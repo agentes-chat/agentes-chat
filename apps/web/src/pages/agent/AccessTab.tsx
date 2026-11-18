@@ -287,7 +287,7 @@ export function AccessTab({ part = "all" }: { part?: "all" | "basic" | "advanced
                   agent={lookOf(agent) ?? true}
                   title={t("skills.emptyTitle")}
                   actions={
-                    viewer !== "member" && (
+                    can("skills") && (
                       <Button asChild variant="primary" icon="plus">
                         <Link to="/org/$orgId/settings/$section" params={{ orgId: org.id, section: "skills" }}>
                           {t("skills.install")}
@@ -319,7 +319,7 @@ export function AccessTab({ part = "all" }: { part?: "all" | "basic" | "advanced
                 <span className="small muted">{t("skills.agentEmpty", { name: agent.name })}</span>
               )}
               <WasLine changeKey="skills" />
-              {viewer !== "member" && library.length > 0 && (
+              {can("skills") && library.length > 0 && (
                 <Link
                   className="agp-more"
                   to="/org/$orgId/settings/$section"

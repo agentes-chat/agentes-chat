@@ -335,8 +335,8 @@ export const en = {
       noTalk: "People with only {{name}} don't talk to agents.",
       turnOnTalk: "Turn on Talk to agents",
       search: "Search agents",
-      notYours: "Only {{owner}}, who is responsible for {{name}}, or someone who edits any agent changes it.",
-      notYoursNoOwner: "Only someone who edits any agent changes it.",
+      notYours: "Only {{owner}}, who is responsible for {{name}}, or someone who edits agents changes it.",
+      notYoursNoOwner: "Only someone who edits agents changes it.",
       none: "There are no agents yet.",
       noMatch: "No agent matches “{{q}}”.",
     },
@@ -432,9 +432,9 @@ export const en = {
     },
     manage_routines: {
       title: "Create routines",
-      desc: "Work the agent does on its own at set times.",
+      desc: "Work an agent does on its own at a set time, on the agents they talk to.",
       short: "create routines",
-      say: "creates routines",
+      say: "creates routines on the agents they talk to",
     },
     approve_actions: {
       title: "Approve agents' actions",
@@ -449,10 +449,10 @@ export const en = {
       say: "creates agents",
     },
     manage_agents: {
-      title: "Edit any agent",
-      desc: "Instructions, brain, budget and what each one uses.",
+      title: "Edit agents",
+      desc: "Instructions, brain, budget and what each one uses, on the agents they talk to. Other people's private agents stay out.",
       short: "edit agents",
-      say: "edits any agent",
+      say: "edits the agents they talk to",
     },
     pair_computers: {
       title: "Connect computers",
@@ -3316,7 +3316,7 @@ export const en = {
         delete: "Only admins delete an agent",
         audience: "Only admins and its owner change who talks to it",
         channels: "Only admins and its owner change its channels",
-        skill: "Only admins change an agent's skills",
+        skill: "Only whoever can edit an agent changes its skills",
         ai_account: "Only the account's owner gives it",
         name: "Only admins rename an agent",
         look: "Only admins and its owner change its look",
@@ -4637,7 +4637,7 @@ export const en = {
     askAccess: "Ask for access",
     detailsHiddenTitle: "How it works",
     detailsHidden:
-      "Only the people {{name}} answers, its owner and admins see its instructions, tools, memory and usage.",
+      "Only the people {{name}} answers, whoever can edit it, its owner and admins see its instructions, tools, memory and usage.",
   },
   presence: {
     online: "Online",
@@ -6576,6 +6576,7 @@ export const en = {
       budget: "Budget",
       owner: "Owner",
       audience: "Who can talk",
+      editors: "Who can edit",
       channels: "Channels",
       machine: "Computer",
       brain: "Who thinks",
@@ -6615,15 +6616,11 @@ export const en = {
       memberOwnerPersonal:
         "You see how {{name}} works. Who edits: {{owner}} (owner) and the people who run this space.",
       owner:
-        "You own {{name}}: you change the look, who can talk, the channels and the computer. The rest, only admins.",
+        "You own {{name}}: you change the instructions, role, skills, look, who can talk or edit, the channels and the computer. The rest, only admins.",
       ownerKeeper:
-        "You own {{name}}: you change the look, who can talk, the group conversations and the computer. The rest, only {{keeper}}.",
+        "You own {{name}}: you change the instructions, role, skills, look, who can talk or edit, the group conversations and the computer. The rest, only {{keeper}}.",
       ownerPersonal:
-        "You own {{name}}: you change the look, who can talk, the group conversations and the computer. The rest, only the people who run this space.",
-      ownerInstructions: "Only admins edit the instructions. As the owner, you approve proposed changes.",
-      ownerInstructionsKeeper: "Only {{keeper}} edits the instructions. As the owner, you approve proposed changes.",
-      ownerInstructionsPersonal:
-        "Only the people who run this space edit the instructions. As the owner, you approve proposed changes.",
+        "You own {{name}}: you change the instructions, role, skills, look, who can talk or edit, the group conversations and the computer. The rest, only the people who run this space.",
       ownerAccess: "Only admins give or take away access and repositories.",
       ownerAccessKeeper: "Only {{keeper}} gives or takes away access and repositories.",
       ownerAccessPersonal: "Only the people who run this space give or take away access and repositories.",
@@ -6894,6 +6891,7 @@ export const en = {
       budget: "Budget",
       owner: "Owner",
       audience: "Who can talk",
+      editors: "Who can edit",
       channels: "Channels",
       computer: "Computer",
       danger: "Archive or delete",
@@ -9566,7 +9564,8 @@ export const en = {
       dontRunName: "Don't run {{name}} when the limit is back",
       canceledToast: "Canceled. It won't run when the limit is back.",
       continuedToast: "Run continuing.",
-      forbidden: "Only who created the routine, the agent's owner or an admin can continue it now",
+      forbidden:
+        "Only who created the routine, the agent's owner, whoever can edit the agent or an admin can continue it now",
       extra_off:
         "This plan's window is used up and this agent's long work doesn't use the plan's paid extra usage. It picks up after the reset",
       extra_used_up:
@@ -9575,7 +9574,8 @@ export const en = {
     pausedRunningToast: "Routine paused. The run in progress stopped too.",
     deleteBodyRunning:
       "It stops running and leaves the list, and the run in progress stops too. Past runs stay in the history.",
-    detailsHidden: "Only its creator, the agent's owner, admins and the people in the conversation see this.",
+    detailsHidden:
+      "Only its creator, the agent's owner, whoever can edit the agent, admins and the people in the conversation see this.",
   },
   missions: {
     chip: "Mission · {{done}} of {{count}}",
@@ -11283,6 +11283,28 @@ export const en = {
       nobody: "{{name}} isn't replying to anyone right now.",
     },
   },
+  /**
+   * "Who can edit" (ADR 0085 addendum of 2026-11-17): who changes how an agent works (its instructions, role, skills
+   * and routines) besides who looks after it: its owner, admins, and whoever edits agents and talks to it.
+   */
+  editors: {
+    section: "Who can edit",
+    title: "Who can edit {{name}}",
+    mode: {
+      owner: "Only who looks after {{name}}",
+      people: "Also some people or roles",
+    },
+    modeText: {
+      /** `owner`: the owner's name. "owner" stays a plain label beside it: never give that person a gender. */
+      owner: "{{owner}} (owner), admins and whoever edits agents and talks to {{name}}.",
+      noOwner: "Admins and whoever edits agents and talks to {{name}}.",
+      people: "Pick who else can change how {{name}} works.",
+    },
+    rolesHint: "Whoever has the role can edit, including people who join it later.",
+    note: "Editing means changing {{name}}'s instructions, role, skills and routines. Apps, budget and owner stay with whoever edits agents.",
+    /** The overview's row when it names nobody: only its owner, admins and whoever edits agents and talks to it. */
+    summary: { owner: "Only who looks after it" },
+  },
   composer: {
     commands: "Commands",
     report: "/report",
@@ -12560,6 +12582,8 @@ export const en = {
       /** {{nth}} is the place in line (`queue.nth`), {{names}} the agents ahead. */
       behind: "In line, {{nth}}. After {{names}}",
       position: "In line, {{nth}}",
+      /** Its Claude plan sign-in ({{account}}, its label) works on all the runs it takes at once; it starts when one ends. */
+      signIn: "Waiting for {{account}} to finish another task",
     },
     /** Places in line by the language's ordinal rule (one: 1st, 21st; two: 2nd; few: 3rd; other: 4th). Same text in each when your language has one form. */
     nth: {
@@ -14608,6 +14632,7 @@ export const en = {
       vault_delete: "Delete password",
       vault_make_password: "Make a password",
       get_my_usage: "See my usage",
+      ignore_usage_limit: "Ignore the usage limit",
       send_feedback: "Send feedback",
       offer_feedback: "Offer to report a problem",
     },
@@ -15634,7 +15659,8 @@ export const en = {
         "This plan's window is used up and its paid extra usage is used up or unavailable. It picks up after the reset.",
       actionsNeedApprover:
         "Only the agent's owner or someone who approves its actions can let a routine act on its own.",
-      editorOnly: "Only who created the routine, the agent's owner or an admin can change it.",
+      editorOnly:
+        "Only who created the routine, the agent's owner, whoever can edit the agent or an admin can change it.",
       widgetFixed: "This routine keeps a widget up to date. Change it from its widget.",
     },
     run: {
@@ -15765,8 +15791,11 @@ export const en = {
       ownerOrAdmin: "Only the agent's owner or an admin can do this.",
       detailsHidden: "Only who talks to {{agentName}} sees how it works.",
       undoForbidden: "Only the person the agent worked for, its owner or an admin can undo this.",
-      /** `action.skills_admins`: skills are only admins' on the agent's page, so are their Undo and Redo. */
-      undoSkillsAdmins: "Only an admin can undo or redo a change to an agent's skills.",
+      /**
+       * `action.skills_admins`: an agent's skills are who edits it on its page (its owner, who manages it, its "Who can
+       * edit"), so are their Undo and Redo.
+       */
+      undoSkillsAdmins: "Only whoever can edit the agent can undo or redo a change to its skills.",
     },
     account: {
       notRestorable: "This account can't be restored anymore.",
@@ -18725,7 +18754,7 @@ export const en = {
       plan_limit_wait_unknown: "The {{plan}} plan hit its limit. I'll answer as soon as it resets.",
       /** The run went on with the next account of the order at its plan's limit (ADR 0041 §6). */
       plan_account_moved: "The {{from}} account hit its limit. I'm going on with the {{to}} account.",
-      /** The same, for long work at the pause line (95%) of its account. */
+      /** The same, for long work at the pause line (99%) of its account. */
       plan_account_moved_line: "The {{from}} account is near its limit. I'm going on with the {{to}} account.",
       /** The same, for long work that would go on into its account's paid extra usage. */
       plan_account_moved_extra:

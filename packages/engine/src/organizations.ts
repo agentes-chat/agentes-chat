@@ -1127,12 +1127,14 @@ async function removableMember(db: Database, actorId: string, orgId: string, tar
 }
 
 /**
- * Who answers for the agents of someone leaving: whoever removes them when they may manage agents, else (or when they
- * leave themselves) the workspace's longest-standing other owner, one who can still sign in first (the last owner
- * can't leave, so one is there). Removing someone never hands their agents to a remover who couldn't take them.
+ * Who answers for the agents of someone leaving: whoever removes them when they reach every agent (an owner or an
+ * administrator: "Editar qualquer agente" alone doesn't reach someone's private agents, ADR 0085 addendum of
+ * 2026-11-17), else (or when they leave themselves) the workspace's longest-standing other owner, one who can still
+ * sign in first (the last owner can't leave, so one is there). Removing someone never hands their agents to a remover
+ * who couldn't take them.
  */
 async function heirOf(db: Executor, actorId: string, orgId: string, targetUserId: string) {
-  if (actorId !== targetUserId && can(await getMembership(db, actorId, orgId), "manage_agents")) return actorId;
+  if (actorId !== targetUserId && can(await getMembership(db, actorId, orgId), "administrator")) return actorId;
   const [owner] = await db
     .select({ userId: organizationMembers.userId })
     .from(organizationMembers)
@@ -1352,11 +1354,19 @@ async function takeOut(
             sql`${targetUserId} = any(${schema.wikiFolderAudiences.audienceUserIds} || ${schema.wikiFolderAudiences.editorUserIds})`,
           ),
         );
-      // And the agents' "only some people" lists, for the same reason.
+      // And the agents' "only some people" and "Quem pode editar" lists, for the same reason.
       const unlisted = await tx
         .update(schema.agents)
-        .set({ audienceUserIds: sql`array_remove(${schema.agents.audienceUserIds}, ${targetUserId})` })
-        .where(and(eq(schema.agents.orgId, orgId), sql`${targetUserId} = any(${schema.agents.audienceUserIds})`))
+        .set({
+          audienceUserIds: sql`array_remove(${schema.agents.audienceUserIds}, ${targetUserId})`,
+          editorUserIds: sql`array_remove(${schema.agents.editorUserIds}, ${targetUserId})`,
+        })
+        .where(
+          and(
+            eq(schema.agents.orgId, orgId),
+            sql`${targetUserId} = any(${schema.agents.audienceUserIds} || ${schema.agents.editorUserIds})`,
+          ),
+        )
         .returning({ id: schema.agents.id });
       for (const a of unlisted) caches.agents.delete(`${orgId}:${a.id}`);
       if (unlisted.length > 0) caches.agents.delete(`${orgId}:team`);
@@ -1397,7 +1407,12 @@ async function takeOut(
       const handed = heir
         ? await tx
             .update(agents)
-            .set({ ownerUserId: heir, updatedAt: new Date() })
+            // The heir now always edits them: off their "Quem pode editar" (ADR 0085 addendum of 2026-11-17).
+            .set({
+              ownerUserId: heir,
+              editorUserIds: sql`array_remove(${schema.agents.editorUserIds}, ${heir}::text)`,
+              updatedAt: new Date(),
+            })
             .where(and(eq(agents.orgId, orgId), eq(agents.ownerUserId, targetUserId)))
             .returning()
         : [];

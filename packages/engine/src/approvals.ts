@@ -21,6 +21,7 @@ import { type ActiveCover, activeCoversFrom, activeCoversTo } from "./approval-c
 import { resumeHeldRuns, wakeLine } from "./approval-order";
 import { addApprovalRules, addRoutineOwnActions, type RememberedKind, rememberedKindOf } from "./approval-rules";
 import { queueApprovalsDigest } from "./approvals-digest";
+import { ACCESS_COLUMNS, managesAgent, managesAgentSql, managesRoutinesOf, REACH_COLUMNS } from "./audience";
 import { recordAudit } from "./audit";
 import { approvalCardVia } from "./card-via";
 import { CONNECTOR_CATALOG } from "./connectors/catalog";
@@ -560,7 +561,8 @@ const BROWSER_PROFILE_PREFIX = "browser-profile:";
 
 /**
  * The keys that let someone decide any approval of its kind: `approve_actions`; for `request_permission`, the keys
- * that give the same access on the agent's page (`manage_agents`, and `manage_connectors` for a browser profile).
+ * that give the same access on the agent's page (`manage_agents`, and `manage_connectors` for a browser profile),
+ * where `manage_agents` counts only on an agent it reaches (`managesAgent`, ADR 0085 addendum of 2026-11-17).
  */
 export function decidingKeys(approval: Pick<Approval, "tool"> & Partial<Pick<Approval, "params">>): RolePermission[] {
   if (!adminsDecide(approval)) return ["approve_actions"];
@@ -570,23 +572,44 @@ export function decidingKeys(approval: Pick<Approval, "tool"> & Partial<Pick<App
     : ["manage_agents"];
 }
 
+/** The agent an access request asks for (`adminsDecide`), as `managesAgent` reads it. */
+type AskingAgent = Parameters<typeof managesAgent>[0];
+
 /**
- * Whether `actorId` may decide `approval`: whoever holds its `decidingKeys` (admins), the agent's owner
- * (`adminsDecide` aside), or for one asked with `request_approval` the people it names instead of the owner (ADR
- * 0126). The person whose request it was never decides it, unless they approve by role (admins, the role it names).
- * One in someone's own mailbox that someone else asked (`required`) only that person decides.
+ * Whether `actorId` may decide `approval`: whoever holds its `decidingKeys` (admins; for an access request, only on
+ * an agent they manage: `agent`, its agent, `managesAgent`), the agent's owner (`adminsDecide` aside), or for one
+ * asked with `request_approval` the people it names instead of the owner (ADR 0126). The person whose request it was
+ * never decides it, unless they approve by role (admins, the role it names). One in someone's own mailbox that someone
+ * else asked (`required`) only that person decides.
  */
 export function decides(
   approval: Pick<Approval, "ownerUserId" | "tool"> & Partial<Pick<Approval, "approvers" | "params">>,
   actorId: string,
-  membership: Pick<Membership, "permissions"> | null,
+  membership: Pick<Membership, "permissions" | "roleIds"> | null,
+  agent: AskingAgent | null,
 ) {
   const named = approval.approvers;
   if (named?.required) return named.userIds.includes(actorId);
-  if (decidingKeys(approval).every((key) => can(membership, key))) return true;
+  if (
+    decidingKeys(approval).every((key) => can(membership, key)) &&
+    (!adminsDecide(approval) || (!!agent && managesAgent(agent, actorId, membership)))
+  )
+    return true;
   if (named?.requestedBy === actorId && !named.requesterDecides) return false;
   if (adminsDecide(approval)) return false;
   return named?.userIds.length ? named.userIds.includes(actorId) : approval.ownerUserId === actorId;
+}
+
+/** The agents the access requests among `rows` ask for (`adminsDecide`), by id: what `decides` reads of each. */
+async function askingAgents(db: Executor, orgId: string, rows: readonly Pick<Approval, "agentId" | "tool">[]) {
+  const ids = [...new Set(rows.filter((r) => adminsDecide(r)).map((r) => r.agentId))];
+  const found = ids.length
+    ? await db
+        .select({ id: agents.id, ...REACH_COLUMNS })
+        .from(agents)
+        .where(and(eq(agents.orgId, orgId), inArray(agents.id, ids)))
+    : [];
+  return new Map<string, AskingAgent>(found.map((a) => [a.id, a]));
 }
 
 /** `decides` as SQL over `approvals` (the sidebar's count). */
@@ -594,7 +617,8 @@ export const decidableBySql = (actorId: string) => sql`(case
   when coalesce((${approvals.approvers} ->> 'required')::boolean, false)
     then ${approvals.approvers} -> 'userIds' @> to_jsonb(${actorId}::text)
   when ${approvals.tool} = ${REQUEST_PERMISSION_TOOL}
-    then ${maySql(approvals.orgId, actorId, "manage_agents")}
+    then exists (select 1 from ${agents} pa where pa.id = ${approvals.agentId} and pa.org_id = ${approvals.orgId}
+        and ${managesAgentSql("pa", sql`${actorId}::text`)})
       and (coalesce(${approvals.params} ->> 'permission', '') not like ${`${BROWSER_PROFILE_PREFIX}%`}
         or ${maySql(approvals.orgId, actorId, "manage_connectors")})
   when ${maySql(approvals.orgId, actorId, "approve_actions")} then true
@@ -649,7 +673,7 @@ export function coveredFor(approval: Coverable, actorId: string, covers: ActiveC
 }
 
 type Askable = Pick<Approval, "orgId" | "ownerUserId"> &
-  Partial<Pick<Approval, "tool" | "approvers" | "params" | "requestedByUserId" | "highRisk">>;
+  Partial<Pick<Approval, "agentId" | "tool" | "approvers" | "params" | "requestedByUserId" | "highRisk">>;
 
 /**
  * The people asked to decide (the card's badge, the live Aprovações list): whoever holds its `decidingKeys` (ADR 0085)
@@ -659,13 +683,17 @@ type Askable = Pick<Approval, "orgId" | "ownerUserId"> &
  */
 export async function approverIds(db: Database, approval: Askable, notified = false) {
   const keys = decidingKeys({ tool: approval.tool ?? "", params: approval.params ?? {} });
+  // An access request's `manage_agents` counts on its own agent only (`managesAgentSql`, ADR 0085 addendum of
+  // 2026-11-17): a private agent's request never goes to who merely holds the key.
+  const holds = (key: RolePermission) =>
+    key === "manage_agents" && approval.agentId
+      ? sql`exists (select 1 from ${agents} pa where pa.id = ${approval.agentId} and pa.org_id = ${approval.orgId}
+          and ${managesAgentSql("pa", sql`${organizationMembers.userId}`)})`
+      : maySql(approval.orgId, organizationMembers.userId, key);
   const members = await db
     .select({
       userId: organizationMembers.userId,
-      admin: sql<boolean>`(${sql.join(
-        keys.map((key) => maySql(approval.orgId, organizationMembers.userId, key)),
-        sql` and `,
-      )})`,
+      admin: sql<boolean>`(${sql.join(keys.map(holds), sql` and `)})`,
     })
     .from(organizationMembers)
     .innerJoin(users, eq(users.id, organizationMembers.userId))
@@ -963,7 +991,8 @@ export async function decideApproval(
     .where(and(eq(approvals.id, approvalId), eq(approvals.orgId, orgId)));
   if (!current) throw new NotFoundError("Approval not found");
   const membership = await requirePermission(db, actorId, current.orgId, "read");
-  const direct = decides(current, actorId, membership);
+  const asking = await askingAgents(db, orgId, [current]);
+  const direct = decides(current, actorId, membership, asking.get(current.agentId) ?? null);
   const forUserId = direct ? null : coveredFor(current, actorId, await activeCoversTo(db, orgId, actorId, at));
   if (!direct && !forUserId) {
     throw new ForbiddenError(
@@ -1073,8 +1102,11 @@ export async function decideApprovals(
   if (input.via) for (const id of ids) vias.set(id, await approvalCardVia(db, orgId, input.via, id));
   const membership = await requirePermission(db, actorId, orgId, "read");
   const covers = await activeCoversTo(db, orgId, actorId, at);
-  const forUserOf = (r: Approval) => (decides(r, actorId, membership) ? null : coveredFor(r, actorId, covers));
-  const allowed = (r: Approval) => decides(r, actorId, membership) || forUserOf(r) !== null;
+  // The agents of the access requests among them, once their rows are read (`decides`).
+  let asking = new Map<string, AskingAgent>();
+  const direct = (r: Approval) => decides(r, actorId, membership, asking.get(r.agentId) ?? null);
+  const forUserOf = (r: Approval) => (direct(r) ? null : coveredFor(r, actorId, covers));
+  const allowed = (r: Approval) => direct(r) || forUserOf(r) !== null;
   /** Some still wait and none is this person's to decide. */
   let theirs = false;
   const decided = await db.transaction(async (tx) => {
@@ -1088,6 +1120,7 @@ export async function decideApprovals(
       : [];
     const out: Approval[] = [];
     const resumed = new Set<string>();
+    asking = await askingAgents(tx, orgId, rows);
     const mine = rows.filter(allowed);
     theirs = rows.length > 0 && mine.length === 0;
     const routine = input.only ? await routineIds(tx, mine) : null;
@@ -1325,9 +1358,17 @@ export async function cancelableAhead(db: Database, actorId: string, orgId: stri
         .from(routines)
         .where(and(eq(routines.id, current.routineId), eq(routines.orgId, orgId)))
     : [];
+  // Who manages the agent's routines (`managesRoutinesOf`, ADR 0085 addendum of 2026-11-17), not the key alone.
+  const [agent] =
+    current.ownerUserId === actorId || routine?.createdByUserId === actorId || can(membership, "approve_actions")
+      ? []
+      : await db
+          .select(ACCESS_COLUMNS)
+          .from(agents)
+          .where(and(eq(agents.id, current.agentId), eq(agents.orgId, orgId)));
   const may =
     can(membership, "approve_actions") ||
-    can(membership, "manage_routines") ||
+    (!!agent && managesRoutinesOf(agent, actorId, membership)) ||
     current.ownerUserId === actorId ||
     routine?.createdByUserId === actorId;
   if (!may) throw new ForbiddenError("Only who may decide it or manage its routine can cancel this");
@@ -1486,11 +1527,11 @@ export async function listApprovals(
     )
     .orderBy(desc(approvals.createdAt))
     .limit(Math.min(options.limit ?? 100, 500));
-  const covers = await activeCoversTo(db, orgId, actorId);
+  const [covers, asking] = await Promise.all([activeCoversTo(db, orgId, actorId), askingAgents(db, orgId, rows)]);
   return viewsOf(
     db,
     rows,
-    (r) => decides(r, actorId, membership) || coveredFor(r, actorId, covers) !== null,
+    (r) => decides(r, actorId, membership, asking.get(r.agentId) ?? null) || coveredFor(r, actorId, covers) !== null,
     false,
     actorId,
   );

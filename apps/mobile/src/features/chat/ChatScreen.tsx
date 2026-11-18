@@ -57,7 +57,7 @@ import {
 } from "@agenteschat/client";
 import { activityVerb, consultDetails, lineStep, listNames } from "@agenteschat/client/lib/activity";
 import { handoffAsk } from "@agenteschat/client/lib/agent-work";
-import { canTalk } from "@agenteschat/client/lib/audience";
+import { canTalk, managesAgent } from "@agenteschat/client/lib/audience";
 import { runPosition, screenAboveEnd } from "@agenteschat/client/lib/chat";
 import { CHAT_RHYTHM, firstUnreadId, opensAtLastRead, unreadThreadRootId } from "@agenteschat/client/lib/chat-look";
 import { type ConversationWait, conversationWaits } from "@agenteschat/client/lib/computer-queue";
@@ -611,18 +611,18 @@ function Chat({
     [live.consults, isThread, threadId, topIds],
   );
 
-  // "Parar" in the working line (as on the web): who manages agents, the agent's owner, or who started it.
+  // "Parar" in the working line (as on the web): who manages the agent (the server's `canManage`), its owner, or who
+  // started it.
   const { org } = useOrg();
-  const manageAgents = can(org, "manage_agents");
   const canStop = useCallback(
     (r: LiveRun) =>
       mayStopRun(r, {
         meId,
-        manageAgents,
+        manageAgents: managesAgent(dir.agentById.get(r.agentId)),
         agentOwnerId: dir.agentById.get(r.agentId)?.ownerUserId,
         messages: list,
       }),
-    [meId, manageAgents, dir.agentById, list],
+    [meId, dir.agentById, list],
   );
   const { stop } = live;
   const stopRun = useCallback(

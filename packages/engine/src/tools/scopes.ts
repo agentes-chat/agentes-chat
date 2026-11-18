@@ -13,6 +13,7 @@ import {
   schema,
   sql,
 } from "@agenteschat/db";
+import { managesAgent, REACH_COLUMNS } from "../audience";
 import { recordAudit } from "../audit";
 import { caches } from "../cache";
 import { ForbiddenError, NotFoundError, ValidationError } from "../errors";
@@ -392,7 +393,7 @@ const builtinOnly: GrantValidator = async (_db, _orgId, grant) =>
   grant.connectionId === null && !isBuiltinScope(grant.scope) ? `Unknown scope ${grant.scope}` : null;
 
 /**
- * Replaces an agent's grants (admins: `manage_agents`). Each grant is checked
+ * Replaces an agent's grants: who manages it (`managesAgent`, ADR 0085 addendum of 2026-11-17). Each grant is checked
  * against the scope catalogs; nothing outside them can be granted.
  */
 export async function setAgentScopes(
@@ -403,12 +404,13 @@ export async function setAgentScopes(
   grants: ScopeGrant[],
   validate: GrantValidator = builtinOnly,
 ) {
-  await requirePermission(db, actorId, orgId, "manage_agents");
+  const membership = await requirePermission(db, actorId, orgId, "manage_agents");
   const [agent] = await db
-    .select({ id: agents.id, builtin: agents.builtin })
+    .select({ id: agents.id, builtin: agents.builtin, ...REACH_COLUMNS })
     .from(agents)
     .where(and(eq(agents.id, agentId), eq(agents.orgId, orgId), isNull(agents.deletedAt)));
   if (!agent) throw new NotFoundError("Agent not found");
+  if (!managesAgent(agent, actorId, membership)) throw new ForbiddenError();
   // What is off for the right hand is kept tool by tool (`setAgentAccess`), which a plain list of scopes can't carry.
   if (isRightHand(agent)) throw new ValidationError("Set what it may use on its page, under what it can use");
   // Mail grants stay as they are (the mail API manages them); any sent back here are ignored.

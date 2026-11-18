@@ -1908,7 +1908,7 @@
     "value": "Changes saved"
   },
   "agentEdit.adminsOnly": {
-    "value": "Only admins change the name, role and instructions."
+    "value": "Only whoever can edit this agent changes its role and instructions. Its name, only admins."
   },
   "agentEdit.discardTitle": {
     "value": "Discard your changes?"
@@ -5908,11 +5908,11 @@
     "value": "Turn on Talk to agents"
   },
   "roles.agents.locked": {
-    "value": "Only {{owner}}, who looks after {{name}}, or someone who edits any agent changes it.",
-    "female": "Only {{owner}}, who looks after {{name}}, or someone who edits any agent changes it."
+    "value": "Only {{owner}}, who looks after {{name}}, or someone who edits agents changes it.",
+    "female": "Only {{owner}}, who looks after {{name}}, or someone who edits agents changes it."
   },
   "roles.agents.lockedNoOwner": {
-    "value": "Only someone who edits any agent changes it."
+    "value": "Only someone who edits agents changes it."
   },
   "roles.agents.none": {
     "value": "No agents yet."

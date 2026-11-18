@@ -24,10 +24,10 @@ import {
   resourcesOf,
 } from "@agenteschat/client/lib/access-levels";
 import { channelsAfter, sameAudience } from "@agenteschat/client/lib/agent-edit";
-import { audienceOf, audiencePatch } from "@agenteschat/client/lib/audience";
+import { audienceOf, audiencePatch, managesAgent } from "@agenteschat/client/lib/audience";
 import { firstName } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { addsAgentsTo, can } from "@agenteschat/client/lib/permissions";
+import { addsAgentsTo } from "@agenteschat/client/lib/permissions";
 import { rolePicksInSight } from "@agenteschat/client/lib/personal-view";
 import { planOf } from "@agenteschat/client/lib/plans";
 import { AUTO } from "@agenteschat/client/lib/providers";
@@ -607,13 +607,18 @@ function WhoStep({ agent }: { agent: Agent }) {
 function HowStep({ agent }: { agent: Agent }) {
   const { t } = useTranslation();
   const { orgId, org } = useOrg();
+  const meId = useMeId();
   const update = useUpdateAgent(orgId, agent.id);
   const modelLabel = useModelLabel();
   const { busy, run } = useStepSave(agent, "how");
   const g = agentGrammar(agent.name);
   const onApi = !agent.brain || agent.brain.kind === "model";
-  // Money is for who sees it (admins): the agent's own limit, else the workspace's.
-  const seesBudget = onApi && agent.monthlyBudgetUsd !== undefined && can(org, "manage_agents");
+  // Whoever edits it saves its instructions; its budget and model as the server's `updateAgent` takes them (ADR 0085
+  // addendum of 2026-11-17): money only from who manages it (its own limit, else the workspace's), its API model also
+  // from its owner.
+  const manages = managesAgent(agent);
+  const seesBudget = onApi && manages && agent.monthlyBudgetUsd !== undefined;
+  const picksModel = onApi && (manages || (!!meId && agent.ownerUserId === meId));
   const [instructions, setInstructions] = useState(agent.instructions);
   const [budget, setBudget] = useState(agent.monthlyBudgetUsd == null ? "" : String(agent.monthlyBudgetUsd));
   const typed = budget.trim().replace(",", ".");
@@ -661,7 +666,7 @@ function HowStep({ agent }: { agent: Agent }) {
           {budgetOk ? null : <GroupedFooter>{t("agent.budgetInvalid")}</GroupedFooter>}
         </>
       ) : null}
-      {onApi ? (
+      {picksModel ? (
         <>
           <GroupedHeader>{t("agentSetup.how.more")}</GroupedHeader>
           <GroupedList>

@@ -174,7 +174,7 @@ export const legalJa: Partial<Record<LegalKind, LegalDocument>> = {
     summary:
       "当社が収集する情報、エージェントが何をどこへ送信するか、誰がお客様のワークスペースを閲覧できるか、およびお客様が有する権利について説明します。",
     courtesy: "本書は便宜上の翻訳であり、英語版と内容が異なる場合は英語版が優先します。",
-    updated: "2026-11-16",
+    updated: "2026-11-18",
     sections: [
       {
         id: "overview",
@@ -321,6 +321,7 @@ export const legalJa: Partial<Record<LegalKind, LegalDocument>> = {
         heading: "14. Cookie およびローカルストレージ",
         blocks: [
           "ワークスペースは、お客様のサインイン状態の維持、フォームの保護、ならびにテーマや言語などの設定の記憶に必要な Cookie およびローカルストレージのみを使用します。公開サイト agentes.chat は、お客様が選択した言語を記憶し、Himetrica の分析（第 2 条）を使用します。当社は、広告用 Cookie またはクロスサイトトラッキング Cookie を使用しません。",
+          "**紹介 Cookie：** お客様が agentes.chat への紹介リンクを開くと、当社の請求サービスは、お客様のご契約時にリンクの送信者がクレジットを受け取れるよう、紹介情報を 1 つの Cookie に入れてお客様のブラウザに 60 日間保存します。欧州経済領域、英国およびスイスでは、お客様が agentes.chat 上で同意した後にのみ設定します。このデバイスの紹介情報を削除するには、https://agentes.chat/ja/privacy?forget-referral#cookies を開いてください。",
         ],
       },
       {

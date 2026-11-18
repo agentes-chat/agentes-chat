@@ -60,6 +60,7 @@ import {
   AGY_SIGN_IN_FILE,
   type AgySignIn,
   agyAuthOf,
+  agyKeychain,
   agyRuntimeDir,
   agySignInFrom,
   agySignInOf,
@@ -305,6 +306,7 @@ export function accountEnv(kind: AccountKind, dir: string, base: NodeJS.ProcessE
     delete env.DISPLAY;
     delete env.SSH_AUTH_SOCK;
     Object.assign(env, AGY_QUIET_ENV);
+    if (process.platform === "darwin") agyKeychain(dir);
   }
   return env;
 }
@@ -503,6 +505,12 @@ export function codexAuthOf(text: unknown): CodexAuth | null {
     accountId: typeof tokens.account_id === "string" ? tokens.account_id : "",
     refreshToken: tokens.refresh_token,
   };
+}
+
+/** Root's copy of a ChatGPT sign-in is safe to read limits with: Codex won't refresh it within the next hour. */
+export function codexProbeSafe(dir: string, now: number) {
+  const auth = readCodexAuth(dir);
+  return auth !== null && now - auth.refreshedAt < CODEX_REFRESH_AFTER_MS - 3600_000;
 }
 
 /** A folder's Codex sign-in; null when it has none. Never through a link or a pipe. */
@@ -1386,7 +1394,7 @@ export interface AccountManagerOptions {
   grokRoot?: string;
   /** System mode: whether Grok Build's sandbox starts for an agent's user above a folder (`grokSandboxFails`). */
   grokSandbox?: (dir: string) => string | null;
-  /** Tests: the platform (the Antigravity CLI signs in only on Linux here). */
+  /** Tests: the platform (the Antigravity CLI signs in on Linux and macOS here). */
   platform?: NodeJS.Platform;
   /**
    * System mode: what goes before each Claude CLI root runs on an account folder (`authEgressPrefix`), asked once;
@@ -1751,10 +1759,10 @@ export class AccountManager {
     if (kind === "opencode" && !cliKey) {
       throw new RunnerError("bad_request", "OpenCode signs in with its API key");
     }
-    // ADR 0143: elsewhere the CLI keeps every sign-in in the one keychain of the computer's user, so two accounts
+    // ADR 0143: Windows keeps every sign-in in the one Credential Manager of the computer's user, so two accounts
     // would be one.
-    if (kind === "antigravity" && (this.opts.platform ?? process.platform) !== "linux") {
-      throw new RunnerError("bad_request", "Gemini accounts sign in on Linux computers only, for now.");
+    if (kind === "antigravity" && (this.opts.platform ?? process.platform) === "win32") {
+      throw new RunnerError("bad_request", "Gemini accounts don't sign in on Windows computers yet.");
     }
     if (this.logins.get(loginId)?.state === "waiting") {
       throw new RunnerError("bad_request", "This sign-in already exists");
@@ -3044,7 +3052,12 @@ export class AccountManager {
         this.usage.get(id),
       );
     }
-    if (!own && (this.lentTo(target.kind, id) !== null || shared)) return null;
+    // A ChatGPT sign-in for all agents is root's own copy: Codex reads its limits there as long as it won't refresh it
+    // (a refresh rotates the token every agent's copy holds). Without this its numbers only came from turns, so with
+    // all long work paused nothing read them again.
+    const codexReadable =
+      shared && target.kind === "codex" && codexProbeSafe(target.cwd, (this.opts.now ?? Date.now)());
+    if (!own && (this.lentTo(target.kind, id) !== null || (shared && !codexReadable))) return null;
     const probe = { command: this.command(target.kind, Boolean(own)), cwd: target.cwd, env: target.env, ...limits };
     // Cursor's CLI reports no plan usage: its turns' `usage` is all there is.
     // Nor does OpenCode's: its key's usage is on OpenCode's console. Grok Build shows its plan's only in its TUI.

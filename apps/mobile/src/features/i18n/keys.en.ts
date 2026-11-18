@@ -851,7 +851,8 @@ export const featureKeysEn = {
   agentEdit: {
     missing: "This agent no longer exists.",
     saved: "Changes saved",
-    adminsOnly: "Only admins change the name, role and instructions.",
+    /** Under the instructions, for who can't edit them: neither its owner, who manages it, nor its "Who can edit". */
+    adminsOnly: "Only whoever can edit this agent changes its role and instructions. Its name, only admins.",
     discardTitle: "Discard your changes?",
     discardText: "What you changed hasn't been saved yet.",
     discard: "Discard",
@@ -2574,9 +2575,9 @@ export const featureKeysEn = {
       everyone: "Everyone talks to it",
       gate: "People with only {{name}} don't talk to agents.",
       gateOn: "Turn on Talk to agents",
-      locked: "Only {{owner}}, who looks after {{name}}, or someone who edits any agent changes it.",
-      locked_female: "Only {{owner}}, who looks after {{name}}, or someone who edits any agent changes it.",
-      lockedNoOwner: "Only someone who edits any agent changes it.",
+      locked: "Only {{owner}}, who looks after {{name}}, or someone who edits agents changes it.",
+      locked_female: "Only {{owner}}, who looks after {{name}}, or someone who edits agents changes it.",
+      lockedNoOwner: "Only someone who edits agents changes it.",
       none: "No agents yet.",
       some: "Only some roles and people",
       addPerson: "Add a person",

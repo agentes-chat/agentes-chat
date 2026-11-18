@@ -10,6 +10,7 @@ import {
   draftOf,
   draftTrigger,
   everyMinutes,
+  fixFor,
   futureRuns,
   HORIZON_AGENTS,
   hasFired,
@@ -673,5 +674,33 @@ describe("Rotinas on the phone, as the web reads them", () => {
     expect(menu).toContain("menu: items,");
     expect(menu).toContain("chooseAction(");
     expect(menu).not.toContain("useSheet");
+  });
+
+  test("a new routine, a move to another agent and a copy: only for an agent that answers who sets up its routines", () => {
+    // A routine asks its agent on its creator's behalf: the server makes one, moves one or copies one only for who may
+    // make one for that agent (`createsRoutinesFor`, ADR 0085 addendum of 2026-11-17); editing keeps the routine's own.
+    const form = read("RoutineForm.tsx");
+    expect(form).toContain("dir.agents.filter((a) => createsRoutinesFor(a) || a.id === routine?.agentId)");
+    expect(form).not.toContain("managesRoutinesOf");
+    // "Duplicate" goes by the agent, not by the routine's own `canManage` (its creator still edits it).
+    expect(read("hooks.tsx")).toContain("if (!widget && createsRoutinesFor(dir.agentById.get(r.agentId)))");
+    // The routine an agent's proposal left to make, the same.
+    expect(readFileSync(join(import.meta.dir, "../../src/features/agents/ProposalCard.tsx"), "utf8")).toContain(
+      'createsRoutinesFor(dir.agentById.get(card.agentId ?? ""))',
+    );
+  });
+
+  test("a paused routine's Take over only for who may make one for its agent; its other fixes for who changes it", () => {
+    // Taking it over makes it mine: the server's create check (`takeOverRoutine`, ADR 0053 §6.2; ADR 0085 addendum of
+    // 2026-11-17). A named editor its agent doesn't answer still changes it, never takes it over.
+    const orphan = routine({ id: "r1", active: false, pausedReason: "creator_left" });
+    const editorOnly = { canManageRoutines: true, canTalk: false };
+    const answers = { canManageRoutines: true, canTalk: true };
+    expect(fixFor(orphan, answers)).toBe("take_over");
+    expect(fixFor(orphan, editorOnly)).toBeNull();
+    expect(fixFor(orphan, undefined)).toBeNull();
+    expect(fixFor(routine({ id: "r2", active: false, pausedReason: "failing" }), editorOnly)).toBe("resume");
+    expect(fixFor({ ...orphan, canManage: false }, answers)).toBeNull();
+    expect(read("RoutineScreen.tsx")).toContain("const fix = fixFor(r, dir.agentById.get(r.agentId));");
   });
 });

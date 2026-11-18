@@ -807,10 +807,10 @@
     "value": "Search agents"
   },
   "rolesPage.agents.notYours": {
-    "value": "Only {{owner}}, who is responsible for {{name}}, or someone who edits any agent changes it."
+    "value": "Only {{owner}}, who is responsible for {{name}}, or someone who edits agents changes it."
   },
   "rolesPage.agents.notYoursNoOwner": {
-    "value": "Only someone who edits any agent changes it."
+    "value": "Only someone who edits agents changes it."
   },
   "rolesPage.agents.none": {
     "value": "There are no agents yet."
@@ -1002,13 +1002,13 @@
     "value": "Create routines"
   },
   "permissions.manage_routines.desc": {
-    "value": "Work the agent does on its own at set times."
+    "value": "Work an agent does on its own at a set time, on the agents they talk to."
   },
   "permissions.manage_routines.short": {
     "value": "create routines"
   },
   "permissions.manage_routines.say": {
-    "value": "creates routines"
+    "value": "creates routines on the agents they talk to"
   },
   "permissions.approve_actions.title": {
     "value": "Approve agents' actions"
@@ -1035,16 +1035,16 @@
     "value": "creates agents"
   },
   "permissions.manage_agents.title": {
-    "value": "Edit any agent"
+    "value": "Edit agents"
   },
   "permissions.manage_agents.desc": {
-    "value": "Instructions, brain, budget and what each one uses."
+    "value": "Instructions, brain, budget and what each one uses, on the agents they talk to. Other people's private agents stay out."
   },
   "permissions.manage_agents.short": {
     "value": "edit agents"
   },
   "permissions.manage_agents.say": {
-    "value": "edits any agent"
+    "value": "edits the agents they talk to"
   },
   "permissions.pair_computers.title": {
     "value": "Connect computers"
@@ -7659,7 +7659,7 @@
     "value": "Only admins and its owner change its channels"
   },
   "rightHand.card.only.skill": {
-    "value": "Only admins change an agent's skills"
+    "value": "Only whoever can edit an agent changes its skills"
   },
   "rightHand.card.only.ai_account": {
     "value": "Only the account's owner gives it"
@@ -10484,7 +10484,7 @@
     "value": "How it works"
   },
   "profile.detailsHidden": {
-    "value": "Only the people {{name}} answers, its owner and admins see its instructions, tools, memory and usage."
+    "value": "Only the people {{name}} answers, whoever can edit it, its owner and admins see its instructions, tools, memory and usage."
   },
   "presence.online": {
     "value": "Online"
@@ -15023,6 +15023,9 @@
   "agentPage.fields.audience": {
     "value": "Who can talk"
   },
+  "agentPage.fields.editors": {
+    "value": "Who can edit"
+  },
   "agentPage.fields.channels": {
     "value": "Channels"
   },
@@ -15111,22 +15114,13 @@
     "value": "You see how {{name}} works. Who edits: {{owner}} (owner) and the people who run this space."
   },
   "agentPage.readOnly.owner": {
-    "value": "You own {{name}}: you change the look, who can talk, the channels and the computer. The rest, only admins."
+    "value": "You own {{name}}: you change the instructions, role, skills, look, who can talk or edit, the channels and the computer. The rest, only admins."
   },
   "agentPage.readOnly.ownerKeeper": {
-    "value": "You own {{name}}: you change the look, who can talk, the group conversations and the computer. The rest, only {{keeper}}."
+    "value": "You own {{name}}: you change the instructions, role, skills, look, who can talk or edit, the group conversations and the computer. The rest, only {{keeper}}."
   },
   "agentPage.readOnly.ownerPersonal": {
-    "value": "You own {{name}}: you change the look, who can talk, the group conversations and the computer. The rest, only the people who run this space."
-  },
-  "agentPage.readOnly.ownerInstructions": {
-    "value": "Only admins edit the instructions. As the owner, you approve proposed changes."
-  },
-  "agentPage.readOnly.ownerInstructionsKeeper": {
-    "value": "Only {{keeper}} edits the instructions. As the owner, you approve proposed changes."
-  },
-  "agentPage.readOnly.ownerInstructionsPersonal": {
-    "value": "Only the people who run this space edit the instructions. As the owner, you approve proposed changes."
+    "value": "You own {{name}}: you change the instructions, role, skills, look, who can talk or edit, the group conversations and the computer. The rest, only the people who run this space."
   },
   "agentPage.readOnly.ownerAccess": {
     "value": "Only admins give or take away access and repositories."
@@ -15803,6 +15797,9 @@
   },
   "agentPage.settings.audience": {
     "value": "Who can talk"
+  },
+  "agentPage.settings.editors": {
+    "value": "Who can edit"
   },
   "agentPage.settings.channels": {
     "value": "Channels"
@@ -22100,7 +22097,7 @@
     "value": "Run continuing."
   },
   "routines.usagePause.forbidden": {
-    "value": "Only who created the routine, the agent's owner or an admin can continue it now"
+    "value": "Only who created the routine, the agent's owner, whoever can edit the agent or an admin can continue it now"
   },
   "routines.usagePause.extra_off": {
     "value": "This plan's window is used up and this agent's long work doesn't use the plan's paid extra usage. It picks up after the reset"
@@ -22115,7 +22112,7 @@
     "value": "It stops running and leaves the list, and the run in progress stops too. Past runs stay in the history."
   },
   "routines.detailsHidden": {
-    "value": "Only its creator, the agent's owner, admins and the people in the conversation see this."
+    "value": "Only its creator, the agent's owner, whoever can edit the agent, admins and the people in the conversation see this."
   },
   "missions.chip": {
     "value": "Mission · {{done}} of {{count}}"
@@ -26446,6 +26443,36 @@
   },
   "audience.notice.nobody": {
     "value": "{{name}} isn't replying to anyone right now."
+  },
+  "editors.section": {
+    "value": "Who can edit"
+  },
+  "editors.title": {
+    "value": "Who can edit {{name}}"
+  },
+  "editors.mode.owner": {
+    "value": "Only who looks after {{name}}"
+  },
+  "editors.mode.people": {
+    "value": "Also some people or roles"
+  },
+  "editors.modeText.owner": {
+    "value": "{{owner}} (owner), admins and whoever edits agents and talks to {{name}}."
+  },
+  "editors.modeText.noOwner": {
+    "value": "Admins and whoever edits agents and talks to {{name}}."
+  },
+  "editors.modeText.people": {
+    "value": "Pick who else can change how {{name}} works."
+  },
+  "editors.rolesHint": {
+    "value": "Whoever has the role can edit, including people who join it later."
+  },
+  "editors.note": {
+    "value": "Editing means changing {{name}}'s instructions, role, skills and routines. Apps, budget and owner stay with whoever edits agents."
+  },
+  "editors.summary.owner": {
+    "value": "Only who looks after it"
   },
   "composer.commands": {
     "value": "Commands"
@@ -35208,6 +35235,9 @@
   "toolNames.label.get_my_usage": {
     "value": "See my usage"
   },
+  "toolNames.label.ignore_usage_limit": {
+    "value": "Ignore the usage limit"
+  },
   "toolNames.label.send_feedback": {
     "value": "Send feedback"
   },
@@ -37723,7 +37753,7 @@
     "value": "Only the agent's owner or someone who approves its actions can let a routine act on its own."
   },
   "errors.routine.editorOnly": {
-    "value": "Only who created the routine, the agent's owner or an admin can change it."
+    "value": "Only who created the routine, the agent's owner, whoever can edit the agent or an admin can change it."
   },
   "errors.routine.widgetFixed": {
     "value": "This routine keeps a widget up to date. Change it from its widget."
@@ -38008,7 +38038,7 @@
     "value": "Only the person the agent worked for, its owner or an admin can undo this."
   },
   "errors.agent.undoSkillsAdmins": {
-    "value": "Only an admin can undo or redo a change to an agent's skills."
+    "value": "Only whoever can edit the agent can undo or redo a change to its skills."
   },
   "errors.account.notRestorable": {
     "value": "This account can't be restored anymore."

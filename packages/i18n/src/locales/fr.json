@@ -325,8 +325,8 @@
       "noTalk": "Qui n'a que {{name}} ne parle pas avec les agents.",
       "turnOnTalk": "Activer Parler aux agents",
       "search": "Chercher un agent",
-      "notYours": "Seuls {{owner}}, responsable de {{name}}, ou qui modifie n'importe quel agent le changent.",
-      "notYoursNoOwner": "Seul qui modifie n'importe quel agent le change.",
+      "notYours": "Seuls {{owner}}, responsable de {{name}}, ou une personne qui modifie les agents peuvent le changer.",
+      "notYoursNoOwner": "Seule une personne qui modifie les agents peut le changer.",
       "none": "Il n'y a pas encore d'agents.",
       "noMatch": "Aucun agent avec « {{q}} »."
     },
@@ -418,9 +418,9 @@
     },
     "manage_routines": {
       "title": "Créer des routines",
-      "desc": "Du travail que l'agent fait seul, à heures fixes.",
+      "desc": "Du travail qu'un agent fait seul à heure fixe, sur les agents à qui la personne parle.",
       "short": "créer des routines",
-      "say": "crée des routines"
+      "say": "crée des routines sur les agents à qui elle parle"
     },
     "approve_actions": {
       "title": "Approuver les actions des agents",
@@ -435,10 +435,10 @@
       "say": "crée des agents"
     },
     "manage_agents": {
-      "title": "Modifier tous les agents",
-      "desc": "Instructions, cerveau, budget et ce que chacun utilise.",
+      "title": "Modifier les agents",
+      "desc": "Instructions, cerveau, budget et ce que chacun utilise, sur les agents à qui la personne parle. Les agents privés des autres restent exclus.",
       "short": "modifier les agents",
-      "say": "modifie tous les agents"
+      "say": "modifie les agents à qui elle parle"
     },
     "pair_computers": {
       "title": "Connecter des ordinateurs",
@@ -3192,7 +3192,7 @@
         "delete": "Seuls les admins suppriment un agent",
         "audience": "Seuls les admins et son responsable changent qui lui parle",
         "channels": "Seuls les admins et son responsable changent ses canaux",
-        "skill": "Seuls les admins changent les compétences d’un agent",
+        "skill": "Seules les personnes qui peuvent modifier un agent changent ses compétences",
         "ai_account": "Seul le propriétaire du compte l’attribue",
         "name": "Seuls les admins renomment un agent",
         "look": "Seuls les admins et son responsable changent son apparence",
@@ -4430,7 +4430,8 @@
     "former": "Ne fait plus partie de cet espace de travail",
     "askAccess": "Demander l'accès",
     "detailsHiddenTitle": "Son fonctionnement",
-    "detailsHidden": "Seules les personnes à qui {{name}} répond, son responsable et les admins voient ses instructions, ses outils, sa mémoire et son usage."
+    "detailsHidden": "Seules les personnes à qui {{name}} répond, celles qui peuvent le modifier, son responsable et les admins voient ses instructions, ses outils, sa mémoire et son usage.",
+    "detailsHidden_female": "Seules les personnes à qui {{name}} répond, celles qui peuvent la modifier, son responsable et les admins voient ses instructions, ses outils, sa mémoire et son usage."
   },
   "presence": {
     "online": "En ligne",
@@ -6324,6 +6325,7 @@
       "budget": "Budget",
       "owner": "Propriétaire",
       "audience": "Qui peut parler",
+      "editors": "Qui peut modifier",
       "channels": "Canaux",
       "machine": "Ordinateur",
       "brain": "Qui réfléchit",
@@ -6366,13 +6368,10 @@
       "memberOwner": "Vous voyez comment {{name}} travaille. Qui modifie : les admins et {{owner}} (propriétaire).",
       "memberOwner_female": "Vous voyez comment {{name}} travaille. Qui modifie : les admins et {{owner}} (propriétaire).",
       "memberOwnerPersonal": "Vous voyez comment {{name}} travaille. Qui modifie : {{owner}} (propriétaire) et les personnes qui gèrent cet espace.",
-      "owner": "{{name}} vous appartient : vous modifiez l'apparence, qui peut parler, les canaux et l'ordinateur. Le reste, seuls les admins.",
-      "owner_female": "{{name}} vous appartient : vous modifiez l'apparence, qui peut parler, les canaux et l'ordinateur. Le reste, seuls les admins.",
-      "ownerKeeper": "{{name}} vous appartient : vous modifiez l'apparence, qui peut parler, les conversations de groupe et l'ordinateur. Le reste est réservé à {{keeper}}.",
-      "ownerPersonal": "{{name}} vous appartient : vous modifiez l'apparence, qui peut parler, les conversations de groupe et l'ordinateur. Le reste est réservé aux personnes qui gèrent cet espace.",
-      "ownerInstructions": "Seuls les admins modifient les instructions. En tant que propriétaire, vous approuvez les modifications proposées.",
-      "ownerInstructionsKeeper": "Les instructions sont modifiées uniquement par {{keeper}}. En tant que propriétaire, vous approuvez les modifications proposées.",
-      "ownerInstructionsPersonal": "Les instructions sont modifiées uniquement par les personnes qui gèrent cet espace. En tant que propriétaire, vous approuvez les modifications proposées.",
+      "owner": "{{name}} vous appartient : vous modifiez les instructions, le rôle, les compétences, l'apparence, qui peut parler ou modifier, les canaux et l'ordinateur. Le reste, seuls les admins.",
+      "owner_female": "{{name}} vous appartient : vous modifiez les instructions, le rôle, les compétences, l'apparence, qui peut parler ou modifier, les canaux et l'ordinateur. Le reste, seuls les admins.",
+      "ownerKeeper": "{{name}} vous appartient : vous modifiez les instructions, le rôle, les compétences, l'apparence, qui peut parler ou modifier, les conversations de groupe et l'ordinateur. Le reste est réservé à {{keeper}}.",
+      "ownerPersonal": "{{name}} vous appartient : vous modifiez les instructions, le rôle, les compétences, l'apparence, qui peut parler ou modifier, les conversations de groupe et l'ordinateur. Le reste est réservé aux personnes qui gèrent cet espace.",
       "ownerAccess": "Seuls les admins donnent ou retirent les accès et les dépôts.",
       "ownerAccessKeeper": "Les accès et les dépôts sont donnés ou retirés uniquement par {{keeper}}.",
       "ownerAccessPersonal": "Les accès et les dépôts sont donnés ou retirés uniquement par les personnes qui gèrent cet espace."
@@ -6645,6 +6644,7 @@
       "budget": "Budget",
       "owner": "Propriétaire",
       "audience": "Qui peut parler",
+      "editors": "Qui peut modifier",
       "channels": "Canaux",
       "computer": "Ordinateur",
       "danger": "Archiver ou supprimer",
@@ -9425,13 +9425,13 @@
       "dontRunName": "Ne pas exécuter {{name}} quand la limite se renouvellera",
       "canceledToast": "Annulé. Ça ne s'exécutera pas quand la limite se renouvellera.",
       "continuedToast": "L'exécution continue.",
-      "forbidden": "Seuls la personne qui a créé la routine, le propriétaire de l'agent ou un admin peuvent la poursuivre maintenant",
+      "forbidden": "Seuls la personne qui a créé la routine, le propriétaire de l'agent, les personnes qui peuvent modifier l'agent ou un admin peuvent la poursuivre maintenant",
       "extra_off": "La fenêtre de cet abonnement est épuisée et le long travail de cet agent n'utilise pas l'usage supplémentaire payant de l'abonnement. Il reprendra après le renouvellement",
       "extra_used_up": "La fenêtre de cet abonnement est épuisée et son usage supplémentaire payant est épuisé ou indisponible. Il reprendra après le renouvellement"
     },
     "pausedRunningToast": "Routine en pause. L'exécution en cours s'est aussi arrêtée.",
     "deleteBodyRunning": "Elle ne s'exécute plus et quitte la liste, et l'exécution en cours s'arrête aussi. Les exécutions passées restent dans l'historique.",
-    "detailsHidden": "Seuls la personne qui l'a créée, le propriétaire de l'agent, les admins et les personnes de la conversation voient ceci."
+    "detailsHidden": "Seuls la personne qui l'a créée, le propriétaire de l'agent, les personnes qui peuvent modifier l'agent, les admins et les personnes de la conversation voient ceci."
   },
   "missions": {
     "chip": "Mission · {{done}} sur {{count}}",
@@ -11292,6 +11292,31 @@
       "nobody_female": "{{name}} ne répond à personne pour le moment."
     }
   },
+  "editors": {
+    "section": "Qui peut modifier",
+    "title": "Qui peut modifier {{name}}",
+    "title_female": "Qui peut modifier {{name}}",
+    "mode": {
+      "owner": "Seulement la personne qui s'occupe de {{name}}",
+      "owner_female": "Seulement la personne qui s'occupe de {{name}}",
+      "people": "Aussi certaines personnes ou certains rôles"
+    },
+    "modeText": {
+      "owner": "{{owner}} (propriétaire), les admins et les personnes qui modifient les agents et parlent à {{name}}.",
+      "owner_female": "{{owner}} (propriétaire), les admins et les personnes qui modifient les agents et parlent à {{name}}.",
+      "noOwner": "Les admins et les personnes qui modifient les agents et parlent à {{name}}.",
+      "noOwner_female": "Les admins et les personnes qui modifient les agents et parlent à {{name}}.",
+      "people": "Choisissez qui d'autre peut changer la façon dont {{name}} travaille.",
+      "people_female": "Choisissez qui d'autre peut changer la façon dont {{name}} travaille."
+    },
+    "rolesHint": "Toute personne ayant ce rôle peut modifier, y compris celles qui l'obtiendront plus tard.",
+    "note": "Modifier, c'est changer les instructions, le rôle, les compétences et les routines de {{name}}. Les applications, le budget et le propriétaire restent entre les mains des personnes qui modifient les agents.",
+    "note_female": "Modifier, c'est changer les instructions, le rôle, les compétences et les routines de {{name}}. Les applications, le budget et le propriétaire restent entre les mains des personnes qui modifient les agents.",
+    "summary": {
+      "owner": "Seulement la personne qui s'occupe de lui",
+      "owner_female": "Seulement la personne qui s'occupe d'elle"
+    }
+  },
   "composer": {
     "commands": "Commandes",
     "report": "/rapport",
@@ -12604,7 +12629,8 @@
       "next": "En attente de l'ordinateur. Passe ensuite",
       "waiting": "En attente de l'ordinateur",
       "behind": "Dans la file, {{nth}}. Après {{names}}",
-      "position": "Dans la file, {{nth}}"
+      "position": "Dans la file, {{nth}}",
+      "signIn": "En attente que {{account}} termine une autre tâche"
     },
     "nth": {
       "one": "{{n}}er",
@@ -14787,6 +14813,7 @@
       "vault_delete": "Supprimer un mot de passe",
       "vault_make_password": "Générer un mot de passe",
       "get_my_usage": "Voir mon utilisation",
+      "ignore_usage_limit": "Ignorer la limite d'utilisation",
       "send_feedback": "Envoyer un retour",
       "offer_feedback": "Proposer de signaler un problème"
     }
@@ -15865,7 +15892,7 @@
       "continueExtraOff": "La fenêtre de cet abonnement est épuisée et le travail long de cet agent n'utilise pas l'usage supplémentaire payant de l'abonnement. Il reprendra après la réinitialisation.",
       "continueExtraUsedUp": "La fenêtre de cet abonnement est épuisée et son usage supplémentaire payant est épuisé ou indisponible. Il reprendra après la réinitialisation.",
       "actionsNeedApprover": "Seuls le responsable de l'agent ou une personne qui approuve ses actions peuvent laisser une routine agir seule.",
-      "editorOnly": "Seuls la personne qui a créé la routine, le responsable de l'agent ou un admin peuvent la modifier.",
+      "editorOnly": "Seuls la personne qui a créé la routine, le responsable de l'agent, les personnes qui peuvent modifier l'agent ou un admin peuvent la modifier.",
       "widgetFixed": "Cette routine tient un widget à jour. Modifiez-la depuis son widget."
     },
     "run": {
@@ -15985,7 +16012,7 @@
       "ownerOrAdmin": "Seuls le responsable de l'agent ou un admin peuvent faire cela.",
       "detailsHidden": "Seules les personnes qui parlent à {{agentName}} voient comment cela fonctionne.",
       "undoForbidden": "Seuls la personne pour qui l'agent a travaillé, son responsable ou un admin peuvent annuler cela.",
-      "undoSkillsAdmins": "Seul un admin peut annuler ou rétablir une modification des compétences d’un agent."
+      "undoSkillsAdmins": "Seules les personnes qui peuvent modifier l'agent peuvent annuler ou rétablir une modification de ses compétences."
     },
     "account": {
       "notRestorable": "Ce compte ne peut plus être restauré.",

@@ -344,7 +344,8 @@ export function GeneralScreen() {
       />
     </GroupedList>
   );
-  const approvals = can(org, "manage_agents") ? (
+  // The workspace's level reaches private agents too: owners and administrators only (ADR 0085 addendum of 2026-11-17).
+  const approvals = can(org, "administrator") ? (
     <>
       <WorkspaceApprovalsRow />
       <Gap />

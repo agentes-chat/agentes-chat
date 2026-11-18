@@ -312,8 +312,8 @@
       "noTalk": "Wie alleen {{name}} heeft, praat niet met agents.",
       "turnOnTalk": "Met agents praten aanzetten",
       "search": "Agent zoeken",
-      "notYours": "Alleen {{owner}}, verantwoordelijk voor {{name}}, of wie elke agent bewerkt, wijzigt dit.",
-      "notYoursNoOwner": "Alleen wie elke agent bewerkt, wijzigt dit.",
+      "notYours": "Alleen {{owner}}, verantwoordelijk voor {{name}}, of wie agents bewerkt, wijzigt dit.",
+      "notYoursNoOwner": "Alleen wie agents bewerkt, wijzigt dit.",
       "none": "Er zijn nog geen agents.",
       "noMatch": "Geen agent met ‘{{q}}’."
     },
@@ -405,9 +405,9 @@
     },
     "manage_routines": {
       "title": "Routines maken",
-      "desc": "Werk dat de agent zelf doet op vaste tijden.",
+      "desc": "Werk dat een agent zelf doet op een vast tijdstip, bij de agents met wie de persoon praat.",
       "short": "routines maken",
-      "say": "maakt routines"
+      "say": "maakt routines bij de agents waarmee hij of zij praat"
     },
     "approve_actions": {
       "title": "Acties van agents goedkeuren",
@@ -422,10 +422,10 @@
       "say": "maakt agents"
     },
     "manage_agents": {
-      "title": "Elke agent bewerken",
-      "desc": "Instructies, brein, budget en wat elke agent gebruikt.",
+      "title": "Agents bewerken",
+      "desc": "Instructies, brein, budget en wat elke agent gebruikt, bij de agents met wie de persoon praat. Privé-agents van anderen vallen erbuiten.",
       "short": "agents bewerken",
-      "say": "bewerkt elke agent"
+      "say": "bewerkt de agents waarmee hij of zij praat"
     },
     "pair_computers": {
       "title": "Computers koppelen",
@@ -3072,7 +3072,7 @@
         "delete": "Alleen admins verwijderen een agent",
         "audience": "Alleen admins en de verantwoordelijke wijzigen wie met hem praat",
         "channels": "Alleen admins en de verantwoordelijke wijzigen zijn kanalen",
-        "skill": "Alleen admins wijzigen de skills van een agent",
+        "skill": "Alleen wie een agent mag bewerken, wijzigt de skills",
         "ai_account": "Alleen de eigenaar van het account geeft het",
         "name": "Alleen admins hernoemen een agent",
         "look": "Alleen admins en de verantwoordelijke wijzigen het uiterlijk",
@@ -4276,7 +4276,8 @@
     "former": "Niet meer in deze werkruimte",
     "askAccess": "Toegang vragen",
     "detailsHiddenTitle": "Hoe het werkt",
-    "detailsHidden": "Alleen de mensen aan wie {{name}} antwoordt, de verantwoordelijke en admins zien de instructies, tools, het geheugen en het gebruik."
+    "detailsHidden": "Alleen de mensen aan wie {{name}} antwoordt, wie hem mag bewerken, de verantwoordelijke en admins zien de instructies, tools, het geheugen en het gebruik.",
+    "detailsHidden_female": "Alleen de mensen aan wie {{name}} antwoordt, wie haar mag bewerken, de verantwoordelijke en admins zien de instructies, tools, het geheugen en het gebruik."
   },
   "presence": {
     "online": "Online",
@@ -6125,6 +6126,7 @@
       "budget": "Budget",
       "owner": "Eigenaar",
       "audience": "Wie mag praten",
+      "editors": "Wie mag bewerken",
       "channels": "Kanalen",
       "machine": "Computer",
       "brain": "Wie denkt",
@@ -6164,13 +6166,10 @@
       "memberOwner": "Je ziet hoe {{name}} werkt. Wie bewerkt: beheerders en {{owner}} (eigenaar).",
       "memberOwner_female": "Je ziet hoe {{name}} werkt. Wie bewerkt: beheerders en {{owner}} (eigenaar).",
       "memberOwnerPersonal": "Je ziet hoe {{name}} werkt. Wie bewerkt: {{owner}} (eigenaar) en de mensen die deze ruimte beheren.",
-      "owner": "Jij bent eigenaar van {{name}}: jij wijzigt het uiterlijk, wie mag praten, de kanalen en de computer. De rest alleen beheerders.",
-      "owner_female": "Jij bent eigenaar van {{name}}: jij wijzigt het uiterlijk, wie mag praten, de kanalen en de computer. De rest alleen beheerders.",
-      "ownerKeeper": "Jij bent eigenaar van {{name}}: jij wijzigt het uiterlijk, wie mag praten, de groepsgesprekken en de computer. De rest alleen {{keeper}}.",
-      "ownerPersonal": "Jij bent eigenaar van {{name}}: jij wijzigt het uiterlijk, wie mag praten, de groepsgesprekken en de computer. De rest alleen de mensen die deze ruimte beheren.",
-      "ownerInstructions": "Alleen beheerders bewerken de instructies. Als eigenaar keur jij voorgestelde wijzigingen goed.",
-      "ownerInstructionsKeeper": "Alleen {{keeper}} bewerkt de instructies. Als eigenaar keur jij voorgestelde wijzigingen goed.",
-      "ownerInstructionsPersonal": "Alleen de mensen die deze ruimte beheren, bewerken de instructies. Als eigenaar keur jij voorgestelde wijzigingen goed.",
+      "owner": "Jij bent eigenaar van {{name}}: jij wijzigt de instructies, de rol, de skills, het uiterlijk, wie mag praten of bewerken, de kanalen en de computer. De rest alleen beheerders.",
+      "owner_female": "Jij bent eigenaar van {{name}}: jij wijzigt de instructies, de rol, de skills, het uiterlijk, wie mag praten of bewerken, de kanalen en de computer. De rest alleen beheerders.",
+      "ownerKeeper": "Jij bent eigenaar van {{name}}: jij wijzigt de instructies, de rol, de skills, het uiterlijk, wie mag praten of bewerken, de groepsgesprekken en de computer. De rest alleen {{keeper}}.",
+      "ownerPersonal": "Jij bent eigenaar van {{name}}: jij wijzigt de instructies, de rol, de skills, het uiterlijk, wie mag praten of bewerken, de groepsgesprekken en de computer. De rest alleen de mensen die deze ruimte beheren.",
       "ownerAccess": "Alleen beheerders geven of ontnemen toegang en repository's.",
       "ownerAccessKeeper": "Alleen {{keeper}} geeft of ontneemt toegang en repository's.",
       "ownerAccessPersonal": "Alleen de mensen die deze ruimte beheren, geven of ontnemen toegang en repository's."
@@ -6430,6 +6429,7 @@
       "budget": "Budget",
       "owner": "Eigenaar",
       "audience": "Wie mag praten",
+      "editors": "Wie mag bewerken",
       "channels": "Kanalen",
       "computer": "Computer",
       "danger": "Archiveren of verwijderen",
@@ -9144,13 +9144,13 @@
       "dontRunName": "{{name}} niet uitvoeren als de limiet opnieuw begint",
       "canceledToast": "Geannuleerd. Het draait niet als de limiet opnieuw begint.",
       "continuedToast": "Run gaat verder.",
-      "forbidden": "Alleen wie de routine maakte, de eigenaar van de agent of een beheerder kan hem nu laten doorgaan",
+      "forbidden": "Alleen wie de routine maakte, de eigenaar van de agent, wie de agent mag bewerken of een beheerder kan hem nu laten doorgaan",
       "extra_off": "Het venster van dit abonnement is op en het lange werk van deze agent gebruikt geen betaald extra gebruik van het abonnement. Hij gaat verder na de reset",
       "extra_used_up": "Het venster van dit abonnement is op en het betaalde extra gebruik is op of niet beschikbaar. Hij gaat verder na de reset"
     },
     "pausedRunningToast": "Routine gepauzeerd. De lopende run is ook gestopt.",
     "deleteBodyRunning": "Hij stopt met draaien en verdwijnt uit de lijst, en de lopende run stopt ook. Eerdere runs blijven in de geschiedenis.",
-    "detailsHidden": "Alleen de maker, de eigenaar van de agent, beheerders en de mensen in het gesprek zien dit."
+    "detailsHidden": "Alleen de maker, de eigenaar van de agent, wie de agent mag bewerken, beheerders en de mensen in het gesprek zien dit."
   },
   "missions": {
     "chip": "Missie · {{done}} van {{count}}",
@@ -10923,6 +10923,31 @@
       "nobody_female": "{{name}} antwoordt nu niemand."
     }
   },
+  "editors": {
+    "section": "Wie mag bewerken",
+    "title": "Wie {{name}} mag bewerken",
+    "title_female": "Wie {{name}} mag bewerken",
+    "mode": {
+      "owner": "Alleen wie voor {{name}} zorgt",
+      "owner_female": "Alleen wie voor {{name}} zorgt",
+      "people": "Ook bepaalde mensen of rollen"
+    },
+    "modeText": {
+      "owner": "{{owner}} (eigenaar), beheerders en wie agents bewerkt en met {{name}} mag praten.",
+      "owner_female": "{{owner}} (eigenaar), beheerders en wie agents bewerkt en met {{name}} mag praten.",
+      "noOwner": "Beheerders en wie agents bewerkt en met {{name}} mag praten.",
+      "noOwner_female": "Beheerders en wie agents bewerkt en met {{name}} mag praten.",
+      "people": "Kies wie er nog meer mag wijzigen hoe {{name}} werkt.",
+      "people_female": "Kies wie er nog meer mag wijzigen hoe {{name}} werkt."
+    },
+    "rolesHint": "Iedereen met de rol mag bewerken, ook wie hem later krijgt.",
+    "note": "Bewerken betekent de instructies, rol, skills en routines van {{name}} wijzigen. Apps, budget en eigenaar blijven bij wie agents bewerkt.",
+    "note_female": "Bewerken betekent de instructies, rol, skills en routines van {{name}} wijzigen. Apps, budget en eigenaar blijven bij wie agents bewerkt.",
+    "summary": {
+      "owner": "Alleen wie voor hem zorgt",
+      "owner_female": "Alleen wie voor haar zorgt"
+    }
+  },
   "composer": {
     "commands": "Opdrachten",
     "report": "/rapport",
@@ -12204,7 +12229,8 @@
       "next": "Wacht op de computer. Is de volgende",
       "waiting": "Wacht op de computer",
       "behind": "In de wachtrij, {{nth}}. Na {{names}}",
-      "position": "In de wachtrij, {{nth}}"
+      "position": "In de wachtrij, {{nth}}",
+      "signIn": "Wacht tot {{account}} een andere taak afrondt"
     },
     "nth": {
       "one": "{{n}}e",
@@ -14357,6 +14383,7 @@
       "vault_delete": "Wachtwoord verwijderen",
       "vault_make_password": "Wachtwoord maken",
       "get_my_usage": "Mijn gebruik bekijken",
+      "ignore_usage_limit": "Gebruikslimiet negeren",
       "send_feedback": "Feedback sturen",
       "offer_feedback": "Aanbieden om een probleem te melden"
     }
@@ -15403,7 +15430,7 @@
       "continueExtraOff": "Het venster van dit abonnement is op en het lange werk van deze agent gebruikt geen betaald extra gebruik van het abonnement. Hij gaat verder na de reset.",
       "continueExtraUsedUp": "Het venster van dit abonnement is op en het betaalde extra gebruik is ook op of niet beschikbaar. Hij gaat verder na de reset.",
       "actionsNeedApprover": "Alleen de eigenaar van de agent of wie zijn acties goedkeurt, kan een routine zelfstandig laten handelen.",
-      "editorOnly": "Alleen wie de routine maakte, de eigenaar van de agent of een beheerder kan hem wijzigen.",
+      "editorOnly": "Alleen wie de routine maakte, de eigenaar van de agent, wie de agent mag bewerken of een beheerder kan hem wijzigen.",
       "widgetFixed": "Deze routine houdt een widget bij. Wijzig hem via de widget."
     },
     "run": {
@@ -15522,7 +15549,7 @@
       "ownerOrAdmin": "Alleen de eigenaar van de agent of een beheerder kan dit doen.",
       "detailsHidden": "Alleen wie met {{agentName}} praat, ziet hoe het werkt.",
       "undoForbidden": "Alleen de persoon voor wie de agent werkte, zijn eigenaar of een beheerder kan dit ongedaan maken.",
-      "undoSkillsAdmins": "Alleen een beheerder kan een wijziging in de skills van een agent ongedaan maken of opnieuw doen."
+      "undoSkillsAdmins": "Alleen wie de agent mag bewerken, kan een wijziging in de skills ongedaan maken of opnieuw doen."
     },
     "account": {
       "notRestorable": "Dit account kan niet meer hersteld worden.",

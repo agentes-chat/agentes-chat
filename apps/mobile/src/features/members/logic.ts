@@ -525,7 +525,7 @@ export function agentPicks(
   t: TFunction,
   args: {
     agents: readonly Agent[];
-    viewer: { userId: string; managesAgents: boolean };
+    viewer: { userId: string };
     roles: readonly OrgRole[];
     draft: Pick<InviteDraft, "roleIds" | "added" | "removed">;
     ownerName: (userId: string | null) => string | null;
@@ -579,11 +579,8 @@ export function agentPicks(
 }
 
 /** Whether Agentes asks whose mailboxes an agent holds: restricted, not a picked cargo's, and the viewer's to open. */
-export const asksMailboxes = (
-  a: Agent,
-  viewer: { userId: string; managesAgents: boolean },
-  cargoAgentIds: readonly string[],
-) => inviteAgentCase(a, viewer, cargoAgentIds) === "opens";
+export const asksMailboxes = (a: Agent, viewer: { userId: string }, cargoAgentIds: readonly string[]) =>
+  inviteAgentCase(a, viewer, cargoAgentIds) === "opens";
 
 /**
  * The lines under Agentes: a person who won't talk to agents (neither Todos nor a picked cargo lets them, the field
@@ -596,7 +593,7 @@ export function agentLines(
     roleIds: readonly string[];
     agents: readonly Agent[];
     agentIds: readonly string[];
-    viewer: { userId: string; managesAgents: boolean };
+    viewer: { userId: string };
   },
 ): { off: boolean; lines: string[] } {
   const everyone = everyoneOf(args.roles);

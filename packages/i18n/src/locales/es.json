@@ -325,8 +325,8 @@
       "noTalk": "Quien solo tiene {{name}} no habla con agentes.",
       "turnOnTalk": "Activar Hablar con agentes",
       "search": "Buscar agente",
-      "notYours": "Solo {{owner}}, responsable de {{name}}, o quien edita cualquier agente lo cambia.",
-      "notYoursNoOwner": "Solo quien edita cualquier agente lo cambia.",
+      "notYours": "Solo {{owner}}, responsable de {{name}}, o quien edita agentes lo cambia.",
+      "notYoursNoOwner": "Solo quien edita agentes lo cambia.",
       "none": "Todavía no hay agentes.",
       "noMatch": "Ningún agente con “{{q}}”."
     },
@@ -418,9 +418,9 @@
     },
     "manage_routines": {
       "title": "Crear rutinas",
-      "desc": "Trabajo que el agente hace solo, a horas fijas.",
+      "desc": "Trabajo que un agente hace solo a una hora fija, en los agentes con los que la persona habla.",
       "short": "crear rutinas",
-      "say": "crea rutinas"
+      "say": "crea rutinas en los agentes con los que habla"
     },
     "approve_actions": {
       "title": "Aprobar acciones de los agentes",
@@ -435,10 +435,10 @@
       "say": "crea agentes"
     },
     "manage_agents": {
-      "title": "Editar cualquier agente",
-      "desc": "Instrucciones, cerebro, presupuesto y lo que usa cada uno.",
+      "title": "Editar agentes",
+      "desc": "Instrucciones, cerebro, presupuesto y lo que usa cada uno, en los agentes con los que la persona habla. Los agentes privados de otras personas quedan fuera.",
       "short": "editar agentes",
-      "say": "edita cualquier agente"
+      "say": "edita los agentes con los que habla"
     },
     "pair_computers": {
       "title": "Conectar computadoras",
@@ -3187,7 +3187,7 @@
         "delete": "Solo los admins eliminan un agente",
         "audience": "Solo los admins y su responsable cambian quién habla con él",
         "channels": "Solo los admins y su responsable cambian sus canales",
-        "skill": "Solo los admins cambian las habilidades de un agente",
+        "skill": "Solo quien puede editar un agente cambia sus habilidades",
         "ai_account": "Solo el dueño de la cuenta la asigna",
         "name": "Solo los admins cambian el nombre de un agente",
         "look": "Solo los admins y su responsable cambian su aspecto",
@@ -4425,7 +4425,8 @@
     "former": "Ya no está en este espacio de trabajo",
     "askAccess": "Pedir acceso",
     "detailsHiddenTitle": "Cómo trabaja",
-    "detailsHidden": "Las instrucciones, herramientas, memoria y uso de {{name}} solo los ven las personas a las que responde, su responsable y los admins."
+    "detailsHidden": "Las instrucciones, herramientas, memoria y uso de {{name}} solo los ven las personas a las que responde, quien puede editarlo, su responsable y los admins.",
+    "detailsHidden_female": "Las instrucciones, herramientas, memoria y uso de {{name}} solo los ven las personas a las que responde, quien puede editarla, su responsable y los admins."
   },
   "presence": {
     "online": "En línea",
@@ -6293,6 +6294,7 @@
       "budget": "Presupuesto",
       "owner": "Responsable",
       "audience": "Quién puede hablar",
+      "editors": "Quién puede editar",
       "channels": "Canales",
       "machine": "Computadora",
       "brain": "Quién piensa",
@@ -6333,12 +6335,9 @@
       "memberPersonal": "Ves cómo trabaja {{name}}. Solo editan quienes administran este espacio.",
       "memberOwner": "Ves cómo trabaja {{name}}. Quién edita: los admins y {{owner}} (responsable).",
       "memberOwnerPersonal": "Ves cómo trabaja {{name}}. Quién edita: {{owner}} (responsable) y quienes administran este espacio.",
-      "owner": "{{name}} es tuyo: cambias la apariencia, quién puede hablar, los canales y la computadora. El resto, solo los admins.",
-      "ownerKeeper": "{{name}} es tuyo: cambias la apariencia, quién puede hablar, las conversaciones en grupo y la computadora. El resto, solo {{keeper}}.",
-      "ownerPersonal": "{{name}} es tuyo: cambias la apariencia, quién puede hablar, las conversaciones en grupo y la computadora. El resto, solo quienes administran este espacio.",
-      "ownerInstructions": "Solo los admins editan las instrucciones. Como responsable, apruebas los cambios propuestos.",
-      "ownerInstructionsKeeper": "Solo {{keeper}} edita las instrucciones. Como responsable, apruebas los cambios propuestos.",
-      "ownerInstructionsPersonal": "Solo quienes administran este espacio editan las instrucciones. Como responsable, apruebas los cambios propuestos.",
+      "owner": "Eres responsable de {{name}}: cambias las instrucciones, el rol, las habilidades, la apariencia, quién puede hablar o editar, los canales y la computadora. El resto, solo los admins.",
+      "ownerKeeper": "Eres responsable de {{name}}: cambias las instrucciones, el rol, las habilidades, la apariencia, quién puede hablar o editar, las conversaciones en grupo y la computadora. El resto, solo {{keeper}}.",
+      "ownerPersonal": "Eres responsable de {{name}}: cambias las instrucciones, el rol, las habilidades, la apariencia, quién puede hablar o editar, las conversaciones en grupo y la computadora. El resto, solo quienes administran este espacio.",
       "ownerAccess": "Solo los admins dan o quitan acceso y repositorios.",
       "ownerAccessKeeper": "Solo {{keeper}} da o quita acceso y repositorios.",
       "ownerAccessPersonal": "Solo quienes administran este espacio dan o quitan acceso y repositorios."
@@ -6608,6 +6607,7 @@
       "budget": "Presupuesto",
       "owner": "Responsable",
       "audience": "Quién puede hablar",
+      "editors": "Quién puede editar",
       "channels": "Canales",
       "computer": "Computadora",
       "danger": "Archivar o eliminar",
@@ -9375,13 +9375,13 @@
       "dontRunName": "No ejecutar {{name}} cuando el límite se renueve",
       "canceledToast": "Cancelado. No se ejecutará cuando el límite se renueve.",
       "continuedToast": "La ejecución continúa.",
-      "forbidden": "Solo quien creó la rutina, el responsable del agente o un admin pueden continuarla ahora",
+      "forbidden": "Solo quien creó la rutina, el responsable del agente, quien puede editar el agente o un admin pueden continuarla ahora",
       "extra_off": "La ventana de este plan se agotó y el trabajo largo de este agente no usa el uso extra pagado del plan. Retoma después de la renovación",
       "extra_used_up": "La ventana de este plan se agotó y su uso extra pagado se agotó o no está disponible. Retoma después de la renovación"
     },
     "pausedRunningToast": "Rutina en pausa. La ejecución en curso también se detuvo.",
     "deleteBodyRunning": "Deja de ejecutarse y sale de la lista, y la ejecución en curso también se detiene. Las ejecuciones anteriores quedan en el historial.",
-    "detailsHidden": "Solo lo ven quien la creó, el responsable del agente, los admins y las personas de la conversación."
+    "detailsHidden": "Solo lo ven quien la creó, el responsable del agente, quien puede editar el agente, los admins y las personas de la conversación."
   },
   "missions": {
     "chip": "Misión · {{done}} de {{count}}",
@@ -11225,6 +11225,25 @@
       "nobody": "{{name}} no le responde a nadie ahora."
     }
   },
+  "editors": {
+    "section": "Quién puede editar",
+    "title": "Quién puede editar a {{name}}",
+    "mode": {
+      "owner": "Solo quien está a cargo de {{name}}",
+      "people": "También algunas personas o roles"
+    },
+    "modeText": {
+      "owner": "{{owner}} (responsable), los admins y quien edita agentes y habla con {{name}}.",
+      "noOwner": "Los admins y quien edita agentes y habla con {{name}}.",
+      "people": "Elige quién más puede cambiar cómo trabaja {{name}}."
+    },
+    "rolesHint": "Cualquiera con el rol puede editar, incluso quien lo reciba después.",
+    "note": "Editar es cambiar las instrucciones, el rol, las habilidades y las rutinas de {{name}}. Las apps, el presupuesto y el responsable siguen en manos de quien edita agentes.",
+    "summary": {
+      "owner": "Solo quien está a cargo de él",
+      "owner_female": "Solo quien está a cargo de ella"
+    }
+  },
   "composer": {
     "commands": "Comandos",
     "report": "/informe",
@@ -12535,7 +12554,8 @@
       "next": "Esperando la computadora. Es el siguiente",
       "waiting": "Esperando la computadora",
       "behind": "En la cola, {{nth}}. Después de {{names}}",
-      "position": "En la cola, {{nth}}"
+      "position": "En la cola, {{nth}}",
+      "signIn": "Esperando a que {{account}} termine otra tarea"
     },
     "nth": {
       "one": "{{n}}.º",
@@ -14718,6 +14738,7 @@
       "vault_delete": "Borrar contraseña",
       "vault_make_password": "Generar contraseña",
       "get_my_usage": "Ver mi uso",
+      "ignore_usage_limit": "Ignorar el límite de uso",
       "send_feedback": "Enviar feedback",
       "offer_feedback": "Ofrecer reportar un problema"
     }
@@ -15796,7 +15817,7 @@
       "continueExtraOff": "La ventana de este plan se agotó y el trabajo largo de este agente no usa el uso extra pagado del plan. Seguirá después del reinicio.",
       "continueExtraUsedUp": "La ventana de este plan se agotó y su uso extra pagado se agotó o no está disponible. Seguirá después del reinicio.",
       "actionsNeedApprover": "Solo el dueño del agente o quien aprueba sus acciones puede dejar que una rutina actúe por su cuenta.",
-      "editorOnly": "Solo quien creó la rutina, el dueño del agente o un admin puede cambiarla.",
+      "editorOnly": "Solo quien creó la rutina, el dueño del agente, quien puede editar el agente o un admin puede cambiarla.",
       "widgetFixed": "Esta rutina mantiene un widget actualizado. Cámbiala desde su widget."
     },
     "run": {
@@ -15916,7 +15937,7 @@
       "ownerOrAdmin": "Solo el dueño del agente o un admin puede hacer esto.",
       "detailsHidden": "Solo quien habla con {{agentName}} ve cómo funciona.",
       "undoForbidden": "Solo la persona para quien trabajó el agente, su dueño o un admin puede deshacer esto.",
-      "undoSkillsAdmins": "Solo un admin puede deshacer o rehacer un cambio en las habilidades de un agente."
+      "undoSkillsAdmins": "Solo quien puede editar el agente puede deshacer o rehacer un cambio en sus habilidades."
     },
     "account": {
       "notRestorable": "Esta cuenta ya no se puede restaurar.",

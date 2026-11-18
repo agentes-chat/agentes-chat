@@ -66,7 +66,8 @@ const AGENTS = [
   agent({ id: "rex", name: "Rex", ...people() }),
   agent({ id: "nora", name: "Nora", ownerUserId: "u-me", ...people() }),
 ];
-const VIEWER = { userId: "u-me", managesAgents: false };
+// Whether they manage an agent is the agent's own `canManage` (ADR 0085 addendum of 2026-11-17): none here.
+const VIEWER = { userId: "u-me" };
 
 const draft = (over: Partial<InviteDraft> = {}): InviteDraft => ({ ...EMPTY_INVITE, ...over });
 
@@ -375,6 +376,9 @@ describe("the choices pushed over a form", () => {
       ["Nora", "mailbox", "Lê o e-mail de Bruno", false, false, "agent"],
       ["Rex", "locked", "Restrito · só Bruno libera", false, true, ""],
     ]);
+    // Someone else's agent the viewer manages (its `canManage`) opens as their own does.
+    const managed = agentPicks(pt, { ...args, agents: [{ ...(AGENTS[4] as Agent), canManage: true }] });
+    expect(said(managed.others)).toEqual([["Rex", "opens", "Restrito · você libera", false, false, ""]]);
     // While its mailboxes are being asked, one the viewer would open waits.
     const asking = agentPicks(pt, {
       agents: [AGENTS[3] as Agent],

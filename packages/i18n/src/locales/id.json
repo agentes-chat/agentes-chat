@@ -299,8 +299,8 @@
       "noTalk": "Yang hanya punya {{name}} tidak berbicara dengan agen.",
       "turnOnTalk": "Nyalakan Bicara dengan agen",
       "search": "Cari agen",
-      "notYours": "Hanya {{owner}}, penanggung jawab {{name}}, atau yang mengedit agen mana pun yang mengubahnya.",
-      "notYoursNoOwner": "Hanya yang mengedit agen mana pun yang mengubahnya.",
+      "notYours": "Hanya {{owner}}, penanggung jawab {{name}}, atau yang mengedit agen yang mengubahnya.",
+      "notYoursNoOwner": "Hanya yang mengedit agen yang mengubahnya.",
       "none": "Belum ada agen.",
       "noMatch": "Tidak ada agen dengan “{{q}}”."
     },
@@ -392,9 +392,9 @@
     },
     "manage_routines": {
       "title": "Buat rutinitas",
-      "desc": "Pekerjaan yang dilakukan agen sendiri pada waktu tertentu.",
+      "desc": "Pekerjaan yang dilakukan agen sendiri pada waktu tertentu, di agen yang diajak bicara orang itu.",
       "short": "buat rutinitas",
-      "say": "membuat rutinitas"
+      "say": "membuat rutinitas di agen yang diajak bicara"
     },
     "approve_actions": {
       "title": "Setujui tindakan agen",
@@ -409,10 +409,10 @@
       "say": "membuat agen"
     },
     "manage_agents": {
-      "title": "Ubah agen mana pun",
-      "desc": "Instruksi, otak, anggaran, dan apa yang dipakai masing-masing.",
+      "title": "Edit agen",
+      "desc": "Instruksi, otak, anggaran, dan apa yang dipakai masing-masing, di agen yang diajak bicara orang itu. Agen pribadi milik orang lain tidak termasuk.",
       "short": "edit agen",
-      "say": "mengedit agen mana pun"
+      "say": "mengedit agen yang diajak bicara"
     },
     "pair_computers": {
       "title": "Hubungkan komputer",
@@ -2958,7 +2958,7 @@
         "delete": "Hanya admin yang menghapus agen",
         "audience": "Hanya admin dan penanggung jawabnya yang mengubah siapa yang bicara dengannya",
         "channels": "Hanya admin dan penanggung jawabnya yang mengubah kanalnya",
-        "skill": "Hanya admin yang mengubah skill agen",
+        "skill": "Hanya yang bisa mengedit agen yang mengubah skill-nya",
         "ai_account": "Hanya pemilik akun yang memberikannya",
         "name": "Hanya admin yang mengganti nama agen",
         "look": "Hanya admin dan penanggung jawabnya yang mengubah tampilannya",
@@ -4123,7 +4123,7 @@
     "former": "Sudah tidak ada di ruang kerja ini",
     "askAccess": "Minta akses",
     "detailsHiddenTitle": "Cara kerjanya",
-    "detailsHidden": "Hanya orang yang dilayani {{name}}, penanggung jawabnya, dan admin yang bisa melihat instruksi, alat, memori, dan pemakaiannya."
+    "detailsHidden": "Hanya orang yang dilayani {{name}}, yang bisa mengeditnya, penanggung jawabnya, dan admin yang bisa melihat instruksi, alat, memori, dan pemakaiannya."
   },
   "presence": {
     "online": "Online",
@@ -5883,6 +5883,7 @@
       "budget": "Anggaran",
       "owner": "Pemilik",
       "audience": "Siapa yang bisa bicara",
+      "editors": "Siapa yang bisa mengedit",
       "channels": "Kanal",
       "machine": "Komputer",
       "brain": "Siapa yang berpikir",
@@ -5917,12 +5918,9 @@
       "memberPersonal": "Kamu melihat cara kerja {{name}}. Hanya orang yang mengelola ruang ini yang bisa mengedit.",
       "memberOwner": "Kamu melihat cara kerja {{name}}. Yang bisa mengedit: admin dan {{owner}} (pemilik).",
       "memberOwnerPersonal": "Kamu melihat cara kerja {{name}}. Yang bisa mengedit: {{owner}} (pemilik) dan orang yang mengelola ruang ini.",
-      "owner": "Kamu pemilik {{name}}: kamu bisa mengubah tampilan, siapa yang bisa bicara, kanal, dan komputernya. Sisanya hanya admin.",
-      "ownerKeeper": "Kamu pemilik {{name}}: kamu bisa mengubah tampilan, siapa yang bisa bicara, percakapan grup, dan komputernya. Sisanya hanya {{keeper}}.",
-      "ownerPersonal": "Kamu pemilik {{name}}: kamu bisa mengubah tampilan, siapa yang bisa bicara, percakapan grup, dan komputernya. Sisanya hanya orang yang mengelola ruang ini.",
-      "ownerInstructions": "Hanya admin yang bisa mengedit instruksi. Sebagai pemilik, kamu menyetujui perubahan yang diusulkan.",
-      "ownerInstructionsKeeper": "Hanya {{keeper}} yang bisa mengedit instruksi. Sebagai pemilik, kamu menyetujui perubahan yang diusulkan.",
-      "ownerInstructionsPersonal": "Hanya orang yang mengelola ruang ini yang bisa mengedit instruksi. Sebagai pemilik, kamu menyetujui perubahan yang diusulkan.",
+      "owner": "Kamu pemilik {{name}}: kamu bisa mengubah instruksi, peran, skill, tampilan, siapa yang bisa bicara atau mengedit, kanal, dan komputernya. Sisanya hanya admin.",
+      "ownerKeeper": "Kamu pemilik {{name}}: kamu bisa mengubah instruksi, peran, skill, tampilan, siapa yang bisa bicara atau mengedit, percakapan grup, dan komputernya. Sisanya hanya {{keeper}}.",
+      "ownerPersonal": "Kamu pemilik {{name}}: kamu bisa mengubah instruksi, peran, skill, tampilan, siapa yang bisa bicara atau mengedit, percakapan grup, dan komputernya. Sisanya hanya orang yang mengelola ruang ini.",
       "ownerAccess": "Hanya admin yang bisa memberi atau mencabut akses dan repositori.",
       "ownerAccessKeeper": "Hanya {{keeper}} yang bisa memberi atau mencabut akses dan repositori.",
       "ownerAccessPersonal": "Hanya orang yang mengelola ruang ini yang bisa memberi atau mencabut akses dan repositori."
@@ -6166,6 +6164,7 @@
       "budget": "Anggaran",
       "owner": "Pemilik",
       "audience": "Siapa yang bisa bicara",
+      "editors": "Siapa yang bisa mengedit",
       "channels": "Kanal",
       "computer": "Komputer",
       "danger": "Arsipkan atau hapus",
@@ -8809,13 +8808,13 @@
       "dontRunName": "Jangan jalankan {{name}} saat batasnya diatur ulang",
       "canceledToast": "Dibatalkan. Tidak akan berjalan saat batasnya diatur ulang.",
       "continuedToast": "Proses dilanjutkan.",
-      "forbidden": "Hanya pembuat rutinitas, pemilik agen, atau admin yang bisa melanjutkannya sekarang",
+      "forbidden": "Hanya pembuat rutinitas, pemilik agen, yang bisa mengedit agen, atau admin yang bisa melanjutkannya sekarang",
       "extra_off": "Jatah paket ini sudah habis dan pekerjaan panjang agen ini tidak memakai penggunaan ekstra berbayar dari paket. Dia lanjut setelah diatur ulang",
       "extra_used_up": "Jatah paket ini sudah habis dan penggunaan ekstra berbayarnya juga habis atau tidak tersedia. Dia lanjut setelah diatur ulang"
     },
     "pausedRunningToast": "Rutinitas dijeda. Proses yang sedang berjalan juga dihentikan.",
     "deleteBodyRunning": "Rutinitas ini berhenti berjalan dan hilang dari daftar, dan proses yang sedang berjalan juga dihentikan. Proses sebelumnya tetap ada di riwayat.",
-    "detailsHidden": "Hanya pembuatnya, pemilik agen, admin, dan orang di percakapan itu yang melihat ini."
+    "detailsHidden": "Hanya pembuatnya, pemilik agen, yang bisa mengedit agen, admin, dan orang di percakapan itu yang melihat ini."
   },
   "missions": {
     "chip": "Misi · {{done}} dari {{count}}",
@@ -10467,6 +10466,24 @@
       "nobody": "{{name}} sedang tidak membalas siapa pun."
     }
   },
+  "editors": {
+    "section": "Siapa yang bisa mengedit",
+    "title": "Siapa yang bisa mengedit {{name}}",
+    "mode": {
+      "owner": "Hanya yang mengurus {{name}}",
+      "people": "Juga beberapa orang atau peran"
+    },
+    "modeText": {
+      "owner": "{{owner}} (pemilik), admin, dan siapa pun yang mengedit agen dan bisa bicara dengan {{name}}.",
+      "noOwner": "Admin dan siapa pun yang mengedit agen dan bisa bicara dengan {{name}}.",
+      "people": "Pilih siapa lagi yang bisa mengubah cara kerja {{name}}."
+    },
+    "rolesHint": "Siapa pun dengan peran ini bisa mengedit, termasuk yang mendapatkannya nanti.",
+    "note": "Mengedit berarti mengubah instruksi, peran, skill, dan rutinitas {{name}}. Aplikasi, anggaran, dan pemilik tetap di tangan yang mengedit agen.",
+    "summary": {
+      "owner": "Hanya yang mengurusnya"
+    }
+  },
   "composer": {
     "commands": "Perintah",
     "report": "/laporan",
@@ -11694,7 +11711,8 @@
       "next": "Menunggu komputer. Giliran berikutnya",
       "waiting": "Menunggu komputer",
       "behind": "Dalam antrean, ke-{{nth}}. Setelah {{names}}",
-      "position": "Dalam antrean, ke-{{nth}}"
+      "position": "Dalam antrean, ke-{{nth}}",
+      "signIn": "Menunggu {{account}} menyelesaikan tugas lain"
     },
     "nth": {
       "one": "{{n}}",
@@ -13820,6 +13838,7 @@
       "vault_delete": "Hapus kata sandi",
       "vault_make_password": "Buat kata sandi",
       "get_my_usage": "Lihat pemakaian saya",
+      "ignore_usage_limit": "Abaikan batas penggunaan",
       "send_feedback": "Kirim masukan",
       "offer_feedback": "Tawarkan laporan masalah"
     }
@@ -14832,7 +14851,7 @@
       "continueExtraOff": "Jatah periode paket ini sudah habis dan pekerjaan panjang agen ini tidak memakai pemakaian tambahan berbayar dari paket. Agen melanjutkan setelah reset.",
       "continueExtraUsedUp": "Jatah periode paket ini sudah habis dan pemakaian tambahan berbayarnya juga habis atau tidak tersedia. Agen melanjutkan setelah reset.",
       "actionsNeedApprover": "Hanya pemilik agen atau orang yang menyetujui tindakannya yang bisa membiarkan rutinitas bertindak sendiri.",
-      "editorOnly": "Hanya pembuat rutinitas, pemilik agen, atau Admin yang bisa mengubahnya.",
+      "editorOnly": "Hanya pembuat rutinitas, pemilik agen, yang bisa mengedit agen, atau Admin yang bisa mengubahnya.",
       "widgetFixed": "Rutinitas ini menjaga widget tetap terbaru. Ubah dari widget-nya."
     },
     "run": {
@@ -14950,7 +14969,7 @@
       "ownerOrAdmin": "Hanya pemilik agen atau Admin yang bisa melakukan ini.",
       "detailsHidden": "Hanya orang yang berbicara dengan {{agentName}} yang bisa melihat cara kerjanya.",
       "undoForbidden": "Hanya orang yang dibantu agen, pemiliknya, atau Admin yang bisa membatalkan ini.",
-      "undoSkillsAdmins": "Hanya Admin yang bisa membatalkan atau mengulang perubahan pada skill agen."
+      "undoSkillsAdmins": "Hanya yang bisa mengedit agen yang bisa membatalkan atau mengulang perubahan pada skill-nya."
     },
     "account": {
       "notRestorable": "Akun ini sudah tidak bisa dipulihkan.",

@@ -172,7 +172,7 @@ export const legalZhHans: Partial<Record<LegalKind, LegalDocument>> = {
     title: "隐私政策",
     summary: "我们收集哪些数据、智能体将数据发送至何处、谁能看到您的工作区，以及您享有的权利。",
     courtesy: "本文件为礼节性译本。如本译本与英文版本存在任何差异，以英文版本为准。",
-    updated: "2026-11-16",
+    updated: "2026-11-18",
     sections: [
       {
         id: "overview",
@@ -319,6 +319,7 @@ export const legalZhHans: Partial<Record<LegalKind, LegalDocument>> = {
         heading: "14. Cookie 和本地存储",
         blocks: [
           "工作区仅使用为保持您的登录状态、保护表单以及记住主题和语言等偏好所必需的 Cookie 和本地存储。公开网站 agentes.chat 会记住您选择的语言，并使用 Himetrica 分析（见第 2 条）。我们不使用广告 Cookie 或跨站跟踪 Cookie。",
+          "**推荐 Cookie：** 当您打开指向 agentes.chat 的推荐链接时，我们的计费服务会将该推荐保存在您浏览器的一个 Cookie 中，为期 60 天，以便您订阅时，发送链接的人获得推荐奖励。在欧洲经济区、英国和瑞士，我们仅在您于 agentes.chat 上同意后才设置该 Cookie。如需在此设备上忘记该推荐，请打开 https://agentes.chat/zh/privacy?forget-referral#cookies 。",
         ],
       },
       {

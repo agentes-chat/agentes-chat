@@ -1,5 +1,5 @@
 {
-  "id": "07741b20-a336-402a-8f17-d7a7ef2d53f5",
+  "id": "0194805f-6591-422a-b36b-5d4e7c5da879",
   "prevId": "b88e1199-0c3f-4527-8d25-c41049506b9e",
   "version": "7",
   "dialect": "postgresql",
@@ -2693,6 +2693,20 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
+        },
+        "editor_user_ids": {
+          "name": "editor_user_ids",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "editor_role_ids": {
+          "name": "editor_role_ids",
+          "type": "uuid[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::uuid[]"
         }
       },
       "indexes": {
@@ -22560,13 +22574,7 @@
           "name": "brain_account_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": false
-        },
-        "machine_id": {
-          "name": "machine_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "brain_account_lent_by": {
           "name": "brain_account_lent_by",
@@ -22667,21 +22675,6 @@
           ],
           "onDelete": "cascade",
           "onUpdate": "no action"
-        },
-        "right_hand_brains_org_id_machine_id_machines_org_id_id_fk": {
-          "name": "right_hand_brains_org_id_machine_id_machines_org_id_id_fk",
-          "tableFrom": "right_hand_brains",
-          "tableTo": "machines",
-          "columnsFrom": [
-            "org_id",
-            "machine_id"
-          ],
-          "columnsTo": [
-            "org_id",
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
@@ -22695,12 +22688,7 @@
       },
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {
-        "right_hand_brains_account_or_machine": {
-          "name": "right_hand_brains_account_or_machine",
-          "value": "\"right_hand_brains\".\"brain_account_id\" is not null or \"right_hand_brains\".\"machine_id\" is not null"
-        }
-      },
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.right_hand_decisions": {
