@@ -110,9 +110,24 @@ export function createAuth(deps: {
 }) {
   const { db, config, log, rateLimiter } = deps;
   const emailEnabled = deps.emailDelivers === true;
+  /**
+   * One address's count of `kind`, in lower case and hashed. Registered hosts run no bot check (ADR 0194), so their
+   * requests share a count of their own: unchecked traffic never spends what the main address's people share, and all
+   * hosts together get one count, not one each.
+   */
+  const addressCount = async (
+    kind: string,
+    address: string,
+    headers: Headers | null | undefined,
+    rule: Parameters<RateLimiter["consume"]>[1],
+  ) =>
+    rateLimiter.consume(
+      `${kind}:${(await hostLook(db, headers?.get("host"))) ? "hosts" : "main"}:${sha256(address.toLowerCase())}`,
+      rule,
+    );
   // Better Auth answers the same whether an email went out, so a flood from many addresses only stops quietly.
-  const emailAllowed = async (kind: "reset-email" | "verify-email", email: string) =>
-    (await rateLimiter.consume(`${kind}:${sha256(email.toLowerCase())}`, EMAILS_PER_ADDRESS)).allowed;
+  const emailAllowed = async (kind: "reset-email" | "verify-email", email: string, request: Request | undefined) =>
+    (await addressCount(kind, email, request?.headers, EMAILS_PER_ADDRESS)).allowed;
 
   const policy = signupPolicy(config);
   // An invitation link never opens sign-up (ADR 0068): only an email invitation to that address, or an early-access
@@ -250,7 +265,7 @@ export function createAuth(deps: {
               },
               request?: Request,
             ) => {
-              if (!(await emailAllowed("reset-email", user.email))) return;
+              if (!(await emailAllowed("reset-email", user.email, request))) return;
               // Straight to our page (not Better Auth's redirect): the same link opens the phone app when it is
               // installed (universal link / App Link, app-links.ts) and the website otherwise; both reset with it.
               // Always the main address, whatever host asked (ADR 0194): anyone may ask for any account's reset, and a
@@ -310,7 +325,7 @@ export function createAuth(deps: {
               const invitation = request?.headers.get(INVITATION_TOKEN_HEADER);
               const mail = { secret: config.AGENTES_SECRET, proof: request?.headers.get(INVITATION_MAIL_HEADER) };
               if (signingUp && invitation && (await holdsInvitation(db, user.email, invitation, mail))) return;
-              if (!(await emailAllowed("verify-email", user.email))) return;
+              if (!(await emailAllowed("verify-email", user.email, request))) return;
               const locale = emailLocale(user.locale ?? requestLocale(request?.headers.get("accept-language")));
               // A new address (`changeAccountEmail`): the account still has its old one until this link is opened.
               const [stored] = await db
@@ -446,7 +461,7 @@ export function createAuth(deps: {
         // After the bot check, so a refused bot spends none of an account's tries. Right or wrong, and for an address
         // nobody has alike, so the answer never tells whether an account exists.
         if (ctx.path === "/sign-in/email" && typeof address === "string") {
-          const tries = await rateLimiter.consume(`sign-in-tries:${sha256(address.toLowerCase())}`, SIGN_IN_TRIES);
+          const tries = await addressCount("sign-in-tries", address, ctx.headers, SIGN_IN_TRIES);
           if (!tries.allowed) {
             const retryIn = retryInSeconds(tries.resetAt);
             throw new APIError(

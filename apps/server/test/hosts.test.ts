@@ -216,6 +216,34 @@ test("a registered host runs no bot check: no site key, no token, no call to Clo
   expect(asked).toEqual([]);
 });
 
+test("unchecked tries on registered hosts never spend the main address's: password tries and reset emails", async () => {
+  const s = await server();
+  await signUp(browser(s), "ana@example.com");
+  await s.drain();
+  const signIn = (b: Browser, password: string) =>
+    b("/api/auth/sign-in/email", { json: { email: "ana@example.com", password } });
+  // Every registered host shares one count: two hosts don't double the tries.
+  for (let i = 0; i < 10; i++) {
+    expect((await signIn(on(browser(s), i % 2 ? HOST : OTHER), "not the password")).status).toBe(401);
+  }
+  expect((await signIn(on(browser(s), HOST), "correct horse battery")).status).toBe(429);
+  expect((await signIn(browser(s), "correct horse battery")).status).toBe(200);
+
+  const resets = async (b: Browser, times: number) => {
+    const before = s.email.sent.length;
+    for (let i = 0; i < times; i++) {
+      const res = await b("/api/auth/request-password-reset", {
+        json: { email: "ana@example.com", redirectTo: "/reset-password" },
+      });
+      expect(res.status).toBe(200);
+    }
+    await s.drain();
+    return s.email.sent.length - before;
+  };
+  expect(await resets(on(browser(s), HOST), 4)).toBe(3);
+  expect(await resets(browser(s), 1)).toBe(1);
+});
+
 test("the WebSocket upgrade takes the same rule", async () => {
   const s = await server();
   const there = on(browser(s), HOST);
