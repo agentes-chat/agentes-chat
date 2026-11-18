@@ -953,6 +953,9 @@ describe("folders and tools on the machine (protocol 10)", () => {
     expect(text).toContain('exit code 137, "Killed"');
     // A finished build's daemons hold their memory for hours unless stopped.
     expect(text).toContain("./gradlew --stop");
+    // Each agent's home is private there: a path handed to another agent leads nowhere.
+    expect(text).toContain("as a git branch or pull request");
+    expect(text).toContain("never as a path in your own home");
     // A size the runner never reported: no numbers.
     expect(sharingText("Build box", null)).toContain("share its CPUs and memory, with no part");
   });
