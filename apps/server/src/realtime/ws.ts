@@ -915,7 +915,7 @@ export function createRealtime(deps: RealtimeDeps) {
         ws.data.subscriptions.set(channelId, off);
         send(ws, { type: "subscribed", channelId });
       },
-      async close(socket: Bun.ServerWebSocket<SocketData>, code: number, reason: string) {
+      async close(socket: Bun.ServerWebSocket<SocketData>, code: number, reason?: string) {
         if (isFrames(socket)) return frameSocket.close(socket);
         if (isMachine(socket)) return deps.machines?.close(socket, code, reason);
         if (isStream(socket)) return deps.streams?.close(socket, code);
