@@ -89,6 +89,7 @@ import {
   checkClaudeToken,
   codexUsage,
   fetchPlanKeyUsage,
+  oldestRead,
   probeClaudeUsage,
   probeCodexUsage,
   usageCrossed,
@@ -2979,7 +2980,7 @@ export class AccountManager {
       const token = recheck.includes(id);
       // A token's check goes by its own clock: a plain look at it (which reads nothing) doesn't put it off.
       const asked = (token ? this.tokenChecked : this.probed).get(id) ?? 0;
-      const known = Math.max(Date.parse(this.usage.get(id)?.at ?? "") || 0, asked);
+      const known = Math.max(oldestRead(this.usage.get(id)), asked);
       const ttl = token ? (this.opts.tokenCheckTtlMs ?? TOKEN_RECHECK_MS) : (this.opts.usageTtlMs ?? USAGE_TTL_MS);
       if (now - known < ttl) continue;
       if (token) {

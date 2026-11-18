@@ -1174,6 +1174,11 @@ export interface PlanWindow {
   label?: string;
   usedPercent: number;
   resetsAt?: string;
+  /**
+   * When this window was last read, where that is before its snapshot's `at`: a turn's event that didn't name it
+   * kept the older reading. Absent: the snapshot's `at`.
+   */
+  at?: string;
 }
 export type PlanWindowKind = "five_hour" | "seven_day" | "seven_day_opus" | "seven_day_sonnet" | "monthly" | "other";
 export const PLAN_WINDOW_KINDS: readonly PlanWindowKind[] = [
@@ -3497,11 +3502,13 @@ export function parsePlanUsage(v: unknown): PlanUsage | undefined {
           .slice(0, PLAN_USAGE_LIMITS.label)
       : "";
     const resetsAt = isoOf(w.resetsAt);
+    const read = isoOf(w.at);
     windows.push({
       kind,
       ...(label ? { label } : {}),
       usedPercent: Math.round(Math.min(100, Math.max(0, used))),
       ...(resetsAt ? { resetsAt } : {}),
+      ...(read && read < at ? { at: read } : {}),
     });
   }
   return {
