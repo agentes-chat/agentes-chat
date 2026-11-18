@@ -125,6 +125,12 @@ test("a chat turn's guard: init with our server's tools alone; a tool of its own
   expect(
     antigravityChatBreach(init([`${CODEX_MCP_SERVER}/post_message`, `mcp_${CODEX_MCP_SERVER}_read`]), false),
   ).toBeNull();
+  expect(
+    antigravityChatBreach(
+      init([`${CODEX_MCP_SERVER}/post_message`, "finish", "call_mcp_tool", "list_resources", "read_resource"]),
+      false,
+    ),
+  ).toBeNull();
   expect(antigravityChatBreach(init([`${CODEX_MCP_SERVER}/post_message`, "run_command"]), false)).toContain(
     "run_command",
   );
@@ -135,6 +141,7 @@ test("a chat turn's guard: init with our server's tools alone; a tool of its own
   const tool = (name: string) => ({ event: "step_update", step_update: { step_type: "tool", tool_name: name } });
   expect(antigravityChatBreach(tool(`${CODEX_MCP_SERVER}/post_message`), true)).toBeNull();
   expect(antigravityChatBreach(tool("view_file"), true)).toContain("view_file");
+  expect(antigravityChatBreach(tool("finish"), true)).toContain("finish");
   expect(antigravityChatBreach(tool("linear/save_issue"), true)).toContain("linear/save_issue");
   const sub = { event: "step_update", step_update: { step_type: "agent_response", subagent_info: { subagents: [] } } };
   expect(antigravityChatBreach(sub, true)).toContain("another agent");
@@ -238,6 +245,7 @@ test("an account's folder is the CLI's whole home: no keyring, no Gemini key or 
   });
   expect(env).toMatchObject({
     HOME: "/acc/x",
+    USERPROFILE: "/acc/x",
     XDG_CONFIG_HOME: "/acc/x/.config",
     XDG_RUNTIME_DIR: "/acc/x/.run",
     AGY_CLI_DISABLE_AUTO_UPDATE: "true",

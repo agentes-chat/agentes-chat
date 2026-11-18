@@ -123,16 +123,22 @@ export function antigravityTurnArgs(input: {
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
+/** Internal CLI meta-tools emitted in `init.tools` by Antigravity CLI 1.5.x even when `tools: []` is configured. */
+const AGY_INTERNAL_INIT_TOOLS = new Set(["finish", "call_mcp_tool", "list_resources", "read_resource"]);
+
 /**
- * A `chat` turn's guard (protocol 44), line by line: `init` must list our server's tools alone, nothing may come
- * before it, and no step may be a tool that isn't ours or a subagent. Null when the line is fine.
+ * A `chat` turn's guard (protocol 44), line by line: `init` must list our server's tools alone (aside from the CLI's
+ * own built-in meta-tools), nothing may come before it, and no step may be a tool that isn't ours or a subagent. Null
+ * when the line is fine.
  */
 export function antigravityChatBreach(ev: Record<string, unknown>, sawInit: boolean): string | null {
   const stop = (why: string) => `${why}, so the turn stopped.`;
   if (ev.event === "init") {
     const tools = isRecord(ev.init) ? ev.init.tools : undefined;
     if (!Array.isArray(tools)) return "The Antigravity CLI didn't list its tools, so the turn stopped before it began.";
-    const theirs = tools.filter((t) => !isOurAgyTool(t)).map((t) => String(t).slice(0, 64));
+    const theirs = tools
+      .filter((t) => !isOurAgyTool(t) && !AGY_INTERNAL_INIT_TOOLS.has(String(t)))
+      .map((t) => String(t).slice(0, 64));
     if (theirs.length === 0) return null;
     return `The Antigravity CLI offers tools of its own here (${theirs.slice(0, 8).join(", ")}), so the turn stopped before it could use them.`;
   }
@@ -241,9 +247,10 @@ export interface AntigravityTurnOptions {
 export async function runAntigravityTurn(input: AntigravityTurnInput, opts: AntigravityTurnOptions): Promise<void> {
   const fail = (code: string, message: string, retryable?: boolean) =>
     opts.emit({ type: "error", code, message, ...(retryable ? { retryable } : {}) });
-  // Elsewhere the CLI keeps its sign-in in the one keychain of the computer's user (ADR 0143).
-  if ((opts.platform ?? process.platform) !== "linux") {
-    return fail("unsupported", "Gemini plans think on Linux computers only, for now.");
+  // On macOS the CLI keeps its sign-in in the one keychain of the computer's user (ADR 0143).
+  const platform = opts.platform ?? process.platform;
+  if (platform !== "linux" && platform !== "win32") {
+    return fail("unsupported", "Gemini plans think on Linux and Windows computers only, for now.");
   }
   try {
     prepareAgyHome(input.account.home, opts.mcpCommand);
@@ -289,7 +296,8 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
         cwd: input.cwd,
         env,
         stdio: ["ignore", "pipe", "pipe"],
-        detached: true,
+        windowsHide: true,
+        detached: process.platform !== "win32",
       });
     } catch (err) {
       return fail("antigravity_failed", err instanceof Error ? err.message : String(err));

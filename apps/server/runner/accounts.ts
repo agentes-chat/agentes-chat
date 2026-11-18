@@ -291,9 +291,10 @@ export function accountEnv(kind: AccountKind, dir: string, base: NodeJS.ProcessE
   }
   if (kind === "grok") Object.assign(env, GROK_QUIET_ENV);
   if (kind === "antigravity") {
-    // Everything Go and the CLI keep under the home stays in the account's folder; no D-Bus session, so the CLI
-    // skips the keyring and keeps its sign-in in its own file there (changelog 1.2.x: "bypasses the keyring when no
-    // D-Bus session bus is present").
+    // Everything Go and the CLI keep under the home stays in the account's folder; on Windows Go's os.UserHomeDir()
+    // reads USERPROFILE, and without a D-Bus session on Linux the CLI skips the keyring and keeps its sign-in in its
+    // own file there (changelog 1.2.x: "bypasses the keyring when no D-Bus session bus is present").
+    env.USERPROFILE = dir;
     env.XDG_CONFIG_HOME = path.join(dir, ".config");
     env.XDG_CACHE_HOME = path.join(dir, ".cache");
     env.XDG_DATA_HOME = path.join(dir, ".local", "share");
@@ -1751,10 +1752,11 @@ export class AccountManager {
     if (kind === "opencode" && !cliKey) {
       throw new RunnerError("bad_request", "OpenCode signs in with its API key");
     }
-    // ADR 0143: elsewhere the CLI keeps every sign-in in the one keychain of the computer's user, so two accounts
-    // would be one.
-    if (kind === "antigravity" && (this.opts.platform ?? process.platform) !== "linux") {
-      throw new RunnerError("bad_request", "Gemini accounts sign in on Linux computers only, for now.");
+    // ADR 0143: on macOS the CLI keeps every sign-in in the one keychain of the computer's user, so two accounts
+    // would be one; on Windows `USERPROFILE` isolates each account's home folder.
+    const platform = this.opts.platform ?? process.platform;
+    if (kind === "antigravity" && platform !== "linux" && platform !== "win32") {
+      throw new RunnerError("bad_request", "Gemini accounts sign in on Linux and Windows computers only, for now.");
     }
     if (this.logins.get(loginId)?.state === "waiting") {
       throw new RunnerError("bad_request", "This sign-in already exists");
