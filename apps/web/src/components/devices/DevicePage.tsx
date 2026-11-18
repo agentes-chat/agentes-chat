@@ -298,7 +298,11 @@ function ComputerPage({ machineId }: { machineId: string }) {
     machine && isPaused(machine)
       ? { kind: "paused", until: machine.paused?.until ?? null }
       : machine && !machine.online && d.status.kind !== "offline"
-        ? { kind: "offline", lastSeenAt: machine.lastSeenAt }
+        ? {
+            kind: "offline",
+            lastSeenAt: machine.lastSeenAt,
+            ...(machine.offlineCause ? { cause: machine.offlineCause } : {}),
+          }
         : d.status;
   const owner = d.ownerUserId === me.user.id;
   const admin = can(org, "configure");

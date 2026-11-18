@@ -16389,7 +16389,10 @@
       "since": "desde {{time}}",
       "until": "hasta {{time}}",
       "withHost": "con {{host}}",
-      "lastSeen": "visto por última vez {{time}}"
+      "lastSeen": "visto por última vez {{time}}",
+      "offlineUnresponsive": "dejó de responder a las {{time}}",
+      "offlineStopped": "el runner se detuvo a las {{time}}",
+      "offlineDropped": "la conexión se cayó a las {{time}}"
     },
     "line": {
       "ready": "Los agentes ya pueden usarlo.",
@@ -16398,7 +16401,10 @@
       "busy_other": "{{count}} de {{max}} tareas en curso",
       "offline": "Los agentes esperan a que vuelva.",
       "offlineSeen": "Visto por última vez {{time}}. Los agentes esperan a que vuelva.",
-      "offlineWithHost": "{{host}} está sin conexión. Los agentes esperan a que vuelva."
+      "offlineWithHost": "{{host}} está sin conexión. Los agentes esperan a que vuelva.",
+      "offlineUnresponsive": "Dejó de responder a las {{time}}, quizá sin red o sobrecargado. Ejecuta {{command}} en él.",
+      "offlineStopped": "El runner se detuvo a las {{time}}. Inícialo de nuevo o ejecuta {{command}} en él para ver por qué.",
+      "offlineDropped": "La conexión se cayó a las {{time}}. Se reconecta sola. Si no vuelve, ejecuta {{command}} en él."
     },
     "reason": {
       "locked": "El teléfono está bloqueado",

@@ -77,7 +77,14 @@ const Status = z
     z.object({ kind: z.literal("needs_you"), reason: Reason }),
     z.object({ kind: z.literal("preparing"), reason: Reason }),
     z.object({ kind: z.literal("paused"), until: z.string().nullable() }),
-    z.object({ kind: z.literal("offline"), lastSeenAt: z.string().nullable(), withHost: z.boolean().optional() }),
+    z.object({
+      kind: z.literal("offline"),
+      lastSeenAt: z.string().nullable(),
+      withHost: z.boolean().optional(),
+      cause: z.enum(["unresponsive", "stopped", "dropped"]).optional().openapi({
+        description: "A computer someone brought: why it went offline (`Machine.offlineCause`). Absent: unknown.",
+      }),
+    }),
     z.object({ kind: z.literal("unsupported"), reason: Reason }),
   ])
   .openapi("DeviceStatus");

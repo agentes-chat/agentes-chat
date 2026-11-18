@@ -15860,7 +15860,10 @@
       "since": "{{time}} itibarıyla",
       "until": "bitiş: {{time}}",
       "withHost": "{{host}} ile birlikte",
-      "lastSeen": "son görülme: {{time}}"
+      "lastSeen": "son görülme: {{time}}",
+      "offlineUnresponsive": "{{time}} itibarıyla yanıt vermiyor",
+      "offlineStopped": "runner {{time}} saatinde durdu",
+      "offlineDropped": "bağlantı {{time}} saatinde koptu"
     },
     "line": {
       "ready": "Ajanlar onu şimdi kullanabilir.",
@@ -15868,7 +15871,10 @@
       "busy_other": "{{max}} görevden {{count}} tanesi çalışıyor",
       "offline": "Ajanlar geri gelmesini bekliyor.",
       "offlineSeen": "Son görülme: {{time}}. Ajanlar geri gelmesini bekliyor.",
-      "offlineWithHost": "{{host}} çevrimdışı. Ajanlar geri gelmesini bekliyor."
+      "offlineWithHost": "{{host}} çevrimdışı. Ajanlar geri gelmesini bekliyor.",
+      "offlineUnresponsive": "{{time}} itibarıyla yanıt vermiyor, ağ yok ya da aşırı yüklü olabilir. Üzerinde {{command}} çalıştırın.",
+      "offlineStopped": "Runner {{time}} saatinde durdu. Yeniden başlatın ya da nedenini görmek için üzerinde {{command}} çalıştırın.",
+      "offlineDropped": "Bağlantı {{time}} saatinde koptu. Kendiliğinden yeniden bağlanır. Bağlanmazsa üzerinde {{command}} çalıştırın."
     },
     "reason": {
       "locked": "Telefon kilitli",

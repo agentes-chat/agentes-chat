@@ -16236,6 +16236,12 @@ export const en = {
       until: "until {{time}}",
       withHost: "with {{host}}",
       lastSeen: "last seen {{time}}",
+      /** A computer someone brought, by why it went offline: its runner stopped answering pings. */
+      offlineUnresponsive: "stopped answering at {{time}}",
+      /** Its runner stopped (its service stopped, the app quit). */
+      offlineStopped: "runner stopped at {{time}}",
+      /** The connection dropped. */
+      offlineDropped: "connection dropped at {{time}}",
     },
     line: {
       ready: "Agents can use it now.",
@@ -16244,6 +16250,11 @@ export const en = {
       offline: "Agents wait for it to come back.",
       offlineSeen: "Last seen {{time}}. Agents wait for it to come back.",
       offlineWithHost: "{{host}} is offline. Agents wait for it to come back.",
+      /** `command`: `agentes-runner doctor`, shown as is. No network, or the computer too busy to answer. */
+      offlineUnresponsive: "Stopped answering at {{time}}, maybe no network or overloaded. Run {{command}} on it.",
+      offlineStopped: "The runner stopped at {{time}}. Start it again, or run {{command}} on it to see why.",
+      offlineDropped:
+        "The connection dropped at {{time}}. It reconnects by itself. If it doesn't, run {{command}} on it.",
     },
     /** Why a device isn't ready, by the code its computer reports. */
     reason: {

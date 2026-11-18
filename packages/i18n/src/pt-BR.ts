@@ -16168,6 +16168,9 @@ export const ptBR = {
       until: "até {{time}}",
       withHost: "com {{host}}",
       lastSeen: "visto às {{time}}",
+      offlineUnresponsive: "parou de responder às {{time}}",
+      offlineStopped: "o runner parou às {{time}}",
+      offlineDropped: "a conexão caiu às {{time}}",
     },
     line: {
       ready: "Os agentes já podem usá-lo.",
@@ -16176,6 +16179,9 @@ export const ptBR = {
       offline: "Os agentes esperam ele voltar.",
       offlineSeen: "Visto às {{time}}. Os agentes esperam ele voltar.",
       offlineWithHost: "{{host}} está offline. Os agentes esperam ele voltar.",
+      offlineUnresponsive: "Parou de responder às {{time}}, talvez sem rede ou sobrecarregado. Rode {{command}} nele.",
+      offlineStopped: "O runner parou às {{time}}. Inicie de novo ou rode {{command}} nele para ver o motivo.",
+      offlineDropped: "A conexão caiu às {{time}}. Ele reconecta sozinho. Se não voltar, rode {{command}} nele.",
     },
     reason: {
       locked: "O celular está bloqueado",

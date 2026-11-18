@@ -16464,7 +16464,10 @@
       "since": "depuis {{time}}",
       "until": "jusqu'à {{time}}",
       "withHost": "avec {{host}}",
-      "lastSeen": "vu pour la dernière fois {{time}}"
+      "lastSeen": "vu pour la dernière fois {{time}}",
+      "offlineUnresponsive": "ne répond plus depuis {{time}}",
+      "offlineStopped": "runner arrêté à {{time}}",
+      "offlineDropped": "connexion perdue à {{time}}"
     },
     "line": {
       "ready": "Les agents peuvent l'utiliser dès maintenant.",
@@ -16473,7 +16476,10 @@
       "busy_other": "{{count}} tâches sur {{max}} en cours",
       "offline": "Les agents attendent son retour.",
       "offlineSeen": "Vu pour la dernière fois {{time}}. Les agents attendent son retour.",
-      "offlineWithHost": "{{host}} est hors ligne. Les agents attendent son retour."
+      "offlineWithHost": "{{host}} est hors ligne. Les agents attendent son retour.",
+      "offlineUnresponsive": "Ne répond plus depuis {{time}}, peut-être sans réseau ou surchargé. Lancez {{command}} dessus.",
+      "offlineStopped": "Le runner s'est arrêté à {{time}}. Relancez-le, ou lancez {{command}} dessus pour savoir pourquoi.",
+      "offlineDropped": "La connexion a été perdue à {{time}}. Elle se rétablit d'elle-même. Sinon, lancez {{command}} dessus."
     },
     "reason": {
       "locked": "Le téléphone est verrouillé",

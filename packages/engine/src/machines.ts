@@ -190,6 +190,8 @@ export const shownOnline = (
   now = new Date(),
 ) => machineOnline(row, now) || shownStandby(row, now);
 
+export type OfflineCause = "unresponsive" | "stopped" | "dropped";
+
 /**
  * Why a computer someone brought is offline, from its runner's last close: `unresponsive` (no pong: no network, or
  * the computer too busy to answer), `stopped` (its runner stopped for good), `dropped` (anything else, our restarts
@@ -199,7 +201,7 @@ export const shownOnline = (
 export function offlineCause(
   row: Pick<MachineRow, "kind" | "disconnects" | "lastSeenAt">,
   online: boolean,
-): "unresponsive" | "stopped" | "dropped" | null {
+): OfflineCause | null {
   const last = row.disconnects[0];
   if (online || row.kind === "managed" || !last) return null;
   if (row.lastSeenAt && row.lastSeenAt.getTime() > Date.parse(last.at)) return null;

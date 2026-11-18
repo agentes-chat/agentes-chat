@@ -158,6 +158,21 @@ test("the list: the workspace's computer first, each computer's status, its phon
   await f.db.update(schema.machines).set({ online: false }).where(eq(schema.machines.id, mac));
   const away = (await listDevices(f.db, f.org.id, rui.id)).devices[1]?.phones[0];
   expect(away?.status).toMatchObject({ kind: "offline", withHost: true });
+  expect((await listDevices(f.db, f.org.id, rui.id)).devices[1]?.status).toEqual({
+    kind: "offline",
+    lastSeenAt: expect.any(String),
+  });
+
+  // Its runner's last close says why it went: the computer's status carries it.
+  const lastSeenAt = new Date(Date.now() - 60_000);
+  const disconnects = [
+    { connectedAt: lastSeenAt.toISOString(), at: new Date().toISOString(), code: 4408, reason: "no pong" },
+  ];
+  await f.db.update(schema.machines).set({ lastSeenAt, disconnects }).where(eq(schema.machines.id, mac));
+  expect((await listDevices(f.db, f.org.id, rui.id)).devices[1]?.status).toMatchObject({
+    kind: "offline",
+    cause: "unresponsive",
+  });
 });
 
 test("phones sync: a phone keeps its name and rule moving between its owner's computers, starts over on someone else's or once forgotten", async () => {

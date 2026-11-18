@@ -17012,7 +17012,10 @@
       "since": "od {{time}}",
       "until": "do {{time}}",
       "withHost": "razem z {{host}}",
-      "lastSeen": "ostatnio online: {{time}}"
+      "lastSeen": "ostatnio online: {{time}}",
+      "offlineUnresponsive": "nie odpowiada od {{time}}",
+      "offlineStopped": "runner zatrzymany o {{time}}",
+      "offlineDropped": "połączenie zerwane o {{time}}"
     },
     "line": {
       "ready": "Agenci mogą go teraz używać.",
@@ -17022,7 +17025,10 @@
       "busy_other": "Zadania w toku: {{count}} z {{max}}",
       "offline": "Agenci czekają, aż wróci.",
       "offlineSeen": "Ostatnio online: {{time}}. Agenci czekają, aż wróci.",
-      "offlineWithHost": "{{host}} jest offline. Agenci czekają, aż wróci."
+      "offlineWithHost": "{{host}} jest offline. Agenci czekają, aż wróci.",
+      "offlineUnresponsive": "Nie odpowiada od {{time}}, może brak sieci lub przeciążenie. Uruchom na nim {{command}}.",
+      "offlineStopped": "Runner zatrzymał się o {{time}}. Uruchom go ponownie albo uruchom na nim {{command}}, by zobaczyć dlaczego.",
+      "offlineDropped": "Połączenie zerwało się o {{time}}. Łączy się ponownie samo. Jeśli nie wróci, uruchom na nim {{command}}."
     },
     "reason": {
       "locked": "Telefon jest zablokowany",

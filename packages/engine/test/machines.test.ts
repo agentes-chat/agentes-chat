@@ -234,7 +234,9 @@ describe("a runner that dies mid-request (brain turns never stay working)", () =
     expect(offlineCause({ kind: "managed", disconnects, lastSeenAt: before }, false)).toBeNull();
     expect(offlineCause({ kind: "connected", disconnects: [], lastSeenAt: before }, false)).toBeNull();
     // A replica that died left the row online: its later pongs say nothing about this old close.
-    expect(offlineCause({ kind: "connected", disconnects, lastSeenAt: new Date("2026-01-01T10:05:00Z") }, false)).toBeNull();
+    expect(
+      offlineCause({ kind: "connected", disconnects, lastSeenAt: new Date("2026-01-01T10:05:00Z") }, false),
+    ).toBeNull();
   });
 
   test("a silent runner is dropped two heartbeats after its last pong, as the runner drops a silent server", async () => {

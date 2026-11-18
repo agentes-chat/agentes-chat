@@ -15406,14 +15406,20 @@
       "since": "sejak {{time}}",
       "until": "sampai {{time}}",
       "withHost": "bersama {{host}}",
-      "lastSeen": "terakhir terlihat {{time}}"
+      "lastSeen": "terakhir terlihat {{time}}",
+      "offlineUnresponsive": "berhenti merespons pukul {{time}}",
+      "offlineStopped": "runner berhenti pukul {{time}}",
+      "offlineDropped": "koneksi terputus pukul {{time}}"
     },
     "line": {
       "ready": "Agen bisa memakainya sekarang.",
       "busy_other": "{{count}} dari {{max}} tugas berjalan",
       "offline": "Agen menunggu sampai perangkat ini kembali.",
       "offlineSeen": "Terakhir terlihat {{time}}. Agen menunggu sampai perangkat ini kembali.",
-      "offlineWithHost": "{{host}} sedang offline. Agen menunggu sampai komputer itu kembali."
+      "offlineWithHost": "{{host}} sedang offline. Agen menunggu sampai komputer itu kembali.",
+      "offlineUnresponsive": "Berhenti merespons pukul {{time}}, mungkin tanpa jaringan atau kelebihan beban. Jalankan {{command}} di sana.",
+      "offlineStopped": "Runner berhenti pukul {{time}}. Jalankan lagi, atau jalankan {{command}} di sana untuk melihat sebabnya.",
+      "offlineDropped": "Koneksi terputus pukul {{time}}. Ia tersambung lagi sendiri. Jika tidak, jalankan {{command}} di sana."
     },
     "reason": {
       "locked": "Ponselnya terkunci",

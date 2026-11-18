@@ -39197,6 +39197,15 @@
   "devices.detail.lastSeen": {
     "value": "last seen {{time}}"
   },
+  "devices.detail.offlineUnresponsive": {
+    "value": "stopped answering at {{time}}"
+  },
+  "devices.detail.offlineStopped": {
+    "value": "runner stopped at {{time}}"
+  },
+  "devices.detail.offlineDropped": {
+    "value": "connection dropped at {{time}}"
+  },
   "devices.line.ready": {
     "value": "Agents can use it now."
   },
@@ -39214,6 +39223,15 @@
   },
   "devices.line.offlineWithHost": {
     "value": "{{host}} is offline. Agents wait for it to come back."
+  },
+  "devices.line.offlineUnresponsive": {
+    "value": "Stopped answering at {{time}}, maybe no network or overloaded. Run {{command}} on it."
+  },
+  "devices.line.offlineStopped": {
+    "value": "The runner stopped at {{time}}. Start it again, or run {{command}} on it to see why."
+  },
+  "devices.line.offlineDropped": {
+    "value": "The connection dropped at {{time}}. It reconnects by itself. If it doesn't, run {{command}} on it."
   },
   "devices.reason.locked": {
     "value": "The phone is locked"

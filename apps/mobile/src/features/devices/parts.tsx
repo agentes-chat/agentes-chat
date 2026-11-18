@@ -19,11 +19,14 @@ export function StatusLine({
   status,
   hostName,
   center = false,
+  text,
 }: {
   status: DeviceStatus;
   hostName?: string | null;
   /** On a device's page, under its portrait. */
   center?: boolean;
+  /** In place of the status's own words. */
+  text?: string | null;
 }) {
   const { t } = useTranslation();
   const when = useWhen();
@@ -41,9 +44,9 @@ export function StatusLine({
         tone={v.wait ? "wait" : "neutral"}
         {...(leading ? { leading } : v.icon && v.icon !== "face" && v.icon !== "spin" ? { icon: v.icon } : {})}
       />
-      {v.line ? (
-        <Text variant="footnote" tone="faint">
-          {v.line}
+      {(text ?? v.line) ? (
+        <Text variant="footnote" tone="faint" style={center ? styles.centerText : undefined}>
+          {text ?? v.line}
         </Text>
       ) : null}
     </View>
@@ -237,6 +240,7 @@ const styles = StyleSheet.create({
   center: { textAlign: "center" },
   status: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 8, rowGap: 4, marginTop: 4 },
   centered: { justifyContent: "center", marginTop: 0 },
+  centerText: { textAlign: "center" },
   card: { borderRadius: 14, padding: 16, gap: 4 },
   bold: { fontWeight: "600" },
   buttons: { marginTop: 12 },

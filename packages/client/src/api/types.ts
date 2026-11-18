@@ -8409,7 +8409,8 @@ export type DeviceStatus =
   | { kind: "needs_you"; reason: string }
   | { kind: "preparing"; reason: string }
   | { kind: "paused"; until: string | null }
-  | { kind: "offline"; lastSeenAt: string | null; withHost?: boolean }
+  /** `cause`: a computer's, as `Machine.offlineCause`; absent: unknown. */
+  | { kind: "offline"; lastSeenAt: string | null; withHost?: boolean; cause?: MachineOfflineCause }
   | { kind: "unsupported"; reason: string };
 
 export interface PhoneDevice {

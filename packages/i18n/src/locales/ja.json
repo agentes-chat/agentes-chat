@@ -15353,14 +15353,20 @@
       "since": "{{time}}から",
       "until": "{{time}}まで",
       "withHost": "{{host}}とともに",
-      "lastSeen": "最終接続 {{time}}"
+      "lastSeen": "最終接続 {{time}}",
+      "offlineUnresponsive": "{{time}} から応答なし",
+      "offlineStopped": "{{time}} にランナー停止",
+      "offlineDropped": "{{time}} に接続が切断"
     },
     "line": {
       "ready": "エージェントが今すぐ使えます。",
       "busy_other": "{{max}}件中{{count}}件のタスクを実行中",
       "offline": "エージェントは復帰を待っています。",
       "offlineSeen": "最終接続 {{time}}。エージェントは復帰を待っています。",
-      "offlineWithHost": "{{host}}はオフラインです。エージェントは復帰を待っています。"
+      "offlineWithHost": "{{host}}はオフラインです。エージェントは復帰を待っています。",
+      "offlineUnresponsive": "{{time}} から応答がありません。ネットワークがないか、負荷が高すぎる可能性があります。そのコンピューターで {{command}} を実行してください。",
+      "offlineStopped": "{{time}} にランナーが停止しました。もう一度起動するか、そのコンピューターで {{command}} を実行して原因を確認してください。",
+      "offlineDropped": "{{time}} に接続が切れました。自動で再接続します。戻らない場合は、そのコンピューターで {{command}} を実行してください。"
     },
     "reason": {
       "locked": "スマートフォンがロックされています",

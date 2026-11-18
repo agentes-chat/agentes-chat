@@ -15925,7 +15925,10 @@
       "since": "seit {{time}}",
       "until": "bis {{time}}",
       "withHost": "mit {{host}}",
-      "lastSeen": "zuletzt gesehen {{time}}"
+      "lastSeen": "zuletzt gesehen {{time}}",
+      "offlineUnresponsive": "antwortet nicht mehr seit {{time}}",
+      "offlineStopped": "Runner gestoppt um {{time}}",
+      "offlineDropped": "Verbindung abgebrochen um {{time}}"
     },
     "line": {
       "ready": "Agenten können es jetzt nutzen.",
@@ -15933,7 +15936,10 @@
       "busy_other": "{{count}} von {{max}} Aufgaben laufen",
       "offline": "Agenten warten, bis es zurück ist.",
       "offlineSeen": "Zuletzt gesehen {{time}}. Agenten warten, bis es zurück ist.",
-      "offlineWithHost": "{{host}} ist offline. Agenten warten, bis es zurück ist."
+      "offlineWithHost": "{{host}} ist offline. Agenten warten, bis es zurück ist.",
+      "offlineUnresponsive": "Antwortet seit {{time}} nicht mehr, vielleicht kein Netz oder überlastet. Führe dort {{command}} aus.",
+      "offlineStopped": "Der Runner wurde um {{time}} gestoppt. Starte ihn neu oder führe dort {{command}} aus, um den Grund zu sehen.",
+      "offlineDropped": "Die Verbindung brach um {{time}} ab. Sie verbindet sich von selbst neu. Falls nicht, führe dort {{command}} aus."
     },
     "reason": {
       "locked": "Das Handy ist gesperrt",

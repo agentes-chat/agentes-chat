@@ -15422,14 +15422,20 @@
       "since": "自 {{time}} 起",
       "until": "至 {{time}}",
       "withHost": "与 {{host}} 一起",
-      "lastSeen": "上次在线 {{time}}"
+      "lastSeen": "上次在线 {{time}}",
+      "offlineUnresponsive": "{{time}} 起无响应",
+      "offlineStopped": "runner 于 {{time}} 停止",
+      "offlineDropped": "连接于 {{time}} 断开"
     },
     "line": {
       "ready": "智能体现在就可以使用它。",
       "busy_other": "{{max}} 个任务中有 {{count}} 个正在运行",
       "offline": "智能体会等它回来。",
       "offlineSeen": "上次在线 {{time}}。智能体会等它回来。",
-      "offlineWithHost": "{{host}} 已离线。智能体会等它回来。"
+      "offlineWithHost": "{{host}} 已离线。智能体会等它回来。",
+      "offlineUnresponsive": "{{time}} 起无响应，可能没有网络或负载过高。请在这台电脑上运行 {{command}}。",
+      "offlineStopped": "runner 于 {{time}} 停止。请重新启动它，或在这台电脑上运行 {{command}} 查看原因。",
+      "offlineDropped": "连接于 {{time}} 断开，会自动重连。如果没有恢复，请在这台电脑上运行 {{command}}。"
     },
     "reason": {
       "locked": "手机已锁定",

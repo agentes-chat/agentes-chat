@@ -15993,7 +15993,10 @@
       "since": "sinds {{time}}",
       "until": "tot {{time}}",
       "withHost": "met {{host}}",
-      "lastSeen": "laatst gezien {{time}}"
+      "lastSeen": "laatst gezien {{time}}",
+      "offlineUnresponsive": "reageert niet meer sinds {{time}}",
+      "offlineStopped": "runner gestopt om {{time}}",
+      "offlineDropped": "verbinding verbroken om {{time}}"
     },
     "line": {
       "ready": "Agents kunnen het nu gebruiken.",
@@ -16001,7 +16004,10 @@
       "busy_other": "{{count}} van {{max}} taken bezig",
       "offline": "Agents wachten tot het terug is.",
       "offlineSeen": "Laatst gezien {{time}}. Agents wachten tot het terug is.",
-      "offlineWithHost": "{{host}} is offline. Agents wachten tot het terug is."
+      "offlineWithHost": "{{host}} is offline. Agents wachten tot het terug is.",
+      "offlineUnresponsive": "Reageert niet meer sinds {{time}}, misschien geen netwerk of overbelast. Voer daar {{command}} uit.",
+      "offlineStopped": "De runner stopte om {{time}}. Start hem opnieuw, of voer daar {{command}} uit om te zien waarom.",
+      "offlineDropped": "De verbinding werd om {{time}} verbroken. Hij maakt zelf opnieuw verbinding. Zo niet, voer daar {{command}} uit."
     },
     "reason": {
       "locked": "De telefoon is vergrendeld",
