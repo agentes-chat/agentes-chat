@@ -2005,8 +2005,10 @@ export type CliName = (typeof CLI_NAMES)[number];
 
 /** A coding CLI on the machine, as `hello` reports it (protocol 7). */
 export interface RunnerExecutorInfo {
-  /** The first line of `<cli> --version`. */
+  /** The line of `<cli> --version` that holds its version (else its first line, or `unknown`). */
   version: string;
+  /** `codex` only: the copy the runner starts, the newest of those it found. */
+  path?: string;
   /** Protocol 8, `claude` only: `claude auth status` says it is logged in (absent: unknown). */
   loggedIn?: boolean;
   /** Protocol 8, `claude` only: how it is logged in (`claude.ai`, `api_key`…) and the plan (`pro`, `max`, `ultra`…). */
@@ -3420,8 +3422,10 @@ export function parseExecutors(v: Record<string, unknown>): NonNullable<RunnerIn
     if (!isObject(e) || !isString(e.version)) continue;
     const authMethod = word(e.authMethod);
     const plan = word(e.plan);
+    const path = name === "codex" && isString(e.path) && /^[^\0\r\n]{1,500}$/.test(e.path) ? e.path : undefined;
     out[name] = {
       version: e.version.replace(/\s+/g, " ").trim().slice(0, 80),
+      ...(path ? { path } : {}),
       ...(typeof e.loggedIn === "boolean" ? { loggedIn: e.loggedIn } : {}),
       ...(authMethod ? { authMethod } : {}),
       ...(plan ? { plan } : {}),

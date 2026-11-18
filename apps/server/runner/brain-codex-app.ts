@@ -104,7 +104,7 @@ import type { Spawn } from "./scope-gate";
  * checks them against a real CLI.
  */
 
-/** The first Codex whose app-server has `turn/steer` and the shapes below (the same as `CODEX_MIN_VERSION` today). */
+/** The first Codex whose app-server has `turn/steer` and the shapes below: older ones run their turns on `codex exec`. */
 export const CODEX_APP_MIN_VERSION = "0.163.0";
 export const CODEX_APP_IDLE_MS = 10 * 60_000;
 export const CODEX_APP_MAX_PROCESSES = 3;
