@@ -111,7 +111,10 @@ export async function approvalsLevelOf(db: Executor, orgId: string, agentId: str
 export const asksOf = (level: ApprovalsLevel): { asks?: "always" | "never" } =>
   level === "risky" ? {} : { asks: level };
 
-export type PolicyTool = Pick<ToolDefinition, "name" | "scope" | "connectionId" | "sensitive" | "opensPullRequest">;
+export type PolicyTool = Pick<
+  ToolDefinition,
+  "name" | "scope" | "connectionId" | "sensitive" | "opensPullRequest" | "readScope"
+>;
 
 const ALLOW: PolicyDecision = { action: "allow" };
 const APPROVE: PolicyDecision = { action: "approve" };
@@ -472,7 +475,8 @@ export const WIDGET_UP_FRONT_MAX = 60;
 export function widgetUpFront(tool: PolicyTool): boolean {
   const what = toolKind(tool);
   if (what.kind === "widget") return true;
-  if (tool.connectionId) return what.kind === "read" || what.kind === "directory";
+  // A tool some of whose calls read (`readScope`: PostHog's `exec`, Composio's executor) is listed for those.
+  if (tool.connectionId) return what.kind === "read" || what.kind === "directory" || Boolean(tool.readScope);
   return tool.name === "web_search" || tool.name === "web_fetch";
 }
 

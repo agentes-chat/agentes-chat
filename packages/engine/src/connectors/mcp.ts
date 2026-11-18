@@ -42,6 +42,7 @@ import {
   type ToolAccess,
 } from "./custom";
 import { applyToolPins } from "./pins";
+import { POSTHOG_EXEC, posthogReads } from "./posthog";
 import { presetForServer } from "./presets";
 import type { McpServerInfo } from "./server-icon";
 
@@ -501,6 +502,9 @@ export function createConnectorToolSource(
           // "Aprovar sempre" keeps either by the server's own name.
           rememberAs: tool.name,
           ...(executor ? { actions: composioActions, readScope: customScope(connection.id, "read") } : {}),
+          ...(preset === "posthog" && tool.name === POSTHOG_EXEC
+            ? { readsOnly: posthogReads, readScope: customScope(connection.id, "read") }
+            : {}),
           ...(sqlArg ? { sqlReads: { tool: tool.name, arg: sqlArg } } : {}),
           describe: (input) => {
             const actions = executor ? composioActions(input) : null;

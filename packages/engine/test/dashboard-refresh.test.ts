@@ -1082,6 +1082,10 @@ describe("changes, Resolve and the routine's life", () => {
     const appSensitiveRead = { name: "stripe_export", scope: "stripe:read", connectionId: "x", sensitive: true };
     expect(widgetUpFront({ name: "update_widget", scope: "" })).toBe(true);
     expect(widgetUpFront(appRead)).toBe(true);
+    // A tool some of whose calls read (PostHog's `exec`) is in hand for those.
+    expect(widgetUpFront({ name: "posthog_exec", scope: "x:write", connectionId: "x", readScope: "x:read" })).toBe(
+      true,
+    );
     expect(widgetUpFront({ name: "web_search", scope: "web:read" })).toBe(true);
     expect(widgetUpFront({ name: "web_fetch", scope: "web:read" })).toBe(true);
     for (const held of [

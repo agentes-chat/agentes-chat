@@ -246,3 +246,13 @@ people than asked.
   wait days for its owner to look, and nothing needs to wait for it (§11).
 - **Posting the refreshed chart in a channel.** What people do today, and what this replaces: the latest number gets
   buried, and the conversation fills with reports nobody asked to read.
+
+## Addendum (2026-11-18): reads through a tool that runs what its input says
+
+A widget's refresh run lists only reads (§5), and a connected server that answers with one tool that runs whatever
+its input says has a write's level for that tool: PostHog's `exec` (`call query-trends …` reads, `call
+dashboard-create …` writes). Such a run never had PostHog at all, and its agent reported it "not enabled". A tool
+whose calls the server's own words tell apart (`readsOnly`: PostHog's commands, `connectors/posthog.ts`; Composio's
+executor through its actions) is now listed for a run that may only read, and each call is judged as it comes: one
+that only reads runs as the connection's read, anything else is refused with why. Routines' reads through it stop
+asking a person for the same reason.
