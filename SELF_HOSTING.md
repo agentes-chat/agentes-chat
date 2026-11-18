@@ -1547,7 +1547,7 @@ restart. The app can install Claude Code there for you, but not Codex. Then sign
 - Nothing asks for approval there: what the isolation refuses stays refused, and it has no network, so
   `git push` or a package install doesn't run from Codex's own commands.
 - No background Codex tasks, and Codex doesn't do a mission's items there (Claude Code or the agent does).
-- A plan doesn't pick who answers a message on Windows (Plans, below).
+- No plan on Windows, Codex's or Claude's, picks who answers a message (Plans, below).
 - The isolation leaves the computer's own loopback open: a command can reach a service listening on
   `127.0.0.1` there.
 
@@ -1727,8 +1727,9 @@ workspaces: a person you invite (Sign-up, under Configuration) can make one of t
   an owner or admin of. A workspace someone else made gets no agents on it, even if they make you an admin
   there: connect a computer from that workspace (**Settings › Devices**), such as their own PC with the
   desktop app, or a server or VM of theirs.
-- **`--system` isolates agents from each other on one computer.** It doesn't separate subscriptions, and two
-  workspaces don't need it.
+- **`--system` isolates agents from each other on one computer.** It doesn't separate subscriptions, and
+  workspaces on computers of their own don't need it. Without it, every agent on a computer runs as one user,
+  whichever workspace it is in, and can reach every sign-in there (Who can reach an account, above).
 - Whoever has root on the server can read everything, encrypted keys included (`AGENTES_SECRET` is in
   `.env`): this keeps accounts apart, not people who don't trust the server's owner.
 
