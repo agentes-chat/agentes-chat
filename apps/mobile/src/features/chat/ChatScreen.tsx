@@ -58,6 +58,7 @@ import {
 } from "@agenteschat/client";
 import { activityVerb, consultDetails, lineStep, listNames } from "@agenteschat/client/lib/activity";
 import { handoffAsk } from "@agenteschat/client/lib/agent-work";
+import { type FoundKey, looksLikeApiKey, withoutApiKeys } from "@agenteschat/client/lib/api-key-text";
 import { canTalk, managesAgent } from "@agenteschat/client/lib/audience";
 import { runPosition, screenAboveEnd } from "@agenteschat/client/lib/chat";
 import { CHAT_RHYTHM, firstUnreadId, opensAtLastRead, unreadThreadRootId } from "@agenteschat/client/lib/chat-look";
@@ -178,6 +179,8 @@ import {
 import { ComposerFloat, createComposerFloat } from "@/ui/Composer";
 import { router } from "@/ui/navigation";
 import { AgentSetupIntro, useSetupSteps } from "../agents/setup/SetupCard";
+import { handKeyToConnectAi } from "../ai/connect-flow";
+import { openConnectAi } from "../ai/NoAiCard";
 import { usePlanHold } from "../ai/parts";
 import { BrowserCard, BrowserRunCard } from "../browser/BrowserCard";
 import { OpenHandoffProvider } from "../browser/open";
@@ -210,6 +213,7 @@ import { useDmStatusLine, usePresenceOf, usePresenceWord } from "../status/hooks
 import { PersonStatusCard } from "../status/StatusCard";
 import { AgentTasksButton, useDmAgentTasks } from "../task-manager/AgentTasksButton";
 import { agentTasksHref } from "../task-manager/logic";
+import { vaultHref } from "../vault/logic";
 import { retryVoice, type VoiceRefusal } from "../voice/outbox";
 import { useVoiceComposer } from "../voice/useVoiceComposer";
 import type { VoiceTarget } from "../voice/useVoiceTake";
@@ -234,6 +238,8 @@ import { EventLine } from "./EventLine";
 import { FirstDay } from "./FirstDay";
 import { HeaderPill } from "./HeaderPill";
 import { IssueTakenLine } from "./issue-work";
+import { KeyGuardSheet } from "./KeyGuardSheet";
+import { handKeyToVault } from "./key-guard";
 import { useKeyboardTruth } from "./keyboard-truth";
 import { browsingRuns, WorkingLine } from "./LiveRows";
 import { type LiveTyping, useChatLive, useLiveTyping } from "./live";
@@ -1328,9 +1334,46 @@ function Chat({
     else sendText(t("mobile.chat.summaryMessage"));
   };
 
+  /**
+   * A key in the words (`KeyGuardSheet`, the web's `KeyGuardDialog`): the field already let them go, so nothing is sent
+   * until the person picks, and the words come back to the field unless they send them as typed.
+   */
+  const guardKey = (text: string, found: FoundKey, sendAnyway: () => void) => {
+    let picked = false;
+    const back = (words: string) => {
+      if (words) setCaptionBack({ text: words, at: Date.now(), join: true });
+    };
+    sheet.open(
+      <KeyGuardSheet
+        found={found}
+        managesKeys={can(org, "manage_credentials") && !planHeld}
+        onPick={(choice) => {
+          picked = true;
+          sheet.close(() => {
+            if (choice === "send") return sendAnyway();
+            back(withoutApiKeys(text));
+            if (choice === "vault") {
+              handKeyToVault(found);
+              router.push(vaultHref.create("personal") as never);
+            } else if (choice === "ai") {
+              handKeyToConnectAi(found.key);
+              openConnectAi({ intent: "api_key" });
+            }
+          });
+        }}
+      />,
+      { onClose: () => !picked && back(text) },
+    );
+  };
+
   // Sending always goes to the end. While an agent works, "Parar e mandar" makes it read this one now.
-  const onSend = (raw: string, how: SendHow = "join") => {
+  const onSend = (raw: string, how: SendHow = "join", keyChecked = false) => {
     const text = raw.trim();
+    const found = keyChecked ? null : looksLikeApiKey(text);
+    if (found) {
+      guardKey(text, found, () => sendFromField(text, how, true));
+      return;
+    }
     // Photos or files waiting above the field: they go with the words, which are their caption (or with none).
     if (pending.length > 0) {
       sendWithFiles(text, how);
@@ -1400,7 +1443,11 @@ function Chat({
   }, [toEnd]);
   // A take goes with the words typed beside it and the files waiting above the field, in one message. The files that
   // can't upload keep the take, paused, and the words in the field (the composer puts them back).
-  const withVoice = async (text: string) => {
+  const withVoice = async (typed: string) => {
+    // A key typed beside the take: the take goes without the words, which wait on the key guard.
+    const found = looksLikeApiKey(typed);
+    if (found) guardKey(typed, found, () => sendFromField(typed, "join", true));
+    const text = found ? "" : typed;
     if (pending.length === 0) return { text, artifacts: [] };
     const artifacts = await uploadPending(pending);
     if (!artifacts) return null;

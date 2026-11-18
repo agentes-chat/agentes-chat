@@ -74,17 +74,27 @@ function emit() {
   for (const listener of listeners) listener();
 }
 
+/** A key the chat caught, for the next flow's key page: never in its address, which would carry the secret. */
+let handedKey = "";
+
+/** The next flow opens with `key` typed on its key's page (`openConnectAi` with the intent `api_key` follows). */
+export function handKeyToConnectAi(key: string) {
+  handedKey = key;
+}
+
 /** A new flow for its first page, the key's maker the ask named (or guessed); returns its id. */
 export function startConnectAi(ask: ConnectAiAsk): string {
   made += 1;
   const id = `connect-${made}`;
+  const text = handedKey;
+  handedKey = "";
   flows.set(id, {
     ask,
     linked: [],
     pickedAgent: null,
     login: null,
     waited: false,
-    key: { provider: providerGuess(undefined, ask.provider), custom: ask.provider === CUSTOM_PROVIDER, text: "" },
+    key: { provider: providerGuess(text || undefined, ask.provider), custom: ask.provider === CUSTOM_PROVIDER, text },
   });
   return id;
 }
