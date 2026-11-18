@@ -15,7 +15,7 @@ import type {
   OrgStanding,
 } from "../api/types";
 import { groupPlans, type OwnSignInRow, ownSignInReady, ownSignIns, planWordOf } from "./ai-accounts";
-import { answersOthers, audienceOf } from "./audience";
+import { answersOthers, audienceOf, managesAgent } from "./audience";
 import { type BillingHold, billingHoldOf } from "./billing";
 import { type SetupView, setupPending } from "./computer";
 import { firstName } from "./format";
@@ -223,17 +223,18 @@ export const noAiLineKey = (card: Pick<NoAiCard, "own" | "signedOut" | "missing"
           ? "noAi.noComputer"
           : "noAi.agent";
 
-type ConnectingAgent = { ownerUserId?: string | null; builtin?: "right_hand" | null };
+type ConnectingAgent = { ownerUserId?: string | null; builtin?: "right_hand" | null; canManage?: boolean };
 
 /**
- * Who can set an agent's own AI: its owner (a plan), who manages agents (a workspace key) or keys. On the right hand
- * that is the workspace's AI, the one its background work (a widget's build) thinks with.
+ * Who can set an agent's own AI: its owner (a plan), who manages it (`managesAgent`: a workspace key, ADR 0085 addendum
+ * of 2026-11-17) or keys. On the right hand that is the workspace's AI, the one its background work (a widget's
+ * build) thinks with.
  */
 export const maySetAgentAi = (
   agent: ConnectingAgent | null | undefined,
   meId: string | null | undefined,
   org: Parameters<typeof can>[0],
-) => (!!meId && agent?.ownerUserId === meId) || can(org, "manage_agents") || can(org, "manage_credentials");
+) => (!!meId && agent?.ownerUserId === meId) || managesAgent(agent) || can(org, "manage_credentials");
 
 /** Who connects an agent's AI, for a person who may not: its owner (`owner`, by first name) or an admin. */
 export const noAiLockedLine = (t: TFunction, name: string, owner: string | null | undefined) =>

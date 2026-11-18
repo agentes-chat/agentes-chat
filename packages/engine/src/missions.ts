@@ -19,9 +19,9 @@ import {
   schema,
   sql,
 } from "@agenteschat/db";
-import { getAgentCached } from "./agents";
+import { getAgent, getAgentCached } from "./agents";
 import type { ArtifactDeps } from "./artifacts";
-import { audienceSql } from "./audience";
+import { audienceSql, managesAgent, managesAgentSql } from "./audience";
 import { recordAudit } from "./audit";
 import { requireChannelAccess } from "./channels";
 import { eligibleChannelAgents } from "./dispatch";
@@ -71,7 +71,7 @@ import {
 } from "./missions-engine";
 import { notifyMissionEnded } from "./notification-producers";
 import { recordTaskFinished } from "./operator-events";
-import { can, requirePermission } from "./organizations";
+import { can, type Membership, requirePermission } from "./organizations";
 import { enqueue } from "./outbox";
 import { maySql } from "./permissions";
 import { runnerUpdateWay } from "./runner-update";
@@ -387,7 +387,39 @@ export async function requireMission(deps: MissionDeps, userId: string, orgId: s
     throw new NotFoundError("Mission not found", "mission.not_found");
   });
   const role = await missionRole(deps.db, mission, userId);
-  return { mission, role, isAdmin: can(membership, "manage_agents") };
+  return { mission, role, isAdmin: await overridesMission(deps.db, membership, mission, userId) };
+}
+
+/**
+ * Whether the person overrides someone's mission as an admin: who manages its agent (`managesAgent`, ADR 0085
+ * addendum of 2026-11-17), so a private agent's missions stay their owner's; with its agent gone, who holds "Editar
+ * qualquer agente".
+ */
+async function overridesMission(
+  db: Database,
+  membership: Membership | null,
+  mission: Pick<MissionRow, "orgId" | "agentId">,
+  userId: string,
+) {
+  if (!can(membership, "manage_agents")) return false;
+  const agent = await getAgent(db, mission.orgId, mission.agentId);
+  return agent ? managesAgent(agent, userId, membership) : true;
+}
+
+/** The agents among `agentIds` whose missions the person overrides as an admin (`managesAgentSql`). */
+async function managedAgentIds(db: Database, orgId: string, userId: string, agentIds: string[]) {
+  if (agentIds.length === 0) return new Set<string>();
+  const rows = await db
+    .select({ id: schema.agents.id })
+    .from(schema.agents)
+    .where(
+      and(
+        eq(schema.agents.orgId, orgId),
+        inArray(schema.agents.id, agentIds),
+        managesAgentSql("agents", sql`${userId}::text`),
+      ),
+    );
+  return new Set(rows.map((r) => r.id));
 }
 
 export function requireAct(role: MissionRole, what = "do this") {
@@ -674,12 +706,15 @@ export interface MissionView {
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
 
-/** Views of several missions for one person (six queries for the whole list). */
+/**
+ * Views of several missions for one person (six queries for the whole list). `isAdmin`: whether they override these
+ * missions as an admin, or the ids of the agents whose missions they override (`managedAgentIds`).
+ */
 export async function missionViews(
   db: Database,
   rows: MissionRow[],
   userId: string,
-  isAdmin: boolean,
+  isAdmin: boolean | ReadonlySet<string>,
 ): Promise<MissionView[]> {
   if (rows.length === 0) return [];
   const ids = rows.map((r) => r.id);
@@ -824,7 +859,7 @@ export async function missionViews(
       needsComputer,
       role,
       canAct: mayAct(role) && OPEN.includes(r.status),
-      canManage: role === "owner" || isAdmin,
+      canManage: role === "owner" || (typeof isAdmin === "boolean" ? isAdmin : isAdmin.has(r.agentId)),
       createdAt: r.createdAt.toISOString(),
       startedAt: iso(r.startedAt),
       pausedAt: iso(r.pausedAt),
@@ -919,7 +954,7 @@ function missionScope(userId: string, orgId: string, input: ListMissionsInput) {
  * the tabs and the sidebar.
  */
 export async function listMissions(deps: MissionDeps, userId: string, orgId: string, input: ListMissionsInput = {}) {
-  const membership = await requirePermission(deps.db, userId, orgId, "read");
+  await requirePermission(deps.db, userId, orgId, "read");
   const status = input.status;
   const scope = missionScope(userId, orgId, input);
   const statusSql =
@@ -943,7 +978,12 @@ export async function listMissions(deps: MissionDeps, userId: string, orgId: str
     missionCounts(deps.db, userId, orgId, input),
   ]);
   return {
-    missions: await missionViews(deps.db, rows, userId, can(membership, "manage_agents")),
+    missions: await missionViews(
+      deps.db,
+      rows,
+      userId,
+      await managedAgentIds(deps.db, orgId, userId, [...new Set(rows.map((r) => r.agentId))]),
+    ),
     counts,
   };
 }
@@ -1261,7 +1301,7 @@ export async function createMission(
       details: { userId: rootAuthor, role: "decide", reason: "thread_author" },
     });
   }
-  return viewFor(deps, mission, userId, can(membership, "manage_agents"));
+  return viewFor(deps, mission, userId, await overridesMission(db, membership, mission, userId));
 }
 
 /** Asked in the main timeline: the mission gets a thread of its own, started from the message that asked. */
@@ -3330,8 +3370,7 @@ export interface EligibleAgent {
  * The others carry the reason. Eligible first. One query.
  */
 export async function eligibleMissionAgents(deps: Pick<MissionDeps, "db">, userId: string, orgId: string) {
-  const membership = await requirePermission(deps.db, userId, orgId, "read");
-  const admin = can(membership, "manage_agents");
+  await requirePermission(deps.db, userId, orgId, "read");
   const rows = rowsOf<{
     id: string;
     handle: string;
@@ -3339,6 +3378,7 @@ export async function eligibleMissionAgents(deps: Pick<MissionDeps, "db">, userI
     owner_user_id: string | null;
     mission_command_approval: string | null;
     can_talk: boolean;
+    manages: boolean | null;
     machine_id: string | null;
     machine_name: string | null;
     online: boolean | null;
@@ -3354,6 +3394,7 @@ export async function eligibleMissionAgents(deps: Pick<MissionDeps, "db">, userI
     await deps.db.execute(sql`select agents.id, agents.handle, agents.name, agents.owner_user_id,
         agents.mission_command_approval,
         ${audienceSql("agents", sql`${userId}::text`)} as can_talk,
+        ${managesAgentSql("agents", sql`${userId}::text`)} as manages,
         mc.id as machine_id, mc.name as machine_name, mc.online, mc.last_seen_at, mc.kind, mc.standby_at,
         mc.wake_wanted_at, mc.protocol,
         mc.exec_allowed, mc.executors, mc.os
@@ -3363,7 +3404,7 @@ export async function eligibleMissionAgents(deps: Pick<MissionDeps, "db">, userI
       order by agents.name`),
   );
   const list = rows.map((r): EligibleAgent => {
-    const canManage = admin || (r.owner_user_id != null && r.owner_user_id === userId);
+    const canManage = r.manages === true || (r.owner_user_id != null && r.owner_user_id === userId);
     const machine = r.machine_id
       ? {
           id: r.machine_id,

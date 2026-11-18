@@ -38,6 +38,7 @@ import { cutText, inertLinks } from "./format";
 import { pictureSize } from "./image-size";
 import { type EveryoneAnswer, everyoneShape, type Judge, personMentionAddressees } from "./judge";
 import { PLATFORM_CAP } from "./limits";
+import { admitFileAgents, type LiveAskSelection, type LiveRef, liveRefFor, liveRefOf } from "./live/conversation";
 import { isMediaAfterReply, isStickerMood, type MessageMedia, mediaOf, mediaSettings, type StickerMood } from "./media";
 import { type MessageMemory, memoriesFor } from "./message-memories";
 import { readableBody, voiceOf } from "./message-preview";
@@ -51,7 +52,13 @@ import { computerWaitSql, KEPT_ON_HOLD, NO_AI, outageParkedSql, passedSql, runEr
 import { accountInUse, closedRefusal } from "./standing";
 import { afterSteered } from "./steering";
 import type { Talker } from "./talker";
-import { admitTaskAgents, taskAgentSql, taskReaderSql } from "./task-access";
+import {
+  admitTaskAgents,
+  conversationReaderSql,
+  fileConversationReaderSql,
+  taskAgentSql,
+  taskReaderSql,
+} from "./task-access";
 import { WEB_USAGE_PROVIDER } from "./web-tools";
 import { syncWikiLinks, withWikiLinks } from "./wiki-links";
 import { type WorkView, workViews } from "./works";
@@ -106,6 +113,8 @@ export interface MessageView {
   longWork?: WorkView;
   /** On the last message here of a run that handed work over (`handOverWork`): each work's line, live via `agent.work`. */
   handedWorks?: WorkView[];
+  /** `meta.liveRef` as the chat reads it (ADR 0199): the live file the message is about and what was selected in it. */
+  liveRef?: LiveRef;
   createdAt: string;
 }
 
@@ -179,6 +188,7 @@ export interface MessageUsage {
 /** A message as the people who read its conversation see it: a sealed one with its words (`unsealed`, ADR 0190). */
 export const messageView = (stored: Message): MessageView => {
   const m = unsealed(stored);
+  const liveRef = liveRefOf(m.meta);
   return {
     id: m.id,
     channelId: m.channelId,
@@ -190,6 +200,7 @@ export const messageView = (stored: Message): MessageView => {
     agentRunId: m.agentRunId,
     meta: m.meta,
     clientId: typeof m.meta.clientId === "string" ? m.meta.clientId : null,
+    ...(liveRef ? { liveRef } : {}),
     createdAt: m.createdAt.toISOString(),
   };
 };
@@ -471,7 +482,8 @@ function channelRefsSql(orgId: string, channelId: string, names: string[]) {
  * The org's agents an agent's text @mentions that aren't members of `channelId`: a mention reaches only members
  * (`insertMessageWithRuns`), so for them it is plain text that wakes nobody. Handles, lower case; never the author,
  * an archived agent or a handle a person holds (the @ is theirs). In a task's conversation (ADR 0145) the ones that see
- * the task join it first, as `insertMessageWithRuns` does, so they are reached.
+ * the task join it first, as `insertMessageWithRuns` does, so they are reached; in a live file's (ADR 0199), the ones
+ * that may work on the file.
  */
 export async function unreachedAgents(
   db: Executor,
@@ -479,9 +491,9 @@ export async function unreachedAgents(
 ): Promise<string[]> {
   const handles = parseMentionHandles(input.body);
   if (handles.length === 0) return [];
-  await admitTaskAgents(db, input.orgId, input.channelId, {
-    handles: await currentHandles(db, input.orgId, handles),
-  });
+  const current = await currentHandles(db, input.orgId, handles);
+  await admitTaskAgents(db, input.orgId, input.channelId, { handles: current });
+  await admitFileAgents(db, input.orgId, input.channelId, { handles: current });
   const rows = await db
     .select({ handle: agents.handle })
     .from(agents)
@@ -507,8 +519,8 @@ export async function unreachedAgents(
 /**
  * The people an agent's text @mentions who hear nothing of it: members it names by handle, or by a full name
  * (`withNamedMentions` drops that @ of someone outside), who don't read `channelId` (a mention notifies only them,
- * `insertMessageWithRuns`: its members, an administrator in a channel, a task's reader in its conversation). Their
- * handles, lower case; never a blocked account or one waiting for its deletion.
+ * `insertMessageWithRuns`: its members, an administrator in a channel, a task's or a live file's reader in its
+ * conversation). Their handles, lower case; never a blocked account or one waiting for its deletion.
  */
 export async function unreachedPeople(
   db: Executor,
@@ -525,7 +537,8 @@ export async function unreachedPeople(
           or (strpos(${schema.users.name}, ' ') > 0 and strpos(lower(${input.body}::text), lower('@' || ${schema.users.name})) > 0))
         and not exists (select 1 from ${channelMembers} cm where cm.channel_id = c.id and cm.user_id = om.user_id)
         and not (c.kind = 'channel' and ${maySql(sql`om.org_id`, sql`om.user_id`, "administrator")})
-        and not (c.kind = 'task' and ${taskReaderSql(sql`c.id`, sql`om.user_id`)})`),
+        and not (c.kind = 'task' and ${taskReaderSql(sql`c.id`, sql`om.user_id`)})
+        and not (c.kind = 'file' and ${fileConversationReaderSql(sql`c.id`, sql`om.user_id`)})`),
   );
   return rows.map((r) => r.handle).sort();
 }
@@ -724,8 +737,12 @@ export async function insertMessageWithRuns(
   const mentions = await currentHandles(tx, input.orgId, parseMentionHandles(body));
   const person = input.author.type === "person";
   // A task's conversation (ADR 0145): an agent another agent mentions there joins it when it sees the task, as with a
-  // person's mention (`postPersonMessage`), so the mention wakes it (hop limits as anywhere). Elsewhere it adds no one.
-  if (!person && mentions.length > 0) await admitTaskAgents(tx, input.orgId, input.channelId, { handles: mentions });
+  // person's mention (`postPersonMessage`), so the mention wakes it (hop limits as anywhere); a live file's (ADR 0199)
+  // when it may work on the file. Elsewhere it adds no one.
+  if (!person && mentions.length > 0) {
+    await admitTaskAgents(tx, input.orgId, input.channelId, { handles: mentions });
+    await admitFileAgents(tx, input.orgId, input.channelId, { handles: mentions });
+  }
   // Handles match [a-z0-9_-]: safe as an array literal.
   const handles = `{${mentions.join(",")}}`;
   const id = Bun.randomUUIDv7();
@@ -806,12 +823,13 @@ export async function insertMessageWithRuns(
         -- The write goes ahead: no client id, or this send claimed it.
         select 1 where ${clientId}::text is null or exists (select 1 from claimed)
       ), task_readers_named as (
-        -- A task's conversation (ADR 0145) has no people in it: who is named there and sees the task is mentioned.
+        -- A task's conversation (ADR 0145) and a live file's (ADR 0199) have no people in them: who is named there and
+        -- sees the task, or reads the file, is mentioned.
         select om.user_id from ${schema.organizationMembers} om
         where om.org_id = ${input.orgId}::uuid and om.user_id is distinct from ${userId}
           and om.handle = any(${handles}::text[])
-          and exists (select 1 from ${channels} tc where tc.id = ${input.channelId}::uuid and tc.kind = 'task')
-          and ${taskReaderSql(sql`${input.channelId}::uuid`, sql`om.user_id`)}
+          and exists (select 1 from ${channels} tc where tc.id = ${input.channelId}::uuid and tc.kind in ('task', 'file'))
+          and ${conversationReaderSql(sql`${input.channelId}::uuid`, sql`om.user_id`)}
       ), muted as (
         -- A mission's thread (ADR 0029): only its owner and those who can decide make its agent act.
         -- Anyone else addressing it starts nothing: the message becomes a suggestion.
@@ -1283,6 +1301,11 @@ export async function postPersonMessage(
     steer?: "now";
     /** A GIF or an agent's sticker (ADR 0091), looked up here and stored as `meta.media`; `body` may be empty. */
     media?: MessageMediaInput;
+    /**
+     * In a live file's conversation (ADR 0199): what the person had selected in the file, stored as `meta.liveRef`
+     * with the file's kind and title. Only that conversation's own file (`message.live_ref` otherwise).
+     */
+    liveRef?: { artifactId: string; selection?: LiveAskSelection } | null;
   },
 ): Promise<MessageView> {
   // One access check (membership + channel) instead of two round trips. It reads a workspace being deleted; posting
@@ -1299,6 +1322,16 @@ export async function postPersonMessage(
       taskAgent: true,
     });
   }
+  // A live file's conversation (ADR 0199): an agent mentioned there joins it when it may work on the file.
+  if (channel.kind === "file") {
+    await admitFileAgents(deps.db, orgId, channelId, {
+      handles: await currentHandles(deps.db, orgId, parseMentionHandles(input.body)),
+    });
+  }
+  if (input.liveRef && channel.kind !== "file") {
+    throw new ValidationError("Only a message in a live file's conversation points at the file", "message.live_ref");
+  }
+  const liveRef = input.liveRef ? await liveRefFor(deps.db, orgId, channelId, input.liveRef) : null;
   const clientId = normalizeClientId(input.clientId);
   // A resend found before the judge call (no cost again); a resend racing the first send is caught by the insert.
   const resent = clientId ? await sentWithClientId(deps.db, orgId, userId, clientId) : null;
@@ -1332,9 +1365,10 @@ export async function postPersonMessage(
       : null;
   const referencedIds = [...new Set([...(addressees?.referenced ?? []), ...(everyone?.referenced ?? [])])];
   const meta =
-    replyTo || files || media || referencedIds.length > 0 || everyone
+    replyTo || files || media || referencedIds.length > 0 || everyone || liveRef
       ? {
           ...(input.meta ?? {}),
+          ...(liveRef ? { liveRef } : {}),
           ...(replyTo ? { replyTo } : {}),
           ...(files ? { artifacts: files } : {}),
           ...(media ? { media } : {}),

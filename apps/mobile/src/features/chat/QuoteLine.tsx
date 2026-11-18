@@ -60,6 +60,9 @@ export function QuoteLine({
 const FACE_MIDDLE = { comfortable: 31, left: 31, bubbles: 25, compact: 59 };
 const WORDS_START = { comfortable: 59, left: 59, bubbles: 48, compact: 74 };
 
+/** Where a line above a row starts: at the row's words. */
+export const aboveInset = (look: RowLook) => (look.faces ? WORDS_START[look.style] : rowBodyInset(look).left);
+
 /** The line above a row, joined to its face by a small curve; a row with no face has it at its words, no curve. */
 export function QuoteAbove({
   look,
@@ -75,7 +78,7 @@ export function QuoteAbove({
 }) {
   const c = useColors();
   const middle = FACE_MIDDLE[look.style];
-  const start = look.faces ? WORDS_START[look.style] : rowBodyInset(look).left;
+  const start = aboveInset(look);
   return (
     <View style={[styles.above, { paddingLeft: start, marginTop: gap }]}>
       {look.faces ? (

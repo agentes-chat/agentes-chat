@@ -19,13 +19,12 @@ import {
   pictureWhen,
   surfaceOf,
 } from "@agenteschat/client/lib/agent-computer";
-import { seesDetails } from "@agenteschat/client/lib/audience";
+import { managesAgent, seesDetails } from "@agenteschat/client/lib/audience";
 import { computerName } from "@agenteschat/client/lib/computer";
 import { ErrorBoundary } from "@agenteschat/client/lib/error-boundary";
 import { formatPercent, formatUsd, relativeTime } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { isAssignee, STATUS_ICON } from "@agenteschat/client/lib/issues";
-import { can } from "@agenteschat/client/lib/permissions";
 import { usageShown } from "@agenteschat/client/lib/plan-usage";
 import { agentFaceWord } from "@agenteschat/client/lib/presence";
 import { isRightHand } from "@agenteschat/client/lib/right-hand";
@@ -297,7 +296,7 @@ function ComputerSection({ agent }: { agent: Agent }) {
             {t("agentComputer.help")}
           </Button>
         ) : button === "choose" ? (
-          (can(org, "manage_agents") || agent.ownerUserId === me.user.id) && (
+          (managesAgent(agent) || agent.ownerUserId === me.user.id) && (
             <Button
               size="sm"
               onClick={() =>
@@ -397,7 +396,7 @@ function ThinksSection({ agent }: { agent: Agent }) {
   const dir = useDirectory(org.id);
   const thinks = useAgentThinks(agent);
   const detail = useAgentDetail(org.id, agent.id);
-  const admin = can(org, "manage_agents");
+  const admin = managesAgent(agent);
   const owner = agent.ownerUserId ? dir.memberById.get(agent.ownerUserId) : undefined;
   const usage = useUsage(org.id);
   const used = detail.data?.budgetUsedPercent ?? 0;

@@ -3,7 +3,7 @@ import type { LegalDocument } from "./types";
 export const privacyPtBR: LegalDocument = {
   title: "Política de privacidade",
   summary: "O que coletamos, o que os agentes enviam e para onde, quem pode ver o seu workspace e os seus direitos.",
-  updated: "2026-11-16",
+  updated: "2026-11-18",
   sections: [
     {
       id: "overview",
@@ -150,6 +150,7 @@ export const privacyPtBR: LegalDocument = {
       heading: "14. Cookies e armazenamento local",
       blocks: [
         "O workspace usa só os cookies e o armazenamento local necessários para manter você conectado, proteger formulários e lembrar preferências como tema e idioma. O site público agentes.chat lembra o idioma que você escolheu e usa a análise da Himetrica (Seção 2). Não usamos cookies de publicidade nem de rastreamento entre sites.",
+        "**Cookie de indicação:** quando você abre um link de indicação do agentes.chat, nosso serviço de cobrança guarda a indicação em um cookie no seu navegador por 60 dias, para que quem enviou o link receba o crédito se você assinar. No Espaço Econômico Europeu, no Reino Unido e na Suíça, só o definimos depois que você concorda no agentes.chat. Para esquecer a indicação neste aparelho, abra https://agentes.chat/pt/privacidade?forget-referral#cookies.",
       ],
     },
     {

@@ -157,14 +157,15 @@ html:not([data-pointer]) .plan-row__head:focus-visible {
   color: var(--muted);
 }
 /* A placed row: its place in the mark's column (the heading holds the mark), on its name's 24px line, so the row's
-   room above and below its words stays the head's own. */
+   room above and below its words stays the head's own. Its number starts on the row's 16 edge, as the right side ends
+   16 in: the place's own 4 of padding sits inside that. */
 .plan-row--placed {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
 }
 .plan-row--placed > .plan-row__place {
   grid-area: 1 / 1;
-  margin: var(--space-3) 0 0 var(--space-2);
+  margin: var(--space-3) 0 0 calc(var(--space-4) - var(--space-1));
 }
 .plan-row--placed > .plan-row__head {
   grid-area: 1 / 2;
@@ -207,8 +208,9 @@ html:not([data-pointer]) .plan-row__head:focus-visible {
 .plan-row__place--grip > .ac-icon {
   color: var(--faint);
 }
-.plan-row__place--grip:hover {
-  background: var(--plate-soft);
+/* No plate on hover: only its words and grip darken, as a header glyph's do. */
+.plan-row__place--grip:hover,
+.plan-row__place--grip:hover > .ac-icon {
   color: var(--ink);
 }
 html:not([data-pointer]) .plan-row__place--grip:focus-visible {
@@ -243,22 +245,31 @@ html:not([data-pointer]) .plan-row__place--grip:focus-visible {
 .plan-row[data-open] > .plan-row__fold {
   grid-template-rows: 1fr;
 }
+/* Open: its parts a step apart (16), each list under its own label, so the bars, the agents, the kinds and "Quem usa"
+   read as separate groups. */
 .plan-row__body {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-4);
   min-height: 0;
   overflow: hidden;
   padding: 0 var(--space-4);
 }
 .plan-row__body > :last-child {
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 /* The head already says where the plan stands. */
 .plan-row__body .ac-planmeter > .ac-planmeter__state {
   display: none;
 }
-.plan-row__body .ac-planmeter,
+.plan-row__body .ac-planmeter {
+  gap: var(--space-4);
+}
+/* The quiet facts at its end (when each window renews, when it was read, the month's tokens) are one group, 4 apart. */
+.plan-row__body .ac-planmeter > small + small,
+.plan-row__body > .ac-planmeter + .plan-block__month {
+  margin-top: calc(var(--space-1) - var(--space-4));
+}
 .plan-row__body .ac-planmeter__windows {
   gap: var(--space-3);
 }
@@ -351,7 +362,7 @@ html:not([data-pointer]) .plan-row__place--grip:focus-visible {
     position: absolute;
     z-index: 1;
     top: var(--space-3);
-    left: var(--space-4);
+    left: calc(var(--space-4) - var(--space-1));
     margin: 0;
   }
   .plan-row--placed > .plan-row__head {
@@ -442,14 +453,21 @@ html:not([data-pointer]) .plan-row__place--grip:focus-visible {
   text-decoration: underline;
 }
 
-/* Under the agents, the account's use by kind: the same rows, an icon in the face's column, not a link. The label
-   cancels half the meter's gap, so it sits 8 above its list. */
-.plan-kinds__label {
-  margin: 0 0 calc(-1 * var(--space-2));
-  color: var(--muted);
-  font-size: 13.5px;
-  font-weight: 600;
+/* A labelled list in an open row (its agents, its use by kind): the label 4 above the list, whose rows add their own
+   room above their words. */
+.plan-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
 }
+.plan-group__label {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+}
+/* Under the agents, the account's use by kind: the same rows, an icon in the face's column, not a link. */
 .plan-kinds__icon {
   display: inline-flex;
   justify-content: center;
@@ -619,7 +637,7 @@ html:not([data-pointer]) .plan-row__place--grip:focus-visible {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2) var(--space-3);
-  padding-top: var(--space-3);
+  padding-top: var(--space-4);
   border-top: 1px solid var(--line);
 }
 .plan-serves__label {

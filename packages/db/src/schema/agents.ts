@@ -155,6 +155,13 @@ export const agents = pgTable(
      */
     consultable: boolean().notNull().default(true),
     /**
+     * "Quem pode editar" (ADR 0085, addendum of 2026-11-17): besides its owner and who manages it, the people named
+     * and whoever holds one of `editor_role_ids` at the time edit how it works (instructions, role, skills and
+     * routines) and see it. Talking to it is still its audience's.
+     */
+    editorUserIds: text().array().notNull().default(sql`'{}'::text[]`),
+    editorRoleIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
+    /**
      * Autonomy brakes (ADR 0131): what it may start that nobody asked for directly (costly work, how much at once,
      * PRs an hour) and which agents it may call. Validated in code (`autonomySettings`); `{}` = the defaults.
      */

@@ -1,4 +1,5 @@
 import type {
+  Agent,
   Routine,
   RoutineEvent,
   RoutineHookCall,
@@ -26,6 +27,7 @@ import {
   useRuleParse,
 } from "@agenteschat/client";
 import { approvalTitle, ownActionName, routineVaultKey, splitOwnActions } from "@agenteschat/client/lib/approval-words";
+import { createsRoutinesFor, managesAgent } from "@agenteschat/client/lib/audience";
 import type { RunStatus } from "@agenteschat/client/lib/calendar";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { FIELD_LIMITS } from "@agenteschat/client/lib/field-limits";
@@ -306,7 +308,7 @@ export function useWhen() {
 /** Rotinas: scheduled and event-driven agent tasks. */
 export function RoutinesPage() {
   const { t } = useTranslation();
-  const { org, me } = useOrg();
+  const { org } = useOrg();
   const dir = useDirectory(org.id);
   const routines = useRoutines(org.id);
   const now = useNow();
@@ -320,8 +322,9 @@ export function RoutinesPage() {
   // After the directory: who may create hangs on the agents they own.
   const noRoutines = routines.isSuccess && list.length === 0 && !dir.loading;
   const look = useRightHandLook();
-  // The server's rule: who manages routines, or an agent's owner for that agent.
-  const mayCreate = can(org, "manage_routines") || dir.agents.some((a) => a.ownerUserId === me.user.id);
+  // The server's `createRoutine`, per agent (ADR 0085 addendum of 2026-11-17): who sets up its routines (who edits it,
+  // or "Create routines" where it reaches) and talks to it, since a routine asks it on its creator's behalf (ADR 0053).
+  const mayCreate = dir.agents.some((a) => createsRoutinesFor(a));
   const [agents, setAgents] = useState<string[]>([]);
   const copy = useFilterCopy();
   const agentOptions = useActorFilterOptions().filter((o) => o.value.startsWith("agent:"));
@@ -349,8 +352,9 @@ export function RoutinesPage() {
   const open = list.find((r) => r.id === openId) ?? null;
   const toggleOpen = (id: string) => setOpenId(openId === id ? null : id);
   const filtered = agents.length > 0 || query.length > 0 || status !== "all";
-  // "N" opens "Nova rotina" (not while typing).
+  // "N" opens "New routine" (not while typing), for who may make one.
   useEffect(() => {
+    if (!mayCreate) return;
     const onKey = (e: KeyboardEvent) => {
       const el = e.target instanceof Element ? e.target : null;
       if (e.metaKey || e.ctrlKey || e.altKey || e.key.toLowerCase() !== "n") return;
@@ -360,7 +364,7 @@ export function RoutinesPage() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [mayCreate]);
   const group = (title: string, rows: Routine[]) =>
     rows.length > 0 && (
       <section className="routines-group" aria-label={title}>
@@ -544,6 +548,16 @@ export function RoutinesPage() {
  * target change from the widget; here it can be paused, resumed, run, stopped or deleted.
  */
 const isWidgetRoutine = (r: Pick<Routine, "target">) => r.target.type === "widget";
+
+/**
+ * The one-tap fix a paused routine offers me (`pausedFix`), for who changes it (`canManage`). "Take over the routine"
+ * makes it mine, the server's create check (`takeOverRoutine`, ADR 0053 §6.2), so only where I may make one for its
+ * agent (`createsRoutinesFor`, the agent's entry in the directory; ADR 0085 addendum of 2026-11-17).
+ */
+function fixFor(r: Routine, agent: Agent | undefined): RoutineFix | null {
+  const fix = r.canManage ? pausedFix(r) : null;
+  return fix === "take_over" && !createsRoutinesFor(agent) ? null : fix;
+}
 
 /** A title for the card: a routine made from a chat message may be named with its whole prompt. */
 export function routineTitle(r: Pick<Routine, "name" | "prompt">) {
@@ -798,7 +812,9 @@ function RoutineRow({
   const more = t("routines.more", { name: title });
   // Something needs a look (a reason it paused, failures, waiting for a computer or a person): a chip says it.
   const needsLook = !done && routineStateWords(r).tone === "waiting";
-  const fix = r.canManage && needsLook ? pausedFix(r) : null;
+  // Its agent as the directory has it: whether I may make (or copy, or take over) a routine for it.
+  const itsAgent = actors.dir.agentById.get(r.agentId);
+  const fix = needsLook ? fixFor(r, itsAgent) : null;
   // Paused near its plan's limit: said quietly (it picks up by itself), with no fix.
   const showState = needsLook || r.state === "usage_paused";
   // Its "…" and its right click: run or stop, pause or resume, then what the "…" always had.
@@ -845,7 +861,8 @@ function RoutineRow({
         ? ([{ kind: "item", id: "edit", label: t("routines.edit"), icon: "edit", run: onEdit }] satisfies MenuEntry[])
         : []),
     { kind: "item", id: "runs", label: t("routines.runs"), icon: "waiting", run: () => !selected && onOpen() },
-    ...(r.canManage && !widget
+    // A copy is a new routine of mine for its agent: the server's create check (`duplicateRoutine`), not its editor's.
+    ...(!widget && createsRoutinesFor(itsAgent)
       ? ([
           {
             kind: "item",
@@ -1328,6 +1345,8 @@ function RoutineDetails({ routine: r, now, onClose }: { routine: Routine; now: D
   const controls = useRoutineControls(r);
   const action = controls.action;
   const runs = useRoutineRuns(org.id, r.id);
+  const itsAgent = actors.dir.agentById.get(r.agentId);
+  const moves = managesAgent(itsAgent);
   const when = useWhen();
   const say = useSay();
   const outages = useMachineOutages(org.id, r.state === "waiting_computer");
@@ -1346,12 +1365,12 @@ function RoutineDetails({ routine: r, now, onClose }: { routine: Routine; now: D
     r.active && r.trigger.type === "schedule" && r.trigger.rule ? r.trigger.rule : null,
   );
   const nexts = described.data?.ok ? described.data.nextRuns.slice(0, 4) : r.nextRunAt ? [r.nextRunAt] : [];
-  const fix = r.canManage ? pausedFix(r) : null;
-  // "Trocar computador": the outage its run waits on, for whoever can move agents, where people connect their own
+  const fix = fixFor(r, itsAgent);
+  // "Trocar computador": the outage its run waits on, for whoever manages its agent, where people connect their own
   // computers (a Cloud workspace has one).
   const selfHost = useComputerEdition(org.id) === "selfhost";
   const outage =
-    selfHost && r.state === "waiting_computer" && r.waitingFor && can(org, "manage_agents")
+    selfHost && r.state === "waiting_computer" && r.waitingFor && moves
       ? outages.data?.outages.find((o) => o.machineId === r.waitingFor?.machineId)
       : undefined;
   const usage = usageParts(r.usage, can(org, "view_usage"));
@@ -1802,13 +1821,18 @@ function RoutineStrip({
       { onSuccess: onSaved, onError: (error) => toast.show(errorText(t, error), "error") },
     );
   const hint = (kind: ReturnType<typeof whereHint>) => t(`routines.panel.whereHint.${kind}`);
+  // The routine's own agent, kept: its creator still edits it after losing that agent's routines. Another one only where
+  // I may make a routine for it (`createsRoutinesFor`): moving it there is the server's create check in `updateRoutine`,
+  // setting up that agent's routines and talking to it (ADR 0085 addendum of 2026-11-17).
   const agentOptions = [
-    ...actors.dir.agents.map((a) => ({
-      value: a.id,
-      label: a.name,
-      description: a.role || undefined,
-      leading: actors.avatar({ type: "agent", id: a.id }, "sm"),
-    })),
+    ...actors.dir.agents
+      .filter((a) => createsRoutinesFor(a) || a.id === r.agentId)
+      .map((a) => ({
+        value: a.id,
+        label: a.name,
+        description: a.role || undefined,
+        leading: actors.avatar({ type: "agent", id: a.id }, "sm"),
+      })),
     ...(actors.dir.agentById.has(r.agentId)
       ? []
       : [{ value: r.agentId, label: actors.name(agent), description: undefined, leading: actors.avatar(agent, "sm") }]),
@@ -2401,7 +2425,9 @@ function RoutineDialog({
   const channels = useChannels(org.id);
   const targetLabel = useTargetLabel();
   const action = useRoutineAction(org.id);
-  const agents = actors.dir.agents;
+  // The agents I may make a routine for (`createsRoutinesFor`: I set up its routines and it answers me, the server's
+  // `createRoutine`, ADR 0085 addendum of 2026-11-17; the server checks again), the routine's own kept when editing.
+  const agents = actors.dir.agents.filter((a) => createsRoutinesFor(a) || a.id === routine?.agentId);
   const editing = Boolean(routine);
   const shows = (p: RoutinePart) => !part || part === p;
   const myZone = actors.dir.memberById.get(me.user.id)?.timezone || browserTimezone() || "America/Sao_Paulo";

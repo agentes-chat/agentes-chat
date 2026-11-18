@@ -289,6 +289,8 @@ describe("a task's conversation (ADR 0145)", () => {
         orgId: f.org.id,
         kind: "file",
         title: "print.png",
+        // A Drive file is made shared with everyone (ADR 0157, amendment 2026-11-17).
+        share: "everyone",
         createdByType: "person",
         createdById: f.owner.id,
         updatedByType: "person",

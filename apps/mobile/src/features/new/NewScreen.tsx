@@ -1,3 +1,4 @@
+import { createsRoutinesFor } from "@agenteschat/client/lib/audience";
 import { markTerms } from "@agenteschat/client/lib/search-filters";
 import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
 import { type AgentPresetColor, gradientOf, mixHex } from "@agenteschat/ui/agent/engine";
@@ -35,6 +36,7 @@ import {
 } from "@/ui";
 import { router } from "@/ui/navigation";
 import { busyAgents } from "../agents/logic";
+import { useCreateLive } from "../live-files/shared/useCreateLive";
 import { AgentFace, Face } from "../shared/Face";
 import { useDirectory, useMeId } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
@@ -82,8 +84,9 @@ export function NewScreen() {
   // No words: the agents in the order you talk to them; words: the matches.
   const agents = typed ? found.agents : recent;
   const people = found.people;
-  const ownsAgent = Boolean(meId) && dir.agents.some((a) => a.ownerUserId === meId);
-  const items = createItems(org, { ownsAgent });
+  // Some agent this person may make a routine for (`createsRoutinesFor`: they set up its routines and it answers them).
+  const createsRoutines = dir.agents.some((a) => createsRoutinesFor(a));
+  const items = createItems(org, { createsRoutines });
   const invite = !typed && items.includes("invite");
 
   const talkTo = (agentId: string) => void openDm({ agentId }, { replace: true });
@@ -233,15 +236,20 @@ const CREATE_LOOK: Record<Exclude<CreateItem, "invite">, { icon: IconName; color
   task: { icon: "checkc", color: "green" },
   routine: { icon: "clock", color: "amber" },
   wiki: { icon: "file", color: "graphite" },
+  spreadsheet: { icon: "spreadsheet", color: "teal" },
+  slides: { icon: "slides", color: "rose" },
+  canvas: { icon: "canvas", color: "indigo" },
 };
 
 /**
  * What to start, as rows: a soft tile of its color, a short name and a hint under it. A personal workspace's channel
- * is a group conversation, and its wiki is for its person's agents (ADR 0159).
+ * is a group conversation, and its wiki is for its person's agents (ADR 0159). A spreadsheet, a presentation or a
+ * canvas is made in the Drive at once and opens on its own screen (ADR 0196 §9).
  */
 function CreateList({ items }: { items: CreateItem[] }) {
   const { t } = useTranslation();
   const { org } = useOrg();
+  const maker = useCreateLive();
   // The short names reuse labels already translated in every language (a form field's or a screen's name elsewhere).
   const spec: Record<Exclude<CreateItem, "invite">, { label: string; sub: string; onPress: () => void }> = {
     agent: { label: t("missions.new.agent"), sub: t("mobile.new.agentHint"), onPress: () => router.push("/new-agent") },
@@ -261,6 +269,21 @@ function CreateList({ items }: { items: CreateItem[] }) {
       sub: t(modeKey(org, "mobile.new.wikiHint")),
       onPress: () => newWikiPage(),
     },
+    spreadsheet: {
+      label: t("live.kinds.spreadsheet"),
+      sub: t("live.kinds.spreadsheetHint"),
+      onPress: () => void maker.make("spreadsheet"),
+    },
+    slides: {
+      label: t("live.kinds.slides"),
+      sub: t("live.kinds.slidesHint"),
+      onPress: () => void maker.make("slides"),
+    },
+    canvas: {
+      label: t("live.kinds.canvas"),
+      sub: t("live.kinds.canvasHint"),
+      onPress: () => void maker.make("canvas"),
+    },
   };
   const create = items.filter((i): i is Exclude<CreateItem, "invite"> => i !== "invite");
   if (create.length === 0) return null;
@@ -269,7 +292,14 @@ function CreateList({ items }: { items: CreateItem[] }) {
       <GroupedHeader>{t("mobile.new.create")}</GroupedHeader>
       <GroupedList>
         {create.map((item) => (
-          <GroupedRow key={item} leading={<TintTile {...CREATE_LOOK[item]} />} {...spec[item]} subLines={2} chevron />
+          <GroupedRow
+            key={item}
+            leading={<TintTile {...CREATE_LOOK[item]} />}
+            {...spec[item]}
+            subLines={2}
+            chevron
+            disabled={maker.busy !== null}
+          />
         ))}
       </GroupedList>
     </>

@@ -54,7 +54,7 @@ const POWERS: [RolePermission, string][] = [
   ["create_agents", "create agents"],
   [
     "manage_agents",
-    "change any agent's settings (model, AI account, budget, owner, who may use it), archive and delete agents",
+    "change the settings (model, AI account, budget, owner, who may use it) of the agents they talk to and the ones with no owner (owners and administrators: every agent), archive and delete them",
   ],
   ["manage_channels", "manage channels (which agents are in them, how they reply)"],
   ["manage_connectors", "connect apps and MCP servers"],
@@ -62,7 +62,7 @@ const POWERS: [RolePermission, string][] = [
   ["invite_people", "invite people"],
   ["manage_members", "change people's roles and remove people"],
   ["manage_billing", "manage billing"],
-  ["manage_routines", "manage any agent's routines"],
+  ["manage_routines", "manage the routines of the agents they talk to"],
 ];
 
 /** At most this many agents, people and channels in the snapshot, like the team roster. */

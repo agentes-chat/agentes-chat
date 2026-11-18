@@ -1,6 +1,6 @@
 import { type CatchUpClosed, keys, type Message, useApi, useUsageQueue } from "@agenteschat/client";
+import { managesAgent } from "@agenteschat/client/lib/audience";
 import { clockAt } from "@agenteschat/client/lib/format";
-import { can } from "@agenteschat/client/lib/permissions";
 import {
   answerAnywayOpen,
   mayAnswerAnyway,
@@ -87,14 +87,14 @@ export function AnswerAnywayButton({
   const { t } = useTranslation();
   const api = useApi();
   const qc = useQueryClient();
-  const { orgId, org } = useOrg();
+  const { orgId } = useOrg();
   const dir = useDirectory();
   const meId = useMeId();
   const failed = useFailed();
   const [pending, setPending] = useState(false);
   if (!answerAnywayOpen(closed)) return null;
-  const owner = dir.agentById.get(agentId ?? "")?.ownerUserId;
-  const may = mayAnswerAnyway(closed, meId, owner, can(org, "manage_agents"));
+  const agent = dir.agentById.get(agentId ?? "");
+  const may = mayAnswerAnyway(closed, meId, agent?.ownerUserId, managesAgent(agent));
   return (
     <Button
       variant="text"
@@ -123,7 +123,7 @@ export function AnswerAnywayButton({
 export function UsageWaitCancel({ message: m }: { message: Message }) {
   const { t } = useTranslation();
   const sheet = useSheetIfAny();
-  const { org, orgId } = useOrg();
+  const { orgId } = useOrg();
   const dir = useDirectory();
   const meId = useMeId();
   const wait = m.author.type === "agent" ? usageWaitOf(m.meta) : null;
@@ -133,8 +133,10 @@ export function UsageWaitCancel({ message: m }: { message: Message }) {
   const queue = useUsageQueue(orgId, m.author.id ?? "", live && planLimitNote(m.meta));
   const checked = live ? usageCheckedText(t, m.meta, queue.data?.checkedAt, now) : null;
   if (!wait || (!skipped && (wait.canceled || wait.ended))) return null;
-  const owner = dir.agentById.get(m.author.id ?? "")?.ownerUserId;
-  const admin = can(org, "manage_agents");
+  const author = dir.agentById.get(m.author.id ?? "");
+  const owner = author?.ownerUserId;
+  // Who manages the agent (the server's `canManage`), as on its page.
+  const admin = managesAgent(author);
   const mayStop = mayContinueUsage(wait, meId, owner, admin);
   // Who may press it, under the row, for anyone it is greyed for.
   const forbidden = skipped
@@ -195,7 +197,7 @@ export function UsageWaitCancel({ message: m }: { message: Message }) {
 export function UsagePauseCard({ message: m }: { message: Message }) {
   const { t, i18n } = useTranslation();
   const api = useApi();
-  const { orgId, org } = useOrg();
+  const { orgId } = useOrg();
   const dir = useDirectory();
   const meId = useMeId();
   const failed = useFailed();
@@ -206,7 +208,7 @@ export function UsagePauseCard({ message: m }: { message: Message }) {
   const agent = dir.agentById.get(card.agentId);
   const name = agent?.name ?? t("channel.unknownAgent");
   const { title, line } = usagePauseText(t, i18n.language, card, name);
-  const may = mayContinueUsage(card, meId, agent?.ownerUserId, can(org, "manage_agents"));
+  const may = mayContinueUsage(card, meId, agent?.ownerUserId, managesAgent(agent));
   const by = card.continuedByUserId;
   const time = card.continuedAt ? clockAt(i18n.language, card.continuedAt) : "";
   const go = async () => {

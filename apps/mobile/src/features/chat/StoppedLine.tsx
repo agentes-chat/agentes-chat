@@ -1,8 +1,7 @@
 import { type Message, useAiAccounts, useStopReason } from "@agenteschat/client";
-import { seesDetails } from "@agenteschat/client/lib/audience";
+import { managesAgent, seesDetails } from "@agenteschat/client/lib/audience";
 import { mayPickModel } from "@agenteschat/client/lib/brain-picker";
 import { type StoppedNotice, stopLine, stopperOf } from "@agenteschat/client/lib/notices";
-import { can } from "@agenteschat/client/lib/permissions";
 import { modelStandInKey } from "@agenteschat/client/lib/plan-usage";
 import { planOf } from "@agenteschat/client/lib/plans";
 import { type ReactNode, useState } from "react";
@@ -170,11 +169,11 @@ export function SpeedFallbackLine({ message }: { message: Message }) {
  */
 export function ModelStandInLine({ message, text }: { message: Message; text: string }) {
   const { t } = useTranslation();
-  const { org, orgId } = useOrg();
+  const { orgId } = useOrg();
   const dir = useRowDirectory();
   const meId = useRowMeId();
   const agent = dir.agentById.get(message.author.id ?? "");
-  const may = mayPickModel(agent, meId, can(org, "manage_agents"));
+  const may = mayPickModel(agent, meId, managesAgent(agent));
   const key = may ? modelStandInKey(message.meta) : null;
   const ai = useAiAccounts(orgId, Boolean(key));
   const account = key

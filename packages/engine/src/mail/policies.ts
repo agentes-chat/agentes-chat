@@ -1,10 +1,10 @@
 import { and, type Database, eq, inArray, like, schema } from "@agenteschat/db";
 import { type Agent, getAgent } from "../agents";
-import { audienceError, canTalkTo, speakerFor } from "../audience";
+import { audienceError, canTalkTo, managesAgent, speakerFor } from "../audience";
 import { recordAudit } from "../audit";
 import { caches } from "../cache";
 import { seesOthersOnAgent } from "../connectors/personal";
-import { NotFoundError, ValidationError } from "../errors";
+import { ForbiddenError, NotFoundError, ValidationError } from "../errors";
 import { requirePermission } from "../organizations";
 import { levelOf, MAIL_SCOPES, mailboxAddresses, mailGrants, mailOwnerOnlyError, orgMailAccounts } from "./accounts";
 import { isEmailAddress, normalizeAddress, normalizeAddressRule } from "./text";
@@ -192,7 +192,11 @@ async function mayChangeMail(
     throw await audienceError(db, agent);
   }
   if (!lowering) throw await mailOwnerOnlyError(db, account);
-  if (agent.ownerUserId !== actorId) await requirePermission(db, actorId, orgId, "manage_agents");
+  // Who manages the agent (`managesAgent`, ADR 0085 addendum of 2026-11-17), never every holder of the key.
+  if (agent.ownerUserId !== actorId) {
+    const membership = await requirePermission(db, actorId, orgId, "manage_agents");
+    if (!managesAgent(agent, actorId, membership)) throw new ForbiddenError();
+  }
   return false;
 }
 

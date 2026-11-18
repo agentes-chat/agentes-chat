@@ -701,8 +701,8 @@ test("long work past the line on its owner's plan goes on with a free account be
   await account(OWN2, fx.owner.id);
   await usage(OWN2, 10);
   const extraOpen = {
-    ...reading(97),
-    windows: [...reading(97).windows, { kind: "other", label: "Extra usage", usedPercent: 10 }],
+    ...reading(99),
+    windows: [...reading(99).windows, { kind: "other", label: "Extra usage", usedPercent: 10 }],
   };
   await fx.db
     .update(schema.machineAccounts)
@@ -736,8 +736,8 @@ test("long work at the pause line goes on with the next account under it, quietl
   const { fx, walter, account, usage } = await world();
   await account(OWN2, fx.owner.id);
   await account(WALTER_ALL, walter.id);
-  await usage(OWN1, 96);
-  await usage(OWN2, 97);
+  await usage(OWN1, 99);
+  await usage(OWN2, 99);
   await usage(WALTER_ALL, 40);
   const { brain, seen } = scripted(() => answers);
   await scheduledSlot(fx);
@@ -751,7 +751,7 @@ test("long work at the pause line goes on with the next account under it, quietl
   expect(await notes(fx, "plan_account_moved")).toHaveLength(0);
 
   // Every account over the line: it pauses on its own.
-  await usage(WALTER_ALL, 98);
+  await usage(WALTER_ALL, 99);
   await scheduledSlot(fx);
   await drainOutbox(fx.db, handlersWith(fx, brain));
   expect(seen).toHaveLength(1);
@@ -765,7 +765,7 @@ test("long work at the pause line goes on with the next account under it, quietl
 test("a paused run on a teammate's account it moved to never goes on into that plan's paid extra usage", async () => {
   const { fx, walter, account, usage } = await world();
   await account(WALTER_ALL, walter.id);
-  await usage(OWN1, 97);
+  await usage(OWN1, 99);
   await usage(WALTER_ALL, 99);
   const { brain } = scripted(() => answers);
   await scheduledSlot(fx);
@@ -798,8 +798,8 @@ test("long work at its own account's limit never moves onto an account past the 
   await account(WALTER_ALL, walter.id);
   await usage(OWN1, 100, iso(5 * 3600_000));
   const pastLine = {
-    ...reading(97),
-    windows: [...reading(97).windows, { kind: "other", label: "Extra usage", usedPercent: 10 }],
+    ...reading(99),
+    windows: [...reading(99).windows, { kind: "other", label: "Extra usage", usedPercent: 10 }],
   };
   await fx.db
     .update(schema.machineAccounts)
@@ -824,7 +824,7 @@ const goesOn = {
 };
 
 /**
- * Each of its first `turns` turns runs a step, puts the account it ran on at 96% of its week (`extra`: with that plan's
+ * Each of its first `turns` turns runs a step, puts the account it ran on at 99% of its week (`extra`: with that plan's
  * paid extra usage open), then says it goes on.
  */
 function fillsTheWeek(fx: Fixture, turns = 1, extra = false) {
@@ -842,7 +842,7 @@ function fillsTheWeek(fx: Fixture, turns = 1, extra = false) {
         .set({
           usage: {
             windows: [
-              { kind: "seven_day", usedPercent: 96, resetsAt: iso(5 * 24 * 3600_000) },
+              { kind: "seven_day", usedPercent: 99, resetsAt: iso(5 * 24 * 3600_000) },
               ...(extra ? [{ kind: "other", label: "Extra usage", usedPercent: 10 }] : []),
             ],
             source: "turn",
@@ -864,8 +864,8 @@ test("long work moved onto a teammate's account that reaches the line there goes
   await account(WALTER_ALL, walter.id);
   await usage(WALTER_ALL, 40);
   const extraOpen = {
-    ...reading(97, iso(3 * 3600_000)),
-    windows: [...reading(97, iso(3 * 3600_000)).windows, { kind: "other", label: "Extra usage", usedPercent: 10 }],
+    ...reading(99, iso(3 * 3600_000)),
+    windows: [...reading(99, iso(3 * 3600_000)).windows, { kind: "other", label: "Extra usage", usedPercent: 10 }],
   };
   await fx.db
     .update(schema.machineAccounts)
@@ -885,7 +885,7 @@ test("long work moved onto a teammate's account that reaches the line there wait
   const { fx, walter, account, usage } = await world({}, goesOn);
   await account(WALTER_ALL, walter.id);
   await usage(WALTER_ALL, 40);
-  await usage(OWN1, 97, iso(3 * 3600_000));
+  await usage(OWN1, 99, iso(3 * 3600_000));
   const { brain, seen } = fillsTheWeek(fx);
   await scheduledSlot(fx);
   await drainOutbox(fx.db, handlersWith(fx, brain));
@@ -903,7 +903,7 @@ test("long work on a teammate's account it moved to stops at that plan's line, t
   const { fx, walter, account, usage } = await world({}, goesOn);
   await account(WALTER_ALL, walter.id);
   await usage(WALTER_ALL, 40);
-  await usage(OWN1, 97, iso(3 * 3600_000));
+  await usage(OWN1, 99, iso(3 * 3600_000));
   const { brain, seen } = fillsTheWeek(fx, 1, true);
   await scheduledSlot(fx);
   await drainOutbox(fx.db, handlersWith(fx, brain));
@@ -1027,8 +1027,8 @@ test("long work on a plan lent to its agent never goes back into that plan's pai
     .set({ brainAccountId: WALTER_ALL, brainAccountLentBy: walter.id })
     .where(eq(schema.agents.id, fx.agent.id));
   const extraOpen = {
-    ...reading(97, iso(3 * 3600_000)),
-    windows: [...reading(97, iso(3 * 3600_000)).windows, { kind: "other", label: "Extra usage", usedPercent: 10 }],
+    ...reading(99, iso(3 * 3600_000)),
+    windows: [...reading(99, iso(3 * 3600_000)).windows, { kind: "other", label: "Extra usage", usedPercent: 10 }],
   };
   await fx.db
     .update(schema.machineAccounts)
@@ -1074,7 +1074,7 @@ test("long work whose turn the plan cut on the account it moved to stays there a
     .update(schema.machineAccounts)
     .set({
       usage: {
-        windows: [{ kind: "seven_day", usedPercent: 96, resetsAt: iso(5 * 24 * 3600_000) }],
+        windows: [{ kind: "seven_day", usedPercent: 99, resetsAt: iso(5 * 24 * 3600_000) }],
         source: "turn",
         at: new Date().toISOString(),
       } as never,
@@ -1121,8 +1121,8 @@ test("long work that would go into its owner's paid extra usage says so when it 
   await account(OWN2, fx.owner.id);
   await usage(OWN2, 40);
   const extraOpen = {
-    ...reading(97),
-    windows: [...reading(97).windows, { kind: "other", label: "Extra usage", usedPercent: 10 }],
+    ...reading(99),
+    windows: [...reading(99).windows, { kind: "other", label: "Extra usage", usedPercent: 10 }],
   };
   await fx.db
     .update(schema.machineAccounts)
@@ -1407,7 +1407,7 @@ test("Lodi's long work on its person's other account it moved to stops at that p
       status: "active",
       createdBy: fx.owner.id,
       shared: true,
-      usage: reading(id === OWN1 ? 97 : 40, iso(3 * 3600_000)) as never,
+      usage: reading(id === OWN1 ? 99 : 40, iso(3 * 3600_000)) as never,
     });
   const [lodi] = await fx.db
     .select()

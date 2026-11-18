@@ -202,6 +202,10 @@ describe("a workspace being deleted is read-only", () => {
             brainModel: null,
             machineId: computer.machineId,
             ownerUserId: null,
+            audienceMode: "everyone" as const,
+            audienceUserIds: [],
+            audienceRoleIds: [],
+            consultable: true,
           };
           return (
             (await agentBrainSummaries(f.db, f.owner.id, f.org.id, [agent])).get(f.agent.id)?.computer !== undefined

@@ -87,13 +87,13 @@ describe("file kind, tile and size", () => {
     expect(fileInfo(upload("logo.svg", "image/svg+xml")).type).toBe("image");
   });
 
-  test("PDF, Markdown and text open in the document screen", () => {
+  test("PDF, Markdown and text open in the document screen; a CSV in the spreadsheet's grid (ADR 0198)", () => {
     const pdf = fileInfo(upload("Relatório.pdf", "application/pdf", 2048));
     expect(pdf).toMatchObject({ view: "pdf", type: "pdf", ext: "PDF", size: 2048, name: "Relatório.pdf" });
     expect(fileInfo(upload("notes.md", "application/octet-stream")).view).toBe("markdown");
     expect(fileInfo(upload("notes.md", "text/markdown")).type).toBe("document");
     const csv = fileInfo(upload("vendas.csv", "text/csv"));
-    expect(csv).toMatchObject({ view: "text", type: "table", ext: "CSV" });
+    expect(csv).toMatchObject({ view: "sheet", type: "table", ext: "CSV" });
     expect(fileInfo(upload("log.txt", "text/plain")).type).toBe("text");
   });
 
@@ -112,9 +112,11 @@ describe("file kind, tile and size", () => {
       title: "Resumo da home",
       content: { kind: "document", markdown: "Olá é" },
     });
-    expect(doc).toMatchObject({ name: "Resumo da home.md", view: "markdown", type: "document", ext: "MD", size: 7 });
+    // A document is a live file (ADR 0200): it opens on its own screen.
+    expect(doc).toMatchObject({ name: "Resumo da home.md", view: "live", type: "document", ext: "MD", size: 7 });
     const table = fileInfo({ kind: "table", title: "Vendas", content: { kind: "table", columns: [], rows: [] } });
-    expect(table).toMatchObject({ name: "Vendas.csv", view: "other", type: "table", size: null });
+    // An old table opens read-only in the spreadsheet's grid.
+    expect(table).toMatchObject({ name: "Vendas.csv", view: "sheet", type: "table", size: null });
   });
 
   test("helpers", () => {
@@ -310,7 +312,10 @@ describe("viewer", () => {
     expect(fileRoute({ id: "v1", version: 2, title: "abertura.mp4", kind: "file" }).pathname).toBe("/images");
     // A file's link that turns out to be one still goes on to the viewer, in the file screen's place.
     const document = src("features/files/DocumentViewer.tsx");
-    expect(document).toContain('const media = info?.view === "image" || info?.view === "video";');
+    // (A live file's too, on to its own screen, ADR 0196.)
+    expect(document).toContain(
+      'const media = info?.view === "image" || info?.view === "video" || info?.view === "live";',
+    );
     expect(document).toContain("openFile({ id: detail.id, detail }, undefined, { replace: true });");
     expect(document).not.toContain("<VideoPlayer");
   });
@@ -341,7 +346,7 @@ describe("viewer", () => {
       params: { files: "x", at: "0" },
     });
     expect(fileRoute({ id: "d", title: "Plano", kind: "document" }, media)).toEqual({
-      pathname: "/file/[id]",
+      pathname: "/document/[id]",
       params: { id: "d" },
     });
     // The file screen at an older version only when that's the one shown.

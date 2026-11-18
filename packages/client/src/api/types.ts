@@ -1,11 +1,13 @@
 /** Types of the private web-app API (`/api/app/*`, apps/server/src/routes/app). */
 
+import type { CanvasPreview, DocumentPreview, SheetPreview, SlidesPreview } from "@agenteschat/live";
 import type { ChatPrefs } from "../lib/chat-look";
 import type { RoleId } from "../lib/new-agent";
 import type { OnboardingStepId } from "../lib/onboarding";
 import type { Permission } from "../lib/permissions";
 import type { Seat } from "../lib/seat";
 import type { AudienceChoice } from "../lib/who-sees";
+import type { LiveRef } from "../live/types";
 
 /** Whether a person owns the workspace (ADR 0085); what anyone may do comes from their roles (`OrgRole`). */
 export type Role = "owner" | "member";
@@ -852,6 +854,12 @@ export interface EndpointCheck {
 /** Who can talk to an agent: everyone, some people, or only its owner. */
 export type AudienceMode = "everyone" | "people" | "owner";
 
+/** "Quem pode editar" (ADR 0085, addendum of 2026-11-17): who edits an agent besides its owner and who manages it. */
+export interface AgentEditors {
+  userIds: string[];
+  roleIds: string[];
+}
+
 export interface AgentAudience {
   mode: AudienceMode;
   /** For `people` (the owner can always talk to it). */
@@ -891,6 +899,18 @@ export interface Agent {
   audienceMode?: AudienceMode;
   /** Whether I can talk to it (absent = yes). */
   canTalk?: boolean;
+  /**
+   * Whether I manage it (ADR 0085, addendum of 2026-11-17): "Editar qualquer agente" where it reaches (owners and
+   * administrators every agent, anyone else the agents whose audience takes them and the ones with no owner).
+   * Everything about it, its apps, budget and owner included. Absent = no.
+   */
+  canManage?: boolean;
+  /** Whether I edit how it works: its instructions, role, skills and routines (its owner, who manages it, `editors`). */
+  canEdit?: boolean;
+  /** Whether I set up its routines: who edits it, and "Criar rotinas" where it reaches. */
+  canManageRoutines?: boolean;
+  /** "Quem pode editar": who edits it besides its owner and who manages it (empty for who doesn't see its details). */
+  editors?: AgentEditors;
   /**
    * Whether I see how it works (its owner, who manages agents, whoever it answers); absent = yes (an older server).
    * Without it `instructions` is empty and its tools, memory, usage and activity are refused: only its public card.
@@ -990,6 +1010,11 @@ export interface FormerAgent {
   appearance: AgentLookInput | null;
   /** Deleted for good; false: archived (an admin may still delete it). */
   deleted: boolean;
+  /**
+   * An archived one: whether I manage it (as `Agent.canManage`, ADR 0085 addendum of 2026-11-17), so I bring it back or
+   * delete it for good. Absent once deleted, and from an older server.
+   */
+  canManage?: boolean;
 }
 
 /**
@@ -1040,6 +1065,8 @@ export interface TeamAgent {
   canTalk: boolean;
   /** Whether I see how it works (absent = yes); without it `capabilities` is empty. */
   seesDetails?: boolean;
+  /** Whether I manage it (as `Agent.canManage`); absent = no. */
+  canManage?: boolean;
 }
 
 /** Responde a: one agent and the agent it reports to (null: nobody, its owner then). */
@@ -1101,6 +1128,11 @@ export interface AgentInput {
   audience?: AgentAudience;
   /** With `audience`: the mailboxes the person agreed it loses; losing another refuses the save (409). */
   mailLossSeen?: string[];
+  /**
+   * "Quem pode editar" (ADR 0085, addendum of 2026-11-17): the whole lists, empty for only who looks after it. Its
+   * owner or who manages it sends it; never on the team's right hand.
+   */
+  editors?: AgentEditors;
   appearance?: AgentLookInput;
   /** Created from an agent's proposal (its card's message id, ADR 0081): the card is marked created. */
   proposal?: string;
@@ -1503,6 +1535,11 @@ export interface Message {
   longWork?: WorkView;
   /** On a run's last message here: the works it handed over to other agents, each with its line; live via `agent.work`. */
   handedWorks?: WorkView[];
+  /**
+   * `meta.liveRef` (ADR 0199): the live file the message is about and what its writer had selected in it, shown as a
+   * line above it. An older server leaves it in `meta` only: `liveRefOf(message.meta)` reads it there.
+   */
+  liveRef?: LiveRef;
   /** Client only: an optimistic message waiting for the server, or one that failed to send. */
   local?: "pending" | "failed";
   /** Client only, on a `failed` one the server refused: why (`sendFailureText`). */
@@ -2788,7 +2825,7 @@ export interface AgentWork {
   runId: string;
   /** Where it shows, when you read that conversation: null otherwise. */
   channelId: string | null;
-  channelKind: "channel" | "dm" | "task" | null;
+  channelKind: "channel" | "dm" | "task" | "file" | null;
   channelName: string | null;
   threadId: string | null;
   /** The reply that handed it off, once posted. */
@@ -2812,7 +2849,7 @@ export interface PendingReturn {
   messageId: string;
   agentId: string;
   channelId: string;
-  channelKind: "channel" | "dm" | "task";
+  channelKind: "channel" | "dm" | "task" | "file";
   channelName: string | null;
   /** Null: the conversation's main timeline. */
   threadId: string | null;
@@ -2833,7 +2870,7 @@ export interface CanceledReturn {
   messageId: string;
   agentId: string;
   channelId: string;
-  channelKind: "channel" | "dm" | "task";
+  channelKind: "channel" | "dm" | "task" | "file";
   channelName: string | null;
   threadId: string | null;
   at: string;
@@ -2955,7 +2992,7 @@ export interface UsageReport {
   defaultAgentBudgetUsd: number;
   totalUsd: number;
   byKind: {
-    kind: "agent" | "router" | "embedding" | "summary";
+    kind: "agent" | "router" | "embedding" | "summary" | "image";
     calls: number;
     partialCalls: number;
     inputTokens: number;
@@ -3712,7 +3749,20 @@ export interface StorageMigration {
 
 // ── Artifacts (expected: `…/artifacts`, events `artifact.created` / `artifact.updated`, `meta.artifacts`) ──
 
-export type ArtifactKind = "document" | "table" | "diff" | "diagram" | "html" | "file" | "block" | "poll" | "choices";
+export type ArtifactKind =
+  | "document"
+  | "table"
+  | "diff"
+  | "diagram"
+  | "html"
+  | "file"
+  | "block"
+  | "poll"
+  | "choices"
+  /** Live files people and agents edit together (ADR 0196): their content here is a small preview. */
+  | "spreadsheet"
+  | "slides"
+  | "canvas";
 
 /**
  * An uploaded file as is (ADR 0025): metadata only; the bytes come from the
@@ -3743,7 +3793,11 @@ export interface ArtifactDiffFile {
 }
 
 export type ArtifactContent =
-  | { kind: "document"; markdown: string }
+  /**
+   * A document (ADR 0200): a live file, sent as its whole text in Markdown (what the apps show until they edit it
+   * live) and its card's preview.
+   */
+  | { kind: "document"; markdown: string; preview?: DocumentPreview }
   | { kind: "table"; columns: string[]; rows: string[][] }
   | { kind: "diff"; files: ArtifactDiffFile[] }
   | { kind: "diagram"; mermaid: string }
@@ -3755,7 +3809,17 @@ export type ArtifactContent =
   | { kind: "block"; spec?: Record<string, unknown>; html?: string; subtitle?: string }
   | { kind: "poll"; question: string; options: string[]; multiple: boolean }
   | { kind: "choices"; questions: ChoiceQuestion[] }
-  | ArtifactFileContent;
+  | ArtifactFileContent
+  | ArtifactLiveContent;
+
+/**
+ * A live file's content (ADR 0196 §7): the small preview cards and the Drive draw (the top-left cells, the first slide,
+ * the canvas's first shapes), never the whole document, which only the room (`useLiveRoom`) holds.
+ */
+export type ArtifactLiveContent =
+  | { kind: "spreadsheet"; preview: SheetPreview }
+  | { kind: "slides"; preview: SlidesPreview }
+  | { kind: "canvas"; preview: CanvasPreview };
 
 /** One question of a choice card (ADR 0124): its options show as A, B, C…, then "Outra resposta". */
 export interface ChoiceQuestion {
@@ -3836,13 +3900,42 @@ export interface Artifact {
   audience: ArtifactAudience;
   /** Who sees it on top of that conversation (ADR 0157); absent from an older server. */
   sharing?: ArtifactSharing;
-  /** I may change `sharing`: it lives in a conversation not everyone reads, and I read it there. */
+  /**
+   * I may change `sharing`: it lives in a conversation not everyone reads, and I read it there; or it is a file of the
+   * Drive itself (ADR 0157, amendment 2026-11-17), and I made it or I'm an administrator.
+   */
   canShare?: boolean;
+  /** A live file's conversation (ADR 0199), once someone opened or wrote in it; null until then and for other kinds. */
+  conversation?: FileConversation | null;
+}
+
+/** Where a live file's conversation lives (ADR 0199): the chat's routes read and post to this thread. */
+export interface FileConversationRef {
+  channelId: string;
+  rootId: string;
+}
+
+/** A live file's conversation as its page shows it: its messages, who took part, an agent at work now. */
+export interface FileConversation extends FileConversationRef {
+  count: number;
+  lastAt: string | null;
+  /** The first ones to write, oldest first (at most 5). */
+  participants: Actor[];
+  working: boolean;
+}
+
+/** A live file's conversation with something I haven't read (`GET …/unread-files`, ADR 0199). */
+export interface UnreadFile {
+  artifactId: string;
+  /** Replies I haven't read: every one where I follow the conversation, else only those that mention me. */
+  unread: number;
+  mentions: number;
 }
 
 /**
  * Who sees a file past where it lives (ADR 0157): nobody more (`conversation`), the people and roles listed and
- * administrators (`people`), or the whole workspace (`everyone`).
+ * administrators (`people`), or the whole workspace (`everyone`). A file of the Drive itself lives with its maker, so
+ * `conversation` is its maker alone (and administrators).
  */
 export interface ArtifactSharing {
   mode: "conversation" | "people" | "everyone";
@@ -5692,7 +5785,7 @@ export interface ThreadInfo {
   id: string;
   channelId: string;
   channelName: string;
-  channelKind: "channel" | "dm" | "task";
+  channelKind: "channel" | "dm" | "task" | "file";
   /** Null: show `rootText`. */
   title: string | null;
   rootText: string;
@@ -7020,6 +7113,8 @@ export interface NotificationSource {
   dashboardId?: string;
   /** `widget_alert`, `widget_failed`: the widget. */
   widgetId?: string;
+  /** A message in a live file's conversation (ADR 0199): the file, opened with it at `messageId`. */
+  artifactId?: string;
   /** Channel name, thread title, issue title, topic title, mission or routine name (or the computer's name). */
   label?: string;
 }
@@ -7140,7 +7235,7 @@ export interface AuditRow {
   details: Record<string, unknown>;
   runId: string | null;
   channelId: string | null;
-  channel: { id: string; name: string; kind: "channel" | "dm" | "task" } | null;
+  channel: { id: string; name: string; kind: "channel" | "dm" | "task" | "file" } | null;
   onBehalfOf: { id: string; name: string | null } | null;
   outcome: AuditOutcome | null;
   /** The approval the call waited for or ran after, as it stands now. */
@@ -7389,7 +7484,7 @@ export interface TaskDelegation {
   /** Where it was handed off, when you read that conversation. Older servers send none. */
   from?: {
     channelId: string;
-    channelKind: "channel" | "dm" | "task";
+    channelKind: "channel" | "dm" | "task" | "file";
     channelName: string | null;
     threadId: string | null;
     messageId: string | null;

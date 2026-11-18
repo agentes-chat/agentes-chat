@@ -12,12 +12,13 @@ import {
   schema,
   sql,
 } from "@agenteschat/db";
+import { managesAgentSql } from "./audience";
 import type { BrainPlan } from "./brains/select";
 import { TtlCache } from "./cache";
 import { NotFoundError } from "./errors";
 import { publishOrgEvent } from "./events";
 import { getMachine } from "./machines";
-import { can, requirePermission } from "./organizations";
+import { requirePermission } from "./organizations";
 import { enqueue } from "./outbox";
 import { RUN_STALE_MS, replyThreadOf } from "./runs";
 
@@ -336,15 +337,16 @@ const agentsOnlySql = (kind: SQL, dmKey: SQL) =>
 
 /**
  * Who sees a run's work, for a select naming its columns: the members of its conversation and, for work no person is
- * a member of (a routine's background run, two agents' private conversation), admins (`manage_agents`) and the agent's
- * owner. Other people's DMs stay theirs. The task manager, a task's steps and the rows of the line read it. Never
- * NULL: an agent with no owner would make it so, and `not` of that drops the run from the hidden counts too.
+ * a member of (a routine's background run, two agents' private conversation), who manages the agent (`manages`: a
+ * value, or SQL per run such as `managesAgentSql`, ADR 0085 addendum of 2026-11-17) and the agent's owner. Other
+ * people's DMs stay theirs. The task manager, a task's steps and the rows of the line read it. Never NULL: an agent
+ * with no owner would make it so, and `not` of that drops the run from the hidden counts too.
  */
 export const seesRunSql = (
   run: { channelId: SQL; kind: SQL; dmKey: SQL; background: SQL; ownerUserId: SQL },
   userId: string,
   orgId: string,
-  manages: boolean,
+  manages: boolean | SQL<boolean>,
 ) => sql<boolean>`coalesce(exists (select 1 from ${channelMembers} cm
     where cm.org_id = ${orgId}::uuid and cm.channel_id = ${run.channelId} and cm.user_id = ${userId})
   or ((${run.background} or ${agentsOnlySql(run.kind, run.dmKey)}) and (${manages} or ${run.ownerUserId} = ${userId})), false)`;
@@ -478,7 +480,9 @@ export async function computerQueue(
   machineId: string,
   now = Date.now(),
 ): Promise<ComputerQueue> {
-  const manages = can(await requirePermission(db, actorId, orgId, "read"), "manage_agents");
+  await requirePermission(db, actorId, orgId, "read");
+  // Who manages each run's agent (`managesAgentSql`), never every holder of "Editar qualquer agente".
+  const manages = managesAgentSql("agents", sql`${actorId}::text`);
   const machine = await getMachine(db, orgId, machineId);
   if (!machine) throw new NotFoundError("Computer not found", "machine.not_found");
   const cols = {
@@ -494,6 +498,7 @@ export async function computerQueue(
     authorAgentId: messages.authorAgentId,
     viaRoutine: sql<unknown>`${messages.meta}->'routine'`,
     ownerUserId: agents.ownerUserId,
+    manages,
     sees: seesRunSql(
       {
         channelId: sql`${agentRuns.channelId}`,
@@ -550,9 +555,14 @@ export async function computerQueue(
     threadId: replyThreadOf(r),
     agents: r.sees && r.agentsOnly,
   });
-  const access = (r: { sees: boolean; ownerUserId: string | null; authorUserId: string | null }) => ({
+  const access = (r: {
+    sees: boolean;
+    manages: boolean | null;
+    ownerUserId: string | null;
+    authorUserId: string | null;
+  }) => ({
     canOpen: r.sees,
-    canStop: manages || r.ownerUserId === actorId || r.authorUserId === actorId,
+    canStop: r.manages === true || r.ownerUserId === actorId || r.authorUserId === actorId,
   });
   return {
     machineId,

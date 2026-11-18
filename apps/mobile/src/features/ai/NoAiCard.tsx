@@ -1,4 +1,5 @@
 import { type Message, useAiStatus, useApi, useMessages, useThreadMessages } from "@agenteschat/client";
+import { managesAgent } from "@agenteschat/client/lib/audience";
 import type { BillingHold } from "@agenteschat/client/lib/billing";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import {
@@ -108,8 +109,7 @@ export function NoAiCard({ message: m }: { message: Message }) {
   const plan = card.own ? planOfKind(card.own) : again;
   const state = aiStateOf(status.data, card.agentId);
   const ready = state !== undefined && state !== "no_ai" && answer !== "still_missing";
-  const mayAnswer =
-    card.forUserId === meId || (meId !== null && agent?.ownerUserId === meId) || can(org, "manage_agents");
+  const mayAnswer = card.forUserId === meId || (meId !== null && agent?.ownerUserId === meId) || managesAgent(agent);
   const answering = answer === "answering";
   // The team's right hand on a plan that can't think now (ADR 0137 §7): one plain line, and the way to an API key.
   const planLine = card.planLine && !(planLinePasses(card.planLine) && state === "ready") ? card.planLine : null;
@@ -227,8 +227,7 @@ function KeptCard({ message: m, card, hold }: { message: Message; card: NoAiCard
   const name = agent?.name ?? t("channel.unknownAgent");
   const ai = aiStateOf(status.data, card.agentId);
   const state = keptCardState({ hold, paid: false, ready: ai !== undefined && ai !== "no_ai" });
-  const mayAnswer =
-    card.forUserId === meId || (meId !== null && agent?.ownerUserId === meId) || can(org, "manage_agents");
+  const mayAnswer = card.forUserId === meId || (meId !== null && agent?.ownerUserId === meId) || managesAgent(agent);
   const replied = messages?.some(
     (x) => x.author.id === card.agentId && x.createdAt > m.createdAt && !noAiCardOf(x.meta),
   );

@@ -1,4 +1,4 @@
-import { type ApiClient, type ArtifactDetail, keys, useApi } from "@agenteschat/client";
+import { type ApiClient, type ArtifactDetail, isLiveFileKind, keys, useApi } from "@agenteschat/client";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Directory, File, Paths } from "expo-file-system";
 import * as MediaLibrary from "expo-media-library";
@@ -123,7 +123,11 @@ export async function localCopy(
   const r =
     source.from === "export"
       ? {
-          uri: api.artifacts.fileUrl(orgId, a.id, { version: a.shownVersion, format: source.format }),
+          // A live file is exported as it stands now (ADR 0198): its versions are snapshots, not what people see.
+          uri: api.artifacts.fileUrl(orgId, a.id, {
+            ...(isLiveFileKind(a.kind) ? {} : { version: a.shownVersion }),
+            ...(source.format ? { format: source.format } : {}),
+          }),
           headers: appHeaders(await readCookie()),
         }
       : await remote(api, orgId, a.id, a.shownVersion);

@@ -8,13 +8,12 @@ import {
   receiptRows,
   receiptUnder,
 } from "@agenteschat/client/lib/actions";
+import { managesRoutinesOf } from "@agenteschat/client/lib/audience";
 import { handedTasksOf } from "@agenteschat/client/lib/issues";
-import { can } from "@agenteschat/client/lib/permissions";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { type GestureResponderEvent, Pressable, StyleSheet, View } from "react-native";
 import Animated, { FadeIn, LayoutAnimationConfig } from "react-native-reanimated";
-import { useOrg } from "@/providers/org";
 import { Disclosure, GroupedFooter, LineIcon, Text, useReducedMotion, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
 import { agoOf } from "../agents/logic";
@@ -269,14 +268,14 @@ function ChangesSheet({
 
 /**
  * A webhook routine the agent just made: its address, kept out of the message text, copied from here by who may
- * manage the routine (the person who asked, admins; the server checks again).
+ * manage the routine (the person who asked, who sets up that agent's routines; the server checks again).
  */
 function CopyHook({ action: a }: { action: AgentAction }) {
   const { t } = useTranslation();
   const api = useApi();
   const orgId = useOrgId();
   const meId = useRowMeId();
-  const manages = can(useOrg().org, "manage_routines");
+  const manages = managesRoutinesOf(useRowDirectory().agentById.get(a.agentId));
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const routineId = hookToCopy(a, { userId: meId, managesRoutines: manages });

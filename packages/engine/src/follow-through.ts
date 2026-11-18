@@ -15,6 +15,7 @@ import {
 } from "@agenteschat/db";
 import { announceAgentStatus } from "./agent-status";
 import { agentsOnlyIn } from "./agent-work";
+import { managesAgent, managesAgentSql, REACH_COLUMNS } from "./audience";
 import { runAuthority } from "./authority";
 import { askStillOpen, unrequested } from "./brakes";
 import { requireChannelAccess } from "./channels";
@@ -549,10 +550,12 @@ export async function cancelFollowUp(
     throw new NotFoundError("Follow-up not found", "follow_up.not_found");
   const { workspace } = await requireChannelAccess(deps.db, userId, orgId, line.channelId);
   const [agent] = line.authorAgentId
-    ? await deps.db.select({ ownerUserId: agents.ownerUserId }).from(agents).where(eq(agents.id, line.authorAgentId))
+    ? await deps.db.select(REACH_COLUMNS).from(agents).where(eq(agents.id, line.authorAgentId))
     : [];
   const who = { personId: refsOf(line).personId ?? null, ownerUserId: agent?.ownerUserId ?? null };
-  if (!mayCancelReturn(who, userId, can(workspace, "manage_agents")))
+  // An admin's override is who manages that agent (ADR 0085 addendum of 2026-11-17), not any holder of the key.
+  const manages = agent ? managesAgent(agent, userId, workspace) : can(workspace, "manage_agents");
+  if (!mayCancelReturn(who, userId, manages))
     throw new ForbiddenError(
       "Only the person it is for, the agent's owner or an admin can cancel this follow-up",
       "follow_up.not_yours",
@@ -573,7 +576,7 @@ export interface PendingReturn {
   messageId: string;
   agentId: string;
   channelId: string;
-  channelKind: "channel" | "dm" | "task";
+  channelKind: "channel" | "dm" | "task" | "file";
   /** A channel's name; null for a DM or a task's conversation. */
   channelName: string | null;
   /** Null: the conversation's main timeline. */
@@ -598,7 +601,7 @@ export interface CanceledReturn {
   messageId: string;
   agentId: string;
   channelId: string;
-  channelKind: "channel" | "dm" | "task";
+  channelKind: "channel" | "dm" | "task" | "file";
   channelName: string | null;
   threadId: string | null;
   at: string;
@@ -615,13 +618,15 @@ type ReturnRow = {
   id: string;
   agent_id: string;
   channel_id: string;
-  channel_kind: "channel" | "dm" | "task";
+  channel_kind: "channel" | "dm" | "task" | "file";
   channel_name: string | null;
   thread_id: string | null;
   refs: Record<string, string> | string | null;
   owner_user_id: string | null;
   reply_message_id: string | null;
   canceler_name: string | null;
+  /** Whether the viewer manages its agent (`managesAgentSql`); only `pendingReturns` reads it. */
+  manages?: boolean | null;
 };
 
 const refsOfRow = (r: Pick<ReturnRow, "refs">) =>
@@ -639,19 +644,20 @@ const placeOf = (r: ReturnRow) => ({
 /**
  * The returns still to come that `viewerId` reads (`channelReaderSql` of the line's conversation), the soonest first,
  * in `channelId` only when given. One statement, from the outbox's pending wakes (its partial index) to their lines by
- * id: a return is a line still pending whose wake will come. `managesAgents`: the viewer's, for `canCancel`.
+ * id: a return is a line still pending whose wake will come. `canCancel` by `mayCancelReturn`, an admin's override
+ * being who manages that agent (`managesAgentSql`, ADR 0085 addendum of 2026-11-17).
  */
 export async function pendingReturns(
   db: Executor,
   viewerId: string,
   orgId: string,
-  options: { channelId?: string; managesAgents?: boolean } = {},
+  options: { channelId?: string } = {},
 ): Promise<PendingReturn[]> {
   const now = Date.now();
   const rows = rowsOf<ReturnRow>(
     await db.execute(sql`select m.id, m.author_agent_id as agent_id, m.channel_id, c.kind as channel_kind,
         c.name as channel_name, m.thread_id, m.meta->'notice'->'refs' as refs, g.owner_user_id, rr.reply_message_id,
-        null as canceler_name
+        null as canceler_name, ${managesAgentSql("g", sql`${viewerId}::text`)} as manages
       from ${messages} m
       join ${channels} c on c.id = m.channel_id and c.org_id = m.org_id and c.archived_at is null
       join ${agents} g on g.id = m.author_agent_id
@@ -679,7 +685,7 @@ export async function pendingReturns(
         canCancel: mayCancelReturn(
           { personId: refs.personId ?? null, ownerUserId: r.owner_user_id },
           viewerId,
-          options.managesAgents === true,
+          r.manages === true,
         ),
       };
     })

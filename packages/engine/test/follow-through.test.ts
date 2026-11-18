@@ -15,6 +15,7 @@ import {
   createIssue,
   createJobHandlers,
   createPassToolSource,
+  createRole,
   drainOutbox,
   FOLLOW_UP_JOB,
   FOLLOW_UP_TOOL,
@@ -34,6 +35,7 @@ import {
   STRETCH_JOB,
   STRETCH_REFUSAL,
   saveAgentStyle,
+  setMemberRoles,
   type ToolSource,
   taskManager,
   toolPolicy,
@@ -835,8 +837,8 @@ describe("returns, as the apps list them (ADR 0037, amended 2026-11-13)", () => 
     await expect(cancelFollowUp(deps, caio.id, f.org.id, first)).rejects.toMatchObject({ code: "follow_up.not_yours" });
     expect(await lineState(f, first)).toBe("pending");
     // The lists say the same, per person: Caio sees them without the control.
-    const mine = async (userId: string, managesAgents = false) =>
-      (await pendingReturns(f.db, userId, f.org.id, { managesAgents })).map((r) => [r.messageId, r.canCancel]);
+    const mine = async (userId: string) =>
+      (await pendingReturns(f.db, userId, f.org.id)).map((r) => [r.messageId, r.canCancel]);
     expect(await mine(caio.id)).toEqual([
       [first, false],
       [second, false],
@@ -845,10 +847,27 @@ describe("returns, as the apps list them (ADR 0037, amended 2026-11-13)", () => 
       [first, true],
       [second, true],
     ]);
-    expect(await mine(f.owner.id, true)).toEqual([
+    expect(await mine(f.owner.id)).toEqual([
       [first, true],
       [second, true],
     ]);
+    // "Edit agents" cancels for an agent whose audience takes them (ADR 0085 addendum of 2026-11-17), never for
+    // someone's private agent.
+    const leads = await createRole(f.db, f.owner.id, f.org.id, { name: "Leads", permissions: ["manage_agents"] });
+    const dani = await addMember(f.db, f.org.id, "member", "dani");
+    await joinChannel(f.db, dani.id, f.org.id, f.general.id);
+    await setMemberRoles(f.db, f.owner.id, f.org.id, dani.id, [leads.id]);
+    expect(await mine(dani.id)).toEqual([
+      [first, true],
+      [second, true],
+    ]);
+    await f.db.update(schema.agents).set({ audienceMode: "owner" }).where(eq(schema.agents.id, f.agent.id));
+    expect(await mine(dani.id)).toEqual([
+      [first, false],
+      [second, false],
+    ]);
+    await expect(cancelFollowUp(deps, dani.id, f.org.id, first)).rejects.toMatchObject({ code: "follow_up.not_yours" });
+    await f.db.update(schema.agents).set({ audienceMode: "everyone" }).where(eq(schema.agents.id, f.agent.id));
     // The agent's owner.
     await f.db.update(schema.agents).set({ ownerUserId: caio.id }).where(eq(schema.agents.id, f.agent.id));
     expect(await mine(caio.id)).toEqual([

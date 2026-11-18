@@ -352,6 +352,8 @@ export interface NotificationSource {
   phoneId?: string;
   /** `device.in_use`, `device.waiting`, `device.access_request`: the agent's run on the device. */
   runId?: string;
+  /** A message in a live file's conversation (ADR 0199): the file, which the apps open with it at `messageId`. */
+  artifactId?: string;
   /** Channel name, thread title, issue title, topic title, mission or routine name, widget or board title. */
   label?: string;
 }

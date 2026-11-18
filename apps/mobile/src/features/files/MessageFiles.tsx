@@ -10,6 +10,8 @@ import { ChoicesCard } from "../blocks/ChoicesCard";
 import { LiveBlockCard } from "../blocks/LiveBlock";
 import { PollCard } from "../blocks/PollCard";
 import { useKeptWidth } from "../chat/look";
+import { LiveFileCard } from "../live-files/LiveFileCard";
+import { opensLive } from "../live-files/routes";
 import { useColors, useOrgId } from "../shared/hooks";
 import { useSurface } from "../shared/parts";
 import { AttachmentTile } from "./AttachmentTile";
@@ -69,6 +71,8 @@ export function MessageFiles({ files, align = "start" }: { files: MessageFile[];
   const images: { file: MessageFile; detail: ArtifactDetail | undefined }[] = [];
   // What lives in the conversation isn't a file: the thing itself (ADR 0113).
   const blocks: ArtifactDetail[] = [];
+  // A live file is its own card: a preview of it as it is now, opening its screen (ADR 0196 §9).
+  const liveFiles: ArtifactDetail[] = [];
   const videos: { file: MessageFile; detail: ArtifactDetail | undefined }[] = [];
   const others: { file: MessageFile; detail: ArtifactDetail | undefined; failed: boolean }[] = [];
   live.forEach((file, i) => {
@@ -76,6 +80,10 @@ export function MessageFiles({ files, align = "start" }: { files: MessageFile[];
     const detail = q?.data;
     if (detail?.kind === "block" || detail?.kind === "poll" || detail?.kind === "choices") {
       blocks.push(detail);
+      return;
+    }
+    if (detail && opensLive(detail.kind)) {
+      liveFiles.push(detail);
       return;
     }
     // Until it loads, a name like "print.png" already says it's a picture (no jump into the grid).
@@ -144,6 +152,9 @@ export function MessageFiles({ files, align = "start" }: { files: MessageFile[];
           <LiveBlockCard key={b.id} id={b.id} version={b.shownVersion} />
         ),
       )}
+      {liveFiles.map((d) => (
+        <LiveFileCard key={d.id} detail={d} width={blockWidth} />
+      ))}
       {tiles.length > 0 ? (
         <View style={[styles.grid, { width: blockWidth }, align === "end" && styles.gridEnd]}>
           {tiles.map(({ file, detail, failed, picture }) => (

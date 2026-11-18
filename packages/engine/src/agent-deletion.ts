@@ -1,5 +1,5 @@
 import { and, eq, inArray, isNull, like, ne, or, schema, sql } from "@agenteschat/db";
-import { deletedHandle } from "./agents";
+import { deletedHandle, requireAgentManager } from "./agents";
 import { recordAudit } from "./audit";
 import { invalidateOrg } from "./cache";
 import { stopOrgWork } from "./cancel";
@@ -11,7 +11,6 @@ import { publishMachineAgentsChanged } from "./machines";
 import { concludeMission, type MissionDeps, OPEN_MISSION_STATUSES } from "./missions";
 import { resolveNotifications } from "./notifications";
 import { recordOperatorEvent } from "./operator-events";
-import { requirePermission } from "./organizations";
 import { refuseRightHand } from "./right-hand";
 import { deleteAgentRoutines, type RoutineDeps } from "./routines";
 import { removeAgentSecrets } from "./secrets";
@@ -41,13 +40,14 @@ const {
 export type AgentDeletionDeps = MissionDeps & Pick<RoutineDeps, "pubsub" | "mail">;
 
 /**
- * Deletes an agent for good (ADR 0082): owners and admins, archived or not. It is archived first, so nothing new
- * starts while its missions close, its routines go and its work stops; then, in one transaction, what it had goes
- * and its row stays as a tombstone (name, role and look; its handle freed) for its messages, runs, usage and audit.
+ * Deletes an agent for good (ADR 0082): who manages it (`requireAgentManager`, ADR 0085 addendum of 2026-11-17),
+ * archived or not. It is archived first, so nothing new starts while its missions close, its routines go and its work
+ * stops; then, in one transaction, what it had goes and its row stays as a tombstone (name, role and look; its handle
+ * freed) for its messages, runs, usage and audit.
  */
 export async function deleteAgent(deps: AgentDeletionDeps, actorId: string, orgId: string, agentId: string) {
   const { db } = deps;
-  await requirePermission(db, actorId, orgId, "manage_agents");
+  await requireAgentManager(db, actorId, orgId, agentId);
   await refuseRightHand(db, orgId, agentId, "deleted");
   const [agent] = await db
     .update(agents)
@@ -97,6 +97,8 @@ export async function deleteAgent(deps: AgentDeletionDeps, actorId: string, orgI
         audienceMode: "everyone",
         audienceUserIds: [],
         audienceRoleIds: [],
+        editorUserIds: [],
+        editorRoleIds: [],
         machineId: null,
         missionCommandApproval: null,
         brain: "model",
