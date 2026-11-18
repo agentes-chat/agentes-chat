@@ -93,6 +93,9 @@ export function signInSlotOf(plan: Pick<BrainPlan, "kind" | "account">, cap: num
   return { key: plan.account?.id ?? "own", label: plan.account?.label ?? "Claude", cap };
 }
 
+/** A computer's own sign-in is that computer's; an account is the workspace's, whichever computer its runs think on. */
+const ownSignIn = (key: string) => key === "own";
+
 /** The sign-in a run in line waits on (`signInWait`): only runs waiting for that same sign-in hold it back. */
 const signInWaitSql = sql<string | null>`${agentRuns.transcript}->'signInWait'->>'key'`;
 
@@ -160,7 +163,7 @@ export async function kickSignInLine(db: Executor, machineId: string, key: strin
   const [head] = await db
     .select({ id: agentRuns.id, orgId: agentRuns.orgId, waitId: waitIdSql })
     .from(agentRuns)
-    .where(and(waitingForRoom(machineId), sql`${signInWaitSql} = ${key}`))
+    .where(and(ownSignIn(key) ? waitingForRoom(machineId) : inLine, sql`${signInWaitSql} = ${key}`))
     .orderBy(rankSql(Date.now()), sinceSql, agentRuns.id)
     .limit(1);
   if (!head?.waitId) return;
@@ -206,6 +209,8 @@ export async function roomGate(
       .limit(1);
     if (ahead) return { retryAt: now + ROOM_BEHIND_RETRY_MS };
     if (signIn) {
+      if (!ownSignIn(signIn.key))
+        await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`sign-in:${signIn.key}`}))`);
       // Its slots: runs working on this sign-in now. One whose worker died stops counting once its heartbeat is stale.
       const [taken] = await tx
         .select({ n: sql<number>`count(*)::int` })
@@ -215,7 +220,7 @@ export async function roomGate(
             eq(agentRuns.orgId, run.orgId),
             eq(agentRuns.status, "running"),
             sql`${agentRuns.id} <> ${run.id}`,
-            sql`${agentRuns.transcript}->'roomAsk'->>'machineId' = ${machineId}`,
+            ownSignIn(signIn.key) ? sql`${agentRuns.transcript}->'roomAsk'->>'machineId' = ${machineId}` : undefined,
             sql`${agentRuns.transcript}->'roomAsk'->>'signIn' = ${signIn.key}`,
             sql`${agentRuns.heartbeatAt} > ${new Date(now - RUN_STALE_MS).toISOString()}::timestamptz`,
           ),

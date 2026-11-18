@@ -98,6 +98,16 @@ describe("plan sign-in slots", () => {
     expect(await roomGate(f.db, newcomer(), machineId, person)).toBeNull();
   });
 
+  test("an account's slots are shared by every computer of the workspace; a computer's own sign-in is its own", async () => {
+    f = await setup();
+    const a = await computer();
+    const { machineId: b } = await pairMachine({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, RUNNER);
+    await working(a, ACCOUNT);
+    await working(a, "own");
+    expect((await roomGate(f.db, newcomer(), b, person, slot(ACCOUNT)))?.signIn).toBe(true);
+    expect(await roomGate(f.db, newcomer(), b, person, { key: "own", label: "Claude", cap: 1 })).toBeNull();
+  });
+
   test("the admitted run holds the slot until it leaves running", async () => {
     f = await setup();
     const machineId = await computer();
