@@ -67,6 +67,7 @@ import {
   notePlanLimit,
   OUTAGE_PARK,
   openDm,
+  PERSON_ROOM_RETRY_MS,
   postPersonMessage,
   queueOnRun,
   receiptsFor,
@@ -3777,7 +3778,8 @@ test("no room on the computer: nothing in the chat, the person's message says it
   expect(listed?.receipts?.handled).toMatchObject([
     { agentId: f.agent.id, status: "waiting_input", computer: "queued" },
   ]);
-  // The run's own job ended with its first try; the next look is a job of its own, a few seconds later.
+  // The run's own job ended with its first try; the next look is a job of its own, a few seconds later (a person
+  // waits on it: sooner than an agent's own work would).
   const jobs = await f.db.select().from(schema.outbox).where(eq(schema.outbox.kind, "agent_run.execute"));
   expect(jobs.find((j) => j.dedupeKey === `agent_run.execute:${run?.id}`)).toMatchObject({
     status: "done",
@@ -3785,7 +3787,9 @@ test("no room on the computer: nothing in the chat, the person's message says it
   });
   const retry = jobs.find((j) => j.dedupeKey?.includes(":room:"));
   expect(retry?.status).toBe("pending");
-  expect((retry?.nextAttemptAt.getTime() ?? 0) - Date.now()).toBeGreaterThan(COMPUTER_BUSY_RETRY_MS - 5_000);
+  const wait = (retry?.nextAttemptAt.getTime() ?? 0) - Date.now();
+  expect(wait).toBeGreaterThan(PERSON_ROOM_RETRY_MS - 2_000);
+  expect(wait).toBeLessThanOrEqual(PERSON_ROOM_RETRY_MS);
 
   // Still full: it waits on, saying nothing more and never flashing "thinking" in the conversation.
   events.length = 0;
@@ -4387,6 +4391,14 @@ test("only the head of the computer's line asks it: an agent's run waits behind 
     ((await runById(f, fromAgents.id))?.transcript as { waitingForBrain?: { waitId?: string } } | null)?.waitingForBrain
       ?.waitId;
   const waitId = await waitOf();
+  // The person's run asks again on its own sooner (`PERSON_ROOM_RETRY_MS`): held off here, only the agent's look runs.
+  for (const j of await f.db.select().from(schema.outbox)) {
+    if (j.status === "pending" && j.dedupeKey?.startsWith(`agent_run.execute:${personRun?.id}:`))
+      await f.db
+        .update(schema.outbox)
+        .set({ nextAttemptAt: new Date(Date.now() + 60_000) })
+        .where(eq(schema.outbox.id, j.id));
+  }
   await drainOutbox(f.db, handlers, { now: new Date(Date.now() + 11_000) });
   expect(seen.length).toBe(asked);
   expect((await runById(f, fromAgents.id))?.status).toBe("waiting_input");

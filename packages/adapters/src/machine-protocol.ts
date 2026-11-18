@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 68;
+export const MACHINE_PROTOCOL_VERSION = 69;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -682,6 +682,12 @@ export const SHARED_GROK_PROTOCOL = 67;
  * folder (ADR 0143). An older Mac runner refuses them, so the server reads it as too old for the Antigravity CLI.
  */
 export const ANTIGRAVITY_MAC_PROTOCOL = 68;
+/**
+ * From this protocol on, the runner sends `room.freed` once there is room again after it refused a turn (`no_slot`): a
+ * turn ended there, or its memory came back over the agents' floor. The server asks its line again at once; an older
+ * runner's line asks again on its timer.
+ */
+export const ROOM_FREED_PROTOCOL = 69;
 
 /**
  * `clis.check`: the coding CLIs looked up again now, the PATH read again first (the apps' "I installed it, check again").
@@ -3210,7 +3216,9 @@ export type RunnerFrame =
   /** The same on the agent's desktop (ADR 0062), in the screen's pixels: desktop use, and its browser's window there. */
   | ({ type: "desktop.pointer"; agentId: string } & AgentPointer)
   /** `KEEP_RUNNING_PROTOCOL`: a hold ended on the computer by itself (the next `hello` says so again). */
-  | { type: "keep.ended"; holdId: string; reason: HoldEnd };
+  | { type: "keep.ended"; holdId: string; reason: HoldEnd }
+  /** `ROOM_FREED_PROTOCOL`: room again after a `no_slot`. */
+  | { type: "room.freed" };
 
 /** A tool as `mcp.tools` lists it (what MCP `tools/list` returns). */
 export interface McpToolInfo {
@@ -3704,6 +3712,8 @@ export function parseRunnerFrame(raw: string): RunnerFrame | null {
         ...(isObject(f.holds) ? { holds: parseHolds(f.holds) } : {}),
       };
     }
+    case "room.freed":
+      return { type: "room.freed" };
     case "keep.ended": {
       const reason = HOLD_ENDS.find((r) => r === f.reason);
       return isUuid(f.holdId) && reason ? { type: "keep.ended", holdId: f.holdId, reason } : null;

@@ -965,6 +965,11 @@ export const MAX_EARLY_COMPUTER_DROPS = 10;
  */
 export const COMPUTER_BUSY_RETRY_MS = 15_000;
 /**
+ * The same for a run a person waits on (`roomPeople`): its turn may fit the runner's person floor or its open CLI's
+ * any moment, and a newer runner's `room.freed` usually comes first anyway.
+ */
+export const PERSON_ROOM_RETRY_MS = 3_000;
+/**
  * Waiting for room is a live state on the person's message, not a chat line: only a run still in line after this long
  * says so, once per agent and conversation.
  */
@@ -3650,7 +3655,8 @@ async function executeRunInner(
    * its first look one just gone too (`computerBackSoon`). Still away: the run waits for the computer (the API never
    * stands in, ADR 0032's 2026-11-15 addendum, but for the right hand's key, ADR 0137 §7 amended 2026-11-15), or
    * (nothing to think with) it fails with `no_ai`. A computer with no
-   * room for the turn (`busy`) is asked again every `COMPUTER_BUSY_RETRY_MS` until it runs.
+   * room for the turn (`busy`) is asked again every `COMPUTER_BUSY_RETRY_MS` (`PERSON_ROOM_RETRY_MS` when a person waits)
+   * until it runs.
    */
   const brainUnavailable = async (
     u: BrainUnavailability & { queued?: boolean; retryAt?: number },
@@ -3858,7 +3864,11 @@ async function executeRunInner(
         kind: "agent_run.execute",
         payload: { runId: run.id, wait: t.waitingForBrain.waitId },
         dedupeKey: `agent_run.execute:${run.id}:${busy ? "room" : "offline_note"}:${t.waitingForBrain.waitId}`,
-        runAt: new Date(busy ? (u.retryAt ?? Date.now() + COMPUTER_BUSY_RETRY_MS) : (quietUntil as number)),
+        runAt: new Date(
+          busy
+            ? (u.retryAt ?? Date.now() + (t.roomPeople ? PERSON_ROOM_RETRY_MS : COMPUTER_BUSY_RETRY_MS))
+            : (quietUntil as number),
+        ),
         maxAttempts: 4,
       });
     }
