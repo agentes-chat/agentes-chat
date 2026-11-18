@@ -598,6 +598,39 @@ describe("code given inline to an interpreter is never auto-allowed", () => {
   });
 });
 
+describe("every refusal says what to do instead", () => {
+  test("each reason code gives has a hint, so a refused agent changes the call instead of respelling it", () => {
+    const calls: Array<[string, Record<string, unknown>]> = [
+      ["Bash", { command: "cat <<EOF > x.txt\nhi\nEOF" }],
+      ["Bash", { command: "ls $(pwd)" }],
+      ["Bash", { command: "echo $HOME" }],
+      ["Bash", { command: "sleep 1 &" }],
+      ["Bash", { command: "ls > /etc/x" }],
+      ["Bash", { command: "cp a.txt /etc/x" }],
+      ["Bash", { command: "sudo ls" }],
+      ["Bash", { command: "ssh vps1 uptime" }],
+      ["Bash", { command: "bash run.sh" }],
+      ["Bash", { command: "python3 -c 'print(1)'" }],
+      ["Bash", { command: "curl -X POST https://example.com/x" }],
+      ["Bash", { command: "npm install -g left-pad" }],
+      ["Write", { file_path: "/etc/hosts" }],
+      ["Read", { file_path: "/Users/w/project/.env" }],
+    ];
+    for (const [tool, input] of calls) {
+      const reason = forbiddenReason(tool, input, scope);
+      expect([JSON.stringify(input), reason === null]).toEqual([JSON.stringify(input), false]);
+      expect([reason, forbiddenHint(reason as string)]).toEqual([reason, expect.any(String)]);
+    }
+  });
+
+  test("the plain forms the hints give run", () => {
+    expect(forbidden("python3 /Users/w/agentes/ada/mission-1/x.py")).toBeNull();
+    expect(forbidden("bun /Users/w/agentes/ada/mission-1/x.ts")).toBeNull();
+    expect(forbidden("ls /Users/w/agentes/ada/mission-1")).toBeNull();
+    expect(forbidden("curl -o /Users/w/agentes/ada/mission-1/page.html https://example.com/")).toBeNull();
+  });
+});
+
 describe("writes asked for outside the turn's folders", () => {
   test("refused by code; inside its folders or /tmp they're the judge's (or the server's) call", () => {
     expect(forbiddenReason("Write", { file_path: "/etc/hosts" }, scope)).toBe(

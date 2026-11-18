@@ -737,8 +737,12 @@ describe("prompt text and permissions", () => {
     const heredoc = ask("git checkout -b fix && cat > src/a.test.ts <<'EOF'\ntest()\nEOF");
     expect(heredoc).toMatchObject({ behavior: "deny", code: "unclear" });
     expect(heredoc.message).toContain("because it can't be read plainly");
-    expect(heredoc.message).toContain("Edit and Write tools");
+    expect(heredoc.message).toContain("with the Write tool (not cat <<)");
+    expect(heredoc.message).toContain("run that file");
     expect(ask("echo hi > /etc/hosts")).toMatchObject({ code: "outside" });
+    expect(ask("ssh vps1 uptime")).toMatchObject({ behavior: "deny", code: "remote" });
+    expect(ask("ssh vps1 uptime").message).toContain("don't try another spelling");
+    expect(ask("sudo systemctl restart x").message).toContain("Ask whoever runs this computer");
     expect(ask("echo hi > /etc/hosts").message).toContain("because it writes outside the mission folder");
     expect(ask("cat ~/.aws/credentials")).toMatchObject({ behavior: "deny", code: "secret" });
     expect(ask("git checkout -b fix").behavior).toBe("allow");

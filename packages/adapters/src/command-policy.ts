@@ -2034,13 +2034,27 @@ export function forbiddenReason(
  * one with another path (a heredoc refused three times in one run).
  */
 const FORBIDDEN_HINTS: Record<string, string> = {
+  // Spelling, not intent: the same work runs once it is written plainly, so the hint gives that form outright
+  // (agents otherwise retry the same heredoc or loop in a new spelling, one refused turn each).
   "it can't be read plainly":
-    "Commands are checked word by word, so heredocs (<<), $(…), backticks, variables, `FOO=1 cmd` and & jobs are never run here. Write or change files with the Edit and Write tools, then run plain commands one at a time.",
-  "it writes outside the mission folder": "Write only inside your folder or /tmp.",
-  "it changes files outside the mission folder": "Change files only inside your folder or /tmp.",
-  "it runs other commands": "Run the commands themselves, one at a time, not through a shell, eval or xargs.",
+    "Commands are checked word by word, so heredocs (<<), $(…), backticks, variables, `FOO=1 cmd` and & jobs are never run here. The same work runs written plainly: put a file's text in place with the Write tool (not cat <<); put a script with loops, variables or pipes between steps in a file in your folder with Write and run that file (python3 your-folder/x.py, bun your-folder/x.ts); type values in as literal arguments instead of $VAR or $(…); run background jobs one at a time, without &.",
+  "it writes outside the mission folder":
+    "Write only inside your folder or /tmp (redirections like > and 2> included). To leave a file for someone else, write it in your folder and hand it over (attach it, or ask whoever owns the other place to take it).",
+  "it changes files outside the mission folder":
+    "Change files only inside your folder or /tmp. A file elsewhere: copy it into your folder and work on the copy, or ask whoever owns that place to make the change.",
+  "it runs other commands":
+    "Run the commands themselves, one at a time, not through a shell, eval or xargs. A shell script: run its steps one by one, or rewrite it as a python3 or bun file in your folder and run that file.",
   "it runs code given inline":
     "Code passed on the command line (node -e, python -c…) is never run without a person: write it to a file in your folder and run that file.",
+  // Intent: these stay refused whatever the spelling, so the hint names the way that is allowed instead.
+  "it changes the system":
+    "Agents never change the system (sudo, systemctl, crontab, passwd, a global git config): don't try another spelling. Ask whoever runs this computer to do it, saying exactly what and why.",
+  "it connects to another host":
+    "Agents don't open remote shells or copy files to other hosts (ssh, scp, rsync, nc): don't try another spelling. Use a connected tool for that service, or hand the work to whoever runs that server, saying exactly what and why.",
+  "it sends data or saves outside the mission folder":
+    "Here curl and wget only read: a plain GET, saved inside your folder at most (-o your-folder/file). To send or post data, use a connected tool for that service.",
+  "it installs globally":
+    "Install inside your folder instead (a local node_modules, a virtual environment), or ask whoever runs this computer to install it for everyone.",
   "it touches secrets": SECRET_MESSAGE,
 };
 
