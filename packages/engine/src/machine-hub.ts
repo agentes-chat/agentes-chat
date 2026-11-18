@@ -10,6 +10,7 @@ import {
   HELLO_TIMEOUT_MS,
   IPHONE_WIFI_PROTOCOL,
   KEEP_RUNNING_PROTOCOL,
+  MACHINE_CLOSE,
   MAX_FRAME_BYTES,
   type MachineErrorCode,
   type MachineOp,
@@ -33,7 +34,7 @@ import {
   TASKS_PROTOCOL,
   type Unsubscribe,
 } from "@agenteschat/adapters";
-import { and, type Database, eq, inArray, lt, schema } from "@agenteschat/db";
+import { and, type Database, eq, inArray, lt, schema, sql } from "@agenteschat/db";
 import type { ToolImage } from "@agenteschat/providers";
 import { getAgentCached } from "./agents";
 import { UUID } from "./authority";
@@ -134,15 +135,16 @@ export interface MachineSocket {
   close(code?: number, reason?: string): void;
 }
 
-/** Close codes the runner may see. */
-export const MACHINE_CLOSE = {
-  badFrame: 4400,
-  invalidToken: 4401,
-  revoked: 4403,
-  timeout: 4408,
-  replaced: 4409,
-  outdated: 4426,
-} as const;
+export { MACHINE_CLOSE };
+
+/** How many closed sockets a computer's row keeps (`machines.disconnects`). */
+export const MACHINE_DISCONNECTS_KEPT = 10;
+
+/** How a socket closed: its code and reason, as the close event or this side said. */
+export interface MachineClose {
+  code: number;
+  reason: string;
+}
 
 /** The runner answered a request with an error (`not_found`, `exec_disabled`…). */
 export class MachineRequestError extends Error {
@@ -312,6 +314,7 @@ export interface MachineConnection {
   pending: Map<string, Pending>;
   lastPong: number;
   lastSeenWrite: number;
+  openedAt: number;
   helloTimer: ReturnType<typeof setTimeout> | null;
   pingTimer: ReturnType<typeof setInterval> | null;
   /** The runner's protocol (from its hello). */
@@ -587,12 +590,24 @@ export function createMachineHub(deps: MachineHubDeps) {
     } catch {}
   };
 
-  const markOffline = async (conn: MachineConnection, serverStop: boolean) => {
+  const markOffline = async (conn: MachineConnection, serverStop: boolean, close: MachineClose) => {
     const machineId = conn.machineId as string;
+    const disconnect: schema.MachineDisconnect = {
+      connectedAt: new Date(conn.openedAt).toISOString(),
+      at: new Date().toISOString(),
+      code: close.code,
+      reason: close.reason.slice(0, 120),
+    };
     const [row] = await db
       .update(machines)
-      // Its last sign of life is its last pong (`last_seen_at` is written at most every 40 s while it is up).
-      .set({ online: false, connectedReplica: null, lastSeenAt: new Date(conn.lastPong), updatedAt: new Date() })
+      .set({
+        online: false,
+        connectedReplica: null,
+        // Its last sign of life is its last pong (`last_seen_at` is written at most every 40 s while it is up).
+        lastSeenAt: new Date(conn.lastPong),
+        disconnects: sql`jsonb_path_query_array(${JSON.stringify([disconnect])}::jsonb || ${machines.disconnects}, ${`$[0 to ${MACHINE_DISCONNECTS_KEPT - 1}]`}::jsonpath)`,
+        updatedAt: new Date(),
+      })
       .where(and(eq(machines.id, machineId), eq(machines.connectedReplica, replicaId)))
       .returning({ orgId: machines.orgId });
     if (!row) return false;
@@ -658,7 +673,7 @@ export function createMachineHub(deps: MachineHubDeps) {
       try {
         conn.socket.close(1011, "server error");
       } catch {}
-      await closeConn(conn).catch(() => undefined);
+      await closeConn(conn, { code: 1011, reason: "server error" }).catch(() => undefined);
     }
   }
 
@@ -719,7 +734,7 @@ export function createMachineHub(deps: MachineHubDeps) {
       refuse(old, "replaced", "Another runner connected for this computer.", MACHINE_CLOSE.replaced);
       // Its requests end now, not when (if ever) the dead socket's close arrives: a runner that restarted
       // mid-request lost them all (its requests die with its session).
-      await closeConn(old);
+      await closeConn(old, { code: MACHINE_CLOSE.replaced, reason: "replaced" });
     }
     const now = new Date();
     // Protocol 19: the own sign-ins' usage it knows, over the last known (a runner that just started knows none).
@@ -858,7 +873,7 @@ export function createMachineHub(deps: MachineHubDeps) {
           conn.socket.close(MACHINE_CLOSE.timeout, "no pong");
         } catch {}
         // A half-open socket may never report its close: its requests fail and the machine goes offline now.
-        void closeConn(conn);
+        void closeConn(conn, { code: MACHINE_CLOSE.timeout, reason: "no pong" });
         return;
       }
       send(conn, { type: "ping", at: Date.now() });
@@ -1407,7 +1422,8 @@ export function createMachineHub(deps: MachineHubDeps) {
     await pubsub.publish(machineRpcReplyTopic(rpcId), { type: "machine.rpc.reply", rpcId }).catch(() => undefined);
   }
 
-  async function closeConn(conn: MachineConnection) {
+  /** `close`: how it closed (the first caller's word stands); none known: 1005, as a close without a code reads. */
+  async function closeConn(conn: MachineConnection, close?: MachineClose) {
     if (conn.closed) return;
     conn.closed = true;
     if (conn.helloTimer) clearTimeout(conn.helloTimer);
@@ -1421,7 +1437,8 @@ export function createMachineHub(deps: MachineHubDeps) {
     if (conn.machineId && local.get(conn.machineId) === conn) {
       local.delete(conn.machineId);
       browserHooks.closed?.(conn.machineId);
-      await markOffline(conn, serverStop).catch(() => undefined);
+      const how = serverStop ? { code: 1001, reason: "server stopping" } : (close ?? { code: 1005, reason: "" });
+      await markOffline(conn, serverStop, how).catch(() => undefined);
     }
   }
 
@@ -1441,7 +1458,7 @@ export function createMachineHub(deps: MachineHubDeps) {
         // The runner came back on another replica: this socket is a stale one (outside the publisher's call stack).
         queueMicrotask(() => {
           refuse(conn, "replaced", "Another runner connected for this computer.", MACHINE_CLOSE.replaced);
-          void closeConn(conn);
+          void closeConn(conn, { code: MACHINE_CLOSE.replaced, reason: "replaced" });
         });
         return;
       }
@@ -1492,6 +1509,7 @@ export function createMachineHub(deps: MachineHubDeps) {
         pending: new Map(),
         lastPong: Date.now(),
         lastSeenWrite: 0,
+        openedAt: Date.now(),
         helloTimer: null,
         pingTimer: null,
         protocol: 0,

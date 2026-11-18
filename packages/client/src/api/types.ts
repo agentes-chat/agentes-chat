@@ -4945,6 +4945,8 @@ export type MachineOs = "linux" | "darwin" | "windows" | "other";
 export type MachineKind = "connected" | "host" | "managed";
 
 /** `GET …/machines`: a computer connected with `agentes-runner`. */
+export type MachineOfflineCause = "unresponsive" | "stopped" | "dropped";
+
 export interface Machine {
   id: string;
   /** The public address measured through an agent process, absent on older runners. */
@@ -4969,6 +4971,11 @@ export interface Machine {
    * from an older server: not in standby.
    */
   standby?: boolean;
+  /**
+   * Why it is offline, from its runner's last close: `unresponsive` (no network, or too busy to answer), `stopped`
+   * (its runner stopped), `dropped` (the link dropped). Null or absent: online, the workspace's own, or unknown.
+   */
+  offlineCause?: MachineOfflineCause | null;
   lastSeenAt: string | null;
   hostname: string;
   /** `linux`, `darwin`, `windows` or `other` (`MachineOs`). */

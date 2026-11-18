@@ -2108,6 +2108,13 @@
       "when": 1795031928914,
       "tag": "0305_drive_folders",
       "breakpoints": true
+    },
+    {
+      "idx": 303,
+      "version": "7",
+      "when": 1795043815358,
+      "tag": "0307_machine_disconnects",
+      "breakpoints": true
     }
   ]
 }
