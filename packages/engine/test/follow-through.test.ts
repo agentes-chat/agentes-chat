@@ -1476,3 +1476,86 @@ describe("a reply that names its own tools to a person", () => {
     expect((await agentMessages(f)).map((m) => m.body)).toEqual([answer, answer]);
   });
 });
+
+describe("a turn end's reads and judgment", () => {
+  const WAIT = 120;
+  const slowly = <T>(value: T) => Bun.sleep(WAIT).then(() => value);
+  const turn = (over: Partial<TurnEnd> = {}): TurnEnd => ({
+    state: { count: 0 },
+    kind: "conversation",
+    executed: 0,
+    bound: null,
+    quiet: false,
+    decided: null,
+    unanswered: false,
+    unreached: "",
+    judged: "Vou checar o deploy e já volto.",
+    mission: false,
+    wakesLater: () => slowly(false),
+    comesBack: () => slowly(false),
+    verdict: () => slowly("continue" as const),
+    ...over,
+  });
+  const timed = async (t: TurnEnd) => {
+    const started = performance.now();
+    const d = await decideTurnEnd(t);
+    return { d, ms: performance.now() - started };
+  };
+
+  test("overlap: what the judgment reads and `comes_back` start beside `wakes_later`; the judgment waits only for it", async () => {
+    let prepared = 0;
+    let judgedAt = 0;
+    const started = performance.now();
+    const { d, ms } = await timed(
+      turn({
+        prepare: () => {
+          prepared++;
+        },
+        verdict: () => {
+          judgedAt = performance.now() - started;
+          return slowly("continue" as const);
+        },
+      }),
+    );
+    expect(d).toMatchObject({ outcome: "continue", rule: "promise" });
+    expect(prepared).toBe(1);
+    expect(judgedAt).toBeGreaterThanOrEqual(WAIT - 5);
+    // wakes_later, then the judgment; comes_back ran beside them, not after.
+    expect(ms).toBeLessThan(2.5 * WAIT);
+  });
+
+  test("the rules keep their order, and something that brings it back still spares the judgment", async () => {
+    let judged = 0;
+    const counted = () => {
+      judged++;
+      return slowly("continue" as const);
+    };
+    expect((await timed(turn({ wakesLater: () => slowly(true), verdict: counted }))).d).toMatchObject({
+      outcome: "waiting",
+      rule: "wakes_later",
+    });
+    expect(judged).toBe(0);
+    // A promise something keeps here rests on it.
+    expect((await timed(turn({ comesBack: () => slowly(true) }))).d).toMatchObject({
+      outcome: "waiting",
+      rule: "comes_back",
+    });
+    // Read only for a promise in a person's conversation.
+    expect(
+      (await timed(turn({ comesBack: () => slowly(true), verdict: () => slowly("done" as const) }))).d,
+    ).toMatchObject({ outcome: "done", rule: "judged" });
+    expect((await timed(turn({ kind: "agents_dm", comesBack: () => slowly(true) }))).d).toMatchObject({
+      outcome: "continue",
+      rule: "promise",
+    });
+    // A failed judgment, or a failed read, is what it always was.
+    expect((await timed(turn({ verdict: () => Promise.reject(new Error("down")) }))).d).toMatchObject({
+      outcome: "done",
+      rule: "judge_error",
+    });
+    expect((await timed(turn({ wakesLater: () => Promise.reject(new Error("db")) }))).d).toMatchObject({
+      outcome: "continue",
+      rule: "promise",
+    });
+  });
+});

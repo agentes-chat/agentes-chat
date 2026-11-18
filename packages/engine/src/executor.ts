@@ -3254,7 +3254,8 @@ async function executeRunInner(
    */
   const evidenceFor = (t: Transcript) => {
     const evidence = { means: [] as string[], tried: [] as string[] };
-    const gather = async () => {
+    let gathering: Promise<typeof evidence> | null = null;
+    const read = async () => {
       const names = new Set([...granted, ...tools].map((x) => x.name));
       const own =
         // The right hand's turn is locked (`RIGHT_HAND_TURN`): a nudge toward shell or files would get it killed.
@@ -3272,6 +3273,11 @@ async function executeRunInner(
       // No call executed in this run: no tool step to read.
       evidence.tried = t.executedCalls ? await triedCalls(db, run, t.harnessTried) : (t.harnessTried ?? []);
       return evidence;
+    };
+    /** Read once: started early beside the turn end's other reads (`prepare`), awaited by the judgment. */
+    const gather = () => {
+      gathering ??= read();
+      return gathering;
     };
     return { evidence, gather };
   };
@@ -5754,22 +5760,25 @@ async function executeRunInner(
           judged: record,
           mission: false,
           wakesLater: () => wakesLater(db, run),
+          prepare: () => void judging.gather().catch(() => {}),
           verdict: checker
-            ? async () =>
-                continuationVerdict(checker, {
+            ? async () => {
+                const [gathered, personal] = await Promise.all([judging.gather(), isPersonalWorkspace(db, run.orgId)]);
+                return continuationVerdict(checker, {
                   orgId: run.orgId,
                   agentId: run.agentId,
                   runId: run.id,
                   request: transcript.request ?? triggerMessage?.body ?? triggerText,
                   reply: record,
-                  ...(await judging.gather()),
+                  ...gathered,
                   runKind: "routine",
-                  personal: await isPersonalWorkspace(db, run.orgId),
+                  personal,
                   onLearn: (signal) => {
                     learned = signal;
                   },
                   onLearnFailed: (error) => reportJudgeLearn(checker, error),
-                })
+                });
+              }
             : null,
           evidence: judging.evidence,
         });
@@ -5984,23 +5993,26 @@ async function executeRunInner(
           (plan.missionId ? await missionAsksPerson(db, plan.missionId) : false) ||
           wakesLater(db, run, (t as { detachedWaits?: { waitId: string }[] }).detachedWaits),
         comesBack: () => comesBackHere(db, run),
+        prepare: () => void judging.gather().catch(() => {}),
         verdict: checker
-          ? async () =>
-              continuationVerdict(checker, {
+          ? async () => {
+              const [gathered, personal] = await Promise.all([judging.gather(), isPersonalWorkspace(db, run.orgId)]);
+              return continuationVerdict(checker, {
                 orgId: run.orgId,
                 agentId: run.agentId,
                 runId: run.id,
                 request,
                 reply: judged,
-                ...(await judging.gather()),
+                ...gathered,
                 runKind: betweenAgents ? "agents_dm" : "conversation",
                 unreached,
-                personal: await isPersonalWorkspace(db, run.orgId),
+                personal,
                 onLearn: (signal) => {
                   learned = signal;
                 },
                 onLearnFailed: (error) => reportJudgeLearn(checker, error),
-              })
+              });
+            }
           : null,
         evidence: judging.evidence,
       });
