@@ -553,7 +553,12 @@ export function KeyGuardDialog({
           onClose={() => setVault(null)}
           onCreated={(item) => {
             setVault(null);
-            toast.show(t("keyGuard.saved", { name: item.keyName ?? item.title }));
+            toast.show(
+              t("vault.new.saved"),
+              "success",
+              undefined,
+              t("keyGuard.saved", { name: item.keyName ?? item.title }),
+            );
           }}
         />
       )}

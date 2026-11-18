@@ -3673,7 +3673,7 @@
     "useAsAi": "Yapay zekâ anahtarı olarak kullan",
     "remove": "Kaldır",
     "send": "Yine de gönder",
-    "saved": "Vault'a {{name}} olarak kaydedildi. Erişimi olan ajanlar onu bu adla kullanır."
+    "saved": "Erişimi olan ajanlar onu {{name}} adıyla kullanır."
   },
   "costlyCard": {
     "go": "Devam et",

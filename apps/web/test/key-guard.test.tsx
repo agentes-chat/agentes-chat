@@ -82,9 +82,9 @@ describe("an API key in a message: nothing goes out until the person chooses", (
       keyName: "MY_ANTHROPIC_API_KEY",
       secret: KEY,
     });
-    expect(document.querySelector(".ac-toast")?.textContent).toContain(
-      "Salva no Cofre como MY_ANTHROPIC_API_KEY. Os agentes com acesso usam por esse nome.",
-    );
+    const toast = document.querySelector(".ac-toast")?.textContent;
+    expect(toast).toContain("Salvo no Cofre");
+    expect(toast).toContain("Os agentes com acesso usam pelo nome MY_ANTHROPIC_API_KEY.");
     expect(posts(state)).toEqual([]);
   });
 

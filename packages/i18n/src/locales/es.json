@@ -3823,7 +3823,7 @@
     "useAsAi": "Usar como clave de IA",
     "remove": "Quitar la clave",
     "send": "Enviar de todos modos",
-    "saved": "Guardada en el Vault como {{name}}. Los agentes con acceso la usan por ese nombre."
+    "saved": "Los agentes con acceso la usan con el nombre {{name}}."
   },
   "costlyCard": {
     "go": "Adelante",

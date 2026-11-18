@@ -3536,7 +3536,7 @@
     "useAsAi": "用作 AI 密钥",
     "remove": "删掉它",
     "send": "仍然发送",
-    "saved": "已以 {{name}} 保存到 Vault。有权限的智能体按这个名字使用它。"
+    "saved": "有权限的智能体以 {{name}} 这个名字使用它。"
   },
   "costlyCard": {
     "go": "可以做",

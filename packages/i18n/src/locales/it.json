@@ -3830,7 +3830,7 @@
     "useAsAi": "Usa come chiave IA",
     "remove": "Rimuovila",
     "send": "Invia comunque",
-    "saved": "Salvata nel Vault come {{name}}. Gli agenti con accesso la usano con quel nome."
+    "saved": "Gli agenti con accesso la usano con il nome {{name}}."
   },
   "costlyCard": {
     "go": "Procedi",

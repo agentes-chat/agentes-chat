@@ -9051,7 +9051,7 @@
     "value": "Send anyway"
   },
   "keyGuard.saved": {
-    "value": "Saved in the Vault as {{name}}. Agents with access use it by that name."
+    "value": "Agents with access use it by the name {{name}}."
   },
   "costlyCard.go": {
     "value": "Go ahead"

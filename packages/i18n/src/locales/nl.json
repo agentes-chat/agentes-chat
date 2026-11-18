@@ -3686,7 +3686,7 @@
     "useAsAi": "Gebruiken als AI-sleutel",
     "remove": "Verwijderen",
     "send": "Toch versturen",
-    "saved": "Opgeslagen in de Vault als {{name}}. Agenten met toegang gebruiken hem onder die naam."
+    "saved": "Agenten met toegang gebruiken hem onder de naam {{name}}."
   },
   "costlyCard": {
     "go": "Ga je gang",

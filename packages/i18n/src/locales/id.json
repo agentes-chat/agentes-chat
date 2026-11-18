@@ -3543,7 +3543,7 @@
     "useAsAi": "Gunakan sebagai kunci AI",
     "remove": "Hapus",
     "send": "Tetap kirim",
-    "saved": "Tersimpan di Vault sebagai {{name}}. Agen yang punya akses menggunakannya dengan nama itu."
+    "saved": "Agen yang punya akses menggunakannya dengan nama {{name}}."
   },
   "costlyCard": {
     "go": "Lanjutkan",

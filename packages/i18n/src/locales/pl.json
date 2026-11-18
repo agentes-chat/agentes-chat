@@ -3968,7 +3968,7 @@
     "useAsAi": "Użyj jako klucza AI",
     "remove": "Usuń",
     "send": "Wyślij mimo to",
-    "saved": "Zapisano w Vault jako {{name}}. Agenci z dostępem używają go pod tą nazwą."
+    "saved": "Agenci z dostępem używają go pod nazwą {{name}}."
   },
   "costlyCard": {
     "go": "Działaj",

@@ -4000,8 +4000,8 @@ export const en = {
     useAsAi: "Use as AI key",
     remove: "Remove it",
     send: "Send anyway",
-    /** After "Save in the Vault", in a toast. */
-    saved: "Saved in the Vault as {{name}}. Agents with access use it by that name.",
+    /** After "Save in the Vault", under the toast's "Saved in the Vault". */
+    saved: "Agents with access use it by the name {{name}}.",
   },
 
   /** An agent's proposal of costly work nobody asked for directly (ADR 0131): the card's buttons and who decided. */

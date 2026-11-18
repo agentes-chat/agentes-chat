@@ -3684,7 +3684,7 @@
     "useAsAi": "Als KI-Schlüssel verwenden",
     "remove": "Entfernen",
     "send": "Trotzdem senden",
-    "saved": "Im Vault als {{name}} gespeichert. Agenten mit Zugriff verwenden ihn unter diesem Namen."
+    "saved": "Agenten mit Zugriff verwenden ihn unter dem Namen {{name}}."
   },
   "costlyCard": {
     "go": "Mach es",

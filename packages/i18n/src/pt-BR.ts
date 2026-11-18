@@ -3879,8 +3879,8 @@ export const ptBR = {
     useAsAi: "Usar como chave de IA",
     remove: "Tirar do texto",
     send: "Enviar mesmo assim",
-    /** After "Save in the Vault", in a toast. */
-    saved: "Salva no Cofre como {{name}}. Os agentes com acesso usam por esse nome.",
+    /** After "Save in the Vault", under the toast's "Saved in the Vault". */
+    saved: "Os agentes com acesso usam pelo nome {{name}}.",
   },
 
   /** An agent's card whose button opens the app's own dialog, filled in (`meta.actionCard`). */

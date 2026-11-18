@@ -82,7 +82,11 @@ export function VaultNewScreen({ scope: asked }: { scope: VaultScope }) {
       onSuccess: (item) => {
         successHaptic();
         if (handed) {
-          toast({ title: t("keyGuard.saved", { name: item.keyName ?? item.title }), icon: "lock" });
+          toast({
+            title: t("mobile.vault.savedToVault"),
+            subtitle: t("keyGuard.saved", { name: item.keyName ?? item.title }),
+            icon: "lock",
+          });
           leave();
           router.back();
           return;
