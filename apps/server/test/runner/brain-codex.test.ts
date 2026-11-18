@@ -75,11 +75,14 @@ test("command line: first turn with instructions, resume by id without them, opt
     instructions: 'Be "brief".\nUse tools.',
     mcp: { command: ["/usr/bin/bun", "/r/runner.js"] },
   });
-  expect(first.slice(0, 8)).toEqual([
+  expect(first.slice(0, 10)).toEqual([
     "exec",
     "--json",
     "--skip-git-repo-check",
     "--ignore-rules",
+    // Codex's own apps (the ChatGPT account's connectors) never: they skip the Tool Gateway (#198).
+    "-c",
+    "features.apps=false",
     "-C",
     "/w/my app",
     "--sandbox",
@@ -108,7 +111,7 @@ test("command line: first turn with instructions, resume by id without them, opt
     profile: "plan",
     writableRoots: ["/w/shared"],
   });
-  expect(plan.slice(6, 8)).toEqual(["--sandbox", "read-only"]);
+  expect(plan.slice(8, 10)).toEqual(["--sandbox", "read-only"]);
   expect(plan).toContain("--ignore-rules");
   expect(plan.join(" ")).not.toContain("writable_roots");
   expect(plan.join(" ")).not.toContain("network_access");
