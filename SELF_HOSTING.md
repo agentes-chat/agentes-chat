@@ -469,11 +469,12 @@ Then add to the `server` block:
     }
 ```
 
-Sign-in rate limits count per client address, read from `X-Forwarded-For`. A single value, as above,
-is trusted as is, and the client can't forge it (nginx replaces whatever the client sent). With
-another proxy or a CDN in front of nginx, send the chain instead (`$proxy_add_x_forwarded_for`) and
-list those proxies' addresses or ranges in `TRUSTED_PROXIES`, comma-separated: the chain is read from
-the right past every trusted hop, and the first other address is the client.
+Sign-in rate limits count per client address, read from `X-Forwarded-For` (password tries also count
+per account, whatever the address). A single value, as above, is trusted as is, and the client can't
+forge it (nginx replaces whatever the client sent). With another proxy or a CDN in front of nginx,
+send the chain instead (`$proxy_add_x_forwarded_for`) and list those proxies' addresses or ranges in
+`TRUSTED_PROXIES`, comma-separated: the chain is read from the right past every trusted hop, and the
+first other address is the client.
 
 </details>
 
