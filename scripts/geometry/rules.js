@@ -2539,6 +2539,48 @@
           out.push({ ...base, side: "under", px: +(mid - line.bottom).toFixed(1) });
       }
     },
+    /**
+     * A wrapping row keeps one start edge: a line it wrapped onto starts where the row does, never pushed along by an
+     * auto margin (a time left, a status, a link floating at the end under buttons that start at the start). Rows whose
+     * lines all end at the end (`justify-content: flex-end`) or centre are aligned as a whole and left alone.
+     */
+    strayend(out) {
+      // Pushed by an auto margin, not set in by a fixed one (an outcome under its item's words): the computed value
+      // keeps "auto" where the resolved one is already in pixels.
+      const pushed = (el) => {
+        try {
+          return String(el.computedStyleMap().get("margin-left")) === "auto";
+        } catch {
+          return false;
+        }
+      };
+      for (const row of document.body.querySelectorAll("*")) {
+        if (!seen(row)) continue;
+        const s = style(row);
+        if (!s.display.includes("flex") || s.flexDirection !== "row" || s.flexWrap !== "wrap" || s.direction === "rtl")
+          continue;
+        if (!["normal", "flex-start", "start", "left"].includes(s.justifyContent)) continue;
+        const kids = flow(row);
+        if (kids.length < 2) continue;
+        const r = row.getBoundingClientRect();
+        const start = r.left + parseFloat(s.borderLeftWidth) + parseFloat(s.paddingLeft);
+        const lines = [];
+        for (const kid of kids) {
+          const k = kid.getBoundingClientRect();
+          const line = lines.find((l) => sameLine(l.box, k));
+          if (line) line.kids.push([kid, k]);
+          else lines.push({ box: k, kids: [[kid, k]] });
+        }
+        if (lines.length < 2) continue;
+        const [first, ...rest] = lines;
+        if (first.kids[0][1].left > start + 2) continue;
+        for (const line of rest) {
+          const [kid, k] = line.kids[0];
+          if (k.left > start + 2 && pushed(kid))
+            out.push({ rule: "strayend", node: kid, el: sig(kid), box: sig(row), px: +(k.left - start).toFixed(1), text: words(kid) });
+        }
+      }
+    },
   };
 
   /**

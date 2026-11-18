@@ -292,6 +292,30 @@ html[data-pointer] :focus-visible {
 }
 
 /*
+ * A wrapping row that ends on one thing (`.ac-tail`: a time left, a status, a link): it ends the first line while it
+ * fits there, and when it wraps it starts its own line at the row's start, never pushed to the end under the rest. A
+ * spring of no width before it takes the first line's spare room; its gap is taken back so the spring never wraps on
+ * its own. A row with another column gap sets `--tail-gap` to it.
+ */
+.ac-tailrow {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--tail-gap, var(--space-2));
+}
+.ac-tailrow::after {
+  content: "";
+  order: 1;
+  flex: 1 0 0;
+  margin-inline-start: calc(-1 * var(--tail-gap, var(--space-2)));
+}
+.ac-tailrow > .ac-tail {
+  order: 2;
+  margin-inline-start: 0;
+}
+.ac-tailrow > .ac-tail ~ * {
+  order: 3;
+}
+/*
  * A row of actions: 16px between what the eye sees, on touch too. A ghost shows only its icon or words until
  * hovered, so its plate reaches half into the gap on each side: its icon or words stand as far from the next shape
  * as two boxes do, and at either end of the row they sit on its edge. The gap is a column gap, so a row that wraps

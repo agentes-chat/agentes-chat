@@ -1288,7 +1288,7 @@ function WaitRow({
           <Headline n={n} dir={dir} channelName={channelName} />
         </p>
         {sub && <p className="nt-wr__sub">{sub}</p>}
-        <div className="rq__foot nt-wr__acts">
+        <div className="rq__foot ac-tailrow nt-wr__acts">
           {/* A board's notice is decided or resolved right here (ADR 0135). */}
           <WidgetNoticeActions n={n} onOpen={() => h.onOpen(n)} open={false} />
           <DeviceNoticeActions n={n} inline />
@@ -1297,7 +1297,7 @@ function WaitRow({
           <Button size="sm" className="nt-wr__open" title={t("notifications.openTip")} onClick={() => h.onOpen(n)}>
             {found?.act ? (t as unknown as (key: string) => string)(found.act) : t("notifications.open")}
           </Button>
-          <span className="rq__end">{tail}</span>
+          <span className="rq__end ac-tail">{tail}</span>
         </div>
       </div>
       {children}
