@@ -903,7 +903,7 @@ export async function runCodexTurn(input: CodexTurnInput, opts: CodexTurnOptions
  * said it; null for any other failure.
  */
 export function codexRefusal(stderr: string): string | null {
-  const line = /^error: (?:unexpected argument|unrecognized subcommand|unknown|invalid value)\b.*$/im.exec(stderr)?.[0];
+  const line = /^error: (?:unexpected argument|unrecognized subcommand|invalid value)\b.*$/m.exec(stderr)?.[0];
   return line ? line.trim().slice(0, 300) : null;
 }
 

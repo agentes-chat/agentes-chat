@@ -67,6 +67,8 @@ test("a Codex that refuses its command line: its own line; any other failure isn
     "error: unrecognized subcommand 'resume'",
   );
   expect(codexRefusal("stream disconnected before completion")).toBeNull();
+  // Codex's own runtime errors (a model it doesn't know, a config value) aren't its command line.
+  expect(codexRefusal("Error: unknown model 'gpt-x'\n")).toBeNull();
 });
 
 test("command line: first turn with instructions, resume by id without them, options before resume", () => {

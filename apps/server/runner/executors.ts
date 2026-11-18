@@ -68,7 +68,8 @@ export function resolveCommand(
   sharedBin = process.env[SHARED_BIN_ENV],
 ): string {
   if (process.platform === "win32" || command.includes("/")) return command;
-  if (command === "codex" && codexPick && isExecutable(codexPick)) return codexPick;
+  const picked = command === "codex" ? pickedCodex() : undefined;
+  if (picked) return picked;
   const dirs = pathList.split(delimiter).filter((dir) => dir && dir !== sharedBin);
   for (const dir of dirs) {
     const full = join(dir, command);
@@ -529,12 +530,9 @@ export function newerVersion(a: string, b: string): boolean {
   return false;
 }
 
-/** Codex's macOS app carries its own CLI here. */
-export const CODEX_APP_BIN = "/Applications/Codex.app/Contents/Resources/codex";
-
 /**
- * Every `codex` this runner could start, each once: the PATH in order, then the usual install folders and Codex's
- * macOS app. Never one in the shared `bin/` (the agents write there) or in a folder that isn't a full path.
+ * Every `codex` this runner could start, each once: the PATH in order, then the usual install folders. Never one in
+ * the shared `bin/` (the agents write there) or in a folder that isn't a full path.
  */
 export function codexCandidates(
   pathList = process.env.PATH ?? "",
@@ -543,8 +541,7 @@ export function codexCandidates(
 ): string[] {
   if (platform === "win32") return [];
   const dirs = [...pathList.split(delimiter), ...usualDirs()].filter((d) => isAbsolute(d) && d !== sharedBin);
-  const files = [...dirs.map((d) => join(d, "codex")), ...(platform === "darwin" ? [CODEX_APP_BIN] : [])];
-  return [...new Set(files)].filter((f) => isFile(f) && isExecutable(f));
+  return [...new Set(dirs.map((d) => join(d, "codex")))].filter((f) => isFile(f) && isExecutable(f));
 }
 
 /**
@@ -552,6 +549,11 @@ export function codexCandidates(
  * version was reported, never an older copy earlier on the PATH.
  */
 let codexPick: string | undefined;
+
+/** The `codex` the last look chose, while it is still there. */
+export function pickedCodex(): string | undefined {
+  return codexPick && isExecutable(codexPick) ? codexPick : undefined;
+}
 
 /** Each copy's `--version`; the newest that answers wins (the first on the PATH among equals), with its path. */
 async function detectCodex(run: Run, bins: string[]): Promise<Probe> {
