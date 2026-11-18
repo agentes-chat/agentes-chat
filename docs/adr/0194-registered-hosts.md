@@ -7,7 +7,7 @@
   `hostOrigin`, `baseUrlFor`, `putHost`, `deleteHost`), `net-guard.ts` (`normalizeHost`), `cache.ts` (`caches.hosts`);
   server `app.ts` (`data-host` on the page), `apps/server/src/routes/app/context.ts` (`requestOriginAllowed`, `requestBaseUrl`), `realtime/ws.ts`
   (`personUpgrade`), `auth.ts` (`trustedOrigins`, `SOCIAL_STARTS`, the reset and confirmation links, `authUiConfig`),
-  `http/human-check.ts` (`humanCheckFor`, `humanCheckRefusal`), `routes/app/account.ts` (`GET /api/app/auth-config`'s `host`),
+  `http/human-check.ts` (`humanCheckRefusal`), `routes/app/account.ts` (`GET /api/app/auth-config`'s `host`),
   `routes/instance.ts` (`GET /api/host-look/logo`), `operator/hosts.ts`; web `apps/web/src/components/AuthLayout.tsx`
   (`AuthShell`), `i18n/index.ts` (`brandTabTitle`), `lib/app-icon.ts` (`showHostIcon`); tests
   `packages/engine/test/hosts.test.ts`, `apps/server/test/hosts.test.ts`, `apps/web/test/host-look.test.tsx`
@@ -67,9 +67,16 @@ stay exact and be written once.
    A registered host runs no bot check (ADR 0075): there `auth-config`'s `turnstileSiteKey` is null, so its pages load
    no widget and send no token, and `humanCheckRefusal` lets its requests through without asking Cloudflare. The
    e-mail's lookup gives no pass there, since a pass would stand for the check on the main address. Turnstile's widget
-   takes a fixed list of hostnames, so it can't follow a list an operator keeps adding to; sign-in there is guarded by
-   the limits per network and the password tries per account (ADR 0075, point 10). The waiting lists keep the check on
-   every host: their forms are the landing page's. Only the request's own `Host`, through `hostLook`, decides.
+   takes a fixed list of hostnames, so it can't follow a list an operator keeps adding to. The waiting lists keep the
+   check on every host: their forms are the landing page's. Only the request's own `Host`, through `hostLook`, decides.
+   What that leaves unguarded, plainly: nothing ties an account to a host, so every account's email lookup, password
+   sign-in and password reset can be asked on any registered host, where no bot check runs. On a server with
+   registered hosts, the main address's bot check therefore no longer stands between a script and those calls for any
+   account. What guards them is the limits per network, tighter on registered hosts (10 email lookups in 10 minutes and
+   5 sign-ups in 15 minutes per network, for all of them together), and the wrong passwords per account (10 in 15
+   minutes from one network, 50 from all), each counted in a server process's memory, so a restart starts them again
+   (ADR 0075, points 10 and 11). Sign-up there can send confirmation emails with only the limit per network in front
+   of it.
 6. **The links that bring a person back.** `baseUrlFor(requestHost)` gives the registered host's address on a request
    for one, else `PUBLIC_URL`. The confirmation link of an account signed up on that host, an invitation's link and its
    email (the host it was created or re-sent from, by someone signed in there), the invitation links' list and the join
