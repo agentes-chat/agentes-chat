@@ -488,6 +488,8 @@ export const isPlanModelId = (v: string) => planModelById(v) !== undefined;
 export function claudeCodeModel(plan: CodingPlan | undefined, value: unknown): string {
   if (isAlias(value)) return value;
   if (typeof value !== "string") return "sonnet";
+  // `fable` is Claude's own alias with no row on any plan: Claude's sign-in runs it, a plan has no such model.
+  if (!plan && value === "fable") return value;
   if (plan) return plan.claudeCode.models.some((m) => m.id === value) ? value : "sonnet";
   return /^claude-/.test(value) ? value : "sonnet";
 }

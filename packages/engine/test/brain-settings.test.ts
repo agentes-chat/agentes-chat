@@ -61,7 +61,12 @@ const mac = (patch: Record<string, unknown> = {}) => ({
 
 describe("brain settings", () => {
   test("a coding plan's models: any of them by id, its aliases named after what they run there", () => {
-    expect(brainModelOptions("claude_code").map((o) => o.label)).toEqual(["Opus 5.5", "Sonnet 5.5", "Haiku 5.5"]);
+    expect(brainModelOptions("claude_code").map((o) => o.label)).toEqual([
+      "Fable 5.2",
+      "Opus 5.5",
+      "Sonnet 5.5",
+      "Haiku 5.5",
+    ]);
     expect(brainModelOptions("codex").every((o) => o.modelId?.startsWith("gpt"))).toBe(true);
     // Codex offers the catalog's OpenAI rows, the Astras among them; the newest Sol is its default.
     expect(brainModelOptions("codex").map((o) => o.label)).toEqual([
@@ -84,6 +89,12 @@ describe("brain settings", () => {
     expect(brainModelLabel("claude_code", "auto", "minimax")).toBe("MiniMax M3.1 Flash");
     expect(brainModelLabel("claude_code", "opus")).toBe("Opus 5.5");
     expect(normalizeBrainModel("claude_code", "haiku")).toBe("haiku");
+    // Fable is an alias too, by its name or its id, and the picker's value goes to `--model` as is.
+    expect(normalizeBrainModel("claude_code", "fable")).toBe("fable");
+    expect(normalizeBrainModel("claude_code", "claude-fable-5-2")).toBe("fable");
+    expect(brainModelLabel("claude_code", "fable")).toBe("Fable 5.2");
+    expect(brainModelOptions("claude_code")[0]).toMatchObject({ value: "fable", contextWindow: 1_000_000 });
+    expect(brainModelOptions("claude_code").some((o) => o.value === "fable" && o.recommended)).toBe(false);
     // One of a plan's other models is stored by its id and named after it there; while Claude thinks it runs Sonnet.
     expect(normalizeBrainModel("claude_code", "deepseek-v4.1-flash")).toBe("deepseek-v4.1-flash");
     expect(normalizeBrainModel("claude_code", "k3-256k")).toBe("k3-256k");
