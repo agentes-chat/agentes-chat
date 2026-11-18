@@ -384,6 +384,24 @@ describe("Rotinas: each routine's state, with its one-tap fix", () => {
   });
 });
 
+describe("Rotinas: each row's last runs as bars", () => {
+  test("each bar says when its run was, how long it took and how it went; a press opens the runs", async () => {
+    const last = routineRun({ at: ago(10), finishedAt: ago(7), status: "reported" });
+    const before = routineRun({ at: ago(24 * 60), status: "failed", code: "budget_exceeded" });
+    await open([routine({ id: "rt-bars", name: "Erros do Sentry", lastRun: last, recentRuns: [last, before] })]);
+    const row = card("Erros do Sentry");
+    const bars = [...row.querySelectorAll<HTMLButtonElement>(".ac-run-bars__bar")];
+    // Oldest left, the strip one Tab stop on its newest bar.
+    expect(bars.map((b) => b.tabIndex)).toEqual([-1, 0]);
+    expect(bars[0]?.getAttribute("aria-label")).toMatch(/^Ontem \d{1,2}:\d{2}.*: O orçamento do mês acabou$/);
+    expect(bars[1]?.getAttribute("aria-label")).toMatch(/ · 3 min: Contou o que achou$/);
+    await click(bars[1] as HTMLButtonElement);
+    await settle(4);
+    const panel = screen().getByRole("dialog", { name: "Erros do Sentry" });
+    expect(within(panel).getByRole("tab", { name: /^Execuções/ }).getAttribute("aria-selected")).toBe("true");
+  });
+});
+
 describe("Rotinas: a routine's details", () => {
   const busy = routine({
     id: "rt-run",
