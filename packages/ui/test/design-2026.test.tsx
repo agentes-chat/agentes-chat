@@ -597,7 +597,8 @@ describe("reduced motion (2026-10 block)", () => {
     const block = css.slice(css.indexOf("Design system 2026-10 (docs/design"));
     const outside = block.replace(/@media \(prefers-reduced-motion: no-preference\) \{[\s\S]*?\n\}/g, "");
     expect(outside).not.toMatch(/\banimation:\s*ac-/);
-    expect(block).toContain("ac-halo");
+    // The working halo no longer animates at all (see working-idle-css.test.ts).
+    expect(block).not.toContain("ac-halo");
     expect(block).toContain("backdrop-filter");
     // Glass has a solid fallback first.
     expect(block.indexOf("var(--glass-solid)")).toBeLessThan(block.indexOf("backdrop-filter: blur"));

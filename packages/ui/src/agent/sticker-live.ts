@@ -1,7 +1,8 @@
 /**
  * Living stickers (ADR 0091): one shared loop draws every sticker on screen, about 25 times a second, and only the
  * ones in view (a picker full of them, or a long conversation, costs what is visible). With reduced motion the loop
- * stands still: each sticker is drawn once, at its still frame, and again when what it shows changes.
+ * stands still: each sticker is drawn once, at its still frame, and again when what it shows changes. With no sticker in
+ * view the loop stops until one comes back into view.
  */
 import { drawSticker, STICKER_STILL_T, type StickerLook, type StickerMood } from "./stickers";
 
@@ -16,6 +17,7 @@ export interface LiveSticker {
 
 const stickers = new Set<LiveSticker>();
 const visible = new WeakSet<HTMLCanvasElement>();
+let timer: ReturnType<typeof setTimeout> | 0 = 0;
 let raf = 0;
 let last = 0;
 let observer: IntersectionObserver | null = null;
@@ -29,7 +31,10 @@ const reduced = () => {
     // Motion allowed again: the loop starts; asked to stop: every sticker stands at its still frame.
     motionQuery?.addEventListener?.("change", () => {
       if (!motionQuery?.matches) start();
-      else for (const s of stickers) drawLiveSticker(s, STICKER_STILL_T);
+      else {
+        cancelLoop();
+        for (const s of stickers) drawLiveSticker(s, STICKER_STILL_T);
+      }
     });
   }
   return motionQuery?.matches === true;
@@ -65,19 +70,45 @@ export function drawLiveSticker(sticker: LiveSticker, t: number) {
   drawSticker(ctx, look, mood, reduced() ? STICKER_STILL_T : at, side);
 }
 
+const anyVisible = () => {
+  for (const s of stickers) if (visible.has(s.canvas)) return true;
+  return false;
+};
+
+function cancelLoop() {
+  if (timer) clearTimeout(timer);
+  if (raf && typeof cancelAnimationFrame === "function") cancelAnimationFrame(raf);
+  timer = 0;
+  raf = 0;
+}
+
+/**
+ * Asks for the next frame only when one is due: a timer waits out the gap, then the browser is asked once. Asking at
+ * every refresh and dropping the early ones keeps the compositor awake on a high-refresh screen. With no sticker in
+ * view, or with reduced motion, no frame is asked for; `start` brings the loop back.
+ */
+function schedule() {
+  if (typeof requestAnimationFrame !== "function") return;
+  if (timer || raf || reduced() || !anyVisible()) return;
+  timer = setTimeout(
+    () => {
+      timer = 0;
+      raf = requestAnimationFrame(tick);
+    },
+    Math.max(0, FRAME_MS - (stickerNow() * 1000 - last)),
+  );
+}
+
 function tick(time: number) {
   raf = 0;
-  if (time - last >= FRAME_MS) {
-    last = time;
-    const t = time / 1000;
-    for (const s of stickers) if (visible.has(s.canvas)) drawLiveSticker(s, t);
-  }
-  if (stickers.size && !reduced()) raf = requestAnimationFrame(tick);
+  last = time;
+  const t = time / 1000;
+  for (const s of stickers) if (visible.has(s.canvas)) drawLiveSticker(s, t);
+  schedule();
 }
 
 function start() {
-  if (!raf && stickers.size && !reduced() && typeof requestAnimationFrame === "function")
-    raf = requestAnimationFrame(tick);
+  schedule();
 }
 
 /** Starts drawing a sticker (in view only); returns the cleanup. */
@@ -92,6 +123,8 @@ export function addLiveSticker(sticker: LiveSticker): () => void {
           continue;
         }
         visible.add(canvas);
+        // The loop stops with nothing in view: a sticker coming into view starts it again.
+        start();
         // Standing still: drawn once as it comes into view (it may have changed while away).
         if (reduced()) for (const s of stickers) if (s.canvas === canvas) drawLiveSticker(s, STICKER_STILL_T);
       }
@@ -104,9 +137,6 @@ export function addLiveSticker(sticker: LiveSticker): () => void {
     stickers.delete(sticker);
     observer?.unobserve(sticker.canvas);
     visible.delete(sticker.canvas);
-    if (stickers.size === 0 && raf && typeof cancelAnimationFrame === "function") {
-      cancelAnimationFrame(raf);
-      raf = 0;
-    }
+    if (!anyVisible()) cancelLoop();
   };
 }

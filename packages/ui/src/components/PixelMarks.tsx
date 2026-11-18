@@ -6,8 +6,8 @@ import { cx } from "../cx";
  * `PixelDone`, one green pixel (the spinner grid's center cell) that pops in
  * when a step is done, `PixelFail`, an exclamation in two pixels of the danger
  * color when a step failed, and `PixelStop`, a solid rounded square that reads as
- * "stop" (it breathes while an agent works). Pure CSS; still under
- * prefers-reduced-motion. Decorative unless `label` is given.
+ * "stop", still, and softened with `dim`. Pure CSS; the pop of `PixelDone` is
+ * skipped under prefers-reduced-motion. Decorative unless `label` is given.
  */
 
 /** A cell of an n×n pixel grid `size` px wide: its pitch, the gap and the drawn side (PixelSpinner's rule). */
@@ -60,8 +60,6 @@ export function PixelFail({ size = 14, label, className }: PixelDoneProps) {
 
 export interface PixelStopProps {
   size?: number;
-  /** An agent is working: the square breathes (a slow fade, 1.6 s). */
-  animated?: boolean;
   /** Stopped (a halted step): dimmed. */
   dim?: boolean;
   label?: string;
@@ -69,14 +67,13 @@ export interface PixelStopProps {
 }
 
 /** Stop: one rounded square in the text color, ~3/4 of the box. */
-export function PixelStop({ size = 13, animated = false, dim = false, label, className }: PixelStopProps) {
+export function PixelStop({ size = 13, dim = false, label, className }: PixelStopProps) {
   const side = Math.round(size * 0.76);
   const radius = Math.max(2, Math.round(side * 0.24));
   return (
     <span
       className={cx("ac-pixstop", className)}
-      data-animated={animated || undefined}
-      data-dim={(!animated && dim) || undefined}
+      data-dim={dim || undefined}
       style={
         {
           width: size,
