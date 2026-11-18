@@ -14,7 +14,8 @@
 // deltas, each 150 ms before the next line, "KEY401" is refused by the endpoint and retries for good
 // (as Claude Code 2.1.310 does, ten times with backoff), "ASKCONTROL" asks for an elicitation on stdout and answers
 // with what it got back, "ECHOSHAPE" prints a token-shaped text in two deltas, "ECHOLONGSHAPE" one that goes on over
-// three after its prefix, "KEY403" is forbidden by it (a model or account switched off). Control requests: `initialize`, and `get_usage`
+// three after its prefix, "KEY403" is forbidden by it (a model or account switched off), "CF403" meets Cloudflare's challenge (an
+// `api_retry` 403, then Cloudflare's 403 page, no API JSON: #358). Control requests: `initialize`, and `get_usage`
 // as $FAKE_CLAUDE_USAGE says ("" a Max plan's windows, "signed_out", "error",
 // "hang": never).
 // With `--json-schema` it is a route (`brain.route`): the prompt on stdin, one JSON result whose
@@ -397,6 +398,33 @@ async function answer(line) {
       subtype: "success",
       is_error: true,
       result: 'API Error: 403 {"type":"error","error":{"type":"permission_error","message":"Account.Disabled"}}',
+      usage: { input_tokens: 0, output_tokens: 0 },
+    });
+    return;
+  }
+  if (prompt.includes("CF403")) {
+    // #358: Cloudflare's challenge page in front of Anthropic, as Claude Code words it (no API JSON).
+    const cf = "Failed to authenticate. API Error: 403 Attention Required! | Cloudflare";
+    out({
+      type: "system",
+      subtype: "api_retry",
+      attempt: 1,
+      max_retries: 10,
+      retry_delay_ms: 600,
+      error_status: 403,
+      error: "authentication_failed",
+    });
+    out({
+      type: "assistant",
+      parent_tool_use_id: null,
+      error: "authentication_failed",
+      message: { id: "msg_cf403", content: [{ type: "text", text: cf }] },
+    });
+    out({
+      type: "result",
+      subtype: "success",
+      is_error: true,
+      result: cf,
       usage: { input_tokens: 0, output_tokens: 0 },
     });
     return;
