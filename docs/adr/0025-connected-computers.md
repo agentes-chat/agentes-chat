@@ -58,6 +58,8 @@ A new artifact kind `file` (migration adds the enum value): any bytes, with the 
 - `read_artifact` returns the metadata (and the text of small UTF-8 text files); `import_file` copies the bytes back into a computer.
 - Versions work like other kinds (`upload_file` with `artifact_id`).
 
+Addendum 2026-11-14. The limit above is the server's own now: `MAX_FILE_MB` (default 50 MB) sets `ARTIFACT_LIMITS.fileBytes` once at boot, and every path reads it there — a person's upload to the Drive, a new version of a file, an agent's `upload_file`, the tool's own description and the number the refusal states. A self-hosted install whose agents deliver client videos (200 MB to 1 GB) raises the variable instead of keeping the file outside the conversation. Two things stay as they were: an upload still arrives whole and is held in the server's memory while it is stored, so the variable is bounded by that memory (a streamed or multipart upload is not part of this change), and the workspace's storage and daily upload limits still apply on top. The Cloud keeps its own limit by setting the variable it wants.
+
 ### 4. `upload_file` tool
 
 `upload_file(path, title?, artifact_id?, note?)`, scope `sandbox:run` (same as `export_file`). A file goes as is; a folder becomes `<name>.zip`. The tool creates an `artifact_uploads` row (pending, bound to org, agent, run and computer, expires in 10 minutes), asks the channel to push, waits for completion (pub/sub signal plus a database poll, so it works across replicas) and answers with the artifact id and version. `export_file` stays for text that should become a native kind.
