@@ -1571,9 +1571,9 @@ function DecisionBar({
         ? t("approvals.clickNoteAhead", { when: nextLabel(i18n.language, a.runAt) })
         : t("approvals.review.grants", { name, doing: approvalDoing(t, a, i18n.language) });
   return (
-    <div className={cx("ap-bar ap-bar--acts", floating && "ap-bar--float")}>
+    <div className={cx("ap-bar ap-bar--acts ac-tailrow", floating && "ap-bar--float")}>
       <WhenAsksLink approval={a} agent={agent} className="ap-bar__when" />
-      <div className="ap-bar__acts">
+      <div className="ap-bar__acts ac-tail">
         <Locked when={deciding}>
           {approveAlwaysOffered(a) && <ApproveAlways approval={a} agent={agent} also={also} />}
           <Button size="sm" onClick={onRefuse}>

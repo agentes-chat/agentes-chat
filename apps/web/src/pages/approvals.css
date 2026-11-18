@@ -917,13 +917,10 @@ html:not([data-pointer]) .ap-li:focus-visible {
   flex: 0 1 auto;
   min-width: 0;
 }
-/* The buttons alone: at the bar's end, the same room on every side of them. */
-.ap-bar--acts {
-  justify-content: flex-end;
-}
-/* "Mudar quando perguntar" at the bar's start, its buttons at the end. */
-.ap-bar__when {
-  margin-inline-end: auto;
+/* "Mudar quando perguntar" at the bar's start, its buttons at the end (alone, the same room on every side of them).
+   Wrapped under it on a narrow bar, they start at its words' edge (`.ac-tailrow`), never floating at the end. */
+.ap-bar--acts > .ap-bar__acts {
+  justify-content: flex-start;
 }
 .ap-bar--acts.ap-bar--float {
   padding: 10px;

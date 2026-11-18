@@ -127,8 +127,9 @@ html:not([data-pointer]) .nt-item:focus-visible {
   display: flex;
 }
 /* Its first plate reaches into the footer's gap (a ghost in `.ac-acts`): that room is given back here, so the plate
-   stands 8 from a button that grows up to it (a phone's Abrir). */
-.rq__end:has(> .nt-tail) {
+   stands 8 from a button that grows up to it (a phone's Abrir). After a time left it is not the first, and the time
+   left keeps the footer's edge when it wraps under the buttons. */
+.rq__end:has(> .nt-tail:first-child) {
   padding-inline-start: var(--ghost-plate);
 }
 
