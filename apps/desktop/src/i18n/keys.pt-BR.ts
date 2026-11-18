@@ -877,6 +877,8 @@ export const desktopPtBR = {
     offline: "Sem conexão com a internet · tentando de novo…",
     /** A gate's sign-in page (Cloudflare Access) loading: the small badge in the window's corner. */
     loading: "Carregando…",
+    /** Over a gate's sign-in page (Cloudflare Access): the pill's button that opens the Servers menu. */
+    servers: "Trocar de servidor",
     unreachable: "Sem acesso a {{host}} · tentando de novo…",
     tailnet: "O Tailscale está conectado neste {{device}}?",
     starting: "Iniciando o agentes.chat neste {{device}}…",

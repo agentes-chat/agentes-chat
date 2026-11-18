@@ -41,6 +41,7 @@ const COMMANDS: &[&str] = &[
     "cover_hide",
     "cover_server",
     "cover_details",
+    "cover_servers_menu",
     "this_mac_listening",
     "local_server_status",
     "local_server_install",

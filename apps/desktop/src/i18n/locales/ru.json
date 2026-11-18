@@ -830,6 +830,7 @@
   "cover": {
     "offline": "Нет подключения к интернету · пробуем снова…",
     "loading": "Загрузка…",
+    "servers": "Сменить сервер",
     "unreachable": "Не удаётся связаться с {{host}} · пробуем снова…",
     "tailnet": "Tailscale подключён на этом {{device}}?",
     "starting": "Запускаем agentes.chat на этом {{device}}…",

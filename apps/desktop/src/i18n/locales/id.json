@@ -815,6 +815,7 @@
   "cover": {
     "offline": "Tidak ada koneksi internet · mencoba lagi…",
     "loading": "Memuat…",
+    "servers": "Ganti server",
     "unreachable": "Tidak bisa menjangkau {{host}} · mencoba lagi…",
     "tailnet": "Apakah Tailscale terhubung di {{device}} ini?",
     "starting": "Memulai agentes.chat di {{device}} ini…",

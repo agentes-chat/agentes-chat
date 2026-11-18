@@ -5,10 +5,10 @@
 - Extends: ADR 0036 (the desktop app), ADR 0154 (every server's workspaces with its own session), ADR 0025 (connected
   computers)
 - Code: desktop `apps/desktop/src-tauri/src/gate.rs`, `gate_cloudflare.rs`, `main_window.rs` (`route_now`, `open`,
-  the page's load), `cover.rs` (`login_page_shown`, `compact`), `runners.rs` (`servers`, the `hello` and
+  the page's load), `cover.rs` (`login_page_shown`, `gate_pill`, `cover_servers_menu`), `runners.rs` (`servers`, the `hello` and
   `gate.required` lines), `workspaces.rs` (`refresh`, `with_session`), `servers.rs` (`server_sign_out`), `lib.rs`
   (`runner_send`), `apps/desktop/src/control/first-run.ts` (`AppServerCheck`), `src/host/tauri.ts` (`checkServer`),
-  `src/cover/` (the compact badge); runner `apps/server/runner/gate.ts`, `gate-cloudflare.ts`, `connection.ts`
+  `src/cover/` (the pill); runner `apps/server/runner/gate.ts`, `gate-cloudflare.ts`, `connection.ts`
   (`webSocketDial`), `streams.ts` (`openDataSocket`), `daemon.ts` (`gateSet`), `control.ts`, `config.ts` (`gate`),
   `main.ts` (`pair --gate`); control
   protocol `packages/adapters/src/runner-control.ts` (`gate.set`, `gate.required`); tests
@@ -54,8 +54,9 @@ The alternatives considered:
    provider's pages open in the browser, which can't hand the session back.
 3. **The window's cover steps aside for the sign-in.** Access's page never says it painted (`page_ready`), so the
    cover hides when it loaded and the opening counts as painted: no reload and no cache cleared over a PIN being
-   typed. While a page of the gate's loads (the PIN sent, the next page on its way), the cover is a small badge in the
-   window's corner, "Loading…", over the page still shown. A page of the server asked for meanwhile (a link, a notification) waits until the window is back on the
+   typed. While the gate's page shows, the cover is a pill in the window's corner: "Switch server", which opens the
+   menu bar's Servers menu (the server's own page, where the person switches servers, isn't there), and "Loading…"
+   while the next page of the sign-in loads (the PIN sent), over the page still shown. A page of the server asked for meanwhile (a link, a notification) waits until the window is back on the
    server, and `window.__agentesDesktop` is never defined on the team's pages.
 4. **The session is the window's cookie, host only.** Access sets `CF_Authorization` on the server's host, which the
    window's requests and same-origin WebSockets carry, and which the desktop app's own requests already forward

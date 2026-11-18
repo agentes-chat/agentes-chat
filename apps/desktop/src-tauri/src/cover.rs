@@ -44,6 +44,8 @@ struct Shown {
     since: Option<(Instant, Duration)>,
     /// Each showing gets a new one: a late hide meant for an earlier showing does nothing.
     generation: u64,
+    /// Only a pill in the window's corner, over a gate's sign-in (`gate_pill`).
+    pill: bool,
 }
 
 /// On Linux, Tauri packs a child web view beside the site in the window's GtkBox, never over it (`add_child`'s
@@ -82,27 +84,39 @@ fn lock(app: &AppHandle) -> std::sync::MutexGuard<'_, Shown> {
     app.state::<Cover>().inner().0.lock().unwrap_or_else(|e| e.into_inner())
 }
 
-/// The badge's size and its distance from the window's top right corner, in points (`compact`).
-const BADGE: LogicalSize<f64> = LogicalSize { width: 150.0, height: 36.0 };
-const BADGE_MARGIN: f64 = 14.0;
+/// The pill's size and its distance from the window's top right corner, in points (`gate_pill`).
+const PILL: LogicalSize<f64> = LogicalSize { width: 210.0, height: 36.0 };
+const PILL_MARGIN: f64 = 14.0;
 
-/// A page of a gate's sign-in loading (gate.rs: the next page of the sign-in, or the form just sent): the page it
-/// replaces stays in sight, and the cover is only a small badge in the window's top right corner saying it loads.
-/// It goes when the page finished loading (`login_page_shown`), as the full cover does.
-pub fn compact(app: &AppHandle) {
+/// The window shows a gate's sign-in (gate.rs): the gate's page stays in sight, and the cover is only a pill in the
+/// window's top right corner. While the next page of the sign-in loads (`loading`: the form just sent) it says so;
+/// once the page is there it offers the app's servers (`cover_servers_menu`), since the server's own page, where the
+/// person switches servers, isn't there. A page of the server loading again brings the whole cover back (`show`).
+pub fn gate_pill(app: &AppHandle, loading: bool) {
     {
         let mut shown = lock(app);
         shown.generation += 1;
-        shown.since = Some((Instant::now(), Duration::ZERO));
+        // Loading, it counts as covering, so the page's own end (`login_page_shown`) knows; shown, nothing waits.
+        shown.since = loading.then(|| (Instant::now(), Duration::ZERO));
+        shown.pill = true;
     }
     let Some(cover) = app.get_webview(LABEL) else { return };
-    let _ = cover.eval("window.__coverCompact?.(true)");
-    if let Some(Ok(size)) = app.get_window(main_window::LABEL).map(|w| window_points(&w)) {
-        let x = (size.width - BADGE.width - BADGE_MARGIN).max(0.0);
-        let _ = cover.set_position(LogicalPosition::new(x, BADGE_MARGIN));
-        let _ = cover.set_size(BADGE);
-    }
+    let _ = cover.eval(format!("window.__coverCompact?.({})", if loading { "\"loading\"" } else { "\"servers\"" }));
+    fit(app);
     let _ = cover.show();
+}
+
+/// The window was resized: a pill keeps its size and its corner (the cover resizes with the window by itself).
+pub fn fit(app: &AppHandle) {
+    if !lock(app).pill {
+        return;
+    }
+    let (Some(cover), Some(window)) = (app.get_webview(LABEL), app.get_window(main_window::LABEL)) else { return };
+    if let Ok(size) = window_points(&window) {
+        let x = (size.width - PILL.width - PILL_MARGIN).max(0.0);
+        let _ = cover.set_position(LogicalPosition::new(x, PILL_MARGIN));
+        let _ = cover.set_size(PILL);
+    }
 }
 
 /// Covers the site now (it is loading a whole page again), for at least `min`. Already covering (the
@@ -118,13 +132,14 @@ pub fn show(app: &AppHandle, min: Duration) {
         let was_shown = shown.since.is_some();
         shown.generation += 1;
         shown.since = Some((now, min.max(left)));
+        shown.pill = false;
         was_shown
     };
     let Some(cover) = app.get_webview(LABEL) else { return };
     if !was_shown {
         let _ = cover.eval("window.__coverShown?.()");
     }
-    // Never left as the gate's badge (`compact`).
+    // Never left as the gate's pill (`gate_pill`).
     let _ = cover.eval("window.__coverCompact?.(false)");
     // Whatever became of its size while it was hidden, it shows as large as the window.
     if let Some(Ok(size)) = app.get_window(main_window::LABEL).map(|w| window_points(&w)) {
@@ -222,19 +237,26 @@ pub fn page_ready(app: AppHandle, webview: tauri::Webview) -> Result<(), String>
     Ok(())
 }
 
-/// The window shows a page that paints but never says so: the sign-in of a gate in front of the server (gate.rs, Cloudflare Access). The
-/// cover steps aside for it, and the opening counts as painted (no reload, no cache cleared over the PIN typed).
+/// The window shows a page that paints but never says so: the sign-in of a gate in front of the server (gate.rs,
+/// Cloudflare Access). The opening counts as painted (no reload, no cache cleared over the PIN typed), and the cover
+/// is the pill that offers the other servers (`gate_pill`).
 pub fn login_page_shown(app: &AppHandle) {
-    painted(app);
+    opened(app);
+    gate_pill(app, false);
 }
 
 /// The window's page is on screen: the opening's marker goes and the cover steps aside.
 fn painted(app: &AppHandle) {
+    opened(app);
+    hide(app);
+}
+
+/// The opening's marker goes: this opening painted.
+fn opened(app: &AppHandle) {
     if let Some(path) = pending_path(app).filter(|p| p.exists()) {
         let _marker = MARKER.lock();
         let _ = std::fs::remove_file(path);
     }
-    hide(app);
 }
 
 /// The site's page finished loading (on Linux, on the graphics card, before it painted): when WebKit's own answer for
@@ -391,6 +413,20 @@ pub fn cover_server(app: AppHandle, webview: tauri::Webview) -> Result<Option<St
         return Err("only the cover asks this".into());
     }
     Ok(main_window::site(&app).map(|s| s.origin().ascii_serialization()))
+}
+
+/// The pill over a gate's sign-in (`gate_pill`): the menu bar's Servers menu, under the pointer (its choices are
+/// the menu bar's own, `menus::on_event`).
+#[tauri::command]
+pub fn cover_servers_menu(app: AppHandle, webview: tauri::Webview) -> Result<(), String> {
+    if webview.label() != LABEL {
+        return Err("only the cover asks this".into());
+    }
+    let labels = crate::menus::labels(&app);
+    let l = |key: &str| labels.get(key).map(String::as_str).unwrap_or(key).to_string();
+    let menu = crate::menus::servers_menu(&app, &l).map_err(|e| e.to_string())?;
+    let window = app.get_window(main_window::LABEL).ok_or("no window")?;
+    window.popup_menu(&menu).map_err(|e| e.to_string())
 }
 
 /// The cover's Copy details over a server other than the one here: the window's own story (the app's version, the

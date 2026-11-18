@@ -285,8 +285,10 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
         })
         // A whole page loading again (⌘R, macOS ended it, a full navigation): the cover, never a blank window.
         .on_page_load(move |page, payload| match payload.event() {
-            // A page of a gate's sign-in: the page before it stays in sight under a small badge (cover.rs `compact`).
-            PageLoadEvent::Started if crate::gate::on_login_page(payload.url()) => crate::cover::compact(&on_load),
+            // A page of a gate's sign-in: the page before it stays in sight under a small pill (cover.rs `gate_pill`).
+            PageLoadEvent::Started if crate::gate::on_login_page(payload.url()) => {
+                crate::cover::gate_pill(&on_load, true)
+            }
             PageLoadEvent::Started => crate::cover::show(&on_load, Duration::ZERO),
             // The page's own sizes follow the zoom (desktop.css), and the bar knows about full screen.
             PageLoadEvent::Finished => {

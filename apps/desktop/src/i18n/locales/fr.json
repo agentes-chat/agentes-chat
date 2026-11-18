@@ -825,6 +825,7 @@
   "cover": {
     "offline": "Pas de connexion Internet · nouvel essai…",
     "loading": "Chargement…",
+    "servers": "Changer de serveur",
     "unreachable": "Impossible de joindre {{host}} · nouvel essai…",
     "tailnet": "Tailscale est-il connecté sur ce {{device}} ?",
     "starting": "Démarrage d'agentes.chat sur ce {{device}}…",

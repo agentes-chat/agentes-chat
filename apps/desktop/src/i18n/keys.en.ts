@@ -906,6 +906,8 @@ export const desktopEn = {
     offline: "No internet connection · trying again…",
     /** A gate's sign-in page (Cloudflare Access) loading: the small badge in the window's corner. */
     loading: "Loading…",
+    /** Over a gate's sign-in page (Cloudflare Access): the pill's button that opens the Servers menu. */
+    servers: "Switch server",
     unreachable: "Can't reach {{host}} · trying again…",
     tailnet: "Is Tailscale connected on this {{device}}?",
     starting: "Starting agentes.chat on this {{device}}…",

@@ -721,6 +721,7 @@ pub fn run() {
             cover::cover_hide,
             cover::cover_server,
             cover::cover_details,
+            cover::cover_servers_menu,
             prepare::screen_access,
             prepare::screen_request,
             prepare::disk_access,
@@ -790,6 +791,7 @@ pub fn run() {
                 window_state::remember(window, true);
                 // Full screen in or out: the page's title bar keeps or drops the room for the buttons.
                 main_window::fit_page(window.app_handle());
+                cover::fit(window.app_handle());
             }
             WindowEvent::ThemeChanged(theme) if window.label() == main_window::LABEL => {
                 let color = main_window::backdrop(*theme);
