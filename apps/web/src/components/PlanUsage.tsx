@@ -243,8 +243,8 @@ function OrderRows({
  * A plan account as a row that opens. Closed: its maker's mark, its name and plan, whose it is and one meter, the
  * window closest to its limit, with what matters near the limit on a line under them. Open: its maker and address,
  * every window with its bar split by agent in their colours, its agents (share of the window the bar splits, tokens
- * this month), when it renews, the month's total and, for its owner, what they do with it. Near its limit it starts
- * open.
+ * this month), when it renews, the month's total and, for its owner, what they do with it. Every row starts closed:
+ * the head's meter and its limit line already say where it stands.
  */
 function AccountRow({
   account,
@@ -265,9 +265,9 @@ function AccountRow({
   const dir = useDirectory(org.id);
   const text = planMeterText(t, i18n.language);
   const line = account.usage ? planLine(account.usage, text) : null;
-  const [open, setOpen] = useState(line != null && line.state !== "ok");
+  const [open, setOpen] = useState(false);
   // What the row holds leaves the page once it has closed, so a closed list of many accounts stays light.
-  const [held, setHeld] = useState(open);
+  const [held, setHeld] = useState(false);
   const body = useId();
   const shares = accountShares(account);
   const window = shares.window ? text.short(shares.window) : null;
@@ -461,34 +461,37 @@ function AgentShares({ shares, window }: { shares: ReturnType<typeof accountShar
   const dir = useDirectory(org.id);
   const [open, setOpen] = useState(false);
   return (
-    <div className="plan-shares">
-      {(open ? [...shares.shown, ...shares.rest] : shares.shown).map((a) => {
-        const name = dir.agentById.get(a.agentId)?.name ?? a.name;
-        return (
-          <Link
-            key={a.agentId}
-            className="plan-shares__row"
-            to="/org/$orgId/agents/$agentId"
-            params={{ orgId: org.id, agentId: a.agentId }}
-            search={{ tab: "usage" }}
-          >
-            <AgentAvatar agentId={a.agentId} size="xs" name={name} />
+    <div className="plan-group">
+      <p className="plan-group__label">{t("shell.agents")}</p>
+      <div className="plan-shares">
+        {(open ? [...shares.shown, ...shares.rest] : shares.shown).map((a) => {
+          const name = dir.agentById.get(a.agentId)?.name ?? a.name;
+          return (
+            <Link
+              key={a.agentId}
+              className="plan-shares__row"
+              to="/org/$orgId/agents/$agentId"
+              params={{ orgId: org.id, agentId: a.agentId }}
+              search={{ tab: "usage" }}
+            >
+              <AgentAvatar agentId={a.agentId} size="xs" name={name} />
+              <span>
+                <b>{name}</b>
+                {shareFacts(t, i18n.language, window, a)}
+              </span>
+            </Link>
+          );
+        })}
+        {!open && shares.rest.length > 0 && (
+          <button type="button" className="plan-shares__row" aria-expanded={false} onClick={() => setOpen(true)}>
+            <span />
             <span>
-              <b>{name}</b>
-              {shareFacts(t, i18n.language, window, a)}
+              <b>{t("usageViews.moreAgents", { count: shares.rest.length })}</b>
+              {shareFacts(t, i18n.language, window, { share: shares.restShare, tokens: shares.restTokens })}
             </span>
-          </Link>
-        );
-      })}
-      {!open && shares.rest.length > 0 && (
-        <button type="button" className="plan-shares__row" aria-expanded={false} onClick={() => setOpen(true)}>
-          <span />
-          <span>
-            <b>{t("usageViews.moreAgents", { count: shares.rest.length })}</b>
-            {shareFacts(t, i18n.language, window, { share: shares.restShare, tokens: shares.restTokens })}
-          </span>
-        </button>
-      )}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -511,19 +514,21 @@ function KindShares({ account, window }: { account: PlanAccountUsage; window: st
   if (kinds.length === 0) return null;
   return (
     <>
-      <p className="plan-kinds__label">{t("usage.kinds.label")}</p>
-      <div className="plan-shares plan-kinds">
-        {kinds.map((k) => (
-          <div key={k.kind} className="plan-shares__row">
-            <span className="plan-kinds__icon">
-              <Icon name={KIND_ICONS[k.kind]} size={16} />
-            </span>
-            <span>
-              <b>{t(`usage.kinds.${k.kind}`)}</b>
-              {kindFacts(t, i18n.language, window, k)}
-            </span>
-          </div>
-        ))}
+      <div className="plan-group">
+        <p className="plan-group__label">{t("usage.kinds.label")}</p>
+        <div className="plan-shares plan-kinds">
+          {kinds.map((k) => (
+            <div key={k.kind} className="plan-shares__row">
+              <span className="plan-kinds__icon">
+                <Icon name={KIND_ICONS[k.kind]} size={16} />
+              </span>
+              <span>
+                <b>{t(`usage.kinds.${k.kind}`)}</b>
+                {kindFacts(t, i18n.language, window, k)}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
       {target && (
         <Alert tone="neutral" icon="info" className="plan-kinds__hint">
