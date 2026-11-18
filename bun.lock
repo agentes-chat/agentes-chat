@@ -12,7 +12,7 @@
     },
     "apps/desktop": {
       "name": "@agenteschat/desktop",
-      "version": "0.8.6",
+      "version": "0.8.11",
       "dependencies": {
         "@agenteschat/adapters": "workspace:*",
         "@agenteschat/client": "workspace:*",
@@ -110,7 +110,7 @@
     },
     "apps/server": {
       "name": "@agenteschat/server",
-      "version": "0.1.1",
+      "version": "0.1.6",
       "dependencies": {
         "@agenteschat/adapters": "workspace:*",
         "@agenteschat/client": "workspace:*",
