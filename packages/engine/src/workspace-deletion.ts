@@ -187,13 +187,15 @@ const DAY_MS = 86_400_000;
 /**
  * Emails `userId` a code that proves it's them before deleting the workspace `orgId`, or their account when it is null
  * (ADR 0088 §2), with the rules of every emailed code (`sendProofCode`). The email says what it deletes and whom to write
- * to if it wasn't them. Only where the server sends email: the routes check it.
+ * to if it wasn't them. With `reset`, before resetting the workspace instead, a code for that only. Only where the
+ * server sends email: the routes check it.
  */
 export async function sendDeletionCode(
   deps: { db: Database; rateLimiter: RateLimiter; emails: { publicUrl: string; support?: string | null } },
   userId: string,
   orgId: string | null,
   now = new Date(),
+  reset = false,
 ) {
   const org = orgId ? await getOrganization(deps.db, orgId) : null;
   if (orgId && !org) throw new NotFoundError("This workspace no longer exists");
@@ -201,7 +203,7 @@ export async function sendDeletionCode(
   return sendProofCode(
     deps,
     userId,
-    orgId ? `workspace:${orgId}` : "account",
+    proofPurpose(orgId, reset),
     {
       template: (code, account) => ({
         kind: "deletion_code",
@@ -209,6 +211,7 @@ export async function sendDeletionCode(
         code,
         email: account.email,
         ...stamp,
+        ...(reset ? { reset: true as const } : {}),
         support: deps.emails.support ?? null,
         url: deps.emails.publicUrl.replace(/\/$/, ""),
       }),
@@ -217,9 +220,12 @@ export async function sendDeletionCode(
   );
 }
 
+const proofPurpose = (orgId: string | null, reset: boolean) =>
+  orgId ? (reset ? (`reset:${orgId}` as const) : (`workspace:${orgId}` as const)) : ("account" as const);
+
 /**
- * Spends the code that proves it's `userId` before deleting the workspace `orgId` (their account when null), once
- * (`spendProofCode`): a code sent for anything else, or to anyone else, is wrong here.
+ * Spends the code that proves it's `userId` before deleting the workspace `orgId` (their account when null), or with
+ * `reset` before resetting it, once (`spendProofCode`): a code sent for anything else, or to anyone else, is wrong here.
  */
 export const spendDeletionCode = (
   deps: { db: Database },
@@ -227,7 +233,8 @@ export const spendDeletionCode = (
   orgId: string | null,
   code: string,
   now = new Date(),
-) => spendProofCode(deps, userId, orgId ? `workspace:${orgId}` : "account", code, "", now);
+  reset = false,
+) => spendProofCode(deps, userId, proofPurpose(orgId, reset), code, "", now);
 
 /** Codes that ran out a day ago, whatever they proved: their rows go (the hourly `deletions` tick). */
 export async function pruneDeletionCodes(db: Database, now = new Date()) {

@@ -147,6 +147,7 @@ import {
   purgeAccount,
   purgeWorkspace,
 } from "./workspace-deletion";
+import { ORG_RESET_JOB, resetWorkspace } from "./workspace-reset";
 
 /** A thread that grew by another `everyMessages` gets reflected on (capture), within the per-thread cap. */
 async function maybeEnqueueReflection(deps: JobDeps, orgId: string, threadId: string) {
@@ -978,6 +979,21 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
         },
         String(job.payload.orgId),
         { finalAttempt: ctx.finalAttempt },
+      );
+    },
+    // An owner's reset (`resetWorkspace`): a no-op once done.
+    [ORG_RESET_JOB]: async (job) => {
+      const blobs = deps.artifacts?.blobs ?? deps.voice?.blobs;
+      await resetWorkspace(
+        {
+          db: deps.db,
+          pubsub: deps.pubsub,
+          hub: deps.sandbox?.machines?.hub ?? null,
+          mail: deps.mail,
+          artifacts: deps.artifacts,
+          ...(blobs ? { blobs } : {}),
+        },
+        String(job.payload.orgId),
       );
     },
     // An account whose deletion's date came (`purgeAccount`): a no-op once restored or gone.
