@@ -21,7 +21,7 @@ afterEach(async () => {
 const { agentRuns, outbox } = schema;
 const ACCOUNT = "0193f1c2-0000-7000-8000-00000000a001";
 const OTHER = "0193f1c2-0000-7000-8000-00000000a002";
-const slot = (key: string, cap = 1) => ({ key, label: key === ACCOUNT ? "Claude 2" : "Claude 3", cap });
+const slot = (key: string, cap = 1) => ({ key, cap });
 
 async function computer() {
   const { machineId } = await pairMachine({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, RUNNER);
@@ -63,7 +63,7 @@ const waiting = (machineId: string, key: string, extra: Record<string, unknown> 
     transcript: {
       waitingForBrain: { kind: "claude_code", machineId, code: "busy", waitId: Bun.randomUUIDv7() },
       roomWaitSince: Date.now() - sinceAgo,
-      signInWait: { key, label: "Claude 2" },
+      signInWait: { key },
       ...extra,
     },
   });
@@ -77,7 +77,7 @@ const kicks = async () =>
 
 describe("plan sign-in slots", () => {
   test("only Claude Code on a plan sign-in takes a slot, never a key, another brain or a cap of 0", () => {
-    expect(signInSlotOf({ kind: "claude_code" }, 2)).toEqual({ key: "own", label: "Claude", cap: 2 });
+    expect(signInSlotOf({ kind: "claude_code" }, 2)).toEqual({ key: "own", cap: 2 });
     const account = { id: ACCOUNT, label: "Claude 2", status: "active" as const };
     expect(signInSlotOf({ kind: "claude_code", account }, 1)?.key).toBe(ACCOUNT);
     expect(signInSlotOf({ kind: "claude_code", account: { ...account, provider: "opencode" } }, 1)).toBeUndefined();
@@ -105,7 +105,7 @@ describe("plan sign-in slots", () => {
     await working(a, ACCOUNT);
     await working(a, "own");
     expect((await roomGate(f.db, newcomer(), b, person, slot(ACCOUNT)))?.signIn).toBe(true);
-    expect(await roomGate(f.db, newcomer(), b, person, { key: "own", label: "Claude", cap: 1 })).toBeNull();
+    expect(await roomGate(f.db, newcomer(), b, person, { key: "own", cap: 1 })).toBeNull();
   });
 
   test("the admitted run holds the slot until it leaves running", async () => {

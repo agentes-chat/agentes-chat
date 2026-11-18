@@ -7075,8 +7075,8 @@
   },
   "receipts.queued": {
     "value": {
-      "one": "{{names}} is in line for the computer",
-      "other": "{{names}} are in line for the computer"
+      "one": "{{names}} is in line",
+      "other": "{{names}} are in line"
     }
   },
   "receipts.away": {
@@ -7109,9 +7109,6 @@
       "other": "{{names}} won't answer"
     }
   },
-  "receipts.queuedNext": {
-    "value": "{{names}} is in line for the computer · next"
-  },
   "receipts.nobody": {
     "value": "No agent will answer"
   },
@@ -7134,7 +7131,7 @@
     "value": "The AI provider is down · retries by itself"
   },
   "receipts.status.queued": {
-    "value": "In line for the computer"
+    "value": "In line"
   },
   "receipts.status.away": {
     "value": "Waiting for the computer"
@@ -10682,7 +10679,7 @@
     "value": "Waiting for the computer"
   },
   "presence.agent.queued_computer": {
-    "value": "In line for the computer"
+    "value": "In line"
   },
   "presence.agent.waiting_plan": {
     "value": "Waiting on the plan"
@@ -29594,12 +29591,6 @@
   "queue.rule": {
     "value": "New work starts when the computer has free memory. People go first. Agents mentioned together start one at a time."
   },
-  "queue.cause": {
-    "value": {
-      "one": "Computer full: {{count}} job uses its memory now ({{fill}}).",
-      "other": "Computer full: {{count}} jobs use its memory now ({{fill}})."
-    }
-  },
   "queue.spill.title": {
     "value": "More computers, shorter line"
   },
@@ -29608,15 +29599,6 @@
   },
   "queue.spill.plan": {
     "value": "your {{plan}} plan"
-  },
-  "queue.stopFill.routine": {
-    "value": "Stop the routine"
-  },
-  "queue.stopFill.work": {
-    "value": "Stop the long job"
-  },
-  "queue.stopFill.agent": {
-    "value": "Stop {{name}}"
   },
   "queue.youFirst": {
     "value": "You go first"
@@ -29702,20 +29684,8 @@
   "queue.where.private": {
     "value": "a private conversation"
   },
-  "queue.live.nextEta": {
-    "value": "Waiting for the computer. Next up, in about {{n}} min"
-  },
-  "queue.live.next": {
-    "value": "Waiting for the computer. Next up"
-  },
-  "queue.live.waiting": {
-    "value": "Waiting for the computer"
-  },
-  "queue.live.behind": {
-    "value": "In line, {{nth}}. After {{names}}"
-  },
-  "queue.live.position": {
-    "value": "In line, {{nth}}"
+  "queue.waiting": {
+    "value": "In line · starts soon"
   },
   "queue.nth.one": {
     "value": "{{n}}st"
@@ -43578,7 +43548,7 @@
     "value": "I'm in the middle of a task ({{duration}}) and can't answer yet. Your message is queued and I'll read it when this round of work ends."
   },
   "work.statusReplyQueued": {
-    "value": "Waiting for the computer ({{duration}}). I'll read your message when my turn comes."
+    "value": "In line ({{duration}}). I'll read your message when my turn comes."
   },
   "work.statusReplyAway": {
     "value": "Waiting for my computer to come back. I'll read your message as soon as it's back."
@@ -45043,11 +45013,8 @@
   "chat.body.confidential_removed": {
     "value": "Removed: confidential text is kept for {{days}} days."
   },
-  "chat.body.brain_busy": {
-    "value": "My computer is busy with other tasks right now. I'll answer as soon as it's free."
-  },
   "chat.body.brain_queued": {
-    "value": "Still in line for the computer. I'll answer as soon as it has free memory."
+    "value": "Still in line. I'll answer as soon as my turn comes."
   },
   "chat.body.brain_interrupted": {
     "value": "{{brain}} stopped before finishing. Already done, not repeated: {{tools}}."
@@ -48204,12 +48171,6 @@
   "taskManager.state.answer": {
     "value": "Waits for an answer"
   },
-  "taskManager.state.computerBusy": {
-    "value": "Waits for room on the computer"
-  },
-  "taskManager.state.inLine": {
-    "value": "In line · #{{position}}"
-  },
   "taskManager.state.computerOffline": {
     "value": "Waits for the computer"
   },
@@ -48275,9 +48236,6 @@
   },
   "taskManager.wait.computerOfflineNext": {
     "value": "Back when it's on"
-  },
-  "taskManager.wait.computerBusyNext": {
-    "value": "Starts when there's free memory"
   },
   "taskManager.wait.okNext": {
     "value": "Goes on once someone approves"
@@ -48489,10 +48447,10 @@
   "taskManager.queue.see": {
     "value": "See the line"
   },
-  "taskManager.queue.full": {
+  "taskManager.queue.inLine": {
     "value": {
-      "one": "Full · {{count}} in line",
-      "other": "Full · {{count}} in line"
+      "one": "{{count}} in line",
+      "other": "{{count}} in line"
     }
   },
   "taskManager.queue.room": {

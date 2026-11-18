@@ -786,7 +786,7 @@ export interface Transcript {
    */
   roomAsk?: { machineId: string; at: number; signIn?: string };
   /** In its computer's line because this plan sign-in has all the runs it takes at once (`SignInSlot`). */
-  signInWait?: { key: string; label: string };
+  signInWait?: { key: string };
   /** Its agent's computer was full: it thinks on another computer of the workspace, in a session of its own there. */
   spill?: SpillRecord;
   /** Its plan's limit moved it to the next account in the workspace's order (ADR 0041 §6), in a session of its own there. */
@@ -3815,9 +3815,7 @@ async function executeRunInner(
           const m = await post(
             tx,
             replyThreadId,
-            busy
-              ? "Still in line for the computer. I'll answer as soon as it has room."
-              : `${u.message} I'll answer when it's back.`,
+            busy ? "Still in line. I'll answer as soon as my turn comes." : `${u.message} I'll answer when it's back.`,
             {
               ...bodyCode("brain_unavailable", { brain: name }),
               // `machineId` and `agentId`: the app shows the note as a live "waiting" card tied to the computer's outage.
@@ -4918,13 +4916,11 @@ async function executeRunInner(
         if (behind) {
           // Not working on the computer: no slot of a sign-in is its (`kickSignInLine` reads it as it leaves).
           delete transcript.roomAsk;
-          if (behind.signIn && slot) transcript.signInWait = { key: slot.key, label: slot.label };
+          if (behind.signIn && slot) transcript.signInWait = { key: slot.key };
           else delete transcript.signInWait;
           const handled = await brainUnavailable({
             code: "busy",
-            message: behind.signIn
-              ? `Waiting for ${slot?.label ?? "Claude"} to finish another task.`
-              : "Waiting in line for the computer.",
+            message: "Waiting in line.",
             queued: true,
             retryAt: behind.retryAt,
           });

@@ -23,7 +23,7 @@ import { useTranslation } from "react-i18next";
 import { ActorAvatar, AgentAvatar } from "@/components/AgentAvatar";
 import { usePlanHold } from "@/components/ai/ConnectAiSteps";
 import { useOpenBilling } from "@/components/BillingLinkButton";
-import { FanOutStrip, QueuedWords } from "@/components/ComputerQueue";
+import { FanOutStrip } from "@/components/ComputerQueue";
 import { useConnectAi } from "@/components/ConnectAi";
 import { HelpLink } from "@/components/HelpLink";
 import { useDirectory } from "@/hooks/useDirectory";
@@ -338,15 +338,11 @@ export function MessageReceipts({ message, part }: { message: Message; part: "ch
       {check}
       {(status?.kind === "outage" ||
         status?.kind === "away" ||
+        status?.kind === "queued" ||
         status?.kind === "plan" ||
         status?.kind === "budget") && (
         <span className="ac-receipt__words">
           <span>{statusText}</span>
-        </span>
-      )}
-      {status?.kind === "queued" && (
-        <span className="ac-receipt__words">
-          <QueuedWords message={message} fallback={statusText} />
         </span>
       )}
       {status?.kind === "failed" && actions && (

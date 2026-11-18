@@ -4218,7 +4218,7 @@ test("still in line after ten minutes: one note in the agent's words, and no oth
   const notes = async () =>
     (await f.db.select().from(schema.messages)).filter((m) => m.meta.bodyCode === "brain_unavailable");
   expect((await notes()).map((m) => [m.body, m.meta.brainUnavailable])).toMatchObject([
-    ["Still in line for the computer. I'll answer as soon as it has room.", { code: "busy", long: true }],
+    ["Still in line. I'll answer as soon as my turn comes.", { code: "busy", long: true }],
   ]);
 
   // A second run of the agent there, first in line by now: it asks, finds no room, and says nothing more.
@@ -4270,7 +4270,7 @@ test("a deploy drops the computer for seconds: runs in line keep their place, an
   expect((await timeline(f)).filter((m) => m.meta.bodyCode === "brain_unavailable")).toEqual([]);
 });
 
-test("a Claude plan sign-in at its cap: the next run waits for it by name, then answers once the other ends", async () => {
+test("a Claude plan sign-in at its cap: the next run waits in line like any other, then answers once the other ends", async () => {
   f = await setup({ reply: () => ({ chunks: ["Pela API."] }) });
   const machineId = await computerAgent(f);
   const { brain, seen } = scriptedComputerBrain(() => [{ type: "done", text: "Pronto." }]);
@@ -4309,7 +4309,9 @@ test("a Claude plan sign-in at its cap: the next run waits for it by name, then 
   expect(run?.transcript).toMatchObject({ waitingForBrain: { code: "busy" }, signInWait: { key: "own" } });
   expect(seen).toHaveLength(0);
   const line = await computerQueue(f.db, f.owner.id, f.org.id, machineId);
-  expect(line.waiting.map((w) => [w.runId, w.signIn])).toEqual([[run?.id ?? "", "Claude"]]);
+  // In line like any turn waiting for room: the same status, no reason for the apps to tell apart.
+  expect(line.waiting.map((w) => w.runId)).toEqual([run?.id ?? ""]);
+  expect(line.waiting[0]).not.toHaveProperty("signIn");
 
   // The other run ends: its slot wakes this one at once, which answers on the computer, never the API.
   await transitionRun(f.db, holder, "running", "done");

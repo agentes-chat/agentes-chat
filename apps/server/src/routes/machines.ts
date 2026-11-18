@@ -432,10 +432,6 @@ const ComputerQueue = z
           description:
             "Who it waits for: for the head, the running turn expected to end first; behind it, the agents ahead in line.",
         }),
-        signIn: z.string().nullable().openapi({
-          description:
-            "The Claude plan sign-in it waits for, by its label: that sign-in works on all the runs it takes at once. Null: it waits for room.",
-        }),
         ...QueueAccess,
       }),
     ),

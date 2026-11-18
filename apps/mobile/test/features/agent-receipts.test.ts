@@ -163,7 +163,7 @@ describe("the agents' receipt line under a person's message", () => {
     expect(waiting("away")?.words).toEqual({ key: "receipts.away", agents: ["ada"] });
     expect(waiting("queued")?.alert).toBe(false);
     const pt = await translator("pt-BR");
-    expect(pt("receipts.queued", { count: 1, names: "Ada" })).toBe("Ada está na fila do computador");
+    expect(pt("receipts.queued", { count: 1, names: "Ada" })).toBe("Ada está na fila");
     const en = await translator("en");
     expect(en("receipts.away", { count: 2, names: "Ada and Theo" })).toBe("Ada and Theo are waiting for the computer");
   });
