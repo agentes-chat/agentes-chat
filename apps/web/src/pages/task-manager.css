@@ -340,7 +340,6 @@ html:not([data-pointer]) .tm-row:has(.tm-hit:focus-visible) {
   cursor: pointer;
 }
 .tm-more:hover {
-  background: var(--plate);
   color: var(--ink);
 }
 html:not([data-pointer]) .tm-more:focus-visible {

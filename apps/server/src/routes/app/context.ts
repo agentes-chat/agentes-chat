@@ -118,6 +118,8 @@ export async function requestOriginAllowed(db: Database, origins: Set<string>, h
  */
 export const MULTIPART_PATHS = [
   /\/organizations\/[^/]+\/artifacts(\/[^/]+)?\/files$/,
+  // A picture dropped on a live file (ADR 0196 §8).
+  /\/organizations\/[^/]+\/artifacts\/[^/]+\/assets$/,
   /\/organizations\/[^/]+\/imports\/files$/,
   /\/organizations\/[^/]+\/channels\/[^/]+\/voice$/,
   /\/feedback\/files$/,

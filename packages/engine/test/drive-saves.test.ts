@@ -155,7 +155,7 @@ async function consultedRun(biaId: string, channelId = f.general.id) {
 }
 
 const save = (ctx: ToolContext, extra: Record<string, unknown> = {}) =>
-  call(ctx, "create_artifact", { title: "Relatório", kind: "document", markdown: "# oi", ...extra });
+  call(ctx, "create_artifact", { title: "Relatório", kind: "table", columns: ["oi"], rows: [["1"]], ...extra });
 
 /** What the Drive API lists for this person: the same two calls as its route. */
 async function driveOf(userId: string) {
@@ -390,9 +390,10 @@ describe("a routine's own files", () => {
     await f.db.update(schema.agentRuns).set({ status: "done" });
     const next = ctxOf(await agentRunRow(f, (await fire(f, routine.id, new Date(Date.now() + 86_400_000))).agentRunId));
     expect((await call(next, "list_artifacts", {})).content).toContain(id);
-    expect((await call(next, "read_artifact", { artifact_id: id })).content).toContain("# oi");
+    expect((await call(next, "read_artifact", { artifact_id: id })).content).toContain("oi");
     expect(
-      (await call(next, "update_artifact", { artifact_id: id, note: "semana", markdown: "# novo" })).isError,
+      (await call(next, "update_artifact", { artifact_id: id, note: "semana", columns: ["novo"], rows: [["2"]] }))
+        .isError,
     ).toBeFalsy();
     expect((await call(next, "update_artifact", { artifact_id: id, note: "x", shared_drive: true })).content).toContain(
       "the workspace's shared Drive",
@@ -691,7 +692,7 @@ describe("who may widen a file to the whole workspace", () => {
     const first = ctxOf(await agentRunRow(f, (await fire(f, routine.id, new Date())).agentRunId));
     const id = idOf(await save(first));
     await updateArtifact(f.artifactDeps, { type: "person", userId: f.owner.id }, f.org.id, id, {
-      content: { kind: "document", markdown: "anotação privada" },
+      content: { kind: "table", columns: ["anotação"], rows: [["privada"]] },
       note: "minha",
     });
     await f.db.update(schema.routineRuns).set({ status: "reported", finishedAt: new Date() });

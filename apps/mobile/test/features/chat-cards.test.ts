@@ -71,7 +71,10 @@ describe("a reply's tools sit last", () => {
 describe("agents it asked first: one pair row right before the reply, never inside it", () => {
   test("saved: the row sits before the reply's own row (which then shows its face and name), none in its body", () => {
     const row = source("MessageRow.tsx");
-    expect(ascending(at(row, ["const grouped = groupedIn && !pair;", "{pair}\n      {quote && !inBubble"]))).toBe(true);
+    // The pair, then what the message is about in a live file (ADR 0199) and its quote, then the reply's own row.
+    expect(
+      ascending(at(row, ["const grouped = groupedIn && !pair;", "{pair}\n      {liveRef ? (", "{quote && !inBubble"])),
+    ).toBe(true);
     const [bodyAt, endAt] = at(row, [
       "<View style={[styles.body, { gap: rhythm.part }]}>",
       "{foot}\n          </RowParts>\n          {hintNode}\n        </View>\n        {popNode}\n      </Pressable>",

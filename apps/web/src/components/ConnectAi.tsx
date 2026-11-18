@@ -10,6 +10,7 @@ import {
   useModels,
 } from "@agenteschat/client";
 import { accountInLine, listsExisting } from "@agenteschat/client/lib/ai-accounts";
+import { managesAgent } from "@agenteschat/client/lib/audience";
 import { CUSTOM_PROVIDER } from "@agenteschat/client/lib/endpoints";
 import { errorCode, errorText, keyRefusal } from "@agenteschat/client/lib/errors";
 import { namesText, rosterText } from "@agenteschat/client/lib/format";
@@ -640,10 +641,10 @@ function ConnectAiDialog({
   // With no set, the agent whose computer the panel reads, "All agents" too (they're on that one's computer).
   const reader = heldReader ?? defaultTarget({ ...aimed, set: [] });
   const theirs = one !== undefined && one.ownerUserId !== me.user.id && !rightHand;
-  // The one agent the dialog is for: what the person already has comes first for it while it has no AI. An admin sees
-  // the accounts of someone else's agent, locked, and may give it a workspace key (ADR 0041 §4).
-  const mayUseKeys = can(org, "manage_agents");
+  // The one agent the dialog is for: what the person already has comes first for it while it has no AI. Who manages
+  // it sees the accounts of someone else's agent, locked, and may give it a workspace key (ADR 0041 §4).
   const forId = one?.id ?? (agents.length === 1 ? agents[0]?.id : undefined);
+  const mayUseKeys = managesAgent(forId ? dir.agentById.get(forId) : undefined);
   const forAgent = forId ? { id: forId, name: dir.agentById.get(forId)?.name ?? "" } : undefined;
   const gates = usePlanGates(org.id, reader ?? (theirs && mayUseKeys ? one?.id : undefined), poll);
   const credentials = useCredentials(org.id, mayUseKeys && forId !== undefined);

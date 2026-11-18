@@ -683,7 +683,8 @@ describe("the gateway applies the run policy", () => {
       { db: f.db, pubsub: f.pubsub, tools: gateway },
       { orgId: f.org.id, agentId: f.agent.id, runId: run.id, machineId: crypto.randomUUID() },
     );
-    expect(bridged.map((t) => t.name).sort()).toEqual(["web_fetch", "web_search"]);
+    // `image_search` is the web's too (ADR 0196 §8): pictures found for a live file.
+    expect(bridged.map((t) => t.name).sort()).toEqual(["image_search", "web_fetch", "web_search"]);
   });
 
   test("the bridge lists exactly what the model loop does, why included", async () => {

@@ -7,10 +7,9 @@ import {
   resourcesOf,
   saveLevels,
 } from "@agenteschat/client/lib/access-levels";
-import { canEditAudience } from "@agenteschat/client/lib/audience";
+import { canEditAudience, managesAgent } from "@agenteschat/client/lib/audience";
 import type { ConnectedItem } from "@agenteschat/client/lib/connected";
 import { githubDisconnectNote } from "@agenteschat/client/lib/github-app";
-import { can } from "@agenteschat/client/lib/permissions";
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -104,10 +103,10 @@ function AgentLevelRow({
   const [saving, setSaving] = useState<Level | null>(null);
   const resource = access.data ? resourcesOf(access.data).find((r) => r.id === `connector:${connectionId}`) : undefined;
   const current: LevelState = saving ?? (resource ? levelOf(resource) : "none");
-  // Giving an agent a connector is an admin's call, like its scopes; one's own personal connection goes on the agents
-  // its person may change (the server checks both again).
+  // Giving an agent a connector is for who manages that agent, like its scopes (ADR 0085 addendum of 2026-11-17); one's
+  // own personal connection goes on the agents its person may change (the server checks both again).
   const mayChange =
-    (personal ? Boolean(agent && canEditAudience(org ?? undefined, agent, me ?? "")) : can(org, "manage_agents")) &&
+    (personal ? Boolean(agent && canEditAudience(org ?? undefined, agent, me ?? "")) : managesAgent(agent)) &&
     Boolean(resource);
   const choose = (level: Level) => {
     if (!resource || level === current) return;

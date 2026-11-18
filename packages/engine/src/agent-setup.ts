@@ -10,7 +10,7 @@ import {
   updateAgent,
   validateAgentFields,
 } from "./agents";
-import { answersOthers, audienceOf } from "./audience";
+import { answersOthers, audienceOf, managesAgent } from "./audience";
 import {
   type AgentBrainInput,
   type BrainEffortSetting,
@@ -36,7 +36,7 @@ import {
   DEFAULT_MISSION_COMMAND_APPROVAL,
   isCommandApproval,
 } from "./missions";
-import { can, requirePermission } from "./organizations";
+import { requirePermission } from "./organizations";
 
 /*
  * One agent's "Quem pensa" and its Autonomia on others (ADR 0094): "Usar em outros agentes" applies them to each agent
@@ -210,7 +210,8 @@ export async function applyAgentSetup(
   input: { setup: AgentSetupInput; agentIds: readonly string[]; preview?: boolean },
 ): Promise<SetupResult[]> {
   const membership = await requirePermission(deps.db, userId, orgId, "read");
-  const admin = can(membership, "manage_agents");
+  // An admin of each agent, not of the workspace: who manages it (`managesAgent`, ADR 0085 addendum of 2026-11-17).
+  const admin = (t: Agent) => managesAgent(t, userId, membership);
   const setup = readSetup(input.setup);
   const ids = [...new Set(input.agentIds)];
   if (ids.length > SETUP_AGENTS_MAX) throw new ValidationError(`At most ${SETUP_AGENTS_MAX} agents`, "setup.invalid");
@@ -257,7 +258,7 @@ export async function applyAgentSetup(
   const plan = (t: Agent) =>
     planFor(t, {
       setup,
-      admin,
+      admin: admin(t),
       userId,
       machine,
       account,
@@ -285,7 +286,7 @@ export async function applyAgentSetup(
             : { status: p.status, ...(p.status === "applied" && p.keeps ? { keeps: p.keeps } : {}) };
         const from = agentMissionApproval(t);
         // Its Autonomia wherever the person may set it by hand, whatever its AI can take.
-        const mayManage = admin || t.ownerUserId === userId;
+        const mayManage = admin(t) || t.ownerUserId === userId;
         const autonomy = mayManage && setup.autonomy && setup.autonomy !== from ? setup.autonomy : null;
         if (p.status !== "applied" && !autonomy) {
           results.set(t.id, { agentId: t.id, ...ai });

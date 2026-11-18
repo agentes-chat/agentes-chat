@@ -176,7 +176,7 @@ export const legalTr: Partial<Record<LegalKind, LegalDocument>> = {
       "Neleri topladığımız, ajanların neyi nereye gönderdiği, çalışma alanınızı kimlerin görebildiği ve sahip olduğunuz haklar.",
     courtesy:
       "Bu metin bir nezaket çevirisidir. İngilizce sürümden farklılık göstermesi hâlinde İngilizce sürüm esas alınır.",
-    updated: "2026-11-16",
+    updated: "2026-11-18",
     sections: [
       {
         id: "overview",
@@ -323,6 +323,7 @@ export const legalTr: Partial<Record<LegalKind, LegalDocument>> = {
         heading: "14. Çerezler ve yerel depolama",
         blocks: [
           "Çalışma alanı yalnızca oturumunuzu açık tutmak, formları korumak ve tema ile dil gibi tercihleri hatırlamak için gerekli çerezleri ve yerel depolamayı kullanır. Herkese açık site agentes.chat seçtiğiniz dili hatırlar ve Himetrica analitiğini (2. Bölüm) kullanır. Reklam veya siteler arası izleme çerezleri kullanmayız.",
+          "**Referans çerezi:** agentes.chat'e bir referans bağlantısı açtığınızda, faturalandırma hizmetimiz, abone olursanız bağlantıyı gönderen kişiye sayılması için referansı tarayıcınızda tek bir çerezde 60 gün saklar. Avrupa Ekonomik Alanı, Birleşik Krallık ve İsviçre'de bu çerezi yalnızca siz agentes.chat üzerinde onay verdikten sonra yerleştiririz. Bu cihazdaki referansı unutmak için https://agentes.chat/tr/privacy?forget-referral#cookies adresini açın.",
         ],
       },
       {

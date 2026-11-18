@@ -396,6 +396,14 @@ test("a provider refused this server's own OAuth app: what's wrong and who fixes
  * hit goes in `KNOWN` instead.
  */
 const PLAIN_LINE = new Set([
+  // A file's conversation (ADR 0199): the apps start one only on a live file, never offer a task's or a file's
+  // conversation to join, leave or rename, and build a message's `liveRef` from the selection themselves.
+  "artifact.no_conversation",
+  "channel.file_conversation",
+  "channel.task_conversation",
+  "message.live_ref",
+  // Only an agent writes an SVG picture (ADR 0196 §8): the refusal goes back to its tool call, never to a person.
+  "live.svg_invalid",
   // Only the outside chat surface's service meets these, on its own bridge routes (ADR 0187).
   "surface.busy",
   "surface.claim_limit",

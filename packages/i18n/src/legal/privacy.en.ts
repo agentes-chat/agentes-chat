@@ -3,7 +3,7 @@ import type { LegalDocument } from "./types";
 export const privacyEn: LegalDocument = {
   title: "Privacy Policy",
   summary: "What we collect, what agents send where, who can see your workspace, and the rights you have.",
-  updated: "2026-11-16",
+  updated: "2026-11-18",
   sections: [
     {
       id: "overview",
@@ -150,6 +150,7 @@ export const privacyEn: LegalDocument = {
       heading: "14. Cookies and local storage",
       blocks: [
         "The workspace uses only the cookies and local storage needed to keep you signed in, protect forms, and remember preferences such as theme and language. The public site agentes.chat remembers the language you chose and uses Himetrica analytics (Section 2). We do not use advertising or cross-site tracking cookies.",
+        "**Referral cookie:** when you open a referral link to agentes.chat, our billing service keeps the referral in one cookie in your browser for 60 days, so the person who sent the link gets credit if you subscribe. In the European Economic Area, the United Kingdom and Switzerland, we set it only after you agree on agentes.chat. To forget the referral on this device, open https://agentes.chat/privacy?forget-referral#cookies.",
       ],
     },
     {

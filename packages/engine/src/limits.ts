@@ -30,7 +30,7 @@ export interface OrgLimits {
   platformUsdPerMonth: number | null;
 }
 
-const { organizations, organizationMembers, artifactVersions, skillFiles, usageRecords } = schema;
+const { organizations, organizationMembers, artifactVersions, skillFiles, usageRecords, liveAssets } = schema;
 
 /** `usage_records.cost_nano_usd`'s unit, in which the platform cap is kept. */
 const NANO_PER_USD = 1e9;
@@ -149,7 +149,7 @@ export async function storageUsage(
   db: Executor,
   orgId: string,
 ): Promise<{ usedBytes: number; uploadBytes24h: number }> {
-  const [stored, [files], [skills]] = await Promise.all([
+  const [stored, [files], [skills], [pictures]] = await Promise.all([
     storedBytes(db, orgId),
     db
       .select({ day: sql<string>`coalesce(sum(${artifactVersions.size}), 0)` })
@@ -172,8 +172,14 @@ export async function storageUsage(
           gt(skillFiles.createdAt, LAST_DAY),
         ),
       ),
+    // Pictures added to live files (ADR 0196 §8): uploads like any other.
+    db
+      .select({ day: sql<string>`coalesce(sum(${liveAssets.size}), 0)` })
+      .from(liveAssets)
+      .where(and(eq(liveAssets.orgId, orgId), isNull(liveAssets.storageConfigId), gt(liveAssets.createdAt, LAST_DAY))),
   ]);
-  return { usedBytes: stored.platformBytes, uploadBytes24h: Number(files?.day ?? 0) + Number(skills?.day ?? 0) };
+  const day = Number(files?.day ?? 0) + Number(skills?.day ?? 0) + Number(pictures?.day ?? 0);
+  return { usedBytes: stored.platformBytes, uploadBytes24h: day };
 }
 
 /**

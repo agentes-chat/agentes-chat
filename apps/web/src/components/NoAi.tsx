@@ -1,6 +1,7 @@
 import type { Message } from "@agenteschat/client";
 import { useAiStatus, useAuthConfig, useMessages, useThreadMessages } from "@agenteschat/client";
 import { withoutApiKeys } from "@agenteschat/client/lib/api-key-text";
+import { managesAgent } from "@agenteschat/client/lib/audience";
 import type { BillingHold } from "@agenteschat/client/lib/billing";
 import { FIX_BRAIN_SCREEN, failedRunFix } from "@agenteschat/client/lib/errors";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
@@ -145,8 +146,8 @@ export function NoAiCard({ message }: { message: Message }) {
   const answering = answer === "answering";
   const state = aiStateOf(status.data, card.agentId);
   const ready = state !== undefined && state !== "no_ai" && answer !== "still_missing";
-  // The same people as "Continuar": who asked, the agent's owner or an admin.
-  const mayAnswer = card.forUserId === me.user.id || agent?.ownerUserId === me.user.id || can(org, "manage_agents");
+  // The same people as "Continuar": who asked, the agent's owner or who manages it.
+  const mayAnswer = card.forUserId === me.user.id || agent?.ownerUserId === me.user.id || managesAgent(agent);
   const owner = agent?.ownerUserId ? dir.memberById.get(agent.ownerUserId)?.name.split(" ")[0] : undefined;
   const title = answering
     ? t("noAi.card.answering", { name })
@@ -229,7 +230,7 @@ function KeptCard({ message, card, hold }: { message: Message; card: NoAiCardMet
   const ai = aiStateOf(status.data, card.agentId);
   const state = keptCardState({ hold, paid, ready: ai !== undefined && ai !== "no_ai" });
   const answer = connect?.answered[message.id];
-  const mayAnswer = card.forUserId === me.user.id || agent?.ownerUserId === me.user.id || can(org, "manage_agents");
+  const mayAnswer = card.forUserId === me.user.id || agent?.ownerUserId === me.user.id || managesAgent(agent);
   const replied = messages?.some(
     (m) => m.author.id === card.agentId && m.createdAt > message.createdAt && !noAiCardOf(m.meta),
   );
@@ -434,10 +435,11 @@ export function FailedRunFix({ code, agentId }: { code: string | undefined; agen
   const dir = useDirectory(org.id);
   const connect = useConnectAi();
   const held = usePlanHold() !== null;
+  const agent = dir.agentById.get(agentId);
   const fix = failedRunFix(code, {
     keys: can(org, "manage_credentials") && !held,
-    admin: can(org, "manage_agents"),
-    owner: dir.agentById.get(agentId)?.ownerUserId === me.user.id,
+    admin: managesAgent(agent),
+    owner: agent?.ownerUserId === me.user.id,
   });
   if (fix === "useKey" && connect)
     return (

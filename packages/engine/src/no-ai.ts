@@ -476,6 +476,7 @@ export async function answerNow(
   );
   if (failed.length > 0) {
     const allowed: AnsweringRun[] = [];
+    // Each with its agent's row (`r.agent`): who manages it is read from there, not once more a run.
     for (const r of failed)
       if (await mayStopRun(deps.db, userId, membership, { ...r, ownerUserId: r.agent.ownerUserId })) allowed.push(r);
     if (allowed.length === 0) throw forbidden();

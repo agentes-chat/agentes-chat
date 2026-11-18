@@ -1,4 +1,5 @@
 import { type Issue, type Message, useApi, useChannels, type WorkView } from "@agenteschat/client";
+import { managesAgent } from "@agenteschat/client/lib/audience";
 import { relativeTime } from "@agenteschat/client/lib/format";
 import { heldBack } from "@agenteschat/client/lib/issues";
 import {
@@ -44,14 +45,13 @@ function useLine(work: WorkView, inUpdatesThread = false) {
   const orgId = useOrgId();
   const meId = useRowMeId();
   const dir = useRowDirectory();
-  const manage = can(useOrg().org, "manage_agents");
   const api = useApi();
   const qc = useQueryClient();
   const toast = useToast();
   const live = work.status === "live" || work.status === "queued";
   const now = useNow(live);
   const agent = dir.agentById.get(work.agentId);
-  // As `mayStopRun` decides (who asked, the agent's owner, an admin); the server has the last word, said in a toast.
+  // As `mayStopRun` decides (who asked, the agent's owner, who manages it); the server has the last word, in a toast.
   const stop = useMutation({
     mutationFn: (runId: string) => api.agents.cancelRun(orgId, runId),
     // A failure's toast, in the failure's tone (the ×), as every refusal in the app.
@@ -65,7 +65,7 @@ function useLine(work: WorkView, inUpdatesThread = false) {
     agentName: agent?.name ?? "",
     nameOf: (id: string) => dir.memberById.get(id)?.name ?? null,
     agentNameOf: (id: string) => dir.anyAgent(id)?.name,
-    canStop: manage || agent?.ownerUserId === meId || work.requestedByUserId === meId,
+    canStop: managesAgent(agent) || agent?.ownerUserId === meId || work.requestedByUserId === meId,
     inUpdatesThread,
   };
   const view = workLine(t, work, context);

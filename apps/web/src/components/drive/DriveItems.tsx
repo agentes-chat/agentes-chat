@@ -1,4 +1,5 @@
 import type { Artifact, ArtifactKind } from "@agenteschat/client";
+import { isLiveFileKind } from "@agenteschat/client";
 import { KIND_ICON } from "@agenteschat/client/lib/artifacts";
 import { fileIcon } from "@agenteschat/client/lib/files";
 import { relativeTime } from "@agenteschat/client/lib/format";
@@ -35,7 +36,8 @@ export interface ItemProps {
 }
 
 /**
- * A grid card: the real preview, the kind (and version) on glass, the title,
+ * A grid card: the real preview, the kind (and version, but for a live file, whose versions are checkpoints behind it:
+ * ADR 0196 §7) on glass, the title,
  * who made it, where and when. The title's button stretches over the card;
  * the checkbox sits above it.
  */
@@ -60,14 +62,15 @@ export function DriveCard({
           <Icon name={itemIcon(a)} size={14} />
           <span>
             {t(`artifacts.kind.${a.kind}`)}
-            {a.version > 1 && ` · ${t("artifacts.version", { version: a.version })}`}
+            {a.version > 1 && !isLiveFileKind(a.kind) && ` · ${t("artifacts.version", { version: a.version })}`}
           </span>
         </span>
         <div className="drive-card__body">
           <button
             type="button"
             className="drive-card__title drive-hit"
-            aria-haspopup="dialog"
+            // A live file opens its own page, the rest the viewer (a dialog).
+            aria-haspopup={isLiveFileKind(a.kind) ? undefined : "dialog"}
             onClick={(e) => onPick(a, e)}
           >
             {a.title}
@@ -138,7 +141,7 @@ export function DriveRow({
             <button
               type="button"
               className="drive-row__title drive-hit"
-              aria-haspopup="dialog"
+              aria-haspopup={isLiveFileKind(a.kind) ? undefined : "dialog"}
               onClick={(e) => onPick(a, e)}
             >
               {a.title}
@@ -147,7 +150,7 @@ export function DriveRow({
               <Icon name={itemIcon(a)} size={14} />
               <span className="drive-row__subtext">
                 {t(`artifacts.kind.${a.kind}`)}
-                {a.version > 1 && ` · ${t("artifacts.version", { version: a.version })}`}
+                {a.version > 1 && !isLiveFileKind(a.kind) && ` · ${t("artifacts.version", { version: a.version })}`}
                 <span className="drive-row__mobile">{` · ${name} · ${when}`}</span>
               </span>
             </span>

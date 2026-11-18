@@ -28,7 +28,9 @@ import {
   accountEnv,
   accountSignIn,
   agentAccountHome,
+  CODEX_REFRESH_AFTER_MS,
   codexAuthOf,
+  codexProbeSafe,
   grantOf,
   grokAuthOf,
   lentAccounts,
@@ -1164,6 +1166,16 @@ test.if(posix)(
   },
   20_000,
 );
+
+test("root reads a ChatGPT sign-in for all agents' limits only while Codex won't refresh it", () => {
+  const home = tempDir("codex-probe-");
+  dirs.push(home);
+  expect(codexProbeSafe(home, Date.now())).toBe(false);
+  const at = Date.parse("2030-01-01T00:00:00.000Z");
+  writeFileSync(path.join(home, "auth.json"), codexAuth("r1", at));
+  expect(codexProbeSafe(home, at + 24 * 3600_000)).toBe(true);
+  expect(codexProbeSafe(home, at + CODEX_REFRESH_AFTER_MS - 30 * 60_000)).toBe(false);
+});
 
 test("in an agent's worker: root's copy goes in unless the agent's is newer, and a refreshed one goes back", async () => {
   const home = tempDir("codex-home-");

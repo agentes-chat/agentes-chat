@@ -1,8 +1,8 @@
 import { useComputerSetup, useMachines, useSetComputerTarget } from "@agenteschat/client";
+import { managesAgent } from "@agenteschat/client/lib/audience";
 import { setupView } from "@agenteschat/client/lib/computer";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { machineTitle } from "@agenteschat/client/lib/machines";
-import { can } from "@agenteschat/client/lib/permissions";
 import { useTranslation } from "react-i18next";
 import { useOrg } from "@/providers/org";
 import { useToast } from "@/ui";
@@ -21,7 +21,7 @@ import { errorHaptic, successHaptic } from "../shared/parts";
 export function usePickComputer(agentId: string): (() => void) | null {
   const { t } = useTranslation();
   const toast = useToast();
-  const { orgId, org } = useOrg();
+  const { orgId } = useOrg();
   const meId = useMeId();
   const dir = useDirectory();
   const machines = useMachines(orgId);
@@ -32,7 +32,7 @@ export function usePickComputer(agentId: string): (() => void) | null {
   const pick = agentComputerPick({
     agent,
     meId,
-    admin: can(org, "manage_agents"),
+    admin: managesAgent(agent),
     machines: machines.data,
     setup: setupView(setupQ.data, setupQ.dataUpdatedAt),
   });

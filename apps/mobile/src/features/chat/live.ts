@@ -5,6 +5,7 @@ import {
   applyChannelEvent,
   applyConsultEvent,
   applyConversationEvent,
+  applyLiveEvent,
   applyMembershipEvent,
   applyReceiptEvent,
   applyTypingEvent,
@@ -277,6 +278,8 @@ function cacheSecret(qc: QueryClient, orgId: string, channelId: string, secretRe
 
 /** What each event changes in the caches (the run rows are the reducer's). */
 function applyToCache(qc: QueryClient, orgId: string, channelId: string, event: ChannelEvent) {
+  // Who is in one of the conversation's live files changed: its cards ask again (ADR 0196 §5).
+  if (applyLiveEvent(qc, orgId, event)) return;
   switch (event.type) {
     // A question to another agent went out, came back or waits on a person: the reply that asked redraws it, and its
     // thread's link says how the work stands.
