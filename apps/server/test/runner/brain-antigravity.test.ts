@@ -1,7 +1,9 @@
 import { afterEach, expect, test } from "bun:test";
 import { spawn } from "node:child_process";
+import { EventEmitter } from "node:events";
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { PassThrough } from "node:stream";
 import { accountCodeAad } from "@agenteschat/adapters/machine-protocol";
 import { cutAtWord } from "@agenteschat/adapters/redact";
 import { sealSecret } from "@agenteschat/adapters/secret-box";
@@ -30,6 +32,7 @@ import {
   writeAgySettings,
 } from "../../runner/agy-home";
 import {
+  AGY_TOKEN_RESUME,
   type AntigravityBrainContext,
   type AntigravityBrainTurnRequest,
   antigravityChatBreach,
@@ -39,8 +42,9 @@ import {
   handleAntigravityBrainTurn,
   isOurAgyTool,
   parseAgyError,
+  runAntigravityTurn,
 } from "../../runner/brain-antigravity";
-import type { CodexBrainEvent } from "../../runner/brain-codex";
+import { type CodexBrainEvent, CodexThreads } from "../../runner/brain-codex";
 import { detectExecutors, parseAgyModels } from "../../runner/executors";
 import { CODEX_MCP_SERVER } from "../../runner/mcp";
 import { antigravityUsage, resetFromWords } from "../../runner/plan-usage";
@@ -749,4 +753,88 @@ test.skipIf(!posix)(
     expect((await m.list()).find((a) => a.id === offline.id)).toMatchObject({ loggedIn: true, shared: true });
   },
   45_000,
+);
+
+const STALE_TOKEN =
+  "UNAUTHENTICATED (code 401): Request had invalid authentication credentials. Expected OAuth 2 access token, login cookie or other valid authentication credential.";
+
+test("an access token that expires under a turn never reads as signed out", () => {
+  expect(antigravityProblem(STALE_TOKEN, { auth: true })[0]).toMatchObject({
+    code: "antigravity_failed",
+    retryable: true,
+  });
+  expect(antigravityProblem("oauth2: invalid_grant: invalid token", { auth: true })[0]).toMatchObject({
+    code: "not_logged_in",
+  });
+});
+
+test.each([STALE_TOKEN, "INVALID_ARGUMENT (code 400): Request contains an invalid argument."])(
+  "a turn cut by a passing refusal goes on in a new run, on the same conversation: %s",
+  async (refusal) => {
+    const root = tempDir("agy-token-");
+    dirs.push(root);
+    const runs: unknown[][] = [
+      [
+        { event: "init", conversation_id: FIRST, init: { tools: [] } },
+        {
+          event: "step_update",
+          step_update: {
+            step_type: "tool",
+            state: "DONE",
+            tool_name: `${CODEX_MCP_SERVER}__post_message`,
+            tool_info: { name: "post_message", output: "ok" },
+          },
+        },
+        { event: "result", result: { status: "ERROR", error: refusal } },
+      ],
+      [
+        { event: "init", conversation_id: FIRST, init: { tools: [] } },
+        { event: "result", result: { status: "SUCCESS", response: "Pronto." } },
+      ],
+    ];
+    const calls: string[][] = [];
+    const fn = ((_cmd: string, args: string[]) => {
+      const lines = runs[calls.length] ?? [];
+      calls.push(args);
+      const child = Object.assign(new EventEmitter(), {
+        stdout: new PassThrough(),
+        stderr: new PassThrough(),
+        kill: () => true,
+      });
+      setTimeout(() => {
+        for (const l of lines) child.stdout.write(`${JSON.stringify(l)}\n`);
+        child.stdout.end();
+        child.stderr.end();
+        setTimeout(() => child.emit("close", 0), 5);
+      }, 1);
+      return child;
+    }) as unknown as Spawn;
+    const events: CodexBrainEvent[] = [];
+    await runAntigravityTurn(
+      {
+        runId: RUN,
+        sessionId: SESSION,
+        cwd: root,
+        system: "You are Dev.",
+        prompt: "check the issues",
+        mcp: { token: "tok_run" },
+        account: { id: ACCOUNT, home: path.join(root, "home") },
+      },
+      {
+        chats: new CodexThreads(path.join(root, "chats.json")),
+        emit: (e) => events.push(e),
+        signal: new AbortController().signal,
+        bin: "/usr/bin/agy",
+        spawn: fn,
+        platform: "linux",
+        retryWaitsMs: [0, 0],
+      },
+    );
+    expect(calls).toHaveLength(2);
+    const again = calls[1] ?? [];
+    expect(again[again.indexOf("-p") + 1]).toBe(AGY_TOKEN_RESUME);
+    expect(again.join(" ")).toContain(`--conversation ${FIRST}`);
+    expect(events.some((e) => e.type === "error")).toBe(false);
+    expect(events.at(-1)).toEqual({ type: "done", text: "Pronto.", session: { id: SESSION } });
+  },
 );
