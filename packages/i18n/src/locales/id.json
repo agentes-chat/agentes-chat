@@ -11694,7 +11694,8 @@
       "next": "Menunggu komputer. Giliran berikutnya",
       "waiting": "Menunggu komputer",
       "behind": "Dalam antrean, ke-{{nth}}. Setelah {{names}}",
-      "position": "Dalam antrean, ke-{{nth}}"
+      "position": "Dalam antrean, ke-{{nth}}",
+      "signIn": "Menunggu {{account}} menyelesaikan tugas lain"
     },
     "nth": {
       "one": "{{n}}",

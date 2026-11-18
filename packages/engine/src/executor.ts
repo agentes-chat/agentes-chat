@@ -136,7 +136,14 @@ import {
   triageSnapshot,
 } from "./catch-up-triage";
 import { REACT_TOOL } from "./chat-tools";
-import { kickRoomQueue, publishQueueChanged, roomGate, roomHead } from "./computer-queue";
+import {
+  kickRoomQueue,
+  publishQueueChanged,
+  roomGate,
+  roomHead,
+  SIGN_IN_CONCURRENCY,
+  signInSlotOf,
+} from "./computer-queue";
 import {
   CONFIDENTIAL_AI_CHANGED,
   confidentialThread,
@@ -541,6 +548,8 @@ export interface EngineDeps {
   computerWakeWaitMs?: number;
   /** How long a computer turn is still read after its plan's `limit` event (default `PLAN_LIMIT_GRACE_MS`). */
   planLimitGraceMs?: number;
+  /** Runs one Claude plan sign-in thinks for at once (default `SIGN_IN_CONCURRENCY`; 0: no limit). */
+  signInConcurrency?: number;
   /**
    * Tools on demand (ADR 0043): each run lists the core tools and the groups the
    * judge (`context.judge`) expects it to need; the rest go behind
@@ -760,8 +769,13 @@ export interface Transcript {
   roomPeople?: boolean;
   /** Its stretch is work a person asked for lately (`personAskedLately`): next in the line after people's runs. */
   roomAsked?: boolean;
-  /** When this run last sent a turn to its computer: agents' turns there are spaced (`roomGate`). */
-  roomAsk?: { machineId: string; at: number };
+  /**
+   * When this run last sent a turn to its computer: agents' turns there are spaced (`roomGate`). `signIn`: the Claude
+   * plan sign-in whose slot it holds while it works (`signInSlotOf`).
+   */
+  roomAsk?: { machineId: string; at: number; signIn?: string };
+  /** In its computer's line because this plan sign-in has all the runs it takes at once (`SignInSlot`). */
+  signInWait?: { key: string; label: string };
   /** Its agent's computer was full: it thinks on another computer of the workspace, in a session of its own there. */
   spill?: SpillRecord;
   /** Its plan's limit moved it to the next account in the workspace's order (ADR 0041 §6), in a session of its own there. */
@@ -4842,7 +4856,8 @@ async function executeRunInner(
         } as const;
         // The right hand is how people find out what the line is doing: it never waits behind it. Its turn is
         // locked down, so the runner lets it in on a lower floor (`admit`).
-        let behind = isRightHand(agent) ? null : await roomGate(db, run, roomMachine, place);
+        const slotOf = (p: BrainPlan) => signInSlotOf(p, deps.signInConcurrency ?? SIGN_IN_CONCURRENCY);
+        let behind = isRightHand(agent) ? null : await roomGate(db, run, roomMachine, place, slotOf(plan));
         let askOn = roomMachine;
         // Spill-over: behind others, or refused for room before, a person's first turn may think on another computer.
         const to =
@@ -4862,21 +4877,29 @@ async function executeRunInner(
           transcript.spill = { from: roomMachine, to: to.machineId };
           // There it thinks on its owner's sign-in, not the account it moved to.
           delete transcript.accountMove;
-          behind = await roomGate(db, run, to.machineId, place);
+          behind = await roomGate(db, run, to.machineId, place, slotOf(plan));
           // Its place in its own computer's line is free: the next one there asks now.
           await kickRoomQueue(db, roomMachine).catch(() => {});
           later(() => addRunStep(db, run, "context", { spill: transcript.spill }));
         }
+        const slot = slotOf(plan);
         if (behind) {
+          // Not working on the computer: no slot of a sign-in is its (`kickSignInLine` reads it as it leaves).
+          delete transcript.roomAsk;
+          if (behind.signIn && slot) transcript.signInWait = { key: slot.key, label: slot.label };
+          else delete transcript.signInWait;
           const handled = await brainUnavailable({
             code: "busy",
-            message: "Waiting in line for the computer.",
+            message: behind.signIn
+              ? `Waiting for ${slot?.label ?? "Claude"} to finish another task.`
+              : "Waiting in line for the computer.",
             queued: true,
             retryAt: behind.retryAt,
           });
           if (handled === "waited" || handled === "failed") return;
         } else {
-          transcript.roomAsk = { machineId: askOn, at: Date.now() };
+          delete transcript.signInWait;
+          transcript.roomAsk = { machineId: askOn, at: Date.now(), ...(slot ? { signIn: slot.key } : {}) };
           admitted = { machineId: askOn, fromLine: transcript.roomWaitSince !== undefined };
         }
       }

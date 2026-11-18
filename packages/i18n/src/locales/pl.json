@@ -13075,7 +13075,8 @@
       "next": "Czeka na komputer. Następny w kolejce",
       "waiting": "Czeka na komputer",
       "behind": "W kolejce, {{nth}}. Po: {{names}}",
-      "position": "W kolejce, {{nth}}"
+      "position": "W kolejce, {{nth}}",
+      "signIn": "Czeka, aż {{account}} skończy inne zadanie"
     },
     "nth": {
       "one": "{{n}}.",

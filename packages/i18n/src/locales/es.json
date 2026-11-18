@@ -12535,7 +12535,8 @@
       "next": "Esperando la computadora. Es el siguiente",
       "waiting": "Esperando la computadora",
       "behind": "En la cola, {{nth}}. Después de {{names}}",
-      "position": "En la cola, {{nth}}"
+      "position": "En la cola, {{nth}}",
+      "signIn": "Esperando a que {{account}} termine otra tarea"
     },
     "nth": {
       "one": "{{n}}.º",

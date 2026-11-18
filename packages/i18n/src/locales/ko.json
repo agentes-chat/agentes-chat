@@ -11635,7 +11635,8 @@
       "next": "컴퓨터를 기다리는 중. 다음 차례",
       "waiting": "컴퓨터를 기다리는 중",
       "behind": "대기열 {{nth}}. {{names}} 다음",
-      "position": "대기열 {{nth}}"
+      "position": "대기열 {{nth}}",
+      "signIn": "{{account}}이(가) 다른 작업을 마칠 때까지 기다리는 중"
     },
     "nth": {
       "one": "{{n}}번째",

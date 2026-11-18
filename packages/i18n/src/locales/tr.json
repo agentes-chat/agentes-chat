@@ -12079,7 +12079,8 @@
       "next": "Bilgisayarı bekliyor. Sıradaki o",
       "waiting": "Bilgisayarı bekliyor",
       "behind": "Sırada, {{nth}}. {{names}} sonrasında",
-      "position": "Sırada, {{nth}}"
+      "position": "Sırada, {{nth}}",
+      "signIn": "{{account}} başka bir görevi bitirene kadar bekliyor"
     },
     "nth": {
       "one": "{{n}}.",

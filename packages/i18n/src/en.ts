@@ -12557,6 +12557,8 @@ export const en = {
       /** {{nth}} is the place in line (`queue.nth`), {{names}} the agents ahead. */
       behind: "In line, {{nth}}. After {{names}}",
       position: "In line, {{nth}}",
+      /** Its Claude plan sign-in ({{account}}, its label) works on all the runs it takes at once; it starts when one ends. */
+      signIn: "Waiting for {{account}} to finish another task",
     },
     /** Places in line by the language's ordinal rule (one: 1st, 21st; two: 2nd; few: 3rd; other: 4th). Same text in each when your language has one form. */
     nth: {

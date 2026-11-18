@@ -12556,6 +12556,7 @@ export const ptBR = {
       waiting: "Aguardando o computador",
       behind: "Na fila, {{nth}}. Depois de {{names}}",
       position: "Na fila, {{nth}}",
+      signIn: "Aguardando {{account}} terminar outra tarefa",
     },
     nth: {
       one: "{{n}}º",

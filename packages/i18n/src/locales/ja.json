@@ -11641,7 +11641,8 @@
       "next": "コンピューター待ち。次の番です",
       "waiting": "コンピューター待ち",
       "behind": "待ち行列の{{nth}}。{{names}}の後",
-      "position": "待ち行列の{{nth}}"
+      "position": "待ち行列の{{nth}}",
+      "signIn": "{{account}} が別のタスクを終えるのを待っています"
     },
     "nth": {
       "one": "{{n}}番目",

@@ -12204,7 +12204,8 @@
       "next": "Wacht op de computer. Is de volgende",
       "waiting": "Wacht op de computer",
       "behind": "In de wachtrij, {{nth}}. Na {{names}}",
-      "position": "In de wachtrij, {{nth}}"
+      "position": "In de wachtrij, {{nth}}",
+      "signIn": "Wacht tot {{account}} een andere taak afrondt"
     },
     "nth": {
       "one": "{{n}}e",

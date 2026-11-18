@@ -11707,7 +11707,8 @@
       "next": "正在等待电脑。下一个就是它",
       "waiting": "正在等待电脑",
       "behind": "排队中，第 {{nth}}。在 {{names}} 之后",
-      "position": "排队中，第 {{nth}}"
+      "position": "排队中，第 {{nth}}",
+      "signIn": "正在等待 {{account}} 完成另一项任务"
     },
     "nth": {
       "one": "{{n}}",
