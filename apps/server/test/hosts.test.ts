@@ -260,7 +260,9 @@ test("registered hosts take fewer email lookups and sign-ups per network, counte
   const hosts = (i: number) => on(browser(s), i % 2 ? HOST : OTHER);
   const lookup = (b: Browser) => b("/api/app/sign-in-options", { json: { email: "ana@example.com" }, headers: from });
   for (let i = 0; i < 10; i++) expect((await lookup(hosts(i))).status).toBe(200);
-  expect((await lookup(on(browser(s), HOST))).status).toBe(429);
+  const looked = await lookup(on(browser(s), HOST));
+  expect(looked.status).toBe(429);
+  expect(Number(looked.headers.get("retry-after"))).toBeGreaterThan(9 * 60);
   expect((await lookup(browser(s))).status).toBe(200);
 
   const join = (b: Browser, n: number) =>

@@ -1,3 +1,4 @@
+import { retryInSeconds } from "@agenteschat/adapters";
 import { isLoopback } from "@agenteschat/client/lib/server";
 import { isWorkAreaAnswer, WORK_AREA_ANSWERS } from "@agenteschat/client/lib/work-area";
 import {
@@ -515,7 +516,10 @@ export function accountRoutes(deps: AppDeps) {
         look ? `sign-in-options:hosts:${ip}` : `sign-in-options:${ip}`,
         look ? SIGN_IN_OPTIONS_PER_IP_ON_HOSTS : SIGN_IN_OPTIONS_PER_IP,
       );
-      if (!limit.allowed) return apiError(c, 429, "rate_limited", "Too many requests. Try again later.");
+      if (!limit.allowed) {
+        c.header("Retry-After", String(retryInSeconds(limit.resetAt)));
+        return apiError(c, 429, "rate_limited", "Too many requests. Try again later.");
+      }
       // Where no check runs, no pass either: it would stand for the check on the main address.
       const check = look ? null : (deps.adapters.humanCheck ?? null);
       const refused = await humanCheckRefusal(check, db, c.req.raw.headers, "email-lookup", config.TRUSTED_PROXIES);
