@@ -1868,6 +1868,8 @@ export interface GitSyncRepo {
 export const HELLO_TIMEOUT_MS = 10_000;
 /** The server pings this often; the runner reconnects after two missed pings. */
 export const HEARTBEAT_MS = 25_000;
+/** The close code a runner sends when it stops for good (its service stopped, the app quit), not a lost link. */
+export const RUNNER_STOPPED_CLOSE = 4000;
 /** Largest text frame either side accepts (a `write` of 5 MB is about 6.7 MB in base64). */
 export const MAX_FRAME_BYTES = 8 * 1024 * 1024;
 /** `read`/`write` bodies (base64 in JSON); larger files go through `push` and `pull`. */

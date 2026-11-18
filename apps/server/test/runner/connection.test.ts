@@ -6,6 +6,7 @@ import {
   MACHINE_PROTOCOL_VERSION,
   type MachineLoad,
   type MachineRequest,
+  RUNNER_STOPPED_CLOSE,
   type RunnerInfo,
   type ServerFrame,
 } from "@agenteschat/adapters/machine-protocol";
@@ -37,14 +38,16 @@ afterEach(() => removeDirs(dirs));
 class FakeSocket implements Socket {
   readonly sent: Record<string, unknown>[] = [];
   closed = false;
+  closeCode: number | undefined;
   bufferedAmount = 0;
   constructor(readonly handlers: SocketHandlers) {}
   send(data: string) {
     this.sent.push(JSON.parse(data) as Record<string, unknown>);
   }
-  close() {
+  close(code?: number) {
     if (this.closed) return;
     this.closed = true;
+    this.closeCode = code;
     queueMicrotask(() => this.handlers.onClose(1000, ""));
   }
   /** The server sends a frame. */
@@ -173,6 +176,26 @@ test("protocol 22: a new load summary rides on the next pong, once, and again on
   expect(again.sent.at(-1)).toEqual({ type: "pong", at: 4, load });
   connection.stop();
   await done;
+});
+
+test("a reconnect closes with no code; stopping closes with RUNNER_STOPPED_CLOSE, so the server tells it from a lost link", async () => {
+  const { sockets, connection } = setup();
+  const done = connection.run();
+  const open = async (i: number) => {
+    await waitFor(() => sockets.length === i + 1);
+    const s = sock(sockets, i);
+    s.handlers.onOpen();
+    await waitFor(() => s.sent.length === 1);
+    s.frame({ type: "welcome", machineId: "m1", name: "Box", heartbeatMs: 25_000 });
+    return s;
+  };
+  const first = await open(0);
+  connection.reconnect();
+  const second = await open(1);
+  expect(first.closeCode).toBeUndefined();
+  connection.stop();
+  await done;
+  expect(second.closeCode).toBe(RUNNER_STOPPED_CLOSE);
 });
 
 test("protocol 23: the browsers' traffic rides on the next pong once per new summary, beside the load", async () => {
