@@ -18023,6 +18023,35 @@
       "message": "Écrire à {{name}}"
     }
   },
+  "quotas": {
+    "title": "Quotas",
+    "lead": "Les limites de chaque compte d'IA telles que le fournisseur les indique, et l'usage récent là où il n'en indique pas.",
+    "home": "Quotas des forfaits",
+    "seeAll": "Voir les quotas",
+    "empty": "Aucun compte d'IA pour l'instant.",
+    "summary": {
+      "limited_one": "{{count}} à la limite",
+      "limited_many": "{{count}} à la limite",
+      "limited_other": "{{count}} à la limite",
+      "almost_one": "{{count}} presque à la limite",
+      "almost_many": "{{count}} presque à la limite",
+      "almost_other": "{{count}} presque à la limite",
+      "ok": "Tous ont de la marge",
+      "accounts_one": "{{count}} compte d'IA",
+      "accounts_many": "{{count}} comptes d'IA",
+      "accounts_other": "{{count}} comptes d'IA"
+    },
+    "notReported": "Aucun quota indiqué par le fournisseur.",
+    "recent": {
+      "title": "Usage récent",
+      "day": "Dernières 24 heures",
+      "week": "7 derniers jours",
+      "month": "30 derniers jours",
+      "requests_one": "{{value}} appel",
+      "requests_many": "{{value}} appels",
+      "requests_other": "{{value}} appels"
+    }
+  },
   "usageViews": {
     "signedOut": "Déconnecté",
     "whose": "De {{name}}",

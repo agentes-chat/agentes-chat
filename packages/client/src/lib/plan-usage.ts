@@ -11,6 +11,8 @@ import type {
   PlanUsage,
   PlanUseKind,
   PlanWindowParts,
+  RecentPeriod,
+  RecentUse,
 } from "../api/types";
 import {
   accountSub,
@@ -600,7 +602,26 @@ function mergeLogin(x: PlanAccountUsage, y: PlanAccountUsage): PlanAccountUsage 
     ...(typeof a.equivalentUsd === "number" || typeof b.equivalentUsd === "number"
       ? { equivalentUsd: (a.equivalentUsd ?? 0) + (b.equivalentUsd ?? 0) }
       : {}),
+    ...(a.recent || b.recent ? { recent: sumRecent(a.recent, b.recent) } : {}),
   };
+}
+
+/** Two logins' recent use (`recent`) as one: each period's tokens, calls and price summed. */
+function sumRecent(
+  x: PlanAccountUsage["recent"],
+  y: PlanAccountUsage["recent"],
+): NonNullable<PlanAccountUsage["recent"]> {
+  const one = (p: RecentPeriod): RecentUse => {
+    const a = x?.[p];
+    const b = y?.[p];
+    const priced = typeof a?.equivalentUsd === "number" || typeof b?.equivalentUsd === "number";
+    return {
+      tokens: (a?.tokens ?? 0) + (b?.tokens ?? 0),
+      requests: (a?.requests ?? 0) + (b?.requests ?? 0),
+      ...(priced ? { equivalentUsd: (a?.equivalentUsd ?? 0) + (b?.equivalentUsd ?? 0) } : {}),
+    };
+  };
+  return { day: one("day"), week: one("week"), month: one("month") };
 }
 
 /**

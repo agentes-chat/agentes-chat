@@ -18543,6 +18543,39 @@
       "message": "Написать: {{name}}"
     }
   },
+  "quotas": {
+    "title": "Квоты",
+    "lead": "Лимиты каждого ИИ-аккаунта так, как их сообщает провайдер, а где он их не сообщает, недавнее использование.",
+    "home": "Квоты тарифов",
+    "seeAll": "Открыть квоты",
+    "empty": "ИИ-аккаунтов пока нет.",
+    "summary": {
+      "limited_one": "{{count}} на лимите",
+      "limited_few": "{{count}} на лимите",
+      "limited_many": "{{count}} на лимите",
+      "limited_other": "{{count}} на лимите",
+      "almost_one": "{{count}} почти на лимите",
+      "almost_few": "{{count}} почти на лимите",
+      "almost_many": "{{count}} почти на лимите",
+      "almost_other": "{{count}} почти на лимите",
+      "ok": "У всех есть запас",
+      "accounts_one": "{{count}} ИИ-аккаунт",
+      "accounts_few": "{{count}} ИИ-аккаунта",
+      "accounts_many": "{{count}} ИИ-аккаунтов",
+      "accounts_other": "{{count}} ИИ-аккаунта"
+    },
+    "notReported": "Провайдер не сообщает квоту.",
+    "recent": {
+      "title": "Недавнее использование",
+      "day": "За последние 24 часа",
+      "week": "За последние 7 дней",
+      "month": "За последние 30 дней",
+      "requests_one": "{{value}} вызов",
+      "requests_few": "{{value}} вызова",
+      "requests_many": "{{value}} вызовов",
+      "requests_other": "{{value}} вызова"
+    }
+  },
   "usageViews": {
     "signedOut": "Выполнен выход",
     "whose": "{{name}}",

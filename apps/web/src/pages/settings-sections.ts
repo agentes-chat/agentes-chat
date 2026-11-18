@@ -146,6 +146,8 @@ export const settingsSearch = (
   agent?: string;
   /** Uso › Pessoas: the person whose month opens (ADR 0141). */
   person?: string;
+  /** Uso, open on Cotas (Início's "Ver cotas"). */
+  view?: "quotas";
   /** Cargos, with Criar cargo open (⌘K). */
   create?: 1;
   /** Notificações, with the outside chat app's link dialog open (ADR 0187). */
@@ -163,6 +165,7 @@ export const settingsSearch = (
   skill: typeof search.skill === "string" ? search.skill : undefined,
   agent: typeof search.agent === "string" ? search.agent : undefined,
   person: typeof search.person === "string" ? search.person : undefined,
+  view: search.view === "quotas" ? "quotas" : undefined,
   create: search.create === undefined ? undefined : 1,
   link: search.link === undefined ? undefined : 1,
 });

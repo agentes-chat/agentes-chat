@@ -17407,6 +17407,31 @@
       "message": "{{name}} ile mesajlaş"
     }
   },
+  "quotas": {
+    "title": "Kotalar",
+    "lead": "Her yapay zekâ hesabının sağlayıcının bildirdiği limitleri, bildirmediği yerde de son kullanım.",
+    "home": "Plan kotaları",
+    "seeAll": "Kotaları gör",
+    "empty": "Henüz yapay zekâ hesabı yok.",
+    "summary": {
+      "limited_one": "{{count}} limitte",
+      "limited_other": "{{count}} limitte",
+      "almost_one": "{{count}} limite yakın",
+      "almost_other": "{{count}} limite yakın",
+      "ok": "Hepsinde pay var",
+      "accounts_one": "{{count}} yapay zekâ hesabı",
+      "accounts_other": "{{count}} yapay zekâ hesabı"
+    },
+    "notReported": "Sağlayıcı kota bildirmiyor.",
+    "recent": {
+      "title": "Son kullanım",
+      "day": "Son 24 saat",
+      "week": "Son 7 gün",
+      "month": "Son 30 gün",
+      "requests_one": "{{value}} çağrı",
+      "requests_other": "{{value}} çağrı"
+    }
+  },
   "usageViews": {
     "signedOut": "Oturum kapatıldı",
     "whose": "{{name}} hesabı",

@@ -17725,6 +17725,32 @@ export const ptBR = {
       message: "Mandar mensagem para {{name}}",
     },
   },
+  /** Cotas (ADR 0063 addendum 2026-11-17): os limites de cada conta de IA por provedor, ou o uso recente onde não há. */
+  quotas: {
+    title: "Cotas",
+    lead: "Os limites de cada conta de IA como o provedor informa, e o uso recente onde ele não informa.",
+    home: "Cotas dos planos",
+    seeAll: "Ver cotas",
+    empty: "Nenhuma conta de IA ainda.",
+    summary: {
+      limited_one: "{{count}} no limite",
+      limited_other: "{{count}} no limite",
+      almost_one: "{{count}} quase no limite",
+      almost_other: "{{count}} quase no limite",
+      ok: "Todas com folga",
+      accounts_one: "{{count}} conta de IA",
+      accounts_other: "{{count}} contas de IA",
+    },
+    notReported: "Sem cota informada pelo provedor.",
+    recent: {
+      title: "Uso recente",
+      day: "Últimas 24 horas",
+      week: "Últimos 7 dias",
+      month: "Últimos 30 dias",
+      requests_one: "{{value}} chamada",
+      requests_other: "{{value}} chamadas",
+    },
+  },
   usageViews: {
     signedOut: "Saiu da conta",
     whose: "de {{name}}",

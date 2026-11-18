@@ -7,6 +7,7 @@ import {
   type PlanMeterUsage,
   planLevel,
   planLine,
+  planSections,
   planState,
   planWindows,
   renewals,
@@ -86,7 +87,7 @@ export function PlanMeter({
   }
   const rows = planWindows(usage, now);
   const { state, until, used } = planState(usage, now);
-  const sections = text.group && rows.some((w) => modelQuota(w)) ? bySection(rows) : null;
+  const sections = text.group && rows.some((w) => modelQuota(w)) ? planSections(rows) : null;
   const headline = state === "limited" ? text.limited(until) : state === "almost" ? text.almost : null;
   const renews = children ? renewals(rows, text, now) : null;
   return (
@@ -127,22 +128,5 @@ export function PlanMeter({
       {children && renews && <small className="ac-planmeter__reset">{renews}</small>}
       <small className="ac-planmeter__at">{text.updated(usage.at)}</small>
     </div>
-  );
-}
-
-/**
- * The full meter's rows by whom they bind (`modelQuota`): the account's own first, then each model group's in the
- * order its tightest quota comes, each row's order within kept; `first` starts a section (its heading).
- */
-function bySection<W extends { kind: string; label?: string }>(rows: readonly W[]) {
-  const groups: (string | null)[] = [];
-  for (const w of rows) {
-    const group = modelQuota(w)?.group ?? null;
-    if (!groups.includes(group)) groups.push(group);
-  }
-  // The account's own (no group) lead whatever their usage.
-  groups.sort((a, b) => Number(a !== null) - Number(b !== null));
-  return groups.flatMap((group) =>
-    rows.filter((w) => (modelQuota(w)?.group ?? null) === group).map((w, i) => ({ w, group, first: i === 0 })),
   );
 }

@@ -39,6 +39,7 @@ import { useMissionsWaitingYou } from "@/components/missions/MissionWaiting";
 import { useNotificationOpener } from "@/components/NotificationOpen";
 import { Face, Headline, SystemFace } from "@/components/NotificationParts";
 import { useOrg } from "@/components/org-context";
+import { HomeQuotas } from "@/components/PlanQuotas";
 import { HomeMural } from "@/components/widgets/HomeMural";
 import { WidgetNoticeActions, widgetNoticeLine } from "@/components/widgets/WidgetNotice";
 import { useDirectory } from "@/hooks/useDirectory";
@@ -203,6 +204,9 @@ export function HomePage() {
             ),
         }}
       />
+
+      {/* Where the AI accounts' limits stand, and the way into Uso › Cotas (ADR 0063 addendum 2026-11-17). */}
+      <HomeQuotas />
 
       {done.length > 0 && (
         <Section title={t("home.done.title")} count={done.length} more={done.length > HOME_ROWS}>

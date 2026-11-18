@@ -18037,6 +18037,35 @@
       "message": "Scrivi a {{name}}"
     }
   },
+  "quotas": {
+    "title": "Quote",
+    "lead": "I limiti di ogni account di IA come li riporta il fornitore, e l'uso recente dove non li riporta.",
+    "home": "Quote dei piani",
+    "seeAll": "Vedi le quote",
+    "empty": "Ancora nessun account di IA.",
+    "summary": {
+      "limited_one": "{{count}} al limite",
+      "limited_many": "{{count}} al limite",
+      "limited_other": "{{count}} al limite",
+      "almost_one": "{{count}} quasi al limite",
+      "almost_many": "{{count}} quasi al limite",
+      "almost_other": "{{count}} quasi al limite",
+      "ok": "Tutti hanno margine",
+      "accounts_one": "{{count}} account di IA",
+      "accounts_many": "{{count}} account di IA",
+      "accounts_other": "{{count}} account di IA"
+    },
+    "notReported": "Nessuna quota riportata dal fornitore.",
+    "recent": {
+      "title": "Uso recente",
+      "day": "Ultime 24 ore",
+      "week": "Ultimi 7 giorni",
+      "month": "Ultimi 30 giorni",
+      "requests_one": "{{value}} chiamata",
+      "requests_many": "{{value}} chiamate",
+      "requests_other": "{{value}} chiamate"
+    }
+  },
   "usageViews": {
     "signedOut": "Disconnesso",
     "whose": "di {{name}}",

@@ -136,3 +136,8 @@ language, and then goes through the onboarding's rail (ADR 0162, amended 2026-11
 business step: its agents (bringing them from another app, or "Seguir sem agentes"), the plan where the workspace waits
 for its first one, and connecting an AI, then the right hand's DM. On a billing hold the card's first row is "Ligue os
 seus agentes.", before the four rows above.
+
+## Amendment (2026-11-17): Cotas in AI and usage (§3)
+
+Alone in a personal workspace, AI and usage now has two tabs, Resumo and Cotas, still without Pessoas: Cotas is the
+person's own plans' limits (ADR 0063 §7).

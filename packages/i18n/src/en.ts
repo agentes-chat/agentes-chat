@@ -17860,6 +17860,32 @@ export const en = {
       message: "Message {{name}}",
     },
   },
+  /** Quotas (ADR 0063 addendum 2026-11-17): every AI account's limits by maker, or its recent use where none is reported. */
+  quotas: {
+    title: "Quotas",
+    lead: "Each AI account's limits as its provider reports them, and recent use where it reports none.",
+    home: "Plan quotas",
+    seeAll: "See quotas",
+    empty: "No AI account yet.",
+    summary: {
+      limited_one: "{{count}} at the limit",
+      limited_other: "{{count}} at the limit",
+      almost_one: "{{count}} almost at the limit",
+      almost_other: "{{count}} almost at the limit",
+      ok: "All have room",
+      accounts_one: "{{count}} AI account",
+      accounts_other: "{{count}} AI accounts",
+    },
+    notReported: "No quota reported by the provider.",
+    recent: {
+      title: "Recent use",
+      day: "Last 24 hours",
+      week: "Last 7 days",
+      month: "Last 30 days",
+      requests_one: "{{value}} call",
+      requests_other: "{{value}} calls",
+    },
+  },
   usageViews: {
     signedOut: "Signed out",
     whose: "{{name}}'s",

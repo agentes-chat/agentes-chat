@@ -16932,6 +16932,27 @@
       "message": "Kirim pesan ke {{name}}"
     }
   },
+  "quotas": {
+    "title": "Kuota",
+    "lead": "Batas setiap akun AI seperti yang dilaporkan penyedianya, dan penggunaan terbaru jika penyedia tidak melaporkannya.",
+    "home": "Kuota paket",
+    "seeAll": "Lihat kuota",
+    "empty": "Belum ada akun AI.",
+    "summary": {
+      "limited_other": "{{count}} di batas",
+      "almost_other": "{{count}} hampir di batas",
+      "ok": "Semua masih longgar",
+      "accounts_other": "{{count}} akun AI"
+    },
+    "notReported": "Penyedia tidak melaporkan kuota.",
+    "recent": {
+      "title": "Penggunaan terbaru",
+      "day": "24 jam terakhir",
+      "week": "7 hari terakhir",
+      "month": "30 hari terakhir",
+      "requests_other": "{{value}} panggilan"
+    }
+  },
   "usageViews": {
     "signedOut": "Sudah keluar",
     "whose": "Milik {{name}}",

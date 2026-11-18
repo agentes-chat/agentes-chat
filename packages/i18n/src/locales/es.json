@@ -17954,6 +17954,35 @@
       "message": "Escribir a {{name}}"
     }
   },
+  "quotas": {
+    "title": "Cuotas",
+    "lead": "Los límites de cada cuenta de IA tal como los informa el proveedor, y el uso reciente donde no los informa.",
+    "home": "Cuotas de los planes",
+    "seeAll": "Ver cuotas",
+    "empty": "Aún no hay ninguna cuenta de IA.",
+    "summary": {
+      "limited_one": "{{count}} en el límite",
+      "limited_many": "{{count}} en el límite",
+      "limited_other": "{{count}} en el límite",
+      "almost_one": "{{count}} casi en el límite",
+      "almost_many": "{{count}} casi en el límite",
+      "almost_other": "{{count}} casi en el límite",
+      "ok": "Todas con margen",
+      "accounts_one": "{{count}} cuenta de IA",
+      "accounts_many": "{{count}} cuentas de IA",
+      "accounts_other": "{{count}} cuentas de IA"
+    },
+    "notReported": "El proveedor no informa ninguna cuota.",
+    "recent": {
+      "title": "Uso reciente",
+      "day": "Últimas 24 horas",
+      "week": "Últimos 7 días",
+      "month": "Últimos 30 días",
+      "requests_one": "{{value}} llamada",
+      "requests_many": "{{value}} llamadas",
+      "requests_other": "{{value}} llamadas"
+    }
+  },
   "usageViews": {
     "signedOut": "Sesión cerrada",
     "whose": "De {{name}}",

@@ -18592,6 +18592,39 @@
       "message": "Napisz do: {{name}}"
     }
   },
+  "quotas": {
+    "title": "Limity",
+    "lead": "Limity każdego konta AI, tak jak podaje je dostawca, a tam, gdzie ich nie podaje, ostatnie użycie.",
+    "home": "Limity planów",
+    "seeAll": "Zobacz limity",
+    "empty": "Nie ma jeszcze żadnego konta AI.",
+    "summary": {
+      "limited_one": "{{count}} na limicie",
+      "limited_few": "{{count}} na limicie",
+      "limited_many": "{{count}} na limicie",
+      "limited_other": "{{count}} na limicie",
+      "almost_one": "{{count}} blisko limitu",
+      "almost_few": "{{count}} blisko limitu",
+      "almost_many": "{{count}} blisko limitu",
+      "almost_other": "{{count}} blisko limitu",
+      "ok": "Wszystkie mają zapas",
+      "accounts_one": "{{count}} konto AI",
+      "accounts_few": "{{count}} konta AI",
+      "accounts_many": "{{count}} kont AI",
+      "accounts_other": "{{count}} konta AI"
+    },
+    "notReported": "Dostawca nie podaje limitu.",
+    "recent": {
+      "title": "Ostatnie użycie",
+      "day": "Ostatnie 24 godziny",
+      "week": "Ostatnie 7 dni",
+      "month": "Ostatnie 30 dni",
+      "requests_one": "{{value}} wywołanie",
+      "requests_few": "{{value}} wywołania",
+      "requests_many": "{{value}} wywołań",
+      "requests_other": "{{value}} wywołania"
+    }
+  },
   "usageViews": {
     "signedOut": "Wylogowane",
     "whose": "Należy do: {{name}}",

@@ -27,6 +27,12 @@ const PlanAccountInfo = z.object({
   signedOut: z.boolean(),
 });
 
+const RecentUse = z.object({
+  tokens: z.number(),
+  requests: z.number().openapi({ description: "Model calls recorded." }),
+  equivalentUsd: z.number().nullable().optional(),
+});
+
 const PlanAccountUsage = PlanAccountInfo.extend({
   usage: PlanUsage.extend({
     windows: z.array(
@@ -69,6 +75,10 @@ const PlanAccountUsage = PlanAccountInfo.extend({
     .nullable()
     .optional()
     .openapi({ description: "`view_usage` only: what the month's tokens would cost through the API." }),
+  recent: z.object({ day: RecentUse, week: RecentUse, month: RecentUse }).optional().openapi({
+    description:
+      "Its use over the last 24 hours, 7 days and 30 days, rolling: what the quotas view shows where the provider reports no limits: only on an account with no limits known. `equivalentUsd` with `view_usage` only. Only in the workspace's list.",
+  }),
 }).openapi("PlanAccountUsage");
 
 const OrgPlanUsage = z

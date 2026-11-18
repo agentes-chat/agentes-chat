@@ -17532,6 +17532,31 @@
       "message": "Bericht aan {{name}}"
     }
   },
+  "quotas": {
+    "title": "Quota",
+    "lead": "De limieten van elk AI-account zoals de aanbieder ze meldt, en het recente gebruik waar hij er geen meldt.",
+    "home": "Quota van de abonnementen",
+    "seeAll": "Quota bekijken",
+    "empty": "Nog geen AI-account.",
+    "summary": {
+      "limited_one": "{{count}} op de limiet",
+      "limited_other": "{{count}} op de limiet",
+      "almost_one": "{{count}} bijna op de limiet",
+      "almost_other": "{{count}} bijna op de limiet",
+      "ok": "Overal nog ruimte",
+      "accounts_one": "{{count}} AI-account",
+      "accounts_other": "{{count}} AI-accounts"
+    },
+    "notReported": "Geen quotum gemeld door de aanbieder.",
+    "recent": {
+      "title": "Recent gebruik",
+      "day": "Afgelopen 24 uur",
+      "week": "Afgelopen 7 dagen",
+      "month": "Afgelopen 30 dagen",
+      "requests_one": "{{value}} aanroep",
+      "requests_other": "{{value}} aanroepen"
+    }
+  },
   "usageViews": {
     "signedOut": "Uitgelogd",
     "whose": "Van {{name}}",

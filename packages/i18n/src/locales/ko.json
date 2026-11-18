@@ -16871,6 +16871,27 @@
       "message": "{{name}}에게 메시지"
     }
   },
+  "quotas": {
+    "title": "할당량",
+    "lead": "각 AI 계정의 한도(제공업체가 알려 주는 대로)와, 알려 주지 않는 곳은 최근 사용량입니다.",
+    "home": "플랜 할당량",
+    "seeAll": "할당량 보기",
+    "empty": "아직 AI 계정이 없습니다.",
+    "summary": {
+      "limited_other": "{{count}}개 한도 도달",
+      "almost_other": "{{count}}개 한도 임박",
+      "ok": "모두 여유 있음",
+      "accounts_other": "AI 계정 {{count}}개"
+    },
+    "notReported": "제공업체가 할당량을 알려 주지 않습니다.",
+    "recent": {
+      "title": "최근 사용",
+      "day": "최근 24시간",
+      "week": "최근 7일",
+      "month": "최근 30일",
+      "requests_other": "호출 {{value}}회"
+    }
+  },
   "usageViews": {
     "signedOut": "로그아웃됨",
     "whose": "{{name}}의 계정",

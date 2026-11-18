@@ -16879,6 +16879,27 @@
       "message": "{{name}}にメッセージ"
     }
   },
+  "quotas": {
+    "title": "クォータ",
+    "lead": "各AIアカウントの上限（プロバイダーが報告するもの）と、報告がない場合は最近の利用量です。",
+    "home": "プランのクォータ",
+    "seeAll": "クォータを見る",
+    "empty": "AIアカウントはまだありません。",
+    "summary": {
+      "limited_other": "{{count}} 件が上限",
+      "almost_other": "{{count}} 件が上限間近",
+      "ok": "すべて余裕あり",
+      "accounts_other": "AIアカウント {{count}} 件"
+    },
+    "notReported": "プロバイダーからクォータの報告はありません。",
+    "recent": {
+      "title": "最近の利用",
+      "day": "過去24時間",
+      "week": "過去7日間",
+      "month": "過去30日間",
+      "requests_other": "{{value}} 回の呼び出し"
+    }
+  },
   "usageViews": {
     "signedOut": "ログアウト済み",
     "whose": "{{name}}の",

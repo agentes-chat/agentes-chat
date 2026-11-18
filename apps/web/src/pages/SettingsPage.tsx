@@ -150,6 +150,7 @@ function Settings({
   skill,
   agent,
   person,
+  view,
   role,
   tab,
   create,
@@ -175,6 +176,8 @@ function Settings({
   agent?: string;
   /** Orçamento e uso › Pessoas: the person whose month opens (a limit's notice). */
   person?: string;
+  /** Orçamento e uso, open on Cotas. */
+  view?: "quotas";
   /** Cargos › one cargo (its id, `everyone` or `owner`) and its tab (`/settings/roles/{role}?tab=`). */
   role?: string;
   tab?: RoleTab;
@@ -288,7 +291,7 @@ function Settings({
       {current === "devices" && (device ? <DevicePage path={device} /> : <DevicesSection start={connect} />)}
       {current === "usage" && (
         <>
-          <UsageTabs person={person} summary={<UsageSection />} />
+          <UsageTabs person={person} view={view} summary={<UsageSection />} />
           {opens("billing") && (
             <SettingsPart id="billing">
               <BillingSection />

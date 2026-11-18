@@ -7983,6 +7983,22 @@ export interface PlanAccountUsage extends PlanAccountInfo {
   hint?: { kind: "handoffs"; agentId: string } | null;
   /** `view_usage` only: what the month's tokens would cost through the API (null: no price). */
   equivalentUsd?: number | null;
+  /**
+   * Its use over the last 24 hours, 7 days and 30 days, rolling: what Cotas shows where the provider reports no
+   * limits. Absent: limits known, an older server, or an agent's view.
+   */
+  recent?: Record<RecentPeriod, RecentUse>;
+}
+
+/** The rolling periods of an account's recent use. */
+export type RecentPeriod = "day" | "week" | "month";
+
+export interface RecentUse {
+  tokens: number;
+  /** Model calls recorded. */
+  requests: number;
+  /** `view_usage` only: what they would cost through the API (null: no price). */
+  equivalentUsd?: number | null;
 }
 
 /** `GET …/usage/plans`: every plan account by computer, and the API per agent this month. */

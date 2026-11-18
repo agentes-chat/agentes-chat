@@ -138,6 +138,23 @@ export function planWindows<W extends PlanMeterWindow>(usage: { windows: readonl
 }
 
 /**
+ * The full meter's rows by whom they bind (the web's `PlanMeter` and the phone's) (`modelQuota`): the account's own first, then each model group's in the
+ * order its tightest quota comes, each row's order within kept; `first` starts a section (its heading).
+ */
+export function planSections<W extends { kind: string; label?: string }>(rows: readonly W[]) {
+  const groups: (string | null)[] = [];
+  for (const w of rows) {
+    const group = modelQuota(w)?.group ?? null;
+    if (!groups.includes(group)) groups.push(group);
+  }
+  // The account's own (no group) lead whatever their usage.
+  groups.sort((a, b) => Number(a !== null) - Number(b !== null));
+  return groups.flatMap((group) =>
+    rows.filter((w) => (modelQuota(w)?.group ?? null) === group).map((w, i) => ({ w, group, first: i === 0 })),
+  );
+}
+
+/**
  * A window of the whole plan: not an `other` one (a single model's week, extra usage, another model group's quota),
  * which never puts the plan at its limit; a refusal it causes still does (`limited`).
  */

@@ -1,0 +1,63 @@
+/* Cotas (PlanQuotas.tsx): a card per maker, its accounts parted by hairlines, every window open. */
+.quotas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.quotas__lead {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+.quotas__accounts {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.quotas__account {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+.quotas__account + .quotas__account {
+  border-top: 1px solid var(--line);
+}
+.quotas__account .ac-planmeter,
+.quotas__account .ac-planmeter__windows {
+  gap: var(--space-3);
+}
+/* Recent use: each period's name, then its numbers, which wrap whole. */
+.quotas__recent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  font-size: 13.5px;
+}
+.quotas__period {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-2);
+}
+.quotas__period dt {
+  min-width: 120px;
+  color: var(--muted);
+}
+.quotas__period dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Início: a few accounts' one-line meters, under the section's heading. */
+.quotas-home__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.quotas-home__row {
+  padding: var(--row-py) var(--space-4);
+}
+.quotas-home__row + .quotas-home__row {
+  border-top: 1px solid var(--line);
+}

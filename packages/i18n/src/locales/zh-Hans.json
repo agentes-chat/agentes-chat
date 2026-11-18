@@ -16941,6 +16941,27 @@
       "message": "给 {{name}} 发消息"
     }
   },
+  "quotas": {
+    "title": "配额",
+    "lead": "每个 AI 账号由提供方报告的限额，提供方不报告时显示最近的用量。",
+    "home": "套餐配额",
+    "seeAll": "查看配额",
+    "empty": "还没有 AI 账号。",
+    "summary": {
+      "limited_other": "{{count}} 个已达上限",
+      "almost_other": "{{count}} 个接近上限",
+      "ok": "全部尚有余量",
+      "accounts_other": "{{count}} 个 AI 账号"
+    },
+    "notReported": "提供方未报告配额。",
+    "recent": {
+      "title": "最近用量",
+      "day": "最近 24 小时",
+      "week": "最近 7 天",
+      "month": "最近 30 天",
+      "requests_other": "{{value}} 次调用"
+    }
+  },
   "usageViews": {
     "signedOut": "已退出登录",
     "whose": "{{name}} 的",

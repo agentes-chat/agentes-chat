@@ -17470,6 +17470,31 @@
       "message": "{{name}} schreiben"
     }
   },
+  "quotas": {
+    "title": "Kontingente",
+    "lead": "Die Limits jedes KI-Kontos, wie der Anbieter sie meldet, und die letzte Nutzung, wo er keine meldet.",
+    "home": "Plan-Kontingente",
+    "seeAll": "Kontingente ansehen",
+    "empty": "Noch kein KI-Konto.",
+    "summary": {
+      "limited_one": "{{count}} am Limit",
+      "limited_other": "{{count}} am Limit",
+      "almost_one": "{{count}} fast am Limit",
+      "almost_other": "{{count}} fast am Limit",
+      "ok": "Alle haben Luft",
+      "accounts_one": "{{count}} KI-Konto",
+      "accounts_other": "{{count}} KI-Konten"
+    },
+    "notReported": "Kein Kontingent vom Anbieter gemeldet.",
+    "recent": {
+      "title": "Letzte Nutzung",
+      "day": "Letzte 24 Stunden",
+      "week": "Letzte 7 Tage",
+      "month": "Letzte 30 Tage",
+      "requests_one": "{{value}} Aufruf",
+      "requests_other": "{{value}} Aufrufe"
+    }
+  },
   "usageViews": {
     "signedOut": "Abgemeldet",
     "whose": "von {{name}}",

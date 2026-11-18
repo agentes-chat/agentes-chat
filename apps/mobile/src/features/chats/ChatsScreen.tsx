@@ -27,6 +27,7 @@ import { Tile } from "../shared/parts";
 import { useActiveWork, useHiddenAgents, useWorkingNow } from "../shared/queries";
 import { SheetHostProvider } from "../shared/SheetHost";
 import { useTabHeader } from "../shared/tabHeader";
+import { QuotasLine } from "../usage/QuotasLine";
 import { alongInAccessory } from "../work-along/logic";
 import { useHasWorkAlong } from "../work-along/WorkAlong";
 import { DeletingNotice } from "./DeletingNotice";
@@ -264,6 +265,8 @@ function Home() {
         <>
           {/* Início's widgets, and the way to Dashboards ("See all"), not a tab (ADR 0135 §15). */}
           <HomeWidgets collapsed={collapsed.includes("widgets")} onToggle={() => toggle("widgets")} />
+          {/* The way into Cotas, where the AI accounts' limits stand (ADR 0063 addendum 2026-11-17). */}
+          <QuotasLine />
           <PinnedStrip
             items={strip}
             collapsed={collapsed.includes("pinned")}

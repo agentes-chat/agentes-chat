@@ -1004,7 +1004,8 @@
       "onboarding.import.choose.step.image",
       "settings.account.chat.wallpaper.name.crowd",
       "newAgentCard.proposal.routine.label",
-      "orgAccent.sampleMention"
+      "orgAccent.sampleMention",
+      "quotas.title"
     ],
     "de": [
       "devices.iphone.steps.account",
