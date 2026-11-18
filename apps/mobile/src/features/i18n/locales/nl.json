@@ -1194,6 +1194,7 @@
     "type": {
       "image": "Afbeelding",
       "video": "Video",
+      "audio": "Audio",
       "pdf": "Pdf",
       "document": "Document",
       "table": "Tabel",

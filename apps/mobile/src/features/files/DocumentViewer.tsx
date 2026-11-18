@@ -16,6 +16,7 @@ import { chooseAction } from "../settings/parts";
 import { LoadFailed } from "../shared/FirstUse";
 import { useColors, useDirectory, useOrgId } from "../shared/hooks";
 import { copyText, MONO, PushedHeader, successHaptic } from "../shared/parts";
+import { AudioFile } from "./AudioFile";
 import { useFileActions } from "./actions";
 import { fileInfo, textChunks } from "./logic";
 import { useFileLine } from "./MessageFiles";
@@ -29,7 +30,7 @@ import { fileText, useRemoteFile } from "./source";
  * system's share sheet with the file) and the "…" with Compartilhar (who sees it and its link, ADR 0157), Copiar texto
  * and Ver no Drive (the system's own menu on iOS, the app's list of the same choices on Android). Under it the file
  * itself, the screen's whole width: Markdown and text drawn by the app, a page or a PDF in a web view (iOS draws PDFs
- * natively there), anything else says it opens in another app. Pictures and videos open straight in the picture
+ * natively there), an audio file in the voice message's player, anything else says it opens in another app. Pictures and videos open straight in the picture
  * viewer (`openFile`); one reached here anyway (a file's link that didn't say what it was) goes on there.
  */
 export function DocumentViewer({ id, version }: { id: string; version?: number }) {
@@ -125,6 +126,19 @@ export function DocumentViewer({ id, version }: { id: string; version?: number }
         <TextPage detail={detail} markdown={info.view === "markdown"} json={isJsonFile(info.name, info.mime)} />
       ) : pdf ? (
         <PdfPage detail={detail} />
+      ) : info.view === "audio" ? (
+        // The player, and the way to open it in another app: a phone plays only some audio types (no Ogg on iPhone).
+        <View style={[styles.page, styles.audio]}>
+          <AudioFile fileId={detail.id} version={detail.shownVersion} />
+          <Button
+            variant="secondary"
+            wide
+            icon="share"
+            label={t("mobile.files.sendCopy")}
+            loading={actions.busy === "share"}
+            onPress={() => void actions.share()}
+          />
+        </View>
       ) : (
         // A type the app doesn't draw: that it has no preview (its name is the bar's title already), and the way to
         // open it in another app.
@@ -276,4 +290,5 @@ const styles = StyleSheet.create({
   white: { backgroundColor: "#fff" },
   mono: { fontFamily: MONO, fontSize: 13, lineHeight: 19 },
   json: { gap: 10, alignItems: "flex-start" },
+  audio: { gap: 16 },
 });

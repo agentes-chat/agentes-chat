@@ -13,9 +13,11 @@ import { useKeptWidth } from "../chat/look";
 import { useColors, useOrgId } from "../shared/hooks";
 import { useSurface } from "../shared/parts";
 import { AttachmentTile } from "./AttachmentTile";
+import { AudioFile } from "./AudioFile";
 import { ImageStack, type StackImage } from "./ImageStack";
 import { isLocalMedia, type LocalFile, localRatio } from "./local-files";
 import {
+  AUDIO_EXT,
   extensionOf,
   extLabel,
   type FileInfo,
@@ -36,7 +38,8 @@ import { VideoFirstFrame, VideoPlayer } from "./VideoPlayer";
  * (`ImageStack`), tapping opens the viewer at that picture. Any other attachment: a tile across the row
  * (`AttachmentTile`: what it holds drawn small, its name, whole, with its kind and size under it), with the pictures
  * beside them as tiles of only the picture, two to a row (as on the web's phone width). A video shows its first frame in
- * the pictures' shape and opens in the same viewer as they do. `align="end"`: the viewer's own message, its files sit on
+ * the pictures' shape and opens in the same viewer as they do; an audio file plays right there (`AudioFile`).
+ * `align="end"`: the viewer's own message, its files sit on
  * the right.
  */
 
@@ -70,6 +73,7 @@ export function MessageFiles({ files, align = "start" }: { files: MessageFile[];
   // What lives in the conversation isn't a file: the thing itself (ADR 0113).
   const blocks: ArtifactDetail[] = [];
   const videos: { file: MessageFile; detail: ArtifactDetail | undefined }[] = [];
+  const audios: { file: MessageFile; detail: ArtifactDetail | undefined }[] = [];
   const others: { file: MessageFile; detail: ArtifactDetail | undefined; failed: boolean }[] = [];
   live.forEach((file, i) => {
     const q = queries[i];
@@ -81,8 +85,10 @@ export function MessageFiles({ files, align = "start" }: { files: MessageFile[];
     // Until it loads, a name like "print.png" already says it's a picture (no jump into the grid).
     const isImage = detail ? fileInfo(detail).view === "image" : !q?.isError && IMAGE_EXT.has(extensionOf(file.title));
     const isVideo = detail ? fileInfo(detail).view === "video" : !q?.isError && VIDEO_EXT.has(extensionOf(file.title));
+    const isAudio = detail ? fileInfo(detail).view === "audio" : !q?.isError && AUDIO_EXT.has(extensionOf(file.title));
     if (isImage) images.push({ file, detail });
     else if (isVideo) videos.push({ file, detail });
+    else if (isAudio) audios.push({ file, detail });
     else others.push({ file, detail, failed: Boolean(q?.isError) });
   });
   const removed = files.filter((f) => f.deleted);
@@ -134,6 +140,9 @@ export function MessageFiles({ files, align = "start" }: { files: MessageFile[];
       ) : null}
       {videos.map(({ file, detail }) => (
         <InlineVideo key={file.id} file={file} detail={detail} width={blockWidth} siblings={media} />
+      ))}
+      {audios.map(({ file, detail }) => (
+        <InlineAudio key={file.id} file={file} detail={detail} width={blockWidth} />
       ))}
       {blocks.map((b) =>
         b.kind === "poll" ? (
@@ -259,6 +268,41 @@ function InlineVideo({
           style={[styles.shot, { width, height: videoHeight(width), backgroundColor: c.sunken, borderColor: c.line2 }]}
         />
       )}
+    </View>
+  );
+}
+
+/**
+ * An audio file on a message: the voice message's player, its name and line under it; a tap there opens the file screen
+ * (Enviar cópia, the Drive). Played at the version the message names.
+ */
+function InlineAudio({
+  file,
+  detail,
+  width,
+}: {
+  file: MessageFile;
+  detail: ArtifactDetail | undefined;
+  width: number;
+}) {
+  const line = useFileLine();
+  const info = detail ? fileInfo(detail) : null;
+  const openLooked = useOpenFile();
+  // Its details may not be here yet: the tap still opens, reading them first.
+  const open = () => {
+    const ref = { id: file.id, version: file.version, title: file.title };
+    if (detail) openFile({ ...ref, detail });
+    else void openLooked(ref);
+  };
+  return (
+    <View style={{ width }}>
+      <AudioFile
+        fileId={file.id}
+        version={file.version}
+        name={info?.name || file.title}
+        {...(info ? { line: line(info) } : {})}
+        onOpen={open}
+      />
     </View>
   );
 }

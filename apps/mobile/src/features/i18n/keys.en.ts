@@ -1280,6 +1280,7 @@ export const featureKeysEn = {
     type: {
       image: "Image",
       video: "Video",
+      audio: "Audio",
       pdf: "PDF",
       document: "Document",
       table: "Table",

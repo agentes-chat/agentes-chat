@@ -7635,6 +7635,8 @@ html:not([data-pointer]) .ac-composer__send:focus-visible {
 }
 
 .ac-voice {
+  /* Where text under the bar starts: past the play button (34) and the bar's gap (12). */
+  --voice-text-inset: 46px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -7659,7 +7661,7 @@ html:not([data-pointer]) .ac-composer__send:focus-visible {
 .ac-voice__preview {
   display: block;
   width: 100%;
-  padding: 0 0 2px 46px;
+  padding: 0 0 2px var(--voice-text-inset);
   border: 0;
   background: none;
   font: inherit;
@@ -7743,7 +7745,7 @@ button.ac-voice__play:active {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 0 0 2px 46px;
+  padding: 0 0 2px var(--voice-text-inset);
   font-size: 13.5px;
   line-height: 1.45;
   color: var(--muted);

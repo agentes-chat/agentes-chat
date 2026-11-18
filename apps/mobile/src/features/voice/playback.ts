@@ -8,6 +8,7 @@ import { releaseVoiceAudio, voiceAudio } from "@/lib/audio-mode";
 export interface PlayRequest {
   id: string;
   source: AudioSource;
+  /** Its length when known ahead (a voice message's); 0: the player's, once it loaded (an audio file's, `lengthOf`). */
   durationMs: number;
   from: number;
   speed: number;
@@ -19,6 +20,8 @@ export interface PlayRequest {
 }
 
 const TICK_MS = 50;
+/** Ticks a place picked before the length was known waits for the player to read it (2 s), then it's given up. */
+const PENDING_TICKS = 40;
 /** Moved this far past where it started (s), the clip is playing: its button stops showing it starting. */
 const MOVED_S = 0.05;
 let player: AudioPlayer | null = null;
@@ -60,6 +63,10 @@ export const subscribePlace = (listener: (id: string) => void) => {
   };
 };
 export const placeOf = (id: string) => places.get(id) ?? 0;
+/** Lengths the player read (ms), for clips that came without one: kept for their clock and their next play. */
+const lengths = new Map<string, number>();
+/** A clip's length in ms: the one it came with, else the one its last play read, else 0 (not loaded yet). */
+export const lengthOf = (id: string, durationMs = 0) => (durationMs > 0 ? durationMs : (lengths.get(id) ?? 0));
 function setPlace(id: string, at: number) {
   if (at > 0) places.set(id, at);
   else places.delete(id);
@@ -107,7 +114,11 @@ export async function startPlayback(request: PlayRequest) {
   const mine = turn;
   starting = request.id;
   say();
-  const from = (request.from * request.durationMs) / 1000;
+  const total = lengthOf(request.id, request.durationMs);
+  const from = (request.from * total) / 1000;
+  // A place picked before its length was known: it goes there once the player has read it.
+  let pending = total > 0 ? 0 : request.from;
+  let waited = 0;
   let p: AudioPlayer;
   try {
     await voiceAudio(false);
@@ -130,6 +141,12 @@ export async function startPlayback(request: PlayRequest) {
   timer = setInterval(() => {
     if (!now) return;
     const status = p.currentStatus;
+    if (request.durationMs <= 0 && p.duration > 0) lengths.set(now.id, p.duration * 1000);
+    // Never a return here: a stream that never says its length still ends and stops spinning.
+    if (pending > 0 && p.duration > 0) {
+      seekPlayback(now.id, pending);
+      pending = 0;
+    } else if (pending > 0 && ++waited >= PENDING_TICKS) pending = 0;
     const done = status.didJustFinish;
     const at = fraction(p, now.durationMs);
     if (done || at >= 0.998) {
@@ -146,7 +163,8 @@ export async function startPlayback(request: PlayRequest) {
       starting = null;
       say();
     }
-    if (seeking) return;
+    // A seek on its way, or a place still waiting for the length: the player's own place would pull the handle back.
+    if (seeking || pending > 0) return;
     setPlace(now.id, at);
     now.onProgress?.(at);
   }, TICK_MS);
@@ -159,7 +177,9 @@ export async function startPlayback(request: PlayRequest) {
 export function seekPlayback(id: string, at: number) {
   setPlace(id, at);
   if (now?.id !== id || !player) return;
-  const seek = player.seekTo((at * now.durationMs) / 1000).catch(() => undefined);
+  const seek = player
+    .seekTo((at * lengthOf(id, now.durationMs || player.duration * 1000)) / 1000)
+    .catch(() => undefined);
   seeking = seek;
   void seek.then(() => {
     if (seeking === seek) seeking = null;

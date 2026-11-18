@@ -108,6 +108,9 @@ describe("file names and types", () => {
     expect(fileContentType("photo.jpeg", "text/html")).toBe("image/jpeg");
     expect(fileContentType("data.parquet", "application/x-parquet")).toBe("application/x-parquet");
     expect(fileContentType("page.weird", "text/html")).toBe("application/octet-stream");
+    // Audio the apps play: typed by its name, whatever the upload said.
+    expect(fileContentType("voz.m4a", "application/octet-stream")).toBe("audio/mp4");
+    expect(fileContentType("amostra.opus")).toBe("audio/ogg");
     expect(fileContentType("img.weird", "image/svg+xml")).toBe("application/octet-stream");
     expect(fileContentType("noext")).toBe("application/octet-stream");
   });

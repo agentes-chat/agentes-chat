@@ -1115,6 +1115,7 @@
     "type": {
       "image": "画像",
       "video": "動画",
+      "audio": "音声",
       "pdf": "PDF",
       "document": "ドキュメント",
       "table": "表",

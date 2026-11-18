@@ -1194,6 +1194,7 @@
     "type": {
       "image": "Görsel",
       "video": "Video",
+      "audio": "Ses",
       "pdf": "PDF",
       "document": "Belge",
       "table": "Tablo",

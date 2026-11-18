@@ -79,6 +79,41 @@ describe("videos", () => {
   });
 });
 
+describe("audio", () => {
+  test("by its type: an audio file plays in the app, its own kind", () => {
+    expect(fileInfo(upload("Amostra voz Antonio (edge-tts).mp3", "audio/mpeg"))).toMatchObject({
+      view: "audio",
+      type: "audio",
+      ext: "MP3",
+    });
+    for (const [name, type] of [
+      ["voz.m4a", "audio/mp4"],
+      ["voz.m4a", "audio/x-m4a"],
+      ["voz.aac", "audio/aac"],
+      ["take.wav", "audio/x-wav"],
+      ["take.ogg", "audio/ogg; codecs=opus"],
+      ["take.opus", "audio/opus"],
+      ["take.flac", "audio/flac"],
+      ["take.weba", "audio/webm"],
+    ])
+      expect(fileInfo(upload(name as string, type as string)).view).toBe("audio");
+  });
+
+  test("stored as plain bytes, by its name; a name with another type stays what its type says", () => {
+    for (const name of ["a.mp3", "a.M4A", "a.aac", "a.wav", "a.ogg", "a.oga", "a.opus", "a.flac", "a.weba"])
+      expect(fileInfo(upload(name, "application/octet-stream")).view).toBe("audio");
+    expect(fileInfo(upload("a.mp3", "")).view).toBe("audio");
+    expect(fileInfo(upload("notas.mp3", "text/plain")).view).toBe("text");
+    expect(fileInfo(upload("som.mid", "audio/midi")).view).toBe("other");
+  });
+
+  test("opens in the file screen, which its name already says", () => {
+    expect(isMediaFile({ id: "a", title: "voz.mp3" })).toBe(false);
+    expect(whereKnown({ id: "a", title: "voz.mp3" })).toBe(true);
+    expect(fileRoute({ id: "a", title: "voz.mp3" })).toEqual({ pathname: "/file/[id]", params: { id: "a" } });
+  });
+});
+
 describe("file kind, tile and size", () => {
   test("raster pictures are images; SVG is not", () => {
     expect(fileInfo(upload("home.png", "image/png")).view).toBe("image");

@@ -2076,6 +2076,56 @@ html:not([data-pointer]) .artifact-tile__open:focus-visible {
   background: none;
   box-shadow: none;
 }
+/* An audio file is the voice message's player across the row, its name and actions inside the card under the track,
+   past the play button as a voice message's words. The name opens the viewer. */
+.artifact-cards > .artifact-audio {
+  margin-top: 0;
+}
+.artifact-audio__foot {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: 0 0 2px var(--voice-text-inset);
+}
+.artifact-audio__name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+}
+button.artifact-audio__name {
+  cursor: pointer;
+}
+button.artifact-audio__name:hover .artifact-tile__title {
+  color: var(--ink);
+  text-decoration: underline;
+}
+.artifact-audio__acts {
+  flex: none;
+  display: flex;
+  gap: var(--space-2);
+}
+.artifact-audio--loading .ac-voice__play {
+  background: var(--sunken);
+  cursor: default;
+}
+.artifact-audio--loading .ac-voice__wave {
+  cursor: default;
+}
+/* In the viewer: the player at the top, as wide as a message's. */
+.file-view--audio {
+  align-items: flex-start;
+}
+.file-view--audio > .ac-voice {
+  width: 100%;
+  margin-top: 0;
+}
 /* On a phone: pictures two to a row; a file the whole row, since its name wraps whole and half a row would take it a
    word a line (a table's cover keeps two columns, the rest wouldn't read); alone, the whole width up to its size. */
 @media (max-width: 640px) {

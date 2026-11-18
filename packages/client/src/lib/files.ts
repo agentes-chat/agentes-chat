@@ -69,8 +69,48 @@ export const isPreviewImage = (content: { contentType: string; size: number }) =
 /** The clean MIME type for a preview blob (never what the browser would sniff). */
 export const previewType = (contentType: string) => contentType.split(";")[0]?.trim().toLowerCase() ?? "";
 
+/**
+ * Audio the apps play in their own player (the web's audio element, expo-audio on the phone), from the download as
+ * media: a media element never runs the file as a page.
+ */
+export const AUDIO_TYPES: ReadonlySet<string> = new Set([
+  "audio/mpeg",
+  "audio/mp3",
+  "audio/mp4",
+  "audio/x-m4a",
+  "audio/m4a",
+  "audio/aac",
+  "audio/wav",
+  "audio/x-wav",
+  "audio/wave",
+  "audio/ogg",
+  "audio/opus",
+  "audio/flac",
+  "audio/x-flac",
+  "audio/webm",
+]);
+/** Names that say "audio": a file stored as plain bytes, and a message's file before its details load. */
+export const AUDIO_EXT: ReadonlySet<string> = new Set([
+  "mp3",
+  "m4a",
+  "aac",
+  "wav",
+  "ogg",
+  "oga",
+  "opus",
+  "flac",
+  "weba",
+]);
+
+/** An audio file the apps play: by its type, or by its name when it was stored without one. */
+export function isAudioFile(name: string, contentType = ""): boolean {
+  const type = previewType(contentType);
+  if (AUDIO_TYPES.has(type)) return true;
+  return (!type || type === "application/octet-stream") && AUDIO_EXT.has(extension(name));
+}
+
 /** The design system icons a file can show (all exist in `@agenteschat/ui`'s `IconName`). */
-export type FileIconName = "image" | "video" | "document" | "table" | "archive" | "code" | "page" | "file";
+export type FileIconName = "image" | "video" | "volume" | "document" | "table" | "archive" | "code" | "page" | "file";
 
 const BY_EXTENSION: Record<string, FileIconName> = {
   png: "image",
@@ -87,6 +127,15 @@ const BY_EXTENSION: Record<string, FileIconName> = {
   webm: "video",
   mkv: "video",
   avi: "video",
+  mp3: "volume",
+  m4a: "volume",
+  aac: "volume",
+  wav: "volume",
+  ogg: "volume",
+  oga: "volume",
+  opus: "volume",
+  flac: "volume",
+  weba: "volume",
   pdf: "document",
   doc: "document",
   docx: "document",
@@ -140,6 +189,7 @@ export function fileIcon(name: string, contentType = ""): FileIconName {
   const type = previewType(contentType);
   if (type.startsWith("image/")) return "image";
   if (type.startsWith("video/")) return "video";
+  if (type.startsWith("audio/")) return "volume";
   if (type === "application/pdf") return "document";
   if (type.startsWith("text/")) return "document";
   if (type.includes("zip") || type.includes("compressed")) return "archive";

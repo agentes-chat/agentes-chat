@@ -1115,6 +1115,7 @@
     "type": {
       "image": "图片",
       "video": "视频",
+      "audio": "音频",
       "pdf": "PDF",
       "document": "文档",
       "table": "表格",

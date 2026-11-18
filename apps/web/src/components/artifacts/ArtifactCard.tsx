@@ -1,7 +1,14 @@
 import type { Artifact, ArtifactContent, ArtifactFileContent, ArtifactRef } from "@agenteschat/client";
 import { useArtifact } from "@agenteschat/client";
 import { documentStart, KIND_ICON, parseDelimited, patchCounts } from "@agenteschat/client/lib/artifacts";
-import { fileIcon, formatBytes, pictureRatio, previewKind, previewKindOfName } from "@agenteschat/client/lib/files";
+import {
+  fileIcon,
+  formatBytes,
+  isAudioFile,
+  pictureRatio,
+  previewKind,
+  previewKindOfName,
+} from "@agenteschat/client/lib/files";
 import { Button, Icon, type IconName, Menu, Tip } from "@agenteschat/ui";
 import type { TFunction } from "i18next";
 import { type CSSProperties, type ReactNode, useEffect, useId, useRef, useState } from "react";
@@ -15,7 +22,7 @@ import { contextMenuHandler, type MenuEntry } from "@/lib/context-menu";
 import { Markdown } from "@/lib/markdown";
 import { useArtifactDownload, useDeleteArtifact } from "./ArtifactActions";
 import { useArtifactViewer } from "./ArtifactViewer";
-import { FileVideo, MAX_THUMB_BYTES, usePreviewUrl } from "./FileView";
+import { FileAudio, FileVideo, MAX_THUMB_BYTES, usePreviewUrl } from "./FileView";
 import { HtmlFrame } from "./HtmlFrame";
 import { MermaidDiagram } from "./Mermaid";
 import { useFileShare } from "./ShareDialog";
@@ -144,6 +151,34 @@ export function ArtifactCard({ artifact: ref }: { artifact: ArtifactRef }) {
         {share.dialog}
       </>
     );
+  // An audio file plays right there, its name (which opens the viewer) and actions under the player.
+  if (isAudioFile(content.name, content.contentType))
+    return (
+      <>
+        <FileAudio
+          artifactId={a.id}
+          version={a.shownVersion}
+          className="artifact-audio"
+          caption={
+            // biome-ignore lint/a11y/noStaticElementInteractions: right click only; the name and the buttons are the accessible ways
+            <div
+              className="artifact-audio__foot"
+              onContextMenu={contextMenuHandler(() => [{ kind: "header", label: a.title }, ...actions()])}
+            >
+              <button type="button" className="artifact-audio__name" onClick={open}>
+                <span className="artifact-tile__title">{a.title}</span>
+                <span className="artifact-tile__meta tabular">{meta}</span>
+              </button>
+              <span className="artifact-audio__acts">
+                <TileActions title={a.title} actions={actions} onDownload={save} />
+              </span>
+            </div>
+          }
+        />
+        {remove.dialog}
+        {share.dialog}
+      </>
+    );
   if (kind === "image" && content.size <= MAX_THUMB_BYTES)
     return tile({
       media: true,
@@ -162,6 +197,24 @@ export function ArtifactCard({ artifact: ref }: { artifact: ArtifactRef }) {
  */
 function LoadingTile({ title = "", ratio }: { title?: string; ratio?: number }) {
   const kind = previewKindOfName(title);
+  // An audio file's player, still, with its name: what `FileAudio` draws once its details are here.
+  if (isAudioFile(title))
+    return (
+      <div className="ac-voice file-audio artifact-audio artifact-audio--loading" aria-busy="true">
+        <div className="ac-voice__card">
+          <div className="ac-voice__bar">
+            <span className="ac-voice__play" />
+            <span className="ac-voice__wave" />
+          </div>
+          <div className="artifact-audio__foot">
+            <span className="artifact-audio__name">
+              <span className="artifact-tile__title">{title}</span>
+              <span className="artifact-tile__meta">{" "}</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    );
   if (kind === "video")
     return (
       <div className="artifact-tile artifact-tile--loading" data-kind="video" aria-busy="true">

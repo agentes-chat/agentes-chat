@@ -31,8 +31,9 @@ export interface VoicePlayerLabels {
 export interface VoicePlayerProps {
   /** Where it plays from. */
   src: string;
-  /** The wave, from 0 to 1. */
+  /** The wave, from 0 to 1; empty: a flat line (an audio file, which has none). */
   peaks: readonly number[];
+  /** Its length; 0 when not known ahead (an audio file): the audio's own, read from its metadata. */
   durationMs: number;
   labels: VoicePlayerLabels;
   /** Its date passed: nothing plays, and the words can still be opened. */
@@ -43,6 +44,8 @@ export interface VoicePlayerProps {
   words?: string | null;
   /** Under the player ("Vai assim que a conexão voltar"). */
   note?: ReactNode;
+  /** Inside the card, under the bar: an audio file's name and actions. */
+  caption?: ReactNode;
   /** The speed, when its caller shares one between players; without it each player keeps its own, from 1x. */
   speed?: number;
   /** The speed button picked `speed`. */
@@ -63,6 +66,7 @@ export const stopVoicePlayback = stopPlayback;
 /**
  * A voice message: play, wave, time and speed, a click or a drag on the wave moves through it. The words stay closed on
  * every load and open only from the small button at its end. An expired one shows its wave dimmed, and doesn't play.
+ * An audio file plays in it too: no wave (a flat line), its length read from the audio, its name in `caption`.
  */
 export function VoicePlayer({
   src,
@@ -73,6 +77,7 @@ export function VoicePlayer({
   isGone,
   words,
   note,
+  caption,
   speed: shared,
   onSpeed,
   className,
@@ -90,6 +95,27 @@ export function VoicePlayer({
   const [open, setOpen] = useState(false);
   const wordsId = useId();
   const dead = Boolean(expired) || gone;
+  // Without a length given, the audio's own: read from its metadata before a play (for the time), then while it plays.
+  const [read, setRead] = useState(0);
+  const lengthMs = durationMs > 0 ? durationMs : read;
+  const length = useRef(lengthMs);
+  length.current = lengthMs;
+  useEffect(() => {
+    if (durationMs > 0) return;
+    const probe = new Audio();
+    probe.preload = "metadata";
+    probe.onloadedmetadata = () => {
+      if (Number.isFinite(probe.duration)) setRead(probe.duration * 1000);
+    };
+    probe.src = src;
+    return () => {
+      probe.onloadedmetadata = null;
+      probe.removeAttribute("src");
+      probe.load();
+    };
+  }, [durationMs, src]);
+  const lengthOf = (a: HTMLAudioElement | null) =>
+    length.current > 0 ? length.current : a && Number.isFinite(a.duration) ? a.duration * 1000 : 0;
 
   const paint = useCallback(
     () => drawVoiceWave(canvas.current, peaks, { progress: pos.current, handle: !dead }),
@@ -118,10 +144,10 @@ export function VoicePlayer({
   const to = useCallback(
     (next: number) => {
       pos.current = next;
-      setTime(next * durationMs);
+      setTime(next * length.current);
       paint();
     },
-    [durationMs, paint],
+    [paint],
   );
   const failed = useCallback(
     (a: HTMLAudioElement) => {
@@ -155,7 +181,7 @@ export function VoicePlayer({
     const a = audio.current;
     claimPlayback(halt);
     a.playbackRate = speed;
-    if (pos.current > 0) a.currentTime = (pos.current * durationMs) / 1000;
+    if (pos.current > 0 && lengthOf(a) > 0) a.currentTime = (pos.current * lengthOf(a)) / 1000;
     // A pause before it started rejects with AbortError: not a failure.
     a.play().catch((error: unknown) => {
       if ((error as { name?: string } | null)?.name !== "AbortError") failed(a);
@@ -163,7 +189,9 @@ export function VoicePlayer({
     setOn(true);
     const tick = () => {
       if (!audio.current) return;
-      to(Math.min(1, (audio.current.currentTime * 1000) / durationMs));
+      const total = lengthOf(audio.current);
+      if (total > 0 && length.current <= 0) setRead(total);
+      if (total > 0) to(Math.min(1, (audio.current.currentTime * 1000) / total));
       frame.current = requestAnimationFrame(tick);
     };
     frame.current = requestAnimationFrame(tick);
@@ -172,7 +200,8 @@ export function VoicePlayer({
   const seek = (next: number) => {
     const clamped = Math.max(0, Math.min(0.999, next));
     to(clamped);
-    if (audio.current) audio.current.currentTime = (clamped * durationMs) / 1000;
+    const total = lengthOf(audio.current);
+    if (audio.current && total > 0) audio.current.currentTime = (clamped * total) / 1000;
   };
   const grab = (e: PointerEvent<HTMLCanvasElement>) => {
     if (dead) return;
@@ -191,9 +220,10 @@ export function VoicePlayer({
   };
   const keys = (e: KeyboardEvent<HTMLCanvasElement>) => {
     const step = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
-    if (!step) return;
+    const total = lengthOf(audio.current);
+    if (!step || total <= 0) return;
     e.preventDefault();
-    seek(pos.current + (step * 5000) / durationMs);
+    seek(pos.current + (step * 5000) / total);
   };
 
   const hasWords = Boolean(words?.trim());
@@ -225,7 +255,7 @@ export function VoicePlayer({
                   tabIndex: 0,
                   "aria-label": labels.seek,
                   "aria-valuemin": 0,
-                  "aria-valuemax": Math.round(durationMs / 1000),
+                  "aria-valuemax": Math.round(lengthMs / 1000),
                   "aria-valuenow": Math.round(time / 1000),
                   "aria-valuetext": clock(time),
                   onPointerDown: grab,
@@ -236,7 +266,7 @@ export function VoicePlayer({
             <span className="ac-voice__expired">{labels.expired}</span>
           ) : (
             <>
-              <span className="ac-voice__time">{clock(on || time > 0 ? time : durationMs)}</span>
+              <span className="ac-voice__time">{clock(on || time > 0 ? time : lengthMs)}</span>
               <button
                 type="button"
                 className="ac-voice__speed"
@@ -252,6 +282,7 @@ export function VoicePlayer({
             </>
           )}
         </div>
+        {caption}
         {hasWords &&
           (open ? (
             <div className="ac-voice__words" id={wordsId}>

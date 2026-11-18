@@ -15,7 +15,13 @@ mock.module("expo-constants", () => ({ default: {} }));
 // The app's one shared player, counting the speeds it is given. A test moves its clock (`currentTime`, of a 9 s clip)
 // and can hold its seeks until it lets them land.
 const rates: number[] = [];
-const clock = { currentTime: 0, holdSeeks: false, land: null as null | (() => void) };
+const clock = {
+  currentTime: 0,
+  duration: 9,
+  finished: false,
+  holdSeeks: false,
+  land: null as null | (() => void),
+};
 mock.module("expo-audio", () => ({
   setAudioModeAsync: async () => undefined,
   createAudioPlayer: () => ({
@@ -33,19 +39,32 @@ mock.module("expo-audio", () => ({
       }),
     play: () => undefined,
     pause: () => undefined,
-    currentStatus: { didJustFinish: false },
+    get currentStatus() {
+      return { didJustFinish: clock.finished };
+    },
     get currentTime() {
       return clock.currentTime;
     },
-    duration: 9,
+    get duration() {
+      return clock.duration;
+    },
   }),
 }));
 
 const { STORAGE_PREFIX } = await import("../../src/config");
 const { STORED } = await import("../../src/lib/storage");
 const { setVoiceSpeed, subscribeVoiceSpeed, voiceSpeed } = await import("../../src/features/voice/speed");
-const { placeOf, playingId, seekPlayback, setPlaybackSpeed, startingId, startPlayback, stopPlayback, subscribePlace } =
-  await import("../../src/features/voice/playback");
+const {
+  lengthOf,
+  placeOf,
+  playingId,
+  seekPlayback,
+  setPlaybackSpeed,
+  startingId,
+  startPlayback,
+  stopPlayback,
+  subscribePlace,
+} = await import("../../src/features/voice/playback");
 
 /** A few of the player's 50 ms ticks. */
 const ticks = () => Bun.sleep(160);
@@ -176,5 +195,53 @@ describe("where a voice message stands lives in the playback module, not in its 
     clock.currentTime = 9;
     await ticks();
     expect([placeOf("clip-f"), playingId(), ended]).toEqual([0, null, 1]);
+  });
+});
+
+describe("an audio file, which comes without its length", () => {
+  test("its length is the player's once read, kept for its clock and its next play; a given length wins", async () => {
+    clock.currentTime = 0;
+    clock.duration = 9;
+    expect(lengthOf("file:len")).toBe(0);
+    await startPlayback({ ...request("file:len"), durationMs: 0 });
+    clock.currentTime = 3;
+    await ticks();
+    expect(lengthOf("file:len")).toBe(9000);
+    expect(placeOf("file:len")).toBeCloseTo(1 / 3, 5);
+    stopPlayback();
+    expect(lengthOf("file:len")).toBe(9000);
+    expect(lengthOf("file:len", 5000)).toBe(5000);
+  });
+
+  test("a place picked before its length goes there once the player reads it, and stays put meanwhile", async () => {
+    clock.currentTime = 0;
+    clock.duration = Number.NaN;
+    seekPlayback("file:late", 0.5);
+    await startPlayback({ ...request("file:late"), durationMs: 0, from: 0.5 });
+    clock.currentTime = 0.2;
+    await ticks();
+    // Still waiting for the length: the handle stays where it was put, and the button stops spinning as it plays.
+    expect(placeOf("file:late")).toBe(0.5);
+    expect(startingId()).toBeNull();
+    clock.duration = 9;
+    await ticks();
+    expect(clock.currentTime).toBe(4.5);
+    expect(placeOf("file:late")).toBeCloseTo(0.5, 5);
+    stopPlayback();
+  });
+
+  test("a stream that never says its length still ends", async () => {
+    clock.currentTime = 0;
+    clock.duration = Number.NaN;
+    let ended = 0;
+    await startPlayback({ ...request("file:stream"), durationMs: 0, from: 0.3, onEnd: () => ended++ });
+    clock.currentTime = 1;
+    await ticks();
+    expect(startingId()).toBeNull();
+    clock.finished = true;
+    await ticks();
+    expect([playingId(), ended]).toEqual([null, 1]);
+    clock.finished = false;
+    clock.duration = 9;
   });
 });

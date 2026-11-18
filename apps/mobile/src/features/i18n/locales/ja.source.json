@@ -2946,6 +2946,9 @@
   "files.type.video": {
     "value": "Video"
   },
+  "files.type.audio": {
+    "value": "Audio"
+  },
   "files.type.pdf": {
     "value": "PDF"
   },

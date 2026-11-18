@@ -1115,6 +1115,7 @@
     "type": {
       "image": "이미지",
       "video": "동영상",
+      "audio": "오디오",
       "pdf": "PDF",
       "document": "문서",
       "table": "표",

@@ -544,8 +544,14 @@ const CONTENT_TYPES: Record<string, string> = {
   webm: "video/webm",
   mov: "video/quicktime",
   mp3: "audio/mpeg",
+  m4a: "audio/mp4",
+  aac: "audio/aac",
   wav: "audio/wav",
   ogg: "audio/ogg",
+  oga: "audio/ogg",
+  opus: "audio/ogg",
+  flac: "audio/flac",
+  weba: "audio/webm",
   ...Object.fromEntries(CODE_EXTENSIONS.map((ext) => [ext, "text/plain; charset=utf-8"])),
 };
 

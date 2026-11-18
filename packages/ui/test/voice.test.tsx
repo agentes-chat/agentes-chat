@@ -17,17 +17,27 @@ afterEach(() => {
 
 /** The media elements the player makes; `fail()` is a load that went wrong (a 503, a dropped connection). */
 function fakeAudio(play: () => Promise<void> = () => Promise.resolve()) {
-  const made: { src: string; fail: () => void; el: { playbackRate: number } }[] = [];
+  const made: {
+    src: string;
+    fail: () => void;
+    loaded: () => void;
+    el: { playbackRate: number; duration: number; src: string };
+  }[] = [];
   globalThis.Audio = class {
     currentTime = 0;
+    duration = Number.NaN;
     playbackRate = 1;
+    preload = "";
     onerror: (() => void) | null = null;
     onended: (() => void) | null = null;
-    constructor(readonly src: string) {
-      made.push({ src, fail: () => this.onerror?.(), el: this });
+    onloadedmetadata: (() => void) | null = null;
+    constructor(public src: string) {
+      made.push({ src, fail: () => this.onerror?.(), loaded: () => this.onloadedmetadata?.(), el: this });
     }
     play = play;
     pause() {}
+    removeAttribute() {}
+    load() {}
   } as unknown as typeof Audio;
   return made;
 }
@@ -111,6 +121,21 @@ describe("VoicePlayer", () => {
     ]);
     expect(made.map((a) => [a.src, a.el.playbackRate])).toEqual([["/a", 1.5]]);
     expect(screen.getByRole("button", { name: "Pausar" })).toBeTruthy();
+  });
+
+  test("an audio file: no length given, the audio's own from its metadata, and its caption inside the card", async () => {
+    const made = fakeAudio();
+    player({ peaks: [], durationMs: 0, caption: <span>amostra.mp3</span> });
+    expect(document.querySelector(".ac-voice__card")?.textContent).toContain("amostra.mp3");
+    // Only the metadata is asked for before a play.
+    const probe = made[0];
+    expect(probe?.el.src).toBe("/a");
+    await act(async () => {
+      if (probe) probe.el.duration = 75;
+      probe?.loaded();
+    });
+    expect(document.querySelector(".ac-voice__time")?.textContent).toBe("1:15");
+    expect(screen.getByRole("slider").getAttribute("aria-valuemax")).toBe("75");
   });
 
   test("with no speed from its caller it keeps its own", () => {

@@ -1194,6 +1194,7 @@
     "type": {
       "image": "Bild",
       "video": "Video",
+      "audio": "Audio",
       "pdf": "PDF",
       "document": "Dokument",
       "table": "Tabelle",
