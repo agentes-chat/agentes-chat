@@ -647,6 +647,7 @@
     "termsMiddle": " i ",
     "privacy": "Polityka prywatności",
     "termsAfter": ".",
+    "poweredBy": "Działa dzięki agentes.chat",
     "signOut": "Wyloguj się",
     "earlyAccess": {
       "otherEmail": "To zaproszenie jest dla innego adresu. Zarejestruj się adresem, na który zostało wysłane.",
@@ -2230,6 +2231,7 @@
     "phone": "Telefon",
     "phoneOn": "W aplikacji na telefon, nawet przy zablokowanym ekranie",
     "phoneOff": "Włącz je w aplikacji na telefon",
+    "phoneOpen": "Otwórz",
     "mac": "Aplikacja na Maca",
     "macHelp": "Gdy aplikacja jest otwarta, nawet w tle",
     "on": "Włączone",
@@ -2577,6 +2579,56 @@
     "localOnly": "Ten serwer otwiera się tylko na komputerze, na którym działa, więc telefon się do niego nie dostanie.",
     "localOnlyHow": "W aplikacji agentes.chat na tamtym komputerze włącz Dostęp z telefonu i dla zespołu w Preferencje › Serwery. Potem wróć tutaj.",
     "localOnlyHere": "Włącz Dostęp z telefonu i dla zespołu. Potem wróć tutaj."
+  },
+  "surface": {
+    "link": {
+      "consent": "{{assistant}} od agentes.chat może pisać do ciebie na {{surface}} w sprawie twoich przestrzeni roboczych i dzwonić tylko wtedy, gdy coś jest pilne i na to pozwolisz. Napisz stop, aby to wyłączyć.",
+      "title": "Rozmawiaj z {{assistant}} w {{surface}}",
+      "qr": "Kod QR, który otwiera {{surface}} z wpisanym kodem",
+      "making": "Tworzenie kodu",
+      "code": "Twój kod {{code}}",
+      "open": "Otwórz {{surface}}",
+      "stepScan": "Zeskanuj kod telefonem albo otwórz aplikację",
+      "stepSend": "Wyślij wiadomość bez zmian",
+      "stepSendText": "To przejdzie dalej samo, gdy dotrze twoja wiadomość.",
+      "stepConfirm": "Sprawdź nadawcę i potwierdź tutaj",
+      "showCode": "Pokaż kod jeszcze raz",
+      "confirmTitle": "Czy to twój {{surface}}?",
+      "sentBy": "Ten nadawca wysłał twój kod",
+      "onlyYou": "Połącz tylko, jeśli to ty.",
+      "workspace": "Odpowiada w {{workspace}}",
+      "confirm": "Tak, połącz",
+      "notMe": "To nie ja",
+      "doneTitle": "{{surface}} połączony",
+      "doneText": "Od teraz {{assistant}} odpowiada ci tam.",
+      "newCode": "Utwórz nowy kod",
+      "done": "Gotowe"
+    },
+    "row": {
+      "hint": "Rozmawiaj z {{assistant}} i dostawaj odpowiedzi w {{surface}}.",
+      "link": "Połącz",
+      "none": "{{assistant}} może tam do ciebie pisać",
+      "pending": "Nadawca czeka, aż potwierdzisz",
+      "unlink": "Rozłącz",
+      "unlinkTitle": "Rozłączyć {{surface}}?",
+      "unlinkText": "{{assistant}} przestanie ci tam odpowiadać. Możesz połączyć ponownie w każdej chwili.",
+      "unlinked": "{{surface}} rozłączony"
+    },
+    "undo": {
+      "title": "Rozłączyć aplikację czatu?",
+      "lead": "Twoje konto zostało właśnie połączone z aplikacją czatu. Jeśli to nie ty, rozłącz ją tutaj.",
+      "button": "Rozłącz",
+      "done": "{{surface}} rozłączony",
+      "doneLead": "{{display}} nie może już dotrzeć do twojego konta.",
+      "ended": "Już rozłączono",
+      "endedLead": "{{display}} w {{surface}} był już rozłączony. Nie trzeba nic więcej robić.",
+      "gone": "Ten link do cofnięcia już nie działa",
+      "sender": "Ten nadawca"
+    },
+    "via": "przez {{surface}}",
+    "viaTip": "Wysłane przez {{person}} na {{surface}}",
+    "forwarded": "przekazane przez {{surface}}",
+    "forwardedTip": "{{person}} przekazał(a) to z {{surface}}. To słowa kogoś innego."
   },
   "team": {
     "title": "Zespół",
@@ -3671,9 +3723,18 @@
     "titleFor": "Połącz AI dla: {{name}}",
     "have": {
       "title": "Już połączone",
-      "titleFor": "Już połączone dla: {{name}}",
       "other": "Albo połącz inne",
-      "manageKeys": "Zarządzaj kluczami lub je usuń"
+      "manageKeys": "Zarządzaj kluczami lub je usuń",
+      "pickLine": "Wybierz konto już tu połączone. {{name}} myśli z jego pomocą.",
+      "onlyOwner_one": "Jeszcze {{count}} konto, które może przekazać tylko {{name}}.",
+      "onlyOwner_few": "Jeszcze {{count}} konta, które może przekazać tylko {{name}}.",
+      "onlyOwner_many": "Jeszcze {{count}} kont, które może przekazać tylko {{name}}.",
+      "onlyOwner_other": "Jeszcze {{count}} konta, które może przekazać tylko {{name}}.",
+      "moreAgents_one": "i jeszcze {{count}} agent",
+      "moreAgents_few": "i jeszcze {{count}} agentów",
+      "moreAgents_many": "i jeszcze {{count}} agentów",
+      "moreAgents_other": "i jeszcze {{count}} agenta",
+      "plenty": "Spory zapas"
     },
     "chat": {
       "mine": "Twoje",
@@ -4111,7 +4172,6 @@
       "aiAccount": "Myśli z {{account}}",
       "aiModel": "Myśli przez API",
       "aiNone": "Nie ma jeszcze AI. Połącz je po utworzeniu agenta",
-      "reviewTitle": "Przejrzyj: {{name}}",
       "lines": "Co dostaje {{name}}",
       "aChannel": "kanał",
       "anApp": "aplikacja",
@@ -7671,7 +7731,6 @@
     "adminsOnlyPersonal": "Poproś osobę, która zarządza tą przestrzenią, żeby pozwoliła ci tworzyć agentów.",
     "proposalClosed": "O tej propozycji już zdecydowano albo wygasła.",
     "proposalNoAccess": "Tę propozycję widzą tylko osoby z jej rozmowy.",
-    "backToChat": "Wróć do rozmowy",
     "and": " i ",
     "routine": "Rutyna",
     "routineKeep": "Utwórz rutynę {{name}}",
@@ -7847,6 +7906,54 @@
     "otherSkill": "Inna umiejętność",
     "namesLead": "Może",
     "namesRoll": "Inne imiona",
+    "proposal": {
+      "lead": "Popraw to, co zaproponował {{name}}. Wszystko możesz zmienić później.",
+      "lead_female": "Popraw to, co zaproponowała {{name}}. Wszystko możesz zmienić później.",
+      "leadNarrow": "Propozycja agenta {{name}}: {{why}}",
+      "side": "Propozycja",
+      "from": "Zaproponował {{name}}",
+      "from_female": "Zaproponowała {{name}}",
+      "changed": "Co zmieniono",
+      "changedNone": "Jeszcze nic. To, co zmienisz na karcie, pojawi się tutaj z opcją Cofnij.",
+      "undo": "Cofnij",
+      "changes": {
+        "changed": "zmieniono",
+        "added": "dodano",
+        "removed": "usunięto",
+        "how": "Jak pracuje"
+      },
+      "firstTask": "Pierwsze zadanie",
+      "firstTaskPlaceholder": "O co poprosić najpierw (opcjonalnie)",
+      "firstTaskHint": "Czeka w czacie z {{name}}. Wystarczy wysłać.",
+      "firstTaskHintBlank": "Czeka w czacie z agentem. Wystarczy wysłać.",
+      "firstTaskNone": "Bez zadania czat otworzy się pusty.",
+      "after": "Po utworzeniu",
+      "afterAi": "Połącz AI, którą {{name}} będzie myśleć",
+      "afterAiBlank": "Połącz AI, którą agent będzie myśleć",
+      "afterApp": "Połącz {{app}}",
+      "afterNone": "Nic. {{name}} zacznie pracę zaraz po utworzeniu.",
+      "afterNoneBlank": "Nic. Agent zacznie pracę zaraz po utworzeniu.",
+      "discard": "Odrzuć propozycję",
+      "otherChannel": "Inny kanał",
+      "chooseChannels": "Wybierz kanały",
+      "channelsNone": "Tylko w czacie z tobą.",
+      "channel": {
+        "lead": "Gdzie {{name}} będzie pracować.",
+        "leadBlank": "Gdzie agent będzie pracować.",
+        "does": "{{name}} odpowiada, gdy ktoś wywoła go w {{channel}}, i czyta, co się tam dzieje.",
+        "does_female": "{{name}} odpowiada, gdy ktoś wywoła ją w {{channel}}, i czyta, co się tam dzieje.",
+        "doesBlank": "Agent odpowiada, gdy ktoś wywoła go w {{channel}}, i czyta, co się tam dzieje.",
+        "remove": "Usuń z {{channel}}"
+      },
+      "routine": {
+        "label": "Rutyna",
+        "lead": "{{when}}, w {{channel}}.",
+        "leadDm": "{{when}}, w czacie z tobą.",
+        "starts": "Zacznie działać po utworzeniu agenta {{name}}. Godzinę i treść zmienisz w Rutynach.",
+        "startsBlank": "Zacznie działać po utworzeniu agenta. Godzinę i treść zmienisz w Rutynach.",
+        "remove": "Usuń rutynę"
+      }
+    },
     "skill": {
       "opens": "{{name}} otwiera tę instrukcję, gdy pojawia się temat. Edytujesz ją w Umiejętnościach.",
       "opensBlank": "Otwiera tę instrukcję, gdy pojawia się temat. Edytujesz ją w Umiejętnościach.",
@@ -12048,6 +12155,17 @@
     "saved": "Logo zaktualizowane.",
     "removed": "Logo usunięte."
   },
+  "orgAccent": {
+    "label": "Kolor akcentu",
+    "change": "Zmień kolor",
+    "useDefault": "Użyj domyślnego",
+    "suggested": "Sugerowane kolory",
+    "sampleMention": "@Agent",
+    "sampleLink": "Link",
+    "save": "Zapisz kolor",
+    "saved": "Kolor akcentu zaktualizowany.",
+    "reset": "Przywrócono kolor domyślny."
+  },
   "look": {
     "previous": "Poprzedni",
     "next": "Następny",
@@ -13743,6 +13861,37 @@
       "add": "Dodaj MCP",
       "list": "Połączone serwery MCP",
       "none": "Tu pojawiają się serwery MCP połączone przez ich adres."
+    },
+    "personal": {
+      "note": "Te połączenia otwierasz tylko ty. Twoi agenci używają ich tylko wtedy, gdy o to poprosisz.",
+      "noteOne": "To połączenie otwierasz tylko ty, a twoi agenci używają go tylko wtedy, gdy o to poprosisz.",
+      "emptyTitle": "Połącz własne konta",
+      "emptyText": "Swoje połączenia otwierasz tylko ty, a twoi agenci używają ich tylko wtedy, gdy o to poprosisz. Skrzynki pocztowe mają własną zasadę.",
+      "noApps": "Usługi, które połączysz tylko dla siebie, pojawią się tutaj.",
+      "mailTitle": "Twoje skrzynki",
+      "mailNote": "Agenci, którym na to pozwolono, używają Twoich skrzynek tak, jak ustawiono, także dla osób, które rozmawiają z nimi bezpośrednio. Gdy ktoś inny prosi o coś, co wymaga zatwierdzenia, zatwierdzasz Ty.",
+      "others": "Osobiste połączenia innych osób",
+      "of": "Osobiste: {{name}}",
+      "seeAll": "Zobacz wszystkie ({{count}})",
+      "forWhom": "Dla kogo",
+      "teamLocked": "Połączenia zespołu dodają tylko osoby zarządzające konektorami.",
+      "mailLocked": "Skrzynka pocztowa zawsze należy do osoby, która ją łączy.",
+      "done": "Twoi agenci używają go tylko wtedy, gdy poprosisz.",
+      "worksWhenAsked": "Działa tylko, gdy poprosisz.",
+      "remove": "Usuń",
+      "removeName": "Usuń {{name}}",
+      "removeTitle": "Usunąć {{name}}?",
+      "takeOff": "Zabierz agentowi",
+      "takeOffTitle": "Zabierz {{name}} agentowi",
+      "takeOffName": "Zabierz {{name}} agentowi {{agent}}",
+      "takeOffOne": "Zabierz",
+      "takenOff": "{{agent}} nie używa już {{name}}.",
+      "turnOff": "Wyłącz",
+      "turnOffName": "Wyłącz {{name}} dla tego agenta",
+      "moveToTeam": "Przenieś do zespołu",
+      "moveTitle": "Przenieść {{name}} do zespołu?",
+      "moveText": "Wszyscy w workspace go widzą. Osoby zarządzające agentami wybierają, które agenty z niego korzystają, a właściciel agenta może go wyłączyć u swojego. Agent, który korzysta ze wszystkich połączonych aplikacji, dostaje go od razu.",
+      "moved": "{{name}} należy teraz do zespołu."
     },
     "addTitle": "Dodaj konektor",
     "catalogText": "Połącz raz dla {{org}}. Potem wybierz, z czego może korzystać każdy agent.",
@@ -15971,6 +16120,16 @@
     }
   },
   "errors": {
+    "surface": {
+      "off": "Łączenie aplikacji czatu zostało wyłączone. Odśwież stronę, aby zobaczyć aktualne ustawienia.",
+      "notAllowed": "Łączenie aplikacji czatu nie jest jeszcze dostępne dla twojego konta. Do tego czasu korzystaj z aplikacji tutaj.",
+      "noAssistant": "Asystent w tej przestrzeni roboczej nie ma ustawionej rozmowy z tobą. Wybierz inną przestrzeń roboczą do połączenia.",
+      "noWorkspace": "Nie należysz już do tej przestrzeni roboczej. Wybierz inną przestrzeń roboczą do połączenia.",
+      "linkGone": "To połączenie już nie czeka: wygasło po 10 minutach albo zostało anulowane. Utwórz nowy kod, aby zacząć od nowa.",
+      "taken": "Ten nadawca jest połączony z innym kontem agentes.chat. Odłącz go tam, a potem wyślij nowy kod.",
+      "undoGone": "Ten link do cofnięcia został już użyty albo wygasł. Odłącz zamiast tego w ustawieniach powiadomień.",
+      "codeGone": "Ten kod jest błędny, już użyty albo wygasł po 10 minutach. Utwórz nowy kod i wyślij go ponownie."
+    },
     "wallpaper": {
       "notYours": "To zdjęcie nie jest twoje.",
       "invalid": "Takie tło nie istnieje.",
@@ -16007,7 +16166,7 @@
       "accountInUse": "To konto myśli już dla innego agenta.",
       "noAiYet": "Nadal nie ma połączonej AI.",
       "filePurged": "Ten plik usunięto ponad 30 dni temu i nie może wrócić.",
-      "looksSecret": "To wygląda na hasło lub klucz, a wszyscy tutaj by to zobaczyli.",
+      "looksSecret": "To wygląda na hasło lub klucz, a wszyscy tutaj by to zobaczyli. Lepiej poproś agenta, żeby poprosił o to prywatnie.",
       "blockSpec": "Ten blok ma błąd w częściach lub formułach, więc nie można go pokazać. Popraw go i spróbuj ponownie.",
       "takeControl": "Najpierw przejmij kontrolę nad profilem.",
       "profileBusy": "Ktoś inny używa tego profilu.",
@@ -16025,8 +16184,10 @@
       "createRefused": "Nie możesz teraz utworzyć przestrzeni roboczej.",
       "noAgentToRemind": "Żaden agent w tej rozmowie nie może ci przypomnieć.",
       "agentCantRead": "Najpierw pozwól agentowi to czytać, w jego dostępach.",
+      "connectionNotYours": "To połączenie jest osobiste innej osoby. Tylko jej rutyna może czekać na jego zdarzenia.",
       "neverHappens": "Ten harmonogram nigdy się nie wydarzy.",
       "soleOwner": "Jesteś jedynym właścicielem przestrzeni roboczej z innymi członkami. Najpierw ustaw kogoś innego jako właściciela albo usuń przestrzeń roboczą.",
+      "soleOwnerOutside": "Jesteś jedynym właścicielem przestrzeni roboczej, w której pozostałe osoby to współpracownicy zewnętrzni, a oni nie mogą być właścicielami. Najpierw zaproś członka i ustaw go jako właściciela albo usuń przestrzeń roboczą.",
       "testFirst": "Przetestuj połączenie z tymi ustawieniami, zanim je włączysz.",
       "voiceLength": "Nagranie jest za długie lub za krótkie.",
       "sendAgain": "Plik nie dotarł w całości. Wyślij go ponownie.",
@@ -16136,7 +16297,8 @@
       "denied": "Twoja prośba nie została zatwierdzona. Poproś kogoś stamtąd o zaproszenie.",
       "answered": "Ktoś już odpowiedział na tę prośbę.",
       "expired": "Ta prośba wygasła: nikt na nią nie odpowiedział przez 14 dni.",
-      "codeNeeded": "Najpierw potwierdź swój e-mail."
+      "codeNeeded": "Najpierw potwierdź swój e-mail.",
+      "outsideClosed": "To konto zostało zablokowane lub jest usuwane, więc nie może dołączyć. Prośba została zamknięta."
     },
     "code": {
       "wrong": "Błędny kod. Spróbuj ponownie.",
@@ -17657,8 +17819,37 @@
     },
     "system": "System",
     "removed": "Usunięte",
+    "operatorRead": {
+      "sentence": "{{who}}: odczytano {{what}}",
+      "who": {
+        "server": "Osoba zarządzająca tym serwerem",
+        "cloud": "Wsparcie agentes.chat"
+      },
+      "what": {
+        "message": "jedną wiadomość",
+        "run_step": "krok pracy agenta",
+        "agent": "instrukcje agenta",
+        "routine": "jedną rutynę",
+        "task": "zadanie w tle",
+        "channel": "nazwę kanału",
+        "connection": "dane połączenia",
+        "support_request": "prośbę o wsparcie",
+        "direct": "coś z rozmowy prywatnej",
+        "other": "coś z przestrzeni roboczej"
+      },
+      "request": {
+        "plain": "na prośbę osoby: {{name}}",
+        "app": "na prośbę osoby: {{name}}, wysłaną z aplikacji",
+        "email": "na prośbę osoby: {{name}}, wysłaną e-mailem",
+        "operator": "na prośbę osoby: {{name}}, zapisaną przez osobę zarządzającą tym serwerem",
+        "support": "na prośbę osoby: {{name}}, zapisaną przez wsparcie"
+      },
+      "fault": "aby zdiagnozować nieudane lub zawieszone uruchomienie",
+      "ai": "z pomocą asystenta AI"
+    },
     "change": {
       "mergedWithoutAsking": "Scalono w {{repo}} bez pytania",
+      "accentChanged": "Zmieniono kolor akcentu przestrzeni roboczej",
       "pattern": "{{verb}} {{area}}",
       "approval": {
         "approved": "Zatwierdzono prośbę",
@@ -17863,7 +18054,7 @@
       "roles": "Każda rola dodaje uprawnienia, kanały i agentów.",
       "vault": "Hasła, klucze i kontakty twoich agentów. Haseł nigdy nie widzą.",
       "access": "Z czego może korzystać każdy agent: jeden poziom na konektor.",
-      "connectors": "Usługi i serwery MCP podłączone raz dla całej przestrzeni roboczej.",
+      "connectors": "Usługi i serwery MCP, podłączone dla zespołu albo tylko dla ciebie.",
       "skills": "Instrukcje w Markdown, które agenci otwierają, gdy ich potrzebują.",
       "storage": "Gdzie są przechowywane pliki przestrzeni roboczej.",
       "usage": "Konta AI przestrzeni roboczej oraz ile zużywa każda osoba i każdy agent.",
@@ -17942,7 +18133,7 @@
         "wallpaper": {
           "title": "Tło",
           "help": "Zmienia się tylko dla ciebie, na wszystkich twoich urządzeniach",
-          "rowHelp": "Za każdą rozmową, tylko dla ciebie. Rozmowa może mieć własne tło w swoim menu.",
+          "rowHelp": "Za każdą rozmową, tylko dla ciebie, chyba że rozmowa ma własne tło ustawione w swoim menu.",
           "rowSub": "Tylko dla ciebie, w każdej rozmowie",
           "onlyHere": "Tylko w {{name}}, tylko dla ciebie",
           "none": "Bez tła",
@@ -19222,6 +19413,8 @@
       "file_saved": "Zapisano plik.",
       "issue_work_start": "Zrób proszę zadanie #{{number}}.",
       "issue_taken": "Biorę zadanie #{{number}}.",
+      "surfaceUnlinked": "{{surface}} odłączono, bo zmieniła się tożsamość. Połącz ponownie w Ustawieniach, jeśli to Ty.",
+      "surfaceVoiceDropped": "Nie udało mi się zrozumieć tej wiadomości głosowej. Wyślesz ją jeszcze raz albo napiszesz?",
       "done": "Gotowe.",
       "stretch_paused_runs_one": "{{agents}} zatrzymuje się, żeby sprawdzić to z tobą, zanim pójdzie dalej",
       "stretch_paused_runs_few": "{{agents}} zatrzymują się, żeby sprawdzić to z tobą, zanim pójdą dalej",
@@ -20157,6 +20350,7 @@
     "serverOwner": "To ty skonfigurowałeś ten serwer. Jego własne ustawienia nie będą tu miały właściciela, tylko w jego środowisku.",
     "blockers": "Zanim będziesz mógł je usunąć",
     "soleOwner": "Jesteś jedynym właścicielem {{name}}. Nadaj komuś innemu rolę właściciela albo usuń {{name}}.",
+    "soleOwnerOutside": "Jesteś jedynym właścicielem {{name}}, a pozostałe osoby to współpracownicy zewnętrzni, którzy nie mogą być właścicielami. Zaproś członka i nadaj mu rolę właściciela albo usuń {{name}}.",
     "soleOwnerSettingUp": "Jesteś jedynym właścicielem {{name}}. Dokończ konfigurację, żeby nadać komuś innemu rolę właściciela, albo usuń {{name}}.",
     "openPeople": "Otwórz Osoby",
     "finishSetup": "Dokończ konfigurację",

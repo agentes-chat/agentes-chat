@@ -369,6 +369,14 @@ test("at the limit, the owner's other free accounts of the same kind and maker, 
     "busy",
     "unknown",
   ]);
+  // One account signed in once per agent: its other login shares the limit in use, and another account is offered once.
+  const team = [
+    account("t1", { usage: usage(100), usedBy: ["Dev"], sameAs: "t1" }),
+    account("t2", { sameAs: "t1" }),
+    account("m1", { usage: usage(20), sameAs: "m1" }),
+    account("m2", { usage: usage(30), sameAs: "m1" }),
+  ];
+  expect(limitOffers(team, "claude_code", "t1", NOW).map((o) => o.account.id)).toEqual(["m1"]);
 });
 
 test("a model group's own quota (Antigravity's Claude and GPT week at 0%) binds only its models, never the account", () => {

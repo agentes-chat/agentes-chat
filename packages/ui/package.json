@@ -32,6 +32,7 @@
     "./sky/forming": "./src/sky/forming.ts",
     "./sky/horizon": "./src/sky/horizon.ts",
     "./sky/chart": "./src/sky/chart.ts",
+    "./sky/accent": "./src/sky/accent.ts",
     "./sky/avatar": "./src/sky/avatar.ts",
     "./sky/wallpaper": "./src/sky/wallpaper.ts",
     "./sky/workspace": "./src/sky/workspace.ts",

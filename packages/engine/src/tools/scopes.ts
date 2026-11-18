@@ -5,15 +5,17 @@ import {
   type Executor,
   eq,
   inArray,
+  isNotNull,
   isNull,
   like,
+  ne,
   type SQL,
   schema,
   sql,
 } from "@agenteschat/db";
 import { recordAudit } from "../audit";
 import { caches } from "../cache";
-import { NotFoundError, ValidationError } from "../errors";
+import { ForbiddenError, NotFoundError, ValidationError } from "../errors";
 import { requirePermission } from "../organizations";
 import { isRightHand, RIGHT_HAND_GRANTS } from "../right-hand";
 import type { ToolDefinition } from "./types";
@@ -419,6 +421,25 @@ export async function setAgentScopes(
     const problem =
       (await builtinOnly(db, orgId, grant)) ?? (grant.connectionId ? await validate(db, orgId, grant) : null);
     if (problem) throw new ValidationError(problem);
+  }
+  // Someone else's personal connection: only its person gives it to an agent, so a grant on one it doesn't hold yet
+  // is refused (taking it off is anyone's who may change the agent).
+  const ids = [...new Set(grants.flatMap((g) => g.connectionId ?? []))];
+  if (ids.length > 0) {
+    const theirs = await db
+      .select({ id: schema.connectorConnections.id })
+      .from(schema.connectorConnections)
+      .where(
+        and(
+          inArray(schema.connectorConnections.id, ids),
+          isNotNull(schema.connectorConnections.ownerUserId),
+          ne(schema.connectorConnections.ownerUserId, actorId),
+        ),
+      );
+    const held = await freshGrantedKeys(db, orgId, agentId);
+    for (const g of grants)
+      if (theirs.some((t) => t.id === g.connectionId) && !held.has(grantKey(g.connectionId, g.scope)))
+        throw new ForbiddenError("Only its person gives a personal connection to an agent");
   }
   caches.scopes.delete(`${orgId}:${agentId}`);
   await db.transaction(async (tx) => {

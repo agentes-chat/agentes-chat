@@ -210,7 +210,7 @@ export const Job = z
       .string()
       .nullable()
       .openapi({
-        description: `Its first ${OPERATOR_JOB_ERROR_MAX} characters; cleared 30 days after the job ended.`,
+        description: `Its first ${OPERATOR_JOB_ERROR_MAX} characters; cleared 30 days after the job ended. Null for a job of a run of a confidential thread.`,
       }),
     lastErrorStatus: z.number().int().nullable().openapi({
       description:

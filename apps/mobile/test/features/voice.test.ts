@@ -241,7 +241,7 @@ describe("a voice note with typed text and files", () => {
     );
     const bar = src("features/voice/useVoiceComposer.tsx");
     expect(bar).toContain('const trash = control("trash", t("voice.delete"), () => void take.cancel(true));');
-    expect(bar).toContain("send: locked || paused ? take.send : null");
+    expect(bar).toContain("send: (locked || paused) && !folding ? take.send : null,");
     // The swipe to cancel on the held mic is unchanged.
     expect(bar).toContain('if (intent === "cancel") scheduleOnRN(take.cancel, true);');
   });

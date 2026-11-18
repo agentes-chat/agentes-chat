@@ -669,6 +669,16 @@ test("Auditoria's row screen: the call's title in words, and what the tool said 
   expect(tech).toContain('label={t("audit.panel.techSaid")} sub={said}');
 });
 
+test("Auditoria says an operator's read of the workspace in the words the web uses: the sentence, why under it and on the row's screen", () => {
+  const src = readFileSync(join(import.meta.dir, "..", "..", "src", "features", "settings", "AuditScreen.tsx"), "utf8");
+  // The list's row: who read what, and under it at whose request or for which fault.
+  expect(src).toContain("const { name, text } = auditSentence(t, row, i18n.language);");
+  expect(src).toContain("const sub = auditSubLine(t, row);");
+  // The row's own screen says why in the reason's place.
+  expect(src).toContain("const reason = auditReason(t, row);");
+  expect(src).toContain("{reason ? (");
+});
+
 test("my photo on Você changes it with a tap, through Conta's own Alterar foto", () => {
   const read = (file: string) => readFileSync(join(import.meta.dir, "..", "..", "src", "features", "me", file), "utf8");
   const me = read("MeScreen.tsx");

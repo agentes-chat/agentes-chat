@@ -47,6 +47,7 @@ import type {
   SecretBox,
 } from "@agenteschat/client";
 import { ApiError } from "@agenteschat/client";
+import { orderAccounts } from "@agenteschat/client/lib/ai-accounts";
 import { isPlanId, planOf } from "@agenteschat/client/lib/plans";
 import { clone, type MockContext, MockNotFoundError } from "./context";
 
@@ -404,11 +405,12 @@ export function createFakeMachines(ctx: MockContext, log: (method: string, ...ar
         log("machines.moveAccountInOrder", orgId, accountId, index);
         const group = orderGroups(ai).find((g) => g.accounts.some((a) => a.id === accountId && a.movable));
         if (!group) throw new MockNotFoundError("Conta não encontrada.");
-        const ids = group.accounts
-          .filter((a) => a.movable)
-          .map((a) => a.id)
-          .filter((id) => id !== accountId);
-        ids.splice(Math.min(index, ids.length), 0, accountId);
+        // As the server: a place is an account's among those with one, its logins (`sameAs`) move together.
+        const accounts = orderAccounts(group.accounts.filter((a) => a.movable));
+        const moved = accounts.find((b) => b.some((a) => a.id === accountId)) ?? [];
+        const others = accounts.filter((b) => b !== moved);
+        others.splice(Math.min(index, others.length), 0, moved);
+        const ids = others.flat().map((a) => a.id);
         for (const a of ai.accounts) if (ids.includes(a.id)) a.useOrder = ids.indexOf(a.id);
         return clone(orderGroups(ai).find((g) => g.machineId === group.machineId && g.kind === group.kind) ?? group);
       },

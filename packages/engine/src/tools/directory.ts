@@ -233,6 +233,8 @@ function directoryTools(
   sensitive: IsSensitive,
 ) {
   const areas = areasOf(tools, prefix);
+  // One connection's tools: a person's own connection makes both its person's alone, as each of its tools.
+  const owner = tools[0]?.ownerUserId ? { ownerUserId: tools[0].ownerUserId } : {};
   const find: ToolDefinition = {
     name: `${prefix}_find_tools`,
     description: `Find ${label} tools (${tools.length} in all${areas.length ? `, about: ${areas.join(", ")}` : ""}) by what you need to do. Returns the best matches with their exact names, what each needs (input) and whether it asks a person's approval. Then call one with \`${prefix}_use_tool\`.`,
@@ -256,6 +258,7 @@ function directoryTools(
     scope: "",
     connectionId,
     connectorLabel: label,
+    ...owner,
     execute: async (input) => ({ content: findTools(tools, prefix, label, input, sensitive) }),
   };
   const use: ToolDefinition = {
@@ -273,6 +276,7 @@ function directoryTools(
     scope: "",
     connectionId,
     connectorLabel: label,
+    ...owner,
     // Never runs itself: the gateway runs the real tool (`directoryRole`).
     execute: async () => ({ content: "Unknown tool", isError: true }),
   };
@@ -505,6 +509,8 @@ function onDemandTools(
   const groups = deferrableGroups(tools);
   const areas = groups.map((g) => `${g.label} (${g.tools.length})`);
   const label = "other";
+  // Its search lists a person's own connection's tools (only ever in that person's runs): its call is theirs to read.
+  const personal = [...tools, ...loaded].find((t) => t.ownerUserId)?.ownerUserId;
   const find: ToolDefinition = {
     name: ON_DEMAND_FIND,
     description: every
@@ -528,6 +534,7 @@ function onDemandTools(
       additionalProperties: false,
     },
     scope: "",
+    ...(personal ? { ownerUserId: personal } : {}),
     execute: async (input, ctx) => ({
       content: findTools(
         tools,

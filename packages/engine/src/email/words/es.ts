@@ -564,4 +564,31 @@ export const words: EmailWords = {
         "Recibiste este correo porque este espacio de trabajo en agentes.chat es tuyo. Solo enviamos dos avisos como este.",
     },
   },
+  surface: {
+    linked: {
+      subject: (surface) => `${surface} se vinculó a tu cuenta de agentes.chat`,
+      preheader: "Tu asistente te responde allí ahora. Si no fuiste tú, desvincúlalo.",
+      headline: (surface) => `${surface} se vinculó`,
+      body: (surface, display, org) => [
+        { b: display },
+        ` en ${surface} ahora habla con tu asistente en `,
+        { b: org },
+        ".",
+      ],
+      notYou: "¿No fuiste tú? Desvincúlalo. Los mensajes de allí dejan de llegar a tu cuenta al instante.",
+      button: "Desvincular",
+      small: "Si fuiste tú, no tienes que hacer nada. Puedes desvincularlo cuando quieras en Configuración.",
+      why: (surface) => `Recibiste este correo porque ${surface} se vinculó a tu cuenta de agentes.chat.`,
+      picture: "Tu asistente, ahora también en tu teléfono",
+    },
+    unlinked: {
+      subject: (surface) => `${surface} se desvinculó de tu cuenta de agentes.chat`,
+      preheader: "Su identidad cambió. Vincúlalo de nuevo en Configuración si fuiste tú.",
+      headline: (surface) => `${surface} se desvinculó`,
+      body: (surface, display) => [{ b: display }, ` en ${surface} se desvinculó porque su identidad cambió.`],
+      small: "Vincúlalo de nuevo en Configuración si fuiste tú.",
+      why: (surface) => `Recibiste este correo porque ${surface} estaba vinculado a tu cuenta de agentes.chat.`,
+      picture: "Tu asistente, ya no en tu teléfono",
+    },
+  },
 };

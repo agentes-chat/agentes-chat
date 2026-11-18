@@ -122,7 +122,7 @@ describe("one decision, mapped per brain", () => {
     expect(modelForTier("anthropic", "medium")).toBe("claude-sonnet-5-5");
     expect(modelForTier("anthropic", "large")).toBe("claude-opus-5-5");
     expect(modelForTier("openai", "small")).toBe("gpt-6-luna");
-    expect(modelForTier("openai", "large")).toBe("gpt-6.1-sol");
+    expect(modelForTier("openai", "large")).toBe("gpt-6.2-sol");
     expect(modelForTier("nobody", "large")).toBeNull();
   });
 
@@ -131,7 +131,7 @@ describe("one decision, mapped per brain", () => {
     expect(brainModelForTier("claude_code", "medium")).toBe("sonnet");
     expect(brainModelForTier("claude_code", "large")).toBe("opus");
     expect(brainModelForTier("codex", "small")).toBe("gpt-6-luna");
-    expect(brainModelForTier("codex", "large")).toBe("gpt-6.1-sol");
+    expect(brainModelForTier("codex", "large")).toBe("gpt-6.2-sol");
     expect(brainModelForTier("model", "large")).toBeUndefined();
   });
 
@@ -151,7 +151,7 @@ describe("one decision, mapped per brain", () => {
     const applied = autoApplied(agent, plan, choice, "anthropic");
     expect(applied).toEqual({ apiModel: "claude-haiku-5-5", effort: "low" });
     expect(autoApplied(agent, plan, { tier: "large", effort: "high" }, "openai")).toEqual({
-      apiModel: "gpt-6.1-sol",
+      apiModel: "gpt-6.2-sol",
       effort: "high",
     });
     const run = withAuto({ ...agent, id: "a" }, plan, applied);

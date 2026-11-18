@@ -83,7 +83,14 @@ import {
   sameLogins,
   sharesSignIns,
 } from "./machine-accounts";
-import { getMachine, type MachineRow, machineOnline, mayBeHome, publishMachineAgentsChanged } from "./machines";
+import {
+  getMachine,
+  type MachineRow,
+  type machineOnline,
+  mayBeHome,
+  publishMachineAgentsChanged,
+  shownOnline,
+} from "./machines";
 import {
   agentMissionApproval,
   CODEX_MIN_VERSION,
@@ -254,7 +261,7 @@ export function defaultBrainModel(kind: BrainKind): string | null {
   if (kind === "model" || kind === "cursor" || kind === "opencode" || kind === "grok" || kind === "antigravity")
     return null;
   const options = brainModelOptions(kind);
-  return (options.find((o) => o.recommended) ?? options[0])?.value ?? (kind === "codex" ? "gpt-6.1-sol" : "sonnet");
+  return (options.find((o) => o.recommended) ?? options[0])?.value ?? (kind === "codex" ? "gpt-6.2-sol" : "sonnet");
 }
 
 /** The model id behind a stored value (an alias resolved; anything else as is). */
@@ -638,7 +645,7 @@ async function candidateMachines(
         (admin || m.kind !== "connected" || m.pairedByUserId === userId || m.id === current) &&
         (mayBeHome(m) || m.id === current),
     )
-    .map((m) => ({ machineId: m.id, name: m.name, online: machineOnline(m), options: brainOptions(m) }));
+    .map((m) => ({ machineId: m.id, name: m.name, online: shownOnline(m), options: brainOptions(m) }));
 }
 
 async function agentMachine(db: Database, orgId: string, machineId: string | null) {
@@ -662,7 +669,7 @@ function view(
     effectiveModel: brain === "model" ? null : (agent.brainModel ?? defaultBrainModel(brain)),
     fallback: false,
     extraUsage: paysExtraUsage(agent),
-    computer: machine ? { machineId: machine.id, name: machine.name, online: machineOnline(machine) } : null,
+    computer: machine ? { machineId: machine.id, name: machine.name, online: shownOnline(machine) } : null,
     options: brainOptions(machine),
     machines,
     canEdit: true,
@@ -1951,7 +1958,7 @@ export async function listAiAccounts(deps: BrainDeps, userId: string, orgId: str
       return {
         machineId: m.id,
         name: m.name,
-        online: machineOnline(m),
+        online: shownOnline(m),
         mine: m.pairedByUserId === userId,
         canAdd: mayAddAccounts(m, userId) && m.protocol >= ACCOUNTS_PROTOCOL,
         keys: m.protocol >= PLAN_KEYS_PROTOCOL,

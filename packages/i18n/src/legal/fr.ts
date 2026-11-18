@@ -8,7 +8,7 @@ export const legalFr: Partial<Record<LegalKind, LegalDocument>> = {
       "Le contrat d'utilisation d'agentes.chat : votre espace de travail, vos agents et les responsabilités de chaque partie.",
     courtesy:
       "Ceci est une traduction de courtoisie. En cas de divergence avec la version anglaise, la version anglaise prévaut.",
-    updated: "2026-11-16",
+    updated: "2026-11-18",
     sections: [
       {
         id: "agreement",
@@ -99,10 +99,11 @@ export const legalFr: Partial<Record<LegalKind, LegalDocument>> = {
           "Chaque espace de travail paie son propre abonnement agentes.chat. Les règles suivantes s'appliquent à tous les abonnements :",
           {
             list: [
+              "**Vendeur.** Tout achat est effectué auprès d'AGENTESCHAT, LLC, société des États-Unis constituée dans le Delaware, qui le facture.",
               "**Prix.** Les abonnements et leurs prix figurent sur notre page de tarifs. Les prix sont exprimés en dollars américains, et les taxes s'y ajoutent lorsqu'elles sont applicables. Votre banque ou votre prestataire de paiement peut prélever ses propres frais sur les achats effectués à l'étranger, comme l'IOF au Brésil.",
               "**Renouvellement.** Un abonnement se renouvelle automatiquement chaque mois ou chaque année, selon la période choisie, jusqu'à sa résiliation. Nous envoyons un rappel avant le renouvellement d'un abonnement annuel.",
               "**Résiliation.** Vous pouvez résilier à tout moment, et la résiliation prend effet à la fin de la période déjà payée. Les agents de l'espace de travail s'arrêtent alors, son ordinateur est effacé 7 jours plus tard, et ses conversations et fichiers restent accessibles en lecture et en téléchargement pendant 90 jours, après quoi ils sont supprimés.",
-              "**Absence de remboursement.** Les paiements sont définitifs et non remboursables, en tout ou en partie, y compris pour le reste d'une période après une résiliation, sauf disposition légale contraire.",
+              "**Absence de remboursement.** Chaque abonnement engendre des coûts d'exploitation dès son achat, comme l'utilisation de modèles d'IA, les serveurs et l'ordinateur de l'espace de travail. C'est pourquoi les achats sont définitifs et non remboursables, en tout ou en partie, y compris pour le reste d'une période après une résiliation.",
               "**Échecs de paiement.** Si un paiement échoue, nous réessayons au cours des jours suivants. S'il échoue toujours, l'espace de travail est mis en suspens : ses agents s'arrêtent, et les personnes peuvent toujours y lire et y écrire. Son ordinateur est conservé pendant 7 jours, puis libéré et effacé. Le paiement rétablit l'espace de travail, sur un nouvel ordinateur si l'ancien a été libéré.",
               "**Modifications de prix.** Nous pouvons modifier les prix pour les nouveaux clients à tout moment. Le prix d'un abonnement que vous avez déjà ne change qu'en raison de nouvelles taxes, à compter de son prochain renouvellement, avec un préavis d'au moins 30 jours.",
               "**Usage raisonnable.** Certaines fonctionnalités reposent sur des services d'IA que nous fournissons sans frais supplémentaires, comme le choix de l'agent qui répond, l'évaluation des souvenirs et des actions, et la recherche de l'élément sur lequel cliquer à l'écran. Nous pouvons les limiter pour un espace de travail dont l'utilisation dépasse largement la normale.",
@@ -150,7 +151,7 @@ export const legalFr: Partial<Record<LegalKind, LegalDocument>> = {
         id: "law",
         heading: "16. Droit applicable",
         blocks: [
-          "Les présentes Conditions sont régies par le droit de l'État du Delaware (États-Unis), à l'exclusion de ses règles de conflit de lois, et les parties se soumettent à la compétence exclusive des juridictions étatiques et fédérales situées dans le Delaware. Si vous êtes un consommateur relevant d'une juridiction dont la loi vous accorde des droits ou un for auxquels il ne peut être renoncé, comme le Brésil, ces droits ne sont pas affectés.",
+          "Les présentes Conditions, ainsi que tout achat effectué en vertu de celles-ci, sont régies par le droit des États-Unis et de l'État du Delaware, à l'exclusion des règles de conflit de lois, et les parties se soumettent à la compétence exclusive des juridictions étatiques et fédérales situées dans le Delaware.",
         ],
       },
       {

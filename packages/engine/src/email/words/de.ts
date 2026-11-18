@@ -572,4 +572,36 @@ export const words: EmailWords = {
         "Du bekommst diese E-Mail, weil dieser Workspace auf agentes.chat dir gehört. Wir senden nur zwei solche Hinweise.",
     },
   },
+  surface: {
+    linked: {
+      subject: (surface) => `${surface} wurde mit deinem agentes.chat-Konto verknüpft`,
+      preheader: "Dein Assistent antwortet dir jetzt dort. Wenn du das nicht warst, heb die Verknüpfung auf.",
+      headline: (surface) => `${surface} wurde verknüpft`,
+      body: (surface, display, org) => [
+        { b: display },
+        ` auf ${surface} spricht jetzt mit deinem Assistenten in `,
+        { b: org },
+        ".",
+      ],
+      notYou:
+        "Das warst nicht du? Heb die Verknüpfung auf. Nachrichten von dort erreichen dein Konto dann sofort nicht mehr.",
+      button: "Verknüpfung aufheben",
+      small:
+        "Wenn du das warst, musst du nichts tun. Du kannst die Verknüpfung jederzeit in den Einstellungen aufheben.",
+      why: (surface) => `Du erhältst diese E-Mail, weil ${surface} mit deinem agentes.chat-Konto verknüpft wurde.`,
+      picture: "Dein Assistent, jetzt auch auf deinem Handy",
+    },
+    unlinked: {
+      subject: (surface) => `${surface} wurde von deinem agentes.chat-Konto getrennt`,
+      preheader: "Die Identität hat sich geändert. Verknüpfe es in den Einstellungen neu, wenn du das warst.",
+      headline: (surface) => `${surface} wurde getrennt`,
+      body: (surface, display) => [
+        { b: display },
+        ` auf ${surface} wurde getrennt, weil sich die Identität geändert hat.`,
+      ],
+      small: "Verknüpfe es in den Einstellungen neu, wenn du das warst.",
+      why: (surface) => `Du erhältst diese E-Mail, weil ${surface} mit deinem agentes.chat-Konto verknüpft war.`,
+      picture: "Dein Assistent, nicht mehr auf deinem Handy",
+    },
+  },
 };

@@ -17,9 +17,10 @@ import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import type { AgentColorName } from "@agenteschat/ui/agent/engine";
 import { wallpaperStrength } from "@agenteschat/ui/sky/wallpaper";
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
-import { type LayoutChangeEvent, StyleSheet, useWindowDimensions } from "react-native";
+import { type LayoutChangeEvent, StyleSheet, useWindowDimensions, type ViewStyle } from "react-native";
 import { useOrg } from "@/providers/org";
 import { useTheme } from "@/ui";
+import { appShadows, type Scheme } from "@/ui/palette";
 import { keepSize, keptSize } from "./kept-sizes";
 import { BUBBLES_INSET, bubbleFill, CHAT_TEXT, quietInset } from "./logic";
 import { wallpaperKey } from "./wallpaper-logic";
@@ -38,8 +39,8 @@ export interface RowLook {
   text: { fontSize: number; lineHeight: number } | null;
   /**
    * A background behind the rows (`ChatWallpaper`): someone else's bubble is lifted off it (`WALLPAPER_LIFT`) and
-   * every bubble takes the cards' light shadow, so none fades into it. Rows with no bubble stay as they are (the
-   * background is at half behind them).
+   * every bubble takes the cards' light edge (`liftedEdge`), so none fades into it. Rows with no bubble stay as they
+   * are (the background is at half behind them).
    */
   wallpaper?: boolean;
 }
@@ -139,6 +140,25 @@ export const useCardTop = (marginTop = 0) => ({ marginTop: useContext(RowPartCon
 
 /** `quietInset` in this conversation's look. */
 export const useQuietInset = () => quietInset(useRowLook());
+
+/** `liftedEdge` per scheme, made once. */
+const liftedEdges = new Map<Scheme, ViewStyle | null>();
+
+/**
+ * A bubble's edge over a background (`RowLook.wallpaper`): the ring of the cards' light shadow (`e1`, its layer with no
+ * blur), drawn as an outline, outside the bubble as that ring is, so nothing in it moves. The shadow's blurred layer
+ * barely shows over a background, and as a `boxShadow` it cost each bubble two masked layers, drawn again on every
+ * frame of a scroll.
+ */
+export function liftedEdge(scheme: Scheme): ViewStyle | null {
+  let edge = liftedEdges.get(scheme);
+  if (edge === undefined) {
+    const ring = appShadows(scheme).e1.find((l) => l.blur === 0 && l.spread > 0);
+    edge = ring ? { outlineWidth: ring.spread, outlineColor: ring.color, outlineStyle: "solid" } : null;
+    liftedEdges.set(scheme, edge);
+  }
+  return edge;
+}
 
 /** The rows' frames per style. */
 export const lookRows = StyleSheet.create({

@@ -1,4 +1,4 @@
-import { and, type Database, eq, inArray, isNotNull, isNull, schema } from "@agenteschat/db";
+import { and, type Database, eq, inArray, isNotNull, isNull, or, schema } from "@agenteschat/db";
 import { type AiStatusDeps, agentAiStates, orgHasAi } from "./ai-status";
 import { seesAgentDetails } from "./audience";
 import { listChannels } from "./channels";
@@ -145,7 +145,14 @@ export async function rightHandPrompt(
     db
       .select({ label: connectorConnections.label })
       .from(connectorConnections)
-      .where(and(eq(connectorConnections.orgId, orgId), isNull(connectorConnections.revokedAt))),
+      .where(
+        and(
+          eq(connectorConnections.orgId, orgId),
+          isNull(connectorConnections.revokedAt),
+          // The team's and the person's own: someone else's personal connection isn't theirs to know of.
+          or(isNull(connectorConnections.ownerUserId), eq(connectorConnections.ownerUserId, personId)),
+        ),
+      ),
     db.select({ context: organizations.context }).from(organizations).where(eq(organizations.id, orgId)),
     // A deleted computer keeps its row without a token.
     db

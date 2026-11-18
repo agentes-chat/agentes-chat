@@ -29,15 +29,23 @@ describe("swiping a message to answer it", () => {
 
   test("off or on, the same views stand around the row: a message turning sent isn't drawn again", () => {
     expect(swipe).not.toContain("if (!enabled)");
-    expect(swipe).toMatch(/usePanGesture\(\{\s*enabled,/);
+    // One config for the row's life, `enabled` in it: a render (a touch's, which mounts the mark) never rebuilds it.
+    expect(swipe).toMatch(/useMemo\(\(\): PanGestureConfig => \{[\s\S]*?return \{\s*enabled,/);
+    expect(swipe).toContain("}, [enabled, onReply, reducedMotion, x, armed]);");
+    expect(swipe).toContain("const pan = usePanGesture(config);");
+    // The mark under the row mounts only once a finger lands on it.
+    expect(swipe).toContain("{marked ? <ReplyMark x={x} armed={armed} /> : null}");
     const chat = src("features/chat/ChatScreen.tsx");
     expect(chat).toContain("<SwipeReply enabled={canReply && !m.local} onReply={reply}>");
     expect(chat).toMatch(/\{NATIVE_MENU \? \(\s*<MessageMenuFor/);
     expect(chat).not.toContain("NATIVE_MENU && !m.local");
     // Its menu then holds what works before the server has it: no reactions, no empty palette.
     const menu = src("features/chat/MessageMenu.tsx");
-    expect(menu).toContain("reactions={context.message.local ? NO_REACTIONS : QUICK_REACTIONS}");
+    expect(menu).toContain("reactions={armed && !context.message.local ? QUICK_REACTIONS : NO_REACTIONS}");
     expect(menu).toContain("{reactions.length > 0 ? (");
+    // Built once a finger lands on the row (or with a screen reader on), never for every row a scroll mounts.
+    expect(menu).toContain("onArm={armed ? undefined : arm}");
+    expect(menu).toContain("{groups === null ? <Link.MenuAction hidden onPress={noop} /> : null}");
   });
 });
 
@@ -121,9 +129,11 @@ describe("the conversation's rows", () => {
   });
 
   test("a new row rises in on the strong ease-out", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
-    expect(chat).toContain("const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);");
-    expect(chat).toContain("100: { opacity: 1, transform: [{ translateY: 0 }], easing: EASE_OUT },");
+    // The app's one rise (`RISE_IN`), also the voice take's line and bar.
+    expect(src("features/chat/ChatScreen.tsx")).toContain("const ENTER = RISE_IN;");
+    const entrances = src("ui/entrances.ts");
+    expect(entrances).toContain("100: { opacity: 1, transform: [{ translateY: 0 }], easing: motion.easeOut },");
+    expect(src("ui/theme.tsx")).toContain("easeOut: Easing.bezier(0.23, 1, 0.32, 1),");
   });
 });
 

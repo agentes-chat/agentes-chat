@@ -253,6 +253,11 @@ export const machines = pgTable(
      */
     standbyAt: timestamp({ withTimezone: true }),
     /**
+     * In standby, when something first wanted it awake (`wantMachine`). People see it online only for a while after
+     * (`shownStandby`): one that never wakes shows its real state. Cleared with `standby_at`.
+     */
+    wakeWantedAt: timestamp({ withTimezone: true }),
+    /**
      * The operator says the workspace's own computer's agents wait for their way out (`PUT …/egress-waiting`): where
      * its network sends them only through a proxy, none works now, so their connections are refused for a while. The
      * apps show a line; null: they don't wait.

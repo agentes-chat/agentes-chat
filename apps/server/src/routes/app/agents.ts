@@ -261,6 +261,13 @@ const AgentProposal = z
             description:
               "A routine of its own, created with it (its schedule read when proposed: `rule`, else `cron`). It reports where the card is (a DM: the creator's DM with it).",
           }),
+        hello: z.string().optional().openapi({
+          description: "How it introduces itself, in its own voice (ADR 0164): the speech bubble on its card.",
+        }),
+        later: z.array(z.string()).optional().openapi({
+          description:
+            "Catalog apps its job needs that aren't connected yet (preset ids): its chat asks to connect them.",
+        }),
         ai: z.discriminatedUnion("kind", [
           z.object({
             kind: z.literal("account"),

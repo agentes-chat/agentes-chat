@@ -125,6 +125,11 @@ export const agentRuns = pgTable(
      * prompt caches stay valid). See docs/adr/0015-tool-gateway-and-approvals.md.
      */
     transcript: jsonb().$type<Record<string, unknown>>(),
+    /**
+     * Each claim's stage profile (the last `RUN_PROFILES_KEPT`), for the operator's work analytics. Its own column so
+     * analytics read it without decompressing the transcript; null on runs that ended before it existed.
+     */
+    profiles: jsonb().$type<unknown[]>(),
     /** Model calls made so far (capped by AGENT_MAX_TOOL_TURNS). */
     turns: integer().notNull().default(0),
     /**
@@ -547,6 +552,11 @@ export interface ApprovalApprovers {
   requesterDecides: boolean;
   /** Only `userIds` decide it, admins too: someone else asked to act in that person's own mailbox. */
   required?: boolean;
+  /**
+   * An action in one person's own connection: listed only to `userIds` and to who is in its conversation, never to
+   * admins or the agent's owner for being them (ADR 0099 addendum).
+   */
+  personal?: boolean;
 }
 
 /**
@@ -967,6 +977,17 @@ export const agentConsultations = pgTable(
     reportedAt: timestamp({ withTimezone: true }),
     expiresAt: timestamp({ withTimezone: true }).notNull(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    /**
+     * The person behind the asking run when it was made (`runAuthorityById`), never changed; null with nobody behind
+     * it (a routine's work) and on rows made before the column.
+     */
+    forUserId: text(),
+    /**
+     * The asking run had read outside content when it made this (`runReadOutside`), never changed: its words relay
+     * that content. The question's own message carries the same mark for the agent that answers; a task's start line
+     * is the server's and carries none.
+     */
+    askerReadOutside: boolean().notNull().default(false),
   },
   (t) => [
     foreignKey({ columns: [t.orgId, t.askerAgentId], foreignColumns: [agents.orgId, agents.id] }).onDelete("cascade"),
@@ -978,6 +999,8 @@ export const agentConsultations = pgTable(
     index().on(t.orgId, t.askerAgentId, t.createdAt),
     // The hand-over of a task, found by the task's conversation.
     index().on(t.orgId, t.channelId),
+    // What other agents handed an agent for a person, newest first (`handedFor`).
+    index("agent_consultations_handed_for_idx").on(t.orgId, t.targetAgentId, t.forUserId, t.createdAt),
   ],
 );
 

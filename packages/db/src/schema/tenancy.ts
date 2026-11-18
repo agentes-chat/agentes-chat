@@ -40,6 +40,8 @@ export const organizations = pgTable("organizations", {
   context: text().notNull().default(""),
   /** The workspace logo (`/api/app/org-logos/{orgId}/{hash}.{ext}`), uploaded by an admin; null = the agent mark. */
   logo: text(),
+  /** The workspace's accent, a lower-case "#rrggbb" (ADR 0193): the agent colors its apps derive; null = the default. */
+  accent: text(),
   /**
    * Set by the people who run this server through the operator API (ADR 0056): `hold` stops its agents,
    * `suspended` the whole workspace. With the notice `silent` the workspace is told only that it is paused,
@@ -374,7 +376,8 @@ export const organizationJoinRequests = pgTable(
     claimHash: text(),
     /**
      * Who the person works for, on a request the operator API filed for an outside collaborator (ADR 0191): an
-     * approval lets `userId` in with it, past the workspace's limit of people.
+     * approval lets `userId` in with it, past the workspace's limit of people. Unlike other requests, one that ran out
+     * is stored as `closed` by the daily sweep, which tells the operator once.
      */
     outsideOf: text(),
     expiresAt: timestamp({ withTimezone: true }).notNull(),

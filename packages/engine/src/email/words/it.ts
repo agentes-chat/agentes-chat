@@ -560,4 +560,34 @@ export const words: EmailWords = {
         "Hai ricevuto questa email perché questo spazio di lavoro su agentes.chat è tuo. Inviamo solo due avvisi come questo.",
     },
   },
+  surface: {
+    linked: {
+      subject: (surface) => `${surface} è stato collegato al tuo account agentes.chat`,
+      preheader: "Il tuo assistente ora ti risponde lì. Se non sei stato tu, scollegalo.",
+      headline: (surface) => `${surface} è stato collegato`,
+      body: (surface, display, org) => [
+        { b: display },
+        ` su ${surface} ora parla con il tuo assistente in `,
+        { b: org },
+        ".",
+      ],
+      notYou: "Non sei stato tu? Scollegalo. I messaggi da lì smettono subito di arrivare al tuo account.",
+      button: "Scollega",
+      small: "Se sei stato tu, non devi fare nulla. Puoi scollegarlo quando vuoi nelle Impostazioni.",
+      why: (surface) => `Ricevi questa email perché ${surface} è stato collegato al tuo account agentes.chat.`,
+      picture: "Il tuo assistente, ora anche sul tuo telefono",
+    },
+    unlinked: {
+      subject: (surface) => `${surface} è stato scollegato dal tuo account agentes.chat`,
+      preheader: "La sua identità è cambiata. Collegalo di nuovo nelle Impostazioni se sei stato tu.",
+      headline: (surface) => `${surface} è stato scollegato`,
+      body: (surface, display) => [
+        { b: display },
+        ` su ${surface} è stato scollegato perché la sua identità è cambiata.`,
+      ],
+      small: "Collegalo di nuovo nelle Impostazioni se sei stato tu.",
+      why: (surface) => `Ricevi questa email perché ${surface} era collegato al tuo account agentes.chat.`,
+      picture: "Il tuo assistente, non più sul tuo telefono",
+    },
+  },
 };

@@ -1,5 +1,6 @@
 import { keys, useApi, useMailAccounts, useMailAction } from "@agenteschat/client";
 import type { Level } from "@agenteschat/client/lib/access-levels";
+import { connectionActs } from "@agenteschat/client/lib/connected";
 import {
   choiceOf,
   fromMailLevel,
@@ -49,7 +50,7 @@ export function MailboxSheet({ accountId }: { accountId: string }) {
   const toast = useToast();
   const accounts = useMailAccounts(orgId);
   const { disconnect } = useMailAction(orgId);
-  const admin = can(org, "manage_connectors");
+  const me = useMeId() ?? "";
   const [error, setError] = useState<string | null>(null);
   const account = accounts.data?.find((a) => a.id === accountId);
   // The shape of what is coming, never a bare spinner; one that didn't load says so.
@@ -61,6 +62,8 @@ export function MailboxSheet({ accountId }: { accountId: string }) {
     ) : (
       <SkeletonList rows={2} />
     );
+  // One's own mailbox is its person's to change; one left with no person, who manages connectors'.
+  const acts = connectionActs(account, me, can(org, "manage_connectors"));
   const choice = choiceOf(account);
   const fail = (text: string) => {
     errorHaptic();
@@ -99,7 +102,7 @@ export function MailboxSheet({ accountId }: { accountId: string }) {
         }
       />
       <WhoUses accountId={account.id} />
-      {admin ? (
+      {acts.change ? (
         <GroupedList>
           {/* The row a connection's screen gives its tools: the same tile and words. */}
           <GroupedRow
@@ -112,7 +115,7 @@ export function MailboxSheet({ accountId }: { accountId: string }) {
         </GroupedList>
       ) : null}
       <Button variant="primary" wide label={t("mobile.connectors.done")} onPress={sheet.close} />
-      {admin ? (
+      {acts.remove ? (
         // Disconnecting, alone in red after the system's confirmation, as on a connection's screen.
         <GroupedList>
           <GroupedRow

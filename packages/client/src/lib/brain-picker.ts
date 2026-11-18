@@ -388,13 +388,17 @@ export function needsOwnSignIn(
   return !ownSignInReady({ ownSignIn: row?.mine === true }, row, p.kind);
 }
 
-/** The list's runs of options under one heading, in order (the phone draws each as a group). */
-export function pickGroups<O extends Pick<BrainPickOption, "group">>(options: readonly O[]) {
-  const out: { group?: string; options: O[] }[] = [];
+/**
+ * The list's runs of options under one heading, in order (the phone draws each as a group). `groupKey` tells apart
+ * two groups whose headings read alike (two owners of one first name); `key`, the group's own.
+ */
+export function pickGroups<O extends Pick<BrainPickOption, "group"> & { groupKey?: string }>(options: readonly O[]) {
+  const out: { key?: string; group?: string; options: O[] }[] = [];
   for (const o of options) {
+    const key = o.groupKey ?? o.group;
     const last = out.at(-1);
-    if (last && last.group === o.group) last.options.push(o);
-    else out.push({ ...(o.group ? { group: o.group } : {}), options: [o] });
+    if (last && last.key === key) last.options.push(o);
+    else out.push({ ...(key ? { key } : {}), ...(o.group ? { group: o.group } : {}), options: [o] });
   }
   return out;
 }

@@ -541,4 +541,31 @@ export const words: EmailWords = {
         "Kamu menerima email ini karena ruang kerja ini di agentes.chat adalah milikmu. Kami hanya mengirim dua pemberitahuan seperti ini.",
     },
   },
+  surface: {
+    linked: {
+      subject: (surface) => `${surface} ditautkan ke akun agentes.chat kamu`,
+      preheader: "Asistenmu sekarang menjawabmu di sana. Kalau bukan kamu, putuskan tautannya.",
+      headline: (surface) => `${surface} ditautkan`,
+      body: (surface, display, org) => [
+        { b: display },
+        ` di ${surface} sekarang bicara dengan asistenmu di `,
+        { b: org },
+        ".",
+      ],
+      notYou: "Bukan kamu? Putuskan tautannya. Pesan dari sana langsung berhenti masuk ke akunmu.",
+      button: "Putuskan tautan",
+      small: "Kalau itu kamu, tidak perlu melakukan apa-apa. Kamu bisa memutuskannya kapan saja di Pengaturan.",
+      why: (surface) => `Kamu menerima email ini karena ${surface} ditautkan ke akun agentes.chat kamu.`,
+      picture: "Asistenmu, kini juga di ponselmu",
+    },
+    unlinked: {
+      subject: (surface) => `Tautan ${surface} ke akun agentes.chat kamu diputus`,
+      preheader: "Identitasnya berubah. Tautkan lagi di Pengaturan kalau itu kamu.",
+      headline: (surface) => `Tautan ${surface} diputus`,
+      body: (surface, display) => [{ b: display }, ` di ${surface} diputus tautannya karena identitasnya berubah.`],
+      small: "Tautkan lagi di Pengaturan kalau itu kamu.",
+      why: (surface) => `Kamu menerima email ini karena ${surface} pernah ditautkan ke akun agentes.chat kamu.`,
+      picture: "Asistenmu, tidak lagi di ponselmu",
+    },
+  },
 };

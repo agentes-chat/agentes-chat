@@ -487,4 +487,26 @@ export const words: EmailWords = {
       why: () => "你收到这封邮件，是因为 agentes.chat 上的这个工作区是你的。此类提醒只发送两次。",
     },
   },
+  surface: {
+    linked: {
+      subject: (surface) => `${surface} 已关联到你的 agentes.chat 账号`,
+      preheader: "你的助手现在会在那里回复你。如果不是你，请解除关联。",
+      headline: (surface) => `${surface} 已关联`,
+      body: (surface, display, org) => [{ b: display }, `（${surface}）现在可以和你在 `, { b: org }, " 的助手对话。"],
+      notYou: "不是你？请解除关联。来自那里的消息会立即不再进入你的账号。",
+      button: "解除关联",
+      small: "如果是你本人，无需任何操作。你可以随时在设置中解除关联。",
+      why: (surface) => `你收到这封邮件，是因为 ${surface} 关联到了你的 agentes.chat 账号。`,
+      picture: "你的助手，现在也在你的手机上",
+    },
+    unlinked: {
+      subject: (surface) => `${surface} 已与你的 agentes.chat 账号解除关联`,
+      preheader: "对方的身份已变更。如果是你，请在设置中重新关联。",
+      headline: (surface) => `${surface} 已解除关联`,
+      body: (surface, display) => [{ b: display }, `（${surface}）因身份变更已解除关联。`],
+      small: "如果是你，请在设置中重新关联。",
+      why: (surface) => `你收到这封邮件，是因为 ${surface} 曾关联到你的 agentes.chat 账号。`,
+      picture: "你的助手，已不在你的手机上",
+    },
+  },
 };

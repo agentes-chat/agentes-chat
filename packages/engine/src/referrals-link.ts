@@ -3,6 +3,7 @@ import { type Database, eq, schema } from "@agenteschat/db";
 import { appLocale } from "@agenteschat/i18n/locale";
 import { BILLING_LINK_SECONDS, linkReturnPath, linkUrl, signLinkToken } from "./billing-link";
 import { can, listMemberships, type UserLocale } from "./organizations";
+import { closedRefusal } from "./standing";
 
 export interface ReferralsLinkClaims {
   aud: "agentes-referrals";
@@ -15,7 +16,10 @@ export interface ReferralsLinkClaims {
   email: string;
   name: string;
   locale: UserLocale;
-  /** The workspaces the person is in, at most `REFERRALS_ORGS`; none blocked or being deleted. */
+  /**
+   * The workspaces the person is in, at most `REFERRALS_ORGS`; none suspended or being deleted, as the billing link
+   * refuses a suspended one. A billing hold stays in: paying is how it ends. A blocked account has none.
+   */
   orgs: { id: string; name: string; role: "owner" | "admin" | "member" }[];
   /** The path in this app the referral service sends the person back to (`linkReturnPath`, or `/`). */
   return: string;
@@ -52,7 +56,7 @@ export async function mintReferralsLink(
     name: user.name,
     locale: appLocale([user.locale], true) ?? "en",
     orgs: memberships
-      .filter((m) => !m.standing?.deletionDueAt)
+      .filter((m) => !closedRefusal(m.standing))
       .slice(0, REFERRALS_ORGS)
       .map((m) => ({
         id: m.orgId,

@@ -436,6 +436,7 @@ async function problemsOf(db: Database, orgId: string, now: Date): Promise<Probl
       id: connectorConnections.id,
       name: connectorConnections.label,
       by: connectorConnections.createdByUserId,
+      owner: connectorConnections.ownerUserId,
       since: connectorConnections.updatedAt,
     })
     .from(connectorConnections)
@@ -446,15 +447,16 @@ async function problemsOf(db: Database, orgId: string, now: Date): Promise<Probl
         isNull(connectorConnections.revokedAt),
       ),
     );
-  for (const c of connectors)
+  for (const { owner, ...c } of connectors)
     out.push({
       cause: "connector",
       ...c,
       episode: at(c.since),
       ripe: c.since < stale && recent(c.since),
-      to: c.by,
-      needs: "manage_connectors",
-      orElse: "manage_connectors",
+      // A person's own connection is theirs alone to reconnect: nobody else hears of it, as a mailbox.
+      ...(owner
+        ? { to: owner }
+        : { to: c.by, needs: "manage_connectors" as const, orElse: "manage_connectors" as const }),
     });
 
   // A mailbox is its owner's alone: nobody else hears of it, not even its address.

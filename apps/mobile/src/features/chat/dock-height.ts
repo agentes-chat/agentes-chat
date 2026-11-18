@@ -29,3 +29,11 @@ export function createDockHeight(): DockHeight {
     },
   };
 }
+
+/**
+ * Where the dock rests for a keyboard the system says is `visible` and `height` tall, in the keyboard library's values
+ * (`useKeyboardTruth`): up by the keyboard's height, or down with no keyboard whatever height was last said.
+ */
+export function restingKeyboard(visible: boolean, height: number): { height: number; progress: number } {
+  return visible && height > 0 ? { height: -height, progress: 1 } : { height: 0, progress: 0 };
+}

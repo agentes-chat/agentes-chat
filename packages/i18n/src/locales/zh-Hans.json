@@ -605,6 +605,7 @@
     "termsMiddle": "和",
     "privacy": "隐私政策",
     "termsAfter": "。",
+    "poweredBy": "由 agentes.chat 提供支持",
     "signOut": "退出登录",
     "earlyAccess": {
       "otherEmail": "这个邀请是发给另一个地址的。请使用收到邀请的地址注册。",
@@ -2014,6 +2015,7 @@
     "phone": "手机",
     "phoneOn": "在手机应用中，锁屏时也会收到",
     "phoneOff": "请在手机应用中开启",
+    "phoneOpen": "打开",
     "mac": "Mac 应用",
     "macHelp": "应用打开时，即使在后台也会收到",
     "on": "开启",
@@ -2325,6 +2327,56 @@
     "localOnly": "这台服务器只能在运行它的电脑上打开，所以你的手机无法访问它。",
     "localOnlyHow": "在那台电脑的 agentes.chat 应用中，打开偏好设置 › 服务器里的“从你的手机和队友那里访问”，然后回到这里。",
     "localOnlyHere": "打开“从你的手机和队友那里访问”，然后回到这里。"
+  },
+  "surface": {
+    "link": {
+      "consent": "agentes.chat 的 {{assistant}} 可能会在 {{surface}} 上给你发关于你的工作区的消息，只有在事情紧急且你允许时才会给你打电话。发送 stop 即可关闭。",
+      "title": "在{{surface}}上和{{assistant}}聊天",
+      "qr": "打开{{surface}}并填好你的代码的二维码",
+      "making": "正在生成你的代码",
+      "code": "你的代码 {{code}}",
+      "open": "打开{{surface}}",
+      "stepScan": "用手机扫描代码，或打开应用",
+      "stepSend": "按原样发送这条消息",
+      "stepSendText": "你的消息一到，就会自动进入下一步。",
+      "stepConfirm": "核对发送者并在这里确认",
+      "showCode": "再次显示代码",
+      "confirmTitle": "这是你的{{surface}}吗？",
+      "sentBy": "这个发送者发来了你的代码",
+      "onlyYou": "只有这是你本人时才关联。",
+      "workspace": "在{{workspace}}中回复",
+      "confirm": "是，关联",
+      "notMe": "不是我",
+      "doneTitle": "{{surface}}已关联",
+      "doneText": "从现在起，{{assistant}}会在那里回复你。",
+      "newCode": "生成新代码",
+      "done": "完成"
+    },
+    "row": {
+      "hint": "和{{assistant}}聊天，并在{{surface}}上收到回复。",
+      "link": "关联",
+      "none": "{{assistant}}可以在那里给你发消息",
+      "pending": "有发送者在等你确认",
+      "unlink": "取消关联",
+      "unlinkTitle": "要取消关联{{surface}}吗？",
+      "unlinkText": "{{assistant}}将不再在那里回复你。你随时可以重新关联。",
+      "unlinked": "已取消关联{{surface}}"
+    },
+    "undo": {
+      "title": "要取消关联聊天应用吗？",
+      "lead": "你的账号刚刚关联了一个聊天应用。如果不是你，请在这里取消关联。",
+      "button": "取消关联",
+      "done": "已取消关联{{surface}}",
+      "doneLead": "{{display}}再也无法联系到你的账号。",
+      "ended": "已经取消关联",
+      "endedLead": "{{surface}}上的{{display}}之前已取消关联。无需再做什么。",
+      "gone": "这个撤销链接已失效",
+      "sender": "该发送者"
+    },
+    "via": "通过 {{surface}}",
+    "viaTip": "由 {{person}} 通过 {{surface}} 发送",
+    "forwarded": "通过 {{surface}} 转发",
+    "forwardedTip": "{{person}} 从 {{surface}} 转发了这条消息。这是别人的话。"
   },
   "team": {
     "title": "团队",
@@ -3256,10 +3308,12 @@
     "titleFor_female": "为 {{name}} 连接 AI",
     "have": {
       "title": "已连接",
-      "titleFor": "已为 {{name}} 连接",
-      "titleFor_female": "已为 {{name}} 连接",
       "other": "或连接其他",
-      "manageKeys": "管理或删除密钥"
+      "manageKeys": "管理或删除密钥",
+      "pickLine": "选择一个已在这里连接的账号。{{name}} 会用它思考。",
+      "onlyOwner_other": "还有 {{count}} 个账号，只有 {{name}} 能提供。",
+      "moreAgents_other": "以及另外 {{count}} 个智能体",
+      "plenty": "余量充足"
     },
     "chat": {
       "mine": "你的账号",
@@ -3665,7 +3719,6 @@
       "aiAccount": "使用 {{account}} 思考",
       "aiModel": "通过 API 思考",
       "aiNone": "还没有 AI。创建后再连接一个",
-      "reviewTitle": "查看 {{name}}",
       "lines": "{{name}} 将获得",
       "aChannel": "一个频道",
       "anApp": "一个应用",
@@ -6919,7 +6972,6 @@
     "adminsOnlyPersonal": "请管理这里的人允许你创建智能体。",
     "proposalClosed": "这个提议已经有了决定或已过期。",
     "proposalNoAccess": "只有所在对话中的人能看到这个提议。",
-    "backToChat": "返回对话",
     "and": "和",
     "routine": "例行工作",
     "routineKeep": "创建例行工作 {{name}}",
@@ -7094,6 +7146,51 @@
     "otherSkill": "其他技能",
     "namesLead": "试试",
     "namesRoll": "换一批名字",
+    "proposal": {
+      "lead": "调整 {{name}} 的提议。之后都可以修改。",
+      "leadNarrow": "{{name}} 的提议：{{why}}",
+      "side": "提议",
+      "from": "{{name}} 提议",
+      "changed": "你改了什么",
+      "changedNone": "还没有。你在卡片上的修改会显示在这里，可以撤销。",
+      "undo": "撤销",
+      "changes": {
+        "changed": "已修改",
+        "added": "已添加",
+        "removed": "已移除",
+        "how": "工作方式"
+      },
+      "firstTask": "第一个任务",
+      "firstTaskPlaceholder": "先让它做什么（可选）",
+      "firstTaskHint": "会在你和 {{name}} 的对话里备好，直接发送即可。",
+      "firstTaskHintBlank": "会在你和它的对话里备好，直接发送即可。",
+      "firstTaskNone": "没有任务时，对话打开是空的。",
+      "after": "创建之后",
+      "afterAi": "连接一个 AI，让 {{name}} 能思考",
+      "afterAiBlank": "连接一个 AI，让它能思考",
+      "afterApp": "连接 {{app}}",
+      "afterNone": "没有。{{name}} 创建后马上开始工作。",
+      "afterNoneBlank": "没有。创建后马上开始工作。",
+      "discard": "放弃提议",
+      "otherChannel": "其他频道",
+      "chooseChannels": "选择频道",
+      "channelsNone": "只在它和你的对话里。",
+      "channel": {
+        "lead": "{{name}} 工作的地方。",
+        "leadBlank": "它工作的地方。",
+        "does": "在 {{channel}} 里被叫到时，{{name}} 会回答，并阅读那里的内容。",
+        "doesBlank": "在 {{channel}} 里被叫到时，它会回答，并阅读那里的内容。",
+        "remove": "从 {{channel}} 移出"
+      },
+      "routine": {
+        "label": "例行任务",
+        "lead": "{{when}}，在 {{channel}}。",
+        "leadDm": "{{when}}，在它和你的对话里。",
+        "starts": "{{name}} 创建后开始。时间和内容可在“例行任务”里修改。",
+        "startsBlank": "创建后开始。时间和内容可在“例行任务”里修改。",
+        "remove": "移除例行任务"
+      }
+    },
     "skill": {
       "opens": "话题出现时，{{name}} 会打开这份指南。可在“技能”里编辑。",
       "opensBlank": "话题出现时，它会打开这份指南。可在“技能”里编辑。",
@@ -10845,6 +10942,17 @@
     "saved": "徽标已更新。",
     "removed": "徽标已移除。"
   },
+  "orgAccent": {
+    "label": "强调色",
+    "change": "更改颜色",
+    "useDefault": "使用默认颜色",
+    "suggested": "推荐颜色",
+    "sampleMention": "@智能体",
+    "sampleLink": "一个链接",
+    "save": "保存颜色",
+    "saved": "强调色已更新。",
+    "reset": "已恢复默认颜色。"
+  },
   "look": {
     "previous": "上一个",
     "next": "下一个",
@@ -12307,6 +12415,37 @@
       "add": "添加 MCP",
       "list": "已连接的 MCP 服务器",
       "none": "通过地址连接的 MCP 服务器会显示在这里。"
+    },
+    "personal": {
+      "note": "只有你能打开这些连接。你的智能体只在你要求时使用它们。",
+      "noteOne": "只有你能打开这个连接，你的智能体只在你要求时使用它。",
+      "emptyTitle": "连接你自己的账号",
+      "emptyText": "只有你能打开你的连接，你的智能体只在你要求时使用它们。邮箱遵循自己的规则。",
+      "noApps": "你只为自己连接的服务会显示在这里。",
+      "mailTitle": "你的邮箱",
+      "mailNote": "你允许的智能体会按你的设置使用你的邮箱，也会为直接和它们对话的人使用。当别人请求需要审批的操作时，由你来审批。",
+      "others": "其他人的个人连接",
+      "of": "{{name}} 的个人连接",
+      "seeAll": "查看全部 {{count}} 个",
+      "forWhom": "适用对象",
+      "teamLocked": "只有管理连接器的人才能添加团队的连接。",
+      "mailLocked": "邮箱始终属于连接它的人。",
+      "done": "你的智能体只在你提出请求时使用它。",
+      "worksWhenAsked": "只在你提出请求时生效。",
+      "remove": "移除",
+      "removeName": "移除 {{name}}",
+      "removeTitle": "移除 {{name}}？",
+      "takeOff": "从智能体移除",
+      "takeOffTitle": "从智能体移除 {{name}}",
+      "takeOffName": "从 {{agent}} 移除 {{name}}",
+      "takeOffOne": "移除",
+      "takenOff": "{{agent}} 不再使用 {{name}}。",
+      "turnOff": "关闭",
+      "turnOffName": "为此智能体关闭 {{name}}",
+      "moveToTeam": "移到团队",
+      "moveTitle": "将 {{name}} 移到团队？",
+      "moveText": "工作区里的所有人都能看到。由管理智能体的人选择哪些智能体使用它，智能体的所有者可以在自己的智能体上关闭它。使用所有已连接应用的智能体会立即用上它。",
+      "moved": "{{name}} 现在属于团队。"
     },
     "addTitle": "添加连接器",
     "catalogText": "为 {{org}} 连接一次，然后选择每个智能体可以使用什么。",
@@ -14418,6 +14557,16 @@
     }
   },
   "errors": {
+    "surface": {
+      "off": "聊天应用关联已关闭。刷新页面即可查看当前设置。",
+      "notAllowed": "你的账号暂时还不能关联聊天应用。在开放之前，请继续在这里使用应用。",
+      "noAssistant": "此工作区的助手未设置为与你交谈。请选择另一个工作区进行关联。",
+      "noWorkspace": "你已不在此工作区。请选择另一个工作区进行关联。",
+      "linkGone": "此关联已不再等待：它在 10 分钟后过期或已被取消。请生成新代码重新开始。",
+      "taken": "该发送者已关联到另一个 agentes.chat 账号。请先在那里取消关联，再发送新代码。",
+      "undoGone": "此撤销链接已被使用或已过期。请改在通知设置中取消关联。",
+      "codeGone": "此代码错误、已被使用或已在 10 分钟后过期。请生成新代码并重新发送。"
+    },
     "wallpaper": {
       "notYours": "这张照片不是你的。",
       "invalid": "该背景不存在。",
@@ -14454,7 +14603,7 @@
       "accountInUse": "这个账号已在为另一个智能体思考。",
       "noAiYet": "还没有连接 AI。",
       "filePurged": "这个文件已删除超过 30 天，无法恢复。",
-      "looksSecret": "这看起来像密码或密钥，这里的所有人都会看到。",
+      "looksSecret": "这看起来像密码或密钥，这里的所有人都会看到。请让智能体改为私下向你请求。",
       "blockSpec": "此区块的组成部分或公式有误，因此无法显示。请修正后重试。",
       "takeControl": "请先接管这个配置文件。",
       "profileBusy": "其他人正在使用这个配置文件。",
@@ -14472,8 +14621,10 @@
       "createRefused": "你现在无法创建工作区。",
       "noAgentToRemind": "这个对话中没有能提醒你的智能体。",
       "agentCantRead": "请先在智能体的访问设置中允许它读取这项内容。",
+      "connectionNotYours": "这个连接是别人的个人连接。只有对方自己的例行任务可以等待它的事件。",
       "neverHappens": "这个日程永远不会触发。",
       "soleOwner": "你是这个有其他成员的工作区的唯一所有者。请先将其他人设为所有者，或删除工作区。",
+      "soleOwnerOutside": "你是这个工作区的唯一所有者，其他人都是外部协作者，不能成为所有者。请先邀请一位成员并设为所有者，或删除工作区。",
       "testFirst": "开启之前，请先用这些设置测试连接。",
       "voiceLength": "录音太长或太短。",
       "sendAgain": "文件没有完整送达。请重新发送。",
@@ -14583,7 +14734,8 @@
       "denied": "你的申请没有获批，请让那里的人邀请你。",
       "answered": "已经有人处理了这个申请。",
       "expired": "这个申请已过期：14 天内无人处理。",
-      "codeNeeded": "请先验证你的邮箱。"
+      "codeNeeded": "请先验证你的邮箱。",
+      "outsideClosed": "这个账号已被封禁或正在删除，因此无法加入。这个申请已关闭。"
     },
     "code": {
       "wrong": "验证码错误，请重试。",
@@ -16046,8 +16198,37 @@
     },
     "system": "系统",
     "removed": "已移除",
+    "operatorRead": {
+      "sentence": "{{who}}查看了{{what}}",
+      "who": {
+        "server": "运行此服务器的人",
+        "cloud": "agentes.chat 支持团队"
+      },
+      "what": {
+        "message": "一条消息",
+        "run_step": "智能体工作中的一个步骤",
+        "agent": "一个智能体的指令",
+        "routine": "一项例行工作",
+        "task": "一个后台任务",
+        "channel": "一个频道的名称",
+        "connection": "一个连接的信息",
+        "support_request": "一条支持请求",
+        "direct": "私密对话中的内容",
+        "other": "工作区中的内容"
+      },
+      "request": {
+        "plain": "应 {{name}} 的请求",
+        "app": "应 {{name}} 的请求（从应用发送）",
+        "email": "应 {{name}} 的请求（通过邮件发送）",
+        "operator": "应 {{name}} 的请求（由运行此服务器的人记录）",
+        "support": "应 {{name}} 的请求（由支持团队记录）"
+      },
+      "fault": "为诊断一次失败或卡住的运行",
+      "ai": "使用了 AI 助手"
+    },
     "change": {
       "mergedWithoutAsking": "未经询问在 {{repo}} 中合并",
+      "accentChanged": "更改了工作区的强调色",
       "pattern": "{{verb}}{{area}}",
       "approval": {
         "approved": "批准了一个请求",
@@ -16252,7 +16433,7 @@
       "roles": "每个角色都会增加权限、频道和智能体。",
       "vault": "你的智能体的密码、密钥和联系人。它们永远看不到密码。",
       "access": "每个智能体可以使用什么：每个连接器一个级别。",
-      "connectors": "为整个工作区一次性连接的服务和 MCP 服务器。",
+      "connectors": "为团队或只为你连接的服务和 MCP 服务器。",
       "skills": "智能体在需要时打开的 Markdown 指令。",
       "storage": "工作区文件的存放位置。",
       "usage": "工作区的 AI 账号,以及每个人和每个智能体的用量。",
@@ -16331,7 +16512,7 @@
         "wallpaper": {
           "title": "背景",
           "help": "只对你生效，并同步到你的所有设备",
-          "rowHelp": "显示在所有对话后面，只有你能看到。单个对话可以在它的菜单里设置自己的背景。",
+          "rowHelp": "显示在所有对话后面，只有你能看到，单个对话也可以在它的菜单里设置自己的背景。",
           "rowSub": "只对你，所有对话",
           "onlyHere": "仅在 {{name}}，只对你",
           "none": "无背景",
@@ -17548,6 +17729,8 @@
       "file_saved": "文件已保存。",
       "issue_work_start": "请完成任务 #{{number}}。",
       "issue_taken": "接手了任务 #{{number}}。",
+      "surfaceUnlinked": "{{surface}} 因身份变更已解除关联。如果是你，请在设置中重新关联。",
+      "surfaceVoiceDropped": "我没听清那条语音消息。可以再发一次，或者打字告诉我吗？",
       "done": "完成。",
       "stretch_paused_runs_other": "{{agents}} 暂停下来，先向你确认再继续",
       "stretch_paused_spend_other": "{{agents}} 暂停下来向你确认 · 每个已用掉本月预算的 {{percent}}%",
@@ -18454,6 +18637,7 @@
     "serverOwner": "这台服务器是你搭建的。它的设置在这里将没有所有者，只保留在服务器的环境配置中。",
     "blockers": "删除之前需要先处理",
     "soleOwner": "你是 {{name}} 唯一的所有者。请把其他人设为所有者，或删除 {{name}}。",
+    "soleOwnerOutside": "你是 {{name}} 唯一的所有者，其他人都是不能成为所有者的外部协作者。请邀请一位成员并设为所有者，或删除 {{name}}。",
     "soleOwnerSettingUp": "你是 {{name}} 唯一的所有者。请先完成设置，再把其他人设为所有者，或删除 {{name}}。",
     "openPeople": "打开成员页面",
     "finishSetup": "完成设置",

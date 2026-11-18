@@ -1996,6 +1996,76 @@
       "when": 1794917194719,
       "tag": "0289_outside_collaborators",
       "breakpoints": true
+    },
+    {
+      "idx": 287,
+      "version": "7",
+      "when": 1794917393261,
+      "tag": "0290_workspace_accent",
+      "breakpoints": true
+    },
+    {
+      "idx": 288,
+      "version": "7",
+      "when": 1794933529896,
+      "tag": "0291_support_requests",
+      "breakpoints": true
+    },
+    {
+      "idx": 289,
+      "version": "7",
+      "when": 1794942564490,
+      "tag": "0292_brand_hosts",
+      "breakpoints": true
+    },
+    {
+      "idx": 290,
+      "version": "7",
+      "when": 1794947961099,
+      "tag": "0293_chat_surfaces",
+      "breakpoints": true
+    },
+    {
+      "idx": 291,
+      "version": "7",
+      "when": 1794952526821,
+      "tag": "0294_machine_wake_wanted",
+      "breakpoints": true
+    },
+    {
+      "idx": 292,
+      "version": "7",
+      "when": 1794952626821,
+      "tag": "0295_handed_for_user",
+      "breakpoints": true
+    },
+    {
+      "idx": 293,
+      "version": "7",
+      "when": 1794963495178,
+      "tag": "0296_run_profiles",
+      "breakpoints": true
+    },
+    {
+      "idx": 294,
+      "version": "7",
+      "when": 1794964106130,
+      "tag": "0297_operator_events_covering",
+      "breakpoints": true
+    },
+    {
+      "idx": 295,
+      "version": "7",
+      "when": 1794984191596,
+      "tag": "0298_host_powered_by",
+      "breakpoints": true
+    },
+    {
+      "idx": 296,
+      "version": "7",
+      "when": 1794984291596,
+      "tag": "0299_personal_connections",
+      "breakpoints": true
     }
   ]
 }

@@ -19,6 +19,7 @@ import {
   ne,
   or,
   queryTrace,
+  type SQL,
   schema,
   sql,
 } from "@agenteschat/db";
@@ -753,6 +754,8 @@ export interface Transcript {
   roomWaitSince?: number;
   /** A wake that waited outside any run first (`StartRunOptions.park`): its place in the line counts from then. */
   roomOrderSince?: number;
+  /** When this run first waited for its computer in standby to wake (ms): past the outage grace it is down. */
+  standbyWaitSince?: number;
   /** A person waits on this run: it goes first in the computer's line (`computer-queue.ts`). */
   roomPeople?: boolean;
   /** Its stretch is work a person asked for lately (`personAskedLately`): next in the line after people's runs. */
@@ -909,7 +912,7 @@ const CONTEXT_TOOLS: readonly string[] = [
 
 /** How long the first call waits for its pre-warm once the quiet window is over. */
 const PREWARM_WAIT_MS = 4000;
-/** A run's last claims whose stage profiles its transcript keeps (`profiles`): long work claims many times. */
+/** A run's last claims whose stage profiles it keeps (`agent_runs.profiles`): long work claims many times. */
 const RUN_PROFILES_KEPT = 10;
 /** How soon a quiet window that ends at once is told from one still running (no pre-warm then). */
 const PREWARM_PROBE_MS = 50;
@@ -1150,18 +1153,17 @@ export async function executeRun(deps: EngineDeps, runId: string, options: RunJo
     unregisterRunAbort(runId, abort);
     if (prof.stages.length > 0) {
       deps.onRunProfile?.({ runId, stages: prof.stages, total: prof.total() });
-      // Kept with the run, so the operator's work analytics can say where time went (`work-analytics.ts`). In its
-      // transcript, not as a step: steps are the run's trail, and its last one marks where a pause began (`whileHeld`).
+      // Kept with the run, so the operator's work analytics can say where time went (`work-analytics.ts`). In its own
+      // column, not as a step (steps are the run's trail, and its last one marks where a pause began, `whileHeld`) and
+      // not in the transcript (appending there would rewrite the whole TOASTed conversation on every claim).
       if (prof.run) {
         const brain = prof.brain.length > 0 ? { brain: prof.brain } : {};
         const kept = JSON.stringify([{ stages: prof.stages, total: prof.total(), ...brain }]);
-        const list = sql`coalesce(${agentRuns.transcript}->'profiles', '[]'::jsonb) || ${kept}::jsonb`;
+        const capped = (list: SQL) =>
+          sql`case when jsonb_array_length(${list}) > ${RUN_PROFILES_KEPT} then (${list}) - 0 else ${list} end`;
         await deps.db
           .update(agentRuns)
-          .set({
-            transcript: sql`jsonb_set(coalesce(${agentRuns.transcript}, '{}'::jsonb), '{profiles}',
-              case when jsonb_array_length(${list}) > ${RUN_PROFILES_KEPT} then (${list}) - 0 else ${list} end)`,
-          })
+          .set({ profiles: capped(sql`coalesce(${agentRuns.profiles}, '[]'::jsonb) || ${kept}::jsonb`) })
           .where(and(eq(agentRuns.orgId, prof.run.orgId), eq(agentRuns.id, prof.run.id)))
           .catch(() => {});
       }
@@ -2547,6 +2549,9 @@ async function executeRunInner(
               ...(deps.tools ? await grantedScopeKeys(db, run.orgId, agent.id) : []),
             ]),
           ].sort(),
+          // A session a person's own connection was offered in holds what it read: only their runs resume it
+          // (ADR 0099 addendum). Absent otherwise, so no other session's key changes.
+          ...[...new Set(granted.flatMap((t) => (t.ownerUserId ? [`personal:${t.ownerUserId}`] : [])))],
         ]),
       ),
       postedUpTo: context.messages.length,
@@ -3735,11 +3740,17 @@ async function executeRunInner(
       }
     }
     // Just gone (our own deploy, a runner dialing again): it waits without a word until the outage grace is over.
+    // Asleep in standby, waking: without a word too, for one grace from its first such wait (ADR 0161); one that
+    // never wakes is down, and says so.
     let quietUntil: number | null = null;
     if (u.code === "machine_offline") {
       const status = await deps.machines?.status(machineId).catch(() => null);
       const seen = status?.lastSeenAt ? Date.parse(status.lastSeenAt) : Number.NaN;
-      if (status && !status.online && Date.now() - seen < TASK_OFFLINE_GRACE_MS)
+      if (status && !status.online && status.standby) {
+        t.standbyWaitSince ??= Date.now();
+        const until = t.standbyWaitSince + TASK_OFFLINE_GRACE_MS;
+        if (Date.now() < until) quietUntil = until;
+      } else if (status && !status.online && Date.now() - seen < TASK_OFFLINE_GRACE_MS)
         quietUntil = seen + TASK_OFFLINE_GRACE_MS;
     }
     // Only a blip keeps its place in the line: after a real outage the wait for room starts over, or its clock
@@ -5104,10 +5115,12 @@ async function executeRunInner(
             touchedAccount = account.id;
             later(() => touchMachineAccount(db, run.orgId, account.id));
           }
-          // A turn cut off by its computer is finished now, and one that found room ends that wait.
+          // A turn cut off by its computer is finished now, and one that found room ends that wait; its computer is
+          // awake, so a later sleep's wait starts its own clock.
           delete transcript.interruptedTurn;
           delete transcript.roomWaitSince;
           delete transcript.roomOrderSince;
+          delete transcript.standbyWaitSince;
           // The plan had room for this turn: the runs parked on its limit go on now, not at their own timers.
           const planMachine = turnPlan.session?.machineId;
           if (planMachine && !turnLimited) {

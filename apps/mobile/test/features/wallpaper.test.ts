@@ -116,8 +116,13 @@ describe("a conversation's background on the phone", () => {
     expect(chat).toContain("<WallpaperBand");
     expect(chat).toContain("useConversationLook(convoDm, dmAgentColor, channelId)");
     const row = await read("chat/MessageRow.tsx");
-    // Someone else's bubble is lifted off a background, and every bubble takes the cards' shadow.
+    // Someone else's bubble is lifted off a background, and every bubble takes the ring of the cards' shadow as an
+    // outline (no masked shadow layers to draw on every frame of a scroll).
     expect(row).toContain("const otherFill = lifted ? lift : c.bubble;");
-    expect(row).toContain("bubbleShadow");
+    expect(row).toContain("const bubbleEdge = lifted ? liftedEdge(scheme) : null;");
+    expect(row).not.toContain("boxShadow");
+    const look = await read("chat/look.ts");
+    expect(look).toContain("appShadows(scheme).e1.find((l) => l.blur === 0 && l.spread > 0)");
+    expect(look).toContain('{ outlineWidth: ring.spread, outlineColor: ring.color, outlineStyle: "solid" }');
   });
 });

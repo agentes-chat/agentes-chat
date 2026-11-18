@@ -326,8 +326,9 @@ jobs:
       # About 3 minutes on a runner (2026-10-20).
       - name: Test (web and design system)
         if: env.SHARED == 'true' || env.WEB == 'true'
-        # The whole suite takes about 10 minutes on one runner now (3320 tests, 612 s on 2026-11-06).
-        timeout-minutes: 15
+        # The whole suite takes 10 to 14 minutes on one runner now (measured on main, 2026-11-18), by the runner it
+        # gets. The limit is there to end a hang, not to fail a slow runner.
+        timeout-minutes: 25
         # The preload saves every screen the tests reach, for the geometry check below. It costs a few percent.
         env:
           GEOMETRY_OUT: ${{ runner.temp }}/geometry

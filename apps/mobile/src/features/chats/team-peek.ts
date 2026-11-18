@@ -11,11 +11,6 @@ export const TEAM_PEEK_MAX = 5;
 export const TEAM_PEEK_STEP = 8;
 /** Between two faces of the row. */
 export const TEAM_PEEK_GAP = 8;
-/**
- * The tab bar's top edge over the bottom safe area (points): the classic bar's height, and where iOS 26's floating
- * bar ends too. The faces come up from behind it.
- */
-export const TAB_BAR_TOP = 49;
 
 interface PeekRow {
   kind: string;

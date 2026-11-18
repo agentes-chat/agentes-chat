@@ -18,6 +18,7 @@ import {
   listOperatorEvents,
   type OperatorEvent,
   postPersonMessage,
+  pruneJoinRequests,
   pruneOperatorEvents,
   recordAccountFailure,
   recordOperatorEvent,
@@ -430,4 +431,57 @@ test("outside access (ADR 0191): granted, denied and ended, each with its worksp
     ["outside_access.granted", orgId, { userId: eve.id }],
     ["outside_access.ended", orgId, { userId: eve.id }],
   ]);
+});
+
+test("outside access (ADR 0191): ending an ordinary member's is refused before anything changes", async () => {
+  const f = await setup();
+  close = f.close;
+  enableOperatorEvents();
+  const deps = { db: f.db, pubsub: f.pubsub, publicUrl: "https://agentes.test" };
+  const gil = await addUser(f.db, "gil");
+  const request = await requestOutsideAccess(deps, {
+    orgId: f.org.id,
+    userId: gil.id,
+    outsideOf: "Example Consulting",
+  });
+  // In the workspace as an ordinary member while the request still waits.
+  await f.db.insert(schema.organizationMembers).values({ orgId: f.org.id, userId: gil.id, role: "member" });
+  await expect(endOutsideAccess(deps, f.org.id, gil.id)).rejects.toMatchObject({ code: "outside_access.member" });
+  const [row] = await f.db
+    .select({ status: schema.organizationJoinRequests.status })
+    .from(schema.organizationJoinRequests)
+    .where(eq(schema.organizationJoinRequests.id, request.id));
+  expect(row?.status).toBe("pending");
+  expect((await allEvents(f.db)).filter((e) => e.type.startsWith("outside_access."))).toEqual([]);
+});
+
+test("outside access (ADR 0191): a request that runs out, or goes with its account, is told as ended once", async () => {
+  const f = await setup();
+  close = f.close;
+  enableOperatorEvents();
+  const deps = { db: f.db, pubsub: f.pubsub, publicUrl: "https://agentes.test" };
+  const now = new Date();
+  const [hal, ivy] = [await addUser(f.db, "hal"), await addUser(f.db, "ivy")];
+  for (const u of [hal, ivy]) {
+    await requestOutsideAccess(deps, { orgId: f.org.id, userId: u.id, outsideOf: "Example Consulting" }, now);
+  }
+  const ended = async () =>
+    (await allEvents(f.db)).filter((e) => e.type === "outside_access.ended").map((e) => [e.orgId, e.data]);
+
+  await pruneJoinRequests(deps, now);
+  expect(await ended()).toEqual([]);
+  const after = new Date(now.getTime() + 15 * 86_400_000);
+  await pruneJoinRequests(deps, after);
+  await pruneJoinRequests(deps, after);
+  expect(await ended()).toEqual([
+    [f.org.id, { userId: hal.id }],
+    [f.org.id, { userId: ivy.id }],
+  ]);
+
+  const jon = await addUser(f.db, "jon");
+  await requestOutsideAccess(deps, { orgId: f.org.id, userId: jon.id, outsideOf: "Example Consulting" });
+  await deleteAccount(f.db, jon.id);
+  // Told as over already: the account going says nothing more.
+  await deleteAccount(f.db, hal.id);
+  expect((await ended()).slice(2)).toEqual([[f.org.id, { userId: jon.id }]]);
 });

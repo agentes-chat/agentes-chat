@@ -505,8 +505,8 @@ function RightHandForm({ agent }: { agent: Agent }) {
   });
   const current = kind ? (planItems.find((i) => i.id === view?.account) ?? null) : keyItem;
   // Plans it can't think with now, dimmed under the others with why: it stands in on what can meanwhile.
-  const cant = rightHandUnusable(aiAccounts).filter((u) => u.id !== current?.id);
-  const away = new Set(cant.map((u) => u.id));
+  const cant = rightHandUnusable(aiAccounts, current?.id);
+  const away = new Set(cant.flatMap((u) => u.ids));
   const others = [...planItems.filter((i) => i.id !== current?.id && !away.has(i.id)), ...(kind ? [keyItem] : [])];
   // Connecting one is self-host's way out: Cloud's own computer is always on, and its way out is the plan.
   const pairs = can(org, "pair_computers") && edition !== "cloud";

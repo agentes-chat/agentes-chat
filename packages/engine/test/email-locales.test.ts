@@ -17,6 +17,15 @@ describe("every email in every language (ADR 0122)", () => {
         const all = `${e.subject}\n${e.preheader}\n${e.html}\n${e.text}`;
         expect({ id, bad: all.match(/undefined|NaN|\{\{|\[object Object\]/)?.[0] ?? null }).toEqual({ id, bad: null });
         expect(e.html).toContain(`<html lang="${locale}"`);
+        // With the pictures off, the phone's alt is the stage's only words.
+        if (id.startsWith("surface_")) {
+          const alt = e.html.match(/\/phone(?:-off)?\.png" [^>]*alt="([^"]*)"/)?.[1] ?? "";
+          expect({ id, alt: alt.length > 0, punctuation: /[;!—]/.test(alt) }).toEqual({
+            id,
+            alt: true,
+            punctuation: false,
+          });
+        }
       }
     });
   }

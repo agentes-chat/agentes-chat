@@ -123,7 +123,7 @@ export const OPERATOR_RUN_SHOWN = [
   "canceled",
 ] as const;
 
-const shown = sql<(typeof OPERATOR_RUN_SHOWN)[number]>`(case when ${passedSql} then 'no_reply'
+export const runShownSql = sql<(typeof OPERATOR_RUN_SHOWN)[number]>`(case when ${passedSql} then 'no_reply'
   when ${computerWaitSql} = 'line' then 'waiting_line'
   when ${computerWaitSql} is not null then 'waiting_computer'
   when ${usageWaitSql} = 'budget' then 'waiting_budget'
@@ -149,7 +149,7 @@ const runColumns = {
     where s.run_id = ${RUN_ID} and s.kind = 'model_call' order by s.seq desc limit 1)`,
   turns: agentRuns.turns,
   status: agentRuns.status,
-  shown,
+  shown: runShownSql,
   waitCode: sql<string | null>`coalesce(${WAIT}->>'code', case when ${outageParkedSql} then 'provider_outage' end)`,
   waitSource: sql<string | null>`${WAIT}->>'source'`,
   waitResetsAt: sql<string | null>`${WAIT}->>'resetsAt'`,

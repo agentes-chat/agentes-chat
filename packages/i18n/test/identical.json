@@ -21,6 +21,7 @@
       "apps.consent.workspace",
       "apps.created.skill",
       "apps.via",
+      "surface.via",
       "artifacts.formatDocx",
       "artifacts.formatOriginal",
       "artifacts.formatPdf",
@@ -341,6 +342,7 @@
       "approvals.panel.admin",
       "approvals.trait.reversible",
       "apps.via",
+      "surface.via",
       "artifacts.formatDocx",
       "artifacts.formatOriginal",
       "artifacts.formatPdf",
@@ -618,6 +620,7 @@
       "apps.created.agent",
       "apps.created.routine",
       "apps.via",
+      "surface.via",
       "artifacts.formatDocx",
       "artifacts.formatOriginal",
       "artifacts.formatPdf",
@@ -999,7 +1002,9 @@
       "storage.connect.awsRegion.eu-north-1",
       "onboarding.import.choose.routine",
       "onboarding.import.choose.step.image",
-      "settings.account.chat.wallpaper.name.crowd"
+      "settings.account.chat.wallpaper.name.crowd",
+      "newAgentCard.proposal.routine.label",
+      "orgAccent.sampleMention"
     ],
     "de": [
       "devices.iphone.steps.account",
@@ -1067,6 +1072,7 @@
       "apps.consent.workspace",
       "apps.tokens.name",
       "apps.via",
+      "surface.via",
       "artifacts.formatDocx",
       "artifacts.formatOriginal",
       "artifacts.formatPdf",
@@ -1464,7 +1470,10 @@
       "onboarding.import.choose.routine",
       "onboarding.import.choose.skill",
       "onboarding.import.choose.step.video",
-      "settings.account.chat.wallpaper.neutral.sand"
+      "settings.account.chat.wallpaper.neutral.sand",
+      "newAgentCard.proposal.routine.label",
+      "newAgentCard.proposal.routine.lead",
+      "orgAccent.sampleMention"
     ],
     "it": [
       "shell.email.label",
@@ -1842,7 +1851,9 @@
       "storage.connect.provider.b2",
       "onboarding.import.choose.routine",
       "onboarding.import.choose.skill",
-      "onboarding.import.choose.step.video"
+      "onboarding.import.choose.step.video",
+      "newAgentCard.proposal.routine.label",
+      "newAgentCard.proposal.routine.lead"
     ],
     "nl": [
       "usage.kinds.routines",
@@ -1936,6 +1947,7 @@
       "apps.created.skill",
       "apps.dialog.step.open",
       "apps.via",
+      "surface.via",
       "artifacts.diagramLabel",
       "artifacts.formatCsv",
       "artifacts.formatDocx",
@@ -2458,7 +2470,10 @@
       "onboarding.import.choose.routine",
       "onboarding.import.choose.skill",
       "onboarding.import.choose.step.video",
-      "settings.account.chat.wallpaper.name.crowd"
+      "settings.account.chat.wallpaper.name.crowd",
+      "newAgentCard.proposal.routine.label",
+      "newAgentCard.proposal.routine.lead",
+      "orgAccent.sampleMention"
     ],
     "ja": [
       "channel.tooLong.fileName",
@@ -3010,6 +3025,7 @@
       "approvals.filters",
       "approvals.panel.admin",
       "apps.via",
+      "surface.via",
       "artifacts.diagramLabel",
       "artifacts.formatDocx",
       "artifacts.formatPdf",
@@ -3764,7 +3780,8 @@
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
       "storage.connect.provider.b2",
-      "storage.connect.region"
+      "storage.connect.region",
+      "orgAccent.sampleMention"
     ],
     "ru": [
       "channel.tooLong.fileName",

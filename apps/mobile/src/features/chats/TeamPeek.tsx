@@ -13,7 +13,7 @@ import { haptics, TabFoot, useReducedMotion } from "@/ui";
 import { usePullPastEnd } from "../chat/ChatPeek";
 import { armedAfter, PEEK_SIZE } from "../chat/peek";
 import { AgentFace } from "../shared/Face";
-import { TAB_BAR_TOP, TEAM_PEEK_GAP, teamFacePose, teamRow } from "./team-peek";
+import { TEAM_PEEK_GAP, teamFacePose, teamRow } from "./team-peek";
 
 /** The tap as the last face arrives: once per pull, from the UI thread. */
 const tap = () => haptics.light();
@@ -57,8 +57,9 @@ export const TeamPeek = memo(function TeamPeek({
       pointerEvents="none"
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
-      // Its bottom edge is the tab bar's top (over the work-along strip when one stands there): below it, cut.
-      style={[styles.box, { bottom: safe.bottom + TAB_BAR_TOP + (foot?.height ?? 0) }]}
+      // Its bottom edge is the tab bar's top (over the work-along strip when one stands there): below it, cut. Inside a
+      // tab the system's bottom safe area already ends there (it holds the bar), so nothing is added for the bar.
+      style={[styles.box, { bottom: safe.bottom + (foot?.height ?? 0) }]}
     >
       {row.map((f) => (
         <TeamFace key={f.id} agentId={f.id} pull={pull} rank={f.rank} lastRank={lastRank} reduced={reduced} />

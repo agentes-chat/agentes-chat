@@ -541,4 +541,31 @@ export const ptBR: Words = {
       why: () => "Você recebeu este e-mail porque este workspace no agentes.chat é seu. São só dois avisos como este.",
     },
   },
+  surface: {
+    linked: {
+      subject: (surface) => `${surface} foi vinculado à sua conta do agentes.chat`,
+      preheader: "Seu assistente responde você por lá agora. Se não foi você, desvincule.",
+      headline: (surface) => `${surface} foi vinculado`,
+      body: (surface, display, org) => [
+        { b: display },
+        ` no ${surface} agora fala com seu assistente em `,
+        { b: org },
+        ".",
+      ],
+      notYou: "Não foi você? Desvincule. As mensagens de lá param de chegar à sua conta na hora.",
+      button: "Desvincular",
+      small: "Se foi você, não precisa fazer nada. Dá para desvincular quando quiser em Configurações.",
+      why: (surface) => `Você recebeu este e-mail porque ${surface} foi vinculado à sua conta do agentes.chat.`,
+      picture: "Seu assistente, agora também no seu celular",
+    },
+    unlinked: {
+      subject: (surface) => `${surface} foi desvinculado da sua conta do agentes.chat`,
+      preheader: "A identidade mudou. Vincule de novo em Configurações se foi você.",
+      headline: (surface) => `${surface} foi desvinculado`,
+      body: (surface, display) => [{ b: display }, ` no ${surface} foi desvinculado porque a identidade mudou.`],
+      small: "Vincule de novo em Configurações se foi você.",
+      why: (surface) => `Você recebeu este e-mail porque ${surface} estava vinculado à sua conta do agentes.chat.`,
+      picture: "Seu assistente, não mais no seu celular",
+    },
+  },
 };

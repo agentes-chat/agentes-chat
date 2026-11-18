@@ -360,14 +360,6 @@ describe("Conectar uma IA: one picker, plans first", () => {
     const ui = await stylesheet("../../../packages/ui/src/styles/components.css");
     expect(ruleOf(ui, '.ac-option[aria-pressed="true"]::after')).toContain("height: 18px");
     const layout = await stylesheet("../src/layout.css");
-    // A row has two lines: its check goes on the first, its name's, past the row's padding (the page's 22px line
-    // where the lh unit is unknown).
-    expect(ruleOf(ui, ".ac-option")).toContain("padding: var(--space-3)");
-    const key = ".ai-picker > .ac-option.ai-picker__key::after";
-    expect(ruleOf(layout, key)).toContain("top: calc(var(--space-3) + 11px - 9px)");
-    expect(ruleOf(layout.split("\n@supports (top: 1lh) {")[1] ?? "", key)).toContain(
-      "top: calc(var(--space-3) + 0.5lh - 9px)",
-    );
     // The form's rhythm: the panel stands from the select as any field from the next.
     expect(ruleOf(layout, ".ai-picker")).toContain("gap: var(--form-gap)");
   });

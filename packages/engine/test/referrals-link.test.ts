@@ -54,6 +54,17 @@ describe("mintReferralsLink", () => {
     });
   });
 
+  test("leaves out a suspended workspace, keeps one held for payment", async () => {
+    const [held] = await f.db
+      .insert(schema.organizations)
+      .values({ name: "Held", standing: "hold" })
+      .returning({ id: schema.organizations.id });
+    if (!held) throw new Error("no workspace");
+    await f.db.insert(schema.organizationMembers).values({ orgId: held.id, userId: f.owner.id, role: "owner" });
+    await f.db.update(schema.organizations).set({ standing: "suspended" }).where(eq(schema.organizations.id, f.org.id));
+    expect(claimsOf((await mint(f.owner.id)).url).orgs).toEqual([{ id: held.id, name: "Held", role: "owner" }]);
+  });
+
   test("a person with no workspace gets a link with none", async () => {
     const loner = await addUser(f.db, "loner");
     expect(claimsOf((await mint(loner.id)).url).orgs).toEqual([]);

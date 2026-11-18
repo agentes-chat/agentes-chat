@@ -14,6 +14,8 @@ export const keys = {
   me: ["me"] as const,
   accountDeletion: ["account-deletion"] as const,
   phoneSignIn: ["phone-sign-in"] as const,
+  /** My outside chat surface links (ADR 0187): per account, not per workspace. */
+  surfaceLinks: ["surface-links"] as const,
   /** The server's Web Push key (ADR 0071); `null` = Web Push off on this server. */
   webPushKey: ["push", "web-key"] as const,
   models: ["models"] as const,

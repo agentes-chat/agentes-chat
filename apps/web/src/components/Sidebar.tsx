@@ -2347,7 +2347,11 @@ function useWorkspaceLook() {
     return o !== undefined && isPersonal(o) && o.role === "owner";
   };
   const several = me.organizations.filter((o) => mine(o.id)).length > 1;
-  return (o: { id: string; name: string; logo?: string | null }, face: "sm" | "md", mark: number) =>
+  return (
+    o: { id: string; name: string; logo?: string | null; accent?: string | null },
+    face: "sm" | "md",
+    mark: number,
+  ) =>
     mine(o.id)
       ? {
           leading: <Avatar kind="person" name={me.user.name} imageUrl={me.user.image} size={face} />,
@@ -2355,7 +2359,13 @@ function useWorkspaceLook() {
           sub: null,
           personal: true,
         }
-      : { leading: <OrgMark logo={o.logo} size={mark} />, name: o.name, sub: null, personal: false };
+      : {
+          // Each workspace in its own accent: the engine's `sky` is the active one's.
+          leading: <OrgMark logo={o.logo} accent={o.accent ?? null} size={mark} />,
+          name: o.name,
+          sub: null,
+          personal: false,
+        };
 }
 
 /**

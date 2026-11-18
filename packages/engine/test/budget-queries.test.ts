@@ -122,16 +122,16 @@ test("with tools, as every production run has them (find_agent among them): with
   expect(run.total).toBeLessThanOrEqual(46);
 });
 
-test("the run keeps its stage profile in its transcript, for the operator's analytics, and adds no step", async () => {
+test("the run keeps its stage profile in its own column, for the operator's analytics, and adds no step", async () => {
   const run = await mentionRun();
   const [row] = await f.db
-    .select({ transcript: schema.agentRuns.transcript })
+    .select({ profiles: schema.agentRuns.profiles, transcript: schema.agentRuns.transcript })
     .from(schema.agentRuns)
     .where(eq(schema.agentRuns.id, run.runId));
-  const kept = row?.transcript?.profiles as { stages: StageTiming[] }[] | undefined;
-  expect(kept?.map((p) => p.stages.map((s) => s.stage))).toEqual([
-    ["claim", "context", "model#1", "persist", "events"],
-  ]);
+  const stages = (kept: unknown) =>
+    (kept as { stages: StageTiming[] }[] | undefined)?.map((p) => p.stages.map((s) => s.stage));
+  expect(stages(row?.profiles)).toEqual([["claim", "context", "model#1", "persist", "events"]]);
+  expect(row?.transcript?.profiles).toBeUndefined();
   const steps = await f.db
     .select({ data: schema.agentRunSteps.data })
     .from(schema.agentRunSteps)

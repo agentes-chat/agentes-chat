@@ -39,7 +39,7 @@ import { AgentFace } from "../shared/Face";
 import { useColors, useDirectory, useMeId } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
 import { pickOne } from "../shared/PickerSheet";
-import { goBack, MentionCount, PushedHeader } from "../shared/parts";
+import { FocusLive, goBack, MentionCount, PushedHeader } from "../shared/parts";
 import { usePersonPhoto } from "../shared/photo";
 import { useTasksUnreadMarks, useUnreadThreads } from "../shared/queries";
 import { useMyPerson, usePresenceOf } from "../status/hooks";
@@ -129,9 +129,18 @@ let horizonArrived = false;
  * so nothing here animates beyond the presses and the platform's push, but for your agents rising onto the horizon the
  * first time it opens in a session. A personal workspace
  * (ADR 0159) is yours: no workspace name after your @, your face as its mark, and its work led by what its sidebar
- * keeps in sight (Routines, Drive), with Threads (no tab there) and Team (no row in Agents) in it.
+ * keeps in sight (Routines, Drive), with Threads (no tab there) and Team (no row in Agents) in it. Its sky and your
+ * agents hold still while a screen it opened is over it.
  */
 export function MeScreen() {
+  return (
+    <FocusLive>
+      <MePage />
+    </FocusLive>
+  );
+}
+
+function MePage() {
   const { t, i18n } = useTranslation();
   const me = useMe();
   const meId = useMeId();
@@ -221,7 +230,7 @@ export function MeScreen() {
       <GroupedRow key="routines" icon="clock" label={t("routines.title")} chevron onPress={() => open("/routines")} />
     ),
     wiki: <GroupedRow key="wiki" icon="file" label={t("wiki.title")} chevron onPress={() => open("/wiki")} />,
-    drive: <GroupedRow key="drive" icon="doc" label={t("mobile.me.drive")} chevron onPress={() => open("/drive")} />,
+    drive: <GroupedRow key="drive" icon="drive" label={t("mobile.me.drive")} chevron onPress={() => open("/drive")} />,
     dashboards: (
       <GroupedRow
         key="dashboards"

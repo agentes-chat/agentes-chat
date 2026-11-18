@@ -175,6 +175,24 @@ export interface AuthConfig {
   errorReports?: ErrorReportsConfig | null;
   /** The same for the phone app; null or absent (a server from before it): nowhere. */
   mobileErrorReports?: ErrorReportsConfig | null;
+  /** An outside chat surface is bridged (ADR 0187); whether I may link it is `surfaces.list().allowed`. */
+  surface?: boolean;
+  /**
+   * This address is one the server's operator registered (ADR 0194): the pages before sign-in show its look, and sign-in
+   * is by email alone. Null or absent on any other address.
+   */
+  host?: HostLook | null;
+}
+
+/**
+ * A registered host's look (`AuthConfig.host`): `accent` a `#rrggbb` or null, `logoUrl` on that host or null,
+ * `poweredBy` whether its pages end with the powered-by line.
+ */
+export interface HostLook {
+  name: string;
+  accent: string | null;
+  logoUrl: string | null;
+  poweredBy: boolean;
 }
 
 export interface ErrorReportsConfig {
@@ -261,6 +279,41 @@ export interface PhoneSignIn {
   expiresIn: number;
 }
 
+/** A sender on the outside chat surface linked to my account (ADR 0187). */
+export interface SurfaceLink {
+  id: string;
+  status: "pending" | "active";
+  /** What the surface shows of the sender (a number, a handle): shown in full, never trusted. */
+  display: string | null;
+  /** The sender's own name on the surface. Untrusted. */
+  profileName: string | null;
+  /** The workspace it answers in; null when that workspace is gone. */
+  orgId: string | null;
+  orgName: string | null;
+  createdAt: string;
+  confirmedAt: string | null;
+  /** Pending only: when it stops counting. */
+  expiresAt: string | null;
+}
+
+/** `GET /me/surface-links`: `allowed`, never `AuthConfig.surface`, decides whether the apps offer linking. */
+export interface SurfaceLinks {
+  /** Null when this server bridges no surface. */
+  surface: { name: string } | null;
+  allowed: boolean;
+  /** Active first, then pending. */
+  links: SurfaceLink[];
+}
+
+/** A code to type on the surface, 10 minutes, once. */
+export interface SurfaceLinkCode {
+  /** As shown: `KQ7M-3XPF`. */
+  code: string;
+  /** Opens the surface with the code typed. */
+  openUrl: string;
+  expiresAt: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -314,6 +367,8 @@ export interface OrgSummary {
   rank?: number | null;
   /** The workspace logo (`/api/app/org-logos/…`); null or absent = the agent mark. */
   logo?: string | null;
+  /** The workspace's accent "#rrggbb" (ADR 0193): the apps paint the agent colors from it. Null or absent: the default. */
+  accent?: string | null;
   /** From `GET /me`: when it was made. Absent from older servers. */
   createdAt?: string;
   /** From `GET /me`; absent from older servers (active). Changes come as `org.standing` events. */
@@ -389,7 +444,8 @@ export interface AccountDeletionPlan {
   /** Others are in them: I leave. */
   leaves: { id: string; name: string; role: Role }[];
   /** I'm their only owner, others are in them and they aren't being deleted: the account can't go yet (`sole_owner`). */
-  soleOwner: { id: string; name: string }[];
+  /** `onlyOutside`: everyone else is an outside collaborator (ADR 0191); optional, an older server doesn't say. */
+  soleOwner: { id: string; name: string; onlyOutside?: boolean }[];
   /** Computers I connected in the workspaces I leave, not in system mode: removed with the account. */
   computers: { orgId: string; id: string; name: string }[];
   /** Keys, connections and mailboxes I added to the workspaces I leave: the workspace's, so they stay. */
@@ -1096,6 +1152,10 @@ export interface AgentDraft {
   mail?: { accountId: string; address: string; level: "read" | "write"; ownerUserId: string }[];
   /** A routine of its own, created with it. */
   routine?: ProposedRoutine | null;
+  /** How it introduces itself, in its own voice (ADR 0164): the speech bubble on its card. */
+  hello?: string;
+  /** Catalog apps its job needs that aren't connected yet (preset ids): its chat asks to connect them. */
+  later?: string[];
   ai: SuggestedAi;
 }
 
@@ -2262,6 +2322,14 @@ export interface Connection {
   reconnectAdds?: string[];
   /** `needs_reconnect`: its sign-in stopped working, no tools until Reconectar. Older servers leave it out. */
   status?: "active" | "needs_reconnect";
+  /**
+   * A personal connection's person (ADR 0099 addendum): only they see its details and give it to agents, and agents
+   * use it when they ask. Someone else's comes, to who manages connectors, with its name, service and person only.
+   * Null (older servers leave it out): the team's.
+   */
+  ownerUserId?: string | null;
+  /** A personal connection's agents (a grant of their own on it), in the list only. */
+  agentIds?: string[];
 }
 
 /** An installation of our GitHub App bound to the organization (repository access for git and PRs). */
@@ -2990,6 +3058,14 @@ export interface CustomServer {
   /** Last time an admin saved the classification; null = never (nothing exposed). */
   reviewedAt: string | null;
   createdAt: string;
+  /**
+   * A personal connection's person (ADR 0099 addendum): only they see its details and give it to agents, and agents
+   * use it when they ask. Someone else's comes, to who manages connectors, with its name, service and person only.
+   * Null (older servers leave it out): the team's.
+   */
+  ownerUserId?: string | null;
+  /** A personal connection's agents (a grant of their own on it), in the list only. */
+  agentIds?: string[];
 }
 
 /** The workspace's Composio calls this month (UTC): connectors and mailboxes together (ADR 0107 §7). */
@@ -4517,6 +4593,11 @@ export interface AgentAccess {
     custom: boolean;
     state: AccessState;
     scopes: AccessScope[];
+    /**
+     * A personal connection's person; null or absent: the team's. Someone else's comes (with `others`) only while the
+     * agent holds some of it, with no scopes: it can only be taken off (`connectors[id]: false`).
+     */
+    ownerUserId?: string | null;
   }[];
 }
 
@@ -4772,11 +4853,12 @@ export interface Machine {
    * OS and arch are blank.
    */
   kind?: MachineKind;
-  /** Runner connected now (`machine.status` events). */
+  /** Runner connected now (`machine.status` events), or asleep in standby: people never see it sleep. */
   online: boolean;
   /**
-   * ADR 0161: the workspace's own computer is asleep in standby, offline by design: it wakes when something wants it,
-   * and opens as it does. Absent from an older server: not in standby.
+   * ADR 0161: the workspace's own computer is asleep in standby: it wakes when something wants it, and its screen
+   * opens as it does. False again (and `online` the runner's) once a wake failed to bring it back in time. Absent
+   * from an older server: not in standby.
    */
   standby?: boolean;
   lastSeenAt: string | null;
@@ -6105,6 +6187,11 @@ export interface MachineAccount {
    */
   useOrder?: number | null;
   /**
+   * The id of the oldest login of the same account on its computer: the same for every login of one account (Claude
+   * signs in once per agent), whoever looks, where its email and key's end are its owner's (absent: an older server).
+   */
+  sameAs?: string;
+  /**
    * A run at another account's limit may go on with it: Claude Code's or Codex's own sign-in (never a key), shared
    * between agents and signed in. Only these have a place in the order of use (absent: an older server).
    */
@@ -7239,6 +7326,8 @@ export type UnreadEvent =
   | { type: "channel.read"; channelId: string; userId: string; lastReadAt: string }
   | { type: "channel.muted"; channelId: string; muted: boolean }
   | { type: "thread.read"; threadId: string; channelId: string; lastReadAt: string }
+  /** One of my outside chat surface links changed (ADR 0187): `surfaces.list` reads again. */
+  | { type: "surface_link.changed"; linkId: string; status: "pending" | "active" | "gone" }
   /** How my conversations look here, changed on another device (`chatPrefs` as the server keeps it). */
   | { type: "chat.prefs"; chatPrefs: ChatPrefs };
 

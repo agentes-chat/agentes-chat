@@ -550,4 +550,32 @@ export const words: EmailWords = {
         "agentes.chatのこのワークスペースはあなたのものであるため、このメールをお送りしています。このお知らせは2回だけです。",
     },
   },
+  surface: {
+    linked: {
+      subject: (surface) => `${surface} が agentes.chat アカウントに連携されました`,
+      preheader: "これからはアシスタントがそちらで返信します。心当たりがなければ連携を解除してください。",
+      headline: (surface) => `${surface} が連携されました`,
+      body: (surface, display, org) => [
+        { b: display },
+        `（${surface}）が `,
+        { b: org },
+        " のアシスタントと話せるようになりました。",
+      ],
+      notYou:
+        "心当たりがありませんか？連携を解除してください。そこからのメッセージはすぐにアカウントに届かなくなります。",
+      button: "連携を解除",
+      small: "ご自身で行った場合は何もする必要はありません。連携はいつでも設定から解除できます。",
+      why: (surface) => `${surface} が agentes.chat アカウントに連携されたため、このメールをお送りしています。`,
+      picture: "スマートフォンでも話せるアシスタント",
+    },
+    unlinked: {
+      subject: (surface) => `${surface} と agentes.chat アカウントの連携が解除されました`,
+      preheader: "相手側の ID が変わりました。ご自身なら設定からもう一度連携してください。",
+      headline: (surface) => `${surface} の連携が解除されました`,
+      body: (surface, display) => [{ b: display }, `（${surface}）は ID が変わったため連携が解除されました。`],
+      small: "ご自身なら設定からもう一度連携してください。",
+      why: (surface) => `${surface} が agentes.chat アカウントに連携されていたため、このメールをお送りしています。`,
+      picture: "スマートフォンからは外れたアシスタント",
+    },
+  },
 };

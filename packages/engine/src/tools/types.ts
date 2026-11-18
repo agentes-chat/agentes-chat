@@ -178,6 +178,11 @@ export interface ToolDefinition {
    */
   readsOutside?: true;
   /**
+   * A person's own connection's tool: that person, the only run it serves (the gateway refuses it to any other) and
+   * the only one who reads its calls in the audit log.
+   */
+  ownerUserId?: string;
+  /**
    * Whose server a connected app's tool runs on, when that says who reads its arguments (ADR 0190): `catalog`, a
    * connector of our catalog on its vendor's own server; `vouched`, a server by address the operator listed in
    * `MCP_CALLER_IDENTITY`. Unset: anyone's (a custom server by address, a connections broker, a mailbox, a database).
@@ -223,9 +228,9 @@ export interface ToolDefinition {
   /** Human summary of a call, for approval cards. */
   describe?(input: Record<string, unknown>): { title: string; detail?: string };
   /**
-   * Our own tools only (`request_approval`, ADR 0126; a person's own mailbox, ADR 0038): who decides this call's
-   * approval instead of the agent's owner and admins; `requestedBy` is the person behind the run. A message refuses
-   * the call (a role that isn't there); null approvers: the usual rule.
+   * Our own tools only (`request_approval`, ADR 0126; a person's own mailbox, ADR 0038, or connection): who decides
+   * this call's approval instead of the agent's owner and admins; `requestedBy` is the person behind the run. A message
+   * refuses the call (a role that isn't there); null approvers: the usual rule.
    */
   approvers?(
     input: Record<string, unknown>,

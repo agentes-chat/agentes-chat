@@ -336,6 +336,38 @@ export const EMAIL_SAMPLES: Record<string, EmailTemplate> = {
     newEmail: "ana.souza@example.com",
     url: `${APP}/email-undo?token=Hk2dQ9xWm4Lp7Rt1Vb8Nc3Zs6Yf0Ja5Ue`,
   },
+  /** An outside chat surface linked: "Not you? Unlink it". */
+  "surface_linked.en": {
+    kind: "surface_linked",
+    locale: "en",
+    surface: "Example Chat",
+    display: "12025550123",
+    orgName: "Souza Bakery",
+    url: `${APP}/email-undo?kind=surface&token=Hk2dQ9xWm4Lp7Rt1Vb8Nc3Zs6Yf0Ja5Ue`,
+  },
+  "surface_linked.pt-BR": {
+    kind: "surface_linked",
+    locale: "pt-BR",
+    surface: "Example Chat",
+    display: "5511900000001",
+    orgName: "Padaria Souza",
+    url: `${APP}/email-undo?kind=surface&token=Hk2dQ9xWm4Lp7Rt1Vb8Nc3Zs6Yf0Ja5Ue`,
+  },
+  /** Unlinked because the sender's identity there changed. */
+  "surface_unlinked.en": {
+    kind: "surface_unlinked",
+    locale: "en",
+    surface: "Example Chat",
+    display: "12025550123",
+    url: APP,
+  },
+  "surface_unlinked.pt-BR": {
+    kind: "surface_unlinked",
+    locale: "pt-BR",
+    surface: "Example Chat",
+    display: "5511900000001",
+    url: APP,
+  },
   /** To an owner: a button to restore it. */
   "workspace_deleting-owner.en": {
     kind: "workspace_deleting",

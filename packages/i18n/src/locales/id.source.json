@@ -1478,6 +1478,9 @@
   "auth.termsAfter": {
     "value": "."
   },
+  "auth.poweredBy": {
+    "value": "Powered by agentes.chat"
+  },
   "auth.signOut": {
     "value": "Sign out"
   },
@@ -5168,6 +5171,9 @@
   "noticePrefs.phoneOff": {
     "value": "Turn them on in the phone app"
   },
+  "noticePrefs.phoneOpen": {
+    "value": "Open"
+  },
   "noticePrefs.mac": {
     "value": "Mac app"
   },
@@ -5986,6 +5992,132 @@
   },
   "openOnPhone.localOnlyHere": {
     "value": "Turn on Reach it from your phone and teammates. Then come back here."
+  },
+  "surface.link.consent": {
+    "value": "{{assistant}} by agentes.chat may message you on {{surface}} about your workspaces, and call you only when something is urgent and you allow it. Write stop to turn this off."
+  },
+  "surface.link.title": {
+    "value": "Talk to {{assistant}} on {{surface}}"
+  },
+  "surface.link.qr": {
+    "value": "QR code that opens {{surface}} with your code typed in"
+  },
+  "surface.link.making": {
+    "value": "Making your code"
+  },
+  "surface.link.code": {
+    "value": "Your code {{code}}"
+  },
+  "surface.link.open": {
+    "value": "Open {{surface}}"
+  },
+  "surface.link.stepScan": {
+    "value": "Scan the code with your phone, or open the app"
+  },
+  "surface.link.stepSend": {
+    "value": "Send the message as it is"
+  },
+  "surface.link.stepSendText": {
+    "value": "This moves on by itself once your message arrives."
+  },
+  "surface.link.stepConfirm": {
+    "value": "Check the sender and confirm here"
+  },
+  "surface.link.showCode": {
+    "value": "Show the code again"
+  },
+  "surface.link.confirmTitle": {
+    "value": "Is this your {{surface}}?"
+  },
+  "surface.link.sentBy": {
+    "value": "This sender sent your code"
+  },
+  "surface.link.onlyYou": {
+    "value": "Link it only if this is you."
+  },
+  "surface.link.workspace": {
+    "value": "Answers in {{workspace}}"
+  },
+  "surface.link.confirm": {
+    "value": "Yes, link it"
+  },
+  "surface.link.notMe": {
+    "value": "Not me"
+  },
+  "surface.link.doneTitle": {
+    "value": "{{surface}} is linked"
+  },
+  "surface.link.doneText": {
+    "value": "{{assistant}} answers you there from now on."
+  },
+  "surface.link.newCode": {
+    "value": "Make a new code"
+  },
+  "surface.link.done": {
+    "value": "Done"
+  },
+  "surface.row.hint": {
+    "value": "Talk with {{assistant}} and get its replies on {{surface}}."
+  },
+  "surface.row.link": {
+    "value": "Link"
+  },
+  "surface.row.none": {
+    "value": "{{assistant}} can message you there"
+  },
+  "surface.row.pending": {
+    "value": "A sender is waiting for you to confirm"
+  },
+  "surface.row.unlink": {
+    "value": "Unlink"
+  },
+  "surface.row.unlinkTitle": {
+    "value": "Unlink {{surface}}?"
+  },
+  "surface.row.unlinkText": {
+    "value": "{{assistant}} stops answering you there. You can link it again any time."
+  },
+  "surface.row.unlinked": {
+    "value": "{{surface}} unlinked"
+  },
+  "surface.undo.title": {
+    "value": "Unlink the chat app?"
+  },
+  "surface.undo.lead": {
+    "value": "Your account was just linked to a chat app. If that wasn't you, unlink it here."
+  },
+  "surface.undo.button": {
+    "value": "Unlink"
+  },
+  "surface.undo.done": {
+    "value": "{{surface}} unlinked"
+  },
+  "surface.undo.doneLead": {
+    "value": "{{display}} can't reach your account anymore."
+  },
+  "surface.undo.ended": {
+    "value": "Already unlinked"
+  },
+  "surface.undo.endedLead": {
+    "value": "{{display}} on {{surface}} was unlinked before. Nothing else to do."
+  },
+  "surface.undo.gone": {
+    "value": "This undo link no longer works"
+  },
+  "surface.undo.sender": {
+    "value": "That sender"
+  },
+  "surface.via": {
+    "value": "via {{surface}}"
+  },
+  "surface.viaTip": {
+    "value": "Sent by {{person}} on {{surface}}"
+  },
+  "surface.forwarded": {
+    "value": "forwarded via {{surface}}"
+  },
+  "surface.forwardedTip": {
+    "value": "{{person}} forwarded this from {{surface}}. The words are someone else's."
   },
   "team.title": {
     "value": "Team"
@@ -8395,14 +8527,29 @@
   "connectAi.have.title": {
     "value": "Already connected"
   },
-  "connectAi.have.titleFor": {
-    "value": "Already connected, for {{name}}"
-  },
   "connectAi.have.other": {
     "value": "Or connect another"
   },
   "connectAi.have.manageKeys": {
     "value": "Manage or delete keys"
+  },
+  "connectAi.have.pickLine": {
+    "value": "Pick an account already connected here. {{name}} thinks with it."
+  },
+  "connectAi.have.onlyOwner": {
+    "value": {
+      "one": "{{count}} more of {{name}}'s accounts only {{name}} can give.",
+      "other": "{{count}} more of {{name}}'s accounts only {{name}} can give."
+    }
+  },
+  "connectAi.have.moreAgents": {
+    "value": {
+      "one": "and {{count}} more agent",
+      "other": "and {{count}} more agents"
+    }
+  },
+  "connectAi.have.plenty": {
+    "value": "Plenty left"
   },
   "connectAi.chat.mine": {
     "value": "Yours"
@@ -9361,9 +9508,6 @@
   },
   "actionCard.agentProposal.aiNone": {
     "value": "No AI yet. Connect one after creating it"
-  },
-  "actionCard.agentProposal.reviewTitle": {
-    "value": "Review {{name}}"
   },
   "actionCard.agentProposal.lines": {
     "value": "What {{name}} gets"
@@ -17525,9 +17669,6 @@
   "newAgent.proposalNoAccess": {
     "value": "Only people in its conversation can see this proposal."
   },
-  "newAgent.backToChat": {
-    "value": "Back to the conversation"
-  },
   "newAgent.and": {
     "value": " and "
   },
@@ -17899,6 +18040,117 @@
   },
   "newAgentCard.namesRoll": {
     "value": "Other names"
+  },
+  "newAgentCard.proposal.lead": {
+    "value": "Adjust what {{name}} proposed. You can change everything later."
+  },
+  "newAgentCard.proposal.leadNarrow": {
+    "value": "{{name}}'s proposal: {{why}}"
+  },
+  "newAgentCard.proposal.side": {
+    "value": "The proposal"
+  },
+  "newAgentCard.proposal.from": {
+    "value": "Proposed by {{name}}"
+  },
+  "newAgentCard.proposal.changed": {
+    "value": "What you changed"
+  },
+  "newAgentCard.proposal.changedNone": {
+    "value": "Nothing yet. What you change on the card shows here, with Undo."
+  },
+  "newAgentCard.proposal.undo": {
+    "value": "Undo"
+  },
+  "newAgentCard.proposal.changes.changed": {
+    "value": "changed"
+  },
+  "newAgentCard.proposal.changes.added": {
+    "value": "added"
+  },
+  "newAgentCard.proposal.changes.removed": {
+    "value": "removed"
+  },
+  "newAgentCard.proposal.changes.how": {
+    "value": "How it works"
+  },
+  "newAgentCard.proposal.firstTask": {
+    "value": "First task"
+  },
+  "newAgentCard.proposal.firstTaskPlaceholder": {
+    "value": "What to ask first (optional)"
+  },
+  "newAgentCard.proposal.firstTaskHint": {
+    "value": "Ready in your chat with {{name}}. Just send it."
+  },
+  "newAgentCard.proposal.firstTaskHintBlank": {
+    "value": "Ready in your chat with it. Just send it."
+  },
+  "newAgentCard.proposal.firstTaskNone": {
+    "value": "With no task, the chat opens empty."
+  },
+  "newAgentCard.proposal.after": {
+    "value": "After it's created"
+  },
+  "newAgentCard.proposal.afterAi": {
+    "value": "Connect an AI for {{name}} to think with"
+  },
+  "newAgentCard.proposal.afterAiBlank": {
+    "value": "Connect an AI for it to think with"
+  },
+  "newAgentCard.proposal.afterApp": {
+    "value": "Connect {{app}}"
+  },
+  "newAgentCard.proposal.afterNone": {
+    "value": "Nothing. {{name}} starts working as soon as it's created."
+  },
+  "newAgentCard.proposal.afterNoneBlank": {
+    "value": "Nothing. It starts working as soon as it's created."
+  },
+  "newAgentCard.proposal.discard": {
+    "value": "Discard proposal"
+  },
+  "newAgentCard.proposal.otherChannel": {
+    "value": "Another channel"
+  },
+  "newAgentCard.proposal.chooseChannels": {
+    "value": "Choose channels"
+  },
+  "newAgentCard.proposal.channelsNone": {
+    "value": "Only in its chat with you."
+  },
+  "newAgentCard.proposal.channel.lead": {
+    "value": "Where {{name}} will work."
+  },
+  "newAgentCard.proposal.channel.leadBlank": {
+    "value": "Where it will work."
+  },
+  "newAgentCard.proposal.channel.does": {
+    "value": "{{name}} answers when called in {{channel}} and reads what goes on there."
+  },
+  "newAgentCard.proposal.channel.doesBlank": {
+    "value": "It answers when called in {{channel}} and reads what goes on there."
+  },
+  "newAgentCard.proposal.channel.remove": {
+    "value": "Remove from {{channel}}"
+  },
+  "newAgentCard.proposal.routine.label": {
+    "value": "Routine"
+  },
+  "newAgentCard.proposal.routine.lead": {
+    "value": "{{when}}, in {{channel}}."
+  },
+  "newAgentCard.proposal.routine.leadDm": {
+    "value": "{{when}}, in its chat with you."
+  },
+  "newAgentCard.proposal.routine.starts": {
+    "value": "Starts once {{name}} is created. Change its time and text in Routines."
+  },
+  "newAgentCard.proposal.routine.startsBlank": {
+    "value": "Starts once it's created. Change its time and text in Routines."
+  },
+  "newAgentCard.proposal.routine.remove": {
+    "value": "Remove the routine"
   },
   "newAgentCard.skill.opens": {
     "value": "{{name}} opens this manual when the topic comes up. You edit it in Skills."
@@ -27347,6 +27599,33 @@
   "orgLogo.removed": {
     "value": "Logo removed."
   },
+  "orgAccent.label": {
+    "value": "Accent color"
+  },
+  "orgAccent.change": {
+    "value": "Change color"
+  },
+  "orgAccent.useDefault": {
+    "value": "Use the default"
+  },
+  "orgAccent.suggested": {
+    "value": "Suggested colors"
+  },
+  "orgAccent.sampleMention": {
+    "value": "@Agent"
+  },
+  "orgAccent.sampleLink": {
+    "value": "A link"
+  },
+  "orgAccent.save": {
+    "value": "Save color"
+  },
+  "orgAccent.saved": {
+    "value": "Accent color updated."
+  },
+  "orgAccent.reset": {
+    "value": "Back to the default color."
+  },
   "look.previous": {
     "value": "Previous"
   },
@@ -31265,6 +31544,93 @@
   },
   "connectors.mcp.none": {
     "value": "MCP servers you connect by their address show up here."
+  },
+  "connectors.personal.note": {
+    "value": "Only you open these connections. Your agents use them only when you ask."
+  },
+  "connectors.personal.noteOne": {
+    "value": "Only you open this connection. Your agents use it only when you ask."
+  },
+  "connectors.personal.emptyTitle": {
+    "value": "Connect your own accounts"
+  },
+  "connectors.personal.emptyText": {
+    "value": "Only you open your connections, and your agents use them only when you ask. Mailboxes follow their own rule."
+  },
+  "connectors.personal.noApps": {
+    "value": "Services you connect just for yourself show up here."
+  },
+  "connectors.personal.mailTitle": {
+    "value": "Your mailboxes"
+  },
+  "connectors.personal.mailNote": {
+    "value": "Agents you allowed use your mailboxes as you set, also for people who talk to them directly. When someone else asks for something that needs approval, you're the one who approves it."
+  },
+  "connectors.personal.others": {
+    "value": "Others' personal connections"
+  },
+  "connectors.personal.of": {
+    "value": "Personal to {{name}}"
+  },
+  "connectors.personal.seeAll": {
+    "value": "See all {{count}}"
+  },
+  "connectors.personal.forWhom": {
+    "value": "Who it's for"
+  },
+  "connectors.personal.teamLocked": {
+    "value": "Only people who manage connectors add the team's."
+  },
+  "connectors.personal.mailLocked": {
+    "value": "A mailbox always belongs to whoever connects it."
+  },
+  "connectors.personal.done": {
+    "value": "Your agents use it only when you ask."
+  },
+  "connectors.personal.worksWhenAsked": {
+    "value": "Works only when you ask."
+  },
+  "connectors.personal.remove": {
+    "value": "Remove"
+  },
+  "connectors.personal.removeName": {
+    "value": "Remove {{name}}"
+  },
+  "connectors.personal.removeTitle": {
+    "value": "Remove {{name}}?"
+  },
+  "connectors.personal.takeOff": {
+    "value": "Take off an agent"
+  },
+  "connectors.personal.takeOffTitle": {
+    "value": "Take {{name}} off an agent"
+  },
+  "connectors.personal.takeOffName": {
+    "value": "Take {{name}} off {{agent}}"
+  },
+  "connectors.personal.takeOffOne": {
+    "value": "Take off"
+  },
+  "connectors.personal.takenOff": {
+    "value": "{{agent}} no longer uses {{name}}."
+  },
+  "connectors.personal.turnOff": {
+    "value": "Turn off"
+  },
+  "connectors.personal.turnOffName": {
+    "value": "Turn off {{name}} for this agent"
+  },
+  "connectors.personal.moveToTeam": {
+    "value": "Move to the team"
+  },
+  "connectors.personal.moveTitle": {
+    "value": "Move {{name}} to the team?"
+  },
+  "connectors.personal.moveText": {
+    "value": "Everyone in the workspace sees it. People who manage agents choose which agents use it, and an agent's owner can turn it off on theirs. An agent that uses every connected app gets it right away."
+  },
+  "connectors.personal.moved": {
+    "value": "{{name}} now belongs to the team."
   },
   "connectors.addTitle": {
     "value": "Add connector"
@@ -36645,6 +37011,30 @@
   "files.nav.place": {
     "value": "{{index}} of {{count}}"
   },
+  "errors.surface.off": {
+    "value": "Linking chat apps was turned off. Reload to see your settings as they are now."
+  },
+  "errors.surface.notAllowed": {
+    "value": "Linking a chat app isn't open to your account yet. Keep using the app here until it opens."
+  },
+  "errors.surface.noAssistant": {
+    "value": "The assistant in this workspace isn't set to talk with you. Pick another workspace to link."
+  },
+  "errors.surface.noWorkspace": {
+    "value": "You're no longer in this workspace. Pick another workspace to link."
+  },
+  "errors.surface.linkGone": {
+    "value": "This link isn't waiting anymore: it ran out after 10 minutes or was canceled. Make a new code to start again."
+  },
+  "errors.surface.taken": {
+    "value": "That sender is linked to another agentes.chat account. Unlink it there, then send a new code."
+  },
+  "errors.surface.undoGone": {
+    "value": "This undo link was already used or ran out. Unlink in your notification settings instead."
+  },
+  "errors.surface.codeGone": {
+    "value": "This code is wrong, used or ran out after 10 minutes. Make a new code and send it again."
+  },
   "errors.wallpaper.notYours": {
     "value": "That photo isn't yours."
   },
@@ -36739,7 +37129,7 @@
     "value": "This file was deleted more than 30 days ago and can't come back."
   },
   "errors.said.looksSecret": {
-    "value": "That looks like a password or a key, and everyone here would see it."
+    "value": "That looks like a password or a key, and everyone here would see it. Ask the agent to request it privately instead."
   },
   "errors.said.blockSpec": {
     "value": "This block has a mistake in its parts or formulas, so it can't be shown. Fix it and try again."
@@ -36792,11 +37182,17 @@
   "errors.said.agentCantRead": {
     "value": "Let the agent read this first, in its access settings."
   },
+  "errors.said.connectionNotYours": {
+    "value": "This connection is someone else's own. Only a routine of theirs can wait on its events."
+  },
   "errors.said.neverHappens": {
     "value": "This schedule never happens."
   },
   "errors.said.soleOwner": {
     "value": "You're the only owner of a workspace with other members. Make someone else an owner, or delete the workspace, first."
+  },
+  "errors.said.soleOwnerOutside": {
+    "value": "You're the only owner of a workspace whose other people are outside collaborators, who can't be owners. Invite a member and make them an owner, or delete the workspace, first."
   },
   "errors.said.testFirst": {
     "value": "Test the connection with these settings before turning it on."
@@ -37055,6 +37451,9 @@
   },
   "errors.join.codeNeeded": {
     "value": "Verify your email first."
+  },
+  "errors.join.outsideClosed": {
+    "value": "This account was blocked or is being deleted, so it can't join. The request is closed."
   },
   "errors.code.wrong": {
     "value": "Wrong code. Try again."
@@ -40760,8 +41159,71 @@
   "audit.removed": {
     "value": "Removed"
   },
+  "audit.operatorRead.sentence": {
+    "value": "{{who}} read {{what}}"
+  },
+  "audit.operatorRead.who.server": {
+    "value": "Whoever runs this server"
+  },
+  "audit.operatorRead.who.cloud": {
+    "value": "agentes.chat support"
+  },
+  "audit.operatorRead.what.message": {
+    "value": "a message"
+  },
+  "audit.operatorRead.what.run_step": {
+    "value": "a step of an agent's work"
+  },
+  "audit.operatorRead.what.agent": {
+    "value": "an agent's instructions"
+  },
+  "audit.operatorRead.what.routine": {
+    "value": "a routine"
+  },
+  "audit.operatorRead.what.task": {
+    "value": "a background task"
+  },
+  "audit.operatorRead.what.channel": {
+    "value": "a channel's name"
+  },
+  "audit.operatorRead.what.connection": {
+    "value": "a connection's details"
+  },
+  "audit.operatorRead.what.support_request": {
+    "value": "a support request"
+  },
+  "audit.operatorRead.what.direct": {
+    "value": "something in a private conversation"
+  },
+  "audit.operatorRead.what.other": {
+    "value": "something in the workspace"
+  },
+  "audit.operatorRead.request.plain": {
+    "value": "at {{name}}'s request"
+  },
+  "audit.operatorRead.request.app": {
+    "value": "at {{name}}'s request, sent from the app"
+  },
+  "audit.operatorRead.request.email": {
+    "value": "at {{name}}'s request, sent by email"
+  },
+  "audit.operatorRead.request.operator": {
+    "value": "at {{name}}'s request, recorded by whoever runs this server"
+  },
+  "audit.operatorRead.request.support": {
+    "value": "at {{name}}'s request, recorded by support"
+  },
+  "audit.operatorRead.fault": {
+    "value": "to diagnose a failed or stuck run"
+  },
+  "audit.operatorRead.ai": {
+    "value": "with an AI assistant"
+  },
   "audit.change.mergedWithoutAsking": {
     "value": "Merged in {{repo}} without asking"
+  },
+  "audit.change.accentChanged": {
+    "value": "Changed the workspace's accent color"
   },
   "audit.change.pattern": {
     "value": "{{verb}} {{area}}"
@@ -41286,7 +41748,7 @@
     "value": "What each agent can use: one level per connector."
   },
   "settings.sectionText.connectors": {
-    "value": "Services and MCP servers connected once for the whole workspace."
+    "value": "Services and MCP servers, connected for the team or just for you."
   },
   "settings.sectionText.skills": {
     "value": "Markdown instructions agents open when they need them."
@@ -41499,7 +41961,7 @@
     "value": "Changes only for you, on all your devices"
   },
   "settings.account.chat.wallpaper.rowHelp": {
-    "value": "Behind every conversation, only for you. A conversation can have its own from its menu."
+    "value": "Behind every conversation, only for you, unless a conversation has its own from its menu."
   },
   "settings.account.chat.wallpaper.rowSub": {
     "value": "Only for you, in every conversation"
@@ -44686,6 +45148,12 @@
   "chat.body.issue_taken": {
     "value": "Took task #{{number}}."
   },
+  "chat.body.surfaceUnlinked": {
+    "value": "{{surface}} was unlinked because its identity changed. Link it again in Settings if it was you."
+  },
+  "chat.body.surfaceVoiceDropped": {
+    "value": "I couldn't make out that voice note. Could you send it again, or type it?"
+  },
   "chat.body.done": {
     "value": "Done."
   },
@@ -46543,6 +47011,9 @@
   },
   "deleteAccount.soleOwner": {
     "value": "You're the only owner of {{name}}. Make someone else an owner, or delete {{name}}."
+  },
+  "deleteAccount.soleOwnerOutside": {
+    "value": "You're the only owner of {{name}}, and its other people are outside collaborators, who can't be owners. Invite a member and make them an owner, or delete {{name}}."
   },
   "deleteAccount.soleOwnerSettingUp": {
     "value": "You're the only owner of {{name}}. Finish setting it up to make someone else an owner, or delete {{name}}."

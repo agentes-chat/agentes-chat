@@ -30,7 +30,6 @@ import { useTabHeader } from "../shared/tabHeader";
 import { alongInAccessory } from "../work-along/logic";
 import { useHasWorkAlong } from "../work-along/WorkAlong";
 import { DeletingNotice } from "./DeletingNotice";
-import { FirstRunLine } from "./FirstRunLine";
 import { FirstAgentEmpty, Greeting, GreetingSky } from "./Greeting";
 import { Arrive, useHomeEntrance, useWake } from "./HomeEntrance";
 import { HomeRow } from "./HomeRow";
@@ -265,7 +264,6 @@ function Home() {
         <>
           {/* Início's widgets, and the way to Dashboards ("See all"), not a tab (ADR 0135 §15). */}
           <HomeWidgets collapsed={collapsed.includes("widgets")} onToggle={() => toggle("widgets")} />
-          <FirstRunLine />
           <PinnedStrip
             items={strip}
             collapsed={collapsed.includes("pinned")}

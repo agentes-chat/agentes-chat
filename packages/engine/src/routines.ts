@@ -33,6 +33,7 @@ import {
   type ConnectorTriggerFilter,
   type ConnectorTriggerSource,
   checkConnectorTrigger,
+  connectorNotYours,
   isConnectorEvent,
   normalizeConnectorFilter,
   syncConnectorTrigger,
@@ -122,6 +123,7 @@ const {
   webhookEndpoints,
   dashboards,
   dashboardWidgets,
+  connectorConnections,
 } = schema;
 
 export type RoutineTarget =
@@ -720,6 +722,8 @@ interface ViewerRights {
   publicPrompt: boolean;
   /** Withdraws what was approved ahead for its runs: who manages it, and who may approve the agent's actions. */
   cancelsAhead: boolean;
+  /** Reads the service of someone else's own connection, as Conectores lists it to them: who manages connectors. */
+  readsServices: boolean;
 }
 
 /**
@@ -740,6 +744,7 @@ async function viewerRights(
         .select({
           may: maySql(orgId, viewerId ?? "", "manage_routines"),
           approves: maySql(orgId, viewerId ?? "", "approve_actions"),
+          connectors: maySql(orgId, viewerId ?? "", "manage_connectors"),
         })
         .from(organizationMembers)
         .where(and(eq(organizationMembers.orgId, orgId), eq(organizationMembers.userId, viewerId ?? ""))),
@@ -784,6 +789,7 @@ async function viewerRights(
       reads: !viewerId || manages || (!!channelId && inChannel.has(channelId)),
       publicPrompt: !!channelId && publicChannels.has(channelId),
       cancelsAhead: manages || me?.approves === true,
+      readsServices: me?.connectors === true,
     });
   }
   return out;
@@ -806,7 +812,8 @@ function billedTo(
 /**
  * Routines as `viewerId` sees them (see `viewerRights`), with their state, last week's health and usage; a webhook
  * routine's address only for who manages it, and only with `hooks`. In a workspace closed to work (suspended, or
- * being deleted) none has a next run: its slots pass.
+ * being deleted) none has a next run: its slots pass. `model`: read by the model of a run `viewerId` is behind, which
+ * may say it where others read: someone else's own connection's service is not given to it.
  */
 async function views(
   db: Database,
@@ -814,6 +821,7 @@ async function views(
   viewerId: string | null,
   hooks?: RoutineHookConfig,
   now = new Date(),
+  model = false,
 ): Promise<RoutineView[]> {
   const first = rows[0];
   if (!first) return [];
@@ -925,6 +933,17 @@ async function views(
     week.set(w.routineId, [...(week.get(w.routineId) ?? []), entry]);
   }
   const usageOf = new Map(usageRows.map((u) => [u.routineId, u]));
+  const personalIds = [...new Set([...hookKeys.values()].flatMap((h) => h.source?.connectionId ?? []))];
+  const personalOf = new Map(
+    (
+      await lookup(personalIds, () =>
+        db
+          .select({ id: connectorConnections.id, owner: connectorConnections.ownerUserId })
+          .from(connectorConnections)
+          .where(and(eq(connectorConnections.orgId, orgId), inArray(connectorConnections.id, personalIds))),
+      )
+    ).flatMap((c) => (c.owner ? [[c.id, c.owner] as const] : [])),
+  );
   const hookUrls = new Map<string, string>();
   if (hooks) {
     for (const [routineId, hook] of hookKeys) {
@@ -1015,6 +1034,13 @@ async function views(
     };
     const used = usageOf.get(r.id);
     const hookKey = hookKeys.get(r.id);
+    const source = hookKey?.source;
+    // A person's own connection's (ADR 0099 addendum): what it gives (filter, inbox, the provider's refusal) is its
+    // person's alone, and its service only theirs and who manages connectors; anyone else reads a plain webhook's.
+    const personal = source ? personalOf.get(source.connectionId) : undefined;
+    const theirs = !personal || personal === viewerId;
+    const blank = source && !(personal ? theirs : right.reads);
+    const hidden = source && !theirs && (model || !right.readsServices);
     return {
       id: r.id,
       name: r.name,
@@ -1025,10 +1051,15 @@ async function views(
         r,
         watches.get(r.id),
         hookKey && {
-          url: hookUrls.get(r.id) ?? null,
+          url: hidden ? null : (hookUrls.get(r.id) ?? null),
           signed: hookKey.signed,
           methods: hookKey.methods,
-          source: hookKey.source,
+          // What its creator typed (filter, inbox) and the provider's refusal go, as its prompt does, to readers only.
+          source: hidden
+            ? null
+            : source && blank
+              ? { ...source, inboxId: undefined, filter: {}, lastError: null }
+              : source,
         },
       ),
       active: r.active,
@@ -1373,7 +1404,7 @@ export async function createRoutine(
   checkFrequency(trigger, input.target);
   if (!input.paused && startsRuns(trigger.triggerType, input.target)) await checkRoutineCap(db, orgId, agent.id);
   if (input.trigger.type === "email") await checkWatchable(db, orgId, agent.id, input.trigger.accountId, actorId);
-  if (input.trigger.type === "connector") await checkConnectorTrigger(db, orgId, agent.id, input.trigger);
+  if (input.trigger.type === "connector") await checkConnectorTrigger(db, orgId, agent.id, input.trigger, actorId);
   const hooks = input.trigger.type === "webhook" || input.trigger.type === "connector" ? hooksOf(deps) : null;
   const ownActions = ownActionsOf(input.ownActions ?? []);
   if (ownActions.length > 0) await requireActionApprover(db, actorId, orgId, agent.ownerUserId);
@@ -1447,7 +1478,22 @@ async function syncConnector(
   const hook = (await routineHookKeys(deps.db, [row.id])).get(row.id);
   if (!hook) return;
   const url = deps.hooks ? await liveHookUrl(deps.db, deps.hooks, hook) : null;
-  await syncConnectorTrigger(deps.db, deps.connectors, row, url, next);
+  // Registering is an action in the connection's account: never for a routine its person didn't make.
+  const registers = row.active && next && (await connectorRefusal(deps.db, row, next.connectionId)) === null;
+  await syncConnectorTrigger(deps.db, deps.connectors, { ...row, active: Boolean(registers) }, url, next);
+}
+
+/** Why `row`'s creator may not wait on the connection's events (`connectorNotYours`); null: they may. */
+async function connectorRefusal(
+  db: Database,
+  row: Pick<RoutineRow, "orgId" | "createdByUserId">,
+  connectionId: string,
+) {
+  const [connection] = await db
+    .select({ ownerUserId: schema.connectorConnections.ownerUserId })
+    .from(schema.connectorConnections)
+    .where(and(eq(schema.connectorConnections.id, connectionId), eq(schema.connectorConnections.orgId, row.orgId)));
+  return connection ? connectorNotYours(db, row.orgId, connection, row.createdByUserId) : null;
 }
 
 /** The addresses' config, which a webhook routine can't be made without (the server always passes it). */
@@ -1537,7 +1583,7 @@ export async function listOrgRoutines(
       ),
     )
     .orderBy(routines.createdAt);
-  return views(db, rows, options.viewerId ?? null);
+  return views(db, rows, options.viewerId ?? null, undefined, undefined, true);
 }
 
 async function loadRoutine(db: Database, orgId: string, id: string, options: { deleted?: boolean } = {}) {
@@ -1572,6 +1618,10 @@ export async function managedWebhookRoutine(db: Database, actorId: string, orgId
   if (routine.event !== WEBHOOK_EVENT) {
     throw new NotFoundError("This routine isn't started by a webhook", "routine.no_webhook");
   }
+  // A person's own connection's address fires that person's routine: theirs alone, as its trigger is (`views`).
+  const source = await connectorOf(db, routine.id);
+  const refusal = source && (await connectorRefusal(db, { orgId, createdByUserId: actorId }, source.connectionId));
+  if (refusal) throw refusal;
   return routine;
 }
 
@@ -1698,7 +1748,19 @@ export async function updateRoutine(
         ? hadConnector
         : null;
   if (connectorTrigger && (patch.trigger?.type === "connector" || set.agentId)) {
-    await checkConnectorTrigger(db, orgId, agentId, connectorTrigger);
+    await checkConnectorTrigger(db, orgId, agentId, connectorTrigger, current.createdByUserId);
+  }
+  // Only its person reads what such a trigger asks (`views`), so only they change it: anyone else would save it blank.
+  if (patch.trigger !== undefined) {
+    for (const c of [hadConnector, patch.trigger.type === "connector" ? connectorTrigger : null]) {
+      const refusal = c && (await connectorRefusal(db, { orgId, createdByUserId: actorId }, c.connectionId));
+      if (refusal) throw refusal;
+    }
+  }
+  // A routine waiting on a person's own connection stays off unless it is theirs (`syncConnector` won't register it).
+  if (patch.active === true && connectorTrigger) {
+    const refusal = await connectorRefusal(db, current, connectorTrigger.connectionId);
+    if (refusal) throw refusal;
   }
   const active = patch.active ?? current.active;
   if (patch.active !== undefined) set.active = active;
@@ -1900,6 +1962,10 @@ export async function setRoutineActive(
 ): Promise<RoutineView> {
   const current = await loadRoutine(deps.db, orgId, id);
   await requireRoutineManager(deps.db, actorId, orgId, current.agentId);
+  // A routine waiting on a person's own connection stays off unless it is theirs.
+  const waitsOn = active ? await connectorOf(deps.db, current.id) : null;
+  const refusal = waitsOn ? await connectorRefusal(deps.db, current, waitsOn.connectionId) : null;
+  if (refusal) throw refusal;
   const nextRunAt = active && current.triggerType === "schedule" ? nextRoutineTime(current, new Date()) : null;
   const [row] = await deps.db
     .update(routines)

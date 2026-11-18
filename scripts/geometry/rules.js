@@ -2438,6 +2438,101 @@
         });
       }
     },
+    /**
+     * The glyphs on a list's row tiles (`.settings-row__icon` with a surface of its own: a face or a maker's mark brings
+     * its own tile) are one size, within 1px: a brand's logo drawn on that tile takes the box of the kit's glyphs beside
+     * it, never a tile of its own inside the tile. A glyph is the tile's one svg, or its one masked mark.
+     */
+    tileglyph(out) {
+      const lists = new Map();
+      for (const tile of document.body.querySelectorAll(".settings-row__icon")) {
+        if (!seen(tile) || !hasSurface(style(tile))) continue;
+        const ink = [...tile.querySelectorAll("*")].filter(
+          (el) =>
+            seen(el) &&
+            (el.tagName.toLowerCase() === "svg"
+              ? !el.parentElement.closest("svg")
+              : !el.closest("svg") && (style(el).maskImage || style(el).webkitMaskImage || "none") !== "none"),
+        );
+        if (ink.length !== 1) continue;
+        const list = tile.closest(".settings-row, li")?.parentElement ?? tile.parentElement;
+        lists.set(list, [...(lists.get(list) ?? []), ink[0]]);
+      }
+      for (const [list, glyphs] of lists) {
+        const sizes = glyphs.map((g) => g.getBoundingClientRect()).map((r) => [r.width, r.height]);
+        const count = (a) => sizes.filter((b) => Math.abs(a[0] - b[0]) <= 1 && Math.abs(a[1] - b[1]) <= 1).length;
+        const usual = sizes.reduce((best, a) => (count(a) > count(best) ? a : best), sizes[0]);
+        glyphs.forEach((g, i) => {
+          const [w, h] = sizes[i];
+          const px = Math.max(Math.abs(w - usual[0]), Math.abs(h - usual[1]));
+          if (px > 1) out.push({ rule: "tileglyph", node: g, el: sig(g), box: sig(list), px: +px.toFixed(1) });
+        });
+      }
+    },
+    /**
+     * A settings row's one button (its end's last element) sits on the row's name's line, its middle within that line's
+     * box, and ends at the row's end, within 1px. Under the name only when the name's longest word, the gap and the
+     * end can't share the line, and then still at the row's end. In a button row (`.settings-row--button`), the state
+     * line under the name starts where the name's words do, within 1px, never under the row's icon.
+     */
+    endline(out) {
+      const firstLine = (el) => {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        return [...range.getClientRects()].find((r) => r.width > 0);
+      };
+      for (const row of document.body.querySelectorAll(".settings-row:not(.settings-row--acts)")) {
+        const label = row.querySelector(".settings-row__label");
+        if (!label || !seen(row)) continue;
+        const line = firstLine(label);
+        if (!line) continue;
+        const status = row.matches(".settings-row--button")
+          ? row.querySelector(":scope > .settings-row__text > .settings-row__status")
+          : null;
+        const from = status && seen(status) ? firstLine(status) : null;
+        if (from && Math.abs(from.left - line.left) > 1)
+          out.push({
+            rule: "endline",
+            node: status,
+            el: sig(status),
+            box: sig(row),
+            text: words(label),
+            side: "status",
+            px: +(from.left - line.left).toFixed(1),
+          });
+        const end = [...row.children].find((c) => c.matches(".settings-row__end"));
+        const btn = end?.lastElementChild;
+        if (!btn?.matches(".ac-btn") || !seen(btn)) continue;
+        const s = style(row);
+        const r = row.getBoundingClientRect();
+        const right = r.right - parseFloat(s.borderRightWidth) - parseFloat(s.paddingRight);
+        const b = btn.getBoundingClientRect();
+        // What ends the row: from the end's first element (a value before the button) to the button.
+        const group = b.right - end.firstElementChild.getBoundingClientRect().left;
+        const mid = (b.top + b.bottom) / 2;
+        const base = { rule: "endline", node: btn, el: sig(btn), box: sig(row), text: words(label) };
+        const short = right - parseFloat(style(end).paddingRight) - b.right;
+        if (Math.abs(short) > 1) {
+          out.push({ ...base, side: "end", px: +short.toFixed(1) });
+          continue;
+        }
+        if (mid >= line.top - 1 && mid <= line.bottom + 1) continue;
+        // The name's narrowest: its longest word, and the room its ⓘ keeps after it.
+        const name = label.closest(".ac-hintline") ?? label;
+        let word = 0;
+        const walk = document.createTreeWalker(label, NodeFilter.SHOW_TEXT);
+        for (let node = walk.nextNode(); node; node = walk.nextNode())
+          for (const m of node.data.matchAll(/\S+/g)) {
+            const w = document.createRange();
+            w.setStart(node, m.index);
+            w.setEnd(node, m.index + m[0].length);
+            word = Math.max(word, w.getBoundingClientRect().width);
+          }
+        const need = word + parseFloat(style(name).paddingRight) + parseFloat(s.columnGap) + group;
+        if (right - name.getBoundingClientRect().left >= need + 1)
+          out.push({ ...base, side: "under", px: +(mid - line.bottom).toFixed(1) });
+      }
+    },
   };
 
   /**

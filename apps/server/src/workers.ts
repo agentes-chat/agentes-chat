@@ -46,6 +46,7 @@ import {
   pruneMessageClientIds,
   pruneOperatorEvents,
   pruneRoutineHookCalls,
+  pruneSurfaceRows,
   purgeApps,
   purgeDeletedArtifacts,
   purgeDeletedWikiPages,
@@ -61,6 +62,7 @@ import {
   sweepEndedInboxes,
   sweepExpiredVoice,
   sweepFeedbackFiles,
+  sweepSupportRequests,
   sweepWidgetDrafts,
   type VoiceDeps,
   wakeSnoozedNotifications,
@@ -179,6 +181,8 @@ export const WORKER_INTERVALS_MS = {
   /** Wiki pages in the trash past 30 days are removed with their history. */
   wikiPurge: 6 * 3600_000,
   voiceExpiry: 24 * 3600_000,
+  /** Support requests past 90 days lose their words, past a year their row. */
+  supportRequests: 24 * 3600_000,
   /** Confidential threads past their time lose their words (ADR 0190). */
   confidentialPrune: 24 * 3600_000,
   /** How often watched IMAP folders are looked at (each is checked every `MAIL_POLL_SECONDS`). */
@@ -326,6 +330,8 @@ export function startWorkers(deps: WorkerDeps) {
     // Old send ids (idempotent resends) are no longer needed.
     const pruned = await pruneMessageClientIds(db);
     if (pruned > 0) log.info("pruned message client ids", { pruned });
+    const surfaceRows = await pruneSurfaceRows(db);
+    if (surfaceRows > 0) log.info("pruned surface rows", { pruned: surfaceRows });
     const events = await pruneOperatorEvents(db);
     if (events > 0) log.info("pruned operator events", { pruned: events });
     const cleared = await clearOldOutboxPayloads(db);
@@ -435,6 +441,11 @@ export function startWorkers(deps: WorkerDeps) {
       if (swept + failed > 0) log.info("expired voice recordings deleted", { swept, failed });
     });
   }
+
+  every("supportRequests", WORKER_INTERVALS_MS.supportRequests, async () => {
+    const { blanked, deleted } = await sweepSupportRequests(db);
+    if (blanked + deleted > 0) log.info("old support requests swept", { blanked, deleted });
+  });
 
   every("confidentialPrune", WORKER_INTERVALS_MS.confidentialPrune, async () => {
     const pruned = await pruneConfidential({ db, pubsub: deps.pubsub, blobs: voice?.blobs });

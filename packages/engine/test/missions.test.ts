@@ -1027,6 +1027,25 @@ describe("missions (ADR 0029)", () => {
     await expect(requestToJoin(md(), zed.id, f.org.id, view.id)).rejects.toMatchObject({ code: "mission.not_found" });
   });
 
+  test("the workspace's computer asleep in standby: making a mission wakes it and goes on once it is back", async () => {
+    f = await setup({ machines: true, missionTools: true, brains: missionComputerBrain().brains });
+    const paired = await pairedMachine();
+    await f.db
+      .update(schema.machines)
+      .set({ kind: "managed", standbyAt: new Date() })
+      .where(eq(schema.machines.id, paired.machineId));
+    const made = createMission(md(), f.owner.id, f.org.id, {
+      agentId: f.agent.id,
+      channelId: f.general.id,
+      goal: "Build our mobile app",
+      title: "Mobile app",
+      repoDir: "app",
+    });
+    await new Promise((r) => setTimeout(r, 200));
+    await missionRunner(f.machineHub as MachineHub).hello(paired.token);
+    expect((await made).title).toBe("Mobile app");
+  });
+
   test("eligible agents: every agent, with a reason when it can't (no computer, commands off, old runner, audience); offline still eligible", async () => {
     f = await setup({ machines: true, missionTools: true });
     const elig = (userId = f.owner.id) => eligibleMissionAgents(md(), userId, f.org.id);

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { createHmac } from "node:crypto";
 import { browser, createTestServer, signUp, type TestServer } from "./harness";
 
 let t: TestServer | undefined;
@@ -58,5 +59,19 @@ describe("the referrals link", () => {
     const other = browser(t);
     await signUp(other, "bo@example.com");
     expect((await link(other)).status).toBe(200);
+  });
+
+  test("its own secret signs it, with no billing service on this server", async () => {
+    const secret = "r".repeat(32);
+    t = await createTestServer({ env: { REFERRALS_URL: "https://refer.example.com", REFERRALS_LINK_SECRET: secret } });
+    const person = browser(t);
+    await signUp(person, "ana@example.com");
+    const res = await link(person);
+    expect(res.status).toBe(200);
+    const [v, payload, signature] = (
+      new URL(((await res.json()) as { url: string }).url).searchParams.get("t") ?? ""
+    ).split(".");
+    expect(signature).toBe(createHmac("sha256", secret).update(`${v}.${payload}`).digest("base64url"));
+    expect(await (await browser(t)("/api/app/auth-config")).json()).toMatchObject({ billingUrl: null });
   });
 });

@@ -1,5 +1,5 @@
 import type { Wallpaper, WallpaperHue } from "@agenteschat/client/lib/wallpaper";
-import { cx, useDarkTheme } from "@agenteschat/ui";
+import { cx, drawnKey, useDarkTheme } from "@agenteschat/ui";
 import { WALLPAPER_PAGE } from "@agenteschat/ui/sky/wallpaper";
 import { useLayoutEffect, useRef, useState } from "react";
 import { paintWallpaper } from "@/lib/wallpaper-paint";
@@ -35,7 +35,8 @@ export function ChatWallpaper({
   const latest = useRef({ wallpaper, bands });
   latest.current = { wallpaper, bands };
   const color = "color" in wallpaper ? wallpaper.color : "";
-  const drawn = photo ? "" : `${wallpaper.kind}:${color}:${bands?.join(",") ?? ""}`;
+  // With the sky as drawn now: the crowd and "auto" draw `sky`, which follows the workspace's accent.
+  const drawn = photo ? "" : `${wallpaper.kind}:${color}:${bands?.join(",") ?? ""}:${drawnKey("sky")}`;
 
   useLayoutEffect(() => {
     const el = box.current;

@@ -3,9 +3,16 @@ import {
   useConnections,
   useCustomServerAction,
   useCustomServers,
+  useMoveConnectionToTeam,
   useRenameConnection,
 } from "@agenteschat/client";
-import { accountUnchecked, connectedItems, itemName, reconnectAddsText } from "@agenteschat/client/lib/connected";
+import {
+  accountUnchecked,
+  connectedItems,
+  connectionActs,
+  itemName,
+  reconnectAddsText,
+} from "@agenteschat/client/lib/connected";
 import { knownErrorText } from "@agenteschat/client/lib/errors";
 import { appAccountsText } from "@agenteschat/client/lib/github-app";
 import { can } from "@agenteschat/client/lib/permissions";
@@ -31,10 +38,11 @@ import {
 } from "@/ui";
 import { CoverBarBackdrop, FadingHeaderTitle, useCoverScroll } from "@/ui/cover";
 import { router } from "@/ui/navigation";
+import { Note } from "../ai/parts";
 import { RowBones } from "../roles/parts";
-import { SettingsPage, useUnsavedGuard } from "../settings/parts";
+import { chooseAction, confirmAction, SettingsPage, useUnsavedGuard } from "../settings/parts";
 import { LoadFailed } from "../shared/FirstUse";
-import { useColors, useOrgId } from "../shared/hooks";
+import { useColors, useErrorToast, useMeId, useOrgId } from "../shared/hooks";
 import { errorHaptic, goBack, PushedHeader, successHaptic } from "../shared/parts";
 import { SheetHostProvider, useSheet } from "../shared/SheetHost";
 import { TextArea } from "../shared/TextArea";
@@ -80,8 +88,10 @@ function Connection({ id }: { id: string }) {
   const catalog = useCatalog();
   const connections = useConnections(orgId);
   const servers = useCustomServers(orgId);
-  const admin = can(org, "manage_connectors");
+  const me = useMeId() ?? "";
   const { refresh } = useCustomServerAction(orgId);
+  const move = useMoveConnectionToTeam(orgId);
+  const failed = useErrorToast();
   const toast = useToast();
   const sheet = useSheet();
   const { y, onScroll } = useCoverScroll();
@@ -92,6 +102,9 @@ function Connection({ id }: { id: string }) {
     (i) => i.id === id,
   );
   const loading = !item && (catalog.isPending || connections.isPending || servers.isPending);
+  // The team's: who manages connectors changes it. One's own: its person, who may also hand it to the team.
+  const acts = connectionActs(item ?? {}, me, can(org, "manage_connectors"));
+  const admin = Boolean(item) && acts.change;
   const name = item ? itemName(t, item) : "";
   // The account when it says something the name doesn't (a server's host often is its name), else how it connects
   // through Composio (its address means nothing to people), else the category.
@@ -108,17 +121,61 @@ function Connection({ id }: { id: string }) {
   const waiting = admin && item ? item.pending : 0;
   const actions = item ? accountActions(item) : [];
   const sent = item?.server?.headerNames ?? [];
+  const toTeam = () =>
+    confirmAction({
+      title: t("connectors.personal.moveTitle", { name }),
+      text: t("connectors.personal.moveText"),
+      action: t("connectors.personal.moveToTeam"),
+      cancel: t("common.cancel"),
+      destructive: false,
+      onConfirm: () =>
+        item &&
+        move.mutate(item.id, {
+          onSuccess: () => {
+            successHaptic();
+            toast({ title: t("connectors.personal.moved", { name }), icon: "check" });
+          },
+          onError: failed,
+        }),
+    });
   // Renaming: the bar's pen (the system's own bar button) pushes its screen straight away (a menu of one item in
-  // between was a step for nothing).
-  const rename: HeaderAction | null =
-    admin && item && actions.includes("rename")
+  // between was a step for nothing). One's own personal connection may also go to the team: then both sit in "…".
+  const choices = [
+    ...(acts.rename && item && actions.includes("rename")
+      ? [
+          {
+            icon: "pen" as const,
+            sf: "pencil" as const,
+            label: t("connectors.rename"),
+            onPress: () => openRename(item.id),
+          },
+        ]
+      : []),
+    ...(acts.moveToTeam && item
+      ? [
+          {
+            icon: "members" as const,
+            sf: "person.2" as const,
+            label: t("connectors.personal.moveToTeam"),
+            onPress: toTeam,
+          },
+        ]
+      : []),
+  ];
+  const [only] = choices;
+  const barAction: HeaderAction | null =
+    choices.length > 1
       ? {
-          icon: "pen",
-          sf: "pencil",
-          label: t("connectors.rename"),
-          onPress: () => openRename(item.id),
+          icon: "more",
+          sf: "ellipsis",
+          label: t("mobile.chat.options"),
+          disabled: move.isPending,
+          onPress: () => chooseAction(name, choices, t("common.cancel")),
+          menu: choices,
         }
-      : null;
+      : only
+        ? { ...only, disabled: move.isPending }
+        : null;
   const missing = !item && !loading;
 
   return (
@@ -129,7 +186,7 @@ function Connection({ id }: { id: string }) {
         }
         plate
         solid={false}
-        {...(rename ? { actions: [rename] } : {})}
+        {...(barAction ? { actions: [barAction] } : {})}
       />
       <Animated.ScrollView
         onScroll={onScroll}
@@ -164,6 +221,11 @@ function Connection({ id }: { id: string }) {
           ) : null}
         </View>
 
+        {item?.ownerUserId ? (
+          <View style={styles.personal}>
+            <Note icon="lock">{t("connectors.personal.noteOne")}</Note>
+          </View>
+        ) : null}
         {loading ? (
           // The groups' shape while they load: nothing jumps when they come.
           <View style={styles.body}>
@@ -211,7 +273,7 @@ function Connection({ id }: { id: string }) {
                 {reconnectAddsText(t, item)}
               </Text>
             ) : null}
-            <AgentLevelList connectionId={id} />
+            <AgentLevelList connectionId={id} personal={Boolean(item.ownerUserId)} />
             {/* Everyone sees the accounts the app is installed on; only admins get its actions. */}
             {item.def?.id === "github" && !item.viaComposio ? (
               <GitHubAppGroup
@@ -391,6 +453,7 @@ const styles = StyleSheet.create({
   body: { paddingHorizontal: 16 },
   problem: { gap: 12 },
   lead: { paddingHorizontal: 16, paddingTop: 12 },
+  personal: { paddingHorizontal: 32, paddingTop: 4 },
   gap: { height: 24 },
   error: { paddingTop: 8, paddingHorizontal: 16 },
 });

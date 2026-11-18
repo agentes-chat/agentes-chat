@@ -49,6 +49,12 @@ export type MachineRow = typeof machines.$inferSelect;
 /** A machine whose last sign of life is older than this is offline, whatever its row says (a replica may have died). */
 export const MACHINE_STALE_MS = 3 * HEARTBEAT_MS;
 
+/**
+ * Running tasks of a machine that went offline become `interrupted` after this (it may just be a network blip
+ * or a runner dialing again); it is also when an offline computer becomes an outage people see.
+ */
+export const TASK_OFFLINE_GRACE_MS = 2 * 60_000;
+
 export const MACHINE_LIMITS = { nameChars: 80 };
 
 /**
@@ -157,6 +163,29 @@ export function machineOnline(row: Pick<MachineRow, "online" | "lastSeenAt" | "d
 /** The operator put the workspace's own computer in standby (ADR 0161): offline by design until something wants it. */
 export const inStandby = (row: Pick<MachineRow, "kind" | "standbyAt">) =>
   row.kind === "managed" && row.standbyAt !== null;
+
+/**
+ * Asleep in standby as people see it (ADR 0161): waking as it should. Taken out of standby before its runner's hello
+ * (it is starting), it still is until that hello (`wake_wanted_at` set). One wanted awake (`wake_wanted_at`) that
+ * hasn't said hello within the outage grace is down, and shows so (`machine.wake_overdue` tells the apps).
+ */
+export const shownStandby = (
+  row: Pick<MachineRow, "deletedAt" | "kind" | "standbyAt" | "wakeWantedAt">,
+  now = new Date(),
+) =>
+  !row.deletedAt &&
+  row.kind === "managed" &&
+  (row.standbyAt !== null || row.wakeWantedAt !== null) &&
+  (row.wakeWantedAt === null || now.getTime() - row.wakeWantedAt.getTime() < TASK_OFFLINE_GRACE_MS);
+
+/**
+ * Online as people see it: a computer in standby reads as online and ready, never asleep or seen at a time, while it
+ * wakes as it should (`shownStandby`). Operators' views and the run logic use `machineOnline` and `inStandby`.
+ */
+export const shownOnline = (
+  row: Pick<MachineRow, "online" | "lastSeenAt" | "deletedAt" | "kind" | "standbyAt" | "wakeWantedAt">,
+  now = new Date(),
+) => machineOnline(row, now) || shownStandby(row, now);
 
 /** The pause in force now (a past `until` is over); null when not paused. */
 export function machinePause(
@@ -507,9 +536,9 @@ async function machineViews(db: Database, actorId: string, orgId: string, only?:
       name: m.name,
       /** `connected` (a person paired it), `host` (the server's own) or `managed` (the workspace's, never removed here). */
       kind: m.kind,
-      online: machineOnline(m, now),
-      /** The workspace's own computer is asleep in standby (ADR 0161): it wakes when wanted, nothing is wrong. */
-      standby: inStandby(m),
+      online: shownOnline(m, now),
+      /** The workspace's own computer is asleep in standby (ADR 0161) and wakes as it should: nothing is wrong. */
+      standby: shownStandby(m, now),
       networkTransition: managed ? m.networkTransition : null,
       /** The workspace's own computer's agents wait for their way out, as the operator says: a line, never an error. */
       egressWaiting: managed && machineOnline(m, now) && m.egressWaitingAt !== null,
@@ -880,6 +909,7 @@ export async function detachMachine(tx: Executor, machine: Pick<MachineRow, "id"
       connectedReplica: null,
       // A managed computer issued again comes back on this row, not asleep (ADR 0161), its agents waiting for nothing.
       standbyAt: null,
+      wakeWantedAt: null,
       egressWaitingAt: null,
       previousAgentIds: ids,
       updatedAt: now,
@@ -940,7 +970,7 @@ export async function computerTarget(db: Database, orgId: string, agentId: strin
   if (!agent?.machineId) return { kind: "none" };
   const machine = await getMachine(db, orgId, agent.machineId);
   if (!machine) return { kind: "none" };
-  return { kind: "machine", machineId: machine.id, name: machine.name, online: machineOnline(machine) };
+  return { kind: "machine", machineId: machine.id, name: machine.name, online: shownOnline(machine) };
 }
 
 let workspaceComputers = false;
@@ -1014,7 +1044,7 @@ export async function setAgentComputerTarget(
     details: { from: agent.machineId, to: machine?.id ?? null, name: machine?.name ?? null },
   });
   const target: ComputerTarget = machine
-    ? { kind: "machine", machineId: machine.id, name: machine.name, online: machineOnline(machine) }
+    ? { kind: "machine", machineId: machine.id, name: machine.name, online: shownOnline(machine) }
     : { kind: "none" };
   await publishOrgEvent(deps.pubsub, {
     type: "org.broadcast",

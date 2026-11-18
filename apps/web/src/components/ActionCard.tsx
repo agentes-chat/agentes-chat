@@ -36,7 +36,7 @@ import {
   type UpdateSkillsCard,
 } from "@agenteschat/client/lib/action-cards";
 import { delegateUndoLine } from "@agenteschat/client/lib/approval-words";
-import { connectedItems, itemName } from "@agenteschat/client/lib/connected";
+import { connectedItems, itemName, personalAllowed } from "@agenteschat/client/lib/connected";
 import { setDraftFor } from "@agenteschat/client/lib/drafts";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { joinNames, whenAt } from "@agenteschat/client/lib/format";
@@ -48,9 +48,9 @@ import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import { holdersOf } from "@agenteschat/client/lib/roles";
 import { connectorName } from "@agenteschat/client/lib/scopes";
 import { SKILL_UPDATE_TOAST } from "@agenteschat/client/lib/skills";
-import { Button, Dialog, EventPillAction, Icon, Spinner } from "@agenteschat/ui";
+import { Button, EventPillAction, Icon } from "@agenteschat/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { lazy, type ReactNode, Suspense, useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useConnectedById } from "@/components/AccessLevels";
 import { AgentAvatar } from "@/components/AgentAvatar";
@@ -62,6 +62,7 @@ import { CostlyProposalCardView } from "@/components/CostlyProposalCard";
 import { CalendarProposalCardView } from "@/components/calendar/ProposalCard";
 import { useInviteDialog } from "@/components/invite/InviteDialog";
 import { MailIcon } from "@/components/MailConnect";
+import { useNewAgent } from "@/components/new-agent/NewAgentDialog";
 import { useOrg } from "@/components/org-context";
 import { PersonLimitCardView } from "@/components/PeopleUsage";
 import {
@@ -98,7 +99,6 @@ import { expiryText } from "@/pages/ApprovalsPage";
 const DAY_MS = 24 * 3_600_000;
 
 /** "Criar agente" in the card's review, loaded when it opens. */
-const NewAgentPage = lazy(() => import("@/pages/NewAgentPage").then((m) => ({ default: m.NewAgentPage })));
 
 /**
  * An agent's action card (ADR 0061, `meta.actionCard`) in place of its text: what needs a person's credentials or
@@ -197,8 +197,9 @@ export function ActionCard({ message }: { message: Message }) {
 /**
  * "Connect Linear" / "Add MCP" (`offer_connect_app`) as a waiting pill: "Connect" opens the same connect dialog as
  * Settings, at the catalog entry or at connecting by address with the address filled in; the person signs in or types
- * the key there. Its why and address go under it, and who may not connect reads who does there. Done once the
- * workspace has it.
+ * the key there. Its why and address go under it. Every member connects it, as their own when they may not add the
+ * team's ("Para quem" there); GitHub connects for the team only, so who may not reads who does. Done once the viewer
+ * has it, theirs or the team's.
  */
 function ConnectAppCardView({ card }: { card: ConnectAppCard }) {
   const { t } = useTranslation();
@@ -218,7 +219,8 @@ function ConnectAppCardView({ card }: { card: ConnectAppCard }) {
       </RequestDone>
     );
   }
-  const may = can(org, "manage_connectors");
+  const admin = can(org, "manage_connectors");
+  const may = admin || personalAllowed(card.connector);
   return (
     <>
       <RequestOpen
@@ -229,7 +231,11 @@ function ConnectAppCardView({ card }: { card: ConnectAppCard }) {
           may ? (
             <EventPillAction
               primary
-              onClick={() => setFlow(def ? { step: 0, def } : { step: 0, def: null, url: card.url })}
+              onClick={() =>
+                setFlow(
+                  def ? { step: 0, def, personal: !admin } : { step: 0, def: null, url: card.url, personal: !admin },
+                )
+              }
             >
               {t("actionCard.connect")}
             </EventPillAction>
@@ -454,8 +460,9 @@ function InviteCardView({ card }: { card: InviteCard }) {
 /**
  * "Ada propõe um novo agente". While it is open, a request card like every other: the agent's reason, the draft in the
  * well (its face, name, handle and role, and the AI it would think with where the line has room), what it gets a line
- * each, and the fuse to its expiry. Criar makes it as it is, in one click, with each line the person may give; Revisar
- * opens "Criar agente" filled in with it over the conversation; Recusar says no; all three for who may create agents.
+ * each, and the fuse to its expiry. Create makes it as it is, in one click, with each line the person may give; Review
+ * opens the new agent's dialog filled in with it, the proposal beside the card; Decline says no; all three for who may
+ * create agents.
  * Then one line says what was decided, the draft and what it got behind "Ver detalhes"; created, it links to the agent
  * there.
  *
@@ -486,7 +493,7 @@ export function AgentProposalCardView({
   const create = useCreateProposedAgent(org.id);
   const makeRoutine = useCreateProposedRoutine(org.id);
   const connect = useConnectAi();
-  const [reviewing, setReviewing] = useState(false);
+  const newAgent = useNewAgent();
   const deny = useDenyAgentProposal(org.id);
   const toast = useToast();
   const openPanel = useOpenAgentPanel();
@@ -645,9 +652,26 @@ export function AgentProposalCardView({
               >
                 {test ? t("rightHand.card.createTest") : t("newAgent.create", { name: draft.name })}
               </Button>
-              <Button size="sm" disabled={busy} onClick={() => setReviewing(true)}>
-                {t(rightHand ? "rightHand.card.editFirst" : "actionCard.agentProposal.review")}
-              </Button>
+              {newAgent && (
+                // The new agent's dialog filled in with the draft, the proposal beside it (ADR 0081, ADR 0164).
+                <Button
+                  size="sm"
+                  disabled={busy}
+                  onClick={() =>
+                    newAgent.open({
+                      proposal: {
+                        messageId,
+                        card,
+                        proposerId,
+                        proposerName: proposer,
+                        ...(firstTask ? { firstTask } : {}),
+                      },
+                    })
+                  }
+                >
+                  {t(rightHand ? "rightHand.card.editFirst" : "actionCard.agentProposal.review")}
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant={rightHand ? "ghost" : undefined}
@@ -681,22 +705,6 @@ export function AgentProposalCardView({
         what={draft.name}
         locked={busy || ask.isPending}
       />
-      {reviewing && (
-        // Over the conversation: creating, saying no or leaving closes it, and the person is where they were.
-        <Dialog
-          bare
-          open
-          onOpenChange={(open) => !open && setReviewing(false)}
-          title={t("actionCard.agentProposal.reviewTitle", { name: draft.name })}
-          closeLabel={t("common.close")}
-          width={1200}
-          className="newag-dialog"
-        >
-          <Suspense fallback={<Spinner />}>
-            <NewAgentPage proposalId={messageId} onClose={() => setReviewing(false)} />
-          </Suspense>
-        </Dialog>
-      )}
     </>
   );
 }

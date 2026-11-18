@@ -480,6 +480,7 @@ test("signing in: the person who connected the computer; the code is sealed to i
       providerOrgId: null,
       serves: "everyone",
       useOrder: null,
+      sameAs: login.loginId,
       // A login for one agent is never a next account.
       movable: false,
     },
@@ -740,6 +741,27 @@ test("a sign-in needs the computer online, a runner that knows accounts and a pr
   const old = await beginAccountLogin(codex.deps, f.owner.id, f.org.id, machineId, "codex").catch((e) => e);
   expect(old).toBeInstanceOf(ConflictError);
   expect(old.code).toBe("account.runner_old");
+});
+
+test("a sign-in on a computer asleep in standby wakes it once and goes on when it is back (ADR 0161)", async () => {
+  f = await setup();
+  const { machineId } = await ownedMachine();
+  const codex = fakeHub(machineId, () => ({ url: "https://auth.openai.com/codex/device", userCode: "ABCD-1234" }));
+  let awake = false;
+  const woke: string[] = [];
+  const hub = {
+    ...codex.deps.hub,
+    status: async () => ({ ...(await codex.deps.hub.status()), online: awake, standby: !awake }),
+    wake: async (_id: string, why: string) => {
+      woke.push(why);
+      awake = true;
+    },
+  };
+  expect(await beginAccountLogin({ ...codex.deps, hub }, f.owner.id, f.org.id, machineId, "codex")).toMatchObject({
+    kind: "codex",
+    url: "https://auth.openai.com/codex/device",
+  });
+  expect(woke).toEqual(["call"]);
 });
 
 test("the email that names the account: a plain address only, never one a shell would read", async () => {

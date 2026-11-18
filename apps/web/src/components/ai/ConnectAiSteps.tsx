@@ -10,13 +10,12 @@ import {
   useModels,
 } from "@agenteschat/client";
 import {
-  type AccountChoice,
-  accountAbout,
   accountInLine,
   accountTitle,
   existingAi,
   groupPlans,
   ownSignInLower,
+  pickable,
   planWordOf,
   signInPlan,
   unnamedAccount,
@@ -72,7 +71,6 @@ import {
   signInProviderOf,
 } from "@agenteschat/client/lib/plans";
 import {
-  keyLine,
   keyLooksValid,
   keyName,
   keyStepHint,
@@ -89,6 +87,7 @@ import {
   Button,
   Card,
   Dialog,
+  DialogBody,
   Icon,
   InfoHint,
   Input,
@@ -103,12 +102,11 @@ import {
 } from "@agenteschat/ui";
 import { matchesWords } from "@agenteschat/ui/search";
 import { useQueryClient } from "@tanstack/react-query";
-import type { TFunction } from "i18next";
-import { Fragment, type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
-import { type HaveItem, HaveRow, renameOf, sortHave } from "@/components/arrival/ConnectHave";
+import { ConnectHave, type HaveItem, HaveRow, haveId, renameOf, sortHave } from "@/components/arrival/ConnectHave";
 import { BillingLinkButton } from "@/components/BillingLinkButton";
 import { ToolOffWayOut } from "@/components/devices/ToolOneClick";
 import { useOrg } from "@/components/org-context";
@@ -117,7 +115,6 @@ import { OpenPrefsButton, useIsThisMac } from "@/components/ThisMac";
 import { managedOf, SetupProgress, useSetupWait, useWaitReader } from "@/components/WorkspaceComputer";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useRenameAccount } from "@/hooks/useRenameAccount";
-import { planWord } from "@/lib/plan-usage";
 import { useToast } from "@/lib/toast";
 import { AddAccount, OpenPage, Step, StepTitle } from "./AddAccountFlow";
 import { CliMissing } from "./CliMissing";
@@ -265,28 +262,6 @@ export function AiPicker({
   );
 }
 
-/**
- * An account as an agent's account choice shows it (Quem pensa's list, Connect an AI's first rows): its name and plan,
- * the line under it with its plan's state, its maker's mark. Only its owner picks it, unless `usable` says otherwise
- * (someone else's plan for a person who may use other people's plans).
- */
-export function accountOption(
-  t: TFunction,
-  locale: string,
-  choice: AccountChoice<MachineAccount>,
-  agentName: string,
-  usable?: boolean,
-) {
-  const a = choice.login;
-  return {
-    label: accountTitle(t, a),
-    description:
-      [accountAbout(t, choice, agentName), planWord(t, locale, a.usage)].filter(Boolean).join(" · ") || undefined,
-    leading: <ProviderLogo id={a.provider ?? a.kind} size="sm" />,
-    disabled: !(usable ?? a.mine),
-  };
-}
-
 /** What an agent thinks with after a row of what the person already had: an account (`account`), or a key. */
 export interface ExistingUsed {
   label: string;
@@ -402,16 +377,17 @@ export function useExistingAi({
 
 /**
  * What the person already has for one agent with no AI (`existingAi`), as the picker's first rows, under a line that
- * says so: an account on its computer used in one click, no sign-in (taken from the agent on it where it may think
- * for one agent only), or signed in once more for this agent in its plan's panel (`onSignIn`, the panel right under
- * its row); a workspace key in one click on the workspace's model, with the budget line; someone else's account shown,
- * locked. A plan that can't run on that computer dims its rows, as its tile.
+ * says what a pick does, listed as Connect from a conversation lists them (`ConnectHave`): grouped by whose they are,
+ * past three rows the three with most room and the rest in "Todas as contas". An account on its computer is used in
+ * one click (taken from the agent on it where it may think for one agent only), or signed in once more for this agent
+ * in its plan's panel (`onSignIn`, under the list); a workspace key in one click on the workspace's model. Someone
+ * else's the person can't pick is counted under its owner's group, not listed. A plan that can't run on that computer
+ * dims its rows, as its tile.
  */
 export function ExistingRows({
   gates,
   agent,
   credentials,
-  named = false,
   signIn,
   panel,
   toEveryone = false,
@@ -424,8 +400,6 @@ export function ExistingRows({
   agent: PlanAgent;
   /** The workspace's keys the person may give it (none for someone who may not). */
   credentials: readonly Credential[];
-  /** The line says for whom (the title doesn't). */
-  named?: boolean;
   signIn?: ExistingSignIn | null;
   /** That sign-in's plan panel, from `AiPicker`. */
   panel?: ReactNode;
@@ -436,7 +410,7 @@ export function ExistingRows({
   /** Where a key shown here is removed: Settings › AI accounts. */
   onManageKeys?: () => void;
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { org } = useOrg();
   const dir = useDirectory(org.id);
   const machines = useMachines(org.id, gates.edition !== null);
@@ -453,6 +427,7 @@ export function ExistingRows({
     toEveryone,
     onUsed,
   });
+  const [all, setAll] = useState(false);
   const view = gates.view;
   if (!view || !found) return null;
   const rows = found;
@@ -478,64 +453,31 @@ export function ExistingRows({
     dimmed?.gate.state === "unsupported" && dimmed.gate.reason === "tool_off" && dimmedOn?.kind !== "managed"
       ? dimmedOn
       : undefined;
-  const items = rows.map((r) => {
-    if (r.kind === "key") {
-      const k = r.key;
-      return (
-        <OptionCard
-          key={k.id}
-          pressed={false}
-          disabled={busy}
-          onClick={() => void pickKey(k)}
-          className="ai-picker__key ac-mediarow ac-mediarow--row"
-        >
-          <span className="ac-mediarow__face">
-            <ProviderLogo id={k.provider} size="sm" />
-          </span>
-          <span className="ac-mediarow__head">
-            <span className="ac-option__title">{k.label}</span>
-          </span>
-          <span className="ac-mediarow__body">
-            <span className="ac-option__desc">{keyLine(t, k)}</span>
-            <span className="ac-option__desc">{t("agentPage.work.brain.modelText", g)}</span>
-          </span>
-        </OptionCard>
-      );
-    }
+  const dims = (choice: PlanChoice) => gateDims(gates.gateOf(choice));
+  const pick = (id: string) => {
+    const r = rows.find((x) => haveId(x) === id);
+    if (!r) return;
+    setAll(false);
+    if (r.kind === "key") return void pickKey(r.key);
     const a = r.choice.login;
-    const option = accountOption(t, i18n.language, r.choice, agent.name);
     const choice = planOfAccount(a);
-    const pick = () => {
-      if (r.act === "use" || r.act === "move") void pickAccount(a, r.act === "move");
-      else if (r.act === "also") onSignIn({ choice, from: a.id, email: a.email });
-      else if (r.act === "again") onSignIn({ choice, from: a.id, again: a.id, email: a.email });
-    };
-    return (
-      <OptionCard
-        key={a.id}
-        pressed={signIn?.from === a.id}
-        disabled={r.act === "locked" || busy || gateDims(gates.gateOf(choice))}
-        onClick={pick}
-        className="ai-picker__key ac-mediarow ac-mediarow--row"
-      >
-        <span className="ac-mediarow__face">{option.leading}</span>
-        <span className="ac-mediarow__head">
-          <span className="ac-option__title">{option.label}</span>
-        </span>
-        {option.description && (
-          <span className="ac-mediarow__body">
-            <span className="ac-option__desc">{option.description}</span>
-          </span>
-        )}
-      </OptionCard>
-    );
-  });
-  // The panel under its row, keyed among the rows so it stays mounted as they change: once the sign-in makes that login
-  // this agent's, the row leaves the list, and the panel, saying it's done, stays after the others.
-  if (panel) {
-    const at = rows.findIndex((r) => r.kind === "account" && r.choice.login.id === signIn?.from);
-    items.splice(at < 0 ? items.length : at + 1, 0, <Fragment key="panel">{panel}</Fragment>);
-  }
+    if (r.act === "use" || r.act === "move") void pickAccount(a, r.act === "move");
+    else if (r.act === "also") onSignIn({ choice, from: a.id, email: a.email });
+    else if (r.act === "again") onSignIn({ choice, from: a.id, again: a.id, email: a.email });
+  };
+  const list = (wide: boolean) => (
+    <ConnectHave
+      rows={rows}
+      agentName={agent.name}
+      value={signIn ? `account:${signIn.from}` : undefined}
+      onChange={pick}
+      dims={dims}
+      all={wide}
+      onAll={() => setAll(true)}
+      disabled={busy}
+      acts
+    />
+  );
   // Someone else's plan, for whoever may use other people's plans: its owner hears it and may take it back.
   const ownerId = dir.agentById.get(agent.id)?.ownerUserId;
   const lends = rows.some(
@@ -543,8 +485,19 @@ export function ExistingRows({
   );
   return (
     <>
-      <p className="ai-picker__or">{named ? t("connectAi.have.titleFor", g) : t("connectAi.have.title")}</p>
-      {items}
+      {pickable(rows).length > 0 && <p className="ai-picker__or">{t("connectAi.have.pickLine", g)}</p>}
+      {list(false)}
+      {/* A row's sign-in panel, under the list: mounted while the rows change around it. */}
+      {panel}
+      <Dialog
+        open={all}
+        onOpenChange={setAll}
+        title={t("connectAi.chat.allTitle")}
+        closeLabel={t("common.close")}
+        width={520}
+      >
+        {all && <DialogBody>{list(true)}</DialogBody>}
+      </Dialog>
       {dimmedWhy && <SettingNote icon={dimmedOff ? "computer" : "alert"}>{dimmedWhy}</SettingNote>}
       {dimmed && dimmedOff && <ToolOffWayOut machine={dimmedOff} tool={brainTool(dimmed.kind)} />}
       {refused && <KeyRefused refusal={refused} />}

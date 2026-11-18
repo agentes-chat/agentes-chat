@@ -191,11 +191,10 @@ export function VaultNewDialog({
                 block
                 label={t("vault.new.who")}
                 value={scope}
-                disabled={!canManageTeam}
                 onValueChange={pickScope}
                 options={[
                   { value: "personal", label: t("vault.scope.personal") },
-                  { value: "team", label: t(modeKey(org, "vault.scope.team")) },
+                  { value: "team", label: t(modeKey(org, "vault.scope.team")), disabled: !canManageTeam },
                 ]}
               />
               {!canManageTeam && <SettingNote icon="lock">{t(modeKey(org, "vault.new.teamLocked"))}</SettingNote>}

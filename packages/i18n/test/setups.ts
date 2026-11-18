@@ -101,6 +101,9 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
   selfhost: [
     // A server that sends no e-mail can't confirm a new address: only there (`email.no_mail`).
     "shell.email.noMail",
+    // Who read a piece of the workspace: off agentes.chat's own servers, whoever runs this one (`details.cloud`).
+    "audit.operatorRead.who.server",
+    "audit.operatorRead.request.operator",
     "auth.owner.",
     "auth.flow.ownerWaits",
     "auth.flow.ownerWaitsLead",

@@ -593,6 +593,39 @@ export const en = {
       why: () => "You got this email because this workspace on agentes.chat is yours. We send two of these, then stop.",
     },
   },
+  /** An outside chat surface linked to the account (ADR 0187), or unlinked by it. */
+  surface: {
+    linked: {
+      subject: (surface: string) => `${surface} was linked to your agentes.chat account`,
+      preheader: "Your assistant answers you there now. If it wasn't you, unlink it.",
+      headline: (surface: string) => `${surface} was linked`,
+      body: (surface: string, display: string, org: string): Text => [
+        { b: display },
+        ` on ${surface} now talks to your assistant in `,
+        { b: org },
+        ".",
+      ],
+      notYou: "Not you? Unlink it. Messages from there stop reaching your account at once.",
+      button: "Unlink it",
+      small: "If it was you, there's nothing to do. You can unlink it any time in Settings.",
+      why: (surface: string) => `You got this email because ${surface} was linked to your agentes.chat account.`,
+      /** The picture's alt text: the assistant beside the phone. */
+      picture: "Your assistant, now on your phone too",
+    },
+    unlinked: {
+      subject: (surface: string) => `${surface} was unlinked from your agentes.chat account`,
+      preheader: "Its identity changed. Link it again in Settings if it was you.",
+      headline: (surface: string) => `${surface} was unlinked`,
+      body: (surface: string, display: string): Text => [
+        { b: display },
+        ` on ${surface} was unlinked because its identity changed.`,
+      ],
+      small: "Link it again in Settings if it was you.",
+      why: (surface: string) => `You got this email because ${surface} was linked to your agentes.chat account.`,
+      /** The picture's alt text: the assistant beside the phone, switched off. */
+      picture: "Your assistant, no longer on your phone",
+    },
+  },
 };
 
 /** Every email's words: English has them all; another language what it translated (`Partial`), English for the rest. */

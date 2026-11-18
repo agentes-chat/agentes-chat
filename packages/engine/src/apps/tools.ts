@@ -5,6 +5,7 @@ import {
   type GifProvider,
   type PubSub,
   type RateLimiter,
+  retryInSeconds,
 } from "@agenteschat/adapters";
 import { and, type Database, desc, eq, gte, inArray, isNull, lte, or, schema, sql } from "@agenteschat/db";
 import {
@@ -652,7 +653,7 @@ export function buildAppsMcpServer(deps: AppsToolDeps, p: AppPrincipal, version:
         const r = await deps.rateLimiter.consume(`mcp:send:${i}:${p.userId}:${p.orgId}`, rule);
         if (!r.allowed)
           throw new AppToolError("Too many messages sent from apps. Try again later.", {
-            retry_after: Math.max(1, Math.ceil((r.resetAt.getTime() - Date.now()) / 1000)),
+            retry_after: retryInSeconds(r.resetAt),
           });
       }
       const agent = await resolveAgent(deps, p, args.agent);

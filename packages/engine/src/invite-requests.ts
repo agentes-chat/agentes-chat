@@ -72,6 +72,7 @@ import {
   inviteLink,
   inviteLinkOpen,
   joinOrganization,
+  lockOrgMembers,
   type Membership,
   onUserCreated,
   removeOutsideMember,
@@ -81,7 +82,7 @@ import {
 } from "./organizations";
 import { enqueue } from "./outbox";
 import { givableRoleIds } from "./roles";
-import { accountInUse, closedOrg } from "./standing";
+import { accountClosed, accountInUse, closedOrg } from "./standing";
 
 const {
   accounts,
@@ -101,6 +102,8 @@ const {
 export const JOIN_REQUEST_TTL_DAYS = 14;
 /** At most this many asks through a link wait in one workspace; the next ask is refused (`join.full`). */
 export const MAX_PENDING_JOIN_REQUESTS = 50;
+/** At most this many outside collaborators' requests (ADR 0191) wait in one workspace, apart from the asks. */
+export const MAX_PENDING_OUTSIDE_REQUESTS = 50;
 /**
  * Members' suggestions waiting in one workspace (ADR 0090), counted apart from the asks so neither crowds out the
  * other; the next is refused (`join.full`).
@@ -143,6 +146,9 @@ const fullLinkApproval = () =>
     "join.link_full_approval",
   );
 const fullError = () => new ConflictError("This workspace has many requests waiting", "join.full");
+/** An outside collaborator's account blocked or waiting for its deletion (ADR 0191): it joins nowhere. */
+const outsideClosed = () =>
+  new ConflictError("This account is blocked or being deleted", "outside_access.account_closed");
 /** A link's hour used up, by asks or by codes: everyone asking through it shares it, unlike `join.rate_limited`. */
 export const linkBusy = () =>
   new TooManyError("Many people asked through this link in the last hour. Try again later.", "join.link_busy");
@@ -185,12 +191,16 @@ async function addressIsMember(db: Executor, orgId: string, email: string) {
   return row !== undefined;
 }
 
-/** Members' suggestions (ADR 0090), and the asks: every other request, made through a link. */
+/**
+ * Members' suggestions (ADR 0090), outside collaborators' requests (ADR 0191), and the asks: every other request,
+ * made through a link.
+ */
 const suggestions = isNotNull(requests.suggestedByUserId);
-const asks = isNull(requests.suggestedByUserId);
+const outsideRequests = isNotNull(requests.outsideOf);
+const asks = and(isNull(requests.suggestedByUserId), isNull(requests.outsideOf));
 
 /** Requests waiting in a workspace: all of them, or only those `which` picks (`asks`, `suggestions`). */
-async function waitingCount(db: Executor, orgId: string, now: Date, which?: SQL) {
+async function waitingCount(db: Executor, orgId: string, now: Date, which?: SQL | undefined) {
   const [row] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(requests)
@@ -594,7 +604,8 @@ async function emailAdmins(
  * Files a request under the workspace's lock, the link read again under it. `proven`: a confirmed account asking
  * for its own address, or an address proven with a code (`usedCode`, the code's hash, used up here). A proven ask
  * hears where it stands (`join.link_closed`, `join.member`, `join.denied`, `join.full`, which leave the code
- * good) and takes over a request still waiting for that address. An unproven ask changes nothing that exists: a
+ * good) and takes over a request still waiting for that address, unless it is an outside collaborator's
+ * (`join.waiting`). An unproven ask changes nothing that exists: a
  * member's, a waiting or a denied address files nothing. Admins are told of a new request by an email at most once
  * an hour per workspace and a notice merged while unread (one push per burst). `keep` (a proven ask signed out,
  * ADR 0090) goes on the request it files or takes over. Returns whether a new request waits, and the request a
@@ -648,6 +659,10 @@ async function file(
       if (await addressIsMember(tx, orgId, ask.email))
         throw new ConflictError("You're already in this workspace", "join.member");
       if (denied) throw new ConflictError("Your request wasn't approved", "join.denied");
+      // An outside collaborator's request (ADR 0191) names the account the operator vouched for: never taken over.
+      if (waiting?.outsideOf != null) {
+        throw new ConflictError("A request to join already waits for this address", "join.waiting");
+      }
       if (waiting) {
         // A member's suggestion becomes the person's own ask (ADR 0090): through this link, answered to them,
         // and its page signs in once approved, as any ask's.
@@ -899,7 +914,9 @@ export type JoinApproval = { outcome: "joined" } | { outcome: "invited"; url: st
  * suggestion gets the invitation email itself, since nobody at that address asked (ADR 0090). The channels and agents
  * they start with (ADR 0184): `start`'s, checked as an invitation's, else the link's, as far as the approver may give
  * them at that moment. A link that took all its people takes no more approvals (`join.link_full_approval`). An
- * outside collaborator's request (ADR 0191) lets in the account it names at once, even into a full workspace.
+ * outside collaborator's request (ADR 0191) lets in the account it names at once, even into a full workspace; once
+ * that account is blocked or waits for its deletion, the request closes instead (`outside_access.ended`) and the
+ * approval is refused (`outside_access.account_closed`).
  */
 export async function approveJoinRequest(
   /** `secret`: `AGENTES_SECRET`, so an invitation an approval sends has a link that can be copied again. */
@@ -923,7 +940,7 @@ export async function approveJoinRequest(
   };
   let made: string | null = null;
   let opened: string[] = [];
-  const result = await deps.db.transaction(async (tx): Promise<JoinApproval> => {
+  const result = await deps.db.transaction(async (tx): Promise<JoinApproval | "closed"> => {
     // Two approvals through one link take turns, so its uses never pass its maximum.
     await lockRequests(tx, orgId);
     const row = await waitingRequest(tx, orgId, id, now);
@@ -941,6 +958,21 @@ export async function approveJoinRequest(
       row.outsideOf !== null && row.userId !== null ? { userId: row.userId, outsideOf: row.outsideOf } : null;
     // Someone with this address got in meanwhile: nothing to send.
     const already = outside ? await isMember(tx, orgId, outside.userId) : await addressIsMember(tx, orgId, row.email);
+    // Blocked or being deleted since the operator asked: the request closes, as every other way in refuses them.
+    if (outside && !already && (await accountClosed(tx, outside.userId))) {
+      await tx
+        .update(requests)
+        .set({
+          status: "closed",
+          reason: "account_closed",
+          decidedByUserId: actorId,
+          decidedAt: now,
+          passwordHash: null,
+        })
+        .where(eq(requests.id, row.id));
+      await recordOperatorEvent(tx, { type: "outside_access.ended", orgId, data: { userId: outside.userId } });
+      return "closed";
+    }
     // Full: nobody joins, and no invitation goes out that couldn't be accepted. An outside collaborator takes no seat.
     if (!already && !outside) await assertMemberRoom(tx, orgId);
     if (!already && !outside && !context.hasAccount && row.passwordHash && row.verifiedAt) {
@@ -1052,6 +1084,10 @@ export async function approveJoinRequest(
     }
     return approval;
   });
+  if (result === "closed") {
+    await settleJoinRequests(deps, orgId, now);
+    throw outsideClosed();
+  }
   if (made) await welcomeAccount(deps.db, made);
   forgetStarted(orgId, opened);
   if (result.outcome === "joined") await announceMembers(deps.pubsub, orgId, opened);
@@ -1505,8 +1541,10 @@ export async function cancelSuggestion(deps: Deps, actorId: string, orgId: strin
  * The operator API asks to let an account in as an outside collaborator (ADR 0191): someone working for the workspace
  * from outside it (`outsideOf`: who they work for), who takes no seat. It files a request the people who may invite
  * answer as any other, and tells them the way `askToJoin` does. Asking again while it waits returns the request as it
- * is. Refused for someone already in (`join.member`), and while another request waits for their address
- * (`join.waiting`): that one is answered first.
+ * is. Refused for someone already in (`join.member`), while another request waits for their address
+ * (`join.waiting`): that one is answered first, for an account blocked or waiting for its deletion
+ * (`outside_access.account_closed`), and once 50 outside requests wait in the workspace (`join.full`), counted apart
+ * from the asks through a link.
  */
 export async function requestOutsideAccess(
   /** `publicUrl`: this server's address, for the links in the email to the people who answer. */
@@ -1524,6 +1562,7 @@ export async function requestOutsideAccess(
   if (!org) throw new NotFoundError("No workspace with this id");
   const account = await accountOf(db, userId);
   if (!account) throw new NotFoundError("No account with this id");
+  if (!account.open) throw outsideClosed();
   const email = account.email.toLowerCase();
   const name = oneLine(account.name, JOIN_NAME_MAX) || oneLine(email.split("@")[0] ?? "", JOIN_NAME_MAX);
   const admins = await adminIds(db, orgId, "invite_people");
@@ -1544,6 +1583,7 @@ export async function requestOutsideAccess(
       }
       return { row: latest, created: false };
     }
+    if ((await waitingCount(tx, orgId, now, outsideRequests)) >= MAX_PENDING_OUTSIDE_REQUESTS) throw fullError();
     const values = {
       linkId: null,
       userId,
@@ -1585,12 +1625,23 @@ export async function requestOutsideAccess(
 /**
  * The operator API ends an account's outside access to a workspace (ADR 0191): its request still waiting closes, and
  * an outside collaborator is taken out as anyone removed is (`removeOutsideMember`). Never an ordinary member
- * (`outside_access.member`). With neither, nothing changes.
+ * (`outside_access.member`), refused before anything changes. With neither, nothing changes.
  */
 export async function endOutsideAccess(deps: Deps, orgId: string, userId: string, now = new Date()) {
   if (!(await orgExists(deps.db, orgId))) throw new NotFoundError("No workspace with this id");
   const closed = await deps.db.transaction(async (tx) => {
     await lockRequests(tx, orgId);
+    await lockOrgMembers(tx, orgId);
+    const [member] = await tx
+      .select({ outsideOf: organizationMembers.outsideOf })
+      .from(organizationMembers)
+      .where(and(eq(organizationMembers.orgId, orgId), eq(organizationMembers.userId, userId)));
+    if (member && member.outsideOf === null) {
+      throw new ConflictError(
+        "This person is a member of the workspace, not an outside collaborator: someone in the workspace removes them.",
+        "outside_access.member",
+      );
+    }
     const rows = await tx
       .update(requests)
       .set({ status: "closed", decidedAt: now, passwordHash: null })
@@ -1599,6 +1650,7 @@ export async function endOutsideAccess(deps: Deps, orgId: string, userId: string
           eq(requests.orgId, orgId),
           eq(requests.userId, userId),
           eq(requests.status, "pending"),
+          gt(requests.expiresAt, now),
           isNotNull(requests.outsideOf),
         ),
       )
@@ -1713,8 +1765,9 @@ export async function turnOffInviteLink(deps: Deps, actorId: string, orgId: stri
 }
 
 /**
- * Daily: deletes requests answered, closed or run out more than 90 days ago, and closes the admins' notices of
- * workspaces where nothing waits anymore (requests that ran out). Codes go a day after both their times pass, their
+ * Daily: closes the outside collaborators' requests that ran out, each told once to the operator
+ * (`outside_access.ended`, ADR 0191), deletes requests answered, closed or run out more than 90 days ago, and closes
+ * the admins' notices of workspaces where nothing waits anymore (requests that ran out). Codes go a day after both their times pass, their
  * counts after a day, and so does a code's email the job couldn't delete (a worker that died sending it). Returns
  * how many requests were deleted.
  */
@@ -1749,6 +1802,17 @@ export async function pruneJoinRequests(deps: Deps, now = new Date()) {
         and(ne(requests.status, "pending"), lt(requests.decidedAt, dayAgo), isNotNull(requests.claimHash)),
       ),
     );
+  await deps.db.transaction(async (tx) => {
+    const ranOut = await tx
+      .update(requests)
+      .set({ status: "closed", decidedAt: requests.expiresAt, passwordHash: null })
+      .where(and(pending, lt(requests.expiresAt, now), isNotNull(requests.outsideOf), isNotNull(requests.userId)))
+      .returning({ orgId: requests.orgId, userId: requests.userId });
+    await recordOperatorEvent(
+      tx,
+      ...ranOut.map((r) => ({ type: "outside_access.ended" as const, orgId: r.orgId, data: { userId: r.userId } })),
+    );
+  });
   const cutoff = new Date(now.getTime() - JOIN_REQUEST_KEEP_DAYS * DAY_MS);
   const gone = await deps.db
     .delete(requests)

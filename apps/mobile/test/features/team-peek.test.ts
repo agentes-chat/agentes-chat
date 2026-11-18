@@ -84,6 +84,8 @@ describe("the wiring", () => {
     expect(peek).toContain('<AgentFace agentId={agentId} size={PEEK_SIZE} live={false} framed={false} gaze="up" />');
     expect(peek).toContain('pointerEvents="none"');
     expect(peek).toContain('overflow: "hidden",');
+    // The tab bar's top is where a tab's bottom safe area ends: nothing added for the bar, or they float above it.
+    expect(peek).toContain("bottom: safe.bottom + (foot?.height ?? 0)");
     expect(math.match(/"worklet";/g)?.length).toBe(1);
   });
 

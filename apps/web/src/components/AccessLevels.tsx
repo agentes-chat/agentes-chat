@@ -190,7 +190,7 @@ export function LevelRow({
    * A short fact under the name, inside the row (the account, a server's host). A list passes it on every row, `null`
    * where there is none, so its rows share one height and one axis.
    */
-  meta?: string | null;
+  meta?: ReactNode;
   /** What the chosen level gives, behind an ⓘ beside the name. */
   hint?: ReactNode;
   asks?: string[];

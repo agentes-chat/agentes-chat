@@ -619,6 +619,7 @@
     "termsMiddle": " en het ",
     "privacy": "Privacybeleid",
     "termsAfter": ".",
+    "poweredBy": "Mogelijk gemaakt door agentes.chat",
     "signOut": "Uitloggen",
     "earlyAccess": {
       "otherEmail": "Deze uitnodiging is voor een ander adres. Meld je aan met het adres waarnaar ze is gestuurd.",
@@ -2085,6 +2086,7 @@
     "phone": "Telefoon",
     "phoneOn": "In de telefoonapp, ook als je telefoon vergrendeld is",
     "phoneOff": "Zet ze aan in de telefoonapp",
+    "phoneOpen": "Openen",
     "mac": "Mac-app",
     "macHelp": "Zolang de app open is, ook op de achtergrond",
     "on": "Aan",
@@ -2408,6 +2410,56 @@
     "localOnly": "Deze server opent alleen op de computer waarop hij draait, dus je telefoon kan hem niet bereiken.",
     "localOnlyHow": "Zet in de agentes.chat-app op die computer Bereik het vanaf je telefoon en je teamgenoten aan bij Voorkeuren › Servers. Kom daarna hier terug.",
     "localOnlyHere": "Zet Bereik het vanaf je telefoon en je teamgenoten aan. Kom daarna hier terug."
+  },
+  "surface": {
+    "link": {
+      "consent": "{{assistant}} van agentes.chat mag je via {{surface}} berichten sturen over je werkruimtes, en je alleen bellen als iets dringend is en jij dat toestaat. Schrijf stop om dit uit te zetten.",
+      "title": "Praat met {{assistant}} op {{surface}}",
+      "qr": "QR-code die {{surface}} opent met je code al ingevuld",
+      "making": "Je code wordt gemaakt",
+      "code": "Je code {{code}}",
+      "open": "{{surface}} openen",
+      "stepScan": "Scan de code met je telefoon, of open de app",
+      "stepSend": "Stuur het bericht zoals het is",
+      "stepSendText": "Dit gaat vanzelf verder zodra je bericht binnenkomt.",
+      "stepConfirm": "Controleer de afzender en bevestig hier",
+      "showCode": "Code opnieuw tonen",
+      "confirmTitle": "Is dit jouw {{surface}}?",
+      "sentBy": "Deze afzender stuurde je code",
+      "onlyYou": "Koppel het alleen als jij dit bent.",
+      "workspace": "Antwoordt in {{workspace}}",
+      "confirm": "Ja, koppelen",
+      "notMe": "Niet ik",
+      "doneTitle": "{{surface}} is gekoppeld",
+      "doneText": "{{assistant}} antwoordt je vanaf nu daar.",
+      "newCode": "Nieuwe code maken",
+      "done": "Klaar"
+    },
+    "row": {
+      "hint": "Praat met {{assistant}} en krijg de antwoorden op {{surface}}.",
+      "link": "Koppelen",
+      "none": "{{assistant}} kan je daar berichten sturen",
+      "pending": "Een afzender wacht tot je bevestigt",
+      "unlink": "Ontkoppelen",
+      "unlinkTitle": "{{surface}} ontkoppelen?",
+      "unlinkText": "{{assistant}} antwoordt je daar niet meer. Je kunt het altijd opnieuw koppelen.",
+      "unlinked": "{{surface}} ontkoppeld"
+    },
+    "undo": {
+      "title": "De chatapp ontkoppelen?",
+      "lead": "Je account is net gekoppeld aan een chatapp. Was jij dat niet, ontkoppel hem dan hier.",
+      "button": "Ontkoppelen",
+      "done": "{{surface}} ontkoppeld",
+      "doneLead": "{{display}} kan je account niet meer bereiken.",
+      "ended": "Al ontkoppeld",
+      "endedLead": "{{display}} op {{surface}} was al ontkoppeld. Je hoeft niets meer te doen.",
+      "gone": "Deze link om ongedaan te maken werkt niet meer",
+      "sender": "Die afzender"
+    },
+    "via": "via {{surface}}",
+    "viaTip": "Verstuurd door {{person}} via {{surface}}",
+    "forwarded": "doorgestuurd via {{surface}}",
+    "forwardedTip": "{{person}} heeft dit doorgestuurd vanuit {{surface}}. Het zijn de woorden van iemand anders."
   },
   "team": {
     "title": "Team",
@@ -3399,10 +3451,14 @@
     "titleFor_female": "Een AI koppelen voor {{name}}",
     "have": {
       "title": "Al gekoppeld",
-      "titleFor": "Al gekoppeld, voor {{name}}",
-      "titleFor_female": "Al gekoppeld, voor {{name}}",
       "other": "Of koppel een ander",
-      "manageKeys": "Sleutels beheren of verwijderen"
+      "manageKeys": "Sleutels beheren of verwijderen",
+      "pickLine": "Kies een account dat hier al verbonden is. {{name}} denkt ermee.",
+      "onlyOwner_one": "Nog {{count}} account dat alleen {{name}} kan geven.",
+      "onlyOwner_other": "Nog {{count}} accounts die alleen {{name}} kan geven.",
+      "moreAgents_one": "en nog {{count}} agent",
+      "moreAgents_other": "en nog {{count}} agents",
+      "plenty": "Ruim genoeg"
     },
     "chat": {
       "mine": "Van jou",
@@ -3820,7 +3876,6 @@
       "aiAccount": "Denkt met {{account}}",
       "aiModel": "Denkt via de API",
       "aiNone": "Nog geen AI. Koppel er een na het aanmaken",
-      "reviewTitle": "{{name}} bekijken",
       "lines": "Wat {{name}} krijgt",
       "aChannel": "een kanaal",
       "anApp": "een app",
@@ -7195,7 +7250,6 @@
     "adminsOnlyPersonal": "Vraag iemand die deze ruimte beheert of je agents mag maken.",
     "proposalClosed": "Over dit voorstel is al beslist of het is verlopen.",
     "proposalNoAccess": "Alleen mensen in het gesprek ervan kunnen dit voorstel zien.",
-    "backToChat": "Terug naar het gesprek",
     "and": " en ",
     "routine": "Routine",
     "routineKeep": "De routine {{name}} maken",
@@ -7370,6 +7424,51 @@
     "otherSkill": "Andere skill",
     "namesLead": "Wat dacht je van",
     "namesRoll": "Andere namen",
+    "proposal": {
+      "lead": "Pas aan wat {{name}} voorstelde. Je kunt later alles wijzigen.",
+      "leadNarrow": "Voorstel van {{name}}: {{why}}",
+      "side": "Het voorstel",
+      "from": "Voorgesteld door {{name}}",
+      "changed": "Wat je hebt gewijzigd",
+      "changedNone": "Nog niets. Wat je op de kaart wijzigt, verschijnt hier, met Ongedaan maken.",
+      "undo": "Ongedaan maken",
+      "changes": {
+        "changed": "gewijzigd",
+        "added": "toegevoegd",
+        "removed": "verwijderd",
+        "how": "Hoe het werkt"
+      },
+      "firstTask": "Eerste taak",
+      "firstTaskPlaceholder": "Wat je eerst vraagt (optioneel)",
+      "firstTaskHint": "Staat klaar in je chat met {{name}}. Gewoon versturen.",
+      "firstTaskHintBlank": "Staat klaar in je chat ermee. Gewoon versturen.",
+      "firstTaskNone": "Zonder taak opent de chat leeg.",
+      "after": "Na het aanmaken",
+      "afterAi": "Een AI koppelen waarmee {{name}} denkt",
+      "afterAiBlank": "Een AI koppelen waarmee het denkt",
+      "afterApp": "{{app}} koppelen",
+      "afterNone": "Niets. {{name}} gaat aan de slag zodra het is aangemaakt.",
+      "afterNoneBlank": "Niets. Het gaat aan de slag zodra het is aangemaakt.",
+      "discard": "Voorstel verwerpen",
+      "otherChannel": "Ander kanaal",
+      "chooseChannels": "Kanalen kiezen",
+      "channelsNone": "Alleen in de chat met jou.",
+      "channel": {
+        "lead": "Waar {{name}} gaat werken.",
+        "leadBlank": "Waar het gaat werken.",
+        "does": "{{name}} antwoordt als het in {{channel}} wordt geroepen en leest wat daar gebeurt.",
+        "doesBlank": "Het antwoordt als het in {{channel}} wordt geroepen en leest wat daar gebeurt.",
+        "remove": "Uit {{channel}} halen"
+      },
+      "routine": {
+        "label": "Routine",
+        "lead": "{{when}}, in {{channel}}.",
+        "leadDm": "{{when}}, in de chat met jou.",
+        "starts": "Start zodra {{name}} is aangemaakt. Tijd en tekst wijzig je bij Routines.",
+        "startsBlank": "Start zodra het is aangemaakt. Tijd en tekst wijzig je bij Routines.",
+        "remove": "Routine verwijderen"
+      }
+    },
     "skill": {
       "opens": "{{name}} opent deze handleiding als het onderwerp opduikt. Je bewerkt hem bij Skills.",
       "opensBlank": "Hij opent deze handleiding als het onderwerp opduikt. Je bewerkt hem bij Skills.",
@@ -11288,6 +11387,17 @@
     "saved": "Logo bijgewerkt.",
     "removed": "Logo verwijderd."
   },
+  "orgAccent": {
+    "label": "Accentkleur",
+    "change": "Kleur wijzigen",
+    "useDefault": "Standaard gebruiken",
+    "suggested": "Voorgestelde kleuren",
+    "sampleMention": "@Agent",
+    "sampleLink": "Een link",
+    "save": "Kleur opslaan",
+    "saved": "Accentkleur bijgewerkt.",
+    "reset": "Terug naar de standaardkleur."
+  },
   "look": {
     "previous": "Vorige",
     "next": "Volgende",
@@ -12828,6 +12938,37 @@
       "add": "MCP toevoegen",
       "list": "Gekoppelde MCP-servers",
       "none": "MCP-servers die je via hun adres koppelt, verschijnen hier."
+    },
+    "personal": {
+      "note": "Alleen jij opent deze verbindingen. Je agenten gebruiken ze alleen als je erom vraagt.",
+      "noteOne": "Alleen jij opent deze verbinding. Je agenten gebruiken ze alleen als je erom vraagt.",
+      "emptyTitle": "Verbind je eigen accounts",
+      "emptyText": "Alleen jij opent je verbindingen, en je agenten gebruiken ze alleen als je erom vraagt. Voor mailboxen geldt hun eigen regel.",
+      "noApps": "Diensten die je alleen voor jezelf koppelt, verschijnen hier.",
+      "mailTitle": "Je mailboxen",
+      "mailNote": "Agenten die je toestemming gaf gebruiken je mailboxen zoals je het instelde, ook voor mensen die rechtstreeks met ze praten. Vraagt iemand anders iets waarvoor goedkeuring nodig is, dan keur jij het goed.",
+      "others": "Persoonlijke verbindingen van anderen",
+      "of": "Persoonlijk van {{name}}",
+      "seeAll": "Alle {{count}} bekijken",
+      "forWhom": "Voor wie",
+      "teamLocked": "Alleen wie connectors beheert voegt die van het team toe.",
+      "mailLocked": "Een mailbox is altijd van wie hem verbindt.",
+      "done": "Je agenten gebruiken het alleen als jij erom vraagt.",
+      "worksWhenAsked": "Werkt alleen als jij erom vraagt.",
+      "remove": "Verwijderen",
+      "removeName": "{{name}} verwijderen",
+      "removeTitle": "{{name}} verwijderen?",
+      "takeOff": "Van een agent halen",
+      "takeOffTitle": "{{name}} van een agent halen",
+      "takeOffName": "{{name}} van {{agent}} halen",
+      "takeOffOne": "Weghalen",
+      "takenOff": "{{agent}} gebruikt {{name}} niet meer.",
+      "turnOff": "Uitzetten",
+      "turnOffName": "{{name}} uitzetten voor deze agent",
+      "moveToTeam": "Naar het team",
+      "moveTitle": "{{name}} naar het team?",
+      "moveText": "Iedereen in de workspace ziet het. Wie agenten beheert, kiest welke agenten het gebruiken, en de eigenaar van een agent kan het bij die van hem uitzetten. Een agent die alle gekoppelde apps gebruikt, krijgt het meteen.",
+      "moved": "{{name}} is nu van het team."
     },
     "addTitle": "Connector toevoegen",
     "catalogText": "Koppel één keer voor {{org}}. Kies daarna wat elke agent mag gebruiken.",
@@ -14978,6 +15119,16 @@
     }
   },
   "errors": {
+    "surface": {
+      "off": "Het koppelen van chat-apps is uitgezet. Laad opnieuw om je instellingen te zien zoals ze nu zijn.",
+      "notAllowed": "Een chat-app koppelen is nog niet open voor je account. Gebruik de app hier tot het opengaat.",
+      "noAssistant": "De assistent in deze werkruimte mag niet met je praten. Kies een andere werkruimte om te koppelen.",
+      "noWorkspace": "Je zit niet meer in deze werkruimte. Kies een andere werkruimte om te koppelen.",
+      "linkGone": "Deze koppeling wacht niet meer: hij is na 10 minuten verlopen of geannuleerd. Maak een nieuwe code om opnieuw te beginnen.",
+      "taken": "Die afzender is gekoppeld aan een ander agentes.chat-account. Ontkoppel hem daar en stuur dan een nieuwe code.",
+      "undoGone": "Deze ongedaan-maken-link is al gebruikt of verlopen. Ontkoppel in plaats daarvan in je meldingsinstellingen.",
+      "codeGone": "Deze code is fout, al gebruikt of na 10 minuten verlopen. Maak een nieuwe code en stuur hem opnieuw."
+    },
     "wallpaper": {
       "notYours": "Die foto is niet van jou.",
       "invalid": "Die achtergrond bestaat niet.",
@@ -15014,7 +15165,7 @@
       "accountInUse": "Dat account denkt al voor een andere agent.",
       "noAiYet": "Er is nog geen AI verbonden.",
       "filePurged": "Dit bestand is meer dan 30 dagen geleden verwijderd en kan niet terugkomen.",
-      "looksSecret": "Dat lijkt op een wachtwoord of sleutel, en iedereen hier zou het zien.",
+      "looksSecret": "Dat lijkt op een wachtwoord of sleutel, en iedereen hier zou het zien. Laat de agent er liever privé om vragen.",
       "blockSpec": "Dit blok bevat een fout in de onderdelen of formules, dus het kan niet worden getoond. Verbeter het en probeer het opnieuw.",
       "takeControl": "Neem eerst de controle over het profiel.",
       "profileBusy": "Iemand anders gebruikt dit profiel.",
@@ -15032,8 +15183,10 @@
       "createRefused": "Je kunt nu geen werkruimte maken.",
       "noAgentToRemind": "Geen agent in dit gesprek kan je eraan herinneren.",
       "agentCantRead": "Laat de agent dit eerst lezen, bij de toegang van de agent.",
+      "connectionNotYours": "Deze verbinding is persoonlijk van iemand anders. Alleen een routine van die persoon kan op de gebeurtenissen ervan wachten.",
       "neverHappens": "Deze planning komt nooit voor.",
       "soleOwner": "Je bent de enige eigenaar van een werkruimte met andere leden. Maak eerst iemand anders eigenaar of verwijder de werkruimte.",
+      "soleOwnerOutside": "Je bent de enige eigenaar van een werkruimte waarvan de andere mensen externe medewerkers zijn, die geen eigenaar kunnen zijn. Nodig eerst een lid uit en maak die eigenaar, of verwijder de werkruimte.",
       "testFirst": "Test de verbinding met deze gegevens voordat je hem aanzet.",
       "voiceLength": "De opname is te lang of te kort.",
       "sendAgain": "Het bestand is niet heel aangekomen. Stuur het opnieuw.",
@@ -15143,7 +15296,8 @@
       "denied": "Je verzoek is niet goedgekeurd. Vraag iemand daar om je uit te nodigen.",
       "answered": "Iemand heeft dit verzoek al beantwoord.",
       "expired": "Dit verzoek is verlopen: niemand heeft het binnen 14 dagen beantwoord.",
-      "codeNeeded": "Bevestig eerst je e-mailadres."
+      "codeNeeded": "Bevestig eerst je e-mailadres.",
+      "outsideClosed": "Dit account is geblokkeerd of wordt verwijderd, dus het kan niet meedoen. Het verzoek is gesloten."
     },
     "code": {
       "wrong": "Verkeerde code. Probeer het opnieuw.",
@@ -16625,8 +16779,37 @@
     },
     "system": "Systeem",
     "removed": "Verwijderd",
+    "operatorRead": {
+      "sentence": "{{who}} las {{what}}",
+      "who": {
+        "server": "Wie deze server beheert,",
+        "cloud": "De support van agentes.chat"
+      },
+      "what": {
+        "message": "een bericht",
+        "run_step": "een stap uit het werk van een agent",
+        "agent": "de instructies van een agent",
+        "routine": "een routine",
+        "task": "een taak op de achtergrond",
+        "channel": "de naam van een kanaal",
+        "connection": "de gegevens van een verbinding",
+        "support_request": "een supportverzoek",
+        "direct": "iets uit een privégesprek",
+        "other": "iets uit de werkruimte"
+      },
+      "request": {
+        "plain": "op verzoek van {{name}}",
+        "app": "op verzoek van {{name}}, verstuurd vanuit de app",
+        "email": "op verzoek van {{name}}, verstuurd per e-mail",
+        "operator": "op verzoek van {{name}}, vastgelegd door wie deze server beheert",
+        "support": "op verzoek van {{name}}, vastgelegd door support"
+      },
+      "fault": "om een mislukte of vastgelopen run te onderzoeken",
+      "ai": "met een AI-assistent"
+    },
     "change": {
       "mergedWithoutAsking": "Gemerged in {{repo}} zonder te vragen",
+      "accentChanged": "Heeft de accentkleur van de werkruimte gewijzigd",
       "pattern": "{{verb}}: {{area}}",
       "approval": {
         "approved": "Een verzoek goedgekeurd",
@@ -16831,7 +17014,7 @@
       "roles": "Elke rol voegt rechten, kanalen en agents toe.",
       "vault": "Wachtwoorden, sleutels en contacten van je agents. Wachtwoorden zien ze nooit.",
       "access": "Wat elke agent kan gebruiken: één niveau per connector.",
-      "connectors": "Diensten en MCP-servers die één keer voor de hele werkruimte zijn gekoppeld.",
+      "connectors": "Diensten en MCP-servers, gekoppeld voor het team of alleen voor jou.",
       "skills": "Markdown-instructies die agents openen als ze ze nodig hebben.",
       "storage": "Waar de bestanden van de werkruimte staan.",
       "usage": "De AI-accounts van de werkruimte, en hoeveel elke persoon en elke agent gebruikt.",
@@ -16910,7 +17093,7 @@
         "wallpaper": {
           "title": "Achtergrond",
           "help": "Verandert alleen voor jou, op al je apparaten",
-          "rowHelp": "Achter elk gesprek, alleen voor jou. Een gesprek kan via zijn menu een eigen achtergrond hebben.",
+          "rowHelp": "Achter elk gesprek, alleen voor jou, tenzij een gesprek via zijn menu een eigen achtergrond heeft.",
           "rowSub": "Alleen voor jou, in elk gesprek",
           "onlyHere": "Alleen in {{name}}, alleen voor jou",
           "none": "Geen achtergrond",
@@ -18148,6 +18331,8 @@
       "file_saved": "Bestand opgeslagen.",
       "issue_work_start": "Wil je taak #{{number}} doen?",
       "issue_taken": "Taak #{{number}} opgepakt.",
+      "surfaceUnlinked": "{{surface}} is ontkoppeld omdat de identiteit is veranderd. Koppel het opnieuw in Instellingen als jij het was.",
+      "surfaceVoiceDropped": "Ik kon dat spraakbericht niet verstaan. Kun je het opnieuw sturen of typen?",
       "done": "Klaar.",
       "stretch_paused_runs_one": "{{agents}} stopte even om met je te overleggen voordat het verdergaat",
       "stretch_paused_runs_other": "{{agents}} stopten even om met je te overleggen voordat ze verdergaan",
@@ -19064,6 +19249,7 @@
     "serverOwner": "Jij hebt deze server opgezet. De eigen instellingen ervan hebben hier geen eigenaar meer, alleen in de omgeving van de server.",
     "blockers": "Voordat je het kunt verwijderen",
     "soleOwner": "Je bent de enige eigenaar van {{name}}. Maak iemand anders eigenaar, of verwijder {{name}}.",
+    "soleOwnerOutside": "Je bent de enige eigenaar van {{name}}, en de andere mensen daar zijn externe medewerkers, die geen eigenaar kunnen zijn. Nodig een lid uit en maak die eigenaar, of verwijder {{name}}.",
     "soleOwnerSettingUp": "Je bent de enige eigenaar van {{name}}. Rond de inrichting af om iemand anders eigenaar te maken, of verwijder {{name}}.",
     "openPeople": "Mensen openen",
     "finishSetup": "Inrichting afronden",

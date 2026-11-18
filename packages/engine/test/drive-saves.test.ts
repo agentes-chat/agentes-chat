@@ -112,13 +112,12 @@ const call = async (ctx: ToolContext, name: string, input: Record<string, unknow
 
 /** The run a person's message started, finished; calls go through it afterwards. */
 async function runAfter(agentId: string, channelId: string, body: string, userId = f.owner.id) {
-  await postPersonMessage({ db: f.db, pubsub: f.pubsub }, userId, f.org.id, channelId, { body });
+  const trigger = await postPersonMessage({ db: f.db, pubsub: f.pubsub }, userId, f.org.id, channelId, { body });
   await drainOutbox(f.db, f.handlers);
-  const runs = await f.db
+  const [run] = await f.db
     .select()
     .from(schema.agentRuns)
-    .where(and(eq(schema.agentRuns.agentId, agentId), eq(schema.agentRuns.channelId, channelId)));
-  const run = runs.at(-1);
+    .where(and(eq(schema.agentRuns.agentId, agentId), eq(schema.agentRuns.triggerMessageId, trigger.id)));
   if (!run) throw new Error("no run");
   return run;
 }
@@ -475,10 +474,11 @@ describe("share_artifact", () => {
     const id = (saved.data as { artifact: { id: string } }).artifact.id;
     await f.db.update(schema.artifacts).set({ channelId: run.channelId }).where(eq(schema.artifacts.id, id));
     await join(bob.id);
-    await postPersonMessage({ db: f.db, pubsub: f.pubsub }, bob.id, f.org.id, f.general.id, { body: "@dev manda" });
+    const trigger = await postPersonMessage({ db: f.db, pubsub: f.pubsub }, bob.id, f.org.id, f.general.id, {
+      body: "@dev manda",
+    });
     await drainOutbox(f.db, f.handlers);
-    const runs = await f.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.channelId, f.general.id));
-    const asked = runs.at(-1);
+    const [asked] = await f.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.triggerMessageId, trigger.id));
     if (!asked) throw new Error("no run");
     expect((await call(ctxOf(asked), "share_artifact", { artifact_id: id })).isError).toBe(true);
   });

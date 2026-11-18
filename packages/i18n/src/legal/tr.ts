@@ -8,7 +8,7 @@ export const legalTr: Partial<Record<LegalKind, LegalDocument>> = {
       "agentes.chat'in kullanımına ilişkin sözleşme: çalışma alanınız, ajanlarınız ve her bir tarafın neden sorumlu olduğu.",
     courtesy:
       "Bu metin bir nezaket çevirisidir. İngilizce sürümden farklılık göstermesi hâlinde İngilizce sürüm esas alınır.",
-    updated: "2026-11-16",
+    updated: "2026-11-18",
     sections: [
       {
         id: "agreement",
@@ -99,10 +99,11 @@ export const legalTr: Partial<Record<LegalKind, LegalDocument>> = {
           "Her çalışma alanı kendi agentes.chat planının ücretini öder. Aşağıdaki kurallar tüm planlar için geçerlidir:",
           {
             list: [
+              "**Satıcı.** Tüm satın almalar, Delaware'de kurulmuş bir ABD şirketi olan AGENTESCHAT, LLC'den yapılır ve bu şirket tarafından faturalandırılır.",
               "**Fiyatlar.** Planlar ve fiyatları fiyatlandırma sayfamızda yer alır. Fiyatlar ABD doları cinsindendir ve uygulandığı hâllerde vergiler eklenir. Bankanız veya ödeme sağlayıcınız, Brezilya'daki IOF gibi, yurt dışından yapılan alımlar için kendi ücretlerini tahsil edebilir.",
               "**Yenileme.** Bir plan, seçilen döneme bağlı olarak her ay veya her yıl, iptal edilene kadar otomatik olarak yenilenir. Yıllık bir plan yenilenmeden önce bir hatırlatma göndeririz.",
               "**İptal.** Dilediğiniz zaman iptal edebilirsiniz. İptal, ücreti ödenmiş dönemin sonunda geçerli olur. Bunun ardından çalışma alanının ajanları durur, bilgisayarı 7 gün sonra silinir ve konuşmaları ile dosyaları 90 gün boyunca okunabilir ve indirilebilir durumda kalır. Bu sürenin sonunda silinir.",
-              "**İade yapılmaz.** Kanunun aksini gerektirdiği hâller dışında, bir iptalden sonra kalan dönem için olanlar dahil olmak üzere, ödemeler kesindir ve tamamen veya kısmen iade edilmez.",
+              "**İade yapılmaz.** Her plan, satın alındığı andan itibaren yapay zekâ modeli kullanımı, sunucular ve çalışma alanının bilgisayarı gibi işletme maliyetleri doğurur. Bu nedenle, bir iptalden sonra kalan dönem için olanlar dahil olmak üzere, satın almalar kesindir ve tamamen veya kısmen iade edilmez.",
               "**Başarısız ödemeler.** Bir ödeme başarısız olursa, izleyen günlerde yeniden deneriz. Yine başarısız olursa çalışma alanı beklemeye alınır: ajanları durur, kişiler ise çalışma alanında okumaya ve yazmaya devam edebilir. Bilgisayarı 7 gün boyunca saklanır, ardından serbest bırakılır ve silinir. Ödeme yapılması çalışma alanını geri getirir, eski bilgisayar serbest bırakılmışsa yeni bir bilgisayar üzerinde.",
               "**Fiyat değişiklikleri.** Yeni müşteriler için fiyatları dilediğimiz zaman değiştirebiliriz. Hâlihazırda sahip olduğunuz bir planın fiyatı yalnızca yeni vergiler nedeniyle, bir sonraki yenilemeden itibaren ve en az 30 gün önceden bildirimde bulunularak değişir.",
               "**Adil kullanım.** Bazı özellikler, hangi ajanın yanıt vereceğinin seçilmesi, hafızaların ve işlemlerin değerlendirilmesi ve bir ekranda neye tıklanacağının bulunması gibi, ek ücret almadan sağladığımız yapay zekâ hizmetleri üzerinde çalışır. Kullanımı normalin çok üzerinde olan bir çalışma alanı için bunları sınırlayabiliriz.",
@@ -150,7 +151,7 @@ export const legalTr: Partial<Record<LegalKind, LegalDocument>> = {
         id: "law",
         heading: "16. Uygulanacak hukuk",
         blocks: [
-          "İşbu Koşullar, kanunlar ihtilafı kuralları hariç olmak üzere ABD'nin Delaware eyaleti kanunlarına tabidir ve taraflar Delaware'de bulunan eyalet ve federal mahkemelerin münhasır yargı yetkisini kabul eder. Brezilya gibi, kanunu size feragat edilemeyen haklar veya yetkili mahkeme hakkı tanıyan bir yargı bölgesinde tüketiciyseniz, bu haklarınız saklıdır.",
+          "İşbu Koşullar ve bunlara dayanılarak yapılan tüm satın almalar, kanunlar ihtilafı kuralları hariç olmak üzere Amerika Birleşik Devletleri ve Delaware eyaleti kanunlarına tabidir ve taraflar Delaware'de bulunan eyalet ve federal mahkemelerin münhasır yargı yetkisini kabul eder.",
         ],
       },
       {

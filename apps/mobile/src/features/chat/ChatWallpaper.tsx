@@ -1,5 +1,5 @@
 import { type Wallpaper, type WallpaperHue, wallpaperName } from "@agenteschat/client/lib/wallpaper";
-import { rgbOf } from "@agenteschat/ui/agent/engine";
+import { drawnKey, rgbOf } from "@agenteschat/ui/agent/engine";
 import {
   CROWD,
   CROWD_EYES,
@@ -76,7 +76,7 @@ const pageOf = (dark: boolean) => (dark ? WALLPAPER_PAGE.dark : WALLPAPER_PAGE.l
 const skies = new Map<string, SkImage | null>();
 
 function skyImage(hues: readonly WallpaperHue[], w: number, h: number, dark: boolean, details: boolean) {
-  const key = `${hues.join(",")}|${w}x${h}|${dark ? 1 : 0}|${details ? 1 : 0}`;
+  const key = `${hues.map(drawnKey).join(";")}|${w}x${h}|${dark ? 1 : 0}|${details ? 1 : 0}`;
   const hit = skies.get(key);
   if (hit !== undefined) return hit;
   const image = Skia.Image.MakeImage(
@@ -252,7 +252,8 @@ function useWallpaperPicture(
   const photo = useWallpaperPhoto(wallpaper.kind === "photo" ? wallpaper.url : null);
   const W = Math.round(width);
   const H = Math.round(height);
-  const key = `${wallpaperKey(wallpaper)}|${bands.join(",")}|${W}x${H}|${dark ? 1 : 0}|${strength}|${tile ? 1 : 0}`;
+  // The sky as drawn now: the crowd and "auto" draw `sky`, which follows the workspace's accent.
+  const key = `${wallpaperKey(wallpaper)}|${bands.join(",")}|${drawnKey("sky")}|${W}x${H}|${dark ? 1 : 0}|${strength}|${tile ? 1 : 0}`;
   // biome-ignore lint/correctness/useExhaustiveDependencies: the key holds everything the picture is painted from
   return useMemo(() => {
     if (W <= 0 || H <= 0 || wallpaper.kind === "none") return null;

@@ -8,6 +8,7 @@ import type { BrainKind } from "./brains/types";
 import { mayStopRun, runRequester } from "./cancel";
 import { ConflictError, ForbiddenError } from "./errors";
 import { publishMessageCreated } from "./events";
+import { inMillisecondOf } from "./message-place";
 import { type Message, messageView } from "./messages";
 import { can, type Membership, requireActiveMembership } from "./organizations";
 import { enqueue } from "./outbox";
@@ -802,7 +803,7 @@ export async function joinUsageNote(
       meta: sql`jsonb_set(${messages.meta}, '{usageWait,runIds}',
         coalesce(${messages.meta}->'usageWait'->'runIds', '[]'::jsonb) || to_jsonb(${run.id}::text))`,
     })
-    .where(and(eq(messages.id, last.id), eq(messages.createdAt, last.createdAt)))
+    .where(and(eq(messages.id, last.id), inMillisecondOf(messages.createdAt, last.createdAt)))
     .returning();
   return { note: note ?? null };
 }
@@ -1091,7 +1092,7 @@ export async function usageNoteHandOn(
     const [row] = await deps.db
       .update(messages)
       .set({ meta: sql`jsonb_set(${messages.meta}, '{usageWait}', ${next})` })
-      .where(and(eq(messages.id, note.id), eq(messages.createdAt, note.createdAt)))
+      .where(and(eq(messages.id, note.id), inMillisecondOf(messages.createdAt, note.createdAt)))
       .returning();
     if (row && deps.pubsub) await publishMessageCreated(deps.pubsub, messageView(row));
   }

@@ -621,4 +621,31 @@ export const words: EmailWords = {
         "Ten e-mail przyszedł, bo ta przestrzeń robocza w agentes.chat należy do ciebie. Wysyłamy tylko dwa takie powiadomienia.",
     },
   },
+  surface: {
+    linked: {
+      subject: (surface) => `${surface} połączono z Twoim kontem agentes.chat`,
+      preheader: "Twój asystent odpowiada Ci teraz tam. Jeśli to nie Ty, odłącz to.",
+      headline: (surface) => `${surface} połączono`,
+      body: (surface, display, org) => [
+        { b: display },
+        ` w ${surface} rozmawia teraz z Twoim asystentem w `,
+        { b: org },
+        ".",
+      ],
+      notYou: "To nie Ty? Odłącz to. Wiadomości stamtąd od razu przestaną trafiać na Twoje konto.",
+      button: "Odłącz",
+      small: "Jeśli to Ty, nic nie musisz robić. Możesz to odłączyć w każdej chwili w Ustawieniach.",
+      why: (surface) => `Otrzymujesz tego e-maila, bo ${surface} połączono z Twoim kontem agentes.chat.`,
+      picture: "Twój asystent, teraz także w telefonie",
+    },
+    unlinked: {
+      subject: (surface) => `${surface} odłączono od Twojego konta agentes.chat`,
+      preheader: "Tożsamość się zmieniła. Połącz ponownie w Ustawieniach, jeśli to Ty.",
+      headline: (surface) => `${surface} odłączono`,
+      body: (surface, display) => [{ b: display }, ` w ${surface} odłączono, bo zmieniła się tożsamość.`],
+      small: "Połącz ponownie w Ustawieniach, jeśli to Ty.",
+      why: (surface) => `Otrzymujesz tego e-maila, bo ${surface} było połączone z Twoim kontem agentes.chat.`,
+      picture: "Twój asystent, już nie w telefonie",
+    },
+  },
 };

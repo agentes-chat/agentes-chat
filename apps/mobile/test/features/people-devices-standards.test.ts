@@ -86,7 +86,7 @@ describe("lists load, fail and empty in the app's own states", () => {
     expect(devices).toContain('<EmptyState size="inline" title={t(copy.title)} subtitle={t(copy.text)} />');
     expect(devices).not.toContain("styles.empty");
     const gallery = read("connectors/ConnectorsScreen.tsx");
-    expect(gallery).toContain('<FirstUse place="connectors" acts={admin} size="inline" />');
+    expect(gallery).toMatch(/<FirstUse\s+place="connectors"\s+acts=\{mayAdd\}\s+size="inline"/);
     expect(gallery).not.toContain("EmptyHint");
   });
 });
@@ -120,7 +120,8 @@ describe("every button does something the person sees", () => {
     expect(card).not.toContain("pressedWord");
     const gallery = read("connectors/ConnectorsScreen.tsx");
     expect(gallery).not.toContain("styles.pressed");
-    expect(gallery).toContain("unstable_pressDelay={ROW_PRESS_DELAY}");
+    // A list row of the kit, which lights a beat late so a scroll never flashes it.
+    expect(gallery).toContain("<RowPressable");
     const sheet = read("connectors/ConnectSheet.tsx");
     expect(sheet).toMatch(/<Button\s+variant="secondary"\s+size="sm"\s+label=\{t\("mobile\.connectors\.paste"\)\}/);
     expect(sheet).not.toContain("styles.paste");

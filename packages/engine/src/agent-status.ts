@@ -520,10 +520,14 @@ export interface StatusCandidate {
   text: string;
 }
 
-/** What it is doing, by the group of the tool it uses; null = nothing worth a line (chat, memory, skills). */
+/**
+ * What it is doing, by the group of the tool it uses; null = nothing worth a line (chat, memory, skills). A person's
+ * own connection's tool says nothing: everyone who may talk to the agent reads the line.
+ */
 export function activityOf(
-  tool: Pick<ToolDefinition, "name" | "scope" | "connectionId" | "connectorLabel">,
+  tool: Pick<ToolDefinition, "name" | "scope" | "connectionId" | "connectorLabel" | "ownerUserId">,
 ): Omit<StatusCandidate, "key"> | null {
+  if (tool.ownerUserId) return null;
   const group = toolGroupKey(tool);
   const label = tool.connectorLabel?.trim();
   if (group === "browser") return { kind: "browsing", subject: null, text: "Browsing the web" };
@@ -780,7 +784,7 @@ async function writeAutoLine(
 export async function followWork(
   deps: { db: Database; pubsub?: PubSub; judge?: Judge | null },
   ctx: Pick<ToolContext, "orgId" | "agentId" | "runId">,
-  tool: Pick<ToolDefinition, "name" | "scope" | "connectionId" | "connectorLabel">,
+  tool: Pick<ToolDefinition, "name" | "scope" | "connectionId" | "connectorLabel" | "ownerUserId">,
   now = new Date(),
 ): Promise<void> {
   if (!ctx.runId) return;
