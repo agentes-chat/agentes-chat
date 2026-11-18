@@ -363,7 +363,7 @@ for (const empty of ["", "NO_REPLY"]) {
     expect(messages).toHaveLength(1);
     expect(messages[0]?.body).toContain(rr.id);
     expect(messages[0]?.meta.routine).toMatchObject({ runId: rr.id });
-    expect(rr.messageId).toBe(messages[0]?.id);
+    expect(rr.messageId).toBe(messages[0]?.id ?? null);
     expect(await f.db.select().from(schema.agentRuns)).toHaveLength(1);
     expect((await f.db.select().from(schema.routines))[0]?.failuresInRow).toBe(1);
   });
