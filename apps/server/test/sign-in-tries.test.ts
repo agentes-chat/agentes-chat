@@ -1,7 +1,7 @@
 import { afterEach, expect, setSystemTime, test } from "bun:test";
 import { browser, createTestServer, signUp, type TestServer } from "./harness";
 
-/** ADR 0075: password tries per account, whatever network they come from. */
+/** ADR 0075: wrong passwords per address, from one network and from all. */
 
 let t: TestServer | undefined;
 afterEach(async () => {
@@ -10,8 +10,26 @@ afterEach(async () => {
   t = undefined;
 });
 
+const RIGHT = "correct horse battery";
+const WRONG = "not the password";
+const ANA = "ana@example.com";
+const NOBODY = "nobody@example.com";
+
+async function start() {
+  t = await createTestServer({ env: { ALLOW_SIGNUP: "true" } });
+  await signUp(browser(t), ANA);
+  return t;
+}
+
 const signIn = (s: TestServer, email: string, password: string, network: string) =>
   browser(s)("/api/auth/sign-in/email", { json: { email, password }, headers: { "x-forwarded-for": network } });
+
+const status = async (s: TestServer, email: string, password: string, network: string) =>
+  (await signIn(s, email, password, network)).status;
+
+async function wrong(s: TestServer, email: string, network: string, times: number) {
+  for (let i = 0; i < times; i++) expect(await status(s, email, WRONG, network)).toBe(401);
+}
 
 async function expectRefused(res: Response) {
   expect(res.status).toBe(429);
@@ -21,23 +39,55 @@ async function expectRefused(res: Response) {
   expect(await res.json()).toMatchObject({ code: "TOO_MANY_PASSWORD_TRIES", retryIn: wait });
 }
 
-test("ten password tries per address in 15 minutes, right or wrong, from any network, for an address nobody has too", async () => {
-  t = await createTestServer({ env: { ALLOW_SIGNUP: "true" } });
-  await signUp(browser(t), "ana@example.com");
-  const start = Date.now();
-  setSystemTime(start);
+test("right passwords count nothing: ten in a row and the next still signs in", async () => {
+  const s = await start();
+  for (let i = 0; i < 11; i++) expect(await status(s, ANA, RIGHT, "203.0.113.1")).toBe(200);
+}, 30_000);
 
-  for (let i = 0; i < 10; i++) {
-    expect((await signIn(t, "ana@example.com", "not the password", `203.0.113.${i}`)).status).toBe(401);
-    expect((await signIn(t, "nobody@example.com", "not the password", `203.0.113.${i}`)).status).toBe(401);
+test("ten wrong from one network refuse that network for that address, the right password too; another network still signs in", async () => {
+  const s = await start();
+  for (const email of [ANA, NOBODY]) {
+    await wrong(s, email, "203.0.113.1", 10);
+    await expectRefused(await signIn(s, email, email === ANA ? RIGHT : WRONG, "203.0.113.1"));
   }
-  // The 11th: the right password, another network, the address in another case.
-  await expectRefused(await signIn(t, "Ana@Example.com", "correct horse battery", "198.51.100.7"));
-  await expectRefused(await signIn(t, "nobody@example.com", "not the password", "198.51.100.7"));
-  // Another address keeps its own tries.
-  await signUp(browser(t), "bo@example.com");
-  expect((await signIn(t, "bo@example.com", "correct horse battery", "203.0.113.1")).status).toBe(200);
+  // The address in another case is the same address.
+  await expectRefused(await signIn(s, "Ana@Example.com", RIGHT, "203.0.113.1"));
+  expect(await status(s, ANA, RIGHT, "198.51.100.7")).toBe(200);
+  expect(await status(s, NOBODY, WRONG, "198.51.100.7")).toBe(401);
+  // Another address from the same network keeps its own tries.
+  await signUp(browser(s), "bo@example.com");
+  expect(await status(s, "bo@example.com", RIGHT, "203.0.113.1")).toBe(200);
+}, 30_000);
 
-  setSystemTime(start + 15 * 60_000);
-  expect((await signIn(t, "ana@example.com", "correct horse battery", "203.0.113.1")).status).toBe(200);
-});
+test("fifty wrong over six networks refuse every network for that address until the window opens again", async () => {
+  const s = await start();
+  const begin = Date.now();
+  setSystemTime(begin);
+  for (const email of [ANA, NOBODY]) {
+    for (let n = 1; n <= 5; n++) await wrong(s, email, `203.0.113.${n}`, 9);
+    await wrong(s, email, "203.0.113.6", 5);
+    await expectRefused(await signIn(s, email, email === ANA ? RIGHT : WRONG, "198.51.100.7"));
+    // A network with tries of its own left is refused too.
+    await expectRefused(await signIn(s, email, email === ANA ? RIGHT : WRONG, "203.0.113.6"));
+  }
+  setSystemTime(begin + 15 * 60_000);
+  expect(await status(s, ANA, RIGHT, "198.51.100.7")).toBe(200);
+  expect(await status(s, NOBODY, WRONG, "198.51.100.7")).toBe(401);
+}, 60_000);
+
+test("a sign-in that succeeds gives back its own try only: the failures stay counted", async () => {
+  const s = await start();
+  await wrong(s, ANA, "203.0.113.1", 5);
+  expect(await status(s, ANA, RIGHT, "203.0.113.1")).toBe(200);
+  await wrong(s, ANA, "203.0.113.1", 5);
+  await expectRefused(await signIn(s, ANA, RIGHT, "203.0.113.1"));
+}, 30_000);
+
+test("twenty wrong tries at once from one network: ten reach the password check, the rest are refused before it", async () => {
+  const s = await start();
+  for (const email of [ANA, NOBODY]) {
+    const statuses = await Promise.all(Array.from({ length: 20 }, () => status(s, email, WRONG, "203.0.113.1")));
+    expect(statuses.filter((code) => code === 401)).toHaveLength(10);
+    expect(statuses.filter((code) => code === 429)).toHaveLength(10);
+  }
+}, 60_000);

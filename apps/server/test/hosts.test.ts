@@ -220,14 +220,24 @@ test("unchecked tries on registered hosts never spend the main address's: passwo
   const s = await server();
   await signUp(browser(s), "ana@example.com");
   await s.drain();
-  const signIn = (b: Browser, password: string) =>
-    b("/api/auth/sign-in/email", { json: { email: "ana@example.com", password } });
-  // Every registered host shares one count: two hosts don't double the tries.
-  for (let i = 0; i < 10; i++) {
-    expect((await signIn(on(browser(s), i % 2 ? HOST : OTHER), "not the password")).status).toBe(401);
+  const signIn = (b: Browser, password: string, network: string) =>
+    b("/api/auth/sign-in/email", {
+      json: { email: "ana@example.com", password },
+      headers: { "x-forwarded-for": network },
+    });
+  const hosts = (i: number) => on(browser(s), i % 2 ? HOST : OTHER);
+  // Every registered host shares one count: two hosts don't double the tries. From one network:
+  for (let i = 0; i < 10; i++) expect((await signIn(hosts(i), "not the password", "203.0.113.1")).status).toBe(401);
+  expect((await signIn(on(browser(s), HOST), "correct horse battery", "203.0.113.1")).status).toBe(429);
+  expect((await signIn(browser(s), "correct horse battery", "203.0.113.1")).status).toBe(200);
+  // From all networks: four more reach the hosts' fifty.
+  for (let n = 2; n <= 5; n++) {
+    for (let i = 0; i < 10; i++) {
+      expect((await signIn(hosts(i), "not the password", `203.0.113.${n}`)).status).toBe(401);
+    }
   }
-  expect((await signIn(on(browser(s), HOST), "correct horse battery")).status).toBe(429);
-  expect((await signIn(browser(s), "correct horse battery")).status).toBe(200);
+  expect((await signIn(on(browser(s), HOST), "correct horse battery", "198.51.100.7")).status).toBe(429);
+  expect((await signIn(browser(s), "correct horse battery", "198.51.100.7")).status).toBe(200);
 
   const resets = async (b: Browser, times: number) => {
     const before = s.email.sent.length;
@@ -242,7 +252,28 @@ test("unchecked tries on registered hosts never spend the main address's: passwo
   };
   expect(await resets(on(browser(s), HOST), 4)).toBe(3);
   expect(await resets(browser(s), 1)).toBe(1);
-});
+}, 60_000);
+
+test("registered hosts take fewer email lookups and sign-ups per network, counted apart from the main address's", async () => {
+  const s = await server();
+  const from = { "x-forwarded-for": "203.0.113.1" };
+  const hosts = (i: number) => on(browser(s), i % 2 ? HOST : OTHER);
+  const lookup = (b: Browser) => b("/api/app/sign-in-options", { json: { email: "ana@example.com" }, headers: from });
+  for (let i = 0; i < 10; i++) expect((await lookup(hosts(i))).status).toBe(200);
+  expect((await lookup(on(browser(s), HOST))).status).toBe(429);
+  expect((await lookup(browser(s))).status).toBe(200);
+
+  const join = (b: Browser, n: number) =>
+    b("/api/auth/sign-up/email", {
+      json: { email: `new${n}@example.com`, password: "correct horse battery", name: `New ${n}` },
+      headers: from,
+    });
+  for (let n = 0; n < 5; n++) expect((await join(hosts(n), n)).status).toBe(200);
+  const refused = await join(on(browser(s), HOST), 5);
+  expect(refused.status).toBe(429);
+  expect(Number(refused.headers.get("retry-after"))).toBeGreaterThan(14 * 60);
+  expect((await join(browser(s), 6)).status).toBe(200);
+}, 30_000);
 
 test("the WebSocket upgrade takes the same rule", async () => {
   const s = await server();

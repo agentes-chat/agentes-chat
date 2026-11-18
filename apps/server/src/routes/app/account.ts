@@ -102,7 +102,7 @@ import {
 } from "../../auth";
 import { requestLimitIp } from "../../http/client-ip";
 import { apiError, errorResponse } from "../../http/errors";
-import { humanCheckFor, humanCheckRefusal } from "../../http/human-check";
+import { humanCheckRefusal } from "../../http/human-check";
 import { humanPassesFor } from "../../http/human-pass";
 import { imageFile } from "../../http/image-file";
 import { releaseOf } from "../../version";
@@ -124,6 +124,8 @@ import { AccentColor, Invitation, Member, Organization, Role } from "./schemas";
 const tags = ["Account"];
 /** E-mail lookups on the sign-in screen: enough for typos and a few accounts, not for listing who has one. */
 const SIGN_IN_OPTIONS_PER_IP = { limit: 30, windowMs: 10 * 60_000 };
+/** The same on registered hosts, which run no bot check (ADR 0194), counted apart. */
+const SIGN_IN_OPTIONS_PER_IP_ON_HOSTS = { limit: 10, windowMs: 10 * 60_000 };
 /** A workspace's deletions in a day: deleting and restoring it over and over can't email its people all day. */
 const DELETIONS_PER_DAY = { limit: 3, windowMs: 86_400_000 };
 /** Workspaces a person makes in a day: making and deleting them over and over can't churn the Cloud's computers. */
@@ -508,10 +510,14 @@ export function accountRoutes(deps: AppDeps) {
     }),
     async (c) => {
       const ip = requestLimitIp(c.req.raw.headers, config.TRUSTED_PROXIES);
-      const limit = await deps.adapters.rateLimiter.consume(`sign-in-options:${ip}`, SIGN_IN_OPTIONS_PER_IP);
+      const look = await hostLook(db, c.req.header("host"));
+      const limit = await deps.adapters.rateLimiter.consume(
+        look ? `sign-in-options:hosts:${ip}` : `sign-in-options:${ip}`,
+        look ? SIGN_IN_OPTIONS_PER_IP_ON_HOSTS : SIGN_IN_OPTIONS_PER_IP,
+      );
       if (!limit.allowed) return apiError(c, 429, "rate_limited", "Too many requests. Try again later.");
       // Where no check runs, no pass either: it would stand for the check on the main address.
-      const check = await humanCheckFor(deps.adapters.humanCheck, db, c.req.header("host"));
+      const check = look ? null : (deps.adapters.humanCheck ?? null);
       const refused = await humanCheckRefusal(check, db, c.req.raw.headers, "email-lookup", config.TRUSTED_PROXIES);
       if (refused) return apiError(c, 403, refused.code, refused.message);
       const { email, access } = c.req.valid("json");

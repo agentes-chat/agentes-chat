@@ -75,6 +75,7 @@ import { multiSession } from "better-auth/plugins/multi-session";
 import { z } from "zod";
 import { listOf } from "./app-links";
 import { desktopSignIn, FRESH_SIGN_IN_MS } from "./desktop-sign-in";
+import { requestLimitIp } from "./http/client-ip";
 import { humanCheckRefusal } from "./http/human-check";
 import { humanPassesFor } from "./http/human-pass";
 import type { Logger } from "./logger";
@@ -111,23 +112,27 @@ export function createAuth(deps: {
   const { db, config, log, rateLimiter } = deps;
   const emailEnabled = deps.emailDelivers === true;
   /**
-   * One address's count of `kind`, in lower case and hashed. Registered hosts run no bot check (ADR 0194), so their
+   * The key of one address's count of `kind`, in lower case and hashed. Registered hosts run no bot check (ADR 0194), so their
    * requests share a count of their own: unchecked traffic never spends what the main address's people share, and all
    * hosts together get one count, not one each.
    */
-  const addressCount = async (
-    kind: string,
-    address: string,
-    headers: Headers | null | undefined,
-    rule: Parameters<RateLimiter["consume"]>[1],
-  ) =>
-    rateLimiter.consume(
-      `${kind}:${(await hostLook(db, headers?.get("host"))) ? "hosts" : "main"}:${sha256(address.toLowerCase())}`,
-      rule,
-    );
+  const addressKey = async (kind: string, address: string, headers: Headers | null | undefined) =>
+    `${kind}:${(await hostLook(db, headers?.get("host"))) ? "hosts" : "main"}:${sha256(address.toLowerCase())}`;
   // Better Auth answers the same whether an email went out, so a flood from many addresses only stops quietly.
   const emailAllowed = async (kind: "reset-email" | "verify-email", email: string, request: Request | undefined) =>
-    (await addressCount(kind, email, request?.headers, EMAILS_PER_ADDRESS)).allowed;
+    (await rateLimiter.consume(await addressKey(kind, email, request?.headers), EMAILS_PER_ADDRESS)).allowed;
+  /**
+   * A password sign-in's two counts (ADR 0075, point 10): the address from this network, then the address from all.
+   * A count only one sender spends can't lock the person out from everywhere.
+   */
+  const signInTries = async (address: string, headers: Headers | undefined) => {
+    const key = await addressKey("sign-in-tries", address, headers);
+    const network = requestLimitIp(headers ?? new Headers(), config.TRUSTED_PROXIES);
+    return [
+      [`${key}:${network}`, SIGN_IN_TRIES_PER_NETWORK],
+      [key, SIGN_IN_TRIES],
+    ] as const;
+  };
 
   const policy = signupPolicy(config);
   // An invitation link never opens sign-up (ADR 0068): only an email invitation to that address, or an early-access
@@ -458,11 +463,16 @@ export function createAuth(deps: {
           );
           if (refused) throw new APIError("FORBIDDEN", refused);
         }
-        // After the bot check, so a refused bot spends none of an account's tries. Right or wrong, and for an address
-        // nobody has alike, so the answer never tells whether an account exists.
+        // After the bot check, so a refused bot spends none of an account's tries. Taken before the password is
+        // checked, so tries in flight can't all pass a count none of them wrote yet; the after hook gives back every
+        // try that wasn't a wrong password (or an address nobody has, refused alike).
         if (ctx.path === "/sign-in/email" && typeof address === "string") {
-          const tries = await addressCount("sign-in-tries", address, ctx.headers, SIGN_IN_TRIES);
-          if (!tries.allowed) {
+          const taken: string[] = [];
+          for (const [key, rule] of await signInTries(address, ctx.headers)) {
+            const tries = await rateLimiter.consume(key, rule);
+            taken.push(key);
+            if (tries.allowed) continue;
+            await Promise.all(taken.map((k) => rateLimiter.release(k)));
             const retryIn = retryInSeconds(tries.resetAt);
             throw new APIError(
               "TOO_MANY_REQUESTS",
@@ -476,12 +486,33 @@ export function createAuth(deps: {
           }
         }
         if (ctx.path !== "/sign-up/email") return;
+        // Better Auth's own limit is the main address's; here, where no bot check runs, fewer, since each can email.
+        if (ctx.headers && (await hostLook(db, ctx.headers.get("host")))) {
+          const network = requestLimitIp(ctx.headers, config.TRUSTED_PROXIES);
+          const signUps = await rateLimiter.consume(`sign-up:hosts:${network}`, SIGN_UPS_PER_NETWORK_ON_HOSTS);
+          if (!signUps.allowed) {
+            const retryIn = retryInSeconds(signUps.resetAt);
+            throw new APIError(
+              "TOO_MANY_REQUESTS",
+              { message: "Too many requests. Try again later.", retryIn },
+              { "Retry-After": String(retryIn) },
+            );
+          }
+        }
         const { email, name, password } = (ctx.body ?? {}) as { email?: unknown; name?: unknown; password?: unknown };
         if (typeof name === "string" && typeof password === "string" && nameIsPassword(name, password)) {
           throw new APIError("BAD_REQUEST", { code: NAME_IS_PASSWORD, message: NAME_IS_PASSWORD_MESSAGE });
         }
         if (typeof email !== "string") return;
         await assertSignupAllowed(email, await accessOf(ctx));
+      }),
+      // Runs only when the before hook let the sign-in through, so it took its tries.
+      after: createAuthMiddleware(async (ctx) => {
+        const address = (ctx.body as { email?: unknown } | undefined)?.email;
+        if (ctx.path !== "/sign-in/email" || typeof address !== "string") return;
+        const { returned } = ctx.context;
+        if (isAPIError(returned) && returned.body?.code === "INVALID_EMAIL_OR_PASSWORD") return;
+        for (const [key] of await signInTries(address, ctx.headers)) await rateLimiter.release(key);
       }),
     },
     databaseHooks: {
@@ -1051,12 +1082,16 @@ const HUMAN_ACTIONS: Record<string, HumanAction> = {
   "/request-password-reset": "password-reset",
 };
 
-/** Password sign-ins one address may try in 15 minutes, from any network (ADR 0075). */
-const SIGN_IN_TRIES = { limit: 10, windowMs: 15 * 60_000 };
+/** Wrong passwords for one address from one network in 15 minutes (ADR 0075). */
+const SIGN_IN_TRIES_PER_NETWORK = { limit: 10, windowMs: 15 * 60_000 };
+/** Wrong passwords for one address from all networks in 15 minutes (ADR 0075). */
+const SIGN_IN_TRIES = { limit: 50, windowMs: 15 * 60_000 };
+/** Sign-ups from one network in 15 minutes on registered hosts (ADR 0075); Better Auth allows 10 everywhere. */
+const SIGN_UPS_PER_NETWORK_ON_HOSTS = { limit: 5, windowMs: 15 * 60_000 };
 
 /**
- * `APIError` code of a password sign-in past `SIGN_IN_TRIES`, with `retryIn` in seconds, as `Retry-After` says
- * (mirrored in packages/client errors.ts).
+ * `APIError` code of a password sign-in past `SIGN_IN_TRIES_PER_NETWORK` or `SIGN_IN_TRIES`, with `retryIn` in
+ * seconds, as `Retry-After` says (mirrored in packages/client errors.ts).
  */
 export const TOO_MANY_PASSWORD_TRIES = "TOO_MANY_PASSWORD_TRIES";
 

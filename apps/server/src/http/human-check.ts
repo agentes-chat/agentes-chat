@@ -33,34 +33,22 @@ const REFUSALS: Record<HumanCheckRefusal, string> = {
 };
 
 /**
- * The bot check of a request for `host`: none on a registered host (ADR 0194). Turnstile's widget takes a fixed list
- * of hostnames, so it can't run on an open-ended list of them; the limits per network and per account guard sign-in
- * there.
- */
-export async function humanCheckFor(
-  check: HumanCheck | null | undefined,
-  db: Database,
-  host: string | null | undefined,
-) {
-  return check && !(await hostLook(db, host)) ? check : null;
-}
-
-/**
  * A public form's bot check (ADR 0075): the refusal to answer with a 403, or null when it passes or there is none.
- * The waiting lists keep it on every host: their forms are the landing page's, never a registered host's.
+ * None on a registered host (ADR 0194): Turnstile's widget takes a fixed list of hostnames, so it can't run on an
+ * open-ended list of them; the limits per network and per account guard sign-in there. The waiting lists keep it on
+ * every host: their forms are the landing page's, never a registered host's.
  * `pass`: where the form follows the e-mail's lookup, the address it is for; a pass that lookup gave stands for the
  * check then (`human-pass.ts`), and one that doesn't count is refused like a refused token, so the page sends its own.
  */
 export async function humanCheckRefusal(
-  humanCheck: HumanCheck | null | undefined,
+  check: HumanCheck | null | undefined,
   db: Database,
   headers: { get(name: string): string | null | undefined },
   action: HumanAction,
   trustedProxies: readonly string[] | undefined,
   pass?: { passes: HumanPasses; email: string },
 ): Promise<{ code: HumanCheckRefusal; message: string } | null> {
-  const check = action === "waitlist" ? humanCheck : await humanCheckFor(humanCheck, db, headers.get("host"));
-  if (!check) return null;
+  if (!check || (action !== "waitlist" && (await hostLook(db, headers.get("host"))))) return null;
   const sent = headers.get(HUMAN_CHECK_HEADER);
   if (sent?.startsWith(HUMAN_PASS_PREFIX)) {
     const network = requestLimitIp(headers, trustedProxies);
