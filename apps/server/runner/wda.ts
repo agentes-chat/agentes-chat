@@ -1092,6 +1092,9 @@ export class IosHelper {
    * helper start and film the screen while it refuses every tap, so one session call shows it may act.
    */
   private check(key: string, xcrun: string, udid: string) {
+    // A refusal whose call only hangs is neither cleared nor said again: without this, every look would check again.
+    const failure = this.failed.get(key);
+    if (failure) failure.at = this.now();
     const job = this.start(key, xcrun, "device", udid).then(
       async (run) => {
         const meta = this.meta(key);
@@ -1233,8 +1236,9 @@ export class IosHelper {
       // The new words and a little before them: a line split across chunks still matches.
       const fresh = said.slice(-200) + text;
       said = (said + text).slice(-256 * 1024);
+      // Only Code=41's own words: the looser UI Automation ones could match a working helper's log and stop it.
       const reason = sim || refused ? null : helperReason(fresh);
-      if (!reason || !UI_REFUSALS.has(reason)) return;
+      if (reason !== "ui_not_authorized") return;
       refused = reason;
       this.opts.log(`iPhone test helper (${udid}): iOS refused UI testing (${reason})`);
       this.fail(key, { reason, detail: failureLine(fresh), check: true, unknown: false });
@@ -1337,12 +1341,13 @@ export class IosHelper {
     }
     const key = this.keyOf("device", udid);
     this.stop(udid);
-    await this.starting.get(udid)?.catch(() => undefined);
-    // A helper a runner before this one started (it crashed, or was killed) still holds the phone's test session.
+    // A helper a runner before this one started (it crashed, or was killed) still holds the phone's test session. One
+    // still starting goes too, before it's waited for: its start could take minutes.
     await runTool("pkill", ["-f", `test-without-building.*id=${key}`], {
       timeoutMs: 10_000,
       env: this.opts.env,
     }).catch(() => undefined);
+    await this.starting.get(udid)?.catch(() => undefined);
     await rm(path.join(this.dir, key, "meta.json"), { force: true });
     this.failed.delete(key);
     this.xcode = null;

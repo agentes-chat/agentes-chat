@@ -213,7 +213,12 @@ export function IphoneSetupScreen({ machineId }: { machineId?: string }) {
               </Step>
               <Step n={4} divider title={t("mobile.devices.iphone.step4")} state={state(3)}>
                 {step === 3 && phone && (reason === "ui_not_authorized" || reason === "ui_automation_off") ? (
-                  <UiAutomationHelp host={host} phone={phone} refused={reason === "ui_not_authorized"} />
+                  <UiAutomationHelp
+                    host={host}
+                    hostName={hostName}
+                    phone={phone}
+                    refused={reason === "ui_not_authorized"}
+                  />
                 ) : step <= 3 ? (
                   <StepText>{t("mobile.devices.iphone.step4Text")}</StepText>
                 ) : null}
@@ -310,7 +315,17 @@ function DevModeHelp({ host, hostName, open }: { host: ComputerDevice; hostName:
  * UI Automation refused or off: the person's steps on this iPhone (both switches, the passcode, unlocked), "check
  * again" (the Mac asks the iPhone now) and, for who manages the Mac, a repair of the test helper there.
  */
-function UiAutomationHelp({ host, phone, refused }: { host: ComputerDevice; phone: PhoneDevice; refused: boolean }) {
+function UiAutomationHelp({
+  host,
+  hostName,
+  phone,
+  refused,
+}: {
+  host: ComputerDevice;
+  hostName: string;
+  phone: PhoneDevice;
+  refused: boolean;
+}) {
   const { t } = useTranslation();
   const toast = useToast();
   const orgId = useOrgId();
@@ -345,7 +360,13 @@ function UiAutomationHelp({ host, phone, refused }: { host: ComputerDevice; phon
         onPress={() => look.mutate(undefined, { onError: fail })}
       />
       {host.mayManage ? (
-        <Cause text={t("devices.iphone.repairHint")}>
+        <Cause
+          text={
+            repair.data?.update
+              ? t("mobile.devices.iphone.devMode.outdated", { host: hostName })
+              : t("devices.iphone.repairHint")
+          }
+        >
           <Button
             size="sm"
             variant="secondary"

@@ -260,7 +260,7 @@ test("session calls that time out in a row while /status answers: stuck, dropped
   expect(await c.call("GET", "/screenshot", undefined, { timeoutMs: 100 }).catch((e) => e)).toBeInstanceOf(HelperSlow);
   expect(gone).toEqual([]);
   // The last one in a row: stuck, dropped, and why in words.
-  const stuck = await ask();
+  const stuck = (await ask()) as Error;
   expect(stuck).toBeInstanceOf(HelperGone);
   expect(stuck.message).toContain("stopped carrying out actions");
   expect(stuck.message).toContain("no terminal access is needed");
