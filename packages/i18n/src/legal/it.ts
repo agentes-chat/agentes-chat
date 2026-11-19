@@ -8,13 +8,13 @@ export const legalIt: Partial<Record<LegalKind, LegalDocument>> = {
       "L'accordo per l'utilizzo di agentes.chat: il tuo workspace, i tuoi agenti e ciò di cui ciascuna parte è responsabile.",
     courtesy:
       "La presente è una traduzione di cortesia. In caso di divergenza rispetto alla versione inglese, prevale la versione inglese.",
-    updated: "2026-11-13",
+    updated: "2026-11-18",
     sections: [
       {
         id: "agreement",
         heading: "1. Accordo",
         blocks: [
-          'I presenti Termini di utilizzo (i "Termini") costituiscono un accordo vincolante tra CODARI GLOBAL, LLC, società a responsabilità limitata (limited liability company) costituita nello Stato del Wyoming che opera con il nome agentes.chat ("agentes.chat", "noi"), e la persona fisica o l\'ente che crea un account o un workspace ("tu"). Creando un account, entrando in un workspace o utilizzando in altro modo agentes.chat sul web, tramite l\'app per Mac o l\'app per telefono (il "Servizio"), accetti i presenti Termini e la nostra Informativa sulla privacy. Se utilizzi il Servizio per conto di una società o di un altro ente, dichiari di avere il potere di vincolarlo.',
+          'I presenti Termini di utilizzo (i "Termini") costituiscono un accordo vincolante tra AGENTESCHAT, LLC, società a responsabilità limitata (limited liability company) costituita nello Stato del Delaware che opera con il nome agentes.chat ("agentes.chat", "noi"), e la persona fisica o l\'ente che crea un account o un workspace ("tu"). Creando un account, entrando in un workspace o utilizzando in altro modo agentes.chat sul web, tramite l\'app per Mac o l\'app per telefono (il "Servizio"), accetti i presenti Termini e la nostra Informativa sulla privacy. Se utilizzi il Servizio per conto di una società o di un altro ente, dichiari di avere il potere di vincolarlo.',
           "Per utilizzare il Servizio devi avere almeno 18 anni ed essere in grado di concludere un contratto.",
         ],
       },
@@ -99,10 +99,11 @@ export const legalIt: Partial<Record<LegalKind, LegalDocument>> = {
           "Ogni workspace paga il proprio piano agentes.chat. Le seguenti regole si applicano a ogni piano:",
           {
             list: [
+              "**Venditore.** Ogni acquisto è effettuato presso AGENTESCHAT, LLC, società statunitense costituita nel Delaware, che lo fattura.",
               "**Prezzi.** I piani e i relativi prezzi sono indicati nella nostra pagina dei prezzi. I prezzi sono espressi in dollari statunitensi e le imposte vengono aggiunte ove applicabili. La tua banca o il tuo fornitore di servizi di pagamento può applicare commissioni proprie sugli acquisti dall'estero, come l'IOF in Brasile.",
               "**Rinnovo.** Un piano si rinnova automaticamente ogni mese o ogni anno, a seconda del periodo scelto, fino alla sua disdetta. Inviamo un promemoria prima del rinnovo di un piano annuale.",
               "**Disdetta.** Puoi disdire in qualsiasi momento, e la disdetta ha effetto alla fine del periodo già pagato. A quel punto gli agenti del workspace si fermano, il suo computer viene cancellato 7 giorni dopo e le sue conversazioni e i suoi file restano disponibili per la lettura e il download per 90 giorni, trascorsi i quali vengono eliminati.",
-              "**Nessun rimborso.** I pagamenti sono definitivi e non rimborsabili, in tutto o in parte, anche per la parte residua di un periodo successiva a una disdetta, salvo diversa disposizione di legge.",
+              "**Nessun rimborso.** Ogni piano genera costi operativi fin dal momento dell'acquisto, come l'uso di modelli di IA, i server e il computer del workspace. Per questo gli acquisti sono definitivi e non rimborsabili, in tutto o in parte, anche per la parte residua di un periodo successiva a una disdetta.",
               "**Pagamenti non riusciti.** Se un pagamento non va a buon fine, riproviamo nei giorni successivi. Se continua a non andare a buon fine, il workspace viene sospeso: i suoi agenti si fermano, mentre le persone possono continuare a leggere e scrivere al suo interno. Il suo computer viene conservato per 7 giorni, poi rilasciato e cancellato. Il pagamento ripristina il workspace, su un nuovo computer se quello precedente è stato rilasciato.",
               "**Modifiche dei prezzi.** Possiamo modificare i prezzi per i nuovi clienti in qualsiasi momento. Il prezzo di un piano che hai già sottoscritto cambia solo a causa di nuove imposte, a partire dal rinnovo successivo, con un preavviso di almeno 30 giorni.",
               "**Uso corretto.** Alcune funzionalità si basano su servizi di IA che forniamo senza costi aggiuntivi, come la scelta dell'agente che risponde, la valutazione di ricordi e azioni e l'individuazione di cosa cliccare su uno schermo. Possiamo limitarle per un workspace il cui utilizzo sia di gran lunga superiore alla norma.",
@@ -150,7 +151,7 @@ export const legalIt: Partial<Record<LegalKind, LegalDocument>> = {
         id: "law",
         heading: "16. Legge applicabile",
         blocks: [
-          "I presenti Termini sono disciplinati dalle leggi dello Stato del Wyoming, USA, a esclusione delle sue norme sui conflitti di leggi, e le parti si sottomettono alla giurisdizione esclusiva dei tribunali statali e federali con sede nel Wyoming. Se sei un consumatore in una giurisdizione la cui legge ti riconosce diritti o un foro competente a cui non è possibile rinunciare, come il Brasile, tali diritti restano impregiudicati.",
+          "I presenti Termini, e ogni acquisto effettuato in base a essi, sono disciplinati dalle leggi degli Stati Uniti e dello Stato del Delaware, a esclusione delle norme sui conflitti di leggi, e le parti si sottomettono alla giurisdizione esclusiva dei tribunali statali e federali con sede nel Delaware.",
         ],
       },
       {
@@ -164,7 +165,7 @@ export const legalIt: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "18. Contatti",
         blocks: [
-          "CODARI GLOBAL, LLC, che opera con il nome agentes.chat. Comunicazioni: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · legal@agentes.chat · Per tutto il resto: hello@agentes.chat",
+          "AGENTESCHAT, LLC, che opera con il nome agentes.chat. Comunicazioni: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · legal@agentes.chat · Per tutto il resto: hello@agentes.chat",
         ],
       },
     ],
@@ -175,13 +176,13 @@ export const legalIt: Partial<Record<LegalKind, LegalDocument>> = {
       "Quali dati raccogliamo, che cosa gli agenti inviano e dove, chi può vedere il tuo workspace e quali diritti hai.",
     courtesy:
       "La presente è una traduzione di cortesia. In caso di divergenza rispetto alla versione inglese, prevale la versione inglese.",
-    updated: "2026-11-14",
+    updated: "2026-11-18",
     sections: [
       {
         id: "overview",
         heading: "1. Panoramica",
         blocks: [
-          'CODARI GLOBAL, LLC, società a responsabilità limitata (limited liability company) costituita nello Stato del Wyoming che opera con il nome agentes.chat ("agentes.chat", "noi"), gestisce agentes.chat: un workspace in cui persone e agenti di IA lavorano insieme, disponibile sul web, come app per Mac e come app per telefono (il "Servizio"). La presente informativa distingue due ruoli:',
+          'AGENTESCHAT, LLC, società a responsabilità limitata (limited liability company) costituita nello Stato del Delaware che opera con il nome agentes.chat ("agentes.chat", "noi"), gestisce agentes.chat: un workspace in cui persone e agenti di IA lavorano insieme, disponibile sul web, come app per Mac e come app per telefono (il "Servizio"). La presente informativa distingue due ruoli:',
           {
             list: [
               "Per i **dati dell'account**, ossia le informazioni che le persone ci forniscono per creare e utilizzare un account, siamo il titolare del trattamento.",
@@ -322,6 +323,7 @@ export const legalIt: Partial<Record<LegalKind, LegalDocument>> = {
         heading: "14. Cookie e archiviazione locale",
         blocks: [
           "Il workspace utilizza solo i cookie e l'archiviazione locale necessari per mantenere l'accesso, proteggere i moduli e ricordare preferenze quali il tema e la lingua. Il sito pubblico agentes.chat ricorda la lingua che hai scelto e utilizza le analisi di Himetrica (Sezione 2). Non utilizziamo cookie pubblicitari né cookie di tracciamento tra siti.",
+          "**Cookie di referral:** quando apri un link di referral verso agentes.chat, il nostro servizio di fatturazione conserva il referral in un cookie nel tuo browser per 60 giorni, così chi ha inviato il link riceve il credito se ti abboni. Nello Spazio economico europeo, nel Regno Unito e in Svizzera lo impostiamo solo dopo che hai dato il consenso su agentes.chat. Per dimenticare il referral su questo dispositivo, apri https://agentes.chat/it/privacy?forget-referral#cookies.",
         ],
       },
       {
@@ -342,7 +344,7 @@ export const legalIt: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "17. Contatti",
         blocks: [
-          "CODARI GLOBAL, LLC, che opera con il nome agentes.chat. Comunicazioni: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · privacy@agentes.chat. Le richieste relative alla protezione dei dati provenienti da UE, Regno Unito e Brasile raggiungono il nostro team privacy allo stesso indirizzo. Per qualsiasi altra questione, scrivi a hello@agentes.chat.",
+          "AGENTESCHAT, LLC, che opera con il nome agentes.chat. Comunicazioni: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · privacy@agentes.chat. Le richieste relative alla protezione dei dati provenienti da UE, Regno Unito e Brasile raggiungono il nostro team privacy allo stesso indirizzo. Per qualsiasi altra questione, scrivi a hello@agentes.chat.",
         ],
       },
     ],

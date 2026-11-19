@@ -23,6 +23,7 @@ import {
   Card,
   CardHeader,
   Chip,
+  Disclosure,
   EmptyState,
   Icon,
   List,
@@ -312,17 +313,26 @@ function ComputerPage({ machineId }: { machineId: string }) {
   // This server's own computer stops being used here (and can be again), it isn't removed.
   const host = d.machineKind === "host";
   const removeWords = host ? t("machines.host.stop") : t("devices.remove");
+  // At a glance its system (and when it was last seen while offline); its size, toolchains, way out and folder are
+  // behind "Detalhes".
   const facts = [
     { label: t("devices.facts.system"), value: osName(t, d.os) },
-    ...(d.cpus ? [{ label: t("devices.facts.cpu"), value: String(d.cpus) }] : []),
-    ...(d.memoryGb ? [{ label: t("devices.facts.memory"), value: t("devices.memory", { gb: d.memoryGb }) }] : []),
     ...(d.status.kind === "offline" && d.lastSeenAt
       ? [{ label: t("devices.facts.lastSeen"), value: clockAt(i18n.language, d.lastSeenAt) }]
       : []),
+  ];
+  const more = [
+    ...(d.cpus ? [{ label: t("devices.facts.cpu"), value: String(d.cpus) }] : []),
+    ...(d.memoryGb ? [{ label: t("devices.facts.memory"), value: t("devices.memory", { gb: d.memoryGb }) }] : []),
     ...(Object.keys(d.toolchains).length > 0
       ? [{ label: t("devices.facts.toolchains"), value: <Toolchains tools={d.toolchains} />, wide: true }]
       : []),
   ];
+  const extra = Boolean(
+    machine &&
+      ((machine.workspace && machine.mode !== "system") ||
+        (machine.kind === "managed" && (machine.networkTransition || (machine.online && machine.egress?.ip)))),
+  );
   return (
     <>
       <BackToDevices />
@@ -365,12 +375,17 @@ function ComputerPage({ machineId }: { machineId: string }) {
         {pausable && !pausable.remotePause && <span className="small muted">{t("machines.remotePause.outdated")}</span>}
         <Facts facts={facts} />
         {status.kind === "paused" && !pausedFromApps && <span className="small muted">{t("machines.pausedHint")}</span>}
-        {machine && <MachineFactsExtra machine={machine} />}
-        {d.systemMode ? (
-          <p className="ac-setnote ac-iconline">
-            <Icon name="code" size={14} />
-            <span>{t("machines.agentUsers")}</span>
-          </p>
+        {more.length > 0 || extra || d.systemMode ? (
+          <Disclosure summary={t("common.details")}>
+            {more.length > 0 && <Facts facts={more} />}
+            {machine && <MachineFactsExtra machine={machine} />}
+            {d.systemMode ? (
+              <p className="ac-setnote ac-iconline">
+                <Icon name="code" size={14} />
+                <span>{t("machines.agentUsers")}</span>
+              </p>
+            ) : null}
+          </Disclosure>
         ) : null}
         {machine && <MachineAgents machine={machine} />}
       </Card>

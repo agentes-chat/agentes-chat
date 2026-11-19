@@ -1,4 +1,5 @@
 import type {
+  Agent,
   Routine,
   RoutineEvent,
   RoutineHookCall,
@@ -26,6 +27,7 @@ import {
   useRuleParse,
 } from "@agenteschat/client";
 import { approvalTitle, ownActionName, routineVaultKey, splitOwnActions } from "@agenteschat/client/lib/approval-words";
+import { createsRoutinesFor, managesAgent } from "@agenteschat/client/lib/audience";
 import type { RunStatus } from "@agenteschat/client/lib/calendar";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { FIELD_LIMITS } from "@agenteschat/client/lib/field-limits";
@@ -112,7 +114,6 @@ import {
   RunKey,
   RunLane,
   RunMark,
-  RunStrip,
   SavedNote,
   SearchField,
   Segmented,
@@ -256,19 +257,6 @@ function useOpenWidget() {
     });
 }
 
-const targetIcon = (target: RoutineTarget): IconName =>
-  target.type === "dm"
-    ? "message"
-    : target.type === "conversation"
-      ? target.threadId
-        ? "reply"
-        : "channel"
-      : target.type === "artifact"
-        ? "file"
-        : target.type === "widget"
-          ? "grid"
-          : "channel";
-
 /** The agent's look for the pixel pieces (color and eyes). */
 function useLook() {
   const actors = useActors();
@@ -306,7 +294,7 @@ export function useWhen() {
 /** Rotinas: scheduled and event-driven agent tasks. */
 export function RoutinesPage() {
   const { t } = useTranslation();
-  const { org, me } = useOrg();
+  const { org } = useOrg();
   const dir = useDirectory(org.id);
   const routines = useRoutines(org.id);
   const now = useNow();
@@ -320,8 +308,9 @@ export function RoutinesPage() {
   // After the directory: who may create hangs on the agents they own.
   const noRoutines = routines.isSuccess && list.length === 0 && !dir.loading;
   const look = useRightHandLook();
-  // The server's rule: who manages routines, or an agent's owner for that agent.
-  const mayCreate = can(org, "manage_routines") || dir.agents.some((a) => a.ownerUserId === me.user.id);
+  // The server's `createRoutine`, per agent (ADR 0085 addendum of 2026-11-17): who sets up its routines (who edits it,
+  // or "Create routines" where it reaches) and talks to it, since a routine asks it on its creator's behalf (ADR 0053).
+  const mayCreate = dir.agents.some((a) => createsRoutinesFor(a));
   const [agents, setAgents] = useState<string[]>([]);
   const copy = useFilterCopy();
   const agentOptions = useActorFilterOptions().filter((o) => o.value.startsWith("agent:"));
@@ -349,8 +338,9 @@ export function RoutinesPage() {
   const open = list.find((r) => r.id === openId) ?? null;
   const toggleOpen = (id: string) => setOpenId(openId === id ? null : id);
   const filtered = agents.length > 0 || query.length > 0 || status !== "all";
-  // "N" opens "Nova rotina" (not while typing).
+  // "N" opens "New routine" (not while typing), for who may make one.
   useEffect(() => {
+    if (!mayCreate) return;
     const onKey = (e: KeyboardEvent) => {
       const el = e.target instanceof Element ? e.target : null;
       if (e.metaKey || e.ctrlKey || e.altKey || e.key.toLowerCase() !== "n") return;
@@ -360,7 +350,7 @@ export function RoutinesPage() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [mayCreate]);
   const group = (title: string, rows: Routine[]) =>
     rows.length > 0 && (
       <section className="routines-group" aria-label={title}>
@@ -544,6 +534,16 @@ export function RoutinesPage() {
  * target change from the widget; here it can be paused, resumed, run, stopped or deleted.
  */
 const isWidgetRoutine = (r: Pick<Routine, "target">) => r.target.type === "widget";
+
+/**
+ * The one-tap fix a paused routine offers me (`pausedFix`), for who changes it (`canManage`). "Take over the routine"
+ * makes it mine, the server's create check (`takeOverRoutine`, ADR 0053 §6.2), so only where I may make one for its
+ * agent (`createsRoutinesFor`, the agent's entry in the directory; ADR 0085 addendum of 2026-11-17).
+ */
+function fixFor(r: Routine, agent: Agent | undefined): RoutineFix | null {
+  const fix = r.canManage ? pausedFix(r) : null;
+  return fix === "take_over" && !createsRoutinesFor(agent) ? null : fix;
+}
 
 /** A title for the card: a routine made from a chat message may be named with its whole prompt. */
 export function routineTitle(r: Pick<Routine, "name" | "prompt">) {
@@ -760,6 +760,16 @@ function FixButton({ routine: r, fix, size = "sm" }: { routine: Routine; fix: Ro
   );
 }
 
+/** The trigger's icon: a widget's grid, a reminder's bell, a schedule's repeat. */
+function triggerIcon(r: Routine, widget: boolean, reminder: boolean): IconName {
+  if (widget) return "grid";
+  if (r.trigger.type === "event") return "bolt";
+  if (r.trigger.type === "email" || r.trigger.type === "connector") return "mail";
+  if (r.trigger.type === "webhook") return "link";
+  if (r.trigger.type === "once") return reminder ? "bell" : "calendar";
+  return "repeat";
+}
+
 function RoutineRow({
   routine: r,
   now,
@@ -779,12 +789,9 @@ function RoutineRow({
   const controls = useRoutineControls(r);
   const action = controls.action;
   const [deleting, setDeleting] = useState(false);
-  const target = useTargetLabel();
   const openWidget = useOpenWidget();
   const when = useWhen();
   const nextText = useNextText();
-  const words = useRunWords();
-  const look = useLook()(r.agentId);
   const agent = { type: "agent" as const, id: r.agentId };
   const widget = isWidgetRoutine(r) ? r.widget : null;
   // A widget's routine reads as its widget (ADR 0135 §4).
@@ -798,7 +805,9 @@ function RoutineRow({
   const more = t("routines.more", { name: title });
   // Something needs a look (a reason it paused, failures, waiting for a computer or a person): a chip says it.
   const needsLook = !done && routineStateWords(r).tone === "waiting";
-  const fix = r.canManage && needsLook ? pausedFix(r) : null;
+  // Its agent as the directory has it: whether I may make (or copy, or take over) a routine for it.
+  const itsAgent = actors.dir.agentById.get(r.agentId);
+  const fix = needsLook ? fixFor(r, itsAgent) : null;
   // Paused near its plan's limit: said quietly (it picks up by itself), with no fix.
   const showState = needsLook || r.state === "usage_paused";
   // Its "…" and its right click: run or stop, pause or resume, then what the "…" always had.
@@ -845,7 +854,8 @@ function RoutineRow({
         ? ([{ kind: "item", id: "edit", label: t("routines.edit"), icon: "edit", run: onEdit }] satisfies MenuEntry[])
         : []),
     { kind: "item", id: "runs", label: t("routines.runs"), icon: "waiting", run: () => !selected && onOpen() },
-    ...(r.canManage && !widget
+    // A copy is a new routine of mine for its agent: the server's create check (`duplicateRoutine`), not its editor's.
+    ...(!widget && createsRoutinesFor(itsAgent)
       ? ([
           {
             kind: "item",
@@ -897,32 +907,30 @@ function RoutineRow({
         onOpen();
       }}
     >
-      <span className="routine-row__who">{actors.avatar(agent, "sm")}</span>
+      <span className="routine-row__who">
+        {actors.avatar(agent, "sm")}
+        {/* Its agent, for a screen reader: the face says it to the eye. */}
+        <span className="ac-visually-hidden">{actors.name(agent)}</span>
+      </span>
       <div className="routine-row__main">
         <button type="button" className="routine-row__title" title={title} aria-expanded={selected} onClick={onOpen}>
           {title}
         </button>
+        {/* Two lines: its name, then when it runs and the next run. Chips only for trouble; where it delivers and its
+            recent runs are in the details the row opens. */}
         <span className="routine-row__sub">
           <span className="routine-row__to ac-iconline">
-            <Icon name={targetIcon(r.target)} size={14} />
+            <Icon name={triggerIcon(r, Boolean(widget), reminder)} size={14} />
             <span>
-              {widget
-                ? t("routines.widgetLine", { agent: actors.name(agent) })
-                : r.target.type === "conversation"
-                  ? t("routines.deliversIn", { agent: actors.name(agent), place: target(r.target) })
-                  : t("routines.deliversTo", { agent: actors.name(agent), target: target(r.target) })}
+              <span>{when(r)}</span>
+              {nextText(r, now) && (
+                <>
+                  {" · "}
+                  <span className={cx(running && "is-live")}>{nextText(r, now)}</span>
+                </>
+              )}
             </span>
           </span>
-          {widget && (
-            <Chip icon="grid" className="routine-row__chip">
-              {t("routines.widgetChip")}
-            </Chip>
-          )}
-          {reminder && (
-            <Chip icon="bell" className="routine-row__chip">
-              {t("routines.reminder")}
-            </Chip>
-          )}
           {mailTrouble(r) && (
             <Chip icon="alert" tone="waiting" className="routine-row__chip">
               {t(mailTrouble(r) === "error" ? "mail.routine.error" : "mail.routine.needsReconnect")}
@@ -931,36 +939,6 @@ function RoutineRow({
           {showState && <RoutineStateChip routine={r} className="routine-row__chip" />}
           {fix && fix !== "resume" && <FixButton routine={r} fix={fix} />}
         </span>
-      </div>
-      <div className="routine-row__when ac-mediarow ac-mediarow--row">
-        <span className="ac-mediarow__face routine-row__when-icon" aria-hidden="true">
-          <Icon
-            name={
-              r.trigger.type === "event"
-                ? "bolt"
-                : r.trigger.type === "email" || r.trigger.type === "connector"
-                  ? "mail"
-                  : r.trigger.type === "webhook"
-                    ? "link"
-                    : r.trigger.type === "once"
-                      ? reminder
-                        ? "bell"
-                        : "calendar"
-                      : "repeat"
-            }
-            size={16}
-          />
-        </span>
-        <span className="ac-mediarow__head routine-row__when-text">
-          <b>{when(r)}</b>
-        </span>
-        <span className="ac-mediarow__body routine-row__when-text">
-          <small className={cx(running && "is-live")}>{nextText(r, now)}</small>
-        </span>
-      </div>
-      <div className="routine-row__runs" role="img" aria-label={words.label(r)}>
-        <RunStrip runs={runPixels(r.recentRuns)} color={look.color} slots={RUN_SLOTS} running={running} />
-        <small>{words.caption(r, now)}</small>
       </div>
       <div className="routine-row__actions">
         {fired || !r.canManage ? (
@@ -1328,6 +1306,8 @@ function RoutineDetails({ routine: r, now, onClose }: { routine: Routine; now: D
   const controls = useRoutineControls(r);
   const action = controls.action;
   const runs = useRoutineRuns(org.id, r.id);
+  const itsAgent = actors.dir.agentById.get(r.agentId);
+  const moves = managesAgent(itsAgent);
   const when = useWhen();
   const say = useSay();
   const outages = useMachineOutages(org.id, r.state === "waiting_computer");
@@ -1346,12 +1326,12 @@ function RoutineDetails({ routine: r, now, onClose }: { routine: Routine; now: D
     r.active && r.trigger.type === "schedule" && r.trigger.rule ? r.trigger.rule : null,
   );
   const nexts = described.data?.ok ? described.data.nextRuns.slice(0, 4) : r.nextRunAt ? [r.nextRunAt] : [];
-  const fix = r.canManage ? pausedFix(r) : null;
-  // "Trocar computador": the outage its run waits on, for whoever can move agents, where people connect their own
+  const fix = fixFor(r, itsAgent);
+  // "Trocar computador": the outage its run waits on, for whoever manages its agent, where people connect their own
   // computers (a Cloud workspace has one).
   const selfHost = useComputerEdition(org.id) === "selfhost";
   const outage =
-    selfHost && r.state === "waiting_computer" && r.waitingFor && can(org, "manage_agents")
+    selfHost && r.state === "waiting_computer" && r.waitingFor && moves
       ? outages.data?.outages.find((o) => o.machineId === r.waitingFor?.machineId)
       : undefined;
   const usage = usageParts(r.usage, can(org, "view_usage"));
@@ -1738,7 +1718,8 @@ function RoutineWeek({ routine: r, runs, now }: { routine: Routine; runs: Routin
     <div className="routine-week">
       <span className="routine-week__text">
         <b>{first ? say(first) : t("routines.health.none")}</b>
-        {rest.length > 0 && <span className="small muted">{rest.map(say).join(" · ")}</span>}
+        {/* The last run's line ("Parada há 5 min") lives here, out of the list's rows. */}
+        <span className="small muted">{[words.caption(r, now), ...rest.map(say)].filter(Boolean).join(" · ")}</span>
       </span>
       <span className="routine-week__days" role="img" aria-label={words.label(r)}>
         {days.map((d) => (
@@ -1802,13 +1783,18 @@ function RoutineStrip({
       { onSuccess: onSaved, onError: (error) => toast.show(errorText(t, error), "error") },
     );
   const hint = (kind: ReturnType<typeof whereHint>) => t(`routines.panel.whereHint.${kind}`);
+  // The routine's own agent, kept: its creator still edits it after losing that agent's routines. Another one only where
+  // I may make a routine for it (`createsRoutinesFor`): moving it there is the server's create check in `updateRoutine`,
+  // setting up that agent's routines and talking to it (ADR 0085 addendum of 2026-11-17).
   const agentOptions = [
-    ...actors.dir.agents.map((a) => ({
-      value: a.id,
-      label: a.name,
-      description: a.role || undefined,
-      leading: actors.avatar({ type: "agent", id: a.id }, "sm"),
-    })),
+    ...actors.dir.agents
+      .filter((a) => createsRoutinesFor(a) || a.id === r.agentId)
+      .map((a) => ({
+        value: a.id,
+        label: a.name,
+        description: a.role || undefined,
+        leading: actors.avatar({ type: "agent", id: a.id }, "sm"),
+      })),
     ...(actors.dir.agentById.has(r.agentId)
       ? []
       : [{ value: r.agentId, label: actors.name(agent), description: undefined, leading: actors.avatar(agent, "sm") }]),
@@ -2401,7 +2387,9 @@ function RoutineDialog({
   const channels = useChannels(org.id);
   const targetLabel = useTargetLabel();
   const action = useRoutineAction(org.id);
-  const agents = actors.dir.agents;
+  // The agents I may make a routine for (`createsRoutinesFor`: I set up its routines and it answers me, the server's
+  // `createRoutine`, ADR 0085 addendum of 2026-11-17; the server checks again), the routine's own kept when editing.
+  const agents = actors.dir.agents.filter((a) => createsRoutinesFor(a) || a.id === routine?.agentId);
   const editing = Boolean(routine);
   const shows = (p: RoutinePart) => !part || part === p;
   const myZone = actors.dir.memberById.get(me.user.id)?.timezone || browserTimezone() || "America/Sao_Paulo";

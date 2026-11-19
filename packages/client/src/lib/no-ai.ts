@@ -14,8 +14,8 @@ import type {
   MachineAccountKind,
   OrgStanding,
 } from "../api/types";
-import { ownSignInReady, ownSignIns, planWordOf } from "./ai-accounts";
-import { answersOthers, audienceOf } from "./audience";
+import { groupPlans, type OwnSignInRow, ownSignInReady, ownSignIns, planWordOf } from "./ai-accounts";
+import { answersOthers, audienceOf, managesAgent } from "./audience";
 import { type BillingHold, billingHoldOf } from "./billing";
 import { type SetupView, setupPending } from "./computer";
 import { firstName } from "./format";
@@ -65,6 +65,33 @@ export interface NoAiCard {
   /** With `plans_not_yours`: whose the workspace's plans are (first name) and what they are ("Claude"). */
   owner?: string;
   plan?: string;
+  /**
+   * Not a card: the right hand answered with another AI than its plan (`postStandInLine`), a quiet line under its reply
+   * with "Change" (`isStandInLine`). No banner, Connect or "Answer now" goes with it.
+   */
+  standIn?: StandIn;
+}
+
+/** Why the right hand's own plan didn't answer, as its stand-in line says it (`chat.standIn.{why}`). */
+export type StandInWhy = "needsComputer" | "away" | "notShared" | "limit" | "cant";
+const STAND_IN_WHYS: ReadonlySet<string> = new Set<StandInWhy>(["needsComputer", "away", "notShared", "limit", "cant"]);
+
+/** What answered for the right hand (`via`, "Acme OpenAI"), the plan that couldn't ("Claude Max") and why. */
+export interface StandIn {
+  via: string;
+  plan: string;
+  why: StandInWhy;
+}
+
+function standInOf(raw: unknown): StandIn | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  if (typeof o.via !== "string" || typeof o.plan !== "string") return null;
+  return {
+    via: o.via,
+    plan: o.plan,
+    why: typeof o.why === "string" && STAND_IN_WHYS.has(o.why) ? (o.why as StandInWhy) : "cant",
+  };
 }
 
 /** Why the right hand's plan can't think for this message (`NoAiCard.planLine`). */
@@ -108,6 +135,8 @@ export function noAiCardOf(meta: Record<string, unknown> | null | undefined): No
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
   if (typeof o.agentId !== "string") return null;
+  const standIn = standInOf(o.standIn);
+  if (standIn) return { agentId: o.agentId, forUserId: null, intent: "task", standIn };
   const signedOut = o.reason === "not_signed_in";
   const own =
     signedOut &&
@@ -138,6 +167,19 @@ export function noAiCardOf(meta: Record<string, unknown> | null | undefined): No
       : {}),
   };
 }
+
+/** An agent's message is the right hand's stand-in line (`NoAiCard.standIn`), not a card that it has no AI. */
+export const isStandInLine = (meta: Record<string, unknown> | null | undefined) =>
+  noAiCardOf(meta)?.standIn !== undefined;
+
+/** A real no-AI card: one that says the agent has no AI, never the stand-in line. */
+export const noAiCardShown = (meta: Record<string, unknown> | null | undefined) => {
+  const card = noAiCardOf(meta);
+  return card && !card.standIn ? card : null;
+};
+
+/** The stand-in line's words (`chat.standIn.{why}`, with `via` and `plan`). */
+export const standInKey = (why: StandInWhy) => `chat.standIn.${why}` as const;
 
 /**
  * "O Claude daqui é só de Walter" (`plans_not_yours`, ADR 0059 §3): whose the workspace's plans are when none serves
@@ -181,17 +223,18 @@ export const noAiLineKey = (card: Pick<NoAiCard, "own" | "signedOut" | "missing"
           ? "noAi.noComputer"
           : "noAi.agent";
 
-type ConnectingAgent = { ownerUserId?: string | null; builtin?: "right_hand" | null };
+type ConnectingAgent = { ownerUserId?: string | null; builtin?: "right_hand" | null; canManage?: boolean };
 
 /**
- * Who can set an agent's own AI: its owner (a plan), who manages agents (a workspace key) or keys. On the right hand
- * that is the workspace's AI, the one its background work (a widget's build) thinks with.
+ * Who can set an agent's own AI: its owner (a plan), who manages it (`managesAgent`: a workspace key, ADR 0085 addendum
+ * of 2026-11-17) or keys. On the right hand that is the workspace's AI, the one its background work (a widget's
+ * build) thinks with.
  */
 export const maySetAgentAi = (
   agent: ConnectingAgent | null | undefined,
   meId: string | null | undefined,
   org: Parameters<typeof can>[0],
-) => (!!meId && agent?.ownerUserId === meId) || can(org, "manage_agents") || can(org, "manage_credentials");
+) => (!!meId && agent?.ownerUserId === meId) || managesAgent(agent) || can(org, "manage_credentials");
 
 /** Who connects an agent's AI, for a person who may not: its owner (`owner`, by first name) or an admin. */
 export const noAiLockedLine = (t: TFunction, name: string, owner: string | null | undefined) =>
@@ -862,3 +905,30 @@ export const teamThinks = (agentIds: readonly string[], status: AiStatus | undef
   if (states.some((s) => s === undefined)) return undefined;
   return states.length > 0 && states.every((s) => s !== "no_ai");
 };
+
+/**
+ * Plans the right hand can't think with now, for the dialog that picks its AI (dimmed, each with why): a computer's own
+ * sign-in, which names no account (it thinks only with a plan signed in as one), and an account whose computer is
+ * away. Nothing to press there: it stands in on what can think meanwhile (ADR 0137 §7, amended 2026-11-15). One
+ * entry per account (`groupPlans`), `ids` its logins, none for the one holding `inUse`.
+ */
+export type UnusablePlan = { id: string; ids: string[] } & (
+  | { why: "computerOnly"; own: OwnSignInRow }
+  | { why: "away"; account: AiAccounts["accounts"][number] }
+);
+
+export function rightHandUnusable(view: AiAccounts | null | undefined, inUse?: string | null): UnusablePlan[] {
+  if (!view) return [];
+  const away = new Set(view.computers.filter((c) => !c.online).map((c) => c.machineId));
+  return [
+    ...ownSignIns(view)
+      .filter((own) => own.key !== inUse)
+      .map((own): UnusablePlan => ({ id: own.key, ids: [own.key], why: "computerOnly", own })),
+    ...groupPlans(view.accounts.filter((a) => a.status === "active" && away.has(a.machineId)))
+      .filter((p) => !p.logins.some((l) => l.id === inUse))
+      .flatMap(({ logins }): UnusablePlan[] => {
+        const account = logins[0];
+        return account ? [{ id: account.id, ids: logins.map((l) => l.id), why: "away", account }] : [];
+      }),
+  ];
+}

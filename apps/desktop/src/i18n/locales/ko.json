@@ -576,7 +576,16 @@
       "notifyBrowserDesc": "요청은 이미 휴대폰과 사이트로 가요. 이 설정을 켜면 여기서도 알려 드려요.",
       "menuBarTitle": "메뉴 막대에 표시",
       "notchTitle": "노치에 에이전트 표시",
-      "notchDesc": "노치가 있는 MacBook에서 작업 중인 에이전트를 카메라 주변에 보여 줘요."
+      "notchDesc": "노치가 있는 MacBook에서 작업 중인 에이전트를 카메라 주변에 보여 줘요.",
+      "compatTitle": "호환 모드",
+      "compatDesc": "그래픽 카드 없이 창을 그립니다. 더 느리지만 어떤 컴퓨터에서도 작동합니다. 창이 검게 되거나, 잘리거나, 멈출 때 사용하세요.",
+      "compatReopen": "앱을 다시 열면 적용됩니다.",
+      "reopenNow": "지금 다시 열기",
+      "compatFellBack": "그래픽 카드로 창이 열리지 않아 호환 모드로 열었습니다.",
+      "compatTryCard": "그래픽 카드 다시 시도",
+      "compatOwn": "지금은 WEBKIT_DISABLE_DMABUF_RENDERER 변수가 이 설정을 정해요. 여기서 고르려면 앱을 종료하고 그 변수 없이 다시 여세요.",
+      "reopenTitle": "agentes.chat을 다시 열까요?",
+      "reopenBody": "앱이 다시 열릴 때까지 에이전트는 이 컴퓨터를 사용할 수 없어요. 이미 실행 중인 작업은 먼저 끝나요."
     },
     "thisMac": {
       "agents": "에이전트",

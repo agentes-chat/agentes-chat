@@ -164,6 +164,21 @@ describe("Settings › Devices", () => {
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/settings/devices/phones/${PIXEL}`);
   });
 
+  test("a computer's page: its system at a glance; its size and toolchains behind Details, closed", async () => {
+    await open(`/org/${ORG_ID}/settings/devices/${MAC}`);
+    const card = screen().getByRole("heading", { name: "Sam's MacBook Pro" }).closest(".ac-card") as HTMLElement;
+    const glance = card.querySelector(":scope > .dv-facts") as HTMLElement;
+    expect([...glance.querySelectorAll("dt")].map((d) => d.textContent)).toEqual(["System"]);
+    const more = card.querySelector("details.ac-disclosure") as HTMLDetailsElement;
+    expect(more.open).toBe(false);
+    expect(more.querySelector("summary")?.textContent).toBe("Details");
+    expect([...more.querySelectorAll(".dv-facts dt")].map((d) => d.textContent)).toEqual([
+      "CPU",
+      "Memory",
+      "Toolchains found",
+    ]);
+  });
+
   test("Let it join, from the list: name and who can use it, then the server lets it in", async () => {
     const { state } = await open(`/org/${ORG_ID}/settings/devices`);
     const ask = screen().getByRole("list", { name: "Asking to join" });

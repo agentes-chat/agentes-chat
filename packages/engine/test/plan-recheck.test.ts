@@ -102,7 +102,7 @@ test("an older runner gets the free probes only: a token there isn't asked, nor 
 
 test("at the pause line, only while work waits on that plan", async () => {
   const { fx, machineId, hub, account } = await world();
-  const paused = await account(reading(96, ago(6 * 60_000)));
+  const paused = await account(reading(99, ago(6 * 60_000)));
   expect(await recheckStuckPlans({ db: fx.db, hub }, NOW)).toEqual([]);
   await fx.db.insert(schema.agentRuns).values({
     orgId: fx.org.id,
@@ -120,6 +120,20 @@ test("at the pause line, only while work waits on that plan", async () => {
     },
   } as typeof schema.agentRuns.$inferInsert);
   expect(await recheckStuckPlans({ db: fx.db, hub }, NOW)).toEqual([paused]);
+});
+
+test("a reading whose window reset since it was read is read again, once", async () => {
+  const { hub, account } = await world();
+  const reset = ago(60 * 60_000);
+  const stale = await account({
+    windows: [{ kind: "seven_day", usedPercent: 95, resetsAt: reset }],
+    source: "turn",
+    at: ago(26 * 3600_000),
+  });
+  // Read after its reset: nothing new to learn.
+  await account({ windows: [{ kind: "seven_day", usedPercent: 5, resetsAt: reset }], source: "turn", at: ago(60_000) });
+  expect(await recheckStuckPlans({ db: f?.db as Fixture["db"], hub }, NOW)).toEqual([stale]);
+  expect(await recheckStuckPlans({ db: f?.db as Fixture["db"], hub }, NOW + 10 * 60_000)).toEqual([]);
 });
 
 test("an offline computer is asked nothing", async () => {

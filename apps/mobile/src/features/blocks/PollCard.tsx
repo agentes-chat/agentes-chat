@@ -3,16 +3,15 @@ import { pollAnswered, pollIsOpen, pollTally, pollToggle } from "@agenteschat/cl
 import { joinNames } from "@agenteschat/client/lib/format";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { photoSource } from "@/lib/photo";
 import { serverUrl } from "@/lib/server";
-import { Icon, Sky, Text, textLineOf, useToast } from "@/ui";
+import { Icon, PressScale, Sky, Text, textLineOf, useToast } from "@/ui";
 import { useFontScale } from "@/ui/text-scale";
 import { leadBox } from "@/ui/type-scale";
 import { Face } from "../shared/Face";
 import { useColors, useDirectory, useMeId, useOrgId } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
-import { tapHaptic } from "../shared/parts";
 import { faceOverlap } from "./logic";
 
 const FACES = 4;
@@ -83,20 +82,23 @@ export function PollCard({ id, version }: { id: string; version?: number }) {
           const mine = meId !== null && o.voters.includes(meId);
           const won = !open && top > 0 && o.voters.length === top;
           return (
-            <Pressable
+            // The option gives under the finger with a tap, as every pressable of the app.
+            <PressScale
               key={o.option}
+              to={0.98}
+              fill={false}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: mine, disabled: !open }}
               accessibilityLabel={`${o.label}, ${o.voters.length}${o.voters.length ? `: ${joinNames(o.voters.map(nameOf), t)}` : ""}`}
               disabled={!open || vote.isPending || !meId}
               onPress={() => {
                 if (!meId) return;
-                tapHaptic();
                 vote.mutate(pollToggle(poll, meId, o.option, multiple), {
                   onError: () => toast({ title: t("mobile.blocks.voteFailed"), icon: "x" }),
                 });
               }}
               style={[styles.option, { borderColor: c.line2 }]}
+              contentStyle={styles.optionIn}
             >
               {/* The share fills the option up to its faces, never under them: their rings stay the card's face. */}
               <View style={styles.track}>
@@ -144,7 +146,7 @@ export function PollCard({ id, version }: { id: string; version?: number }) {
                   </Text>
                 ) : null}
               </View>
-            </Pressable>
+            </PressScale>
           );
         })}
       </View>
@@ -178,18 +180,16 @@ const styles = StyleSheet.create({
   head: { gap: 1, paddingHorizontal: 14, paddingTop: 12 },
   bold: { fontWeight: "600" },
   options: { gap: 6, padding: 14, paddingTop: 10 },
+  // The option's plate (its border, corners and the share's fill cut to them) around the press area.
+  option: { overflow: "hidden", borderWidth: 1, borderRadius: 12, borderBottomLeftRadius: 4 },
   // Top-aligned with 12 above and below: one line is 46 tall and centred as before, a wrapping label grows down.
-  option: {
+  optionIn: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 10,
     minHeight: 46,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderRadius: 12,
-    borderBottomLeftRadius: 4,
   },
   fill: { position: "absolute", top: 0, bottom: 0, left: 0 },
   box: {

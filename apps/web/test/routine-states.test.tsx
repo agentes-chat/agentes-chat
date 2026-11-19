@@ -236,7 +236,9 @@ describe("Rotinas: each routine's state, with its one-tap fix", () => {
 
     const theirs = await details("Resumo do suporte");
     expect((within(theirs).getByRole("button", { name: "Continuar agora" }) as HTMLButtonElement).disabled).toBe(true);
-    expect(theirs.textContent).toContain("Só quem criou a rotina, o dono do agente ou um admin pode continuar agora");
+    expect(theirs.textContent).toContain(
+      "Só quem criou a rotina, o dono do agente, quem pode editar o agente ou um admin pode continuar agora",
+    );
     await click(within(theirs).getByRole("button", { name: "Fechar detalhes" }));
     await settle(4);
 
@@ -313,10 +315,12 @@ describe("Rotinas: each routine's state, with its one-tap fix", () => {
         },
       }),
     ]);
-    expect(card("Issues da Ada").textContent).toContain("Parada há 5 min");
-    expect(card("Issues da Ada").textContent).not.toContain("Não rodou");
     expect(card("Avaliações").textContent).toContain("A cada 30 minutos");
     expect(card("Avaliações").textContent).not.toContain("Every");
+    // The last run's line is in the details, out of the list's rows.
+    const panel = await details("Issues da Ada");
+    expect(panel.textContent).toContain("Parada há 5 min");
+    expect(panel.textContent).not.toContain("Não rodou");
   });
 
   test("a run's record reads as Markdown, folded when long, and Ver mais opens it in place for good", async () => {
@@ -373,7 +377,7 @@ describe("Rotinas: each routine's state, with its one-tap fix", () => {
     const now = routineRun({ at: ago(0.5), status: "reported" });
     const yesterday = routineRun({ at: ago(24 * 60), status: "silent" });
     await open([routine({ id: "rt-runs", name: "Erros do Sentry", lastRun: now, recentRuns: [now, yesterday] })]);
-    const strip = within(card("Erros do Sentry")).getByRole("img", { name: /^Últimas execuções/ });
+    const strip = within(await details("Erros do Sentry")).getByRole("img", { name: /^Últimas execuções/ });
     expect(strip.getAttribute("aria-label")).toMatch(
       /^Últimas execuções: agora: respondeu\. Ontem \d{1,2}:\d{2}: nada novo, ficou em silêncio$/,
     );
@@ -532,7 +536,9 @@ describe("Rotinas: a routine's details", () => {
     expect(within(row).queryByRole("switch")).toBeNull();
     expect(within(row).queryByRole("button", { name: "Rodar agora" })).toBeNull();
     const panel = await details("Caixa do suporte");
-    expect(panel.textContent).toContain("Só quem criou, o dono do agente, admins e quem está na conversa veem isto.");
+    expect(panel.textContent).toContain(
+      "Só quem criou, o dono do agente, quem pode editar o agente, admins e quem está na conversa veem isto.",
+    );
     expect(within(panel).queryByRole("button", { name: "Editar" })).toBeNull();
     expect(within(panel).queryByRole("button", { name: "Editar o nome" })).toBeNull();
     expect(within(panel).queryByRole("button", { name: "Rodar agora" })).toBeNull();

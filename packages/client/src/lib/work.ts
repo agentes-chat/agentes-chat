@@ -838,11 +838,16 @@ const QUIET_READS: ReadonlySet<ActivityKind> = new Set([
 /** The computer brain's own image tool (Codex's), as the runner names its call. */
 export const IMAGE_TOOL = "image_generation";
 
+/** Ours (ADR 0197): images made onto a canvas, as `agent.tool` names its call (a computer brain's through the bridge). */
+export const GENERATE_IMAGE_TOOL = "generate_image";
+const GENERATE_IMAGE_NAMES = new Set([GENERATE_IMAGE_TOOL, `mcp__agentes__${GENERATE_IMAGE_TOOL}`]);
+
 /**
- * It is making a picture now (its own image tool's step, `agent.step`): the conversation shows where the picture will
- * be until its reply, with the picture, takes its place.
+ * It is making a picture now (its own image tool's step, `agent.step`, or our `generate_image` while it runs,
+ * `agent.tool`): the conversation shows where the picture will be until its reply, with the picture, takes its place.
  */
-export const makingImage = (run: Pick<LiveRun, "step">) => run.step?.tool === IMAGE_TOOL;
+export const makingImage = (run: Pick<LiveRun, "step"> & Partial<Pick<LiveRun, "tool">>) =>
+  run.step?.tool === IMAGE_TOOL || GENERATE_IMAGE_NAMES.has(run.tool ?? "");
 
 /** A step running this long is no quick read: its card stays. */
 const LONG_STEP_MS = 4000;

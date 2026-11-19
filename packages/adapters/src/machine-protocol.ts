@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 68;
+export const MACHINE_PROTOCOL_VERSION = 72;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -677,6 +677,11 @@ export const IPHONE_DEV_MODE_PROTOCOL = 65;
  * per agent, as before.
  */
 export const SHARED_GROK_PROTOCOL = 67;
+/**
+ * From this protocol on, Gemini accounts sign in and think on macOS too, each in a keychain of its own inside its
+ * folder (ADR 0143). An older Mac runner refuses them, so the server reads it as too old for the Antigravity CLI.
+ */
+export const ANTIGRAVITY_MAC_PROTOCOL = 68;
 
 /**
  * `clis.check`: the coding CLIs looked up again now, the PATH read again first (the apps' "I installed it, check again").
@@ -689,7 +694,7 @@ export const CLI_INSTALL_PROTOCOL = 66;
  * `report.collect`: the facts and the scrubbed end of its log a computer adds to a problem report someone chose to
  * send. The server asks no older runner, and says in the report that its log is missing.
  */
-export const PROBLEM_REPORT_PROTOCOL = 68;
+export const PROBLEM_REPORT_PROTOCOL = 72;
 /** Lines of the runner's log `report.collect` gives, at most. */
 export const REPORT_LOG_LINES = 300;
 
@@ -752,6 +757,8 @@ export type PhoneReason =
   /** iPhone: no Xcode on the Mac, or its iPhone SDK is older than the phone's iOS (`xcode_too_old`). */
   | "xcode_missing"
   | "xcode_too_old"
+  /** iPhone: its iOS is older than the Mac's iPhone SDK and the test helper is stuck: the iPhone needs an update. */
+  | "ios_behind_xcode"
   /** iPhone: the Mac is preparing the phone (device support download, needs internet). */
   | "device_support"
   /** iPhone: the test helper isn't built yet, or its free signature ran out (`helper_expired`). */
@@ -1473,6 +1480,40 @@ export const CHROME_FAILURES = {
 } as const;
 
 export type ChromeFailure = "missing" | "start" | "profile" | "outdated";
+/** The way out of a Chrome that closed as it started for no cause we know. */
+const UPDATE_CHROME =
+  "Update Google Chrome on it (open Chrome, then Settings › About Chrome, and Relaunch), then try again.";
+
+/**
+ * How a Chrome that closed while starting exited, for logs and people: its exit code (in hex too on Windows, whose
+ * codes are often NTSTATUS values) or the signal that ended it.
+ */
+export function chromeExitText(code: number | null, signal: string | null, platform: string = process.platform) {
+  if (code === null) return signal ? `signal ${signal}` : "no exit code";
+  const n = platform === "win32" ? code >>> 0 : code;
+  return platform === "win32" ? `exit 0x${n.toString(16).toUpperCase()}/${n}` : `exit ${n}`;
+}
+
+/**
+ * What follows `CHROME_FAILURES.start` when Chrome closed while starting: the cause, when its exit code is one we
+ * know, and one way out. 21 (a profile in use) is `CHROME_FAILURES.profile` instead.
+ */
+export function chromeExitCause(code: number | null, signal: string | null, platform: string = process.platform) {
+  const exit = chromeExitText(code, signal, platform);
+  switch (code === null ? null : code >>> 0) {
+    // chrome_result_codes.h: RESULT_CODE_NORMAL_EXIT_PROCESS_NOTIFIED, handed to a Chrome already on the profile.
+    case 24:
+      return `Another Google Chrome already running with the agent's profile took over its start (${exit}). Try again in a minute.`;
+    // NTSTATUS STATUS_DLL_NOT_FOUND.
+    case 0xc0000135:
+      return `A file Google Chrome needs is missing (${exit}). Reinstall Google Chrome from google.com/chrome, then try again.`;
+    // NTSTATUS STATUS_ACCESS_VIOLATION.
+    case 0xc0000005:
+      return `Google Chrome crashed as it started (${exit}). ${UPDATE_CHROME}`;
+    default:
+      return `Google Chrome closed as it started (${exit}). ${UPDATE_CHROME}`;
+  }
+}
 
 /** Which of `CHROME_FAILURES` a runner's message is, or null for another one (an older runner's, a busy computer). */
 export function chromeFailureKind(message: string): ChromeFailure | null {

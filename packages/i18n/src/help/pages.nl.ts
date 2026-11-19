@@ -492,7 +492,7 @@ export const helpNl: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "jev",
         heading: "Jev",
         blocks: [
-          "Als agentes.chat je werkruimte host, zit Jev erbij inbegrepen. Op een server die je zelf beheert, gebruikt hij de TypeSafe-sleutel van de eigenaar, ongeveer US$ 0,0001 per bericht: [Jev instellen](/help/jev#setup).",
+          "Als agentes.chat je werkruimte host, zit Jev erbij inbegrepen. Op een server die je zelf beheert, gebruikt hij de TypeSafe- of OpenRouter-sleutel van de eigenaar, ongeveer US$ 0,0001 per bericht: [Jev instellen](/help/jev#setup).",
         ],
       },
       {
@@ -554,6 +554,7 @@ export const helpNl: Partial<Record<HelpSlug, HelpDocument>> = {
               "Open in agentes.chat **Instellingen › AI en gebruik** en plak hem onder **Jev**. Alleen degene die deze server heeft ingericht, ziet hem.",
             ],
           },
+          "Betaal je al bij OpenRouter? Kies **OpenRouter** onder **Jev** en plak een sleutel van https://openrouter.ai/keys, of zet Jev met één klik aan met de OpenRouter-sleutel van de werkruimte. Het is dezelfde Jev, gefactureerd via OpenRouter voor dezelfde prijs.",
           "Op een server die je met Docker draait, kun je de sleutel ook in `.env` zetten als `TYPESAFE_API_KEY`. Die gaat voor op de sleutel in Instellingen.",
         ],
       },
@@ -588,6 +589,7 @@ export const helpNl: Partial<Record<HelpSlug, HelpDocument>> = {
           },
           "TypeSafe draait Jev in de Verenigde Staten en traint zijn modellen niet op wat je stuurt. Het bewaart gegevens zo lang als nodig is om de dienst te leveren. Met de enterprise-abonnementen kun je ervoor kiezen dat er niets wordt bewaard.",
           "Het privacybeleid van TypeSafe: https://typesafe.ai/legal/privacy-policy. De verwerkersovereenkomst: https://typesafe.ai/legal/data-processing.",
+          "Met een OpenRouter-sleutel gaan dezelfde verzoeken via OpenRouter naar TypeSafe, onder de voorwaarden van OpenRouter en je privacyinstellingen daar: https://openrouter.ai/privacy.",
         ],
       },
       {

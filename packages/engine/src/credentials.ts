@@ -604,8 +604,9 @@ export async function usableCredentialRow(db: Executor, orgId: string, credentia
 }
 
 /**
- * Decrypts a credential for a model call. Backend-only: the Model Gateway is
- * its only caller. Org-scoped: a credential id from another org is not found.
+ * Decrypts a credential for a model call. Backend-only: the Model Gateway, and
+ * Jev's key route when a server's owner hands Jev the workspace's OpenRouter key
+ * (ADR 0073 §9). Org-scoped: a credential id from another org is not found.
  */
 export async function decryptCredential(
   db: Database,

@@ -24,12 +24,14 @@ import {
   decisionOutcome,
   requesterDecidesLine,
 } from "@agenteschat/client/lib/approval-words";
+import { changesWhenAsks } from "@agenteschat/client/lib/approvals-level";
 import { formatTime, nextLabel, whenAt } from "@agenteschat/client/lib/format";
 import { Button } from "@agenteschat/ui";
 import type { TFunction } from "i18next";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AheadLine, ApproveAlways, CancelAhead } from "@/components/ApprovalItem";
+import { WhenAsksLink } from "@/components/ApprovalsLevelDialog";
 import { useOrg } from "@/components/org-context";
 import { inlineWords } from "@/lib/markdown";
 import {
@@ -158,6 +160,11 @@ export function ApprovalAsk({
           </>
         )
       }
+      under={
+        !refusing && agent && changesWhenAsks(agent, approval) ? (
+          <WhenAsksLink approval={approval} agent={agent} />
+        ) : undefined
+      }
       what={title}
       locked={deciding}
     />
@@ -266,7 +273,8 @@ export function ApprovalGroupAsk({
   const first = items[0];
   if (!first) return null;
   const waiting = items.filter((a) => a.status === "pending");
-  const mine = waiting.some((a) => a.canDecide);
+  const decider = waiting.find((a) => a.canDecide);
+  const mine = Boolean(decider);
   const owner = members.get(first.ownerUserId ?? agent?.ownerUserId ?? "");
   const waits = approvalGroupWaitsFor(items, owner?.name);
   const leadItem = waiting[0] ?? first;
@@ -360,6 +368,11 @@ export function ApprovalGroupAsk({
             {deadline && <RequestFuse left={left} agent={agent} text={expiryText(t, { expiresAt: deadline })} />}
             {tail}
           </>
+        ) : undefined
+      }
+      under={
+        decider && agent && changesWhenAsks(agent, decider) ? (
+          <WhenAsksLink approval={decider} agent={agent} />
         ) : undefined
       }
       what={one ? runHead(t, one, agent) : approvalAskLine(t, mine, waiting.length)}

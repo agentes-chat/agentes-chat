@@ -1,9 +1,18 @@
-import { and, asc, type Database, desc, eq, gte, inArray, isNotNull, isNull, schema, sql } from "@agenteschat/db";
+import { and, asc, type Database, desc, eq, gte, inArray, isNotNull, isNull, or, schema, sql } from "@agenteschat/db";
 import { type AgentStatusView, lineInEnglish, loadAgentStatuses } from "./agent-status";
 import { currentHandles } from "./agents";
 import { type AiStatusDeps, agentAiStates } from "./ai-status";
 import type { AgentAppearance } from "./appearance";
-import { canTalkTo, listsAgentTo, type Speaker, seesAgentDetails, speakerFor, speakerOf, viaAgent } from "./audience";
+import {
+  canTalkTo,
+  listsAgentTo,
+  managesAgent,
+  type Speaker,
+  seesAgentDetails,
+  speakerFor,
+  speakerOf,
+  viaAgent,
+} from "./audience";
 import { inLine, mayCall } from "./autonomy-settings";
 import { agentBrowserStatus } from "./browser/status";
 import { BROWSER_SCOPE, DESKTOP_SCOPE } from "./browser/types";
@@ -24,6 +33,7 @@ import { inWorkspaceWords, isPersonalWorkspace } from "./workspace-mode";
 
 const {
   agentConsultations,
+  agentGroups,
   agentRuns,
   agentScopes,
   agents,
@@ -37,6 +47,7 @@ const {
 /**
  * Each agent's scopes, with a whole-connection grant (`connector:*`) named
  * after its connector (`sentry:*`), so summaries say "Sentry", not "Connector".
+ * A person's own connection serves that person alone: none of its grants are named.
  */
 export async function agentScopeNames(db: Database, orgId: string, agentIds: string[]) {
   if (agentIds.length === 0) return [];
@@ -44,7 +55,13 @@ export async function agentScopeNames(db: Database, orgId: string, agentIds: str
     .select({ agentId: agentScopes.agentId, scope: agentScopes.scope, connector: connectorConnections.connector })
     .from(agentScopes)
     .leftJoin(connectorConnections, eq(connectorConnections.id, agentScopes.connectionId))
-    .where(and(eq(agentScopes.orgId, orgId), inArray(agentScopes.agentId, agentIds)));
+    .where(
+      and(
+        eq(agentScopes.orgId, orgId),
+        inArray(agentScopes.agentId, agentIds),
+        or(isNull(agentScopes.connectionId), isNull(connectorConnections.ownerUserId)),
+      ),
+    );
   return rows.map((r) => ({
     agentId: r.agentId,
     scope: r.scope.startsWith("connector:") && r.connector ? `${r.connector}:${r.scope.slice(10)}` : r.scope,
@@ -125,9 +142,16 @@ type Teammate = Pick<
   | "brain"
   | "autonomyBrakes"
   | "reportsToAgentId"
->;
+  | "groupId"
+> & {
+  /** Its department's name (`groupId`'s), read with the row: null when it is in none. */
+  groupName: string | null;
+};
 
-/** The org's active agents, oldest first (per-process cache; agent writes drop it). */
+/**
+ * The org's active agents, oldest first, each with the name of its department (`groupId`'s, ADR 0083), joined in so
+ * a run's context and `find_agent` read it without a query per agent (per-process cache; agent writes drop it).
+ */
 export function loadTeam(db: Database, orgId: string): Promise<Teammate[]> {
   return caches.agents.getOrLoad(`${orgId}:team`, () =>
     db
@@ -145,8 +169,11 @@ export function loadTeam(db: Database, orgId: string): Promise<Teammate[]> {
         brain: agents.brain,
         autonomyBrakes: agents.autonomyBrakes,
         reportsToAgentId: agents.reportsToAgentId,
+        groupId: agents.groupId,
+        groupName: agentGroups.name,
       })
       .from(agents)
+      .leftJoin(agentGroups, eq(agentGroups.id, agents.groupId))
       .where(and(eq(agents.orgId, orgId), isNull(agents.archivedAt)))
       .orderBy(asc(agents.createdAt)),
   ) as Promise<Teammate[]>;
@@ -277,6 +304,15 @@ export async function teammateMeans(
 }
 
 /**
+ * `@handle (role, department: X)` for the prompt, each part left out when the agent has none: who to ask often
+ * depends on which part of the workspace it sits in, and the sector is what a person names ("fala com o de Vendas").
+ */
+const whoLine = (a: Teammate) => {
+  const parts = [a.role, a.groupName ? `department: ${a.groupName}` : ""].filter(Boolean);
+  return `@${a.handle}${parts.length ? ` (${parts.join(", ")})` : ""}`;
+};
+
+/**
  * "# Your team" for the system prompt: the other agents the person
  * behind the run can talk to, one short line each, so an agent knows who
  * exists even in a DM. Details stay behind `find_agent`. Agents already
@@ -298,7 +334,7 @@ export function teamPrompt(
   const lines =
     others.length > TEAM_IN_PROMPT
       ? `${others.length} other agents ${where}.`
-      : `Other agents ${personal ? "of this person" : "in this organization"}: ${others.map((a) => `@${a.handle}${a.role ? ` (${a.role})` : ""}`).join(", ")}.`;
+      : `Other agents ${personal ? "of this person" : "in this organization"}: ${others.map(whoLine).join(", ")}.`;
   return `# ${personal ? "Your fellow agents" : "Your team"}\n${lines} Use \`${FIND_AGENT_TOOL}\` to see who knows or can do something and what each one can do. When you need another agent's answer for the task, ask it with \`ask_agent\`; to hand one work, use \`tell_agent\`, giving the whole job to the agent that owns it with everything it needs. Do this instead of saying you can't or sending the person to it. Either way the call returns at once and what comes of it reaches you here by itself.`;
 }
 
@@ -379,6 +415,7 @@ export function createFindAgentToolSource(deps: { machines?: Pick<MachineCaller,
           return [
             `@${a.handle}: ${a.name}${a.role ? `, ${a.role}` : ""}${presenceNote(statusOf.get(a.id))}`,
             `  Can: ${summarizeScopes(scopes.filter((s) => s.agentId === a.id).map((s) => s.scope))}`,
+            a.groupName ? `  Department: ${a.groupName}` : "",
             owner ? `  Responsible person: ${owner}` : "",
             about ? `  About: ${about.length > 240 ? `${cutText(about, 237)}…` : about}` : "",
           ]
@@ -429,9 +466,7 @@ export async function teammatesNowPrompt(
   if (ids.length === 0) return "";
   const [ai, presence, personal] = await Promise.all([
     agentAiStates(deps, orgId, ids),
-    loadAgentStatuses(deps.db, orgId, new Date(), ids, {
-      hasModel: (agent) => deps.gateway.hasModelCredential(agent),
-    }),
+    loadAgentStatuses(deps.db, orgId, new Date(), ids),
     isPersonalWorkspace(deps.db, orgId),
   ]);
   const presenceOf = new Map(presence.map((s) => [s.agentId, s]));
@@ -483,6 +518,8 @@ export async function getTeam(db: Database, actorId: string, orgId: string) {
       audienceRoleIds: agents.audienceRoleIds,
       consultable: agents.consultable,
       brain: agents.brain,
+      editorUserIds: agents.editorUserIds,
+      editorRoleIds: agents.editorRoleIds,
       reportsToAgentId: agents.reportsToAgentId,
     })
     .from(agents)
@@ -559,6 +596,7 @@ export async function getTeam(db: Database, actorId: string, orgId: string) {
         channelIds: seats.filter((r) => r.agentId === a.id).map((r) => r.channelId),
         canTalk: canTalkTo(a, actorId, talks),
         seesDetails,
+        canManage: managesAgent(a, actorId, membership),
       };
     }),
     people: owners.map((o) => ({ id: o.id, name: o.name, image: o.image ?? null })),

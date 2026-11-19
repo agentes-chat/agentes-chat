@@ -6,6 +6,7 @@ import type { jsonSchemaValidator } from "@modelcontextprotocol/sdk/validation/t
 import { ARTIFACT_LIMITS, type ArtifactDeps, createFileArtifact, fileReach } from "../artifacts";
 import { recordAudit } from "../audit";
 import { runAuthorityById } from "../authority";
+import { CONFIDENTIAL_META_KEY } from "../confidential";
 import { connectorKeyOf } from "../connector-usage";
 import { signJwtHs256 } from "../crypto";
 import { cutText } from "../format";
@@ -40,6 +41,7 @@ import {
   syncCustomTools,
   type ToolAccess,
 } from "./custom";
+import { auditLabel, personalTool, usableConnections } from "./personal";
 import { applyToolPins } from "./pins";
 import { presetForServer } from "./presets";
 import type { McpServerInfo } from "./server-icon";
@@ -60,6 +62,8 @@ export interface McpCallResult {
   isError: boolean;
   /** A Composio action's answer as Composio gave it (files and all), for `keepComposioFiles`. */
   data?: unknown;
+  /** The result's own `_meta`, as the server sent it: what it says of its answer beside the content. */
+  meta?: Record<string, unknown>;
 }
 
 /** An open MCP client session. Only the connector tool source uses it, behind the Tool Gateway. */
@@ -78,7 +82,7 @@ export interface McpSession {
  */
 export type McpConnect = (
   connection: Pick<ConnectorConnection, "serverUrl"> &
-    Partial<Pick<ConnectorConnection, "orgId" | "composioAccountId">>,
+    Partial<Pick<ConnectorConnection, "orgId" | "composioAccountId" | "ownerUserId">>,
   headers: Record<string, string>,
 ) => Promise<McpSession>;
 
@@ -120,6 +124,7 @@ export async function mcpSessionOver(transport: Transport): Promise<McpSession> 
         content?: { type: string; text?: string; resource?: { text?: unknown } }[];
         isError?: boolean;
         structuredContent?: unknown;
+        _meta?: Record<string, unknown>;
       };
       // GitHub's `get_file_contents` sends the file itself as an embedded resource next to a one-line text block.
       const parts = (res.content ?? []).map((c) =>
@@ -130,7 +135,7 @@ export async function mcpSessionOver(transport: Transport): Promise<McpSession> 
             : `[${c.type}]`,
       );
       if (parts.length === 0 && res.structuredContent !== undefined) parts.push(JSON.stringify(res.structuredContent));
-      return { content: parts.join("\n"), isError: res.isError === true };
+      return { content: parts.join("\n"), isError: res.isError === true, ...(res._meta ? { meta: res._meta } : {}) };
     },
     serverInfo: () => (client.getServerVersion() as McpServerInfo | undefined) ?? null,
     close: () => client.close(),
@@ -382,20 +387,29 @@ export function createConnectorToolSource(
     return lines.length > 0 ? { ...input, [sign.field]: creditedMessage(given, ...lines) } : input;
   }
 
-  /**
-   * What a tool call to a listed host carries in `params._meta` (ADR 0181): a JWT signed with that host's secret that
-   * says which workspace, agent, run and connection is calling, and the person the run acts for. Nothing for any other
-   * host, nor over http, where anyone on the way could read it and send it again within its life.
-   */
-  async function callerStatement(connection: ConnectorConnection, ctx: ToolContext) {
+  /** The secret of a server by address the operator listed (`MCP_CALLER_IDENTITY`): its host, over https alone. */
+  function listedSecret(connection: ConnectorConnection): string | undefined {
     if (!deps.callerIdentity?.size) return undefined;
     const url = new URL(connection.serverUrl);
     // `host` keeps a port that isn't https's own, and the list holds bare names: the audience is one origin.
-    const secret = url.protocol === "https:" ? deps.callerIdentity?.get(url.host) : undefined;
+    return url.protocol === "https:" ? deps.callerIdentity.get(url.host) : undefined;
+  }
+
+  /**
+   * What a tool call to a listed host carries in `params._meta` (ADR 0181): a JWT signed with that host's secret that
+   * says which workspace, agent, run and connection is calling, the person the run acts for, what thinks for the run
+   * and the conversation it answers in. Nothing for any other host, nor over http, where anyone on the way could read
+   * it and send it again within its life.
+   */
+  async function callerStatement(connection: ConnectorConnection, ctx: ToolContext) {
+    const secret = listedSecret(connection);
     if (!secret) return undefined;
+    const url = new URL(connection.serverUrl);
     // Who the audit log's `tool.call` row says is behind the run; a call with no run has nobody.
     const user = ctx.runId ? (await runAuthorityById(ctx.db, ctx.orgId, ctx.runId)).personId : null;
     const iat = Math.floor((deps.now?.() ?? new Date()).getTime() / 1000);
+    // `model:<provider>`, or the kind of a program on a computer (`ToolContext.thinksWith`).
+    const [brain, provider] = (ctx.thinksWith ?? "").split(":");
     const claims = {
       iss: new URL(deps.publicUrl).origin,
       aud: url.host,
@@ -404,6 +418,10 @@ export function createConnectorToolSource(
       ...(ctx.runId ? { run: ctx.runId } : {}),
       conn: connection.id,
       ...(user ? { user } : {}),
+      ...(brain ? { brain } : {}),
+      ...(provider ? { provider } : {}),
+      channel: ctx.channelId,
+      ...(ctx.threadRootId ? { thread: ctx.threadRootId } : {}),
       iat,
       exp: iat + CALLER_STATEMENT_SECONDS,
       jti: crypto.randomUUID(),
@@ -427,7 +445,10 @@ export function createConnectorToolSource(
    * its workbench, bash and proxy ask whatever their stored level, and like
    * any tool that asks may be approved for good for one agent.
    */
-  async function customToolsOf(connection: ConnectorConnection): Promise<ToolDefinition[]> {
+  async function customToolsOf(
+    connection: ConnectorConnection,
+    run: Awaited<ReturnType<typeof usableConnections>>,
+  ): Promise<ToolDefinition[]> {
     // A sign-in that stopped working (a Composio account too) has no tools until it is reconnected.
     if (connection.status === "needs_reconnect") return [];
     let classified = await classifiedTools(deps.db, connection.id);
@@ -445,6 +466,9 @@ export function createConnectorToolSource(
     const preset = presetForServer(connection.serverUrl)?.id;
     const composio = composioServiceOf(connection.serverUrl);
     const prefix = toolPrefixOfConnection(connection);
+    // Never Composio's: no server at its address ever reads a request of ours, so none is the operator's own.
+    const vouched = !composio && listedSecret(connection) !== undefined;
+    const named = auditLabel(connection);
     return classified.flatMap((row): ToolDefinition[] => {
       const tool = byName.get(row.name);
       const access = row.access as ToolAccess;
@@ -457,76 +481,84 @@ export function createConnectorToolSource(
       const said = executor
         ? [EXECUTOR_NOTE, tool.description].filter(Boolean).join(" ")
         : (tool.description ?? tool.name);
-      return [
-        {
-          name: exposedToolName(prefix, tool.name),
-          description: cutText(`[${connection.label}] ${row.label}: ${said}`, 1024),
-          inputSchema: tool.inputSchema?.type === "object" ? tool.inputSchema : { type: "object" },
-          scope: customScope(connection.id, access),
-          connectionId: connection.id,
-          // Through Composio, counted under the toolkit's alias as ADR 0103 §7 says.
-          connector: composio
-            ? { key: connectorKeyOf({ toolkit: composio.way.toolkit }), via: "composio", tool: tool.name }
-            : { key: connectorKeyOf(connection), via: "mcp", tool: tool.name },
-          connectorLabel: connection.label,
-          service: preset,
-          serviceIcon: connection.icon ?? undefined,
-          toolPrefix: prefix,
-          // A sensitive tool never runs without approval, whatever is stored.
-          sensitive: access === "approval" || row.sensitive || asks || COMPOSIO_ANY_ACTION.has(tool.name),
-          // Its exact call may be approved ahead, except a tool that runs whatever its input says.
-          ahead: !COMPOSIO_ANY_ACTION.has(tool.name),
-          external: true, // whatever the server returns is third-party text
-          // The executor names what each call does. A Composio action, and a custom server's own tool, is one action.
-          // "Aprovar sempre" keeps either by the server's own name.
-          rememberAs: tool.name,
-          ...(executor ? { actions: composioActions, readScope: customScope(connection.id, "read") } : {}),
-          ...(sqlArg ? { sqlReads: { tool: tool.name, arg: sqlArg } } : {}),
-          describe: (input) => {
-            const actions = executor ? composioActions(input) : null;
-            return {
-              title: `${connection.label}: ${actions ? actions.join(", ") : row.label}`,
-              detail: `${tool.name} · ${Object.entries(input)
-                .map(([k, v]) => `${k}=${typeof v === "object" ? JSON.stringify(v) : String(v)}`)
-                .join(" · ")}`,
-            };
-          },
-          execute: async (input, ctx) => {
-            // Never through Composio: no server at its address ever reads a request of ours.
-            const meta = composio ? undefined : await callerStatement(connection, ctx);
-            let result: McpCallResult;
-            try {
-              result = await withSession(connection, (s) => s.callTool(tool.name, input, meta));
-            } catch (error) {
-              if (!composio) throw error;
-              return composioFailure(deps, connection, error);
-            }
-            if (composio && deps.composio && !result.isError) {
-              const kept = await keepComposioFiles(
-                { client: deps.composio.client, artifacts: deps.artifacts, resolveHost: deps.resolveHost },
-                ctx,
-                result,
-                connection.label,
-              );
-              result = { ...result, content: kept };
-            }
-            if (access === "write" && !row.sensitive) {
-              await recordAudit(ctx.db, {
-                orgId: ctx.orgId,
-                actor: { type: "agent", id: ctx.agentId },
-                action: "connector.tool_changed",
-                target: { type: "connector_connection", id: connection.id },
-                details: { tool: tool.name, runId: ctx.runId, isError: result.isError },
-              }).catch(() => {});
-            }
-            return {
-              content: result.content,
-              isError: result.isError,
-              data: { connector: "custom", serverId: connection.id, tool: tool.name, isError: result.isError },
-            };
-          },
+      const built: ToolDefinition = {
+        name: exposedToolName(prefix, tool.name),
+        description: cutText(`[${named}] ${row.label}: ${said}`, 1024),
+        inputSchema: tool.inputSchema?.type === "object" ? tool.inputSchema : { type: "object" },
+        scope: customScope(connection.id, access),
+        connectionId: connection.id,
+        // Through Composio, counted under the toolkit's alias as ADR 0103 §7 says.
+        connector: composio
+          ? { key: connectorKeyOf({ toolkit: composio.way.toolkit }), via: "composio", tool: tool.name }
+          : { key: connectorKeyOf(connection), via: "mcp", tool: tool.name },
+        connectorLabel: named,
+        service: preset,
+        serviceIcon: connection.icon ?? undefined,
+        toolPrefix: prefix,
+        // A sensitive tool never runs without approval, whatever is stored.
+        sensitive: access === "approval" || row.sensitive || asks || COMPOSIO_ANY_ACTION.has(tool.name),
+        // Its exact call may be approved ahead, except a tool that runs whatever its input says.
+        ahead: !COMPOSIO_ANY_ACTION.has(tool.name),
+        external: true, // whatever the server returns is third-party text
+        ...(vouched ? { server: "vouched" as const } : {}),
+        // The executor names what each call does. A Composio action, and a custom server's own tool, is one action.
+        // "Aprovar sempre" keeps either by the server's own name.
+        rememberAs: tool.name,
+        ...(executor ? { actions: composioActions, readScope: customScope(connection.id, "read") } : {}),
+        ...(sqlArg ? { sqlReads: { tool: tool.name, arg: sqlArg } } : {}),
+        describe: (input) => {
+          const actions = executor ? composioActions(input) : null;
+          return {
+            title: `${named}: ${actions ? actions.join(", ") : row.label}`,
+            detail: `${tool.name} · ${Object.entries(input)
+              .map(([k, v]) => `${k}=${typeof v === "object" ? JSON.stringify(v) : String(v)}`)
+              .join(" · ")}`,
+          };
         },
-      ];
+        execute: async (input, ctx) => {
+          // Never through Composio: no server at its address ever reads a request of ours.
+          const meta = composio ? undefined : await callerStatement(connection, ctx);
+          let result: McpCallResult;
+          try {
+            result = await withSession(connection, (s) => s.callTool(tool.name, input, meta));
+          } catch (error) {
+            if (!composio) throw error;
+            return composioFailure(deps, connection, error);
+          }
+          if (composio && deps.composio && !result.isError) {
+            const kept = await keepComposioFiles(
+              { client: deps.composio.client, artifacts: deps.artifacts, resolveHost: deps.resolveHost },
+              ctx,
+              result,
+              named,
+            );
+            result = { ...result, content: kept };
+          }
+          if (access === "write" && !row.sensitive) {
+            await recordAudit(ctx.db, {
+              orgId: ctx.orgId,
+              actor: { type: "agent", id: ctx.agentId },
+              action: "connector.tool_changed",
+              target: { type: "connector_connection", id: connection.id },
+              details: {
+                tool: tool.name,
+                runId: ctx.runId,
+                isError: result.isError,
+                ...(connection.ownerUserId ? { label: named, personalOf: connection.ownerUserId } : {}),
+              },
+            }).catch(() => {});
+          }
+          return {
+            content: result.content,
+            isError: result.isError,
+            data: { connector: "custom", serverId: connection.id, tool: tool.name, isError: result.isError },
+            // Only a listed server's word counts: any other could lock a run by saying so.
+            ...(vouched && result.meta?.[CONFIDENTIAL_META_KEY] === true ? { confidential: true as const } : {}),
+          };
+        },
+      };
+      const held = personalTool(built, connection, run, access === "read");
+      return held ? [held] : [];
     });
   }
 
@@ -534,15 +566,17 @@ export function createConnectorToolSource(
     name: "connectors",
     async tools(ctx) {
       const out: ToolDefinition[] = [];
-      for (const connection of await activeConnections(ctx.db, ctx.orgId)) {
+      const run = await usableConnections(ctx, await activeConnections(ctx.db, ctx.orgId));
+      for (const connection of run.connections) {
         if (isCustom(connection)) {
-          out.push(...(await customToolsOf(connection)));
+          out.push(...(await customToolsOf(connection, run)));
           continue;
         }
         const def = CONNECTOR_CATALOG[connection.connector];
         // A sign-in that stopped working has no tools until Reconectar.
         if (!def || connection.status === "needs_reconnect") continue;
         const prefix = toolPrefixOfConnection(connection);
+        const named = auditLabel(connection);
         let listed: McpTool[];
         try {
           listed = await serverTools(connection);
@@ -552,19 +586,20 @@ export function createConnectorToolSource(
         for (const tool of listed) {
           const mapped = def.tools[tool.name];
           if (!mapped || mapped.ours) continue; // not in our catalog, or one we serve: never exposed
-          out.push({
+          const built: ToolDefinition = {
             name: exposedToolName(prefix, tool.name),
-            description: cutText(`[${connection.label}] ${tool.description ?? tool.name}`, 1024),
+            description: cutText(`[${named}] ${tool.description ?? tool.name}`, 1024),
             inputSchema: tool.inputSchema?.type === "object" ? tool.inputSchema : { type: "object" },
             scope: connectorScope(def.id, mapped.scope),
             connectionId: connection.id,
             connector: { key: def.id, via: "mcp", tool: tool.name },
-            connectorLabel: connection.label,
+            connectorLabel: named,
             service: def.id,
             toolPrefix: prefix,
             sensitive: mapped.sensitive === true,
             ahead: true,
             external: true, // whatever the server returns is third-party text
+            server: "catalog",
             describe: (input) => ({
               title: mapped.title ? fillTitle(mapped.title, input) : `${def.label}: ${tool.name}`,
               detail: `${def.id}.${tool.name} · ${Object.entries(input)
@@ -609,7 +644,9 @@ export function createConnectorToolSource(
                   : {}),
               };
             },
-          });
+          };
+          const held = personalTool(built, connection, run, mapped.scope.endsWith(".read"));
+          if (held) out.push(held);
         }
       }
       return out;

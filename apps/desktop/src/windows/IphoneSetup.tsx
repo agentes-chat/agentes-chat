@@ -511,6 +511,8 @@ export function IphoneSetup({ onClose }: { onClose: () => void }) {
             </>
           );
         if (reason === "team_limit") return t("devices.iphone.teamLimitText");
+        if (reason === "ios_behind_xcode" && phone?.osVersion && setup?.sdk)
+          return t("devices.iphone.iosBehind", { ios: phone.osVersion, sdk: setup.sdk });
         return states.helper === "active" ? t("desktop.iphone.helperBuilding") : t("desktop.iphone.helperText");
     }
   };

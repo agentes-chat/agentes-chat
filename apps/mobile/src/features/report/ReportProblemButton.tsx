@@ -17,13 +17,12 @@ export function ReportProblemButton(props: ReportProblemProps) {
   const host = useSheetIfAny();
   const [open, setOpen] = useState(false);
   if (!useProblemReports()) return null;
-  const show = () =>
-    host ? host.open(<ReportProblemSheet {...props} onClose={() => host.close()} />, { solid: true }) : setOpen(true);
+  const show = () => (host ? host.open(<ReportProblemSheet {...props} onClose={() => host.close()} />) : setOpen(true));
   return (
     <>
       <Button variant="text" size="sm" label={t("problemReport.button")} onPress={show} />
       {!host && (
-        <Sheet open={open} onClose={() => setOpen(false)} solid>
+        <Sheet open={open} onClose={() => setOpen(false)}>
           {open && <ReportProblemSheet {...props} onClose={() => setOpen(false)} />}
         </Sheet>
       )}

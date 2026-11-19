@@ -231,6 +231,8 @@ describe("Canal", () => {
     expect([...(card.querySelector(".rq__foot")?.querySelectorAll("button") ?? [])].map((b) => b.textContent)).toEqual([
       "Aprovar todos",
       "Agora não para todos",
+      // Under the decision, on its own line.
+      "Mudar quando perguntar",
     ]);
     await act(async () => fireEvent.click(within(card).getByRole("button", { name: "Ver cada um" })));
     expect(card.querySelectorAll(".rq__item")).toHaveLength(3);
@@ -342,8 +344,8 @@ describe("Canal", () => {
       "Aprovar sempre",
       "Agora não para todos",
     ]);
-    // Only buttons: what it covers is the button's tip and description.
-    expect([...foot.children].every((el) => el.matches("button, .rq__end"))).toBe(true);
+    // Only buttons, and the quiet link under them: what it covers is the button's tip and description.
+    expect([...foot.children].every((el) => el.matches("button, .rq__end, .rq__under"))).toBe(true);
     expect(within(foot).getByRole("button", { name: "Aprovar sempre" }).getAttribute("aria-description")).toContain(
       "de agora em diante",
     );
@@ -466,14 +468,13 @@ describe("Canal", () => {
       expect(bar.textContent).toContain("Fazer um merge");
       await act(async () => fireEvent.click(within(bar).getByRole("button", { name: "Ver" })));
       expect(card.classList.contains("rq--flash")).toBe(true);
-      // Ada at work meanwhile: the line still says the request, and keeps her stop at its end.
+      // Ada at work meanwhile: the line still says the request (no stop in it), and the composer stops her.
       const run = { type: "agent.run", channelId: ENG_ID, threadId: null, runId: "r-live", agentId: ADA_ID };
       await act(async () => socket.push({ type: "event", channelId: ENG_ID, event: { ...run, status: "running" } }));
       await settle(2);
       expect(bar.textContent).toContain("Ada espera sua aprovação");
-      const stop = within(bar).getByRole("button", { name: "Parar" });
-      expect(bar.lastElementChild?.contains(stop)).toBe(true);
-      await act(async () => fireEvent.click(stop));
+      expect(within(bar).queryByRole("button", { name: "Parar" })).toBeNull();
+      await act(async () => fireEvent.click(screen().getByRole("button", { name: "Parar a Ada" })));
       await settle(2);
       expect(state.calls.some((c) => c.method === "agents.cancelRun")).toBe(true);
     } finally {

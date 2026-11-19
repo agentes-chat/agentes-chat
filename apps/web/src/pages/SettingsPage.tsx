@@ -79,6 +79,7 @@ import { AccessMatrixSection } from "@/components/AccessLevels";
 import { AccountSection } from "@/components/AccountSettings";
 import { AiAppsSection } from "@/components/AiApps";
 import { ApprovalsSection } from "@/components/ApprovalCover";
+import { WorkspaceApprovalsRow } from "@/components/ApprovalsLevelDialog";
 import { AppsDownloadSection } from "@/components/AppsDownload";
 import { AuditSection } from "@/components/Audit";
 import { AutoModelsRow } from "@/components/AutoModels";
@@ -109,6 +110,7 @@ import { TeamMemoryCard } from "@/components/TeamMemory";
 import { OpenPrefsButton, useLocalServerHere } from "@/components/ThisMac";
 import { VoiceSettingsSection } from "@/components/VoiceSettings";
 import { VaultSection } from "@/components/vault/VaultSection";
+import { AccentRow } from "@/components/WorkspaceAccent";
 import { WorkspaceModeDialog } from "@/components/WorkspaceModeDialog";
 import { ZoneSelect } from "@/components/ZoneSelect";
 import { useCentreCurrent } from "@/hooks/useCentreCurrent";
@@ -601,9 +603,11 @@ function GeneralSection() {
     <Card aria-label={t(modeKey(org, "settings.orgTitle"))}>
       <div className="settings-rows">
         {personal ? zoneRow : logoRow}
+        {!personal && <AccentRow />}
         {nameRow}
         {!personal && zoneRow}
         {checkRow}
+        <WorkspaceApprovalsRow />
         {modeRow}
       </div>
     </Card>

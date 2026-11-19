@@ -249,7 +249,8 @@ describe("Quem pensa: a coding plan's models", () => {
     expect(brainScreen(d)).toBe("Modelo da Ada");
     expect(within(d).getByRole("radiogroup", { name: "Modelo da Ada" })).toBeTruthy();
     const rows = brainRows(d);
-    expect(rows).toHaveLength(32);
+    // Automatic and the 32 models of Go's list.
+    expect(rows).toHaveLength(33);
     expect(rowsOf(d).slice(0, 4)).toEqual([
       ["Automático", "Escolhe o modelo e o esforço para cada tarefa"],
       ["MiniMax M3"],
@@ -359,7 +360,8 @@ describe("Quem pensa: a coding plan's models", () => {
     expect(rows.map((r) => [r.group, r.title, r.lines[0] ?? null, r.mark])).toEqual([
       ["Em uso", "Plano", "chave …4f2a", "opencode"],
       ["OpenCode Go", "Plano 2", "chave …9f3c", "opencode"],
-      ["Claude", "Pessoal · Max", "Sua", "claude"],
+      // A name its owner gave it, its plan on the line under it.
+      ["Claude", "Pessoal", "Max", "claude"],
       ["Chaves de API", "Chave padrão do workspace", "Claude · termina em 7f2a", "claude"],
     ]);
     // One more key of the same plan: the model it has stays.

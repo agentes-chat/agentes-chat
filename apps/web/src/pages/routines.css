@@ -240,7 +240,7 @@ html:not([data-pointer]) .routines-horizon__label:focus-visible {
   position: relative;
   display: grid;
   /* Fixed columns: every row lines up (placeholders stand in for missing buttons). */
-  grid-template-columns: 36px minmax(0, 1fr) minmax(0, 220px) 136px 124px;
+  grid-template-columns: 36px minmax(0, 1fr) 124px;
   align-items: center;
   gap: 16px;
   padding: var(--row-py) 12px var(--row-py) 16px;
@@ -311,7 +311,7 @@ html:not([data-pointer]) .routine-row__title:focus-visible {
   font-size: 12.5px;
   color: var(--muted);
 }
-/* Who and where it delivers, whole: the words wrap with the icon on their first line (`.ac-iconline`), never "…". */
+/* When it runs and the next run, whole: the words wrap with the icon on their first line (`.ac-iconline`), never "…". */
 .routine-row__to {
   gap: 6px;
   min-width: 0;
@@ -326,47 +326,10 @@ html:not([data-pointer]) .routine-row__title:focus-visible {
 .routine-row__chip {
   flex: none;
 }
-/* When it runs, a MediaRow (the kit's `.ac-mediarow`): the trigger's tile and when on one line, the next run under
-   them at the cell's width, never a column of words beside the tile. */
-.routine-row__when {
-  min-width: 0;
-  row-gap: 2px;
-}
-.routine-row__when-icon {
-  border-radius: 8px;
-  background: var(--sunken);
-  color: var(--ink2);
-}
-/* When it runs is the row's fact: it wraps in its column, never cut short ("De segunda a sexta às 09:00" on a tablet). */
-.routine-row__when-text b,
-.routine-row__when-text small {
-  overflow-wrap: anywhere;
-  text-wrap: balance;
-}
-.routine-row__when-text b {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ink2);
-}
-.routine-row__when-text small {
-  font-size: 12px;
-  color: var(--faint);
-  font-variant-numeric: tabular-nums;
-}
-.routine-row__when-text small.is-live {
+/* The next run while it runs now, in the line's own words but stronger. */
+.routine-row__to .is-live {
   color: var(--ink2);
   font-weight: 600;
-}
-.routine-row__runs {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.routine-row__runs small {
-  font-size: 12px;
-  color: var(--faint);
-  overflow-wrap: anywhere;
 }
 .routine-row__actions {
   display: flex;
@@ -386,13 +349,8 @@ html:not([data-pointer]) .routine-row__title:focus-visible {
   width: 42px;
 }
 .routine-row[data-paused] .routine-row__title,
-.routine-row[data-done] .routine-row__title,
-.routine-row[data-paused] .routine-row__when-text b {
+.routine-row[data-done] .routine-row__title {
   color: var(--muted);
-}
-.routine-row[data-paused] .ac-run-strip,
-.routine-row[data-done] .ac-run-strip {
-  opacity: 0.5;
 }
 
 /* ── Details: the routine's page in the details dialog, laid out as a task's (`issue-details`, `.ac-props`) ── */
@@ -787,12 +745,6 @@ html:not([data-pointer]) .routine-row__title:focus-visible {
 
 /* ── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 980px) {
-  .routine-row {
-    grid-template-columns: 36px minmax(0, 1fr) minmax(0, 200px) auto;
-  }
-  .routine-row__runs {
-    display: none;
-  }
   .routines-horizon {
     --lab: 40px;
   }
@@ -807,10 +759,6 @@ html:not([data-pointer]) .routine-row__title:focus-visible {
     grid-template-columns: 36px minmax(0, 1fr) auto;
     gap: 10px 12px;
     padding: 12px;
-  }
-  .routine-row__when {
-    grid-column: 2 / 4;
-    grid-row: 2;
   }
   .routine-row__actions .ac-btn:not([aria-haspopup]),
   .routine-row__ph {

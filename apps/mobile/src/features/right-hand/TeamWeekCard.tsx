@@ -248,7 +248,7 @@ function WeekCard({ message, card }: { message: Message; card: TeamWeekCard }) {
             <Pressable
               accessibilityRole="button"
               onPress={openRightHandSettings}
-              hitSlop={8}
+              hitSlop={{ left: 8, right: 8 }}
               style={({ pressed }) => [styles.when, pressed && styles.pressed]}
             >
               <Text variant="footnote" tone="muted">
@@ -441,6 +441,7 @@ const styles = StyleSheet.create({
     gap: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
-  when: { alignSelf: "flex-start", minHeight: 28, justifyContent: "center" },
+  // A finger's 44 points tall, laid out as the line's 28: 8 above and below reach into the footer's gap and padding.
+  when: { alignSelf: "flex-start", minHeight: 44, marginVertical: -8, justifyContent: "center" },
   pressed: { opacity: 0.6 },
 });

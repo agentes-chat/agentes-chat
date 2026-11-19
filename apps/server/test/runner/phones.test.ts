@@ -802,6 +802,9 @@ test("an iPhone on iOS 16 is reported as too old, never left out; one newer than
     [{ state: "needs_you", reason: "ui_not_authorized" }, "26.2"],
     [{ state: "preparing", reason: "device_support" }, "27.0"],
     [{ state: "preparing", reason: "helper_missing" }, "26.2"],
+    // The reverse: iOS 27 under an iOS 28 SDK, named only once the helper is stuck the same way.
+    [{ state: "needs_you", reason: "ui_not_authorized" }, "28.0"],
+    [{ state: "preparing", reason: "helper_missing" }, "28.0"],
   ] as const) {
     const s = stuck(need, sdk);
     await s.manager.poll();
@@ -812,6 +815,8 @@ test("an iPhone on iOS 16 is reported as too old, never left out; one newer than
     ["needs_you", "xcode_too_old"],
     ["needs_you", "xcode_too_old"],
     ["preparing", "device_support"],
+    ["preparing", "helper_missing"],
+    ["needs_you", "ios_behind_xcode"],
     ["preparing", "helper_missing"],
   ]);
 });

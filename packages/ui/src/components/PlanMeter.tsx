@@ -5,6 +5,7 @@ import {
   PLAN_ALMOST,
   type PlanMeterText,
   type PlanMeterUsage,
+  planAgeShown,
   planLevel,
   planLine,
   planState,
@@ -25,6 +26,7 @@ export {
   type PlanMeterUsage,
   type PlanMeterWindow,
   type PlanState,
+  planAgeShown,
   planAttention,
   planLevel,
   planLine,
@@ -46,7 +48,8 @@ const passed = (iso: string | undefined, now: number) => iso !== undefined && Da
  * from 10 minutes ("atualizado há 51 min"; out of date past 6 hours); nothing
  * while no window is known, unless the plan already refused a request ("No limite"). `children` (an
  * account's agents) go between the bars and when they renew: each window's
- * renewal then moves under them, on one line, before how old the numbers are.
+ * renewal then moves under them, on one line, before how old the numbers are. How old they are shows only once that
+ * matters (`planAgeShown`): fresh numbers need no date.
  */
 export function PlanMeter({
   usage,
@@ -125,7 +128,7 @@ export function PlanMeter({
       )}
       {children}
       {children && renews && <small className="ac-planmeter__reset">{renews}</small>}
-      <small className="ac-planmeter__at">{text.updated(usage.at)}</small>
+      {planAgeShown(usage, now) && <small className="ac-planmeter__at">{text.updated(usage.at)}</small>}
     </div>
   );
 }

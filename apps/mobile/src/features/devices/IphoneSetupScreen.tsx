@@ -79,7 +79,9 @@ export function IphoneSetupScreen({ machineId }: { machineId?: string }) {
               major: iosMajor(phone.osVersion),
               host: hostName,
             })
-          : reasonText(t, r);
+          : r === "ios_behind_xcode" && phone?.osVersion && host?.toolchains.xcodeSdk
+            ? t("devices.iphone.iosBehind", { ios: phone.osVersion, sdk: host.toolchains.xcodeSdk })
+            : reasonText(t, r);
   const state = (i: number) => (i < step ? "done" : i === step ? "now" : "later");
   const choose = async () => {
     const key = await pickOne({
