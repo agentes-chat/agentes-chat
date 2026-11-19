@@ -394,11 +394,11 @@ test("an avatar's initials are a box of their own trimmed to their capitals, so 
   expect(photo?.querySelector(".ac-avatar__initials")).toBeNull();
   const css = await Bun.file(new URL("../src/styles/components.css", import.meta.url).pathname).text();
   const rule = (selector: string) => css.split(`\n${selector} {`)[1]?.split("}")[0] ?? "";
-  expect(rule(".ac-avatar__initials")).toContain("text-box: trim-both cap alphabetic;");
-  // Where text-box is unknown, the line's own offset: the capitals' middle sits --cap-mid above the line's.
-  expect(css).toMatch(
-    /@supports not \(text-box: trim-both cap alphabetic\) \{\s*\.ac-avatar__initials \{\s*translate: 0 var\(--cap-mid\);/,
-  );
+  // A line taller than the type, never a trimmed box (it overflowed its own content box): no letter is ever cut.
+  expect(rule(".ac-avatar__initials")).toContain("line-height: 1.3;");
+  expect(rule(".ac-avatar__initials")).toContain("translate: 0 var(--cap-mid);");
+  expect(rule(".ac-avatar__initials")).not.toContain("text-box");
+  expect(rule(".ac-avatar__initials")).not.toContain("padding");
 });
 
 test("an event pill's mark sits on its sentence's first line and its time on that line's baseline, wrapped or not", async () => {

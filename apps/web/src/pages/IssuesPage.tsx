@@ -246,18 +246,7 @@ export function IssuesPage() {
             }
             count={
               <>
-                <span>
-                  {t("issues.summary", {
-                    open: open.length,
-                    agents: open.filter((i) => i.assignees.some((a) => a.type === "agent")).length,
-                  })}
-                </span>
-                {open.some((i) => i.assignees.length === 0) && (
-                  <span>
-                    {" "}
-                    · {t("issues.unassigned", { count: open.filter((i) => i.assignees.length === 0).length })}
-                  </span>
-                )}
+                <span>{t("issues.openCount", { open: open.length })}</span>
                 {project?.archived && <span> · {t("issues.projects.archivedMark")}</span>}
               </>
             }

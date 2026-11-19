@@ -8081,6 +8081,7 @@
     },
     "title": "Aufgaben",
     "summary": "{{open}} offen · {{agents}} bei Agenten",
+    "openCount": "{{open}} offen",
     "search": "Aufgaben durchsuchen",
     "view": "Ansicht",
     "board": "Board",

@@ -162,8 +162,8 @@ html:not([data-pointer]) .db-card:focus-visible {
   margin-left: 4px;
 }
 .db-by {
+  /* `.ac-iconline` leads the first line with the face, however the name wraps. */
   display: inline-flex;
-  align-items: center;
   gap: 6px;
   min-width: 0;
 }
@@ -622,6 +622,8 @@ html:not([data-pointer]) .nwc-ask:focus-visible {
 /* The ask is shown whole: when it and the row's choices don't fit side by side, the choices go under it. */
 .nwc-row:has(> .nwc-asked) {
   flex-wrap: wrap;
+  /* The ask's plate reaches 6 past its words: 12 leaves the choices 6 from its box, never touching. */
+  gap: 12px;
 }
 .nwc-row > .nwc-asked {
   flex: 1 1 200px;

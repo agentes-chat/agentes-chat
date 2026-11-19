@@ -458,12 +458,12 @@ describe("Tarefas: moving a card", () => {
     expect(await shown([`agent:${ATLAS_ID}`, "person:u-joao"])).toBe(true);
     expect(await shown([`agent:${ATLAS_ID}`])).toBe(false);
     expect(await shown(["none"])).toBe(false);
-    // The header counts it once among the ones with agents.
+    // The header keeps one fact: the open count. Agents and nobody are the page's filters, never header chains.
     cleanup();
     const { state, api } = await withAssignees({ 132: [ADA, ATLAS, JOAO], 131: [] });
     await go(state, api);
-    expect(screen().getByText("5 em aberto · 3 com agentes")).toBeTruthy();
-    expect(screen().getByText(/1 sem responsável/)).toBeTruthy();
+    expect(screen().getByText("5 em aberto")).toBeTruthy();
+    expect(screen().queryByText(/com agentes|sem responsável/)).toBeNull();
   });
 
   test("dropped on Sem responsável the task has nobody", async () => {

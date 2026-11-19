@@ -8040,6 +8040,7 @@
     },
     "title": "Görevler",
     "summary": "{{open}} açık · {{agents}} ajanlarda",
+    "openCount": "{{open}} açık",
     "search": "Görevlerde ara",
     "view": "Görünüm",
     "board": "Pano",

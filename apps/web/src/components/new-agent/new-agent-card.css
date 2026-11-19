@@ -297,7 +297,8 @@
 }
 .nac__name {
   min-width: 3.2ch;
-  margin: 0 -3px;
+  /* -1 at the start: the words before it stand 4 from its box (5 gap less 1), its plate 3 further. */
+  margin: 0 -3px 0 -1px;
   padding: 0 3px;
   color: var(--ink);
   box-shadow: inset 0 -1.5px 0 color-mix(in srgb, var(--ink) 22%, transparent);

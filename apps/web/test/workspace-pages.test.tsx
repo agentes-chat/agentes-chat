@@ -572,7 +572,9 @@ describe("Equipe (ADR 0148)", () => {
     expect(screen().getByRole("heading", { name: "Equipe" })).toBeTruthy();
     // Its count on the title's row.
     const count = document.querySelector(".ac-pagehead__titleline > .ac-pagehead__count");
-    expect(count?.textContent).toBe("2 pessoas · 2 agentes · 0 setores");
+    // No sector yet: the zero stays out of the header, and a count that exists shows (foundations §12).
+    expect(count?.textContent).toBe("2 pessoas · 2 agentes");
+    expect(count?.textContent).not.toContain("setores");
     // The same action as the sidebar's, in the same words.
     const head = document.querySelector(".ac-pagehead") as HTMLElement;
     // It opens the new agent's dialog over the page (ADR 0164).

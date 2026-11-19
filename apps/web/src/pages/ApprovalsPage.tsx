@@ -428,7 +428,7 @@ export function ApprovalsPage() {
             commands === 0 &&
             !missionWaiting &&
             shownDecided.length === 0 && (
-              <EmptyState size="page" agent={look} mood="deal" title={t("approvals.emptyTitle")}>
+              <EmptyState size="page" agent={look} scene="approval" mood="deal" title={t("approvals.emptyTitle")}>
                 <HelpLink slug="approvals">{t("approvals.how")}</HelpLink>
               </EmptyState>
             )}

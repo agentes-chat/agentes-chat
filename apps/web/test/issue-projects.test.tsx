@@ -145,7 +145,8 @@ describe("Tarefas: projects", () => {
     expect(title()).toBe("Clínica Teo");
     expect(cards().sort()).toEqual([128, 129, 131]);
     expect(facts(cardOf(131)).slice(0, 2)).toEqual(["#131", "produto"]);
-    expect(screen().getByText("3 em aberto · 2 com agentes")).toBeTruthy();
+    // One fact in the header (who works on what is the page's own filter).
+    expect(screen().getByText("3 em aberto")).toBeTruthy();
     // The chip wears the project: its dot in place of the icon, its name, and a × beside it.
     expect(chip()?.textContent).toBe("Clínica Teo");
     expect(chip()?.querySelector(".ac-colordot")).toBeTruthy();

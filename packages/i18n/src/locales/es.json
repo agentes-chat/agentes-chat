@@ -8326,6 +8326,7 @@
     },
     "title": "Tareas",
     "summary": "{{open}} abiertas · {{agents}} con agentes",
+    "openCount": "{{open}} abiertas",
     "search": "Buscar tareas",
     "view": "Vista",
     "board": "Tablero",

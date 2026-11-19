@@ -339,6 +339,8 @@ export function CalendarPage({ today: todayProp, day }: { today?: Date; day?: st
   // The last range stays on screen while the next one loads: its items say nothing about these days.
   const agendaWaits = range.isLoading || range.isPlaceholderData;
   const agendaEmpty = view === "agenda" && range.isSuccess && !agendaWaits && inGrid.length === 0 && !filtersOff;
+  // Every kind keeps its chip, so Filtros is always the same control in the same place. A kind with nothing in it
+  // shows no count: a zero says nothing (foundations §12).
   const filterChips = (
     <Toolbar size="sm" label={t("calendar.filters")}>
       {SOURCES.map(({ source, icon }) => (
@@ -346,7 +348,7 @@ export function CalendarPage({ today: todayProp, day }: { today?: Date; day?: st
           key={source}
           icon={icon}
           pressed={filters[source]}
-          count={counts[source] ?? 0}
+          count={counts[source] || undefined}
           onPressedChange={() => setFilters((f) => ({ ...f, [source]: !f[source] }))}
         >
           {t(`calendar.filter.${source}`)}

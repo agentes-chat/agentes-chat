@@ -1063,16 +1063,14 @@ textarea.ac-input:not(:hover, :focus-visible) {
   height: 100%;
   border-radius: inherit;
 }
-/* The initials' box trimmed to their capitals, so the tile centres the letters the eye sees, not the line around them
-   (a line's room above and below the capitals differs, and its baseline lands on a whole pixel). Without text-box the
-   capitals' middle sits --cap-mid above the line's. */
+/* The initials sit in a line taller than the type (1.3 em: the font's own ascent and descent fit in it, so no box of the
+   tile ever cuts a letter) and the tile centres that box. The half-leading around a line is the same above and below, so
+   the line's height moves no letter: the capitals' middle is the line's own, --cap-mid above it, which the translate
+   gives back. No text-box trim and no padding: a trimmed box overflowed its own content box by the trim (a clip the
+   build's CSS order made visible), and the trim is not in every engine. */
 .ac-avatar__initials {
-  text-box: trim-both cap alphabetic;
-}
-@supports not (text-box: trim-both cap alphabetic) {
-  .ac-avatar__initials {
-    translate: 0 var(--cap-mid);
-  }
+  line-height: 1.3;
+  translate: 0 var(--cap-mid);
 }
 .ac-avatar--agent {
   background: var(--agent);
@@ -1979,6 +1977,8 @@ html:not([data-pointer]) .ac-msg__time--details:focus-visible {
   gap: var(--icon-gap);
   min-width: 0;
   padding: 7px 12px;
+  /* The time goes under the sentence, never leaving it a word a line beside it. */
+  flex-wrap: wrap;
 }
 .ac-eventpill__mark {
   display: inline-flex;
@@ -1994,12 +1994,14 @@ html:not([data-pointer]) .ac-msg__time--details:focus-visible {
 }
 .ac-eventpill__text {
   align-self: baseline;
+  flex: 1 1 16ch;
   min-width: 0;
   overflow-wrap: anywhere;
 }
 .ac-eventpill__time {
   align-self: baseline;
   flex: none;
+  margin-inline-start: auto;
   font-size: 12px;
   color: var(--faint);
 }
@@ -2211,7 +2213,8 @@ html:not([data-pointer]) .ac-chip--button:focus-visible {
 .ac-logo {
   display: inline-flex;
   align-items: center;
-  gap: 0.16em;
+  /* Never under the kit's smallest gap (4), at the small sizes the em falls short of. */
+  gap: max(var(--space-1, 4px), 0.16em);
   /* Funnel Display light (the landing's headings); the app falls back to its sans. */
   font-family: var(--font-brand, var(--font-display, var(--font-sans)));
   font-weight: 300;
@@ -4727,6 +4730,8 @@ html:not([data-pointer]) .ac-date__day:focus-visible {
   /* The ✕ draws 8 of its button's 20 and fills the rest on hover: pulled out by that spare, it reads as far from the
      edge as the words at the other end, and as near the words as a label's gap. */
   --token-x-spare: 6px;
+  /* How far its ✕ box stands from the label before it: the kit's smallest gap past the label's own, never closer. */
+  --token-x-near: 4px;
 }
 /* Never wider than the list: a long one (an e-mail address on a phone or in the agent's panel) ends in "…", its ✕
    still in reach, instead of running out of its card. */
@@ -4750,7 +4755,7 @@ html:not([data-pointer]) .ac-date__day:focus-visible {
 }
 .ac-token__remove {
   flex: none;
-  margin-inline: calc(-1 * var(--token-x-spare) + 2px) calc(-1 * var(--token-x-spare));
+  margin-inline: calc(-1 * var(--token-x-spare) + var(--token-x-near)) calc(-1 * var(--token-x-spare));
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -4780,6 +4785,7 @@ html:not([data-pointer]) .ac-token__remove:focus-visible {
   /* 7 less the ✕'s 5 of spare: its plate 2px from the end, as from the top and bottom. */
   --token-px: 7px;
   --token-x-spare: 5px;
+  --token-x-near: 5px;
 }
 .ac-token--sm .ac-token__remove {
   width: 18px;
@@ -6451,6 +6457,9 @@ html:not([data-pointer]) .ac-hint:focus-visible {
 }
 .ac-menu__tip {
   position: fixed;
+  /* Anchored by its right edge with no width, it would take only the room left of that edge: its own width, up to the
+     bubble's max-width. */
+  width: max-content;
   z-index: var(--z-floating);
   translate: 0 -100%;
   pointer-events: none;
@@ -8451,11 +8460,14 @@ html:not([data-pointer]) .ac-composer__file-remove:focus-visible {
 /* Room inside its clip for a hovered cell's 1.12 growth (~3px a side), taken out of the popover's padding. */
 .ac-emoji__scroll {
   height: 248px;
-  margin-inline: -4px;
   padding-inline: 4px;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
+}
+/* Out to the popover's own padding (its 8px less the 4px kept inside); the picker on its own stays within its box. */
+.ac-emoji-popover .ac-emoji__scroll {
+  margin-inline: -4px;
 }
 .ac-emoji__heading {
   padding: 6px 4px 4px;
@@ -8598,11 +8610,14 @@ html:not([data-pointer]) .ac-picker__panel:focus-visible {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 0 -8px -8px;
   padding: 7px 12px;
   border-top: 1px solid var(--line);
   font-size: 12px;
   color: var(--faint);
+}
+/* Edge to edge of the popover's padding it sits in; on its own it stays within its box. */
+.ac-emoji-popover .ac-media__foot {
+  margin: 0 -8px -8px;
 }
 .ac-media__foot b {
   color: var(--muted);
@@ -12056,7 +12071,9 @@ html:not([data-pointer]) .ac-msg__note:focus-visible {
   display: flex;
   gap: 6px;
   min-width: 0;
-  padding: 2px;
+  /* 4px under: a pressed toggle's shadow falls 3px below its box. The extra 2px is pulled back so the row keeps its height. */
+  padding: 2px 2px 4px;
+  margin-block-end: -2px;
   scroll-padding-inline: 2px;
   overflow-x: auto;
   overflow-y: hidden;
@@ -12149,6 +12166,12 @@ html:not([data-pointer]) .ac-carousel__arrow:focus-visible {
   justify-content: center;
   width: 32px;
   margin-right: 4px;
+}
+/* A mark beside a name with a line under it leads the name's first line (`.ac-iconline`'s formula, 20px lines, the row's
+   6px padding above them), the level and the remove stay on the row's middle. */
+.ac-access__row:has(.ac-access__detail) > .ac-access__lead {
+  align-self: flex-start;
+  translate: 0 calc(10px - var(--cap-mid) - 50%);
 }
 .ac-access__who {
   flex: 1;

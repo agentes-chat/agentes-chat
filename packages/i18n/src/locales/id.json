@@ -7802,6 +7802,7 @@
     },
     "title": "Tugas",
     "summary": "{{open}} terbuka · {{agents}} dengan agen",
+    "openCount": "{{open}} terbuka",
     "search": "Cari tugas",
     "view": "Tampilan",
     "board": "Papan",

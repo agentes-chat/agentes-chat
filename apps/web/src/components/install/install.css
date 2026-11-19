@@ -553,8 +553,9 @@
 .isc-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 8px;
+  gap: 4px 8px;
   padding: 6px 8px;
 }
 .isc-row + .isc-row {

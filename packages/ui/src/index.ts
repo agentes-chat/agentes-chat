@@ -418,6 +418,7 @@ export {
   ToolLevelSwatch,
   toolLevelTones,
 } from "./components/ToolPixels";
+export { EMPTY_SCENES, type EmptyScene, ToolScene } from "./components/ToolScenes";
 export { type UsageDay, type UsageDayPart, UsageDays, UsageSwatch } from "./components/UsageDays";
 export { VideoPlayer, type VideoPlayerLabels, type VideoPlayerProps } from "./components/VideoPlayer";
 export {

@@ -126,7 +126,7 @@ describe("Dashboards: in the sidebar's More, and the list (ADR 0135 §14)", () =
     expect(css).toMatch(/\.db-thumb:has\(> \.db-thumb__tile--empty\) \{\s*grid-auto-rows: 1fr;/);
   });
 
-  test("only My Home: under it the right hand says what a dashboard is, with Novo painel and an ask to it", async () => {
+  test("an empty My Home with no other board: no card of its own and no '0 widgets', the page's empty state alone", async () => {
     await open(
       `/org/${ORG_ID}/dashboards`,
       (fake) => {
@@ -134,8 +134,22 @@ describe("Dashboards: in the sidebar's More, and the list (ADR 0135 §14)", () =
       },
       withRightHand(seedState()),
     );
+    expect(screen().queryByRole("region", { name: "Meu Início" })).toBeNull();
+    expect(document.body.textContent).not.toMatch(/0 widgets?/);
+    expect(document.querySelectorAll(".ac-empty")).toHaveLength(1);
+  });
+
+  test("only My Home: under it the right hand says what a dashboard is, with Novo painel and an ask to it", async () => {
+    await open(
+      `/org/${ORG_ID}/dashboards`,
+      (fake) => {
+        const home = fake.addBoard({ kind: "home" });
+        fake.addWidget(home.id, { agentId: ATLAS_ID, title: "Meta", layout: { position: 0, w: 2, h: 1 } });
+      },
+      withRightHand(seedState()),
+    );
     const home = section("Meu Início");
-    expect(within(home).getByRole("link", { name: /Meu Início/ })).toBeTruthy();
+    expect(within(home).getByRole("link", { name: /Meu Início/ }).textContent).toContain("1 widget");
     const empty = document.querySelector(".ac-empty") as HTMLElement;
     expect(empty.querySelector(".ac-empty__agent")).not.toBeNull();
     expect(empty.querySelector(".ac-empty__title")?.textContent).toBe("Monte o primeiro painel do time");
@@ -167,8 +181,8 @@ describe("a board's page", () => {
     const meta = document.querySelector(".db-meta") as HTMLElement;
     expect(meta.textContent).toContain("Todo o workspace");
     expect(meta.textContent).toContain("Criado por você");
-    // Portuguese counts 0 as one ("0 widget").
-    expect(meta.textContent).toMatch(/0 widgets?/);
+    // A zero with nothing behind it does not render (foundations §12).
+    expect(meta.textContent).not.toMatch(/widget/);
     expect(screen().getByText("Acompanhe seus números")).toBeTruthy();
     expect(screen().getAllByRole("button", { name: "Adicionar widget" })).toHaveLength(2);
     // Organize needs widgets to move.

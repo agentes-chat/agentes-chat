@@ -5,6 +5,24 @@
 .page--list.home {
   max-width: 1120px;
 }
+/* Past a 1440 window the mural takes the room it has (rule 3), up to 1600. Words keep the 1120 measure. */
+@media (min-width: 1441px) {
+  .page--list.home {
+    max-width: 1600px;
+  }
+  .page--list.home .home-ask,
+  .page--list.home .home-continue {
+    max-width: 1120px;
+  }
+}
+
+/* A line where a card would hold nothing: the sentence, then its way out. */
+.home-quiet {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3, 12px);
+  margin: 0;
+}
 
 .home-start {
   display: flex;

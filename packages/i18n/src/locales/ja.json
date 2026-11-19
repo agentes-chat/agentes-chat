@@ -7775,6 +7775,7 @@
     },
     "title": "タスク",
     "summary": "未完了 {{open}} · エージェント担当 {{agents}}",
+    "openCount": "未完了 {{open}} 件",
     "search": "タスクを検索",
     "view": "表示",
     "board": "ボード",

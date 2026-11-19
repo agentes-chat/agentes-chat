@@ -33,6 +33,8 @@ export function DashboardsPage() {
   const myRoleIds = members.data?.find((m) => m.userId === me.user.id)?.roleIds ?? [];
   const myRoles = roleNames(roles, myRoleIds);
   const onlyHome = groups.workspace.length + groups.roles.length + groups.mine.length === 0;
+  const homeWidgets = list.data?.home?.widgetCount ?? 0;
+  // Empty Início next to no other board: the page's own empty state is the only one (foundations §12).
   const homeCard = list.data && (
     <>
       <DashboardThumb thumbs={list.data.home?.thumbs ?? []} />
@@ -41,9 +43,11 @@ export function DashboardsPage() {
           <Icon name="home" size={16} />
           {t("dashboards.home")}
         </span>
-        <span className="db-card__meta">
-          <span>{t("dashboards.meta.widgets", { count: list.data.home?.widgetCount ?? 0 })}</span>
-        </span>
+        {homeWidgets > 0 && (
+          <span className="db-card__meta">
+            <span>{t("dashboards.meta.widgets", { count: homeWidgets })}</span>
+          </span>
+        )}
       </span>
     </>
   );
@@ -64,29 +68,36 @@ export function DashboardsPage() {
       {list.isError && !list.data && <ErrorState error={list.error} onRetry={() => void list.refetch()} />}
       {list.data && (
         <div className="ac-groups">
-          <section className="db-group" aria-label={t("dashboards.home")}>
-            <div className="db-list">
-              {/* With another board on Início (ADR 0135 §18), My Home opens as a board page of its own. */}
-              {list.data.homeDashboardId ? (
-                <Link
-                  to="/org/$orgId/dashboards/$dashboardId"
-                  params={{ orgId: org.id, dashboardId: "home" }}
-                  className="ac-card ac-card--interactive db-card"
-                >
-                  {homeCard}
-                </Link>
-              ) : (
-                <Link to="/org/$orgId/home" params={{ orgId: org.id }} className="ac-card ac-card--interactive db-card">
-                  {homeCard}
-                </Link>
-              )}
-            </div>
-          </section>
+          {!(onlyHome && homeWidgets === 0) && (
+            <section className="db-group" aria-label={t("dashboards.home")}>
+              <div className="db-list">
+                {/* With another board on Início (ADR 0135 §18), My Home opens as a board page of its own. */}
+                {list.data.homeDashboardId ? (
+                  <Link
+                    to="/org/$orgId/dashboards/$dashboardId"
+                    params={{ orgId: org.id, dashboardId: "home" }}
+                    className="ac-card ac-card--interactive db-card"
+                  >
+                    {homeCard}
+                  </Link>
+                ) : (
+                  <Link
+                    to="/org/$orgId/home"
+                    params={{ orgId: org.id }}
+                    className="ac-card ac-card--interactive db-card"
+                  >
+                    {homeCard}
+                  </Link>
+                )}
+              </div>
+            </section>
+          )}
           {onlyHome && (
             <EmptyState
               className="db-empty"
               size="page"
               agent={look}
+              scene="board"
               title={t("dashboards.first.title")}
               actions={
                 <>
@@ -178,9 +189,11 @@ function BoardCard({ board: b, onHome = false }: { board: DashboardSummary; onHo
           <OwnerLine owner={b.owner} mine={b.mine} />
           <span>
             {[
-              t("dashboards.meta.widgets", { count: b.widgetCount }),
+              b.widgetCount > 0 && t("dashboards.meta.widgets", { count: b.widgetCount }),
               t("dashboards.meta.updated", { when: relativeTime(t, i18n.language, b.updatedAt, new Date(now)) }),
-            ].join(" · ")}
+            ]
+              .filter(Boolean)
+              .join(" · ")}
           </span>
         </span>
       </span>

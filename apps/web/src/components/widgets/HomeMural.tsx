@@ -35,7 +35,16 @@ const DEFAULT_TILES: HomeTile[] = [
  * With a board chosen for Início ("Use on Home", ADR 0135 §18) the head takes its title and its widgets follow the
  * fixed tiles; "+" and Organize change that board, when the person edits it.
  */
-export function HomeMural({ orgId, waiting, working }: { orgId: string; waiting: MuralTile; working: MuralTile }) {
+export function HomeMural({
+  orgId,
+  waiting,
+  working,
+}: {
+  orgId: string;
+  waiting: MuralTile;
+  /** Null while nobody works: that tile is not drawn, the page says it in one quiet line instead. */
+  working: MuralTile | null;
+}) {
   const { t } = useTranslation();
   const { org } = useOrg();
   const home = useHomeBoard(orgId);
@@ -56,8 +65,8 @@ export function HomeMural({ orgId, waiting, working }: { orgId: string; waiting:
     </BoardTile>
   );
   const fixed = {
-    tiles: { waiting: tile(waiting), working: tile(working) },
-    tileNames: { waiting: waiting.title, working: working.title },
+    tiles: { waiting: tile(waiting), ...(working && { working: tile(working) }) },
+    tileNames: { waiting: waiting.title, ...(working && { working: working.title }) },
   };
   return (
     <section className="home-sec home-mural" aria-label={title}>

@@ -250,10 +250,20 @@ describe("a head button and a shortcut follow the empty state's gate", () => {
 
 describe("the right words for the right empty", () => {
   test("a filter that hides the agenda says so and clears", async () => {
-    await go(fresh(), "calendar");
+    // Something in the agenda for the filter to hide: a person's event tomorrow.
+    const api = createFakeApi(fresh(), { seed: false });
+    const start = new Date(Date.now() + 24 * 3_600_000);
+    await api.calendar.create(ORG_ID, {
+      title: "Café com o time",
+      start: start.toISOString(),
+      end: new Date(start.getTime() + 3_600_000).toISOString(),
+      recurrence: "none",
+      participants: [],
+    });
+    await renderApp(`/org/${ORG_ID}/calendar`, { api });
+    await settle(8);
     await click(screen().getByRole("radio", { name: "Agenda" }));
-    expect(title()).toBe("Agenda livre nos próximos 30 dias");
-    expect(screen().getAllByRole("button", { name: /Novo evento/ })).toHaveLength(1);
+    expect(document.querySelector(".ac-empty")).toBeNull();
     // Under 1440 the side panel starts closed, so the sources are in the Filtros popover.
     await click(screen().getByRole("button", { name: "Filtros" }));
     await click(screen().getByRole("button", { name: /^Pessoas/ }));
@@ -261,7 +271,15 @@ describe("the right words for the right empty", () => {
     await settle(2);
     expect(empty().querySelector(".ac-empty__agent")).toBeNull();
     await click(within(empty()).getByRole("button", { name: "Limpar filtros" }));
-    expect(title()).toBe("Agenda livre nos próximos 30 dias");
+    expect(document.querySelector(".ac-empty")).toBeNull();
+  });
+
+  test("Filtros is always there, and a kind with nothing in it shows no 0", async () => {
+    await go(fresh(), "calendar");
+    await click(screen().getByRole("button", { name: "Filtros" }));
+    const people = screen().getByRole("button", { name: /^Pessoas/ });
+    expect(people.querySelector(".ac-count, .ac-countchip, [class*='count']")).toBeNull();
+    expect(people.textContent?.trim()).toBe("Pessoas");
   });
 
   test("Arquivadas empty beside a memory that exists: a line, not a first use", async () => {

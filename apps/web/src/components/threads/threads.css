@@ -288,6 +288,12 @@ html:not([data-pointer]) .pins-pop__item:has(> .thread-pop__row:focus-visible) {
   min-width: 0;
   white-space: nowrap;
 }
+/* A line that is only words (a task's or an agent's "place · state · time"): they wrap at the panel's edge. */
+.thread-head__meta:not(:has(> *)) {
+  display: block;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 .thread-head__meta > * {
   flex: none;
 }

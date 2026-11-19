@@ -360,7 +360,7 @@ export function DisplayButton({
         <Switch id={`${id}-empty`} checked={view.hideEmpty} onCheckedChange={(hideEmpty) => onChange({ hideEmpty })} />
       </div>
       <div className="issues-display__foot">
-        <span>
+        <span className="ac-iconline">
           <Icon name="check" size={14} />
           {t("issues.display.saved")}
         </span>

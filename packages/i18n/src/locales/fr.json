@@ -8376,6 +8376,7 @@
     },
     "title": "Tâches",
     "summary": "{{open}} ouvertes · {{agents}} avec des agents",
+    "openCount": "{{open}} ouvertes",
     "search": "Rechercher des tâches",
     "view": "Affichage",
     "board": "Tableau",

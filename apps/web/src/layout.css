@@ -2294,6 +2294,16 @@ html:not([data-pointer]) .artifact-table__sort:focus-visible {
 .artifact-split__row > .ac-diff__line:first-child {
   border-right: 1px solid var(--line);
 }
+/* On a phone half a row leaves a word or two a line: the old side over the new, one column. */
+@media (max-width: 420px) {
+  .artifact-split__row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .artifact-split__row > .ac-diff__line:first-child {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+}
 .artifact-split__empty {
   background: var(--surface-sunken);
 }
@@ -9342,6 +9352,9 @@ html:not([data-pointer]) .onb__step:focus-visible {
   .onb__steps {
     flex-direction: row;
     gap: 4px;
+    /* The current step's ring sits 1px outside its box: room for it above and below, where the scroller would cut
+       it. Not on the sides, so the steps stay on their page's edge. */
+    padding-block: 2px;
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: none;
@@ -9960,6 +9973,13 @@ html:not([data-pointer]) .newag__addrow:focus-visible {
   gap: 12px;
   min-width: 0;
   text-align: left;
+}
+/* Only words (the trigger's line for a choice the list lacks): a block, so a long one ends in "…" at the field's edge
+   (a flex box's words are an anonymous item, which the "…" never reaches). */
+.newag__sel-value:not(:has(> *)) {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .newag__sel-text {
   display: flex;
@@ -11123,14 +11143,19 @@ html:not([data-pointer]) .agp-cell:focus-visible {
 .agp-was s {
   color: var(--faint);
 }
+/* Who may change it: a sentence that wraps in a narrow card, its lock on the first line. */
 .agp-lock {
   display: inline-flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 5px;
+  min-width: 0;
   color: var(--faint);
   font-size: 12px;
   font-weight: 600;
-  white-space: nowrap;
+  line-height: 16px;
+}
+.agp-lock > .ac-icon {
+  flex: none;
 }
 .agp-readonly {
   gap: 10px;
@@ -12121,6 +12146,8 @@ html:not([data-pointer]) .agp-changes__jump:focus-visible {
   top: 6px;
 }
 .agp-id__fields {
+  /* The first label's capitals start at the tile's top (rule 11): its line rises by the air above them. */
+  margin-block-start: -8px;
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -12560,6 +12587,11 @@ html[data-menu-overlay] .shell {
 .sidebar:not([data-rail="true"]) .sidebar__foot {
   gap: 4px;
 }
+/* The scroll's 4px of padding sat on the 12px gap: the foot stood 12 from the last item, the others 8 apart. Its bottom
+   bleed grows by 4 so the foot is the sidebar's own 8 (--space-2) from it. */
+.sidebar:not([data-rail="true"]) .sidebar__scroll {
+  margin-bottom: calc(-4px - (12px - var(--space-2)));
+}
 .sidebar:not([data-rail="true"]) .sidebar__item > .ac-icon {
   width: 16px;
   height: 16px;
@@ -12787,6 +12819,10 @@ html:not([data-pointer]) .sidebar__section-toggle:focus-visible {
 /* Two of them side by side (Agentes' ⋯ and +) stand 8 apart, as every pair of icon buttons: the head's gap is 2. */
 .sidebar__section-add.ac-btn + .sidebar__section-add.ac-btn {
   margin-inline-start: calc(var(--space-2) - 2px);
+}
+/* The fold button's box and the count or the "working" line after it stand 4 apart (the head's gap is 2). */
+.sidebar__section-toggle + :is(.sidebar__section-count, .sidebar__section-working) {
+  margin-inline-start: 2px;
 }
 /* A header's button beside its count or its "working" line stands 8 apart too, never 2. */
 .sidebar__section-head > .ac-btn + .sidebar__section-count,
@@ -13190,6 +13226,8 @@ html:not([data-pointer]) .channel-perms__target:focus-visible {
   margin-top: 8px;
 }
 .sidebar__section--group .sidebar__section-toggle > .ac-rolemark {
+  /* The toggle's gap is 2: the mark stands 6 from the name, never under the kit's 4. */
+  margin-inline-end: 4px;
   filter: grayscale(1);
   opacity: 0.6;
 }
@@ -14319,6 +14357,16 @@ html:not([data-pointer]) .ac-typing__see:focus-visible {
    on the name's line (`.ac-captail`). */
 .jev__key {
   align-items: flex-start;
+}
+/* On a phone the key's actions (a link to the provider's site, "Trocar a chave") take a line under its words and wrap
+   there, instead of running past the list's edge beside them. */
+@media (max-width: 480px) {
+  .jev__key > .ac-captail {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    height: auto;
+    row-gap: var(--space-2);
+  }
 }
 /* A fact breaks between facts, never inside one ("US$ 0,13"). */
 .jev__fact {
