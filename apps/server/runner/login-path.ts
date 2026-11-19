@@ -123,6 +123,16 @@ export function adoptWindowsPath(
   env.PATH = mergePathWith(";", envValue(env, "PATH", "win32"), registry(), usual.join(";"));
 }
 
+/**
+ * A service (`start`, `host`; not Windows) keeps the PATH written into its unit at install time, which is the
+ * installing shell's: run through `runuser` or `sudo -u`, another user's, without this user's `~/.local/bin` where
+ * Claude Code puts itself, so no CLI is found and every agent looks offline (#705). What it had stays first; this
+ * user's usual folders and the system's are added after it, existing or not, so a CLI installed later is found too.
+ */
+export function adoptServicePath(env: NodeJS.ProcessEnv = process.env, home = os.homedir()): void {
+  env.PATH = mergePath(env.PATH, usualDirs(home).join(path.delimiter), "/usr/local/bin:/usr/bin:/bin");
+}
+
 /** Sets `process.env.PATH` to the login shell's PATH + the usual folders that exist + what we had. */
 export function adoptLoginPath(log: (line: string) => void = () => {}): void {
   if (process.platform === "win32") {
