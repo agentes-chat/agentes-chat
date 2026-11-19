@@ -21,6 +21,7 @@ export { Button, type ButtonProps, type ButtonVariant } from "./Button";
 export { Card, type CardProps } from "./Card";
 export { Chip, type ChipProps } from "./Chip";
 export { CodeInput, type CodeInputProps } from "./CodeInput";
+export { CodeWords } from "./CodeWords";
 export {
   Composer,
   type ComposerMentionState,
