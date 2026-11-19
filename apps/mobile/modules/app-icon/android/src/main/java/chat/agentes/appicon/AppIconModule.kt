@@ -2,6 +2,7 @@ package chat.agentes.appicon
 
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import expo.modules.kotlin.exception.Exceptions
 import expo.modules.kotlin.modules.Module
@@ -46,6 +47,14 @@ class AppIconModule : Module() {
       } catch (_: PackageManager.NameNotFoundException) {
         false
       }
+    }
+
+    // The entry the launcher shows now, in one call to the system and at once: the opening draws its agent from it
+    // before its first frame (a launcher may close the app while it redraws, before the pick is saved).
+    Function("current") {
+      val launcher = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setPackage(context.packageName)
+      context.packageManager.queryIntentActivities(launcher, 0).firstOrNull()?.activityInfo?.name
+        ?.removePrefix("${context.packageName}.")
     }
 
     // The alias turned on by hand, else the one the manifest turns on, else the first.

@@ -146,6 +146,12 @@ token whose audience is the bundle id `chat.agentes.app` (the server's Apple pro
   replay (`recorder.ts`, `skia-ctx.ts`); one shared ~25 fps clock.
 - `src/sky`: sky, fuse, spend bar and plan track as Skia shaders; `math.ts` mirrors the shader and is tested
   against the web's math (`@agenteschat/ui/sky/math`).
+- Festive moods: the calendar in `@agenteschat/client/lib/festive` (Christmas, New Year, Carnival and Easter from
+  Easter's date, São João, Children's Day, Halloween, Dia dos Namorados; a variation per day); the phone tints Conversas'
+  sky and the launch splash and draws the particles in `src/sky/FestiveLayer.tsx` (UI thread, 12 fps, still off screen
+  and with reduced motion). Você › Climas festivos turns them off (`src/lib/festive.ts`, `STORED.festive`).
+- The launch splash draws the app icon in use (its agent and its sky), read at once from `STORED.appIcon`, which
+  `features/me/app-icon.ts` keeps each time it asks the system.
 
 ## Fonts
 

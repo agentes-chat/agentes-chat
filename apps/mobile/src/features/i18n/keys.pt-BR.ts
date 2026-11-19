@@ -1090,6 +1090,9 @@ export const featureKeysPtBR = {
       memberPersonal: "um workspace pessoal compartilhado com você",
     },
     appearance: "Aparência",
+    festive: "Climas festivos",
+    festiveHint:
+      "Em datas especiais, como Natal, Carnaval ou São João, o céu e a abertura se enfeitam. Só neste celular.",
     notifications: "Notificações",
     pushOff: "Notificações desligadas",
     pushOffSub: "Ligue nos Ajustes do celular para receber avisos.",

@@ -5,12 +5,12 @@
  * pixel size and theme and cached; the live loop (../agent/live.ts) stamps it
  * under the agent.
  */
-import { drawnKey, gradientOf, mixHex } from "../agent/engine.js";
+import { drawnKey, gradientOf, mixHex, type SkyPair } from "../agent/engine.js";
 import { BoundedMap } from "../bounded-map";
 import { bayerAt } from "./math";
 
 /** [top, bottom] of an agent's tile sky: light mixes its light tone into white, dark its deep tone into the dark surface. */
-export function avatarSkyTones(color: string | undefined, dark: boolean): [string, string] {
+export function avatarSkyTones(color: string | SkyPair | undefined, dark: boolean): [string, string] {
   const [light, deep] = gradientOf(color);
   if (dark) return [mixHex(deep, "#1c1c1b", 0.78), mixHex(deep, "#1c1c1b", 0.55)];
   return [mixHex(light, "#ffffff", 0.86), mixHex(light, "#ffffff", 0.62)];
@@ -31,7 +31,7 @@ const cache = new BoundedMap<string, HTMLCanvasElement | null>(256);
 const looked = new BoundedMap<string, HTMLCanvasElement | null>(256);
 
 /** The sky as a `px`×`px` canvas, cached per color, size and theme (null without a DOM canvas). */
-export function avatarSky(color: string | undefined, px: number, dark: boolean): HTMLCanvasElement | null {
+export function avatarSky(color: string | SkyPair | undefined, px: number, dark: boolean): HTMLCanvasElement | null {
   const asked = `${drawnKey(color)}|${dark ? 1 : 0}|${px}`;
   if (looked.has(asked)) return looked.get(asked) ?? null;
   const [top, bottom] = avatarSkyTones(color, dark);

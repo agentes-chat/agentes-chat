@@ -90,6 +90,10 @@ export const STORED = {
   voiceSpeed: "voice-speed",
   /** The person held the send button to stop an agent and send once: the composer's hint is over ("1"). */
   stopSendTaught: "stop-send-taught",
+  /** Festive moods turned off on this phone ("off"; lib/festive.ts). */
+  festive: "festive",
+  /** The app icon in use, as last asked of the system (its id): the launch splash draws its agent (features/me/app-icon.ts). */
+  appIcon: "app-icon",
 } as const;
 
 export async function clearStoredValues(): Promise<void> {

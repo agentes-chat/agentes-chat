@@ -1118,6 +1118,8 @@
       "memberPersonal": "un espacio personal compartido contigo"
     },
     "appearance": "Apariencia",
+    "festive": "Ambientes festivos",
+    "festiveHint": "En fechas especiales, como Navidad, Carnaval o São João, el cielo y la apertura se adornan. Solo en este teléfono.",
     "notifications": "Notificaciones",
     "pushOff": "Las notificaciones están desactivadas",
     "pushOffSub": "Actívalas en la Configuración del teléfono para recibir alertas.",

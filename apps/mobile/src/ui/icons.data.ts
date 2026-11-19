@@ -113,6 +113,13 @@ export const ICONS = {
     p("M18.5 15.5c.3 1.5.9 2.1 2.4 2.4-1.5.3-2.1.9-2.4 2.4-.3-1.5-.9-2.1-2.4-2.4 1.5-.3 2.1-.9 2.4-2.4Z"),
   ],
   smile: [c(12, 12, 8.5), p("M8.5 14c.8 1.4 2 2 3.5 2s2.7-.6 3.5-2M9 9.5h.01M15 9.5h.01", 2)],
+  // A party popper: the cone, its streamers and two bits of confetti (festive days).
+  party: [
+    p("M4.5 19.5 8.2 9.2l6.6 6.6Z"),
+    p("M11.5 4.5c1 1.2 1 2.6 0 3.8M15.7 12.5c1.2-1 2.6-1 3.8 0M14.5 9.5 18 6"),
+    c(16, 4, 1, true),
+    c(20, 8.5, 1, true),
+  ],
   // The web's sticker on this grid: its corner peeled (ADR 0091).
   sticker: [
     p("M19.8 12.6V7.2a3 3 0 0 0-3-3H7.2a3 3 0 0 0-3 3v9.6a3 3 0 0 0 3 3h5.4Z"),

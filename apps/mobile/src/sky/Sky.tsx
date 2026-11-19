@@ -4,7 +4,7 @@ import type { StyleProp, ViewStyle } from "react-native";
 import { useServer } from "@/lib/server";
 import { useTheme } from "@/ui/theme";
 import { Dither } from "./Dither";
-import { fromSurface } from "./math";
+import { festiveTones, fromSurface } from "./math";
 
 export interface SkyProps {
   color?: AgentColorName;
@@ -44,6 +44,7 @@ export function WorkspaceSky({
   fade = 0.55,
   fadeTop = 0,
   host,
+  mood = null,
   style,
 }: {
   fade?: number;
@@ -51,12 +52,14 @@ export function WorkspaceSky({
   fadeTop?: number;
   /** Another server's sky (where a connection leads, a workspace elsewhere: ADR 0154); the current server's by default. */
   host?: string;
+  /** A festive mood's tint (`useFestiveMood`): the field shifts toward it. */
+  mood?: { tint: string; tintAmount: number } | null;
   style?: StyleProp<ViewStyle>;
 }) {
   const { colors } = useTheme();
   const current = useServer();
   const hour = skyHourOf(host ?? hostOf(current));
-  const tones = workspaceTones(hour, colors.bg);
+  const tones = festiveTones(workspaceTones(hour, colors.bg), mood);
   const ink = workspaceInk(hour, colors.bg);
   const deepest = tones[tones.length - 1] ?? colors.bg;
   return (

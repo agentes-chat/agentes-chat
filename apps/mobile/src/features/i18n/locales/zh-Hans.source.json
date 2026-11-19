@@ -2532,6 +2532,12 @@
   "me.appearance": {
     "value": "Appearance"
   },
+  "me.festive": {
+    "value": "Festive moods"
+  },
+  "me.festiveHint": {
+    "value": "On special days, like Christmas, Carnival or São João, the sky and the opening dress up. Only on this phone."
+  },
   "me.notifications": {
     "value": "Notifications"
   },

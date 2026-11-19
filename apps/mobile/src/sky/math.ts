@@ -220,3 +220,12 @@ export function statesUniform(items: readonly PlanState[]): number[] {
   }
   return out;
 }
+
+/**
+ * A sky's tones under a festive mood (`@agenteschat/client/lib/festive`): each shifted toward its tint, the first
+ * (the surface it rises from) kept, so the sky still meets the screen without an edge. No mood: the tones as they are.
+ */
+export function festiveTones(tones: readonly string[], mood: { tint: string; tintAmount: number } | null): string[] {
+  if (!mood) return [...tones];
+  return tones.map((tone, i) => (i === 0 ? tone : mixHex(tone, mood.tint, mood.tintAmount)));
+}

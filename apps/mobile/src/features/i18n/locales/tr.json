@@ -1045,6 +1045,8 @@
       "memberPersonal": "sizinle paylaşılan kişisel bir çalışma alanı"
     },
     "appearance": "Görünüm",
+    "festive": "Bayram havası",
+    "festiveHint": "Noel, Karnaval veya São João gibi özel günlerde gökyüzü ve açılış ekranı süslenir. Yalnızca bu telefonda.",
     "notifications": "Bildirimler",
     "pushOff": "Bildirimler kapalı",
     "pushOffSub": "Uyarı almak için telefonun Ayarlar bölümünden açın.",

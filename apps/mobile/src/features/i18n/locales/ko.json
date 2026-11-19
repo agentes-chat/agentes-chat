@@ -972,6 +972,8 @@
       "memberPersonal": "나와 공유된 개인 워크스페이스"
     },
     "appearance": "화면 모드",
+    "festive": "축제 분위기",
+    "festiveHint": "크리스마스, 카니발, 상주앙 같은 특별한 날에는 하늘과 시작 화면이 꾸며집니다. 이 휴대폰에만 적용됩니다.",
     "notifications": "알림",
     "pushOff": "알림이 꺼져 있어요",
     "pushOffSub": "알림을 받으려면 휴대폰 설정에서 켜 주세요.",

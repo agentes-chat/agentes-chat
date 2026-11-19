@@ -62,6 +62,7 @@ export const SF_SYMBOLS: Record<IconName, { sf: SFSymbolName; fill?: SFSymbolNam
   pen: { sf: "pencil" },
   doc: { sf: "doc.text", fill: "doc.text.fill" },
   sparkle: { sf: "sparkles" },
+  party: { sf: "party.popper", fill: "party.popper.fill" },
   smile: { sf: "face.smiling", fill: "face.smiling.inverse" },
   sticker: null,
   laptop: { sf: "laptopcomputer" },
@@ -243,6 +244,7 @@ export const TILE_TINTS: Partial<Record<IconName, TileTint>> = {
   // Sound and feelings.
   sound: "pink",
   smile: "pink",
+  party: "pink",
   sticker: "pink",
   mic: "pink",
   // Pages.

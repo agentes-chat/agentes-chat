@@ -1118,6 +1118,8 @@
       "memberPersonal": "un workspace personale condiviso con te"
     },
     "appearance": "Aspetto",
+    "festive": "Atmosfere di festa",
+    "festiveHint": "Nei giorni speciali, come Natale, Carnevale o São João, il cielo e l'apertura si fanno belli. Solo su questo telefono.",
     "notifications": "Notifiche",
     "pushOff": "Le notifiche sono disattivate",
     "pushOffSub": "Attivale nelle Impostazioni del telefono per ricevere gli avvisi.",

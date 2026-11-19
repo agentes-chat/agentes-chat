@@ -25,3 +25,26 @@ export function useDrawingClock(moving: boolean): SharedValue<number> {
   }, [frames, moving]);
   return clock;
 }
+
+/**
+ * `useDrawingClock` in steps of `fps` (seconds): the frame callback only counts, and the value changes, so Skia draws
+ * again, `fps` times a second. For a light layer (festive particles) that needn't move at the screen's rate.
+ */
+export function useSteppedClock(moving: boolean, fps: number): SharedValue<number> {
+  const clock = useSharedValue(0);
+  const elapsed = useSharedValue(0);
+  const tick = useCallback(
+    (frame: FrameInfo) => {
+      "worklet";
+      elapsed.value += Math.min(frame.timeSincePreviousFrame ?? 0, MAX_STEP_MS);
+      const step = Math.floor((elapsed.value / 1000) * fps) / fps;
+      if (step !== clock.value) clock.value = step;
+    },
+    [clock, elapsed, fps],
+  );
+  const frames = useFrameCallback(tick, false);
+  useEffect(() => {
+    frames.setActive(moving);
+  }, [frames, moving]);
+  return clock;
+}

@@ -1045,6 +1045,8 @@
       "memberPersonal": "ein persönlicher Workspace, der mit dir geteilt wird"
     },
     "appearance": "Darstellung",
+    "festive": "Festtagsstimmung",
+    "festiveHint": "An besonderen Tagen wie Weihnachten, Karneval oder São João schmücken sich der Himmel und der Start der App. Nur auf diesem Telefon.",
     "notifications": "Benachrichtigungen",
     "pushOff": "Benachrichtigungen sind aus",
     "pushOffSub": "Schalte sie in den Einstellungen des Handys ein, um Hinweise zu bekommen.",

@@ -972,6 +972,8 @@
       "memberPersonal": "ruang kerja pribadi yang dibagikan denganmu"
     },
     "appearance": "Tampilan",
+    "festive": "Suasana perayaan",
+    "festiveHint": "Di hari-hari istimewa, seperti Natal, Karnaval, atau São João, langit dan layar pembuka ikut berhias. Hanya di ponsel ini.",
     "notifications": "Notifikasi",
     "pushOff": "Notifikasi mati",
     "pushOffSub": "Aktifkan di Pengaturan ponsel untuk menerima peringatan.",

@@ -41,7 +41,8 @@ export interface BodyFrame {
 }
 
 export interface DrawAgentOptions {
-  color?: AgentColorName;
+  /** A preset or custom color, or a [top, bottom] pair drawn as is (`SkyPair`). */
+  color?: AgentColorName | SkyPair;
   eyes?: EyeStyle;
   pose?: Pose;
   cells?: number;
@@ -80,7 +81,7 @@ export type Ctx2D = Pick<
 
 export const AGENT_GRADIENTS: Record<AgentPresetColor, [string, string]>;
 export const DEFAULT_SKY: [string, string];
-export function drawnKey(color?: AgentColorName | string): string;
+export function drawnKey(color?: AgentColorName | string | SkyPair): string;
 export function setSkyColors(pair: readonly [string, string] | null): void;
 /** A [top, bottom] pair drawn as is, as a named color resolves to one. */
 export type SkyPair = readonly [string, string];

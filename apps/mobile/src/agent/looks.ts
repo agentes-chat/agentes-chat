@@ -1,8 +1,9 @@
-import type { AgentColorName, EyeStyle } from "@agenteschat/ui/agent/engine";
+import type { AgentColorName, EyeStyle, SkyPair } from "@agenteschat/ui/agent/engine";
 
 /** What the engine needs to draw an agent. */
 export interface AgentLookInput {
-  color: AgentColorName;
+  /** A color by name, or a [top, bottom] pair drawn as is (an app icon's fixed colors). */
+  color: AgentColorName | SkyPair;
   eyes: EyeStyle;
   /** An accessory name from the engine (`hat`, `cap`, …); "none" or unknown draws nothing. */
   accessory?: string;

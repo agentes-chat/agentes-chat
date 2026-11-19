@@ -1114,6 +1114,9 @@ export const featureKeysEn = {
       memberPersonal: "a personal workspace shared with you",
     },
     appearance: "Appearance",
+    festive: "Festive moods",
+    festiveHint:
+      "On special days, like Christmas, Carnival or São João, the sky and the opening dress up. Only on this phone.",
     notifications: "Notifications",
     pushOff: "Notifications are off",
     pushOffSub: "Turn them on in the phone's Settings to get alerts.",

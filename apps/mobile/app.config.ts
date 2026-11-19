@@ -207,8 +207,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "expo-splash-screen",
       {
-        // The first frame of the animated splash (src/features/launch): same image, size and background as
-        // the app (white in light), so the hand-over doesn't show. Keep LOGO in launch/logic.ts in step.
+        // Only the app's background (white in light): the image is blank, as the animated splash's first frame
+        // (src/features/launch), which then brings in the agent of the icon in use. A mascot drawn here, fixed at
+        // build time, would show before the one the person picked.
         image: "./assets/images/splash-icon.png",
         imageWidth: 120,
         resizeMode: "contain",

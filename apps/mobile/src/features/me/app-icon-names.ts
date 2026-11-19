@@ -2,17 +2,27 @@ import {
   APP_ICONS,
   type AppIconId,
   type MadeIcon,
+  type MadeIconColor,
   madeIconId,
   madeIconOf,
   madeIcons,
   PHONE_APP_ICON,
 } from "@agenteschat/client/lib/app-icons";
+import { AGENT_GRADIENTS, DEFAULT_SKY, type SkyPair } from "@agenteschat/ui/agent/engine";
 
 /** An icon the phone can show: one of the ready ones, or one the person made. */
 export type PhoneIcon = AppIconId | MadeIcon;
 
-const idOf = (icon: PhoneIcon) => (typeof icon === "string" ? icon : madeIconId(icon));
-export const samePhoneIcon = (a: PhoneIcon, b: PhoneIcon) => idOf(a) === idOf(b);
+/** Its id: a ready one's, or a made one's (`made-night-rose-heart`). */
+export const phoneIconId = (icon: PhoneIcon) => (typeof icon === "string" ? icon : madeIconId(icon));
+export const samePhoneIcon = (a: PhoneIcon, b: PhoneIcon) => phoneIconId(a) === phoneIconId(b);
+
+/**
+ * An icon's agent color as the build draws it (packages/ui/scripts/app-icons): fixed, so `sky` is always the landing's
+ * blue. The engine's `sky` follows the accent shown (ADR 0193), so drawing an icon by the name alone would show a color
+ * no icon of the build has.
+ */
+export const iconGradient = (color: MadeIconColor): SkyPair => (color === "sky" ? DEFAULT_SKY : AGENT_GRADIENTS[color]);
 
 const IOS_PREFIX = "AppIcon-";
 
@@ -22,7 +32,7 @@ const IOS_PREFIX = "AppIcon-";
  * reads it without React Native.
  */
 export function nativeIconName(icon: PhoneIcon, os: string): string | null {
-  const id = idOf(icon);
+  const id = phoneIconId(icon);
   if (os === "ios") return id === PHONE_APP_ICON ? null : `${IOS_PREFIX}${id}`;
   return `AppIcon${id
     .split("-")

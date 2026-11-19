@@ -2,7 +2,9 @@ import { useMe } from "@agenteschat/client";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, View } from "react-native";
+import { useFestiveMood } from "@/lib/festive";
 import { useOrg } from "@/providers/org";
+import { FestiveLayer } from "@/sky/FestiveLayer";
 import {
   AgentAvatar,
   Button,
@@ -51,9 +53,12 @@ const openAgents = () => router.navigate("/agents");
  * lead, and gone before the field.
  */
 export function GreetingSky() {
+  // On a special day (unless the person turned them off): the sky's tint and its particles, faint as the sky.
+  const mood = useFestiveMood();
   return (
     <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.sky]}>
-      <WorkspaceSky fade={0.22} style={StyleSheet.absoluteFill} />
+      <WorkspaceSky fade={0.22} mood={mood} style={StyleSheet.absoluteFill} />
+      {mood ? <FestiveLayer mood={mood} style={styles.festive} /> : null}
     </View>
   );
 }
@@ -214,6 +219,8 @@ export function FirstAgentEmpty() {
 const EMPTY_PAD = CARD_PAD;
 const styles = StyleSheet.create({
   sky: { opacity: 0.5 },
+  // Over the sky's own height (it fades out under the greeting), never over the list.
+  festive: { position: "absolute", top: 0, left: 0, right: 0, height: "60%" },
   // At the screen's sides, as the field under it and the list.
   mini: { paddingHorizontal: SCREEN_X, paddingTop: 8, paddingBottom: 16 },
   line: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 },

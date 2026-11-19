@@ -14,7 +14,7 @@ import {
   type MadeIconLook,
   PHONE_APP_ICON,
 } from "@agenteschat/client/lib/app-icons";
-import { drawAccessory, drawAgent, drawnKey, gradientOf } from "@agenteschat/ui/agent/engine";
+import { drawAccessory, drawAgent } from "@agenteschat/ui/agent/engine";
 import { Canvas, createPicture, Picture } from "@shopify/react-native-skia";
 import { LinearGradient } from "expo-linear-gradient";
 import { type ReactNode, useMemo, useState } from "react";
@@ -37,7 +37,7 @@ import {
 import { useColors } from "../shared/hooks";
 import { tapHaptic } from "../shared/parts";
 import { APP_ICON_PICTURES, MADE_ICON_SKY_PICTURES, useAppIcon } from "./app-icon";
-import { type PhoneIcon, samePhoneIcon } from "./app-icon-names";
+import { iconGradient, type PhoneIcon, samePhoneIcon } from "./app-icon-names";
 import { Page } from "./parts";
 
 /** An icon's corner on a home screen, as a share of its side. */
@@ -53,11 +53,14 @@ const WEARING = { x: 256, y: 416, side: 512, cells: 16 };
 const LEANING = { x: 170, y: 202, side: 960, cells: 30 };
 const LEAN = { degrees: -18, about: [650, 600], look: [-0.035, -0.045] } as const;
 
-/** What a made icon's look is to the agent engine: its eyes, a held expression and what it wears. */
+/**
+ * What a made icon's look is to the agent engine: its color as the build draws it (never the accent `sky` follows),
+ * its eyes, a held expression and what it wears.
+ */
 function agentOf(icon: MadeIcon) {
   const face = isMadeIconFace(icon.look) ? icon.look : "round";
   return {
-    color: icon.color,
+    color: iconGradient(icon.color),
     eyes: isMadeIconExpression(face) ? ("round" as const) : face,
     expression: isMadeIconExpression(face) ? face : undefined,
     accessory: isMadeIconFace(icon.look) ? ("none" as const) : icon.look,
@@ -67,9 +70,6 @@ function agentOf(icon: MadeIcon) {
 /** A made icon as the home screen will show it: its sky's picture and the agent drawn over it by the agent engine. */
 function MadeIconPicture({ icon, size }: { icon: MadeIcon; size: number }) {
   const { color, look, pose } = icon;
-  // By the colors it resolves to: `sky` follows the workspace's accent.
-  const drawn = drawnKey(color);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: `drawn` is what `color` draws as now
   const picture = useMemo(() => {
     const agent = agentOf({ sky: "night", color, look, pose });
     const leans = pose === "peek";
@@ -97,7 +97,7 @@ function MadeIconPicture({ icon, size }: { icon: MadeIcon; size: number }) {
     if (leans) rec.restore();
     const frame = compile(rec.commands);
     return createPicture((canvas) => replay(canvas, frame), { width: size, height: size });
-  }, [color, drawn, look, pose, size]);
+  }, [color, look, pose, size]);
   return (
     <View style={{ width: size, height: size, borderRadius: Math.round(size * CORNER), overflow: "hidden" }}>
       <Image
@@ -274,7 +274,7 @@ function AppIconMaker({ current, set }: { current: PhoneIcon; set: (icon: PhoneI
             const on = !ready && made.color === color;
             return (
               <Choice key={color} on={on} label={t(`look.colors.${color}`)} onPress={() => make({ color })} slop={7}>
-                <LinearGradient colors={gradientOf(color)} style={styles.color}>
+                <LinearGradient colors={iconGradient(color)} style={styles.color}>
                   {on ? <Icon name="check" size={16} color="#fff" /> : null}
                 </LinearGradient>
               </Choice>
@@ -321,7 +321,7 @@ function AppIconMaker({ current, set }: { current: PhoneIcon; set: (icon: PhoneI
               >
                 <View style={[plate(on), styles.wearing]}>
                   <AgentAvatar
-                    agent={{ color: made.color, eyes: "round", accessory: each }}
+                    agent={{ color: iconGradient(made.color), eyes: "round", accessory: each }}
                     size={44}
                     framed={false}
                     live={false}

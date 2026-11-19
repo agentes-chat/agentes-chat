@@ -3,17 +3,20 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import {
   APP_ICONS,
+  isMadeIconFace,
   MADE_ICON_COLORS,
   MADE_ICON_FACES,
   MADE_ICON_LOOKS,
   MADE_ICON_POSES,
   MADE_ICON_SKIES,
+  type MadeIcon,
   madeIconId,
   madeIconOf,
   madeIcons,
   PHONE_APP_ICON,
 } from "@agenteschat/client/lib/app-icons";
-import { iconOfNativeName, nativeIconName, phoneIcons } from "../src/features/me/app-icon-names";
+import { AGENT_GRADIENTS, DEFAULT_SKY, setSkyColors } from "@agenteschat/ui/agent/engine";
+import { iconGradient, iconOfNativeName, nativeIconName, phoneIcons } from "../src/features/me/app-icon-names";
 
 interface Node {
   $?: Record<string, string>;
@@ -150,6 +153,52 @@ describe("app icons on the phone (ADR 0179)", () => {
     for (const sky of MADE_ICON_SKIES) {
       expect(existsSync(join(ASSETS, "made", `${sky}.png`))).toBe(true);
       expect(existsSync(join(ASSETS, "made", `${sky}-peek.png`))).toBe(true);
+    }
+  });
+
+  test("every made icon the picker offers turns on an alias the build has, and reads back as itself", () => {
+    const aliases = new Set(
+      (plugin.launcherAliases(manifest()).manifest.application[0]?.["activity-alias"] ?? []).map((a) =>
+        String(a.$?.["android:name"]).slice(1),
+      ),
+    );
+    // Every sky, pose, color and face or accessory the picker shows (leaning, a face only).
+    const offered: MadeIcon[] = MADE_ICON_POSES.flatMap((pose) =>
+      MADE_ICON_SKIES.flatMap((sky) =>
+        MADE_ICON_COLORS.flatMap((color) =>
+          MADE_ICON_LOOKS.filter((look) => pose === "front" || isMadeIconFace(look)).map((look) => ({
+            sky,
+            color,
+            look,
+            pose,
+          })),
+        ),
+      ),
+    );
+    expect(offered).toHaveLength(496);
+    for (const icon of offered) {
+      const name = nativeIconName(icon, "android") ?? "";
+      expect(aliases.has(name)).toBe(true);
+      expect(iconOfNativeName(name, "android")).toEqual(icon);
+      expect(plugin.MADE_IDS).toContain(madeIconId(icon));
+    }
+    // The pick the phone reported: the night sky, the leaning agent, sky blue, the plain face.
+    expect(nativeIconName({ sky: "night", color: "sky", look: "round", pose: "peek" }, "android")).toBe(
+      "AppIconMadeNightSkyRoundPeek",
+    );
+  });
+
+  test("the picker draws a made icon in the build's colors, whatever accent the engine's sky follows", () => {
+    // The build draws with the engine's own colors, sky the landing's blue (packages/ui/scripts/app-icons).
+    const built = Object.fromEntries(MADE_ICON_COLORS.map((color) => [color, [...AGENT_GRADIENTS[color]]]));
+    expect(built.sky).toEqual([...DEFAULT_SKY]);
+    // A magenta accent shown: the engine's sky turns magenta, the icon's sky does not.
+    setSkyColors(["#ff8cff", "#d100d1"]);
+    try {
+      expect(AGENT_GRADIENTS.sky).not.toEqual(DEFAULT_SKY);
+      for (const color of MADE_ICON_COLORS) expect([...iconGradient(color)]).toEqual(built[color] as string[]);
+    } finally {
+      setSkyColors(null);
     }
   });
 

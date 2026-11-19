@@ -12,6 +12,7 @@ import { StyleSheet, View } from "react-native";
 import Animated, { Easing, FadeIn, FadeInUp } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { signOut } from "@/features/account";
+import { setFestiveOn, useFestiveOn } from "@/lib/festive";
 import { type SoundChoice, setSoundChoice, useSoundChoice } from "@/lib/sounds";
 import { useOrg } from "@/providers/org";
 import { WorkspaceSky } from "@/sky/Sky";
@@ -181,6 +182,7 @@ function MePage() {
   const photo = usePersonPhoto(mine?.avatarUrl ?? mine?.image ?? me.data?.user.image);
   const { changePhoto, uploading } = useChangePhoto();
   const sounds = useSoundChoice();
+  const festive = useFestiveOn();
   const styleLabel = useSoundLabel();
   const startLabel = useStartLabel();
   const withMe = openIssuesWithMe(issues.data, meId);
@@ -501,6 +503,15 @@ function MePage() {
               value={themeValue}
               menu
               onPress={pickTheme}
+            />
+            {/* Special days dress the sky and the opening (lib/festive.ts): on this phone, on by default. */}
+            <GroupedRow
+              key="festive"
+              icon="party"
+              label={t("mobile.me.festive")}
+              hint={{ name: t("common.about", { label: t("mobile.me.festive") }), text: t("mobile.me.festiveHint") }}
+              toggle={festive}
+              onPress={() => setFestiveOn(!festive)}
             />
             {/* The app icon (ADR 0179): only where this build carries the others. */}
             {appIcon.supported && appIcon.icon ? (

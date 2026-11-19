@@ -36,9 +36,10 @@ export function setSkyColors(pair) {
 
 /**
  * A color as it is drawn now, for a cache's or a memo's key: `sky` (and no color) by the pair it resolves to, which
- * follows the workspace's accent; any other color as is.
+ * follows the workspace's accent; a [top, bottom] pair by its two colors; any other color as is.
  */
 export function drawnKey(color) {
+  if (Array.isArray(color)) return color.join();
   return !color || color === "sky" ? AGENT_GRADIENTS.sky.join() : color;
 }
 
