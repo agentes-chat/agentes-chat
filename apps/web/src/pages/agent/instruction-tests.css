@@ -1,0 +1,38 @@
+.instruction-tests,
+.instruction-tests__example {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.instruction-tests__pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-4);
+}
+
+.instruction-tests h3,
+.instruction-tests h4,
+.instruction-tests p {
+  margin: 0;
+}
+
+.instruction-tests__pair > div {
+  min-width: 0;
+}
+
+.instruction-tests .ac-acts {
+  flex-wrap: wrap;
+  row-gap: var(--space-2);
+}
+
+@media (max-width: 640px) {
+  .instruction-tests-dialog .ac-details__foot > .ac-acts,
+  .instruction-tests-dialog .ac-details__foot .ac-btn:only-child {
+    width: 100%;
+  }
+  .instruction-tests__pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

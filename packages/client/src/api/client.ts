@@ -28,6 +28,7 @@ import type {
   VaultScope,
 } from "../vault/types";
 import type { UploadOptions } from "./http";
+import type { InstructionTestsApi } from "./instruction-tests";
 import type {
   AccessInput,
   AccountDeletionPlan,
@@ -390,6 +391,7 @@ export interface OpenedWorkspace {
 }
 
 export interface ApiClient {
+  instructionTests: InstructionTestsApi;
   system: {
     health(): Promise<Health>;
     instance(): Promise<Instance>;

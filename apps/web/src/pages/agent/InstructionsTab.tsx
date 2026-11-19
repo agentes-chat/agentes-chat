@@ -11,6 +11,7 @@ import { useDirectory } from "@/hooks/useDirectory";
 import { useTextLimit } from "@/hooks/useTextLimit";
 import { Markdown } from "@/lib/markdown";
 import { CardHead, useAgentEdit } from "./context";
+import { InstructionTests } from "./InstructionTests";
 import { ReadOnlyNote } from "./pieces";
 
 /** Instruções: the text, edited in place (admins); what changed, as a diff; tips to add a line. */
@@ -21,6 +22,7 @@ export function InstructionsTab() {
   const { agent, g, draft, saved, set, can, changeOf, goTo } = useAgentEdit();
   const proposals = useProposals(org.id);
   const [showDiff, setShowDiff] = useState(false);
+  const [testing, setTesting] = useState(false);
   const area = useRef<HTMLTextAreaElement>(null);
   const limit = useTextLimit(FIELD_LIMITS.instructions);
   const editable = can("instructions");
@@ -50,9 +52,10 @@ export function InstructionsTab() {
             {editable ? (
               <>
                 <Textarea
+                  autoGrow
                   ref={area}
                   className="newag__textarea agp-instructions"
-                  rows={14}
+                  rows={6}
                   limit={limit}
                   aria-label={t("agent.instructions")}
                   placeholder={t("newAgent.instructionsPlaceholder")}
@@ -69,14 +72,19 @@ export function InstructionsTab() {
                 </div>
                 {changed && (
                   <div className="agp-stack">
-                    <Button
-                      size="sm"
-                      className="agp-self-start"
-                      aria-expanded={showDiff}
-                      onClick={() => setShowDiff((v) => !v)}
-                    >
-                      {showDiff ? t("agentPage.instructions.hideDiff") : t("agentPage.instructions.showDiff")}
-                    </Button>
+                    <div className="ac-acts">
+                      <Button
+                        size="sm"
+                        className="agp-self-start"
+                        aria-expanded={showDiff}
+                        onClick={() => setShowDiff((v) => !v)}
+                      >
+                        {showDiff ? t("agentPage.instructions.hideDiff") : t("agentPage.instructions.showDiff")}
+                      </Button>
+                      <Button size="sm" onClick={() => setTesting(true)}>
+                        {t("instructionTests.title")}
+                      </Button>
+                    </div>
                     {showDiff && (
                       <ProseDiff
                         label={t("agentPage.instructions.diff")}
@@ -131,6 +139,16 @@ export function InstructionsTab() {
           )}
         </div>
       </div>
+      {editable && testing && (
+        <InstructionTests
+          key={`${org.id}:${agent.id}`}
+          open={testing}
+          onOpenChange={setTesting}
+          agentId={agent.id}
+          baseInstructions={saved.instructions}
+          candidateInstructions={draft.instructions}
+        />
+      )}
     </>
   );
 }

@@ -1187,6 +1187,8 @@ export const PLAN_WINDOW_KINDS: readonly PlanWindowKind[] = [
 
 /** Protocol 19: a plan's usage limits as the CLI or the provider said them (`at`), during a turn or by a probe. */
 export interface PlanUsage {
+  /** Probe explicitly confirmed no extra paid usage or credit balance. Unknown is never safe. */
+  subscriptionOnly?: true;
   windows: PlanWindow[];
   /** The plan refused a request for its limit (cleared when it allows one again). */
   limited?: boolean;
@@ -2245,6 +2247,8 @@ export const ROUTE_LIMITS = { system: 8000, prompt: 32_000, schema: 8000 } as co
 
 /** `brain.route` (protocol 24): one answer in `schema`'s shape from the account's CLI. */
 export interface BrainRouteRequest {
+  /** ADR 0196: isolated comparison, preserving the selected model and effort. */
+  comparison?: { model: string; effort: BrainEffort | null };
   kind: AccountKind;
   /** The account folder (`accounts/<kind>/<id>`); absent: the computer's own sign-in. */
   account?: string;
@@ -2435,6 +2439,8 @@ export const ACCESS_LIMITS = {
 } as const;
 
 export interface RunnerInfo {
+  /** Supports isolated subscription comparisons, including Windows, with quota preflight. */
+  instructionTests?: true;
   /** Protocol 4: the tasks in the runner's journal (running, and finished ones not yet acknowledged). */
   tasks?: RunnerTask[];
   /** The runner's own version (`0.1.0`). */
@@ -3714,6 +3720,7 @@ export function parseRunnerFrame(raw: string): RunnerFrame | null {
           : {}),
         ...(isString(f.claudeLoginBlocked) ? { claudeLoginBlocked: f.claudeLoginBlocked.slice(0, 300) } : {}),
         ...(f.authEgressGroup === true ? { authEgressGroup: true as const } : {}),
+        ...(f.instructionTests === true ? { instructionTests: true as const } : {}),
         ...(Array.isArray(f.phones) ? { phones: parsePhones(f.phones) } : {}),
         ...(isObject(f.toolchains) ? { toolchains: parseToolchains(f.toolchains) } : {}),
         ...(isObject(f.holds) ? { holds: parseHolds(f.holds) } : {}),

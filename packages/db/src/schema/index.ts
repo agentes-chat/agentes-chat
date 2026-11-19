@@ -13,6 +13,7 @@ export * from "./forum";
 export * from "./hosts";
 export * from "./imports";
 export * from "./instance-secrets";
+export * from "./instruction-tests";
 export * from "./live";
 export * from "./machines";
 export * from "./mail";

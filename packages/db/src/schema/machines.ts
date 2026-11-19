@@ -44,6 +44,7 @@ export interface MachinePlanUsage {
  * its desktops and its terminal (protocol 18), and the agents' use of their desktops (protocol 21).
  */
 export interface MachineExecutors {
+  instructionTests?: true;
   /** `loggedIn`/`authMethod`/`plan`: from `claude auth status` (protocol 8; absent = unknown). */
   claude?: { version: string; loggedIn?: boolean; authMethod?: string; plan?: string };
   codex?: { version: string };

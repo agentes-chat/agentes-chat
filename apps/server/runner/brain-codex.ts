@@ -24,6 +24,7 @@ import {
   withoutSignIns,
 } from "./accounts";
 import { CODEX_ROUTE_OFF } from "./brain-route";
+import { CODEX_NATIVE_CONTEXT_OFF } from "./brain-tool-policy";
 import {
   CODEX_WINDOWS_CONFIG,
   codexLaunch,
@@ -162,27 +163,7 @@ export interface CodexBrainTurnRequest {
  * `code_mode_host` stays off so `exec` fails closed: an `exec` cell, and an `apply_patch` it calls, emit no item for
  * the kill to see.
  */
-export const CODEX_CHAT_OFF = [
-  ...CODEX_ROUTE_OFF,
-  "unified_exec",
-  "unified_exec_tty",
-  "shell_snapshot",
-  "skill_mcp_dependency_install",
-  "remote_plugin",
-  "plugin_sharing",
-  "multi_agent_v2",
-  "browser_use_external",
-  "browser_use_full_cdp_access",
-  "browser_annotation_api",
-  "in_app_browser",
-  "in_app_local_automation",
-  "view_image",
-  "hooks",
-  "memories",
-  "goals",
-  "code_mode_host",
-  "workspace_dependencies",
-] as const;
+export const CODEX_CHAT_OFF = [...CODEX_ROUTE_OFF, ...CODEX_NATIVE_CONTEXT_OFF] as const;
 
 /**
  * Our bridge's tools offered to the model directly. Codex's catalog makes its models `code_mode_only` (gpt-5.6 and

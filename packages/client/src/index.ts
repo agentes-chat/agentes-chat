@@ -12,6 +12,7 @@ export * from "./api/client";
 export * from "./api/context";
 export * from "./api/http";
 export * from "./api/http-client";
+export * from "./api/instruction-tests";
 export * from "./api/keys";
 export * from "./api/missions";
 export * from "./api/outbox";
