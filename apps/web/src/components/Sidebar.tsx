@@ -412,9 +412,9 @@ export function Sidebar() {
   // …and the unread and latest ones as soon as the workspace opens.
   usePrefetchRecent(orgId);
   // The right hand (ADR 0137): the first row of AGENTES; outside its audience, none.
-  const rightHand = dir.agents.find((a) => isRightHand(a) && a.canTalk !== false);
+  const workspaceRightHand = dir.agents.find((a) => isRightHand(a) && a.canTalk !== false);
   const dmOf = new Map((dms.data ?? []).map((d) => [d.with.id, d]));
-  const rightHandDm = rightHand ? dmOf.get(rightHand.id) : undefined;
+  const rightHandDm = workspaceRightHand ? dmOf.get(workspaceRightHand.id) : undefined;
   // New agent: one dialog for every way in (ADR 0164); outside the shell (a test's page), the full form.
   const newAgentDialog = useNewAgent();
   const newAgent = () =>
@@ -472,8 +472,8 @@ export function Sidebar() {
   const [workingFilterScope, setWorkingFilterScope] = useState<string | null>(null);
   const workingOnly = !personal && !rail && workingFilterScope === filterScope;
   const workingTeam = shownAgents.filter((a) => busy.has(a.id));
-  const workingRightHand = rightHand && busy.has(rightHand.id);
-  const listedRightHand = workingOnly && !workingRightHand ? undefined : rightHand;
+  const workingRightHand = workspaceRightHand && busy.has(workspaceRightHand.id);
+  const rightHand = workingOnly && !workingRightHand ? undefined : workspaceRightHand;
   const workingLabel = t("sidebarAgents.working", { count: workingTeam.length + Number(Boolean(workingRightHand)) });
   const listedAgents = workingOnly ? workingTeam : shownAgents;
   const groups = useAgentGroups(orgId).data ?? [];
@@ -567,7 +567,7 @@ export function Sidebar() {
   const navRef = useRef<HTMLDivElement>(null);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   // The list fades out at an edge only while there is more to scroll past it (no hard cut); re-checked as lists load.
-  useScrollEdges(navRef, [channels.data, directs.length, listedAgents.length, listedRightHand, groups.length, rail]);
+  useScrollEdges(navRef, [channels.data, directs.length, listedAgents.length, rightHand, groups.length, rail]);
 
   // A tablet's open sidebar folds back on a new page, a width change, Esc (before the page sees it: Esc in a channel
   // would stop an agent; an open menu closes first), a press outside it and focus leaving it (Tab past its end would
@@ -670,9 +670,9 @@ export function Sidebar() {
   // The agents' rows, under the Agentes header in a team's workspace and with none in a personal one (ADR 0159).
   const agentRows = (
     <>
-      {listedRightHand && (
+      {rightHand && (
         <RightHandRow
-          agent={listedRightHand}
+          agent={rightHand}
           unread={rightHandDm?.unread ?? 0}
           onPrefetch={() => rightHandDm && prefetch(rightHandDm.channelId)}
           onOpen={() => rightHandDm && markOpen(rightHandDm.channelId)}
