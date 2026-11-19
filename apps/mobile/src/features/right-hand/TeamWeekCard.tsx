@@ -13,6 +13,7 @@ import {
   useTeamWeekPrefs,
   useWaitingOnMe,
 } from "@agenteschat/client";
+import { errorText } from "@agenteschat/client/lib/errors";
 import { clockAt, formatUsd, joinNames, relativeTime } from "@agenteschat/client/lib/format";
 import { can } from "@agenteschat/client/lib/permissions";
 import { isRightHand } from "@agenteschat/client/lib/right-hand";
@@ -459,6 +460,19 @@ function HowtoDetails({ agentId, itemId, uses }: { agentId: string; itemId: stri
                 })
               : t("teamWeek.howto.detailsUsesNever", { uses: item.uses || uses })}
           </Text>
+        </>
+      ) : memory.isError ? (
+        <>
+          <Text variant="footnote" tone="muted" accessibilityLiveRegion="polite">
+            {errorText(t, memory.error)}
+          </Text>
+          <Button
+            variant="secondary"
+            size="sm"
+            label={t("common.retry")}
+            disabled={memory.isFetching}
+            onPress={() => void memory.refetch()}
+          />
         </>
       ) : (
         <Text variant="footnote" tone="muted">

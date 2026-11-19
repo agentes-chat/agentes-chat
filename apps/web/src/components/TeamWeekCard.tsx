@@ -429,6 +429,15 @@ function HowtoDetails({ agentId, itemId, uses }: { agentId: string; itemId: stri
               : t("teamWeek.howto.detailsUsesNever", { uses: item.uses || uses })}
           </span>
         </>
+      ) : memory.isError ? (
+        <>
+          <span className="small tw__details-meta" role="status">
+            {errorText(t, memory.error)}
+          </span>
+          <Button size="sm" disabled={memory.isFetching} onClick={() => void memory.refetch()}>
+            {t("common.retry")}
+          </Button>
+        </>
       ) : (
         <span className="small tw__details-meta">{t("teamWeek.howto.detailsGone")}</span>
       )}
