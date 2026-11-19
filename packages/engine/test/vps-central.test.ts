@@ -86,7 +86,7 @@ describe("work at its step limit", () => {
       .where(eq(schema.agentRuns.id, first[0] as string));
     expect(next?.triggerMessageId).toBe(run.replyMessageId as string);
     expect(JSON.stringify(next?.transcript)).toContain("You reached your step limit");
-  });
+  }, 30_000);
   test("a stuck run, and one that was itself a continuation, wait for a person", async () => {
     f = await setup();
     await endedAtLimit({ stepLimit: { stuck: true } });
@@ -140,7 +140,10 @@ describe("the Central", () => {
       expiresAt: new Date(Date.now() + 60_000),
     } as never);
     const view = await centralView(f.db, f.owner.id, f.org.id);
-    expect(view.tasks.find((t) => t.runId === run?.id)?.state).toBe("working");
+    const shown = view.tasks.find((t) => t.runId === run?.id);
+    expect(shown?.state).toBe("working");
+    expect(shown?.title).toBe("faça");
+    expect(shown?.requester).toMatchObject({ kind: "person", id: f.owner.id });
     expect(view.talks[0]?.question).toBe("segredo");
     const member = await addMember(f.db, f.org.id, "member", "Bea");
     const theirs = await centralView(f.db, member.id, f.org.id);

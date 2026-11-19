@@ -67,7 +67,10 @@ const pt = {
   stalledHint: "Nenhum passo há bastante tempo. Pode ser um comando longo; se não for, pare ou abra a conversa.",
   doneWeek: "concluídas",
   failedWeek: "falhas",
-  ask: { question: "perguntou", task: "passou tarefa", tell: "avisou" } as Record<string, string>,
+  ask: { question: "perguntou", task: "passou tarefa", tell: "avisou", note: "deixou recado" } as Record<
+    string,
+    string
+  >,
   talk: {
     open: "aberta",
     pending: "aberta",
@@ -160,7 +163,7 @@ const en: typeof pt = {
   stalledHint: "No step for a long time. It may be a long command; if not, stop it or open the conversation.",
   doneWeek: "done",
   failedWeek: "failed",
-  ask: { question: "asked", task: "handed a task", tell: "told" },
+  ask: { question: "asked", task: "handed a task", tell: "told", note: "left a note" },
   talk: {
     open: "open",
     pending: "open",

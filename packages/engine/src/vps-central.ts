@@ -22,6 +22,7 @@ export const CENTRAL_LOOKBACK_MS = 7 * 24 * 3600_000;
 const TALKS_MAX = 40;
 const PULL_REQUESTS_MAX = 40;
 const TALK_TEXT_MAX = 600;
+const TITLE_MAX = 90;
 
 export type CentralState =
   | "queued"
@@ -166,6 +167,30 @@ function requesterOf(task: ManagedTask): CentralTask["requester"] {
   return null;
 }
 
+interface AskedFacts {
+  askedText: string | null;
+  askedByAgent: string | null;
+  askedByUser: string | null;
+  askedByName: string | null;
+}
+
+/** Who wrote the message that started the run. */
+function askedBy(fact: AskedFacts | undefined): CentralTask["requester"] {
+  if (fact?.askedByUser) return { kind: "person", id: fact.askedByUser, name: fact.askedByName ?? "" };
+  if (fact?.askedByAgent) return { kind: "agent", id: fact.askedByAgent };
+  return null;
+}
+
+/**
+ * A task with no title goes by what was asked, one line. The list only holds conversations the viewer is in; one only
+ * agents are in keeps its words to itself.
+ */
+function askedLine(task: { betweenAgents: boolean }, fact: AskedFacts | undefined): string | null {
+  const line = fact?.askedText?.replace(/\s+/g, " ").trim();
+  if (!line || task.betweenAgents) return null;
+  return line.length > TITLE_MAX ? `${line.slice(0, TITLE_MAX)}…` : line;
+}
+
 function originOf(task: ManagedTask): string | null {
   const origin = task.delegation?.origin;
   return origin && (origin.kind === "person" || origin.kind === "routine") ? origin.name : null;
@@ -197,11 +222,20 @@ export async function centralView(
             error: agentRuns.error,
             title: agentWorks.title,
             update: agentWorks.lastUpdateText,
+            askedText: schema.messages.body,
+            askedByAgent: schema.messages.authorAgentId,
+            askedByUser: schema.messages.authorUserId,
+            askedByName: schema.users.name,
             replyMeta: sql<Record<string, unknown> | null>`(
               select m.meta from messages m where m.id = ${agentRuns.replyMessageId} and m.org_id = ${agentRuns.orgId})`,
           })
           .from(agentRuns)
           .leftJoin(agentWorks, sql`${agentWorks.id} = ${agentRuns.workId}`)
+          .leftJoin(
+            schema.messages,
+            sql`${schema.messages.id} = ${agentRuns.triggerMessageId} and ${schema.messages.orgId} = ${agentRuns.orgId}`,
+          )
+          .leftJoin(schema.users, sql`${schema.users.id} = ${schema.messages.authorUserId}`)
           .where(inArray(agentRuns.id, runIds))
       : [],
     manager.tasks.length
@@ -237,7 +271,7 @@ export async function centralView(
     const lastSignalAt = signalOf.get(t.runId) ?? t.startedAt ?? t.createdAt;
     return {
       ...placeOf(t),
-      title: t.label ?? fact?.title ?? t.subject,
+      title: t.label ?? fact?.title ?? t.subject ?? askedLine(t, fact),
       state: centralState(t, lastSignalAt, now.getTime()),
       waitsOn: t.held ?? (t.status === "running" ? null : (t.work?.state ?? null)),
       startedAt: t.startedAt,
@@ -246,7 +280,7 @@ export async function centralView(
       lastSignalAt,
       progress: percentOf(t.plan),
       latestUpdate: fact?.update ?? null,
-      requester: requesterOf(t),
+      requester: requesterOf(t) ?? askedBy(fact),
       origin: originOf(t),
       now: t.now ? { tool: t.now.tool, detail: t.now.detail } : null,
       steps: t.steps,
@@ -261,7 +295,7 @@ export async function centralView(
     const limit = fact?.replyMeta?.stepLimit as { continuedRunId?: string } | undefined;
     return {
       ...placeOf(t),
-      title: t.label ?? fact?.title ?? null,
+      title: t.label ?? fact?.title ?? askedLine(t, fact),
       state: t.status === "done" ? "done" : t.status === "failed" ? "failed" : "stopped",
       waitsOn: null,
       startedAt: t.startedAt,
@@ -270,7 +304,7 @@ export async function centralView(
       lastSignalAt: t.finishedAt,
       progress: null,
       latestUpdate: fact?.update ?? null,
-      requester: t.stoppedBy ? null : t.routine ? { kind: "routine", name: t.routine.name } : null,
+      requester: t.routine ? { kind: "routine", name: t.routine.name } : askedBy(fact),
       origin: null,
       now: null,
       steps: 0,
