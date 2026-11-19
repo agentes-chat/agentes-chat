@@ -25,7 +25,10 @@ export function StatusLine({
   hostName?: string | null;
   /** On a device's page, under its portrait. */
   center?: boolean;
-  /** In place of the status's own words. */
+  /**
+   * In place of the status's own words, its `code` as code (the offline cause's way out). The status's own words carry
+   * typed names, so they show as typed.
+   */
   text?: string | null;
 }) {
   const { t } = useTranslation();
@@ -47,7 +50,7 @@ export function StatusLine({
       />
       {words ? (
         <Text variant="footnote" tone="faint" style={center ? styles.centerText : undefined}>
-          <CodeWords text={words} />
+          {text ? <CodeWords text={text} /> : v.line}
         </Text>
       ) : null}
     </View>

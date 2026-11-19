@@ -159,7 +159,7 @@ function StatusLine({
   hostOs?: string;
   action?: ReactNode;
   ios?: string | null;
-  /** In place of the status's own sentence. */
+  /** In place of the status's own sentence, as typed (it carries a person's name). */
   text?: string | null;
 }) {
   const { t, i18n } = useTranslation();
@@ -169,7 +169,7 @@ function StatusLine({
   return (
     <div className="dv-statusline" data-status={statusLook(status)} role="status">
       <span className="dv-statusline__text">
-        {sentence && codeAndBold(sentence)}
+        {text ?? (sentence && codeAndBold(sentence, "cb", [host]))}
         {label && <small> · {label}</small>}
       </span>
       {action}
