@@ -13,8 +13,11 @@ import {
   SCREEN_X,
   SkeletonList,
   Text,
+  TOOL_H,
+  textLineOf,
   useTheme,
 } from "@/ui";
+import { useFontScale } from "@/ui/text-scale";
 import { Face, OpensAgent } from "../../shared/Face";
 import { PushedLargeTitle } from "../../shared/PushedLargeTitle";
 import { goBack } from "../../shared/parts";
@@ -115,6 +118,10 @@ function HereRow({
   const editing = peer.state.mode === "editing";
   const name = peer.self ? t("live.shell.presence.you") : look.name;
   const said = whereText(where);
+  // What wraps under the name (where they are, two lines) never floats the face or "Seguir": both sit on the name's
+  // line, centred on its middle.
+  const nameLine = textLineOf("body", useFontScale());
+  const onName = (size: number) => ({ marginTop: nameLine.middle - size / 2 });
   const face = (
     <View style={[styles.ring, agent ? styles.tile : styles.round, { borderColor: editing ? look.tint : c.raised }]}>
       <Face
@@ -137,7 +144,7 @@ function HereRow({
       }
       onAccessibilityAction={() => (followed ? onStop() : onFollow())}
     >
-      {agent ? <OpensAgent agentId={peer.user.id}>{face}</OpensAgent> : face}
+      <View style={onName(FACE)}>{agent ? <OpensAgent agentId={peer.user.id}>{face}</OpensAgent> : face}</View>
       <View style={styles.words}>
         <Text variant="body" numberOfLines={1} style={styles.name}>
           {name}
@@ -147,12 +154,14 @@ function HereRow({
         </Text>
       </View>
       {peer.self ? null : (
-        <Button
-          variant="text"
-          size="sm"
-          label={t(followed ? "live.shell.presence.unfollow" : "live.shell.presence.follow")}
-          onPress={followed ? onStop : onFollow}
-        />
+        <View style={onName(TOOL_H)}>
+          <Button
+            variant="text"
+            size="sm"
+            label={t(followed ? "live.shell.presence.unfollow" : "live.shell.presence.follow")}
+            onPress={followed ? onStop : onFollow}
+          />
+        </View>
       )}
     </View>
   );
@@ -162,7 +171,7 @@ const styles = StyleSheet.create({
   page: { paddingHorizontal: SCREEN_X, paddingTop: 4 },
   row: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 12,
     minHeight: GROUPED_ROW.minHeight + 8,
     paddingHorizontal: GROUPED_ROW.padX,

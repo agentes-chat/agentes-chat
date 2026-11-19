@@ -45,7 +45,7 @@ export const HereFaces = memo(function HereFaces({
       accessibilityRole="button"
       accessibilityLabel={t("mobile.live.here.faces", { count: others, editing })}
       hitSlop={10}
-      style={styles.row}
+      contentStyle={styles.rowIn}
     >
       {shown.map((peer, i) => (
         <StackFace
@@ -57,7 +57,7 @@ export const HereFaces = memo(function HereFaces({
         />
       ))}
       {more > 0 ? (
-        <View style={[styles.more, styles.overlap, { borderColor: ring ?? colors.bg, backgroundColor: colors.sunken }]}>
+        <View style={[styles.more, styles.overlap, { borderColor: ring ?? colors.bg, backgroundColor: colors.plate }]}>
           <Count value={more} size={11} color={colors.muted} />
         </View>
       ) : null}
@@ -155,6 +155,8 @@ const styles = StyleSheet.create({
   cardRound: { borderRadius: (CARD_FACE + RING * 2) / 2, overflow: "hidden" },
   cardTile: { borderRadius: Math.round((CARD_FACE + RING * 2) * 0.3) },
   cardMore: { marginLeft: 4 },
+  // The bar's faces (inside their press: `contentStyle`), and a card's.
+  rowIn: { flexDirection: "row", alignItems: "center" },
   row: { flexDirection: "row", alignItems: "center" },
   face: { borderWidth: RING },
   overlap: { marginLeft: -6 },

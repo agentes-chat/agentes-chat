@@ -58,6 +58,7 @@ import {
 } from "@agenteschat/client";
 import { activityVerb, consultDetails, lineStep, listNames } from "@agenteschat/client/lib/activity";
 import { handoffAsk } from "@agenteschat/client/lib/agent-work";
+import { type FoundKey, looksLikeApiKey, withoutApiKeys } from "@agenteschat/client/lib/api-key-text";
 import { canTalk, managesAgent } from "@agenteschat/client/lib/audience";
 import { runPosition, screenAboveEnd } from "@agenteschat/client/lib/chat";
 import { CHAT_RHYTHM, firstUnreadId, opensAtLastRead, unreadThreadRootId } from "@agenteschat/client/lib/chat-look";
@@ -180,6 +181,8 @@ import {
 import { ComposerFloat, createComposerFloat } from "@/ui/Composer";
 import { router } from "@/ui/navigation";
 import { AgentSetupIntro, useSetupSteps } from "../agents/setup/SetupCard";
+import { handKeyToConnectAi } from "../ai/connect-flow";
+import { openConnectAi } from "../ai/NoAiCard";
 import { usePlanHold } from "../ai/parts";
 import { BrowserCard, BrowserRunCard } from "../browser/BrowserCard";
 import { OpenHandoffProvider } from "../browser/open";
@@ -212,6 +215,7 @@ import { useDmStatusLine, usePresenceOf, usePresenceWord } from "../status/hooks
 import { PersonStatusCard } from "../status/StatusCard";
 import { AgentTasksButton, useDmAgentTasks } from "../task-manager/AgentTasksButton";
 import { agentTasksHref } from "../task-manager/logic";
+import { vaultHref } from "../vault/logic";
 import { retryVoice, type VoiceRefusal } from "../voice/outbox";
 import { useVoiceComposer } from "../voice/useVoiceComposer";
 import type { VoiceTarget } from "../voice/useVoiceTake";
@@ -236,6 +240,8 @@ import { EventLine } from "./EventLine";
 import { FirstDay } from "./FirstDay";
 import { HeaderPill } from "./HeaderPill";
 import { IssueTakenLine } from "./issue-work";
+import { KeyGuardSheet } from "./KeyGuardSheet";
+import { handKeyToVault } from "./key-guard";
 import { browsingRuns, WorkingLine } from "./LiveRows";
 import { useListEnd } from "./list-end";
 import { type LiveTyping, useChatLive, useLiveTyping } from "./live";
@@ -1360,9 +1366,46 @@ function Chat({
     else sendText(t("mobile.chat.summaryMessage"));
   };
 
+  /**
+   * A key in the words (`KeyGuardSheet`, the web's `KeyGuardDialog`): the field already let them go, so nothing is sent
+   * until the person picks, and the words come back to the field unless they send them as typed.
+   */
+  const guardKey = (text: string, found: FoundKey, sendAnyway: () => void) => {
+    let picked = false;
+    const back = (words: string) => {
+      if (words) setCaptionBack({ text: words, at: Date.now(), join: true });
+    };
+    sheet.open(
+      <KeyGuardSheet
+        found={found}
+        managesKeys={can(org, "manage_credentials") && !planHeld}
+        onPick={(choice) => {
+          picked = true;
+          sheet.close(() => {
+            if (choice === "send") return sendAnyway();
+            back(withoutApiKeys(text));
+            if (choice === "vault") {
+              handKeyToVault(found);
+              router.push(vaultHref.create("personal") as never);
+            } else if (choice === "ai") {
+              handKeyToConnectAi(found.key);
+              openConnectAi({ intent: "api_key" });
+            }
+          });
+        }}
+      />,
+      { onClose: () => !picked && back(text) },
+    );
+  };
+
   // Sending always goes to the end. While an agent works, "Parar e mandar" makes it read this one now.
-  const onSend = (raw: string, how: SendHow = "join") => {
+  const onSend = (raw: string, how: SendHow = "join", keyChecked = false) => {
     const text = raw.trim();
+    const found = keyChecked ? null : looksLikeApiKey(text);
+    if (found) {
+      guardKey(text, found, () => sendFromField(text, how, true));
+      return;
+    }
     // Photos or files waiting above the field: they go with the words, which are their caption (or with none).
     if (pending.length > 0) {
       sendWithFiles(text, how);
@@ -1432,15 +1475,23 @@ function Chat({
   }, [toEnd]);
   // A take goes with the words typed beside it and the files waiting above the field, in one message. The files that
   // can't upload keep the take, paused, and the words in the field (the composer puts them back).
-  const withVoice = async (text: string) => {
-    if (pending.length === 0) return { text, artifacts: [] };
-    const artifacts = await uploadPending(pending);
-    if (!artifacts) return null;
-    artifacts.forEach((a, i) => {
-      const file = pending[i];
-      if (file) sentWithVoice.current.set(a.id, file);
-    });
-    setPending([]);
+  const withVoice = async (typed: string) => {
+    // A key typed beside the take: the take goes without the words, which wait on the key guard. Asked only once the
+    // take goes: when the files can't upload, the composer keeps the words, key and all, and nothing was sent.
+    const found = looksLikeApiKey(typed);
+    const text = found ? "" : typed;
+    let artifacts: ArtifactRef[] = [];
+    if (pending.length > 0) {
+      const uploaded = await uploadPending(pending);
+      if (!uploaded) return null;
+      uploaded.forEach((a, i) => {
+        const file = pending[i];
+        if (file) sentWithVoice.current.set(a.id, file);
+      });
+      setPending([]);
+      artifacts = uploaded;
+    }
+    if (found) guardKey(typed, found, () => sendFromField(typed, "join", true));
     return { text, artifacts };
   };
   const onRecording = useCallback(() => sendTyping(threadId, undefined, "voice"), [sendTyping, threadId]);
@@ -1468,8 +1519,9 @@ function Chat({
     toEnd();
     sheet.close();
   };
+  // Over the "+" when it opens from there (a step back to it), on its own from the field's button.
   const openMedia = () =>
-    sheet.open(
+    sheet.push(
       <MediaPickerSheet
         tabs={mediaTabs}
         channelId={channelId}
@@ -1667,17 +1719,24 @@ function Chat({
   });
   const openPlus = () => sheet.open(<PlusActions media={mediaTabs.length > 0} onPick={(p) => void onPlus(p)} />);
   const onPlus = async (pick: PlusPick) => {
-    // What opens next opens once the sheet is gone (`sheet.close` says when): the library, the camera and the files
-    // picker presented over it while it slid out were taken away with it, and the app waited for an answer that never
-    // came; the next sheet (GIFs, a mission, a reminder, a mission's summary) takes its place the same way. Only the
-    // summary sent as a message has nothing to wait for.
-    const after = pick !== "summary" || Boolean(mission);
-    if (after) await new Promise<void>((done) => sheet.close(done));
-    else sheet.close();
+    // A next step of the "+" stacks over it at once (the GIFs, a reminder, a mission's summary): a flick down goes back
+    // to the "+". What the system presents (the camera, the library, the files picker) waits for the sheet to be gone:
+    // presented over it while it slid out, iOS took it away with it, and the app waited for an answer that never came.
     switch (pick) {
       case "media":
         openMedia();
         return;
+      case "remind":
+        openRemind();
+        return;
+      case "summary":
+        // A mission's summary is a sheet; elsewhere the summary is a message, and the conversation shows it.
+        if (!mission) sheet.close();
+        summarize();
+        return;
+    }
+    await new Promise<void>((done) => sheet.close(done));
+    switch (pick) {
       case "camera": {
         const perm = await ImagePicker.requestCameraPermissionsAsync();
         if (!perm.granted) {
@@ -1726,15 +1785,6 @@ function Chat({
           );
         return;
       }
-      case "mission":
-        openNewMission();
-        return;
-      case "summary":
-        summarize();
-        return;
-      case "remind":
-        openRemind();
-        return;
     }
   };
 
@@ -2606,6 +2656,13 @@ function Chat({
   const sendFromField = useLatest(onSend);
   const voiceFromField = useLatest(withVoice);
   const plusFromField = useLatest(openPlus);
+  // GIFs and stickers also beside the mic while the field is empty, where they can be sent: one tap from the field.
+  const mediaFromField = useLatest(openMedia);
+  const canSendMedia = mediaTabs.length > 0;
+  const composerMedia = useMemo(
+    () => (canSendMedia ? { label: t("media.picker.send"), onPress: mediaFromField } : null),
+    [canSendMedia, t, mediaFromField],
+  );
   const longFromField = useLatest(longAsFile);
   const removeFromStrip = useLatest(removePending);
   const cancelQuote = useCallback(() => setQuote(null), []);
@@ -3469,8 +3526,9 @@ function Chat({
                       placeholder={placeholder}
                       onSend={sendFromField}
                       working={working}
-                      // GIFs and stickers live in the "+", with the photos: the field only sends.
+                      // GIFs and stickers in the "+", with the photos, and beside the mic in the empty field.
                       onPlus={plusFromField}
+                      media={composerMedia}
                       draftKey={threadId ? `${channelId}:${threadId}` : channelId}
                       inputNativeID={COMPOSER_INPUT_ID}
                       float={composerFloat}

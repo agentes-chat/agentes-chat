@@ -91,7 +91,8 @@ export function LiveBar({
         ]
       : []),
   ];
-  return <PushedHeader title={<LiveTitle live={live} fileId={fileId} title={title} />} actions={bar} />;
+  // The file's name in the bar's middle, as on every screen, whatever stands on the right.
+  return <PushedHeader centered title={<LiveTitle live={live} fileId={fileId} title={title} />} actions={bar} />;
 }
 
 /** How long a dropped connection waits before the bar says so (a quick reconnect says nothing). */

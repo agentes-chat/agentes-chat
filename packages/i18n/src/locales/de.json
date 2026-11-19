@@ -3678,11 +3678,13 @@
   },
   "keyGuard": {
     "title": "Das sieht nach einem API-Schlüssel aus",
-    "text": "Alles im Chat ist für Personen und Agenten sichtbar. Speichere ihn lieber als Workspace-Schlüssel: Er wird verschlüsselt und niemand sieht ihn.",
-    "textMember": "Alles im Chat ist für Personen und Agenten sichtbar. Ein Schlüssel ist wie ein Passwort.",
-    "save": "Als Schlüssel speichern",
+    "titleSecret": "Das sieht nach einem Schlüssel oder Passwort aus",
+    "vaultText": "Alles im Chat sehen Menschen und Agenten. Bewahre ihn im Vault auf: Er ist verschlüsselt, und die Agenten, die du erlaubst, verwenden ihn, ohne ihn zu sehen.",
+    "vault": "Im Vault speichern",
+    "useAsAi": "Als KI-Schlüssel verwenden",
     "remove": "Entfernen",
-    "send": "Trotzdem senden"
+    "send": "Trotzdem senden",
+    "saved": "Agenten mit Zugriff verwenden ihn unter dem Namen {{name}}."
   },
   "costlyCard": {
     "go": "Mach es",
@@ -20852,6 +20854,38 @@
       "alwaysOn": "Ab jetzt gehen solche Berichte ohne Nachfrage raus.",
       "askFirst": "Vor dem Senden fragen"
     }
+  },
+  "problemReport": {
+    "button": "Bericht senden",
+    "title": "Bericht an agentes.chat senden",
+    "lead": "Das agentes.chat-Team bekommt: Versionen, welche Einstellungen gesetzt sind (nie ihre Werte), was fehlgeschlagen ist, und die letzten Zeilen der Logs. Keine Nachrichten, Seiten, Namen oder Schlüssel.",
+    "noteLabel": "Was ist passiert? (optional)",
+    "notePlaceholder": "Was du gemacht hast, als es stehen blieb",
+    "emailLabel": "E-Mail für eine Antwort (optional)",
+    "emailHelp": "Nur wenn du eine Antwort möchtest.",
+    "showAll": "Alles ansehen, was gesendet wird",
+    "copy": "Bericht kopieren",
+    "copied": "Kopiert",
+    "send": "Senden",
+    "sending": "Wird gesendet…",
+    "cancel": "Abbrechen",
+    "loading": "Details werden gesammelt…",
+    "sentTitle": "Bericht {{id}} gesendet",
+    "sentText": "Wenn du uns schreibst, nenne diesen Code.",
+    "sentTextReply": "Wir antworten an {{email}}. Nenne diesen Code, wenn du uns schreibst.",
+    "copyCode": "Code kopieren",
+    "done": "Fertig",
+    "noLogComputer": "{{computer}} hat nicht geantwortet, sein Log ist daher nicht dabei.",
+    "oldRunner": "Die agentes.chat-App auf {{computer}} ist zu alt, um ihr Log mitzuschicken. Aktualisiere sie dort, damit es dabei ist.",
+    "noServerLines": "Die Log-Zeilen des Servers sind nur dabei, wenn die Person, der die Installation gehört, den Bericht sendet.",
+    "off": "Senden ist auf diesem Server aus (PROBLEM_REPORT_URL=off). Kopiere den Bericht, um ihn zu teilen.",
+    "errorRate": "Zu viele Berichte in kurzer Zeit. Versuch es in {{minutes}} Min. noch einmal oder kopiere den Bericht.",
+    "errorUnreachable": "agentes.chat hat nicht geantwortet. Versuch es noch einmal oder kopiere den Bericht.",
+    "errorRefused": "agentes.chat hat diesen Bericht nicht angenommen (er stammt vielleicht von einer älteren Version). Kopiere den Bericht stattdessen.",
+    "errorPreview": "Die Details konnten nicht gesammelt werden: {{reason}}",
+    "emailInvalid": "Diese E-Mail sieht nicht richtig aus. Korrigiere sie oder lass das Feld leer.",
+    "settingsTitle": "Funktioniert etwas nicht?",
+    "settingsText": "Sende die technischen Details an das agentes.chat-Team."
   },
   "live": {
     "slides": {

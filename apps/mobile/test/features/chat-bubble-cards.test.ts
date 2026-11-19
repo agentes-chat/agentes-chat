@@ -20,7 +20,8 @@ test("in bubbles, the cards under someone else's words are bubbles of that messa
   expect(src("features/chat/Receipts.tsx")).toContain(
     "? [styles.card, { backgroundColor: part.fill, borderWidth: 0 }, cardCorners, part.edge]",
   );
-  expect(src("features/chat/WorkLine.tsx")).toContain("? [styles.inBody, { borderWidth: 0 }, surface]");
+  // The work it handed is a quiet line under the bubble, its mark where the bubble's words start.
+  expect(src("features/chat/WorkLine.tsx")).toContain("quietInBubble: { paddingLeft: 14 },");
   expect(src("features/shared/bubble-part.ts")).toContain(
     "export const BUBBLE_PART_CORNERS = corners(RADIUS.sm, RADIUS.xl, RADIUS.xl, RADIUS.sm);",
   );

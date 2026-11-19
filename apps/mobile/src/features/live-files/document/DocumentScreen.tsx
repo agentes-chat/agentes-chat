@@ -7,7 +7,7 @@ import {
   useLiveDocVersion,
   useLivePeers,
 } from "@agenteschat/client";
-import { LOCAL } from "@agenteschat/live";
+import { LOCAL, readableOn } from "@agenteschat/live";
 import type { Peer } from "@agenteschat/live/awareness";
 import {
   blockIndex,
@@ -535,7 +535,7 @@ function LiveDocument({
                 onLayout={(e) => {
                   if (block.id) tops.current.set(block.id, e.nativeEvent.layout.y);
                 }}
-                style={[styles.block, lit === block.id && { backgroundColor: c.sunken }]}
+                style={[styles.block, lit === block.id && { backgroundColor: c.plate }]}
               >
                 <BlockFlags peers={block.id ? others.get(block.id) : undefined} />
                 {isEditing && editing && editedElement ? (
@@ -652,7 +652,7 @@ function Runs({ runs }: { runs: readonly DocRun[] }) {
     <>
       {runs.map((run, i) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: runs have no ids of their own; their place is their key
-        <RNText key={i} style={runStyle(run, c.agent, c.sunken)}>
+        <RNText key={i} style={runStyle(run, c.agent, c.plate)}>
           {run.text}
         </RNText>
       ))}
@@ -714,7 +714,7 @@ const BlockView = memo(function BlockView({
       return (
         <ScrollView
           horizontal
-          style={[styles.code, { backgroundColor: c.sunken }]}
+          style={[styles.code, { backgroundColor: c.plate }]}
           contentContainerStyle={styles.codeIn}
         >
           <RNText style={[styles.mono, { color: c.ink }]}>{block.text || " "}</RNText>
@@ -780,7 +780,7 @@ function DocPicture({
       onLoad={(e) => {
         if (e.source.width > 0 && e.source.height > 0) setRatio(e.source.width / e.source.height);
       }}
-      style={[styles.picture, { width: w, aspectRatio: ratio, backgroundColor: c.sunken }]}
+      style={[styles.picture, { width: w, aspectRatio: ratio, backgroundColor: c.plate }]}
     />
   );
 }
@@ -871,13 +871,13 @@ function BlockField({
         look,
         styles.field,
         { color: c.ink },
-        code && [styles.mono, styles.codeIn, { backgroundColor: c.sunken, borderRadius: 8 }],
+        code && [styles.mono, styles.codeIn, { backgroundColor: c.plate, borderRadius: 8 }],
         block.type === "blockquote" && [styles.quote, { borderLeftColor: c.line2 }],
       ]}
     >
       {runs.map((run, i) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: runs have no ids of their own; their place is their key
-        <RNText key={i} style={runStyle(run, c.agent, c.sunken)}>
+        <RNText key={i} style={runStyle(run, c.agent, c.plate)}>
           {run.text}
         </RNText>
       ))}
@@ -915,7 +915,12 @@ function BlockFlags({ peers }: { peers: Peer[] | undefined }) {
             ]}
           >
             {agent ? <Face who={{ type: "agent", id: p.user.id }} size={14} live={false} /> : null}
-            <Text variant="caption" style={[styles.flagName, { color: agent ? c.ink : "#ffffff" }]} numberOfLines={1}>
+            {/* White on a dark tint, ink on a light one (dark mode's pastels), as a pointer's name tag. */}
+            <Text
+              variant="caption"
+              style={[styles.flagName, { color: agent ? c.ink : readableOn(who.tint, ["#ffffff", "#111111"]) }]}
+              numberOfLines={1}
+            >
               {who.name}
             </Text>
           </View>
@@ -975,6 +980,7 @@ function FormatBar({
           accessibilityRole="button"
           accessibilityLabel={askLabel}
           style={[styles.formatButton, { backgroundColor: c.plate }]}
+          contentStyle={styles.formatButtonIn}
         >
           <Face who={{ type: "agent", id: agent }} size={22} live={false} />
         </PressScale>
@@ -1003,6 +1009,7 @@ function FormatButton({
       accessibilityLabel={label}
       accessibilityState={{ selected: on }}
       style={[styles.formatButton, on && { backgroundColor: c.plate }]}
+      contentStyle={styles.formatButtonIn}
     >
       <Icon name={icon} size={20} color={c.ink} />
     </PressScale>
@@ -1047,6 +1054,7 @@ function LinkBar({
         accessibilityRole="button"
         accessibilityLabel={t("mobile.common.cancel")}
         style={styles.formatButton}
+        contentStyle={styles.formatButtonIn}
       >
         <Icon name="x" size={18} color={c.muted} />
       </PressScale>
@@ -1056,6 +1064,7 @@ function LinkBar({
         accessibilityRole="button"
         accessibilityLabel={t("mobile.live.doc.linkApply")}
         style={styles.formatButton}
+        contentStyle={styles.formatButtonIn}
       >
         <Icon name="check" size={20} color={c.ink} />
       </PressScale>
@@ -1075,9 +1084,9 @@ function DocumentBones() {
       accessibilityLabel={t("mobile.common.loading")}
       accessibilityState={{ busy: true }}
     >
-      <View style={[styles.boneTitle, { backgroundColor: c.sunken }]} />
+      <View style={[styles.boneTitle, { backgroundColor: c.plate }]} />
       {[0.92, 0.84, 0.88, 0.6].map((w) => (
-        <View key={w} style={[styles.boneLine, { width: `${w * 100}%`, backgroundColor: c.sunken }]} />
+        <View key={w} style={[styles.boneLine, { width: `${w * 100}%`, backgroundColor: c.plate }]} />
       ))}
     </Animated.View>
   );
@@ -1090,7 +1099,8 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   page: { paddingHorizontal: SCREEN_X + 4, paddingTop: 12, paddingBottom: 32 },
   title: { marginBottom: 6 },
-  by: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 16 },
+  // The face on the first line of the words beside it (an imported file's name can wrap them).
+  by: { flexDirection: "row", alignItems: "flex-start", gap: 6, marginBottom: 16 },
   byWords: { flexShrink: 1 },
   bold: { fontWeight: "600" },
   block: { marginVertical: 4, borderRadius: 6 },
@@ -1132,13 +1142,8 @@ const styles = StyleSheet.create({
   },
   linkBar: { gap: 4, justifyContent: "flex-start" },
   linkField: { flex: 1, paddingVertical: 8 },
-  formatButton: {
-    width: 44,
-    height: 44,
-    borderRadius: Math.round(44 * 0.3),
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  formatButton: { width: 44, height: 44, borderRadius: Math.round(44 * 0.3) },
+  formatButtonIn: { alignItems: "center", justifyContent: "center" },
   boneTitle: { height: 28, width: "70%", borderRadius: 6, marginBottom: 20 },
   boneLine: { height: 12, borderRadius: 4, marginBottom: 12 },
 });

@@ -20,6 +20,7 @@ mod main_window;
 mod menus;
 mod notch;
 mod prepare;
+mod problem_report;
 mod runners;
 mod servers;
 mod tailscale;
@@ -684,6 +685,9 @@ pub fn run() {
             local_server::keep_running,
             local_server::open_system_settings,
             local_server::local_server_diagnostics,
+            local_server::problem_report_parts,
+            problem_report::problem_report_on,
+            problem_report::problem_report_send,
             local_server::local_server_sync,
             tailscale::tailscale_status,
             tailscale::tailscale_open,

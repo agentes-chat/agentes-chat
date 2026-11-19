@@ -274,6 +274,7 @@ function Show({
             accessibilityState={{ selected: notes }}
             accessibilityLabel={t("live.slides.notes.short")}
             style={[styles.notesButton, notes && styles.notesOn]}
+            contentStyle={styles.notesButtonIn}
           >
             <Text variant="subhead" style={[styles.bold, { color: WHITE }]}>
               {t("live.slides.notes.short")}
@@ -311,6 +312,7 @@ function Round({
       accessibilityLabel={label}
       accessibilityState={{ disabled }}
       style={[styles.round, disabled && styles.off]}
+      contentStyle={styles.roundIn}
     >
       <Icon name={icon} size={20} color={WHITE} />
     </PressScale>
@@ -342,22 +344,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: SCRIM,
   },
-  notesButton: {
-    height: ROUND,
-    paddingHorizontal: 16,
-    borderRadius: ROUND / 2,
-    justifyContent: "center",
-    backgroundColor: SCRIM,
-  },
+  notesButton: { height: ROUND, paddingHorizontal: 16, borderRadius: ROUND / 2, backgroundColor: SCRIM },
+  notesButtonIn: { justifyContent: "center" },
   notesOn: { backgroundColor: "rgba(255, 255, 255, 0.24)" },
   bold: { fontWeight: "600" },
-  round: {
-    width: ROUND,
-    height: ROUND,
-    borderRadius: ROUND / 2,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: SCRIM,
-  },
+  round: { width: ROUND, height: ROUND, borderRadius: ROUND / 2, backgroundColor: SCRIM },
+  roundIn: { alignItems: "center", justifyContent: "center" },
   off: { opacity: 0.35 },
 });

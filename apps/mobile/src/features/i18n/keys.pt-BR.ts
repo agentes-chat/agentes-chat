@@ -585,11 +585,9 @@ export const featureKeysPtBR = {
     camera: "Câmera",
     photos: "Fotos",
     file: "Arquivo",
-    /** The fourth tile: the GIFs and stickers, out of the field so it only sends. */
+    /** The fourth tile: the GIFs and stickers (also beside the mic in the empty field). */
     media: "GIFs",
     noCamera: "Sem acesso à câmera. Libere nos Ajustes do celular.",
-    mission: "Começar uma missão",
-    missionHint: "Um trabalho longo, com plano, do começo ao fim",
     summary: "Resumir a conversa",
     summaryHint: "O que aconteceu enquanto você estava fora",
     remind: "Lembrar depois",

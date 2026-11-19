@@ -21,7 +21,7 @@ export function PageBones({ cover = false }: { cover?: boolean }) {
       importantForAccessibility="no-hide-descendants"
     >
       {BONES.map((w) => (
-        <View key={w} style={[styles.bone, { width: `${w}%`, backgroundColor: c.sunken }]} />
+        <View key={w} style={[styles.bone, { width: `${w}%`, backgroundColor: c.plate }]} />
       ))}
     </Animated.View>
   );

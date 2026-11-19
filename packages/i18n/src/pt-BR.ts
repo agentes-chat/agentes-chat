@@ -3872,11 +3872,15 @@ export const ptBR = {
   /** An API key pasted in a message, before it goes out. */
   keyGuard: {
     title: "Isso parece uma chave de API",
-    text: "Tudo o que vai no chat fica visível para as pessoas e os agentes. Salve como chave do workspace: ela fica cifrada e ninguém vê.",
-    textMember: "Tudo o que vai no chat fica visível para as pessoas e os agentes. Uma chave é como uma senha.",
-    save: "Salvar como chave",
+    titleSecret: "Isso parece uma chave ou senha",
+    vaultText:
+      "Tudo o que vai no chat fica visível para as pessoas e os agentes. Guarde no Cofre: ela fica cifrada, e os agentes que você autorizar usam sem ver.",
+    vault: "Salvar no Cofre",
+    useAsAi: "Usar como chave de IA",
     remove: "Tirar do texto",
     send: "Enviar mesmo assim",
+    /** After "Save in the Vault", under the toast's "Saved in the Vault". */
+    saved: "Os agentes com acesso usam pelo nome {{name}}.",
   },
   /** An agent's card whose button opens the app's own dialog, filled in (`meta.actionCard`). */
   /** A stretch's pause card once someone pressed Continuar (ADR 0089). */
@@ -21445,6 +21449,39 @@ export const ptBR = {
       alwaysOn: "Daqui em diante, relatos assim vão sem perguntar.",
       askFirst: "Perguntar antes de enviar",
     },
+  },
+  /** "Send a report" on a self-hosted server: what the agentes.chat team gets, shown in full before it goes. */
+  problemReport: {
+    button: "Enviar um relatório",
+    title: "Enviar um relatório para o agentes.chat",
+    lead: "A equipe do agentes.chat recebe: versões, quais configurações estão definidas (nunca os valores), o que falhou e as últimas linhas dos logs. Sem mensagens, páginas, nomes ou chaves.",
+    noteLabel: "O que aconteceu? (opcional)",
+    notePlaceholder: "O que você estava fazendo quando parou",
+    emailLabel: "E-mail para resposta (opcional)",
+    emailHelp: "Só se você quiser uma resposta.",
+    showAll: "Ver tudo o que é enviado",
+    copy: "Copiar relatório",
+    copied: "Copiado",
+    send: "Enviar",
+    sending: "Enviando…",
+    cancel: "Cancelar",
+    loading: "Reunindo os detalhes…",
+    sentTitle: "Relatório {{id}} enviado",
+    sentText: "Se nos escrever, cite este código.",
+    sentTextReply: "Vamos responder em {{email}}. Cite este código se nos escrever.",
+    copyCode: "Copiar código",
+    done: "Pronto",
+    noLogComputer: "O {{computer}} não respondeu, então o log dele não vai junto.",
+    oldRunner: "O app agentes.chat no {{computer}} é antigo demais para incluir o log. Atualize-o lá para incluir.",
+    noServerLines: "As linhas do log do servidor só vão junto quando o dono da instalação envia o relatório.",
+    off: "O envio está desligado neste servidor (PROBLEM_REPORT_URL=off). Copie o relatório para compartilhar.",
+    errorRate: "Relatórios demais em pouco tempo. Tente de novo em {{minutes}} min ou copie o relatório.",
+    errorUnreachable: "O agentes.chat não respondeu. Tente de novo ou copie o relatório.",
+    errorRefused: "O agentes.chat não aceitou este relatório (pode ser de uma versão antiga). Copie o relatório.",
+    errorPreview: "Não deu para reunir os detalhes: {{reason}}",
+    emailInvalid: "Esse e-mail não parece certo. Corrija ou deixe vazio.",
+    settingsTitle: "Algo não está funcionando?",
+    settingsText: "Envie os detalhes técnicos para a equipe do agentes.chat.",
   },
   live: {
     /** The presentation editor (ADR 0196 §2): its rail, stage, toolbar, notes and presenting. */

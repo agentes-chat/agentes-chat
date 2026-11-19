@@ -41,7 +41,6 @@ test("every card in a message takes the message card's corners, last over its ow
   const look = src("features/chat/look.ts");
   expect(look).toContain("return part ? BUBBLE_PART_CORNERS : inBody ? MESSAGE_CARD_CORNERS : null;");
   const cards = [
-    "features/chat/WorkLine.tsx",
     "features/chat/Receipts.tsx",
     "features/chat/asks.tsx",
     "features/chat/ToolCalls.tsx",
@@ -67,6 +66,8 @@ test("every card in a message takes the message card's corners, last over its ow
     // Never the bubble's corners by hand: the hook says which.
     expect([file, text.includes("BUBBLE_PART_CORNERS")]).toEqual([file, false]);
   }
-  // The work line under a reply (the card next to the bubble that showed the mismatch).
-  expect(src("features/chat/WorkLine.tsx")).toMatch(/: surface,\s*\/\/[^\n]*\n\s*cardCorners,\s*cardTop,/);
+  // The work line under a reply is no card: a quiet line under the bubble, as the conversation's working line.
+  expect(src("features/chat/WorkLine.tsx")).toContain(
+    "<View style={[styles.quiet, part ? styles.quietInBubble : null, cardTop]}",
+  );
 });

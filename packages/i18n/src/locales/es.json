@@ -3817,11 +3817,13 @@
   },
   "keyGuard": {
     "title": "Esto parece una clave de API",
-    "text": "Todo lo que está en el chat lo ven personas y agentes. Mejor guárdala como clave del espacio de trabajo: se cifra y nadie la ve.",
-    "textMember": "Todo lo que está en el chat lo ven personas y agentes. Una clave es como una contraseña.",
-    "save": "Guardar como clave",
+    "titleSecret": "Esto parece una clave o contraseña",
+    "vaultText": "Todo lo que va al chat lo ven las personas y los agentes. Guárdala en el Vault: queda cifrada y los agentes que autorices la usan sin verla.",
+    "vault": "Guardar en el Vault",
+    "useAsAi": "Usar como clave de IA",
     "remove": "Quitar la clave",
-    "send": "Enviar de todos modos"
+    "send": "Enviar de todos modos",
+    "saved": "Los agentes con acceso la usan con el nombre {{name}}."
   },
   "costlyCard": {
     "go": "Adelante",
@@ -21439,6 +21441,38 @@
       "alwaysOn": "De ahora en adelante, informes como este salen sin preguntar.",
       "askFirst": "Preguntar antes de enviar"
     }
+  },
+  "problemReport": {
+    "button": "Enviar un informe",
+    "title": "Enviar un informe a agentes.chat",
+    "lead": "El equipo de agentes.chat recibe: versiones, qué ajustes están definidos (nunca sus valores), qué falló y las últimas líneas de los registros. Sin mensajes, páginas, nombres ni claves.",
+    "noteLabel": "¿Qué pasó? (opcional)",
+    "notePlaceholder": "Qué estabas haciendo cuando se detuvo",
+    "emailLabel": "Correo para la respuesta (opcional)",
+    "emailHelp": "Solo si quieres una respuesta.",
+    "showAll": "Ver todo lo que se envía",
+    "copy": "Copiar informe",
+    "copied": "Copiado",
+    "send": "Enviar",
+    "sending": "Enviando…",
+    "cancel": "Cancelar",
+    "loading": "Reuniendo los detalles…",
+    "sentTitle": "Informe {{id}} enviado",
+    "sentText": "Si nos escribes, menciona este código.",
+    "sentTextReply": "Te responderemos en {{email}}. Menciona este código si nos escribes.",
+    "copyCode": "Copiar código",
+    "done": "Listo",
+    "noLogComputer": "{{computer}} no respondió, así que su registro no se incluye.",
+    "oldRunner": "La app agentes.chat en {{computer}} es demasiado antigua para incluir su registro. Actualízala allí para incluirlo.",
+    "noServerLines": "Las líneas del registro del servidor solo se incluyen cuando quien es dueño de la instalación envía el informe.",
+    "off": "El envío está desactivado en este servidor (PROBLEM_REPORT_URL=off). Copia el informe para compartirlo.",
+    "errorRate": "Demasiados informes en poco tiempo. Inténtalo de nuevo en {{minutes}} min o copia el informe.",
+    "errorUnreachable": "agentes.chat no respondió. Inténtalo de nuevo o copia el informe.",
+    "errorRefused": "agentes.chat no aceptó este informe (puede ser de una versión anterior). Copia el informe.",
+    "errorPreview": "No se pudieron reunir los detalles: {{reason}}",
+    "emailInvalid": "Ese correo no parece correcto. Corrígelo o déjalo vacío.",
+    "settingsTitle": "¿Algo no funciona?",
+    "settingsText": "Envía los detalles técnicos al equipo de agentes.chat."
   },
   "live": {
     "slides": {

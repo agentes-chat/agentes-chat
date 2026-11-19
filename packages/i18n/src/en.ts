@@ -3993,11 +3993,15 @@ export const en = {
   },
   keyGuard: {
     title: "This looks like an API key",
-    text: "Everything in the chat is visible to people and agents. Save it as a workspace key instead: it's encrypted and nobody sees it.",
-    textMember: "Everything in the chat is visible to people and agents. A key is like a password.",
-    save: "Save as a key",
+    titleSecret: "This looks like a key or password",
+    vaultText:
+      "Everything in the chat is visible to people and agents. Keep it in the Vault: it's encrypted, and the agents you allow use it without seeing it.",
+    vault: "Save in the Vault",
+    useAsAi: "Use as AI key",
     remove: "Remove it",
     send: "Send anyway",
+    /** After "Save in the Vault", under the toast's "Saved in the Vault". */
+    saved: "Agents with access use it by the name {{name}}.",
   },
   /** An agent's proposal of costly work nobody asked for directly (ADR 0131): the card's buttons and who decided. */
   costlyCard: {
@@ -21546,6 +21550,39 @@ export const en = {
       alwaysOn: "From now on, reports like this go without asking.",
       askFirst: "Ask before sending",
     },
+  },
+  /** "Send a report" on a self-hosted server: what the agentes.chat team gets, shown in full before it goes. */
+  problemReport: {
+    button: "Send a report",
+    title: "Send a report to agentes.chat",
+    lead: "The agentes.chat team gets: versions, which settings are set (never their values), what failed, and the last lines of the logs. No messages, pages, names or keys.",
+    noteLabel: "What happened? (optional)",
+    notePlaceholder: "What you were doing when it stopped",
+    emailLabel: "Email for a reply (optional)",
+    emailHelp: "Only if you want an answer.",
+    showAll: "See everything that's sent",
+    copy: "Copy report",
+    copied: "Copied",
+    send: "Send",
+    sending: "Sending…",
+    cancel: "Cancel",
+    loading: "Gathering the details…",
+    sentTitle: "Report {{id}} sent",
+    sentText: "If you write to us, mention this code.",
+    sentTextReply: "We'll answer at {{email}}. Mention this code if you write to us.",
+    copyCode: "Copy code",
+    done: "Done",
+    noLogComputer: "{{computer}} didn't answer, so its log isn't included.",
+    oldRunner: "The agentes.chat app on {{computer}} is too old to include its log. Update it there to include it.",
+    noServerLines: "The server's log lines are included only when the installation's owner sends a report.",
+    off: "Sending is off on this server (PROBLEM_REPORT_URL=off). Copy the report to share it.",
+    errorRate: "Too many reports in a short time. Try again in {{minutes}} min, or copy the report.",
+    errorUnreachable: "agentes.chat didn't answer. Try again, or copy the report.",
+    errorRefused: "agentes.chat didn't accept this report (it may be from an older version). Copy the report instead.",
+    errorPreview: "Couldn't gather the details: {{reason}}",
+    emailInvalid: "That email doesn't look right. Fix it or leave it empty.",
+    settingsTitle: "Something not working?",
+    settingsText: "Send the technical details to the agentes.chat team.",
   },
   /** Live files: spreadsheets, presentations and canvases people and agents edit together (ADR 0196). */
   live: {

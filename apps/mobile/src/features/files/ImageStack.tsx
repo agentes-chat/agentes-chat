@@ -20,7 +20,7 @@ import { DECK_DRAG, DECK_RISE, deckCard, deckIndex, deckTarget, wrapPlace } from
 import type { FileRef } from "./logic";
 import type { MessageFile } from "./MessageFiles";
 import { openFile } from "./open";
-import { useRemoteFile } from "./source";
+import { pictureDrawn, pictureFade, useRemoteFile } from "./source";
 import { listenViewerPlace } from "./viewer-place";
 
 export interface StackImage {
@@ -184,7 +184,7 @@ export function ImageStack({
 }
 
 function StackCard({
-  item: { file, detail },
+  item: { file },
   index,
   count,
   size,
@@ -202,7 +202,9 @@ function StackCard({
   const orgId = useOrgId();
   const c = useColors();
   const { shadows } = useTheme();
-  const version = detail?.shownVersion ?? file.version;
+  // The message's own version, from the first frame (see `MessageFiles`' `InlineImage`).
+  const version = file.version;
+  const key = `${file.id}@${version ?? "latest"}`;
   const link = useRemoteFile(orgId, near ? file.id : null, version);
   const [failed, setFailed] = useState(false);
   const placed = useAnimatedStyle(() => {
@@ -225,10 +227,11 @@ function StackCard({
       <View style={[styles.clip, cardCorners]}>
         {link.data && !failed ? (
           <Image
-            source={{ uri: link.data.uri, headers: link.data.headers, cacheKey: `${file.id}@${version ?? "latest"}` }}
-            recyclingKey={`${file.id}@${version ?? "latest"}`}
+            source={{ uri: link.data.uri, headers: link.data.headers, cacheKey: key }}
+            recyclingKey={key}
             contentFit="cover"
-            transition={160}
+            transition={pictureFade(key)}
+            onLoad={() => pictureDrawn(key)}
             style={StyleSheet.absoluteFill}
             onError={() => setFailed(true)}
             accessible={false}

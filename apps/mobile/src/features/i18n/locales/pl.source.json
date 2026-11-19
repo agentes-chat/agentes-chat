@@ -1310,12 +1310,6 @@
   "plus.noCamera": {
     "value": "No camera access. Allow it in the phone's Settings."
   },
-  "plus.mission": {
-    "value": "Start a mission"
-  },
-  "plus.missionHint": {
-    "value": "Long work, with a plan, from start to finish"
-  },
   "plus.summary": {
     "value": "Sum up the chat"
   },
