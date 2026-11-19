@@ -65,7 +65,11 @@ pub async fn problem_report_send(webview: tauri::Webview, json: String) -> Resul
         let agent = ureq::AgentBuilder::new().timeout(TIMEOUT).redirects(0).build();
         match agent.post(&url).set("Content-Type", "application/json").send_string(&json) {
             Ok(res) => {
-                let id = res.into_json::<serde_json::Value>().ok().and_then(|v| v["id"].as_str().map(str::to_string));
+                let id = res
+                    .into_string()
+                    .ok()
+                    .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
+                    .and_then(|v| v["id"].as_str().map(str::to_string));
                 match id {
                     Some(id) => Sent { id: Some(id), ..Sent::default() },
                     None => failed("refused"),

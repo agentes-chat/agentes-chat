@@ -134,7 +134,12 @@ export function problemReportRoutes(deps: AppDeps) {
         },
       );
       return c.json(
-        { report, text: problemReportText(report), send: config.PROBLEM_REPORT_URL === "off" ? "off" : "on", missing } as const,
+        {
+          report,
+          text: problemReportText(report),
+          send: config.PROBLEM_REPORT_URL === "off" ? "off" : "on",
+          missing,
+        } as const,
         200,
       );
     },
