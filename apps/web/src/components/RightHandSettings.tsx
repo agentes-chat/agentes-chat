@@ -504,8 +504,8 @@ function RightHandForm({ agent }: { agent: Agent }) {
       id: a.id,
       title: accountTitle(t, a),
       unnamed: unnamedAccount(a),
-      // The accounts listed here are on the right hand's computer.
-      rename: renameOf(t, a, view?.computer?.machineId, renameAccount),
+      // The accounts listed here are on any computer (the right hand is on none): each renamed on its own.
+      rename: renameOf(t, a, aiAccounts?.accounts.find((x) => x.id === a.id)?.machineId, renameAccount),
       about: accountAbout(t, c, agent.name),
       whose,
       group: owner ? { key: `owner:${a.ownerId}`, label: whose } : mineGroup,
