@@ -27,6 +27,7 @@ import { audienceSql } from "./audience";
 import { TYPING_GRACE_MS, typesInApp, typingLogFor } from "./burst";
 import { caches } from "./cache";
 import { summarizeGrants } from "./capabilities";
+import { isConfidential } from "./confidential";
 import { quotedLine } from "./context";
 import { addAgentReaction, isValidReaction, normalizeReaction } from "./context/feedback";
 import { createAgentRuns, requesterOf } from "./dispatch";
@@ -777,6 +778,7 @@ export async function routeMessage(
   deps: RouterDeps,
   input: { orgId: string; messageId: string },
 ): Promise<RouteResult> {
+  const started = performance.now();
   const { db } = deps;
   // A workspace on hold, suspended or being deleted asks no strategy (Jev bills the server): nobody answers there now.
   const refusal = await standingRefusal(db, input.orgId);
@@ -908,14 +910,19 @@ export async function routeMessage(
     }
     if (await continuedSoon(db, message, quietMs)) return { runs: [], skipped: "continued" };
   }
-  // What each one can reach, by name ("Sentry"): a question about an app goes to who has it.
+  // What each one can reach, by name ("Sentry"): a question about an app goes to who has it. A person's own
+  // connection is never named: the router's reason is read by the whole conversation.
   const [granted, connections] = await Promise.all([
     db
       .select({ agentId: agentScopes.agentId, scope: agentScopes.scope, connectionLabel: connectorConnections.label })
       .from(agentScopes)
       .leftJoin(
         connectorConnections,
-        and(eq(connectorConnections.id, agentScopes.connectionId), isNull(connectorConnections.revokedAt)),
+        and(
+          eq(connectorConnections.id, agentScopes.connectionId),
+          isNull(connectorConnections.revokedAt),
+          isNull(connectorConnections.ownerUserId),
+        ),
       )
       .where(
         and(
@@ -929,7 +936,13 @@ export async function routeMessage(
     db
       .select({ label: connectorConnections.label })
       .from(connectorConnections)
-      .where(and(eq(connectorConnections.orgId, message.orgId), isNull(connectorConnections.revokedAt))),
+      .where(
+        and(
+          eq(connectorConnections.orgId, message.orgId),
+          isNull(connectorConnections.revokedAt),
+          isNull(connectorConnections.ownerUserId),
+        ),
+      ),
   ]);
   const orgApps = connections.map((c) => c.label);
   for (const c of candidates) {
@@ -963,7 +976,9 @@ export async function routeMessage(
           and r.trigger_message_id = ${messages.id} and ${inArray(sql`r.status`, [...ACTIVE_RUN_STATUSES])})`,
         threadId: messages.threadId,
         // As text, which every driver reads the same way.
-        replyTo: sql<string | null>`(${messages.meta}->'replyTo')::text`,
+        // The quote a message carries is a copy of the quoted words: none out of a confidential thread (ADR 0190).
+        replyTo: sql<string | null>`case when coalesce(${messages.meta}->>'confidential', '') = 'true' then null
+          else (${messages.meta}->'replyTo')::text end`,
         createdAt: messages.createdAt,
       })
       .from(messages)
@@ -1206,7 +1221,10 @@ export async function routeMessage(
   // What it decides on, one line per message, and everyone those name. Of the `ROUTER_MESSAGE_CHARS` a step
   // reads, the message takes what it needs; the lines before it, cut like the slice's, fill the rest, newest
   // first, a line break each.
-  const ownLine = { body: `${quotedLine(message.meta)}${message.body}`, names: namesOf(message).map((n) => n.label) };
+  const ownLine = {
+    body: `${isConfidential(message.meta) ? "" : quotedLine(message.meta)}${message.body}`,
+    names: namesOf(message).map((n) => n.label),
+  };
   const runLines = run.map(lineOf);
   const saidNames = [...new Set([...runLines, ownLine].flatMap((l) => l.names ?? []))];
   const said = [...sliced(null, runLines, ROUTER_MESSAGE_CHARS - ownLine.body.length - runLines.length), ownLine];
@@ -1618,7 +1636,10 @@ export async function routeMessage(
       .onConflictDoNothing()
       .returning({ id: routingDecisions.id });
     if (!decision) return null; // another worker routed it first
-    return createAgentRuns(tx, message, chosen, "router", { joinChannelRun: message.authorType === "person" });
+    return createAgentRuns(tx, message, chosen, "router", {
+      joinChannelRun: message.authorType === "person",
+      routerMs: performance.now() - started,
+    });
   });
   if (!runs) return { runs: [], skipped: "already_routed" };
   const reacted = chosen.length === 0 ? await reactToSocial(decided, heldBack ? (only ?? null) : null) : undefined;

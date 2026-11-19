@@ -8,7 +8,7 @@ export const legalNl: Partial<Record<LegalKind, LegalDocument>> = {
       "De overeenkomst voor het gebruik van agentes.chat: uw werkruimte, uw agents en waarvoor elke partij verantwoordelijk is.",
     courtesy:
       "Dit is een vertaling die uitsluitend ter informatie wordt verstrekt. Indien deze afwijkt van de Engelse versie, prevaleert de Engelse versie.",
-    updated: "2026-11-16",
+    updated: "2026-11-18",
     sections: [
       {
         id: "agreement",
@@ -99,10 +99,11 @@ export const legalNl: Partial<Record<LegalKind, LegalDocument>> = {
           "Elke werkruimte betaalt voor haar eigen agentes.chat-abonnement. De volgende regels gelden voor elk abonnement:",
           {
             list: [
+              "**Verkoper.** Elke aankoop wordt gedaan bij, en gefactureerd door, AGENTESCHAT, LLC, een Amerikaans bedrijf opgericht in Delaware.",
               "**Prijzen.** De abonnementen en hun prijzen staan op onze prijzenpagina. Prijzen zijn in Amerikaanse dollars, en belastingen worden toegevoegd waar deze van toepassing zijn. Uw bank of betaaldienstaanbieder kan eigen kosten in rekening brengen voor aankopen in het buitenland, zoals de IOF in Brazilië.",
               "**Verlenging.** Een abonnement wordt automatisch elke maand of elk jaar verlengd, afhankelijk van de gekozen periode, totdat het wordt opgezegd. Wij sturen een herinnering voordat een jaarabonnement wordt verlengd.",
               "**Opzegging.** U kunt op elk moment opzeggen, en de opzegging gaat in aan het einde van de reeds betaalde periode. Daarna stoppen de agents van de werkruimte, wordt haar computer 7 dagen later gewist, en blijven haar gesprekken en bestanden 90 dagen beschikbaar om te lezen en te downloaden, waarna zij worden verwijderd.",
-              "**Geen terugbetalingen.** Betalingen zijn definitief en worden niet, geheel noch gedeeltelijk, terugbetaald, ook niet voor het resterende deel van een periode na een opzegging, behalve waar de wet anders voorschrijft.",
+              "**Geen terugbetalingen.** Elk abonnement brengt vanaf de aankoop bedrijfskosten met zich mee, zoals het gebruik van AI-modellen, servers en de computer van de werkruimte. Daarom zijn aankopen definitief en worden ze niet, geheel noch gedeeltelijk, terugbetaald, ook niet voor het resterende deel van een periode na een opzegging.",
               "**Mislukte betalingen.** Indien een betaling mislukt, proberen wij het in de daaropvolgende dagen opnieuw. Mislukt deze dan nog steeds, dan wordt de werkruimte gepauzeerd: haar agents stoppen, en mensen kunnen er nog steeds in lezen en schrijven. Haar computer wordt 7 dagen bewaard en daarna vrijgegeven en gewist. Na betaling wordt de werkruimte hersteld, op een nieuwe computer indien de oude is vrijgegeven.",
               "**Prijswijzigingen.** Wij kunnen de prijzen voor nieuwe klanten op elk moment wijzigen. De prijs van een abonnement dat u al heeft, wijzigt uitsluitend als gevolg van nieuwe belastingen, met ingang van de eerstvolgende verlenging, met een kennisgeving van ten minste 30 dagen.",
               "**Redelijk gebruik.** Sommige functies draaien op AI-diensten die wij zonder extra kosten leveren, zoals het kiezen welke agent antwoordt, het beoordelen van herinneringen en handelingen, en het vinden van waar op een scherm moet worden geklikt. Wij kunnen deze beperken voor een werkruimte waarvan het gebruik ver boven het normale ligt.",
@@ -150,7 +151,7 @@ export const legalNl: Partial<Record<LegalKind, LegalDocument>> = {
         id: "law",
         heading: "16. Toepasselijk recht",
         blocks: [
-          "Op deze Voorwaarden is het recht van de staat Delaware, VS, van toepassing, met uitsluiting van de conflictregels daarvan, en de partijen onderwerpen zich aan de exclusieve bevoegdheid van de staats- en federale rechtbanken in Delaware. Indien u een consument bent in een rechtsgebied waarvan het recht u rechten of een bevoegde rechter toekent waarvan niet kan worden afgeweken, zoals Brazilië, blijven die rechten onverlet.",
+          "Op deze Voorwaarden, en op elke aankoop die op grond daarvan wordt gedaan, is het recht van de Verenigde Staten en van de staat Delaware van toepassing, met uitsluiting van conflictregels, en de partijen onderwerpen zich aan de exclusieve bevoegdheid van de staats- en federale rechtbanken in Delaware.",
         ],
       },
       {
@@ -174,7 +175,7 @@ export const legalNl: Partial<Record<LegalKind, LegalDocument>> = {
     summary: "Wat wij verzamelen, wat agents waarheen sturen, wie uw werkruimte kan zien en welke rechten u hebt.",
     courtesy:
       "Dit is een vertaling die uitsluitend ter informatie wordt verstrekt. Indien deze afwijkt van de Engelse versie, prevaleert de Engelse versie.",
-    updated: "2026-11-16",
+    updated: "2026-11-18",
     sections: [
       {
         id: "overview",
@@ -321,6 +322,7 @@ export const legalNl: Partial<Record<LegalKind, LegalDocument>> = {
         heading: "14. Cookies en lokale opslag",
         blocks: [
           "De werkruimte gebruikt uitsluitend de cookies en lokale opslag die nodig zijn om u aangemeld te houden, formulieren te beschermen en voorkeuren zoals thema en taal te onthouden. De openbare website agentes.chat onthoudt de taal die u hebt gekozen en gebruikt Himetrica-analyse (artikel 2). Wij gebruiken geen advertentiecookies of cookies voor tracking over websites heen.",
+          "**Verwijzingscookie:** wanneer u een verwijzingslink naar agentes.chat opent, bewaart onze factureringsdienst de verwijzing 60 dagen in één cookie in uw browser, zodat degene die de link stuurde de verwijzing krijgt als u een abonnement neemt. In de Europese Economische Ruimte, het Verenigd Koninkrijk en Zwitserland plaatsen wij die pas nadat u op agentes.chat toestemming hebt gegeven. Om de verwijzing op dit apparaat te vergeten, opent u https://agentes.chat/nl/privacy?forget-referral#cookies.",
         ],
       },
       {

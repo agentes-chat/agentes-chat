@@ -3,7 +3,7 @@ import type { LegalDocument } from "./types";
 export const termsPtBR: LegalDocument = {
   title: "Termos de uso",
   summary: "O acordo para usar o agentes.chat: o seu workspace, os seus agentes e pelo que cada lado responde.",
-  updated: "2026-11-16",
+  updated: "2026-11-18",
   sections: [
     {
       id: "agreement",
@@ -94,10 +94,11 @@ export const termsPtBR: LegalDocument = {
         "Cada workspace paga o próprio plano do agentes.chat. Estas regras valem para todos os planos:",
         {
           list: [
+            "**Vendedora.** Toda compra é feita da AGENTESCHAT, LLC, empresa dos Estados Unidos constituída em Delaware, e cobrada por ela.",
             "**Preços.** Os planos do agentes.chat e os preços deles estão na nossa página de preços. Os preços são em dólares americanos, e os impostos são somados onde se aplicam. O seu banco ou meio de pagamento pode cobrar as próprias tarifas em compras do exterior, como o IOF no Brasil.",
             "**Renovação.** O plano do agentes.chat se renova sozinho a cada mês ou a cada ano, conforme o período escolhido, até ser cancelado. Avisamos antes de um plano anual se renovar.",
             "**Cancelamento.** Você pode cancelar a qualquer momento, e o cancelamento vale no fim do período já pago. Depois disso, os agentes do workspace param, o computador dele é apagado 7 dias depois, e as conversas e os arquivos ficam disponíveis para ler e baixar por 90 dias e depois são apagados.",
-            "**Sem reembolso.** Os pagamentos são definitivos e não são reembolsados, nem no todo nem em parte, inclusive pelo resto de um período depois de um cancelamento, exceto quando a lei exigir.",
+            "**Sem reembolso.** Cada plano gera custos de operação desde o momento da compra, como o uso de modelos de IA, os servidores e o computador do workspace. Por isso, as compras são definitivas e não são reembolsadas, nem no todo nem em parte, inclusive pelo resto de um período depois de um cancelamento.",
             "**Pagamento recusado.** Se um pagamento falhar, tentamos de novo nos dias seguintes. Se continuar falhando, o workspace fica bloqueado: os agentes param, e as pessoas continuam podendo ler e escrever nele. O computador fica guardado por 7 dias e depois é liberado e apagado. Pagar traz o workspace de volta, num computador novo se o antigo já tiver sido liberado.",
             "**Mudança de preço.** Podemos mudar os preços para clientes novos a qualquer momento. O preço de um plano do agentes.chat que você já tem só muda por causa de impostos novos, a partir da próxima renovação, com pelo menos 30 dias de aviso.",
             "**Uso justo.** Alguns recursos rodam em serviços de IA que oferecemos sem custo a mais, como escolher qual agente responde, avaliar memórias e ações, e achar onde clicar numa tela. Podemos limitá-los num workspace cujo uso esteja muito acima do normal.",
@@ -145,7 +146,7 @@ export const termsPtBR: LegalDocument = {
       id: "law",
       heading: "16. Lei aplicável",
       blocks: [
-        "Estes Termos são regidos pelas leis do estado de Delaware, EUA, sem as suas regras de conflito de leis, e as partes se submetem à jurisdição exclusiva dos tribunais estaduais e federais de Delaware. Se você é consumidor num país cuja lei lhe dá direitos ou foro irrenunciáveis, como o Brasil, esses direitos continuam valendo.",
+        "Estes Termos, e toda compra feita com base neles, são regidos pelas leis dos Estados Unidos e do estado de Delaware, sem as suas regras de conflito de leis, e as partes se submetem à jurisdição exclusiva dos tribunais estaduais e federais de Delaware.",
       ],
     },
     {

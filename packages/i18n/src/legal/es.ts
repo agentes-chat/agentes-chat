@@ -6,7 +6,7 @@ export const legalEs: Partial<Record<LegalKind, LegalDocument>> = {
     title: "Términos de uso",
     summary: "El acuerdo para usar agentes.chat: su espacio de trabajo, sus agentes y de qué responde cada parte.",
     courtesy: "Esta es una traducción de cortesía. Si difiere de la versión en inglés, prevalece la versión en inglés.",
-    updated: "2026-11-16",
+    updated: "2026-11-18",
     sections: [
       {
         id: "agreement",
@@ -97,10 +97,11 @@ export const legalEs: Partial<Record<LegalKind, LegalDocument>> = {
           "Cada espacio de trabajo paga su propio plan de agentes.chat. Estas reglas se aplican a todos los planes:",
           {
             list: [
+              "**Vendedor.** Toda compra se realiza a AGENTESCHAT, LLC, una empresa de los Estados Unidos constituida en Delaware, que es quien la factura.",
               "**Precios.** Los planes y sus precios figuran en nuestra página de precios. Los precios se expresan en dólares estadounidenses y se añaden los impuestos cuando corresponda. Su banco o proveedor de pagos puede cobrar sus propias comisiones por compras realizadas en el extranjero, como el IOF en Brasil.",
               "**Renovación.** Un plan se renueva automáticamente cada mes o cada año, según el período elegido, hasta que se cancele. Enviamos un recordatorio antes de que se renueve un plan anual.",
               "**Cancelación.** Puede cancelar en cualquier momento, y la cancelación surte efecto al final del período ya pagado. A partir de entonces, los agentes del espacio de trabajo se detienen, su computadora se borra 7 días después, y sus conversaciones y archivos siguen disponibles para leerlos y descargarlos durante 90 días, tras lo cual se eliminan.",
-              "**Sin reembolsos.** Los pagos son definitivos y no reembolsables, total ni parcialmente, incluso por el resto de un período tras una cancelación, salvo que la ley disponga otra cosa.",
+              "**Sin reembolsos.** Cada plan genera costos operativos desde el momento de la compra, como el uso de modelos de IA, los servidores y la computadora del espacio de trabajo. Por ello, las compras son definitivas y no reembolsables, total ni parcialmente, incluso por el resto de un período tras una cancelación.",
               "**Pagos fallidos.** Si un pago falla, lo intentamos de nuevo durante los días siguientes. Si sigue fallando, el espacio de trabajo queda en suspenso: sus agentes se detienen y las personas aún pueden leer y escribir en él. Su computadora se conserva durante 7 días y después se libera y se borra. Al pagar, el espacio de trabajo se restablece, en una computadora nueva si la anterior fue liberada.",
               "**Cambios de precio.** Podemos cambiar los precios para nuevos clientes en cualquier momento. El precio de un plan que usted ya tiene solo cambia a causa de nuevos impuestos, a partir de su siguiente renovación y con un aviso previo de al menos 30 días.",
               "**Uso razonable.** Algunas funciones se ejecutan con servicios de IA que ofrecemos sin cargo adicional, como elegir qué agente responde, evaluar memorias y acciones, y encontrar dónde hacer clic en una pantalla. Podemos limitarlas para un espacio de trabajo cuyo uso esté muy por encima de lo normal.",
@@ -148,7 +149,7 @@ export const legalEs: Partial<Record<LegalKind, LegalDocument>> = {
         id: "law",
         heading: "16. Ley aplicable",
         blocks: [
-          "Estos Términos se rigen por las leyes del Estado de Delaware, EE. UU., con exclusión de sus normas sobre conflicto de leyes, y las partes se someten a la jurisdicción exclusiva de los tribunales estatales y federales ubicados en Delaware. Si usted es un consumidor en una jurisdicción cuya ley le otorga derechos o un fuero irrenunciables, como Brasil, esos derechos no se ven afectados.",
+          "Estos Términos, y toda compra realizada conforme a ellos, se rigen por las leyes de los Estados Unidos y del Estado de Delaware, con exclusión de las normas sobre conflicto de leyes, y las partes se someten a la jurisdicción exclusiva de los tribunales estatales y federales ubicados en Delaware.",
         ],
       },
       {
@@ -172,7 +173,7 @@ export const legalEs: Partial<Record<LegalKind, LegalDocument>> = {
     summary:
       "Qué recopilamos, qué envían los agentes y adónde, quién puede ver su espacio de trabajo y qué derechos tiene usted.",
     courtesy: "Esta es una traducción de cortesía. Si difiere de la versión en inglés, prevalece la versión en inglés.",
-    updated: "2026-11-16",
+    updated: "2026-11-18",
     sections: [
       {
         id: "overview",
@@ -319,6 +320,7 @@ export const legalEs: Partial<Record<LegalKind, LegalDocument>> = {
         heading: "14. Cookies y almacenamiento local",
         blocks: [
           "El espacio de trabajo utiliza únicamente las cookies y el almacenamiento local necesarios para mantener su sesión iniciada, proteger los formularios y recordar preferencias como el tema y el idioma. El sitio público agentes.chat recuerda el idioma que usted eligió y utiliza la analítica de Himetrica (Sección 2). No utilizamos cookies publicitarias ni de seguimiento entre sitios.",
+          "**Cookie de referido:** cuando usted abre un enlace de referido de agentes.chat, nuestro servicio de facturación guarda el referido en una cookie en su navegador durante 60 días, para que quien envió el enlace reciba el crédito si usted se suscribe. En el Espacio Económico Europeo, el Reino Unido y Suiza, solo la establecemos después de que usted lo acepte en agentes.chat. Para olvidar el referido en este dispositivo, abra https://agentes.chat/es/privacy?forget-referral#cookies.",
         ],
       },
       {

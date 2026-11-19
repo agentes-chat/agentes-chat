@@ -18,10 +18,11 @@
   box-shadow: var(--e2);
 }
 /*
- * noVNC sets its canvas's cursor inline, to the screen's own pointer or to none where the screen draws none: watching,
- * the person's own pointer stays over it, so it never looks like they're in control.
+ * noVNC sets its canvas's cursor inline, to the screen's own pointer or to none: the agents' desktops draw none
+ * (`-nocursor`, ADR 0040 §7.2), so over the screen the person's own pointer stays, watching or in control. Watching,
+ * the agent's cursor is drawn apart (`AgentCursor`).
  */
-.dsk-screen:not(.is-control) canvas {
+.dsk-screen canvas {
   /* biome-ignore lint/complexity/noImportantStyles: only !important outranks the inline style noVNC sets */
   cursor: default !important;
 }

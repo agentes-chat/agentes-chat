@@ -8,7 +8,7 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
       "Perjanjian untuk menggunakan agentes.chat: ruang kerja Anda, agen Anda, dan apa yang menjadi tanggung jawab masing-masing pihak.",
     courtesy:
       "Dokumen ini adalah terjemahan yang disediakan semata-mata untuk kemudahan. Apabila terdapat perbedaan dengan versi bahasa Inggris, versi bahasa Inggris yang berlaku.",
-    updated: "2026-11-16",
+    updated: "2026-11-18",
     sections: [
       {
         id: "agreement",
@@ -99,10 +99,11 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
           "Setiap ruang kerja membayar paket agentes.chat-nya sendiri. Ketentuan berikut berlaku untuk setiap paket:",
           {
             list: [
+              "**Penjual.** Setiap pembelian dilakukan dari, dan ditagih oleh, AGENTESCHAT, LLC, perusahaan Amerika Serikat yang didirikan di Delaware.",
               "**Harga.** Paket dan harganya tercantum di halaman harga kami. Harga dinyatakan dalam dolar AS, dan pajak ditambahkan apabila berlaku. Bank atau penyedia pembayaran Anda dapat mengenakan biayanya sendiri atas pembelian dari luar negeri, seperti IOF di Brasil.",
               "**Perpanjangan.** Paket diperpanjang secara otomatis setiap bulan atau setiap tahun, bergantung pada periode yang dipilih, hingga dibatalkan. Kami mengirimkan pengingat sebelum paket tahunan diperpanjang.",
               "**Pembatalan.** Anda dapat membatalkan kapan saja, dan pembatalan berlaku pada akhir periode yang telah dibayar. Setelah itu, agen ruang kerja berhenti, komputernya dihapus 7 hari kemudian, dan percakapan serta berkasnya tetap dapat dibaca dan diunduh selama 90 hari, setelah itu semuanya dihapus.",
-              "**Tidak ada pengembalian dana.** Pembayaran bersifat final dan tidak dapat dikembalikan, baik seluruhnya maupun sebagian, termasuk untuk sisa periode setelah pembatalan, kecuali apabila hukum menentukan lain.",
+              "**Tidak ada pengembalian dana.** Setiap paket menimbulkan biaya operasional sejak dibeli, seperti penggunaan model AI, server, dan komputer ruang kerja. Karena itu, pembelian bersifat final dan tidak dapat dikembalikan, baik seluruhnya maupun sebagian, termasuk untuk sisa periode setelah pembatalan.",
               "**Pembayaran gagal.** Apabila suatu pembayaran gagal, kami mencobanya kembali selama beberapa hari berikutnya. Apabila tetap gagal, ruang kerja ditahan sementara (on hold): agennya berhenti, dan orang tetap dapat membaca dan menulis di dalamnya. Komputernya disimpan selama 7 hari, kemudian dilepaskan dan dihapus. Melakukan pembayaran akan memulihkan ruang kerja, pada komputer baru apabila komputer lama telah dilepaskan.",
               "**Perubahan harga.** Kami dapat mengubah harga bagi pelanggan baru kapan saja. Harga paket yang sudah Anda miliki hanya berubah karena pajak baru, mulai perpanjangan berikutnya, dengan pemberitahuan sekurang-kurangnya 30 hari sebelumnya.",
               "**Penggunaan wajar.** Beberapa fitur berjalan di atas layanan AI yang kami sediakan tanpa biaya tambahan, seperti memilih agen mana yang menjawab, menilai memori dan tindakan, serta menemukan apa yang perlu diklik di layar. Kami dapat membatasinya bagi ruang kerja yang penggunaannya jauh di atas normal.",
@@ -150,7 +151,7 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
         id: "law",
         heading: "16. Hukum yang berlaku",
         blocks: [
-          "Ketentuan ini diatur oleh hukum Negara Bagian Delaware, Amerika Serikat, tidak termasuk kaidah hukum perdata internasionalnya (conflict-of-law rules), dan para pihak tunduk pada yurisdiksi eksklusif pengadilan negara bagian dan federal yang berkedudukan di Delaware. Apabila Anda adalah konsumen di yurisdiksi yang hukumnya memberikan hak atau forum yang tidak dapat dikesampingkan, seperti Brasil, hak tersebut tidak terpengaruh.",
+          "Ketentuan ini, dan setiap pembelian yang dilakukan berdasarkan Ketentuan ini, diatur oleh hukum Amerika Serikat dan Negara Bagian Delaware, tidak termasuk kaidah hukum perdata internasional (conflict-of-law rules), dan para pihak tunduk pada yurisdiksi eksklusif pengadilan negara bagian dan federal yang berkedudukan di Delaware.",
         ],
       },
       {
@@ -175,7 +176,7 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
       "Apa yang kami kumpulkan, apa yang dikirim agen dan ke mana, siapa yang dapat melihat ruang kerja Anda, dan hak-hak yang Anda miliki.",
     courtesy:
       "Dokumen ini adalah terjemahan yang disediakan semata-mata untuk kemudahan. Apabila terdapat perbedaan dengan versi bahasa Inggris, versi bahasa Inggris yang berlaku.",
-    updated: "2026-11-16",
+    updated: "2026-11-18",
     sections: [
       {
         id: "overview",
@@ -322,6 +323,7 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
         heading: "14. Cookie dan penyimpanan lokal",
         blocks: [
           "Ruang kerja hanya menggunakan cookie dan penyimpanan lokal yang diperlukan untuk menjaga Anda tetap masuk, melindungi formulir, dan mengingat preferensi seperti tema dan bahasa. Situs publik agentes.chat mengingat bahasa yang Anda pilih dan menggunakan analitik Himetrica (Bagian 2). Kami tidak menggunakan cookie iklan atau pelacakan lintas situs.",
+          "**Cookie referal:** saat Anda membuka tautan referal ke agentes.chat, layanan penagihan kami menyimpan referal tersebut dalam satu cookie di browser Anda selama 60 hari, agar orang yang mengirim tautan mendapat kredit jika Anda berlangganan. Di Wilayah Ekonomi Eropa, Inggris, dan Swiss, kami hanya memasangnya setelah Anda menyetujuinya di agentes.chat. Untuk melupakan referal di perangkat ini, buka https://agentes.chat/id/privacy?forget-referral#cookies.",
         ],
       },
       {

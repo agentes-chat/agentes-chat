@@ -53,7 +53,7 @@ test("the two agents' line is always one line: the subject gives way first, the 
 
 test("two agents' conversation is a sheet over the one that asked, as the web's dialog", () => {
   const layout = readFileSync(join(import.meta.dir, "../../app/(app)/_layout.tsx"), "utf8");
-  expect(layout).toContain('<Stack.Screen name="consultation/[id]" options={formSheet} />');
+  expect(layout).toContain('<Sheet.Screen name="consultation/[id]" options={full} />');
   const screen = readFileSync(join(import.meta.dir, "../../src/features/chat/ConsultationScreen.tsx"), "utf8");
   expect(screen).toContain("<SheetSurface>");
   expect(screen).not.toContain("PushedHeader");

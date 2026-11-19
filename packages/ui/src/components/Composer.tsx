@@ -24,6 +24,7 @@ import {
   insertText,
   type TextEdit,
 } from "../format";
+import { useScrollSides } from "../hooks/useScrollSides";
 import { Icon, type IconName } from "../icons/Icon";
 import { selectionRect } from "../selection-rect";
 import { Button } from "./Button";
@@ -227,6 +228,13 @@ export interface ComposerProps {
 }
 
 /**
+ * A thumbnail's address: only a local object URL (`blob:`), the only kind the apps make for a picked file, through
+ * `encodeURI` (which leaves such a URL as it is), so nothing from the file can reach the page as markup or as a
+ * script address. Any other address shows the file's icon instead.
+ */
+const thumbnailSrc = (url: string | undefined) => (url?.startsWith("blob:") ? encodeURI(url) : undefined);
+
+/**
  * A file in the composer, as a tile beside the others: an image shows its
  * thumbnail (`preview`, a local object URL); the rest show the type, name and
  * `detail` (the size). A spinner while it uploads, remove.
@@ -243,7 +251,7 @@ export function ComposerFile({
 }: {
   name: string;
   icon?: IconName;
-  /** An image's thumbnail URL. */
+  /** An image's thumbnail: a local object URL (`blob:`). */
   preview?: string;
   /** Under the name ("1,2 MB"). */
   detail?: string;
@@ -259,7 +267,8 @@ export function ComposerFile({
       <Icon name="close" size={14} />
     </button>
   );
-  if (preview) {
+  const src = thumbnailSrc(preview);
+  if (src) {
     return (
       <span
         className="ac-composer__file ac-composer__file--image"
@@ -267,7 +276,7 @@ export function ComposerFile({
         aria-busy={status === "uploading" || undefined}
         title={name}
       >
-        <img src={preview} alt="" />
+        <img src={src} alt="" />
         <span className="ac-visually-hidden">{name}</span>
         {status !== "done" && (
           <span className="ac-composer__file-state" aria-hidden="true">
@@ -386,28 +395,45 @@ function FormatBar({
         e.preventDefault();
       }}
     >
-      {FORMAT_KINDS.map((kind, i) => {
-        const hint = formatShortcutHint(kind, mod);
-        return (
-          <span
-            key={kind}
-            className="ac-formatbar__item"
-            data-group-end={FORMAT_GROUP_ENDS.includes(kind) || undefined}
-          >
-            <button
-              type="button"
-              className="ac-formatbar__btn"
-              aria-label={labels[kind]}
-              title={hint ? `${labels[kind]} (${hint})` : labels[kind]}
-              tabIndex={i === focus ? 0 : -1}
-              onFocus={() => setFocus(i)}
-              onClick={() => onFormat(kind)}
+      <FormatRow>
+        {FORMAT_KINDS.map((kind, i) => {
+          const hint = formatShortcutHint(kind, mod);
+          return (
+            <span
+              key={kind}
+              className="ac-formatbar__item"
+              data-group-end={FORMAT_GROUP_ENDS.includes(kind) || undefined}
             >
-              <Icon name={FORMAT_ICON[kind]} size={16} />
-            </button>
-          </span>
-        );
-      })}
+              <button
+                type="button"
+                className="ac-formatbar__btn"
+                aria-label={labels[kind]}
+                title={hint ? `${labels[kind]} (${hint})` : labels[kind]}
+                tabIndex={i === focus ? 0 : -1}
+                onFocus={() => setFocus(i)}
+                onClick={() => onFormat(kind)}
+              >
+                <Icon name={FORMAT_ICON[kind]} size={16} />
+              </button>
+            </span>
+          );
+        })}
+      </FormatRow>
+    </div>
+  );
+}
+
+/**
+ * The bar's one row of buttons, scrolling sideways with faded ends when the composer is narrower than it (a phone):
+ * wrapped, its last row ended short of the bar's edge. Its own component so its scroller exists when the hook first
+ * measures it: the bar renders nothing until the first selection.
+ */
+function FormatRow({ children }: { children: ReactNode }) {
+  const row = useRef<HTMLDivElement>(null);
+  const more = useScrollSides(row);
+  return (
+    <div ref={row} className="ac-formatbar__row" data-more={more}>
+      {children}
     </div>
   );
 }
@@ -962,263 +988,261 @@ export function Composer({
       : undefined;
 
   return (
-    <>
-      <RPopover.Root
-        open={open}
-        onOpenChange={(o) => {
-          if (!o && open) dismiss();
-        }}
-      >
-        <RPopover.Anchor asChild>
-          {/* biome-ignore lint/a11y/noStaticElementInteractions: files dropped anywhere on the card (the attach button is the accessible way), and its empty room is part of the text box, as a mouse sees it */}
-          <div
-            ref={box}
-            className={cx("ac-composer", className)}
-            data-disabled={disabled || undefined}
-            data-dragging={dragging || undefined}
-            data-voice={recording ? rec.phase : undefined}
-            data-esc-layer={recording || attachments ? "" : undefined}
-            onMouseDown={(e) => {
-              if ((e.target as HTMLElement).closest(COMPOSER_CONTROLS)) return;
-              // Keeps the caret where it was.
-              e.preventDefault();
-              ref.current?.focus();
-            }}
-            onDragOver={
-              onFiles
-                ? (e) => {
-                    if (!hasFiles(e) || disabled) return;
-                    e.preventDefault();
-                    setDragging(true);
-                  }
-                : undefined
-            }
-            onDragLeave={
-              onFiles
-                ? (e) => {
-                    if (!(e.relatedTarget instanceof Node && e.currentTarget.contains(e.relatedTarget)))
-                      setDragging(false);
-                  }
-                : undefined
-            }
-            onDrop={
-              onFiles
-                ? (e) => {
+    <RPopover.Root
+      open={open}
+      onOpenChange={(o) => {
+        if (!o && open) dismiss();
+      }}
+    >
+      <RPopover.Anchor asChild>
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: files dropped anywhere on the card (the attach button is the accessible way), and its empty room is part of the text box, as a mouse sees it */}
+        <div
+          ref={box}
+          className={cx("ac-composer", className)}
+          data-disabled={disabled || undefined}
+          data-dragging={dragging || undefined}
+          data-voice={recording ? rec.phase : undefined}
+          data-esc-layer={recording || attachments ? "" : undefined}
+          onMouseDown={(e) => {
+            if ((e.target as HTMLElement).closest(COMPOSER_CONTROLS)) return;
+            // Keeps the caret where it was.
+            e.preventDefault();
+            ref.current?.focus();
+          }}
+          onDragOver={
+            onFiles
+              ? (e) => {
+                  if (!hasFiles(e) || disabled) return;
+                  e.preventDefault();
+                  setDragging(true);
+                }
+              : undefined
+          }
+          onDragLeave={
+            onFiles
+              ? (e) => {
+                  if (!(e.relatedTarget instanceof Node && e.currentTarget.contains(e.relatedTarget)))
                     setDragging(false);
-                    const dropped = files(e.dataTransfer?.files);
-                    if (dropped.length === 0 || disabled) return;
+                }
+              : undefined
+          }
+          onDrop={
+            onFiles
+              ? (e) => {
+                  setDragging(false);
+                  const dropped = files(e.dataTransfer?.files);
+                  if (dropped.length === 0 || disabled) return;
+                  e.preventDefault();
+                  onFiles(dropped);
+                }
+              : undefined
+          }
+        >
+          {header && <div className="ac-composer__header">{header}</div>}
+          {pills && <div className="ac-composer__pills">{pills}</div>}
+          {(attachments || (voice && recording)) && (
+            <div className="ac-composer__attachments">
+              {voice && recording && take(voice)}
+              {attachments}
+            </div>
+          )}
+          {notice && (
+            <div className="ac-composer__notice" role="alert">
+              {notice}
+            </div>
+          )}
+          <div className="ac-composer__row">
+            <div className="ac-composer__tools">
+              {attachLabel && (
+                <Button
+                  variant="ghost"
+                  iconOnly
+                  size="sm"
+                  icon="attach"
+                  aria-label={attachLabel}
+                  onClick={onAttach ?? (onFiles ? () => fileInput.current?.click() : undefined)}
+                  disabled={(!onAttach && !onFiles) || disabled}
+                />
+              )}
+              {onFiles && !onAttach && (
+                <input
+                  ref={fileInput}
+                  type="file"
+                  multiple
+                  hidden
+                  tabIndex={-1}
+                  aria-label={attachLabel}
+                  onChange={(e) => {
+                    const picked = files(e.target.files);
+                    e.target.value = "";
+                    if (picked.length > 0) onFiles(picked);
+                  }}
+                />
+              )}
+              {emoji && !disabled && (
+                <EmojiPickerPopover
+                  labels={emoji}
+                  onPick={insertEmoji}
+                  tabs={pickerTabs}
+                  tabLabels={pickerLabels}
+                  align="start"
+                  // Back to the text box (the caret after the emoji), not to the button.
+                  onCloseAutoFocus={(e) => {
                     e.preventDefault();
-                    onFiles(dropped);
-                  }
-                : undefined
-            }
-          >
-            {header && <div className="ac-composer__header">{header}</div>}
-            {pills && <div className="ac-composer__pills">{pills}</div>}
-            {(attachments || (voice && recording)) && (
-              <div className="ac-composer__attachments">
-                {voice && recording && take(voice)}
-                {attachments}
-              </div>
-            )}
-            {notice && (
-              <div className="ac-composer__notice" role="alert">
-                {notice}
-              </div>
-            )}
-            <div className="ac-composer__row">
-              <div className="ac-composer__tools">
-                {attachLabel && (
-                  <Button
-                    variant="ghost"
-                    iconOnly
-                    size="sm"
-                    icon="attach"
-                    aria-label={attachLabel}
-                    onClick={onAttach ?? (onFiles ? () => fileInput.current?.click() : undefined)}
-                    disabled={(!onAttach && !onFiles) || disabled}
-                  />
-                )}
-                {onFiles && !onAttach && (
-                  <input
-                    ref={fileInput}
-                    type="file"
-                    multiple
-                    hidden
-                    tabIndex={-1}
-                    aria-label={attachLabel}
-                    onChange={(e) => {
-                      const picked = files(e.target.files);
-                      e.target.value = "";
-                      if (picked.length > 0) onFiles(picked);
-                    }}
-                  />
-                )}
-                {emoji && !disabled && (
-                  <EmojiPickerPopover
-                    labels={emoji}
-                    onPick={insertEmoji}
-                    tabs={pickerTabs}
-                    tabLabels={pickerLabels}
-                    align="start"
-                    // Back to the text box (the caret after the emoji), not to the button.
-                    onCloseAutoFocus={(e) => {
-                      e.preventDefault();
-                      ref.current?.focus();
-                    }}
-                    trigger={<Button variant="ghost" iconOnly size="sm" icon="smile" aria-label={emoji.button} />}
-                  />
-                )}
-              </div>
-              <div className="ac-composer__text">
-                {textarea}
-                {format && !disabled && (
-                  <FormatBar
-                    labels={format}
-                    onFormat={applyKind}
-                    range={open ? null : selected}
-                    value={value}
-                    field={ref}
-                    card={box}
-                    barRef={bar}
-                    onLeave={(to, back) => {
-                      if (back) ref.current?.focus();
-                      else if (to !== ref.current && !(to instanceof Node && bar.current?.contains(to)))
-                        setSelected(null);
-                    }}
-                  />
-                )}
-              </div>
-              <div className="ac-composer__tools">
-                {hasMic && (
-                  <Button
-                    variant="ghost"
-                    iconOnly
-                    size="sm"
-                    icon={rec.phase === "rec" && !rec.hold ? "pause" : "mic"}
-                    className="ac-composer__mic"
-                    data-on={rec.phase === "rec" || rec.phase === "paused" || undefined}
-                    aria-label={micLabel}
-                    title={micLabel}
-                    {...rec.micProps}
-                  />
-                )}
-                {/* The compact primary square (32px): dim until there is something to send. */}
-                {working !== undefined ? (
-                  // An agent may work here: one button whose glyph morphs between send and stop.
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    className="ac-composer__send ac-btn--icon"
-                    data-ready={ready || stopMode || takeReady ? "" : undefined}
-                    data-mode={stopMode ? "stop" : "send"}
-                    data-press={pressed || undefined}
-                    aria-label={recording && voice ? voice.labels.send : stopMode ? working?.stopLabel : sendLabel}
-                    title={sendTitle}
-                    onClick={() => {
-                      if (stopMode) stop();
-                      else {
-                        press();
-                        send();
-                      }
-                    }}
-                    disabled={!ready && !stopMode && !takeReady}
-                  >
-                    <span className="ac-composer__glyph ac-composer__glyph--send" aria-hidden="true">
-                      <Icon name="send" />
-                    </span>
-                    <span className="ac-composer__glyph ac-composer__glyph--stop" aria-hidden="true">
-                      <PixelStop size={13} animated={stopMode} />
-                    </span>
-                  </Button>
-                ) : (
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    iconOnly
-                    icon="send"
-                    className="ac-composer__send"
-                    data-ready={ready || takeReady ? "" : undefined}
-                    aria-label={recording && voice ? voice.labels.send : sendLabel}
-                    title={sendTitle}
-                    onClick={() => send()}
-                    disabled={!ready && !takeReady}
-                  />
-                )}
-              </div>
+                    ref.current?.focus();
+                  }}
+                  trigger={<Button variant="ghost" iconOnly size="sm" icon="smile" aria-label={emoji.button} />}
+                />
+              )}
+            </div>
+            <div className="ac-composer__text">
+              {textarea}
+              {format && !disabled && (
+                <FormatBar
+                  labels={format}
+                  onFormat={applyKind}
+                  range={open ? null : selected}
+                  value={value}
+                  field={ref}
+                  card={box}
+                  barRef={bar}
+                  onLeave={(to, back) => {
+                    if (back) ref.current?.focus();
+                    else if (to !== ref.current && !(to instanceof Node && bar.current?.contains(to)))
+                      setSelected(null);
+                  }}
+                />
+              )}
+            </div>
+            <div className="ac-composer__tools">
+              {hasMic && (
+                <Button
+                  variant="ghost"
+                  iconOnly
+                  size="sm"
+                  icon={rec.phase === "rec" && !rec.hold ? "pause" : "mic"}
+                  className="ac-composer__mic"
+                  data-on={rec.phase === "rec" || rec.phase === "paused" || undefined}
+                  aria-label={micLabel}
+                  title={micLabel}
+                  {...rec.micProps}
+                />
+              )}
+              {/* The compact primary square (32px): dim until there is something to send. */}
+              {working !== undefined ? (
+                // An agent may work here: one button whose glyph morphs between send and stop.
+                <Button
+                  variant="primary"
+                  size="sm"
+                  className="ac-composer__send ac-btn--icon"
+                  data-ready={ready || stopMode || takeReady ? "" : undefined}
+                  data-mode={stopMode ? "stop" : "send"}
+                  data-press={pressed || undefined}
+                  aria-label={recording && voice ? voice.labels.send : stopMode ? working?.stopLabel : sendLabel}
+                  title={sendTitle}
+                  onClick={() => {
+                    if (stopMode) stop();
+                    else {
+                      press();
+                      send();
+                    }
+                  }}
+                  disabled={!ready && !stopMode && !takeReady}
+                >
+                  <span className="ac-composer__glyph ac-composer__glyph--send" aria-hidden="true">
+                    <Icon name="send" />
+                  </span>
+                  <span className="ac-composer__glyph ac-composer__glyph--stop" aria-hidden="true">
+                    <PixelStop size={13} animated={stopMode} />
+                  </span>
+                </Button>
+              ) : (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  iconOnly
+                  icon="send"
+                  className="ac-composer__send"
+                  data-ready={ready || takeReady ? "" : undefined}
+                  aria-label={recording && voice ? voice.labels.send : sendLabel}
+                  title={sendTitle}
+                  onClick={() => send()}
+                  disabled={!ready && !takeReady}
+                />
+              )}
             </div>
           </div>
-        </RPopover.Anchor>
-        {(mentions || commands || links || channels) && (
-          <RPopover.Portal>
-            <RPopover.Content
-              className={cx("ac-menu ac-suggest", isSlash && "ac-suggest--commands")}
-              side="top"
-              align="start"
-              sideOffset={6}
-              collisionPadding={EDGE_ROOM}
-              // Focus stays in the text box (combobox).
-              onOpenAutoFocus={(e) => e.preventDefault()}
-              onCloseAutoFocus={(e) => e.preventDefault()}
-              onInteractOutside={(e) => {
-                if (e.target instanceof Node && box.current?.contains(e.target)) e.preventDefault();
-              }}
+        </div>
+      </RPopover.Anchor>
+      {(mentions || commands || links || channels) && (
+        <RPopover.Portal>
+          <RPopover.Content
+            className={cx("ac-menu ac-suggest", isSlash && "ac-suggest--commands")}
+            side="top"
+            align="start"
+            sideOffset={6}
+            collisionPadding={EDGE_ROOM}
+            // Focus stays in the text box (combobox).
+            onOpenAutoFocus={(e) => e.preventDefault()}
+            onCloseAutoFocus={(e) => e.preventDefault()}
+            onInteractOutside={(e) => {
+              if (e.target instanceof Node && box.current?.contains(e.target)) e.preventDefault();
+            }}
+          >
+            <div
+              role="listbox"
+              id={listId}
+              aria-label={
+                isSlash
+                  ? (commands?.listLabel ?? "")
+                  : isLink
+                    ? (links?.listLabel ?? "")
+                    : isChannel
+                      ? (channels?.listLabel ?? "")
+                      : (mentions?.listLabel ?? "")
+              }
             >
-              <div
-                role="listbox"
-                id={listId}
-                aria-label={
-                  isSlash
-                    ? (commands?.listLabel ?? "")
-                    : isLink
-                      ? (links?.listLabel ?? "")
-                      : isChannel
-                        ? (channels?.listLabel ?? "")
-                        : (mentions?.listLabel ?? "")
-                }
-              >
-                {items.map((item, i) => {
-                  const heading = item.group && item.group !== items[i - 1]?.group;
-                  return (
-                    <div key={item.key} role="presentation">
-                      {heading && (
-                        <div className="ac-menu__heading" role="presentation">
-                          {item.group}
-                        </div>
-                      )}
-                      <div
-                        id={optionId(i)}
-                        role="option"
-                        tabIndex={-1}
-                        aria-selected={i === current}
-                        data-active={i === current || undefined}
-                        className="ac-menu__item ac-suggest__item"
-                        onPointerDown={(e) => {
-                          e.preventDefault();
-                          pick(item);
-                        }}
-                        onClick={() => pick(item)}
-                        onKeyDown={() => {}}
-                      >
-                        {item.leading && (
-                          <span className="ac-menu__leading" aria-hidden="true">
-                            {item.leading}
-                          </span>
-                        )}
-                        <span className="ac-menu__label">
-                          <span>{item.label}</span>
-                          {item.description && <span className="ac-menu__desc">{item.description}</span>}
-                        </span>
-                        {item.note && <span className="ac-suggest__note">{item.note}</span>}
+              {items.map((item, i) => {
+                const heading = item.group && item.group !== items[i - 1]?.group;
+                return (
+                  <div key={item.key} role="presentation">
+                    {heading && (
+                      <div className="ac-menu__heading" role="presentation">
+                        {item.group}
                       </div>
+                    )}
+                    <div
+                      id={optionId(i)}
+                      role="option"
+                      tabIndex={-1}
+                      aria-selected={i === current}
+                      data-active={i === current || undefined}
+                      className="ac-menu__item ac-suggest__item"
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        pick(item);
+                      }}
+                      onClick={() => pick(item)}
+                      onKeyDown={() => {}}
+                    >
+                      {item.leading && (
+                        <span className="ac-menu__leading" aria-hidden="true">
+                          {item.leading}
+                        </span>
+                      )}
+                      <span className="ac-menu__label">
+                        <span>{item.label}</span>
+                        {item.description && <span className="ac-menu__desc">{item.description}</span>}
+                      </span>
+                      {item.note && <span className="ac-suggest__note">{item.note}</span>}
                     </div>
-                  );
-                })}
-              </div>
-            </RPopover.Content>
-          </RPopover.Portal>
-        )}
-      </RPopover.Root>
-    </>
+                  </div>
+                );
+              })}
+            </div>
+          </RPopover.Content>
+        </RPopover.Portal>
+      )}
+    </RPopover.Root>
   );
 }

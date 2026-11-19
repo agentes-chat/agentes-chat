@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { LoadingLine } from "@/components/Loading";
 import { OpenOnPhoneDialog } from "@/components/OpenOnPhone";
 import { useOrg } from "@/components/org-context";
+import { SurfacePrefRow } from "@/components/SurfaceLink";
 import { useBrowserNotices } from "@/components/WebPush";
 import { inDesktopApp } from "@/lib/desktop";
 import { useToast } from "@/lib/toast";
@@ -61,8 +62,7 @@ export function NoticePrefsSection() {
             id="notice-phone"
             icon="phone"
             label={t("noticePrefs.phone")}
-            hint={phones > 0 ? t("noticePrefs.phoneOn") : undefined}
-            status={phones > 0 ? undefined : t("noticePrefs.phoneOff")}
+            hint={t(phones > 0 ? "noticePrefs.phoneOn" : "noticePrefs.phoneOff")}
             control={
               prefs.data &&
               (phones > 0 ? (
@@ -70,13 +70,14 @@ export function NoticePrefsSection() {
                   {t("noticePrefs.on")}
                 </Chip>
               ) : (
-                <Button size="sm" icon="phone" onClick={() => setPhoneCode(true)}>
-                  {t("shell.openOnPhone")}
+                <Button size="sm" icon="phone" aria-label={t("shell.openOnPhone")} onClick={() => setPhoneCode(true)}>
+                  {t("noticePrefs.phoneOpen")}
                 </Button>
               ))
             }
           />
           <PrefRow id="notice-mac" icon="computerMac" label={t("noticePrefs.mac")} hint={t("noticePrefs.macHelp")} />
+          <SurfacePrefRow />
         </div>
         <OpenOnPhoneDialog open={phoneCode} onClose={() => setPhoneCode(false)} />
       </Card>
@@ -159,6 +160,8 @@ export function PrefRow({
 }) {
   const { t } = useTranslation();
   const toggle = isValidElement(control) && control.type === Switch;
+  // One button (or the chip that stands for its outcome) keeps the name's line at every width (`.settings-row--button`).
+  const button = isValidElement(control) && (control.type === Button || control.type === Chip);
   const switchId = toggle ? ((control.props as { id?: string }).id ?? `${id}-switch`) : undefined;
   const described = [hint && !onOpen && `${id}-help`, status && `${id}-status`].filter(Boolean).join(" ");
   const end = toggle
@@ -234,7 +237,9 @@ export function PrefRow({
       className={
         toggle
           ? "settings-row ac-actrow settings-row--lead settings-row--toggle"
-          : "settings-row ac-actrow settings-row--lead"
+          : button
+            ? "settings-row ac-actrow settings-row--lead settings-row--button"
+            : "settings-row ac-actrow settings-row--lead"
       }
     >
       {body}

@@ -1712,7 +1712,10 @@ export class DesktopSessions {
  * in a terminal); no blacklist (TigerVNC counts attempts, not
  * failures, so a burst of reconnects after a deploy would lock everyone out,
  * and behind a 0600 socket it protects nothing); X only through the cookie
- * file, no TCP; no screen saver.
+ * file, no TCP; no screen saver; no pointer drawn (`-nocursor`): TigerVNC
+ * draws it into the picture of a viewer whose own pointer is elsewhere, so
+ * whoever watches saw the computer's arrow beside the agent's cursor the
+ * apps draw (ADR 0040 §7.2); in control the person's own pointer shows.
  */
 function xvncArgs(files: { socket: string; xauthority: string; passwd: string }, name: string): string[] {
   return [
@@ -1741,6 +1744,7 @@ function xvncArgs(files: { socket: string; xauthority: string; passwd: string },
     "tcp",
     "-s",
     "0",
+    "-nocursor",
     "-desktop",
     name,
   ];

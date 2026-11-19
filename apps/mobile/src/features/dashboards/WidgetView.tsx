@@ -589,11 +589,11 @@ export function BuildingSweep({
   const at = useSharedValue(0);
   useEffect(() => {
     if (reduced || width === 0) return;
-    at.value = 0;
-    at.value = withRepeat(withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.quad) }), -1, false);
+    at.set(0);
+    at.set(withRepeat(withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.quad) }), -1, false));
     return () => cancelAnimation(at);
   }, [reduced, width, at]);
-  const sweep = useAnimatedStyle(() => ({ transform: [{ translateX: -band + at.value * (width + band) }] }));
+  const sweep = useAnimatedStyle(() => ({ transform: [{ translateX: -band + at.get() * (width + band) }] }));
   const box = roundRectPath(0, 0, width, height, 6);
   return (
     <View style={styles.building} accessibilityRole={still ? "text" : "progressbar"} accessibilityLabel={text}>

@@ -101,6 +101,9 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
   selfhost: [
     // A server that sends no e-mail can't confirm a new address: only there (`email.no_mail`).
     "shell.email.noMail",
+    // Who read a piece of the workspace: off agentes.chat's own servers, whoever runs this one (`details.cloud`).
+    "audit.operatorRead.who.server",
+    "audit.operatorRead.request.operator",
     "auth.owner.",
     "auth.flow.ownerWaits",
     "auth.flow.ownerWaitsLead",
@@ -117,12 +120,16 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     "browser.inCard.noComputer",
     "browser.live.noComputer",
     "computers.hostMissing",
+    // Lodi's computer row on a self-hosted server (`rightHandNoComputer` with `selfHosted`).
+    "rightHand.computerNoHomeServer",
     "connectAi.wait.connecting",
     "errors.mission.unavailable",
     // The feedback form's line on who reads it, where the server isn't one of agentes.chat's own (`auth-config.cloud`).
     "feedback.goesServer",
     "feedback.offer.goesServer",
     "feedback.offer.sentServer",
+    // Only a server that set PROBLEM_REPORT_URL=off, which the Cloud never does.
+    "problemReport.off",
     "machines.download.title",
     "machines.host.",
     "members.requests.copyText",
@@ -209,7 +216,7 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     // An address held for an account that just left it (`changeAccountEmail`): only a server that sends e-mail holds it.
     "auth.flow.emailHeld",
   ],
-  apiKey: ["agentPage.work.brain.fallbackTitle"],
+  apiKey: [],
   // A message nobody mentions still gets an agent: routing.mine (the chip and its help line), routing.by (Settings),
   // or the receipt of a message a rule sent to its one candidate.
   routing: ["channelMembers.replyAloneHelp", "routing.by.jev", "routing.by.model", "receipts.by.only_agent"],
@@ -293,6 +300,8 @@ export const ANYWHERE: readonly string[] = [
   // People connect their own computers and phones in every setup, the Cloud included.
   "devices.",
   "mobile.devices.",
+  // The right hand's plan that needs a computer: the workspace's way out is connecting one, in every setup.
+  "rightHand.brain.unusable.connect",
 ];
 
 /** A key's agent-gender variant (`_female`, ADR 0122) goes where its base key goes. */

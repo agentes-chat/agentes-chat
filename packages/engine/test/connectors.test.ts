@@ -495,6 +495,36 @@ describe("OAuth (state + PKCE)", () => {
     return { http, seen, setChallenge: (c: string) => (challenge = c) };
   }
 
+  test("a team sign-in's return still needs its person to manage connectors", async () => {
+    f = await setup();
+    const ana = await addMember(f.db, f.org.id, "admin", "ana");
+    const token = tokenEndpoint();
+    const deps = depsOf(f, {
+      http: token.http,
+      oauthApps: { linear: { clientId: "lin-client", clientSecret: "lin-secret" } },
+    });
+    const { authorizeUrl, state } = await startOAuth(deps, ana.id, f.org.id, "linear");
+    token.setChallenge(new URL(authorizeUrl).searchParams.get("code_challenge") ?? "");
+    await f.db.delete(schema.organizationMemberRoles).where(eq(schema.organizationMemberRoles.userId, ana.id));
+    await expect(completeOAuth(deps, { id: ana.id }, { state, code: "good-code" })).rejects.toBeInstanceOf(
+      ForbiddenError,
+    );
+  });
+
+  test("a sign-in started as personal ends as its person's own connection", async () => {
+    f = await setup();
+    const walter = await addMember(f.db, f.org.id, "member", "walter");
+    const token = tokenEndpoint();
+    const deps = depsOf(f, {
+      http: token.http,
+      oauthApps: { linear: { clientId: "lin-client", clientSecret: "lin-secret" } },
+    });
+    const { authorizeUrl, state } = await startOAuth(deps, walter.id, f.org.id, "linear", { personal: true });
+    token.setChallenge(new URL(authorizeUrl).searchParams.get("code_challenge") ?? "");
+    const { connection } = await completeOAuth(deps, { id: walter.id }, { state, code: "good-code" });
+    expect(connection).toMatchObject({ connector: "linear", ownerUserId: walter.id });
+  });
+
   test("start → callback stores sealed tokens; state is single use, per person, and expires", async () => {
     f = await setup();
     const token = tokenEndpoint();

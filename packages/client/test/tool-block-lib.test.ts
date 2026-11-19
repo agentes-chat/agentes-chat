@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { TFunction } from "i18next";
 import type { LiveRun, LiveWork } from "../src/index";
 import { applyChannelEvent, emptyStreams, isQuiet, QUIET_AFTER_MS } from "../src/index";
-import { type Activity, barEntries, toolActivity } from "../src/lib/activity";
+import { type Activity, barEntries, serviceKey, toolActivity } from "../src/lib/activity";
 import {
   callLogo,
   foldSteps,
@@ -638,6 +638,18 @@ describe("each call's service and its logo", () => {
     expect(second?.hint).toBe("list issues");
   });
 
+  test("a connection's service by its name, each run of spaces or parentheses read once", () => {
+    expect(serviceKey("Google Drive (ana@acme.com) 2")).toBe("google_drive");
+    expect(serviceKey("Notion  3")).toBe("notion");
+    expect(serviceKey("A (b) (c)")).toBe("a_(b)");
+    expect(serviceKey("A (b)) 2")).toBe("a_(b))");
+    const started = performance.now();
+    expect(serviceKey(`a${" ".repeat(100_000)}b`)).toBe("a_b");
+    expect(serviceKey(`a${"(".repeat(100_000)}`)).toBe(`a${"(".repeat(100_000)}`);
+    expect(serviceKey(`a${" (".repeat(50_000)}x)`)).toBe("a");
+    expect(performance.now() - started).toBeLessThan(1000);
+  });
+
   test("the block's logos: each service once, in order of first use, four at most", () => {
     const items = toolItemsLive([
       call("1", "mail_wnogueira_search", { connector: "Email", service: "gmail" }),
@@ -801,6 +813,11 @@ describe("a lone quick read that only fed the answer shows no card", () => {
     expect(makingImage({ step: { tool: "shell" } })).toBe(false);
     expect(makingImage({ step: { said: "Vou desenhar" } })).toBe(false);
     expect(makingImage({})).toBe(false);
+    // Ours onto a canvas (ADR 0197): while its call runs, on any brain; its end (`tool` null) ends it.
+    expect(makingImage({ tool: "generate_image" })).toBe(true);
+    expect(makingImage({ tool: "mcp__agentes__generate_image" })).toBe(true);
+    expect(makingImage({ tool: "mcp__higgsfield__generate_image" })).toBe(false);
+    expect(makingImage({ tool: null })).toBe(false);
   });
 
   test("saved: the run's lone call is quiet by meta.work; calls another card shows are left out of the count", () => {

@@ -64,6 +64,12 @@ export const orgExists = async (db: Database, orgId: string) =>
 export const CODE = /^[A-Za-z][\w.:/-]{0,99}$/;
 export const codeOf = (v: unknown) => (typeof v === "string" && CODE.test(v) ? v : null);
 export const uuidOf = (v: unknown) => (typeof v === "string" && UUID.test(v) ? v : null);
+const Instant = z.iso.datetime({ offset: true });
+/** A time a JSON column or a query holds, when it is written as an ISO 8601 instant: that instant, in UTC. */
+export function instantOf(v: unknown) {
+  const at = Instant.safeParse(v).success ? new Date(v as string) : null;
+  return at && !Number.isNaN(at.getTime()) ? at.toISOString() : null;
+}
 /** A word, when a list written in the code holds it: its shape alone would let any one word through as a fact. */
 export const listedOf = <T extends string>(list: readonly T[], v: unknown): T | null =>
   list.find((word) => word === v) ?? null;

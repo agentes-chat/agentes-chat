@@ -210,7 +210,14 @@ export async function checkDeviceUse(
       message: `${name} is ${ruleText}, not for ${forWhom}. Nobody can be asked for it: an admin can change who uses it under Settings › Devices. Use another device.`,
     };
   }
-  const requestId = await askDeviceOwner(deps, ctx, target, { owner, requester, why, requesterName: forWhom });
+  // From a confidential thread (ADR 0190) the owner is asked with none of the run's words: they may not be in the
+  // conversation, and neither the request nor its notification goes with the thread's prune.
+  const requestId = await askDeviceOwner(deps, ctx, target, {
+    owner,
+    requester,
+    why: ctx.confidential ? "" : why,
+    requesterName: forWhom,
+  });
   return {
     ok: false,
     requester,
@@ -320,6 +327,13 @@ async function askDeviceOwner(
   return row.id;
 }
 
+/**
+ * The person's steps when iOS refuses UI testing on an iPhone, and what isn't needed: agents were seen asking for the
+ * helper to be rebuilt in Xcode and for terminal access.
+ */
+const IPHONE_UI_STEPS =
+  "Ask the person, on the iPhone: Settings → Privacy & Security → Developer Mode on; Settings → Developer → Enable UI Automation on (off and on again if it already is); enter the passcode when it asks; keep it unlocked. Then Check again in its setup. Nothing needs rebuilding and no terminal access is needed: the Mac builds and renews the test helper by itself.";
+
 /** What to tell the person for a phone that needs them, by its reason (`PhoneReason`), and whether it ends by itself. */
 export function phoneReasonText(
   reason: PhoneReason | string | null,
@@ -346,7 +360,7 @@ export function phoneReasonText(
       };
     case "ui_automation_off":
       return {
-        text: `${phone} needs UI Automation: Settings → Developer → Enable UI Automation. Ask the person to turn it on.`,
+        text: `iOS doesn't allow UI Automation on ${phone} yet. ${IPHONE_UI_STEPS}`,
         byItself: false,
       };
     case "xcode_missing":
@@ -354,6 +368,11 @@ export function phoneReasonText(
     case "xcode_too_old":
       return {
         text: `${phone} runs an iOS newer than Xcode on ${host} can drive. Ask the person to install the Xcode matching the iPhone's iOS (27 for iOS 27), then run \`xcrun devicectl manage ddis update\`.`,
+        byItself: false,
+      };
+    case "ios_behind_xcode":
+      return {
+        text: `${phone} runs an iOS older than the one Xcode on ${host} is for. Ask the person to update the iPhone: Settings → General → Software Update.`,
         byItself: false,
       };
     case "helper_missing":
@@ -375,7 +394,7 @@ export function phoneReasonText(
       };
     case "ui_not_authorized":
       return {
-        text: `${phone} refused the test helper's taps. Ask the person to unlock it and enter its passcode if it asks, and if it keeps happening to turn Settings → Developer → Enable UI Automation off and on.`,
+        text: `Screen capture on ${phone} works, but iOS refuses the test helper's taps and other actions. ${IPHONE_UI_STEPS}`,
         byItself: false,
       };
     case "team_limit":

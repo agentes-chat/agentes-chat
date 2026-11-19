@@ -19,6 +19,7 @@ import {
 } from "@agenteschat/db";
 import { z } from "zod";
 import { audienceSql } from "./audience";
+import { confidentialThreadSql } from "./confidential";
 import { operatorInputDigest } from "./crypto";
 import { decodeCursor, encodeCursor } from "./cursor";
 import { ValidationError } from "./errors";
@@ -45,6 +46,7 @@ import {
 import { rightHandReaches } from "./right-hand";
 import { DEFAULT_CAP, UNDER_NEED_GATE } from "./router";
 import { RELEASE_REASONS } from "./run-inbox";
+import { runClaims } from "./run-timings";
 import {
   computerWaitSql,
   KEPT_ON_HOLD,
@@ -122,7 +124,7 @@ export const OPERATOR_RUN_SHOWN = [
   "canceled",
 ] as const;
 
-const shown = sql<(typeof OPERATOR_RUN_SHOWN)[number]>`(case when ${passedSql} then 'no_reply'
+export const runShownSql = sql<(typeof OPERATOR_RUN_SHOWN)[number]>`(case when ${passedSql} then 'no_reply'
   when ${computerWaitSql} = 'line' then 'waiting_line'
   when ${computerWaitSql} is not null then 'waiting_computer'
   when ${usageWaitSql} = 'budget' then 'waiting_budget'
@@ -148,14 +150,17 @@ const runColumns = {
     where s.run_id = ${RUN_ID} and s.kind = 'model_call' order by s.seq desc limit 1)`,
   turns: agentRuns.turns,
   status: agentRuns.status,
-  shown,
+  shown: runShownSql,
   waitCode: sql<string | null>`coalesce(${WAIT}->>'code', case when ${outageParkedSql} then 'provider_outage' end)`,
   waitSource: sql<string | null>`${WAIT}->>'source'`,
   waitResetsAt: sql<string | null>`${WAIT}->>'resetsAt'`,
+  accountId: sql<string | null>`${agentRuns.transcript}->'accountMove'->>'to'`,
   // Which plan it waits on: only what `planOfWaitKey` reads out of it is returned.
   waitPlan: sql<string | null>`${WAIT}->>'waitKey'`,
   waitingMachineId: agentRuns.waitingMachineId,
   error: agentRuns.error,
+  // Read by `runOf` and never answered: of a confidential thread (ADR 0190).
+  confidential: sql<boolean>`${confidentialThreadSql(sql`${agentRuns.orgId}`, sql`${agentRuns.threadRootId}`)}`,
   createdAt: ms(agentRuns.createdAt),
   startedAt: agentRuns.startedAt,
   finishedAt: agentRuns.finishedAt,
@@ -195,7 +200,7 @@ function errorCodeOf(error: string | null, canceled: boolean) {
   return canceled && code === "run.failed" ? "run.canceled" : code;
 }
 
-function runOf({ error, model, waitCode, waitSource, waitResetsAt, waitPlan, ...run }: RunRow) {
+function runOf({ error, confidential, model, waitCode, waitSource, waitResetsAt, waitPlan, ...run }: RunRow) {
   const plan = planOfWaitKey(waitPlan);
   const stop = run.status === "canceled" ? stopOf(error) : null;
   return {
@@ -208,7 +213,9 @@ function runOf({ error, model, waitCode, waitSource, waitResetsAt, waitPlan, ...
     waitAccountMachineId: plan?.machineId ?? null,
     canceled: stop && { ...stop, userId: wordOf(stop.userId), agentId: uuidOf(stop.agentId) },
     errorCode: errorCodeOf(error, run.status === "canceled"),
-    error: errorText(error, OPERATOR_RUN_ERROR_MAX),
+    // A run of a confidential thread may have failed on what it read, and whoever reads this is outside the thread:
+    // its code above, none of its words.
+    error: confidential ? null : errorText(error, OPERATOR_RUN_ERROR_MAX),
   };
 }
 
@@ -546,8 +553,9 @@ const stepColumns = {
 
 /**
  * One run, start to end: its row, its steps in order (which tool, whether it failed, how big its input and its
- * result were, never either of them), what it asked of people, the jobs that started and woke it, what it spent and
- * the computer it is tied to. `beforeSeq` pages back from the end, `limit` steps at a time. Null: no such run.
+ * result were, never either of them), what it asked of people, the jobs that started and woke it, what it spent,
+ * where each of its claims' time went and the computer it is tied to. `beforeSeq` pages back from the end, `limit`
+ * steps at a time. Null: no such run.
  */
 export async function operatorRunTrace(
   db: Database,
@@ -564,7 +572,7 @@ export async function operatorRunTrace(
     gte(usageRecords.createdAt, run.createdAt),
     eq(usageRecords.runId, runId),
   );
-  const [steps, counted, asks, jobs, usage, ranOn, agent] = await Promise.all([
+  const [steps, counted, asks, jobs, usage, ranOn, agent, kept] = await Promise.all([
     db
       .select(stepColumns)
       .from(agentRunSteps)
@@ -596,6 +604,8 @@ export async function operatorRunTrace(
       .orderBy(desc(usageRecords.createdAt))
       .limit(1),
     db.select({ machineId: agents.machineId }).from(agents).where(eq(agents.id, run.agentId)),
+    // Apart from the run's row: a list of runs never reads their profiles.
+    db.select({ profiles: agentRuns.profiles }).from(agentRuns).where(eq(agentRuns.id, runId)),
   ]);
 
   // The run's row doesn't say where it ran: the computer it waits for, else the one its plan's usage names,
@@ -667,6 +677,7 @@ export async function operatorRunTrace(
       }),
       byModel: usage.map(spentOf),
     },
+    claims: runClaims(kept[0]?.profiles),
     machine:
       tied && computer
         ? {

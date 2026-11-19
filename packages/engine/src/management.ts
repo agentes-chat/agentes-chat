@@ -1,9 +1,10 @@
 import type { PubSub } from "@agenteschat/adapters";
 import { and, asc, type Database, desc, eq, gte, inArray, isNull, lt, schema, sql } from "@agenteschat/db";
 import { MODEL_TIERS, type ModelTier } from "@agenteschat/providers";
+import { othersPersonalTools } from "./agent-audit";
 import { getAgent } from "./agents";
 import { decidableBySql } from "./approvals";
-import { audienceSql, listsAllAgents } from "./audience";
+import { listsAgentSql, managesAgent } from "./audience";
 import { recordAudit } from "./audit";
 import type { AutoModels } from "./auto-model";
 import { caches } from "./cache";
@@ -315,13 +316,13 @@ export async function orgOverview(db: Database, actorId: string, orgId: string, 
   const [agentCount] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(agents)
-    // The agents the person's lists name (`listsAgentTo`), the right hand (ADR 0137) included: the sidebar lists it
-    // under this count with the others.
+    // The agents the person's lists name (`listsAgentTo`, the ones they edit included), the right hand (ADR 0137)
+    // included: the sidebar lists it under this count with the others.
     .where(
       and(
         eq(agents.orgId, orgId),
         isNull(agents.archivedAt),
-        listsAllAgents(membership) ? undefined : audienceSql("agents", sql`${actorId}::text`),
+        listsAgentSql("agents", sql`${actorId}::text`, membership),
       ),
     );
   const [pending] = await db
@@ -350,8 +351,8 @@ export async function agentDetail(db: Database, actorId: string, orgId: string, 
   const since = monthStartUtc(now);
   const [usage] = await db
     .select({
-      // What its budget paid: its own calls, as `agentBudgetsThisMonth` counts them.
-      cost: sql<string>`coalesce(sum(${usageRecords.costNanoUsd}) filter (where ${usageRecords.kind} = 'agent'), 0)`,
+      // What its budget paid: its own calls and pictures, as `agentBudgetsThisMonth` counts them.
+      cost: sql<string>`coalesce(sum(${usageRecords.costNanoUsd}) filter (where ${usageRecords.kind} in ('agent', 'image')), 0)`,
       tokens: sql<string>`coalesce(sum(${usageRecords.inputTokens} + ${usageRecords.outputTokens} + ${usageRecords.cacheReadTokens} + ${usageRecords.cacheWriteTokens}), 0)`,
     })
     .from(usageRecords)
@@ -397,7 +398,7 @@ export async function agentDetail(db: Database, actorId: string, orgId: string, 
 
 export async function listAgentChannels(db: Database, actorId: string, orgId: string, agentId: string) {
   const membership = await requireActiveMembership(db, actorId, orgId);
-  const [rows, ownChannels] = await Promise.all([
+  const [rows, ownChannels, agent] = await Promise.all([
     db
       .select({
         id: channels.id,
@@ -414,9 +415,11 @@ export async function listAgentChannels(db: Database, actorId: string, orgId: st
       .select({ channelId: channelMembers.channelId })
       .from(channelMembers)
       .where(and(eq(channelMembers.orgId, orgId), eq(channelMembers.userId, actorId))),
+    getAgent(db, orgId, agentId),
   ]);
   const visible = new Set(ownChannels.map((row) => row.channelId));
-  const admin = can(membership, "manage_agents");
+  // Its private channels show to who manages this agent (ADR 0085 addendum of 2026-11-17), who may take it out of them.
+  const admin = !!agent && managesAgent(agent, actorId, membership);
   return rows
     .filter((row) => visible.has(row.id) || (row.kind === "channel" && (row.visibility === "public" || admin)))
     .map(({ id, name, autoReply }) => ({ id, name, autoReply }));
@@ -424,10 +427,10 @@ export async function listAgentChannels(db: Database, actorId: string, orgId: st
 
 /**
  * Sets where an agent works: the channels it belongs to and, per channel, whether the router may pick it without a
- * mention. Its owner or who may manage every agent (`manage_agents`) sets it, and puts it in or takes it out of a
- * channel only where they're a member who may post, or that they manage (`placesAgentsIn`, the rule a channel's
- * members follow too). The list replaces the channels `listAgentChannels` shows them: a private channel they can't
- * see, a DM or an archived channel stays as it is.
+ * mention. Its owner or who manages it (`managesAgent`, ADR 0085 addendum of 2026-11-17) sets it, and puts it in or
+ * takes it out of a channel only where they're a member who may post, or that they manage (`placesAgentsIn`, the rule
+ * a channel's members follow too). The list replaces the channels `listAgentChannels` shows them: a private channel
+ * they can't see, a DM or an archived channel stays as it is.
  */
 export async function setAgentChannels(
   db: Database,
@@ -440,7 +443,7 @@ export async function setAgentChannels(
   const membership = await requireActiveMembership(db, actorId, orgId);
   const agent = await getAgent(db, orgId, agentId);
   if (!agent || agent.archivedAt) throw new NotFoundError("Agent not found");
-  const admin = can(membership, "manage_agents");
+  const admin = managesAgent(agent, actorId, membership);
   if (!admin && agent.ownerUserId !== actorId) {
     throw new ForbiddenError("Only an admin or the agent's owner can change where it works");
   }
@@ -474,6 +477,20 @@ export async function setAgentChannels(
   const inIt = new Set(current.map((c) => c.id));
   const adding = found.filter((c) => !inIt.has(c.id));
   if (adding.some((c) => c.kind === "dm")) throw new ValidationError("A direct conversation keeps its participants");
+  // An agent joins a live file's conversation only when it may work on the file (`admitFileAgents`, ADR 0199 §2).
+  if (adding.some((c) => c.kind === "file")) {
+    throw new ValidationError(
+      "An agent joins a file's conversation when someone there names it",
+      "channel.file_conversation",
+    );
+  }
+  // And a task's only through a mention there (ADR 0145, `admitTaskAgents`).
+  if (adding.some((c) => c.kind === "task")) {
+    throw new ValidationError(
+      "An agent joins a task's conversation when someone there names it",
+      "channel.task_conversation",
+    );
+  }
   const actorIn = new Set(mine.map((c) => c.id));
   const removing = current.filter(
     (c) => c.kind === "channel" && !wanted.has(c.id) && (actorIn.has(c.id) || c.visibility === "public" || admin),
@@ -637,7 +654,7 @@ export async function channelMembersDetail(db: Database, orgId: string, channelI
 // ── Runs and usage ───────────────────────────────────────────────────────────
 
 /** Who may see runs and usage: admins (`view_usage`), or the agent's owner for that agent. */
-async function requireUsageAccess(db: Database, actorId: string, orgId: string, agentId?: string) {
+export async function requireUsageAccess(db: Database, actorId: string, orgId: string, agentId?: string) {
   const membership = await requirePermission(db, actorId, orgId, "read");
   if (can(membership, "view_usage")) return;
   if (agentId) {
@@ -808,12 +825,30 @@ export async function getRun(db: Database, actorId: string, orgId: string, runId
     .from(agentRunSteps)
     .where(eq(agentRunSteps.runId, runId))
     .orderBy(asc(agentRunSteps.seq));
-  return { run: summary, steps };
+  const hidden = await othersPersonalTools(db, orgId, runId, actorId);
+  // A call still running has no audit row yet: its step says whose connection it goes through.
+  const running = new Set(
+    steps.flatMap((s) =>
+      s.kind === "tool_call" && typeof s.data.personalOf === "string" && s.data.personalOf !== actorId
+        ? [String(s.data.toolUseId)]
+        : [],
+    ),
+  );
+  if (hidden.size === 0 && running.size === 0) return { run: summary, steps };
+  return {
+    run: summary,
+    steps: steps.map((s) =>
+      (s.kind === "tool_call" || s.kind === "tool_result") &&
+      (hidden.has(String(s.data.name)) || running.has(String(s.data.toolUseId)))
+        ? { ...s, data: { toolUseId: s.data.toolUseId, name: s.data.name, isError: s.data.isError } }
+        : s,
+    ),
+  };
 }
 
 /**
  * Usage of the organization since `since` (default: this month): totals by
- * kind (agent, router, embedding, summary) and per agent with budgets.
+ * kind (agent, router, embedding, summary, image) and per agent with budgets.
  */
 export async function usageReport(db: Database, actorId: string, orgId: string, options: { since?: Date } = {}) {
   await requirePermission(db, actorId, orgId, "view_usage");

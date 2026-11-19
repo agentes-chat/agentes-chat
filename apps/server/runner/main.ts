@@ -74,6 +74,7 @@ import { RotatingFile } from "./logfile";
 import { adoptLoginPath } from "./login-path";
 import { LoopbackGuard, loopbackEndpoints, runnerEndpoints } from "./loopback-guard";
 import { MCP_TOKEN_FILE, mcpSocketPath, runMcpRelay, runMcpServer } from "./mcp";
+import { runMigrate } from "./migrate";
 import {
   type DeviceGrant,
   devicePair,
@@ -133,6 +134,9 @@ Usage:
       --rotate   asks for a new token for that organization's connection (the server refused its own)
   agentes-runner service install --host --server <url> --token-file <path> [--state <dir>] [--no-exec] [--no-start]
       Runs host as this computer's service: the root unit from boot on Linux, at login on macOS.
+  agentes-runner migrate [--from <app>] [--out <folder>] [--json] [--no-files]
+      Reads the agents another app keeps on this computer (openbot, openmausbot, hermes, openclaw,
+      paperclip) and writes one .zip to drop on the import screen. It only reads, and sends nothing.
   agentes-runner update
       Downloads the latest runner from the server and restarts the service (keeps the pairing).
   agentes-runner standby [--minutes <n>]
@@ -198,6 +202,10 @@ interface Parsed {
 
 const VALUE_FLAGS = new Set([
   "server",
+  "from",
+  "out",
+  "data",
+  "company",
   "dir",
   "name",
   "task",
@@ -1549,6 +1557,16 @@ async function main(argv: string[]): Promise<number> {
       runTaskWrapper(path.resolve(sub));
       return new Promise<number>(() => {});
     }
+    case "migrate":
+      // Reads another app's agents on this computer into a file for the import page; it needs no connection.
+      return runMigrate({
+        from: flagString(p, "from"),
+        out: flagString(p, "out"),
+        data: flagString(p, "data"),
+        company: flagString(p, "company"),
+        json: p.flags.has("json"),
+        noFiles: p.flags.has("no-files"),
+      });
     case "update":
       return update();
     case "standby":

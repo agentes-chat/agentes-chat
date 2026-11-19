@@ -34,6 +34,7 @@
     "eval:mentions": "bun --env-file=.env packages/engine/eval/mention-handoff.ts",
     "eval:catchup": "bun --env-file=.env packages/engine/eval/catch-up.ts",
     "eval:router": "bun --env-file=.env packages/engine/eval/router.ts",
+    "eval:steer": "bun --env-file=.env packages/engine/eval/steer-triage.ts",
     "eval:turns": "bun --env-file=.env packages/engine/eval/turns-real.ts",
     "eval:conversation": "bun --env-file=.env packages/engine/eval/conversation.ts",
     "eval:browser": "bun --env-file=.env packages/engine/eval/browser/ab.ts",

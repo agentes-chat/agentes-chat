@@ -53,8 +53,15 @@ test("Configurações › Lodi: Resumo do dia and its hour for anyone, the week'
   // One list of switch rows, as the web's card: no header repeats a row's name over it.
   expect(screen).not.toContain("<GroupedHeader>{dayLabel}</GroupedHeader>");
   expect(screen).not.toContain("<GroupedHeader>{weekLabel}</GroupedHeader>");
-  expect(screen).toContain("onPick={(weekHour) => save({ weekHour })}");
   expect(screen).toContain('t("teamWeek.settings.dayLabel")');
+  // The hour and the day are one row each that opens the app's picker, as "Your AI" does: no wall of 24 small pills.
+  expect(screen).not.toContain("<Pills");
+  // Three of them, and "Your AI" itself, which opens its choice the same way.
+  expect(screen.match(/\bmenu\n/g)).toHaveLength(4);
+  expect(screen).toContain("value={hourText(locale, prefs.dayHour)}");
+  expect(screen).toContain("value={dayText(locale, prefs.day)}");
+  expect(screen).toContain("(weekHour) => save({ weekHour })");
+  expect(screen).toMatch(/void pickOne\(\{\s+title,\s+value: String\(value\),/);
 });
 
 test("the other switches show only for a feature the server lists, the workspace's only to who configures it", () => {
@@ -64,10 +71,27 @@ test("the other switches show only for a feature the server lists, the workspace
   expect(screen).toContain('can(org, "configure") && settings');
   // A workspace switch says who it is for under its name, and saves through the workspace's settings.
   expect(screen).toContain('sub={t("rightHand.settings.groupWorkspace")}');
-  expect(screen).toContain("setSettings.mutate({ [r.id]: !on }, { onError: failed })");
-  // Nothing takes a second press while a change is being saved.
-  expect(screen).toContain("disabled={set.isPending}");
-  expect(screen).toContain("disabled={setSettings.isPending}");
+  expect(screen).toContain(".mutateAsync({ [id]: next })");
+  // A switch flips on the tap; only the row whose save is on its way waits for it, every other one stays live.
+  expect(screen).not.toMatch(/disabled=\{(set|setSettings)\.isPending\}/);
+  expect(screen).toContain("if (savingPrefs && Object.keys(patch).some((k) => k in savingPrefs)) return;");
+  expect(screen).toContain("if (flips.has(id)) return;");
+  expect(screen).toContain("const on = flips.get(r.id) ??");
+});
+
+test("the right hand's own switches show on the tap, and a refused one goes back", () => {
+  const queries = readFileSync(new URL("../../../../packages/client/src/api/queries.ts", import.meta.url), "utf8");
+  const hook = queries.slice(
+    queries.indexOf("export const useSetTeamWeekPrefs"),
+    queries.indexOf("export const useActOnTeamWeek"),
+  );
+  // Written to the cache before the server answers, one save at a time, and put back if it is refused.
+  expect(hook).toContain("qc.setQueryData<LodiPrefs>(keys.teamWeek(orgId), { ...before, ...patch });");
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: the hook's source
+  expect(hook).toContain("scope: { id: `team-week-prefs:${orgId}` },");
+  expect(hook).toContain("if (context?.before) qc.setQueryData(keys.teamWeek(orgId), context.before);");
+  // An earlier answer never undoes a later choice still on its way.
+  expect(hook).toContain("if (qc.isMutating({ mutationKey }) <= 1) qc.setQueryData(keys.teamWeek(orgId), prefs);");
 });
 
 test("the card's footer says when the card it sits on comes", () => {
