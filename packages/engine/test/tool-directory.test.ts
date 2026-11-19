@@ -328,8 +328,10 @@ test("a schema over the cut keeps what is required", () => {
   );
   const text = compactSchema({ type: "object", properties, required: ["inbox_id"], additionalProperties: false });
   expect(text).toStartWith('{"required":["inbox_id"],"type":"object"');
-  expect(text).toEndWith("…");
-  expect(text.length).toBeLessThanOrEqual(1_501);
+  const [cut, rest] = text.split("… (every field: ");
+  expect(cut?.length).toBeLessThanOrEqual(1_500);
+  // Every field is still named past the cut, the last one too: told to fill it, an agent can see it exists.
+  expect(rest).toContain("field_59");
   expect(compactSchema({ type: "object", properties: {} })).toBe('{"type":"object","properties":{}}');
 });
 
