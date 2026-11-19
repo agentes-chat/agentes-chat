@@ -527,11 +527,11 @@ export const LOGIN_PER_AGENT: Readonly<Record<"claude_code" | "codex" | "cursor"
 };
 
 /**
- * Whether an account (its CLI's kind, and a coding plan's `provider` for a key, `cursor` for a Cursor API key or `zen`
- * for an OpenCode key) may have one login per agent.
+ * Whether an account (its CLI's kind, and a coding plan's `provider` for a key, `cursor` for a Cursor API key, `zen`
+ * for an OpenCode key or `commandcode` for a Command Code key) may have one login per agent.
  */
 export const loginPerAgent = (kind: string, provider?: string | null) =>
-  isPlanId(provider) || provider === "cursor" || provider === "zen"
+  isPlanId(provider) || provider === "cursor" || provider === "zen" || provider === "commandcode"
     ? LOGIN_PER_AGENT.key
     : kind === "codex" || kind === "cursor"
       ? LOGIN_PER_AGENT[kind]

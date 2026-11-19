@@ -1324,7 +1324,8 @@ no commands) and `--no-service`.
 That computer runs the commands agents execute, the browser they drive (the computer's own Google
 Chrome, which must be installed there: get it from google.com/chrome; it keeps itself up to date, and
 each agent uses a profile of its own, never yours), and Claude Code, Codex, Cursor's, OpenCode's, xAI's Grok
-Build or Google's Antigravity CLI when an agent thinks with a subscription signed in there (OpenCode's free models need no sign-in at all).
+Build, Google's Antigravity CLI or Command Code's when an agent thinks with a subscription signed in there (OpenCode's
+free models need no sign-in at all).
 Install the ones you want on that computer, as the user that runs the runner: Cursor's with
 `curl https://cursor.com/install -fsS | bash` (it lands in `~/.local/bin`, which the runner's PATH must
 include), OpenCode's with `npm install -g opencode-ai@1.19.5`, Grok Build with
@@ -1334,7 +1335,9 @@ bubblewrap, `sudo apt install -y bubblewrap`, or Grok Build refuses to start and
 Antigravity CLI with
 `curl -fsSL https://antigravity.google/cli/install.sh | bash` (`agy` in `~/.local/bin`; Gemini accounts sign in on Linux
 and macOS computers, not Windows yet, each in a folder of its own (on a Mac, with a keychain of its own there), and a personal Google plan used this way is against Google's terms for
-consumer plans: Gemini Enterprise or an API key avoids that). A runner in system mode (each agent
+consumer plans: Gemini Enterprise or an API key avoids that), and Command Code's with `npm install -g command-code`
+(it runs as `command-code`; agents think with it only through a Command Code key added in Settings, AI and usage, never
+the computer's own `cmd login`; not on Windows yet). A runner in system mode (each agent
 its own system user) needs the CLI where every agent's user can run it, not in one user's home: install it
 under a shared folder and link it into `/usr/local/bin`, for example
 `sudo env HOME=/opt/cursor sh -c 'curl https://cursor.com/install -fsS | bash'`, then
@@ -1345,9 +1348,11 @@ extracted to `/usr/local/bin/opencode`; Grok Build with
 `sudo chmod -R a+rX /opt/grok` and `sudo ln -sf /opt/grok/.local/bin/grok /usr/local/bin/grok`. Grok's installer
 also makes `~/.local/bin/agent`, Cursor's name: where both are installed, link Cursor's `agent` last. The Antigravity
 CLI the same way: `sudo env HOME=/opt/agy sh -c 'curl -fsSL https://antigravity.google/cli/install.sh | bash -s -- --skip-path'`,
-then `sudo chmod -R a+rX /opt/agy` and `sudo ln -sf /opt/agy/.local/bin/agy /usr/local/bin/agy`.
+then `sudo chmod -R a+rX /opt/agy` and `sudo ln -sf /opt/agy/.local/bin/agy /usr/local/bin/agy`. Command Code's
+with `sudo npm install -g command-code`, which puts `command-code` in `/usr/local/bin`.
 Commands run as the user that runs the runner, so give it a dedicated user or a VM.
-`agentes-runner tools disable commands` (or `claude`, `codex`, `cursor`, `opencode`, `grok` or `antigravity`) turns a capability off on that
+`agentes-runner tools disable commands` (or `claude`, `codex`, `cursor`, `opencode`, `grok`, `antigravity` or
+`commandcode`) turns a capability off on that
 computer, and `agentes-runner folders allow <path>` shares a folder besides the agents' own.
 
 On a Linux server, the installer's `--system` option (below) installs Google Chrome from Google's apt

@@ -206,6 +206,17 @@ const LIMIT_BOUNDS: Record<keyof typeof DEFAULT_LIMITS, [number, number]> = {
   brainMaxProcesses: [1, 10],
 };
 
+/** Each brain's CLI as the activity log names it ("thinking with …"). */
+const BRAIN_LABELS: Readonly<Record<string, string>> = {
+  claude_code: "Claude Code",
+  codex: "Codex",
+  cursor: "Cursor",
+  opencode: "OpenCode",
+  grok: "Grok Build",
+  antigravity: "Antigravity CLI",
+  commandcode: "Command Code",
+};
+
 /** Error codes that mean "refused here" in the activity log (not "it broke"). */
 const REFUSED = new Set(["paused", "not_allowed", "exec_disabled", "outside_workspace"]);
 
@@ -1080,6 +1091,7 @@ export class RunnerDaemon implements RequestObserver {
       opencode: "OpenCode",
       grok: "Grok Build",
       antigravity: "Antigravity CLI",
+      commandcode: "Command Code",
       commands: "commands",
       browser: "the browser",
       desktop: "the agents' desktops",
@@ -2805,7 +2817,7 @@ export class RunnerDaemon implements RequestObserver {
         };
       }
       case "brain.turn": {
-        const brain = req.kind === "codex" ? "Codex" : "Claude Code";
+        const brain = BRAIN_LABELS[req.kind] ?? "Claude Code";
         return { kind: "brain", summary: `thinking with ${brain}`, said: { key: "thinking", brain } };
       }
       case "git.sync": {

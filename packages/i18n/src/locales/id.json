@@ -3235,6 +3235,7 @@
       "antigravity": "Gemini belum masuk di komputer ini. Hubungkan akun Gemini di halaman {{name}}.",
       "antigravity_female": "Gemini belum masuk di komputer ini. Hubungkan akun Gemini di halaman {{name}}.",
       "opencode": "OpenCode tidak bisa berpikir di komputer ini. Hubungkan kunci OpenCode di halaman {{name}}.",
+      "commandcode": "Command Code tidak bisa berpikir di komputer ini. Hubungkan kunci Command Code di halaman {{name}}.",
       "opencode_female": "OpenCode tidak bisa berpikir di komputer ini. Hubungkan kunci OpenCode di halaman {{name}}."
     },
     "card": {
@@ -3294,6 +3295,7 @@
       "grok": "Hubungkan paket Grok-mu",
       "gemini": "Hubungkan paket Gemini-mu",
       "zen": "Hubungkan OpenCode",
+      "commandcode": "Hubungkan Command Code",
       "api_key": "Tambahkan kunci API"
     },
     "cli": {
@@ -3418,6 +3420,10 @@
         "title": "OpenCode",
         "tiers": "Model gratis, atau kunci OpenCode-mu"
       },
+      "commandcode": {
+        "title": "Command Code",
+        "tiers": "Kunci Command Code-mu"
+      },
       "zai": {
         "tiers": "Lite, Pro, atau Max"
       },
@@ -3521,7 +3527,8 @@
       "cursor": "Cursor masuk sebagai {{email}}, bukan {{account}}. Keluar di halaman Cursor lalu coba lagi.",
       "grok": "Grok masuk sebagai {{email}}, bukan {{account}}. Keluar di halaman Grok lalu coba lagi.",
       "antigravity": "Gemini masuk sebagai {{email}}, bukan {{account}}. Keluar di halaman Google lalu coba lagi.",
-      "opencode": "OpenCode masuk sebagai {{email}}, bukan {{account}}. Coba lagi dengan kunci yang benar."
+      "opencode": "OpenCode masuk sebagai {{email}}, bukan {{account}}. Coba lagi dengan kunci yang benar.",
+      "commandcode": "Command Code masuk sebagai {{email}}, bukan {{account}}. Coba lagi dengan kunci yang benar."
     },
     "useAnyway": "Pakai {{email}}",
     "assignFailed": "Akun {{label}} sudah terhubung, tapi {{agent}} tidak bisa beralih ke akun itu.",
@@ -5695,7 +5702,8 @@
             "cursor": "Tambah akun Cursor",
             "grok": "Tambah akun Grok",
             "antigravity": "Tambah akun Gemini",
-            "opencode": "Tambah kunci OpenCode"
+            "opencode": "Tambah kunci OpenCode",
+            "commandcode": "Tambah kunci Command Code"
           },
           "stepOne": {
             "claude_code": "Akun dengan paketmu",
@@ -5759,7 +5767,8 @@
             "cursor": "Cursor masuk sebagai {{account}}, akun yang sudah kamu hubungkan. Untuk memakai akun lain, keluar di halaman Cursor lalu coba lagi.",
             "grok": "Grok masuk sebagai {{account}}, akun yang sudah kamu hubungkan. Untuk memakai akun lain, keluar di halaman Grok lalu coba lagi.",
             "antigravity": "Gemini masuk sebagai {{account}}, akun yang sudah kamu hubungkan. Untuk memakai akun lain, keluar di halaman Google lalu coba lagi.",
-            "opencode": "Kunci OpenCode itu sudah terhubung sebagai {{account}}."
+            "opencode": "Kunci OpenCode itu sudah terhubung sebagai {{account}}.",
+            "commandcode": "Kunci Command Code itu sudah terhubung sebagai {{account}}."
           },
           "startFailed": "Tidak ada jawaban dari {{computer}}. Coba lagi sebentar lagi.",
           "sendFailed": "Tidak bisa mengirim kode. Periksa lalu coba lagi.",
@@ -10289,6 +10298,7 @@
       "grok": "Grok",
       "antigravity": "Gemini",
       "opencode": "OpenCode",
+      "commandcode": "Command Code",
       "needs": {
         "keys": "Perbarui agentes di komputer untuk memakai kunci paket"
       },
@@ -11526,6 +11536,7 @@
       "grok": "{{model}} dengan paket Grok",
       "gemini": "{{model}} dengan paket Gemini",
       "zen": "{{model}} lewat OpenCode",
+      "commandcode": "{{model}} lewat Command Code",
       "coding": "{{model}} dengan {{plan}}",
       "claudeOf": "{{model}} dengan paket Claude milik {{owner}}",
       "chatgptOf": "{{model}} dengan paket ChatGPT milik {{owner}}",
@@ -11533,6 +11544,7 @@
       "grokOf": "{{model}} dengan paket Grok milik {{owner}}",
       "geminiOf": "{{model}} dengan paket Gemini milik {{owner}}",
       "zenOf": "{{model}} lewat OpenCode milik {{owner}}",
+      "commandcodeOf": "{{model}} lewat Command Code milik {{owner}}",
       "codingOf": "{{model}} dengan {{plan}} milik {{owner}}",
       "claudeAuto": "Paket Claude",
       "chatgptAuto": "Paket ChatGPT",
@@ -11540,6 +11552,7 @@
       "grokAuto": "Paket Grok",
       "geminiAuto": "Paket Gemini",
       "zenAuto": "OpenCode",
+      "commandcodeAuto": "Command Code",
       "codingAuto": "{{plan}}",
       "claudeAutoOf": "Paket Claude milik {{owner}}",
       "chatgptAutoOf": "Paket ChatGPT milik {{owner}}",
@@ -11547,6 +11560,7 @@
       "grokAutoOf": "Paket Grok milik {{owner}}",
       "geminiAutoOf": "Paket Gemini milik {{owner}}",
       "zenAutoOf": "OpenCode milik {{owner}}",
+      "commandcodeAutoOf": "Command Code milik {{owner}}",
       "codingAutoOf": "{{plan}} milik {{owner}}",
       "on": "{{line}} di {{computer}}"
     },
@@ -11558,6 +11572,7 @@
       "codex": "Codex",
       "cursor": "Cursor",
       "opencode": "OpenCode",
+      "commandcode": "Command Code",
       "grok": "Grok Build",
       "antigravity": "Antigravity CLI"
     },
@@ -11571,6 +11586,7 @@
     "codexText": "Memakai paket ChatGPT milik orang yang menghubungkan komputer.",
     "cursorText": "Memakai paket Cursor milik orang yang menghubungkan komputer.",
     "grokText": "Memakai paket Grok milik orang yang menghubungkan komputer.",
+    "commandcodeText": "Memakai paket Command Code milik orang yang menghubungkan komputer.",
     "antigravityText": "Memakai paket Gemini milik orang yang menghubungkan komputer.",
     "opencodeText": "Model gratis OpenCode, atau kunci OpenCode milik orang yang menghubungkan komputer.",
     "cursorModel": {
@@ -11624,7 +11640,8 @@
       "cursor": "Cursor · {{model}}",
       "grok": "Grok Build · {{model}}",
       "antigravity": "Antigravity CLI · {{model}}",
-      "opencode": "OpenCode · {{model}}"
+      "opencode": "OpenCode · {{model}}",
+      "commandcode": "Command Code · {{model}}"
     },
     "mission": {
       "modelLabel": "Model",
@@ -15080,6 +15097,7 @@
         "codex": "Codex",
         "cursor": "Cursor",
         "opencode": "OpenCode",
+        "commandcode": "Command Code",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
         "commands": "perintah",
@@ -15240,6 +15258,7 @@
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
         "opencode": "OpenCode",
+        "commandcode": "Command Code",
         "commands": "Perintah",
         "browser": "Browser"
       },
@@ -15248,6 +15267,7 @@
         "codex": "Seperti Claude Code, dengan akun ChatGPT. Hanya di folder yang diizinkan.",
         "cursor": "Seperti Claude Code, dengan akun Cursor. Hanya di folder yang diizinkan.",
         "grok": "Seperti Claude Code, dengan akun Grok. Hanya di folder yang diizinkan.",
+        "commandcode": "Seperti Claude Code, dengan akun Command Code. Hanya di folder yang diizinkan.",
         "antigravity": "Seperti Claude Code, dengan akun Gemini. Hanya di folder yang diizinkan.",
         "opencode": "Seperti Claude Code, dengan model gratis OpenCode atau kunci OpenCode. Hanya di folder yang diizinkan.",
         "commands": "Menjalankan perintah Terminal, seperti tes dan build."

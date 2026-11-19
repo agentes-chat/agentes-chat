@@ -336,7 +336,7 @@ describe("the Cloud's plan gate tells the truth", () => {
   });
 
   test("every plan's program gets the same honest line", () => {
-    for (const kind of ["claude_code", "codex", "cursor", "opencode", "grok", "antigravity"] as const) {
+    for (const kind of ["claude_code", "codex", "cursor", "opencode", "grok", "antigravity", "commandcode"] as const) {
       const line = cloudLine({ state: "unsupported", reason: "not_installed", overdue: true }, kind);
       expect(line?.text).toContain("Acme");
       expect(line?.text).toContain("API key");
@@ -514,7 +514,7 @@ describe("the agent a plan starts on, and the order of the plans", () => {
     expect(firstAgent([], () => false)).toBeUndefined();
   });
 
-  test("Claude, ChatGPT, Gemini, Grok, Cursor, OpenCode, then the coding plans; ChatGPT signs in through Codex, the others through their own CLIs", () => {
+  test("Claude, ChatGPT, Gemini, Grok, Cursor, OpenCode, Command Code, then the coding plans; ChatGPT signs in through Codex, the others through their own CLIs", () => {
     expect(PLAN_CHOICES).toEqual([
       "claude",
       "chatgpt",
@@ -522,6 +522,7 @@ describe("the agent a plan starts on, and the order of the plans", () => {
       "grok",
       "cursor",
       "zen",
+      "commandcode",
       "zai",
       "kimi",
       "minimax",
@@ -534,6 +535,7 @@ describe("the agent a plan starts on, and the order of the plans", () => {
       "grok",
       "cursor",
       "opencode",
+      "commandcode",
       "claude_code",
       "claude_code",
       "claude_code",

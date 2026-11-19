@@ -285,6 +285,7 @@ export function machineAccountRoutes(deps: AppDeps) {
                       opencode: z.boolean(),
                       grok: z.boolean(),
                       antigravity: z.boolean(),
+                      commandcode: z.boolean(),
                       key: z.boolean(),
                     })
                     .openapi({
@@ -302,6 +303,7 @@ export function machineAccountRoutes(deps: AppDeps) {
                       opencode: z.boolean(),
                       grok: z.boolean(),
                       antigravity: z.boolean(),
+                      commandcode: z.boolean(),
                     })
                     .openapi({
                       description:

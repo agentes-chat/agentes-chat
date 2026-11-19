@@ -1294,7 +1294,8 @@ export async function buildRunContext(
             ? [
                 { text: machineAccessText(a) },
                 // Cursor's, Grok's and Antigravity's sandboxes (ADR 0114, 0142, 0143) and OpenCode's permissions (ADR
-                // 0132) keep its shell out of a folder outside the turn's workspace, so it couldn't use it.
+                // 0132) keep its shell out of a folder outside the turn's workspace, so it couldn't use it. Command
+                // Code's turns may change the folders allowed to the agent (ADR 0194).
                 ...(a.shared &&
                 agent.brain !== "cursor" &&
                 agent.brain !== "opencode" &&

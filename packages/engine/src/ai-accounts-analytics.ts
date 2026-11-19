@@ -32,6 +32,7 @@ const RUNTIME_PROVIDER: Record<string, string> = {
   antigravity: "google",
   cursor: "cursor",
   opencode: "opencode",
+  commandcode: "commandcode",
 };
 
 type Billing = "subscription" | "coding_plan" | "metered_api" | "unknown";

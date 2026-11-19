@@ -3510,7 +3510,8 @@
       "cursor": "Cursor n'est pas connecté sur cet ordinateur. Connectez un compte Cursor sur la page de {{name}}.",
       "grok": "Grok n'est pas connecté sur cet ordinateur. Connectez un compte Grok sur la page de {{name}}.",
       "antigravity": "Gemini n'est pas connecté sur cet ordinateur. Connectez un compte Gemini sur la page de {{name}}.",
-      "opencode": "OpenCode ne peut pas réfléchir sur cet ordinateur. Connectez une clé OpenCode sur la page de {{name}}."
+      "opencode": "OpenCode ne peut pas réfléchir sur cet ordinateur. Connectez une clé OpenCode sur la page de {{name}}.",
+      "commandcode": "Command Code ne peut pas réfléchir sur cet ordinateur. Connectez une clé Command Code sur la page de {{name}}."
     },
     "card": {
       "connected": "C'est fait : {{name}} a maintenant une IA.",
@@ -3569,6 +3570,7 @@
       "grok": "Connecter votre abonnement Grok",
       "gemini": "Connecter votre abonnement Gemini",
       "zen": "Connecter OpenCode",
+      "commandcode": "Connecter Command Code",
       "api_key": "Ajouter une clé API"
     },
     "cli": {
@@ -3703,6 +3705,10 @@
         "title": "OpenCode",
         "tiers": "Modèles gratuits, ou votre clé OpenCode"
       },
+      "commandcode": {
+        "title": "Command Code",
+        "tiers": "Votre clé Command Code"
+      },
       "zai": {
         "tiers": "Lite, Pro ou Max"
       },
@@ -3806,7 +3812,8 @@
       "cursor": "Cursor est connecté en tant que {{email}}, et non {{account}}. Déconnectez-vous sur la page de Cursor et réessayez.",
       "grok": "Grok est connecté en tant que {{email}}, et non {{account}}. Déconnectez-vous sur la page de Grok et réessayez.",
       "antigravity": "Gemini est connecté en tant que {{email}}, et non {{account}}. Déconnectez-vous sur la page de Google et réessayez.",
-      "opencode": "OpenCode est connecté en tant que {{email}}, pas {{account}}. Réessayez avec la bonne clé."
+      "opencode": "OpenCode est connecté en tant que {{email}}, pas {{account}}. Réessayez avec la bonne clé.",
+      "commandcode": "Command Code est connecté en tant que {{email}}, pas {{account}}. Réessayez avec la bonne clé."
     },
     "useAnyway": "Utiliser {{email}}",
     "assignFailed": "Le compte {{label}} est connecté, mais {{agent}} n'a pas pu basculer dessus.",
@@ -6128,7 +6135,8 @@
             "cursor": "Ajouter un compte Cursor",
             "grok": "Ajouter un compte Grok",
             "antigravity": "Ajouter un compte Gemini",
-            "opencode": "Ajouter une clé OpenCode"
+            "opencode": "Ajouter une clé OpenCode",
+            "commandcode": "Ajouter une clé Command Code"
           },
           "stepOne": {
             "claude_code": "Le compte avec votre abonnement",
@@ -6192,7 +6200,8 @@
             "cursor": "Cursor s'est connecté en tant que {{account}}, un compte que vous avez déjà connecté. Pour en utiliser un autre, déconnectez-vous sur la page de Cursor et réessayez.",
             "grok": "Grok s'est connecté en tant que {{account}}, un compte que vous avez déjà connecté. Pour en utiliser un autre, déconnectez-vous sur la page de Grok et réessayez.",
             "antigravity": "Gemini s'est connecté en tant que {{account}}, un compte que vous avez déjà connecté. Pour en utiliser un autre, déconnectez-vous sur la page de Google et réessayez.",
-            "opencode": "Cette clé OpenCode est déjà connectée en tant que {{account}}."
+            "opencode": "Cette clé OpenCode est déjà connectée en tant que {{account}}.",
+            "commandcode": "Cette clé Command Code est déjà connectée en tant que {{account}}."
           },
           "startFailed": "Aucune réponse de {{computer}}. Réessayez dans un instant.",
           "sendFailed": "Impossible d'envoyer le code. Vérifiez-le et réessayez.",
@@ -11083,6 +11092,7 @@
       "grok": "Grok",
       "antigravity": "Gemini",
       "opencode": "OpenCode",
+      "commandcode": "Command Code",
       "needs": {
         "keys": "Mettez à jour agentes sur l'ordinateur pour utiliser la clé d'un abonnement"
       },
@@ -12435,6 +12445,7 @@
       "grok": "{{model}} avec l'abonnement Grok",
       "gemini": "{{model}} avec l'abonnement Gemini",
       "zen": "{{model}} avec OpenCode",
+      "commandcode": "{{model}} avec Command Code",
       "coding": "{{model}} avec {{plan}}",
       "claudeOf": "{{model}} avec l'abonnement Claude de {{owner}}",
       "chatgptOf": "{{model}} avec l'abonnement ChatGPT de {{owner}}",
@@ -12442,6 +12453,7 @@
       "grokOf": "{{model}} avec l'abonnement Grok de {{owner}}",
       "geminiOf": "{{model}} avec l'abonnement Gemini de {{owner}}",
       "zenOf": "{{model}} avec l'OpenCode de {{owner}}",
+      "commandcodeOf": "{{model}} avec l'Command Code de {{owner}}",
       "codingOf": "{{model}} avec {{plan}} de {{owner}}",
       "claudeAuto": "Abonnement Claude",
       "chatgptAuto": "Abonnement ChatGPT",
@@ -12449,6 +12461,7 @@
       "grokAuto": "Abonnement Grok",
       "geminiAuto": "Abonnement Gemini",
       "zenAuto": "OpenCode",
+      "commandcodeAuto": "Command Code",
       "codingAuto": "{{plan}}",
       "claudeAutoOf": "Abonnement Claude de {{owner}}",
       "chatgptAutoOf": "Abonnement ChatGPT de {{owner}}",
@@ -12456,6 +12469,7 @@
       "grokAutoOf": "Abonnement Grok de {{owner}}",
       "geminiAutoOf": "Abonnement Gemini de {{owner}}",
       "zenAutoOf": "OpenCode de {{owner}}",
+      "commandcodeAutoOf": "Command Code de {{owner}}",
       "codingAutoOf": "{{plan}} de {{owner}}",
       "on": "{{line}} sur {{computer}}"
     },
@@ -12468,6 +12482,7 @@
       "codex": "Codex",
       "cursor": "Cursor",
       "opencode": "OpenCode",
+      "commandcode": "Command Code",
       "grok": "Grok Build",
       "antigravity": "Antigravity CLI"
     },
@@ -12481,6 +12496,7 @@
     "codexText": "Utilise l'abonnement ChatGPT de la personne qui a connecté l'ordinateur.",
     "cursorText": "Utilise l'abonnement Cursor de la personne qui a connecté l'ordinateur.",
     "grokText": "Utilise l'abonnement Grok de la personne qui a connecté l'ordinateur.",
+    "commandcodeText": "Utilise l'abonnement Command Code de la personne qui a connecté l'ordinateur.",
     "antigravityText": "Utilise l'abonnement Gemini de la personne qui a connecté l'ordinateur.",
     "opencodeText": "Les modèles gratuits d'OpenCode, ou la clé OpenCode de la personne qui a connecté l'ordinateur.",
     "cursorModel": {
@@ -12534,7 +12550,8 @@
       "cursor": "Cursor · {{model}}",
       "grok": "Grok Build · {{model}}",
       "antigravity": "Antigravity CLI · {{model}}",
-      "opencode": "OpenCode · {{model}}"
+      "opencode": "OpenCode · {{model}}",
+      "commandcode": "Command Code · {{model}}"
     },
     "mission": {
       "modelLabel": "Modèle",
@@ -16136,6 +16153,7 @@
         "codex": "Codex",
         "cursor": "Cursor",
         "opencode": "OpenCode",
+        "commandcode": "Command Code",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
         "commands": "les commandes",
@@ -16296,6 +16314,7 @@
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
         "opencode": "OpenCode",
+        "commandcode": "Command Code",
         "commands": "Commandes",
         "browser": "Navigateur"
       },
@@ -16304,6 +16323,7 @@
         "codex": "Comme Claude Code, avec un compte ChatGPT. Uniquement dans les dossiers autorisés.",
         "cursor": "Comme Claude Code, avec un compte Cursor. Uniquement dans les dossiers autorisés.",
         "grok": "Comme Claude Code, avec un compte Grok. Uniquement dans les dossiers autorisés.",
+        "commandcode": "Comme Claude Code, avec un compte Command Code. Uniquement dans les dossiers autorisés.",
         "antigravity": "Comme Claude Code, avec un compte Gemini. Uniquement dans les dossiers autorisés.",
         "opencode": "Comme Claude Code, avec les modèles gratuits d'OpenCode ou une clé OpenCode. Uniquement dans les dossiers autorisés.",
         "commands": "Lance des commandes dans le Terminal, comme des tests et des builds."

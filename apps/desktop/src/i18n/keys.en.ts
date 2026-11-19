@@ -564,6 +564,8 @@ export const desktopEn = {
     grokDesc: "Writes and changes code in the allowed folders, with your Grok account.",
     antigravityName: "Antigravity CLI",
     antigravityDesc: "Writes and changes code in the allowed folders, with your Gemini account.",
+    commandcodeName: "Command Code",
+    commandcodeDesc: "Writes and changes code in the allowed folders, with your Command Code account.",
     found: "Found",
     notFound: "Not found",
     loggedOut: "Not signed in",
