@@ -8,12 +8,14 @@ import {
   deleteMachine,
   denyDeviceJoin,
   forgetPhone,
+  IPHONE_REPAIR_LIMIT,
   listDevices,
   lookForPhones,
   normalizeUserCode,
   openConnectLink,
   openXcode,
   pickIphoneOverWifi,
+  repairIphone,
   startWifiPairing,
   stopPhone,
   updateComputerDevice,
@@ -529,6 +531,31 @@ export function deviceAppRoutes(deps: AppDeps) {
       const limit = await deps.adapters.rateLimiter.consume(`xcode-open:user:${userId}`, XCODE_OPEN_LIMIT);
       if (!limit.allowed) return apiError(c, 429, "rate_limited", "Too many tries. Try again in a few minutes.");
       return c.json(await openXcode({ db, hub: hub() }, userId, orgId, machineId), 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/devices/phones/{phoneId}/repair",
+      tags,
+      security,
+      summary: "Repair a real iPhone's test helper (its Mac's owner or an admin)",
+      description:
+        "The Mac stops the iPhone's test helper and whatever is left of it, builds it again with the Xcode installed there now and checks it on the iPhone, in a few minutes; the phone's state shows it. What runs on the phone stops. `update`: the Mac's agentes.chat is too old for it.",
+      request: { params: PhoneParams, body: body(z.object({}).strict()) },
+      responses: {
+        200: json(z.object({ repairing: z.boolean(), update: z.literal(true).optional() }).openapi("IphoneRepair")),
+        429: errorResponse("Too many repairs"),
+        ...errors,
+      },
+    }),
+    async (c) => {
+      const { orgId, phoneId } = c.req.valid("param");
+      const userId = c.get("user").id;
+      const limit = await deps.adapters.rateLimiter.consume(`iphone-repair:user:${userId}`, IPHONE_REPAIR_LIMIT);
+      if (!limit.allowed) return apiError(c, 429, "rate_limited", "Too many tries. Try again in a few minutes.");
+      return c.json(await repairIphone({ db, hub: hub() }, userId, orgId, phoneId), 200);
     },
   );
 

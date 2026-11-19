@@ -8528,6 +8528,12 @@ export interface CliInstall {
   cause?: "git_missing" | "still_missing";
 }
 
+/** A repair of an iPhone's test helper started on its Mac; `update`: the Mac's agentes.chat is too old for it. */
+export interface IphoneRepairView {
+  repairing: boolean;
+  update?: true;
+}
+
 /** `fix: null`: none ran; `update`: the Mac's agentes.chat is too old to fix it (the Terminal way instead). */
 export interface XcodeFixView {
   fix: XcodeFix | null;

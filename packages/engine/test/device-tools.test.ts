@@ -494,6 +494,52 @@ describe("phone tools", () => {
     expect(launch.content).toStartWith("That app isn't installed on Pixel 8: install it first with phone_install.");
   });
 
+  test("an iPhone refusing UI actions says so plainly; phone_repair repairs its helper, logged, an iPhone only", async () => {
+    const w = await world();
+    await f.db.update(schema.machines).set({ audienceMode: "everyone" }).where(eq(schema.machines.id, w.mac.machineId));
+    await f.db
+      .update(schema.machinePhones)
+      .set({ audienceMode: "everyone" })
+      .where(eq(schema.machinePhones.id, w.phone.id));
+    const [iphone] = await f.db
+      .insert(schema.machinePhones)
+      .values({
+        orgId: f.org.id,
+        machineId: w.mac.machineId,
+        platform: "ios",
+        serial: "00008120-001A",
+        name: "Sam's iPhone",
+        model: "iPhone 16",
+        osVersion: "26.1",
+        ownerUserId: w.sam.id,
+        followsHost: true,
+        state: "needs_you",
+        reason: "ui_not_authorized",
+      })
+      .returning();
+    w.answer((req) => {
+      if (req.op === "phone.repair") return { repairing: true };
+      throw new MachineRequestError("phone_not_ready", "Screen capture works, but iOS refuses the test helper's taps.");
+    });
+    const ctx = await runCtx();
+    const flow = await call(ctx, "phone_flow", { phone: "Sam's iPhone", flow_yaml: "- tapOn: Sign in" });
+    expect(flow).toMatchObject({ isError: true, data: { code: "device.phone_not_ready" } });
+    expect(flow.content).toStartWith(
+      "Screen capture on Sam's iPhone works, but iOS refuses the test helper's taps and other actions. Ask the person, on the iPhone: Settings → Privacy & Security → Developer Mode on; Settings → Developer → Enable UI Automation on",
+    );
+    expect(flow.content).toContain("Nothing needs rebuilding and no terminal access is needed");
+    const repaired = await call(ctx, "phone_repair", { phone: "Sam's iPhone" });
+    expect(repaired.isError).toBeFalsy();
+    expect(repaired.content).toStartWith("Sam's MacBook is repairing the test helper on Sam's iPhone");
+    expect(w.asked.at(-1)).toEqual({ op: "phone.repair", serial: "00008120-001A" });
+    const audit = await f.db.select().from(schema.auditLog).where(eq(schema.auditLog.action, "device.iphone_repair"));
+    expect(audit.map((a) => [a.actorType, a.actorId, a.runId, a.details])).toEqual([
+      ["agent", f.agent.id, ctx.runId, { phoneId: iphone?.id }],
+    ]);
+    const android = await call(ctx, "phone_repair", { phone: "Pixel 8" });
+    expect(android).toMatchObject({ isError: true, data: { code: "device.unsupported" } });
+  });
+
   test("a phone stopped by its owner for this run stays stopped", async () => {
     const w = await world();
     await f.db

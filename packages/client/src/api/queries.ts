@@ -7701,6 +7701,17 @@ export function useIphoneDevMode(orgId: string, machineId: string | null) {
   return { look, openXcode };
 }
 
+/** The iPhone guide's Repair: its Mac stops the iPhone's test helper, builds it again and checks it (devices refetch). */
+export function useIphoneRepair(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (phoneId: string) => api.devices.repairIphone(orgId, phoneId),
+    meta: { silent: true },
+    onSettled: () => qc.invalidateQueries({ queryKey: keys.devices(orgId) }),
+  });
+}
+
 /**
  * A Mac fixing its own Xcode for the iPhone guide (`on`: the guide shows the Xcode step to who may manage the Mac):
  * where the last fix stands, asked every 1.5 s while macOS's password window is open or the commands run. Once done,

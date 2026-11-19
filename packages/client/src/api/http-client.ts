@@ -136,6 +136,7 @@ import type {
   InviteLink,
   InviteLinkChanged,
   InviteLinkMade,
+  IphoneRepairView,
   Issue,
   IssueActivity,
   IssueColumn,
@@ -1351,6 +1352,8 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         request<XcodeFixView>(`${org(orgId)}/devices/computers/${enc(machineId)}/xcode-fix`, { method: "DELETE" }),
       openXcode: (orgId, machineId) =>
         request<{ opened: boolean }>(`${org(orgId)}/devices/computers/${enc(machineId)}/xcode-open`, { json: {} }),
+      repairIphone: (orgId, phoneId) =>
+        request<IphoneRepairView>(`${org(orgId)}/devices/phones/${enc(phoneId)}/repair`, { json: {} }),
     },
     machines: {
       list: async (orgId) => (await request<{ machines: Machine[] }>(`${org(orgId)}/machines`)).machines,

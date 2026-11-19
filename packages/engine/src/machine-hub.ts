@@ -429,6 +429,8 @@ export function isNewWork(request: MachineRequest) {
     // Its owner fixing the Mac's Xcode for an iPhone's setup, or opening it there.
     case "xcode.fix":
     case "xcode.open":
+    // Repairing an iPhone's test helper (its owner from the apps; an agent's call is refused paused before it's sent).
+    case "phone.repair":
     // Its owner looking for, or installing, a coding CLI there.
     case "clis.check":
     case "cli.install":
