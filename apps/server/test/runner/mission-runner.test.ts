@@ -2,7 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { chmodSync, existsSync, lstatSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { PUSH_ASK_RULES } from "@agenteschat/adapters/command-policy";
+import { INLINE_CODE_DENY_RULES, PUSH_ASK_RULES } from "@agenteschat/adapters/command-policy";
 import {
   CLI_GIT_MISSING,
   MISSION_RULES,
@@ -321,8 +321,11 @@ test("permission profile: work allows git, tests and builds; every push asks the
   for (const p of [work, plan]) {
     expect(p.allow.some((r) => r.startsWith("Bash(git push"))).toBe(false);
     expect(p.deny.some((r) => r.startsWith("Bash(git") && r.includes(" push"))).toBe(false);
-    expect(p.ask).toEqual([...PUSH_ASK_RULES]);
+    expect(p.ask?.slice(0, PUSH_ASK_RULES.length)).toEqual([...PUSH_ASK_RULES]);
   }
+  // Inline code too reaches the prompt tool in a work turn, so the server decides it; a plan turn denies it.
+  expect(work.ask).toEqual([...PUSH_ASK_RULES, ...INLINE_CODE_DENY_RULES]);
+  expect(plan.deny).toEqual(expect.arrayContaining([...INLINE_CODE_DENY_RULES]));
   for (const rule of [
     "Bash(git merge *)",
     "Bash(gh pr merge *)",
@@ -390,7 +393,7 @@ test.skipIf(!posix)(
     expect(work.command).toContain("--permission-mode acceptEdits");
     expect(work.command).toContain(`--settings '${path.join(home, "tasks", id(1), "settings.json")}'`);
     const settings = JSON.parse(readFileSync(path.join(home, "tasks", id(1), "settings.json"), "utf8"));
-    expect(settings.permissions.ask).toEqual([...PUSH_ASK_RULES]);
+    expect(settings.permissions.ask).toEqual([...PUSH_ASK_RULES, ...INLINE_CODE_DENY_RULES]);
     expect(settings.permissions.deny).toContain("Bash(git merge *)");
     // Its prompts say they come from a mission's task, and which branches are its own (the mission's and the agent's).
     const mcp = JSON.parse(readFileSync(path.join(home, "tasks", id(1), "mcp.json"), "utf8"));
