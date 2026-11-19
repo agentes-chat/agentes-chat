@@ -356,34 +356,38 @@ html:not([data-pointer]) .wg__resolve:focus-visible {
 }
 
 /* ── Kinds ──────────────────────────────────────────────────────────────── */
+/* A tile holding a big number is the box its size is measured in (`.wk-num`). */
+.wg__body:has(> .wk-num) {
+  container-type: inline-size;
+}
+/* 40px, smaller when the number (its width in ems: `--wk-ems`) would not fit its tile: the digits are never cut, never
+   ellipsized, the number scales down to the box it is in. */
 .wk-num {
   font-family: var(--font-sans);
-  font-size: 40px;
+  font-size: clamp(12px, 100cqw / var(--wk-ems, 1), 40px);
   font-weight: 700;
-  line-height: 44px;
+  line-height: 1.1;
   letter-spacing: -0.03em;
   color: var(--ink);
   font-variant-numeric: tabular-nums lining-nums;
   font-feature-settings: "tnum", "lnum";
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .wk-num small {
   font-family: var(--font-sans);
-  font-size: 18px;
+  font-size: 0.45em;
   font-weight: 600;
   letter-spacing: 0;
   color: var(--ink2);
 }
 .wk-num__pre {
-  margin-right: 6px;
+  margin-right: 0.15em;
 }
 .wk-num__suf {
-  margin-left: 6px;
+  margin-left: 0.15em;
 }
 .wk-num__pct {
-  margin-left: 2px;
+  margin-left: 0.05em;
 }
 /* A unit that is a mark ("★"): drawn around its own middle, so on the baseline it hangs under the digits' middle.
    Raised to it (measured: the mark's middle sits 0.32em of its size under the digits'), taking no height of the line. */
@@ -795,6 +799,17 @@ html:not([data-pointer]) :is(.wg__size, .wg__grip):focus-visible {
   position: relative;
   min-height: 0;
   overflow: hidden;
+}
+/* A phone: a fixed tile's rows put their action under their words (the list is under 480px, `.ac-mediarow__end--wrap`),
+   so a row is taller than the cap's 320px counted on one line: the tile grows to its rows (a few, "See all" is on the
+   page) instead of cutting one under the fade, its action eaten by the body's clip. */
+@media (max-width: 640px) {
+  .wg.wg--fixed[data-capped] {
+    max-height: none;
+  }
+  .wg.wg--fixed[data-capped] > .wg__body {
+    overflow: visible;
+  }
 }
 /* The tile whole, in its dialog: its rows reach the dialog's edges, as they reach the card's. */
 .wg-whole__title {

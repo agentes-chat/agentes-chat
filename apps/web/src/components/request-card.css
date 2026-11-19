@@ -38,18 +38,21 @@
 }
 .rq__head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  column-gap: 8px;
+  row-gap: 4px;
   min-height: 20px;
 }
+/* Who, the kind and where wrap onto a second line (rule 17), never cut by an ellipsis. */
 .rq__kind {
-  min-width: 0;
+  flex: 1 1 0;
+  min-width: min(100%, 12ch);
   font-size: 12.5px;
   font-weight: 600;
   color: var(--muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 /* Where it was asked, after the kind, quieter (a card away from its conversation: Notificações). */
 .rq__source {
@@ -65,12 +68,10 @@
   font-size: 12px;
   font-weight: 600;
   color: var(--warn);
-  white-space: nowrap;
 }
 .rq__state--other {
   color: var(--muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 .rq__lead {
   margin: 6px 0 0;
@@ -404,32 +405,38 @@ html:not([data-pointer]) .rq__more:focus-visible {
   }
 }
 /*
- * A question's choices: a list in the card's body, one a line, its number key on the left (1 to 9 answer while the
- * focus is in the list), "Other answer" its last line. Whole sentences wrap inside their line.
+ * A question's choices: the kit's 32px buttons in a row that wraps (8 apart, as `.ac-acts`), the number key on the left
+ * as a hint (1 to 9 answer while the focus is in the list), "Other answer" the last one. A long sentence wraps inside
+ * its button. On a phone each takes its own line, at the touch height.
  */
 .rq__choices {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: var(--space-2);
   margin: 12px 0 0;
   padding: 0;
   list-style: none;
 }
+.rq__choices > li {
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+}
 .rq__choice {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
   max-width: 100%;
-  min-height: 40px;
+  min-height: var(--control-h-sm);
   box-sizing: border-box;
-  padding: 9px 12px;
+  padding: 4px 12px 4px 6px;
   border: 0;
-  border-radius: 12px 12px 12px 4px;
+  border-radius: var(--control-r-sm);
   background: var(--card-well);
   box-shadow: var(--card-well-shadow);
   font: inherit;
-  font-size: 14.5px;
+  font-size: 13px;
   line-height: 20px;
   color: var(--ink);
   text-align: left;
@@ -437,6 +444,16 @@ html:not([data-pointer]) .rq__more:focus-visible {
   overflow-wrap: anywhere;
   cursor: pointer;
   transition: background-color 0.12s;
+}
+@media (max-width: 640px) {
+  .rq__choices > li {
+    flex: 1 1 100%;
+  }
+}
+@media (pointer: coarse) {
+  .rq__choice {
+    min-height: var(--touch-target);
+  }
 }
 .rq__choice:hover:not(:disabled) {
   background: var(--plate);
@@ -456,9 +473,9 @@ html:not([data-pointer]) .rq__choice:focus-visible {
   flex: none;
   display: inline-grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
   box-shadow: inset 0 0 0 1px var(--line2);
   background: var(--raised);
   font-size: 12px;
@@ -491,11 +508,13 @@ html:not([data-pointer]) .rq__choice:focus-visible {
 }
 .rq__end {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  column-gap: 8px;
+  row-gap: 4px;
+  max-width: 100%;
   font-size: 12px;
   color: var(--faint);
-  white-space: nowrap;
 }
 /* The fuse in line here, not along a card's edge. */
 .rq__end .ac-expiry-fuse {

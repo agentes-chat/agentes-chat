@@ -825,8 +825,10 @@ function RowRuns({ routine: r, running, onOpenRuns }: { routine: Routine; runnin
       onPick: onOpenRuns,
     };
   };
+  // No run yet: only the next one is told (in the row's head). The empty track comes back with the first run.
+  if (!running && runPixels(r.recentRuns).length === 0) return <div className="routine-row__runs" aria-hidden="true" />;
   return (
-    // Each bar's button says its run; with none, the strip is only dots.
+    // Each bar's button says its run.
     <div className="routine-row__runs">
       <RunStrip runs={runPixels(r.recentRuns)} color={color} slots={RUN_SLOTS} running={running} bar={bar} />
     </div>
@@ -1221,8 +1223,10 @@ function RoutineHorizon({
               onClick={() => pick(a.agentId)}
             >
               <AgentFace agentId={a.agentId} />
-              <b>{name}</b>
-              <small>{t("routines.horizon.agentRoutines", { count: a.mine.length })}</small>
+              <span className="routines-horizon__who">
+                <b>{name}</b>
+                <small>{t("routines.horizon.agentRoutines", { count: a.mine.length })}</small>
+              </span>
             </button>
             <div
               className="routines-horizon__track"

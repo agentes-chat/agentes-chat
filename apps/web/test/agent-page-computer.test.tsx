@@ -135,9 +135,14 @@ describe("the agent page's one entry: its status line", () => {
     const none = { available: false, reason: "Agents use desktops only on Linux" };
     expect(line(await entryOf({ ...neither, machine: { desktopUse: none } }))).toBe("Não usa navegador");
     cleanup();
-    const row = await entryOf({ machine: null, desktop: { available: false, reason: "no_computer" } });
+    // Who may choose one gets a single door, the Computador row of "Como trabalha"; this entry steps aside.
+    const noneRow = await entryOf({ machine: null, desktop: { available: false, reason: "no_computer" } });
+    expect(noneRow).toBeNull();
+    expect(screen().queryByRole("button", { name: "Escolher um computador" })).toBeNull();
+    cleanup();
+    // A member can't choose: the entry still says there is none.
+    const row = await entryOf({ machine: null, desktop: { available: false, reason: "no_computer" }, role: "member" });
     expect(line(row)).toBe("Sem computador ainda");
-    expect(within(row as HTMLElement).getByRole("button", { name: "Escolher um computador" })).toBeTruthy();
     cleanup();
     const free = await entryOf();
     expect(line(free)).toBe("Disponível · ninguém usando agora");

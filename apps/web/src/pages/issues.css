@@ -310,9 +310,31 @@ html:not([data-pointer]) .issues-layout:focus-visible {
   margin: 0 calc(-1 * var(--page-x));
   padding: 2px var(--page-x) 10px;
   scroll-padding-inline: var(--page-x);
+  /* Full columns: a stop lands on a column's edge, never mid-card. Proximity, so the card drag's own scroll isn't fought. */
+  scroll-snap-type: x proximity;
+}
+.issues-col {
+  scroll-snap-align: start;
+}
+/* It scrolls, and says so: the edge that has more under it fades (the kit's scroll fade, `ac-scroll-fade`). */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: scroll()) {
+    .issues-boardwrap {
+      --ac-fade: linear-gradient(
+        to right,
+        transparent,
+        #000 var(--ac-fade-start),
+        #000 calc(100% - var(--ac-fade-end)),
+        transparent
+      );
+      animation: ac-scroll-fade linear both;
+      animation-timeline: scroll(self inline);
+    }
+  }
 }
 .issues-board {
-  --cw: 248px;
+  /* The narrowest a column goes: four of them (and their gaps) fit a 1280 window with the sidebar open. */
+  --cw: 216px;
   display: flex;
   gap: 12px;
   align-items: flex-start;

@@ -43,3 +43,20 @@ test("the island's open list keeps a max height and scrolls inside", () => {
   expect(last(".ni__list", "max-height")).toBeDefined();
   expect(last(".ni__list", "overflow")).toBe("auto");
 });
+
+test("the request card's choices are the kit's 32px buttons in a row that wraps, a line each on a phone", async () => {
+  const raw = (await builtCss("src/components/request-card.css")).replace(/\s+/g, "");
+  expect(last(".rq__choices", "flex-direction") ?? "row").toBe("row");
+  expect(last(".rq__choices", "flex-wrap")).toBe("wrap");
+  expect(last(".rq__choices", "gap")).toBe("var(--space-2)");
+  expect(last(".rq__choice", "min-height")).toBe("var(--control-h-sm)");
+  expect(last(".rq__choice", "border-radius")).toBe("var(--control-r-sm)");
+  // A phone: each choice takes its own line, at the touch height on a coarse pointer.
+  expect(raw).toContain("@media(width<=640px){.rq__choices>li{flex:100%");
+  expect(raw).toContain("@media(pointer:coarse){.rq__choice{min-height:var(--touch-target)");
+  // The header wraps instead of cutting its words, and "N dias para decidir" stays whole.
+  expect(last(".rq__head", "flex-wrap")).toBe("wrap");
+  expect(last(".rq__kind", "white-space")).toBe("normal");
+  expect(last(".rq__kind", "overflow")).toBeUndefined();
+  expect(last(".rq__end", "flex-wrap")).toBe("wrap");
+});

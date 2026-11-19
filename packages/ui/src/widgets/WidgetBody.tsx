@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { type CSSProperties, useEffect, useRef } from "react";
 import { useDarkTheme } from "../hooks/useDarkTheme";
 import { Icon } from "../icons/Icon";
 import { prefersReducedMotion } from "../sky/engine";
@@ -62,6 +62,16 @@ export function WidgetBody({ spec, status, color, size, locale, buildingText, sp
   }
 }
 
+/**
+ * How many ems a big number takes: its final digits (a tabular digit is about .62 em), its units at .45 of its size (a
+ * unit's own words count by .27 em a letter, its margin .15 em). `.wk-num` sets its size so that width fits its tile.
+ */
+function fitStyle(text: string, prefix?: string, suffix?: string): CSSProperties {
+  const units = [prefix, suffix].filter((u): u is string => !!u);
+  const ems = text.length * 0.62 + units.reduce((n, u) => n + u.length * 0.27 + 0.15, 0);
+  return { "--wk-ems": Math.max(1, Math.round(ems * 100) / 100) } as CSSProperties;
+}
+
 function KpiBody({
   spec,
   color,
@@ -76,7 +86,11 @@ function KpiBody({
   const shown = useCountUp(spec.value);
   return (
     <>
-      <div className="wk-num" data-value={spec.value}>
+      <div
+        className="wk-num"
+        data-value={spec.value}
+        style={fitStyle(formatWidgetNumber(spec.value, locale, widgetDigits(spec.value)), spec.prefix, spec.suffix)}
+      >
         {spec.prefix && (
           <small className={isMarkUnit(spec.prefix) ? "wk-num__pre wk-num__mark" : "wk-num__pre"}>{spec.prefix}</small>
         )}
@@ -104,7 +118,7 @@ function GoalBody({ spec, locale }: { spec: GoalWidgetSpec; locale: string }) {
   const shown = useCountUp(pct);
   return (
     <>
-      <div className="wk-num">
+      <div className="wk-num" style={fitStyle(formatWidgetNumber(pct, locale, 0), undefined, "%")}>
         <span>{formatWidgetNumber(shown, locale, 0)}</span>
         <small className="wk-num__pct">%</small>
       </div>
