@@ -48,6 +48,7 @@ import {
   listCredentials,
   listEndpoint,
   listFormerAgents,
+  listsAgentTo,
   listTeamTemplates,
   type Membership,
   moveAgentToGroup,
@@ -171,6 +172,7 @@ const toAgent = (
     canTalk: canTalkTo(a, viewerId, speakerOf(viewer)),
     ...agentRights(a, viewerId, viewer),
     editors: seesDetails ? editorsOf(a) : { userIds: [], roleIds: [] },
+    listed: listsAgentTo(a, viewerId, viewer),
   };
 };
 
