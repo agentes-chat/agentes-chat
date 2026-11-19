@@ -8160,7 +8160,6 @@ html:not([data-pointer]) .ac-video__rail:focus-visible .ac-video__knob {
   left: 0;
   z-index: var(--z-floating);
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-1);
   box-sizing: border-box;
@@ -8197,7 +8196,9 @@ html:not([data-pointer]) .ac-video__rail:focus-visible .ac-video__knob {
 }
 .ac-formatbar__item {
   display: inline-flex;
-  flex: none;
+  /* One row at any width: the buttons narrow together instead of wrapping and leaving the last row short. */
+  flex: 0 1 auto;
+  min-width: 0;
 }
 .ac-formatbar__item[data-group-end]::after {
   content: "";
