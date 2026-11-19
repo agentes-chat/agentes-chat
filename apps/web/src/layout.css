@@ -13436,9 +13436,14 @@ html:not([data-pointer]) .sidebar__grip:focus-visible {
   align-items: center;
   justify-content: center;
   width: var(--control-h-md);
+  padding: 0;
+  border: 0;
   border-radius: 10px;
+  background: transparent;
+  font: inherit;
   color: var(--ink-muted);
   text-decoration: none;
+  cursor: pointer;
   transition:
     background-color 0.15s,
     color 0.15s;

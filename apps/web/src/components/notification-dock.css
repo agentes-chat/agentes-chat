@@ -1,0 +1,98 @@
+/*
+ * The bell's dock: the thread popover's surface (`.thread-pop`), a little wider for a headline and its time, the
+ * window's height at most, its list scrolling between the head and "Ver tudo".
+ */
+.nt-dock {
+  width: min(380px, calc(100vw - 24px));
+  max-width: min(380px, calc(100vw - 24px));
+  max-height: min(560px, var(--radix-popover-content-available-height));
+  display: flex;
+  flex-direction: column;
+}
+.nt-dock__head {
+  align-items: center;
+  padding-block: 0 var(--space-1);
+}
+.nt-dock__grow {
+  flex: 1;
+}
+/*
+ * Grouped by space alone, no lines or cards: an item's head and words sit close (2), items stand apart (8 more than
+ * a row's own room), so the eye reads one block per notification.
+ */
+.nt-dock__list {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.nt-dock__face {
+  width: 24px;
+  height: 24px;
+}
+.nt-dock__what {
+  font-size: 13.5px;
+  color: var(--ink-muted);
+  overflow-wrap: anywhere;
+}
+.nt-dock__what b {
+  font-weight: 500;
+  color: var(--ink2);
+}
+/* Unread: the bold name and the left pill the sidebar's unread rows have (rule 34), no red. */
+.nt-dock__row {
+  position: relative;
+  row-gap: 2px;
+}
+.nt-dock__row.is-unread .nt-dock__what b {
+  font-weight: 650;
+  color: var(--ink);
+}
+.nt-dock__row.is-unread::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  /* On the headline's line, not the row's middle: a row of three lines keeps it beside the name. */
+  top: calc(var(--space-2) + 0.5lh);
+  width: 3px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--ink);
+  translate: 0 -50%;
+}
+.nt-dock__body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+/* What waits on me: the question itself, then its state, said once. */
+.nt-dock__row:has(.nt-dock__wait) .thread-pop__sub {
+  color: var(--ink2);
+}
+.nt-dock__time {
+  font-size: 12px;
+  color: var(--faint);
+  white-space: nowrap;
+}
+.nt-dock__loading {
+  padding: var(--space-2);
+}
+.nt-dock__foot {
+  padding-top: var(--space-2);
+  margin-top: var(--space-1);
+  border-top: 1px solid var(--line);
+}
+/* Rows come in one after another as the dock opens, never popping in (rule 29). */
+@media (prefers-reduced-motion: no-preference) {
+  .nt-dock__row {
+    animation: nt-dock-in var(--dur-base) var(--out) both;
+    animation-delay: calc(var(--i, 0) * 24ms);
+  }
+}
+@keyframes nt-dock-in {
+  from {
+    opacity: 0;
+    translate: -4px 0;
+  }
+}

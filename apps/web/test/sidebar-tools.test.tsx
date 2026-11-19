@@ -68,8 +68,9 @@ describe("the bell", () => {
         notifications: [notification({ id: "n1", kind: "mention" }), notification({ id: "n2", kind: "dm" })],
       }),
     );
-    const bell = within(nav()).getByRole("link", { name: "2 notificações não lidas" });
-    expect(bell.getAttribute("href")).toBe(`/org/${ORG_ID}/notifications`);
+    // A button that opens its dock beside it; the inbox page is the dock's "Ver tudo".
+    const bell = within(nav()).getByRole("button", { name: "2 notificações não lidas" });
+    expect(bell.getAttribute("aria-haspopup")).toBe("dialog");
     expect(bell.closest(".sidebar__me")).toBeTruthy();
     expect(bell.textContent).toBe("2");
     // Unread calls on me: red like a mention's count, not a neutral count of things.
@@ -81,12 +82,12 @@ describe("the bell", () => {
     await go(
       seedState({ notifications: Array.from({ length: 120 }, (_, i) => notification({ id: `n${i}`, kind: "dm" })) }),
     );
-    expect(within(nav()).getByRole("link", { name: "120 notificações não lidas" }).textContent).toBe("99+");
+    expect(within(nav()).getByRole("button", { name: "120 notificações não lidas" }).textContent).toBe("99+");
   });
 
   test("nothing unread: the bell alone, named Notificações", async () => {
     await go();
-    const bell = within(nav()).getByRole("link", { name: "Notificações" });
+    const bell = within(nav()).getByRole("button", { name: "Notificações" });
     expect(bell.textContent).toBe("");
   });
 });

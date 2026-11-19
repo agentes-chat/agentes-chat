@@ -65,9 +65,8 @@ describe("a personal workspace's sidebar", () => {
     expect(me.textContent).toContain("Walter");
     // My row, not the workspace's: my name wraps whole there, never cut.
     expect(me.classList.contains("sidebar__org-button--me")).toBe(true);
-    expect(within(top()).getByRole("link", { name: "Notificações" }).getAttribute("href")).toBe(
-      `/org/${ORG_ID}/notifications`,
-    );
+    // The bell opens its dock beside it; the inbox page is the dock's "Ver tudo".
+    expect(within(top()).getByRole("button", { name: "Notificações" }).getAttribute("aria-haspopup")).toBe("dialog");
     expect(within(top()).queryByRole("button", { name: /Menu do workspace/ })).toBeNull();
     expect(nav().querySelector(".sidebar__foot")).toBeNull();
     expect(nav().querySelectorAll(".sidebar__bell")).toHaveLength(1);
