@@ -73,6 +73,7 @@ import { FOLLOW_UP_JOB, wakeFollowUp } from "./follow-through";
 import { cutText } from "./format";
 import type { GitHubAppAccess } from "./git/github-call";
 import { GITHUB_EVENT_JOB, type GitHubAppEvent, handleGitHubAppEvent } from "./git/github-events";
+import { executeInstructionTest, INSTRUCTION_TEST_JOB } from "./instruction-tests";
 import { FILE_JOIN_REQUEST_JOB, fileJoinRequest } from "./invite-requests";
 import { announceTaskConversation } from "./issues";
 import type { JevKey, JevKeySource } from "./jev-key";
@@ -1057,6 +1058,13 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
         userId: String(job.payload.userId),
         email: String(job.payload.email),
       });
+    },
+    [INSTRUCTION_TEST_JOB]: async (job) => {
+      await executeInstructionTest(
+        { db: deps.db, gateway: deps.gateway, hub: deps.sandbox?.machines?.hub },
+        orgOf(job),
+        String(job.payload.testId),
+      );
     },
     // A background task on a connected computer ended: its conversation wakes (ADR 0029).
     "machine.task_done": async (job) => {

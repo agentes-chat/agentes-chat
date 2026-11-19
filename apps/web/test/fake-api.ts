@@ -50,6 +50,7 @@ import type {
   ImportItemKind,
   ImportItemResult,
   Instance,
+  InstructionTestCase,
   InvitationPreview,
   InvitationState,
   InvitationWithStatus,
@@ -1320,6 +1321,7 @@ function presenceOf(state: FakeState, userId: string): Pick<Person, "online" | "
 }
 
 export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
+  const instructionExamples = new Map<string, InstructionTestCase[]>();
   const log = (method: string, ...args: unknown[]): void => {
     state.calls.push({ method, args });
   };
@@ -1481,6 +1483,36 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
     return budget > 0 ? Math.round((spent / budget) * 1000) / 10 : 0;
   };
   return {
+    instructionTests: {
+      list: async (orgId, agentId) => ({
+        support: {
+          available: false,
+          executor: null,
+          model: null,
+          reason: "instructionTests.unavailable",
+          limitations: [],
+        },
+        cases: instructionExamples.get(`${orgId}:${agentId}`) ?? [],
+        runs: [],
+      }),
+      saveCases: async (orgId, agentId, cases) => {
+        instructionExamples.set(`${orgId}:${agentId}`, structuredClone(cases));
+        return { cases };
+      },
+      start: async () => {
+        throw new ApiError(422, "instructionTests.unavailable", "Comparison is not configured");
+      },
+      get: async () => {
+        throw new ApiError(404, "not_found", "Comparison not found");
+      },
+      cancel: async () => {
+        throw new ApiError(404, "not_found", "Comparison not found");
+      },
+      remove: async () => {},
+      suggest: async () => {
+        throw new ApiError(422, "instructionTests.unavailable", "Comparison is not configured");
+      },
+    },
     system: {
       health: async () => ({ status: "ok", version: "test", edition: state.edition ?? "cloud" }),
       instance: async () => ({

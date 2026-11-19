@@ -94,6 +94,7 @@ export type ClaimedJob = OutboxJob & { long: boolean; background: boolean };
  * indexing, push, email) never waits behind them. Every other kind is quick. Background work is long too.
  */
 export const LONG_JOB_KINDS = [
+  "instruction_test.run",
   "agent_run.execute",
   "routine.run",
   "autonomy.later",

@@ -705,6 +705,7 @@ textarea.ac-input {
 }
 /* Grows with its text up to here, then scrolls inside: a long paste never pushes the field's buttons out of view. */
 textarea.ac-input--grow {
+  resize: none;
   max-height: min(50vh, 360px);
   overflow-y: auto;
 }

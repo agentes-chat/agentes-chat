@@ -43,6 +43,7 @@ import { feedbackRoutes, registerFeedbackFiles, registerFeedbackInbox } from "./
 import { gifKeyRoutes } from "./routes/app/gif-key";
 import { gifRoutes } from "./routes/app/gifs";
 import { imageRoutes } from "./routes/app/images";
+import { instructionTestRoutes } from "./routes/app/instruction-tests";
 import { inviteRoutes } from "./routes/app/invites";
 import { issueRoutes } from "./routes/app/issues";
 import { jevRoutes } from "./routes/app/jev";
@@ -219,6 +220,7 @@ export function createApp(options: AppOptions) {
     // Pictures on canvases (ADR 0197): the image models, requests and Try again.
     api.route("/app", imageRoutes(deps));
     api.route("/app", issueRoutes(deps));
+    api.route("/app", instructionTestRoutes(deps));
     api.route("/app", threadRoutes(deps));
     api.route("/app", missionRoutes(deps));
     api.route("/app", wikiRoutes(deps));

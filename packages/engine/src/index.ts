@@ -162,6 +162,7 @@ export * from "./host-computer";
 export * from "./hosts";
 export * from "./id-refs";
 export * from "./imports";
+export * from "./instruction-tests";
 export * from "./invite-choices";
 export * from "./invite-requests";
 export * from "./issue-assignees";

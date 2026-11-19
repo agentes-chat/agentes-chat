@@ -1963,6 +1963,7 @@ export class RunnerDaemon implements RequestObserver {
     const access = this.access();
     return {
       version: RUNNER_VERSION,
+      instructionTests: true,
       protocol: MACHINE_PROTOCOL_VERSION,
       os: machineOs(),
       arch: os.arch(),

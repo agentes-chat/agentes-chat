@@ -8,6 +8,7 @@ import {
   type PlanWindowKind,
 } from "@agenteschat/adapters/machine-protocol";
 import { type PlanId, planOf } from "@agenteschat/providers/plans";
+import { CLAUDE_COMPARISON_SAFETY } from "./brain-tool-policy";
 import { killTree } from "./exec";
 import { cliSpawn } from "./executors";
 
@@ -148,7 +149,9 @@ export function claudeUsage(response: unknown, now = Date.now()): PlanUsage | nu
   if (isObj(limits.extra_usage) && limits.extra_usage.is_enabled === true) {
     add({ kind: "other", label: "Extra usage" }, limits.extra_usage);
   }
-  return snapshot(windows, "probe", now);
+  const result = snapshot(windows, "probe", now);
+  if (result && isObj(limits.extra_usage) && limits.extra_usage.is_enabled === false) result.subscriptionOnly = true;
+  return result;
 }
 
 // ── Codex ────────────────────────────────────────────────────────────────────
@@ -175,7 +178,15 @@ export function codexUsage(rateLimits: unknown, source: PlanUsage["source"], now
   };
   add(rateLimits.primary, "five_hour");
   add(rateLimits.secondary, "seven_day");
-  return snapshot(windows, source, now);
+  const result = snapshot(windows, source, now);
+  if (
+    result &&
+    isObj(rateLimits.credits) &&
+    rateLimits.credits.hasCredits === false &&
+    rateLimits.credits.unlimited === false
+  )
+    result.subscriptionOnly = true;
+  return result;
 }
 
 // ── Coding-plan keys ─────────────────────────────────────────────────────────
@@ -294,6 +305,10 @@ export async function fetchPlanKeyUsage(
 // ── Probes: a short-lived CLI ────────────────────────────────────────────────
 
 export interface UsageProbe {
+  /** ADR 0196: disable tools and all unmanaged customizations even during a non-inference quota probe. */
+  isolated?: true;
+  /** Require Codex to prove a ChatGPT sign-in before probing limits. */
+  subscriptionOnly?: boolean;
   /** How to start the CLI (`["claude"]`, `["codex"]`, a fake script in tests). */
   command: string[];
   /** The account folder (nothing of the person's own projects loads there). */
@@ -336,12 +351,19 @@ export function jsonLines<T>(
       return;
     }
     let done = false;
+    let result: T | null = null;
     const finish = (v: T | null) => {
       if (done) return;
       done = true;
+      result = v;
       clearTimeout(timer);
+      child.stdin?.end();
       killTree(child, "SIGKILL");
-      resolve(v);
+      // A native Windows process can still be held while taskkill starts (or is refused).
+      const reap = setTimeout(() => child.kill("SIGKILL"), 1000);
+      (child as unknown as EventEmitter).once("close", () => clearTimeout(reap));
+      // Windows keeps the working directory locked until the process actually exits.
+      if (child.pid === undefined) resolve(null);
     };
     const timer = setTimeout(() => finish(null), p.timeoutMs ?? USAGE_PROBE_TIMEOUT_MS);
     timer.unref?.();
@@ -359,6 +381,10 @@ export function jsonLines<T>(
       pipe?.end(`${p.fd3}\n`);
     }
     (child as unknown as EventEmitter).on("error", () => finish(null));
+    (child as unknown as EventEmitter).on("close", () => {
+      if (!done) finish(null);
+      resolve(result);
+    });
     if (!child.stdout) return finish(null);
     const lines = createInterface({ input: child.stdout, crlfDelay: Number.POSITIVE_INFINITY });
     const events = lines as unknown as EventEmitter;
@@ -402,7 +428,7 @@ export function probeClaudeUsage(p: UsageProbe): Promise<PlanUsage | null> {
   });
   return jsonLines(
     p,
-    CLAUDE_PROBE_ARGS,
+    [...CLAUDE_PROBE_ARGS, ...(p.isolated ? ["--safe-mode", "--tools", "", ...CLAUDE_COMPARISON_SAFETY] : [])],
     (send) => send(request("init", { subtype: "initialize" })),
     (msg, send) => {
       const r = msg.type === "control_response" && isObj(msg.response) ? msg.response : null;
@@ -449,12 +475,24 @@ export function checkClaudeToken(p: UsageProbe, prev: PlanUsage | undefined): Pr
 export function probeCodexUsage(p: UsageProbe): Promise<PlanUsage | null> {
   return jsonLines(
     p,
-    ["app-server"],
+    [
+      "app-server",
+      ...(p.subscriptionOnly
+        ? ["hooks", "plugins", "apps", "code_mode_host"].flatMap((feature) => ["--disable", feature])
+        : []),
+    ],
     (send) => send({ id: 1, method: "initialize", params: { clientInfo: { name: "agentes_runner", version: "1" } } }),
     (msg, send) => {
       if (msg.id === 1) {
         if (!isObj(msg.result)) return null;
         send({ method: "initialized" });
+        send(
+          p.subscriptionOnly
+            ? { id: 3, method: "account/read", params: {} }
+            : { id: 2, method: "account/rateLimits/read", params: {} },
+        );
+      } else if (msg.id === 3 && p.subscriptionOnly) {
+        if (!isObj(msg.result) || !isObj(msg.result.account) || msg.result.account.type !== "chatgpt") return null;
         send({ id: 2, method: "account/rateLimits/read", params: {} });
       } else if (msg.id === 2) {
         return isObj(msg.result) ? codexUsage(msg.result.rateLimits, "probe") : null;

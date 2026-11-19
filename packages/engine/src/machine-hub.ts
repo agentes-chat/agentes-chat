@@ -760,7 +760,9 @@ export function createMachineHub(deps: MachineHubDeps) {
         frame.terminal ||
         frame.desktopUse ||
         frame.claudeLoginMethods ||
-        frame.toolchains
+        frame.toolchains ||
+        frame.instructionTests ||
+        machine.executors?.instructionTests
           ? {
               executors: {
                 // A runner that hasn't looked yet leaves the CLIs out: the last ones stored stand.
@@ -775,6 +777,8 @@ export function createMachineHub(deps: MachineHubDeps) {
                 ...(frame.claudeLoginMethods ? { claudeLoginMethods: frame.claudeLoginMethods } : {}),
                 ...(loginBlocked ? { claudeLoginBlocked: loginBlocked } : {}),
                 ...(frame.authEgressGroup ? { authEgressGroup: true as const } : {}),
+                // Capabilities belong to this connection, even before CLI detection completes.
+                instructionTests: frame.instructionTests === true ? true : undefined,
                 ...(Object.keys(ownUsage).length > 0 ? { ownUsage } : {}),
                 // A runner whose probe hasn't finished says none: the last ones stored stand.
                 ...((frame.toolchains ?? machine.executors?.toolchains)

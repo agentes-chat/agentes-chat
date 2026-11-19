@@ -25,9 +25,11 @@ import {
   TOKEN_STDIO,
   withoutContainers,
 } from "./accounts";
+import { CLAUDE_COMPARISON_SAFETY, CODEX_NATIVE_CONTEXT_OFF } from "./brain-tool-policy";
 import { RunnerError } from "./errors";
 import { killTree } from "./exec";
-import { resolveCommand } from "./executors";
+import { cliSpawn } from "./executors";
+import { probeClaudeUsage, probeCodexUsage } from "./plan-usage";
 
 /**
  * `brain.route` (protocol 24, ADR 0074): a person's own Claude or ChatGPT plan picks who answers their
@@ -46,14 +48,20 @@ import { resolveCommand } from "./executors";
  */
 
 /** Claude Code's argv for a route; the prompt goes on standard input. */
-export function claudeRouteArgs(o: { systemFile: string; schema: Record<string, unknown> }): string[] {
+export function claudeRouteArgs(o: {
+  systemFile: string;
+  schema: Record<string, unknown>;
+  model?: string;
+  effort?: string | null;
+  comparison?: boolean;
+}): string[] {
   return [
     "-p",
     "--safe-mode",
+    ...(o.comparison ? [...CLAUDE_COMPARISON_SAFETY, "--max-turns", "2"] : []),
     "--model",
-    "haiku",
-    "--effort",
-    "low",
+    o.model ?? "haiku",
+    ...(!o.comparison || o.effort ? ["--effort", o.effort ?? "low"] : []),
     "--tools",
     "",
     "--no-session-persistence",
@@ -81,20 +89,37 @@ export const CODEX_ROUTE_OFF = [
 ] as const;
 
 /** Codex's argv for a route; the prompt goes on standard input (`-`). */
-export function codexRouteArgs(o: { model: string; schemaFile: string; lastFile: string }): string[] {
+export function codexRouteArgs(o: {
+  model: string;
+  schemaFile: string;
+  lastFile: string;
+  effort?: string | null;
+  comparison?: boolean;
+}): string[] {
   return [
     "exec",
     "--json",
     "--ephemeral",
     "--ignore-user-config",
+    ...(o.comparison ? ["--ignore-rules"] : []),
     "--skip-git-repo-check",
     "-s",
     "read-only",
     "-m",
     o.model,
-    "-c",
-    'model_reasoning_effort="low"',
+    ...(!o.comparison || o.effort ? ["-c", `model_reasoning_effort="${o.effort ?? "low"}"`] : []),
     ...CODEX_ROUTE_OFF.flatMap((feature) => ["--disable", feature]),
+    ...(o.comparison
+      ? [
+          ...CODEX_NATIVE_CONTEXT_OFF.flatMap((feature) => ["--disable", feature]),
+          ...[
+            'approval_policy="never"',
+            'web_search="disabled"',
+            "project_doc_max_bytes=0",
+            "agents.enabled=false",
+          ].flatMap((setting) => ["-c", setting]),
+        ]
+      : []),
     "--output-schema",
     o.schemaFile,
     "-o",
@@ -220,11 +245,18 @@ const OUTPUT_MAX = 1 << 20;
  * starting on that sign-in meanwhile stops it (`yieldRoute`), so the route fails and the server's rules decide.
  */
 export async function routeWithPlan(req: BrainRouteRequest, deps: RouteDeps): Promise<BrainRouteReply> {
-  if (process.platform === "win32") throw new RunnerError("not_allowed", "Plans don't pick who answers on Windows yet");
-  if (!isAccountKind(req.kind) || req.kind === "cursor" || req.kind === "opencode") {
+  if (process.platform === "win32" && !req.comparison)
+    throw new RunnerError("not_allowed", "Plans don't pick who answers on Windows yet");
+  if (!isAccountKind(req.kind) || (req.kind !== "claude_code" && req.kind !== "codex")) {
     throw new RunnerError("bad_request", "kind must be claude_code or codex");
   }
-  if (typeof req.system !== "string" || req.system.length > ROUTE_LIMITS.system) {
+  if (
+    req.comparison &&
+    (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}$/.test(req.comparison.model) ||
+      ![null, "low", "medium", "high", "xhigh", "max"].includes(req.comparison.effort))
+  )
+    throw new RunnerError("bad_request", "Invalid comparison model or effort");
+  if (typeof req.system !== "string" || req.system.length > (req.comparison ? 112_000 : ROUTE_LIMITS.system)) {
     throw new RunnerError("bad_request", "system must be a string of at most 8000 characters");
   }
   if (typeof req.prompt !== "string" || !req.prompt.trim() || req.prompt.length > ROUTE_LIMITS.prompt) {
@@ -286,44 +318,93 @@ async function claudeRoute(req: BrainRouteRequest, o: RouteDeps & { dir: string;
   // An account's folder is the CLI's home, and requests go only to Claude's own endpoint.
   const token = o.grant?.kind === "token" ? o.grant.token : undefined;
   const env = launched
-    ? { ...launched.env, ...accountSettingsEnv(undefined, "haiku") }
-    : o.home
+    ? { ...launched.env, ...accountSettingsEnv(undefined, req.comparison?.model ?? "haiku") }
+    : o.home || req.comparison
       ? {
-          ...accountEnv("claude_code", o.home),
-          ...accountSettingsEnv(undefined, "haiku"),
+          ...accountEnv("claude_code", o.home ?? process.env.CLAUDE_CONFIG_DIR ?? path.join(os.homedir(), ".claude")),
+          ...accountSettingsEnv(undefined, req.comparison?.model ?? "haiku"),
           ...(token ? TOKEN_FD_ENV : {}),
         }
       : process.env;
+  if (req.comparison)
+    Object.assign(env, {
+      CLAUDE_CODE_DISABLE_AUTO_MEMORY: "1",
+      ENABLE_CLAUDEAI_MCP_SERVERS: "false",
+      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1",
+    });
   const started = Date.now();
   const command = launched?.command ?? o.claudeCommand ?? ["claude"];
-  const run = await runCli(command, claudeRouteArgs({ systemFile, schema: req.schema }), {
-    cwd: launched?.cwd ?? o.dir,
-    env,
-    input: req.prompt,
-    timeoutMs: o.timeoutMs ?? ROUTE_TIMEOUT_MS,
-    signal: o.signal,
-    ...(token ? { token } : {}),
-  });
+  if (req.comparison) {
+    const usage = await probeClaudeUsage({
+      command,
+      cwd: o.dir,
+      env,
+      isolated: true,
+      ...(token ? { fd3: token } : {}),
+    });
+    if (!usage?.subscriptionOnly || usage.limited || usage.windows.some((w) => w.usedPercent >= 100))
+      throw new RunnerError("not_allowed", "instructionTests.planUnavailable");
+    if (o.signal?.aborted) throw new RunnerError("not_allowed", "Comparison canceled");
+  }
+  const run = await runCli(
+    command,
+    claudeRouteArgs({ systemFile, schema: req.schema, ...req.comparison, comparison: Boolean(req.comparison) }),
+    {
+      cwd: launched?.cwd ?? o.dir,
+      env,
+      input: req.prompt,
+      timeoutMs: o.timeoutMs ?? (req.comparison ? 60_000 : ROUTE_TIMEOUT_MS),
+      signal: o.signal,
+      ...(token ? { token } : {}),
+    },
+  );
+  if (req.comparison && !run.ok) throw new RunnerError("internal", "instructionTests.failed");
   const answer = claudeRouteAnswer(run.stdout);
   if (!answer) throw new RunnerError("internal", `Claude Code didn't answer${run.why(started)}`);
   return { ...answer, durationMs: answer.durationMs || Date.now() - started };
 }
 
 async function codexRoute(req: BrainRouteRequest, o: RouteDeps & { dir: string; home: string | null; key: string }) {
-  const env = withoutContainers(o.home ? accountEnv("codex", o.home) : process.env);
-  const model = await codexLuna(o, env);
+  const env = withoutContainers(
+    o.home || req.comparison
+      ? accountEnv("codex", o.home ?? process.env.CODEX_HOME ?? path.join(os.homedir(), ".codex"))
+      : process.env,
+  );
+  const model = req.comparison?.model ?? (await codexLuna(o, env));
+  if (req.comparison) {
+    const usage = await probeCodexUsage({
+      command: o.codexCommand ?? ["codex"],
+      cwd: o.dir,
+      env,
+      subscriptionOnly: true,
+    });
+    if (!usage?.subscriptionOnly || usage.limited || usage.windows.some((w) => w.usedPercent >= 100))
+      throw new RunnerError("not_allowed", "instructionTests.planUnavailable");
+    if (o.signal?.aborted) throw new RunnerError("not_allowed", "Comparison canceled");
+  }
   const schemaFile = path.join(o.dir, "schema.json");
   const lastFile = path.join(o.dir, "last.txt");
   writeFileSync(schemaFile, JSON.stringify(req.schema), { mode: 0o600 });
   const started = Date.now();
-  const run = await runCli(o.codexCommand ?? ["codex"], codexRouteArgs({ model, schemaFile, lastFile }), {
-    cwd: o.dir,
-    env,
-    // `codex exec` has no system prompt of its own here (`--ignore-user-config`): it leads the prompt.
-    input: `${req.system}\n\n${req.prompt}`,
-    timeoutMs: o.timeoutMs ?? ROUTE_TIMEOUT_MS,
-    signal: o.signal,
-  });
+  const run = await runCli(
+    o.codexCommand ?? ["codex"],
+    codexRouteArgs({
+      model,
+      schemaFile,
+      lastFile,
+      effort: req.comparison?.effort,
+      comparison: Boolean(req.comparison),
+    }),
+    {
+      cwd: o.dir,
+      env,
+      // `codex exec` has no system prompt of its own here (`--ignore-user-config`): it leads the prompt.
+      input: `${req.system}\n\n${req.prompt}`,
+      timeoutMs: o.timeoutMs ?? (req.comparison ? 60_000 : ROUTE_TIMEOUT_MS),
+      signal: o.signal,
+    },
+  );
+  if (req.comparison && !run.ok) throw new RunnerError("internal", "instructionTests.failed");
   let json: unknown = null;
   try {
     json = existsSync(lastFile) ? JSON.parse(readFileSync(lastFile, "utf8")) : null;
@@ -370,8 +451,8 @@ function runCli(
     /** A token root handed over, on its own descriptor (`TOKEN_FD_ENV`). */
     token?: string;
   },
-): Promise<{ stdout: string; why(started: number): string }> {
-  const [file, ...pre] = command;
+): Promise<{ stdout: string; ok: boolean; why(started: number): string }> {
+  const launch = cliSpawn(command, args, o.env.PATH);
   return new Promise((resolve) => {
     let stdout = "";
     let stderr = "";
@@ -396,6 +477,7 @@ function runCli(
       const tail = (error?.message ?? stderr).trim().split("\n").slice(-2).join(" ").slice(0, 300);
       resolve({
         stdout,
+        ok: ended === null && !error && code === 0,
         why: (started) =>
           ended === "timeout"
             ? ` in ${Math.round((Date.now() - started) / 1000)} s`
@@ -405,12 +487,13 @@ function runCli(
       });
     };
     try {
-      child = spawn(resolveCommand(file ?? "", o.env.PATH), [...pre, ...args], {
+      child = spawn(launch.file, launch.args, {
         cwd: o.cwd,
-        env: o.env,
+        env: { ...o.env, ...launch.env },
         stdio: o.token ? [...TOKEN_STDIO] : ["pipe", "pipe", "pipe"],
         detached: true,
         windowsHide: true,
+        windowsVerbatimArguments: launch.windowsVerbatimArguments,
       });
     } catch (error) {
       return done(null, error instanceof Error ? error : new Error(String(error)));

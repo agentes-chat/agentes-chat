@@ -54530,5 +54530,161 @@
   },
   "live.sheet.fn.YEARFRAC": {
     "value": "The share of a year between two dates"
+  },
+  "instructionTests.baseChanged": {
+    "value": "The saved instructions changed. Reload before comparing."
+  },
+  "instructionTests.compare": {
+    "value": "Compare responses"
+  },
+  "instructionTests.inconclusive": {
+    "value": "Inconclusive"
+  },
+  "instructionTests.latest": {
+    "value": "View last comparison"
+  },
+  "instructionTests.sampleOnly": {
+    "value": "The results apply only to the examples evaluated."
+  },
+  "instructionTests.title": {
+    "value": "Test change"
+  },
+  "instructionTests.results": {
+    "value": "Evaluation of these examples"
+  },
+  "instructionTests.reviewInconclusive": {
+    "value": "The AI evaluation was inconclusive. Review the responses."
+  },
+  "instructionTests.planBusy": {
+    "value": "This subscription is busy. Wait for its current task to finish before comparing."
+  },
+  "instructionTests.current": {
+    "value": "Current"
+  },
+  "instructionTests.deleteDescription": {
+    "value": "Removes its examples, responses and evaluation from the comparison history."
+  },
+  "instructionTests.suggest": {
+    "value": "Suggest an example with AI"
+  },
+  "instructionTests.expectation": {
+    "value": "What the response needs to do"
+  },
+  "instructionTests.instructionsTooLong": {
+    "value": "The instructions exceed the comparison limit."
+  },
+  "instructionTests.modelChanged": {
+    "value": "The model used differs from the selected model. The comparison was stopped."
+  },
+  "instructionTests.toolRequested": {
+    "value": "The model requested a tool. This comparison cannot execute it."
+  },
+  "instructionTests.outputLimited": {
+    "value": "The response reached the output limit. Review or shorten the example."
+  },
+  "instructionTests.unavailable": {
+    "value": "This executor is not available for contained instruction comparisons yet."
+  },
+  "instructionTests.saved": {
+    "value": "Examples saved"
+  },
+  "instructionTests.running": {
+    "value": "Comparing responses"
+  },
+  "instructionTests.invalidSuggestion": {
+    "value": "The AI did not return a usable example. You can write one instead."
+  },
+  "instructionTests.agentChanged": {
+    "value": "The agent configuration changed. Start a new comparison."
+  },
+  "instructionTests.isolatedContext": {
+    "value": "Uses the selected examples and a fixed context. Production conversations, memories, skills and connectors are not tested."
+  },
+  "instructionTests.planUnavailable": {
+    "value": "The subscription comparison is unavailable. Connect an active Claude or ChatGPT subscription, select a model and update the computer. Execution also stops if the quota is exhausted or extra paid usage cannot be ruled out."
+  },
+  "instructionTests.cancel": {
+    "value": "Stop comparison"
+  },
+  "instructionTests.loading": {
+    "value": "Loading examples"
+  },
+  "instructionTests.contextScope": {
+    "value": "Production conversations, memories, skills and connectors are outside this comparison."
+  },
+  "instructionTests.save": {
+    "value": "Save examples"
+  },
+  "instructionTests.invalidCases": {
+    "value": "Use up to five examples with a situation and criteria."
+  },
+  "instructionTests.failed": {
+    "value": "The comparison could not finish. You can try again."
+  },
+  "instructionTests.evaluationHint": {
+    "value": "Results apply only to the examples run. The AI evaluation can be wrong."
+  },
+  "instructionTests.tokens": {
+    "value": "{{count}} tokens used"
+  },
+  "instructionTests.responsesOnly": {
+    "value": "Response comparison only, without operational tools."
+  },
+  "instructionTests.add": {
+    "value": "Add example"
+  },
+  "instructionTests.chooseModel": {
+    "value": "Choose a specific model before comparing instructions."
+  },
+  "instructionTests.limits": {
+    "value": "Up to 5 examples. Each comparison runs both instructions and an AI evaluation, within the agent's limits."
+  },
+  "instructionTests.notMet": {
+    "value": "Did not meet the criteria"
+  },
+  "instructionTests.timeout": {
+    "value": "The comparison reached its time limit."
+  },
+  "instructionTests.delete": {
+    "value": "Delete comparison"
+  },
+  "instructionTests.busy": {
+    "value": "A comparison is already running for this agent."
+  },
+  "instructionTests.stale": {
+    "value": "The draft changed after this comparison."
+  },
+  "instructionTests.remove": {
+    "value": "Remove example"
+  },
+  "instructionTests.met": {
+    "value": "Met the criteria"
+  },
+  "instructionTests.planUsage": {
+    "value": "Uses only the connected subscription. No API fallback. Stops when the quota is exhausted or extra paid usage cannot be ruled out."
+  },
+  "instructionTests.candidate": {
+    "value": "With change"
+  },
+  "instructionTests.exampleHint": {
+    "value": "Use synthetic data. You can save examples for this agent and reuse them."
+  },
+  "instructionTests.situation": {
+    "value": "Situation"
+  },
+  "instructionTests.interrupted": {
+    "value": "The comparison was interrupted. Start it again to continue."
+  },
+  "instructionTests.deleteConfirm": {
+    "value": "Delete this comparison?"
+  },
+  "instructionTests.noOperationalTools": {
+    "value": "No operational tool is executed."
+  },
+  "instructionTests.more": {
+    "value": "What is tested"
+  },
+  "instructionTests.canceled": {
+    "value": "Comparison stopped"
   }
 }
