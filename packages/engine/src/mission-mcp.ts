@@ -10,7 +10,6 @@ import {
 } from "@agenteschat/adapters";
 import { eq, schema } from "@agenteschat/db";
 import type { ToolImage } from "@agenteschat/providers";
-import { getAgentCached } from "./agents";
 import { recordAudit } from "./audit";
 import { getContextItems, personMayRead } from "./context/items";
 import { ValidationError } from "./errors";
@@ -61,6 +60,7 @@ import { grantedScopeKeys, grantKey } from "./tools/scopes";
 import type { ToolDefinition, ToolOutput, ToolSource } from "./tools/types";
 import { createUpload, failUpload, uploadedFile, waitForUpload } from "./uploads";
 import { wikiHitsForAgent } from "./wiki";
+import { agentScopeOn } from "./works-on";
 
 const { machineTasks } = schema;
 
@@ -136,17 +136,15 @@ async function uploadFromTask(
     path,
     title,
   });
-  const agent = await getAgentCached(deps.db, mission.orgId, mission.agentId);
   try {
-    await createMachineSandboxProvider(deps.hub, { id: mission.agentId, handle: agent?.handle ?? "agent" }).pushFile(
-      task.machineId,
-      path,
-      {
-        url: `${(deps.publicUrl ?? "").replace(/\/$/, "")}/api/machines/uploads/${upload.id}`,
-        uploadId: upload.id,
-        maxBytes: upload.maxBytes,
-      },
-    );
+    await createMachineSandboxProvider(
+      deps.hub,
+      await agentScopeOn(deps.db, mission.orgId, mission.agentId, task.machineId),
+    ).pushFile(task.machineId, path, {
+      url: `${(deps.publicUrl ?? "").replace(/\/$/, "")}/api/machines/uploads/${upload.id}`,
+      uploadId: upload.id,
+      maxBytes: upload.maxBytes,
+    });
   } catch (error) {
     await failUpload(deps, upload.id, error instanceof Error ? error.message : String(error));
     throw error;

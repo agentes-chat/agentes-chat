@@ -51,6 +51,7 @@ import { openAgentMore } from "./more-link";
 import { ReportsToSection } from "./ReportsToSection";
 import { RoleInput } from "./RoleInput";
 import { openSetupStep } from "./setup/SetupStepScreen";
+import { WorksOnSection } from "./WorksOnSection";
 
 const INSTRUCTIONS_LIMIT = { max: FIELD_LIMITS.instructions };
 
@@ -298,6 +299,7 @@ export function AgentEditScreen({ id }: { id: string }) {
               <ReportsToSection agentId={id} />
             </>
           )}
+          <WorksOnSection agentId={id} />
 
           <GroupedHeader>{t("agent.instructions")}</GroupedHeader>
           {/* The list draws the field's surface (radius 14, raised), as on "Create agent". */}

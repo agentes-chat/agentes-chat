@@ -396,16 +396,53 @@ export async function requireComputerDriver(
 }
 
 /**
- * The agent's computer and why this person may not drive it (`driveRefusal`), null when they may. `shared`: the right
+ * The agents whose OS user a desktop or terminal of `agentId` runs as: itself, and for a linked member its lead, which
+ * runs every one of its members' work (ADR 0202); and for a lead, its members too. The sign-in any of them lends
+ * (`lentAccount`) is kept lent to that one user (ADR 0059 §8), so it counts for all of them.
+ */
+async function driveCrew(db: Database, orgId: string, agent: { id: string; worksOnAgentId: string | null }) {
+  const leadId = agent.worksOnAgentId ?? agent.id;
+  const rows = await db
+    .select({
+      id: agents.id,
+      ...REACH_COLUMNS,
+      account: agents.brainAccountId,
+      machineId: agents.machineId,
+      archivedAt: agents.archivedAt,
+    })
+    .from(agents)
+    .where(
+      and(
+        eq(agents.orgId, orgId),
+        isNull(agents.deletedAt),
+        or(eq(agents.id, leadId), eq(agents.worksOnAgentId, leadId)),
+      ),
+    );
+  const lead = rows.find((r) => r.id === leadId) ?? null;
+  return {
+    lead: agent.worksOnAgentId ? lead : null,
+    // A member's sign-in is lent to the lead's user only while it is live and on the lead's computer.
+    signIn: rows.some(
+      (r) => lentAccount(r) !== null && (r.id === leadId || (!r.archivedAt && r.machineId === lead?.machineId)),
+    ),
+  };
+}
+
+/**
+ * The agent's computer and why this person may not drive it (`driveRefusal`), null when they may. A linked member's
+ * desktop and terminal are its lead's OS user, so they must pass for the lead too, and a sign-in lent by the lead or
+ * by any member counts for both (ADR 0202). `shared`: the right
  * hand's shared seat (ADR 0175) is meant, not the person's own; it means nothing for any other agent.
  */
 export async function computerDriving(db: Database, userId: string, orgId: string, agentId: string, shared = false) {
   const membership = await requireActiveMembership(db, userId, orgId);
   const [agent] = await db
     .select({
+      id: agents.id,
       machineId: agents.machineId,
       account: agents.brainAccountId,
       builtin: agents.builtin,
+      worksOnAgentId: agents.worksOnAgentId,
       ...REACH_COLUMNS,
     })
     .from(agents)
@@ -421,17 +458,23 @@ export async function computerDriving(db: Database, userId: string, orgId: strin
     const keyed = can(membership, "own_computers") || can(membership, "control_computers");
     return { machine, refusal: keyed ? null : ("role" as const) };
   }
-  const person = {
+  const personFor = (a: Parameters<typeof managesAgent>[0]) => ({
     userId,
     admin: can(membership, "control_computers"),
     own: can(membership, "own_computers"),
-    owner: agent.ownerUserId === userId,
-    manages: managesAgent(agent, userId, membership),
+    owner: a.ownerUserId === userId,
+    manages: managesAgent(a, userId, membership),
     browsers: can(membership, "control_browsers"),
-  };
+  });
   // The shared seat is driven like any agent's computer, by the rule above. Its OS user never holds a plan's sign-in:
   // the right hand thinks as another user (ADR 0137 §4).
-  return { machine, refusal: driveRefusal(machine, person, !home && lentAccount(agent) !== null) };
+  if (home) return { machine, refusal: driveRefusal(machine, personFor(agent), false) };
+  const { lead, signIn } = await driveCrew(db, orgId, agent);
+  return {
+    machine,
+    refusal:
+      driveRefusal(machine, personFor(agent), signIn) ?? (lead ? driveRefusal(machine, personFor(lead), signIn) : null),
+  };
 }
 
 /** Whether this person may drive the agent's computer now (`computerDriving`); false where it has none. */
@@ -449,11 +492,13 @@ export const mayDriveComputer = (db: Database, userId: string, orgId: string, ag
 export async function computerDrivers(db: Database, orgId: string, agentId: string): Promise<string[]> {
   const [agent] = await db
     .select({
+      id: agents.id,
       machineId: agents.machineId,
       owner: agents.ownerUserId,
       brain: agents.brain,
       account: agents.brainAccountId,
       builtin: agents.builtin,
+      worksOnAgentId: agents.worksOnAgentId,
     })
     .from(agents)
     .where(and(eq(agents.id, agentId), eq(agents.orgId, orgId)));
@@ -461,8 +506,11 @@ export async function computerDrivers(db: Database, orgId: string, agentId: stri
   const machineId = home ?? agent?.machineId;
   const machine = machineId ? await getMachine(db, orgId, machineId) : null;
   if (!agent || !machine) return [];
-  const signIn = !home && lentAccount(agent) !== null;
-  const named = [agent.owner, machine.pairedByUserId].filter((id): id is string => !!id);
+  // A member's desktop is its lead's OS user: whoever may not drive the lead's is not asked (`computerDriving`).
+  const crew = home ? { lead: null, signIn: false } : await driveCrew(db, orgId, agent);
+  const signIn = crew.signIn;
+  const leadId = crew.lead?.id ?? null;
+  const named = [agent.owner, crew.lead?.ownerUserId, machine.pairedByUserId].filter((id): id is string => !!id);
   // Who may drive it (`control_computers`, `own_computers`, ADR 0085), read once per member, and the people named above;
   // `manages`: who manages this agent (`managesAgentSql`, ADR 0085 addendum of 2026-11-17).
   const everyone = await db
@@ -472,13 +520,20 @@ export async function computerDrivers(db: Database, orgId: string, agentId: stri
       own: maySql(orgId, organizationMembers.userId, "own_computers"),
       manages: sql<boolean>`exists (select 1 from ${agents} ag where ag.id = ${agentId}::uuid
         and ag.org_id = ${orgId}::uuid and ${managesAgentSql("ag", sql`${organizationMembers.userId}`)})`,
+      managesLead: sql<boolean>`${leadId === null} or exists (select 1 from ${agents} ag where ag.id = ${leadId}::uuid
+        and ag.org_id = ${orgId}::uuid and ${managesAgentSql("ag", sql`${organizationMembers.userId}`)})`,
     })
     .from(organizationMembers)
     .where(eq(organizationMembers.orgId, orgId))
     .orderBy(organizationMembers.createdAt);
   const members = everyone.filter((m) => m.admin || named.includes(m.userId));
   const drivers = members
-    .filter((m) => drivesComputer(machine, { ...m, owner: m.userId === agent.owner }, signIn))
+    .filter(
+      (m) =>
+        drivesComputer(machine, { ...m, owner: m.userId === agent.owner }, signIn) &&
+        (!crew.lead ||
+          drivesComputer(machine, { ...m, manages: m.managesLead, owner: m.userId === crew.lead.ownerUserId }, signIn)),
+    )
     .map((m) => m.userId);
   return agent.owner && drivers.includes(agent.owner) ? [agent.owner] : drivers;
 }
@@ -504,7 +559,12 @@ async function machineViews(db: Database, actorId: string, orgId: string, only?:
   );
   const using = ids.length
     ? await db
-        .select({ id: agents.id, name: agents.name, handle: agents.handle, machineId: agents.machineId })
+        .select({
+          id: agents.id,
+          name: agents.name,
+          handle: agents.handle,
+          machineId: agents.machineId,
+        })
         .from(agents)
         .where(and(eq(agents.orgId, orgId), inArray(agents.machineId, ids), isNull(agents.archivedAt)))
         // The agents' order everywhere else (the sidebar, the team): who came first.
@@ -713,6 +773,7 @@ export async function machineAgents(db: Database, orgId: string, machineId: stri
       brain: agents.brain,
       account: agents.brainAccountId,
       builtin: agents.builtin,
+      worksOn: agents.worksOnAgentId,
       locale: users.locale,
     })
     .from(agents)
@@ -757,9 +818,19 @@ export async function machineAgents(db: Database, orgId: string, machineId: stri
     : [];
   const listed = rows.map((a): MachineAgent => {
     const own = a.builtin === RIGHT_HAND ? lentAccount(a) : null;
-    const extra = a.builtin === RIGHT_HAND ? [...new Set(personal.map((p) => p.id))].filter((id) => id !== own) : [];
+    // The sign-ins of the agents working on this one's computer stay open while it is on (ADR 0202): the runner keeps
+    // each agent's account by the id its requests carry, which is this one's.
+    const crewAccounts = rows
+      .flatMap((m) => (m.worksOn === a.id ? [lentAccount(m)] : []))
+      .filter((x): x is string => x !== null);
+    const extra =
+      a.builtin === RIGHT_HAND
+        ? [...new Set(personal.map((p) => p.id))].filter((id) => id !== own)
+        : [...new Set(crewAccounts)].filter((id) => id !== (a.worksOn ? null : lentAccount(a)));
     // The right hand off any workspace plan here thinks only with people's own: the first is its frame's account.
-    const account = a.builtin === RIGHT_HAND ? (own ?? extra.shift() ?? null) : lentAccount(a);
+    // A linked member's account is listed under its lead's entry alone (`crewAccounts`); its own entry stays so the
+    // runner never takes it for gone, with no account that would map the lent folder to another user.
+    const account = a.builtin === RIGHT_HAND ? (own ?? extra.shift() ?? null) : a.worksOn ? null : lentAccount(a);
     return {
       id: a.id,
       handle: a.handle,
@@ -894,6 +965,13 @@ export async function detachMachine(tx: Executor, machine: Pick<MachineRow, "id"
   const now = new Date();
   // The right hand's shared seat (ADR 0175) goes with the workspace's own computer: another one starts it anew.
   if ((await workspaceHomeId(tx, machine.orgId)) === machine.id) await removeSeat(tx, machine.orgId, SHARED_SEAT);
+  // Locked in id order, as a lead's move locks them: the two never wait on each other's rows.
+  await tx
+    .select({ id: agents.id })
+    .from(agents)
+    .where(and(eq(agents.orgId, machine.orgId), eq(agents.machineId, machine.id)))
+    .orderBy(agents.id)
+    .for("update");
   const rows = await tx
     .update(agents)
     // Its accounts (ADR 0041) stay with it: the agents leave them.
@@ -992,6 +1070,29 @@ export function setWorkspaceComputers(on: boolean) {
 export const mayBeHome = (m: Pick<MachineRow, "kind">) => !workspaceComputers || m.kind !== "connected";
 
 /**
+ * The setter's rule for who may give an agent a computer it doesn't manage (`managesAgent`): its owner, on a workspace
+ * computer or one they connected. Also asked when an agent is put on another's computer (`setWorksOn`).
+ */
+export function mayPutOnComputer(
+  agent: Parameters<typeof managesAgent>[0],
+  machine: Pick<MachineRow, "kind" | "pairedByUserId"> | null,
+  actorId: string,
+  membership?: Parameters<typeof managesAgent>[2],
+) {
+  if (membership && managesAgent(agent, actorId, membership)) return;
+  if (agent.ownerUserId !== actorId) {
+    throw new ForbiddenError("Only an admin or the agent's owner can choose its computer", "machine.forbidden");
+  }
+  // The workspace's own computers (managed, host) are nobody's: any agent of the workspace may use them.
+  if (machine && machine.kind === "connected" && machine.pairedByUserId !== actorId) {
+    throw new ForbiddenError(
+      "You can only give your agent a computer you connected yourself. Ask an admin for this one.",
+      "machine.forbidden",
+    );
+  }
+}
+
+/**
  * Points an agent at a connected machine, or at none with null. Who manages it (`managesAgent`, ADR 0085 addendum of
  * 2026-11-17) may; so may the agent's owner when they paired that machine or it is the workspace's own (leaving it with
  * none only needs the owner). Never at a brought computer where workspaces have their own (`mayBeHome`).
@@ -1003,12 +1104,26 @@ export async function setAgentComputerTarget(
   agentId: string,
   machineId: string | null,
   /** false: the caller moves its waiting runs itself (`moveAgentsFromMachine`), or `setAgentBrain` follows. */
-  options: { wakeWaits?: boolean } = {},
+  options: {
+    wakeWaits?: boolean;
+    /** false: the caller is inside a transaction and stops its members' work itself once it commits (`stopMembersWork`). */
+    stopMembers?: boolean;
+  } = {},
 ): Promise<ComputerTarget> {
   const membership = await requirePermission(deps.db, actorId, orgId, "read");
   const agent = await getAgent(deps.db, orgId, agentId);
   if (!agent || agent.archivedAt) throw new NotFoundError("Agent not found");
   if (machineId && isRightHand(agent)) throw rightHandPermanent("given a computer");
+  // It works on another agent's computer (ADR 0202): it follows that agent, and chooses none of its own.
+  const refuseLinked = async (db: Database, leadId: string | null) => {
+    if (!leadId) return;
+    const lead = await getAgent(db, orgId, leadId);
+    throw new ForbiddenError(
+      `${agent.name} works on ${lead?.name ?? "another agent"}'s computer: it moves when ${lead?.name ?? "that agent"} does. Stop that first to give it a computer of its own.`,
+      "agent.works_on",
+    );
+  };
+  await refuseLinked(deps.db, agent.worksOnAgentId);
   const admin = managesAgent(agent, actorId, membership);
   const machine = machineId ? await getMachine(deps.db, orgId, machineId) : null;
   if (machineId && !machine) throw new NotFoundError("Computer not found", "machine.not_found");
@@ -1018,28 +1133,45 @@ export async function setAgentComputerTarget(
       "device.not_home",
     );
   }
-  if (!admin) {
-    if (agent.ownerUserId !== actorId) {
-      throw new ForbiddenError("Only an admin or the agent's owner can choose its computer", "machine.forbidden");
-    }
-    // The workspace's own computers (managed, host) are nobody's: any agent of the workspace may use them.
-    if (machine && machine.kind === "connected" && machine.pairedByUserId !== actorId) {
-      throw new ForbiddenError(
-        "You can only give your agent a computer you connected yourself. Ask an admin for this one.",
-        "machine.forbidden",
-      );
-    }
-  }
+  if (!admin) mayPutOnComputer(agent, machine, actorId);
   const moved = (machine?.id ?? null) !== agent.machineId;
-  await deps.db
-    .update(agents)
-    .set({
+  // The agents working on its computer (ADR 0202) go with it, in the same step and from the same sign-in.
+  const followers = await deps.db.transaction(async (tx) => {
+    // The lead's row and its followers', locked in id order (as `detachMachine` does, so they never deadlock): a link
+    // made meanwhile is seen by the follower update below, and one made to this agent meanwhile is refused here.
+    const locked = await tx
+      .select({ id: agents.id, worksOnAgentId: agents.worksOnAgentId })
+      .from(agents)
+      .where(and(eq(agents.orgId, orgId), or(eq(agents.id, agentId), eq(agents.worksOnAgentId, agentId))))
+      .orderBy(agents.id)
+      .for("update");
+    await refuseLinked(tx as unknown as Database, locked.find((r) => r.id === agentId)?.worksOnAgentId ?? null);
+    const set = {
       machineId: machine?.id ?? null,
       // An account is a folder on one computer (ADR 0041): another computer starts on its own sign-in.
       ...(moved ? { brainAccountId: null } : {}),
       updatedAt: new Date(),
-    })
-    .where(and(eq(agents.orgId, orgId), eq(agents.id, agentId)));
+    };
+    await tx
+      .update(agents)
+      .set(set)
+      .where(and(eq(agents.orgId, orgId), eq(agents.id, agentId)));
+    if (!moved) return [];
+    return tx
+      .update(agents)
+      .set(set)
+      .where(and(eq(agents.orgId, orgId), eq(agents.worksOnAgentId, agentId)))
+      .returning({ id: agents.id });
+  });
+  for (const m of followers) caches.agents.delete(`${orgId}:${m.id}`);
+  // Their work on the computer it left ends, through the scope it started under.
+  if (moved && options.stopMembers !== false) {
+    const { stopMembersWork } = await import("./works-on");
+    await stopMembersWork(deps, orgId, agentId);
+  }
+  const followerTarget: ComputerTarget = machine
+    ? { kind: "machine", machineId: machine.id, name: machine.name, online: shownOnline(machine) }
+    : { kind: "none" };
   caches.agents.delete(`${orgId}:${agentId}`);
   await recordAudit(deps.db, {
     orgId,
@@ -1056,13 +1188,22 @@ export async function setAgentComputerTarget(
     orgId,
     event: { type: "agent.computer", agentId, target },
   });
+  for (const m of followers) {
+    await publishOrgEvent(deps.pubsub, {
+      type: "org.broadcast",
+      orgId,
+      event: { type: "agent.computer", agentId: m.id, target: followerTarget },
+    });
+  }
   // The machine it left and the one it joined list their agents again (protocol 9).
   await publishMachineAgentsChanged(deps.pubsub, orgId);
   // Later than at once: an account on the new computer is saved next (`setAgentBrain`), and a run claimed between the
   // two would find no sign-in there. That save's wake shares the job's dedupe key, so the job keeps this later time.
-  if (moved && options.wakeWaits !== false) {
+  // Their followers' waiting runs go on whoever moved them (a bulk move wakes only the agents it names).
+  const wake = [...(moved && options.wakeWaits !== false ? [agentId] : []), ...followers.map((m) => m.id)];
+  if (wake.length > 0) {
     const { wakeAgentsBrainWaits } = await import("./usage-pause");
-    await wakeAgentsBrainWaits(deps, orgId, [agentId], { delayMs: TARGET_WAKE_DELAY_MS });
+    await wakeAgentsBrainWaits(deps, orgId, wake, { delayMs: TARGET_WAKE_DELAY_MS });
   }
   return target;
 }

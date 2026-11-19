@@ -193,3 +193,15 @@ test("no spill-over where its owner turned it off, nor to someone else's compute
   expect(first.seen.map((t) => t.session?.machineId)).toEqual([theirs]);
   expect(first.seen[0]?.account?.label).toBe("Ana's Claude");
 });
+
+test("a member of another agent's computer never spills to another computer: its turn stays where its lead is", async () => {
+  f = await setup();
+  await fullHome();
+  const laptop = await pair(f.owner.id, "laptop");
+  const [rio] = await f.db.select().from(schema.agents).where(eq(schema.agents.handle, "rio"));
+  await f.db.update(schema.agents).set({ ownerUserId: f.owner.id }).where(eq(schema.agents.orgId, f.org.id));
+  await f.db.update(schema.agents).set({ worksOnAgentId: rio?.id }).where(eq(schema.agents.id, f.agent.id));
+  const { run, seen } = await ask();
+  expect(seen.map((t) => t.session?.machineId)).not.toContain(laptop);
+  expect(run?.transcript).not.toHaveProperty("spill");
+});

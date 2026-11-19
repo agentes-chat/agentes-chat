@@ -12156,6 +12156,20 @@
       "saved": "Model: {{model}}"
     }
   },
+  "worksOn": {
+    "label": "Werkt op de computer van",
+    "hint": "Gebruikt de computer van die agent zoals die agent dat daar doet. Overal elders blijft het zijn eigen agent.",
+    "none": "Eigen computer",
+    "locked": "Volgt {{name}}",
+    "lockedUnknown": "Volgt de computer van een andere agent",
+    "stop": "Stop met werken op de computer van {{name}}",
+    "crewTitle": "Werken op deze computer",
+    "crewEmpty": "Geen andere agent werkt op deze computer.",
+    "crewMore": "en {{count}} meer",
+    "noneEligible": "Geen andere agent met dezelfde eigenaar heeft een computer om te delen.",
+    "unavailable": "{{name}} kan de computer nu niet delen: gearchiveerd, andere eigenaar of verhuisd. Kies een andere of stop.",
+    "tradeoff": "Op die computer kan hij doen wat die agent kan: de bestanden, de inlogs en de programma's gebruiken die die agent draait. Zijn eigen AI-inlog blijft ook beschikbaar op de gebruiker van die computer. Geheugen en naam blijven van hemzelf, en goedkeuringen voor gevoelige acties gaan nog steeds naar mensen."
+  },
   "computer": {
     "title": "Pc van {{name}}",
     "title_female": "Pc van {{name}}",
@@ -16529,7 +16543,8 @@
         "other": "kon nu niet overstappen",
         "not_found": "gebruikte deze computer niet meer",
         "brain_unavailable": "de nieuwe computer heeft zijn Claude Code of Codex niet",
-        "forbidden": "je kunt deze agent niet wijzigen"
+        "forbidden": "je kunt deze agent niet wijzigen",
+        "works_on": "hij werkt op de computer van een andere agent en blijft dus bij die agent"
       }
     },
     "card": {

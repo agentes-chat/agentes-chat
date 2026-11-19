@@ -1,3 +1,4 @@
+import type { AgentScope } from "@agenteschat/adapters";
 import {
   findPullRequestUrl,
   type MachineReplies,
@@ -47,6 +48,7 @@ import { runnerUpdateWay } from "./runner-update";
 import { replyThreadOf } from "./runs";
 import { hopLimitReached, runStretchOf } from "./stretch";
 import type { ToolContext } from "./tools/types";
+import { resolveForRow } from "./works-on";
 
 const { machineTasks, agentRuns } = schema;
 
@@ -220,11 +222,25 @@ export interface TaskDeps {
   pubsub?: PubSub;
 }
 
-/** The agent as a task's computer knows it: the agent, or the seat its task runs in (`scopeId`). */
-export const taskScope = (task: { agentId: string; scopeId?: string | null }, handle: string) => ({
-  id: task.scopeId ?? task.agentId,
-  handle,
-});
+/**
+ * Who the computer is asked as when a task starts, resolved now (never saved with a queued start): a seat, the lead
+ * of a member whose link is honored on that computer, or the agent. A link no longer honored refuses the start (ADR 0202).
+ */
+async function startScopeOf(db: Database, input: Pick<QueuedTaskStart, "orgId" | "agent" | "scopeId" | "machineId">) {
+  if (input.scopeId) return { ...input.agent, id: input.scopeId };
+  const agent = await getAgentCached(db, input.orgId, input.agent.id);
+  return agent?.worksOnAgentId ? resolveForRow(db, agent, input.machineId) : input.agent;
+}
+
+/**
+ * The agent as a task's computer knows it for every request after it started: the scope it was started under
+ * (`runnerScopeId`: its own id, a seat's, or the lead's for an agent working on another's computer, ADR 0202), never
+ * derived again from what the link is now. A row from before the column is the seat or the agent itself.
+ */
+export const taskScope = (
+  task: { agentId: string; scopeId?: string | null; runnerScopeId?: string | null },
+  handle: string,
+): AgentScope => ({ id: task.runnerScopeId ?? task.scopeId ?? task.agentId, handle });
 
 export interface StartTaskInput {
   orgId: string;
@@ -472,8 +488,12 @@ export async function launchTask(
           taskId: row.id,
         })
       : null;
+    // The scope it starts under is resolved now and kept on the row, before the computer is asked: from then on every
+    // request about this task (stop, status, output, resume) uses it, whatever the link becomes.
+    const scope = await startScopeOf(deps.db, input);
+    await deps.db.update(machineTasks).set({ runnerScopeId: scope.id }).where(eq(machineTasks.id, row.id));
     const started = await deps.call<"task.start">(input.machineId, {
-      agent: input.scopeId ? { ...input.agent, id: input.scopeId } : input.agent,
+      agent: scope,
       op: "task.start",
       taskId: row.id,
       executor: input.executor,
@@ -911,6 +931,13 @@ export async function settleInterruptedTask(
     const asked = claimed.startedAt ? null : claimed.prompt;
     const shell = claimed.executor === "shell";
     try {
+      // A member whose link isn't honored there starts nothing: refused before a row is made (ADR 0202).
+      await startScopeOf(deps.db, {
+        orgId: claimed.orgId,
+        agent: { id: claimed.agentId, handle: handle ?? "agent" },
+        scopeId: claimed.scopeId,
+        machineId: claimed.machineId,
+      });
       const again = {
         orgId: claimed.orgId,
         agent: { id: claimed.agentId, handle: handle ?? "agent" },

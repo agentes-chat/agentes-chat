@@ -160,6 +160,14 @@ export function createGitToolSource(deps: GitToolDeps): ToolSource {
           };
         }
         const self = await getAgentCached(c.db, c.orgId, c.agentId);
+        // Git is the lead's for an agent that works on another's computer (ADR 0202): its pushes are the lead's.
+        const lead = self?.worksOnAgentId ? await getAgentCached(c.db, c.orgId, self.worksOnAgentId) : null;
+        if (lead) {
+          return {
+            ok: false,
+            message: `Git and GitHub are ${lead.name}'s on this computer: ask ${lead.name} to push to ${branch}; yours are its branches under agentes/${lead.handle}/.`,
+          };
+        }
         const handle = self?.handle ?? "";
         if ([handle, ...(self?.previousHandles ?? [])].some((h) => branch.startsWith(`agentes/${h}/`))) {
           return { ok: false, message: `${branch} is your own branch: just push to it, nothing to ask.` };
@@ -253,7 +261,7 @@ export function createGitToolSource(deps: GitToolDeps): ToolSource {
                       ? `${r.repo} is already at ${where}, but it couldn't be updated (${r.message ?? "unknown error"})`
                       : `${r.repo} was already at ${where}; updated it`;
                 return {
-                  content: `${what} (branch ${r.branch ?? "?"}${r.head ? ` at ${r.head}` : ""}${r.message && r.status !== "failed" ? `; ${r.message}` : ""}).\nWork there (cd ${where}); create a branch agentes/${agent.handle}/<topic> to push, then open_pull_request.`,
+                  content: `${what} (branch ${r.branch ?? "?"}${r.head ? ` at ${r.head}` : ""}${r.message && r.status !== "failed" ? `; ${r.message}` : ""}).\nWork there (cd ${where}); create a branch agentes/${scope.handle}/<topic> to push, then open_pull_request.`,
                   data: { repo: r.repo, dir: r.dir, machineId, status: r.status },
                 };
               }

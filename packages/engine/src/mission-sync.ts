@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 import { and, asc, desc, eq, inArray, lte, schema, sql } from "@agenteschat/db";
-import { getAgentCached } from "./agents";
 import { cutText } from "./format";
 import { formatDuration, getTask, isAgentTask, type MachineTaskRow, taskEndNotice, taskSeconds } from "./machine-tasks";
 import { getMachineById } from "./machines";
@@ -31,6 +30,7 @@ import {
 } from "./missions";
 import { tellMainSession } from "./missions-engine";
 import { lineLocale } from "./requester";
+import { agentScopeOn } from "./works-on";
 
 const { missions, missionFiles, missionDecisions, missionReviews, missionParticipants, messages, users } = schema;
 
@@ -132,10 +132,9 @@ export function smallDiff(before: string, after: string, maxLines = 40) {
     .join("\n");
 }
 
-async function agentScope(deps: MissionDeps, mission: MissionRow) {
-  const agent = await getAgentCached(deps.db, mission.orgId, mission.agentId);
-  return { id: mission.agentId, handle: agent?.handle ?? "agent" };
-}
+/** Who the mission's computer takes the mission's agent for: itself, or the lead when it works on that computer (ADR 0202). */
+const agentScope = (deps: MissionDeps, mission: MissionRow) =>
+  agentScopeOn(deps.db, mission.orgId, mission.agentId, mission.machineId ?? "");
 
 async function readOnMachine(deps: MissionDeps, mission: MissionRow, path: string) {
   if (!deps.hub || !mission.machineId) return null;

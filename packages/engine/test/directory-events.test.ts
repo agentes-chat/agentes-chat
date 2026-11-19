@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { channelTopic, orgTopic, userTopic } from "@agenteschat/adapters";
-import { and, countQueries, eq, schema } from "@agenteschat/db";
+import { channelTopic, MACHINE_PROTOCOL_VERSION, orgTopic, userTopic } from "@agenteschat/adapters";
+import { and, countQueries, eq, inArray, schema } from "@agenteschat/db";
 import {
   addChannelMember,
   archiveAgent,
@@ -19,6 +19,7 @@ import {
   joinChannel,
   listChannelMembers,
   listDms,
+  type MachineHub,
   openDm,
   openPersonAgentDm,
   PROPOSE_TEAM_TOOL,
@@ -189,6 +190,80 @@ describe("what Lodi creates reaches every open app, after its transaction commit
     expect(announced(log, AGENTS)).toBe(1);
     expect(announced(log, CHANNELS)).toBe(1);
     expect(log.indexOf(AGENTS)).toBeGreaterThan(log.indexOf("commit"));
+  });
+
+  test("Desfazer: the members' work on the archived lead's computer is stopped through the computer, after the commit", async () => {
+    f = await setup({ rightHand: true, machines: true });
+    const id = await teamCard(f, [IARA, CAIO]);
+    await createTeam({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, id);
+    const [lead, member] = await f.db
+      .select()
+      .from(schema.agents)
+      .where(and(eq(schema.agents.orgId, f.org.id), eq(schema.agents.handle, "iara")))
+      .then(async (l) => [l[0], (await f.db.select().from(schema.agents).where(eq(schema.agents.handle, "caio")))[0]]);
+    const hub = f.machineHub as MachineHub;
+    const { machineId, token } = await pairMachine({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, {
+      name: "Box",
+      exec: true,
+    });
+    await f.db
+      .update(schema.agents)
+      .set({ machineId })
+      .where(inArray(schema.agents.id, [lead?.id as string, member?.id as string]));
+    await f.db
+      .update(schema.agents)
+      .set({ worksOnAgentId: lead?.id })
+      .where(eq(schema.agents.id, member?.id as string));
+    const asked: Record<string, unknown>[] = [];
+    const conn = hub.open({
+      send(text: string) {
+        const frame = JSON.parse(text) as Record<string, unknown>;
+        if (frame.type !== "request") return;
+        asked.push(frame);
+        setTimeout(
+          () =>
+            void hub.message(
+              conn,
+              JSON.stringify({ type: "result", id: frame.id, ok: true, data: { canceled: true } }),
+            ),
+          1,
+        );
+      },
+      close() {},
+    });
+    await hub.message(
+      conn,
+      JSON.stringify({
+        type: "hello",
+        token,
+        hostname: "box",
+        os: "linux",
+        arch: "x64",
+        version: "0.1.0",
+        workspace: "/w",
+        protocol: MACHINE_PROTOCOL_VERSION,
+        exec: true,
+        mode: "system",
+        executors: {},
+      }),
+    );
+    await f.db.insert(schema.machineTasks).values({
+      orgId: f.org.id,
+      agentId: member?.id,
+      runnerScopeId: lead?.id,
+      machineId,
+      channelId: f.general.id,
+      threadRootId: crypto.randomUUID(),
+      title: "dev server",
+      executor: "shell",
+      command: "bun dev",
+      status: "running",
+      startedAt: new Date(),
+    } as never);
+    await undoTeam({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, id);
+    expect(asked.filter((r) => r.op === "task.cancel").map((r) => (r.agent as { id: string }).id)).toEqual([
+      lead?.id as string,
+    ]);
   });
 
   test("create_channel: announced after the run's transaction, with its agents in it", async () => {

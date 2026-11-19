@@ -119,7 +119,11 @@ export function useBrainState(view: AgentBrain, opts: { added: readonly MachineA
   // A coding plan thinks through Claude Code on the agent's computer, where its key is: it never moves.
   const homeOf = (c: AiChoice) => {
     if (c === "key") return null;
-    if (!isPlanId(c)) return homeFor(kindOf(c), work.machineId, machines);
+    // A linked agent works on its lead's computer and never moves (ADR 0202): only what runs there counts.
+    if (!isPlanId(c)) {
+      const home = homeFor(kindOf(c), work.machineId, machines);
+      return agent.worksOnAgentId && home?.machineId !== work.machineId ? null : home;
+    }
     const here = machines.find((m) => m.machineId === work.machineId);
     return here?.options.some((o) => o.kind === "claude_code" && o.available) ? here : null;
   };

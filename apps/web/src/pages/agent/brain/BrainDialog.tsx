@@ -1000,7 +1000,7 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
               <PinAccount on={m.accountPinned} onChange={(on) => setMore({ ...m, accountPinned: on })} />
             </div>
           )}
-          {s.runsOn.length > 1 && can("machine") && (
+          {s.runsOn.length > 1 && can("machine") && !agent.worksOnAgentId && (
             <BrainLine
               label={t("agentPage.work.brain.v2.computer")}
               value={s.computerName}

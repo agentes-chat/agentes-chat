@@ -419,6 +419,12 @@ export function SettingsTab({
                       <Button
                         size="sm"
                         icon="computer"
+                        disabled={!!agent.worksOnAgentId}
+                        title={
+                          agent.worksOnAgentId && agent.worksOn
+                            ? t("worksOn.locked", { name: agent.worksOn.name })
+                            : undefined
+                        }
                         onClick={() => openWork("computer")}
                         style={{ alignSelf: "flex-start" }}
                       >

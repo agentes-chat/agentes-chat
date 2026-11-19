@@ -1470,6 +1470,24 @@ interface Login {
   watch?: () => void;
 }
 
+/**
+ * System mode: which user each account's folder stays lent to, from the `agents` frame: an account belongs to the
+ * agent whose entry names it (`account`, `accounts`). An agent working on another's computer (ADR 0202) names none of
+ * its own: its accounts are under the entry its requests carry.
+ */
+export function lentUids(
+  list: readonly { id: string; account?: string; accounts?: string[] }[],
+  uids: ReadonlyMap<string, number>,
+): Map<string, number> {
+  const lent = new Map<string, number>();
+  for (const a of list) {
+    const uid = uids.get(a.id);
+    if (!uid) continue;
+    for (const id of [a.account, ...(a.accounts ?? [])]) if (id) lent.set(id, uid);
+  }
+  return lent;
+}
+
 export class AccountManager {
   private readonly logins = new Map<string, Login>();
   private cache: { at: number; value: RunnerAccountInfo[] } | null = null;

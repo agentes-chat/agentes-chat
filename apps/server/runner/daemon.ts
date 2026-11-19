@@ -62,7 +62,7 @@ import {
 } from "./access";
 import { AccountBrains } from "./account-brains";
 import { accountSelfCheck, SELF_CHECK_EVERY_MS, SELF_CHECK_RETRY_MS } from "./account-check";
-import { AccountManager, grokSandboxFails, lchownTree, SYSTEM_ACCOUNTS_ROOT } from "./accounts";
+import { AccountManager, grokSandboxFails, lchownTree, lentUids, SYSTEM_ACCOUNTS_ROOT } from "./accounts";
 import { ActivityLog } from "./activity";
 import {
   AccountUsers,
@@ -2089,13 +2089,7 @@ export class RunnerDaemon implements RequestObserver {
     if (this.stored?.mode === "system") {
       const users = readAgentUsers(this.opts.home);
       const uids = new Map(users.map((u) => [u.id, u.uid]));
-      const lent = new Map<string, number>();
-      for (const a of list) {
-        const uid = uids.get(a.id);
-        if (!uid) continue;
-        for (const id of [a.account, ...(a.accounts ?? [])]) if (id) lent.set(id, uid);
-      }
-      void this.accounts.keepLent(lent).catch(() => undefined);
+      void this.accounts.keepLent(lentUids(list, uids)).catch(() => undefined);
       const here = new Set(list.map((a) => a.id));
       const gone = this.agents.filter((a) => !here.has(a.id)).map((a) => a.id);
       const deleted = new Set(Array.isArray(deletedIds) ? deletedIds : []);

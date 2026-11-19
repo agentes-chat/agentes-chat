@@ -29546,6 +29546,42 @@
   "brain.mission.saved": {
     "value": "Model: {{model}}"
   },
+  "worksOn.label": {
+    "value": "Works on the computer of"
+  },
+  "worksOn.hint": {
+    "value": "It uses that agent's computer as that agent does there. It stays its own agent everywhere else."
+  },
+  "worksOn.none": {
+    "value": "Its own computer"
+  },
+  "worksOn.locked": {
+    "value": "Follows {{name}}"
+  },
+  "worksOn.lockedUnknown": {
+    "value": "Follows another agent's computer"
+  },
+  "worksOn.stop": {
+    "value": "Stop working on {{name}}'s computer"
+  },
+  "worksOn.crewTitle": {
+    "value": "Work on this computer"
+  },
+  "worksOn.crewEmpty": {
+    "value": "No other agent works on this computer."
+  },
+  "worksOn.crewMore": {
+    "value": "and {{count}} more"
+  },
+  "worksOn.noneEligible": {
+    "value": "No other agent with the same owner has a computer to share."
+  },
+  "worksOn.unavailable": {
+    "value": "{{name}} can't share its computer now: it is archived, has another owner or moved. Choose another or stop."
+  },
+  "worksOn.tradeoff": {
+    "value": "On that computer it can do what that agent can: use its files, its sign-ins and the programs it runs. Its own AI sign-in is also kept available on that computer's user. Its memory and name stay its own, and approvals for sensitive actions still go to people."
+  },
   "computer.title": {
     "value": "{{name}}'s PC"
   },
@@ -40549,6 +40585,9 @@
   },
   "outage.done.skip.forbidden": {
     "value": "you can't change this agent"
+  },
+  "outage.done.skip.works_on": {
+    "value": "it works on another agent's computer, so it stays with that agent"
   },
   "outage.card.waiting": {
     "value": "Waiting for {{name}} to come back"

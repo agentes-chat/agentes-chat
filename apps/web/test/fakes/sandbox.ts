@@ -33,6 +33,10 @@ export function createFakeSandbox(
       return clone(settings);
     },
     computer: async (_orgId, agentId) => clone({ target: targetOf(agentId) }),
+    setWorksOn: async (orgId, agentId, worksOnAgentId) => {
+      log("sandbox.setWorksOn", orgId, agentId, worksOnAgentId);
+      return { worksOnAgentId };
+    },
     setTarget: async (orgId, agentId, machineId) => {
       log("sandbox.setTarget", orgId, agentId, machineId);
       const before = targets.get(agentId);

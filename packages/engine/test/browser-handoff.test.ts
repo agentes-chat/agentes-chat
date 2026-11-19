@@ -47,6 +47,7 @@ import {
   requireBrowserControl,
   requirePageRead,
   setMessageLinkBase,
+  setWorksOn,
   startTakeover,
   stopAgentBrowser,
   stopChecksSettled,
@@ -107,6 +108,8 @@ const probe: ToolSource = {
 const ready = new Set<string>();
 /** The address the agent's browser shows, when a test sets one. */
 let pageUrl: string | null = null;
+/** Every request the tools sent to a computer, in order. */
+const seen: MachineRequest[] = [];
 const readyHub: MachineCaller = {
   async status(id): Promise<MachineStatus | null> {
     if (!ready.has(id)) return null;
@@ -124,6 +127,7 @@ const readyHub: MachineCaller = {
     } as MachineStatus;
   },
   async call(_id, request) {
+    seen.push(request);
     if (pageUrl && request.op === "browser.act") return { success: true, data: { url: pageUrl } } as never;
     throw new Error("no runner in these tests");
   },
@@ -132,6 +136,7 @@ const askSource = () => createBrowserHandoffToolSource({ machines: { hub: readyH
 
 async function start() {
   ready.clear();
+  seen.length = 0;
   pageUrl = null;
   f = await setup({ reply, machines: true, toolSources: [askSource(), probe] });
   const pubsubDeps = { db: f.db, pubsub: f.pubsub };
@@ -171,6 +176,26 @@ async function runFor(userId: string) {
 }
 
 describe("browser_ask_person", () => {
+  test("an agent working on another's computer is asked about as that agent there: the page it checks is the lead's browser", async () => {
+    const machine = await start();
+    const [own] = await f.db.select().from(schema.agents).where(eq(schema.agents.id, f.agent.id));
+    const [lead] = await f.db
+      .insert(schema.agents)
+      .values({ ...(own as typeof schema.agents.$inferSelect), id: crypto.randomUUID(), name: "Ada", handle: "ada" })
+      .returning();
+    if (!lead) throw new Error("no lead");
+    await f.db.update(schema.agents).set({ ownerUserId: f.owner.id }).where(eq(schema.agents.orgId, f.org.id));
+    await setWorksOn(deps(), f.owner.id, f.org.id, f.agent.id, lead.id);
+    expect((await f.db.select().from(schema.agents).where(eq(schema.agents.id, f.agent.id)))[0]?.machineId).toBe(
+      machine.machineId,
+    );
+    await post("@dev sign in please");
+    await drainOutbox(f.db, f.handlers);
+    const urls = seen.filter((r) => r.op === "browser.act" && r.command === "get");
+    expect(urls.length).toBeGreaterThan(0);
+    for (const r of urls) expect(r.agent).toMatchObject({ id: lead.id, handle: "ada" });
+  });
+
   test("`message` is taken as `instructions` when the call has no `instructions`; with both it is refused", async () => {
     await start();
     await post("@dev guess the field");

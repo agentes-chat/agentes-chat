@@ -34,6 +34,7 @@ import {
   safeEqual,
   setAgentComputerTarget,
   setMachinePause,
+  setWorksOn,
   startDeviceCode,
   startLinkedDeviceCode,
   syncHostComputer,
@@ -444,7 +445,7 @@ const MoveAgentsResult = z
   .object({
     moved: z.array(z.uuid()),
     skipped: z.array(
-      z.object({ agentId: z.string(), reason: z.enum(["brain_unavailable", "forbidden", "not_found"]) }),
+      z.object({ agentId: z.string(), reason: z.enum(["brain_unavailable", "forbidden", "not_found", "works_on"]) }),
     ),
     resumed: z.number().int().openapi({ description: "Waiting runs queued again on the new computer." }),
     stillWaiting: z.number().int().openapi({
@@ -1013,6 +1014,30 @@ export function machineAppRoutes(deps: AppDeps) {
         c.req.valid("json").machineId,
       );
       return c.json(target, 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "put",
+      path: "/organizations/{orgId}/agents/{agentId}/works-on",
+      tags,
+      security,
+      summary:
+        "Works on the computer of another agent (ADR 0202): uses its computer as it does there; null to stop. Who manages both",
+      request: { params: AgentParams, body: body(z.object({ worksOnAgentId: z.uuid().nullable() })) },
+      responses: { 200: json(z.object({ worksOnAgentId: z.uuid().nullable() })), ...errors },
+    }),
+    async (c) => {
+      const { orgId, agentId } = c.req.valid("param");
+      const out = await setWorksOn(
+        { db, pubsub },
+        c.get("user").id,
+        orgId,
+        agentId,
+        c.req.valid("json").worksOnAgentId,
+      );
+      return c.json(out, 200);
     },
   );
 

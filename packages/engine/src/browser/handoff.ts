@@ -1,4 +1,5 @@
 import {
+  type AgentScope,
   type BrowserHandoffInfo,
   type MachineReplies,
   type PubSub,
@@ -67,6 +68,7 @@ import { SandboxUnavailableError } from "../sandbox";
 import { closedRefusal } from "../standing";
 import { grantedScopeKeys, isAllowed, toolAccess } from "../tools/scopes";
 import type { ToolContext, ToolDefinition, ToolOutput, ToolSource } from "../tools/types";
+import { agentScopeOn } from "../works-on";
 import { getBrowserProfile, runBrowserProfile } from "./profiles";
 import { agentBrowserStatus, browserUnavailableText } from "./status";
 import {
@@ -920,7 +922,7 @@ export const ownAppRefusal = (orgId: string) =>
   `Nothing was asked: that is agentes.chat itself, the app you work in. Never sign in to it on your computer, nor ask a person to. Change the workspace with your own tools, which post cards a person applies as themselves (propose_remove_agents archives or deletes agents, propose_agent creates them, propose_settings_change, offer_invites, offer_connect_app; find_tools finds them). When no tool does it, send the person the link to the page instead: the team ${appPageLink(orgId, "/team")}, settings ${appPageLink(orgId, "/settings/members")} (or /settings/roles, /settings/connectors, /settings/computers, /settings/usage).`;
 
 /** The address the agent's browser shows, as its computer says (short: it runs before a person is asked). */
-async function browserUrl(hub: MachineCaller, machineId: string, agent: { id: string; handle: string }) {
+async function browserUrl(hub: MachineCaller, machineId: string, agent: AgentScope) {
   try {
     const reply = await hub.call<"browser.act">(
       machineId,
@@ -1012,8 +1014,13 @@ export function createBrowserHandoffToolSource(
       }
     }
     if (screen === "browser" && hub) {
-      const agent = await getAgentCached(ctx.db, ctx.orgId, ctx.agentId);
-      const url = agent && (await browserUrl(hub, place.machineId, { id: agent.id, handle: agent.handle }));
+      // Its browser there: the agent's own, or its lead's for one that works on another's computer (ADR 0202).
+      const scope = await agentScopeOn(ctx.db, ctx.orgId, ctx.agentId, place.machineId).catch((error: unknown) => {
+        if (error instanceof ForbiddenError) return error;
+        throw error;
+      });
+      if (scope instanceof ForbiddenError) return { content: scope.message, isError: true };
+      const url = await browserUrl(hub, place.machineId, scope);
       if (url && namesOwnApp(url)) return { content: ownAppRefusal(ctx.orgId), isError: true };
     }
     const [run] = await ctx.db
@@ -1899,7 +1906,7 @@ export async function openPageInControl(
       open.machineId,
       {
         op: "browser.act",
-        agent: { id: agentId, handle: agent.handle, ...(agent.name ? { name: agent.name } : {}) },
+        agent: await agentScopeOn(deps.db, orgId, agentId, open.machineId),
         command,
         args,
         timeoutSeconds: OPEN_PAGE_SECONDS,

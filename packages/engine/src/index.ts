@@ -379,6 +379,7 @@ export * from "./work-analytics";
 export * from "./work-tools";
 export * from "./working";
 export * from "./works";
+export * from "./works-on";
 export * from "./workspace-actions";
 export * from "./workspace-approvals";
 export * from "./workspace-deletion";

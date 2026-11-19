@@ -618,6 +618,23 @@ export const Agent = z
       description:
         "Responde a (ADR 0148 addendum): the agent it reports to. It says where news goes by default and grants nothing; null = its owner, else its setor's lead.",
     }),
+    worksOnAgentId: z.uuid().nullable().optional().openapi({
+      description:
+        "Works on the computer of (ADR 0202): the agent whose computer, folder and sign-ins it uses there; null = its own environment.",
+    }),
+    worksOn: z
+      .object({ id: z.uuid(), name: z.string(), handle: z.string(), archived: z.boolean() })
+      .nullable()
+      .optional()
+      .openapi({
+        description: "The agent it works on, in the list only.",
+      }),
+    crew: z
+      .array(z.object({ id: z.uuid(), name: z.string(), handle: z.string(), archived: z.boolean() }))
+      .optional()
+      .openapi({
+        description: "Every agent linked to this one, archived ones included, in the list only.",
+      }),
     brakes: AgentBrakes,
     setup: AgentSetupChecklist.nullable().openapi({
       description:

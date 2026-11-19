@@ -5621,6 +5621,22 @@ export function useSetComputerTarget(orgId: string) {
   });
 }
 
+/** Works on the computer of another agent, or none (ADR 0202): its agent and computer views follow the answer. */
+export function useSetWorksOn(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ agentId, worksOnAgentId }: { agentId: string; worksOnAgentId: string | null }) =>
+      api.sandbox.setWorksOn(orgId, agentId, worksOnAgentId),
+    meta: { silent: true },
+    onSuccess: (_out, { agentId }) => {
+      void qc.invalidateQueries({ queryKey: keys.computer(orgId, agentId) });
+      void qc.invalidateQueries({ queryKey: keys.machines(orgId) });
+      void qc.invalidateQueries({ queryKey: keys.agents(orgId) });
+    },
+  });
+}
+
 // ── Connected computers ─────────────────────────────────────────────────────
 
 /** `pollMs`: also refetch this often (while waiting for a new machine to pair); events keep it live otherwise. */

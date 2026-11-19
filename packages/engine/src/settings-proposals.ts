@@ -18,6 +18,7 @@ import { reportsToRefusal, setReportsTo } from "./reporting";
 import { isRightHand } from "./right-hand";
 import { setAgentSkills } from "./skills";
 import { canonicalJson } from "./tools/json-schema";
+import { stopMembersWork } from "./works-on";
 
 const {
   agentActions,
@@ -286,7 +287,10 @@ async function setValue(
       if (!account) throw new NotFoundError("That AI account is gone", "account.not_found");
       const agent = await getAgent(db, orgId, agentId);
       if (agent?.machineId !== account.machineId)
-        await setAgentComputerTarget(deps, actorId, orgId, agentId, account.machineId, { wakeWaits: false });
+        await setAgentComputerTarget(deps, actorId, orgId, agentId, account.machineId, {
+          wakeWaits: false,
+          stopMembers: false,
+        });
       return void (await setAgentBrain(deps, actorId, orgId, agentId, { brain: to.brain, account: to.accountId }));
     }
     case "skill":
@@ -306,6 +310,23 @@ async function setValue(
 
 /** A row that deletes its agent for good (ADR 0082's rules, applied as whoever clicks). */
 export const deletes = (p: Pick<Proposal, "settings">) => (p.settings ?? []).some((l) => l.field === "delete");
+/**
+ * Whether the lines applied to the agent ended what the agents on its computer run (ADR 0202): it became archived, or
+ * its computer is not the one it had (`before`, read before applying). An AI account on the same computer ends nothing.
+ * The editors can't call the computer inside a transaction, so whoever applies lines stops them after it commits.
+ */
+export async function endsMembersWork(
+  db: Database,
+  orgId: string,
+  agentId: string,
+  before: { machineId: string | null } | null | undefined,
+  applied: readonly Pick<ReceiptLine, "field" | "to">[],
+) {
+  if (applied.some((l) => l.field === "archive" && l.to === true)) return true;
+  if (!applied.some((l) => l.field === "ai_account")) return false;
+  const now = await getAgent(db, orgId, agentId);
+  return (now?.machineId ?? null) !== (before?.machineId ?? null);
+}
 
 /** The row's group (all its lines share one). */
 export const settingsGroup = (p: Pick<Proposal, "settings">) => SETTING_GROUP[p.settings?.[0]?.field ?? "model"];
@@ -622,6 +643,10 @@ export async function revertSettings(
   for (const l of steps)
     if (!same(await valueNow(deps.db, agent, l), direction === "undo" ? l.to : l.from)) throw changedSince();
   for (const l of steps) await setValue(deps, userId, a.orgId, agent.id, l, direction === "undo" ? l.from : l.to);
+  // Archived again, or on another computer: the work of the agents on its computer ends, after the writes above.
+  const applied = steps.map((l) => ({ field: l.field, to: direction === "undo" ? l.from : l.to }));
+  if (await endsMembersWork(deps.db, a.orgId, agent.id, agent, applied))
+    await stopMembersWork({ db: deps.db, pubsub: deps.pubsub }, a.orgId, agent.id);
   // Who it answers and its AI have no event of their own.
   await publishAgentsChanged(deps.pubsub, a.orgId);
 }

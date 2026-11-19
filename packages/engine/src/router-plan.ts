@@ -4,6 +4,7 @@ import { recordPlanUsage, toolOff } from "./brains/claude-code";
 import { publishChannelEvent } from "./events";
 import type { MachineCaller } from "./machine-hub";
 import { parseRouterJson, RouterSkip, type RouterStrategy, routerPrompt, scoresOf } from "./router";
+import { agentScopeOn } from "./works-on";
 
 const { agents, instanceTelemetry, machineAccounts, machines } = schema;
 
@@ -32,6 +33,8 @@ export interface PlanSignIn {
   machineId: string;
   /** The agent it thinks for: the route runs in that agent's folder, as its user. */
   agent: { id: string; handle: string };
+  /** The agent whose usage the route is recorded under: the one it thinks for, never the lead it is run as. */
+  usageAgentId: string;
   /** Its account folder; null: the computer's own Claude Code sign-in. */
   accountId: string | null;
   kind: AccountKind;
@@ -49,7 +52,7 @@ export interface PlanSignIn {
  * None where the installation keeps people's plans out of routing (`routerPlanFallback`).
  */
 export async function planSignInsOf(
-  db: Executor,
+  db: Database,
   hub: Pick<MachineCaller, "status">,
   orgId: string,
   userId?: string,
@@ -126,6 +129,7 @@ export async function planSignInsOf(
     found.push({
       machineId: r.machineId,
       agent: { id: r.agentId, handle: r.handle },
+      usageAgentId: r.agentId,
       accountId: r.accountId,
       kind: r.kind,
       ownerId: r.ownerId,
@@ -138,6 +142,7 @@ export async function planSignInsOf(
     found.push({
       machineId: r.machineId,
       agent: { id: r.agentId, handle: r.handle },
+      usageAgentId: r.agentId,
       accountId: null,
       kind: "claude_code",
       ownerId: r.ownerId,
@@ -148,7 +153,7 @@ export async function planSignInsOf(
   const statuses = new Map(
     await Promise.all(ids.map(async (id) => [id, await hub.status(id).catch(() => null)] as const)),
   );
-  return found
+  const ready = found
     .filter((s) => {
       const status = statuses.get(s.machineId);
       if (!status?.online || status.protocol < ROUTE_PROTOCOL || status.paused) return false;
@@ -158,6 +163,15 @@ export async function planSignInsOf(
     })
     .sort((a, b) => (a.kind === b.kind ? b.usedAt - a.usedAt : a.kind === "claude_code" ? -1 : 1))
     .map(({ usedAt: _, ...s }) => s);
+  // An agent that works on another's computer thinks there as that agent: its sign-in is lent to the lead's OS user
+  // (ADR 0202), so the route is asked as the lead; a link that isn't honored now routes nothing.
+  const asked = await Promise.all(
+    ready.map(async (s) => {
+      const scope = await agentScopeOn(db, orgId, s.agent.id, s.machineId).catch(() => null);
+      return scope ? { ...s, agent: { id: scope.id, handle: scope.handle } } : null;
+    }),
+  );
+  return asked.filter((s): s is PlanSignIn => s !== null);
 }
 
 const tokens = (n: unknown) => (typeof n === "number" && Number.isFinite(n) ? Math.max(0, Math.round(n)) : 0);
@@ -207,7 +221,7 @@ export function createPlanRouterStrategy(deps: {
         const parsed = parseRouterJson(reply.json);
         const usageRecordId = await recordPlanUsage(deps.db, {
           orgId: input.orgId,
-          agentId: s.agent.id,
+          agentId: s.usageAgentId,
           kind: "router",
           provider: s.kind,
           machineId: s.machineId,

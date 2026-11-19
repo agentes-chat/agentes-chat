@@ -20,6 +20,7 @@ import { enqueue } from "./outbox";
 import { RIGHT_HAND } from "./right-hand";
 import { maySettle, revertSettings, type SettingLine } from "./settings-proposals";
 import { orgDefaultAgentBudget } from "./usage";
+import { stopMembersWork } from "./works-on";
 import { isPersonalWorkspace } from "./workspace-mode";
 
 const { agentActions, agents, channels, contextProposals, messages, rightHandApprovals, rightHandDecisions, users } =
@@ -703,7 +704,10 @@ export async function undoRightHandDecision(
     throw new ConflictError("Desfazer lasts 24 hours", "right_hand.undo_expired");
   const changed = () => new ConflictError("It changed since, so it can't be undone", "right_hand.changed_since");
   if (row.kind === "agent_new") {
-    if (row.targetAgentId) await archiveAgent(db, actorId, orgId, row.targetAgentId, deps.pubsub, true);
+    if (row.targetAgentId) {
+      await archiveAgent(db, actorId, orgId, row.targetAgentId, deps.pubsub, true);
+      await stopMembersWork({ db, pubsub: deps.pubsub }, orgId, row.targetAgentId).catch(() => null);
+    }
   } else {
     const message = await getMessage(db, orgId, row.messageId);
     const ids = settingsCardOf(message?.meta)?.proposalIds ?? [];

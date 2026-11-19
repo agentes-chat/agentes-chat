@@ -1811,7 +1811,7 @@ async function cancelMissionTasks(deps: MissionDeps, mission: MissionRow, actorI
       reply =
         deps.hub && !row.startRequest
           ? await deps.hub.call<"task.cancel">(row.machineId, {
-              agent: { id: mission.agentId, handle: agent?.handle ?? "agent" },
+              agent: taskScope(row, agent?.handle ?? "agent"),
               op: "task.cancel",
               taskId: row.id,
             })

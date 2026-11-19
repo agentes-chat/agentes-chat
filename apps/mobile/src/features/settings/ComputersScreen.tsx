@@ -155,6 +155,7 @@ export function AgentComputers() {
                 leading={<AgentFace agentId={a.id} size={30} live={false} />}
                 label={a.name}
                 value={choiceName(t, org ?? null, pick, pick.value)}
+                {...(pick.follows?.name ? { sub: t("worksOn.locked", { name: pick.follows.name }) } : {})}
                 chevron={pick.canPick}
                 {...(pick.canPick
                   ? {
@@ -223,6 +224,11 @@ export function AgentComputerScreen({ agentId }: { agentId: string }) {
   return (
     <SettingsPage title={t("computers.agents.pick", { name: agent.name })}>
       <Gap />
+      {pick.follows && (
+        <GroupedFooter>
+          {pick.follows.name ? t("worksOn.locked", { name: pick.follows.name }) : t("worksOn.lockedUnknown")}
+        </GroupedFooter>
+      )}
       <GroupedList>
         {pick.noComputer ? (
           <GroupedRow
@@ -230,7 +236,7 @@ export function AgentComputerScreen({ agentId }: { agentId: string }) {
             label={noComputerName(t, org, pick.noComputer)}
             sub={pick.noComputer === "workspace" && setup ? t(setup.chipKey) : t("computer.target.noneText")}
             checked={pick.value === NO_COMPUTER}
-            disabled={setTarget.isPending}
+            disabled={setTarget.isPending || !!pick.follows}
             onPress={() => choose(NO_COMPUTER)}
           />
         ) : null}
@@ -241,7 +247,7 @@ export function AgentComputerScreen({ agentId }: { agentId: string }) {
             label={machineTitle(m, t("machines.host.label"))}
             sub={t(`computers.agents.state.${computerState(m)}`)}
             checked={pick.value === m.id}
-            disabled={setTarget.isPending}
+            disabled={setTarget.isPending || !!pick.follows}
             onPress={() => choose(m.id)}
           />
         ))}

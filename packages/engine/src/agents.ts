@@ -794,7 +794,7 @@ export async function editAgent(
 }
 
 /** What this process keeps of an agent and of what names it: the agent, the team, the archived, old handles, channels. */
-function forgetAgentCaches(orgId: string, agentId: string) {
+export function forgetAgentCaches(orgId: string, agentId: string) {
   caches.agents.delete(`${orgId}:${agentId}`);
   caches.agents.delete(`${orgId}:team`);
   caches.agents.delete(`${orgId}:archived`);
@@ -802,6 +802,10 @@ function forgetAgentCaches(orgId: string, agentId: string) {
   caches.channelMembers.deletePrefix(`${orgId}:`);
 }
 
+/**
+ * Archives an agent. The agents working on its computer (ADR 0202) stop with it, through the computer, which can't
+ * happen inside a transaction: every caller calls `stopMembersWork` once this has committed.
+ */
 export async function archiveAgent(
   db: Database,
   actorId: string,
@@ -938,6 +942,8 @@ export const agentView = (a: Agent) => ({
   builtin: a.builtin ?? null,
   /** "Responde a" (ADR 0148 addendum): the agent it reports to; null = its owner, else its setor's lead. */
   reportsToAgentId: a.reportsToAgentId ?? null,
+  /** "Works on the computer of" (ADR 0202): the agent whose computer it uses; null = its own. */
+  worksOnAgentId: a.worksOnAgentId ?? null,
   /** Its setup checklist (ADR 0155 §2): the role it started from and the steps confirmed; null = none. */
   setup: setupOf(a.setup),
   /** Its autonomy brakes (ADR 0131), with the defaults filled in. */

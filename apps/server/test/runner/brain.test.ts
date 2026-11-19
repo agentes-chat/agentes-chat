@@ -1606,6 +1606,53 @@ test.if(posix)(
 );
 
 test.if(posix)(
+  "two agents on one scope id (a lead and a member): both turns at once, each on its own account, neither process dropped when the frame lists both accounts",
+  async () => {
+    await withCli(NOW_CLI, async () => {
+      const dirA = tempDir("claude-account-");
+      const dirB = tempDir("claude-account-");
+      dirs.push(dirA, dirB);
+      const ACCOUNT_B = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+      const { m, spawns, turn } = setup({
+        maxProcesses: 1,
+        accounts: {
+          accountDir: (kind, id) =>
+            kind === "claude_code" ? (id === ACCOUNT ? dirA : id === ACCOUNT_B ? dirB : null) : null,
+        },
+      });
+      const logged = () => spawns() as unknown as { args: string[]; configDir: string | null }[];
+      const lead = turn(1, "STEER lead", { account: ACCOUNT });
+      const member = turn(2, "STEER member", { account: ACCOUNT_B, session: { id: SESSION(2), resume: false } });
+      await waitFor(() => spawns().length === 2 && m.size === 2);
+      // The frame lists the lead's account and, under the lead's entry, the member's.
+      m.keepAccount(ACCOUNT, [ACCOUNT_B], AGENT.id);
+      expect(m.size).toBe(2);
+      expect(
+        logged()
+          .map((x) => x.configDir)
+          .sort(),
+      ).toEqual([dirA, dirB].sort());
+      const msg = (n: number) => [{ uuid: U(n), text: `more ${n}` }];
+      const steer = (n: number) => {
+        let r = m.steer(AGENT.id, { runId: RUN(n), session: SESSION(n), messages: msg(n) });
+        return waitFor(() => {
+          if (r.status === "no_turn") r = m.steer(AGENT.id, { runId: RUN(n), session: SESSION(n), messages: msg(n) });
+          return r.status !== "no_turn";
+        });
+      };
+      await Promise.all([steer(1), steer(2)]);
+      const [fl, fm] = await Promise.all([lead, member]);
+      expect(fl.final).toMatchObject({ type: "done" });
+      expect(fm.final).toMatchObject({ type: "done" });
+      // Control: a frame that lists only the lead's account closes the idle process on the member's.
+      m.keepAccount(ACCOUNT, [], AGENT.id);
+      await waitFor(() => m.size <= 1);
+      expect(m.process(AGENT.id, SESSION(2))).toBeUndefined();
+    });
+  },
+);
+
+test.if(posix)(
   "an account turn runs in its folder (CLAUDE_CONFIG_DIR), a new session there; a change restarts the process",
   async () => {
     const accountDir = tempDir("claude-account-");

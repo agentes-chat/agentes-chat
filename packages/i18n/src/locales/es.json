@@ -12478,6 +12478,20 @@
       "saved": "Modelo: {{model}}"
     }
   },
+  "worksOn": {
+    "label": "Trabaja en el ordenador de",
+    "hint": "Usa el ordenador de ese agente como lo usa él allí. En todo lo demás sigue siendo su propio agente.",
+    "none": "Su propio ordenador",
+    "locked": "Sigue a {{name}}",
+    "lockedUnknown": "Sigue el computador de otro agente",
+    "stop": "Dejar de trabajar en el computador de {{name}}",
+    "crewTitle": "Trabajan en este ordenador",
+    "crewEmpty": "Ningún otro agente trabaja en este ordenador.",
+    "crewMore": "y {{count}} más",
+    "noneEligible": "Ningún otro agente con el mismo dueño tiene un computador para compartir.",
+    "unavailable": "{{name}} no puede compartir su ordenador ahora: está archivado, tiene otro dueño o se movió. Elige otro o déjalo.",
+    "tradeoff": "En ese computador puede hacer lo que hace ese agente: usar sus archivos, sus inicios de sesión y los programas que ejecuta. Su propia sesión de IA también queda disponible en el usuario de ese computador. La memoria y el nombre siguen siendo suyos, y las aprobaciones de acciones sensibles siguen yendo a las personas."
+  },
   "computer": {
     "title": "PC de {{name}}",
     "title_female": "PC de {{name}}",
@@ -16937,7 +16951,8 @@
         "other": "no se pudo cambiar ahora",
         "not_found": "ya no usaba esta computadora",
         "brain_unavailable": "la nueva computadora no tiene su Claude Code o Codex",
-        "forbidden": "no puedes cambiar este agente"
+        "forbidden": "no puedes cambiar este agente",
+        "works_on": "trabaja en el computador de otro agente, así que se queda con ese agente"
       }
     },
     "card": {

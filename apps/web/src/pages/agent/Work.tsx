@@ -605,6 +605,8 @@ function ComputerForm({ onClose }: { onClose: () => void }) {
   const status = (m: Machine) =>
     m.online ? t("agentPage.work.computer.online") : t("agentPage.work.computer.offline");
   const chosen = pickable.find((m) => m.id === choice);
+  // It works on another agent's computer (ADR 0202): it goes where that agent goes; the server refuses a move.
+  const followed = agent.worksOnAgentId ? (agent.worksOn?.name ?? null) : undefined;
   const use = async () => {
     setBusy(true);
     try {
@@ -653,8 +655,14 @@ function ComputerForm({ onClose }: { onClose: () => void }) {
     >
       <Locked when={busy}>
         <DialogBody>
+          {followed !== undefined && (
+            <SettingNote icon="lock">
+              {followed ? t("worksOn.locked", { name: followed }) : t("worksOn.lockedUnknown")}
+            </SettingNote>
+          )}
           <OptionList
             aria-label={t("agentPage.work.computer.title", g)}
+            disabled={followed !== undefined}
             value={choice}
             onValueChange={setChoice}
             options={[
@@ -711,7 +719,7 @@ function ComputerForm({ onClose }: { onClose: () => void }) {
             </Link>
           )
         }
-        disabled={choice === work.machineId}
+        disabled={followed !== undefined || choice === work.machineId}
         busy={busy}
         primary={
           chosen
@@ -771,7 +779,7 @@ function BrowserForm({ onClose }: { onClose: () => void }) {
   // With no computer the browser needs a connected one: the first with the browser ready, else any.
   const ready = (m: Machine) => Boolean(m.access?.tools.browser && m.browser?.available);
   const moveTo =
-    mode !== "off" && work.machineId === NO_COMPUTER
+    mode !== "off" && work.machineId === NO_COMPUTER && !agent.worksOnAgentId
       ? (pickable.find((m) => ready(m) && m.online) ?? pickable.find(ready) ?? pickable[0] ?? null)
       : null;
   const add = () => {

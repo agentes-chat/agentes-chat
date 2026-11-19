@@ -878,6 +878,14 @@ export interface ForeignMailbox {
   ownerName: string | null;
 }
 
+/** An agent another one is linked to or from (ADR 0202). */
+export interface AgentRef {
+  id: string;
+  name: string;
+  handle: string;
+  archived: boolean;
+}
+
 export interface Agent {
   id: string;
   name: string;
@@ -924,6 +932,12 @@ export interface Agent {
   builtin?: "right_hand" | null;
   /** Responde a (ADR 0148 addendum): the agent it reports to; null or absent = its owner, else its setor's lead. */
   reportsToAgentId?: string | null;
+  /** Works on the computer of (ADR 0202): the agent whose computer it uses; null or absent = its own. */
+  worksOnAgentId?: string | null;
+  /** In the agents list: the agent it works on, even when that one is archived (the apps never take its name from the live list). */
+  worksOn?: AgentRef | null;
+  /** In the agents list: every agent linked to this one, archived ones included; empty for an agent with none. */
+  crew?: AgentRef[];
   /** No longer in the team (ADR 0082): only its name, role and look, from `FormerAgent`. */
   former?: "archived" | "deleted";
   /**

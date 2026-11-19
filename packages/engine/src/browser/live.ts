@@ -19,6 +19,7 @@ import { type MachineHub, MachineRequestError } from "../machine-hub";
 import { getMachineById, shownOnline } from "../machines";
 import { isRightHand } from "../right-hand";
 import type { ClaimedStream, StreamSocket } from "../streams";
+import { agentScopeOn } from "../works-on";
 import {
   agentBrowserLink,
   agentUsesScreen,
@@ -269,7 +270,8 @@ interface LiveView {
 interface AgentLive {
   orgId: string;
   machineId: string;
-  handle: string;
+  /** Who its computer takes the agent for: the agent, or its lead for one that works on another's computer (ADR 0202). */
+  scope: AgentScope;
   /** The running stream's own socket from the computer; null: its frames come on the machine socket. */
   view: LiveView | null;
   /** Its socket is opened again after this wait (`VIEW_RETRY_MS`), and how many waits this stream used. */
@@ -511,7 +513,7 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
     state.viewRetry = setTimeout(() => {
       state.viewRetry = null;
       if (live.get(agentId) !== state || state.mode === null || state.view) return;
-      openView(agentId, state, { id: agentId, handle: state.handle });
+      openView(agentId, state, state.scope);
     }, wait);
   }
 
@@ -591,7 +593,7 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
       }, stopDelayMs);
       return;
     }
-    const agent = { id: agentId, handle: state.handle };
+    const agent = state.scope;
     // A fresh stream (or none): the page is known again from its first frame.
     if (state.mode === null || mode === null) {
       state.page = null;
@@ -730,13 +732,10 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
       if (!ofBrowser(row.screen)) return null;
       const state = live.get(row.agentId);
       if (state && state.machineId === row.machineId && state.mode !== null && state.page) return state.page;
-      const [agent] = await deps.db
-        .select({ handle: agents.handle })
-        .from(agents)
-        .where(and(eq(agents.id, row.agentId), eq(agents.orgId, row.orgId)));
-      if (!agent) return null;
+      const scope = await agentScopeOn(deps.db, row.orgId, row.agentId, row.machineId).catch(() => null);
+      if (!scope) return null;
       // Short: a hand back waits on this answer before the agent is told.
-      const url = await askUrl(row.machineId, { id: row.agentId, handle: agent.handle });
+      const url = await askUrl(row.machineId, scope);
       return url ? { url } : null;
     },
   };
@@ -828,7 +827,7 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
       void deps.hub
         .call(old.machineId, {
           op: "browser.stream.stop",
-          agent: { id: agentId, handle: old.handle },
+          agent: old.scope,
           ...profileOp(agentId),
         })
         .catch(() => {});
@@ -937,11 +936,13 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
       const profileId = profileIdOfKey(agentId);
       let agent: { handle: string } | undefined;
       let machineId: string | null = null;
+      let scope: AgentScope | null = null;
       if (profileId) {
         const row = await getBrowserProfile(deps.db, orgId, profileId);
         if (row) {
           agent = { handle: profileScope(profileId).handle };
           machineId = row.machineId;
+          scope = { id: agentId, handle: agent.handle };
         }
       } else {
         const [row] = await deps.db
@@ -953,8 +954,10 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
         agent = isRightHand(row) ? undefined : row;
         // The computer the browser runs on now (an open handoff's, a mission's, else the agent's).
         machineId = agent ? await browserMachineOf(deps.db, orgId, agentId) : null;
+        // A member whose link isn't honored has no browser on that computer to show.
+        scope = machineId ? await agentScopeOn(deps.db, orgId, agentId, machineId).catch(() => null) : null;
       }
-      if (!agent || !machineId) {
+      if (!agent || !machineId || !scope) {
         viewer.send({ type: "browser.unavailable", agentId, reason: "no_computer" });
         return { stop: () => {}, streaming: false };
       }
@@ -986,7 +989,7 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
         state = {
           orgId,
           machineId,
-          handle: agent.handle,
+          scope,
           viewers: new Set(),
           unsubscribe: new Map(),
           view: null,
@@ -1142,12 +1145,9 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
       let scope: AgentScope;
       if (profileId) scope = profileScope(profileId);
       else {
-        const [agent] = await deps.db
-          .select({ handle: agents.handle })
-          .from(agents)
-          .where(and(eq(agents.id, agentId), eq(agents.orgId, orgId)));
-        if (!agent) return { accepted: 0, refused: true };
-        scope = { id: agentId, handle: agent.handle };
+        const resolved = await agentScopeOn(deps.db, orgId, agentId, open.machineId).catch(() => null);
+        if (!resolved) return { accepted: 0, refused: true };
+        scope = resolved;
       }
       const reply = await deps.hub.call(open.machineId, {
         op: "browser.input",
@@ -1179,11 +1179,11 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
       if (!machineId) throw new ValidationError("This agent has no computer");
       const agent = await getAgentCached(deps.db, orgId, agentId);
       if (!agent) throw new NotFoundError("Agent not found");
+      const scope: AgentScope = await agentScopeOn(deps.db, orgId, agentId, machineId);
       // Already restarting here: its end brings every view the page.
       if (restarting.has(agentId)) return;
       // ponytail: only this server's views miss the stop's "stopped"; with several replicas, an event of its own.
       restarting.add(agentId);
-      const scope: AgentScope = { id: agentId, handle: agent.handle, ...(agent.name ? { name: agent.name } : {}) };
       const hold = () =>
         openHandoffOf(deps.db, orgId, agentId)
           .then((open) => open && touchControl(deps.db, open.id, userId, new Date(), true))
@@ -1373,12 +1373,11 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
       const open = await deps.db
         .select({
           id: browserHandoffs.id,
+          orgId: browserHandoffs.orgId,
           agentId: browserHandoffs.agentId,
           machineId: browserHandoffs.machineId,
-          handle: agents.handle,
         })
         .from(browserHandoffs)
-        .innerJoin(agents, eq(agents.id, browserHandoffs.agentId))
         .where(and(eq(browserHandoffs.screen, "browser"), inArray(browserHandoffs.status, ["pending", "active"])));
       const ids = new Set(open.map((h) => h.id));
       for (const id of touched.keys()) if (!ids.has(id)) touched.delete(id);
@@ -1394,17 +1393,13 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
       for (const h of due) touched.set(h.id, now);
       for (let i = 0; i < due.length; i += KEEPALIVE_PARALLEL) {
         await Promise.all(
-          due.slice(i, i + KEEPALIVE_PARALLEL).map((h) =>
-            deps.hub
-              .call(h.machineId, {
-                op: "browser.act",
-                agent: { id: h.agentId, handle: h.handle },
-                command: "get",
-                args: ["url"],
-                timeoutSeconds: 10,
-              })
-              .catch(() => {}),
-          ),
+          due.slice(i, i + KEEPALIVE_PARALLEL).map(async (h) => {
+            const agent = await agentScopeOn(deps.db, h.orgId, h.agentId, h.machineId).catch(() => null);
+            if (!agent) return;
+            await deps.hub
+              .call(h.machineId, { op: "browser.act", agent, command: "get", args: ["url"], timeoutSeconds: 10 })
+              .catch(() => {});
+          }),
         );
       }
       return due.length;

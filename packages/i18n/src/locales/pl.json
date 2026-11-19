@@ -13020,6 +13020,20 @@
       "saved": "Model: {{model}}"
     }
   },
+  "worksOn": {
+    "label": "Pracuje na komputerze agenta",
+    "hint": "Używa komputera tego agenta tak, jak on go tam używa. Poza tym nadal jest osobnym agentem.",
+    "none": "Własny komputer",
+    "locked": "Podąża za: {{name}}",
+    "lockedUnknown": "Korzysta z komputera innego agenta",
+    "stop": "Przestań pracować na komputerze agenta {{name}}",
+    "crewTitle": "Pracują na tym komputerze",
+    "crewEmpty": "Żaden inny agent nie pracuje na tym komputerze.",
+    "crewMore": "i {{count}} więcej",
+    "noneEligible": "Żaden inny agent tego samego właściciela nie ma komputera do udostępnienia.",
+    "unavailable": "{{name}} nie może teraz udostępnić komputera: jest zarchiwizowany, ma innego właściciela lub został przeniesiony. Wybierz innego albo przestań.",
+    "tradeoff": "Na tym komputerze może robić to, co ten agent: korzystać z jego plików, logowań i programów, które uruchamia. Jego własne logowanie AI pozostaje też dostępne na użytkowniku tego komputera. Pamięć i nazwa pozostają jego, a zatwierdzenia wrażliwych działań nadal trafiają do ludzi."
+  },
   "computer": {
     "title": "PC: {{name}}",
     "machineHint": "Osoba, która podłączyła ten komputer, włącza go, wyłącza i wstrzymuje bezpośrednio na nim.",
@@ -17572,7 +17586,8 @@
         "other": "nie można teraz przenieść",
         "not_found": "już nie używa tego komputera",
         "brain_unavailable": "nowy komputer nie ma jego Claude Code ani Codex",
-        "forbidden": "nie możesz zmieniać tego agenta"
+        "forbidden": "nie możesz zmieniać tego agenta",
+        "works_on": "pracuje na komputerze innego agenta, więc zostaje przy tym agencie"
       }
     },
     "card": {

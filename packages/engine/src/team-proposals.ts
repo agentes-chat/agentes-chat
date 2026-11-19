@@ -56,6 +56,7 @@ import { billingHold } from "./standing";
 import { APPROVAL_TTL_MS } from "./tools/gateway";
 import type { JsonSchema } from "./tools/json-schema";
 import type { ToolContext, ToolDefinition, ToolOutput } from "./tools/types";
+import { stopMembersWork } from "./works-on";
 import { isPersonalWorkspace } from "./workspace-mode";
 
 const { agentRuns, agentSkills, agents, channelMembers, channels, messages, skills, users } = schema;
@@ -801,6 +802,7 @@ export async function undoTeam(deps: TeamDeps, userId: string, orgId: string, me
     }
   }
   const events = holdEvents(deps.pubsub);
+  const archivedIds: string[] = [];
   await deps.db.transaction(async (raw) => {
     const tx = raw as unknown as Database;
     for (const id of made.routineIds) {
@@ -818,7 +820,10 @@ export async function undoTeam(deps: TeamDeps, userId: string, orgId: string, me
       .select({ id: agents.id })
       .from(agents)
       .where(and(eq(agents.orgId, orgId), inArray(agents.id, made.agentIds), isNull(agents.archivedAt)));
-    for (const a of live) await archiveAgent(tx, userId, orgId, a.id, events.pubsub, mine);
+    for (const a of live) {
+      await archiveAgent(tx, userId, orgId, a.id, events.pubsub, mine);
+      archivedIds.push(a.id);
+    }
     for (const id of made.channelIds) {
       await archiveChannel(tx, userId, orgId, id, events).catch((e) => {
         if (!(e instanceof NotFoundError)) throw e;
@@ -827,6 +832,9 @@ export async function undoTeam(deps: TeamDeps, userId: string, orgId: string, me
   });
   invalidateOrg(orgId);
   await events.flush();
+  // Archived inside the transaction above: the work of the agents on their computers stops once it committed (ADR 0202).
+  for (const id of archivedIds)
+    await stopMembersWork({ db: deps.db, pubsub: deps.pubsub }, orgId, id).catch(() => null);
   const next: TeamProposalCard = { ...card, state: "undone", undoneAt: new Date().toISOString() };
   await writeCard(deps, message, next, "created");
   return { card: next };

@@ -14,6 +14,7 @@ import { recordOperatorEvent } from "./operator-events";
 import { refuseRightHand } from "./right-hand";
 import { deleteAgentRoutines, type RoutineDeps } from "./routines";
 import { removeAgentSecrets } from "./secrets";
+import { stopMembersWork } from "./works-on";
 
 const {
   agentBudgetPeriods,
@@ -100,6 +101,7 @@ export async function deleteAgent(deps: AgentDeletionDeps, actorId: string, orgI
         editorUserIds: [],
         editorRoleIds: [],
         machineId: null,
+        worksOnAgentId: null,
         missionCommandApproval: null,
         brain: "model",
         brainModel: null,
@@ -115,6 +117,11 @@ export async function deleteAgent(deps: AgentDeletionDeps, actorId: string, orgI
       .where(and(eq(agents.id, agentId), isNull(agents.deletedAt)))
       .returning({ id: agents.id });
     if (!gone) throw new NotFoundError("Agent not found");
+    // The agents that worked on its computer keep the one they are on, with their own identity again (ADR 0202).
+    await tx
+      .update(agents)
+      .set({ worksOnAgentId: null, updatedAt: now })
+      .where(and(eq(agents.orgId, orgId), eq(agents.worksOnAgentId, agentId)));
     const memory = tx
       .select({ id: contextItems.id })
       .from(contextItems)
@@ -178,6 +185,8 @@ export async function deleteAgent(deps: AgentDeletionDeps, actorId: string, orgI
     return { released, dms };
   });
   invalidateOrg(orgId);
+  // The agents that worked on its computer stop under its scope, which the tombstone doesn't change (ADR 0202).
+  await stopMembersWork({ db, pubsub: deps.pubsub }, orgId, agentId).catch(() => null);
   // What it waited on people for (approvals, questions, handoffs, secrets) leaves their inboxes, as a closed source
   // does.
   const waiting = await db

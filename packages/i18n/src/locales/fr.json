@@ -12553,6 +12553,20 @@
       "saved": "Modèle : {{model}}"
     }
   },
+  "worksOn": {
+    "label": "Travaille sur l'ordinateur de",
+    "hint": "Utilise l'ordinateur de cet agent comme lui le fait là-bas. Partout ailleurs, il reste son propre agent.",
+    "none": "Son propre ordinateur",
+    "locked": "Suit {{name}}",
+    "lockedUnknown": "Suit l'ordinateur d'un autre agent",
+    "stop": "Ne plus travailler sur l'ordinateur de {{name}}",
+    "crewTitle": "Travaillent sur cet ordinateur",
+    "crewEmpty": "Aucun autre agent ne travaille sur cet ordinateur.",
+    "crewMore": "et {{count}} de plus",
+    "noneEligible": "Aucun autre agent du même propriétaire n'a d'ordinateur à partager.",
+    "unavailable": "{{name}} ne peut pas partager son ordinateur pour le moment : archivé, autre propriétaire ou déplacé. Choisissez un autre agent ou arrêtez.",
+    "tradeoff": "Sur cet ordinateur, il peut faire ce que fait cet agent : utiliser ses fichiers, ses connexions et les programmes qu'il lance. Sa propre connexion IA reste aussi disponible sur l'utilisateur de cet ordinateur. Sa mémoire et son nom restent les siens, et les approbations d'actions sensibles vont toujours aux personnes."
+  },
   "computer": {
     "title": "PC de {{name}}",
     "title_female": "PC de {{name}}",
@@ -17012,7 +17026,8 @@
         "other": "impossible de changer pour l'instant",
         "not_found": "n'utilisait plus cet ordinateur",
         "brain_unavailable": "le nouvel ordinateur n'a pas son Claude Code ou Codex",
-        "forbidden": "vous ne pouvez pas modifier cet agent"
+        "forbidden": "vous ne pouvez pas modifier cet agent",
+        "works_on": "il travaille sur l'ordinateur d'un autre agent, donc il reste avec cet agent"
       }
     },
     "card": {

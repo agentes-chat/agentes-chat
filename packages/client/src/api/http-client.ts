@@ -1304,6 +1304,11 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
           method: "PUT",
           json: { machineId },
         }),
+      setWorksOn: (orgId, agentId, worksOnAgentId) =>
+        request<{ worksOnAgentId: string | null }>(`${org(orgId)}/agents/${enc(agentId)}/works-on`, {
+          method: "PUT",
+          json: { worksOnAgentId },
+        }),
     },
     devices: {
       list: (orgId) => request<DevicesList>(`${org(orgId)}/devices`),

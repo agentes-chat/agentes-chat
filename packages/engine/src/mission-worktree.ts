@@ -37,6 +37,7 @@ import {
   requireOpen,
   tellSession,
 } from "./missions";
+import { agentScopeOn } from "./works-on";
 
 const { missions, machineTasks, missionEvents, agentRuns } = schema;
 
@@ -125,10 +126,9 @@ export const onlyReadsWhileWriting = (executor: string) =>
 /** A commit id as people see it (7 characters, like the app). */
 export const shortSha = (sha: string) => sha.slice(0, 7);
 
-async function agentScope(deps: MissionDeps, mission: MissionRow) {
-  const agent = await getAgentCached(deps.db, mission.orgId, mission.agentId);
-  return { id: mission.agentId, handle: agent?.handle ?? "agent" };
-}
+/** Who the mission's computer takes the mission's agent for: itself, or the lead when it works on that computer (ADR 0202). */
+const agentScope = (deps: MissionDeps, mission: MissionRow) =>
+  agentScopeOn(deps.db, mission.orgId, mission.agentId, mission.machineId ?? "");
 
 /**
  * Writes worktree columns; a changed state is told to the home conversation
@@ -442,7 +442,12 @@ async function queueItem(deps: MissionDeps, mission: MissionRow, input: ItemInpu
   if (!status || status.orgId !== mission.orgId) {
     throw new ConflictError("The mission's computer was removed", "mission.needs_computer");
   }
-  const agent = await agentScope(deps, mission);
+  // Refused here when a member's link isn't honored; the task's own scope is resolved when it starts (ADR 0202).
+  await agentScope(deps, mission);
+  const agent = {
+    id: mission.agentId,
+    handle: (await getAgentCached(deps.db, mission.orgId, mission.agentId))?.handle ?? "agent",
+  };
   const git = Boolean(mission.branch);
   const title = input.title.slice(0, 120);
   const row = await queueMachineTask(

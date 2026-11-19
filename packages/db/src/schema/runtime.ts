@@ -1113,6 +1113,12 @@ export const machineTasks = pgTable(
     agentId: uuid().notNull(),
     /** The id its computer knows the agent by when it isn't the agent's own: a seat of the right hand (ADR 0175). */
     scopeId: uuid(),
+    /**
+     * The id its computer was asked under when it started (ADR 0202): the agent's own, a seat's, or the lead's for an
+     * agent working on another's computer. Every later request about it uses this one. Null: from before it, then
+     * `scopeId ?? agentId`.
+     */
+    runnerScopeId: uuid(),
     machineId: uuid()
       .notNull()
       .references(() => machines.id, { onDelete: "cascade" }),
@@ -1215,6 +1221,8 @@ export const machineHolds = pgTable(
       .$defaultFn(() => Bun.randomUUIDv7()),
     orgId: uuid().notNull(),
     agentId: uuid().notNull(),
+    /** The id its computer was asked under when it was taken (ADR 0202); null: from before it, then the agent's own. */
+    runnerScopeId: uuid(),
     machineId: uuid()
       .notNull()
       .references(() => machines.id, { onDelete: "cascade" }),

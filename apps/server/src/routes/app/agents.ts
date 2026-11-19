@@ -71,6 +71,7 @@ import {
   setAgentBrain,
   setReportsTo,
   speakerOf,
+  stopMembersWork,
   summaryModelReady,
   TEAM_TEMPLATES,
   unarchiveAgent,
@@ -80,6 +81,7 @@ import {
   usageQueue,
   usageSummary,
   useTeamTemplate,
+  worksOnViewsOf,
 } from "@agenteschat/engine";
 import { contextWindowOf, nanoUsdToUsd, pricesAt, usdToNanoUsd } from "@agenteschat/providers";
 import { learnedPlanModels } from "@agenteschat/providers/plans";
@@ -676,10 +678,12 @@ export function agentRoutes(deps: AppDeps) {
         const b = budgets.get(id);
         return b ? budgetPercent(b.spentNanoUsd, b.budgetNanoUsd) : 0;
       };
+      const crews = await worksOnViewsOf(db, orgId);
       return c.json(
         {
           agents: list.map((a) => ({
             ...toAgent(a, actor, seesCost, percent(a.id), brains.get(a.id), viewer),
+            ...crews.get(a.id),
             previousHandles: old.get(a.id) ?? [],
           })),
         },
@@ -1702,6 +1706,7 @@ export function agentRoutes(deps: AppDeps) {
         return c.body(null, 204);
       }
       await archiveAgent(db, actor, orgId, agentId, adapters.pubsub);
+      await stopMembersWork({ db, pubsub: adapters.pubsub }, orgId, agentId).catch(() => null);
       await publishMachineAgentsChanged(adapters.pubsub, orgId);
       return c.body(null, 204);
     },

@@ -367,10 +367,16 @@ export function codePrompt(input: {
   notCloned: readonly string[];
   /** Repositories still downloading on the computer (ADR 0116). */
   downloading?: readonly string[];
+  /** The agent whose folder this is, when it is another's that this agent works in (ADR 0202). */
+  folderOf?: string;
 }): string {
   const downloading = input.downloading ?? [];
   if (input.checkouts.length === 0 && input.notCloned.length === 0 && downloading.length === 0) return "";
   const lines = ["# Your code"];
+  if (input.folderOf)
+    lines.push(
+      `These are in ${input.folderOf}'s folder, which you work in: what you change there is shared with them.`,
+    );
   for (const c of input.checkouts) {
     const branch = c.defaultBranch ? `default branch ${c.defaultBranch}` : "default branch";
     lines.push(

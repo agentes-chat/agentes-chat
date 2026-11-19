@@ -1187,6 +1187,12 @@ export interface ApiClient {
     computer(orgId: string, agentId: string): Promise<AgentComputer>;
     /** Which computer the agent uses: a connected machine, or `null` for none. */
     setTarget(orgId: string, agentId: string, machineId: string | null): Promise<ComputerTarget>;
+    /** Works on the computer of another agent (ADR 0202), or `null`: its own environment. */
+    setWorksOn(
+      orgId: string,
+      agentId: string,
+      worksOnAgentId: string | null,
+    ): Promise<{ worksOnAgentId: string | null }>;
   };
   /** Bring your own devices: computers people connect and the phones they reach, as agents' targets. */
   devices: {

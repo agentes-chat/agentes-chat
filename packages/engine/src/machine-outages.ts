@@ -236,7 +236,7 @@ export type MoveTarget = { kind: "machine"; machineId: string };
 
 export interface MoveAgentsResult {
   moved: string[];
-  skipped: { agentId: string; reason: "brain_unavailable" | "forbidden" | "not_found" }[];
+  skipped: { agentId: string; reason: "brain_unavailable" | "forbidden" | "not_found" | "works_on" }[];
   /** Waiting runs queued again on the new computer. */
   resumed: number;
   /** Waiting runs that stay with the old computer (a cut-off turn that already ran tools there, or a mission's). */
@@ -284,6 +284,11 @@ export async function moveAgentsFromMachine(
   const skipped: MoveAgentsResult["skipped"] = [];
   for (const agentId of agentIds) {
     const agent = await getAgent(db, orgId, agentId);
+    // It works on another agent's computer (ADR 0202): it moves when that agent does, so it is no one's to move here.
+    if (agent?.worksOnAgentId && !agent.archivedAt) {
+      skipped.push({ agentId, reason: "works_on" });
+      continue;
+    }
     const related = agent?.machineId === from.id || waiting.some((r) => r.agentId === agentId);
     if (!agent || agent.archivedAt || !related) {
       skipped.push({ agentId, reason: "not_found" });

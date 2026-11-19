@@ -12024,6 +12024,20 @@
       "saved": "Model: {{model}}"
     }
   },
+  "worksOn": {
+    "label": "Şu agent'ın bilgisayarında çalışır",
+    "hint": "O agent'ın bilgisayarını, o agent orada nasıl kullanıyorsa öyle kullanır. Geri kalan her şeyde kendi agent'ı olmaya devam eder.",
+    "none": "Kendi bilgisayarı",
+    "locked": "{{name}} adlı agent'ı izler",
+    "lockedUnknown": "Başka bir ajanın bilgisayarını izler",
+    "stop": "{{name}} adlı ajanın bilgisayarında çalışmayı bırak",
+    "crewTitle": "Bu bilgisayarda çalışanlar",
+    "crewEmpty": "Bu bilgisayarda çalışan başka agent yok.",
+    "crewMore": "ve {{count}} tane daha",
+    "noneEligible": "Aynı sahibe ait, paylaşılacak bilgisayarı olan başka ajan yok.",
+    "unavailable": "{{name}} bilgisayarını şu anda paylaşamıyor: arşivlenmiş, sahibi farklı veya taşınmış. Başka birini seçin ya da vazgeçin.",
+    "tradeoff": "O bilgisayarda o ajanın yapabildiğini yapabilir: dosyalarını, oturum açmalarını ve çalıştırdığı programları kullanır. Kendi yapay zekâ oturumu da o bilgisayarın kullanıcısında kullanılabilir tutulur. Belleği ve adı kendisine ait kalır, hassas işlemlerin onayları yine kişilere gider."
+  },
   "computer": {
     "title": "Bilgisayar: {{name}}",
     "machineHint": "Bu bilgisayarı bağlayan kişi onu bilgisayarın kendisinden açar, kapatır ve duraklatır.",
@@ -16396,7 +16410,8 @@
         "other": "şu anda geçiş yapılamadı",
         "not_found": "artık bu bilgisayarı kullanmıyordu",
         "brain_unavailable": "yeni bilgisayarda Claude Code veya Codex yok",
-        "forbidden": "bu ajanı değiştiremezsiniz"
+        "forbidden": "bu ajanı değiştiremezsiniz",
+        "works_on": "başka bir ajanın bilgisayarında çalışıyor, bu yüzden o ajanla kalıyor"
       }
     },
     "card": {

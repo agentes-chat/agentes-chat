@@ -343,6 +343,8 @@ export interface AgentComputerPick {
   /** The computers this person may pick for it. */
   choices: Machine[];
   canPick: boolean;
+  /** It works on another agent's computer (ADR 0202): its picker is locked; the name of that agent, when known. */
+  follows: { name: string | null } | null;
 }
 
 /**
@@ -350,7 +352,7 @@ export interface AgentComputerPick {
  * server checks again). While the workspace's own computer is on its way, "no computer" stands for it.
  */
 export function agentComputerPick(input: {
-  agent: Pick<Agent, "id" | "ownerUserId">;
+  agent: Pick<Agent, "id" | "ownerUserId" | "worksOnAgentId" | "worksOn">;
   meId: string | null;
   admin: boolean;
   machines: readonly Machine[];
@@ -359,13 +361,15 @@ export function agentComputerPick(input: {
   const machines = setupPending(input.setup) ? input.machines.filter((m) => m.kind !== "managed") : [...input.machines];
   const current = machines.find((m) => m.agents.some((a) => a.id === input.agent.id));
   const value = current?.id ?? NO_COMPUTER;
+  const follows = !!input.agent.worksOnAgentId;
   const mine = (id: string | null | undefined) => input.meId !== null && id === input.meId;
   const choices = machines.filter((m) => input.admin || mine(m.pairedBy?.id) || m.id === value);
   return {
     value,
     noComputer: noComputerChoice(input.setup, value === NO_COMPUTER),
     choices,
-    canPick: (input.admin || mine(input.agent.ownerUserId)) && choices.length > 0,
+    canPick: !follows && (input.admin || mine(input.agent.ownerUserId)) && choices.length > 0,
+    follows: follows ? { name: input.agent.worksOn?.name ?? null } : null,
   };
 }
 

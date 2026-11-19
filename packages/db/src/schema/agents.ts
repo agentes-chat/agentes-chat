@@ -290,6 +290,11 @@ export const agents = pgTable(
      */
     reportsToAgentId: uuid().references((): AnyPgColumn => agents.id, { onDelete: "set null" }),
     /**
+     * "Works on the computer of" (ADR 0202): the agent whose computer, folder and sign-ins this one uses there, in the
+     * same workspace. Null (the default) = its own environment. Everything else about the agent stays its own.
+     */
+    worksOnAgentId: uuid(),
+    /**
      * A built-in agent the product ships (ADR 0137): `right_hand` is the team's right hand, one per workspace (the
      * index below), never archived, deleted, exported or imported. Null = an agent people made.
      */
@@ -339,6 +344,9 @@ export const agents = pgTable(
     uniqueIndex("agents_one_right_hand").on(t.orgId).where(sql`${t.builtin} = 'right_hand'`),
     // Machines are only soft-deleted (and `deleteMachine` clears this column first).
     foreignKey({ columns: [t.orgId, t.machineId], foreignColumns: [machines.orgId, machines.id] }),
+    // Agents are never hard-deleted (ADR 0082): `deleteAgent` clears the links to the one it tombstones, in code.
+    foreignKey({ columns: [t.orgId, t.worksOnAgentId], foreignColumns: [t.orgId, t.id] }),
+    index("agents_works_on_idx").on(t.worksOnAgentId),
     // No action (a composite SET NULL would null `org_id` too): code clears it before an account row goes.
     foreignKey({
       columns: [t.orgId, t.brainAccountId],

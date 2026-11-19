@@ -12,9 +12,11 @@ import { and, eq, schema } from "@agenteschat/db";
 import {
   addChannelMember,
   type ConnectorDeps,
+  cloneOnMachine,
   codePrompt,
   codeStart,
   connectorGrantValidator,
+  createAgent,
   createApiKeyConnection,
   createGitToolSource,
   deleteMachine,
@@ -39,6 +41,7 @@ import {
   setAgentComputerTarget,
   setAgentRepositories,
   setAgentScopes,
+  setWorksOn,
   type ToolContext,
   verifyGitToken,
   ZERO_OID,
@@ -323,6 +326,55 @@ describe("git on a connected machine through the proxy (ADR 0024 addendum)", () 
         session: { machineId: w.paired.machineId, cwd: "" },
       }),
     ).toBeNull();
+  });
+
+  test("a member's checkouts are updated in the lead's folder: the lead's scope, grants, author and branches, the folder named", async () => {
+    const w = await world();
+    const deps = { db: f.db, pubsub: f.pubsub, publicUrl: PUBLIC_URL };
+    const lead = await createAgent(
+      f.db,
+      f.owner.id,
+      f.org.id,
+      { name: "Ada", handle: "ada", role: "Dev", credentialId: f.credential.id, ownerUserId: f.owner.id },
+      { model: "claude-sonnet-5-5" },
+    );
+    await f.db.update(schema.agents).set({ ownerUserId: f.owner.id }).where(eq(schema.agents.id, f.agent.id));
+    await setAgentComputerTarget(deps, f.owner.id, f.org.id, lead.id, w.paired.machineId);
+    await setWorksOn(deps, f.owner.id, f.org.id, f.agent.id, lead.id);
+    // The lead owns git and GitHub (ADR 0202): its grants and repositories decide, the member's alone give nothing.
+    await setAgentScopes(
+      f.db,
+      f.owner.id,
+      f.org.id,
+      lead.id,
+      [{ connectionId: w.connection.id, scope: "github:git.read" }],
+      connectorGrantValidator,
+    );
+    await setAgentRepositories(f.db, f.owner.id, f.org.id, lead.id, ["acme/app"]);
+    w.answers.fn = (req) =>
+      req.repos.map((r) => ({
+        repo: r.repo,
+        dir: r.dir,
+        path: `${FOLDER}/${r.dir}`,
+        status: "updated" as const,
+        defaultBranch: "main",
+      }));
+    const out = await prepareAgentCode(w.machineDeps, {
+      orgId: f.org.id,
+      agentId: f.agent.id,
+      threadRootId: null,
+      trigger: "bom dia",
+      messages: [{ content: "earlier" }],
+      session: { machineId: w.paired.machineId, cwd: "" },
+    });
+    const syncs = w.runner.syncs();
+    expect(syncs.length).toBeGreaterThan(0);
+    for (const sync of syncs) expect(sync.agent).toMatchObject({ id: lead.id, handle: "ada" });
+    expect(JSON.stringify(syncs)).not.toContain(f.agent.id);
+    // Git is the lead's: its author on the sync, its branches in the prompt.
+    expect(syncs[0]?.author?.name).toContain("Ada");
+    expect(out?.prompt).toContain("agentes/ada/<topic>");
+    expect(out?.prompt).toContain("Ada's folder");
   });
 
   test("before a chat turn: checkouts updated, the turn starts in the repository it is about, # Your code", async () => {
@@ -655,6 +707,75 @@ describe("fetches straight from GitHub: who gets a token, and what the turn is t
     expect(audits.map((a) => [a.targetId, (a.details as { via?: string }).via])).toEqual([
       ["acme/app", "github-direct"],
     ]);
+  });
+
+  /** Ada, who owns git here, and the fixture's agent (dev) working on her computer. */
+  async function crewWorld() {
+    const w = await appWorld();
+    const deps = { db: f.db, pubsub: f.pubsub, publicUrl: PUBLIC_URL };
+    const lead = await createAgent(
+      f.db,
+      f.owner.id,
+      f.org.id,
+      { name: "Ada", handle: "ada", role: "Dev", credentialId: f.credential.id, ownerUserId: f.owner.id },
+      { model: "claude-sonnet-5-5" },
+    );
+    await f.db.update(schema.agents).set({ ownerUserId: f.owner.id }).where(eq(schema.agents.id, f.agent.id));
+    await setAgentComputerTarget(deps, f.owner.id, f.org.id, lead.id, w.paired.machineId);
+    await setWorksOn(deps, f.owner.id, f.org.id, f.agent.id, lead.id);
+    await setAgentScopes(
+      f.db,
+      f.owner.id,
+      f.org.id,
+      lead.id,
+      [{ connectionId: w.connection.id, scope: "github:git.read" }],
+      connectorGrantValidator,
+    );
+    await setAgentRepositories(f.db, f.owner.id, f.org.id, lead.id, ["acme/app"]);
+    // The member's own list names another repository: only the lead's grants allow this one.
+    await setAgentRepositories(f.db, f.owner.id, f.org.id, f.agent.id, ["acme/other"]);
+    const source = createGitToolSource({
+      sandbox: { db: f.db, machines: { hub: w.hub }, git: w.git } as never,
+      connectors: w.connectors,
+      app: APP,
+      github: w.deps.github.http,
+    });
+    return { w, lead, source, ctx: await runCtx() };
+  }
+
+  test("a member's git_clone gets the lead's fetch token and is told the lead's branches", async () => {
+    const { w, source, ctx } = await crewWorld();
+    const clone = (await source.tools(ctx)).find((t) => t.name === "git_clone");
+    const out = await clone?.execute({ repo: "acme/app" }, ctx);
+    expect(out?.isError).toBeFalsy();
+    expect(w.runner.syncs().at(-1)?.repos[0]?.github).toBe(APP_TOKEN);
+    expect(out?.content).toContain("agentes/ada/<topic>");
+    expect(out?.content).not.toContain("agentes/dev/");
+  });
+
+  test("a member's request_branch_push is refused with words that send it to its lead", async () => {
+    const { source, ctx } = await crewWorld();
+    const push = (await source.tools(ctx)).find((t) => t.name === "request_branch_push");
+    const check = await push?.checkCall?.({ repo: "acme/app", branch: "main" }, ctx);
+    expect(check).toMatchObject({ ok: false });
+    expect((check as { message: string }).message).toContain("Ada");
+  });
+
+  test("a right-hand seat's clone keeps its fetch token and audit row: the agent, not the seat, is who is asked", async () => {
+    const w = await appWorld();
+    await setAgentRepositories(f.db, f.owner.id, f.org.id, f.agent.id, ["acme/app"]);
+    const seat = { id: crypto.randomUUID(), handle: "dev", name: "Dev (Ana)" };
+    await cloneOnMachine(
+      w.deps,
+      { orgId: f.org.id, agentId: f.agent.id, machineId: w.paired.machineId, scope: seat },
+      { repo: "acme/app" },
+    );
+    expect(w.runner.syncs().at(-1)?.repos[0]?.github).toBe(APP_TOKEN);
+    const audits = await f.db
+      .select()
+      .from(schema.auditLog)
+      .where(and(eq(schema.auditLog.orgId, f.org.id), eq(schema.auditLog.action, "git.fetch")));
+    expect(audits).toHaveLength(1);
   });
 
   test("a token the runner wouldn't take is never sent: the checkout fetches through the proxy, the sync still goes", async () => {

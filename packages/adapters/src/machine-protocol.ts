@@ -2518,6 +2518,11 @@ export interface AgentScope {
    * lines its commits end with. The runner hands them to git in the agent's own processes alone (`co-authors.ts`).
    */
   coAuthors?: string[];
+  /**
+   * Server side only (ADR 0202): the agent working on this computer as the agent named by `id` and `handle`. The hub
+   * takes the name and commit line from its row and removes this field before the request goes out.
+   */
+  member?: string;
 }
 
 /** What the server asks. Paths are always relative to the workspace (the agent's folder when `agent` is set). */

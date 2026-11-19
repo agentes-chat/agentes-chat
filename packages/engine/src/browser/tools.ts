@@ -89,6 +89,7 @@ import {
   vaultPlaceName,
 } from "../vault";
 import type { BrowserPageReader } from "../web-tools";
+import { agentScopeOn } from "../works-on";
 import {
   ASK_PERSON_TOOL,
   agentUsesScreen,
@@ -174,13 +175,6 @@ export async function rememberBrowserMachine(db: Database, orgId: string, agentI
     );
 }
 
-/** The agent as its browser requests name it. */
-const scopeOf = (agentId: string, agent: Awaited<ReturnType<typeof getAgentCached>>): AgentScope => ({
-  id: agentId,
-  handle: agent?.handle ?? "agent",
-  ...(agent?.name ? { name: agent.name } : {}),
-});
-
 /**
  * Starts the agent's Chrome before its next browser command, on the computer that command goes to (protocol 27,
  * ADR 0040 §11): while a run whose judge chose the browser thinks, or while a person opens the agent's computer.
@@ -211,7 +205,7 @@ export async function warmAgentBrowser(
   const desktop = await browserOnDesktop(db, orgId, agentId, status.machineId);
   const reply = await hub.call<"browser.warm">(status.machineId, {
     op: "browser.warm",
-    agent: scopeOf(agentId, agent),
+    agent: await agentScopeOn(db, orgId, agentId, status.machineId),
     ...(desktop ? { desktop: true } : {}),
   });
   return reply.started === true;
@@ -2044,11 +2038,10 @@ export function createBrowserToolSource(deps: BrowserToolDeps): ToolSource & { r
     if (!hub) return;
     const status = await hub.status(machineId).catch(() => null);
     if (!status?.online || (await profileMachineProblem(ctx.db, hub, ctx.orgId, machineId))) return;
-    const agent = await getAgentCached(ctx.db, ctx.orgId, ctx.agentId);
     await hub
       .call<"browser.warm">(machineId, {
         op: "browser.warm",
-        agent: scopeOf(ctx.agentId, agent),
+        agent: await agentScopeOn(ctx.db, ctx.orgId, ctx.agentId, machineId),
         profile: { id: profileId },
       })
       .catch(() => {});

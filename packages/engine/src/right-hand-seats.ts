@@ -3,12 +3,14 @@ import { and, type Database, desc, type Executor, eq, isNotNull, isNull, schema,
 import { getAgentCached, workspaceHomeId } from "./agents";
 import { fedByRoutine, runAuthorityById, UUID } from "./authority";
 import { BROWSER_SCOPE, DESKTOP_SCOPE } from "./browser/types";
+import { ForbiddenError } from "./errors";
 import type { MachineCaller } from "./machine-hub";
 import { personBehindCall } from "./requester";
 import { isRightHand, isRightHandId, RIGHT_HAND, soleReader } from "./right-hand";
 import { SANDBOX_SCOPE } from "./sandbox-scope";
 import { grantedScopeKeys, grantKey } from "./tools/scopes";
 import type { ToolContext } from "./tools/types";
+import { agentScopeOn, resolveForRow, WORKS_ON_CODE } from "./works-on";
 
 const { agents, organizationMembers, rightHandSeats, users } = schema;
 
@@ -387,7 +389,8 @@ export async function machineScope(
 ): Promise<AgentScope> {
   const agent = await getAgentCached(ctx.db, ctx.orgId, ctx.agentId);
   if (!isRightHand(agent)) {
-    return { id: ctx.agentId, handle: agent?.handle ?? "agent", ...(agent?.name ? { name: agent.name } : {}) };
+    // An agent that works on another's computer is that agent's there (ADR 0202); any other is itself.
+    return agent ? resolveForRow(ctx.db, agent, machineId) : { id: ctx.agentId, handle: "agent" };
   }
   const owner =
     agent && ctx.channelId
@@ -425,8 +428,12 @@ export async function screenKey(
     : key;
 }
 
-/** A scope's id when it is a seat, for rows that keep which seat their work runs in; null for the agent's own. */
-export const seatIdOf = (ctx: { agentId: string }, scope: AgentScope) => (scope.id === ctx.agentId ? null : scope.id);
+/**
+ * A scope's id when it is a seat, for rows that keep which seat their work runs in; null for the agent's own and for a
+ * linked member's, which is the lead's scope and no seat (ADR 0202: the row keeps the rider, `scope`).
+ */
+export const seatIdOf = (ctx: { agentId: string }, scope: AgentScope) =>
+  scope.id === ctx.agentId || scope.member ? null : scope.id;
 
 /**
  * The agent a person's own request reaches on a computer (watching, driving, a terminal, its files): the agent, or
@@ -461,7 +468,12 @@ export async function viewerScope(
     .where(and(eq(agents.orgId, orgId), eq(agents.id, agentId)));
   if (!agent) return null;
   if (!isRightHand(agent)) {
-    return { machineId: agent.machineId, scope: { id: agentId, handle: agent.handle, name: agent.name }, seat: false };
+    // A member whose link isn't honored (ADR 0202) has no screen on that computer: none to show, never a refusal at the viewer.
+    const scope = await agentScopeOn(db, orgId, agentId, agent.machineId ?? "").catch((error: unknown) => {
+      if (error instanceof ForbiddenError && error.code === WORKS_ON_CODE) return null;
+      throw error;
+    });
+    return scope ? { machineId: agent.machineId, scope, seat: false } : { machineId: null, scope: null, seat: false };
   }
   const machineId = await workspaceHomeId(db, orgId);
   const machine = machineId ? await (await machines()).getMachine(db, orgId, machineId) : null;

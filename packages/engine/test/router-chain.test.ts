@@ -14,6 +14,7 @@ import {
   type MachineStatus,
   postPersonMessage,
   receiptsFor,
+  setWorksOn,
   smallModelFor,
 } from "../src";
 import { addMember, type Fixture, setup } from "./fixtures";
@@ -186,6 +187,35 @@ describe("the author's own plan", () => {
       cacheReadTokens: 2000,
     });
     expect(decision?.usageRecordId).toBe(usage?.id ?? "");
+  });
+
+  test("an agent that works on another's computer is routed as that agent there: the sign-in is lent to the lead's user", async () => {
+    const { hub, machineId, accountId, handlers } = await plansOnly();
+    const [own] = await f.db.select().from(schema.agents).where(eq(schema.agents.id, f.agent.id));
+    const [lead] = await f.db
+      .insert(schema.agents)
+      .values({
+        ...(own as typeof schema.agents.$inferSelect),
+        id: crypto.randomUUID(),
+        name: "Ada",
+        handle: "ada",
+        brain: "model",
+        brainAccountId: null,
+      })
+      .returning();
+    if (!lead) throw new Error("no lead");
+    await f.db.update(schema.agents).set({ ownerUserId: f.owner.id }).where(eq(schema.agents.id, f.agent.id));
+    await f.db.update(schema.agents).set({ machineId }).where(eq(schema.agents.id, lead.id));
+    await setWorksOn({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.agent.id, lead.id);
+    await f.db.update(schema.agents).set({ brainAccountId: accountId }).where(eq(schema.agents.id, f.agent.id));
+    await post(f.owner.id, "alguém sabe se o deploy de ontem saiu?");
+    await drain(handlers);
+    expect(hub.calls).toHaveLength(1);
+    expect(hub.calls[0]?.request.agent).toMatchObject({ id: lead.id, handle: "ada" });
+    expect(JSON.stringify(hub.calls)).not.toContain(f.agent.id);
+    // The route is run as the lead, but the plan's usage is the member's: it is the one that thinks.
+    const usage = (await f.db.select().from(schema.usageRecords)).find((u) => u.kind === "router");
+    expect(usage?.agentId).toBe(f.agent.id);
   });
 
   test("never for someone else's message: a teammate with no plan of their own gets the rules", async () => {

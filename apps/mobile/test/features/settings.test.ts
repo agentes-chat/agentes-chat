@@ -486,6 +486,27 @@ describe("Computadores", () => {
       expect(member.canPick).toBe(false);
     });
 
+    test("an agent that works on another's computer has its picker locked, with the lead's name when known", () => {
+      const lead = { id: "dev", name: "Dev", handle: "dev", archived: true };
+      const pick = agentComputerPick({
+        agent: { id: "infra", ownerUserId: "u2", worksOnAgentId: "dev", worksOn: lead },
+        meId: "u2",
+        admin: true,
+        machines,
+        setup: null,
+      });
+      expect(pick).toMatchObject({ canPick: false, follows: { name: "Dev" } });
+      const unnamed = agentComputerPick({
+        agent: { id: "infra", ownerUserId: "u2", worksOnAgentId: "dev" },
+        meId: "u2",
+        admin: true,
+        machines,
+        setup: null,
+      });
+      expect(unnamed).toMatchObject({ canPick: false, follows: { name: null } });
+      expect(pick.value).toBe("mini");
+    });
+
     test("no computer: offered only for an agent that has none", () => {
       const pick = agentComputerPick({
         agent: { id: "dev", ownerUserId: null },

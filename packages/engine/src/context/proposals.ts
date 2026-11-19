@@ -57,6 +57,7 @@ import {
   agentApps,
   applySettings,
   deletes,
+  endsMembersWork,
   maySettle,
   type ReceiptLine,
   recordSettingsReceipt,
@@ -70,6 +71,7 @@ import {
 import { editedByAgents, pinBlobs, runsCode, skillFolderFiles, writeSkillBody, writeSkillChange } from "../skills";
 import { ALL_TOOLS } from "../tools/scopes";
 import type { ToolContext } from "../tools/types";
+import { stopMembersWork } from "../works-on";
 import {
   type ContextItem,
   checkContent,
@@ -529,6 +531,8 @@ export async function decideProposal(
     .from(contextProposals)
     .where(and(eq(contextProposals.id, proposalId), eq(contextProposals.orgId, orgId)));
   if (!p) throw new NotFoundError("Proposal not found");
+  // Its computer before the decision applies, to know afterwards whether the agents on it must stop (ADR 0202).
+  const computerBefore = p.agentId ? await getAgent(db, orgId, p.agentId) : null;
   if (!(await mayDecide(db, actorId, p)))
     throw new ForbiddenError("Only the agent's owner or an admin can decide this");
   if (p.status !== "pending") throw new ConflictError("This proposal was already decided");
@@ -646,6 +650,14 @@ export async function decideProposal(
         .where(eq(contextProposals.id, decided.id));
       throw error;
     }
+  }
+  // An archive or a move applied by the decision (inside its transaction): the work of the agents on its computer stops now.
+  if (
+    decided.status === "accepted" &&
+    decided.agentId &&
+    (await endsMembersWork(db, orgId, decided.agentId, computerBefore, decided.settings ?? []))
+  ) {
+    await stopMembersWork({ db, pubsub: options.pubsub }, orgId, decided.agentId).catch(() => null);
   }
   if (decided.agentId) caches.agents.delete(`${orgId}:${decided.agentId}`);
   caches.orgs.delete(`${orgId}:`);

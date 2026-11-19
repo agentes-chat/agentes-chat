@@ -35,6 +35,7 @@ import { enqueue } from "./outbox";
 import { replyThreadOf } from "./runs";
 import { hopLimitReached, runStretchOf } from "./stretch";
 import type { ToolContext } from "./tools/types";
+import { agentScopeOn } from "./works-on";
 
 const { machines, machineAccessRequests, agentRuns } = schema;
 
@@ -362,6 +363,7 @@ export async function requestFolderAccess(
   if (!status?.online) throw new MachineOfflineError(machine.name, machine.kind);
   await assertNotPaused(deps.db, machine);
   const agent = await getAgentCached(deps.db, ctx.orgId, ctx.agentId);
+  const scope = await agentScopeOn(ctx.db, ctx.orgId, ctx.agentId, machine.id);
   const now = new Date();
   const [row] = await deps.db
     .insert(machineAccessRequests)
@@ -382,7 +384,7 @@ export async function requestFolderAccess(
   if (!row) throw new Error("machine_access_requests insert returned nothing");
   try {
     const reply = await deps.hub.call(machine.id, {
-      agent: { id: ctx.agentId, handle: agent?.handle ?? "agent", ...(agent ? { name: agent.name } : {}) },
+      agent: scope,
       op: "access.request",
       requestId: row.id,
       path,

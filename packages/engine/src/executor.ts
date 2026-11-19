@@ -4874,7 +4874,8 @@ async function executeRunInner(
             await runAuthority(db, { ...run, transcript: transcript as unknown as Record<string, unknown> }),
           );
           // An agent with repositories works in its checkouts, on its own computer.
-          if (!personId || (await agentRepositoryList(db, run.orgId, agent.id)).length > 0) return null;
+          if (!personId || agent.worksOnAgentId || (await agentRepositoryList(db, run.orgId, agent.id)).length > 0)
+            return null;
           const session = { id: Bun.randomUUIDv7() };
           const found = await spillTarget(deps, agent, plan, personId, session);
           if (found) await db.update(agentRuns).set({ brainSessionId: session.id }).where(eq(agentRuns.id, run.id));

@@ -137,6 +137,7 @@ import {
   vaultItemName,
   vaultRefusalOutput,
 } from "./vault";
+import { agentScopeOn } from "./works-on";
 
 const str = (v: unknown) => (typeof v === "string" ? v : "");
 
@@ -1455,12 +1456,13 @@ export function createSandboxToolSource(
                     )
                     .limit(1)
                 : [];
+              const taskScope = await machineScope(hub, ctx, computer.machineId);
               return startMachineTask(
                 { db: ctx.db, pubsub: deps.pubsub, call: hub.call },
                 {
                   orgId: ctx.orgId,
                   agent: { id: ctx.agentId, handle: agent?.handle ?? "agent" },
-                  scopeId: seatIdOf(ctx, await machineScope(hub, ctx, computer.machineId)),
+                  scopeId: seatIdOf(ctx, taskScope),
                   machineId: computer.machineId,
                   protocol: status?.protocol ?? 0,
                   machineName: status?.name ?? info.name,
@@ -1828,6 +1830,7 @@ export function createSandboxToolSource(
         const out = await takeHold(holdDeps, {
           orgId: ctx.orgId,
           agent: { id: ctx.agentId, handle: agent?.handle ?? "agent" },
+          scope: await agentScopeOn(ctx.db, ctx.orgId, ctx.agentId, info.machineId),
           machineId: info.machineId,
           ...(kept ? { holdId: kept.id } : {}),
           runId: ctx.runId ?? null,
