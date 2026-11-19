@@ -49,7 +49,9 @@ Every tenant table is in exactly one list, and a test checks that each table wit
 The agents go first, then the messages in batches (`MESSAGE_BATCH`, per channel), then one transaction erases the
 rest, drops the workspace's waiting jobs for erased things and makes the right hand and `#general` again. A crash
 anywhere before that commit leaves the mark set: the job retries, and the hourly deletions tick queues any reset left
-waiting for over 10 minutes. A hold that keeps a deletion waiting keeps a reset waiting too.
+waiting for over 10 minutes. A hold that keeps a deletion waiting keeps a reset waiting too, checked again before
+each message batch with the workspace's row held, which also stops a late second job from taking messages posted
+after the first one finished.
 
 ### 4. No undo, on purpose
 

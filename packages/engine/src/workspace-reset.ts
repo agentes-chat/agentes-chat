@@ -323,7 +323,7 @@ export async function resetWorkspace(deps: ResetDeps, orgId: string, { messageBa
     .from(schema.browserProfiles)
     .where(and(eq(schema.browserProfiles.orgId, orgId), isNull(schema.browserProfiles.deletedAt)));
   // Ahead of the transaction, each batch its own: a crash leaves the reset asked for, and the next run deletes the rest.
-  await eraseMessages(db, orgId, messageBatch);
+  if (!(await eraseMessages(db, orgId, org.at, messageBatch))) return false;
 
   const done = await db.transaction(async (tx) => {
     await lockOrgMembers(tx, orgId);
@@ -458,15 +458,30 @@ async function storedFiles(db: Database, orgId: string) {
   );
 }
 
-async function eraseMessages(db: Database, orgId: string, batch: number) {
+/**
+ * Each batch checks, with the workspace's row held, that this reset is still under way and nothing keeps it: a hold
+ * placed meanwhile keeps the rest, and a second `org.reset` job running late never takes what the workspace posted
+ * after the first one finished. False when it stopped for that.
+ */
+async function eraseMessages(db: Database, orgId: string, at: Date, batch: number) {
   const all = await db.select({ id: channels.id }).from(channels).where(eq(channels.orgId, orgId));
   for (const { id } of all) {
     for (;;) {
-      const gone = rowsOf(
-        await db.execute(sql`delete from messages where (id, created_at) in
-          (select id, created_at from messages where channel_id = ${id}::uuid limit ${batch}) returning 1 as gone`),
-      );
-      if (gone.length < batch) break;
+      const gone = await db.transaction(async (tx) => {
+        const [still] = await tx
+          .select({ at: organizations.resetRequestedAt, ...KEPT_COLUMNS })
+          .from(organizations)
+          .where(eq(organizations.id, orgId))
+          .for("share");
+        if (still?.at?.getTime() !== at.getTime() || keptFromDeletion(still)) return null;
+        return rowsOf(
+          await tx.execute(sql`delete from messages where (id, created_at) in
+            (select id, created_at from messages where channel_id = ${id}::uuid limit ${batch}) returning 1 as gone`),
+        ).length;
+      });
+      if (gone === null) return false;
+      if (gone < batch) break;
     }
   }
+  return true;
 }

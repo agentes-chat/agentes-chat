@@ -157,26 +157,43 @@ describe("workspace reset", () => {
     }
     expect(await orgMessages()).toBe(21);
     await requestReset(f.db, f.owner.id, f.org.id);
-    // The process dies once the messages are gone, before the transaction that erases the rest commits.
-    const crashing = new Proxy(f.db, {
-      get: (target, key) => {
-        if (key === "transaction") return () => Promise.reject(new Error("crash"));
-        const value = Reflect.get(target, key);
-        return typeof value === "function" ? value.bind(target) : value;
-      },
-    });
-    const cut = await resetWorkspace({ ...resetDeps(), db: crashing }, f.org.id, { messageBatch: 3 }).catch(
-      (e: Error) => e.message,
-    );
-    expect(cut).toBe("crash");
+    // The transaction that erases the rest fails once the messages are gone, as a process dying there would leave it.
+    await f.db.execute(sql`create function refuse_general() returns trigger language plpgsql as $$
+      begin raise exception 'crash'; end $$`);
+    await f.db.execute(sql`create trigger refuse_general before insert on channels
+      for each row execute function refuse_general()`);
+    const cut = await resetWorkspace(resetDeps(), f.org.id, { messageBatch: 3 }).catch((e: Error) => e.message);
+    expect(cut).toContain('insert into "channels"');
     expect(await orgMessages()).toBe(0);
     expect(await count("channels")).toBe(3);
     const [waiting] = await f.db.select().from(schema.organizations).where(eq(schema.organizations.id, f.org.id));
     expect(waiting?.resetRequestedAt).not.toBeNull();
+    await f.db.execute(sql`drop trigger refuse_general on channels`);
 
     expect(await resetWorkspace(resetDeps(), f.org.id, { messageBatch: 3 })).toBe(true);
     const channels = await f.db.select().from(schema.channels).where(eq(schema.channels.orgId, f.org.id));
     expect(channels.map((c) => c.name)).toEqual(["general"]);
+  });
+
+  test("a hold placed while its messages go keeps the rest", async () => {
+    f = await setup();
+    for (let i = 0; i < 7; i++) {
+      await insertMessage(f.db, {
+        orgId: f.org.id,
+        channelId: f.general.id,
+        author: { type: "person", userId: f.owner.id },
+        body: `m${i}`,
+      });
+    }
+    await requestReset(f.db, f.owner.id, f.org.id);
+    // The operator's hold lands right after the first batch.
+    await f.db.execute(sql`create function hold_org() returns trigger language plpgsql as $$
+      begin update organizations set deletion_hold_at = now() where id = ${sql.raw(`'${f.org.id}'`)}; return null; end $$`);
+    await f.db.execute(sql`create trigger hold_org after delete on messages
+      for each statement execute function hold_org()`);
+    expect(await resetWorkspace(resetDeps(), f.org.id, { messageBatch: 3 })).toBe(false);
+    expect(await orgMessages()).toBe(4);
+    expect(await count("channels")).toBe(1);
   });
 
   test("the workspace's computer stays its own: no second one is asked for", async () => {
