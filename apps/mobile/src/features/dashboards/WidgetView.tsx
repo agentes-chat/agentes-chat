@@ -11,7 +11,7 @@ import type {
   WidgetStatus,
   WidgetWait,
 } from "@agenteschat/client";
-import { widgetCardStatus } from "@agenteschat/client";
+import { scheduleText, widgetCardStatus } from "@agenteschat/client";
 import type { ChartSpec } from "@agenteschat/client/lib/chart";
 import type { AgentColorName } from "@agenteschat/ui/agent/engine";
 import {
@@ -858,7 +858,7 @@ function WidgetFoot({ widget: w }: { widget: WidgetCardData }) {
       </View>
     );
   const when = w.refreshedAt ? words.ago(w.refreshedAt) : "";
-  const often = w.w === 2 || !when ? t(`widgets.schedulesInline.${w.schedule}`) : "";
+  const often = w.w === 2 || !when ? scheduleText(t, w.schedule, "inline") : "";
   const line = [when, often].filter(Boolean).join(" · ");
   if (!line) return null;
   return (

@@ -1,4 +1,6 @@
 import {
+  isWidgetSchedule,
+  WIDGET_EVERY_HOURS,
   WIDGET_FORMATS,
   WIDGET_KINDS,
   WIDGET_LIMITS,
@@ -18,10 +20,13 @@ export const WidgetKind = z.enum(WIDGET_KINDS).openapi("WidgetKind");
 export const WidgetFormat = z
   .enum(WIDGET_FORMATS)
   .openapi("WidgetFormat", { description: "A kind, or `auto`: the agent picks the kind that shows the ask best." });
-export const WidgetSchedule = z.enum(WIDGET_SCHEDULES).openapi("WidgetSchedule", {
-  description:
-    "`half` every 30 minutes (the floor), `hour` on the hour, `day` at 08:00, `week` Mondays at 08:00 (in the time zone of who set it up), `manual` only when asked.",
-});
+export const WidgetSchedule = z
+  .string()
+  .refine(isWidgetSchedule, { message: "Unknown schedule" })
+  .openapi("WidgetSchedule", {
+    description: `\`half\` every 30 minutes (the floor), \`hour\` on the hour, \`day\` at 08:00, \`week\` Mondays at 08:00 (in the time zone of who set it up), \`manual\` only when asked, or \`h:N\` every N hours from midnight, N from ${WIDGET_EVERY_HOURS.min} to ${WIDGET_EVERY_HOURS.max}.`,
+    examples: [...WIDGET_SCHEDULES, "h:6"],
+  });
 export const WidgetSize = z.enum(WIDGET_SIZES).openapi("WidgetSize", { description: "S = 1×1, M = 2×1, L = 2×2." });
 export const WidgetStatus = z.enum(WIDGET_STATUSES).openapi("WidgetStatus");
 export const DashboardAudience = z.enum(["workspace", "roles", "private"]).openapi("DashboardAudience", {

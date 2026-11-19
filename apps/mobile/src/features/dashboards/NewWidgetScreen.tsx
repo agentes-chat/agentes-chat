@@ -1,4 +1,5 @@
 import {
+  scheduleText,
   useAiStatusSince,
   useConfirmWidget,
   useDashboards,
@@ -61,17 +62,20 @@ import {
   asksInCard,
   confirmTitle,
   destinationsOf,
+  EVERY_HOURS,
   HOME,
   newWidgetBarLabel,
   previewKind,
   realBoardId,
+  scheduleChoiceOf,
+  schedulePicked,
   sizeFor,
   testKeyOf,
   testPhase,
 } from "./logic";
 import { type PickItem, usePickMenu } from "./menu";
 import { closeOptionPick, openOptionPick } from "./option-pick";
-import { KindGlyph } from "./parts";
+import { EveryHoursInput, KindGlyph } from "./parts";
 import { BuildingSweep, WidgetBody, WidgetCard } from "./WidgetView";
 
 /** The longest ask and alert condition the server takes (ADR 0135). */
@@ -336,19 +340,27 @@ export function NewWidgetScreen({ dashboardId }: { dashboardId: string }) {
       format,
       setFormat,
     );
-  // How often: the schedules' words only (what it spends is not this menu's business).
+  // How often: the schedules' words only (what it spends is not this menu's business), and every N hours, whose
+  // number shows under the card's foot.
   const openSchedules = () =>
     pick(
       t("dashboards.newWidget.updates"),
-      WIDGET_SCHEDULES.map(
-        (s): PickItem<WidgetSchedule> => ({
-          key: s,
-          label: t(`widgets.schedules.${s}`),
+      [
+        ...WIDGET_SCHEDULES.map(
+          (s): PickItem<WidgetSchedule | typeof EVERY_HOURS> => ({
+            key: s,
+            label: scheduleText(t, s),
+            leading: <Icon name="clock" size={18} color={c.muted} />,
+          }),
+        ),
+        {
+          key: EVERY_HOURS,
+          label: t("widgets.everyHoursPick"),
           leading: <Icon name="clock" size={18} color={c.muted} />,
-        }),
-      ),
-      schedule,
-      setSchedule,
+        },
+      ],
+      scheduleChoiceOf(schedule),
+      (k) => setSchedule(schedulePicked(schedule, k)),
     );
 
   const suggestionList = suggestions.data?.suggestions ?? [];
@@ -611,17 +623,18 @@ export function NewWidgetScreen({ dashboardId }: { dashboardId: string }) {
         <Pressable
           onPress={openSchedules}
           accessibilityRole="button"
-          accessibilityLabel={`${t("dashboards.newWidget.updates")}: ${t(`widgets.schedules.${schedule}`)}`}
+          accessibilityLabel={`${t("dashboards.newWidget.updates")}: ${scheduleText(t, schedule)}`}
           hitSlop={FOOT_SLOP}
           style={({ pressed }) => [styles.footPick, styles.shrink, pressed && styles.pressed]}
         >
           <Icon name="clock" size={13} color={c.muted} />
           <Text variant="footnote" numberOfLines={1} style={[styles.shrink, { color: c.ink2 }]}>
-            {t(`widgets.schedulesInline.${schedule}`)}
+            {scheduleText(t, schedule, "inline")}
           </Text>
           <Icon name="down" size={13} color={c.muted} />
         </Pressable>
       </View>
+      <EveryHoursInput value={schedule} onChange={setSchedule} />
     </Locked>
   );
 

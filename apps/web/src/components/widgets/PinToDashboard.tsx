@@ -1,5 +1,5 @@
 import type { WidgetSchedule } from "@agenteschat/client";
-import { useDashboards, useHomeDashboard, usePinWidget } from "@agenteschat/client";
+import { scheduleText, useDashboards, useHomeDashboard, usePinWidget } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
 import {
   Alert,
@@ -9,7 +9,6 @@ import {
   DialogFooter,
   Field,
   Locked,
-  Segmented,
   Select,
   Switch,
   WidgetCard,
@@ -21,11 +20,11 @@ import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { useToast } from "@/lib/toast";
 import { useWidgetAgent } from "./parts";
+import { WidgetScheduleSelect } from "./WidgetScheduleSelect";
 import "./widgets.css";
 
-/** How often a pinned chart may be redone (not "manual": that is "just pin"). */
-const KEEP_SCHEDULES = ["half", "hour", "day", "week"] as const satisfies readonly WidgetSchedule[];
-type KeepSchedule = (typeof KEEP_SCHEDULES)[number];
+/** A pinned chart kept updated is never "manual": not keeping it is the Keep updated switch. */
+const NOT_KEPT = ["manual"] as const;
 
 /**
  * "Pin to a dashboard" on an agent's chart in the chat (ADR 0135): the chart as it will look, where it goes (My Home
@@ -55,7 +54,7 @@ export function PinToDashboard({
   const { name, color } = useWidgetAgent(agentId);
   const [dest, setDest] = useState("home");
   const [keep, setKeep] = useState(false);
-  const [schedule, setSchedule] = useState<KeepSchedule>("day");
+  const [schedule, setSchedule] = useState<WidgetSchedule>("day");
   const id = useId();
   const editable = (boards.data?.dashboards ?? []).filter((d) => d.kind === "board" && d.canEdit);
   const target = dest === "home" ? home.data : editable.find((d) => d.id === dest);
@@ -72,7 +71,7 @@ export function PinToDashboard({
           onClose();
           toast.show(
             keep
-              ? t("widgets.pin.doneUpdating", { where, name, schedule: t(`widgets.schedulesInline.${chosen}`) })
+              ? t("widgets.pin.doneUpdating", { where, name, schedule: scheduleText(t, chosen, "inline") })
               : t("widgets.pin.done", { where }),
             "success",
             {
@@ -117,7 +116,7 @@ export function PinToDashboard({
                 face={<AgentAvatar agentId={agentId} name={name} size="xs" />}
                 footer={
                   <span className="wg__when">
-                    <b>{name}</b> <span className="wg__dot">·</span> {t(`widgets.schedulesInline.${chosen}`)}
+                    <b>{name}</b> <span className="wg__dot">·</span> {scheduleText(t, chosen, "inline")}
                   </span>
                 }
               />
@@ -141,18 +140,19 @@ export function PinToDashboard({
               <label htmlFor={`${id}-keep`}>{t("dashboards.newWidget.keepUpdated")}</label>
               <small id={`${id}-keep-hint`}>
                 {keep
-                  ? t("dashboards.newWidget.steps.redoes", { name, schedule: t(`widgets.schedulesInline.${schedule}`) })
+                  ? t("dashboards.newWidget.steps.redoes", { name, schedule: scheduleText(t, schedule, "inline") })
                   : t("dashboards.newWidget.steps.noRedoHint")}
               </small>
             </span>
           </div>
           {keep && (
             <Field label={t("dashboards.newWidget.updates")} group>
-              <Segmented<KeepSchedule>
+              <WidgetScheduleSelect
+                size="md"
                 label={t("dashboards.newWidget.updates")}
                 value={schedule}
-                onValueChange={setSchedule}
-                options={KEEP_SCHEDULES.map((s) => ({ value: s, label: t(`widgets.schedulesShort.${s}`) }))}
+                onChange={setSchedule}
+                without={NOT_KEPT}
               />
             </Field>
           )}
