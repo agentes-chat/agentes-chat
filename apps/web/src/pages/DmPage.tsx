@@ -1,5 +1,4 @@
-import type { DmTarget } from "@agenteschat/client";
-import { addDm } from "@agenteschat/client";
+import { addDm, type DmTarget } from "@agenteschat/client";
 import { audienceNotice, canTalk, seesDetails } from "@agenteschat/client/lib/audience";
 import { greetingSuggestions } from "@agenteschat/client/lib/chat";
 import { isGone } from "@agenteschat/client/lib/errors";
@@ -26,6 +25,7 @@ import { RightHandIntro } from "@/components/RightHandIntro";
 import { HeaderSearch } from "@/components/search/HeaderSearch";
 import { AgentTasksPill } from "@/components/tasks/AgentTasksPanel";
 import { useDirectory } from "@/hooks/useDirectory";
+import { knownDm } from "@/lib/dm-preload";
 import { rightHandSeen } from "@/lib/storage";
 import { ChannelPage, ChannelSkeleton, type DmSideControl } from "./ChannelPage";
 
@@ -47,6 +47,12 @@ export function DmPage({ target, focusMessageId }: { target: DmTarget; focusMess
       return res;
     },
     staleTime: Number.POSITIVE_INFINITY,
+    // A DM already in the list opens at once on its channel while the request confirms it: the page no longer
+    // waits for that round trip before it even asks for the messages.
+    placeholderData: () => {
+      const known = knownDm(qc, org.id, target);
+      return known ? { channelId: known.channelId, dm: known } : undefined;
+    },
   });
 
   const agent = "agentId" in target ? dir.agentById.get(target.agentId) : undefined;

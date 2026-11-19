@@ -1,5 +1,6 @@
 import { isPaidReturn } from "@agenteschat/client/lib/billing";
 import { createFileRoute } from "@tanstack/react-router";
+import { preloadDm } from "@/lib/dm-preload";
 import { agentPanelSearch, threadSearch } from "@/lib/open-param";
 import { DmPage } from "@/pages/DmPage";
 
@@ -16,6 +17,8 @@ export const Route = createFileRoute("/org/$orgId/dm/agent/$agentId")({
     ...(typeof search.m === "string" && search.m ? { m: search.m } : {}),
     ...(isPaidReturn(search) ? { paid: true as const } : {}),
   }),
+  loader: ({ context: { queryClient, api }, params: { orgId, agentId } }) =>
+    preloadDm(queryClient, api, orgId, { agentId }),
   component: function AgentDm() {
     const { agentId } = Route.useParams();
     return <DmPage key={agentId} target={{ agentId }} focusMessageId={Route.useSearch().m} />;

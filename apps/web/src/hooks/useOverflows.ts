@@ -11,8 +11,13 @@ export function useOverflows(box: RefObject<HTMLElement | null>, active = true, 
   useLayoutEffect(() => {
     const el = box.current;
     if (!el || !active) return;
-    const measure = () => setCut(el.scrollHeight > (over ?? el.clientHeight) + 1);
-    measure();
+    const measure = () => {
+      if (el.checkVisibility?.({ contentVisibilityAuto: true }) === false) return;
+      setCut(el.scrollHeight > (over ?? el.clientHeight) + 1);
+    };
+    // Read the size after layout. Measuring each row during mount forces layout of the conversation,
+    // including content-visibility rows that the browser would otherwise skip.
+    if (typeof ResizeObserver === "undefined" || typeof el.checkVisibility !== "function") measure();
     if (typeof ResizeObserver === "undefined") return;
     const resized = new ResizeObserver(measure);
     // The box itself while it still grows towards its `max-height`, its first child for what it holds past it.
