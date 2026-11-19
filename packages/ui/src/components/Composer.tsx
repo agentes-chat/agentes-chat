@@ -568,7 +568,8 @@ export function Composer({
   // A selection to restore after the text changes (formatting, an emoji).
   const selectAfter = useRef<[number, number] | null>(null);
 
-  useAutoGrow(ref, value);
+  const growsWithCss = typeof CSS !== "undefined" && CSS.supports?.("field-sizing", "content");
+  useAutoGrow(ref, value, !growsWithCss);
   // Once the text is in: the caret after an inserted mention, or a selection put back.
   useLayoutEffect(() => {
     // The box emptied without a keystroke (the message went out, a draft was cleared): no list stays open over it.

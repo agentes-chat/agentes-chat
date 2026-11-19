@@ -5,7 +5,7 @@ setupDom();
 
 import type { Message } from "@agenteschat/client";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
-import { createFakeApi, GENERAL_ID, ORG_ID, seedState } from "./fake-api";
+import { ADA_ID, createFakeApi, GENERAL_ID, ORG_ID, seedDm, seedState } from "./fake-api";
 import { renderApp, screen, settle } from "./render";
 
 afterEach(() => cleanup());
@@ -209,4 +209,96 @@ describe("conversations load fast", () => {
       Object.assign(globalThis, realFrames);
     }
   });
+
+  test("a long Windows DM paints recent rows first and then fills in the page one batch per frame", async () => {
+    const state = seedState();
+    const channelId = seedDm(state, { type: "agent", id: ADA_ID });
+    state.messages.unshift(...history(130).map((message) => ({ ...message, channelId })));
+    const desktop = window as typeof window & { __agentesDesktop?: unknown };
+    const originalDesktop = desktop.__agentesDesktop;
+    const realFrames = {
+      requestAnimationFrame: globalThis.requestAnimationFrame,
+      cancelAnimationFrame: globalThis.cancelAnimationFrame,
+    };
+    const callbacks = new Map<number, FrameRequestCallback>();
+    let id = 0;
+    const nextFrame = () =>
+      act(() => {
+        const queued = [...callbacks.values()];
+        callbacks.clear();
+        for (const callback of queued) callback(performance.now());
+      });
+    desktop.__agentesDesktop = { platform: "windows" };
+    Object.assign(globalThis, {
+      requestAnimationFrame: (callback: FrameRequestCallback) => {
+        callbacks.set(++id, callback);
+        return id;
+      },
+      cancelAnimationFrame: (handle: number) => callbacks.delete(handle),
+    });
+    const message = (index: number) => document.querySelector(`[data-message-id="h-${index}"]`);
+    const path = `/org/${ORG_ID}/dm/agent/${ADA_ID}`;
+    try {
+      await renderApp(path, { api: createFakeApi(state) });
+      expect(message(129)).not.toBeNull();
+      expect(message(50)).toBeNull();
+      await nextFrame();
+      expect(message(50)).toBeNull();
+      const rows = () => document.querySelectorAll(".channel__messages [data-message-id]").length;
+      const composer = document.querySelector<HTMLTextAreaElement>('textarea[id^="composer-"]');
+      if (!composer) throw new Error("missing DM composer");
+      await act(() => composer.focus());
+      let draft = "";
+      let previousCount = rows();
+      expect(previousCount).toBeLessThanOrEqual(18);
+      for (let batch = 0; batch < 7; batch++) {
+        draft += "a";
+        await act(() => void fireEvent.change(composer, { target: { value: draft } }));
+        await nextFrame();
+        const count = rows();
+        expect(count).toBeGreaterThan(previousCount);
+        expect(count - previousCount).toBeLessThanOrEqual(12);
+        previousCount = count;
+        expect(document.activeElement).toBe(composer);
+        expect(composer.value).toBe(draft);
+      }
+      expect(rows()).toBe(100);
+      expect(message(50)).not.toBeNull();
+      expect(message(129)).not.toBeNull();
+
+      cleanup();
+      callbacks.clear();
+      await renderApp(path, { api: createFakeApi(state) });
+      const beforeScroll = rows();
+      expect(beforeScroll).toBeLessThanOrEqual(18);
+      const list = screen().getByRole("region", { name: "Mensagens" });
+      Object.defineProperty(list, "scrollHeight", { get: () => rows() * 60 });
+      await act(() => {
+        fireEvent.wheel(list, { deltaY: -100 });
+        fireEvent.scroll(list, { target: { scrollTop: 0 } });
+      });
+      expect(rows()).toBe(100);
+      expect(list.scrollTop).toBe((100 - beforeScroll) * 60);
+
+      cleanup();
+      callbacks.clear();
+      await renderApp(`${path}?m=h-50`, { api: createFakeApi(state) });
+      expect(message(50)).not.toBeNull();
+
+      cleanup();
+      callbacks.clear();
+      const membership = state.me?.organizations[0];
+      const dm = state.dms.find((entry) => entry.channelId === channelId);
+      if (!membership || !dm) throw new Error("missing DM fixture");
+      membership.chatPrefs = { openAt: "read" };
+      Object.assign(dm, { unread: 80, lastReadAt: history(130)[49]?.createdAt });
+      await renderApp(path, { api: createFakeApi(state) });
+      expect(rows()).toBe(100);
+      expect(document.querySelector(".channel__unread")).not.toBeNull();
+    } finally {
+      cleanup();
+      desktop.__agentesDesktop = originalDesktop;
+      Object.assign(globalThis, realFrames);
+    }
+  }, 15_000);
 });
