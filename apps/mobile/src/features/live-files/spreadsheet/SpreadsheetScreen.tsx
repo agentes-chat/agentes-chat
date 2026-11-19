@@ -38,16 +38,16 @@ import { KeyboardAvoidingView, useReanimatedKeyboardAnimation } from "react-nati
 import Animated, { useAnimatedStyle } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type * as Y from "yjs";
-import { Button, Filters, type HeaderMenuItem, Text, useTheme, useToast } from "@/ui";
+import { Filters, type HeaderMenuItem, useTheme, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
-import { Face } from "../../shared/Face";
 import { showActionSheet } from "../../shared/PickerSheet";
-import { copyText, errorHaptic, successHaptic, useSurface } from "../../shared/parts";
+import { copyText, errorHaptic, successHaptic } from "../../shared/parts";
 import { liveClosed, liveRoute } from "../logic";
 import { setFollowing, useFollowing } from "../shared/follow";
 import { LiveBar, LiveUnavailable } from "../shared/LiveBar";
 import { usePeerLook } from "../shared/peers";
 import { type LiveDoc, useLiveDoc } from "../shared/useLiveDoc";
+import { HereIsland } from "../slides/Island";
 import { useAskAgent, useRevealHere, useTalkFocus } from "../talk/hooks";
 import { FileTalkLine } from "../talk/TalkLine";
 import { type Caret, CellBar, type CellEditing } from "./CellBar";
@@ -564,7 +564,6 @@ function LiveSheet({
   const keyboard = useReanimatedKeyboardAnimation();
   const homeRoom = useAnimatedStyle(() => ({ height: insets.bottom * (1 - keyboard.progress.get()) }));
   const label = layout ? boxLabel(selection.box, layout) : "";
-  const surface = useSurface("e2");
 
   if (!source || !layout || !sheetId)
     return (
@@ -590,19 +589,14 @@ function LiveSheet({
             editing={typing}
           />
           {followed ? (
-            <View style={styles.followAt} pointerEvents="box-none">
-              <View style={[styles.follow, surface]}>
-                <Face
-                  who={{ type: followed.user.kind === "agent" ? "agent" : "person", id: followed.user.id }}
-                  size={18}
-                  live={false}
-                />
-                <Text variant="footnote" numberOfLines={1} style={styles.followText}>
-                  {t("mobile.live.here.followingName", { name: look(followed.user).name })}
-                </Text>
-                <Button variant="text" size="sm" label={t("mobile.live.here.stop")} onPress={stopFollowing} />
-              </View>
-            </View>
+            // The live files' island (it fades in and out), under the sheet's column letters.
+            <HereIsland
+              who={followed.user}
+              words={t("mobile.live.here.followingName", { name: look(followed.user).name })}
+              action={t("mobile.live.here.stop")}
+              onAction={stopFollowing}
+              top={32}
+            />
           ) : null}
         </View>
         {tabs.length > 1 && !typing ? (
@@ -646,16 +640,4 @@ function LiveSheet({
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   tabs: { paddingTop: 8 },
-  followAt: { position: "absolute", top: 32, left: 0, right: 0, alignItems: "center" },
-  follow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    maxWidth: "90%",
-    paddingLeft: 8,
-    paddingRight: 4,
-    minHeight: 36,
-    borderRadius: 18,
-  },
-  followText: { flexShrink: 1, fontWeight: "600" },
 });

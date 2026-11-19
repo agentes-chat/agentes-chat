@@ -610,13 +610,13 @@ describe("viewer", () => {
 });
 
 describe("a document's head", () => {
-  test("a file is a pushed screen: the native bar holds its name, its line, Enviar cópia and the ⋯", () => {
+  test("a file is a pushed screen: the native bar holds its name, Send a copy and the ⋯; its line under the bar", () => {
     // Pushed, never a full-screen modal: the app's sheets, menus and toasts live at the root, under a modal.
     expect(ownOptionsOf("file/[id]")).toBe("solid,");
     const viewer = src("features/files/DocumentViewer.tsx");
     expect(viewer).toContain("<PushedHeader");
     expect(viewer).toContain('title={info?.name ?? ""}');
-    expect(viewer).toContain("subtitle: line(info, [dir.nameOf(detail.createdBy)])");
+    expect(viewer).toContain("<BarNote>{line(info, [dir.nameOf(detail.createdBy)])}</BarNote>");
     expect(viewer).toContain("actions={bar}");
     // The system's share sheet says what it does; the ⋯ is the system's menu on iOS and the app's list on Android.
     expect(viewer).toContain('label: t("mobile.files.sendCopy")');

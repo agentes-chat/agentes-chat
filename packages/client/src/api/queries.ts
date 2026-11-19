@@ -168,6 +168,8 @@ import type {
   Person,
   PersonalTokenInput,
   PersonLimits,
+  ProblemReportPreviewInput,
+  ProblemReportSendInput,
   Proposal,
   ReactionCount,
   ReminderInput,
@@ -389,6 +391,28 @@ export function useSetServerTelemetry() {
   return useMutation({
     mutationFn: (enabled: boolean) => api.system.setTelemetry(enabled),
     onSuccess: (telemetry) => qc.setQueryData(keys.telemetry, telemetry),
+  });
+}
+
+/** A problem report gathered for the person to read before sending; asked again each time the dialog opens. */
+export const useProblemReportPreview = (input: ProblemReportPreviewInput, enabled: boolean) => {
+  const api = useApi();
+  return useQuery({
+    queryKey: ["problem-report", input] as const,
+    queryFn: () => api.system.previewProblemReport(input),
+    enabled,
+    staleTime: 0,
+    gcTime: 0,
+    retry: false,
+  });
+};
+
+export function useSendProblemReport() {
+  const api = useApi();
+  // The dialog says why it failed, with its way out, under its buttons.
+  return useMutation({
+    mutationFn: (input: ProblemReportSendInput) => api.system.sendProblemReport(input),
+    meta: { silent: true },
   });
 }
 

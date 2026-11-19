@@ -52,6 +52,7 @@ import { openComputer } from "../computer/AgentComputerRow";
 import { ScreenWatch, type ScreenWatchHandle } from "../computer/ScreenWatch";
 import { DEFAULT_DESKTOP } from "../computer/screen-view";
 import { MachineToolButton } from "../devices/ToolOneClick";
+import { ReportProblemButton } from "../report/ReportProblemButton";
 import { withAgentFaces } from "../shared/Face";
 import { useColors, useDirectory, useEdition, useMeId, useNow, useOrgId, useWhen } from "../shared/hooks";
 import { agentLook, genderOf } from "../shared/logic";
@@ -366,7 +367,17 @@ export function BrowserCard({
         {offHere && profileMachine ? (
           <MachineToolButton machine={profileMachine} tool="browser" onAllowed={retry} />
         ) : note.say === "stuck" || note.say === "noAnswer" || (note.say === "unavailable" && profile) ? (
-          <Button variant="secondary" size="sm" label={t("mobile.common.retry")} onPress={retry} />
+          <View style={styles.noteActs}>
+            <Button variant="secondary" size="sm" label={t("mobile.common.retry")} onPress={retry} />
+            {note.say !== "unavailable" && (
+              <ReportProblemButton
+                place="browser"
+                code={note.say === "noAnswer" ? "browser.no_answer" : "browser.stuck"}
+                context={{ agentId, ...(profile?.machineId ? { machineId: profile.machineId } : {}) }}
+                timings={{ attempts: attempt + 1 }}
+              />
+            )}
+          </View>
         ) : null}
       </View>
     </View>
@@ -836,6 +847,7 @@ const CARD = 20;
 const PAGE_INSET = 8;
 
 const styles = StyleSheet.create({
+  noteActs: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", justifyContent: "center", gap: 8 },
   // ── The conversation's frame ──
   frameRoom: { marginTop: 12 },
   frame: {

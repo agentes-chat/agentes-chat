@@ -21590,6 +21590,38 @@
       "askFirst": "Demander avant d'envoyer"
     }
   },
+  "problemReport": {
+    "button": "Envoyer un rapport",
+    "title": "Envoyer un rapport à agentes.chat",
+    "lead": "L'équipe agentes.chat reçoit : les versions, les réglages définis (jamais leurs valeurs), ce qui a échoué et les dernières lignes des journaux. Aucun message, page, nom ni clé.",
+    "noteLabel": "Que s'est-il passé ? (facultatif)",
+    "notePlaceholder": "Ce que vous faisiez quand ça s'est arrêté",
+    "emailLabel": "E-mail pour la réponse (facultatif)",
+    "emailHelp": "Seulement si vous voulez une réponse.",
+    "showAll": "Voir tout ce qui est envoyé",
+    "copy": "Copier le rapport",
+    "copied": "Copié",
+    "send": "Envoyer",
+    "sending": "Envoi…",
+    "cancel": "Annuler",
+    "loading": "Collecte des détails…",
+    "sentTitle": "Rapport {{id}} envoyé",
+    "sentText": "Si vous nous écrivez, indiquez ce code.",
+    "sentTextReply": "Nous répondrons à {{email}}. Indiquez ce code si vous nous écrivez.",
+    "copyCode": "Copier le code",
+    "done": "Terminé",
+    "noLogComputer": "{{computer}} n'a pas répondu, son journal n'est donc pas inclus.",
+    "oldRunner": "L'app agentes.chat sur {{computer}} est trop ancienne pour inclure son journal. Mettez-la à jour là-bas pour l'inclure.",
+    "noServerLines": "Les lignes du journal du serveur ne sont incluses que si le propriétaire de l'installation envoie le rapport.",
+    "off": "L'envoi est désactivé sur ce serveur (PROBLEM_REPORT_URL=off). Copiez le rapport pour le partager.",
+    "errorRate": "Trop de rapports en peu de temps. Réessayez dans {{minutes}} min ou copiez le rapport.",
+    "errorUnreachable": "agentes.chat n'a pas répondu. Réessayez ou copiez le rapport.",
+    "errorRefused": "agentes.chat n'a pas accepté ce rapport (il vient peut-être d'une ancienne version). Copiez plutôt le rapport.",
+    "errorPreview": "Impossible de collecter les détails : {{reason}}",
+    "emailInvalid": "Cet e-mail ne semble pas correct. Corrigez-le ou laissez le champ vide.",
+    "settingsTitle": "Quelque chose ne fonctionne pas ?",
+    "settingsText": "Envoyez les détails techniques à l'équipe agentes.chat."
+  },
   "live": {
     "slides": {
       "rail": {

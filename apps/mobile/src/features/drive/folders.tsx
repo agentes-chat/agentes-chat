@@ -229,6 +229,9 @@ export function FolderRows({
             icon="drive"
             label={f.name}
             labelLines={0}
+            // One centred line for the folder's tile, its name and its "…" (a long name still wraps): as a wrapping
+            // row, the tile and the "…" sat a few points under a one-line name's middle.
+            media
             chevron={!more}
             onPress={() => openFolder(f.id)}
             onLongPress={() => onMenu(f)}
@@ -267,7 +270,12 @@ export function FolderPath({ trail }: { trail: readonly DriveFolder[] }) {
             {last ? (
               <Text variant="footnote">{s.name}</Text>
             ) : (
-              <Pressable accessibilityRole="link" hitSlop={8} onPress={() => goTo(s.id)}>
+              // An 18-point line: 13 above and under reach the 44 a finger needs.
+              <Pressable
+                accessibilityRole="link"
+                hitSlop={{ top: 13, bottom: 13, left: 6, right: 6 }}
+                onPress={() => goTo(s.id)}
+              >
                 <Text variant="footnote" tone="muted">
                   {s.name}
                 </Text>
@@ -281,7 +289,8 @@ export function FolderPath({ trail }: { trail: readonly DriveFolder[] }) {
 }
 
 const styles = StyleSheet.create({
-  rows: { paddingHorizontal: SCREEN_X, paddingBottom: 16 },
+  // 16 under the chips (their own 4 and these 12); under the folders, the next header's own 24.
+  rows: { paddingHorizontal: SCREEN_X, paddingTop: 12 },
   path: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: SCREEN_X, paddingBottom: 10 },
   step: { flexDirection: "row", alignItems: "center" },
 });

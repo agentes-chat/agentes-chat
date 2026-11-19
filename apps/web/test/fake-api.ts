@@ -78,6 +78,7 @@ import type {
   PersonLimits,
   PersonUsage,
   PlanAccountUsage,
+  ProblemReportPreview,
   Proposal,
   ReactionCount,
   RightHandApprovals,
@@ -409,6 +410,10 @@ export interface FakeState {
   setupResults?: Record<string, Omit<AgentSetupResult, "agentId">>;
   /** `system.telemetry`: the usage report's switch; unset = I'm not the installation's owner (null). */
   telemetry?: ServerTelemetry;
+  /** `system.previewProblemReport`: the report shown; unset = a small one with sending on. A function may wait or throw. */
+  problemReport?: ProblemReportPreview | (() => Promise<ProblemReportPreview>);
+  /** `system.sendProblemReport`: its code, or what it throws; unset = `R-7K3QXM`. */
+  problemReportSend?: { id: string } | ApiError;
   /** `system.jev`: the installation's Jev key; unset = I'm not its owner on a self-hosted server (null). */
   jev?: JevKey;
   /**
@@ -1504,6 +1509,25 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         if (!state.telemetry) throw new ApiError(404, "not_found", "Not found");
         state.telemetry = { ...state.telemetry, enabled };
         return state.telemetry;
+      },
+      previewProblemReport: async (input) => {
+        log("system.previewProblemReport", input);
+        const p = state.problemReport;
+        if (typeof p === "function") return p();
+        return (
+          p ?? {
+            report: { format: 1, source: "server", place: input.place },
+            text: '{\n  "format": 1\n}',
+            send: "on",
+            missing: {},
+          }
+        );
+      },
+      sendProblemReport: async (input) => {
+        log("system.sendProblemReport", input);
+        const r = state.problemReportSend ?? { id: "R-7K3QXM" };
+        if (r instanceof ApiError) throw r;
+        return r;
       },
       sendFeedback: async (input) => {
         log("system.sendFeedback", input);

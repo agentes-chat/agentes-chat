@@ -229,6 +229,8 @@ export const OP_ROUTES: Readonly<Record<MachineOp, "machine" | "agent">> = {
   // Installed as the runner's own user. Root answers unsupported: the agents' users get their CLIs from the
   // computer's setup, never from an install run as root.
   "cli.install": "machine",
+  // Reads the runner's own log and state: root's.
+  "report.collect": "machine",
 };
 
 type AccessRequestOp = Extract<MachineRequest, { op: "access.request" }>;
@@ -355,6 +357,8 @@ export interface HandlerContext {
   cliInstall?: (req: Extract<MachineRequest, { op: "cli.install" }>) => MachineReplies["cli.install"];
   /** `IPHONE_DEV_MODE_PROTOCOL`: opening Xcode on this Mac; without it the op answers `opened: false`. */
   xcodeOpen?: () => Promise<MachineReplies["xcode.open"]>;
+  /** `PROBLEM_REPORT_PROTOCOL`: what a problem report adds from this computer. */
+  reportParts?: () => MachineReplies["report.collect"];
 }
 
 export interface RequestScope {
@@ -736,6 +740,10 @@ async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: Req
         fix: { kind: req.kind === "update" ? "update" : "select", state: "unsupported", step: 0 },
       }
     );
+  }
+  if (req.op === "report.collect") {
+    if (!ctx.reportParts) throw new RunnerError("bad_request", "This runner doesn't add to problem reports");
+    return ctx.reportParts();
   }
   if (req.op === "clis.check") {
     if (!ctx.clisCheck) throw new RunnerError("bad_request", "This runner doesn't look up its programs on request");

@@ -7,7 +7,8 @@ import { FlatList, StyleSheet, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { appHeaders, lastCookie } from "@/lib/auth";
 import { useOrg } from "@/providers/org";
-import { Button, SCREEN_X, Text, useTheme } from "@/ui";
+import { Button, SCREEN_X, Text, TOOL_H, textLineOf, useTheme } from "@/ui";
+import { useFontScale } from "@/ui/text-scale";
 import { openFile } from "../../files/open";
 import { LoadFailed } from "../../shared/FirstUse";
 import { useErrorToast, useOrgId } from "../../shared/hooks";
@@ -116,6 +117,7 @@ export function deckSketches(deck: DeckData): SketchSlide[] {
  */
 export function EditAs({ detail, view }: { detail: ArtifactDetail; view: OfficeView }) {
   const { t } = useTranslation();
+  const fontScale = useFontScale();
   const { colors: c } = useTheme();
   const orgId = useOrgId();
   const { org } = useOrg();
@@ -135,14 +137,17 @@ export function EditAs({ detail, view }: { detail: ArtifactDetail; view: OfficeV
         {t(`live.office.kind.${kind}`)}
       </Text>
       {can(org, "upload_files") && detail.inDrive !== false ? (
-        <Button
-          variant="secondary"
-          size="sm"
-          label={t(`live.office.editAs.${editAs}`)}
-          hint={t("live.office.editAsHint")}
-          loading={openAs.isPending}
-          onPress={make}
-        />
+        // On the words' first line, centred on its middle, when they wrap to two.
+        <View style={{ marginTop: textLineOf("footnote", fontScale).middle - TOOL_H / 2 }}>
+          <Button
+            variant="secondary"
+            size="sm"
+            label={t(`live.office.editAs.${editAs}`)}
+            hint={t("live.office.editAsHint")}
+            loading={openAs.isPending}
+            onPress={make}
+          />
+        </View>
       ) : null}
     </View>
   );
@@ -179,7 +184,7 @@ const styles = StyleSheet.create({
   slideBone: { borderRadius: 8 },
   bar: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 12,
     minHeight: 52,
     paddingHorizontal: 16,

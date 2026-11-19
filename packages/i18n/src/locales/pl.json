@@ -22172,6 +22172,38 @@
       "askFirst": "Pytaj przed wysłaniem"
     }
   },
+  "problemReport": {
+    "button": "Wyślij raport",
+    "title": "Wyślij raport do agentes.chat",
+    "lead": "Zespół agentes.chat dostaje: wersje, które ustawienia są ustawione (nigdy ich wartości), co się nie udało i ostatnie wiersze logów. Bez wiadomości, stron, nazw i kluczy.",
+    "noteLabel": "Co się stało? (opcjonalnie)",
+    "notePlaceholder": "Co robiłeś, gdy przestało działać",
+    "emailLabel": "E-mail do odpowiedzi (opcjonalnie)",
+    "emailHelp": "Tylko jeśli chcesz odpowiedź.",
+    "showAll": "Zobacz wszystko, co jest wysyłane",
+    "copy": "Kopiuj raport",
+    "copied": "Skopiowano",
+    "send": "Wyślij",
+    "sending": "Wysyłanie…",
+    "cancel": "Anuluj",
+    "loading": "Zbieranie szczegółów…",
+    "sentTitle": "Raport {{id}} wysłany",
+    "sentText": "Jeśli do nas napiszesz, podaj ten kod.",
+    "sentTextReply": "Odpowiemy na {{email}}. Podaj ten kod, jeśli do nas napiszesz.",
+    "copyCode": "Kopiuj kod",
+    "done": "Gotowe",
+    "noLogComputer": "{{computer}} nie odpowiedział, więc jego log nie jest dołączony.",
+    "oldRunner": "Aplikacja agentes.chat na {{computer}} jest za stara, by dołączyć log. Zaktualizuj ją tam, aby go dołączyć.",
+    "noServerLines": "Wiersze logu serwera są dołączane tylko wtedy, gdy raport wysyła właściciel instalacji.",
+    "off": "Wysyłanie jest wyłączone na tym serwerze (PROBLEM_REPORT_URL=off). Skopiuj raport, aby go udostępnić.",
+    "errorRate": "Za dużo raportów w krótkim czasie. Spróbuj ponownie za {{minutes}} min albo skopiuj raport.",
+    "errorUnreachable": "agentes.chat nie odpowiedział. Spróbuj ponownie albo skopiuj raport.",
+    "errorRefused": "agentes.chat nie przyjął tego raportu (może pochodzić ze starszej wersji). Zamiast tego skopiuj raport.",
+    "errorPreview": "Nie udało się zebrać szczegółów: {{reason}}",
+    "emailInvalid": "Ten e-mail wygląda na niepoprawny. Popraw go albo zostaw puste.",
+    "settingsTitle": "Coś nie działa?",
+    "settingsText": "Wyślij szczegóły techniczne zespołowi agentes.chat."
+  },
   "live": {
     "slides": {
       "rail": {

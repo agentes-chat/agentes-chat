@@ -31,7 +31,7 @@ import { AgentFace } from "../shared/Face";
 import { LoadFailed } from "../shared/FirstUse";
 import { useColors, useDirectory, useErrorToast, usePullRefresh } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
-import { PushedHeader } from "../shared/parts";
+import { BarNote, PushedHeader } from "../shared/parts";
 import { PlanMeter, PlanModels } from "./parts";
 
 /*
@@ -68,17 +68,13 @@ export function UsageAccountScreen({ accountKey }: { accountKey: string }) {
     .join(" · ");
   return (
     <View style={[styles.screen, { backgroundColor: c.grouped }]}>
-      <PushedHeader
-        title={account ? accountName(t, account) : t("settings.section.usage")}
-        {...(subtitle ? { subtitle } : {})}
-        solid={false}
-        grouped
-      />
+      <PushedHeader title={account ? accountName(t, account) : t("settings.section.usage")} solid={false} grouped />
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} />}
         contentContainerStyle={[styles.in, { paddingBottom: insets.bottom + 24 }]}
       >
+        {subtitle ? <BarNote>{subtitle}</BarNote> : null}
         {usage.isLoading ? (
           <SkeletonList rows={3} />
         ) : !account ? (

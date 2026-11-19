@@ -39,6 +39,7 @@ import { setFollowing, useFollowing } from "../shared/follow";
 import { PresentFaces } from "../shared/HereFaces";
 import { LiveBar, LiveUnavailable } from "../shared/LiveBar";
 import { usePeerLook } from "../shared/peers";
+import { Tool, ToolBar } from "../shared/Tools";
 import { type LiveDoc, useLiveDoc } from "../shared/useLiveDoc";
 import { useAskAgent, useRevealHere, useTalkFocus } from "../talk/hooks";
 import { FileTalkLine } from "../talk/TalkLine";
@@ -331,27 +332,18 @@ function SlideList({
           />
         ) : null}
       </View>
-      <View style={[styles.bar, { borderTopColor: c.line2, backgroundColor: c.bg }]}>
+      {/* The slide's own tools: its icon over its word under a hairline, as the slide's screen has them (two filled
+          buttons stood heavy over the conversation's line). */}
+      <ToolBar>
         {edit ? (
-          <View style={styles.barItem}>
-            <Button
-              variant="secondary"
-              label={t("live.slides.tools.newSlide")}
-              wide
-              onPress={() => router.push(slideLayoutRoute(fileId, { at: deck.slides.length }))}
-            />
-          </View>
-        ) : null}
-        <View style={styles.barItem}>
-          <Button
-            variant="primary"
-            label={t("live.shell.present")}
-            wide
-            disabled={shown.length === 0}
-            onPress={() => present()}
+          <Tool
+            icon="plus"
+            label={t("live.slides.tools.newSlide")}
+            onPress={() => router.push(slideLayoutRoute(fileId, { at: deck.slides.length }))}
           />
-        </View>
-      </View>
+        ) : null}
+        <Tool icon="present" label={t("live.shell.present")} disabled={shown.length === 0} onPress={() => present()} />
+      </ToolBar>
       <FileTalkLine file={detail} />
     </>
   );
@@ -426,9 +418,9 @@ export function SlidesBones() {
       {[0, 1, 2].map((i) => (
         <View key={i} style={styles.row}>
           <View style={styles.head}>
-            <View style={[styles.boneNumber, { backgroundColor: c.sunken }]} />
+            <View style={[styles.boneNumber, { backgroundColor: c.plate }]} />
           </View>
-          <View style={[styles.bone, { width: w, height: slideHeight(w), backgroundColor: c.sunken }]} />
+          <View style={[styles.bone, { width: w, height: slideHeight(w), backgroundColor: c.plate }]} />
         </View>
       ))}
     </Animated.View>
@@ -444,14 +436,6 @@ const styles = StyleSheet.create({
   number: { fontVariant: ["tabular-nums"] },
   slide: { borderRadius: 6 },
   hidden: { opacity: 0.45 },
-  bar: {
-    flexDirection: "row",
-    gap: 8,
-    paddingHorizontal: SCREEN_X,
-    paddingTop: 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  barItem: { flex: 1 },
   boneNumber: { width: 48, height: 10, borderRadius: 3 },
   bone: { borderRadius: 6 },
 });

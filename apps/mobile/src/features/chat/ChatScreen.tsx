@@ -1519,8 +1519,9 @@ function Chat({
     toEnd();
     sheet.close();
   };
+  // Over the "+" when it opens from there (a step back to it), on its own from the field's button.
   const openMedia = () =>
-    sheet.open(
+    sheet.push(
       <MediaPickerSheet
         tabs={mediaTabs}
         channelId={channelId}
@@ -1718,17 +1719,24 @@ function Chat({
   });
   const openPlus = () => sheet.open(<PlusActions media={mediaTabs.length > 0} onPick={(p) => void onPlus(p)} />);
   const onPlus = async (pick: PlusPick) => {
-    // What opens next opens once the sheet is gone (`sheet.close` says when): the library, the camera and the files
-    // picker presented over it while it slid out were taken away with it, and the app waited for an answer that never
-    // came; the next sheet (GIFs, a mission, a reminder, a mission's summary) takes its place the same way. Only the
-    // summary sent as a message has nothing to wait for.
-    const after = pick !== "summary" || Boolean(mission);
-    if (after) await new Promise<void>((done) => sheet.close(done));
-    else sheet.close();
+    // A next step of the "+" stacks over it at once (the GIFs, a reminder, a mission's summary): a flick down goes back
+    // to the "+". What the system presents (the camera, the library, the files picker) waits for the sheet to be gone:
+    // presented over it while it slid out, iOS took it away with it, and the app waited for an answer that never came.
     switch (pick) {
       case "media":
         openMedia();
         return;
+      case "remind":
+        openRemind();
+        return;
+      case "summary":
+        // A mission's summary is a sheet; elsewhere the summary is a message, and the conversation shows it.
+        if (!mission) sheet.close();
+        summarize();
+        return;
+    }
+    await new Promise<void>((done) => sheet.close(done));
+    switch (pick) {
       case "camera": {
         const perm = await ImagePicker.requestCameraPermissionsAsync();
         if (!perm.granted) {
@@ -1777,15 +1785,6 @@ function Chat({
           );
         return;
       }
-      case "mission":
-        openNewMission();
-        return;
-      case "summary":
-        summarize();
-        return;
-      case "remind":
-        openRemind();
-        return;
     }
   };
 
@@ -2657,6 +2656,13 @@ function Chat({
   const sendFromField = useLatest(onSend);
   const voiceFromField = useLatest(withVoice);
   const plusFromField = useLatest(openPlus);
+  // GIFs and stickers also beside the mic while the field is empty, where they can be sent: one tap from the field.
+  const mediaFromField = useLatest(openMedia);
+  const canSendMedia = mediaTabs.length > 0;
+  const composerMedia = useMemo(
+    () => (canSendMedia ? { label: t("media.picker.send"), onPress: mediaFromField } : null),
+    [canSendMedia, t, mediaFromField],
+  );
   const longFromField = useLatest(longAsFile);
   const removeFromStrip = useLatest(removePending);
   const cancelQuote = useCallback(() => setQuote(null), []);
@@ -3520,8 +3526,9 @@ function Chat({
                       placeholder={placeholder}
                       onSend={sendFromField}
                       working={working}
-                      // GIFs and stickers live in the "+", with the photos: the field only sends.
+                      // GIFs and stickers in the "+", with the photos, and beside the mic in the empty field.
                       onPlus={plusFromField}
+                      media={composerMedia}
                       draftKey={threadId ? `${channelId}:${threadId}` : channelId}
                       inputNativeID={COMPOSER_INPUT_ID}
                       float={composerFloat}

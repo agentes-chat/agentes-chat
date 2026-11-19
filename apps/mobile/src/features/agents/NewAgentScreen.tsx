@@ -92,6 +92,7 @@ import { proposedRoutineWhen } from "../routines/rule";
 import { chooseAction, SettingsPage, useUnsavedGuard } from "../settings/parts";
 import { useColors, useDirectory, useMeId, useOrgId } from "../shared/hooks";
 import {
+  BarNote,
   BottomBar,
   FocusLive,
   goBack,
@@ -365,13 +366,14 @@ function StepPage({
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.fill, { backgroundColor: c.grouped }]}>
-      <PushedHeader title={t("newAgent.title")} {...(subtitle ? { subtitle } : {})} solid={false} grouped />
+      <PushedHeader title={t("newAgent.title")} solid={false} grouped />
       <KeyboardAvoidingView behavior="padding" style={styles.fill}>
         <ScrollView
           contentInsetAdjustmentBehavior="automatic"
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[styles.body, bar ? null : { paddingBottom: 32 + insets.bottom }]}
         >
+          {subtitle ? <BarNote>{subtitle}</BarNote> : null}
           {children}
         </ScrollView>
         {bar ? <BottomBar bottom={insets.bottom}>{bar}</BottomBar> : null}

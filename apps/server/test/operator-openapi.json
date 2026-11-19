@@ -1923,7 +1923,7 @@
                   "properties": {
                     "cause": {
                       "type": "string",
-                      "description": "`brain_unavailable:<code>` (a wait for its computer: `busy` for room, `offline`, `standby`, …) or `provider_outage`. Ignore values you don't know."
+                      "description": "`brain_unavailable:<code>` (a wait for its computer: `busy` for room, `machine_offline`, `machine_paused`, …) or `provider_outage`. Ignore values you don't know."
                     },
                     "waits": {
                       "type": "integer",
@@ -2396,7 +2396,7 @@
                   "properties": {
                     "cause": {
                       "type": "string",
-                      "description": "`brain_unavailable:<code>` (a wait for its computer: `busy` for room, `offline`, `standby`, …) or `provider_outage`. Ignore values you don't know."
+                      "description": "`brain_unavailable:<code>` (a wait for its computer: `busy` for room, `machine_offline`, `machine_paused`, …) or `provider_outage`. Ignore values you don't know."
                     },
                     "waits": {
                       "type": "integer",
@@ -2560,6 +2560,189 @@
           }
         },
         "required": ["from", "to", "bucket", "totals", "series", "more", "orgId", "agents"]
+      },
+      "OperatorRunTimings": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "by": {
+            "type": "string",
+            "enum": ["brain", "model"]
+          },
+          "runs": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Runs created in the window, with the filters."
+          },
+          "profiled": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Of them, the ones that kept at least one claim's stages."
+          },
+          "stages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "brain": {
+                  "type": ["string", "null"],
+                  "description": "What the runs thought with: `model` (a provider's API) or a coding CLI. `other`: none the server knows. Null: runs that had no turn yet."
+                },
+                "model": {
+                  "type": ["string", "null"],
+                  "description": "With `by=model`: the model of the run's latest turn, null when it had none. Else always null."
+                },
+                "stage": {
+                  "type": "string",
+                  "description": "`claim`, `context`, `model` (each turn), `persist`, `events`… `other`: a name not shaped like one the server writes."
+                },
+                "count": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Stages measured, not runs: a run has one `model` per turn."
+                },
+                "medianMs": {
+                  "type": ["integer", "null"]
+                },
+                "p90Ms": {
+                  "type": ["integer", "null"]
+                },
+                "p99Ms": {
+                  "type": ["integer", "null"]
+                },
+                "maxMs": {
+                  "type": ["integer", "null"]
+                }
+              },
+              "required": ["brain", "model", "stage", "count", "medianMs", "p90Ms", "p99Ms", "maxMs"]
+            },
+            "description": "By brain, then model, then the slowest median first. At most 300: the most measured."
+          },
+          "stagesMore": {
+            "type": "boolean",
+            "description": "More stages than were listed."
+          },
+          "computerStarts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "brain": {
+                  "type": ["string", "null"],
+                  "description": "What the runs thought with: `model` (a provider's API) or a coding CLI. `other`: none the server knows. Null: runs that had no turn yet."
+                },
+                "model": {
+                  "type": ["string", "null"],
+                  "description": "With `by=model`: the model of the run's latest turn, null when it had none. Else always null."
+                },
+                "turns": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Turns on a computer that said how they started."
+                },
+                "warm": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Of them, on a process already open."
+                },
+                "initMedianMs": {
+                  "type": ["integer", "null"],
+                  "description": "A new process until it said it was ready."
+                },
+                "initP90Ms": {
+                  "type": ["integer", "null"]
+                },
+                "initP99Ms": {
+                  "type": ["integer", "null"]
+                },
+                "warmFirstEventMedianMs": {
+                  "type": ["integer", "null"],
+                  "description": "Turn start to its first event."
+                },
+                "warmFirstEventP90Ms": {
+                  "type": ["integer", "null"]
+                },
+                "warmFirstEventP99Ms": {
+                  "type": ["integer", "null"]
+                },
+                "coldFirstEventMedianMs": {
+                  "type": ["integer", "null"]
+                },
+                "coldFirstEventP90Ms": {
+                  "type": ["integer", "null"]
+                },
+                "coldFirstEventP99Ms": {
+                  "type": ["integer", "null"]
+                }
+              },
+              "required": [
+                "brain",
+                "model",
+                "turns",
+                "warm",
+                "initMedianMs",
+                "initP90Ms",
+                "initP99Ms",
+                "warmFirstEventMedianMs",
+                "warmFirstEventP90Ms",
+                "warmFirstEventP99Ms",
+                "coldFirstEventMedianMs",
+                "coldFirstEventP90Ms",
+                "coldFirstEventP99Ms"
+              ]
+            },
+            "description": "By brain, then model. At most 300: the ones with most turns."
+          },
+          "waits": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "cause": {
+                  "type": "string",
+                  "description": "`brain_unavailable:<code>`, a wait for its computer or a sign-in on it, by its code: `busy` for room, `machine_offline`, `not_logged_in`, … `other`: not shaped like one. Ignore values you don't know."
+                },
+                "brain": {
+                  "type": ["string", "null"],
+                  "description": "What the runs thought with: `model` (a provider's API) or a coding CLI. `other`: none the server knows. Null: runs that had no turn yet."
+                },
+                "model": {
+                  "type": ["string", "null"],
+                  "description": "With `by=model`: the model of the run's latest turn, null when it had none. Else always null."
+                },
+                "waits": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "runs": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Distinct runs that waited."
+                },
+                "medianSec": {
+                  "type": ["integer", "null"]
+                },
+                "p90Sec": {
+                  "type": ["integer", "null"]
+                },
+                "p99Sec": {
+                  "type": ["integer", "null"]
+                },
+                "totalSec": {
+                  "type": ["integer", "null"]
+                }
+              },
+              "required": ["cause", "brain", "model", "waits", "runs", "medianSec", "p90Sec", "p99Sec", "totalSec"]
+            },
+            "description": "The waits for a computer alone (a provider's outage is not among them). By brain, then model, then most waits first, at most 300: the most frequent. Each wait lasts until the run's next step, its end, or the earlier of now and `to`."
+          }
+        },
+        "required": ["from", "to", "by", "runs", "profiled", "stages", "stagesMore", "computerStarts", "waits"]
       },
       "OperatorAiAccounts": {
         "type": "object",
@@ -2979,6 +3162,51 @@
                   "type": ["string", "null"],
                   "description": "`turn` or `probe`."
                 },
+                "usage": {
+                  "type": ["object", "null"],
+                  "properties": {
+                    "limited": {
+                      "type": "boolean",
+                      "description": "The plan refused a request for its limit."
+                    },
+                    "checkedAt": {
+                      "type": ["string", "null"],
+                      "description": "When the server last asked its computer to read a plan stuck at its limit again."
+                    },
+                    "windows": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "five_hour",
+                              "seven_day",
+                              "seven_day_opus",
+                              "seven_day_sonnet",
+                              "monthly",
+                              "other"
+                            ],
+                            "description": "`other`: a window the list has no word for; never the provider's own name for it."
+                          },
+                          "usedPercent": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "resetsAt": {
+                            "type": ["string", "null"]
+                          }
+                        },
+                        "required": ["kind", "usedPercent", "resetsAt"]
+                      },
+                      "description": "At most 10."
+                    }
+                  },
+                  "required": ["limited", "checkedAt", "windows"],
+                  "description": "Its plan's windows as its computer last reported them (`usageAt`); null: none."
+                },
                 "runnerVersion": {
                   "type": ["string", "null"]
                 },
@@ -3009,6 +3237,7 @@
                 "lastFailureAt",
                 "usageAt",
                 "usageSource",
+                "usage",
                 "runnerVersion",
                 "protocol"
               ]
@@ -4534,6 +4763,80 @@
             },
             "required": ["calls", "input", "output", "cacheRead", "cacheWrite", "costUsd", "byModel"]
           },
+          "claims": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "endedAt": {
+                  "type": ["string", "null"],
+                  "description": "When the claim ended; null: it was kept without it."
+                },
+                "totalMs": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Its stages' time in all."
+                },
+                "queries": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "The SQL statements it issued."
+                },
+                "stages": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "stage": {
+                        "type": "string",
+                        "description": "`claim`, `context`, `model#1` (the turn it is of), `persist`, `events`… `other`: a name not shaped like one the server writes."
+                      },
+                      "ms": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "queries": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": ["stage", "ms", "queries"]
+                  },
+                  "description": "In the order they ran, at most 200."
+                },
+                "stagesCut": {
+                  "type": "boolean",
+                  "description": "It kept more than 200 stages."
+                },
+                "computerTurns": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "warm": {
+                        "type": "boolean",
+                        "description": "On a process already open."
+                      },
+                      "initMs": {
+                        "type": ["integer", "null"],
+                        "minimum": 0,
+                        "description": "A new process until it said it was ready."
+                      },
+                      "firstEventMs": {
+                        "type": ["integer", "null"],
+                        "minimum": 0,
+                        "description": "Turn start to its first event."
+                      }
+                    },
+                    "required": ["warm", "initMs", "firstEventMs"]
+                  },
+                  "description": "How each of its turns on a computer started, as the computer said, at most 50."
+                }
+              },
+              "required": ["endedAt", "totalMs", "queries", "stages", "stagesCut", "computerTurns"]
+            },
+            "description": "Where the time went each time a worker took the run up (a claim), oldest first: the last 10 the run kept, none on a run that kept none. A wait between two claims is in neither."
+          },
           "machine": {
             "type": ["object", "null"],
             "properties": {
@@ -4565,7 +4868,7 @@
             "description": "The computer it is tied to; null: none."
           }
         },
-        "required": ["run", "steps", "stepCount", "asks", "jobs", "moreJobs", "usage", "machine"]
+        "required": ["run", "steps", "stepCount", "asks", "jobs", "moreJobs", "usage", "claims", "machine"]
       },
       "OperatorAsk": {
         "type": "object",
@@ -9756,6 +10059,103 @@
         }
       }
     },
+    "/analytics/run-timings": {
+      "get": {
+        "tags": ["Operator"],
+        "summary": "Where the runs' time went: each stage, how computer turns started and the waits, per brain or model",
+        "description": "Of the runs created in the window: 2 days at most across workspaces, 31 in one (`orgId`). Counts, times and the server's own words only: no message, no name. An unknown workspace answers with zeros.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "An ISO 8601 instant: runs created at or after it.",
+              "example": "2026-10-30T00:00:00Z"
+            },
+            "required": true,
+            "description": "An ISO 8601 instant: runs created at or after it.",
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "An ISO 8601 instant: runs created before it. After `from`, at most 2 days apart across workspaces and 31 with `orgId`. Else 400 `analytics.range`.",
+              "example": "2026-10-31T00:00:00Z"
+            },
+            "required": true,
+            "description": "An ISO 8601 instant: runs created before it. After `from`, at most 2 days apart across workspaces and 31 with `orgId`. Else 400 `analytics.range`.",
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Only this workspace's runs."
+            },
+            "required": false,
+            "description": "Only this workspace's runs.",
+            "name": "orgId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Only this agent's runs. Only with `orgId`."
+            },
+            "required": false,
+            "description": "Only this agent's runs. Only with `orgId`.",
+            "name": "agentId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": ["brain", "model"],
+              "default": "brain",
+              "description": "`brain`: a row per brain. `model`: a row per brain and model."
+            },
+            "required": false,
+            "description": "`brain`: a row per brain. `model`: a row per brain and model.",
+            "name": "by",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperatorRunTimings"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request (`analytics.range`: the dates)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/analytics/ai-accounts": {
       "get": {
         "tags": ["Operator"],
@@ -10679,7 +11079,7 @@
     "/runs/{runId}/trace": {
       "get": {
         "tags": ["Operator"],
-        "summary": "One run from start to end: its steps, what it asked, its jobs, what it spent and its computer",
+        "summary": "One run from start to end: its steps, what it asked, its jobs, what it spent, where its time went and its computer",
         "description": "Which tool each step called, whether it is the server's own, whether it failed and how, and how big its input and result were, never either of them. The steps page back from the end with `beforeSeq`.",
         "parameters": [
           {

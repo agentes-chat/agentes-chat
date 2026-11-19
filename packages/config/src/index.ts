@@ -1,4 +1,5 @@
 import { createECDH } from "node:crypto";
+import type { z } from "zod";
 import { type Config, configSchema, envVars } from "./schema";
 
 export { composioAuthConfigs, connectorOAuthApps, githubAppConfig, mcpCallerIdentity } from "./connectors";
@@ -163,6 +164,31 @@ export function redactConfig(config: Config): Record<string, unknown> {
       return [key, def.secret ? "********" : value];
     }),
   );
+}
+
+/** Settings a problem report gives by value: modes, never anything a person typed. */
+const REPORTED_VALUES = new Set(["TELEMETRY", "INSTALL_MODE", "NODE_ENV", "LOG_LEVEL", "MACHINE_PROVISIONING"]);
+
+/**
+ * Which settings differ from their defaults, for a problem report: `config.<NAME>: "set"`, never the value (a few
+ * modes excepted), and `config.publicUrl` as `https`, `http` or `loopback`, never the host.
+ */
+export function configFacts(config: Config): Record<string, string> {
+  const facts: Record<string, string> = {};
+  for (const [key, def] of Object.entries(envVars)) {
+    if (key === "PUBLIC_URL") continue;
+    const value = (config as Record<string, unknown>)[key];
+    const fallback = (def.schema as z.ZodType).safeParse(undefined);
+    const isDefault = fallback.success
+      ? JSON.stringify(fallback.data) === JSON.stringify(value)
+      : value === undefined || value === "";
+    if (isDefault) continue;
+    facts[`config.${key}`] = REPORTED_VALUES.has(key) && typeof value === "string" ? value : "set";
+  }
+  const url = new URL(config.PUBLIC_URL);
+  const loopback = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+  facts["config.publicUrl"] = loopback ? "loopback" : url.protocol === "https:" ? "https" : "http";
+  return facts;
 }
 
 /**

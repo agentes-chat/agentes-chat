@@ -922,6 +922,7 @@ beforeAll(async () => {
   ]);
   const today = new Date().toISOString().slice(0, 10);
   const days = `from=${today}&to=${today}`;
+  const hours = `from=${new Date(Date.now() - 3600_000).toISOString()}&to=${new Date(Date.now() + 3600_000).toISOString()}`;
   const ref = (text: string, inOrg = true) =>
     `/resolve?ref=${encodeURIComponent(text)}${inOrg ? `&orgId=${orgId}` : ""}`;
   const review = "reason=a%20report&operator=someone";
@@ -940,6 +941,8 @@ beforeAll(async () => {
     `/analytics/connectors/github?${days}`,
     `/analytics/connectors/gmail?${days}`,
     `/analytics/work?${days}`,
+    ...["brain", "model"].map((by) => `/analytics/run-timings?${hours}&by=${by}`),
+    `/analytics/run-timings?${hours}&orgId=${orgId}&agentId=${agentId}`,
     `/analytics/ai-accounts?${days}`,
     "/ai-accounts?limit=200",
     "/claude-auth",
@@ -1049,6 +1052,7 @@ beforeAll(async () => {
     ["/jobs?stuck=maybe", 400],
     ["/events?after=nope", 400],
     ["/analytics", 400],
+    [`/analytics/run-timings?${days}`, 400],
     ["/nope", 404],
   ];
 });

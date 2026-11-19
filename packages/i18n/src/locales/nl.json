@@ -21038,6 +21038,38 @@
       "askFirst": "Vragen voor het versturen"
     }
   },
+  "problemReport": {
+    "button": "Rapport versturen",
+    "title": "Rapport naar agentes.chat versturen",
+    "lead": "Het agentes.chat-team krijgt: versies, welke instellingen zijn ingesteld (nooit hun waarden), wat misging en de laatste regels van de logs. Geen berichten, pagina's, namen of sleutels.",
+    "noteLabel": "Wat gebeurde er? (optioneel)",
+    "notePlaceholder": "Wat je deed toen het stopte",
+    "emailLabel": "E-mail voor een antwoord (optioneel)",
+    "emailHelp": "Alleen als je een antwoord wilt.",
+    "showAll": "Alles bekijken wat wordt verstuurd",
+    "copy": "Rapport kopiëren",
+    "copied": "Gekopieerd",
+    "send": "Versturen",
+    "sending": "Versturen…",
+    "cancel": "Annuleren",
+    "loading": "Details verzamelen…",
+    "sentTitle": "Rapport {{id}} verstuurd",
+    "sentText": "Als je ons schrijft, noem dan deze code.",
+    "sentTextReply": "We antwoorden op {{email}}. Noem deze code als je ons schrijft.",
+    "copyCode": "Code kopiëren",
+    "done": "Klaar",
+    "noLogComputer": "{{computer}} reageerde niet, dus de log ervan zit er niet bij.",
+    "oldRunner": "De agentes.chat-app op {{computer}} is te oud om de log mee te sturen. Werk hem daar bij om hem mee te sturen.",
+    "noServerLines": "De logregels van de server zitten er alleen bij als de eigenaar van de installatie het rapport verstuurt.",
+    "off": "Versturen staat uit op deze server (PROBLEM_REPORT_URL=off). Kopieer het rapport om het te delen.",
+    "errorRate": "Te veel rapporten in korte tijd. Probeer het over {{minutes}} min opnieuw of kopieer het rapport.",
+    "errorUnreachable": "agentes.chat reageerde niet. Probeer het opnieuw of kopieer het rapport.",
+    "errorRefused": "agentes.chat heeft dit rapport niet geaccepteerd (het komt misschien van een oudere versie). Kopieer het rapport in plaats daarvan.",
+    "errorPreview": "De details konden niet worden verzameld: {{reason}}",
+    "emailInvalid": "Dat e-mailadres lijkt niet te kloppen. Pas het aan of laat het leeg.",
+    "settingsTitle": "Werkt er iets niet?",
+    "settingsText": "Stuur de technische details naar het agentes.chat-team."
+  },
   "live": {
     "slides": {
       "rail": {
