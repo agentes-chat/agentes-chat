@@ -39,7 +39,7 @@ import Animated, { FadeIn, LayoutAnimationConfig } from "react-native-reanimated
 import { useOrg } from "@/providers/org";
 import { Button, LineIcon, Text, useReducedMotion } from "@/ui";
 import { router } from "@/ui/navigation";
-import { useCardTop } from "../chat/look";
+import { useCardTop, useMessageCardCorners } from "../chat/look";
 import { chatHref } from "../links/logic";
 import { useFailed } from "../routines/hooks";
 import { AgentFace } from "../shared/Face";
@@ -69,6 +69,7 @@ function WeekCard({ message, card }: { message: Message; card: TeamWeekCard }) {
   const { orgId, org } = useOrg();
   const c = useColors();
   const cardTop = useCardTop();
+  const cardCorners = useMessageCardCorners();
   const dir = useDirectory();
   const channels = useChannels(orgId).data ?? [];
   const proposals = useCardProposals(orgId, card.proposalIds);
@@ -151,7 +152,7 @@ function WeekCard({ message, card }: { message: Message; card: TeamWeekCard }) {
   return (
     // Its week ("Como foi a semana do time, de 28 out. a 3 nov.") is the message's text, above.
     <View>
-      <View style={[styles.card, { backgroundColor: c.raised, borderColor: c.line2 }, cardTop]}>
+      <View style={[styles.card, { backgroundColor: c.raised, borderColor: c.line2 }, cardCorners, cardTop]}>
         <View style={styles.head}>
           <Text variant="footnote" tone="muted" style={styles.semibold}>
             {t(teamWeekTitleKey(card))}
@@ -248,7 +249,7 @@ function WeekCard({ message, card }: { message: Message; card: TeamWeekCard }) {
             <Pressable
               accessibilityRole="button"
               onPress={openRightHandSettings}
-              hitSlop={8}
+              hitSlop={{ left: 8, right: 8 }}
               style={({ pressed }) => [styles.when, pressed && styles.pressed]}
             >
               <Text variant="footnote" tone="muted">
@@ -441,6 +442,7 @@ const styles = StyleSheet.create({
     gap: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
-  when: { alignSelf: "flex-start", minHeight: 28, justifyContent: "center" },
+  // A finger's 44 points tall, laid out as the line's 28: 8 above and below reach into the footer's gap and padding.
+  when: { alignSelf: "flex-start", minHeight: 44, marginVertical: -8, justifyContent: "center" },
   pressed: { opacity: 0.6 },
 });

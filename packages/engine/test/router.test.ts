@@ -681,6 +681,11 @@ describe("LLM strategy (end to end through the outbox)", () => {
       error: null,
     });
     expect(decision?.usageRecordId).toBe(usage.find((u) => u.kind === "router")?.id ?? "");
+    // The router's time is the first stage of the run it started.
+    const [run] = await f.db.select({ profiles: schema.agentRuns.profiles }).from(schema.agentRuns);
+    const [first] = (run?.profiles ?? []) as { stages: { stage: string; ms: number }[] }[];
+    expect(first?.stages.map((s) => s.stage).slice(0, 2)).toEqual(["router", "claim"]);
+    expect(first?.stages[0]?.ms).toBeGreaterThan(0);
   });
 
   test("after an agent answers, another agent may join on its own; its reply says nobody called it", async () => {

@@ -12,7 +12,7 @@ import { createFakeApi, fakeMachinesOf, ORG_ID, seedState } from "./fake-api";
 import { makeServices, screen, settle } from "./render";
 
 /*
- * Adding a Muse account (ADR 0174): its CLI signs in by device code, so the dialog shows the page, then the code Meta's
+ * Adding a Muse account (ADR 0203): its CLI signs in by device code, so the dialog shows the page, then the code Meta's
  * page asks the person to confirm, then waits for the computer to finish by itself. The code belongs to that sign-in:
  * nothing shows it before one starts.
  */

@@ -20,7 +20,7 @@ import { useLocalSearchParams } from "expo-router";
 import type { TFunction } from "i18next";
 import { memo, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pressable, RefreshControl, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import Animated, { FadeIn, FadeOut, LayoutAnimationConfig, LinearTransition } from "react-native-reanimated";
 import { useOrg } from "@/providers/org";
 import {
@@ -35,8 +35,6 @@ import {
   LIST_INSET,
   ListRow,
   PersonAvatar,
-  PULL_TINT,
-  PullOrbit,
   SectionHeader,
   SkeletonList,
   SwipeRow,
@@ -51,13 +49,14 @@ import { WhenAsksLink } from "../approvals/when-asks";
 import type { AskKind } from "../chat/ask-store";
 import { ASK_ICON, AskButtons } from "../chat/asks";
 import { dashboardWaitingCard } from "../dashboards/logic";
-import { isDeviceNotice } from "../devices/logic";
+import { deviceNoticeOf, isDeviceNotice } from "../devices/logic";
 import { DeviceNoticeActions, DeviceNoticeCard } from "../devices/notices";
 import { notificationHref, notificationWebPath, routineHref } from "../links/logic";
 import { openWebPath } from "../links/open-web";
 import { ChangeRequestCard } from "../right-hand/SettingsCard";
 import { AdminAskAdd } from "../shared/AdminAsk";
 import { AgentFace, Face } from "../shared/Face";
+import { LoadFailed } from "../shared/FirstUse";
 import { useColors, useDirectory, useNow, useOrgId, usePullRefresh, useWhen } from "../shared/hooks";
 import { Tile } from "../shared/parts";
 import { useWaitingApprovals } from "../shared/queries";
@@ -112,12 +111,7 @@ export function ActivityScreen() {
   // A card decided while the page shows fades out and the rest close up; a new one fades in.
   const cardMotion = reduced ? {} : { entering: CARD_IN, exiting: CARD_OUT, layout: LinearTransition };
   return (
-    <LargeTitleScreen
-      title={t("mobile.activity.title")}
-      {...header}
-      refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} tintColor={PULL_TINT} />}
-      pullMark={<PullOrbit refreshing={pull.refreshing} />}
-    >
+    <LargeTitleScreen title={t("mobile.activity.title")} {...header} pull={pull}>
       <Filters
         items={[
           { key: "all", label: t("mobile.activity.filter.all") },
@@ -153,7 +147,8 @@ export function ActivityScreen() {
           <SkeletonList rows={1} />
         </>
       ) : list.isError && !list.data ? (
-        <RetryLine onRetry={() => void list.refetch()} />
+        // Nothing kept to read: the list's error, with the way to ask again.
+        <LoadFailed onRetry={() => void list.refetch()} />
       ) : filter !== "done" ? (
         <AllClear />
       ) : days.length === 0 ? (
@@ -170,16 +165,19 @@ export function ActivityScreen() {
           ))}
         </View>
       ))}
+      {/* The next page, as Drive's "Mostrar mais": the kit's button, centered, its wheel while the page comes. */}
       {list.hasNextPage ? (
-        <Pressable
-          onPress={() => void list.fetchNextPage()}
-          accessibilityRole="button"
-          style={({ pressed }) => [styles.more, pressed && styles.morePressed]}
-        >
-          <Text variant="small" tone="muted">
-            {t("mobile.activity.more")}
-          </Text>
-        </Pressable>
+        <View style={styles.more}>
+          <Button
+            variant="secondary"
+            size="sm"
+            label={t("mobile.activity.more")}
+            loading={list.isFetchingNextPage}
+            onPress={() => {
+              if (!list.isFetchingNextPage) void list.fetchNextPage();
+            }}
+          />
+        </View>
       ) : null}
     </LargeTitleScreen>
   );
@@ -519,8 +517,9 @@ const ActivityRow = memo(function ActivityRow({ item: n, divider }: { item: AppN
         ? ""
         : failed
           ? failed.sub
-          : // A widget's or routine's name is often its line too: said once ("Assinaturas hoje", not twice).
-            [emojisOf(n).join(" "), [...new Set([line, placeOf(n)].filter(Boolean))].join(" · ")]
+          : // Where first, then the words, as the web inbox ("#canal · snippet"). A widget's or routine's name is
+            // often its line too: said once ("Assinaturas hoje", not twice).
+            [emojisOf(n).join(" "), [...new Set([placeOf(n), line].filter(Boolean))].join(" · ")]
               .filter(Boolean)
               .join(" ");
   const time = when.short(n.updatedAt);
@@ -624,8 +623,8 @@ const ActivityRow = memo(function ActivityRow({ item: n, divider }: { item: AppN
           <Button variant="secondary" size="sm" label={t("mobile.activity.chooseModel")} onPress={open} />
         </View>
       ) : null}
-      {/* An agent holds the person's phone: Stop, right here. */}
-      {isDeviceNotice(n.kind) ? (
+      {/* An agent holds the person's phone: Stop, right here (nothing, and no room for it, once it let go). */}
+      {deviceStoppable(n) ? (
         <View style={styles.change}>
           <DeviceNoticeActions item={n} />
         </View>
@@ -647,6 +646,13 @@ const ActivityRow = memo(function ActivityRow({ item: n, divider }: { item: AppN
   );
 });
 
+/** Whether a phone notice still has its Stop under the row (`DeviceNoticeActions` draws it only then). */
+function deviceStoppable(n: AppNotification): boolean {
+  if (!isDeviceNotice(n.kind) || n.doneAt) return false;
+  const d = deviceNoticeOf(n);
+  return d?.kind === "device.in_use" && Boolean(d.phoneId);
+}
+
 /** Two faces share the avatar box (grouped items: reactions, replies). */
 const STACKED = 36;
 const faceOf = (a: AppNotification["actors"][number] | undefined) =>
@@ -657,20 +663,15 @@ const styles = StyleSheet.create({
   decision: { gap: 4 },
   // Cards 12 apart, at the screen's margin.
   cards: { gap: 12, paddingHorizontal: 16 },
-  change: { paddingHorizontal: 16, paddingBottom: 12 },
-  wpressed: { opacity: 0.85 },
+  // What is decided right under a row starts at the row's words (the text column at 80), not under its face.
+  change: { paddingLeft: LIST_INSET, paddingRight: 16, paddingBottom: 12 },
   faces: { flexDirection: "row" },
   overlap: { marginLeft: -6 },
-  grow: { flex: 1, minWidth: 0 },
-  // Nothing waiting, on the page itself: the sky band edge to edge, its crew, the words, the next event's line.
-  // One event line: the 16-point mark on the first line, the words, when at the end.
   stack: { width: LIST_AVATAR, height: LIST_AVATAR },
   back: { position: "absolute", top: 0, left: 0 },
   front: { position: "absolute", right: -2, bottom: -2, padding: 2 },
-  bold: { fontWeight: "600" },
   divider: { position: "absolute", top: 0, left: LIST_INSET, right: 0, height: StyleSheet.hairlineWidth },
-  more: { alignItems: "center", paddingVertical: 16 },
-  morePressed: { opacity: 0.6 },
+  more: { alignItems: "center", paddingTop: 20, paddingBottom: 8 },
 });
 
 const CARD_IN = FadeIn.duration(160);

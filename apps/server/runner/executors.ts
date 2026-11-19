@@ -2,7 +2,7 @@ import { type ChildProcess, execFile, spawn } from "node:child_process";
 import type { EventEmitter } from "node:events";
 import { accessSync, constants, existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { delimiter, join, win32 } from "node:path";
+import { delimiter, isAbsolute, join, win32 } from "node:path";
 import {
   CLI_ERROR_MAX,
   CLI_GIT_MISSING,
@@ -14,6 +14,7 @@ import {
 import { isOpencodeFreeModel, OPENCODE_FREE_MODELS } from "@agenteschat/providers/plans";
 import { killTree } from "./exec";
 import { readSmallJson, writeJson } from "./json-file";
+import { usualDirs } from "./login-path";
 import { SHARED_BIN_ENV } from "./shared-folder";
 
 /**
@@ -69,6 +70,8 @@ export function resolveCommand(
   sharedBin = process.env[SHARED_BIN_ENV],
 ): string {
   if (process.platform === "win32" || command.includes("/")) return command;
+  const picked = command === "codex" ? pickedCodex() : undefined;
+  if (picked) return picked;
   const dirs = pathList.split(delimiter).filter((dir) => dir && dir !== sharedBin);
   for (const dir of dirs) {
     const full = join(dir, command);
@@ -499,7 +502,7 @@ export const MUSE_CATALOG_TIMEOUT_MS = 6000;
 
 /**
  * `model/list`'s answer, as the host's stdout carries it: NDJSON JSON-RPC frames, the result being
- * `{ models: ModelCatalogEntry[], providerId, profileId, source }` (ADR 0174, `muse schema generate-json-schema`).
+ * `{ models: ModelCatalogEntry[], providerId, profileId, source }` (ADR 0203, `muse schema generate-json-schema`).
  * `modelId` is what `session/start` takes as `modelId`, `displayLabel` its name. A frame that isn't JSON, a
  * notification, an error answer and a row without a usable id are all skipped; at most 60 rows, like every other CLI.
  */
@@ -655,7 +658,7 @@ export function museModelCatalog(
 export type MuseCatalog = () => Promise<CursorModelInfo[]>;
 
 /**
- * Protocol 59 (ADR 0174): the Muse Code CLI, its version and the models `model/list` returns. The catalog costs a host
+ * Protocol 74 (ADR 0203): the Muse Code CLI, its version and the models `model/list` returns. The catalog costs a host
  * of its own, so it is read only once `--version` matched, and a host that fails, times out or answers nothing leaves
  * the version standing: it says nothing about the CLI being there, so the look is not `unsure` (which would retry it
  * every 30 s for nothing) and no other CLI's look is touched.
@@ -689,6 +692,67 @@ const versionFailed = (r: RunResult): Probe =>
 
 const firstLine = (r: RunResult) => r.stdout.trim().split("\n")[0]?.trim().slice(0, 80) ?? "";
 
+/** A version anywhere in a `--version` output: a warning may come first, or the CLI may write it to stderr. */
+const VERSION = /\d+\.\d+\.\d+[\w.+-]*/;
+
+/** The `--version` line that holds a version, else its first line; "unknown" when it printed nothing. */
+export function versionLine(r: Pick<RunResult, "stdout" | "stderr">): string {
+  const lines = `${r.stdout}\n${r.stderr ?? ""}`
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  return (lines.find((l) => VERSION.test(l)) ?? lines[0] ?? "unknown").slice(0, 80);
+}
+
+/** `a` is a newer version than `b`; a line with no version in it is older than any. */
+export function newerVersion(a: string, b: string): boolean {
+  const parts = (s: string) => VERSION.exec(s)?.[0].split(/\D+/).slice(0, 3).map(Number) ?? [-1];
+  const x = parts(a);
+  const y = parts(b);
+  for (let i = 0; i < 3; i++) if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) > (y[i] ?? 0);
+  return false;
+}
+
+/**
+ * Every `codex` this runner could start, each once: the PATH in order, then the usual install folders. Never one in
+ * the shared `bin/` (the agents write there) or in a folder that isn't a full path.
+ */
+export function codexCandidates(
+  pathList = process.env.PATH ?? "",
+  platform: NodeJS.Platform = process.platform,
+  sharedBin = process.env[SHARED_BIN_ENV],
+): string[] {
+  if (platform === "win32") return [];
+  const dirs = [...pathList.split(delimiter), ...usualDirs()].filter((d) => isAbsolute(d) && d !== sharedBin);
+  return [...new Set(dirs.map((d) => join(d, "codex")))].filter((f) => isFile(f) && isExecutable(f));
+}
+
+/**
+ * The `codex` the last look chose (`detectCodex`): `resolveCommand` starts this one, so a turn runs the Codex whose
+ * version was reported, never an older copy earlier on the PATH.
+ */
+let codexPick: string | undefined;
+
+/** The `codex` the last look chose, while it is still there. */
+export function pickedCodex(): string | undefined {
+  return codexPick && isExecutable(codexPick) ? codexPick : undefined;
+}
+
+/** Each copy's `--version`; the newest that answers wins (the first on the PATH among equals), with its path. */
+async function detectCodex(run: Run, bins: string[]): Promise<Probe> {
+  const looks = await Promise.all(bins.map(async (path) => ({ path, r: await run(path, ["--version"]) })));
+  const ok = looks
+    .filter(({ r }) => !r.error && r.status === 0)
+    .map(({ path, r }) => ({ path, version: versionLine(r) }));
+  const best = ok.reduce<(typeof ok)[number] | undefined>(
+    (a, b) => (!a || newerVersion(b.version, a.version) ? b : a),
+    undefined,
+  );
+  codexPick = best?.path;
+  if (best) return { entry: best };
+  return looks[0] ? versionFailed(looks[0].r) : detectVersion(run, "codex");
+}
+
 /** `<bin> --version` checked against `shape`, then `<bin> models` (none when signed out or offline). */
 async function detectWithModels(
   run: Run,
@@ -712,8 +776,7 @@ async function detectWithModels(
 async function detectVersion(run: Run, name: "claude" | "codex"): Promise<Probe> {
   const r = await run(name, ["--version"]);
   if (r.error || r.status !== 0) return versionFailed(r);
-  const version = firstLine(r);
-  if (!version) return {};
+  const version = versionLine(r);
   if (name !== "claude") return { entry: { version } };
   const auth = await claudeAuth(run);
   return auth ? { entry: { version, ...auth } } : { entry: { version }, unsure: true };
@@ -724,22 +787,22 @@ async function detectVersion(run: Run, name: "claude" | "codex"): Promise<Probe>
  * whole look is `unsure`, so it is retried soon instead of cached. `strikes` counts each CLI's failing exits in a
  * row across looks (the caller keeps it). A CLI whose `--version` fails with no good look to keep, or past its
  * strikes, is `broken` with its error line: it is there and can't start, which is not missing. Claude Code on Windows
- * says why only through `gitMissing`: without Git for Windows it can't start at all.
- * row across looks (the caller keeps it). `museCatalog` is Muse's catalog, which only an MSP host can answer (a test
- * passes its own instead of starting one).
+ * says why only through `gitMissing`: without Git for Windows it can't start at all. `museCatalog` is Muse's catalog,
+ * which only an MSP host can answer (a test passes its own instead of starting one).
  */
 export async function detectExecutors(
   run: Run = defaultRun,
   prev: Executors = {},
   strikes: Partial<Record<string, number>> = {},
   gitMissing: () => boolean = () => false,
+  codexBins: () => string[] = run === defaultRun ? codexCandidates : () => [],
   museCatalog: MuseCatalog = museModelCatalog,
 ): Promise<{ found: Executors; unsure: boolean }> {
   const safe = (p: () => Promise<Probe>) => p().catch((): Probe => ({ unsure: true }));
   const names = ["claude", "codex", "cursor", "opencode", "grok", "antigravity", "muse"] as const;
   const probes = await Promise.all([
     safe(() => detectVersion(run, "claude")),
-    safe(() => detectVersion(run, "codex")),
+    safe(() => detectCodex(run, codexBins())),
     safe(() => detectCursor(run)),
     safe(() => detectOpencode(run)),
     safe(() => detectGrok(run)),
@@ -849,11 +912,15 @@ export function cachedExecutors(
  * `codex --version` alone, for a Codex turn: a good answer is kept for the TTL; null when it couldn't tell (timed
  * out, failed), never cached.
  */
-export function cachedCodexVersion(run: Run = defaultRun, now: () => number = Date.now) {
+export function cachedCodexVersion(
+  run: Run = defaultRun,
+  now: () => number = Date.now,
+  codexBins: () => string[] = run === defaultRun ? codexCandidates : () => [],
+) {
   let kept: { version?: string; at: number } | undefined;
   return async (): Promise<string | undefined | null> => {
     if (kept && now() - kept.at < EXECUTORS_TTL_MS) return kept.version;
-    const p = await detectVersion(run, "codex").catch((): Probe => ({ unsure: true }));
+    const p = await detectCodex(run, codexBins()).catch((): Probe => ({ unsure: true }));
     if (p.unsure) return null;
     kept = { ...(p.entry ? { version: p.entry.version } : {}), at: now() };
     return kept.version;

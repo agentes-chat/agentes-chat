@@ -6,12 +6,13 @@ import { answersOthers, audienceOf } from "./audience";
 import { accountablePerson, runAuthority } from "./authority";
 import { isComputerBrain } from "./brains/types";
 import { endsAsking } from "./brakes";
+import { CONFIDENTIAL_NOT_SHOWN, CONFIDENTIAL_OUTBOUND } from "./confidential";
 import { getChannelCached } from "./context";
 import { publishDelivery } from "./delivery";
 import { isAgentOnlyDm } from "./dms";
 import { decisionNudge, FOLLOW_THROUGH_NUDGE, FOLLOW_THROUGH_NUDGE_DM, MISSION_ASK_NUDGE } from "./follow-through";
 import { cutText, cutTextEnd } from "./format";
-import type { Judge } from "./judge";
+import { type Judge, JudgeBudgetError } from "./judge";
 import type { NoticeKind } from "./notices";
 import { notifyRunFailed } from "./notification-producers";
 import { ANSWER_NUDGE } from "./reply-policy";
@@ -128,6 +129,7 @@ const SAFETY_CODES = new Set([
   "outbound.private_text",
   "outbound.credential",
   "outbound.long",
+  CONFIDENTIAL_OUTBOUND,
 ]);
 
 const isSafetyCode = (code: unknown) => typeof code === "string" && SAFETY_CODES.has(code);
@@ -403,8 +405,8 @@ export async function continuationVerdict(
     answers = await ask(learned);
   } catch (error) {
     // Some providers' filters refuse a wording (a Claude subscription sign-in's misleading 400): the follow-through
-    // verdict must never fail because of the extra question, so it is asked again alone.
-    if (!learned) throw error;
+    // verdict must never fail because of the extra question, so it is asked again alone. Not past the turn end's wait.
+    if (!learned || error instanceof JudgeBudgetError) throw error;
     learned = false;
     input.onLearnFailed?.(error);
     answers = await ask(false);
@@ -513,17 +515,38 @@ export async function runCalls(db: Database, run: { id: string; orgId: string })
     if (kind === "tool_call") calls.set(id, { name, input: data.input });
     else {
       const call = calls.get(id) ?? { name, input: undefined };
+      const read = data.data as { outside?: unknown; confidential?: unknown; code?: unknown } | undefined;
       call.result = {
-        content: String(data.content ?? ""),
+        // A confidential result's words (ADR 0190) go to the run's own model and to no other reader of its calls.
+        content: read?.confidential === true ? CONFIDENTIAL_NOT_SHOWN : String(data.content ?? ""),
         isError: data.isError === true,
         // `data.data.outside`: the gateway's mark for any outside read, which survives `shown` dropping the envelope.
-        external: data.external === true || (data.data as { outside?: unknown } | undefined)?.outside === true,
+        external: data.external === true || read?.outside === true,
       };
-      call.safety = data.isError === true && isSafetyCode((data.data as { code?: unknown } | undefined)?.code);
+      call.safety = data.isError === true && isSafetyCode(read?.code);
       calls.set(id, call);
     }
   }
   return [...calls.values()];
+}
+
+/**
+ * The run's calls that repeat an earlier one that worked (same tool and argument, its stated `why` aside): the run's
+ * executed calls less these are its work, so a turn told to go on that only re-runs what it already did earns no
+ * further nudge.
+ */
+export async function repeatedCalls(db: Database, run: { id: string; orgId: string }) {
+  const done = new Set<string>();
+  let repeated = 0;
+  for (const call of await runCalls(db, run)) {
+    const { why: _, ...input } = (
+      call.input && typeof call.input === "object" ? call.input : { value: call.input }
+    ) as Record<string, unknown>;
+    const key = `${call.name}\u0000${JSON.stringify(input)}`;
+    if (done.has(key)) repeated++;
+    else if (call.result && !call.result.isError) done.add(key);
+  }
+  return repeated;
 }
 
 export interface RunCall {
@@ -576,6 +599,8 @@ export interface TurnEnd {
   comesBack?(): Promise<boolean>;
   /** The judgment; null when the workspace has no judge. */
   verdict: (() => Promise<ContinuationVerdict>) | null;
+  /** Starts what the judgment reads, called beside `wakesLater` once the judgment may run. */
+  prepare?(): void;
   /** What an `untried` turn is reminded of (`untriedNudge`): its means and what it tried, filled by `verdict`. */
   evidence?: { means: string[]; tried: string[] };
 }
@@ -646,6 +671,9 @@ async function answerTurnEnd(t: TurnEnd): Promise<TurnEndDecision> {
   if (!t.judged || !t.verdict) return { outcome: "done", rule: t.verdict ? "nothing_to_judge" : "no_judge" };
   if (!canNudge && !t.state.askPending && (t.state.askNudged || t.kind !== "conversation"))
     return { outcome: "done", rule: "cap" };
+  // The judgment's evidence starts beside `wakes_later`; the judgment itself waits for it, which spares it. `comes_back`
+  // is read only after a continue, the rare verdict, so most turn ends pay nothing for it.
+  t.prepare?.();
   if (await t.wakesLater().catch(() => false)) return { outcome: "waiting", rule: "wakes_later" };
   let verdict: ContinuationVerdict;
   try {

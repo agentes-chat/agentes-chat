@@ -33,7 +33,7 @@ import type { Spawn } from "./scope-gate";
 import { agentSecrets } from "./secrets";
 
 /**
- * The Muse Code brain (protocol 59, ADR 0174): a turn of Meta's agent on the agent's computer, driven over **MSP** —
+ * The Muse Code brain (protocol 74, ADR 0203): a turn of Meta's agent on the agent's computer, driven over **MSP** —
  * one `muse serve` host per turn, which speaks the protocol on its stdio — under a person's signed-in subscription.
  *
  * Why `serve` and not `muse exec`: a subscription turn needs a session that outlives the turn (the next message
@@ -158,8 +158,7 @@ export function museHostEnv(base: NodeJS.ProcessEnv = process.env): NodeJS.Proce
  * The account's settings document: no server of ours in it (the bridge travels on `session/start` instead — a name in
  * both places is rejected as a conflict), and none of the machine's hooks (they run unsandboxed).
  */
-export function museSettings(input: { mcp: { token: string; url?: string }; mcpCommand?: string[] }): string {
-  const env = (name: string) => `\${${name}}`;
+export function museSettings(): string {
   return JSON.stringify({
     // Required: without it every command refuses the document ("missing field `schema_version`").
     schema_version: 1,
@@ -401,7 +400,7 @@ export function museApprovalVerdict(input: {
 /**
  * The offer taken: `approved` for once, and `approvedForSession` only when the verdict says `always` (never the other
  * way round, so a narrow decision can't become a session-wide one); a refusal takes `denied`, else `abort`, where a
- * shell ask offers no deny (ADR 0174). Undefined: the host offered nothing that says this, so nothing is sent.
+ * shell ask offers no deny (ADR 0203). Undefined: the host offered nothing that says this, so nothing is sent.
  */
 export function museChoice(
   choices: readonly MuseApprovalChoice[],
@@ -751,11 +750,7 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
   if (key) env[MUSE_KEY_ENV] = key;
   try {
     mkdirSync(path.join(configDir, "muse"), { recursive: true, mode: 0o700 });
-    writeFileSync(
-      path.join(configDir, "muse", "settings.json"),
-      museSettings({ mcp: input.mcp, ...(opts.mcpCommand ? { mcpCommand: opts.mcpCommand } : {}) }),
-      { mode: 0o600 },
-    );
+    writeFileSync(path.join(configDir, "muse", "settings.json"), museSettings(), { mode: 0o600 });
   } catch (err) {
     return fail("muse_failed", err instanceof Error ? err.message : String(err), true);
   }
@@ -992,7 +987,7 @@ export async function runMuseTurn(input: MuseTurnInput, opts: MuseTurnOptions): 
       opts.sessions.delete(sessionKey);
       const started = await host.request("session/start", {
         commandId: uuidv7(),
-        // The host asks for what its own policy doesn't match, and this turn answers every ask (ADR 0174).
+        // The host asks for what its own policy doesn't match, and this turn answers every ask (ADR 0203).
         approvalMode: input.chat ? "denyUnmatched" : "promptUnmatched",
         ...(input.model ? { modelId: input.model } : {}),
         // The bridge is handed over **on the wire**, per session: `config.mcpServers` is what an MSP client adds a

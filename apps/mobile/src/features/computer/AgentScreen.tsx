@@ -15,14 +15,15 @@ import {
   useBrowserHandoffActions,
 } from "@agenteschat/client";
 import { liveSubLine } from "@agenteschat/client/lib/agent-computer";
+import { managesAgent } from "@agenteschat/client/lib/audience";
 import { computerName } from "@agenteschat/client/lib/computer";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { can } from "@agenteschat/client/lib/permissions";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { type AgentColorName, bodyTones } from "@agenteschat/ui/agent/engine";
 import { Canvas, Fill, Shader, Skia } from "@shopify/react-native-skia";
 import * as Clipboard from "expo-clipboard";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { Stack } from "expo-router";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Keyboard, type LayoutChangeEvent, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import {
@@ -191,7 +192,8 @@ export function AgentScreen({
   canTakeOver: boolean;
   /** The agent held or its computer paused. */
   banner: ReactNode;
-  top: (sub: string, action: ReactNode, info?: ReactNode) => ReactNode;
+  /** The screen's bar, saying `sub` under its title. */
+  top: (sub: string) => ReactNode;
 }) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -758,10 +760,17 @@ export function AgentScreen({
     const { width, height } = e.nativeEvent.layout;
     setBoxSize({ width, height });
   };
+  // Set when they change only: the screen renders on every page event.
+  const barOptions = useMemo(() => ({ headerShown: !wide, gestureEnabled: !inControl }), [wide, inControl]);
 
   return (
-    <KeyboardAvoidingView behavior="padding" style={styles.fill}>
-      {wide ? null : top(sub, null)}
+    // Under the screen's bar: its true place on the screen, so the keys and the trackpad clear the keyboard by the
+    // bar's height too.
+    <KeyboardAvoidingView behavior="padding" style={styles.fill} automaticOffset>
+      {/* Sideways the picture takes the whole phone: no bar. In control the edge swipe is the trackpad's, never a way
+          back that would hand the screen back mid-gesture (the bar's back still leaves). */}
+      <Stack.Screen options={barOptions} />
+      {wide ? null : top(sub)}
       {inControl && !wide ? <View style={styles.notice}>{notice.text}</View> : null}
       {wide ? null : banner}
       {/* The screen and, across its bottom edge, the capsule (it hangs past the screen into this view's margin). */}
@@ -1450,12 +1459,13 @@ function Watching({
     api.chat.post(orgId, channelId, { body: body.trim(), ...steer }).catch(failed);
   };
   const atWork = run !== null && (run.status === "thinking" || run.status === "queued" || run.status === "running");
-  // Who may stop it here: its owner and who manages agents (the conversation's own rule also lets its asker).
+  // Who may stop it here: its owner and who manages it (the server's `canManage`; the conversation's own rule also
+  // lets its asker).
   const mayStop =
     run !== null &&
     mayStopRun(run, {
       meId,
-      manageAgents: can(org, "manage_agents"),
+      manageAgents: managesAgent(dir.agentById.get(agentId)),
       agentOwnerId: dir.agentById.get(agentId)?.ownerUserId,
       messages: [],
     });

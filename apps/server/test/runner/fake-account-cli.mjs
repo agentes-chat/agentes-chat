@@ -13,6 +13,7 @@
 // device-code words, keeps its sign-in in `$XDG_CONFIG_HOME/muse/credential.json`, answers `usage` with "not logged
 // in" on stderr and exit 1 while signed out, and `logout` drops that folder. $FAKE_MUSE_LOGIN_MS is how long its
 // `login` takes to be approved (default 300); $FAKE_ACCOUNT_MODE "nocode" prints the page and never a code.
+// $FAKE_ACCOUNT_USAGE: Claude Code's usage probe (`-p … stream-json`) answers `get_usage` while signed in.
 // `auth login --email <address>` signs in like `auth login` (the address is only the account
 // to offer). With $ANTHROPIC_API_KEY set, `auth status` says it is signed in with that key, as
 // Claude Code does whatever the folder holds. `setup-token` draws Claude Code 2.1.314's screen
@@ -325,5 +326,21 @@ switch (args.replace(/^auth login --email \S+$/, "auth login")) {
     end(0, "Successfully logged out\n");
     break;
   default:
+    if (process.env.FAKE_ACCOUNT_USAGE && args.startsWith("-p ")) {
+      const signedIn = existsSync(path.join(process.env.CLAUDE_CONFIG_DIR ?? "", "signed-in"));
+      const lines = createInterface({ input: process.stdin });
+      lines.on("line", (line) => {
+        const { request_id: id, request } = JSON.parse(line);
+        const ok = { type: "control_response", response: { subtype: "success", request_id: id } };
+        if (request?.subtype === "initialize") process.stdout.write(`${JSON.stringify(ok)}\n`);
+        else if (signedIn) {
+          const five_hour = { utilization: 12, resets_at: "2030-01-01T00:00:00Z" };
+          const response = { rate_limits_available: true, rate_limits: { five_hour } };
+          end(0, `${JSON.stringify({ ...ok, response: { ...ok.response, response } })}\n`);
+        } else
+          end(1, `${JSON.stringify({ type: "control_response", response: { subtype: "error", request_id: id } })}\n`);
+      });
+      break;
+    }
     end(2, `unknown command: ${args}\n`, process.stderr);
 }

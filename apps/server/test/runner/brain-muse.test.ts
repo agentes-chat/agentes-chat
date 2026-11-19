@@ -134,7 +134,7 @@ test("the host runs without a key that could answer for the person, and without 
 
 test("the settings document keeps the account's ground, and the bridge travels on the wire", () => {
   // The document: no server of ours (a name in both places is rejected as a conflict), and none of the machine's hooks.
-  const doc = JSON.parse(museSettings({ mcp: { token: "t" }, mcpCommand: ["agentes-runner", "mcp"] }));
+  const doc = JSON.parse(museSettings());
   expect(doc.schema_version).toBe(1);
   expect(doc.hooks).toEqual({});
   expect(doc.managed_hooks_path).toBeNull();
@@ -700,6 +700,7 @@ test("executor detection reads the version and nothing else", async () => {
     {},
     {},
     () => false,
+    undefined,
     async () => [],
   );
   expect(found.muse?.version).toContain("1.4.18-R8587.1");

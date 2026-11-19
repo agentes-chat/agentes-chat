@@ -25,7 +25,8 @@ import { HANDOFF_REMIND_JOB, remindBrowserHandoff } from "./browser/handoff";
 import { typingLogFor } from "./burst";
 import { CHANNEL_DELETE_JOB, purgeChannel } from "./channel-deletion";
 import { crowdedAgents, publishQueueChanged } from "./computer-queue";
-import type { ConnectorDeps } from "./connectors/connections";
+import { forgetComposioAccount } from "./connectors/composio";
+import { CONNECTOR_FORGET_JOB, type ConnectorDeps } from "./connectors/connections";
 import { startNoteRun } from "./consultations";
 import { getChannelCached } from "./context";
 import { consolidateOrg } from "./context/consolidate";
@@ -77,6 +78,9 @@ import { announceTaskConversation } from "./issues";
 import type { JevKey, JevKeySource } from "./jev-key";
 import { DEEP_MENTION_THRESHOLD, DEEP_WAKE_HOP, MENTION_WAKE_THRESHOLD, mentionNeedsNothing } from "./judge";
 import { platformCapReached } from "./limits";
+import type { LiveDocs } from "./live/docs";
+import { liveImageJobHandlers } from "./live/images";
+import { liveJobHandlers } from "./live/jobs";
 import { wakeForAccessDecision } from "./machine-access";
 import type { MachineCaller } from "./machine-hub";
 import {
@@ -86,6 +90,7 @@ import {
   type TaskCall,
   wakeConversationForTask,
 } from "./machine-tasks";
+import { WAKE_OVERDUE_JOB, wakeOverdue } from "./machine-wake";
 import { isMediaAfterReply, isMediaOnly } from "./media";
 import { getMessage, referencedOf } from "./messages";
 import { checkMissionDone } from "./mission-delivery";
@@ -125,6 +130,8 @@ import type { SkillDeps } from "./skills";
 import { TEAM_HELLO_JOB } from "./standing";
 import { purgeOrgFiles, purgeUserFiles, runMigration, type StorageDeps } from "./storage";
 import { postStretchCard, STRETCH_JOB, type StretchHold } from "./stretch";
+import { forgetReplyWords } from "./support-requests";
+import { fallBack, queueSurfaceDelivery, SURFACE_FALLBACK_JOB } from "./surfaces/deliveries";
 import { sayTeamHello } from "./team-templates";
 import { postTeamWeek, TEAM_DAY_JOB, TEAM_WEEK_JOB } from "./team-week";
 import { isAgentesCloud } from "./telemetry";
@@ -140,6 +147,7 @@ import {
   purgeAccount,
   purgeWorkspace,
 } from "./workspace-deletion";
+import { ORG_RESET_JOB, resetWorkspace } from "./workspace-reset";
 
 /** A thread that grew by another `everyMessages` gets reflected on (capture), within the per-thread cap. */
 async function maybeEnqueueReflection(deps: JobDeps, orgId: string, threadId: string) {
@@ -207,6 +215,8 @@ export interface JobDeps extends RunExecutorDeps {
   };
   /** Drive (routines' reports, polls). */
   artifacts?: ArtifactDeps;
+  /** Live files this process hosts (ADR 0196): the image job places pictures on canvases through them (ADR 0197). */
+  live?: LiveDocs;
   /** Agents' computers: the hub and public URL missions use. */
   sandbox?: SandboxDeps | null;
   /** The engine missions start, resume and cancel runs with (default: today's run queue). */
@@ -289,8 +299,7 @@ export function messageRouter(deps: JobDeps): RouterDeps | null {
       maxHops: deps.maxHops,
     },
     hasAi: (orgId) => orgHasAi({ db: deps.db, gateway: deps.gateway, machines: deps.machines }, orgId),
-    outOfOffice: (orgId, ids) =>
-      outOfOfficeIds(deps.db, orgId, ids, { hasModel: (agent) => deps.gateway.hasModelCredential(agent) }),
+    outOfOffice: (orgId, ids) => outOfOfficeIds(deps.db, orgId, ids),
     routing: { jev: () => jevPicks(jev?.key), smallModel, plans },
     quietMs: router.quietMs,
     quietByTyping: router.quietByTyping,
@@ -582,9 +591,10 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
       if (!message) return;
       if (deps.context && message.threadId) await maybeEnqueueReflection(deps, message.orgId, message.threadId);
       // An issue's work card, its start (the run is already started) and the "took issue #N" line route to nobody.
-      // A task conversation's root (ADR 0145) stands for the task: nobody is routed either.
+      // A task conversation's root (ADR 0145) stands for the task, a file conversation's (ADR 0199) for the file:
+      // nobody is routed either.
       if (message.meta.issueWork || message.meta.issueWorkStart || message.meta.issueTaken) return;
-      if (message.meta.taskConversation) return;
+      if (message.meta.taskConversation || message.meta.fileConversation) return;
       // A fast reply while the task works (talker.ts): its task reads it; it starts nobody, not even by mention.
       if (message.meta.talker) return;
       // A GIF or a sticker alone (ADR 0091), an agent's silent one after its reply too: it starts nobody, routes
@@ -789,12 +799,14 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
       if (typeof job.payload.line === "string")
         await publishQueueChanged(deps.pubsub, orgOf(job), job.payload.line).catch(() => {});
       const lineSince = typeof job.payload.lineSince === "number" ? job.payload.lineSince : undefined;
+      const routerMs = typeof job.payload.routerMs === "number" ? job.payload.routerMs : undefined;
       await queryTrace.run({ count: 0 }, () =>
         executeRun(deps, String(job.payload.runId), {
           ...ctx,
           jobId: job.id,
           ...(wait ? { wait } : {}),
           ...(lineSince ? { lineSince } : {}),
+          ...(routerMs !== undefined ? { routerMs } : {}),
         }),
       );
       // A mission's main-session turn that ended: write items queued behind it may start (ADR 0044).
@@ -971,6 +983,21 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
         { finalAttempt: ctx.finalAttempt },
       );
     },
+    // An owner's reset (`resetWorkspace`): a no-op once done.
+    [ORG_RESET_JOB]: async (job) => {
+      const blobs = deps.artifacts?.blobs ?? deps.voice?.blobs;
+      await resetWorkspace(
+        {
+          db: deps.db,
+          pubsub: deps.pubsub,
+          hub: deps.sandbox?.machines?.hub ?? null,
+          mail: deps.mail,
+          artifacts: deps.artifacts,
+          ...(blobs ? { blobs } : {}),
+        },
+        String(job.payload.orgId),
+      );
+    },
     // An account whose deletion's date came (`purgeAccount`): a no-op once restored or gone.
     [ACCOUNT_DELETE_JOB]: async (job) => {
       await purgeAccount(
@@ -985,14 +1012,19 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
       );
     },
     "email.send": async (job, ctx) => {
+      // What an email's job must not keep once it can't be sent again: a code's whole row, a reply's own words.
+      const forget = async () => {
+        await forgetCodeEmail(deps.db, job);
+        await forgetReplyWords(deps.db, job);
+      };
       try {
         if (!deps.email) throw new PermanentJobError("no email sender configured");
         await sendQueuedEmail(deps.email, job.payload, deps.emailArt);
       } catch (error) {
-        if (ctx.finalAttempt || error instanceof PermanentJobError) await forgetCodeEmail(deps.db, job);
+        if (ctx.finalAttempt || error instanceof PermanentJobError) await forget();
         throw error;
       }
-      await forgetCodeEmail(deps.db, job);
+      await forget();
     },
     // The team says hi in #general once it can work (ADR 0162).
     [TEAM_HELLO_JOB]: async (job) => {
@@ -1087,6 +1119,10 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
         statusOnly: job.payload.statusOnly === true,
       });
     },
+    // A computer in standby wanted awake a grace ago: still asleep, people see it down (ADR 0161).
+    [WAKE_OVERDUE_JOB]: async (job) => {
+      await wakeOverdue({ db: deps.db, pubsub: deps.pubsub }, String(job.payload.machineId));
+    },
     // A task start cut by a drop, once it can't still be underway: the agent's journal on its computer settles it.
     "machine.task_start_check": async (job) => {
       const hub = missions.hub;
@@ -1123,6 +1159,10 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
     },
     // What else the right hand does by itself: each lane's own jobs (`right-hand-lane.ts`).
     ...lodiLaneHandlers(deps),
+    // Live files (ADR 0196): their changes folded into the state, and a version after a quiet spell.
+    ...liveJobHandlers({ artifacts: deps.artifacts, pubsub: deps.pubsub, log: deps.log }),
+    // Pictures asked for on a canvas (ADR 0197): made through the gateway, placed where their placeholders wait.
+    ...liveImageJobHandlers({ artifacts: deps.artifacts, live: deps.live, gateway: deps.gateway, log: deps.log }),
     // A person's monthly AI limit neared or reached (ADR 0141): the person hears 80%, who decides hears 100%.
     [PERSON_LIMIT_JOB]: async (job) => {
       await notifyPersonLimit({ db: deps.db, pubsub: deps.pubsub }, orgOf(job), {
@@ -1133,10 +1173,15 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
     },
     // In-app notifications of a message: mentions, thread replies, DMs.
     "notifications.message": async (job) => {
-      await notifyMessage({ db: deps.db, pubsub: deps.pubsub }, orgOf(job), String(job.payload.messageId));
+      const messageId = String(job.payload.messageId);
+      // A reply read on an outside chat surface goes there instead (ADR 0187); it falls back to this if not sent.
+      if (!(await queueSurfaceDelivery(deps.db, orgOf(job), messageId))) {
+        await notifyMessage({ db: deps.db, pubsub: deps.pubsub }, orgOf(job), messageId);
+      }
       // A reply in a task's conversation (ADR 0145): the board's card counts it.
-      await announceTaskConversation({ db: deps.db, pubsub: deps.pubsub }, orgOf(job), String(job.payload.messageId));
+      await announceTaskConversation({ db: deps.db, pubsub: deps.pubsub }, orgOf(job), messageId);
     },
+    [SURFACE_FALLBACK_JOB]: (job) => fallBack({ db: deps.db, pubsub: deps.pubsub }, String(job.payload.deliveryId)),
     // A request for help in an agent's browser nobody answered within the hour: the people asked hear it again, once.
     [HANDOFF_REMIND_JOB]: async (job) => {
       await remindBrowserHandoff({ db: deps.db, pubsub: deps.pubsub }, orgOf(job), String(job.payload.handoffId));
@@ -1153,6 +1198,13 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
     [SKILL_UPDATES_JOB]: async (job) => {
       if (!deps.skills) return;
       await runSkillUpdates(deps.skills, orgOf(job));
+    },
+    // One-click accounts of personal connections that went with their person (`dropPersonalConnections`).
+    [CONNECTOR_FORGET_JOB]: async (job) => {
+      const client = deps.connectors?.composio?.client ?? deps.mail?.composio?.client;
+      if (!client) return;
+      const ids = Array.isArray(job.payload.accountIds) ? job.payload.accountIds : [];
+      for (const id of ids) if (typeof id === "string") await forgetComposioAccount(client, id);
     },
     // A Vault connection read again (ADR 0144); a source's refusal stays on the connection, never retried here.
     [VAULT_SYNC_JOB]: async (job) => {

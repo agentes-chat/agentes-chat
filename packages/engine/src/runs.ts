@@ -2,10 +2,15 @@ import { and, type Executor, eq, type SQL, schema, sql } from "@agenteschat/db";
 import { PROVIDERS, type ProviderCause, ProviderError, providerCause } from "@agenteschat/providers";
 import { wakeLineOfRun } from "./approval-order";
 import { BRAIN_NAMES, type ComputerBrainKind, planName } from "./brains/types";
+import { kickSignInLine } from "./computer-queue";
 import { cutText, pgSafeJson } from "./format";
 import { recordRunFinished } from "./operator-events";
 import { standingErrorDetail } from "./standing";
 import { cliErrorWords, redactCredentials } from "./tool-detail";
+
+/** How often a running run's worker says it is alive; after `RUN_STALE_MS` without it, the run is recovered. */
+export const RUN_HEARTBEAT_MS = 20_000;
+export const RUN_STALE_MS = 2 * 60_000;
 
 const { agentRuns, agentRunSteps } = schema;
 
@@ -89,9 +94,13 @@ export function usageWaitOf(run: Pick<AgentRun, "status" | "waitingMachineId" | 
  * that thread. The run keeps `threadRootId` (its trigger, when top-level) as
  * the conversation it belongs to. The one rule for the engine, its tools and
  * the bridge: cards and events of a run always land where its replies do.
+ * `confidential`: its thread holds a confidential result (ADR 0190), so it answers under the message that asked it
+ * even when that message is in the main timeline.
  */
-export function replyThreadOf(run: Pick<AgentRun, "threadRootId" | "triggerMessageId">): string | null {
-  return run.threadRootId === run.triggerMessageId ? null : run.threadRootId;
+export function replyThreadOf(
+  run: Pick<AgentRun, "threadRootId" | "triggerMessageId"> & { confidential?: boolean },
+): string | null {
+  return run.threadRootId === run.triggerMessageId && !run.confidential ? null : run.threadRootId;
 }
 
 /**
@@ -581,6 +590,10 @@ export async function transitionRun(
     })
     .where(and(eq(agentRuns.id, runId), eq(agentRuns.status, from)))
     .returning();
+  // Out of work on a plan sign-in that has runs waiting for it: the first of them takes the slot now.
+  const ask = (row?.transcript as { roomAsk?: { machineId?: string; signIn?: string } } | null)?.roomAsk;
+  if (row && from === "running" && ask?.machineId && ask.signIn)
+    await kickSignInLine(db, ask.machineId, ask.signIn).catch(() => {});
   if (row && isTerminal(to)) {
     await recordRunFinished(
       db,
