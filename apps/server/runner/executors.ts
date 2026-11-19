@@ -5,6 +5,7 @@ import { delimiter, isAbsolute, join, win32 } from "node:path";
 import {
   CLI_ERROR_MAX,
   CLI_GIT_MISSING,
+  COMMANDCODE_MODEL_LIMIT,
   type CursorModelInfo,
   parseExecutors,
   type RunnerExecutorInfo,
@@ -490,6 +491,41 @@ function detectAntigravity(run: Run): Promise<Probe> {
 }
 
 /**
+ * Command Code's CLI (`command-code` on npm, ADR 0203), by its long name: the package's `cmd` is also Windows' shell and
+ * any other `cmd` on a PATH.
+ */
+export const COMMANDCODE_BIN = "command-code";
+
+/**
+ * `command-code --list-models` → its model ids, from the table under "Available models  ·  98 models" (1.89.1): one
+ * `<id>  <what it is>` per line, under a maker's heading, until its notes. Nothing without that header (another
+ * program, an error).
+ */
+export function parseCommandcodeModels(output: string): CursorModelInfo[] {
+  const out: CursorModelInfo[] = [];
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: the CLI's colors
+  const lines = output.replace(/\u001b\[[0-9;]*m/g, "").split("\n");
+  if (!lines.some((l) => /^\s*Available models\b/.test(l))) return out;
+  for (const raw of lines) {
+    // Its notes, the docs link and the decision models (Jev, headless only) come after the table.
+    if (/^\s*(Pass the full id|Docs:|Decision models)/.test(raw)) break;
+    const id = /^([a-z0-9][\w.:/-]{0,79}[\w-]) {2,}\S/i.exec(raw)?.[1];
+    if (!id || out.some((x) => x.id === id)) continue;
+    out.push({ id });
+    if (out.length >= COMMANDCODE_MODEL_LIMIT) break;
+  }
+  return out;
+}
+
+/** Command Code's version line is plain semver (`1.89.1`); anything else is skipped. */
+const COMMANDCODE_VERSION = /^v?\d+\.\d+\.\d+\b/;
+
+/** protocol 74 (ADR 0203): Command Code's CLI and the models it lists (`--list-models`, with no key: its catalog). */
+function detectCommandcode(run: Run): Promise<Probe> {
+  return detectWithModels(run, COMMANDCODE_BIN, COMMANDCODE_VERSION, parseCommandcodeModels, () => ["--list-models"]);
+}
+
+/**
  * One CLI's look: what it found, and whether it couldn't tell (then the last good look stands). `exited`: unsure
  * because `--version` failed with an exit code, counted toward `EXECUTORS_EXIT_STRIKES`.
  */
@@ -614,7 +650,7 @@ export async function detectExecutors(
   codexBins: () => string[] = run === defaultRun ? codexCandidates : () => [],
 ): Promise<{ found: Executors; unsure: boolean }> {
   const safe = (p: () => Promise<Probe>) => p().catch((): Probe => ({ unsure: true }));
-  const names = ["claude", "codex", "cursor", "opencode", "grok", "antigravity"] as const;
+  const names = ["claude", "codex", "cursor", "opencode", "grok", "antigravity", "commandcode"] as const;
   const probes = await Promise.all([
     safe(() => detectVersion(run, "claude")),
     safe(() => detectCodex(run, codexBins())),
@@ -622,6 +658,7 @@ export async function detectExecutors(
     safe(() => detectOpencode(run)),
     safe(() => detectGrok(run)),
     safe(() => detectAntigravity(run)),
+    safe(() => detectCommandcode(run)),
   ]);
   const found: Executors = {};
   const broken: NonNullable<Executors["broken"]> = {};

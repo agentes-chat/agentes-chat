@@ -502,6 +502,8 @@
     "grokDesc": "Écrit et modifie du code dans les dossiers autorisés, avec votre compte Grok.",
     "antigravityName": "Antigravity CLI",
     "antigravityDesc": "Écrit et modifie du code dans les dossiers autorisés, avec votre compte Gemini.",
+    "commandcodeName": "Command Code",
+    "commandcodeDesc": "Écrit et modifie du code dans les dossiers autorisés, avec votre compte Command Code.",
     "found": "Trouvé",
     "notFound": "Introuvable",
     "loggedOut": "Non connecté",

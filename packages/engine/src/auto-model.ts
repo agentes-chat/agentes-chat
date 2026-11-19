@@ -194,13 +194,17 @@ export const autoWanted = (agent: AutoAgent) =>
 export const needsAutoChoice = (agent: AutoAgent, plan: Pick<BrainPlan, "kind" | "model">) =>
   isAutoModel(agent.model) || isAutoModel(plan.model) || autoEffortFor(agent, plan.kind);
 
-/** A computer brain's model for a tier: Claude Code's alias (`haiku`, `sonnet`, `opus`), a Codex model. */
+/**
+ * A computer brain's model for a tier: Claude Code's alias (`haiku`, `sonnet`, `opus`), a Codex model, or Command
+ * Code's (ADR 0203: its catalog line's model, by Command Code's own id). The other CLIs keep their own default.
+ */
 export function brainModelForTier(kind: BrainKind, tier: ModelTier): string | undefined {
   if (kind === "claude_code") {
     const id = modelForTier("anthropic", tier);
     return CLAUDE_CODE_MODELS.find((o) => o.modelId === id)?.value ?? "sonnet";
   }
   if (kind === "codex") return modelForTier("openai", tier) ?? undefined;
+  if (kind === "commandcode") return modelForTier("commandcode", tier)?.slice("commandcode:".length);
   return undefined;
 }
 

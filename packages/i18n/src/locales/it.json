@@ -3511,6 +3511,7 @@
       "antigravity": "Gemini non ha effettuato l'accesso su questo computer. Collega un account Gemini nella pagina di {{name}}.",
       "antigravity_female": "Gemini non ha effettuato l'accesso su questo computer. Collega un account Gemini nella pagina di {{name}}.",
       "opencode": "OpenCode non può pensare su questo computer. Collega una chiave OpenCode nella pagina di {{name}}.",
+      "commandcode": "Command Code non può pensare su questo computer. Collega una chiave Command Code nella pagina di {{name}}.",
       "opencode_female": "OpenCode non può pensare su questo computer. Collega una chiave OpenCode nella pagina di {{name}}."
     },
     "card": {
@@ -3570,6 +3571,7 @@
       "grok": "Collega il tuo piano Grok",
       "gemini": "Collega il tuo piano Gemini",
       "zen": "Collega OpenCode",
+      "commandcode": "Collega Command Code",
       "api_key": "Aggiungi una chiave API"
     },
     "cli": {
@@ -3705,6 +3707,10 @@
         "title": "OpenCode",
         "tiers": "Modelli gratuiti, o la tua chiave OpenCode"
       },
+      "commandcode": {
+        "title": "Command Code",
+        "tiers": "La tua chiave Command Code"
+      },
       "zai": {
         "tiers": "Lite, Pro o Max"
       },
@@ -3808,7 +3814,8 @@
       "cursor": "Cursor ha effettuato l'accesso come {{email}}, non {{account}}. Esci dalla pagina di Cursor e riprova.",
       "grok": "Grok ha effettuato l'accesso come {{email}}, non {{account}}. Esci dalla pagina di Grok e riprova.",
       "antigravity": "Gemini ha effettuato l'accesso come {{email}}, non {{account}}. Esci dalla pagina di Google e riprova.",
-      "opencode": "OpenCode ha effettuato l'accesso come {{email}}, non come {{account}}. Riprova con la chiave giusta."
+      "opencode": "OpenCode ha effettuato l'accesso come {{email}}, non come {{account}}. Riprova con la chiave giusta.",
+      "commandcode": "Command Code ha effettuato l'accesso come {{email}}, non come {{account}}. Riprova con la chiave giusta."
     },
     "useAnyway": "Usa {{email}}",
     "assignFailed": "L'account {{label}} è collegato, ma {{agent}} non è riuscito a passarci.",
@@ -6130,7 +6137,8 @@
             "cursor": "Aggiungi un account Cursor",
             "grok": "Aggiungi un account Grok",
             "antigravity": "Aggiungi un account Gemini",
-            "opencode": "Aggiungi una chiave OpenCode"
+            "opencode": "Aggiungi una chiave OpenCode",
+            "commandcode": "Aggiungi una chiave Command Code"
           },
           "stepOne": {
             "claude_code": "L'account con il tuo piano",
@@ -6194,7 +6202,8 @@
             "cursor": "Cursor ha effettuato l'accesso come {{account}}, un account che hai già collegato. Per usarne un altro, esci sulla pagina di Cursor e riprova.",
             "grok": "Grok ha effettuato l'accesso come {{account}}, un account che hai già collegato. Per usarne un altro, esci sulla pagina di Grok e riprova.",
             "antigravity": "Gemini ha effettuato l'accesso come {{account}}, un account che hai già collegato. Per usarne un altro, esci sulla pagina di Google e riprova.",
-            "opencode": "Questa chiave OpenCode è già collegata come {{account}}."
+            "opencode": "Questa chiave OpenCode è già collegata come {{account}}.",
+            "commandcode": "Questa chiave Command Code è già collegata come {{account}}."
           },
           "startFailed": "Nessuna risposta da {{computer}}. Riprova tra un attimo.",
           "sendFailed": "Impossibile inviare il codice. Controllalo e riprova.",
@@ -11104,6 +11113,7 @@
       "grok": "Grok",
       "antigravity": "Gemini",
       "opencode": "OpenCode",
+      "commandcode": "Command Code",
       "needs": {
         "keys": "Aggiorna agentes sul computer per usare la chiave di un piano"
       },
@@ -12455,6 +12465,7 @@
       "grok": "{{model}} con il piano Grok",
       "gemini": "{{model}} con il piano Gemini",
       "zen": "{{model}} con OpenCode",
+      "commandcode": "{{model}} con Command Code",
       "coding": "{{model}} con {{plan}}",
       "claudeOf": "{{model}} con il piano Claude di {{owner}}",
       "chatgptOf": "{{model}} con il piano ChatGPT di {{owner}}",
@@ -12462,6 +12473,7 @@
       "grokOf": "{{model}} con il piano Grok di {{owner}}",
       "geminiOf": "{{model}} con il piano Gemini di {{owner}}",
       "zenOf": "{{model}} con l'OpenCode di {{owner}}",
+      "commandcodeOf": "{{model}} con l'Command Code di {{owner}}",
       "codingOf": "{{model}} con {{plan}} di {{owner}}",
       "claudeAuto": "Piano Claude",
       "chatgptAuto": "Piano ChatGPT",
@@ -12469,6 +12481,7 @@
       "grokAuto": "Piano Grok",
       "geminiAuto": "Piano Gemini",
       "zenAuto": "OpenCode",
+      "commandcodeAuto": "Command Code",
       "codingAuto": "{{plan}}",
       "claudeAutoOf": "Piano Claude di {{owner}}",
       "chatgptAutoOf": "Piano ChatGPT di {{owner}}",
@@ -12476,6 +12489,7 @@
       "grokAutoOf": "Piano Grok di {{owner}}",
       "geminiAutoOf": "Piano Gemini di {{owner}}",
       "zenAutoOf": "OpenCode di {{owner}}",
+      "commandcodeAutoOf": "Command Code di {{owner}}",
       "codingAutoOf": "{{plan}} di {{owner}}",
       "on": "{{line}} su {{computer}}"
     },
@@ -12488,6 +12502,7 @@
       "codex": "Codex",
       "cursor": "Cursor",
       "opencode": "OpenCode",
+      "commandcode": "Command Code",
       "grok": "Grok Build",
       "antigravity": "Antigravity CLI"
     },
@@ -12501,6 +12516,7 @@
     "codexText": "Usa il piano ChatGPT di chi ha collegato il computer.",
     "cursorText": "Usa il piano Cursor di chi ha collegato il computer.",
     "grokText": "Usa il piano Grok di chi ha collegato il computer.",
+    "commandcodeText": "Usa il piano Command Code di chi ha collegato il computer.",
     "antigravityText": "Usa il piano Gemini di chi ha collegato il computer.",
     "opencodeText": "I modelli gratuiti di OpenCode, o la chiave OpenCode di chi ha collegato il computer.",
     "cursorModel": {
@@ -12554,7 +12570,8 @@
       "cursor": "Cursor · {{model}}",
       "grok": "Grok Build · {{model}}",
       "antigravity": "Antigravity CLI · {{model}}",
-      "opencode": "OpenCode · {{model}}"
+      "opencode": "OpenCode · {{model}}",
+      "commandcode": "Command Code · {{model}}"
     },
     "mission": {
       "modelLabel": "Modello",
@@ -16152,6 +16169,7 @@
         "codex": "Codex",
         "cursor": "Cursor",
         "opencode": "OpenCode",
+        "commandcode": "Command Code",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
         "commands": "i comandi",
@@ -16312,6 +16330,7 @@
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
         "opencode": "OpenCode",
+        "commandcode": "Command Code",
         "commands": "Comandi",
         "browser": "Browser"
       },
@@ -16320,6 +16339,7 @@
         "codex": "Come Claude Code, con un account ChatGPT. Solo nelle cartelle consentite.",
         "cursor": "Come Claude Code, con un account Cursor. Solo nelle cartelle consentite.",
         "grok": "Come Claude Code, con un account Grok. Solo nelle cartelle consentite.",
+        "commandcode": "Come Claude Code, con un account Command Code. Solo nelle cartelle consentite.",
         "antigravity": "Come Claude Code, con un account Gemini. Solo nelle cartelle consentite.",
         "opencode": "Come Claude Code, con i modelli gratuiti di OpenCode o una chiave OpenCode. Solo nelle cartelle consentite.",
         "commands": "Esegue comandi del Terminale, come test e build."

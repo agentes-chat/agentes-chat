@@ -157,7 +157,7 @@ export function useBrainState(view: AgentBrain, opts: { added: readonly MachineA
   const cards: AiChoice[] = [
     "claude",
     "chatgpt",
-    ...(["cursor", "zen", "grok", "gemini"] as const).filter(
+    ...(["cursor", "zen", "grok", "gemini", "commandcode"] as const).filter(
       (c) =>
         savedCard === c ||
         [view.options, ...machines.map((m) => m.options)].flat().some((o) => o.kind === kindOf(c) && o.available),

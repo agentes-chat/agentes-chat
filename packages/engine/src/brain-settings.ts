@@ -7,6 +7,7 @@ import {
   type BrainEffort,
   type BrainSpeed,
   CODEX_WINDOWS_PROTOCOL,
+  COMMANDCODE_PROTOCOL,
   CURSOR_PROTOCOL,
   GROK_PROTOCOL,
   isBrainEffort,
@@ -130,6 +131,7 @@ export const BRAIN_KINDS: readonly BrainKind[] = [
   "opencode",
   "grok",
   "antigravity",
+  "commandcode",
 ];
 export const isBrainKind = (v: unknown): v is BrainKind =>
   typeof v === "string" && (BRAIN_KINDS as readonly string[]).includes(v);
@@ -217,6 +219,68 @@ export const antigravityModels = (listed: readonly { id: string; label?: string 
   });
 
 /**
+ * Command Code's models (ADR 0203): what its CLI listed on the agent's computer (`cmd --list-models`), else the
+ * catalog's Command Code rows (ADR 0174). A listed id is named and priced by its catalog row where there is one
+ * (`commandcode:<id>`, matched without case: the CLI lowercases some makers' ids).
+ */
+/** Words a Command Code id spells in lowercase that its makers write otherwise. */
+const MODEL_WORDS: Readonly<Record<string, string>> = {
+  deepseek: "DeepSeek",
+  glm: "GLM",
+  gpt: "GPT",
+  minimax: "MiniMax",
+  mimo: "MiMo",
+  longcat: "LongCat",
+  hy3: "HY3",
+  hy4: "HY4",
+  vl: "VL",
+  exp: "(exp)",
+};
+
+/**
+ * A model id as a name, where the catalog has none (`deepseek/deepseek-v4-flash` → "DeepSeek V4 Flash",
+ * `claude-opus-4-8` → "Claude Opus 4.8", `zai-org/glm-5.2-fast` → "GLM-5.2 Fast"): the part after its maker, a word per
+ * dash, each capitalized.
+ */
+export function modelIdName(id: string): string {
+  const words = id
+    .slice(id.lastIndexOf("/") + 1)
+    .replace(/:free$/, "-(free)")
+    .split("-")
+    .filter(Boolean);
+  const out: string[] = [];
+  for (const w of words) {
+    const prev = out.at(-1);
+    // Claude's versions are dashed digits (`claude-opus-4-8`): "Opus 4.8".
+    if (/^\d+$/.test(w) && prev && /^\d+$/.test(prev) && !/^\d{4,}$/.test(w)) out[out.length - 1] = `${prev}.${w}`;
+    // GPT's and GLM's version follows a dash, as their makers write it: "GPT-6.1", "GLM-5.3".
+    else if (/^\d/.test(w) && (prev === "GPT" || prev === "GLM")) out[out.length - 1] = `${prev}-${w}`;
+    else if (/^\d+b$/i.test(w)) out.push(w.toUpperCase());
+    else
+      out.push(
+        MODEL_WORDS[w.toLowerCase()] ?? (/^[a-z]\d/i.test(w) ? w.toUpperCase() : w[0]?.toUpperCase() + w.slice(1)),
+      );
+  }
+  return out.join(" ");
+}
+
+export const commandcodeModels = (listed: readonly { id: string; label?: string }[] = []): BrainModelOption[] => {
+  const rows = Object.entries(MODEL_CATALOG).filter(([, m]) => m.provider === "commandcode");
+  const row = (id: string) => rows.find(([key]) => key.slice("commandcode:".length).toLowerCase() === id.toLowerCase());
+  const models: readonly { id: string; label?: string }[] = listed.length
+    ? listed
+    : rows.map(([key]) => ({ id: key.slice("commandcode:".length) }));
+  return models.map((m) => {
+    const found = row(m.id);
+    return {
+      value: m.id,
+      label: found?.[1].label ?? (m.label || modelIdName(m.id)),
+      ...(found ? { modelId: found[0] } : {}),
+    };
+  });
+};
+
+/**
  * Claude Code's aliases (`--model opus|sonnet|haiku`), mapped to today's ids in the catalog. Each is named by its
  * catalog row without the maker ("Opus 5.5"), so moving an alias to a new id renames it with no copy change.
  */
@@ -254,12 +318,20 @@ function modelChoices(kind: BrainKind, machine?: { executors?: schema.MachineExe
   if (kind === "opencode") return opencodeModels(machine?.executors?.opencode?.models);
   if (kind === "grok") return grokModels(machine?.executors?.grok?.models);
   if (kind === "antigravity") return antigravityModels(machine?.executors?.antigravity?.models);
+  if (kind === "commandcode") return commandcodeModels(machine?.executors?.commandcode?.models);
   return [];
 }
 
-/** What a computer brain runs with when nobody chose a model (Cursor, OpenCode, Grok, Antigravity: its CLI's own default, null). */
+/** What a computer brain runs with when nobody chose a model (Cursor, OpenCode, Grok, Antigravity, Command Code: its CLI's own default, null). */
 export function defaultBrainModel(kind: BrainKind): string | null {
-  if (kind === "model" || kind === "cursor" || kind === "opencode" || kind === "grok" || kind === "antigravity")
+  if (
+    kind === "model" ||
+    kind === "cursor" ||
+    kind === "opencode" ||
+    kind === "grok" ||
+    kind === "antigravity" ||
+    kind === "commandcode"
+  )
     return null;
   const options = brainModelOptions(kind);
   return (options.find((o) => o.recommended) ?? options[0])?.value ?? (kind === "codex" ? "gpt-6.2-sol" : "sonnet");
@@ -345,6 +417,7 @@ type MachineLike = Parameters<typeof machineExecutors>[0] & {
       opencode?: boolean;
       grok?: boolean;
       antigravity?: boolean;
+      commandcode?: boolean;
     };
   } | null;
 } & Parameters<typeof machineOnline>[0];
@@ -395,6 +468,7 @@ export function brainOptions(machine: MachineLike | null): BrainOption[] {
     cliOption(machine, "opencode"),
     cliOption(machine, "grok"),
     cliOption(machine, "antigravity"),
+    cliOption(machine, "commandcode"),
   ];
 }
 
@@ -402,11 +476,16 @@ export function brainOptions(machine: MachineLike | null): BrainOption[] {
  * Cursor (ADR 0114, runner protocol 36) or OpenCode (ADR 0132, protocol 39): the runner's protocol, its switch (or
  * Codex's on a runner before it) and its CLI found there.
  */
-function cliOption(machine: MachineLike | null, kind: "cursor" | "opencode" | "grok" | "antigravity"): BrainOption {
+function cliOption(
+  machine: MachineLike | null,
+  kind: "cursor" | "opencode" | "grok" | "antigravity" | "commandcode",
+): BrainOption {
   const tools = machine?.access?.tools;
   let reason: BrainUnavailable | undefined;
   if (!machine) reason = "no_computer";
   else if (!tools && !machine.execAllowed) reason = "exec_off";
+  // A CLI that never runs on that system says so before any update would be asked for.
+  else if (!brainRunsOn(kind, machine.os)) reason = "system";
   else if (
     machine.protocol <
     {
@@ -414,6 +493,7 @@ function cliOption(machine: MachineLike | null, kind: "cursor" | "opencode" | "g
       opencode: OPENCODE_PROTOCOL,
       grok: GROK_PROTOCOL,
       antigravity: ANTIGRAVITY_PROTOCOL,
+      commandcode: COMMANDCODE_PROTOCOL,
     }[kind]
   )
     reason = "runner_old";
@@ -423,7 +503,6 @@ function cliOption(machine: MachineLike | null, kind: "cursor" | "opencode" | "g
   // On a Mac a runner before `ANTIGRAVITY_MAC_PROTOCOL` refuses every Gemini sign-in and turn.
   else if (kind === "antigravity" && machine.os === "darwin" && machine.protocol < ANTIGRAVITY_MAC_PROTOCOL)
     reason = "runner_old";
-  else if (!brainRunsOn(kind, machine.os)) reason = "system";
   else if (!machine.executors?.[kind]) reason = missingCli(machine, kind);
   else if (tools && (tools[kind] ?? tools.codex) !== true) reason = "tool_off";
   return {
@@ -1998,11 +2077,12 @@ export interface AiComputer {
     opencode: boolean;
     grok: boolean;
     antigravity: boolean;
+    commandcode: boolean;
     key: boolean;
   };
   /** Why a CLI of `brains` can't think there, as `brainOptions` says it. */
   off: Partial<Record<BrainKind, BrainUnavailable>>;
-  /** What it can think with now: Claude Code (Claude and the coding plans), Codex (ChatGPT), Cursor, OpenCode, Grok, Antigravity. */
+  /** What it can think with now: Claude Code (Claude and the coding plans), Codex (ChatGPT), Cursor, OpenCode, Grok, Antigravity, Command Code. */
   brains: {
     claude_code: boolean;
     codex: boolean;
@@ -2010,6 +2090,7 @@ export interface AiComputer {
     opencode: boolean;
     grok: boolean;
     antigravity: boolean;
+    commandcode: boolean;
   };
   /**
    * "Conta deste computador": each CLI's own sign-in there, on a computer the caller connected (it is theirs, and
@@ -2068,6 +2149,7 @@ export async function listAiAccounts(deps: BrainDeps, userId: string, orgId: str
           opencode: sharesSignIns(m, "opencode"),
           grok: sharesSignIns(m, "grok"),
           antigravity: sharesSignIns(m, "antigravity"),
+          commandcode: sharesSignIns(m, "commandcode"),
           key: sharesSignIns(m, "key"),
         },
         off: Object.fromEntries(options.flatMap((o) => (o.reason ? [[o.kind, o.reason]] : []))),
@@ -2078,6 +2160,7 @@ export async function listAiAccounts(deps: BrainDeps, userId: string, orgId: str
           opencode: can("opencode"),
           grok: can("grok"),
           antigravity: can("antigravity"),
+          commandcode: can("commandcode"),
         },
         own: m.pairedByUserId === userId ? ownSignIns(m.executors, can) : {},
       };

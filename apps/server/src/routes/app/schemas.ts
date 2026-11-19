@@ -633,7 +633,7 @@ export const Agent = z
     }),
     brain: z
       .object({
-        kind: z.enum(["model", "claude_code", "codex", "cursor", "opencode", "grok", "antigravity"]),
+        kind: z.enum(["model", "claude_code", "codex", "cursor", "opencode", "grok", "antigravity", "commandcode"]),
         model: z
           .string()
           .nullable()
@@ -1063,7 +1063,7 @@ export const Model = z
 
 /** ADR 0032: who thinks for an agent. */
 export const BrainKind = z
-  .enum(["model", "claude_code", "codex", "cursor", "opencode", "grok", "antigravity"])
+  .enum(["model", "claude_code", "codex", "cursor", "opencode", "grok", "antigravity", "commandcode"])
   .openapi("BrainKind");
 
 export const BrainUnavailable = z.enum([

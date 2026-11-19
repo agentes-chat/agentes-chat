@@ -494,6 +494,8 @@
     "grokDesc": "Menulis dan mengubah kode di folder yang diizinkan, dengan akun Grok-mu.",
     "antigravityName": "Antigravity CLI",
     "antigravityDesc": "Menulis dan mengubah kode di folder yang diizinkan, dengan akun Gemini-mu.",
+    "commandcodeName": "Command Code",
+    "commandcodeDesc": "Menulis dan mengubah kode di folder yang diizinkan, dengan akun Command Code-mu.",
     "found": "Ditemukan",
     "notFound": "Tidak ditemukan",
     "loggedOut": "Belum masuk",

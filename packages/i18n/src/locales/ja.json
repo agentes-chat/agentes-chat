@@ -3229,7 +3229,8 @@
       "cursor": "このコンピューターでCursorにログインしていません。{{name}}のページでCursorアカウントを接続してください。",
       "grok": "このコンピューターでGrokにログインしていません。{{name}}のページでGrokアカウントを接続してください。",
       "antigravity": "このコンピューターでGeminiにログインしていません。{{name}}のページでGeminiアカウントを接続してください。",
-      "opencode": "このコンピューターではOpenCodeが動きません。{{name}}のページでOpenCodeのキーを接続してください。"
+      "opencode": "このコンピューターではOpenCodeが動きません。{{name}}のページでOpenCodeのキーを接続してください。",
+      "commandcode": "このコンピューターではCommand Codeが動きません。{{name}}のページでCommand Codeのキーを接続してください。"
     },
     "card": {
       "connected": "完了しました。{{name}}にAIが接続されました。",
@@ -3288,6 +3289,7 @@
       "grok": "Grokのプランを接続",
       "gemini": "Geminiのプランを接続",
       "zen": "OpenCodeを接続",
+      "commandcode": "Command Codeを接続",
       "api_key": "APIキーを追加"
     },
     "cli": {
@@ -3411,6 +3413,10 @@
         "title": "OpenCode",
         "tiers": "無料モデル、またはあなたのOpenCodeキー"
       },
+      "commandcode": {
+        "title": "Command Code",
+        "tiers": "あなたのCommand Codeキー"
+      },
       "zai": {
         "tiers": "Lite、Pro、Max"
       },
@@ -3512,7 +3518,8 @@
       "cursor": "Cursorは{{account}}ではなく{{email}}でログインしています。Cursorのページでログアウトして、もう一度お試しください。",
       "grok": "Grokは{{account}}ではなく{{email}}でログインしています。Grokのページでログアウトして、もう一度お試しください。",
       "antigravity": "Geminiは{{account}}ではなく{{email}}でログインしています。Googleのページでログアウトして、もう一度お試しください。",
-      "opencode": "OpenCodeは{{account}}ではなく{{email}}でログインしました。正しいキーでもう一度お試しください。"
+      "opencode": "OpenCodeは{{account}}ではなく{{email}}でログインしました。正しいキーでもう一度お試しください。",
+      "commandcode": "Command Codeは{{account}}ではなく{{email}}でログインしました。正しいキーでもう一度お試しください。"
     },
     "useAnyway": "{{email}}を使う",
     "assignFailed": "{{label}}のアカウントは接続されましたが、{{agent}}を切り替えられませんでした。",
@@ -5681,7 +5688,8 @@
             "cursor": "Cursorアカウントを追加",
             "grok": "Grokアカウントを追加",
             "antigravity": "Geminiアカウントを追加",
-            "opencode": "OpenCodeのキーを追加"
+            "opencode": "OpenCodeのキーを追加",
+            "commandcode": "Command Codeのキーを追加"
           },
           "stepOne": {
             "claude_code": "プランを契約しているアカウント",
@@ -5745,7 +5753,8 @@
             "cursor": "Cursorは{{account}}でログインしましたが、このアカウントはすでに接続済みです。別のアカウントを使うには、Cursorのページでログアウトしてからもう一度お試しください。",
             "grok": "Grokは{{account}}でログインしましたが、このアカウントはすでに接続済みです。別のアカウントを使うには、Grokのページでログアウトしてからもう一度お試しください。",
             "antigravity": "Geminiは{{account}}でログインしましたが、このアカウントはすでに接続済みです。別のアカウントを使うには、Googleのページでログアウトしてからもう一度お試しください。",
-            "opencode": "そのOpenCodeキーは{{account}}としてすでに接続されています。"
+            "opencode": "そのOpenCodeキーは{{account}}としてすでに接続されています。",
+            "commandcode": "そのCommand Codeキーは{{account}}としてすでに接続されています。"
           },
           "startFailed": "{{computer}}から応答がありません。少し待ってからもう一度お試しください。",
           "sendFailed": "コードを送信できませんでした。確認してもう一度お試しください。",
@@ -10241,6 +10250,7 @@
       "grok": "Grok",
       "antigravity": "Gemini",
       "opencode": "OpenCode",
+      "commandcode": "Command Code",
       "needs": {
         "keys": "プランのキーを使うには、コンピューターのagentesをアップデートしてください"
       },
@@ -11474,6 +11484,7 @@
       "grok": "Grokプランの{{model}}",
       "gemini": "Geminiプランの{{model}}",
       "zen": "OpenCodeの{{model}}",
+      "commandcode": "Command Codeの{{model}}",
       "coding": "{{plan}}の{{model}}",
       "claudeOf": "{{owner}}のClaudeプランの{{model}}",
       "chatgptOf": "{{owner}}のChatGPTプランの{{model}}",
@@ -11481,6 +11492,7 @@
       "grokOf": "{{owner}}のGrokプランの{{model}}",
       "geminiOf": "{{owner}}のGeminiプランの{{model}}",
       "zenOf": "{{owner}}のOpenCodeの{{model}}",
+      "commandcodeOf": "{{owner}}のCommand Codeの{{model}}",
       "codingOf": "{{owner}}の{{plan}}の{{model}}",
       "claudeAuto": "Claudeプラン",
       "chatgptAuto": "ChatGPTプラン",
@@ -11488,6 +11500,7 @@
       "grokAuto": "Grokプラン",
       "geminiAuto": "Geminiプラン",
       "zenAuto": "OpenCode",
+      "commandcodeAuto": "Command Code",
       "codingAuto": "{{plan}}",
       "claudeAutoOf": "{{owner}}のClaudeプラン",
       "chatgptAutoOf": "{{owner}}のChatGPTプラン",
@@ -11495,6 +11508,7 @@
       "grokAutoOf": "{{owner}}のGrokプラン",
       "geminiAutoOf": "{{owner}}のGeminiプラン",
       "zenAutoOf": "{{owner}}のOpenCode",
+      "commandcodeAutoOf": "{{owner}}のCommand Code",
       "codingAutoOf": "{{owner}}の{{plan}}",
       "on": "{{computer}}上の{{line}}"
     },
@@ -11506,6 +11520,7 @@
       "codex": "Codex",
       "cursor": "Cursor",
       "opencode": "OpenCode",
+      "commandcode": "Command Code",
       "grok": "Grok Build",
       "antigravity": "Antigravity CLI"
     },
@@ -11519,6 +11534,7 @@
     "codexText": "コンピューターを接続した人のChatGPTプランを使います。",
     "cursorText": "コンピューターを接続した人のCursorプランを使います。",
     "grokText": "コンピューターを接続した人のGrokプランを使います。",
+    "commandcodeText": "コンピューターを接続した人のCommand Codeプランを使います。",
     "antigravityText": "コンピューターを接続した人のGeminiプランを使います。",
     "opencodeText": "OpenCodeの無料モデル、またはコンピューターを接続した人のOpenCodeキーを使います。",
     "cursorModel": {
@@ -11572,7 +11588,8 @@
       "cursor": "Cursor · {{model}}",
       "grok": "Grok Build · {{model}}",
       "antigravity": "Antigravity CLI · {{model}}",
-      "opencode": "OpenCode · {{model}}"
+      "opencode": "OpenCode · {{model}}",
+      "commandcode": "Command Code · {{model}}"
     },
     "mission": {
       "modelLabel": "モデル",
@@ -15027,6 +15044,7 @@
         "codex": "Codex",
         "cursor": "Cursor",
         "opencode": "OpenCode",
+        "commandcode": "Command Code",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
         "commands": "コマンド",
@@ -15187,6 +15205,7 @@
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
         "opencode": "OpenCode",
+        "commandcode": "Command Code",
         "commands": "コマンド",
         "browser": "ブラウザ"
       },
@@ -15195,6 +15214,7 @@
         "codex": "Claude Codeと同様で、ChatGPTアカウントを使います。許可されたフォルダ内のみです。",
         "cursor": "Claude Codeと同様で、Cursorアカウントを使います。許可されたフォルダ内のみです。",
         "grok": "Claude Codeと同様で、Grokアカウントを使います。許可されたフォルダ内のみです。",
+        "commandcode": "Claude Codeと同様で、Command Codeアカウントを使います。許可されたフォルダ内のみです。",
         "antigravity": "Claude Codeと同様で、Geminiアカウントを使います。許可されたフォルダ内のみです。",
         "opencode": "Claude Codeと同様で、OpenCodeの無料モデルかOpenCodeキーを使います。許可されたフォルダ内のみです。",
         "commands": "テストやビルドなど、ターミナルのコマンドを実行します。"

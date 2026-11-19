@@ -135,6 +135,15 @@ describe("one decision, mapped per brain", () => {
     expect(brainModelForTier("model", "large")).toBeUndefined();
   });
 
+  test("Command Code's catalog line, by its own ids; the other CLIs keep their default", () => {
+    expect(MODEL_TIERS.map((tier) => brainModelForTier("commandcode", tier))).toEqual([
+      "deepseek/deepseek-v4.1-flash",
+      "zai-org/GLM-5.3",
+      "claude-sonnet-5-5",
+    ]);
+    expect(brainModelForTier("opencode", "large")).toBeUndefined();
+  });
+
   test("on a coding plan the tier's alias runs the plan's model for it, whatever else the plan has", () => {
     const tiers = (plan: keyof typeof CODING_PLANS) =>
       MODEL_TIERS.map((tier) => planModel(CODING_PLANS[plan], brainModelForTier("claude_code", tier)).label);

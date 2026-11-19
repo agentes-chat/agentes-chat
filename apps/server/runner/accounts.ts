@@ -24,6 +24,7 @@ import {
   type AccountLoginState,
   type AuthMethod,
   accountCodeAad,
+  COMMANDCODE_KEY_PROVIDER,
   CURSOR_KEY_PROVIDER,
   type CursorModelInfo,
   isAccountId,
@@ -72,6 +73,7 @@ import { errnoCode, RunnerError } from "./errors";
 import { killTree } from "./exec";
 import {
   AGY_BIN,
+  COMMANDCODE_BIN,
   CURSOR_BIN,
   claudeKeptPlan,
   claudePlan,
@@ -176,6 +178,7 @@ const LABEL: Record<AccountKind, string> = {
   opencode: "OpenCode",
   grok: "Grok Build",
   antigravity: "The Antigravity CLI",
+  commandcode: "Command Code",
 };
 /** Cursor's CLI keeps its config in `CURSOR_CONFIG_DIR` (cursor.com/docs/cli/reference/configuration). */
 const ENV_VAR: Record<AccountKind, string> = {
@@ -188,6 +191,8 @@ const ENV_VAR: Record<AccountKind, string> = {
   grok: "GROK_HOME",
   // `agy` documents no config folder of its own (ADR 0143): the account's folder is its whole home.
   antigravity: "HOME",
+  // Command Code keeps everything under `$HOME/.commandcode` (its sessions, settings, caches): the folder is its home.
+  commandcode: "HOME",
 };
 const LOGIN_ARGS: Record<AccountKind, string[]> = {
   claude_code: ["auth", "login"],
@@ -199,6 +204,8 @@ const LOGIN_ARGS: Record<AccountKind, string[]> = {
   grok: ["login", "--device-auth"],
   // Google's sign-in by a pasted code, then it exits (antigravity.google/docs/ide/extensions/acp).
   antigravity: ["acp", "--login"],
+  // Never run: a Command Code account is its key alone (`begin` refuses a sign-in without one).
+  commandcode: ["login"],
 };
 const STATUS_ARGS: Record<AccountKind, string[]> = {
   claude_code: ["auth", "status", "--json"],
@@ -209,6 +216,8 @@ const STATUS_ARGS: Record<AccountKind, string[]> = {
   grok: ["models"],
   // No status command either: `agy models` lists the account's models once it is signed in.
   antigravity: ["models"],
+  // Never run either: the key is the sign-in (`cmd status` would read the computer's own).
+  commandcode: ["status"],
 };
 const LOGOUT_ARGS: Record<AccountKind, string[]> = {
   claude_code: ["auth", "logout"],
@@ -218,6 +227,7 @@ const LOGOUT_ARGS: Record<AccountKind, string[]> = {
   grok: ["logout"],
   // `/logout`, answered by the CLI itself in print mode; deleting the folder ends the sign-in anyway.
   antigravity: ["-p", "/logout"],
+  commandcode: ["logout"],
 };
 /** Each CLI's executable (Cursor's was `cursor-agent` before it was renamed). */
 const COMMAND: Record<AccountKind, string> = {
@@ -227,6 +237,7 @@ const COMMAND: Record<AccountKind, string> = {
   opencode: OPENCODE_BIN,
   grok: GROK_BIN,
   antigravity: AGY_BIN,
+  commandcode: COMMANDCODE_BIN,
 };
 
 /** What a brain turn says when its account folder is gone (people read it). */
@@ -239,6 +250,8 @@ export const ACCOUNT_MISSING_MESSAGE: Record<AccountKind, string> = {
     "The Cursor account chosen for this agent isn't on this computer anymore. Choose another account in the agent's settings, or add it again.",
   opencode:
     "The OpenCode account chosen for this agent isn't on this computer anymore. Choose another account in the agent's settings, or add it again.",
+  commandcode:
+    "The Command Code account chosen for this agent isn't on this computer anymore. Choose another account in the agent's settings, or add it again.",
   grok: "The Grok account chosen for this agent isn't on this computer anymore. Choose another account in the agent's settings, or add it again.",
   antigravity:
     "The Gemini account chosen for this agent isn't on this computer anymore. Choose another account in the agent's settings, or add it again.",
@@ -248,10 +261,11 @@ export const ACCOUNT_MISSING_MESSAGE: Record<AccountKind, string> = {
  * What would make a CLI think with anything but its folder's sign-in: a key, a token, another endpoint or cloud. Every
  * `GROK_` switch too (folder trust, memory, managed config, sandbox…): Grok Build gets only `GROK_QUIET_ENV`'s. And a
  * Gemini or Google AI key, another Gemini endpoint, the Antigravity CLI's enterprise gateway (`AGY_LLM_GATEWAY_*`) and
- * every other `AGY_` switch (it gets only `AGY_QUIET_ENV`'s).
+ * every other `AGY_` switch (it gets only `AGY_QUIET_ENV`'s). Every Command Code variable (`COMMAND_CODE_API_KEY`,
+ * `CMD_LOCAL_ONLY`, `CMD_ZDR`…): its turns get the account's key alone.
  */
 const STRAY_SIGN_IN =
-  /^(ANTHROPIC_(API_KEY|AUTH_TOKEN|BASE_URL)|CLAUDE_CODE_(OAUTH_TOKEN|USE_\w+|\w+_FILE_DESCRIPTOR)|OPENAI_API_KEY|CODEX_API_KEY|CURSOR_API_KEY|OPENCODE_API_KEY|OPENCODE_AUTH_CONTENT|XAI_API_KEY|GROK_\w+|GEMINI_API_KEY|GOOGLE_API_KEY|GOOGLE_GEMINI_BASE_URL|GOOGLE_GENAI_\w+|AGY_\w+)$/;
+  /^(ANTHROPIC_(API_KEY|AUTH_TOKEN|BASE_URL)|CLAUDE_CODE_(OAUTH_TOKEN|USE_\w+|\w+_FILE_DESCRIPTOR)|OPENAI_API_KEY|CODEX_API_KEY|CURSOR_API_KEY|OPENCODE_API_KEY|OPENCODE_AUTH_CONTENT|XAI_API_KEY|GROK_\w+|GEMINI_API_KEY|GOOGLE_API_KEY|GOOGLE_GEMINI_BASE_URL|GOOGLE_GENAI_\w+|AGY_\w+|COMMAND_CODE_\w+|COMMANDCODE_\w+|CMD_\w+)$/;
 /**
  * Google Cloud's own sign-ins (Application Default Credentials, gcloud's config, Vertex's project): kept out of the
  * Antigravity CLI only, since an agent on another CLI may deploy to Google Cloud with them.
@@ -356,6 +370,17 @@ export async function cursorKeyOf(dir: string): Promise<string | null> {
   return keyIn(dir, CURSOR_KEY_FILE);
 }
 
+/** A Command Code account keeps its key here (600): a Command Code key is its only sign-in (ADR 0203). */
+const COMMANDCODE_KEY_FILE = "commandcode-key.json";
+/** Command Code's keys: `user_` and letters, digits, `_` or `-` (88 of them in every key seen, 2026-11-14). */
+const COMMANDCODE_KEY = /^user_[A-Za-z0-9_-]{16,500}$/;
+
+/** A Command Code account's key (`commandcode-key.json`); null when it has none (yet). */
+export async function commandcodeKeyOf(dir: string): Promise<string | null> {
+  const o = readSmallJson(path.join(dir, COMMANDCODE_KEY_FILE), 1000) as Record<string, unknown> | null;
+  return typeof o?.key === "string" && COMMANDCODE_KEY.test(o.key) ? o.key : null;
+}
+
 /** An OpenCode account keeps its key here (600): an OpenCode key is its only sign-in (ADR 0132). */
 const OPENCODE_KEY_FILE = "opencode-key.json";
 
@@ -369,12 +394,17 @@ function keyIn(dir: string, file: string): string | null {
   return typeof o?.key === "string" && CURSOR_KEY.test(o.key) ? o.key : null;
 }
 
-/** The key file and words of a CLI made with an API key alone (Cursor's, chosen; OpenCode's, its only sign-in). */
+/**
+ * The key file, shape and words of a CLI made with an API key alone (Cursor's, chosen; OpenCode's and Command Code's,
+ * their only sign-in).
+ */
 const CLI_KEYS = {
-  [CURSOR_KEY_PROVIDER]: { file: CURSOR_KEY_FILE, label: "a Cursor API key" },
-  [OPENCODE_KEY_PROVIDER]: { file: OPENCODE_KEY_FILE, label: "an OpenCode API key" },
+  [CURSOR_KEY_PROVIDER]: { file: CURSOR_KEY_FILE, shape: CURSOR_KEY, label: "a Cursor API key" },
+  [OPENCODE_KEY_PROVIDER]: { file: OPENCODE_KEY_FILE, shape: CURSOR_KEY, label: "an OpenCode API key" },
+  [COMMANDCODE_KEY_PROVIDER]: { file: COMMANDCODE_KEY_FILE, shape: COMMANDCODE_KEY, label: "a Command Code API key" },
 } as const;
 type CliKeyProvider = keyof typeof CLI_KEYS;
+const isCliKeyProvider = (v: unknown): v is CliKeyProvider => typeof v === "string" && Object.hasOwn(CLI_KEYS, v);
 
 /**
  * How Claude Code gets a token root hands over: on descriptor 3, which it reads at its start, then closes, dropping
@@ -1445,7 +1475,7 @@ interface Login {
   shared: boolean;
   /** Claude's own login for all agents: its CLI runs as the sign-in's user (`sharedCli`). */
   cliShared?: boolean;
-  /** A key account's plan, `cursor` for a Cursor API key, or `zen` for an OpenCode key. */
+  /** A key account's plan, `cursor` for a Cursor API key, `zen` for an OpenCode key, `commandcode` for Command Code's. */
   provider?: PlanId | CliKeyProvider;
   state: AccountLoginState;
   output: string;
@@ -1663,7 +1693,7 @@ export class AccountManager {
     if (info.keyHint) return { authMethod: "api_key" };
     const has = (file: string) => existsSync(path.join(this.dirOf(kind, id), file));
     if (kind === "claude_code" && this.isShared(kind, id)) return has(TOKEN_FILE) ? { authMethod: "setup_token" } : {};
-    return kind === "opencode" || has(SIGNING_IN) ? {} : { authMethod: "cli_login" };
+    return kind === "opencode" || kind === "commandcode" || has(SIGNING_IN) ? {} : { authMethod: "cli_login" };
   }
 
   /**
@@ -1752,13 +1782,18 @@ export class AccountManager {
         ? CURSOR_KEY_PROVIDER
         : kind === "opencode" && provider === OPENCODE_KEY_PROVIDER
           ? OPENCODE_KEY_PROVIDER
-          : null;
+          : kind === "commandcode" && provider === COMMANDCODE_KEY_PROVIDER
+            ? COMMANDCODE_KEY_PROVIDER
+            : null;
     const enterprise = kind === "antigravity" && provider === GEMINI_ENTERPRISE_PROVIDER;
     if (provider !== undefined && !cliKey && !enterprise && (kind !== "claude_code" || !isPlanId(provider))) {
       throw new RunnerError("bad_request", "This computer doesn't know that plan");
     }
     if (kind === "opencode" && !cliKey) {
       throw new RunnerError("bad_request", "OpenCode signs in with its API key");
+    }
+    if (kind === "commandcode" && !cliKey) {
+      throw new RunnerError("bad_request", "Command Code signs in with its API key");
     }
     // ADR 0143: Windows keeps every sign-in in the one Credential Manager of the computer's user, so two accounts
     // would be one.
@@ -2079,7 +2114,7 @@ export class AccountManager {
   /** The code the person pasted (Claude Code) or a plan's key, sealed to this sign-in's key: written to the CLI, or kept. */
   async code(loginId: string, aad: string, box: WireSecretBox): Promise<void> {
     const login = this.waiting(loginId);
-    const cliKey = login.provider === CURSOR_KEY_PROVIDER || login.provider === OPENCODE_KEY_PROVIDER;
+    const cliKey = isCliKeyProvider(login.provider);
     if ((login.kind !== "claude_code" && login.kind !== "antigravity" && !cliKey) || !login.privateKey) {
       throw new RunnerError("bad_request", "This sign-in doesn't take a code");
     }
@@ -2096,9 +2131,7 @@ export class AccountManager {
     } catch {
       throw new RunnerError("bad_request", "The code couldn't be opened (wrong key or altered on the way)");
     }
-    if (login.provider === CURSOR_KEY_PROVIDER || login.provider === OPENCODE_KEY_PROVIDER) {
-      return this.keepCliKey(login, login.provider, code);
-    }
+    if (isCliKeyProvider(login.provider)) return this.keepCliKey(login, login.provider, code);
     if (login.provider) return this.keepKey(login, login.provider, code);
     if (!code || code.length > MAX_CODE_CHARS || /[\r\n]/.test(code)) {
       throw new RunnerError("bad_request", "That doesn't look like a sign-in code");
@@ -2129,11 +2162,10 @@ export class AccountManager {
     return !this.opts.lending || this.isShared(kind, id) ? { shared: true } : {};
   }
 
-  /** A Cursor or OpenCode API key, kept in the folder (600, written whole): the account thinks with it. Never logged. */
+  /** A Cursor, OpenCode or Command Code API key, kept in the folder (600, written whole): the account thinks with it. Never logged. */
   private async keepCliKey(login: Login, provider: CliKeyProvider, key: string) {
-    const { file, label } = CLI_KEYS[provider];
-    if (!CURSOR_KEY.test(key))
-      throw new RunnerError("bad_request", `That doesn't look like ${label}. Copy the whole key.`);
+    const { file, shape, label } = CLI_KEYS[provider];
+    if (!shape.test(key)) throw new RunnerError("bad_request", `That doesn't look like ${label}. Copy the whole key.`);
     writeJson(path.join(login.dir, file), { key });
     await rm(path.join(login.dir, SIGNING_IN), { force: true });
     await rm(this.marker(login.kind, login.id, "invalid"), { force: true });
@@ -2504,11 +2536,12 @@ export class AccountManager {
     if (cursorKey) {
       return { id, kind, loggedIn: !refused, provider: CURSOR_KEY_PROVIDER, keyHint: cursorKey.slice(-4), ...shared };
     }
-    if (kind === "opencode") {
+    if (kind === "opencode" || kind === "commandcode") {
       // Its key is its only sign-in: no key, signed out (its CLI is never asked).
-      const key = await opencodeKeyOf(dir);
+      const key = kind === "opencode" ? await opencodeKeyOf(dir) : await commandcodeKeyOf(dir);
+      const provider = kind === "opencode" ? OPENCODE_KEY_PROVIDER : COMMANDCODE_KEY_PROVIDER;
       return key
-        ? { id, kind, loggedIn: !refused, provider: OPENCODE_KEY_PROVIDER, keyHint: key.slice(-4), ...shared }
+        ? { id, kind, loggedIn: !refused, provider, keyHint: key.slice(-4), ...shared }
         : { id, kind, loggedIn: false, ...shared };
     }
     const cliShared = this.isCliShared(kind, id);
@@ -2689,7 +2722,8 @@ export class AccountManager {
       !this.isShared(kind, id) &&
       !(kind === "claude_code" && (await planKeyOf(dir))) &&
       !(kind === "cursor" && (await cursorKeyOf(dir))) &&
-      kind !== "opencode"
+      kind !== "opencode" &&
+      kind !== "commandcode"
     ) {
       const r = await runCli(this.command(kind), LOGOUT_ARGS[kind], this.env(kind, dir), STATUS_TIMEOUT_MS);
       if (r.status !== 0) this.log(`account ${id.slice(0, 8)} (${kind}): sign-out didn't finish; removing it anyway`);
@@ -3064,7 +3098,14 @@ export class AccountManager {
     const probe = { command: this.command(target.kind, Boolean(own)), cwd: target.cwd, env: target.env, ...limits };
     // Cursor's CLI reports no plan usage: its turns' `usage` is all there is.
     // Nor does OpenCode's: its key's usage is on OpenCode's console. Grok Build shows its plan's only in its TUI.
-    if (target.kind === "cursor" || target.kind === "opencode" || target.kind === "grok") return null;
+    // Command Code's is on its own site.
+    if (
+      target.kind === "cursor" ||
+      target.kind === "opencode" ||
+      target.kind === "grok" ||
+      target.kind === "commandcode"
+    )
+      return null;
     // The Antigravity CLI answers `/usage` itself in print mode: the plan's quotas and when they refresh.
     if (target.kind === "antigravity") {
       if (own) return null;

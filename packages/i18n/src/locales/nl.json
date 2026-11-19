@@ -3372,6 +3372,7 @@
       "antigravity": "Gemini is niet ingelogd op deze computer. Koppel een Gemini-account op de pagina van {{name}}.",
       "antigravity_female": "Gemini is niet ingelogd op deze computer. Koppel een Gemini-account op de pagina van {{name}}.",
       "opencode": "OpenCode kan niet denken op deze computer. Koppel een OpenCode-sleutel op de pagina van {{name}}.",
+      "commandcode": "Command Code kan niet denken op deze computer. Koppel een Command-Code-sleutel op de pagina van {{name}}.",
       "opencode_female": "OpenCode kan niet denken op deze computer. Koppel een OpenCode-sleutel op de pagina van {{name}}."
     },
     "card": {
@@ -3431,6 +3432,7 @@
       "grok": "Koppel je Grok-abonnement",
       "gemini": "Koppel je Gemini-abonnement",
       "zen": "Koppel OpenCode",
+      "commandcode": "Koppel Command Code",
       "api_key": "Een API-sleutel toevoegen"
     },
     "cli": {
@@ -3561,6 +3563,10 @@
         "title": "OpenCode",
         "tiers": "Gratis modellen, of je OpenCode-sleutel"
       },
+      "commandcode": {
+        "title": "Command Code",
+        "tiers": "Je Command-Code-sleutel"
+      },
       "zai": {
         "tiers": "Lite, Pro of Max"
       },
@@ -3664,7 +3670,8 @@
       "cursor": "Cursor is ingelogd als {{email}}, niet als {{account}}. Log uit op de pagina van Cursor en probeer het opnieuw.",
       "grok": "Grok is ingelogd als {{email}}, niet als {{account}}. Log uit op de pagina van Grok en probeer het opnieuw.",
       "antigravity": "Gemini is ingelogd als {{email}}, niet als {{account}}. Log uit op de pagina van Google en probeer het opnieuw.",
-      "opencode": "OpenCode is ingelogd als {{email}}, niet als {{account}}. Probeer het opnieuw met de juiste sleutel."
+      "opencode": "OpenCode is ingelogd als {{email}}, niet als {{account}}. Probeer het opnieuw met de juiste sleutel.",
+      "commandcode": "Command Code is ingelogd als {{email}}, niet als {{account}}. Probeer het opnieuw met de juiste sleutel."
     },
     "useAnyway": "{{email}} gebruiken",
     "assignFailed": "Het account {{label}} is gekoppeld, maar {{agent}} kon er niet naar overstappen.",
@@ -5930,7 +5937,8 @@
             "cursor": "Cursor-account toevoegen",
             "grok": "Grok-account toevoegen",
             "antigravity": "Gemini-account toevoegen",
-            "opencode": "Een OpenCode-sleutel toevoegen"
+            "opencode": "Een OpenCode-sleutel toevoegen",
+            "commandcode": "Een Command-Code-sleutel toevoegen"
           },
           "stepOne": {
             "claude_code": "Het account met je abonnement",
@@ -5994,7 +6002,8 @@
             "cursor": "Cursor is ingelogd als {{account}}, een account dat je al hebt gekoppeld. Wil je een ander gebruiken? Log uit op de pagina van Cursor en probeer het opnieuw.",
             "grok": "Grok is ingelogd als {{account}}, een account dat je al hebt gekoppeld. Wil je een ander gebruiken? Log uit op de pagina van Grok en probeer het opnieuw.",
             "antigravity": "Gemini is ingelogd als {{account}}, een account dat je al hebt gekoppeld. Wil je een ander gebruiken? Log uit op de pagina van Google en probeer het opnieuw.",
-            "opencode": "Die OpenCode-sleutel is al gekoppeld als {{account}}."
+            "opencode": "Die OpenCode-sleutel is al gekoppeld als {{account}}.",
+            "commandcode": "Die Command-Code-sleutel is al gekoppeld als {{account}}."
           },
           "startFailed": "Geen antwoord van {{computer}}. Probeer het zo opnieuw.",
           "sendFailed": "Kon de code niet versturen. Controleer hem en probeer het opnieuw.",
@@ -10724,6 +10733,7 @@
       "grok": "Grok",
       "antigravity": "Gemini",
       "opencode": "OpenCode",
+      "commandcode": "Command Code",
       "needs": {
         "keys": "Werk agentes bij op de computer om de sleutel van een abonnement te gebruiken"
       },
@@ -12038,6 +12048,7 @@
       "grok": "{{model}} op het Grok-abonnement",
       "gemini": "{{model}} op het Gemini-abonnement",
       "zen": "{{model}} via OpenCode",
+      "commandcode": "{{model}} via Command Code",
       "coding": "{{model}} op {{plan}}",
       "claudeOf": "{{model}} op het Claude-abonnement van {{owner}}",
       "chatgptOf": "{{model}} op het ChatGPT-abonnement van {{owner}}",
@@ -12045,6 +12056,7 @@
       "grokOf": "{{model}} op het Grok-abonnement van {{owner}}",
       "geminiOf": "{{model}} op het Gemini-abonnement van {{owner}}",
       "zenOf": "{{model}} via de OpenCode van {{owner}}",
+      "commandcodeOf": "{{model}} via de Command Code van {{owner}}",
       "codingOf": "{{model}} op {{plan}} van {{owner}}",
       "claudeAuto": "Claude-abonnement",
       "chatgptAuto": "ChatGPT-abonnement",
@@ -12052,6 +12064,7 @@
       "grokAuto": "Grok-abonnement",
       "geminiAuto": "Gemini-abonnement",
       "zenAuto": "OpenCode",
+      "commandcodeAuto": "Command Code",
       "codingAuto": "{{plan}}",
       "claudeAutoOf": "Claude-abonnement van {{owner}}",
       "chatgptAutoOf": "ChatGPT-abonnement van {{owner}}",
@@ -12059,6 +12072,7 @@
       "grokAutoOf": "Grok-abonnement van {{owner}}",
       "geminiAutoOf": "Gemini-abonnement van {{owner}}",
       "zenAutoOf": "OpenCode van {{owner}}",
+      "commandcodeAutoOf": "Command Code van {{owner}}",
       "codingAutoOf": "{{plan}} van {{owner}}",
       "on": "{{line}} op {{computer}}"
     },
@@ -12071,6 +12085,7 @@
       "codex": "Codex",
       "cursor": "Cursor",
       "opencode": "OpenCode",
+      "commandcode": "Command Code",
       "grok": "Grok Build",
       "antigravity": "Antigravity CLI"
     },
@@ -12084,6 +12099,7 @@
     "codexText": "Gebruikt het ChatGPT-abonnement van wie de computer koppelde.",
     "cursorText": "Gebruikt het Cursor-abonnement van wie de computer koppelde.",
     "grokText": "Gebruikt het Grok-abonnement van wie de computer koppelde.",
+    "commandcodeText": "Gebruikt het Command-Code-abonnement van wie de computer koppelde.",
     "antigravityText": "Gebruikt het Gemini-abonnement van wie de computer koppelde.",
     "opencodeText": "De gratis modellen van OpenCode, of de OpenCode-sleutel van wie de computer koppelde.",
     "cursorModel": {
@@ -12137,7 +12153,8 @@
       "cursor": "Cursor · {{model}}",
       "grok": "Grok Build · {{model}}",
       "antigravity": "Antigravity CLI · {{model}}",
-      "opencode": "OpenCode · {{model}}"
+      "opencode": "OpenCode · {{model}}",
+      "commandcode": "Command Code · {{model}}"
     },
     "mission": {
       "modelLabel": "Model",
@@ -15666,6 +15683,7 @@
         "codex": "Codex",
         "cursor": "Cursor",
         "opencode": "OpenCode",
+        "commandcode": "Command Code",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
         "commands": "de commando's",
@@ -15826,6 +15844,7 @@
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
         "opencode": "OpenCode",
+        "commandcode": "Command Code",
         "commands": "Opdrachten",
         "browser": "Browser"
       },
@@ -15834,6 +15853,7 @@
         "codex": "Zoals Claude Code, met een ChatGPT-account. Alleen in de toegestane mappen.",
         "cursor": "Zoals Claude Code, met een Cursor-account. Alleen in de toegestane mappen.",
         "grok": "Zoals Claude Code, met een Grok-account. Alleen in de toegestane mappen.",
+        "commandcode": "Zoals Claude Code, met een Command-Code-account. Alleen in de toegestane mappen.",
         "antigravity": "Zoals Claude Code, met een Gemini-account. Alleen in de toegestane mappen.",
         "opencode": "Zoals Claude Code, met de gratis modellen van OpenCode of een OpenCode-sleutel. Alleen in de toegestane mappen.",
         "commands": "Voert Terminal-opdrachten uit, zoals tests en builds."

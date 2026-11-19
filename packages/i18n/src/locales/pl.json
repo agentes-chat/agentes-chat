@@ -3647,7 +3647,8 @@
       "cursor": "Cursor nie jest zalogowany na tym komputerze. Podłącz konto Cursor na stronie agenta {{name}}.",
       "grok": "Grok nie jest zalogowany na tym komputerze. Podłącz konto Grok na stronie agenta {{name}}.",
       "antigravity": "Gemini nie jest zalogowany na tym komputerze. Podłącz konto Gemini na stronie agenta {{name}}.",
-      "opencode": "OpenCode nie może myśleć na tym komputerze. Połącz klucz OpenCode na stronie agenta {{name}}."
+      "opencode": "OpenCode nie może myśleć na tym komputerze. Połącz klucz OpenCode na stronie agenta {{name}}.",
+      "commandcode": "Command Code nie może myśleć na tym komputerze. Połącz klucz Command Code na stronie agenta {{name}}."
     },
     "card": {
       "connected": "Gotowe: {{name}} ma teraz AI.",
@@ -3706,6 +3707,7 @@
       "grok": "Połącz swój plan Grok",
       "gemini": "Połącz swój plan Gemini",
       "zen": "Połącz OpenCode",
+      "commandcode": "Połącz Command Code",
       "api_key": "Dodaj klucz API"
     },
     "cli": {
@@ -3845,6 +3847,10 @@
         "title": "OpenCode",
         "tiers": "Darmowe modele albo Twój klucz OpenCode"
       },
+      "commandcode": {
+        "title": "Command Code",
+        "tiers": "Twój klucz Command Code"
+      },
       "zai": {
         "tiers": "Lite, Pro lub Max"
       },
@@ -3946,7 +3952,8 @@
       "cursor": "Cursor jest zalogowany jako {{email}}, a nie {{account}}. Wyloguj się na stronie Cursor i spróbuj ponownie.",
       "grok": "Grok jest zalogowany jako {{email}}, a nie {{account}}. Wyloguj się na stronie Grok i spróbuj ponownie.",
       "antigravity": "Gemini jest zalogowany jako {{email}}, a nie {{account}}. Wyloguj się na stronie Google i spróbuj ponownie.",
-      "opencode": "OpenCode zalogował się jako {{email}}, a nie {{account}}. Spróbuj ponownie z właściwym kluczem."
+      "opencode": "OpenCode zalogował się jako {{email}}, a nie {{account}}. Spróbuj ponownie z właściwym kluczem.",
+      "commandcode": "Command Code zalogował się jako {{email}}, a nie {{account}}. Spróbuj ponownie z właściwym kluczem."
     },
     "useAnyway": "Użyj {{email}}",
     "assignFailed": "Konto {{label}} jest połączone, ale nie udało się na nie przełączyć agenta {{agent}}.",
@@ -6355,7 +6362,8 @@
             "cursor": "Dodaj konto Cursor",
             "grok": "Dodaj konto Grok",
             "antigravity": "Dodaj konto Gemini",
-            "opencode": "Dodaj klucz OpenCode"
+            "opencode": "Dodaj klucz OpenCode",
+            "commandcode": "Dodaj klucz Command Code"
           },
           "stepOne": {
             "claude_code": "Konto z twoim planem",
@@ -6419,7 +6427,8 @@
             "cursor": "Cursor zalogował się jako {{account}}, a to konto jest już połączone. Aby użyć innego, wyloguj się na stronie Cursor i spróbuj ponownie.",
             "grok": "Grok zalogował się jako {{account}}, a to konto jest już połączone. Aby użyć innego, wyloguj się na stronie Grok i spróbuj ponownie.",
             "antigravity": "Gemini zalogował się jako {{account}}, a to konto jest już połączone. Aby użyć innego, wyloguj się na stronie Google i spróbuj ponownie.",
-            "opencode": "Ten klucz OpenCode jest już połączony jako {{account}}."
+            "opencode": "Ten klucz OpenCode jest już połączony jako {{account}}.",
+            "commandcode": "Ten klucz Command Code jest już połączony jako {{account}}."
           },
           "startFailed": "Brak odpowiedzi od komputera {{computer}}. Spróbuj ponownie za chwilę.",
           "sendFailed": "Nie udało się wysłać kodu. Sprawdź go i spróbuj ponownie.",
@@ -11471,6 +11480,7 @@
       "grok": "Grok",
       "antigravity": "Gemini",
       "opencode": "OpenCode",
+      "commandcode": "Command Code",
       "needs": {
         "keys": "Zaktualizuj agentes na komputerze, żeby używać klucza planu"
       },
@@ -12902,6 +12912,7 @@
       "grok": "{{model}} w planie Grok",
       "gemini": "{{model}} w planie Gemini",
       "zen": "{{model}} przez OpenCode",
+      "commandcode": "{{model}} przez Command Code",
       "coding": "{{model}} w {{plan}}",
       "claudeOf": "{{model}} w planie Claude użytkownika {{owner}}",
       "chatgptOf": "{{model}} w planie ChatGPT użytkownika {{owner}}",
@@ -12909,6 +12920,7 @@
       "grokOf": "{{model}} w planie Grok użytkownika {{owner}}",
       "geminiOf": "{{model}} w planie Gemini użytkownika {{owner}}",
       "zenOf": "{{model}} przez OpenCode użytkownika {{owner}}",
+      "commandcodeOf": "{{model}} przez Command Code użytkownika {{owner}}",
       "codingOf": "{{model}} w {{plan}} użytkownika {{owner}}",
       "claudeAuto": "Plan Claude",
       "chatgptAuto": "Plan ChatGPT",
@@ -12916,6 +12928,7 @@
       "grokAuto": "Plan Grok",
       "geminiAuto": "Plan Gemini",
       "zenAuto": "OpenCode",
+      "commandcodeAuto": "Command Code",
       "codingAuto": "{{plan}}",
       "claudeAutoOf": "Plan Claude użytkownika {{owner}}",
       "chatgptAutoOf": "Plan ChatGPT użytkownika {{owner}}",
@@ -12923,6 +12936,7 @@
       "grokAutoOf": "Plan Grok użytkownika {{owner}}",
       "geminiAutoOf": "Plan Gemini użytkownika {{owner}}",
       "zenAutoOf": "OpenCode użytkownika {{owner}}",
+      "commandcodeAutoOf": "Command Code użytkownika {{owner}}",
       "codingAutoOf": "{{plan}} użytkownika {{owner}}",
       "on": "{{line}} na komputerze {{computer}}"
     },
@@ -12935,6 +12949,7 @@
       "codex": "Codex",
       "cursor": "Cursor",
       "opencode": "OpenCode",
+      "commandcode": "Command Code",
       "grok": "Grok Build",
       "antigravity": "Antigravity CLI"
     },
@@ -12948,6 +12963,7 @@
     "codexText": "Korzysta z planu ChatGPT osoby, która połączyła komputer.",
     "cursorText": "Korzysta z planu Cursor osoby, która połączyła komputer.",
     "grokText": "Korzysta z planu Grok osoby, która połączyła komputer.",
+    "commandcodeText": "Korzysta z planu Command Code osoby, która połączyła komputer.",
     "antigravityText": "Korzysta z planu Gemini osoby, która połączyła komputer.",
     "opencodeText": "Darmowe modele OpenCode albo klucz OpenCode osoby, która połączyła komputer.",
     "cursorModel": {
@@ -13001,7 +13017,8 @@
       "cursor": "Cursor · {{model}}",
       "grok": "Grok Build · {{model}}",
       "antigravity": "Antigravity CLI · {{model}}",
-      "opencode": "OpenCode · {{model}}"
+      "opencode": "OpenCode · {{model}}",
+      "commandcode": "Command Code · {{model}}"
     },
     "mission": {
       "modelLabel": "Model",
@@ -16683,6 +16700,7 @@
         "codex": "Codex",
         "cursor": "Cursor",
         "opencode": "OpenCode",
+        "commandcode": "Command Code",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
         "commands": "polecenia",
@@ -16843,6 +16861,7 @@
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
         "opencode": "OpenCode",
+        "commandcode": "Command Code",
         "commands": "Polecenia",
         "browser": "Przeglądarka"
       },
@@ -16851,6 +16870,7 @@
         "codex": "Jak Claude Code, z kontem ChatGPT. Tylko w dozwolonych folderach.",
         "cursor": "Jak Claude Code, z kontem Cursor. Tylko w dozwolonych folderach.",
         "grok": "Jak Claude Code, z kontem Grok. Tylko w dozwolonych folderach.",
+        "commandcode": "Jak Claude Code, z kontem Command Code. Tylko w dozwolonych folderach.",
         "antigravity": "Jak Claude Code, z kontem Gemini. Tylko w dozwolonych folderach.",
         "opencode": "Jak Claude Code, z darmowymi modelami OpenCode albo kluczem OpenCode. Tylko w dozwolonych folderach.",
         "commands": "Uruchamia polecenia w Terminalu, na przykład testy i buildy."
