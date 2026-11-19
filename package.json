@@ -49,6 +49,7 @@
     "typescript": "^7.0.2"
   },
   "patchedDependencies": {
+    "react-native-gesture-handler@3.3.0": "patches/react-native-gesture-handler@3.3.0.patch",
     "react-native-screens@4.30.0": "patches/react-native-screens@4.30.0.patch"
   },
   "packageManager": "bun@1.4.4",

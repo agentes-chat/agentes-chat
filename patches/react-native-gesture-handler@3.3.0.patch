@@ -1,0 +1,97 @@
+diff --git a/android/src/main/java/com/swmansion/gesturehandler/core/GestureHandlerOrchestrator.kt b/android/src/main/java/com/swmansion/gesturehandler/core/GestureHandlerOrchestrator.kt
+index 4917f84..e211bc2 100644
+--- a/android/src/main/java/com/swmansion/gesturehandler/core/GestureHandlerOrchestrator.kt
++++ b/android/src/main/java/com/swmansion/gesturehandler/core/GestureHandlerOrchestrator.kt
+@@ -390,10 +390,17 @@ class GestureHandlerOrchestrator(
+   }
+ 
+   /**
+-   * Cancels handlers whose view opted out of surviving a native view taking over the touch stream.
++   * Cancels handlers that shouldn't survive a native view taking over the touch stream: handlers
++   * whose view opted out through its hook (buttons), and handlers attached through a detector that
++   * haven't activated, native gestures included.
+    */
+-  fun cancelHandlersOnNativeTouchGrab(grabbedMidGesture: Boolean) = cancelHandlersMatching {
+-    it is NativeViewGestureHandler && it.shouldCancelOnNativeTouchGrab(grabbedMidGesture)
++  fun cancelHandlersOnNativeTouchGrab(grabbedMidGesture: Boolean, downTime: Long) = cancelHandlersMatching {
++    val cancelledByHook = it is NativeViewGestureHandler && it.shouldCancelOnNativeTouchGrab(grabbedMidGesture)
++    val cancelledByDetector = !it.isActive &&
++      GestureHandler.usesNativeOrVirtualDetector(it.actionType) &&
++      it.hostDetectorView?.shouldCancelOnNativeTouchGrab(grabbedMidGesture, downTime) == true
++
++    cancelledByHook || cancelledByDetector
+   }
+ 
+   /**
+diff --git a/android/src/main/java/com/swmansion/gesturehandler/react/RNGestureHandlerDetectorView.kt b/android/src/main/java/com/swmansion/gesturehandler/react/RNGestureHandlerDetectorView.kt
+index c4a8199..b09f0ce 100644
+--- a/android/src/main/java/com/swmansion/gesturehandler/react/RNGestureHandlerDetectorView.kt
++++ b/android/src/main/java/com/swmansion/gesturehandler/react/RNGestureHandlerDetectorView.kt
+@@ -1,6 +1,7 @@
+ package com.swmansion.gesturehandler.react
+ 
+ import android.content.Context
++import android.view.MotionEvent
+ import android.view.View
+ import com.facebook.react.bridge.ReadableArray
+ import com.facebook.react.uimanager.ThemedReactContext
+@@ -22,6 +23,10 @@ class RNGestureHandlerDetectorView(context: Context) : ReactViewGroup(context) {
+   private var subscribedVirtualHandlers: MutableMap<Int, MutableSet<Int>> = mutableMapOf()
+   private var moduleId: Int = -1
+ 
++  // Down time of the last DOWN that native dispatch delivered to this view. Handler delivery
++  // bypasses `dispatchTouchEvent`, so a DOWN intercepted by an ancestor never updates it.
++  private var lastNativeDownTime = -1L
++
+   data class VirtualChildren(val handlerTags: List<Int>, val viewTag: Int)
+ 
+   fun setHandlerTags(handlerTags: ReadableArray?) {
+@@ -44,6 +49,22 @@ class RNGestureHandlerDetectorView(context: Context) : ReactViewGroup(context) {
+     super.onDetachedFromWindow()
+   }
+ 
++  override fun dispatchTouchEvent(event: MotionEvent): Boolean {
++    if (event.actionMasked == MotionEvent.ACTION_DOWN) {
++      lastNativeDownTime = event.downTime
++    }
++    return super.dispatchTouchEvent(event)
++  }
++
++  /**
++   * A native view takes over the touch stream with `requestDisallowInterceptTouchEvent`, which only
++   * bubbles up, so handlers of detectors below it are never notified. Mirror the rule buttons use:
++   * cancel when the grab happens after DOWN, or when it happens on DOWN and kept the event from
++   * reaching this detector (e.g. a scroll view catching a fling).
++   */
++  fun shouldCancelOnNativeTouchGrab(grabbedMidGesture: Boolean, downTime: Long) =
++    grabbedMidGesture || lastNativeDownTime != downTime
++
+   override fun requestDisallowInterceptTouchEvent(disallowIntercept: Boolean) {
+     super.requestDisallowInterceptTouchEvent(disallowIntercept)
+     if (!disallowIntercept) {
+diff --git a/android/src/main/java/com/swmansion/gesturehandler/react/RNGestureHandlerRootHelper.kt b/android/src/main/java/com/swmansion/gesturehandler/react/RNGestureHandlerRootHelper.kt
+index 63001c1..5b5b8ab 100644
+--- a/android/src/main/java/com/swmansion/gesturehandler/react/RNGestureHandlerRootHelper.kt
++++ b/android/src/main/java/com/swmansion/gesturehandler/react/RNGestureHandlerRootHelper.kt
+@@ -141,9 +141,9 @@ class RNGestureHandlerRootHelper(private val context: ReactContext, wrappedView:
+    * request alone doesn't say what the caller did with the event: a scrollable calls it when it
+    * takes over the touch, but e.g. a nested pager calls it already on DOWN, just to keep its
+    * ancestors from stealing a swipe it may recognize later, and the event still reaches the
+-   * button - at request time both calls look identical. They only become
+-   * distinguishable once the native dispatch completes (did the button receive the DOWN?), which
+-   * is why cancellation runs here instead of in `requestDisallowInterceptTouchEvent`.
++   * button or detector - at request time both calls look identical. They only become
++   * distinguishable once the native dispatch completes (did the button or detector receive the
++   * DOWN?), which is why cancellation runs here instead of in `requestDisallowInterceptTouchEvent`.
+    */
+   fun onNativeDispatchEnd(event: MotionEvent) {
+     passingNativeTouch = false
+@@ -154,7 +154,7 @@ class RNGestureHandlerRootHelper(private val context: ReactContext, wrappedView:
+       val grabbedMidGesture = event.actionMasked != MotionEvent.ACTION_DOWN &&
+         event.actionMasked != MotionEvent.ACTION_POINTER_DOWN
+ 
+-      orchestrator?.cancelHandlersOnNativeTouchGrab(grabbedMidGesture)
++      orchestrator?.cancelHandlersOnNativeTouchGrab(grabbedMidGesture, event.downTime)
+     }
+   }
+ 
