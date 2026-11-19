@@ -1,5 +1,7 @@
 import {
   ACCESS_PROTOCOL,
+  badActorCode,
+  badActorRefusal,
   type ExecRequest,
   type ExecResult,
   isReservedSecretName,
@@ -906,6 +908,12 @@ export function createSandboxToolSource(
           const timeout = timeoutOf(input, execTimeout, maxTimeout);
           const names = runKeysOf(input.keys);
           if (typeof names === "string") return { content: names, isError: true };
+          // The same obvious harm a brain's own command is refused for (ADR 0053 §3), unless a person approved this call.
+          const bad = ctx.approved ? null : badActorCode(str(input.code), lang);
+          if (bad) {
+            const refusal = badActorRefusal(bad);
+            return { content: `Not run: ${refusal.message}`, isError: true, data: { refusal: refusal.code } };
+          }
           const file = `.agentes/run-${Date.now()}.${runner.ext}`;
           const started = Date.now();
           const result = await run(
