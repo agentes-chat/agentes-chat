@@ -3872,11 +3872,15 @@ export const ptBR = {
   /** An API key pasted in a message, before it goes out. */
   keyGuard: {
     title: "Isso parece uma chave de API",
-    text: "Tudo o que vai no chat fica visível para as pessoas e os agentes. Salve como chave do workspace: ela fica cifrada e ninguém vê.",
-    textMember: "Tudo o que vai no chat fica visível para as pessoas e os agentes. Uma chave é como uma senha.",
-    save: "Salvar como chave",
+    titleSecret: "Isso parece uma chave ou senha",
+    vaultText:
+      "Tudo o que vai no chat fica visível para as pessoas e os agentes. Guarde no Cofre: ela fica cifrada, e os agentes que você autorizar usam sem ver.",
+    vault: "Salvar no Cofre",
+    useAsAi: "Usar como chave de IA",
     remove: "Tirar do texto",
     send: "Enviar mesmo assim",
+    /** After "Save in the Vault", under the toast's "Saved in the Vault". */
+    saved: "Os agentes com acesso usam pelo nome {{name}}.",
   },
   /** An agent's card whose button opens the app's own dialog, filled in (`meta.actionCard`). */
   /** A stretch's pause card once someone pressed Continuar (ADR 0089). */
@@ -19633,6 +19637,25 @@ export const ptBR = {
     writeAfter: ".",
     ask: "Precisa de ajuda? Fale com quem cuida deste servidor.",
   },
+  /** Resetting a workspace (owners, Sua conta): what it made goes now and for good, and it starts over as a new one. */
+  resetOrg: {
+    /** The title over the account's danger rows for an owner: resetting, deleting the workspace, deleting the account. */
+    cardTitle: "Recomeçar ou apagar",
+    row: {
+      title: "Recomeçar o workspace",
+      text: "Apaga o que foi feito nele e começa de novo, com as mesmas pessoas.",
+    },
+    goes: "Os agentes, as conversas, as DMs, os arquivos, as tarefas, as rotinas e a memória",
+    stays: "As pessoas, os cargos, os convites, as contas de IA, os computadores e os conectores",
+    fresh: "Depois ele abre como um workspace novo, com a configuração do começo",
+    /** Only where plans are billed. */
+    plan: "O plano continua o mesmo, sem cobrança nova",
+    now: "Acontece na hora e não tem volta.",
+    title: "Recomeçar {{name}}?",
+    submit: "Recomeçar workspace",
+    /** In the row once it started, until the workspace opens again as a new one. */
+    resetting: "Recomeçando {{name}}…",
+  },
   /** Deleting a workspace (owners): it turns read-only for everyone now and is deleted for good 7 days later. */
   deleteOrg: {
     card: {
@@ -19725,8 +19748,6 @@ export const ptBR = {
     card: {
       text: "Apaga a sua conta em 7 dias, em todos os workspaces.",
       button: "Apagar conta…",
-      /** The card's title for an owner, over its two buttons: the account and the workspace. */
-      title: "Apagar",
     },
     title: "Apagar a sua conta inteira?",
     intro: "Isto apaga a sua conta inteira, não só um workspace.",

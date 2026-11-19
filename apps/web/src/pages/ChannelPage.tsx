@@ -98,7 +98,7 @@ import {
 import type { AgentTab } from "@agenteschat/client/lib/agent-edit";
 import { foldTalk, TALK_LINE_CHARS, talksToAgent } from "@agenteschat/client/lib/agent-talk";
 import { returnsHere } from "@agenteschat/client/lib/agent-work";
-import { looksLikeApiKey } from "@agenteschat/client/lib/api-key-text";
+import { type FoundKey, looksLikeApiKey } from "@agenteschat/client/lib/api-key-text";
 import { approvalCardItems, asOfNow, cardDeadline } from "@agenteschat/client/lib/approval-card";
 import { artifactRefs } from "@agenteschat/client/lib/artifacts";
 import { canTalk, unavailableNotice } from "@agenteschat/client/lib/audience";
@@ -2176,12 +2176,12 @@ function ChannelView({
   const uploading = files.some((f) => f.status === "uploading");
 
   // A key pasted in the message: nothing goes out until the person chooses (`KeyGuardDialog`).
-  const [keyAsk, setKeyAsk] = useState<{ text: string; key: string; interrupt?: boolean } | null>(null);
+  const [keyAsk, setKeyAsk] = useState<{ text: string; found: FoundKey; interrupt?: boolean } | null>(null);
   const onSend = (text: string, opts?: { interrupt?: boolean; keyChecked?: boolean }) => {
     if (uploading || (!text && attached.length === 0)) return;
-    const key = opts?.keyChecked ? null : looksLikeApiKey(text);
-    if (key) {
-      setKeyAsk({ text, key, interrupt: opts?.interrupt });
+    const found = opts?.keyChecked ? null : looksLikeApiKey(text);
+    if (found) {
+      setKeyAsk({ text, found, interrupt: opts?.interrupt });
       return;
     }
     if (attached.length === 0 && parseMissionCommand(text)) {
@@ -2252,11 +2252,11 @@ function ChannelView({
           onRecording: () => sendTyping(undefined, "voice"),
           onTake: ({ blob, durationMs, peaks }) => {
             const typed = draft.trim();
-            const key = looksLikeApiKey(typed);
-            const text = key ? "" : typed;
+            const found = looksLikeApiKey(typed);
+            const text = found ? "" : typed;
             toBottom(true);
             setQuote(null);
-            if (key) setKeyAsk({ text: typed, key });
+            if (found) setKeyAsk({ text: typed, found });
             else if (text) setDraft("");
             const sentFiles = files.filter((f) => f.status === "done" && f.ref);
             const uploading = setInterval(() => sendTyping(undefined, "voice", true), 1000);

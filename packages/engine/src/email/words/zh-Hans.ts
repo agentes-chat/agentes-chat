@@ -264,6 +264,13 @@ export const words: EmailWords = {
   deletionCode: {
     subjectWorkspace: (code) => `删除工作区的验证码：${code}`,
     subjectAccount: (code) => `删除整个账号的验证码：${code}`,
+    subjectReset: (code) => `重置工作区的验证码：${code}`,
+    reset: (org) => [
+      "输入这个验证码即可重置工作区 ",
+      { b: org },
+      "。它的智能体、对话、文件和记忆会立即被永久删除，并像新工作区一样重新开始。",
+    ],
+    whyReset: (org) => `你收到这封邮件，是因为你的账号请求重置 agentes.chat 上的 ${org}。`,
     preheader: "在 agentes.chat 中输入它来确认。10 分钟内有效。",
     headline: "你的验证码",
     workspace: (org) => ["输入这个验证码即可删除工作区 ", { b: org }, "。它会立即对所有人变为只读，7 天后被永久删除。"],

@@ -2250,6 +2250,8 @@
     "deleteIntro": "{{name}} ist ab sofort für alle schreibgeschützt und wird in 7 Tagen endgültig gelöscht.",
     "holdDelete": "Zum Löschen gedrückt halten",
     "deleteFailed": "Der Workspace ließ sich nicht löschen. Versuch es noch einmal.",
+    "holdReset": "Zum Zurücksetzen gedrückt halten",
+    "resetFailed": "Der Workspace konnte nicht zurückgesetzt werden. Versuch es noch mal.",
     "access": {
       "how": "Tippe auf eine Zeile, um die Stufe zu ändern: Kein Zugriff, Lesen, Lesen und schreiben."
     },

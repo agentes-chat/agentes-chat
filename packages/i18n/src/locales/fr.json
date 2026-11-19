@@ -3822,11 +3822,13 @@
   },
   "keyGuard": {
     "title": "Cela ressemble à une clé API",
-    "text": "Tout ce qui est dans la discussion est visible par les personnes et les agents. Enregistrez-la plutôt comme clé de l'espace de travail : elle est chiffrée et personne ne la voit.",
-    "textMember": "Tout ce qui est dans la discussion est visible par les personnes et les agents. Une clé, c'est comme un mot de passe.",
-    "save": "Enregistrer comme clé",
+    "titleSecret": "Cela ressemble à une clé ou un mot de passe",
+    "vaultText": "Tout ce qui passe dans le chat est visible par les personnes et les agents. Gardez-la dans le Vault : elle est chiffrée, et les agents que vous autorisez l'utilisent sans la voir.",
+    "vault": "Enregistrer dans le Vault",
+    "useAsAi": "Utiliser comme clé d'IA",
     "remove": "La retirer",
-    "send": "Envoyer quand même"
+    "send": "Envoyer quand même",
+    "saved": "Les agents qui y ont accès l'utilisent sous le nom {{name}}."
   },
   "costlyCard": {
     "go": "Vas-y",
@@ -19810,6 +19812,21 @@
     "writeAfter": ".",
     "ask": "Besoin d'aide ? Demandez aux personnes qui gèrent ce serveur."
   },
+  "resetOrg": {
+    "cardTitle": "Réinitialiser ou supprimer",
+    "row": {
+      "title": "Réinitialiser l'espace de travail",
+      "text": "Efface tout ce qui y a été fait et repart de zéro, avec les mêmes personnes."
+    },
+    "goes": "Les agents, conversations, messages privés, fichiers, tâches, routines et la mémoire",
+    "stays": "Les personnes, rôles, invitations, comptes d'IA, ordinateurs et connecteurs",
+    "fresh": "Ensuite il s'ouvre comme un nouvel espace de travail, avec la configuration de départ",
+    "plan": "L'abonnement reste le même, sans nouveau prélèvement",
+    "now": "Cela se fait tout de suite et ne peut pas être annulé.",
+    "title": "Réinitialiser {{name}} ?",
+    "submit": "Réinitialiser l'espace de travail",
+    "resetting": "Réinitialisation de {{name}}…"
+  },
   "deleteOrg": {
     "card": {
       "title": "Supprimer l'espace de travail",
@@ -19881,8 +19898,7 @@
     "menu": "Supprimer le compte",
     "card": {
       "text": "Supprime votre compte dans 7 jours, dans tous les espaces de travail.",
-      "button": "Supprimer le compte…",
-      "title": "Supprimer"
+      "button": "Supprimer le compte…"
     },
     "title": "Supprimer tout votre compte ?",
     "intro": "Cela supprime tout votre compte, pas seulement un espace de travail.",

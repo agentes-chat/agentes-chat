@@ -2144,6 +2144,8 @@
     "deleteIntro": "{{name}} langsung jadi hanya-baca untuk semua orang dan dihapus selamanya dalam 7 hari.",
     "holdDelete": "Tahan untuk menghapus",
     "deleteFailed": "Tidak bisa menghapus ruang kerja. Coba lagi.",
+    "holdReset": "Tahan untuk mengatur ulang",
+    "resetFailed": "Ruang kerja tidak bisa diatur ulang. Coba lagi.",
     "access": {
       "how": "Ketuk baris untuk mengubah levelnya: Tanpa akses, Baca, Baca dan tulis."
     },

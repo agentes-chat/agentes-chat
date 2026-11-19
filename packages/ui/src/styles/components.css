@@ -12935,9 +12935,18 @@ html:not([data-pointer]) .ac-disclosure__summary:focus-visible {
   gap: var(--space-4);
   padding-top: var(--space-2);
 }
+/* A closed body still lays out when something measures it (content-visibility only skips painting), so its controls
+   would read as spilling out of the row and its card; hidden, they are gone for good. */
+.ac-disclosure:not([open]) > .ac-disclosure__body {
+  visibility: hidden;
+}
 @media (prefers-reduced-motion: no-preference) {
   .ac-disclosure {
     interpolate-size: allow-keywords;
+  }
+  /* Hidden only once the collapse has ended, so closing still shows the body folding away. */
+  .ac-disclosure:not([open]) > .ac-disclosure__body {
+    transition: visibility 0s var(--dur-panel);
   }
   .ac-disclosure::details-content {
     block-size: 0;

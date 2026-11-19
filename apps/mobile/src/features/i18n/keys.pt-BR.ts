@@ -2315,6 +2315,8 @@ export const featureKeysPtBR = {
     deleteIntro: "{{name}} fica só para leitura para todos agora e é apagado de vez em 7 dias.",
     holdDelete: "Segure para apagar",
     deleteFailed: "Não deu para apagar o workspace. Tente de novo.",
+    holdReset: "Segure para recomeçar",
+    resetFailed: "Não deu para recomeçar o workspace. Tente de novo.",
     access: {
       how: "Toque numa linha para trocar o nível: Sem acesso, Ler, Ler e escrever.",
     },
