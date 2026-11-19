@@ -328,12 +328,20 @@ describe("a workspace being deleted, at its end and in the desktop app", () => {
   });
 });
 
+/** With several workspaces the header opens the quick switcher; its settings item opens the full menu. */
+const openFullMenu = async () => {
+  const trigger = screen().getByRole("button", { name: /^Menu do workspace/ });
+  if (trigger.getAttribute("aria-haspopup") === "menu") {
+    await act(async () => fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false }));
+    await settle(4);
+    await act(async () => fireEvent.click(screen().getByRole("menuitem", { name: /Configurações do workspace/ })));
+  } else await act(async () => fireEvent.click(trigger));
+  await settle(4);
+};
+
 describe("the workspace menu tells closed and same-named workspaces apart", () => {
   const rows = async () => {
-    await act(async () => {
-      fireEvent.click(screen().getByRole("button", { name: /^Menu do workspace/ }));
-    });
-    await settle(4);
+    await openFullMenu();
     return within(screen().getByRole("menu", { name: "Seus workspaces" })).getAllByRole("menuitem");
   };
 
@@ -370,10 +378,7 @@ describe("the workspace menu tells closed and same-named workspaces apart", () =
 describe("the desktop app lists every server's workspaces (ADR 0154)", () => {
   const OWN = "https://agentes.exemplo.com.br";
   const menuRows = async () => {
-    await act(async () => {
-      fireEvent.click(screen().getByRole("button", { name: /^Menu do workspace/ }));
-    });
-    await settle(4);
+    await openFullMenu();
     return within(screen().getByRole("menu", { name: "Seus workspaces" }));
   };
   const text = (el: Element) => el.textContent?.replace(/\s+/g, " ").trim();

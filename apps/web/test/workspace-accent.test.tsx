@@ -74,7 +74,14 @@ describe("the workspace shell paints its accent", () => {
     });
     await renderApp(`/org/${ORG_ID}/home`, { api: createFakeApi(state) });
     await settle(6);
-    await click(screen().getByRole("button", { name: "Menu do workspace Acme" }));
+    // Several workspaces: the header opens the quick switcher, whose rows carry the same marks.
+    await act(async () =>
+      fireEvent.pointerDown(screen().getByRole("button", { name: "Menu do workspace Acme" }), {
+        button: 0,
+        ctrlKey: false,
+      }),
+    );
+    await settle(4);
     const dither = (name: string) =>
       screen()
         .getByRole("menuitem", { name: new RegExp(name) })
