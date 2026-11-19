@@ -1,6 +1,7 @@
 import { Children, isValidElement, type ReactNode } from "react";
 import { type AccessibilityActionEvent, Pressable, StyleSheet, View } from "react-native";
 import Animated, { FadeIn, LayoutAnimationConfig } from "react-native-reanimated";
+import { CodeWords } from "./CodeWords";
 import { haptics } from "./haptics";
 import { Icon, type IconName } from "./Icon";
 import { IconTile } from "./IconTile";
@@ -154,19 +155,20 @@ export function GroupedFooter({
   /** An ⓘ after the footer's one sentence, with the rest of the explanation; its text shows under the sentence. */
   hint?: { name: string; text: string };
 }) {
+  const words = typeof children === "string" ? <CodeWords text={children} /> : children;
   if (hint)
     return (
       <View style={styles.footer}>
         <InfoHint {...hint} variant="footnote">
           <Text variant="footnote" tone="faint">
-            {children}
+            {words}
           </Text>
         </InfoHint>
       </View>
     );
   return (
     <Text variant="footnote" tone="faint" style={styles.footer}>
-      {children}
+      {words}
     </Text>
   );
 }

@@ -224,6 +224,8 @@ export const OP_ROUTES: Readonly<Record<MachineOp, "machine" | "agent">> = {
   // The person's own session: macOS's password window opens on their screen (a system-mode runner answers unsupported).
   "xcode.fix": "machine",
   "xcode.open": "machine",
+  // The process that sees the phones runs their helpers.
+  "phone.repair": "machine",
   // Looking for the coding CLIs only reads the computer's PATH, so root answers it in system mode too.
   "clis.check": "machine",
   // Installed as the runner's own user. Root answers unsupported: the agents' users get their CLIs from the
@@ -732,6 +734,10 @@ async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: Req
   if (req.op === "phone.look")
     return { looking: (await ctx.phones?.look()) ?? false } satisfies MachineReplies["phone.look"];
   if (req.op === "xcode.open") return (await ctx.xcodeOpen?.()) ?? { opened: false };
+  if (req.op === "phone.repair") {
+    if (!ctx.phones) throw new RunnerError("phone_missing", "This computer doesn't reach phones.");
+    return ctx.phones.repair(req);
+  }
   if (req.op === "phone.wifi")
     return ctx.phones ? ctx.phones.wifi(req) : ({ available: [] } satisfies MachineReplies["phone.wifi"]);
   if (req.op === "xcode.fix") {

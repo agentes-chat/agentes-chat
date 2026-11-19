@@ -1318,8 +1318,8 @@
       "where": {
         "openbotrun": "Leg openbot-import.json (aus dem Migrator von OpenBot) oder openbot-transfer.json (aus dem Instanz-Transfer) hier ab, oder die .zip-Datei, in der sie kam.",
         "openmausbot": "In OpenMausBot: Rechtsklick auf das Team → Team teilen… → Datei speichern.",
-        "hermes": "Führe in einem Terminal hermes profile export mit dem Namen des Profils aus und leg die .tar.gz hier ab. Oder zieh den Ordner ~/.hermes hierher, um alle Profile mitzubringen.",
-        "openclaw": "Zieh den ganzen Ordner ~/.openclaw hierher (er bringt alle Agenten mit) oder nur einen Workspace. Auf dem Mac zeigt ⌘⇧. versteckte Ordner in der Dateiauswahl.",
+        "hermes": "Führe in einem Terminal `hermes profile export` mit dem Namen des Profils aus und leg die .tar.gz hier ab. Oder zieh den Ordner `~/.hermes` hierher, um alle Profile mitzubringen.",
+        "openclaw": "Zieh den ganzen Ordner `~/.openclaw` hierher (er bringt alle Agenten mit) oder nur einen Workspace. Auf dem Mac zeigt ⌘⇧. versteckte Ordner in der Dateiauswahl.",
         "paperclip": "Zieh den Paketordner (den mit COMPANY.md) hierher, leg eine .zip davon ab oder füge den GitHub-Link ein.",
         "agenteschat": "Im anderen Workspace: Einstellungen → Import und Export → Datei herunterladen. Leg dann die .json hier ab."
       },
@@ -4629,7 +4629,7 @@
     "error": {
       "title": "Gib ihm einen Namen.",
       "website": "Verwende eine https-Adresse, etwa app.example.com.",
-      "keyName": "Verwende Großbuchstaben, Zahlen und _, beginnend mit einem Buchstaben, etwa ACME_API_KEY.",
+      "keyName": "Verwende Großbuchstaben, Zahlen und _, beginnend mit einem Buchstaben, etwa `ACME_API_KEY`.",
       "password": "Gib das Passwort ein.",
       "value": "Gib den Wert ein.",
       "contact": "Füll mindestens ein Feld aus."
@@ -4790,7 +4790,7 @@
       "show": "Wert von {{name}} anzeigen",
       "hide": "Wert von {{name}} verbergen",
       "problem": {
-        "name": "Der Name muss wie ACME_API_KEY aussehen",
+        "name": "Der Name muss wie `ACME_API_KEY` aussehen",
         "reserved": "Reservierter Name",
         "empty": "Kein Wert",
         "tooLarge": "Wert zu groß"
@@ -10575,8 +10575,8 @@
     "line": {
       "invalid": "TypeSafe hat diesen Schlüssel nicht akzeptiert. Erstelle einen neuen.",
       "no_credit": "Lade Guthaben bei TypeSafe auf. Jev macht dann von selbst weiter.",
-      "env": "In den Einstellungen dieses Servers gesetzt (TYPESAFE_API_KEY).",
-      "envInvalid": "TypeSafe hat diesen Schlüssel nicht akzeptiert. Ändere ihn in den Einstellungen dieses Servers (TYPESAFE_API_KEY)."
+      "env": "In den Einstellungen dieses Servers gesetzt (`TYPESAFE_API_KEY`).",
+      "envInvalid": "TypeSafe hat diesen Schlüssel nicht akzeptiert. Ändere ihn in den Einstellungen dieses Servers (`TYPESAFE_API_KEY`)."
     },
     "checkAgain": "Erneut prüfen",
     "via": {
@@ -10602,7 +10602,7 @@
       "line": {
         "invalid": "OpenRouter hat diesen Schlüssel nicht akzeptiert. Erstelle einen neuen.",
         "no_credit": "Lade Guthaben bei OpenRouter auf. Jev macht dann von selbst weiter.",
-        "envInvalid": "OpenRouter hat diesen Schlüssel nicht akzeptiert. Ändere ihn in den Einstellungen dieses Servers (TYPESAFE_API_KEY)."
+        "envInvalid": "OpenRouter hat diesen Schlüssel nicht akzeptiert. Ändere ihn in den Einstellungen dieses Servers (`TYPESAFE_API_KEY`)."
       }
     },
     "remove": {
@@ -12830,7 +12830,7 @@
         "invalid": "Ungültig"
       },
       "line": {
-        "env": "In den Einstellungen dieses Servers festgelegt (GITHUB_APP_ID).",
+        "env": "In den Einstellungen dieses Servers festgelegt (`GITHUB_APP_ID`).",
         "invalid": "Dieser Server kann die gespeicherte App nicht öffnen. Entferne sie und erstelle sie neu.",
         "events": "Damit Agenten mitbekommen, was auf GitHub passiert, hak diese Events in der App an: {{events}}."
       },
@@ -13410,8 +13410,8 @@
     "composio": {
       "via": "Über Composio",
       "needsReconnect": "Muss neu verbunden werden",
-      "off_one": "{{names}} und {{count}} weiterer Dienst verbinden sich über Composio. Um sie zu aktivieren, setzt die Person, die diesen Server betreibt, COMPOSIO_API_KEY (siehe SELF_HOSTING.md).",
-      "off_other": "{{names}} und {{count}} weitere Dienste verbinden sich über Composio. Um sie zu aktivieren, setzt die Person, die diesen Server betreibt, COMPOSIO_API_KEY (siehe SELF_HOSTING.md).",
+      "off_one": "{{names}} und {{count}} weiterer Dienst verbinden sich über Composio. Um sie zu aktivieren, setzt die Person, die diesen Server betreibt, `COMPOSIO_API_KEY` (siehe `SELF_HOSTING.md`).",
+      "off_other": "{{names}} und {{count}} weitere Dienste verbinden sich über Composio. Um sie zu aktivieren, setzt die Person, die diesen Server betreibt, `COMPOSIO_API_KEY` (siehe `SELF_HOSTING.md`).",
       "usage": "Composio: {{calls}} von {{limit}} Aufrufen im {{month}}",
       "usageNoLimit": "Composio: {{calls}} Aufrufe im {{month}}",
       "limitNotice": "Dieser Workspace hat seine Composio-Aufrufe für diesen Monat aufgebraucht",
@@ -14579,7 +14579,7 @@
       },
       "railway": {
         "1": "Öffne im Postgres-Dienst Data → Query und führ den Befehl unten aus (ändere das Passwort).",
-        "2": "Kopier unter Variables DATABASE_PUBLIC_URL (DATABASE_URL ist intern und funktioniert von hier aus nicht).",
+        "2": "Kopier unter Variables `DATABASE_PUBLIC_URL` (`DATABASE_URL` ist intern und funktioniert von hier aus nicht).",
         "3": "Ersetz darin Benutzer und Passwort durch agentes_leitura und das Passwort, das du gewählt hast, und füg sie hier ein."
       },
       "rds": {
@@ -14614,7 +14614,7 @@
     "error": {
       "auth": "Benutzer oder Passwort stimmen nicht. Prüf sie und versuch es noch einmal.",
       "unreachable": "Wir konnten den Datenbankserver nicht erreichen. Prüf die Adresse und ob er Verbindungen von außen annimmt.",
-      "blocked_host": "Dieser Server ist nicht erlaubt. Nutze die öffentliche Adresse der Datenbank (interne Adressen wie DATABASE_URL von Railway funktionieren von hier aus nicht).",
+      "blocked_host": "Dieser Server ist nicht erlaubt. Nutze die öffentliche Adresse der Datenbank (interne Adressen wie `DATABASE_URL` von Railway funktionieren von hier aus nicht).",
       "tls": "Die Datenbank hat keine sichere Verbindung angenommen. Aktiviere SSL in der Datenbank oder wähl unter Erweitert „Ohne Verschlüsselung“ (nur für Testdatenbanken).",
       "unknown": "Verbindung gerade nicht möglich. Versuch es gleich noch einmal.",
       "no_databases": "Dieser Benutzer kann keine Datenbank auf diesem Server öffnen. Prüfe seine Rechte oder den Namensanfang."
@@ -15521,7 +15521,7 @@
       "titleRequired": "Gib ihm einen Namen.",
       "tooLong": "Das ist zu lang. Die Grenze ist {{max}}.",
       "notHttps": "Verwende eine Adresse, die mit https:// beginnt",
-      "keyNameInvalid": "Verwende Großbuchstaben, Ziffern und _ im Namen, etwa ACME_API_KEY.",
+      "keyNameInvalid": "Verwende Großbuchstaben, Ziffern und _ im Namen, etwa `ACME_API_KEY`.",
       "keyNameReserved": "Dieser Name ist reserviert. Wähl einen anderen.",
       "keyNameTaken": "Hier ist schon ein Schlüssel mit diesem Namen gespeichert.",
       "contactEmpty": "Füll mindestens ein Feld aus.",
@@ -15917,7 +15917,10 @@
       "since": "seit {{time}}",
       "until": "bis {{time}}",
       "withHost": "mit {{host}}",
-      "lastSeen": "zuletzt gesehen {{time}}"
+      "lastSeen": "zuletzt gesehen {{time}}",
+      "offlineUnresponsive": "antwortet nicht mehr seit {{time}}",
+      "offlineStopped": "Runner gestoppt um {{time}}",
+      "offlineDropped": "Verbindung abgebrochen um {{time}}"
     },
     "line": {
       "ready": "Agenten können es jetzt nutzen.",
@@ -15925,7 +15928,10 @@
       "busy_other": "{{count}} von {{max}} Aufgaben laufen",
       "offline": "Agenten warten, bis es zurück ist.",
       "offlineSeen": "Zuletzt gesehen {{time}}. Agenten warten, bis es zurück ist.",
-      "offlineWithHost": "{{host}} ist offline. Agenten warten, bis es zurück ist."
+      "offlineWithHost": "{{host}} ist offline. Agenten warten, bis es zurück ist.",
+      "offlineUnresponsive": "Antwortet seit {{time}} nicht mehr, vielleicht kein Netz oder überlastet. Führe dort `{{command}}` aus.",
+      "offlineStopped": "Der Runner wurde um {{time}} gestoppt. Starte ihn neu oder führe dort `{{command}}` aus, um den Grund zu sehen.",
+      "offlineDropped": "Die Verbindung brach um {{time}} ab. Sie verbindet sich von selbst neu. Falls nicht, führe dort `{{command}}` aus."
     },
     "reason": {
       "locked": "Das Handy ist gesperrt",
@@ -16287,7 +16293,12 @@
       "iosBehind": "Dieses iPhone hat iOS {{ios}} und Xcode auf diesem Mac ist für iOS {{sdk}}. Aktualisiere das iPhone: Einstellungen › Allgemein › Softwareupdate.",
       "xcodeOld": "{{name}} läuft mit iOS {{version}}, Xcode auf {{mac}} kennt höchstens iOS {{sdk}}. Installiere Xcode {{major}} und führe dann das hier im Terminal aus.",
       "xcodeOldAny": "{{name}} läuft mit iOS {{version}}, neuer als Xcode auf {{mac}} kennt. Installiere Xcode {{major}} und führe dann das hier im Terminal aus.",
-      "uiRefusedText": "Das iPhone hat die Eingaben der Test-App abgelehnt. Entsperre es und gib seinen Code ein, wenn es danach fragt. Passiert es wieder, schalte Einstellungen › Entwickler › UI-Automatisierung aktivieren aus und wieder ein.",
+      "uiRefusedText": "Agenten sehen den Bildschirm des iPhone, aber iOS lehnt ihre Berührungen ab.",
+      "uiTurnOn": "Schalte auf dem iPhone beides ein:",
+      "uiPasscode": "Gib seinen Code ein, wenn es danach fragt, und lass es entsperrt.",
+      "uiCheck": "Erneut prüfen",
+      "repair": "Test-App reparieren",
+      "repairHint": "Der Mac beendet die Test-App und erstellt sie mit seinem Xcode neu, in wenigen Minuten. Für Berührungen, die weiter scheitern, obwohl beides eingeschaltet ist.",
       "tooOld": "{{name}} läuft mit iOS {{version}}, Agenten brauchen iOS 17 oder neuer. Aktualisiere es, wenn das geht, oder schließ ein neueres iPhone an.",
       "tooOldVersion": "16 oder älter",
       "pluggedIn": "Es ist angeschlossen",
@@ -17347,8 +17358,8 @@
         },
         "line": {
           "invalid": "Dieser Server kann diesen Schlüssel nicht lesen. Füge ihn noch einmal ein.",
-          "env": "In den Einstellungen dieses Servers festgelegt (GIPHY_API_KEY).",
-          "envInvalid": "Dieser Schlüssel kann nicht genutzt werden. Ändere ihn in den Einstellungen dieses Servers (GIPHY_API_KEY)."
+          "env": "In den Einstellungen dieses Servers festgelegt (`GIPHY_API_KEY`).",
+          "envInvalid": "Dieser Schlüssel kann nicht genutzt werden. Ändere ihn in den Einstellungen dieses Servers (`GIPHY_API_KEY`)."
         },
         "invalid": "GIPHY hat diesen Schlüssel nicht akzeptiert. Kopiere ihn noch einmal von GIPHY Developers.",
         "remove": {
@@ -20878,7 +20889,7 @@
     "noLogComputer": "{{computer}} hat nicht geantwortet, sein Log ist daher nicht dabei.",
     "oldRunner": "Die agentes.chat-App auf {{computer}} ist zu alt, um ihr Log mitzuschicken. Aktualisiere sie dort, damit es dabei ist.",
     "noServerLines": "Die Log-Zeilen des Servers sind nur dabei, wenn die Person, der die Installation gehört, den Bericht sendet.",
-    "off": "Senden ist auf diesem Server aus (PROBLEM_REPORT_URL=off). Kopiere den Bericht, um ihn zu teilen.",
+    "off": "Senden ist auf diesem Server aus (`PROBLEM_REPORT_URL=off`). Kopiere den Bericht, um ihn zu teilen.",
     "errorRate": "Zu viele Berichte in kurzer Zeit. Versuch es in {{minutes}} Min. noch einmal oder kopiere den Bericht.",
     "errorUnreachable": "agentes.chat hat nicht geantwortet. Versuch es noch einmal oder kopiere den Bericht.",
     "errorRefused": "agentes.chat hat diesen Bericht nicht angenommen (er stammt vielleicht von einer älteren Version). Kopiere den Bericht stattdessen.",

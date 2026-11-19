@@ -853,9 +853,9 @@ export const featureKeysPtBR = {
         openmausbot:
           "No OpenMausBot: clique com o botão direito na equipe\u00a0›\u00a0Compartilhar equipe…\u00a0›\u00a0Salvar arquivo. Depois escolha esse arquivo aqui.",
         hermes:
-          "O Hermes exporta pelo terminal (hermes profile export), num .tar.gz que o celular não abre. Importe pelo computador, ou escolha aqui os arquivos .md e .yaml do perfil.",
+          "O Hermes exporta pelo terminal (`hermes profile export`), num .tar.gz que o celular não abre. Importe pelo computador, ou escolha aqui os arquivos .md e .yaml do perfil.",
         openclaw:
-          "O OpenClaw guarda os agentes na pasta ~/.openclaw do computador. Escolha aqui os arquivos .md de um workspace, ou importe a pasta inteira pelo computador.",
+          "O OpenClaw guarda os agentes na pasta `~/.openclaw` do computador. Escolha aqui os arquivos .md de um workspace, ou importe a pasta inteira pelo computador.",
         paperclip: "Cole abaixo o link do pacote no GitHub, ou escolha o COMPANY.md e os outros arquivos .md.",
         agenteschat:
           "No outro workspace: Configurações\u00a0›\u00a0Importar e exportar\u00a0›\u00a0Baixar o arquivo. Depois escolha o .json aqui.",
@@ -2013,8 +2013,7 @@ export const featureKeysPtBR = {
         "Este iPhone usa o iOS {{version}}, mais novo do que o Xcode no {{host}} conhece. Instale lá o Xcode {{major}} e rode xcrun devicectl manage ddis update no Terminal.",
       teamMissing:
         "O Xcode está conectado, mas ainda não mostra um time. No Xcode, crie qualquer app de iOS, escolha seu time em Signing & Capabilities e rode neste iPhone uma vez.",
-      uiRefused:
-        "Este iPhone recusou os toques do app de testes. Desbloqueie e digite seu código se ele pedir. Se continuar, desligue e ligue Ajustes\u00a0›\u00a0Desenvolvedor\u00a0›\u00a0Ativar Automação da IU.",
+      uiRefused: "Os agentes veem a tela deste iPhone, mas o iOS recusa os toques deles.",
       pluggedIn: "Já está ligado",
       wifi: {
         also: "Também no Wi-Fi de {{host}}: {{name}}",
@@ -2601,7 +2600,7 @@ export const featureKeysPtBR = {
       newPassword: "Nova senha",
       keyName: "Variável",
       keyNamePlaceholder: "ACME_API_KEY",
-      keyNameHelp: "Letras maiúsculas, números e _, como ACME_API_KEY. Os agentes pedem a chave por esse nome.",
+      keyNameHelp: "Letras maiúsculas, números e _, como `ACME_API_KEY`. Os agentes pedem a chave por esse nome.",
       value: "Valor",
       newValue: "Novo valor",
       description: "Descrição",

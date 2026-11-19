@@ -2299,6 +2299,12 @@ export class RunnerDaemon implements RequestObserver {
     return { looking: (await this.phones?.look()) ?? false };
   }
 
+  /** The desktop app's iPhone setup repairing an iPhone's test helper (`phone.repair`). */
+  async iphoneRepair(serial: string): Promise<{ repairing: boolean }> {
+    if (!this.phones) throw new RunnerError("phone_missing", "This computer doesn't reach phones.");
+    return this.phones.repair({ serial });
+  }
+
   /** The desktop app's iPhone setup: what the Mac has, a download of the iOS platform, Xcode opened. */
   iphoneSetup(): IphoneSetup {
     this.iphone ??= new IphoneSetup({ log: this.opts.log, fixer: () => this.xcodeFixer(), ...this.opts.iphone });

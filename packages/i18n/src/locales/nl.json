@@ -1318,8 +1318,8 @@
       "where": {
         "openbotrun": "Sleep openbot-import.json (van Migrator by OpenBot) of openbot-transfer.json (van de instance-overdracht) hierheen, of de .zip waarin het kwam.",
         "openmausbot": "In OpenMausBot: klik met rechts op het team → Share team… → Save file.",
-        "hermes": "Voer in een terminal hermes profile export uit met de naam van het profiel en sleep de .tar.gz hierheen. Of sleep de map ~/.hermes om alle profielen mee te nemen.",
-        "openclaw": "Sleep de hele map ~/.openclaw (die neemt elke agent mee) of alleen één workspace. Op een Mac toont ⌘⇧. verborgen mappen in de bestandskiezer.",
+        "hermes": "Voer in een terminal `hermes profile export` uit met de naam van het profiel en sleep de .tar.gz hierheen. Of sleep de map `~/.hermes` om alle profielen mee te nemen.",
+        "openclaw": "Sleep de hele map `~/.openclaw` (die neemt elke agent mee) of alleen één workspace. Op een Mac toont ⌘⇧. verborgen mappen in de bestandskiezer.",
         "paperclip": "Sleep de pakketmap (die met COMPANY.md), sleep er een .zip van hierheen of plak de GitHub-link.",
         "agenteschat": "In de andere werkruimte: Instellingen → Importeren en exporteren → Het bestand downloaden. Sleep daarna de .json hierheen."
       },
@@ -4629,7 +4629,7 @@
     "error": {
       "title": "Geef het een naam.",
       "website": "Gebruik een https-adres, zoals app.example.com.",
-      "keyName": "Gebruik hoofdletters, cijfers en _, beginnend met een letter, zoals ACME_API_KEY.",
+      "keyName": "Gebruik hoofdletters, cijfers en _, beginnend met een letter, zoals `ACME_API_KEY`.",
       "password": "Typ het wachtwoord.",
       "value": "Typ de waarde.",
       "contact": "Vul minstens één veld in."
@@ -4790,7 +4790,7 @@
       "show": "Waarde van {{name}} tonen",
       "hide": "Waarde van {{name}} verbergen",
       "problem": {
-        "name": "De naam moet eruitzien als ACME_API_KEY",
+        "name": "De naam moet eruitzien als `ACME_API_KEY`",
         "reserved": "Gereserveerde naam",
         "empty": "Geen waarde",
         "tooLarge": "Waarde te groot"
@@ -10619,8 +10619,8 @@
     "line": {
       "invalid": "TypeSafe heeft deze sleutel niet geaccepteerd. Maak een nieuwe aan.",
       "no_credit": "Voeg tegoed toe bij TypeSafe. Jev gaat vanzelf weer verder.",
-      "env": "Ingesteld in de instellingen van deze server (TYPESAFE_API_KEY).",
-      "envInvalid": "TypeSafe heeft deze sleutel niet geaccepteerd. Wijzig hem in de instellingen van deze server (TYPESAFE_API_KEY)."
+      "env": "Ingesteld in de instellingen van deze server (`TYPESAFE_API_KEY`).",
+      "envInvalid": "TypeSafe heeft deze sleutel niet geaccepteerd. Wijzig hem in de instellingen van deze server (`TYPESAFE_API_KEY`)."
     },
     "checkAgain": "Opnieuw controleren",
     "via": {
@@ -10646,7 +10646,7 @@
       "line": {
         "invalid": "OpenRouter heeft deze sleutel niet geaccepteerd. Maak een nieuwe aan.",
         "no_credit": "Voeg tegoed toe bij OpenRouter. Jev gaat vanzelf weer verder.",
-        "envInvalid": "OpenRouter heeft deze sleutel niet geaccepteerd. Wijzig hem in de instellingen van deze server (TYPESAFE_API_KEY)."
+        "envInvalid": "OpenRouter heeft deze sleutel niet geaccepteerd. Wijzig hem in de instellingen van deze server (`TYPESAFE_API_KEY`)."
       }
     },
     "remove": {
@@ -12902,7 +12902,7 @@
         "invalid": "Ongeldig"
       },
       "line": {
-        "env": "Ingesteld in de instellingen van deze server (GITHUB_APP_ID).",
+        "env": "Ingesteld in de instellingen van deze server (`GITHUB_APP_ID`).",
         "invalid": "Deze server kan de opgeslagen app niet openen. Verwijder hem en maak hem opnieuw.",
         "events": "Vink deze events aan in de app, zodat agents horen wat er op GitHub gebeurt: {{events}}."
       },
@@ -13478,8 +13478,8 @@
     "composio": {
       "via": "Via Composio",
       "needsReconnect": "Moet opnieuw gekoppeld worden",
-      "off_one": "{{names}} en nog {{count}} dienst koppelen via Composio. Om ze aan te zetten, stelt wie deze server beheert COMPOSIO_API_KEY in (zie SELF_HOSTING.md).",
-      "off_other": "{{names}} en nog {{count}} diensten koppelen via Composio. Om ze aan te zetten, stelt wie deze server beheert COMPOSIO_API_KEY in (zie SELF_HOSTING.md).",
+      "off_one": "{{names}} en nog {{count}} dienst koppelen via Composio. Om ze aan te zetten, stelt wie deze server beheert `COMPOSIO_API_KEY` in (zie `SELF_HOSTING.md`).",
+      "off_other": "{{names}} en nog {{count}} diensten koppelen via Composio. Om ze aan te zetten, stelt wie deze server beheert `COMPOSIO_API_KEY` in (zie `SELF_HOSTING.md`).",
       "usage": "Composio: {{calls}} van {{limit}} aanroepen in {{month}}",
       "usageNoLimit": "Composio: {{calls}} aanroepen in {{month}}",
       "limitNotice": "Deze werkruimte heeft de Composio-aanroepen van deze maand opgebruikt",
@@ -14647,7 +14647,7 @@
       },
       "railway": {
         "1": "Open in de Postgres-service Data → Query en voer de opdracht hieronder uit (verander het wachtwoord).",
-        "2": "Kopieer bij Variables DATABASE_PUBLIC_URL (DATABASE_URL is intern en werkt niet vanaf hier).",
+        "2": "Kopieer bij Variables `DATABASE_PUBLIC_URL` (`DATABASE_URL` is intern en werkt niet vanaf hier).",
         "3": "Vervang daarin de gebruiker en het wachtwoord door agentes_leitura en het wachtwoord dat je koos, en plak hem hier."
       },
       "rds": {
@@ -14682,7 +14682,7 @@
     "error": {
       "auth": "De gebruiker of het wachtwoord klopt niet. Controleer ze en probeer het opnieuw.",
       "unreachable": "We konden de databaseserver niet bereiken. Controleer het adres en of hij verbindingen van buitenaf accepteert.",
-      "blocked_host": "Deze server is niet toegestaan. Gebruik het publieke adres van de database (interne adressen, zoals DATABASE_URL van Railway, werken niet vanaf hier).",
+      "blocked_host": "Deze server is niet toegestaan. Gebruik het publieke adres van de database (interne adressen, zoals `DATABASE_URL` van Railway, werken niet vanaf hier).",
       "tls": "De database accepteerde geen beveiligde verbinding. Zet SSL aan in de database, of kies Geen versleuteling onder Geavanceerd (alleen voor testdatabases).",
       "unknown": "Kon nu geen verbinding maken. Probeer het zo opnieuw.",
       "no_databases": "Deze gebruiker kan geen enkele database op deze server openen. Controleer de rechten of het begin van de naam."
@@ -15589,7 +15589,7 @@
       "titleRequired": "Geef het een naam.",
       "tooLong": "Dat is te lang. De limiet is {{max}}.",
       "notHttps": "Gebruik een adres dat begint met https://",
-      "keyNameInvalid": "Gebruik hoofdletters, cijfers en _ in de naam, zoals ACME_API_KEY.",
+      "keyNameInvalid": "Gebruik hoofdletters, cijfers en _ in de naam, zoals `ACME_API_KEY`.",
       "keyNameReserved": "Deze naam is gereserveerd. Kies een andere.",
       "keyNameTaken": "Er staat hier al een sleutel met deze naam.",
       "contactEmpty": "Vul minstens één veld in.",
@@ -15985,7 +15985,10 @@
       "since": "sinds {{time}}",
       "until": "tot {{time}}",
       "withHost": "met {{host}}",
-      "lastSeen": "laatst gezien {{time}}"
+      "lastSeen": "laatst gezien {{time}}",
+      "offlineUnresponsive": "reageert niet meer sinds {{time}}",
+      "offlineStopped": "runner gestopt om {{time}}",
+      "offlineDropped": "verbinding verbroken om {{time}}"
     },
     "line": {
       "ready": "Agents kunnen het nu gebruiken.",
@@ -15993,7 +15996,10 @@
       "busy_other": "{{count}} van {{max}} taken bezig",
       "offline": "Agents wachten tot het terug is.",
       "offlineSeen": "Laatst gezien {{time}}. Agents wachten tot het terug is.",
-      "offlineWithHost": "{{host}} is offline. Agents wachten tot het terug is."
+      "offlineWithHost": "{{host}} is offline. Agents wachten tot het terug is.",
+      "offlineUnresponsive": "Reageert niet meer sinds {{time}}, misschien geen netwerk of overbelast. Voer daar `{{command}}` uit.",
+      "offlineStopped": "De runner stopte om {{time}}. Start hem opnieuw, of voer daar `{{command}}` uit om te zien waarom.",
+      "offlineDropped": "De verbinding werd om {{time}} verbroken. Hij maakt zelf opnieuw verbinding. Zo niet, voer daar `{{command}}` uit."
     },
     "reason": {
       "locked": "De telefoon is vergrendeld",
@@ -16355,7 +16361,12 @@
       "iosBehind": "Deze iPhone draait iOS {{ios}} en Xcode op deze Mac is voor iOS {{sdk}}. Werk de iPhone bij: Instellingen › Algemeen › Software-update.",
       "xcodeOld": "{{name}} draait iOS {{version}} en Xcode op {{mac}} kent hooguit iOS {{sdk}}. Installeer Xcode {{major}} en voer dit daarna uit in Terminal.",
       "xcodeOldAny": "{{name}} draait iOS {{version}}, nieuwer dan Xcode op {{mac}} kent. Installeer Xcode {{major}} en voer dit daarna uit in Terminal.",
-      "uiRefusedText": "De iPhone weigerde de tikken van de testhelper. Ontgrendel hem en voer de toegangscode in als hij erom vraagt. Blijft het gebeuren, zet dan Instellingen › Ontwikkelaar › Schakel UI-automatisering in uit en weer aan.",
+      "uiRefusedText": "Agents zien het scherm van de iPhone, maar iOS weigert hun tikken.",
+      "uiTurnOn": "Zet op de iPhone allebei aan:",
+      "uiPasscode": "Voer de toegangscode in als erom gevraagd wordt en houd hem ontgrendeld.",
+      "uiCheck": "Opnieuw controleren",
+      "repair": "Testhelper herstellen",
+      "repairHint": "De Mac stopt de testhelper en bouwt hem opnieuw met zijn Xcode, in een paar minuten. Voor tikken die nog mislukken als beide aanstaan.",
       "tooOld": "{{name}} draait iOS {{version}}, en agents hebben iOS 17 of nieuwer nodig. Werk hem bij als dat kan, of sluit een nieuwere iPhone aan.",
       "tooOldVersion": "16 of ouder",
       "pluggedIn": "Hij is aangesloten",
@@ -17415,8 +17426,8 @@
         },
         "line": {
           "invalid": "Deze server kan deze sleutel niet lezen. Plak hem opnieuw.",
-          "env": "Ingesteld in de instellingen van deze server (GIPHY_API_KEY).",
-          "envInvalid": "Deze sleutel is niet te gebruiken. Wijzig hem in de instellingen van deze server (GIPHY_API_KEY)."
+          "env": "Ingesteld in de instellingen van deze server (`GIPHY_API_KEY`).",
+          "envInvalid": "Deze sleutel is niet te gebruiken. Wijzig hem in de instellingen van deze server (`GIPHY_API_KEY`)."
         },
         "invalid": "GIPHY accepteerde deze sleutel niet. Kopieer hem opnieuw bij GIPHY Developers.",
         "remove": {
@@ -21061,7 +21072,7 @@
     "noLogComputer": "{{computer}} reageerde niet, dus de log ervan zit er niet bij.",
     "oldRunner": "De agentes.chat-app op {{computer}} is te oud om de log mee te sturen. Werk hem daar bij om hem mee te sturen.",
     "noServerLines": "De logregels van de server zitten er alleen bij als de eigenaar van de installatie het rapport verstuurt.",
-    "off": "Versturen staat uit op deze server (PROBLEM_REPORT_URL=off). Kopieer het rapport om het te delen.",
+    "off": "Versturen staat uit op deze server (`PROBLEM_REPORT_URL=off`). Kopieer het rapport om het te delen.",
     "errorRate": "Te veel rapporten in korte tijd. Probeer het over {{minutes}} min opnieuw of kopieer het rapport.",
     "errorUnreachable": "agentes.chat reageerde niet. Probeer het opnieuw of kopieer het rapport.",
     "errorRefused": "agentes.chat heeft dit rapport niet geaccepteerd (het komt misschien van een oudere versie). Kopieer het rapport in plaats daarvan.",

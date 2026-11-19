@@ -182,6 +182,7 @@ import type {
   InviteLinkChanged,
   InviteLinkChoices,
   InviteLinkMade,
+  IphoneRepairView,
   Issue,
   IssueActivity,
   IssueColumn,
@@ -1245,6 +1246,8 @@ export interface ApiClient {
     cancelXcodeFix(orgId: string, machineId: string): Promise<XcodeFixView>;
     /** Opens Xcode on the Mac (its owner or an admin): it shows Developer Mode on a plugged iPhone. */
     openXcode(orgId: string, machineId: string): Promise<{ opened: boolean }>;
+    /** Repairs a real iPhone's test helper on its Mac (the Mac's owner or an admin): stopped, rebuilt and checked. */
+    repairIphone(orgId: string, phoneId: string): Promise<IphoneRepairView>;
   };
   /** Connected computers (ADR 0025): machines running `agentes-runner`. */
   machines: {

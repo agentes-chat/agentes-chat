@@ -40,6 +40,7 @@ import {
   Button,
   Chip,
   ColorDot,
+  codeAndBold,
   cx,
   Dialog,
   DialogFooter,
@@ -107,7 +108,6 @@ import {
   useStepText,
 } from "@/lib/issues";
 import { lookOf } from "@/lib/look";
-import { codeAndBold } from "@/lib/markdown";
 import { inPlaceClick } from "@/lib/navigate";
 import { useOpenParam } from "@/lib/open-param";
 import { type ToastText, useToast } from "@/lib/toast";

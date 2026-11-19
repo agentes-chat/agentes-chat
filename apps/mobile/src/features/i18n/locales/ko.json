@@ -794,8 +794,8 @@
       "where": {
         "openbotrun": "openbot-import.json(OpenBot의 Migrator에서) 또는 openbot-transfer.json(인스턴스 이전에서)을 선택하세요. .zip은 먼저 파일 앱에서 열어요. 탭하면 압축이 풀려요.",
         "openmausbot": "OpenMausBot에서 팀을 오른쪽 클릭 › 팀 공유… › 파일 저장을 선택하세요. 그런 다음 여기서 그 파일을 고르세요.",
-        "hermes": "Hermes는 터미널에서 내보내요(hermes profile export). 휴대폰에서 열 수 없는 .tar.gz 파일이에요. 컴퓨터에서 가져오거나, 여기서 프로필의 .md와 .yaml 파일을 고르세요.",
-        "openclaw": "OpenClaw는 컴퓨터의 ~/.openclaw 폴더에 에이전트를 보관해요. 여기서 워크스페이스의 .md 파일을 고르거나, 컴퓨터에서 폴더 전체를 가져오세요.",
+        "hermes": "Hermes는 터미널에서 내보내요(`hermes profile export`). 휴대폰에서 열 수 없는 .tar.gz 파일이에요. 컴퓨터에서 가져오거나, 여기서 프로필의 .md와 .yaml 파일을 고르세요.",
+        "openclaw": "OpenClaw는 컴퓨터의 `~/.openclaw` 폴더에 에이전트를 보관해요. 여기서 워크스페이스의 .md 파일을 고르거나, 컴퓨터에서 폴더 전체를 가져오세요.",
         "paperclip": "아래에 패키지의 GitHub 링크를 붙여넣거나, COMPANY.md와 나머지 .md 파일을 고르세요.",
         "agenteschat": "다른 워크스페이스에서 설정 › 가져오기 및 내보내기 › 파일 다운로드를 선택하세요. 그런 다음 여기서 .json을 고르세요."
       },
@@ -1861,7 +1861,7 @@
       "tooOld": "이 iPhone은 iOS {{version}}을(를) 쓰는데 에이전트에는 iOS 17 이상이 필요해요. 가능하면 업데이트하거나 더 새로운 iPhone을 쓰세요.",
       "xcodeOld": "이 iPhone은 {{host}}의 Xcode가 아는 것보다 새로운 iOS {{version}}을(를) 써요. 그 Mac에 Xcode {{major}}을(를) 설치한 다음 터미널에서 xcrun devicectl manage ddis update를 실행하세요.",
       "teamMissing": "Xcode에 로그인되어 있지만 아직 팀이 표시되지 않아요. Xcode에서 아무 iOS 앱이나 만들고 Signing & Capabilities에서 팀을 고른 다음 이 iPhone에서 한 번 실행하세요.",
-      "uiRefused": "이 iPhone이 테스트 도우미의 탭을 거부했어요. 잠금을 해제하고 요청하면 암호를 입력하세요. 계속 그러면 설정 › 개발자 › UI 자동화 활성화를 껐다가 다시 켜세요.",
+      "uiRefused": "에이전트는 이 iPhone의 화면을 볼 수 있지만 iOS가 탭을 거부하고 있어요.",
       "pluggedIn": "연결했어요",
       "wifi": {
         "also": "{{host}}의 Wi-Fi에도 있어요: {{name}}",
@@ -2415,7 +2415,7 @@
       "newPassword": "새 비밀번호",
       "keyName": "변수",
       "keyNamePlaceholder": "ACME_API_KEY",
-      "keyNameHelp": "대문자, 숫자, _를 써요. 예: ACME_API_KEY. 에이전트는 이 이름으로 키를 요청해요.",
+      "keyNameHelp": "대문자, 숫자, _를 써요. 예: `ACME_API_KEY`. 에이전트는 이 이름으로 키를 요청해요.",
       "value": "값",
       "newValue": "새 값",
       "description": "설명",

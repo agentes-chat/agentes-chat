@@ -145,6 +145,10 @@ export const Machine = z
       description:
         "The workspace's own computer is asleep in standby (ADR 0161): it wakes when something wants it, and reads online meanwhile. False again once a wake failed to bring it back in time. A change comes as `machine.updated`.",
     }),
+    offlineCause: z.enum(["unresponsive", "stopped", "dropped"]).nullable().openapi({
+      description:
+        "Why it is offline, from its runner's last close: `unresponsive` (stopped answering: no network, or too busy), `stopped` (its runner stopped), `dropped` (the link dropped). Null: online, the workspace's own computer, or unknown.",
+    }),
     lastSeenAt: z.string().nullable(),
     hostname: z.string(),
     os: z.string().openapi({ description: "`linux`, `darwin`, `windows` or `other`." }),

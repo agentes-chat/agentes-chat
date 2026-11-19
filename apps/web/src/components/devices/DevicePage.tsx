@@ -23,6 +23,7 @@ import {
   Card,
   CardHeader,
   Chip,
+  codeAndBold,
   Disclosure,
   EmptyState,
   Icon,
@@ -158,7 +159,7 @@ function StatusLine({
   hostOs?: string;
   action?: ReactNode;
   ios?: string | null;
-  /** In place of the status's own sentence. */
+  /** In place of the status's own sentence, as typed (it carries a person's name). */
   text?: string | null;
 }) {
   const { t, i18n } = useTranslation();
@@ -168,7 +169,7 @@ function StatusLine({
   return (
     <div className="dv-statusline" data-status={statusLook(status)} role="status">
       <span className="dv-statusline__text">
-        {sentence}
+        {text ?? (sentence && codeAndBold(sentence, "cb", [host]))}
         {label && <small> · {label}</small>}
       </span>
       {action}
@@ -306,7 +307,11 @@ function ComputerPage({ machineId }: { machineId: string }) {
     machine && isPaused(machine)
       ? { kind: "paused", until: machine.paused?.until ?? null }
       : machine && !machine.online && d.status.kind !== "offline"
-        ? { kind: "offline", lastSeenAt: machine.lastSeenAt }
+        ? {
+            kind: "offline",
+            lastSeenAt: machine.lastSeenAt,
+            ...(machine.offlineCause ? { cause: machine.offlineCause } : {}),
+          }
         : d.status;
   const owner = d.ownerUserId === me.user.id;
   const admin = can(org, "configure");

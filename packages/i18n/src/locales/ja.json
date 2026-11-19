@@ -1280,8 +1280,8 @@
       "where": {
         "openbotrun": "openbot-import.json（OpenBotのMigratorから）またはopenbot-transfer.json（インスタンスの移行から）、もしくはそれが入っていた.zipをドロップしてください。",
         "openmausbot": "OpenMausBotで、チームを右クリック → チームを共有… → ファイルを保存。",
-        "hermes": "ターミナルでプロファイル名を指定してhermes profile exportを実行し、.tar.gzをここにドロップしてください。すべてのプロファイルを移すには、~/.hermesフォルダをドラッグしてください。",
-        "openclaw": "~/.openclawフォルダ全体（すべてのエージェントを移行）か、ワークスペース1つだけをドラッグしてください。Macでは、ファイル選択画面で⌘⇧.を押すと隠しフォルダが表示されます。",
+        "hermes": "ターミナルでプロファイル名を指定して`hermes profile export`を実行し、.tar.gzをここにドロップしてください。すべてのプロファイルを移すには、`~/.hermes`フォルダをドラッグしてください。",
+        "openclaw": "`~/.openclaw`フォルダ全体（すべてのエージェントを移行）か、ワークスペース1つだけをドラッグしてください。Macでは、ファイル選択画面で⌘⇧.を押すと隠しフォルダが表示されます。",
         "paperclip": "パッケージのフォルダ（COMPANY.mdがあるもの）をドラッグするか、その.zipをドロップするか、GitHubのリンクを貼り付けてください。",
         "agenteschat": "もう一方のワークスペースで、設定 → インポートとエクスポート → ファイルをダウンロード。その.jsonをここにドロップしてください。"
       },
@@ -4461,7 +4461,7 @@
     "error": {
       "title": "名前を付けてください。",
       "website": "httpsのアドレスを使ってください。例: app.example.com",
-      "keyName": "大文字、数字、_を使い、英字で始めてください。例: ACME_API_KEY",
+      "keyName": "大文字、数字、_を使い、英字で始めてください。例: `ACME_API_KEY`",
       "password": "パスワードを入力してください。",
       "value": "値を入力してください。",
       "contact": "少なくとも1つの項目を入力してください。"
@@ -4609,7 +4609,7 @@
       "show": "{{name}}の値を表示",
       "hide": "{{name}}の値を隠す",
       "problem": {
-        "name": "名前はACME_API_KEYのような形式にしてください",
+        "name": "名前は`ACME_API_KEY`のような形式にしてください",
         "reserved": "予約されている名前",
         "empty": "値がありません",
         "tooLarge": "値が大きすぎます"
@@ -10144,8 +10144,8 @@
     "line": {
       "invalid": "TypeSafeがこのキーを受け付けませんでした。新しいキーを作成してください。",
       "no_credit": "TypeSafeでクレジットを追加してください。Jevは自動で再開します。",
-      "env": "このサーバーの設定（TYPESAFE_API_KEY）で設定されています。",
-      "envInvalid": "TypeSafeがこのキーを受け付けませんでした。このサーバーの設定（TYPESAFE_API_KEY）で変更してください。"
+      "env": "このサーバーの設定（`TYPESAFE_API_KEY`）で設定されています。",
+      "envInvalid": "TypeSafeがこのキーを受け付けませんでした。このサーバーの設定（`TYPESAFE_API_KEY`）で変更してください。"
     },
     "checkAgain": "もう一度確認",
     "via": {
@@ -10171,7 +10171,7 @@
       "line": {
         "invalid": "OpenRouterがこのキーを受け付けませんでした。新しいキーを作成してください。",
         "no_credit": "OpenRouterでクレジットを追加してください。Jevは自動で再開します。",
-        "envInvalid": "OpenRouterがこのキーを受け付けませんでした。このサーバーの設定（TYPESAFE_API_KEY）で変更してください。"
+        "envInvalid": "OpenRouterがこのキーを受け付けませんでした。このサーバーの設定（`TYPESAFE_API_KEY`）で変更してください。"
       }
     },
     "remove": {
@@ -12303,7 +12303,7 @@
         "invalid": "無効"
       },
       "line": {
-        "env": "このサーバーの設定で指定されています（GITHUB_APP_ID）。",
+        "env": "このサーバーの設定で指定されています（`GITHUB_APP_ID`）。",
         "invalid": "このサーバーは保存されたアプリを開けません。削除して作り直してください。",
         "events": "エージェントがGitHubの出来事を受け取れるよう、アプリでこれらのイベントにチェックを入れてください：{{events}}。"
       },
@@ -12875,7 +12875,7 @@
     "composio": {
       "via": "Composio経由",
       "needsReconnect": "再接続が必要",
-      "off_other": "{{names}}ほか{{count}}個のサービスはComposio経由で接続します。有効にするには、このサーバーの運用者がCOMPOSIO_API_KEYを設定してください（SELF_HOSTING.mdを参照）。",
+      "off_other": "{{names}}ほか{{count}}個のサービスはComposio経由で接続します。有効にするには、このサーバーの運用者が`COMPOSIO_API_KEY`を設定してください（`SELF_HOSTING.md`を参照）。",
       "usage": "Composio: {{month}}は{{limit}}回中{{calls}}回を使用",
       "usageNoLimit": "Composio: {{month}}は{{calls}}回を使用",
       "limitNotice": "このワークスペースは今月のComposioの呼び出し回数を使い切りました",
@@ -14022,7 +14022,7 @@
       },
       "railway": {
         "1": "PostgresサービスでData → Queryを開き、下のコマンドを実行します（パスワードは変更してください）。",
-        "2": "VariablesでDATABASE_PUBLIC_URLをコピーします（DATABASE_URLは内部用で、ここからは使えません）。",
+        "2": "Variablesで`DATABASE_PUBLIC_URL`をコピーします（`DATABASE_URL`は内部用で、ここからは使えません）。",
         "3": "その中のユーザーとパスワードを、agentes_leituraと選んだパスワードに置き換えて、ここに貼り付けます。"
       },
       "rds": {
@@ -14057,7 +14057,7 @@
     "error": {
       "auth": "ユーザーまたはパスワードが一致しません。確認して、もう一度お試しください。",
       "unreachable": "データベースサーバーに接続できませんでした。アドレスと、外部からの接続を受け付けているかを確認してください。",
-      "blocked_host": "このサーバーは許可されていません。データベースの公開アドレスを使ってください（RailwayのDATABASE_URLのような内部アドレスは、ここからは使えません）。",
+      "blocked_host": "このサーバーは許可されていません。データベースの公開アドレスを使ってください（Railwayの`DATABASE_URL`のような内部アドレスは、ここからは使えません）。",
       "tls": "データベースが安全な接続を受け付けませんでした。データベースでSSLを有効にするか、「詳細」で「暗号化なし」を選んでください（テスト用データベースのみ）。",
       "unknown": "今は接続できませんでした。少し待ってからお試しください。",
       "no_databases": "このユーザーはこのサーバーのどのデータベースも開けません。権限か名前の先頭を確認してください。"
@@ -14950,7 +14950,7 @@
       "titleRequired": "名前を付けてください。",
       "tooLong": "長すぎます。上限は{{max}}です。",
       "notHttps": "https://で始まるアドレスを使ってください",
-      "keyNameInvalid": "名前には大文字、数字、_を使ってください。例: ACME_API_KEY",
+      "keyNameInvalid": "名前には大文字、数字、_を使ってください。例: `ACME_API_KEY`",
       "keyNameReserved": "この名前は予約されています。別の名前を選んでください。",
       "keyNameTaken": "この名前のキーはすでに保存されています。",
       "contactEmpty": "少なくとも1つの項目を入力してください。",
@@ -15345,14 +15345,20 @@
       "since": "{{time}}から",
       "until": "{{time}}まで",
       "withHost": "{{host}}とともに",
-      "lastSeen": "最終接続 {{time}}"
+      "lastSeen": "最終接続 {{time}}",
+      "offlineUnresponsive": "{{time}} から応答なし",
+      "offlineStopped": "{{time}} にランナー停止",
+      "offlineDropped": "{{time}} に接続が切断"
     },
     "line": {
       "ready": "エージェントが今すぐ使えます。",
       "busy_other": "{{max}}件中{{count}}件のタスクを実行中",
       "offline": "エージェントは復帰を待っています。",
       "offlineSeen": "最終接続 {{time}}。エージェントは復帰を待っています。",
-      "offlineWithHost": "{{host}}はオフラインです。エージェントは復帰を待っています。"
+      "offlineWithHost": "{{host}}はオフラインです。エージェントは復帰を待っています。",
+      "offlineUnresponsive": "{{time}} から応答がありません。ネットワークがないか、負荷が高すぎる可能性があります。そのコンピューターで `{{command}}` を実行してください。",
+      "offlineStopped": "{{time}} にランナーが停止しました。もう一度起動するか、そのコンピューターで `{{command}}` を実行して原因を確認してください。",
+      "offlineDropped": "{{time}} に接続が切れました。自動で再接続します。戻らない場合は、そのコンピューターで `{{command}}` を実行してください。"
     },
     "reason": {
       "locked": "スマートフォンがロックされています",
@@ -15712,7 +15718,12 @@
       "iosBehind": "この iPhone は iOS {{ios}} で、この Mac の Xcode は iOS {{sdk}} 向けです。iPhone をアップデートしてください:設定 › 一般 › ソフトウェアアップデート。",
       "xcodeOld": "{{name}}はiOS {{version}}ですが、{{mac}}のXcodeが対応するのはiOS {{sdk}}までです。Xcode {{major}}をインストールしてから、ターミナルでこれを実行してください。",
       "xcodeOldAny": "{{name}}はiOS {{version}}で、{{mac}}のXcodeより新しいバージョンです。Xcode {{major}}をインストールしてから、ターミナルでこれを実行してください。",
-      "uiRefusedText": "iPhoneがテストヘルパーのタップを拒否しました。ロックを解除し、求められたらパスコードを入力してください。続く場合は、設定 › デベロッパ › UIオートメーションを有効にするをオフにしてからオンにしてください。",
+      "uiRefusedText": "エージェントはiPhoneの画面を見られますが、iOSがタップを拒否しています。",
+      "uiTurnOn": "iPhoneで、次の2つをオンにします：",
+      "uiPasscode": "求められたらパスコードを入力し、ロックを解除したままにします。",
+      "uiCheck": "もう一度確認",
+      "repair": "テストヘルパーを修復",
+      "repairHint": "Macがテストヘルパーを停止し、そのXcodeで数分かけて作り直します。両方オンでもタップが失敗するときに使います。",
       "tooOld": "{{name}}はiOS {{version}}です。エージェントにはiOS 17以降が必要です。可能ならアップデートするか、新しいiPhoneをつないでください。",
       "tooOldVersion": "16以前",
       "pluggedIn": "つなぎました",
@@ -16752,8 +16763,8 @@
         },
         "line": {
           "invalid": "このサーバーはこのキーを読み取れません。もう一度貼り付けてください。",
-          "env": "このサーバーの設定で指定されています（GIPHY_API_KEY）。",
-          "envInvalid": "このキーは使えません。このサーバーの設定で変更してください（GIPHY_API_KEY）。"
+          "env": "このサーバーの設定で指定されています（`GIPHY_API_KEY`）。",
+          "envInvalid": "このキーは使えません。このサーバーの設定で変更してください（`GIPHY_API_KEY`）。"
         },
         "invalid": "GIPHYがこのキーを受け付けませんでした。GIPHY Developersからもう一度コピーしてください。",
         "remove": {
@@ -20228,7 +20239,7 @@
     "noLogComputer": "{{computer}} が応答しなかったため、そのログは含まれていません。",
     "oldRunner": "{{computer}} の agentes.chat アプリが古いため、ログを含められません。含めるには、そちらでアプリを更新してください。",
     "noServerLines": "サーバーのログ行は、インストールの所有者がレポートを送信した場合のみ含まれます。",
-    "off": "このサーバーでは送信がオフです（PROBLEM_REPORT_URL=off）。共有するにはレポートをコピーしてください。",
+    "off": "このサーバーでは送信がオフです（`PROBLEM_REPORT_URL=off`）。共有するにはレポートをコピーしてください。",
     "errorRate": "短時間にレポートが多すぎます。{{minutes}} 分後にもう一度試すか、レポートをコピーしてください。",
     "errorUnreachable": "agentes.chat から応答がありませんでした。もう一度試すか、レポートをコピーしてください。",
     "errorRefused": "agentes.chat はこのレポートを受け付けませんでした（古いバージョンのものかもしれません）。代わりにレポートをコピーしてください。",

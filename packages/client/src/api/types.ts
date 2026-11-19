@@ -4977,6 +4977,8 @@ export type MachineOs = "linux" | "darwin" | "windows" | "other";
 export type MachineKind = "connected" | "host" | "managed";
 
 /** `GET …/machines`: a computer connected with `agentes-runner`. */
+export type MachineOfflineCause = "unresponsive" | "stopped" | "dropped";
+
 export interface Machine {
   id: string;
   /** The public address measured through an agent process, absent on older runners. */
@@ -5001,6 +5003,11 @@ export interface Machine {
    * from an older server: not in standby.
    */
   standby?: boolean;
+  /**
+   * Why it is offline, from its runner's last close: `unresponsive` (no network, or too busy to answer), `stopped`
+   * (its runner stopped), `dropped` (the link dropped). Null or absent: online, the workspace's own, or unknown.
+   */
+  offlineCause?: MachineOfflineCause | null;
   lastSeenAt: string | null;
   hostname: string;
   /** `linux`, `darwin`, `windows` or `other` (`MachineOs`). */
@@ -8425,7 +8432,8 @@ export type DeviceStatus =
   | { kind: "needs_you"; reason: string }
   | { kind: "preparing"; reason: string }
   | { kind: "paused"; until: string | null }
-  | { kind: "offline"; lastSeenAt: string | null; withHost?: boolean }
+  /** `cause`: a computer's, as `Machine.offlineCause`; absent: unknown. */
+  | { kind: "offline"; lastSeenAt: string | null; withHost?: boolean; cause?: MachineOfflineCause }
   | { kind: "unsupported"; reason: string };
 
 export interface PhoneDevice {
@@ -8549,6 +8557,12 @@ export interface CliInstall {
   state: "running" | "done" | "failed" | "canceled" | "unsupported";
   message?: string;
   cause?: "git_missing" | "still_missing";
+}
+
+/** A repair of an iPhone's test helper started on its Mac; `update`: the Mac's agentes.chat is too old for it. */
+export interface IphoneRepairView {
+  repairing: boolean;
+  update?: true;
 }
 
 /** `fix: null`: none ran; `update`: the Mac's agentes.chat is too old to fix it (the Terminal way instead). */

@@ -4,6 +4,7 @@ import {
   createFakeErrorReporter,
   MACHINE_PROTOCOL_VERSION,
   orgTopic,
+  RUNNER_STOPPED_CLOSE,
   type ServerFrame,
   sealSecret,
   secretAad,
@@ -28,12 +29,14 @@ import {
   listMachines,
   listNotifications,
   MACHINE_CONTROL_TOPIC,
+  MACHINE_DISCONNECTS_KEPT,
   MachineDroppedError,
   type MachineHub,
   MachineOfflineError,
   MachineRequestError,
   machineAgents,
   NotFoundError,
+  offlineCause,
   postPersonMessage,
   receiveMachineUpload,
   registerPushDevice,
@@ -183,6 +186,57 @@ describe("a runner that dies mid-request (brain turns never stay working)", () =
     expect(runner.closed()).toMatchObject({ code: 4408 });
     const [row] = await f.db.select().from(schema.machines);
     expect(row).toMatchObject({ online: false, connectedReplica: null });
+  });
+
+  test("each close is kept, newest first and capped, and the list says why the computer is offline", async () => {
+    f = await setup({ machines: true });
+    const hub = createMachineHub({ db: f.db, pubsub: f.pubsub, replicaId: "replica-c", heartbeatMs: 20 });
+    hubs.push(hub);
+    const paired = await pair();
+    const cause = async () => (await listMachines(f.db, f.owner.id, f.org.id))[0]?.offlineCause;
+
+    const stopping = fakeRunner(hub);
+    await stopping.hello(paired.token);
+    expect(await cause()).toBeNull();
+    await stopping.disconnect({ code: RUNNER_STOPPED_CLOSE, reason: "stopped" });
+    expect(await cause()).toBe("stopped");
+
+    const dropping = fakeRunner(hub);
+    await dropping.hello(paired.token);
+    await dropping.disconnect();
+    expect(await cause()).toBe("dropped");
+
+    const silent = fakeRunner(hub, { dead: true });
+    await silent.hello(paired.token);
+    await until(async () => (await cause()) === "unresponsive", "the no-pong close");
+    const [row] = await f.db.select().from(schema.machines);
+    expect(row?.disconnects.map((d) => d.code)).toEqual([4408, 1005, RUNNER_STOPPED_CLOSE]);
+    expect(row?.disconnects[0]).toMatchObject({ reason: "no pong" });
+    const first = row?.disconnects[0];
+    expect(Date.parse(first?.connectedAt ?? "")).toBeLessThanOrEqual(Date.parse(first?.at ?? ""));
+
+    for (let i = 0; i < MACHINE_DISCONNECTS_KEPT; i++) {
+      const again = fakeRunner(hub);
+      await again.hello(paired.token);
+      await again.disconnect({ code: 1006, reason: "" });
+    }
+    const [capped] = await f.db.select().from(schema.machines);
+    expect(capped?.disconnects).toHaveLength(MACHINE_DISCONNECTS_KEPT);
+    expect(capped?.disconnects.every((d) => d.code === 1006)).toBe(true);
+  });
+
+  test("the offline cause: none for the workspace's own computer, or past a close a later sign of life overrides", () => {
+    const at = "2026-01-01T10:00:00.000Z";
+    const disconnects = [{ connectedAt: at, at, code: 4408, reason: "no pong" }];
+    const before = new Date("2026-01-01T09:59:59Z");
+    expect(offlineCause({ kind: "connected", disconnects, lastSeenAt: before }, false)).toBe("unresponsive");
+    expect(offlineCause({ kind: "connected", disconnects, lastSeenAt: before }, true)).toBeNull();
+    expect(offlineCause({ kind: "managed", disconnects, lastSeenAt: before }, false)).toBeNull();
+    expect(offlineCause({ kind: "connected", disconnects: [], lastSeenAt: before }, false)).toBeNull();
+    // A replica that died left the row online: its later pongs say nothing about this old close.
+    expect(
+      offlineCause({ kind: "connected", disconnects, lastSeenAt: new Date("2026-01-01T10:05:00Z") }, false),
+    ).toBeNull();
   });
 
   test("a silent runner is dropped two heartbeats after its last pong, as the runner drops a silent server", async () => {

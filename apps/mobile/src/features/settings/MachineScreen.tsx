@@ -18,8 +18,9 @@ import {
   useReduceMachineAccess,
 } from "@agenteschat/client";
 import { computerName, setupView } from "@agenteschat/client/lib/computer";
+import { offlineCauseText } from "@agenteschat/client/lib/devices";
 import { errorText } from "@agenteschat/client/lib/errors";
-import { firstName, formatTime, joinNames } from "@agenteschat/client/lib/format";
+import { clockAt, firstName, formatTime, joinNames } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import {
   allowedFolders,
@@ -249,6 +250,12 @@ function MachinePage({ machineId }: { machineId: string }) {
     m.workspace && m.mode !== "system" ? `${t("machines.workspace")} ${m.workspace}` : null,
     m.pairedBy ? t("machines.pairedBy", { name: m.pairedBy.name }) : null,
   ].filter((x): x is string => Boolean(x));
+  // Offline with a known cause: the sentence with its way out, in place of the row's short words.
+  const s = device?.status;
+  const causeLine =
+    s?.kind === "offline" && s.cause && s.lastSeenAt
+      ? offlineCauseText(t, s.cause, clockAt(i18n.language, s.lastSeenAt), "line")
+      : null;
   const egressIp = managed && m.online ? (m.egress?.ip ?? null) : null;
   const flag = egressIp ? countryFlagSvg(m.egress?.country) : null;
 
@@ -256,7 +263,7 @@ function MachinePage({ machineId }: { machineId: string }) {
     <SettingsPage title={title}>
       <View style={styles.head}>
         <ComputerPortrait kind={computerKind(m.os)} state={computerState(m)} size={96} />
-        {device ? <StatusLine status={device.status} center /> : null}
+        {device ? <StatusLine status={device.status} center text={causeLine} /> : null}
         {status ? (
           <View style={styles.chips}>
             <Chip icon={status.icon} label={status.label} />

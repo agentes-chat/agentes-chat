@@ -44,6 +44,7 @@ import Animated, {
 import { useOrg } from "@/providers/org";
 import {
   Button,
+  CodeWords,
   EmptyState,
   Filters,
   GroupedHeader,
@@ -423,7 +424,7 @@ function Gallery() {
           )}
           {composioOff ? (
             <Text variant="small" tone="muted" style={styles.note}>
-              {composioOff}
+              <CodeWords text={composioOff} />
             </Text>
           ) : null}
         </>

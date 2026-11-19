@@ -794,8 +794,8 @@
       "where": {
         "openbotrun": "openbot-import.json（OpenBotのMigratorから）またはopenbot-transfer.json（インスタンスの移行から）を選んでください。.zipはまず「ファイル」アプリで開きます。タップすると解凍されます。",
         "openmausbot": "OpenMausBotで: チームを右クリック › チームを共有… › ファイルを保存。そのファイルをここで選んでください。",
-        "hermes": "Hermesはターミナルから書き出します（hermes profile export）。形式は.tar.gzで、スマートフォンでは開けません。コンピューターで取り込むか、プロフィールの.mdと.yamlファイルをここで選んでください。",
-        "openclaw": "OpenClawはエージェントをコンピューターの~/.openclawフォルダに保存します。ワークスペースの.mdファイルをここで選ぶか、コンピューターでフォルダごと取り込んでください。",
+        "hermes": "Hermesはターミナルから書き出します（`hermes profile export`）。形式は.tar.gzで、スマートフォンでは開けません。コンピューターで取り込むか、プロフィールの.mdと.yamlファイルをここで選んでください。",
+        "openclaw": "OpenClawはエージェントをコンピューターの`~/.openclaw`フォルダに保存します。ワークスペースの.mdファイルをここで選ぶか、コンピューターでフォルダごと取り込んでください。",
         "paperclip": "パッケージのGitHubリンクを下に貼り付けるか、COMPANY.mdとほかの.mdファイルを選んでください。",
         "agenteschat": "もう一方のワークスペースで: 設定 › インポートとエクスポート › ファイルをダウンロード。その.jsonをここで選んでください。"
       },
@@ -1861,7 +1861,7 @@
       "tooOld": "このiPhoneはiOS {{version}}です。エージェントにはiOS 17以降が必要です。可能ならアップデートするか、新しいiPhoneを使ってください。",
       "xcodeOld": "このiPhoneはiOS {{version}}で、{{host}}のXcodeより新しいバージョンです。そちらにXcode {{major}}をインストールしてから、ターミナルでxcrun devicectl manage ddis updateを実行してください。",
       "teamMissing": "Xcodeはサインイン済みですが、まだチームが表示されていません。Xcodeで任意のiOSアプリを作成し、Signing & Capabilitiesでチームを選んで、このiPhoneで一度実行してください。",
-      "uiRefused": "このiPhoneがテストヘルパーのタップを拒否しました。ロックを解除し、求められたらパスコードを入力してください。続く場合は、設定 › デベロッパ › UIオートメーションを有効にするをオフにしてからオンにしてください。",
+      "uiRefused": "エージェントはこのiPhoneの画面を見られますが、iOSがタップを拒否しています。",
       "pluggedIn": "つなぎました",
       "wifi": {
         "also": "{{host}}のWi-Fiにもあります：{{name}}",
@@ -2415,7 +2415,7 @@
       "newPassword": "新しいパスワード",
       "keyName": "変数",
       "keyNamePlaceholder": "ACME_API_KEY",
-      "keyNameHelp": "大文字、数字、_を使います。例: ACME_API_KEY。エージェントはこの名前でキーを求めます。",
+      "keyNameHelp": "大文字、数字、_を使います。例: `ACME_API_KEY`。エージェントはこの名前でキーを求めます。",
       "value": "値",
       "newValue": "新しい値",
       "description": "説明",

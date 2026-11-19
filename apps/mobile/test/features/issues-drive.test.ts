@@ -538,7 +538,7 @@ describe("a task's number and title on one row; its conversation on the card", (
     expect(card).toContain("<PressScale");
     expect(card).not.toContain("<Pressable");
     const title = parts.slice(parts.indexOf("export function TaskTitle("), parts.indexOf("const STATE_ICON"));
-    expect(title).toContain("codeAndBoldParts(title)");
+    expect(title).toContain("<CodeWords text={title} />");
     expect(title).not.toContain("numberOfLines");
     // Then its facts, then who has it with its state.
     expect(card.indexOf("<CardFacts")).toBeGreaterThan(card.indexOf("{i.title}"));

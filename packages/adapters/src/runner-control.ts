@@ -294,6 +294,8 @@ export type ControlRequest =
   | { type: "cli.install"; action: "start" | "status" | "cancel"; tool: InstallableCli }
   /** Reads the plugged iPhone again now; answers once the status carries what it found. */
   | { type: "iphone.look" }
+  /** Repairs the test helper of the iPhone `serial` here (machine op `phone.repair`); the status shows its rebuild. */
+  | { type: "iphone.repair"; serial: string }
   /** Finish what's running briefly, then exit 0 (the app quits). */
   | { type: "shutdown" };
 
@@ -338,6 +340,7 @@ export interface ControlReplies {
   "iphone.fixXcode": ControlIphoneSetup;
   "cli.install": { install: CliInstall | null };
   "iphone.look": { looking: boolean };
+  "iphone.repair": { repairing: boolean };
   shutdown: { stopping: true };
 }
 

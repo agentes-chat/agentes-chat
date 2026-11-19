@@ -557,6 +557,7 @@ export function buildEngine(o: EngineOptions) {
         pubsub: adapters.pubsub,
         artifacts,
         publicUrl: config.PUBLIC_URL,
+        rateLimiter: adapters.rateLimiter,
       }),
       browserTools,
       // Reading the web, for every agent and run (ADR 0109): a search service when configured, else the agent's

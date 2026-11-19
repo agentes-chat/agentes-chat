@@ -134,6 +134,7 @@ export {
 } from "./components/Chip";
 export { ChipField, type ChipFieldOption, type ChipFieldProps, type ChipFieldToken } from "./components/ChipField";
 export { CodeInput, type CodeInputProps } from "./components/CodeInput";
+export { codeAndBold } from "./components/CodeWords";
 export { ColorDot, dotTone } from "./components/ColorDot";
 export { ColorPicker, type ColorPickerLabels } from "./components/ColorPicker";
 export { CommandPalette, filterPalette, type PaletteItem } from "./components/CommandPalette";

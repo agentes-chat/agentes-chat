@@ -3234,10 +3234,10 @@
     "value": "In OpenMausBot: right-click the team → Share team… → Save file."
   },
   "onboarding.import.where.hermes": {
-    "value": "In a terminal, run hermes profile export with the profile's name and drop the .tar.gz here. Or drag the ~/.hermes folder to bring every profile."
+    "value": "In a terminal, run `hermes profile export` with the profile's name and drop the .tar.gz here. Or drag the `~/.hermes` folder to bring every profile."
   },
   "onboarding.import.where.openclaw": {
-    "value": "Drag the whole ~/.openclaw folder (it brings every agent) or just one workspace. On a Mac, ⌘⇧. shows hidden folders in the file picker."
+    "value": "Drag the whole `~/.openclaw` folder (it brings every agent) or just one workspace. On a Mac, ⌘⇧. shows hidden folders in the file picker."
   },
   "onboarding.import.where.paperclip": {
     "value": "Drag the package folder (the one with COMPANY.md), drop a .zip of it or paste its GitHub link."
@@ -11351,7 +11351,7 @@
     "value": "Use an https address, like app.example.com."
   },
   "vault.error.keyName": {
-    "value": "Use capital letters, numbers and _, starting with a letter, like ACME_API_KEY."
+    "value": "Use capital letters, numbers and _, starting with a letter, like `ACME_API_KEY`."
   },
   "vault.error.password": {
     "value": "Type the password."
@@ -11765,7 +11765,7 @@
     "value": "Hide the value of {{name}}"
   },
   "vault.env.problem.name": {
-    "value": "The name must look like ACME_API_KEY"
+    "value": "The name must look like `ACME_API_KEY`"
   },
   "vault.env.problem.reserved": {
     "value": "Reserved name"
@@ -25767,10 +25767,10 @@
     "value": "Add credit at TypeSafe. Jev resumes by itself."
   },
   "jev.line.env": {
-    "value": "Set in this server's settings (TYPESAFE_API_KEY)."
+    "value": "Set in this server's settings (`TYPESAFE_API_KEY`)."
   },
   "jev.line.envInvalid": {
-    "value": "TypeSafe didn't accept this key. Change it in this server's settings (TYPESAFE_API_KEY)."
+    "value": "TypeSafe didn't accept this key. Change it in this server's settings (`TYPESAFE_API_KEY`)."
   },
   "jev.checkAgain": {
     "value": "Check again"
@@ -25833,7 +25833,7 @@
     "value": "Add credit at OpenRouter. Jev resumes by itself."
   },
   "jev.openRouter.line.envInvalid": {
-    "value": "OpenRouter didn't accept this key. Change it in this server's settings (TYPESAFE_API_KEY)."
+    "value": "OpenRouter didn't accept this key. Change it in this server's settings (`TYPESAFE_API_KEY`)."
   },
   "jev.remove.title": {
     "value": "Remove the Jev key?"
@@ -31443,7 +31443,7 @@
     "value": "Invalid"
   },
   "githubApp.server.line.env": {
-    "value": "Set in this server's settings (GITHUB_APP_ID)."
+    "value": "Set in this server's settings (`GITHUB_APP_ID`)."
   },
   "githubApp.server.line.invalid": {
     "value": "This server can't open the saved app. Remove it and create it again."
@@ -32579,8 +32579,8 @@
   },
   "connectors.composio.off": {
     "value": {
-      "one": "{{names}} and {{count}} more service connect through Composio. To turn them on, whoever runs this server sets COMPOSIO_API_KEY (see SELF_HOSTING.md).",
-      "other": "{{names}} and {{count}} more services connect through Composio. To turn them on, whoever runs this server sets COMPOSIO_API_KEY (see SELF_HOSTING.md)."
+      "one": "{{names}} and {{count}} more service connect through Composio. To turn them on, whoever runs this server sets `COMPOSIO_API_KEY` (see `SELF_HOSTING.md`).",
+      "other": "{{names}} and {{count}} more services connect through Composio. To turn them on, whoever runs this server sets `COMPOSIO_API_KEY` (see `SELF_HOSTING.md`)."
     }
   },
   "connectors.composio.usage": {
@@ -35932,7 +35932,7 @@
     "value": "In the Postgres service, open Data → Query and run the command below (change the password)."
   },
   "database.how.railway.2": {
-    "value": "In Variables, copy DATABASE_PUBLIC_URL (DATABASE_URL is internal and doesn't work from here)."
+    "value": "In Variables, copy `DATABASE_PUBLIC_URL` (`DATABASE_URL` is internal and doesn't work from here)."
   },
   "database.how.railway.3": {
     "value": "Swap the user and password in it for agentes_leitura and the password you chose, and paste it here."
@@ -36010,7 +36010,7 @@
     "value": "We couldn't reach the database server. Check the address and whether it accepts connections from outside."
   },
   "database.error.blocked_host": {
-    "value": "This server isn't allowed. Use the database's public address (internal addresses, like Railway's DATABASE_URL, don't work from here)."
+    "value": "This server isn't allowed. Use the database's public address (internal addresses, like Railway's `DATABASE_URL`, don't work from here)."
   },
   "database.error.tls": {
     "value": "The database didn't accept a secure connection. Turn on SSL in the database, or choose No encryption under Advanced (test databases only)."
@@ -38149,7 +38149,7 @@
     "value": "Use an address that starts with https://"
   },
   "errors.vault.keyNameInvalid": {
-    "value": "Use capital letters, digits and _ in the name, like ACME_API_KEY."
+    "value": "Use capital letters, digits and _ in the name, like `ACME_API_KEY`."
   },
   "errors.vault.keyNameReserved": {
     "value": "This name is reserved. Pick another one."
@@ -39179,6 +39179,15 @@
   "devices.detail.lastSeen": {
     "value": "last seen {{time}}"
   },
+  "devices.detail.offlineUnresponsive": {
+    "value": "stopped answering at {{time}}"
+  },
+  "devices.detail.offlineStopped": {
+    "value": "runner stopped at {{time}}"
+  },
+  "devices.detail.offlineDropped": {
+    "value": "connection dropped at {{time}}"
+  },
   "devices.line.ready": {
     "value": "Agents can use it now."
   },
@@ -39196,6 +39205,15 @@
   },
   "devices.line.offlineWithHost": {
     "value": "{{host}} is offline. Agents wait for it to come back."
+  },
+  "devices.line.offlineUnresponsive": {
+    "value": "Stopped answering at {{time}}, maybe no network or overloaded. Run `{{command}}` on it."
+  },
+  "devices.line.offlineStopped": {
+    "value": "The runner stopped at {{time}}. Start it again, or run `{{command}}` on it to see why."
+  },
+  "devices.line.offlineDropped": {
+    "value": "The connection dropped at {{time}}. It reconnects by itself. If it doesn't, run `{{command}}` on it."
   },
   "devices.reason.locked": {
     "value": "The phone is locked"
@@ -40137,7 +40155,22 @@
     "value": "{{name}} runs iOS {{version}}, newer than Xcode on {{mac}} knows. Install Xcode {{major}}, then run this in Terminal."
   },
   "devices.iphone.uiRefusedText": {
-    "value": "The iPhone refused the test helper's taps. Unlock it and enter its passcode if it asks. If it keeps happening, turn Settings › Developer › Enable UI Automation off and on."
+    "value": "Agents see the iPhone's screen, but iOS refuses their taps."
+  },
+  "devices.iphone.uiTurnOn": {
+    "value": "On the iPhone, turn both on:"
+  },
+  "devices.iphone.uiPasscode": {
+    "value": "Enter its passcode when it asks, and keep it unlocked."
+  },
+  "devices.iphone.uiCheck": {
+    "value": "Check again"
+  },
+  "devices.iphone.repair": {
+    "value": "Repair the test helper"
+  },
+  "devices.iphone.repairHint": {
+    "value": "The Mac stops the test helper and builds it again with its Xcode, in a few minutes. For taps that still fail once both are on."
   },
   "devices.iphone.tooOld": {
     "value": "{{name}} runs iOS {{version}}, and agents need iOS 17 or newer. Update it if it can, or plug in a newer iPhone."
@@ -42771,10 +42804,10 @@
     "value": "This server can't read this key. Paste it again."
   },
   "settings.media.giphy.line.env": {
-    "value": "Set in this server's settings (GIPHY_API_KEY)."
+    "value": "Set in this server's settings (`GIPHY_API_KEY`)."
   },
   "settings.media.giphy.line.envInvalid": {
-    "value": "This key can't be used. Change it in this server's settings (GIPHY_API_KEY)."
+    "value": "This key can't be used. Change it in this server's settings (`GIPHY_API_KEY`)."
   },
   "settings.media.giphy.invalid": {
     "value": "GIPHY didn't accept this key. Copy it again from GIPHY Developers."
@@ -50989,7 +51022,7 @@
     "value": "The server's log lines are included only when the installation's owner sends a report."
   },
   "problemReport.off": {
-    "value": "Sending is off on this server (PROBLEM_REPORT_URL=off). Copy the report to share it."
+    "value": "Sending is off on this server (`PROBLEM_REPORT_URL=off`). Copy the report to share it."
   },
   "problemReport.errorRate": {
     "value": "Too many reports in a short time. Try again in {{minutes}} min, or copy the report."

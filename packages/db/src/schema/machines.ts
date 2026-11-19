@@ -161,6 +161,14 @@ export interface MachineAccess {
  */
 export type MachineKind = "connected" | "host" | "managed";
 
+/** One runner socket that closed: when it opened and closed, and the close code and reason. */
+export interface MachineDisconnect {
+  connectedAt: string;
+  at: string;
+  code: number;
+  reason: string;
+}
+
 /**
  * Connected computers (ADR 0025): machines people paired, where our runner
  * keeps one outbound WebSocket open. The token is stored as SHA-256 only;
@@ -250,6 +258,8 @@ export const machines = pgTable(
     /** The server process holding its socket. */
     connectedReplica: text(),
     lastSeenAt: timestamp({ withTimezone: true }),
+    /** Its runner's last sockets that closed, newest first (at most `MACHINE_DISCONNECTS_KEPT`): why it went offline. */
+    disconnects: jsonb().$type<MachineDisconnect[]>().notNull().default([]),
     /**
      * The operator put the workspace's own computer (`managed`) in standby (ADR 0161): asleep by design, it is woken
      * when something wants it. Its runner's next hello clears it.
