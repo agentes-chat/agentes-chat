@@ -20,6 +20,13 @@ export const REAUTH_PASSWORD = "reauth.password";
  * takes `untranslatedText`; a guard test (`error-words.test.ts`) fails on a new code that isn't here or on its list.
  */
 const KNOWN = {
+  "issue.task_destination_private": "issues.dependencies.destinationPrivate",
+  "issue.dependency_cycle": "issues.dependencies.cycle",
+  "issue.dependencies_pending": "issues.dependencies.pending",
+  "issue.dependencies_limit": "issues.dependencies.limit",
+  "issue.readiness_stale": "issues.dependencies.stale",
+  "issue.readiness_filter": "issues.dependencies.filter",
+  "issue.already_started": "issues.dependencies.started",
   // Linking an outside chat surface (ADR 0187). The lines name no surface: the server's errors carry no name.
   "surface.off": "errors.surface.off",
   "surface.not_allowed": "errors.surface.notAllowed",

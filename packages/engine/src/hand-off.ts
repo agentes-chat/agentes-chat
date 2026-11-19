@@ -15,6 +15,7 @@ import type { RoutineBrief } from "./routine-brief";
 import { personCanPost } from "./routine-state";
 import { type AgentRun, addRunStep } from "./runs";
 import { REQUEST_SECRET_TOOL } from "./secrets";
+import { taskRunDestinationAllowed } from "./task-sharing";
 import { maskCredentials } from "./tool-detail";
 import { reachesTeammates, turnMeans } from "./tools/directory";
 import type { ToolContext, ToolDefinition, ToolSource } from "./tools/types";
@@ -27,7 +28,7 @@ export const MAX_HAND_OFF = 8000;
 const { agentRuns, routines, routineRuns } = schema;
 
 /** Why a routine's report can't be delivered now (the routine run ends `skipped` with it). */
-export type HandOffBlock = "deleted" | "paused" | "creator_no_access" | "handoff_blocked";
+export type HandOffBlock = "deleted" | "paused" | "creator_no_access" | "handoff_blocked" | "task_not_visible";
 
 /**
  * Whether a routine may still speak where it reports (ADR 0053 §4): it exists and is active (a
@@ -50,6 +51,12 @@ export async function routineDeliveryBlock(tx: Executor, brief: RoutineBrief): P
   // Its creator now (an admin or the agent's owner may have taken it over since it fired).
   if (!routine.creator) return "creator_no_access";
   if (!(await personCanPost(tx, routine.orgId, routine.creator, brief.deliverTo.channelId))) return "creator_no_access";
+  const [started] = await tx
+    .select({ runId: routineRuns.agentRunId })
+    .from(routineRuns)
+    .where(and(eq(routineRuns.id, brief.routineRunId), eq(routineRuns.orgId, routine.orgId)));
+  if (started?.runId && !(await taskRunDestinationAllowed(tx, routine.orgId, started.runId, brief.deliverTo.channelId)))
+    return "task_not_visible";
   return null;
 }
 
@@ -78,6 +85,11 @@ export async function deliverRoutineReport(
   },
 ): Promise<{ message: Message; runs: AgentRun[] } | null> {
   const { run, brief } = input;
+  const block = await routineDeliveryBlock(tx, brief);
+  if (block) {
+    await blockRoutineRun(tx, brief, run.orgId, block);
+    return null;
+  }
   // Its final text delivered for it (`auto_report`) never went through the Tool Gateway: no credential in it.
   const text = maskCredentials(input.text);
   const [open] = await tx
@@ -165,6 +177,7 @@ async function blockRoutineRun(tx: Executor, brief: RoutineBrief, orgId: string,
 }
 
 const BLOCKED: Record<HandOffBlock | "stopped", string> = {
+  task_not_visible: "the task is no longer visible to everyone receiving this report",
   deleted: "the routine was deleted",
   paused: "the routine was paused",
   creator_no_access: "the routine's creator can no longer post where it reports",

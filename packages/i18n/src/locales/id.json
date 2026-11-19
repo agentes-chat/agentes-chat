@@ -8184,6 +8184,27 @@
       "criterion_checked": "mencentang kriteria \"{{text}}\"",
       "criterion_unchecked": "menghapus centang kriteria \"{{text}}\"",
       "agent_asked": "meminta {{name}} mengerjakannya"
+    },
+    "dependencies": {
+      "destinationPrivate": "Tugas tidak lagi terlihat oleh semua orang yang akan menerima file ini.",
+      "title": "Bergantung pada",
+      "loadError": "Tidak dapat memuat dependensi.",
+      "changeError": "Tidak dapat mengubah dependensi. Periksa apakah perubahan membuat siklus.",
+      "pick": "Tambahkan tugas",
+      "search": "Cari menurut nomor atau judul",
+      "noResults": "Tidak ada tugas ditemukan",
+      "noProject": "Tidak ada proyek ditemukan",
+      "none": "Tidak ada dependensi",
+      "unavailable": "Dependensi tidak tersedia",
+      "remove": "Hapus dependensi {{task}}",
+      "waiting_other": "Menunggu {{count}} tugas",
+      "inputsChanged": "Masukan berubah setelah pekerjaan dimulai. Tinjau dependensi.",
+      "cycle": "Dependensi ini akan membentuk siklus.",
+      "pending": "Selesaikan atau atasi dependensi yang tertunda sebelum memulai.",
+      "limit": "Tugas ini telah mencapai batas dependensi.",
+      "stale": "Dependensi berubah. Periksa tugas sebelum memulai.",
+      "filter": "Pilih tugas atau proyek yang valid untuk rutinitas ini.",
+      "started": "Pekerjaan untuk tugas ini sudah berjalan."
     }
   },
   "routines": {
@@ -8623,7 +8644,8 @@
         "pr_opened": "PR dibuka di GitHub"
       },
       "issue": {
-        "created": "Tugas dibuat di agentes"
+        "created": "Tugas dibuat di agentes",
+        "ready": "Saat tugas siap"
       },
       "deploy": {
         "succeeded": "Deploy selesai"
@@ -8676,7 +8698,11 @@
         "when_past": "Waktu itu sudah lewat.",
         "when_nonexistent": "Waktu itu tidak ada di zona waktu ini (pergantian waktu musim panas).",
         "when_unreadable": "Waktunya tidak terbaca. Coba “besok pukul 9 pagi”."
-      }
+      },
+      "readyScope": "Berlaku untuk",
+      "readyAll": "Semua tugas",
+      "readyTask": "Tugas tertentu",
+      "readyProject": "Proyek tertentu"
     },
     "copyName": "{{name}} (salinan)",
     "state": {
@@ -8798,7 +8824,9 @@
       "computer_timeout": "Komputer terlalu lama menjawab",
       "cli_failed": "Program AI di komputer berhenti karena kesalahan",
       "account_missing": "Akun agen sudah tidak ada di komputernya",
-      "our_error": "Ada yang salah di pihak kami"
+      "our_error": "Ada yang salah di pihak kami",
+      "task_not_visible": "Tugas tidak terlihat di tujuan ini.",
+      "task_readiness_stale": "Dependensi tugas atau rutinitas berubah sebelum pekerjaan dimulai."
     },
     "openInChat": "Buka di percakapan",
     "stop": "Hentikan",

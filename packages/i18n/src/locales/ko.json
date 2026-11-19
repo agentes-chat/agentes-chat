@@ -8145,6 +8145,27 @@
       "criterion_checked": "조건 \"{{text}}\"을(를) 체크했어요",
       "criterion_unchecked": "조건 \"{{text}}\"의 체크를 해제했어요",
       "agent_asked": "{{name}}에게 맡겼어요"
+    },
+    "dependencies": {
+      "destinationPrivate": "이 파일을 받을 모든 사람이 작업을 볼 수 있는 상태가 아니에요.",
+      "title": "선행 작업",
+      "loadError": "의존 관계를 불러오지 못했어요.",
+      "changeError": "의존 관계를 변경하지 못했어요. 순환이 생기는지 확인하세요.",
+      "pick": "작업 추가",
+      "search": "번호 또는 제목으로 검색",
+      "noResults": "작업을 찾지 못했어요",
+      "noProject": "프로젝트를 찾지 못했어요",
+      "none": "의존 관계 없음",
+      "unavailable": "의존 관계를 사용할 수 없음",
+      "remove": "의존 관계 {{task}} 삭제",
+      "waiting_other": "작업 {{count}}개 대기 중",
+      "inputsChanged": "작업을 시작한 후 입력이 변경됐어요. 의존 관계를 확인하세요.",
+      "cycle": "이 의존 관계는 순환을 만들어요.",
+      "pending": "시작하기 전에 대기 중인 의존 관계를 완료하거나 해결하세요.",
+      "limit": "이 작업이 의존 관계 한도에 도달했어요.",
+      "stale": "의존 관계가 변경됐어요. 시작 전에 작업을 확인하세요.",
+      "filter": "이 루틴에 유효한 작업이나 프로젝트를 선택하세요.",
+      "started": "이 작업은 이미 진행 중이에요."
     }
   },
   "routines": {
@@ -8584,7 +8605,8 @@
         "pr_opened": "GitHub에서 PR 열림"
       },
       "issue": {
-        "created": "agentes에서 작업 생성됨"
+        "created": "agentes에서 작업 생성됨",
+        "ready": "작업이 준비되면"
       },
       "deploy": {
         "succeeded": "배포 완료"
@@ -8637,7 +8659,11 @@
         "when_past": "이미 지난 시점이에요.",
         "when_nonexistent": "이 시간대에는 존재하지 않는 시간이에요(서머타임).",
         "when_unreadable": "시점을 이해하지 못했어요. “내일 오전 9시”처럼 입력해 보세요."
-      }
+      },
+      "readyScope": "적용 대상",
+      "readyAll": "모든 작업",
+      "readyTask": "특정 작업",
+      "readyProject": "특정 프로젝트"
     },
     "copyName": "{{name}}(사본)",
     "state": {
@@ -8759,7 +8785,9 @@
       "computer_timeout": "컴퓨터가 응답하는 데 너무 오래 걸렸어요",
       "cli_failed": "컴퓨터의 AI 프로그램이 오류로 멈췄어요",
       "account_missing": "에이전트의 계정이 더 이상 컴퓨터에 없어요",
-      "our_error": "저희 쪽에서 문제가 생겼어요"
+      "our_error": "저희 쪽에서 문제가 생겼어요",
+      "task_not_visible": "이 대상에서는 작업을 볼 수 없어요.",
+      "task_readiness_stale": "작업을 시작하기 전에 작업의 의존 관계나 루틴이 변경됐어요."
     },
     "openInChat": "대화에서 열기",
     "stop": "중지",

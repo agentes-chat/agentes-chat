@@ -178,6 +178,7 @@ const EVENT_WORDS: Record<RoutineEvent, string> = {
   "sentry.issue_created": "a new error comes in from Sentry",
   "github.pr_opened": "a pull request is opened on GitHub",
   "issue.created": "a task is created here",
+  "issue.ready": "a task's dependencies have all been completed",
   "deploy.succeeded": "a deploy succeeds",
   "email.received": "new mail arrives",
   "webhook.received": "its webhook address is called",

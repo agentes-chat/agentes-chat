@@ -7129,6 +7129,7 @@ export function readConversationListsOncePerBurst(qc: QueryClient, orgId: string
 export function applyIssueEvent(qc: QueryClient, orgId: string, event: { type: string }) {
   if (
     event.type === "issue.created" ||
+    event.type === "issues.changed" ||
     event.type === "issue.updated" ||
     event.type === "issue.deleted" ||
     event.type === "issue.audience"

@@ -48,6 +48,7 @@ import { widgetRunContext } from "./dashboards/refresh-context";
 import { deviceRoster, osName, switchesOff } from "./device-resolve";
 import { isAgentOnlyDm } from "./dms";
 import { cutText, stringsOf } from "./format";
+import { issueDependencyBrief } from "./issue-dependencies";
 import { issueWorkBrief, issueWorkOf } from "./issue-work";
 import { openTasksBrief } from "./issues";
 import { fileConversationBrief, liveRefLine } from "./live/conversation";
@@ -1095,11 +1096,24 @@ export async function buildRunContext(
   const taskHere = root ? taskConversationOf(root.meta) : null;
   const workIssueId = issueWork && issueWork.agentId === agent.id ? issueWork.issueId : null;
   const taskAsked = taskHere ? await assignedTo(db, run.orgId, taskHere.issueId, agent.id) : false;
-  const issueBrief = workIssueId
+  let issueBrief = workIssueId
     ? await issueWorkBrief(db, run.orgId, workIssueId, { inConversation: false, personal }).catch(() => null)
     : taskHere
       ? await issueWorkBrief(db, run.orgId, taskHere.issueId, { asked: taskAsked, personal }).catch(() => null)
       : null;
+  const dependencyTask = workIssueId ?? taskHere?.issueId;
+  if (issueBrief && dependencyTask) {
+    const report = background ? routineBriefOf(trigger.meta) : null;
+    const destination = report?.toDrive ? null : (report?.deliverTo.channelId ?? run.channelId);
+    const references = await issueDependencyBrief(
+      db,
+      { type: "agent", agentId: agent.id, channelId: run.channelId, runId: run.id },
+      run.orgId,
+      dependencyTask,
+      destination,
+    );
+    if (references) issueBrief += `\n\n${references}`;
+  }
   // A live file's conversation (ADR 0199): the file in focus, read from the artifact now.
   const fileBrief =
     root && channel.kind === "file"

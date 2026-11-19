@@ -230,7 +230,12 @@ const Routine = z
         description: z.string(),
         rule: ScheduleRuleSchema.nullable(),
       }),
-      z.object({ type: z.literal("event"), event: Event }),
+      z.object({
+        type: z.literal("event"),
+        event: Event,
+        issueId: z.uuid().optional(),
+        projectId: z.uuid().optional(),
+      }),
       z.object({
         type: z.literal("once"),
         at: z.string(),
@@ -390,7 +395,7 @@ const TriggerInput = z.union([
       timezone: z.string().max(64).optional(),
     })
     .openapi({ description: "A phrase (`weekdays at 9am`, or pt `dias úteis às 9h`) or a `rule` from the picker." }),
-  z.object({ type: z.literal("event"), event: Event }),
+  z.object({ type: z.literal("event"), event: Event, issueId: z.uuid().optional(), projectId: z.uuid().optional() }),
   z.object({
     type: z.literal("once"),
     at: z.iso.datetime({ offset: true }),

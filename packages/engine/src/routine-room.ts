@@ -3,6 +3,10 @@ import { and, type Database, type Executor, eq, schema } from "@agenteschat/db";
 import { caches } from "./cache";
 import { sha256 } from "./crypto";
 import { createAgentRuns } from "./dispatch";
+import { ConflictError } from "./errors";
+import { assigneesOfIssue, setAssignees } from "./issue-assignees";
+import { checkDependencyStart, consumeDependencyStart, type TaskReadyRef } from "./issue-dependencies";
+import { issueWorkBrief } from "./issue-work";
 import { insertMessageWithRuns, type Message } from "./messages";
 import { type RoutineBrief, routineRoomKey } from "./routine-brief";
 
@@ -60,12 +64,35 @@ export async function openRoutineRoom(tx: Executor, orgId: string, agentId: stri
  */
 export async function startRoutineRun(
   deps: { db: Database; pubsub?: PubSub },
-  input: { orgId: string; agentId: string; brief: RoutineBrief; body: string; brain: string },
+  input: {
+    orgId: string;
+    agentId: string;
+    brief: RoutineBrief;
+    body: string;
+    brain: string;
+    taskReady?: TaskReadyRef & { routineEpoch: string };
+  },
 ): Promise<{ message: Message; runId: string; roomId: string } | null> {
   const { brief } = input;
   const creator = brief.creatorUserId;
   if (!creator) throw new Error("a routine's brief needs its creator");
   const start = async (tx: Executor) => {
+    const task = input.taskReady
+      ? await checkDependencyStart(tx, input.orgId, creator, input.taskReady.issueId, input.taskReady)
+      : null;
+    if (input.taskReady) {
+      const [enabled] = await tx
+        .select({ active: schema.routines.active, event: schema.routines.event, rule: schema.routines.rule })
+        .from(schema.routines)
+        .where(and(eq(schema.routines.id, brief.routineId), eq(schema.routines.orgId, input.orgId)))
+        .for("update");
+      if (
+        !enabled?.active ||
+        enabled.event !== "issue.ready" ||
+        enabled.rule?.readinessEpoch !== input.taskReady.routineEpoch
+      )
+        throw new ConflictError("The routine's readiness authorization changed", "issue.readiness_stale");
+    }
     const room = await openRoutineRoom(tx, input.orgId, input.agentId, brief.routineId);
     const { message } = await insertMessageWithRuns(
       tx,
@@ -74,17 +101,36 @@ export async function startRoutineRun(
         channelId: room.id,
         threadId: null,
         author: { type: "person", userId: creator },
-        body: input.body,
+        body: task
+          ? `${input.body}\n\n${await issueWorkBrief(tx, input.orgId, task.id, { inConversation: false })}`
+          : input.body,
         meta: {
           routineBrief: brief,
           routine: { id: brief.routineId, name: brief.name, runId: brief.routineRunId },
           background: true,
+          ...(task
+            ? {
+                issueId: task.id,
+                issueWork: { issueId: task.id, number: task.number, title: task.title, agentId: input.agentId },
+              }
+            : {}),
         },
       },
       { startRuns: false, deliver: false },
     );
     const [agentRun] = await createAgentRuns(tx, message, [input.agentId], "mention", { background: true });
     if (!agentRun) throw new Error("the routine's run did not start");
+    if (task) {
+      const current = await assigneesOfIssue(tx, task.id);
+      if (!current.some((a) => a.type === "agent" && a.id === input.agentId))
+        await setAssignees(tx, task, [{ type: "agent", id: input.agentId }, ...current]);
+      await tx.update(schema.agentRuns).set({ issueId: task.id }).where(eq(schema.agentRuns.id, agentRun.id));
+      await consumeDependencyStart(tx, input.orgId, task.id, agentRun.id);
+      await tx
+        .update(schema.issues)
+        .set({ status: "in_progress", columnId: null, boardRank: -Date.now(), updatedAt: new Date() })
+        .where(eq(schema.issues.id, task.id));
+    }
     const [moved] = await tx
       .update(routineRuns)
       .set({ status: "started", agentRunId: agentRun.id, summary: "", brain: input.brain })

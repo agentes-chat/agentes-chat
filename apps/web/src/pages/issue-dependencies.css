@@ -1,0 +1,24 @@
+.issue-dependencies {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.issue-dependencies > li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block: var(--row-py);
+}
+.issue-dependencies__task {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-1);
+  overflow-wrap: anywhere;
+}
+.issue-dependencies__task > .small {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}

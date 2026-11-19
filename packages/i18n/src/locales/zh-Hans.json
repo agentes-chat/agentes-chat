@@ -8194,6 +8194,27 @@
       "criterion_checked": "勾选了标准“{{text}}”",
       "criterion_unchecked": "取消勾选了标准“{{text}}”",
       "agent_asked": "请 {{name}} 来完成"
+    },
+    "dependencies": {
+      "destinationPrivate": "此任务已不再对所有将接收此文件的人可见。",
+      "title": "依赖任务",
+      "loadError": "无法加载依赖关系。",
+      "changeError": "无法更改依赖关系。请检查是否会形成循环。",
+      "pick": "添加任务",
+      "search": "按编号或标题搜索",
+      "noResults": "未找到任务",
+      "noProject": "未找到项目",
+      "none": "没有依赖关系",
+      "unavailable": "依赖关系不可用",
+      "remove": "删除依赖关系 {{task}}",
+      "waiting_other": "正在等待 {{count}} 个任务",
+      "inputsChanged": "工作开始后输入发生了变化。请检查依赖关系。",
+      "cycle": "这些依赖关系会形成循环。",
+      "pending": "开始前，请完成或解决待处理的依赖关系。",
+      "limit": "此任务已达到依赖关系上限。",
+      "stale": "依赖关系已更改。开始前请检查任务。",
+      "filter": "请为此例程选择有效的任务或项目。",
+      "started": "此任务已有工作正在进行。"
     }
   },
   "routines": {
@@ -8630,7 +8651,8 @@
         "pr_opened": "GitHub 上创建了 PR"
       },
       "issue": {
-        "created": "在 agentes 中创建了任务"
+        "created": "在 agentes 中创建了任务",
+        "ready": "任务准备就绪时"
       },
       "deploy": {
         "succeeded": "部署完成"
@@ -8683,7 +8705,11 @@
         "when_past": "这个时间已经过去了。",
         "when_nonexistent": "这个时间在此时区中不存在（夏令时）。",
         "when_unreadable": "无法确定时间。试试“明天上午 9 点”。"
-      }
+      },
+      "readyScope": "适用范围",
+      "readyAll": "所有任务",
+      "readyTask": "指定任务",
+      "readyProject": "指定项目"
     },
     "copyName": "{{name}}（副本）",
     "state": {
@@ -8805,7 +8831,9 @@
       "computer_timeout": "电脑响应时间过长",
       "cli_failed": "电脑上的 AI 程序因出错而停止",
       "account_missing": "智能体的账号已不在它的电脑上",
-      "our_error": "我们这边出了点问题"
+      "our_error": "我们这边出了点问题",
+      "task_not_visible": "此任务在该目标位置不可见。",
+      "task_readiness_stale": "任务的依赖关系或例程在工作开始前发生了变化。"
     },
     "openInChat": "在对话中打开",
     "stop": "停止",

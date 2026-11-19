@@ -19,6 +19,8 @@ export interface SearchSelectLabels {
 export interface SearchSelectProps<V extends string = string, O extends SelectOption<V> = SelectOption<V>> {
   value: V | undefined;
   onValueChange: (value: V) => void;
+  /** Optional remote search. Local filtering still applies to the returned options. */
+  onSearchChange?: (query: string) => void;
   /** Consecutive options with the same `group` get a heading. A function is read only while the list is open. */
   options: O[] | (() => O[]);
   labels: SearchSelectLabels;
@@ -73,6 +75,7 @@ function groupsOf<O extends SelectOption>(options: O[]) {
 export function SearchSelect<V extends string = string, O extends SelectOption<V> = SelectOption<V>>({
   value,
   onValueChange,
+  onSearchChange,
   options,
   labels,
   groupLabel = (group) => group,
@@ -89,6 +92,9 @@ export function SearchSelect<V extends string = string, O extends SelectOption<V
   const listId = useId();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  useEffect(() => {
+    onSearchChange?.(query);
+  }, [query, onSearchChange]);
   const [active, setActive] = useState(0);
   const all = useMemo(() => (Array.isArray(options) ? options : open ? options() : []), [options, open]);
   const groups = useMemo(

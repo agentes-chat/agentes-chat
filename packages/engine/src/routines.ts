@@ -55,6 +55,8 @@ import { widgetChangeOf, widgetRoutineGone, widgetRoutineHeld } from "./dashboar
 import { openDm } from "./dms";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { publishListChanged, publishMessageCreated, publishRoutineRuns, publishUserEvent } from "./events";
+import type { TaskReadyRef } from "./issue-dependencies";
+import { findVisible, getIssue, nameableIn, publishToTaskReaders } from "./issues";
 import { releaseRoutineEmails } from "./mail/inbound";
 import {
   checkWatchable,
@@ -154,6 +156,7 @@ export const ROUTINE_EVENTS = [
   "sentry.issue_created",
   "github.pr_opened",
   "issue.created",
+  "issue.ready",
   "deploy.succeeded",
   /** New mail in a watched mailbox folder (only through an `email` trigger: it needs a watch). */
   "email.received",
@@ -209,7 +212,7 @@ export type RoutineTrigger =
       /** The structured form (always present when it can be derived; null for exotic cron). */
       rule: ScheduleRule | null;
     }
-  | { type: "event"; event: RoutineEvent }
+  | { type: "event"; event: RoutineEvent; issueId?: string; projectId?: string }
   /** A one-off (reminders): fires once at `at`, then the routine is done (inactive). */
   | { type: "once"; at: string; timezone: string; description: string }
   /**
@@ -389,7 +392,7 @@ export type RoutineTriggerInput =
       rule?: Omit<ScheduleRule, "freq"> & { freq: ScheduleRule["freq"] | "once" };
       timezone?: string;
     }
-  | { type: "event"; event: RoutineEvent }
+  | { type: "event"; event: RoutineEvent; issueId?: string; projectId?: string }
   /** Once, at this moment (ISO 8601). */
   | { type: "once"; at: string; timezone?: string }
   /** New mail in a mailbox the routine's agent can read; `folder` default the inbox. */
@@ -498,7 +501,17 @@ function triggerOf(
       status: watch.status as "active" | "needs_reconnect" | "error",
     };
   }
-  if (r.triggerType === "event") return { type: "event", event: (r.event ?? "issue.created") as RoutineEvent };
+  if (r.triggerType === "event")
+    return {
+      type: "event",
+      event: (r.event ?? "issue.created") as RoutineEvent,
+      ...(r.event === "issue.ready"
+        ? {
+            ...(typeof r.rule?.issueId === "string" ? { issueId: r.rule.issueId } : {}),
+            ...(typeof r.rule?.projectId === "string" ? { projectId: r.rule.projectId } : {}),
+          }
+        : {}),
+    };
   if (r.triggerType === "once") {
     return {
       type: "once",
@@ -1280,6 +1293,39 @@ async function resolveTrigger(
   // Mail events need a mailbox and a folder, webhook calls an address: only through their own triggers.
   if (!ROUTINE_EVENTS.includes(trigger.event) || trigger.event === "email.received" || trigger.event === WEBHOOK_EVENT)
     throw new ValidationError("Unknown event", "routine.unknown_event");
+  if (trigger.event === "issue.ready") {
+    if (trigger.issueId && trigger.projectId)
+      throw new ValidationError("Pick a task or project, not both", "issue.readiness_filter");
+    if (trigger.issueId) {
+      if (!UUID.test(trigger.issueId)) throw new ValidationError("Pick a task", "issue.readiness_filter");
+      await findVisible(deps.db, { type: "person", userId: actorId }, orgId, { id: trigger.issueId });
+    }
+    if (trigger.projectId) {
+      if (!UUID.test(trigger.projectId)) throw new ValidationError("Pick a project", "issue.readiness_filter");
+      const [project] = await deps.db
+        .select({ id: schema.issueProjects.id })
+        .from(schema.issueProjects)
+        .where(
+          and(
+            eq(schema.issueProjects.orgId, orgId),
+            eq(schema.issueProjects.id, trigger.projectId),
+            isNull(schema.issueProjects.archivedAt),
+          ),
+        );
+      if (!project) throw new NotFoundError("Project not found");
+    }
+    return {
+      ...none,
+      triggerType: "event",
+      event: trigger.event as string | null,
+      rule: {
+        readinessEpoch: Bun.randomUUIDv7(),
+        ...(trigger.issueId ? { issueId: trigger.issueId } : {}),
+        ...(trigger.projectId ? { projectId: trigger.projectId } : {}),
+      },
+      nextRunAt: null as Date | null,
+    };
+  }
   return { ...none, triggerType: "event", event: trigger.event as string | null, nextRunAt: null as Date | null };
 }
 
@@ -1834,6 +1880,8 @@ export async function updateRoutine(
           : null;
   }
   const hooks = patch.trigger?.type === "webhook" || patch.trigger?.type === "connector" ? hooksOf(deps) : null;
+  if ((set.event ?? current.event) === "issue.ready" && Object.keys(set).some((key) => key !== "nextRunAt"))
+    set.rule = { ...(set.rule ?? current.rule), readinessEpoch: Bun.randomUUIDv7() };
   const changed = Object.keys(set).filter((k) => k !== "nextRunAt") as (keyof typeof set)[];
   if (changed.length === 0 && set.nextRunAt === undefined) {
     const [view] = await views(db, [current], actorId, deps.hooks);
@@ -2017,7 +2065,15 @@ export async function setRoutineActive(
   const nextRunAt = active && current.triggerType === "schedule" ? nextRoutineTime(current, new Date()) : null;
   const [row] = await deps.db
     .update(routines)
-    .set({ active, nextRunAt, updatedAt: new Date(), ...(active ? { pausedReason: null, failuresInRow: 0 } : {}) })
+    .set({
+      active,
+      nextRunAt,
+      updatedAt: new Date(),
+      ...(active ? { pausedReason: null, failuresInRow: 0 } : {}),
+      ...(current.event === "issue.ready" && active !== current.active
+        ? { rule: { ...current.rule, readinessEpoch: Bun.randomUUIDv7() } }
+        : {}),
+    })
     .where(eq(routines.id, id))
     .returning();
   if (!active) {
@@ -2342,6 +2398,38 @@ async function fireClaimedRun(deps: RoutineDeps, run: RunRow) {
   };
   const target = targetOf(routine);
   const ref = { orgId: routine.orgId, routineId: routine.id, routineRunId: run.id };
+  let taskReady: (TaskReadyRef & { routineEpoch: string }) | undefined;
+  if (run.event?.type === "issue.ready") {
+    if (typeof run.event.routineEpoch !== "string" || run.event.routineEpoch !== routine.rule?.readinessEpoch)
+      return skip("task_readiness_stale");
+    if (
+      routine.event !== "issue.ready" ||
+      typeof run.event.issueId !== "string" ||
+      typeof run.event.generation !== "string"
+    )
+      return skip("task_readiness_stale");
+    const filter = routine.rule as { issueId?: string; projectId?: string } | null;
+    const task = await getIssue(db, { type: "person", userId: creator }, run.orgId, { id: run.event.issueId }).catch(
+      (e) => {
+        if (e instanceof NotFoundError || e instanceof ForbiddenError) return null;
+        throw e;
+      },
+    );
+    if (
+      !task ||
+      (filter?.issueId && filter.issueId !== task.id) ||
+      (filter?.projectId && filter.projectId !== task.project?.id)
+    )
+      return skip("task_readiness_stale");
+    if (
+      (target.type === "channel" || target.type === "conversation") &&
+      !(await nameableIn(db, target.channelId, task))
+    )
+      return skip("task_not_visible");
+    if ((target.type === "artifact" || target.type === "widget") && task.audience.mode !== "everyone")
+      return skip("task_not_visible");
+    taskReady = { issueId: task.id, generation: run.event.generation, routineEpoch: run.event.routineEpoch };
+  }
 
   if (target.type === "conversation" && target.reminder) {
     // A plain reminder: the agent's own message, mentioning the person; no run.
@@ -2463,9 +2551,25 @@ async function fireClaimedRun(deps: RoutineDeps, run: RunRow) {
     brief,
     body: routine.prompt,
     brain: brainOf(agent.brain),
+    taskReady,
+  }).catch((error) => {
+    if (
+      taskReady &&
+      (error instanceof ConflictError || error instanceof ValidationError) &&
+      ["issue.readiness_stale", "issue.dependencies_pending", "issue.already_started"].includes(error.code)
+    )
+      return null;
+    throw error;
   });
   // Stopped while it was being started: nothing ran.
-  if (!started) return;
+  if (!started) {
+    if (taskReady) await skip("task_readiness_stale");
+    return;
+  }
+  if (taskReady) {
+    const task = await getIssue(db, { type: "person", userId: creator }, routine.orgId, { id: taskReady.issueId });
+    await publishToTaskReaders(deps, routine.orgId, task, { type: "issue.updated", issue: task });
+  }
   await publishRoutineRuns(deps.pubsub, routine.orgId, routine.id);
   await ran();
 }
@@ -2574,7 +2678,12 @@ export async function takeOverRoutine(
   }
   const [row] = await db
     .update(routines)
-    .set({ createdByUserId: actorId, pausedReason: null, updatedAt: new Date() })
+    .set({
+      createdByUserId: actorId,
+      pausedReason: null,
+      updatedAt: new Date(),
+      ...(current.event === "issue.ready" ? { rule: { ...current.rule, readinessEpoch: Bun.randomUUIDv7() } } : {}),
+    })
     .where(and(eq(routines.id, current.id), eq(routines.orgId, orgId)))
     .returning();
   if (!row) throw new NotFoundError("Routine not found");

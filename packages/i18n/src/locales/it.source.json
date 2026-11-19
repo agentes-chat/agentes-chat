@@ -54530,5 +54530,86 @@
   },
   "live.sheet.fn.YEARFRAC": {
     "value": "The share of a year between two dates"
+  },
+  "issues.dependencies.unavailable": {
+    "value": "Unavailable dependency"
+  },
+  "issues.dependencies.pick": {
+    "value": "Add task"
+  },
+  "issues.dependencies.limit": {
+    "value": "This task has reached its dependency limit."
+  },
+  "issues.dependencies.pending": {
+    "value": "Finish or resolve the pending dependencies before starting."
+  },
+  "issues.dependencies.none": {
+    "value": "No dependencies"
+  },
+  "issues.dependencies.stale": {
+    "value": "The dependencies changed. Check the task before starting."
+  },
+  "issues.dependencies.inputsChanged": {
+    "value": "An input changed after work started. Review the dependencies."
+  },
+  "issues.dependencies.remove": {
+    "value": "Remove dependency {{task}}"
+  },
+  "routines.code.task_not_visible": {
+    "value": "The task is not visible at this destination."
+  },
+  "issues.dependencies.destinationPrivate": {
+    "value": "The task is no longer visible to everyone receiving this file."
+  },
+  "routines.form.readyTask": {
+    "value": "Specific task"
+  },
+  "routines.event.issue.ready": {
+    "value": "When a task becomes ready"
+  },
+  "routines.form.readyAll": {
+    "value": "All tasks"
+  },
+  "issues.dependencies.changeError": {
+    "value": "Could not change the dependency. Check whether it creates a cycle."
+  },
+  "issues.dependencies.noResults": {
+    "value": "No tasks found"
+  },
+  "issues.dependencies.filter": {
+    "value": "Choose a valid task or project for this routine."
+  },
+  "issues.dependencies.waiting": {
+    "value": {
+      "one": "Waiting for {{count}} task",
+      "other": "Waiting for {{count}} tasks"
+    }
+  },
+  "routines.form.readyProject": {
+    "value": "Specific project"
+  },
+  "routines.form.readyScope": {
+    "value": "Applies to"
+  },
+  "issues.dependencies.title": {
+    "value": "Depends on"
+  },
+  "issues.dependencies.search": {
+    "value": "Search by number or title"
+  },
+  "issues.dependencies.started": {
+    "value": "This task already has work in progress."
+  },
+  "routines.code.task_readiness_stale": {
+    "value": "The task's dependencies or routine changed before work started."
+  },
+  "issues.dependencies.cycle": {
+    "value": "These dependencies would create a cycle."
+  },
+  "issues.dependencies.noProject": {
+    "value": "No projects found"
+  },
+  "issues.dependencies.loadError": {
+    "value": "Could not load dependencies."
   }
 }

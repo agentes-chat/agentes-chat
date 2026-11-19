@@ -41,6 +41,14 @@ import {
   setAssignees,
 } from "./issue-assignees";
 import { boardColumns, columnForMove, columnOf, topRank } from "./issue-columns";
+import {
+  checkDependencyStart,
+  consumeDependencyStart,
+  dependencyWaitCounts,
+  lockIssueDependencies,
+  publishDependencyInputChanged,
+  refreshIssueReadiness,
+} from "./issue-dependencies";
 import { type IssueProjectRef, projectForTask, projectsById } from "./issue-projects";
 import type { IssueWorkMeta } from "./issue-work";
 import { fileIdsOf, getMessage, insertMessage, type MessageView, messageView, postPersonMessage } from "./messages";
@@ -98,6 +106,8 @@ export interface IssueView {
   title: string;
   description: string;
   status: IssueStatus;
+  /** Unfinished prerequisites, without their private content. */
+  dependencyWait?: number;
   /** Its board column: always one of its stage. */
   columnId: string | null;
   /** Order inside the column, lowest first. */
@@ -624,10 +634,17 @@ async function views(db: Database, rows: IssueRow[], reader?: string): Promise<I
     db,
     rows.map((r) => r.id),
   );
-  const [work, works, conversations] = await Promise.all([
+  const [work, works, conversations, dependencyWait] = await Promise.all([
     workOf(db, rows, assignees),
     backgroundWorksOf(db, rows, reader),
     taskConversationSummaries(db, rows),
+    rows[0]
+      ? dependencyWaitCounts(
+          db,
+          rows[0].orgId,
+          rows.map((r) => r.id),
+        )
+      : new Map<string, number>(),
   ]);
   const ids = [...new Set(rows.flatMap((r) => r.artifactIds))];
   const files = ids.length
@@ -652,6 +669,7 @@ async function views(db: Database, rows: IssueRow[], reader?: string): Promise<I
     title: r.title,
     description: r.description,
     status: r.status,
+    dependencyWait: dependencyWait.get(r.id) ?? 0,
     columnId: columnOf(columns, r)?.id ?? null,
     boardRank: r.boardRank,
     priority: r.priority,
@@ -1324,8 +1342,14 @@ export async function updateIssue(
       });
   }
   const { row, ended } = await db.transaction(async (tx) => {
+    if (set.status !== undefined) {
+      await lockIssueDependencies(tx, orgId);
+      if (set.status === "in_progress" && current.status === "todo")
+        await checkDependencyStart(tx, orgId, actor, issueId);
+    }
     const [updated] = await tx.update(issues).set(set).where(eq(issues.id, current.id)).returning();
     if (!updated) throw new NotFoundError("Issue not found");
+    if (set.status !== undefined) await refreshIssueReadiness(tx, orgId, updated.id);
     if (assignees && !sameAssignees(assignees, had)) await setAssignees(tx, updated, assignees);
     for (const e of events) await addActivity(tx, updated, { kind: "event", author, ...e });
     await enqueueIndex(tx, { orgId, kind: "issue", sourceId: updated.id });
@@ -1352,6 +1376,7 @@ export async function updateIssue(
   }
   // After the inbox, so the row of this change is there to be done for them. Its job tells it if this fails.
   if (ended) await tellTaskEnd(deps, orgId, ended).catch(() => {});
+  await publishDependencyInputChanged(deps, orgId, row.id);
   return view;
 }
 
@@ -1722,19 +1747,35 @@ export async function askAgentToImplement(
   const agent = await getAgent(db, orgId, agentId);
   if (!agent || agent.archivedAt) throw new NotFoundError("Agent not found");
   if (!canTalkTo(agent, userId, await speakerFor(db, orgId, userId))) throw await audienceError(db, agent);
-  // It goes first among whoever has the task, everyone else staying: the first agent is the one the task's
-  // conversation answers with (ADR 0188).
-  const had = await assigneesOfIssue(db, issue.id);
+  // Refuse known pending inputs before assigning the agent or opening its conversation; the start checks again atomically.
+  await db.transaction((tx) => checkDependencyStart(tx, orgId, userId, issue.id));
   const asked: WorkActor = { type: "agent", id: agentId };
-  const first = [asked, ...assigneesNotIn(had, [asked])];
-  const updated = sameAssignees(had, first)
-    ? await one(db, issue, userId)
-    : await updateIssue(deps, actor, orgId, issue.id, { assignees: first });
   const conversation = await ensureTaskConversation(db, issue.id);
-  await admitTaskAgents(db, orgId, conversation.channelId, { ids: [agentId] });
   const card: IssueWorkMeta = { issueId: issue.id, number: issue.number, title: issue.title, agentId };
   const author: WorkActor = by ? { type: "agent", id: by.agentId } : { type: "person", id: userId };
-  const { start, runId, consultationId } = await db.transaction(async (tx) => {
+  const { start, runId, consultationId, assignedRow, added } = await db.transaction(async (tx) => {
+    await checkDependencyStart(tx, orgId, userId, issue.id);
+    const current = await findVisible(tx, actor, orgId, { id: issue.id });
+    const had = await assigneesOfIssue(tx, issue.id);
+    const first = [asked, ...assigneesNotIn(had, [asked])];
+    const added = assigneesNotIn(first, had);
+    await checkAssignees(tx, orgId, added, current);
+    let assignedRow = current;
+    if (!sameAssignees(had, first)) {
+      await setAssignees(tx, current, first);
+      const [row] = await tx.update(issues).set({ updatedAt: new Date() }).where(eq(issues.id, current.id)).returning();
+      if (!row) throw new NotFoundError("Issue not found");
+      assignedRow = row;
+      for (const assignee of added)
+        await addActivity(tx, row, {
+          kind: "event",
+          author: actorOf(actor),
+          text: "assigned the issue",
+          event: "assigned",
+          data: { assignee },
+        });
+    }
+    await admitTaskAgents(tx, orgId, conversation.channelId, { ids: [agentId] });
     const consultationId = Bun.randomUUIDv7();
     // What starts the run, in the conversation: short and human (shown in the person's language).
     const start = await insertMessage(tx, {
@@ -1753,6 +1794,10 @@ export async function askAgentToImplement(
     });
     const { run, steered } = await enqueueRunJob(tx, start, agentId);
     const targetRunId = run?.id ?? steered;
+    if (targetRunId) {
+      await tx.update(agentRuns).set({ issueId: issue.id }).where(eq(agentRuns.id, targetRunId));
+      await consumeDependencyStart(tx, orgId, issue.id, targetRunId);
+    }
     if (by) {
       await tx.insert(agentConsultations).values({
         id: consultationId,
@@ -1774,8 +1819,10 @@ export async function askAgentToImplement(
       // The right hand looks at it again a day later, for the person it handed it over for.
       await queueTaskCheck(tx, orgId, consultationId);
     }
-    return { start, runId: run?.id ?? null, consultationId: by ? consultationId : null };
+    return { start, runId: run?.id ?? null, consultationId: by ? consultationId : null, assignedRow, added };
   });
+  if (added.length)
+    await notifyIssueChanged(deps, actorOf(actor), issue, assignedRow, { added, removed: [] }).catch(() => {});
   await publishMessageCreated(pubsub, messageView(start));
   if (runId) {
     await publishChannelEvent(pubsub, {
@@ -1815,7 +1862,7 @@ export async function askAgentToImplement(
   // Handed by the right hand: the work reports in the person's DM, and this card follows it by itself.
   if (consultationId) await handOverWork(deps, consultationId).catch(() => null);
   const fresh = await reload(db, issue);
-  if (!fresh) return updated;
+  if (!fresh) return one(db, assignedRow, userId);
   const view = await one(db, fresh);
   await announce(deps, orgId, view, "issue.updated");
   return view;
@@ -2072,6 +2119,7 @@ export async function setWorkIssueState(
   }
   const author: WorkActor = { type: "agent", id: work.agentId };
   const row = await deps.db.transaction(async (tx) => {
+    if (status !== current.status) await lockIssueDependencies(tx, work.orgId);
     const [updated] = await tx
       .update(issues)
       .set({
@@ -2083,6 +2131,7 @@ export async function setWorkIssueState(
       .returning();
     if (!updated) return null;
     if (status !== current.status) {
+      await refreshIssueReadiness(tx, work.orgId, updated.id);
       await addActivity(tx, updated, {
         kind: "event",
         author,
@@ -2114,6 +2163,7 @@ export async function setWorkIssueState(
   });
   if (!row) return;
   await announce(deps, work.orgId, await one(deps.db, row), "issue.updated");
+  await publishDependencyInputChanged(deps, work.orgId, row.id);
 }
 
 /** A task's steps at every depth (`union`: a loop ends). */
@@ -2184,6 +2234,7 @@ export async function setIssueAudience(
   );
   const readers = await conversationReaders(db, orgId, changed);
   const row = await db.transaction(async (tx) => {
+    await lockIssueDependencies(tx, orgId);
     const [updated] = await tx
       .update(issues)
       .set({ ...scope, updatedAt: new Date() })
@@ -2229,6 +2280,7 @@ export async function setIssueAudience(
     orgId,
     event: { type: "issue.audience", issueId: current.id },
   });
+  for (const id of changed) await publishDependencyInputChanged(deps, orgId, id);
   return one(db, (await reload(db, row)) ?? row, readerOf(actor));
 }
 

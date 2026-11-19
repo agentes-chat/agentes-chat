@@ -8793,6 +8793,28 @@
       "criterion_checked": "ha spuntato il criterio \"{{text}}\"",
       "criterion_unchecked": "ha tolto la spunta al criterio \"{{text}}\"",
       "agent_asked": "ha chiesto a {{name}} di farla"
+    },
+    "dependencies": {
+      "destinationPrivate": "L’attività non è più visibile a tutte le persone che riceverebbero questo file.",
+      "title": "Dipende da",
+      "loadError": "Impossibile caricare le dipendenze.",
+      "changeError": "Impossibile modificare la dipendenza. Controlla se crea un ciclo.",
+      "pick": "Aggiungi attività",
+      "search": "Cerca per numero o titolo",
+      "noResults": "Nessuna attività trovata",
+      "noProject": "Nessun progetto trovato",
+      "none": "Nessuna dipendenza",
+      "unavailable": "Dipendenza non disponibile",
+      "remove": "Rimuovi dipendenza {{task}}",
+      "waiting_one": "In attesa di {{count}} attività",
+      "waiting_other": "In attesa di {{count}} attività",
+      "inputsChanged": "Un input è cambiato dopo l’inizio del lavoro. Controlla le dipendenze.",
+      "cycle": "Queste dipendenze creerebbero un ciclo.",
+      "pending": "Completa o risolvi le dipendenze in sospeso prima di iniziare.",
+      "limit": "Questa attività ha raggiunto il limite di dipendenze.",
+      "stale": "Le dipendenze sono cambiate. Controlla l’attività prima di iniziare.",
+      "filter": "Scegli un’attività o un progetto valido per questa routine.",
+      "started": "Questa attività ha già un lavoro in corso."
     }
   },
   "routines": {
@@ -9239,7 +9261,8 @@
         "pr_opened": "PR aperta su GitHub"
       },
       "issue": {
-        "created": "Attività creata in agentes"
+        "created": "Attività creata in agentes",
+        "ready": "Quando un’attività è pronta"
       },
       "deploy": {
         "succeeded": "Deploy completato"
@@ -9292,7 +9315,11 @@
         "when_past": "Quel momento è già passato.",
         "when_nonexistent": "Quell'orario non esiste in questo fuso orario (ora legale).",
         "when_unreadable": "Non sono riuscito a capire quando. Prova con “domani alle 9”."
-      }
+      },
+      "readyScope": "Applica a",
+      "readyAll": "Tutte le attività",
+      "readyTask": "Attività specifica",
+      "readyProject": "Progetto specifico"
     },
     "copyName": "{{name}} (copia)",
     "state": {
@@ -9426,7 +9453,9 @@
       "computer_timeout": "Il computer ha impiegato troppo tempo a rispondere",
       "cli_failed": "Il programma di IA sul computer si è fermato con un errore",
       "account_missing": "L'account dell'agente non è più sul suo computer",
-      "our_error": "Qualcosa è andato storto da parte nostra"
+      "our_error": "Qualcosa è andato storto da parte nostra",
+      "task_not_visible": "L’attività non è visibile in questa destinazione.",
+      "task_readiness_stale": "Le dipendenze dell’attività o la routine sono cambiate prima dell’inizio del lavoro."
     },
     "openInChat": "Apri nella conversazione",
     "stop": "Ferma",
