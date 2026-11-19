@@ -10900,7 +10900,10 @@
     "sampleLink": "링크",
     "save": "색상 저장",
     "saved": "강조 색상을 업데이트했어요.",
-    "reset": "기본 색상으로 되돌렸어요."
+    "reset": "기본 색상으로 되돌렸어요.",
+    "mine": "내 강조 색상",
+    "useWorkspace": "워크스페이스 색상 사용",
+    "resetWorkspace": "워크스페이스 색상으로 되돌렸어요."
   },
   "look": {
     "previous": "이전",

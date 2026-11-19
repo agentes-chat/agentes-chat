@@ -11425,7 +11425,10 @@
     "sampleLink": "Een link",
     "save": "Kleur opslaan",
     "saved": "Accentkleur bijgewerkt.",
-    "reset": "Terug naar de standaardkleur."
+    "reset": "Terug naar de standaardkleur.",
+    "mine": "Jouw accentkleur",
+    "useWorkspace": "Die van de werkruimte gebruiken",
+    "resetWorkspace": "Terug naar de kleur van de werkruimte."
   },
   "look": {
     "previous": "Vorige",

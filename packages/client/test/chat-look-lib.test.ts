@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import {
+  accentOf,
   CHAT_TEXT_SIZES,
   chatLookOf,
   facesShown,
@@ -113,4 +114,13 @@ test("opened with an unread reply in a thread and nothing new at the end: the th
   // Something new in the conversation itself: the end has it.
   const withNew = [...list, said("new", ada, "2026-11-05T12:30:00.000Z")];
   expect(unreadThreadRootId(withNew, [thread("root", ada, "2026-11-05T12:00:00.000Z")], read, "me")).toBeNull();
+});
+
+test("my own accent wins over the workspace's, for me; taken away, the workspace's shows again", () => {
+  expect(accentOf({ accent: "#7c3aed", chatPrefs: { accent: "#f97316" } })).toBe("#f97316");
+  expect(accentOf({ accent: null, chatPrefs: { accent: "#f97316" } })).toBe("#f97316");
+  expect(accentOf({ accent: "#7c3aed", chatPrefs: {} })).toBe("#7c3aed");
+  expect(accentOf({ accent: "#7c3aed", chatPrefs: { accent: null } })).toBe("#7c3aed");
+  expect(accentOf({ chatPrefs: {} })).toBeNull();
+  expect(accentOf(undefined)).toBeNull();
 });

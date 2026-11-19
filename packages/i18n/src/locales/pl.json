@@ -12197,7 +12197,10 @@
     "sampleLink": "Link",
     "save": "Zapisz kolor",
     "saved": "Kolor akcentu zaktualizowany.",
-    "reset": "Przywrócono kolor domyślny."
+    "reset": "Przywrócono kolor domyślny.",
+    "mine": "Twój kolor akcentu",
+    "useWorkspace": "Użyj koloru przestrzeni roboczej",
+    "resetWorkspace": "Przywrócono kolor przestrzeni roboczej."
   },
   "look": {
     "previous": "Poprzedni",

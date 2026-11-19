@@ -1,4 +1,5 @@
 import { and, type Executor, eq, schema, sql } from "@agenteschat/db";
+import { isAccentHex } from "@agenteschat/tokens/accent";
 import { ValidationError } from "./errors";
 
 const { organizationMembers } = schema;
@@ -35,6 +36,8 @@ export interface ChatPrefs {
   wallpaper?: Wallpaper;
   /** A conversation's own background, by channel id (`saveConversationWallpaper`); absent: as the others. */
   wallpapers?: Record<string, Wallpaper>;
+  /** My own accent "#rrggbb", lower case (ADR 0193 addendum): it wins over the workspace's for me; absent: theirs. */
+  accent?: string;
 }
 
 /**
@@ -130,15 +133,26 @@ export function chatPrefsOf(stored: unknown): ChatPrefs {
     feedbackAuto: typeof o.feedbackAuto === "boolean" ? o.feedbackAuto : undefined,
     wallpaper: wallpaperOf(o.wallpaper),
     wallpapers: wallpapersOf(o.wallpapers),
+    accent: isAccentHex(o.accent) ? o.accent.toLowerCase() : undefined,
   };
   return Object.fromEntries(Object.entries(picks).filter(([, v]) => v !== undefined));
 }
 
-/** Merged in the database, so a choice made on another device in the meantime stays. Null: not a member here. */
-export async function saveChatPrefs(db: Executor, orgId: string, userId: string, patch: ChatPrefs) {
+/**
+ * Merged in the database, so a choice made on another device in the meantime stays; the keys in `drop` are taken
+ * away (a choice undone). Null: not a member here.
+ */
+export async function saveChatPrefs(
+  db: Executor,
+  orgId: string,
+  userId: string,
+  patch: ChatPrefs,
+  drop: (keyof ChatPrefs)[] = [],
+) {
+  const merged = sql`${organizationMembers.chatPrefs} || ${JSON.stringify(patch)}::jsonb`;
   const rows = await db
     .update(organizationMembers)
-    .set({ chatPrefs: sql`${organizationMembers.chatPrefs} || ${JSON.stringify(patch)}::jsonb` })
+    .set({ chatPrefs: drop.length ? sql`(${merged}) - ${`{${drop.join(",")}}`}::text[]` : merged })
     .where(and(eq(organizationMembers.orgId, orgId), eq(organizationMembers.userId, userId)))
     .returning({ chatPrefs: organizationMembers.chatPrefs });
   return rows[0] ? chatPrefsOf(rows[0].chatPrefs) : null;

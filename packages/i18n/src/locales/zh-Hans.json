@@ -10978,7 +10978,10 @@
     "sampleLink": "一个链接",
     "save": "保存颜色",
     "saved": "强调色已更新。",
-    "reset": "已恢复默认颜色。"
+    "reset": "已恢复默认颜色。",
+    "mine": "你的强调色",
+    "useWorkspace": "使用工作区的颜色",
+    "resetWorkspace": "已恢复工作区的颜色。"
   },
   "look": {
     "previous": "上一个",

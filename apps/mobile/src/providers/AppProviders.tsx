@@ -1,5 +1,5 @@
 import { ApiProvider, createSnapshot, outbox } from "@agenteschat/client";
-import { textSizeOf } from "@agenteschat/client/lib/chat-look";
+import { accentOf, textSizeOf } from "@agenteschat/client/lib/chat-look";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useMemo } from "react";
 import { I18nextProvider } from "react-i18next";
@@ -125,13 +125,13 @@ export function AppProviders({ children }: { children: ReactNode }) {
 }
 
 /**
- * The person's text size (Você › Conversa) for every screen, read from the workspace they are in; the default before
- * one is chosen (sign-in, the first run).
+ * The person's text size (Você › Conversa) and accent (theirs, else the workspace's) for every screen, read from the
+ * workspace they are in; the default before one is chosen (sign-in, the first run).
  */
 function AppTextSize({ children }: { children: ReactNode }) {
   const org = useOrgMaybe()?.org;
   return (
-    <AccentProvider accent={org?.accent}>
+    <AccentProvider accent={accentOf(org)}>
       <TextScaleProvider size={textSizeOf(org?.chatPrefs)}>{children}</TextScaleProvider>
     </AccentProvider>
   );

@@ -133,8 +133,9 @@ export function ThemeColorsOverride({ colors, children }: { colors: AppColors; c
 }
 
 /**
- * The active workspace's accent (ADR 0193) on the agent colors of everything under it, and as the engine's `sky`: the
- * color of every agent with none of its own and of the sky art. None: the theme's own.
+ * The active workspace's accent (ADR 0193), or the person's own over it (`accentOf`), on the agent colors of everything
+ * under it, and as the engine's `sky`: the color of every agent with none of its own and of the sky art. None: the
+ * theme's own.
  */
 export function AccentProvider({ accent, children }: { accent: string | null | undefined; children: ReactNode }) {
   const theme = useTheme();

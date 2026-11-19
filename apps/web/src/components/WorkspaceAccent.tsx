@@ -1,4 +1,4 @@
-import { useSetOrgAccent } from "@agenteschat/client";
+import { useSetChatPrefs, useSetOrgAccent } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { can } from "@agenteschat/client/lib/permissions";
 import { type AccentTokens, accentPalette, Button, ColorPicker, DEFAULT_ACCENT, Popover } from "@agenteschat/ui";
@@ -31,49 +31,117 @@ const paint = (tokens: AccentTokens) =>
 export function AccentRow() {
   const { t } = useTranslation();
   const { org } = useOrg();
-  const { resolved } = useTheme();
   const toast = useToast();
   const save = useSetOrgAccent(org.id);
-  const editable = can(org, "configure");
-  const saved = org.accent ?? null;
+  return (
+    <AccentControl
+      saved={org.accent ?? null}
+      editable={can(org, "configure")}
+      pending={save.isPending}
+      resetLabel={t("orgAccent.useDefault")}
+      onCommit={(accent, done) =>
+        save.mutate(accent, {
+          onSuccess: (r) => {
+            done();
+            toast.show(t(r.accent ? "orgAccent.saved" : "orgAccent.reset"));
+          },
+          onError: (e) => toast.show(errorText(t, e), "error"),
+        })
+      }
+    />
+  );
+}
+
+/**
+ * Sua conta › "Your accent color" (ADR 0193 addendum): every member's own, over the workspace's for them alone, kept
+ * with their other choices here (`chatPrefs.accent`) on every device. Taken away, the workspace's shows again.
+ */
+export function PersonalAccentRow() {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const toast = useToast();
+  const save = useSetChatPrefs(org.id);
+  return (
+    <AccentControl
+      saved={org.chatPrefs?.accent ?? null}
+      fallback={org.accent ?? null}
+      editable
+      pending={save.isPending}
+      label={t("orgAccent.mine")}
+      resetLabel={t(org.accent ? "orgAccent.useWorkspace" : "orgAccent.useDefault")}
+      onCommit={(accent, done) =>
+        save.mutate(
+          { accent },
+          {
+            onSuccess: () => {
+              done();
+              toast.show(t(accent ? "orgAccent.saved" : org.accent ? "orgAccent.resetWorkspace" : "orgAccent.reset"));
+            },
+            onError: (e) => toast.show(errorText(t, e), "error"),
+          },
+        )
+      }
+    />
+  );
+}
+
+/**
+ * The accent's row: the color now, and for who may change it the kit's picker with the suggestions, a mention and a
+ * link painted in the draft, and a way back. `fallback` is what shows when nothing is saved here (null: the default).
+ */
+function AccentControl({
+  saved,
+  fallback = null,
+  editable,
+  pending,
+  label,
+  resetLabel,
+  onCommit,
+}: {
+  saved: string | null;
+  fallback?: string | null;
+  editable: boolean;
+  pending: boolean;
+  label?: string;
+  resetLabel: string;
+  onCommit: (accent: string | null, done: () => void) => void;
+}) {
+  const { t } = useTranslation();
+  const { resolved } = useTheme();
+  const title = label ?? t("orgAccent.label");
+  const current = saved ?? fallback ?? DEFAULT_ACCENT;
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState(saved ?? DEFAULT_ACCENT);
+  const [draft, setDraft] = useState(current);
   // A suggestion picked restarts the picker on it (it keeps its own hue and saturation otherwise).
   const [pickerKey, setPickerKey] = useState(0);
-  const pending = save.isPending;
-  const shown = accentPalette(saved ?? DEFAULT_ACCENT)[resolved];
+  const shown = accentPalette(current)[resolved];
   const preview = accentPalette(draft)[resolved];
 
-  const commit = (accent: string | null) =>
-    save.mutate(accent, {
-      onSuccess: (r) => {
-        setOpen(false);
-        toast.show(t(r.accent ? "orgAccent.saved" : "orgAccent.reset"));
-      },
-      onError: (e) => toast.show(errorText(t, e), "error"),
-    });
+  const commit = (accent: string | null) => onCommit(accent, () => setOpen(false));
+  // Saving the color that would show anyway stores nothing: the default for the workspace, theirs for a person.
+  const choose = (hex: string) => commit(hex === (fallback ?? DEFAULT_ACCENT) ? null : hex);
 
   return (
     <div className="settings-row ac-actrow">
       <div className="settings-row__text ac-actrow__text">
-        <span className="settings-row__label">{t("orgAccent.label")}</span>
+        <span className="settings-row__label">{title}</span>
       </div>
       <div className="settings-row__control settings-accent__control">
         <span className="settings-accent__swatch" style={{ background: shown.agent }} data-testid="accent-swatch" />
         {editable && saved && (
           <Button size="sm" type="button" variant="ghost" disabled={pending} onClick={() => commit(null)}>
-            {t("orgAccent.useDefault")}
+            {resetLabel}
           </Button>
         )}
         {editable && (
           <Popover
-            label={t("orgAccent.label")}
+            label={title}
             side="bottom"
             align="end"
             open={open}
             onOpenChange={(next) => {
               if (next) {
-                setDraft(saved ?? DEFAULT_ACCENT);
+                setDraft(current);
                 setPickerKey((k) => k + 1);
               }
               setOpen(next);
@@ -120,8 +188,8 @@ export function AccentRow() {
                 type="button"
                 variant="primary"
                 loading={pending}
-                disabled={pending || draft === (saved ?? DEFAULT_ACCENT)}
-                onClick={() => commit(draft === DEFAULT_ACCENT ? null : draft)}
+                disabled={pending || draft === current}
+                onClick={() => choose(draft)}
               >
                 {t("orgAccent.save")}
               </Button>

@@ -34,6 +34,7 @@ import {
 import { CoverBarBackdrop, CoverParallax, useCoverScroll } from "@/ui/cover";
 import { router } from "@/ui/navigation";
 import { openPage } from "../ai/parts";
+import { usePersonalAccent } from "../settings/AccentRow";
 import { confirmAction, Uploading } from "../settings/parts";
 import { AgentFace } from "../shared/Face";
 import { useColors, useDirectory, useMeId } from "../shared/hooks";
@@ -148,6 +149,7 @@ function MePage() {
   const personal = isPersonal(org.org);
   const { groups, elsewhere } = useWorkspacesAcross();
   const theme = useTheme();
+  const accent = usePersonalAccent();
   const appIcon = useAppIcon();
   const appIconName = useAppIconName(appIcon.icon ?? PHONE_APP_ICON);
   const dir = useDirectory();
@@ -502,6 +504,8 @@ function MePage() {
               menu
               onPress={pickTheme}
             />
+            {/* Mine over the workspace's (ADR 0193 addendum), kept in `chatPrefs`: not on a server without them. */}
+            {org.org?.chatPrefs !== undefined ? accent.row : null}
             {/* The app icon (ADR 0179): only where this build carries the others. */}
             {appIcon.supported && appIcon.icon ? (
               <GroupedRow
@@ -550,6 +554,7 @@ function MePage() {
           {!about && version ? <GroupedFooter>{t("mobile.me.version", { version })}</GroupedFooter> : null}
         </View>
       </Animated.ScrollView>
+      {accent.sheet}
       {/* The bar takes the page's gray only once the sky has gone from under it: over the sky it stays clear. */}
       <CoverBarBackdrop y={y} from={band - headerHeight - 24} to={band - headerHeight} height={headerHeight} />
     </View>

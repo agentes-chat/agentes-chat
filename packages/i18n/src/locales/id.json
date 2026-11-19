@@ -10958,7 +10958,10 @@
     "sampleLink": "Sebuah tautan",
     "save": "Simpan warna",
     "saved": "Warna aksen diperbarui.",
-    "reset": "Kembali ke warna bawaan."
+    "reset": "Kembali ke warna bawaan.",
+    "mine": "Warna aksen Anda",
+    "useWorkspace": "Pakai warna ruang kerja",
+    "resetWorkspace": "Kembali ke warna ruang kerja."
   },
   "look": {
     "previous": "Sebelumnya",

@@ -11295,7 +11295,10 @@
     "sampleLink": "Bir bağlantı",
     "save": "Rengi kaydet",
     "saved": "Vurgu rengi güncellendi.",
-    "reset": "Varsayılan renge dönüldü."
+    "reset": "Varsayılan renge dönüldü.",
+    "mine": "Vurgu renginiz",
+    "useWorkspace": "Çalışma alanınınkini kullan",
+    "resetWorkspace": "Çalışma alanının rengine dönüldü."
   },
   "look": {
     "previous": "Önceki",

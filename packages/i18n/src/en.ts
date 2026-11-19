@@ -11767,6 +11767,9 @@ export const en = {
     save: "Save color",
     saved: "Accent color updated.",
     reset: "Back to the default color.",
+    mine: "Your accent color",
+    useWorkspace: "Use the workspace's",
+    resetWorkspace: "Back to the workspace's color.",
   },
   look: {
     previous: "Previous",

@@ -11354,7 +11354,10 @@
     "sampleLink": "Ein Link",
     "save": "Farbe speichern",
     "saved": "Akzentfarbe aktualisiert.",
-    "reset": "Wieder die Standardfarbe."
+    "reset": "Wieder die Standardfarbe.",
+    "mine": "Deine Akzentfarbe",
+    "useWorkspace": "Die des Workspace verwenden",
+    "resetWorkspace": "Wieder die Farbe des Workspace."
   },
   "look": {
     "previous": "Zurück",

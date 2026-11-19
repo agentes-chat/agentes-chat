@@ -861,13 +861,24 @@ export async function setAgentStyle(db: Database, userId: string, orgId: string,
   return style;
 }
 
-/** How conversations look to the person in this workspace, on every device. Only the keys in `patch` change. */
-export async function setChatPrefs(db: Database, userId: string, orgId: string, patch: ChatPrefs, pubsub?: PubSub) {
+/**
+ * How conversations look to the person in this workspace, on every device. Only the keys in `patch` change; `accent:
+ * null` takes their own accent away (the workspace's shows again).
+ */
+export async function setChatPrefs(
+  db: Database,
+  userId: string,
+  orgId: string,
+  patch: Omit<ChatPrefs, "accent"> & { accent?: string | null },
+  pubsub?: PubSub,
+) {
   await requirePermission(db, userId, orgId, "read");
   // A conversation's own background changes one at a time (`setConversationWallpaper`): the map is never replaced.
   const { wallpapers: _one, ...known } = chatPrefsOf(patch);
   assertOwnWallpaper(known.wallpaper, userId);
-  const prefs = (await saveChatPrefs(db, orgId, userId, known)) ?? {};
+  if (patch.accent !== undefined && patch.accent !== null && !known.accent)
+    throw new ValidationError("accent must be a #rrggbb color");
+  const prefs = (await saveChatPrefs(db, orgId, userId, known, patch.accent === null ? ["accent"] : [])) ?? {};
   // My other devices take it at once (`chat.prefs` on my topic).
   await publishUserEvent(pubsub, orgId, userId, { type: "chat.prefs", chatPrefs: prefs });
   return prefs;

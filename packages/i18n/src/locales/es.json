@@ -11724,7 +11724,10 @@
     "sampleLink": "Un enlace",
     "save": "Guardar color",
     "saved": "Color de acento actualizado.",
-    "reset": "De vuelta al color predeterminado."
+    "reset": "De vuelta al color predeterminado.",
+    "mine": "Tu color de acento",
+    "useWorkspace": "Usar el del espacio de trabajo",
+    "resetWorkspace": "De vuelta al color del espacio de trabajo."
   },
   "look": {
     "previous": "Anterior",

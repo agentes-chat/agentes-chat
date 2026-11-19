@@ -56,6 +56,7 @@ import { PrefRow } from "@/components/NoticePrefs";
 import { OpenOnPhoneDialog } from "@/components/OpenOnPhone";
 import { useOrg } from "@/components/org-context";
 import { MyFace } from "@/components/ProfilePhoto";
+import { PersonalAccentRow } from "@/components/WorkspaceAccent";
 import { ZoneSelect } from "@/components/ZoneSelect";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useSignInAgain } from "@/hooks/useSignInAgain";
@@ -233,6 +234,8 @@ export function AccountSection() {
               />
             }
           />
+          {/* Kept with the conversations' choices, which a server from before them can't keep. */}
+          {org.chatPrefs !== undefined && <PersonalAccentRow />}
           {picksAppIcon() && (
             <PrefRow
               id="account-app-icon"

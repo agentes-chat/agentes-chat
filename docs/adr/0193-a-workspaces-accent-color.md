@@ -87,7 +87,8 @@ by hand.
 
 - The product's name and logo on pages outside a workspace (sign-in, invitations, emails): they stay the product's.
   A server-wide brand would be a separate decision.
-- A second accent, per-person accents, and changing any token other than the agent family.
+- A second accent, and changing any token other than the agent family. (Per-person accents came later, in the
+  addendum below.)
 
 ## Alternatives considered
 
@@ -95,3 +96,24 @@ by hand.
   could disagree. One hex and one shared function keep every app on the same rule.
 - Setting the variables on the shell's own element: dialogs and menus are portaled to `<body>` and would show the
   default blue inside a workspace painted in another color.
+
+## Addendum (2026-11-19): each person's own accent
+
+- **What.** Every member may pick an accent of their own, which wins over the workspace's for them alone, on the web,
+  the desktop app and the phone. Nobody else sees it, and the workspace's stays what admins chose.
+- **Where it is kept.** With the person's other choices in that workspace, `organization_members.chat_prefs.accent`
+  (`ChatPrefs` in `packages/engine/src/chat-prefs.ts`, a lower-case `#rrggbb`, anything else dropped by `chatPrefsOf`),
+  so it follows them on every device and needs no migration. `PUT …/organizations/{orgId}/me/chat` takes
+  `{ accent: "#rrggbb" }`, and `{ accent: null }` takes it away (`saveChatPrefs`'s `drop`); their other devices hear
+  `chat.prefs` as for any of those choices.
+- **How it is applied.** The apps pick the color with one rule, `accentOf` in `packages/client/src/lib/chat-look.ts`
+  (theirs, else the workspace's, else none), and hand it to the same painters as before (`useWorkspaceAccent` on the
+  web, `AccentProvider` on the phone), so the palette, the contrast rules and the engine's `sky` (§2, §5) are the same.
+  A list of workspaces still draws each one's mark from that workspace's own accent.
+- **Where it is picked.** Sua conta, beside the theme on the web (`PersonalAccentRow` in
+  `apps/web/src/components/WorkspaceAccent.tsx`) and on the phone's Você (`usePersonalAccent` in
+  `apps/mobile/src/features/settings/AccentRow.tsx`): the same picker as the workspace's, for every member. "Use the
+  workspace's" (or "Use the default" where the workspace has none) takes theirs away; picking the color that would show
+  anyway stores nothing.
+- Tests: `packages/engine/test/chat-prefs.test.ts`, `apps/server/test/chat-prefs.test.ts`,
+  `packages/client/test/chat-look-lib.test.ts`, `apps/web/test/workspace-accent.test.tsx`.

@@ -11819,7 +11819,10 @@
     "sampleLink": "Un link",
     "save": "Salva colore",
     "saved": "Colore di accento aggiornato.",
-    "reset": "Di nuovo il colore predefinito."
+    "reset": "Di nuovo il colore predefinito.",
+    "mine": "Il tuo colore di accento",
+    "useWorkspace": "Usa quello dello spazio di lavoro",
+    "resetWorkspace": "Di nuovo il colore dello spazio di lavoro."
   },
   "look": {
     "previous": "Precedente",

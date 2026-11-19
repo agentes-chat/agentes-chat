@@ -38,6 +38,11 @@ export interface ChatPrefs {
   wallpaper?: Wallpaper;
   /** A conversation's own background, by channel id, over the two above; absent: as the others. */
   wallpapers?: Record<string, Wallpaper>;
+  /**
+   * My own accent "#rrggbb" (ADR 0193 addendum), over the workspace's for me alone (`accentOf`); absent: theirs. Null
+   * only in a change, where it takes mine away.
+   */
+  accent?: string | null;
 }
 
 /** Owner's decision: a channel reads as one log, and in a DM right and left already say who spoke. */
@@ -51,6 +56,10 @@ export const DEFAULT_TEXT_SIZE: ChatTextSize = "md";
  * scroll up to a "New" line. Only an explicit `openAt` is stored, so whoever picked "read" keeps it.
  */
 export const DEFAULT_OPEN_AT: ChatOpenAt = "latest";
+
+/** The accent the apps paint with: mine when I picked one, else the workspace's; null for the default blue. */
+export const accentOf = (org: { accent?: string | null; chatPrefs?: ChatPrefs } | null | undefined): string | null =>
+  org?.chatPrefs?.accent ?? org?.accent ?? null;
 
 export const textSizeOf = (prefs: ChatPrefs | undefined): ChatTextSize => prefs?.textSize ?? DEFAULT_TEXT_SIZE;
 export const openAtOf = (prefs: ChatPrefs | undefined): ChatOpenAt => prefs?.openAt ?? DEFAULT_OPEN_AT;

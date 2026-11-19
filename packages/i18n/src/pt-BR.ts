@@ -11775,6 +11775,9 @@ export const ptBR = {
     save: "Salvar cor",
     saved: "Cor de destaque atualizada.",
     reset: "De volta à cor padrão.",
+    mine: "Sua cor de destaque",
+    useWorkspace: "Usar a do workspace",
+    resetWorkspace: "De volta à cor do workspace.",
   },
   look: {
     previous: "Anteriores",

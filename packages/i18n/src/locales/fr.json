@@ -11797,7 +11797,10 @@
     "sampleLink": "Un lien",
     "save": "Enregistrer la couleur",
     "saved": "Couleur d’accent mise à jour.",
-    "reset": "Retour à la couleur par défaut."
+    "reset": "Retour à la couleur par défaut.",
+    "mine": "Votre couleur d’accent",
+    "useWorkspace": "Utiliser celle de l'espace de travail",
+    "resetWorkspace": "Retour à la couleur de l'espace de travail."
   },
   "look": {
     "previous": "Précédent",

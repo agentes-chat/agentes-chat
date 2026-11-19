@@ -61,6 +61,28 @@ test("how conversations look: only what the person chose, each person's own, mer
   expect((await put(stranger, { dmStyle: "left" })).status).toBe(403);
 });
 
+test("my own accent: a #rrggbb kept in lower case, anything else refused, null takes it away", async () => {
+  const owner = browser(t);
+  await signUp(owner, "owner@example.com");
+  const { orgId } = await seedOrg(owner);
+  const prefsOf = async () =>
+    ((await (await owner("/api/app/me")).json()) as Me).organizations.find((o) => o.id === orgId)?.chatPrefs;
+  const put = (json: Record<string, string | null>) =>
+    owner(`/api/app/organizations/${orgId}/me/chat`, { method: "PUT", json });
+
+  expect(await (await put({ accent: "#F97316", dmStyle: "compact" })).json()).toEqual({
+    accent: "#f97316",
+    dmStyle: "compact",
+  });
+  expect((await put({ accent: "orange" })).status).toBe(400);
+  expect((await put({ accent: "#f97" })).status).toBe(400);
+  expect((await prefsOf())?.accent).toBe("#f97316");
+
+  // Undone: only the accent goes, the other choices stay.
+  expect(await (await put({ accent: null })).json()).toEqual({ dmStyle: "compact" });
+  expect(await prefsOf()).toEqual({ dmStyle: "compact" });
+});
+
 test("where the unread starts is in the channel list, and reading moves it", async () => {
   const owner = browser(t);
   await signUp(owner, "owner@example.com");

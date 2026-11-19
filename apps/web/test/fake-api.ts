@@ -1993,6 +1993,8 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         const org = state.me?.organizations.find((o) => o.id === orgId);
         if (!org) throw new ApiError(404, "not_found", "Organization not found");
         org.chatPrefs = { ...org.chatPrefs, ...patch };
+        // As the server: `accent: null` takes the person's own accent away.
+        if (patch.accent === null) delete org.chatPrefs.accent;
         return org.chatPrefs;
       },
       setConversationWallpaper: async (orgId, channelId, wallpaper) => {

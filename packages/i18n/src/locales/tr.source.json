@@ -27665,6 +27665,15 @@
   "orgAccent.reset": {
     "value": "Back to the default color."
   },
+  "orgAccent.mine": {
+    "value": "Your accent color"
+  },
+  "orgAccent.useWorkspace": {
+    "value": "Use the workspace's"
+  },
+  "orgAccent.resetWorkspace": {
+    "value": "Back to the workspace's color."
+  },
   "look.previous": {
     "value": "Previous"
   },

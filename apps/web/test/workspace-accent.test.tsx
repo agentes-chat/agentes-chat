@@ -185,3 +185,49 @@ describe("Configurações › Workspace › Cor de destaque", () => {
     expect(screen().queryByRole("button", { name: "Usar a padrão" })).toBeNull();
   });
 });
+
+describe("Sua conta › Sua cor de destaque", () => {
+  const ORANGE = "#f97316";
+  /** Acme with the workspace's accent, and the person's own choices (none yet, or `mine`). */
+  const withMine = (mine?: string) => {
+    const state = twoWorkspaces(PURPLE);
+    const org = state.me?.organizations[0];
+    if (org) org.chatPrefs = mine ? { accent: mine } : {};
+    return state;
+  };
+  const open = async (state: FakeState) => {
+    await renderApp(`/org/${ORG_ID}/settings/account`, { api: createFakeApi(state) });
+    await settle(8);
+  };
+  const popover = () => screen().getByRole("dialog", { name: "Sua cor de destaque" });
+
+  test("any member picks their own: it wins over the workspace's at once, kept with their choices", async () => {
+    const state = withMine();
+    const org = state.me?.organizations[0];
+    if (org) org.role = "member";
+    await open(state);
+    expect(agentVar()).toBe(accentPalette(PURPLE).light.agent);
+    expect(screen().queryByRole("button", { name: "Usar a do workspace" })).toBeNull();
+    await click(screen().getByRole("button", { name: "Trocar cor" }));
+    const hex = within(popover()).getByRole("textbox") as HTMLInputElement;
+    // The picker starts on the color that shows now: the workspace's.
+    expect(hex.value).toBe(PURPLE);
+    await act(async () => fireEvent.change(hex, { target: { value: ORANGE } }));
+    await click(within(popover()).getByRole("button", { name: "Salvar cor" }));
+    expect(state.calls).toContainEqual({ method: "orgs.setChatPrefs", args: [ORG_ID, { accent: ORANGE }] });
+    expect(state.calls.some((c) => c.method === "orgs.setAccent")).toBe(false);
+    expect(agentVar()).toBe(accentPalette(ORANGE).light.agent);
+    expect(gradientOf("sky")).toEqual(accentSky(ORANGE));
+  });
+
+  test("Usar a do workspace takes mine away and the workspace's shows again", async () => {
+    const state = withMine(ORANGE);
+    await open(state);
+    expect(agentVar()).toBe(accentPalette(ORANGE).light.agent);
+    await click(screen().getByRole("button", { name: "Usar a do workspace" }));
+    expect(state.calls).toContainEqual({ method: "orgs.setChatPrefs", args: [ORG_ID, { accent: null }] });
+    expect(document.body.textContent).toContain("De volta à cor do workspace.");
+    expect(agentVar()).toBe(accentPalette(PURPLE).light.agent);
+    expect(screen().queryByRole("button", { name: "Usar a do workspace" })).toBeNull();
+  });
+});

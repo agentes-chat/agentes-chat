@@ -206,6 +206,10 @@ export const ChatPrefs = z
       description:
         "A conversation's own background, by channel id (`PUT`/`DELETE …/channels/{channelId}/wallpaper`); ignored in `PUT …/me/chat`.",
     }),
+    accent: AccentColor.nullable().optional().openapi({
+      description:
+        "Your own accent color (ADR 0193): it wins over the workspace's `accent` for you alone; absent: the workspace's. `null` in `PUT …/me/chat` takes it away.",
+    }),
   })
   .openapi("ChatPrefs");
 
