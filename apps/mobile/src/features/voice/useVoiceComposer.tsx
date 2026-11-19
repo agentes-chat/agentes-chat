@@ -303,7 +303,8 @@ export function useVoiceComposer(
           accessibilityLabel={t("voice.holdToRecord")}
           // The gestures' slop counts only for a touch that reaches this view: on iOS the view's own takes it there.
           hitSlop={MIC_SLOP}
-          style={[styles.button, phase === "hold" && { backgroundColor: c.ink }, micStyle]}
+          // At rest one of the capsule's quiet buttons (the neutral fill); held, ink, as the one that acts.
+          style={[styles.button, { backgroundColor: phase === "hold" ? c.ink : c.chip }, micStyle]}
         >
           <View style={styles.center}>
             <Icon name="mic" size={20} color={phase === "hold" ? c.bg : c.muted} />

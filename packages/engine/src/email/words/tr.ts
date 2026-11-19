@@ -314,6 +314,13 @@ export const words: EmailWords = {
   deletionCode: {
     subjectWorkspace: (code) => `Çalışma alanı silme kodunuz: ${code}`,
     subjectAccount: (code) => `Hesabınızın tamamını silme kodunuz: ${code}`,
+    subjectReset: (code) => `Çalışma alanı sıfırlama kodunuz: ${code}`,
+    reset: (org) => [
+      { b: org },
+      " çalışma alanını sıfırlamak için bu kodu yazın. Ajanları, konuşmaları, dosyaları ve belleği hemen ve kalıcı olarak silinir ve yeni bir çalışma alanı gibi baştan başlar.",
+    ],
+    whyReset: (org) =>
+      `Bu e-postayı, hesabınızdan agentes.chat'te ${org} çalışma alanının sıfırlanması istendiği için aldınız.`,
     preheader: "Onaylamak için agentes.chat'e yazın. 10 dakika geçerli.",
     headline: "Kodunuz",
     workspace: (org) => [

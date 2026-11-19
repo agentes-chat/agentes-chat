@@ -44,6 +44,7 @@ export interface MeterWindow {
   label?: string;
   usedPercent: number;
   resetsAt?: string;
+  at?: string;
   part?: number;
   note?: string;
   segments?: MeterSegment[];

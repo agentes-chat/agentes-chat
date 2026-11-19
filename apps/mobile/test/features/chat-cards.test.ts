@@ -25,8 +25,9 @@ describe("a reply's tools sit last", () => {
           "<TurnTools",
           "<SavedTools",
           "<NoAiCard message={m} />",
-          // The foot is the reply's last part: only the double tap's one-time hint and its 👍 over the row follow it.
-          "{foot}\n          </RowParts>\n          {hintNode}\n        </View>\n        {popNode}\n      </Pressable>\n    </>\n  );\n}\n",
+          // The foot is the reply's last part: only the double tap's one-time hint follows it in the body (the time a
+          // pull shows and the 👍 over the row are outside it).
+          "{foot}\n          </RowParts>\n          {hintNode}\n        </Animated.View>\n",
         ]),
       ),
     ).toBe(true);
@@ -44,7 +45,7 @@ describe("a reply's tools sit last", () => {
     const row = source("MessageRow.tsx");
     const [toolsAt, footAt] = at(row, [
       "<SavedTools\n",
-      "{foot}\n          </RowParts>\n          {hintNode}\n        </View>\n        {popNode}\n      </Pressable>\n    </>\n  );\n}\n",
+      "{foot}\n          </RowParts>\n          {hintNode}\n        </Animated.View>\n",
     ]);
     const last = row.slice(toolsAt, footAt);
     for (const card of [
@@ -76,8 +77,8 @@ describe("agents it asked first: one pair row right before the reply, never insi
       ascending(at(row, ["const grouped = groupedIn && !pair;", "{pair}\n      {liveRef ? (", "{quote && !inBubble"])),
     ).toBe(true);
     const [bodyAt, endAt] = at(row, [
-      "<View style={[styles.body, { gap: rhythm.part }]}>",
-      "{foot}\n          </RowParts>\n          {hintNode}\n        </View>\n        {popNode}\n      </Pressable>",
+      "<Animated.View style={[styles.body, { gap: rhythm.part }, inBubble && giveWay.style]}>",
+      "{foot}\n          </RowParts>\n          {hintNode}\n        </Animated.View>\n",
     ]);
     expect(row.slice(bodyAt, endAt)).not.toContain("Consult");
   });
@@ -165,11 +166,11 @@ describe("nothing more than the message shows", () => {
 });
 
 describe("what agents did under each reply: the person's own setting, off by default", () => {
-  test("off, a done reply keeps only what it read and a saved one draws no block; the live block stays", () => {
+  test("off, a done reply draws nothing and a saved one no block; the live block stays", () => {
     const tools = source("ToolCalls.tsx");
-    // Done and off: no call is "now", so only the messages it read stay (the branch for a reply with no call).
+    // Done and off: no call is "now", so nothing shows (the branch for a reply with no call: its words are the reply).
     expect(tools).toContain("(done && !showsActivity(org)) ? null : toolNow(items);");
-    expect(tools).toContain('const shown = done ? items.filter((i) => i.kind === "steer") : items;');
+    expect(tools).toContain('const said = done ? [] : items.flatMap((i) => (i.kind === "say" ? [i] : []));');
     expect(tools).toContain("if (!compact || shown === 0 || !showsActivity(org)) return null;");
     // The cards that carry content or wait for a person aren't the tools' and stay in the row.
     const row = source("MessageRow.tsx");

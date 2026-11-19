@@ -22,9 +22,9 @@ import type { TFunction } from "i18next";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Linking, StyleSheet, View } from "react-native";
-import { Chip, Icon, IconButton, RowPressable, Text, useToast } from "@/ui";
+import { Chip, Icon, IconButton, insetCorners, RowPressable, Text, useToast } from "@/ui";
 import { keepOpen, keptOpen } from "../chat/kept-sizes";
-import { useCardTop } from "../chat/look";
+import { useCardTop, useMessageCardCorners } from "../chat/look";
 import { useColors, useDirectory, useMeId, useOrgId, useWhen } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
 import { tapHaptic } from "../shared/parts";
@@ -65,6 +65,7 @@ export function TrailCard({
   recent?: boolean;
   screen?: ScreenKind;
 }) {
+  const cardCorners = useMessageCardCorners();
   const { t, i18n } = useTranslation();
   const tt = screenT(t, screen);
   const orgId = useOrgId();
@@ -120,7 +121,7 @@ export function TrailCard({
 
   return (
     <View style={cardTop}>
-      <EndBand color={color} style={styles.card}>
+      <EndBand color={color} style={[styles.card, cardCorners]}>
         <RowPressable
           onPress={toggle}
           litColor={c.plateSoft}
@@ -164,7 +165,9 @@ export function TrailCard({
           </View>
         ) : null}
         {open ? (
-          <View style={[styles.log, { backgroundColor: c.raised }]}>
+          <View
+            style={[styles.log, { backgroundColor: c.raised }, cardCorners && insetCorners(cardCorners, BAND.inset)]}
+          >
             {browserTrailPages(steps).map((p, i) => {
               const href = p.link ? browserTrailHref(p.site) : null;
               return (

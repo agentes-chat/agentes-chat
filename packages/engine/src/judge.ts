@@ -304,6 +304,51 @@ export function createLlmJudge(deps: {
 }
 
 /**
+ * What a turn's end waits for its checks in all (`withJudgeBudget`): the reply waits on them, and a slow small model
+ * would otherwise hold it `LLM_JUDGE_TIMEOUT_MS` per check, up to four checks a run.
+ */
+export const TURN_END_CHECK_BUDGET_MS = 4_000;
+
+/** A check that ran out of its turn end's wait, or skipped after an earlier one did. */
+export class JudgeBudgetError extends Error {
+  constructor() {
+    super("judge: out of the turn end's wait");
+    this.name = "JudgeBudgetError";
+  }
+}
+
+/**
+ * `judge` within one wait of `budgetMs` from its first ask. Past it the check fails at once, so its caller takes the
+ * default it takes on any failure, and `slow.timedOut` is set: every later check sharing `slow` (the run's next turn
+ * ends) fails at once too. The request left behind ends on its own timeout.
+ */
+export function withJudgeBudget(judge: Judge, budgetMs: number, slow: { timedOut: boolean }): Judge {
+  let until: number | null = null;
+  return {
+    get name() {
+      return judge.name;
+    },
+    async ask(request) {
+      if (slow.timedOut) throw new JudgeBudgetError();
+      until ??= Date.now() + budgetMs;
+      const left = Math.max(0, until - Date.now());
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const out = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          slow.timedOut = true;
+          reject(new JudgeBudgetError());
+        }, left);
+      });
+      try {
+        return await Promise.race([judge.ask(request), out]);
+      } finally {
+        clearTimeout(timer);
+      }
+    },
+  };
+}
+
+/**
  * `primary`, and `fallback` on any error or timeout. Named after `fallback` while `primaryOn()` is false (no Jev key
  * now), so a decision never names a judge that wasn't asked.
  */
@@ -325,39 +370,61 @@ export function withJudgeFallback(primary: Judge, fallback: Judge, primaryOn: ()
 
 // ── The judgments the product uses ────────────────────────────────────────────
 
-/** Only a short message can be a plain "stop" (anything longer is an instruction for the task). */
-const STOP_MAX_LENGTH = 80;
+/** How an agent at work takes a message the person it works for sends meanwhile (`steerHandling`). */
+export type SteerHandling = "stop" | "interrupt" | "add" | "answer" | "queue";
+
+/** How likely a way must be for the agent to take it: below, the message is read at the next pause (`add`). */
+export const STEER_SURE = 0.6;
+
+const STEER_CRITERIA: Record<SteerHandling, string> = {
+  stop: "Stop and drop the task: the message only tells the agent to stop, cancel or forget the task ('para', 'deixa', 'cancela'), asking for nothing else.",
+  interrupt:
+    "Stop at once and read the message, because going on as it is would waste work or something can't wait: it corrects or changes the task in progress (another target, file, period, recipient, branch or approach; a mistake pointed out), drops it for something else, or reports an urgent problem.",
+  add: "Keep working and fold the message in at the next pause: it adds a detail, an item, a preference or information to the same task, and what was done so far stays good.",
+  answer:
+    "Answer right away in a short reply and keep working: a greeting, thanks, small talk, a question about how the task is going (status, progress, time left, whether it got access), or a quick question it can answer from what it knows.",
+  queue:
+    "Finish the task first, then do this: a new, separate piece of work, not part of the task in progress, and not urgent.",
+};
 
 /**
- * A message sent while an agent works on a task: does it only tell the agent
- * to stop or cancel that task ("para", "stop", "deixa pra lá", "basta")? A
- * correction or new instruction is not a stop: it steers the task instead.
+ * A message a person sent an agent while it works on a task for them (ADR 0112 addendum): how the agent takes it.
+ * `stop` drops the task; `interrupt` reads it now (a correction that makes going on a waste, an urgent problem); `add`
+ * folds it in at the next pause, as before; `answer` gets a short reply now while the work goes on (a greeting, a
+ * question about the work); `queue` waits for the task to end and gets a run of its own (a separate request). One
+ * judgment, in any language; a way less likely than `STEER_SURE` is `add`. `task`: what the agent works on (its
+ * request), null when unknown. Never asked for a run of a confidential thread (`refuseConfidential`): it throws.
  */
-export async function isStopRequest(
+export async function steerHandling(
   judge: Judge,
-  input: { orgId: string; text: string; agentName: string; agentId?: string; runId?: string },
-) {
+  input: { orgId: string; text: string; agentName: string; task: string | null; agentId?: string; runId?: string },
+): Promise<SteerHandling> {
   const text = input.text.trim();
-  if (!text || text.length > STOP_MAX_LENGTH) return false;
+  if (!text) return "add";
   const answers = await judge.ask({
     orgId: input.orgId,
     agentId: input.agentId,
     runId: input.runId,
-    kind: "stop_request",
-    state: { agent: input.agentName, agent_is_working_on_a_task: true, message: text },
+    kind: "steer_triage",
+    state: {
+      agent: input.agentName,
+      ...(input.task ? { task_in_progress: cutText(input.task, 1500) } : { agent_is_working_on_a_task: true }),
+      message: cutText(text, 2000),
+    },
     questions: {
-      stop: {
-        type: "noul",
-        instructions:
-          "`agent` is in the middle of a task and a person sent `message`. Does the message only tell the agent to stop, cancel or drop the task now?",
-        criteria: {
-          true: "It asks the agent to stop or cancel what it is doing, and nothing else.",
-          false: "It corrects, adds to or redirects the task, asks something, or talks about something else.",
-        },
+      handling: {
+        type: "choice",
+        instructions: input.task
+          ? "`agent` is an AI teammate in a team chat. It is in the middle of `task_in_progress`, which the person asked for, and that person just sent `message` while it works. How should the agent handle `message`?"
+          : "`agent` is an AI teammate in a team chat, in the middle of a task the person asked for, and that person just sent `message` while it works. How should the agent handle `message`?",
+        criteria: STEER_CRITERIA,
       },
     },
   });
-  return (answers.stop?.noul ?? 0) >= 0.6;
+  const answer = answers.handling;
+  const choice = Object.keys(STEER_CRITERIA).find((k) => k === answer?.choice) as SteerHandling | undefined;
+  if (!choice) return "add";
+  return (answer?.probabilities?.[choice] ?? 1) >= STEER_SURE ? choice : "add";
 }
 
 /**

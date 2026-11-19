@@ -21,6 +21,8 @@ import { leadBox } from "./type-scale";
  * the smaller of the two framed sizes), so a face never spills into the gap before the text.
  */
 const LEAD = GROUPED_ROW.lead;
+/** An icon's tile in a row (IconTile's own size). */
+const TILE = 30;
 /** The remove ×'s glyph, inside its 44-point button. */
 const REMOVE_GLYPH = 16;
 /**
@@ -322,12 +324,18 @@ function Row({
   const tall = !flat && (labelLines !== 1 || subLines !== 1 || Boolean(below) || Boolean(belowText));
   const line = tall ? textLineOf("body", fontScale) : null;
   const onLine = (size: number) => (line ? [leadBox(line, size), styles.onLine] : null);
+  // A tree row's name wraps: its tile stays centred on the first line, as on a one-line row, and takes no more than
+  // that line's height, so a one-line tree row is as tall as any other.
+  const tileOnLine =
+    depth > 0 && line
+      ? { marginTop: line.middle - TILE / 2, marginBottom: line.height - line.middle - TILE / 2 }
+      : null;
   const lead = (
     <>
       {/* One column for whatever leads (an icon's tile, a 24 to 36 face, a mark): the text, and the hairline above,
           start at 64 in every row, so a list mixing tiles and faces reads as one column. */}
       {icon ? (
-        <View style={styles.lead}>
+        <View style={[styles.lead, tileOnLine]}>
           {/* The system Settings' 30-point tile, in the 36 column: 11 from the row's top and bottom. */}
           <IconTile icon={icon} danger={danger} mark={mark ?? null} />
         </View>

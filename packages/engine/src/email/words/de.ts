@@ -314,6 +314,14 @@ export const words: EmailWords = {
   deletionCode: {
     subjectWorkspace: (code) => `${code} ist dein Code zum Löschen eines Workspace`,
     subjectAccount: (code) => `${code} ist dein Code zum Löschen deines ganzen Kontos`,
+    subjectReset: (code) => `${code} ist dein Code zum Zurücksetzen eines Workspace`,
+    reset: (org) => [
+      "Gib diesen Code ein, um den Workspace ",
+      { b: org },
+      " zurückzusetzen. Seine Agenten, Unterhaltungen, Dateien und Erinnerungen werden sofort und endgültig gelöscht, und er beginnt neu wie ein neuer Workspace.",
+    ],
+    whyReset: (org) =>
+      `Du erhältst diese E-Mail, weil über dein Konto das Zurücksetzen von ${org} auf agentes.chat angefragt wurde.`,
     preheader: "Gib ihn in agentes.chat ein, um zu bestätigen. Er gilt 10 Minuten lang.",
     headline: "Dein Code",
     workspace: (org) => [

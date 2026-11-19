@@ -15,7 +15,10 @@ own machine). The setup writes it for you. Sign-in cookies, the only browser ori
 anything, and every link the app sends come from it. Opened at any other address, sign-in fails with
 "Invalid origin" and saving fails with `bad_origin`. To reach the same instance at more than one
 address (the machine's LAN IP and a tunnel hostname, say), list the others in
-`EXTRA_TRUSTED_ORIGINS`, comma-separated; `PUBLIC_URL` stays trusted either way.
+`EXTRA_TRUSTED_ORIGINS`, comma-separated; `PUBLIC_URL` stays trusted either way. With the operator
+API on (below), a browser that opens the app at a hostname that is neither of these nor a host registered
+through that API sees only an "address isn't set up yet" page, so a proxy in front must pass the
+browser's `Host` through unchanged.
 
 The server needs no model key of its own. Each organization adds its own keys (Claude, OpenAI,
 Gemini, DeepSeek, Kimi, Z.ai, MiniMax, Command Code or OpenRouter) in **Settings → AI and usage**. Keys are stored encrypted with a key derived from `AGENTES_SECRET` and are
@@ -1407,6 +1410,22 @@ Chrome is missing. Since its agents run as the
 person who connected it, a computer leaves the organization with them when they leave, are removed or
 delete their account; one installed with `--system` is the team's and stays.
 
+**Agent isolation: which one a computer has.**
+
+| How its runner runs | Agents work as | One agent can read |
+| --- | --- | --- |
+| `--system` (Linux, as root, systemd with `BPF_FRAMEWORK`) | each its own user, `ag-<8 characters of its id>`, home `/home/ag-…` (mode 700) | its own home and the shared folder, nothing of the other agents' |
+| Simple mode (the setup's choice where systemd lacks `BPF_FRAMEWORK`, as on Ubuntu) | one user, `agentes`, for all of them | every other agent's folders, but not yours or the server's |
+| The command above without `--system`, a Mac, Windows | the user that runs the runner: on your own computer, you | every other agent's folders, and whatever that user can |
+
+To check one: its page in **Settings › Devices** says "Each agent works as its own user, in its own folder."
+under **Details** only with `--system`. On the computer, `getent passwd | grep '^ag-'` lists one user per agent
+that has worked there (each is made at that agent's first request); in simple mode there is only `agentes`.
+
+With `--system`, what an agent clones or builds stays in its own home, which no other agent can open, so a
+path handed from one agent to another leads nowhere. Hand work over as a git branch or pull request (each agent
+clones the repository itself), or put it in the shared folder (`~/shared`, below). Agents there are told so.
+
 **Lodi's computer.** Lodi, the built-in agent every member talks to, works on the workspace's own computer (the
 server's own, set up with `--system`), where each person gets a place of their own: a separate user with its
 own files, browser, desktop and sign-ins, which only that person can watch or take control of, from Lodi's
@@ -1517,6 +1536,23 @@ free space on the disk, and the workspace's admins get a notification when that 
 Mac and Windows computers get no agents' desktops: the agent's browser runs headless, and its card
 shows it live. A Mac connected with the command above opens terminals
 (`agentes-runner tools enable terminal`); the desktop app doesn't have them yet.
+
+**Codex on Windows.** Codex runs on Windows itself, on a PC connected with the desktop app's **Use this PC**:
+no WSL. Install it as the Windows user that runs the app, with `npm install -g @openai/codex` (or OpenAI's
+installer), so `codex` is on that user's PATH; the app looks at the PATH again each time, so it needs no
+restart. The app can install Claude Code there for you, but not Codex. Then sign in to ChatGPT in
+**Settings → AI and usage**. What differs from Linux and macOS:
+
+- Every turn that can run commands runs inside Windows' own isolation (Microsoft Execution Containers),
+  which needs **Windows 11 24H2 or newer** (`winver` shows yours). On an older Windows those turns fail with
+  "This Windows computer can't isolate Codex's commands": update Windows, give that agent Claude or an API
+  key, or move it to a Linux computer. Lodi's turns run no commands, so they work on any Windows.
+- Nothing asks for approval there: what the isolation refuses stays refused, and it has no network, so
+  `git push` or a package install doesn't run from Codex's own commands.
+- No background Codex tasks, and Codex doesn't do a mission's items there (Claude Code or the agent does).
+- No plan on Windows, Codex's or Claude's, picks who answers a message (Plans, below).
+- The isolation leaves the computer's own loopback open: a command can reach a service listening on
+  `127.0.0.1` there.
 
 Use HTTPS with a certificate from a public authority (Tailscale and the Caddy profile get one). Over
 plain http the computer's token travels unencrypted, and the runner's background service doesn't
@@ -1681,6 +1717,24 @@ that think with it; any other account folder belongs to the user of the agent th
 only while it does. Taking control of an agent's desktop or opening its terminal is a shell as that
 user: in the default install only the person who paired the computer can, and with `--system` admins
 and the agent's owner can, but only its owner while the agent thinks with their plan.
+
+**Several workspaces on one server, each with its own AI accounts.** One server holds any number of
+workspaces: a person you invite (Sign-up, under Configuration) can make one of their own.
+
+- **API keys are per workspace**: each adds its own in **Settings → AI and usage**. The server's own keys
+  (`PLATFORM_ANTHROPIC_API_KEY` and the other `PLATFORM_*_API_KEY`) serve every workspace that has none of its
+  own: leave them empty to keep the workspaces' bills apart.
+- **A plan sign-in** (Claude, ChatGPT…) is made on a computer, from one workspace, and belongs to the person
+  who made it. Only that workspace's agents think with it, and it stays on that computer.
+- **This server's own computer serves only the workspaces the installation's first account made** and is
+  an owner or admin of. A workspace someone else made gets no agents on it, even if they make you an admin
+  there: connect a computer from that workspace (**Settings › Devices**), such as their own PC with the
+  desktop app, or a server or VM of theirs.
+- **`--system` isolates agents from each other on one computer.** It doesn't separate subscriptions, and
+  workspaces on computers of their own don't need it. Without it, every agent on a computer runs as one user,
+  whichever workspace it is in, and can reach every sign-in there (Who can reach an account, above).
+- Whoever has root on the server can read everything, encrypted keys included (`AGENTES_SECRET` is in
+  `.env`): this keeps accounts apart, not people who don't trust the server's owner.
 
 **Backups.** Leave `<runner home>/accounts`, and the CLIs' own `~/.claude` and `~/.codex`, out of the
 computer's backups: they hold sign-ins. The server's database never has them.

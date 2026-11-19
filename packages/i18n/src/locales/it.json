@@ -6627,7 +6627,7 @@
         "cli_closed": "Il programma {{brain}} si è chiuso all'improvviso.",
         "cli_sandbox": "Il programma {{brain}} non riesce ad avviare la sua sandbox su questo computer. Scegli un'altra IA nelle impostazioni dell'agente.",
         "account_missing": "L'account scelto per questo agente non è più sul suo computer. Scegline un altro nelle impostazioni dell'agente o aggiungilo di nuovo.",
-        "windows_sandbox": "Questo computer Windows non riesce a isolare i comandi di Codex: serve Windows 11 24H2 o più recente.",
+        "windows_sandbox": "Questo computer Windows non riesce a isolare i comandi di Codex: serve Windows 11 24H2 o più recente. Aggiorna Windows, scegli Claude o una chiave API per questo agente, oppure spostalo su un computer Linux.",
         "our_error": "Qualcosa è andato storto da parte nostra e l'attività si è fermata. Richiedilo tra poco.",
         "unknown": "Non riuscita."
       }
@@ -8179,7 +8179,10 @@
     "unreachableTitle": "Impossibile raggiungere agentes.chat",
     "unreachableText": "Potrebbe essere in riavvio. Questa pagina si riapre da sola appena torna disponibile.",
     "offlineTitle": "Sei offline",
-    "offlineText": "Questa pagina si riapre da sola quando torni online."
+    "offlineText": "Questa pagina si riapre da sola quando torni online.",
+    "unknownHostTitle": "Questo indirizzo non è ancora configurato",
+    "unknownHostText": "Se è stato appena collegato, riprova tra qualche minuto.",
+    "unknownHostTab": "Indirizzo non configurato · agentes.chat"
   },
   "scopes": {
     "context_read": {
@@ -10007,8 +10010,7 @@
       "approvals": "Di norma merge, deploy e rollback chiedono l'approvazione",
       "start": "Avvia missione",
       "created": "Missione creata: {{name}} sta preparando il piano.",
-      "who": "Chi programma",
-      "codexOld": "Codex su {{computer}} è troppo vecchio per le missioni: aggiornalo lì."
+      "who": "Chi programma"
     },
     "commandApproval": {
       "label": "Autonomia",
@@ -11108,7 +11110,6 @@
       "needsCloud": {
         "online": "{{computer}} si sta riavviando o riconnettendo. Questo cambia da solo appena torna.",
         "installing": "{{program}} è in installazione su {{computer}}. Questo cambia da solo quando ha finito.",
-        "updating": "{{program}} è in aggiornamento su {{computer}}. Questo cambia da solo quando ha finito.",
         "runnerOld": "Il programma agentes.chat su {{computer}} non è aggiornato e l'aggiornamento è in arrivo. Questo cambia da solo quando ha finito.",
         "execOff": "{{computer}} non può ancora eseguire {{program}}. Ci stiamo lavorando, e questo cambia da solo.",
         "toolOff": "{{program}} non è ancora consentito su {{computer}}. Dipende da noi: riprova più tardi.",
@@ -12417,12 +12418,6 @@
       "read": "{{name}} l'ha letto",
       "resolved": "{{name}} ha chiuso la richiesta di aiuto"
     },
-    "well": {
-      "readYours": "Ha letto la tua nota",
-      "readOf": "Ha letto la nota di {{name}}",
-      "nowYours": "Si è fermato per leggere la tua nota",
-      "nowOf": "Si è fermato per leggere la nota di {{name}}"
-    },
     "strip": {
       "see": "Vedi",
       "toStop": "per fermare"
@@ -12518,11 +12513,6 @@
       "not_installed": "{{program}} non è installato su {{computer}}.",
       "cant_start": "{{program}} è su {{computer}}, ma non si avvia.",
       "not_reported": "{{computer}} sta ancora controllando quali programmi ha. Questo cambia da solo quando ha finito.",
-      "outdated": "La versione su {{computer}} è vecchia. Aggiorna Codex per usarlo.",
-      "outdatedCodex": "Su {{computer}} è stato rilevato Codex CLI {{detected}}. Aggiornalo alla versione {{minimum}} o successiva.",
-      "codexUpdateGuide": "Come aggiornare Codex CLI",
-      "codexRecheckHere": "Dopo l’aggiornamento, seleziona Controlla di nuovo nella riga di Codex in Preferenze › Strumenti.",
-      "codexRecheckThere": "Aggiorna Codex CLI su {{computer}}. Se è presente l’app desktop, seleziona Controlla di nuovo nella riga di Codex in Preferenze › Strumenti.",
       "system": "{{program}} non funziona ancora sul sistema di {{computer}}.",
       "no_computerCloud": "Pronto appena lo è {{computer}}."
     },
@@ -19830,6 +19820,21 @@
     "writeAfter": ".",
     "ask": "Serve aiuto? Chiedi a chi gestisce questo server."
   },
+  "resetOrg": {
+    "cardTitle": "Reimposta o elimina",
+    "row": {
+      "title": "Reimposta lo spazio di lavoro",
+      "text": "Cancella tutto ciò che è stato fatto al suo interno e riparte da zero, con le stesse persone."
+    },
+    "goes": "Agenti, conversazioni, messaggi diretti, file, attività, routine e memoria",
+    "stays": "Persone, ruoli, inviti, account IA, computer e connettori",
+    "fresh": "Poi si apre come uno spazio di lavoro nuovo, con la configurazione iniziale",
+    "plan": "Il piano resta lo stesso, senza nuovi addebiti",
+    "now": "Succede subito e non si può annullare.",
+    "title": "Reimpostare {{name}}?",
+    "submit": "Reimposta lo spazio di lavoro",
+    "resetting": "Reimpostazione di {{name}}…"
+  },
   "deleteOrg": {
     "card": {
       "title": "Elimina spazio di lavoro",
@@ -19901,8 +19906,7 @@
     "menu": "Elimina account",
     "card": {
       "text": "Elimina il tuo account tra 7 giorni, in tutti gli spazi di lavoro.",
-      "button": "Elimina account…",
-      "title": "Elimina"
+      "button": "Elimina account…"
     },
     "title": "Eliminare tutto il tuo account?",
     "intro": "Elimina tutto il tuo account, non solo uno spazio di lavoro.",

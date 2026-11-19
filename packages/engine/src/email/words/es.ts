@@ -308,6 +308,13 @@ export const words: EmailWords = {
   deletionCode: {
     subjectWorkspace: (code) => `${code} es tu código para eliminar un espacio de trabajo`,
     subjectAccount: (code) => `${code} es tu código para eliminar toda tu cuenta`,
+    subjectReset: (code) => `${code} es tu código para reiniciar un espacio de trabajo`,
+    reset: (org) => [
+      "Escribe este código para reiniciar el espacio de trabajo ",
+      { b: org },
+      ". Sus agentes, conversaciones, archivos y memoria se borran al instante y para siempre, y empieza de cero como uno nuevo.",
+    ],
+    whyReset: (org) => `Recibiste este correo porque tu cuenta pidió reiniciar ${org} en agentes.chat.`,
     preheader: "Escríbelo en agentes.chat para confirmar. Es válido por 10 minutos.",
     headline: "Tu código",
     workspace: (org) => [

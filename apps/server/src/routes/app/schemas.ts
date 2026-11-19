@@ -484,6 +484,10 @@ export const PlanWindow = z.object({
   label: z.string().optional().openapi({ description: "`other`: the provider's name for it." }),
   usedPercent: z.number().openapi({ description: "0–100." }),
   resetsAt: z.string().optional(),
+  at: z
+    .string()
+    .optional()
+    .openapi({ description: "When this window was last read, where that is before the reading's `at`." }),
 });
 
 export const PlanUsage = z
@@ -1064,22 +1068,16 @@ export const BrainUnavailable = z.enum([
   "runner_old",
   "tool_off",
   "not_installed",
-  "outdated",
   "not_reported",
   "system",
   "cant_start",
 ]);
-
-export const CodexVersionRequirement = z
-  .object({ detected: z.string(), minimum: z.string() })
-  .openapi("CodexVersionRequirement");
 
 export const BrainOption = z
   .object({
     kind: BrainKind,
     available: z.boolean(),
     reason: BrainUnavailable.optional().openapi({ description: "Why it can't be chosen now (computer brains)." }),
-    codexVersion: CodexVersionRequirement.optional(),
     models: z.array(
       z.object({
         value: z.string().openapi({ description: "What is stored and passed to the CLI (`opus`, `gpt-…`)." }),

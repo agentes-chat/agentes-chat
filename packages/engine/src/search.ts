@@ -402,6 +402,25 @@ async function fileSearchScopes(db: Database, orgId: string, userId: string) {
   return rows.map((r) => r.id);
 }
 
+export type QueryEmbedding = Awaited<ReturnType<ModelGateway["embed"]>>;
+
+/**
+ * One query embedding for several searches of the same words (a run's memory and its wiki both search the trigger
+ * message): asked by the first search that needs it, for every kind they search, then shared.
+ */
+export function sharedQueryEmbedding(
+  deps: Pick<SearchDeps, "gateway">,
+  orgId: string,
+  text: string,
+  kinds: SearchKind[],
+) {
+  let embedded: Promise<QueryEmbedding> | null = null;
+  return () => {
+    embedded ??= deps.gateway.embed({ orgId, texts: [text], inputType: "query", kinds }).catch(() => null);
+    return embedded;
+  };
+}
+
 /** Hybrid search with the query embedded when possible (else full-text only). */
 export async function searchVisible(
   deps: SearchDeps,
@@ -417,6 +436,8 @@ export async function searchVisible(
      * what was read there.
      */
     wordsOnly?: boolean;
+    /** The query's embedding from `sharedQueryEmbedding`, in place of its own. */
+    queryEmbedding?: () => Promise<QueryEmbedding>;
   } & Pick<
     SearchQuery,
     "after" | "before" | "messages" | "sort" | "visibleIssueScopes" | "visibleFileScopes" | "minTextRank"
@@ -425,14 +446,15 @@ export async function searchVisible(
   // A list by date ranks by no vector: no embedding to pay for. A provider that fails or is slow leaves the words.
   const embedded =
     !input.wordsOnly && input.text.trim() && (input.sort ?? "relevance") === "relevance"
-      ? await deps.gateway
-          .embed({
-            orgId: input.orgId,
-            texts: [input.text],
-            inputType: "query",
-            kinds: input.messages ? ["message"] : input.kinds,
-          })
-          .catch(() => null)
+      ? await (input.queryEmbedding?.() ??
+          deps.gateway
+            .embed({
+              orgId: input.orgId,
+              texts: [input.text],
+              inputType: "query",
+              kinds: input.messages ? ["message"] : input.kinds,
+            })
+            .catch(() => null))
       : null;
   const index = await deps.search.forOrg(input.orgId);
   return index.query({

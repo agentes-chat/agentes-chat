@@ -6373,7 +6373,7 @@
         "cli_closed": "Das Programm {{brain}} wurde unerwartet beendet.",
         "cli_sandbox": "Das Programm {{brain}} kann seine Sandbox auf diesem Computer nicht starten. Wähle in den Einstellungen des Agenten eine andere KI.",
         "account_missing": "Das für diesen Agenten gewählte Konto ist nicht mehr auf seinem Computer. Wähl in den Einstellungen des Agenten ein anderes oder füg es erneut hinzu.",
-        "windows_sandbox": "Dieser Windows-Computer kann die Befehle von Codex nicht isolieren: Er braucht Windows 11 24H2 oder neuer.",
+        "windows_sandbox": "Dieser Windows-Computer kann die Befehle von Codex nicht isolieren: Er braucht Windows 11 24H2 oder neuer. Aktualisiere Windows, wähle Claude oder einen API-Schlüssel für diesen Agenten oder verschiebe ihn auf einen Linux-Computer.",
         "our_error": "Bei uns ist etwas schiefgelaufen, und die Aufgabe wurde angehalten. Frag gleich noch einmal.",
         "unknown": "Fehlgeschlagen."
       }
@@ -7874,7 +7874,10 @@
     "unreachableTitle": "agentes.chat ist nicht erreichbar",
     "unreachableText": "Es startet vielleicht gerade neu. Diese Seite öffnet sich von selbst, sobald es wieder da ist.",
     "offlineTitle": "Du bist offline",
-    "offlineText": "Diese Seite öffnet sich von selbst, sobald du wieder online bist."
+    "offlineText": "Diese Seite öffnet sich von selbst, sobald du wieder online bist.",
+    "unknownHostTitle": "Diese Adresse ist noch nicht eingerichtet",
+    "unknownHostText": "Wenn sie gerade erst verbunden wurde, versuch es in ein paar Minuten noch einmal.",
+    "unknownHostTab": "Adresse nicht eingerichtet · agentes.chat"
   },
   "scopes": {
     "context_read": {
@@ -9626,8 +9629,7 @@
       "approvals": "Standardmäßig fragen Merge, Deploy und Rollback nach Freigabe",
       "start": "Mission starten",
       "created": "Mission erstellt: {{name}} stellt den Plan zusammen.",
-      "who": "Wer programmiert",
-      "codexOld": "Codex auf {{computer}} ist zu alt für Missionen: Aktualisiere es dort."
+      "who": "Wer programmiert"
     },
     "commandApproval": {
       "label": "Selbstständigkeit",
@@ -10677,7 +10679,6 @@
       "needsCloud": {
         "online": "{{computer}} startet neu oder verbindet sich wieder. Das ändert sich von selbst, sobald er zurück ist.",
         "installing": "{{program}} wird auf {{computer}} installiert. Das ändert sich von selbst, wenn es fertig ist.",
-        "updating": "{{program}} wird auf {{computer}} aktualisiert. Das ändert sich von selbst, wenn es fertig ist.",
         "runnerOld": "Das agentes.chat-Programm auf {{computer}} ist veraltet und ein Update ist unterwegs. Das ändert sich von selbst, wenn es fertig ist.",
         "execOff": "{{computer}} kann {{program}} noch nicht ausführen. Wir kümmern uns, und das ändert sich von selbst.",
         "toolOff": "{{program}} ist auf {{computer}} noch nicht freigegeben. Das liegt an uns: Versuch es später noch einmal.",
@@ -11931,12 +11932,6 @@
       "read": "{{name}} hat es gelesen",
       "resolved": "{{name}} hat die Hilfeanfrage geschlossen"
     },
-    "well": {
-      "readYours": "Hat deine Notiz gelesen",
-      "readOf": "Hat die Notiz von {{name}} gelesen",
-      "nowYours": "Hat angehalten, um deine Notiz zu lesen",
-      "nowOf": "Hat angehalten, um die Notiz von {{name}} zu lesen"
-    },
     "strip": {
       "see": "Ansehen",
       "toStop": "zum Stoppen"
@@ -12030,11 +12025,6 @@
       "not_installed": "{{program}} ist auf {{computer}} nicht installiert.",
       "cant_start": "{{program}} ist auf {{computer}}, startet aber nicht.",
       "not_reported": "{{computer}} prüft noch, welche Programme vorhanden sind. Das ändert sich von selbst, wenn es so weit ist.",
-      "outdated": "Die Version auf {{computer}} ist veraltet. Aktualisiere Codex, um es zu nutzen.",
-      "outdatedCodex": "Auf {{computer}} wurde Codex CLI {{detected}} gefunden. Aktualisiere auf Version {{minimum}} oder neuer.",
-      "codexUpdateGuide": "Codex CLI aktualisieren",
-      "codexRecheckHere": "Wähle nach dem Update in den Einstellungen unter Tools bei Codex „Erneut prüfen“.",
-      "codexRecheckThere": "Aktualisiere Codex CLI auf {{computer}}. Falls dort die Desktop-App läuft, wähle in den Einstellungen unter Tools bei Codex „Erneut prüfen“.",
       "system": "{{program}} läuft noch nicht auf dem System von {{computer}}.",
       "no_computerCloud": "Bereit, sobald {{computer}} es ist."
     },
@@ -19177,6 +19167,21 @@
     "writeAfter": ".",
     "ask": "Brauchst du Hilfe? Frag die Personen, die diesen Server betreiben."
   },
+  "resetOrg": {
+    "cardTitle": "Zurücksetzen oder löschen",
+    "row": {
+      "title": "Workspace zurücksetzen",
+      "text": "Löscht alles, was darin entstanden ist, und beginnt neu, mit denselben Personen."
+    },
+    "goes": "Agenten, Unterhaltungen, DMs, Dateien, Aufgaben, Routinen und Gedächtnis",
+    "stays": "Personen, Rollen, Einladungen, KI-Konten, Computer und Konnektoren",
+    "fresh": "Danach öffnet er sich wie ein neuer Workspace, mit der ersten Einrichtung",
+    "plan": "Der Plan bleibt gleich, ohne neue Abbuchung",
+    "now": "Das passiert sofort und lässt sich nicht rückgängig machen.",
+    "title": "{{name}} zurücksetzen?",
+    "submit": "Workspace zurücksetzen",
+    "resetting": "{{name}} wird zurückgesetzt…"
+  },
   "deleteOrg": {
     "card": {
       "title": "Workspace löschen",
@@ -19248,8 +19253,7 @@
     "menu": "Konto löschen",
     "card": {
       "text": "Löscht dein Konto in 7 Tagen, in allen Workspaces.",
-      "button": "Konto löschen…",
-      "title": "Löschen"
+      "button": "Konto löschen…"
     },
     "title": "Dein ganzes Konto löschen?",
     "intro": "Damit löschst du dein ganzes Konto, nicht nur einen Workspace.",

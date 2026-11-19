@@ -17,6 +17,7 @@ import {
   enqueueRightHandChecks,
   enqueueSkillUpdates,
   enqueueVaultSyncs,
+  enqueueWaitingResets,
   enqueueWaitlistContacts,
   expireAgentProposalAsks,
   expireApprovals,
@@ -348,8 +349,9 @@ export function startWorkers(deps: WorkerDeps) {
     await pruneEmailChanges(db);
     const accounts = await enqueueOverdueAccountDeletions(db);
     const due = await enqueueOverdueDeletions(db);
-    if (due + accounts > 0) {
-      log.info("workspace deletions due", { due, accounts });
+    const resets = await enqueueWaitingResets(db);
+    if (due + accounts + resets > 0) {
+      log.info("workspace deletions due", { due, accounts, resets });
       void ticks.get("outbox")?.();
     }
   });

@@ -163,7 +163,10 @@ export function statusDetail(
   }
 }
 
-/** The device page's status line, after the pill: the reason in words, never a bare code. */
+/**
+ * The device page's line under its chips: the reason in words, never a bare code. Null when the pill says it all (ready,
+ * busy with its count), so the page shows no line then.
+ */
 export function statusSentence(
   t: TFunction,
   locale: string,
@@ -180,9 +183,8 @@ export function statusSentence(
         ? t("devices.line.offlineSeen", { time: clockAt(locale, s.lastSeenAt, now) })
         : t("devices.line.offline");
     case "busy":
-      return t("devices.line.busy", { count: s.running, max: s.max });
     case "ready":
-      return t("devices.line.ready");
+      return null;
     default:
       return statusDetail(t, locale, s, options);
   }

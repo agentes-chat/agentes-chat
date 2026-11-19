@@ -6,7 +6,6 @@ import type {
   AiComputer,
   AiStatus,
   BrainUnavailable,
-  CodexVersionRequirement,
   ConnectIntent,
   Edition,
   Machine,
@@ -436,7 +435,6 @@ export type PlanGate =
       state: "unsupported";
       reason: BrainUnavailable | "keys";
       overdue?: boolean;
-      codexVersion?: CodexVersionRequirement;
     }
   /** `owner`: the viewer doesn't own the agent; `computer`: only whoever connected it adds a sign-in there. */
   | { state: "locked"; who: "owner" | "computer" }
@@ -463,11 +461,9 @@ export const unsupportedGate = (
   edition: Edition | null,
   setup: SetupView | null,
   now = Date.now(),
-  codexVersion?: CodexVersionRequirement,
 ): PlanGate => ({
   state: "unsupported",
   reason,
-  ...(reason === "outdated" && codexVersion ? { codexVersion } : {}),
   ...(edition === "cloud" && reason !== "tool_off" && installOverdue(setup, now) ? { overdue: true } : {}),
 });
 
@@ -505,8 +501,7 @@ export function planGate({
     return edition === "cloud" && !caughtUp ? { state: "preparing", view: null } : { state: "missing" };
   if (!brain.computer.online) return { state: "offline" };
   const option = brain.options.find((o) => o.kind === kindOf(choice));
-  if (!option?.available)
-    return unsupportedGate(option?.reason ?? "not_reported", edition, setup, now, option?.codexVersion);
+  if (!option?.available) return unsupportedGate(option?.reason ?? "not_reported", edition, setup, now);
   if (!brain.accountsSupported) return unsupportedGate("runner_old", edition, setup, now);
   if (isPlanId(choice) && !computer?.keys) return unsupportedGate("keys", edition, setup, now);
   if (!brain.canManageAccounts) return { state: "locked", who: "computer" };
@@ -560,7 +555,7 @@ export function planGateWithoutAgent({
   if (!computer.online) return { gate: { state: "offline" }, computer };
   if (computer.brains[kind] !== true)
     return {
-      gate: unsupportedGate(computer.off?.[kind] ?? "not_reported", edition, setup, now, computer.codexVersion),
+      gate: unsupportedGate(computer.off?.[kind] ?? "not_reported", edition, setup, now),
       computer,
     };
   if (isPlanId(choice) && !computer.keys) return { gate: unsupportedGate("keys", edition, setup, now), computer };
@@ -613,7 +608,6 @@ const CLOUD_REASON = {
   keys: "runnerOld",
   tool_off: "toolOff",
   not_installed: "installing",
-  outdated: "updating",
   // Said only past the wait: before it, the line says the computer is still looking.
   not_reported: "stuck",
   // The Cloud's computers run Linux, where every CLI runs: never said there.
@@ -682,8 +676,6 @@ export function gateLine(
     };
   if (gate.reason === "keys") return { text: t("aiAccounts.connect.needs.keys"), rechecks };
   if (gate.reason === "tool_off") return { text: t("brain.reasons.tool_offOne", { computer, program }), rechecks };
-  if (gate.reason === "outdated" && gate.codexVersion)
-    return { text: t("brain.reasons.outdatedCodex", { computer, ...gate.codexVersion }), rechecks };
   return { text: t(`brain.reasons.${gate.reason}`, { computer, program }), rechecks };
 }
 

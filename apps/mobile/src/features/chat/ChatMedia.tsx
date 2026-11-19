@@ -11,7 +11,7 @@ import { CHROME_MAX_SCALE, Text } from "@/ui";
 import { useReducedMotion } from "@/ui/theme";
 import { useColors, useOrgId } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
-import { useKeptWidth } from "./look";
+import { useKeptWidth, useMessageCardCorners } from "./look";
 import { gifBox, MESSAGE_STICKER } from "./media";
 import { useRowDirectory } from "./row-data";
 
@@ -75,6 +75,7 @@ function ChatGif({ media, align }: { media: GifMedia; align: "start" | "end" }) 
   const orgId = useOrgId();
   const c = useColors();
   const reduced = useReducedMotion();
+  const cardCorners = useMessageCardCorners();
   // Kept across the list's unmounts: a row coming back draws the GIF at its size from its first frame.
   const [width, onWidth] = useKeptWidth(`gif:${align}`);
   const room = Math.floor(width);
@@ -93,7 +94,11 @@ function ChatGif({ media, align }: { media: GifMedia; align: "start" | "end" }) 
         accessible
         accessibilityRole="image"
         accessibilityLabel={gifLabel(t, media.title)}
-        style={[styles.gif, { width: box.width, height: box.height, backgroundColor: c.sunken, borderColor: c.line }]}
+        style={[
+          styles.gif,
+          { width: box.width, height: box.height, backgroundColor: c.sunken, borderColor: c.line },
+          cardCorners,
+        ]}
       >
         {off ? (
           title ? (

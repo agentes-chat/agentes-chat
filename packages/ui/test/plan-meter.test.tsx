@@ -250,8 +250,10 @@ test("compact says how old its numbers are from 10 minutes, and out of date past
   expect(old.dataset.stale).toBeUndefined();
   cleanup();
   const stale = read(7 * HOUR);
-  expect(stale.querySelector(".ac-planmeter__line")?.textContent).toBe("5h 30% · números antigos, de 05:00");
+  // Past 6 hours a number is no longer one to trust: only how old it is, and no bar.
+  expect(stale.querySelector(".ac-planmeter__line")?.textContent).toBe("5h atualizado 05:00");
   expect(stale.dataset.stale).toBe("true");
+  expect(stale.querySelector("[role=meter]")).toBeNull();
   expect(planLine({ windows: [{ kind: "five_hour", usedPercent: 30 }], at: at(-6 * HOUR) }, text, NOW)).toMatchObject({
     stale: false,
     age: "atualizado 06:00",
@@ -445,4 +447,38 @@ test("full meter: a model group's quotas under its own heading, after the accoun
   const plain = render(<PlanMeter usage={usage} text={text} now={NOW} />).container;
   expect(plain.querySelector(".ac-planmeter__group")).toBeNull();
   expect(rows(plain)[2]?.[0]).toBe("Claude and GPT models · 7d");
+});
+
+test("a window whose own reading is out of date shows only its age, after the known ones, and never pauses work", () => {
+  // A turn a minute ago named the 5 hours only; the week is the one read 7 hours ago (a new week may have started).
+  const week = { kind: "seven_day", usedPercent: 73, resetsAt: at(48 * HOUR), at: at(-7 * HOUR) };
+  const usage: PlanMeterUsage = {
+    windows: [week, { kind: "five_hour", usedPercent: 12, resetsAt: at(2 * HOUR) }],
+    at: at(-60_000),
+  };
+  expect(planWindows(usage, NOW).map((w) => [w.kind, w.stale])).toEqual([
+    ["five_hour", false],
+    ["seven_day", true],
+  ]);
+  const line = planLine(usage, text, NOW);
+  expect(line).toMatchObject({ line: "5h 12% · semana atualizado 05:00", stale: true, age: null, state: "ok" });
+  expect(line?.top?.kind).toBe("five_hour");
+  expect(line?.title).toBe("5 horas 12% · renova 14:00\nSemana atualizado 05:00 · renova 12:00");
+  // The full meter: its age in place of the percentage, no bar, no reset it may no longer have.
+  const { container } = render(<PlanMeter usage={usage} text={text} now={NOW} />);
+  expect(rows(container)).toEqual([
+    ["5 horas", "12%", "renova 14:00"],
+    ["Semana", "atualizado 05:00", null],
+  ]);
+  expect([...container.querySelectorAll("[role=meter]")].map((m) => m.getAttribute("aria-label"))).toEqual(["5 horas"]);
+  // Long work pauses on what is known, never on an old number; read again, it binds.
+  expect(planBinding({ ...usage, windows: [{ ...week, usedPercent: 99 }] }, { now: NOW })).toBeNull();
+  expect(planBinding({ ...usage, windows: [{ ...week, usedPercent: 99, at: at(-HOUR) }] }, { now: NOW })?.used).toBe(
+    99,
+  );
+  // One that reset since is known: empty again.
+  expect(planWindows({ ...usage, windows: [{ ...week, resetsAt: at(-HOUR) }] }, NOW)[0]).toMatchObject({
+    used: 0,
+    stale: false,
+  });
 });
