@@ -364,6 +364,7 @@ export * from "./vault";
 export * from "./vault/tools";
 export * from "./voice";
 export * from "./voice-rooms";
+export * from "./vps-central";
 export * from "./waiting";
 export * from "./waitlist";
 export * from "./wallpaper-photos";

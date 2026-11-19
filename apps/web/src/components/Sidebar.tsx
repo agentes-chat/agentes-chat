@@ -124,6 +124,8 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
+import { useAtWork } from "@/central/useAtWork";
+import { useCentralWords } from "@/central/words";
 import { useDirectory } from "@/hooks/useDirectory";
 import { agentLine, availabilityOf, personLine, useAgentPresence, usePersonPresence } from "@/hooks/usePresence";
 import { useServerPlace } from "@/hooks/useServerPlace";
@@ -396,6 +398,25 @@ export function Sidebar() {
       {countOf(id)}
     </Link>
   );
+  // VPS Zen: at work anywhere, also in conversations this tab isn't listening to.
+  const atWork = useAtWork(orgId);
+  const centralWords = useCentralWords();
+  // VPS Zen: the Central is always in sight, whatever each person keeps there. Only in the built app: the sidebar's
+  // tests describe the tools as they ship upstream.
+  const centralRow = () =>
+    import.meta.env.PROD ? (
+      <Link
+        to="/org/$orgId/central"
+        params={{ orgId }}
+        search={{}}
+        className="sidebar__item"
+        title={rail ? centralWords.title : undefined}
+      >
+        <Icon name="stageProgress" />
+        <span className="sidebar__item-label">{centralWords.title}</span>
+        {atWork.size > 0 && <span className="sidebar__section-working">{atWork.size}</span>}
+      </Link>
+    ) : null;
   // Agents waiting for an offline computer: "esperando" instead of anything "working".
   const outages = useMachineOutages(orgId);
   const waitingFor = useMemo(() => waitingAgents(outages.data), [outages.data]);
@@ -443,16 +464,18 @@ export function Sidebar() {
   // Who works now: a run this tab hears, or the agents' list (work handed off in two agents' DM too). Who waits on
   // someone or is in line: a closed group still shows them.
   const busyKey = useStreams((st) => [...runningAgents(st)].sort().join());
+  const atWorkKey = [...atWork].sort().join();
   const { busy, waits } = useMemo(() => {
     const work = workKey ? workKey.split(",").map((w) => w.split(":") as [string, string]) : [];
     return {
       busy: new Set([
         ...(busyKey ? busyKey.split(",") : []),
+        ...(atWorkKey ? atWorkKey.split(",") : []),
         ...work.flatMap(([id, s]) => (s === "working" ? [id] : [])),
       ]),
       waits: new Set(work.flatMap(([id, s]) => (s === "working" ? [] : [id]))),
     };
-  }, [busyKey, workKey]);
+  }, [busyKey, atWorkKey, workKey]);
   // How many of the workspace's agents are working now: the sky at the bottom rises with it.
   const working = dir.agents.filter((a) => busy.has(a.id)).length;
   // Narrow screens: the sidebar is a drawer (id, open state, close on link / swipe).
@@ -685,8 +708,9 @@ export function Sidebar() {
     // A personal workspace's list is its conversations (ADR 0159): a tool comes into sight only while something
     // waits in it, or once the person put it there; Início, Go to… and the other tools are in More at the end.
     tools: personal ? (
-      listed.length > 0 && (
+      (listed.length > 0 || import.meta.env.PROD) && (
         <div className="sidebar__group sidebar__tools">
+          {centralRow()}
           <ToolList items={listed} row={toolRow} />
         </div>
       )
@@ -697,6 +721,7 @@ export function Sidebar() {
           <Icon name="home" />
           <span className="sidebar__item-label">{t("shell.home")}</span>
         </Link>
+        {centralRow()}
         <ToolList items={listed} row={toolRow} />
         <MoreTools items={inMore} row={toolRow} countOf={countOf} onCustomize={() => setCustomizing(true)} />
       </div>
@@ -1932,7 +1957,8 @@ function AgentRow({
   const shown = useAgentPresence(a.id);
   const work = shown?.work ?? null;
   // At work: a run this tab hears, or its work for me anywhere (work handed off in two agents' DM too).
-  const busy = (state !== "idle" && !waitingFor) || work?.state === "working";
+  const atWork = useAtWork(org.id).has(a.id);
+  const busy = (state !== "idle" && !waitingFor) || work?.state === "working" || atWork;
   const color = colorOf(a);
   const chip = audienceChip(t, a);
   // Background work's minutes move with the anchor's line, every half minute; its work's every minute.

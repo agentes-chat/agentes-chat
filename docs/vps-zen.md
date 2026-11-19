@@ -23,3 +23,16 @@ the runner's service up, Chrome first in line for the OOM killer) and `agentes-d
 idle; swaps the image, checks health and the runner, and rolls back by itself when the new image doesn't come up).
 The Discord feed (`/opt/aurevia-agentes-feed`, reads Postgres) and the runner's
 systemd drop-in with `AGENTES_RUNNER_FULL_ACCESS=1`.
+
+## Central
+
+`/org/<id>/central` (`apps/web/src/central`, `packages/engine/src/vps-central.ts`, `GET …/central`) shows the agents, their
+tasks by state, who asked whom, conversations between agents, their GitHub items and the computers.
+
+- A task's state reads from its **last step**: 5 minutes without one is "Sem sinal", 15 is "Parada?". Nothing is stopped
+  for it, because a long command is quiet too.
+- A percentage appears only when the work has a plan. It is never estimated.
+- A run that ended at its step limit continues by itself once (`continueWorkAtStepLimit`, in the recovery sweep). A run
+  found stuck, or one that was already a continuation, waits for a person.
+- The "Ao vivo" panel lists the run's real steps. Claude Code runs with `-p`, so there is no interactive screen to mirror.
+- A fenced `html` block in a message shows as a page, in the artifacts' sandbox (no network, no access to the app).

@@ -7643,6 +7643,112 @@ export interface HiddenTasks {
   byAgent: Record<string, number>;
 }
 
+/** VPS Zen: the Central (`GET …/central`), mirrors `packages/engine/src/vps-central.ts`. */
+export type CentralState =
+  | "queued"
+  | "working"
+  | "quiet"
+  | "stalled"
+  | "waiting_you"
+  | "waiting_other"
+  | "done"
+  | "failed"
+  | "stopped";
+
+export interface CentralTask {
+  runId: string;
+  agentId: string;
+  channelId: string;
+  channelKind: "channel" | "dm";
+  channelName: string | null;
+  betweenAgents: boolean;
+  threadId: string | null;
+  title: string | null;
+  state: CentralState;
+  waitsOn: string | null;
+  startedAt: string | null;
+  createdAt: string;
+  finishedAt: string | null;
+  lastSignalAt: string;
+  progress: { done: number; total: number; percent: number } | null;
+  latestUpdate: string | null;
+  requester:
+    | { kind: "person"; id: string; name: string }
+    | { kind: "agent"; id: string }
+    | { kind: "routine"; name: string }
+    | null;
+  origin: string | null;
+  now: { tool: string; detail: string | null } | null;
+  steps: number;
+  helpers: number;
+  error: string | null;
+  canStop: boolean;
+  canContinue: boolean;
+}
+
+export interface CentralAgent {
+  id: string;
+  name: string;
+  handle: string;
+  role: string;
+  brain: string;
+  model: string | null;
+  effort: string | null;
+  approvals: string;
+  hasInstructions: boolean;
+  machine: { id: string; name: string; online: boolean } | null;
+  activity: number[];
+  doneThisWeek: number;
+  failedThisWeek: number;
+}
+
+export interface CentralTalk {
+  id: string;
+  fromAgentId: string;
+  toAgentId: string;
+  kind: string;
+  status: string;
+  createdAt: string;
+  answeredAt: string | null;
+  question: string | null;
+  answer: string | null;
+}
+
+export interface CentralPullRequest {
+  repo: string;
+  number: number;
+  agentId: string;
+  authored: boolean;
+  channelId: string;
+  threadId: string | null;
+  updatedAt: string;
+  url: string;
+}
+
+export interface CentralComputer {
+  id: string;
+  name: string;
+  online: boolean;
+  version: string | null;
+  cpus: number | null;
+  memoryGb: number | null;
+  memoryAvg: number | null;
+  memoryPeak: number | null;
+  diskFreeGb: number | null;
+  working: number;
+  inLine: number;
+}
+
+export interface CentralView {
+  at: string;
+  agents: CentralAgent[];
+  tasks: CentralTask[];
+  talks: CentralTalk[];
+  pullRequests: CentralPullRequest[];
+  computers: CentralComputer[];
+  hiddenTasks: number;
+}
+
 export interface TaskManagerView {
   tasks: ManagedTask[];
   ended: EndedTask[];
