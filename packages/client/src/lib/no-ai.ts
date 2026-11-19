@@ -6,7 +6,6 @@ import type {
   AiComputer,
   AiStatus,
   BrainUnavailable,
-  CodexVersionRequirement,
   ConnectIntent,
   Edition,
   Machine,
@@ -14,8 +13,8 @@ import type {
   MachineAccountKind,
   OrgStanding,
 } from "../api/types";
-import { type OwnSignInRow, ownSignInReady, ownSignIns, planWordOf } from "./ai-accounts";
-import { answersOthers, audienceOf } from "./audience";
+import { groupPlans, type OwnSignInRow, ownSignInReady, ownSignIns, planWordOf } from "./ai-accounts";
+import { answersOthers, audienceOf, managesAgent } from "./audience";
 import { type BillingHold, billingHoldOf } from "./billing";
 import { type SetupView, setupPending } from "./computer";
 import { firstName } from "./format";
@@ -223,17 +222,18 @@ export const noAiLineKey = (card: Pick<NoAiCard, "own" | "signedOut" | "missing"
           ? "noAi.noComputer"
           : "noAi.agent";
 
-type ConnectingAgent = { ownerUserId?: string | null; builtin?: "right_hand" | null };
+type ConnectingAgent = { ownerUserId?: string | null; builtin?: "right_hand" | null; canManage?: boolean };
 
 /**
- * Who can set an agent's own AI: its owner (a plan), who manages agents (a workspace key) or keys. On the right hand
- * that is the workspace's AI, the one its background work (a widget's build) thinks with.
+ * Who can set an agent's own AI: its owner (a plan), who manages it (`managesAgent`: a workspace key, ADR 0085 addendum
+ * of 2026-11-17) or keys. On the right hand that is the workspace's AI, the one its background work (a widget's
+ * build) thinks with.
  */
 export const maySetAgentAi = (
   agent: ConnectingAgent | null | undefined,
   meId: string | null | undefined,
   org: Parameters<typeof can>[0],
-) => (!!meId && agent?.ownerUserId === meId) || can(org, "manage_agents") || can(org, "manage_credentials");
+) => (!!meId && agent?.ownerUserId === meId) || managesAgent(agent) || can(org, "manage_credentials");
 
 /** Who connects an agent's AI, for a person who may not: its owner (`owner`, by first name) or an admin. */
 export const noAiLockedLine = (t: TFunction, name: string, owner: string | null | undefined) =>
@@ -435,7 +435,6 @@ export type PlanGate =
       state: "unsupported";
       reason: BrainUnavailable | "keys";
       overdue?: boolean;
-      codexVersion?: CodexVersionRequirement;
     }
   /** `owner`: the viewer doesn't own the agent; `computer`: only whoever connected it adds a sign-in there. */
   | { state: "locked"; who: "owner" | "computer" }
@@ -462,11 +461,9 @@ export const unsupportedGate = (
   edition: Edition | null,
   setup: SetupView | null,
   now = Date.now(),
-  codexVersion?: CodexVersionRequirement,
 ): PlanGate => ({
   state: "unsupported",
   reason,
-  ...(reason === "outdated" && codexVersion ? { codexVersion } : {}),
   ...(edition === "cloud" && reason !== "tool_off" && installOverdue(setup, now) ? { overdue: true } : {}),
 });
 
@@ -504,8 +501,7 @@ export function planGate({
     return edition === "cloud" && !caughtUp ? { state: "preparing", view: null } : { state: "missing" };
   if (!brain.computer.online) return { state: "offline" };
   const option = brain.options.find((o) => o.kind === kindOf(choice));
-  if (!option?.available)
-    return unsupportedGate(option?.reason ?? "not_reported", edition, setup, now, option?.codexVersion);
+  if (!option?.available) return unsupportedGate(option?.reason ?? "not_reported", edition, setup, now);
   if (!brain.accountsSupported) return unsupportedGate("runner_old", edition, setup, now);
   if (isPlanId(choice) && !computer?.keys) return unsupportedGate("keys", edition, setup, now);
   if (!brain.canManageAccounts) return { state: "locked", who: "computer" };
@@ -559,7 +555,7 @@ export function planGateWithoutAgent({
   if (!computer.online) return { gate: { state: "offline" }, computer };
   if (computer.brains[kind] !== true)
     return {
-      gate: unsupportedGate(computer.off?.[kind] ?? "not_reported", edition, setup, now, computer.codexVersion),
+      gate: unsupportedGate(computer.off?.[kind] ?? "not_reported", edition, setup, now),
       computer,
     };
   if (isPlanId(choice) && !computer.keys) return { gate: unsupportedGate("keys", edition, setup, now), computer };
@@ -612,7 +608,6 @@ const CLOUD_REASON = {
   keys: "runnerOld",
   tool_off: "toolOff",
   not_installed: "installing",
-  outdated: "updating",
   // Said only past the wait: before it, the line says the computer is still looking.
   not_reported: "stuck",
   // The Cloud's computers run Linux, where every CLI runs: never said there.
@@ -681,8 +676,6 @@ export function gateLine(
     };
   if (gate.reason === "keys") return { text: t("aiAccounts.connect.needs.keys"), rechecks };
   if (gate.reason === "tool_off") return { text: t("brain.reasons.tool_offOne", { computer, program }), rechecks };
-  if (gate.reason === "outdated" && gate.codexVersion)
-    return { text: t("brain.reasons.outdatedCodex", { computer, ...gate.codexVersion }), rechecks };
   return { text: t(`brain.reasons.${gate.reason}`, { computer, program }), rechecks };
 }
 
@@ -908,19 +901,26 @@ export const teamThinks = (agentIds: readonly string[], status: AiStatus | undef
 /**
  * Plans the right hand can't think with now, for the dialog that picks its AI (dimmed, each with why): a computer's own
  * sign-in, which names no account (it thinks only with a plan signed in as one), and an account whose computer is
- * away. Nothing to press there: it stands in on what can think meanwhile (ADR 0137 §7, amended 2026-11-15).
+ * away. Nothing to press there: it stands in on what can think meanwhile (ADR 0137 §7, amended 2026-11-15). One
+ * entry per account (`groupPlans`), `ids` its logins, none for the one holding `inUse`.
  */
-export type UnusablePlan =
-  | { id: string; why: "computerOnly"; own: OwnSignInRow }
-  | { id: string; why: "away"; account: AiAccounts["accounts"][number] };
+export type UnusablePlan = { id: string; ids: string[] } & (
+  | { why: "computerOnly"; own: OwnSignInRow }
+  | { why: "away"; account: AiAccounts["accounts"][number] }
+);
 
-export function rightHandUnusable(view: AiAccounts | null | undefined): UnusablePlan[] {
+export function rightHandUnusable(view: AiAccounts | null | undefined, inUse?: string | null): UnusablePlan[] {
   if (!view) return [];
   const away = new Set(view.computers.filter((c) => !c.online).map((c) => c.machineId));
   return [
-    ...ownSignIns(view).map((own): UnusablePlan => ({ id: own.key, why: "computerOnly", own })),
-    ...view.accounts
-      .filter((a) => a.status === "active" && away.has(a.machineId))
-      .map((account): UnusablePlan => ({ id: account.id, why: "away", account })),
+    ...ownSignIns(view)
+      .filter((own) => own.key !== inUse)
+      .map((own): UnusablePlan => ({ id: own.key, ids: [own.key], why: "computerOnly", own })),
+    ...groupPlans(view.accounts.filter((a) => a.status === "active" && away.has(a.machineId)))
+      .filter((p) => !p.logins.some((l) => l.id === inUse))
+      .flatMap(({ logins }): UnusablePlan[] => {
+        const account = logins[0];
+        return account ? [{ id: account.id, ids: logins.map((l) => l.id), why: "away", account }] : [];
+      }),
   ];
 }

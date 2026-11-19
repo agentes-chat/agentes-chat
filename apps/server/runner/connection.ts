@@ -5,6 +5,7 @@ import {
   type MachineLoad,
   type MachineRequest,
   parseServerFrame,
+  RUNNER_STOPPED_CLOSE,
   type RunnerFrame,
   type RunnerInfo,
   type ServerFrame,
@@ -25,7 +26,7 @@ export interface SocketHandlers {
 export interface Socket {
   readonly bufferedAmount?: number;
   send(data: string): void;
-  close(): void;
+  close(code?: number, reason?: string): void;
 }
 
 /** Opens a socket (real WebSocket in the runner, a fake in tests). */
@@ -58,9 +59,9 @@ export const webSocketDial: Dial = (url, handlers) => {
       return ws.bufferedAmount;
     },
     send: (data) => ws.send(data),
-    close: () => {
+    close: (code, reason) => {
       try {
-        ws.close();
+        ws.close(code, reason);
       } catch {
         // already closed
       }
@@ -301,7 +302,8 @@ export class RunnerConnection {
         runner.close();
         tasks?.detach();
         opts.mcp?.detach();
-        socket?.close();
+        if (this.stopped) socket?.close(RUNNER_STOPPED_CLOSE, "stopped");
+        else socket?.close();
         this.endSession = undefined;
         opts.onState?.("offline");
         resolve({ welcomed, outcome });

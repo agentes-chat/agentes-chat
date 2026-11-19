@@ -12,7 +12,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import path from "node:path";
-import { PUSH_ASK_RULES } from "@agenteschat/adapters/command-policy";
+import { INLINE_CODE_DENY_RULES, PUSH_ASK_RULES } from "@agenteschat/adapters/command-policy";
 import {
   BRAIN_PROFILES_PROTOCOL,
   BRAIN_PROTOCOL,
@@ -122,6 +122,10 @@ test("protocol 8: brain.turn requests and brain frames parse; bad events are dro
   expect(done({ warm: false, initMs: 812.4, firstEventMs: -3 })).toMatchObject({
     event: { type: "done", text: "ok", timings: { warm: false, initMs: 812 } },
   });
+  expect(done({ warm: false, initMs: 90_000_000, firstEventMs: 1200 })).toMatchObject({
+    event: { type: "done", text: "ok", timings: { warm: false, firstEventMs: 1200 } },
+  });
+  expect(done({ warm: false, initMs: 90_000_000 })).not.toHaveProperty("event.timings.initMs");
   expect(done({ initMs: 5 })).toEqual({ type: "brain.event", runId: RUN(1), event: { type: "done", text: "ok" } });
 });
 
@@ -447,6 +451,17 @@ test("parser: a failed turn says why the provider failed it, from Claude Code's 
     cause: "auth_rejected",
     httpStatus: 401,
   });
+  // A 401 the CLI got past (its login refreshed, then another error, or an answer) never reads as signed out.
+  expect(fail(retry("authentication_failed", 401), retry("server_error", 529), failed)).toMatchObject({
+    code: "claude_failed",
+  });
+  expect(
+    fail(
+      retry("authentication_failed", 401),
+      { type: "assistant", parent_tool_use_id: null, message: { id: "m2", content: [{ type: "text", text: "hi" }] } },
+      failed,
+    ),
+  ).toMatchObject({ code: "claude_failed" });
   // A 403 alone is a refused sign-in, not a disabled account.
   expect(fail(retry("authentication_failed", 403), failed)).toMatchObject({ cause: "auth_rejected", httpStatus: 403 });
   expect(
@@ -1284,12 +1299,14 @@ test.if(posix)(
     const wsettings = JSON.parse(readFileSync(wargs[wargs.indexOf("--settings") + 1] as string, "utf8")) as {
       permissions: { allow: string[]; ask: string[]; deny: string[] };
     };
-    expect(wsettings.permissions.deny).toContain("Bash(python3 -c*)");
+    // Inline code reaches the prompt tool, where the server decides it (a mission's card, elsewhere ordinary work).
+    expect(wsettings.permissions.deny).not.toContain("Bash(python3 -c*)");
+    expect(wsettings.permissions.ask).toContain("Bash(python3 -c*)");
     expect(wsettings.permissions.deny).toContain("Bash(gh auth token*)");
     expect(wsettings.permissions.deny).not.toContain("Edit");
     expect(wsettings.permissions.allow).not.toContain("Bash(cat *)");
     // Every push reaches the prompt tool, even past the owner's allow rules, which reads where it goes.
-    expect(wsettings.permissions.ask).toEqual([...PUSH_ASK_RULES]);
+    expect(wsettings.permissions.ask).toEqual([...PUSH_ASK_RULES, ...INLINE_CODE_DENY_RULES]);
     const wconfig = JSON.parse(readFileSync(wargs[wargs.indexOf("--mcp-config") + 1] as string, "utf8")) as {
       mcpServers: { agentes: { env: Record<string, string> } };
     };
@@ -2109,6 +2126,16 @@ test("protocol 15: brain.steer parses; steer_read events travel, empty ones are 
   ).toBeNull();
 });
 
+test("an answer posted as it comes travels as its own event; an empty one is dropped", () => {
+  expect(
+    parseRunnerFrame(line({ type: "brain.event", runId: RUN(1), event: { type: "answer", text: "Oi! Tudo certo." } })),
+  ).toEqual({ type: "brain.event", runId: RUN(1), event: { type: "answer", text: "Oi! Tudo certo." } });
+  expect(
+    parseRunnerFrame(line({ type: "brain.event", runId: RUN(1), event: { type: "answer", text: " " } })),
+  ).toBeNull();
+  expect(parseRunnerFrame(line({ type: "brain.event", runId: RUN(1), event: { type: "answer" } }))).toBeNull();
+});
+
 test("steering: capabilities (not versions), the stdin line, and what the parser reads back", () => {
   // 2.1.175 says none; 2.1.220 the lifecycle; 2.1.309 also "now". A version alone is never enough.
   expect(steerSupport(undefined)).toEqual({ next: false, now: false });
@@ -2411,6 +2438,44 @@ test.if(posix)(
       expect(m.size).toBe(1);
       expect((await turn(2, "after")).final).toMatchObject({ text: "echo 3: after" });
       expect(spawns()).toHaveLength(1);
+    });
+  },
+);
+
+test.if(posix)(
+  "the server takes each answer as it comes: the one before the message read goes out at once, never joined",
+  async () => {
+    await withCli(NOW_CLI, async () => {
+      const { m, turn } = setup();
+      const pending = turn(1, "STEERLATE work", { answers: "each" });
+      expect((await steerWhenReady(m, RUN(1), [{ uuid: U(1), text: "one more thing" }])).status).toBe("accepted");
+      const { final, events } = await pending;
+      // Its own event as the CLI's turn ends, before the message is read; `done` holds only what came after it.
+      expect(events.filter((e) => e.type === "answer")).toEqual([{ type: "answer", text: "echo 1: STEERLATE work" }]);
+      expect(events.findIndex((e) => e.type === "answer")).toBeLessThan(
+        events.findIndex((e) => e.type === "steer_read"),
+      );
+      expect(final).toMatchObject({ type: "done", text: "echo 2: one more thing" });
+      expect(m.size).toBe(1);
+    });
+  },
+);
+
+test.if(posix)(
+  "each answer as it comes: when no next turn follows, the request ends with nothing said twice",
+  async () => {
+    await withCli(NOW_CLI, async () => {
+      // Work moved to the background that never ends: the request waits for it, then ends on the result it went on from.
+      const { turn, m } = setup({ steerBackgroundWaitMs: 200, strayWaitMs: 300, dueWaitMs: 200 });
+      const pending = turn(1, "STEERBGHANG work", { answers: "each" });
+      expect((await steerWhenReady(m, RUN(1), [{ uuid: U(1), text: "x", urgent: true }])).status).toBe("accepted");
+      const { final, events } = await pending;
+      // Out at once, while the work it moved aside runs on.
+      expect(events.filter((e) => e.type === "answer")).toEqual([
+        { type: "answer", text: "echo 1: STEERBGHANG work +now/human: x" },
+      ]);
+      // It went out already: the request ends on nothing more.
+      expect(final).toMatchObject({ type: "done", text: "" });
     });
   },
 );

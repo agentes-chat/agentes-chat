@@ -150,7 +150,7 @@ describe("ending a run hands its unread messages on", () => {
     let correction = "";
     const requests: string[] = [];
     f = await setup({
-      judge: (kind, _id, state) => (kind === "stop_request" && state.message === "para" ? 0.95 : 0),
+      judge: (kind, _id, state) => (kind === "steer_triage" ? (state.message === "para" ? "stop" : undefined) : 0),
       toolSources: [
         slowTool(async () => {
           correction = (await post("usa a branch dev", { threadId })).id;

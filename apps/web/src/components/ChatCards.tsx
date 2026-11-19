@@ -108,11 +108,13 @@ export function MemoryChangeCard({ update, agentId }: { update: MemoryUpdate; ag
       role="group"
       aria-label={t("memoryCard.group", { name })}
     >
-      <div className="ac-approval__head">
+      <div className="ac-approval__head ac-tailrow">
         <span className="ac-approval__who">
           <b>{t(`memoryCard.${update.action}`, { name })}</b>
         </span>
-        <Chip icon="check">{t("memoryCard.chip")}</Chip>
+        <Chip icon="check" className="ac-tail">
+          {t("memoryCard.chip")}
+        </Chip>
       </div>
       <p className={update.action === "forgot" ? "ac-approval__title struck" : "ac-approval__title"}>{update.text}</p>
       {update.action === "updated" && update.previousText && (

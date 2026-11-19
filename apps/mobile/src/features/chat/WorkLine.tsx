@@ -1,4 +1,5 @@
 import { type Issue, type Message, useApi, useChannels, type WorkView } from "@agenteschat/client";
+import { managesAgent } from "@agenteschat/client/lib/audience";
 import { relativeTime } from "@agenteschat/client/lib/format";
 import { heldBack } from "@agenteschat/client/lib/issues";
 import {
@@ -15,12 +16,15 @@ import { createContext, type ReactNode, useContext, useEffect, useState } from "
 import { Trans, useTranslation } from "react-i18next";
 import { Pressable, type StyleProp, StyleSheet, View, type ViewStyle } from "react-native";
 import { useOrg } from "@/providers/org";
-import { Button, haptics, LineIcon, PixelOrbit, Text, useToast } from "@/ui";
+import { Button, haptics, LineIcon, PixelOrbit, Text, textLineOf, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
+import { useFontScale } from "@/ui/text-scale";
 import { chatHref } from "../links/logic";
-import { useColors, useDirectory, useMeId, useOrgId } from "../shared/hooks";
+import { useBubblePart } from "../shared/bubble-part";
+import { useColors, useOrgId } from "../shared/hooks";
 import { tapHaptic, useSurface } from "../shared/parts";
 import { RowPartContext, useCardTop } from "./look";
+import { useRowDirectory, useRowMeId } from "./row-data";
 
 /** The conversation's list scrolls to one of its messages (false: it doesn't show it). */
 export const JumpToMessageContext = createContext<((messageId: string) => boolean) | null>(null);
@@ -40,19 +44,19 @@ function useNow(live: boolean) {
 function useLine(work: WorkView, inUpdatesThread = false) {
   const { t, i18n } = useTranslation();
   const orgId = useOrgId();
-  const meId = useMeId();
-  const dir = useDirectory();
-  const manage = can(useOrg().org, "manage_agents");
+  const meId = useRowMeId();
+  const dir = useRowDirectory();
   const api = useApi();
   const qc = useQueryClient();
   const toast = useToast();
   const live = work.status === "live" || work.status === "queued";
   const now = useNow(live);
   const agent = dir.agentById.get(work.agentId);
-  // As `mayStopRun` decides (who asked, the agent's owner, an admin); the server has the last word, said in a toast.
+  // As `mayStopRun` decides (who asked, the agent's owner, who manages it); the server has the last word, in a toast.
   const stop = useMutation({
     mutationFn: (runId: string) => api.agents.cancelRun(orgId, runId),
-    onError: () => toast({ title: t("work.stopFailed"), icon: "info" }),
+    // A failure's toast, in the failure's tone (the ×), as every refusal in the app.
+    onError: () => toast({ title: t("work.stopFailed"), icon: "x" }),
     onSettled: () => void qc.invalidateQueries({ queryKey: ["org", orgId, "channel", work.channelId] }),
   });
   const context = {
@@ -62,7 +66,7 @@ function useLine(work: WorkView, inUpdatesThread = false) {
     agentName: agent?.name ?? "",
     nameOf: (id: string) => dir.memberById.get(id)?.name ?? null,
     agentNameOf: (id: string) => dir.anyAgent(id)?.name,
-    canStop: manage || agent?.ownerUserId === meId || work.requestedByUserId === meId,
+    canStop: managesAgent(agent) || agent?.ownerUserId === meId || work.requestedByUserId === meId,
     inUpdatesThread,
   };
   const view = workLine(t, work, context);
@@ -80,8 +84,9 @@ const MAX_ACTIONS = 3;
  * The work as a card that matches where it stands. In a message's body, the conversation's own card (as the tool
  * block's, the receipts' and the team checks': a hairline, radius 14, the cut corner) on the body's edges, off the part
  * above by the body's card gap (`useCardTop`). On a task's screen, the screen's card (radius 20 with the cut corner,
- * the raised surface and its lit top), as the work card over it; the screen places it. Either way its text, actions
- * and the plan under them (`below`) share one column: 14 + mark 16 + 10 = 40 from the card's left edge.
+ * the raised surface and its lit top), as the work card over it; the screen places it. Its text and the plan under it
+ * (`below`) share one column, 14 + mark 16 + 10 = 40 from the card's left edge; its actions are the card's foot in a
+ * message (equal buttons under a hairline) and words in that column on a task's screen.
  */
 function Line({
   work,
@@ -99,7 +104,9 @@ function Line({
 }) {
   const c = useColors();
   const surface = useSurface();
+  const part = useBubblePart();
   const cardTop = useCardTop();
+  const fontScale = useFontScale();
   const inBody = useContext(RowPartContext) !== null;
   const line = useLine(work, inUpdatesThread);
   const { stop, t } = line;
@@ -121,42 +128,28 @@ function Line({
     if (!jump?.(messageId)) router.push(chatHref(work.channelId, work.homeThreadId));
   };
   // Priority when more than MAX_ACTIONS apply: stopping, then the result, the task, the thread; shown in reading order.
-  const all: { key: string; rank: number; node: ReactNode }[] = [];
-  if (onThread && view.threadId)
-    all.push({ key: "thread", rank: 3, node: <Action key="thread" label={t("work.openThread")} onPress={onThread} /> });
+  const all: (WorkAction & { rank: number })[] = [];
+  if (onThread && view.threadId) all.push({ key: "thread", rank: 3, label: t("work.openThread"), onPress: onThread });
   if (view.task) {
     const number = view.task.number;
-    all.push({
-      key: "task",
-      rank: 2,
-      node: <Action key="task" label={view.task.label} onPress={() => router.push(`/issues/${number}`)} />,
-    });
+    all.push({ key: "task", rank: 2, label: view.task.label, onPress: () => router.push(`/issues/${number}`) });
   }
   if (view.result) {
     const messageId = view.result.messageId;
-    all.push({
-      key: "result",
-      rank: 1,
-      node: <Action key="result" label={view.result.label} onPress={() => seeResult(messageId)} />,
-    });
+    all.push({ key: "result", rank: 1, label: view.result.label, onPress: () => seeResult(messageId) });
   }
   if (view.stop) {
     const runId = view.stop.runId;
     all.push({
       key: "stop",
       rank: 0,
-      node: (
-        <Action
-          key="stop"
-          label={t("work.stop")}
-          danger
-          disabled={stop.isPending}
-          onPress={() => {
-            haptics.firm();
-            stop.mutate(runId);
-          }}
-        />
-      ),
+      label: t("work.stop"),
+      danger: true,
+      disabled: stop.isPending,
+      onPress: () => {
+        haptics.firm();
+        stop.mutate(runId);
+      },
     });
   }
   const kept = new Set(
@@ -165,84 +158,155 @@ function Line({
       .slice(0, MAX_ACTIONS)
       .map((a) => a.key),
   );
-  const actions = all.filter((a) => kept.has(a.key)).map((a) => a.node);
-  return (
-    <View
-      style={[
-        styles.line,
-        inBody ? [styles.inBody, { backgroundColor: c.raised, borderColor: c.line2 }] : surface,
-        cardTop,
-      ]}
-      accessibilityRole="summary"
-    >
-      {/* On the first line's reading middle. */}
-      <View style={styles.mark}>
-        {view.tone === "working" ? (
-          <LineIcon variant="small" size={12} mark>
-            <PixelOrbit color="sky" size={12} />
-          </LineIcon>
-        ) : (
-          <LineIcon variant="small" name={mark.icon} size={12} color={mark.color} />
-        )}
-      </View>
-      <View style={styles.body}>
-        <Text variant="small" tone="ink2">
-          {h ? (
-            <>
-              <Trans i18nKey="work.handed.lead" values={{ name: line.agentName }} components={[<Text key="face" />]} />
-              {" · "}
-              <Text
-                variant="small"
-                style={[styles.bold, { color: h.tone === "working" ? c.agent : h.tone === "waiting" ? c.warn : c.ink }]}
-              >
-                {h.state}
-              </Text>
-              {h.facts.map((fact) => ` · ${fact}`).join("")}
-            </>
-          ) : (
-            view.text
-          )}
+  const actions = all.filter((a) => kept.has(a.key));
+  // The state's words, the handed work's or the work's own, at the given size.
+  const said = (variant: "small" | "caption") =>
+    h ? (
+      <>
+        <Trans i18nKey="work.handed.lead" values={{ name: line.agentName }} components={[<Text key="face" />]} />
+        {" · "}
+        <Text
+          variant={variant}
+          style={[styles.bold, { color: h.tone === "working" ? c.agent : h.tone === "waiting" ? c.warn : c.ink }]}
+        >
+          {h.state}
         </Text>
-        {view.question ? (
-          <Text variant="small" tone="ink" numberOfLines={2}>
-            {view.question.text}
+        {h.facts.map((fact) => ` · ${fact}`).join("")}
+      </>
+    ) : (
+      view.text
+    );
+  const markOf = (variant: "small" | "caption", size: number) =>
+    view.tone === "working" ? (
+      <LineIcon variant={variant} size={size} mark>
+        <PixelOrbit color="sky" size={size - 2} />
+      </LineIcon>
+    ) : (
+      <LineIcon variant={variant} name={mark.icon} size={size} color={mark.color} />
+    );
+  if (inBody) {
+    // In a message: a quiet line under it, in the conversation's working line's words (a card under the bubble read
+    // as a dialog in the chat). The way to the work (its result, its task or its thread) is its words' tap, said after
+    // them; "Parar" ends the line after a thin rule, neutral until pressed.
+    const go = actions.filter((a) => !a.danger).sort((a, b) => a.rank - b.rank)[0];
+    const halt = actions.find((a) => a.danger);
+    return (
+      <View style={[styles.quiet, part ? styles.quietInBubble : null, cardTop]} accessibilityRole="summary">
+        <View style={styles.quietMark}>{markOf("caption", QUIET_MARK)}</View>
+        <Pressable
+          onPress={go?.onPress}
+          disabled={!go}
+          accessibilityRole={go ? "button" : undefined}
+          {...(go ? { accessibilityHint: go.label } : {})}
+          style={({ pressed }) => [styles.quietWords, pressed && styles.pressed]}
+        >
+          <Text variant="caption" tone="muted">
+            {said("caption")}
+            {go ? (
+              <>
+                {" · "}
+                <Text variant="caption" style={[styles.bold, { color: c.ink2 }]}>
+                  {go.label}
+                </Text>
+              </>
+            ) : null}
           </Text>
+          {view.question ? (
+            <Text variant="caption" tone="ink" numberOfLines={2}>
+              {view.question.text}
+            </Text>
+          ) : null}
+          {view.update ? (
+            <Text variant="caption" tone="faint">
+              {view.update}
+            </Text>
+          ) : null}
+        </Pressable>
+        {halt ? (
+          <View style={[styles.quietStop, { height: textLineOf("caption", fontScale).height }]}>
+            <View style={[styles.rule, { backgroundColor: c.line }]} />
+            <Pressable
+              onPress={halt.onPress}
+              disabled={halt.disabled}
+              accessibilityRole="button"
+              accessibilityLabel={halt.label}
+              // A caption word: 14 above and under make the 44 a finger needs.
+              hitSlop={{ top: 14, bottom: 14, left: 8, right: 8 }}
+            >
+              {({ pressed }) => (
+                <Text
+                  variant="caption"
+                  style={[styles.bold, { color: halt.disabled ? c.faint : pressed ? c.danger : c.ink }]}
+                >
+                  {halt.label}
+                </Text>
+              )}
+            </Pressable>
+          </View>
         ) : null}
-        {view.update ? (
-          <Text variant="small" tone="muted">
-            {view.update}
+      </View>
+    );
+  }
+  return (
+    <View style={[styles.card, surface]} accessibilityRole="summary">
+      <View style={styles.line}>
+        {/* On the first line's reading middle. */}
+        <View style={styles.mark}>{markOf("small", MARK)}</View>
+        <View style={styles.body}>
+          <Text variant="small" tone="ink2">
+            {said("small")}
           </Text>
-        ) : null}
-        {actions.length > 0 ? <View style={styles.actions}>{actions}</View> : null}
-        {below}
+          {view.question ? (
+            <Text variant="small" tone="ink" numberOfLines={2}>
+              {view.question.text}
+            </Text>
+          ) : null}
+          {view.update ? (
+            <Text variant="small" tone="muted">
+              {view.update}
+            </Text>
+          ) : null}
+          {actions.length > 0 ? (
+            <View style={styles.actions}>
+              {actions.map((a) => (
+                <Action key={a.key} action={a} />
+              ))}
+            </View>
+          ) : null}
+          {below}
+        </View>
       </View>
     </View>
   );
 }
 
-function Action({
-  label,
-  onPress,
-  danger,
-  disabled,
-}: {
+/** One of the work's actions: what it says, what it does, and whether it stops the work (`danger`). */
+interface WorkAction {
+  key: string;
   label: string;
   onPress: () => void;
   danger?: boolean;
   disabled?: boolean;
-}) {
+}
+
+/** The status mark beside the line, on its first line's middle; in a message's quiet line, the caption's size. */
+const MARK = 16;
+const QUIET_MARK = 14;
+
+/** One action in words, on a task's screen: neutral, the stop in the danger color. */
+function Action({ action: a }: { action: WorkAction }) {
   const c = useColors();
   return (
     // 44 tall to the finger; across, no more than the gap to the next action.
     <Pressable
-      onPress={onPress}
-      disabled={disabled}
+      onPress={a.onPress}
+      disabled={a.disabled}
       accessibilityRole="button"
       hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
       style={({ pressed }) => pressed && styles.pressed}
     >
-      <Text variant="small" style={[styles.action, { color: disabled ? c.faint : danger ? c.danger : c.agent }]}>
-        {label}
+      <Text variant="small" style={[styles.action, { color: a.disabled ? c.faint : a.danger ? c.danger : c.ink }]}>
+        {a.label}
       </Text>
     </Pressable>
   );
@@ -288,8 +352,9 @@ export function IssueWorkLine({ issue, style }: { issue: Issue; style?: StylePro
   const progress = work ? workPlanProgress(work) : null;
   return (
     <View style={[styles.block, style]}>
+      {/* A state is its words in the state's color, never a label on a tinted plate. */}
       {blocked ? (
-        <Text variant="small" style={[styles.blocked, { backgroundColor: c.warnSoft, color: c.warn }]}>
+        <Text variant="small" style={[styles.blocked, { color: c.warn }]}>
           {blocked}
         </Text>
       ) : null}
@@ -332,7 +397,7 @@ export function IssueWorkLine({ issue, style }: { issue: Issue; style?: StylePro
  */
 function HandedWork({ work, style }: { work: WorkView; style?: StyleProp<ViewStyle> }) {
   const { t, i18n } = useTranslation();
-  const dir = useDirectory();
+  const dir = useRowDirectory();
   const surface = useSurface();
   if (work.status === "done") {
     const name = dir.anyAgent(work.agentId)?.name ?? t("channel.unknownAgent");
@@ -382,7 +447,7 @@ function HandedWork({ work, style }: { work: WorkView; style?: StyleProp<ViewSty
 export function useShareWork(issue: Issue): { share: () => void; pending: boolean } | null {
   const { t } = useTranslation();
   const orgId = useOrgId();
-  const meId = useMeId();
+  const meId = useRowMeId();
   const admin = can(useOrg().org, "manage_agents");
   const api = useApi();
   const qc = useQueryClient();
@@ -394,7 +459,7 @@ export function useShareWork(issue: Issue): { share: () => void; pending: boolea
       toast({ title: t("work.shared"), icon: "check" });
       void qc.invalidateQueries({ queryKey: ["org", orgId, "issues"] });
     },
-    onError: () => toast({ title: t("work.shareFailed"), icon: "info" }),
+    onError: () => toast({ title: t("work.shareFailed"), icon: "x" }),
   });
   const work = issue.backgroundWork;
   const mayShare =
@@ -413,37 +478,33 @@ export function useShareWork(issue: Issue): { share: () => void; pending: boolea
 }
 
 const styles = StyleSheet.create({
-  // The app's card: radius 20 with the cut corner; text at 14 + 16 + 10 = 40 from its left edge.
-  line: {
+  // The app's card: radius 20 with the cut corner.
+  card: { borderRadius: 20, borderBottomLeftRadius: 6 },
+  // The mark and the words: text at 14 + 16 + 10 = 40 from the card's left edge.
+  line: { flexDirection: "row", gap: 10, paddingHorizontal: 14, paddingVertical: 12 },
+  // In a message: the line under it, as wide as its words, a little under the part above.
+  quiet: {
     flexDirection: "row",
-    gap: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 20,
-    borderBottomLeftRadius: 6,
+    alignItems: "flex-start",
+    alignSelf: "flex-start",
+    maxWidth: "100%",
+    gap: 6,
+    paddingTop: 4,
   },
-  // In a message's body: the conversation's card family (ToolCalls, Receipts, TeamChecks, ReachLines).
-  inBody: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderTopLeftRadius: 14,
-    borderTopRightRadius: 14,
-    borderBottomRightRadius: 14,
-    borderBottomLeftRadius: 6,
-  },
+  // Under a bubble: its mark where the bubble's words start.
+  quietInBubble: { paddingLeft: 14 },
+  quietMark: { width: QUIET_MARK, alignItems: "center" },
+  quietWords: { flexShrink: 1, minWidth: 0, gap: 2 },
+  // The rule and "Parar" on the words' first line.
+  quietStop: { flexDirection: "row", alignItems: "center", gap: 8, paddingLeft: 2 },
+  rule: { width: StyleSheet.hairlineWidth, height: 12 },
   mark: { width: 16, alignItems: "center" },
   body: { flex: 1, minWidth: 0, gap: 4 },
   actions: { flexDirection: "row", flexWrap: "wrap", columnGap: 16, rowGap: 4, marginTop: 4 },
   action: { fontWeight: "600" },
   pressed: { opacity: 0.6 },
   block: { gap: 12 },
-  blocked: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-    overflow: "hidden",
-    fontWeight: "600",
-  },
+  blocked: { fontWeight: "600" },
   // Under the actions, on the card's text column.
   plan: { gap: 6, marginTop: 8 },
   step: { flexDirection: "row", gap: 8, alignItems: "flex-start" },

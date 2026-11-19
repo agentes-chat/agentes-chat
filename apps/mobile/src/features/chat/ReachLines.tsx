@@ -4,7 +4,6 @@ import {
   type ForeignMailbox,
   type Message,
   useChannels,
-  useRoles,
   useWidenAudience,
 } from "@agenteschat/client";
 import {
@@ -26,11 +25,12 @@ import { useTranslation } from "react-i18next";
 import { Alert, StyleSheet, View } from "react-native";
 import { useOrg } from "@/providers/org";
 import { Button, LineIcon, ROW_CARD_INSET, RowAction, Text, useTheme, useToast } from "@/ui";
-import { useDirectory, useMeId, useOrgId } from "../shared/hooks";
+import { useOrgId } from "../shared/hooks";
 import { tapHaptic } from "../shared/parts";
 import { boldRuns } from "./actions";
 import { ConsultPairRow, useConsultById } from "./ConsultGroup";
-import { useCardTop, useRhythm } from "./look";
+import { useCardTop, useMessageCardCorners, useRhythm } from "./look";
+import { useRowDirectory, useRowMeId, useRowRoles } from "./row-data";
 
 const LIST_GAP = 8;
 
@@ -68,8 +68,9 @@ function Row({
   const { t } = useTranslation();
   const rhythm = useRhythm();
   const { colors } = useTheme();
+  const cardCorners = useMessageCardCorners();
   const orgId = useOrgId();
-  const dir = useDirectory();
+  const dir = useRowDirectory();
   const channel = useChannels(orgId).data?.find((c) => c.id === channelId);
   // A DM isn't in the channel list: "in this conversation".
   const place = channel ? t("reach.inChannel", { name: channel.name }) : t("reach.inHere");
@@ -99,7 +100,7 @@ function Row({
       />
     );
   return (
-    <View style={[styles.one, { backgroundColor: colors.raised, borderColor: colors.line2 }]}>
+    <View style={[styles.one, { backgroundColor: colors.raised, borderColor: colors.line2 }, cardCorners]}>
       <View style={styles.head}>
         <LineIcon name={handed ? "chat" : "info"} size={15} color={colors.muted} variant="small" />
         <View style={styles.words}>
@@ -140,8 +141,8 @@ export function AllowTalkAction({ agent, userId }: { agent: Agent; userId: strin
   const { t } = useTranslation();
   const orgId = useOrgId();
   const { org } = useOrg();
-  const me = useMeId();
-  const dir = useDirectory();
+  const me = useRowMeId();
+  const dir = useRowDirectory();
   const toast = useToast();
   const save = useWidenAudience(orgId, agent.id);
   const ask = useWidenAsk(agent);
@@ -153,6 +154,8 @@ export function AllowTalkAction({ agent, userId }: { agent: Agent; userId: strin
   return (
     <RowAction
       label={t("reach.allow", { person, context: g.context })}
+      // Off while it saves and once done: a second tap isn't offered (the toast says it took).
+      disabled={save.busy || save.done}
       onPress={() => {
         if (save.busy || save.done) return;
         tapHaptic();
@@ -174,7 +177,7 @@ export function LetMeTalkButton({ agent }: { agent: Agent }) {
   const { t } = useTranslation();
   const orgId = useOrgId();
   const { org } = useOrg();
-  const me = useMeId();
+  const me = useRowMeId();
   const toast = useToast();
   const save = useWidenAudience(orgId, agent.id);
   const ask = useWidenAsk(agent);
@@ -182,19 +185,23 @@ export function LetMeTalkButton({ agent }: { agent: Agent }) {
   if (!audience) return null;
   const g = agentGrammar(agent.name);
   return (
-    <Button
-      variant="primary"
-      size="sm"
-      label={t("reach.allowMe", g)}
-      disabled={save.busy || save.done}
-      onPress={() => {
-        tapHaptic();
-        save
-          .saveAsync(audience, ask(audience))
-          .then((saved) => saved && toast({ title: t("reach.allowedMe", g) }))
-          .catch((error: unknown) => toast({ title: errorText(t, error), icon: "x" }));
-      }}
-    />
+    // Centered under the centered words it follows, on the agent's page and in place of the composer: a button keeps
+    // to the left by itself.
+    <View style={styles.letIn}>
+      <Button
+        variant="primary"
+        size="sm"
+        label={t("reach.allowMe", g)}
+        disabled={save.busy || save.done}
+        onPress={() => {
+          tapHaptic();
+          save
+            .saveAsync(audience, ask(audience))
+            .then((saved) => saved && toast({ title: t("reach.allowedMe", g) }))
+            .catch((error: unknown) => toast({ title: errorText(t, error), icon: "x" }));
+        }}
+      />
+    </View>
   );
 }
 
@@ -204,8 +211,8 @@ export function LetMeTalkButton({ agent }: { agent: Agent }) {
  */
 export function AgentLocked({ agent }: { agent: Agent }) {
   const { t } = useTranslation();
-  const dir = useDirectory();
-  const roles = useRoles(useOrgId()).data?.roles;
+  const dir = useRowDirectory();
+  const roles = useRowRoles();
   const notice = audienceNotice(
     t,
     agent,
@@ -229,8 +236,8 @@ export function AgentLocked({ agent }: { agent: Agent }) {
 export function UnavailableLines({ notices }: { notices: AgentUnavailableEvent[] }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
-  const dir = useDirectory();
-  const roles = useRoles(useOrgId()).data?.roles;
+  const dir = useRowDirectory();
+  const roles = useRowRoles();
   if (notices.length === 0) return null;
   return (
     <View style={styles.unavailable} accessibilityLiveRegion="polite">
@@ -259,8 +266,8 @@ export function UnavailableLines({ notices }: { notices: AgentUnavailableEvent[]
  */
 export function useWidenAsk(agent: Agent | undefined) {
   const { t } = useTranslation();
-  const dir = useDirectory();
-  const me = useMeId();
+  const dir = useRowDirectory();
+  const me = useRowMeId();
   return (next: AgentAudience) =>
     (mailboxes: ForeignMailbox[]): Promise<boolean> => {
       if (!agent) return Promise.resolve(true);
@@ -295,6 +302,8 @@ const styles = StyleSheet.create({
   unavailableRow: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
   grow: { flex: 1, minWidth: 0 },
   lockedText: { textAlign: "center" },
+  // A row, centered along it: the button's own `alignSelf` would beat a column's `alignItems`.
+  letIn: { alignSelf: "stretch", flexDirection: "row", justifyContent: "center" },
   bold: { fontWeight: "600" },
   // The icon on the words' first line, the words across the card, as wide as they are; the action under them on their
   // column.

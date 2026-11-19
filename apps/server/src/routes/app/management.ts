@@ -3,6 +3,7 @@ import {
   AGENT_SORTS,
   AGENT_STYLES,
   agentDetail,
+  agentRights,
   agentView,
   announceMembers,
   audienceOf,
@@ -14,6 +15,7 @@ import {
   canViewCost,
   continuePausedRuns,
   continueRun,
+  editorsOf,
   GIF_RATINGS,
   getMembership,
   getOrgSettings,
@@ -68,6 +70,7 @@ import {
   setAgentChannels,
   setAgentStyle,
   setChatPrefs,
+  setConversationWallpaper,
   setMyIssuesView,
   setMySidebarItem,
   setMySidebarItems,
@@ -100,6 +103,7 @@ import {
   json,
   keyTester,
   OrgParams,
+  requestBaseUrl,
   requireSession,
   security,
 } from "./context";
@@ -107,16 +111,19 @@ import { credentialOut } from "./credential-view";
 import {
   AgentAppearance,
   AgentAudience,
+  AgentEditors,
   ApprovalsLevel,
   CanceledReturn,
   ChatPrefs,
   Credential,
   Model,
   ModelTier,
+  OutsideOf,
   PendingReturn,
   ProviderId,
   Role,
   StartChoice,
+  Wallpaper,
   WorkState,
 } from "./schemas";
 
@@ -300,6 +307,7 @@ const Person = z
     roleIds: z.array(z.string()).openapi({ description: "Their roles (`org_roles` ids), not `everyone`." }),
     joinedAt: z.string(),
     lastSeenAt: z.string().nullable(),
+    outsideOf: OutsideOf,
     online: z.boolean().openapi({ description: "Seen as connected: `presence` is online, away or busy." }),
     presence: z.enum(["online", "away", "busy", "out", "hidden", "offline"]).openapi({
       description:
@@ -370,9 +378,13 @@ const AgentDetail = z
     audience: AgentAudience,
     audienceMode: z.enum(["everyone", "people", "owner"]),
     canTalk: z.boolean(),
+    canManage: z.boolean().openapi({ description: "Whether the current person manages it (as on the agent)." }),
+    canEdit: z.boolean().openapi({ description: "Whether the current person edits how it works (as on the agent)." }),
+    canManageRoutines: z.boolean().openapi({ description: "Whether the current person sets up its routines." }),
+    editors: AgentEditors,
     seesDetails: z.boolean().openapi({
       description:
-        "Whether the current person sees how it works (its owner, who manages agents, whoever it answers). Without it the instructions are empty and the month's numbers zero: only its public card.",
+        "Whether the current person sees how it works (who edits it and whoever it answers). Without it the instructions are empty and the month's numbers zero: only its public card.",
     }),
     appearance: AgentAppearance.nullable(),
     mediaReplies: z.boolean().openapi({
@@ -461,7 +473,7 @@ const ManagedTask = z
         from: z
           .object({
             channelId: z.uuid(),
-            channelKind: z.enum(["channel", "dm", "task"]),
+            channelKind: z.enum(["channel", "dm", "task", "file"]),
             channelName: z.string().nullable(),
             threadId: z.uuid().nullable(),
             messageId: z.uuid().nullable(),
@@ -701,7 +713,7 @@ export function managementRoutes(deps: AppDeps) {
       path: "/organizations/{orgId}/approvals-level",
       tags: ["Organization"],
       security,
-      summary: "Set how much the workspace's agents ask before acting (who manages agents)",
+      summary: "Set how much the workspace's agents ask before acting (owners and administrators)",
       description:
         "Every agent that follows the workspace takes the level at once; an agent with its own choice keeps it unless `everyAgent` is true, which clears every agent's own choice.",
       request: {
@@ -928,7 +940,47 @@ export function managementRoutes(deps: AppDeps) {
     }),
     async (c) => {
       const { orgId } = c.req.valid("param");
-      return c.json(await setChatPrefs(db, c.get("user").id, orgId, c.req.valid("json")), 200);
+      return c.json(await setChatPrefs(db, c.get("user").id, orgId, c.req.valid("json"), adapters.pubsub), 200);
+    },
+  );
+
+  const wallpaperRoute = {
+    path: "/organizations/{orgId}/channels/{channelId}/wallpaper",
+    tags: ["Members"],
+    security,
+    description:
+      'Yours alone, on every device: it wins over `wallpaper` in `chatPrefs` and comes back in `chatPrefs.wallpapers` (by channel id). `{ kind: "none" }` is no background here even where the others have one. A photo has to be one of yours (`PUT …/me/wallpaper-photo`): 400 `wallpaper.photo_not_yours`. Members only. Your other devices hear `chat.prefs`.',
+    responses: { 200: json(ChatPrefs), ...errors },
+  };
+  app.openapi(
+    createRoute({
+      ...wallpaperRoute,
+      method: "put",
+      summary: "Give a conversation you're in a background of its own, for you",
+      request: {
+        params: OrgParams.extend({ channelId: z.uuid() }),
+        body: body(z.object({ wallpaper: Wallpaper })),
+      },
+    }),
+    async (c) => {
+      const { orgId, channelId } = c.req.valid("param");
+      const { wallpaper } = c.req.valid("json");
+      return c.json(
+        await setConversationWallpaper(db, c.get("user").id, orgId, channelId, wallpaper, adapters.pubsub),
+        200,
+      );
+    },
+  );
+  app.openapi(
+    createRoute({
+      ...wallpaperRoute,
+      method: "delete",
+      summary: "Let a conversation follow your channels' or DMs' background again",
+      request: { params: OrgParams.extend({ channelId: z.uuid() }) },
+    }),
+    async (c) => {
+      const { orgId, channelId } = c.req.valid("param");
+      return c.json(await setConversationWallpaper(db, c.get("user").id, orgId, channelId, null, adapters.pubsub), 200);
     },
   );
 
@@ -1170,7 +1222,7 @@ export function managementRoutes(deps: AppDeps) {
     },
   );
 
-  const inviteUrl = (token: string) => `${config.PUBLIC_URL.replace(/\/$/, "")}/invite/${token}`;
+  const inviteUrl = (base: string, token: string) => `${base}/invite/${token}`;
 
   app.openapi(
     createRoute({
@@ -1185,6 +1237,7 @@ export function managementRoutes(deps: AppDeps) {
     async (c) => {
       const { orgId } = c.req.valid("param");
       const rows = await listInvitationsWithStatus(db, c.get("user").id, orgId, new Date(), config.AGENTES_SECRET);
+      const base = await requestBaseUrl(deps, c.req.raw.headers);
       return c.json(
         {
           invitations: rows.map((i) => ({
@@ -1198,7 +1251,7 @@ export function managementRoutes(deps: AppDeps) {
             expiresAt: i.expiresAt.toISOString(),
             createdAt: i.createdAt.toISOString(),
             invitedBy: i.invitedBy,
-            url: i.token ? inviteUrl(i.token) : null,
+            url: i.token ? inviteUrl(base, i.token) : null,
           })),
         },
         200,
@@ -1293,6 +1346,7 @@ export function managementRoutes(deps: AppDeps) {
         ...c.req.valid("json"),
         secret: config.AGENTES_SECRET,
       });
+      const base = await requestBaseUrl(deps, c.req.raw.headers);
       for (const r of results) {
         if (r.status !== "invited") continue;
         await queueInvitationEmail(db, {
@@ -1300,7 +1354,7 @@ export function managementRoutes(deps: AppDeps) {
           invitationId: r.invitationId,
           email: r.email,
           role: "member",
-          url: inviteUrl(r.token),
+          url: inviteUrl(base, r.token),
           inviterId: c.get("user").id,
           secret: config.AGENTES_SECRET,
         });
@@ -1310,7 +1364,7 @@ export function managementRoutes(deps: AppDeps) {
         {
           results: results.map((r) =>
             r.status === "invited"
-              ? { email: r.email, status: r.status, invitationId: r.invitationId, url: inviteUrl(r.token) }
+              ? { email: r.email, status: r.status, invitationId: r.invitationId, url: inviteUrl(base, r.token) }
               : { email: r.email, status: r.status, ...(r.invitationId ? { invitationId: r.invitationId } : {}) },
           ),
         },
@@ -1340,17 +1394,18 @@ export function managementRoutes(deps: AppDeps) {
         new Date(),
         config.AGENTES_SECRET,
       );
+      const base = await requestBaseUrl(deps, c.req.raw.headers);
       await queueInvitationEmail(db, {
         orgId,
         invitationId,
         email: invitation.email,
         role: invitation.role,
-        url: inviteUrl(token),
+        url: inviteUrl(base, token),
         inviterId: c.get("user").id,
         secret: config.AGENTES_SECRET,
       });
       deps.wakeWorkers?.();
-      return c.json({ url: inviteUrl(token), expiresAt: invitation.expiresAt.toISOString() }, 200);
+      return c.json({ url: inviteUrl(base, token), expiresAt: invitation.expiresAt.toISOString() }, 200);
     },
   );
 
@@ -1589,6 +1644,8 @@ export function managementRoutes(deps: AppDeps) {
           audience: audienceOf(d.agent),
           audienceMode: d.agent.audienceMode,
           canTalk: canTalkTo(d.agent, userId, speakerOf(viewer)),
+          ...agentRights(d.agent, userId, viewer),
+          editors: seesDetails ? editorsOf(d.agent) : { userIds: [], roleIds: [] },
           seesDetails,
           appearance: v.appearance,
           mediaReplies: v.mediaReplies,
@@ -1932,7 +1989,7 @@ export function managementRoutes(deps: AppDeps) {
               .openapi({ description: "Calls the server pays for (Jev), not in the total." }),
             byKind: z.array(
               z.object({
-                kind: z.enum(["agent", "router", "embedding", "summary"]),
+                kind: z.enum(["agent", "router", "embedding", "summary", "image"]),
                 calls: z.number(),
                 partialCalls: z.number(),
                 inputTokens: z.number(),

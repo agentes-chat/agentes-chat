@@ -309,7 +309,7 @@ export function fakeRunner(hub: MachineHub, options: FakeRunnerOptions = {}) {
         conn,
         JSON.stringify({ type: "hello", token, ...RUNNER, exec: options.execAllowed !== false, ...extra }),
       ),
-    disconnect: () => hub.close(conn),
+    disconnect: (close?: { code: number; reason: string }) => hub.close(conn, close),
     /** Sends a frame as this runner. */
     frame: (frame: Record<string, unknown>) => reply(frame),
   };

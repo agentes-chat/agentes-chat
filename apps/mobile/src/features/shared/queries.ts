@@ -47,7 +47,10 @@ export function useWorkingNow() {
 /** My threads and missions, the latest 50 (Conversas' rows and the Threads tab). */
 const THREAD_LIST = { tab: "all", mine: true, limit: 50 } as const;
 
-/** The agents my lists leave out (`hiddenAgentIds`), and whether the directory that names them is still loading. */
+/**
+ * The agents whose DMs my conversation lists leave out (`hiddenAgentIds`: their DM wouldn't open for me), and whether
+ * the directory that names them is still loading.
+ */
 export function useHiddenAgents() {
   const org = useOrg().org;
   const dir = useDirectory();
@@ -86,7 +89,7 @@ export function useConversations() {
   };
 }
 
-/** The badge of Conversas: channels and DMs with something unread (the home's sections; threads have their tab). */
+/** The badge of Conversas: channels and DMs with something unread (the home's Recent list; threads have their tab). */
 export function useUnreadConversations() {
   const orgId = useOrgId();
   const channels = useChannels(orgId);

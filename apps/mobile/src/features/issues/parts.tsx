@@ -1,8 +1,7 @@
 import type { Issue, IssueColumn, IssueProjectRef } from "@agenteschat/client";
-import { useIssueProjects, useTaskUnread } from "@agenteschat/client";
+import { useTaskUnread } from "@agenteschat/client";
 import { dueLabel, dueTone, joinNames } from "@agenteschat/client/lib/format";
 import { githubLinkLabel } from "@agenteschat/client/lib/github-link";
-import { pickableProjects } from "@agenteschat/client/lib/issue-projects";
 import {
   type CardState,
   cardState,
@@ -11,19 +10,20 @@ import {
   isOpen,
   taskAgentId,
 } from "@agenteschat/client/lib/issues";
-import { codeAndBoldParts } from "@agenteschat/client/lib/markdown";
 import { stepPhrase } from "@agenteschat/client/lib/work";
 import { bodyTones } from "@agenteschat/ui/agent/engine";
 import { memo, type ReactNode, useCallback } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { Pressable, Text as RNText, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import {
   Chip,
+  CodeWords,
   Icon,
   IconButton,
   type IconName,
   PixelOrbit,
+  PressScale,
   Sky,
   Text,
   type TextProps,
@@ -39,7 +39,7 @@ import { router } from "@/ui/navigation";
 import { Face } from "../shared/Face";
 import { useColors, useDirectory, useOrgId } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
-import { type ActionItem, MentionCount, MONO, Tile, useSurface } from "../shared/parts";
+import { MentionCount, Tile, useSurface } from "../shared/parts";
 import { criteriaProgress, type IssueState, issueState, latestPr } from "./logic";
 
 /** An agent's step in the person's words ("Mexeu nos arquivos do PC · trips.service.ts"), as the web says it. */
@@ -85,22 +85,9 @@ export function ColumnHeader({ label, count, onNew }: { label: string; count: nu
 
 /** A task's title, whole, with its `code` as the inline code pill and its **bold** (the web card's); no links. */
 export function TaskTitle({ title, ...text }: { title: string } & Omit<TextProps, "children">) {
-  const c = useColors();
   return (
     <Text {...text}>
-      {codeAndBoldParts(title).map((part, k) =>
-        part.mark ? (
-          <RNText
-            // biome-ignore lint/suspicious/noArrayIndexKey: the pieces of one title, in order
-            key={k}
-            style={part.mark === "code" ? [styles.code, { backgroundColor: c.sunken, color: c.ink2 }] : styles.heavy}
-          >
-            {part.text}
-          </RNText>
-        ) : (
-          part.text
-        ),
-      )}
+      <CodeWords text={title} />
     </Text>
   );
 }
@@ -340,9 +327,11 @@ function CardFacts({
 }
 
 /**
- * One task on the board, in the web card's three parts: the title, whole; one row of facts; who has it (the face 24,
- * moving while its agent works) and its one state. An agent waiting on a person puts its sky at the card's top, faded
- * in. A long name wraps beside the face, on the face's line first; a state that doesn't fit goes under, whole.
+ * One task on the board, in the web card's three parts: the title in the cards' type (the subhead, semibold, three
+ * lines at most: the task's screen says it whole); one row of facts; who has it (the face 24, moving while its agent
+ * works) and its one state. An agent waiting on a person puts its sky at the card's top, faded in. A long name wraps
+ * beside the face, on the face's line first; a state that doesn't fit goes under, whole. It gives under the finger as
+ * the Drive's cards do (`PressScale`); opening the task is its feedback.
  */
 export const BoardCard = memo(function BoardCard({
   issue: i,
@@ -365,7 +354,9 @@ export const BoardCard = memo(function BoardCard({
   // Mentions of me not read in its conversation (ADR 0145), red as on the web's card.
   const { mentions, unread } = useTaskUnread(useOrgId(), i.id);
   return (
-    <Pressable
+    <PressScale
+      haptic={false}
+      fill={false}
       onPress={() => router.push(`/issues/${i.number}`)}
       accessibilityRole="button"
       accessibilityLabel={[
@@ -375,7 +366,8 @@ export const BoardCard = memo(function BoardCard({
       ]
         .filter(Boolean)
         .join(", ")}
-      style={({ pressed }) => [styles.card, surface, pressed && styles.pressed]}
+      style={[styles.card, surface]}
+      contentStyle={styles.cardIn}
     >
       {cardWaits(state) ? (
         <Animated.View entering={reduced ? undefined : FadeIn.duration(200)} style={styles.sky}>
@@ -388,7 +380,7 @@ export const BoardCard = memo(function BoardCard({
           />
         </Animated.View>
       ) : null}
-      <TaskTitle title={i.title} variant="callout" style={styles.title} />
+      <TaskTitle title={i.title} variant="subhead" numberOfLines={CARD_TITLE_LINES} style={styles.title} />
       <CardFacts issue={i} mentions={mentions} unread={unread > 0} project={project} />
       {i.status === "done" && i.backgroundWork?.result ? (
         <Text variant="caption" tone="ink2">
@@ -413,9 +405,12 @@ export const BoardCard = memo(function BoardCard({
           {state && words ? <StateWords issue={i} state={state} words={words} /> : null}
         </View>
       ) : null}
-    </Pressable>
+    </PressScale>
   );
 });
+
+/** A card's title at most: a long task reads on its screen. */
+const CARD_TITLE_LINES = 3;
 
 /** A project's color as one flat tone, as the web's dot: the middle of the five its dither is drawn in. */
 const projectTone = (color: string) => bodyTones(color)[2];
@@ -435,55 +430,37 @@ export function ProjectDot({ color }: { color?: string | null | undefined }) {
   );
 }
 
-/** A task's project on its card and its row: the dot and the name, which wraps whole inside the line. */
-export function ProjectName({ project }: { project: IssueProjectRef }) {
-  const mark = mediaRowAxis(12, textLineOf("caption", useFontScale())).face;
+/**
+ * A task's project on its card (among the facts, `caption`) and its row (in the row's second line, `small`): the dot
+ * and the name, which wraps whole inside the line.
+ */
+export function ProjectName({
+  project,
+  variant = "caption",
+}: {
+  project: IssueProjectRef;
+  variant?: "caption" | "small";
+}) {
+  const mark = mediaRowAxis(12, textLineOf(variant, useFontScale())).face;
   return (
     <View style={[styles.inline, styles.wraps]}>
       <View style={{ marginTop: mark }}>
         <ProjectDot color={project.color} />
       </View>
-      <Text variant="caption" tone="muted" style={styles.shrink}>
+      <Text variant={variant} tone="muted" style={styles.shrink}>
         {project.name}
       </Text>
     </View>
   );
 }
 
-/**
- * A sheet's rows to pick a task's project: the ones in use (and the task's own, even archived) with their dots, then
- * "Sem projeto", a check on the current one. Projects are created and changed on the web.
- */
-export function useProjectItems() {
-  const { t } = useTranslation();
-  const projects = useIssueProjects(useOrgId()).data?.projects ?? [];
-  return (current: IssueProjectRef | null | undefined, onPick: (projectId: string | null) => void): ActionItem[] => {
-    const check = (on: boolean) => (on ? { trailing: <Icon name="check" size={18} /> } : {});
-    return [
-      ...pickableProjects(projects, current).map((p) => ({
-        key: p.id,
-        label: p.name,
-        leading: <ProjectDot color={p.color} />,
-        ...check(p.id === current?.id),
-        onPress: () => onPick(p.id),
-      })),
-      {
-        key: "none",
-        label: t("issues.projects.none"),
-        leading: <ProjectDot />,
-        ...check(!current),
-        onPress: () => onPick(null),
-      },
-    ];
-  };
-}
-
 /** The strip's value line at the default text size: one line makes the 32 control. */
 const PROP_LINE = textLineOf("subhead", 1).height;
 
 /**
- * A field on a strip: 32 high in the field look, its icon or face and its value; a press opens its picker. A value
- * wider than the screen wraps inside it, never cut, its icon or face on the first line.
+ * A field on a strip: 32 high in the field look, its icon or face and its value; a press opens its picker, the field
+ * giving under the finger as the app's controls do (`PressScale`). A value wider than the screen wraps inside it, never
+ * cut, its icon or face on the first line.
  */
 export function PropChip({
   label,
@@ -501,16 +478,14 @@ export function PropChip({
   const c = useColors();
   const line = textLineOf("subhead", useFontScale()).height;
   return (
-    <Pressable
+    <PressScale
+      fill={false}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${label}: ${value}`}
       hitSlop={{ top: (TOUCH - TOOL_H) / 2, bottom: (TOUCH - TOOL_H) / 2 }}
-      style={({ pressed }) => [
-        styles.prop,
-        { backgroundColor: c.sunken, borderColor: c.line2 },
-        pressed && styles.pressed,
-      ]}
+      style={styles.propBox}
+      contentStyle={[styles.prop, { backgroundColor: c.sunken, borderColor: c.line2 }]}
     >
       <View style={{ height: line, justifyContent: "center" }}>
         {leading ?? (icon ? <Icon name={icon} size={16} color={c.muted} /> : null)}
@@ -518,7 +493,7 @@ export function PropChip({
       <Text variant="subhead" style={styles.propText}>
         {value}
       </Text>
-    </Pressable>
+    </PressScale>
   );
 }
 
@@ -539,8 +514,10 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
   },
   propText: { fontWeight: "600", flexShrink: 1 },
-  card: { borderRadius: 20, paddingHorizontal: 12, paddingVertical: 12, gap: 8, overflow: "hidden" },
-  pressed: { opacity: 0.85 },
+  // The field's width at most the line it sits on: a long value wraps inside it.
+  propBox: { maxWidth: "100%" },
+  card: { borderRadius: 20, overflow: "hidden" },
+  cardIn: { paddingHorizontal: 12, paddingVertical: 12, gap: 8 },
   inline: { flexDirection: "row", alignItems: "center", gap: 4 },
   // A long state (a stopped run's reason) wraps inside the card instead of running past its edge.
   state: { flexShrink: 1, maxWidth: "100%" },
@@ -566,7 +543,6 @@ const styles = StyleSheet.create({
   // A person's photo is 20 (an agent's body 24): either sits in the 24 box, on the name's first line.
   face: { width: 24, height: 24, alignItems: "center", justifyContent: "center" },
   name: { flexShrink: 1 },
-  code: { fontFamily: MONO },
   column: {
     flexDirection: "row",
     alignItems: "center",

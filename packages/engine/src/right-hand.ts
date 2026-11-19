@@ -124,7 +124,11 @@ export async function ensureRightHand(db: Executor, orgId: string): Promise<stri
   const { workspaceApprovalsLevel } = await import("./workspace-approvals");
   const [taken, [other], approvalsLevel] = await Promise.all([
     takenHandles(db, orgId),
-    db.select({ id: agents.id }).from(agents).where(eq(agents.orgId, orgId)).limit(1),
+    db
+      .select({ id: agents.id })
+      .from(agents)
+      .where(and(eq(agents.orgId, orgId), isNull(agents.deletedAt)))
+      .limit(1),
     workspaceApprovalsLevel(db, orgId),
   ]);
   const handle = taken.has(RIGHT_HAND_DEFAULTS.handle)
@@ -320,7 +324,7 @@ export const RIGHT_HAND_TURN = { mode: "chat" } as const;
 
 type ThinkingAgent = Pick<Agent, "orgId" | "brainAccountId" | "machineId"> &
   Partial<Pick<Agent, "builtin" | "ownerUserId" | "brain" | "brainModel" | "brainEffort" | "brainAccountLentBy">> &
-  Partial<Pick<Agent, "planForOthers" | "brainFallback" | "brainExtraUsage" | "credentialId">>;
+  Partial<Pick<Agent, "planForOthers" | "credentialId">>;
 
 /** A person's own AI for the right hand (§11): their row, null when their DM thinks with the workspace's. */
 export async function personalBrain(db: Executor, orgId: string, userId: string) {
@@ -570,7 +574,7 @@ export async function withPersonalBrain<T extends ThinkingAgent>(
   db: Executor,
   agent: T,
   person: string | null | undefined,
-): Promise<{ agent: T; own: boolean }> {
+): Promise<{ agent: T; own: boolean; signedInOn?: string | null }> {
   const own = isRightHand(agent)
     ? ((person ? await personalBrain(db, agent.orgId, person) : null) ??
       (await servingPlanFor(db, agent, person ?? null)))
@@ -584,18 +588,17 @@ export async function withPersonalBrain<T extends ThinkingAgent>(
       brainEffort: own.brainEffort,
       brainAccountId: own.brainAccountId,
       brainAccountLentBy: own.brainAccountLentBy,
-      brainFallback: false,
-      brainExtraUsage: false,
     },
     own: true,
+    signedInOn: "machineId" in own && !own.brainAccountId ? own.machineId : null,
   };
 }
 
 /**
  * An agent as its brain sees it. The right hand is on no computer and its owner is the workspace's (`followOwner`):
  * on a plan it thinks on the computer where that plan's account is signed in, and the plan is its owner's (who pays,
- * as for any agent, ADR 0059 §3). With no account it has no computer. `person`: whose DM the run answers; their own
- * AI (§11) thinks for them in place of the workspace's. A plan thinks for someone else's DM (`planForOthers`) while it
+ * as for any agent, ADR 0059 §3). With no account it has no computer, unless a person's own AI is their computer's
+ * own sign-in. `person`: whose DM the run answers; their own AI (§11) thinks for them in place of the workspace's. A plan thinks for someone else's DM (`planForOthers`) while it
  * serves everyone in the workspace (`machine_accounts.serves`). Every other agent is itself.
  */
 export async function thinkingAgent<T extends ThinkingAgent>(
@@ -604,7 +607,9 @@ export async function thinkingAgent<T extends ThinkingAgent>(
   person?: string | null,
 ): Promise<T> {
   if (!isRightHand(agent)) return agent;
-  const { agent: base, own } = await withPersonalBrain(db, agent, person);
+  const { agent: base, own, signedInOn } = await withPersonalBrain(db, agent, person);
+  // The plan the person's own computer is signed in to: theirs, on that computer, as for any agent they own.
+  if (signedInOn) return { ...base, machineId: signedInOn, ownerUserId: person ?? null, planForOthers: true };
   const [plan] = base.brainAccountId
     ? await db
         .select({

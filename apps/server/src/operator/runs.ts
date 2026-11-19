@@ -32,6 +32,9 @@ import {
   operatorUnanswered,
   operatorUnansweredCounts,
   RELEASE_REASONS,
+  RUN_CLAIM_STAGES_MAX,
+  RUN_CLAIM_TURNS_MAX,
+  RUN_CLAIMS_MAX,
   STOPPED_BY,
   SYSTEM_STOP_REASONS,
 } from "@agenteschat/engine";
@@ -84,7 +87,10 @@ const Run = z
         "What it last waited on that isn't a person: `busy`, `machine_offline`, `plan_limit`, `budget`, `usage_pause`, `work_queue`, `provider_outage`… On an ended run: what it waited on when it ended. Ignore values you don't know.",
     }),
     waitSource: z.string().nullable().openapi({ description: "A long-work pause's: `plan` or `budget`." }),
-    waitResetsAt: Time.nullable().openapi({ description: "When the limit it waits on resets, when known." }),
+    waitResetsAt: Time.nullable().openapi({
+      description:
+        "When the limit it waits on resets, when known. With every account of the order at its limit, the first of them.",
+    }),
     waitAccountId: z.uuid().nullable().openapi({
       description:
         "The AI sign-in whose plan it waits on (`plan_limit`, or a long-work pause on a plan). Null: the plan is its computer's own sign-in, or it waits on a budget or on no plan.",
@@ -92,6 +98,10 @@ const Run = z
     waitAccountMachineId: z.uuid().nullable().openapi({
       description:
         "The computer that sign-in is on. With `waitAccountId` null and this set: that computer's own sign-in is the plan it waits on.",
+    }),
+    accountId: z.uuid().nullable().openapi({
+      description:
+        "The AI account it went on with at its plan's limit (ADR 0041 §6): its plan waits and usage are that account's. Null: its agent's own (`accountId` on the agent).",
     }),
     waitingMachineId: z.uuid().nullable().openapi({ description: "The computer it waits for." }),
     canceled: z
@@ -203,7 +213,7 @@ export const Job = z
       .string()
       .nullable()
       .openapi({
-        description: `Its first ${OPERATOR_JOB_ERROR_MAX} characters; cleared 30 days after the job ended.`,
+        description: `Its first ${OPERATOR_JOB_ERROR_MAX} characters; cleared 30 days after the job ended. Null for a job of a run of a confidential thread.`,
       }),
     lastErrorStatus: z.number().int().nullable().openapi({
       description:
@@ -340,6 +350,41 @@ const Trace = z
         }),
       ),
     }),
+    claims: z
+      .array(
+        z.object({
+          endedAt: Time.nullable().openapi({ description: "When the claim ended; null: it was kept without it." }),
+          totalMs: Count.openapi({ description: "Its stages' time in all." }),
+          queries: Count.openapi({ description: "The SQL statements it issued." }),
+          stages: z
+            .array(
+              z.object({
+                stage: z.string().openapi({
+                  description:
+                    "`claim`, `context`, `model#1` (the turn it is of), `persist`, `events`… `other`: a name not shaped like one the server writes.",
+                }),
+                ms: Count,
+                queries: Count,
+              }),
+            )
+            .openapi({ description: `In the order they ran, at most ${RUN_CLAIM_STAGES_MAX}.` }),
+          stagesCut: z.boolean().openapi({ description: `It kept more than ${RUN_CLAIM_STAGES_MAX} stages.` }),
+          computerTurns: z
+            .array(
+              z.object({
+                warm: z.boolean().openapi({ description: "On a process already open." }),
+                initMs: Count.nullable().openapi({ description: "A new process until it said it was ready." }),
+                firstEventMs: Count.nullable().openapi({ description: "Turn start to its first event." }),
+              }),
+            )
+            .openapi({
+              description: `How each of its turns on a computer started, as the computer said, at most ${RUN_CLAIM_TURNS_MAX}.`,
+            }),
+        }),
+      )
+      .openapi({
+        description: `Where the time went each time a worker took the run up (a claim), oldest first: the last ${RUN_CLAIMS_MAX} the run kept, none on a run that kept none. A wait between two claims is in neither.`,
+      }),
     machine: z
       .object({
         id: z.uuid(),
@@ -711,7 +756,8 @@ export function registerOperatorRuns(api: OpenAPIHono, { db, config }: OperatorD
       method: "get",
       path: "/runs/{runId}/trace",
       tags,
-      summary: "One run from start to end: its steps, what it asked, its jobs, what it spent and its computer",
+      summary:
+        "One run from start to end: its steps, what it asked, its jobs, what it spent, where its time went and its computer",
       description:
         "Which tool each step called, whether it is the server's own, whether it failed and how, and how big its input and result were, never either of them. The steps page back from the end with `beforeSeq`.",
       request: { params: RunParams, query: TraceQuery },

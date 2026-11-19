@@ -433,13 +433,10 @@ export class ClaudeStreamParser {
           if (failure.cause || failure.httpStatus) this.failure = failure;
         }
         const forbidden = this.planKey && ev.error_status === 403;
-        if (
-          ev.subtype === "api_retry" &&
-          !forbidden &&
-          (ev.error === "authentication_failed" || ev.error_status === 401)
-        ) {
-          this.authFailed = true;
-          return { events: [], authRetry: true };
+        if (ev.subtype === "api_retry") {
+          // Only the last retry counts: a later one for another reason got past the sign-in.
+          this.authFailed = !forbidden && (ev.error === "authentication_failed" || ev.error_status === 401);
+          if (this.authFailed) return { events: [], authRetry: true };
         }
         if (ev.subtype === "api_retry" && ev.error === "rate_limit") this.limited = true;
         // Claude Code says `init` as each turn starts (also one it starts by itself).
@@ -469,7 +466,8 @@ export class ClaudeStreamParser {
       }
       case "assistant": {
         if (!main) return { events: [] };
-        if (ev.error === "authentication_failed") this.authFailed = true;
+        // An answer from the model: the sign-in worked, whatever a retry before it said.
+        this.authFailed = ev.error === "authentication_failed";
         if (ev.error === "rate_limit") this.limited = true;
         const content = isObj(ev.message) && Array.isArray(ev.message.content) ? ev.message.content : [];
         // Claude Code's own frame for a provider's error (its `error` word set): its text is the provider's answer.
@@ -1314,11 +1312,13 @@ interface TurnOutcome {
  * batched every `deltaMs`), resolves on the turn's `result` or the process
  * exiting first. Abort kills the process.
  *
- * The request goes on past a `result` (answers joined) while the CLI is sure
- * to run another turn for it: steered messages still queued, work moved to the
- * background still running (Claude Code answers it in a turn of its own when it
- * ends, up to `backgroundWaitMs`), or a background task that ended after the
- * model's last look (its notice starts the next turn).
+ * The request goes on past a `result` while the CLI is sure to run another
+ * turn for it: steered messages still queued, work moved to the background
+ * still running (Claude Code answers it in a turn of its own when it ends, up
+ * to `backgroundWaitMs`), or a background task that ended after the model's
+ * last look (its notice starts the next turn). The answer of that `result`
+ * goes out at once as an `answer` event when the server asked for each answer
+ * (`eachAnswer`), else it leads the final one, joined.
  */
 export function runTurnOnProcess(
   proc: ClaudeProcess,
@@ -1346,6 +1346,11 @@ export function runTurnOnProcess(
     followUpMs?: number;
     /** How long work moved to the background may run on after a result (`STEER_BACKGROUND_WAIT_MS`). */
     backgroundWaitMs?: number;
+    /**
+     * The server posts each answer the request goes on from as it comes (`BrainTurnRequest.answers`): an `answer`
+     * event, never joined into `done`.
+     */
+    eachAnswer?: boolean;
     /** Each `rate_limit_event` of the turn (`rate_limit_info`). */
     onRateLimit?: (info: Record<string, unknown>) => void;
     /**
@@ -1369,7 +1374,10 @@ export function runTurnOnProcess(
     let settled = false;
     /** Steered messages written to this turn and not yet said read. */
     const outstanding = new Set<string>();
-    /** Answers of results that came while steered messages were still queued: they lead the final one. */
+    /**
+     * Answers of results that came while steered messages were still queued: they lead the final one (none when the
+     * server takes each answer as it comes, `eachAnswer`).
+     */
     const held: string[] = [];
     let followUp: ReturnType<typeof setTimeout> | null = null;
     /** The last result the turn went on from (its answer is in `held`). */
@@ -1536,15 +1544,20 @@ export function runTurnOnProcess(
       if (!final) return;
       // The CLI runs another turn for this request: steered messages still queued (the turn ended before
       // a tool boundary), work moved to the background still running, or a background task's notice the
-      // model never saw. This request goes on until that turn's result and the answers join. A plan
-      // limit or a failed login ends it (the next turn would fail the same way).
+      // model never saw. This request goes on until that turn's result, this answer posted now or joined to
+      // it. A plan limit or a failed login ends it (the next turn would fail the same way).
       const goesOn = final.type === "done" || (final.type === "error" && final.code === "claude_failed");
       const queuedMessages = outstanding.size > 0 && parsed.queued !== 0;
       const work = movedRunning();
       const notice = unheard > 0;
       unheard = 0;
       if (goesOn && !proc.exited && (queuedMessages || work || notice)) {
-        if (final.type === "done" && final.text) held.push(final.text);
+        if (final.type === "done" && final.text) {
+          if (opts.eachAnswer) {
+            flush();
+            opts.emit({ type: "answer", text: redact(final.text) });
+          } else held.push(final.text);
+        }
         heldFinal = final;
         between = true;
         proc.parser.beginTurn();
@@ -2164,6 +2177,7 @@ export class BrainManager {
             : {}),
         ...(this.opts.steerFollowUpMs !== undefined ? { followUpMs: this.opts.steerFollowUpMs } : {}),
         ...(this.opts.steerBackgroundWaitMs !== undefined ? { backgroundWaitMs: this.opts.steerBackgroundWaitMs } : {}),
+        ...(req.answers === "each" ? { eachAnswer: true } : {}),
       });
       if (live.proc.breach) {
         this.log(`[${ctx.agent.handle}] turn stopped: ${live.proc.breach}`);

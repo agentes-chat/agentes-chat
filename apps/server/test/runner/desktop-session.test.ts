@@ -332,6 +332,8 @@ test("start: Xvnc on a Unix socket only, VncAuth, never resized; the cookie and 
     "-FrameRate=30",
     "-UseBlacklist=0",
     "-AlwaysShared",
+    // No pointer drawn into the picture: the apps draw the agent's cursor, and in control the person's own shows.
+    "-nocursor",
   ]) {
     expect(xvnc.argv).toContain(flag);
   }
