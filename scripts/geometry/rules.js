@@ -1511,7 +1511,9 @@
      */
     clip(out) {
       for (const el of document.body.querySelectorAll("*")) {
-        if (!seen(el) || el.closest("svg")) continue;
+        // Inside a row `content-visibility` skips (a conversation's rows before their first frame), the row keeps its
+        // placeholder height while its content is measured whole, spilling over the rows below: nothing a person sees.
+        if (!seen(el) || el.closest("svg") || !el.checkVisibility({ contentVisibilityAuto: true })) continue;
         const s = style(el);
         const reach = { top: 0, bottom: 0, left: 0, right: 0 };
         for (const l of outerShadows(s.boxShadow)) {

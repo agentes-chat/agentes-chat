@@ -64,7 +64,7 @@ export function ApprovalCard({
       {...rest}
     >
       {sky}
-      <div className="ac-approval__head ac-tailrow">
+      <div className={cx("ac-approval__head", !!statusLabel && "ac-tailrow")}>
         {avatar}
         <span className="ac-approval__who">
           {who}
