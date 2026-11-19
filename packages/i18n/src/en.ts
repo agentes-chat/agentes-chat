@@ -16669,8 +16669,16 @@ export const en = {
         "{{name}} runs iOS {{version}} and Xcode on {{mac}} knows iOS {{sdk}} at most. Install Xcode {{major}}, then run this in Terminal.",
       xcodeOldAny:
         "{{name}} runs iOS {{version}}, newer than Xcode on {{mac}} knows. Install Xcode {{major}}, then run this in Terminal.",
-      uiRefusedText:
-        "The iPhone refused the test helper's taps. Unlock it and enter its passcode if it asks. If it keeps happening, turn Settings\u00a0›\u00a0Developer\u00a0›\u00a0Enable UI Automation off and on.",
+      uiRefusedText: "Agents see the iPhone's screen, but iOS refuses their taps.",
+      /** Above two Settings paths (Developer Mode, Enable UI Automation): both switches on. */
+      uiTurnOn: "On the iPhone, turn both on:",
+      uiPasscode: "Enter its passcode when it asks, and keep it unlocked.",
+      /** A button: the Mac checks again now whether the iPhone lets the test helper tap. */
+      uiCheck: "Check again",
+      /** A button: the Mac stops the test helper, builds it again with its Xcode and checks it on the iPhone. */
+      repair: "Repair the test helper",
+      repairHint:
+        "The Mac stops the test helper and builds it again with its Xcode, in a few minutes. For taps that still fail once both are on.",
       /** An iPhone below iOS 17: the guide ends here. */
       tooOld:
         "{{name}} runs iOS {{version}}, and agents need iOS 17 or newer. Update it if it can, or plug in a newer iPhone.",

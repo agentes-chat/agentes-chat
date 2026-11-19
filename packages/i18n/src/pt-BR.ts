@@ -16565,8 +16565,13 @@ export const ptBR = {
         "{{name}} usa o iOS {{version}} e o Xcode em {{mac}} conhece no máximo o iOS {{sdk}}. Instale o Xcode {{major}} e rode isto no Terminal.",
       xcodeOldAny:
         "{{name}} usa o iOS {{version}}, mais novo do que o Xcode em {{mac}} conhece. Instale o Xcode {{major}} e rode isto no Terminal.",
-      uiRefusedText:
-        "O iPhone recusou os toques do assistente de testes. Desbloqueie e digite o código se ele pedir. Se continuar, desligue e ligue Ajustes\u00a0›\u00a0Desenvolvedor\u00a0›\u00a0Ativar Automação de UI.",
+      uiRefusedText: "Os agentes veem a tela do iPhone, mas o iOS recusa os toques deles.",
+      uiTurnOn: "No iPhone, ligue os dois:",
+      uiPasscode: "Digite o código quando ele pedir e deixe o iPhone desbloqueado.",
+      uiCheck: "Verificar de novo",
+      repair: "Reparar o assistente de testes",
+      repairHint:
+        "O Mac para o assistente de testes e cria de novo com o Xcode dele, em alguns minutos. Para toques que ainda falham com os dois ligados.",
       tooOld:
         "{{name}} usa o iOS {{version}}, e os agentes precisam do iOS 17 ou mais novo. Atualize se ele aceitar, ou conecte um iPhone mais novo.",
       tooOldVersion: "16 ou anterior",

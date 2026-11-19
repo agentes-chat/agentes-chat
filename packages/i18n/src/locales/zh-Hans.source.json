@@ -40164,7 +40164,22 @@
     "value": "{{name}} runs iOS {{version}}, newer than Xcode on {{mac}} knows. Install Xcode {{major}}, then run this in Terminal."
   },
   "devices.iphone.uiRefusedText": {
-    "value": "The iPhone refused the test helper's taps. Unlock it and enter its passcode if it asks. If it keeps happening, turn Settings › Developer › Enable UI Automation off and on."
+    "value": "Agents see the iPhone's screen, but iOS refuses their taps."
+  },
+  "devices.iphone.uiTurnOn": {
+    "value": "On the iPhone, turn both on:"
+  },
+  "devices.iphone.uiPasscode": {
+    "value": "Enter its passcode when it asks, and keep it unlocked."
+  },
+  "devices.iphone.uiCheck": {
+    "value": "Check again"
+  },
+  "devices.iphone.repair": {
+    "value": "Repair the test helper"
+  },
+  "devices.iphone.repairHint": {
+    "value": "The Mac stops the test helper and builds it again with its Xcode, in a few minutes. For taps that still fail once both are on."
   },
   "devices.iphone.tooOld": {
     "value": "{{name}} runs iOS {{version}}, and agents need iOS 17 or newer. Update it if it can, or plug in a newer iPhone."

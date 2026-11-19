@@ -4852,7 +4852,7 @@
     "value": "Xcode is signed in but shows no team yet. In Xcode, make any iOS app, pick your team under Signing & Capabilities and run it on this iPhone once."
   },
   "devices.iphone.uiRefused": {
-    "value": "This iPhone refused the test helper's taps. Unlock it and enter its passcode if it asks. If it keeps happening, turn Settings › Developer › Enable UI Automation off and on."
+    "value": "Agents see this iPhone's screen, but iOS refuses their taps."
   },
   "devices.iphone.pluggedIn": {
     "value": "It's plugged in"

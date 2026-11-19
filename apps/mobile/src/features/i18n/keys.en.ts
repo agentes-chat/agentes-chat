@@ -2075,8 +2075,7 @@ export const featureKeysEn = {
       /** Xcode's names (Signing & Capabilities) stay in English. */
       teamMissing:
         "Xcode is signed in but shows no team yet. In Xcode, make any iOS app, pick your team under Signing & Capabilities and run it on this iPhone once.",
-      uiRefused:
-        "This iPhone refused the test helper's taps. Unlock it and enter its passcode if it asks. If it keeps happening, turn Settings\u00a0›\u00a0Developer\u00a0›\u00a0Enable UI Automation off and on.",
+      uiRefused: "Agents see this iPhone's screen, but iOS refuses their taps.",
       /** A button on step 1: the person says it's plugged in, and the guide says what to check. */
       pluggedIn: "It's plugged in",
       /** iPhones on the Mac's network that already trust it (they did over a cable once), offered, never used until picked. */

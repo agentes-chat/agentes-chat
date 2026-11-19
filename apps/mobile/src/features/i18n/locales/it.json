@@ -2059,7 +2059,7 @@
       "tooOld": "Questo iPhone usa iOS {{version}}, e gli agenti hanno bisogno di iOS 17 o successivo. Aggiornalo se può, o usa un iPhone più recente.",
       "xcodeOld": "Questo iPhone usa iOS {{version}}, più recente di quanto conosca Xcode su {{host}}. Installa lì Xcode {{major}}, poi esegui xcrun devicectl manage ddis update nel Terminale.",
       "teamMissing": "Xcode ha effettuato l'accesso ma non mostra ancora un team. In Xcode crea un'app iOS qualsiasi, scegli il tuo team in Signing & Capabilities ed eseguila una volta su questo iPhone.",
-      "uiRefused": "Questo iPhone ha rifiutato i tocchi dell'app di test. Sbloccalo e inserisci il codice se lo chiede. Se succede ancora, disattiva e riattiva Impostazioni › Sviluppatore › Abilita automazione UI.",
+      "uiRefused": "Gli agenti vedono lo schermo di questo iPhone, ma iOS rifiuta i loro tocchi.",
       "pluggedIn": "È collegato",
       "wifi": {
         "also": "Anche sul Wi-Fi di {{host}}: {{name}}",

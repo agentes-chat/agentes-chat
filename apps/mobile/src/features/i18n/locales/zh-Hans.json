@@ -1864,7 +1864,7 @@
       "tooOld": "这台 iPhone 运行 iOS {{version}}，而智能体需要 iOS 17 或更新版本。能更新就更新，或者换一台更新的 iPhone。",
       "xcodeOld": "这台 iPhone 运行 iOS {{version}}，比 {{host}} 上的 Xcode 支持的版本更新。请在那台 Mac 上安装 Xcode {{major}}，然后在终端中运行 xcrun devicectl manage ddis update。",
       "teamMissing": "Xcode 已登录，但还没有显示团队。在 Xcode 中新建任意 iOS App，在 Signing & Capabilities 下选择你的团队，然后在这台 iPhone 上运行一次。",
-      "uiRefused": "这台 iPhone 拒绝了测试助手的点按。请解锁它，如有要求就输入密码。如果反复出现，把 设置 › 开发者 › 启用 UI 自动化 关闭再打开。",
+      "uiRefused": "智能体能看到这台 iPhone 的屏幕，但 iOS 拒绝了它们的点按。",
       "pluggedIn": "已经插好了",
       "wifi": {
         "also": "也在 {{host}} 的 Wi-Fi 上：{{name}}",

@@ -2015,8 +2015,7 @@ export const featureKeysPtBR = {
         "Este iPhone usa o iOS {{version}}, mais novo do que o Xcode no {{host}} conhece. Instale lá o Xcode {{major}} e rode xcrun devicectl manage ddis update no Terminal.",
       teamMissing:
         "O Xcode está conectado, mas ainda não mostra um time. No Xcode, crie qualquer app de iOS, escolha seu time em Signing & Capabilities e rode neste iPhone uma vez.",
-      uiRefused:
-        "Este iPhone recusou os toques do app de testes. Desbloqueie e digite seu código se ele pedir. Se continuar, desligue e ligue Ajustes\u00a0›\u00a0Desenvolvedor\u00a0›\u00a0Ativar Automação da IU.",
+      uiRefused: "Os agentes veem a tela deste iPhone, mas o iOS recusa os toques deles.",
       pluggedIn: "Já está ligado",
       wifi: {
         also: "Também no Wi-Fi de {{host}}: {{name}}",

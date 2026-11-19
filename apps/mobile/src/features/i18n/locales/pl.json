@@ -2164,7 +2164,7 @@
       "tooOld": "Ten iPhone ma iOS {{version}}, a agenci potrzebują iOS 17 lub nowszego. Zaktualizuj go, jeśli się da, albo użyj nowszego iPhone'a.",
       "xcodeOld": "Ten iPhone ma iOS {{version}}, nowszy niż zna Xcode na {{host}}. Zainstaluj tam Xcode {{major}}, a potem uruchom xcrun devicectl manage ddis update w Terminalu.",
       "teamMissing": "Xcode jest zalogowany, ale nie pokazuje jeszcze zespołu. W Xcode utwórz dowolną aplikację iOS, wybierz swój zespół w Signing & Capabilities i uruchom ją raz na tym iPhonie.",
-      "uiRefused": "Ten iPhone odrzucił stuknięcia pomocnika testowego. Odblokuj go i wpisz kod, jeśli poprosi. Jeśli to się powtarza, wyłącz i włącz Ustawienia › Deweloper › Włącz automatyzację UI.",
+      "uiRefused": "Agenci widzą ekran tego iPhone'a, ale iOS odrzuca ich stuknięcia.",
       "pluggedIn": "Jest podłączony",
       "wifi": {
         "also": "Też w sieci Wi-Fi komputera {{host}}: {{name}}",

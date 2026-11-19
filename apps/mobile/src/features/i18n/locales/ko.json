@@ -1864,7 +1864,7 @@
       "tooOld": "이 iPhone은 iOS {{version}}을(를) 쓰는데 에이전트에는 iOS 17 이상이 필요해요. 가능하면 업데이트하거나 더 새로운 iPhone을 쓰세요.",
       "xcodeOld": "이 iPhone은 {{host}}의 Xcode가 아는 것보다 새로운 iOS {{version}}을(를) 써요. 그 Mac에 Xcode {{major}}을(를) 설치한 다음 터미널에서 xcrun devicectl manage ddis update를 실행하세요.",
       "teamMissing": "Xcode에 로그인되어 있지만 아직 팀이 표시되지 않아요. Xcode에서 아무 iOS 앱이나 만들고 Signing & Capabilities에서 팀을 고른 다음 이 iPhone에서 한 번 실행하세요.",
-      "uiRefused": "이 iPhone이 테스트 도우미의 탭을 거부했어요. 잠금을 해제하고 요청하면 암호를 입력하세요. 계속 그러면 설정 › 개발자 › UI 자동화 활성화를 껐다가 다시 켜세요.",
+      "uiRefused": "에이전트는 이 iPhone의 화면을 볼 수 있지만 iOS가 탭을 거부하고 있어요.",
       "pluggedIn": "연결했어요",
       "wifi": {
         "also": "{{host}}의 Wi-Fi에도 있어요: {{name}}",

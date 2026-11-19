@@ -1864,7 +1864,7 @@
       "tooOld": "iPhone ini memakai iOS {{version}}, dan agen butuh iOS 17 atau lebih baru. Perbarui jika bisa, atau pakai iPhone yang lebih baru.",
       "xcodeOld": "iPhone ini memakai iOS {{version}}, lebih baru dari yang dikenal Xcode di {{host}}. Instal Xcode {{major}} di sana, lalu jalankan xcrun devicectl manage ddis update di Terminal.",
       "teamMissing": "Xcode sudah masuk tapi belum menampilkan tim. Di Xcode, buat app iOS apa saja, pilih timmu di Signing & Capabilities, lalu jalankan di iPhone ini sekali.",
-      "uiRefused": "iPhone ini menolak ketukan helper pengujian. Buka kuncinya dan masukkan kode sandimu jika diminta. Jika terus terjadi, matikan lalu nyalakan lagi Pengaturan › Pengembang › Aktifkan Otomatisasi UI.",
+      "uiRefused": "Agen bisa melihat layar iPhone ini, tetapi iOS menolak ketukan mereka.",
       "pluggedIn": "Sudah tercolok",
       "wifi": {
         "also": "Juga di Wi-Fi {{host}}: {{name}}",

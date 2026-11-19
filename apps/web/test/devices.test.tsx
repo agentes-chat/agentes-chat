@@ -712,7 +712,7 @@ describe("Connect a device", () => {
 
     await show(iphoneAs({ kind: "needs_you", reason: "ui_not_authorized" }));
     expect(step()?.textContent).toContain("Turn on UI Automation");
-    expect(step()?.textContent).toContain("The iPhone refused the test helper's taps. Unlock it");
+    expect(step()?.textContent).toContain("Agents see the iPhone's screen, but iOS refuses their taps.");
 
     await show(iphoneAs({ kind: "needs_you", reason: "xcode_too_old" }, {}, { xcodeSdk: "26.2" }));
     expect(step()?.textContent).toContain(
