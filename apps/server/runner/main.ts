@@ -71,7 +71,7 @@ import { writeJson } from "./json-file";
 import { hasBunTerminal, runningCompiled, thisRunner } from "./launch";
 import { acquireLock, lockedMessage, pidAlive, readLock } from "./lock";
 import { RotatingFile } from "./logfile";
-import { adoptLoginPath } from "./login-path";
+import { adoptLoginPath, adoptServicePath } from "./login-path";
 import { LoopbackGuard, loopbackEndpoints, runnerEndpoints } from "./loopback-guard";
 import { MCP_TOKEN_FILE, mcpSocketPath, runMcpRelay, runMcpServer } from "./mcp";
 import { runMigrate } from "./migrate";
@@ -1488,6 +1488,8 @@ async function main(argv: string[]): Promise<number> {
     case "pair":
       return pair(p);
     case "start":
+      // Root's service (system mode) keeps its own fixed PATH; each agent's user has its own.
+      if (process.platform !== "win32" && process.getuid?.() !== 0) adoptServicePath();
       return start();
     case "app":
       return app();
