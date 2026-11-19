@@ -169,7 +169,11 @@ export function cursorChatBreach(ev: Record<string, unknown>): string | null {
   const namespace = str(args.namespace);
   if (key === "CallDynamicTool" && namespace === CODEX_MCP_SERVER) return null;
   if (key === "GetDynamicTools" && (!namespace || namespace === CODEX_MCP_SERVER)) return null;
-  return `Cursor used a tool of its own (${(key.replace(/ToolCall$/, "") || "unknown").slice(0, 64)}), so the turn stopped.`;
+  // What it tried, so a real breach reads apart from a call to ourselves: the kind, and a dynamic call's namespace and
+  // tool.
+  const target = namespace ? ` ${namespace}:${str(args.toolName)}` : "";
+  const tried = `${key.replace(/ToolCall$/, "") || "unknown"}${target}`.slice(0, 128);
+  return `Cursor used a tool of its own (${tried}), so the turn stopped.`;
 }
 
 /** Whether `--approve-mcps` may go: `cwd` is `folder` or under it, with no `.cursor/mcp.json` but ours on the way. */
