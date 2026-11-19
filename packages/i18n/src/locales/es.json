@@ -407,7 +407,7 @@
     },
     "view_all_agents": {
       "title": "Ver todos los agentes",
-      "desc": "En Equipo y en la barra lateral. Sin esto, solo los que le responden a la persona.",
+      "desc": "En Equipo y en la barra lateral, salvo los agentes personales de otros. Sin esto, solo los que le responden a la persona.",
       "short": "ver todos los agentes",
       "say": "ve todos los agentes"
     },
@@ -11186,7 +11186,7 @@
     "modeText": {
       "everyone": "Cualquiera del espacio de trabajo puede llamar a {{name}}.",
       "people": "Elige las personas y los roles que pueden hablar con {{name}}.",
-      "owner": "Solo {{owner}} habla con {{name}}.",
+      "owner": "Solo {{owner}} habla con {{name}}. En las listas, solo {{owner}}, los admins y quien puede editar ven a {{name}}.",
       "noOwner": "Define un responsable para usar esta opción.",
       "everyonePersonal": "Cualquiera de aquí puede llamar a {{name}}.",
       "peoplePersonal": "Elige las personas que pueden hablar con {{name}}."

@@ -381,7 +381,7 @@
     },
     "view_all_agents": {
       "title": "查看所有智能体",
-      "desc": "在团队和侧边栏中。关闭后，只显示会回应此人的智能体。",
+      "desc": "在团队和侧边栏中，但不包括他人的个人智能体。关闭后，只显示会回应此人的智能体。",
       "short": "查看所有智能体",
       "say": "查看所有智能体"
     },
@@ -10436,8 +10436,8 @@
       "everyone_female": "工作区中的任何人都可以呼叫 {{name}}。",
       "people": "选择可以和 {{name}} 对话的成员和角色。",
       "people_female": "选择可以和 {{name}} 对话的成员和角色。",
-      "owner": "只有 {{owner}} 可以和 {{name}} 对话。",
-      "owner_female": "只有 {{owner}} 可以和 {{name}} 对话。",
+      "owner": "只有 {{owner}} 可以和 {{name}} 对话。在列表中，只有 {{owner}}、管理员和可编辑的人能看到 {{name}}。",
+      "owner_female": "只有 {{owner}} 可以和 {{name}} 对话。在列表中，只有 {{owner}}、管理员和可编辑的人能看到 {{name}}。",
       "noOwner": "设置所有者后才能使用此选项。",
       "everyonePersonal": "这里的任何人都可以呼叫 {{name}}。",
       "everyonePersonal_female": "这里的任何人都可以呼叫 {{name}}。",

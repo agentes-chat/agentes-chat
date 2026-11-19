@@ -394,7 +394,7 @@
     },
     "view_all_agents": {
       "title": "Tüm ajanları görme",
-      "desc": "Ekip'te ve kenar çubuğunda. Bu olmadan yalnızca kişiye yanıt verenler.",
+      "desc": "Ekip'te ve kenar çubuğunda, başkalarının kişisel ajanları hariç. Bu olmadan yalnızca kişiye yanıt verenler.",
       "short": "tüm ajanları görme",
       "say": "tüm ajanları görür"
     },
@@ -10765,7 +10765,7 @@
     "modeText": {
       "everyone": "Çalışma alanındaki herkes {{name}} ajanına seslenebilir.",
       "people": "{{name}} ile konuşabilecek kişileri ve rolleri seçin.",
-      "owner": "{{name}} ile yalnızca {{owner}} konuşur.",
+      "owner": "{{name}} ile yalnızca {{owner}} konuşur. Listelerde {{name}} ajanını yalnızca {{owner}}, yöneticiler ve düzenleyebilenler görür.",
       "noOwner": "Bu seçeneği kullanmak için bir sahip belirleyin.",
       "everyonePersonal": "Buradaki herkes {{name}} ajanına seslenebilir.",
       "peoplePersonal": "{{name}} ile konuşabilecek kişileri seçin."

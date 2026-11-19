@@ -421,7 +421,7 @@ export const en = {
     },
     view_all_agents: {
       title: "See all agents",
-      desc: "On Team and in the sidebar. Without it, only the ones that answer them.",
+      desc: "On Team and in the sidebar, except other people's personal agents. Without it, only the ones that answer them.",
       short: "see all agents",
       say: "sees all agents",
     },
@@ -11249,7 +11249,7 @@ export const en = {
     modeText: {
       everyone: "Anyone in the workspace can call {{name}}.",
       people: "Pick the people and roles that can talk to {{name}}.",
-      owner: "Only {{owner}} talks to {{name}}.",
+      owner: "Only {{owner}} talks to {{name}}. Lists show {{name}} only to {{owner}}, admins and whoever can edit.",
       noOwner: "Set an owner to use this option.",
       everyonePersonal: "Anyone here can call {{name}}.",
       peoplePersonal: "Pick the people who can talk to {{name}}.",

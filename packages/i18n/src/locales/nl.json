@@ -394,7 +394,7 @@
     },
     "view_all_agents": {
       "title": "Alle agents zien",
-      "desc": "In Team en de zijbalk. Zonder dit alleen de agents die de persoon antwoorden.",
+      "desc": "In Team en de zijbalk, behalve de persoonlijke agents van anderen. Zonder dit alleen de agents die de persoon antwoorden.",
       "short": "alle agents zien",
       "say": "ziet alle agents"
     },
@@ -10878,8 +10878,8 @@
       "everyone_female": "Iedereen in de werkruimte kan {{name}} roepen.",
       "people": "Kies de mensen en rollen die met {{name}} mogen praten.",
       "people_female": "Kies de mensen en rollen die met {{name}} mogen praten.",
-      "owner": "Alleen {{owner}} praat met {{name}}.",
-      "owner_female": "Alleen {{owner}} praat met {{name}}.",
+      "owner": "Alleen {{owner}} praat met {{name}}. In lijsten zien alleen {{owner}}, admins en wie mag bewerken {{name}}.",
+      "owner_female": "Alleen {{owner}} praat met {{name}}. In lijsten zien alleen {{owner}}, admins en wie mag bewerken {{name}}.",
       "noOwner": "Stel een eigenaar in om deze optie te gebruiken.",
       "everyonePersonal": "Iedereen hier kan {{name}} roepen.",
       "everyonePersonal_female": "Iedereen hier kan {{name}} roepen.",

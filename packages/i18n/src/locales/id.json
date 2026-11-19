@@ -381,7 +381,7 @@
     },
     "view_all_agents": {
       "title": "Lihat semua agen",
-      "desc": "Di Tim dan bilah samping. Tanpa ini, hanya agen yang menjawab orang itu.",
+      "desc": "Di Tim dan bilah samping, kecuali agen pribadi orang lain. Tanpa ini, hanya agen yang menjawab orang itu.",
       "short": "lihat semua agen",
       "say": "melihat semua agen"
     },
@@ -10428,7 +10428,7 @@
     "modeText": {
       "everyone": "Siapa pun di ruang kerja bisa memanggil {{name}}.",
       "people": "Pilih orang dan peran yang bisa bicara dengan {{name}}.",
-      "owner": "Hanya {{owner}} yang bicara dengan {{name}}.",
+      "owner": "Hanya {{owner}} yang bicara dengan {{name}}. Di daftar, {{name}} hanya terlihat oleh {{owner}}, admin, dan yang boleh mengedit.",
       "noOwner": "Tetapkan pemilik untuk memakai opsi ini.",
       "everyonePersonal": "Siapa pun di sini bisa memanggil {{name}}.",
       "peoplePersonal": "Pilih orang yang bisa bicara dengan {{name}}."

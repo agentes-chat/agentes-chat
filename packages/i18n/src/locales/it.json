@@ -407,7 +407,7 @@
     },
     "view_all_agents": {
       "title": "Vedere tutti gli agenti",
-      "desc": "In Team e nella barra laterale. Senza, solo quelli che rispondono alla persona.",
+      "desc": "In Team e nella barra laterale, tranne gli agenti personali degli altri. Senza, solo quelli che rispondono alla persona.",
       "short": "vedere tutti gli agenti",
       "say": "vede tutti gli agenti"
     },
@@ -11268,8 +11268,8 @@
       "everyone_female": "Chiunque nello spazio di lavoro può chiamare {{name}}.",
       "people": "Scegli le persone e i ruoli che possono parlare con {{name}}.",
       "people_female": "Scegli le persone e i ruoli che possono parlare con {{name}}.",
-      "owner": "Solo {{owner}} parla con {{name}}.",
-      "owner_female": "Solo {{owner}} parla con {{name}}.",
+      "owner": "Solo {{owner}} parla con {{name}}. Negli elenchi, {{name}} è visibile solo a {{owner}}, agli admin e a chi può modificare.",
+      "owner_female": "Solo {{owner}} parla con {{name}}. Negli elenchi, {{name}} è visibile solo a {{owner}}, agli admin e a chi può modificare.",
       "noOwner": "Imposta un proprietario per usare questa opzione.",
       "everyonePersonal": "Chiunque qui può chiamare {{name}}.",
       "everyonePersonal_female": "Chiunque qui può chiamare {{name}}.",

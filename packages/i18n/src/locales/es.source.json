@@ -981,7 +981,7 @@
     "value": "See all agents"
   },
   "permissions.view_all_agents.desc": {
-    "value": "On Team and in the sidebar. Without it, only the ones that answer them."
+    "value": "On Team and in the sidebar, except other people's personal agents. Without it, only the ones that answer them."
   },
   "permissions.view_all_agents.short": {
     "value": "see all agents"
@@ -26352,7 +26352,7 @@
     "value": "Pick the people and roles that can talk to {{name}}."
   },
   "audience.modeText.owner": {
-    "value": "Only {{owner}} talks to {{name}}."
+    "value": "Only {{owner}} talks to {{name}}. Lists show {{name}} only to {{owner}}, admins and whoever can edit."
   },
   "audience.modeText.noOwner": {
     "value": "Set an owner to use this option."

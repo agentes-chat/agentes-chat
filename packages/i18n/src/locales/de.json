@@ -394,7 +394,7 @@
     },
     "view_all_agents": {
       "title": "Alle Agenten sehen",
-      "desc": "Im Team und in der Seitenleiste. Ohne das nur die, die der Person antworten.",
+      "desc": "Im Team und in der Seitenleiste, außer den persönlichen Agenten anderer. Ohne das nur die, die der Person antworten.",
       "short": "alle Agenten sehen",
       "say": "sieht alle Agenten"
     },
@@ -10822,7 +10822,7 @@
     "modeText": {
       "everyone": "Alle im Workspace können {{name}} rufen.",
       "people": "Wähle die Personen und Rollen, die mit {{name}} schreiben dürfen.",
-      "owner": "Nur {{owner}} schreibt mit {{name}}.",
+      "owner": "Nur {{owner}} schreibt mit {{name}}. In Listen sehen {{name}} nur {{owner}}, Admins und wer bearbeiten darf.",
       "noOwner": "Leg einen Inhaber fest, um diese Option zu nutzen.",
       "everyonePersonal": "Alle hier können {{name}} rufen.",
       "peoplePersonal": "Wähle die Personen, die mit {{name}} schreiben dürfen."
