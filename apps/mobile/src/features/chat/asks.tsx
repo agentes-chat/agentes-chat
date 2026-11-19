@@ -54,7 +54,7 @@ import {
 } from "@/ui";
 import { SparkCheck } from "@/ui/SparkCheck";
 import { approvalTitleText } from "../approvals/parts";
-import { BUBBLE_PART_CORNERS, useBubbleHead, useBubblePart } from "../shared/bubble-part";
+import { useBubbleHead, useBubblePart } from "../shared/bubble-part";
 import { AgentFace } from "../shared/Face";
 import { useColors, useDirectory, useMeId, useNow, useOrgId } from "../shared/hooks";
 import { agentLook, fuseRemaining } from "../shared/logic";
@@ -73,7 +73,7 @@ import {
 } from "./ask-store";
 import { LineStop } from "./LiveRows";
 import { approvalIdOf, lineStops, markedParts, markName, parseInline, questionOf, workingEntries } from "./logic";
-import { useCardTop, useOwnTop } from "./look";
+import { useCardTop, useMessageCardCorners, useOwnTop } from "./look";
 import { Spans } from "./MessageSpans";
 import { withOpacity } from "./turn";
 import { WaitMark } from "./WaitMark";
@@ -491,6 +491,7 @@ export function AskCard({
   // Under someone else's words in a conversation of bubbles: a bubble of that message (its fill, joined to it, no sky),
   // and, when the message is only this request, its name line at the top and its time at the end, as a bubble's.
   const part = useBubblePart();
+  const cardCorners = useMessageCardCorners();
   const bubbleHead = useBubbleHead();
   const fill = part?.fill ?? c.raised;
   const reduced = useReducedMotion();
@@ -558,11 +559,11 @@ export function AskCard({
   return (
     // A plain view the conversation measures (never flattened away), around the card.
     <View ref={slot} collapsable={false} style={ownTop}>
-      <Animated.View entering={entering} style={[styles.card, surface, part ? BUBBLE_PART_CORNERS : null]}>
+      <Animated.View entering={entering} style={[styles.card, surface, cardCorners]}>
         {/* What the card holds when it mounts just shows (a row scrolled back into view, its answer already there);
             what comes later fades in. */}
         <LayoutAnimationConfig skipEntering>
-          <View style={[styles.clip, part ? BUBBLE_PART_CORNERS : null]}>
+          <View style={[styles.clip, cardCorners]}>
             {part ? null : <Sky color={sky} depth={0.55} fade={0.15} surface="raised" style={styles.sky} />}
             {bubbleHead ? <View style={styles.bubbleHead}>{bubbleHead.who}</View> : null}
             {headless ? null : (
@@ -686,6 +687,7 @@ export function AskNote({
   const dir = useDirectory();
   const surface = useSurface();
   const part = useBubblePart();
+  const cardCorners = useMessageCardCorners();
   const entering = useEntrance(CARD_IN);
   const heading = (
     <Text variant="body" tone="ink" style={styles.semibold}>
@@ -694,8 +696,8 @@ export function AskNote({
   );
   return (
     <View style={ownTop}>
-      <Animated.View entering={entering} style={[styles.card, surface, part ? BUBBLE_PART_CORNERS : null]}>
-        <View style={[styles.clip, part ? BUBBLE_PART_CORNERS : null]}>
+      <Animated.View entering={entering} style={[styles.card, surface, cardCorners]}>
+        <View style={[styles.clip, cardCorners]}>
           {part ? null : (
             <Sky
               color={agentLook(dir.agentById.get(agentId)).color}
@@ -896,10 +898,10 @@ function pillWords(words: string, color: string) {
 // ── The bar ──────────────────────────────────────────────────────────────────
 
 /**
- * The line above the composer while a request waits out of view (waiting beats working): the agent's face,
- * the breathing square, "Ada espera sua aprovação · Enviar e-mail", "+1" when more wait, and Ver, which
- * scrolls to it. While one agent works here with its live row out of view, the working line's "Parar" stays at its
- * end (a row on screen carries its own).
+ * The line above the composer while a request waits out of view: the agent's face, the breathing square, "Ada espera
+ * sua aprovação · Enviar e-mail", "+1" when more wait, and Ver, which scrolls to it. While one agent works here, the
+ * working line's "Parar" stays at its end: that line is the conversation's last, out of view with it (a row on screen
+ * carries its own).
  */
 export function AskBar({
   away,

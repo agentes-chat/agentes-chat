@@ -83,6 +83,7 @@ import {
   routineHookUrl,
   timezoneName,
 } from "@agenteschat/client/lib/routines";
+import { formatDuration } from "@agenteschat/client/lib/work";
 import {
   Button,
   CheckboxPill,
@@ -111,9 +112,11 @@ import {
   PageHeader,
   RecurrencePicker,
   type RecurrenceRule,
+  type RunBar,
   RunKey,
   RunLane,
   RunMark,
+  RunStrip,
   SavedNote,
   SearchField,
   Segmented,
@@ -336,7 +339,16 @@ export function RoutinesPage() {
   const live = current.filter((r) => byStatus(r) && !isPaused(r));
   const paused = current.filter((r) => byStatus(r) && isPaused(r));
   const open = list.find((r) => r.id === openId) ?? null;
-  const toggleOpen = (id: string) => setOpenId(openId === id ? null : id);
+  // The tab the details open on: a run's bar opens them on its runs.
+  const [openTab, setOpenTab] = useState<"details" | "runs">("details");
+  const toggleOpen = (id: string) => {
+    setOpenTab("details");
+    setOpenId(openId === id ? null : id);
+  };
+  const openRuns = (id: string) => {
+    setOpenTab("runs");
+    setOpenId(id);
+  };
   const filtered = agents.length > 0 || query.length > 0 || status !== "all";
   // "N" opens "New routine" (not while typing), for who may make one.
   useEffect(() => {
@@ -363,6 +375,7 @@ export function RoutinesPage() {
               now={now}
               selected={r.id === openId}
               onOpen={() => toggleOpen(r.id)}
+              onOpenRuns={() => openRuns(r.id)}
               onEdit={() => setOpenId(r.id)}
             />
           ))}
@@ -512,6 +525,7 @@ export function RoutinesPage() {
                           now={now}
                           selected={r.id === openId}
                           onOpen={() => toggleOpen(r.id)}
+                          onOpenRuns={() => openRuns(r.id)}
                           onEdit={() => setOpenId(r.id)}
                         />
                       ))}
@@ -523,7 +537,15 @@ export function RoutinesPage() {
           </>
         )}
       </div>
-      {open && <RoutineDetails routine={open} now={now} onClose={() => setOpenId(null)} />}
+      {open && (
+        <RoutineDetails
+          key={`${open.id}-${openTab}`}
+          routine={open}
+          now={now}
+          tab={openTab}
+          onClose={() => setOpenId(null)}
+        />
+      )}
       <RoutineDialog open={creating} onClose={() => setCreating(false)} onWebhook={(r) => setOpenId(r.id)} />
     </div>
   );
@@ -770,17 +792,60 @@ function triggerIcon(r: Routine, widget: boolean, reminder: boolean): IconName {
   return "repeat";
 }
 
+/**
+ * The row's last runs as bars, each with its tip (when it ran, how long, how it went) and opening the routine's runs.
+ */
+function RowRuns({ routine: r, running, onOpenRuns }: { routine: Routine; running: boolean; onOpenRuns: () => void }) {
+  const { t, i18n } = useTranslation();
+  const actors = useActors();
+  const say = useSay();
+  const { color } = useLook()(r.agentId);
+  // The finished runs as `runPixels` keeps them: the same order, so a bar's index is its run's.
+  const finished = r.recentRuns.filter((x) => runPixelStatus(x.status));
+  const atWork = r.recentRuns.find((x) => isRunAtWork(x.status));
+  const bar = (i: number): RunBar => {
+    const x = i < 0 ? atWork : finished[i];
+    const took = x?.finishedAt ? formatDuration(t, Date.parse(x.finishedAt) - Date.parse(x.at)) : null;
+    const head = [x && capitalize(whenAt(t, i18n.language, x.at), i18n.language), took].filter(Boolean).join(" · ");
+    const how =
+      i < 0 || !x ? t("routines.runningNow") : say(runOutcome(x, (id) => actors.dir.memberById.get(id)?.name ?? null));
+    return {
+      label: head ? `${head}: ${how}` : how,
+      tip: (
+        <>
+          {head && (
+            <>
+              <b>{head}</b>
+              <br />
+            </>
+          )}
+          {how}
+        </>
+      ),
+      onPick: onOpenRuns,
+    };
+  };
+  return (
+    // Each bar's button says its run; with none, the strip is only dots.
+    <div className="routine-row__runs">
+      <RunStrip runs={runPixels(r.recentRuns)} color={color} slots={RUN_SLOTS} running={running} bar={bar} />
+    </div>
+  );
+}
+
 function RoutineRow({
   routine: r,
   now,
   selected,
   onOpen,
+  onOpenRuns,
   onEdit,
 }: {
   routine: Routine;
   now: Date;
   selected: boolean;
   onOpen: () => void;
+  onOpenRuns: () => void;
   onEdit: () => void;
 }) {
   const { t } = useTranslation();
@@ -853,7 +918,7 @@ function RoutineRow({
       : r.canManage
         ? ([{ kind: "item", id: "edit", label: t("routines.edit"), icon: "edit", run: onEdit }] satisfies MenuEntry[])
         : []),
-    { kind: "item", id: "runs", label: t("routines.runs"), icon: "waiting", run: () => !selected && onOpen() },
+    { kind: "item", id: "runs", label: t("routines.runs"), icon: "waiting", run: onOpenRuns },
     // A copy is a new routine of mine for its agent: the server's create check (`duplicateRoutine`), not its editor's.
     ...(!widget && createsRoutinesFor(itsAgent)
       ? ([
@@ -916,8 +981,8 @@ function RoutineRow({
         <button type="button" className="routine-row__title" title={title} aria-expanded={selected} onClick={onOpen}>
           {title}
         </button>
-        {/* Two lines: its name, then when it runs and the next run. Chips only for trouble; where it delivers and its
-            recent runs are in the details the row opens. */}
+        {/* Two lines: its name, then when it runs and the next run. Chips only for trouble; where it delivers is in the
+            details the row opens. */}
         <span className="routine-row__sub">
           <span className="routine-row__to ac-iconline">
             <Icon name={triggerIcon(r, Boolean(widget), reminder)} size={14} />
@@ -940,6 +1005,7 @@ function RoutineRow({
           {fix && fix !== "resume" && <FixButton routine={r} fix={fix} />}
         </span>
       </div>
+      <RowRuns routine={r} running={running} onOpenRuns={onOpenRuns} />
       <div className="routine-row__actions">
         {fired || !r.canManage ? (
           <span className="routine-row__ph routine-row__ph--switch" aria-hidden="true" />
@@ -1299,7 +1365,17 @@ function useWhereHint() {
  * runs; the webhook; what was prepared for later) and "Execuções"; the aside holds "No ar" and the fields that change
  * at once. "Rodar agora" (or Parar) and the one-tap fix are on the bar. Who can't change it sees the values.
  */
-function RoutineDetails({ routine: r, now, onClose }: { routine: Routine; now: Date; onClose: () => void }) {
+function RoutineDetails({
+  routine: r,
+  now,
+  tab: firstTab = "details",
+  onClose,
+}: {
+  routine: Routine;
+  now: Date;
+  tab?: "details" | "runs";
+  onClose: () => void;
+}) {
   const { t, i18n } = useTranslation();
   const { org } = useOrg();
   const actors = useActors();
@@ -1312,7 +1388,7 @@ function RoutineDetails({ routine: r, now, onClose }: { routine: Routine; now: D
   const say = useSay();
   const outages = useMachineOutages(org.id, r.state === "waiting_computer");
   const [switching, setSwitching] = useState(false);
-  const [tab, setTab] = useState<"details" | "runs">("details");
+  const [tab, setTab] = useState<"details" | "runs">(firstTab);
   const [saved, flashSaved] = useSavedFlash();
   const agent = { type: "agent" as const, id: r.agentId };
   const name = actors.name(agent);

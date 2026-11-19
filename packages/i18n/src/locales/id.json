@@ -6142,7 +6142,7 @@
         "cli_closed": "Program {{brain}} tertutup tiba-tiba.",
         "cli_sandbox": "Program {{brain}} tidak bisa menjalankan sandbox-nya di komputer ini. Pilih AI lain di pengaturan agen.",
         "account_missing": "Akun yang dipilih untuk agen ini sudah tidak ada di komputernya. Pilih akun lain di pengaturan agen, atau tambahkan lagi.",
-        "windows_sandbox": "Komputer Windows ini tidak dapat mengisolasi perintah Codex: perlu Windows 11 24H2 atau yang lebih baru.",
+        "windows_sandbox": "Komputer Windows ini tidak dapat mengisolasi perintah Codex: perlu Windows 11 24H2 atau yang lebih baru. Perbarui Windows, pilih Claude atau kunci API untuk agen ini, atau pindahkan ke komputer Linux.",
         "our_error": "Ada yang salah di pihak kami dan tugasnya berhenti. Minta lagi sebentar lagi.",
         "unknown": "Gagal."
       }
@@ -7598,7 +7598,10 @@
     "unreachableTitle": "agentes.chat tidak bisa dijangkau",
     "unreachableText": "Mungkin sedang dimulai ulang. Halaman ini terbuka sendiri begitu kembali normal.",
     "offlineTitle": "Kamu sedang offline",
-    "offlineText": "Halaman ini terbuka sendiri saat kamu kembali online."
+    "offlineText": "Halaman ini terbuka sendiri saat kamu kembali online.",
+    "unknownHostTitle": "Alamat ini belum disiapkan",
+    "unknownHostText": "Kalau baru saja dihubungkan, coba lagi dalam beberapa menit.",
+    "unknownHostTab": "Alamat belum disiapkan · agentes.chat"
   },
   "scopes": {
     "context_read": {
@@ -11490,12 +11493,6 @@
       "held": "{{name}} membacanya setelah kamu memutuskan",
       "read": "{{name}} sudah membacanya",
       "resolved": "{{name}} menutup permintaan bantuan"
-    },
-    "well": {
-      "readYours": "Membaca catatanmu",
-      "readOf": "Membaca catatan {{name}}",
-      "nowYours": "Berhenti untuk membaca catatanmu",
-      "nowOf": "Berhenti untuk membaca catatan {{name}}"
     },
     "strip": {
       "see": "Lihat",

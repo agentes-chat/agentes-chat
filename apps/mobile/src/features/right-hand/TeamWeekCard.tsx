@@ -39,7 +39,7 @@ import Animated, { FadeIn, LayoutAnimationConfig } from "react-native-reanimated
 import { useOrg } from "@/providers/org";
 import { Button, LineIcon, Text, useReducedMotion } from "@/ui";
 import { router } from "@/ui/navigation";
-import { useCardTop } from "../chat/look";
+import { useCardTop, useMessageCardCorners } from "../chat/look";
 import { chatHref } from "../links/logic";
 import { useFailed } from "../routines/hooks";
 import { AgentFace } from "../shared/Face";
@@ -69,6 +69,7 @@ function WeekCard({ message, card }: { message: Message; card: TeamWeekCard }) {
   const { orgId, org } = useOrg();
   const c = useColors();
   const cardTop = useCardTop();
+  const cardCorners = useMessageCardCorners();
   const dir = useDirectory();
   const channels = useChannels(orgId).data ?? [];
   const proposals = useCardProposals(orgId, card.proposalIds);
@@ -151,7 +152,7 @@ function WeekCard({ message, card }: { message: Message; card: TeamWeekCard }) {
   return (
     // Its week ("Como foi a semana do time, de 28 out. a 3 nov.") is the message's text, above.
     <View>
-      <View style={[styles.card, { backgroundColor: c.raised, borderColor: c.line2 }, cardTop]}>
+      <View style={[styles.card, { backgroundColor: c.raised, borderColor: c.line2 }, cardCorners, cardTop]}>
         <View style={styles.head}>
           <Text variant="footnote" tone="muted" style={styles.semibold}>
             {t(teamWeekTitleKey(card))}

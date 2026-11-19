@@ -343,6 +343,7 @@
     "replies_other": "{{count}} Antworten",
     "repliesWord_one": "Antwort",
     "repliesWord_other": "Antworten",
+    "dayAt": "{{day}} {{time}}",
     "thread": "Thread",
     "closed": "geschlossen",
     "options": "Optionen",
@@ -379,9 +380,7 @@
       "delivered": "{{name}} hat es erhalten",
       "held": "{{name}} liest es nach deiner Entscheidung",
       "read": "{{name}} hat es gelesen",
-      "resolved": "{{name}} hat die Hilfeanfrage geschlossen",
-      "well": "Hat deine Notiz gelesen",
-      "wellNow": "Hat angehalten, um deine Notiz zu lesen"
+      "resolved": "{{name}} hat die Hilfeanfrage geschlossen"
     },
     "stopped": {
       "byYou": "Hier gestoppt",

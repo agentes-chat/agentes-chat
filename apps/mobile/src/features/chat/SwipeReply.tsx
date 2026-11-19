@@ -12,6 +12,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { haptics, Icon, useTheme } from "@/ui";
+import { rubberband } from "./pull";
 
 /** How far the row follows the finger freely; past it the pull resists. */
 const TRAVEL = 72;
@@ -27,12 +28,6 @@ const FLICK_S = 0.08;
 /** The reply mark: a plate at the row's left edge, under where the row slides from. */
 const MARK = 28;
 const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
-
-/** The further past the edge, the less the row follows (Apple's rubber band). */
-function rubberband(over: number, dimension: number, constant = 0.55) {
-  "worklet";
-  return (over * dimension * constant) / (dimension + constant * Math.abs(over));
-}
 
 /**
  * Swipe a message to the right to answer it in the conversation (the quote above the field). The row follows the

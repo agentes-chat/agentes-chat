@@ -15755,7 +15755,7 @@
     "value": "The account chosen for this agent isn't on its computer anymore. Choose another one in the agent's settings, or add it again."
   },
   "agentPage.activity.errors.windows_sandbox": {
-    "value": "This Windows computer can't isolate Codex's commands: it needs Windows 11 24H2 or newer."
+    "value": "This Windows computer can't isolate Codex's commands: it needs Windows 11 24H2 or newer. Update Windows, choose Claude or an API key for this agent, or move it to a Linux computer."
   },
   "agentPage.activity.errors.our_error": {
     "value": "Something went wrong on our side and it stopped. Ask again in a little while."
@@ -19296,6 +19296,15 @@
   },
   "empty.offlineText": {
     "value": "This page opens by itself when you're back online."
+  },
+  "empty.unknownHostTitle": {
+    "value": "This address isn't set up yet"
+  },
+  "empty.unknownHostText": {
+    "value": "If it was just connected, try again in a few minutes."
+  },
+  "empty.unknownHostTab": {
+    "value": "Address not set up · agentes.chat"
   },
   "scopes.context_read.label": {
     "value": "Read context"
@@ -29182,18 +29191,6 @@
   },
   "run.steer.resolved": {
     "value": "{{name}} closed the help request"
-  },
-  "run.well.readYours": {
-    "value": "Read your note"
-  },
-  "run.well.readOf": {
-    "value": "Read {{name}}'s note"
-  },
-  "run.well.nowYours": {
-    "value": "Stopped to read your note"
-  },
-  "run.well.nowOf": {
-    "value": "Stopped to read {{name}}'s note"
   },
   "run.strip.see": {
     "value": "View"

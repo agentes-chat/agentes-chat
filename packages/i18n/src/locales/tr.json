@@ -6357,7 +6357,7 @@
         "cli_closed": "Beklenmedik şekilde {{brain}} programı kapandı.",
         "cli_sandbox": "{{brain}} programı bu bilgisayarda sandbox'ını başlatamıyor. Ajanın ayarlarından başka bir yapay zekâ seçin.",
         "account_missing": "Bu ajan için seçilen hesap artık bilgisayarında değil. Ajanın ayarlarından başka bir hesap seçin ya da yeniden ekleyin.",
-        "windows_sandbox": "Bu Windows bilgisayar Codex'in komutlarını yalıtamıyor: Windows 11 24H2 veya daha yenisi gerekiyor.",
+        "windows_sandbox": "Bu Windows bilgisayar Codex'in komutlarını yalıtamıyor: Windows 11 24H2 veya daha yenisi gerekiyor. Windows'u güncelleyin, bu ajan için Claude'u ya da bir API anahtarını seçin veya onu bir Linux bilgisayara taşıyın.",
         "our_error": "Bizim tarafımızda bir şeyler ters gitti ve görev durdu. Birazdan yeniden isteyin.",
         "unknown": "Başarısız oldu."
       }
@@ -7835,7 +7835,10 @@
     "unreachableTitle": "agentes.chat'e ulaşılamıyor",
     "unreachableText": "Yeniden başlatılıyor olabilir. Geri döner dönmez bu sayfa kendiliğinden açılır.",
     "offlineTitle": "Çevrimdışısınız",
-    "offlineText": "Yeniden çevrimiçi olduğunuzda bu sayfa kendiliğinden açılır."
+    "offlineText": "Yeniden çevrimiçi olduğunuzda bu sayfa kendiliğinden açılır.",
+    "unknownHostTitle": "Bu adres henüz ayarlanmadı",
+    "unknownHostText": "Yeni bağlandıysa birkaç dakika sonra tekrar deneyin.",
+    "unknownHostTab": "Adres ayarlanmadı · agentes.chat"
   },
   "scopes": {
     "context_read": {
@@ -11871,12 +11874,6 @@
       "held": "{{name}} kararınızdan sonra okuyacak",
       "read": "{{name}} okudu",
       "resolved": "{{name}} yardım isteğini kapattı"
-    },
-    "well": {
-      "readYours": "Notunuzu okudu",
-      "readOf": "{{name}} notunu okudu",
-      "nowYours": "Notunuzu okumak için durdu",
-      "nowOf": "{{name}} notunu okumak için durdu"
     },
     "strip": {
       "see": "Gör",

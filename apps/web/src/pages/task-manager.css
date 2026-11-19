@@ -349,10 +349,11 @@ html:not([data-pointer]) .tm-more:focus-visible {
   .tm-cell--state > .tm-mark {
     display: inline-grid;
   }
+  /* The mark keeps the kit's 8 from the time's shaded box after it. */
   .tm-row--agent > .tm-cell--state,
   .tm-row--ended > .tm-cell--state,
   .tm-row[data-look="flat"] > .tm-cell--state {
-    padding-inline: var(--space-1) 0;
+    padding-inline: var(--space-1) var(--space-2);
   }
 }
 

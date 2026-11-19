@@ -121,6 +121,8 @@ export type CodexBrainEvent =
   | { type: "error"; code: string; message: string; retryable?: boolean; worked?: boolean }
   /** Protocol 15 (app-server only): messages handed with `brain.steer` that the turn read. */
   | { type: "steer_read"; uuids: string[] }
+  /** App-server only: the answer of a Codex turn an urgent message ended, posted as it comes (`answers: "each"`). */
+  | { type: "answer"; text: string }
   | { type: "speed_fallback"; message: string }
   /** A file a tool of Codex's own made (an image), kept in the agent's folder: the server shows it with the reply. */
   | { type: "file"; path: string };
@@ -149,6 +151,8 @@ export interface CodexBrainTurnRequest {
   permissions?: { mode?: "plan" | "work" | "chat"; asks?: "always" | "never" };
   /** Protocol 16: false for a background turn (no app-server is kept for it). */
   keepAlive?: boolean;
+  /** Each answer as it comes (`BrainTurnRequest.answers`); a runner that doesn't read it joins them into `done`. */
+  answers?: "each";
 }
 
 /**
@@ -843,6 +847,11 @@ export interface CodexTurnInput {
   keepAlive?: boolean;
   /** Protocol 41: the team's right hand (`codexTurnArgs`' `chat`), always on `codex exec`, killed at a tool of Codex's own. */
   chat?: boolean;
+  /**
+   * The server posts each answer as it comes (`BrainTurnRequest.answers`): a Codex turn's answer before the one an
+   * urgent message starts is an `answer` event, never joined into `done`.
+   */
+  answers?: "each";
 }
 
 /** The app-server mode as `runCodexTurn` sees it (`CodexAppServers`). */
@@ -1178,6 +1187,7 @@ export async function handleCodexBrainTurn(
         ...(req.permissions?.asks === "never" ? { asks: "never" as const } : {}),
         ...(req.keepAlive === false ? { keepAlive: false } : {}),
         ...(chat ? { chat } : {}),
+        ...(req.answers === "each" ? { answers: "each" as const } : {}),
       },
       {
         threads,

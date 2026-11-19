@@ -1303,9 +1303,13 @@ export class CodexAppServers implements CodexAppRunner {
         if (turnId && turn.id !== turnId) return;
         flush();
         if (restart && turn.status !== "failed") {
-          // The next Codex turn starts with the urgent messages (and any that came while it stopped).
+          // The next Codex turn starts with the urgent messages (and any that came while it stopped). The answer of
+          // the one that ended is posted now when the server takes each answer as it comes, else it leads the last.
           const answer = mapper.nextTurn();
-          if (turn.status === "completed" && answer) held.push(answer);
+          if (turn.status === "completed" && answer) {
+            if (input.answers === "each") emit({ type: "answer", text: redact(answer) });
+            else held.push(answer);
+          }
           const batch = restart;
           restart = null;
           const clientId = (batch[0] as SteerMessage).uuid;

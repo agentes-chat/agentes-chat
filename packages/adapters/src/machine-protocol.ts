@@ -2093,6 +2093,11 @@ export type WireBrainEvent =
     }
   /** Protocol 15: messages handed with `brain.steer` that the turn read (their `uuid`s). */
   | { type: "steer_read"; uuids: string[] }
+  /**
+   * An answer the turn finished before it went on (`BrainTurnRequest.answers`): the server posts it as a message of its
+   * own now; `done` holds only what came after it. Sent only to a request that asked for it.
+   */
+  | { type: "answer"; text: string }
   /** Protocol 46: Fast failed (`message`: the provider's words) and this turn answered at standard speed. */
   | { type: "speed_fallback"; message: string }
   /** A call the brain starts on its own (Claude Code's Read, Bash, Task): its `tool_call` follows once it ended. */
@@ -2200,6 +2205,12 @@ export interface BrainTurnRequest {
    * (`PERSON_TURN_MIN_FREE_BYTES`). No protocol step: a runner that doesn't read it admits the turn like any other.
    */
   personWaiting?: boolean;
+  /**
+   * `each` (ADR 0112): an answer the turn finished before it went on (a message handed to it mid-turn was read after
+   * it, work moved to the background, a background task's notice) goes out at once as an `answer` event, and `done`
+   * holds only what came after it. No protocol step: a runner that doesn't read it joins them into `done`, as before.
+   */
+  answers?: "each";
 }
 
 /**
@@ -3615,6 +3626,10 @@ export function parseBrainEvent(v: unknown): WireBrainEvent | null {
         .map((u) => u.slice(0, 64));
       return uuids.length ? { type: "steer_read", uuids } : null;
     }
+    case "answer":
+      return isString(v.text) && v.text.trim() !== ""
+        ? { type: "answer", text: v.text.slice(0, BRAIN_LIMITS.doneText) }
+        : null;
     case "speed_fallback":
       return { type: "speed_fallback", message: (isString(v.message) ? v.message : "").slice(0, BRAIN_LIMITS.message) };
     case "tool_started":

@@ -6629,7 +6629,7 @@
         "cli_closed": "Il programma {{brain}} si è chiuso all'improvviso.",
         "cli_sandbox": "Il programma {{brain}} non riesce ad avviare la sua sandbox su questo computer. Scegli un'altra IA nelle impostazioni dell'agente.",
         "account_missing": "L'account scelto per questo agente non è più sul suo computer. Scegline un altro nelle impostazioni dell'agente o aggiungilo di nuovo.",
-        "windows_sandbox": "Questo computer Windows non riesce a isolare i comandi di Codex: serve Windows 11 24H2 o più recente.",
+        "windows_sandbox": "Questo computer Windows non riesce a isolare i comandi di Codex: serve Windows 11 24H2 o più recente. Aggiorna Windows, scegli Claude o una chiave API per questo agente, oppure spostalo su un computer Linux.",
         "our_error": "Qualcosa è andato storto da parte nostra e l'attività si è fermata. Richiedilo tra poco.",
         "unknown": "Non riuscita."
       }
@@ -8181,7 +8181,10 @@
     "unreachableTitle": "Impossibile raggiungere agentes.chat",
     "unreachableText": "Potrebbe essere in riavvio. Questa pagina si riapre da sola appena torna disponibile.",
     "offlineTitle": "Sei offline",
-    "offlineText": "Questa pagina si riapre da sola quando torni online."
+    "offlineText": "Questa pagina si riapre da sola quando torni online.",
+    "unknownHostTitle": "Questo indirizzo non è ancora configurato",
+    "unknownHostText": "Se è stato appena collegato, riprova tra qualche minuto.",
+    "unknownHostTab": "Indirizzo non configurato · agentes.chat"
   },
   "scopes": {
     "context_read": {
@@ -12418,12 +12421,6 @@
       "held": "{{name}} lo legge dopo la tua decisione",
       "read": "{{name}} l'ha letto",
       "resolved": "{{name}} ha chiuso la richiesta di aiuto"
-    },
-    "well": {
-      "readYours": "Ha letto la tua nota",
-      "readOf": "Ha letto la nota di {{name}}",
-      "nowYours": "Si è fermato per leggere la tua nota",
-      "nowOf": "Si è fermato per leggere la nota di {{name}}"
     },
     "strip": {
       "see": "Vedi",

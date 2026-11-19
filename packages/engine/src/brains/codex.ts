@@ -423,6 +423,8 @@ export class CodexBrain implements Brain {
       ...(this.deps.keepAlive === false ? { keepAlive: false } : {}),
       ...(freeTier ? { freeTier } : {}),
       ...(turn.personWaiting ? { personWaiting: true } : {}),
+      // Each answer the turn finishes before it goes on is its own message (ADR 0112).
+      answers: "each",
     };
 
     const events = channel<BrainEvent>();
@@ -451,6 +453,8 @@ export class CodexBrain implements Brain {
       for await (const event of events.read()) {
         if (ended) continue;
         if (event.type === "text_delta") text += event.text;
+        // What it streamed before an answer it finished is that answer, posted on its own: never the turn's again.
+        if (event.type === "answer") text = "";
         if (event.type === "done") {
           ended = true;
           yield { type: "done", text: event.text, session: { id: session.id } };

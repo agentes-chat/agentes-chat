@@ -336,6 +336,7 @@ export {
   PlanStrip,
   type PlanStripCell,
   planCellPixel,
+  type RunBar,
   RunKey,
   RunLane,
   RunMark,

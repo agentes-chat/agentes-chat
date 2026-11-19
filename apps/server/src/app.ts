@@ -1,4 +1,4 @@
-import { hostLook, MisconfiguredError, requestLocale } from "@agenteschat/engine";
+import { hostLook, MisconfiguredError, normalizeHost, requestLocale } from "@agenteschat/engine";
 import { helpDocsUrl } from "@agenteschat/i18n/help";
 import { appLocale } from "@agenteschat/i18n/locale";
 import type { AgentesModule, Edition, ModuleContext } from "@agenteschat/modules";
@@ -14,6 +14,7 @@ import { apiBodyLimit } from "./http/body-limit";
 import { errorPages } from "./http/error-page";
 import { apiError, domainErrorResponse, routeOf, validationHook } from "./http/errors";
 import { createLogger, type Logger, loggedPath } from "./logger";
+import { ownHosts } from "./operator/hosts";
 import { directPushSenders, relayServeSender } from "./push-senders";
 import { accessRoutes } from "./routes/app/access";
 import { accountRoutes } from "./routes/app/account";
@@ -418,15 +419,38 @@ export function createApp(options: AppOptions) {
     // addresses all answer with the same page. A header, never a robots.txt: a crawler kept out can't read it.
     // On a registered host (ADR 0194) the page says so on its <html> before the app knows the host, so index.html's
     // boot rules hide the product's mark. Every page from WEB_DIR passes here, the SPA fallback included.
+    // On a hostname that is neither the server's own nor registered, the app's page is a 404 marked
+    // data-unknown-host, and the web shows only its "not set up yet" screen. Only with the operator API on: hosts
+    // register only through it, so without it every name a proxy sends is the server's own.
     const db = options.services?.db;
+    const config = options.services?.config;
+    const own = config ? ownHosts(config) : new Set<string>();
+    const unknownHost = (host: string | undefined) => {
+      const name = normalizeHost(host);
+      return Boolean(config?.OPERATOR_API_TOKEN && name && !own.has(name));
+    };
+    const appPage = (path: string) => !path.endsWith(".html") || path === "/index.html";
     app.use("/*", async (c, next) => {
       await next();
       if (isApi(c.req.path)) return;
       const html = c.res.headers.get("content-type")?.startsWith("text/html");
-      if (html && db && c.res.ok && c.req.method === "GET" && (await hostLook(db, c.req.header("host")))) {
-        const page = (await c.res.text()).replace("<html", "<html data-host");
-        c.res.headers.delete("content-length");
-        c.res = new Response(page, { status: c.res.status, headers: c.res.headers });
+      if (html && db && c.res.ok && c.req.method === "GET") {
+        const host = c.req.header("host");
+        const mark = (await hostLook(db, host))
+          ? "data-host"
+          : appPage(c.req.path) && unknownHost(host)
+            ? "data-unknown-host"
+            : null;
+        if (mark) {
+          const page = (await c.res.text()).replace("<html", `<html ${mark}`);
+          c.res.headers.delete("content-length");
+          // The address may be registered a moment later: nothing keeps this answer.
+          if (mark === "data-unknown-host") c.res.headers.set("cache-control", "no-store");
+          c.res = new Response(page, {
+            status: mark === "data-unknown-host" ? 404 : c.res.status,
+            headers: c.res.headers,
+          });
+        }
       }
       if (html) c.res.headers.set("x-robots-tag", "noindex");
       if (!c.res.ok || c.res.headers.has("cache-control")) return;
