@@ -4,8 +4,8 @@ import {
   isOpenHandoff,
   keys,
   machineProfiles,
-  useAgents,
   useAgentsBrowserHandoffs,
+  useAllAgents,
   useAllowMachineTool,
   useApi,
   useBrowserHandoffMutations,
@@ -457,7 +457,7 @@ function useAskReduce(machineId: string) {
 
 /** An agent's name: from the workspace's agents, else from the computer's list. */
 function useAgentName(m: Pick<Machine, "agents"> | undefined) {
-  const agents = useAgents(useOrgId());
+  const agents = useAllAgents(useOrgId());
   return (id: string) => agents.data?.find((a) => a.id === id)?.name ?? m?.agents.find((a) => a.id === id)?.name ?? "";
 }
 

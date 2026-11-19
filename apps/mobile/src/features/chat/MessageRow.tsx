@@ -310,10 +310,10 @@ function RowBody({
       !inThread &&
       !readOnly &&
       !m.local &&
-      talksToAgent(m, (handle) => agentsByAnyHandle(dir.agents).get(handle)?.id)
+      talksToAgent(m, (handle) => agentsByAnyHandle([...dir.agentById.values()]).get(handle)?.id)
         ? foldTalk(body, TALK_LINE_CHARS.phone)
         : null,
-    [isAgent, inThread, readOnly, m, body, dir.agents],
+    [isAgent, inThread, readOnly, m, body, dir.agentById],
   );
   // A GIF or a sticker (ADR 0091); with no words, the message is the picture alone (no empty bubble).
   const media = messageMediaOf(meta);

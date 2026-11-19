@@ -137,11 +137,11 @@ function MentionText({ text, everyone, ink }: { text: string; everyone: boolean;
   const c = useColors();
   const myHandle = useRowMyHandle();
   const { i18n } = useTranslation();
-  const { agents, memberByHandle } = useRowDirectory();
+  const { agentById, memberByHandle } = useRowDirectory();
   const { scheme } = useTheme();
   const handle = text.slice(1);
   const all = everyone && isEveryoneWord(handle);
-  const tint = mentionTint(handle, agents, scheme);
+  const tint = mentionTint(handle, [...agentById.values()], scheme);
   if (!all && !tint && !memberByHandle.has(handle.toLowerCase())) return <RNText>{text}</RNText>;
   return (
     <RNText

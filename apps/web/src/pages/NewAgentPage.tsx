@@ -1,7 +1,7 @@
 import type { Agent, AgentAudience } from "@agenteschat/client";
 import {
-  useAgents,
   useAiAccounts,
+  useAllAgents,
   useBrainMachines,
   useCatalog,
   useChannels,
@@ -260,7 +260,8 @@ function NewAgentFlow({ channelId = null }: { channelId?: string | null }) {
   const api = useApi();
   const members = useMembers(org.id);
   const roleList = useRoles(org.id);
-  const agents = useAgents(org.id);
+  // Every agent, unlisted ones too: a new one takes neither their names nor their handles.
+  const agents = useAllAgents(org.id);
   const models = useModels();
   const credentials = useCredentials(org.id);
   const channels = useChannels(org.id);

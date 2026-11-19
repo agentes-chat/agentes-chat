@@ -31,6 +31,14 @@ describe("Agents", () => {
     expect(src("agents/BrakesSection.tsx")).toContain("const others = dir.agents.filter(");
   });
 
+  test("a message's mentions and a new @ read every agent, unlisted ones too: they still name it and hold its @", () => {
+    for (const file of ["chat/EventLine.tsx", "chat/MessageRow.tsx"])
+      expect(src(file)).toContain("agentsByAnyHandle([...dir.agentById.values()])");
+    expect(src("chat/MessageSpans.tsx")).toContain("mentionTint(handle, [...agentById.values()], scheme)");
+    for (const file of ["agents/AgentEditScreen.tsx", "agents/NewAgentScreen.tsx"])
+      expect(src(file)).toContain("takenHandles([...dir.agentById.values()],");
+  });
+
   test("rows are memoized on plain values and share the screen's one clock", () => {
     const screen = src("agents/AgentsScreen.tsx");
     expect(screen).toContain("const AgentRow = memo(function AgentRow(");

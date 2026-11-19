@@ -1,7 +1,7 @@
 import type { Machine, MachineAccessReduce, MachinePause, MachineToolName } from "@agenteschat/client";
 import {
   profilesApply,
-  useAgents,
+  useAllAgents,
   useAuthConfig,
   useDesktopStatus,
   useHostComputer,
@@ -472,7 +472,7 @@ function ReduceDialog({ machine, reduce, onClose }: { machine: Machine; reduce: 
 function FoldersCard({ machine: m, onReduce }: { machine: Machine; onReduce: (r: Reduce) => void }) {
   const { t, i18n } = useTranslation();
   const { org } = useOrg();
-  const agents = useAgents(org.id);
+  const agents = useAllAgents(org.id);
   const nameOf = (id: string) =>
     agents.data?.find((a) => a.id === id)?.name ?? m.agents.find((a) => a.id === id)?.name ?? "";
   const access = m.access;
