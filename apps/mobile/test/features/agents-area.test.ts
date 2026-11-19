@@ -22,6 +22,15 @@ describe("Agents", () => {
     expect(screen).toContain("directory.refetch(),");
   });
 
+  test("a private agent unlisted to me (listed: false) stays off every list, while its name and face still resolve", () => {
+    const hooks = src("shared/hooks.ts");
+    expect(hooks).toContain("const agents = all.filter((a) => a.listed !== false);");
+    expect(hooks).toContain("const agentById = new Map(all.map((a) => [a.id, a]));");
+    expect(hooks).toContain("const agents = useAllAgents(orgId);");
+    // The brakes' list of agents it may call is a list too: the directory's, not its lookups.
+    expect(src("agents/BrakesSection.tsx")).toContain("const others = dir.agents.filter(");
+  });
+
   test("rows are memoized on plain values and share the screen's one clock", () => {
     const screen = src("agents/AgentsScreen.tsx");
     expect(screen).toContain("const AgentRow = memo(function AgentRow(");

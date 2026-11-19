@@ -128,8 +128,9 @@ export const listsAgent = (
 ) => opensDm(agent) || editsAgent(agent);
 
 /**
- * Whether Equipe, its sectors and the counts name every agent for me (the server's `listsAllAgents`); without it the
- * server sends them only the agents whose workings I see (`listsAgentTo`): that answer me, or that I edit.
+ * Whether Equipe, its sectors and the counts name every agent for me (the server's `listsAllAgents`), but someone
+ * else's private one (`listed: false`, which the directory and `useAgents` leave out); without it the server sends them
+ * only the agents whose workings I see (`listsAgentTo`): that answer me, or that I edit.
  */
 export const listsAllAgents = (org: OrgSummary | null | undefined) =>
   can(org, "view_all_agents") || can(org, "manage_agents");

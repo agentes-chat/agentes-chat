@@ -810,6 +810,10 @@ export function useRevokeInvitation(orgId: string) {
 
 // ── Agents ──────────────────────────────────────────────────────────────────
 
+/** The agents my lists and pickers name: a private agent (`listed: false`) stays out for whom it is unlisted. */
+const listedAgents = (list: Agent[]) => list.filter((a) => a.listed !== false);
+
+/** The team's agents my lists name (`listed`); the directories resolve every agent's name and face (`useAllAgents`). */
 export const useAgents = (orgId: string, enabled = true) => {
   const api = useApi();
   return useQuery({
@@ -817,6 +821,21 @@ export const useAgents = (orgId: string, enabled = true) => {
     queryFn: () => api.agents.list(orgId),
     staleTime: 30_000,
     enabled,
+    select: listedAgents,
+    ...BACK_TO_TAB,
+  });
+};
+
+/**
+ * Every agent of the team the server sent, unlisted ones too (`listed: false`): only for the directories, which name a
+ * message's author and open a link to its public card. A list or picker reads `useAgents`.
+ */
+export const useAllAgents = (orgId: string) => {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.agents(orgId),
+    queryFn: () => api.agents.list(orgId),
+    staleTime: 30_000,
     ...BACK_TO_TAB,
   });
 };
