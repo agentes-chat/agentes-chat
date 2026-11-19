@@ -655,10 +655,15 @@ export function rankTools(tools: ToolDefinition[], prefix: string, query: string
     .map((s) => s.tool);
 }
 
-/** A tool's input schema, short enough for a search result: `required` first, so the cut never takes it. */
+/**
+ * A tool's input schema, short enough for a search result: `required` first, so the cut never takes it. A cut schema
+ * still names every field after it: an agent told to fill a field the cut took would read that it doesn't exist.
+ */
 export function compactSchema(schema: JsonSchema) {
   const text = JSON.stringify({ required: schema.required, ...schema });
-  return text.length > SCHEMA_CHARS ? `${cutText(text, SCHEMA_CHARS)}…` : text;
+  if (text.length <= SCHEMA_CHARS) return text;
+  const fields = Object.keys(schema.properties ?? {}).join(", ");
+  return `${cutText(text, SCHEMA_CHARS)}…${fields ? ` (every field: ${cutText(fields, SCHEMA_CHARS / 2)})` : ""}`;
 }
 
 /** How a person gets a connector the agent lacks, in the app's words (and the Portuguese the app shows). */
