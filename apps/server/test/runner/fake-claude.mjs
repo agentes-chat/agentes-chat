@@ -331,6 +331,12 @@ async function answer(line) {
     await sleep(20);
     process.exit(3);
   }
+  // "NOTICED": the process writes Claude Code's notice for a model outside its catalog, then dies saying nothing more.
+  if (prompt.includes("NOTICED")) {
+    process.stderr.write('[claude-code:unrecognized_model] {"model":"deepseek-v4.1-flash","query_source":"sdk"}\n');
+    await sleep(20);
+    process.exit(3);
+  }
   if (prompt.includes("ASKCONTROL")) {
     out({
       type: "control_request",
