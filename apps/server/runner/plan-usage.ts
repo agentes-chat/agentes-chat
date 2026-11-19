@@ -81,8 +81,12 @@ const RATE_LIMIT_WINDOWS = new Map<string, Pick<PlanWindow, "kind" | "label">>([
   ["overage", { kind: "other", label: "Extra usage" }],
 ]);
 
-/** A utilization up to 1 is a fraction. */
-const usedOf = (u: number) => (u <= 1 ? u * 100 : u);
+/**
+ * The event's utilization is always a fraction: Claude Code passes the API's `anthropic-ratelimit-unified-*-utilization`
+ * header through as a number (2.1.327, read 2026-11-18). So 1 is a full window, and one past it (1.2) is over it, never
+ * 1%. `get_usage`'s 0–100 never comes here (`claudeUsage`).
+ */
+const usedOf = (u: number) => u * 100;
 const windowKey = (w: Pick<PlanWindow, "kind" | "label">) => `${w.kind}:${w.label ?? ""}`;
 
 /**

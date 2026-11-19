@@ -80,10 +80,10 @@ test("a turn's rate_limit_event: its window replaced (a fraction ×100), the lim
     source: "turn",
     at,
   });
-  // Another window joins; a percentage stays one; the limit hit.
+  // Another window joins, full (a fraction of 1); the limit hit.
   const week = withRateLimit(
     first ?? undefined,
-    { status: "rejected", rateLimitType: "seven_day", utilization: 100 },
+    { status: "rejected", rateLimitType: "seven_day", utilization: 1 },
     NOW,
   );
   expect(week?.windows.map((w) => [w.kind, w.usedPercent])).toEqual([
@@ -105,6 +105,11 @@ test("a turn's rate_limit_event: its window replaced (a fraction ×100), the lim
   expect(
     withRateLimit(undefined, { status: "allowed", rateLimitType: "overage", utilization: 0.3 }, NOW)?.windows,
   ).toEqual([{ kind: "other", label: "Extra usage", usedPercent: 30 }]);
+  // Every utilization is a fraction: 1% is 0.01, and past the limit (1.2) is full, never 1%.
+  const used = (utilization: number) =>
+    withRateLimit(undefined, { status: "allowed", rateLimitType: "five_hour", utilization }, NOW)?.windows[0]
+      ?.usedPercent;
+  expect([used(0.01), used(1), used(1.2), used(0)]).toEqual([1, 100, 100, 0]);
   expect(
     withRateLimit(undefined, { status: "allowed", rateLimitType: "seven_day_overage_included", utilization: 0.5 }, NOW)
       ?.windows[0]?.kind,
