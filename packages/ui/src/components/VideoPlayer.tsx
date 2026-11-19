@@ -1,4 +1,13 @@
-import { type KeyboardEvent, type PointerEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  type KeyboardEvent,
+  type PointerEvent,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { cx } from "../cx";
 import { Icon } from "../icons/Icon";
 import { claimPlayback, releasePlayback } from "./media-playback";
@@ -29,6 +38,11 @@ export interface VideoPlayerProps {
   name: string;
   /** `tile` in the chat (one box, the video whole inside it; a corner button opens the viewer), `viewer` fills its box. */
   variant?: "tile" | "viewer";
+  /**
+   * A tile's shape (width / height), when the server read the video's size: the tile is that shape from the first
+   * paint. Without it the tile starts 16:9 and takes the video's shape once its size loads.
+   */
+  ratio?: number;
   labels: VideoPlayerLabels;
   /** The tile's corner button. */
   onOpen?: () => void;
@@ -161,6 +175,7 @@ export function VideoPlayer({
   src,
   name,
   variant = "tile",
+  ratio,
   labels,
   onOpen,
   actions,
@@ -183,6 +198,9 @@ export function VideoPlayer({
   const [volume, setVolume] = useState(1);
   const [speed, setSpeed] = useState(1);
   const [full, setFull] = useState(false);
+  // The shape the video told once its size loaded, for a tile whose shape the server didn't read.
+  const [told, setTold] = useState<number | undefined>(undefined);
+  const shape = ratio ?? told;
 
   const pause = useCallback(() => video.current?.pause(), []);
   useEffect(
@@ -289,6 +307,8 @@ export function VideoPlayer({
       data-phase={phase}
       data-hide={(hidden && phase === "playing") || undefined}
       data-full={full || undefined}
+      data-ratio={(tile && shape !== undefined) || undefined}
+      style={tile && shape !== undefined ? ({ "--ratio": String(shape) } as CSSProperties) : undefined}
       tabIndex={-1}
       onKeyDown={keys}
       onClick={(e) => {
@@ -310,7 +330,13 @@ export function VideoPlayer({
         src={`${src}${src.includes("#") ? "" : "#t=0.001"}`}
         preload="metadata"
         playsInline
-        onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+        onLoadedMetadata={(e) => {
+          const v = e.currentTarget;
+          setDuration(v.duration);
+          // Within the bounds a picture's tile keeps (`pictureRatio`): a strip of a video still reads.
+          if (ratio === undefined && v.videoWidth > 0 && v.videoHeight > 0)
+            setTold(Math.min(4, Math.max(0.25, v.videoWidth / v.videoHeight)));
+        }}
         onDurationChange={(e) => Number.isFinite(e.currentTarget.duration) && setDuration(e.currentTarget.duration)}
         onPlay={() => {
           claimPlayback(pause);

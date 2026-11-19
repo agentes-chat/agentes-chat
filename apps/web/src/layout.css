@@ -2076,6 +2076,12 @@ html:not([data-pointer]) .artifact-tile__open:focus-visible {
   background: none;
   box-shadow: none;
 }
+/* Beside other attachments, a video in its own shape is at most 300px high, so upright ones sit side by side (three
+   in a message's 640px) instead of one under the other; a wide one keeps its 320px. Alone, up to 440px high
+   (`.ac-video--tile[data-ratio]`). */
+.artifact-cards > .artifact-tile[data-kind="video"]:not(:only-child) .ac-video--tile[data-ratio] .ac-video__media {
+  width: min(320px, calc(300px * var(--ratio)));
+}
 /* On a phone: pictures two to a row; a file the whole row, since its name wraps whole and half a row would take it a
    word a line (a table's cover keeps two columns, the rest wouldn't read); alone, the whole width up to its size. */
 @media (max-width: 640px) {

@@ -147,6 +147,7 @@ export function ArtifactCard({ artifact: ref }: { artifact: ArtifactRef }) {
           content={content}
           artifactId={a.id}
           version={a.shownVersion}
+          ratio={pictureRatio(content) ?? pictureRatio(ref)}
           onOpen={open}
           tip={`${a.title} · ${meta}`}
           actions={<TileActions title={a.title} actions={actions} onDownload={save} />}
@@ -188,7 +189,8 @@ function LoadingTile({ title = "", ratio }: { title?: string; ratio?: number }) 
   if (kind === "video")
     return (
       <div className="artifact-tile artifact-tile--loading" data-kind="video" aria-busy="true">
-        <span className="ac-video ac-video--tile">
+        {/* Its shape already, when the server read the video's size: the tile keeps it once the player comes. */}
+        <span className="ac-video ac-video--tile" {...ratioProps(ratio)}>
           <span className="ac-video__media" />
         </span>
       </div>

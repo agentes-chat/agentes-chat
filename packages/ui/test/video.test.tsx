@@ -103,3 +103,35 @@ describe("one thing plays at a time", () => {
     expect(stopped).toEqual(["a", "a"]);
   });
 });
+
+describe("VideoPlayer's shape", () => {
+  const box = () => document.querySelector(".ac-video") as HTMLElement;
+  test("a tile in the shape the server read, from the first paint", () => {
+    player({ ratio: 716 / 1284 });
+    expect(box().hasAttribute("data-ratio")).toBe(true);
+    expect(box().style.getPropertyValue("--ratio")).toBe(String(716 / 1284));
+  });
+  test("with no shape read, a tile takes the video's once its size loads, within a picture's bounds", () => {
+    player();
+    expect(box().hasAttribute("data-ratio")).toBe(false);
+    const video = document.querySelector("video") as HTMLVideoElement;
+    Object.defineProperty(video, "videoWidth", { value: 100 });
+    Object.defineProperty(video, "videoHeight", { value: 1000 });
+    fireEvent.loadedMetadata(video);
+    expect(box().style.getPropertyValue("--ratio")).toBe("0.25");
+  });
+  test("the viewer fills its box: no shape of its own", () => {
+    player({ variant: "viewer", ratio: 0.5 });
+    expect(box().hasAttribute("data-ratio")).toBe(false);
+  });
+  test("full screen, the video fills the screen whatever box its tile gave it", async () => {
+    const css = await Bun.file(new URL("../src/styles/components.css", import.meta.url)).text();
+    const rule =
+      css.match(
+        /\.ac-video\[data-full\] \.ac-video__media,\s*\.ac-video:fullscreen \.ac-video__media \{([^}]*)\}/,
+      )?.[1] ?? "";
+    expect(rule).toContain("width: 100%");
+    expect(rule).toContain("height: 100%");
+    expect(rule).toContain("max-width: none");
+  });
+});

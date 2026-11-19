@@ -102,10 +102,13 @@ export function FileVideo({
   actions,
   fallback,
   tip,
+  ratio,
 }: {
   content: ArtifactFileContent;
   artifactId: string;
   version: number;
+  /** Its shape, when the server read the video's size. */
+  ratio?: number;
   onOpen: () => void;
   actions?: ReactNode;
   fallback: ReactNode;
@@ -122,6 +125,7 @@ export function FileVideo({
         <VideoPlayer
           src={api.artifacts.fileUrl(org.id, artifactId, { version })}
           name={content.name}
+          ratio={ratio}
           labels={labels}
           onOpen={onOpen}
           actions={actions}

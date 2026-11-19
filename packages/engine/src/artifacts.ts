@@ -52,6 +52,7 @@ import {
   versionDoc,
 } from "./live/preview";
 import { docOf, liveDocMeta, loadStored, toB64 } from "./live/store";
+import { videoSize } from "./video-size";
 
 export { tableToCsv };
 
@@ -151,7 +152,7 @@ export interface FileContent {
   size: number;
   sha256: string;
   text?: string;
-  /** A picture's own size, read from its header when it was stored (`imageSize`); absent for older files. */
+  /** A picture's or a video's own size, read when it was stored (`imageSize`, `videoSize`); absent for older files. */
   width?: number;
   height?: number;
 }
@@ -1128,8 +1129,8 @@ async function writeBlob(deps: ArtifactDeps, orgId: string, artifactId: string, 
   // loser's put overwrites the winner's committed bytes, leaving the row's size and sha not matching disk.
   const key = `${location.prefix}artifacts/${artifactId}/v${version}-${Bun.randomUUIDv7()}`;
   await location.store.put(key, body, { contentType });
-  // A picture keeps its size, so a conversation draws its box before it loads.
-  const size = stored.fileName !== undefined && stored.fileName !== null ? imageSize(body) : null;
+  // A picture or a video keeps its size, so a conversation draws its box in its shape before it loads.
+  const size = stored.fileName !== undefined && stored.fileName !== null ? (imageSize(body) ?? videoSize(body)) : null;
   return {
     storageConfigId: location.storageConfigId,
     key,

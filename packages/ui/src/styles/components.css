@@ -7811,14 +7811,31 @@ button.ac-voice__play:active {
   max-width: 100%;
   height: 180px;
 }
+/* In the video's own shape (`--ratio`, the server's reading of its size, or the video's once it loads): up to 400px
+   wide and 440px high, as a lone picture's tile. Lengths, never `min(100%, …)` alone: a percentage counts as no cap
+   while the row sizes to what it holds. */
+.ac-video--tile[data-ratio] .ac-video__media {
+  width: min(400px, calc(440px * var(--ratio)));
+  height: auto;
+  aspect-ratio: var(--ratio);
+}
 .ac-video--viewer {
   width: 100%;
   height: 100%;
   min-height: 240px;
   border-radius: var(--radius-sm);
 }
-.ac-video[data-full] {
+.ac-video[data-full],
+.ac-video:fullscreen {
   border-radius: 0;
+}
+/* Full screen, the player is the screen and the video fills it whole, whatever box its tile gave it. */
+.ac-video[data-full] .ac-video__media,
+.ac-video:fullscreen .ac-video__media {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  aspect-ratio: auto;
 }
 .ac-video[data-hide] {
   cursor: none;

@@ -230,6 +230,30 @@ export function singleImageBox(width: number, ratio: number | undefined): { widt
     : { width: Math.round(MAX_PICTURE_HEIGHT * ratio), height: MAX_PICTURE_HEIGHT };
 }
 
+/** Beside other videos, an upright one is at most this tall, so two sit side by side (`videoBoxes`). */
+export const MAX_GROUP_VIDEO_HEIGHT = 300;
+
+/**
+ * Each of a message's videos in its own shape (`ratio`, the server's reading of its size; unknown, 16:9): alone, as a
+ * lone picture (`singleImageBox`); beside others, an upright one takes half the row, up to
+ * `MAX_GROUP_VIDEO_HEIGHT` high, so upright videos sit side by side, and a wide one keeps the whole row.
+ */
+export function videoBoxes(width: number, ratios: readonly (number | undefined)[], gap: number) {
+  if (ratios.length === 1) {
+    const [ratio] = ratios;
+    return [ratio ? singleImageBox(width, ratio) : { width, height: videoHeight(width) }];
+  }
+  const half = Math.floor((width - gap) / 2);
+  return ratios.map((ratio) => {
+    if (!ratio) return { width, height: videoHeight(width) };
+    if (ratio >= 1) return { width, height: Math.round(width / ratio) };
+    const height = Math.round(half / ratio);
+    return height <= MAX_GROUP_VIDEO_HEIGHT
+      ? { width: half, height }
+      : { width: Math.round(MAX_GROUP_VIDEO_HEIGHT * ratio), height: MAX_GROUP_VIDEO_HEIGHT };
+  });
+}
+
 /**
  * A safe file name for a copy in the cache (and the name the share sheet shows): no folders, no
  * characters iOS or other apps refuse, not empty, not too long (the extension is kept).

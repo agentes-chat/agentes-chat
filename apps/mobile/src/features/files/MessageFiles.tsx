@@ -26,6 +26,7 @@ import {
   IMAGE_EXT,
   singleImageBox,
   VIDEO_EXT,
+  videoBoxes,
   videoClock,
   videoHeight,
 } from "./logic";
@@ -115,6 +116,14 @@ export function MessageFiles({ files, align = "start" }: { files: MessageFile[];
         pictureRatio(only.detail?.content.kind === "file" ? only.detail.content : null) ?? pictureRatio(only.file),
       )
     : null;
+  // Each video in its own shape, from its file's details, else its ref.
+  const videoBoxesOf = videoBoxes(
+    blockWidth,
+    videos.map(
+      ({ file, detail }) => pictureRatio(detail?.content.kind === "file" ? detail.content : null) ?? pictureRatio(file),
+    ),
+    GAP,
+  );
   // The message's pictures and videos in the order they show (pictures, then videos; beside other files the videos
   // come first, the pictures among the tiles): whichever is tapped, the viewer pages through them all.
   const media: FileRef[] = (tiles.length > 0 ? [...videos, ...images] : [...pictures, ...videos]).map(
@@ -139,9 +148,24 @@ export function MessageFiles({ files, align = "start" }: { files: MessageFile[];
           />
         </View>
       ) : null}
-      {videos.map(({ file, detail }) => (
-        <InlineVideo key={file.id} file={file} detail={detail} width={blockWidth} siblings={media} />
-      ))}
+      {videos.length > 0 ? (
+        // Upright videos side by side, each in its own shape (`videoBoxes`); a wide one takes the row.
+        <View style={styles.videoRow}>
+          {videos.map(({ file, detail }, i) => {
+            const box = videoBoxesOf[i] ?? { width: blockWidth, height: videoHeight(blockWidth) };
+            return (
+              <InlineVideo
+                key={file.id}
+                file={file}
+                detail={detail}
+                width={box.width}
+                height={box.height}
+                siblings={media}
+              />
+            );
+          })}
+        </View>
+      ) : null}
       {blocks.map((b) =>
         b.kind === "poll" ? (
           <PollCard key={b.id} id={b.id} version={b.shownVersion} />
@@ -237,11 +261,13 @@ function InlineVideo({
   file,
   detail,
   width,
+  height,
   siblings,
 }: {
   file: MessageFile;
   detail: ArtifactDetail | undefined;
   width: number;
+  height: number;
   siblings: readonly FileRef[];
 }) {
   const cardCorners = useMessageCardCorners();
@@ -265,17 +291,12 @@ function InlineVideo({
           source={source}
           name={info?.name || file.title}
           width={width}
+          height={height}
           onOpen={detail ? open : undefined}
           onFailed={() => setFailed(true)}
         />
       ) : (
-        <View
-          style={[
-            styles.shot,
-            { width, height: videoHeight(width), backgroundColor: c.sunken, borderColor: c.line2 },
-            cardCorners,
-          ]}
-        />
+        <View style={[styles.shot, { width, height, backgroundColor: c.sunken, borderColor: c.line2 }, cardCorners]} />
       )}
     </View>
   );
@@ -487,6 +508,7 @@ function RemovedCard() {
 
 const styles = StyleSheet.create({
   wrap: { alignSelf: "stretch", gap: 8 },
+  videoRow: { flexDirection: "row", flexWrap: "wrap", gap: GAP },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: GAP },
   gridEnd: { justifyContent: "flex-end" },
   end: { alignItems: "flex-end" },
