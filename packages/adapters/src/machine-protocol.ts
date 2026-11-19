@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 69;
+export const MACHINE_PROTOCOL_VERSION = 72;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -696,6 +696,33 @@ export const ROOM_FREED_PROTOCOL = 69;
  * runner holds the installers. Older runners answer `bad_request`: the server asks none of them.
  */
 export const CLI_INSTALL_PROTOCOL = 66;
+/**
+ * `report.collect`: the facts and the scrubbed end of its log a computer adds to a problem report someone chose to
+ * send. The server asks no older runner, and says in the report that its log is missing.
+ */
+export const PROBLEM_REPORT_PROTOCOL = 72;
+/** Lines of the runner's log `report.collect` gives, at most. */
+export const REPORT_LOG_LINES = 300;
+
+/** What `report.collect` answers: no paths, names or addresses (the log tail is scrubbed on the computer). */
+export interface RunnerReportParts {
+  runner: string;
+  protocol: number;
+  runtime: string;
+  os: string;
+  arch: string;
+  compiled: boolean;
+  managedBy: string;
+  connection: string;
+  paused: boolean;
+  tools: Record<string, boolean>;
+  executors: { claude?: string; codex?: string; claudeLoggedIn?: boolean };
+  agents: number;
+  runningNow: number;
+  browser?: { state: string; chrome?: string; lastError?: string };
+  logTail: string[];
+}
+
 /** The coding CLIs `cli.install` installs: Claude Code and Codex. */
 export const INSTALLABLE_CLIS = ["claude", "codex"] as const;
 export type InstallableCli = (typeof INSTALLABLE_CLIS)[number];
@@ -2770,6 +2797,8 @@ export type MachineRequest = (
   | { op: "cli.install"; action: "start" | "status" | "cancel"; tool?: InstallableCli }
   /** `IPHONE_DEV_MODE_PROTOCOL`: open Xcode on this Mac (it shows Developer Mode on a plugged iPhone). */
   | { op: "xcode.open" }
+  /** `PROBLEM_REPORT_PROTOCOL`: facts and the scrubbed log tail for a problem report. */
+  | { op: "report.collect" }
 ) & {
   agent?: AgentScope;
   /** Protocol 34: a `browser.*` op in this browser profile's session instead of the agent's (ADR 0110). */
@@ -2850,6 +2879,7 @@ export const MACHINE_OPS: readonly MachineOp[] = [
   "clis.check",
   "cli.install",
   "xcode.open",
+  "report.collect",
 ];
 
 /** What each op answers with `ok: true`. */
@@ -3021,6 +3051,7 @@ export interface MachineReplies {
   "clis.check": { executors: NonNullable<RunnerInfo["executors"]> };
   "cli.install": { install: CliInstall | null };
   "xcode.open": { opened: boolean };
+  "report.collect": RunnerReportParts;
 }
 
 /** An element numbered on a `browser.capture` image: its ref and box (CSS pixels). */
@@ -3616,7 +3647,10 @@ export function parseBrainEvent(v: unknown): WireBrainEvent | null {
     case "done": {
       if (!isString(v.text)) return null;
       const session = isObject(v.session) && isString(v.session.id) ? { id: v.session.id.slice(0, 64) } : undefined;
-      const ms = (x: unknown) => (finite(x) !== undefined && (x as number) >= 0 ? Math.round(x as number) : undefined);
+      // A runner reports these itself: past a day it is a wrong clock, not a slow start, and would skew the percentiles.
+      const DAY_MS = 86_400_000;
+      const ms = (x: unknown) =>
+        finite(x) !== undefined && (x as number) >= 0 && (x as number) <= DAY_MS ? Math.round(x as number) : undefined;
       const t = isObject(v.timings) && typeof v.timings.warm === "boolean" ? v.timings : null;
       const initMs = ms(t?.initMs);
       const firstEventMs = ms(t?.firstEventMs);

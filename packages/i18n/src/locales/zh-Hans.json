@@ -20395,6 +20395,38 @@
       "askFirst": "发送前先询问"
     }
   },
+  "problemReport": {
+    "button": "发送报告",
+    "title": "向 agentes.chat 发送报告",
+    "lead": "agentes.chat 团队会收到：版本、哪些设置已配置（不含其值）、出错的内容，以及日志的最后几行。不包含消息、页面、名称或密钥。",
+    "noteLabel": "发生了什么？（可选）",
+    "notePlaceholder": "停止时你正在做什么",
+    "emailLabel": "用于回复的邮箱（可选）",
+    "emailHelp": "仅在你需要回复时填写。",
+    "showAll": "查看发送的全部内容",
+    "copy": "复制报告",
+    "copied": "已复制",
+    "send": "发送",
+    "sending": "正在发送…",
+    "cancel": "取消",
+    "loading": "正在收集详细信息…",
+    "sentTitle": "报告 {{id}} 已发送",
+    "sentText": "如果你给我们写信，请注明此代码。",
+    "sentTextReply": "我们会回复到 {{email}}。如果你给我们写信，请注明此代码。",
+    "copyCode": "复制代码",
+    "done": "完成",
+    "noLogComputer": "{{computer}} 没有响应，因此未包含它的日志。",
+    "oldRunner": "{{computer}} 上的 agentes.chat 应用版本太旧，无法包含其日志。请在那台电脑上更新应用后再试。",
+    "noServerLines": "只有安装的所有者发送报告时，才会包含服务器的日志行。",
+    "off": "此服务器已关闭发送（PROBLEM_REPORT_URL=off）。请复制报告来分享。",
+    "errorRate": "短时间内报告太多。请在 {{minutes}} 分钟后重试，或复制报告。",
+    "errorUnreachable": "agentes.chat 没有响应。请重试，或复制报告。",
+    "errorRefused": "agentes.chat 未接受此报告（可能来自旧版本）。请改为复制报告。",
+    "errorPreview": "无法收集详细信息：{{reason}}",
+    "emailInvalid": "这个邮箱看起来不对。请修改或留空。",
+    "settingsTitle": "有功能不正常吗？",
+    "settingsText": "将技术详细信息发送给 agentes.chat 团队。"
+  },
   "live": {
     "slides": {
       "rail": {

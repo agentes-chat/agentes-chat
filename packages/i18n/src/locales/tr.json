@@ -20790,6 +20790,38 @@
       "askFirst": "Göndermeden önce sor"
     }
   },
+  "problemReport": {
+    "button": "Rapor gönder",
+    "title": "agentes.chat'e rapor gönderin",
+    "lead": "agentes.chat ekibi şunları alır: sürümler, hangi ayarların tanımlı olduğu (değerleri asla), neyin başarısız olduğu ve günlüklerin son satırları. Mesaj, sayfa, ad veya anahtar yoktur.",
+    "noteLabel": "Ne oldu? (isteğe bağlı)",
+    "notePlaceholder": "Durduğunda ne yapıyordunuz",
+    "emailLabel": "Yanıt için e-posta (isteğe bağlı)",
+    "emailHelp": "Yalnızca yanıt istiyorsanız.",
+    "showAll": "Gönderilen her şeyi görün",
+    "copy": "Raporu kopyala",
+    "copied": "Kopyalandı",
+    "send": "Gönder",
+    "sending": "Gönderiliyor…",
+    "cancel": "İptal",
+    "loading": "Ayrıntılar toplanıyor…",
+    "sentTitle": "{{id}} raporu gönderildi",
+    "sentText": "Bize yazarsanız bu kodu belirtin.",
+    "sentTextReply": "{{email}} adresine yanıt vereceğiz. Bize yazarsanız bu kodu belirtin.",
+    "copyCode": "Kodu kopyala",
+    "done": "Tamam",
+    "noLogComputer": "{{computer}} yanıt vermedi, bu yüzden günlüğü eklenmedi.",
+    "oldRunner": "{{computer}} üzerindeki agentes.chat uygulaması günlüğünü eklemek için çok eski. Eklemek için orada güncelleyin.",
+    "noServerLines": "Sunucunun günlük satırları yalnızca kurulumun sahibi rapor gönderdiğinde eklenir.",
+    "off": "Bu sunucuda gönderme kapalı (PROBLEM_REPORT_URL=off). Paylaşmak için raporu kopyalayın.",
+    "errorRate": "Kısa sürede çok fazla rapor. {{minutes}} dk sonra tekrar deneyin veya raporu kopyalayın.",
+    "errorUnreachable": "agentes.chat yanıt vermedi. Tekrar deneyin veya raporu kopyalayın.",
+    "errorRefused": "agentes.chat bu raporu kabul etmedi (eski bir sürümden olabilir). Bunun yerine raporu kopyalayın.",
+    "errorPreview": "Ayrıntılar toplanamadı: {{reason}}",
+    "emailInvalid": "Bu e-posta doğru görünmüyor. Düzeltin veya boş bırakın.",
+    "settingsTitle": "Bir şey çalışmıyor mu?",
+    "settingsText": "Teknik ayrıntıları agentes.chat ekibine gönderin."
+  },
   "live": {
     "slides": {
       "rail": {

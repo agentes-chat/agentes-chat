@@ -19,6 +19,7 @@ import {
   type IconName,
   Locked,
   RoleMark,
+  SheetBar,
   SheetScreen,
   SkeletonList,
   Text,
@@ -30,7 +31,6 @@ import { leadBox } from "@/ui/type-scale";
 import { Face } from "../shared/Face";
 import { LoadFailed } from "../shared/FirstUse";
 import { useColors, useDirectory, useMeId, useOrgId } from "../shared/hooks";
-import { SheetTitle } from "../shared/PromptForm";
 import { copyText, successHaptic } from "../shared/parts";
 
 type Mode = ArtifactSharing["mode"];
@@ -147,7 +147,8 @@ export function FileShareSheet({ id, onClose }: { id: string; onClose: () => voi
 
   return (
     <SheetScreen>
-      <SheetTitle title={t("share.title", { name: a.title })} />
+      {/* A task sheet: the close plate and the title in its bar, as every task sheet has them (no "Concluído" under it). */}
+      <SheetBar inset title={t("share.title", { name: a.title })} onClose={onClose} />
       <Locked when={busy} style={styles.fields}>
         {closed ? (
           <View>
@@ -276,7 +277,6 @@ export function FileShareSheet({ id, onClose }: { id: string; onClose: () => voi
           </View>
         ) : null}
         <Button variant="primary" wide icon="link" label={t("share.copyLink")} onPress={() => void copy()} />
-        <Button variant="secondary" wide label={t("share.done")} onPress={onClose} />
       </Locked>
     </SheetScreen>
   );

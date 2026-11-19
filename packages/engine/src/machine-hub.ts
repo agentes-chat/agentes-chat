@@ -435,6 +435,8 @@ export function isNewWork(request: MachineRequest) {
     // Its owner looking for, or installing, a coding CLI there.
     case "clis.check":
     case "cli.install":
+    // A problem report reads the computer, paused or not.
+    case "report.collect":
       return false;
     case "secret":
       return request.action !== "discard" && request.action !== "remove" && request.action !== "activate";

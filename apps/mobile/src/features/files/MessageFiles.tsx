@@ -30,7 +30,7 @@ import {
   videoHeight,
 } from "./logic";
 import { openFile } from "./open";
-import { rememberLocalCopy, useArtifacts, useRemoteFile } from "./source";
+import { pictureDrawn, pictureFade, rememberLocalCopy, useArtifacts, useRemoteFile } from "./source";
 import { VideoFirstFrame, VideoPlayer } from "./VideoPlayer";
 
 /**
@@ -133,7 +133,6 @@ export function MessageFiles({ files, align = "start" }: { files: MessageFile[];
         <View style={{ width: onlyBox.width }}>
           <InlineImage
             file={only.file}
-            detail={only.detail}
             box={onlyBox}
             label={only.detail?.title || only.file.title}
             onPress={openOnly}
@@ -180,13 +179,11 @@ export function MessageFiles({ files, align = "start" }: { files: MessageFile[];
 
 function InlineImage({
   file,
-  detail,
   box: { width, height },
   label,
   onPress,
 }: {
   file: MessageFile;
-  detail: ArtifactDetail | undefined;
   box: { width: number; height: number };
   label: string;
   onPress: () => void;
@@ -195,7 +192,10 @@ function InlineImage({
   const { t } = useTranslation();
   const orgId = useOrgId();
   const c = useColors();
-  const version = detail?.shownVersion ?? file.version;
+  // The message's own version, from the first frame: switched to the details' once they came, the link and the cache
+  // key changed, and the picture went blank and faded in again.
+  const version = file.version;
+  const key = `${file.id}@${version ?? "latest"}`;
   const link = useRemoteFile(orgId, file.id, version);
   const [failed, setFailed] = useState(false);
   return (
@@ -209,10 +209,11 @@ function InlineImage({
     >
       {link.data && !failed ? (
         <Image
-          source={{ uri: link.data.uri, headers: link.data.headers, cacheKey: `${file.id}@${version ?? "latest"}` }}
-          recyclingKey={`${file.id}@${version ?? "latest"}`}
+          source={{ uri: link.data.uri, headers: link.data.headers, cacheKey: key }}
+          recyclingKey={key}
           contentFit="contain"
-          transition={160}
+          transition={pictureFade(key)}
+          onLoad={() => pictureDrawn(key)}
           style={StyleSheet.absoluteFill}
           onError={() => setFailed(true)}
           accessible={false}

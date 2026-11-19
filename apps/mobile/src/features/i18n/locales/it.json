@@ -579,8 +579,6 @@
     "file": "File",
     "media": "GIF",
     "noCamera": "Nessun accesso alla fotocamera. Consentilo nelle Impostazioni del telefono.",
-    "mission": "Avvia una missione",
-    "missionHint": "Un lavoro lungo, con un piano, dall'inizio alla fine",
     "summary": "Riassumi la chat",
     "summaryHint": "Cosa è successo mentre eri via",
     "remind": "Ricordamelo più tardi",

@@ -183,7 +183,7 @@ describe('the "New" line', () => {
 });
 
 describe("sheets that open the next thing", () => {
-  test("wait for the sheet to be gone (`sheet.close` says when), never a guessed time", () => {
+  test("stack the next step over the sheet, or wait for it to be gone (`sheet.close` says when), never a guessed time", () => {
     const chat = src("features/chat/ChatScreen.tsx");
     expect(chat).not.toContain("SHEET_LEAVE_MS");
     expect(chat).not.toMatch(/setTimeout\(\(\) => open(NewMission|Remind)\(\), \d+\)/);
@@ -191,8 +191,12 @@ describe("sheets that open the next thing", () => {
     expect(chat).toContain(
       'else sheet.close(() => router.setParams({ channelId: id, thread: "", handoff: "", m: "" }));',
     );
-    expect(chat).toContain('const after = pick !== "summary" || Boolean(mission);');
-    expect(chat).toContain("if (after) await new Promise<void>((done) => sheet.close(done));");
+    // The "+": the GIFs, a reminder and a mission's summary stack over it at once (a flick down goes back to it); the
+    // camera, the library and the files picker wait for it to be gone.
+    const plus = between(chat, "const onPlus = async (pick: PlusPick) => {", 'case "camera": {');
+    expect(plus).toMatch(/case "media":\s*openMedia\(\);\s*return;\s*case "remind":\s*openRemind\(\);\s*return;/);
+    expect(plus).toContain("await new Promise<void>((done) => sheet.close(done));");
+    expect(chat).toContain("const openMedia = () =>\n    sheet.push(");
   });
 });
 

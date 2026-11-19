@@ -115,7 +115,7 @@ beforeAll(async () => {
     secretCiphertext: "v1.fake.fake.fake",
     wrappedDataKey: "fake",
     kekId: "local:v1",
-    keyHint: "abcd",
+    keyHint: "wqrs",
     revokedAt,
   });
   await t.db
@@ -154,7 +154,7 @@ async function ok<T = Record<string, unknown>>(res: Response) {
   return (await res.json()) as T;
 }
 const code = async (res: Response) => ((await res.json()) as { error: { code: string } }).error.code;
-const PRIVATE = ["ada@example.com", "Ada@Example.com", "lia@example.com", "9xyz", "abcd", "org-ada", "org-lia"];
+const PRIVATE = ["ada@example.com", "Ada@Example.com", "lia@example.com", "9xyz", "wqrs", "org-ada", "org-lia"];
 
 test("both reads need the token", async () => {
   expect((await get(`/analytics/ai-accounts?${RANGE}`, "Bearer wrong")).status).toBe(401);

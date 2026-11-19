@@ -74,7 +74,7 @@ function LayoutBones() {
     >
       {Array.from({ length: 6 }, (_, i) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: a fixed drawing
-        <View key={i} style={[styles.bone, { width: w, height: slideHeight(w), backgroundColor: c.sunken }]} />
+        <View key={i} style={[styles.bone, { width: w, height: slideHeight(w), backgroundColor: c.plate }]} />
       ))}
     </Animated.View>
   );
@@ -160,7 +160,8 @@ const LayoutTile = memo(function LayoutTile({
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ selected: checked }}
-      style={[styles.tile, { width }]}
+      style={[{ width }]}
+      contentStyle={styles.tileIn}
     >
       <View
         style={[
@@ -228,7 +229,7 @@ function Slot({ slot, k, theme }: { slot: LayoutSlot; k: number; theme: SlideThe
 const styles = StyleSheet.create({
   list: { paddingHorizontal: SCREEN_X, paddingTop: 16, paddingBottom: 32, gap: 20 },
   cols: { gap: GAP },
-  tile: { gap: 8 },
+  tileIn: { gap: 8 },
   frame: { borderRadius: 8, overflow: "hidden" },
   checked: { fontWeight: "600" },
   sketch: { overflow: "hidden" },

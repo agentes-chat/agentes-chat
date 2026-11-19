@@ -72,7 +72,8 @@ export function Filters({ items, value, onChange }: FiltersProps) {
                 minHeight: TOOL_H,
                 paddingHorizontal: 14,
                 borderRadius: 999,
-                backgroundColor: on ? colors.ink : colors.sunken,
+                // Off, the search field's fill: `sunken` is darker than the dark page, and the pill vanished.
+                backgroundColor: on ? colors.ink : colors.plate,
                 flexDirection: "row",
                 alignItems: "center",
                 gap: 6,

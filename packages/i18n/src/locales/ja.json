@@ -20211,6 +20211,38 @@
       "askFirst": "送信前に確認する"
     }
   },
+  "problemReport": {
+    "button": "レポートを送信",
+    "title": "agentes.chat にレポートを送信",
+    "lead": "agentes.chat チームに届くのは、バージョン、設定されている項目（値は含みません）、失敗した内容、ログの最後の行です。メッセージ、ページ、名前、キーは含まれません。",
+    "noteLabel": "何が起きましたか？（任意）",
+    "notePlaceholder": "止まったときに何をしていたか",
+    "emailLabel": "返信用のメール（任意）",
+    "emailHelp": "返信が必要な場合のみ。",
+    "showAll": "送信される内容をすべて見る",
+    "copy": "レポートをコピー",
+    "copied": "コピーしました",
+    "send": "送信",
+    "sending": "送信中…",
+    "cancel": "キャンセル",
+    "loading": "詳細を集めています…",
+    "sentTitle": "レポート {{id}} を送信しました",
+    "sentText": "お問い合わせの際はこのコードをお伝えください。",
+    "sentTextReply": "{{email}} に返信します。お問い合わせの際はこのコードをお伝えください。",
+    "copyCode": "コードをコピー",
+    "done": "完了",
+    "noLogComputer": "{{computer}} が応答しなかったため、そのログは含まれていません。",
+    "oldRunner": "{{computer}} の agentes.chat アプリが古いため、ログを含められません。含めるには、そちらでアプリを更新してください。",
+    "noServerLines": "サーバーのログ行は、インストールの所有者がレポートを送信した場合のみ含まれます。",
+    "off": "このサーバーでは送信がオフです（PROBLEM_REPORT_URL=off）。共有するにはレポートをコピーしてください。",
+    "errorRate": "短時間にレポートが多すぎます。{{minutes}} 分後にもう一度試すか、レポートをコピーしてください。",
+    "errorUnreachable": "agentes.chat から応答がありませんでした。もう一度試すか、レポートをコピーしてください。",
+    "errorRefused": "agentes.chat はこのレポートを受け付けませんでした（古いバージョンのものかもしれません）。代わりにレポートをコピーしてください。",
+    "errorPreview": "詳細を集められませんでした: {{reason}}",
+    "emailInvalid": "メールアドレスが正しくないようです。修正するか、空のままにしてください。",
+    "settingsTitle": "うまく動かないことがありますか？",
+    "settingsText": "技術的な詳細を agentes.chat チームに送信します。"
+  },
   "live": {
     "slides": {
       "rail": {

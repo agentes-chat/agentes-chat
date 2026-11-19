@@ -6,6 +6,8 @@
     "core:default",
     "allow-runners-list",
     "allow-runner-send",
+    "allow-problem-report-on",
+    "allow-problem-report-send",
     "allow-runner-remove",
     "allow-open-external",
     "allow-reveal-folder",

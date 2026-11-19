@@ -819,6 +819,7 @@ ones a self-hosted instance usually touches:
 | `LOG_LEVEL` | `info` | `debug`, `info`, `warn` or `error`. |
 | `LOG_FORMAT` | `json` | `gcp` for Google Cloud Logging (`severity` and `message`). |
 | `TELEMETRY` | `on` | `off` stops the anonymous usage report (Optional services and what they receive). |
+| `PROBLEM_REPORT_URL` | `https://telemetry.agentes.chat/v1/problem-report` | Where **Send a report** sends a report someone chose to send. `off`: it only copies it (Optional services and what they receive). |
 | `FEEDBACK_RELAY` | `true` | The apps' feedback form sends what a person writes to the agentes.chat team. `false`: no form (Optional services and what they receive). |
 | `TYPESAFE_API_KEY` | | Your TypeSafe key for Jev, or an OpenRouter key (`sk-or-…`) to call the same Jev through OpenRouter (AI: plans and keys). Wins over the key added in Settings → AI and usage. |
 | `COMPOSIO_API_KEY`, `COMPOSIO_WEBHOOK_SECRET` | | Your Composio project: Gmail and Outlook mailboxes and the services connected through Composio (below). |
@@ -1109,6 +1110,27 @@ either way:
   Docker, in `~/.agentes/.env`, then start it again. This wins over the switch below.
 - The switch in **Settings → General → Usage statistics**. Only the installation's first account (the
   person who set it up) sees it.
+
+**Send a report.** Where something fails (an agent's browser that doesn't open, a computer that stopped
+answering, an agent's run that failed, the desktop app's server that won't start) and in **Settings → General**,
+**Send a report** shows a report in full, then sends it to the agentes.chat team only when someone presses **Send**,
+so it goes even with `TELEMETRY=off`. The server posts it as JSON to `PROBLEM_REPORT_URL`
+(`https://telemetry.agentes.chat/v1/problem-report`); the desktop app posts its own (its cover and Preferences →
+Activity) when the server is down or out of reach. Set `PROBLEM_REPORT_URL=off` and the button only copies the
+report. A report holds:
+
+| Field | What it is |
+| --- | --- |
+| `format`, `source`, `place` | `1`; `server` or `desktop`; where it was sent from (`browser`, `computer`, `run`, `desktop_server`, `settings`). |
+| `instance` | The usage report's random id (`null` from the desktop app). |
+| `code`, `step`, `happenedAt`, `timings` | What failed and at which step, as codes (`browser.no_answer`, a run's error code), when, and counts or durations the screen measured (`attempts`). |
+| `versions` | The server's, the runner's (and its protocol), the desktop app's and the phone app's versions, the server's system and processor, and the browser's family and major version (`chrome 142`), never the whole User-Agent. |
+| `install`, `locale` | `docker`, `native` or `desktop`; the app's language. |
+| `facts` | Which settings differ from their defaults, as `config.<NAME>: "set"`, never their values (`TELEMETRY`, `INSTALL_MODE`, `NODE_ENV`, `LOG_LEVEL` and `MACHINE_PROVISIONING` by value, and `config.publicUrl` as `https`, `http` or `loopback`, never the address); how many workspaces, agents and computers; hours since the server started; migrations applied; for the computer involved, its system, processor, runner version, connection, last sign of life, pause, its coding CLIs' versions and which of its tools are on; for a run, its status, brain, turns and hop. |
+| `logs` | The last lines of the computer's `runner.log` (up to 300, from its app when it answers within 5 seconds), and the server's own last log lines from the last 30 minutes (only when the installation's owner sends it); the desktop app's server log and setup steps. Every line is scrubbed first: emails, IP addresses, keys, tokens and cookie headers masked, links cut to their origin (with any user and password in them), home folders as `~`, and the names of the server, its workspaces, computers, agents and the sender replaced by `[server]`, `[workspace]`, `[computer]`, `[agent]`, `[person]`. Lines over 1,000 characters are cut. |
+| `note`, `replyTo` | What the person wrote (credentials masked) and an email for a reply, both optional and empty unless filled in. |
+
+Never messages, prompts, tool calls, pages or files. Each person can send 5 reports an hour, and the server 20.
 
 **Feedback.** The apps have a feedback form (**Send feedback**, at the bottom of the sidebar), and an
 agent can send one when a person asks it to or agrees to its offer. Each one

@@ -269,6 +269,9 @@ import type {
   PlanServes,
   Poll,
   PostMedia,
+  ProblemReportPreview,
+  ProblemReportPreviewInput,
+  ProblemReportSendInput,
   Proposal,
   PushDeviceInput,
   ReactionCount,
@@ -396,6 +399,10 @@ export interface ApiClient {
     /** `null` unless I am the installation's owner (and not on agentes.chat itself). */
     telemetry(): Promise<ServerTelemetry | null>;
     setTelemetry(enabled: boolean): Promise<ServerTelemetry>;
+    /** A problem report to show in full before it's sent (self-hosted servers; 404 on agentes.chat itself). */
+    previewProblemReport(input: ProblemReportPreviewInput): Promise<ProblemReportPreview>;
+    /** Sends the previewed report, with the person's note and reply address: answers its code (`R-7K3QXM`). */
+    sendProblemReport(input: ProblemReportSendInput): Promise<{ id: string }>;
     /** By email to whoever runs the server; only where it takes feedback (`AuthConfig.feedback`). */
     sendFeedback(input: FeedbackInput): Promise<void>;
     /** A picture or a video for the feedback being written: kept an hour unless it is sent. */

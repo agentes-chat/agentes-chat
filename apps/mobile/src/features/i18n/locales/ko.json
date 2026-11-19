@@ -547,8 +547,6 @@
     "file": "파일",
     "media": "GIF",
     "noCamera": "카메라에 접근할 수 없어요. 휴대폰 설정에서 허용해 주세요.",
-    "mission": "미션 시작",
-    "missionHint": "계획을 세워 처음부터 끝까지 하는 긴 작업",
     "summary": "채팅 요약",
     "summaryHint": "내가 없는 동안 있었던 일",
     "remind": "나중에 알림",

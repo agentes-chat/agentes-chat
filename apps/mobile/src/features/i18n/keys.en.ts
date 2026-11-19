@@ -600,11 +600,9 @@ export const featureKeysEn = {
     camera: "Camera",
     photos: "Photos",
     file: "File",
-    /** The fourth tile: the GIFs and stickers, out of the field so it only sends. */
+    /** The fourth tile: the GIFs and stickers (also beside the mic in the empty field). */
     media: "GIFs",
     noCamera: "No camera access. Allow it in the phone's Settings.",
-    mission: "Start a mission",
-    missionHint: "Long work, with a plan, from start to finish",
     summary: "Sum up the chat",
     summaryHint: "What happened while you were away",
     remind: "Remind me later",

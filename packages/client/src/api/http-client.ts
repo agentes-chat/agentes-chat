@@ -202,6 +202,7 @@ import type {
   PhoneSignIn,
   PlanServes,
   Poll,
+  ProblemReportPreview,
   Proposal,
   ReactionCount,
   Reminder,
@@ -591,6 +592,9 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       instance: () => request<Instance>("/api/instance"),
       telemetry: () => nullOn(404, () => request<ServerTelemetry>("/api/app/telemetry")),
       setTelemetry: (enabled) => request<ServerTelemetry>("/api/app/telemetry", { method: "PUT", json: { enabled } }),
+      previewProblemReport: (input) =>
+        request<ProblemReportPreview>("/api/app/problem-reports/preview", { json: input }),
+      sendProblemReport: (input) => request<{ id: string }>("/api/app/problem-reports/send", { json: input }),
       sendFeedback: (input) => request<void>("/api/app/feedback", { json: input }),
       uploadFeedbackFile: (file) => {
         const form = new FormData();

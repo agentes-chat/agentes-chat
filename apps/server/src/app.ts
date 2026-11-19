@@ -56,6 +56,7 @@ import { missionRoutes } from "./routes/app/missions";
 import { notificationRoutes } from "./routes/app/notifications";
 import { personUsageRoutes } from "./routes/app/person-usage";
 import { planUsageRoutes } from "./routes/app/plan-usage";
+import { problemReportRoutes } from "./routes/app/problem-reports";
 import { pushRoutes } from "./routes/app/push";
 import { questionRoutes } from "./routes/app/questions";
 import { referralRoutes } from "./routes/app/referrals";
@@ -236,6 +237,7 @@ export function createApp(options: AppOptions) {
     api.route("/app", teamWeekRoutes(deps));
     api.route("/app", dashboardRoutes(deps));
     api.route("/app", telemetryRoutes(deps));
+    api.route("/app", problemReportRoutes(deps));
     api.route("/app", jevRoutes(deps));
     api.route("/app", feedbackRoutes(deps));
     api.route("/app", gifKeyRoutes(deps));

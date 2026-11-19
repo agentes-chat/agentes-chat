@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { Platform, StyleSheet, View } from "react-native";
 import { useKeyboardState } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Glass, Icon, PixelOrbit, PressScale, Text, useTheme } from "@/ui";
+import { Glass, Icon, PixelOrbit, PressScale, SCREEN_X, Text, useTheme } from "@/ui";
 import { nameInk, workingEntries } from "../../chat/logic";
 import { Face } from "../../shared/Face";
 import { useDirectory, useOrgId } from "../../shared/hooks";
@@ -15,7 +15,7 @@ import { MentionCount } from "../../shared/parts";
 import { useOpenFileTalk, useTalkMessages, useTalkRuns } from "./hooks";
 import { talkLine } from "./logic";
 
-/** The line's height and its distance from the screen's sides. */
+/** The line's height, and the least room under it (over a phone with no home indicator). */
 export const TALK_LINE_H = 56;
 const SIDE = 12;
 /** Faces of who took part, at most, their side and the ring that parts them. */
@@ -149,7 +149,8 @@ export function FileTalkLine({ file, floating = false }: { file: TalkFile | unde
 }
 
 const styles = StyleSheet.create({
-  at: { paddingHorizontal: SIDE, paddingTop: 8 },
+  // On the page's own sides, as the slides, pages and cells over it.
+  at: { paddingHorizontal: SCREEN_X, paddingTop: 8 },
   floating: { position: "absolute", left: 0, right: 0, bottom: 0 },
   pill: {
     flexDirection: "row",

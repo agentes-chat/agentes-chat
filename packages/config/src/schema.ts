@@ -1292,6 +1292,12 @@ export const envVars = {
     description: "Where the usage report is sent (the report as JSON in a POST).",
     section: "Usage report",
   },
+  PROBLEM_REPORT_URL: {
+    schema: z.union([z.literal("off"), z.url()]).default("https://telemetry.agentes.chat/v1/problem-report"),
+    description:
+      "Where Send a report sends a report someone chose to send after seeing it in full (versions, which settings are set, what failed, recent log lines; never messages, pages, names or keys). Sent even with `TELEMETRY=off`, since a person clicked Send. `off`: the button only copies the report.",
+    section: "Usage report",
+  },
   INSTALL_MODE: {
     schema: z.enum(["docker", "native", "desktop"]).optional(),
     description:

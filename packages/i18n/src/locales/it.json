@@ -21606,6 +21606,38 @@
       "askFirst": "Chiedi prima di inviare"
     }
   },
+  "problemReport": {
+    "button": "Invia una segnalazione",
+    "title": "Invia una segnalazione ad agentes.chat",
+    "lead": "Il team di agentes.chat riceve: versioni, quali impostazioni sono definite (mai i loro valori), cosa non ha funzionato e le ultime righe dei log. Niente messaggi, pagine, nomi o chiavi.",
+    "noteLabel": "Cos'è successo? (facoltativo)",
+    "notePlaceholder": "Cosa stavi facendo quando si è fermato",
+    "emailLabel": "Email per la risposta (facoltativa)",
+    "emailHelp": "Solo se vuoi una risposta.",
+    "showAll": "Vedi tutto ciò che viene inviato",
+    "copy": "Copia segnalazione",
+    "copied": "Copiato",
+    "send": "Invia",
+    "sending": "Invio…",
+    "cancel": "Annulla",
+    "loading": "Raccolta dei dettagli…",
+    "sentTitle": "Segnalazione {{id}} inviata",
+    "sentText": "Se ci scrivi, indica questo codice.",
+    "sentTextReply": "Ti risponderemo a {{email}}. Indica questo codice se ci scrivi.",
+    "copyCode": "Copia codice",
+    "done": "Fatto",
+    "noLogComputer": "{{computer}} non ha risposto, quindi il suo log non è incluso.",
+    "oldRunner": "L'app agentes.chat su {{computer}} è troppo vecchia per includere il suo log. Aggiornala lì per includerlo.",
+    "noServerLines": "Le righe del log del server sono incluse solo quando è il proprietario dell'installazione a inviare la segnalazione.",
+    "off": "L'invio è disattivato su questo server (PROBLEM_REPORT_URL=off). Copia la segnalazione per condividerla.",
+    "errorRate": "Troppe segnalazioni in poco tempo. Riprova tra {{minutes}} min o copia la segnalazione.",
+    "errorUnreachable": "agentes.chat non ha risposto. Riprova o copia la segnalazione.",
+    "errorRefused": "agentes.chat non ha accettato questa segnalazione (potrebbe venire da una versione precedente). Copia invece la segnalazione.",
+    "errorPreview": "Impossibile raccogliere i dettagli: {{reason}}",
+    "emailInvalid": "Questa email non sembra corretta. Correggila o lasciala vuota.",
+    "settingsTitle": "Qualcosa non funziona?",
+    "settingsText": "Invia i dettagli tecnici al team di agentes.chat."
+  },
   "live": {
     "slides": {
       "rail": {

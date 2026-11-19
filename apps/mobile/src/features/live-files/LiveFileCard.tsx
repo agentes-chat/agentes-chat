@@ -2,7 +2,7 @@ import { type ArtifactDetail, useLivePresence } from "@agenteschat/client";
 import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
-import { Icon, PressScale, Sky, Text, useTheme } from "@/ui";
+import { LineIcon, PressScale, Sky, Text, useTheme } from "@/ui";
 import { router } from "@/ui/navigation";
 import { useMessageCardCorners } from "../chat/look";
 import { useDirectory, useOrgId } from "../shared/hooks";
@@ -66,7 +66,8 @@ export const LiveFileCard = memo(function LiveFileCard({ detail, width }: { deta
         ) : null}
       </View>
       <View style={styles.foot}>
-        <Icon name={LIVE_ICON[kind]} size={16} color={c.faint} />
+        {/* On the title's first line, as an attachment's icon: centred on the whole foot it floated between lines. */}
+        <LineIcon name={LIVE_ICON[kind]} size={16} color={c.faint} variant="footnote" />
         <View style={styles.words}>
           <Text variant="footnote" numberOfLines={2} style={styles.title}>
             {detail.title}
@@ -91,7 +92,7 @@ const styles = StyleSheet.create({
   },
   cover: { overflow: "hidden", borderBottomWidth: StyleSheet.hairlineWidth },
   sky: { position: "absolute", top: 0, left: 0, right: 0, height: 6, opacity: 0.7 },
-  foot: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 10 },
+  foot: { flexDirection: "row", alignItems: "flex-start", gap: 8, paddingHorizontal: 12, paddingVertical: 10 },
   words: { flex: 1, minWidth: 0 },
   title: { fontWeight: "600" },
 });
