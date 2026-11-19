@@ -28,6 +28,7 @@ import {
   GroupedHeader,
   GroupedList,
   GroupedRow,
+  Sheet,
   SkeletonList,
   Text,
   useToast,
@@ -39,6 +40,8 @@ import { useMemoryOriginText } from "../agents/useMemoryOriginText";
 import { Note } from "../ai/parts";
 import { ZoneList } from "../me/AccountPage";
 import { PHOTO_MAX_BASE64, photoContentType } from "../me/logic";
+import { useProblemReports } from "../report/ReportProblemButton";
+import { ReportProblemSheet } from "../report/ReportProblemSheet";
 import { LoadFailed } from "../shared/FirstUse";
 import { useColors } from "../shared/hooks";
 import { OrgAvatar } from "../shared/OrgAvatar";
@@ -471,6 +474,7 @@ export function GeneralScreen() {
 
       <TeamMemory />
       <UsageStatistics />
+      <ProblemReport />
     </SettingsPage>
   );
 }
@@ -567,6 +571,25 @@ function UsageStatistics() {
         <GroupedRow label={t("settings.telemetry.see")} chevron onPress={() => router.push("/settings/telemetry")} />
       </GroupedList>
       {envOff ? <GroupedFooter>{envOff}</GroupedFooter> : null}
+    </>
+  );
+}
+
+/** "Send a report" for anything not tied to one screen: self-hosted servers only. */
+function ProblemReport() {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  if (!useProblemReports()) return null;
+  return (
+    <>
+      <GroupedHeader>{t("problemReport.settingsTitle")}</GroupedHeader>
+      <GroupedList>
+        <GroupedRow label={t("problemReport.button")} chevron onPress={() => setOpen(true)} />
+      </GroupedList>
+      <GroupedFooter>{t("problemReport.settingsText")}</GroupedFooter>
+      <Sheet open={open} onClose={() => setOpen(false)}>
+        {open && <ReportProblemSheet place="settings" onClose={() => setOpen(false)} />}
+      </Sheet>
     </>
   );
 }

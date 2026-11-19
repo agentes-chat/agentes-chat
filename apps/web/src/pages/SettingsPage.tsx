@@ -102,6 +102,7 @@ import { UsageTabs } from "@/components/PeopleUsage";
 import { ApiCard, PlanUsageCards } from "@/components/PlanUsage";
 import { MyFace, OrgLogoDialog, OrgMark } from "@/components/ProfilePhoto";
 import { KeyMismatch, KeyRefused, KeySite, ProviderKeySelect } from "@/components/ProviderKey";
+import { ReportProblem, useProblemReports } from "@/components/ReportProblem";
 import { RolesSection } from "@/components/roles/RolesSection";
 import { SkillsSection } from "@/components/Skills";
 import { StorageSection } from "@/components/StorageSettings";
@@ -674,6 +675,7 @@ function GeneralSection() {
       <TeamMemoryCard />
 
       <UsageStatisticsCard />
+      <ProblemReportCard />
       {org.role === "owner" && !org.deletion && <DeleteWorkspaceCard />}
       <OrgLogoDialog open={logo} onClose={() => setLogo(false)} />
       <WorkspaceModeDialog
@@ -797,6 +799,27 @@ function UsageStatisticsCard() {
           </pre>
         </DialogBody>
       </Dialog>
+    </Card>
+  );
+}
+
+/** "Send a report" for anything not tied to one screen: self-hosted servers only. */
+function ProblemReportCard() {
+  const { t } = useTranslation();
+  if (!useProblemReports()) return null;
+  return (
+    <Card aria-labelledby="sec-problem-report">
+      <CardHeader id="sec-problem-report" icon="alert" title={t("problemReport.settingsTitle")} />
+      <div className="settings-rows">
+        <div className="settings-row ac-actrow">
+          <div className="settings-row__text ac-actrow__text">
+            <span className="settings-row__label">{t("problemReport.settingsText")}</span>
+          </div>
+          <div className="settings-row__control">
+            <ReportProblem place="settings" />
+          </div>
+        </div>
+      </div>
     </Card>
   );
 }

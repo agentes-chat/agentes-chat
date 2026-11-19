@@ -265,6 +265,7 @@ export * from "./person-usage-report";
 export * from "./pins";
 export * from "./plan-models";
 export * from "./plan-usage";
+export * from "./problem-report";
 export * from "./profile";
 export * from "./push";
 export * from "./push-messages";

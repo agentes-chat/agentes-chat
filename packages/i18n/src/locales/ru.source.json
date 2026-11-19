@@ -50937,6 +50937,96 @@
   "feedback.offer.askFirst": {
     "value": "Ask before sending"
   },
+  "problemReport.button": {
+    "value": "Send a report"
+  },
+  "problemReport.title": {
+    "value": "Send a report to agentes.chat"
+  },
+  "problemReport.lead": {
+    "value": "The agentes.chat team gets: versions, which settings are set (never their values), what failed, and the last lines of the logs. No messages, pages, names or keys."
+  },
+  "problemReport.noteLabel": {
+    "value": "What happened? (optional)"
+  },
+  "problemReport.notePlaceholder": {
+    "value": "What you were doing when it stopped"
+  },
+  "problemReport.emailLabel": {
+    "value": "Email for a reply (optional)"
+  },
+  "problemReport.emailHelp": {
+    "value": "Only if you want an answer."
+  },
+  "problemReport.showAll": {
+    "value": "See everything that's sent"
+  },
+  "problemReport.copy": {
+    "value": "Copy report"
+  },
+  "problemReport.copied": {
+    "value": "Copied"
+  },
+  "problemReport.send": {
+    "value": "Send"
+  },
+  "problemReport.sending": {
+    "value": "Sending…"
+  },
+  "problemReport.cancel": {
+    "value": "Cancel"
+  },
+  "problemReport.loading": {
+    "value": "Gathering the details…"
+  },
+  "problemReport.sentTitle": {
+    "value": "Report {{id}} sent"
+  },
+  "problemReport.sentText": {
+    "value": "If you write to us, mention this code."
+  },
+  "problemReport.sentTextReply": {
+    "value": "We'll answer at {{email}}. Mention this code if you write to us."
+  },
+  "problemReport.copyCode": {
+    "value": "Copy code"
+  },
+  "problemReport.done": {
+    "value": "Done"
+  },
+  "problemReport.noLogComputer": {
+    "value": "{{computer}} didn't answer, so its log isn't included."
+  },
+  "problemReport.oldRunner": {
+    "value": "The agentes.chat app on {{computer}} is too old to include its log. Update it there to include it."
+  },
+  "problemReport.noServerLines": {
+    "value": "The server's log lines are included only when the installation's owner sends a report."
+  },
+  "problemReport.off": {
+    "value": "Sending is off on this server (PROBLEM_REPORT_URL=off). Copy the report to share it."
+  },
+  "problemReport.errorRate": {
+    "value": "Too many reports in a short time. Try again in {{minutes}} min, or copy the report."
+  },
+  "problemReport.errorUnreachable": {
+    "value": "agentes.chat didn't answer. Try again, or copy the report."
+  },
+  "problemReport.errorRefused": {
+    "value": "agentes.chat didn't accept this report (it may be from an older version). Copy the report instead."
+  },
+  "problemReport.errorPreview": {
+    "value": "Couldn't gather the details: {{reason}}"
+  },
+  "problemReport.emailInvalid": {
+    "value": "That email doesn't look right. Fix it or leave it empty."
+  },
+  "problemReport.settingsTitle": {
+    "value": "Something not working?"
+  },
+  "problemReport.settingsText": {
+    "value": "Send the technical details to the agentes.chat team."
+  },
   "live.slides.rail.label": {
     "value": "Slides"
   },

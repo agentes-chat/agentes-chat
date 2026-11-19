@@ -98,6 +98,8 @@ export class ControlServer {
         return d.orgLogo();
       case "diagnostics":
         return { text: d.diagnostics() };
+      case "report":
+        return d.reportParts();
       case "access.get":
         return d.access();
       case "folders.add":

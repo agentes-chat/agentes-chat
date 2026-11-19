@@ -20311,6 +20311,38 @@
       "askFirst": "Tanya dulu sebelum mengirim"
     }
   },
+  "problemReport": {
+    "button": "Kirim laporan",
+    "title": "Kirim laporan ke agentes.chat",
+    "lead": "Tim agentes.chat menerima: versi, pengaturan mana yang diisi (tanpa nilainya), apa yang gagal, dan baris terakhir log. Tanpa pesan, halaman, nama, atau kunci.",
+    "noteLabel": "Apa yang terjadi? (opsional)",
+    "notePlaceholder": "Apa yang sedang kamu lakukan saat berhenti",
+    "emailLabel": "Email untuk balasan (opsional)",
+    "emailHelp": "Hanya jika kamu ingin dijawab.",
+    "showAll": "Lihat semua yang dikirim",
+    "copy": "Salin laporan",
+    "copied": "Tersalin",
+    "send": "Kirim",
+    "sending": "Mengirim…",
+    "cancel": "Batal",
+    "loading": "Mengumpulkan detail…",
+    "sentTitle": "Laporan {{id}} terkirim",
+    "sentText": "Jika kamu menghubungi kami, sebutkan kode ini.",
+    "sentTextReply": "Kami akan menjawab ke {{email}}. Sebutkan kode ini jika kamu menghubungi kami.",
+    "copyCode": "Salin kode",
+    "done": "Selesai",
+    "noLogComputer": "{{computer}} tidak menjawab, jadi lognya tidak disertakan.",
+    "oldRunner": "Aplikasi agentes.chat di {{computer}} terlalu lama untuk menyertakan lognya. Perbarui di sana agar lognya ikut.",
+    "noServerLines": "Baris log server hanya disertakan jika pemilik instalasi yang mengirim laporan.",
+    "off": "Pengiriman dimatikan di server ini (PROBLEM_REPORT_URL=off). Salin laporan untuk membagikannya.",
+    "errorRate": "Terlalu banyak laporan dalam waktu singkat. Coba lagi dalam {{minutes}} menit, atau salin laporannya.",
+    "errorUnreachable": "agentes.chat tidak menjawab. Coba lagi, atau salin laporannya.",
+    "errorRefused": "agentes.chat tidak menerima laporan ini (mungkin dari versi lama). Salin laporannya saja.",
+    "errorPreview": "Tidak bisa mengumpulkan detail: {{reason}}",
+    "emailInvalid": "Email itu sepertinya tidak benar. Perbaiki atau biarkan kosong.",
+    "settingsTitle": "Ada yang tidak berfungsi?",
+    "settingsText": "Kirim detail teknis ke tim agentes.chat."
+  },
   "live": {
     "slides": {
       "rail": {

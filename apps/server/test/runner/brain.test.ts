@@ -122,6 +122,10 @@ test("protocol 8: brain.turn requests and brain frames parse; bad events are dro
   expect(done({ warm: false, initMs: 812.4, firstEventMs: -3 })).toMatchObject({
     event: { type: "done", text: "ok", timings: { warm: false, initMs: 812 } },
   });
+  expect(done({ warm: false, initMs: 90_000_000, firstEventMs: 1200 })).toMatchObject({
+    event: { type: "done", text: "ok", timings: { warm: false, firstEventMs: 1200 } },
+  });
+  expect(done({ warm: false, initMs: 90_000_000 })).not.toHaveProperty("event.timings.initMs");
   expect(done({ initMs: 5 })).toEqual({ type: "brain.event", runId: RUN(1), event: { type: "done", text: "ok" } });
 });
 

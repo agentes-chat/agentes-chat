@@ -29,6 +29,38 @@ export interface ServerTelemetry {
   report: Record<string, unknown>;
 }
 
+/** Where a problem report comes from (`POST /api/app/problem-reports/preview`). */
+export type ProblemReportPlace = "browser" | "computer" | "run" | "settings";
+
+export interface ProblemReportPreviewInput {
+  orgId: string;
+  place: ProblemReportPlace;
+  code?: string | null;
+  step?: string | null;
+  context?: { machineId?: string; agentId?: string; runId?: string };
+  timings?: Record<string, number>;
+  /** What the screen measured (a card's state, its attempt). */
+  facts?: Record<string, string | number | boolean>;
+  client?: { web?: string; mobile?: string; browser?: string; locale?: string };
+}
+
+/** A problem report, shown in full before it's sent, and why a log may be missing from it. */
+export interface ProblemReportPreview {
+  report: Record<string, unknown>;
+  /** The report as shown and copied. */
+  text: string;
+  /** `off`: the server sends none (`PROBLEM_REPORT_URL` is empty), only Copy works. */
+  send: "on" | "off";
+  missing: { computer?: string; runnerLog?: "no_answer" | "old_app"; serverLines?: boolean };
+}
+
+export interface ProblemReportSendInput {
+  orgId: string;
+  report: Record<string, unknown>;
+  note?: string | null;
+  replyTo?: string | null;
+}
+
 /** The installation's Jev key, for its pinned owner on a self-hosted server (`GET /api/app/jev`, ADR 0073). */
 export interface JevKey {
   /** `env`: `TYPESAFE_API_KEY`, read-only here. `settings`: added in Settings. Null: none. */
