@@ -37,5 +37,8 @@ describe("the phone's Drive folders", () => {
     expect(folders).not.toContain('sub: [t("drive.title")');
     const grouped = read("src/ui/Grouped.tsx");
     expect(grouped).toContain("left: TREE_X + i * NEST");
+    // A long name wraps, its tile on the first line at every depth.
+    expect(read("src/features/shared/PickerSheet.tsx")).toContain("{ depth: o.depth, labelLines: 0 }");
+    expect(grouped).toContain("<View style={[styles.lead, tileOnLine]}>");
   });
 });

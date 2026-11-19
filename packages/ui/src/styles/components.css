@@ -10905,6 +10905,29 @@ html:not([data-pointer]) .ac-filter__option:focus-visible {
   display: block;
   image-rendering: pixelated;
 }
+/* A strip whose bars are buttons (RunStrip's `bar`): each bar's button covers its column, a little taller for a finger. */
+.ac-run-bars {
+  position: relative;
+  display: block;
+  flex: none;
+}
+.ac-run-bars__bar {
+  position: absolute;
+  top: calc(-1 * var(--space-1));
+  bottom: calc(-1 * var(--space-1));
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+  cursor: pointer;
+}
+.ac-run-bars__bar:hover {
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+}
+html:not([data-pointer]) .ac-run-bars__bar:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
 /* An agent's month (MonthRuns): the row's whole width, 2px cells. */
 .ac-month-runs {
   display: block;
@@ -11153,8 +11176,26 @@ html:not([data-pointer]) .ac-optlist--list .ac-optrow:focus-visible {
   font-weight: 500;
   overflow-wrap: anywhere;
 }
+/* A long name wraps: the icon stays at the top, centred on the first line's capitals (`.ac-iconline`'s rule), at every
+   depth. In the title's size, so its `lh` is the title's line. */
+.ac-optlist--list .ac-optrow {
+  align-items: flex-start;
+}
 .ac-optlist--list .ac-optrow__lead {
+  font-size: 14px;
   color: var(--muted);
+  translate: 0 calc(11px - var(--cap-mid) - 50%);
+}
+@supports (top: 1lh) {
+  .ac-optlist--list .ac-optrow__lead {
+    translate: 0 calc(0.5lh - var(--cap-mid) - 50%);
+  }
+  /* A one-line row stays centred: the air above and under its line split the row's 40 evenly. */
+  .ac-optlist--list .ac-optrow,
+  .ac-optlist--list .ac-optrow--lead {
+    --optrow-pad-y: calc((var(--control-h-md) - 1lh) / 2);
+    padding-block: var(--optrow-pad-y);
+  }
 }
 .ac-optlist--list .ac-optrow[data-state="checked"] .ac-optrow__title {
   font-weight: 650;
@@ -11169,7 +11210,7 @@ html:not([data-pointer]) .ac-optlist--list .ac-optrow:focus-visible {
   flex: none;
   align-self: stretch;
   width: var(--space-4);
-  margin-block: calc(-1 * var(--space-2) - 1px);
+  margin-block: calc(-1 * var(--optrow-pad-y, var(--space-2)) - 1px);
   margin-inline-end: calc(-1 * var(--space-3));
   background: linear-gradient(var(--line2), var(--line2)) center / 1px 100% no-repeat;
 }

@@ -29,7 +29,7 @@ import { useOrgId } from "../shared/hooks";
 import { tapHaptic } from "../shared/parts";
 import { boldRuns } from "./actions";
 import { ConsultPairRow, useConsultById } from "./ConsultGroup";
-import { useCardTop, useRhythm } from "./look";
+import { useCardTop, useMessageCardCorners, useRhythm } from "./look";
 import { useRowDirectory, useRowMeId, useRowRoles } from "./row-data";
 
 const LIST_GAP = 8;
@@ -68,6 +68,7 @@ function Row({
   const { t } = useTranslation();
   const rhythm = useRhythm();
   const { colors } = useTheme();
+  const cardCorners = useMessageCardCorners();
   const orgId = useOrgId();
   const dir = useRowDirectory();
   const channel = useChannels(orgId).data?.find((c) => c.id === channelId);
@@ -99,7 +100,7 @@ function Row({
       />
     );
   return (
-    <View style={[styles.one, { backgroundColor: colors.raised, borderColor: colors.line2 }]}>
+    <View style={[styles.one, { backgroundColor: colors.raised, borderColor: colors.line2 }, cardCorners]}>
       <View style={styles.head}>
         <LineIcon name={handed ? "chat" : "info"} size={15} color={colors.muted} variant="small" />
         <View style={styles.words}>

@@ -175,7 +175,7 @@ describe("back to the latest messages", () => {
     const button = screen.indexOf("<ToLatest unseen={unseen} onPress={toEnd} />", dock);
     expect(button).toBeGreaterThan(dock);
     expect(screen.indexOf("ref={composerRef}", dock)).toBeGreaterThan(button);
-    expect(screen).toContain('jumpAt: { alignSelf: "flex-end", marginRight: 14, marginBottom: 10 },');
+    expect(screen).toContain('jumpAt: { alignSelf: "flex-end", marginRight: DOCK_SIDE + 4, marginBottom: 10 },');
     expect(screen).not.toContain("bottom: composerHeight + 10");
   });
 });

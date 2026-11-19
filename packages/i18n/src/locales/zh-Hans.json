@@ -6159,7 +6159,7 @@
         "cli_closed": "程序 {{brain}} 意外关闭。",
         "cli_sandbox": "程序 {{brain}} 无法在这台电脑上启动它的沙盒。请在智能体设置中选择其他 AI。",
         "account_missing": "为这个智能体选择的账号已不在它的电脑上。请在智能体设置中选择另一个账号，或重新添加。",
-        "windows_sandbox": "这台 Windows 电脑无法隔离 Codex 的命令：需要 Windows 11 24H2 或更高版本。",
+        "windows_sandbox": "这台 Windows 电脑无法隔离 Codex 的命令：需要 Windows 11 24H2 或更高版本。请更新 Windows，为这个智能体选择 Claude 或 API 密钥，或把它移到一台 Linux 电脑上。",
         "our_error": "我们这边出了点问题，任务已停止。请稍后再提一次。",
         "unknown": "失败。"
       }
@@ -9290,8 +9290,7 @@
       "approvals": "默认情况下，合并、部署和回滚需要审批",
       "start": "开始专项任务",
       "created": "专项任务已创建：{{name}} 正在制定计划。",
-      "who": "由谁编程",
-      "codexOld": "{{computer}} 上的 Codex 版本太旧，无法运行专项任务：请在那台电脑上更新。"
+      "who": "由谁编程"
     },
     "commandApproval": {
       "label": "自主程度",
@@ -10299,7 +10298,6 @@
       "needsCloud": {
         "online": "{{computer}} 正在重启或重新连接。它回来后这里会自动更新。",
         "installing": "正在 {{computer}} 上安装 {{program}}。完成后这里会自动更新。",
-        "updating": "正在 {{computer}} 上更新 {{program}}。完成后这里会自动更新。",
         "runnerOld": "{{computer}} 上的 agentes.chat 程序版本较旧，更新正在路上。完成后这里会自动更新。",
         "execOff": "{{computer}} 暂时还不能运行 {{program}}。我们正在处理，这里会自动更新。",
         "toolOff": "{{computer}} 上还未允许 {{program}}。这是我们这边的问题：请稍后再试。",
@@ -11510,12 +11508,6 @@
       "read": "{{name}} 已读",
       "resolved": "{{name}} 关闭了求助请求"
     },
-    "well": {
-      "readYours": "已读你的留言",
-      "readOf": "已读 {{name}} 的留言",
-      "nowYours": "停下来阅读你的留言",
-      "nowOf": "停下来阅读 {{name}} 的留言"
-    },
     "strip": {
       "see": "查看",
       "toStop": "以停止"
@@ -11611,11 +11603,6 @@
       "not_installed": "{{computer}} 上没有安装 {{program}}。",
       "cant_start": "{{program}} 在 {{computer}} 上，但无法启动。",
       "not_reported": "{{computer}} 还在检查有哪些程序。完成后这里会自动更新。",
-      "outdated": "{{computer}} 上的版本太旧。请更新 Codex 后使用。",
-      "outdatedCodex": "在 {{computer}} 上检测到 Codex CLI {{detected}}。请更新到 {{minimum}} 或更高版本。",
-      "codexUpdateGuide": "如何更新 Codex CLI",
-      "codexRecheckHere": "更新后，请在偏好设置 › 工具的 Codex 一行中选择「重新检查」。",
-      "codexRecheckThere": "请在 {{computer}} 上更新 Codex CLI。如果该电脑运行桌面应用，请在偏好设置 › 工具的 Codex 一行中选择「重新检查」。",
       "system": "{{program}} 暂时还不能在 {{computer}} 的系统上运行。",
       "no_computerCloud": "{{computer}} 一就绪即可使用。"
     },

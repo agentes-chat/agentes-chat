@@ -12,7 +12,7 @@ import { publishDelivery } from "./delivery";
 import { isAgentOnlyDm } from "./dms";
 import { decisionNudge, FOLLOW_THROUGH_NUDGE, FOLLOW_THROUGH_NUDGE_DM, MISSION_ASK_NUDGE } from "./follow-through";
 import { cutText, cutTextEnd } from "./format";
-import type { Judge } from "./judge";
+import { type Judge, JudgeBudgetError } from "./judge";
 import type { NoticeKind } from "./notices";
 import { notifyRunFailed } from "./notification-producers";
 import { ANSWER_NUDGE } from "./reply-policy";
@@ -405,8 +405,8 @@ export async function continuationVerdict(
     answers = await ask(learned);
   } catch (error) {
     // Some providers' filters refuse a wording (a Claude subscription sign-in's misleading 400): the follow-through
-    // verdict must never fail because of the extra question, so it is asked again alone.
-    if (!learned) throw error;
+    // verdict must never fail because of the extra question, so it is asked again alone. Not past the turn end's wait.
+    if (!learned || error instanceof JudgeBudgetError) throw error;
     learned = false;
     input.onLearnFailed?.(error);
     answers = await ask(false);
@@ -599,6 +599,8 @@ export interface TurnEnd {
   comesBack?(): Promise<boolean>;
   /** The judgment; null when the workspace has no judge. */
   verdict: (() => Promise<ContinuationVerdict>) | null;
+  /** Starts what the judgment reads, called beside `wakesLater` once the judgment may run. */
+  prepare?(): void;
   /** What an `untried` turn is reminded of (`untriedNudge`): its means and what it tried, filled by `verdict`. */
   evidence?: { means: string[]; tried: string[] };
 }
@@ -669,6 +671,9 @@ async function answerTurnEnd(t: TurnEnd): Promise<TurnEndDecision> {
   if (!t.judged || !t.verdict) return { outcome: "done", rule: t.verdict ? "nothing_to_judge" : "no_judge" };
   if (!canNudge && !t.state.askPending && (t.state.askNudged || t.kind !== "conversation"))
     return { outcome: "done", rule: "cap" };
+  // The judgment's evidence starts beside `wakes_later`; the judgment itself waits for it, which spares it. `comes_back`
+  // is read only after a continue, the rare verdict, so most turn ends pay nothing for it.
+  t.prepare?.();
   if (await t.wakesLater().catch(() => false)) return { outcome: "waiting", rule: "wakes_later" };
   let verdict: ContinuationVerdict;
   try {

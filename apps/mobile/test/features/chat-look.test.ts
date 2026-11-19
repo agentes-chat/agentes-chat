@@ -9,6 +9,7 @@ import {
 } from "@agenteschat/client/lib/chat-look";
 import { AGENT_GRADIENTS, type AgentColorName, contrastOf, gradientOf, mixHex } from "@agenteschat/ui/agent/engine";
 import {
+  BUBBLES_EDGE,
   BUBBLES_INSET,
   bubbleFill,
   CHAT_TEXT,
@@ -121,9 +122,11 @@ describe("the rows follow the same choice as the web", () => {
 
   test("a DM whose sides say who spoke has no face: its bodies and quiet rows start at the rows' own padding", () => {
     const dm = (style: "comfortable" | "bubbles") => ({ style, faces: facesShown(style, true) });
-    expect(rowBodyInset(dm("bubbles"))).toEqual({ left: BUBBLES_INSET, right: ROW_BODY_INSET.bubbles.right });
+    expect(rowBodyInset(dm("bubbles"))).toEqual({ left: BUBBLES_EDGE, right: ROW_BODY_INSET.bubbles.right });
     expect(rowBodyInset(dm("comfortable"))).toEqual({ left: MSG_INSET, right: ROW_BODY_INSET.comfortable.right });
-    expect(quietInset(dm("bubbles"))).toBe(BUBBLES_INSET);
+    expect(quietInset(dm("bubbles"))).toBe(BUBBLES_EDGE);
+    // With faces (a channel) the face keeps its own inset; with none the bubble stands where mine end on the other side.
+    expect(BUBBLES_INSET).toBeLessThan(BUBBLES_EDGE);
     expect(quietInset(dm("comfortable"))).toBe(MSG_INSET);
     // A channel, and a DM in a look with everyone on the left, keep the face and the words' column.
     for (const style of ["comfortable", "bubbles", "left", "compact"] as const) {
@@ -136,6 +139,8 @@ describe("the rows follow the same choice as the web", () => {
   test("the look says it, and every row with a face column and every quiet row reads it", async () => {
     expect(await read("chat/look.ts")).toContain("faces: facesShown(style, dm)");
     expect(await read("chat/look.ts")).toContain("paddingLeft: BUBBLES_INSET");
+    expect(await read("chat/look.ts")).toContain("bubblesBare: { paddingLeft: BUBBLES_EDGE },");
+    expect(await read("chat/MessageRow.tsx")).toContain("bubbled && !look.faces && lookRows.bubblesBare,");
     expect(await read("chat/MessageRow.tsx")).toContain("{look.faces ? (");
     const queue = await read("queue/parts.tsx");
     expect(queue).toContain("{faces ? (");

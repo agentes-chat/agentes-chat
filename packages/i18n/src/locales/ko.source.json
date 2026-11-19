@@ -15749,7 +15749,7 @@
     "value": "The account chosen for this agent isn't on its computer anymore. Choose another one in the agent's settings, or add it again."
   },
   "agentPage.activity.errors.windows_sandbox": {
-    "value": "This Windows computer can't isolate Codex's commands: it needs Windows 11 24H2 or newer."
+    "value": "This Windows computer can't isolate Codex's commands: it needs Windows 11 24H2 or newer. Update Windows, choose Claude or an API key for this agent, or move it to a Linux computer."
   },
   "agentPage.activity.errors.our_error": {
     "value": "Something went wrong on our side and it stopped. Ask again in a little while."
@@ -23427,9 +23427,6 @@
   "missions.new.who": {
     "value": "Who programs"
   },
-  "missions.new.codexOld": {
-    "value": "Codex on {{computer}} is too old for missions: update it there."
-  },
   "missions.commandApproval.label": {
     "value": "Autonomy"
   },
@@ -25989,9 +25986,6 @@
   },
   "aiAccounts.connect.needsCloud.installing": {
     "value": "{{program}} is being installed on {{computer}}. This changes by itself when it's done."
-  },
-  "aiAccounts.connect.needsCloud.updating": {
-    "value": "{{program}} is being updated on {{computer}}. This changes by itself when it's done."
   },
   "aiAccounts.connect.needsCloud.runnerOld": {
     "value": "The agentes.chat program on {{computer}} is out of date and an update is on its way. This changes by itself when it's done."
@@ -29186,18 +29180,6 @@
   "run.steer.resolved": {
     "value": "{{name}} closed the help request"
   },
-  "run.well.readYours": {
-    "value": "Read your note"
-  },
-  "run.well.readOf": {
-    "value": "Read {{name}}'s note"
-  },
-  "run.well.nowYours": {
-    "value": "Stopped to read your note"
-  },
-  "run.well.nowOf": {
-    "value": "Stopped to read {{name}}'s note"
-  },
   "run.strip.see": {
     "value": "View"
   },
@@ -29425,21 +29407,6 @@
   },
   "brain.reasons.not_reported": {
     "value": "{{computer}} is still checking which programs it has. This changes by itself when it's done."
-  },
-  "brain.reasons.outdated": {
-    "value": "The version on {{computer}} is old. Update Codex to use it."
-  },
-  "brain.reasons.outdatedCodex": {
-    "value": "Codex CLI {{detected}} was found on {{computer}}. Update it to {{minimum}} or later."
-  },
-  "brain.reasons.codexUpdateGuide": {
-    "value": "How to update Codex CLI"
-  },
-  "brain.reasons.codexRecheckHere": {
-    "value": "After updating, choose Check again for Codex in Preferences › Tools."
-  },
-  "brain.reasons.codexRecheckThere": {
-    "value": "Update Codex CLI on {{computer}}. If it runs the desktop app, choose Check again for Codex in Preferences › Tools."
   },
   "brain.reasons.system": {
     "value": "{{program}} doesn't run on {{computer}}'s system yet."

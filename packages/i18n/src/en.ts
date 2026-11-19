@@ -6868,7 +6868,8 @@ export const en = {
         account_missing:
           "The account chosen for this agent isn't on its computer anymore. Choose another one in the agent's settings, or add it again.",
         /** A Codex turn on a Windows computer where MXC can't hold its commands (runner `windows_sandbox`). */
-        windows_sandbox: "This Windows computer can't isolate Codex's commands: it needs Windows 11 24H2 or newer.",
+        windows_sandbox:
+          "This Windows computer can't isolate Codex's commands: it needs Windows 11 24H2 or newer. Update Windows, choose Claude or an API key for this agent, or move it to a Linux computer.",
         our_error: "Something went wrong on our side and it stopped. Ask again in a little while.",
         unknown: "Failed.",
       },
@@ -10085,7 +10086,6 @@ export const en = {
       start: "Start mission",
       created: "Mission created: {{name}} is putting the plan together.",
       who: "Who programs",
-      codexOld: "Codex on {{computer}} is too old for missions: update it there.",
     },
     commandApproval: {
       label: "Autonomy",
@@ -11088,7 +11088,6 @@ export const en = {
       needsCloud: {
         online: "{{computer}} is restarting or reconnecting. This changes by itself once it's back.",
         installing: "{{program}} is being installed on {{computer}}. This changes by itself when it's done.",
-        updating: "{{program}} is being updated on {{computer}}. This changes by itself when it's done.",
         runnerOld:
           "The agentes.chat program on {{computer}} is out of date and an update is on its way. This changes by itself when it's done.",
         execOff: "{{computer}} can't run {{program}} yet. We're on it, and this changes by itself.",
@@ -12328,12 +12327,6 @@ export const en = {
       read: "{{name}} read it",
       resolved: "{{name}} closed the help request",
     },
-    well: {
-      readYours: "Read your note",
-      readOf: "Read {{name}}'s note",
-      nowYours: "Stopped to read your note",
-      nowOf: "Stopped to read {{name}}'s note",
-    },
     strip: {
       see: "View",
       toStop: "to stop",
@@ -12429,12 +12422,6 @@ export const en = {
       cant_start: "{{program}} is on {{computer}}, but it won't start.",
       /** Its runner hasn't said which CLIs it has yet: nobody knows whether this one is there. */
       not_reported: "{{computer}} is still checking which programs it has. This changes by itself when it's done.",
-      outdated: "The version on {{computer}} is old. Update Codex to use it.",
-      outdatedCodex: "Codex CLI {{detected}} was found on {{computer}}. Update it to {{minimum}} or later.",
-      codexUpdateGuide: "How to update Codex CLI",
-      codexRecheckHere: "After updating, choose Check again for Codex in Preferences › Tools.",
-      codexRecheckThere:
-        "Update Codex CLI on {{computer}}. If it runs the desktop app, choose Check again for Codex in Preferences › Tools.",
       /** The runner doesn't run this program on that computer's system (Cursor on Windows, for one). */
       system: "{{program}} doesn't run on {{computer}}'s system yet.",
       no_computerCloud: "Ready as soon as {{computer}} is.",

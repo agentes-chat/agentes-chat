@@ -343,6 +343,7 @@
     "replies_other": "{{count}} yanıt",
     "repliesWord_one": "yanıt",
     "repliesWord_other": "yanıt",
+    "dayAt": "{{day}} {{time}}",
     "thread": "İleti dizisi",
     "closed": "kapalı",
     "options": "Seçenekler",
@@ -379,9 +380,7 @@
       "delivered": "{{name}} aldı",
       "held": "{{name}} kararınızdan sonra okuyacak",
       "read": "{{name}} okudu",
-      "resolved": "{{name}} yardım isteğini kapattı",
-      "well": "Notunuzu okudu",
-      "wellNow": "Notunuzu okumak için durdu"
+      "resolved": "{{name}} yardım isteğini kapattı"
     },
     "stopped": {
       "byYou": "Burada durdu",

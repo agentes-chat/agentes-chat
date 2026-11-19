@@ -581,6 +581,19 @@ describe("a runner that dies mid-request (brain turns never stay working)", () =
     expect(woke).toEqual([paired.machineId]);
   });
 
+  test("room.freed asks the computer's line again (protocol 69)", async () => {
+    f = await setup({ machines: true });
+    const hub = f.machineHub as MachineHub;
+    const freed: string[] = [];
+    hub.setMissionHooks({ roomFreed: async (id) => void freed.push(id) });
+    const paired = await pair();
+    const runner = fakeRunner(hub);
+    await runner.hello(paired.token);
+    await runner.frame({ type: "room.freed" });
+    await Bun.sleep(5);
+    expect(freed).toEqual([paired.machineId]);
+  });
+
   test("CLIs found mid-session replace the hello's (the browser and the rest stay) and wake what waited", async () => {
     f = await setup({ machines: true });
     const hub = f.machineHub as MachineHub;

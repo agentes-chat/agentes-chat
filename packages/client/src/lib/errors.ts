@@ -592,6 +592,7 @@ const KNOWN = {
   "join.waiting": "errors.said.alreadyAsked",
   "mail.already_connected": "errors.said.mailboxConnected",
   "mail.send_without_asking_needs_recipients": "errors.said.sendNeedsRecipients",
+  "mission.executor_unavailable": "errors.mission.executorUnavailable",
   "mission.tasks_live": "errors.said.missionLive",
   "org.create_refused": "errors.said.createRefused",
   "reminder.no_agent": "errors.said.noAgentToRemind",

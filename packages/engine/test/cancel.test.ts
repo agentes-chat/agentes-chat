@@ -341,7 +341,7 @@ describe("one active run per agent and conversation", () => {
   test('a stop ("para", as the judge hears it) while it works cancels the task instead of starting another', async () => {
     let threadId = "";
     f = await setup({
-      judge: (kind, _id, state) => (kind === "stop_request" && state.message === "para" ? 0.95 : 0),
+      judge: (kind, _id, state) => (kind === "steer_triage" ? (state.message === "para" ? "stop" : undefined) : 0),
       toolSources: [
         slowTool(async () => {
           await postPersonMessage(
