@@ -120,6 +120,17 @@ describe("@mention autocomplete", () => {
     expect(state.calls.some((c) => c.method === "chat.addMember")).toBe(false);
   });
 
+  test("in a DM between people the list offers people only: an agent's mention there reaches no one", async () => {
+    await go("dm/person/u-joao", withRightHand(seedState()));
+    await typeIn(composer(), "@");
+    const list = screen().getByRole("listbox", { name: "Pessoas e agentes" });
+    const options = within(list).getAllByRole("option");
+    expect(options.map((o) => o.textContent).some((t) => /Ada|Atlas|Lodi/.test(t ?? ""))).toBe(false);
+    expect(options.some((o) => o.textContent?.includes("João"))).toBe(true);
+    await typeIn(composer(), "@lod");
+    expect(screen().queryByRole("listbox", { name: "Pessoas e agentes" })).toBeNull();
+  });
+
   test("the right hand is in every channel: no note, and picking it offers nothing to add", async () => {
     const { state } = await go(`c/${GENERAL_ID}`, withRightHand(seedState()));
     await typeIn(composer(), "@lod");

@@ -64,7 +64,9 @@ const matchIn = (value: string, q: string) => {
  * Who "@<query>" can mean: agents I can talk to and the other people of the workspace, filtered by name,
  * handle or e-mail; members of the conversation first, then names or handles that start with the query,
  * then the rest, by name. `members` = a channel's members (`type:id` keys), and the right hand is in every channel
- * (`mentionReaches`); null = everyone is in (a DM).
+ * (`mentionReaches`); null = everyone is in (a DM). `peopleOnly`: a DM between people, where no agent is offered: the
+ * server counts an agent's mention only from a member of the conversation, and the right hand's only in a channel
+ * (`rightHandReaches`, ADR 0137), so it would reach no one.
  */
 export function mentionOptions(input: {
   query: string;
@@ -72,6 +74,7 @@ export function mentionOptions(input: {
   people: readonly MentionPerson[];
   meId: string | null;
   members: ReadonlySet<string> | null;
+  peopleOnly?: boolean;
   limit?: number;
 }): MentionOption[] {
   const q = fold(input.query);
@@ -110,7 +113,7 @@ export function mentionOptions(input: {
       rank,
     });
   };
-  for (const a of input.agents)
+  for (const a of input.peopleOnly ? [] : input.agents)
     if (a.canTalk !== false) push("agent", a.id, a.name, a.handle, a.role || null, "", mentionReaches(a, "channel"));
   for (const p of input.people) if (p.userId !== input.meId) push("person", p.userId, p.name, p.handle, null, p.email);
   rows.sort((a, b) => Number(b.inChannel) - Number(a.inChannel) || a.rank - b.rank || a.name.localeCompare(b.name));

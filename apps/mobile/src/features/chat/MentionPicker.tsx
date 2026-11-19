@@ -34,6 +34,7 @@ export function MentionPicker({
   channelId,
   members,
   everyone = false,
+  peopleOnly = false,
 }: {
   query: string;
   pick: (handle: string) => void;
@@ -42,6 +43,8 @@ export function MentionPicker({
   members: ReadonlySet<string> | null;
   /** The person may mention everyone here (`offersEveryone`): `@todos`, in their language, comes first. */
   everyone?: boolean;
+  /** A DM between people: no agent is offered (`mentionOptions`). */
+  peopleOnly?: boolean;
 }) {
   const { t, i18n } = useTranslation();
   const { colors: c, reducedMotion } = useTheme();
@@ -52,7 +55,7 @@ export function MentionPicker({
   const toast = useToast();
   const add = useAddChannelMember(orgId);
   const people = useMemo(() => [...dir.memberById.values()], [dir.memberById]);
-  const options = mentionOptions({ query, agents: dir.agents, people, meId, members });
+  const options = mentionOptions({ query, agents: dir.agents, people, meId, members, peopleOnly });
   const all = everyone ? everyoneSuggestion(query, i18n.language) : null;
   if (options.length === 0 && !all) return null;
 

@@ -1108,6 +1108,7 @@ function ChannelView({
     chrome?.task ? undefined : members.data,
     chrome?.dmAgentId || chrome?.dmPersonId ? "dm" : "channel",
     offersEveryone(org, Boolean(chrome?.dmAgentId || chrome?.dmPersonId)),
+    Boolean(chrome?.dmPersonId),
   );
   const channelSearch = useChannelSearch();
   const composer = useRef<HTMLTextAreaElement>(null);

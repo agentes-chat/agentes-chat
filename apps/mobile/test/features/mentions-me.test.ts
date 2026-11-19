@@ -48,6 +48,22 @@ describe("@ picker", () => {
     expect(o).toMatchObject({ id: "rh", inChannel: true });
   });
 
+  test("a DM between people offers people only: an agent's mention there reaches no one, the right hand's neither", () => {
+    const lodi = { id: "rh", name: "Lodi", handle: "lodi", role: null, builtin: "right_hand" as const };
+    const all = mentionOptions({
+      query: "",
+      agents: [...agents, lodi],
+      people,
+      meId: "me",
+      members: null,
+      peopleOnly: true,
+    });
+    expect(all.map((x) => x.key)).toEqual(["person:u2", "person:u1"]);
+    expect(
+      mentionOptions({ query: "lo", agents: [lodi], people, meId: "me", members: null, peopleOnly: true }),
+    ).toEqual([]);
+  });
+
   test("filters by name, handle or e-mail, accents folded; starts-with ranks first", () => {
     expect(mentionOptions({ query: "jo", agents, people, meId: "me", members: null }).map((x) => x.id)).toEqual(["u2"]);
     expect(mentionOptions({ query: "joã", agents, people, meId: null, members: null })[0]?.id).toBe("u2");

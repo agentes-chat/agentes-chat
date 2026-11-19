@@ -2688,6 +2688,7 @@ function Chat({
     [pending, preparing, removeFromStrip],
   );
   const everyoneOffered = offersEveryone(org, Boolean(dm));
+  const peopleDm = dm?.with.type === "person";
   const mentionCard = useCallback<NonNullable<ComposerProps["mention"]>>(
     ({ query, sigil, pick }) =>
       sigil === "#" ? (
@@ -2699,9 +2700,10 @@ function Chat({
           channelId={channelId}
           members={mentionMembers}
           everyone={everyoneOffered}
+          peopleOnly={peopleDm}
         />
       ),
-    [channelId, mentionMembers, everyoneOffered],
+    [channelId, mentionMembers, everyoneOffered, peopleDm],
   );
   const onType = useCallback((text: string) => sendTyping(threadId, text), [sendTyping, threadId]);
   // The composer floats over the list's bottom and rides the keyboard (KeyboardStickyView, on the keyboard library's
