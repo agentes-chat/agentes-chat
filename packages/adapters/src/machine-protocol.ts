@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 73;
+export const MACHINE_PROTOCOL_VERSION = 74;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -748,6 +748,14 @@ export interface CliInstall {
   message?: string;
   cause?: (typeof CLI_INSTALL_CAUSES)[number];
 }
+/**
+ * From this protocol on (ADR 0202): the Copilot brain. `brain.turn` takes `kind: "copilot"` (GitHub's Copilot CLI,
+ * `copilot --output-format json` with the prompt on its standard input, one process per turn), `account` takes
+ * `kind: "copilot"` (a device-code sign-in to a GitHub Copilot plan in the account's own `COPILOT_HOME`),
+ * `hello.executors.copilot` reports the CLI, and `access.tools.copilot` turns it on or off.
+ * The server never sends any of these to an older runner.
+ */
+export const COPILOT_PROTOCOL = 74;
 
 export type PhonePlatform = "android" | "ios";
 export type PhoneKind = "device" | "emulator" | "simulator";
@@ -1093,7 +1101,7 @@ export interface ExecVault {
 }
 
 /** Which CLI an account signs in. */
-export type AccountKind = "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+export type AccountKind = "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "copilot";
 export const ACCOUNT_KINDS: readonly AccountKind[] = [
   "claude_code",
   "codex",
@@ -1101,6 +1109,7 @@ export const ACCOUNT_KINDS: readonly AccountKind[] = [
   "opencode",
   "grok",
   "antigravity",
+  "copilot",
 ];
 export const isAccountKind = (v: unknown): v is AccountKind => ACCOUNT_KINDS.some((k) => k === v);
 /** Account and sign-in ids: UUIDs (the server makes them; the desktop app's runner too). */
@@ -1269,6 +1278,7 @@ export const OWN_USAGE_ID: Record<AccountKind, string> = {
   opencode: "own:opencode",
   grok: "own:grok",
   antigravity: "own:antigravity",
+  copilot: "own:copilot",
 };
 
 export const PLAN_USAGE_LIMITS = { windows: 8, label: 40 } as const;
@@ -2054,7 +2064,7 @@ export interface TaskStart {
 }
 
 /** The coding CLIs `hello.executors` reports. */
-export const CLI_NAMES = ["claude", "codex", "cursor", "opencode", "grok", "antigravity"] as const;
+export const CLI_NAMES = ["claude", "codex", "cursor", "opencode", "grok", "antigravity", "copilot"] as const;
 export type CliName = (typeof CLI_NAMES)[number];
 
 /** A coding CLI on the machine, as `hello` reports it (protocol 7). */
@@ -2203,9 +2213,9 @@ export interface BrainTurnRequest {
   runId: string;
   /**
    * `cursor`: protocol 36 (`CURSOR_PROTOCOL`); `opencode`: protocol 39 (`OPENCODE_PROTOCOL`); `grok`: 43
-   * (`GROK_PROTOCOL`); `antigravity`: 44 (`ANTIGRAVITY_PROTOCOL`).
+   * (`GROK_PROTOCOL`); `antigravity`: 44 (`ANTIGRAVITY_PROTOCOL`); `copilot`: 74 (`COPILOT_PROTOCOL`).
    */
-  kind: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+  kind: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "copilot";
   /** The executor's session (a UUID, stable per thread); `resume`: the server knows it ran before (a hint). */
   session: { id: string; resume: boolean };
   /** Relative to the agent's folder ("" = the folder). */
@@ -2445,6 +2455,8 @@ export interface RunnerTools {
   grok?: boolean;
   /** Protocol 44: Google's Antigravity CLI (ADR 0143). Absent = off (older runners). */
   antigravity?: boolean;
+  /** Protocol 74: GitHub's Copilot CLI (ADR 0202). Absent = off (older runners). */
+  copilot?: boolean;
   /** Shell commands (`exec`, `shell` tasks). The same as `exec` in `hello` once protocol 10 is in use. */
   commands: boolean;
   /** Protocol 12: the agent browser (ADR 0040). Absent = off (older runners). */
@@ -2511,6 +2523,7 @@ export interface RunnerInfo {
     opencode?: RunnerExecutorInfo;
     grok?: RunnerExecutorInfo;
     antigravity?: RunnerExecutorInfo;
+    copilot?: RunnerExecutorInfo;
     /**
      * `CLI_INSTALL_PROTOCOL`: a CLI that is there and whose `--version` keeps failing, with its own last line of
      * error. It is not listed above: it can't run turns, and it isn't missing either.
@@ -3486,7 +3499,7 @@ export function parseCursorModels(v: unknown): CursorModelInfo[] {
 }
 
 /**
- * `hello.executors`: only `claude`, `codex`, `cursor`, `opencode`, `grok` and `antigravity`, each with a short version
+ * `hello.executors`: only `claude`, `codex`, `cursor`, `opencode`, `grok`, `antigravity` and `copilot`, each with a short version
  * line (and Claude Code's login), and `broken`: the error line of each of them that is there and can't start.
  */
 export function parseExecutors(v: Record<string, unknown>): NonNullable<RunnerInfo["executors"]> {
@@ -4447,6 +4460,8 @@ export function parseAccess(v: unknown): RunnerAccess | undefined {
       ...(typeof t.grok === "boolean" ? { grok: t.grok } : {}),
       // Absent: a runner before the Antigravity CLI's switch (protocol 44), where it is off.
       ...(typeof t.antigravity === "boolean" ? { antigravity: t.antigravity } : {}),
+      // Absent: a runner before the Copilot CLI's switch (protocol 74), where it is off.
+      ...(typeof t.copilot === "boolean" ? { copilot: t.copilot } : {}),
       commands: t.commands === true,
       ...(t.browser === true ? { browser: true } : {}),
       ...(t.desktop === true ? { desktop: true } : {}),

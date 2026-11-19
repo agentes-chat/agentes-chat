@@ -11,6 +11,7 @@ import {
   accountCodeAad,
   CLAUDE_AUTH_PROTOCOL,
   type ClaudeLoginMethod,
+  COPILOT_PROTOCOL,
   CURSOR_KEY_PROVIDER,
   CURSOR_PROTOCOL,
   claudeLoginMethodsOf,
@@ -1282,16 +1283,16 @@ const sharedSignInProtocol = (kind: string) =>
 /**
  * Whether a new sign-in of that kind on the computer thinks for all of its owner's agents there (protocol 29):
  * every one where the agents are the runner's own user; where each is its own OS user (system mode), as
- * `SHARED_SIGN_INS` says (ChatGPT's from protocol 38, Gemini's from 58, Grok Build's from 67, never Cursor's nor
- * OpenCode's).
+ * `SHARED_SIGN_INS` says (ChatGPT's from protocol 38, Gemini's from 58, Grok Build's from 67, never Cursor's,
+ * OpenCode's or Copilot's yet).
  */
 export function sharesSignIns(
   machine: Pick<MachineRow, "protocol" | "executors">,
-  which: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "key",
+  which: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "copilot" | "key",
 ): boolean {
   if (machine.protocol < SHARED_ACCOUNTS_PROTOCOL) return false;
   if (machine.executors?.mode !== "system") return true;
-  if (which === "cursor" || which === "opencode") return false;
+  if (which === "cursor" || which === "opencode" || which === "copilot") return false;
   return machine.protocol >= sharedSignInProtocol(which) && SHARED_SIGN_INS[which];
 }
 
@@ -1514,7 +1515,7 @@ export async function beginAccountLogin(
 ): Promise<AccountLoginView> {
   if (!isAccountKind(kind)) {
     throw new ValidationError(
-      "Choose claude_code, codex, cursor, opencode, grok or antigravity",
+      "Choose claude_code, codex, cursor, opencode, grok, antigravity or copilot",
       "account.invalid_kind",
     );
   }
@@ -1558,11 +1559,13 @@ export async function beginAccountLogin(
           : ANTIGRAVITY_PROTOCOL
         : kind === "grok"
           ? GROK_PROTOCOL
-          : kind === "opencode"
-            ? OPENCODE_PROTOCOL
-            : plan
-              ? PLAN_KEYS_PROTOCOL
-              : ACCOUNTS_PROTOCOL,
+          : kind === "copilot"
+            ? COPILOT_PROTOCOL
+            : kind === "opencode"
+              ? OPENCODE_PROTOCOL
+              : plan
+                ? PLAN_KEYS_PROTOCOL
+                : ACCOUNTS_PROTOCOL,
   );
   // Once for every agent of its owner there, where the runner can (protocol 29; ChatGPT's 38, Gemini's 58).
   const shared = protocol >= sharedSignInProtocol(kind) && sharedSignIn(kind, provider);

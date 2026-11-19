@@ -26,7 +26,7 @@ export const VAULT_KEY_NAME = /^[A-Z][A-Z0-9_]{0,63}$/;
  * (`packages/adapters/src/secret-box.ts`), so a form says it before the server refuses.
  */
 export const isReservedKeyName = (name: string) =>
-  /^(ANTHROPIC_|CLAUDE_|OPENAI_|CODEX_|OPENCODE_|XAI_|GROK_|GEMINI_|AGY_|GOOGLE_(?:API_KEY$|GEMINI_|GENAI_)|NODE_|SSL_CERT_|LD_|DYLD_)|_PROXY$/.test(
+  /^(ANTHROPIC_|CLAUDE_|OPENAI_|CODEX_|OPENCODE_|XAI_|GROK_|GEMINI_|AGY_|COPILOT_|GOOGLE_(?:API_KEY$|GEMINI_|GENAI_)|NODE_|SSL_CERT_|LD_|DYLD_)|_PROXY$/.test(
     name.toUpperCase(),
   );
 

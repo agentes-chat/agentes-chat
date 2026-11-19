@@ -8344,6 +8344,9 @@
   "noAi.notSignedIn.grok": {
     "value": "Grok isn't signed in on this computer. Connect a Grok account on {{name}}'s page."
   },
+  "noAi.notSignedIn.copilot": {
+    "value": "Copilot isn't signed in on this computer. Connect a Copilot account on {{name}}'s page."
+  },
   "noAi.notSignedIn.antigravity": {
     "value": "Gemini isn't signed in on this computer. Connect a Gemini account on {{name}}'s page."
   },
@@ -8475,6 +8478,9 @@
   },
   "connectAi.title.grok": {
     "value": "Connect your Grok plan"
+  },
+  "connectAi.title.copilot": {
+    "value": "Connect your GitHub Copilot plan"
   },
   "connectAi.title.gemini": {
     "value": "Connect your Gemini plan"
@@ -8758,8 +8764,14 @@
   "connectAi.plan.grok.title": {
     "value": "Your Grok plan"
   },
+  "connectAi.plan.copilot.title": {
+    "value": "Your GitHub Copilot plan"
+  },
   "connectAi.plan.grok.tiers": {
     "value": "SuperGrok, SuperGrok Heavy or X Premium+"
+  },
+  "connectAi.plan.copilot.tiers": {
+    "value": "Copilot Pro, Pro+, Business or Enterprise"
   },
   "connectAi.plan.gemini.title": {
     "value": "Your Gemini plan"
@@ -8989,6 +9001,9 @@
   },
   "connectAi.otherAccount.grok": {
     "value": "Grok signed in as {{email}}, not {{account}}. Sign out on Grok's page and try again."
+  },
+  "connectAi.otherAccount.copilot": {
+    "value": "Copilot signed in as {{email}}, not {{account}}. Sign out on GitHub's page and try again."
   },
   "connectAi.otherAccount.antigravity": {
     "value": "Gemini signed in as {{email}}, not {{account}}. Sign out on Google's page and try again."
@@ -14533,6 +14548,9 @@
   "agentPage.work.brain.add.title.grok": {
     "value": "Add a Grok account"
   },
+  "agentPage.work.brain.add.title.copilot": {
+    "value": "Add a Copilot account"
+  },
   "agentPage.work.brain.add.title.antigravity": {
     "value": "Add a Gemini account"
   },
@@ -14549,6 +14567,9 @@
     "value": "The account with your plan"
   },
   "agentPage.work.brain.add.stepOne.grok": {
+    "value": "The account with your plan"
+  },
+  "agentPage.work.brain.add.stepOne.copilot": {
     "value": "The account with your plan"
   },
   "agentPage.work.brain.add.stepOne.antigravity": {
@@ -14572,6 +14593,9 @@
   "agentPage.work.brain.add.open.grok": {
     "value": "Sign in with Grok"
   },
+  "agentPage.work.brain.add.open.copilot": {
+    "value": "Sign in with GitHub"
+  },
   "agentPage.work.brain.add.open.antigravity": {
     "value": "Sign in with Google"
   },
@@ -14583,6 +14607,9 @@
   },
   "agentPage.work.brain.add.grokFinish": {
     "value": "Sign in on Grok's page, and the sign-in finishes on {{computer}} by itself."
+  },
+  "agentPage.work.brain.add.copilotFinish": {
+    "value": "Sign in on GitHub's page, and the sign-in finishes on {{computer}} by itself."
   },
   "agentPage.work.brain.add.geminiEnterprise": {
     "value": "Use Gemini Enterprise instead"
@@ -14637,6 +14664,9 @@
   },
   "agentPage.work.brain.add.grokCode": {
     "value": "Code for Grok"
+  },
+  "agentPage.work.brain.add.copilotCode": {
+    "value": "Code for GitHub"
   },
   "agentPage.work.brain.add.deviceCodeText": {
     "value": "Type this code on the page that opens."
@@ -14700,6 +14730,9 @@
   },
   "agentPage.work.brain.add.duplicate.grok": {
     "value": "Grok signed in as {{account}}, an account you already connected. To use another, sign out on Grok's page and try again."
+  },
+  "agentPage.work.brain.add.duplicate.copilot": {
+    "value": "Copilot signed in as {{account}}, an account you already connected. To use another, sign out on GitHub's page and try again."
   },
   "agentPage.work.brain.add.duplicate.antigravity": {
     "value": "Gemini signed in as {{account}}, an account you already connected. To use another, sign out on Google's page and try again."
@@ -25972,6 +26005,9 @@
   "aiAccounts.connect.grok": {
     "value": "Grok"
   },
+  "aiAccounts.connect.copilot": {
+    "value": "Copilot"
+  },
   "aiAccounts.connect.antigravity": {
     "value": "Gemini"
   },
@@ -29255,6 +29291,9 @@
   "brain.line.grok": {
     "value": "{{model}} on the Grok plan"
   },
+  "brain.line.copilot": {
+    "value": "{{model}} on the GitHub Copilot plan"
+  },
   "brain.line.gemini": {
     "value": "{{model}} on the Gemini plan"
   },
@@ -29275,6 +29314,9 @@
   },
   "brain.line.grokOf": {
     "value": "{{model}} on {{owner}}'s Grok plan"
+  },
+  "brain.line.copilotOf": {
+    "value": "{{model}} on {{owner}}'s GitHub Copilot plan"
   },
   "brain.line.geminiOf": {
     "value": "{{model}} on {{owner}}'s Gemini plan"
@@ -29297,6 +29339,9 @@
   "brain.line.grokAuto": {
     "value": "Grok plan"
   },
+  "brain.line.copilotAuto": {
+    "value": "GitHub Copilot plan"
+  },
   "brain.line.geminiAuto": {
     "value": "Gemini plan"
   },
@@ -29317,6 +29362,9 @@
   },
   "brain.line.grokAutoOf": {
     "value": "{{owner}}'s Grok plan"
+  },
+  "brain.line.copilotAutoOf": {
+    "value": "{{owner}}'s GitHub Copilot plan"
   },
   "brain.line.geminiAutoOf": {
     "value": "{{owner}}'s Gemini plan"
@@ -29354,6 +29402,9 @@
   "brain.card.grok": {
     "value": "Grok Build"
   },
+  "brain.card.copilot": {
+    "value": "Copilot CLI"
+  },
   "brain.card.antigravity": {
     "value": "Antigravity CLI"
   },
@@ -29380,6 +29431,9 @@
   },
   "brain.grokText": {
     "value": "Uses the Grok plan of whoever connected the computer."
+  },
+  "brain.copilotText": {
+    "value": "Uses the GitHub Copilot plan of whoever connected the computer."
   },
   "brain.antigravityText": {
     "value": "Uses the Gemini plan of whoever connected the computer."
@@ -29503,6 +29557,9 @@
   },
   "brain.summary.grok": {
     "value": "Grok Build · {{model}}"
+  },
+  "brain.summary.copilot": {
+    "value": "Copilot CLI · {{model}}"
   },
   "brain.summary.antigravity": {
     "value": "Antigravity CLI · {{model}}"
@@ -38346,6 +38403,9 @@
   "machines.oneClick.tools.antigravity": {
     "value": "Antigravity CLI"
   },
+  "machines.oneClick.tools.copilot": {
+    "value": "Copilot CLI"
+  },
   "machines.oneClick.tools.commands": {
     "value": "commands"
   },
@@ -38750,6 +38810,9 @@
   "machines.access.tool.grok": {
     "value": "Grok Build"
   },
+  "machines.access.tool.copilot": {
+    "value": "Copilot CLI"
+  },
   "machines.access.tool.antigravity": {
     "value": "Antigravity CLI"
   },
@@ -38773,6 +38836,9 @@
   },
   "machines.access.toolText.grok": {
     "value": "Like Claude Code, with a Grok account. Only in the allowed folders."
+  },
+  "machines.access.toolText.copilot": {
+    "value": "Like Claude Code, with a GitHub Copilot account. Only in the allowed folders."
   },
   "machines.access.toolText.antigravity": {
     "value": "Like Claude Code, with a Gemini account. Only in the allowed folders."

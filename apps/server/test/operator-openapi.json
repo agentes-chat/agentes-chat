@@ -2843,11 +2843,11 @@
               "properties": {
                 "provider": {
                   "type": "string",
-                  "description": "`anthropic`, `openai`, `xai`, `google`, `cursor`, `opencode`, a coding plan's id, or an API key's provider."
+                  "description": "`anthropic`, `openai`, `xai`, `google`, `github`, `cursor`, `opencode`, a coding plan's id, or an API key's provider."
                 },
                 "runtime": {
                   "type": "string",
-                  "description": "`claude_code`, `codex`, `grok`, `antigravity`, `cursor`, `opencode`, or `api` (an API key)."
+                  "description": "`claude_code`, `codex`, `grok`, `antigravity`, `copilot`, `cursor`, `opencode`, or `api` (an API key)."
                 },
                 "authMethod": {
                   "$ref": "#/components/schemas/OperatorAiAuthMethod"
@@ -10301,7 +10301,7 @@
           {
             "schema": {
               "type": "string",
-              "enum": ["claude_code", "codex", "cursor", "opencode", "grok", "antigravity"]
+              "enum": ["claude_code", "codex", "cursor", "opencode", "grok", "antigravity", "copilot"]
             },
             "required": false,
             "name": "kind",

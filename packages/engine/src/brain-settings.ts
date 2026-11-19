@@ -7,6 +7,7 @@ import {
   type BrainEffort,
   type BrainSpeed,
   CODEX_WINDOWS_PROTOCOL,
+  COPILOT_PROTOCOL,
   CURSOR_PROTOCOL,
   GROK_PROTOCOL,
   isBrainEffort,
@@ -45,6 +46,7 @@ import {
 import {
   ANTIGRAVITY_MODELS,
   antigravityBaseModel,
+  COPILOT_CLI_MODELS,
   claudeCodeModel,
   GROK_BUILD_MODELS,
   isPlanModelId,
@@ -109,7 +111,7 @@ import {
 import { planLentGroup, planModelDroppedGroup } from "./notification-producers";
 import { resolveNotifications } from "./notifications";
 import { can, getMembership, requirePermission } from "./organizations";
-import { isRightHand, personalBrain, personalModel } from "./right-hand";
+import { isRightHand, personalBrain, personalModel, RIGHT_HAND_NO_BRAINS } from "./right-hand";
 import { orgModelProvider } from "./router";
 import { readRefusal } from "./standing";
 import { agentsMovedOnto, paysExtraUsage, wakeAgentsBrainWaits } from "./usage-pause";
@@ -130,6 +132,7 @@ export const BRAIN_KINDS: readonly BrainKind[] = [
   "opencode",
   "grok",
   "antigravity",
+  "copilot",
 ];
 export const isBrainKind = (v: unknown): v is BrainKind =>
   typeof v === "string" && (BRAIN_KINDS as readonly string[]).includes(v);
@@ -216,6 +219,14 @@ export const antigravityModels = (listed: readonly { id: string; label?: string 
     return { value: m.id, label: m.label || m.id, ...(catalogModelOf(base) ? { modelId: base } : {}) };
   });
 
+/** The Copilot CLI's models (ADR 0202): what it listed on the agent's computer, else `COPILOT_CLI_MODELS`. */
+export const copilotModels = (listed: readonly { id: string; label?: string }[] = []): BrainModelOption[] =>
+  (listed.length ? listed : COPILOT_CLI_MODELS).map((m) => ({
+    value: m.id,
+    label: m.label || m.id,
+    ...(catalogModelOf(m.id) ? { modelId: m.id } : {}),
+  }));
+
 /**
  * Claude Code's aliases (`--model opus|sonnet|haiku`), mapped to today's ids in the catalog. Each is named by its
  * catalog row without the maker ("Opus 5.5"), so moving an alias to a new id renames it with no copy change.
@@ -254,12 +265,20 @@ function modelChoices(kind: BrainKind, machine?: { executors?: schema.MachineExe
   if (kind === "opencode") return opencodeModels(machine?.executors?.opencode?.models);
   if (kind === "grok") return grokModels(machine?.executors?.grok?.models);
   if (kind === "antigravity") return antigravityModels(machine?.executors?.antigravity?.models);
+  if (kind === "copilot") return copilotModels(machine?.executors?.copilot?.models);
   return [];
 }
 
-/** What a computer brain runs with when nobody chose a model (Cursor, OpenCode, Grok, Antigravity: its CLI's own default, null). */
+/** What a computer brain runs with when nobody chose a model (Cursor, OpenCode, Grok, Antigravity, Copilot: its CLI's own default, null). */
 export function defaultBrainModel(kind: BrainKind): string | null {
-  if (kind === "model" || kind === "cursor" || kind === "opencode" || kind === "grok" || kind === "antigravity")
+  if (
+    kind === "model" ||
+    kind === "cursor" ||
+    kind === "opencode" ||
+    kind === "grok" ||
+    kind === "antigravity" ||
+    kind === "copilot"
+  )
     return null;
   const options = brainModelOptions(kind);
   return (options.find((o) => o.recommended) ?? options[0])?.value ?? (kind === "codex" ? "gpt-6.2-sol" : "sonnet");
@@ -345,6 +364,7 @@ type MachineLike = Parameters<typeof machineExecutors>[0] & {
       opencode?: boolean;
       grok?: boolean;
       antigravity?: boolean;
+      copilot?: boolean;
     };
   } | null;
 } & Parameters<typeof machineOnline>[0];
@@ -395,6 +415,7 @@ export function brainOptions(machine: MachineLike | null): BrainOption[] {
     cliOption(machine, "opencode"),
     cliOption(machine, "grok"),
     cliOption(machine, "antigravity"),
+    cliOption(machine, "copilot"),
   ];
 }
 
@@ -402,7 +423,10 @@ export function brainOptions(machine: MachineLike | null): BrainOption[] {
  * Cursor (ADR 0114, runner protocol 36) or OpenCode (ADR 0132, protocol 39): the runner's protocol, its switch (or
  * Codex's on a runner before it) and its CLI found there.
  */
-function cliOption(machine: MachineLike | null, kind: "cursor" | "opencode" | "grok" | "antigravity"): BrainOption {
+function cliOption(
+  machine: MachineLike | null,
+  kind: "cursor" | "opencode" | "grok" | "antigravity" | "copilot",
+): BrainOption {
   const tools = machine?.access?.tools;
   let reason: BrainUnavailable | undefined;
   if (!machine) reason = "no_computer";
@@ -414,6 +438,7 @@ function cliOption(machine: MachineLike | null, kind: "cursor" | "opencode" | "g
       opencode: OPENCODE_PROTOCOL,
       grok: GROK_PROTOCOL,
       antigravity: ANTIGRAVITY_PROTOCOL,
+      copilot: COPILOT_PROTOCOL,
     }[kind]
   )
     reason = "runner_old";
@@ -559,9 +584,10 @@ async function brainAccounts(
   return {
     accounts: accounts.filter(
       (a) =>
-        (a.ownerId !== null && a.serves === "everyone") ||
-        (agent.ownerUserId !== null && a.ownerId === agent.ownerUserId) ||
-        a.id === agent.brainAccountId,
+        !(isRightHand(agent) && RIGHT_HAND_NO_BRAINS.has(a.kind)) &&
+        ((a.ownerId !== null && a.serves === "everyone") ||
+          (agent.ownerUserId !== null && a.ownerId === agent.ownerUserId) ||
+          a.id === agent.brainAccountId),
     ),
     canManageAccounts: supported && agent.ownerUserId === userId && mayAddAccounts(machine, userId),
     accountsSupported: supported,
@@ -646,6 +672,12 @@ async function agentMachine(db: Database, orgId: string, machineId: string | nul
   return machine && !machine.deletedAt ? machine : null;
 }
 
+const RIGHT_HAND_BRAIN_REFUSED = "The team's right hand can't think with this brain yet";
+
+/** What the agent may be given: the team's right hand is offered no brain of `RIGHT_HAND_NO_BRAINS`. */
+const offeredTo = (agent: Pick<Agent, "builtin">, options: BrainOption[]) =>
+  isRightHand(agent) ? options.filter((o) => !RIGHT_HAND_NO_BRAINS.has(o.kind)) : options;
+
 function view(
   agent: Agent,
   machine: MachineRow | null,
@@ -662,8 +694,8 @@ function view(
     fallback: false,
     extraUsage: paysExtraUsage(agent),
     computer: machine ? { machineId: machine.id, name: machine.name, online: shownOnline(machine) } : null,
-    options: brainOptions(machine),
-    machines,
+    options: offeredTo(agent, brainOptions(machine)),
+    machines: isRightHand(agent) ? machines.map((m) => ({ ...m, options: offeredTo(agent, m.options) })) : machines,
     canEdit: true,
     account: agent.brainAccountId,
     accountPinned: agent.brainAccountPinned,
@@ -817,6 +849,9 @@ async function setPersonalBrain(
   if (input.brain !== undefined && !isBrainKind(input.brain)) {
     throw new ValidationError("Choose model, claude_code, codex or cursor", "brain.invalid");
   }
+  if (typeof input.brain === "string" && RIGHT_HAND_NO_BRAINS.has(input.brain)) {
+    throw new ValidationError(RIGHT_HAND_BRAIN_REFUSED, "brain.invalid");
+  }
   const from = current
     ? { brain: current.brain, model: current.brainModel, account: current.brainAccountId, effort: current.brainEffort }
     : null;
@@ -856,6 +891,7 @@ async function setPersonalBrain(
   if (!account || !brain || account.kind !== brain || !isComputerBrain(brain)) {
     throw new ValidationError("Choose an account of this brain", "account.invalid", { brain: brain ?? null });
   }
+  if (RIGHT_HAND_NO_BRAINS.has(brain)) throw new ValidationError(RIGHT_HAND_BRAIN_REFUSED, "brain.invalid");
   const lent = account.createdBy !== userId;
   if (account.createdBy === null || (lent && account.serves !== "everyone")) {
     throw new ForbiddenError("This plan thinks only for the person who connected it", "account.not_owner");
@@ -1170,6 +1206,8 @@ export async function setAgentBrain(
   }
   const pinned = (input.accountPinned as boolean | undefined) ?? agent.brainAccountPinned;
   const brain = (input.brain as BrainKind | undefined) ?? from;
+  if (rightHand && RIGHT_HAND_NO_BRAINS.has(brain))
+    throw new ValidationError(RIGHT_HAND_BRAIN_REFUSED, "brain.invalid");
   const changed = brain !== from;
   const [machine, machines] = await Promise.all([
     agentMachine(deps.db, orgId, agent.machineId),
@@ -1998,11 +2036,12 @@ export interface AiComputer {
     opencode: boolean;
     grok: boolean;
     antigravity: boolean;
+    copilot: boolean;
     key: boolean;
   };
   /** Why a CLI of `brains` can't think there, as `brainOptions` says it. */
   off: Partial<Record<BrainKind, BrainUnavailable>>;
-  /** What it can think with now: Claude Code (Claude and the coding plans), Codex (ChatGPT), Cursor, OpenCode, Grok, Antigravity. */
+  /** What it can think with now: Claude Code (Claude and the coding plans), Codex (ChatGPT), Cursor, OpenCode, Grok, Antigravity, Copilot. */
   brains: {
     claude_code: boolean;
     codex: boolean;
@@ -2010,6 +2049,7 @@ export interface AiComputer {
     opencode: boolean;
     grok: boolean;
     antigravity: boolean;
+    copilot: boolean;
   };
   /**
    * "Conta deste computador": each CLI's own sign-in there, on a computer the caller connected (it is theirs, and
@@ -2068,6 +2108,7 @@ export async function listAiAccounts(deps: BrainDeps, userId: string, orgId: str
           opencode: sharesSignIns(m, "opencode"),
           grok: sharesSignIns(m, "grok"),
           antigravity: sharesSignIns(m, "antigravity"),
+          copilot: sharesSignIns(m, "copilot"),
           key: sharesSignIns(m, "key"),
         },
         off: Object.fromEntries(options.flatMap((o) => (o.reason ? [[o.kind, o.reason]] : []))),
@@ -2078,6 +2119,7 @@ export async function listAiAccounts(deps: BrainDeps, userId: string, orgId: str
           opencode: can("opencode"),
           grok: can("grok"),
           antigravity: can("antigravity"),
+          copilot: can("copilot"),
         },
         own: m.pairedByUserId === userId ? ownSignIns(m.executors, can) : {},
       };

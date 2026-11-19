@@ -34,15 +34,25 @@ const COMPUTER: AiComputer = {
   mine: true,
   canAdd: true,
   keys: true,
-  brains: { claude_code: true, codex: true, cursor: true, opencode: true, grok: true, antigravity: true },
+  brains: {
+    claude_code: true,
+    codex: true,
+    cursor: true,
+    opencode: true,
+    grok: true,
+    antigravity: true,
+    copilot: true,
+  },
 };
 
-const EVERY_PROGRAM = (["claude_code", "codex", "cursor", "opencode", "grok", "antigravity"] as const).map((kind) => ({
-  kind,
-  available: true,
-  models: [],
-  defaultModel: null,
-}));
+const EVERY_PROGRAM = (["claude_code", "codex", "cursor", "opencode", "grok", "antigravity", "copilot"] as const).map(
+  (kind) => ({
+    kind,
+    available: true,
+    models: [],
+    defaultModel: null,
+  }),
+);
 const NO_COMPUTER = { computer: null, machines: [] };
 
 const click = async (el: Element) => {
@@ -115,6 +125,7 @@ const CARD: Partial<Record<PlanChoice, string>> = {
   cursor: "Cursor",
   grok: "Grok",
   gemini: "Gemini",
+  copilot: "Copilot",
   zen: "Começar grátis",
 };
 

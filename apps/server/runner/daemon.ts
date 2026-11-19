@@ -1080,6 +1080,7 @@ export class RunnerDaemon implements RequestObserver {
       opencode: "OpenCode",
       grok: "Grok Build",
       antigravity: "Antigravity CLI",
+      copilot: "Copilot CLI",
       commands: "commands",
       browser: "the browser",
       desktop: "the agents' desktops",
