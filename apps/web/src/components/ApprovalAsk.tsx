@@ -43,6 +43,7 @@ import {
   expiryText,
   RefuseBox,
 } from "@/pages/ApprovalsPage";
+import { FeedbackFacts } from "./FeedbackFacts";
 import { type RequestAnswer, RequestCard, RequestFuse, useExpired } from "./RequestCard";
 
 /** The whole time a request has (24 h when the row doesn't say): the fuse burns down over it. */
@@ -92,7 +93,9 @@ export function ApprovalAsk({
   const requester = requesterDecidesLine(t, approval);
   const title = approvalTitle(t, approval);
   const email = approval.email;
-  const previewed = Boolean(email || approvalLetter(approval));
+  // A feedback an agent sends: its text as the cover, and all that goes with it under "Ver o que vai junto".
+  const feedback = approval.feedback ?? null;
+  const previewed = Boolean(email || feedback || approvalLetter(approval));
   // What the preview already shows isn't said again on the action's line. A connector's detail is its raw call
   // (`tool · key=value`): its values in words instead, the call under "Ver detalhes".
   const detail = previewed ? undefined : approvalDetail(approval, i18n.language) || undefined;
@@ -124,10 +127,11 @@ export function ApprovalAsk({
         logo: <ConnectorMark approval={approval} />,
         title,
         detail,
-        more: email ? t("approval.seeEmail") : t("approval.seeDetails"),
+        more: email ? t("approval.seeEmail") : feedback ? t("feedback.seeAlongWith") : t("approval.seeDetails"),
       }}
       details={
         <>
+          {feedback && <FeedbackFacts facts={feedback.facts} />}
           <ExactAction approval={approval} />
           {origin && <p className="rq__origin">{tt(origin.key, origin.values)}</p>}
           {requester && <p className="rq__origin">{requester}</p>}
@@ -210,6 +214,14 @@ function approvalAnswer(
 function ApprovalPreview({ approval }: { approval: Approval }) {
   const { t } = useTranslation();
   const email = approval.email;
+  if (approval.feedback) {
+    const text = typeof approval.params?.text === "string" ? approval.params.text.trim() : "";
+    return text ? (
+      <div className="rq-mail">
+        <p className="rq-mail__body">{text}</p>
+      </div>
+    ) : null;
+  }
   const letter = approvalLetter(approval);
   if (letter) {
     return (

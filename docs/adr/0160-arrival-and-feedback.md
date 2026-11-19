@@ -1,6 +1,6 @@
 # 0160. The arrival after the onboarding, and feedback by email
 
-- Status: Accepted. Amended 2026-11-16 (the addendum on support requests: a record that a member asked, and where their words are kept)
+- Status: Accepted. Amended 2026-11-16 (the addendum on support requests: a record that a member asked, and where their words are kept). Amended 2026-11-11: an agent's feedback carries the run's side, listed before it goes (§ Amendment at the end).
 - Date: 2026-11-09
 - Code: web `components/arrival/*` (`Arrival`, `BetaDialog`, `TeamScene`, `ConnectChoices`, `FeedbackDialog`,
   `FeedbackMark`), `components/ConnectAi.tsx` (`ConnectAiRequest.arrival`), `pages/OnboardingPage.tsx`
@@ -214,3 +214,17 @@ A feedback was one email and nothing else: "Nothing is stored beyond the outbox 
 - **For how long.** The words 90 days, the row a year (a daily sweep). It goes with its workspace or with the person's account. Words kept while the token was set stay their 90 days when it is taken away: the door is closed then, so nothing reads them, and the sweep drops them by their age.
 - **Who reads it.** Nobody in the apps. The operator API lists a workspace's requests without their words, and gives the words only through its reveal door, one at a time, on record, and shown in the workspace's audit log.
 - **What the form says is unchanged**: who reads the feedback. On a server that keeps the words, its operator owes its workspaces that notice (ADR 0056).
+
+## Amendment (2026-11-11): an agent's feedback carries the run's side, and the person sees all of it first
+
+### Context
+
+§11 and §12 gave an agent's feedback its text alone, while the person's form carries the screen, the build and the app's last errors. Yet the agent is the one that saw the failure from inside: which of our tools broke and how, on what brain, model and computer. All of that reached whoever runs the server only as far as the agent wrote it in words, and the person approving it in their name couldn't see more than that text.
+
+### Decision
+
+1. **The run's side, from stored data** (`runFeedbackFacts`, no model call): the run's brain, the model that last answered with its provider (never an account or a key), the computer it ran on as its system and runner (never its name), the last three failures of the app's own tools as the tool and its error's first line (a connected app's failures stay out: their text is that app's data), and the run's id and start. `send_feedback` and `offer_feedback` add them to the email's facts, after the role and "Written by".
+2. **What the person reads is what goes.** `send_feedback`'s approval carries them (`ApprovalView.feedback`), read from the run as it will be sent; the card shows the words as its cover and the lines under "See what goes along", on the web, and as the request's rows on the phone. An offer keeps them on its row (`FeedbackOfferView.facts`, at most twelve, read back safely), opened with the report, and its email carries exactly those.
+3. **What stays.** Only with the person's approval or click, in their name, within their ten an hour. Nothing of the conversation beyond what the agent writes. The labels are the email's own, in English, for its reader.
+
+Proposed with two more parts that need an approval's decision to carry something (issue #153): the person's app adding the form's own facts at the click, and the agent's last screenshot as one unchecked box on the same card. They wait for that design.

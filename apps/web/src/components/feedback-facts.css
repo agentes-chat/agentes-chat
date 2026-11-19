@@ -1,0 +1,34 @@
+/* What goes along with a feedback an agent writes: a small heading, then label and value per line, the value
+   wrapping under itself. Inside a request's details and an offer's open report alike. */
+.fb-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.fb-facts__head {
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--ink2);
+}
+.fb-facts__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+}
+.fb-facts__row {
+  display: grid;
+  grid-template-columns: minmax(80px, max-content) minmax(0, 1fr);
+  gap: 12px;
+  font-size: 12.5px;
+  line-height: 18px;
+}
+.fb-facts__row dt {
+  color: var(--muted);
+}
+.fb-facts__row dd {
+  margin: 0;
+  color: var(--ink2);
+  overflow-wrap: anywhere;
+}
