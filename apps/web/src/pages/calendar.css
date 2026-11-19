@@ -196,7 +196,8 @@ html:not([data-pointer]) .cal-week__daybtn:focus-visible {
   height: 2px;
   background: var(--danger);
   pointer-events: none;
-  z-index: 2;
+  /* Under the events: a line across a chip would hide its title. */
+  z-index: 0;
 }
 .cal-week__now::before {
   content: "";
