@@ -21,7 +21,15 @@ import { KeyboardBar, TOOLBAR_HEIGHT } from "@/ui/auth/AuthScaffold";
 import { useColors, useNow, usePullRefresh } from "../shared/hooks";
 import { showActionSheet } from "../shared/PickerSheet";
 import { PushedLargeTitle } from "../shared/PushedLargeTitle";
-import { BottomBar, copyText, type HeaderWordAction, MONO, PushedHeader, successHaptic } from "../shared/parts";
+import {
+  BarNote,
+  BottomBar,
+  copyText,
+  type HeaderWordAction,
+  MONO,
+  PushedHeader,
+  successHaptic,
+} from "../shared/parts";
 
 /**
  * What the workspace's settings screens share (each one a screen pushed with the platform's push, as Você's): the
@@ -49,6 +57,7 @@ export function SettingsPage(props: SettingsPageProps) {
 
 interface SettingsPageProps {
   title: string;
+  /** What the page is about (whose role, which channel): a quiet line right under the bar (`BarNote`). */
   subtitle?: string | undefined;
   action?: HeaderWordAction;
   /** An icon button on the bar's right in place of a word. Prefer `actions`. */
@@ -138,7 +147,6 @@ function CompactPage({
     <View style={[styles.fill, { backgroundColor: c.grouped }]}>
       <PushedHeader
         title={title}
-        {...(subtitle ? { subtitle } : {})}
         solid={false}
         grouped
         {...(busy
@@ -162,6 +170,7 @@ function CompactPage({
         // A docked action holds the home indicator's room itself.
         contentContainerStyle={[styles.body, { paddingBottom: bottom ? 24 : 24 + insets.bottom }]}
       >
+        {subtitle ? <BarNote>{subtitle}</BarNote> : null}
         {/* What is there as the screen opens doesn't fade in; what loads while it is watched does (`Loaded`). */}
         <Locked when={locked || busy || frozen} readable={frozen && !locked && !busy}>
           <LayoutAnimationConfig skipEntering>{children}</LayoutAnimationConfig>

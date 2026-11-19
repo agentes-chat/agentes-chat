@@ -18,7 +18,7 @@ import { liveRoute } from "../live-files/routes";
 import { chooseAction } from "../settings/parts";
 import { LoadFailed } from "../shared/FirstUse";
 import { useColors, useDirectory, useOrgId } from "../shared/hooks";
-import { copyText, MONO, PushedHeader, successHaptic } from "../shared/parts";
+import { BarNote, copyText, MONO, PushedHeader, successHaptic } from "../shared/parts";
 import { useFileActions } from "./actions";
 import { fileInfo, isCodeName, textChunks } from "./logic";
 import { useFileLine } from "./MessageFiles";
@@ -124,12 +124,9 @@ export function DocumentViewer({
 
   return (
     <>
-      <PushedHeader
-        centered
-        title={info?.name ?? ""}
-        {...(info && detail ? { subtitle: line(info, [dir.nameOf(detail.createdBy)]) } : {})}
-        actions={bar}
-      />
+      {/* The file's name as the system's own title (centred by it); what it is and who sent it, a quiet line under. */}
+      <PushedHeader title={info?.name ?? ""} actions={bar} />
+      {info && detail ? <BarNote>{line(info, [dir.nameOf(detail.createdBy)])}</BarNote> : null}
       {query.isError && !detail ? (
         <Middle>
           <LoadFailed onRetry={() => void query.refetch()} />

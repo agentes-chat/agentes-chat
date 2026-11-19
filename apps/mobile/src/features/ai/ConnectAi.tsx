@@ -43,7 +43,7 @@ import { useOrg } from "@/providers/org";
 import { Button, GroupedFooter, SkeletonList, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
 import { useColors, useDirectory, useMeId } from "../shared/hooks";
-import { BottomBar, PushedHeader } from "../shared/parts";
+import { BarNote, BottomBar, PushedHeader } from "../shared/parts";
 import { ConnectAiPage, viewOf } from "./ConnectAiSteps";
 import { ConnectScene } from "./ConnectScene";
 import {
@@ -311,13 +311,15 @@ function FlowScreen({
       : pageTitle(t, view);
   return (
     <View style={[styles.screen, { backgroundColor: c.grouped }]}>
-      <PushedHeader title={title} subtitle={subtitle} solid={false} grouped />
+      <PushedHeader title={title} solid={false} grouped />
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
         contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 32 }]}
       >
+        {/* The step and the agent, under the bar's question (`BarNote`). */}
+        {subtitle ? <BarNote>{subtitle}</BarNote> : null}
         {view.page === "home" && !done ? <ConnectScene /> : null}
         {/* Under the band, what the question in the bar leaves open; the ways come under it. */}
         {home && !hold ? <GroupedFooter>{t("mobile.ai.questionLead")}</GroupedFooter> : null}

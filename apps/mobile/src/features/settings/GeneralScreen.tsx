@@ -52,8 +52,6 @@ import { AccentRow } from "./AccentRow";
 import { missingIdeas, nameOnLeave, withIdea, zoneLabel } from "./logic";
 import { chooseAction, Gap, SettingsPage, Uploading } from "./parts";
 
-/** How long "Salvo" stays under the title after a change saved by itself. */
-const SAVED_MS = 1800;
 /** The workspace's logo at the top of Geral (`OrgAvatar`'s corners: one cut, the other three round). */
 const LOGO = 84;
 /** The context saves this long after the last key (and when its field is left). */
@@ -105,11 +103,9 @@ export function GeneralScreen() {
   const [name, setName] = useState("");
   const [context, setContext] = useState("");
   const [timezone, setTimezone] = useState("");
-  const [saved, setSaved] = useState(false);
   const [uploading, setUploading] = useState(false);
   const loaded = useRef<string | null>(null);
   const contextTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const savedTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const contextField = useRef<TextInputInstance | null>(null);
   const picked = useZonePick();
 
@@ -132,7 +128,6 @@ export function GeneralScreen() {
   useEffect(
     () => () => {
       clearTimeout(contextTimer.current);
-      clearTimeout(savedTimer.current);
       const now = latest.current;
       if (!now.editable || !now.settings) return;
       const patch: Partial<OrgSettings> = {};
@@ -154,12 +149,8 @@ export function GeneralScreen() {
   const save = (patch: Partial<OrgSettings>) => {
     if (!editable) return;
     update.mutate(patch, {
-      onSuccess: () => {
-        setSaved(true);
-        AccessibilityInfo.announceForAccessibility(t("settings.savedShort"));
-        clearTimeout(savedTimer.current);
-        savedTimer.current = setTimeout(() => setSaved(false), SAVED_MS);
-      },
+      // The control already shows the change (it moves as it is tapped); a screen reader hears that it stuck.
+      onSuccess: () => AccessibilityInfo.announceForAccessibility(t("settings.savedShort")),
       onError: () => toast({ title: t("mobile.app.failed"), icon: "x" }),
     });
   };
@@ -424,7 +415,6 @@ export function GeneralScreen() {
             ? t("mobile.settings.edit")
             : t("settings.section.general")
       }
-      subtitle={saved ? t("settings.savedShort") : undefined}
       frozen={settingsFrozen(org, "general")}
     >
       {!editable ? (

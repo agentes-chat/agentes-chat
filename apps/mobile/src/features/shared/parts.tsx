@@ -24,6 +24,7 @@ import {
   IconTile,
   LivePause,
   RowPressable,
+  SCREEN_X,
   Text,
   ToggleSwitch,
   textLineOf,
@@ -196,7 +197,8 @@ const liquidGlass = IOS && !needsHeaderBlur(Platform.OS, Platform.Version);
 
 /**
  * The bar of a pushed screen, as the native header (react-native-screens): the system back chevron with
- * the edge swipe, a title (with a subtitle under it when given), an action on the right. Renders nothing
+ * the edge swipe, a title (the system's own when it is words: centred and shortened by it), an action on the right.
+ * What a subtitle would say goes under the bar, as a `BarNote` (the navigator has no native subtitle). Renders nothing
  * itself; it sets the screen's header options, so screens keep calling it where the bar used to be.
  * The bar is opaque by default (`solid`, content lays out below it); `solid={false}` makes content scroll
  * under it (glass on iOS 26, blur before; the screen's scroll view needs
@@ -208,7 +210,6 @@ const liquidGlass = IOS && !needsHeaderBlur(Platform.OS, Platform.Version);
  */
 export function PushedHeader({
   title,
-  subtitle,
   right,
   action,
   plate = false,
@@ -217,10 +218,8 @@ export function PushedHeader({
   largeTitle = false,
   actions,
   lead,
-  centered = false,
 }: {
   title?: ReactNode;
-  subtitle?: string;
   right?: ReactNode;
   action?: HeaderWordAction;
   /**
@@ -243,11 +242,6 @@ export function PushedHeader({
    * into the bar as the list scrolls, and the bar takes the system's material over what passes under it.
    */
   largeTitle?: boolean;
-  /**
-   * The custom title stays in the bar's middle whatever stands on the right (a file's name): narrow enough to clear
-   * the widest side, it shortens with "…" instead of being pushed against the back button.
-   */
-  centered?: boolean;
 }) {
   const { colors } = useTheme();
   const scrollUnder = useScrollUnderPushedOptions();
@@ -255,7 +249,8 @@ export function PushedHeader({
   const text = typeof title === "string" ? title : "";
   const titleNode = useHeaderSlot(typeof title === "string" ? null : title);
   const rightNode = useHeaderSlot(right);
-  const custom = Boolean(subtitle) || (title != null && typeof title !== "string");
+  // Words are the system's own title; only a view of our own (a pill, a fading name, a segmented control) is ours.
+  const custom = title != null && typeof title !== "string";
   const hasRight = Boolean(right);
   // The action's press always reaches its latest handler; the options change only with its word and state.
   const press = useRef(action?.onPress);
@@ -266,9 +261,7 @@ export function PushedHeader({
   const wordOff = action?.disabled ?? false;
   const actionOptions = useHeaderActionOptions({ right: actions, lead });
   const hasActions = (actions?.length ?? 0) > 0 || lead != null;
-  // A centred title clears this many buttons on the right (`centered`).
-  const rightCount = (actions?.length ?? 0) + (lead != null ? 1 : 0);
-  // Stable options: `setOptions` runs when the title, subtitle or the presence of actions change, not on
+  // Stable options: `setOptions` runs when the title or the presence of actions change, not on
   // every render of the screen (a conversation re-renders while agents stream).
   const options = useMemo<NativeStackNavigationOptions>(
     () => ({
@@ -281,17 +274,7 @@ export function PushedHeader({
         ? { headerLargeTitleShadowVisible: false, headerLargeTitleStyle: { color: colors.ink } }
         : null),
       title: text,
-      headerTitle: custom
-        ? () => (
-            <HeaderTitle
-              text={text}
-              node={titleNode}
-              subtitle={subtitle}
-              beside={word !== null}
-              {...(centered ? { rightCount } : {})}
-            />
-          )
-        : text,
+      headerTitle: custom ? () => <HeaderTitle node={titleNode} beside={word !== null} /> : text,
       ...(word !== null && IOS
         ? {
             unstable_headerRightItems: () => [
@@ -340,14 +323,11 @@ export function PushedHeader({
       colors.ink,
       text,
       custom,
-      subtitle,
       titleNode,
       hasRight,
       rightNode,
       word,
       wordOff,
-      centered,
-      rightCount,
     ],
   );
   return <Stack.Screen options={options} />;
@@ -401,46 +381,37 @@ export interface HeaderWordAction {
 }
 
 /**
- * A title with a subtitle under it, in the native bar (centered on iOS, leading on Android). `beside`: a word action
- * (Save) on the right, wider than the back button: the centered title keeps clear of it on both sides.
+ * A title of our own in the native bar (centered on iOS, leading on Android). `beside`: a word action (Save) on the
+ * right, wider than the back button: the centered title keeps clear of it on both sides.
  */
-function HeaderTitle({
-  text,
-  node,
-  subtitle,
-  beside = false,
-  rightCount,
-}: {
-  text: string;
-  node: HeaderSlotStore;
-  subtitle?: string | undefined;
-  beside?: boolean;
-  /**
-   * Kept centred (`PushedHeader`'s `centered`): how many buttons stand on the right. Each side keeps the widest one's
-   * room, the bar's edge and one button (75) plus 50 for each more, so iOS can centre it.
-   */
-  rightCount?: number;
-}) {
+function HeaderTitle({ node, beside = false }: { node: HeaderSlotStore; beside?: boolean }) {
   const { width } = useWindowDimensions();
-  const side = rightCount !== undefined ? 75 + 50 * Math.max(0, rightCount - 1) : beside ? 100 : 75;
   return (
-    <View style={[styles.headerTitle, { maxWidth: width - 2 * side }]}>
-      {text ? (
-        <Text variant="body" numberOfLines={1} style={styles.titleText}>
-          {text}
-        </Text>
-      ) : (
-        // A title of our own is pressable (the conversation's pill): its tap is its, not the bar's scroll to top.
-        <BarPressable>
-          <HeaderSlot slot={node} />
-        </BarPressable>
-      )}
-      {subtitle ? (
-        <Text variant="caption" tone="faint" numberOfLines={1}>
-          {subtitle}
-        </Text>
-      ) : null}
+    <View style={[styles.headerTitle, { maxWidth: width - (beside ? 200 : 150) }]}>
+      {/* A title of our own is pressable (the conversation's pill): its tap is its, not the bar's scroll to top. */}
+      <BarPressable>
+        <HeaderSlot slot={node} />
+      </BarPressable>
     </View>
+  );
+}
+
+/**
+ * What a native subtitle says (the navigator has none yet: a title and a subtitle of our own in the bar did not fit
+ * its middle beside the buttons and were pushed against the back button): a quiet line centred right under the bar,
+ * the bar keeping the system's own title. On a screen whose content scrolls under the bar, the first thing in it.
+ */
+export function BarNote({ children, color }: { children: ReactNode; color?: string }) {
+  const c = useColors();
+  return (
+    <Text
+      variant="footnote"
+      numberOfLines={2}
+      style={[styles.barNote, { color: color ?? c.faint }]}
+      accessibilityLiveRegion="polite"
+    >
+      {children}
+    </Text>
   );
 }
 
@@ -507,7 +478,7 @@ const styles = StyleSheet.create({
   actionText: { flex: 1, minWidth: 0 },
   mono: { fontFamily: MONO, fontSize: 13 },
   headerTitle: { alignItems: Platform.OS === "ios" ? "center" : "flex-start", minWidth: 0 },
-  titleText: { fontWeight: "600" },
+  barNote: { textAlign: "center", paddingHorizontal: SCREEN_X, paddingTop: 4, paddingBottom: 10 },
   headerRight: { flexDirection: "row", alignItems: "center" },
   headerWithWord: { gap: 8 },
 });

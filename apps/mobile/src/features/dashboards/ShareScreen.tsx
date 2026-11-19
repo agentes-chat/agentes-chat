@@ -15,7 +15,7 @@ import { useFailed } from "../routines/hooks";
 import { useUnsavedGuard } from "../settings/parts";
 import { Face } from "../shared/Face";
 import { useMeId, useOrgId } from "../shared/hooks";
-import { goBack, PushedHeader, successHaptic } from "../shared/parts";
+import { BarNote, goBack, PushedHeader, successHaptic } from "../shared/parts";
 import {
   type AudienceDraft,
   accessPerson,
@@ -116,7 +116,6 @@ function Form({ board }: { board: Dashboard }) {
     <View style={[styles.screen, { backgroundColor: c.grouped }]}>
       <PushedHeader
         title={t("dashboards.share.action")}
-        subtitle={board.title}
         solid={false}
         grouped
         action={{ label: t("dashboards.share.save"), disabled: !ready, onPress: save }}
@@ -126,6 +125,7 @@ function Form({ board }: { board: Dashboard }) {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={[styles.in, { paddingBottom: 24 + insets.bottom }]}
       >
+        <BarNote>{board.title}</BarNote>
         {board.kind === "home" ? (
           <Text variant="footnote" tone="muted" style={styles.note}>
             {t("dashboards.errors.homeFixed")}
