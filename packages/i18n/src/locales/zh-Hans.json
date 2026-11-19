@@ -2118,6 +2118,13 @@
       "agentSettings": "{{name}} 设置"
     },
     "sidebarSetup": {
+      "inTools": "仅在工具中显示",
+      "reviewTools": "待查看",
+      "organizeTools": "整理",
+      "workspaceTools": "工作区",
+      "inQuickAccess": "在快速访问中",
+      "pinTool": "将{{name}}固定到快速访问",
+      "removeTool": "从快速访问中移除{{name}}",
       "description": "选择在侧边栏顶部常驻显示的内容。只对你自己生效，仅限此工作区。",
       "always": "始终显示",
       "more": "放在“更多”中",
@@ -2215,6 +2222,7 @@
     "channelsPersonal": "群组对话",
     "agents": "智能体",
     "directMessages": "私信",
+    "create": "创建",
     "createAgent": "创建智能体",
     "importAgents": "从其他应用导入智能体",
     "account": "账号",
@@ -19081,7 +19089,8 @@
     }
   },
   "agora": {
-    "label": "现在",
+    "label": "活动",
+    "openActivity": "查看代理的活动",
     "working_other": "{{count}} 个智能体在工作",
     "waiting_other": "{{count}} 件事等你处理",
     "sections": {

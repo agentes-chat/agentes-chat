@@ -2330,6 +2330,13 @@ export const en = {
       description: "Choose what stays in sight at the top of your sidebar. Just for you, in this workspace.",
       always: "Always",
       more: "In More",
+      inTools: "Only in Tools",
+      reviewTools: "To review",
+      organizeTools: "Organization",
+      workspaceTools: "Workspace",
+      inQuickAccess: "In Quick access",
+      pinTool: "Pin {{name}} to Quick access",
+      removeTool: "Remove {{name}} from Quick access",
       auto: "When there's something",
       autoHint: "Shows up when something waits for you",
       reset: "Reset to default",
@@ -2434,6 +2441,7 @@ export const en = {
     channelsPersonal: "Group conversations",
     agents: "Agents",
     directMessages: "Direct messages",
+    create: "Create",
     createAgent: "Create agent",
     importAgents: "Bring agents from another app",
     account: "Account",
@@ -20138,7 +20146,8 @@ export const en = {
   },
   /** Agora (ADR 0128 addendum): the whole workspace's work in one place, a button beside "Go to…" and its list. */
   agora: {
-    label: "Now",
+    label: "Activity",
+    openActivity: "View agent activity",
     /** Its tip, one line each. */
     working_one: "{{count}} agent working",
     working_other: "{{count}} agents working",

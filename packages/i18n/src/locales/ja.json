@@ -2118,6 +2118,13 @@
       "agentSettings": "{{name}}の設定"
     },
     "sidebarSetup": {
+      "inTools": "ツールのみ",
+      "reviewTools": "要確認",
+      "organizeTools": "整理",
+      "workspaceTools": "ワークスペース",
+      "inQuickAccess": "クイックアクセスに表示",
+      "pinTool": "{{name}}をクイックアクセスに固定",
+      "removeTool": "{{name}}をクイックアクセスから外す",
       "description": "サイドバーの上部に常に表示するものを選びます。このワークスペースで、あなただけに適用されます。",
       "always": "常に表示",
       "more": "「その他」に表示",
@@ -2215,6 +2222,7 @@
     "channelsPersonal": "グループ会話",
     "agents": "エージェント",
     "directMessages": "ダイレクトメッセージ",
+    "create": "作成",
     "createAgent": "エージェントを作成",
     "importAgents": "ほかのアプリからエージェントを取り込む",
     "account": "アカウント",
@@ -18904,7 +18912,8 @@
     }
   },
   "agora": {
-    "label": "今",
+    "label": "アクティビティ",
+    "openActivity": "エージェントのアクティビティを表示",
     "working_other": "エージェント {{count}} 件が作業中",
     "waiting_other": "{{count}}件があなたの対応待ち",
     "sections": {

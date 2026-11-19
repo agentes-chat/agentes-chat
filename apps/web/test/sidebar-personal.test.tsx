@@ -4,19 +4,22 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 setupDom();
 
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
-import { ADA_ID, createFakeApi, ENG_ID, ORG_ID, seedState, withRightHand } from "./fake-api";
+import { COMPACT_QUERY } from "@/components/NavDrawer";
+import { toggleSidebar } from "@/components/Sidebar";
+import { ADA_ID, createFakeApi, ENG_ID, meWithRole, ORG_ID, seedState, withRightHand } from "./fake-api";
 import { renderApp, screen, settle } from "./render";
 
 /* A personal workspace's sidebar (ADR 0159): the person on top, the agents with no header and New agent under them,
-   group conversations (a row to create the first while there is none), people only when there are some, one More at the end with Início, Go to… and every tool. */
+   group conversations, people only when there are some, and direct access to Home and Tools. */
 
-/** A narrow screen (the new agent's two steps, NEW_AGENT_STEPS_QUERY): only that query matches. */
+/** A narrow screen: only the query for the behavior under test matches. */
 let media: { mockRestore: () => void } | null = null;
-const narrowScreen = () => {
+let sidebarCollapsed = false;
+const narrowScreen = (query = "(max-width: 959px)") => {
   media = spyOn(window, "matchMedia").mockImplementation(
     (q: string) =>
       ({
-        matches: q === "(max-width: 959px)",
+        matches: q === query,
         media: q,
         addEventListener: () => {},
         removeEventListener: () => {},
@@ -28,6 +31,8 @@ afterEach(() => {
   media?.mockRestore();
   media = null;
   cleanup();
+  if (sidebarCollapsed) toggleSidebar();
+  sidebarCollapsed = false;
   localStorage.clear();
   sessionStorage.clear();
 });
@@ -54,6 +59,17 @@ const click = async (el: Element) => {
 };
 const nav = () => document.getElementById("app-nav") as HTMLElement;
 const top = () => nav().querySelector(".sidebar__top") as HTMLElement;
+const collapse = async () => {
+  await click(within(nav()).getByRole("button", { name: "Minimizar barra lateral" }));
+  sidebarCollapsed = true;
+};
+const openCreate = async () => {
+  const button = within(nav()).getByRole("button", { name: "Criar" });
+  button.focus();
+  await act(async () => fireEvent.keyDown(button, { key: "Enter" }));
+  await settle(3);
+  return within(screen().getByRole("menu", { name: "Criar" }));
+};
 const blocks = () => [...nav().querySelectorAll<HTMLElement>(".sidebar__block")].map((b) => b.dataset.section);
 const channelRows = () =>
   [...nav().querySelectorAll('.sidebar__item[data-kind="channel"] .sidebar__item-label')].map((l) => l.textContent);
@@ -73,7 +89,7 @@ describe("a personal workspace's sidebar", () => {
     expect(nav().querySelectorAll(".sidebar__bell")).toHaveLength(1);
   });
 
-  test("my menu opens down with my account, the settings and my workspaces in it", async () => {
+  test("my menu opens down with my account, About you and my workspaces in it", async () => {
     await go(personal());
     const me = within(top()).getByRole("button", { name: /^Conta: / });
     me.focus();
@@ -93,7 +109,7 @@ describe("a personal workspace's sidebar", () => {
       "Definir status",
       "Editar perfil",
       "Sua conta",
-      "Configurações",
+      "Sobre você",
       // A personal workspace of mine is me: my face (its initial here) and my name, never the workspace's.
       "WWalterVocê está aqui",
       "Novo workspace",
@@ -102,21 +118,24 @@ describe("a personal workspace's sidebar", () => {
       "Sair",
     ]);
     expect(menu.textContent).toContain("Seus workspaces");
+    await click(within(menu).getByRole("menuitem", { name: "Sobre você" }));
+    expect(screen().getByRole("heading", { level: 2, name: "Sobre você" })).toBeTruthy();
   });
 
-  test("no tool in sight while nothing waits; one More at the end with Início, Go to… and every tool", async () => {
+  test("Home is always in sight and Tools lists every tool in its group", async () => {
     await go(personal());
-    expect(nav().querySelector(".sidebar__tools")).toBeNull();
+    const home = within(nav()).getByRole("link", { name: "Início" });
+    expect(home.getAttribute("href")).toBe(`/org/${ORG_ID}/home`);
+    expect(home.getAttribute("title")).toBe("O seu dia: o que espera você e o que os seus agentes estão fazendo");
+    expect(home.closest(".sidebar__top")).toBe(top());
+    expect(home.closest(".sidebar__scroll")).toBeNull();
+    expect(within(top()).getByRole("button", { name: "Atividade" }).textContent).toContain("Atividade");
     expect(nav().querySelector(".sidebar__jump")).toBeNull();
-    const more = nav().querySelector(".sidebar__end .sidebar__more") as HTMLElement;
-    expect(more).not.toBeNull();
-    await click(more);
-    const menu = screen().getByRole("dialog", { name: "Mais" });
-    const names = within(menu)
-      .getAllByRole("link")
-      .map((l) => l.querySelector(".ac-menu__label")?.firstChild?.textContent);
+    await click(within(nav()).getByRole("button", { name: "Ferramentas" }));
+    const menu = screen().getByRole("dialog", { name: "Ferramentas" });
+    const links = within(menu).getAllByRole("link");
+    const names = links.map((link) => link.querySelector(".sidebar__catalog-title > span")?.textContent);
     expect(names).toEqual([
-      "Início",
       "Esperando você",
       "Aprovações",
       "Propostas de melhoria",
@@ -130,10 +149,145 @@ describe("a personal workspace's sidebar", () => {
       "Painéis",
       "Gerenciador de tarefas",
     ]);
+    const descriptions = links.map((link) => link.querySelector(".ac-menu__desc")?.textContent);
+    expect(descriptions.every(Boolean)).toBe(true);
+    expect(descriptions).toContain("O que seus agentes pedem para você liberar");
+    expect(descriptions).toContain("Arquivos, relatórios e tabelas");
     expect(within(menu).getByRole("button", { name: /Ir para…/ })).toBeTruthy();
-    const tasks = within(menu).getByRole("link", { name: /Tarefas/ });
-    expect(tasks.querySelector(".ac-menu__desc")?.textContent).toBe("Suas tarefas e as dos seus agentes");
+    expect(within(menu).getByRole("region", { name: "Organização" }).textContent).toContain("Tarefas");
   });
+
+  test("on a phone, closing Customize sidebar returns focus to Tools in the open navigation drawer", async () => {
+    narrowScreen(COMPACT_QUERY);
+    await go(personal(), "home");
+    const openDrawer = screen().getByRole("button", { name: "Abrir menu" });
+    await click(openDrawer);
+    const tools = within(nav()).getByRole("button", { name: "Ferramentas" });
+
+    tools.focus();
+    await click(tools);
+    const catalog = within(screen().getByRole("dialog", { name: "Ferramentas" }));
+    const customize = catalog.getByRole("button", { name: "Personalizar a barra lateral" });
+    customize.focus();
+    await click(customize);
+    const dialog = within(screen().getByRole("dialog", { name: "Personalizar a barra lateral" }));
+    const choice = within(dialog.getByRole("radiogroup", { name: "Aprovações" })).getByRole("radio", {
+      name: "Quando tiver algo",
+    });
+    choice.focus();
+    await act(async () => fireEvent.keyDown(choice, { key: "Escape" }));
+    await settle(3);
+
+    expect(screen().queryByRole("dialog", { name: "Personalizar a barra lateral" })).toBeNull();
+    expect(openDrawer.getAttribute("aria-expanded")).toBe("true");
+    expect(document.activeElement === tools).toBe(true);
+  });
+
+  test("on a phone, dismissing Go to returns focus to Tools in the open navigation drawer", async () => {
+    narrowScreen(COMPACT_QUERY);
+    await go(personal(), "home");
+    const openDrawer = screen().getByRole("button", { name: "Abrir menu" });
+    await click(openDrawer);
+    const tools = within(nav()).getByRole("button", { name: "Ferramentas" });
+    tools.focus();
+    await click(tools);
+    const catalog = within(screen().getByRole("dialog", { name: "Ferramentas" }));
+    const jump = catalog.getByRole("button", { name: "Ir para…" });
+    jump.focus();
+    await click(jump);
+
+    const name = "Ir para, ou pedir a um agente";
+    const input = screen().getByRole("combobox", { name });
+    expect(document.activeElement === input).toBe(true);
+    await act(async () => fireEvent.keyDown(input, { key: "Escape" }));
+    await settle(3);
+
+    expect(screen().queryByRole("dialog", { name })).toBeNull();
+    expect(openDrawer.getAttribute("aria-expanded")).toBe("true");
+    expect(document.activeElement === tools).toBe(true);
+  });
+
+  test("pinning and removing a tool stays in sync with Customize sidebar in both directions", async () => {
+    const state = await go(personal());
+    const openTools = async () => {
+      await click(within(nav()).getByRole("button", { name: "Ferramentas" }));
+      return within(screen().getByRole("dialog", { name: "Ferramentas" }));
+    };
+    const catalog = await openTools();
+    const pin = catalog.getByRole("button", { name: "Fixar Drive no acesso rápido" });
+    pin.focus();
+    await click(pin);
+    expect(catalog.getByRole("link", { name: /^Drive\b/ })).toBeTruthy();
+    expect(within(nav()).getByRole("link", { name: "Drive" })).toBeTruthy();
+    expect(catalog.getByRole("button", { name: "Remover Drive do acesso rápido" })).toBe(pin);
+    expect(document.activeElement === pin).toBe(true);
+
+    await click(catalog.getByRole("button", { name: "Personalizar a barra lateral" }));
+    const customize = within(screen().getByRole("dialog", { name: "Personalizar a barra lateral" }));
+    const drive = within(customize.getByRole("radiogroup", { name: "Drive" }));
+    expect(drive.getByRole("radio", { name: "No acesso rápido" }).getAttribute("aria-checked")).toBe("true");
+    await click(drive.getByRole("radio", { name: "Só em Ferramentas" }));
+    await click(customize.getByRole("button", { name: "Fechar" }));
+    const reopened = await openTools();
+    expect(Boolean(within(nav()).queryByRole("link", { name: "Drive" }))).toBe(false);
+    await click(reopened.getByRole("button", { name: "Fixar Drive no acesso rápido" }));
+    await click(reopened.getByRole("button", { name: "Remover Drive do acesso rápido" }));
+    expect(Boolean(within(nav()).queryByRole("link", { name: "Drive" }))).toBe(false);
+    expect(reopened.getByRole("link", { name: /^Drive\b/ })).toBeTruthy();
+    expect(
+      state.calls.filter((call) => call.method === "orgs.setSidebarItem").map((call) => call.args.slice(1)),
+    ).toEqual([
+      ["drive", "always"],
+      ["drive", null],
+      ["drive", "always"],
+      ["drive", null],
+    ]);
+  });
+
+  test("opening Customize sidebar while a pin is saving keeps the optimistic choice", async () => {
+    const api = createFakeApi(personal());
+    const write = api.orgs.setSidebarItem;
+    let finish = () => {};
+    const pending = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    api.orgs.setSidebarItem = async (...args) => {
+      await pending;
+      return write(...args);
+    };
+    await renderApp(`/org/${ORG_ID}/home`, { api });
+    await settle(8);
+    try {
+      await click(within(nav()).getByRole("button", { name: "Ferramentas" }));
+      const tools = within(screen().getByRole("dialog", { name: "Ferramentas" }));
+      await click(tools.getByRole("button", { name: "Fixar Drive no acesso rápido" }));
+      expect(within(nav()).getByRole("link", { name: "Drive" })).toBeTruthy();
+      await click(tools.getByRole("button", { name: "Personalizar a barra lateral" }));
+      const setup = within(screen().getByRole("dialog", { name: "Personalizar a barra lateral" }));
+      const drive = within(setup.getByRole("radiogroup", { name: "Drive" }));
+      expect(drive.getByRole("radio", { name: "No acesso rápido", checked: true })).toBeTruthy();
+    } finally {
+      await act(async () => finish());
+      await settle(3);
+    }
+  });
+
+  for (const platform of ["windows", "linux", "mac"] as const) {
+    test(`Activity has one entry point in a personal workspace on ${platform}`, async () => {
+      const desktop = window as { __agentesDesktop?: unknown; __TAURI_INTERNALS__?: unknown };
+      desktop.__agentesDesktop = { platform };
+      desktop.__TAURI_INTERNALS__ = { invoke: async () => ({ orgs: [] }) };
+      try {
+        await go(personal(), "home");
+        const activity = screen().getByRole("button", { name: "Atividade" });
+        expect(Boolean(activity.closest(".titlebar"))).toBe(platform === "mac");
+        expect(Boolean(activity.closest("#app-nav"))).toBe(platform !== "mac");
+      } finally {
+        delete desktop.__agentesDesktop;
+        delete desktop.__TAURI_INTERNALS__;
+      }
+    });
+  }
 
   test("Aprovações comes into sight while something waits", async () => {
     const state = personal();
@@ -143,6 +297,72 @@ describe("a personal workspace's sidebar", () => {
     const rows = [...nav().querySelectorAll(".sidebar__tools .sidebar__item-label")].map((l) => l.textContent);
     expect(rows).toEqual(["Aprovações"]);
   });
+
+  for (const collapsed of [false, true]) {
+    test(`the Settings shortcut opens Your account in the ${collapsed ? "collapsed" : "expanded"} sidebar`, async () => {
+      await go(personal());
+      if (collapsed) await collapse();
+      const shortcut = within(nav()).getByRole("link", { name: "Configurações" });
+      expect(shortcut.getAttribute("href")).toBe(`/org/${ORG_ID}/settings/account`);
+      await click(shortcut);
+      expect(screen().getByRole("heading", { name: "Sua conta" })).toBeTruthy();
+      expect(within(nav()).getByRole("link", { name: "Configurações" }).getAttribute("aria-current")).toBe("page");
+    });
+  }
+
+  test("the collapsed sidebar offers one Create menu even before the first group conversation", async () => {
+    const state = withRightHand(personal({ alone: true }));
+    state.channels = state.channels.filter((c) => c.name === "general");
+    await go(state, `dm/agent/${ADA_ID}`);
+    expect(Boolean(within(nav()).queryByRole("button", { name: "Criar" }))).toBe(false);
+    await collapse();
+    expect(nav().querySelectorAll(".sidebar__new-channel, .sidebar__create")).toHaveLength(0);
+    const menu = await openCreate();
+    expect(menu.getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
+      "Novo agente",
+      "Nova conversa em grupo",
+    ]);
+    await click(menu.getByRole("menuitem", { name: "Nova conversa em grupo" }));
+    const dialog = screen().getByRole("dialog", { name: "Nova conversa em grupo" });
+    await act(async () => fireEvent.keyDown(dialog, { key: "Escape" }));
+    await settle(3);
+    expect(screen().queryByRole("dialog", { name: "Nova conversa em grupo" })).toBeNull();
+    expect(document.activeElement === within(nav()).getByRole("button", { name: "Criar" })).toBe(true);
+  });
+
+  test("Create opens the new agent flow and regains focus when it closes", async () => {
+    await go(withRightHand(personal()));
+    await collapse();
+    const menu = await openCreate();
+    const item = menu.getByRole("menuitem", { name: "Novo agente" });
+    item.focus();
+    await click(item);
+    const dialog = screen().getByRole("dialog", { name: "Novo agente" });
+    await act(async () => fireEvent.keyDown(dialog, { key: "Escape" }));
+    await settle(3);
+    expect(screen().queryByRole("dialog", { name: "Novo agente" })).toBeNull();
+    expect(document.activeElement === within(nav()).getByRole("button", { name: "Criar" })).toBe(true);
+  });
+
+  for (const allowed of ["create_agents", "create_channels", null] as const) {
+    test(`Create respects the resolved permissions (${allowed ?? "none"})`, async () => {
+      const state = personal();
+      meWithRole(state, allowed ? [allowed] : []);
+      const everyone = state.roles?.find((role) => role.kind === "everyone");
+      if (everyone)
+        everyone.permissions = everyone.permissions.filter((permission) => permission !== "create_channels");
+      await go(state);
+      await collapse();
+      if (!allowed) {
+        expect(Boolean(within(nav()).queryByRole("button", { name: "Criar" }))).toBe(false);
+        return;
+      }
+      const menu = await openCreate();
+      expect(menu.getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
+        allowed === "create_agents" ? "Novo agente" : "Nova conversa em grupo",
+      ]);
+    });
+  }
 
   test("the agents have no header; New agent sits right under them and opens the new agent's card (ADR 0164)", async () => {
     const state = withRightHand(personal());

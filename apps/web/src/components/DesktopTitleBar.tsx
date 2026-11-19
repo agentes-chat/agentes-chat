@@ -1,10 +1,13 @@
+import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { Button, Icon, Kbd, modKey } from "@agenteschat/ui";
 import { useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { desktopPlatform } from "@/lib/desktop";
 import { AgoraButton } from "./Agora";
 import { openPalette } from "./CommandMenu";
-import { useNavDrawer } from "./NavDrawer";
+import { NAV_ID, useNavDrawer } from "./NavDrawer";
+import { useOrg } from "./org-context";
 import { useSidebarCollapsed } from "./Sidebar";
 import { WorkspaceSky } from "./Sky";
 
@@ -19,6 +22,7 @@ import { WorkspaceSky } from "./Sky";
  */
 export function DesktopTitleBar() {
   const { t } = useTranslation();
+  const { org } = useOrg();
   const router = useRouter();
   const [collapsed, toggleSidebar] = useSidebarCollapsed();
   // A window narrow enough for the drawer (the app's minimum is under it): the same button opens and closes it.
@@ -28,6 +32,7 @@ export function DesktopTitleBar() {
   const navLabel = inDrawer
     ? t(drawer.open ? "shell.closeNav" : "shell.openNav")
     : t(collapsed ? "shell.expandNav" : "shell.collapseNav");
+  const showActivity = !isPersonal(org) || desktopPlatform() === "mac";
 
   // ⌘[ and ⌘], as in every Mac app.
   useEffect(() => {
@@ -55,6 +60,7 @@ export function DesktopTitleBar() {
           data-sidebar-toggle=""
           aria-label={navLabel}
           title={navLabel}
+          aria-controls={NAV_ID}
           aria-expanded={shown}
           onClick={inDrawer ? drawer.toggle : toggleSidebar}
         />
@@ -83,7 +89,7 @@ export function DesktopTitleBar() {
         <Kbd>{modKey()}</Kbd>
         <Kbd>K</Kbd>
       </button>
-      <AgoraButton below size="sm" className="titlebar__agora" />
+      {showActivity && <AgoraButton below size="sm" className="titlebar__agora" />}
     </header>
   );
 }
