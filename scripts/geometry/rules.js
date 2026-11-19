@@ -55,7 +55,7 @@
     const el = worded(labelOrEl);
     const classes = (typeof el.className === "string" ? el.className : (el.className?.baseVal ?? ""))
       .split(/\s+/)
-      .filter((c) => c && !/^(ac-captop|ac-iconline|ac-actrow|is-|has-)/.test(c))
+      .filter((c) => c && !/^(ac-captop|ac-iconline|ac-actrow|ac-tail|is-|has-)/.test(c))
       .slice(0, 3);
     return el.tagName.toLowerCase() + classes.map((c) => `.${c}`).join("");
   };

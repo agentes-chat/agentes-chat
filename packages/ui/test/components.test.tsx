@@ -291,8 +291,10 @@ describe("ApprovalCard", () => {
     );
     const cards = container.querySelectorAll(".ac-approval--done");
     expect(cards).toHaveLength(2);
-    expect(cards[0]?.querySelector(".ac-chip")?.className).toBe("ac-chip ac-chip--done");
-    expect(cards[1]?.querySelector(".ac-chip")?.className).toBe("ac-chip");
+    // The chip ends the head's line, or starts its own under who asked (`.ac-tail`).
+    expect(cards[0]?.querySelector(".ac-chip")?.className).toBe("ac-chip ac-chip--done ac-tail");
+    expect(cards[1]?.querySelector(".ac-chip")?.className).toBe("ac-chip ac-tail");
+    expect(cards[0]?.querySelector(".ac-approval__head")?.classList.contains("ac-tailrow")).toBe(true);
     expect(container.querySelector(".ac-approval__actions")).toBeNull();
   });
 });
