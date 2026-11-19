@@ -1072,7 +1072,20 @@ async function agentRefusal(db: Database, actor: Extract<ArtifactActor, { type: 
       "File not found: it was deleted. Say so: a person can restore it from the Drive's trash (Lixeira).",
     );
   }
-  const nobody = (await runPerson(db, orgId, actor.runId ?? undefined))
+  const person = await runPerson(db, orgId, actor.runId ?? undefined);
+  // A routine's run reads the conversation it reports to but never opens its files (ADR 0053 §2): saying so leaks
+  // nothing it can't read there, and spares it doubting a right id.
+  const file = person ? null : await loadArtifact(db, orgId, id);
+  if (
+    file?.channelId &&
+    (await agentSearchChannels(db, orgId, actor.agentId, actor.channelId)).includes(file.channelId) &&
+    !(await agentSearchChannels(db, orgId, actor.agentId, actor.channelId, { files: true })).includes(file.channelId)
+  ) {
+    return new NotFoundError(
+      `File out of reach: ${id} is right, but it is in the conversation this routine reports to, whose files a routine never opens. Don't try it again. Say so in your report: to let the routine use it, a person shares the file with the whole workspace.`,
+    );
+  }
+  const nobody = person
     ? ""
     : " Nobody is behind this run, so you only reach this conversation, public channels you are in and what the whole workspace sees in the Drive.";
   return new NotFoundError(
