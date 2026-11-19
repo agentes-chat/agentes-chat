@@ -86,3 +86,23 @@ test("a DM's floating sidebar: 360px over the chat, and where panels take the wh
   expect(width(topLevel(css))).toBeUndefined();
   expect(width(atRule(css, "@media (min-width: 861px)"))).toBe("min(360px,100vw - 20px)");
 });
+
+test("a member's name wraps, never cut with an ellipsis, and a face leading a line rises to the name's capitals", async () => {
+  const shipped = topLevel(await builtCss("src/styles.css", "src/components/members/members.css"));
+  const last = (selector: string, property: string) =>
+    declarations(shipped, selector)
+      .filter(([p]) => p === property)
+      .at(-1)?.[1];
+  expect(last(".members-side__label", "text-overflow")).toBeUndefined();
+  expect(last(".members-side__label", "white-space")).toBeUndefined();
+  expect(last(".members-side__label", "overflow-wrap")).toBe("anywhere");
+  expect(last(".members-side__inner:has(.members-side__line)", "align-items")).toBe("flex-start");
+});
+
+test("the composer's notice strip sits 8px (the spacing token) above the composer", async () => {
+  const shipped = topLevel(await builtCss("src/styles.css", "src/components/no-ai.css"));
+  const margin = declarations(shipped, ".noai-banner")
+    .filter(([p]) => p === "margin")
+    .at(-1)?.[1];
+  expect(margin).toBe("0 4px var(--space-2)");
+});

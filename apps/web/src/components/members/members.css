@@ -132,7 +132,7 @@ html:not([data-pointer]) .members-side__row.profile-trigger:focus-visible {
 }
 .members-side__name {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
   min-width: 0;
   font-size: 14.5px;
@@ -140,11 +140,18 @@ html:not([data-pointer]) .members-side__row.profile-trigger:focus-visible {
   line-height: 19px;
   color: var(--ink);
 }
+/* A name wraps, never cut with "…" (ui-polish rule 17: wrap meaning); the face lines up with its first line's capitals. */
 .members-side__label {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+}
+/* A name that leads a line under it: the face sits at the row's top and the name's capitals start there
+   (`.ac-captop` on the name). A row with no line centres its face on the name instead. */
+.members-side__inner:has(.members-side__line) {
+  align-items: flex-start;
+}
+.members-side__inner:not(:has(.members-side__line)) .members-side__name.ac-captop {
+  margin-block-start: 0;
 }
 .members-side__you {
   flex: none;
@@ -187,6 +194,7 @@ html:not([data-pointer]) .members-side__row.profile-trigger:focus-visible {
 /* An agent working here: its pixel orbit beside its name (what it does is the orbit's label and the row's title). */
 .members-side__spin {
   flex: none;
+  margin-block-start: 2px;
 }
 /* Everyone under Offline (people, and agents out of office, held or with no AI) is faded alike, whatever its badge. */
 .members-side__group[data-off] .members-side__inner {
@@ -197,6 +205,7 @@ html:not([data-pointer]) .members-side__row.profile-trigger:focus-visible {
 }
 .members-side__crown {
   flex: none;
+  margin-block-start: 2px;
   display: inline-flex;
   color: var(--warn);
 }
