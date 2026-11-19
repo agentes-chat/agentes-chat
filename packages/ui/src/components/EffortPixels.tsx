@@ -89,6 +89,7 @@ export function EffortPixels<V extends string>({
   color = "sky",
   disabled: off,
   className,
+  animationRate = 1,
 }: {
   /** Null: nothing chosen yet, the ramp stays empty. */
   value: V | null;
@@ -102,6 +103,8 @@ export function EffortPixels<V extends string>({
   color?: AgentColor;
   disabled?: boolean;
   className?: string;
+  /** Playback rate of the pixel shimmer. */
+  animationRate?: number;
 }) {
   const locked = useLocked();
   const disabled = off || locked;
@@ -111,8 +114,9 @@ export function EffortPixels<V extends string>({
   // While dragging: how far the fill reaches, in steps.
   const [drag, setDrag] = useState<number | null>(null);
   const shown = drag === null ? index : Math.min(n - 1, Math.max(0, Math.ceil(drag) - 1));
-  const motion = useRef({ pos: index + 1, target: index + 1 });
+  const motion = useRef({ pos: index + 1, target: index + 1, animationRate });
   motion.current.target = drag ?? index + 1;
+  motion.current.animationRate = animationRate;
   const still = reduced();
   // Still: a new frame only when the choice moves.
   const frameKey = still ? `${index}:${drag}` : "";
@@ -128,15 +132,19 @@ export function EffortPixels<V extends string>({
     let colors = { ink: "", off: "" };
     let frame = 0;
     let raf = 0;
+    let time = 0;
+    let lastTime: number | undefined;
     const paint = (now: number) => {
       // The theme can change under us: the tokens are read again now and then.
       if (frame++ % 30 === 0) colors = { ink: token(c, "--ink", "#151514"), off: token(c, "--faint", "#6f6f6a") };
       const m = motion.current;
       m.pos = still ? m.target : m.pos + (m.target - m.pos) * 0.16;
+      time += (now - (lastTime ?? now)) * m.animationRate;
+      lastTime = now;
       drawEffort(ctx, c, {
         pos: m.pos,
         steps: n,
-        t: still ? 0 : now,
+        t: still ? 0 : time,
         fill: tones[1] ?? "#5b8def",
         tip: tones[3] ?? "#9cc0ff",
         ...colors,
