@@ -148,8 +148,9 @@ export const CURSOR_CHAT_PERMISSIONS = {
 
 /**
  * The runtime kill of a `chat` turn: a `tool_call` (started or completed) that isn't a call to our bridge
- * (`mcpToolCall` named `<server>-<tool>` or from our `providerIdentifier`, or a `function` named for our server) is a
- * breach. Null for anything else.
+ * (`mcpToolCall` named `<server>-<tool>` or from our `providerIdentifier`, a `function` named for our server, or
+ * Cursor's dynamic tools: `CallDynamicTool` with our `namespace`, `GetDynamicTools` reading our schemas or all of
+ * them) is a breach. Null for anything else.
  */
 export function cursorChatBreach(ev: Record<string, unknown>): string | null {
   if (ev.type !== "tool_call") return null;
@@ -163,6 +164,11 @@ export function cursorChatBreach(ev: Record<string, unknown>): string | null {
     name.startsWith(`mcp_${CODEX_MCP_SERVER}`) ||
     (key === "mcpToolCall" && str(args.providerIdentifier) === CODEX_MCP_SERVER);
   if ((key === "mcpToolCall" || key === "function") && ours) return null;
+  // Cursor reaches MCP tools through dynamic namespaces too: a call goes to the namespace it names, and the listing
+  // only reads schemas of servers this turn was given.
+  const namespace = str(args.namespace);
+  if (key === "CallDynamicTool" && namespace === CODEX_MCP_SERVER) return null;
+  if (key === "GetDynamicTools" && (!namespace || namespace === CODEX_MCP_SERVER)) return null;
   return `Cursor used a tool of its own (${(key.replace(/ToolCall$/, "") || "unknown").slice(0, 64)}), so the turn stopped.`;
 }
 
