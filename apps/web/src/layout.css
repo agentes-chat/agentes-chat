@@ -4309,6 +4309,43 @@ html:not([data-pointer]) .sidebar__org-button:focus-visible {
   gap: 6px;
   padding: 0 10px;
 }
+.settings__nav .settings__search {
+  width: auto;
+  margin: 0 10px;
+}
+.settings__searchNone {
+  margin: 0;
+  padding: 0 10px;
+  color: var(--ink-muted);
+  font-size: 13px;
+}
+.settings__hit {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  height: auto;
+  padding-block: 6px;
+}
+.settings__hitSection {
+  color: var(--ink-muted);
+  font-size: 12px;
+}
+.settings__hitText {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 13px;
+}
+::highlight(settings-search) {
+  background: var(--accent-soft, #fde68a);
+  color: inherit;
+}
+.settings__found {
+  outline: 2px solid var(--accent, #f59e0b);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
 .settings__title {
   margin: 0;
   font-size: 20px;
@@ -4659,6 +4696,9 @@ html:not([data-pointer]) .settings__link:focus-visible {
   .settings__head {
     padding: 0;
   }
+  .settings__nav .settings__search {
+    margin-inline: 0;
+  }
   .settings__groups {
     flex-direction: row;
     gap: 4px;
@@ -4678,6 +4718,18 @@ html:not([data-pointer]) .settings__link:focus-visible {
   .settings__link {
     flex: none;
     white-space: nowrap;
+  }
+  .settings__groups--results {
+    display: block;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+  }
+  .settings__groups--results ul {
+    flex-direction: column;
+  }
+  .settings__groups--results .settings__hit {
+    white-space: normal;
   }
 }
 /* On a phone the control goes under the words, as wide as the row. The row wraps to put it there, never turns into a

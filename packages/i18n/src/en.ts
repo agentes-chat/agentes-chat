@@ -17444,6 +17444,11 @@ export const en = {
   settings: {
     notOpen: "Your role in this workspace doesn't open {{section}}. Whoever manages roles can open it for you.",
     nav: "Settings sections",
+    /** The settings' search box: finds what was typed, as typed, in every section the person may open. */
+    search: "Search settings",
+    searchClear: "Clear search",
+    searchNone: "Nothing in the settings says “{{query}}”.",
+    searchResults: "Settings that say what you typed",
     group: {
       org: "Workspace",
     },

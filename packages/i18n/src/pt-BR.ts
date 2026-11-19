@@ -17302,6 +17302,10 @@ export const ptBR = {
   settings: {
     notOpen: "{{section}} não abre com o seu cargo neste workspace. Quem gerencia os cargos pode liberar para você.",
     nav: "Seções das configurações",
+    search: "Buscar nas configurações",
+    searchClear: "Limpar busca",
+    searchNone: "Nada nas configurações diz “{{query}}”.",
+    searchResults: "Configurações que dizem o que você digitou",
     group: {
       org: "Workspace",
     },
