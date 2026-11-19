@@ -157,7 +157,7 @@ function readSetup(input: AgentSetupInput): Setup {
 function modelFits(kind: BrainKind, model: string | null, plan: CodingPlan | undefined) {
   if (kind !== "claude_code" || model === null || isAutoModel(model)) return true;
   if (plan) return plan.claudeCode.models.some((m) => m.id === model || m.alias === model);
-  return PLAN_ALIASES.some((a) => a === model) || model.startsWith("claude-");
+  return PLAN_ALIASES.some((a) => a === model) || model === "fable" || model.startsWith("claude-");
 }
 
 const sameModel = (kind: BrainKind, a: string | null, b: string | null) =>

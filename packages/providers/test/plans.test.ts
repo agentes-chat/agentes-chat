@@ -164,6 +164,9 @@ describe("coding plans' models", () => {
     for (const other of ["glm-5.3", "claude-opus-5-5", "auto", undefined, 3])
       expect(claudeCodeModel(kimi, other)).toBe("sonnet");
     expect(claudeCodeModel(undefined, "haiku")).toBe("haiku");
+    // Fable is Claude's alias: it runs as chosen on Claude's own sign-in, and a plan (no such model) runs sonnet.
+    expect(claudeCodeModel(undefined, "fable")).toBe("fable");
+    expect(claudeCodeModel(kimi, "fable")).toBe("sonnet");
     expect(claudeCodeModel(undefined, "claude-sonnet-4-5")).toBe("claude-sonnet-4-5");
     // Another plan's model kept while Claude thinks.
     expect(claudeCodeModel(undefined, "deepseek-v4.1-flash")).toBe("sonnet");

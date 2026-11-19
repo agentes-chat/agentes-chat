@@ -130,6 +130,8 @@ describe("one decision, mapped per brain", () => {
     expect(brainModelForTier("claude_code", "small")).toBe("haiku");
     expect(brainModelForTier("claude_code", "medium")).toBe("sonnet");
     expect(brainModelForTier("claude_code", "large")).toBe("opus");
+    // Fable has no tier: "Automático" never lands on it.
+    expect(MODEL_TIERS.map((tier) => brainModelForTier("claude_code", tier))).not.toContain("fable");
     expect(brainModelForTier("codex", "small")).toBe("gpt-6-luna");
     expect(brainModelForTier("codex", "large")).toBe("gpt-6.2-sol");
     expect(brainModelForTier("model", "large")).toBeUndefined();
