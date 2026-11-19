@@ -18419,6 +18419,11 @@ export const en = {
         shell: "It runs other commands inside it",
         inline: "It runs code given inline",
         global: "It installs for the whole computer",
+        privilege: "It asks for more rights (sudo, su)",
+        reverseShell: "It hands this computer's shell to another machine",
+        destroy: "It would wipe the computer or a whole home folder",
+        network: "It changes or goes around the proxy and firewall",
+        otherUser: "It reaches into another user's files",
         rules: "Outside what agents may do on their own",
         /** Calls the Tool Gateway refused (`data.refusal`): the agent lacks access, the kind of work, a key, a repository. */
         noAccess: "The agent doesn't have access to this",

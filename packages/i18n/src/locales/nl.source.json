@@ -44173,6 +44173,21 @@
   "chat.work.refusal.global": {
     "value": "It installs for the whole computer"
   },
+  "chat.work.refusal.privilege": {
+    "value": "It asks for more rights (sudo, su)"
+  },
+  "chat.work.refusal.reverseShell": {
+    "value": "It hands this computer's shell to another machine"
+  },
+  "chat.work.refusal.destroy": {
+    "value": "It would wipe the computer or a whole home folder"
+  },
+  "chat.work.refusal.network": {
+    "value": "It changes or goes around the proxy and firewall"
+  },
+  "chat.work.refusal.otherUser": {
+    "value": "It reaches into another user's files"
+  },
   "chat.work.refusal.rules": {
     "value": "Outside what agents may do on their own"
   },
