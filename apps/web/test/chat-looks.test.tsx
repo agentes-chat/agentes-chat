@@ -451,3 +451,12 @@ describe("opening at the last read message", () => {
     expect(document.querySelector(".channel__unread")).toBeNull();
   });
 });
+
+test("in bubbles, the cards under someone else's words are bubbles of that message", () => {
+  const looks = readFileSync(new URL("../src/chat/looks.css", import.meta.url), "utf8");
+  expect(looks).toMatch(
+    /\.ac-msg\[data-look="bubbles"\]:not\(\.ac-msg--own\)\s*\.ac-msg__body\s*:is\(\.ag-rc:not\(\.ag-rc--talk\), \.ag-rcg, \.ac-workline\.handed-line, \.rq\) \{\s*background: var\(--msg-bubble\);\s*box-shadow: none;\s*border-radius: 6px 18px 18px 6px;/,
+  );
+  expect(looks).toContain('.ac-msg[data-look="bubbles"]:not(.ac-msg--own) .rq > .ac-approval__sky {\n  display: none;');
+  expect(looks).toMatch(/\.ac-msg__body > \.ac-msg__text ~ :is\(\.ag-rcs, \.handed-line, \.rq\) \{\s*margin-top: 3px;/);
+});

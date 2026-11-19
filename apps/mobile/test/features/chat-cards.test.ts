@@ -25,8 +25,9 @@ describe("a reply's tools sit last", () => {
           "<TurnTools",
           "<SavedTools",
           "<NoAiCard message={m} />",
-          // The foot is the reply's last part: only the double tap's one-time hint and its 👍 over the row follow it.
-          "{foot}\n          </RowPartContext.Provider>\n          {hintNode}\n        </View>\n        {popNode}\n      </Pressable>\n    </>\n  );\n}\n",
+          // The foot is the reply's last part: only the double tap's one-time hint follows it in the body (the time a
+          // pull shows and the 👍 over the row are outside it).
+          "{foot}\n          </RowParts>\n          {hintNode}\n        </Animated.View>\n",
         ]),
       ),
     ).toBe(true);
@@ -44,7 +45,7 @@ describe("a reply's tools sit last", () => {
     const row = source("MessageRow.tsx");
     const [toolsAt, footAt] = at(row, [
       "<SavedTools\n",
-      "{foot}\n          </RowPartContext.Provider>\n          {hintNode}\n        </View>\n        {popNode}\n      </Pressable>\n    </>\n  );\n}\n",
+      "{foot}\n          </RowParts>\n          {hintNode}\n        </Animated.View>\n",
     ]);
     const last = row.slice(toolsAt, footAt);
     for (const card of [
@@ -71,10 +72,13 @@ describe("a reply's tools sit last", () => {
 describe("agents it asked first: one pair row right before the reply, never inside it", () => {
   test("saved: the row sits before the reply's own row (which then shows its face and name), none in its body", () => {
     const row = source("MessageRow.tsx");
-    expect(ascending(at(row, ["const grouped = groupedIn && !pair;", "{pair}\n      {quote && !inBubble"]))).toBe(true);
+    // The pair, then what the message is about in a live file (ADR 0199) and its quote, then the reply's own row.
+    expect(
+      ascending(at(row, ["const grouped = groupedIn && !pair;", "{pair}\n      {liveRef ? (", "{quote && !inBubble"])),
+    ).toBe(true);
     const [bodyAt, endAt] = at(row, [
-      "<View style={[styles.body, { gap: rhythm.part }]}>",
-      "{foot}\n          </RowPartContext.Provider>\n          {hintNode}\n        </View>\n        {popNode}\n      </Pressable>",
+      "<Animated.View style={[styles.body, { gap: rhythm.part }, inBubble && giveWay.style, compact && slide]}>",
+      "{foot}\n          </RowParts>\n          {hintNode}\n        </Animated.View>\n",
     ]);
     expect(row.slice(bodyAt, endAt)).not.toContain("Consult");
   });
@@ -162,11 +166,11 @@ describe("nothing more than the message shows", () => {
 });
 
 describe("what agents did under each reply: the person's own setting, off by default", () => {
-  test("off, a done reply keeps only what it read and a saved one draws no block; the live block stays", () => {
+  test("off, a done reply draws nothing and a saved one no block; the live block stays", () => {
     const tools = source("ToolCalls.tsx");
-    // Done and off: no call is "now", so only the messages it read stay (the branch for a reply with no call).
+    // Done and off: no call is "now", so nothing shows (the branch for a reply with no call: its words are the reply).
     expect(tools).toContain("(done && !showsActivity(org)) ? null : toolNow(items);");
-    expect(tools).toContain('const shown = done ? items.filter((i) => i.kind === "steer") : items;');
+    expect(tools).toContain('const said = done ? [] : items.flatMap((i) => (i.kind === "say" ? [i] : []));');
     expect(tools).toContain("if (!compact || shown === 0 || !showsActivity(org)) return null;");
     // The cards that carry content or wait for a person aren't the tools' and stay in the row.
     const row = source("MessageRow.tsx");
@@ -295,26 +299,28 @@ describe("a plan account on the phone (IA e uso › Contas): a row that pushes i
     expect(screen).not.toContain("function AgentShares(");
   });
 
-  test("its screen: bars split by agent, the month, each agent a row to its usage, then the way to the AI accounts screen", () => {
+  test("its screen: the bars, one Detalhes row that opens the agents and the month in place, then the way to the AI accounts screen", () => {
     expect(
-      ascending(
-        at(detail, ["brandOf(account)", "usage={splitUsage(", "{tokens}", 't("shell.agents")', "mobile.ai.row"]),
-      ),
+      ascending(at(detail, ['t("common.details")', "{details ? (", 't("shell.agents")', "{tokens}", "mobile.ai.row"])),
     ).toBe(true);
+    // Split by agent only while Detalhes shows the agents that explain the colours.
+    expect(detail).toMatch(/details\s+\? splitUsage\(/);
     // The title says the account: the meter doesn't say where the plan stands again.
     expect(detail).toMatch(/<PlanMeter\s+plain/);
     expect(detail).toContain('t("usageViews.monthTokens", {');
+    // The logo names the maker: no line saying it again.
+    expect(detail).not.toContain("brandOf(");
     // Only its owner manages it, on the AI accounts screen.
     expect(detail).toContain("account.mine && account.accountId ?");
-    // Every agent, nothing folded, each one's facts on its row and the row to its own usage.
+    // Every agent, nothing folded, its share as the row's value, its tokens under its name, the row to its own usage.
     expect(detail).toContain("const agents = [...shares.shown, ...shares.rest];");
     expect(detail).not.toContain("usageViews.moreAgents");
-    expect(detail).toContain("shareFacts(t, i18n.language, window, a)");
+    expect(detail).toContain("shareCells(t, i18n.language, window, a)");
     expect(detail).toMatch(/onPress=\{\(\) => router\.push\(`\/agent-usage\/\$\{a\.agentId\}`/);
-    // The renewal moves under the list, once.
+    // Without an account's list inside, each window says when it renews under its bar; the age only once it matters.
     const parts = source("../usage/parts.tsx");
     expect(
-      ascending(at(parts, ["!children ? (", "{children}\n      {children && renews ?", "text.updated(usage.at)"])),
+      ascending(at(parts, ["!children ? (", "{children}\n      {children && renews ?", "planAgeShown(usage, now)"])),
     ).toBe(true);
   });
 
@@ -438,6 +444,8 @@ describe("the secret card on the phone", () => {
     expect(asks).toContain("lineMark: { flexShrink: 0, width: 20, height: 20,");
     // The fuse and the time left under the decision, never on the card's top line.
     expect(asks).toContain('{waitsFor === "you" && expiry ? <View style={styles.expiryRow}>{expiry}</View> : null}');
+    // From the card's edge, as the buttons above it: never floating at the other end on a line of its own.
+    expect(asks).toContain('expiryRow: { flexDirection: "row", marginTop: 10 },');
     expect(asks).toContain('{waitsFor && waitsFor !== "you" && !ended ? (');
   });
 });

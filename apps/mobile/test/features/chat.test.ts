@@ -403,7 +403,7 @@ describe("working line", () => {
     expect(line).not.toContain("<Dither");
     expect(line).not.toContain("glassSolid");
     expect(line).toContain("const plate = [styles.tok, { backgroundColor: c.bg }];");
-    // The requests' lines that take its place are as bare.
+    // The requests' lines over the composer are as bare.
     const asks = await source("features/chat/asks.tsx");
     const askLines = asks.slice(asks.indexOf("export function AskBar("), asks.indexOf("const styles"));
     expect(askLines).not.toContain("glassSolid");
@@ -1134,7 +1134,7 @@ describe("an agent's turn: nothing drawn while it works, its work kept for the r
 
   test("the saved reply finds the work its run did, heard a moment ago", () => {
     const items = turnItems(run({ runId: "r9", work: [call("1", "sentry_list_issues", false)] }));
-    rememberTurn("r9", { items, quotes: {}, at: 1000 });
+    rememberTurn("r9", { items, at: 1000 });
     expect(recentTurn("r9", 2000)?.items).toEqual(items);
     expect(recentTurn("r9", 1000 + 60_000)).toBeNull();
     expect(recentTurn("nope", 2000)).toBeNull();

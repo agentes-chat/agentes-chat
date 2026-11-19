@@ -529,6 +529,8 @@ describe("issues", () => {
           orgId: f.org.id,
           kind: "file",
           title,
+          // A Drive file is made shared with everyone (ADR 0157, amendment 2026-11-17).
+          share: "everyone",
           createdByType: "person",
           createdById: by,
           updatedByType: "person",
@@ -560,6 +562,8 @@ describe("issues", () => {
           orgId: f.org.id,
           kind: "file",
           title,
+          // A Drive file is made shared with everyone (ADR 0157, amendment 2026-11-17).
+          share: "everyone",
           createdByType: "person",
           createdById: by,
           updatedByType: "person",

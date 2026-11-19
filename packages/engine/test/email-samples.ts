@@ -490,6 +490,33 @@ export const EMAIL_SAMPLES: Record<string, EmailTemplate> = {
     support: "help@agentes.chat",
     url: APP,
   },
+  /** One of our own sentences, written by an AI assistant, on a server with a support address. */
+  "support_reply.en": {
+    kind: "support_reply",
+    locale: "en",
+    reply: "received",
+    assistedByAi: true,
+    support: "help@agentes.chat",
+    url: APP,
+  },
+  /** Another of them, by a person; the server has no support address. */
+  "support_reply.pt-BR": {
+    kind: "support_reply",
+    locale: "pt-BR",
+    reply: "resolved",
+    assistedByAi: false,
+    support: null,
+    url: APP,
+  },
+  /** The operator's own words, in two paragraphs. */
+  "support_reply-text.en": {
+    kind: "support_reply",
+    locale: "en",
+    text: "The export stopped because the file was over the size limit.\nThe limit is higher now, so the same export works.",
+    assistedByAi: true,
+    support: "help@agentes.chat",
+    url: APP,
+  },
   "autonomy_report.en": {
     kind: "autonomy_report",
     locale: "en",

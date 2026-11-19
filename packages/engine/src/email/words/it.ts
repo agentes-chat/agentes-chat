@@ -304,6 +304,13 @@ export const words: EmailWords = {
   deletionCode: {
     subjectWorkspace: (code) => `${code} è il tuo codice per eliminare uno spazio di lavoro`,
     subjectAccount: (code) => `${code} è il tuo codice per eliminare tutto il tuo account`,
+    subjectReset: (code) => `${code} è il tuo codice per reimpostare uno spazio di lavoro`,
+    reset: (org) => [
+      "Inserisci questo codice per reimpostare lo spazio di lavoro ",
+      { b: org },
+      ". I suoi agenti, conversazioni, file e memoria vengono cancellati subito e per sempre, e riparte da zero come uno nuovo.",
+    ],
+    whyReset: (org) => `Ricevi questa email perché il tuo account ha chiesto di reimpostare ${org} su agentes.chat.`,
     preheader: "Inseriscilo in agentes.chat per confermare. Vale per 10 minuti.",
     headline: "Il tuo codice",
     workspace: (org) => [
@@ -589,5 +596,21 @@ export const words: EmailWords = {
       why: (surface) => `Ricevi questa email perché ${surface} era collegato al tuo account agentes.chat.`,
       picture: "Il tuo assistente, non più sul tuo telefono",
     },
+  },
+  supportReply: {
+    subject: "Una risposta alla tua richiesta di aiuto",
+    preheader: "Sull’aiuto che hai chiesto su agentes.chat.",
+    headline: "Una risposta alla tua richiesta di aiuto",
+    answers: {
+      received: "Abbiamo ricevuto la tua richiesta e la stiamo esaminando.",
+      need_more: "Ci servono più dettagli per aiutarti: cosa stavi facendo, cosa ti aspettavi e cosa è successo.",
+      resolved: "Quello che hai segnalato è stato risolto.",
+      handed_over: "Ora una persona ha la tua richiesta e ti risponderà.",
+    },
+    from: (host) =>
+      host ? atHost("Risposta di chi gestisce il server agentes.chat", "su", host) : "Risposta di agentes.chat.",
+    ai: "Un assistente IA ha scritto questa risposta.",
+    reply: (address) => ["Per rispondere, scrivi a ", { mail: address }, "."],
+    why: "Ricevi questa email perché hai chiesto aiuto su agentes.chat.",
   },
 };

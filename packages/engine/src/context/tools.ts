@@ -35,7 +35,14 @@ import { can, getMembership } from "../organizations";
 import { personWords, runReadOutsideById, UNASKED_DESTINATION, unaskedDestination } from "../outside";
 import { personBehindCall, wikiActorOfCall } from "../requester";
 import { isRightHandId, rightHandReader } from "../right-hand";
-import { agentSearchChannels, agentVisibleChannels, indexSource, searchForUser, searchVisible } from "../search";
+import {
+  agentSearchChannels,
+  agentVisibleChannels,
+  indexSource,
+  type QueryEmbedding,
+  searchForUser,
+  searchVisible,
+} from "../search";
 import { closedRefusal } from "../standing";
 import { noAgentText } from "../team";
 import type { ToolContext, ToolDefinition, ToolSource } from "../tools/types";
@@ -1026,15 +1033,20 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
   return { name: "context", tools: async (ctx) => inWorkspaceWords(ctx.db, ctx.orgId, tools, personalWords(tools)) };
 }
 
-/** Who accepts a row the person who asked can't, for the agent to tell them (`deciders` in proposals.ts). */
+/**
+ * Who accepts a row the person who asked can't, for the agent to tell them (`deciders` in proposals.ts). Who edits the
+ * agent is its owner, who manages it and who its "Quem pode editar" names (ADR 0085 addendum of 2026-11-17).
+ */
 const decidedBy = (p: Proposal) =>
   p.target === "org_context"
     ? "someone who reviews memory (the org context)"
     : p.target === "agent_instructions"
-      ? "the agent's owner or someone who reviews memory (instructions)"
-      : ownerDecides(p)
-        ? "an admin who manages agents or the agent's owner (apps turned off)"
-        : `an admin who manages agents (${p.target === "agent_role" ? "a role" : "apps"})`;
+      ? "someone who edits the agent or reviews memory (instructions)"
+      : p.target === "agent_role"
+        ? "someone who edits the agent (a role)"
+        : ownerDecides(p)
+          ? "an admin who manages the agent or the agent's owner (apps turned off)"
+          : "an admin who manages the agent (apps)";
 
 /** Memory tools only act on a person's request in the current turn (never on tool, webhook or document text). */
 /** The person behind the run (`authority.ts`); null for a routine's work and unattended runs. */
@@ -1528,6 +1540,8 @@ export async function retrieveForRun(
     runId?: string;
     /** The holdout arm (`memoryArmOf`): its own items come in whatever the request, as before ADR 0167. */
     withOwn?: boolean;
+    /** `sharedQueryEmbedding` of `text`, shared with the run's wiki search. */
+    queryEmbedding?: () => Promise<QueryEmbedding>;
   },
 ): Promise<{ text: string; itemIds: string[]; matchedIds: string[] }> {
   const { db } = deps;
@@ -1635,6 +1649,7 @@ export async function retrieveForRun(
       kinds: ["context_item"],
       limit: 15,
       match: "any",
+      queryEmbedding: input.queryEmbedding,
     }).catch(() => []);
     const rank = new Map(hits.map((h, i) => [h.sourceId, i]));
     searched = (
@@ -1807,7 +1822,7 @@ export function pickDistinct(candidates: ContextItem[], known: string): ContextI
 }
 
 /** Tools whose calls say nothing about how a task was done. */
-const STEP_NOISE = ["search_context", "get_summary", "expand", "react", "ask_user", "save_how_to"];
+const STEP_NOISE = ["search_context", "get_summary", "expand", "react", "ask_user", "say_now", "save_how_to"];
 /** Words too common to tell one step from another (English and Portuguese). */
 const STEP_STOP_WORDS = new Set(
   "the and for from with that this you your what how com que para por uma dos das nos nas como sobre isso esse essa".split(

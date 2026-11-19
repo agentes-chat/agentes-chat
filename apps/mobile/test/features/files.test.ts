@@ -87,13 +87,13 @@ describe("file kind, tile and size", () => {
     expect(fileInfo(upload("logo.svg", "image/svg+xml")).type).toBe("image");
   });
 
-  test("PDF, Markdown and text open in the document screen", () => {
+  test("PDF, Markdown and text open in the document screen; a CSV in the spreadsheet's grid (ADR 0198)", () => {
     const pdf = fileInfo(upload("Relatório.pdf", "application/pdf", 2048));
     expect(pdf).toMatchObject({ view: "pdf", type: "pdf", ext: "PDF", size: 2048, name: "Relatório.pdf" });
     expect(fileInfo(upload("notes.md", "application/octet-stream")).view).toBe("markdown");
     expect(fileInfo(upload("notes.md", "text/markdown")).type).toBe("document");
     const csv = fileInfo(upload("vendas.csv", "text/csv"));
-    expect(csv).toMatchObject({ view: "text", type: "table", ext: "CSV" });
+    expect(csv).toMatchObject({ view: "sheet", type: "table", ext: "CSV" });
     expect(fileInfo(upload("log.txt", "text/plain")).type).toBe("text");
   });
 
@@ -112,9 +112,11 @@ describe("file kind, tile and size", () => {
       title: "Resumo da home",
       content: { kind: "document", markdown: "Olá é" },
     });
-    expect(doc).toMatchObject({ name: "Resumo da home.md", view: "markdown", type: "document", ext: "MD", size: 7 });
+    // A document is a live file (ADR 0200): it opens on its own screen.
+    expect(doc).toMatchObject({ name: "Resumo da home.md", view: "live", type: "document", ext: "MD", size: 7 });
     const table = fileInfo({ kind: "table", title: "Vendas", content: { kind: "table", columns: [], rows: [] } });
-    expect(table).toMatchObject({ name: "Vendas.csv", view: "other", type: "table", size: null });
+    // An old table opens read-only in the spreadsheet's grid.
+    expect(table).toMatchObject({ name: "Vendas.csv", view: "sheet", type: "table", size: null });
   });
 
   test("helpers", () => {
@@ -253,7 +255,9 @@ describe("viewer", () => {
     const chat = src("features/chat/ChatScreen.tsx");
     expect(chat).toContain("api.artifacts.upload(orgId, uploadPart(file), {");
     expect(chat).not.toContain("as unknown as Parameters<typeof api.artifacts.upload>[1]");
-    expect(src("features/drive/useDriveUpload.ts")).toContain("api.artifacts.upload(orgId, uploadPart(file))");
+    expect(src("features/drive/useDriveUpload.ts")).toContain(
+      "api.artifacts.upload(orgId, uploadPart(file), folderId ? { folderId } : {})",
+    );
     expect(src("features/files/upload-part.ts")).toContain("bytes: () => source.bytes()");
   });
 
@@ -310,7 +314,10 @@ describe("viewer", () => {
     expect(fileRoute({ id: "v1", version: 2, title: "abertura.mp4", kind: "file" }).pathname).toBe("/images");
     // A file's link that turns out to be one still goes on to the viewer, in the file screen's place.
     const document = src("features/files/DocumentViewer.tsx");
-    expect(document).toContain('const media = info?.view === "image" || info?.view === "video";');
+    // (A live file's too, on to its own screen, ADR 0196.)
+    expect(document).toContain(
+      'const media = info?.view === "image" || info?.view === "video" || info?.view === "live";',
+    );
     expect(document).toContain("openFile({ id: detail.id, detail }, undefined, { replace: true });");
     expect(document).not.toContain("<VideoPlayer");
   });
@@ -341,7 +348,7 @@ describe("viewer", () => {
       params: { files: "x", at: "0" },
     });
     expect(fileRoute({ id: "d", title: "Plano", kind: "document" }, media)).toEqual({
-      pathname: "/file/[id]",
+      pathname: "/document/[id]",
       params: { id: "d" },
     });
     // The file screen at an older version only when that's the one shown.
@@ -603,13 +610,13 @@ describe("viewer", () => {
 });
 
 describe("a document's head", () => {
-  test("a file is a pushed screen: the native bar holds its name, its line, Enviar cópia and the ⋯", () => {
+  test("a file is a pushed screen: the native bar holds its name and its line, Send a copy and the ⋯", () => {
     // Pushed, never a full-screen modal: the app's sheets, menus and toasts live at the root, under a modal.
     expect(ownOptionsOf("file/[id]")).toBe("solid,");
     const viewer = src("features/files/DocumentViewer.tsx");
     expect(viewer).toContain("<PushedHeader");
     expect(viewer).toContain('title={info?.name ?? ""}');
-    expect(viewer).toContain("subtitle: line(info, [dir.nameOf(detail.createdBy)])");
+    expect(viewer).toContain("subtitle={info && detail ? line(info, [dir.nameOf(detail.createdBy)]) : undefined}");
     expect(viewer).toContain("actions={bar}");
     // The system's share sheet says what it does; the ⋯ is the system's menu on iOS and the app's list on Android.
     expect(viewer).toContain('label: t("mobile.files.sendCopy")');
@@ -629,14 +636,16 @@ describe("a document's head", () => {
     expect(viewer).toContain("...(textual && text.data !== undefined");
   });
 
-  test("a picture's head too: × alone on the first row, the name and its line on the row under it", () => {
+  test("a picture's head: × on the left, the name and its line centred beside it, a space as wide on the right", () => {
     const viewer = readFileSync(join(import.meta.dir, "../../src/features/files/ImageViewer.tsx"), "utf8");
     const top = viewer.slice(viewer.indexOf("style={[styles.top,"), viewer.indexOf("</Chrome>"));
     expect(top.indexOf('icon="x"')).toBeGreaterThan(-1);
     expect(top.indexOf('icon="x"')).toBeLessThan(top.indexOf("{info?.name"));
-    expect(top).toContain("numberOfLines={3}");
-    expect(top).not.toContain("numberOfLines={1}");
-    expect(viewer).toContain('title: { flexBasis: "100%", gap: 2 }');
+    // One line each, a long name shortened in its middle so the kind of file stays.
+    expect(top).toContain('numberOfLines={1} ellipsizeMode="middle"');
+    expect(top.indexOf("{info?.name")).toBeLessThan(top.indexOf('<View pointerEvents="none" style={styles.round} />'));
+    expect(viewer).toContain('title: { flex: 1, minWidth: 0, alignItems: "center" },');
+    expect(viewer).not.toContain('flexBasis: "100%"');
   });
 
   test("a picture's actions are the row at the bottom, never repeated in a ⋯, and Share has one icon", () => {

@@ -1,4 +1,5 @@
 import type {
+  Agent,
   AppNotification,
   Channel,
   DirectMessage,
@@ -9,7 +10,7 @@ import type {
   ThreadActor,
   ThreadInfo,
 } from "@agenteschat/client";
-import { hiddenAgentIds, hiddenDm } from "@agenteschat/client/lib/audience";
+import { hiddenAgentIds, hiddenDm, opensDm } from "@agenteschat/client/lib/audience";
 import { dmActivityAt } from "@agenteschat/client/lib/recent";
 import type { ServerCheck, ServerProblem } from "@agenteschat/client/lib/server";
 import { looksUnread, unreadTotal } from "@agenteschat/client/lib/unread";
@@ -349,14 +350,16 @@ export const withoutQuietGeneral = (rows: ConversationRow[], hide: boolean) =>
 
 /**
  * The agents to start a conversation with, as rows: each a DM with no channel (`channelId: ""`), opened on press (a
- * pinned agent never talked to, on the home's strip). Agents hidden from me are left out.
+ * pinned agent never talked to, on the home's strip). Agents hidden from me are left out, and so is any whose DM the
+ * server wouldn't open for me (`opensDm`): one I only edit, or someone's private agent under a mere "Edit agents" (ADR
+ * 0085 addendum of 2026-11-17).
  */
 export function agentStarters(
-  agents: readonly { id: string; name: string; handle: string }[],
+  agents: readonly Pick<Agent, "id" | "name" | "handle" | "canTalk" | "canManage">[],
   hidden: ReadonlySet<string> = new Set(),
 ): ConversationRow[] {
   return agents
-    .filter((a) => !hidden.has(a.id))
+    .filter((a) => !hidden.has(a.id) && opensDm(a))
     .map((a) => ({
       kind: "dm" as const,
       key: `a:${a.id}`,

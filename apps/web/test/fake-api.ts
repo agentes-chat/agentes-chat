@@ -4,6 +4,7 @@ import type {
   Agent,
   AgentAudience,
   AgentBrain,
+  AgentEditors,
   AgentGroup,
   AgentProposal,
   AgentProposalCard,
@@ -77,6 +78,7 @@ import type {
   PersonLimits,
   PersonUsage,
   PlanAccountUsage,
+  ProblemReportPreview,
   Proposal,
   ReactionCount,
   RightHandApprovals,
@@ -127,6 +129,7 @@ import { createMockCustomConnectors } from "./fakes/custom-connectors";
 import { createFakeDashboards, type FakeDashboards } from "./fakes/dashboards";
 import { createFakeDatabases, type FakeDatabases } from "./fakes/databases";
 import { createFakeDevices, type FakeDevices } from "./fakes/devices";
+import { createFakeLive, type FakeLive } from "./fakes/live";
 import { createFakeMachines, type FakeMachines, withNamed } from "./fakes/machines";
 import { createFakeMail, type FakeMail } from "./fakes/mail";
 import { createFakeMissions } from "./fakes/missions";
@@ -407,6 +410,10 @@ export interface FakeState {
   setupResults?: Record<string, Omit<AgentSetupResult, "agentId">>;
   /** `system.telemetry`: the usage report's switch; unset = I'm not the installation's owner (null). */
   telemetry?: ServerTelemetry;
+  /** `system.previewProblemReport`: the report shown; unset = a small one with sending on. A function may wait or throw. */
+  problemReport?: ProblemReportPreview | (() => Promise<ProblemReportPreview>);
+  /** `system.sendProblemReport`: its code, or what it throws; unset = `R-7K3QXM`. */
+  problemReportSend?: { id: string } | ApiError;
   /** `system.jev`: the installation's Jev key; unset = I'm not its owner on a self-hosted server (null). */
   jev?: JevKey;
   /**
@@ -1290,7 +1297,8 @@ type FakedParts =
   | "mail"
   | "databases"
   | "browser"
-  | "desktop";
+  | "desktop"
+  | "live";
 
 /** The core of the fake backend, over `FakeState`. Records every call in `state.calls`. */
 /** A member as the signed-in person sees them: hidden reads as offline to everyone else (ADR 0084). */
@@ -1416,11 +1424,55 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
       mode === "everyone" || a.ownerUserId === me || (mode === "people" && (a.audience?.userIds ?? []).includes(me))
     );
   };
-  // The server's `listsAgentTo`: Equipe, its sectors and the counts name only these.
-  const listed = () => {
-    const all = listsAllAgents(state.me ? withPermissions(state.me).organizations[0] : undefined);
-    return state.agents.filter((a) => all || talksToMe(a));
+  // The server's `listsAgentTo`: Equipe, its sectors, the counts and every list name only these. Who sees every agent
+  // sees all but a private one (it answers only its owner); else who it answers, who edits it and admins.
+  const listsToMe = (a: Agent) =>
+    (listsAllAgents(state.me ? withPermissions(state.me).organizations[0] : undefined) &&
+      answersOthers(audienceOf(a), a.ownerUserId)) ||
+    talksToMe(a) ||
+    rightsOf(a).canEdit ||
+    seesCost();
+  const listed = () => state.agents.filter(listsToMe);
+  /** Whether my workspace keys include `key`, as `me` resolves them (`withPermissions`). */
+  const holds = (key: string) =>
+    (state.me ? withPermissions(state.me).organizations[0]?.permissions : undefined)?.includes(key) === true;
+  /**
+   * What I may do with an agent, as the server's `agentRights` (ADR 0085 addendum of 2026-11-17): my keys over agents
+   * reach every agent for owners and administrators, else the ones with no owner and the ones whose audience takes me;
+   * "Edit agents" there manages it; its owner, who manages it and the people its "Who can edit" names edit it; "Create
+   * routines" where the keys reach sets up its routines too. A test may set any of them on the agent itself.
+   */
+  const rightsOf = (a: Agent) => {
+    const me = state.me?.user.id ?? "";
+    const myRoles = state.members.find((m) => m.userId === me)?.roleIds ?? [];
+    const mode = a.audience?.mode ?? "everyone";
+    const reach =
+      holds("administrator") ||
+      !a.ownerUserId ||
+      a.ownerUserId === me ||
+      mode === "everyone" ||
+      (mode === "people" &&
+        ((a.audience?.userIds ?? []).includes(me) || (a.audience?.roleIds ?? []).some((r) => myRoles.includes(r))));
+    const named =
+      (a.editors?.userIds ?? []).includes(me) || (a.editors?.roleIds ?? []).some((r) => myRoles.includes(r));
+    const canManage = a.canManage ?? (holds("manage_agents") && reach);
+    const canEdit = a.canEdit ?? (a.ownerUserId === me || canManage || named);
+    const canManageRoutines = a.canManageRoutines ?? (canEdit || (holds("manage_routines") && reach));
+    return { canManage, canEdit, canManageRoutines };
   };
+  /** The agent with what I may do with it and its "Who can edit", as the server sends it (`toAgent`). */
+  const withRights = (a: Agent, seesDetails: boolean) => ({
+    ...rightsOf(a),
+    // Only who sees how it works reads who edits it.
+    editors: seesDetails
+      ? { userIds: [...(a.editors?.userIds ?? [])], roleIds: [...(a.editors?.roleIds ?? [])] }
+      : { userIds: [], roleIds: [] },
+  });
+  /** "Who can edit" as the server saves it (`setAgentEditors`): each once, its owner left out (they always edit). */
+  const savedEditors = (e: AgentEditors, ownerUserId: string | null): AgentEditors => ({
+    userIds: [...new Set(e.userIds)].filter((id) => id !== ownerUserId),
+    roleIds: [...new Set(e.roleIds)],
+  });
   // A personal workspace (ADR 0159), as `me` says.
   const personalOrg = (orgId: string) => state.me?.organizations.find((o) => o.id === orgId)?.mode === "personal";
   // A new `me` with the org's logo changed, as the server answers: what the app read before stays as it was.
@@ -1457,6 +1509,25 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         if (!state.telemetry) throw new ApiError(404, "not_found", "Not found");
         state.telemetry = { ...state.telemetry, enabled };
         return state.telemetry;
+      },
+      previewProblemReport: async (input) => {
+        log("system.previewProblemReport", input);
+        const p = state.problemReport;
+        if (typeof p === "function") return p();
+        return (
+          p ?? {
+            report: { format: 1, source: "server", place: input.place },
+            text: '{\n  "format": 1\n}',
+            send: "on",
+            missing: {},
+          }
+        );
+      },
+      sendProblemReport: async (input) => {
+        log("system.sendProblemReport", input);
+        const r = state.problemReportSend ?? { id: "R-7K3QXM" };
+        if (r instanceof ApiError) throw r;
+        return r;
       },
       sendFeedback: async (input) => {
         log("system.sendFeedback", input);
@@ -1846,6 +1917,16 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           organizations: me.organizations.map((o) => (o.id === orgId ? { ...o, deletion, onboarding: undefined } : o)),
         };
         return { dueAt };
+      },
+      resetCode: async (orgId) => {
+        log("orgs.resetCode", orgId);
+        if (state.codeError) throw state.codeError;
+        return { email: requireMe().user.email, resendIn: 60 };
+      },
+      reset: async (orgId, input) => {
+        log("orgs.reset", orgId, input);
+        if (state.deletionError) throw state.deletionError;
+        return { startedAt: new Date().toISOString() };
       },
       restore: async (orgId) => {
         log("orgs.restore", orgId);
@@ -2321,8 +2402,9 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         const all = listsAllAgents(state.me ? withPermissions(state.me).organizations[0] : undefined);
         const ids = new Set(listed().map((a) => a.id));
         return structuredClone(state.agentGroups ?? [])
-          .map((g) => (all ? g : { ...g, agentIds: g.agentIds.filter((id) => ids.has(id)) }))
-          .filter((g) => all || g.agentIds.length > 0);
+          .map((g) => ({ ...g, agentIds: g.agentIds.filter((id) => ids.has(id)), was: g.agentIds.length }))
+          .filter((g) => g.agentIds.length > 0 || (all && g.was === 0))
+          .map(({ was: _was, ...g }) => g);
       },
       create: async (orgId, input) => {
         state.calls.push({ method: "agentGroups.create", args: [orgId, input] });
@@ -2435,6 +2517,7 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
             .filter((c) => (state.channelMembers[c.id] ?? []).some((m) => m.type === "agent" && m.id === a.id))
             .map((c) => c.id),
           canTalk: true,
+          canManage: rightsOf(a).canManage,
           ...(a.seesDetails === false ? { capabilities: [], canTalk: false, seesDetails: false } : {}),
         })),
         people: state.members
@@ -2447,8 +2530,8 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           const mode = a.audience?.mode ?? "everyone";
           const canTalk = talksToMe(a);
           const { monthlyBudgetUsd, ...rest } = a;
-          // Same rule as the backend: how it works only for who it answers, its owner and admins.
-          const seesDetails = canTalk || seesCost();
+          // Same rule as the backend: how it works only for who it answers, who edits it and admins.
+          const seesDetails = canTalk || seesCost() || rightsOf(a).canEdit;
           return {
             ...rest,
             ...(seesCost() ? { monthlyBudgetUsd } : {}),
@@ -2456,7 +2539,9 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
             budgetUsedPercent: percentOf(a),
             audienceMode: mode,
             canTalk,
+            ...withRights(a, seesDetails),
             seesDetails,
+            listed: listsToMe(a),
           };
         }),
       create: async (orgId, input) => {
@@ -2477,6 +2562,7 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           monthlyBudgetUsd: input.monthlyBudgetUsd ?? null,
           createdAt: NOW.toISOString(),
           audience: input.audience ?? { mode: "everyone", userIds: [] },
+          ...(input.editors ? { editors: savedEditors(input.editors, input.ownerUserId ?? null) } : {}),
           ...(input.appearance ? { appearance: input.appearance } : {}),
           // As the backend: every new agent starts with its setup checklist (ADR 0155 §2), who and how done.
           setup: { role: input.setup?.role ?? null, done: ["who", "how"] },
@@ -2684,7 +2770,7 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           agent.previousHandles = [...(agent.previousHandles ?? []).filter((h) => h !== input.handle), agent.handle];
         }
         // As the backend: a mailbox given since the person was asked refuses the save.
-        const { mailLossSeen, approvalsLevel, ...fields } = input;
+        const { mailLossSeen, approvalsLevel, editors, ...fields } = input;
         // As the backend: a level is the agent's own choice; null follows the workspace's again.
         if (approvalsLevel !== undefined)
           Object.assign(agent, {
@@ -2695,7 +2781,9 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           throw new ApiError(409, "agent.mail_loss_changed", "It holds a mailbox you weren't asked about");
         }
         Object.assign(agent, fields);
-        return { ...agent };
+        // "Who can edit" (ADR 0085 addendum of 2026-11-17): the whole lists, after the owner it has now.
+        if (editors) agent.editors = savedEditors(editors, agent.ownerUserId);
+        return { ...agent, ...withRights(agent, true) };
       },
       confirmSetup: async (orgId, agentId, step) => {
         log("agents.confirmSetup", orgId, agentId, step);
@@ -2726,7 +2814,10 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           { id: was.id, name: was.name, role: was.role, appearance: was.appearance ?? null, deleted: true },
         ];
       },
-      former: async () => state.former ?? [],
+      // An archived one says whether I manage it (who brings it back or deletes it for good): "Edit agents", unless the
+      // test says otherwise. A deleted one says nothing.
+      former: async () =>
+        (state.former ?? []).map((a) => (a.deleted ? a : { ...a, canManage: a.canManage ?? holds("manage_agents") })),
       models: async () => ({
         ...(state.planModels ? { planModels: state.planModels } : {}),
         defaultModel: "claude-sonnet-5-5",
@@ -3438,8 +3529,22 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
             ...inChannel.filter((m) => m.threadId === options.threadId),
           ]);
         }
-        // Like the server: the latest `limit` before `before`, oldest first.
-        const top = inChannel.filter((m) => m.threadId === null && (!options.before || m.createdAt < options.before));
+        if (options.around || options.after) log("chat.messages", channelId, options);
+        const all = inChannel.filter((m) => m.threadId === null);
+        // Like the server: `around` is the page with the message in its middle; gone or elsewhere is a 404.
+        if (options.around) {
+          const at = all.findIndex((m) => m.id === options.around);
+          if (at < 0) throw new ApiError(404, "not_found", "Message not found");
+          const half = Math.floor((options.limit ?? 50) / 2);
+          return structuredClone(all.slice(Math.max(0, at - half), at + (options.limit ?? 50) - half));
+        }
+        // `after`: the oldest `limit` after it.
+        if (options.after) {
+          const after = options.after;
+          return structuredClone(all.filter((m) => m.createdAt > after).slice(0, options.limit ?? 50));
+        }
+        // The latest `limit` before `before`, oldest first.
+        const top = all.filter((m) => !options.before || m.createdAt < options.before);
         return structuredClone(options.limit ? top.slice(-options.limit) : top);
       },
       post: async (orgId, channelId, input) => {
@@ -4161,6 +4266,12 @@ export const fakeAppsOf = new WeakMap<ApiClient, FakeApps>();
 /** The boards and widgets fake behind each `createFakeApi` client (tests add boards and finish widgets with it). */
 export const fakeDashboardsOf = new WeakMap<ApiClient, FakeDashboards>();
 
+/**
+ * The live files fake behind each `createFakeApi` client (ADR 0196): its in-memory live server, the files' pictures,
+ * image requests (`finishImages`) and Office previews. `render.tsx` routes the app's live sockets to its server.
+ */
+export const fakeLiveOf = new WeakMap<ApiClient, FakeLive>();
+
 /** Full client: fake HTTP + the real in-memory mocks (seeded like development). */
 export function createFakeApi(state: FakeState = seedState(), options: { seed?: boolean } = {}): ApiClient {
   const http = createFakeHttpApi(state);
@@ -4220,6 +4331,7 @@ export function createFakeApi(state: FakeState = seedState(), options: { seed?: 
   const apps = createFakeApps((method, ...args) => state.calls.push({ method, args }), ctx.now);
   const artifacts = createMockArtifacts(ctx, (method, ...args) => state.calls.push({ method, args }));
   state.drive = artifacts;
+  const live = createFakeLive(ctx, (method, ...args) => state.calls.push({ method, args }), artifacts);
   const client: ApiClient = {
     ...http,
     apps: apps.client,
@@ -4474,6 +4586,7 @@ export function createFakeApi(state: FakeState = seedState(), options: { seed?: 
     mail: mail.client,
     databases: databases.client,
     dashboards: dashboards.client,
+    live: live.client,
     browser: browser.client,
     desktop: browser.desktop,
     // "Trabalhando agora" and the task manager only for a test that gives the task manager (`state.taskManager`).
@@ -4544,6 +4657,7 @@ export function createFakeApi(state: FakeState = seedState(), options: { seed?: 
   fakeMailOf.set(client, mail);
   fakeDatabasesOf.set(client, databases);
   fakeDashboardsOf.set(client, dashboards);
+  fakeLiveOf.set(client, live);
   fakeBrowserOf.set(client, browser);
   fakeAppsOf.set(client, apps);
   return client;

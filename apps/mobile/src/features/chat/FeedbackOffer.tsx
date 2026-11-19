@@ -7,7 +7,7 @@ import { StyleSheet, View } from "react-native";
 import { useOrg } from "@/providers/org";
 import { LineIcon, ROW_CARD_INSET, RowAction, Text, useTheme, useToast } from "@/ui";
 import { boldRuns } from "./actions";
-import { useCardTop } from "./look";
+import { useCardTop, useMessageCardCorners } from "./look";
 import { useRowMeId } from "./row-data";
 
 /**
@@ -32,6 +32,7 @@ export function FeedbackOfferRow({ message: m }: { message: Message }) {
   const [open, setOpen] = useState(false);
   // A card under the message's words: the body's card gap above it, as every card in a message.
   const cardTop = useCardTop();
+  const cardCorners = useMessageCardCorners();
   if (!offer) return null;
   // A refusal says why: the card otherwise stayed as it was, as if the tap had done nothing.
   const failed = (error: unknown) => toast({ title: errorText(t, error), icon: "x" });
@@ -50,7 +51,7 @@ export function FeedbackOfferRow({ message: m }: { message: Message }) {
   return (
     <View
       accessibilityLabel={t("feedback.offer.group")}
-      style={[styles.one, cardTop, { backgroundColor: colors.raised, borderColor: colors.line2 }]}
+      style={[styles.one, cardTop, { backgroundColor: colors.raised, borderColor: colors.line2 }, cardCorners]}
     >
       <View style={styles.tx}>
         <LineIcon name={sent ? "check" : "flag"} size={15} color={colors.muted} variant="small" />

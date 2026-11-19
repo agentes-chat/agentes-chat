@@ -30,10 +30,14 @@ test("its rows say what the web's say, in the agent's voice", async () => {
   expect(setupRow(en, "where", false, facts).title).toBe("Join #suporte");
 });
 
-test("who sees it on the phone: who manages agents every step, its owner theirs, the right hand none", () => {
+test("who sees it on the phone: who manages it every step, its owner theirs, the right hand none", () => {
   const leo = agent({ id: "a-leo", name: "Leo", ownerUserId: "u-owner", setup: { role: "sales", done: [] } });
   expect(setupSteps(leo, { meId: "u-admin", admin: true })).toEqual(["ai", "apps", "where", "who", "how"]);
   expect(setupSteps(leo, { meId: "u-owner", admin: false })).toEqual(["ai", "where", "who"]);
+  // How it works is its owner's while they edit it (its `canEdit`, ADR 0085 addendum of 2026-11-17); its apps never.
+  expect(setupSteps(leo, { meId: "u-owner", admin: false, edits: true })).toEqual(["ai", "where", "who", "how"]);
+  // Someone its "Who can edit" names edits it on its page: the checklist is for who sets it up.
+  expect(setupSteps(leo, { meId: "u-editor", admin: false, edits: true })).toEqual([]);
   expect(setupSteps({ ...leo, builtin: "right_hand" }, { meId: "u-admin", admin: true })).toEqual([]);
   expect(setupSteps({ ...leo, setup: null }, { meId: "u-admin", admin: true })).toEqual([]);
 });
@@ -114,8 +118,9 @@ test("alone in a personal workspace, nothing asks who else talks to an agent (AD
   expect(setupStepsInSight(steps, { mode: "everyone" }, false)).toEqual([...steps]);
   const card = src("agents/setup/SetupCard.tsx");
   expect(card).toContain(
-    'setupStepsInSight(setupSteps(agent, { meId, admin: can(org, "manage_agents") }), audienceOf(agent), solo)',
+    "const steps = setupSteps(agent, { meId, admin: managesAgent(agent), edits: editsAgent(agent) });",
   );
+  expect(card).toContain("return setupStepsInSight(steps, audienceOf(agent), solo);");
   expect(card).toContain("personal: isPersonal(org),");
 });
 

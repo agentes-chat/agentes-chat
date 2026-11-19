@@ -641,6 +641,22 @@ test("each worker hears which account its own agent thinks with and its person's
   expect(await errorCode(() => run)).toBe("dropped");
 });
 
+test("a worker that crashes on a full disk says so to what it ran, so the run can name the cause", async () => {
+  const t = setup();
+  t.sup.boot();
+  t.sup.attach();
+  const run = handleRequest(t.ctx, exec(ANA, "sleep 100"), scope().scope);
+  await waitFor(() => t.workers.length === 1);
+  const ana = t.last(ANA.id);
+  ana.hello();
+  await requestOn(ana);
+  ana.stderr.write("ENOSPC: no space left on device, write\n");
+  ana.crash();
+  const err = (await Promise.resolve(run).catch((e: unknown) => e)) as RunnerError;
+  expect(err.code).toBe("dropped");
+  expect(err.message).toContain("disk is full (no space left on device)");
+});
+
 test("a cancel reaches only the worker that runs that request", async () => {
   const t = setup();
   t.sup.boot();

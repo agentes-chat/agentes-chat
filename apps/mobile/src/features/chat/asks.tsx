@@ -54,6 +54,7 @@ import {
 } from "@/ui";
 import { SparkCheck } from "@/ui/SparkCheck";
 import { approvalTitleText } from "../approvals/parts";
+import { useBubbleHead, useBubblePart } from "../shared/bubble-part";
 import { AgentFace } from "../shared/Face";
 import { useColors, useDirectory, useMeId, useNow, useOrgId } from "../shared/hooks";
 import { agentLook, fuseRemaining } from "../shared/logic";
@@ -72,8 +73,9 @@ import {
 } from "./ask-store";
 import { LineStop } from "./LiveRows";
 import { approvalIdOf, lineStops, markedParts, markName, parseInline, questionOf, workingEntries } from "./logic";
-import { useCardTop, useOwnTop } from "./look";
+import { useCardTop, useMessageCardCorners, useOwnTop } from "./look";
 import { Spans } from "./MessageSpans";
+import { withOpacity } from "./turn";
 import { WaitMark } from "./WaitMark";
 
 /**
@@ -486,6 +488,12 @@ export function AskCard({
   const c = useColors();
   const dir = useDirectory();
   const surface = useSurface();
+  // Under someone else's words in a conversation of bubbles: a bubble of that message (its fill, joined to it, no sky),
+  // and, when the message is only this request, its name line at the top and its time at the end, as a bubble's.
+  const part = useBubblePart();
+  const cardCorners = useMessageCardCorners();
+  const bubbleHead = useBubbleHead();
+  const fill = part?.fill ?? c.raised;
   const reduced = useReducedMotion();
   const store = useAskStore();
   const entering = useEntrance(CARD_IN);
@@ -551,12 +559,13 @@ export function AskCard({
   return (
     // A plain view the conversation measures (never flattened away), around the card.
     <View ref={slot} collapsable={false} style={ownTop}>
-      <Animated.View entering={entering} style={[styles.card, surface]}>
+      <Animated.View entering={entering} style={[styles.card, surface, cardCorners]}>
         {/* What the card holds when it mounts just shows (a row scrolled back into view, its answer already there);
             what comes later fades in. */}
         <LayoutAnimationConfig skipEntering>
-          <View style={styles.clip}>
-            <Sky color={sky} depth={0.55} fade={0.15} surface="raised" style={styles.sky} />
+          <View style={[styles.clip, cardCorners]}>
+            {part ? null : <Sky color={sky} depth={0.55} fade={0.15} surface="raised" style={styles.sky} />}
+            {bubbleHead ? <View style={styles.bubbleHead}>{bubbleHead.who}</View> : null}
             {headless ? null : (
               <View style={styles.head}>
                 <Icon name={ASK_ICON[kind]} size={13} color={c.muted} />
@@ -579,7 +588,7 @@ export function AskCard({
             {preview && !open ? (
               <View style={[styles.edge, styles.preview, { borderTopColor: c.line }]}>
                 {preview}
-                <LinearGradient pointerEvents="none" colors={[`${c.raised}00`, c.raised]} style={styles.fade} />
+                <LinearGradient pointerEvents="none" colors={[withOpacity(fill, 0), fill]} style={styles.fade} />
               </View>
             ) : null}
             {preview ? opened : null}
@@ -641,6 +650,11 @@ export function AskCard({
                 {waitsFor === "you" && expiry ? <View style={styles.expiryRow}>{expiry}</View> : null}
               </>
             )}
+            {bubbleHead ? (
+              <Text variant="caption" tone="muted" style={styles.bubbleTime}>
+                {bubbleHead.time}
+              </Text>
+            ) : null}
           </View>
         </LayoutAnimationConfig>
       </Animated.View>
@@ -672,6 +686,8 @@ export function AskNote({
   const { t } = useTranslation();
   const dir = useDirectory();
   const surface = useSurface();
+  const part = useBubblePart();
+  const cardCorners = useMessageCardCorners();
   const entering = useEntrance(CARD_IN);
   const heading = (
     <Text variant="body" tone="ink" style={styles.semibold}>
@@ -680,15 +696,17 @@ export function AskNote({
   );
   return (
     <View style={ownTop}>
-      <Animated.View entering={entering} style={[styles.card, surface]}>
-        <View style={styles.clip}>
-          <Sky
-            color={agentLook(dir.agentById.get(agentId)).color}
-            depth={0.55}
-            fade={0.15}
-            surface="raised"
-            style={styles.sky}
-          />
+      <Animated.View entering={entering} style={[styles.card, surface, cardCorners]}>
+        <View style={[styles.clip, cardCorners]}>
+          {part ? null : (
+            <Sky
+              color={agentLook(dir.agentById.get(agentId)).color}
+              depth={0.55}
+              fade={0.15}
+              surface="raised"
+              style={styles.sky}
+            />
+          )}
           {hint ? (
             <InfoHint name={t("common.about", { label: title })} text={hint} variant="body">
               {heading}
@@ -880,10 +898,10 @@ function pillWords(words: string, color: string) {
 // ── The bar ──────────────────────────────────────────────────────────────────
 
 /**
- * The line above the composer while a request waits out of view (waiting beats working): the agent's face,
- * the breathing square, "Ada espera sua aprovação · Enviar e-mail", "+1" when more wait, and Ver, which
- * scrolls to it. While one agent works here with its live row out of view, the working line's "Parar" stays at its
- * end (a row on screen carries its own).
+ * The line above the composer while a request waits out of view: the agent's face, the breathing square, "Ada espera
+ * sua aprovação · Enviar e-mail", "+1" when more wait, and Ver, which scrolls to it. While one agent works here, the
+ * working line's "Parar" stays at its end: that line is the conversation's last, out of view with it (a row on screen
+ * carries its own).
  */
 export function AskBar({
   away,
@@ -1062,6 +1080,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     gap: 8,
   },
+  // A bubble's name line at the card's top, and its time at the end (`BubbleHeadContext`).
+  bubbleHead: { marginBottom: 2 },
+  bubbleTime: { alignSelf: "flex-end", fontVariant: ["tabular-nums"], marginTop: -2 },
   // Across the top, at half strength, under the kind line (as `WaitingCard`).
   sky: { position: "absolute", top: 0, left: 0, right: 0, height: 56, opacity: 0.5 },
   head: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 18 },
@@ -1085,8 +1106,8 @@ const styles = StyleSheet.create({
   lineMore: { flexDirection: "row", alignItems: "center", gap: 3, alignSelf: "flex-start", marginLeft: 30, height: 22 },
   // Under the title, on its column (the mark and its gap), to the card's edge.
   lineDetail: { marginLeft: 30, marginTop: 1 },
-  // The deadline at the foot's end, right-aligned under the decision.
-  expiryRow: { flexDirection: "row", justifyContent: "flex-end", marginTop: 10 },
+  // The deadline under the decision, from the card's edge as everything in it: never floating at the other end.
+  expiryRow: { flexDirection: "row", marginTop: 10 },
   pressed: { opacity: 0.7 },
   flip: { transform: [{ rotate: "180deg" }] },
   exact: { gap: 10, paddingVertical: 12 },

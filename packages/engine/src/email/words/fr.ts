@@ -326,6 +326,14 @@ export const words: EmailWords = {
   deletionCode: {
     subjectWorkspace: (code) => `${code} est votre code pour supprimer un espace de travail`,
     subjectAccount: (code) => `${code} est votre code pour supprimer tout votre compte`,
+    subjectReset: (code) => `${code} est votre code pour réinitialiser un espace de travail`,
+    reset: (org) => [
+      "Saisissez ce code pour réinitialiser l’espace de travail ",
+      { b: org },
+      ". Ses agents, conversations, fichiers et sa mémoire sont effacés aussitôt et définitivement, et il repart de zéro comme un nouvel espace.",
+    ],
+    whyReset: (org) =>
+      `Vous recevez cet e-mail car votre compte a demandé la réinitialisation de ${org} sur agentes.chat.`,
     preheader: "Saisissez-le dans agentes.chat pour confirmer. Il est valable 10 minutes.",
     headline: "Votre code",
     workspace: (org) => [
@@ -611,5 +619,24 @@ export const words: EmailWords = {
       why: (surface) => `Tu reçois cet e-mail parce que ${surface} était lié à ton compte agentes.chat.`,
       picture: "Ton assistant, plus sur ton téléphone",
     },
+  },
+  supportReply: {
+    subject: "Une réponse à votre demande d’aide",
+    preheader: "À propos de l’aide que vous avez demandée sur agentes.chat.",
+    headline: "Une réponse à votre demande d’aide",
+    answers: {
+      received: "Nous avons bien reçu votre demande et nous l’examinons.",
+      need_more:
+        "Il nous faut plus de détails pour vous aider : ce que vous faisiez, ce que vous attendiez et ce qui s’est passé.",
+      resolved: "Ce que vous avez signalé est corrigé.",
+      handed_over: "Une personne a maintenant votre demande et va vous répondre.",
+    },
+    from: (host) =>
+      host
+        ? atHost("Réponse des personnes qui gèrent le serveur agentes.chat", "sur", host)
+        : "Réponse d’agentes.chat.",
+    ai: "Un assistant IA a rédigé cette réponse.",
+    reply: (address) => ["Pour répondre, écrivez à ", { mail: address }, "."],
+    why: "Vous recevez cet e-mail car vous avez demandé de l’aide sur agentes.chat.",
   },
 };

@@ -2,7 +2,7 @@ import type { ConnectorDef } from "@agenteschat/client";
 import {
   keys,
   useAgentProposal,
-  useAgents,
+  useAllAgents,
   useCatalog,
   useChannels,
   useCreateAgent,
@@ -395,7 +395,8 @@ function NewAgentDialog({
   const navigate = useNavigate();
   const personal = isPersonal(org);
   const managesAgents = can(org, "manage_agents");
-  const agents = useAgents(org.id);
+  // Every agent, unlisted ones too: a new one takes neither their names nor their handles.
+  const agents = useAllAgents(org.id);
   const members = useMembers(org.id);
   const catalog = useCatalog();
   const connected = useConnectedById();

@@ -9,6 +9,8 @@ export interface PlanMeterWindow {
   label?: string;
   usedPercent: number;
   resetsAt?: string;
+  /** When this window was last read, where that is before its reading's `at` (`windowReadAt`). */
+  at?: string;
   /** An estimated part of `usedPercent` (one agent's), in full ink over the rest of the bar. */
   part?: number;
   /** Words under the bar: whose use it is. */
@@ -121,21 +123,49 @@ const quotaOfModel = (label: string, model: string) =>
     .some((name) => name !== "" && model.includes(name));
 const passed = (iso: string | undefined, now: number) => iso !== undefined && Date.parse(iso) <= now;
 
+/** When a window was last read: its own time where a later reading didn't name it, else its reading's. */
+export const windowReadAt = (usage: { at?: string }, w: { at?: string }) => w.at ?? usage.at;
+
+/**
+ * A window whose own reading is older than `PLAN_STALE_MS` and that hasn't reset since: its number may be long gone
+ * (the provider can start a new week early), so it is no number to show or act on.
+ */
+export function windowStale(usage: { at?: string }, w: { at?: string; resetsAt?: string }, now = Date.now()) {
+  const read = Date.parse(windowReadAt(usage, w) ?? "");
+  return Number.isFinite(read) && now - read > PLAN_STALE_MS && !passed(w.resetsAt, now);
+}
+
 /**
  * The windows tightest first (the most used, then the shortest), each with
  * `used` as it stands now: a window whose reset already passed is empty again.
+ * A `stale` one (`windowStale`) comes after the fresh ones, so what leads the line and the plan's state is known.
  */
-export function planWindows<W extends PlanMeterWindow>(usage: { windows: readonly W[] }, now = Date.now()) {
+export function planWindows<W extends PlanMeterWindow>(
+  usage: { windows: readonly W[]; at?: string },
+  now = Date.now(),
+) {
   // A model's own quota comes after the account's: the line leads with what every model runs on.
   return usage.windows
-    .map((w) => ({ ...w, used: passed(w.resetsAt, now) ? 0 : w.usedPercent }))
+    .map((w) => ({
+      ...w,
+      used: passed(w.resetsAt, now) ? 0 : w.usedPercent,
+      stale: windowStale(usage, w, now),
+    }))
     .sort(
       (a, b) =>
         Number(modelOwn(a)) - Number(modelOwn(b)) ||
+        Number(a.stale) - Number(b.stale) ||
         b.used - a.used ||
         KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind),
     );
 }
+
+/** A window's amount as a meter says it: its percentage, or for a `stale` one only how old its reading is. */
+export const windowAmount = (
+  usage: { at?: string },
+  w: PlanMeterWindow & { used: number; stale: boolean },
+  text: Pick<PlanMeterText, "ago">,
+) => (w.stale ? text.ago(windowReadAt(usage, w) ?? "") : `${w.used}%`);
 
 /**
  * A window of the whole plan: not an `other` one (a single model's week, extra usage, another model group's quota),
@@ -193,10 +223,26 @@ export function planCheckedAt(usage: { at?: string; checkedAt?: string } | null 
   return at > 0 ? new Date(at).toISOString() : null;
 }
 
+/** A window of this reading reset since it was read or last asked for (`planCheckedAt`): its numbers are out of date. */
+export function resetSinceRead(
+  usage: { at?: string; checkedAt?: string; windows: readonly PlanMeterWindow[] },
+  now = Date.now(),
+) {
+  const read = Date.parse(planCheckedAt(usage) ?? "") || 0;
+  return usage.windows.some((w) => {
+    const reset = Date.parse(w.resetsAt ?? "");
+    return reset > read && reset <= now;
+  });
+}
+
 /** From this age the compact line says how old its numbers are. */
 export const PLAN_AGE_SHOWN_MS = 10 * 60_000;
 /** Numbers older than this read as out of date. */
 export const PLAN_STALE_MS = 6 * 3_600_000;
+
+/** Whether a meter says how old its numbers are: from `PLAN_AGE_SHOWN_MS`, and always at the limit. */
+export const planAgeShown = (usage: PlanMeterUsage, now = Date.now()) =>
+  planState(usage, now).state === "limited" || now - Date.parse(planCheckedAt(usage) ?? usage.at) >= PLAN_AGE_SHOWN_MS;
 
 /**
  * The compact meter's words: the tightest windows by their short names ("semana 40% · 5h 12%"), every window
@@ -208,25 +254,36 @@ export const PLAN_STALE_MS = 6 * 3_600_000;
  */
 export function planLine(usage: PlanMeterUsage, text: PlanMeterText, now = Date.now()) {
   const rows = planWindows(usage, now);
-  const top = rows[0];
+  const top = rows[0] && !rows[0].stale ? rows[0] : undefined;
   const { state, until } = planState(usage, now);
-  if (!top && state !== "limited") return null;
+  if (!rows[0] && state !== "limited") return null;
   const reset = (w?: PlanMeterWindow) => (w?.resetsAt && !passed(w.resetsAt, now) ? text.resets(w.resetsAt) : null);
   const join = (parts: (string | null)[]) => parts.filter(Boolean).join(" · ");
   // At the limit the plan is asked again every few minutes (`planCheckedAt`): how long ago that was always shows then.
   const at = planCheckedAt(usage) ?? usage.at;
   const old = now - Date.parse(at);
-  const stale = old > PLAN_STALE_MS;
+  const shown = rows.slice(0, LINE_WINDOWS);
+  // Windows read too long ago say only that, once, after the known ones: "5h 12% · semana atualizado há 2 d".
+  const unsure = shown.filter((w) => w.stale);
+  const oldest = unsure.map((w) => windowReadAt(usage, w) ?? at).sort()[0];
+  const stale = old > PLAN_STALE_MS || unsure.length > 0;
+  const age = oldest
+    ? null
+    : old > PLAN_STALE_MS
+      ? text.stale(at)
+      : old >= PLAN_AGE_SHOWN_MS || state === "limited"
+        ? text.ago(at)
+        : null;
   return {
     state,
     top,
     stale,
-    age: stale ? text.stale(at) : old >= PLAN_AGE_SHOWN_MS || state === "limited" ? text.ago(at) : null,
-    line: rows
-      .slice(0, LINE_WINDOWS)
-      .map((w) => `${text.short(w)} ${w.used}%`)
-      .join(" · "),
-    title: rows.map((w) => join([`${text.window(w)} ${w.used}%`, reset(w)])).join("\n"),
+    age,
+    line: join([
+      ...shown.filter((w) => !w.stale).map((w) => `${text.short(w)} ${w.used}%`),
+      oldest ? `${unsure.map((w) => text.short(w)).join(", ")} ${text.ago(oldest)}` : null,
+    ]),
+    title: rows.map((w) => join([`${text.window(w)} ${windowAmount(usage, w, text)}`, reset(w)])).join("\n"),
     alert: state === "limited" ? text.limited(until) : state === "almost" ? join([text.almost, reset(top)]) : null,
   };
 }
@@ -292,7 +349,7 @@ export function limitOffers<A extends OfferAccount>(
 }
 
 /** From here long work pauses until the window resets (ADR 0118); replies to people go on until the limit. */
-export const PLAN_PAUSE = 95;
+export const PLAN_PAUSE = 99;
 /** From here an agent is told where its plan stands, so it can say a long task may pause. */
 export const PLAN_NOTICE = 90;
 
@@ -334,7 +391,8 @@ export function planBinding(
     if (w.kind === "seven_day_sonnet" && !model.includes("sonnet")) continue;
     const length = WINDOW_MS[w.kind] ?? 0;
     const live = w.resetsAt ? Date.parse(w.resetsAt) > now : Number.isFinite(read) && now - read < length;
-    if (!live) continue;
+    // A window read too long ago may have reset early: it never pauses work (a refusal still does, `limited`).
+    if (!live || windowStale(usage, w, now)) continue;
     if (!top || w.usedPercent > top.used) {
       top = { kind: w.kind, used: w.usedPercent, ...(w.resetsAt ? { resetsAt: w.resetsAt } : {}) };
     }

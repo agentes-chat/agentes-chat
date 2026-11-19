@@ -330,6 +330,7 @@
     "startedWith": "Dimulai di percakapan dengan {{name}}",
     "replies_other": "{{count}} balasan",
     "repliesWord_other": "balasan",
+    "dayAt": "{{day}} {{time}}",
     "thread": "Utas",
     "closed": "ditutup",
     "options": "Opsi",
@@ -364,9 +365,7 @@
       "delivered": "{{name}} sudah menerimanya",
       "held": "{{name}} membacanya setelah kamu memutuskan",
       "read": "{{name}} sudah membacanya",
-      "resolved": "{{name}} menutup permintaan bantuan",
-      "well": "Membaca catatanmu",
-      "wellNow": "Berhenti untuk membaca catatanmu"
+      "resolved": "{{name}} menutup permintaan bantuan"
     },
     "stopped": {
       "byYou": "Berhenti di sini",
@@ -548,8 +547,6 @@
     "file": "File",
     "media": "GIF",
     "noCamera": "Tidak ada akses kamera. Izinkan di Pengaturan ponsel.",
-    "mission": "Mulai misi",
-    "missionHint": "Pekerjaan panjang, dengan rencana, dari awal sampai akhir",
     "summary": "Rangkum obrolan",
     "summaryHint": "Apa yang terjadi selama kamu pergi",
     "remind": "Ingatkan aku nanti",
@@ -778,7 +775,7 @@
   "agentEdit": {
     "missing": "Agen ini sudah tidak ada.",
     "saved": "Perubahan disimpan",
-    "adminsOnly": "Hanya admin yang bisa mengubah nama, peran, dan instruksi.",
+    "adminsOnly": "Hanya yang bisa mengedit agen ini yang bisa mengubah peran dan instruksinya. Namanya, hanya admin.",
     "discardTitle": "Buang perubahanmu?",
     "discardText": "Perubahanmu belum disimpan.",
     "discard": "Buang",
@@ -797,8 +794,8 @@
       "where": {
         "openbotrun": "Pilih openbot-import.json (dari Migrator oleh OpenBot) atau openbot-transfer.json (dari transfer instance). File .zip dibuka dulu di aplikasi File: sekali ketuk untuk mengekstraknya.",
         "openmausbot": "Di OpenMausBot: klik kanan tim › Bagikan tim… › Simpan file. Lalu pilih file itu di sini.",
-        "hermes": "Hermes mengekspor dari terminal (hermes profile export), sebagai .tar.gz yang tidak bisa dibuka ponsel. Impor di komputer, atau pilih file .md dan .yaml profilnya di sini.",
-        "openclaw": "OpenClaw menyimpan agen di folder ~/.openclaw di komputer. Pilih file .md dari sebuah ruang kerja di sini, atau impor seluruh folder di komputer.",
+        "hermes": "Hermes mengekspor dari terminal (`hermes profile export`), sebagai .tar.gz yang tidak bisa dibuka ponsel. Impor di komputer, atau pilih file .md dan .yaml profilnya di sini.",
+        "openclaw": "OpenClaw menyimpan agen di folder `~/.openclaw` di komputer. Pilih file .md dari sebuah ruang kerja di sini, atau impor seluruh folder di komputer.",
         "paperclip": "Tempel tautan GitHub paketnya di bawah, atau pilih COMPANY.md dan file .md lainnya.",
         "agenteschat": "Di ruang kerja lain: Pengaturan › Impor dan ekspor › Unduh file. Lalu pilih .json-nya di sini."
       },
@@ -1124,6 +1121,9 @@
       "diagram": "Diagram",
       "page": "Halaman",
       "text": "Teks",
+      "spreadsheet": "Spreadsheet",
+      "slides": "Presentasi",
+      "canvas": "Kanvas",
       "file": "File"
     },
     "more": "Opsi lainnya",
@@ -1247,6 +1247,9 @@
     "type": {
       "all": "Semua",
       "documents": "Dokumen",
+      "spreadsheets": "Spreadsheet",
+      "presentations": "Presentasi",
+      "canvases": "Kanvas",
       "images": "Gambar",
       "tables": "Tabel",
       "diffs": "Perubahan kode"
@@ -1260,6 +1263,9 @@
       "table": "Tabel",
       "diff": "Perubahan kode",
       "image": "Gambar",
+      "spreadsheet": "Spreadsheet",
+      "slides": "Presentasi",
+      "canvas": "Kanvas",
       "file": "File"
     },
     "by": "{{name}} · {{when}}",
@@ -1855,7 +1861,7 @@
       "tooOld": "iPhone ini memakai iOS {{version}}, dan agen butuh iOS 17 atau lebih baru. Perbarui jika bisa, atau pakai iPhone yang lebih baru.",
       "xcodeOld": "iPhone ini memakai iOS {{version}}, lebih baru dari yang dikenal Xcode di {{host}}. Instal Xcode {{major}} di sana, lalu jalankan xcrun devicectl manage ddis update di Terminal.",
       "teamMissing": "Xcode sudah masuk tapi belum menampilkan tim. Di Xcode, buat app iOS apa saja, pilih timmu di Signing & Capabilities, lalu jalankan di iPhone ini sekali.",
-      "uiRefused": "iPhone ini menolak ketukan helper pengujian. Buka kuncinya dan masukkan kode sandimu jika diminta. Jika terus terjadi, matikan lalu nyalakan lagi Pengaturan › Pengembang › Aktifkan Otomatisasi UI.",
+      "uiRefused": "Agen bisa melihat layar iPhone ini, tetapi iOS menolak ketukan mereka.",
       "pluggedIn": "Sudah tercolok",
       "wifi": {
         "also": "Juga di Wi-Fi {{host}}: {{name}}",
@@ -2136,6 +2142,8 @@
     "deleteIntro": "{{name}} langsung jadi hanya-baca untuk semua orang dan dihapus selamanya dalam 7 hari.",
     "holdDelete": "Tahan untuk menghapus",
     "deleteFailed": "Tidak bisa menghapus ruang kerja. Coba lagi.",
+    "holdReset": "Tahan untuk mengatur ulang",
+    "resetFailed": "Ruang kerja tidak bisa diatur ulang. Coba lagi.",
     "access": {
       "how": "Ketuk baris untuk mengubah levelnya: Tanpa akses, Baca, Baca dan tulis."
     },
@@ -2278,9 +2286,9 @@
       "everyone": "Semua orang bicara dengannya",
       "gate": "Yang hanya punya {{name}} tidak bicara dengan agen.",
       "gateOn": "Nyalakan Bicara dengan agen",
-      "locked": "Hanya {{owner}}, penanggung jawab {{name}}, atau yang mengedit agen mana pun yang bisa mengubahnya.",
-      "locked_female": "Hanya {{owner}}, penanggung jawab {{name}}, atau yang mengedit agen mana pun yang bisa mengubahnya.",
-      "lockedNoOwner": "Hanya yang mengedit agen mana pun yang bisa mengubahnya.",
+      "locked": "Hanya {{owner}}, penanggung jawab {{name}}, atau yang mengedit agen yang bisa mengubahnya.",
+      "locked_female": "Hanya {{owner}}, penanggung jawab {{name}}, atau yang mengedit agen yang bisa mengubahnya.",
+      "lockedNoOwner": "Hanya yang mengedit agen yang bisa mengubahnya.",
       "none": "Belum ada agen.",
       "some": "Hanya beberapa peran dan orang",
       "addPerson": "Tambah orang",
@@ -2407,7 +2415,7 @@
       "newPassword": "Kata sandi baru",
       "keyName": "Variabel",
       "keyNamePlaceholder": "ACME_API_KEY",
-      "keyNameHelp": "Huruf kapital, angka, dan _, misalnya ACME_API_KEY. Agen meminta kunci dengan nama ini.",
+      "keyNameHelp": "Huruf kapital, angka, dan _, misalnya `ACME_API_KEY`. Agen meminta kunci dengan nama ini.",
       "value": "Nilai",
       "newValue": "Nilai baru",
       "description": "Deskripsi",
@@ -2737,6 +2745,212 @@
     "audit": {
       "title": "Tidak ada yang perlu ditinjau",
       "text": "Saat agen melakukan sesuatu di luar percakapan, itu muncul di sini."
+    }
+  },
+  "live": {
+    "status": {
+      "opening": "Membuka…",
+      "saved": "Tersimpan",
+      "saving": "Menyimpan…",
+      "offline": "Tidak ada koneksi",
+      "offlineKept": "Tidak ada koneksi · perubahan disimpan di ponsel ini",
+      "readOnly": "Hanya baca"
+    },
+    "closed": {
+      "missing": "File ini tidak ada atau tidak dibagikan denganmu",
+      "signedOut": "Masuk lagi untuk membuka file ini",
+      "broken": "File ini tidak bisa dibuka di aplikasi",
+      "toDrive": "Kembali ke Drive"
+    },
+    "menu": {
+      "undo": "Urungkan",
+      "redo": "Ulangi"
+    },
+    "here": {
+      "title": "Siapa yang ada di sini",
+      "faces_other": "{{count}} orang lagi di sini. Lihat siapa",
+      "group": {
+        "editing": "Mengedit",
+        "viewing": "Melihat"
+      },
+      "editing": "mengedit",
+      "viewing": "melihat",
+      "editingAt": "mengedit {{where}}",
+      "viewingAt": "di {{where}}",
+      "editingSlide": "mengedit slide {{n}}",
+      "onSlide": "di slide {{n}}",
+      "editingShapes_other": "mengedit {{count}} item",
+      "followingName": "Mengikuti {{name}}",
+      "stop": "Hentikan",
+      "alone": "Sekarang hanya kamu yang ada di sini",
+      "aloneHint": "Siapa pun yang membuka file ini akan muncul di sini, beserta apa yang sedang dilakukannya."
+    },
+    "card": {
+      "sheets_other": "{{count}} lembar",
+      "slides_other": "{{count}} slide",
+      "shapes_other": "{{count}} item"
+    },
+    "sheet": {
+      "edit": "Ubah",
+      "editHint": "Ketik di sel ini",
+      "editing": "Mengedit {{cell}}",
+      "placeholder": "Ketik nilai atau =",
+      "empty": "Kosong",
+      "cancel": "Biarkan seperti semula",
+      "done": "Selesai",
+      "typeKey": "Ketik {{key}}",
+      "stats": "Jumlah {{sum}} · Rata-rata {{average}} · Hitungan {{count}}",
+      "countOnly": "Hitungan {{count}}",
+      "cantDo": "Itu tidak bisa dilakukan di sini",
+      "copied": "Disalin",
+      "newSheet": "Lembar baru",
+      "sheetWord": "Lembar",
+      "duplicateSheet": "Duplikat lembar",
+      "copyOf": "{{name}} (salinan)",
+      "deleteSheet": "Hapus lembar",
+      "deleteSheetTitle": "Hapus {{name}}?",
+      "deleteSheetText": "Semua isi lembar ini hilang untuk semua orang di file ini. Urungkan bisa mengembalikannya.",
+      "menu": {
+        "copy": "Salin",
+        "paste": "Tempel",
+        "clear": "Kosongkan",
+        "rowsAbove_other": "Sisipkan {{count}} baris di atas",
+        "rowsBelow_other": "Sisipkan {{count}} baris di bawah",
+        "colsLeft_other": "Sisipkan {{count}} kolom di kiri",
+        "colsRight_other": "Sisipkan {{count}} kolom di kanan",
+        "sortUp": "Urutkan A ke Z",
+        "sortDown": "Urutkan Z ke A",
+        "deleteRows_other": "Hapus {{count}} baris",
+        "deleteCols_other": "Hapus {{count}} kolom"
+      },
+      "problem": {
+        "empty": "Ketik sesuatu setelah =",
+        "unexpected": "Ada yang salah di dekat {{text}}",
+        "paren": "Ada tanda kurung yang belum ditutup",
+        "quote": "Ada tanda kutip yang belum ditutup",
+        "sheetQuote": "Tanda kutip nama lembar belum ditutup",
+        "operand": "Ada nilai yang kurang di samping tanda",
+        "array": "Daftar nilai ini belum lengkap",
+        "range": "Rentang ini tidak valid",
+        "sheet": "Tidak ada lembar bernama {{text}}",
+        "args": "Jumlah nilai untuk {{fn}} salah",
+        "tooLong": "Ini terlalu panjang untuk satu sel",
+        "tooDeep": "Rumus ini punya terlalu banyak tingkat",
+        "tooFar": "Referensi ini melewati batas spreadsheet",
+        "limit": "Spreadsheet ini sudah mencapai batas ukurannya",
+        "merged": "Ada sel yang digabung menghalangi",
+        "failed": "Itu tidak berhasil. Coba lagi."
+      }
+    },
+    "slides": {
+      "placeholder": {
+        "title": "Ketuk untuk menambahkan judul",
+        "text": "Ketuk untuk menambahkan teks",
+        "image": "Ketuk untuk menambahkan foto"
+      },
+      "part": {
+        "title": "Judul",
+        "subtitle": "Subjudul",
+        "body": "Teks",
+        "caption": "Keterangan",
+        "number": "Angka besar",
+        "quote": "Kutipan",
+        "shape": "Teks di dalam bentuk",
+        "text": "Kotak teks",
+        "note": "Catatan"
+      },
+      "openHint": "Membuka slide",
+      "editHint": "Mengubah teksnya",
+      "place": "Slide {{n}} dari {{count}}",
+      "placeHidden": "Slide {{n}} dari {{count}} · disembunyikan saat presentasi",
+      "deleteTitle": "Hapus slide {{n}}?",
+      "deleteText": "Slide ini hilang untuk semua orang di file ini. Urungkan bisa mengembalikannya.",
+      "notesPlaceholder": "Tulis apa yang ingin disampaikan di slide ini",
+      "pickPhoto": "Pilih foto",
+      "tools": {
+        "text": "Teks",
+        "photo": "Foto",
+        "sending": "Mengirim…"
+      }
+    },
+    "text": {
+      "title": "Teks",
+      "noteTitle": "Catatan",
+      "done": "Selesai",
+      "placeholder": "Ketik teksnya",
+      "titlePlaceholder": "Ketik judulnya",
+      "hint": "Setiap baris adalah satu paragraf. Yang kamu ketik langsung masuk ke file."
+    },
+    "show": {
+      "nothing": "Semua slide disembunyikan, jadi tidak ada yang bisa ditampilkan.",
+      "upright": "Tegakkan ponsel",
+      "sideways": "Miringkan ponsel"
+    },
+    "canvas": {
+      "tools": {
+        "label": "Alat",
+        "select": "Pilih",
+        "pen": "Pena",
+        "shapes": "Bentuk",
+        "arrow": "Panah",
+        "note": "Catatan",
+        "text": "Teks",
+        "photo": "Foto",
+        "comment": "Komentar"
+      },
+      "shapes": {
+        "rect": "Persegi panjang",
+        "ellipse": "Elips",
+        "diamond": "Belah ketupat",
+        "triangle": "Segitiga",
+        "star": "Bintang",
+        "line": "Garis"
+      },
+      "penHint": "Gambar dengan jarimu. Dua jari untuk menggeser kanvas.",
+      "arrowHint": "Seret dari satu tempat ke tempat lain",
+      "commentHint": "Ketuk tempat yang ingin kamu komentari",
+      "pin": "Komentar {{n}} dari {{name}}",
+      "addToSelection": "Pilih ini juga",
+      "emptyText": "Tambahkan catatan atau foto, atau minta bantuan agen di percakapan."
+    },
+    "talk": {
+      "start": "Bicarakan {{what}}",
+      "openHint": "Membuka percakapan",
+      "placeholder": {
+        "spreadsheet": "Tulis tentang spreadsheet…",
+        "slides": "Tulis tentang presentasi…",
+        "canvas": "Tulis tentang kanvas…",
+        "document": "Tulis tentang dokumen…"
+      },
+      "aboutPoint": "Komentar di satu titik kanvas",
+      "comment": "Komentar",
+      "imported": "Diimpor dari {{file}} oleh <0>{{name}}</0>",
+      "variationsText": "buat variasi dari gambar ini"
+    },
+    "doc": {
+      "styles": {
+        "paragraph": "Teks",
+        "h1": "Judul 1",
+        "h2": "Judul 2",
+        "h3": "Judul 3",
+        "quote": "Kutipan",
+        "code": "Kode"
+      },
+      "style": "Gaya teks",
+      "bold": "Tebal",
+      "italic": "Miring",
+      "bullets": "Daftar berpoin",
+      "numbers": "Daftar bernomor",
+      "quote": "Kutipan",
+      "link": "Tambahkan tautan",
+      "linkChoose": "Pilih dulu kata-kata untuk tautannya",
+      "linkBad": "Alamat itu tidak bisa dijadikan tautan",
+      "linkPlaceholder": "Alamat tautan",
+      "linkApply": "Tambahkan tautan",
+      "placeholder": "Tulis di sini",
+      "add": "Tambah paragraf",
+      "editHint": "Mengubah bagian ini",
+      "notHere": "Bagian ini diubah di komputer"
     }
   },
   "surface": {

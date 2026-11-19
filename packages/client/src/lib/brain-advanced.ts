@@ -102,9 +102,9 @@ export function advancedParts(t: TFunction, _language: string, o: AdvancedOf): s
   ].filter((p): p is string => p !== null);
 }
 
-/** Claude's own models (`--model opus|sonnet|haiku`) say what each is for under their names. */
-export const isClaudeAlias = (v: string): v is "opus" | "sonnet" | "haiku" =>
-  v === "opus" || v === "sonnet" || v === "haiku";
+/** Claude's own models (`--model fable|opus|sonnet|haiku`) say what each is for under their names. */
+export const isClaudeAlias = (v: string): v is "fable" | "opus" | "sonnet" | "haiku" =>
+  v === "fable" || v === "opus" || v === "sonnet" || v === "haiku";
 
 /** An effort as stored, as the apps show it: `xhigh` is high, none (or an automatic one) medium, the default. */
 export const effortLevel = (e: string | null | undefined): EffortLevel =>

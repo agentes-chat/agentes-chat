@@ -70,6 +70,7 @@ import { listedText } from "../lib/voice";
 import type { Wallpaper } from "../lib/wallpaper";
 import type { AudienceChoice } from "../lib/who-sees";
 import type { WikiAccess } from "../lib/wiki";
+import { liveRefOf } from "../live/types";
 import type { RealtimeConnection } from "../realtime/connection";
 import { readUnknownMembers, setOrgDeletion } from "../realtime/machines";
 import type { ApiClient } from "./client";
@@ -103,6 +104,7 @@ import type {
   Approval,
   ApprovalCoverInput,
   ApprovalsLevel,
+  Artifact,
   ArtifactContent,
   ArtifactDetail,
   ArtifactFilters,
@@ -127,6 +129,8 @@ import type {
   DmRead,
   DmTarget,
   EndpointModel,
+  FileConversation,
+  FileConversationRef,
   ForeignMailbox,
   GifCategory,
   GifKey,
@@ -164,6 +168,8 @@ import type {
   Person,
   PersonalTokenInput,
   PersonLimits,
+  ProblemReportPreviewInput,
+  ProblemReportSendInput,
   Proposal,
   ReactionCount,
   ReminderInput,
@@ -388,6 +394,28 @@ export function useSetServerTelemetry() {
   });
 }
 
+/** A problem report gathered for the person to read before sending; asked again each time the dialog opens. */
+export const useProblemReportPreview = (input: ProblemReportPreviewInput, enabled: boolean) => {
+  const api = useApi();
+  return useQuery({
+    queryKey: ["problem-report", input] as const,
+    queryFn: () => api.system.previewProblemReport(input),
+    enabled,
+    staleTime: 0,
+    gcTime: 0,
+    retry: false,
+  });
+};
+
+export function useSendProblemReport() {
+  const api = useApi();
+  // The dialog says why it failed, with its way out, under its buttons.
+  return useMutation({
+    mutationFn: (input: ProblemReportSendInput) => api.system.sendProblemReport(input),
+    meta: { silent: true },
+  });
+}
+
 /** The installation's Jev key: `null` for everyone but its owner on a self-hosted server. */
 export const useJevKey = () => {
   const api = useApi();
@@ -536,6 +564,15 @@ export function useDeleteWorkspace(orgId: string) {
       });
       void qc.invalidateQueries({ queryKey: keys.me });
     },
+  });
+}
+
+/** Resets a workspace (owners): its apps read everything again when it is done (`org.reset`). */
+export function useResetWorkspace(orgId: string) {
+  const api = useApi();
+  return useMutation({
+    mutationFn: (proof: DeletionProofInput) => api.orgs.reset(orgId, proof),
+    meta: { silent: true },
   });
 }
 
@@ -806,6 +843,10 @@ export function useRevokeInvitation(orgId: string) {
 
 // ── Agents ──────────────────────────────────────────────────────────────────
 
+/** The agents my lists and pickers name: a private agent (`listed: false`) stays out for whom it is unlisted. */
+const listedAgents = (list: Agent[]) => list.filter((a) => a.listed !== false);
+
+/** The team's agents my lists name (`listed`); the directories resolve every agent's name and face (`useAllAgents`). */
 export const useAgents = (orgId: string, enabled = true) => {
   const api = useApi();
   return useQuery({
@@ -813,6 +854,21 @@ export const useAgents = (orgId: string, enabled = true) => {
     queryFn: () => api.agents.list(orgId),
     staleTime: 30_000,
     enabled,
+    select: listedAgents,
+    ...BACK_TO_TAB,
+  });
+};
+
+/**
+ * Every agent of the team the server sent, unlisted ones too (`listed: false`): only for the directories, which name a
+ * message's author and open a link to its public card. A list or picker reads `useAgents`.
+ */
+export const useAllAgents = (orgId: string) => {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.agents(orgId),
+    queryFn: () => api.agents.list(orgId),
+    staleTime: 30_000,
     ...BACK_TO_TAB,
   });
 };
@@ -1888,6 +1944,8 @@ function postBody({ body, clientId, threadId, meta, steer }: PostInput) {
   const replyTo = replyOf(meta)?.messageId;
   const attachments = artifactRefs(meta).map((r) => r.id);
   const media = messageMediaOf(meta);
+  // The quote bar of a live file's conversation (ADR 0199): the server adds the file's kind and title.
+  const about = liveRefOf(meta);
   return {
     body,
     clientId,
@@ -1897,6 +1955,9 @@ function postBody({ body, clientId, threadId, meta, steer }: PostInput) {
     ...(threadId && meta?.[OPEN_THREAD] === true ? { openThread: true } : {}),
     ...(steer ? { steer } : {}),
     ...(media ? { media: postedMedia(media) } : {}),
+    ...(about
+      ? { liveRef: { artifactId: about.artifactId, ...(about.selection ? { selection: about.selection } : {}) } }
+      : {}),
   };
 }
 
@@ -4467,6 +4528,44 @@ export function useArtifacts(orgId: string, filters: ArtifactFilters) {
   return { ...query, artifacts: query.data ? artifacts : undefined, counts: pages?.[0]?.counts ?? null };
 }
 
+/** Every Drive folder of the workspace (the apps build the tree from `parentId`). */
+export const useDriveFolders = (orgId: string) => {
+  const api = useApi();
+  return useQuery({ queryKey: keys.driveFolders(orgId), queryFn: () => api.artifacts.folders(orgId) });
+};
+
+/**
+ * Arranging the Drive: folders made, renamed, moved and deleted, files moved and renamed. Each refreshes the Drive's
+ * lists and folders.
+ */
+export function useDriveArrange(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  const refresh = () => qc.invalidateQueries({ queryKey: keys.artifacts(orgId) });
+  const options = { onSettled: refresh };
+  return {
+    createFolder: useMutation({
+      mutationFn: (input: { name: string; parentId?: string | null }) => api.artifacts.createFolder(orgId, input),
+      ...options,
+    }),
+    updateFolder: useMutation({
+      mutationFn: (input: { id: string; name?: string; parentId?: string | null }) =>
+        api.artifacts.updateFolder(orgId, input.id, { name: input.name, parentId: input.parentId }),
+      ...options,
+    }),
+    deleteFolder: useMutation({ mutationFn: (id: string) => api.artifacts.deleteFolder(orgId, id), ...options }),
+    move: useMutation({
+      mutationFn: (input: { ids: string[]; folderId: string | null }) =>
+        api.artifacts.move(orgId, input.ids, input.folderId),
+      ...options,
+    }),
+    rename: useMutation({
+      mutationFn: (input: { id: string; title: string }) => api.artifacts.rename(orgId, input.id, input.title),
+      ...options,
+    }),
+  };
+}
+
 /** One artifact at a version (latest when omitted). */
 /** `GET …/artifacts-trash`: deleted files (30 days). */
 export const useArtifactTrash = (orgId: string) => {
@@ -4476,6 +4575,26 @@ export const useArtifactTrash = (orgId: string) => {
     queryFn: () => api.artifacts.trash(orgId),
   });
 };
+
+/**
+ * Where a live file's conversation lives (ADR 0199): the one the file already carries, or, once `open`, the one the
+ * server makes on first use. Null until then. `useTaskConversation` for a file.
+ */
+export function useFileConversation(
+  orgId: string,
+  artifact: Pick<Artifact, "id" | "conversation">,
+  open: boolean,
+): FileConversationRef | null {
+  const api = useApi();
+  const made = useQuery({
+    queryKey: [...keys.artifact(orgId, artifact.id), "conversation"],
+    queryFn: () => api.artifacts.conversation(orgId, artifact.id),
+    enabled: open && !artifact.conversation,
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+  const known: FileConversation | null | undefined = artifact.conversation;
+  return known ?? made.data ?? null;
+}
 
 export const useArtifact = (orgId: string, id: string | null, version?: number) => {
   const api = useApi();
@@ -4700,12 +4819,17 @@ export function useUploadFile(orgId: string) {
       file: File;
       title?: string;
       channelId?: string | null;
+      folderId?: string | null;
       artifactId?: string;
       note?: string;
     }): Promise<ArtifactDetail> =>
       input.artifactId
         ? api.artifacts.uploadVersion(orgId, input.artifactId, input.file, { note: input.note })
-        : api.artifacts.upload(orgId, input.file, { title: input.title, channelId: input.channelId }),
+        : api.artifacts.upload(orgId, input.file, {
+            title: input.title,
+            channelId: input.channelId,
+            folderId: input.folderId,
+          }),
     meta: { silent: true },
     onSettled: () => qc.invalidateQueries({ queryKey: keys.artifacts(orgId) }),
   });
@@ -6955,6 +7079,7 @@ function refreshThreadUnread(qc: QueryClient, orgId: string) {
   void qc.invalidateQueries({ queryKey: keys.channels(orgId) });
   void qc.invalidateQueries({ queryKey: keys.dms(orgId) });
   void qc.invalidateQueries({ queryKey: keys.unreadTasks(orgId) });
+  void qc.invalidateQueries({ queryKey: keys.unreadFiles(orgId) });
 }
 
 /** How many threads I follow have a reply I haven't read (the Threads entry's mark); live via `applyUnreadEvent`. */
@@ -6985,6 +7110,26 @@ export function useUnreadTasks(orgId: string) {
 /** One task's unread replies and mentions of me in its conversation; none: zeros. */
 export function useTaskUnread(orgId: string, issueId: string) {
   const found = useUnreadTasks(orgId).data?.find((u) => u.issueId === issueId);
+  return { unread: found?.unread ?? 0, mentions: found?.mentions ?? 0 };
+}
+
+/**
+ * The live files whose conversation has a reply I haven't read (ADR 0199), with the ones that mention me. Under the
+ * Drive's key, so whatever reads the Drive again reads it too; a notice about a file and my reads refresh it as well.
+ */
+export function useUnreadFiles(orgId: string) {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.unreadFiles(orgId),
+    queryFn: () => api.reads?.unreadFiles?.(orgId) ?? Promise.resolve([]),
+    enabled: Boolean(api.reads?.unreadFiles),
+    staleTime: 30_000,
+  });
+}
+
+/** One live file's unread replies and mentions of me in its conversation (its "Conversation" toggle); none: zeros. */
+export function useFileUnread(orgId: string, artifactId: string) {
+  const found = useUnreadFiles(orgId).data?.find((u) => u.artifactId === artifactId);
   return { unread: found?.unread ?? 0, mentions: found?.mentions ?? 0 };
 }
 
@@ -7029,7 +7174,10 @@ export function readConversationListsOncePerBurst(qc: QueryClient, orgId: string
   readOncePerBurst(`${orgId}:channels`, () => void qc.invalidateQueries({ queryKey: keys.channels(orgId) }));
 }
 
-/** A task changed, a reply in its conversation too (ADR 0145): the boards on screen read again, once per burst. */
+/**
+ * A task changed, a reply in its conversation too (ADR 0145): the boards on screen read again, once per burst. A
+ * notice about a live file's conversation (ADR 0199) refreshes the file's unread marks and its page's conversation.
+ */
 export function applyIssueEvent(qc: QueryClient, orgId: string, event: { type: string }) {
   if (
     event.type === "issue.created" ||
@@ -7041,10 +7189,25 @@ export function applyIssueEvent(qc: QueryClient, orgId: string, event: { type: s
   // A task's conversation has no members to hear `channel.activity`: a notice about the task is my news of it.
   else if (event.type === "notification.upserted" && taskNoticeOf(event))
     readOncePerBurst(`${orgId}:unread-tasks`, () => void qc.invalidateQueries({ queryKey: keys.unreadTasks(orgId) }));
+  // So has a live file's (ADR 0199): a notice about the file refreshes its unread marks and its conversation's line.
+  else if (event.type === "notification.upserted") {
+    const fileId = fileNoticeOf(event);
+    if (!fileId) return;
+    readOncePerBurst(`${orgId}:unread-files`, () => void qc.invalidateQueries({ queryKey: keys.unreadFiles(orgId) }));
+    readOncePerBurst(
+      `${orgId}:file:${fileId}`,
+      () => void qc.invalidateQueries({ queryKey: keys.artifact(orgId, fileId), exact: true }),
+    );
+  }
 }
 
 const taskNoticeOf = (event: { type: string }) =>
   Boolean((event as { notification?: { source?: { issueId?: unknown } } }).notification?.source?.issueId);
+
+const fileNoticeOf = (event: { type: string }) => {
+  const id = (event as { notification?: { source?: { artifactId?: unknown } } }).notification?.source?.artifactId;
+  return typeof id === "string" ? id : null;
+};
 
 /**
  * My own topic's unread marks, on the web and the phone: a message in a conversation I'm in has its list read again
@@ -7588,6 +7751,17 @@ export function useIphoneDevMode(orgId: string, machineId: string | null) {
     meta: { silent: true },
   });
   return { look, openXcode };
+}
+
+/** The iPhone guide's Repair: its Mac stops the iPhone's test helper, builds it again and checks it (devices refetch). */
+export function useIphoneRepair(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (phoneId: string) => api.devices.repairIphone(orgId, phoneId),
+    meta: { silent: true },
+    onSettled: () => qc.invalidateQueries({ queryKey: keys.devices(orgId) }),
+  });
 }
 
 /**

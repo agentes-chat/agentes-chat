@@ -11,8 +11,7 @@ export const HUMAN_CHECK_HEADER = "x-captcha-response";
 
 /**
  * agentes.chat Cloud's bot check (ADR 0075), only with both keys: without them nothing reaches Cloudflare. Tokens
- * count when made on `PUBLIC_URL`'s host or on the request's own registered host (`humanCheckRefusal`, ADR 0194), and
- * for the waiting lists also on `LANDING_URL`'s.
+ * count when made on `PUBLIC_URL`'s host, and for the waiting lists also on `LANDING_URL`'s.
  */
 export function createHumanCheck(
   config: Pick<Config, "PUBLIC_URL" | "LANDING_URL" | "TURNSTILE_SITE_KEY" | "TURNSTILE_SECRET_KEY">,
@@ -35,6 +34,9 @@ const REFUSALS: Record<HumanCheckRefusal, string> = {
 
 /**
  * A public form's bot check (ADR 0075): the refusal to answer with a 403, or null when it passes or there is none.
+ * None on a registered host (ADR 0194): Turnstile's widget takes a fixed list of hostnames, so it can't run on an
+ * open-ended list of them; the limits per network and per account guard sign-in there. The waiting lists keep it on
+ * every host: their forms are the landing page's, never a registered host's.
  * `pass`: where the form follows the e-mail's lookup, the address it is for; a pass that lookup gave stands for the
  * check then (`human-pass.ts`), and one that doesn't count is refused like a refused token, so the page sends its own.
  */
@@ -46,15 +48,14 @@ export async function humanCheckRefusal(
   trustedProxies: readonly string[] | undefined,
   pass?: { passes: HumanPasses; email: string },
 ): Promise<{ code: HumanCheckRefusal; message: string } | null> {
-  if (!check) return null;
+  if (!check || (action !== "waitlist" && (await hostLook(db, headers.get("host"))))) return null;
   const sent = headers.get(HUMAN_CHECK_HEADER);
   if (sent?.startsWith(HUMAN_PASS_PREFIX)) {
     const network = requestLimitIp(headers, trustedProxies);
     if (pass?.passes.accepts(sent, { action, email: pass.email, network })) return null;
     return { code: "human_check", message: REFUSALS.human_check };
   }
-  const host = (await hostLook(db, headers.get("host")))?.host;
-  const code = await check.verify(sent, action, requestIp(headers, trustedProxies), host);
+  const code = await check.verify(sent, action, requestIp(headers, trustedProxies));
   return code ? { code, message: REFUSALS[code] } : null;
 }
 

@@ -334,6 +334,13 @@ export const en = {
   deletionCode: {
     subjectWorkspace: (code: string) => `${code} is your code to delete a workspace`,
     subjectAccount: (code: string) => `${code} is your code to delete your whole account`,
+    subjectReset: (code: string) => `${code} is your code to reset a workspace`,
+    reset: (org: string): Text => [
+      "Type this code to reset the workspace ",
+      { b: org },
+      ". Its agents, conversations, files and memory are erased at once, for good, and it starts over like a new one.",
+    ],
+    whyReset: (org: string) => `You got this email because your account asked to reset ${org} on agentes.chat.`,
     preheader: "Type it in agentes.chat to confirm. It works for 10 minutes.",
     headline: "Your code",
     workspace: (org: string): Text => [
@@ -625,6 +632,25 @@ export const en = {
       /** The picture's alt text: the assistant beside the phone, switched off. */
       picture: "Your assistant, no longer on your phone",
     },
+  },
+  /** The answer of whoever runs the server to a member's request for help (ADR 0056). */
+  supportReply: {
+    subject: "An answer to your request for help",
+    preheader: "About the help you asked for on agentes.chat.",
+    headline: "An answer to your request for help",
+    /** Our own sentences, each under the word the operator API takes for it. */
+    answers: {
+      received: "We got your request and are looking into it.",
+      need_more: "We need to know more to help: what you were doing, what you expected and what happened instead.",
+      resolved: "What you reported is fixed.",
+      handed_over: "A person now has your request and will answer you.",
+    },
+    /** Who answers: agentes.chat, or the people who run a self-hosted server, named by its host. */
+    from: (host: string | null): Text =>
+      host ? atHost("Answered by the people who run the agentes.chat server", "at", host) : "Answered by agentes.chat.",
+    ai: "An AI assistant wrote this answer.",
+    reply: (address: string): Text => ["To answer, write to ", { mail: address }, "."],
+    why: "You got this email because you asked for help on agentes.chat.",
   },
 };
 

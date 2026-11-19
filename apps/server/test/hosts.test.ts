@@ -1,8 +1,8 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { HumanAction, HumanCheck } from "@agenteschat/adapters";
+import type { HumanCheck } from "@agenteschat/adapters";
 import { schema } from "@agenteschat/db";
 import { enableCaches, listHosts, putHost } from "@agenteschat/engine";
 import { createApp } from "../src/app";
@@ -20,7 +20,6 @@ import {
   seedOrg,
   signUp,
   type TestServer,
-  tokenMadeOn,
   turnstileCheck,
 } from "./harness";
 
@@ -148,41 +147,135 @@ test("by email on a registered host: sign-up, the app's writes, sign-out and sig
   expect((await there("/api/app/me")).status).toBe(200);
 });
 
-test("the bot check takes a token made on the request's own registered host, on that host only", async () => {
-  const s = await server({}, turnstileCheck(fakeCloudflare().fetch));
-  const made = (host: string, action: HumanAction) => ({ "x-captcha-response": tokenMadeOn(host, action) });
+test("a registered host runs no bot check: no site key, no token, no call to Cloudflare; the main address keeps it", async () => {
+  const cloudflare = fakeCloudflare();
+  const asked: string[] = [];
+  const fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    asked.push(String(input));
+    return cloudflare.fetch(input, init);
+  }) as typeof globalThis.fetch;
+  const landing = { LANDING_URL: "https://landing.example" };
+  const s = await server(landing, turnstileCheck(fetch, landing));
+  const config = async (b: Browser) => (await (await b("/api/app/auth-config")).json()) as Record<string, unknown>;
+  expect(await config(on(browser(s), HOST))).toMatchObject({ turnstileSiteKey: null });
+  expect(await config(browser(s))).toMatchObject({ turnstileSiteKey: "1x00000000000000000000AA" });
+
   const there = on(browser(s), HOST);
   const account = { email: "ana@example.com", password: "correct horse battery" };
-  const up = await there("/api/auth/sign-up/email", {
-    json: { ...account, name: "Ana" },
-    headers: made(HOST, "sign-up"),
+  expect((await there("/api/auth/sign-up/email", { json: { ...account, name: "Ana" } })).status).toBe(200);
+  const { orgId } = await seedOrg(there);
+  const link = (await (await there(`/api/app/organizations/${orgId}/invite-links`, { json: {} })).json()) as {
+    url: string;
+  };
+  const code = `/api/app/invitations/${link.url.split("/invite/")[1]}/code`;
+  const calls = (b: Browser) => ({
+    "email-lookup": b("/api/app/sign-in-options", { json: { email: account.email } }),
+    "sign-in": b("/api/auth/sign-in/email", { json: account }),
+    "sign-up": b("/api/auth/sign-up/email", {
+      json: { email: "bo@example.com", password: "correct horse battery", name: "Bo" },
+    }),
+    "password-reset": b("/api/auth/request-password-reset", {
+      json: { email: account.email, redirectTo: "/reset-password" },
+    }),
+    "ask-code": b(code, { json: { email: "cy@example.com" } }),
   });
-  expect(up.status).toBe(200);
-  const lookup = await there("/api/app/sign-in-options", {
-    json: { email: account.email },
-    headers: made(HOST, "email-lookup"),
+  const outcomes = async (b: Browser) =>
+    Object.fromEntries(
+      await Promise.all(
+        Object.entries(calls(b)).map(async ([call, pending]) => {
+          const res = await pending;
+          const body = (await res.json()) as { code?: string; error?: { code?: string } };
+          return [call, res.ok ? res.status : (body.error?.code ?? body.code)];
+        }),
+      ),
+    );
+  expect(await outcomes(on(browser(s), HOST))).toEqual({
+    "email-lookup": 200,
+    "sign-in": 200,
+    "sign-up": 200,
+    "password-reset": 200,
+    "ask-code": 202,
   });
-  expect(lookup.status).toBe(200);
-  const reset = await there("/api/auth/request-password-reset", {
-    json: { email: account.email, redirectTo: "/reset-password" },
-    headers: made(HOST, "password-reset"),
+  expect(await outcomes(browser(s))).toEqual({
+    "email-lookup": "human_check",
+    "sign-in": "human_check",
+    "sign-up": "human_check",
+    "password-reset": "human_check",
+    "ask-code": "human_check",
   });
-  expect(reset.status).toBe(200);
-  const signIn = (b: Browser) => b("/api/auth/sign-in/email", { json: account, headers: made(HOST, "sign-in") });
-  expect((await signIn(on(browser(s), HOST))).status).toBe(200);
-  // The same token on a request for another registered host or for the main address: refused.
-  for (const b of [on(browser(s), OTHER, HOST_ORIGIN), on(browser(s), OTHER), browser(s)]) {
-    const res = await signIn(b);
-    expect(res.status).toBe(403);
-    expect(((await res.json()) as { code?: string }).code).toBe("human_check");
-  }
-  // The main address's own tokens still count on a registered host.
-  const main = await on(browser(s), HOST)("/api/auth/sign-in/email", {
-    json: account,
-    headers: made("localhost", "sign-in"),
-  });
-  expect(main.status).toBe(200);
+  // No pass where no check ran: it would stand for the check on the main address.
+  const found = await on(browser(s), HOST)("/api/app/sign-in-options", { json: { email: account.email } });
+  expect(await found.json()).not.toHaveProperty("pass");
+  // The waiting lists' forms are the landing page's: a request for a registered host still needs a token.
+  const waitlist = await on(
+    browser(s),
+    HOST,
+    landing.LANDING_URL,
+  )("/api/waitlist", { json: { email: "di@example.com" } });
+  expect(waitlist.status).toBe(403);
+  expect(asked).toEqual([]);
 });
+
+test("unchecked tries on registered hosts never spend the main address's: password tries and reset emails", async () => {
+  const s = await server();
+  await signUp(browser(s), "ana@example.com");
+  await s.drain();
+  const signIn = (b: Browser, password: string, network: string) =>
+    b("/api/auth/sign-in/email", {
+      json: { email: "ana@example.com", password },
+      headers: { "x-forwarded-for": network },
+    });
+  const hosts = (i: number) => on(browser(s), i % 2 ? HOST : OTHER);
+  // Every registered host shares one count: two hosts don't double the tries. From one network:
+  for (let i = 0; i < 10; i++) expect((await signIn(hosts(i), "not the password", "203.0.113.1")).status).toBe(401);
+  expect((await signIn(on(browser(s), HOST), "correct horse battery", "203.0.113.1")).status).toBe(429);
+  expect((await signIn(browser(s), "correct horse battery", "203.0.113.1")).status).toBe(200);
+  // From all networks: four more reach the hosts' fifty.
+  for (let n = 2; n <= 5; n++) {
+    for (let i = 0; i < 10; i++) {
+      expect((await signIn(hosts(i), "not the password", `203.0.113.${n}`)).status).toBe(401);
+    }
+  }
+  expect((await signIn(on(browser(s), HOST), "correct horse battery", "198.51.100.7")).status).toBe(429);
+  expect((await signIn(browser(s), "correct horse battery", "198.51.100.7")).status).toBe(200);
+
+  const resets = async (b: Browser, times: number) => {
+    const before = s.email.sent.length;
+    for (let i = 0; i < times; i++) {
+      const res = await b("/api/auth/request-password-reset", {
+        json: { email: "ana@example.com", redirectTo: "/reset-password" },
+      });
+      expect(res.status).toBe(200);
+    }
+    await s.drain();
+    return s.email.sent.length - before;
+  };
+  expect(await resets(on(browser(s), HOST), 4)).toBe(3);
+  expect(await resets(browser(s), 1)).toBe(1);
+}, 60_000);
+
+test("registered hosts take fewer email lookups and sign-ups per network, counted apart from the main address's", async () => {
+  const s = await server();
+  const from = { "x-forwarded-for": "203.0.113.1" };
+  const hosts = (i: number) => on(browser(s), i % 2 ? HOST : OTHER);
+  const lookup = (b: Browser) => b("/api/app/sign-in-options", { json: { email: "ana@example.com" }, headers: from });
+  for (let i = 0; i < 10; i++) expect((await lookup(hosts(i))).status).toBe(200);
+  const looked = await lookup(on(browser(s), HOST));
+  expect(looked.status).toBe(429);
+  expect(Number(looked.headers.get("retry-after"))).toBeGreaterThan(9 * 60);
+  expect((await lookup(browser(s))).status).toBe(200);
+
+  const join = (b: Browser, n: number) =>
+    b("/api/auth/sign-up/email", {
+      json: { email: `new${n}@example.com`, password: "correct horse battery", name: `New ${n}` },
+      headers: from,
+    });
+  for (let n = 0; n < 5; n++) expect((await join(hosts(n), n)).status).toBe(200);
+  const refused = await join(on(browser(s), HOST), 5);
+  expect(refused.status).toBe(429);
+  expect(Number(refused.headers.get("retry-after"))).toBeGreaterThan(14 * 60);
+  expect((await join(browser(s), 6)).status).toBe(200);
+}, 30_000);
 
 test("the WebSocket upgrade takes the same rule", async () => {
   const s = await server();
@@ -434,31 +527,103 @@ test("the operator's routes: auth, shapes, refusals, and the cache dropped on a 
   expect(await refusal(await call("DELETE", `/hosts/${HOST}`))).toEqual([404, "not_found"]);
 });
 
+/** The app with a WEB_DIR holding the real index.html; the directory goes when the test does. */
+function withWeb(s: TestServer) {
+  const index = readFileSync(join(import.meta.dir, "../../web/index.html"), "utf8");
+  const web = mkdtempSync(join(tmpdir(), "agentes-web-"));
+  webDirs.push(web);
+  writeFileSync(join(web, "index.html"), index);
+  mkdirSync(join(web, "assets"));
+  writeFileSync(join(web, "assets", "index-4f2a.js"), "export {};");
+  writeFileSync(join(web, "screen.html"), SCREEN);
+  const app = createApp({
+    edition: "cloud",
+    version: "test",
+    modules: [],
+    pingDatabase: async () => {},
+    services: { db: s.db, auth: s.auth, config: s.config, adapters: s.adapters },
+    webDir: web,
+  });
+  return { index, get: (path: string, host: string) => app.request(path, { headers: { host } }) };
+}
+const webDirs: string[] = [];
+afterEach(() => {
+  for (const dir of webDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+});
+
 test("the app's page says it is on a registered host, so its boot hides the product's mark", async () => {
   const s = await server();
-  const index = readFileSync(join(import.meta.dir, "../../web/index.html"), "utf8");
+  const { index, get } = withWeb(s);
   expect(index).toContain("[data-host] .boot img { display: none; }");
-  const web = mkdtempSync(join(tmpdir(), "agentes-web-"));
-  try {
-    writeFileSync(join(web, "index.html"), index);
-    const app = createApp({
-      edition: "cloud",
-      version: "test",
-      modules: [],
-      pingDatabase: async () => {},
-      services: { db: s.db, auth: s.auth, config: s.config, adapters: s.adapters },
-      webDir: web,
-    });
-    const page = async (path: string, host: string) => {
-      const res = await app.request(path, { headers: { host } });
-      expect(res.status).toBe(200);
-      return res.text();
-    };
-    for (const path of ["/", "/login", "/invite/abc"]) {
-      expect(await page(path, HOST)).toStartWith('<!doctype html>\n<html data-host lang="en"');
-      expect(await page(path, "localhost:3000")).toBe(index);
-    }
-  } finally {
-    rmSync(web, { recursive: true, force: true });
+  const page = async (path: string, host: string) => {
+    const res = await get(path, host);
+    expect(res.status).toBe(200);
+    return res.text();
+  };
+  for (const path of ["/", "/login", "/invite/abc"]) {
+    expect(await page(path, HOST)).toStartWith('<!doctype html>\n<html data-host lang="en"');
+    expect(await page(path, "localhost:3000")).toBe(index);
   }
+});
+
+const UNKNOWN = "app.unregistered.example";
+const SCREEN = '<!doctype html>\n<html lang="en"><body>screen</body></html>';
+
+test("a hostname neither the server's own nor registered: the app's page is a 404 marked data-unknown-host", async () => {
+  const s = await server({ PUBLIC_URL: "https://chat.example.com", EXTRA_TRUSTED_ORIGINS: OWN_EXTRA });
+  const { index, get } = withWeb(s);
+  for (const path of ["/", "/login", "/invite/abc", "/index.html"]) {
+    const res = await get(path, UNKNOWN);
+    expect(res.status).toBe(404);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    expect(res.headers.get("x-robots-tag")).toBe("noindex");
+    expect(await res.text()).toStartWith('<!doctype html>\n<html data-unknown-host lang="en"');
+  }
+  expect((await get("/", "App.Unregistered.Example.")).status).toBe(404);
+  // The server's own names, an IP, a single label and a name with a port: the page as before.
+  for (const host of ["chat.example.com", "chat.northwind.example", "203.0.113.7", "localhost", `${UNKNOWN}:8443`]) {
+    const res = await get("/login", host);
+    expect({ host, status: res.status, cache: res.headers.get("cache-control") }).toEqual({
+      host,
+      status: 200,
+      cache: "no-cache",
+    });
+    expect(await res.text()).toBe(index);
+  }
+  // A registered host: its own mark, never both.
+  const there = await (await get("/login", HOST)).text();
+  expect(there).toStartWith('<!doctype html>\n<html data-host lang="en"');
+  expect(there).not.toContain("data-unknown-host");
+  // Everything but the app's page is untouched there.
+  const health = await get("/api/health", UNKNOWN);
+  expect(health.status).toBe(200);
+  expect(health.headers.get("content-type")).toContain("application/json");
+  const asset = await get("/assets/index-4f2a.js", UNKNOWN);
+  expect(asset.status).toBe(200);
+  expect(await asset.text()).toBe("export {};");
+  expect((await get("/assets/gone-1234.js", UNKNOWN)).status).toBe(404);
+  const other = await get("/screen.html", UNKNOWN);
+  expect(other.status).toBe(200);
+  expect(await other.text()).toBe(SCREEN);
+});
+
+test("without the operator API no hostname is unknown: the page as before, whatever Host the proxy sends", async () => {
+  const s = await server({ OPERATOR_API_TOKEN: "" });
+  expect(s.config.OPERATOR_API_TOKEN).toBeFalsy();
+  const { index, get } = withWeb(s);
+  const res = await get("/", UNKNOWN);
+  expect(res.status).toBe(200);
+  expect(await res.text()).toBe(index);
+});
+
+test("a hostname registered after its first look shows as registered once the write drops the cache", async () => {
+  const s = await server();
+  enableCaches(true);
+  const { get } = withWeb(s);
+  expect((await get("/", UNKNOWN)).status).toBe(404);
+  expect((await get("/", UNKNOWN)).status).toBe(404);
+  await putHost({ db: s.db, blobs: s.adapters.platformBlobs }, new Set(), UNKNOWN, { name: "Fabrikam" });
+  const res = await get("/", UNKNOWN);
+  expect(res.status).toBe(200);
+  expect(await res.text()).toStartWith('<!doctype html>\n<html data-host lang="en"');
 });

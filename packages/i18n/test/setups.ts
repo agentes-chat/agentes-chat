@@ -128,6 +128,8 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     "feedback.goesServer",
     "feedback.offer.goesServer",
     "feedback.offer.sentServer",
+    // Only a server that set PROBLEM_REPORT_URL=off, which the Cloud never does.
+    "problemReport.off",
     "machines.download.title",
     "machines.host.",
     "members.requests.copyText",

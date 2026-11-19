@@ -20,11 +20,20 @@ import { getAgent } from "./agents";
 import { type AiStatusDeps, rightHandWorkAi } from "./ai-status";
 import { decidesAgentApprovals, MAX_OWN_ACTIONS, OWN_ACTION_NAME } from "./approval-rules";
 import { cancelRoutineAhead, type RoutineAheadView, routinesAhead } from "./approvals";
-import { audienceError, audienceSql, canTalkTo, speakerFor, speakerOf } from "./audience";
+import {
+  audienceError,
+  audienceSql,
+  canTalkTo,
+  managesRoutinesOf,
+  managesRoutinesSql,
+  speakerFor,
+  speakerOf,
+} from "./audience";
 import { recordAudit } from "./audit";
 import { UUID } from "./authority";
 import { brainOf } from "./brain-settings";
 import { BRAIN_PLAN_NAMES, type BrainKind, isComputerBrain } from "./brains/types";
+import { caches, type TtlCache } from "./cache";
 import { canceledBy } from "./cancel";
 import { requireChannelAccess } from "./channels";
 import {
@@ -334,9 +343,12 @@ export interface RoutineView {
    * the run strip; `total`: their sum, without the runs a person stopped).
    */
   health: { ok: number; silent: number; failed: number; skipped: number; missed: number; total: number };
-  /** The viewer reads its records and reports (its creator, admins, the agent's owner, its conversation). */
+  /** The viewer reads its records and reports (its creator, who manages the agent's routines, its conversation). */
   canSeeDetails: boolean;
-  /** The viewer may change, pause, stop or delete it (its creator, admins, the agent's owner). */
+  /**
+   * The viewer may change, pause, stop or delete it: its creator, and who manages the agent's routines
+   * (`managesRoutinesOf`: who edits the agent, "Criar rotinas" where it reaches).
+   */
   canManage: boolean;
   /** Whose reach it has (ADR 0053 §2): its creator, kept on edit; null once they left. */
   createdByUserId: string | null;
@@ -572,6 +584,8 @@ interface RunDetails {
   names: Map<string, string>;
 }
 
+type RoutineWeekUsage = { routineId: string; tokens: string; cost: string; plan: boolean; api: boolean };
+
 /** Every token a call used (as the usage page counts them). */
 const TOKENS = sql`${usageRecords.inputTokens} + ${usageRecords.outputTokens}
   + ${usageRecords.cacheReadTokens} + ${usageRecords.cacheWriteTokens}`;
@@ -592,15 +606,30 @@ async function runDetails(db: Database, orgId: string, runs: RunRow[]): Promise<
           status: agentRuns.status,
           error: agentRuns.error,
           waitingMachineId: agentRuns.waitingMachineId,
-          waitingCode: sql<string | null>`${agentRuns.transcript}->'waitingForBrain'->>'code'`,
-          waitSource: sql<string | null>`${agentRuns.transcript}->'waitingForBrain'->>'source'`,
-          resetsAt: sql<string | null>`${agentRuns.transcript}->'waitingForBrain'->>'resetsAt'`,
-          plan: sql<string | null>`${agentRuns.transcript}->'waitingForBrain'->>'plan'`,
-          continued: sql<boolean>`(${agentRuns.transcript}->'usagePause'->'override') is not null`,
+          // The transcript is a large TOASTed jsonb: only a waiting_input run's wait is read from it (all that the
+          // views use it for), as one value, so other rows never detoast it.
+          wait: sql<{ wait: Record<string, unknown> | null; continued: boolean } | null>`case
+            when ${agentRuns.status} = 'waiting_input' then jsonb_build_object(
+              'wait', ${agentRuns.transcript}->'waitingForBrain',
+              'continued', (${agentRuns.transcript}->'usagePause'->'override') is not null) end`,
           updatedAt: agentRuns.updatedAt,
         })
         .from(agentRuns)
-        .where(and(eq(agentRuns.orgId, orgId), inArray(agentRuns.id, ids))),
+        .where(and(eq(agentRuns.orgId, orgId), inArray(agentRuns.id, ids)))
+        .then((rows) =>
+          rows.map(({ wait, ...row }): AgentRunInfo => {
+            const w = wait?.wait;
+            const text = (key: string) => (typeof w?.[key] === "string" ? (w[key] as string) : null);
+            return {
+              ...row,
+              waitingCode: text("code"),
+              waitSource: text("source"),
+              resetsAt: text("resetsAt"),
+              plan: text("plan"),
+              continued: wait?.continued === true,
+            };
+          }),
+        ),
     ),
     lookup(ids, () =>
       db
@@ -714,9 +743,12 @@ const conversationOf = (t: RoutineTarget) => (t.type === "channel" || t.type ===
 
 /** What a viewer may see of each routine (ADR 0053 §9). */
 interface ViewerRights {
-  /** Reads its prompt, records and reports: its creator, admins, the agent's owner, its conversation's members. */
+  /** Reads its prompt, records and reports: who manages it, its conversation's members. */
   reads: boolean;
-  /** Changes, pauses, stops or deletes it: its creator, admins, the agent's owner. */
+  /**
+   * Changes, pauses, stops or deletes it: its creator, and who manages the agent's routines (`managesRoutinesOf`, ADR
+   * 0085 addendum of 2026-11-17: who edits the agent, and "Criar rotinas" only where it reaches).
+   */
   manages: boolean;
   /** Its prompt is shown even to who doesn't read it (a public channel's). */
   publicPrompt: boolean;
@@ -738,21 +770,22 @@ async function viewerRights(
 ): Promise<Map<string, ViewerRights>> {
   const channelIds = [...new Set(rows.flatMap((r) => conversationOf(targetOf(r)) ?? []))];
   const agentIds = [...new Set(rows.map((r) => r.agentId))];
-  const [member, owners, channelRows, joined] = await Promise.all([
+  const [member, perAgent, channelRows, joined] = await Promise.all([
     lookup(viewerId ? [viewerId] : [], () =>
       db
         .select({
-          may: maySql(orgId, viewerId ?? "", "manage_routines"),
           approves: maySql(orgId, viewerId ?? "", "approve_actions"),
           connectors: maySql(orgId, viewerId ?? "", "manage_connectors"),
         })
         .from(organizationMembers)
         .where(and(eq(organizationMembers.orgId, orgId), eq(organizationMembers.userId, viewerId ?? ""))),
     ),
-    db
-      .select({ id: agents.id, ownerUserId: agents.ownerUserId })
-      .from(agents)
-      .where(and(eq(agents.orgId, orgId), inArray(agents.id, agentIds))),
+    lookup(viewerId ? agentIds : [], () =>
+      db
+        .select({ id: agents.id, routines: managesRoutinesSql("agents", sql`${viewerId ?? ""}::text`) })
+        .from(agents)
+        .where(and(eq(agents.orgId, orgId), inArray(agents.id, agentIds))),
+    ),
     lookup(channelIds, () =>
       db
         .select({ id: channels.id, kind: channels.kind, visibility: channels.visibility })
@@ -773,8 +806,7 @@ async function viewerRights(
     ),
   ]);
   const [me] = member;
-  const admin = me?.may === true;
-  const ownerOf = new Map(owners.map((a) => [a.id, a.ownerUserId]));
+  const managesRoutinesOfAgent = new Set(perAgent.filter((a) => a.routines === true).map((a) => a.id));
   const publicChannels = new Set(
     channelRows.filter((c) => c.kind === "channel" && c.visibility === "public").map((c) => c.id),
   );
@@ -783,7 +815,7 @@ async function viewerRights(
   for (const r of rows) {
     const target = targetOf(r);
     const channelId = conversationOf(target);
-    const manages = !!viewerId && (admin || r.createdByUserId === viewerId || ownerOf.get(r.agentId) === viewerId);
+    const manages = !!viewerId && (r.createdByUserId === viewerId || managesRoutinesOfAgent.has(r.agentId));
     out.set(r.id, {
       manages,
       reads: !viewerId || manages || (!!channelId && inChannel.has(channelId)),
@@ -868,18 +900,24 @@ async function views(
       .from(routineRuns)
       .where(inWeek)
       .groupBy(routineRuns.routineId, routineRuns.status),
-    db
-      .select({
-        routineId: routineRuns.routineId,
-        tokens: sql<string>`coalesce(sum(${TOKENS}), 0)`,
-        cost: sql<string>`coalesce(sum(${usageRecords.costNanoUsd}), 0)`,
-        plan: sql<boolean>`coalesce(bool_or(${usageRecords.billedTo} = 'plan'), false)`,
-        api: sql<boolean>`coalesce(bool_or(${usageRecords.billedTo} <> 'plan'), false)`,
-      })
-      .from(routineRuns)
-      .innerJoin(usageRecords, eq(usageRecords.runId, routineRuns.agentRunId))
-      .where(inWeek)
-      .groupBy(routineRuns.routineId),
+    // Every usage row of a week of runs: the list's heaviest read, asked again on each run event by every open app.
+    // A minute-old sum is fine for "this week".
+    (caches.routineWeekUsage as TtlCache<RoutineWeekUsage[]>).getOrLoad(
+      `${orgId}:${[...ids].sort().join(",")}`,
+      async () =>
+        db
+          .select({
+            routineId: routineRuns.routineId,
+            tokens: sql<string>`coalesce(sum(${TOKENS}), 0)`,
+            cost: sql<string>`coalesce(sum(${usageRecords.costNanoUsd}), 0)`,
+            plan: sql<boolean>`coalesce(bool_or(${usageRecords.billedTo} = 'plan'), false)`,
+            api: sql<boolean>`coalesce(bool_or(${usageRecords.billedTo} <> 'plan'), false)`,
+          })
+          .from(routineRuns)
+          .innerJoin(usageRecords, eq(usageRecords.runId, routineRuns.agentRunId))
+          .where(inWeek)
+          .groupBy(routineRuns.routineId),
+    ),
     db
       .select({
         id: agents.id,
@@ -1245,12 +1283,16 @@ async function resolveTrigger(
   return { ...none, triggerType: "event", event: trigger.event as string | null, nextRunAt: null as Date | null };
 }
 
-/** Admins, or the agent's owner. */
+/**
+ * Who manages the agent's routines (`managesRoutinesOf`, ADR 0085 addendum of 2026-11-17): who edits the agent (its
+ * owner, who manages it, its "Quem pode editar") and "Criar rotinas" where it reaches, never a private agent's.
+ */
 async function requireRoutineManager(db: Database, actorId: string, orgId: string, agentId: string) {
   const membership = await requirePermission(db, actorId, orgId, "read");
-  if (can(membership, "manage_routines")) return;
   const agent = await getAgent(db, orgId, agentId);
-  if (agent?.ownerUserId !== actorId) throw new ForbiddenError("Only an admin or the agent's owner can do this");
+  if (!agent) throw new NotFoundError("Agent not found");
+  if (!managesRoutinesOf(agent, actorId, membership))
+    throw new ForbiddenError("Only an admin or the agent's owner can do this");
 }
 
 /**
@@ -1531,9 +1573,10 @@ export async function listRoutines(db: Database, actorId: string, orgId: string,
 }
 
 /**
- * Whether `viewerId` sees a routine at all (its name, schedule, runs): who manages it (its creator, admins, the
- * agent's owner), who manages agents, or who the agent answers. The agents list's own rule (`listsAgent` in the
- * apps), so an agent hidden from someone doesn't show through its routines on Início, Rotinas or the calendar.
+ * Whether `viewerId` sees a routine at all (its name, schedule, runs): its creator, who manages the agent's routines
+ * (`managesRoutinesOf`: who edits the agent, "Criar rotinas" where it reaches) or who the agent answers. A private
+ * agent's routines stay hidden from who merely holds "Criar rotinas" or "Editar qualquer agente" (ADR 0085 addendum
+ * of 2026-11-17), so an agent hidden from someone doesn't show through its routines on Início, Rotinas or the calendar.
  */
 export async function routineSeer(
   db: Database,
@@ -1551,13 +1594,18 @@ export async function routineSeer(
         audienceRoleIds: agents.audienceRoleIds,
         consultable: agents.consultable,
         brain: agents.brain,
+        editorUserIds: agents.editorUserIds,
+        editorRoleIds: agents.editorRoleIds,
       })
       .from(agents)
       .where(eq(agents.orgId, orgId)),
   ]);
-  if (can(membership, "manage_routines") || can(membership, "manage_agents")) return () => true;
   const talks = speakerOf(membership);
-  const listed = new Set(agentRows.filter((a) => canTalkTo(a, viewerId, talks)).map((a) => a.id));
+  const listed = new Set(
+    agentRows
+      .filter((a) => canTalkTo(a, viewerId, talks) || managesRoutinesOf(a, viewerId, membership))
+      .map((a) => a.id),
+  );
   return (r) => r.createdByUserId === viewerId || listed.has(r.agentId);
 }
 
@@ -1595,12 +1643,12 @@ async function loadRoutine(db: Database, orgId: string, id: string, options: { d
   return row;
 }
 
-/** Edit: its creator, admins, or the agent's owner. */
+/** Edit: its creator, or who manages the agent's routines (`managesRoutinesOf`, ADR 0085 addendum of 2026-11-17). */
 async function requireRoutineEditor(db: Database, actorId: string, orgId: string, routine: RoutineRow) {
   const membership = await requirePermission(db, actorId, orgId, "read");
-  if (routine.createdByUserId === actorId || can(membership, "manage_routines")) return;
+  if (routine.createdByUserId === actorId) return;
   const agent = await getAgent(db, orgId, routine.agentId);
-  if (agent?.ownerUserId !== actorId) {
+  if (!agent || !managesRoutinesOf(agent, actorId, membership)) {
     throw new ForbiddenError(
       "Only who created the routine, the agent's owner or an admin can change it",
       "routine.editor_only",

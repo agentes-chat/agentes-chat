@@ -6,7 +6,9 @@ name: iOS build
 # its share extension with the App Store Connect API key. The one development certificate it signs the archive with
 # is kept as a secret and put in the runner's keychain: left to make one, Xcode made a new certificate on every
 # runner (each a fresh machine, the key gone with it) until the account ran out of them.
-# Production only: testers get builds through TestFlight.
+# Production only: testers get builds through TestFlight. Each run on main with `release` = fix/feature/major first
+# raises the iPhone's version (apps/mobile/versions.json's ios), commits it and tags ios-v<version> on main, as the
+# desktop app's release does; the Android build raises its own. A branch builds the current version.
 # Runs only by hand (Actions → Run workflow). See apps/mobile/README.md, "iOS on GitHub Actions".
 #
 # Secrets (repository settings, never in the repo):
@@ -24,6 +26,15 @@ on:
         description: "Send to TestFlight"
         type: boolean
         default: true
+      release:
+        description: "fix = 0.0.x, feature = 0.x.0, major = x.0.0; none = build the current version (a branch always does)"
+        type: choice
+        options: [fix, feature, major, none]
+        default: fix
+      notes:
+        description: "Release notes (optional; default = commit subjects since the last release)"
+        type: string
+        required: false
 
 permissions:
   contents: read
@@ -37,12 +48,39 @@ defaults:
     shell: bash
 
 jobs:
+  # Before any build, so a failed bump costs no build minutes. On main with `release` = fix/feature/major the version
+  # goes up (apps/mobile/versions.json's ios, the other store's untouched), committed and tagged ios-v<version>
+  # on main, as the desktop app's (desktop.yml); elsewhere, with none, or a build kept as an artifact (no upload), the build carries the current version.
+  version:
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      ref: ${{ steps.version.outputs.ref }}
+    steps:
+      # main only takes pull requests; the release's deploy key is the one push the ruleset lets through.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
+      - id: version
+        uses: ./.github/actions/mobile-version
+        with:
+          platform: ios
+          release: ${{ inputs.upload && inputs.release || 'none' }}
+          notes: ${{ inputs.notes }}
+          deploy-key-set: ${{ secrets.RELEASE_DEPLOY_KEY != '' }}
+
   build:
+    needs: version
     # CI_RUNNER_MACOS names another macOS runner. The App Store takes only builds made with a current Xcode.
     runs-on: ${{ vars.CI_RUNNER_MACOS || 'macos-26' }}
     timeout-minutes: 90
     env:
       APP_VARIANT: production
+      APP_PLATFORM: ios
     steps:
       # Fails in seconds, before anything is installed, when the key isn't there.
       - name: Apple secrets are set
@@ -58,7 +96,10 @@ jobs:
             if [ -z "$value" ] || [ "$value" = PLACEHOLDER ]; then echo "::error::Secret $name is not set"; missing=1; fi
           done
           if [ "$missing" = 1 ]; then echo "See apps/mobile/README.md, \"iOS on GitHub Actions\"."; exit 1; fi
+      # The release's commit (the raised version), or the run's own.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.version.outputs.ref }}
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: package.json

@@ -314,6 +314,14 @@ export const words: EmailWords = {
   deletionCode: {
     subjectWorkspace: (code) => `${code} ist dein Code zum Löschen eines Workspace`,
     subjectAccount: (code) => `${code} ist dein Code zum Löschen deines ganzen Kontos`,
+    subjectReset: (code) => `${code} ist dein Code zum Zurücksetzen eines Workspace`,
+    reset: (org) => [
+      "Gib diesen Code ein, um den Workspace ",
+      { b: org },
+      " zurückzusetzen. Seine Agenten, Unterhaltungen, Dateien und Erinnerungen werden sofort und endgültig gelöscht, und er beginnt neu wie ein neuer Workspace.",
+    ],
+    whyReset: (org) =>
+      `Du erhältst diese E-Mail, weil über dein Konto das Zurücksetzen von ${org} auf agentes.chat angefragt wurde.`,
     preheader: "Gib ihn in agentes.chat ein, um zu bestätigen. Er gilt 10 Minuten lang.",
     headline: "Dein Code",
     workspace: (org) => [
@@ -603,5 +611,24 @@ export const words: EmailWords = {
       why: (surface) => `Du erhältst diese E-Mail, weil ${surface} mit deinem agentes.chat-Konto verknüpft war.`,
       picture: "Dein Assistent, nicht mehr auf deinem Handy",
     },
+  },
+  supportReply: {
+    subject: "Eine Antwort auf deine Hilfeanfrage",
+    preheader: "Zu der Hilfe, um die du auf agentes.chat gebeten hast.",
+    headline: "Eine Antwort auf deine Hilfeanfrage",
+    answers: {
+      received: "Wir haben deine Anfrage erhalten und sehen sie uns an.",
+      need_more:
+        "Wir brauchen mehr Angaben, um dir zu helfen: was du gemacht hast, was du erwartet hast und was stattdessen passiert ist.",
+      resolved: "Was du gemeldet hast, ist behoben.",
+      handed_over: "Eine Person hat deine Anfrage jetzt übernommen und antwortet dir.",
+    },
+    from: (host) =>
+      host
+        ? atHost("Beantwortet von den Betreibern des agentes.chat-Servers", "auf", host)
+        : "Beantwortet von agentes.chat.",
+    ai: "Ein KI-Assistent hat diese Antwort geschrieben.",
+    reply: (address) => ["Zum Antworten schreib an ", { mail: address }, "."],
+    why: "Du erhältst diese E-Mail, weil du auf agentes.chat um Hilfe gebeten hast.",
   },
 };

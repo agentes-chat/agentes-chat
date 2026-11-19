@@ -8,7 +8,7 @@ import {
   useMailSuggestedAddresses,
 } from "@agenteschat/client";
 import { LEVELS, type Level } from "@agenteschat/client/lib/access-levels";
-import { canTalk } from "@agenteschat/client/lib/audience";
+import { canTalk, managesAgent } from "@agenteschat/client/lib/audience";
 import { errorText, knownErrorText } from "@agenteschat/client/lib/errors";
 import { relativeTime } from "@agenteschat/client/lib/format";
 import {
@@ -33,7 +33,6 @@ import {
   setMailLevel,
   splitEmails,
 } from "@agenteschat/client/lib/mail";
-import { can } from "@agenteschat/client/lib/permissions";
 import {
   Alert,
   Button,
@@ -752,7 +751,7 @@ function WhoStep({
     const may = mailAccessOf(account, {
       userId: me.user.id,
       talks: canTalk(a),
-      managesAgent: can(org, "manage_agents") || a.ownerUserId === me.user.id,
+      managesAgent: managesAgent(a) || a.ownerUserId === me.user.id,
     });
     if (may.gives) return LEVELS;
     return may.removes ? LEVELS.slice(0, LEVELS.indexOf(current(a.id)) + 1) : [current(a.id)];

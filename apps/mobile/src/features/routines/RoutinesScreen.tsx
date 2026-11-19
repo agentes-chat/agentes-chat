@@ -1,4 +1,5 @@
 import { type Routine, useRoutines } from "@agenteschat/client";
+import { createsRoutinesFor } from "@agenteschat/client/lib/audience";
 import { routineStateTime, routineStateWords } from "@agenteschat/client/lib/routine-view";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -24,7 +25,7 @@ import { routineHref, widgetHref } from "../links/logic";
 import { mayCreate } from "../new/logic";
 import { AgentFace } from "../shared/Face";
 import { FirstUse, LoadFailed } from "../shared/FirstUse";
-import { useDirectory, useMeId, useNamesComputers, useNow, useOrgId, usePullRefresh } from "../shared/hooks";
+import { useDirectory, useNamesComputers, useNow, useOrgId, usePullRefresh } from "../shared/hooks";
 import { PushedLargeTitle } from "../shared/PushedLargeTitle";
 import { useNextText, useSay, useWhenText } from "./hooks";
 import {
@@ -40,6 +41,7 @@ import {
   type StatusFilter,
   whenIcon,
 } from "./logic";
+import { RoutineRunBars } from "./parts";
 import { RoutineHorizon } from "./RoutineHorizon";
 
 /** While a run works (or waits), the list is asked again this often: its state and its next run move on. */
@@ -64,7 +66,6 @@ export function RoutinesScreen() {
   const { t, i18n } = useTranslation();
   const orgId = useOrgId();
   const dir = useDirectory();
-  const meId = useMeId();
   const routines = useRoutines(orgId);
   const pull = usePullRefresh(routines.refetch);
   const now = useNow(60_000);
@@ -98,8 +99,9 @@ export function RoutinesScreen() {
     setQ("");
     setStatus("all");
   };
-  const ownsAgent = Boolean(meId) && dir.agents.some((a) => a.ownerUserId === meId);
-  const mayNew = mayCreate(useOrg().org, "routine", { ownsAgent });
+  // Some agent this person may make a routine for (`createsRoutinesFor`: they set up its routines and it answers them).
+  const createsRoutines = dir.agents.some((a) => createsRoutinesFor(a));
+  const mayNew = mayCreate(useOrg().org, "routine", { createsRoutines });
   // A section that comes or goes with a filter, or as a routine is paused or deleted, fades while the rest slide into
   // place; what shows when the screen opens doesn't fade section by section (as Drive's days).
   const reduced = useReducedMotion();
@@ -224,6 +226,7 @@ function AgentSection({ group, now, live }: { group: AgentGroup<Routine>; now: n
               subLines={2}
               {...(needsLook ? { subTone: "amber" as const } : {})}
               {...(next && !needsLook ? { belowText: next } : {})}
+              valueLeading={<RoutineRunBars routine={r} running={isRunning(r)} toRoutine />}
               chevron
               onPress={() => openRoutine(r)}
             />

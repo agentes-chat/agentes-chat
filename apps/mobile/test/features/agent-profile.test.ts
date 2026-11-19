@@ -435,7 +435,7 @@ describe("Perfil: o mês, com os limites do plano (ADR 0063 §5)", () => {
     const parts = await Bun.file(new URL("../../src/features/usage/parts.tsx", import.meta.url).pathname).text();
     expect(parts).toContain('const tone = c[PLAN_TONE[planLevel(shown.top?.used ?? 0, shown.state === "limited")]];');
     expect(parts).toContain('{ color: c[PLAN_TONE[planLevel(used, state === "limited")]] }');
-    expect(parts).toContain("const level = planLevel(w.used);");
+    expect(parts).toContain('const level = w.stale ? "ok" : planLevel(w.used);');
     expect(parts.match(/color=\{tone\}/g)).toHaveLength(2);
   });
 
@@ -514,7 +514,9 @@ describe("Perfil: agora, cada coisa uma vez", () => {
     expect(screen).toContain(
       "      {knows.data ? memoryKnows : knows.isError ? memoryFailed : null}\n      {/* What people told it to always do, under what it learned, as the web's Memória. */}\n      <GivenRules agentId={id} name={name} rightHand={rightHand} />",
     );
-    expect(screen).toContain('<MergeReposSection agentId={id} mayEdit={mine || can(org, "manage_agents")} />');
+    // Its owner or who manages it (the server's `canManage`): the "Edit agents" key alone doesn't reach every agent.
+    expect(screen).toContain("const decides = mine || managesAgent(agent);");
+    expect(screen).toContain("<MergeReposSection agentId={id} mayEdit={decides} />");
     expect(screen).toContain(
       '<GroupedHeader>{t("rightHand.settings.mine")}</GroupedHeader>\n            <RightHandMine',
     );
@@ -532,9 +534,21 @@ describe("an agent that doesn't answer me", () => {
   const admin = { permissions: ["manage_agents", "talk_to_agents"] } as unknown as OrgSummary;
   const member = { permissions: ["talk_to_agents"] } as unknown as OrgSummary;
 
-  test("Conversar on its page opens the locked conversation for who manages agents, not for a member outside", () => {
-    expect(listsAgent(admin, kept)).toBe(true);
+  test("Conversar on its page opens the locked conversation for who manages it, not for a member outside", async () => {
+    // What the server's `openDm` takes, as text (the screen is a component the tests can't render): whom it answers or
+    // who manages it (its `canManage`) starts one, one already there opens for anyone; editing it alone talks to nobody.
+    const screen = await Bun.file(
+      new URL("../../src/features/agents/AgentProfileScreen.tsx", import.meta.url).pathname,
+    ).text();
+    expect(screen).toMatch(
+      /disabled=\{\s*!\(\s*canTalk\(agent\) \|\|\s*managesAgent\(agent\) \|\|\s*dms\.data\?\.some\(\(d\) => d\.with\.type === "agent" && d\.with\.id === id\)\s*\)\s*\}/,
+    );
+    // The Agents list still names it for who manages it (the server's `canManage`), its lock saying whom it answers, and
+    // for who edits it; "Edit agents" alone doesn't reach someone's private agent (ADR 0085 addendum of 2026-11-17).
+    expect(listsAgent(admin, { ...kept, canManage: true })).toBe(true);
+    expect(listsAgent(admin, kept)).toBe(false);
     expect(listsAgent(member, kept)).toBe(false);
+    expect(listsAgent(member, { ...kept, canEdit: true })).toBe(true);
     expect(listsAgent(member, { ...kept, canTalk: true })).toBe(true);
   });
 

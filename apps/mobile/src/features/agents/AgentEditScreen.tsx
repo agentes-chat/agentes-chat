@@ -4,6 +4,8 @@ import {
   audienceModeKey,
   audienceOf,
   consultableLocked,
+  editsAgent,
+  managesAgent,
   modeOf,
   offersConsultable,
   reachShortKey,
@@ -12,7 +14,6 @@ import { engineOfBrain } from "@agenteschat/client/lib/brain";
 import { FIELD_LIMITS } from "@agenteschat/client/lib/field-limits";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { cleanHandle, handleAfterRename, handleProblemText, takenHandles } from "@agenteschat/client/lib/new-agent";
-import { can } from "@agenteschat/client/lib/permissions";
 import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -42,6 +43,7 @@ import { overLimit, TextArea } from "../shared/TextArea";
 import { BrakesSection } from "./BrakesSection";
 import { BudgetSection } from "./BudgetSection";
 import { openAgentDelete } from "./DeleteAgentScreen";
+import { EditorsSection } from "./EditorsSection";
 import { type AgentDraft, agentChanges, editableFields, fullLook } from "./edit";
 import { ErrorLine, HandleInput } from "./HandleInput";
 import { LookList } from "./LookPicker";
@@ -57,8 +59,9 @@ export const openAgentEdit = (id: string) => router.push({ pathname: "/agent-edi
 
 /**
  * "Editar agente", as the web's Configurações › Identidade and Instruções: name, its @ (Menções, which follows a
- * new name until typed), role, look and instructions for admins; the look only for
- * the agent's own person (the server's rules). One Salvar. The team's right hand (ADR 0137) is its name, @ and look
+ * new name until typed), role, look and instructions for who manages it; role and instructions for who edits it (its
+ * owner and its "Quem pode editar", ADR 0085 addendum of 2026-11-17); the look for the agent's own person (the
+ * server's rules). One Salvar. The team's right hand (ADR 0137) is its name, @ and look
  * only: its instructions are the product's, and it is never archived or deleted. A settings page (the bar's Salvar,
  * its spinner while it saves, the page locked under it), in the same groups, headers and fields as "Create agent".
  */
@@ -73,10 +76,11 @@ export function AgentEditScreen({ id }: { id: string }) {
   const agent = dir.agentById.get(id);
   const update = useUpdateAgent(useOrgId(), id);
   const ask = useWidenAsk(agent);
-  const admin = can(org, "manage_agents");
+  // Who manages this agent (the server's `canManage`: "Editar qualquer agente" where it reaches).
+  const admin = managesAgent(agent);
   const rightHand = isRightHand(agent);
   const owner = Boolean(meId && agent?.ownerUserId === meId);
-  const fields = editableFields({ admin, owner });
+  const fields = editableFields({ admin, editor: editsAgent(agent), owner });
   const onPlan = engineOfBrain(agent?.brain?.kind) !== "agent";
   const { personal, others } = usePersonalView();
   const saved = useMemo<AgentDraft | null>(
@@ -102,8 +106,8 @@ export function AgentEditScreen({ id }: { id: string }) {
   const nameMissing = Boolean(draft && fields.has("name") && !draft.name.trim());
   const tooLong = Boolean(draft && fields.has("instructions") && overLimit(draft.instructions, INSTRUCTIONS_LIMIT));
   const taken = useMemo(
-    () => takenHandles(dir.agents, [...dir.memberById.values()], id),
-    [dir.agents, dir.memberById, id],
+    () => takenHandles([...dir.agentById.values()], [...dir.memberById.values()], id),
+    [dir.agentById, dir.memberById, id],
   );
   const moved = Boolean(saved && draft && draft.handle !== saved.handle);
   const handleIssue = moved && draft ? handleProblemText(t, draft.handle, taken) : null;
@@ -276,6 +280,9 @@ export function AgentEditScreen({ id }: { id: string }) {
         </>
       ) : null}
 
+      {/* Who edits how it works, after who talks to it, as on the web (ADR 0085 addendum of 2026-11-17). */}
+      <EditorsSection agent={agent} />
+
       {rightHand ? (
         <>
           <Gap />
@@ -317,7 +324,7 @@ export function AgentEditScreen({ id }: { id: string }) {
               </Text>
             )}
           </GroupedList>
-          {!fields.has("name") ? <GroupedFooter>{t("mobile.agentEdit.adminsOnly")}</GroupedFooter> : null}
+          {!fields.has("instructions") ? <GroupedFooter>{t("mobile.agentEdit.adminsOnly")}</GroupedFooter> : null}
         </>
       )}
 

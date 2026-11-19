@@ -7,6 +7,7 @@ import {
   useRuleDescribe,
 } from "@agenteschat/client";
 import { ownActionName, routineVaultKey, splitOwnActions } from "@agenteschat/client/lib/approval-words";
+import { managesAgent } from "@agenteschat/client/lib/audience";
 import { formatTokensShort, formatUsd, whenAt } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { can } from "@agenteschat/client/lib/permissions";
@@ -16,14 +17,12 @@ import {
   healthWords,
   isRunAtWork,
   isStoppable,
-  pausedFix,
   routineChannelOf,
   routineStateTime,
   routineStateWords,
   runMessageLink,
   runOutcome,
   runPixelStatus,
-  runPixels,
   runsPerDay,
   stopWordsKey,
   usageContinueBlock,
@@ -68,7 +67,6 @@ import {
   useOrgId,
   usePullRefresh,
 } from "../shared/hooks";
-import { agentLook } from "../shared/logic";
 import { FocusLive, goBack, PushedHeader } from "../shared/parts";
 import { EventWebhookSetup } from "./EventWebhookSetup";
 import {
@@ -83,6 +81,7 @@ import {
 } from "./hooks";
 import {
   FIX_ICON,
+  fixFor,
   hasFired,
   isDoneOnce,
   isPaused,
@@ -92,7 +91,7 @@ import {
   routineTitle,
   targetIcon,
 } from "./logic";
-import { RunStrip } from "./RunPixels";
+import { RoutineRunBars } from "./parts";
 import { nextLabel } from "./rule";
 import { WebhookCard } from "./WebhookCard";
 
@@ -159,12 +158,13 @@ function Details({ routine: r, refetch }: { routine: Routine; refetch: () => Pro
     r.active && r.trigger.type === "schedule" && r.trigger.rule ? r.trigger.rule : null,
   );
   const nexts = described.data?.ok ? described.data.nextRuns.slice(0, 4) : r.nextRunAt ? [r.nextRunAt] : [];
-  const fix = r.canManage ? pausedFix(r) : null;
-  // "Trocar computador": the outage its run waits on, for whoever can move agents, where people connect their own
-  // computers (a Cloud workspace has one).
+  // Its one-tap fix, "Take over" only for who may make a routine for its agent (`fixFor`).
+  const fix = fixFor(r, dir.agentById.get(r.agentId));
+  // "Trocar computador": the outage its run waits on, for whoever manages its agent (the server's `canManage`), where
+  // people connect their own computers (a Cloud workspace has one).
   const selfHost = useEdition() === "selfhost";
   const outage =
-    selfHost && r.state === "waiting_computer" && r.waitingFor && can(org, "manage_agents")
+    selfHost && r.state === "waiting_computer" && r.waitingFor && managesAgent(dir.agentById.get(r.agentId))
       ? outages.outages.find((o) => o.machineId === r.waitingFor?.machineId)
       : undefined;
   const health = healthWords(r.health);
@@ -341,12 +341,7 @@ function Details({ routine: r, refetch }: { routine: Routine; refetch: () => Pro
                 </Text>
               ) : null}
               <View style={styles.strip}>
-                <RunStrip
-                  runs={runPixels(r.recentRuns)}
-                  color={agentLook(dir.agentById.get(r.agentId)).color}
-                  running={running}
-                  label={words.label(r)}
-                />
+                <RoutineRunBars routine={r} running={running} />
                 <Text variant="caption" tone="faint" style={styles.shrink}>
                   {words.caption(r, at)}
                 </Text>

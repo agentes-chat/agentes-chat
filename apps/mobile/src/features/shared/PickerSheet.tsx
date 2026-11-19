@@ -40,6 +40,8 @@ export interface PickOption {
   leading?: PickLeading | undefined;
   /** Red, for the action menus that come here ("Apagar conta"). */
   destructive?: boolean | undefined;
+  /** Its level in a tree (a folder picker): a guide line per level. Flat while the person searches. */
+  depth?: number | undefined;
 }
 
 export interface PickAsk {
@@ -248,6 +250,7 @@ export function PickerHost() {
                 {...(typed ? { labelParts: markTerms(o.label, [typed]) } : {})}
                 {...(o.sub ? { sub: o.sub } : {})}
                 {...(o.subLines ? { subLines: o.subLines } : {})}
+                {...(o.depth && !typed ? { depth: o.depth, labelLines: 0 } : {})}
                 {...(lead?.kind === "icon" ? { icon: lead.name } : {})}
                 {...(lead?.kind === "person"
                   ? { leading: <Face who={{ type: "person", id: lead.userId }} size={36} /> }

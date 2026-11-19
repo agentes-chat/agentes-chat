@@ -5,6 +5,7 @@ import {
   type AccountKind,
   type AccountLoginFailure,
   type AccountLoginState,
+  ANTIGRAVITY_MAC_PROTOCOL,
   ANTIGRAVITY_PROTOCOL,
   type AuthMethod,
   accountCodeAad,
@@ -65,7 +66,17 @@ import {
   SHARED_SIGN_INS,
   sharedSignIn,
 } from "@agenteschat/providers/plans";
-import { PLAN_PAUSE, planCheckedAt, planFull, planState } from "@agenteschat/ui/plan-state";
+import {
+  PLAN_PAUSE,
+  PLAN_STALE_MS,
+  planCheckedAt,
+  planFull,
+  planOwn,
+  planState,
+  resetSinceRead,
+  windowReadAt,
+  windowStale,
+} from "@agenteschat/ui/plan-state";
 import { recordAudit } from "./audit";
 import { liveModelLimits } from "./brains/select";
 import { BRAIN_PLAN_NAMES } from "./brains/types";
@@ -307,13 +318,17 @@ const runMayMoveTo = (row: Pick<MachineAccountRow, "kind" | "provider" | "authMe
 /** The accounts of an order of use that have a place in it (`MachineAccountView.movable`). */
 const movableRow = and(eq(machineAccounts.shared, true), eq(machineAccounts.status, "active"));
 
-/** People would see a difference: a window moved a point or more, its reset moved, one came or went, or the limit. */
+/**
+ * People would see a difference: a window moved a point or more, its reset moved, it was read again or carried over
+ * (`PlanWindow.at`), one came or went, or the limit.
+ */
 export function usageMoved(prev: PlanUsage | null | undefined, next: PlanUsage | null | undefined): boolean {
   if (!prev || !next) return Boolean(prev) !== Boolean(next);
   if (Boolean(prev.limited) !== Boolean(next.limited) || prev.windows.length !== next.windows.length) return true;
   return next.windows.some((w) => {
     const p = prev.windows.find((x) => x.kind === w.kind && x.label === w.label);
-    return !p || Math.abs(p.usedPercent - w.usedPercent) >= 1 || p.resetsAt !== w.resetsAt;
+    // A window read again after its number went out of date shows a number again, not how old it is.
+    return !p || Math.abs(p.usedPercent - w.usedPercent) >= 1 || p.resetsAt !== w.resetsAt || p.at !== w.at;
   });
 }
 
@@ -873,7 +888,11 @@ async function settleAccount(
  * engine keeps them, `noteModelLimit`), and on a plan whose models have their own limits a refusal with no window
  * full is a model's (`refusalScope`), not the account's.
  */
-function accountReading(provider: string | null, prev: PlanUsage | null | undefined, next: PlanUsage): PlanUsage {
+function accountReading(
+  provider: string | null,
+  prev: (PlanUsage & { checkedAt?: string }) | null | undefined,
+  next: PlanUsage,
+): PlanUsage & { checkedAt?: string } {
   const { limited, models: _, answered: __, ...rest } = next;
   const models = liveModelLimits(prev);
   const perModel = planOf(provider)?.limitsPerModel === true;
@@ -882,6 +901,8 @@ function accountReading(provider: string | null, prev: PlanUsage | null | undefi
     ...(limited && !(perModel && !planFull(next)) ? { limited } : {}),
     ...(models ? { models } : {}),
     ...(perModel && prev?.answered ? { answered: prev.answered } : {}),
+    // The sweep's last ask outlives a reading: it tells whether an out-of-date window was asked about already.
+    ...(prev?.checkedAt ? { checkedAt: prev.checkedAt } : {}),
   };
 }
 
@@ -1095,7 +1116,11 @@ export async function refreshAiAccounts(deps: MachineAccountHubDeps, userId: str
 /**
  * The sweep (every minute) that notices a plan freed before its stored reset (Claude's "reset for free", extra usage
  * bought, a new week): every account whose last reading is at its limit, or at the long-work pause line (`PLAN_PAUSE`)
- * with work waiting on it, is read again on its computer. A CLI login or a key gets the free probe every
+ * with work waiting on it, is read again on its computer, and so, once, is one whose window reset since its reading
+ * (`resetSinceRead`), so the meter doesn't keep a day-old reading. Also read again, while turns ran on the account
+ * since: once, a window whose own reading went out of date (`windowStale`: a turn's event that doesn't name a window
+ * keeps its old number, and a provider can start a new week early); and, for `PLAN_STALE_MS` after a refusal for
+ * the limit that a turn since got past, a window read before that refusal. A CLI login or a key gets the free probe every
  * `PLAN_RECHECK_MS`; a Claude setup token, which can't read its usage without a model call, a one-shot check on the
  * cheapest model every `TOKEN_RECHECK_MS` (`list.recheck`, protocol 62), refused while still full. A computer's own
  * sign-ins (`executors.ownUsage`, asked as `OWN_USAGE_ID`s) get the free probe too. A reading with room goes on from
@@ -1111,6 +1136,9 @@ export async function recheckStuckPlans(deps: Pick<MachineAccountHubDeps, "db" |
       kind: machineAccounts.kind,
       authMethod: machineAccounts.authMethod,
       usage: machineAccounts.usage,
+      lastSuccessAt: machineAccounts.lastSuccessAt,
+      lastFailureAt: machineAccounts.lastFailureAt,
+      lastFailureCause: machineAccounts.lastFailureCause,
     })
     .from(machineAccounts)
     .where(
@@ -1119,7 +1147,14 @@ export async function recheckStuckPlans(deps: Pick<MachineAccountHubDeps, "db" |
         isNotNull(machineAccounts.usage),
         sql`(${machineAccounts.usage}->>'limited' = 'true' or exists (
           select 1 from jsonb_array_elements(coalesce(${machineAccounts.usage}->'windows', '[]'::jsonb)) w
-          where (w->>'usedPercent')::numeric >= ${PLAN_PAUSE}))`,
+          where (w->>'usedPercent')::numeric >= ${PLAN_PAUSE}
+            or (w->>'resetsAt' <= ${new Date(now).toISOString()}
+              and w->>'resetsAt' > greatest(${machineAccounts.usage}->>'at', ${machineAccounts.usage}->>'checkedAt'))
+            or (coalesce(w->>'at', ${machineAccounts.usage}->>'at') < ${new Date(now - PLAN_STALE_MS).toISOString()}
+              and ${machineAccounts.lastSuccessAt} > (coalesce(w->>'at', ${machineAccounts.usage}->>'at'))::timestamptz)
+            or (${machineAccounts.lastFailureCause} = 'quota'
+              and ${machineAccounts.lastFailureAt} > ${new Date(now - PLAN_STALE_MS).toISOString()}::timestamptz
+              and ${machineAccounts.lastSuccessAt} > ${machineAccounts.lastFailureAt})))`,
       ),
     );
   const owned = (
@@ -1157,19 +1192,23 @@ export async function recheckStuckPlans(deps: Pick<MachineAccountHubDeps, "db" |
     accountId: string | undefined,
     usage: NonNullable<(typeof rows)[number]["usage"]>,
     token: boolean,
+    turns?: Pick<(typeof rows)[number], "lastSuccessAt" | "lastFailureAt" | "lastFailureCause">,
   ) => {
     const { state, used } = planState(usage, now);
     const key = usageWaitKey({ code: "plan_limit", machineId, kind, accountId });
-    if (state !== "limited" && !(used >= PLAN_PAUSE && waiting.has(key))) return;
-    const last = Date.parse(planCheckedAt(usage) ?? "") || 0;
-    if (now - last < (token ? TOKEN_RECHECK_MS : PLAN_RECHECK_MS)) return;
+    const every = token ? TOKEN_RECHECK_MS : PLAN_RECHECK_MS;
+    const asked = Date.parse(usage.checkedAt ?? "") || 0;
+    const stuck = state === "limited" || (used >= PLAN_PAUSE && waiting.has(key)) || resetSinceRead(usage, now);
+    if (!stuck || now - (Date.parse(planCheckedAt(usage) ?? "") || 0) < every) {
+      if (!turns || !outdated(usage, turns, asked, every, now)) return;
+    }
     const m = byMachine.get(machineId) ?? { fresh: [], tokens: [], own: [] };
     m.fresh.push(accountId ?? OWN_USAGE_ID[kind]);
     if (token && accountId) m.tokens.push(accountId);
     if (!accountId) m.own.push(kind);
     byMachine.set(machineId, m);
   };
-  for (const r of rows) if (r.usage) consider(r.machineId, kindOf(r), r.id, r.usage, r.authMethod === "setup_token");
+  for (const r of rows) if (r.usage) consider(r.machineId, kindOf(r), r.id, r.usage, r.authMethod === "setup_token", r);
   for (const o of owned) consider(o.machineId, o.kind, undefined, o.usage, false);
   const asked: string[] = [];
   await Promise.all(
@@ -1201,6 +1240,33 @@ export async function recheckStuckPlans(deps: Pick<MachineAccountHubDeps, "db" |
     }),
   );
   return asked;
+}
+
+/**
+ * A reading that turns on the account outran (`recheckStuckPlans`): a window whose own reading went out of date
+ * before the last turn, not asked about since it did; or, within `PLAN_STALE_MS` of a refusal for the limit that a
+ * turn since got past, a window of the plan's own (`planOwn`) read before that refusal, asked at most every `every`.
+ * `asked`: the sweep's last ask.
+ */
+function outdated(
+  usage: PlanUsage & { checkedAt?: string },
+  turns: { lastSuccessAt: Date | null; lastFailureAt: Date | null; lastFailureCause: string | null },
+  asked: number,
+  every: number,
+  now = Date.now(),
+) {
+  const worked = turns.lastSuccessAt?.getTime() ?? 0;
+  const readAt = (w: PlanUsage["windows"][number]) => Date.parse(windowReadAt(usage, w) ?? "") || 0;
+  const stale = usage.windows.filter((w) => windowStale(usage, w, now) && readAt(w) < worked);
+  if (stale.some((w) => asked < readAt(w) + PLAN_STALE_MS)) return true;
+  const refused = turns.lastFailureCause === "quota" ? (turns.lastFailureAt?.getTime() ?? 0) : 0;
+  return (
+    refused > now - PLAN_STALE_MS &&
+    worked > refused &&
+    now - asked >= every &&
+    // The plan's own: extra usage or a model's week the check never names again would ask every time.
+    usage.windows.some((w) => planOwn(w) && readAt(w) < refused)
+  );
 }
 
 /** The runner protocol from which a sign-in of that kind can be made for all agents where each is its own OS user. */
@@ -1487,7 +1553,9 @@ export async function beginAccountLogin(
     kind === "cursor"
       ? CURSOR_PROTOCOL
       : kind === "antigravity"
-        ? ANTIGRAVITY_PROTOCOL
+        ? machine.os === "darwin"
+          ? ANTIGRAVITY_MAC_PROTOCOL
+          : ANTIGRAVITY_PROTOCOL
         : kind === "grok"
           ? GROK_PROTOCOL
           : kind === "opencode"

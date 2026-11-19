@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import {
   ACCOUNT_LOGIN_TTL_MS,
   ACCOUNTS_PROTOCOL,
+  ANTIGRAVITY_MAC_PROTOCOL,
   accountCodeAad,
   BRAIN_PROTOCOL,
   CLAUDE_AUTH_PROTOCOL,
@@ -30,6 +31,7 @@ import {
   beginAccountLogin,
   ConflictError,
   cancelAccountLogin,
+  claudeAuthBucket,
   claudeAuthMethodFor,
   claudeAuthPolicy,
   createAgent,
@@ -923,10 +925,18 @@ test("Gemini's sign-in is made for all of its owner's agents from runner protoco
     );
     return (runner.calls.find((c) => c.action === "begin") as { shared?: boolean } | undefined)?.shared;
   };
+  await f.db.update(schema.machines).set({ os: "linux" }).where(eq(schema.machines.id, machineId));
   expect(await begun(SHARED_GEMINI_PROTOCOL)).toBe(true);
   // A Gemini Enterprise seat too.
   expect(await begun(SHARED_GEMINI_PROTOCOL, "enterprise")).toBe(true);
   expect(await begun(SHARED_GEMINI_PROTOCOL - 1)).toBeUndefined();
+  // A Mac signs in to Gemini from `ANTIGRAVITY_MAC_PROTOCOL` on: an older runner there refuses it.
+  await f.db
+    .update(schema.machines)
+    .set({ os: "darwin", protocol: ANTIGRAVITY_MAC_PROTOCOL })
+    .where(eq(schema.machines.id, machineId));
+  expect(await begun(ANTIGRAVITY_MAC_PROTOCOL)).toBe(true);
+  await expect(begun(ANTIGRAVITY_MAC_PROTOCOL - 1)).rejects.toMatchObject({ code: "account.runner_old" });
 });
 
 test("Claude: an account another agent thinks with signs in again as a login of its own, under the account's name", async () => {
@@ -2034,6 +2044,7 @@ test("the Claude sign-in policy: no row is setup-token for the listed workspaces
     method: "setup_token",
     rollout: "selected",
     orgIds: [],
+    percent: 0,
     changedAt: null,
   });
   const at = new Date("2026-03-02T10:00:00Z");
@@ -2042,7 +2053,7 @@ test("the Claude sign-in policy: no row is setup-token for the listed workspaces
     { method: "cli_login", rollout: "selected", orgIds: [f.org.id.toUpperCase(), f.org.id] },
     at,
   );
-  expect(set).toEqual({ method: "cli_login", rollout: "selected", orgIds: [f.org.id], changedAt: at });
+  expect(set).toEqual({ method: "cli_login", rollout: "selected", orgIds: [f.org.id], percent: 0, changedAt: at });
   // The same again changes nothing, its time included.
   const again = await setClaudeAuthPolicy(f.db, { method: "cli_login", rollout: "selected", orgIds: [f.org.id] });
   expect(again.changedAt).toEqual(at);
@@ -2076,13 +2087,39 @@ test("the Claude sign-in policy: no row is setup-token for the listed workspaces
   ).rejects.toMatchObject({ code: "claude_auth.unknown_org" });
 
   const other = "0193dddd-0000-4000-8000-0000000000fe";
-  const listed = { method: "cli_login" as const, rollout: "selected" as const, orgIds: [f.org.id] };
+  const listed = { method: "cli_login" as const, rollout: "selected" as const, orgIds: [f.org.id], percent: 0 };
   expect(claudeAuthMethodFor(listed, f.org.id, true)).toBe("cli_login");
   expect(claudeAuthMethodFor(listed, other, true)).toBe("setup_token");
   expect(claudeAuthMethodFor({ ...listed, rollout: "all" }, other, true)).toBe("cli_login");
   expect(claudeAuthMethodFor({ ...listed, method: "setup_token", rollout: "all" }, f.org.id, true)).toBe("setup_token");
   // Where the agents are the runner's own user, always Claude's own login.
   expect(claudeAuthMethodFor({ ...listed, method: "setup_token" }, f.org.id, false)).toBe("cli_login");
+
+  // A percent: the listed ones plus the workspaces whose stable bucket is under it; a percent kept only with `percent`.
+  expect(claudeAuthBucket("0193DDDD-0000-4000-8000-0000000000FE")).toBe(claudeAuthBucket(other));
+  const ids = Array.from({ length: 1000 }, (_, i) => `0193dddd-0000-4000-8000-${String(i).padStart(12, "0")}`);
+  const share = (percent: number) =>
+    ids.filter((id) => claudeAuthMethodFor({ ...listed, rollout: "percent", percent }, id, true) === "cli_login");
+  expect(share(0)).toEqual([]);
+  expect(share(100)).toHaveLength(1000);
+  // Pinned: a service that decides the same rollout outside core must give these same answers.
+  expect(ids.slice(0, 5).map(claudeAuthBucket)).toEqual([12, 96, 82, 17, 68]);
+  expect(share(20).length).toBeGreaterThan(150);
+  expect(share(20).length).toBeLessThan(250);
+  // Raising it only adds workspaces.
+  expect(share(30).filter((id) => !share(20).includes(id))).toHaveLength(share(30).length - share(20).length);
+  expect(claudeAuthMethodFor({ ...listed, rollout: "percent", percent: 0 }, f.org.id, true)).toBe("cli_login");
+  expect(claudeAuthMethodFor({ ...listed, method: "setup_token", rollout: "percent", percent: 100 }, other, true)).toBe(
+    "setup_token",
+  );
+  const pct = await setClaudeAuthPolicy(f.db, { method: "cli_login", rollout: "percent", orgIds: [], percent: 20 });
+  expect(pct).toMatchObject({ rollout: "percent", percent: 20 });
+  expect(
+    (await setClaudeAuthPolicy(f.db, { method: "cli_login", rollout: "all", orgIds: [], percent: 20 })).percent,
+  ).toBe(0);
+  await expect(
+    setClaudeAuthPolicy(f.db, { method: "cli_login", rollout: "percent", orgIds: [], percent: 101 }),
+  ).rejects.toBeInstanceOf(ValidationError);
 });
 
 test("a new Claude sign-in for all agents takes the policy's method once; signing in again keeps the row's", async () => {

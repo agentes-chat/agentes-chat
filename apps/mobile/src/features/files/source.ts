@@ -1,4 +1,4 @@
-import { type ApiClient, type ArtifactDetail, keys, useApi } from "@agenteschat/client";
+import { type ApiClient, type ArtifactDetail, isLiveFileKind, keys, useApi } from "@agenteschat/client";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Directory, File, Paths } from "expo-file-system";
 import * as MediaLibrary from "expo-media-library";
@@ -41,6 +41,18 @@ async function remote(api: ApiClient, orgId: string, id: string, version?: numbe
  */
 const localCopies = new Map<string, string>();
 export const rememberLocalCopy = (id: string, uri: string) => localCopies.set(id, uri);
+
+/**
+ * Pictures already drawn once in this run, by their cache key: one coming back (its row mounted again as the list
+ * scrolls, the conversation opened again) shows at once from the cache, where a fade each time read as a flicker.
+ */
+const drawn = new Set<string>();
+/** A picture's fade in, its first time only (`drawn`). */
+export const pictureFade = (key: string) => (drawn.has(key) ? 0 : 160);
+/** Its `onLoad`: drawn once, it never fades in again in this run. */
+export const pictureDrawn = (key: string) => {
+  drawn.add(key);
+};
 
 /**
  * The link to show a file; a file this phone just sent, from its own copy. Shared and refreshed before it expires, for
@@ -123,7 +135,11 @@ export async function localCopy(
   const r =
     source.from === "export"
       ? {
-          uri: api.artifacts.fileUrl(orgId, a.id, { version: a.shownVersion, format: source.format }),
+          // A live file is exported as it stands now (ADR 0198): its versions are snapshots, not what people see.
+          uri: api.artifacts.fileUrl(orgId, a.id, {
+            ...(isLiveFileKind(a.kind) ? {} : { version: a.shownVersion }),
+            ...(source.format ? { format: source.format } : {}),
+          }),
           headers: appHeaders(await readCookie()),
         }
       : await remote(api, orgId, a.id, a.shownVersion);

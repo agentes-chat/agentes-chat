@@ -8,12 +8,14 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Text as RNText, StyleSheet, View } from "react-native";
 import { Icon, type IconName, LineIcon, PressScale, Text } from "@/ui";
+import { useMessageCardCorners } from "../chat/look";
 import { MessageText } from "../chat/MessageText";
+import { LiveCover } from "../live-files/shared/LiveCover";
 import { useColors, useOrgId } from "../shared/hooks";
 import { MONO } from "../shared/parts";
-import { extensionOf, type FileRef, fileInfo } from "./logic";
+import { extensionOf, type FileRef, fileInfo, isCodeName } from "./logic";
 import { openFile } from "./open";
-import { useRemoteFile } from "./source";
+import { pictureDrawn, pictureFade, useRemoteFile } from "./source";
 
 /**
  * An attachment as a tile (as on the web): what it holds drawn small on top (its cover: a document's start, a table's
@@ -30,12 +32,6 @@ const COVER_FILES = 3;
 const COVER_LINES = 10;
 /** The start of a document drawn on its cover (cut at a line). */
 const COVER_CHARS = 700;
-/** Code files read in the code font; any other text in the app's. */
-const CODE_EXT = new Set(
-  "ts tsx js jsx mjs cjs json py rb go rs java kt swift c h cc cpp hpp cs php sh bash zsh yml yaml toml sql css scss html xml vue svelte lua dart".split(
-    " ",
-  ),
-);
 /** A signed percentage ("+12%", "−3%"): its cell takes the up or down tone. */
 const SIGNED = /^([+\-−])\s?\d[\d.,]*\s?%$/;
 /** A column of numbers, amounts or percentages lines up on the right. */
@@ -50,6 +46,9 @@ const KIND_ICON: Record<Exclude<ArtifactContent["kind"], "file">, IconName> = {
   block: "globe",
   poll: "check",
   choices: "check",
+  spreadsheet: "spreadsheet",
+  slides: "slides",
+  canvas: "canvas",
 };
 
 export interface TileFile {
@@ -80,6 +79,8 @@ export function AttachmentTile({
 }) {
   const { t, i18n } = useTranslation();
   const c = useColors();
+  // In a message, the corners every card there has (a bubble's in bubbles); its own shape elsewhere.
+  const cardCorners = useMessageCardCorners();
   const info = detail ? fileInfo(detail) : null;
   const content = detail?.content;
   const name = detail?.kind === "file" ? info?.name || file.title : detail?.title || file.title;
@@ -102,7 +103,7 @@ export function AttachmentTile({
       disabled={!detail}
       accessibilityRole={picture ? "imagebutton" : "button"}
       accessibilityLabel={`${name}, ${meta}`}
-      style={[styles.tile, { width, backgroundColor: c.raised, borderColor: picture ? c.line : c.line2 }]}
+      style={[styles.tile, { width, backgroundColor: c.raised, borderColor: picture ? c.line : c.line2 }, cardCorners]}
     >
       <View
         style={[
@@ -118,7 +119,7 @@ export function AttachmentTile({
             {failed ? <TypeCover icon="file" label={extensionOf(file.title).toUpperCase()} /> : null}
           </View>
         ) : (
-          <Cover detail={detail} fileId={file.id} />
+          <Cover detail={detail} fileId={file.id} width={width} height={single ? 150 : 104} />
         )}
       </View>
       {picture ? null : (
@@ -154,6 +155,8 @@ function fileIconOf(type: string | undefined): IconName {
     case "pdf":
     case "document":
       return "doc";
+    case "slides":
+      return "slides";
     default:
       return "file";
   }
@@ -169,6 +172,11 @@ function metaOf(t: TFunction, detail: ArtifactDetail, locale: string) {
   }
   const kind = t(`artifacts.kind.${content.kind}`);
   if (content.kind === "table") return `${kind} · ${t("artifacts.rows", { count: content.rows.length })}`;
+  // A live file says how big it is, not its version: it is always as it is now (ADR 0196).
+  if (content.kind === "spreadsheet")
+    return `${kind} · ${t("mobile.live.card.sheets", { count: content.preview.sheets })}`;
+  if (content.kind === "slides") return `${kind} · ${t("mobile.live.card.slides", { count: content.preview.count })}`;
+  if (content.kind === "canvas") return kind;
   if (content.kind === "diff") {
     const total = { added: 0, removed: 0 };
     for (const f of content.files) {
@@ -181,9 +189,23 @@ function metaOf(t: TFunction, detail: ArtifactDetail, locale: string) {
   return `${kind} · ${t("artifacts.version", { version: detail.shownVersion })}`;
 }
 
-function Cover({ detail, fileId }: { detail: ArtifactDetail; fileId: string }) {
+function Cover({
+  detail,
+  fileId,
+  width,
+  height,
+}: {
+  detail: ArtifactDetail;
+  fileId: string;
+  width: number;
+  height: number;
+}) {
   const content = detail.content;
   switch (content.kind) {
+    case "spreadsheet":
+    case "slides":
+    case "canvas":
+      return <LiveCover content={content} width={width} height={height} />;
     case "document":
       return <TextCover markdown={documentStart(content.markdown, COVER_CHARS)} />;
     case "table":
@@ -201,7 +223,7 @@ function Cover({ detail, fileId }: { detail: ArtifactDetail; fileId: string }) {
           return <TableCover columns={head} rows={rows} />;
         }
         if (info.view === "markdown") return <TextCover markdown={documentStart(text, COVER_CHARS)} />;
-        return <LinesCover text={text} code={CODE_EXT.has(ext)} />;
+        return <LinesCover text={text} code={isCodeName(`x.${ext}`)} />;
       }
       return <TypeCover icon={fileIconOf(info.type)} label={ext.toUpperCase()} />;
     }
@@ -305,7 +327,8 @@ function PictureCover({ fileId, version }: { fileId: string; version: number }) 
           source={{ uri: link.data.uri, headers: link.data.headers, cacheKey: `${fileId}@${version}` }}
           recyclingKey={`${fileId}@${version}`}
           contentFit="cover"
-          transition={160}
+          transition={pictureFade(`${fileId}@${version}`)}
+          onLoad={() => pictureDrawn(`${fileId}@${version}`)}
           style={StyleSheet.absoluteFill}
           onError={() => setFailed(true)}
           accessible={false}

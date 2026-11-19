@@ -156,6 +156,12 @@ const PLACES: [what: string, table: string, value: string, where?: string][] = [
   ["a notification's words", "notifications", "latest::text"],
   ["what a member wrote to ask for help", "support_requests", "text"],
   ["what the thing they reported says", "support_requests", "about"],
+  [
+    "the operator's reply to them, in the job of its email",
+    "outbox",
+    "payload->'template'->>'text'",
+    "payload->'template'->>'kind' = 'support_reply'",
+  ],
 ];
 
 const TABLES = `
@@ -238,7 +244,12 @@ beforeAll(async () => {
   });
   // A server that provisions computers lists the workspaces waiting for one: the only read its setting changes.
   const config = { ...t.config, MACHINE_PROVISIONING: "external" as const };
-  const app = createOperatorApp({ db: t.db, config, version: "test", log: createLogger("error") }, TOKEN, READ, REVEAL);
+  const app = createOperatorApp(
+    { db: t.db, config, version: "test", log: createLogger("error"), emails: true },
+    TOKEN,
+    READ,
+    REVEAL,
+  );
   as = (token) => async (path, json) =>
     app.request(`/api/operator/v1${path}`, {
       headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
@@ -759,6 +770,29 @@ beforeAll(async () => {
     authorType: "person",
     authorId: ownerId,
   });
+  // A live file's document and a picture in it (ADR 0196): its meters read their sizes, never what they hold.
+  await db.insert(schema.liveDocs).values({
+    orgId,
+    artifactId: file?.id ?? "",
+    kind: "document",
+    state: "canary-live-state",
+    stateBytes: 17,
+    editedByType: "person",
+    editedById: ownerId,
+  });
+  await db.insert(schema.liveAssets).values({
+    id: crypto.randomUUID(),
+    orgId,
+    artifactId: file?.id ?? "",
+    blobKey: "canary-live-blob",
+    contentType: "image/png",
+    size: 12,
+    sha256: "canary-live-digest",
+    source: "upload",
+    origin: { url: "https://example.com/canary-live-picture.png", credit: "canary credit" },
+    createdByType: "person",
+    createdById: ownerId,
+  });
   await db.insert(schema.skillFiles).values({
     orgId,
     skillId: skill?.id ?? "",
@@ -858,6 +892,15 @@ beforeAll(async () => {
     .insert(schema.machineProvisioning)
     .values({ orgId: waiting?.id ?? "", state: "preparing", step: "installing", stage: "apps", since: new Date() });
 
+  // The operator answered that request in its own words: until the email goes out, its job holds them.
+  const replied = await as(REVEAL)(`/reveal/orgs/${orgId}/replies`, {
+    requestId: confidential.requestId,
+    text: "canary reply words",
+    operator: "someone",
+    assistedByAi: true,
+  });
+  expect(replied.status).toBe(200);
+
   // The secrets the server made itself, as it stored them.
   for (const s of await db.select({ token: schema.sessions.token }).from(schema.sessions)) hidden.push(s.token);
   for (const a of await db.select({ password: schema.accounts.password }).from(schema.accounts)) {
@@ -879,6 +922,7 @@ beforeAll(async () => {
   ]);
   const today = new Date().toISOString().slice(0, 10);
   const days = `from=${today}&to=${today}`;
+  const hours = `from=${new Date(Date.now() - 3600_000).toISOString()}&to=${new Date(Date.now() + 3600_000).toISOString()}`;
   const ref = (text: string, inOrg = true) =>
     `/resolve?ref=${encodeURIComponent(text)}${inOrg ? `&orgId=${orgId}` : ""}`;
   const review = "reason=a%20report&operator=someone";
@@ -897,6 +941,8 @@ beforeAll(async () => {
     `/analytics/connectors/github?${days}`,
     `/analytics/connectors/gmail?${days}`,
     `/analytics/work?${days}`,
+    ...["brain", "model"].map((by) => `/analytics/run-timings?${hours}&by=${by}`),
+    `/analytics/run-timings?${hours}&orgId=${orgId}&agentId=${agentId}`,
     `/analytics/ai-accounts?${days}`,
     "/ai-accounts?limit=200",
     "/claude-auth",
@@ -1006,6 +1052,7 @@ beforeAll(async () => {
     ["/jobs?stuck=maybe", 400],
     ["/events?after=nope", 400],
     ["/analytics", 400],
+    [`/analytics/run-timings?${days}`, 400],
     ["/nope", 404],
   ];
 });

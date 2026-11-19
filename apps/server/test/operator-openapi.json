@@ -3,7 +3,7 @@
   "info": {
     "title": "agentes.chat operator API",
     "version": "test",
-    "description": "Workspace and account lookups, what a run did and why a message started one or none, what a workspace connected, recorded, asked and scheduled, what a person was notified of and reaches, the messages no run answered, the job queue, the emails queued to an address and what model calls spent, the times a member asked for help, one piece of what a workspace wrote read with a reason (the reveal door), workspace standing, billing holds and limits (ADR 0079), a workspace's logo and accent color (ADR 0193), the extra hostnames this server answers on with their look (ADR 0194), outside collaborators (ADR 0191), the events feed and review blocks, the workspaces' computers from an external provisioner, who may sign up (the waiting list and early-access invitations, ADR 0078), how new Claude sign-ins for all agents are made (ADR 0150), and how connectors are used (ADR 0103), for the people who run this instance (ADR 0056)."
+    "description": "Workspace and account lookups, what a run did and why a message started one or none, what a workspace connected, recorded, asked and scheduled, what a person was notified of and reaches, the messages no run answered, the job queue, the emails queued to an address and what model calls spent, the times a member asked for help, one piece of what a workspace wrote read with a reason and a member's support request answered by email (the reveal door), a workspace told afterwards that its content was read to investigate suspected abuse, workspace standing, billing holds and limits (ADR 0079), a workspace's logo and accent color (ADR 0193), the extra hostnames this server answers on with their look (ADR 0194), outside collaborators (ADR 0191), the events feed and review blocks, the workspaces' computers from an external provisioner, who may sign up (the waiting list and early-access invitations, ADR 0078), how new Claude sign-ins for all agents are made (ADR 0150), and how connectors are used (ADR 0103), for the people who run this instance (ADR 0056)."
   },
   "servers": [
     {
@@ -651,7 +651,7 @@
           },
           "type": {
             "type": "string",
-            "description": "`user.signed_up`, `session.created`, `user.deletion_requested`, `user.deletion_canceled`, `user.deleted`, `organization.created`, `organization.deletion_requested`, `organization.deletion_canceled`, `organization.deleted`, `invitation.created`, `agent.created`, `agent.deleted`, `mail.sent`, `run.finished`, `run.hop_limit`, `task.finished`, `desktop_control.ended`, `content.viewed`, `support.requested`, `platform_ai.threshold`, `account.failure`, `surface.cap_reached`, `outside_access.granted`, `outside_access.denied` or `outside_access.ended` (ADR 0056 §5 lists each one's `data`; ADR 0191 the last three's). Ignore types you don't know: new ones keep v1."
+            "description": "`user.signed_up`, `session.created`, `user.deletion_requested`, `user.deletion_canceled`, `user.deleted`, `organization.created`, `organization.deletion_requested`, `organization.deletion_canceled`, `organization.deleted`, `invitation.created`, `agent.created`, `agent.deleted`, `mail.sent`, `run.finished`, `run.hop_limit`, `task.finished`, `desktop_control.ended`, `content.viewed`, `support.requested`, `support.replied`, `platform_ai.threshold`, `account.failure`, `surface.cap_reached`, `outside_access.granted`, `outside_access.denied` or `outside_access.ended` (ADR 0056 §5 lists each one's `data`; ADR 0191 the last three's). Ignore types you don't know: new ones keep v1."
           },
           "orgId": {
             "type": ["string", "null"],
@@ -1923,7 +1923,7 @@
                   "properties": {
                     "cause": {
                       "type": "string",
-                      "description": "`brain_unavailable:<code>` (a wait for its computer: `busy` for room, `offline`, `standby`, …) or `provider_outage`. Ignore values you don't know."
+                      "description": "`brain_unavailable:<code>` (a wait for its computer: `busy` for room, `machine_offline`, `machine_paused`, …) or `provider_outage`. Ignore values you don't know."
                     },
                     "waits": {
                       "type": "integer",
@@ -2396,7 +2396,7 @@
                   "properties": {
                     "cause": {
                       "type": "string",
-                      "description": "`brain_unavailable:<code>` (a wait for its computer: `busy` for room, `offline`, `standby`, …) or `provider_outage`. Ignore values you don't know."
+                      "description": "`brain_unavailable:<code>` (a wait for its computer: `busy` for room, `machine_offline`, `machine_paused`, …) or `provider_outage`. Ignore values you don't know."
                     },
                     "waits": {
                       "type": "integer",
@@ -2560,6 +2560,189 @@
           }
         },
         "required": ["from", "to", "bucket", "totals", "series", "more", "orgId", "agents"]
+      },
+      "OperatorRunTimings": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "by": {
+            "type": "string",
+            "enum": ["brain", "model"]
+          },
+          "runs": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Runs created in the window, with the filters."
+          },
+          "profiled": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Of them, the ones that kept at least one claim's stages."
+          },
+          "stages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "brain": {
+                  "type": ["string", "null"],
+                  "description": "What the runs thought with: `model` (a provider's API) or a coding CLI. `other`: none the server knows. Null: runs that had no turn yet."
+                },
+                "model": {
+                  "type": ["string", "null"],
+                  "description": "With `by=model`: the model of the run's latest turn, null when it had none. Else always null."
+                },
+                "stage": {
+                  "type": "string",
+                  "description": "`claim`, `context`, `model` (each turn), `persist`, `events`… `other`: a name not shaped like one the server writes."
+                },
+                "count": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Stages measured, not runs: a run has one `model` per turn."
+                },
+                "medianMs": {
+                  "type": ["integer", "null"]
+                },
+                "p90Ms": {
+                  "type": ["integer", "null"]
+                },
+                "p99Ms": {
+                  "type": ["integer", "null"]
+                },
+                "maxMs": {
+                  "type": ["integer", "null"]
+                }
+              },
+              "required": ["brain", "model", "stage", "count", "medianMs", "p90Ms", "p99Ms", "maxMs"]
+            },
+            "description": "By brain, then model, then the slowest median first. At most 300: the most measured."
+          },
+          "stagesMore": {
+            "type": "boolean",
+            "description": "More stages than were listed."
+          },
+          "computerStarts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "brain": {
+                  "type": ["string", "null"],
+                  "description": "What the runs thought with: `model` (a provider's API) or a coding CLI. `other`: none the server knows. Null: runs that had no turn yet."
+                },
+                "model": {
+                  "type": ["string", "null"],
+                  "description": "With `by=model`: the model of the run's latest turn, null when it had none. Else always null."
+                },
+                "turns": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Turns on a computer that said how they started."
+                },
+                "warm": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Of them, on a process already open."
+                },
+                "initMedianMs": {
+                  "type": ["integer", "null"],
+                  "description": "A new process until it said it was ready."
+                },
+                "initP90Ms": {
+                  "type": ["integer", "null"]
+                },
+                "initP99Ms": {
+                  "type": ["integer", "null"]
+                },
+                "warmFirstEventMedianMs": {
+                  "type": ["integer", "null"],
+                  "description": "Turn start to its first event."
+                },
+                "warmFirstEventP90Ms": {
+                  "type": ["integer", "null"]
+                },
+                "warmFirstEventP99Ms": {
+                  "type": ["integer", "null"]
+                },
+                "coldFirstEventMedianMs": {
+                  "type": ["integer", "null"]
+                },
+                "coldFirstEventP90Ms": {
+                  "type": ["integer", "null"]
+                },
+                "coldFirstEventP99Ms": {
+                  "type": ["integer", "null"]
+                }
+              },
+              "required": [
+                "brain",
+                "model",
+                "turns",
+                "warm",
+                "initMedianMs",
+                "initP90Ms",
+                "initP99Ms",
+                "warmFirstEventMedianMs",
+                "warmFirstEventP90Ms",
+                "warmFirstEventP99Ms",
+                "coldFirstEventMedianMs",
+                "coldFirstEventP90Ms",
+                "coldFirstEventP99Ms"
+              ]
+            },
+            "description": "By brain, then model. At most 300: the ones with most turns."
+          },
+          "waits": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "cause": {
+                  "type": "string",
+                  "description": "`brain_unavailable:<code>`, a wait for its computer or a sign-in on it, by its code: `busy` for room, `machine_offline`, `not_logged_in`, … `other`: not shaped like one. Ignore values you don't know."
+                },
+                "brain": {
+                  "type": ["string", "null"],
+                  "description": "What the runs thought with: `model` (a provider's API) or a coding CLI. `other`: none the server knows. Null: runs that had no turn yet."
+                },
+                "model": {
+                  "type": ["string", "null"],
+                  "description": "With `by=model`: the model of the run's latest turn, null when it had none. Else always null."
+                },
+                "waits": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "runs": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Distinct runs that waited."
+                },
+                "medianSec": {
+                  "type": ["integer", "null"]
+                },
+                "p90Sec": {
+                  "type": ["integer", "null"]
+                },
+                "p99Sec": {
+                  "type": ["integer", "null"]
+                },
+                "totalSec": {
+                  "type": ["integer", "null"]
+                }
+              },
+              "required": ["cause", "brain", "model", "waits", "runs", "medianSec", "p90Sec", "p99Sec", "totalSec"]
+            },
+            "description": "The waits for a computer alone (a provider's outage is not among them). By brain, then model, then most waits first, at most 300: the most frequent. Each wait lasts until the run's next step, its end, or the earlier of now and `to`."
+          }
+        },
+        "required": ["from", "to", "by", "runs", "profiled", "stages", "stagesMore", "computerStarts", "waits"]
       },
       "OperatorAiAccounts": {
         "type": "object",
@@ -2979,6 +3162,55 @@
                   "type": ["string", "null"],
                   "description": "`turn` or `probe`."
                 },
+                "usage": {
+                  "type": ["object", "null"],
+                  "properties": {
+                    "limited": {
+                      "type": "boolean",
+                      "description": "The plan refused a request for its limit."
+                    },
+                    "checkedAt": {
+                      "type": ["string", "null"],
+                      "description": "When the server last asked its computer to read a plan stuck at its limit again."
+                    },
+                    "windows": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "five_hour",
+                              "seven_day",
+                              "seven_day_opus",
+                              "seven_day_sonnet",
+                              "monthly",
+                              "other"
+                            ],
+                            "description": "`other`: a window the list has no word for; never the provider's own name for it."
+                          },
+                          "usedPercent": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "resetsAt": {
+                            "type": ["string", "null"]
+                          },
+                          "at": {
+                            "type": ["string", "null"],
+                            "description": "When this window was last read, where that is before `usageAt`: a later reading that didn't name it kept the older one. Null: at `usageAt`."
+                          }
+                        },
+                        "required": ["kind", "usedPercent", "resetsAt", "at"]
+                      },
+                      "description": "At most 10."
+                    }
+                  },
+                  "required": ["limited", "checkedAt", "windows"],
+                  "description": "Its plan's windows as its computer last reported them (`usageAt`); null: none."
+                },
                 "runnerVersion": {
                   "type": ["string", "null"]
                 },
@@ -3009,6 +3241,7 @@
                 "lastFailureAt",
                 "usageAt",
                 "usageSource",
+                "usage",
                 "runnerVersion",
                 "protocol"
               ]
@@ -3069,12 +3302,17 @@
           {
             "type": "object",
             "properties": {
+              "percent": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              },
               "changedAt": {
                 "type": ["string", "null"],
                 "description": "When it last changed; null: never."
               }
             },
-            "required": ["changedAt"]
+            "required": ["percent", "changedAt"]
           }
         ]
       },
@@ -3086,8 +3324,8 @@
           },
           "rollout": {
             "type": "string",
-            "enum": ["selected", "all"],
-            "description": "`selected`: only the workspaces in `orgIds`. `all`: every workspace."
+            "enum": ["selected", "percent", "all"],
+            "description": "`selected`: only the workspaces in `orgIds`. `percent`: those plus `percent` of all workspaces, picked by a stable hash of the workspace's id (raising it only adds workspaces). `all`: every workspace."
           },
           "orgIds": {
             "type": "array",
@@ -3097,6 +3335,12 @@
             },
             "maxItems": 500,
             "description": "Deduplicated; each must exist."
+          },
+          "percent": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "With `percent`: the share of workspaces, 0–100 (0 when left out). Kept as 0 with any other rollout."
           }
         },
         "required": ["method", "rollout", "orgIds"]
@@ -3293,6 +3537,7 @@
                     "channel",
                     "dm",
                     "task_conversation",
+                    "file_conversation",
                     "message",
                     "run",
                     "task",
@@ -3300,7 +3545,7 @@
                     "computer",
                     "ai_account"
                   ],
-                  "description": "`user`: an account (by its id) or a member (by handle). `dm`: a direct conversation. `task_conversation`: the channel a task's conversation is in. `file`: a file in the Drive. `computer`: a connected computer. `ai_account`: a sign-in to an AI plan on a computer."
+                  "description": "`user`: an account (by its id) or a member (by handle). `dm`: a direct conversation. `task_conversation`: the channel a task's conversation is in. `file_conversation`: the channel a live file's conversation is in. `file`: a file in the Drive. `computer`: a connected computer. `ai_account`: a sign-in to an AI plan on a computer."
                 },
                 "id": {
                   "type": "string"
@@ -3542,11 +3787,11 @@
                 },
                 "name": {
                   "type": "string",
-                  "description": "A channel's name. A direct or a task's conversation's is made up."
+                  "description": "A channel's name. A direct, a task's or a file's conversation's is made up."
                 },
                 "kind": {
                   "type": "string",
-                  "description": "`channel`, `dm` or `task`."
+                  "description": "`channel`, `dm`, `task` or `file`."
                 },
                 "visibility": {
                   "type": "string",
@@ -4522,6 +4767,80 @@
             },
             "required": ["calls", "input", "output", "cacheRead", "cacheWrite", "costUsd", "byModel"]
           },
+          "claims": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "endedAt": {
+                  "type": ["string", "null"],
+                  "description": "When the claim ended; null: it was kept without it."
+                },
+                "totalMs": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Its stages' time in all."
+                },
+                "queries": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "The SQL statements it issued."
+                },
+                "stages": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "stage": {
+                        "type": "string",
+                        "description": "`claim`, `context`, `model#1` (the turn it is of), `persist`, `events`… `other`: a name not shaped like one the server writes."
+                      },
+                      "ms": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "queries": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": ["stage", "ms", "queries"]
+                  },
+                  "description": "In the order they ran, at most 200."
+                },
+                "stagesCut": {
+                  "type": "boolean",
+                  "description": "It kept more than 200 stages."
+                },
+                "computerTurns": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "warm": {
+                        "type": "boolean",
+                        "description": "On a process already open."
+                      },
+                      "initMs": {
+                        "type": ["integer", "null"],
+                        "minimum": 0,
+                        "description": "A new process until it said it was ready."
+                      },
+                      "firstEventMs": {
+                        "type": ["integer", "null"],
+                        "minimum": 0,
+                        "description": "Turn start to its first event."
+                      }
+                    },
+                    "required": ["warm", "initMs", "firstEventMs"]
+                  },
+                  "description": "How each of its turns on a computer started, as the computer said, at most 50."
+                }
+              },
+              "required": ["endedAt", "totalMs", "queries", "stages", "stagesCut", "computerTurns"]
+            },
+            "description": "Where the time went each time a worker took the run up (a claim), oldest first: the last 10 the run kept, none on a run that kept none. A wait between two claims is in neither."
+          },
           "machine": {
             "type": ["object", "null"],
             "properties": {
@@ -4553,7 +4872,7 @@
             "description": "The computer it is tied to; null: none."
           }
         },
-        "required": ["run", "steps", "stepCount", "asks", "jobs", "moreJobs", "usage", "machine"]
+        "required": ["run", "steps", "stepCount", "asks", "jobs", "moreJobs", "usage", "claims", "machine"]
       },
       "OperatorAsk": {
         "type": "object",
@@ -6773,6 +7092,7 @@
               "public_channel",
               "administrator",
               "task_reader",
+              "file_reader",
               "shared_everyone",
               "shared_person",
               "shared_role",
@@ -6787,10 +7107,11 @@
               "not_joined",
               "not_channel_member",
               "not_task_reader",
+              "not_file_reader",
               "not_shared",
               "unknown"
             ],
-            "description": "What decided. Yes: `owner` (the agent's or the computer's), `audience_everyone`, `audience_person` (named in its audience), `audience_role` (holds a role of its audience), `workspace` (for the whole workspace: a task or a file outside any conversation, a workspace's computer nobody owns), `channel_member` (in the channel, or in the one the task or the file is in), `public_channel` (the task or the file is in one), `administrator`, `task_reader` (sees the task whose conversation it is), `shared_everyone`, `shared_person`, `shared_role` (the file's sharing), `granted_once` (a person let their agents use the computer for now). No: `not_a_member` (of the workspace), `account_closed` (blocked, or being deleted), `workspace_suspended`, `gone` (archived, deleted or removed), `no_permission` (no role of theirs lets them talk to agents), `owner_only`, `not_in_audience`, `not_joined` (a public channel they may join), `not_channel_member`, `not_task_reader`, `not_shared`. `unknown`: the server's own check answered, and no rule here explains it."
+            "description": "What decided. Yes: `owner` (the agent's or the computer's, or who made a file of the Drive itself), `audience_everyone`, `audience_person` (named in its audience), `audience_role` (holds a role of its audience), `workspace` (for the whole workspace: a task outside any conversation, a file of the Drive itself shared with everyone, a workspace's computer nobody owns), `channel_member` (in the channel, or in the one the task or the file is in), `public_channel` (the task or the file is in one), `administrator`, `task_reader` (sees the task whose conversation it is), `file_reader` (reads the live file whose conversation it is), `shared_everyone`, `shared_person`, `shared_role` (the file's sharing), `granted_once` (a person let their agents use the computer for now). No: `not_a_member` (of the workspace), `account_closed` (blocked, or being deleted), `workspace_suspended`, `gone` (archived, deleted or removed), `no_permission` (no role of theirs lets them talk to agents), `owner_only`, `not_in_audience`, `not_joined` (a public channel they may join), `not_channel_member`, `not_task_reader`, `not_file_reader`, `not_shared`. `unknown`: the server's own check answered, and no rule here explains it."
           }
         },
         "required": ["userId", "targetKind", "targetId", "allowed", "rule"]
@@ -6944,8 +7265,8 @@
           },
           "purpose": {
             "type": "string",
-            "enum": ["member_request", "fault"],
-            "description": "`member_request`: a member asked for help (`requestId`). `fault`: a run failed or got stuck (`runId`)."
+            "enum": ["member_request", "fault", "trust_safety"],
+            "description": "`member_request`: a member asked for help (`requestId`). `fault`: a run failed or got stuck (`runId`). `trust_safety`: a safety review, to investigate suspected abuse (neither)."
           },
           "reason": {
             "type": "string",
@@ -6961,20 +7282,106 @@
           },
           "assistedByAi": {
             "type": "boolean",
-            "description": "Whether an AI assistant reads the answer. The workspace's audit entry says so."
+            "description": "Whether an AI assistant reads the answer. The workspace's audit entry says so, and the `content.viewed` event."
           },
           "requestId": {
             "type": "string",
             "format": "uuid",
-            "description": "A support request of this workspace made in the last 30 days. With `member_request`, the proof: what its member reads in the app now is what opens. With `fault`, optional: the report the run was about, which the run's days then count back from."
+            "description": "A support request of this workspace made in the last 30 days. With `member_request`, the proof: what its member reads in the app now is what opens. With `fault`, optional: the report the run was about, which the run's days then count back from. Refused with `trust_safety`."
           },
           "runId": {
             "type": "string",
             "format": "uuid",
-            "description": "With `fault`, the proof: a run of this workspace made in the last 14 days (or up to 14 days before `requestId`'s request) that failed, stands still for over an hour with nothing a person is asked to do, or holds a failed step."
+            "description": "With `fault`, the proof: a run of this workspace made in the last 14 days (or up to 14 days before `requestId`'s request) that failed, stands still for over an hour with nothing a person is asked to do, or holds a failed step. Refused with `trust_safety`."
           }
         },
         "required": ["kind", "id", "field", "purpose", "reason", "operator", "assistedByAi"],
+        "additionalProperties": false
+      },
+      "OperatorReplied": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "replies": {
+            "type": "integer",
+            "description": "How many replies this request now has, of the 3 it may get."
+          }
+        },
+        "required": ["requestId", "replies"]
+      },
+      "OperatorReplyRequest": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The support request answered: one of this workspace made in the last 90 days."
+          },
+          "template": {
+            "type": "string",
+            "enum": ["received", "need_more", "resolved", "handed_over"],
+            "description": "One of this server's own sentences, sent in the member's language: `received` (the request is being looked into), `need_more` (more details are needed), `resolved` (what they reported is fixed) or `handed_over` (a person now has the request). This or `text`, never both."
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Your own words, as plain text: a line break ends a paragraph, and nothing else in it is rendered or becomes a link. Kept nowhere but the email."
+          },
+          "operator": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Who answers, as your own service names them. Kept in the `support.replied` event."
+          },
+          "assistedByAi": {
+            "type": "boolean",
+            "description": "Whether an AI assistant wrote the answer. The email and the workspace's audit entry say so."
+          }
+        },
+        "required": ["requestId", "operator", "assistedByAi"],
+        "additionalProperties": false
+      },
+      "OperatorDisclosure": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "count": {
+            "type": "integer"
+          }
+        },
+        "required": ["from", "to", "count"]
+      },
+      "OperatorDisclosureRequest": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the first of the reads was made."
+          },
+          "to": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the last was made: after `from`, at most 90 days after it, and not in the future."
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000,
+            "description": "How many items you read. Your own count: this server checks it against nothing."
+          }
+        },
+        "required": ["from", "to", "count"],
         "additionalProperties": false
       },
       "OperatorHost": {
@@ -9696,6 +10103,103 @@
         }
       }
     },
+    "/analytics/run-timings": {
+      "get": {
+        "tags": ["Operator"],
+        "summary": "Where the runs' time went: each stage, how computer turns started and the waits, per brain or model",
+        "description": "Of the runs created in the window: 2 days at most across workspaces, 31 in one (`orgId`). Counts, times and the server's own words only: no message, no name. An unknown workspace answers with zeros.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "An ISO 8601 instant: runs created at or after it.",
+              "example": "2026-10-30T00:00:00Z"
+            },
+            "required": true,
+            "description": "An ISO 8601 instant: runs created at or after it.",
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "An ISO 8601 instant: runs created before it. After `from`, at most 2 days apart across workspaces and 31 with `orgId`. Else 400 `analytics.range`.",
+              "example": "2026-10-31T00:00:00Z"
+            },
+            "required": true,
+            "description": "An ISO 8601 instant: runs created before it. After `from`, at most 2 days apart across workspaces and 31 with `orgId`. Else 400 `analytics.range`.",
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Only this workspace's runs."
+            },
+            "required": false,
+            "description": "Only this workspace's runs.",
+            "name": "orgId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Only this agent's runs. Only with `orgId`."
+            },
+            "required": false,
+            "description": "Only this agent's runs. Only with `orgId`.",
+            "name": "agentId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": ["brain", "model"],
+              "default": "brain",
+              "description": "`brain`: a row per brain. `model`: a row per brain and model."
+            },
+            "required": false,
+            "description": "`brain`: a row per brain. `model`: a row per brain and model.",
+            "name": "by",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperatorRunTimings"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request (`analytics.range`: the dates)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/analytics/ai-accounts": {
       "get": {
         "tags": ["Operator"],
@@ -10235,11 +10739,11 @@
           {
             "schema": {
               "type": "string",
-              "enum": ["channel", "dm", "task"],
-              "description": "`channel`, `dm` (a direct conversation) or `task` (a task's conversation). Absent: all of them."
+              "enum": ["channel", "dm", "task", "file"],
+              "description": "`channel`, `dm` (a direct conversation), `task` (a task's conversation) or `file` (a live file's conversation). Absent: all of them."
             },
             "required": false,
-            "description": "`channel`, `dm` (a direct conversation) or `task` (a task's conversation). Absent: all of them.",
+            "description": "`channel`, `dm` (a direct conversation), `task` (a task's conversation) or `file` (a live file's conversation). Absent: all of them.",
             "name": "kind",
             "in": "query"
           },
@@ -10619,7 +11123,7 @@
     "/runs/{runId}/trace": {
       "get": {
         "tags": ["Operator"],
-        "summary": "One run from start to end: its steps, what it asked, its jobs, what it spent and its computer",
+        "summary": "One run from start to end: its steps, what it asked, its jobs, what it spent, where its time went and its computer",
         "description": "Which tool each step called, whether it is the server's own, whether it failed and how, and how big its input and result were, never either of them. The steps page back from the end with `beforeSeq`.",
         "parameters": [
           {
@@ -12421,7 +12925,7 @@
       "post": {
         "tags": ["Operator"],
         "summary": "Read one field of one record of what a workspace wrote, with a reason",
-        "description": "Only with `OPERATOR_API_REVEAL_TOKEN`. One record a call, at most 2000 characters, for one of two purposes that a record of the workspace proves. For `member_request`: the support request is this workspace's and recent (403 `reveal.no_request`), its member still is one (`reveal.requester`) and reads the record in the app now (`reveal.not_visible`). For `fault`: the run failed or got stuck in its days (`reveal.no_fault`), the record is its step, the message that started it or one it wrote, its agent's instructions, its routine or a task it started, or, for a run that went on past a failed step, that step's `error` and its call's `input` alone (`reveal.not_the_fault`), and it is not of a direct conversation (`reveal.direct_conversation`). What a run of a confidential thread holds opens under neither purpose: its steps and a task it started answer 403 `reveal.confidential` where the proof would have opened them, and a message of such a thread reads as its stub. Before any text is read, the read is recorded: a `content.viewed` event with the reason, and an entry in the workspace's own audit log (`operator.content_read`) with what was read, the purpose and its proof, never the reason. A record of another workspace, a deleted one and one nobody has answer the same 404. An `error` of something that did not fail is 409 `reveal.no_error`. At most 30 calls a minute (429 `reveal.limit_minute`) and 100 reads of one workspace in 24 hours (`reveal.limit_workspace`).",
+        "description": "Only with `OPERATOR_API_REVEAL_TOKEN`. One record a call, at most 2000 characters, for one of three purposes. Two are proved by a record of the workspace. For `member_request`: the support request is this workspace's and recent (403 `reveal.no_request`), its member still is one (`reveal.requester`) and reads the record in the app now (`reveal.not_visible`). For `fault`: the run failed or got stuck in its days (`reveal.no_fault`), the record is its step, the message that started it or one it wrote, its agent's instructions, its routine or a task it started, or, for a run that went on past a failed step, that step's `error` and its call's `input` alone (`reveal.not_the_fault`), and it is not of a direct conversation (`reveal.direct_conversation`). For `trust_safety`, a safety review to investigate suspected abuse, no record proves the purpose and the call names none (`requestId` or `runId` with it is a 400): this server has no record of an abuse investigation, so your own service answers for the cause. It opens every kind but a support request's words (`reveal.not_visible`), and of a direct conversation never a message that no agent wrote and that started no run (`reveal.direct_conversation`). What a run of a confidential thread holds opens under no purpose: its steps and a task it started answer 403 `reveal.confidential` where the purpose would have opened them, and a message of such a thread reads as its stub. Before any text is read, the read is recorded: a `content.viewed` event with the reason, and, for `member_request` and `fault`, an entry in the workspace's own audit log (`operator.content_read`) with what was read, the purpose and its proof, never the reason. A read for `trust_safety` writes the event and no entry: you tell the workspace afterwards with `POST /orgs/{orgId}/content-reads/disclosure`, when your review ends and 7 days after the read at the latest. A record of another workspace, a deleted one and one nobody has answer the same 404. An `error` of something that did not fail is 409 `reveal.no_error`. At most 30 calls a minute (429 `reveal.limit_minute`), 100 reads of one workspace in 24 hours (`reveal.limit_workspace`) and, on the whole server, 150 reads for `trust_safety` in 24 hours (`reveal.limit_untold`).",
         "parameters": [
           {
             "schema": {
@@ -12475,7 +12979,7 @@
             }
           },
           "403": {
-            "description": "Not the reveal token, the door is closed, the purpose's proof does not open this, or a confidential thread keeps it",
+            "description": "Not the reveal token, the door is closed, the purpose does not open this, or a confidential thread keeps it",
             "content": {
               "application/json": {
                 "schema": {
@@ -12506,6 +13010,186 @@
           },
           "429": {
             "description": "Past the door's own limits",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reveal/orgs/{orgId}/replies": {
+      "post": {
+        "tags": ["Operator"],
+        "summary": "Answer a member's support request at the address of their account",
+        "description": "Only with `OPERATOR_API_REVEAL_TOKEN`. An email to the address the request's account has now, in that account's language: one of this server's own sentences (`template`) or your own words (`text`, plain text of at most 2000 characters). No argument names an address, a name or a subject. The email says that this server answers, that an AI assistant wrote it when `assistedByAi`, and where to write back when `SUPPORT_EMAIL` is set. A reply reads nothing: a request can be answered after the 30 days in which it opens content, for the 90 days its words are kept (403 `reveal.request_old` after that). Its member must still be one (`reveal.requester`). A request of another workspace and one nobody has answer the same 404. In one transaction with the email's job, the reply is recorded: a `support.replied` event and an entry in the workspace's own audit log (`operator.support_replied`), each with the request, the template or the word `text`, how long your words were and `assistedByAi`. Never the words: they are in the email's job alone, and leave it once the email is sent or given up. At most 3 replies to one request (429 `reveal.limit_request`) and 60 from this server in 24 hours (`reveal.limit_day`), counted from those events; a call counts toward the door's 30 a minute (`reveal.limit_minute`). A server that sends no email answers 409 `reveal.no_email`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "orgId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OperatorReplyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperatorReplied"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request: both or neither of `template` and `text`, or a `text` that says nothing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not the reveal token, the door is closed, the request is too old or its member is gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record in this workspace",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "This server sends no email (`reveal.no_email`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Past the replies' own limits, or the door's",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/content-reads/disclosure": {
+      "post": {
+        "tags": ["Operator"],
+        "summary": "Tell a workspace, afterwards, that its content was read to investigate suspected abuse",
+        "description": "Only with `OPERATOR_API_TOKEN`. An operator that read content for `trust_safety` tells the workspace afterwards that it did: one entry in the workspace's own audit log (`operator.content_review_disclosed`, actor `system`) with the period and how many items, and nothing else: no reason, no record, no text. You owe it when your review ends, and 7 days after the read at the latest. The same `from` and `to` again answer the entry first written and write nothing, so a call that timed out can be sent again; another period writes its own entry.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "orgId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OperatorDisclosureRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperatorDisclosure"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request: a period that has not ended, is backwards or too long, or a count out of bounds",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not the full token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -12558,7 +13242,7 @@
       "put": {
         "tags": ["Operator"],
         "summary": "Register a hostname, or replace its look (ADR 0194)",
-        "description": "On that host the pages before sign-in show its name, logo and accent, and sign-in is by email alone. Point the hostname at this server and serve a certificate for it first: the server only answers what reaches it. With the bot check on, also add it to the Turnstile widget's domains in Cloudflare. Applies at once on this process and within 30 s on the others. Refusals: `host.invalid` (not a hostname: no scheme, port or path, at least one dot), `host.own` (`PUBLIC_URL`'s host or one of `EXTRA_TRUSTED_ORIGINS`), `host.too_many` (409, past 1000), `host.needs_https` (409, `PUBLIC_URL` isn't https, so the session cookies a registered host sets would carry no Secure flag), and a logo's as for a workspace's (`logo.type`, `logo.too_large`, `logo.not_base64`, `logo.empty`).",
+        "description": "On that host the pages before sign-in show its name, logo and accent, and sign-in is by email alone. Point the hostname at this server and serve a certificate for it first: the server only answers what reaches it. It runs no bot check, and nothing ties an account to a host, so any account's email lookup, password sign-in and reset can be asked there: what guards them is the limits per network, tighter on registered hosts (10 email lookups in 10 minutes and 5 sign-ups in 15 minutes per network, for all of them together), and the wrong passwords per account (10 in 15 minutes from one network, 50 from all), each counted in a server process's memory, so a restart starts them again (ADR 0075). Applies at once on this process and within 30 s on the others. Refusals: `host.invalid` (not a hostname: no scheme, port or path, at least one dot), `host.own` (`PUBLIC_URL`'s host or one of `EXTRA_TRUSTED_ORIGINS`), `host.too_many` (409, past 1000), `host.needs_https` (409, `PUBLIC_URL` isn't https, so the session cookies a registered host sets would carry no Secure flag), and a logo's as for a workspace's (`logo.type`, `logo.too_large`, `logo.not_base64`, `logo.empty`).",
         "parameters": [
           {
             "schema": {

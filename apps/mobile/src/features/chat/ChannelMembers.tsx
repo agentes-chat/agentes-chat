@@ -11,7 +11,7 @@ import {
   useRoster,
 } from "@agenteschat/client";
 import { WORK_TICK_MS, workLine, workLineText } from "@agenteschat/client/lib/agent-work";
-import { listsAgent, opensDetails } from "@agenteschat/client/lib/audience";
+import { managesAgent, opensDetails } from "@agenteschat/client/lib/audience";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { useHeldWhile } from "@agenteschat/client/lib/hold";
@@ -518,6 +518,7 @@ export function AddChannelMembersScreen({ channelId }: { channelId: string }) {
   const api = useApi();
   const toast = useToast();
   const dir = useDirectory();
+  const meId = useMeId();
   const { org } = useOrg();
   const roster = useRoster(orgId, channelId);
   const refresh = useRefresh(channelId);
@@ -544,9 +545,11 @@ export function AddChannelMembersScreen({ channelId }: { channelId: string }) {
     new Set((roster.data ?? []).map((m) => `${m.type === "agent" ? "agent" : "person"}:${m.id}`)),
     add.isPending || add.isSuccess,
   );
+  // Only the agents this person may place here, as the server's `requirePlacesAgent`: their own, or one they manage
+  // (ADR 0085 addendum of 2026-11-17). Editing an agent, or talking to it, doesn't move it between channels.
   const candidates = [
     ...dir.agents
-      .filter((a) => listsAgent(org, a) && joinsChannels(a))
+      .filter((a) => joinsChannels(a) && ((meId !== null && a.ownerUserId === meId) || managesAgent(a)))
       .map((a) => ({ kind: "agent" as const, id: a.id, name: a.name, line: `@${a.handle}` })),
     ...[...dir.memberById.values()].map((m) => ({
       kind: "person" as const,

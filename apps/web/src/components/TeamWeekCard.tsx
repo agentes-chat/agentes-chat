@@ -211,7 +211,7 @@ export function TeamWeekCardView({ message, card }: { message: Message; card: Te
             </section>
           )
         )}
-        <div className="rq__foot">
+        <div className="rq__foot ac-tailrow">
           {/* One row to apply has its own button for it: the footer's would only repeat it. */}
           {!dismissed && bulk.length > 1 && (
             <Button
@@ -235,7 +235,7 @@ export function TeamWeekCardView({ message, card }: { message: Message; card: Te
               {t("teamWeek.notNow")}
             </Button>
           )}
-          <span className="rq__end tw__when">
+          <span className="rq__end ac-tail tw__when">
             <TeamWeekWhen period={card.period ?? "week"} />
           </span>
         </div>

@@ -139,6 +139,11 @@ export const agentRuns = pgTable(
      */
     pendingMessageIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
     /**
+     * A separate request sent while the run worked (ADR 0112 addendum, `steerHandling` `queue`): out of what its steps
+     * read, left for after its task. Every ending hands them on with its unread messages: a run of their own.
+     */
+    afterMessageIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
+    /**
      * The issue this run works on: set when someone asks the agent to
      * implement it, or when the run uses an issue tool on it. The issue shows
      * "working now" from a live run, and "stalled" when none is alive.
@@ -351,7 +356,8 @@ export const agentRunSteps = pgTable(
   ],
 );
 
-export const usageKindEnum = pgEnum("usage_kind", ["agent", "router", "embedding", "summary"]);
+/** `image`: pictures made through the gateway (ADR 0197), billed like an agent's own calls when an agent asked. */
+export const usageKindEnum = pgEnum("usage_kind", ["agent", "router", "embedding", "summary", "image"]);
 
 /**
  * One row per model call, written by the Model Gateway only. Same numbers in

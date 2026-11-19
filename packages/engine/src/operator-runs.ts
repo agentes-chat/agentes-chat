@@ -46,6 +46,7 @@ import {
 import { rightHandReaches } from "./right-hand";
 import { DEFAULT_CAP, UNDER_NEED_GATE } from "./router";
 import { RELEASE_REASONS } from "./run-inbox";
+import { runClaims } from "./run-timings";
 import {
   computerWaitSql,
   KEPT_ON_HOLD,
@@ -552,8 +553,9 @@ const stepColumns = {
 
 /**
  * One run, start to end: its row, its steps in order (which tool, whether it failed, how big its input and its
- * result were, never either of them), what it asked of people, the jobs that started and woke it, what it spent and
- * the computer it is tied to. `beforeSeq` pages back from the end, `limit` steps at a time. Null: no such run.
+ * result were, never either of them), what it asked of people, the jobs that started and woke it, what it spent,
+ * where each of its claims' time went and the computer it is tied to. `beforeSeq` pages back from the end, `limit`
+ * steps at a time. Null: no such run.
  */
 export async function operatorRunTrace(
   db: Database,
@@ -570,7 +572,7 @@ export async function operatorRunTrace(
     gte(usageRecords.createdAt, run.createdAt),
     eq(usageRecords.runId, runId),
   );
-  const [steps, counted, asks, jobs, usage, ranOn, agent] = await Promise.all([
+  const [steps, counted, asks, jobs, usage, ranOn, agent, kept] = await Promise.all([
     db
       .select(stepColumns)
       .from(agentRunSteps)
@@ -602,6 +604,8 @@ export async function operatorRunTrace(
       .orderBy(desc(usageRecords.createdAt))
       .limit(1),
     db.select({ machineId: agents.machineId }).from(agents).where(eq(agents.id, run.agentId)),
+    // Apart from the run's row: a list of runs never reads their profiles.
+    db.select({ profiles: agentRuns.profiles }).from(agentRuns).where(eq(agentRuns.id, runId)),
   ]);
 
   // The run's row doesn't say where it ran: the computer it waits for, else the one its plan's usage names,
@@ -673,6 +677,7 @@ export async function operatorRunTrace(
       }),
       byModel: usage.map(spentOf),
     },
+    claims: runClaims(kept[0]?.profiles),
     machine:
       tied && computer
         ? {

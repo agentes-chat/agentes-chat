@@ -1,6 +1,7 @@
 import { Children, isValidElement, type ReactNode } from "react";
 import { type AccessibilityActionEvent, Pressable, StyleSheet, View } from "react-native";
 import Animated, { FadeIn, LayoutAnimationConfig } from "react-native-reanimated";
+import { CodeWords } from "./CodeWords";
 import { haptics } from "./haptics";
 import { Icon, type IconName } from "./Icon";
 import { IconTile } from "./IconTile";
@@ -21,6 +22,8 @@ import { leadBox } from "./type-scale";
  * the smaller of the two framed sizes), so a face never spills into the gap before the text.
  */
 const LEAD = GROUPED_ROW.lead;
+/** An icon's tile in a row (IconTile's own size). */
+const TILE = 30;
 /** The remove ×'s glyph, inside its 44-point button. */
 const REMOVE_GLYPH = 16;
 /**
@@ -59,8 +62,8 @@ function leads(props: unknown, depth = 0): boolean {
 
 /** A nested row's hairline starts at its own text, moved in with it. */
 const nests = (props: unknown) => {
-  const tree = (props as { tree?: unknown } | null)?.tree;
-  return tree === "mid" || tree === "end";
+  const p = props as { tree?: unknown; depth?: unknown } | null;
+  return (p?.tree === "mid" || p?.tree === "end" ? NEST : 0) + (typeof p?.depth === "number" ? p.depth * NEST : 0);
 };
 
 /**
@@ -86,8 +89,7 @@ export function GroupedList({ children }: { children?: ReactNode }) {
                     backgroundColor: c.separator,
                     // A tile and a face share one leading column, so the text and its hairline start at one place.
                     marginLeft:
-                      (leads(child.props) ? GROUPED_ROW.padX + LEAD + 12 : GROUPED_ROW.padX) +
-                      (nests(child.props) ? NEST : 0),
+                      (leads(child.props) ? GROUPED_ROW.padX + LEAD + 12 : GROUPED_ROW.padX) + nests(child.props),
                   },
                 ]}
               />
@@ -153,19 +155,20 @@ export function GroupedFooter({
   /** An ⓘ after the footer's one sentence, with the rest of the explanation; its text shows under the sentence. */
   hint?: { name: string; text: string };
 }) {
+  const words = typeof children === "string" ? <CodeWords text={children} /> : children;
   if (hint)
     return (
       <View style={styles.footer}>
         <InfoHint {...hint} variant="footnote">
           <Text variant="footnote" tone="faint">
-            {children}
+            {words}
           </Text>
         </InfoHint>
       </View>
     );
   return (
     <Text variant="footnote" tone="faint" style={styles.footer}>
-      {children}
+      {words}
     </Text>
   );
 }
@@ -241,6 +244,9 @@ export interface GroupedRowProps {
    * `mid` and `end` move in and branch off it (`end` closes the trunk).
    */
   tree?: "host" | "mid" | "end";
+  /** A level in a tree of any depth (a folder picker): moved in a step per level, a thin guide line per level. */
+  depth?: number;
+  onLongPress?: () => void;
 }
 
 export interface RowButton {
@@ -296,6 +302,8 @@ function Row({
   buttons,
   media = false,
   tree,
+  depth = 0,
+  onLongPress,
   said,
   labelAfter,
 }: Omit<GroupedRowProps, "hint"> & { said?: string; labelAfter?: ReactNode }) {
@@ -318,12 +326,18 @@ function Row({
   const tall = !flat && (labelLines !== 1 || subLines !== 1 || Boolean(below) || Boolean(belowText));
   const line = tall ? textLineOf("body", fontScale) : null;
   const onLine = (size: number) => (line ? [leadBox(line, size), styles.onLine] : null);
+  // A tree row's name wraps: its tile stays centred on the first line, as on a one-line row, and takes no more than
+  // that line's height, so a one-line tree row is as tall as any other.
+  const tileOnLine =
+    depth > 0 && line
+      ? { marginTop: line.middle - TILE / 2, marginBottom: line.height - line.middle - TILE / 2 }
+      : null;
   const lead = (
     <>
       {/* One column for whatever leads (an icon's tile, a 24 to 36 face, a mark): the text, and the hairline above,
           start at 64 in every row, so a list mixing tiles and faces reads as one column. */}
       {icon ? (
-        <View style={styles.lead}>
+        <View style={[styles.lead, tileOnLine]}>
           {/* The system Settings' 30-point tile, in the 36 column: 11 from the row's top and bottom. */}
           <IconTile icon={icon} danger={danger} mark={mark ?? null} />
         </View>
@@ -488,6 +502,7 @@ function Row({
   return (
     <RowPressable
       onPress={press}
+      {...(onLongPress ? { onLongPress } : {})}
       // A row that opens a screen stays lit until that screen covers it; a switch's row answers with its switch.
       hold={chevron}
       light={toggle === undefined}
@@ -512,11 +527,20 @@ function Row({
         styles.row,
         flat ? styles.media : tall ? styles.tall : null,
         tree === "mid" || tree === "end" ? styles.nested : null,
+        depth > 0 ? { paddingLeft: GROUPED_ROW.padX + depth * NEST } : null,
         // Off, it looks off: a tap that does nothing never looks like one that should.
         disabled ? styles.off : null,
       ]}
     >
       {tree ? <TreeLines tree={tree} color={c.line2} /> : null}
+      {Array.from({ length: depth }, (_, i) => (
+        <View
+          // biome-ignore lint/suspicious/noArrayIndexKey: one guide per level, never reordered
+          key={i}
+          pointerEvents="none"
+          style={[styles.guide, { left: TREE_X + i * NEST, backgroundColor: c.line2 }]}
+        />
+      ))}
       {flat ? (
         <>
           <View style={styles.mediaHead}>
@@ -714,6 +738,8 @@ const styles = StyleSheet.create({
     paddingVertical: GROUPED_ROW.padY,
   },
   nested: { paddingLeft: GROUPED_ROW.padX + NEST },
+  // A tree level's guide: under the middle of the parent's lead, the row's whole height, so levels read as lines.
+  guide: { position: "absolute", top: 0, bottom: 0, width: 1 },
   // From just under the drawing (a laptop's base, a tower's foot), not the bottom of its 48-point box.
   trunkHost: { position: "absolute", left: TREE_X, top: GROUPED_ROW.tallPadY + 45, bottom: 0, width: 1 },
   trunk: { position: "absolute", left: TREE_X, top: TREE_ELBOW - TREE_CURVE, bottom: 0, width: 1 },

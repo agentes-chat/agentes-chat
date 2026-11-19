@@ -9,7 +9,9 @@ import { Icon, PressScale, Text } from "@/ui";
 import { ChoicesCard } from "../blocks/ChoicesCard";
 import { LiveBlockCard } from "../blocks/LiveBlock";
 import { PollCard } from "../blocks/PollCard";
-import { useKeptWidth } from "../chat/look";
+import { useKeptWidth, useMessageCardCorners } from "../chat/look";
+import { LiveFileCard } from "../live-files/LiveFileCard";
+import { opensLive } from "../live-files/routes";
 import { useColors, useOrgId } from "../shared/hooks";
 import { useSurface } from "../shared/parts";
 import { AttachmentTile } from "./AttachmentTile";
@@ -28,7 +30,7 @@ import {
   videoHeight,
 } from "./logic";
 import { openFile } from "./open";
-import { rememberLocalCopy, useArtifacts, useRemoteFile } from "./source";
+import { pictureDrawn, pictureFade, rememberLocalCopy, useArtifacts, useRemoteFile } from "./source";
 import { VideoFirstFrame, VideoPlayer } from "./VideoPlayer";
 
 /**
@@ -69,6 +71,8 @@ export function MessageFiles({ files, align = "start" }: { files: MessageFile[];
   const images: { file: MessageFile; detail: ArtifactDetail | undefined }[] = [];
   // What lives in the conversation isn't a file: the thing itself (ADR 0113).
   const blocks: ArtifactDetail[] = [];
+  // A live file is its own card: a preview of it as it is now, opening its screen (ADR 0196 §9).
+  const liveFiles: ArtifactDetail[] = [];
   const videos: { file: MessageFile; detail: ArtifactDetail | undefined }[] = [];
   const others: { file: MessageFile; detail: ArtifactDetail | undefined; failed: boolean }[] = [];
   live.forEach((file, i) => {
@@ -76,6 +80,10 @@ export function MessageFiles({ files, align = "start" }: { files: MessageFile[];
     const detail = q?.data;
     if (detail?.kind === "block" || detail?.kind === "poll" || detail?.kind === "choices") {
       blocks.push(detail);
+      return;
+    }
+    if (detail && opensLive(detail.kind)) {
+      liveFiles.push(detail);
       return;
     }
     // Until it loads, a name like "print.png" already says it's a picture (no jump into the grid).
@@ -125,7 +133,6 @@ export function MessageFiles({ files, align = "start" }: { files: MessageFile[];
         <View style={{ width: onlyBox.width }}>
           <InlineImage
             file={only.file}
-            detail={only.detail}
             box={onlyBox}
             label={only.detail?.title || only.file.title}
             onPress={openOnly}
@@ -144,6 +151,9 @@ export function MessageFiles({ files, align = "start" }: { files: MessageFile[];
           <LiveBlockCard key={b.id} id={b.id} version={b.shownVersion} />
         ),
       )}
+      {liveFiles.map((d) => (
+        <LiveFileCard key={d.id} detail={d} width={blockWidth} />
+      ))}
       {tiles.length > 0 ? (
         <View style={[styles.grid, { width: blockWidth }, align === "end" && styles.gridEnd]}>
           {tiles.map(({ file, detail, failed, picture }) => (
@@ -169,21 +179,23 @@ export function MessageFiles({ files, align = "start" }: { files: MessageFile[];
 
 function InlineImage({
   file,
-  detail,
   box: { width, height },
   label,
   onPress,
 }: {
   file: MessageFile;
-  detail: ArtifactDetail | undefined;
   box: { width: number; height: number };
   label: string;
   onPress: () => void;
 }) {
+  const cardCorners = useMessageCardCorners();
   const { t } = useTranslation();
   const orgId = useOrgId();
   const c = useColors();
-  const version = detail?.shownVersion ?? file.version;
+  // The message's own version, from the first frame: switched to the details' once they came, the link and the cache
+  // key changed, and the picture went blank and faded in again.
+  const version = file.version;
+  const key = `${file.id}@${version ?? "latest"}`;
   const link = useRemoteFile(orgId, file.id, version);
   const [failed, setFailed] = useState(false);
   return (
@@ -193,14 +205,15 @@ function InlineImage({
       accessibilityRole="imagebutton"
       accessibilityLabel={label || t("mobile.files.openImage")}
       accessibilityHint={t("mobile.files.openImage")}
-      style={[styles.shot, { width, height, backgroundColor: c.sunken, borderColor: c.line2 }]}
+      style={[styles.shot, { width, height, backgroundColor: c.sunken, borderColor: c.line2 }, cardCorners]}
     >
       {link.data && !failed ? (
         <Image
-          source={{ uri: link.data.uri, headers: link.data.headers, cacheKey: `${file.id}@${version ?? "latest"}` }}
-          recyclingKey={`${file.id}@${version ?? "latest"}`}
+          source={{ uri: link.data.uri, headers: link.data.headers, cacheKey: key }}
+          recyclingKey={key}
           contentFit="contain"
-          transition={160}
+          transition={pictureFade(key)}
+          onLoad={() => pictureDrawn(key)}
           style={StyleSheet.absoluteFill}
           onError={() => setFailed(true)}
           accessible={false}
@@ -231,6 +244,7 @@ function InlineVideo({
   width: number;
   siblings: readonly FileRef[];
 }) {
+  const cardCorners = useMessageCardCorners();
   const orgId = useOrgId();
   const c = useColors();
   const link = useRemoteFile(orgId, file.id, file.version, { once: true });
@@ -256,7 +270,11 @@ function InlineVideo({
         />
       ) : (
         <View
-          style={[styles.shot, { width, height: videoHeight(width), backgroundColor: c.sunken, borderColor: c.line2 }]}
+          style={[
+            styles.shot,
+            { width, height: videoHeight(width), backgroundColor: c.sunken, borderColor: c.line2 },
+            cardCorners,
+          ]}
         />
       )}
     </View>
@@ -359,11 +377,16 @@ function LocalMedia({
   box: { width: number; height: number };
   sending: boolean;
 }) {
+  const cardCorners = useMessageCardCorners();
   const c = useColors();
   const video = file.type.startsWith("video/");
   return (
     <View
-      style={[styles.shot, { width: box.width, height: box.height, backgroundColor: c.sunken, borderColor: c.line2 }]}
+      style={[
+        styles.shot,
+        { width: box.width, height: box.height, backgroundColor: c.sunken, borderColor: c.line2 },
+        cardCorners,
+      ]}
       accessible
       accessibilityLabel={file.name}
     >
@@ -388,11 +411,12 @@ function LocalMedia({
 }
 
 function LocalFileCard({ file, sending }: { file: LocalFile; sending: boolean }) {
+  const cardCorners = useMessageCardCorners();
   const { i18n } = useTranslation();
   const c = useColors();
   const surface = useSurface();
   return (
-    <View style={[styles.card, surface]} accessible accessibilityLabel={file.name}>
+    <View style={[styles.card, surface, cardCorners]} accessible accessibilityLabel={file.name}>
       <FileTile ext={extLabel(extensionOf(file.name))} />
       <View style={styles.grow}>
         <Text variant="body" style={styles.bold} numberOfLines={2}>
@@ -445,11 +469,12 @@ export function FileTile({ ext }: { ext: string }) {
 }
 
 function RemovedCard() {
+  const cardCorners = useMessageCardCorners();
   const { t } = useTranslation();
   const c = useColors();
   const surface = useSurface();
   return (
-    <View style={[styles.card, surface]}>
+    <View style={[styles.card, surface, cardCorners]}>
       <View style={[styles.tile, { backgroundColor: c.sunken }]}>
         <Icon name="file" size={20} color={c.faint} />
       </View>

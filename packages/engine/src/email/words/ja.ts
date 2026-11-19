@@ -292,6 +292,14 @@ export const words: EmailWords = {
   deletionCode: {
     subjectWorkspace: (code) => `ワークスペース削除の確認コード: ${code}`,
     subjectAccount: (code) => `アカウント全体の削除の確認コード: ${code}`,
+    subjectReset: (code) => `ワークスペースのリセットの確認コード: ${code}`,
+    reset: (org) => [
+      "このコードを入力すると、ワークスペース ",
+      { b: org },
+      " がリセットされます。エージェント、会話、ファイル、メモリはすぐに完全に消去され、新しいワークスペースとして始まります。",
+    ],
+    whyReset: (org) =>
+      `このメールは、あなたのアカウントが agentes.chat の ${org} のリセットをリクエストしたため送信されました。`,
     preheader: "agentes.chat に入力して確定してください。有効期限は10分です。",
     headline: "確認コード",
     workspace: (org) => [
@@ -577,5 +585,24 @@ export const words: EmailWords = {
       why: (surface) => `${surface} が agentes.chat アカウントに連携されていたため、このメールをお送りしています。`,
       picture: "スマートフォンからは外れたアシスタント",
     },
+  },
+  supportReply: {
+    subject: "お問い合わせへの回答",
+    preheader: "agentes.chat でご依頼いただいた件についてのお知らせです。",
+    headline: "お問い合わせへの回答",
+    answers: {
+      received: "ご依頼を受け取りました。現在確認しています。",
+      need_more:
+        "対応のために、次のことを知る必要があります。何をしていたか、どうなると思っていたか、実際に何が起きたか。",
+      resolved: "ご報告いただいた問題は修正されました。",
+      handed_over: "ここからは担当者がご依頼を引き継ぎ、お返事します。",
+    },
+    from: (host) =>
+      host
+        ? ["この回答は ", { nobr: host }, " の agentes.chat サーバーの管理者からお送りしています。"]
+        : "この回答は agentes.chat からお送りしています。",
+    ai: "この回答は AI アシスタントが作成しました。",
+    reply: (address) => ["返信する場合は、", { mail: address }, " までご連絡ください。"],
+    why: "agentes.chat でお問い合わせいただいたため、このメールをお送りしています。",
   },
 };

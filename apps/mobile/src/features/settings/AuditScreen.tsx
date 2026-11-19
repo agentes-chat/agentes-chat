@@ -15,6 +15,7 @@ import {
   auditQueryOf,
   auditReason,
   auditReasonKey,
+  auditReasonLabel,
   auditRoutine,
   auditSecretText,
   auditSentence,
@@ -214,7 +215,7 @@ function byDay(rows: AuditRow[], day: (iso: string) => string): [string, AuditRo
 function AuditRowView({ row, time }: { row: AuditRow; time: string }) {
   const { t, i18n } = useTranslation();
   const { name, text } = auditSentence(t, row, i18n.language);
-  const sub = auditSubLine(t, row);
+  const sub = auditSubLine(t, row, i18n.language);
   const look = auditOutcome(t, row);
   return (
     <GroupedRow
@@ -285,8 +286,9 @@ export function AuditRowScreen({ id }: { id: string }) {
   const name = auditActorName(t, row) ?? t("audit.system");
   const { name: who, text } = auditSentence(t, row, i18n.language);
   const look = auditOutcome(t, row);
-  const reason = auditReason(t, row);
+  const reason = auditReason(t, row, i18n.language);
   const reasonKey = auditReasonKey(row);
+  const reasonLabel = auditReasonLabel(t, row);
   const said = auditToolSaid(row);
   const isCall = row.action === TOOL_CALL;
   const where = auditWhere(t, row);
@@ -294,7 +296,7 @@ export function AuditRowScreen({ id }: { id: string }) {
   const asked = isCall ? askedOf(t, row) : null;
   const input = isCall ? (row.details.input as Record<string, unknown> | undefined) : undefined;
   const sent = input ? Object.entries(input) : [];
-  const changeDetails = isCall ? [] : auditDetailEntries(row.details);
+  const changeDetails = isCall ? [] : auditDetailEntries(row.details, row.action);
   const copy = async () => {
     if (await copyText(row.id)) toast({ title: t("audit.panel.copied"), icon: "check" });
   };
@@ -318,7 +320,7 @@ export function AuditRowScreen({ id }: { id: string }) {
       {reason ? (
         <View style={styles.note}>
           <Note icon={reasonKey === "refused" ? "x" : "info"}>
-            {`${t(`audit.panel.reason.${reasonKey}`)}: ${reason}`}
+            {reasonLabel ? `${reasonLabel}: ${reason}` : reason}
           </Note>
         </View>
       ) : null}

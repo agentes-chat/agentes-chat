@@ -75,7 +75,7 @@ const hostJson = (h: HostLook) => ({
 });
 
 /** This server's own hosts, which never register: `PUBLIC_URL`'s and each of `EXTRA_TRUSTED_ORIGINS`. */
-const ownHosts = (config: Config) =>
+export const ownHosts = (config: Config) =>
   new Set(
     [config.PUBLIC_URL, ...(config.EXTRA_TRUSTED_ORIGINS ?? [])]
       .map((url) => normalizeHost(new URL(url).hostname))
@@ -109,7 +109,7 @@ export function registerOperatorHosts(api: OpenAPIHono, { db, config, blobs }: O
       path: "/hosts/{host}",
       tags,
       summary: "Register a hostname, or replace its look (ADR 0194)",
-      description: `On that host the pages before sign-in show its name, logo and accent, and sign-in is by email alone. Point the hostname at this server and serve a certificate for it first: the server only answers what reaches it. With the bot check on, also add it to the Turnstile widget's domains in Cloudflare. Applies at once on this process and within 30 s on the others. Refusals: \`host.invalid\` (not a hostname: no scheme, port or path, at least one dot), \`host.own\` (\`PUBLIC_URL\`'s host or one of \`EXTRA_TRUSTED_ORIGINS\`), \`host.too_many\` (409, past ${HOSTS_MAX}), \`host.needs_https\` (409, \`PUBLIC_URL\` isn't https, so the session cookies a registered host sets would carry no Secure flag), and a logo's as for a workspace's (\`logo.type\`, \`logo.too_large\`, \`logo.not_base64\`, \`logo.empty\`).`,
+      description: `On that host the pages before sign-in show its name, logo and accent, and sign-in is by email alone. Point the hostname at this server and serve a certificate for it first: the server only answers what reaches it. It runs no bot check, and nothing ties an account to a host, so any account's email lookup, password sign-in and reset can be asked there: what guards them is the limits per network, tighter on registered hosts (10 email lookups in 10 minutes and 5 sign-ups in 15 minutes per network, for all of them together), and the wrong passwords per account (10 in 15 minutes from one network, 50 from all), each counted in a server process's memory, so a restart starts them again (ADR 0075). Applies at once on this process and within 30 s on the others. Refusals: \`host.invalid\` (not a hostname: no scheme, port or path, at least one dot), \`host.own\` (\`PUBLIC_URL\`'s host or one of \`EXTRA_TRUSTED_ORIGINS\`), \`host.too_many\` (409, past ${HOSTS_MAX}), \`host.needs_https\` (409, \`PUBLIC_URL\` isn't https, so the session cookies a registered host sets would carry no Secure flag), and a logo's as for a workspace's (\`logo.type\`, \`logo.too_large\`, \`logo.not_base64\`, \`logo.empty\`).`,
       request: { params: HostParams, body: body(HostLookBody) },
       responses: { 200: json(Host), ...errors, 409: errorResponse("Too many hosts, or `PUBLIC_URL` isn't https") },
     }),

@@ -10,7 +10,7 @@ import { AgentFace } from "../shared/Face";
 import { useColors, useDirectory, useMeId, useOrgId, useWhen } from "../shared/hooks";
 import { useSurface } from "../shared/parts";
 import { usePresenceOf } from "../status/hooks";
-import { useCardTop, useQuietInset } from "./look";
+import { useCardTop, useMessageCardCorners, useQuietInset } from "./look";
 
 /**
  * "Ask Ada to implement" (as on the web): the root of the work thread in the
@@ -18,6 +18,7 @@ import { useCardTop, useQuietInset } from "./look";
  * issue"); the agent's instructions never show in the chat.
  */
 export function IssueWorkCard({ work, authorId }: { work: IssueWorkRef; authorId: string | null }) {
+  const cardCorners = useMessageCardCorners();
   const { t } = useTranslation();
   const c = useColors();
   const cardTop = useCardTop();
@@ -36,7 +37,7 @@ export function IssueWorkCard({ work, authorId }: { work: IssueWorkRef; authorId
       accessibilityHint={t("chat.issueWork.view")}
       // The card's own size: the press area never grows past it.
       fill={false}
-      style={[styles.cardBox, surface, cardTop]}
+      style={[styles.cardBox, surface, cardCorners, cardTop]}
       contentStyle={styles.card}
     >
       <View style={styles.head}>

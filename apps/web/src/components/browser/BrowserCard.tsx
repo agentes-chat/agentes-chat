@@ -99,6 +99,7 @@ import { DesktopView } from "../desktop/DesktopView";
 import { PASTE_MAX_BYTES, pasteBytes } from "../desktop/paste";
 import { MachineToolButton } from "../devices/ToolOneClick";
 import { useOrg } from "../org-context";
+import { ReportProblem } from "../ReportProblem";
 import { colorOf } from "../Sky";
 import { useComputerEdition } from "../WorkspaceComputer";
 import { AddressBar } from "./AddressBar";
@@ -872,6 +873,13 @@ export function BrowserCard({
   const [attempt, setAttempt] = useState(0);
   // Never on the screen: the card watches no frames there (`watching`).
   const stuck = useBrowserStuck(watching && online && !hidden && (starting || reconnecting || opening), attempt);
+  const reportOf = (code: string) => ({
+    place: "browser" as const,
+    code,
+    step: opening ? "open" : reconnecting ? "reconnect" : "start",
+    context: { agentId, ...(machine ? { machineId: machine.id } : {}) },
+    timings: { attempts: attempt + 1 },
+  });
   const retry = () => {
     setAttempt((n) => n + 1);
     // Watching again after the restart too: this view's own watch may be what the server refused.
@@ -1147,14 +1155,17 @@ export function BrowserCard({
           profile?.machine && offHere ? (
             <MachineToolButton machine={profile.machine} tool="browser" onAllowed={retry} />
           ) : (
-            <Button
-              size="sm"
-              icon="refresh"
-              loading={actions.restart.isPending || profileActions.takeover.isPending}
-              onClick={retry}
-            >
-              {t("common.retry")}
-            </Button>
+            <span className="ac-acts">
+              <Button
+                size="sm"
+                icon="refresh"
+                loading={actions.restart.isPending || profileActions.takeover.isPending}
+                onClick={retry}
+              >
+                {t("common.retry")}
+              </Button>
+              {noAnswer && <ReportProblem {...reportOf("browser.no_answer")} />}
+            </span>
           )
         }
       />
@@ -1178,9 +1189,12 @@ export function BrowserCard({
         text={t("browser.inCard.stuck", g)}
         help={mayDrive ? t("browser.inCard.stuckHelp") : undefined}
         action={
-          <Button size="sm" icon="refresh" loading={actions.restart.isPending} onClick={retry}>
-            {t("common.retry")}
-          </Button>
+          <span className="ac-acts">
+            <Button size="sm" icon="refresh" loading={actions.restart.isPending} onClick={retry}>
+              {t("common.retry")}
+            </Button>
+            <ReportProblem {...reportOf("browser.stuck")} />
+          </span>
         }
       />
     ) : opening ? (

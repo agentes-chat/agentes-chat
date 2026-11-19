@@ -102,12 +102,7 @@ export function KeyForAllScreen({
   };
   return (
     <View style={[styles.screen, { backgroundColor: c.grouped }]}>
-      <PushedHeader
-        title={t("aiAccounts.page.useAll")}
-        {...(plan ? { subtitle: plan.label } : {})}
-        solid={false}
-        grouped
-      />
+      <PushedHeader title={t("aiAccounts.page.useAll")} subtitle={plan?.label} solid={false} grouped />
       <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.in}>
         {ai.isPending ? (
           <SkeletonList rows={4} />

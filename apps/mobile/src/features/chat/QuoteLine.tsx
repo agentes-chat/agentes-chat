@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { Icon, Text, TOUCH } from "@/ui";
 import { Face } from "../shared/Face";
 import { useColors } from "../shared/hooks";
-import { rowBodyInset } from "./logic";
+import { COMPACT_FACE, MSG_INSET, ROW_BODY_INSET, rowBodyInset } from "./logic";
 import type { RowLook } from "./look";
 import { useRowDirectory } from "./row-data";
 
@@ -57,8 +57,11 @@ export function QuoteLine({
 }
 
 /** Where each style's face and words stand in a row (`styles.msg`, `lookRows`): the curve runs from one to the other. */
-const FACE_MIDDLE = { comfortable: 31, left: 31, bubbles: 25, compact: 59 };
-const WORDS_START = { comfortable: 59, left: 59, bubbles: 48, compact: 74 };
+const FACE_MIDDLE = { comfortable: 31, left: 31, bubbles: 25, compact: MSG_INSET + COMPACT_FACE / 2 };
+const WORDS_START = { comfortable: 59, left: 59, bubbles: 48, compact: ROW_BODY_INSET.compact.left };
+
+/** Where a line above a row starts: at the row's words. */
+export const aboveInset = (look: RowLook) => (look.faces ? WORDS_START[look.style] : rowBodyInset(look).left);
 
 /** The line above a row, joined to its face by a small curve; a row with no face has it at its words, no curve. */
 export function QuoteAbove({
@@ -75,7 +78,7 @@ export function QuoteAbove({
 }) {
   const c = useColors();
   const middle = FACE_MIDDLE[look.style];
-  const start = look.faces ? WORDS_START[look.style] : rowBodyInset(look).left;
+  const start = aboveInset(look);
   return (
     <View style={[styles.above, { paddingLeft: start, marginTop: gap }]}>
       {look.faces ? (

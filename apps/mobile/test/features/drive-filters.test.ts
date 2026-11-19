@@ -70,7 +70,9 @@ describe("the Drive's type chips", () => {
 
   test("the screen asks the server with the chip, refines on the phone, and says why when nothing matches", () => {
     const screen = src("features/drive/DriveScreen.tsx");
-    expect(screen).toContain("const filters = useMemo(() => driveFilters(search, type), [search, type]);");
+    // Browsing a folder adds it; a search or a chip looks through the whole Drive.
+    expect(screen).toContain("() => ({ ...driveFilters(search, type), ...(browsing ? { folderId } : {}) }),");
+    expect(screen).toContain('const browsing = search === "" && type === "all";');
     expect(screen).toContain("(list.artifacts ?? []).filter((a) => matchesType(a, type))");
     expect(screen).toContain("failed: list.isFetchNextPageError,");
     expect(screen).toContain('view === "loading" ? (');

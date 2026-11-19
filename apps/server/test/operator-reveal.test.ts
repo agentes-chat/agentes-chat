@@ -5,9 +5,12 @@ import { and, asc, type Database, desc, eq, schema } from "@agenteschat/db";
 import {
   addRunStep,
   CONFIDENTIAL_STUB,
+  DISCLOSURE_MAX_COUNT,
+  DISCLOSURE_MAX_DAYS,
   markThreadConfidential,
   REVEAL_FIELDS,
   REVEAL_PER_WORKSPACE_DAY,
+  REVEAL_UNTOLD_PER_DAY,
   routineRoomKey,
   setRestrictionNotices,
 } from "@agenteschat/engine";
@@ -20,7 +23,9 @@ import { SECRET_SHAPES, shownIn, UNOPENED } from "./secret-shapes";
 /**
  * The operator API's reveal door (ADR 0056): one field of one record, with a reason, for a member who asked for
  * help or to diagnose a run that failed or got stuck. What opens is what the proof opens and no more; the read is
- * on record before the text is read; a workspace that nobody reads this way sees nothing change.
+ * on record before the text is read; a workspace that nobody reads this way sees nothing change. And its third
+ * purpose, a safety review: no proof, a cap for the whole instance, no audit entry at the time, and the route by
+ * which the operator tells the workspace afterwards.
  */
 
 const TOKEN = "operator-test-token-".padEnd(48, "x");
@@ -111,6 +116,8 @@ const ask = (kind: string, id: string, field: string, proof: Record<string, unkn
   ...("runId" in proof ? { purpose: "fault" } : { purpose: "member_request" }),
   ...proof,
 });
+/** A safety review where a helper takes a proof: the purpose, and no request where the helper would name its own. */
+const UNTOLD = { purpose: "trust_safety", requestId: undefined };
 /** The answer's status and, for a refusal, its code. */
 async function outcome(json: unknown, options?: Parameters<typeof call>[1]) {
   const res = await call(json, options);
@@ -150,7 +157,10 @@ beforeAll(async () => {
   });
   db = t.db;
   // The tests' own door counts no minute: the one about its limits brings a clock.
-  const unlimited = { consume: async () => ({ allowed: true, remaining: 1, resetAt: new Date(0) }) };
+  const unlimited = {
+    consume: async () => ({ allowed: true, remaining: 1, resetAt: new Date(0) }),
+    release: async () => {},
+  };
   deps = { db, config: t.config, version: "test", log: createLogger("error"), rateLimiter: unlimited };
   app = createOperatorApp(deps, TOKEN, READ, REVEAL);
 
@@ -978,7 +988,8 @@ test("a conversation deleted for good: what its runs kept is the same 404 as nob
     .where(eq(schema.channels.id, w.goneId));
   await forget();
   const nobody = await (await call(ask("message", UNKNOWN, "text", mine))).text();
-  for (const json of [...kept, ...kept.map((k) => ({ ...k, runId: undefined, purpose: "member_request", ...mine }))]) {
+  const under = (proof: Record<string, unknown>) => kept.map((k) => ({ ...k, runId: undefined, ...proof }));
+  for (const json of [...kept, ...under({ purpose: "member_request", ...mine }), ...under(UNTOLD)]) {
     const res = await call(json);
     expect({ json, status: res.status, body: (await res.text()).replace(String(json.id), UNKNOWN) }).toEqual({
       json,
@@ -1201,6 +1212,415 @@ test("no record, no text; and a read that fails once on record stays on record, 
   }
   expect(lines.filter((line) => line.includes("unhandled error"))).toHaveLength(3);
   expect(lines.join("\n")).not.toContain("canary");
+});
+
+// The safety review's tests read the fixtures as they were made: the masking tests below rewrite them.
+/** A read for a safety review: it names no request and no run. */
+const review = (kind: string, id: string, field: string, over: Record<string, unknown> = {}) => ({
+  ...ask(kind, id, field, {}),
+  purpose: "trust_safety",
+  ...over,
+});
+/** Every entry of the workspace's audit log, whatever its action. */
+const everyAuditLine = (orgId = w.orgId) => db.select().from(schema.auditLog).where(eq(schema.auditLog.orgId, orgId));
+/** A read's own event, to write again as many times as a count needs. */
+async function anEvent() {
+  const one = (await events())[0];
+  if (!one) throw new Error("no event");
+  const { id: _, xactId: __, ...event } = one;
+  return event;
+}
+const many = (length: number, event: typeof schema.operatorEvents.$inferInsert) =>
+  db.insert(schema.operatorEvents).values(Array.from({ length }, () => event));
+
+test("trust_safety: every kind but a support request's words opens, with no request and no run named", async () => {
+  await forget();
+  const given: [json: Record<string, unknown>, text: string][] = [
+    [review("message", messages.secret, "text"), "canary-secret plans"],
+    // A run that ended well: no fault would open it.
+    [review("run_step", runs.clean, "input", { seq: 1 }), "q: canary-input-c\npassword: ***"],
+    [review("run_step", runs.clean, "result", { seq: 2 }), "canary-result-c"],
+    [review("run_step", runs.failed, "narration", { seq: 3 }), "canary-narration"],
+    [review("run_step", runs.failed, "error", { seq: 4 }), "cli_failed: canary-step-error: canary-step-message"],
+    // An agent that answers its owner alone: no other member's request would open it.
+    [review("agent", w.botId, "instructions"), "canary-bot"],
+    [review("routine", w.routineId, "name"), "canary-routine-name"],
+    [review("routine", w.routineId, "instructions"), "canary-routine-instructions"],
+    [review("task", w.taskId, "command"), "canary-task-command"],
+    [review("task", w.taskId, "prompt"), "canary-task-prompt"],
+    [review("task", w.taskId, "result"), "canary-task-result"],
+    [review("channel", w.secretId, "name"), "canary-plans"],
+    [review("connection", w.connectionId, "label"), "canary-connection-label"],
+    [review("connection", w.connectionId, "host"), "mcp.example.com"],
+    [review("connection", w.connectionId, "last_error"), "canary-connection-error"],
+  ];
+  // Every field of the door's table but a support request's.
+  expect(given.map(([json]) => `${json.kind}.${json.field}`).sort()).toEqual(
+    Object.entries(REVEAL_FIELDS)
+      .flatMap(([kind, list]) => (kind === "support_request" ? [] : list.map((field) => `${kind}.${field}`)))
+      .sort(),
+  );
+  for (const [json, expected] of given) {
+    const res = await call(json);
+    const answer = res.status === 200 ? ((await res.json()) as Answer).text : await res.text();
+    expect({ asked: `${json.kind}.${json.field}`, status: res.status, answer }).toEqual({
+      asked: `${json.kind}.${json.field}`,
+      status: 200,
+      answer: expected,
+    });
+  }
+  // Nobody asked and no run failed: each event names no member and no proof.
+  const feed = await events();
+  expect(feed.map((e) => [e.orgId, e.userId])).toEqual(given.map(() => [w.orgId, null]));
+  expect(feed[0]?.data).toEqual({
+    ref: `reveal:message:${messages.secret}`,
+    reason: REASON,
+    operator: "call:7",
+    purpose: "trust_safety",
+    field: "text",
+    assistedByAi: true,
+  });
+
+  // A record of another workspace is nobody's, as under any purpose.
+  await forget();
+  const nobody = await call(review("message", UNKNOWN, "text"));
+  const foreign = await call(review("message", messages.foreign, "text"));
+  expect([nobody.status, foreign.status]).toEqual([404, 404]);
+  expect((await foreign.text()).replace(messages.foreign, UNKNOWN)).toBe(await nobody.text());
+  expect(await events()).toEqual([]);
+});
+
+test("trust_safety names no proof: a request or a run sent with it is refused, so no read can look like it had one", async () => {
+  await forget();
+  for (const proof of [
+    { requestId: requests.owner },
+    { runId: runs.failed },
+    { requestId: requests.owner, runId: runs.failed },
+  ]) {
+    expect({ proof, answer: await outcome(review("message", messages.asked, "text", proof)) }).toEqual({
+      proof,
+      answer: [400, "invalid_request"],
+    });
+  }
+  expect(await events()).toEqual([]);
+});
+
+test("trust_safety: a support request's words are never given", async () => {
+  await forget();
+  for (const field of REVEAL_FIELDS.support_request) {
+    for (const id of [requests.owner, requests.bia]) {
+      expect({ field, answer: await outcome(review("support_request", id, field)) }).toEqual({
+        field,
+        answer: [403, "reveal.not_visible"],
+      });
+    }
+  }
+  // One that is not there is the same 404 as ever: the refusal tells of no request the caller could not list.
+  expect((await call(review("support_request", requests.foreign, "text"))).status).toBe(404);
+  expect(await events()).toEqual([]);
+});
+
+test("trust_safety: of a direct conversation, never a message that no agent wrote and that started no run", async () => {
+  await forget();
+  const say = async (channelId: string, body: string, over: Partial<typeof schema.messages.$inferInsert> = {}) => {
+    const [m] = await db
+      .insert(schema.messages)
+      .values({ orgId: w.orgId, channelId, authorType: "person", authorUserId: w.ownerId, body, ...over })
+      .returning({ id: schema.messages.id });
+    return m?.id ?? "";
+  };
+  const byAgent = { authorType: "agent", authorUserId: null, authorAgentId: w.devId } as const;
+  const [people] = await db
+    .insert(schema.channels)
+    .values({ orgId: w.orgId, name: "dm-owner-bia", kind: "dm", visibility: "private", dmKey: "dm-owner-bia" })
+    .returning({ id: schema.channels.id });
+  const peopleId = people?.id ?? "";
+  await db.insert(schema.channelMembers).values([
+    { orgId: w.orgId, channelId: peopleId, userId: w.ownerId },
+    { orgId: w.orgId, channelId: peopleId, userId: w.biaId },
+  ]);
+
+  // What two people said to each other, and what a person told an agent that no run took up.
+  const between = [
+    await say(peopleId, "canary-between two people"),
+    await say(peopleId, "canary-between two people, answered", { authorUserId: w.biaId }),
+    await say(w.dmId, "canary-direct words no run took up"),
+  ];
+  for (const id of between) {
+    expect(await outcome(review("message", id, "text"))).toEqual([403, "reveal.direct_conversation"]);
+  }
+  // Refused before the record: nothing says a message was read, and no text was.
+  expect(await events()).toEqual([]);
+
+  // An agent's part of a direct conversation opens: the message that started its run, and what it wrote.
+  expect(await text(review("message", messages.dm, "text"))).toBe("canary-direct words");
+  const wrote = await say(w.dmId, "canary-direct answer", { ...byAgent, agentRunId: runs.direct });
+  expect(await text(review("message", wrote, "text"))).toBe("canary-direct answer");
+  const mentioned = await say(peopleId, "canary-between two people, with @dev");
+  await db.insert(schema.agentRuns).values({
+    orgId: w.orgId,
+    agentId: w.devId,
+    channelId: peopleId,
+    threadRootId: mentioned,
+    triggerMessageId: mentioned,
+    trigger: "mention",
+    hop: 1,
+    status: "done",
+    brain: "model",
+  });
+  expect(await text(review("message", mentioned, "text"))).toBe("canary-between two people, with @dev");
+
+  // Every other kind is an agent's, in a direct conversation too: a run's step, a task, the agent, its routine.
+  const [box] = await db.select({ id: schema.machines.id }).from(schema.machines).limit(1);
+  const [task] = await db
+    .insert(schema.machineTasks)
+    .values({
+      orgId: w.orgId,
+      agentId: w.devId,
+      machineId: box?.id ?? "",
+      channelId: w.dmId,
+      runId: runs.direct,
+      title: "canary-direct-title",
+      executor: "claude",
+      command: "canary-direct-command",
+      status: "done",
+    })
+    .returning({ id: schema.machineTasks.id });
+  expect(await text(review("run_step", runs.direct, "input", { seq: 1 }))).toContain("canary-input-m");
+  expect(await text(review("task", task?.id ?? "", "command"))).toBe("canary-direct-command");
+  expect(await outcome(review("agent", w.devId, "instructions"))).toBe(200);
+  expect(await outcome(review("routine", w.routineId, "instructions"))).toBe(200);
+
+  // The same conversations a fault read calls direct, and no other: a person's words in a channel open, and so do
+  // those in the room of a routine that reports to a channel, which is stored as a direct conversation.
+  expect(await outcome(review("message", messages.secret, "text"))).toBe(200);
+  const inRoom = await say(w.roomId, "canary-left in the routine's room");
+  expect(await outcome(review("message", inRoom, "text"))).toBe(200);
+});
+
+test("trust_safety: recorded first and told later: the event before any text, and never an audit entry", async () => {
+  await forget();
+  const json = review("message", messages.asked, "text");
+  const before = (await everyAuditLine()).length;
+  expect(await text(json)).toContain("canary-asked");
+  expect((await events()).map((e) => e.data)).toEqual([
+    {
+      ref: `reveal:message:${messages.asked}`,
+      reason: REASON,
+      operator: "call:7",
+      purpose: "trust_safety",
+      field: "text",
+      assistedByAi: true,
+    },
+  ]);
+  // Nothing in the workspace's own log, under any action.
+  expect((await everyAuditLine()).length).toBe(before);
+
+  const lines: string[] = [];
+  const print = console.error;
+  console.error = (line: unknown) => void lines.push(String(line));
+  try {
+    for (const mode of ["record", "read", "after"] as const) {
+      await forget();
+      const broken = failing(mode);
+      const on = createOperatorApp({ ...deps, db: broken.db }, TOKEN, READ, REVEAL);
+      const res = await call(json, { on });
+      // No record, no text. And a read that fails once on record stays on record.
+      expect({ mode, status: res.status }).toEqual({ mode, status: 500 });
+      expect(await res.text()).not.toContain("canary");
+      expect({ mode, events: (await events()).length }).toEqual({ mode, events: mode === "record" ? 0 : 1 });
+      expect(broken.read.text.includes("canary-asked")).toBe(mode === "after");
+      expect((await everyAuditLine()).length).toBe(before);
+    }
+  } finally {
+    console.error = print;
+  }
+  expect(lines.join("\n")).not.toContain("canary");
+});
+
+test("trust_safety is bounded: 150 such reads in a day on the whole instance, whatever the workspace", async () => {
+  await forget();
+  const here = review("message", messages.asked, "text");
+  const there = () => outcome(review("message", messages.foreign, "text"), { orgId: w.otherOrgId });
+  expect(await outcome(here)).toBe(200);
+  // The rest of the day's reads were of a workspace that is gone since: the count is the instance's.
+  await many(REVEAL_UNTOLD_PER_DAY - 2, { ...(await anEvent()), orgId: UNKNOWN });
+  expect(await outcome(here)).toBe(200);
+  const refused = await call(here);
+  const body = (await refused.json()) as Refusal;
+  expect([refused.status, body.error.code]).toEqual([429, "reveal.limit_untold"]);
+  // The sentence says what is used and that it frees.
+  expect(body.error.message).toContain(`${REVEAL_UNTOLD_PER_DAY} reads`);
+  expect(body.error.message).toContain("frees 24 hours after");
+  expect(await there()).toEqual([429, "reveal.limit_untold"]);
+  expect(await events()).toHaveLength(REVEAL_UNTOLD_PER_DAY);
+
+  // The other two purposes are not stopped by it.
+  expect(await outcome(ask("message", messages.asked, "text", { requestId: requests.owner }))).toBe(200);
+  expect(await outcome(ask("message", messages.asked, "text", { runId: runs.failed }))).toBe(200);
+  // It frees as the day moves on: a read over a day old is no longer counted.
+  const [oldest] = await events();
+  await db
+    .update(schema.operatorEvents)
+    .set({ createdAt: ago(DAY + HOUR) })
+    .where(eq(schema.operatorEvents.id, oldest?.id ?? ""));
+  expect(await there()).toBe(200);
+  expect(await there()).toEqual([429, "reveal.limit_untold"]);
+});
+
+test("trust_safety's count is its own: reads for a request or a fault, and review blocks, use none of it", async () => {
+  await forget();
+  expect(await outcome(ask("message", messages.asked, "text", { requestId: requests.owner }))).toBe(200);
+  const asked = await anEvent();
+  // A day's worth and more of the other two purposes and of review blocks, on another workspace.
+  await many(REVEAL_UNTOLD_PER_DAY, { ...asked, orgId: UNKNOWN });
+  await many(REVEAL_UNTOLD_PER_DAY, {
+    ...asked,
+    orgId: UNKNOWN,
+    data: { ...asked.data, purpose: "fault", runId: runs.foreign },
+  });
+  await many(REVEAL_UNTOLD_PER_DAY, {
+    ...asked,
+    orgId: UNKNOWN,
+    data: { ref: `run:${runs.failed}`, reason: "a sample", operator: "sampler", purpose: "trust_safety" },
+  });
+  expect(await outcome(review("message", messages.asked, "text"))).toBe(200);
+});
+
+test("trust_safety: a workspace's own 100 reads a day still stop it", async () => {
+  await forget();
+  expect(await outcome(ask("message", messages.asked, "text", { requestId: requests.owner }))).toBe(200);
+  await many(REVEAL_PER_WORKSPACE_DAY - 1, await anEvent());
+  expect(await outcome(review("message", messages.asked, "text"))).toEqual([429, "reveal.limit_workspace"]);
+  expect(await outcome(review("message", messages.foreign, "text"), { orgId: w.otherOrgId })).toBe(200);
+});
+
+const DISCLOSED = "operator.content_review_disclosed";
+const disclose = (json: unknown, options: { token?: string; orgId?: string } = {}) =>
+  app.request(`/api/operator/v1/orgs/${options.orgId ?? w.orgId}/content-reads/disclosure`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${options.token ?? TOKEN}`, "content-type": "application/json" },
+    body: JSON.stringify(json),
+  });
+const disclosures = (orgId = w.orgId) =>
+  db
+    .select()
+    .from(schema.auditLog)
+    .where(and(eq(schema.auditLog.orgId, orgId), eq(schema.auditLog.action, DISCLOSED)))
+    .orderBy(asc(schema.auditLog.createdAt));
+const undisclose = () => db.delete(schema.auditLog).where(eq(schema.auditLog.action, DISCLOSED));
+/** The answer's status and, for a refusal, its code. */
+async function disclosed(json: unknown, options?: Parameters<typeof disclose>[1]) {
+  const res = await disclose(json, options);
+  return res.status === 200 ? 200 : [res.status, ((await res.json()) as Refusal).error.code];
+}
+
+test("the disclosure is the full token's alone", async () => {
+  await undisclose();
+  const period = { from: ago(3 * DAY).toISOString(), to: ago(DAY).toISOString(), count: 12 };
+  for (const token of [READ, REVEAL]) {
+    expect({ token, answer: await disclosed(period, { token }) }).toEqual({ token, answer: [403, "forbidden"] });
+  }
+  expect(await disclosed(period, { token: "wrong" })).toEqual([401, "unauthorized"]);
+  expect(await disclosures()).toEqual([]);
+  expect(await disclosed(period)).toBe(200);
+  expect(await disclosures()).toHaveLength(1);
+});
+
+test("the disclosure writes one entry with the period and the count, and nothing else", async () => {
+  await forget();
+  await undisclose();
+  const before = (await everyAuditLine()).length;
+  const period = { from: ago(3 * DAY).toISOString(), to: ago(DAY).toISOString(), count: 12 };
+  const res = await disclose(period);
+  expect([res.status, await res.json()]).toEqual([200, period]);
+  const lines = await disclosures();
+  expect(
+    lines.map((l) => [l.actorType, l.actorId, l.targetType, l.targetId, l.onBehalfOfUserId, l.runId, l.channelId]),
+  ).toEqual([["system", null, "organization", null, null, null, null]]);
+  expect(lines.map((l) => l.details)).toEqual([period]);
+  // One entry, and no event: the operator's feed is told nothing it did not say itself.
+  expect((await everyAuditLine()).length).toBe(before + 1);
+  expect(await db.select().from(schema.operatorEvents)).toEqual([]);
+
+  // On agentes.chat's own servers the entry says so, for the apps to name who read.
+  await undisclose();
+  setRestrictionNotices("https://app.agentes.chat");
+  try {
+    expect(await disclosed(period)).toBe(200);
+  } finally {
+    setRestrictionNotices(t.config.PUBLIC_URL);
+  }
+  expect((await disclosures()).map((l) => l.details)).toEqual([{ ...period, cloud: true }]);
+  // A workspace nobody has.
+  expect(await disclosed(period, { orgId: UNKNOWN })).toEqual([404, "not_found"]);
+});
+
+test("the disclosure of one period is one entry however often it is sent, and answers as the first did", async () => {
+  await undisclose();
+  const [from, to] = [ago(3 * DAY), ago(DAY)];
+  const period = { from: from.toISOString(), to: to.toISOString(), count: 12 };
+  const first = await disclose(period);
+  expect(first.status).toBe(200);
+  // Sent again after a timeout, with the instants written another way, and with another count.
+  const hours = (d: Date) => new Date(d.getTime() + 2 * HOUR).toISOString().replace("Z", "+02:00");
+  const answers = [];
+  for (const again of [period, { ...period, from: hours(from), to: hours(to) }, { ...period, count: 40 }]) {
+    const res = await disclose(again);
+    answers.push([res.status, await res.json()]);
+  }
+  expect(answers).toEqual(answers.map(() => [200, period]));
+  expect((await disclosures()).map((l) => l.details)).toEqual([period]);
+
+  // Another period is another entry, and so is the same period of another workspace.
+  const later = { ...period, to: ago(HOUR).toISOString() };
+  expect(await disclosed(later)).toBe(200);
+  expect(await disclosed(period, { orgId: w.otherOrgId })).toBe(200);
+  expect((await disclosures()).map((l) => l.details)).toEqual([period, later]);
+  expect((await disclosures(w.otherOrgId)).map((l) => l.details)).toEqual([period]);
+});
+
+test("the disclosure refuses a period or a count out of bounds, and anything else sent with them", async () => {
+  await undisclose();
+  const now = Date.now();
+  const at = (ms: number) => new Date(now + ms).toISOString();
+  const good = { from: at(-3 * DAY), to: at(-DAY), count: 12 };
+  const bad: Record<string, unknown>[] = [
+    // A period that ends before it begins, or as it begins.
+    { ...good, from: good.to, to: good.from },
+    { ...good, from: good.to },
+    // One that has not ended, and one too long.
+    { ...good, to: at(5 * 60_000) },
+    { ...good, from: at(-(DISCLOSURE_MAX_DAYS + 2) * DAY) },
+    // Not instants.
+    { ...good, from: "2026-01-01" },
+    { ...good, to: "yesterday" },
+    { ...good, from: undefined },
+    { ...good, to: 1767225600000 },
+    // A count that is none, too many, or no whole number.
+    { ...good, count: 0 },
+    { ...good, count: -3 },
+    { ...good, count: DISCLOSURE_MAX_COUNT + 1 },
+    { ...good, count: 1.5 },
+    { ...good, count: "12" },
+    { ...good, count: undefined },
+    // The entry says a period and a count: a reason, a record or a word is refused, never kept.
+    { ...good, reason: REASON },
+    { ...good, ids: [messages.asked] },
+    { ...good, text: "canary-disclosed words" },
+    { ...good, operator: "call:7" },
+  ];
+  for (const json of bad) {
+    expect({ json, answer: await disclosed(json) }).toEqual({ json, answer: [400, "invalid_request"] });
+  }
+  expect(await disclosures()).toEqual([]);
+  // At the bounds: the caller's clock a little ahead, the longest period, the smallest and the largest count.
+  const edges = [
+    { from: at(-HOUR), to: at(30_000), count: 1 },
+    { from: at(-DISCLOSURE_MAX_DAYS * DAY - HOUR), to: at(-HOUR), count: DISCLOSURE_MAX_COUNT },
+  ];
+  for (const json of edges) expect({ json, answer: await disclosed(json) }).toEqual({ json, answer: 200 });
+  expect((await disclosures()).map((l) => l.details)).toEqual(edges);
 });
 
 test("masking before the cut: in every field the door reads, credentials are gone whichever window is asked, an address and a phone stay, a marker is defused", async () => {
@@ -1550,10 +1970,11 @@ test("the door's own limits: 30 calls a minute, and 100 reads of one workspace i
   expect(await outcome(good, { on })).toBe(200);
 });
 
-test("a confidential thread: its run's steps and the task it started open under neither purpose, its messages read as the stub, and what is no thread's words stays", async () => {
+test("a confidential thread: its run's steps and the task it started open under no purpose, its messages read as the stub, and what is no thread's words stays", async () => {
   const root = asking.get(runs.sealed) ?? "";
   const mine = { requestId: requests.owner };
   const of = { runId: runs.sealed };
+  const purposes = { member_request: mine, fault: of, trust_safety: UNTOLD };
   type Proof = Record<string, unknown>;
   // Every field of the door's table: the thread's own record where the kind has one.
   const places: Record<string, (proof: Proof) => Record<string, unknown>> = {
@@ -1585,7 +2006,7 @@ test("a confidential thread: its run's steps and the task it started open under 
   const read = async () => {
     const answers: Record<string, unknown> = {};
     for (const [asked, json] of Object.entries(places)) {
-      for (const [purpose, proof] of Object.entries({ member_request: mine, fault: of })) {
+      for (const [purpose, proof] of Object.entries(purposes)) {
         const res = await call(json(proof));
         const body = (await res.json()) as Answer & Refusal;
         answers[`${asked} ${purpose}`] = res.status === 200 ? body.text : [res.status, body.error.code];
@@ -1613,11 +2034,12 @@ test("a confidential thread: its run's steps and the task it started open under 
     "task.result": "canary-sealed-result",
   };
   for (const [asked, text] of Object.entries(held)) {
-    for (const purpose of ["member_request", "fault"]) {
+    for (const purpose of Object.keys(purposes)) {
       expect({ asked, purpose, text: before[`${asked} ${purpose}`] }).toEqual({ asked, purpose, text });
     }
   }
-  expect(await onRecord()).toEqual([14, 14]);
+  // Each of the seven under each purpose is in the feed; a safety review's are in no audit log.
+  expect(await onRecord()).toEqual([21, 14]);
 
   await forget();
   await markThreadConfidential(db, { orgId: w.orgId, channelId: w.generalId, rootId: root });
@@ -1659,11 +2081,11 @@ test("a confidential thread: its run's steps and the task it started open under 
 });
 
 test("a task the server started again by itself is its first task's run's: a confidential thread keeps it after any number of restarts", async () => {
-  const mine = { requestId: requests.owner };
-  const read = async () => {
+  const proofs = [{ requestId: requests.owner }, UNTOLD];
+  const read = async (proof: Record<string, unknown>) => {
     const answers: unknown[] = [];
     for (const field of REVEAL_FIELDS.task) {
-      const res = await call(ask("task", w.againTaskId, field, mine));
+      const res = await call(ask("task", w.againTaskId, field, proof));
       const body = (await res.json()) as Answer & Refusal;
       answers.push(res.status === 200 ? body.text : [res.status, body.error.code]);
     }
@@ -1671,17 +2093,21 @@ test("a task the server started again by itself is its first task's run's: a con
   };
   // It has no run of its own: no run's fault opens it, whatever its thread.
   const fault = ask("task", w.againTaskId, "command", { runId: runs.again });
-  expect(await read()).toEqual(["canary-again-command", "canary-again-prompt", "canary-again-result"]);
+  for (const proof of proofs) {
+    expect(await read(proof)).toEqual(["canary-again-command", "canary-again-prompt", "canary-again-result"]);
+  }
   expect(await outcome(fault)).toEqual([403, "reveal.not_the_fault"]);
 
   await forget();
   await markThreadConfidential(db, { orgId: w.orgId, channelId: w.generalId, rootId: asking.get(runs.again) ?? "" });
-  expect(await read()).toEqual(REVEAL_FIELDS.task.map(() => [403, "reveal.confidential"]));
+  for (const proof of proofs) {
+    expect(await read(proof)).toEqual(REVEAL_FIELDS.task.map(() => [403, "reveal.confidential"]));
+  }
   expect(await outcome(fault)).toEqual([403, "reveal.not_the_fault"]);
   expect([await events(), await auditLines()]).toEqual([[], []]);
 });
 
-test("a message of a confidential thread that is not sealed yet reads as the stub, under both purposes", async () => {
+test("a message of a confidential thread that is not sealed yet reads as the stub, under every purpose", async () => {
   const root = asking.get(runs.sealed) ?? "";
   await markThreadConfidential(db, { orgId: w.orgId, channelId: w.generalId, rootId: root });
   // As a message written while the mark was being committed is stored: in the thread, with its words.
@@ -1698,7 +2124,7 @@ test("a message of a confidential thread that is not sealed yet reads as the stu
     })
     .returning({ id: schema.messages.id, body: schema.messages.body });
   expect(reply?.body).toBe("canary-unsealed reply");
-  for (const proof of [{ requestId: requests.owner }, { runId: runs.sealed }]) {
+  for (const proof of [{ requestId: requests.owner }, { runId: runs.sealed }, UNTOLD]) {
     expect(await text(ask("message", reply?.id ?? "", "text", proof))).toBe(CONFIDENTIAL_STUB);
   }
   // A message of any other thread reads as it is stored.

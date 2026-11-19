@@ -86,6 +86,30 @@ const KNOWN = {
   "artifact.sharing_empty": "errors.artifact.sharingEmpty",
   "artifact.sharing_too_many": "errors.artifact.sharingTooMany",
   "artifact.not_in_drive": "errors.artifact.notInDrive",
+  "drive.folder_into_itself": "errors.drive.folderIntoItself",
+  // Live files (ADR 0196): a change to a file that is read-only now (in the trash, its workspace closing), a picture
+  // over the size a file takes or that is no picture, a file past what it may hold, a whole new content sent for one
+  // (it changes only in place).
+  "live.read_only": "errors.live.readOnly",
+  "live.too_large": "errors.live.tooLarge",
+  "live.asset_too_large": "errors.live.assetTooLarge",
+  "live.asset_type": "errors.live.assetType",
+  "artifact.live_only": "errors.live.liveOnly",
+  // Uploaded Office files (ADR 0198): damaged, past what the server reads, of a kind only downloaded, locked with a
+  // password, or past what a live file holds.
+  "office.unreadable": "errors.office.unreadable",
+  "office.too_large": "errors.office.tooLarge",
+  "office.unsupported": "errors.office.unsupported",
+  "office.encrypted": "errors.office.encrypted",
+  "office.too_large_to_edit": "errors.office.tooLargeToEdit",
+  // Images made on a canvas (ADR 0197).
+  "images.no_model": "errors.images.noModel",
+  "images.model_unavailable": "errors.images.modelUnavailable",
+  "images.reference": "errors.images.reference",
+  "images.not_canvas": "errors.images.notCanvas",
+  "images.rate": "errors.images.rate",
+  person_limit: "errors.images.personLimit",
+  provider_error: "errors.images.provider",
   "machine.forbidden": "errors.machine.forbidden",
   "device.forbidden": "errors.machine.forbidden",
   "device.link_not_found": "errors.machine.pairingInvalid",
@@ -96,6 +120,7 @@ const KNOWN = {
   "machine.not_found": "errors.machine.notFound",
   "machine.name_required": "errors.machine.nameRequired",
   "account.method_unsupported": "errors.machine.accountMethodUnsupported",
+  "brain.unavailable": "errors.machine.brainUnavailable",
   "machine.pairing_invalid": "errors.machine.pairingInvalid",
   "machine.pairing_off": "errors.machine.pairingOff",
   "machine.target_offline": "errors.machine.targetOffline",
@@ -567,6 +592,7 @@ const KNOWN = {
   "join.waiting": "errors.said.alreadyAsked",
   "mail.already_connected": "errors.said.mailboxConnected",
   "mail.send_without_asking_needs_recipients": "errors.said.sendNeedsRecipients",
+  "mission.executor_unavailable": "errors.mission.executorUnavailable",
   "mission.tasks_live": "errors.said.missionLive",
   "org.create_refused": "errors.said.createRefused",
   "reminder.no_agent": "errors.said.noAgentToRemind",
@@ -916,6 +942,18 @@ function readsEnglish(t: TFunction) {
 export const forbiddenText = (t: TFunction, error: ApiError, locale?: string): string =>
   knownErrorText(t, error, locale) ?? t("common.notAllowed");
 
+/** A password sign-in past its account's tries (apps/server auth.ts `TOO_MANY_PASSWORD_TRIES`). */
+export const TOO_MANY_PASSWORD_TRIES = "TOO_MANY_PASSWORD_TRIES";
+
+/**
+ * Too many password tries on this account: when to try again, in whole minutes from the refusal's `retryIn` (its
+ * `Retry-After`, in seconds). Null for any other refusal.
+ */
+export function passwordTriesText(t: TFunction, refusal: { code?: string | null; retryIn?: number }): string | null {
+  if (refusal.code !== TOO_MANY_PASSWORD_TRIES) return null;
+  return t("auth.passwordTries", { count: Math.max(1, Math.ceil((refusal.retryIn ?? 15 * 60) / 60)) });
+}
+
 /**
  * A sign-in, sign-up or reset Better Auth refused (`{ status, code, message }`, a block's kind on agentes.chat Cloud)
  * in the person's words: too many tries, a blocked account and the bot check by their codes, no answer (status 0, or
@@ -923,8 +961,10 @@ export const forbiddenText = (t: TFunction, error: ApiError, locale?: string): s
  */
 export function authErrorText(
   t: TFunction,
-  refusal: { status: number; code?: string; message: string } & RestrictionFacts,
+  refusal: { status: number; code?: string; message: string; retryIn?: number } & RestrictionFacts,
 ): string {
+  const tries = passwordTriesText(t, refusal);
+  if (tries) return tries;
   if (refusal.status === 429) return t("auth.tooManyTries");
   if (refusal.status === 0) return noAnswerText(t);
   const { kind, cloud } = refusal;

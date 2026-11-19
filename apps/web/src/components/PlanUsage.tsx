@@ -11,18 +11,18 @@ import { removableLogins } from "@agenteschat/client/lib/ai-accounts";
 import { computerNameOf } from "@agenteschat/client/lib/computer";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { formatPercent, formatTokensShort, formatUsd, joinNames } from "@agenteschat/client/lib/format";
-import { accountKinds, kindFacts, usageOrderSections } from "@agenteschat/client/lib/plan-usage";
+import { accountKinds, usageOrderSections } from "@agenteschat/client/lib/plan-usage";
 import { planName } from "@agenteschat/client/lib/plans";
 import { AUTO, apiProviderOf } from "@agenteschat/client/lib/providers";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import {
-  Alert,
   agentGradient,
   Button,
   Card,
   CardHeader,
   Dialog,
   DialogFooter,
+  Disclosure,
   EmptyState,
   HintLine,
   Icon,
@@ -54,15 +54,15 @@ import {
   accountName,
   accountOwner,
   accountShares,
+  accountWhere,
   accountWhose,
-  brandOf,
   groupUsageAccounts,
   loginsText,
   noWindowsText,
   planMeterText,
   servesTerms,
   servesText,
-  shareFacts,
+  shareCells,
   splitUsage,
 } from "@/lib/plan-usage";
 import { useToast } from "@/lib/toast";
@@ -79,10 +79,10 @@ import "./plan-usage.css";
 /** An en space between a row's name, its plan and whose it is: it ends a line unseen where a margin would indent the next. */
 const WIDE_SPACE = "\u2002";
 
-/** An account's head: the maker's mark, its name and plan, its maker and whose it is. */
+/** An account's head: the maker's mark (it names the maker), its name and plan, and whose it is. */
 export function AccountHead({ account, extra }: { account: PlanAccountInfo; extra?: string | null }) {
   const { t } = useTranslation();
-  const whose = accountWhose(t, account);
+  const sub = [accountWhose(t, account), extra].filter(Boolean).join(" · ");
   return (
     <div className="plan-acct ac-mediarow ac-mediarow--row">
       <span className="ac-mediarow__face">
@@ -97,9 +97,7 @@ export function AccountHead({ account, extra }: { account: PlanAccountInfo; extr
           )}
         </span>
       </span>
-      <span className="ac-mediarow__body plan-acct__sub">
-        {[brandOf(account), whose, extra].filter(Boolean).join(" · ")}
-      </span>
+      {sub && <span className="ac-mediarow__body plan-acct__sub">{sub}</span>}
     </div>
   );
 }
@@ -241,10 +239,10 @@ function OrderRows({
 
 /**
  * A plan account as a row that opens. Closed: its maker's mark, its name and plan, whose it is and one meter, the
- * window closest to its limit, with what matters near the limit on a line under them. Open: its maker and address,
- * every window with its bar split by agent in their colours, its agents (share of the window the bar splits, tokens
- * this month), when it renews, the month's total and, for its owner, what they do with it. Near its limit it starts
- * open.
+ * window closest to its limit, with what matters near the limit on a line under them. Open: every window with when it
+ * renews (the head's meter fades), near the limit why when handoffs led, then one quiet "Detalhes" holding its agents
+ * and kinds in columns (the bars split by agent while it is open), the month's tokens and its address; for its owner,
+ * what they do with it. Every row starts closed: the head's meter and its limit line already say where it stands.
  */
 function AccountRow({
   account,
@@ -265,18 +263,17 @@ function AccountRow({
   const dir = useDirectory(org.id);
   const text = planMeterText(t, i18n.language);
   const line = account.usage ? planLine(account.usage, text) : null;
-  const [open, setOpen] = useState(line != null && line.state !== "ok");
+  const [open, setOpen] = useState(false);
   // What the row holds leaves the page once it has closed, so a closed list of many accounts stays light.
-  const [held, setHeld] = useState(open);
+  const [held, setHeld] = useState(false);
   const body = useId();
+  // Split by agent only while the agents that explain the colours are open under the bars.
+  const [details, setDetails] = useState(false);
   const shares = accountShares(account);
   const window = shares.window ? text.short(shares.window) : null;
-  const list = shares.shown.length > 0 && (
-    <>
-      <AgentShares shares={shares} window={window} />
-      <KindShares account={account} window={window} />
-    </>
-  );
+  const hasShares = shares.shown.length > 0;
+  const where = accountWhere(t, account, computer);
+  const hasDetails = hasShares || account.monthTokens > 0 || Boolean(where);
   // Whose it is, who uses it and how many logins it stands for: each moves to the next line whole.
   const facts = [accountOwner(t, account), servesText(t, account), loginsText(t, account)].filter((f): f is string =>
     Boolean(f),
@@ -337,7 +334,8 @@ function AccountRow({
             className="ac-planmeter__state plan-row__alert"
             data-level={planLevel(line.top?.used ?? 0, line.state === "limited")}
           >
-            {line.alert}
+            {/* Each window's bar says when it renews: near the limit the warning keeps just its words. */}
+            {line.state === "limited" ? line.alert : text.almost}
           </span>
         )}
       </button>
@@ -353,48 +351,64 @@ function AccountRow({
         <div className="plan-row__body">
           {held && (
             <>
-              <span className="plan-acct__sub">
-                {[brandOf(account), account.email, computer].filter(Boolean).join(" · ")}
-              </span>
               {account.usage ? (
                 <>
                   <PlanMeter
-                    usage={splitUsage(account.usage, (id) => agentGradient(colorOf(dir.agentById.get(id))))}
+                    usage={
+                      details
+                        ? splitUsage(account.usage, (id) => agentGradient(colorOf(dir.agentById.get(id))))
+                        : account.usage
+                    }
                     text={text}
-                  >
-                    {list}
-                  </PlanMeter>
+                  />
                   <PlanModels usage={account.usage} provider={account.provider} />
                 </>
               ) : (
-                <>
-                  <p className="plan-empty">{noWindowsText(t, account)}</p>
-                  {list}
-                </>
+                <p className="plan-empty">{noWindowsText(t, account)}</p>
               )}
-              {account.monthTokens > 0 && (
-                <span className="plan-block__month">
-                  {t("usageViews.monthTokens", { tokens: formatTokensShort(t, i18n.language, account.monthTokens) })}
-                  {money && typeof account.equivalentUsd === "number" && (
+              {line && line.state !== "ok" && <HandoffNudge account={account} />}
+              {hasDetails && (
+                <Disclosure summary={t("common.details")} onOpenChange={setDetails} className="plan-details">
+                  {hasShares && (
                     <>
-                      {" · "}
-                      <span className="ac-hintline">
-                        <span>
-                          {t("usageViews.equivalent", { amount: formatUsd(i18n.language, account.equivalentUsd) })}
-                        </span>
-                        <InfoHint name={t("common.about", { label: t("usageViews.apiPrice") })}>
-                          {t("usageViews.apiPriceHint")}
-                        </InfoHint>
-                      </span>
+                      <AgentShares shares={shares} window={window} />
+                      <KindShares account={account} window={window} />
                     </>
                   )}
-                </span>
-              )}
-              {account.mine && account.accountId && account.serves && (
-                <WhoUses accountId={account.accountId} account={account} />
+                  {(account.monthTokens > 0 || where) && (
+                    <div className="plan-details__facts">
+                      {account.monthTokens > 0 && (
+                        <span>
+                          {t("usageViews.monthTokens", {
+                            tokens: formatTokensShort(t, i18n.language, account.monthTokens),
+                          })}
+                          {money && typeof account.equivalentUsd === "number" && (
+                            <>
+                              {" · "}
+                              <span className="ac-hintline">
+                                <span>
+                                  {t("usageViews.equivalent", {
+                                    amount: formatUsd(i18n.language, account.equivalentUsd),
+                                  })}
+                                </span>
+                                <InfoHint name={t("common.about", { label: t("usageViews.apiPrice") })}>
+                                  {t("usageViews.apiPriceHint")}
+                                </InfoHint>
+                              </span>
+                            </>
+                          )}
+                        </span>
+                      )}
+                      {where && <span className="plan-acct__sub">{where}</span>}
+                    </div>
+                  )}
+                </Disclosure>
               )}
               {account.mine && account.accountId && (
-                <AccountActions machineId={account.machineId} accountId={account.accountId} />
+                <div className="plan-own">
+                  {account.serves && <WhoUses accountId={account.accountId} account={account} />}
+                  <AccountActions machineId={account.machineId} accountId={account.accountId} />
+                </div>
               )}
             </>
           )}
@@ -451,44 +465,67 @@ function WhoUses({ accountId, account }: { accountId: string; account: PlanAccou
   );
 }
 
-/**
- * The account's agents, biggest share first, each on one line of words ("Lia · semana 48% · 4,8 mi tokens"); past the
- * first few, one row that opens the rest in place.
- */
+/** A list's label over its columns: the window's short name heads the shares. */
+function SharesHead({ label, window }: { label: string; window: string | null }) {
+  return (
+    <p className="plan-group__label plan-shares__cols">
+      <span>{label}</span>
+      {window && <span className="plan-shares__share">{window}</span>}
+    </p>
+  );
+}
+
+/** One row's columns after its face: the name, its share of the window, its tokens this month. */
+function ShareCells({ name, cells }: { name: string; cells: ReturnType<typeof shareCells> }) {
+  return (
+    <>
+      <b>{name}</b>
+      {cells.share && <span className="plan-shares__share">{cells.share}</span>}
+      <span className="plan-shares__tokens">{cells.tokens}</span>
+    </>
+  );
+}
+
+/** The account's agents, biggest share first, in columns; past the first few, one row that opens the rest in place. */
 function AgentShares({ shares, window }: { shares: ReturnType<typeof accountShares>; window: string | null }) {
   const { t, i18n } = useTranslation();
   const { org } = useOrg();
   const dir = useDirectory(org.id);
   const [open, setOpen] = useState(false);
   return (
-    <div className="plan-shares">
-      {(open ? [...shares.shown, ...shares.rest] : shares.shown).map((a) => {
-        const name = dir.agentById.get(a.agentId)?.name ?? a.name;
-        return (
-          <Link
-            key={a.agentId}
-            className="plan-shares__row"
-            to="/org/$orgId/agents/$agentId"
-            params={{ orgId: org.id, agentId: a.agentId }}
-            search={{ tab: "usage" }}
+    <div className="plan-group">
+      <SharesHead label={t("shell.agents")} window={window} />
+      <div className="plan-shares">
+        {(open ? [...shares.shown, ...shares.rest] : shares.shown).map((a) => {
+          const name = dir.agentById.get(a.agentId)?.name ?? a.name;
+          return (
+            <Link
+              key={a.agentId}
+              className="plan-shares__row plan-shares__cols"
+              to="/org/$orgId/agents/$agentId"
+              params={{ orgId: org.id, agentId: a.agentId }}
+              search={{ tab: "usage" }}
+            >
+              <AgentAvatar agentId={a.agentId} size="xs" name={name} />
+              <ShareCells name={name} cells={shareCells(t, i18n.language, window, a)} />
+            </Link>
+          );
+        })}
+        {!open && shares.rest.length > 0 && (
+          <button
+            type="button"
+            className="plan-shares__row plan-shares__cols"
+            aria-expanded={false}
+            onClick={() => setOpen(true)}
           >
-            <AgentAvatar agentId={a.agentId} size="xs" name={name} />
-            <span>
-              <b>{name}</b>
-              {shareFacts(t, i18n.language, window, a)}
-            </span>
-          </Link>
-        );
-      })}
-      {!open && shares.rest.length > 0 && (
-        <button type="button" className="plan-shares__row" aria-expanded={false} onClick={() => setOpen(true)}>
-          <span />
-          <span>
-            <b>{t("usageViews.moreAgents", { count: shares.rest.length })}</b>
-            {shareFacts(t, i18n.language, window, { share: shares.restShare, tokens: shares.restTokens })}
-          </span>
-        </button>
-      )}
+            <span />
+            <ShareCells
+              name={t("usageViews.moreAgents", { count: shares.rest.length })}
+              cells={shareCells(t, i18n.language, window, { share: shares.restShare, tokens: shares.restTokens })}
+            />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -498,42 +535,52 @@ const KIND_ICONS = { handoffs: "swap", people: "person", routines: "routines" } 
   string
 >;
 
-/**
- * Under the agents, what the account's use was for ("Handoffs between agents · week 37% · 6.9M tokens"), and when
- * handoffs led the week, a hint to ask the agent that took most of them directly.
- */
+/** Under the agents, what the account's use was for, in the same columns. */
 function KindShares({ account, window }: { account: PlanAccountUsage; window: string | null }) {
   const { t, i18n } = useTranslation();
-  const { org } = useOrg();
-  const dir = useDirectory(org.id);
   const kinds = accountKinds(account);
-  const target = account.hint ? dir.agentById.get(account.hint.agentId) : undefined;
   if (kinds.length === 0) return null;
   return (
-    <>
-      <p className="plan-kinds__label">{t("usage.kinds.label")}</p>
+    <div className="plan-group">
+      <SharesHead label={t("usage.kinds.label")} window={window} />
       <div className="plan-shares plan-kinds">
         {kinds.map((k) => (
-          <div key={k.kind} className="plan-shares__row">
+          <div key={k.kind} className="plan-shares__row plan-shares__cols">
             <span className="plan-kinds__icon">
               <Icon name={KIND_ICONS[k.kind]} size={16} />
             </span>
-            <span>
-              <b>{t(`usage.kinds.${k.kind}`)}</b>
-              {kindFacts(t, i18n.language, window, k)}
-            </span>
+            <ShareCells
+              name={t(`usage.kinds.${k.kind}`)}
+              cells={shareCells(t, i18n.language, window, { share: k.percent, tokens: k.tokens })}
+            />
           </div>
         ))}
       </div>
-      {target && (
-        <Alert tone="neutral" icon="info" className="plan-kinds__hint">
-          {t("usage.hint.handoffs")}{" "}
-          <Link className="ac-link" to="/org/$orgId/dm/agent/$agentId" params={{ orgId: org.id, agentId: target.id }}>
-            {t("usage.hint.message", { name: target.name })}
-          </Link>
-        </Alert>
-      )}
-    </>
+    </div>
+  );
+}
+
+/**
+ * Near or at the limit, when handoffs led the week: one line on why, with the way to ask the agent that took most of
+ * them directly. Far from the limit it would only be noise.
+ */
+function HandoffNudge({ account }: { account: PlanAccountUsage }) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const dir = useDirectory(org.id);
+  const target = account.hint ? dir.agentById.get(account.hint.agentId) : undefined;
+  if (!target) return null;
+  return (
+    <p className="plan-kinds__hint">
+      {t("usage.hint.handoffs")}{" "}
+      <Link
+        className="ac-link ac-link--muted"
+        to="/org/$orgId/dm/agent/$agentId"
+        params={{ orgId: org.id, agentId: target.id }}
+      >
+        {t("usage.hint.message", { name: target.name })}
+      </Link>
+    </p>
   );
 }
 

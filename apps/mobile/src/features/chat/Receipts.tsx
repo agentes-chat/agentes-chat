@@ -8,24 +8,24 @@ import {
   receiptRows,
   receiptUnder,
 } from "@agenteschat/client/lib/actions";
+import { managesRoutinesOf } from "@agenteschat/client/lib/audience";
 import { handedTasksOf } from "@agenteschat/client/lib/issues";
-import { can } from "@agenteschat/client/lib/permissions";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { type GestureResponderEvent, Pressable, StyleSheet, View } from "react-native";
 import Animated, { FadeIn, LayoutAnimationConfig } from "react-native-reanimated";
-import { useOrg } from "@/providers/org";
 import { Disclosure, GroupedFooter, LineIcon, Text, useReducedMotion, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
 import { agoOf } from "../agents/logic";
 import { agoText } from "../agents/work";
+import { useBubblePart } from "../shared/bubble-part";
 import { useColors, useOrgId } from "../shared/hooks";
 import { SheetTitle } from "../shared/PromptForm";
 import { ActionList, copyText, tapHaptic } from "../shared/parts";
 import { useSheetIfAny } from "../shared/SheetHost";
 import { groupStart, receiptIcon, receiptLayout, targetHref } from "./actions";
 import { DOUBLE_TAP_MS } from "./logic";
-import { useCardTop } from "./look";
+import { useCardTop, useMessageCardCorners } from "./look";
 import { useRowDirectory, useRowMeId } from "./row-data";
 
 /**
@@ -48,6 +48,8 @@ export function Receipts({
 }) {
   const { t } = useTranslation();
   const c = useColors();
+  const part = useBubblePart();
+  const cardCorners = useMessageCardCorners();
   const meId = useRowMeId();
   const dir = useRowDirectory();
   const sheet = useSheetIfAny();
@@ -96,17 +98,21 @@ export function Receipts({
     );
   };
   const start = groupStart(list);
+  // In a conversation of bubbles, a bubble of the message it came with (its fill, joined to it); else the card.
+  const frame = part
+    ? [styles.card, { backgroundColor: part.fill, borderWidth: 0 }, cardCorners, part.edge]
+    : [styles.card, { backgroundColor: c.raised, borderColor: c.line2 }, cardCorners];
   // What changes while it shows (undone from somewhere else) fades in; what is there when it mounts just shows.
   return (
     <View style={cardTop}>
       <LayoutAnimationConfig skipEntering>
         {layout === "one" ? (
-          <View style={[styles.one, styles.card, { backgroundColor: c.raised, borderColor: c.line2 }]}>
+          <View style={[styles.one, frame]}>
             <LineIcon name={receiptIcon((list[0] as AgentAction).kind)} size={15} color={c.muted} variant="small" />
             {row(rows[0] as ReceiptRow, "one")}
           </View>
         ) : (
-          <View style={[styles.group, styles.card, { backgroundColor: c.raised, borderColor: c.line2 }]}>
+          <View style={[styles.group, frame]}>
             <View style={styles.hd}>
               <Text variant="small" tone="muted" style={styles.fit}>
                 <Text variant="small" tone="ink" style={styles.bold}>
@@ -263,14 +269,14 @@ function ChangesSheet({
 
 /**
  * A webhook routine the agent just made: its address, kept out of the message text, copied from here by who may
- * manage the routine (the person who asked, admins; the server checks again).
+ * manage the routine (the person who asked, who sets up that agent's routines; the server checks again).
  */
 function CopyHook({ action: a }: { action: AgentAction }) {
   const { t } = useTranslation();
   const api = useApi();
   const orgId = useOrgId();
   const meId = useRowMeId();
-  const manages = can(useOrg().org, "manage_routines");
+  const manages = managesRoutinesOf(useRowDirectory().agentById.get(a.agentId));
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const routineId = hookToCopy(a, { userId: meId, managesRoutines: manages });

@@ -127,7 +127,7 @@ export function EmailSteps({
   };
 
   /** Better Auth's refusal → the sentence to show (never the server's raw text). */
-  const refusal = (refused: { status: number; code?: string }) =>
+  const refusal = (refused: { status: number; code?: string; retryIn?: number }) =>
     refused.status ? refusalText(t, refused) : t("mobile.auth.errors.network");
 
   const signIn = () =>

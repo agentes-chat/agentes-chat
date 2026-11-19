@@ -188,6 +188,8 @@ export const keys = {
   /** How many threads I follow have an unread reply (the Threads entry's mark). */
   unreadThreads: (orgId: string) => ["org", orgId, "threads", "unread"] as const,
   unreadTasks: (orgId: string) => ["org", orgId, "issues", "unread"] as const,
+  /** Live files whose conversation has a reply I haven't read (ADR 0199): under the Drive's, read again with it. */
+  unreadFiles: (orgId: string) => ["org", orgId, "artifacts", "unread"] as const,
   channelThreads: (orgId: string, channelId: string, tab: string) =>
     ["org", orgId, "threads", "channel", channelId, tab] as const,
   /** The messages of a thread's context range (another channel's, or this one's). */
@@ -208,6 +210,7 @@ export const keys = {
   calendar: (orgId: string) => ["org", orgId, "calendar"] as const,
   calendarRange: (orgId: string, from: string) => ["org", orgId, "calendar", from] as const,
   artifactList: (orgId: string, filters: object) => ["org", orgId, "artifacts", "list", filters] as const,
+  driveFolders: (orgId: string) => ["org", orgId, "artifacts", "folders"] as const,
   artifact: (orgId: string, id: string, version?: number) =>
     ["org", orgId, "artifacts", "one", id, version ?? "latest"] as const,
   artifactVersions: (orgId: string, id: string) => ["org", orgId, "artifacts", "versions", id] as const,

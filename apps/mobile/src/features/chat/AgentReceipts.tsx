@@ -9,6 +9,7 @@ import {
   useSteerState,
 } from "@agenteschat/client";
 import { listNames } from "@agenteschat/client/lib/activity";
+import { managesAgent } from "@agenteschat/client/lib/audience";
 import { failedRunFix, filesTextOnlyOf, runFailureLine } from "@agenteschat/client/lib/errors";
 import { sentAtLine } from "@agenteschat/client/lib/format";
 import { mayConnectAi, plansNotYoursOf } from "@agenteschat/client/lib/no-ai";
@@ -35,6 +36,7 @@ import {
 import { openAgentAi, openAgentModel } from "../ai/AgentAiScreen";
 import { openConnectAi } from "../ai/NoAiCard";
 import { Note, OpenPage, usePlanHold } from "../ai/parts";
+import { ReportProblemButton } from "../report/ReportProblemButton";
 import { AgentFace, Face } from "../shared/Face";
 import { useColors, useOrgId } from "../shared/hooks";
 import { SheetTitle } from "../shared/PromptForm";
@@ -57,14 +59,13 @@ import { useRowDirectory, useRowMeId } from "./row-data";
 /** Under a reply whose picture or PDF reached its AI as text only: "Trocar modelo", for who may change the agent. */
 export function FilesTextOnlyFix({ message: m }: { message: Message }) {
   const { t } = useTranslation();
-  const { org } = useOrg();
   const meId = useRowMeId();
   const dir = useRowDirectory();
   const agentId = m.author.id;
   const fix = agentId
     ? failedRunFix(filesTextOnlyOf(m.meta), {
         keys: false,
-        admin: can(org, "manage_agents"),
+        admin: managesAgent(dir.agentById.get(agentId)),
         owner: meId !== null && dir.agentById.get(agentId)?.ownerUserId === meId,
       })
     : null;
@@ -123,7 +124,7 @@ export const AgentReceiptLine = memo(function AgentReceiptLine({
     failedAgent && failure
       ? failedRunFix(failure.code, {
           keys: can(org, "manage_credentials") && !held,
-          admin: can(org, "manage_agents"),
+          admin: managesAgent(dir.agentById.get(failedAgent)),
           owner: meId !== null && dir.agentById.get(failedAgent)?.ownerUserId === meId,
         })
       : null;
@@ -227,6 +228,9 @@ export const AgentReceiptLine = memo(function AgentReceiptLine({
                 : openAgentAi(failedAgent)
           }
         />
+      ) : null}
+      {failedAgent && receipt?.runOf?.[failedAgent] ? (
+        <ReportProblemButton place="run" context={{ runId: receipt.runOf[failedAgent] }} />
       ) : null}
       {mine && !held && receipt?.noAi && receipt.server?.kept ? <KeptAnswer messageId={m.id} /> : null}
     </Animated.View>

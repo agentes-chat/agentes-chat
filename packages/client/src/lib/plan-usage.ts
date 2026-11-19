@@ -44,6 +44,7 @@ export interface MeterWindow {
   label?: string;
   usedPercent: number;
   resetsAt?: string;
+  at?: string;
   part?: number;
   note?: string;
   segments?: MeterSegment[];
@@ -479,26 +480,26 @@ export function accountShares(account: Pick<PlanAccountUsage, "usage" | "agents"
 }
 
 /**
- * What follows an agent's name on its line under an account's bars: " · semana 48% · 4,8 mi tokens". The share only
- * while a window has parts (`window`, its short name); with no tokens yet, "usa agora" for an agent on it right now.
+ * An agent's or a kind's two columns under an account's bars, each fact whole so a narrow row never parts a number from
+ * its unit: its share of the window ("48%", only while a window has parts, `window` being its short name) and its tokens
+ * this month ("4,8 mi tokens"), or, with none yet, "usa agora" for an agent on it right now.
  */
-export function shareFacts(
+export function shareCells(
   t: TFunction,
   lang: string,
   window: string | null,
-  row: { share: number; tokens: number; now?: boolean },
+  row: { share: number | null; tokens: number; now?: boolean },
 ) {
-  return [
-    window ? `${window} ${formatPercent(lang, row.share)}` : null,
-    row.tokens > 0
-      ? t("usageViews.tokens", { tokens: formatTokensShort(t, lang, row.tokens) })
-      : row.now
-        ? t("usageViews.usesNow")
-        : null,
-  ]
-    .filter(Boolean)
-    .map((fact) => ` · ${fact}`)
-    .join("");
+  const whole = (s: string) => s.replaceAll(" ", "\u00a0");
+  return {
+    share: window ? whole(formatPercent(lang, row.share ?? 0)) : null,
+    tokens:
+      row.tokens > 0
+        ? whole(t("usageViews.tokens", { tokens: formatTokensShort(t, lang, row.tokens) }))
+        : row.now
+          ? t("usageViews.usesNow")
+          : null,
+  };
 }
 
 const KIND_ORDER: readonly PlanUseKind[] = ["handoffs", "people", "routines"];
@@ -512,17 +513,12 @@ export const accountKinds = (account: Pick<PlanAccountUsage, "kinds">) =>
     (kind) => account.kinds?.find((k) => k.kind === kind && (k.tokens > 0 || (k.percent ?? 0) > 0)) ?? [],
   );
 
-/** `shareFacts` for a kind's line, each fact whole ("week\u00a037%"), so a narrow row never parts a number from its unit. */
-export const kindFacts = (
+/** Where an account lives, under its "Detalhes": its address (unless it is already the name) and the computer, if named. */
+export const accountWhere = (
   t: TFunction,
-  lang: string,
-  window: string | null,
-  row: { percent: number | null; tokens: number },
-) =>
-  shareFacts(t, lang, window, { share: row.percent ?? 0, tokens: row.tokens })
-    .split(" · ")
-    .map((fact) => fact.replaceAll(" ", "\u00a0"))
-    .join(" · ");
+  a: Parameters<typeof accountName>[1] & Pick<PlanAccountInfo, "email">,
+  computer: string | null,
+) => [a.email !== accountName(t, a) ? a.email : null, computer].filter(Boolean).join(" · ");
 
 /** Whose a plan account is, in words: "de Ana" (the first name); null where the server names no owner. */
 export const accountOwner = (t: TFunction, a: Pick<PlanAccountInfo, "ownerName">) =>

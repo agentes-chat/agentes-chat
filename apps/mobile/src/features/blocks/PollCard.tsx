@@ -9,6 +9,7 @@ import { serverUrl } from "@/lib/server";
 import { Icon, PressScale, Sky, Text, textLineOf, useToast } from "@/ui";
 import { useFontScale } from "@/ui/text-scale";
 import { leadBox } from "@/ui/type-scale";
+import { useMessageCardCorners } from "../chat/look";
 import { Face } from "../shared/Face";
 import { useColors, useDirectory, useMeId, useOrgId } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
@@ -21,6 +22,7 @@ const FACES = 4;
  * Everyone sees the marks arrive (`poll.updated`).
  */
 export function PollCard({ id, version }: { id: string; version?: number }) {
+  const cardCorners = useMessageCardCorners();
   const { t, i18n } = useTranslation();
   const c = useColors();
   const orgId = useOrgId();
@@ -37,7 +39,7 @@ export function PollCard({ id, version }: { id: string; version?: number }) {
   const poll = query.data;
   if (a?.content.kind !== "poll" || !poll) {
     return (
-      <View style={[styles.card, styles.loading, { backgroundColor: c.raised, borderColor: c.line2 }]}>
+      <View style={[styles.card, styles.loading, { backgroundColor: c.raised, borderColor: c.line2 }, cardCorners]}>
         <ActivityIndicator color={c.faint} />
         <Text variant="footnote" tone="muted">
           {t("mobile.blocks.building")}
@@ -61,7 +63,7 @@ export function PollCard({ id, version }: { id: string; version?: number }) {
     new Date(poll.closesAt),
   );
   return (
-    <View style={[styles.card, { backgroundColor: c.raised, borderColor: c.line2 }]}>
+    <View style={[styles.card, { backgroundColor: c.raised, borderColor: c.line2 }, cardCorners]}>
       <Sky
         color={agentLook(dir.agentById.get(a.createdBy.id)).color}
         surface="raised"

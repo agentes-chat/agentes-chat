@@ -122,7 +122,7 @@ describe("the conversation's rows", () => {
     expect(messages).not.toContain("browsing");
     expect(messages).not.toContain("waits");
     // Nor the DM and channel lists, read again with each message: only the thread head's words and count.
-    expect(messages).toContain("}, [isThread, threadId, list, startedText, replyCount, superseded, t]);");
+    expect(messages).toContain("}, [isThread, threadId, list, startedText, replyCount, superseded, timeLines, t]);");
     expect(chat).toContain("[browsing, held, making, waits],");
     expect(chat).toContain('() => messageRows.flatMap((r) => (r.kind === "message" ? [r.message] : [])),');
     expect(chat).toContain("shownRef.current = keepSameRows(shownRef.current, next);");
@@ -155,13 +155,13 @@ describe("older pages", () => {
     expect(chat).toContain('older: { height: OLDER_ROW, alignItems: "center", justifyContent: "center" },');
   });
 
-  test("going to a message asks a failed page again once, and gives up on one that fails while it looks", () => {
-    expect(chat).toContain("const pageFailed = olderFailed && seekPages.current > 0;");
-    expect(chat).toContain("if (isThread || olderDone || pageFailed || seekPages.current >= SEEK_MAX_PAGES) {");
-    expect(chat).toContain('if (pageFailed) toast({ title: t("common.loadFailed"), icon: "x" });');
-    // The search's own asks go through even after a failure (the list's own don't).
-    const seek = between(chat, "const pageFailed =", "useEffect(() => {");
-    expect(seek).toContain("seekPages.current += 1;\n      fetchOlder();");
+  test("going to a message reads the page around it at any distance; a failed read says so, a 404 says it's gone", () => {
+    expect(chat).toContain(".messages(orgId, channelId, { around: seek, limit: SEEK_PAGE })");
+    expect(chat).toContain("const gone = error === undefined || (error instanceof ApiError && error.status === 404);");
+    expect(chat).toContain('toast({ title: gone ? t("channel.jumpMissing") : t("common.loadFailed"), icon: "x" });');
+    // Away from the latest page: newer pages as the person scrolls down, never pinned to that end.
+    expect(chat).toContain("onEndReached={gap ? loadNewer : undefined}");
+    expect(chat).toContain("maintainScrollAtEnd={readHold || gap ? false : GLIDE}");
   });
 });
 
@@ -183,7 +183,7 @@ describe('the "New" line', () => {
 });
 
 describe("sheets that open the next thing", () => {
-  test("wait for the sheet to be gone (`sheet.close` says when), never a guessed time", () => {
+  test("stack the next step over the sheet, or wait for it to be gone (`sheet.close` says when), never a guessed time", () => {
     const chat = src("features/chat/ChatScreen.tsx");
     expect(chat).not.toContain("SHEET_LEAVE_MS");
     expect(chat).not.toMatch(/setTimeout\(\(\) => open(NewMission|Remind)\(\), \d+\)/);
@@ -191,8 +191,12 @@ describe("sheets that open the next thing", () => {
     expect(chat).toContain(
       'else sheet.close(() => router.setParams({ channelId: id, thread: "", handoff: "", m: "" }));',
     );
-    expect(chat).toContain('const after = pick !== "summary" || Boolean(mission);');
-    expect(chat).toContain("if (after) await new Promise<void>((done) => sheet.close(done));");
+    // The "+": the GIFs, a reminder and a mission's summary stack over it at once (a flick down goes back to it); the
+    // camera, the library and the files picker wait for it to be gone.
+    const plus = between(chat, "const onPlus = async (pick: PlusPick) => {", 'case "camera": {');
+    expect(plus).toMatch(/case "media":\s*openMedia\(\);\s*return;\s*case "remind":\s*openRemind\(\);\s*return;/);
+    expect(plus).toContain("await new Promise<void>((done) => sheet.close(done));");
+    expect(chat).toContain("const openMedia = () =>\n    sheet.push(");
   });
 });
 
@@ -211,11 +215,12 @@ describe("the composer", () => {
     expect(float).toBeGreaterThan(button);
     expect(chat.indexOf("ref={composerRef}", dock)).toBeGreaterThan(float);
     expect(chat).toContain("float={composerFloat}");
-    // No suggestion pills over the conversation: the list's end inset is the box alone.
+    // No suggestion pills over the conversation: the list's end inset is the box (and what the keyboard library's two
+    // paths disagree on, `useListEnd`).
     expect(chat).not.toContain("composerSuggestions");
     expect(chat).not.toContain("PILLS_ROOM");
-    expect(chat).toContain("endInset.value = height;");
-    expect(chat).toContain("contentInsetEndAdjustment={endInset}");
+    expect(chat).toContain("boxHeight.set(height);");
+    expect(chat).toContain("contentInsetEndAdjustment={listEnd}");
   });
 
   test("the send button comes in from 0.85 on an ease-out with no overshoot, and leaves the same way", () => {

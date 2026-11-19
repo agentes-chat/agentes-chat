@@ -312,6 +312,14 @@ export const words: EmailWords = {
   deletionCode: {
     subjectWorkspace: (code) => `${code} is je code om een werkruimte te verwijderen`,
     subjectAccount: (code) => `${code} is je code om je hele account te verwijderen`,
+    subjectReset: (code) => `${code} is je code om een werkruimte te resetten`,
+    reset: (org) => [
+      "Typ deze code om de werkruimte ",
+      { b: org },
+      " te resetten. Agents, gesprekken, bestanden en geheugen worden meteen en definitief gewist, en hij begint opnieuw als een nieuwe werkruimte.",
+    ],
+    whyReset: (org) =>
+      `Je krijgt deze e-mail omdat vanuit je account is gevraagd om ${org} op agentes.chat te resetten.`,
     preheader: "Typ hem in agentes.chat om te bevestigen. Hij werkt 10 minuten.",
     headline: "Je code",
     workspace: (org) => [
@@ -596,5 +604,23 @@ export const words: EmailWords = {
       why: (surface) => `Je krijgt deze e-mail omdat ${surface} aan je agentes.chat-account gekoppeld was.`,
       picture: "Je assistent, niet meer op je telefoon",
     },
+  },
+  supportReply: {
+    subject: "Een antwoord op je hulpvraag",
+    preheader: "Over de hulp die je vroeg op agentes.chat.",
+    headline: "Een antwoord op je hulpvraag",
+    answers: {
+      received: "We hebben je vraag ontvangen en kijken ernaar.",
+      need_more: "We hebben meer informatie nodig om je te helpen: wat je deed, wat je verwachtte en wat er gebeurde.",
+      resolved: "Wat je meldde is opgelost.",
+      handed_over: "Een persoon heeft je vraag nu en geeft je antwoord.",
+    },
+    from: (host) =>
+      host
+        ? atHost("Beantwoord door de beheerders van de agentes.chat-server", "op", host)
+        : "Beantwoord door agentes.chat.",
+    ai: "Een AI-assistent schreef dit antwoord.",
+    reply: (address) => ["Wil je antwoorden? Schrijf naar ", { mail: address }, "."],
+    why: "Je krijgt deze e-mail omdat je om hulp vroeg op agentes.chat.",
   },
 };

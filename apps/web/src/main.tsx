@@ -13,6 +13,7 @@ import { backToSignIn } from "./app/unauthorized";
 import { createBetterAuthClient } from "./auth/better-auth";
 import { copyPillAddresses } from "./chat/link-pill-copy";
 import { ErrorScreen } from "./components/ErrorScreen";
+import { onUnknownHost, showUnknownHost } from "./components/UnknownHost";
 import { withComposerDraftsSignOut } from "./hooks/useComposerDraft";
 import { brandTabTitle, loadI18n, savedLocale, translateTabTitle } from "./i18n";
 import { accountInLink, followAccountChanges, takeAccountMove, watchAccount, withoutAccount } from "./lib/accounts";
@@ -46,6 +47,15 @@ import { createToastStore } from "./lib/toast";
 import { withWebPushSignOut } from "./lib/web-push";
 import { routeTree } from "./routeTree.gen";
 
+// A hostname the server doesn't answer for (ADR 0194): its one screen, and nothing else of the app starts there (no
+// session, router, socket, service worker or notifications).
+if (onUnknownHost()) {
+  const words = await loadI18n(savedLocale()).catch((error: unknown) => {
+    window.__agentesBootFailed?.();
+    throw error;
+  });
+  await showUnknownHost(words);
+}
 // Errors from the very start wait for the server to say where reports go (ADR 0104), asked before anything that can
 // fail to load (the locale's chunk): a boot that breaks is reported too.
 catchEarlyErrors();

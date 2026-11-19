@@ -173,7 +173,7 @@ export const legalKo: Partial<Record<LegalKind, LegalDocument>> = {
     summary:
       "당사가 수집하는 정보, 에이전트가 무엇을 어디로 보내는지, 누가 귀하의 워크스페이스를 볼 수 있는지, 그리고 귀하가 가진 권리.",
     courtesy: "본 문서는 편의를 위한 번역본이며, 영어 원문과 내용이 다를 경우 영어 원문이 우선합니다.",
-    updated: "2026-11-16",
+    updated: "2026-11-18",
     sections: [
       {
         id: "overview",
@@ -320,6 +320,7 @@ export const legalKo: Partial<Record<LegalKind, LegalDocument>> = {
         heading: "14. 쿠키 및 로컬 저장소",
         blocks: [
           "워크스페이스는 귀하의 로그인 상태를 유지하고, 양식을 보호하며, 테마와 언어 같은 환경설정을 기억하는 데 필요한 쿠키와 로컬 저장소만 사용합니다. 공개 사이트 agentes.chat은 귀하가 선택한 언어를 기억하며 Himetrica 분석(제2조)을 사용합니다. 당사는 광고 쿠키나 사이트 간 추적 쿠키를 사용하지 않습니다.",
+          "**추천 쿠키:** 귀하가 agentes.chat 추천 링크를 열면, 당사의 결제 서비스는 귀하가 구독할 때 링크를 보낸 사람이 크레딧을 받을 수 있도록 추천 정보를 쿠키 하나에 담아 귀하의 브라우저에 60일 동안 보관합니다. 유럽경제지역, 영국 및 스위스에서는 귀하가 agentes.chat에서 동의한 후에만 이 쿠키를 설정합니다. 이 기기에서 추천 정보를 지우려면 https://agentes.chat/ko/privacy?forget-referral#cookies 를 여십시오.",
         ],
       },
       {

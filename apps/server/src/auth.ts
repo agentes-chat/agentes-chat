@@ -1,6 +1,12 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { randomBytes, sign as signWithKey } from "node:crypto";
-import type { HumanAction, HumanCheck, PubSub, RateLimiter } from "@agenteschat/adapters";
+import {
+  type HumanAction,
+  type HumanCheck,
+  type PubSub,
+  type RateLimiter,
+  retryInSeconds,
+} from "@agenteschat/adapters";
 import { jwtClaims, nameIsPassword } from "@agenteschat/client/lib/text";
 import type { Config } from "@agenteschat/config";
 import { and, type Database, eq, ne, schema } from "@agenteschat/db";
@@ -69,6 +75,7 @@ import { multiSession } from "better-auth/plugins/multi-session";
 import { z } from "zod";
 import { listOf } from "./app-links";
 import { desktopSignIn, FRESH_SIGN_IN_MS } from "./desktop-sign-in";
+import { requestLimitIp } from "./http/client-ip";
 import { humanCheckRefusal } from "./http/human-check";
 import { humanPassesFor } from "./http/human-pass";
 import type { Logger } from "./logger";
@@ -95,7 +102,7 @@ export function createAuth(deps: {
   config: Config;
   log: Logger;
   emailDelivers?: boolean;
-  /** Counts the reset and confirmation emails per address. */
+  /** Counts the reset and confirmation emails, and the password tries, per address. */
   rateLimiter: RateLimiter;
   /** The bot check of the email forms (ADR 0075); absent: none. */
   humanCheck?: HumanCheck | null;
@@ -104,9 +111,28 @@ export function createAuth(deps: {
 }) {
   const { db, config, log, rateLimiter } = deps;
   const emailEnabled = deps.emailDelivers === true;
+  /**
+   * The key of one address's count of `kind`, in lower case and hashed. Registered hosts run no bot check (ADR 0194), so their
+   * requests share a count of their own: unchecked traffic never spends what the main address's people share, and all
+   * hosts together get one count, not one each.
+   */
+  const addressKey = async (kind: string, address: string, headers: Headers | null | undefined) =>
+    `${kind}:${(await hostLook(db, headers?.get("host"))) ? "hosts" : "main"}:${sha256(address.toLowerCase())}`;
   // Better Auth answers the same whether an email went out, so a flood from many addresses only stops quietly.
-  const emailAllowed = async (kind: "reset-email" | "verify-email", email: string) =>
-    (await rateLimiter.consume(`${kind}:${sha256(email.toLowerCase())}`, EMAILS_PER_ADDRESS)).allowed;
+  const emailAllowed = async (kind: "reset-email" | "verify-email", email: string, request: Request | undefined) =>
+    (await rateLimiter.consume(await addressKey(kind, email, request?.headers), EMAILS_PER_ADDRESS)).allowed;
+  /**
+   * A password sign-in's two counts (ADR 0075, point 10): the address from this network, then the address from all.
+   * A count only one sender spends can't lock the person out from everywhere.
+   */
+  const signInTries = async (address: string, headers: Headers | undefined) => {
+    const key = await addressKey("sign-in-tries", address, headers);
+    const network = requestLimitIp(headers ?? new Headers(), config.TRUSTED_PROXIES);
+    return [
+      [`${key}:${network}`, SIGN_IN_TRIES_PER_NETWORK],
+      [key, SIGN_IN_TRIES],
+    ] as const;
+  };
 
   const policy = signupPolicy(config);
   // An invitation link never opens sign-up (ADR 0068): only an email invitation to that address, or an early-access
@@ -244,7 +270,7 @@ export function createAuth(deps: {
               },
               request?: Request,
             ) => {
-              if (!(await emailAllowed("reset-email", user.email))) return;
+              if (!(await emailAllowed("reset-email", user.email, request))) return;
               // Straight to our page (not Better Auth's redirect): the same link opens the phone app when it is
               // installed (universal link / App Link, app-links.ts) and the website otherwise; both reset with it.
               // Always the main address, whatever host asked (ADR 0194): anyone may ask for any account's reset, and a
@@ -304,7 +330,7 @@ export function createAuth(deps: {
               const invitation = request?.headers.get(INVITATION_TOKEN_HEADER);
               const mail = { secret: config.AGENTES_SECRET, proof: request?.headers.get(INVITATION_MAIL_HEADER) };
               if (signingUp && invitation && (await holdsInvitation(db, user.email, invitation, mail))) return;
-              if (!(await emailAllowed("verify-email", user.email))) return;
+              if (!(await emailAllowed("verify-email", user.email, request))) return;
               const locale = emailLocale(user.locale ?? requestLocale(request?.headers.get("accept-language")));
               // A new address (`changeAccountEmail`): the account still has its old one until this link is opened.
               const [stored] = await db
@@ -421,10 +447,10 @@ export function createAuth(deps: {
           }
         }
         const action = HUMAN_ACTIONS[ctx.path];
+        const address = (ctx.body as { email?: unknown } | undefined)?.email;
         // Before the sign-up policy: a bot gets the cheap refusal first.
         if (action && ctx.headers) {
           // The lookup of this address passed the check a moment ago: its pass stands for this step's (ADR 0075).
-          const address = (ctx.body as { email?: unknown } | undefined)?.email;
           const refused = await humanCheckRefusal(
             deps.humanCheck,
             db,
@@ -437,13 +463,64 @@ export function createAuth(deps: {
           );
           if (refused) throw new APIError("FORBIDDEN", refused);
         }
+        // After the bot check, so a refused bot spends none of an account's tries. Taken before the password is
+        // checked, so tries in flight can't all pass a count none of them wrote yet; the after hook gives back every
+        // try that wasn't a wrong password (or an address nobody has, refused alike), and `authHandler` those of a
+        // sign-in that never reached it.
+        if (ctx.path === "/sign-in/email" && typeof address === "string") {
+          const keys = await signInTries(address, ctx.headers);
+          const counts = await Promise.all(keys.map(([key, rule]) => rateLimiter.consume(key, rule)));
+          const giveBack = async () => {
+            await Promise.all(keys.map(([key]) => rateLimiter.release(key)));
+          };
+          const refused = counts.filter((count) => !count.allowed);
+          if (refused.length > 0) {
+            await giveBack();
+            // Both counts full: the wait until both open, not the first one's.
+            const retryIn = retryInSeconds(new Date(Math.max(...refused.map((count) => count.resetAt.getTime()))));
+            throw new APIError(
+              "TOO_MANY_REQUESTS",
+              {
+                code: TOO_MANY_PASSWORD_TRIES,
+                message: "Too many password tries for this account. Try again later.",
+                retryIn,
+              },
+              { "Retry-After": String(retryIn) },
+            );
+          }
+          const seen = authRequest.getStore();
+          if (seen) seen.giveBack = giveBack;
+        }
         if (ctx.path !== "/sign-up/email") return;
+        // Better Auth's own limit is the main address's; here, where no bot check runs, fewer, since each can email.
+        if (ctx.headers && (await hostLook(db, ctx.headers.get("host")))) {
+          const network = requestLimitIp(ctx.headers, config.TRUSTED_PROXIES);
+          const signUps = await rateLimiter.consume(`sign-up:hosts:${network}`, SIGN_UPS_PER_NETWORK_ON_HOSTS);
+          if (!signUps.allowed) {
+            const retryIn = retryInSeconds(signUps.resetAt);
+            throw new APIError(
+              "TOO_MANY_REQUESTS",
+              { message: "Too many requests. Try again later.", retryIn },
+              { "Retry-After": String(retryIn) },
+            );
+          }
+        }
         const { email, name, password } = (ctx.body ?? {}) as { email?: unknown; name?: unknown; password?: unknown };
         if (typeof name === "string" && typeof password === "string" && nameIsPassword(name, password)) {
           throw new APIError("BAD_REQUEST", { code: NAME_IS_PASSWORD, message: NAME_IS_PASSWORD_MESSAGE });
         }
         if (typeof email !== "string") return;
         await assertSignupAllowed(email, await accessOf(ctx));
+      }),
+      // Runs only when the before hook let the sign-in through, so it took its tries.
+      after: createAuthMiddleware(async (ctx) => {
+        const address = (ctx.body as { email?: unknown } | undefined)?.email;
+        if (ctx.path !== "/sign-in/email" || typeof address !== "string") return;
+        const seen = authRequest.getStore();
+        if (seen) seen.giveBack = undefined;
+        const { returned } = ctx.context;
+        if (isAPIError(returned) && returned.body?.code === "INVALID_EMAIL_OR_PASSWORD") return;
+        for (const [key] of await signInTries(address, ctx.headers)) await rateLimiter.release(key);
       }),
     },
     databaseHooks: {
@@ -547,10 +624,10 @@ export function createAuth(deps: {
 export type Auth = ReturnType<typeof createAuth>;
 
 /**
- * This request to Better Auth (`authHandler`): when it began, and the address a provider gave its sign-in
- * (`noteProviderEmail`).
+ * This request to Better Auth (`authHandler`): when it began, the address a provider gave its sign-in
+ * (`noteProviderEmail`), and the password tries its sign-in took that no after hook has settled yet.
  */
-const authRequest = new AsyncLocalStorage<{ startedAt: number; email?: string }>();
+const authRequest = new AsyncLocalStorage<{ startedAt: number; email?: string; giveBack?: () => Promise<void> }>();
 
 /** Every provider's `mapProfileToUser`: notes the address, changes nothing. */
 function noteProviderEmail(profile: { email?: unknown }) {
@@ -581,9 +658,11 @@ async function signInStartedAt(): Promise<number | null> {
  */
 export function authHandler(auth: Auth, db: Database) {
   return (request: Request) => {
-    const seen: { startedAt: number; email?: string } = { startedAt: Date.now() };
+    const seen: { startedAt: number; email?: string; giveBack?: () => Promise<void> } = { startedAt: Date.now() };
     return authRequest.run(seen, async () => {
-      const res = await auth.handler(request);
+      // Better Auth skips the after hooks when its endpoint throws anything but an APIError (a failed query, say): a
+      // sign-in that ended so was never refused for its credentials, so its tries go back here.
+      const res = await auth.handler(request).finally(() => seen.giveBack?.());
       const location = res.headers.get("location");
       if (!seen.email || !location) return res;
       const back = new URL(location, "http://localhost");
@@ -913,7 +992,8 @@ export async function confirmsOnThisMac(
 
 /**
  * Proof that the person at this session is the account's own, before deleting the workspace `orgId`, or their account
- * when it is null (ADR 0088 §2): the code emailed to them (`spendDeletionCode`). On a server that sends no email, their
+ * when it is null, or with `reset` before resetting the workspace (ADR 0088 §2): the code emailed to them
+ * (`spendDeletionCode`). On a server that sends no email, their
  * password instead, with 5 tries per 15 minutes per account (429 after), or, for the owner `confirmsOnThisMac`, a
  * sign-in in the last 10 minutes when no password comes. Throws `reauth.code` without a code, `reauth.sign_in` for
  * that owner's older sign-in, and `reauth.password` without a password or with a wrong one.
@@ -925,10 +1005,11 @@ export async function deletionProof(
   userId: string,
   orgId: string | null,
   proof: { code?: string; password?: string },
+  reset = false,
 ) {
   if (deps.emailDelivers) {
     if (!proof.code) throw new ForbiddenError("Type the code we emailed you", "reauth.code");
-    return spendDeletionCode(deps, userId, orgId, proof.code);
+    return spendDeletionCode(deps, userId, orgId, proof.code, new Date(), reset);
   }
   if (!proof.password && (await confirmsOnThisMac(deps, userId))) {
     if (await signedInLately(auth, headers, userId)) return;
@@ -1012,6 +1093,19 @@ const HUMAN_ACTIONS: Record<string, HumanAction> = {
   "/sign-up/email": "sign-up",
   "/request-password-reset": "password-reset",
 };
+
+/** Wrong passwords for one address from one network in 15 minutes (ADR 0075). */
+const SIGN_IN_TRIES_PER_NETWORK = { limit: 10, windowMs: 15 * 60_000 };
+/** Wrong passwords for one address from all networks in 15 minutes (ADR 0075). */
+const SIGN_IN_TRIES = { limit: 50, windowMs: 15 * 60_000 };
+/** Sign-ups from one network in 15 minutes on registered hosts (ADR 0075); Better Auth allows 10 everywhere. */
+const SIGN_UPS_PER_NETWORK_ON_HOSTS = { limit: 5, windowMs: 15 * 60_000 };
+
+/**
+ * `APIError` code of a password sign-in past `SIGN_IN_TRIES_PER_NETWORK` or `SIGN_IN_TRIES`, with `retryIn` in
+ * seconds, as `Retry-After` says (mirrored in packages/client errors.ts).
+ */
+export const TOO_MANY_PASSWORD_TRIES = "TOO_MANY_PASSWORD_TRIES";
 
 /** Reset and confirmation emails to one address in an hour. */
 const EMAILS_PER_ADDRESS = { limit: 3, windowMs: 3600_000 };

@@ -22,6 +22,23 @@ describe("Agents", () => {
     expect(screen).toContain("directory.refetch(),");
   });
 
+  test("a private agent unlisted to me (listed: false) stays off every list, while its name and face still resolve", () => {
+    const hooks = src("shared/hooks.ts");
+    expect(hooks).toContain("const agents = all.filter((a) => a.listed !== false);");
+    expect(hooks).toContain("const agentById = new Map(all.map((a) => [a.id, a]));");
+    expect(hooks).toContain("const agents = useAllAgents(orgId);");
+    // The brakes' list of agents it may call is a list too: the directory's, not its lookups.
+    expect(src("agents/BrakesSection.tsx")).toContain("const others = dir.agents.filter(");
+  });
+
+  test("a message's mentions and a new @ read every agent, unlisted ones too: they still name it and hold its @", () => {
+    for (const file of ["chat/EventLine.tsx", "chat/MessageRow.tsx"])
+      expect(src(file)).toContain("agentsByAnyHandle([...dir.agentById.values()])");
+    expect(src("chat/MessageSpans.tsx")).toContain("mentionTint(handle, [...agentById.values()], scheme)");
+    for (const file of ["agents/AgentEditScreen.tsx", "agents/NewAgentScreen.tsx"])
+      expect(src(file)).toContain("takenHandles([...dir.agentById.values()],");
+  });
+
   test("rows are memoized on plain values and share the screen's one clock", () => {
     const screen = src("agents/AgentsScreen.tsx");
     expect(screen).toContain("const AgentRow = memo(function AgentRow(");

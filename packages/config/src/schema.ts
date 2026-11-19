@@ -416,6 +416,12 @@ export const envVars = {
     description: "Upper bound on tokens an agent may generate in one reply.",
     section: "Agents",
   },
+  CLAUDE_PLAN_CONCURRENCY: {
+    schema: z.coerce.number().int().min(0).max(50).default(6),
+    description:
+      "How many agent runs one Claude plan sign-in (a subscription, never an API key) works on at once. Past it, the next run waits in line like any other and starts as soon as one ends. 0 turns the limit off.",
+    section: "Agents",
+  },
   AGENT_MAX_TOOL_TURNS: {
     schema: z.coerce.number().int().min(1).max(200).default(200),
     description:
@@ -451,6 +457,27 @@ export const envVars = {
     description:
       "Workspace id for the platform key, when the key is not scoped to a workspace (sent as `anthropic-workspace-id`).",
     section: "Agents",
+  },
+  PLATFORM_OPENAI_API_KEY: {
+    schema: z.string().optional(),
+    description:
+      "The server's own OpenAI API key. Workspaces without an OpenAI key of their own use it to generate images on canvases (GPT Image, ADR 0197) and for agents on OpenAI models. Usage is still recorded per organization.",
+    section: "Agents",
+    secret: true,
+  },
+  PLATFORM_GEMINI_API_KEY: {
+    schema: z.string().optional(),
+    description:
+      "The server's own Gemini API key. Workspaces without a Gemini key of their own use it to generate images on canvases (Nano Banana, ADR 0197) and for agents on Gemini models. Usage is still recorded per organization.",
+    section: "Agents",
+    secret: true,
+  },
+  PLATFORM_OPENROUTER_API_KEY: {
+    schema: z.string().optional(),
+    description:
+      "The server's own OpenRouter API key. Workspaces without an OpenRouter key of their own use it to generate images on canvases (ADR 0197) and for agents on OpenRouter models. Usage is still recorded per organization.",
+    section: "Agents",
+    secret: true,
   },
   MODEL_ENDPOINTS_PRIVATE: {
     schema: z.stringbool().optional(),
@@ -1263,6 +1290,12 @@ export const envVars = {
   TELEMETRY_URL: {
     schema: z.url().default("https://telemetry.agentes.chat/v1/report"),
     description: "Where the usage report is sent (the report as JSON in a POST).",
+    section: "Usage report",
+  },
+  PROBLEM_REPORT_URL: {
+    schema: z.union([z.literal("off"), z.url()]).default("https://telemetry.agentes.chat/v1/problem-report"),
+    description:
+      "Where Send a report sends a report someone chose to send after seeing it in full (versions, which settings are set, what failed, recent log lines; never messages, pages, names or keys). Sent even with `TELEMETRY=off`, since a person clicked Send. `off`: the button only copies the report.",
     section: "Usage report",
   },
   INSTALL_MODE: {

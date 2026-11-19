@@ -368,6 +368,7 @@ export function presentTools(
 export function toolGroupKey(tool: Pick<ToolDefinition, "scope" | "connectionId"> & { name?: string }) {
   if (tool.name && RARE_TOOLS.has(tool.name)) return RARE_GROUP;
   if (tool.name && DASHBOARD_TOOLS.has(tool.name) && !tool.connectionId) return DASHBOARD_GROUP;
+  if (tool.name && LIVE_FILE_TOOLS.has(tool.name) && !tool.connectionId) return LIVE_FILES_GROUP;
   const prefix = tool.scope.split(":")[0] ?? "";
   return prefix.startsWith("custom") ? `custom:${tool.connectionId ?? prefix}` : prefix;
 }
@@ -383,7 +384,7 @@ const CORE_TOOLS: ReadonlySet<string> = new Set(["read_wiki_page", "search_wiki"
 
 /**
  * Tools of the core groups that few runs use (token-trim B3): a group of their own, loaded on demand like any other.
- * Never what the agent reaches for on its own (react, ask_user, request_permission, remember, save_how_to,
+ * Never what the agent reaches for on its own (react, ask_user, say_now, request_permission, remember, save_how_to,
  * update_memory, forget, update_skill, search_context, the web, ask_agent, tell_agent, follow_up,
  * work_in_background, post_message, send_dm, post_update, show_block, the skill and wiki readers).
  */
@@ -422,6 +423,29 @@ export const DASHBOARD_TOOLS: ReadonlySet<string> = new Set([
 ]);
 const DASHBOARD_GROUP = "dashboards";
 
+/**
+ * Live files (ADR 0196 §6, ADR 0197): spreadsheets, presentations and canvases, and images onto a canvas. Under the
+ * Drive's scopes, in a group of their own, so a run about a spreadsheet loads these and not every Drive tool (and the
+ * other way round).
+ */
+export const LIVE_FILE_TOOLS: ReadonlySet<string> = new Set([
+  "create_spreadsheet",
+  "read_spreadsheet",
+  "edit_spreadsheet",
+  "create_presentation",
+  "read_presentation",
+  "edit_presentation",
+  "create_canvas",
+  "read_canvas",
+  "edit_canvas",
+  "read_document",
+  "edit_document",
+  "generate_image",
+  // Pictures from the web to put in a live file (ADR 0196 §8): no scope, like the web's other tools.
+  "image_search",
+]);
+export const LIVE_FILES_GROUP = "files";
+
 export const isCore = (tool: Pick<ToolDefinition, "name" | "scope" | "connectionId">) =>
   !RARE_TOOLS.has(tool.name) && (CORE_GROUPS.has(toolGroupKey(tool)) || CORE_TOOLS.has(tool.name));
 
@@ -438,6 +462,7 @@ const GROUP_LABELS: Record<string, string> = {
     "More of the conversation (reading a channel or a message by its link, stickers, your status, reply style, threads, adding agents to channels, the agents' directory, your usage, instruction changes, your own settings, the agents' line on commits, feedback on this app)",
   drive: "Files (Drive)",
   [DASHBOARD_GROUP]: "Dashboards and widgets (numbers and charts kept up to date, boards to share)",
+  [LIVE_FILES_GROUP]: "Live spreadsheets, slides, canvases and documents, and pictures in them",
   issues: "Issues",
   calendar: "Calendar",
   schedule: "Schedule, reminders and routines",

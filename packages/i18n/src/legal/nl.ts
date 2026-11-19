@@ -175,7 +175,7 @@ export const legalNl: Partial<Record<LegalKind, LegalDocument>> = {
     summary: "Wat wij verzamelen, wat agents waarheen sturen, wie uw werkruimte kan zien en welke rechten u hebt.",
     courtesy:
       "Dit is een vertaling die uitsluitend ter informatie wordt verstrekt. Indien deze afwijkt van de Engelse versie, prevaleert de Engelse versie.",
-    updated: "2026-11-16",
+    updated: "2026-11-18",
     sections: [
       {
         id: "overview",
@@ -322,6 +322,7 @@ export const legalNl: Partial<Record<LegalKind, LegalDocument>> = {
         heading: "14. Cookies en lokale opslag",
         blocks: [
           "De werkruimte gebruikt uitsluitend de cookies en lokale opslag die nodig zijn om u aangemeld te houden, formulieren te beschermen en voorkeuren zoals thema en taal te onthouden. De openbare website agentes.chat onthoudt de taal die u hebt gekozen en gebruikt Himetrica-analyse (artikel 2). Wij gebruiken geen advertentiecookies of cookies voor tracking over websites heen.",
+          "**Verwijzingscookie:** wanneer u een verwijzingslink naar agentes.chat opent, bewaart onze factureringsdienst de verwijzing 60 dagen in één cookie in uw browser, zodat degene die de link stuurde de verwijzing krijgt als u een abonnement neemt. In de Europese Economische Ruimte, het Verenigd Koninkrijk en Zwitserland plaatsen wij die pas nadat u op agentes.chat toestemming hebt gegeven. Om de verwijzing op dit apparaat te vergeten, opent u https://agentes.chat/nl/privacy?forget-referral#cookies.",
         ],
       },
       {

@@ -9,6 +9,7 @@ import {
 } from "@agenteschat/client/lib/chat-look";
 import { AGENT_GRADIENTS, type AgentColorName, contrastOf, gradientOf, mixHex } from "@agenteschat/ui/agent/engine";
 import {
+  BUBBLES_EDGE,
   BUBBLES_INSET,
   bubbleFill,
   CHAT_TEXT,
@@ -54,10 +55,23 @@ describe("the bubbles' colors", () => {
 });
 
 describe("the rows follow the same choice as the web", () => {
-  test("defaults: channels on the left, DMs in bubbles", () => {
+  test("defaults: on the web channels on the left, on the phone in bubbles as DMs; the person's choice wins", () => {
     expect(chatLookOf(undefined, false).style).toBe("left");
     expect(chatLookOf(undefined, true).style).toBe("bubbles");
+    expect(chatLookOf(undefined, false, false, "phone").style).toBe("bubbles");
+    expect(chatLookOf({ channelStyle: "compact" }, false, false, "phone").style).toBe("compact");
     expect(mineOnRight("left")).toBe(false);
+  });
+
+  test("compact holds no column of times: a pull shows them, its face at the rows' edge", async () => {
+    const row = await read("chat/MessageRow.tsx");
+    expect(row).not.toContain("compactClock");
+    expect(row).toContain("{inBubble || compact ? (");
+    expect(row).toContain("const slide = useSwipeSlide(compact);");
+    expect(await read("chat/look.ts")).toContain(
+      "compactRow: { paddingLeft: MSG_INSET, paddingRight: 12, gap: COMPACT_GAP },",
+    );
+    expect(await read("me/ChatLookPage.tsx")).not.toContain("compactClock");
   });
 
   test("a personal workspace opens every conversation in bubbles; the person's choice wins (ADR 0159)", async () => {
@@ -65,9 +79,9 @@ describe("the rows follow the same choice as the web", () => {
     expect(chatLookOf(undefined, true, true).style).toBe("bubbles");
     expect(chatLookOf({ channelStyle: "compact" }, false, true).style).toBe("compact");
     // Every conversation and the preview read the workspace's mode.
-    expect(await read("chat/look.ts")).toContain("chatLookOf(org?.chatPrefs, dm, isPersonal(org))");
+    expect(await read("chat/look.ts")).toContain('chatLookOf(org?.chatPrefs, dm, isPersonal(org), "phone")');
     const page = await read("me/ChatLookPage.tsx");
-    expect(page).toContain("chatLookOf(prefs, dm, isPersonal(org))");
+    expect(page).toContain('chatLookOf(prefs, dm, isPersonal(org), "phone")');
     // Its channels are its group conversations: the tab and the tone's header say so.
     expect(page).toContain('label: t(modeKey(org, "settings.account.chat.channels"))');
     expect(page).toContain('modeKey(org, "settings.account.chat.toneChannels")');
@@ -121,9 +135,11 @@ describe("the rows follow the same choice as the web", () => {
 
   test("a DM whose sides say who spoke has no face: its bodies and quiet rows start at the rows' own padding", () => {
     const dm = (style: "comfortable" | "bubbles") => ({ style, faces: facesShown(style, true) });
-    expect(rowBodyInset(dm("bubbles"))).toEqual({ left: BUBBLES_INSET, right: ROW_BODY_INSET.bubbles.right });
+    expect(rowBodyInset(dm("bubbles"))).toEqual({ left: BUBBLES_EDGE, right: ROW_BODY_INSET.bubbles.right });
     expect(rowBodyInset(dm("comfortable"))).toEqual({ left: MSG_INSET, right: ROW_BODY_INSET.comfortable.right });
-    expect(quietInset(dm("bubbles"))).toBe(BUBBLES_INSET);
+    expect(quietInset(dm("bubbles"))).toBe(BUBBLES_EDGE);
+    // With faces (a channel) the face keeps its own inset; with none the bubble stands where mine end on the other side.
+    expect(BUBBLES_INSET).toBeLessThan(BUBBLES_EDGE);
     expect(quietInset(dm("comfortable"))).toBe(MSG_INSET);
     // A channel, and a DM in a look with everyone on the left, keep the face and the words' column.
     for (const style of ["comfortable", "bubbles", "left", "compact"] as const) {
@@ -136,6 +152,8 @@ describe("the rows follow the same choice as the web", () => {
   test("the look says it, and every row with a face column and every quiet row reads it", async () => {
     expect(await read("chat/look.ts")).toContain("faces: facesShown(style, dm)");
     expect(await read("chat/look.ts")).toContain("paddingLeft: BUBBLES_INSET");
+    expect(await read("chat/look.ts")).toContain("bubblesBare: { paddingLeft: BUBBLES_EDGE },");
+    expect(await read("chat/MessageRow.tsx")).toContain("bubbled && !look.faces && lookRows.bubblesBare,");
     expect(await read("chat/MessageRow.tsx")).toContain("{look.faces ? (");
     const queue = await read("queue/parts.tsx");
     expect(queue).toContain("{faces ? (");

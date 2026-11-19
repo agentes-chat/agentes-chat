@@ -25,6 +25,7 @@ import {
   Checkbox,
   Chip,
   CriteriaPixels,
+  codeAndBold,
   cx,
   DatePicker,
   DetailsDialog,
@@ -80,7 +81,7 @@ import {
   useStageName,
   useStepText,
 } from "@/lib/issues";
-import { codeAndBold, Markdown } from "@/lib/markdown";
+import { Markdown } from "@/lib/markdown";
 import { useOpenParam } from "@/lib/open-param";
 import { useToast } from "@/lib/toast";
 import { useIssueRealtime } from "@/realtime/context";

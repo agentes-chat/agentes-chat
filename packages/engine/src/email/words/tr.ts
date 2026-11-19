@@ -314,6 +314,13 @@ export const words: EmailWords = {
   deletionCode: {
     subjectWorkspace: (code) => `Çalışma alanı silme kodunuz: ${code}`,
     subjectAccount: (code) => `Hesabınızın tamamını silme kodunuz: ${code}`,
+    subjectReset: (code) => `Çalışma alanı sıfırlama kodunuz: ${code}`,
+    reset: (org) => [
+      { b: org },
+      " çalışma alanını sıfırlamak için bu kodu yazın. Ajanları, konuşmaları, dosyaları ve belleği hemen ve kalıcı olarak silinir ve yeni bir çalışma alanı gibi baştan başlar.",
+    ],
+    whyReset: (org) =>
+      `Bu e-postayı, hesabınızdan agentes.chat'te ${org} çalışma alanının sıfırlanması istendiği için aldınız.`,
     preheader: "Onaylamak için agentes.chat'e yazın. 10 dakika geçerli.",
     headline: "Kodunuz",
     workspace: (org) => [
@@ -593,5 +600,22 @@ export const words: EmailWords = {
       why: (surface) => `Bu e-postayı ${surface} agentes.chat hesabına bağlı olduğu için aldın.`,
       picture: "Asistanın, artık telefonunda değil",
     },
+  },
+  supportReply: {
+    subject: "Yardım talebinize bir yanıt",
+    preheader: "agentes.chat'te istediğiniz yardım hakkında.",
+    headline: "Yardım talebinize bir yanıt",
+    answers: {
+      received: "Talebinizi aldık ve inceliyoruz.",
+      need_more:
+        "Yardımcı olabilmemiz için daha fazla bilgiye ihtiyacımız var: ne yaptığınız, ne beklediğiniz ve ne olduğu.",
+      resolved: "Bildirdiğiniz sorun düzeltildi.",
+      handed_over: "Talebinizle artık bir kişi ilgileniyor ve size yanıt verecek.",
+    },
+    from: (host) =>
+      host ? atHost("agentes.chat sunucusunu yönetenler yanıtladı.", "Sunucu:", host) : "agentes.chat yanıtladı.",
+    ai: "Bu yanıtı bir yapay zeka asistanı yazdı.",
+    reply: (address) => ["Yanıtlamak için ", { mail: address }, " adresine yazın."],
+    why: "Bu e-postayı, agentes.chat'te yardım istediğiniz için aldınız.",
   },
 };

@@ -518,7 +518,10 @@ describe("Import .env and moving an item (ADR 0144 §11)", () => {
       ["ACME_EMPTY", "problem"],
     ]);
     expect(dialog.textContent).toContain(t("vault.env.duplicates", { names: "ACME_DB_URL" }));
-    expect(stateOf("lower_case")?.textContent).toContain(t("vault.env.problem.name"));
+    // The example name shows as code, never with its backticks.
+    const named = stateOf("lower_case")?.querySelector(".vlt-env__problem");
+    expect(named?.textContent).toBe(t("vault.env.problem.name").replaceAll("`", ""));
+    expect(named?.querySelector("code.ac-inlinecode")?.textContent).toBe("ACME_API_KEY");
     expect(stateOf("OPENAI_API_KEY")?.textContent).toContain(t("vault.env.problem.reserved"));
     expect(stateOf("ACME_EMPTY")?.textContent).toContain(t("vault.env.problem.empty"));
     // Every value behind its dots until asked, one key at a time.

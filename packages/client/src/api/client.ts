@@ -10,6 +10,8 @@ import type { Wallpaper } from "../lib/wallpaper";
 import type { AudienceChoice } from "../lib/who-sees";
 import type { WikiAccess } from "../lib/wiki";
 import type { WorkAreaAnswer } from "../lib/work-area";
+import type { LiveApi } from "../live/api";
+import type { LiveRefInput } from "../live/types";
 import type {
   SecretToVaultInput,
   VaultConnectInput,
@@ -142,6 +144,7 @@ import type {
   DirectMessage,
   DmRead,
   DmTarget,
+  DriveFolder,
   EmailChange,
   EndpointCheck,
   EndpointModel,
@@ -149,6 +152,7 @@ import type {
   FeedbackFile,
   FeedbackInput,
   FeedbackOffer,
+  FileConversationRef,
   ForeignMailbox,
   FormerAgent,
   GifKey,
@@ -178,6 +182,7 @@ import type {
   InviteLinkChanged,
   InviteLinkChoices,
   InviteLinkMade,
+  IphoneRepairView,
   Issue,
   IssueActivity,
   IssueColumn,
@@ -265,6 +270,9 @@ import type {
   PlanServes,
   Poll,
   PostMedia,
+  ProblemReportPreview,
+  ProblemReportPreviewInput,
+  ProblemReportSendInput,
   Proposal,
   PushDeviceInput,
   ReactionCount,
@@ -345,6 +353,7 @@ import type {
   ToolDecision,
   TrashedArtifact,
   UndoAllResult,
+  UnreadFile,
   UnreadTask,
   UsageQueue,
   UsageReport,
@@ -391,6 +400,10 @@ export interface ApiClient {
     /** `null` unless I am the installation's owner (and not on agentes.chat itself). */
     telemetry(): Promise<ServerTelemetry | null>;
     setTelemetry(enabled: boolean): Promise<ServerTelemetry>;
+    /** A problem report to show in full before it's sent (self-hosted servers; 404 on agentes.chat itself). */
+    previewProblemReport(input: ProblemReportPreviewInput): Promise<ProblemReportPreview>;
+    /** Sends the previewed report, with the person's note and reply address: answers its code (`R-7K3QXM`). */
+    sendProblemReport(input: ProblemReportSendInput): Promise<{ id: string }>;
     /** By email to whoever runs the server; only where it takes feedback (`AuthConfig.feedback`). */
     sendFeedback(input: FeedbackInput): Promise<void>;
     /** A picture or a video for the feedback being written: kept an hour unless it is sent. */
@@ -578,6 +591,13 @@ export interface ApiClient {
     deleteWorkspace(orgId: string, input?: DeletionProofInput): Promise<{ dueAt: string }>;
     /** Owners, before its date: it opens again. `org.not_restorable` (409) once the date passed. */
     restore(orgId: string): Promise<void>;
+    /** Owners: emails me the code that resetting this workspace takes (a deletion's code doesn't). */
+    resetCode(orgId: string): Promise<CodeSent>;
+    /**
+     * Owners: erases everything made in the workspace and starts it over, keeping its people, plan, AI accounts and
+     * computers; its apps hear `org.reset` once done. Proof as `deleteWorkspace`'s; 429 after 3 resets of it in a day.
+     */
+    reset(orgId: string, input?: DeletionProofInput): Promise<{ startedAt: string }>;
     /** My handle and time zone in this organization (`timezone: null` = the organization's). */
     updateMe(orgId: string, input: { handle?: string; timezone?: string | null }): Promise<Person>;
     /** Your availability (auto, busy, hidden) and what you are doing (ADR 0084). */
@@ -1016,7 +1036,7 @@ export interface ApiClient {
     messages(
       orgId: string,
       channelId: string,
-      options?: { threadId?: string; before?: string; limit?: number },
+      options?: { threadId?: string; before?: string; after?: string; around?: string; limit?: number },
     ): Promise<Message[]>;
     post(
       orgId: string,
@@ -1038,6 +1058,12 @@ export interface ApiClient {
          * `message.media_off` (GIFs or stickers off here) or `message.media_not_found`.
          */
         media?: PostMedia;
+        /**
+         * In a live file's conversation (ADR 0199): what the person had selected in the file (the composer's quote
+         * bar). The server adds the file's kind and title and stores `meta.liveRef`; 400 `message.live_ref` for
+         * another file or another conversation.
+         */
+        liveRef?: LiveRefInput;
       },
     ): Promise<Message>;
     reactions(orgId: string, messageId: string): Promise<ReactionCount[]>;
@@ -1220,6 +1246,8 @@ export interface ApiClient {
     cancelXcodeFix(orgId: string, machineId: string): Promise<XcodeFixView>;
     /** Opens Xcode on the Mac (its owner or an admin): it shows Developer Mode on a plugged iPhone. */
     openXcode(orgId: string, machineId: string): Promise<{ opened: boolean }>;
+    /** Repairs a real iPhone's test helper on its Mac (the Mac's owner or an admin): stopped, rebuilt and checked. */
+    repairIphone(orgId: string, phoneId: string): Promise<IphoneRepairView>;
   };
   /** Connected computers (ADR 0025): machines running `agentes-runner`. */
   machines: {
@@ -1542,6 +1570,8 @@ export interface ApiClient {
   };
   /** Boards and widgets (ADR 0135). */
   dashboards: DashboardsApi;
+  /** Spreadsheets, presentations and canvases edited together (ADR 0196), their pictures and Office previews. */
+  live: LiveApi;
   /** Missions (ADR 0029): long work by the agent's executor on a connected computer, in one thread. */
   missions: {
     /** Missions you can see (the Missões tab), most recently changed first, with the counts for the tabs. */
@@ -1841,6 +1871,11 @@ export interface ApiClient {
     page(orgId: string, filters?: ArtifactFilters, cursor?: string): Promise<ArtifactPage>;
     /** One artifact at `version` (default: latest), with content. */
     get(orgId: string, id: string, version?: number): Promise<ArtifactDetail>;
+    /**
+     * A live file's conversation (ADR 0199), made on first use: its channel and thread root, for the chat's routes.
+     * 404 for a file the person doesn't read, 400 `artifact.no_conversation` for a kind without one.
+     */
+    conversation(orgId: string, id: string): Promise<FileConversationRef>;
     /** Keeps a block in the Drive (ADR 0113). */
     keep(orgId: string, id: string): Promise<Artifact>;
     /** Sends what a person picked in a block to the agent that made it, as their own message. */
@@ -1870,21 +1905,24 @@ export interface ApiClient {
     versions(orgId: string, id: string): Promise<ArtifactVersion[]>;
     /** Short-lived signed URL for the stored file. */
     download(orgId: string, id: string, version?: number): Promise<{ url: string; expiresAt: string }>;
-    /** Same-origin URL of the file as an attachment, optionally converted (CSV, .patch, PDF). */
+    /**
+     * Same-origin URL of the file as an attachment, optionally converted (CSV, .patch, PDF, Word; a live file as Excel
+     * or PowerPoint, ADR 0198; a document as Markdown, ADR 0200).
+     */
     fileUrl(
       orgId: string,
       id: string,
-      options?: { version?: number; format?: "csv" | "patch" | "pdf" | "docx" },
+      options?: { version?: number; format?: "csv" | "patch" | "pdf" | "docx" | "xlsx" | "pptx" | "md" },
     ): string;
     create(
       orgId: string,
-      input: { title: string; channelId?: string | null; content: ArtifactContent },
+      input: { title: string; channelId?: string | null; folderId?: string | null; content: ArtifactContent },
     ): Promise<ArtifactDetail>;
     /** Uploads a file as is (multipart, ≤ 50 MB) to the Drive or to a channel. */
     upload(
       orgId: string,
       file: File,
-      options?: { title?: string; channelId?: string | null; threadId?: string | null },
+      options?: { title?: string; channelId?: string | null; threadId?: string | null; folderId?: string | null },
     ): Promise<ArtifactDetail>;
     /** A new version of an uploaded file (multipart, ≤ 50 MB). */
     uploadVersion(orgId: string, id: string, file: File, options?: { note?: string }): Promise<ArtifactDetail>;
@@ -1904,6 +1942,17 @@ export interface ApiClient {
     ): Promise<Artifact>;
     /** To the trash for 30 days (403 `artifact.delete_forbidden`). */
     remove(orgId: string, id: string): Promise<void>;
+    /** A Drive file's new name (no new version). */
+    rename(orgId: string, id: string, title: string): Promise<Artifact>;
+    /** Puts Drive files in a folder (null: the top level). Who sees them doesn't change. */
+    move(orgId: string, ids: string[], folderId: string | null): Promise<{ moved: number }>;
+    /** Every Drive folder of the workspace. */
+    folders(orgId: string): Promise<DriveFolder[]>;
+    createFolder(orgId: string, input: { name: string; parentId?: string | null }): Promise<DriveFolder>;
+    /** Rename, or move (`parentId`, null: the top level); 400 `drive.folder_into_itself`. */
+    updateFolder(orgId: string, id: string, patch: { name?: string; parentId?: string | null }): Promise<DriveFolder>;
+    /** The folder and its folders go; my files in them to the trash, the rest move up (`kept`). */
+    deleteFolder(orgId: string, id: string): Promise<{ trashed: number; kept: number }>;
     trash(orgId: string): Promise<TrashedArtifact[]>;
     /** Back from the trash (409 `artifact.purged` after 30 days). */
     restore(orgId: string, id: string): Promise<ArtifactDetail | undefined>;
@@ -2034,6 +2083,8 @@ export interface ApiClient {
     unreadThreads(orgId: string): Promise<number>;
     /** The tasks whose conversation has a reply I haven't read, with the ones that mention me (ADR 0145). */
     unreadTasks?(orgId: string): Promise<UnreadTask[]>;
+    /** The live files whose conversation has a reply I haven't read, with the ones that mention me (ADR 0199). */
+    unreadFiles?(orgId: string): Promise<UnreadFile[]>;
   };
   /** "Trabalhando agora": agent runs in progress in the conversations you are in (any member). */
   working?: {

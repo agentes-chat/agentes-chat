@@ -134,6 +134,7 @@ export {
 } from "./components/Chip";
 export { ChipField, type ChipFieldOption, type ChipFieldProps, type ChipFieldToken } from "./components/ChipField";
 export { CodeInput, type CodeInputProps } from "./components/CodeInput";
+export { codeAndBold } from "./components/CodeWords";
 export { ColorDot, dotTone } from "./components/ColorDot";
 export { ColorPicker, type ColorPickerLabels } from "./components/ColorPicker";
 export { CommandPalette, filterPalette, type PaletteItem } from "./components/CommandPalette";
@@ -176,6 +177,7 @@ export {
   useUnsavedInDialog,
 } from "./components/Dialog";
 export { Diff, type DiffBlock, type DiffKind, type DiffLine, diffBlocks, diffLines } from "./components/Diff";
+export { Disclosure } from "./components/Disclosure";
 export { drawEffort, EffortPixels, type EffortStep } from "./components/EffortPixels";
 export {
   EMOJI_COLUMNS,
@@ -298,11 +300,13 @@ export {
   type PlanMeterUsage,
   type PlanMeterWindow,
   type PlanState,
+  planAgeShown,
   planAttention,
   planLevel,
   planLine,
   planState,
   planWindows,
+  windowAmount,
 } from "./components/PlanMeter";
 export { Popover } from "./components/Popover";
 export { type BadgePresence, PresenceBadge, type PresenceBadgeProps } from "./components/PresenceBadge";
@@ -334,6 +338,7 @@ export {
   PlanStrip,
   type PlanStripCell,
   planCellPixel,
+  type RunBar,
   RunKey,
   RunLane,
   RunMark,

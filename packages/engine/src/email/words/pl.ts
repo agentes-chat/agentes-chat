@@ -338,6 +338,14 @@ export const words: EmailWords = {
   deletionCode: {
     subjectWorkspace: (code) => `${code} to twój kod do usunięcia przestrzeni roboczej`,
     subjectAccount: (code) => `${code} to twój kod do usunięcia całego konta`,
+    subjectReset: (code) => `${code} to twój kod do zresetowania przestrzeni roboczej`,
+    reset: (org) => [
+      "Wpisz ten kod, żeby zresetować przestrzeń roboczą ",
+      { b: org },
+      ". Jej agenci, rozmowy, pliki i pamięć zostaną od razu usunięte na dobre, a ona zacznie od nowa jak nowa przestrzeń.",
+    ],
+    whyReset: (org) =>
+      `Otrzymujesz tę wiadomość, ponieważ z twojego konta poproszono o zresetowanie ${org} w agentes.chat.`,
     preheader: "Wpisz go w agentes.chat, żeby potwierdzić. Działa przez 10 minut.",
     headline: "Twój kod",
     workspace: (org) => [
@@ -647,5 +655,23 @@ export const words: EmailWords = {
       why: (surface) => `Otrzymujesz tego e-maila, bo ${surface} było połączone z Twoim kontem agentes.chat.`,
       picture: "Twój asystent, już nie w telefonie",
     },
+  },
+  supportReply: {
+    subject: "Odpowiedź na twoją prośbę o pomoc",
+    preheader: "W sprawie twojej prośby o pomoc w agentes.chat.",
+    headline: "Odpowiedź na twoją prośbę o pomoc",
+    answers: {
+      received: "Dostaliśmy twoją prośbę i już się nią zajmujemy.",
+      need_more: "Żeby pomóc, musimy wiedzieć więcej: jakie były twoje kroki, jaki miał być wynik i co się stało.",
+      resolved: "Zgłoszony problem został naprawiony.",
+      handed_over: "Twoją prośbą zajmuje się teraz człowiek, który ci odpowie.",
+    },
+    from: (host) =>
+      host
+        ? atHost("Odpowiedź od osób, które prowadzą serwer agentes.chat pod", "adresem", host)
+        : "Odpowiedź od agentes.chat.",
+    ai: "Tę odpowiedź napisał asystent AI.",
+    reply: (address) => ["Aby odpowiedzieć, napisz na ", { mail: address }, "."],
+    why: "Otrzymujesz tę wiadomość w odpowiedzi na twoją prośbę o pomoc w agentes.chat.",
   },
 };

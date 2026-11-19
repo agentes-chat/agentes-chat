@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Text as RNText, StyleSheet, View } from "react-native";
 import { Icon, PressScale } from "@/ui";
+import { useMessageCardCorners } from "../chat/look";
 import { useColors } from "../shared/hooks";
 import { videoClock, videoHeight } from "./logic";
 
@@ -65,6 +66,8 @@ function InlineVideo({
 }) {
   const { t } = useTranslation();
   const c = useColors();
+  // In a message, the corners every card there has, as the picture's beside it (its loading frame had them).
+  const cardCorners = useMessageCardCorners();
   // Silent and still: it is here only for its first frame and its length.
   const player = useVideoPlayer(source, (p) => {
     p.muted = true;
@@ -83,7 +86,11 @@ function InlineVideo({
       disabled={!onOpen}
       accessibilityRole="button"
       accessibilityLabel={`${t("mobile.files.video.play")}: ${name}${length ? `, ${length}` : ""}`}
-      style={[styles.inline, { width, height: videoHeight(width), backgroundColor: c.sunken, borderColor: c.line2 }]}
+      style={[
+        styles.inline,
+        { width, height: videoHeight(width), backgroundColor: c.sunken, borderColor: c.line2 },
+        cardCorners,
+      ]}
     >
       <VideoView
         player={player}
@@ -100,7 +107,9 @@ function InlineVideo({
         </View>
       </View>
       {length ? (
+        // The length as a video on its way up shows it (`MessageFiles`): a play mark and the time on a dark pill.
         <View style={styles.length} pointerEvents="none">
+          <Icon name="play" size={9} color="#fff" />
           <RNText style={styles.lengthText}>{length}</RNText>
         </View>
       ) : null}
@@ -208,10 +217,13 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 8,
     bottom: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 7,
-    backgroundColor: "rgba(0, 0, 0, 0.65)",
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "rgba(0,0,0,0.6)",
   },
   lengthText: { color: "#fff", fontSize: 12, fontWeight: "600", fontVariant: ["tabular-nums"] },
 });

@@ -343,6 +343,7 @@
     "replies_other": "{{count}} antwoorden",
     "repliesWord_one": "antwoord",
     "repliesWord_other": "antwoorden",
+    "dayAt": "{{day}} {{time}}",
     "thread": "Thread",
     "closed": "gesloten",
     "options": "Opties",
@@ -379,9 +380,7 @@
       "delivered": "{{name}} heeft het ontvangen",
       "held": "{{name}} leest het na jouw beslissing",
       "read": "{{name}} heeft het gelezen",
-      "resolved": "{{name}} heeft het hulpverzoek gesloten",
-      "well": "Heeft je bericht gelezen",
-      "wellNow": "Stopte om je bericht te lezen"
+      "resolved": "{{name}} heeft het hulpverzoek gesloten"
     },
     "stopped": {
       "byYou": "Hier gestopt",
@@ -564,8 +563,6 @@
     "file": "Bestand",
     "media": "GIF's",
     "noCamera": "Geen toegang tot de camera. Sta het toe in de Instellingen van de telefoon.",
-    "mission": "Een missie starten",
-    "missionHint": "Lang werk, met een plan, van begin tot eind",
     "summary": "Het gesprek samenvatten",
     "summaryHint": "Wat er gebeurde terwijl je weg was",
     "remind": "Herinner me later",
@@ -802,7 +799,7 @@
   "agentEdit": {
     "missing": "Deze agent bestaat niet meer.",
     "saved": "Wijzigingen opgeslagen",
-    "adminsOnly": "Alleen beheerders wijzigen de naam, de rol en de instructies.",
+    "adminsOnly": "Alleen wie deze agent mag bewerken, wijzigt de rol en de instructies. De naam alleen beheerders.",
     "discardTitle": "Je wijzigingen weggooien?",
     "discardText": "Wat je hebt gewijzigd, is nog niet opgeslagen.",
     "discard": "Weggooien",
@@ -821,8 +818,8 @@
       "where": {
         "openbotrun": "Kies openbot-import.json (uit Migrator by OpenBot) of openbot-transfer.json (uit de instance transfer). Een .zip opent eerst in de app Bestanden: met één tik pak je hem uit.",
         "openmausbot": "In OpenMausBot: klik met rechts op het team › Share team… › Save file. Kies daarna dat bestand hier.",
-        "hermes": "Hermes exporteert vanuit een terminal (hermes profile export), als .tar.gz die de telefoon niet kan openen. Importeer het op de computer, of kies hier de .md- en .yaml-bestanden van het profiel.",
-        "openclaw": "OpenClaw bewaart agents in de map ~/.openclaw op de computer. Kies hier de .md-bestanden van een werkruimte, of importeer de hele map op de computer.",
+        "hermes": "Hermes exporteert vanuit een terminal (`hermes profile export`), als .tar.gz die de telefoon niet kan openen. Importeer het op de computer, of kies hier de .md- en .yaml-bestanden van het profiel.",
+        "openclaw": "OpenClaw bewaart agents in de map `~/.openclaw` op de computer. Kies hier de .md-bestanden van een werkruimte, of importeer de hele map op de computer.",
         "paperclip": "Plak hieronder de GitHub-link van het pakket, of kies de COMPANY.md en de andere .md-bestanden.",
         "agenteschat": "In de andere werkruimte: Instellingen › Importeren en exporteren › Het bestand downloaden. Kies daarna hier de .json."
       },
@@ -1203,6 +1200,9 @@
       "diagram": "Diagram",
       "page": "Pagina",
       "text": "Tekst",
+      "spreadsheet": "Spreadsheet",
+      "slides": "Presentatie",
+      "canvas": "Whiteboard",
       "file": "Bestand"
     },
     "more": "Meer opties",
@@ -1327,6 +1327,9 @@
     "type": {
       "all": "Alles",
       "documents": "Documenten",
+      "spreadsheets": "Spreadsheets",
+      "presentations": "Presentaties",
+      "canvases": "Whiteboards",
       "images": "Afbeeldingen",
       "tables": "Tabellen",
       "diffs": "Diffs"
@@ -1340,6 +1343,9 @@
       "table": "Tabel",
       "diff": "Diff",
       "image": "Afbeelding",
+      "spreadsheet": "Spreadsheet",
+      "slides": "Presentatie",
+      "canvas": "Whiteboard",
       "file": "Bestand"
     },
     "by": "{{name}} · {{when}}",
@@ -1955,7 +1961,7 @@
       "tooOld": "Deze iPhone draait iOS {{version}}, en agents hebben iOS 17 of nieuwer nodig. Werk hem bij als dat kan, of gebruik een nieuwere iPhone.",
       "xcodeOld": "Deze iPhone draait iOS {{version}}, nieuwer dan Xcode op {{host}} kent. Installeer daar Xcode {{major}} en voer daarna xcrun devicectl manage ddis update uit in Terminal.",
       "teamMissing": "Xcode is ingelogd maar toont nog geen team. Maak in Xcode een willekeurige iOS-app, kies je team bij Signing & Capabilities en voer hem één keer uit op deze iPhone.",
-      "uiRefused": "Deze iPhone weigerde de tikken van de testhelper. Ontgrendel hem en voer je toegangscode in als hij erom vraagt. Blijft het gebeuren, zet dan Instellingen › Ontwikkelaar › Schakel UI-automatisering in uit en weer aan.",
+      "uiRefused": "Agents zien het scherm van deze iPhone, maar iOS weigert hun tikken.",
       "pluggedIn": "Hij is aangesloten",
       "wifi": {
         "also": "Ook op de wifi van {{host}}: {{name}}",
@@ -2242,6 +2248,8 @@
     "deleteIntro": "{{name}} wordt meteen voor iedereen alleen-lezen en wordt over 7 dagen definitief verwijderd.",
     "holdDelete": "Ingedrukt houden om te verwijderen",
     "deleteFailed": "De werkruimte kon niet worden verwijderd. Probeer het opnieuw.",
+    "holdReset": "Houd ingedrukt om te resetten",
+    "resetFailed": "De werkruimte kon niet worden gereset. Probeer het opnieuw.",
     "access": {
       "how": "Tik op een rij om het niveau te wijzigen: Geen toegang, Lezen, Lezen en schrijven."
     },
@@ -2389,9 +2397,9 @@
       "everyone": "Iedereen praat ermee",
       "gate": "Wie alleen {{name}} heeft, praat niet met agents.",
       "gateOn": "Met agents praten aanzetten",
-      "locked": "Alleen {{owner}}, verantwoordelijk voor {{name}}, of wie elke agent bewerkt, wijzigt dit.",
-      "locked_female": "Alleen {{owner}}, verantwoordelijk voor {{name}}, of wie elke agent bewerkt, wijzigt dit.",
-      "lockedNoOwner": "Alleen wie elke agent bewerkt, wijzigt dit.",
+      "locked": "Alleen {{owner}}, verantwoordelijk voor {{name}}, of wie agents bewerkt, wijzigt dit.",
+      "locked_female": "Alleen {{owner}}, verantwoordelijk voor {{name}}, of wie agents bewerkt, wijzigt dit.",
+      "lockedNoOwner": "Alleen wie agents bewerkt, wijzigt dit.",
       "none": "Nog geen agents.",
       "some": "Alleen sommige rollen en mensen",
       "addPerson": "Persoon toevoegen",
@@ -2521,7 +2529,7 @@
       "newPassword": "Nieuw wachtwoord",
       "keyName": "Variabele",
       "keyNamePlaceholder": "ACME_API_KEY",
-      "keyNameHelp": "Hoofdletters, cijfers en _, zoals ACME_API_KEY. Agenten vragen de sleutel op met deze naam.",
+      "keyNameHelp": "Hoofdletters, cijfers en _, zoals `ACME_API_KEY`. Agenten vragen de sleutel op met deze naam.",
       "value": "Waarde",
       "newValue": "Nieuwe waarde",
       "description": "Beschrijving",
@@ -2858,6 +2866,223 @@
     "audit": {
       "title": "Niets te controleren",
       "text": "Als een agent iets buiten het gesprek doet, verschijnt het hier."
+    }
+  },
+  "live": {
+    "status": {
+      "opening": "Openen…",
+      "saved": "Opgeslagen",
+      "saving": "Opslaan…",
+      "offline": "Geen verbinding",
+      "offlineKept": "Geen verbinding · wijzigingen bewaard op deze telefoon",
+      "readOnly": "Alleen-lezen"
+    },
+    "closed": {
+      "missing": "Dit bestand bestaat niet of is niet met je gedeeld",
+      "signedOut": "Log opnieuw in om dit bestand te openen",
+      "broken": "Dit bestand kan niet in de app worden geopend",
+      "toDrive": "Terug naar de Drive"
+    },
+    "menu": {
+      "undo": "Ongedaan maken",
+      "redo": "Opnieuw"
+    },
+    "here": {
+      "title": "Wie er is",
+      "faces_one": "Nog {{count}} hier. Bekijk wie",
+      "faces_other": "Nog {{count}} hier. Bekijk wie",
+      "group": {
+        "editing": "Bewerkt",
+        "viewing": "Kijkt mee"
+      },
+      "editing": "bewerkt",
+      "viewing": "kijkt mee",
+      "editingAt": "bewerkt {{where}}",
+      "viewingAt": "op {{where}}",
+      "editingSlide": "bewerkt dia {{n}}",
+      "onSlide": "op dia {{n}}",
+      "editingShapes_one": "bewerkt {{count}} element",
+      "editingShapes_other": "bewerkt {{count}} elementen",
+      "followingName": "Je volgt {{name}}",
+      "stop": "Stoppen",
+      "alone": "Alleen jij bent hier nu",
+      "aloneHint": "Wie dit bestand opent, verschijnt hier, met wat die doet."
+    },
+    "card": {
+      "sheets_one": "{{count}} tabblad",
+      "sheets_other": "{{count}} tabbladen",
+      "slides_one": "{{count}} dia",
+      "slides_other": "{{count}} dia's",
+      "shapes_one": "{{count}} element",
+      "shapes_other": "{{count}} elementen"
+    },
+    "sheet": {
+      "edit": "Bewerken",
+      "editHint": "In deze cel typen",
+      "editing": "{{cell}} bewerken",
+      "placeholder": "Typ een waarde of =",
+      "empty": "Leeg",
+      "cancel": "Laten zoals het was",
+      "done": "Klaar",
+      "typeKey": "{{key}} typen",
+      "stats": "Som {{sum}} · Gemiddelde {{average}} · Aantal {{count}}",
+      "countOnly": "Aantal {{count}}",
+      "cantDo": "Dat kan hier niet",
+      "copied": "Gekopieerd",
+      "newSheet": "Nieuw tabblad",
+      "sheetWord": "Blad",
+      "duplicateSheet": "Tabblad dupliceren",
+      "copyOf": "{{name}} (kopie)",
+      "deleteSheet": "Tabblad verwijderen",
+      "deleteSheetTitle": "{{name}} verwijderen?",
+      "deleteSheetText": "Alles op dit tabblad verdwijnt voor iedereen in het bestand. Ongedaan maken haalt het terug.",
+      "menu": {
+        "copy": "Kopiëren",
+        "paste": "Plakken",
+        "clear": "Wissen",
+        "rowsAbove_one": "Een rij hierboven invoegen",
+        "rowsAbove_other": "{{count}} rijen hierboven invoegen",
+        "rowsBelow_one": "Een rij hieronder invoegen",
+        "rowsBelow_other": "{{count}} rijen hieronder invoegen",
+        "colsLeft_one": "Een kolom links invoegen",
+        "colsLeft_other": "{{count}} kolommen links invoegen",
+        "colsRight_one": "Een kolom rechts invoegen",
+        "colsRight_other": "{{count}} kolommen rechts invoegen",
+        "sortUp": "Sorteren van A naar Z",
+        "sortDown": "Sorteren van Z naar A",
+        "deleteRows_one": "De rij verwijderen",
+        "deleteRows_other": "{{count}} rijen verwijderen",
+        "deleteCols_one": "De kolom verwijderen",
+        "deleteCols_other": "{{count}} kolommen verwijderen"
+      },
+      "problem": {
+        "empty": "Typ iets na =",
+        "unexpected": "Er klopt iets niet bij {{text}}",
+        "paren": "Er is een haakje niet gesloten",
+        "quote": "Een aanhalingsteken is niet gesloten",
+        "sheetQuote": "Het aanhalingsteken van een tabbladnaam is niet gesloten",
+        "operand": "Er ontbreekt een waarde naast een teken",
+        "array": "Deze lijst met waarden is niet compleet",
+        "range": "Dit bereik is niet geldig",
+        "sheet": "Er is geen tabblad met de naam {{text}}",
+        "args": "{{fn}} heeft het verkeerde aantal waarden",
+        "tooLong": "Dit is te lang voor een cel",
+        "tooDeep": "Deze formule heeft te veel niveaus",
+        "tooFar": "Deze verwijzing gaat voorbij de limiet van de spreadsheet",
+        "limit": "De spreadsheet heeft de maximale grootte bereikt",
+        "merged": "Samengevoegde cellen zitten in de weg",
+        "failed": "Dat is niet gelukt. Probeer het opnieuw."
+      }
+    },
+    "slides": {
+      "placeholder": {
+        "title": "Tik om een titel toe te voegen",
+        "text": "Tik om tekst toe te voegen",
+        "image": "Tik om een foto toe te voegen"
+      },
+      "part": {
+        "title": "Titel",
+        "subtitle": "Ondertitel",
+        "body": "Tekst",
+        "caption": "Bijschrift",
+        "number": "Groot getal",
+        "quote": "Citaat",
+        "shape": "Tekst in de vorm",
+        "text": "Tekstvak",
+        "note": "Notitie"
+      },
+      "openHint": "Opent de dia",
+      "editHint": "Bewerkt de tekst",
+      "place": "Dia {{n}} van {{count}}",
+      "placeHidden": "Dia {{n}} van {{count}} · verborgen tijdens presenteren",
+      "deleteTitle": "Dia {{n}} verwijderen?",
+      "deleteText": "De dia verdwijnt voor iedereen in het bestand. Ongedaan maken haalt hem terug.",
+      "notesPlaceholder": "Schrijf wat je bij deze dia wilt zeggen",
+      "pickPhoto": "Kies een foto",
+      "tools": {
+        "text": "Tekst",
+        "photo": "Foto",
+        "sending": "Versturen…"
+      }
+    },
+    "text": {
+      "title": "Tekst",
+      "noteTitle": "Notitie",
+      "done": "Klaar",
+      "placeholder": "Typ de tekst",
+      "titlePlaceholder": "Typ de titel",
+      "hint": "Elke regel is een alinea. Wat je typt, gaat meteen het bestand in."
+    },
+    "show": {
+      "nothing": "Alle dia's zijn verborgen, dus er is niets te tonen.",
+      "upright": "Zet de telefoon rechtop",
+      "sideways": "Draai de telefoon op zijn kant"
+    },
+    "canvas": {
+      "tools": {
+        "label": "Hulpmiddelen",
+        "select": "Selecteren",
+        "pen": "Pen",
+        "shapes": "Vormen",
+        "arrow": "Pijl",
+        "note": "Notitie",
+        "text": "Tekst",
+        "photo": "Foto",
+        "comment": "Opmerking"
+      },
+      "shapes": {
+        "rect": "Rechthoek",
+        "ellipse": "Ellips",
+        "diamond": "Ruit",
+        "triangle": "Driehoek",
+        "star": "Ster",
+        "line": "Lijn"
+      },
+      "penHint": "Teken met je vinger. Met twee vingers verschuif je het whiteboard.",
+      "arrowHint": "Sleep van de ene plek naar de andere",
+      "commentHint": "Tik waar je een opmerking wilt plaatsen",
+      "pin": "Opmerking {{n}} van {{name}}",
+      "addToSelection": "Dit ook kiezen",
+      "emptyText": "Voeg een notitie of foto toe, of vraag een agent in het gesprek."
+    },
+    "talk": {
+      "start": "Praten over {{what}}",
+      "openHint": "Opent het gesprek",
+      "placeholder": {
+        "spreadsheet": "Schrijf over de spreadsheet…",
+        "slides": "Schrijf over de presentatie…",
+        "canvas": "Schrijf over het whiteboard…",
+        "document": "Schrijf over het document…"
+      },
+      "aboutPoint": "Een opmerking bij een plek op het whiteboard",
+      "comment": "Opmerking",
+      "imported": "Geïmporteerd uit {{file}} door <0>{{name}}</0>",
+      "variationsText": "maak variaties van deze afbeelding"
+    },
+    "doc": {
+      "styles": {
+        "paragraph": "Tekst",
+        "h1": "Kop 1",
+        "h2": "Kop 2",
+        "h3": "Kop 3",
+        "quote": "Citaat",
+        "code": "Code"
+      },
+      "style": "Tekststijl",
+      "bold": "Vet",
+      "italic": "Cursief",
+      "bullets": "Opsommingslijst",
+      "numbers": "Genummerde lijst",
+      "quote": "Citaat",
+      "link": "Een link toevoegen",
+      "linkChoose": "Kies eerst de woorden voor de link",
+      "linkBad": "Dat adres kan geen link zijn",
+      "linkPlaceholder": "Linkadres",
+      "linkApply": "Link toevoegen",
+      "placeholder": "Schrijf hier",
+      "add": "Een alinea toevoegen",
+      "editHint": "Bewerkt dit deel",
+      "notHere": "Dit deel bewerk je op de computer"
     }
   },
   "surface": {

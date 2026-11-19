@@ -24,6 +24,7 @@ import {
   insertText,
   type TextEdit,
 } from "../format";
+import { useScrollSides } from "../hooks/useScrollSides";
 import { Icon, type IconName } from "../icons/Icon";
 import { selectionRect } from "../selection-rect";
 import { Button } from "./Button";
@@ -394,28 +395,45 @@ function FormatBar({
         e.preventDefault();
       }}
     >
-      {FORMAT_KINDS.map((kind, i) => {
-        const hint = formatShortcutHint(kind, mod);
-        return (
-          <span
-            key={kind}
-            className="ac-formatbar__item"
-            data-group-end={FORMAT_GROUP_ENDS.includes(kind) || undefined}
-          >
-            <button
-              type="button"
-              className="ac-formatbar__btn"
-              aria-label={labels[kind]}
-              title={hint ? `${labels[kind]} (${hint})` : labels[kind]}
-              tabIndex={i === focus ? 0 : -1}
-              onFocus={() => setFocus(i)}
-              onClick={() => onFormat(kind)}
+      <FormatRow>
+        {FORMAT_KINDS.map((kind, i) => {
+          const hint = formatShortcutHint(kind, mod);
+          return (
+            <span
+              key={kind}
+              className="ac-formatbar__item"
+              data-group-end={FORMAT_GROUP_ENDS.includes(kind) || undefined}
             >
-              <Icon name={FORMAT_ICON[kind]} size={16} />
-            </button>
-          </span>
-        );
-      })}
+              <button
+                type="button"
+                className="ac-formatbar__btn"
+                aria-label={labels[kind]}
+                title={hint ? `${labels[kind]} (${hint})` : labels[kind]}
+                tabIndex={i === focus ? 0 : -1}
+                onFocus={() => setFocus(i)}
+                onClick={() => onFormat(kind)}
+              >
+                <Icon name={FORMAT_ICON[kind]} size={16} />
+              </button>
+            </span>
+          );
+        })}
+      </FormatRow>
+    </div>
+  );
+}
+
+/**
+ * The bar's one row of buttons, scrolling sideways with faded ends when the composer is narrower than it (a phone):
+ * wrapped, its last row ended short of the bar's edge. Its own component so its scroller exists when the hook first
+ * measures it: the bar renders nothing until the first selection.
+ */
+function FormatRow({ children }: { children: ReactNode }) {
+  const row = useRef<HTMLDivElement>(null);
+  const more = useScrollSides(row);
+  return (
+    <div ref={row} className="ac-formatbar__row" data-more={more}>
+      {children}
     </div>
   );
 }

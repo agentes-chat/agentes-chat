@@ -39,6 +39,7 @@ export type OperatorEventType =
   | "desktop_control.ended"
   | "content.viewed"
   | "support.requested"
+  | "support.replied"
   | "platform_ai.threshold"
   | "account.failure"
   | "machine.wake_wanted"
@@ -82,6 +83,27 @@ export async function recordContentViewed(
 ) {
   const { orgId, ...data } = view;
   await insertEvents(db, [{ type: "content.viewed", orgId, data }]);
+}
+
+/**
+ * `support.replied`, whether events are on or not: the replies a request and a day may have are counted from these.
+ * Which sentence was sent or the word `text`, and how long the operator's own words were, never the words.
+ */
+export async function recordSupportReplied(
+  db: Executor,
+  reply: {
+    orgId: string;
+    /** The member answered. */
+    userId: string;
+    requestId: string;
+    template: string;
+    chars: number;
+    assistedByAi: boolean;
+    operator: string;
+  },
+) {
+  const { orgId, userId, ...data } = reply;
+  await insertEvents(db, [{ type: "support.replied", orgId, userId, data }]);
 }
 
 /** `user.signed_up`, from a new sign-in method: the account's first one is its sign-up, later ones are links. */

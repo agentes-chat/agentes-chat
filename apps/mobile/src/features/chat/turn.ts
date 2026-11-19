@@ -78,13 +78,11 @@ export function withOpacity(color: string, opacity: number): string {
 // ── The block's work, handed to the saved reply ──────────────────────────────
 
 /**
- * The work a run at work here did last, so its saved reply shows the same tool block at once ("Usou 4 ferramentas")
- * and the messages it read, instead of loading the run's steps first.
+ * The work a run at work here did last, so its saved reply shows the same tool block at once ("Used 4 tools") instead
+ * of loading the run's steps first.
  */
 export interface TurnSnapshot {
   items: ToolItem[];
-  /** The text of each message it read (the "Leu seu recado" wells). */
-  quotes: Record<string, string>;
   at: number;
 }
 

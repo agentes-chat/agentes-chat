@@ -32,6 +32,9 @@ import {
   operatorUnanswered,
   operatorUnansweredCounts,
   RELEASE_REASONS,
+  RUN_CLAIM_STAGES_MAX,
+  RUN_CLAIM_TURNS_MAX,
+  RUN_CLAIMS_MAX,
   STOPPED_BY,
   SYSTEM_STOP_REASONS,
 } from "@agenteschat/engine";
@@ -347,6 +350,41 @@ const Trace = z
         }),
       ),
     }),
+    claims: z
+      .array(
+        z.object({
+          endedAt: Time.nullable().openapi({ description: "When the claim ended; null: it was kept without it." }),
+          totalMs: Count.openapi({ description: "Its stages' time in all." }),
+          queries: Count.openapi({ description: "The SQL statements it issued." }),
+          stages: z
+            .array(
+              z.object({
+                stage: z.string().openapi({
+                  description:
+                    "`claim`, `context`, `model#1` (the turn it is of), `persist`, `events`… `other`: a name not shaped like one the server writes.",
+                }),
+                ms: Count,
+                queries: Count,
+              }),
+            )
+            .openapi({ description: `In the order they ran, at most ${RUN_CLAIM_STAGES_MAX}.` }),
+          stagesCut: z.boolean().openapi({ description: `It kept more than ${RUN_CLAIM_STAGES_MAX} stages.` }),
+          computerTurns: z
+            .array(
+              z.object({
+                warm: z.boolean().openapi({ description: "On a process already open." }),
+                initMs: Count.nullable().openapi({ description: "A new process until it said it was ready." }),
+                firstEventMs: Count.nullable().openapi({ description: "Turn start to its first event." }),
+              }),
+            )
+            .openapi({
+              description: `How each of its turns on a computer started, as the computer said, at most ${RUN_CLAIM_TURNS_MAX}.`,
+            }),
+        }),
+      )
+      .openapi({
+        description: `Where the time went each time a worker took the run up (a claim), oldest first: the last ${RUN_CLAIMS_MAX} the run kept, none on a run that kept none. A wait between two claims is in neither.`,
+      }),
     machine: z
       .object({
         id: z.uuid(),
@@ -718,7 +756,8 @@ export function registerOperatorRuns(api: OpenAPIHono, { db, config }: OperatorD
       method: "get",
       path: "/runs/{runId}/trace",
       tags,
-      summary: "One run from start to end: its steps, what it asked, its jobs, what it spent and its computer",
+      summary:
+        "One run from start to end: its steps, what it asked, its jobs, what it spent, where its time went and its computer",
       description:
         "Which tool each step called, whether it is the server's own, whether it failed and how, and how big its input and result were, never either of them. The steps page back from the end with `beforeSeq`.",
       request: { params: RunParams, query: TraceQuery },

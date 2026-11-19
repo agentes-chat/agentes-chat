@@ -138,9 +138,9 @@ describe("the peek's wiring", () => {
   test("the list lends its scroll view through the keyboard list's ref; its insets and follow stay as they were", () => {
     const list = between(chat, "<ConversationList", "/>");
     expect(list).toContain("refScrollView={listScroll}");
-    expect(list).toContain("contentInsetEndAdjustment={endInset}");
+    expect(list).toContain("contentInsetEndAdjustment={listEnd}");
     expect(list).toContain('keyboardLiftBehavior="whenAtEnd"');
-    expect(list).toContain("maintainScrollAtEnd={!readHold}");
+    expect(list).toContain("maintainScrollAtEnd={readHold || gap ? false : GLIDE}");
     expect(chat).toContain("const listScroll = useAnimatedRef<Animated.ScrollView>();");
     expect(chat).toContain("const pull = usePullPastEnd(listScroll, peekAgentId !== null);");
     // iOS only: Android's list never reports a pull past its end.
@@ -150,7 +150,7 @@ describe("the peek's wiring", () => {
 
   test("the face is the first thing in the dock (under all of it), a still frame looking up, taking no touch", () => {
     const dock = between(chat, "<KeyboardStickyView offset={{ opened: lift }}", "ref={composerRef}");
-    const face = dock.indexOf("<ChatPeek agentId={peekAgentId} pull={pull} dock={endInset} />");
+    const face = dock.indexOf("<ChatPeek agentId={peekAgentId} pull={pull} dock={boxHeight} />");
     expect(face).toBeGreaterThan(0);
     expect(dock.indexOf("<ToLatest")).toBeGreaterThan(face);
     expect(dock.indexOf("<ComposerFloat")).toBeGreaterThan(face);

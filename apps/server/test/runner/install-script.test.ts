@@ -39,6 +39,7 @@ import {
   RUNNER_BUN_WINDOWS_SHA256,
   SYSTEM_BROWSER_DIR,
   shQuote,
+  withoutTrailingSlashes,
 } from "../../runner/install-script";
 import { launchdPlist, systemdUnit, windowsTaskCommand } from "../../runner/service";
 import { removeDirs, tempDir } from "./helpers";
@@ -131,6 +132,17 @@ mkdir -p "$dir/bun-linux-aarch64" && cp "$FAKE_BUN" "$dir/bun-linux-aarch64/bun"
 test("shQuote survives single quotes", () => {
   expect(shQuote("plain")).toBe("'plain'");
   expect(shQuote("it's")).toBe("'it'\\''s'");
+});
+
+test("the server's address loses the slashes it ends with, read once however long a run of them inside it", () => {
+  expect(withoutTrailingSlashes("https://a.example//")).toBe("https://a.example");
+  expect(withoutTrailingSlashes("https://a.example//x")).toBe("https://a.example//x");
+  expect(withoutTrailingSlashes("///")).toBe("");
+  const started = performance.now();
+  const run = `https://a.example${"/".repeat(200_000)}x`;
+  expect(installScript(` ${run}// `)).toContain(`SERVER='${run}'\n`);
+  expect(installScriptPowerShell(`${run}/`)).toContain(run);
+  expect(performance.now() - started).toBeLessThan(1000);
 });
 
 test("the install script quotes the server URL and is valid sh", () => {

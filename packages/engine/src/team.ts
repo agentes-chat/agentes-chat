@@ -3,7 +3,17 @@ import { type AgentStatusView, lineInEnglish, loadAgentStatuses } from "./agent-
 import { currentHandles } from "./agents";
 import { type AiStatusDeps, agentAiStates } from "./ai-status";
 import type { AgentAppearance } from "./appearance";
-import { canTalkTo, listsAgentTo, type Speaker, seesAgentDetails, speakerFor, speakerOf, viaAgent } from "./audience";
+import {
+  canTalkTo,
+  findsAgent,
+  listsAgentTo,
+  managesAgent,
+  type Speaker,
+  seesAgentDetails,
+  speakerFor,
+  speakerOf,
+  viaAgent,
+} from "./audience";
 import { inLine, mayCall } from "./autonomy-settings";
 import { agentBrowserStatus } from "./browser/status";
 import { BROWSER_SCOPE, DESKTOP_SCOPE } from "./browser/types";
@@ -131,6 +141,8 @@ type Teammate = Pick<
   | "audienceRoleIds"
   | "consultable"
   | "brain"
+  | "editorUserIds"
+  | "editorRoleIds"
   | "autonomyBrakes"
   | "reportsToAgentId"
   | "groupId"
@@ -158,6 +170,8 @@ export function loadTeam(db: Database, orgId: string): Promise<Teammate[]> {
         audienceRoleIds: agents.audienceRoleIds,
         consultable: agents.consultable,
         brain: agents.brain,
+        editorUserIds: agents.editorUserIds,
+        editorRoleIds: agents.editorRoleIds,
         autonomyBrakes: agents.autonomyBrakes,
         reportsToAgentId: agents.reportsToAgentId,
         groupId: agents.groupId,
@@ -213,7 +227,7 @@ export async function noAgentText(
     speakerFor(ctx.db, ctx.orgId, person),
   ]);
   const speaker = options.viaAgent ? viaAgent(talks) : talks;
-  const others = team.filter((a) => a.id !== ctx.agentId && canTalkTo(a, person, speaker)).map((a) => a.handle);
+  const others = team.filter((a) => a.id !== ctx.agentId && findsAgent(a, person, speaker)).map((a) => a.handle);
   return handles
     .map((h) => {
       if (archived.includes(h)) {
@@ -273,7 +287,7 @@ export const teammatesFor = (
     (a) =>
       a.id !== selfId &&
       !skip.has(a.id) &&
-      canTalkTo(a, requester, viaAgent(talks)) &&
+      findsAgent(a, requester, viaAgent(talks)) &&
       ((!!self && inLine(self, a)) || mayCall(self?.autonomyBrakes, { id: a.id, autonomy: a.autonomyBrakes })),
   );
 };
@@ -346,7 +360,8 @@ const FIND_AGENT_PERSONAL = {
 /**
  * The built-in `find_agent` tool: who else works here, searchable by
  * name, role or what they do. Lists only agents the person behind the run can
- * talk to or that take consultations for them, with what they can do (`rosterScopeNames`), who is responsible and
+ * talk to or that take consultations for them (`findsAgent`: a private one only for who lists it), with what they can
+ * do (`rosterScopeNames`), who is responsible and
  * whether they are busy. Read-only; asking one is `ask_agent`.
  */
 export function createFindAgentToolSource(deps: { machines?: Pick<MachineCaller, "status"> | null } = {}): ToolSource {
@@ -368,7 +383,7 @@ export function createFindAgentToolSource(deps: { machines?: Pick<MachineCaller,
       const person = await personBehindCall(ctx);
       const talks = await speakerFor(db, ctx.orgId, person);
       const team = (await loadTeam(db, ctx.orgId)).filter(
-        (a) => a.id !== ctx.agentId && canTalkTo(a, person, viaAgent(talks)),
+        (a) => a.id !== ctx.agentId && findsAgent(a, person, viaAgent(talks)),
       );
       const query = words(String(input.query ?? ""));
       const scored = team
@@ -509,6 +524,8 @@ export async function getTeam(db: Database, actorId: string, orgId: string) {
       audienceRoleIds: agents.audienceRoleIds,
       consultable: agents.consultable,
       brain: agents.brain,
+      editorUserIds: agents.editorUserIds,
+      editorRoleIds: agents.editorRoleIds,
       reportsToAgentId: agents.reportsToAgentId,
     })
     .from(agents)
@@ -585,6 +602,7 @@ export async function getTeam(db: Database, actorId: string, orgId: string) {
         channelIds: seats.filter((r) => r.agentId === a.id).map((r) => r.channelId),
         canTalk: canTalkTo(a, actorId, talks),
         seesDetails,
+        canManage: managesAgent(a, actorId, membership),
       };
     }),
     people: owners.map((o) => ({ id: o.id, name: o.name, image: o.image ?? null })),

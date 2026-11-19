@@ -10,6 +10,16 @@ The native projects (`ios/`, `android/`) are made from `app.config.ts` and `plug
 committed. **Credentials never go in the repo** (it is public): the upload key, Firebase's files and store accounts
 live in GitHub's secrets or the stores.
 
+## Versions
+
+Each store has its own version in `versions.json` (`app.config.ts` takes the one of the platform it builds,
+`APP_PLATFORM`). The **iOS build** and the **Android build** raise their own on main, as the desktop app's release does:
+`release` = fix (0.0.x), feature (0.x.0) or major (x.0.0) commits the new version to main and tags `ios-v<version>` or
+`android-v<version>` before building (`.github/actions/mobile-version`, with the `RELEASE_DEPLOY_KEY` deploy key the
+desktop release pushes with). `none`, a branch, an iOS build not sent to TestFlight and an Android preview build the
+current version. Build numbers keep growing on their own (each workflow's base plus its run number). On TestFlight the
+first build of each new version goes through Apple's beta review before the public group gets it.
+
 ## Android on GitHub Actions
 
 Run **Android build** (Actions → Run workflow) with `preview` (an arm64 APK to install directly, kept as the run's

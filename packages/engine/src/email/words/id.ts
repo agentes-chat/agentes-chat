@@ -291,6 +291,13 @@ export const words: EmailWords = {
   deletionCode: {
     subjectWorkspace: (code) => `${code} adalah kodemu untuk menghapus ruang kerja`,
     subjectAccount: (code) => `${code} adalah kodemu untuk menghapus seluruh akunmu`,
+    subjectReset: (code) => `${code} adalah kodemu untuk mengatur ulang ruang kerja`,
+    reset: (org) => [
+      "Ketik kode ini untuk mengatur ulang ruang kerja ",
+      { b: org },
+      ". Agen, percakapan, file, dan memorinya langsung dihapus permanen, dan ruang kerja ini mulai lagi seperti baru.",
+    ],
+    whyReset: (org) => `Kamu menerima email ini karena akunmu meminta pengaturan ulang ${org} di agentes.chat.`,
     preheader: "Ketik di agentes.chat untuk mengonfirmasi. Kodenya berlaku 10 menit.",
     headline: "Kodemu",
     workspace: (org) => [
@@ -567,5 +574,22 @@ export const words: EmailWords = {
       why: (surface) => `Kamu menerima email ini karena ${surface} pernah ditautkan ke akun agentes.chat kamu.`,
       picture: "Asistenmu, tidak lagi di ponselmu",
     },
+  },
+  supportReply: {
+    subject: "Jawaban untuk permintaan bantuanmu",
+    preheader: "Tentang bantuan yang kamu minta di agentes.chat.",
+    headline: "Jawaban untuk permintaan bantuanmu",
+    answers: {
+      received: "Kami sudah menerima permintaanmu dan sedang memeriksanya.",
+      need_more:
+        "Kami perlu tahu lebih banyak untuk membantu: apa yang sedang kamu lakukan, apa yang kamu harapkan, dan apa yang terjadi.",
+      resolved: "Yang kamu laporkan sudah diperbaiki.",
+      handed_over: "Sekarang permintaanmu ditangani seseorang, dan dia akan membalasmu.",
+    },
+    from: (host) =>
+      host ? atHost("Dijawab oleh pengelola server agentes.chat", "di", host) : "Dijawab oleh agentes.chat.",
+    ai: "Jawaban ini ditulis oleh asisten AI.",
+    reply: (address) => ["Untuk membalas, kirim email ke ", { mail: address }, "."],
+    why: "Kamu menerima email ini karena kamu meminta bantuan di agentes.chat.",
   },
 };

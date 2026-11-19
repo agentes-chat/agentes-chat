@@ -4,7 +4,15 @@ import { errorText } from "@agenteschat/client/lib/errors";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, Pressable, Text as RNText, StyleSheet, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  Text as RNText,
+  type StyleProp,
+  StyleSheet,
+  View,
+  type ViewStyle,
+} from "react-native";
 import Animated, { Easing, FadeIn, FadeOut } from "react-native-reanimated";
 import {
   CHROME_MAX_SCALE,
@@ -35,12 +43,21 @@ export function useReturnsHere(channelId: string, threadId: string | null) {
 }
 
 /**
- * The dock's line at rest, in the working line's slot while nobody works here (the web's resting bar): 28 points,
- * bare, up to three faces (one per agent), the clock (the amber wait mark when it waits on the reader's answer),
- * "Ada retorna às 00:32", her words after " · " only when they fit whole beside it, "+1", then ⋯. The whole line
- * opens the Retornos sheet.
+ * The working line at rest, in its place while nobody works here (the conversation's last line, the web's resting
+ * bar): 28 points, bare, up to three faces (one per agent), the clock (the amber wait mark when it waits on the
+ * reader's answer), "Ada retorna às 00:32", her words after " · " only when they fit whole beside it, "+1", then ⋯.
+ * The whole line opens the Retornos sheet.
  */
-export function ReturnLine({ returns, onOpen }: { returns: PendingReturn[]; onOpen: () => void }) {
+export function ReturnLine({
+  returns,
+  onOpen,
+  style,
+}: {
+  returns: PendingReturn[];
+  onOpen: () => void;
+  /** Its room where it is drawn, as the working line's (`WorkingLine` `style`). */
+  style?: StyleProp<ViewStyle>;
+}) {
   const { t, i18n } = useTranslation();
   const dir = useDirectory();
   const { colors: c } = useTheme();
@@ -74,7 +91,7 @@ export function ReturnLine({ returns, onOpen }: { returns: PendingReturn[]; onOp
     </Text>
   ));
   return (
-    <View style={styles.dock}>
+    <View style={[styles.dock, style]}>
       <Animated.View
         entering={reduced ? undefined : LINE_IN}
         exiting={reduced ? undefined : LINE_OUT}

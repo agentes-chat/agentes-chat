@@ -1,5 +1,6 @@
 import type { AgentPlanUsage } from "@agenteschat/client";
 import { useAgentPlanUsage, useApi } from "@agenteschat/client";
+import { managesAgent } from "@agenteschat/client/lib/audience";
 import {
   formatMonth,
   formatPercent,
@@ -9,7 +10,6 @@ import {
   joinNames,
 } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { can } from "@agenteschat/client/lib/permissions";
 import {
   brandOf,
   noWindowsText,
@@ -41,7 +41,7 @@ import { AccountHead, PlanMeter, PlanModels, Swatch, UsageCard, UsageDays } from
 
 export function AgentUsageScreen({ agentId }: { agentId: string }) {
   const { t } = useTranslation();
-  const { orgId, org } = useOrg();
+  const { orgId } = useOrg();
   const api = useApi();
   const c = useColors();
   const dir = useDirectory();
@@ -50,10 +50,9 @@ export function AgentUsageScreen({ agentId }: { agentId: string }) {
   const usage = useAgentPlanUsage(orgId, agentId);
   const agent = dir.agentById.get(agentId);
   const name = agent?.name ?? "";
-  // Its owner and who manages agents change what it thinks with, as on its page (the right hand's is each person's
-  // own, on its settings). Here too: this is where they see it at its limit.
-  const changes =
-    agent && !isRightHand(agent) && (Boolean(meId && agent.ownerUserId === meId) || can(org, "manage_agents"));
+  // Its owner and who manages it (the server's `canManage`) change what it thinks with, as on its page (the right
+  // hand's is each person's own, on its settings). Here too: this is where they see it at its limit.
+  const changes = agent && !isRightHand(agent) && (Boolean(meId && agent.ownerUserId === meId) || managesAgent(agent));
   const switchAi = changes ? (
     <View style={styles.switch}>
       <Button

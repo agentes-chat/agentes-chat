@@ -35,6 +35,7 @@ import {
 import { withAlpha } from "@/ui/palette";
 import { useFontScale } from "@/ui/text-scale";
 import { leadBox } from "@/ui/type-scale";
+import { useBubblePart } from "./bubble-part";
 import { useColors } from "./hooks";
 
 /**
@@ -195,8 +196,9 @@ const liquidGlass = IOS && !needsHeaderBlur(Platform.OS, Platform.Version);
 
 /**
  * The bar of a pushed screen, as the native header (react-native-screens): the system back chevron with
- * the edge swipe, a title (with a subtitle under it when given), an action on the right. Renders nothing
- * itself; it sets the screen's header options, so screens keep calling it where the bar used to be.
+ * the edge swipe, a title (the system's own when it is words: centred and shortened by it) with its line under it,
+ * an action on the right. Renders nothing itself; it sets the screen's header options, so screens keep calling it
+ * where the bar used to be.
  * The bar is opaque by default (`solid`, content lays out below it); `solid={false}` makes content scroll
  * under it (glass on iOS 26, blur before; the screen's scroll view needs
  * `contentInsetAdjustmentBehavior="automatic"`); `plate` puts a clear bar over a full-bleed cover. On Android
@@ -207,7 +209,6 @@ const liquidGlass = IOS && !needsHeaderBlur(Platform.OS, Platform.Version);
  */
 export function PushedHeader({
   title,
-  subtitle,
   right,
   action,
   plate = false,
@@ -216,9 +217,18 @@ export function PushedHeader({
   largeTitle = false,
   actions,
   lead,
+  subtitle,
+  subtitleColor,
 }: {
   title?: ReactNode;
-  subtitle?: string;
+  /**
+   * A line under the title (the step, the board, who sent a file), drawn with it in a view of our own: on iOS kept
+   * clear of the wider side (`titleSide`) so the bar centres both instead of pushing them against the back button,
+   * on Android at the bar's start.
+   */
+  subtitle?: string | undefined;
+  /** The line's colour (a dropped connection's warning); muted when not given. */
+  subtitleColor?: string | undefined;
   right?: ReactNode;
   action?: HeaderWordAction;
   /**
@@ -248,7 +258,13 @@ export function PushedHeader({
   const text = typeof title === "string" ? title : "";
   const titleNode = useHeaderSlot(typeof title === "string" ? null : title);
   const rightNode = useHeaderSlot(right);
-  const custom = Boolean(subtitle) || (title != null && typeof title !== "string");
+  // The bar of the navigator the app uses has no subtitle: a title with a line is drawn, both, in a view of our own.
+  const line = subtitle || undefined;
+  // Words are the system's own title; a view of our own (a pill, a fading name, a segmented control) is ours, and so
+  // are words with a line under them.
+  const custom = (title != null && typeof title !== "string") || line !== undefined;
+  // What stands on the right, which a drawn title and its line keep clear of on both sides.
+  const rightCount = (actions?.length ?? 0) + (lead != null ? 1 : 0) + (right ? 1 : 0);
   const hasRight = Boolean(right);
   // The action's press always reaches its latest handler; the options change only with its word and state.
   const press = useRef(action?.onPress);
@@ -259,7 +275,7 @@ export function PushedHeader({
   const wordOff = action?.disabled ?? false;
   const actionOptions = useHeaderActionOptions({ right: actions, lead });
   const hasActions = (actions?.length ?? 0) > 0 || lead != null;
-  // Stable options: `setOptions` runs when the title, subtitle or the presence of actions change, not on
+  // Stable options: `setOptions` runs when the title or the presence of actions change, not on
   // every render of the screen (a conversation re-renders while agents stream).
   const options = useMemo<NativeStackNavigationOptions>(
     () => ({
@@ -273,7 +289,15 @@ export function PushedHeader({
         : null),
       title: text,
       headerTitle: custom
-        ? () => <HeaderTitle text={text} node={titleNode} subtitle={subtitle} beside={word !== null} />
+        ? () => (
+            <HeaderTitle
+              text={line !== undefined ? text : ""}
+              node={titleNode}
+              line={line}
+              lineColor={subtitleColor}
+              side={line !== undefined ? titleSide(word, rightCount) : word !== null ? 100 : 75}
+            />
+          )
         : text,
       ...(word !== null && IOS
         ? {
@@ -323,7 +347,9 @@ export function PushedHeader({
       colors.ink,
       text,
       custom,
-      subtitle,
+      line,
+      subtitleColor,
+      rightCount,
       titleNode,
       hasRight,
       rightNode,
@@ -331,8 +357,21 @@ export function PushedHeader({
       wordOff,
     ],
   );
+  // Nothing of its own in the screen, only its options: the navigator finds a screen's list through its first
+  // children (to fold a large title, to turn the bar to glass as the list scrolls under it), and a view placed here
+  // would be the first one.
   return <Stack.Screen options={options} />;
 }
+
+/**
+ * How far a drawn title and its line keep from each edge, the wider side's room, so the bar can centre them: the back
+ * button (a 44-point circle) on the left; on the right a word's capsule (about 9 points a letter and 32 of padding)
+ * and 44 points a button; the bar's 16-point margin and 8 of air before the title on both.
+ */
+const titleSide = (word: string | null, buttons: number) => {
+  const right = (word ? 32 + word.length * 9 + (buttons > 0 ? 8 : 0) : 0) + 44 * buttons;
+  return 16 + Math.max(44, right) + 8;
+};
 
 /**
  * A word and buttons together on a bar (a task's "Concluir" beside its "…"): the word at the bar's end, the buttons
@@ -382,23 +421,27 @@ export interface HeaderWordAction {
 }
 
 /**
- * A title with a subtitle under it, in the native bar (centered on iOS, leading on Android). `beside`: a word action
- * (Save) on the right, wider than the back button: the centered title keeps clear of it on both sides.
+ * A title of our own in the native bar (centered on iOS, leading on Android): a view (the conversation's pill), or the
+ * words with their line under them. `side`: the room kept on each side, the wider side's, so iOS centres it instead
+ * of pushing it against the back button.
  */
 function HeaderTitle({
   text,
   node,
-  subtitle,
-  beside = false,
+  line,
+  lineColor,
+  side,
 }: {
   text: string;
   node: HeaderSlotStore;
-  subtitle?: string | undefined;
-  beside?: boolean;
+  line?: string | undefined;
+  lineColor?: string | undefined;
+  side: number;
 }) {
   const { width } = useWindowDimensions();
+  const c = useColors();
   return (
-    <View style={[styles.headerTitle, { maxWidth: width - (beside ? 200 : 150) }]}>
+    <View style={[styles.headerTitle, { maxWidth: width - 2 * side }]}>
       {text ? (
         <Text variant="body" numberOfLines={1} style={styles.titleText}>
           {text}
@@ -409,9 +452,9 @@ function HeaderTitle({
           <HeaderSlot slot={node} />
         </BarPressable>
       )}
-      {subtitle ? (
-        <Text variant="caption" tone="faint" numberOfLines={1}>
-          {subtitle}
+      {line ? (
+        <Text variant="caption" numberOfLines={1} style={{ color: lineColor ?? c.muted }}>
+          {line}
         </Text>
       ) : null}
     </View>
@@ -488,13 +531,18 @@ const styles = StyleSheet.create({
 
 /**
  * A raised, neutral surface (the cards inside messages): raised background, the e1 shadow (e2 for what
- * asks for you: an approval) and lit top edge.
+ * asks for you: an approval) and lit top edge. Under someone else's words in a conversation of bubbles, the bubble's
+ * own fill and no shadow (`BubblePartContext`): the card is a bubble of that message.
  */
 export function useSurface(elevation: "e1" | "e2" = "e1") {
   const { colors, shadows } = useTheme();
+  const part = useBubblePart();
   return useMemo(
-    () => ({ backgroundColor: colors.raised, boxShadow: `${shadows[elevation]}, ${shadows.top}` }),
-    [colors.raised, shadows, elevation],
+    () =>
+      part
+        ? { backgroundColor: part.fill, ...part.edge }
+        : { backgroundColor: colors.raised, boxShadow: `${shadows[elevation]}, ${shadows.top}` },
+    [part, colors.raised, shadows, elevation],
   );
 }
 
