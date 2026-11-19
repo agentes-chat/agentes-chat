@@ -30,4 +30,12 @@ describe("settings search", () => {
     expect(searchSettings("   ", sections, resource)).toEqual([]);
     expect(shownText("  a  <b>b</b> ")).toBe("a b");
   });
+  test("indexes English fallback text for each untranslated key in a translated section", () => {
+    const fallbackResource = (key: string) =>
+      key === "vault" ? { title: "Vault", item: { password: "Password", hint: "Choose a secret" } } : undefined;
+    expect(searchSettings("Choose a secret", sections, resource, { fallbackResource })).toEqual([
+      { section: "vault", text: "Choose a secret" },
+    ]);
+    expect(searchSettings("Password", sections, resource, { fallbackResource })).toEqual([]);
+  });
 });

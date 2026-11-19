@@ -67,9 +67,20 @@ export const shownText = (s: string) =>
     .replace(/\s+/g, " ")
     .trim();
 
-function strings(node: unknown, out: string[]) {
-  if (typeof node === "string") out.push(node);
-  else if (node && typeof node === "object") for (const v of Object.values(node)) strings(v, out);
+function strings(node: unknown, fallback: unknown, out: string[]) {
+  if (typeof node === "string") {
+    out.push(node);
+    return;
+  }
+  if (typeof fallback === "string") {
+    out.push(fallback);
+    return;
+  }
+  const localized = node && typeof node === "object" ? (node as Record<string, unknown>) : undefined;
+  const defaults = fallback && typeof fallback === "object" ? (fallback as Record<string, unknown>) : undefined;
+  for (const key of new Set([...Object.keys(localized ?? {}), ...Object.keys(defaults ?? {})])) {
+    strings(localized?.[key], defaults?.[key], out);
+  }
 }
 
 /**
@@ -80,7 +91,15 @@ export function searchSettings(
   query: string,
   sections: readonly { id: SettingsSection; name: string }[],
   resource: (key: string) => unknown,
-  { perSection = 3, limit = 40 } = {},
+  {
+    perSection = 3,
+    limit = 40,
+    fallbackResource,
+  }: {
+    perSection?: number;
+    limit?: number;
+    fallbackResource?: (key: string) => unknown;
+  } = {},
 ): SettingsHit[] {
   const q = query.trim().toLocaleLowerCase();
   if (!q) return [];
@@ -89,7 +108,7 @@ export function searchSettings(
     const found = new Set<string>();
     if (name.toLocaleLowerCase().includes(q)) found.add(name);
     const all: string[] = [];
-    for (const key of SETTINGS_SEARCH_KEYS[id] ?? []) strings(resource(key), all);
+    for (const key of SETTINGS_SEARCH_KEYS[id] ?? []) strings(resource(key), fallbackResource?.(key), all);
     for (const s of all) {
       if (found.size >= perSection) break;
       const text = shownText(s);

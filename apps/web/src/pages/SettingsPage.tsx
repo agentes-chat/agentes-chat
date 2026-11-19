@@ -239,7 +239,8 @@ function Settings({
   const hits = searchSettings(
     query,
     visible.map((s) => ({ id: s.id, name: entryName(s.id) })),
-    (key) => i18n.getResource(i18n.language, "translation", key) ?? i18n.getResource("en", "translation", key),
+    (key) => i18n.getResource(i18n.language, "translation", key),
+    { fallbackResource: i18n.language === "en" ? undefined : (key) => i18n.getResource("en", "translation", key) },
   );
   const navigationState = useRouterState({ select: (state) => state.location.state });
   useEffect(() => {
