@@ -17404,7 +17404,7 @@
         "shell": "会在内部运行其他命令",
         "inline": "会运行内联代码",
         "global": "会为整台电脑安装",
-        "privilege": "它要求更高的权限（sudo、su）",
+        "privilege": "它要求更高的权限",
         "reverseShell": "它把这台电脑的 shell 交给另一台机器",
         "destroy": "它会清空电脑或整个主文件夹",
         "network": "它修改或绕过代理和防火墙",

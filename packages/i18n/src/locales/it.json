@@ -18536,7 +18536,7 @@
         "shell": "Esegue altri comandi al suo interno",
         "inline": "Esegue codice scritto direttamente nel comando",
         "global": "Installa per tutto il computer",
-        "privilege": "Chiede più permessi (sudo, su)",
+        "privilege": "Chiede più permessi",
         "reverseShell": "Consegna la shell di questo computer a un'altra macchina",
         "destroy": "Cancellerebbe il computer o un'intera cartella home",
         "network": "Modifica o aggira proxy e firewall",

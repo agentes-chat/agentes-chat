@@ -18283,7 +18283,7 @@ export const ptBR = {
         shell: "Roda outros comandos por dentro",
         inline: "Roda código passado direto no comando",
         global: "Instala para o computador todo",
-        privilege: "Pede mais permissões (sudo, su)",
+        privilege: "Pede mais permissões",
         reverseShell: "Entrega o terminal deste computador a outra máquina",
         destroy: "Apagaria o computador ou uma pasta pessoal inteira",
         network: "Mexe no proxy e no firewall ou passa por fora deles",

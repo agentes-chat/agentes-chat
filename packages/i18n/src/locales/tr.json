@@ -17868,7 +17868,7 @@
         "shell": "İçinde başka komutlar çalıştırıyor",
         "inline": "Satır içinde verilen kodu çalıştırıyor",
         "global": "Tüm bilgisayara kurulum yapıyor",
-        "privilege": "Daha fazla yetki istiyor (sudo, su)",
+        "privilege": "Daha fazla yetki istiyor",
         "reverseShell": "Bu bilgisayarın kabuğunu başka bir makineye veriyor",
         "destroy": "Bilgisayarı ya da bütün bir ev klasörünü silerdi",
         "network": "Proxy ve güvenlik duvarını değiştiriyor ya da atlatıyor",

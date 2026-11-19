@@ -17383,7 +17383,7 @@
         "shell": "Menjalankan perintah lain di dalamnya",
         "inline": "Menjalankan kode yang ditulis langsung",
         "global": "Memasang untuk seluruh komputer",
-        "privilege": "Meminta hak lebih (sudo, su)",
+        "privilege": "Meminta hak lebih",
         "reverseShell": "Menyerahkan shell komputer ini ke mesin lain",
         "destroy": "Akan menghapus komputer atau seluruh folder home",
         "network": "Mengubah atau melewati proxy dan firewall",

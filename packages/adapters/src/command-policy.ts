@@ -477,7 +477,7 @@ const SECRET_NAMES = [
   ...new Set([
     ...SECRET_DIRS.map((d) => d.split("/").pop() as string),
     ...SECRET_FILES,
-    ...SECRET_KEY_FILES.map((f) => f.replace("*", "x")),
+    ...SECRET_KEY_FILES.map((f) => f.replaceAll("*", "x")),
     ".env",
     "auth.json",
   ]),
@@ -486,7 +486,7 @@ const SECRET_NAMES = [
 /** A path segment's wildcards as a pattern; like the shell, `*` and `?` don't match a leading dot. */
 const globPattern = (seg: string) =>
   new RegExp(
-    `^${seg.startsWith(".") ? "" : "(?!\\.)"}${seg.replace(/\[(!?)([^\]]*)\]|[*?]|[^*?[]+|\[/g, (m, not, set) =>
+    `^${seg.startsWith(".") ? "" : "(?!\\.)"}${seg.replace(/\[(!?)([^\][]*)\]|[*?]|[^*?[]+|\[/g, (m, not, set) =>
       m === "*"
         ? "[^/]*"
         : m === "?"
@@ -508,7 +508,7 @@ function pathsOf(word: string): string[] {
     if (!/[*?[]/.test(w)) return [w];
     let out = [""];
     for (const [i, seg] of w.split("/").entries()) {
-      const own = /[*?[]/.test(seg) ? seg.replace(/\[[^\]]*\]|[*?]/g, "").length : 0;
+      const own = /[*?[]/.test(seg) ? seg.replace(/\[[^\][]*\]|[*?]/g, "").length : 0;
       const names = own >= 2 ? SECRET_NAMES.filter((n) => own * 2 >= n.length && globPattern(seg).test(n)) : [];
       const parts = names.length ? names : [seg];
       out = out.flatMap((o) => parts.map((part) => (i === 0 ? part : `${o}/${part}`))).slice(0, 64);

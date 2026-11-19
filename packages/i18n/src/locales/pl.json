@@ -19106,7 +19106,7 @@
         "shell": "Uruchamia w sobie inne polecenia",
         "inline": "Uruchamia kod podany w linii",
         "global": "Instaluje dla całego komputera",
-        "privilege": "Prosi o większe uprawnienia (sudo, su)",
+        "privilege": "Prosi o większe uprawnienia",
         "reverseShell": "Oddaje powłokę tego komputera innej maszynie",
         "destroy": "Wymazałoby komputer lub cały folder domowy",
         "network": "Zmienia lub omija proxy i zaporę",

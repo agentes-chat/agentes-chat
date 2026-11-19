@@ -17939,7 +17939,7 @@
         "shell": "Es führt darin andere Befehle aus",
         "inline": "Es führt direkt übergebenen Code aus",
         "global": "Es installiert für den ganzen Computer",
-        "privilege": "Es verlangt mehr Rechte (sudo, su)",
+        "privilege": "Es verlangt mehr Rechte",
         "reverseShell": "Es übergibt die Shell dieses Computers an einen anderen Rechner",
         "destroy": "Es würde den Computer oder einen ganzen Home-Ordner löschen",
         "network": "Es ändert Proxy und Firewall oder umgeht sie",

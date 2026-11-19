@@ -18440,7 +18440,7 @@
         "shell": "Ejecuta otros comandos dentro",
         "inline": "Ejecuta código escrito en línea",
         "global": "Instala para toda la computadora",
-        "privilege": "Pide más permisos (sudo, su)",
+        "privilege": "Pide más permisos",
         "reverseShell": "Entrega la terminal de esta computadora a otra máquina",
         "destroy": "Borraría la computadora o una carpeta personal entera",
         "network": "Cambia el proxy y el firewall o los esquiva",

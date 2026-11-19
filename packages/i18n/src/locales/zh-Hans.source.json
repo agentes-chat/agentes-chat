@@ -44174,7 +44174,7 @@
     "value": "It installs for the whole computer"
   },
   "chat.work.refusal.privilege": {
-    "value": "It asks for more rights (sudo, su)"
+    "value": "It asks for more rights"
   },
   "chat.work.refusal.reverseShell": {
     "value": "It hands this computer's shell to another machine"

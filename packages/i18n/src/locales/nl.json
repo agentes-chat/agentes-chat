@@ -18012,7 +18012,7 @@
         "shell": "Het voert er andere opdrachten in uit",
         "inline": "Het voert meegegeven code direct uit",
         "global": "Het installeert voor de hele computer",
-        "privilege": "Het vraagt om meer rechten (sudo, su)",
+        "privilege": "Het vraagt om meer rechten",
         "reverseShell": "Het geeft de shell van deze computer aan een andere machine",
         "destroy": "Het zou de computer of een hele thuismap wissen",
         "network": "Het wijzigt of omzeilt de proxy en firewall",
