@@ -231,7 +231,8 @@ export const AI_ACCOUNT_WINDOWS_MAX = 10;
 
 /**
  * A plan's readings as an account's computer last reported them: `usage` as stored, which may hold anything. Each
- * window's kind is a word of the protocol's list, never the provider's own name for it. Null: none stored.
+ * window's kind is a word of the protocol's list, never the provider's own name for it, and its `at` is its own
+ * reading's time where the snapshot kept an older one. Null: none stored.
  */
 function planReadings(usage: unknown) {
   if (!isJsonObject(usage)) return null;
@@ -239,7 +240,14 @@ function planReadings(usage: unknown) {
     if (!isJsonObject(w)) return [];
     const usedPercent = numberIn(w.usedPercent, 0, 100);
     if (usedPercent === null) return [];
-    return [{ kind: listedOf(PLAN_WINDOW_KINDS, w.kind) ?? "other", usedPercent, resetsAt: instantOf(w.resetsAt) }];
+    return [
+      {
+        kind: listedOf(PLAN_WINDOW_KINDS, w.kind) ?? "other",
+        usedPercent,
+        resetsAt: instantOf(w.resetsAt),
+        at: instantOf(w.at),
+      },
+    ];
   });
   return {
     limited: usage.limited === true,

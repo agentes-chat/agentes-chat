@@ -394,7 +394,7 @@
     },
     "view_all_agents": {
       "title": "Alle Agenten sehen",
-      "desc": "Im Team und in der Seitenleiste. Ohne das nur die, die der Person antworten.",
+      "desc": "Im Team und in der Seitenleiste, außer den persönlichen Agenten anderer. Ohne das nur die, die der Person antworten.",
       "short": "alle Agenten sehen",
       "say": "sieht alle Agenten"
     },
@@ -10824,7 +10824,7 @@
     "modeText": {
       "everyone": "Alle im Workspace können {{name}} rufen.",
       "people": "Wähle die Personen und Rollen, die mit {{name}} schreiben dürfen.",
-      "owner": "Nur {{owner}} schreibt mit {{name}}.",
+      "owner": "Nur {{owner}} schreibt mit {{name}}. In Listen sehen {{name}} nur {{owner}}, Admins und wer bearbeiten darf.",
       "noOwner": "Leg einen Inhaber fest, um diese Option zu nutzen.",
       "everyonePersonal": "Alle hier können {{name}} rufen.",
       "peoplePersonal": "Wähle die Personen, die mit {{name}} schreiben dürfen."
@@ -17950,6 +17950,11 @@
         "shell": "Es führt darin andere Befehle aus",
         "inline": "Es führt direkt übergebenen Code aus",
         "global": "Es installiert für den ganzen Computer",
+        "privilege": "Es verlangt mehr Rechte",
+        "reverseShell": "Es übergibt die Shell dieses Computers an einen anderen Rechner",
+        "destroy": "Es würde den Computer oder einen ganzen Home-Ordner löschen",
+        "network": "Es ändert Proxy und Firewall oder umgeht sie",
+        "otherUser": "Es greift auf Dateien eines anderen Benutzers zu",
         "rules": "Außerhalb dessen, was Agenten selbstständig tun dürfen",
         "noAccess": "Der Agent hat keinen Zugriff darauf",
         "policy": "Bei dieser Art Arbeit nicht erlaubt",

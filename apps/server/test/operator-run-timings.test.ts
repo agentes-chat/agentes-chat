@@ -382,7 +382,7 @@ test("nothing anyone wrote comes out as words: a stage, a brain, a cause, a mode
   expect(rows.find((a) => a.id === accountId)?.usage).toEqual({
     limited: false,
     checkedAt: null,
-    windows: [{ kind: "other", usedPercent: 40, resetsAt: null }],
+    windows: [{ kind: "other", usedPercent: 40, resetsAt: null, at: null }],
   });
 });
 
@@ -518,8 +518,8 @@ test("a stored row of the wrong shape breaks no answer: what can't be read is sk
         { kind: "five_hour", usedPercent: 100.5 },
         { kind: "five_hour", usedPercent: 1e300 },
         { kind: "five_hour" },
-        { kind: 5, usedPercent: 40.5, resetsAt: 12 },
-        { kind: "monthly", usedPercent: 100, resetsAt: "2026-11-01T00:00:00Z" },
+        { kind: 5, usedPercent: 40.5, resetsAt: 12, at: "last week" },
+        { kind: "monthly", usedPercent: 100, resetsAt: "2026-11-01T00:00:00Z", at: "2026-10-04T12:00:00+02:00" },
         { kind: "seven_day_opus", usedPercent: 0, resetsAt: "next week" },
         ...Array.from({ length: 9 }, (_, n) => window(n + 1)),
       ],
@@ -536,10 +536,10 @@ test("a stored row of the wrong shape breaks no answer: what can't be read is sk
       checkedAt: "2026-10-05T10:00:00.000Z",
       // The first 10 it could read.
       windows: [
-        { kind: "other", usedPercent: 40.5, resetsAt: null },
-        { kind: "monthly", usedPercent: 100, resetsAt: "2026-11-01T00:00:00.000Z" },
-        { kind: "seven_day_opus", usedPercent: 0, resetsAt: null },
-        ...Array.from({ length: 7 }, (_, n) => ({ kind: "five_hour", usedPercent: n + 1, resetsAt: null })),
+        { kind: "other", usedPercent: 40.5, resetsAt: null, at: null },
+        { kind: "monthly", usedPercent: 100, resetsAt: "2026-11-01T00:00:00.000Z", at: "2026-10-04T10:00:00.000Z" },
+        { kind: "seven_day_opus", usedPercent: 0, resetsAt: null, at: null },
+        ...Array.from({ length: 7 }, (_, n) => ({ kind: "five_hour", usedPercent: n + 1, resetsAt: null, at: null })),
       ],
     },
     null,

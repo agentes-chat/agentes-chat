@@ -59,7 +59,7 @@ beforeAll(async () => {
       usage: {
         windows: [
           { kind: "five_hour", label: "Session", usedPercent: 100, resetsAt: "2026-10-05T14:00:00.000Z" },
-          { kind: "seven_day", usedPercent: 37.5 },
+          { kind: "seven_day", usedPercent: 37.5, at: "2026-10-03T09:00:00.000Z" },
         ],
         limited: true,
         source: "probe",
@@ -313,8 +313,8 @@ test("the list: keyset pages newest first, agents counted once each, no email or
       limited: true,
       checkedAt: "2026-10-05T11:00:00.000Z",
       windows: [
-        { kind: "five_hour", usedPercent: 100, resetsAt: "2026-10-05T14:00:00.000Z" },
-        { kind: "seven_day", usedPercent: 37.5, resetsAt: null },
+        { kind: "five_hour", usedPercent: 100, resetsAt: "2026-10-05T14:00:00.000Z", at: null },
+        { kind: "seven_day", usedPercent: 37.5, resetsAt: null, at: "2026-10-03T09:00:00.000Z" },
       ],
     },
     runnerVersion: "1.2.3",

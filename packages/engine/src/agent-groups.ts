@@ -1,6 +1,6 @@
 import type { PubSub } from "@agenteschat/adapters";
 import { and, asc, type Database, type Executor, eq, inArray, isNotNull, isNull, schema, sql } from "@agenteschat/db";
-import { listsAllAgents, managesAgent, REACH_COLUMNS, seesAgentDetailsSql } from "./audience";
+import { listsAgentSql, listsAllAgents, managesAgent, REACH_COLUMNS } from "./audience";
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { publishOrgEvent } from "./events";
 import { getMembership, type Membership, requirePermission } from "./organizations";
@@ -81,14 +81,15 @@ export async function agentGroupViews(db: Executor, orgId: string): Promise<Agen
 }
 
 /**
- * Tells every open app of the workspace to read the groups again (an org broadcast), and gives them as they are now.
- * The event carries no list: it grows with the agents, and Postgres NOTIFY refuses payloads near 8000 bytes.
+ * Tells every open app of the workspace to read the groups again (an org broadcast), and gives them as they are now to
+ * `userId` (`listAgentGroups`). The event carries no list: it grows with the agents, and Postgres NOTIFY refuses
+ * payloads near 8000 bytes.
  */
-async function announce(deps: AgentGroupDeps, orgId: string) {
+async function announce(deps: AgentGroupDeps, userId: string, orgId: string) {
   // Team rows carry their department's name (`loadTeam`): a move or a rename changes them too.
   forgetTeam(orgId);
   await publishOrgEvent(deps.pubsub, { type: "org.broadcast", orgId, event: { type: "agent.groups" } });
-  return agentGroupViews(deps.db, orgId);
+  return listAgentGroups(deps.db, userId, orgId);
 }
 
 /**
@@ -140,27 +141,30 @@ async function placeAgents(tx: Executor, orgId: string, groupId: string | null, 
 }
 
 /**
- * Anyone in the workspace reads them. Who doesn't list every agent (`listsAllAgents`) gets only the agents their
- * lists name (`seesAgentDetailsSql`: whom they answer, and the ones they edit), and no group left without one: they
- * don't arrange the groups.
+ * Anyone in the workspace reads them, with only the agents their lists name (`listsAgentSql`). Who doesn't list every
+ * agent (`listsAllAgents`) gets no group left without one: they don't arrange the groups. Who does keeps the empty
+ * ones, but not one that only private agents (`isPrivateAgent`) filled.
  */
 export async function listAgentGroups(db: Database, userId: string, orgId: string): Promise<AgentGroupView[]> {
   const membership = await requirePermission(db, userId, orgId, "read");
-  const groups = await agentGroupViews(db, orgId);
-  if (listsAllAgents(membership)) return groups;
-  const listed = new Set(
-    (
-      await db
-        .select({ id: agents.id })
-        .from(agents)
-        .where(
-          and(eq(agents.orgId, orgId), isNull(agents.archivedAt), seesAgentDetailsSql("agents", sql`${userId}::text`)),
-        )
-    ).map((r) => r.id),
-  );
+  const [groups, rows] = await Promise.all([
+    agentGroupViews(db, orgId),
+    db
+      .select({ id: agents.id })
+      .from(agents)
+      .where(
+        and(
+          eq(agents.orgId, orgId),
+          isNull(agents.archivedAt),
+          listsAgentSql("agents", sql`${userId}::text`, membership),
+        ),
+      ),
+  ]);
+  const listed = new Set(rows.map((r) => r.id));
+  const all = listsAllAgents(membership);
   return groups
     .map((g) => ({ ...g, agentIds: g.agentIds.filter((id) => listed.has(id)) }))
-    .filter((g) => g.agentIds.length > 0);
+    .filter((g, i) => g.agentIds.length > 0 || (all && groups[i]?.agentIds.length === 0));
 }
 
 /**
@@ -192,7 +196,7 @@ export async function createAgentGroup(
       .returning({ id: agentGroups.id });
     if (group) await placeAgents(tx, orgId, group.id, ids);
   });
-  return announce(deps, orgId);
+  return announce(deps, userId, orgId);
 }
 
 /**
@@ -225,7 +229,7 @@ export async function updateAgentGroup(
       if (g.position !== i) await tx.update(agentGroups).set({ position: i }).where(eq(agentGroups.id, g.id));
     }
   });
-  return announce(deps, orgId);
+  return announce(deps, userId, orgId);
 }
 
 /**
@@ -256,7 +260,7 @@ export async function deleteAgentGroup(
       throw new ForbiddenError("Only who manages every agent in a group deletes it");
     await tx.delete(agentGroups).where(eq(agentGroups.id, group.id));
   });
-  return announce(deps, orgId);
+  return announce(deps, userId, orgId);
 }
 
 /**
@@ -288,5 +292,5 @@ export async function moveAgentToGroup(
     const ids = others.map((a) => a.id).filter((id) => id !== agentId);
     await placeAgents(tx, orgId, group.id, placeAt(ids, agentId, index ?? ids.length));
   });
-  return announce(deps, orgId);
+  return announce(deps, userId, orgId);
 }

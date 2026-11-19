@@ -790,6 +790,20 @@ describe("machines and targets", () => {
     expect(machine?.agents.map((a) => a.handle)).toEqual(["dev", "qa"]);
   });
 
+  test("a private agent on a computer is named only to who lists it and to who paired that computer", async () => {
+    f = await setup();
+    const bia = await addMember(f.db, f.org.id, "member", "bia");
+    const carl = await addMember(f.db, f.org.id, "member", "carl");
+    const box = await pair(bia.id, "Bia's laptop");
+    await setAgentComputerTarget(deps(), f.owner.id, f.org.id, f.agent.id, box.machineId);
+    await f.db.update(schema.agents).set({ audienceMode: "owner" }).where(eq(schema.agents.id, f.agent.id));
+    const named = async (userId: string) =>
+      (await listMachines(f.db, userId, f.org.id))[0]?.agents.map((a) => a.handle);
+    expect(await named(carl.id)).toEqual([]);
+    expect(await named(bia.id)).toEqual(["dev"]);
+    expect(await named(f.owner.id)).toEqual(["dev"]);
+  });
+
   test("list, rename and delete: every member sees them, only the pairer or an admin changes them", async () => {
     f = await setup();
     const bia = await addMember(f.db, f.org.id, "member", "bia");

@@ -106,8 +106,8 @@ export function AgentEditScreen({ id }: { id: string }) {
   const nameMissing = Boolean(draft && fields.has("name") && !draft.name.trim());
   const tooLong = Boolean(draft && fields.has("instructions") && overLimit(draft.instructions, INSTRUCTIONS_LIMIT));
   const taken = useMemo(
-    () => takenHandles(dir.agents, [...dir.memberById.values()], id),
-    [dir.agents, dir.memberById, id],
+    () => takenHandles([...dir.agentById.values()], [...dir.memberById.values()], id),
+    [dir.agentById, dir.memberById, id],
   );
   const moved = Boolean(saved && draft && draft.handle !== saved.handle);
   const handleIssue = moved && draft ? handleProblemText(t, draft.handle, taken) : null;

@@ -421,7 +421,7 @@ export const en = {
     },
     view_all_agents: {
       title: "See all agents",
-      desc: "On Team and in the sidebar. Without it, only the ones that answer them.",
+      desc: "On Team and in the sidebar, except other people's personal agents. Without it, only the ones that answer them.",
       short: "see all agents",
       say: "sees all agents",
     },
@@ -11253,7 +11253,7 @@ export const en = {
     modeText: {
       everyone: "Anyone in the workspace can call {{name}}.",
       people: "Pick the people and roles that can talk to {{name}}.",
-      owner: "Only {{owner}} talks to {{name}}.",
+      owner: "Only {{owner}} talks to {{name}}. Lists show {{name}} only to {{owner}}, admins and whoever can edit.",
       noOwner: "Set an owner to use this option.",
       everyonePersonal: "Anyone here can call {{name}}.",
       peoplePersonal: "Pick the people who can talk to {{name}}.",
@@ -18438,6 +18438,11 @@ export const en = {
         shell: "It runs other commands inside it",
         inline: "It runs code given inline",
         global: "It installs for the whole computer",
+        privilege: "It asks for more rights",
+        reverseShell: "It hands this computer's shell to another machine",
+        destroy: "It would wipe the computer or a whole home folder",
+        network: "It changes or goes around the proxy and firewall",
+        otherUser: "It reaches into another user's files",
         rules: "Outside what agents may do on their own",
         /** Calls the Tool Gateway refused (`data.refusal`): the agent lacks access, the kind of work, a key, a repository. */
         noAccess: "The agent doesn't have access to this",

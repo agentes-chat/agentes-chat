@@ -381,7 +381,7 @@
     },
     "view_all_agents": {
       "title": "Lihat semua agen",
-      "desc": "Di Tim dan bilah samping. Tanpa ini, hanya agen yang menjawab orang itu.",
+      "desc": "Di Tim dan bilah samping, kecuali agen pribadi orang lain. Tanpa ini, hanya agen yang menjawab orang itu.",
       "short": "lihat semua agen",
       "say": "melihat semua agen"
     },
@@ -10430,7 +10430,7 @@
     "modeText": {
       "everyone": "Siapa pun di ruang kerja bisa memanggil {{name}}.",
       "people": "Pilih orang dan peran yang bisa bicara dengan {{name}}.",
-      "owner": "Hanya {{owner}} yang bicara dengan {{name}}.",
+      "owner": "Hanya {{owner}} yang bicara dengan {{name}}. Di daftar, {{name}} hanya terlihat oleh {{owner}}, admin, dan yang boleh mengedit.",
       "noOwner": "Tetapkan pemilik untuk memakai opsi ini.",
       "everyonePersonal": "Siapa pun di sini bisa memanggil {{name}}.",
       "peoplePersonal": "Pilih orang yang bisa bicara dengan {{name}}."
@@ -17394,6 +17394,11 @@
         "shell": "Menjalankan perintah lain di dalamnya",
         "inline": "Menjalankan kode yang ditulis langsung",
         "global": "Memasang untuk seluruh komputer",
+        "privilege": "Meminta hak lebih",
+        "reverseShell": "Menyerahkan shell komputer ini ke mesin lain",
+        "destroy": "Akan menghapus komputer atau seluruh folder home",
+        "network": "Mengubah atau melewati proxy dan firewall",
+        "otherUser": "Menjangkau file pengguna lain",
         "rules": "Di luar yang boleh dilakukan agen sendiri",
         "noAccess": "Agen tidak punya akses ke ini",
         "policy": "Tidak diizinkan dalam jenis pekerjaan ini",

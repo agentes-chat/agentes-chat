@@ -420,7 +420,7 @@ export const ptBR = {
     },
     view_all_agents: {
       title: "Ver todos os agentes",
-      desc: "Na Equipe e na barra lateral. Sem isto, só os que respondem à pessoa.",
+      desc: "Na Equipe e na barra lateral, menos os agentes pessoais dos outros. Sem isto, só os que respondem à pessoa.",
       short: "ver todos os agentes",
       say: "vê todos os agentes",
     },
@@ -11240,8 +11240,10 @@ export const ptBR = {
       everyone_female: "Qualquer pessoa do workspace pode chamar a {{name}}.",
       people: "Escolha as pessoas e os cargos que podem falar com o {{name}}.",
       people_female: "Escolha as pessoas e os cargos que podem falar com a {{name}}.",
-      owner: "Só {{owner}} fala com o {{name}}.",
-      owner_female: "Só {{owner}} fala com a {{name}}.",
+      owner:
+        "Só {{owner}} fala com o {{name}}. Nas listas, o {{name}} aparece só para {{owner}}, admins e quem pode editar.",
+      owner_female:
+        "Só {{owner}} fala com a {{name}}. Nas listas, a {{name}} aparece só para {{owner}}, admins e quem pode editar.",
       noOwner: "Defina um responsável para usar esta opção.",
       everyonePersonal: "Qualquer pessoa daqui pode chamar o {{name}}.",
       everyonePersonal_female: "Qualquer pessoa daqui pode chamar a {{name}}.",
@@ -18296,6 +18298,11 @@ export const ptBR = {
         shell: "Roda outros comandos por dentro",
         inline: "Roda código passado direto no comando",
         global: "Instala para o computador todo",
+        privilege: "Pede mais permissões",
+        reverseShell: "Entrega o terminal deste computador a outra máquina",
+        destroy: "Apagaria o computador ou uma pasta pessoal inteira",
+        network: "Mexe no proxy e no firewall ou passa por fora deles",
+        otherUser: "Mexe em arquivos de outro usuário",
         rules: "Fora do que agentes podem fazer sozinhos",
         noAccess: "O agente não tem acesso a isso",
         policy: "Não é permitido neste tipo de trabalho",

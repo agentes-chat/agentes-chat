@@ -1424,11 +1424,15 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
       mode === "everyone" || a.ownerUserId === me || (mode === "people" && (a.audience?.userIds ?? []).includes(me))
     );
   };
-  // The server's `listsAgentTo`: Equipe, its sectors and the counts name only these (who it answers or who edits it).
-  const listed = () => {
-    const all = listsAllAgents(state.me ? withPermissions(state.me).organizations[0] : undefined);
-    return state.agents.filter((a) => all || talksToMe(a) || rightsOf(a).canEdit);
-  };
+  // The server's `listsAgentTo`: Equipe, its sectors, the counts and every list name only these. Who sees every agent
+  // sees all but a private one (it answers only its owner); else who it answers, who edits it and admins.
+  const listsToMe = (a: Agent) =>
+    (listsAllAgents(state.me ? withPermissions(state.me).organizations[0] : undefined) &&
+      answersOthers(audienceOf(a), a.ownerUserId)) ||
+    talksToMe(a) ||
+    rightsOf(a).canEdit ||
+    seesCost();
+  const listed = () => state.agents.filter(listsToMe);
   /** Whether my workspace keys include `key`, as `me` resolves them (`withPermissions`). */
   const holds = (key: string) =>
     (state.me ? withPermissions(state.me).organizations[0]?.permissions : undefined)?.includes(key) === true;
@@ -2398,8 +2402,9 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         const all = listsAllAgents(state.me ? withPermissions(state.me).organizations[0] : undefined);
         const ids = new Set(listed().map((a) => a.id));
         return structuredClone(state.agentGroups ?? [])
-          .map((g) => (all ? g : { ...g, agentIds: g.agentIds.filter((id) => ids.has(id)) }))
-          .filter((g) => all || g.agentIds.length > 0);
+          .map((g) => ({ ...g, agentIds: g.agentIds.filter((id) => ids.has(id)), was: g.agentIds.length }))
+          .filter((g) => g.agentIds.length > 0 || (all && g.was === 0))
+          .map(({ was: _was, ...g }) => g);
       },
       create: async (orgId, input) => {
         state.calls.push({ method: "agentGroups.create", args: [orgId, input] });
@@ -2536,6 +2541,7 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
             canTalk,
             ...withRights(a, seesDetails),
             seesDetails,
+            listed: listsToMe(a),
           };
         }),
       create: async (orgId, input) => {

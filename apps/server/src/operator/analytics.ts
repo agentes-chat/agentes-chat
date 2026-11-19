@@ -613,6 +613,10 @@ const AiAccountPage = z
                   }),
                   usedPercent: z.number().min(0).max(100),
                   resetsAt: z.string().nullable(),
+                  at: z.string().nullable().openapi({
+                    description:
+                      "When this window was last read, where that is before `usageAt`: a later reading that didn't name it kept the older one. Null: at `usageAt`.",
+                  }),
                 }),
               )
               .openapi({ description: `At most ${AI_ACCOUNT_WINDOWS_MAX}.` }),

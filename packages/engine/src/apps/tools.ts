@@ -19,7 +19,7 @@ import {
 } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { type Agent, listAgents } from "../agents";
-import { audienceError, canTalkTo, speakerOf } from "../audience";
+import { audienceError, canTalkTo, listsAgentTo, speakerOf } from "../audience";
 import { recordAudit } from "../audit";
 import { listChannels, requireChannelAccess } from "../channels";
 import { stubOf, threadIsConfidential } from "../confidential";
@@ -751,8 +751,8 @@ export function buildAppsMcpServer(deps: AppsToolDeps, p: AppPrincipal, version:
     async (args) => {
       const membership = await getMembership(deps.db, p.userId, p.orgId);
       const talks = speakerOf(membership);
-      const all = (await listAgents(deps.db, p.userId, p.orgId)).filter((a) =>
-        matches(args.query, a.name, a.handle, a.role),
+      const all = (await listAgents(deps.db, p.userId, p.orgId)).filter(
+        (a) => listsAgentTo(a, p.userId, membership) && matches(args.query, a.name, a.handle, a.role),
       );
       const { slice, next_cursor } = page(all, args.cursor, args.limit, `agents:${args.query ?? ""}`);
       return {

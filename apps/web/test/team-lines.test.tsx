@@ -198,14 +198,15 @@ describe("Responde a, by clicking (ADR 0148 addendum)", () => {
 });
 
 /**
- * I hold "Edit agents", but Atlas answers only João, its owner: the key doesn't reach it (ADR 0085 addendum of
- * 2026-11-17), so I put nobody under it, and no Undo puts anyone back there. Bia, like Ada, answers everyone.
+ * I hold "Edit agents", but Atlas answers João, its owner, and someone else, not me: the key doesn't reach it (ADR 0085
+ * addendum of 2026-11-17), so I put nobody under it, and no Undo puts anyone back there. Bia, like Ada, answers
+ * everyone. Answering someone besides its owner, Atlas isn't private: it is still listed.
  */
 const unreached = () => {
   const state = withRightHand(seedState());
   meWithRole(state, ["manage_agents"]);
   const atlas = state.agents.find((a) => a.id === ATLAS_ID);
-  if (atlas) atlas.audience = { mode: "owner", userIds: [] };
+  if (atlas) atlas.audience = { mode: "people", userIds: ["u-someone"] };
   state.agents.push({
     ...(state.agents.find((a) => a.id === ADA_ID) as Agent),
     id: BIA,

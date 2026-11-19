@@ -28,7 +28,7 @@ import {
 } from "@agenteschat/db";
 import { appLocale } from "@agenteschat/i18n/locale";
 import { getAgent, workspaceHomeId } from "./agents";
-import { managesAgent, managesAgentSql, REACH_COLUMNS } from "./audience";
+import { listsAgentSql, managesAgent, managesAgentSql, REACH_COLUMNS } from "./audience";
 import { type AuditEntry, recordAudit } from "./audit";
 import { isSandboxedBrain } from "./brains/types";
 import { caches } from "./cache";
@@ -526,7 +526,13 @@ async function machineViews(db: Database, actorId: string, orgId: string, only?:
   );
   const using = ids.length
     ? await db
-        .select({ id: agents.id, name: agents.name, handle: agents.handle, machineId: agents.machineId })
+        .select({
+          id: agents.id,
+          name: agents.name,
+          handle: agents.handle,
+          machineId: agents.machineId,
+          listed: listsAgentSql("agents", sql`${actorId}::text`, membership),
+        })
         .from(agents)
         .where(and(eq(agents.orgId, orgId), inArray(agents.machineId, ids), isNull(agents.archivedAt)))
         // The agents' order everywhere else (the sidebar, the team): who came first.
@@ -543,7 +549,7 @@ async function machineViews(db: Database, actorId: string, orgId: string, only?:
           .from(agents)
           .where(and(eq(agents.orgId, orgId), eq(agents.builtin, RIGHT_HAND), isNull(agents.archivedAt)))
       : [];
-  if (rightHand && homeRow) using.push({ ...rightHand, machineId: homeRow.id });
+  if (rightHand && homeRow) using.push({ ...rightHand, machineId: homeRow.id, listed: true });
   // Its shared seat there is opened like any agent's computer, by the admins of computers and its owner
   // (`computerDriving` with `shared`): only they are shown it.
   const sharedSeat =
@@ -603,7 +609,10 @@ async function machineViews(db: Database, actorId: string, orgId: string, only?:
       /** The coding CLIs there that can't start, with their own error line; admins and the pairer only. */
       cliErrors: (admin || mine) && !managed ? (m.executors?.broken ?? null) : null,
       pairedBy: m.pairedByUserId ? { id: m.pairedByUserId, name: pairedByName ?? "" } : null,
-      agents: using.filter((a) => a.machineId === m.id).map((a) => ({ id: a.id, name: a.name, handle: a.handle })),
+      // A private agent stays out for whom it is unlisted (`listsAgentTo`), but not on the computer of who paired it.
+      agents: using
+        .filter((a) => a.machineId === m.id && (a.listed || mine))
+        .map((a) => ({ id: a.id, name: a.name, handle: a.handle })),
       /**
        * The right hand's id where this computer holds its shared seat (ADR 0175) and this person may open it, as they
        * may any agent's computer here; null otherwise.

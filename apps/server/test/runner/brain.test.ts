@@ -12,7 +12,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import path from "node:path";
-import { PUSH_ASK_RULES } from "@agenteschat/adapters/command-policy";
+import { INLINE_CODE_DENY_RULES, PUSH_ASK_RULES } from "@agenteschat/adapters/command-policy";
 import {
   BRAIN_PROFILES_PROTOCOL,
   BRAIN_PROTOCOL,
@@ -1299,12 +1299,14 @@ test.if(posix)(
     const wsettings = JSON.parse(readFileSync(wargs[wargs.indexOf("--settings") + 1] as string, "utf8")) as {
       permissions: { allow: string[]; ask: string[]; deny: string[] };
     };
-    expect(wsettings.permissions.deny).toContain("Bash(python3 -c*)");
+    // Inline code reaches the prompt tool, where the server decides it (a mission's card, elsewhere ordinary work).
+    expect(wsettings.permissions.deny).not.toContain("Bash(python3 -c*)");
+    expect(wsettings.permissions.ask).toContain("Bash(python3 -c*)");
     expect(wsettings.permissions.deny).toContain("Bash(gh auth token*)");
     expect(wsettings.permissions.deny).not.toContain("Edit");
     expect(wsettings.permissions.allow).not.toContain("Bash(cat *)");
     // Every push reaches the prompt tool, even past the owner's allow rules, which reads where it goes.
-    expect(wsettings.permissions.ask).toEqual([...PUSH_ASK_RULES]);
+    expect(wsettings.permissions.ask).toEqual([...PUSH_ASK_RULES, ...INLINE_CODE_DENY_RULES]);
     const wconfig = JSON.parse(readFileSync(wargs[wargs.indexOf("--mcp-config") + 1] as string, "utf8")) as {
       mcpServers: { agentes: { env: Record<string, string> } };
     };

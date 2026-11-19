@@ -948,6 +948,12 @@ export interface Agent {
    * Without it `instructions` is empty and its tools, memory, usage and activity are refused: only its public card.
    */
   seesDetails?: boolean;
+  /**
+   * Whether my lists and pickers name it; absent = yes (an older server). False for a private agent (it answers only its
+   * owner) to anyone but its owner, administrators and who its "Quem pode editar" names: its messages and its public
+   * card still show.
+   */
+  listed?: boolean;
   /** Its look (color, eyes, accessory), from the backend's allow-list. */
   appearance?: AgentLookInput;
   /** Who thinks for it (ADR 0032): the brain, a computer brain's model label, its computer (owner and admins). */

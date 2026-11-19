@@ -436,6 +436,16 @@ describe("Criar agente: steps", () => {
     expect(title()).toBe("O que a Ada Maria faz");
   });
 
+  test("someone else's private Ada, unlisted to me, still holds @ada: Dev starts as @ada-2's suggestion", async () => {
+    const state = seedState();
+    meWithRole(state, ["create_agents"]);
+    const ada = state.agents.find((a) => a.handle === "ada");
+    if (ada) Object.assign(ada, { ownerUserId: "u-other", audience: { mode: "owner", userIds: [] } });
+    await open(state);
+    await startAs("Dev");
+    expect(document.body.textContent).toContain("@ada já é de outro agente ou pessoa. Que tal @ada-2?");
+  });
+
   test("an empty name and @ only complain after trying to go on", async () => {
     await open();
     await startAs("Do zero");

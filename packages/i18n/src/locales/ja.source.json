@@ -981,7 +981,7 @@
     "value": "See all agents"
   },
   "permissions.view_all_agents.desc": {
-    "value": "On Team and in the sidebar. Without it, only the ones that answer them."
+    "value": "On Team and in the sidebar, except other people's personal agents. Without it, only the ones that answer them."
   },
   "permissions.view_all_agents.short": {
     "value": "see all agents"
@@ -26358,7 +26358,7 @@
     "value": "Pick the people and roles that can talk to {{name}}."
   },
   "audience.modeText.owner": {
-    "value": "Only {{owner}} talks to {{name}}."
+    "value": "Only {{owner}} talks to {{name}}. Lists show {{name}} only to {{owner}}, admins and whoever can edit."
   },
   "audience.modeText.noOwner": {
     "value": "Set an owner to use this option."
@@ -44205,6 +44205,21 @@
   },
   "chat.work.refusal.global": {
     "value": "It installs for the whole computer"
+  },
+  "chat.work.refusal.privilege": {
+    "value": "It asks for more rights"
+  },
+  "chat.work.refusal.reverseShell": {
+    "value": "It hands this computer's shell to another machine"
+  },
+  "chat.work.refusal.destroy": {
+    "value": "It would wipe the computer or a whole home folder"
+  },
+  "chat.work.refusal.network": {
+    "value": "It changes or goes around the proxy and firewall"
+  },
+  "chat.work.refusal.otherUser": {
+    "value": "It reaches into another user's files"
   },
   "chat.work.refusal.rules": {
     "value": "Outside what agents may do on their own"

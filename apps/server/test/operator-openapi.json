@@ -3197,9 +3197,13 @@
                           },
                           "resetsAt": {
                             "type": ["string", "null"]
+                          },
+                          "at": {
+                            "type": ["string", "null"],
+                            "description": "When this window was last read, where that is before `usageAt`: a later reading that didn't name it kept the older one. Null: at `usageAt`."
                           }
                         },
-                        "required": ["kind", "usedPercent", "resetsAt"]
+                        "required": ["kind", "usedPercent", "resetsAt", "at"]
                       },
                       "description": "At most 10."
                     }
