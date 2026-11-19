@@ -14535,6 +14535,26 @@
       "asks_other": "{{count}} Aktionen fragen im Chat nach Freigabe.",
       "adjust": "Anpassen",
       "ok": "Fertig"
+    },
+    "local": {
+      "transport": "MCP-Transport",
+      "tab": "Lokales Programm · stdio",
+      "where": "Das Programm läuft am Installationsort von agentes.chat. Bei Docker läuft es im Container.",
+      "checking": "Lokale MCP-Unterstützung wird geprüft…",
+      "checkFailed": "MCP · Prüfung fehlgeschlagen. Öffne diesen Dialog erneut.",
+      "disabled": "Aktiviere MCP_STDIO_ENABLED auf einem vertrauenswürdigen eigenen Server ohne öffentliche Registrierung.",
+      "command": "Ausführbares Programm",
+      "commandHelp": "Programmname oder absoluter Pfad. Argumente separat angeben, ohne Shell.",
+      "args": "Argumente (JSON-Array)",
+      "argsHelp": "Eine Zeichenfolge pro Argument, auch bei Leerzeichen.",
+      "cwd": "Arbeitsverzeichnis (optional)",
+      "cwdHelp": "Absoluter Pfad. Bei Docker muss er im Container existieren.",
+      "environment": "Umgebungsvariablen",
+      "env": "Umgebung (JSON-Objekt)",
+      "envHelp": "Werte werden verschlüsselt. Der Prozess erbt keine Servergeheimnisse. {\"API_KEY\":\"…\"}",
+      "invalid": "Prüfe Programm, Argumentliste und Umgebungswerte im JSON-Format.",
+      "failed": "Prüfe die Pfade und ob das Programm MCP über stdio unterstützt.",
+      "permissions": "Läuft mit dem Systemkonto des Servers. Berechtigungen folgen im nächsten Schritt."
     }
   },
   "database": {

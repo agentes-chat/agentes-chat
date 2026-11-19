@@ -836,6 +836,25 @@ tools. A model without prices costs nothing in budgets (its tokens are still cou
 `http://` are allowed on a self-hosted server, unless `ALLOW_SIGNUP=true` lets anyone in; set
 `MODEL_ENDPOINTS_PRIVATE` to choose (`false` allows only public https ones, what agentes.chat Cloud does).
 
+**Local MCP programs (stdio).** Settings → Connectors → Add MCP offers **Local · stdio** alongside
+the remote transport. It starts a program on this server and is disabled by default. Set
+`MCP_STDIO_ENABLED=true` only when every workspace administrator is trusted to run programs as the
+server's OS user; it is unavailable with `ALLOW_SIGNUP=true` and on agentes.chat Cloud. Supply an
+executable, separate arguments as a JSON array, an optional absolute directory, and explicit
+environment values. These settings are encrypted and not returned by connector list APIs. Tools
+retain classification, agent access and approvals. Server secret variables are not inherited.
+This is program execution with the OS/container user's permissions, not a sandbox.
+
+In Docker, the program runs **inside the agentes container**, not on the host or the person's PC.
+Use a derived image with the executable installed and mount only the files it needs. Paths in the
+form are container paths. A Node MCP in a derived image might use executable `node`, arguments
+`["/opt/example-mcp/server.js"]` and directory `/data/mcp-project`. Credentials belong in the
+encrypted environment field or a scoped secret-file mount, not in an image layer. Set the flag in
+`.env` and additions in a Compose override so installer updates preserve them. No host networking,
+Docker socket, public MCP port or certificate bypass is required for stdio. The working directory
+does not change an MCP tool's own project/cwd argument; follow that server's contract. A selected
+remote computer is not used by this transport (ADR 0186).
+
 **Sign-up.** The first account is allowed unless an owner link or the desktop app's owner key holds
 it (below). After it, with `ALLOW_SIGNUP=false` (the default), only invited people get in: invited by
 email from **Settings → Members and invitations**. A workspace's invitation link lets nobody in by

@@ -774,6 +774,12 @@ export const envVars = {
     section: "Connectors",
     secret: true,
   },
+  MCP_STDIO_ENABLED: {
+    schema: z.stringbool().default(false),
+    description:
+      "Allow workspace administrators to connect local stdio MCP programs in Settings > Connectors. Programs run as the server's OS user (inside its container in Docker), with that user's file and network access. Enable only when every workspace administrator is trusted to run programs on this server. Disabled by default; unavailable on agentes.chat Cloud or with ALLOW_SIGNUP=true. Commands, arguments and explicit environment are stored encrypted; server secrets are not inherited. A connected computer is not the execution host (ADR 0202).",
+    section: "Connectors",
+  },
   MCP_CALLER_IDENTITY: {
     schema: z
       .string()

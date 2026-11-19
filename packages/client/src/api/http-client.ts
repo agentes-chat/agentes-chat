@@ -1976,6 +1976,7 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         }),
     },
     customConnectors: {
+      transports: (orgId) => request<{ stdio: boolean }>(`${org(orgId)}/connectors/custom-transports`),
       list: async (orgId, options) =>
         (await request<{ servers: CustomServer[] }>(`${org(orgId)}/connectors/custom${othersQuery(options)}`)).servers,
       connect: (orgId, input) => request<CustomConnectStart>(`${org(orgId)}/connectors/custom`, { json: input }),

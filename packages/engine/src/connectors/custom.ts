@@ -74,6 +74,7 @@ import {
 } from "./presets";
 import { checkRequestHeaders, type RequestHeader } from "./request-headers";
 import { type McpServerInfo, refreshServerIcon } from "./server-icon";
+import { connectOverStdio, isStdioMcp, parseStdioConfig, requireStdioMcp, type StdioMcpConfig } from "./stdio";
 
 const { connectorConnections, customTools, oauthStates, agentScopes, agents } = schema;
 
@@ -190,7 +191,7 @@ export interface CustomServerView {
   label: string;
   /** The account as the provider names it ("Acme"), when it says; null otherwise. */
   accountLabel: string | null;
-  authType: "oauth" | "api_key";
+  authType: "oauth" | "api_key" | "stdio";
   /**
    * The request headers a person typed for it, by name and never by value (ADR 0186); empty when it has none, and
    * for a reader who doesn't manage connectors.
@@ -311,7 +312,7 @@ function view(c: ConnectorConnection, tools: ToolRow[], whole = true, actorId?: 
     serverUrl: whole ? c.serverUrl : serverUrlShown(c.serverUrl),
     label: c.label,
     accountLabel: c.accountLabel,
-    authType: c.authType === "oauth" ? "oauth" : "api_key",
+    authType: c.authType === "stdio" ? "stdio" : c.authType === "oauth" ? "oauth" : "api_key",
     headerNames: whole ? (c.headerNames ?? []) : [],
     iconUrl: c.icon,
     ...(composioToolkitOf(c.serverUrl) ? { via: "composio" as const } : {}),
@@ -483,7 +484,7 @@ export async function storeCustomConnection(
     serverUrl: string;
     /** The service's name ("Stripe", what the person typed): its first account's name, the others' base. */
     label: string;
-    authType: "oauth" | "api_key" | "none";
+    authType: "oauth" | "api_key" | "none" | "stdio";
     secret: ConnectionSecret | null;
     tokenExpiresAt?: Date | null;
     oauthClientId?: string | null;
@@ -865,7 +866,8 @@ export async function connectCustomServer(
   actorId: string,
   orgId: string,
   input: {
-    serverUrl: string;
+    serverUrl?: string;
+    stdio?: StdioMcpConfig;
     apiKey?: string;
     label?: string;
     returnTo?: string;
@@ -875,6 +877,35 @@ export async function connectCustomServer(
     personal?: boolean;
   },
 ): Promise<CustomConnectStart> {
+  if (input.stdio !== undefined) {
+    await requirePermission(deps.db, actorId, orgId, "manage_connectors");
+    requireStdioMcp(deps.stdioAllowed);
+    if (input.personal || input.serverUrl || input.apiKey || input.headers?.length)
+      throw new ValidationError("Choose one MCP transport", "connector.stdio_invalid");
+    const stdio = parseStdioConfig(input.stdio);
+    const existing = input.connectionId ? await loadCustom(deps.db, orgId, input.connectionId) : null;
+    if (existing && (existing.ownerUserId || !isStdioMcp(existing.serverUrl)))
+      throw new ValidationError("Reconnect with the same MCP transport", "connector.stdio_invalid");
+    // Prove initialize and tools/list before persisting a connection or granting access.
+    const session = await connectOverStdio(stdio);
+    try {
+      await session.listTools();
+    } finally {
+      await session.close().catch(() => {});
+    }
+    const { connection, outcome } = await storeCustomConnection(deps, {
+      orgId,
+      actorId,
+      serverUrl: existing?.serverUrl ?? `stdio://${crypto.randomUUID()}`,
+      label: input.label?.trim() || existing?.label || "Local MCP",
+      authType: "stdio",
+      secret: { stdio },
+      connectionId: input.connectionId,
+    });
+    await syncCustomTools(deps, connection);
+    return { status: "connected", server: await serverView(deps.db, orgId, connection.id), outcome };
+  }
+  if (!input.serverUrl) throw new ValidationError("Enter an MCP address", "url.invalid");
   const personal = input.personal === true;
   await requireConnect(deps.db, actorId, orgId, personal);
   const owner = personal ? actorId : null;
@@ -882,7 +913,7 @@ export async function connectCustomServer(
   // A service through Composio signs in on Composio's page: its address is never fetched.
   if (composioToolkitOf(input.serverUrl.trim())) {
     if (input.headers?.length) throw signInOnly();
-    return beginComposioConnect(deps, actorId, orgId, { ...input, personal });
+    return beginComposioConnect(deps, actorId, orgId, { ...input, serverUrl: input.serverUrl, personal });
   }
   const url = await assertPublicHttpsUrl(input.serverUrl.trim(), deps.resolveHost);
   // Composio's address spelled another way is still Composio's: nothing is sent or kept there.

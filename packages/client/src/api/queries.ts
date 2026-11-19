@@ -4250,7 +4250,8 @@ export function useCustomServerAction(orgId: string) {
   return {
     connect: useMutation({
       mutationFn: (input: {
-        serverUrl: string;
+        serverUrl?: string;
+        stdio?: { command: string; args: string[]; cwd?: string; env: Record<string, string> };
         apiKey?: string;
         label?: string;
         returnTo: string;

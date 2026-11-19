@@ -183,6 +183,8 @@ export type OAuthApps = Record<string, { clientId: string; clientSecret: string 
 
 /** What's stored (encrypted) for a connection. Never returned by any API. */
 export interface ConnectionSecret {
+  /** Local executable settings are encrypted and never returned by the connector API. */
+  stdio?: import("./stdio").StdioMcpConfig;
   accessToken?: string;
   refreshToken?: string;
   apiKey?: string;
@@ -191,6 +193,8 @@ export interface ConnectionSecret {
 }
 
 export interface ConnectorDeps {
+  /** Explicit operator opt-in on a self-hosted server closed to public sign-up. */
+  stdioAllowed?: boolean;
   db: Database;
   /** Current wrapper first (seals), then legacy ones (open only). */
   keyWrappers: KeyWrapper[];

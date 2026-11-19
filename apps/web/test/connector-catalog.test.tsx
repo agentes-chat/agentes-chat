@@ -388,10 +388,7 @@ describe("Adicionar conector: one catalog", () => {
   });
 
   test("the close sits on its big title's capitals' middle; a service's, in the corner, isn't lifted", async () => {
-    const css = (await Bun.file(new URL("../src/layout.css", import.meta.url).pathname).text()).replace(
-      /\/\*[\s\S]*?\*\//g,
-      "",
-    );
+    const css = (await Bun.file(new URL("../src/layout.css", import.meta.url)).text()).replace(/\/\*[\s\S]*?\*\//g, "");
     const rule = (selector: string, from = css) => from.split(`\n${selector} {`)[1]?.split("}")[0] ?? "";
     expect(rule(".catalog .ac-dialog__head")).toContain("--title-cap-mid: 0.88px;");
     const phone = css.split("\n@media (max-width: 760px) {\n  .catalog__body {")[1] ?? "";

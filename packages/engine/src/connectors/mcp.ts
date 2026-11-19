@@ -96,9 +96,14 @@ const NO_OUTPUT_VALIDATION: jsonSchemaValidator = {
 };
 
 /** Wraps an official MCP SDK client over any transport. */
-export async function mcpSessionOver(transport: Transport): Promise<McpSession> {
+export async function mcpSessionOver(transport: Transport, timeout?: number): Promise<McpSession> {
   const client = new Client({ name: "agentes.chat", version: "1" }, { jsonSchemaValidator: NO_OUTPUT_VALIDATION });
-  await client.connect(transport);
+  try {
+    await client.connect(transport, timeout === undefined ? undefined : { timeout });
+  } catch (error) {
+    await client.close().catch(() => {});
+    throw error;
+  }
   return {
     async listTools() {
       const tools: McpTool[] = [];

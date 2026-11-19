@@ -13972,6 +13972,26 @@
       "asks_other": "작업 {{count}}개는 채팅에서 승인을 요청해요.",
       "adjust": "조정",
       "ok": "완료"
+    },
+    "local": {
+      "transport": "MCP 전송 방식",
+      "tab": "로컬 프로그램 · stdio",
+      "where": "agentes.chat이 설치된 곳에서 실행합니다. Docker에서는 컨테이너 안에서 실행합니다.",
+      "checking": "로컬 MCP 지원 확인 중…",
+      "checkFailed": "MCP · 확인하지 못했습니다. 이 창을 다시 여세요.",
+      "disabled": "공개 가입을 차단한 신뢰할 수 있는 자체 서버에서 MCP_STDIO_ENABLED를 켜세요.",
+      "command": "실행 파일",
+      "commandHelp": "프로그램 이름 또는 절대 경로입니다. 셸 없이 인수를 개별 입력하세요.",
+      "args": "인수(JSON 배열)",
+      "argsHelp": "공백이 있어도 인수마다 문자열 하나를 입력하세요.",
+      "cwd": "작업 디렉터리(선택 사항)",
+      "cwdHelp": "절대 경로입니다. Docker에서는 컨테이너 안에 있어야 합니다.",
+      "environment": "환경 변수",
+      "env": "환경(JSON 객체)",
+      "envHelp": "값은 암호화됩니다. 프로세스는 서버의 비밀 값을 상속하지 않습니다. {\"API_KEY\":\"…\"}",
+      "invalid": "실행 파일과 인수 배열, JSON 환경 변수를 확인하세요.",
+      "failed": "경로와 프로그램의 stdio 기반 MCP 지원 여부를 확인하세요.",
+      "permissions": "서버의 시스템 계정으로 실행합니다. 다음 단계에서 권한을 설정하세요."
     }
   },
   "database": {

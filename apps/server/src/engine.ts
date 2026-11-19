@@ -13,6 +13,7 @@ import {
   APP_FAULT_HINT,
   type ArtifactDeps,
   agentScopeFromDb,
+  allowsStdioMcp,
   approvalsLevelOf,
   asksOf,
   authorizeStream,
@@ -140,6 +141,7 @@ import {
   warmAgentBrowser,
   withComposio,
   withJudgeFallback,
+  withStdioMcp,
 } from "@agenteschat/engine";
 import { createOpenAIEmbeddings, createVoyageEmbeddings, type ModelProvider } from "@agenteschat/providers";
 import { type AppleTokenRevoker, appleTokenRevoker } from "./auth";
@@ -308,7 +310,10 @@ export function buildEngine(o: EngineOptions) {
     oauthApps: connectorOAuthApps(config),
     publicUrl: config.PUBLIC_URL,
     http: o.http,
-    connect: withComposio(o.mcpConnect ?? connectOverHttp, composio),
+    connect: withComposio(
+      withStdioMcp({ db, keyWrappers, stdioAllowed: allowsStdioMcp(config) }, o.mcpConnect ?? connectOverHttp),
+      composio,
+    ),
     composio,
   };
   const storage: StorageDeps = {

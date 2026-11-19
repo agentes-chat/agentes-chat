@@ -103,7 +103,11 @@ export function fromServer(s: CustomServer, catalog: ConnectorDef[]): ConnectedI
     def: catalog.find((d) => d.kind === "remote_mcp" && sameServer(d.serverUrl, s.serverUrl)) ?? null,
     image: s.iconUrl ?? null,
     // Composio's address means nothing to people: only the account, when it is known.
-    account: s.accountLabel ? accountNote(s.label, s.accountLabel) : s.via === "composio" ? null : host(s.serverUrl),
+    account: s.accountLabel
+      ? accountNote(s.label, s.accountLabel)
+      : s.via === "composio" || s.authType === "stdio"
+        ? null
+        : host(s.serverUrl),
     viaComposio: s.via === "composio",
     needsReconnect: s.status === "needs_reconnect",
     reconnectAdds: [],

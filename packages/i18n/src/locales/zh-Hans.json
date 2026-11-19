@@ -14047,6 +14047,26 @@
       "asks_other": "{{count}} 项操作会在聊天中请求审批。",
       "adjust": "调整",
       "ok": "完成"
+    },
+    "local": {
+      "transport": "MCP 传输方式",
+      "tab": "本地程序 · stdio",
+      "where": "程序在安装 agentes.chat 的位置运行。使用 Docker 时在容器内运行。",
+      "checking": "正在检查本地 MCP 支持情况…",
+      "checkFailed": "MCP · 无法检查支持情况。请重新打开此窗口。",
+      "disabled": "请在关闭公开注册且受信任的自托管服务器上启用 MCP_STDIO_ENABLED。",
+      "command": "可执行程序",
+      "commandHelp": "程序名或绝对路径。请单独输入参数，无需使用 shell。",
+      "args": "参数（JSON 数组）",
+      "argsHelp": "每个参数使用一个字符串，即使包含空格也是如此。",
+      "cwd": "工作目录（可选）",
+      "cwdHelp": "使用绝对路径。在 Docker 中，该路径必须存在于容器内。",
+      "environment": "环境变量",
+      "env": "环境（JSON 对象）",
+      "envHelp": "值会加密存储。进程不会继承服务器的密钥。 {\"API_KEY\":\"…\"}",
+      "invalid": "请检查可执行程序、参数数组和 JSON 环境变量。",
+      "failed": "请检查路径，并确认程序支持通过 stdio 使用 MCP。",
+      "permissions": "程序以服务器的系统用户身份运行。请在后续步骤设置权限。"
     }
   },
   "database": {

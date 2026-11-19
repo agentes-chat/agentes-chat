@@ -5359,6 +5359,14 @@ html:not([data-pointer]) .catalog-tile:focus-visible {
 .cflow__text {
   margin: 0;
 }
+.cflow__stdio-fields {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
 /* Reconectar GitHub: the organizations it reaches, the words and the way to GitHub's page, one under the other. */
 .cflow__orgs {
   display: flex;

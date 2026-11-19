@@ -3,6 +3,7 @@ import {
   abandonComposioOAuth,
   acceptCustomSuggestion,
   agentScopesFor,
+  allowsStdioMcp,
   appOAuthRedirect,
   BUILTIN_SCOPES,
   type ConnectorDeps,
@@ -39,6 +40,7 @@ import {
   uninstallInstallation,
   ValidationError,
   withComposio,
+  withStdioMcp,
 } from "@agenteschat/engine";
 import { createRoute, z } from "@hono/zod-openapi";
 import { sessionUser } from "../../auth";
@@ -178,7 +180,13 @@ export function connectorRoutes(deps: AppDeps) {
     http: deps.extras?.http,
     resolveHost: deps.extras?.resolveHost,
     // A sign-in's account is asked of the server before it's stored (two accounts are told apart by it).
-    connect: withComposio(deps.extras?.mcpConnect ?? connectOverHttp, composio),
+    connect: withComposio(
+      withStdioMcp(
+        { db, keyWrappers: [adapters.keyWrapper, ...adapters.legacyKeyWrappers], stdioAllowed: allowsStdioMcp(config) },
+        deps.extras?.mcpConnect ?? connectOverHttp,
+      ),
+      composio,
+    ),
     composio,
   };
 

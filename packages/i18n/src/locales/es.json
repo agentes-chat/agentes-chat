@@ -14984,6 +14984,26 @@
       "asks_other": "{{count}} acciones piden aprobación en el chat.",
       "adjust": "Ajustar",
       "ok": "Listo"
+    },
+    "local": {
+      "transport": "Transporte MCP",
+      "tab": "Programa local · stdio",
+      "where": "Se ejecuta donde está instalado agentes.chat. Con Docker se ejecuta dentro del contenedor.",
+      "checking": "Comprobando MCP local…",
+      "checkFailed": "MCP · No se pudo comprobar el soporte. Vuelve a abrir esta ventana.",
+      "disabled": "Para usar programas locales, activa MCP_STDIO_ENABLED en un servidor propio de confianza sin registro público.",
+      "command": "Ejecutable",
+      "commandHelp": "Nombre del programa o ruta absoluta. Introduce los argumentos por separado, sin shell.",
+      "args": "Argumentos (lista JSON)",
+      "argsHelp": "Una cadena por argumento, incluso si contiene espacios.",
+      "cwd": "Directorio de trabajo (opcional)",
+      "cwdHelp": "Ruta absoluta disponible dentro del contenedor si usas Docker.",
+      "environment": "Variables de entorno",
+      "env": "Entorno (objeto JSON)",
+      "envHelp": "Los valores se cifran. El proceso no hereda los secretos del servidor. {\"API_KEY\":\"…\"}",
+      "invalid": "Comprueba el ejecutable, la lista de argumentos y las variables de entorno en JSON.",
+      "failed": "Comprueba las rutas y que el programa admita MCP por stdio.",
+      "permissions": "Se ejecuta con el usuario del servidor. Configura los permisos en los pasos siguientes."
     }
   },
   "database": {

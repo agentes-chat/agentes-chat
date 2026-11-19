@@ -14031,6 +14031,26 @@
       "asks_other": "{{count}} tindakan meminta persetujuan di chat.",
       "adjust": "Sesuaikan",
       "ok": "Selesai"
+    },
+    "local": {
+      "transport": "Transpor MCP",
+      "tab": "Program lokal · stdio",
+      "where": "Program berjalan di tempat agentes.chat terpasang. Dengan Docker, program berjalan di dalam kontainer.",
+      "checking": "Memeriksa dukungan MCP lokal…",
+      "checkFailed": "MCP · Pemeriksaan gagal. Buka kembali dialog ini.",
+      "disabled": "Aktifkan MCP_STDIO_ENABLED pada server pribadi tepercaya dengan pendaftaran publik ditutup.",
+      "command": "Program yang dijalankan",
+      "commandHelp": "Nama program atau jalur absolut. Masukkan argumen secara terpisah tanpa shell.",
+      "args": "Argumen (larik JSON)",
+      "argsHelp": "Satu string per argumen, termasuk yang mengandung spasi.",
+      "cwd": "Direktori kerja (opsional)",
+      "cwdHelp": "Jalur absolut yang tersedia di dalam kontainer jika memakai Docker.",
+      "environment": "Variabel lingkungan",
+      "env": "Lingkungan (objek JSON)",
+      "envHelp": "Nilai disimpan terenkripsi. Proses tidak mewarisi rahasia server. {\"API_KEY\":\"…\"}",
+      "invalid": "Periksa program, larik argumen dan nilai lingkungan dalam JSON.",
+      "failed": "Periksa jalur dan dukungan MCP melalui stdio pada program.",
+      "permissions": "Berjalan dengan akun sistem server. Atur izin pada langkah berikutnya."
     }
   },
   "database": {

@@ -15059,6 +15059,26 @@
       "asks_other": "{{count}} actions demandent une approbation dans le chat.",
       "adjust": "Ajuster",
       "ok": "Terminé"
+    },
+    "local": {
+      "transport": "Transport du protocole MCP",
+      "tab": "Programme local · stdio",
+      "where": "Le programme tourne là où agentes.chat est installé. Avec Docker, il tourne dans le conteneur.",
+      "checking": "Vérification du MCP local…",
+      "checkFailed": "MCP · Vérification impossible. Rouvrez cette fenêtre.",
+      "disabled": "Activez MCP_STDIO_ENABLED sur un serveur privé de confiance sans inscription publique.",
+      "command": "Exécutable",
+      "commandHelp": "Nom du programme ou chemin absolu. Saisissez les arguments séparément, sans shell.",
+      "args": "Arguments (tableau JSON)",
+      "argsHelp": "Une chaîne par argument, même avec des espaces.",
+      "cwd": "Répertoire de travail (facultatif)",
+      "cwdHelp": "Chemin absolu accessible dans le conteneur si vous utilisez Docker.",
+      "environment": "Variables d’environnement",
+      "env": "Environnement (objet JSON)",
+      "envHelp": "Les valeurs sont chiffrées. Le processus ne reçoit pas les secrets du serveur. {\"API_KEY\":\"…\"}",
+      "invalid": "Vérifiez le programme, le tableau des arguments et les variables en JSON.",
+      "failed": "Vérifiez les chemins et la prise en charge de MCP via stdio.",
+      "permissions": "Le programme utilise le compte système du serveur. Réglez les autorisations aux étapes suivantes."
     }
   },
   "database": {

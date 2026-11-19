@@ -15592,6 +15592,26 @@
       "asks_other": "{{count}} akcji prosi o zatwierdzenie na czacie.",
       "adjust": "Dostosuj",
       "ok": "Gotowe"
+    },
+    "local": {
+      "transport": "Transport protokołu MCP",
+      "tab": "Program lokalny · stdio",
+      "where": "Program działa tam, gdzie zainstalowano agentes.chat. W Dockerze działa w kontenerze.",
+      "checking": "Sprawdzanie lokalnej obsługi MCP…",
+      "checkFailed": "MCP · Nie udało się sprawdzić obsługi. Otwórz okno ponownie.",
+      "disabled": "Włącz MCP_STDIO_ENABLED na zaufanym własnym serwerze bez publicznej rejestracji.",
+      "command": "Plik wykonywalny",
+      "commandHelp": "Nazwa programu lub ścieżka bezwzględna. Podaj argumenty osobno, bez powłoki.",
+      "args": "Argumenty (tablica JSON)",
+      "argsHelp": "Jeden ciąg tekstowy na argument, również ze spacjami.",
+      "cwd": "Katalog roboczy (opcjonalny)",
+      "cwdHelp": "Ścieżka bezwzględna dostępna w kontenerze podczas korzystania z Dockera.",
+      "environment": "Zmienne środowiskowe",
+      "env": "Środowisko (obiekt JSON)",
+      "envHelp": "Wartości są szyfrowane. Proces nie dziedziczy sekretów serwera. {\"API_KEY\":\"…\"}",
+      "invalid": "Sprawdź program, tablicę argumentów i wartości środowiska w JSON.",
+      "failed": "Sprawdź ścieżki i obsługę MCP przez stdio.",
+      "permissions": "Program działa na koncie systemowym serwera. Uprawnienia ustawisz w kolejnych krokach."
     }
   },
   "database": {

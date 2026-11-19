@@ -89,7 +89,7 @@ describe("a failed request in the person's words", () => {
   test("no error's own message on screen: errorText, authErrorText or the screen's own line", () => {
     const src = ROOTS[0] ?? "";
     const offenders = sourceFiles(src)
-      .filter((f) => !OWN_WORDS.some((own) => f.endsWith(own)))
+      .filter((f) => !OWN_WORDS.some((own) => f.endsWith(join(...own.split("/")))))
       .flatMap((f) => {
         const source = withoutComments(readFileSync(f, "utf8"));
         return [...source.matchAll(/\b(?:e|err|error|failed|result)\.message\b|as Error\)\.message/g)].map(

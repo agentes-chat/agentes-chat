@@ -3113,7 +3113,7 @@ export interface CustomServer {
   label: string;
   /** The account as the provider names it ("Acme"), when it says. */
   accountLabel?: string | null;
-  authType: "oauth" | "api_key";
+  authType: "oauth" | "api_key" | "stdio";
   /**
    * The request headers typed for it, by name (their values are never returned); empty when it has none, and for
    * who doesn't manage connectors. Older servers leave it out.

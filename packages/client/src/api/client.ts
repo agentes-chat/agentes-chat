@@ -1441,6 +1441,7 @@ export interface ApiClient {
     ask(orgId: string, proposalId: string): Promise<Proposal>;
   };
   customConnectors: {
+    transports?(orgId: string): Promise<{ stdio: boolean }>;
     /** The team's servers and the person's own. `others`: also everyone else's personal ones (who manages connectors gets them, as read-only rows). */
     list(orgId: string, options?: { others?: boolean }): Promise<CustomServer[]>;
     /**
@@ -1456,7 +1457,8 @@ export interface ApiClient {
     connect(
       orgId: string,
       input: {
-        serverUrl: string;
+        serverUrl?: string;
+        stdio?: { command: string; args: string[]; cwd?: string; env: Record<string, string> };
         apiKey?: string;
         label?: string;
         returnTo: string;

@@ -101,6 +101,7 @@ import { oauthReturnPath } from "@/lib/desktop";
 import { forgetGithubOrgs, keepGithubOrgs, readGithubOrgs } from "@/lib/github-orgs";
 import { navigateAway } from "@/lib/navigate";
 import { useToast } from "@/lib/toast";
+import { ConnectStdio, emptyStdioDraft } from "./ConnectStdio";
 import { reviewNote, ToolLevelsView, ToolReview, type ToolReviewState } from "./ToolReview";
 
 /**
@@ -293,6 +294,8 @@ function ConnectStep({
   const [how, setHow] = useState<"app" | "account">("app");
   const [url, setUrl] = useState(initialUrl ?? "");
   const [label, setLabel] = useState("");
+  const [transport, setTransport] = useState<"http" | "stdio">(item?.server?.authType === "stdio" ? "stdio" : "http");
+  const [stdioDraft, setStdioDraft] = useState(() => emptyStdioDraft(item?.label));
   const [apiKey, setApiKey] = useState("");
   const [keyOpen, setKeyOpen] = useState(false);
   const [needsKey, setNeedsKey] = useState<Extract<CustomConnectStart, { status: "needs_key" }> | null>(null);
@@ -434,6 +437,20 @@ function ConnectStep({
     }
   };
 
+  const transportTabs =
+    askUrl && admin && !personal ? (
+      <Segmented<"http" | "stdio">
+        label={t("connectFlow.local.transport")}
+        value={transport}
+        onValueChange={setTransport}
+        block
+        options={[
+          { value: "http", label: "HTTP" },
+          { value: "stdio", label: t("connectFlow.local.tab") },
+        ]}
+      />
+    ) : null;
+
   const keyForm = (
     <form
       className="cflow__key"
@@ -470,10 +487,27 @@ function ConnectStep({
     </form>
   );
 
+  if (transport === "stdio") {
+    return (
+      <ConnectStdio
+        tabs={transportTabs}
+        connectionId={connectionId}
+        initialName={item?.label}
+        draft={stdioDraft}
+        onDraftChange={setStdioDraft}
+        returnTo={back}
+        onClose={onClose}
+        onConnected={(server) =>
+          done(fromServer(server, catalog.data?.connectors ?? []), connectionId ? "reconnected" : "connected")
+        }
+      />
+    );
+  }
   return (
     <>
       <Locked when={busy}>
         <DialogBody className="cflow__body">
+          {transportTabs}
           {def && viaComposio ? (
             <p className="muted cflow__text">
               {connectorDescription(t, def)} {composioConnectText(t, def)}

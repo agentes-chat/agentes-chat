@@ -88,6 +88,7 @@ export function createMockCustomConnectors(
     return s;
   };
   return {
+    transports: async () => ({ stdio: false }),
     list: async (orgId, options) =>
       clone(list(orgId).filter((s) => options?.others || !s.ownerUserId || s.ownerUserId === meId())),
     connect: async (orgId, input) => {
@@ -97,31 +98,32 @@ export function createMockCustomConnectors(
         ...(input.headers ? { headers: input.headers.map((h) => ({ name: h.name, value: "[redacted]" })) } : {}),
       });
       // Through Composio: its page signs in, back to the callback.
-      if (input.serverUrl.startsWith("https://backend.composio.dev/")) {
+      const serverUrl = input.serverUrl ?? `stdio://${mockId("local-mcp")}`;
+      if (serverUrl.startsWith("https://backend.composio.dev/")) {
         return { status: "oauth", authorizeUrl: "https://composio.example/connect/ca_1?state=s" };
       }
-      const oauth = input.serverUrl.includes("oauth");
+      const oauth = serverUrl.includes("oauth");
       const target = input.connectionId ? find(orgId, input.connectionId) : null;
       const headerNames = input.headers?.map((h) => h.name) ?? target?.headerNames ?? [];
       if (oauth && !input.apiKey && headerNames.length > 0) {
         throw new ApiError(400, "connector.headers_with_sign_in", "This server asks for a sign-in");
       }
-      if (!oauth && !input.apiKey && headerNames.length === 0) return { status: "needs_key" };
+      if (!input.stdio && !oauth && !input.apiKey && headerNames.length === 0) return { status: "needs_key" };
       if (target) {
         target.headerNames = headerNames;
         return { status: "connected", server: clone(target), outcome: "reconnected" };
       }
       const now = ctx.now();
-      const base = input.label?.trim() || new URL(input.serverUrl).hostname;
+      const base = input.label?.trim() || new URL(serverUrl).hostname;
       const taken = new Set(list(orgId).map((s) => s.label.toLowerCase()));
       let label = base;
       for (let n = 2; taken.has(label.toLowerCase()); n++) label = `${base} ${n}`;
       const server: CustomServer = {
         id: mockId("mcp"),
-        serverUrl: input.serverUrl,
+        serverUrl,
         label,
         accountLabel: null,
-        authType: oauth ? "oauth" : "api_key",
+        authType: input.stdio ? "stdio" : oauth ? "oauth" : "api_key",
         headerNames,
         tools: TOOLS.map((t) => tool(t, now)),
         reviewedAt: null,

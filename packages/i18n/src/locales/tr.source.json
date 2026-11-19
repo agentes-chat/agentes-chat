@@ -54695,5 +54695,59 @@
   },
   "live.sheet.fn.YEARFRAC": {
     "value": "The share of a year between two dates"
+  },
+  "connectFlow.local.transport": {
+    "value": "MCP transport"
+  },
+  "connectFlow.local.tab": {
+    "value": "Local · stdio"
+  },
+  "connectFlow.local.where": {
+    "value": "Runs where agentes.chat is installed: on your computer in the desktop installation, inside the container in Docker. A computer connected to another server is not used here."
+  },
+  "connectFlow.local.checking": {
+    "value": "Checking local MCP support…"
+  },
+  "connectFlow.local.checkFailed": {
+    "value": "Could not check local MCP support. Reopen this dialog to try again."
+  },
+  "connectFlow.local.disabled": {
+    "value": "Local programs are disabled. The installation operator must enable MCP_STDIO_ENABLED on a trusted, self-hosted server closed to public sign-up."
+  },
+  "connectFlow.local.command": {
+    "value": "Executable"
+  },
+  "connectFlow.local.commandHelp": {
+    "value": "Program name or absolute path. Enter arguments separately. The program starts without a shell."
+  },
+  "connectFlow.local.args": {
+    "value": "Arguments (JSON array)"
+  },
+  "connectFlow.local.argsHelp": {
+    "value": "One string per argument, for example [\"server.js\", \"mcp\"]. Paths with spaces stay in a single string."
+  },
+  "connectFlow.local.cwd": {
+    "value": "Working directory (optional)"
+  },
+  "connectFlow.local.cwdHelp": {
+    "value": "Absolute path on the server. In Docker, this path must exist inside the container."
+  },
+  "connectFlow.local.environment": {
+    "value": "Environment variables"
+  },
+  "connectFlow.local.env": {
+    "value": "Environment (JSON object)"
+  },
+  "connectFlow.local.envHelp": {
+    "value": "For example {\"API_KEY\":\"…\"}. Values are encrypted. The process receives no server secrets by default."
+  },
+  "connectFlow.local.invalid": {
+    "value": "Enter an executable, a JSON array of string arguments and a JSON object of string environment values."
+  },
+  "connectFlow.local.failed": {
+    "value": "Could not connect the local MCP. Check the executable and paths in the installation, and whether the program speaks MCP over stdio."
+  },
+  "connectFlow.local.permissions": {
+    "value": "Runs as the server's OS user. Tool access and approvals are managed in the next steps."
   }
 }

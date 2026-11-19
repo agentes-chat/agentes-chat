@@ -14603,6 +14603,26 @@
       "asks_other": "{{count}} acties vragen om goedkeuring in de chat.",
       "adjust": "Aanpassen",
       "ok": "Klaar"
+    },
+    "local": {
+      "transport": "MCP-verbinding",
+      "tab": "Lokaal programma · stdio",
+      "where": "Het programma draait waar agentes.chat is geïnstalleerd. Met Docker draait het in de container.",
+      "checking": "Lokale MCP-ondersteuning controleren…",
+      "checkFailed": "MCP · Controle mislukt. Open dit venster opnieuw.",
+      "disabled": "Schakel MCP_STDIO_ENABLED in op een vertrouwde eigen server zonder openbare registratie.",
+      "command": "Uitvoerbaar programma",
+      "commandHelp": "Programmanaam of absoluut pad. Geef argumenten apart op, zonder shell.",
+      "args": "Argumenten (JSON-lijst)",
+      "argsHelp": "Eén tekenreeks per argument, ook bij spaties.",
+      "cwd": "Werkmap (optioneel)",
+      "cwdHelp": "Absoluut pad dat bij Docker in de container moet bestaan.",
+      "environment": "Omgevingsvariabelen",
+      "env": "Omgeving (JSON-object)",
+      "envHelp": "Waarden worden versleuteld. Het proces erft geen servergeheimen. {\"API_KEY\":\"…\"}",
+      "invalid": "Controleer het programma, de lijst met argumenten en de omgevingswaarden in JSON.",
+      "failed": "Controleer de paden en of het programma MCP via stdio ondersteunt.",
+      "permissions": "Draait onder het systeemaccount van de server. Stel de rechten in bij de volgende stappen."
     }
   },
   "database": {

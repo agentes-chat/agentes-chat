@@ -14747,6 +14747,29 @@ export const en = {
     agentSub: "By connector and subject. By default, sensitive actions ask for approval.",
   },
   connectFlow: {
+    local: {
+      transport: "MCP transport",
+      tab: "Local · stdio",
+      where:
+        "Runs where agentes.chat is installed: on your computer in the desktop installation, inside the container in Docker. A computer connected to another server is not used here.",
+      checking: "Checking local MCP support…",
+      checkFailed: "Could not check local MCP support. Reopen this dialog to try again.",
+      disabled:
+        "Local programs are disabled. The installation operator must enable MCP_STDIO_ENABLED on a trusted, self-hosted server closed to public sign-up.",
+      command: "Executable",
+      commandHelp: "Program name or absolute path. Enter arguments separately. The program starts without a shell.",
+      args: "Arguments (JSON array)",
+      argsHelp: 'One string per argument, for example ["server.js", "mcp"]. Paths with spaces stay in a single string.',
+      cwd: "Working directory (optional)",
+      cwdHelp: "Absolute path on the server. In Docker, this path must exist inside the container.",
+      environment: "Environment variables",
+      env: "Environment (JSON object)",
+      envHelp: 'For example {"API_KEY":"…"}. Values are encrypted. The process receives no server secrets by default.',
+      invalid: "Enter an executable, a JSON array of string arguments and a JSON object of string environment values.",
+      failed:
+        "Could not connect the local MCP. Check the executable and paths in the installation, and whether the program speaks MCP over stdio.",
+      permissions: "Runs as the server's OS user. Tool access and approvals are managed in the next steps.",
+    },
     steps: "Steps",
     step: { "0": "Connect", "1": "What it does", "2": "Who can use it" },
     connectTitle: "Connect {{name}}",

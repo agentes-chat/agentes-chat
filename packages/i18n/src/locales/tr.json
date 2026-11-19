@@ -14470,6 +14470,26 @@
       "asks_other": "{{count}} işlem sohbette onay ister.",
       "adjust": "Ayarla",
       "ok": "Tamam"
+    },
+    "local": {
+      "transport": "MCP aktarımı",
+      "tab": "Yerel program · stdio",
+      "where": "Program agentes.chat kurulumunun bulunduğu yerde çalışır. Docker kullanırken kapsayıcıda çalışır.",
+      "checking": "Yerel MCP desteği denetleniyor…",
+      "checkFailed": "MCP · Destek denetlenemedi. Bu pencereyi yeniden açın.",
+      "disabled": "Herkese açık kayıt almayan güvenilir kendi sunucunuzda MCP_STDIO_ENABLED ayarını açın.",
+      "command": "Çalıştırılabilir dosya",
+      "commandHelp": "Program adı veya mutlak yol. Argümanları kabuk kullanmadan ayrı ayrı girin.",
+      "args": "Argümanlar (JSON dizisi)",
+      "argsHelp": "Boşluk içerenler dahil her argüman için bir dize girin.",
+      "cwd": "Çalışma dizini (isteğe bağlı)",
+      "cwdHelp": "Mutlak yol. Docker kullanılıyorsa kapsayıcıda bulunmalıdır.",
+      "environment": "Ortam değişkenleri",
+      "env": "Ortam (JSON nesnesi)",
+      "envHelp": "Değerler şifrelenir. İşlem sunucunun gizli değerlerini devralmaz. {\"API_KEY\":\"…\"}",
+      "invalid": "Programı, argüman dizisini ve JSON ortam değerlerini kontrol edin.",
+      "failed": "Yolları ve programın stdio üzerinden MCP desteğini kontrol edin.",
+      "permissions": "Sunucunun sistem hesabıyla çalışır. İzinleri sonraki adımlarda ayarlayın."
     }
   },
   "database": {

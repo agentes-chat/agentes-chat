@@ -3,6 +3,7 @@ import { type Config, connectorOAuthApps } from "@agenteschat/config";
 import type { Database } from "@agenteschat/db";
 import {
   type AiStatusDeps,
+  allowsStdioMcp,
   baseUrlFor,
   type ConnectorTriggerDeps,
   closedRefusal,
@@ -18,6 +19,7 @@ import {
   type RoutineHookDeps,
   requireAgentDetails,
   withComposio,
+  withStdioMcp,
 } from "@agenteschat/engine";
 import { OpenAPIHono, z } from "@hono/zod-openapi";
 import { createMiddleware } from "hono/factory";
@@ -65,7 +67,17 @@ export const routineConnectorDeps = (deps: AppDeps): ConnectorTriggerDeps => {
     publicUrl: deps.config.PUBLIC_URL,
     http: deps.extras?.http,
     resolveHost: deps.extras?.resolveHost,
-    connect: withComposio(deps.extras?.mcpConnect ?? connectOverHttp, composio),
+    connect: withComposio(
+      withStdioMcp(
+        {
+          db: deps.db,
+          keyWrappers: [deps.adapters.keyWrapper, ...deps.adapters.legacyKeyWrappers],
+          stdioAllowed: allowsStdioMcp(deps.config),
+        },
+        deps.extras?.mcpConnect ?? connectOverHttp,
+      ),
+      composio,
+    ),
     composio,
   };
 };

@@ -15075,6 +15075,26 @@
       "asks_other": "{{count}} azioni chiedono l'approvazione in chat.",
       "adjust": "Regola",
       "ok": "Fatto"
+    },
+    "local": {
+      "transport": "Trasporto MCP",
+      "tab": "Programma locale · stdio",
+      "where": "Il programma viene eseguito dove è installato agentes.chat. Con Docker viene eseguito nel contenitore.",
+      "checking": "Verifica del supporto MCP locale…",
+      "checkFailed": "MCP · Verifica non riuscita. Riapri la finestra.",
+      "disabled": "Attiva MCP_STDIO_ENABLED su un server privato affidabile senza registrazione pubblica.",
+      "command": "Eseguibile",
+      "commandHelp": "Nome o percorso assoluto. Inserisci gli argomenti separatamente, senza shell.",
+      "args": "Argomenti (array JSON)",
+      "argsHelp": "Una stringa per argomento, anche con spazi.",
+      "cwd": "Directory di lavoro (facoltativa)",
+      "cwdHelp": "Percorso assoluto disponibile nel contenitore se usi Docker.",
+      "environment": "Variabili di ambiente",
+      "env": "Ambiente (oggetto JSON)",
+      "envHelp": "I valori sono cifrati. Il processo non eredita i segreti del server. {\"API_KEY\":\"…\"}",
+      "invalid": "Controlla eseguibile, elenco degli argomenti e variabili in JSON.",
+      "failed": "Controlla i percorsi e il supporto MCP su stdio.",
+      "permissions": "Usa l’utente di sistema del server. Configura i permessi nei passaggi successivi."
     }
   },
   "database": {
