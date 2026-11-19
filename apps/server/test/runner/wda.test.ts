@@ -645,8 +645,10 @@ test("a real iPhone's helper waits on the person: no Apple Account, UI Automatio
 test("iOS refusing UI testing: heard live, kept on the checklist until an action works, checked again, repaired", async () => {
   const m = await mac();
   expect(await m.settle(null)).toBe(null);
-  // The setup check acted once on the phone, under a session.
-  expect(m.calls().some((c) => c[0] === "wda" && c[2] === "/session/s1/window/size")).toBe(true);
+  // The setup check acted once on the phone, under a session (it may still be on its way when the checklist clears).
+  const acted = () => m.calls().some((c) => c[0] === "wda" && c[2] === "/session/s1/window/size");
+  for (let i = 0; i < 600 && !acted(); i++) await Bun.sleep(25);
+  expect(acted()).toBe(true);
   // The helper prints Code=41 and its call never answers: heard, dropped, and the call says why.
   const code41 =
     'Error Domain=com.apple.dt.XCTDaemonErrorDomain Code=41 "Not authorized for performing UI testing actions."\n';
