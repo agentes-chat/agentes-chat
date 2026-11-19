@@ -1822,6 +1822,16 @@ export class BrainManager {
   }
 
   /** The live process of a session, if any (tests). */
+  /** VPS Zen: each agent's running CLI processes, for its memory in the Central. */
+  pidsByAgent(): Map<string, number[]> {
+    const out = new Map<string, number[]>();
+    for (const l of this.live.values()) {
+      const pid = l.proc.child.pid;
+      if (!l.proc.exited && pid) out.set(l.agentId, [...(out.get(l.agentId) ?? []), pid]);
+    }
+    return out;
+  }
+
   process(agentId: string, session: string): ClaudeProcess | undefined {
     return this.live.get(brainKey(agentId, session))?.proc;
   }

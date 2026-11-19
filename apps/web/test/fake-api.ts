@@ -4551,6 +4551,7 @@ export function createFakeApi(state: FakeState = seedState(), options: { seed?: 
                   talks: [],
                   pullRequests: [],
                   computers: [],
+                  links: [],
                   hiddenTasks: 0,
                 },
               ),

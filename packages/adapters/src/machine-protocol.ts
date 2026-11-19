@@ -316,6 +316,25 @@ export interface MachineLoad {
   diskFreeGb?: number;
   diskUse?: number;
   sharedGb?: number;
+  /** VPS Zen: each agent's CLI process tree right now. Absent from an older runner: no protocol number. */
+  agents?: AgentMemory;
+}
+
+/** VPS Zen: memory by agent id (MB of resident memory, and how many processes). */
+export type AgentMemory = Record<string, { rssMb: number; processes: number }>;
+
+/** At most this many agents in one report: a bad runner can't fill the row. */
+const AGENT_MEMORY_MAX = 200;
+
+export function parseAgentMemory(v: unknown): AgentMemory | null {
+  if (!isObject(v)) return null;
+  const out: AgentMemory = {};
+  for (const [id, m] of Object.entries(v).slice(0, AGENT_MEMORY_MAX)) {
+    if (!/^[0-9a-f-]{36}$/i.test(id) || !isObject(m)) continue;
+    if (between(m.rssMb, 0, 1 << 20) && inRange(m.processes, [0, 100_000]))
+      out[id] = { rssMb: m.rssMb, processes: m.processes };
+  }
+  return out;
 }
 
 /** How often a computer's load is sampled (protocol 22). */
@@ -4438,6 +4457,7 @@ export function parseMachineLoad(v: unknown): MachineLoad | null {
     ...(between(v.diskFreeGb, 0, 1e6) ? { diskFreeGb: v.diskFreeGb } : {}),
     ...(between(v.diskUse, 0, 1) ? { diskUse: v.diskUse } : {}),
     ...(between(v.sharedGb, 0, 1e6) ? { sharedGb: v.sharedGb } : {}),
+    ...(isObject(v.agents) ? { agents: parseAgentMemory(v.agents) ?? {} } : {}),
   };
 }
 

@@ -11,7 +11,9 @@ import { colorOf } from "@/components/Sky";
 import { TaskStepsBlock } from "@/components/ToolCalls";
 import { StopTaskButton, useOpenTask, useTaskStop } from "@/components/tasks/TaskBits";
 import { useDirectory } from "@/hooks/useDirectory";
+import { BrainQuick } from "./BrainQuick";
 import { COLUMNS, columnOf, leadTask, STILL_ON, shortAgo, TONE, tasksOfAgent } from "./model";
+import { Orchestration } from "./Orchestration";
 import { setupLine, useCentralWords } from "./words";
 import "./central.css";
 
@@ -151,6 +153,7 @@ function AgentCard({
             <i key={i} style={{ height: `${Math.max(8, (n / peak) * 100)}%` }} data-on={n > 0 || undefined} />
           ))}
         </span>
+        {agent.memory && <small>{w.memoryLine(agent.memory.rssMb, agent.memory.processes)}</small>}
         <small className="central-agent__setup">
           {setupLine(agent, w)} ·{" "}
           {agent.machine ? (agent.machine.online ? agent.machine.name : w.offline) : w.noComputer}
@@ -329,7 +332,11 @@ function AgentPanelView({
             {agent.machine ? `${agent.machine.name} · ${agent.machine.online ? w.online : w.off}` : w.noComputer}
           </Fact>
           <Fact label={w.approvals}>{w.approval[agent.approvals] ?? agent.approvals}</Fact>
+          <Fact label={w.memoryNow}>
+            {agent.memory ? w.memoryLine(agent.memory.rssMb, agent.memory.processes) : w.memoryNone}
+          </Fact>
         </dl>
+        <BrainQuick agent={agent} w={w} />
         <div className="central-actions">
           <Button asChild size="sm" variant="default">
             <Link to="/org/$orgId/dm/agent/$agentId" params={{ orgId: org.id, agentId: agent.id }}>
@@ -456,6 +463,11 @@ export function CentralPage({ initialAgent }: { initialAgent: string | null }) {
             ) : (
               <p className="central-muted">{w.noAgents}</p>
             )}
+          </section>
+          <section>
+            <h2>{w.orchestration}</h2>
+            <p className="central-muted central-lead">{w.orchestrationLead}</p>
+            <Orchestration view={view} now={now} w={w} />
           </section>
           <section>
             <h2>{w.sections.tasks}</h2>

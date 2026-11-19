@@ -87,6 +87,19 @@ export interface CentralAgent {
   activity: number[];
   doneThisWeek: number;
   failedThisWeek: number;
+  /** Who it answers to on the org chart; null: its owner or its setor's lead. */
+  reportsToAgentId: string | null;
+  /** Its CLI's process tree now, from its computer's last report; null: nothing running, or an older runner. */
+  memory: { rssMb: number; processes: number; at: string } | null;
+}
+
+/** Who asked whom over the last week: an agent orchestrating another, or a person asking an agent. */
+export interface CentralLink {
+  from: { kind: "agent"; id: string } | { kind: "person"; id: string; name: string };
+  toAgentId: string;
+  asks: number;
+  tasks: number;
+  lastAt: string;
 }
 
 export interface CentralTalk {
@@ -135,6 +148,7 @@ export interface CentralView {
   talks: CentralTalk[];
   pullRequests: CentralPullRequest[];
   computers: CentralComputer[];
+  links: CentralLink[];
   /** Tasks still on that the viewer may not see: only how many. */
   hiddenTasks: number;
 }
@@ -214,7 +228,7 @@ export async function centralView(
   const managed = new Set(agents.filter((a) => admin || a.ownerUserId === userId).map((a) => a.id));
   const runIds = [...manager.tasks.map((t) => t.runId), ...manager.ended.map((t) => t.runId)];
 
-  const [facts, signals, machines, week, talks, pulls] = await Promise.all([
+  const [facts, signals, machines, week, talks, pulls, agentLinks, personLinks] = await Promise.all([
     runIds.length
       ? db
           .select({
@@ -262,6 +276,19 @@ export async function centralView(
       order by created_at desc limit ${TALKS_MAX}`),
     db.execute(sql`select repo, number, agent_id, authored, channel_id, thread_id, updated_at from github_items
       where org_id = ${orgId}::uuid order by updated_at desc limit ${PULL_REQUESTS_MAX}`),
+    db.execute(sql`select asker_agent_id, target_agent_id,
+        count(*) filter (where kind = 'question')::int asks, count(*) filter (where kind <> 'question')::int tasks,
+        max(created_at) last_at
+      from agent_consultations where org_id = ${orgId}::uuid and created_at >= ${since.toISOString()}::timestamptz
+      group by 1, 2`),
+    // People's requests: how many runs a person's message started for each agent. Counts only, never words, and only
+    // for who manages that agent or the person themselves (filtered below).
+    db.execute(sql`select m.author_user_id, u.name, r.agent_id, count(*)::int n, max(r.created_at) last_at
+      from agent_runs r
+      join messages m on m.id = r.trigger_message_id and m.org_id = r.org_id
+      join users u on u.id = m.author_user_id
+      where r.org_id = ${orgId}::uuid and r.created_at >= ${since.toISOString()}::timestamptz and r.hop = 1
+      group by 1, 2, 3`),
   ]);
 
   const factOf = new Map(facts.map((f) => [f.id, f]));
@@ -346,6 +373,8 @@ export async function centralView(
         activity: manager.activity[a.id] ?? [],
         doneThisWeek: weekOf.get(a.id)?.done ?? 0,
         failedThisWeek: weekOf.get(a.id)?.failed ?? 0,
+        reportsToAgentId: a.reportsToAgentId ?? null,
+        memory: memoryOf(machine, a.id),
       };
     }),
     tasks: [...live, ...ended],
@@ -410,8 +439,54 @@ export async function centralView(
         working: line.get(m.id)?.working ?? 0,
         inLine: line.get(m.id)?.inLine ?? 0,
       })),
+    links: [
+      ...rowsOf<{
+        asker_agent_id: string;
+        target_agent_id: string;
+        asks: number;
+        tasks: number;
+        last_at: string | Date;
+      }>(agentLinks).map(
+        (r): CentralLink => ({
+          from: { kind: "agent", id: r.asker_agent_id },
+          toAgentId: r.target_agent_id,
+          asks: r.asks,
+          tasks: r.tasks,
+          lastAt: iso(r.last_at) as string,
+        }),
+      ),
+      ...rowsOf<{ author_user_id: string; name: string; agent_id: string; n: number; last_at: string | Date }>(
+        personLinks,
+      )
+        .filter((r) => managed.has(r.agent_id) || r.author_user_id === userId)
+        .map(
+          (r): CentralLink => ({
+            from: { kind: "person", id: r.author_user_id, name: r.name },
+            toAgentId: r.agent_id,
+            asks: 0,
+            tasks: r.n,
+            lastAt: iso(r.last_at) as string,
+          }),
+        ),
+    ].sort((a, b) => b.lastAt.localeCompare(a.lastAt)),
     hiddenTasks: manager.hidden.total,
   };
+}
+
+/** A report older than this says nothing about now. */
+const MEMORY_FRESH_MS = 3 * 60_000;
+
+function memoryOf(
+  machine: { load: Record<string, unknown> | null } | undefined,
+  agentId: string,
+): CentralAgent["memory"] {
+  const load = machine?.load;
+  const at = typeof load?.at === "string" ? load.at : null;
+  const mine = (load?.agents as Record<string, { rssMb?: unknown; processes?: unknown }> | undefined)?.[agentId];
+  if (!at || !mine || Date.now() - Date.parse(at) > MEMORY_FRESH_MS) return null;
+  const rssMb = num(mine.rssMb);
+  const processes = num(mine.processes);
+  return rssMb === null || processes === null ? null : { rssMb, processes, at };
 }
 
 function placeOf(t: ManagedTask | EndedTask) {

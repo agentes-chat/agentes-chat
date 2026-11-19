@@ -7700,6 +7700,16 @@ export interface CentralAgent {
   activity: number[];
   doneThisWeek: number;
   failedThisWeek: number;
+  reportsToAgentId: string | null;
+  memory: { rssMb: number; processes: number; at: string } | null;
+}
+
+export interface CentralLink {
+  from: { kind: "agent"; id: string } | { kind: "person"; id: string; name: string };
+  toAgentId: string;
+  asks: number;
+  tasks: number;
+  lastAt: string;
 }
 
 export interface CentralTalk {
@@ -7746,6 +7756,7 @@ export interface CentralView {
   talks: CentralTalk[];
   pullRequests: CentralPullRequest[];
   computers: CentralComputer[];
+  links: CentralLink[];
   hiddenTasks: number;
 }
 

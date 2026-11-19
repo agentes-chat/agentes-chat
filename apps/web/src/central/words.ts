@@ -101,6 +101,21 @@ const pt = {
   approvals: "Aprovações",
   approval: { always: "pede sempre", risky: "só no que é arriscado", never: "não pede" } as Record<string, string>,
   preview: "Prévia",
+  orchestration: "Quem orquestra quem",
+  orchestrationLead: "Pedidos dos últimos 7 dias: de pessoas para agentes e de agentes para agentes.",
+  noLinks: "Ninguém pediu nada a um agente nos últimos 7 dias.",
+  orchestrates: "orquestra",
+  answersTo: "responde a",
+  asksN: (n: number) => (n === 1 ? "1 pergunta" : `${n} perguntas`),
+  tasksN: (n: number) => (n === 1 ? "1 tarefa" : `${n} tarefas`),
+  requestsN: (n: number) => (n === 1 ? "1 pedido" : `${n} pedidos`),
+  memoryNow: "Memória agora",
+  memoryLine: (mb: number, p: number) =>
+    `${mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${mb} MB`} em ${p} ${p === 1 ? "processo" : "processos"}`,
+  memoryNone: "sem processo ativo agora",
+  change: "Trocar",
+  saved: "Salvo. Vale a partir da próxima resposta.",
+  efforts: { auto: "automático", low: "baixo", medium: "médio", high: "alto", max: "máximo" } as Record<string, string>,
 };
 
 const en: typeof pt = {
@@ -194,6 +209,21 @@ const en: typeof pt = {
   approvals: "Approvals",
   approval: { always: "always asks", risky: "asks when risky", never: "never asks" },
   preview: "Preview",
+  orchestration: "Who orchestrates whom",
+  orchestrationLead: "Requests over the last 7 days: from people to agents and from agents to agents.",
+  noLinks: "Nobody asked an agent anything in the last 7 days.",
+  orchestrates: "orchestrates",
+  answersTo: "answers to",
+  asksN: (n: number) => (n === 1 ? "1 question" : `${n} questions`),
+  tasksN: (n: number) => (n === 1 ? "1 task" : `${n} tasks`),
+  requestsN: (n: number) => (n === 1 ? "1 request" : `${n} requests`),
+  memoryNow: "Memory now",
+  memoryLine: (mb: number, p: number) =>
+    `${mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${mb} MB`} in ${p} ${p === 1 ? "process" : "processes"}`,
+  memoryNone: "no process running now",
+  change: "Change",
+  saved: "Saved. It applies from the next reply.",
+  efforts: { auto: "automatic", low: "low", medium: "medium", high: "high", max: "max" },
 };
 
 export function useCentralWords() {

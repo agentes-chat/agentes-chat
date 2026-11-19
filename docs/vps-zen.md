@@ -36,3 +36,8 @@ tasks by state, who asked whom, conversations between agents, their GitHub items
   found stuck, or one that was already a continuation, waits for a person.
 - The "Ao vivo" panel lists the run's real steps. Claude Code runs with `-p`, so there is no interactive screen to mirror.
 - A fenced `html` block in a message shows as a page, in the artifacts' sandbox (no network, no access to the app).
+- "Quem orquestra quem" groups the last week's requests by who asked: agents asking agents (`agent_consultations`) and
+  people starting runs (counts only, for who manages the agent).
+- Each agent's memory: the runner reads its CLI's process tree every 30 s (`runner/agent-memory.ts`, one `ps`) and sends it
+  in `pong.load.agents`; the Central shows a reading under 3 minutes old. Only Claude Code processes are counted.
+- The agent panel changes model and effort through the same "Quem pensa" call as the agent's page.

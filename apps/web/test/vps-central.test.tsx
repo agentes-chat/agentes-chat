@@ -56,6 +56,8 @@ const agent = (id: string, name: string) => ({
   activity: [0, 2, 1],
   doneThisWeek: 4,
   failedThisWeek: 0,
+  reportsToAgentId: null,
+  memory: id === ADA_ID ? { rssMb: 640, processes: 3, at: new Date().toISOString() } : null,
 });
 const view = (tasks: CentralTask[]): CentralView => ({
   at: new Date().toISOString(),
@@ -90,6 +92,10 @@ const view = (tasks: CentralTask[]): CentralView => ({
       inLine: 0,
     },
   ],
+  links: [
+    { from: { kind: "agent", id: ATLAS_ID }, toAgentId: ADA_ID, asks: 2, tasks: 1, lastAt: ago(3) },
+    { from: { kind: "person", id: "u1", name: "Rodrigo" }, toAgentId: ATLAS_ID, asks: 0, tasks: 5, lastAt: ago(4) },
+  ],
   hiddenTasks: 0,
 });
 
@@ -122,6 +128,10 @@ describe("the Central", () => {
     expect(screen().getByText("Quem fala com quem")).toBeTruthy();
     expect(screen().getByText("respondida")).toBeTruthy();
     expect(screen().getByText(/16\.0 \/ 32 GB/)).toBeTruthy();
+    expect(screen().getByText("Quem orquestra quem")).toBeTruthy();
+    expect(screen().getByText("2 perguntas, 1 tarefa")).toBeTruthy();
+    expect(screen().getByText("5 pedidos")).toBeTruthy();
+    expect(screen().getByText("640 MB em 3 processos")).toBeTruthy();
   });
 
   test("no plan, no percentage; a task gone quiet is said to be, and opens with its way out", async () => {
