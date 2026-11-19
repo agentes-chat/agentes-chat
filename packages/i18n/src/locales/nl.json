@@ -2203,7 +2203,9 @@
       "order": "Volgorde van de onderdelen",
       "orderHint": "Sleep of gebruik de pijlen. Bijvoorbeeld agents eerst.",
       "moveSection": "Sleep om de sectie {{name}} te verplaatsen of klik voor opties",
-      "moveTool": "Sleep om {{name}} te verplaatsen"
+      "moveTool": "Sleep om {{name}} te verplaatsen",
+      "hiddenAgents": "Verborgen",
+      "showAgent": "Tonen"
     },
     "inviteHint": "Via e-mail of link",
     "profileHint": "Naam, foto en @",
@@ -2361,6 +2363,8 @@
       "working": "Aan het werk eerst"
     },
     "showAll": "Agents tonen die niet met mij praten",
+    "hide": "Verberg uit de zijbalk",
+    "hiddenToast": "{{name}} staat niet meer in de zijbalk. Terug via Aanpassen.",
     "collapseAll": "Alles inklappen",
     "expandAll": "Alles uitklappen",
     "organize": "Afdelingen ordenen in Team",

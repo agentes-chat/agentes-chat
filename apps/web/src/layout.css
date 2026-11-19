@@ -13616,6 +13616,10 @@ html:not([data-pointer]) .sidebar__bell:focus-visible {
   display: flex;
   gap: var(--space-2);
 }
+/* A hidden agent's "Mostrar" ends its line, in the arrows' column. */
+.sidebar-setup__row > .ac-btn:last-child {
+  grid-column: 4;
+}
 /* No room beside the name on a phone: the arrows stay on its line, the choices go under it. */
 @media (max-width: 680px) {
   .sidebar-setup {
@@ -13625,6 +13629,9 @@ html:not([data-pointer]) .sidebar__bell:focus-visible {
   .sidebar-setup__row > .ac-seg {
     grid-row: 2;
     grid-column: 2 / -1;
+  }
+  .sidebar-setup__row > .ac-btn:last-child {
+    grid-column: 3;
   }
 }
 /* Phones and touch screens keep the taller rows a finger hits, and the Go to… field and its toggle at 40px. */

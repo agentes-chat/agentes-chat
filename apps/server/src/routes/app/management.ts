@@ -57,6 +57,7 @@ import {
   resendInvitation,
   rotateCredential,
   runErrorDetail,
+  SIDEBAR_HIDDEN_LIMIT,
   SIDEBAR_ITEMS,
   SIDEBAR_PIN_LIMIT,
   SIDEBAR_PLACES,
@@ -1186,8 +1187,15 @@ export function managementRoutes(deps: AppDeps) {
         .openapi({
           description: `"Fixar no topo": agent, channel and user ids on top of their own section, at most ${SIDEBAR_PIN_LIMIT} each. \`null\` until you first pin or dismiss: the apps then pin your own agents.`,
         }),
+      hiddenAgents: z
+        .array(z.string().min(1).max(64))
+        .max(SIDEBAR_HIDDEN_LIMIT)
+        .openapi({
+          description: `"Esconder da sidebar": agent ids taken off the AGENTES list, at most ${SIDEBAR_HIDDEN_LIMIT}; the agent keeps working and stays one search away. On a save, ids of agents outside this workspace are dropped, and the list left out keeps what is stored.`,
+        }),
     })
     .openapi("SidebarView");
+  const SidebarViewSave = SidebarView.extend({ hiddenAgents: SidebarView.shape.hiddenAgents.optional() });
 
   app.openapi(
     createRoute({
@@ -1213,7 +1221,7 @@ export function managementRoutes(deps: AppDeps) {
       security,
       summary: "Keep how your sidebar shows the agents, and what you pinned, in this workspace",
       description: "Yours alone, on every device. Replaces the view; the tools' places and the orders stay.",
-      request: { params: OrgParams, body: body(z.object({ view: SidebarView })) },
+      request: { params: OrgParams, body: body(z.object({ view: SidebarViewSave })) },
       responses: { 200: json(z.object({ view: SidebarView })), ...errors },
     }),
     async (c) => {

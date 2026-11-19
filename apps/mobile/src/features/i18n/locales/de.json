@@ -780,6 +780,8 @@
     "teamSection": "Team",
     "teamSectionPersonal": "Deine Agenten",
     "managerQuiet": "Nichts in Arbeit",
+    "hide": "Aus der Liste ausblenden",
+    "hiddenToast": "{{name}} aus der Liste ausgeblendet",
     "state": {
       "waitsYou": "wartet auf dich",
       "noAi": "Keine KI verbunden",

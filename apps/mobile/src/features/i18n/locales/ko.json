@@ -756,6 +756,8 @@
     "teamSection": "팀",
     "teamSectionPersonal": "내 에이전트",
     "managerQuiet": "진행 중인 작업이 없어요",
+    "hide": "목록에서 숨기기",
+    "hiddenToast": "{{name}}을(를) 목록에서 숨겼습니다",
     "state": {
       "waitsYou": "내 확인 대기",
       "noAi": "연결된 AI 없음",

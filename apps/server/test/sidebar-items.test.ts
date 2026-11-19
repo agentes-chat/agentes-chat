@@ -66,17 +66,24 @@ test("a saved layout holding a removed tool and an unknown one reads as the tool
 });
 
 test("a stored sidebar view is never trusted as is: known orders only, each pin once, five at most", () => {
-  expect(sidebarViewOf(undefined)).toEqual({ agentSort: "workspace", showAllAgents: false, pins: null });
+  expect(sidebarViewOf(undefined)).toEqual({
+    agentSort: "workspace",
+    showAllAgents: false,
+    pins: null,
+    hiddenAgents: [],
+  });
   expect(
     sidebarViewOf({
       agentSort: "nope",
       showAllAgents: "yes",
       pins: { agents: ["a", "a", 3, "b"], channels: ["1", "2", "3", "4", "5", "6"], extra: ["x"] },
+      hiddenAgents: ["h", "h", 7, "i"],
     }),
   ).toEqual({
     agentSort: "workspace",
     showAllAgents: false,
     pins: { agents: ["a", "b"], channels: ["1", "2", "3", "4", "5"], people: [] },
+    hiddenAgents: ["h", "i"],
   });
 });
 
@@ -288,7 +295,7 @@ test("the sidebar view: each person's own, per workspace, beside the tools' plac
   const put = (json: unknown, b = owner) => b(`${sidebar}/view`, { method: "PUT", json });
 
   // Never saved: no pins yet, so the apps pin the person's own agents.
-  expect(await view()).toEqual({ agentSort: "workspace", showAllAgents: false, pins: null });
+  expect(await view()).toEqual({ agentSort: "workspace", showAllAgents: false, pins: null, hiddenAgents: [] });
   await owner(sidebar, { method: "PATCH", json: { item: "wiki", place: "always" } });
   const mine = {
     agentSort: "mine",
@@ -297,21 +304,65 @@ test("the sidebar view: each person's own, per workspace, beside the tools' plac
   };
   const saved = await put({ view: mine });
   expect(saved.status).toBe(200);
-  expect(await saved.json()).toEqual({ view: mine });
-  expect(await view()).toEqual(mine);
+  expect(await saved.json()).toEqual({ view: { ...mine, hiddenAgents: [] } });
+  expect(await view()).toEqual({ ...mine, hiddenAgents: [] });
   // Resetting the tools' places keeps the view, and the view keeps the places.
   await owner(sidebar, { method: "PUT", json: { items: {} } });
-  expect(await view()).toEqual(mine);
+  expect(await view()).toEqual({ ...mine, hiddenAgents: [] });
 
   // Six pins in a section, or an order the apps don't know: refused, kept.
   const six = { ...mine, pins: { ...mine.pins, channels: ["1", "2", "3", "4", "5", "6"] } };
   expect((await put({ view: six })).status).toBe(400);
   expect((await put({ view: { ...mine, agentSort: "alphabetical" } })).status).toBe(400);
-  expect(await view()).toEqual(mine);
+  expect(await view()).toEqual({ ...mine, hiddenAgents: [] });
 
   // Someone else keeps their own.
   const member = await joinByInvitation(t, owner, orgId, "member@example.com");
-  expect(await view(member)).toEqual({ agentSort: "workspace", showAllAgents: false, pins: null });
+  expect(await view(member)).toEqual({ agentSort: "workspace", showAllAgents: false, pins: null, hiddenAgents: [] });
+});
+
+test("hidden agents ride the sidebar view: only this workspace's agents, once each, kept when a save leaves them out", async () => {
+  t = await createTestServer();
+  const owner = browser(t);
+  await signUp(owner, "owner@example.com");
+  const orgId = await workspace(owner, "Acme");
+  const other = await workspace(owner, "Beta");
+  const agent = async (id: string) => {
+    const res = await owner(`/api/app/organizations/${id}/agents`, {
+      json: { name: "Ada", handle: "ada" },
+    });
+    expect(res.status).toBe(201);
+    return ((await res.json()) as { id: string }).id;
+  };
+  const mine = await agent(orgId);
+  const foreign = await agent(other);
+  const sidebar = `/api/app/organizations/${orgId}/me/sidebar/view`;
+  const base = { agentSort: "workspace", showAllAgents: false, pins: null };
+  const put = (view: unknown, b = owner) => b(sidebar, { method: "PUT", json: { view } });
+  const read = async (b = owner) => ((await (await b(sidebar)).json()) as { view: { hiddenAgents: string[] } }).view;
+
+  expect((await read()).hiddenAgents).toEqual([]);
+  // Another workspace's agent, a made-up id and a repeat are dropped.
+  const saved = await put({ ...base, hiddenAgents: [mine, mine, foreign, "nope"] });
+  expect(saved.status).toBe(200);
+  expect(((await saved.json()) as { view: { hiddenAgents: string[] } }).view.hiddenAgents).toEqual([mine]);
+  expect((await read()).hiddenAgents).toEqual([mine]);
+
+  // An app from before the field saves the view without it: the list stays.
+  expect((await put({ ...base, agentSort: "mine" })).status).toBe(200);
+  expect(await read()).toMatchObject({ agentSort: "mine", hiddenAgents: [mine] });
+  // An empty list shows them all again.
+  await put({ ...base, hiddenAgents: [] });
+  expect((await read()).hiddenAgents).toEqual([]);
+
+  // Too long: refused.
+  const many = Array.from({ length: 201 }, (_, i) => `id-${i}`);
+  expect((await put({ ...base, hiddenAgents: many })).status).toBe(400);
+
+  // Someone else keeps their own.
+  await put({ ...base, hiddenAgents: [mine] });
+  const member = await joinByInvitation(t, owner, orgId, "member@example.com");
+  expect((await read(member)).hiddenAgents).toEqual([]);
 });
 
 test("a personal workspace reads its own default orders (ADR 0159); a saved order stays, the team's included", async () => {

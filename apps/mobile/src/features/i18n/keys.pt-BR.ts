@@ -807,6 +807,8 @@ export const featureKeysPtBR = {
     teamSectionPersonal: "Seus agentes",
     /** Under the task manager's row when nothing runs or waits. */
     managerQuiet: "Nada em andamento",
+    hide: "Esconder da lista",
+    hiddenToast: "{{name}} escondido da lista",
     /** A row's state, as text in the state's color (amber only for what waits on the person). */
     state: {
       waitsYou: "esperando você",

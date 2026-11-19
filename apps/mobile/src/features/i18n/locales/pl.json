@@ -828,6 +828,8 @@
     "teamSection": "Zespół",
     "teamSectionPersonal": "Twoi agenci",
     "managerQuiet": "Nic w toku",
+    "hide": "Ukryj z listy",
+    "hiddenToast": "{{name}} ukryty z listy",
     "state": {
       "waitsYou": "czeka na ciebie",
       "noAi": "Brak połączonego AI",

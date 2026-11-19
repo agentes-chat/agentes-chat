@@ -756,6 +756,8 @@
     "teamSection": "Tim",
     "teamSectionPersonal": "Agenmu",
     "managerQuiet": "Tidak ada yang berjalan",
+    "hide": "Sembunyikan dari daftar",
+    "hiddenToast": "{{name}} disembunyikan dari daftar",
     "state": {
       "waitsYou": "menunggumu",
       "noAi": "Belum ada AI terhubung",

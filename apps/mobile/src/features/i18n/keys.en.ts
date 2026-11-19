@@ -824,6 +824,9 @@ export const featureKeysEn = {
     teamSectionPersonal: "Your agents",
     /** Under the task manager's row when nothing runs or waits. */
     managerQuiet: "Nothing in progress",
+    /** A free agent's swipe and long press: it leaves Agentes' lists (Escondidos brings it back). */
+    hide: "Hide from list",
+    hiddenToast: "{{name}} hidden from the list",
     /** A row's state, as text in the state's color (amber only for what waits on the person). */
     state: {
       waitsYou: "waiting for you",

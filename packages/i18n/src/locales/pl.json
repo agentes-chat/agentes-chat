@@ -2350,7 +2350,9 @@
       "order": "Kolejność sekcji",
       "orderHint": "Przeciągnij albo użyj strzałek. Na przykład agenci na początku.",
       "moveSection": "Przeciągnij, aby przenieść sekcję {{name}}, lub kliknij, aby zobaczyć opcje",
-      "moveTool": "Przeciągnij, aby przenieść: {{name}}"
+      "moveTool": "Przeciągnij, aby przenieść: {{name}}",
+      "hiddenAgents": "Ukryci",
+      "showAgent": "Pokaż"
     },
     "inviteHint": "Przez e-mail lub link",
     "profileHint": "Imię, zdjęcie i @",
@@ -2524,6 +2526,8 @@
       "working": "Pracujący najpierw"
     },
     "showAll": "Pokaż agentów, którzy ze mną nie rozmawiają",
+    "hide": "Ukryj z paska bocznego",
+    "hiddenToast": "{{name}} zniknął z paska bocznego. Wróci w Dostosuj.",
     "collapseAll": "Zwiń wszystkie",
     "expandAll": "Rozwiń wszystkie",
     "organize": "Porządkuj działy w Zespole",

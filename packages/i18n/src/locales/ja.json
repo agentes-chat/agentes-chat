@@ -2131,7 +2131,9 @@
       "order": "セクションの順序",
       "orderHint": "ドラッグするか矢印を使ってください。たとえばエージェントを先頭にできます。",
       "moveSection": "ドラッグして{{name}}セクションを移動、クリックでオプションを表示",
-      "moveTool": "ドラッグして{{name}}を移動"
+      "moveTool": "ドラッグして{{name}}を移動",
+      "hiddenAgents": "非表示",
+      "showAgent": "表示"
     },
     "inviteHint": "メールまたはリンクで",
     "profileHint": "名前、写真、@",
@@ -2281,6 +2283,8 @@
       "working": "作業中を先に"
     },
     "showAll": "自分と話さないエージェントも表示",
+    "hide": "サイドバーから非表示",
+    "hiddenToast": "{{name}}をサイドバーから外しました。カスタマイズで戻せます。",
     "collapseAll": "すべて折りたたむ",
     "expandAll": "すべて展開",
     "organize": "チームで部署を整理",

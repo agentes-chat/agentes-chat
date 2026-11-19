@@ -2203,7 +2203,9 @@
       "order": "Bölüm sırası",
       "orderHint": "Sürükleyin ya da okları kullanın. Örneğin önce ajanlar.",
       "moveSection": "{{name}} bölümünü taşımak için sürükleyin veya seçenekler için tıklayın",
-      "moveTool": "{{name}} öğesini taşımak için sürükleyin"
+      "moveTool": "{{name}} öğesini taşımak için sürükleyin",
+      "hiddenAgents": "Gizlenenler",
+      "showAgent": "Göster"
     },
     "inviteHint": "E-posta veya bağlantıyla",
     "profileHint": "Ad, fotoğraf ve @",
@@ -2361,6 +2363,8 @@
       "working": "Önce çalışanlar"
     },
     "showAll": "Benimle konuşmayan ajanları göster",
+    "hide": "Kenar çubuğundan gizle",
+    "hiddenToast": "{{name}} kenar çubuğundan çıktı. Özelleştir'den geri gelir.",
     "collapseAll": "Tümünü daralt",
     "expandAll": "Tümünü genişlet",
     "organize": "Departmanları Ekip'te düzenle",

@@ -756,6 +756,8 @@
     "teamSection": "团队",
     "teamSectionPersonal": "你的智能体",
     "managerQuiet": "没有进行中的事项",
+    "hide": "从列表中隐藏",
+    "hiddenToast": "已从列表中隐藏 {{name}}",
     "state": {
       "waitsYou": "等你处理",
       "noAi": "未连接 AI",

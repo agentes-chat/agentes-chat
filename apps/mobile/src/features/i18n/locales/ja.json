@@ -756,6 +756,8 @@
     "teamSection": "チーム",
     "teamSectionPersonal": "あなたのエージェント",
     "managerQuiet": "進行中のものはありません",
+    "hide": "リストから非表示",
+    "hiddenToast": "{{name}} をリストから非表示にしました",
     "state": {
       "waitsYou": "あなたの対応待ち",
       "noAi": "AI未接続",

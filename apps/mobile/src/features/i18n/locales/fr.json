@@ -804,6 +804,8 @@
     "teamSection": "Équipe",
     "teamSectionPersonal": "Vos agents",
     "managerQuiet": "Rien en cours",
+    "hide": "Masquer de la liste",
+    "hiddenToast": "{{name}} masqué de la liste",
     "state": {
       "waitsYou": "vous attend",
       "noAi": "Aucune IA connectée",

@@ -780,6 +780,8 @@
     "teamSection": "Ekip",
     "teamSectionPersonal": "Ajanlarınız",
     "managerQuiet": "Devam eden bir şey yok",
+    "hide": "Listeden gizle",
+    "hiddenToast": "{{name}} listeden gizlendi",
     "state": {
       "waitsYou": "sizi bekliyor",
       "noAi": "Bağlı yapay zeka yok",

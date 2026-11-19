@@ -2203,7 +2203,9 @@
       "order": "Reihenfolge der Bereiche",
       "orderHint": "Zieh oder nutze die Pfeile. Zum Beispiel Agenten zuerst.",
       "moveSection": "Ziehen, um den Bereich {{name}} zu verschieben, oder klicken für Optionen",
-      "moveTool": "Ziehen, um {{name}} zu verschieben"
+      "moveTool": "Ziehen, um {{name}} zu verschieben",
+      "hiddenAgents": "Ausgeblendet",
+      "showAgent": "Einblenden"
     },
     "inviteHint": "Per E-Mail oder Link",
     "profileHint": "Name, Foto und @",
@@ -2361,6 +2363,8 @@
       "working": "Arbeitende zuerst"
     },
     "showAll": "Agenten zeigen, die nicht mit mir sprechen",
+    "hide": "Aus der Seitenleiste ausblenden",
+    "hiddenToast": "{{name}} ist aus der Seitenleiste verschwunden. Zurück unter Anpassen.",
     "collapseAll": "Alle einklappen",
     "expandAll": "Alle ausklappen",
     "organize": "Abteilungen im Team ordnen",

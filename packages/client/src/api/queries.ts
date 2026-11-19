@@ -6599,6 +6599,36 @@ export function useSetSidebarView(orgId: string) {
   };
 }
 
+/** At most this many hidden agents (`SIDEBAR_HIDDEN_LIMIT`, packages/engine/src/sidebar-items.ts). */
+const SIDEBAR_HIDDEN_LIMIT = 200;
+
+/**
+ * "Esconder da sidebar": the agents I took off the AGENTES list in this workspace, saved with my sidebar view so they
+ * stay hidden on every device. `loaded` is false until the view arrives: `hide` and `show` do nothing before that, so a
+ * change never starts from the default view and wipes what the server keeps.
+ */
+export function useHiddenSidebarAgentIds(orgId: string) {
+  const api = useApi();
+  const view = useQuery({
+    queryKey: keys.sidebarView(orgId),
+    queryFn: () => api.orgs.sidebarView(orgId),
+    staleTime: 60_000,
+  });
+  const setView = useSetSidebarView(orgId);
+  const ids = useMemo<ReadonlySet<string>>(() => new Set(view.data?.hiddenAgents ?? []), [view.data]);
+  const loaded = view.data !== undefined;
+  const change = (next: (now: string[]) => string[]) => {
+    if (!loaded) return;
+    setView((now) => ({ ...now, hiddenAgents: next(now.hiddenAgents ?? []).slice(0, SIDEBAR_HIDDEN_LIMIT) }));
+  };
+  return {
+    ids,
+    loaded,
+    hide: (agentId: string) => change((now) => [...new Set([...now, agentId])]),
+    show: (agentId: string) => change((now) => now.filter((id) => id !== agentId)),
+  };
+}
+
 /** How I look at Tarefas in this workspace (the default until it loads, or when it can't). */
 export const useIssuesView = (orgId: string) => {
   const api = useApi();

@@ -5,7 +5,18 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 setupDom();
 
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
-import { ADA_ID, ATLAS_ID, createFakeApi, ENG_ID, GENERAL_ID, ORG_ID, seedDm, seedRoles, seedState } from "./fake-api";
+import {
+  ADA_ID,
+  ATLAS_ID,
+  createFakeApi,
+  ENG_ID,
+  GENERAL_ID,
+  ORG_ID,
+  seedDm,
+  seedRoles,
+  seedState,
+  withRightHand,
+} from "./fake-api";
 import { renderApp, screen, settle } from "./render";
 
 /**
@@ -454,5 +465,50 @@ describe("Fixar no topo", () => {
     await pick("Fixar no topo");
     expect(screen().getByText("Você já fixou 5 canais. Tire um do topo para fixar este.")).toBeTruthy();
     expect(views(state)).toEqual([]);
+  });
+});
+
+describe("Esconder da sidebar", () => {
+  test("hiding from the row's menu takes it off the list, Personalizar brings it back", async () => {
+    const state = seedState();
+    await go(state);
+    expect(rowsIn(section("Agentes"))).toContain("Ada");
+    await rightClick(within(nav()).getByRole("link", { name: /^Ada/ }));
+    await pick("Esconder da sidebar");
+    expect(rowsIn(section("Agentes"))).not.toContain("Ada");
+    expect(rowsIn(section("Agentes"))).toContain("Atlas");
+    // Saved with the sidebar view, so it holds on every device.
+    expect(views(state).at(-1)).toMatchObject({ hiddenAgents: [ADA_ID] });
+
+    await rightClick(nav().querySelector(".sidebar__scroll") as HTMLElement);
+    await pick("Personalizar a barra lateral");
+    const dialog = screen().getByRole("dialog", { name: "Personalizar a barra lateral" });
+    expect(within(dialog).getByText("Escondidos")).toBeTruthy();
+    await click(within(dialog).getByRole("button", { name: "Mostrar" }));
+    expect(within(dialog).queryByText("Escondidos")).toBeNull();
+    // The open dialog hides the sidebar from the accessibility tree: read its rows by id.
+    expect(rowsIn(document.getElementById("app-nav") as HTMLElement)).toContain("Ada");
+    expect(views(state).at(-1)).toMatchObject({ hiddenAgents: [] });
+  });
+
+  test("a hidden agent's unread still shows on the Agentes header", async () => {
+    const state = seedState();
+    seedDm(state, { type: "agent", id: ADA_ID }, { unread: 3 });
+    await go(state);
+    await rightClick(within(nav()).getByRole("link", { name: /^Ada/ }));
+    await pick("Esconder da sidebar");
+    expect(rowsIn(section("Agentes"))).not.toContain("Ada");
+    // Closed, the section's header sums every agent's unread, the hidden one's too.
+    await click(within(nav()).getByRole("button", { name: "Agentes" }));
+    expect(head("Agentes").textContent).toContain("3");
+  });
+
+  test("the right hand has the same menu and leaves its own row", async () => {
+    await go(withRightHand(seedState()));
+    const row = () => nav().querySelector("[data-right-hand]");
+    expect(row()).not.toBeNull();
+    await rightClick(row() as Element);
+    await pick("Esconder da sidebar");
+    expect(row()).toBeNull();
   });
 });

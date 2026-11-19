@@ -780,6 +780,8 @@
     "teamSection": "Team",
     "teamSectionPersonal": "Je agents",
     "managerQuiet": "Er loopt niets",
+    "hide": "Verberg uit de lijst",
+    "hiddenToast": "{{name}} verborgen uit de lijst",
     "state": {
       "waitsYou": "wacht op jou",
       "noAi": "Geen AI gekoppeld",

@@ -1,9 +1,9 @@
-import { and, type Database, eq, schema, sql } from "@agenteschat/db";
+import { and, type Database, eq, inArray, schema, sql } from "@agenteschat/db";
 import { ValidationError } from "./errors";
 import { requirePermission } from "./organizations";
 import { isPersonalWorkspace } from "./workspace-mode";
 
-const { organizationMembers } = schema;
+const { agents, organizationMembers } = schema;
 
 /**
  * The tools at the top of a person's sidebar, each where they put it in this workspace
@@ -272,16 +272,21 @@ export type AgentSort = (typeof AGENT_SORTS)[number];
 export const SIDEBAR_PIN_LIMIT = 5;
 export const SIDEBAR_PIN_KINDS = ["agents", "channels", "people"] as const;
 export type SidebarPins = Record<(typeof SIDEBAR_PIN_KINDS)[number], string[]>;
+/** At most this many agents taken off the AGENTES list ("Esconder da sidebar"). */
+export const SIDEBAR_HIDDEN_LIMIT = 200;
 
 /**
  * How the person sees the sidebar's agents and what they pinned (`view` in the same `sidebar_items` row): the AGENTES
  * order, whether a manager shows the agents that don't talk to them, and the pinned agents, channels and people (agent,
  * channel and user ids, in order). `pins: null` means never saved: the apps pin the person's own agents then.
+ * `hiddenAgents` are the agents they took off the AGENTES list ("Esconder da sidebar": the agent keeps working and
+ * stays one search away); an id of an agent since deleted is ignored by the apps.
  */
 export interface SidebarView {
   agentSort: AgentSort;
   showAllAgents: boolean;
   pins: SidebarPins | null;
+  hiddenAgents: string[];
 }
 
 const ids = (raw: unknown) =>
@@ -289,6 +294,14 @@ const ids = (raw: unknown) =>
     ? [...new Set(raw.filter((x): x is string => typeof x === "string" && x.length > 0 && x.length <= 64))].slice(
         0,
         SIDEBAR_PIN_LIMIT,
+      )
+    : [];
+
+const hiddenIds = (raw: unknown) =>
+  Array.isArray(raw)
+    ? [...new Set(raw.filter((x): x is string => typeof x === "string" && x.length > 0 && x.length <= 64))].slice(
+        0,
+        SIDEBAR_HIDDEN_LIMIT,
       )
     : [];
 
@@ -302,7 +315,7 @@ export function sidebarViewOf(raw: unknown): SidebarView {
           SIDEBAR_PIN_KINDS.map((k) => [k, ids((v.pins as Record<string, unknown>)[k])]),
         ) as SidebarPins)
       : null;
-  return { agentSort: sort, showAllAgents: v.showAllAgents === true, pins };
+  return { agentSort: sort, showAllAgents: v.showAllAgents === true, pins, hiddenAgents: hiddenIds(v.hiddenAgents) };
 }
 
 /** The person's sidebar view in this workspace. */
@@ -315,19 +328,42 @@ export async function mySidebarView(db: Database, orgId: string, userId: string)
   return sidebarViewOf((row?.items as Record<string, unknown> | undefined)?.[VIEW_KEY]);
 }
 
-/** Replaces the person's sidebar view in this workspace; the tools' places and both orders stay. */
+/**
+ * Replaces the person's sidebar view in this workspace; the tools' places and both orders stay. `hiddenAgents` left out
+ * (an app from before it) keeps what the row holds; sent, it keeps only agents of this workspace.
+ */
 export async function setMySidebarView(
   db: Database,
   orgId: string,
   userId: string,
-  view: SidebarView,
+  view: Omit<SidebarView, "hiddenAgents"> & { hiddenAgents?: string[] },
 ): Promise<SidebarView> {
   await requirePermission(db, userId, orgId, "read");
   const clean = sidebarViewOf(view);
   const items = organizationMembers.sidebarItems;
+  if (view.hiddenAgents === undefined) {
+    const [row] = await db
+      .update(organizationMembers)
+      .set({
+        sidebarItems: sql`${items} || jsonb_build_object(${VIEW_KEY}::text, ${JSON.stringify({ ...clean, hiddenAgents: undefined })}::jsonb || jsonb_strip_nulls(jsonb_build_object('hiddenAgents', ${items} -> ${VIEW_KEY}::text -> 'hiddenAgents')))`,
+      })
+      .where(mine(orgId, userId))
+      .returning({ items });
+    return sidebarViewOf((row?.items as Record<string, unknown> | undefined)?.[VIEW_KEY]);
+  }
+  if (clean.hiddenAgents.length) {
+    const known = await db
+      .select({ id: agents.id })
+      .from(agents)
+      .where(and(eq(agents.orgId, orgId), inArray(agents.id, clean.hiddenAgents.filter(isUuid))));
+    const ofOrg = new Set(known.map((a) => a.id));
+    clean.hiddenAgents = clean.hiddenAgents.filter((id) => ofOrg.has(id));
+  }
   await db
     .update(organizationMembers)
     .set({ sidebarItems: sql`${items} || jsonb_build_object(${VIEW_KEY}::text, ${JSON.stringify(clean)}::jsonb)` })
     .where(mine(orgId, userId));
   return clean;
 }
+
+const isUuid = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);

@@ -7399,6 +7399,11 @@ export interface SidebarView {
   showAllAgents: boolean;
   /** Never saved: the apps pin my own agents (`dayOnePins`). */
   pins: SidebarPins | null;
+  /**
+   * "Esconder da sidebar": agents taken off AGENTES, on every device (an id of a deleted agent is ignored). Left out
+   * by a server from before it, and on a save: the stored list stays.
+   */
+  hiddenAgents?: string[];
 }
 
 /**

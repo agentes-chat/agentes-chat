@@ -828,6 +828,8 @@
     "teamSection": "Команда",
     "teamSectionPersonal": "Ваши агенты",
     "managerQuiet": "Ничего не выполняется",
+    "hide": "Скрыть из списка",
+    "hiddenToast": "{{name}} скрыт из списка",
     "state": {
       "waitsYou": "ждёт вас",
       "noAi": "ИИ не подключён",

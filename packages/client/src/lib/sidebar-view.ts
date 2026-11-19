@@ -8,7 +8,12 @@ export type PinKind = keyof SidebarPins;
 export const AGENT_SORTS = ["workspace", "mine", "working"] as const satisfies readonly SidebarView["agentSort"][];
 
 /** The view of someone who never changed it. */
-export const SIDEBAR_VIEW_DEFAULT: SidebarView = { agentSort: "workspace", showAllAgents: false, pins: null };
+export const SIDEBAR_VIEW_DEFAULT: SidebarView = {
+  agentSort: "workspace",
+  showAllAgents: false,
+  pins: null,
+  hiddenAgents: [],
+};
 const NO_PINS: SidebarPins = { agents: [], channels: [], people: [] };
 
 /**

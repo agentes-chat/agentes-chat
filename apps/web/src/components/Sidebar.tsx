@@ -124,6 +124,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { useDirectory } from "@/hooks/useDirectory";
+import { useHiddenSidebarAgents } from "@/hooks/useHiddenSidebarAgents";
 import { agentLine, availabilityOf, personLine, useAgentPresence, usePersonPresence } from "@/hooks/usePresence";
 import { useServerPlace } from "@/hooks/useServerPlace";
 import { useSidebarPins } from "@/hooks/useSidebarPins";
@@ -422,6 +423,9 @@ export function Sidebar() {
   const sections = useSidebarSections(me.user.id, orgId);
   // "Fixar no topo": pinned rows sit on top of their own section, above a thin line.
   const { view, setView, pins } = useSidebarPins();
+  // "Esconder da sidebar": agents this person took off the list (still answering, still in Ctrl K).
+  const sidebarHidden = useHiddenSidebarAgents();
+  const hideToast = useToast();
   // "Mensagens diretas": the people I talked to or just opened a DM with, latest first (an agent's row in AGENTES is its DM), pinned ones on top.
   const pinnedPeople = pins.people.flatMap((id) => {
     const m = id === me.user.id ? undefined : dir.memberById.get(id);
@@ -467,7 +471,8 @@ export function Sidebar() {
   // the key doesn't reach (ADR 0085 addendum of 2026-11-17), which Team still lists.
   const manages = can(org, "manage_agents");
   const team = dir.agents.filter((a) => !isRightHand(a));
-  const shownAgents = team.filter((a) => canTalk(a) || (manages && view.showAllAgents && opensDm(a)));
+  const listable = team.filter((a) => canTalk(a) || (manages && view.showAllAgents && opensDm(a)));
+  const shownAgents = listable.filter((a) => !sidebarHidden.ids.has(a.id));
   const groups = useAgentGroups(orgId).data ?? [];
   const byGroup = agentSections(shownAgents, groups, (a) => a.id);
   const ordered = (items: Agent[]) => {
@@ -493,7 +498,10 @@ export function Sidebar() {
     onRename: () => setGroupDialog({ mode: "rename", group }),
     onDelete: () => setDeletingGroup(group),
   });
-  const agentsUnread = shownAgents.reduce((n, a) => n + (dmOf.get(a.id)?.unread ?? 0), 0);
+  // A hidden agent's unread still counts here, so a message it sent is never lost with its row.
+  const agentsUnread =
+    listable.reduce((n, a) => n + (dmOf.get(a.id)?.unread ?? 0), 0) +
+    (rightHand && sidebarHidden.ids.has(rightHand.id) ? (rightHandDm?.unread ?? 0) : 0);
   const workingAgents = shownAgents.filter((a) => busy.has(a.id)).length;
   // "Mudar de grupo" in an agent's right click: the keyboard's way to what dragging does.
   const groupEntries = (a: Agent): MenuEntry[] => {
@@ -522,6 +530,23 @@ export function Sidebar() {
       },
     ];
   };
+  // "Esconder da sidebar": the row leaves AGENTES, the agent keeps working; Personalizar brings it back.
+  const hideEntry = (a: Agent): MenuEntry[] => [
+    {
+      kind: "item",
+      id: "hide",
+      label: t("sidebarAgents.hide"),
+      icon: "eyeOff",
+      run: () => {
+        sidebarHidden.hide(a.id);
+        // Reversible at once: Desfazer at the end of its sentence (ui-polish rule 18), besides Personalizar.
+        hideToast.show(t("sidebarAgents.hiddenToast", { name: a.name }), "info", {
+          label: t("channelCategories.undo"),
+          run: () => sidebarHidden.show(a.id),
+        });
+      },
+    },
+  ];
   const agentRow = (a: Agent) => {
     const dm = dmOf.get(a.id);
     const unread = dm?.unread ?? 0;
@@ -548,7 +573,7 @@ export function Sidebar() {
           onPrefetch={() => dm && prefetch(dm.channelId)}
           onOpen={() => markOpen(dm?.channelId ?? a.id)}
           drag={organize && arranges ? drag.row(a.id) : undefined}
-          menuExtra={arranges ? groupEntries(a) : undefined}
+          menuExtra={[...hideEntry(a), ...(arranges ? groupEntries(a) : [])]}
         />
       </ErrorBoundary>
     );
@@ -661,9 +686,10 @@ export function Sidebar() {
   // The agents' rows, under the Agentes header in a team's workspace and with none in a personal one (ADR 0159).
   const agentRows = (
     <>
-      {rightHand && (
+      {rightHand && !sidebarHidden.ids.has(rightHand.id) && (
         <RightHandRow
           agent={rightHand}
+          menuExtra={hideEntry(rightHand)}
           unread={rightHandDm?.unread ?? 0}
           onPrefetch={() => rightHandDm && prefetch(rightHandDm.channelId)}
           onOpen={() => rightHandDm && markOpen(rightHandDm.channelId)}
@@ -2017,26 +2043,31 @@ function AgentRow({
  * The team's right hand (ADR 0137), always the first row of Agents, a plain row like any agent's: its face, its name
  * over its label as a tag ("your right hand"), a one-time "New" until its DM first opens (in this browser), and its
  * DM's unread count. It opens the
- * person's DM with it. Never sorted, pinned, dragged or hidden; a closed AGENTES still shows it.
+ * person's DM with it. Never sorted, pinned or dragged; a closed AGENTES still shows it. Only "Esconder da sidebar" takes
+ * it off the list.
  */
 function RightHandRow({
   agent: a,
   unread,
   onPrefetch,
   onOpen,
+  menuExtra,
 }: {
   agent: Agent;
   unread: number;
   onPrefetch: () => void;
   onOpen: () => void;
+  menuExtra?: MenuEntry[];
 }) {
   const { t } = useTranslation();
   const { org, me } = useOrg();
+  const agentEntries = useAgentMenu();
   const fresh = rightHandSeen.useFresh(rightHandSeenKey(me.user.id, org.id));
   const shown = useAgentPresence(a.id);
   const label = t("rightHand.label");
   return (
     <Link
+      {...entityMenu(() => agentEntries(a, menuExtra))}
       to="/org/$orgId/dm/agent/$agentId"
       params={{ orgId: org.id, agentId: a.id }}
       className="sidebar__item"

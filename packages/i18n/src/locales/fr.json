@@ -2277,7 +2277,9 @@
       "order": "Ordre des sections",
       "orderHint": "Faites glisser ou utilisez les flèches. Les agents d'abord, par exemple.",
       "moveSection": "Faites glisser pour déplacer la section {{name}} ou cliquez pour voir les options",
-      "moveTool": "Faites glisser pour déplacer {{name}}"
+      "moveTool": "Faites glisser pour déplacer {{name}}",
+      "hiddenAgents": "Masqués",
+      "showAgent": "Afficher"
     },
     "inviteHint": "Par e-mail ou lien",
     "profileHint": "Nom, photo et @",
@@ -2443,6 +2445,8 @@
       "working": "Au travail d’abord"
     },
     "showAll": "Afficher les agents qui ne me parlent pas",
+    "hide": "Masquer de la barre latérale",
+    "hiddenToast": "{{name}} a quitté la barre latérale. Il revient dans Personnaliser.",
     "collapseAll": "Tout replier",
     "expandAll": "Tout déplier",
     "organize": "Organiser les services dans Équipe",

@@ -2277,7 +2277,9 @@
       "order": "Ordine delle sezioni",
       "orderHint": "Trascina o usa le frecce. Ad esempio, prima gli agenti.",
       "moveSection": "Trascina per spostare la sezione {{name}} o fai clic per le opzioni",
-      "moveTool": "Trascina per spostare {{name}}"
+      "moveTool": "Trascina per spostare {{name}}",
+      "hiddenAgents": "Nascosti",
+      "showAgent": "Mostra"
     },
     "inviteHint": "Per email o link",
     "profileHint": "Nome, foto e @",
@@ -2443,6 +2445,8 @@
       "working": "Al lavoro prima"
     },
     "showAll": "Mostra gli agenti che non parlano con me",
+    "hide": "Nascondi dalla barra laterale",
+    "hiddenToast": "{{name}} ha lasciato la barra laterale. Torna in Personalizza.",
     "collapseAll": "Comprimi tutti",
     "expandAll": "Espandi tutti",
     "organize": "Organizza i reparti in Team",
