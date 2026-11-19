@@ -81,6 +81,7 @@ import {
   cx,
   Icon,
   type IconName,
+  isApple,
   Kbd,
   Menu,
   MenuCheckboxItem,
@@ -132,6 +133,7 @@ import { useUnreadTitle } from "@/hooks/useUnreadTitle";
 import { useWorkspaceGroups } from "@/hooks/useWorkspaceGroups";
 import { switchAccount } from "@/lib/accounts";
 import { requestAgentPanel } from "@/lib/agent-panel-ask";
+import { quickAgentEvent, quickAgentHint } from "@/lib/agent-shortcuts";
 import { requestChannelDetails } from "@/lib/channel-details";
 import type { MenuEntry } from "@/lib/context-menu";
 import { onPhoneAsk, takePhoneAsk, thisMac } from "@/lib/desktop";
@@ -478,6 +480,38 @@ export function Sidebar() {
   // Members never see an empty group; who arranges the agents keeps them, to drop agents in.
   const agentGroups = byGroup.groups.filter((g) => g.items.length > 0 || (manages && g.group.agentIds.length === 0));
   const groupIds = agentGroups.map((g) => `group:${g.group.id}` as SectionId);
+  const quickOrder = [
+    ...(rightHand ? [rightHand] : []),
+    ...loose.top,
+    ...loose.rest,
+    ...agentGroups.flatMap((group) => {
+      const { top, rest } = ordered(group.items);
+      return [...top, ...rest];
+    }),
+  ].slice(0, 9);
+  const quickKey = quickOrder.map((a) => a.id).join(",");
+  const quickHint = (id: string) =>
+    quickAgentHint(
+      quickOrder.findIndex((a) => a.id === id),
+      isApple(),
+    );
+  const dmOfRef = useRef(dmOf);
+  dmOfRef.current = dmOf;
+  useEffect(() => {
+    if (!quickKey) return;
+    const ids = quickKey.split(",");
+    const apple = isApple();
+    const onKey = (event: KeyboardEvent) => {
+      const index = quickAgentEvent(event, apple);
+      const agentId = index === null ? undefined : ids[index];
+      if (!agentId) return;
+      event.preventDefault();
+      markOpen(dmOfRef.current.get(agentId)?.channelId ?? agentId);
+      void navigate({ to: "/org/$orgId/dm/agent/$agentId", params: { orgId, agentId } });
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [quickKey, orgId, navigate]);
   // A long team starts with its groups closed. Closed, a group still shows who works, waits or wrote to me.
   const groupsOpen = shownAgents.length <= 12;
   const organize = manages && !rail;
@@ -549,6 +583,7 @@ export function Sidebar() {
           onOpen={() => markOpen(dm?.channelId ?? a.id)}
           drag={organize && arranges ? drag.row(a.id) : undefined}
           menuExtra={arranges ? groupEntries(a) : undefined}
+          shortcut={quickHint(a.id)}
         />
       </ErrorBoundary>
     );
@@ -667,6 +702,7 @@ export function Sidebar() {
           unread={rightHandDm?.unread ?? 0}
           onPrefetch={() => rightHandDm && prefetch(rightHandDm.channelId)}
           onOpen={() => rightHandDm && markOpen(rightHandDm.channelId)}
+          shortcut={quickHint(rightHand.id)}
         />
       )}
       {dir.loading && team.length === 0 && <SidebarSkeleton count={2} avatar label={t("common.loadingList")} />}
@@ -1844,6 +1880,7 @@ function AgentRow({
   onOpen,
   drag,
   menuExtra,
+  shortcut,
 }: {
   agent: Agent;
   unread: number;
@@ -1855,6 +1892,7 @@ function AgentRow({
   onOpen: () => void;
   drag?: ReturnType<ReturnType<typeof useAgentDrag>["row"]>;
   menuExtra?: MenuEntry[];
+  shortcut?: string | null;
 }) {
   const { t, i18n } = useTranslation();
   const { org, me } = useOrg();
@@ -1922,9 +1960,10 @@ function AgentRow({
   const doingTitle = doing
     ? [upperFirst(doing.text, i18n.language), place && `#${place}`, doing.time].filter(Boolean).join(" · ")
     : null;
-  const title = doingTitle
+  const baseTitle = doingTitle
     ? `${[a.name, a.role].filter(Boolean).join(" · ")}\n${doingTitle}`
     : [a.name, a.role, now ?? word, line?.text].filter(Boolean).join(" · ");
+  const title = shortcut ? `${baseTitle} (${shortcut})` : baseTitle;
   const roleTag = !locked && !out;
   return (
     <div className="sidebar__row" data-agent-row={a.id} data-live={live || undefined} data-acts={edits ? 1 : undefined}>
@@ -2024,11 +2063,13 @@ function RightHandRow({
   unread,
   onPrefetch,
   onOpen,
+  shortcut,
 }: {
   agent: Agent;
   unread: number;
   onPrefetch: () => void;
   onOpen: () => void;
+  shortcut?: string | null;
 }) {
   const { t } = useTranslation();
   const { org, me } = useOrg();
@@ -2040,7 +2081,7 @@ function RightHandRow({
       to="/org/$orgId/dm/agent/$agentId"
       params={{ orgId: org.id, agentId: a.id }}
       className="sidebar__item"
-      title={`${a.name} · ${label}`}
+      title={`${a.name} · ${label}${shortcut ? ` (${shortcut})` : ""}`}
       onMouseEnter={onPrefetch}
       onFocus={onPrefetch}
       onClick={onOpen}
