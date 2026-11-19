@@ -20,7 +20,7 @@ import { agentStyleLine, agentStyleOf, isAgentStyle } from "./agent-style";
 import type { Agent } from "./agents";
 import { readerOf, readerOfMessage } from "./agents-dm-reads";
 import type { AiStatusDeps } from "./ai-status";
-import { canTalkTo, NO_PERSON, speakerFor, viaAgent } from "./audience";
+import { findsAgent, NO_PERSON, speakerFor, viaAgent } from "./audience";
 import { runAuthority, UUID } from "./authority";
 import { type BlockSpecReader, blockStateNotes } from "./block-state";
 import { isSandboxedBrain } from "./brains/types";
@@ -1074,7 +1074,7 @@ export async function buildRunContext(
         teamPrompt(teamRows, agent.id, requester, here, talks, personal),
         linePrompt(
           // Its line as this person may know it: an agent they can't talk to stays out, as in "# Your team".
-          teamRows.filter((a) => a.id === agent.id || canTalkTo(a, requester, viaAgent(talks))),
+          teamRows.filter((a) => a.id === agent.id || findsAgent(a, requester, viaAgent(talks))),
           agent.id,
         ),
       ]

@@ -11,6 +11,7 @@ import {
   updateAgent,
 } from "../agents";
 import { AGENT_LOOK, setAgentAppearance } from "../appearance";
+import { listsAgentTo } from "../audience";
 import { recordAudit } from "../audit";
 import { createChannel, listChannels } from "../channels";
 import { addContextItemByPerson } from "../context/items";
@@ -18,6 +19,7 @@ import { ConflictError, TooManyError, ValidationError } from "../errors";
 import { handleFromName } from "../imports";
 import { publishMachineAgentsChanged } from "../machines";
 import { notifyAppCreated } from "../notification-producers";
+import { getMembership } from "../organizations";
 import { createRoutine, listRoutines } from "../routines";
 import {
   listSkills,
@@ -150,14 +152,17 @@ export function registerManageTools(deps: AppsToolDeps, p: AppPrincipal, tool: R
       openWorld: false,
     },
     async () => {
-      const [agents, skills, routines, channels] = await Promise.all([
+      const [agents, skills, routines, channels, membership] = await Promise.all([
         listAgents(deps.db, p.userId, p.orgId),
         listSkills(deps.db, p.userId, p.orgId),
         listRoutines(deps.db, p.userId, p.orgId),
         listChannels(deps.db, p.userId, p.orgId),
+        getMembership(deps.db, p.userId, p.orgId),
       ]);
       return {
-        agents: agents.map((a) => ({ id: a.id, name: a.name, handle: a.handle, role: fenced(a.role, 200) })),
+        agents: agents
+          .filter((a) => listsAgentTo(a, p.userId, membership))
+          .map((a) => ({ id: a.id, name: a.name, handle: a.handle, role: fenced(a.role, 200) })),
         skills: skills.map((s) => ({ id: s.id, name: s.name })),
         routines: routines.map((r) => ({ id: r.id, name: r.name, agent_id: r.agentId })),
         channels: channels.map((c) => ({ id: c.id, name: c.name })),
