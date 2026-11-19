@@ -99,6 +99,38 @@ describe("a run that must answer never posts the silence word", () => {
     expect(run?.error).toBe("empty_reply");
   });
 
+  test("a turn that ran a tool and wrote nothing is told to answer, never closed with the bare Done.", async () => {
+    const build: ToolSource = {
+      name: "build",
+      tools: async () => [
+        {
+          name: "build",
+          description: "Build the project",
+          scope: "",
+          inputSchema: { type: "object", properties: {}, additionalProperties: false },
+          execute: async () => ({ content: "build ok" }),
+        },
+      ],
+    };
+    f = await setup({
+      toolSources: [build],
+      reply: (req, call) =>
+        call === 1
+          ? { chunks: [], toolUses: [{ name: "build", input: {} }] }
+          : lastText(req).includes(ANSWER_NUDGE)
+            ? { chunks: ["Build ok, ", "sem erros."] }
+            : { chunks: [] },
+    });
+    await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, {
+      body: "@dev roda o build",
+    });
+    await drainOutbox(f.db, f.handlers);
+    // The tool round, the turn with no words, and the nudged answer.
+    expect(f.provider.calls.length).toBe(3);
+    expect(await agentMessages()).toEqual(["Build ok, sem erros."]);
+    expect((await runRow())?.status).toBe("done");
+  });
+
   test("a mention can't pass: the tool isn't offered (and calling it anyway is refused)", async () => {
     f = await setup({ toolSources: [createPassToolSource()], reply: () => ({ chunks: ["Feito."] }) });
     await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, {
