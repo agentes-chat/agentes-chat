@@ -5,13 +5,8 @@ import { idlePose, mixHex, type Pose } from "@agenteschat/ui/agent/engine";
  * Native imports. Times in seconds.
  */
 export const LAUNCH = {
-  /** The shortest it plays before it may leave, once its rise is under way. */
-  min: 0.9,
-  /**
-   * Ready this soon (its first frames: the session and the workspace kept from last time), it leaves at once, with no
-   * minimum to sit through: its rise had barely begun.
-   */
-  quick: 0.15,
+  /** The shortest it plays before it may leave: the sky up, the agent's hop and its name, even with the app ready. */
+  min: 1.2,
   /** The sky rising and the agent lifting with it. */
   rise: 0.85,
   /** Leaving: the agent and the name go up and out first, the sky sinks, the screen fades into the app. */
@@ -23,7 +18,7 @@ export const LAUNCH = {
   /** How long it waits before one line says why it is still here. */
   lineAfter: 2.5,
   /** How high the sky rises (share of the screen's height). */
-  sky: 0.5,
+  sky: 0.56,
   /** How far the agent lifts with it (points). */
   lift: 26,
   /** Waiting on something the person can act on (a server that doesn't answer): the agent's height, as a share of the screen. */
@@ -38,9 +33,6 @@ export const NATIVE_IMAGE = 120;
 export const LOGO = (NATIVE_IMAGE * 400) / 512;
 /** The agent in the logo (the same as the app icon). */
 export const LOGO_LOOK = { color: "sky", eyes: "round" } as const;
-
-/** Whether the app, ready `readyMs` after the splash came up, skips its minimum (`LAUNCH.quick`). */
-export const launchesAtOnce = (readyMs: number) => readyMs <= LAUNCH.quick * 1000;
 
 /** The line under the name while it waits: none at first, then why (no network, or just slow). */
 export function waitLine(late: boolean, offline: boolean): "offline" | "slow" | null {

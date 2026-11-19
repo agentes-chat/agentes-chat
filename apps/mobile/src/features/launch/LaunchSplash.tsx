@@ -22,6 +22,7 @@ import Animated, {
   useDerivedValue,
   useSharedValue,
   withDelay,
+  withSequence,
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -38,7 +39,6 @@ import {
   LAUNCH,
   LOGO,
   LOGO_LOOK,
-  launchesAtOnce,
   launchPose,
   launchSkyTones,
   SPRITE_BODY,
@@ -80,9 +80,8 @@ export interface LaunchSplashProps {
 /**
  * Opening the app. It starts exactly on the native launch image (the logo
  * agent centered, 120 pt image), then the pixel sky rises from the bottom with little agents going up in it,
- * the agent lifts and looks at them, and the name comes in. Once the app is ready (at once when it was within the
- * splash's first frames, else after at least 0.9 s) the agent and the name go up and out, the sky sinks and the
- * screen fades into the app. Slow: one
+ * the agent hops, lifts and looks at them, and the name comes in. Once the app is ready and that has played (1.2 s at
+ * least) the agent and the name go up and out, the sky sinks and the screen fades into the app. Slow: one
  * line says it's connecting; no network: one line says so. Waiting on the person (`waiting`: a server that
  * doesn't answer) the agent goes up and closes its eyes, the sprites keep above the panel that comes in at the
  * bottom, and the splash stays until the app is ready. Reduced motion: the logo still, a short fade.
@@ -107,7 +106,6 @@ export function LaunchSplash({
   // Its own timers (the agents' clock can start paused): the minimum, and when to say why it waits.
   const [played, setPlayed] = useState(reduced);
   const [late, setLate] = useState(false);
-  const [startedAt] = useState(() => Date.now());
   useEffect(() => {
     const min = setTimeout(() => setPlayed(true), LAUNCH.min * 1000);
     const why = setTimeout(() => setLate(true), LAUNCH.lineAfter * 1000);
@@ -116,22 +114,22 @@ export function LaunchSplash({
       clearTimeout(why);
     };
   }, []);
-  // Once it starts leaving it goes, whatever happens next. Ready within its first frames (the session and the workspace
-  // kept from last time), it leaves at once; later, its rise is under way and plays its minimum.
+  // Once it starts leaving it goes, whatever happens next; it always plays its minimum first.
   const [leaving, setLeaving] = useState(false);
   // Where the agent's choreography stops while it leaves (its last pose, smiling).
   const [heldAt, setHeldAt] = useState(0);
   useEffect(() => {
     if (leaving || !ready) return;
-    if (!played && !launchesAtOnce(Date.now() - startedAt)) return;
+    if (!played) return;
     setHeldAt(frameClock.time());
     setLeaving(true);
-  }, [ready, played, leaving, startedAt]);
+  }, [ready, played, leaving]);
   const asking = Boolean(waiting) && !leaving;
   const line = leaving || asking ? null : waitLine(late, offline);
 
   const level = useSharedValue(0);
   const lift = useSharedValue(0);
+  const hop = useSharedValue(0);
   const away = useSharedValue(0);
   const name = useSharedValue(0);
   const lineIn = useSharedValue(0);
@@ -146,8 +144,16 @@ export function LaunchSplash({
     const rise = { duration: LAUNCH.rise * 1000, easing: Easing.out(Easing.cubic) };
     level.value = withTiming(LAUNCH.sky, rise);
     lift.value = withTiming(1, rise);
-    name.value = withDelay(LAUNCH.nameAt * 1000, withTiming(1, { duration: 350 }));
-  }, [reduced, level, lift, name]);
+    // The agent gives a little hop as the sky reaches it: it starts exactly on the native image, at rest.
+    hop.value = withDelay(
+      180,
+      withSequence(
+        withTiming(1, { duration: 220, easing: EASE_OUT }),
+        withTiming(0, { duration: 320, easing: EASE_IN_OUT }),
+      ),
+    );
+    name.value = withDelay(LAUNCH.nameAt * 1000, withTiming(1, { duration: 420, easing: EASE_OUT }));
+  }, [reduced, level, lift, name, hop]);
 
   useEffect(() => {
     lineIn.value = withTiming(line ? 1 : 0, { duration: 300 });
@@ -218,11 +224,14 @@ export function LaunchSplash({
     opacity: 1 - away.value,
     transform: [
       { translateY: -LAUNCH.lift * lift.value - raise * up.value - 96 * away.value },
-      { scale: 1 - 0.3 * away.value },
+      { scale: (1 - 0.3 * away.value) * (1 + 0.1 * hop.value) },
     ],
   }));
   const panelStyle = useAnimatedStyle(() => ({ opacity: up.value * (1 - away.value) }));
-  const nameStyle = useAnimatedStyle(() => ({ opacity: name.value }));
+  const nameStyle = useAnimatedStyle(() => ({
+    opacity: name.value,
+    transform: [{ translateY: 12 * (1 - name.value) }],
+  }));
   const lineStyle = useAnimatedStyle(() => ({ opacity: lineIn.value }));
   const tones = useMemo(() => launchSkyTones(c.bg, scheme === "dark", dusk), [c.bg, scheme, dusk]);
   const lineText = line ? t(`mobile.splash.${line}`) : "";
