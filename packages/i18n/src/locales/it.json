@@ -3824,11 +3824,13 @@
   },
   "keyGuard": {
     "title": "Sembra una chiave API",
-    "text": "Tutto nella chat è visibile a persone e agenti. Salvala piuttosto come chiave dello spazio di lavoro: è cifrata e nessuno la vede.",
-    "textMember": "Tutto nella chat è visibile a persone e agenti. Una chiave è come una password.",
-    "save": "Salva come chiave",
+    "titleSecret": "Sembra una chiave o una password",
+    "vaultText": "Tutto ciò che va in chat è visibile a persone e agenti. Conservala nel Vault: è cifrata, e gli agenti che autorizzi la usano senza vederla.",
+    "vault": "Salva nel Vault",
+    "useAsAi": "Usa come chiave IA",
     "remove": "Rimuovila",
-    "send": "Invia comunque"
+    "send": "Invia comunque",
+    "saved": "Gli agenti con accesso la usano con il nome {{name}}."
   },
   "costlyCard": {
     "go": "Procedi",

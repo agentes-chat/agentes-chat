@@ -3817,11 +3817,13 @@
   },
   "keyGuard": {
     "title": "Esto parece una clave de API",
-    "text": "Todo lo que está en el chat lo ven personas y agentes. Mejor guárdala como clave del espacio de trabajo: se cifra y nadie la ve.",
-    "textMember": "Todo lo que está en el chat lo ven personas y agentes. Una clave es como una contraseña.",
-    "save": "Guardar como clave",
+    "titleSecret": "Esto parece una clave o contraseña",
+    "vaultText": "Todo lo que va al chat lo ven las personas y los agentes. Guárdala en el Vault: queda cifrada y los agentes que autorices la usan sin verla.",
+    "vault": "Guardar en el Vault",
+    "useAsAi": "Usar como clave de IA",
     "remove": "Quitar la clave",
-    "send": "Enviar de todos modos"
+    "send": "Enviar de todos modos",
+    "saved": "Los agentes con acceso la usan con el nombre {{name}}."
   },
   "costlyCard": {
     "go": "Adelante",

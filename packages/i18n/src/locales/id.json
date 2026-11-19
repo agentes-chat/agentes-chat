@@ -3537,11 +3537,13 @@
   },
   "keyGuard": {
     "title": "Ini sepertinya kunci API",
-    "text": "Semua yang ada di chat terlihat oleh orang dan agen. Simpan sebagai kunci ruang kerja saja: kunci itu dienkripsi dan tidak ada yang bisa melihatnya.",
-    "textMember": "Semua yang ada di chat terlihat oleh orang dan agen. Kunci itu seperti kata sandi.",
-    "save": "Simpan sebagai kunci",
+    "titleSecret": "Ini sepertinya kunci atau kata sandi",
+    "vaultText": "Semua yang ada di chat terlihat oleh orang dan agen. Simpan di Vault: dienkripsi, dan agen yang kamu izinkan menggunakannya tanpa melihatnya.",
+    "vault": "Simpan di Vault",
+    "useAsAi": "Gunakan sebagai kunci AI",
     "remove": "Hapus",
-    "send": "Tetap kirim"
+    "send": "Tetap kirim",
+    "saved": "Agen yang punya akses menggunakannya dengan nama {{name}}."
   },
   "costlyCard": {
     "go": "Lanjutkan",

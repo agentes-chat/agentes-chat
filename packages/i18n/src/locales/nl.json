@@ -3680,11 +3680,13 @@
   },
   "keyGuard": {
     "title": "Dit lijkt op een API-sleutel",
-    "text": "Alles in de chat is zichtbaar voor mensen en agents. Sla het liever op als sleutel van de werkruimte: die is versleuteld en niemand ziet hem.",
-    "textMember": "Alles in de chat is zichtbaar voor mensen en agents. Een sleutel is net als een wachtwoord.",
-    "save": "Opslaan als sleutel",
+    "titleSecret": "Dit lijkt op een sleutel of wachtwoord",
+    "vaultText": "Alles in de chat is zichtbaar voor mensen en agenten. Bewaar hem in de Vault: hij is versleuteld, en de agenten die je toestaat gebruiken hem zonder hem te zien.",
+    "vault": "Opslaan in de Vault",
+    "useAsAi": "Gebruiken als AI-sleutel",
     "remove": "Verwijderen",
-    "send": "Toch versturen"
+    "send": "Toch versturen",
+    "saved": "Agenten met toegang gebruiken hem onder de naam {{name}}."
   },
   "costlyCard": {
     "go": "Ga je gang",

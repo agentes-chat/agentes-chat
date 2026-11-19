@@ -9032,20 +9032,26 @@
   "keyGuard.title": {
     "value": "This looks like an API key"
   },
-  "keyGuard.text": {
-    "value": "Everything in the chat is visible to people and agents. Save it as a workspace key instead: it's encrypted and nobody sees it."
+  "keyGuard.titleSecret": {
+    "value": "This looks like a key or password"
   },
-  "keyGuard.textMember": {
-    "value": "Everything in the chat is visible to people and agents. A key is like a password."
+  "keyGuard.vaultText": {
+    "value": "Everything in the chat is visible to people and agents. Keep it in the Vault: it's encrypted, and the agents you allow use it without seeing it."
   },
-  "keyGuard.save": {
-    "value": "Save as a key"
+  "keyGuard.vault": {
+    "value": "Save in the Vault"
+  },
+  "keyGuard.useAsAi": {
+    "value": "Use as AI key"
   },
   "keyGuard.remove": {
     "value": "Remove it"
   },
   "keyGuard.send": {
     "value": "Send anyway"
+  },
+  "keyGuard.saved": {
+    "value": "Agents with access use it by the name {{name}}."
   },
   "costlyCard.go": {
     "value": "Go ahead"

@@ -3822,11 +3822,13 @@
   },
   "keyGuard": {
     "title": "Cela ressemble à une clé API",
-    "text": "Tout ce qui est dans la discussion est visible par les personnes et les agents. Enregistrez-la plutôt comme clé de l'espace de travail : elle est chiffrée et personne ne la voit.",
-    "textMember": "Tout ce qui est dans la discussion est visible par les personnes et les agents. Une clé, c'est comme un mot de passe.",
-    "save": "Enregistrer comme clé",
+    "titleSecret": "Cela ressemble à une clé ou un mot de passe",
+    "vaultText": "Tout ce qui passe dans le chat est visible par les personnes et les agents. Gardez-la dans le Vault : elle est chiffrée, et les agents que vous autorisez l'utilisent sans la voir.",
+    "vault": "Enregistrer dans le Vault",
+    "useAsAi": "Utiliser comme clé d'IA",
     "remove": "La retirer",
-    "send": "Envoyer quand même"
+    "send": "Envoyer quand même",
+    "saved": "Les agents qui y ont accès l'utilisent sous le nom {{name}}."
   },
   "costlyCard": {
     "go": "Vas-y",

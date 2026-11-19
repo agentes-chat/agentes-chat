@@ -3872,11 +3872,15 @@ export const ptBR = {
   /** An API key pasted in a message, before it goes out. */
   keyGuard: {
     title: "Isso parece uma chave de API",
-    text: "Tudo o que vai no chat fica visível para as pessoas e os agentes. Salve como chave do workspace: ela fica cifrada e ninguém vê.",
-    textMember: "Tudo o que vai no chat fica visível para as pessoas e os agentes. Uma chave é como uma senha.",
-    save: "Salvar como chave",
+    titleSecret: "Isso parece uma chave ou senha",
+    vaultText:
+      "Tudo o que vai no chat fica visível para as pessoas e os agentes. Guarde no Cofre: ela fica cifrada, e os agentes que você autorizar usam sem ver.",
+    vault: "Salvar no Cofre",
+    useAsAi: "Usar como chave de IA",
     remove: "Tirar do texto",
     send: "Enviar mesmo assim",
+    /** After "Save in the Vault", under the toast's "Saved in the Vault". */
+    saved: "Os agentes com acesso usam pelo nome {{name}}.",
   },
   /** An agent's card whose button opens the app's own dialog, filled in (`meta.actionCard`). */
   /** A stretch's pause card once someone pressed Continuar (ADR 0089). */
