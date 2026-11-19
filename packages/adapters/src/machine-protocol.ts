@@ -3590,7 +3590,10 @@ export function parseBrainEvent(v: unknown): WireBrainEvent | null {
     case "done": {
       if (!isString(v.text)) return null;
       const session = isObject(v.session) && isString(v.session.id) ? { id: v.session.id.slice(0, 64) } : undefined;
-      const ms = (x: unknown) => (finite(x) !== undefined && (x as number) >= 0 ? Math.round(x as number) : undefined);
+      // A runner reports these itself: past a day it is a wrong clock, not a slow start, and would skew the percentiles.
+      const DAY_MS = 86_400_000;
+      const ms = (x: unknown) =>
+        finite(x) !== undefined && (x as number) >= 0 && (x as number) <= DAY_MS ? Math.round(x as number) : undefined;
       const t = isObject(v.timings) && typeof v.timings.warm === "boolean" ? v.timings : null;
       const initMs = ms(t?.initMs);
       const firstEventMs = ms(t?.firstEventMs);
