@@ -2518,6 +2518,7 @@ export const en = {
     newAgent: "New agent",
     working_one: "{{count}} working",
     working_other: "{{count}} working",
+    workingOnly: "Show only working agents",
     count_one: "{{count}} agent",
     count_other: "{{count}} agents",
     workingIn: "working in #{{channel}}",

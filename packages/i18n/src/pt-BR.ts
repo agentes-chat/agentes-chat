@@ -2418,6 +2418,7 @@ export const ptBR = {
     newAgent: "Novo agente",
     working_one: "{{count}} trabalhando",
     working_other: "{{count}} trabalhando",
+    workingOnly: "Mostrar só agentes trabalhando",
     count_one: "{{count}} agente",
     count_other: "{{count}} agentes",
     /** Under an agent's name while it works, lower case like its role. */

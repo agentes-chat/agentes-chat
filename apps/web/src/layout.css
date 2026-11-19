@@ -13207,6 +13207,20 @@ html:not([data-pointer]) .channel-perms__target:focus-visible {
   white-space: nowrap;
   color: var(--agent);
 }
+button.sidebar__section-working {
+  padding: 2px 4px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+}
+button.sidebar__section-working:is(:hover, :focus-visible) {
+  text-decoration: underline;
+}
+button.sidebar__section-working[aria-pressed="true"] {
+  background: var(--agent-soft);
+}
 /* An agent out of office (its plan or budget ran out) rests dim until it is back; its line says when. */
 .sidebar__item[data-presence="out"]:not([data-status="active"]) {
   color: var(--ink-muted);
