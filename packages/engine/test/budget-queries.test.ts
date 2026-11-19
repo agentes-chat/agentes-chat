@@ -131,6 +131,9 @@ test("the run keeps its stage profile in its own column, for the operator's anal
   const stages = (kept: unknown) =>
     (kept as { stages: StageTiming[] }[] | undefined)?.map((p) => p.stages.map((s) => s.stage));
   expect(stages(row?.profiles)).toEqual([["claim", "context", "model#1", "turn_end#1", "persist", "events"]]);
+  // When the claim ended, beside its stages: an ISO time, not a stage.
+  const [kept] = (row?.profiles ?? []) as { endedAt: string }[];
+  expect(new Date(kept?.endedAt ?? "").toISOString()).toBe(kept?.endedAt ?? "");
   expect(row?.transcript?.profiles).toBeUndefined();
   const steps = await f.db
     .select({ data: schema.agentRunSteps.data })

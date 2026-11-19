@@ -525,6 +525,8 @@ export interface MachineMissionHooks {
   phonesChanged?(machine: { id: string; orgId: string }, phones: MachinePhoneRow[]): Promise<void>;
   /** Starts what may start in the machine's queue of mission tasks (ADR 0044; a resumed item waits there). */
   queue?(machineId: string): Promise<unknown>;
+  /** `room.freed`: the run first in this computer's line for room asks again now. */
+  roomFreed?(machineId: string): Promise<void>;
 }
 
 /**
@@ -1613,6 +1615,10 @@ export function createMachineHub(deps: MachineHubDeps) {
           const row = await getMachineById(db, conn.machineId).catch(() => null);
           if (row && !row.deletedAt) await phonesReported(row, frame.phones);
         }
+      } else if (frame.type === "room.freed") {
+        await hooks
+          .roomFreed?.(conn.machineId)
+          .catch((error) => deps.log?.warn("room.freed failed", { machineId: conn.machineId, error: String(error) }));
       } else if (frame.type === "keep.ended") {
         await holdEndedOnComputer({ db, pubsub }, conn.machineId, frame).catch((error) =>
           deps.log?.warn("keep.ended failed", { holdId: frame.holdId, error: String(error) }),

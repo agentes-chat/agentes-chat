@@ -330,6 +330,7 @@
     "startedWith": "{{name}}와(과)의 대화에서 시작됨",
     "replies_other": "답장 {{count}}개",
     "repliesWord_other": "답장",
+    "dayAt": "{{day}} {{time}}",
     "thread": "스레드",
     "closed": "닫힘",
     "options": "옵션",
@@ -364,9 +365,7 @@
       "delivered": "{{name}}이(가) 받았어요",
       "held": "{{name}}이(가) 내 결정 후에 읽어요",
       "read": "{{name}}이(가) 읽었어요",
-      "resolved": "{{name}}이(가) 도움 요청을 닫았어요",
-      "well": "메모를 읽었어요",
-      "wellNow": "멈추고 메모를 읽었어요"
+      "resolved": "{{name}}이(가) 도움 요청을 닫았어요"
     },
     "stopped": {
       "byYou": "여기서 멈춤",
@@ -2145,6 +2144,8 @@
     "deleteIntro": "{{name}}은(는) 모두에게 바로 읽기 전용이 되고 7일 후 영구 삭제돼요.",
     "holdDelete": "길게 눌러 삭제",
     "deleteFailed": "워크스페이스를 삭제하지 못했어요. 다시 시도해 주세요.",
+    "holdReset": "길게 눌러 초기화",
+    "resetFailed": "워크스페이스를 초기화하지 못했어요. 다시 시도해 주세요.",
     "access": {
       "how": "행을 탭해서 수준을 바꾸세요: 접근 불가, 읽기, 읽기 및 쓰기."
     },

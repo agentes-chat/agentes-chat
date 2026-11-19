@@ -356,6 +356,7 @@
     "repliesWord_one": "respuesta",
     "repliesWord_many": "respuestas",
     "repliesWord_other": "respuestas",
+    "dayAt": "{{day}} {{time}}",
     "thread": "Hilo",
     "closed": "cerrado",
     "options": "Opciones",
@@ -394,9 +395,7 @@
       "delivered": "{{name}} lo recibió",
       "held": "{{name}} lo lee después de tu decisión",
       "read": "{{name}} lo leyó",
-      "resolved": "{{name}} cerró el pedido de ayuda",
-      "well": "Leyó tu nota",
-      "wellNow": "Se detuvo para leer tu nota"
+      "resolved": "{{name}} cerró el pedido de ayuda"
     },
     "stopped": {
       "byYou": "Se detuvo aquí",
@@ -2350,6 +2349,8 @@
     "deleteIntro": "{{name}} queda en solo lectura para todos de inmediato y se elimina para siempre en 7 días.",
     "holdDelete": "Mantén presionado para eliminar",
     "deleteFailed": "No se pudo eliminar el espacio de trabajo. Inténtalo de nuevo.",
+    "holdReset": "Mantén pulsado para reiniciar",
+    "resetFailed": "No se pudo reiniciar el espacio de trabajo. Inténtalo de nuevo.",
     "access": {
       "how": "Toca una fila para cambiar su nivel: Sin acceso, Leer, Leer y escribir."
     },

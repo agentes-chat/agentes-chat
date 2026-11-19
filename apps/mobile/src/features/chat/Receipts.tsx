@@ -18,14 +18,14 @@ import { Disclosure, GroupedFooter, LineIcon, Text, useReducedMotion, useToast }
 import { router } from "@/ui/navigation";
 import { agoOf } from "../agents/logic";
 import { agoText } from "../agents/work";
-import { BUBBLE_PART_CORNERS, useBubblePart } from "../shared/bubble-part";
+import { useBubblePart } from "../shared/bubble-part";
 import { useColors, useOrgId } from "../shared/hooks";
 import { SheetTitle } from "../shared/PromptForm";
 import { ActionList, copyText, tapHaptic } from "../shared/parts";
 import { useSheetIfAny } from "../shared/SheetHost";
 import { groupStart, receiptIcon, receiptLayout, targetHref } from "./actions";
 import { DOUBLE_TAP_MS } from "./logic";
-import { useCardTop } from "./look";
+import { useCardTop, useMessageCardCorners } from "./look";
 import { useRowDirectory, useRowMeId } from "./row-data";
 
 /**
@@ -49,6 +49,7 @@ export function Receipts({
   const { t } = useTranslation();
   const c = useColors();
   const part = useBubblePart();
+  const cardCorners = useMessageCardCorners();
   const meId = useRowMeId();
   const dir = useRowDirectory();
   const sheet = useSheetIfAny();
@@ -99,8 +100,8 @@ export function Receipts({
   const start = groupStart(list);
   // In a conversation of bubbles, a bubble of the message it came with (its fill, joined to it); else the card.
   const frame = part
-    ? [styles.card, { backgroundColor: part.fill, borderWidth: 0 }, BUBBLE_PART_CORNERS, part.edge]
-    : [styles.card, { backgroundColor: c.raised, borderColor: c.line2 }];
+    ? [styles.card, { backgroundColor: part.fill, borderWidth: 0 }, cardCorners, part.edge]
+    : [styles.card, { backgroundColor: c.raised, borderColor: c.line2 }, cardCorners];
   // What changes while it shows (undone from somewhere else) fades in; what is there when it mounts just shows.
   return (
     <View style={cardTop}>

@@ -230,6 +230,11 @@ export type BrainEvent =
     }
   /** Messages handed mid-turn (`BrainIO.steerable`) that the turn read, by their `uuid`. */
   | { type: "steer_read"; uuids: string[] }
+  /**
+   * A computer brain finished an answer and went on (a message handed mid-turn read after it, work moved to the
+   * background): its own message now (ADR 0112). `done` holds only what came after it.
+   */
+  | { type: "answer"; text: string }
   /** Fast failed (`message`: the provider's words) and this turn answered at standard speed. */
   | { type: "speed_fallback"; message: string }
   /** A computer brain started a call of its own: shown only, its `tool_call` with `executed` follows. */

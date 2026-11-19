@@ -6124,7 +6124,7 @@
         "cli_closed": "갑자기 {{brain}} 프로그램이 종료됐어요.",
         "cli_sandbox": "{{brain}} 프로그램이 이 컴퓨터에서 샌드박스를 시작할 수 없어요. 에이전트 설정에서 다른 AI를 고르세요.",
         "account_missing": "이 에이전트에 고른 계정이 더 이상 컴퓨터에 없어요. 에이전트 설정에서 다른 계정을 고르거나 다시 추가하세요.",
-        "windows_sandbox": "이 Windows 컴퓨터에서는 Codex의 명령을 격리할 수 없어요. Windows 11 24H2 이상이 필요해요.",
+        "windows_sandbox": "이 Windows 컴퓨터에서는 Codex의 명령을 격리할 수 없어요. Windows 11 24H2 이상이 필요해요. Windows를 업데이트하거나, 이 에이전트에 Claude나 API 키를 선택하거나, Linux 컴퓨터로 옮기세요.",
         "our_error": "저희 쪽에서 문제가 생겨 작업이 멈췄어요. 잠시 후 다시 요청해 주세요.",
         "unknown": "실패했어요."
       }
@@ -7566,7 +7566,10 @@
     "unreachableTitle": "agentes.chat에 연결할 수 없어요",
     "unreachableText": "다시 시작하는 중일 수 있어요. 돌아오는 대로 이 페이지가 자동으로 열려요.",
     "offlineTitle": "오프라인 상태예요",
-    "offlineText": "다시 온라인이 되면 이 페이지가 자동으로 열려요."
+    "offlineText": "다시 온라인이 되면 이 페이지가 자동으로 열려요.",
+    "unknownHostTitle": "이 주소는 아직 설정되지 않았어요",
+    "unknownHostText": "방금 연결했다면 몇 분 뒤에 다시 시도하세요.",
+    "unknownHostTab": "설정되지 않은 주소 · agentes.chat"
   },
   "scopes": {
     "context_read": {
@@ -9239,8 +9242,7 @@
       "approvals": "기본적으로 머지, 배포, 롤백은 승인을 요청해요",
       "start": "미션 시작",
       "created": "미션을 만들었어요. {{name}}이(가) 계획을 세우고 있어요.",
-      "who": "프로그래밍 담당",
-      "codexOld": "{{computer}}의 Codex가 미션에 쓰기에는 너무 오래됐어요. 그 컴퓨터에서 업데이트하세요."
+      "who": "프로그래밍 담당"
     },
     "commandApproval": {
       "label": "자율성",
@@ -10239,7 +10241,6 @@
       "needsCloud": {
         "online": "{{computer}}이(가) 다시 시작하거나 다시 연결하는 중이에요. 돌아오면 저절로 바뀌어요.",
         "installing": "{{computer}}에 {{program}}을(를) 설치하는 중이에요. 끝나면 저절로 바뀌어요.",
-        "updating": "{{computer}}의 {{program}}을(를) 업데이트하는 중이에요. 끝나면 저절로 바뀌어요.",
         "runnerOld": "{{computer}}의 agentes.chat 프로그램이 오래되어 업데이트가 오고 있어요. 끝나면 저절로 바뀌어요.",
         "execOff": "{{computer}}이(가) 아직 {{program}}을(를) 실행할 수 없어요. 해결 중이고, 저절로 바뀌어요.",
         "toolOff": "{{computer}}에서 {{program}}이(가) 아직 허용되지 않았어요. 저희 쪽 문제예요. 나중에 다시 시도하세요.",
@@ -11431,12 +11432,6 @@
       "read": "{{name}}이(가) 읽었어요",
       "resolved": "{{name}}이(가) 도움 요청을 닫았어요"
     },
-    "well": {
-      "readYours": "내 메모를 읽었어요",
-      "readOf": "{{name}}의 메모를 읽었어요",
-      "nowYours": "멈추고 내 메모를 읽었어요",
-      "nowOf": "멈추고 {{name}}의 메모를 읽었어요"
-    },
     "strip": {
       "see": "보기",
       "toStop": "중지"
@@ -11530,11 +11525,6 @@
       "not_installed": "{{computer}}에 {{program}}이(가) 설치되어 있지 않아요.",
       "cant_start": "{{program}}이(가) {{computer}}에 있지만 실행되지 않습니다.",
       "not_reported": "{{computer}}에 어떤 프로그램이 있는지 아직 확인하는 중이에요. 끝나면 저절로 바뀌어요.",
-      "outdated": "{{computer}}의 버전이 오래됐어요. 사용하려면 Codex를 업데이트하세요.",
-      "outdatedCodex": "{{computer}}에서 Codex CLI {{detected}} 버전을 찾았습니다. {{minimum}} 이상으로 업데이트하세요.",
-      "codexUpdateGuide": "Codex CLI 업데이트 방법",
-      "codexRecheckHere": "업데이트한 뒤 환경설정 › 도구의 Codex 행에서 다시 확인을 선택하세요.",
-      "codexRecheckThere": "{{computer}}에서 Codex CLI를 업데이트하세요. 데스크톱 앱이 있다면 환경설정 › 도구의 Codex 행에서 다시 확인을 선택하세요.",
       "system": "{{program}}은(는) 아직 {{computer}}의 시스템에서 실행되지 않아요.",
       "no_computerCloud": "{{computer}}이(가) 준비되면 바로 쓸 수 있어요."
     },
@@ -18558,6 +18548,21 @@
     "writeAfter": ".",
     "ask": "도움이 필요하면 이 서버를 운영하는 사람에게 문의하세요."
   },
+  "resetOrg": {
+    "cardTitle": "초기화 또는 삭제",
+    "row": {
+      "title": "워크스페이스 초기화",
+      "text": "안에서 만든 것을 모두 지우고 같은 사람들과 처음부터 다시 시작해요."
+    },
+    "goes": "에이전트, 대화, DM, 파일, 작업, 루틴, 메모리",
+    "stays": "사람, 역할, 초대, AI 계정, 컴퓨터, 커넥터",
+    "fresh": "그다음 처음 설정과 함께 새 워크스페이스처럼 열려요",
+    "plan": "요금제는 그대로이고 새로 청구되지 않아요",
+    "now": "바로 실행되고 되돌릴 수 없어요.",
+    "title": "{{name}}을(를) 초기화할까요?",
+    "submit": "워크스페이스 초기화",
+    "resetting": "{{name}} 초기화 중…"
+  },
   "deleteOrg": {
     "card": {
       "title": "워크스페이스 삭제",
@@ -18629,8 +18634,7 @@
     "menu": "계정 삭제",
     "card": {
       "text": "7일 후 모든 워크스페이스에서 계정을 삭제해요.",
-      "button": "계정 삭제…",
-      "title": "삭제"
+      "button": "계정 삭제…"
     },
     "title": "계정 전체를 삭제할까요?",
     "intro": "워크스페이스 하나가 아니라 계정 전체를 삭제해요.",

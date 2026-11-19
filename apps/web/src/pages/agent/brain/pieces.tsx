@@ -14,6 +14,7 @@ import {
   RadioGroup,
   Segmented,
   Switch,
+  windowAmount,
 } from "@agenteschat/ui";
 import {
   type CSSProperties,
@@ -51,14 +52,21 @@ export function PlanWindows({ usage, provider }: { usage: PlanUsage; provider?: 
       <div className="bd-wins">
         {rows.map((w, i) => {
           const name = text.window(w);
-          const renews = w.resetsAt && Date.parse(w.resetsAt) > now ? text.resets(w.resetsAt) : null;
+          const renews = w.resetsAt && Date.parse(w.resetsAt) > now && !w.stale ? text.resets(w.resetsAt) : null;
           return (
-            <div key={`${w.kind}:${w.label ?? i}`} className="bd-win" data-level={planLevel(w.used)}>
+            <div
+              key={`${w.kind}:${w.label ?? i}`}
+              className="bd-win"
+              data-level={w.stale ? "ok" : planLevel(w.used)}
+              data-stale={w.stale || undefined}
+            >
               <span className="bd-win__name">{name}</span>
-              <span className="bd-win__bar" aria-hidden="true">
-                <i style={{ "--used": `${Math.min(100, w.used)}%` } as CSSProperties} />
-              </span>
-              <span className="bd-win__n">{w.used}%</span>
+              {!w.stale && (
+                <span className="bd-win__bar" aria-hidden="true">
+                  <i style={{ "--used": `${Math.min(100, w.used)}%` } as CSSProperties} />
+                </span>
+              )}
+              <span className="bd-win__n">{windowAmount(usage, w, text)}</span>
               <small className="bd-win__at">{renews}</small>
             </div>
           );

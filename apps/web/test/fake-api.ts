@@ -1890,6 +1890,16 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         };
         return { dueAt };
       },
+      resetCode: async (orgId) => {
+        log("orgs.resetCode", orgId);
+        if (state.codeError) throw state.codeError;
+        return { email: requireMe().user.email, resendIn: 60 };
+      },
+      reset: async (orgId, input) => {
+        log("orgs.reset", orgId, input);
+        if (state.deletionError) throw state.deletionError;
+        return { startedAt: new Date().toISOString() };
+      },
       restore: async (orgId) => {
         log("orgs.restore", orgId);
         const me = requireMe();

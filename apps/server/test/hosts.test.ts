@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { HumanCheck } from "@agenteschat/adapters";
@@ -527,31 +527,103 @@ test("the operator's routes: auth, shapes, refusals, and the cache dropped on a 
   expect(await refusal(await call("DELETE", `/hosts/${HOST}`))).toEqual([404, "not_found"]);
 });
 
+/** The app with a WEB_DIR holding the real index.html; the directory goes when the test does. */
+function withWeb(s: TestServer) {
+  const index = readFileSync(join(import.meta.dir, "../../web/index.html"), "utf8");
+  const web = mkdtempSync(join(tmpdir(), "agentes-web-"));
+  webDirs.push(web);
+  writeFileSync(join(web, "index.html"), index);
+  mkdirSync(join(web, "assets"));
+  writeFileSync(join(web, "assets", "index-4f2a.js"), "export {};");
+  writeFileSync(join(web, "screen.html"), SCREEN);
+  const app = createApp({
+    edition: "cloud",
+    version: "test",
+    modules: [],
+    pingDatabase: async () => {},
+    services: { db: s.db, auth: s.auth, config: s.config, adapters: s.adapters },
+    webDir: web,
+  });
+  return { index, get: (path: string, host: string) => app.request(path, { headers: { host } }) };
+}
+const webDirs: string[] = [];
+afterEach(() => {
+  for (const dir of webDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+});
+
 test("the app's page says it is on a registered host, so its boot hides the product's mark", async () => {
   const s = await server();
-  const index = readFileSync(join(import.meta.dir, "../../web/index.html"), "utf8");
+  const { index, get } = withWeb(s);
   expect(index).toContain("[data-host] .boot img { display: none; }");
-  const web = mkdtempSync(join(tmpdir(), "agentes-web-"));
-  try {
-    writeFileSync(join(web, "index.html"), index);
-    const app = createApp({
-      edition: "cloud",
-      version: "test",
-      modules: [],
-      pingDatabase: async () => {},
-      services: { db: s.db, auth: s.auth, config: s.config, adapters: s.adapters },
-      webDir: web,
-    });
-    const page = async (path: string, host: string) => {
-      const res = await app.request(path, { headers: { host } });
-      expect(res.status).toBe(200);
-      return res.text();
-    };
-    for (const path of ["/", "/login", "/invite/abc"]) {
-      expect(await page(path, HOST)).toStartWith('<!doctype html>\n<html data-host lang="en"');
-      expect(await page(path, "localhost:3000")).toBe(index);
-    }
-  } finally {
-    rmSync(web, { recursive: true, force: true });
+  const page = async (path: string, host: string) => {
+    const res = await get(path, host);
+    expect(res.status).toBe(200);
+    return res.text();
+  };
+  for (const path of ["/", "/login", "/invite/abc"]) {
+    expect(await page(path, HOST)).toStartWith('<!doctype html>\n<html data-host lang="en"');
+    expect(await page(path, "localhost:3000")).toBe(index);
   }
+});
+
+const UNKNOWN = "app.unregistered.example";
+const SCREEN = '<!doctype html>\n<html lang="en"><body>screen</body></html>';
+
+test("a hostname neither the server's own nor registered: the app's page is a 404 marked data-unknown-host", async () => {
+  const s = await server({ PUBLIC_URL: "https://chat.example.com", EXTRA_TRUSTED_ORIGINS: OWN_EXTRA });
+  const { index, get } = withWeb(s);
+  for (const path of ["/", "/login", "/invite/abc", "/index.html"]) {
+    const res = await get(path, UNKNOWN);
+    expect(res.status).toBe(404);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    expect(res.headers.get("x-robots-tag")).toBe("noindex");
+    expect(await res.text()).toStartWith('<!doctype html>\n<html data-unknown-host lang="en"');
+  }
+  expect((await get("/", "App.Unregistered.Example.")).status).toBe(404);
+  // The server's own names, an IP, a single label and a name with a port: the page as before.
+  for (const host of ["chat.example.com", "chat.northwind.example", "203.0.113.7", "localhost", `${UNKNOWN}:8443`]) {
+    const res = await get("/login", host);
+    expect({ host, status: res.status, cache: res.headers.get("cache-control") }).toEqual({
+      host,
+      status: 200,
+      cache: "no-cache",
+    });
+    expect(await res.text()).toBe(index);
+  }
+  // A registered host: its own mark, never both.
+  const there = await (await get("/login", HOST)).text();
+  expect(there).toStartWith('<!doctype html>\n<html data-host lang="en"');
+  expect(there).not.toContain("data-unknown-host");
+  // Everything but the app's page is untouched there.
+  const health = await get("/api/health", UNKNOWN);
+  expect(health.status).toBe(200);
+  expect(health.headers.get("content-type")).toContain("application/json");
+  const asset = await get("/assets/index-4f2a.js", UNKNOWN);
+  expect(asset.status).toBe(200);
+  expect(await asset.text()).toBe("export {};");
+  expect((await get("/assets/gone-1234.js", UNKNOWN)).status).toBe(404);
+  const other = await get("/screen.html", UNKNOWN);
+  expect(other.status).toBe(200);
+  expect(await other.text()).toBe(SCREEN);
+});
+
+test("without the operator API no hostname is unknown: the page as before, whatever Host the proxy sends", async () => {
+  const s = await server({ OPERATOR_API_TOKEN: "" });
+  expect(s.config.OPERATOR_API_TOKEN).toBeFalsy();
+  const { index, get } = withWeb(s);
+  const res = await get("/", UNKNOWN);
+  expect(res.status).toBe(200);
+  expect(await res.text()).toBe(index);
+});
+
+test("a hostname registered after its first look shows as registered once the write drops the cache", async () => {
+  const s = await server();
+  enableCaches(true);
+  const { get } = withWeb(s);
+  expect((await get("/", UNKNOWN)).status).toBe(404);
+  expect((await get("/", UNKNOWN)).status).toBe(404);
+  await putHost({ db: s.db, blobs: s.adapters.platformBlobs }, new Set(), UNKNOWN, { name: "Fabrikam" });
+  const res = await get("/", UNKNOWN);
+  expect(res.status).toBe(200);
+  expect(await res.text()).toStartWith('<!doctype html>\n<html data-host lang="en"');
 });

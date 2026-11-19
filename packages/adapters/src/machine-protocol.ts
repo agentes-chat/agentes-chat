@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 68;
+export const MACHINE_PROTOCOL_VERSION = 69;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -682,6 +682,12 @@ export const SHARED_GROK_PROTOCOL = 67;
  * folder (ADR 0143). An older Mac runner refuses them, so the server reads it as too old for the Antigravity CLI.
  */
 export const ANTIGRAVITY_MAC_PROTOCOL = 68;
+/**
+ * From this protocol on, the runner sends `room.freed` once there is room again after it refused a turn (`no_slot`): a
+ * turn ended there, or its memory came back over the agents' floor. The server asks its line again at once; an older
+ * runner's line asks again on its timer.
+ */
+export const ROOM_FREED_PROTOCOL = 69;
 
 /**
  * `clis.check`: the coding CLIs looked up again now, the PATH read again first (the apps' "I installed it, check again").
@@ -1174,6 +1180,11 @@ export interface PlanWindow {
   label?: string;
   usedPercent: number;
   resetsAt?: string;
+  /**
+   * When this window was last read, where that is before its snapshot's `at`: a turn's event that didn't name it
+   * kept the older reading. Absent: the snapshot's `at`.
+   */
+  at?: string;
 }
 export type PlanWindowKind = "five_hour" | "seven_day" | "seven_day_opus" | "seven_day_sonnet" | "monthly" | "other";
 export const PLAN_WINDOW_KINDS: readonly PlanWindowKind[] = [
@@ -2016,8 +2027,10 @@ export type CliName = (typeof CLI_NAMES)[number];
 
 /** A coding CLI on the machine, as `hello` reports it (protocol 7). */
 export interface RunnerExecutorInfo {
-  /** The first line of `<cli> --version`. */
+  /** The line of `<cli> --version` that holds its version (else its first line, or `unknown`). */
   version: string;
+  /** `codex` only: the copy the runner starts, the newest of those it found. */
+  path?: string;
   /** Protocol 8, `claude` only: `claude auth status` says it is logged in (absent: unknown). */
   loggedIn?: boolean;
   /** Protocol 8, `claude` only: how it is logged in (`claude.ai`, `api_key`…) and the plan (`pro`, `max`, `ultra`…). */
@@ -2104,6 +2117,11 @@ export type WireBrainEvent =
     }
   /** Protocol 15: messages handed with `brain.steer` that the turn read (their `uuid`s). */
   | { type: "steer_read"; uuids: string[] }
+  /**
+   * An answer the turn finished before it went on (`BrainTurnRequest.answers`): the server posts it as a message of its
+   * own now; `done` holds only what came after it. Sent only to a request that asked for it.
+   */
+  | { type: "answer"; text: string }
   /** Protocol 46: Fast failed (`message`: the provider's words) and this turn answered at standard speed. */
   | { type: "speed_fallback"; message: string }
   /** A call the brain starts on its own (Claude Code's Read, Bash, Task): its `tool_call` follows once it ended. */
@@ -2211,6 +2229,12 @@ export interface BrainTurnRequest {
    * (`PERSON_TURN_MIN_FREE_BYTES`). No protocol step: a runner that doesn't read it admits the turn like any other.
    */
   personWaiting?: boolean;
+  /**
+   * `each` (ADR 0112): an answer the turn finished before it went on (a message handed to it mid-turn was read after
+   * it, work moved to the background, a background task's notice) goes out at once as an `answer` event, and `done`
+   * holds only what came after it. No protocol step: a runner that doesn't read it joins them into `done`, as before.
+   */
+  answers?: "each";
 }
 
 /**
@@ -3221,7 +3245,9 @@ export type RunnerFrame =
   /** The same on the agent's desktop (ADR 0062), in the screen's pixels: desktop use, and its browser's window there. */
   | ({ type: "desktop.pointer"; agentId: string } & AgentPointer)
   /** `KEEP_RUNNING_PROTOCOL`: a hold ended on the computer by itself (the next `hello` says so again). */
-  | { type: "keep.ended"; holdId: string; reason: HoldEnd };
+  | { type: "keep.ended"; holdId: string; reason: HoldEnd }
+  /** `ROOM_FREED_PROTOCOL`: room again after a `no_slot`. */
+  | { type: "room.freed" };
 
 /** A tool as `mcp.tools` lists it (what MCP `tools/list` returns). */
 export interface McpToolInfo {
@@ -3431,8 +3457,10 @@ export function parseExecutors(v: Record<string, unknown>): NonNullable<RunnerIn
     if (!isObject(e) || !isString(e.version)) continue;
     const authMethod = word(e.authMethod);
     const plan = word(e.plan);
+    const path = name === "codex" && isString(e.path) && /^[^\0\r\n]{1,500}$/.test(e.path) ? e.path : undefined;
     out[name] = {
       version: e.version.replace(/\s+/g, " ").trim().slice(0, 80),
+      ...(path ? { path } : {}),
       ...(typeof e.loggedIn === "boolean" ? { loggedIn: e.loggedIn } : {}),
       ...(authMethod ? { authMethod } : {}),
       ...(plan ? { plan } : {}),
@@ -3508,11 +3536,13 @@ export function parsePlanUsage(v: unknown): PlanUsage | undefined {
           .slice(0, PLAN_USAGE_LIMITS.label)
       : "";
     const resetsAt = isoOf(w.resetsAt);
+    const read = isoOf(w.at);
     windows.push({
       kind,
       ...(label ? { label } : {}),
       usedPercent: Math.round(Math.min(100, Math.max(0, used))),
       ...(resetsAt ? { resetsAt } : {}),
+      ...(read && read < at ? { at: read } : {}),
     });
   }
   return {
@@ -3626,6 +3656,10 @@ export function parseBrainEvent(v: unknown): WireBrainEvent | null {
         .map((u) => u.slice(0, 64));
       return uuids.length ? { type: "steer_read", uuids } : null;
     }
+    case "answer":
+      return isString(v.text) && v.text.trim() !== ""
+        ? { type: "answer", text: v.text.slice(0, BRAIN_LIMITS.doneText) }
+        : null;
     case "speed_fallback":
       return { type: "speed_fallback", message: (isString(v.message) ? v.message : "").slice(0, BRAIN_LIMITS.message) };
     case "tool_started":
@@ -3715,6 +3749,8 @@ export function parseRunnerFrame(raw: string): RunnerFrame | null {
         ...(isObject(f.holds) ? { holds: parseHolds(f.holds) } : {}),
       };
     }
+    case "room.freed":
+      return { type: "room.freed" };
     case "keep.ended": {
       const reason = HOLD_ENDS.find((r) => r === f.reason);
       return isUuid(f.holdId) && reason ? { type: "keep.ended", holdId: f.holdId, reason } : null;

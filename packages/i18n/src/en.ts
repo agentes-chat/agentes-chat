@@ -6868,7 +6868,8 @@ export const en = {
         account_missing:
           "The account chosen for this agent isn't on its computer anymore. Choose another one in the agent's settings, or add it again.",
         /** A Codex turn on a Windows computer where MXC can't hold its commands (runner `windows_sandbox`). */
-        windows_sandbox: "This Windows computer can't isolate Codex's commands: it needs Windows 11 24H2 or newer.",
+        windows_sandbox:
+          "This Windows computer can't isolate Codex's commands: it needs Windows 11 24H2 or newer. Update Windows, choose Claude or an API key for this agent, or move it to a Linux computer.",
         our_error: "Something went wrong on our side and it stopped. Ask again in a little while.",
         unknown: "Failed.",
       },
@@ -8386,6 +8387,11 @@ export const en = {
     unreachableText: "It may be restarting. This page opens by itself as soon as it's back.",
     offlineTitle: "You're offline",
     offlineText: "This page opens by itself when you're back online.",
+    /** The page on a hostname that reaches the server but isn't set up there. */
+    unknownHostTitle: "This address isn't set up yet",
+    unknownHostText: "If it was just connected, try again in a few minutes.",
+    /** That page's browser tab title. */
+    unknownHostTab: "Address not set up · agentes.chat",
   },
   scopes: {
     context_read: {
@@ -10080,7 +10086,6 @@ export const en = {
       start: "Start mission",
       created: "Mission created: {{name}} is putting the plan together.",
       who: "Who programs",
-      codexOld: "Codex on {{computer}} is too old for missions: update it there.",
     },
     commandApproval: {
       label: "Autonomy",
@@ -11083,7 +11088,6 @@ export const en = {
       needsCloud: {
         online: "{{computer}} is restarting or reconnecting. This changes by itself once it's back.",
         installing: "{{program}} is being installed on {{computer}}. This changes by itself when it's done.",
-        updating: "{{program}} is being updated on {{computer}}. This changes by itself when it's done.",
         runnerOld:
           "The agentes.chat program on {{computer}} is out of date and an update is on its way. This changes by itself when it's done.",
         execOff: "{{computer}} can't run {{program}} yet. We're on it, and this changes by itself.",
@@ -12323,12 +12327,6 @@ export const en = {
       read: "{{name}} read it",
       resolved: "{{name}} closed the help request",
     },
-    well: {
-      readYours: "Read your note",
-      readOf: "Read {{name}}'s note",
-      nowYours: "Stopped to read your note",
-      nowOf: "Stopped to read {{name}}'s note",
-    },
     strip: {
       see: "View",
       toStop: "to stop",
@@ -12424,12 +12422,6 @@ export const en = {
       cant_start: "{{program}} is on {{computer}}, but it won't start.",
       /** Its runner hasn't said which CLIs it has yet: nobody knows whether this one is there. */
       not_reported: "{{computer}} is still checking which programs it has. This changes by itself when it's done.",
-      outdated: "The version on {{computer}} is old. Update Codex to use it.",
-      outdatedCodex: "Codex CLI {{detected}} was found on {{computer}}. Update it to {{minimum}} or later.",
-      codexUpdateGuide: "How to update Codex CLI",
-      codexRecheckHere: "After updating, choose Check again for Codex in Preferences › Tools.",
-      codexRecheckThere:
-        "Update Codex CLI on {{computer}}. If it runs the desktop app, choose Check again for Codex in Preferences › Tools.",
       /** The runner doesn't run this program on that computer's system (Cursor on Windows, for one). */
       system: "{{program}} doesn't run on {{computer}}'s system yet.",
       no_computerCloud: "Ready as soon as {{computer}} is.",
@@ -19749,6 +19741,25 @@ export const en = {
     writeAfter: ".",
     ask: "Need help? Ask the people who run this server.",
   },
+  /** Resetting a workspace (owners, Sua conta): what it made goes now and for good, and it starts over as a new one. */
+  resetOrg: {
+    /** The title over the account's danger rows for an owner: resetting, deleting the workspace, deleting the account. */
+    cardTitle: "Reset or delete",
+    row: {
+      title: "Reset workspace",
+      text: "Erases everything made in it and starts over, with the same people.",
+    },
+    goes: "Agents, conversations, DMs, files, tasks, routines and memory",
+    stays: "People, roles, invitations, AI accounts, computers and connectors",
+    fresh: "Then it opens like a new workspace, with the first setup",
+    /** Only where plans are billed. */
+    plan: "The plan stays the same, with no new charge",
+    now: "It happens at once and can't be undone.",
+    title: "Reset {{name}}?",
+    submit: "Reset workspace",
+    /** In the row once it started, until the workspace opens again as a new one. */
+    resetting: "Resetting {{name}}…",
+  },
   /** Deleting a workspace (owners): it turns read-only for everyone now and is deleted for good 7 days later. */
   deleteOrg: {
     card: {
@@ -19841,8 +19852,6 @@ export const en = {
     card: {
       text: "Deletes your account in 7 days, in every workspace.",
       button: "Delete account…",
-      /** The card's title for an owner, over its two buttons: the account and the workspace. */
-      title: "Delete",
     },
     title: "Delete your whole account?",
     intro: "This deletes your whole account, not just one workspace.",

@@ -6586,7 +6586,7 @@
         "cli_closed": "El programa {{brain}} se cerró de repente.",
         "cli_sandbox": "El programa {{brain}} no puede iniciar su sandbox en esta computadora. Elige otra IA en la configuración del agente.",
         "account_missing": "La cuenta elegida para este agente ya no está en su computadora. Elige otra en la configuración del agente o agrégala de nuevo.",
-        "windows_sandbox": "Esta computadora con Windows no puede aislar los comandos de Codex: necesita Windows 11 24H2 o una versión más reciente.",
+        "windows_sandbox": "Esta computadora con Windows no puede aislar los comandos de Codex: necesita Windows 11 24H2 o una versión más reciente. Actualiza Windows, elige Claude o una clave de API para este agente, o muévelo a una computadora con Linux.",
         "our_error": "Algo salió mal de nuestro lado y la tarea se detuvo. Pide de nuevo en un rato.",
         "unknown": "Falló."
       }
@@ -8118,7 +8118,10 @@
     "unreachableTitle": "No se puede conectar con agentes.chat",
     "unreachableText": "Puede que se esté reiniciando. Esta página se abre sola en cuanto vuelva.",
     "offlineTitle": "No tienes conexión",
-    "offlineText": "Esta página se abre sola cuando vuelvas a tener conexión."
+    "offlineText": "Esta página se abre sola cuando vuelvas a tener conexión.",
+    "unknownHostTitle": "Esta dirección aún no está configurada",
+    "unknownHostText": "Si se acaba de conectar, vuelve a intentarlo en unos minutos.",
+    "unknownHostTab": "Dirección sin configurar · agentes.chat"
   },
   "scopes": {
     "context_read": {
@@ -9942,8 +9945,7 @@
       "approvals": "Por defecto, merge, deploy y rollback piden aprobación",
       "start": "Empezar misión",
       "created": "Misión creada: {{name}} está armando el plan.",
-      "who": "Quién programa",
-      "codexOld": "Codex en {{computer}} es demasiado antiguo para misiones: actualízalo ahí."
+      "who": "Quién programa"
     },
     "commandApproval": {
       "label": "Autonomía",
@@ -11031,7 +11033,6 @@
       "needsCloud": {
         "online": "{{computer}} se está reiniciando o reconectando. Esto cambia solo cuando vuelva.",
         "installing": "{{program}} se está instalando en {{computer}}. Esto cambia solo cuando termine.",
-        "updating": "{{program}} se está actualizando en {{computer}}. Esto cambia solo cuando termine.",
         "runnerOld": "El programa de agentes.chat en {{computer}} está desactualizado y la actualización ya viene en camino. Esto cambia solo cuando termine.",
         "execOff": "{{computer}} todavía no puede ejecutar {{program}}. Ya estamos en eso, y esto cambia solo.",
         "toolOff": "{{program}} todavía no está habilitado en {{computer}}. Eso es cosa nuestra: inténtalo de nuevo más tarde.",
@@ -12324,12 +12325,6 @@
       "read": "{{name}} lo leyó",
       "resolved": "{{name}} cerró el pedido de ayuda"
     },
-    "well": {
-      "readYours": "Leyó tu nota",
-      "readOf": "Leyó la nota de {{name}}",
-      "nowYours": "Se detuvo para leer tu nota",
-      "nowOf": "Se detuvo para leer la nota de {{name}}"
-    },
     "strip": {
       "see": "Ver",
       "toStop": "para detener"
@@ -12423,11 +12418,6 @@
       "not_installed": "{{program}} no está instalado en {{computer}}.",
       "cant_start": "{{program}} está en {{computer}}, pero no abre.",
       "not_reported": "{{computer}} todavía está comprobando qué programas tiene. Esto cambia solo cuando termine.",
-      "outdated": "La versión de {{computer}} es antigua. Actualiza Codex para usarlo.",
-      "outdatedCodex": "Se encontró Codex CLI {{detected}} en {{computer}}. Actualízalo a la versión {{minimum}} o posterior.",
-      "codexUpdateGuide": "Cómo actualizar Codex CLI",
-      "codexRecheckHere": "Después de actualizar, pulsa Volver a comprobar en la fila de Codex en Preferencias › Herramientas.",
-      "codexRecheckThere": "Actualiza Codex CLI en {{computer}}. Si tiene la aplicación de escritorio, pulsa Volver a comprobar en la fila de Codex en Preferencias › Herramientas.",
       "system": "{{program}} todavía no funciona en el sistema de {{computer}}.",
       "no_computerCloud": "Listo en cuanto {{computer}} lo esté."
     },
@@ -19692,6 +19682,21 @@
     "writeAfter": ".",
     "ask": "¿Necesitas ayuda? Pregúntales a quienes administran este servidor."
   },
+  "resetOrg": {
+    "cardTitle": "Reiniciar o eliminar",
+    "row": {
+      "title": "Reiniciar espacio de trabajo",
+      "text": "Borra todo lo que se hizo en él y empieza de cero, con las mismas personas."
+    },
+    "goes": "Agentes, conversaciones, mensajes directos, archivos, tareas, rutinas y memoria",
+    "stays": "Personas, roles, invitaciones, cuentas de IA, computadoras y conectores",
+    "fresh": "Después se abre como un espacio de trabajo nuevo, con la configuración inicial",
+    "plan": "El plan sigue igual, sin cobros nuevos",
+    "now": "Ocurre al instante y no se puede deshacer.",
+    "title": "¿Reiniciar {{name}}?",
+    "submit": "Reiniciar espacio de trabajo",
+    "resetting": "Reiniciando {{name}}…"
+  },
   "deleteOrg": {
     "card": {
       "title": "Eliminar espacio de trabajo",
@@ -19763,8 +19768,7 @@
     "menu": "Eliminar cuenta",
     "card": {
       "text": "Elimina tu cuenta en 7 días, en todos los espacios de trabajo.",
-      "button": "Eliminar cuenta…",
-      "title": "Eliminar"
+      "button": "Eliminar cuenta…"
     },
     "title": "¿Eliminar toda tu cuenta?",
     "intro": "Esto elimina toda tu cuenta, no solo un espacio de trabajo.",

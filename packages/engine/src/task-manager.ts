@@ -371,7 +371,7 @@ async function visibleRuns(
   return rowsOf<Row>(
     await db.execute(sql`select r.id, r.agent_id, r.channel_id, ${shownStatusSql} as status, r.thread_root_id, r.trigger_message_id,
         r.started_at, r.created_at, r.finished_at, r.error, c.kind, c.name, c.dm_key, t.title,
-        array_to_json(r.pending_message_ids) as pending, r.background, r.brain,
+        array_to_json(r.pending_message_ids || r.after_message_ids) as pending, r.background, r.brain,
         a.owner_user_id, a.machine_id, mc.name as machine_name,
         trig.author_user_id as requester_id, ru.name as requester_name, trig.author_agent_id as asker_agent_id,
         ${which.active ? sql`consult.question` : sql`null`} as question,
@@ -712,6 +712,7 @@ export async function taskManager(
     machine: r.machine_id ? { id: r.machine_id, name: r.machine_name ?? "" } : null,
     now: nowOf(r),
     steps: Number(r.steps ?? 0),
+    // Unread, a separate request left for after the task (`after_message_ids`) too.
     pendingMessageIds: pendingIds(r.pending),
     canStop: truthy(r.manages) || r.requester_id === userId || r.owner_user_id === userId,
     held: heldOf(r),
