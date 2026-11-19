@@ -39,7 +39,6 @@ import {
 import { runnerUpdateWay } from "../runner-update";
 import type { AgentRun } from "../runs";
 import { accountUnavailable, brainSessionId, claudeCodeAvailability, cliMissingMessage, toolOff } from "./claude-code";
-import { codexVersionOk } from "./codex";
 import { BRAIN_NAMES, BRAIN_PLAN_NAMES, type BrainAccount, type BrainKind, type BrainSession } from "./types";
 
 const KINDS: readonly BrainKind[] = ["model", "claude_code", "codex", "cursor", "opencode", "grok", "antigravity"];
@@ -450,9 +449,6 @@ export function computerBrainUnavailable(
   if (status.executors?.detectedAt && !codex) {
     return { code: "codex_missing", message: cliMissingMessage("Codex", status, "codex") };
   }
-  if (codex && !codexVersionOk(codex.version)) {
-    return { code: "codex_too_old", message: `Codex on ${status.name} is too old. Update it there.` };
-  }
   return accountUnavailable(status, account, "codex");
 }
 
@@ -472,6 +468,7 @@ export const UNAVAILABLE_CODES: ReadonlySet<string> = new Set([
   "cli_missing",
   "not_logged_in",
   "codex_missing",
+  // Only runners from before Codex counted at any version still refuse with it.
   "codex_too_old",
   "cursor_missing",
   "opencode_missing",

@@ -9032,20 +9032,26 @@
   "keyGuard.title": {
     "value": "This looks like an API key"
   },
-  "keyGuard.text": {
-    "value": "Everything in the chat is visible to people and agents. Save it as a workspace key instead: it's encrypted and nobody sees it."
+  "keyGuard.titleSecret": {
+    "value": "This looks like a key or password"
   },
-  "keyGuard.textMember": {
-    "value": "Everything in the chat is visible to people and agents. A key is like a password."
+  "keyGuard.vaultText": {
+    "value": "Everything in the chat is visible to people and agents. Keep it in the Vault: it's encrypted, and the agents you allow use it without seeing it."
   },
-  "keyGuard.save": {
-    "value": "Save as a key"
+  "keyGuard.vault": {
+    "value": "Save in the Vault"
+  },
+  "keyGuard.useAsAi": {
+    "value": "Use as AI key"
   },
   "keyGuard.remove": {
     "value": "Remove it"
   },
   "keyGuard.send": {
     "value": "Send anyway"
+  },
+  "keyGuard.saved": {
+    "value": "Agents with access use it by the name {{name}}."
   },
   "costlyCard.go": {
     "value": "Go ahead"
@@ -15749,7 +15755,7 @@
     "value": "The account chosen for this agent isn't on its computer anymore. Choose another one in the agent's settings, or add it again."
   },
   "agentPage.activity.errors.windows_sandbox": {
-    "value": "This Windows computer can't isolate Codex's commands: it needs Windows 11 24H2 or newer."
+    "value": "This Windows computer can't isolate Codex's commands: it needs Windows 11 24H2 or newer. Update Windows, choose Claude or an API key for this agent, or move it to a Linux computer."
   },
   "agentPage.activity.errors.our_error": {
     "value": "Something went wrong on our side and it stopped. Ask again in a little while."
@@ -19290,6 +19296,15 @@
   },
   "empty.offlineText": {
     "value": "This page opens by itself when you're back online."
+  },
+  "empty.unknownHostTitle": {
+    "value": "This address isn't set up yet"
+  },
+  "empty.unknownHostText": {
+    "value": "If it was just connected, try again in a few minutes."
+  },
+  "empty.unknownHostTab": {
+    "value": "Address not set up · agentes.chat"
   },
   "scopes.context_read.label": {
     "value": "Read context"
@@ -23418,9 +23433,6 @@
   "missions.new.who": {
     "value": "Who programs"
   },
-  "missions.new.codexOld": {
-    "value": "Codex on {{computer}} is too old for missions: update it there."
-  },
   "missions.commandApproval.label": {
     "value": "Autonomy"
   },
@@ -25980,9 +25992,6 @@
   },
   "aiAccounts.connect.needsCloud.installing": {
     "value": "{{program}} is being installed on {{computer}}. This changes by itself when it's done."
-  },
-  "aiAccounts.connect.needsCloud.updating": {
-    "value": "{{program}} is being updated on {{computer}}. This changes by itself when it's done."
   },
   "aiAccounts.connect.needsCloud.runnerOld": {
     "value": "The agentes.chat program on {{computer}} is out of date and an update is on its way. This changes by itself when it's done."
@@ -29177,18 +29186,6 @@
   "run.steer.resolved": {
     "value": "{{name}} closed the help request"
   },
-  "run.well.readYours": {
-    "value": "Read your note"
-  },
-  "run.well.readOf": {
-    "value": "Read {{name}}'s note"
-  },
-  "run.well.nowYours": {
-    "value": "Stopped to read your note"
-  },
-  "run.well.nowOf": {
-    "value": "Stopped to read {{name}}'s note"
-  },
   "run.strip.see": {
     "value": "View"
   },
@@ -29416,21 +29413,6 @@
   },
   "brain.reasons.not_reported": {
     "value": "{{computer}} is still checking which programs it has. This changes by itself when it's done."
-  },
-  "brain.reasons.outdated": {
-    "value": "The version on {{computer}} is old. Update Codex to use it."
-  },
-  "brain.reasons.outdatedCodex": {
-    "value": "Codex CLI {{detected}} was found on {{computer}}. Update it to {{minimum}} or later."
-  },
-  "brain.reasons.codexUpdateGuide": {
-    "value": "How to update Codex CLI"
-  },
-  "brain.reasons.codexRecheckHere": {
-    "value": "After updating, choose Check again for Codex in Preferences › Tools."
-  },
-  "brain.reasons.codexRecheckThere": {
-    "value": "Update Codex CLI on {{computer}}. If it runs the desktop app, choose Check again for Codex in Preferences › Tools."
   },
   "brain.reasons.system": {
     "value": "{{program}} doesn't run on {{computer}}'s system yet."
@@ -47090,6 +47072,39 @@
   "support.ask": {
     "value": "Need help? Ask the people who run this server."
   },
+  "resetOrg.cardTitle": {
+    "value": "Reset or delete"
+  },
+  "resetOrg.row.title": {
+    "value": "Reset workspace"
+  },
+  "resetOrg.row.text": {
+    "value": "Erases everything made in it and starts over, with the same people."
+  },
+  "resetOrg.goes": {
+    "value": "Agents, conversations, DMs, files, tasks, routines and memory"
+  },
+  "resetOrg.stays": {
+    "value": "People, roles, invitations, AI accounts, computers and connectors"
+  },
+  "resetOrg.fresh": {
+    "value": "Then it opens like a new workspace, with the first setup"
+  },
+  "resetOrg.plan": {
+    "value": "The plan stays the same, with no new charge"
+  },
+  "resetOrg.now": {
+    "value": "It happens at once and can't be undone."
+  },
+  "resetOrg.title": {
+    "value": "Reset {{name}}?"
+  },
+  "resetOrg.submit": {
+    "value": "Reset workspace"
+  },
+  "resetOrg.resetting": {
+    "value": "Resetting {{name}}…"
+  },
   "deleteOrg.card.title": {
     "value": "Delete workspace"
   },
@@ -47257,9 +47272,6 @@
   },
   "deleteAccount.card.button": {
     "value": "Delete account…"
-  },
-  "deleteAccount.card.title": {
-    "value": "Delete"
   },
   "deleteAccount.title": {
     "value": "Delete your whole account?"

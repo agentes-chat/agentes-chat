@@ -75,7 +75,7 @@ const hostJson = (h: HostLook) => ({
 });
 
 /** This server's own hosts, which never register: `PUBLIC_URL`'s and each of `EXTRA_TRUSTED_ORIGINS`. */
-const ownHosts = (config: Config) =>
+export const ownHosts = (config: Config) =>
   new Set(
     [config.PUBLIC_URL, ...(config.EXTRA_TRUSTED_ORIGINS ?? [])]
       .map((url) => normalizeHost(new URL(url).hostname))

@@ -194,9 +194,23 @@ export function confirmDeleteWorkspace(t: TFunction, name: string) {
   });
 }
 
+/** Resetting the workspace: the system's confirmation first, as deleting it, then its own screen. */
+export function confirmResetWorkspace(t: TFunction, name: string) {
+  confirmAction({
+    title: t("resetOrg.title", { name }),
+    text: t("resetOrg.now"),
+    action: t("resetOrg.submit"),
+    cancel: t("common.cancel"),
+    onConfirm: () => {
+      haptics.medium();
+      router.push("/settings/reset");
+    },
+  });
+}
+
 /**
- * Owners: "Delete <name>" alone in red, behind the system's alert (`confirmDeleteWorkspace`), then the proof and
- * the hold on a screen of its own. Nothing for anyone else, nor while it is being deleted.
+ * Owners: "Reset workspace", then "Delete <name>" in red, each behind the system's alert (`confirmResetWorkspace`,
+ * `confirmDeleteWorkspace`), then the proof and the hold on a screen of its own. Nothing for anyone else, nor while it is being deleted.
  */
 export function DeleteWorkspaceRow() {
   const { t } = useTranslation();
@@ -206,6 +220,11 @@ export function DeleteWorkspaceRow() {
   return (
     <>
       <Gap />
+      <Gap />
+      <GroupedList>
+        <GroupedRow label={t("resetOrg.row.title")} danger onPress={() => confirmResetWorkspace(t, name)} />
+      </GroupedList>
+      <GroupedFooter>{t("resetOrg.row.text")}</GroupedFooter>
       <Gap />
       <GroupedList>
         <GroupedRow

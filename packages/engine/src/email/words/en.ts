@@ -334,6 +334,13 @@ export const en = {
   deletionCode: {
     subjectWorkspace: (code: string) => `${code} is your code to delete a workspace`,
     subjectAccount: (code: string) => `${code} is your code to delete your whole account`,
+    subjectReset: (code: string) => `${code} is your code to reset a workspace`,
+    reset: (org: string): Text => [
+      "Type this code to reset the workspace ",
+      { b: org },
+      ". Its agents, conversations, files and memory are erased at once, for good, and it starts over like a new one.",
+    ],
+    whyReset: (org: string) => `You got this email because your account asked to reset ${org} on agentes.chat.`,
     preheader: "Type it in agentes.chat to confirm. It works for 10 minutes.",
     headline: "Your code",
     workspace: (org: string): Text => [

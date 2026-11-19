@@ -91,7 +91,7 @@ function useBackToList() {
     void navigate({ to: "/org/$orgId/settings/$section", params: { orgId: org.id, section: "devices" }, search: {} });
 }
 
-/** The header card's top: the 96 portrait, the name with its rename pencil, chips (whose, where), the menu. */
+/** The header card's top: the 96 portrait, the name with its rename pencil, chips (whose, its state, where), its actions. */
 function Head({
   device,
   chips,
@@ -143,7 +143,7 @@ function OwnerChip({ userId }: { userId: string | null }) {
   );
 }
 
-/** The state, its reason in words, and its one action. */
+/** Under the header's chips: the state's reason in words and its one action; nothing when the pill says it all. */
 function StatusLine({
   status,
   host,
@@ -164,9 +164,9 @@ function StatusLine({
   const { t, i18n } = useTranslation();
   const sentence = text ?? statusSentence(t, i18n.language, status, { host, hostOs, ios });
   const label = status.kind === "in_use" && status.label ? status.label : null;
+  if (!sentence && !action) return null;
   return (
     <div className="dv-statusline" data-status={statusLook(status)} role="status">
-      <StatusPill status={status} />
       <span className="dv-statusline__text">
         {sentence}
         {label && <small> · {label}</small>}
@@ -200,17 +200,25 @@ function PauseControl({ machine, paused }: { machine: Machine; paused: boolean }
         onError: (err) => toast.show(errorText(t, err), "error"),
       },
     );
+  const words = t(paused ? "machines.remotePause.resume" : "machines.remotePause.button");
   if (!machine.remotePause) {
     return (
-      <Button size="sm" icon={paused ? "play" : "pause"} disabled>
-        {t(paused ? "machines.remotePause.resume" : "machines.remotePause.button")}
+      <Button size="sm" icon={paused ? "play" : "pause"} disabled className="dv-pausebtn" aria-label={words}>
+        {words}
       </Button>
     );
   }
   if (paused) {
     return (
-      <Button size="sm" icon="play" loading={pause.isPending} onClick={() => set("resume")}>
-        {t("machines.remotePause.resume")}
+      <Button
+        size="sm"
+        icon="play"
+        loading={pause.isPending}
+        onClick={() => set("resume")}
+        className="dv-pausebtn"
+        aria-label={words}
+      >
+        {words}
       </Button>
     );
   }
@@ -220,8 +228,8 @@ function PauseControl({ machine, paused }: { machine: Machine; paused: boolean }
       align="end"
       label={label}
       trigger={
-        <Button size="sm" icon="pause" loading={pause.isPending}>
-          {t("machines.remotePause.button")}
+        <Button size="sm" icon="pause" loading={pause.isPending} className="dv-pausebtn" aria-label={words}>
+          {words}
         </Button>
       }
     >
@@ -343,39 +351,45 @@ function ComputerPage({ machineId }: { machineId: string }) {
       <Card aria-labelledby="dv-page-title">
         <Head
           device={d}
-          chips={<OwnerChip userId={d.belongsToWorkspace ? null : d.ownerUserId} />}
+          chips={
+            <>
+              <OwnerChip userId={d.belongsToWorkspace ? null : d.ownerUserId} />
+              <StatusPill status={status} />
+            </>
+          }
           onRename={d.mayManage ? () => setRenaming(target) : undefined}
           menu={
-            d.mayManage && (
-              <Menu
-                align="end"
-                label={t("devices.menu", { name: d.name })}
-                trigger={
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    iconOnly
-                    icon="more"
-                    aria-label={t("devices.menu", { name: d.name })}
-                  />
-                }
-              >
-                <MenuItem icon="edit" onSelect={() => setRenaming(target)}>
-                  {t("devices.rename")}
-                </MenuItem>
-                <MenuSeparator />
-                <MenuItem icon={host ? "block" : "trash"} danger onSelect={() => setRemoving(target)}>
-                  {removeWords}
-                </MenuItem>
-              </Menu>
+            (pausable || d.mayManage) && (
+              <span className="row dv-headacts">
+                {pausable && <PauseControl machine={pausable} paused={status.kind === "paused"} />}
+                {d.mayManage && (
+                  <Menu
+                    align="end"
+                    label={t("devices.menu", { name: d.name })}
+                    trigger={
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        iconOnly
+                        icon="more"
+                        aria-label={t("devices.menu", { name: d.name })}
+                      />
+                    }
+                  >
+                    <MenuItem icon="edit" onSelect={() => setRenaming(target)}>
+                      {t("devices.rename")}
+                    </MenuItem>
+                    <MenuSeparator />
+                    <MenuItem icon={host ? "block" : "trash"} danger onSelect={() => setRemoving(target)}>
+                      {removeWords}
+                    </MenuItem>
+                  </Menu>
+                )}
+              </span>
             )
           }
         />
-        <StatusLine
-          status={status}
-          text={pausedFromApps}
-          action={pausable && <PauseControl machine={pausable} paused={status.kind === "paused"} />}
-        />
+        <StatusLine status={status} text={pausedFromApps} />
         {pausable && !pausable.remotePause && <span className="small muted">{t("machines.remotePause.outdated")}</span>}
         <Facts facts={facts} />
         {status.kind === "paused" && !pausedFromApps && <span className="small muted">{t("machines.pausedHint")}</span>}
@@ -595,6 +609,7 @@ function PhonePage({ phoneId }: { phoneId: string }) {
           chips={
             <>
               <OwnerChip userId={p.ownerUserId} />
+              <StatusPill status={p.status} />
               <Link
                 to="/org/$orgId/settings/devices/$deviceId"
                 params={{ orgId: org.id, deviceId: host.id }}

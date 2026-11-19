@@ -778,6 +778,7 @@ export async function routeMessage(
   deps: RouterDeps,
   input: { orgId: string; messageId: string },
 ): Promise<RouteResult> {
+  const started = performance.now();
   const { db } = deps;
   // A workspace on hold, suspended or being deleted asks no strategy (Jev bills the server): nobody answers there now.
   const refusal = await standingRefusal(db, input.orgId);
@@ -1635,7 +1636,10 @@ export async function routeMessage(
       .onConflictDoNothing()
       .returning({ id: routingDecisions.id });
     if (!decision) return null; // another worker routed it first
-    return createAgentRuns(tx, message, chosen, "router", { joinChannelRun: message.authorType === "person" });
+    return createAgentRuns(tx, message, chosen, "router", {
+      joinChannelRun: message.authorType === "person",
+      routerMs: performance.now() - started,
+    });
   });
   if (!runs) return { runs: [], skipped: "already_routed" };
   const reacted = chosen.length === 0 ? await reactToSocial(decided, heldBack ? (only ?? null) : null) : undefined;

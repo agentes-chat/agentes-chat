@@ -6,6 +6,7 @@ import { endsAsking } from "./brakes";
 import { threadIsConfidential } from "./confidential";
 import { publishMessageCreated } from "./events";
 import type { ModelGateway } from "./gateway";
+import type { SteerHandling } from "./judge";
 import { landedAfterSql } from "./message-place";
 import { insertMessage, type Message, messageView } from "./messages";
 import type { Notice } from "./notices";
@@ -26,6 +27,12 @@ export interface TalkerInput {
   live: boolean;
   /** What the message did to the run's wait, if it waited. */
   waited: WaitMessageOutcome | null;
+  /**
+   * How the triage said the agent takes the message (`steerHandling`), null without a judge. A quick question or a
+   * separate request left for after the task gets its answer now, even from a task that reads messages soon: that
+   * read answers only at the task's end.
+   */
+  handling?: SteerHandling | null;
 }
 
 /**
@@ -66,13 +73,16 @@ export type TalkerSkip =
  * `TALKER_QUIET_MS` (a long tool). Skipped: background work, a
  * message that ended the wait, a model-brain run moving along (it reads the
  * message within seconds at its next step), and a second reply within
- * `TALKER_MIN_GAP_MS` or with no new person message since the last one.
+ * `TALKER_MIN_GAP_MS` or with no new person message since the last one. A message the triage said is a quick question
+ * or a separate request for after the task (`handling`) is considered from a run moving along too.
  */
 export function talkerPolicy(input: {
   run: Pick<AgentRun, "status" | "background"> & Partial<Pick<AgentRun, "startedAt" | "createdAt">>;
   brain: string;
   message: Pick<Message, "body" | "createdAt">;
   waited: WaitMessageOutcome | null;
+  /** How the triage said the agent takes the message (`TalkerInput.handling`). */
+  handling?: SteerHandling | null;
   /** The run's latest sign of life (its last step, else its start). */
   lastActivityAt: Date;
   /** Its last fast reply on this run. */
@@ -93,7 +103,9 @@ export function talkerPolicy(input: {
     (input.brain !== "model"
       ? !start || now.getTime() - start.getTime() >= TALKER_QUIET_MS
       : now.getTime() - input.lastActivityAt.getTime() >= TALKER_QUIET_MS);
-  if (!waiting && !busy) return "reads_soon";
+  // Asked how it goes, or handed a separate request: the task would answer only at its end.
+  const answersNow = input.handling === "answer" || input.handling === "queue";
+  if (!waiting && !busy && !answersNow) return "reads_soon";
   const last = input.lastReplyAt;
   if (last && (now.getTime() - last.getTime() < TALKER_MIN_GAP_MS || last >= input.message.createdAt)) {
     return "rate_limited";
@@ -108,6 +120,7 @@ const SYSTEM = (name: string) =>
     "- Use only the facts in `snapshot`. Never claim a result, progress or decision that isn't there. Never invent what the task found.",
     "- Never promise an action the task may not take, and never say you did something. You can't run tools, change anything or grant anything.",
     '- When the task will handle the message (a correction, a new instruction, more detail), say briefly that it\'s noted and when it will be read (e.g. "Anotado, leio assim que terminar este passo.").',
+    '- When `snapshot.afterTask` is true, the message is a separate request the agent takes up right after the current task: say briefly that it\'s noted and comes after it (e.g. "Anotado, faço assim que terminar o relatório.").',
     "- A question you can answer from the snapshot (status, what it's doing, what it waits on): answer it plainly. People can't see or use the task's tools: say in everyday words what it does, never the name of a tool (the names in `steps`), a function or a parameter.",
     "- While `waitingOn` names its computer, the task isn't working and has no step to finish: say what it waits for and that it reads the message once it gets there. Never say it is working.",
     "- If the message only asks to stop or cancel, or is small talk that needs no answer, or the conversation already answered it: pass.",
@@ -220,7 +233,7 @@ const promptOf = (s: TalkerSnapshot) => JSON.stringify({ snapshot: s }, null, 1)
 export function createTalker(deps: TalkerDeps): Talker {
   const now = deps.now ?? (() => new Date());
   return {
-    async consider({ run: landed, message, live, waited }) {
+    async consider({ run: landed, message, live, waited, handling = null }) {
       const decide = (outcome: TalkerSkip | "pass" | "reply" | "error") =>
         deps.onDecision?.({ runId: landed.id, messageId: message.id, outcome });
       // Cheap checks first: most messages to a working run need no model call.
@@ -238,6 +251,7 @@ export function createTalker(deps: TalkerDeps): Talker {
         brain: runBrainOf(landed, agent),
         message,
         waited,
+        handling,
         lastActivityAt: activity,
         lastReplyAt: replied,
         now: at,
@@ -262,6 +276,7 @@ export function createTalker(deps: TalkerDeps): Talker {
           message,
           live,
           waited,
+          handling,
           now: at,
         });
         const answer = await ask(deps, run, agent, snapshot);

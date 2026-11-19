@@ -330,6 +330,7 @@
     "startedWith": "{{name}}との会話で開始",
     "replies_other": "{{count}}件の返信",
     "repliesWord_other": "返信",
+    "dayAt": "{{day}} {{time}}",
     "thread": "スレッド",
     "closed": "終了",
     "options": "オプション",
@@ -364,9 +365,7 @@
       "delivered": "{{name}}に届きました",
       "held": "{{name}}はあなたの決定後に読みます",
       "read": "{{name}}が読みました",
-      "resolved": "{{name}}がヘルプのリクエストを閉じました",
-      "well": "メモを読みました",
-      "wellNow": "手を止めてメモを読みました"
+      "resolved": "{{name}}がヘルプのリクエストを閉じました"
     },
     "stopped": {
       "byYou": "ここで停止",
@@ -2145,6 +2144,8 @@
     "deleteIntro": "{{name}}はすぐに全員に対して閲覧のみになり、7日後に完全に削除されます。",
     "holdDelete": "長押しして削除",
     "deleteFailed": "ワークスペースを削除できませんでした。もう一度お試しください。",
+    "holdReset": "長押ししてリセット",
+    "resetFailed": "ワークスペースをリセットできませんでした。もう一度お試しください。",
     "access": {
       "how": "行をタップしてレベルを変更します: アクセスなし、読み取り、読み取りと書き込み。"
     },

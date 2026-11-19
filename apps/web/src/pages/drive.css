@@ -205,6 +205,19 @@ html:not([data-pointer]) .drive-row:has(.drive-hit:focus-visible) {
   border-top: 1px solid var(--line);
   transition: background 0.12s;
 }
+/* A row is two lines (the title, then its kind): the checkbox goes on the title's line, centred on its capitals as the
+   icon is (`.ac-iconline`'s rule). In the title's font, so its `lh` is the title's line. */
+.drive-row > .drive-check {
+  align-self: start;
+  font: inherit;
+  font-size: 14px;
+  translate: 0 calc(11px - var(--cap-mid) - 50%);
+}
+@supports (top: 1lh) {
+  .drive-row > .drive-check {
+    translate: 0 calc(0.5lh - var(--cap-mid) - 50%);
+  }
+}
 .drive-row:hover {
   background: color-mix(in srgb, var(--sunken) 55%, transparent);
 }

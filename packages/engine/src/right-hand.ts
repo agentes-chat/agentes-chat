@@ -124,7 +124,11 @@ export async function ensureRightHand(db: Executor, orgId: string): Promise<stri
   const { workspaceApprovalsLevel } = await import("./workspace-approvals");
   const [taken, [other], approvalsLevel] = await Promise.all([
     takenHandles(db, orgId),
-    db.select({ id: agents.id }).from(agents).where(eq(agents.orgId, orgId)).limit(1),
+    db
+      .select({ id: agents.id })
+      .from(agents)
+      .where(and(eq(agents.orgId, orgId), isNull(agents.deletedAt)))
+      .limit(1),
     workspaceApprovalsLevel(db, orgId),
   ]);
   const handle = taken.has(RIGHT_HAND_DEFAULTS.handle)

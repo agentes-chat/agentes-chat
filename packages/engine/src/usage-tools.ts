@@ -1,5 +1,5 @@
 import type { PubSub } from "@agenteschat/adapters";
-import { planState, planWindows } from "@agenteschat/ui/plan-state";
+import { planState, planWindows, windowReadAt } from "@agenteschat/ui/plan-state";
 import { ago, zoneOf } from "./context";
 import { defaultAccountLabel } from "./machine-accounts";
 import { type AgentPlanUsageView, type ApiAgentUsage, agentUsageFor, type PlanAccountUsage } from "./plan-usage";
@@ -41,6 +41,9 @@ function planText(a: PlanAccountUsage, agentId: string, zone: string, now: Date)
     const resets = w.resetsAt && Date.parse(w.resetsAt) > at ? `, resets ${when(w.resetsAt)}` : "";
     // Null: a window of unknown length has no estimate.
     const part = w.used > 0 && w.agents ? (w.agents.find((p) => p.agentId === agentId)?.percent ?? 0) : null;
+    // Read too long ago it may have reset early (the apps show only its age): never a number to plan on.
+    if (w.stale)
+      return `- ${name}: ${w.used}% used when last read ${ago(new Date(windowReadAt(usage, w) ?? usage.at), at)}; it may have reset since.`;
     return `- ${name}: ${w.used}% used${resets}.${part === null ? "" : ` Your part: about ${part}%.`}`;
   });
   const { state, until } = planState(usage, at);

@@ -41,6 +41,7 @@ import {
   type StatusFilter,
   whenIcon,
 } from "./logic";
+import { RoutineRunBars } from "./parts";
 import { RoutineHorizon } from "./RoutineHorizon";
 
 /** While a run works (or waits), the list is asked again this often: its state and its next run move on. */
@@ -225,6 +226,7 @@ function AgentSection({ group, now, live }: { group: AgentGroup<Routine>; now: n
               subLines={2}
               {...(needsLook ? { subTone: "amber" as const } : {})}
               {...(next && !needsLook ? { belowText: next } : {})}
+              valueLeading={<RoutineRunBars routine={r} running={isRunning(r)} toRoutine />}
               chevron
               onPress={() => openRoutine(r)}
             />

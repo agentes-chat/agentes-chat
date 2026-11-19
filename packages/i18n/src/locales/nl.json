@@ -3680,11 +3680,13 @@
   },
   "keyGuard": {
     "title": "Dit lijkt op een API-sleutel",
-    "text": "Alles in de chat is zichtbaar voor mensen en agents. Sla het liever op als sleutel van de werkruimte: die is versleuteld en niemand ziet hem.",
-    "textMember": "Alles in de chat is zichtbaar voor mensen en agents. Een sleutel is net als een wachtwoord.",
-    "save": "Opslaan als sleutel",
+    "titleSecret": "Dit lijkt op een sleutel of wachtwoord",
+    "vaultText": "Alles in de chat is zichtbaar voor mensen en agenten. Bewaar hem in de Vault: hij is versleuteld, en de agenten die je toestaat gebruiken hem zonder hem te zien.",
+    "vault": "Opslaan in de Vault",
+    "useAsAi": "Gebruiken als AI-sleutel",
     "remove": "Verwijderen",
-    "send": "Toch versturen"
+    "send": "Toch versturen",
+    "saved": "Agenten met toegang gebruiken hem onder de naam {{name}}."
   },
   "costlyCard": {
     "go": "Ga je gang",
@@ -6406,7 +6408,7 @@
         "cli_closed": "Het programma {{brain}} werd onverwacht afgesloten.",
         "cli_sandbox": "Het programma {{brain}} kan zijn sandbox niet starten op deze computer. Kies een andere AI in de instellingen van de agent.",
         "account_missing": "Het account dat voor deze agent gekozen is staat niet meer op zijn computer. Kies een ander in de instellingen van de agent of voeg het opnieuw toe.",
-        "windows_sandbox": "Deze Windows-computer kan de opdrachten van Codex niet isoleren: hij heeft Windows 11 24H2 of nieuwer nodig.",
+        "windows_sandbox": "Deze Windows-computer kan de opdrachten van Codex niet isoleren: hij heeft Windows 11 24H2 of nieuwer nodig. Werk Windows bij, kies Claude of een API-sleutel voor deze agent, of verplaats hem naar een Linux-computer.",
         "our_error": "Er ging iets mis aan onze kant en de taak is gestopt. Vraag het over een poosje opnieuw.",
         "unknown": "Mislukt."
       }
@@ -7912,7 +7914,10 @@
     "unreachableTitle": "agentes.chat is niet bereikbaar",
     "unreachableText": "Misschien wordt het opnieuw opgestart. Deze pagina opent vanzelf zodra het weer werkt.",
     "offlineTitle": "Je bent offline",
-    "offlineText": "Deze pagina opent vanzelf zodra je weer online bent."
+    "offlineText": "Deze pagina opent vanzelf zodra je weer online bent.",
+    "unknownHostTitle": "Dit adres is nog niet ingesteld",
+    "unknownHostText": "Is het net gekoppeld, probeer het dan over een paar minuten opnieuw.",
+    "unknownHostTab": "Adres niet ingesteld · agentes.chat"
   },
   "scopes": {
     "context_read": {
@@ -9670,8 +9675,7 @@
       "approvals": "Standaard vragen merge, deploy en rollback om goedkeuring",
       "start": "Missie starten",
       "created": "Missie gemaakt: {{name}} stelt het plan op.",
-      "who": "Wie programmeert",
-      "codexOld": "Codex op {{computer}} is te oud voor missies: werk het daar bij."
+      "who": "Wie programmeert"
     },
     "commandApproval": {
       "label": "Autonomie",
@@ -10728,7 +10732,6 @@
       "needsCloud": {
         "online": "{{computer}} start opnieuw op of maakt opnieuw verbinding. Dit verandert vanzelf zodra hij terug is.",
         "installing": "{{program}} wordt geïnstalleerd op {{computer}}. Dit verandert vanzelf als het klaar is.",
-        "updating": "{{program}} wordt bijgewerkt op {{computer}}. Dit verandert vanzelf als het klaar is.",
         "runnerOld": "Het agentes.chat-programma op {{computer}} is verouderd en een update is onderweg. Dit verandert vanzelf als het klaar is.",
         "execOff": "{{computer}} kan {{program}} nog niet uitvoeren. We zijn ermee bezig, en dit verandert vanzelf.",
         "toolOff": "{{program}} is nog niet toegestaan op {{computer}}. Dat ligt aan ons: probeer het later opnieuw.",
@@ -12000,12 +12003,6 @@
       "read": "{{name}} heeft het gelezen",
       "resolved": "{{name}} heeft het hulpverzoek gesloten"
     },
-    "well": {
-      "readYours": "Las je notitie",
-      "readOf": "Las de notitie van {{name}}",
-      "nowYours": "Stopte om je notitie te lezen",
-      "nowOf": "Stopte om de notitie van {{name}} te lezen"
-    },
     "strip": {
       "see": "Bekijken",
       "toStop": "om te stoppen"
@@ -12101,11 +12098,6 @@
       "not_installed": "{{program}} is niet geïnstalleerd op {{computer}}.",
       "cant_start": "{{program}} staat op {{computer}}, maar start niet.",
       "not_reported": "{{computer}} controleert nog welke programma's erop staan. Dit verandert vanzelf als het klaar is.",
-      "outdated": "De versie op {{computer}} is oud. Werk Codex bij om het te gebruiken.",
-      "outdatedCodex": "Op {{computer}} is Codex CLI {{detected}} gevonden. Werk bij naar versie {{minimum}} of hoger.",
-      "codexUpdateGuide": "Codex CLI bijwerken",
-      "codexRecheckHere": "Kies na het bijwerken Opnieuw controleren bij Codex in Voorkeuren › Tools.",
-      "codexRecheckThere": "Werk Codex CLI bij op {{computer}}. Als daar de desktopapp draait, kies je Opnieuw controleren bij Codex in Voorkeuren › Tools.",
       "system": "{{program}} werkt nog niet op het systeem van {{computer}}.",
       "no_computerCloud": "Klaar zodra {{computer}} klaar is."
     },
@@ -19304,6 +19296,21 @@
     "writeAfter": ".",
     "ask": "Hulp nodig? Vraag het aan de mensen die deze server beheren."
   },
+  "resetOrg": {
+    "cardTitle": "Resetten of verwijderen",
+    "row": {
+      "title": "Werkruimte resetten",
+      "text": "Wist alles wat erin is gemaakt en begint opnieuw, met dezelfde mensen."
+    },
+    "goes": "Agents, gesprekken, privéberichten, bestanden, taken, routines en geheugen",
+    "stays": "Mensen, rollen, uitnodigingen, AI-accounts, computers en connectors",
+    "fresh": "Daarna opent hij als een nieuwe werkruimte, met de eerste inrichting",
+    "plan": "Het abonnement blijft hetzelfde, zonder nieuwe afschrijving",
+    "now": "Dit gebeurt meteen en kan niet ongedaan worden gemaakt.",
+    "title": "{{name}} resetten?",
+    "submit": "Werkruimte resetten",
+    "resetting": "{{name}} wordt gereset…"
+  },
   "deleteOrg": {
     "card": {
       "title": "Werkruimte verwijderen",
@@ -19375,8 +19382,7 @@
     "menu": "Account verwijderen",
     "card": {
       "text": "Verwijdert je account over 7 dagen, in alle werkruimtes.",
-      "button": "Account verwijderen…",
-      "title": "Verwijderen"
+      "button": "Account verwijderen…"
     },
     "title": "Je hele account verwijderen?",
     "intro": "Dit verwijdert je hele account, niet alleen één werkruimte.",

@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 import { Button, IconButton, SCREEN_X, Sky, Text, useTheme, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
+import { useMessageCardCorners } from "../chat/look";
 import { PageBones } from "../files/PageBones";
 import { LoadFailed } from "../shared/FirstUse";
 import { useColors, useDirectory, useErrorToast, useOrgId } from "../shared/hooks";
@@ -355,6 +356,7 @@ export function LiveBlock({
 
 /** A block on its message: the agent's card, its title, and the block itself. */
 export function LiveBlockCard({ id, version }: { id: string; version?: number }) {
+  const cardCorners = useMessageCardCorners();
   const { t } = useTranslation();
   const c = useColors();
   const orgId = useOrgId();
@@ -363,7 +365,7 @@ export function LiveBlockCard({ id, version }: { id: string; version?: number })
   const a = query.data;
   if (a?.content.kind !== "block") {
     return (
-      <View style={[styles.card, styles.loading, { backgroundColor: c.raised, borderColor: c.line2 }]}>
+      <View style={[styles.card, styles.loading, { backgroundColor: c.raised, borderColor: c.line2 }, cardCorners]}>
         <ActivityIndicator color={c.faint} />
         <Text variant="footnote" tone="muted">
           {t("mobile.blocks.building")}
@@ -374,7 +376,7 @@ export function LiveBlockCard({ id, version }: { id: string; version?: number })
   const agentId = a.createdBy.id;
   const open = () => router.push({ pathname: "/block/[id]", params: { id: a.id, v: String(a.shownVersion) } });
   return (
-    <View style={[styles.card, { backgroundColor: c.raised, borderColor: c.line2 }]}>
+    <View style={[styles.card, { backgroundColor: c.raised, borderColor: c.line2 }, cardCorners]}>
       <Sky
         color={agentLook(dir.agentById.get(agentId)).color}
         surface="raised"

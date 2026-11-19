@@ -63,6 +63,7 @@ import { useColors, useOrgId } from "../shared/hooks";
 import { MONO, tapHaptic } from "../shared/parts";
 import { CodeCard } from "./CodeCard";
 import { keepOpen, keptOpen } from "./kept-sizes";
+import { useMessageCardCorners } from "./look";
 import { MessageText } from "./MessageText";
 import { outputTail } from "./turn";
 
@@ -70,8 +71,8 @@ import { outputTail } from "./turn";
  * The tools of one reply, as on the web (`ToolCalls.tsx`, the UI kit's `ToolBlock`): one
  * flat card that stays one line while the agent works (the apps' logos, what it does now, the pixel mark)
  * and opens on a tap into every call, each opening again into what it ran or was given and answered. What
- * the agent said between calls sits inside, muted; the messages it read stay outside, under the block, so
- * "Leu seu recado" is always in sight. The words come from the shared model (`@agenteschat/client/lib/work`).
+ * the agent said between calls sits inside, muted. The words come from the shared model
+ * (`@agenteschat/client/lib/work`).
  */
 
 /** Our own tools by what they do: their icon on the tile (a connector's call shows its mark). */
@@ -285,6 +286,7 @@ export function ToolBlock({
   keep?: string | undefined;
 }) {
   const c = useColors();
+  const cardCorners = useMessageCardCorners();
   const reduced = useReducedMotion();
   const [open, setOpen] = useState(() => defaultOpen || keptOpen(keep));
   const flashing = useFlash(flash, reduced ? FLASH_MS : FLASH_HOLD_MS);
@@ -312,7 +314,7 @@ export function ToolBlock({
         only.line.detail
       );
     return (
-      <View style={[styles.block, { backgroundColor: c.raised, borderColor: c.line2 }]}>
+      <View style={[styles.block, { backgroundColor: c.raised, borderColor: c.line2 }, cardCorners]}>
         {plate}
         <View style={styles.one}>
           <Line line={{ ...only.line, detail }} color={color} onToggle={onToggle} keep={keep} />
@@ -321,7 +323,7 @@ export function ToolBlock({
     );
   }
   return (
-    <View style={[styles.block, { backgroundColor: c.raised, borderColor: c.line2 }]}>
+    <View style={[styles.block, { backgroundColor: c.raised, borderColor: c.line2 }, cardCorners]}>
       {plate}
       <Pressable
         onPress={() => {
@@ -639,14 +641,13 @@ function blockItemsOf(items: ToolItem[], t: TFunction, locale: string, logo: Cal
 
 /**
  * The tools of an agent's turn while it works (and kept by its saved reply a moment after, `done`): the
- * block saying what it does now, opening into every call; the messages it read under it. Before its first
- * call, what it said and read are plain lines (as on the web's `LiveTools`).
+ * block saying what it does now, opening into every call. Before its first call, what it said is plain lines (as on
+ * the web's `LiveTools`). A message it read on the way shows nothing here: that message says it (its receipt).
  */
 export function TurnTools({
   items,
   agentName,
   color,
-  quoteOf,
   done = false,
   settled = false,
   keep,
@@ -654,8 +655,6 @@ export function TurnTools({
   items: ToolItem[];
   agentName: string;
   color: AgentColorName;
-  /** A message's text (the "Leu seu recado" wells quote it). */
-  quoteOf: (messageId: string) => string | undefined;
   /** The reply is done: "Usou 4 ferramentas · 6 s". */
   done?: boolean;
   /** Drawn by the saved reply (nothing comes in any more). */
@@ -671,20 +670,16 @@ export function TurnTools({
   // the person chose not to see (`showActivity`) unless they turned it on.
   const now = quietWork(items) || (done && !showsActivity(org)) ? null : toolNow(items);
   if (!now) {
-    // Done without a call: its words are the reply now; only the messages it read stay.
-    const shown = done ? items.filter((i) => i.kind === "steer") : items;
-    if (shown.length === 0) return null;
+    // Done without a call: its words are the reply now.
+    const said = done ? [] : items.flatMap((i) => (i.kind === "say" ? [i] : []));
+    if (said.length === 0) return null;
     return (
       <View style={styles.loose}>
-        {shown.map((i) =>
-          i.kind === "say" ? (
-            <View key={i.key} style={styles.say}>
-              <MessageText body={i.text} selectable={false} />
-            </View>
-          ) : i.kind === "steer" ? (
-            <ReadWell key={i.key} now={i.now} quote={quoteOf(i.messageId) ?? ""} settled={settled} />
-          ) : null,
-        )}
+        {said.map((i) => (
+          <View key={i.key} style={styles.say}>
+            <MessageText body={i.text} selectable={false} />
+          </View>
+        ))}
       </View>
     );
   }
@@ -700,28 +695,21 @@ export function TurnTools({
         count: t("chat.work.steps", { count: calls }),
       };
   return (
-    <>
-      <ToolBlock
-        logos={toolApps(items).map((a) => ({ key: appKey(a), node: logo(a, 18) }))}
-        head={head}
-        // Its own line is closed until tapped, as the block it stands for (code that runs shows when opened).
-        items={
-          one
-            ? blockItems.map((i) => (i.kind === "line" ? { ...i, line: { ...i.line, defaultOpen: false } } : i))
-            : blockItems
-        }
-        color={color}
-        label={t("chat.work.block", agentGrammar(agentName))}
-        live={!done && !settled}
-        one={one}
-        keep={keep}
-      />
-      {items.map((i) =>
-        i.kind === "steer" ? (
-          <ReadWell key={i.key} now={i.now} quote={quoteOf(i.messageId) ?? ""} settled={settled} />
-        ) : null,
-      )}
-    </>
+    <ToolBlock
+      logos={toolApps(items).map((a) => ({ key: appKey(a), node: logo(a, 18) }))}
+      head={head}
+      // Its own line is closed until tapped, as the block it stands for (code that runs shows when opened).
+      items={
+        one
+          ? blockItems.map((i) => (i.kind === "line" ? { ...i, line: { ...i.line, defaultOpen: false } } : i))
+          : blockItems
+      }
+      color={color}
+      label={t("chat.work.block", agentGrammar(agentName))}
+      live={!done && !settled}
+      one={one}
+      keep={keep}
+    />
   );
 }
 
@@ -898,32 +886,6 @@ export function RunSteps({
   );
 }
 
-/**
- * A message it read while working, under its tools: "Leu seu recado · …", or "Parou para ler seu recado ·
- * …" when it was asked to stop and read (until then the message itself says "lê na próxima pausa").
- */
-function ReadWell({ now, quote, settled }: { now: boolean; quote: string; settled: boolean }) {
-  const { t } = useTranslation();
-  const c = useColors();
-  const reduced = useReducedMotion();
-  return (
-    <Animated.View
-      entering={reduced || settled ? undefined : FadeIn.duration(260)}
-      style={[styles.well, { backgroundColor: c.sunken }]}
-    >
-      <Icon name={now ? "bolt" : "eye"} size={15} color={c.muted} />
-      <Text variant="small" tone="ink2" style={styles.wellTitle} numberOfLines={1}>
-        {t(now ? "mobile.chat.steer.wellNow" : "mobile.chat.steer.well")}
-      </Text>
-      {quote ? (
-        <Text variant="small" tone="muted" numberOfLines={1} style={styles.shrink}>
-          {quote}
-        </Text>
-      ) : null}
-    </Animated.View>
-  );
-}
-
 /** A call's row: its side padding, the logo's column (and its first line's height) and the gap to the phrase. */
 const ROW_PAD = 8;
 const LOGO = 20;
@@ -997,21 +959,4 @@ const styles = StyleSheet.create({
   loading: { flexDirection: "row", alignItems: "center", gap: 8 },
   loose: { gap: 2 },
   say: { marginVertical: 2 },
-  // "Leu seu recado": a sunken well with the "tato com canto" corner.
-  well: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    alignSelf: "flex-start",
-    maxWidth: "100%",
-    marginVertical: 6,
-    paddingVertical: 6,
-    paddingLeft: 8,
-    paddingRight: 10,
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10,
-    borderBottomRightRadius: 10,
-    borderBottomLeftRadius: 3,
-  },
-  wellTitle: { fontWeight: "600", flexShrink: 0 },
 });

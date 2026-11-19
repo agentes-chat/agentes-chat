@@ -292,6 +292,14 @@ export const words: EmailWords = {
   deletionCode: {
     subjectWorkspace: (code) => `ワークスペース削除の確認コード: ${code}`,
     subjectAccount: (code) => `アカウント全体の削除の確認コード: ${code}`,
+    subjectReset: (code) => `ワークスペースのリセットの確認コード: ${code}`,
+    reset: (org) => [
+      "このコードを入力すると、ワークスペース ",
+      { b: org },
+      " がリセットされます。エージェント、会話、ファイル、メモリはすぐに完全に消去され、新しいワークスペースとして始まります。",
+    ],
+    whyReset: (org) =>
+      `このメールは、あなたのアカウントが agentes.chat の ${org} のリセットをリクエストしたため送信されました。`,
     preheader: "agentes.chat に入力して確定してください。有効期限は10分です。",
     headline: "確認コード",
     workspace: (org) => [
