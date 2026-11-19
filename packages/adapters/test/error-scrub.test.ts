@@ -19,6 +19,19 @@ describe("scrubLogLine", () => {
     expect(scrubLogLine("open http://localhost:3000")).toBe("open http://localhost:3000");
   });
 
+  test("a URL whose host is an IP, has credentials or is a local name keeps no path, password or name", () => {
+    expect(scrubLogLine("GET http://192.168.1.5:3000/org/x/wiki/secret-page?token=abc")).toBe("GET http://[ip]:3000/…");
+    expect(scrubLogLine("fetch https://user:hunter2@example.com/path failed")).toBe(
+      "fetch https://example.com/… failed",
+    );
+    expect(scrubLogLine("postgres://agentes:pw@10.0.0.2:5432/agentes")).toBe("postgres://[ip]:5432/…");
+    expect(scrubLogLine("GET http://[2001:db8::1]:8080/private/path")).not.toContain("private");
+    expect(scrubLogLine("listening on http://someones-laptop.local:3000/")).toBe("listening on http://[host]:3000");
+    expect(scrubLogLine("open http://studio-box.local:3000/private", [["studio-box", "computer"]])).toBe(
+      "open http://[computer]/…",
+    );
+  });
+
   test("home folders become ~", () => {
     expect(scrubLogLine("C:\\Users\\someone\\.agentes-runner\\logs\\runner.log")).toBe(
       "~\\.agentes-runner\\logs\\runner.log",

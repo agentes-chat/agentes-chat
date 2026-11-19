@@ -110,6 +110,18 @@ describe("problem reports", () => {
     expect(((await down.json()) as { error: { code: string } }).error.code).toBe("unreachable");
   });
 
+  test("a person sends at most 5 an hour", async () => {
+    const { http, calls } = receiver();
+    const { owner, orgId } = await server({}, http);
+    const { report } = (await (await preview(owner, { orgId, place: "settings" })).json()) as { report: unknown };
+    const statuses: number[] = [];
+    for (let i = 0; i < 6; i++) {
+      statuses.push((await owner("/api/app/problem-reports/send", { json: { orgId, report } })).status);
+    }
+    expect(statuses).toEqual([200, 200, 200, 200, 200, 429]);
+    expect(calls).toHaveLength(5);
+  });
+
   test("with PROBLEM_REPORT_URL=off, only Copy works", async () => {
     const { owner, orgId } = await server({ PROBLEM_REPORT_URL: "off" });
     const body = (await (await preview(owner, { orgId, place: "settings" })).json()) as {

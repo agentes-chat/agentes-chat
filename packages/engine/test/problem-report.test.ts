@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { capProblemReport, PROBLEM_REPORT_TARGET_BYTES } from "@agenteschat/adapters";
 import { eq, schema } from "@agenteschat/db";
+import { createChannel } from "../src/channels";
+import { postPersonMessage } from "../src/messages";
 import {
   buildProblemReport,
   finishProblemReport,
@@ -79,6 +81,64 @@ describe("problem report", () => {
     expect(theirs.report.logs).toEqual([]);
     expect(theirs.missing.serverLines).toBe(true);
     expect(theirs.report.facts?.machine).toBe("not_visible");
+  });
+
+  test("a run: its facts and error code for who reads its conversation, nothing for who doesn't", async () => {
+    const fx = await setup();
+    f = fx;
+    const priv = await createChannel(f.db, f.owner.id, f.org.id, { name: "private-run", visibility: "private" });
+    const runIn = async (channelId: string) => {
+      const msg = await postPersonMessage({ db: fx.db, pubsub: fx.pubsub }, fx.owner.id, fx.org.id, channelId, {
+        body: "x",
+      });
+      const [run] = await fx.db
+        .insert(schema.agentRuns)
+        .values({
+          orgId: fx.org.id,
+          agentId: fx.agent.id,
+          channelId,
+          threadRootId: msg.id,
+          triggerMessageId: msg.id,
+          trigger: "mention",
+          hop: 1,
+          status: "failed",
+          error: "provider.unavailable: the model said no",
+        })
+        .returning();
+      return run?.id ?? "";
+    };
+    const runId = await runIn(priv.id);
+    const mine = await buildProblemReport(
+      f.db,
+      { orgId: f.org.id, userId: f.owner.id, place: "run", context: { runId } },
+      { ...SOURCES, serverLines: () => [] },
+    );
+    expect(mine.report.code).toBe("provider.unavailable");
+    expect(mine.report.facts?.["run.status"]).toBe("failed");
+    expect(JSON.stringify(mine.report)).not.toContain("the model said no");
+
+    const member = await addMember(f.db, f.org.id, "member", "bia");
+    const theirs = await buildProblemReport(
+      f.db,
+      { orgId: f.org.id, userId: member.id, place: "run", context: { runId } },
+      { ...SOURCES, serverLines: () => [] },
+    );
+    expect(theirs.report.facts?.run).toBe("not_visible");
+    expect(theirs.report.facts?.["run.status"]).toBeUndefined();
+    expect(theirs.report.code).toBeNull();
+  });
+
+  test("too many or too long facts are cut to the contract, never fail the report", async () => {
+    f = await setup();
+    const config = Object.fromEntries(Array.from({ length: 200 }, (_, i) => [`config.KEY_${i}`, "set"]));
+    const clientFacts = Object.fromEntries(Array.from({ length: 50 }, (_, i) => [`k${i}`, "y".repeat(500)]));
+    const built = await buildProblemReport(
+      f.db,
+      { orgId: f.org.id, userId: f.owner.id, place: "settings", clientFacts },
+      { ...SOURCES, config, serverLines: () => [] },
+    );
+    expect(Object.keys(built.report.facts ?? {}).length).toBeLessThanOrEqual(120);
+    expect(built.report.facts?.["client.k0"]).toHaveLength(200);
   });
 
   test("send keeps the report and masks credentials in the note", () => {

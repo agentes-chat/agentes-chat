@@ -149,6 +149,8 @@ export interface ProblemReportSources {
 export const REPORT_COLLECT_TIMEOUT_MS = 5_000;
 const SERVER_LOG_WINDOW_MS = 30 * 60_000;
 const LOG_LINES = 300;
+/** The contract's limit on facts. */
+const FACTS_MAX = 120;
 
 const fit = (s: string, max: number) => (s.length > max ? s.slice(0, max) : s);
 /** `versions.os`, `arch` and `browser` as the contract takes them: no `@` or `/`, cut to `max`. */
@@ -366,6 +368,15 @@ export async function buildProblemReport(
   const timings = Object.entries(input.timings ?? {})
     .filter(([k, v]) => /^[a-zA-Z][a-zA-Z0-9]{0,39}$/.test(k) && Number.isInteger(v) && v >= 0 && v <= 86_400_000)
     .slice(0, 20);
+  // Facts come from rows and the person's computer: kept within the contract instead of failing the whole report.
+  const fittedFacts = Object.fromEntries(
+    Object.entries(facts)
+      .slice(0, FACTS_MAX)
+      .map(([k, v]) => [
+        k,
+        typeof v === "string" ? fit(v, 200) : typeof v === "number" && !Number.isFinite(v) ? null : v,
+      ]),
+  );
   const report = capProblemReport({
     format: 1,
     instance: state.instanceId,
@@ -378,7 +389,7 @@ export async function buildProblemReport(
     versions,
     install: sources.server.install,
     locale: input.client?.locale && LOCALE_PATTERN.test(input.client.locale) ? input.client.locale : null,
-    facts,
+    facts: fittedFacts,
     logs,
     note: null,
     replyTo: null,

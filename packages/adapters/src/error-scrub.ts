@@ -72,7 +72,11 @@ export function urlOrigin(url: string): string | null {
   }
 }
 
-const URL_IN_TEXT = /\b[a-z][a-z0-9+.-]*:\/\/[^\s"'<>()[\]{}]+/gi;
+/** A bracketed IPv6 host (`http://[::1]:3000/…`) is part of the URL, so its path is cut too. */
+const URL_IN_TEXT = /\b[a-z][a-z0-9+.-]*:\/\/(?:[^\s"'<>()[\]{}@/]*@)?(?:\[[\w:.%-]*\])?[^\s"'<>()[\]{}]*/gi;
+const URL_HEAD = /^[a-z][a-z0-9+.-]*:\/\/(?:[^/?#@]*@)?(?:\[[^\]]*\]|[^/?#:]*)(?::\d+)?/i;
+/** Hosts named only on a local network (`someones-laptop.local`): a person's or a computer's name. */
+const LOCAL_HOST = /\b[\w-]+(?:\.[\w-]+)*\.(?:local|lan|internal|home\.arpa)\b/gi;
 /**
  * Home folders on macOS, Linux and Windows (both slashes), and Windows' variable for one. A Windows account name may
  * hold spaces (`C:\\Users\\Jane Doe\\…`): taken whole when a separator follows it.
@@ -107,11 +111,15 @@ export function scrubLogLine(line: string, known: ReadonlyArray<readonly [value:
       )
         .replace(COOKIE_HEADER, "$1***")
         .replace(URL_IN_TEXT, (url) => {
-          const origin = urlOrigin(url);
-          if (!origin) return url;
+          // A host a known name became (`[computer].local`) no longer parses: its scheme and host by pattern then.
+          const head = urlOrigin(url) ?? URL_HEAD.exec(url)?.[0];
+          if (!head) return url;
+          const origin = head.replace(/\/\/[^/?#@]*@/, "//");
           return url.length > origin.length && url.slice(origin.length) !== "/" ? `${origin}/…` : origin;
         }),
-    ).replace(HOME_PATHS, "~"),
+    )
+      .replace(LOCAL_HOST, "[host]")
+      .replace(HOME_PATHS, "~"),
     values,
   );
   return out.length > LOG_LINE_MAX ? out.slice(0, LOG_LINE_MAX) : out;
