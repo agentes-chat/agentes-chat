@@ -1199,7 +1199,7 @@ export type CostlyDecision = "go" | "not_now" | "never" | "always";
 export type SuggestedAi =
   | {
       kind: "account";
-      brain: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+      brain: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "muse";
       machineId: string;
       accountId: string;
       label: string;
@@ -5137,7 +5137,7 @@ export interface MachinePause {
 }
 
 /** A tool the person turns on or off on the machine. */
-export type MachineToolName = "claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "commands";
+export type MachineToolName = "claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "muse" | "commands";
 
 /** A folder allowed on the machine and the agents (ids) that may use it; empty: allowed, no agent yet. */
 export interface MachineFolderGrant {
@@ -5152,7 +5152,7 @@ export interface MachineAccess {
    * `browser` (ADR 0040): the agent browser; absent on runners before protocol 12 (off). `desktop` and
    * `terminal` (ADR 0058): the agents' desktops and terminals; absent before protocol 18 (off).
    */
-  tools: Record<Exclude<MachineToolName, "cursor" | "opencode" | "grok" | "antigravity">, boolean> & {
+  tools: Record<Exclude<MachineToolName, "cursor" | "opencode" | "grok" | "antigravity" | "muse">, boolean> & {
     /** Protocol 36 (ADR 0114): Cursor's CLI; absent on older runners, where it follows Codex's. */
     cursor?: boolean;
     /** Protocol 39 (ADR 0132): OpenCode's CLI; absent on older runners, where it follows Codex's. */
@@ -5161,6 +5161,8 @@ export interface MachineAccess {
     grok?: boolean;
     /** Protocol 44 (ADR 0143): the Antigravity CLI; absent on older runners, where it follows Codex's. */
     antigravity?: boolean;
+    /** Protocol 74 (ADR 0203): Muse Code; absent on older runners, where it follows Codex's. */
+    muse?: boolean;
     browser?: boolean;
     desktop?: boolean;
     terminal?: boolean;
@@ -5216,7 +5218,7 @@ export interface DesktopRelease {
 }
 
 /** A computer brain that runs on a connected machine. */
-export type ComputerBrain = "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+export type ComputerBrain = "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "muse";
 
 /** An agent waiting for an offline computer, and what it has waiting. */
 export interface OutageAgent {
@@ -6165,7 +6167,7 @@ export interface MissionSettings {
 }
 
 /** "Quem pensa" (ADR 0032): the API, or Claude Code / Codex on the agent's computer with a person's plan. */
-export type BrainKind = "model" | "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+export type BrainKind = "model" | "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "muse";
 
 /** Why a computer brain can't be chosen now. */
 export type BrainUnavailable =
@@ -6287,7 +6289,7 @@ export type BrainEffortSetting = BrainEffort | "auto";
 
 export type BrainSpeed = "standard" | "fast";
 
-export type MachineAccountKind = "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+export type MachineAccountKind = "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "muse";
 
 /** ADR 0041 §3, ADR 0059: a Claude Code or Codex account signed in on a connected computer (metadata only). */
 export interface MachineAccount {
@@ -6377,6 +6379,7 @@ export interface AiComputer {
     opencode?: boolean;
     grok?: boolean;
     antigravity?: boolean;
+    muse?: boolean;
     key: boolean;
   };
   /** Why a CLI of `brains` can't think there (absent: an older server). */
@@ -6389,6 +6392,7 @@ export interface AiComputer {
     opencode?: boolean;
     grok?: boolean;
     antigravity?: boolean;
+    muse?: boolean;
   };
   /**
    * "Conta deste computador": each CLI's own sign-in there, on a computer the viewer connected (absent: a server

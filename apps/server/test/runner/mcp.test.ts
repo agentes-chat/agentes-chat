@@ -95,9 +95,22 @@ test("MCP JSON-RPC: initialize, notifications, tools/list, tools/call and errors
   expect(
     await handleMcpMessage({ jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: "get_context" } }, call),
   ).toMatchObject({ result: { content: [{ text: "Nope" }], isError: true } });
+  // What a host that namespaces another server's tools sends: the server hears the bare name it listed.
+  expect(
+    await handleMcpMessage(
+      {
+        jsonrpc: "2.0",
+        id: 5,
+        method: "tools/call",
+        params: { name: "mcp__agenteschat_agentes__report", arguments: { summary: "hi" } },
+      },
+      call,
+    ),
+  ).toMatchObject({ result: { isError: false } });
   expect(calls).toEqual([
     ["report", { summary: "hi" }],
     ["get_context", {}],
+    ["report", { summary: "hi" }],
   ]);
   expect(
     await handleMcpMessage({ jsonrpc: "2.0", id: 5, method: "tools/call", params: { name: "rm_rf" } }, call),
@@ -120,6 +133,21 @@ function bridge(task: McpTaskInfo | null, socketPath = "unused") {
   return { b, frames };
 }
 
+test("a host's namespaced name reaches the server as the bare tool it lists", async () => {
+  // Muse names another server's tools `mcp__<server>__<tool>` (and `mcp__<server>.<tool>` in one build). Sent on as
+  // that text, every call answered "Unknown tool mcp__agenteschat_agentes__read_artifact".
+  for (const asked of ["mcp__agenteschat_agentes__report", "mcp__agenteschat_agentes.report"]) {
+    const { b, frames } = bridge({ token: "secret-token-1", missionId: "m1", running: true });
+    b.attach((f) => frames.push(f));
+    const pending = b.handle({ taskId: TASK, token: "secret-token-1", tool: asked, args: { summary: "hi" } });
+    await waitFor(() => frames.length === 1);
+    const sent = frames[0] as Extract<RunnerFrame, { type: "mcp.call" }>;
+    expect(sent.tool).toBe("report");
+    b.result({ type: "mcp.result", callId: sent.callId, ok: true, text: "ok" });
+    expect(await pending).toEqual({ ok: true, text: "ok" });
+  }
+});
+
 test("the bridge checks the task's token, needs a connection, relays the call and its answer", async () => {
   const { b, frames } = bridge({ token: "secret-token-1", missionId: "m1", running: true });
   const req = { taskId: TASK, token: "secret-token-1", tool: "report", args: { summary: "hi" } };
@@ -129,6 +157,7 @@ test("the bridge checks the task's token, needs a connection, relays the call an
   });
   expect(await b.handle({ ...req, taskId: "0193aaaa-0000-7000-8000-000000000099" })).toMatchObject({ ok: false });
   expect(await b.handle({ ...req, tool: "rm_rf" })).toMatchObject({ ok: false, error: "Unknown tool rm_rf" });
+
   b.attach((f) => frames.push(f));
   const pending = b.handle(req);
   await waitFor(() => frames.length === 1);

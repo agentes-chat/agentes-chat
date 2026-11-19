@@ -106,6 +106,7 @@ import {
   type LiveDeps,
   type MailDeps,
   type McpConnect,
+  MuseBrain,
   messageRouter,
   missionTurnPermissions,
   notifyOwnerOnBudget,
@@ -755,6 +756,15 @@ export function buildEngine(o: EngineOptions) {
     // ADR 0143: Google's Antigravity CLI, one process per turn like Grok's.
     antigravity: (_agent, _run, setup) =>
       new AntigravityBrain({
+        link: brainLink,
+        mcp: async () => ({ token: setup.mcpToken() }),
+        agent: agentScope,
+        permissions: turnPermissions,
+        prepare: prepareCode,
+      }),
+    // ADR 0203: Meta's Muse Code CLI, one process per turn like Grok's.
+    muse: (_agent, _run, setup) =>
+      new MuseBrain({
         link: brainLink,
         mcp: async () => ({ token: setup.mcpToken() }),
         agent: agentScope,
