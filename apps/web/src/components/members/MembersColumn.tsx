@@ -23,7 +23,6 @@ import { StatusLine } from "@/components/Presence";
 import { ProfileTrigger } from "@/components/ProfileCard";
 import { unshownRow } from "@/components/Sidebar";
 import { AgentTrail, colorOf } from "@/components/Sky";
-import { ChannelThreadsButton } from "@/components/threads/ThreadLines";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useModalSheet } from "@/hooks/useModalSheet";
 import {
@@ -124,7 +123,6 @@ export function MembersSheet({
               <span>{channel.name}</span>
             </span>
             <span className="members-sheet__acts">
-              {isMember && <ChannelThreadsButton channelId={channel.id} channelName={channel.name} />}
               {isMember && <ChannelPinsButton channelId={channel.id} channelName={channel.name} />}
               <button
                 type="button"

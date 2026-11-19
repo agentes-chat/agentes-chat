@@ -10384,6 +10384,16 @@ export const en = {
       empty: "No threads in this channel.",
       seeAll: "See all in Threads",
     },
+    new: {
+      open: "New thread",
+      title: "New thread",
+      text: "The first message goes to the channel and the conversation goes on in its thread.",
+      channel: "Channel",
+      subject: "Subject",
+      placeholder: "What is this conversation about?",
+      start: "Start thread",
+      failed: "Couldn't start the thread. Try again.",
+    },
     side: {
       label: "Thread",
       expand: "Open full screen",

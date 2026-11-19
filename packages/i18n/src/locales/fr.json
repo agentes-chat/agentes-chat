@@ -10323,6 +10323,16 @@
       "empty": "Aucun fil dans ce canal.",
       "seeAll": "Tout voir dans Fils"
     },
+    "new": {
+      "open": "Nouveau fil",
+      "title": "Nouveau fil",
+      "text": "Le premier message va dans le canal et la conversation continue dans son fil.",
+      "channel": "Canal",
+      "subject": "Sujet",
+      "placeholder": "De quoi parle cette conversation ?",
+      "start": "Ouvrir le fil",
+      "failed": "Impossible d'ouvrir le fil. Réessayez."
+    },
     "side": {
       "label": "Fil",
       "expand": "Ouvrir en plein écran",

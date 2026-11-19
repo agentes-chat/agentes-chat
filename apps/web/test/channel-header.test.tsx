@@ -26,11 +26,15 @@ describe("the channel header, as Discord's", () => {
     const line = header.querySelector(":scope > .ac-actline.channel__line") as HTMLElement;
     expect(line.firstElementChild?.matches(".channel__head-text")).toBe(true);
     expect(line.lastElementChild?.matches(".channel__acts")).toBe(true);
+    // Threads lead, with their word and count: the one control that names itself (an icon alone hid them).
+    const threads = header.querySelector<HTMLElement>(".channel__acts > .channel__threads");
+    expect(header.querySelector(".channel__acts")?.firstElementChild).toBe(threads);
+    expect(threads?.getAttribute("aria-label")).toMatch(/^Threads: \d+ neste canal$/);
+    expect(threads?.textContent).toMatch(/^Threads\d*$/);
     const icons = [...header.querySelectorAll<HTMLElement>(".channel__acts > .channel__icon")]
       .filter((b) => !b.classList.contains("channel__search-icon"))
       .map((b) => b.getAttribute("aria-label"));
     expect(icons).toEqual([
-      expect.stringMatching(/^Threads: \d+ neste canal$/),
       "Mensagens fixadas",
       "Configurações do canal",
       "Membros do canal (4)",

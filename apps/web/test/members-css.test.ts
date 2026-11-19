@@ -41,10 +41,10 @@ test("the members column: 264px on the work's sheet, group titles in normal case
   expect(last(shipped, ".members-side__row.profile-trigger:hover", "background")).toBe("var(--side-hover)");
   // Every role mark (the group headers' too) is a full circle.
   expect(last(shipped, ".ac-rolemark", "border-radius")).toBe("50%");
-  // A phone: no column, the members in a sheet, and the threads button moves into it.
+  // A phone: no column, the members in a sheet; the threads button stays in the header with its word.
   expect(last(phone, ".members-side", "display")).toBe("none");
   expect(last(shipped, ".members-sheet", "width")).toBe("86%");
-  expect(last(phone, ".channel__acts>.channel__threads", "display")).toBe("none");
+  expect(last(phone, ".channel__acts>.channel__threads", "display")).toBeUndefined();
 });
 
 test("the column's add row: a 24px plus tile and 13px text, so it fits one line in the 264px column", async () => {

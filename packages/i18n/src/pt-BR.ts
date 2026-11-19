@@ -10352,6 +10352,16 @@ export const ptBR = {
       empty: "Nenhuma thread neste canal.",
       seeAll: "Ver todas em Threads",
     },
+    new: {
+      open: "Nova thread",
+      title: "Nova thread",
+      text: "A primeira mensagem vai pro canal e a conversa segue na thread dela.",
+      channel: "Canal",
+      subject: "Assunto",
+      placeholder: "Sobre o que é esta conversa?",
+      start: "Abrir thread",
+      failed: "Não deu pra abrir a thread. Tente de novo.",
+    },
     side: {
       label: "Thread",
       expand: "Abrir em tela cheia",

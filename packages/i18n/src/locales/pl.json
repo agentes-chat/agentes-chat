@@ -10683,6 +10683,16 @@
       "empty": "Brak wątków na tym kanale.",
       "seeAll": "Zobacz wszystkie w Wątkach"
     },
+    "new": {
+      "open": "Nowy wątek",
+      "title": "Nowy wątek",
+      "text": "Pierwsza wiadomość trafia na kanał, a rozmowa toczy się dalej w jej wątku.",
+      "channel": "Kanał",
+      "subject": "Temat",
+      "placeholder": "O czym jest ta rozmowa?",
+      "start": "Otwórz wątek",
+      "failed": "Nie udało się otworzyć wątku. Spróbuj ponownie."
+    },
     "side": {
       "label": "Wątek",
       "expand": "Otwórz na pełnym ekranie",

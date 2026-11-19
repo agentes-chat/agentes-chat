@@ -24187,6 +24187,30 @@
   "threads.popover.seeAll": {
     "value": "See all in Threads"
   },
+  "threads.new.open": {
+    "value": "New thread"
+  },
+  "threads.new.title": {
+    "value": "New thread"
+  },
+  "threads.new.text": {
+    "value": "The first message goes to the channel and the conversation goes on in its thread."
+  },
+  "threads.new.channel": {
+    "value": "Channel"
+  },
+  "threads.new.subject": {
+    "value": "Subject"
+  },
+  "threads.new.placeholder": {
+    "value": "What is this conversation about?"
+  },
+  "threads.new.start": {
+    "value": "Start thread"
+  },
+  "threads.new.failed": {
+    "value": "Couldn't start the thread. Try again."
+  },
   "threads.side.label": {
     "value": "Thread"
   },
