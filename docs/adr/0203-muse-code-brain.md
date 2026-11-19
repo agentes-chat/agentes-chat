@@ -1,4 +1,4 @@
-# 0174: A Muse Code brain
+# 0203: A Muse Code brain
 
 - Status: proposed
 - Date: 2026-11-12
@@ -36,7 +36,7 @@ is what the product needs: it can **park an approval and answer it**, which is t
 still has (`REFUSED_ELICITATION`, ADR-adjacent fix in flight), and it lists models, reads history and interrupts a
 turn. A one-shot process cannot.
 
-### Protocol 67
+### Protocol 74
 
 `brain.turn` takes `kind: "muse"`; `account` takes `kind: "muse"`; `hello.executors.muse` reports the CLI, its
 version and the models `model/list` returns; `access.tools.muse` turns it on or off. A `chat` turn is checked on a
@@ -48,10 +48,13 @@ machine like the others.
 the runner. The host is spawned by the runner like every other brain (`scope-gate`), and only the framing is taken
 from the SDK — OpenMausBot's `stdioTransport` is the model for that.
 
-Arguments: `serve --trust-workspace`, plus `--disable-sandbox` at the `yolo` level and nothing else. The sandbox is a
+Arguments: `serve`, plus `--disable-sandbox` at the `yolo` level and nothing else. No `--trust-workspace`: measured
+against 1.4.18, the flag alone loads nothing (the workspace only loads when a session declares `workspaceRoots`, which
+this brain does not), and with a root declared it is what makes a cloned repo's `.muse/hooks.json` run a command as the
+host itself, outside the shell sandbox. The sandbox is a
 host-construction decision the wire cannot change ("neither is negotiable over the wire"); the approval mode is the
-other way round — "it is selected on the wire, so there is no approval flag here" — so `yolo` sets `allowAll` and
-every other level `promptUnmatched` on the request, not on the argv.
+other way round — "it is selected on the wire, so there is no approval flag here" — so a level nobody answers needs `allowAll`
+(a value the wire has; `never` is not one), and `promptUnmatched` is for when approvals are wired.
 
 The levels are four, and only two of them are a posture:
 
@@ -59,7 +62,7 @@ The levels are four, and only two of them are a posture:
 |---|---|
 | `plan` | `--disable-write --disable-shell` (measured: the run completes) |
 | `work` | the default: shell and write on, approval on |
-| `chat` | refused at first — no `--tools`/`--disallowed-tools` exists, so the right-hand guard (ADR 0137 §4) has nothing to bind to |
+| `chat` | `--disable-write --disable-shell` and `denyUnmatched`: its own Bash and Write are refused, the bridge's tools run |
 | `yolo` | `--disable-sandbox` |
 
 A named profile (`--permission-profile`) is **not** the path: `read-only` is a display name, not an id — the binary
@@ -68,6 +71,10 @@ answers "profile does not exist" — and `-c permissions.default_profile=…` re
 too: `-c permissions.default_profile="read-only"`, never a bare string.
 
 ### One host per session, never per turn
+
+**Chosen; the first implementation is one host per turn** (the session id is still kept and resumed, so the thread
+survives across hosts). The rest of this section is what moving to a held host costs and why it is the shape to
+grow into.
 
 Neither product that integrated this opens a process per turn, and their code says so plainly: OpenBot keeps one host
 per agent and multiplexes every session over it, guarding teardown with `canReleaseProcess` — false while any thread
@@ -79,6 +86,14 @@ We take OpenMausBot's shape, because our runner is a process per request and the
 it: a host belongs to a session, is reused across its turns, and is remounted — resuming by session id — when the
 posture or the MCP set moves. On release the view is unsubscribed first (`view/unsubscribe`), then the host closed;
 while a turn runs the release is refused, never forced. Idle teardown is bounded, and the kill tree is the fallback.
+
+### The wire, as measured
+
+`initialize` → the `initialized` notification → `session/start` (or `session/resume`) → `view/subscribe` →
+`turn/start`, NDJSON frames of JSON-RPC 2.0, every command carrying a **UUIDv7** (`expected UUIDv7` otherwise).
+`clientInfo.name` must be `^[a-z0-9_]+$`. Approval modes are `allowAll`, `promptUnmatched`, `onRequest`,
+`denyUnmatched` — there is no `never`. A turn's text is `item/delta` on field `text`; its calls are `item/*` of kind
+`toolCall`; it ends at `turn/completed`.
 
 ### Approvals are the point
 
@@ -116,8 +131,9 @@ always: the runner owns the version, and Muse upgrades itself otherwise. Stored 
   `--contributor-mode off` (or `MUSE_CONTRIBUTOR_MODE=0`), and the switch is stated in the UI as ADR 0142 §7 does,
   rather than living only in the CLI's docs.
 - **Four background observer agents are on by default** and make **their own model calls** — the docs say they add
-  token usage, so the person's allowance pays for advice nobody read. They come off in the account's settings, whose
-  document must carry `schema_version: 1` or every command fails.
+  token usage, so the person's allowance pays for advice nobody read. The account's settings document exists and
+  carries `schema_version: 1`, but the key that turns the observers off is not written yet: that part of the claim is
+  still open.
 
 ## Consequences
 
@@ -128,10 +144,20 @@ always: the runner owns the version, and Muse upgrades itself otherwise. Stored 
   before the brain is offered anywhere.
 - **The installer does not pin.** It writes a launcher that upgrades itself, so a version can change under a running
   parser: the image pins the binary and every host carries `MUSE_NO_AUTO_UPDATE=1`.
+- **`mode` is not on the wire.** The typed session arm has no `required` marker; the bridge coming up (or not) shows as
+  the turn's own failure.
 - **Hooks run outside the sandbox.** A trusted workspace's `.muse/hooks.json` executes through the shell with only a
-  cleared environment, so the account's settings keep `hooks={}` and `managed_hooks_path=null`.
-- **`mode: required` on our own MCP server aborts the run** when the bridge does not come up, which is what we want
-  for the agent's tools — but it also means a bridge failure reads as a Muse failure, so the message has to say so.
+  cleared environment. Two guards: the account's settings keep `hooks={}` and `managed_hooks_path=null`, and the host
+  is started without `--trust-workspace`, so nothing of a cloned repo runs today.
+- **The bridge is handed over on the wire.** `session/start` takes `config.mcpServers`, a closed union needing
+  `transport` and typed on each arm, and it is what an MSP client adds a server with; a `capabilities.requestedCapabilities`
+  of `sessionMcp` in `initialize` is required first, or the start is refused. The settings document keeps the account's
+  ground (`schema_version`, `hooks`), and a server declared in *both* is a name conflict, so ours lives only on the wire.
+  The entry's fields are literal — a `${VAR}` placeholder is expanded in its `env` but **not** in its `args`, so a
+  `--run ${AGENTES_MCP_RUN}` reaches the bridge as that text, which prints its usage and exits and is reported as
+  "the transport closed unexpectedly". Two near-misses cost a lot to find and are worth writing down: the settings key is `mcpServers` (not Codex's
+  `mcp_servers`) and the settings arm is tagged `type` while the wire arm is tagged `transport`, with neither spelling
+  valid in the other place. Measured: the wire form spawns the server (`initialize`, `tools/list`) and a call runs.
 - **`muse usage` answers without a turn** (window, weekly use, reset, tier, since 1.4.13): the plan figures come from
   it rather than from a learned table.
 - **Where the credential rests is undocumented**, only "stores the credential for you", with no config-directory
