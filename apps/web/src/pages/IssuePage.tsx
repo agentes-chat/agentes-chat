@@ -86,6 +86,7 @@ import { useToast } from "@/lib/toast";
 import { useIssueRealtime } from "@/realtime/context";
 import { AssigneeFaces, AssigneesField } from "./IssueAssignees";
 import { IssueDeleteButton, IssueDeleteProvider, useIssueDeleting } from "./IssueDelete";
+import { IssueDependenciesSection } from "./IssueDependencies";
 import { NEW_PROJECT, ProjectDialog, useProjectOptions } from "./IssueProjects";
 import { PRIORITY_ICON } from "./IssuesToolbar";
 import "./issues.css";
@@ -355,6 +356,7 @@ export function IssueDetails({
             )}
           </DetailsSection>
           <IssueCriteria issue={i} onSaved={flashSaved} />
+          <IssueDependenciesSection issue={i} />
           <IssueSubIssues issue={i} />
           <DetailsSection title={t("issues.conversation.button")}>
             <TaskConversationSummary issue={i} onOpen={onConversation} />

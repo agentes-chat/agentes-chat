@@ -1,12 +1,14 @@
 import { and, asc, type Database, type Executor, eq, gt, lte, schema, sql } from "@agenteschat/db";
 import * as Y from "yjs";
 import { UUID } from "../authority";
-import { NotFoundError } from "../errors";
+import { ForbiddenError, NotFoundError } from "../errors";
+import { taskRunFileDestinationAllowed } from "../task-sharing";
 
 /**
  * Where a live file's document is kept (ADR 0196 §4): `live_docs` holds the state as of its last compaction and the
  * number of its newest change; `live_doc_updates` the changes after that, one row per merged batch. Nothing here knows
- * a document's kind or who may read it: callers checked that (`liveFileAccess`).
+ * a document's kind; callers checked who may open it (`liveFileAccess`). An agent task's changes also recheck the
+ * file's current readers in their write transaction, before any update can be published.
  *
  * A read of the state and the changes after it is one snapshot (`repeatable read`): a compaction committing between
  * two separate reads would fold away changes the second read then no longer finds.
@@ -240,6 +242,17 @@ export async function appendChanges(
     return { seqs: [], headSeq: row.headSeq, compactedSeq: row.compactedSeq };
   }
   return db.transaction(async (tx) => {
+    const runs = new Set(
+      changes.filter((change) => change.actor.type === "agent").map((change) => runOf(change.actor)),
+    );
+    for (const runId of runs) {
+      if (runId && !(await taskRunFileDestinationAllowed(tx, orgId, runId, fileId))) {
+        throw new ForbiddenError(
+          "The task is no longer visible to everyone who would receive this file",
+          "issue.task_destination_private",
+        );
+      }
+    }
     const [row] = await tx
       .update(liveDocs)
       .set({

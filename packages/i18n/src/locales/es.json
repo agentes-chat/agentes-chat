@@ -8732,6 +8732,28 @@
       "criterion_checked": "marcó el criterio \"{{text}}\"",
       "criterion_unchecked": "desmarcó el criterio \"{{text}}\"",
       "agent_asked": "le pidió a {{name}} que lo hiciera"
+    },
+    "dependencies": {
+      "destinationPrivate": "La tarea ya no está visible para todas las personas que recibirían este archivo.",
+      "title": "Depende de",
+      "loadError": "No se pudieron cargar las dependencias.",
+      "changeError": "No se pudo cambiar la dependencia. Comprueba si crea un ciclo.",
+      "pick": "Agregar tarea",
+      "search": "Buscar por número o título",
+      "noResults": "No se encontraron tareas",
+      "noProject": "No se encontraron proyectos",
+      "none": "Sin dependencias",
+      "unavailable": "Dependencia no disponible",
+      "remove": "Quitar dependencia {{task}}",
+      "waiting_one": "Esperando {{count}} tarea",
+      "waiting_other": "Esperando {{count}} tareas",
+      "inputsChanged": "Una entrada cambió después del inicio. Revisa las dependencias.",
+      "cycle": "Estas dependencias crearían un ciclo.",
+      "pending": "Completa o resuelve las dependencias pendientes antes de iniciar.",
+      "limit": "Esta tarea alcanzó su límite de dependencias.",
+      "stale": "Las dependencias cambiaron. Revisa la tarea antes de iniciar.",
+      "filter": "Elige una tarea o un proyecto válido para esta rutina.",
+      "started": "Esta tarea ya tiene trabajo en curso."
     }
   },
   "routines": {
@@ -9181,7 +9203,8 @@
         "pr_opened": "PR abierto en GitHub"
       },
       "issue": {
-        "created": "Tarea creada en agentes"
+        "created": "Tarea creada en agentes",
+        "ready": "Cuando una tarea esté lista"
       },
       "deploy": {
         "succeeded": "Deploy terminado"
@@ -9234,7 +9257,11 @@
         "when_past": "Ese momento ya pasó.",
         "when_nonexistent": "Esa hora no existe en esta zona horaria (horario de verano).",
         "when_unreadable": "No se pudo saber cuándo. Prueba “mañana a las 9”."
-      }
+      },
+      "readyScope": "Aplicar a",
+      "readyAll": "Todas las tareas",
+      "readyTask": "Tarea específica",
+      "readyProject": "Proyecto específico"
     },
     "copyName": "{{name}} (copia)",
     "state": {
@@ -9368,7 +9395,9 @@
       "computer_timeout": "La computadora tardó demasiado en responder",
       "cli_failed": "El programa de IA de la computadora se detuvo con un error",
       "account_missing": "La cuenta del agente ya no está en su computadora",
-      "our_error": "Algo salió mal de nuestro lado"
+      "our_error": "Algo salió mal de nuestro lado",
+      "task_not_visible": "La tarea no está visible en este destino.",
+      "task_readiness_stale": "Las dependencias de la tarea o la rutina cambiaron antes de iniciar el trabajo."
     },
     "openInChat": "Abrir en la conversación",
     "stop": "Detener",

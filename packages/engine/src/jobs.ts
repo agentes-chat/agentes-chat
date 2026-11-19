@@ -74,6 +74,7 @@ import { cutText } from "./format";
 import type { GitHubAppAccess } from "./git/github-call";
 import { GITHUB_EVENT_JOB, type GitHubAppEvent, handleGitHubAppEvent } from "./git/github-events";
 import { FILE_JOIN_REQUEST_JOB, fileJoinRequest } from "./invite-requests";
+import { dispatchIssueReady, ISSUE_READY_JOB } from "./issue-dependencies";
 import { announceTaskConversation } from "./issues";
 import type { JevKey, JevKeySource } from "./jev-key";
 import { DEEP_MENTION_THRESHOLD, DEEP_WAKE_HOP, MENTION_WAKE_THRESHOLD, mentionNeedsNothing } from "./judge";
@@ -1056,6 +1057,12 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
       await saveAccountContact(deps.db, deps.email, {
         userId: String(job.payload.userId),
         email: String(job.payload.email),
+      });
+    },
+    [ISSUE_READY_JOB]: async (job) => {
+      await dispatchIssueReady({ db: deps.db }, orgOf(job), {
+        issueId: String(job.payload.issueId),
+        generation: String(job.payload.generation),
       });
     },
     // A background task on a connected computer ended: its conversation wakes (ADR 0029).

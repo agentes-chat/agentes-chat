@@ -145,6 +145,33 @@ async function insertRun(
 /** What became of an event: a new run, joined to a queued one, gathered for after the one working, or a repeat. */
 export type EventOutcome = "queued" | "merged" | "gathered" | "duplicate";
 
+/** One task readiness is one firing: unlike notifications, these must not be merged or truncated. */
+export async function queueIsolatedEventRun(
+  deps: { db: Database },
+  routine: Pick<RoutineRow, "id" | "orgId">,
+  event: RoutineEventPayload,
+  dedupeKey: string,
+) {
+  return deps.db.transaction(async (tx) => {
+    await lockRoutine(tx, routine.id);
+    const [seen] = await tx
+      .select({ id: routineRuns.id })
+      .from(routineRuns)
+      .where(and(eq(routineRuns.routineId, routine.id), eq(routineRuns.dedupeKey, dedupeKey)))
+      .limit(1);
+    if (seen) return;
+    const gathered = await routineInFlight(tx, routine.id);
+    const row = await insertRun(tx, routine, {
+      at: new Date(),
+      trigger: "event",
+      event: withState(event, [dedupeKey], { gathered }),
+      dedupeKey,
+    });
+    if (!row) throw new Error("No routine time slot was available for this task readiness; retry the dispatch");
+    if (!gathered) await enqueueRoutineJob(tx, row);
+  });
+}
+
 /**
  * An event for a routine (§6.3, §6.5): a repeat of an event it already got is dropped; else it joins
  * the run still queued with its job alive, or the run waiting to start (gathered, or held emails),

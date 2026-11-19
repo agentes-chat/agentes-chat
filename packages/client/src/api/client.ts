@@ -28,6 +28,7 @@ import type {
   VaultScope,
 } from "../vault/types";
 import type { UploadOptions } from "./http";
+import type { IssueDependenciesApi } from "./issue-dependencies";
 import type {
   AccessInput,
   AccountDeletionPlan,
@@ -390,6 +391,7 @@ export interface OpenedWorkspace {
 }
 
 export interface ApiClient {
+  issueDependencies: IssueDependenciesApi;
   system: {
     health(): Promise<Health>;
     instance(): Promise<Instance>;

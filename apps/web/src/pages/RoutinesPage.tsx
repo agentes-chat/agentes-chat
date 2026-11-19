@@ -173,11 +173,13 @@ import { defaultRule, fromApiRule, recurrenceLabels, ruleSentence, toApiRule, up
 import { useToast } from "@/lib/toast";
 import "./issues.css";
 import "./routines.css";
+import { type ReadyFilter, RoutineReadyFilter } from "./RoutineReadyFilter";
 
 export const ROUTINE_EVENTS: RoutineEvent[] = [
   "sentry.issue_created",
   "github.pr_opened",
   "issue.created",
+  "issue.ready",
   "deploy.succeeded",
 ];
 
@@ -2505,6 +2507,14 @@ function RoutineDialog({
   const [event, setEvent] = useState<RoutineEvent>(
     routine?.trigger.type === "event" ? routine.trigger.event : "sentry.issue_created",
   );
+  const [readyFilter, setReadyFilter] = useState<ReadyFilter>(
+    routine?.trigger.type === "event"
+      ? {
+          ...(routine.trigger.issueId ? { issueId: routine.trigger.issueId } : {}),
+          ...(routine.trigger.projectId ? { projectId: routine.trigger.projectId } : {}),
+        }
+      : {},
+  );
   // When it posts.
   const [report, setReport] = useState<RoutineReport>(routine?.report ?? "when_new");
   const say = useSay();
@@ -2562,13 +2572,16 @@ function RoutineDialog({
   const phraseFailed = phraseTyped && typed.length > 0 && parsed.data?.ok === false;
   const shownZone = zone;
   const scheduleOk =
-    kind === "event" ||
-    kind === "webhook" ||
-    (kind === "connector"
-      ? Boolean(connector.connectionId)
-      : kind === "email"
-        ? Boolean(email.accountId)
-        : once || !phraseFailed);
+    kind === "event"
+      ? event !== "issue.ready" ||
+        ((readyFilter.scope !== "task" || Boolean(readyFilter.issueId)) &&
+          (readyFilter.scope !== "project" || Boolean(readyFilter.projectId)))
+      : kind === "webhook" ||
+        (kind === "connector"
+          ? Boolean(connector.connectionId)
+          : kind === "email"
+            ? Boolean(email.accountId)
+            : once || !phraseFailed);
   const targetValue = (): RoutineTargetInput =>
     target === TARGET_DM
       ? { type: "dm" }
@@ -2596,7 +2609,16 @@ function RoutineDialog({
         : kind === "email"
           ? emailTrigger()
           : kind === "event"
-            ? { type: "event", event }
+            ? {
+                type: "event",
+                event,
+                ...(event === "issue.ready"
+                  ? {
+                      ...(readyFilter.issueId ? { issueId: readyFilter.issueId } : {}),
+                      ...(readyFilter.projectId ? { projectId: readyFilter.projectId } : {}),
+                    }
+                  : {}),
+              }
             : once
               ? {
                   type: "once",
@@ -2634,7 +2656,11 @@ function RoutineDialog({
                   filter: cleanFilter(r.trigger.filter ?? {}),
                 })
             : kind === "event"
-              ? r.trigger.type !== "event" || r.trigger.event !== event
+              ? r.trigger.type !== "event" ||
+                r.trigger.event !== event ||
+                (event === "issue.ready" &&
+                  JSON.stringify({ issueId: r.trigger.issueId, projectId: r.trigger.projectId }) !==
+                    JSON.stringify({ issueId: readyFilter.issueId, projectId: readyFilter.projectId }))
               : once
                 ? r.trigger.type !== "once" ||
                   JSON.stringify(trigger()) !== JSON.stringify({ type: "once", at: r.trigger.at, timezone: savedZone })
@@ -2939,6 +2965,9 @@ function RoutineDialog({
                 )}
                 {kind === "event" && eventWebhook(event) && (
                   <EventWebhookSetup provider={eventWebhook(event) ?? "github"} />
+                )}
+                {kind === "event" && event === "issue.ready" && (
+                  <RoutineReadyFilter value={readyFilter} onChange={setReadyFilter} />
                 )}
                 {busy && (
                   <p className="routine-note small ac-iconline" role="status">

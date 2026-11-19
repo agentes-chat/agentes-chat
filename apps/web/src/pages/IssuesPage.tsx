@@ -942,6 +942,7 @@ const STATE_ICON: Record<TaskState["kind"], IconName> = {
   running: "bolt",
   stalled: "pause",
   blocked: "waiting",
+  dependencies: "waiting",
 };
 
 /** The one state a task's card and row say beside who has it ("Pergunta algo", "Parado há 2 dias"). */

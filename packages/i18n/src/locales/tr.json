@@ -8425,6 +8425,28 @@
       "criterion_checked": "\"{{text}}\" kriterini işaretledi",
       "criterion_unchecked": "\"{{text}}\" kriterinin işaretini kaldırdı",
       "agent_asked": "{{name}} ajanından yapmasını istedi"
+    },
+    "dependencies": {
+      "destinationPrivate": "Görev artık bu dosyayı alacak herkes tarafından görülemiyor.",
+      "title": "Bağımlı olduğu görevler",
+      "loadError": "Bağımlılıklar yüklenemedi.",
+      "changeError": "Bağımlılık değiştirilemedi. Döngü oluşturup oluşturmadığını kontrol edin.",
+      "pick": "Görev ekle",
+      "search": "Numara veya başlığa göre ara",
+      "noResults": "Görev bulunamadı",
+      "noProject": "Proje bulunamadı",
+      "none": "Bağımlılık yok",
+      "unavailable": "Bağımlılık kullanılamıyor",
+      "remove": "{{task}} bağımlılığını kaldır",
+      "waiting_one": "{{count}} görev bekleniyor",
+      "waiting_other": "{{count}} görev bekleniyor",
+      "inputsChanged": "İş başladıktan sonra bir girdi değişti. Bağımlılıkları gözden geçirin.",
+      "cycle": "Bu bağımlılıklar bir döngü oluşturur.",
+      "pending": "Başlamadan önce bekleyen bağımlılıkları tamamlayın veya çözün.",
+      "limit": "Bu görev bağımlılık sınırına ulaştı.",
+      "stale": "Bağımlılıklar değişti. Başlamadan önce görevi kontrol edin.",
+      "filter": "Bu rutin için geçerli bir görev veya proje seçin.",
+      "started": "Bu görevde zaten çalışma sürüyor."
     }
   },
   "routines": {
@@ -8866,7 +8888,8 @@
         "pr_opened": "GitHub'da PR açıldı"
       },
       "issue": {
-        "created": "agentes'te görev oluşturuldu"
+        "created": "agentes'te görev oluşturuldu",
+        "ready": "Bir görev hazır olduğunda"
       },
       "deploy": {
         "succeeded": "Dağıtım tamamlandı"
@@ -8919,7 +8942,11 @@
         "when_past": "Bu an çoktan geçti.",
         "when_nonexistent": "Bu saat bu saat diliminde yok (yaz saati).",
         "when_unreadable": "Ne zaman olduğu anlaşılamadı. “yarın saat 9'da” gibi deneyin."
-      }
+      },
+      "readyScope": "Uygulanacağı kapsam",
+      "readyAll": "Tüm görevler",
+      "readyTask": "Belirli görev",
+      "readyProject": "Belirli proje"
     },
     "copyName": "{{name}} (kopya)",
     "state": {
@@ -9047,7 +9074,9 @@
       "computer_timeout": "Bilgisayarın yanıt vermesi çok uzun sürdü",
       "cli_failed": "Bilgisayardaki yapay zeka programı bir hatayla durdu",
       "account_missing": "Ajanın hesabı artık bilgisayarında değil",
-      "our_error": "Bizim tarafımızda bir şeyler ters gitti"
+      "our_error": "Bizim tarafımızda bir şeyler ters gitti",
+      "task_not_visible": "Görev bu hedefte görünmüyor.",
+      "task_readiness_stale": "İş başlamadan önce görevin bağımlılıkları veya rutin değişti."
     },
     "openInChat": "Konuşmada aç",
     "stop": "Durdur",

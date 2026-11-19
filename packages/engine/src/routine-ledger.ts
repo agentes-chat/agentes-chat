@@ -13,6 +13,7 @@ import { lodiFor, lodiSwitches, saidKey, saidOnce } from "./right-hand-proactive
 import { startGatheredRun } from "./routine-events";
 import { pauseRoutine, ROUTINE_FATIGUE_LIMIT, routineJobAlive } from "./routine-state";
 import { type AgentRun, canceledBy, runErrorDetail } from "./runs";
+import { taskRunDestinationAllowed } from "./task-sharing";
 
 const { routineRuns, routines, agentRuns, outbox } = schema;
 
@@ -266,7 +267,12 @@ async function reportEveryTime(
     if (block) {
       await tx
         .update(routineRuns)
-        .set({ status: "skipped", code: block, summary: record, finishedAt: new Date() })
+        .set({
+          status: "skipped",
+          code: block,
+          summary: block === "task_not_visible" ? "" : record,
+          finishedAt: new Date(),
+        })
         .where(
           and(eq(routineRuns.id, ref.routineRunId), inArray(routineRuns.status, ["queued", "starting", "started"])),
         );
@@ -311,19 +317,30 @@ async function finishRoutineRow(deps: LedgerDeps, ref: RoutineRunRef, end: Routi
       ...(note ? { summary: sql`case when ${reported} then ${routineRuns.summary} else ${note} end` } : {}),
     };
   }
-  const [row] = await deps.db
-    .update(routineRuns)
-    .set({ ...set, brain: sql`coalesce(${brain}::text, ${routineRuns.brain})`, finishedAt: new Date() })
-    .where(
-      and(
-        eq(routineRuns.id, ref.routineRunId),
-        eq(routineRuns.orgId, ref.orgId),
-        inArray(routineRuns.status, OPEN),
-        // A reported run that already ended keeps its ending.
-        isNull(routineRuns.finishedAt),
-      ),
-    )
-    .returning({ status: routineRuns.status, code: routineRuns.code, event: routineRuns.event });
+  const row = await deps.db.transaction(async (tx) => {
+    const [work] = await tx
+      .select({ run: agentRuns })
+      .from(routineRuns)
+      .innerJoin(agentRuns, eq(agentRuns.id, routineRuns.agentRunId))
+      .where(and(eq(routineRuns.id, ref.routineRunId), eq(routineRuns.orgId, ref.orgId)));
+    const brief = work ? await routineBriefOfRun(tx, work.run) : null;
+    const permitted =
+      !work || !brief || (await taskRunDestinationAllowed(tx, ref.orgId, work.run.id, brief.deliverTo.channelId));
+    const safe = permitted ? set : { status: "skipped", code: "task_not_visible", summary: "" };
+    const [updated] = await tx
+      .update(routineRuns)
+      .set({ ...safe, brain: sql`coalesce(${brain}::text, ${routineRuns.brain})`, finishedAt: new Date() })
+      .where(
+        and(
+          eq(routineRuns.id, ref.routineRunId),
+          eq(routineRuns.orgId, ref.orgId),
+          inArray(routineRuns.status, OPEN),
+          isNull(routineRuns.finishedAt),
+        ),
+      )
+      .returning({ status: routineRuns.status, code: routineRuns.code, event: routineRuns.event });
+    return updated;
+  });
   if (!row) return null;
   await afterRoutineRunEnded(deps, { ...ref, status: row.status, code: row.code, event: row.event });
   return row;

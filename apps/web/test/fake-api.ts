@@ -1481,6 +1481,15 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
     return budget > 0 ? Math.round((spent / budget) * 1000) / 10 : 0;
   };
   return {
+    issueDependencies: {
+      list: async () => ({ dependencies: [], waiting: 0, inputsChanged: false }),
+      add: async () => {
+        throw new ApiError(404, "not_found", "Task not found");
+      },
+      remove: async () => {
+        throw new ApiError(404, "not_found", "Dependency not found");
+      },
+    },
     system: {
       health: async () => ({ status: "ok", version: "test", edition: state.edition ?? "cloud" }),
       instance: async () => ({

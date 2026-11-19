@@ -108,14 +108,18 @@ export type CardState =
   | { kind: "question" }
   | { kind: "running" }
   | { kind: "stalled"; since: string }
-  | { kind: "blocked"; blocked: NonNullable<Issue["blocked"]> };
+  | { kind: "blocked"; blocked: NonNullable<Issue["blocked"]> }
+  | { kind: "dependencies"; count: number };
 
 /**
  * What a task's card says it needs or does now, from one place: its agent's work first, then background work stopped
  * on something, then a turn live in its conversation (`live`). A closed task says nothing. So a card never says
  * "Pergunta algo" and "Trabalhando" at once, as it did while the conversation's line read the live turn on its own.
  */
-export function cardState(i: Pick<Issue, "status" | "work" | "blocked">, live = false): CardState | null {
+export function cardState(
+  i: Pick<Issue, "status" | "work" | "blocked" | "dependencyWait">,
+  live = false,
+): CardState | null {
   if (!isOpen(i)) return null;
   const w = i.work;
   if (w?.state === "waiting_approval") return { kind: "approval" };
@@ -123,6 +127,8 @@ export function cardState(i: Pick<Issue, "status" | "work" | "blocked">, live = 
   if (w?.state === "running") return { kind: "running" };
   if (w?.state === "stalled") return { kind: "stalled", since: w.since };
   if (i.blocked) return { kind: "blocked", blocked: i.blocked };
+  if (i.status === "todo" && i.dependencyWait && i.dependencyWait > 0)
+    return { kind: "dependencies", count: i.dependencyWait };
   return live ? { kind: "running" } : null;
 }
 
@@ -142,6 +148,8 @@ export function cardStateText(t: TFunction, s: CardState, now = new Date()): str
       return t("issues.work.stalled", { when: timeAgo(t, s.since, now.getTime()) });
     case "blocked":
       return blockedText(t, s.blocked) ?? "";
+    case "dependencies":
+      return t("issues.dependencies.waiting", { count: s.count });
   }
 }
 

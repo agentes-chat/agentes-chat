@@ -8466,6 +8466,28 @@
       "criterion_checked": "hat das Kriterium „{{text}}“ abgehakt",
       "criterion_unchecked": "hat das Kriterium „{{text}}“ wieder geöffnet",
       "agent_asked": "hat {{name}} gebeten, sie zu erledigen"
+    },
+    "dependencies": {
+      "destinationPrivate": "Die Aufgabe ist nicht mehr für alle sichtbar, die diese Datei erhalten würden.",
+      "title": "Abhängig von",
+      "loadError": "Abhängigkeiten konnten nicht geladen werden.",
+      "changeError": "Die Abhängigkeit konnte nicht geändert werden. Prüfe, ob sie einen Zyklus erzeugt.",
+      "pick": "Aufgabe hinzufügen",
+      "search": "Nach Nummer oder Titel suchen",
+      "noResults": "Keine Aufgaben gefunden",
+      "noProject": "Keine Projekte gefunden",
+      "none": "Keine Abhängigkeiten",
+      "unavailable": "Abhängigkeit nicht verfügbar",
+      "remove": "Abhängigkeit {{task}} entfernen",
+      "waiting_one": "Wartet auf {{count}} Aufgabe",
+      "waiting_other": "Wartet auf {{count}} Aufgaben",
+      "inputsChanged": "Eine Eingabe wurde nach Arbeitsbeginn geändert. Prüfe die Abhängigkeiten.",
+      "cycle": "Diese Abhängigkeiten würden einen Zyklus erzeugen.",
+      "pending": "Schließe ausstehende Abhängigkeiten ab oder löse sie, bevor du beginnst.",
+      "limit": "Diese Aufgabe hat ihr Abhängigkeitslimit erreicht.",
+      "stale": "Die Abhängigkeiten haben sich geändert. Prüfe die Aufgabe vor dem Start.",
+      "filter": "Wähle eine gültige Aufgabe oder ein gültiges Projekt für diese Routine.",
+      "started": "Für diese Aufgabe läuft bereits eine Bearbeitung."
     }
   },
   "routines": {
@@ -8910,7 +8932,8 @@
         "pr_opened": "PR auf GitHub geöffnet"
       },
       "issue": {
-        "created": "Aufgabe in agentes erstellt"
+        "created": "Aufgabe in agentes erstellt",
+        "ready": "Wenn eine Aufgabe bereit ist"
       },
       "deploy": {
         "succeeded": "Deploy abgeschlossen"
@@ -8963,7 +8986,11 @@
         "when_past": "Dieser Zeitpunkt ist schon vorbei.",
         "when_nonexistent": "Diese Uhrzeit gibt es in dieser Zeitzone nicht (Zeitumstellung).",
         "when_unreadable": "Unklar, wann. Versuch „morgen um 9 Uhr“."
-      }
+      },
+      "readyScope": "Gilt für",
+      "readyAll": "Alle Aufgaben",
+      "readyTask": "Bestimmte Aufgabe",
+      "readyProject": "Bestimmtes Projekt"
     },
     "copyName": "{{name}} (Kopie)",
     "state": {
@@ -9091,7 +9118,9 @@
       "computer_timeout": "Der Computer hat zu lange gebraucht, um zu antworten",
       "cli_failed": "Das KI-Programm auf dem Computer wurde mit einem Fehler beendet",
       "account_missing": "Das Konto des Agenten ist nicht mehr auf seinem Computer",
-      "our_error": "Bei uns ist etwas schiefgelaufen"
+      "our_error": "Bei uns ist etwas schiefgelaufen",
+      "task_not_visible": "Die Aufgabe ist an diesem Ziel nicht sichtbar.",
+      "task_readiness_stale": "Die Abhängigkeiten der Aufgabe oder die Routine haben sich vor Arbeitsbeginn geändert."
     },
     "openInChat": "In der Unterhaltung öffnen",
     "stop": "Stoppen",

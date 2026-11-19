@@ -8148,6 +8148,27 @@
       "criterion_checked": "条件「{{text}}」にチェックを入れました",
       "criterion_unchecked": "条件「{{text}}」のチェックを外しました",
       "agent_asked": "{{name}}に作業を頼みました"
+    },
+    "dependencies": {
+      "destinationPrivate": "このファイルを受け取るすべての人がタスクを閲覧できる状態ではなくなりました。",
+      "title": "依存するタスク",
+      "loadError": "依存関係を読み込めませんでした。",
+      "changeError": "依存関係を変更できませんでした。循環していないか確認してください。",
+      "pick": "タスクを追加",
+      "search": "番号またはタイトルで検索",
+      "noResults": "タスクが見つかりません",
+      "noProject": "プロジェクトが見つかりません",
+      "none": "依存関係はありません",
+      "unavailable": "依存関係を利用できません",
+      "remove": "依存関係 {{task}} を削除",
+      "waiting_other": "{{count}} 件のタスクを待機中",
+      "inputsChanged": "作業開始後に入力が変更されました。依存関係を確認してください。",
+      "cycle": "これらの依存関係を追加すると循環が発生します。",
+      "pending": "開始する前に、保留中の依存関係を完了または解決してください。",
+      "limit": "このタスクは依存関係の上限に達しました。",
+      "stale": "依存関係が変更されました。開始する前にタスクを確認してください。",
+      "filter": "このルーチンに有効なタスクまたはプロジェクトを選んでください。",
+      "started": "このタスクではすでに作業が進んでいます。"
     }
   },
   "routines": {
@@ -8587,7 +8608,8 @@
         "pr_opened": "GitHubでPRが作成されたとき"
       },
       "issue": {
-        "created": "agentesでタスクが作成されたとき"
+        "created": "agentesでタスクが作成されたとき",
+        "ready": "タスクの準備が整ったとき"
       },
       "deploy": {
         "succeeded": "デプロイが完了したとき"
@@ -8640,7 +8662,11 @@
         "when_past": "その日時はすでに過ぎています。",
         "when_nonexistent": "その時刻はこのタイムゾーンには存在しません（夏時間）。",
         "when_unreadable": "日時を読み取れませんでした。「明日の9時」のように入力してみてください。"
-      }
+      },
+      "readyScope": "適用先",
+      "readyAll": "すべてのタスク",
+      "readyTask": "特定のタスク",
+      "readyProject": "特定のプロジェクト"
     },
     "copyName": "{{name}}（コピー）",
     "state": {
@@ -8762,7 +8788,9 @@
       "computer_timeout": "コンピューターの応答に時間がかかりすぎました",
       "cli_failed": "コンピューターのAIプログラムがエラーで停止しました",
       "account_missing": "エージェントのアカウントがもうコンピューターにありません",
-      "our_error": "こちら側で問題が発生しました"
+      "our_error": "こちら側で問題が発生しました",
+      "task_not_visible": "この送信先ではタスクを閲覧できません。",
+      "task_readiness_stale": "作業開始前にタスクの依存関係またはルーチンが変更されました。"
     },
     "openInChat": "会話で開く",
     "stop": "停止",

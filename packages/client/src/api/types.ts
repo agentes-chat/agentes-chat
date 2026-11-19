@@ -4079,6 +4079,7 @@ export interface Issue {
   title: string;
   description: string;
   status: IssueStatus;
+  dependencyWait?: number;
   /** Its board column, always one of its stage. */
   columnId: string | null;
   /** Order inside the column, lowest first. */
@@ -4220,7 +4221,12 @@ export interface IssueColumn {
   position: number;
 }
 
-export type RoutineEvent = "sentry.issue_created" | "github.pr_opened" | "issue.created" | "deploy.succeeded";
+export type RoutineEvent =
+  | "sentry.issue_created"
+  | "github.pr_opened"
+  | "issue.created"
+  | "issue.ready"
+  | "deploy.succeeded";
 
 /**
  * The rule as the API sends it: monthly/yearly positions are in `byWeekday`
@@ -4256,7 +4262,7 @@ export type RoutineTrigger =
       timezone: string;
       description: string;
     }
-  | { type: "event"; event: RoutineEvent }
+  | { type: "event"; event: RoutineEvent; issueId?: string; projectId?: string }
   /** A one-off (reminders, "amanhã às 9h"): fires once at `at`, then the routine is inactive. */
   | { type: "once"; at: string; timezone: string; description: string }
   | RoutineEmailTrigger
@@ -4528,7 +4534,7 @@ export interface RoutineInput {
   trigger:
     | { type: "schedule"; phrase: string; timezone?: string }
     | { type: "schedule"; rule: ApiRule }
-    | { type: "event"; event: RoutineEvent }
+    | { type: "event"; event: RoutineEvent; issueId?: string; projectId?: string }
     | { type: "once"; at: string; timezone?: string }
     | Omit<RoutineEmailTrigger, "status">
     | { type: "webhook"; methods?: RoutineHookMethod[] }

@@ -4,6 +4,8 @@ import { recordAudit } from "./audit";
 import { stopRun } from "./cancel";
 import { endChannelWork, markChannelDeleted } from "./channel-deletion";
 import { ForbiddenError } from "./errors";
+import { publishOrgEvent } from "./events";
+import { invalidateDeletedDependencyInputs } from "./issue-dependencies";
 import { canSee, findVisible, publishToTaskReaders, taskAudienceOf, tiedPeople } from "./issues";
 import { clearIssueNotifications } from "./notifications";
 import { can, requireActiveMembership } from "./organizations";
@@ -84,7 +86,8 @@ export async function deleteIssue(deps: AgentDeletionDeps, userId: string, orgId
   for (const { run, kind } of live)
     await stopRun(deps, orgId, run, kind, { type: "person", id: userId }, { forAll: true }).catch(() => null);
 
-  await db.transaction(async (tx) => {
+  const dependencyChanges = await db.transaction(async (tx) => {
+    const dependencyChanges = await invalidateDeletedDependencyInputs(tx, orgId, ids);
     for (const room of rooms) await markChannelDeleted(tx, orgId, room);
     await tx
       .update(agentRuns)
@@ -106,7 +109,10 @@ export async function deleteIssue(deps: AgentDeletionDeps, userId: string, orgId
       target: { type: "issue", id: issue.id },
       details: { number: issue.number, title: issue.title, steps: ids.length - 1 },
     });
+    return dependencyChanges;
   });
+  if (dependencyChanges)
+    await publishOrgEvent(deps.pubsub, { type: "org.broadcast", orgId, event: { type: "issues.changed" } });
   for (const room of rooms) await endChannelWork(deps, userId, orgId, room);
   await clearIssueNotifications(deps, orgId, ids);
   const tied = await tiedPeople(db, gone);

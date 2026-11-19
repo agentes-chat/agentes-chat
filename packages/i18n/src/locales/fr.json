@@ -8782,6 +8782,28 @@
       "criterion_checked": "a coché le critère « {{text}} »",
       "criterion_unchecked": "a décoché le critère « {{text}} »",
       "agent_asked": "a demandé à {{name}} de la faire"
+    },
+    "dependencies": {
+      "destinationPrivate": "La tâche n’est plus visible par toutes les personnes qui recevraient ce fichier.",
+      "title": "Dépend de",
+      "loadError": "Impossible de charger les dépendances.",
+      "changeError": "Impossible de modifier la dépendance. Vérifiez si elle crée un cycle.",
+      "pick": "Ajouter une tâche",
+      "search": "Rechercher par numéro ou titre",
+      "noResults": "Aucune tâche trouvée",
+      "noProject": "Aucun projet trouvé",
+      "none": "Aucune dépendance",
+      "unavailable": "Dépendance indisponible",
+      "remove": "Retirer la dépendance {{task}}",
+      "waiting_one": "En attente de {{count}} tâche",
+      "waiting_other": "En attente de {{count}} tâches",
+      "inputsChanged": "Une entrée a changé après le début du travail. Vérifiez les dépendances.",
+      "cycle": "Ces dépendances créeraient un cycle.",
+      "pending": "Terminez ou résolvez les dépendances en attente avant de commencer.",
+      "limit": "Cette tâche a atteint sa limite de dépendances.",
+      "stale": "Les dépendances ont changé. Vérifiez la tâche avant de commencer.",
+      "filter": "Choisissez une tâche ou un projet valide pour cette routine.",
+      "started": "Un travail est déjà en cours pour cette tâche."
     }
   },
   "routines": {
@@ -9231,7 +9253,8 @@
         "pr_opened": "PR ouverte sur GitHub"
       },
       "issue": {
-        "created": "Tâche créée dans agentes"
+        "created": "Tâche créée dans agentes",
+        "ready": "Quand une tâche est prête"
       },
       "deploy": {
         "succeeded": "Déploiement terminé"
@@ -9284,7 +9307,11 @@
         "when_past": "Ce moment est déjà passé.",
         "when_nonexistent": "Cette heure n'existe pas dans ce fuseau horaire (changement d'heure).",
         "when_unreadable": "Impossible de comprendre quand. Essayez « demain à 9 h »."
-      }
+      },
+      "readyScope": "Appliquer à",
+      "readyAll": "Toutes les tâches",
+      "readyTask": "Tâche précise",
+      "readyProject": "Projet précis"
     },
     "copyName": "{{name}} (copie)",
     "state": {
@@ -9418,7 +9445,9 @@
       "computer_timeout": "L'ordinateur a mis trop de temps à répondre",
       "cli_failed": "Le programme d'IA de l'ordinateur s'est arrêté sur une erreur",
       "account_missing": "Le compte de l'agent n'est plus sur son ordinateur",
-      "our_error": "Un problème est survenu de notre côté"
+      "our_error": "Un problème est survenu de notre côté",
+      "task_not_visible": "La tâche n’est pas visible à cette destination.",
+      "task_readiness_stale": "Les dépendances de la tâche ou la routine ont changé avant le début du travail."
     },
     "openInChat": "Ouvrir dans la conversation",
     "stop": "Arrêter",

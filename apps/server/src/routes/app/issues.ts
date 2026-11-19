@@ -1,4 +1,5 @@
 import {
+  addIssueDependency,
   askAgentToImplement,
   commentIssue,
   createIssue,
@@ -12,11 +13,13 @@ import {
   issueFromMessage,
   listIssueActivity,
   listIssueColumns,
+  listIssueDependencies,
   listIssueProjects,
   listIssues,
   openTaskConversation,
   PROJECT_NAME_MAX,
   ROLE_COLORS,
+  removeIssueDependency,
   setCriterion,
   setIssueAudience,
   updateIssue,
@@ -89,6 +92,7 @@ const Issue = z
     title: z.string(),
     description: z.string(),
     status: Status,
+    dependencyWait: z.number().int().optional(),
     columnId: z.uuid().nullable().openapi({ description: "Its board column, always one of its stage." }),
     boardRank: z.number().openapi({ description: "Order inside the column, lowest first." }),
     priority: Priority,
@@ -181,6 +185,16 @@ const Activity = z
   .openapi("IssueActivity");
 
 const IssueParams = OrgParams.extend({ issueId: z.uuid() });
+const Dependencies = z.object({
+  dependencies: z.array(
+    z.object({
+      id: z.uuid(),
+      task: z.object({ id: z.uuid(), number: z.number(), title: z.string(), status: Status }).nullable(),
+    }),
+  ),
+  waiting: z.number().int(),
+  inputsChanged: z.boolean(),
+});
 
 const Column = z
   .object({
@@ -202,6 +216,67 @@ export function issueRoutes(deps: AppDeps) {
   app.use("/organizations/*", requireSession(deps.auth));
   const issues: IssueDeps = { db, pubsub: adapters.pubsub };
   const person = (userId: string) => ({ type: "person" as const, userId });
+
+  app.openapi(
+    createRoute({
+      method: "get",
+      path: "/organizations/{orgId}/issues/{issueId}/dependencies",
+      tags,
+      security,
+      request: { params: IssueParams },
+      responses: { 200: json(Dependencies), ...errors },
+    }),
+    async (c) => {
+      const { orgId, issueId } = c.req.valid("param");
+      return c.json(await listIssueDependencies(db, person(c.get("user").id), orgId, issueId), 200);
+    },
+  );
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/issues/{issueId}/dependencies",
+      tags,
+      security,
+      request: { params: IssueParams, body: body(z.object({ dependencyId: z.uuid() })) },
+      responses: { 200: json(Dependencies), ...errors },
+    }),
+    async (c) => {
+      const { orgId, issueId } = c.req.valid("param");
+      return c.json(
+        await addIssueDependency(
+          { db, pubsub: adapters.pubsub },
+          person(c.get("user").id),
+          orgId,
+          issueId,
+          c.req.valid("json").dependencyId,
+        ),
+        200,
+      );
+    },
+  );
+  app.openapi(
+    createRoute({
+      method: "delete",
+      path: "/organizations/{orgId}/issues/{issueId}/dependencies/{relationId}",
+      tags,
+      security,
+      request: { params: IssueParams.extend({ relationId: z.uuid() }) },
+      responses: { 200: json(Dependencies), ...errors },
+    }),
+    async (c) => {
+      const { orgId, issueId, relationId } = c.req.valid("param");
+      return c.json(
+        await removeIssueDependency(
+          { db, pubsub: adapters.pubsub },
+          person(c.get("user").id),
+          orgId,
+          issueId,
+          relationId,
+        ),
+        200,
+      );
+    },
+  );
 
   app.openapi(
     createRoute({

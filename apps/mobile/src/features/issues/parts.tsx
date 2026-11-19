@@ -203,6 +203,7 @@ export function GithubChip({ url }: { url: string }) {
 
 /** A state's mark: the agent's orbit while it works; what calls on a person, or stopped, in the attention color. */
 const CARD_STATE_ICON: Record<Exclude<CardState["kind"], "running">, IconName> = {
+  dependencies: "wait",
   approval: "shield",
   question: "help",
   stalled: "pause",

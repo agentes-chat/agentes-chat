@@ -8513,6 +8513,28 @@
       "criterion_checked": "heeft het criterium \"{{text}}\" aangevinkt",
       "criterion_unchecked": "heeft het criterium \"{{text}}\" uitgevinkt",
       "agent_asked": "heeft {{name}} gevraagd het te doen"
+    },
+    "dependencies": {
+      "destinationPrivate": "De taak is niet meer zichtbaar voor iedereen die dit bestand zou ontvangen.",
+      "title": "Afhankelijk van",
+      "loadError": "De afhankelijkheden konden niet worden geladen.",
+      "changeError": "De afhankelijkheid kon niet worden gewijzigd. Controleer of deze een cyclus veroorzaakt.",
+      "pick": "Taak toevoegen",
+      "search": "Zoeken op nummer of titel",
+      "noResults": "Geen taken gevonden",
+      "noProject": "Geen projecten gevonden",
+      "none": "Geen afhankelijkheden",
+      "unavailable": "Afhankelijkheid niet beschikbaar",
+      "remove": "Afhankelijkheid {{task}} verwijderen",
+      "waiting_one": "Wacht op {{count}} taak",
+      "waiting_other": "Wacht op {{count}} taken",
+      "inputsChanged": "Een invoer is na de start gewijzigd. Controleer de afhankelijkheden.",
+      "cycle": "Deze afhankelijkheden zouden een cyclus veroorzaken.",
+      "pending": "Rond de openstaande afhankelijkheden af of los ze op voordat je begint.",
+      "limit": "Deze taak heeft de limiet voor afhankelijkheden bereikt.",
+      "stale": "De afhankelijkheden zijn gewijzigd. Controleer de taak voordat je begint.",
+      "filter": "Kies een geldige taak of een geldig project voor deze routine.",
+      "started": "Voor deze taak is al werk in uitvoering."
     }
   },
   "routines": {
@@ -8954,7 +8976,8 @@
         "pr_opened": "PR geopend op GitHub"
       },
       "issue": {
-        "created": "Taak gemaakt in agentes"
+        "created": "Taak gemaakt in agentes",
+        "ready": "Wanneer een taak gereed is"
       },
       "deploy": {
         "succeeded": "Deploy voltooid"
@@ -9007,7 +9030,11 @@
         "when_past": "Dat moment is al voorbij.",
         "when_nonexistent": "Dat tijdstip bestaat niet in deze tijdzone (zomertijd).",
         "when_unreadable": "Kon niet bepalen wanneer. Probeer “morgen om 9:00”."
-      }
+      },
+      "readyScope": "Van toepassing op",
+      "readyAll": "Alle taken",
+      "readyTask": "Specifieke taak",
+      "readyProject": "Specifiek project"
     },
     "copyName": "{{name}} (kopie)",
     "state": {
@@ -9135,7 +9162,9 @@
       "computer_timeout": "De computer deed er te lang over om te antwoorden",
       "cli_failed": "Het AI-programma op de computer is gestopt met een fout",
       "account_missing": "Het account van de agent staat niet meer op zijn computer",
-      "our_error": "Er ging iets mis aan onze kant"
+      "our_error": "Er ging iets mis aan onze kant",
+      "task_not_visible": "De taak is niet zichtbaar op deze bestemming.",
+      "task_readiness_stale": "De afhankelijkheden van de taak of de routine zijn gewijzigd voordat het werk begon."
     },
     "openInChat": "Openen in het gesprek",
     "stop": "Stoppen",

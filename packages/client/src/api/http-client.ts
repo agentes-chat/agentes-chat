@@ -17,6 +17,7 @@ import type {
 } from "../vault/types";
 import type { HttpApi, OpenedWorkspace } from "./client";
 import { ApiError, createFileRequester, createRequester, enc, type TransportOptions } from "./http";
+import { createIssueDependenciesApi } from "./issue-dependencies";
 import type {
   AccountDeletionPlan,
   AccountLoginStart,
@@ -346,6 +347,7 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
   };
 
   return {
+    issueDependencies: createIssueDependenciesApi(request),
     actions: {
       undo: (orgId, actionId) => request<AgentAction>(`${org(orgId)}/actions/${enc(actionId)}/undo`, { json: {} }),
       redo: (orgId, actionId) => request<AgentAction>(`${org(orgId)}/actions/${enc(actionId)}/redo`, { json: {} }),

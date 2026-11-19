@@ -9070,6 +9070,30 @@
       "criterion_checked": "zaznaczył(a) kryterium „{{text}}”",
       "criterion_unchecked": "odznaczył(a) kryterium „{{text}}”",
       "agent_asked": "poprosił(a) o wykonanie: {{name}}"
+    },
+    "dependencies": {
+      "destinationPrivate": "Zadanie nie jest już widoczne dla wszystkich osób, które otrzymałyby ten plik.",
+      "title": "Zależy od",
+      "loadError": "Nie udało się wczytać zależności.",
+      "changeError": "Nie udało się zmienić zależności. Sprawdź, czy nie tworzy cyklu.",
+      "pick": "Dodaj zadanie",
+      "search": "Szukaj według numeru lub tytułu",
+      "noResults": "Nie znaleziono zadań",
+      "noProject": "Nie znaleziono projektów",
+      "none": "Brak zależności",
+      "unavailable": "Zależność niedostępna",
+      "remove": "Usuń zależność {{task}}",
+      "waiting_one": "Oczekiwanie na {{count}} zadanie",
+      "waiting_few": "Oczekiwanie na {{count}} zadania",
+      "waiting_many": "Oczekiwanie na {{count}} zadań",
+      "waiting_other": "Oczekiwanie na {{count}} zadania",
+      "inputsChanged": "Dane wejściowe zmieniły się po rozpoczęciu pracy. Sprawdź zależności.",
+      "cycle": "Te zależności utworzyłyby cykl.",
+      "pending": "Zakończ lub rozwiąż oczekujące zależności przed rozpoczęciem.",
+      "limit": "To zadanie osiągnęło limit zależności.",
+      "stale": "Zależności się zmieniły. Sprawdź zadanie przed rozpoczęciem.",
+      "filter": "Wybierz prawidłowe zadanie lub projekt dla tej rutyny.",
+      "started": "Praca nad tym zadaniem już trwa."
     }
   },
   "routines": {
@@ -9521,7 +9545,8 @@
         "pr_opened": "Otwarty PR na GitHubie"
       },
       "issue": {
-        "created": "Zadanie utworzone w agentes"
+        "created": "Zadanie utworzone w agentes",
+        "ready": "Gdy zadanie będzie gotowe"
       },
       "deploy": {
         "succeeded": "Wdrożenie zakończone"
@@ -9574,7 +9599,11 @@
         "when_past": "Ten moment już minął.",
         "when_nonexistent": "Ta godzina nie istnieje w tej strefie czasowej (zmiana czasu).",
         "when_unreadable": "Nie udało się ustalić kiedy. Spróbuj „jutro o 9:00”."
-      }
+      },
+      "readyScope": "Dotyczy",
+      "readyAll": "Wszystkie zadania",
+      "readyTask": "Konkretne zadanie",
+      "readyProject": "Konkretny projekt"
     },
     "copyName": "{{name}} (kopia)",
     "state": {
@@ -9714,7 +9743,9 @@
       "computer_timeout": "Komputer zbyt długo nie odpowiadał",
       "cli_failed": "Program AI na komputerze zatrzymał się z błędem",
       "account_missing": "Konta agenta nie ma już na jego komputerze",
-      "our_error": "Coś poszło nie tak po naszej stronie"
+      "our_error": "Coś poszło nie tak po naszej stronie",
+      "task_not_visible": "Zadanie nie jest widoczne w tym miejscu docelowym.",
+      "task_readiness_stale": "Zależności zadania lub rutyna zmieniły się przed rozpoczęciem pracy."
     },
     "openInChat": "Otwórz w rozmowie",
     "stop": "Zatrzymaj",

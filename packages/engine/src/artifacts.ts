@@ -52,6 +52,7 @@ import {
   versionDoc,
 } from "./live/preview";
 import { docOf, liveDocMeta, loadStored, toB64 } from "./live/store";
+import { taskRunDestinationAllowed, taskRunFileDestinationAllowed } from "./task-sharing";
 
 export { tableToCsv };
 
@@ -1199,6 +1200,26 @@ async function placeFile(
   return { ...place, ...(toDrive ? { channelId: null, threadId: null } : await peopleSee(db, run, room)) };
 }
 
+async function assertTaskFileDestination(tx: Executor, actor: ArtifactActor, orgId: string, channelId: string | null) {
+  if (actor.type === "agent" && actor.runId && !(await taskRunDestinationAllowed(tx, orgId, actor.runId, channelId)))
+    throw new ForbiddenError(
+      "The task is no longer visible to everyone who would receive this file",
+      "issue.task_destination_private",
+    );
+}
+
+async function assertTaskFileVersion(tx: Executor, actor: ArtifactActor, orgId: string, artifactId: string) {
+  if (
+    actor.type === "agent" &&
+    actor.runId &&
+    !(await taskRunFileDestinationAllowed(tx, orgId, actor.runId, artifactId))
+  )
+    throw new ForbiddenError(
+      "The task is no longer visible to everyone who would receive this file",
+      "issue.task_destination_private",
+    );
+}
+
 /** Version 1 of a new artifact: blob, rows, index, audit and the channel event. */
 async function insertArtifact(
   deps: ArtifactDeps,
@@ -1232,9 +1253,11 @@ async function insertArtifact(
   const { db } = deps;
   const id = input.id ?? Bun.randomUUIDv7();
   const sharing = input.sharing ?? (input.channelId ? CONVERSATION_ALONE : SHARED_WITH_EVERYONE);
+  await db.transaction((tx) => assertTaskFileDestination(tx, actor, orgId, input.channelId));
   const blob = await writeBlob(deps, orgId, id, 1, input.stored);
   const author = input.author ?? authorOf(actor);
   const row = await db.transaction(async (tx) => {
+    await assertTaskFileDestination(tx, actor, orgId, input.channelId);
     const [a] = await tx
       .insert(artifacts)
       .values({
@@ -1313,11 +1336,13 @@ export async function insertVersion(
   const { db } = deps;
   const artifactId = current.id;
   const version = current.currentVersion + 1;
+  await db.transaction((tx) => assertTaskFileVersion(tx, actor, orgId, artifactId));
   const blob = await writeBlob(deps, orgId, artifactId, version, input.stored);
   const author = authorOf(actor);
   const title = input.title?.trim().slice(0, ARTIFACT_LIMITS.titleChars) || current.title;
   const note = input.note?.trim().slice(0, 500) || null;
   const row = await db.transaction(async (tx) => {
+    await assertTaskFileVersion(tx, actor, orgId, artifactId);
     const [a] = await tx
       .update(artifacts)
       .set({
@@ -1668,6 +1693,7 @@ export async function moveToSharedDrive(
   const refusal = await sharedDriveRefusal(deps.db, actor, orgId, a);
   if (refusal) throw new ForbiddenError(refusal);
   const row = await deps.db.transaction(async (tx) => {
+    await assertTaskFileDestination(tx, actor, orgId, null);
     const [moved] = await tx
       .update(artifacts)
       .set({ channelId: null, threadId: null, share: "everyone", shareUserIds: [], shareRoleIds: [] })
