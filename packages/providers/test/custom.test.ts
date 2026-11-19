@@ -156,6 +156,117 @@ describe("calls", () => {
     expect(req?.headers.get("user-agent")).not.toStartWith("agentes.chat/");
   });
 
+  test("Chat Completions: a tool result's picture rides beside it, in the message that follows", async () => {
+    const { fetcher, requests } = scripted(
+      chat([
+        { choices: [{ index: 0, delta: { content: "It is red." }, finish_reason: "stop" }] },
+        { choices: [], usage: { prompt_tokens: 10, completion_tokens: 3 } },
+      ]),
+    );
+    const result = await createCustomProvider({ fetch: fetcher, maxRetries: 0 }).stream(
+      {
+        model: id,
+        system: "s",
+        messages: [
+          { role: "user", content: "what colour is it?" },
+          {
+            role: "assistant",
+            content: [{ type: "tool_use", id: "call_1", name: "read_artifact", input: {} }],
+          },
+          {
+            role: "user",
+            content: [
+              {
+                type: "tool_result",
+                toolUseId: "call_1",
+                content: "File red.png (image/png, 128 bytes)",
+                images: [{ mediaType: "image/png", data: "iVBORw0KGgo=" }],
+              },
+            ],
+          },
+        ],
+        maxTokens: 100,
+      },
+      { apiKey: "k-123456789", endpoint: { style: "openai", baseURL: "https://gw.example/v1" }, onDelta: () => {} },
+    );
+    const sent = requests[0]?.body.messages as Record<string, unknown>[];
+    // Nothing was left out: the endpoint took the picture.
+    expect(result.imagesLeftOut).toBeUndefined();
+    // The tool's words, then the picture in a message of its own: Chat Completions gives a tool answer words only.
+    expect(sent.map((m) => m.role)).toEqual(["system", "user", "assistant", "tool", "user"]);
+    expect(sent[3]).toEqual({
+      role: "tool",
+      tool_call_id: "call_1",
+      content: "File red.png (image/png, 128 bytes)",
+    });
+    expect(sent[4]).toEqual({
+      role: "user",
+      content: [{ type: "image_url", image_url: { url: "data:image/png;base64,iVBORw0KGgo=" } }],
+    });
+  });
+
+  test("Chat Completions: a model that refuses pictures gets the turn again without them, and stays text-only", async () => {
+    // A model of its own: what one endpoint learns about another's pictures must not leak into the tests beside it.
+    const textOnly = customModelId(CRED, "zhipu/glm-5.3-flash");
+    const refusal = JSON.stringify({
+      object: "error",
+      message: "Image input is not enabled for this model",
+      type: "invalid_request_invalid_args",
+      code: "3051",
+    });
+    const seen: Record<string, unknown>[] = [];
+    const inline = (body: Record<string, unknown>) =>
+      JSON.stringify((body.messages as Record<string, unknown>[]) ?? []).includes("image_url");
+    const fetcher = (async (_url: string | URL | Request, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>;
+      seen.push(body);
+      // Only a body carrying pictures is refused; the same turn without them answers.
+      return inline(body)
+        ? new Response(refusal, { status: 400, headers: { "content-type": "application/json" } })
+        : new Response(
+            chat([
+              { choices: [{ index: 0, delta: { content: "I cannot see it." }, finish_reason: "stop" }] },
+              { choices: [], usage: { prompt_tokens: 10, completion_tokens: 4 } },
+            ]),
+            { status: 200, headers: { "content-type": "text/event-stream" } },
+          );
+    }) as unknown as typeof fetch;
+    const provider = createCustomProvider({ fetch: fetcher, maxRetries: 0 });
+    const messages = [
+      { role: "user" as const, content: "what colour is it?" },
+      {
+        role: "assistant" as const,
+        content: [{ type: "tool_use" as const, id: "c1", name: "read_artifact", input: {} }],
+      },
+      {
+        role: "user" as const,
+        content: [
+          {
+            type: "tool_result" as const,
+            toolUseId: "c1",
+            content: "File red.png (image/png, 128 bytes)",
+            images: [{ mediaType: "image/png", data: "iVBORw0KGgo=" }],
+          },
+        ],
+      },
+    ];
+    const call = () =>
+      provider.stream(
+        { model: textOnly, system: "s", messages, maxTokens: 100 },
+        { apiKey: "k-123456789", endpoint: { style: "openai", baseURL: "https://gw.example/v1" }, onDelta: () => {} },
+      );
+    const result = await call();
+    expect(result.text).toBe("I cannot see it.");
+    expect(seen.map(inline)).toEqual([true, false]);
+    expect(result.imagesLeftOut).toBe(true);
+    // The note it reads says why, in the words the text-only path already uses.
+    expect(JSON.stringify(seen[1]?.messages)).toContain("is not shown to you");
+    // Remembered: the next turn asks once, without pictures, and pays for no refusal.
+    seen.length = 0;
+    await call();
+    expect(seen.map(inline)).toEqual([false]);
+  });
+
   test("Chat Completions: no effort, or none, sends no reasoning_effort", async () => {
     for (const effort of [undefined, "none"] as const) {
       const { fetcher, requests } = scripted(
