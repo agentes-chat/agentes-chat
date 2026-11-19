@@ -203,6 +203,7 @@ import type {
   PhoneSignIn,
   PlanServes,
   Poll,
+  ProblemReportPreview,
   Proposal,
   ReactionCount,
   Reminder,
@@ -592,6 +593,9 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       instance: () => request<Instance>("/api/instance"),
       telemetry: () => nullOn(404, () => request<ServerTelemetry>("/api/app/telemetry")),
       setTelemetry: (enabled) => request<ServerTelemetry>("/api/app/telemetry", { method: "PUT", json: { enabled } }),
+      previewProblemReport: (input) =>
+        request<ProblemReportPreview>("/api/app/problem-reports/preview", { json: input }),
+      sendProblemReport: (input) => request<{ id: string }>("/api/app/problem-reports/send", { json: input }),
       sendFeedback: (input) => request<void>("/api/app/feedback", { json: input }),
       uploadFeedbackFile: (file) => {
         const form = new FormData();
@@ -682,6 +686,9 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       deleteWorkspace: async (orgId, input = {}) =>
         (await request<{ deletion: { dueAt: string } }>(`${org(orgId)}/deletion`, { json: input })).deletion,
       restore: (orgId) => request<void>(`${org(orgId)}/deletion`, { method: "DELETE" }),
+      resetCode: (orgId) => request<CodeSent>(`${org(orgId)}/reset/code`, { json: {} }),
+      reset: async (orgId, input = {}) =>
+        (await request<{ reset: { startedAt: string } }>(`${org(orgId)}/reset`, { json: input })).reset,
       setAvatar: (orgId, input) =>
         request<{ avatarUrl: string }>(`${org(orgId)}/me/avatar`, { method: "PUT", json: input }),
       removeAvatar: (orgId) => request<void>(`${org(orgId)}/me/avatar`, { method: "DELETE" }),

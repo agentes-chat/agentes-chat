@@ -239,8 +239,8 @@ html:not([data-pointer]) .routines-horizon__label:focus-visible {
 .routine-row {
   position: relative;
   display: grid;
-  /* Fixed columns: every row lines up (placeholders stand in for missing buttons). */
-  grid-template-columns: 36px minmax(0, 1fr) 124px;
+  /* Fixed columns: every row lines up (placeholders stand in for missing buttons, every strip has its 14 slots). */
+  grid-template-columns: 36px minmax(0, 1fr) auto 124px;
   align-items: center;
   gap: 16px;
   padding: var(--row-py) 12px var(--row-py) 16px;
@@ -351,6 +351,10 @@ html:not([data-pointer]) .routine-row__title:focus-visible {
 .routine-row[data-paused] .routine-row__title,
 .routine-row[data-done] .routine-row__title {
   color: var(--muted);
+}
+.routine-row[data-paused] .ac-run-strip,
+.routine-row[data-done] .ac-run-strip {
+  opacity: 0.5;
 }
 
 /* ── Details: the routine's page in the details dialog, laid out as a task's (`issue-details`, `.ac-props`) ── */
@@ -756,7 +760,7 @@ html:not([data-pointer]) .routine-row__title:focus-visible {
 }
 @media (max-width: 720px) {
   .routine-row {
-    grid-template-columns: 36px minmax(0, 1fr) auto;
+    grid-template-columns: 36px minmax(0, 1fr) auto auto;
     gap: 10px 12px;
     padding: 12px;
   }
@@ -768,15 +772,19 @@ html:not([data-pointer]) .routine-row__title:focus-visible {
     padding: 12px 12px 0;
   }
 }
-/* On a narrow phone the title, its line and when it runs keep the row's width: the switch and the ⋯ go under them. */
+/* On a narrow phone the title and when it runs keep the row's width: the runs go under them on the text's edge, the
+   switch and the ⋯ on the row's other edge, where they are on a wide screen. */
 @media (max-width: 480px) {
   .routine-row__main {
-    grid-column: 2 / 4;
+    grid-column: 2 / -1;
+  }
+  .routine-row__runs {
+    grid-column: 2;
+    grid-row: 2;
   }
   .routine-row__actions {
-    grid-column: 2 / 4;
-    grid-row: 3;
-    justify-content: flex-start;
+    grid-column: 3 / -1;
+    grid-row: 2;
   }
 }
 

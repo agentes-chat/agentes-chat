@@ -3962,11 +3962,13 @@
   },
   "keyGuard": {
     "title": "To wygląda na klucz API",
-    "text": "Wszystko na czacie widzą osoby i agenci. Zapisz to lepiej jako klucz przestrzeni roboczej: jest szyfrowany i nikt go nie widzi.",
-    "textMember": "Wszystko na czacie widzą osoby i agenci. Klucz jest jak hasło.",
-    "save": "Zapisz jako klucz",
+    "titleSecret": "To wygląda na klucz lub hasło",
+    "vaultText": "Wszystko na czacie widzą ludzie i agenci. Przechowuj go w Vault: jest zaszyfrowany, a agenci, którym pozwolisz, używają go, nie widząc go.",
+    "vault": "Zapisz w Vault",
+    "useAsAi": "Użyj jako klucza AI",
     "remove": "Usuń",
-    "send": "Wyślij mimo to"
+    "send": "Wyślij mimo to",
+    "saved": "Agenci z dostępem używają go pod nazwą {{name}}."
   },
   "costlyCard": {
     "go": "Działaj",
@@ -6871,7 +6873,7 @@
         "cli_closed": "Program {{brain}} nagle się zamknął.",
         "cli_sandbox": "Program {{brain}} nie może uruchomić swojego sandboxa na tym komputerze. Wybierz inną AI w ustawieniach agenta.",
         "account_missing": "Konta wybranego dla tego agenta nie ma już na jego komputerze. Wybierz inne w ustawieniach agenta albo dodaj je ponownie.",
-        "windows_sandbox": "Ten komputer z Windows nie może odizolować poleceń Codex: potrzebuje Windows 11 24H2 lub nowszego.",
+        "windows_sandbox": "Ten komputer z Windows nie może odizolować poleceń Codex: potrzebuje Windows 11 24H2 lub nowszego. Zaktualizuj Windows, wybierz Claude albo klucz API dla tego agenta lub przenieś go na komputer z Linuksem.",
         "our_error": "Coś poszło nie tak po naszej stronie i zadanie się zatrzymało. Poproś ponownie za chwilę.",
         "unknown": "Błąd."
       }
@@ -10337,8 +10339,7 @@
       "approvals": "Domyślnie merge, wdrożenie i rollback wymagają zatwierdzenia",
       "start": "Rozpocznij misję",
       "created": "Utworzono misję: {{name}} przygotowuje plan.",
-      "who": "Kto programuje",
-      "codexOld": "Codex na {{computer}} jest za stary na misje: zaktualizuj go tam."
+      "who": "Kto programuje"
     },
     "commandApproval": {
       "label": "Autonomia",
@@ -11478,7 +11479,6 @@
       "needsCloud": {
         "online": "{{computer}} uruchamia się ponownie albo łączy się od nowa. To zmieni się samo, gdy wróci.",
         "installing": "{{program}} jest instalowany na komputerze {{computer}}. To zmieni się samo, gdy skończy.",
-        "updating": "{{program}} jest aktualizowany na komputerze {{computer}}. To zmieni się samo, gdy skończy.",
         "runnerOld": "Program agentes.chat na komputerze {{computer}} jest nieaktualny, a aktualizacja jest w drodze. To zmieni się samo, gdy się skończy.",
         "execOff": "{{computer}} nie może jeszcze uruchomić programu {{program}}. Zajmujemy się tym, a to zmieni się samo.",
         "toolOff": "{{program}} nie jest jeszcze dozwolony na {{computer}}. To po naszej stronie: spróbuj ponownie później.",
@@ -12867,12 +12867,6 @@
       "read": "{{name}}: przeczytane",
       "resolved": "{{name}}: prośba o pomoc zamknięta"
     },
-    "well": {
-      "readYours": "Twoja notatka przeczytana",
-      "readOf": "Notatka od {{name}} przeczytana",
-      "nowYours": "Przerwa na przeczytanie twojej notatki",
-      "nowOf": "Przerwa na przeczytanie notatki od {{name}}"
-    },
     "strip": {
       "see": "Zobacz",
       "toStop": "aby zatrzymać"
@@ -12968,11 +12962,6 @@
       "not_installed": "{{program}} nie jest zainstalowany na komputerze {{computer}}.",
       "cant_start": "{{program}} jest na {{computer}}, ale się nie uruchamia.",
       "not_reported": "{{computer}} wciąż sprawdza, jakie ma programy. To zmieni się samo, gdy skończy.",
-      "outdated": "Wersja na komputerze {{computer}} jest stara. Zaktualizuj Codex, żeby z niego korzystać.",
-      "outdatedCodex": "Na komputerze {{computer}} wykryto Codex CLI {{detected}}. Zaktualizuj do wersji {{minimum}} lub nowszej.",
-      "codexUpdateGuide": "Jak zaktualizować Codex CLI",
-      "codexRecheckHere": "Po aktualizacji wybierz Sprawdź ponownie w wierszu Codex w Preferencjach › Narzędzia.",
-      "codexRecheckThere": "Zaktualizuj Codex CLI na komputerze {{computer}}. Jeśli działa na nim aplikacja komputerowa, wybierz Sprawdź ponownie w wierszu Codex w Preferencjach › Narzędzia.",
       "system": "{{program}} nie działa jeszcze w systemie komputera {{computer}}.",
       "no_computerCloud": "Gotowe, gdy tylko {{computer}} będzie gotowy."
     },
@@ -20415,6 +20404,21 @@
     "writeAfter": ".",
     "ask": "Potrzebujesz pomocy? Zapytaj osoby, które prowadzą ten serwer."
   },
+  "resetOrg": {
+    "cardTitle": "Zresetuj lub usuń",
+    "row": {
+      "title": "Zresetuj przestrzeń roboczą",
+      "text": "Usuwa wszystko, co w niej powstało, i zaczyna od nowa, z tymi samymi osobami."
+    },
+    "goes": "Agenci, rozmowy, wiadomości prywatne, pliki, zadania, rutyny i pamięć",
+    "stays": "Osoby, role, zaproszenia, konta AI, komputery i konektory",
+    "fresh": "Potem otwiera się jak nowa przestrzeń robocza, z początkową konfiguracją",
+    "plan": "Plan zostaje ten sam, bez nowej opłaty",
+    "now": "Dzieje się od razu i nie da się tego cofnąć.",
+    "title": "Zresetować {{name}}?",
+    "submit": "Zresetuj przestrzeń roboczą",
+    "resetting": "Resetowanie {{name}}…"
+  },
   "deleteOrg": {
     "card": {
       "title": "Usuń przestrzeń roboczą",
@@ -20486,8 +20490,7 @@
     "menu": "Usuń konto",
     "card": {
       "text": "Usuwa twoje konto za 7 dni, we wszystkich przestrzeniach roboczych.",
-      "button": "Usuń konto…",
-      "title": "Usuń"
+      "button": "Usuń konto…"
     },
     "title": "Usunąć całe twoje konto?",
     "intro": "To usuwa całe twoje konto, a nie tylko jedną przestrzeń roboczą.",
@@ -22173,6 +22176,38 @@
       "alwaysOn": "Od teraz takie zgłoszenia będą wysyłane bez pytania.",
       "askFirst": "Pytaj przed wysłaniem"
     }
+  },
+  "problemReport": {
+    "button": "Wyślij raport",
+    "title": "Wyślij raport do agentes.chat",
+    "lead": "Zespół agentes.chat dostaje: wersje, które ustawienia są ustawione (nigdy ich wartości), co się nie udało i ostatnie wiersze logów. Bez wiadomości, stron, nazw i kluczy.",
+    "noteLabel": "Co się stało? (opcjonalnie)",
+    "notePlaceholder": "Co robiłeś, gdy przestało działać",
+    "emailLabel": "E-mail do odpowiedzi (opcjonalnie)",
+    "emailHelp": "Tylko jeśli chcesz odpowiedź.",
+    "showAll": "Zobacz wszystko, co jest wysyłane",
+    "copy": "Kopiuj raport",
+    "copied": "Skopiowano",
+    "send": "Wyślij",
+    "sending": "Wysyłanie…",
+    "cancel": "Anuluj",
+    "loading": "Zbieranie szczegółów…",
+    "sentTitle": "Raport {{id}} wysłany",
+    "sentText": "Jeśli do nas napiszesz, podaj ten kod.",
+    "sentTextReply": "Odpowiemy na {{email}}. Podaj ten kod, jeśli do nas napiszesz.",
+    "copyCode": "Kopiuj kod",
+    "done": "Gotowe",
+    "noLogComputer": "{{computer}} nie odpowiedział, więc jego log nie jest dołączony.",
+    "oldRunner": "Aplikacja agentes.chat na {{computer}} jest za stara, by dołączyć log. Zaktualizuj ją tam, aby go dołączyć.",
+    "noServerLines": "Wiersze logu serwera są dołączane tylko wtedy, gdy raport wysyła właściciel instalacji.",
+    "off": "Wysyłanie jest wyłączone na tym serwerze (PROBLEM_REPORT_URL=off). Skopiuj raport, aby go udostępnić.",
+    "errorRate": "Za dużo raportów w krótkim czasie. Spróbuj ponownie za {{minutes}} min albo skopiuj raport.",
+    "errorUnreachable": "agentes.chat nie odpowiedział. Spróbuj ponownie albo skopiuj raport.",
+    "errorRefused": "agentes.chat nie przyjął tego raportu (może pochodzić ze starszej wersji). Zamiast tego skopiuj raport.",
+    "errorPreview": "Nie udało się zebrać szczegółów: {{reason}}",
+    "emailInvalid": "Ten e-mail wygląda na niepoprawny. Popraw go albo zostaw puste.",
+    "settingsTitle": "Coś nie działa?",
+    "settingsText": "Wyślij szczegóły techniczne zespołowi agentes.chat."
   },
   "live": {
     "slides": {

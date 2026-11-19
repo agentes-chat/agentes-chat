@@ -369,6 +369,7 @@
     "repliesWord_few": "odpowiedzi",
     "repliesWord_many": "odpowiedzi",
     "repliesWord_other": "odpowiedzi",
+    "dayAt": "{{day}} {{time}}",
     "thread": "Wątek",
     "closed": "zamknięty",
     "options": "Opcje",
@@ -409,9 +410,7 @@
       "delivered": "{{name}} ma to już u siebie",
       "held": "{{name}} przeczyta to po twojej decyzji",
       "read": "Przeczytane przez: {{name}}",
-      "resolved": "{{name}} zamyka prośbę o pomoc",
-      "well": "Przeczytane",
-      "wellNow": "Przerwa na przeczytanie twojej uwagi"
+      "resolved": "{{name}} zamyka prośbę o pomoc"
     },
     "stopped": {
       "byYou": "Zatrzymano tutaj",
@@ -2463,6 +2462,8 @@
     "deleteIntro": "{{name}} od razu staje się dla wszystkich tylko do odczytu, a po 7 dniach zostaje trwale usunięta.",
     "holdDelete": "Przytrzymaj, aby usunąć",
     "deleteFailed": "Nie udało się usunąć przestrzeni roboczej. Spróbuj ponownie.",
+    "holdReset": "Przytrzymaj, aby zresetować",
+    "resetFailed": "Nie udało się zresetować przestrzeni roboczej. Spróbuj ponownie.",
     "access": {
       "how": "Stuknij wiersz, aby zmienić poziom: Brak dostępu, Odczyt, Odczyt i zapis."
     },

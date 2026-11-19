@@ -3537,11 +3537,13 @@
   },
   "keyGuard": {
     "title": "Ini sepertinya kunci API",
-    "text": "Semua yang ada di chat terlihat oleh orang dan agen. Simpan sebagai kunci ruang kerja saja: kunci itu dienkripsi dan tidak ada yang bisa melihatnya.",
-    "textMember": "Semua yang ada di chat terlihat oleh orang dan agen. Kunci itu seperti kata sandi.",
-    "save": "Simpan sebagai kunci",
+    "titleSecret": "Ini sepertinya kunci atau kata sandi",
+    "vaultText": "Semua yang ada di chat terlihat oleh orang dan agen. Simpan di Vault: dienkripsi, dan agen yang kamu izinkan menggunakannya tanpa melihatnya.",
+    "vault": "Simpan di Vault",
+    "useAsAi": "Gunakan sebagai kunci AI",
     "remove": "Hapus",
-    "send": "Tetap kirim"
+    "send": "Tetap kirim",
+    "saved": "Agen yang punya akses menggunakannya dengan nama {{name}}."
   },
   "costlyCard": {
     "go": "Lanjutkan",
@@ -6140,7 +6142,7 @@
         "cli_closed": "Program {{brain}} tertutup tiba-tiba.",
         "cli_sandbox": "Program {{brain}} tidak bisa menjalankan sandbox-nya di komputer ini. Pilih AI lain di pengaturan agen.",
         "account_missing": "Akun yang dipilih untuk agen ini sudah tidak ada di komputernya. Pilih akun lain di pengaturan agen, atau tambahkan lagi.",
-        "windows_sandbox": "Komputer Windows ini tidak dapat mengisolasi perintah Codex: perlu Windows 11 24H2 atau yang lebih baru.",
+        "windows_sandbox": "Komputer Windows ini tidak dapat mengisolasi perintah Codex: perlu Windows 11 24H2 atau yang lebih baru. Perbarui Windows, pilih Claude atau kunci API untuk agen ini, atau pindahkan ke komputer Linux.",
         "our_error": "Ada yang salah di pihak kami dan tugasnya berhenti. Minta lagi sebentar lagi.",
         "unknown": "Gagal."
       }
@@ -9290,8 +9292,7 @@
       "approvals": "Secara default, merge, deploy, dan rollback meminta persetujuan",
       "start": "Mulai misi",
       "created": "Misi dibuat: {{name}} sedang menyusun rencananya.",
-      "who": "Siapa yang menulis kode",
-      "codexOld": "Codex di {{computer}} terlalu lama untuk misi: perbarui di sana."
+      "who": "Siapa yang menulis kode"
     },
     "commandApproval": {
       "label": "Otonomi",
@@ -10296,7 +10297,6 @@
       "needsCloud": {
         "online": "{{computer}} sedang memulai ulang atau menyambung lagi. Ini berubah sendiri begitu ia kembali.",
         "installing": "{{program}} sedang dipasang di {{computer}}. Ini berubah sendiri setelah selesai.",
-        "updating": "{{program}} sedang diperbarui di {{computer}}. Ini berubah sendiri setelah selesai.",
         "runnerOld": "Program agentes.chat di {{computer}} sudah usang dan pembaruannya sedang dalam perjalanan. Ini berubah sendiri setelah selesai.",
         "execOff": "{{computer}} belum bisa menjalankan {{program}}. Kami sedang menanganinya, dan ini berubah sendiri.",
         "toolOff": "{{program}} belum diizinkan di {{computer}}. Itu urusan kami: coba lagi nanti.",
@@ -11492,12 +11492,6 @@
       "read": "{{name}} sudah membacanya",
       "resolved": "{{name}} menutup permintaan bantuan"
     },
-    "well": {
-      "readYours": "Membaca catatanmu",
-      "readOf": "Membaca catatan {{name}}",
-      "nowYours": "Berhenti untuk membaca catatanmu",
-      "nowOf": "Berhenti untuk membaca catatan {{name}}"
-    },
     "strip": {
       "see": "Lihat",
       "toStop": "untuk menghentikan"
@@ -11591,11 +11585,6 @@
       "not_installed": "{{program}} belum terpasang di {{computer}}.",
       "cant_start": "{{program}} ada di {{computer}}, tetapi tidak mau berjalan.",
       "not_reported": "{{computer}} masih memeriksa program apa saja yang dimilikinya. Ini berubah sendiri setelah selesai.",
-      "outdated": "Versi di {{computer}} sudah lama. Perbarui Codex untuk memakainya.",
-      "outdatedCodex": "Codex CLI {{detected}} ditemukan di {{computer}}. Perbarui ke versi {{minimum}} atau yang lebih baru.",
-      "codexUpdateGuide": "Cara memperbarui Codex CLI",
-      "codexRecheckHere": "Setelah memperbarui, pilih Periksa lagi pada baris Codex di Preferensi › Alat.",
-      "codexRecheckThere": "Perbarui Codex CLI di {{computer}}. Jika komputer itu menjalankan aplikasi desktop, pilih Periksa lagi pada baris Codex di Preferensi › Alat.",
       "system": "{{program}} belum berjalan di sistem {{computer}}.",
       "no_computerCloud": "Siap begitu {{computer}} siap."
     },
@@ -18621,6 +18610,21 @@
     "writeAfter": ".",
     "ask": "Butuh bantuan? Tanyakan ke pengelola server ini."
   },
+  "resetOrg": {
+    "cardTitle": "Atur ulang atau hapus",
+    "row": {
+      "title": "Atur ulang ruang kerja",
+      "text": "Menghapus semua yang dibuat di dalamnya dan mulai lagi, dengan orang-orang yang sama."
+    },
+    "goes": "Agen, percakapan, DM, file, tugas, rutinitas, dan memori",
+    "stays": "Orang, peran, undangan, akun AI, komputer, dan konektor",
+    "fresh": "Setelah itu ruang kerja terbuka seperti baru, dengan penyiapan awal",
+    "plan": "Paketnya tetap sama, tanpa tagihan baru",
+    "now": "Terjadi seketika dan tidak bisa dibatalkan.",
+    "title": "Atur ulang {{name}}?",
+    "submit": "Atur ulang ruang kerja",
+    "resetting": "Mengatur ulang {{name}}…"
+  },
   "deleteOrg": {
     "card": {
       "title": "Hapus ruang kerja",
@@ -18692,8 +18696,7 @@
     "menu": "Hapus akun",
     "card": {
       "text": "Menghapus akunmu dalam 7 hari, di semua ruang kerja.",
-      "button": "Hapus akun…",
-      "title": "Hapus"
+      "button": "Hapus akun…"
     },
     "title": "Hapus seluruh akunmu?",
     "intro": "Ini menghapus seluruh akunmu, bukan hanya satu ruang kerja.",
@@ -20307,6 +20310,38 @@
       "alwaysOn": "Mulai sekarang, laporan seperti ini dikirim tanpa bertanya.",
       "askFirst": "Tanya dulu sebelum mengirim"
     }
+  },
+  "problemReport": {
+    "button": "Kirim laporan",
+    "title": "Kirim laporan ke agentes.chat",
+    "lead": "Tim agentes.chat menerima: versi, pengaturan mana yang diisi (tanpa nilainya), apa yang gagal, dan baris terakhir log. Tanpa pesan, halaman, nama, atau kunci.",
+    "noteLabel": "Apa yang terjadi? (opsional)",
+    "notePlaceholder": "Apa yang sedang kamu lakukan saat berhenti",
+    "emailLabel": "Email untuk balasan (opsional)",
+    "emailHelp": "Hanya jika kamu ingin dijawab.",
+    "showAll": "Lihat semua yang dikirim",
+    "copy": "Salin laporan",
+    "copied": "Tersalin",
+    "send": "Kirim",
+    "sending": "Mengirim…",
+    "cancel": "Batal",
+    "loading": "Mengumpulkan detail…",
+    "sentTitle": "Laporan {{id}} terkirim",
+    "sentText": "Jika kamu menghubungi kami, sebutkan kode ini.",
+    "sentTextReply": "Kami akan menjawab ke {{email}}. Sebutkan kode ini jika kamu menghubungi kami.",
+    "copyCode": "Salin kode",
+    "done": "Selesai",
+    "noLogComputer": "{{computer}} tidak menjawab, jadi lognya tidak disertakan.",
+    "oldRunner": "Aplikasi agentes.chat di {{computer}} terlalu lama untuk menyertakan lognya. Perbarui di sana agar lognya ikut.",
+    "noServerLines": "Baris log server hanya disertakan jika pemilik instalasi yang mengirim laporan.",
+    "off": "Pengiriman dimatikan di server ini (PROBLEM_REPORT_URL=off). Salin laporan untuk membagikannya.",
+    "errorRate": "Terlalu banyak laporan dalam waktu singkat. Coba lagi dalam {{minutes}} menit, atau salin laporannya.",
+    "errorUnreachable": "agentes.chat tidak menjawab. Coba lagi, atau salin laporannya.",
+    "errorRefused": "agentes.chat tidak menerima laporan ini (mungkin dari versi lama). Salin laporannya saja.",
+    "errorPreview": "Tidak bisa mengumpulkan detail: {{reason}}",
+    "emailInvalid": "Email itu sepertinya tidak benar. Perbaiki atau biarkan kosong.",
+    "settingsTitle": "Ada yang tidak berfungsi?",
+    "settingsText": "Kirim detail teknis ke tim agentes.chat."
   },
   "live": {
     "slides": {

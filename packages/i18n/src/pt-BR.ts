@@ -3872,11 +3872,15 @@ export const ptBR = {
   /** An API key pasted in a message, before it goes out. */
   keyGuard: {
     title: "Isso parece uma chave de API",
-    text: "Tudo o que vai no chat fica visível para as pessoas e os agentes. Salve como chave do workspace: ela fica cifrada e ninguém vê.",
-    textMember: "Tudo o que vai no chat fica visível para as pessoas e os agentes. Uma chave é como uma senha.",
-    save: "Salvar como chave",
+    titleSecret: "Isso parece uma chave ou senha",
+    vaultText:
+      "Tudo o que vai no chat fica visível para as pessoas e os agentes. Guarde no Cofre: ela fica cifrada, e os agentes que você autorizar usam sem ver.",
+    vault: "Salvar no Cofre",
+    useAsAi: "Usar como chave de IA",
     remove: "Tirar do texto",
     send: "Enviar mesmo assim",
+    /** After "Save in the Vault", under the toast's "Saved in the Vault". */
+    saved: "Os agentes com acesso usam pelo nome {{name}}.",
   },
   /** An agent's card whose button opens the app's own dialog, filled in (`meta.actionCard`). */
   /** A stretch's pause card once someone pressed Continuar (ADR 0089). */
@@ -6759,7 +6763,7 @@ export const ptBR = {
           "A conta escolhida para este agente não está mais no computador dele. Escolha outra nas configurações do agente ou adicione de novo.",
         /** A Codex turn on a Windows computer where MXC can't hold its commands (runner `windows_sandbox`). */
         windows_sandbox:
-          "Este computador com Windows não consegue isolar os comandos do Codex: ele precisa do Windows 11 24H2 ou mais novo.",
+          "Este computador com Windows não consegue isolar os comandos do Codex: ele precisa do Windows 11 24H2 ou mais novo. Atualize o Windows, escolha o Claude ou uma chave de API para este agente, ou mova-o para um computador Linux.",
         our_error: "Algo deu errado do nosso lado e a tarefa parou. Peça de novo daqui a pouco.",
         unknown: "Falhou.",
       },
@@ -10048,7 +10052,6 @@ export const ptBR = {
       start: "Começar missão",
       created: "Missão criada: {{name}} está montando o plano.",
       who: "Quem programa",
-      codexOld: "O Codex no {{computer}} é antigo demais para missões: atualize-o lá.",
     },
     commandApproval: {
       label: "Autonomia",
@@ -11068,7 +11071,6 @@ export const ptBR = {
       needsCloud: {
         online: "O {{computer}} está reiniciando ou se reconectando. Isto muda sozinho quando ele voltar.",
         installing: "O {{program}} está sendo instalado no {{computer}}. Isto muda sozinho quando terminar.",
-        updating: "O {{program}} está sendo atualizado no {{computer}}. Isto muda sozinho quando terminar.",
         runnerOld:
           "O programa do agentes.chat no {{computer}} está desatualizado e a atualização já está a caminho. Isto muda sozinho quando ela terminar.",
         execOff: "O {{computer}} ainda não consegue rodar o {{program}}. Já estamos cuidando, e isto muda sozinho.",
@@ -12334,12 +12336,6 @@ export const ptBR = {
       read: "{{name}} leu",
       resolved: "{{name}} encerrou o pedido de ajuda",
     },
-    well: {
-      readYours: "Leu seu recado",
-      readOf: "Leu o recado de {{name}}",
-      nowYours: "Parou para ler seu recado",
-      nowOf: "Parou para ler o recado de {{name}}",
-    },
     strip: {
       see: "Ver",
       toStop: "para parar",
@@ -12436,14 +12432,6 @@ export const ptBR = {
       not_installed: "O {{program}} não está instalado no {{computer}}.",
       cant_start: "O {{program}} está no {{computer}}, mas não abre.",
       not_reported: "O {{computer}} ainda está vendo quais programas tem. Isto muda sozinho quando terminar.",
-      outdated: "A versão no {{computer}} é antiga. Atualize o Codex para usar.",
-      outdatedCodex:
-        "O Codex CLI {{detected}} foi encontrado no {{computer}}. Atualize para a versão {{minimum}} ou superior.",
-      codexUpdateGuide: "Como atualizar o Codex CLI",
-      codexRecheckHere:
-        "Depois de atualizar, clique em Verificar de novo na linha do Codex em Preferências › Ferramentas.",
-      codexRecheckThere:
-        "Atualize o Codex CLI no {{computer}}. Se ele usa o app para computador, clique em Verificar de novo na linha do Codex em Preferências › Ferramentas.",
       system: "O {{program}} ainda não roda no sistema do {{computer}}.",
       no_computerCloud: "Disponível assim que o {{computer}} ficar pronto.",
     },
@@ -19652,6 +19640,25 @@ export const ptBR = {
     writeAfter: ".",
     ask: "Precisa de ajuda? Fale com quem cuida deste servidor.",
   },
+  /** Resetting a workspace (owners, Sua conta): what it made goes now and for good, and it starts over as a new one. */
+  resetOrg: {
+    /** The title over the account's danger rows for an owner: resetting, deleting the workspace, deleting the account. */
+    cardTitle: "Recomeçar ou apagar",
+    row: {
+      title: "Recomeçar o workspace",
+      text: "Apaga o que foi feito nele e começa de novo, com as mesmas pessoas.",
+    },
+    goes: "Os agentes, as conversas, as DMs, os arquivos, as tarefas, as rotinas e a memória",
+    stays: "As pessoas, os cargos, os convites, as contas de IA, os computadores e os conectores",
+    fresh: "Depois ele abre como um workspace novo, com a configuração do começo",
+    /** Only where plans are billed. */
+    plan: "O plano continua o mesmo, sem cobrança nova",
+    now: "Acontece na hora e não tem volta.",
+    title: "Recomeçar {{name}}?",
+    submit: "Recomeçar workspace",
+    /** In the row once it started, until the workspace opens again as a new one. */
+    resetting: "Recomeçando {{name}}…",
+  },
   /** Deleting a workspace (owners): it turns read-only for everyone now and is deleted for good 7 days later. */
   deleteOrg: {
     card: {
@@ -19744,8 +19751,6 @@ export const ptBR = {
     card: {
       text: "Apaga a sua conta em 7 dias, em todos os workspaces.",
       button: "Apagar conta…",
-      /** The card's title for an owner, over its two buttons: the account and the workspace. */
-      title: "Apagar",
     },
     title: "Apagar a sua conta inteira?",
     intro: "Isto apaga a sua conta inteira, não só um workspace.",
@@ -21449,6 +21454,39 @@ export const ptBR = {
       alwaysOn: "Daqui em diante, relatos assim vão sem perguntar.",
       askFirst: "Perguntar antes de enviar",
     },
+  },
+  /** "Send a report" on a self-hosted server: what the agentes.chat team gets, shown in full before it goes. */
+  problemReport: {
+    button: "Enviar um relatório",
+    title: "Enviar um relatório para o agentes.chat",
+    lead: "A equipe do agentes.chat recebe: versões, quais configurações estão definidas (nunca os valores), o que falhou e as últimas linhas dos logs. Sem mensagens, páginas, nomes ou chaves.",
+    noteLabel: "O que aconteceu? (opcional)",
+    notePlaceholder: "O que você estava fazendo quando parou",
+    emailLabel: "E-mail para resposta (opcional)",
+    emailHelp: "Só se você quiser uma resposta.",
+    showAll: "Ver tudo o que é enviado",
+    copy: "Copiar relatório",
+    copied: "Copiado",
+    send: "Enviar",
+    sending: "Enviando…",
+    cancel: "Cancelar",
+    loading: "Reunindo os detalhes…",
+    sentTitle: "Relatório {{id}} enviado",
+    sentText: "Se nos escrever, cite este código.",
+    sentTextReply: "Vamos responder em {{email}}. Cite este código se nos escrever.",
+    copyCode: "Copiar código",
+    done: "Pronto",
+    noLogComputer: "O {{computer}} não respondeu, então o log dele não vai junto.",
+    oldRunner: "O app agentes.chat no {{computer}} é antigo demais para incluir o log. Atualize-o lá para incluir.",
+    noServerLines: "As linhas do log do servidor só vão junto quando o dono da instalação envia o relatório.",
+    off: "O envio está desligado neste servidor (PROBLEM_REPORT_URL=off). Copie o relatório para compartilhar.",
+    errorRate: "Relatórios demais em pouco tempo. Tente de novo em {{minutes}} min ou copie o relatório.",
+    errorUnreachable: "O agentes.chat não respondeu. Tente de novo ou copie o relatório.",
+    errorRefused: "O agentes.chat não aceitou este relatório (pode ser de uma versão antiga). Copie o relatório.",
+    errorPreview: "Não deu para reunir os detalhes: {{reason}}",
+    emailInvalid: "Esse e-mail não parece certo. Corrija ou deixe vazio.",
+    settingsTitle: "Algo não está funcionando?",
+    settingsText: "Envie os detalhes técnicos para a equipe do agentes.chat.",
   },
   live: {
     /** The presentation editor (ADR 0196 §2): its rail, stage, toolbar, notes and presenting. */

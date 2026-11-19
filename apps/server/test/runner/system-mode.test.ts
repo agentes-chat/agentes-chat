@@ -532,6 +532,8 @@ test("a system-mode runner (root) without workers does no agent work; machine-le
     "xcode.open",
     // Repairing an iPhone's test helper is the phones' process's, beside their locks.
     "phone.repair",
+    // A problem report reads the runner's own log and state: root's.
+    "report.collect",
   ]);
   const install = { op: "cli.install", action: "start", tool: "claude" } as unknown as MachineRequest;
   const installer = { ...ctx, cliInstall: () => ({ install: { tool: "claude" as const, state: "running" as const } }) };

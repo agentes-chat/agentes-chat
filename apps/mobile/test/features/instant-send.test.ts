@@ -10,9 +10,10 @@ describe("a message I send reads as sent at once", () => {
     expect(row).toContain("muted={workOver}");
   });
 
-  test("its time shows from the start, in the bubble and under my rows, so nothing moves when the server's copy lands", () => {
-    expect(row).toContain('{myBubble && m.local !== "failed" ? stamp : null}');
-    expect(row).toContain('{m.local !== "failed" && (run === "end" || run === "solo") && !myBubble ? (');
+  test("its time is there from the start, under my rows or behind the pull in bubbles, so nothing moves when the server's copy lands", () => {
+    // In bubbles a pull to the left shows it (`SwipeTime`), a send in flight's too: never inside the bubble.
+    expect(row).toMatch(/const swipeTime =\s+bubbled && m\.local !== "failed" \? \(\s+<SwipeTime>/);
+    expect(row).toContain('{m.local !== "failed" && (run === "end" || run === "solo") && !bubbled ? (');
   });
 
   test('"Sending" only when the server is really slow; offline it still says when it will go', () => {

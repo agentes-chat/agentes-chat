@@ -3678,11 +3678,13 @@
   },
   "keyGuard": {
     "title": "Das sieht nach einem API-Schlüssel aus",
-    "text": "Alles im Chat ist für Personen und Agenten sichtbar. Speichere ihn lieber als Workspace-Schlüssel: Er wird verschlüsselt und niemand sieht ihn.",
-    "textMember": "Alles im Chat ist für Personen und Agenten sichtbar. Ein Schlüssel ist wie ein Passwort.",
-    "save": "Als Schlüssel speichern",
+    "titleSecret": "Das sieht nach einem Schlüssel oder Passwort aus",
+    "vaultText": "Alles im Chat sehen Menschen und Agenten. Bewahre ihn im Vault auf: Er ist verschlüsselt, und die Agenten, die du erlaubst, verwenden ihn, ohne ihn zu sehen.",
+    "vault": "Im Vault speichern",
+    "useAsAi": "Als KI-Schlüssel verwenden",
     "remove": "Entfernen",
-    "send": "Trotzdem senden"
+    "send": "Trotzdem senden",
+    "saved": "Agenten mit Zugriff verwenden ihn unter dem Namen {{name}}."
   },
   "costlyCard": {
     "go": "Mach es",
@@ -6373,7 +6375,7 @@
         "cli_closed": "Das Programm {{brain}} wurde unerwartet beendet.",
         "cli_sandbox": "Das Programm {{brain}} kann seine Sandbox auf diesem Computer nicht starten. Wähle in den Einstellungen des Agenten eine andere KI.",
         "account_missing": "Das für diesen Agenten gewählte Konto ist nicht mehr auf seinem Computer. Wähl in den Einstellungen des Agenten ein anderes oder füg es erneut hinzu.",
-        "windows_sandbox": "Dieser Windows-Computer kann die Befehle von Codex nicht isolieren: Er braucht Windows 11 24H2 oder neuer.",
+        "windows_sandbox": "Dieser Windows-Computer kann die Befehle von Codex nicht isolieren: Er braucht Windows 11 24H2 oder neuer. Aktualisiere Windows, wähle Claude oder einen API-Schlüssel für diesen Agenten oder verschiebe ihn auf einen Linux-Computer.",
         "our_error": "Bei uns ist etwas schiefgelaufen, und die Aufgabe wurde angehalten. Frag gleich noch einmal.",
         "unknown": "Fehlgeschlagen."
       }
@@ -9629,8 +9631,7 @@
       "approvals": "Standardmäßig fragen Merge, Deploy und Rollback nach Freigabe",
       "start": "Mission starten",
       "created": "Mission erstellt: {{name}} stellt den Plan zusammen.",
-      "who": "Wer programmiert",
-      "codexOld": "Codex auf {{computer}} ist zu alt für Missionen: Aktualisiere es dort."
+      "who": "Wer programmiert"
     },
     "commandApproval": {
       "label": "Selbstständigkeit",
@@ -10680,7 +10681,6 @@
       "needsCloud": {
         "online": "{{computer}} startet neu oder verbindet sich wieder. Das ändert sich von selbst, sobald er zurück ist.",
         "installing": "{{program}} wird auf {{computer}} installiert. Das ändert sich von selbst, wenn es fertig ist.",
-        "updating": "{{program}} wird auf {{computer}} aktualisiert. Das ändert sich von selbst, wenn es fertig ist.",
         "runnerOld": "Das agentes.chat-Programm auf {{computer}} ist veraltet und ein Update ist unterwegs. Das ändert sich von selbst, wenn es fertig ist.",
         "execOff": "{{computer}} kann {{program}} noch nicht ausführen. Wir kümmern uns, und das ändert sich von selbst.",
         "toolOff": "{{program}} ist auf {{computer}} noch nicht freigegeben. Das liegt an uns: Versuch es später noch einmal.",
@@ -11934,12 +11934,6 @@
       "read": "{{name}} hat es gelesen",
       "resolved": "{{name}} hat die Hilfeanfrage geschlossen"
     },
-    "well": {
-      "readYours": "Hat deine Notiz gelesen",
-      "readOf": "Hat die Notiz von {{name}} gelesen",
-      "nowYours": "Hat angehalten, um deine Notiz zu lesen",
-      "nowOf": "Hat angehalten, um die Notiz von {{name}} zu lesen"
-    },
     "strip": {
       "see": "Ansehen",
       "toStop": "zum Stoppen"
@@ -12033,11 +12027,6 @@
       "not_installed": "{{program}} ist auf {{computer}} nicht installiert.",
       "cant_start": "{{program}} ist auf {{computer}}, startet aber nicht.",
       "not_reported": "{{computer}} prüft noch, welche Programme vorhanden sind. Das ändert sich von selbst, wenn es so weit ist.",
-      "outdated": "Die Version auf {{computer}} ist veraltet. Aktualisiere Codex, um es zu nutzen.",
-      "outdatedCodex": "Auf {{computer}} wurde Codex CLI {{detected}} gefunden. Aktualisiere auf Version {{minimum}} oder neuer.",
-      "codexUpdateGuide": "Codex CLI aktualisieren",
-      "codexRecheckHere": "Wähle nach dem Update in den Einstellungen unter Tools bei Codex „Erneut prüfen“.",
-      "codexRecheckThere": "Aktualisiere Codex CLI auf {{computer}}. Falls dort die Desktop-App läuft, wähle in den Einstellungen unter Tools bei Codex „Erneut prüfen“.",
       "system": "{{program}} läuft noch nicht auf dem System von {{computer}}.",
       "no_computerCloud": "Bereit, sobald {{computer}} es ist."
     },
@@ -19185,6 +19174,21 @@
     "writeAfter": ".",
     "ask": "Brauchst du Hilfe? Frag die Personen, die diesen Server betreiben."
   },
+  "resetOrg": {
+    "cardTitle": "Zurücksetzen oder löschen",
+    "row": {
+      "title": "Workspace zurücksetzen",
+      "text": "Löscht alles, was darin entstanden ist, und beginnt neu, mit denselben Personen."
+    },
+    "goes": "Agenten, Unterhaltungen, DMs, Dateien, Aufgaben, Routinen und Gedächtnis",
+    "stays": "Personen, Rollen, Einladungen, KI-Konten, Computer und Konnektoren",
+    "fresh": "Danach öffnet er sich wie ein neuer Workspace, mit der ersten Einrichtung",
+    "plan": "Der Plan bleibt gleich, ohne neue Abbuchung",
+    "now": "Das passiert sofort und lässt sich nicht rückgängig machen.",
+    "title": "{{name}} zurücksetzen?",
+    "submit": "Workspace zurücksetzen",
+    "resetting": "{{name}} wird zurückgesetzt…"
+  },
   "deleteOrg": {
     "card": {
       "title": "Workspace löschen",
@@ -19256,8 +19260,7 @@
     "menu": "Konto löschen",
     "card": {
       "text": "Löscht dein Konto in 7 Tagen, in allen Workspaces.",
-      "button": "Konto löschen…",
-      "title": "Löschen"
+      "button": "Konto löschen…"
     },
     "title": "Dein ganzes Konto löschen?",
     "intro": "Damit löschst du dein ganzes Konto, nicht nur einen Workspace.",
@@ -20856,6 +20859,38 @@
       "alwaysOn": "Ab jetzt gehen solche Berichte ohne Nachfrage raus.",
       "askFirst": "Vor dem Senden fragen"
     }
+  },
+  "problemReport": {
+    "button": "Bericht senden",
+    "title": "Bericht an agentes.chat senden",
+    "lead": "Das agentes.chat-Team bekommt: Versionen, welche Einstellungen gesetzt sind (nie ihre Werte), was fehlgeschlagen ist, und die letzten Zeilen der Logs. Keine Nachrichten, Seiten, Namen oder Schlüssel.",
+    "noteLabel": "Was ist passiert? (optional)",
+    "notePlaceholder": "Was du gemacht hast, als es stehen blieb",
+    "emailLabel": "E-Mail für eine Antwort (optional)",
+    "emailHelp": "Nur wenn du eine Antwort möchtest.",
+    "showAll": "Alles ansehen, was gesendet wird",
+    "copy": "Bericht kopieren",
+    "copied": "Kopiert",
+    "send": "Senden",
+    "sending": "Wird gesendet…",
+    "cancel": "Abbrechen",
+    "loading": "Details werden gesammelt…",
+    "sentTitle": "Bericht {{id}} gesendet",
+    "sentText": "Wenn du uns schreibst, nenne diesen Code.",
+    "sentTextReply": "Wir antworten an {{email}}. Nenne diesen Code, wenn du uns schreibst.",
+    "copyCode": "Code kopieren",
+    "done": "Fertig",
+    "noLogComputer": "{{computer}} hat nicht geantwortet, sein Log ist daher nicht dabei.",
+    "oldRunner": "Die agentes.chat-App auf {{computer}} ist zu alt, um ihr Log mitzuschicken. Aktualisiere sie dort, damit es dabei ist.",
+    "noServerLines": "Die Log-Zeilen des Servers sind nur dabei, wenn die Person, der die Installation gehört, den Bericht sendet.",
+    "off": "Senden ist auf diesem Server aus (PROBLEM_REPORT_URL=off). Kopiere den Bericht, um ihn zu teilen.",
+    "errorRate": "Zu viele Berichte in kurzer Zeit. Versuch es in {{minutes}} Min. noch einmal oder kopiere den Bericht.",
+    "errorUnreachable": "agentes.chat hat nicht geantwortet. Versuch es noch einmal oder kopiere den Bericht.",
+    "errorRefused": "agentes.chat hat diesen Bericht nicht angenommen (er stammt vielleicht von einer älteren Version). Kopiere den Bericht stattdessen.",
+    "errorPreview": "Die Details konnten nicht gesammelt werden: {{reason}}",
+    "emailInvalid": "Diese E-Mail sieht nicht richtig aus. Korrigiere sie oder lass das Feld leer.",
+    "settingsTitle": "Funktioniert etwas nicht?",
+    "settingsText": "Sende die technischen Details an das agentes.chat-Team."
   },
   "live": {
     "slides": {

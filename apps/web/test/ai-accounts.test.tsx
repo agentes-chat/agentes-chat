@@ -357,8 +357,9 @@ describe("IA e uso: a plan with a login per agent", () => {
     ...over,
   });
   const LOGINS = [
-    glm("acct_ada", "Ada", { usage: usage(40, "2026-10-27T10:00:00.000Z") }),
-    glm("acct_theo", "Theo", { usage: usage(62, "2026-10-27T11:00:00.000Z") }),
+    // Read within the last hours: a reading older than 6 hours shows only its age.
+    glm("acct_ada", "Ada", { usage: usage(40, new Date(Date.now() - 2 * 3_600_000).toISOString()) }),
+    glm("acct_theo", "Theo", { usage: usage(62, new Date(Date.now() - 3_600_000).toISOString()) }),
     glm("acct_lia", "Lia"),
   ];
 

@@ -288,6 +288,13 @@ export const words: EmailWords = {
   deletionCode: {
     subjectWorkspace: (code) => `워크스페이스 삭제 코드: ${code}`,
     subjectAccount: (code) => `계정 전체 삭제 코드: ${code}`,
+    subjectReset: (code) => `워크스페이스 초기화 코드: ${code}`,
+    reset: (org) => [
+      "이 코드를 입력하면 워크스페이스 ",
+      { b: org },
+      "이(가) 초기화돼요. 에이전트, 대화, 파일, 메모리가 즉시 영구 삭제되고 새 워크스페이스처럼 다시 시작해요.",
+    ],
+    whyReset: (org) => `내 계정에서 agentes.chat의 ${org} 초기화를 요청해서 이 메일을 보내 드렸어요.`,
     preheader: "agentes.chat에 입력해서 확인하세요. 10분 동안 유효해요.",
     headline: "인증 코드",
     workspace: (org) => [

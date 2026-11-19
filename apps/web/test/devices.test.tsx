@@ -961,8 +961,9 @@ describe("iPhones over Wi-Fi", () => {
 describe("A device's page", () => {
   test("a phone in use: Stop, and who can use it", async () => {
     const { state } = await open(`/org/${ORG_ID}/settings/devices/phones/${PIXEL}`);
+    // The pill sits in the header's chips, after its owner's; the line under them says the rest.
+    expect(document.querySelector(".dv-headchips")?.textContent).toContain("In use by Lia");
     const line = document.querySelector(".dv-statusline");
-    expect(line?.textContent).toContain("In use by Lia");
     expect(line?.textContent).toContain("Recording a test video");
     await click(within(line as HTMLElement).getByRole("button", { name: "Stop" }));
     expect(calls(state, "devices.stopPhone")[0]?.args).toEqual([ORG_ID, PIXEL]);

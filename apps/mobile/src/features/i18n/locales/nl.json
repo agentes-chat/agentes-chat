@@ -343,6 +343,7 @@
     "replies_other": "{{count}} antwoorden",
     "repliesWord_one": "antwoord",
     "repliesWord_other": "antwoorden",
+    "dayAt": "{{day}} {{time}}",
     "thread": "Thread",
     "closed": "gesloten",
     "options": "Opties",
@@ -379,9 +380,7 @@
       "delivered": "{{name}} heeft het ontvangen",
       "held": "{{name}} leest het na jouw beslissing",
       "read": "{{name}} heeft het gelezen",
-      "resolved": "{{name}} heeft het hulpverzoek gesloten",
-      "well": "Heeft je bericht gelezen",
-      "wellNow": "Stopte om je bericht te lezen"
+      "resolved": "{{name}} heeft het hulpverzoek gesloten"
     },
     "stopped": {
       "byYou": "Hier gestopt",
@@ -2251,6 +2250,8 @@
     "deleteIntro": "{{name}} wordt meteen voor iedereen alleen-lezen en wordt over 7 dagen definitief verwijderd.",
     "holdDelete": "Ingedrukt houden om te verwijderen",
     "deleteFailed": "De werkruimte kon niet worden verwijderd. Probeer het opnieuw.",
+    "holdReset": "Houd ingedrukt om te resetten",
+    "resetFailed": "De werkruimte kon niet worden gereset. Probeer het opnieuw.",
     "access": {
       "how": "Tik op een rij om het niveau te wijzigen: Geen toegang, Lezen, Lezen en schrijven."
     },

@@ -46,9 +46,17 @@ export type AgentDeletionDeps = MissionDeps & Pick<RoutineDeps, "pubsub" | "mail
  * freed) for its messages, runs, usage and audit.
  */
 export async function deleteAgent(deps: AgentDeletionDeps, actorId: string, orgId: string, agentId: string) {
+  await requireAgentManager(deps.db, actorId, orgId, agentId);
+  await refuseRightHand(deps.db, orgId, agentId, "deleted");
+  await eraseAgent(deps, actorId, orgId, agentId);
+}
+
+/**
+ * `deleteAgent` without its checks, for a caller that made its own (a workspace's reset, which takes the right hand
+ * too: its tombstone stops being the right hand, so a new one can be made).
+ */
+export async function eraseAgent(deps: AgentDeletionDeps, actorId: string, orgId: string, agentId: string) {
   const { db } = deps;
-  await requireAgentManager(db, actorId, orgId, agentId);
-  await refuseRightHand(db, orgId, agentId, "deleted");
   const [agent] = await db
     .update(agents)
     .set({ archivedAt: sql`coalesce(${agents.archivedAt}, now())` })
@@ -87,6 +95,7 @@ export async function deleteAgent(deps: AgentDeletionDeps, actorId: string, orgI
       .update(agents)
       .set({
         deletedAt: now,
+        builtin: null,
         handle: deletedHandle(agentId),
         previousHandles: [],
         instructions: "",

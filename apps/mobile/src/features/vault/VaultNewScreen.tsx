@@ -10,6 +10,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { GroupedFooter, GroupedHeader, GroupedList, GroupedRow, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
+import { takeKeyForVault } from "../chat/key-guard";
 import { Gap, NEXT_FIELD, SettingsPage, useUnsavedGuard } from "../settings/parts";
 import { useOrgId } from "../shared/hooks";
 import { successHaptic } from "../shared/parts";
@@ -46,7 +47,11 @@ export function VaultNewScreen({ scope: asked }: { scope: VaultScope }) {
   const vault = useVault(orgId);
   const create = useCreateVaultItem(orgId);
   const canTeam = vault.data?.canManageTeam ?? false;
-  const [form, setForm] = useState<VaultForm>(() => emptyForm("login"));
+  // A key the chat caught on its way out (`key-guard.ts`): the form opens on it, and saving goes back to the chat.
+  const [handed] = useState(takeKeyForVault);
+  const [form, setForm] = useState<VaultForm>(() =>
+    handed ? { ...emptyForm("key"), keyName: handed.keyName, secret: handed.secret } : emptyForm("login"),
+  );
   const [chosen, setChosen] = useState<VaultScope>(asked);
   // The team's only for who may: until the Vault says so, and for anyone else, a new item is personal.
   const scope: VaultScope = chosen === "team" && canTeam ? "team" : "personal";
@@ -76,6 +81,16 @@ export function VaultNewScreen({ scope: asked }: { scope: VaultScope }) {
     create.mutate(itemInput(form, scope, access), {
       onSuccess: (item) => {
         successHaptic();
+        if (handed) {
+          toast({
+            title: t("mobile.vault.savedToVault"),
+            subtitle: t("keyGuard.saved", { name: item.keyName ?? item.title }),
+            icon: "lock",
+          });
+          leave();
+          router.back();
+          return;
+        }
         toast({ title: t("mobile.vault.savedToVault"), icon: "lock" });
         leave();
         router.replace(vaultHref.item(item.id) as never);

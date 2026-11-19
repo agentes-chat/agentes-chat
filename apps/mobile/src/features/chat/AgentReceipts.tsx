@@ -36,6 +36,7 @@ import {
 import { openAgentAi, openAgentModel } from "../ai/AgentAiScreen";
 import { openConnectAi } from "../ai/NoAiCard";
 import { Note, OpenPage, usePlanHold } from "../ai/parts";
+import { ReportProblemButton } from "../report/ReportProblemButton";
 import { AgentFace, Face } from "../shared/Face";
 import { useColors, useOrgId } from "../shared/hooks";
 import { SheetTitle } from "../shared/PromptForm";
@@ -227,6 +228,9 @@ export const AgentReceiptLine = memo(function AgentReceiptLine({
                 : openAgentAi(failedAgent)
           }
         />
+      ) : null}
+      {failedAgent && receipt?.runOf?.[failedAgent] ? (
+        <ReportProblemButton place="run" context={{ runId: receipt.runOf[failedAgent] }} />
       ) : null}
       {mine && !held && receipt?.noAi && receipt.server?.kept ? <KeptAnswer messageId={m.id} /> : null}
     </Animated.View>

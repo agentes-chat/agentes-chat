@@ -14,6 +14,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { haptics, Icon, motion, Text, useReducedMotion, useTheme } from "@/ui";
+import { useMessageCardCorners } from "../chat/look";
 import { useColors, useOrgId } from "../shared/hooks";
 import { DECK_DRAG, DECK_RISE, deckCard, deckIndex, deckTarget, wrapPlace } from "./deck";
 import type { FileRef } from "./logic";
@@ -197,6 +198,7 @@ function StackCard({
   place: SharedValue<number>;
   near: boolean;
 }) {
+  const cardCorners = useMessageCardCorners();
   const orgId = useOrgId();
   const c = useColors();
   const { shadows } = useTheme();
@@ -216,10 +218,11 @@ function StackCard({
       style={[
         styles.card,
         { width: size, height: size, backgroundColor: c.sunken, borderColor: c.line2, boxShadow: shadows.e2 },
+        cardCorners,
         placed,
       ]}
     >
-      <View style={styles.clip}>
+      <View style={[styles.clip, cardCorners]}>
         {link.data && !failed ? (
           <Image
             source={{ uri: link.data.uri, headers: link.data.headers, cacheKey: `${file.id}@${version ?? "latest"}` }}

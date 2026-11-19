@@ -3667,11 +3667,13 @@
   },
   "keyGuard": {
     "title": "Bu bir API anahtarına benziyor",
-    "text": "Sohbetteki her şeyi kişiler ve ajanlar görür. Bunun yerine çalışma alanı anahtarı olarak kaydedin: şifrelenir ve kimse görmez.",
-    "textMember": "Sohbetteki her şeyi kişiler ve ajanlar görür. Anahtar bir şifre gibidir.",
-    "save": "Anahtar olarak kaydet",
+    "titleSecret": "Bu bir anahtar ya da şifreye benziyor",
+    "vaultText": "Sohbete giden her şeyi kişiler ve ajanlar görür. Vault'ta saklayın: şifrelenir ve izin verdiğiniz ajanlar onu görmeden kullanır.",
+    "vault": "Vault'a kaydet",
+    "useAsAi": "Yapay zekâ anahtarı olarak kullan",
     "remove": "Kaldır",
-    "send": "Yine de gönder"
+    "send": "Yine de gönder",
+    "saved": "Erişimi olan ajanlar onu {{name}} adıyla kullanır."
   },
   "costlyCard": {
     "go": "Devam et",
@@ -6355,7 +6357,7 @@
         "cli_closed": "Beklenmedik şekilde {{brain}} programı kapandı.",
         "cli_sandbox": "{{brain}} programı bu bilgisayarda sandbox'ını başlatamıyor. Ajanın ayarlarından başka bir yapay zekâ seçin.",
         "account_missing": "Bu ajan için seçilen hesap artık bilgisayarında değil. Ajanın ayarlarından başka bir hesap seçin ya da yeniden ekleyin.",
-        "windows_sandbox": "Bu Windows bilgisayar Codex'in komutlarını yalıtamıyor: Windows 11 24H2 veya daha yenisi gerekiyor.",
+        "windows_sandbox": "Bu Windows bilgisayar Codex'in komutlarını yalıtamıyor: Windows 11 24H2 veya daha yenisi gerekiyor. Windows'u güncelleyin, bu ajan için Claude'u ya da bir API anahtarını seçin veya onu bir Linux bilgisayara taşıyın.",
         "our_error": "Bizim tarafımızda bir şeyler ters gitti ve görev durdu. Birazdan yeniden isteyin.",
         "unknown": "Başarısız oldu."
       }
@@ -9578,8 +9580,7 @@
       "approvals": "Varsayılan olarak birleştirme, dağıtım ve geri alma onay ister",
       "start": "Misyonu başlat",
       "created": "Misyon oluşturuldu: {{name}} planı hazırlıyor.",
-      "who": "Kim programlıyor",
-      "codexOld": "{{computer}} üzerindeki Codex misyonlar için çok eski: orada güncelleyin."
+      "who": "Kim programlıyor"
     },
     "commandApproval": {
       "label": "Özerklik",
@@ -10623,7 +10624,6 @@
       "needsCloud": {
         "online": "{{computer}} yeniden başlıyor ya da yeniden bağlanıyor. Geri döndüğünde bu kendiliğinden değişir.",
         "installing": "{{program}}, {{computer}} üzerine kuruluyor. Bittiğinde bu kendiliğinden değişir.",
-        "updating": "{{program}}, {{computer}} üzerinde güncelleniyor. Bittiğinde bu kendiliğinden değişir.",
         "runnerOld": "{{computer}} üzerindeki agentes.chat programı eski ve güncelleme yolda. Bittiğinde bu kendiliğinden değişir.",
         "execOff": "{{computer}} henüz {{program}} çalıştıramıyor. İlgileniyoruz, bu kendiliğinden değişir.",
         "toolOff": "{{program}}, {{computer}} üzerinde henüz izinli değil. Bu bizim tarafımızda: daha sonra yeniden dene.",
@@ -11873,12 +11873,6 @@
       "read": "{{name}} okudu",
       "resolved": "{{name}} yardım isteğini kapattı"
     },
-    "well": {
-      "readYours": "Notunuzu okudu",
-      "readOf": "{{name}} notunu okudu",
-      "nowYours": "Notunuzu okumak için durdu",
-      "nowOf": "{{name}} notunu okumak için durdu"
-    },
     "strip": {
       "see": "Gör",
       "toStop": "durdurmak için"
@@ -11972,11 +11966,6 @@
       "not_installed": "{{program}}, {{computer}} üzerinde yüklü değil.",
       "cant_start": "{{program}}, {{computer}} üzerinde var ama açılmıyor.",
       "not_reported": "{{computer}} hangi programların olduğunu hâlâ kontrol ediyor. Bittiğinde bu kendiliğinden değişir.",
-      "outdated": "{{computer}} üzerindeki sürüm eski. Kullanmak için Codex'i güncelleyin.",
-      "outdatedCodex": "{{computer}} üzerinde Codex CLI {{detected}} bulundu. {{minimum}} veya daha yeni bir sürüme güncelleyin.",
-      "codexUpdateGuide": "Codex CLI nasıl güncellenir?",
-      "codexRecheckHere": "Güncellemeden sonra Tercihler › Araçlar bölümünde Codex satırındaki Tekrar kontrol et seçeneğini seçin.",
-      "codexRecheckThere": "Codex CLI aracını {{computer}} üzerinde güncelleyin. Bu bilgisayarda masaüstü uygulaması çalışıyorsa Tercihler › Araçlar bölümünde Codex satırındaki Tekrar kontrol et seçeneğini seçin.",
       "system": "{{program}} henüz {{computer}} sisteminde çalışmıyor.",
       "no_computerCloud": "{{computer}} hazır olur olmaz hazır."
     },
@@ -19114,6 +19103,21 @@
     "writeAfter": ".",
     "ask": "Yardım mı lazım? Bu sunucuyu yönetenlere sorun."
   },
+  "resetOrg": {
+    "cardTitle": "Sıfırla veya sil",
+    "row": {
+      "title": "Çalışma alanını sıfırla",
+      "text": "İçinde yapılan her şeyi siler ve aynı kişilerle baştan başlar."
+    },
+    "goes": "Ajanlar, konuşmalar, özel mesajlar, dosyalar, görevler, rutinler ve bellek",
+    "stays": "Kişiler, roller, davetler, yapay zekâ hesapları, bilgisayarlar ve bağlayıcılar",
+    "fresh": "Sonra ilk kurulumla yeni bir çalışma alanı gibi açılır",
+    "plan": "Plan aynı kalır, yeni ücret alınmaz",
+    "now": "Hemen olur ve geri alınamaz.",
+    "title": "{{name}} sıfırlansın mı?",
+    "submit": "Çalışma alanını sıfırla",
+    "resetting": "{{name}} sıfırlanıyor…"
+  },
   "deleteOrg": {
     "card": {
       "title": "Çalışma alanını sil",
@@ -19185,8 +19189,7 @@
     "menu": "Hesabı sil",
     "card": {
       "text": "Hesabınızı 7 gün sonra tüm çalışma alanlarında siler.",
-      "button": "Hesabı sil…",
-      "title": "Sil"
+      "button": "Hesabı sil…"
     },
     "title": "Hesabınızın tamamı silinsin mi?",
     "intro": "Bu, tek bir çalışma alanını değil hesabınızın tamamını siler.",
@@ -20785,6 +20788,38 @@
       "alwaysOn": "Bundan sonra bu tür bildirimler sormadan gider.",
       "askFirst": "Göndermeden önce sor"
     }
+  },
+  "problemReport": {
+    "button": "Rapor gönder",
+    "title": "agentes.chat'e rapor gönderin",
+    "lead": "agentes.chat ekibi şunları alır: sürümler, hangi ayarların tanımlı olduğu (değerleri asla), neyin başarısız olduğu ve günlüklerin son satırları. Mesaj, sayfa, ad veya anahtar yoktur.",
+    "noteLabel": "Ne oldu? (isteğe bağlı)",
+    "notePlaceholder": "Durduğunda ne yapıyordunuz",
+    "emailLabel": "Yanıt için e-posta (isteğe bağlı)",
+    "emailHelp": "Yalnızca yanıt istiyorsanız.",
+    "showAll": "Gönderilen her şeyi görün",
+    "copy": "Raporu kopyala",
+    "copied": "Kopyalandı",
+    "send": "Gönder",
+    "sending": "Gönderiliyor…",
+    "cancel": "İptal",
+    "loading": "Ayrıntılar toplanıyor…",
+    "sentTitle": "{{id}} raporu gönderildi",
+    "sentText": "Bize yazarsanız bu kodu belirtin.",
+    "sentTextReply": "{{email}} adresine yanıt vereceğiz. Bize yazarsanız bu kodu belirtin.",
+    "copyCode": "Kodu kopyala",
+    "done": "Tamam",
+    "noLogComputer": "{{computer}} yanıt vermedi, bu yüzden günlüğü eklenmedi.",
+    "oldRunner": "{{computer}} üzerindeki agentes.chat uygulaması günlüğünü eklemek için çok eski. Eklemek için orada güncelleyin.",
+    "noServerLines": "Sunucunun günlük satırları yalnızca kurulumun sahibi rapor gönderdiğinde eklenir.",
+    "off": "Bu sunucuda gönderme kapalı (PROBLEM_REPORT_URL=off). Paylaşmak için raporu kopyalayın.",
+    "errorRate": "Kısa sürede çok fazla rapor. {{minutes}} dk sonra tekrar deneyin veya raporu kopyalayın.",
+    "errorUnreachable": "agentes.chat yanıt vermedi. Tekrar deneyin veya raporu kopyalayın.",
+    "errorRefused": "agentes.chat bu raporu kabul etmedi (eski bir sürümden olabilir). Bunun yerine raporu kopyalayın.",
+    "errorPreview": "Ayrıntılar toplanamadı: {{reason}}",
+    "emailInvalid": "Bu e-posta doğru görünmüyor. Düzeltin veya boş bırakın.",
+    "settingsTitle": "Bir şey çalışmıyor mu?",
+    "settingsText": "Teknik ayrıntıları agentes.chat ekibine gönderin."
   },
   "live": {
     "slides": {

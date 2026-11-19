@@ -161,61 +161,35 @@ export function agentMissionApproval(agent: { missionCommandApproval?: string | 
   return isCommandApproval(v) ? v : DEFAULT_MISSION_COMMAND_APPROVAL;
 }
 
-/**
- * Codex needs `exec --json`, `exec … resume <id>` and no `--full-auto` (ADR
- * 0029, "Codex"): 0.163.0 is the release verified on a real machine.
- */
-export const CODEX_MIN_VERSION = "0.163.0";
-
-/**
- * `codex-cli 0.163.0` → [0, 163, 0]; null when there is no version in it. Each part is up to nine digits: a runner
- * reports the text, and unbounded digits would make a long run of them slow to read.
- */
-export function versionOf(text: string | undefined): number[] | null {
-  const m = /(\d{1,9})\.(\d{1,9})\.(\d{1,9})/.exec(text ?? "");
-  return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null;
-}
-const atLeast = (have: number[], want: number[]) => {
-  for (let i = 0; i < 3; i++) if ((have[i] ?? 0) !== (want[i] ?? 0)) return (have[i] ?? 0) > (want[i] ?? 0);
-  return true;
-};
-
 /** What a computer can run a mission with: what it has installed (protocol 7) and what its runner speaks. */
 export function machineExecutors(machine: {
   protocol: number;
   execAllowed: boolean;
   executors?: schema.MachineExecutors | null;
-}): { available: MissionExecutor[]; codexTooOld: boolean } {
-  if (!machine.execAllowed || machine.protocol < TASKS_PROTOCOL) return { available: [], codexTooOld: false };
+}): { available: MissionExecutor[] } {
+  if (!machine.execAllowed || machine.protocol < TASKS_PROTOCOL) return { available: [] };
   const found = machine.executors ?? {};
   // A runner that doesn't report its CLIs (older than protocol 7): Claude Code is assumed, as before.
   const unknown = !found.detectedAt;
   const available: MissionExecutor[] = [];
-  let codexTooOld = false;
   if (machine.protocol >= MISSION_PROTOCOL) {
     if (unknown || found.claude) available.push("claude");
-    if (found.codex) {
-      const v = versionOf(found.codex.version);
-      if (v && atLeast(v, versionOf(CODEX_MIN_VERSION) as number[])) available.push("codex");
-      else codexTooOld = true;
-    }
+    // Whatever its version line says: a Codex too old for a flag fails the run with its own error.
+    if (found.codex) available.push("codex");
   }
   available.push("agent");
-  return { available, codexTooOld };
+  return { available };
 }
 
 /**
  * What a computer can run a mission's items with: `machineExecutors`, less Codex on Windows, where the runner doesn't
- * run Codex background tasks yet (ADR 0053's addendum of 2026-11-12), though Codex brain turns run there. No update
- * changes that, so a Codex too old there isn't worth saying.
+ * run Codex background tasks yet (ADR 0053's addendum of 2026-11-12), though Codex brain turns run there.
  */
 export function missionExecutors(
   machine: Parameters<typeof machineExecutors>[0] & { os?: string | null },
 ): ReturnType<typeof machineExecutors> {
   const found = machineExecutors(machine);
-  return machine.os === "windows"
-    ? { available: found.available.filter((e) => e !== "codex"), codexTooOld: false }
-    : found;
+  return machine.os === "windows" ? { available: found.available.filter((e) => e !== "codex") } : found;
 }
 
 /** Codex asked for a mission's items on a Windows computer (`missionExecutors`): no update makes it run there. */
@@ -687,8 +661,6 @@ export interface MissionView {
     lentBy: string | null;
     /** Who can do the work there (the plan card lets the owner switch before Start). */
     executors: MissionExecutor[];
-    /** Codex is installed but older than `CODEX_MIN_VERSION`. */
-    codexTooOld: boolean;
   } | null;
   /** The owner has no computer for it (handed over without one): work can't start until they set one. */
   needsComputer: boolean;
@@ -853,7 +825,6 @@ export async function missionViews(
             online: shownOnline(m),
             lentBy: r.machineLentBy,
             executors: missionExecutors(m).available,
-            codexTooOld: missionExecutors(m).codexTooOld,
           }
         : null,
       needsComputer,
@@ -1032,7 +1003,7 @@ async function usableMachine(
       computer: status.name,
     });
   }
-  const { available, codexTooOld } = missionExecutors(status);
+  const { available } = missionExecutors(status);
   // Before any update it might ask for: none makes Codex run a mission's items there.
   if (asked === "codex" && status.os === "windows") throw codexWindowsRefusal(status.name);
   // Every mission works in its own copy of the project (ADR 0044): runner protocol 14.
@@ -1045,11 +1016,9 @@ async function usableMachine(
   }
   if (asked && !available.includes(asked)) {
     throw new ConflictError(
-      asked === "codex" && codexTooOld
-        ? `Codex on ${status.name} is too old for missions (needs ${CODEX_MIN_VERSION} or later): update it there`
-        : `${asked === "codex" ? "Codex" : "Claude Code"} isn't installed on ${status.name}`,
-      asked === "codex" && codexTooOld ? "mission.executor_outdated" : "mission.executor_unavailable",
-      { computer: status.name, executor: asked, ...(asked === "codex" ? { minVersion: CODEX_MIN_VERSION } : {}) },
+      `${asked === "codex" ? "Codex" : "Claude Code"} isn't installed on ${status.name}`,
+      "mission.executor_unavailable",
+      { computer: status.name, executor: asked },
     );
   }
   // One in standby reads ready to people (ADR 0161): it is woken and waited for.
@@ -3357,8 +3326,6 @@ export interface EligibleAgent {
   /** Who can do the work on that computer ("Quem programa"), and the default (null when not eligible). */
   executors: MissionExecutor[];
   defaultExecutor: MissionExecutor | null;
-  /** Codex is there but too old (`CODEX_MIN_VERSION`). */
-  codexTooOld: boolean;
   /** The autonomy its new missions start with ("Usar como padrão"). */
   commandApproval: CommandApproval;
 }
@@ -3445,11 +3412,10 @@ export async function eligibleMissionAgents(deps: Pick<MissionDeps, "db">, userI
         ready: false,
         executors: [],
         defaultExecutor: null,
-        codexTooOld: false,
       };
     }
     const found = typeof r.executors === "string" ? (JSON.parse(r.executors) as schema.MachineExecutors) : r.executors;
-    const { available, codexTooOld } = missionExecutors({ protocol, execAllowed: true, executors: found, os: r.os });
+    const { available } = missionExecutors({ protocol, execAllowed: true, executors: found, os: r.os });
     return {
       ...base,
       eligible: true,
@@ -3457,7 +3423,6 @@ export async function eligibleMissionAgents(deps: Pick<MissionDeps, "db">, userI
       ready: Boolean(machine?.online),
       executors: available,
       defaultExecutor: defaultExecutor(available),
-      codexTooOld,
     };
   });
   // Eligible first (by name, as the query sorts): the dialog picks the first one.

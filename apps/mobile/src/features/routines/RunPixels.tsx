@@ -1,6 +1,6 @@
 import { type AgentColorName, gradientOf, mixHex } from "@agenteschat/ui/agent/engine";
 import { memo, useEffect, useMemo, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { useFrameTime, useLivePaused } from "@/agent/live";
 import { useReducedMotion, useTheme } from "@/ui/theme";
 import { CellCanvas } from "../browser/TrailPixels";
@@ -19,6 +19,7 @@ import {
   spritePose,
   spriteX,
   stripCells,
+  stripRunAt,
   stripWidth,
 } from "./run-pixels";
 
@@ -40,19 +41,22 @@ export function useRunTones(): RunTones {
 
 /**
  * The last runs as a strip of pixel columns, oldest left; a run at work flickers in the newest slot. `label` says
- * them: a screen reader hears the strip as one image.
+ * them: a screen reader hears the strip as one image. With `onPick`, a tap picks the run under the finger (its index
+ * in `runs`, `-1` for the one at work).
  */
 export const RunStrip = memo(function RunStrip({
   runs,
   color,
   label,
   running = false,
+  onPick,
 }: {
   /** Newest first (`runPixels`). */
   runs: readonly RunPixel[];
   color: AgentColorName;
   label: string;
   running?: boolean;
+  onPick?: (index: number) => void;
 }) {
   const tones = useRunTones();
   const reduced = useReducedMotion();
@@ -66,10 +70,27 @@ export const RunStrip = memo(function RunStrip({
   );
   const w = stripWidth(RUN_SLOTS) * RUN_CELL;
   const h = STRIP_ROWS * RUN_CELL;
+  const canvas = <CellCanvas runs={cells} width={w} height={h} cx={RUN_CELL} />;
+  if (!onPick || (runs.length === 0 && !running))
+    return (
+      <View style={{ width: w, height: h }} accessible accessibilityRole="image" accessibilityLabel={label}>
+        {canvas}
+      </View>
+    );
   return (
-    <View style={{ width: w, height: h }} accessible accessibilityRole="image" accessibilityLabel={label}>
-      <CellCanvas runs={cells} width={w} height={h} cx={RUN_CELL} />
-    </View>
+    <Pressable
+      style={({ pressed }) => [{ width: w, height: h }, pressed ? styles.pressed : null]}
+      // A finger's 44 points tall around the strip's 20.
+      hitSlop={{ top: 12, bottom: 12 }}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={(e) => {
+        const i = stripRunAt(e.nativeEvent.locationX, runs.length, RUN_SLOTS, running);
+        if (i !== null) onPick(i);
+      }}
+    >
+      {canvas}
+    </Pressable>
   );
 });
 
@@ -162,4 +183,5 @@ function useTicker(active: boolean, ms: number): number {
 
 const styles = StyleSheet.create({
   sprite: { position: "absolute" },
+  pressed: { opacity: 0.6 },
 });

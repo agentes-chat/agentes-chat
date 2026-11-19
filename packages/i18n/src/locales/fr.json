@@ -3822,11 +3822,13 @@
   },
   "keyGuard": {
     "title": "Cela ressemble à une clé API",
-    "text": "Tout ce qui est dans la discussion est visible par les personnes et les agents. Enregistrez-la plutôt comme clé de l'espace de travail : elle est chiffrée et personne ne la voit.",
-    "textMember": "Tout ce qui est dans la discussion est visible par les personnes et les agents. Une clé, c'est comme un mot de passe.",
-    "save": "Enregistrer comme clé",
+    "titleSecret": "Cela ressemble à une clé ou un mot de passe",
+    "vaultText": "Tout ce qui passe dans le chat est visible par les personnes et les agents. Gardez-la dans le Vault : elle est chiffrée, et les agents que vous autorisez l'utilisent sans la voir.",
+    "vault": "Enregistrer dans le Vault",
+    "useAsAi": "Utiliser comme clé d'IA",
     "remove": "La retirer",
-    "send": "Envoyer quand même"
+    "send": "Envoyer quand même",
+    "saved": "Les agents qui y ont accès l'utilisent sous le nom {{name}}."
   },
   "costlyCard": {
     "go": "Vas-y",
@@ -6623,7 +6625,7 @@
         "cli_closed": "Le programme {{brain}} s'est fermé de façon inattendue.",
         "cli_sandbox": "Le programme {{brain}} ne peut pas démarrer sa sandbox sur cet ordinateur. Choisissez une autre IA dans les paramètres de l'agent.",
         "account_missing": "Le compte choisi pour cet agent n'est plus sur son ordinateur. Choisissez-en un autre dans les paramètres de l'agent, ou ajoutez-le à nouveau.",
-        "windows_sandbox": "Cet ordinateur Windows ne peut pas isoler les commandes de Codex : il lui faut Windows 11 24H2 ou une version plus récente.",
+        "windows_sandbox": "Cet ordinateur Windows ne peut pas isoler les commandes de Codex : il lui faut Windows 11 24H2 ou une version plus récente. Mettez Windows à jour, choisissez Claude ou une clé API pour cet agent, ou déplacez-le sur un ordinateur Linux.",
         "our_error": "Un problème est survenu de notre côté et la tâche s'est arrêtée. Redemandez dans un moment.",
         "unknown": "Échec."
       }
@@ -9995,8 +9997,7 @@
       "approvals": "Par défaut, le merge, le déploiement et le rollback demandent une approbation",
       "start": "Démarrer la mission",
       "created": "Mission créée : {{name}} prépare le plan.",
-      "who": "Qui programme",
-      "codexOld": "Codex sur {{computer}} est trop ancien pour les missions : mettez-le à jour là-bas."
+      "who": "Qui programme"
     },
     "commandApproval": {
       "label": "Autonomie",
@@ -11090,7 +11091,6 @@
       "needsCloud": {
         "online": "{{computer}} redémarre ou se reconnecte. Ceci change tout seul dès son retour.",
         "installing": "{{program}} est en cours d'installation sur {{computer}}. Ceci change tout seul une fois terminé.",
-        "updating": "{{program}} est en cours de mise à jour sur {{computer}}. Ceci change tout seul une fois terminé.",
         "runnerOld": "Le programme agentes.chat sur {{computer}} n'est pas à jour et la mise à jour est en route. Ceci change tout seul une fois terminé.",
         "execOff": "{{computer}} ne peut pas encore lancer {{program}}. On s'en occupe, et ceci change tout seul.",
         "toolOff": "{{program}} n'est pas encore autorisé sur {{computer}}. Cela vient de nous : réessayez plus tard.",
@@ -12400,12 +12400,6 @@
       "read": "{{name}} l'a lu",
       "resolved": "{{name}} a clos la demande d'aide"
     },
-    "well": {
-      "readYours": "A lu votre note",
-      "readOf": "A lu la note de {{name}}",
-      "nowYours": "S'est arrêté pour lire votre note",
-      "nowOf": "S'est arrêté pour lire la note de {{name}}"
-    },
     "strip": {
       "see": "Voir",
       "toStop": "pour arrêter"
@@ -12501,11 +12495,6 @@
       "not_installed": "{{program}} n'est pas installé sur {{computer}}.",
       "cant_start": "{{program}} est sur {{computer}}, mais ne démarre pas.",
       "not_reported": "{{computer}} vérifie encore quels programmes il a. Ceci change tout seul une fois terminé.",
-      "outdated": "La version sur {{computer}} est ancienne. Mettez à jour Codex pour l'utiliser.",
-      "outdatedCodex": "Codex CLI {{detected}} a été détecté sur {{computer}}. Installez la version {{minimum}} ou une version ultérieure.",
-      "codexUpdateGuide": "Mettre à jour Codex CLI",
-      "codexRecheckHere": "Après la mise à jour, cliquez sur Vérifier à nouveau dans la ligne Codex des préférences, sous Outils.",
-      "codexRecheckThere": "Mettez à jour Codex CLI sur {{computer}}. Si l’application de bureau y est installée, cliquez sur Vérifier à nouveau dans la ligne Codex des préférences, sous Outils.",
       "system": "{{program}} ne fonctionne pas encore sur le système de {{computer}}.",
       "no_computerCloud": "Prêt dès que {{computer}} l'est."
     },
@@ -19828,6 +19817,21 @@
     "writeAfter": ".",
     "ask": "Besoin d'aide ? Demandez aux personnes qui gèrent ce serveur."
   },
+  "resetOrg": {
+    "cardTitle": "Réinitialiser ou supprimer",
+    "row": {
+      "title": "Réinitialiser l'espace de travail",
+      "text": "Efface tout ce qui y a été fait et repart de zéro, avec les mêmes personnes."
+    },
+    "goes": "Les agents, conversations, messages privés, fichiers, tâches, routines et la mémoire",
+    "stays": "Les personnes, rôles, invitations, comptes d'IA, ordinateurs et connecteurs",
+    "fresh": "Ensuite il s'ouvre comme un nouvel espace de travail, avec la configuration de départ",
+    "plan": "L'abonnement reste le même, sans nouveau prélèvement",
+    "now": "Cela se fait tout de suite et ne peut pas être annulé.",
+    "title": "Réinitialiser {{name}} ?",
+    "submit": "Réinitialiser l'espace de travail",
+    "resetting": "Réinitialisation de {{name}}…"
+  },
   "deleteOrg": {
     "card": {
       "title": "Supprimer l'espace de travail",
@@ -19899,8 +19903,7 @@
     "menu": "Supprimer le compte",
     "card": {
       "text": "Supprime votre compte dans 7 jours, dans tous les espaces de travail.",
-      "button": "Supprimer le compte…",
-      "title": "Supprimer"
+      "button": "Supprimer le compte…"
     },
     "title": "Supprimer tout votre compte ?",
     "intro": "Cela supprime tout votre compte, pas seulement un espace de travail.",
@@ -21591,6 +21594,38 @@
       "alwaysOn": "Désormais, les rapports de ce type partent sans demander.",
       "askFirst": "Demander avant d'envoyer"
     }
+  },
+  "problemReport": {
+    "button": "Envoyer un rapport",
+    "title": "Envoyer un rapport à agentes.chat",
+    "lead": "L'équipe agentes.chat reçoit : les versions, les réglages définis (jamais leurs valeurs), ce qui a échoué et les dernières lignes des journaux. Aucun message, page, nom ni clé.",
+    "noteLabel": "Que s'est-il passé ? (facultatif)",
+    "notePlaceholder": "Ce que vous faisiez quand ça s'est arrêté",
+    "emailLabel": "E-mail pour la réponse (facultatif)",
+    "emailHelp": "Seulement si vous voulez une réponse.",
+    "showAll": "Voir tout ce qui est envoyé",
+    "copy": "Copier le rapport",
+    "copied": "Copié",
+    "send": "Envoyer",
+    "sending": "Envoi…",
+    "cancel": "Annuler",
+    "loading": "Collecte des détails…",
+    "sentTitle": "Rapport {{id}} envoyé",
+    "sentText": "Si vous nous écrivez, indiquez ce code.",
+    "sentTextReply": "Nous répondrons à {{email}}. Indiquez ce code si vous nous écrivez.",
+    "copyCode": "Copier le code",
+    "done": "Terminé",
+    "noLogComputer": "{{computer}} n'a pas répondu, son journal n'est donc pas inclus.",
+    "oldRunner": "L'app agentes.chat sur {{computer}} est trop ancienne pour inclure son journal. Mettez-la à jour là-bas pour l'inclure.",
+    "noServerLines": "Les lignes du journal du serveur ne sont incluses que si le propriétaire de l'installation envoie le rapport.",
+    "off": "L'envoi est désactivé sur ce serveur (PROBLEM_REPORT_URL=off). Copiez le rapport pour le partager.",
+    "errorRate": "Trop de rapports en peu de temps. Réessayez dans {{minutes}} min ou copiez le rapport.",
+    "errorUnreachable": "agentes.chat n'a pas répondu. Réessayez ou copiez le rapport.",
+    "errorRefused": "agentes.chat n'a pas accepté ce rapport (il vient peut-être d'une ancienne version). Copiez plutôt le rapport.",
+    "errorPreview": "Impossible de collecter les détails : {{reason}}",
+    "emailInvalid": "Cet e-mail ne semble pas correct. Corrigez-le ou laissez le champ vide.",
+    "settingsTitle": "Quelque chose ne fonctionne pas ?",
+    "settingsText": "Envoyez les détails techniques à l'équipe agentes.chat."
   },
   "live": {
     "slides": {

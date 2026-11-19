@@ -122,6 +122,10 @@ test("protocol 8: brain.turn requests and brain frames parse; bad events are dro
   expect(done({ warm: false, initMs: 812.4, firstEventMs: -3 })).toMatchObject({
     event: { type: "done", text: "ok", timings: { warm: false, initMs: 812 } },
   });
+  expect(done({ warm: false, initMs: 90_000_000, firstEventMs: 1200 })).toMatchObject({
+    event: { type: "done", text: "ok", timings: { warm: false, firstEventMs: 1200 } },
+  });
+  expect(done({ warm: false, initMs: 90_000_000 })).not.toHaveProperty("event.timings.initMs");
   expect(done({ initMs: 5 })).toEqual({ type: "brain.event", runId: RUN(1), event: { type: "done", text: "ok" } });
 });
 
@@ -2120,6 +2124,16 @@ test("protocol 15: brain.steer parses; steer_read events travel, empty ones are 
   ).toBeNull();
 });
 
+test("an answer posted as it comes travels as its own event; an empty one is dropped", () => {
+  expect(
+    parseRunnerFrame(line({ type: "brain.event", runId: RUN(1), event: { type: "answer", text: "Oi! Tudo certo." } })),
+  ).toEqual({ type: "brain.event", runId: RUN(1), event: { type: "answer", text: "Oi! Tudo certo." } });
+  expect(
+    parseRunnerFrame(line({ type: "brain.event", runId: RUN(1), event: { type: "answer", text: " " } })),
+  ).toBeNull();
+  expect(parseRunnerFrame(line({ type: "brain.event", runId: RUN(1), event: { type: "answer" } }))).toBeNull();
+});
+
 test("steering: capabilities (not versions), the stdin line, and what the parser reads back", () => {
   // 2.1.175 says none; 2.1.220 the lifecycle; 2.1.309 also "now". A version alone is never enough.
   expect(steerSupport(undefined)).toEqual({ next: false, now: false });
@@ -2422,6 +2436,44 @@ test.if(posix)(
       expect(m.size).toBe(1);
       expect((await turn(2, "after")).final).toMatchObject({ text: "echo 3: after" });
       expect(spawns()).toHaveLength(1);
+    });
+  },
+);
+
+test.if(posix)(
+  "the server takes each answer as it comes: the one before the message read goes out at once, never joined",
+  async () => {
+    await withCli(NOW_CLI, async () => {
+      const { m, turn } = setup();
+      const pending = turn(1, "STEERLATE work", { answers: "each" });
+      expect((await steerWhenReady(m, RUN(1), [{ uuid: U(1), text: "one more thing" }])).status).toBe("accepted");
+      const { final, events } = await pending;
+      // Its own event as the CLI's turn ends, before the message is read; `done` holds only what came after it.
+      expect(events.filter((e) => e.type === "answer")).toEqual([{ type: "answer", text: "echo 1: STEERLATE work" }]);
+      expect(events.findIndex((e) => e.type === "answer")).toBeLessThan(
+        events.findIndex((e) => e.type === "steer_read"),
+      );
+      expect(final).toMatchObject({ type: "done", text: "echo 2: one more thing" });
+      expect(m.size).toBe(1);
+    });
+  },
+);
+
+test.if(posix)(
+  "each answer as it comes: when no next turn follows, the request ends with nothing said twice",
+  async () => {
+    await withCli(NOW_CLI, async () => {
+      // Work moved to the background that never ends: the request waits for it, then ends on the result it went on from.
+      const { turn, m } = setup({ steerBackgroundWaitMs: 200, strayWaitMs: 300, dueWaitMs: 200 });
+      const pending = turn(1, "STEERBGHANG work", { answers: "each" });
+      expect((await steerWhenReady(m, RUN(1), [{ uuid: U(1), text: "x", urgent: true }])).status).toBe("accepted");
+      const { final, events } = await pending;
+      // Out at once, while the work it moved aside runs on.
+      expect(events.filter((e) => e.type === "answer")).toEqual([
+        { type: "answer", text: "echo 1: STEERBGHANG work +now/human: x" },
+      ]);
+      // It went out already: the request ends on nothing more.
+      expect(final).toMatchObject({ type: "done", text: "" });
     });
   },
 );

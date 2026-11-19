@@ -168,6 +168,8 @@ import type {
   Person,
   PersonalTokenInput,
   PersonLimits,
+  ProblemReportPreviewInput,
+  ProblemReportSendInput,
   Proposal,
   ReactionCount,
   ReminderInput,
@@ -392,6 +394,28 @@ export function useSetServerTelemetry() {
   });
 }
 
+/** A problem report gathered for the person to read before sending; asked again each time the dialog opens. */
+export const useProblemReportPreview = (input: ProblemReportPreviewInput, enabled: boolean) => {
+  const api = useApi();
+  return useQuery({
+    queryKey: ["problem-report", input] as const,
+    queryFn: () => api.system.previewProblemReport(input),
+    enabled,
+    staleTime: 0,
+    gcTime: 0,
+    retry: false,
+  });
+};
+
+export function useSendProblemReport() {
+  const api = useApi();
+  // The dialog says why it failed, with its way out, under its buttons.
+  return useMutation({
+    mutationFn: (input: ProblemReportSendInput) => api.system.sendProblemReport(input),
+    meta: { silent: true },
+  });
+}
+
 /** The installation's Jev key: `null` for everyone but its owner on a self-hosted server. */
 export const useJevKey = () => {
   const api = useApi();
@@ -540,6 +564,15 @@ export function useDeleteWorkspace(orgId: string) {
       });
       void qc.invalidateQueries({ queryKey: keys.me });
     },
+  });
+}
+
+/** Resets a workspace (owners): its apps read everything again when it is done (`org.reset`). */
+export function useResetWorkspace(orgId: string) {
+  const api = useApi();
+  return useMutation({
+    mutationFn: (proof: DeletionProofInput) => api.orgs.reset(orgId, proof),
+    meta: { silent: true },
   });
 }
 

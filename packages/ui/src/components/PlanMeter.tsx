@@ -11,6 +11,7 @@ import {
   planState,
   planWindows,
   renewals,
+  windowAmount,
 } from "../plan-state";
 import { Meter } from "./Surfaces";
 
@@ -32,6 +33,7 @@ export {
   planLine,
   planState,
   planWindows,
+  windowAmount,
 } from "../plan-state";
 
 const passed = (iso: string | undefined, now: number) => iso !== undefined && Date.parse(iso) <= now;
@@ -45,7 +47,8 @@ const passed = (iso: string | undefined, now: number) => iso !== undefined && Da
  * (lists, an agent's facts, Contas de IA): one line with the tightest windows
  * ("semana 40% · 5h 12%", after `label`), one bar for the fullest, every window
  * on hover, and only near the limit when it renews, then how old the numbers are
- * from 10 minutes ("atualizado há 51 min"; out of date past 6 hours); nothing
+ * from 10 minutes ("atualizado há 51 min"; out of date past 6 hours); a window whose own reading is that old shows
+ * only its age, no number or bar ("semana atualizado há 7 h", `windowStale`); nothing
  * while no window is known, unless the plan already refused a request ("No limite"). `children` (an
  * account's agents) go between the bars and when they renew: each window's
  * renewal then moves under them, on one line, before how old the numbers are. How old they are shows only once that
@@ -101,22 +104,29 @@ export function PlanMeter({
             const quota = modelQuota(w);
             const name =
               sections && quota ? text.window({ kind: quota.kind, usedPercent: w.usedPercent }) : text.window(w);
-            // A window that reset is empty again: its parts were the old window's.
-            const fresh = !passed(w.resetsAt, now);
+            // A window that reset is empty again: its parts were the old window's. One read too long ago may have.
+            const fresh = !passed(w.resetsAt, now) && !w.stale;
             const heading = first && text.group ? text.group(group) : null;
             return (
-              <li key={`${w.kind}:${w.label ?? i}`} className="ac-planmeter__window" data-level={planLevel(w.used)}>
+              <li
+                key={`${w.kind}:${w.label ?? i}`}
+                className="ac-planmeter__window"
+                data-level={w.stale ? "ok" : planLevel(w.used)}
+                data-stale={w.stale || undefined}
+              >
                 {heading && <span className="ac-planmeter__group">{heading}</span>}
                 <span className="ac-planmeter__name">{name}</span>
-                <span className="ac-planmeter__pct">{w.used}%</span>
-                <Meter
-                  value={w.used}
-                  max={100}
-                  label={group ? `${text.group?.(group) ?? group} · ${name}` : name}
-                  marks={[PLAN_ALMOST]}
-                  {...(w.part !== undefined && fresh ? { part: w.part } : {})}
-                  {...(w.segments && fresh ? { segments: w.segments } : {})}
-                />
+                <span className="ac-planmeter__pct">{windowAmount(usage, w, text)}</span>
+                {!w.stale && (
+                  <Meter
+                    value={w.used}
+                    max={100}
+                    label={group ? `${text.group?.(group) ?? group} · ${name}` : name}
+                    marks={[PLAN_ALMOST]}
+                    {...(w.part !== undefined && fresh ? { part: w.part } : {})}
+                    {...(w.segments && fresh ? { segments: w.segments } : {})}
+                  />
+                )}
                 {w.note && fresh && <small className="ac-planmeter__note">{w.note}</small>}
                 {w.resetsAt && fresh && !children && (
                   <small className="ac-planmeter__reset">{text.resets(w.resetsAt)}</small>
