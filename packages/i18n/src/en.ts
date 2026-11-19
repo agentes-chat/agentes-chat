@@ -3515,6 +3515,12 @@ export const en = {
       line: "Used {{uses}}×. Make it a skill?",
       action: "Make it a skill",
       done: "Confirmed",
+      details: "See details",
+      hideDetails: "Hide details",
+      detailsTitle: "What was kept",
+      detailsGone: "This lesson is no longer in its memory.",
+      detailsUses: "Used {{uses}}× · last used {{when}}",
+      detailsUsesNever: "Used {{uses}}×",
     },
     stalled: {
       /** `{{number}}` is the task's number, `{{title}}` its title. */

@@ -8,11 +8,12 @@ import {
   useCardProposals,
   useChannels,
   useDecideProposal,
+  useMemory,
   useModelLabel,
   useTeamWeekPrefs,
   useWaitingOnMe,
 } from "@agenteschat/client";
-import { clockAt, formatUsd, joinNames } from "@agenteschat/client/lib/format";
+import { clockAt, formatUsd, joinNames, relativeTime } from "@agenteschat/client/lib/format";
 import { can } from "@agenteschat/client/lib/permissions";
 import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import { teamWeekOn, teamWeekWhen } from "@agenteschat/client/lib/right-hand-prefs";
@@ -305,6 +306,7 @@ function Fix({
   const actions = useAgentActions(orgId, message.channelId);
   const [pending, setPending] = useState(false);
   const [skipping, setSkipping] = useState(false);
+  const [details, setDetails] = useState(false);
   const agentId = "agentId" in row ? row.agentId : null;
   const receipt = proposal?.undoActionId ? message.actions?.find((a) => a.id === proposal.undoActionId) : undefined;
   const undoable =
@@ -343,6 +345,22 @@ function Fix({
       <Text variant="footnote" tone="ink2">
         {line}
       </Text>
+      {row.kind === "howto" ? (
+        <>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: details }}
+            hitSlop={8}
+            onPress={() => setDetails((v) => !v)}
+            style={({ pressed }) => [styles.when, pressed && styles.pressed]}
+          >
+            <Text variant="footnote" tone="ink" style={[styles.semibold, styles.underline]}>
+              {t(details ? "teamWeek.howto.hideDetails" : "teamWeek.howto.details")}
+            </Text>
+          </Pressable>
+          {details ? <HowtoDetails agentId={row.agentId} itemId={row.itemId} uses={row.uses} /> : null}
+        </>
+      ) : null}
       {state === "done" ? (
         <Animated.View entering={reduced ? undefined : FadeIn.duration(160)} style={styles.doneRow}>
           <View style={[styles.line, styles.fill]}>
@@ -404,7 +422,56 @@ function Fix({
   );
 }
 
+/**
+ * "Ver detalhes" under a lesson that may become a skill: the whole of what the agent kept, where it came from and how
+ * often it was used, read on the phone before tapping Virar skill.
+ */
+function HowtoDetails({ agentId, itemId, uses }: { agentId: string; itemId: string; uses: number }) {
+  const { t, i18n } = useTranslation();
+  const { orgId } = useOrg();
+  const c = useColors();
+  const memory = useMemory(orgId, agentId);
+  const item = memory.data?.find((m) => m.id === itemId);
+  return (
+    <View style={[styles.details, { borderColor: c.line2 }]}>
+      <Text variant="footnote" tone="muted" style={styles.semibold}>
+        {t("teamWeek.howto.detailsTitle")}
+      </Text>
+      {memory.isPending ? (
+        <Text variant="footnote" tone="muted">
+          {t("common.loading")}
+        </Text>
+      ) : item ? (
+        <>
+          <Text variant="small" tone="ink" selectable>
+            {item.text}
+          </Text>
+          {item.source ? (
+            <Text variant="footnote" tone="muted">
+              {item.source}
+            </Text>
+          ) : null}
+          <Text variant="footnote" tone="muted">
+            {item.lastUsedAt
+              ? t("teamWeek.howto.detailsUses", {
+                  uses: item.uses || uses,
+                  when: relativeTime(t, i18n.language, item.lastUsedAt),
+                })
+              : t("teamWeek.howto.detailsUsesNever", { uses: item.uses || uses })}
+          </Text>
+        </>
+      ) : (
+        <Text variant="footnote" tone="muted">
+          {t("teamWeek.howto.detailsGone")}
+        </Text>
+      )}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  details: { gap: 6, padding: 10, borderRadius: 10, borderWidth: StyleSheet.hairlineWidth },
+  underline: { textDecorationLine: "underline" },
   card: {
     paddingTop: 12,
     paddingHorizontal: 14,
