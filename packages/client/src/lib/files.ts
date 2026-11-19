@@ -1,19 +1,38 @@
+import { SKILL_ASSET_BYTES, SKILL_TEXT_BYTES, SKILL_ZIP_BYTES } from "@agenteschat/tokens/skills";
+
 /** Same limit as the server (`ARTIFACT_LIMITS.fileBytes`): 50 MB per file version. */
 export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 export const MAX_UPLOAD_MB = MAX_UPLOAD_BYTES / 1024 / 1024;
-/** Same limit as the server (`SKILL_LIMITS.assetBytes`): the images and other files a skill keeps, in MB. */
-export const SKILL_ASSET_MB = 40;
+/** The text and scripts, and the images and other files, a skill keeps, in MB. */
+export const SKILL_TEXT_MB = SKILL_TEXT_BYTES / 1024 / 1024;
+export const SKILL_ASSET_MB = SKILL_ASSET_BYTES / 1024 / 1024;
+export { SKILL_ZIP_BYTES };
+/** The largest skill .zip the server takes, in whole MB: what the apps say, a little under what they let through. */
+export const SKILL_ZIP_MB = Math.floor(SKILL_ZIP_BYTES / 1024 / 1024);
 
 /** Previews bigger than this are download-only (the bytes load into memory). Videos stream instead: any size plays. */
 export const MAX_PREVIEW_BYTES = 25 * 1024 * 1024;
 
-export type PreviewKind = "image" | "pdf" | "video";
+/**
+ * How a file shows inline: from its bytes (`image`, `pdf`, `video`), or as the server read it (ADR 0198): a workbook
+ * drawn by the spreadsheet view (`office-sheet`), a deck by the slides view (`office-slides`), a Word document's HTML in
+ * an isolated frame (`office-doc`).
+ */
+export type PreviewKind = "image" | "pdf" | "video" | OfficePreviewKind;
+
+/** The Office previews, which the server reads (`…/preview`) instead of the apps loading the bytes. */
+export type OfficePreviewKind = "office-sheet" | "office-slides" | "office-doc";
+
+/** Whether a preview is an Office file's (drawn from the server's reading, never from its bytes). */
+export const isOfficePreview = (kind: PreviewKind | null | undefined): kind is OfficePreviewKind =>
+  kind === "office-sheet" || kind === "office-slides" || kind === "office-doc";
 
 /**
  * The only types previewed inline (ADR 0025): raster images and PDF, loaded
  * from the download as a blob of exactly this type; videos, played by a video
- * player straight from the download (in parts), never as a page. SVG, HTML
- * and the rest are download-only.
+ * player straight from the download (in parts), never as a page; and Office
+ * files the server reads for the apps to draw (ADR 0198). SVG, HTML and the
+ * rest are download-only.
  */
 const PREVIEW: Record<string, PreviewKind> = {
   "image/png": "image",
@@ -24,6 +43,13 @@ const PREVIEW: Record<string, PreviewKind> = {
   "video/mp4": "video",
   "video/webm": "video",
   "video/quicktime": "video",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "office-sheet",
+  "application/vnd.ms-excel": "office-sheet",
+  "application/vnd.oasis.opendocument.spreadsheet": "office-sheet",
+  "text/csv": "office-sheet",
+  "text/tab-separated-values": "office-sheet",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation": "office-slides",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "office-doc",
 };
 
 const extension = (name: string) => {
@@ -42,12 +68,25 @@ const PREVIEW_BY_EXTENSION: Record<string, PreviewKind> = {
   mp4: "video",
   webm: "video",
   mov: "video",
+  xlsx: "office-sheet",
+  xls: "office-sheet",
+  ods: "office-sheet",
+  csv: "office-sheet",
+  tsv: "office-sheet",
+  pptx: "office-slides",
+  docx: "office-doc",
 };
 
-/** `image`, `pdf`, `video` or null (download only). `contentType` may carry parameters. */
-export function previewKind(contentType: string): PreviewKind | null {
+/**
+ * `image`, `pdf`, `video`, an Office preview, or null (download only). `contentType` may carry parameters; `name`,
+ * when given, says what a generic type (`application/octet-stream`) doesn't, for Office files only.
+ */
+export function previewKind(contentType: string, name?: string): PreviewKind | null {
   const base = contentType.split(";")[0]?.trim().toLowerCase() ?? "";
-  return PREVIEW[base] ?? null;
+  const byType = PREVIEW[base];
+  if (byType) return byType;
+  const byName = name ? PREVIEW_BY_EXTENSION[extension(name)] : undefined;
+  return byName && isOfficePreview(byName) ? byName : null;
 }
 
 /**
@@ -64,9 +103,13 @@ export const isPreviewImage = (content: { contentType: string; size: number }) =
 export const previewType = (contentType: string) => contentType.split(";")[0]?.trim().toLowerCase() ?? "";
 
 /** The design system icons a file can show (all exist in `@agenteschat/ui`'s `IconName`). */
-export type FileIconName = "image" | "video" | "document" | "table" | "archive" | "code" | "page" | "file";
+export type FileIconName = "image" | "video" | "document" | "table" | "slides" | "archive" | "code" | "page" | "file";
 
 const BY_EXTENSION: Record<string, FileIconName> = {
+  pptx: "slides",
+  ppt: "slides",
+  odp: "slides",
+  key: "slides",
   png: "image",
   jpg: "image",
   jpeg: "image",
@@ -135,6 +178,7 @@ export function fileIcon(name: string, contentType = ""): FileIconName {
   if (type.startsWith("image/")) return "image";
   if (type.startsWith("video/")) return "video";
   if (type === "application/pdf") return "document";
+  if (type.includes("presentation") || type === "application/vnd.ms-powerpoint") return "slides";
   if (type.startsWith("text/")) return "document";
   if (type.includes("zip") || type.includes("compressed")) return "archive";
   return "file";
@@ -149,14 +193,26 @@ export function formatBytes(locale: string, bytes: number) {
     value /= 1024;
     i++;
   }
+  const digits = i === 0 || value >= 10 ? 0 : 1;
+  // Rounded here too: the phone's engine (Hermes on iOS) drops `maximumFractionDigits` for a unit and wrote 38,882 MB.
+  const rounded = Math.round(value * 10 ** digits) / 10 ** digits;
   return new Intl.NumberFormat(locale, {
     style: "unit",
     unit: units[i],
     // English's short byte is "byte" whatever the count ("820 byte"): the long one is plural where it should be.
     unitDisplay: i === 0 ? "long" : "short",
-    maximumFractionDigits: i === 0 || value >= 10 ? 0 : 1,
-  }).format(value);
+    maximumFractionDigits: digits,
+  }).format(rounded);
 }
 
 /** Within the upload limit (checked before sending; the server checks again). */
 export const fitsUpload = (file: { size: number }) => file.size <= MAX_UPLOAD_BYTES;
+
+/**
+ * A picture's width over its height, when the server read both (`width`/`height` on the file's content or on its ref
+ * in a message), kept between 1:4 and 4:1: a lone picture in a conversation takes that shape before it loads.
+ */
+export const pictureRatio = (size: { width?: number; height?: number } | null | undefined) =>
+  size?.width && size.height && size.width > 0 && size.height > 0
+    ? Math.min(4, Math.max(0.25, size.width / size.height))
+    : undefined;

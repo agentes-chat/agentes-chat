@@ -17,6 +17,7 @@ import {
   PUSH_ASK_RULES,
   SECRET_BASH_DENY_RULES,
   SECRET_READ_DENY_RULES,
+  unaskedMessage,
 } from "@agenteschat/adapters/command-policy";
 import {
   isSafeRule,
@@ -94,7 +95,30 @@ export interface McpTaskInfo {
 }
 
 /** One block of a tool's result (MCP `content`). */
-export type McpContent = { type: "text"; text: string } | { type: "image"; data: string; mimeType: string };
+export type McpContent =
+  | { type: "text"; text: string }
+  | { type: "image"; data: string; mimeType: string }
+  /** A PDF a tool returned, as an embedded resource: the CLIs keep it as a file their own reader opens. */
+  | { type: "resource"; resource: { uri: string; mimeType: string; blob: string } };
+
+/** A picture or a PDF in a server tool's answer (`MCP_IMAGES_PROTOCOL`), base64. */
+export type McpImage = { mediaType: string; data: string; name?: string };
+
+/** A server tool's pictures as MCP content: images as `image`, a PDF as an embedded `resource`. */
+export function mcpImageContent(images: readonly McpImage[]): McpContent[] {
+  return images.map((i) =>
+    i.mediaType === "application/pdf"
+      ? {
+          type: "resource" as const,
+          resource: {
+            uri: `agentes://file/${encodeURIComponent(i.name ?? "file.pdf")}`,
+            mimeType: i.mediaType,
+            blob: i.data,
+          },
+        }
+      : { type: "image" as const, data: i.data, mimeType: i.mediaType },
+  );
+}
 export type McpToolResult = { content: McpContent[]; isError: boolean };
 
 /** What `delegated-tools.ts` serves on a session. */
@@ -104,6 +128,7 @@ export interface DelegatedSurface {
   profile: CommandProfile;
   branches?: readonly string[];
   /** `PromptContext`'s. */
+  asks?: "always" | "never";
   task?: boolean;
   local?: boolean;
   /** `id`: the JSON-RPC request's, for `cancel`. `ask`: the bridge, for the permission prompt. */
@@ -178,8 +203,14 @@ export interface IpcRequest {
  * answer. `memo`: a list the daemon answers again by itself for the same run (`LIST_MEMO_MS`), so asking often is free.
  */
 export type IpcReply =
-  | { ok: true; text: string; tools?: McpToolInfo[]; memo?: boolean }
+  | { ok: true; text: string; images?: McpImage[]; tools?: McpToolInfo[]; memo?: boolean }
   | { ok: false; error: string; transient?: boolean; idle?: boolean };
+
+/** A frame's pictures, when each is one (anything else in their place is dropped). */
+const validImages = (v: unknown): v is McpImage[] =>
+  Array.isArray(v) &&
+  v.length > 0 &&
+  v.every((i) => typeof i === "object" && i !== null && typeof i.mediaType === "string" && typeof i.data === "string");
 
 /** What a tool name may look like (the Tool Gateway's rule). */
 const TOOL_NAME = /^[a-zA-Z0-9_-]{1,64}$/;
@@ -393,7 +424,11 @@ export class McpBridge {
     if (!p) return;
     clearTimeout(p.timer);
     this.pending.delete(frame.callId);
-    p.resolve(frame.ok ? { ok: true, text: String(frame.text ?? "") } : { ok: false, error: frame.error.message });
+    p.resolve(
+      frame.ok
+        ? { ok: true, text: String(frame.text ?? ""), ...(validImages(frame.images) ? { images: frame.images } : {}) }
+        : { ok: false, error: frame.error.message },
+    );
   }
 
   /** The server's answer to a list (protocol 8). */
@@ -571,6 +606,7 @@ export class McpBridge {
       profile: delegated.profile,
       context: {
         ...(delegated.branches ? { branches: delegated.branches } : {}),
+        ...(delegated.asks ? { asks: delegated.asks } : {}),
         ...(delegated.task ? { task: true } : {}),
         ...(delegated.local ? { local: true } : {}),
         delegated,
@@ -859,7 +895,10 @@ export async function handleMcpMessage(
         jsonrpc: "2.0",
         id,
         result: {
-          content: [{ type: "text", text: reply.ok ? reply.text : reply.error }],
+          content: [
+            { type: "text", text: reply.ok ? reply.text : reply.error },
+            ...(reply.ok && reply.images ? mcpImageContent(reply.images) : []),
+          ],
           isError: !reply.ok,
         },
       };
@@ -882,6 +921,12 @@ export interface PromptContext {
   task?: boolean;
   /** Nobody answers beyond this computer (a background task outside a mission): an ordinary push goes through here. */
   local?: boolean;
+  /**
+   * How much the agent asks, when it isn't the default (`BrainTurnRequest.permissions.asks`). `always`: nothing but a
+   * read is decided here, a push to its own branches included. `never`: a held command is refused with where it
+   * runs (`unaskedMessage`).
+   */
+  asks?: "always" | "never";
 }
 
 /** What an MCP process serves besides the server's tools. */
@@ -927,17 +972,20 @@ export async function permissionPrompt(
   if (!toolName) return { behavior: "deny", message: "Unknown tool." };
   const how = opts.task ? ASK_AFTER_TASK : ASK_IN_CHAT;
   const verdict = localVerdict(toolName, input, opts.scope, opts.profile ?? "work", how);
-  if (verdict?.behavior === "deny") return verdict;
+  // A background task's executor has no run_code to be pointed to: it keeps "stop and say so".
+  const said = (message: string) => (opts.asks === "never" && !opts.task ? unaskedMessage(message) : message);
+  if (verdict?.behavior === "deny") return { behavior: "deny", message: said(verdict.message) };
   if (verdict?.behavior === "allow") return { behavior: "allow", updatedInput: input };
   if (toolName === "Bash" && typeof input.command === "string") {
     const own = opts.branches ?? [];
     const cwd = opts.scope?.cwd ?? null;
     const held = await commandApproval(input.command, { cwd, own, how, script: true });
-    if (held) return { behavior: "deny", message: held.message };
+    if (held) return { behavior: "deny", message: held.never ? held.message : said(held.message) };
     // A push alone to its own branches, or through our git proxy (which decides someone else's branch with a
-    // person's grant, so no card here asks first).
+    // person's grant, so no card here asks first). An agent that always asks is asked for these too.
     const push = lonePush(input.command);
-    if (push && (opts.local || pushesOwnBranches(push, own) || (await pushThroughProxy(push, cwd)))) {
+    const alone = opts.local || opts.asks !== "always";
+    if (push && alone && (opts.local || pushesOwnBranches(push, own) || (await pushThroughProxy(push, cwd)))) {
       return { behavior: "allow", updatedInput: input };
     }
   }
@@ -1120,13 +1168,19 @@ export function mcpScopeFromEnv(env: NodeJS.ProcessEnv): CommandScope | undefine
   if (!cwd || !path.isAbsolute(cwd)) return undefined;
   const folders = (env.AGENTES_MCP_FOLDERS ?? "").split(path.delimiter).filter((f) => f && path.isAbsolute(f));
   const runnerHome = env.AGENTES_RUNNER_HOME?.trim();
+  // Windows has no HOME, as a rule: the home is USERPROFILE (without one, `~` would read as the agent's folder).
+  const home = env.HOME || (process.platform === "win32" ? env.USERPROFILE : undefined);
   return {
     cwd,
     folders: folders.length ? folders : [cwd],
-    ...(env.HOME ? { home: env.HOME } : {}),
+    ...(home ? { home } : {}),
     ...(runnerHome && path.isAbsolute(runnerHome) ? { runnerHome } : {}),
   };
 }
+
+/** `permissions.asks` of a turn, as the server sent it or as our MCP process's env carries it (`AGENTES_MCP_ASKS`). */
+export const turnAsks = (value: unknown): "always" | "never" | undefined =>
+  value === "always" || value === "never" ? value : undefined;
 
 /** The turn's permission profile for our MCP process (`AGENTES_MCP_PROFILE`): anything but `plan` is `work`. */
 export const mcpProfileFromEnv = (env: NodeJS.ProcessEnv): CommandProfile =>
@@ -1140,8 +1194,10 @@ export const mcpProfileFromEnv = (env: NodeJS.ProcessEnv): CommandProfile =>
 export function mcpContextFromEnv(env: NodeJS.ProcessEnv): PromptContext {
   const branches = (env.AGENTES_MCP_BRANCHES ?? "").split(",").filter((b) => /^[A-Za-z0-9/_.-]+\/$/.test(b));
   const task = env.AGENTES_MCP_TASK;
+  const asks = turnAsks(env.AGENTES_MCP_ASKS);
   return {
     ...(branches.length ? { branches } : {}),
+    ...(asks ? { asks } : {}),
     ...(task === "mission" || task === "local" ? { task: true } : {}),
     ...(task === "local" ? { local: true } : {}),
   };
@@ -1172,6 +1228,8 @@ export function claudeMcpConfig(input: {
   branches?: readonly string[];
   /** A background task's executor: a mission's, or one outside a mission (`local`: only the prompt, answered here). */
   task?: "mission" | "local";
+  /** `PromptContext.asks`. */
+  asks?: "always" | "never";
   /** A delegated CLI: the byte relay to the agent's worker, which serves MCP itself (`runMcpRelay`). */
   relay?: boolean;
 }) {
@@ -1192,6 +1250,7 @@ export function claudeMcpConfig(input: {
           ...(input.runnerHome ? { AGENTES_RUNNER_HOME: input.runnerHome } : {}),
           ...(input.branches?.length ? { AGENTES_MCP_BRANCHES: input.branches.join(",") } : {}),
           ...(input.task ? { AGENTES_MCP_TASK: input.task } : {}),
+          ...(input.asks ? { AGENTES_MCP_ASKS: input.asks } : {}),
         },
       },
     },
@@ -1362,16 +1421,20 @@ function toolsBreach(init: Record<string, unknown>, own: readonly string[]): str
 
 /**
  * Denied in every profile (Claude Code checks deny rules before allow rules):
- * the deny list, credential stores (shell and read tools) and code given
- * inline to an interpreter, which `Bash(node *)`, `Bash(python3 *)` would
- * otherwise allow (ADR 0053 §3).
+ * the deny list and credential stores (shell and read tools) (ADR 0053 §3).
  */
 export const ALWAYS_DENY_RULES: readonly string[] = [
   ...MISSION_DENY_RULES,
   ...SECRET_BASH_DENY_RULES,
   ...SECRET_READ_DENY_RULES,
-  ...INLINE_CODE_DENY_RULES,
 ];
+
+/**
+ * A `work` turn's `ask` rules, which outrank allow rules: every push, and code given inline to an interpreter, which
+ * `Bash(node *)`, `Bash(python3 *)` would otherwise allow. Both reach our prompt tool, so the server decides (a
+ * mission's card; outside one, ordinary work).
+ */
+const WORK_ASK_RULES: readonly string[] = [...PUSH_ASK_RULES, ...INLINE_CODE_DENY_RULES];
 
 /** What a `plan` turn never gets: edits. Reading the web is a read (ADR 0109). */
 const PLAN_DENY = ["Edit", "Write", "NotebookEdit"];
@@ -1384,8 +1447,8 @@ const PLAN_DENY = ["Edit", "Write", "NotebookEdit"];
  * also `git -C <path> …`; Claude Code checks each part of a pipeline). `work`: edits (`acceptEdits`), the same
  * read-only commands, plain file work, git work, pull requests, tests and
  * builds. Merges, deploys and publishing are denied (deny rules win over
- * allow rules); every push is `ask` (`PUSH_ASK_RULES`, which outranks allow
- * rules), so the prompt tool reads where it goes.
+ * allow rules); every push and inline code is `ask` (`WORK_ASK_RULES`, which outrank allow
+ * rules), so the prompt tool reads where it goes; `plan` and `chat` deny inline code.
  */
 export function claudePermissionSettings(
   mode: "plan" | "work" | "chat",
@@ -1400,6 +1463,11 @@ export function claudePermissionSettings(
     promptReads?: boolean;
     /** The runner's home when it isn't under `.agentes-runner` (system mode): read by no tool or command either. */
     runnerHome?: string;
+    /**
+     * The agent always asks (ADR 0173): a `work` turn allows only what reads, so every edit and every other command
+     * reaches our prompt tool, and from there the server.
+     */
+    asksFirst?: boolean;
   } = {},
 ) {
   const shellReads = opts.promptReads ? [] : readOnlyShell();
@@ -1408,7 +1476,10 @@ export function claudePermissionSettings(
   // The team's right hand on a person's plan (protocol 41): our tools only, every tool of Claude Code's own refused.
   if (mode === "chat") {
     return {
-      permissions: { allow: ["mcp__agentes"], deny: [...CHAT_DENIED_TOOLS, ...ALWAYS_DENY_RULES, ...homeDeny] },
+      permissions: {
+        allow: ["mcp__agentes"],
+        deny: [...CHAT_DENIED_TOOLS, ...ALWAYS_DENY_RULES, ...INLINE_CODE_DENY_RULES, ...homeDeny],
+      },
     };
   }
   if (mode === "plan") {
@@ -1427,7 +1498,16 @@ export function claudePermissionSettings(
           ...missionFolderRules(missionFolder, ["Read"]),
         ],
         ask: [...PUSH_ASK_RULES],
-        deny: [...PLAN_DENY, ...ALWAYS_DENY_RULES, ...homeDeny],
+        deny: [...PLAN_DENY, ...ALWAYS_DENY_RULES, ...INLINE_CODE_DENY_RULES, ...homeDeny],
+      },
+    };
+  }
+  if (opts.asksFirst) {
+    return {
+      permissions: {
+        allow: ["mcp__agentes", ...shellReads, ...missionFolderRules(missionFolder, ["Read"])],
+        ask: [...WORK_ASK_RULES],
+        deny: [...ALWAYS_DENY_RULES, ...homeDeny],
       },
     };
   }
@@ -1450,7 +1530,7 @@ export function claudePermissionSettings(
         // What a person allowed for the whole mission ("Aprovar sempre nesta missão").
         ...missionAllow.filter(isSafeRule).slice(0, 100),
       ],
-      ask: [...PUSH_ASK_RULES],
+      ask: [...WORK_ASK_RULES],
       deny: [...ALWAYS_DENY_RULES, ...homeDeny],
     },
   };

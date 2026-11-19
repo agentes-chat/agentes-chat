@@ -61,6 +61,16 @@ describe("Importar agentes on the phone: which picked files are read", () => {
     expect(archive).toBe(false);
   });
 
+  test("a whole-team export is read past the 4 MB cap of other files", () => {
+    const big = 5 * 1024 * 1024;
+    expect(
+      phonePicks([
+        { name: "openbot-transfer.json", size: big },
+        { name: "huge.md", size: big },
+      ]).read,
+    ).toEqual([true, false]);
+  });
+
   test("only archives: the phone opens none, so it says so", () => {
     expect(phonePicks([{ name: "export.zip", size: 10 }]).archive).toBe(true);
     expect(phonePicks([{ name: "profile.tar.gz" }, { name: "b.tgz" }]).archive).toBe(true);
@@ -184,8 +194,8 @@ describe("Importar agentes on the phone: the preview", () => {
 });
 
 describe("Importar agentes on the phone: after the import", () => {
-  test("lands on the one agent's page, else on the agents tab", () => {
-    expect(landingOf(["a1"])).toEqual({ href: "/agent/a1", how: "replace" });
+  test("lands on the one agent's page once the import's screens are left, else on the agents tab", () => {
+    expect(landingOf(["a1"])).toEqual({ href: "/agent/a1", how: "open" });
     expect(landingOf(["a1", "a2"])).toEqual({ href: "/agents", how: "dismissTo" });
     expect(landingOf([])).toEqual({ href: "/agents", how: "dismissTo" });
     expect(landingOf(["a1"], { left: true })).toBeNull();

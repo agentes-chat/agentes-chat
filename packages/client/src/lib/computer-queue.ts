@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next";
 import type { ComputerQueue, Message, QueuePurpose, QueueWaiting, QueueWorking } from "../api/types";
 import type { MessageReceipt, ReceiptPhase, ReceiptsState } from "../realtime/receipts";
-import { joinNames, namesText, ordinalForm } from "./format";
+import { joinNames, ordinalForm } from "./format";
 import { agentGrammar } from "./grammar";
 
 /**
@@ -36,10 +36,8 @@ export type QueueRow<T> = T & {
 export interface QueueView {
   working: QueueRow<QueueWorking>[];
   waiting: QueueRow<QueueWaiting>[];
-  /** Turns wait for room: the computer is full. */
+  /** Turns wait, for room on the computer or for their AI sign-in. */
   full: boolean;
-  /** When the next in line should start (null: no basis). */
-  nextStartAt: string | null;
   /** When the last in line should start, once every estimate is known. */
   allStartedAt: string | null;
 }
@@ -53,7 +51,6 @@ export function queueView(queue: ComputerQueue, viewerId: string): QueueView {
     working: queue.working.map((w) => ({ ...w, mine: mineOf(w.purpose, viewerId) })),
     waiting,
     full: waiting.length > 0,
-    nextStartAt: waiting[0]?.estimatedStartAt ?? null,
     allStartedAt: waiting.every((w) => w.estimatedStartAt) ? (last?.estimatedStartAt ?? null) : null,
   };
 }
@@ -71,11 +68,8 @@ export function queueFillText(t: TFunction, working: readonly Pick<QueueWorking,
 export const queueButtonText = (t: TFunction, queue: ComputerQueue | null | undefined) =>
   queue?.waiting.length ? t("queue.button", { count: queue.waiting.length }) : t("queue.buttonIdle");
 
-/** "Full · next starts in about 1 min", "Full", "Nobody in line". */
-export function queueStatusText(t: TFunction, view: QueueView, now: number) {
-  if (!view.full) return t("queue.free");
-  return view.nextStartAt ? t("queue.fullNext", { n: etaMinutes(view.nextStartAt, now) }) : t("queue.full");
-}
+/** "In line · starts soon" whatever holds the line, or "Nobody in line". */
+export const queueStatusText = (t: TFunction, view: QueueView) => t(view.full ? "queue.waiting" : "queue.free");
 
 /** "all started in ~6 min", or null with no basis or one in line (its row says it). */
 export const queueAllStartedText = (t: TFunction, view: QueueView, now: number) =>
@@ -149,32 +143,6 @@ export function queueStartText(
 }
 
 /**
- * The waiting agent's live row: "Waiting for the computer. Next up, in about 1 min" when the line can say when, else
- * "… Next up" alone, or "In line, 4th. After Ada, Kai and Ravi". Null when the run isn't in this computer's line.
- */
-export function queueLiveText(
-  t: TFunction,
-  locale: string,
-  queue: ComputerQueue | null | undefined,
-  runId: string,
-  agentName: (id: string) => string | undefined,
-  now: number,
-) {
-  const w = queue?.waiting.find((x) => x.runId === runId);
-  if (!w) return null;
-  const { context } = agentGrammar(agentName(w.agentId) ?? "");
-  if (w.position === 1) {
-    if (w.estimatedStartAt) return t("queue.live.nextEta", { n: etaMinutes(w.estimatedStartAt, now), context });
-    return t("queue.live.next", { context });
-  }
-  const names = w.after.flatMap((id) => agentName(id) ?? []);
-  const nth = nthText(t, locale, w.position);
-  return names.length
-    ? t("queue.live.behind", { nth, names: namesText(t, names, 3) })
-    : t("queue.live.position", { nth });
-}
-
-/**
  * An agent's place in line for a message: its run as the receipt follows it, else its one waiting turn in this
  * conversation (a new mention joins the turn already waiting).
  */
@@ -221,10 +189,6 @@ export function conversationWaits(
   }
   return [...waits.values()];
 }
-
-/** The receipt of a message whose agent is next in line: "Theo is in line for the computer · next". */
-export const queuedNextText = (t: TFunction, name: string) =>
-  t("receipts.queuedNext", { names: name, context: agentGrammar(name).context });
 
 /** The outage card's pill beside the time: "Away 3 min". */
 export const awayText = (t: TFunction, sinceIso: string, now: number) =>

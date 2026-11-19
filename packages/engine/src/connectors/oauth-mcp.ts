@@ -72,11 +72,26 @@ export function canonicalResource(serverUrl: string) {
   return u.toString().replace(/\/$/, "");
 }
 
-/** One MCP address however it was typed: no trailing slash, any case (mirrors the apps' `sameServer`). */
-export const serverKey = (serverUrl: string) => serverUrl.replace(/\/+$/, "").toLowerCase();
+/**
+ * One MCP address however it was typed: no trailing slash, any case (mirrors the apps' `sameServer`). Read from the
+ * end, not by a pattern: a person types the address, and a pattern backtracks on a long run of slashes that does not
+ * end it.
+ */
+export const serverKey = (serverUrl: string) => {
+  let end = serverUrl.length;
+  while (end > 0 && serverUrl[end - 1] === "/") end--;
+  return serverUrl.slice(0, end).toLowerCase();
+};
 
-/** Asks the server who it is without credentials and reads where its OAuth lives. */
-export async function probeMcpServer(deps: McpOAuthDeps, serverUrl: string): Promise<ServerProbe> {
+/**
+ * Asks the server who it is without credentials and reads where its OAuth lives. `headers`: what a person typed for
+ * this server (ADR 0186), sent with this one request to it and never with the metadata reads that follow.
+ */
+export async function probeMcpServer(
+  deps: McpOAuthDeps,
+  serverUrl: string,
+  headers: Record<string, string> = {},
+): Promise<ServerProbe> {
   await assertPublicHttpsUrl(serverUrl, deps.resolveHost);
   let res: Response;
   try {
@@ -84,7 +99,7 @@ export async function probeMcpServer(deps: McpOAuthDeps, serverUrl: string): Pro
       method: "POST",
       redirect: "error",
       signal: waitMs(),
-      headers: { "content-type": "application/json", accept: "application/json, text/event-stream" },
+      headers: { ...headers, "content-type": "application/json", accept: "application/json, text/event-stream" },
       body: JSON.stringify({
         jsonrpc: "2.0",
         id: 1,

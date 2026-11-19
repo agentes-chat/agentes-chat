@@ -6,13 +6,13 @@ export const legalEs: Partial<Record<LegalKind, LegalDocument>> = {
     title: "Términos de uso",
     summary: "El acuerdo para usar agentes.chat: su espacio de trabajo, sus agentes y de qué responde cada parte.",
     courtesy: "Esta es una traducción de cortesía. Si difiere de la versión en inglés, prevalece la versión en inglés.",
-    updated: "2026-11-06",
+    updated: "2026-11-18",
     sections: [
       {
         id: "agreement",
         heading: "1. Acuerdo",
         blocks: [
-          'Estos Términos de uso (los "Términos") constituyen un acuerdo vinculante entre CODARI GLOBAL, LLC, una sociedad de responsabilidad limitada de Wyoming que opera bajo el nombre comercial agentes.chat ("agentes.chat", "nosotros"), y la persona o entidad que crea una cuenta o un espacio de trabajo ("usted"). Al crear una cuenta, unirse a un espacio de trabajo o utilizar de cualquier otro modo agentes.chat en la web, en la aplicación para Mac o en la aplicación para teléfono (el "Servicio"), usted acepta estos Términos y nuestra Política de privacidad. Si utiliza el Servicio en nombre de una empresa u otra entidad, declara que tiene facultades para obligarla.',
+          'Estos Términos de uso (los "Términos") constituyen un acuerdo vinculante entre AGENTESCHAT, LLC, una sociedad de responsabilidad limitada de Delaware que opera bajo el nombre comercial agentes.chat ("agentes.chat", "nosotros"), y la persona o entidad que crea una cuenta o un espacio de trabajo ("usted"). Al crear una cuenta, unirse a un espacio de trabajo o utilizar de cualquier otro modo agentes.chat en la web, en la aplicación para Mac o en la aplicación para teléfono (el "Servicio"), usted acepta estos Términos y nuestra Política de privacidad. Si utiliza el Servicio en nombre de una empresa u otra entidad, declara que tiene facultades para obligarla.',
           "Para utilizar el Servicio, usted debe tener al menos 18 años y capacidad para celebrar contratos.",
         ],
       },
@@ -97,10 +97,11 @@ export const legalEs: Partial<Record<LegalKind, LegalDocument>> = {
           "Cada espacio de trabajo paga su propio plan de agentes.chat. Estas reglas se aplican a todos los planes:",
           {
             list: [
+              "**Vendedor.** Toda compra se realiza a AGENTESCHAT, LLC, una empresa de los Estados Unidos constituida en Delaware, que es quien la factura.",
               "**Precios.** Los planes y sus precios figuran en nuestra página de precios. Los precios se expresan en dólares estadounidenses y se añaden los impuestos cuando corresponda. Su banco o proveedor de pagos puede cobrar sus propias comisiones por compras realizadas en el extranjero, como el IOF en Brasil.",
               "**Renovación.** Un plan se renueva automáticamente cada mes o cada año, según el período elegido, hasta que se cancele. Enviamos un recordatorio antes de que se renueve un plan anual.",
               "**Cancelación.** Puede cancelar en cualquier momento, y la cancelación surte efecto al final del período ya pagado. A partir de entonces, los agentes del espacio de trabajo se detienen, su computadora se borra 7 días después, y sus conversaciones y archivos siguen disponibles para leerlos y descargarlos durante 90 días, tras lo cual se eliminan.",
-              "**Sin reembolsos.** Los pagos son definitivos y no reembolsables, total ni parcialmente, incluso por el resto de un período tras una cancelación, salvo que la ley disponga otra cosa.",
+              "**Sin reembolsos.** Cada plan genera costos operativos desde el momento de la compra, como el uso de modelos de IA, los servidores y la computadora del espacio de trabajo. Por ello, las compras son definitivas y no reembolsables, total ni parcialmente, incluso por el resto de un período tras una cancelación.",
               "**Pagos fallidos.** Si un pago falla, lo intentamos de nuevo durante los días siguientes. Si sigue fallando, el espacio de trabajo queda en suspenso: sus agentes se detienen y las personas aún pueden leer y escribir en él. Su computadora se conserva durante 7 días y después se libera y se borra. Al pagar, el espacio de trabajo se restablece, en una computadora nueva si la anterior fue liberada.",
               "**Cambios de precio.** Podemos cambiar los precios para nuevos clientes en cualquier momento. El precio de un plan que usted ya tiene solo cambia a causa de nuevos impuestos, a partir de su siguiente renovación y con un aviso previo de al menos 30 días.",
               "**Uso razonable.** Algunas funciones se ejecutan con servicios de IA que ofrecemos sin cargo adicional, como elegir qué agente responde, evaluar memorias y acciones, y encontrar dónde hacer clic en una pantalla. Podemos limitarlas para un espacio de trabajo cuyo uso esté muy por encima de lo normal.",
@@ -148,7 +149,7 @@ export const legalEs: Partial<Record<LegalKind, LegalDocument>> = {
         id: "law",
         heading: "16. Ley aplicable",
         blocks: [
-          "Estos Términos se rigen por las leyes del Estado de Wyoming, EE. UU., con exclusión de sus normas sobre conflicto de leyes, y las partes se someten a la jurisdicción exclusiva de los tribunales estatales y federales ubicados en Wyoming. Si usted es un consumidor en una jurisdicción cuya ley le otorga derechos o un fuero irrenunciables, como Brasil, esos derechos no se ven afectados.",
+          "Estos Términos, y toda compra realizada conforme a ellos, se rigen por las leyes de los Estados Unidos y del Estado de Delaware, con exclusión de las normas sobre conflicto de leyes, y las partes se someten a la jurisdicción exclusiva de los tribunales estatales y federales ubicados en Delaware.",
         ],
       },
       {
@@ -162,7 +163,7 @@ export const legalEs: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "18. Contacto",
         blocks: [
-          "CODARI GLOBAL, LLC, que opera bajo el nombre comercial agentes.chat. Notificaciones: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · legal@agentes.chat · Para todo lo demás: hello@agentes.chat",
+          "AGENTESCHAT, LLC, que opera bajo el nombre comercial agentes.chat. Notificaciones: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · legal@agentes.chat · Para todo lo demás: hello@agentes.chat",
         ],
       },
     ],
@@ -172,13 +173,13 @@ export const legalEs: Partial<Record<LegalKind, LegalDocument>> = {
     summary:
       "Qué recopilamos, qué envían los agentes y adónde, quién puede ver su espacio de trabajo y qué derechos tiene usted.",
     courtesy: "Esta es una traducción de cortesía. Si difiere de la versión en inglés, prevalece la versión en inglés.",
-    updated: "2026-11-06",
+    updated: "2026-11-18",
     sections: [
       {
         id: "overview",
         heading: "1. Descripción general",
         blocks: [
-          'CODARI GLOBAL, LLC, una sociedad de responsabilidad limitada de Wyoming que opera bajo el nombre comercial agentes.chat ("agentes.chat", "nosotros"), opera agentes.chat: un espacio de trabajo donde personas y agentes de IA trabajan juntos, disponible en la web, como aplicación para Mac y como aplicación para teléfono (el "Servicio"). Esta política distingue dos funciones:',
+          'AGENTESCHAT, LLC, una sociedad de responsabilidad limitada de Delaware que opera bajo el nombre comercial agentes.chat ("agentes.chat", "nosotros"), opera agentes.chat: un espacio de trabajo donde personas y agentes de IA trabajan juntos, disponible en la web, como aplicación para Mac y como aplicación para teléfono (el "Servicio"). Esta política distingue dos funciones:',
           {
             list: [
               "Respecto de los **datos de cuenta**, la información que las personas nos proporcionan para crear y utilizar una cuenta, somos el responsable del tratamiento.",
@@ -227,15 +228,15 @@ export const legalEs: Partial<Record<LegalKind, LegalDocument>> = {
           "Los agentes son modelos de IA que leen y actúan dentro del espacio de trabajo. El Contenido del Espacio de Trabajo sale de nuestros servidores en los siguientes casos, y solo en ellos:",
           {
             list: [
-              "**Entre los dispositivos y nuestros servidores.** Todo lo que se envía entre nuestros servidores y los navegadores, aplicaciones y computadoras que se conectan a ellos, incluido el Contenido del Espacio de Trabajo, pasa por Cloudflare, que protege el Servicio frente a ataques. Para ello, Cloudflare descifra este tráfico en su centro de datos más cercano a cada dispositivo y lo gestiona por nuestra cuenta.",
-              "**Respuestas.** Cuando un agente trabaja, envía el contexto que necesita (el contexto del espacio de trabajo, las instrucciones del agente, la conversación, la memoria pertinente y los resultados de sus herramientas) al proveedor de modelos elegido para ese agente. Con una clave de API que haya añadido el espacio de trabajo, la llamada se realiza bajo la propia cuenta del espacio de trabajo y su acuerdo con ese proveedor. Con un plan de IA, como Claude o ChatGPT, conectado a un agente, el agente trabaja bajo la cuenta de la persona que conectó el plan y conforme a los términos del proveedor.",
+              "**Entre los dispositivos y nuestros servidores.** Todo lo que se envía entre nuestros servidores y los navegadores, aplicaciones y computadoras que se conectan a ellos, incluido el Contenido del Espacio de Trabajo, pasa por nuestro proveedor de red, que protege el Servicio frente a ataques. Para ello, el proveedor de red descifra este tráfico en su centro de datos más cercano a cada dispositivo y lo gestiona por nuestra cuenta.",
+              "**Respuestas.** Cuando un agente trabaja, envía el contexto que necesita (el contexto del espacio de trabajo, las instrucciones del agente, la conversación, la memoria pertinente y los resultados de sus herramientas) al proveedor de modelos elegido para ese agente. Con una clave de API que haya añadido el espacio de trabajo, la llamada se realiza bajo la propia cuenta del espacio de trabajo y su acuerdo con ese proveedor. Algunos proveedores transmiten la llamada a la empresa que desarrolla o aloja el modelo, que también la trata conforme a los términos de ese proveedor. Con un plan de IA, como Claude o ChatGPT, conectado a un agente, el agente trabaja bajo la cuenta de la persona que conectó el plan y conforme a los términos del proveedor.",
               "**Decidir quién responde.** Un modelo de enrutamiento lee un mensaje nuevo, los nombres y roles de los agentes del espacio de trabajo y la conversación reciente para decidir qué agente debe responder, si alguno. Se ejecuta en TypeSafe o, como alternativa, en el proveedor de modelos del espacio de trabajo. El enrutamiento nunca concede ningún permiso a un agente.",
               "**Memoria.** Los agentes conservan memoria de las conversaciones (resúmenes, hechos y lecciones) para mejorar con el tiempo. Algunas evaluaciones sobre la memoria (si algo merece conservarse o si contradice lo que un agente ya sabe) las realiza TypeSafe. La memoria puede verse y eliminarse en la página del agente, y se elimina junto con el espacio de trabajo.",
               "**Búsqueda.** Para encontrar mensajes y documentos relacionados, el texto puede convertirse en vectores (embeddings) mediante Voyage AI.",
               "**Conectores.** Cuando el espacio de trabajo conecta un servicio (como GitHub, Google, Linear, Sentry, una bandeja de entrada de correo electrónico o cualquier servidor MCP), almacenamos sus tokens de acceso cifrados y leemos o escribimos en ese servicio solo dentro de los alcances que el espacio de trabajo otorgó a cada agente. El servicio conectado trata esos datos conforme a sus propios términos. Las conexiones con bandejas de entrada de Gmail y Outlook, y con Google Drive, Google Calendar, Google Sheets, Google Docs, Slack, Microsoft Teams, OneDrive, HubSpot, Salesforce, Zendesk, Asana, Figma, Intercom, Dropbox, Square, Instagram, Facebook, LinkedIn, YouTube, Pinterest, Reddit y WhatsApp, pasan por Composio, que trata lo que los agentes leen y escriben en ellas.",
               "**Bases de datos.** Las conexiones con bases de datos son de solo lectura. Las credenciales se almacenan cifradas y cada consulta se verifica antes de ejecutarse.",
-              "**Computadoras conectadas.** Cuando alguien conecta una computadora, los agentes pueden ejecutar comandos y utilizar un navegador en ella, dentro de las carpetas y los permisos establecidos en esa computadora. La vista en directo del navegador de un agente pasa por Cloudflare y por la memoria de nuestros servidores, y no se graba. Un resumen de los pasos que siguió el agente (como las direcciones visitadas y las acciones) se conserva junto con su trabajo para que el equipo pueda ver lo que hizo.",
-              "**La computadora del espacio de trabajo.** En agentes.chat Cloud, los agentes de un espacio de trabajo trabajan en una computadora que operamos para ese espacio de trabajo, alojada por Contabo en la Unión Europea. Contabilizamos, por día, cuántos datos envían y reciben allí el navegador, las herramientas de IA y los demás programas de cada agente. La computadora se borra después de que finaliza el plan de agentes.chat del espacio de trabajo, según se describe en los Términos de uso.",
+              "**Computadoras conectadas.** Cuando alguien conecta una computadora, los agentes pueden ejecutar comandos y utilizar un navegador en ella, dentro de las carpetas y los permisos establecidos en esa computadora. La vista en directo del navegador de un agente pasa por nuestro proveedor de red y por la memoria de nuestros servidores, y no se graba. Un resumen de los pasos que siguió el agente (como las direcciones visitadas y las acciones) se conserva junto con su trabajo para que el equipo pueda ver lo que hizo.",
+              "**La computadora del espacio de trabajo.** En agentes.chat Cloud, los agentes de un espacio de trabajo trabajan en una computadora que operamos para ese espacio de trabajo, en nuestros servidores o en los de un proveedor de alojamiento, en la Unión Europea o en los Estados Unidos. Contabilizamos, por día, cuántos datos envían y reciben allí el navegador, las herramientas de IA y los demás programas de cada agente. La computadora se borra después de que finaliza el plan de agentes.chat del espacio de trabajo, según se describe en los Términos de uso.",
             ],
           },
           "Las acciones difíciles de deshacer (como fusionar código, desplegar o enviar algo en nombre de alguien) se convierten en una solicitud de aprobación dirigida a una persona antes de ejecutarse. El texto que procede de fuera del espacio de trabajo (páginas web, correos electrónicos, archivos) se marca como no confiable antes de que un agente lo lea.",
@@ -283,14 +284,14 @@ export const legalEs: Partial<Record<LegalKind, LegalDocument>> = {
         id: "transfers",
         heading: "9. Transferencias internacionales",
         blocks: [
-          "Nuestra aplicación y su base de datos funcionan en los Estados Unidos, y los proveedores mencionados en esta política tratan los datos en los Estados Unidos, excepto las computadoras de los espacios de trabajo, que Contabo aloja en la Unión Europea, y Cloudflare, que gestiona el tráfico en su centro de datos más cercano a cada dispositivo, en los Estados Unidos o en otro lugar. Cuando se transfieren datos personales sujetos al RGPD o al RGPD del Reino Unido a un tercer país, nos basamos en las Cláusulas Contractuales Tipo de la Comisión Europea y en el Anexo del Reino Unido (UK Addendum). Para los datos sujetos a la LGPD, nos basamos en las garantías contractuales del artículo 33.",
+          "Nuestra aplicación y su base de datos funcionan en los Estados Unidos, y los proveedores mencionados en esta política tratan los datos en los Estados Unidos, excepto los proveedores de modelos y los servicios conectados que elige un espacio de trabajo, y las empresas a las que estos transmiten las llamadas, que pueden tratar datos en otros países conforme a sus propios términos. Las computadoras de los espacios de trabajo funcionan en la Unión Europea o en los Estados Unidos, y nuestro proveedor de red gestiona el tráfico en su centro de datos más cercano a cada dispositivo, en los Estados Unidos o en otro lugar. Cuando se transfieren datos personales sujetos al RGPD o al RGPD del Reino Unido a un tercer país, nos basamos en las Cláusulas Contractuales Tipo de la Comisión Europea y en el Anexo del Reino Unido (UK Addendum). Para los datos sujetos a la LGPD, nos basamos en las garantías contractuales del artículo 33.",
         ],
       },
       {
         id: "apps",
         heading: "10. Aplicaciones para teléfono y Mac",
         blocks: [
-          "La aplicación para teléfono envía notificaciones a través de Expo, Apple y Google. Una notificación puede mostrar el nombre de quien escribió y el comienzo del mensaje, y usted elige qué notificaciones recibe. La aplicación para Mac y las computadoras conectadas mantienen la sesión iniciada en el dispositivo. Al eliminar su cuenta (opción también disponible en las aplicaciones) se cierra la sesión en todos los dispositivos.",
+          "La aplicación para teléfono envía notificaciones a través de Apple y Google. Una notificación puede mostrar el nombre de quien escribió y el comienzo del mensaje, y usted elige qué notificaciones recibe. La aplicación para Mac y las computadoras conectadas mantienen la sesión iniciada en el dispositivo. Al eliminar su cuenta (opción también disponible en las aplicaciones) se cierra la sesión en todos los dispositivos.",
         ],
       },
       {
@@ -319,6 +320,7 @@ export const legalEs: Partial<Record<LegalKind, LegalDocument>> = {
         heading: "14. Cookies y almacenamiento local",
         blocks: [
           "El espacio de trabajo utiliza únicamente las cookies y el almacenamiento local necesarios para mantener su sesión iniciada, proteger los formularios y recordar preferencias como el tema y el idioma. El sitio público agentes.chat recuerda el idioma que usted eligió y utiliza la analítica de Himetrica (Sección 2). No utilizamos cookies publicitarias ni de seguimiento entre sitios.",
+          "**Cookie de referido:** cuando usted abre un enlace de referido de agentes.chat, nuestro servicio de facturación guarda el referido en una cookie en su navegador durante 60 días, para que quien envió el enlace reciba el crédito si usted se suscribe. En el Espacio Económico Europeo, el Reino Unido y Suiza, solo la establecemos después de que usted lo acepte en agentes.chat. Para olvidar el referido en este dispositivo, abra https://agentes.chat/es/privacy?forget-referral#cookies.",
         ],
       },
       {
@@ -339,7 +341,7 @@ export const legalEs: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "17. Contacto",
         blocks: [
-          "CODARI GLOBAL, LLC, que opera bajo el nombre comercial agentes.chat. Notificaciones: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · privacy@agentes.chat. Las consultas sobre protección de datos de la UE, el Reino Unido y Brasil llegan a nuestro equipo de privacidad en la misma dirección. Para cualquier otro asunto, escriba a hello@agentes.chat.",
+          "AGENTESCHAT, LLC, que opera bajo el nombre comercial agentes.chat. Notificaciones: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · privacy@agentes.chat. Las consultas sobre protección de datos de la UE, el Reino Unido y Brasil llegan a nuestro equipo de privacidad en la misma dirección. Para cualquier otro asunto, escriba a hello@agentes.chat.",
         ],
       },
     ],

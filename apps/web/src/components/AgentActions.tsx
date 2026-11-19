@@ -11,6 +11,7 @@ import {
   receiptTip,
   receiptUnder,
 } from "@agenteschat/client/lib/actions";
+import { managesRoutinesOf } from "@agenteschat/client/lib/audience";
 import { relativeTime, toYmd } from "@agenteschat/client/lib/format";
 import { handedTasksOf } from "@agenteschat/client/lib/issues";
 import { can } from "@agenteschat/client/lib/permissions";
@@ -35,9 +36,9 @@ import "./agent-actions.css";
 /**
  * What an agent changed with this reply (ADR 0037 round 2), under the message. One change: a quiet row (A). Several:
  * "3 mudanças · há 1 min" and a row each, those of one kind said once ("Criei as tarefas #58, #59 e #60") (B). Every
- * row and every line under it is one line, cut with "…": its whole words are its tip, and on a touch screen a tap on
- * its words lists each change whole. The bold target opens the thing itself, where it is fixed or removed. One undone
- * elsewhere stays as history: struck through, "Desfeito por …".
+ * row and every line under it wraps whole, on a card as wide as its words. A row of several changes has a tip (on a
+ * touch screen, a tap on its words) that lists each of them whole. The bold target opens the thing itself, where it is
+ * fixed or removed. One undone elsewhere stays as history: struck through, "Desfeito por …".
  */
 export function AgentActionReceipts({ message }: { message: Message }) {
   // The right hand's settings card says what was applied and has its own Desfazer (ADR 0137).
@@ -159,8 +160,9 @@ function Receipt({
   const under = [lines.files, lines.own, lines.undone].filter((line): line is string => line !== null);
   const sentence = (
     <span
-      className="ag-rc__sentence ag-rc__line"
-      title={touch ? undefined : receiptTip(row, t, me.user.id, words)}
+      className="ag-rc__sentence"
+      // A row of one change says it whole on screen: only a row of several has a tip, each of them whole.
+      title={touch || row.actions.length < 2 ? undefined : receiptTip(row, t, me.user.id, words)}
       // On a screen with no hover the words are the list's button: reached with Tab, opened with Enter or Space.
       {...(touch
         ? {
@@ -239,7 +241,7 @@ function Receipt({
           sentence
         )}
         {under.map((line) => (
-          <span key={line} className="ag-rc__by ag-rc__line" title={touch ? undefined : line}>
+          <span key={line} className="ag-rc__by">
             {line}
           </span>
         ))}
@@ -251,7 +253,7 @@ function Receipt({
 
 /**
  * A webhook routine the agent just made: its address, a secret kept out of the message text, is copied from here by
- * who may manage the routine (the person who asked, admins; the server checks again).
+ * who may manage the routine (the person who asked, who sets up that agent's routines; the server checks again).
  */
 function CopyHookButton({ action: a }: { action: AgentAction }) {
   const { t } = useTranslation();
@@ -259,7 +261,8 @@ function CopyHookButton({ action: a }: { action: AgentAction }) {
   const api = useApi();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
-  const routineId = hookToCopy(a, { userId: me.user.id, managesRoutines: can(org, "manage_routines") });
+  const agent = useDirectory(org.id).agentById.get(a.agentId);
+  const routineId = hookToCopy(a, { userId: me.user.id, managesRoutines: managesRoutinesOf(agent) });
   if (!routineId) return null;
   const copy = async () => {
     setBusy(true);

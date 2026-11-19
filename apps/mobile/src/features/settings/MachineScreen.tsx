@@ -4,8 +4,9 @@ import {
   isOpenHandoff,
   keys,
   machineProfiles,
-  useAgents,
   useAgentsBrowserHandoffs,
+  useAllAgents,
+  useAllowMachineTool,
   useApi,
   useBrowserHandoffMutations,
   useBrowserProfileMutations,
@@ -17,8 +18,9 @@ import {
   useReduceMachineAccess,
 } from "@agenteschat/client";
 import { computerName, setupView } from "@agenteschat/client/lib/computer";
+import { offlineCauseText } from "@agenteschat/client/lib/devices";
 import { errorText } from "@agenteschat/client/lib/errors";
-import { joinNames } from "@agenteschat/client/lib/format";
+import { clockAt, firstName, formatTime, joinNames } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import {
   allowedFolders,
@@ -32,22 +34,28 @@ import {
   isPaused,
   MACHINE_TOOLS,
   machineReasonText,
+  oneClickTerminal,
   PAUSE_CHOICES,
   pauseChoiceText,
   pausedByText,
   pauseUntil,
+  profileRefusalLine,
+  profileToolOff,
+  profileUnavailable,
   sharedFolderFacts,
   sharedFolderOf,
   toolOnCommand,
+  toolOneClick,
 } from "@agenteschat/client/lib/machines";
 import { can } from "@agenteschat/client/lib/permissions";
+import { SHARED_SEAT, screenId } from "@agenteschat/client/lib/seat";
 import { helpUrl } from "@agenteschat/client/lib/server";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { countryFlagSvg } from "@agenteschat/ui/brand/flags";
-import { useQueries } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { SvgXml } from "react-native-svg";
 import { ComputerPortrait } from "@/computer/ComputerPortrait";
 import { useOrg } from "@/providers/org";
@@ -61,30 +69,51 @@ import {
   Icon,
   type IconName,
   ProviderLogo,
+  SkeletonList,
   Text,
   useToast,
 } from "@/ui";
 import { router } from "@/ui/navigation";
-import { Note, openPage } from "../ai/parts";
+import { openPage } from "../ai/parts";
+import { openComputer } from "../computer/AgentComputerRow";
 import { ComputerSection } from "../devices/ComputerSection";
 import { findDevice } from "../devices/logic";
 import { StatusLine } from "../devices/parts";
 import { useDevices } from "../devices/queries";
+import { MachineToolButton } from "../devices/ToolOneClick";
 import { AgentFace } from "../shared/Face";
+import { LoadFailed } from "../shared/FirstUse";
 import { useColors, useDirectory, useMeId, useOrgId } from "../shared/hooks";
-import { goBack, MONO, successHaptic } from "../shared/parts";
+import { FocusLive, goBack, successHaptic } from "../shared/parts";
 import { TextArea } from "../shared/TextArea";
 import { DESKTOP_TURN_ON, grantCommand, osOf, pauseText, type Reduce, reduceTexts, seenText } from "./logic";
-import { CommandBlock, chooseAction, confirmAction, Gap, SettingsPage } from "./parts";
+import {
+  CommandBlock,
+  chooseAction,
+  confirmAction,
+  Gap,
+  SettingsPage,
+  TerminalFallback,
+  useUnsavedGuard,
+} from "./parts";
 
 /**
  * One computer, as the web's page: its portrait and state (online, paused, who connected it) and what it is; the
  * agents that use it (each opens its page; Abrir shows its computer to whoever may watch it); then what it allows:
  * the folders and who uses each, its tools, the agents' browser, apps on the agents' screens, and how to allow more
  * (only ever on the computer itself). Admins and whoever connected it take things away, rename or remove it;
- * everyone else reads. The workspace's own computer (ADR 0056 §10) shows its size and its help page instead.
+ * everyone else reads. The workspace's own computer (ADR 0056 §10) shows its size and its help page instead. Its
+ * portrait and the agents at work hold still while a screen it opened is over it.
  */
 export function MachineScreen({ machineId }: { machineId: string }) {
+  return (
+    <FocusLive>
+      <MachinePage machineId={machineId} />
+    </FocusLive>
+  );
+}
+
+function MachinePage({ machineId }: { machineId: string }) {
   const { t, i18n } = useTranslation();
   const c = useColors();
   const api = useApi();
@@ -108,16 +137,23 @@ export function MachineScreen({ machineId }: { machineId: string }) {
       retry: false,
     })),
   });
+  // The right hand's shared place here (ADR 0175), for whoever may open it: its screen's state answers only them.
+  const sharedOf = m?.agents.find((a) => a.id === m.sharedSeatOf);
+  const sharedDesktop = useQuery({
+    queryKey: keys.agentDesktop(orgId, screenId(sharedOf?.id ?? "", SHARED_SEAT)),
+    queryFn: () => api.desktop.status(orgId, sharedOf?.id ?? "", SHARED_SEAT),
+    enabled: Boolean(sharedOf),
+    retry: false,
+  });
 
+  const [moreOpen, setMoreOpen] = useState(false);
   if (!m) {
     return (
       <SettingsPage title={t("machines.page.back")}>
         {machines.isLoading ? (
-          <ActivityIndicator color={c.muted} style={styles.loading} />
+          <SkeletonList rows={4} />
         ) : machines.isError && !machines.data ? (
-          <View style={styles.note}>
-            <Note icon="x">{t("common.loadFailed")}</Note>
-          </View>
+          <LoadFailed onRetry={() => void machines.refetch()} />
         ) : (
           <View style={styles.missing}>
             <EmptyState title={t("machines.page.notFound")} subtitle={t("machines.page.notFoundText")} />
@@ -181,87 +217,86 @@ export function MachineScreen({ machineId }: { machineId: string }) {
   // Pause from here: whoever connected it and admins, while it's online; never the workspace's own computer.
   const pausable = m.canManage && m.online && !managed;
 
-  const chips: { icon: IconName; label: string }[] = [
-    ...(m.kind === "host" && m.name ? [{ icon: "server" as const, label: t("machines.host.label") }] : []),
-    // The device's state says online, busy or paused in its own chip.
-    ...(device
-      ? []
-      : [
-          {
-            icon: m.online ? ("check" as const) : ("circle" as const),
-            label: m.online ? t("machines.online") : t("machines.offline"),
-          },
-          ...(paused ? [{ icon: "pause" as const, label: paused }] : []),
-        ]),
-    ...(m.pairedBy ? [{ icon: "members" as const, label: t("machines.pairedBy", { name: m.pairedBy.name }) }] : []),
-  ];
+  // One status word (the device's own line says it when there is one): paused outranks online.
+  const status: { icon: IconName; label: string } | null = device
+    ? null
+    : paused
+      ? { icon: "pause", label: paused }
+      : m.online
+        ? { icon: "check", label: t("machines.online") }
+        : { icon: "circle", label: t("machines.offline") };
+  // One facts line, and why it's paused while it is.
   const facts = [
+    managed
+      ? [setup?.specs ? t("computerSetup.specs", setup.specs) : null, m.online ? null : seenText(t, i18n.language, m)]
+          .filter(Boolean)
+          .join(" · ")
+      : [t(`machines.os.${osOf(m.os)}`), m.arch, seenText(t, i18n.language, m)].filter(Boolean).join(" · "),
+    isPaused(m) ? (pausedByText(t, i18n.language, m.paused, meId ?? "") ?? t("machines.pausedHint")) : null,
+  ].filter((x): x is string => Boolean(x));
+  // What most people never need, behind one "Detalhes" row, as the web's.
+  const details = [
     m.kind === "host" ? t(`machines.host.${hostDescKey(m.os)}`) : null,
     managed ? t("computerSetup.users") : null,
-    managed
-      ? setup?.specs
-        ? t("computerSetup.specs", setup.specs)
-        : null
-      : t("machines.details", {
-          os: t(`machines.os.${osOf(m.os)}`),
-          arch: m.arch,
-          version: m.runnerVersion,
-          seen: seenText(t, i18n.language, m),
-        }),
-    managed && !m.online ? seenText(t, i18n.language, m) : null,
-    isPaused(m) ? (pausedByText(t, i18n.language, m.paused, meId ?? "") ?? t("machines.pausedHint")) : null,
+    !managed && m.runnerVersion ? t("machines.versionShort", { version: m.runnerVersion }) : null,
     // System mode: each agent works in its own home, never in the folder the computer was connected from.
     m.mode === "system" && !managed && m.kind !== "host" ? t("machines.agentUsers") : null,
+    managed && m.online && m.egressWaiting ? t("machines.egress.waiting") : null,
+    managed && m.networkTransition
+      ? t(m.networkTransition.state === "draining" ? "machines.egress.draining" : "machines.egress.restart", {
+          when: formatTime(i18n.language, m.networkTransition.deadline),
+        })
+      : null,
+    m.workspace && m.mode !== "system" ? `${t("machines.workspace")} ${m.workspace}` : null,
+    m.pairedBy ? t("machines.pairedBy", { name: m.pairedBy.name }) : null,
   ].filter((x): x is string => Boolean(x));
+  // Offline with a known cause: the sentence with its way out, in place of the row's short words.
+  const s = device?.status;
+  const causeLine =
+    s?.kind === "offline" && s.cause && s.lastSeenAt
+      ? offlineCauseText(t, s.cause, clockAt(i18n.language, s.lastSeenAt), "line")
+      : null;
+  const egressIp = managed && m.online ? (m.egress?.ip ?? null) : null;
+  const flag = egressIp ? countryFlagSvg(m.egress?.country) : null;
 
   return (
     <SettingsPage title={title}>
       <View style={styles.head}>
         <ComputerPortrait kind={computerKind(m.os)} state={computerState(m)} size={96} />
-        {device ? <StatusLine status={device.status} center /> : null}
-        <View style={styles.chips}>
-          {chips.map((x) => (
-            <Chip key={x.label} icon={x.icon} label={x.label} />
-          ))}
-        </View>
+        {device ? <StatusLine status={device.status} center text={causeLine} /> : null}
+        {status ? (
+          <View style={styles.chips}>
+            <Chip icon={status.icon} label={status.label} />
+          </View>
+        ) : null}
         {facts.map((line) => (
           <Text key={line} variant="small" tone="muted" style={styles.center}>
             {line}
           </Text>
         ))}
-        {managed && m.online && m.egressWaiting && (
-          <Text variant="small" tone="muted" style={styles.center}>
-            {t("machines.egress.waiting")}
-          </Text>
-        )}
-        {managed && m.networkTransition && (
-          <Text variant="small" tone="muted" style={styles.center}>
-            {t(m.networkTransition.state === "draining" ? "machines.egress.draining" : "machines.egress.restart", {
-              when: new Date(m.networkTransition.deadline).toLocaleTimeString(),
-            })}
-          </Text>
-        )}
-        {managed && m.online && m.egress?.ip && (
-          <View style={{ flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center" }}>
-            {countryFlagSvg(m.egress.country) ? (
-              <SvgXml xml={countryFlagSvg(m.egress.country) as string} width={20} height={14} />
-            ) : (
-              <Icon name="globe" size={15} color={c.muted} />
-            )}
-            <Text variant="small" tone="muted">
-              {t("machines.egress.line", { ip: m.egress.ip })}
-            </Text>
-          </View>
-        )}
-        {m.workspace && m.mode !== "system" ? (
-          <Text variant="small" tone="muted" style={styles.center}>
-            {t("machines.workspace")}{" "}
-            <Text variant="small" tone="muted" style={styles.mono}>
-              {m.workspace}
-            </Text>
-          </Text>
-        ) : null}
       </View>
+
+      {details.length > 0 || egressIp ? (
+        <>
+          <Gap />
+          <GroupedList>
+            <GroupedRow
+              icon={moreOpen ? "up" : "down"}
+              label={t("common.details")}
+              onPress={() => setMoreOpen((o) => !o)}
+            />
+            {moreOpen ? details.map((line) => <GroupedRow key={line} label={line} labelLines={4} />) : null}
+            {moreOpen && egressIp ? (
+              <GroupedRow
+                leading={
+                  flag ? <SvgXml xml={flag} width={20} height={14} /> : <Icon name="globe" size={15} color={c.muted} />
+                }
+                label={t("machines.egress.line", { ip: egressIp })}
+              />
+            ) : null}
+          </GroupedList>
+        </>
+      ) : null}
 
       {pausable ? (
         <>
@@ -271,7 +306,8 @@ export function MachineScreen({ machineId }: { machineId: string }) {
               icon={pausedNow ? "play" : "pause"}
               label={t(pausedNow ? "machines.remotePause.resume" : "machines.remotePause.button")}
               {...(m.remotePause ? {} : { sub: t("machines.remotePause.outdated"), subLines: 3 })}
-              {...(pausedNow ? {} : { chevron: true })}
+              // Pausing lists how long in the app's short menu: the three dots of a row that opens one.
+              {...(pausedNow ? {} : { more: true })}
               disabled={!m.remotePause || pause.isPending}
               onPress={pausedNow ? () => setPause("resume") : askPause}
             />
@@ -323,6 +359,20 @@ export function MachineScreen({ machineId }: { machineId: string }) {
                 />,
               ];
             })}
+            {sharedOf && sharedDesktop.isSuccess ? (
+              <GroupedRow
+                icon="laptop"
+                label={t(
+                  "agentComputer.title",
+                  agentGrammar(sharedOf.name, t("rightHand.sharedName", { name: sharedOf.name })),
+                )}
+                sub={t("rightHand.sharedPlace")}
+                subLines={4}
+                value={t("agentComputer.open")}
+                chevron
+                onPress={() => openComputer(sharedOf.id, SHARED_SEAT)}
+              />
+            ) : null}
           </GroupedList>
         </>
       ) : null}
@@ -414,7 +464,7 @@ function useAskReduce(machineId: string) {
 
 /** An agent's name: from the workspace's agents, else from the computer's list. */
 function useAgentName(m: Pick<Machine, "agents"> | undefined) {
-  const agents = useAgents(useOrgId());
+  const agents = useAllAgents(useOrgId());
   return (id: string) => agents.data?.find((a) => a.id === id)?.name ?? m?.agents.find((a) => a.id === id)?.name ?? "";
 }
 
@@ -486,15 +536,45 @@ function FoldersSection({ machine: m }: { machine: Machine }) {
   );
 }
 
-/** Ferramentas: on or off; who manages the computer turns one off here (never on), except on the workspace's own. */
+/**
+ * Ferramentas: on or off; who manages the computer turns one off here, whoever connected it turns one on too; never on
+ * the workspace's own.
+ */
 function ToolsSection({ machine: m, onReduce }: { machine: Machine; onReduce: (r: Reduce) => void }) {
   const { t } = useTranslation();
+  const toast = useToast();
+  const allow = useAllowMachineTool(useOrgId());
+  // Whoever connected it turns an off tool on with a tap too (ADR 0036 §8).
+  const allows = toolOneClick(m, useMeId())?.kind === "allow";
   const access = m.access;
   if (!access) return null;
   const reduces = canReduceAccess(m);
+  const turnOn = (tool: (typeof MACHINE_TOOLS)[number]) =>
+    allow.mutate(
+      { machineId: m.id, tool },
+      {
+        onSuccess: () => {
+          successHaptic();
+          toast({ title: t("machines.oneClick.done", { machine: m.name }) });
+        },
+        onError: (err) => toast({ title: errorText(t, err), icon: "x" }),
+      },
+    );
   return (
     <>
-      <GroupedHeader>{t("machines.access.tools")}</GroupedHeader>
+      {/* How the rows work, behind the header's ⓘ: the list ends on its rows. */}
+      <GroupedHeader
+        {...(allows || (reduces && MACHINE_TOOLS.some((tool) => access.tools[tool]))
+          ? {
+              hint: {
+                name: t("common.about", { label: t("machines.access.tools") }),
+                text: allows ? t("mobile.settings.machine.toolsHowOwner") : t("mobile.settings.machine.toolsHow"),
+              },
+            }
+          : {})}
+      >
+        {t("machines.access.tools")}
+      </GroupedHeader>
       <GroupedList>
         {MACHINE_TOOLS.map((tool) => {
           const on = access.tools[tool];
@@ -515,14 +595,15 @@ function ToolsSection({ machine: m, onReduce }: { machine: Machine; onReduce: (r
               subLines={3}
               media
               value={on ? t("machines.access.on") : t("machines.access.off")}
-              {...(on && reduces ? { onPress: () => onReduce({ kind: "tool", tool }) } : {})}
+              {...(on && reduces
+                ? { onPress: () => onReduce({ kind: "tool", tool }) }
+                : !on && allows && !allow.isPending
+                  ? { onPress: () => turnOn(tool) }
+                  : {})}
             />
           );
         })}
       </GroupedList>
-      {reduces && MACHINE_TOOLS.some((tool) => access.tools[tool]) ? (
-        <GroupedFooter>{t("mobile.settings.machine.toolsHow")}</GroupedFooter>
-      ) : null}
     </>
   );
 }
@@ -539,22 +620,71 @@ function ProfilesSection({ machine: m }: { machine: Machine }) {
   const dir = useDirectory();
   const profiles = useBrowserProfiles(orgId);
   const actions = useBrowserProfileMutations(orgId);
+  const allow = useAllowMachineTool(orgId);
   const mine = machineProfiles(profiles.data, m);
   if (mine.length === 0) return null;
   const drive = can(org, "manage_connectors") && can(org, "control_browsers");
+  const fail = (err: unknown) => toast({ title: errorText(t, err), icon: "x" });
+  // A refusal with a cause asks with its one way out (as the web's line under the row); anything else is a toast.
+  const refused = (profileId: string, err: unknown) => {
+    const off = profileToolOff(err);
+    const title = profileRefusalLine(t, err);
+    if (off?.oneClick?.kind === "allow")
+      return chooseAction(
+        title,
+        [
+          {
+            label: t("browser.profiles.loginOn"),
+            onPress: () =>
+              allow.mutate(
+                { machineId: off.machineId, tool: off.tool },
+                {
+                  onSuccess: () => {
+                    toast({ title: t("browser.profiles.turningOn", { machine: off.machineName }) });
+                    login(profileId);
+                  },
+                  onError: fail,
+                },
+              ),
+          },
+        ],
+        t("common.cancel"),
+      );
+    if (off?.oneClick?.kind === "ask") {
+      const name = firstName(off.oneClick.ownerName);
+      return chooseAction(
+        title,
+        [
+          {
+            label: t("machines.oneClick.ask", { name }),
+            onPress: () =>
+              allow.mutate(
+                { machineId: off.machineId, tool: off.tool, ask: true },
+                { onSuccess: () => toast({ title: t("machines.oneClick.asked", { name }) }), onError: fail },
+              ),
+          },
+        ],
+        t("common.cancel"),
+      );
+    }
+    if (off?.oneClick?.kind === "outdated")
+      return toast({ title, subtitle: t("machines.oneClick.outdated", { machine: off.machineName }), icon: "x" });
+    if (profileUnavailable(err))
+      return chooseAction(title, [{ label: t("common.retry"), onPress: () => login(profileId) }], t("common.cancel"));
+    toast({ title, icon: "x" });
+  };
   const login = (profileId: string) =>
     actions.takeover.mutate(profileId, {
       onSuccess: () => router.push(`/browser-profile/${profileId}`),
-      onError: (err) =>
-        toast({
-          title:
-            (err as { status?: number }).status === 409 ? t("browser.profiles.busy") : t("browser.profiles.failed"),
-          icon: "x",
-        }),
+      onError: (err) => refused(profileId, err),
     });
   return (
     <>
-      <GroupedHeader>{t("browser.profiles.title")}</GroupedHeader>
+      <GroupedHeader
+        hint={{ name: t("common.about", { label: t("browser.profiles.title") }), text: t("browser.profiles.sub") }}
+      >
+        {t("browser.profiles.title")}
+      </GroupedHeader>
       <GroupedList>
         {mine.map((p) => (
           <GroupedRow
@@ -574,7 +704,7 @@ function ProfilesSection({ machine: m }: { machine: Machine }) {
             value={t("browser.profiles.agents", { count: p.agentIds.length })}
             {...(drive
               ? {
-                  chevron: true,
+                  more: true,
                   onPress: () =>
                     chooseAction(
                       p.name,
@@ -586,7 +716,6 @@ function ProfilesSection({ machine: m }: { machine: Machine }) {
           />
         ))}
       </GroupedList>
-      <GroupedFooter>{t("browser.profiles.sub")}</GroupedFooter>
     </>
   );
 }
@@ -600,6 +729,7 @@ function BrowserSection({ machine: m, onTurnOff }: { machine: Machine; onTurnOff
   const api = useApi();
   const toast = useToast();
   const orgId = useOrgId();
+  const oneClick = toolOneClick(m, useMeId());
   const actions = useBrowserHandoffMutations(orgId);
   const agentIds = m.agents.map((a) => a.id);
   const handoffs = useAgentsBrowserHandoffs(orgId, agentIds);
@@ -669,7 +799,18 @@ function BrowserSection({ machine: m, onTurnOff }: { machine: Machine; onTurnOff
           <GroupedRow icon="x" label={t("browser.machine.turnOffLabel")} labelLines={2} danger onPress={onTurnOff} />
         ) : null}
       </GroupedList>
-      {!switchedOn ? (
+      {!switchedOn && oneClick && oneClick.kind !== "outdated" ? (
+        <>
+          <GroupedFooter>
+            {oneClick.kind === "ask"
+              ? t("browser.profiles.toolOffOther", { name: firstName(oneClick.ownerName) })
+              : t("browser.profiles.toolOff")}
+          </GroupedFooter>
+          <Gap />
+          <MachineToolButton machine={m} tool="browser" />
+          <TerminalFallback command={oneClickTerminal(m, oneClick, ["browser"])} />
+        </>
+      ) : !switchedOn ? (
         allowsInApp(m.os) ? (
           <GroupedFooter>{t("browser.machine.offHelp")}</GroupedFooter>
         ) : (
@@ -714,7 +855,7 @@ function BrowserSection({ machine: m, onTurnOff }: { machine: Machine; onTurnOff
                     subLines={2}
                     media
                     {...(waiting ? { value: t("browser.machine.waitingChip") } : {})}
-                    chevron
+                    more
                     onPress={() => use(agent.id, agent.name)}
                   />
                 );
@@ -725,7 +866,11 @@ function BrowserSection({ machine: m, onTurnOff }: { machine: Machine; onTurnOff
       ) : null}
       {m.canManage ? (
         <>
-          <GroupedHeader>{t("browser.machine.who")}</GroupedHeader>
+          <GroupedHeader
+            hint={{ name: t("common.about", { label: t("browser.machine.who") }), text: t("browser.machine.whoHelp") }}
+          >
+            {t("browser.machine.who")}
+          </GroupedHeader>
           {allowed.length > 0 ? (
             <GroupedList>
               {allowed.map(({ agent, domains }) => (
@@ -744,11 +889,12 @@ function BrowserSection({ machine: m, onTurnOff }: { machine: Machine; onTurnOff
               ))}
             </GroupedList>
           ) : null}
-          <GroupedFooter>
-            {allowed.length > 0
-              ? t("browser.machine.whoHelp")
-              : t("common.joinSentences", { a: t("browser.machine.whoNone"), b: t("browser.machine.whoHelp") })}
-          </GroupedFooter>
+          {/* Nobody yet: what to do now, under the header. */}
+          {allowed.length > 0 ? null : (
+            <GroupedFooter>
+              {t("common.joinSentences", { a: t("browser.machine.whoNone"), b: t("browser.machine.whoHelp") })}
+            </GroupedFooter>
+          )}
         </>
       ) : null}
     </>
@@ -762,9 +908,11 @@ function BrowserSection({ machine: m, onTurnOff }: { machine: Machine; onTurnOff
  */
 function DesktopUseSection({ machine: m }: { machine: Machine }) {
   const { t } = useTranslation();
+  const oneClick = toolOneClick(m, useMeId());
   const use = m.desktopUse;
   if (!use) return null;
   const off = use.available && !(m.access?.tools.desktop && m.access.tools.commands);
+  const desktopOff = (["desktop", "commands"] as const).filter((tool) => m.access?.tools[tool] !== true);
   // A Mac or Windows has nothing to install for it: said in the app's words, not the runner's English.
   const linux = m.os === "linux";
   const reason = use.available
@@ -786,7 +934,20 @@ function DesktopUseSection({ machine: m }: { machine: Machine }) {
           label={!use.available ? t("desktop.use.unavailable") : off ? t("desktop.use.off") : t("desktop.use.ready")}
         />
       </GroupedList>
-      {off ? (
+      {off && oneClick && oneClick.kind !== "outdated" ? (
+        <>
+          <GroupedFooter>{t("desktop.use.offOne")}</GroupedFooter>
+          <Gap />
+          <View style={styles.oneClicks}>
+            {oneClick.kind === "ask" ? (
+              <MachineToolButton machine={m} tool={desktopOff} />
+            ) : (
+              desktopOff.map((tool) => <MachineToolButton key={tool} machine={m} tool={tool} />)
+            )}
+          </View>
+          <TerminalFallback command={oneClickTerminal(m, oneClick, desktopOff)} />
+        </>
+      ) : off ? (
         <>
           <GroupedFooter>{t("desktop.use.offHelp")}</GroupedFooter>
           <Gap />
@@ -853,7 +1014,6 @@ function GrantSection({ machine: m }: { machine: Machine }) {
  */
 export function FolderScreen({ machineId, path }: { machineId: string; path: string }) {
   const { t } = useTranslation();
-  const c = useColors();
   const machines = useMachines(useOrgId());
   const m = machines.data?.find((x) => x.id === machineId);
   const nameOf = useAgentName(m);
@@ -863,7 +1023,8 @@ export function FolderScreen({ machineId, path }: { machineId: string; path: str
   return (
     <SettingsPage title={folder}>
       <GroupedFooter>{path}</GroupedFooter>
-      {machines.isLoading ? <ActivityIndicator color={c.muted} style={styles.loading} /> : null}
+      {machines.isLoading ? <SkeletonList rows={2} /> : null}
+      {machines.isError && !machines.data ? <LoadFailed onRetry={() => void machines.refetch()} /> : null}
       {grant && m && canReduceAccess(m) ? (
         <>
           <GroupedHeader>{t("machines.access.usedBy", { folder })}</GroupedHeader>
@@ -874,8 +1035,11 @@ export function FolderScreen({ machineId, path }: { machineId: string; path: str
                   key={id}
                   leading={<AgentFace agentId={id} size={30} live={false} />}
                   label={nameOf(id)}
-                  value={t("machines.access.remove")}
-                  onPress={() => askReduce({ kind: "folder", path, agent: { id, name: nameOf(id) } })}
+                  // The row's ×: this agent alone off the folder (the system's confirmation first).
+                  remove={{
+                    label: t("machines.access.remove"),
+                    onPress: () => askReduce({ kind: "folder", path, agent: { id, name: nameOf(id) } }),
+                  }}
                 />
               ))}
             </GroupedList>
@@ -910,6 +1074,8 @@ export function RenameMachineScreen({ machineId }: { machineId: string }) {
   const value = name ?? m?.name ?? "";
   const clean = value.trim();
   const ready = Boolean(m) && clean.length > 0 && clean !== m?.name && !action.isPending;
+  // Back with a new name not saved asks first.
+  const leave = useUnsavedGuard(Boolean(m) && name !== null && clean !== m?.name);
   const save = () => {
     if (!m || !ready) return;
     action.mutate(
@@ -918,6 +1084,7 @@ export function RenameMachineScreen({ machineId }: { machineId: string }) {
         onSuccess: () => {
           successHaptic();
           toast({ title: t("machines.renamed", { name: clean }), icon: "check" });
+          leave();
           goBack();
         },
         onError: (err) => setError(errorText(t, err)),
@@ -942,7 +1109,6 @@ export function RenameMachineScreen({ machineId }: { machineId: string }) {
         multiline={false}
         minHeight={50}
         maxLength={80}
-        autoFocus
         returnKeyType="done"
         onSubmitEditing={save}
         accessibilityLabel={t("machines.name")}
@@ -957,12 +1123,10 @@ export function RenameMachineScreen({ machineId }: { machineId: string }) {
 }
 
 const styles = StyleSheet.create({
-  note: { paddingHorizontal: 4, paddingTop: 10 },
-  loading: { marginVertical: 16 },
+  oneClicks: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   missing: { paddingTop: 40 },
   head: { alignItems: "center", gap: 8, paddingTop: 10, paddingBottom: 6, paddingHorizontal: 8 },
   chips: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 6, paddingBottom: 2 },
   center: { textAlign: "center" },
-  mono: { fontFamily: MONO },
   error: { paddingTop: 8, paddingHorizontal: 16 },
 });

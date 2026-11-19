@@ -30,6 +30,7 @@ import {
   Menu,
   MenuItem,
   MenuSeparator,
+  overLimit,
   RadioCard,
   RadioGroup,
   SearchField,
@@ -50,6 +51,7 @@ import { useOrg } from "@/components/org-context";
 import { ThisMacButton } from "@/components/ThisMac";
 import { useComputerEdition, useNamesComputers } from "@/components/WorkspaceComputer";
 import { useDirectory } from "@/hooks/useDirectory";
+import { useTextLimit } from "@/hooks/useTextLimit";
 import { useToast } from "@/lib/toast";
 import { CommandApprovalSelect, executorOptions } from "./MissionBits";
 import "./missions.css";
@@ -108,7 +110,6 @@ export function NewMissionDialog({
         machine: e.machine,
         executors: e.executors ?? [],
         defaultExecutor: e.defaultExecutor,
-        codexTooOld: e.codexTooOld,
         commandApproval: e.commandApproval,
       },
     ];
@@ -116,6 +117,7 @@ export function NewMissionDialog({
   const agents = choices.filter((a) => a.eligible);
   const blocked = choices.filter((a) => !a.eligible);
   const [goal, setGoal] = useState(initialGoal);
+  const goalLimit = useTextLimit(2000);
   const [agentId, setAgentId] = useState(initialAgentId ?? "");
   const memberChannels = (channels.data ?? []).filter((c) => c.isMember);
   const [home, setHome] = useState<"channel" | "dm">(initialChannelId || memberChannels.length ? "channel" : "dm");
@@ -137,7 +139,7 @@ export function NewMissionDialog({
   const none = eligible.isSuccess && agents.length === 0;
   const goalId = useId();
   const submit = async () => {
-    if (!agent || !goal.trim()) return;
+    if (!agent || !goal.trim() || overLimit(goal, goalLimit)) return;
     setError(null);
     let where = channelId;
     if (home === "dm") {
@@ -194,7 +196,7 @@ export function NewMissionDialog({
               id={goalId}
               rows={3}
               value={goal}
-              maxLength={2000}
+              limit={goalLimit}
               placeholder={t("missions.new.goalPlaceholder")}
               onChange={(e) => setGoal(e.target.value)}
             />
@@ -310,14 +312,6 @@ export function NewMissionDialog({
                 onValueChange={(v) => setPicked(v as MissionExecutor)}
                 options={executorOptions(t, agent.executors, agent.name, agent.id)}
               />
-              {agent.codexTooOld && (
-                <span className="mi-hint ac-iconline">
-                  <Icon name="info" size={14} />
-                  {t("missions.new.codexOld", {
-                    computer: computerNameOf(t, org.name, agent.machine?.name ?? "", isPersonal(org)),
-                  })}
-                </span>
-              )}
             </div>
           )}
           {!none && (
@@ -383,7 +377,7 @@ export function NewMissionDialog({
         <Button onClick={() => onOpenChange(false)}>{t("common.cancel")}</Button>
         <Button
           variant="primary"
-          disabled={!goal.trim() || !agent || (home === "channel" && !channelId)}
+          disabled={!goal.trim() || overLimit(goal, goalLimit) || !agent || (home === "channel" && !channelId)}
           loading={create.isPending}
           onClick={() => void submit()}
         >

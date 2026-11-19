@@ -114,6 +114,15 @@ export async function makeAdmin(db: Database, orgId: string, userId: string) {
   await db.insert(schema.organizationMemberRoles).values({ orgId, userId, roleId }).onConflictDoNothing();
 }
 
+/** Takes `key` off the workspace's base role ("Todos"), as an admin may in Cargos. */
+export async function everyoneWithout(db: Database, orgId: string, key: string) {
+  await ensureRoles(db, orgId);
+  await db
+    .update(schema.orgRoles)
+    .set({ permissions: sql`array_remove(${schema.orgRoles.permissions}, ${key}::text)` })
+    .where(and(eq(schema.orgRoles.orgId, orgId), eq(schema.orgRoles.kind, "everyone")));
+}
+
 export async function addMember(db: Database, orgId: string, role: TestRole, name: string = role) {
   const user = await addUser(db, name);
   await ensureRoles(db, orgId);
@@ -244,6 +253,8 @@ export async function setup(
     workTools?: boolean;
     /** Long work's safety net (ADR 0121 §1). None: off (no test moves by accident). */
     workAuto?: { afterMs?: number; afterCalls?: number; minMs?: number; tickMs?: number };
+    /** Brains the jobs think with besides the model brain (computer brains). None: a computer brain's turn waits. */
+    brains?: RunExecutorDeps["brains"];
   } = {},
 ) {
   const { db, close } = await createTestDatabase();
@@ -422,6 +433,7 @@ export async function setup(
     workAutoAfterCalls: options.workAuto?.afterCalls ?? 100_000,
     workAutoMinMs: options.workAuto?.minMs,
     workTickMs: options.workAuto?.tickMs ?? 60_000,
+    ...(options.brains ? { brains: options.brains } : {}),
   };
   const handlers = createJobHandlers(jobDeps);
 

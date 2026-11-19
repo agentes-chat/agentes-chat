@@ -1,17 +1,21 @@
 import { afterEach, expect, test } from "bun:test";
 import {
+  IPHONE_DEV_MODE_PROTOCOL,
   IPHONE_WIFI_PROTOCOL,
   orgTopic,
   PHONE_PAIRING_PROTOCOL,
+  PHONE_REPAIR_PROTOCOL,
   PHONE_SCREEN_PROTOCOL,
   PHONES_PROTOCOL,
   type RunnerPhone,
   STREAM_CLOSE,
+  XCODE_FIX_PROTOCOL,
 } from "@agenteschat/adapters";
 import { eq, schema } from "@agenteschat/db";
 import {
   authorizePhoneStream,
   cancelWifiPairing,
+  claimStuckPhoneSetups,
   ForbiddenError,
   forgetPhone,
   isNewWork,
@@ -21,10 +25,13 @@ import {
   MachineOfflineError,
   type MachinePhoneRow,
   MachineRequestError,
+  openXcode,
+  PHONE_SETUP_STUCK_MS,
   phoneStoppedBy,
   pickIphoneOverWifi,
   recheckPhoneStream,
   removeMember,
+  repairIphone,
   requestTimeoutMs,
   setAgentComputerTarget,
   setWorkspaceComputers,
@@ -36,6 +43,7 @@ import {
   ValidationError,
   wifiIphones,
   wifiPairingState,
+  xcodeFix,
 } from "../src";
 import { addMember, type Fixture, setup } from "./fixtures";
 import { fakeRunner, pairMachine, RUNNER } from "./machine-fixtures";
@@ -61,6 +69,7 @@ const online = (id: string) =>
 const sync = async (machineId: string, phones: RunnerPhone[]) =>
   syncMachinePhones(f.db, await machineRow(machineId), phones);
 const phoneRows = () => f.db.select().from(schema.machinePhones).orderBy(schema.machinePhones.createdAt);
+const phoneRowsOf = async (platform: string) => (await phoneRows()).find((p) => p.platform === platform);
 
 const pixel: RunnerPhone = {
   platform: "android",
@@ -152,6 +161,21 @@ test("the list: the workspace's computer first, each computer's status, its phon
   await f.db.update(schema.machines).set({ online: false }).where(eq(schema.machines.id, mac));
   const away = (await listDevices(f.db, f.org.id, rui.id)).devices[1]?.phones[0];
   expect(away?.status).toMatchObject({ kind: "offline", withHost: true });
+  expect((await listDevices(f.db, f.org.id, rui.id)).devices[1]?.status).toEqual({
+    kind: "offline",
+    lastSeenAt: expect.any(String),
+  });
+
+  // Its runner's last close says why it went: the computer's status carries it.
+  const lastSeenAt = new Date(Date.now() - 60_000);
+  const disconnects = [
+    { connectedAt: lastSeenAt.toISOString(), at: new Date().toISOString(), code: 4408, reason: "no pong" },
+  ];
+  await f.db.update(schema.machines).set({ lastSeenAt, disconnects }).where(eq(schema.machines.id, mac));
+  expect((await listDevices(f.db, f.org.id, rui.id)).devices[1]?.status).toMatchObject({
+    kind: "offline",
+    cause: "unresponsive",
+  });
 });
 
 test("phones sync: a phone keeps its name and rule moving between its owner's computers, starts over on someone else's or once forgotten", async () => {
@@ -250,6 +274,27 @@ test("who can use it: the owner sets it; an admin renames, marks it the workspac
   await expect(
     updateComputerDevice(deps(), f.owner.id, f.org.id, managed?.machineId as string, { name: "x" }),
   ).rejects.toMatchObject({ code: "machine.managed" });
+});
+
+test("spill-over: on for its owner's replies by default; only the owner turns it on, an admin only off", async () => {
+  f = await setup();
+  const sam = await addMember(f.db, f.org.id, "admin", "sam");
+  const rui = await addMember(f.db, f.org.id, "member", "rui");
+  const laptop = await pair(rui.id, "Rui's laptop");
+  expect((await updateComputerDevice(deps(), rui.id, f.org.id, laptop, {})).spill).toEqual({
+    own: true,
+    others: false,
+  });
+  await expect(
+    updateComputerDevice(deps(), sam.id, f.org.id, laptop, { spill: { others: true } }),
+  ).rejects.toMatchObject({ code: "device.spill_owner_only" });
+  expect((await updateComputerDevice(deps(), rui.id, f.org.id, laptop, { spill: { others: true } })).spill).toEqual({
+    own: true,
+    others: true,
+  });
+  expect(
+    (await updateComputerDevice(deps(), sam.id, f.org.id, laptop, { spill: { own: false, others: false } })).spill,
+  ).toEqual({ own: false, others: false });
 });
 
 test("where workspaces have their own computer, a brought one is a target, never an agent's home", async () => {
@@ -605,4 +650,154 @@ test("iPhones over Wi-Fi: only who may manage the Mac sees the offer or picks on
   expect(await wifiIphones(d, f.owner.id, f.org.id, mac)).toEqual({ available: [] });
   expect(isNewWork({ op: "phone.wifi", action: "allow", serial: near.serial })).toBe(false);
   expect(IPHONE_WIFI_PROTOCOL).toBeGreaterThan(PHONE_PAIRING_PROTOCOL);
+});
+
+test("fixing a Mac's Xcode: its owner or an admin asks; an old app, an odd answer and an offline Mac", async () => {
+  f = await setup();
+  const rui = await addMember(f.db, f.org.id, "member", "rui");
+  const mac = await pair(f.owner.id, "MacBook");
+  await online(mac);
+  const calls: unknown[] = [];
+  let reply: unknown = { fix: { kind: "select", state: "asking", step: 0 } };
+  let fail: Error | null = null;
+  const hub = {
+    call: async (machineId: string, request: unknown) => {
+      calls.push({ machineId, request });
+      if (fail) throw fail;
+      return reply;
+    },
+  } as unknown as Parameters<typeof xcodeFix>[0]["hub"];
+  const d = { db: f.db, hub };
+
+  // A member who doesn't manage the Mac never opens a password window on it.
+  await expect(xcodeFix(d, rui.id, f.org.id, mac, "start")).rejects.toThrow(ForbiddenError);
+  // A Mac whose app predates the fix: the apps show the Terminal command.
+  await f.db
+    .update(schema.machines)
+    .set({ protocol: XCODE_FIX_PROTOCOL - 1 })
+    .where(eq(schema.machines.id, mac));
+  expect(await xcodeFix(d, f.owner.id, f.org.id, mac, "start")).toEqual({ fix: null, update: true });
+  expect(calls).toEqual([]);
+
+  await f.db.update(schema.machines).set({ protocol: XCODE_FIX_PROTOCOL }).where(eq(schema.machines.id, mac));
+  expect(await xcodeFix(d, f.owner.id, f.org.id, mac, "start")).toEqual({
+    fix: { kind: "select", state: "asking", step: 0 },
+  });
+  expect(calls.at(-1)).toEqual({ machineId: mac, request: { op: "xcode.fix", action: "start", kind: "select" } });
+  const audit = await f.db.select().from(schema.auditLog).where(eq(schema.auditLog.action, "device.xcode_fix"));
+  expect(audit.map((a) => a.details)).toEqual([{ kind: "select" }]);
+  // The answer comes from the person's computer: an unknown state is a failure, the step stays in 0-3, text is cut.
+  reply = { fix: { kind: "rm", state: "pwned", step: 99, message: "x".repeat(400) } };
+  const odd = await xcodeFix(d, f.owner.id, f.org.id, mac, "status", "update");
+  expect(odd.fix).toMatchObject({ kind: "update", state: "failed", step: 3 });
+  expect(odd.fix?.message).toHaveLength(300);
+  reply = { fix: null };
+  expect(await xcodeFix(d, f.owner.id, f.org.id, mac, "cancel")).toEqual({ fix: null });
+  // A runner that doesn't know the op; an offline Mac: nothing to ask about, and starting says it's offline.
+  fail = new MachineRequestError("bad_request", "Unknown op");
+  expect(await xcodeFix(d, f.owner.id, f.org.id, mac, "start")).toEqual({ fix: null, update: true });
+  fail = new MachineOfflineError("MacBook", "personal");
+  expect(await xcodeFix(d, f.owner.id, f.org.id, mac, "status")).toEqual({ fix: null });
+  await expect(xcodeFix(d, f.owner.id, f.org.id, mac, "start")).rejects.toThrow(MachineOfflineError);
+  expect(isNewWork({ op: "xcode.fix", action: "start", kind: "select" })).toBe(false);
+});
+
+test("repairing an iPhone's test helper: who manages its Mac, a real iPhone only, an old app, logged", async () => {
+  f = await setup();
+  const rui = await addMember(f.db, f.org.id, "member", "rui");
+  const mac = await pair(f.owner.id, "MacBook");
+  await online(mac);
+  await sync(mac, [{ ...iphone, state: "needs_you", reason: "ui_not_authorized" }, pixel]);
+  const calls: unknown[] = [];
+  let fail: Error | null = null;
+  const hub = {
+    call: async (machineId: string, request: unknown) => {
+      calls.push({ machineId, request });
+      if (fail) throw fail;
+      return { repairing: true };
+    },
+  } as unknown as Parameters<typeof repairIphone>[0]["hub"];
+  const d = { db: f.db, hub };
+  const phoneId = (await phoneRowsOf("ios"))?.id ?? "";
+  const androidId = (await phoneRowsOf("android"))?.id ?? "";
+
+  await expect(repairIphone(d, rui.id, f.org.id, phoneId)).rejects.toThrow(ForbiddenError);
+  await expect(repairIphone(d, f.owner.id, f.org.id, androidId)).rejects.toThrow("Only a real iPhone");
+  await f.db
+    .update(schema.machines)
+    .set({ protocol: PHONE_REPAIR_PROTOCOL - 1 })
+    .where(eq(schema.machines.id, mac));
+  expect(await repairIphone(d, f.owner.id, f.org.id, phoneId)).toEqual({ repairing: false, update: true });
+  expect(calls).toEqual([]);
+  await f.db.update(schema.machines).set({ protocol: PHONE_REPAIR_PROTOCOL }).where(eq(schema.machines.id, mac));
+  expect(await repairIphone(d, f.owner.id, f.org.id, phoneId)).toEqual({ repairing: true });
+  expect(calls).toEqual([{ machineId: mac, request: { op: "phone.repair", serial: iphone.serial } }]);
+  const audit = await f.db.select().from(schema.auditLog).where(eq(schema.auditLog.action, "device.iphone_repair"));
+  expect(audit.map((a) => [a.actorType, a.actorId, a.targetId, a.details])).toEqual([
+    ["person", f.owner.id, mac, { phoneId }],
+  ]);
+  fail = new MachineOfflineError("MacBook", "personal");
+  await expect(repairIphone(d, f.owner.id, f.org.id, phoneId)).rejects.toThrow(MachineOfflineError);
+  expect(isNewWork({ op: "phone.repair", serial: iphone.serial })).toBe(false);
+});
+
+test("opening Xcode on a Mac: its owner or an admin, an app new enough, and the list says which Macs can", async () => {
+  f = await setup();
+  const rui = await addMember(f.db, f.org.id, "member", "rui");
+  const mac = await pair(f.owner.id, "MacBook");
+  await online(mac);
+  const calls: unknown[] = [];
+  let fail: Error | null = null;
+  const hub = {
+    call: async (_machineId: string, request: unknown) => {
+      calls.push(request);
+      if (fail) throw fail;
+      return { opened: true };
+    },
+  } as unknown as Parameters<typeof openXcode>[0]["hub"];
+  const d = { db: f.db, hub };
+  const listed = async () =>
+    (await listDevices(f.db, f.org.id, f.owner.id)).devices.find((m) => m.id === mac)?.opensXcode;
+
+  await expect(openXcode(d, rui.id, f.org.id, mac)).rejects.toThrow(ForbiddenError);
+  // A Mac whose app predates it: nothing is asked, and the list says so.
+  await f.db
+    .update(schema.machines)
+    .set({ protocol: IPHONE_DEV_MODE_PROTOCOL - 1, os: "darwin" })
+    .where(eq(schema.machines.id, mac));
+  expect(await openXcode(d, f.owner.id, f.org.id, mac)).toEqual({ opened: false });
+  expect(calls).toEqual([]);
+  expect(await listed()).toBe(false);
+  await f.db.update(schema.machines).set({ protocol: IPHONE_DEV_MODE_PROTOCOL }).where(eq(schema.machines.id, mac));
+  expect(await listed()).toBe(true);
+  expect(await openXcode(d, f.owner.id, f.org.id, mac)).toEqual({ opened: true });
+  expect(calls).toEqual([{ op: "xcode.open" }]);
+  fail = new MachineRequestError("bad_request", "Unknown op");
+  expect(await openXcode(d, f.owner.id, f.org.id, mac)).toEqual({ opened: false });
+  fail = new MachineOfflineError("MacBook", "personal");
+  await expect(openXcode(d, f.owner.id, f.org.id, mac)).rejects.toThrow(MachineOfflineError);
+  expect(isNewWork({ op: "xcode.open" })).toBe(false);
+});
+
+test("a phone's setup stuck on one step is claimed once, again only after its step moved", async () => {
+  f = await setup();
+  const mac = await pair(f.owner.id, "MacBook");
+  const t0 = new Date("2026-11-14T10:00:00Z");
+  const at = (ms: number) => new Date(t0.getTime() + ms);
+  const stuck = async (ms: number) => (await claimStuckPhoneSetups(f.db, at(ms))).map((p) => [p.platform, p.reason]);
+  await syncMachinePhones(f.db, await machineRow(mac), [iphone, pixel], t0);
+  // Every report bumps `updated_at`: the same step reported again doesn't restart the clock.
+  await syncMachinePhones(f.db, await machineRow(mac), [iphone, pixel], at(PHONE_SETUP_STUCK_MS - 60_000));
+  expect(await stuck(PHONE_SETUP_STUCK_MS - 1000)).toEqual([]);
+  expect(await stuck(PHONE_SETUP_STUCK_MS + 1000)).toEqual([["ios", "developer_mode_off"]]);
+  // Claimed: no sweep (on any replica) reports it again while it stays there.
+  await syncMachinePhones(f.db, await machineRow(mac), [iphone, pixel], at(PHONE_SETUP_STUCK_MS + 2000));
+  expect(await stuck(3 * PHONE_SETUP_STUCK_MS)).toEqual([]);
+  // It restarts (gone a moment) and comes back on the same step: a new wait, reported again once it lasts.
+  await syncMachinePhones(f.db, await machineRow(mac), [pixel], at(3 * PHONE_SETUP_STUCK_MS));
+  await syncMachinePhones(f.db, await machineRow(mac), [iphone, pixel], at(3 * PHONE_SETUP_STUCK_MS + 60_000));
+  expect(await stuck(3 * PHONE_SETUP_STUCK_MS + 120_000)).toEqual([]);
+  expect(await stuck(4 * PHONE_SETUP_STUCK_MS + 120_000)).toEqual([["ios", "developer_mode_off"]]);
+  // Ready phones never are.
+  expect((await phoneRows()).find((p) => p.platform === "android")?.stuckReportedAt).toBeNull();
 });

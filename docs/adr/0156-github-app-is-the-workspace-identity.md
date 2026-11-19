@@ -11,7 +11,8 @@
   `github-app-settings.ts` (the server's app: env or made with GitHub's manifest flow, the manifest, its state),
   `github-call.ts` (`githubCallAuth`, `githubListingHeaders`, `appPermissionsFor`), `signature.ts`;
   `connectors/connections.ts` (`syncGitHubAppConnection`, `GITHUB_APP_AUTH`, `revokeConnection`), `connectors/mcp.ts`,
-  `connectors/catalog.ts` (`sign`); `git/machine.ts` (bot author, the turn's credit line), `git/proxy.ts`, `git/tools.ts`;
+  `connectors/catalog.ts` (`sign`); `git/machine.ts` (bot author, the turn's credit line), `git/proxy.ts`, `git/tools.ts`,
+  `git/co-author-tool.ts`, `machine-hub.ts` (`withAgentName`), `apps/server/runner/co-authors.ts`;
   `apps/server/src/routes/github-app.ts`; migration 0242; screens: `packages/client/src/lib/github-app.ts` (what the
   panel shows, shared by the web and the phone), `apps/web/src/components/GitHubAppPanel.tsx` (the panel and the
   server's app card), `ConnectFlow.tsx`, `Connectors.tsx`, `apps/mobile/src/features/connectors/GitHubApp.tsx`
@@ -131,7 +132,8 @@ next to a person's connection. GitHub's MCP tools, which do most of the writing,
   environment variable (the agent user's own `hosts.yml`, system mode only), an optional `gh` field in `git.sync` with
   a protocol bump, and it could never be signed. Brains already reach the signed tools through the bridge.
 - Assigning the pull request to the person, and listing repositories per installation in searches.
-- A `prepare-commit-msg` hook for the computer's credit, if the instruction proves unreliable.
+- A `prepare-commit-msg` hook for the computer's credit, if the instruction proves unreliable (the agent's own line
+  got its hook: addendum of 2026-11-13).
 
 ## Addendum (2026-11-08): agents work on GitHub on their own, as the app
 
@@ -258,3 +260,52 @@ to the owners) still holds a fresh state while an owner makes the installation o
 - **Not done.** Who made an installation isn't in what GitHub says of it (`GET /app/installations/{id}`), and the
   `installation.created` delivery that names its sender needs the webhook, which a server may run without (decision 8):
   the owner's role is what can always be asked.
+
+## Addendum (2026-11-13): every commit an agent makes ends with its own line
+
+Every commit an agent makes ends with `Co-authored-by: Nick <noreply@agentes.chat>`, the agent's name (its handle when
+the name has nothing left once made one line without `<`, `>` or control characters, as for a person) at
+`AGENT_CO_AUTHOR_EMAIL` in `signature.ts`. That address is verified on agentes.chat's own GitHub account, so GitHub
+links every agent's line to it. It stacks with the coding CLI's own trailer (Claude Code's `Co-Authored-By: Claude …`)
+and with the person's credit of decision 4: the agent's line, then the person's, each never twice (compared in any
+capitals). On by default on agentes.chat and on every server.
+
+- **API commits.** `push_files` and `create_or_update_file` end their message with both (`runCoAuthors`,
+  `creditedMessage`), and so does a merge's `commit_message` when the agent writes one (`merge_pull_request`, the
+  catalog's `sign`). A merge without one keeps GitHub's own message: a squash's lists the merged commits, lines
+  included.
+- **Agents' computers.** The hub puts the agent's line on every `exec`, `brain.turn` and `task.start` it sends
+  (`AgentScope.coAuthors`, protocol 63), unless the workspace turned it off. The runner hands git, in the agent's own
+  processes only, `GIT_CONFIG_PARAMETERS` with `core.hooksPath` at `<runner home>/git-hooks` and the lines in
+  `AGENTES_CO_AUTHORS` (`apps/server/runner/co-authors.ts`, through `agentSecrets`): no repository and nobody's git
+  config changes, so a person's own git on that computer (self-host's user mode on someone's laptop) never sees it.
+  Every hook name is one shim that runs the repository's own hook of that name first, found by `git rev-parse --git-path
+  hooks` with the env's config as it was before ours: a repository's `core.hooksPath` (husky's `.husky/_`) keeps working
+  and keeps its hooks, and the shim never finds itself. A repository on Git LFS (an `lfs` folder in its git dir) with
+  none of its own gets LFS's four (`git lfs pre-push`, `post-checkout`, `post-commit`, `post-merge`): LFS installs its
+  hooks where `core.hooksPath` points, our folder, so in the agent's processes it never does, and without its `pre-push`
+  a push would leave the files out of the remote without a word. `commit-msg` then adds the lines the message lacks
+  (`git interpret-trailers --if-exists addIfDifferent`). One variable, never `GIT_CONFIG_COUNT`'s three: a CLI that
+  drops variables named like a key (Codex's default `*KEY*` filter) would leave git a count without its key, and git
+  refuses every command then. It covers the CLIs' and shells' commits in chat turns (delegated ones in system mode too,
+  through the bridge's agent), `run_code` and skill scripts, background tasks and a mission item's commit at its end
+  (the task's journal keeps the lines for it and for a start again). A live Claude Code process starts again, resumed,
+  when the lines change; Codex's app server already does when its env changes.
+- **Hook installers.** One run in an agent's process (lefthook, simple-git-hooks, `git lfs update --force`) writes where
+  `core.hooksPath` points, our folder, and `pre-commit install` and `git lfs install` refuse while it is set. The
+  computer brains' note (`COMPUTER_TOOLS_NOTE`) says to run them with `GIT_CONFIG_PARAMETERS=` before: the hooks land in
+  the repository, where the shim runs them. What one wrote into our folder anyway is put back at the agent's next piece
+  of work, so it never runs for another repository for long.
+- **The turn's instruction too.** The line next to where a chat turn starts names every line (the agent's and the
+  person's): an older runner has no hook, and `--no-verify` skips every hook. The person's credit stays on that line
+  alone on computers: it changes from turn to turn, and a live CLI's environment is its first turn's.
+- **The switch.** `organization_settings.agent_co_author` (migration 0262), on by default, and no screen: a person asks
+  any agent, which calls `commit_co_author` (`on`, `off` or `status`, `git/co-author-tool.ts`). It acts at once for the
+  whole workspace (each agent from its next turn), asks nobody at any approvals level (a `self` tool, as
+  `set_reply_style`), and needs a person behind the run, a member of the workspace (a routine's run changes nothing).
+  Each change is audited as `organization.agent_co_author_changed`: the agent, on behalf of the person who asked, the
+  run and the conversation, `details.on`.
+- **Not covered.** `git commit --no-verify` and `git -c core.hooksPath=…` on a computer whose turn had no instruction
+  (a shell command, a task), git inside an agent's containers, and what people type in an agent's terminal or desktop.
+  Git runs no `commit-msg` for a rebase, a cherry-pick or a revert: commits of others picked again get no line, and
+  neither does a revert.

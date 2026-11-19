@@ -1,6 +1,5 @@
 import { and, eq, isNull, schema, sql } from "@agenteschat/db";
 import { grantBrowserProfile, onSingleModeMachine } from "../browser/profiles";
-import { FIXED_GRANTS } from "../right-hand";
 import {
   ALL_TOOLS,
   BUILTIN_SCOPES,
@@ -33,7 +32,6 @@ export interface MissingPermission {
  */
 export async function missingPermissions(ctx: Pick<ToolContext, "db" | "orgId" | "agentId">) {
   const granted = await grantedScopeKeys(ctx.db, ctx.orgId, ctx.agentId);
-  if (granted.has(grantKey(null, FIXED_GRANTS))) return [];
   const all = granted.has(grantKey(null, ALL_TOOLS));
   const out: MissingPermission[] = [];
   for (const [scope, info] of Object.entries(BUILTIN_SCOPES)) {
@@ -46,7 +44,14 @@ export async function missingPermissions(ctx: Pick<ToolContext, "db" | "orgId" |
   const connections = await ctx.db
     .select({ id: schema.connectorConnections.id, label: schema.connectorConnections.label })
     .from(schema.connectorConnections)
-    .where(and(eq(schema.connectorConnections.orgId, ctx.orgId), isNull(schema.connectorConnections.revokedAt)));
+    .where(
+      and(
+        eq(schema.connectorConnections.orgId, ctx.orgId),
+        isNull(schema.connectorConnections.revokedAt),
+        // A person's own connection reaches an agent only from that person, never through a card.
+        isNull(schema.connectorConnections.ownerUserId),
+      ),
+    );
   const own = await mailConnectionIds(
     ctx.db,
     ctx.orgId,

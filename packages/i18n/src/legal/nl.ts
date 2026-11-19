@@ -8,13 +8,13 @@ export const legalNl: Partial<Record<LegalKind, LegalDocument>> = {
       "De overeenkomst voor het gebruik van agentes.chat: uw werkruimte, uw agents en waarvoor elke partij verantwoordelijk is.",
     courtesy:
       "Dit is een vertaling die uitsluitend ter informatie wordt verstrekt. Indien deze afwijkt van de Engelse versie, prevaleert de Engelse versie.",
-    updated: "2026-11-06",
+    updated: "2026-11-18",
     sections: [
       {
         id: "agreement",
         heading: "1. Overeenkomst",
         blocks: [
-          'Deze Gebruiksvoorwaarden (de "Voorwaarden") vormen een bindende overeenkomst tussen CODARI GLOBAL, LLC, een limited liability company naar het recht van Wyoming die handelt onder de naam agentes.chat ("agentes.chat", "wij", "ons"), en de persoon of entiteit die een account of een werkruimte aanmaakt ("u"). Door een account aan te maken, lid te worden van een werkruimte of agentes.chat anderszins te gebruiken via het web, de Mac-app of de telefoonapp (de "Dienst"), aanvaardt u deze Voorwaarden en ons Privacybeleid. Indien u de Dienst gebruikt namens een bedrijf of andere entiteit, verklaart u bevoegd te zijn deze te binden.',
+          'Deze Gebruiksvoorwaarden (de "Voorwaarden") vormen een bindende overeenkomst tussen AGENTESCHAT, LLC, een limited liability company naar het recht van Delaware die handelt onder de naam agentes.chat ("agentes.chat", "wij", "ons"), en de persoon of entiteit die een account of een werkruimte aanmaakt ("u"). Door een account aan te maken, lid te worden van een werkruimte of agentes.chat anderszins te gebruiken via het web, de Mac-app of de telefoonapp (de "Dienst"), aanvaardt u deze Voorwaarden en ons Privacybeleid. Indien u de Dienst gebruikt namens een bedrijf of andere entiteit, verklaart u bevoegd te zijn deze te binden.',
           "Om de Dienst te gebruiken, moet u ten minste 18 jaar oud zijn en bevoegd zijn een overeenkomst aan te gaan.",
         ],
       },
@@ -99,10 +99,11 @@ export const legalNl: Partial<Record<LegalKind, LegalDocument>> = {
           "Elke werkruimte betaalt voor haar eigen agentes.chat-abonnement. De volgende regels gelden voor elk abonnement:",
           {
             list: [
+              "**Verkoper.** Elke aankoop wordt gedaan bij, en gefactureerd door, AGENTESCHAT, LLC, een Amerikaans bedrijf opgericht in Delaware.",
               "**Prijzen.** De abonnementen en hun prijzen staan op onze prijzenpagina. Prijzen zijn in Amerikaanse dollars, en belastingen worden toegevoegd waar deze van toepassing zijn. Uw bank of betaaldienstaanbieder kan eigen kosten in rekening brengen voor aankopen in het buitenland, zoals de IOF in Brazilië.",
               "**Verlenging.** Een abonnement wordt automatisch elke maand of elk jaar verlengd, afhankelijk van de gekozen periode, totdat het wordt opgezegd. Wij sturen een herinnering voordat een jaarabonnement wordt verlengd.",
               "**Opzegging.** U kunt op elk moment opzeggen, en de opzegging gaat in aan het einde van de reeds betaalde periode. Daarna stoppen de agents van de werkruimte, wordt haar computer 7 dagen later gewist, en blijven haar gesprekken en bestanden 90 dagen beschikbaar om te lezen en te downloaden, waarna zij worden verwijderd.",
-              "**Geen terugbetalingen.** Betalingen zijn definitief en worden niet, geheel noch gedeeltelijk, terugbetaald, ook niet voor het resterende deel van een periode na een opzegging, behalve waar de wet anders voorschrijft.",
+              "**Geen terugbetalingen.** Elk abonnement brengt vanaf de aankoop bedrijfskosten met zich mee, zoals het gebruik van AI-modellen, servers en de computer van de werkruimte. Daarom zijn aankopen definitief en worden ze niet, geheel noch gedeeltelijk, terugbetaald, ook niet voor het resterende deel van een periode na een opzegging.",
               "**Mislukte betalingen.** Indien een betaling mislukt, proberen wij het in de daaropvolgende dagen opnieuw. Mislukt deze dan nog steeds, dan wordt de werkruimte gepauzeerd: haar agents stoppen, en mensen kunnen er nog steeds in lezen en schrijven. Haar computer wordt 7 dagen bewaard en daarna vrijgegeven en gewist. Na betaling wordt de werkruimte hersteld, op een nieuwe computer indien de oude is vrijgegeven.",
               "**Prijswijzigingen.** Wij kunnen de prijzen voor nieuwe klanten op elk moment wijzigen. De prijs van een abonnement dat u al heeft, wijzigt uitsluitend als gevolg van nieuwe belastingen, met ingang van de eerstvolgende verlenging, met een kennisgeving van ten minste 30 dagen.",
               "**Redelijk gebruik.** Sommige functies draaien op AI-diensten die wij zonder extra kosten leveren, zoals het kiezen welke agent antwoordt, het beoordelen van herinneringen en handelingen, en het vinden van waar op een scherm moet worden geklikt. Wij kunnen deze beperken voor een werkruimte waarvan het gebruik ver boven het normale ligt.",
@@ -150,7 +151,7 @@ export const legalNl: Partial<Record<LegalKind, LegalDocument>> = {
         id: "law",
         heading: "16. Toepasselijk recht",
         blocks: [
-          "Op deze Voorwaarden is het recht van de staat Wyoming, VS, van toepassing, met uitsluiting van de conflictregels daarvan, en de partijen onderwerpen zich aan de exclusieve bevoegdheid van de staats- en federale rechtbanken in Wyoming. Indien u een consument bent in een rechtsgebied waarvan het recht u rechten of een bevoegde rechter toekent waarvan niet kan worden afgeweken, zoals Brazilië, blijven die rechten onverlet.",
+          "Op deze Voorwaarden, en op elke aankoop die op grond daarvan wordt gedaan, is het recht van de Verenigde Staten en van de staat Delaware van toepassing, met uitsluiting van conflictregels, en de partijen onderwerpen zich aan de exclusieve bevoegdheid van de staats- en federale rechtbanken in Delaware.",
         ],
       },
       {
@@ -164,7 +165,7 @@ export const legalNl: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "18. Contact",
         blocks: [
-          "CODARI GLOBAL, LLC, handelend onder de naam agentes.chat. Kennisgevingen: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · legal@agentes.chat · Al het overige: hello@agentes.chat",
+          "AGENTESCHAT, LLC, handelend onder de naam agentes.chat. Kennisgevingen: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · legal@agentes.chat · Al het overige: hello@agentes.chat",
         ],
       },
     ],
@@ -174,13 +175,13 @@ export const legalNl: Partial<Record<LegalKind, LegalDocument>> = {
     summary: "Wat wij verzamelen, wat agents waarheen sturen, wie uw werkruimte kan zien en welke rechten u hebt.",
     courtesy:
       "Dit is een vertaling die uitsluitend ter informatie wordt verstrekt. Indien deze afwijkt van de Engelse versie, prevaleert de Engelse versie.",
-    updated: "2026-11-06",
+    updated: "2026-11-18",
     sections: [
       {
         id: "overview",
         heading: "1. Overzicht",
         blocks: [
-          'CODARI GLOBAL, LLC, een limited liability company naar het recht van Wyoming die handelt onder de naam agentes.chat ("agentes.chat", "wij"), exploiteert agentes.chat: een werkruimte waarin mensen en AI-agents samenwerken, beschikbaar via het web, als Mac-app en als telefoonapp (de "Dienst"). Dit beleid onderscheidt twee rollen:',
+          'AGENTESCHAT, LLC, een limited liability company naar het recht van Delaware die handelt onder de naam agentes.chat ("agentes.chat", "wij"), exploiteert agentes.chat: een werkruimte waarin mensen en AI-agents samenwerken, beschikbaar via het web, als Mac-app en als telefoonapp (de "Dienst"). Dit beleid onderscheidt twee rollen:',
           {
             list: [
               "Voor **accountgegevens**, de informatie die personen ons verstrekken om een account aan te maken en te gebruiken, zijn wij de verwerkingsverantwoordelijke.",
@@ -229,15 +230,15 @@ export const legalNl: Partial<Record<LegalKind, LegalDocument>> = {
           "Agents zijn AI-modellen die binnen de werkruimte lezen en handelen. Werkruimte-inhoud verlaat onze servers in de volgende gevallen, en uitsluitend in die gevallen:",
           {
             list: [
-              "**Tussen apparaten en onze servers.** Alles wat tussen onze servers en de browsers, apps en computers die daarmee verbinding maken wordt verzonden, Werkruimte-inhoud inbegrepen, gaat via Cloudflare, dat de Dienst tegen aanvallen beschermt. Daartoe ontsleutelt Cloudflare dit verkeer in zijn datacenter dat het dichtst bij elk apparaat ligt, en verwerkt het dit namens ons.",
-              "**Antwoorden.** Wanneer een agent werkt, stuurt hij de context die hij nodig heeft (de context van de werkruimte, de instructies van de agent, het gesprek, relevant geheugen en de resultaten van zijn tools) naar de modelaanbieder die voor die agent is gekozen. Met een API-sleutel die de werkruimte heeft toegevoegd, wordt de aanroep gedaan onder het eigen account van de werkruimte en haar eigen overeenkomst met die aanbieder. Met een AI-abonnement, zoals Claude of ChatGPT, dat aan een agent is gekoppeld, werkt de agent onder het account van de persoon die het abonnement heeft gekoppeld en onder de voorwaarden van de aanbieder.",
+              "**Tussen apparaten en onze servers.** Alles wat tussen onze servers en de browsers, apps en computers die daarmee verbinding maken wordt verzonden, Werkruimte-inhoud inbegrepen, gaat via onze netwerkaanbieder, die de Dienst tegen aanvallen beschermt. Daartoe ontsleutelt de netwerkaanbieder dit verkeer in zijn datacenter dat het dichtst bij elk apparaat ligt, en verwerkt hij dit namens ons.",
+              "**Antwoorden.** Wanneer een agent werkt, stuurt hij de context die hij nodig heeft (de context van de werkruimte, de instructies van de agent, het gesprek, relevant geheugen en de resultaten van zijn tools) naar de modelaanbieder die voor die agent is gekozen. Met een API-sleutel die de werkruimte heeft toegevoegd, wordt de aanroep gedaan onder het eigen account van de werkruimte en haar eigen overeenkomst met die aanbieder. Sommige aanbieders sturen de aanroep door naar het bedrijf dat het model maakt of host, dat hem dan ook verwerkt onder de voorwaarden van die aanbieder. Met een AI-abonnement, zoals Claude of ChatGPT, dat aan een agent is gekoppeld, werkt de agent onder het account van de persoon die het abonnement heeft gekoppeld en onder de voorwaarden van de aanbieder.",
               "**Bepalen wie antwoordt.** Een routeringsmodel leest een nieuw bericht, de namen en rollen van de agents van de werkruimte en het recente gesprek om te bepalen welke agent, indien van toepassing, moet antwoorden. Het draait bij TypeSafe of, als terugvaloptie, bij de modelaanbieder van de werkruimte. Routering verleent een agent nooit enige machtiging.",
               "**Geheugen.** Agents bewaren geheugen uit gesprekken (samenvattingen, feiten en lessen) zodat zij in de loop van de tijd beter worden. Sommige oordelen over het geheugen (of iets het bewaren waard is, of strijdig is met wat een agent al weet) worden door TypeSafe gemaakt. Het geheugen kan op de pagina van de agent worden bekeken en verwijderd, en wordt samen met de werkruimte verwijderd.",
               "**Zoeken.** Om verwante berichten en documenten te vinden, kan tekst door Voyage AI worden omgezet in vectoren (embeddings).",
               "**Connectoren.** Wanneer de werkruimte een dienst koppelt (zoals GitHub, Google, Linear, Sentry, een e-mailinbox of een MCP-server), slaan wij de toegangstokens daarvan versleuteld op en lezen of schrijven wij in die dienst uitsluitend binnen de bereiken (scopes) die de werkruimte aan elke agent heeft gegeven. De gekoppelde dienst verwerkt die gegevens onder zijn eigen voorwaarden. Koppelingen met Gmail- en Outlook-inboxen, en met Google Drive, Google Calendar, Google Sheets, Google Docs, Slack, Microsoft Teams, OneDrive, HubSpot, Salesforce, Zendesk, Asana, Figma, Intercom, Dropbox, Square, Instagram, Facebook, LinkedIn, YouTube, Pinterest, Reddit en WhatsApp, lopen via Composio, dat verwerkt wat agents daar lezen en schrijven.",
               "**Databases.** Databaseverbindingen zijn alleen-lezen. Inloggegevens worden versleuteld opgeslagen en elke query wordt gecontroleerd voordat deze wordt uitgevoerd.",
-              "**Gekoppelde computers.** Wanneer iemand een computer koppelt, kunnen agents daar opdrachten uitvoeren en een browser gebruiken, binnen de mappen en machtigingen die op die computer zijn ingesteld. De live weergave van de browser van een agent gaat via Cloudflare en via het geheugen van onze servers, en wordt niet opgenomen. Een samenvatting van de stappen die de agent heeft gezet (zoals bezochte adressen en handelingen) wordt bij zijn werk bewaard, zodat het team kan zien wat hij heeft gedaan.",
-              "**De computer van de werkruimte.** Op agentes.chat Cloud werken de agents van een werkruimte op een computer die wij voor die werkruimte beheren, gehost door Contabo in de Europese Unie. Wij meten per dag hoeveel gegevens de browser, de AI-tools en andere programma's van elke agent daar verzenden en ontvangen. De computer wordt gewist nadat het agentes.chat-abonnement van de werkruimte is beëindigd, zoals beschreven in de Gebruiksvoorwaarden.",
+              "**Gekoppelde computers.** Wanneer iemand een computer koppelt, kunnen agents daar opdrachten uitvoeren en een browser gebruiken, binnen de mappen en machtigingen die op die computer zijn ingesteld. De live weergave van de browser van een agent gaat via onze netwerkaanbieder en via het geheugen van onze servers, en wordt niet opgenomen. Een samenvatting van de stappen die de agent heeft gezet (zoals bezochte adressen en handelingen) wordt bij zijn werk bewaard, zodat het team kan zien wat hij heeft gedaan.",
+              "**De computer van de werkruimte.** Op agentes.chat Cloud werken de agents van een werkruimte op een computer die wij voor die werkruimte beheren, op onze servers of die van een hostingaanbieder, in de Europese Unie of de Verenigde Staten. Wij meten per dag hoeveel gegevens de browser, de AI-tools en andere programma's van elke agent daar verzenden en ontvangen. De computer wordt gewist nadat het agentes.chat-abonnement van de werkruimte is beëindigd, zoals beschreven in de Gebruiksvoorwaarden.",
             ],
           },
           "Handelingen die moeilijk ongedaan te maken zijn (zoals het samenvoegen van code, het uitrollen of het verzenden namens iemand), worden een goedkeuringsverzoek aan een persoon voordat zij plaatsvinden. Tekst die van buiten de werkruimte afkomstig is (webpagina's, e-mails, bestanden), wordt als onbetrouwbaar gemarkeerd voordat een agent deze leest.",
@@ -285,14 +286,14 @@ export const legalNl: Partial<Record<LegalKind, LegalDocument>> = {
         id: "transfers",
         heading: "9. Internationale doorgiften",
         blocks: [
-          "Onze applicatie en de bijbehorende database draaien in de Verenigde Staten, en de in dit beleid genoemde aanbieders verwerken gegevens in de Verenigde Staten, met uitzondering van de computers van de werkruimten, die Contabo in de Europese Unie host, en Cloudflare, dat verkeer verwerkt in zijn datacenter dat het dichtst bij elk apparaat ligt, in de Verenigde Staten of elders. Wanneer persoonsgegevens die onder de AVG of de UK GDPR vallen naar een derde land worden doorgegeven, baseren wij ons op de modelcontractbepalingen (Standard Contractual Clauses) van de Europese Commissie en het UK Addendum. Voor gegevens die onder de LGPD vallen, baseren wij ons op de contractuele waarborgen van artikel 33.",
+          "Onze applicatie en de bijbehorende database draaien in de Verenigde Staten, en de in dit beleid genoemde aanbieders verwerken gegevens in de Verenigde Staten, behalve de modelaanbieders en gekoppelde diensten die een werkruimte kiest, en de bedrijven waarnaar zij aanroepen doorsturen, die gegevens in andere landen kunnen verwerken onder hun eigen voorwaarden. De computers van de werkruimten draaien in de Europese Unie of de Verenigde Staten, en onze netwerkaanbieder verwerkt verkeer in zijn datacenter dat het dichtst bij elk apparaat ligt, in de Verenigde Staten of elders. Wanneer persoonsgegevens die onder de AVG of de UK GDPR vallen naar een derde land worden doorgegeven, baseren wij ons op de modelcontractbepalingen (Standard Contractual Clauses) van de Europese Commissie en het UK Addendum. Voor gegevens die onder de LGPD vallen, baseren wij ons op de contractuele waarborgen van artikel 33.",
         ],
       },
       {
         id: "apps",
         heading: "10. Telefoon- en Mac-apps",
         blocks: [
-          "De telefoonapp verstuurt meldingen via Expo, Apple en Google. Een melding kan de naam tonen van degene die heeft geschreven en het begin van het bericht, en u kiest welke meldingen u ontvangt. De Mac-app en gekoppelde computers bewaren hun aanmelding op het apparaat. Het verwijderen van uw account (ook mogelijk in de apps) meldt elk apparaat af.",
+          "De telefoonapp verstuurt meldingen via Apple en Google. Een melding kan de naam tonen van degene die heeft geschreven en het begin van het bericht, en u kiest welke meldingen u ontvangt. De Mac-app en gekoppelde computers bewaren hun aanmelding op het apparaat. Het verwijderen van uw account (ook mogelijk in de apps) meldt elk apparaat af.",
         ],
       },
       {
@@ -321,6 +322,7 @@ export const legalNl: Partial<Record<LegalKind, LegalDocument>> = {
         heading: "14. Cookies en lokale opslag",
         blocks: [
           "De werkruimte gebruikt uitsluitend de cookies en lokale opslag die nodig zijn om u aangemeld te houden, formulieren te beschermen en voorkeuren zoals thema en taal te onthouden. De openbare website agentes.chat onthoudt de taal die u hebt gekozen en gebruikt Himetrica-analyse (artikel 2). Wij gebruiken geen advertentiecookies of cookies voor tracking over websites heen.",
+          "**Verwijzingscookie:** wanneer u een verwijzingslink naar agentes.chat opent, bewaart onze factureringsdienst de verwijzing 60 dagen in één cookie in uw browser, zodat degene die de link stuurde de verwijzing krijgt als u een abonnement neemt. In de Europese Economische Ruimte, het Verenigd Koninkrijk en Zwitserland plaatsen wij die pas nadat u op agentes.chat toestemming hebt gegeven. Om de verwijzing op dit apparaat te vergeten, opent u https://agentes.chat/nl/privacy?forget-referral#cookies.",
         ],
       },
       {
@@ -341,7 +343,7 @@ export const legalNl: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "17. Contact",
         blocks: [
-          "CODARI GLOBAL, LLC, handelend onder de naam agentes.chat. Kennisgevingen: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · privacy@agentes.chat. Vragen over gegevensbescherming uit de EU, het Verenigd Koninkrijk en Brazilië bereiken ons privacyteam via hetzelfde adres. Voor al het overige kunt u schrijven naar hello@agentes.chat.",
+          "AGENTESCHAT, LLC, handelend onder de naam agentes.chat. Kennisgevingen: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · privacy@agentes.chat. Vragen over gegevensbescherming uit de EU, het Verenigd Koninkrijk en Brazilië bereiken ons privacyteam via hetzelfde adres. Voor al het overige kunt u schrijven naar hello@agentes.chat.",
         ],
       },
     ],

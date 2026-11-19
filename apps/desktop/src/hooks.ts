@@ -257,6 +257,18 @@ export function writePref<T>(key: string, value: T) {
   }
 }
 
+/** Preferences, on `tab` when given: the window reads the tab it is asked for when it shows (`Prefs`). */
+export function useOpenPrefs() {
+  const host = useHost();
+  return useCallback(
+    (tab?: string) => {
+      if (tab) writePref("prefsTab", tab);
+      void host.showWindow("prefs").catch(() => {});
+    },
+    [host],
+  );
+}
+
 /**
  * The action running now, by name: its button shows `loading` and no other starts until it ends, so a second press
  * never sends it twice. Each action says its own errors.

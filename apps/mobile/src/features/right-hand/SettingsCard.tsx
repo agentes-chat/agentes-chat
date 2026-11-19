@@ -20,9 +20,12 @@ import {
   type WorkspaceActionCard,
 } from "@agenteschat/client";
 import {
+  actionCardApplyKey,
   actionCardDetail,
   actionCardKey,
+  actionCardMark,
   actionCardOf,
+  actionCardSaysDone,
   actionCardWords,
   mayApplyCard,
 } from "@agenteschat/client/lib/action-cards";
@@ -161,7 +164,7 @@ function SettingsRow({
   const ask = useAskProposal(orgId);
   const redo = useSendDm(orgId);
   const actions = useAgentActions(orgId, message?.channelId ?? "");
-  const delegateUndo = useDelegateUndoAction(first ? delegate : null);
+  const delegateUndo = useDelegateUndoAction(first ? delegate : null, p.agentId);
   const when = useWhen();
   const agent = dir.anyAgent(p.agentId);
   const proposer = p.proposedByAgentId ?? p.agentId;
@@ -218,8 +221,9 @@ function SettingsRow({
     };
   }
 
+  // A row that puts its agent under another went only to who manages that one too (ADR 0085 addendum of 2026-11-17).
   const asked = p.askedAt
-    ? sentToText(t, i18n.language, decidersOf(p, members, roles, agent?.ownerUserId), p.askedAt)
+    ? sentToText(t, i18n.language, decidersOf(p, members, roles, agent, dir.anyAgent), p.askedAt)
     : null;
   const state = p.stale
     ? t("rightHand.card.stale")
@@ -358,14 +362,19 @@ function WorkspaceActionView({
   const dir = useDirectory();
   const failed = useFailed();
   const when = useWhen();
-  const decide = useDecideActionCard(orgId, where);
+  const decide = useDecideActionCard(orgId, { ...where, action: card.params.action });
   const undo = useAgentActions(orgId, where.channelId).undo;
-  const say = t as unknown as (key: string, values: Record<string, string>) => string;
+  const say = t as unknown as (key: string, values: Record<string, string | number>) => string;
   const sentence = say(actionCardKey(card), actionCardWords(card, t));
   const plain = sentence.replace(/<\/?b>/g, "");
-  const detail = actionCardDetail(card, t, i18n.language);
+  // The answer to their own tap says more than the card everyone reads (an address that already held an invitation).
+  const own = decide.data?.card;
+  const detail = actionCardDetail(own?.state === "applied" ? own : card, t, i18n.language);
   const may = mayApplyCard(card, { userId: meId ?? "", may: (key) => can(org, key) });
   const mine = card.forUserId === meId;
+  // Whoever applies it for someone else reads who asked, in the conversation and in their inbox.
+  const asker = mine ? undefined : dir.memberById.get(card.forUserId)?.name;
+  const mark = actionCardMark(card);
   // Decided: the same card, and who did it, when and Undo where the buttons were.
   let answer: AskAnswer | null = null;
   if (card.state !== "pending") {
@@ -403,7 +412,7 @@ function WorkspaceActionView({
           variant="primary"
           size="card"
           wide
-          label={t("rightHand.card.apply")}
+          label={t(actionCardApplyKey(card))}
           disabled={decide.isPending}
           loading={decide.isPending && decide.variables === "apply"}
           onPress={() => decide.mutate("apply", { onError: failed })}
@@ -439,11 +448,17 @@ function WorkspaceActionView({
     <AskCard
       id={where.messageId}
       kind="proposal"
+      headless={actionCardSaysDone(card)}
+      kindNote={asker ? t("audit.behind.person", { name: asker }) : undefined}
       agentId={agentId ?? ""}
       waitsFor={may ? "you" : t("rightHand.action.only")}
       answer={answer}
       lead={card.params.why || plain}
-      well={{ tile: <Icon name="shield" size={16} />, title: plain, ...(detail ? { detail } : {}) }}
+      well={{
+        tile: <Icon name={mark === "channel" ? "hash" : mark} size={16} />,
+        title: plain,
+        ...(detail ? { detail } : {}),
+      }}
       foot={decision ? <AskFoot>{decision}</AskFoot> : undefined}
     />
   );

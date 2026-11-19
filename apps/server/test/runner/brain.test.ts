@@ -12,7 +12,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import path from "node:path";
-import { PUSH_ASK_RULES } from "@agenteschat/adapters/command-policy";
+import { INLINE_CODE_DENY_RULES, PUSH_ASK_RULES } from "@agenteschat/adapters/command-policy";
 import {
   BRAIN_PROFILES_PROTOCOL,
   BRAIN_PROTOCOL,
@@ -116,6 +116,17 @@ test("protocol 8: brain.turn requests and brain frames parse; bad events are dro
       line({ type: "brain.event", runId: RUN(1), event: { type: "usage", input: 3.4, output: -1, source: "x" } }),
     ),
   ).toMatchObject({ event: { type: "usage", input: 3, output: 0, source: "plan" } });
+  // A turn's timings travel on its `done`; a malformed one is left out, the answer kept.
+  const done = (timings: unknown) =>
+    parseRunnerFrame(line({ type: "brain.event", runId: RUN(1), event: { type: "done", text: "ok", timings } }));
+  expect(done({ warm: false, initMs: 812.4, firstEventMs: -3 })).toMatchObject({
+    event: { type: "done", text: "ok", timings: { warm: false, initMs: 812 } },
+  });
+  expect(done({ warm: false, initMs: 90_000_000, firstEventMs: 1200 })).toMatchObject({
+    event: { type: "done", text: "ok", timings: { warm: false, firstEventMs: 1200 } },
+  });
+  expect(done({ warm: false, initMs: 90_000_000 })).not.toHaveProperty("event.timings.initMs");
+  expect(done({ initMs: 5 })).toEqual({ type: "brain.event", runId: RUN(1), event: { type: "done", text: "ok" } });
 });
 
 test("hello: Claude Code's login state travels (never anything else from auth status)", async () => {
@@ -238,22 +249,27 @@ test("parser: partial deltas, our tool calls with results, usage, and the final 
   expect(p.session).toBe(SESSION(1));
 });
 
-test("parser: a turn's usage says how many API calls it made and the most uncached input one read", () => {
+test("parser: a turn's usage says how many API calls it made and the most uncached and whole input one read", () => {
   const p = new ClaudeStreamParser();
   p.beginTurn();
-  const call = (id: string, input: number) =>
+  const call = (id: string, input: number, written = 0) =>
     p.push(
       line({
         type: "assistant",
         parent_tool_use_id: null,
-        message: { id, content: [], usage: { input_tokens: input, cache_read_input_tokens: 9000 } },
+        message: {
+          id,
+          content: [],
+          usage: { input_tokens: input, cache_read_input_tokens: 9000, cache_creation_input_tokens: written },
+        },
       }),
     );
   call("m1", 12);
   call("m2", 3400);
   // The same message said again for its next block.
   call("m2", 3400);
-  call("m3", 40);
+  // The biggest step is not the most uncached one: its context, cache included.
+  call("m3", 40, 5000);
   const end = p.push(
     line({
       type: "result",
@@ -265,7 +281,16 @@ test("parser: a turn's usage says how many API calls it made and the most uncach
     }),
   );
   expect(end.events).toEqual([
-    { type: "usage", input: 30452, output: 30, source: "plan", cacheRead: 27000, calls: 3, maxUncached: 3400 },
+    {
+      type: "usage",
+      input: 30452,
+      output: 30,
+      source: "plan",
+      cacheRead: 27000,
+      calls: 3,
+      maxUncached: 3400,
+      maxContext: 14040,
+    },
   ]);
   // It reaches the server as said.
   expect(parseBrainEvent(end.events[0])).toEqual(end.events[0] as WireBrainEvent);
@@ -426,6 +451,17 @@ test("parser: a failed turn says why the provider failed it, from Claude Code's 
     cause: "auth_rejected",
     httpStatus: 401,
   });
+  // A 401 the CLI got past (its login refreshed, then another error, or an answer) never reads as signed out.
+  expect(fail(retry("authentication_failed", 401), retry("server_error", 529), failed)).toMatchObject({
+    code: "claude_failed",
+  });
+  expect(
+    fail(
+      retry("authentication_failed", 401),
+      { type: "assistant", parent_tool_use_id: null, message: { id: "m2", content: [{ type: "text", text: "hi" }] } },
+      failed,
+    ),
+  ).toMatchObject({ code: "claude_failed" });
   // A 403 alone is a refused sign-in, not a disabled account.
   expect(fail(retry("authentication_failed", 403), failed)).toMatchObject({ cause: "auth_rejected", httpStatus: 403 });
   expect(
@@ -568,6 +604,12 @@ test("profiles (ADR 0053 §3): plan has our tools only, no settings files, no ed
   // Every tool of Claude Code but its web: ours read it.
   expect(at(personal, "--disallowedTools")).toBe("WebFetch,WebSearch");
   expect(work).not.toContain("--disallowedTools");
+  // An agent that always asks: no edit is accepted by the CLI itself, so each reaches the prompt tool.
+  const asks = claudeBrainArgs({ ...base, ...brainProfileLaunch("work", false, false, true) });
+  expect(at(asks, "--permission-mode")).toBe("default");
+  expect(asks).toContain("--permission-prompt-tool");
+  expect(brainProfileLaunch("work", false, true, true).permissionMode).toBe("default");
+  expect(brainProfileLaunch("work", false, true).permissionMode).toBe("acceptEdits");
 });
 
 test("protocol 41: a chat turn (the team's right hand on a plan) gets our MCP tools and nothing else", () => {
@@ -674,7 +716,14 @@ test.if(posix)(
   async () => {
     const { m, spawns, turn } = setup();
     const a = await turn(1, "first");
-    expect(a.final).toEqual({ type: "done", text: "echo 1: first", session: { id: SESSION(1) } });
+    expect(a.final).toMatchObject({ type: "done", text: "echo 1: first", session: { id: SESSION(1) } });
+    // The first turn started the process: it says how long Claude Code took to be ready and to say something.
+    const timings = (f: WireBrainEvent) => (f.type === "done" ? f.timings : undefined);
+    expect(timings(a.final)).toMatchObject({
+      warm: false,
+      initMs: expect.any(Number),
+      firstEventMs: expect.any(Number),
+    });
     expect(a.events.at(-1)).toEqual(a.final);
     expect(
       a.events
@@ -693,6 +742,8 @@ test.if(posix)(
     });
     const b = await turn(2, "second");
     expect(b.final).toMatchObject({ type: "done", text: "echo 2: second" });
+    expect(timings(b.final)).toMatchObject({ warm: true, firstEventMs: expect.any(Number) });
+    expect(timings(b.final)?.initMs).toBeUndefined();
     expect(spawns()).toHaveLength(1);
     expect(m.size).toBe(1);
     const args = spawns()[0]?.args ?? [];
@@ -1248,12 +1299,14 @@ test.if(posix)(
     const wsettings = JSON.parse(readFileSync(wargs[wargs.indexOf("--settings") + 1] as string, "utf8")) as {
       permissions: { allow: string[]; ask: string[]; deny: string[] };
     };
-    expect(wsettings.permissions.deny).toContain("Bash(python3 -c*)");
+    // Inline code reaches the prompt tool, where the server decides it (a mission's card, elsewhere ordinary work).
+    expect(wsettings.permissions.deny).not.toContain("Bash(python3 -c*)");
+    expect(wsettings.permissions.ask).toContain("Bash(python3 -c*)");
     expect(wsettings.permissions.deny).toContain("Bash(gh auth token*)");
     expect(wsettings.permissions.deny).not.toContain("Edit");
     expect(wsettings.permissions.allow).not.toContain("Bash(cat *)");
     // Every push reaches the prompt tool, even past the owner's allow rules, which reads where it goes.
-    expect(wsettings.permissions.ask).toEqual([...PUSH_ASK_RULES]);
+    expect(wsettings.permissions.ask).toEqual([...PUSH_ASK_RULES, ...INLINE_CODE_DENY_RULES]);
     const wconfig = JSON.parse(readFileSync(wargs[wargs.indexOf("--mcp-config") + 1] as string, "utf8")) as {
       mcpServers: { agentes: { env: Record<string, string> } };
     };
@@ -1357,9 +1410,9 @@ test.if(posix)(
       },
       { signal: new AbortController().signal, output: () => {}, emit: (f) => frames.push(f) },
     )) as { runId: string; final: WireBrainEvent };
-    expect(reply).toEqual({
+    expect(reply).toMatchObject({
       runId: RUN(9),
-      final: { type: "done", text: "echo 1: hello", session: { id: SESSION(1) } },
+      final: { type: "done", text: "echo 1: hello", session: { id: SESSION(1) }, timings: { warm: false } },
     });
     expect(frames.at(-1)).toEqual({ type: "brain.done", runId: RUN(9) });
     expect(frames.at(-2)).toEqual({ type: "brain.event", runId: RUN(9), event: reply.final });
@@ -1524,6 +1577,37 @@ test.if(posix)(
     // None (or nonsense): the model's own window.
     await turn(4, "fourth", { contextTokens: "lots" as never });
     expect(logged()[2]?.compactWindow).toBeNull();
+  },
+);
+
+test.if(posix)(
+  "a session started with no limit takes 200K once, resumed in the same session; later turns keep the process",
+  async () => {
+    const { spawns, turn } = setup();
+    const logged = () => spawns() as unknown as { args: string[]; compactWindow: string | null }[];
+    await turn(1, "first");
+    expect(logged()[0]?.compactWindow).toBeNull();
+    await turn(2, "second", { contextTokens: 200_000 });
+    expect(logged()).toHaveLength(2);
+    expect(logged()[1]?.compactWindow).toBe("200000");
+    expect(logged()[1]?.args.slice(-2)).toEqual(["--resume", SESSION(1)]);
+    // The same limit never starts the process again, however many turns follow.
+    for (const n of [3, 4, 5]) await turn(n, `turn ${n}`, { contextTokens: 200_000 });
+    expect(logged()).toHaveLength(2);
+  },
+);
+
+test.if(posix)(
+  "other lines for the agent's commits (turned off, the agent renamed) restart the process, resumed",
+  async () => {
+    const { spawns, turn } = setup();
+    const nick = { agent: { ...AGENT, coAuthors: ["Co-authored-by: Nick <noreply@agentes.chat>"] } };
+    await turn(1, "first", {}, undefined, nick);
+    await turn(2, "second", {}, undefined, nick);
+    expect(spawns()).toHaveLength(1);
+    await turn(3, "third", {}, undefined, { agent: AGENT });
+    expect(spawns()).toHaveLength(2);
+    expect(spawns()[1]?.args.slice(-2)).toEqual(["--resume", SESSION(1)]);
   },
 );
 
@@ -2042,6 +2126,16 @@ test("protocol 15: brain.steer parses; steer_read events travel, empty ones are 
   ).toBeNull();
 });
 
+test("an answer posted as it comes travels as its own event; an empty one is dropped", () => {
+  expect(
+    parseRunnerFrame(line({ type: "brain.event", runId: RUN(1), event: { type: "answer", text: "Oi! Tudo certo." } })),
+  ).toEqual({ type: "brain.event", runId: RUN(1), event: { type: "answer", text: "Oi! Tudo certo." } });
+  expect(
+    parseRunnerFrame(line({ type: "brain.event", runId: RUN(1), event: { type: "answer", text: " " } })),
+  ).toBeNull();
+  expect(parseRunnerFrame(line({ type: "brain.event", runId: RUN(1), event: { type: "answer" } }))).toBeNull();
+});
+
 test("steering: capabilities (not versions), the stdin line, and what the parser reads back", () => {
   // 2.1.175 says none; 2.1.220 the lifecycle; 2.1.309 also "now". A version alone is never enough.
   expect(steerSupport(undefined)).toEqual({ next: false, now: false });
@@ -2348,6 +2442,44 @@ test.if(posix)(
   },
 );
 
+test.if(posix)(
+  "the server takes each answer as it comes: the one before the message read goes out at once, never joined",
+  async () => {
+    await withCli(NOW_CLI, async () => {
+      const { m, turn } = setup();
+      const pending = turn(1, "STEERLATE work", { answers: "each" });
+      expect((await steerWhenReady(m, RUN(1), [{ uuid: U(1), text: "one more thing" }])).status).toBe("accepted");
+      const { final, events } = await pending;
+      // Its own event as the CLI's turn ends, before the message is read; `done` holds only what came after it.
+      expect(events.filter((e) => e.type === "answer")).toEqual([{ type: "answer", text: "echo 1: STEERLATE work" }]);
+      expect(events.findIndex((e) => e.type === "answer")).toBeLessThan(
+        events.findIndex((e) => e.type === "steer_read"),
+      );
+      expect(final).toMatchObject({ type: "done", text: "echo 2: one more thing" });
+      expect(m.size).toBe(1);
+    });
+  },
+);
+
+test.if(posix)(
+  "each answer as it comes: when no next turn follows, the request ends with nothing said twice",
+  async () => {
+    await withCli(NOW_CLI, async () => {
+      // Work moved to the background that never ends: the request waits for it, then ends on the result it went on from.
+      const { turn, m } = setup({ steerBackgroundWaitMs: 200, strayWaitMs: 300, dueWaitMs: 200 });
+      const pending = turn(1, "STEERBGHANG work", { answers: "each" });
+      expect((await steerWhenReady(m, RUN(1), [{ uuid: U(1), text: "x", urgent: true }])).status).toBe("accepted");
+      const { final, events } = await pending;
+      // Out at once, while the work it moved aside runs on.
+      expect(events.filter((e) => e.type === "answer")).toEqual([
+        { type: "answer", text: "echo 1: STEERBGHANG work +now/human: x" },
+      ]);
+      // It went out already: the request ends on nothing more.
+      expect(final).toMatchObject({ type: "done", text: "" });
+    });
+  },
+);
+
 test.if(posix)("an old CLI, a one-shot turn, another agent or session: unsupported or no_turn", async () => {
   // A version new enough by number, but no capabilities said: not steerable.
   await withCli({ version: "2.1.300" }, async () => {
@@ -2616,7 +2748,10 @@ test.if(posix)("delegated: root refuses what the CLI asks on stdout, and the tur
   const s = delegatedSetup();
   (s.m as unknown as { log: (l: string) => void }).log = (l) => lines.push(l);
   const r = await s.turn(1, "ASKCONTROL");
-  expect(r.final).toMatchObject({ type: "done", text: "control error: Not allowed with this sign-in." });
+  // An elicitation is refused with a reason that says nobody was asked, never as if the person had declined (#198).
+  const ended = r.events.flatMap((e) => (e.type === "done" ? [e.text] : [])).join("");
+  expect(ended).toContain("nobody was shown the form");
+  expect(ended).toContain("Not allowed with this sign-in");
   expect(lines.join("\n")).toContain("control_request elicitation");
 });
 

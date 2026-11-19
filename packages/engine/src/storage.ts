@@ -27,18 +27,30 @@ import {
 import { recordAudit } from "./audit";
 import { openSecret, randomToken, sealSecret, sha256 } from "./crypto";
 import { NotFoundError, ValidationError } from "./errors";
+import { transcriptKey } from "./file-reader";
 import { assertStorageRoom } from "./limits";
 import { assertPublicHttpsUrl, outboundFetch, type ResolveHost } from "./net-guard";
 import { requirePermission } from "./organizations";
 import { enqueue } from "./outbox";
+import { withoutTrailingSlashes } from "./url-text";
 
-const { storageConfigs, storageMigrations, artifacts, artifactVersions, skillFiles, voiceClips } = schema;
+const { storageConfigs, storageMigrations, artifacts, artifactVersions, skillFiles, voiceClips, liveAssets, liveDocs } =
+  schema;
 
 type StorageConfigRow = typeof storageConfigs.$inferSelect;
 type MigrationRow = typeof storageMigrations.$inferSelect;
 
-/** What an admin types for "Your own bucket". Keys empty = keep the stored ones. */
+/**
+ * Where the bucket is, as the admin picked it when connecting: it only says which steps the app shows and how it names
+ * the bucket in use, never how the server reaches it.
+ */
+export const STORAGE_PROVIDERS = ["r2", "s3", "b2", "other"] as const;
+export type StorageProvider = (typeof STORAGE_PROVIDERS)[number];
+
+/** What an admin types for "Your own storage". Keys empty = keep the stored ones. */
 export interface S3Input {
+  /** The service picked in the app; absent from an older app. */
+  provider?: StorageProvider | null;
   endpoint: string;
   region: string;
   bucket: string;
@@ -61,6 +73,8 @@ export interface StorageMigrationView {
 export interface StorageView {
   kind: "agentes" | "s3";
   s3: {
+    /** Null for settings saved before the app said it. */
+    provider: StorageProvider | null;
     endpoint: string;
     region: string;
     bucket: string;
@@ -93,11 +107,16 @@ const TEST_VALID_MS = 30 * 60_000;
 const aadFor = (orgId: string, id: string) => `storage:${orgId}:${id}`;
 const hint = (s: string) => (s.length <= 4 ? "••••" : `••••${s.slice(-4)}`);
 const keyPrefix = (prefix: string | null | undefined) => {
-  const p = (prefix ?? "").trim().replace(/^\/+|\/+$/g, "");
+  const typed = (prefix ?? "").trim();
+  // Slashes out from both ends by index, not by `/^\/+|\/+$/g`, which rescans each inner run of them.
+  let start = 0;
+  while (typed.charAt(start) === "/") start++;
+  const p = withoutTrailingSlashes(typed.slice(start));
   return p ? `${p}/` : "";
 };
 
 interface StoredOptions {
+  provider: StorageProvider | null;
   endpoint: string;
   region: string;
   bucket: string;
@@ -109,6 +128,7 @@ interface StoredOptions {
 function optionsOf(row: StorageConfigRow): StoredOptions {
   const o = row.options as Partial<StoredOptions>;
   return {
+    provider: STORAGE_PROVIDERS.find((p) => p === o.provider) ?? null,
     endpoint: String(o.endpoint ?? ""),
     region: String(o.region ?? "auto"),
     bucket: String(o.bucket ?? ""),
@@ -130,7 +150,7 @@ function s3Store(deps: StorageDeps, settings: S3Settings) {
 }
 
 async function storeOf(deps: StorageDeps, row: StorageConfigRow): Promise<BlobStore> {
-  const o = optionsOf(row);
+  const { provider: _, ...o } = optionsOf(row);
   const secretAccessKey = await secretOf(deps, row);
   return s3Store(deps, { ...o, secretAccessKey });
 }
@@ -204,7 +224,7 @@ export function storageErrorText(error: unknown): string {
 
 /** Settings plus keys (the stored ones when the input leaves them empty). */
 async function resolveInput(deps: StorageDeps, orgId: string, input: S3Input) {
-  const endpoint = input.endpoint.trim().replace(/\/+$/, "");
+  const endpoint = withoutTrailingSlashes(input.endpoint.trim());
   const bucket = input.bucket.trim();
   const region = input.region.trim() || "auto";
   if (!bucket || !/^[a-z0-9][a-z0-9.-]{1,62}$/.test(bucket))
@@ -224,11 +244,12 @@ async function resolveInput(deps: StorageDeps, orgId: string, input: S3Input) {
   return { settings, prefix, fingerprint };
 }
 
-function failedAtFirstStep(error: string): StorageTestResult {
+function failedAtFirstStep(error: string, code: string): StorageTestResult {
   const steps = (["write", "read", "list", "delete"] as const).map((step, i) => ({
     step,
     ok: false,
     error: i === 0 ? error : null,
+    code: i === 0 ? code : null,
   }));
   return { ok: false, steps };
 }
@@ -280,9 +301,9 @@ export async function testStorage(
     if (error instanceof ValidationError) return error;
     throw error;
   });
-  if (resolved instanceof ValidationError) return failedAtFirstStep(resolved.message);
+  if (resolved instanceof ValidationError) return failedAtFirstStep(resolved.message, storageErrorCode(resolved));
   const result = await probe(s3Store(deps, resolved.settings), resolved.prefix ?? "").catch((error: unknown) =>
-    failedAtFirstStep(storageErrorText(error)),
+    failedAtFirstStep(storageErrorText(error), storageErrorCode(error)),
   );
   const id = Bun.randomUUIDv7();
   const { settings } = resolved;
@@ -293,6 +314,8 @@ export async function testStorage(
       orgId,
       kind: "s3",
       options: {
+        // Not part of the fingerprint: the same bucket picked under another name is still the same bucket.
+        provider: STORAGE_PROVIDERS.find((p) => p === input.provider) ?? null,
         endpoint: settings.endpoint,
         region: settings.region,
         bucket: settings.bucket,
@@ -396,6 +419,16 @@ function migrationView(m: MigrationRow | undefined | null): StorageMigrationView
   return { status: m.status, copied: m.copied, total: m.total, error: m.error };
 }
 
+/**
+ * Whether a `running` migration has no job behind it any more (its worker died on its last attempt), so asking again
+ * starts it over instead of answering "running" forever. `runMigration` writes `updatedAt` after every file it copies.
+ */
+function migrationStalled(m: MigrationRow, now: Date): boolean {
+  // ponytail: one file that takes longer than this to copy reads as stalled, and asking again then starts a second
+  // job beside the first (as every second ask did before). A beat written while a file copies, if files get that large.
+  return now.getTime() - m.updatedAt.getTime() > 10 * 60_000;
+}
+
 async function latestMigration(db: Database, orgId: string) {
   const [m] = await db
     .select()
@@ -415,6 +448,7 @@ export async function getStorage(db: Database, actorId: string, orgId: string): 
   return {
     kind: "s3",
     s3: {
+      provider: o.provider,
       endpoint: o.endpoint,
       region: o.region,
       bucket: o.bucket,
@@ -464,22 +498,41 @@ export const storedBytesQueries = (db: Executor, orgId: string) =>
       })
       .from(voiceClips)
       .where(and(eq(voiceClips.orgId, orgId), isNull(voiceClips.audioDeletedAt))),
+    // Live files' pictures (ADR 0196 §8), out of the trash like the versions.
+    db
+      .select({
+        platform: sql<string>`coalesce(sum(${liveAssets.size}) filter (where ${liveAssets.storageConfigId} is null), 0)`,
+        own: sql<string>`coalesce(sum(${liveAssets.size}) filter (where ${liveAssets.storageConfigId} is not null), 0)`,
+      })
+      .from(liveAssets)
+      .innerJoin(artifacts, eq(artifacts.id, liveAssets.artifactId))
+      .where(and(eq(liveAssets.orgId, orgId), eq(artifacts.orgId, orgId), isNull(artifacts.deletedAt))),
+    // Live files' documents, kept in this server's database whatever storage the workspace uses (ADR 0196 §4).
+    db
+      .select({ platform: sql<string>`coalesce(sum(${liveDocs.stateBytes}), 0)`, own: sql<string>`0` })
+      .from(liveDocs)
+      .innerJoin(artifacts, eq(artifacts.id, liveDocs.artifactId))
+      .where(and(eq(liveDocs.orgId, orgId), eq(artifacts.orgId, orgId), isNull(artifacts.deletedAt))),
   ] as const;
 
 /**
  * What a workspace's files take, summed from the size each one recorded when it was written: no bucket is listed and
  * no folder walked. It counts every version kept of the Drive's files (uploads, what agents make or bring from their
  * computers, files attached to messages, issues and wiki pages) and every stored file of its skills, deleted skills'
- * included, as their files stay, and the voice recordings still kept. Left out: the Drive's trash, which goes for good after 30 days; the workspace's
+ * included, as their files stay, the voice recordings still kept, and live files' pictures and documents (ADR 0196).
+ * Left out: the Drive's trash, which goes for good after 30 days; the workspace's
  * logo, connectors' icons and people's photos, small and with no size on record; the old copies a copy between
  * storages (`runMigration`) leaves where the files were.
  */
 export async function storedBytes(db: Executor, orgId: string): Promise<StoredBytes> {
-  const [[files], [skills], [voice]] = await Promise.all(storedBytesQueries(db, orgId));
-  return {
-    platformBytes: Number(files?.platform ?? 0) + Number(skills?.platform ?? 0) + Number(voice?.platform ?? 0),
-    ownBucketBytes: Number(files?.own ?? 0) + Number(skills?.own ?? 0) + Number(voice?.own ?? 0),
-  };
+  const sums = await Promise.all(storedBytesQueries(db, orgId));
+  let platformBytes = 0;
+  let ownBucketBytes = 0;
+  for (const [sum] of sums) {
+    platformBytes += Number(sum?.platform ?? 0);
+    ownBucketBytes += Number(sum?.own ?? 0);
+  }
+  return { platformBytes, ownBucketBytes };
 }
 
 export async function getMigration(db: Database, actorId: string, orgId: string) {
@@ -496,6 +549,15 @@ const notAt = (orgId: string, target: string | null) =>
     sql`exists (select 1 from ${artifacts} where ${artifacts.id} = ${artifactVersions.artifactId} and ${artifacts.deletedAt} is null)`,
     target ? or(isNull(artifactVersions.storageConfigId), ne(artifactVersions.storageConfigId, target)) : undefined,
     target ? undefined : sql`${artifactVersions.storageConfigId} is not null`,
+  );
+
+/** Live files' pictures not yet where new files go, those of files out of the trash (ADR 0196 §8). */
+const assetsNotAt = (orgId: string, target: string | null) =>
+  and(
+    eq(liveAssets.orgId, orgId),
+    sql`exists (select 1 from ${artifacts} where ${artifacts.id} = ${liveAssets.artifactId} and ${artifacts.deletedAt} is null)`,
+    target ? or(isNull(liveAssets.storageConfigId), ne(liveAssets.storageConfigId, target)) : undefined,
+    target ? undefined : sql`${liveAssets.storageConfigId} is not null`,
   );
 
 /** Voice recordings not yet where new files go; those already swept have nothing to copy (ADR 0100). */
@@ -516,6 +578,11 @@ export async function startMigration(deps: StorageDeps, actorId: string, orgId: 
   await requirePermission(deps.db, actorId, orgId, "configure");
   const target = (await activeConfig(deps.db, orgId))?.id ?? null;
   const last = await latestMigration(deps.db, orgId);
+  // A running one is returned as is (asked twice, two jobs would copy the same files and count each twice), unless
+  // nothing is behind it any more.
+  if (last?.status === "running" && !migrationStalled(last, new Date())) {
+    return migrationView(last) as StorageMigrationView;
+  }
   const [counted] = await deps.db
     .select({ n: sql<number>`count(*)::int` })
     .from(artifactVersions)
@@ -524,7 +591,11 @@ export async function startMigration(deps: StorageDeps, actorId: string, orgId: 
     .select({ n: sql<number>`count(*)::int` })
     .from(voiceClips)
     .where(clipsNotAt(orgId, target));
-  const remaining = (counted?.n ?? 0) + (countedClips?.n ?? 0);
+  const [countedAssets] = await deps.db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(liveAssets)
+    .where(assetsNotAt(orgId, target));
+  const remaining = (counted?.n ?? 0) + (countedClips?.n ?? 0) + (countedAssets?.n ?? 0);
   // Back onto this server's storage, the files it copies count against its limit.
   if (target === null) {
     const [moving] = await deps.db
@@ -535,7 +606,11 @@ export async function startMigration(deps: StorageDeps, actorId: string, orgId: 
       .select({ bytes: sql<string>`coalesce(sum(${voiceClips.size}), 0)` })
       .from(voiceClips)
       .where(clipsNotAt(orgId, null));
-    const bytes = Number(moving?.bytes ?? 0) + Number(movingClips?.bytes ?? 0);
+    const [movingAssets] = await deps.db
+      .select({ bytes: sql<string>`coalesce(sum(${liveAssets.size}), 0)` })
+      .from(liveAssets)
+      .where(assetsNotAt(orgId, null));
+    const bytes = Number(moving?.bytes ?? 0) + Number(movingClips?.bytes ?? 0) + Number(movingAssets?.bytes ?? 0);
     if (bytes > 0) await assertStorageRoom(deps.db, orgId, bytes, { daily: false });
   }
   const resume = last && last.status !== "done" && last.toStorageConfigId === target ? last : null;
@@ -653,7 +728,10 @@ export async function runMigration(deps: StorageDeps, migrationId: string, optio
         // The row now points at the target copy. Drop the old object only when it was on our platform store,
         // so cycling off the platform frees our disk; a workspace's own bucket is theirs (and may be a backup),
         // so its copies stay. Never delete the key the row now holds (a store that overwrote in place).
-        if (v.storageConfigId === null && v.blobKey !== key) await source.delete(v.blobKey).catch(() => undefined);
+        if (v.storageConfigId === null && v.blobKey !== key) {
+          await source.delete(v.blobKey).catch(() => undefined);
+          await source.delete(transcriptKey(v.blobKey)).catch(() => undefined);
+        }
       } catch (error) {
         await db
           .update(storageMigrations)
@@ -691,6 +769,39 @@ export async function runMigration(deps: StorageDeps, migrationId: string, optio
         // As for the Drive's files: only our own store frees the old copy.
         if (clip.storageConfigId === null && clip.blobKey !== key)
           await source.delete(clip.blobKey).catch(() => undefined);
+      } catch (error) {
+        await db
+          .update(storageMigrations)
+          .set({ status: "failed", error: storageErrorText(error), copied, cursor, updatedAt: new Date() })
+          .where(eq(storageMigrations.id, m.id));
+        return;
+      }
+      copied++;
+      await db.update(storageMigrations).set({ copied, updatedAt: new Date() }).where(eq(storageMigrations.id, m.id));
+    }
+  }
+  // Live files' pictures last, the same way: each one copied stops matching.
+  for (;;) {
+    const batch = await db
+      .select()
+      .from(liveAssets)
+      .where(assetsNotAt(m.orgId, m.toStorageConfigId))
+      .limit(options.batch ?? 50);
+    if (batch.length === 0) break;
+    for (const asset of batch) {
+      try {
+        const source = await resolver.forConfig(m.orgId, asset.storageConfigId);
+        const object = await source.get(asset.blobKey);
+        if (!object) throw new StorageError("not_found", `missing object ${asset.blobKey}`);
+        const key = `${target.prefix}artifacts/${asset.artifactId}/assets/${asset.id}`;
+        await target.store.put(key, object.body, { contentType: object.contentType });
+        await db
+          .update(liveAssets)
+          .set({ storageConfigId: target.storageConfigId, blobKey: key })
+          .where(and(eq(liveAssets.artifactId, asset.artifactId), eq(liveAssets.id, asset.id)));
+        if (asset.storageConfigId === null && asset.blobKey !== key) {
+          await source.delete(asset.blobKey).catch(() => undefined);
+        }
       } catch (error) {
         await db
           .update(storageMigrations)

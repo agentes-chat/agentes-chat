@@ -103,7 +103,7 @@ describe("Dashboards: in the sidebar's More, and the list (ADR 0135 §14)", () =
     const workspace = section("Do workspace");
     expect(workspace.textContent).toContain("todo mundo vê");
     expect(within(workspace).getByRole("link", { name: "Acme hoje" }).textContent).toContain("Criado por você");
-    const roles = section("Dos seus papéis");
+    const roles = section("Dos seus cargos");
     const comercial = within(roles).getByRole("link", { name: "Comercial" });
     expect(comercial.textContent).toContain("Criado por Ada");
     expect(comercial.getAttribute("href")).toMatch(new RegExp(`^/org/${ORG_ID}/dashboards/`));
@@ -420,8 +420,9 @@ describe("Routines: a widget's routine", () => {
     const view = await renderApp(`/org/${ORG_ID}/routines`, { api });
     await settle(8);
     const card = screen().getByRole("article", { name: "PRs esperando revisão" });
-    expect(card.textContent).toContain("Ada · atualiza o widget, sem mensagem");
-    expect(card.textContent).toContain("Widget de painel");
+    // Two lines: its name, then when it runs; no "Widget" chip (the trigger's icon is the widget's grid).
+    expect(card.textContent).toContain("A cada hora");
+    expect(card.querySelector(".ac-chip")).toBeNull();
     expect(card.textContent).not.toContain("Drive");
     const trigger = within(card).getByRole("button", { name: "Mais ações: PRs esperando revisão" });
     trigger.focus();

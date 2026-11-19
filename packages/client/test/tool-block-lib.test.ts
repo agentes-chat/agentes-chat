@@ -2,11 +2,12 @@ import { describe, expect, test } from "bun:test";
 import type { TFunction } from "i18next";
 import type { LiveRun, LiveWork } from "../src/index";
 import { applyChannelEvent, emptyStreams, isQuiet, QUIET_AFTER_MS } from "../src/index";
-import { type Activity, barEntries, toolActivity } from "../src/lib/activity";
+import { type Activity, barEntries, serviceKey, toolActivity } from "../src/lib/activity";
 import {
   callLogo,
   foldSteps,
   formatLineTime,
+  makingImage,
   oneCall,
   quietLine,
   quietWork,
@@ -637,6 +638,18 @@ describe("each call's service and its logo", () => {
     expect(second?.hint).toBe("list issues");
   });
 
+  test("a connection's service by its name, each run of spaces or parentheses read once", () => {
+    expect(serviceKey("Google Drive (ana@acme.com) 2")).toBe("google_drive");
+    expect(serviceKey("Notion  3")).toBe("notion");
+    expect(serviceKey("A (b) (c)")).toBe("a_(b)");
+    expect(serviceKey("A (b)) 2")).toBe("a_(b))");
+    const started = performance.now();
+    expect(serviceKey(`a${" ".repeat(100_000)}b`)).toBe("a_b");
+    expect(serviceKey(`a${"(".repeat(100_000)}`)).toBe(`a${"(".repeat(100_000)}`);
+    expect(serviceKey(`a${" (".repeat(50_000)}x)`)).toBe("a");
+    expect(performance.now() - started).toBeLessThan(1000);
+  });
+
   test("the block's logos: each service once, in order of first use, four at most", () => {
     const items = toolItemsLive([
       call("1", "mail_wnogueira_search", { connector: "Email", service: "gmail" }),
@@ -782,6 +795,29 @@ describe("a lone quick read that only fed the answer shows no card", () => {
     for (const [why, work] of kept) expect([why, quietWork(toolItemsLive(work))]).toEqual([why, false]);
     // Lookups aren't steps: a usage check after looking the tool up is still a lone read.
     expect(quietWork(toolItemsLive([call("1", "find_tools"), call("2", "get_my_usage")]))).toBe(true);
+  });
+
+  test("a picture its own image tool made is its reply's picture: no card, however long it took; failed, it shows", () => {
+    expect(toolActivity("image_generation").kind).toBe("creatingImage");
+    expect(quietWork(toolItemsLive([call("1", "image_generation", { ms: 48_000 })]))).toBe(true);
+    expect(quietWork(toolItemsLive([call("1", "image_generation", { ms: 48_000, failed: true })]))).toBe(false);
+    expect(quietWork(toolItemsLive([call("1", "image_generation", { running: true })]))).toBe(false);
+    // Beside another call, the block stays.
+    expect(quietWork(toolItemsLive([call("1", "image_generation"), call("2", "create_issue")]))).toBe(false);
+    const saved = savedOneLine({ work: { steps: 1, calls: [{ name: "image_generation" }], durationMs: 50_000 } });
+    expect(saved && quietLine(saved)).toBe(true);
+  });
+
+  test("while it makes a picture its live run says so (`makingImage`), until another step replaces it", () => {
+    expect(makingImage({ step: { tool: "image_generation" } })).toBe(true);
+    expect(makingImage({ step: { tool: "shell" } })).toBe(false);
+    expect(makingImage({ step: { said: "Vou desenhar" } })).toBe(false);
+    expect(makingImage({})).toBe(false);
+    // Ours onto a canvas (ADR 0197): while its call runs, on any brain; its end (`tool` null) ends it.
+    expect(makingImage({ tool: "generate_image" })).toBe(true);
+    expect(makingImage({ tool: "mcp__agentes__generate_image" })).toBe(true);
+    expect(makingImage({ tool: "mcp__higgsfield__generate_image" })).toBe(false);
+    expect(makingImage({ tool: null })).toBe(false);
   });
 
   test("saved: the run's lone call is quiet by meta.work; calls another card shows are left out of the count", () => {

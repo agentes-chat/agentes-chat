@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import type { Credential } from "@agenteschat/client";
 import { setupDom } from "@agenteschat/ui/testing/dom";
 
 setupDom();
@@ -11,9 +12,22 @@ import { pick, rowMenu } from "./catalog";
 import { createFakeApi, OPENROUTER_KEY, OPENROUTER_MODELS, ORG_ID, seedState } from "./fake-api";
 import { shownText } from "./hint";
 import { pick as pickOption } from "./new-agent-flow";
+import { openDetails, shareRow } from "./plan-rows";
 import { renderApp, screen, settle, showIn } from "./render";
 
 afterEach(() => cleanup());
+
+/** Opens a key row's ⋯ menu in Settings › Chaves de provedor. */
+async function keyMenu(label: string) {
+  const button = screen().getByRole("button", { name: `Ações de ${label}` });
+  button.focus();
+  await act(async () => {
+    fireEvent.keyDown(button, { key: "Enter" });
+    fireEvent.keyUp(button, { key: "Enter" });
+  });
+  await settle(2);
+  return screen().getByRole("menu");
+}
 
 const go = async (state = seedState(), path = "settings") => {
   const r = await renderApp(`/org/${ORG_ID}/${path}`, { api: createFakeApi(state) });
@@ -41,8 +55,8 @@ describe("Configurações do workspace", () => {
     expect(screen().getByRole("heading", { level: 2, name: "Geral" })).toBeTruthy();
     expect(screen().queryByRole("button", { name: "Salvar organização" })).toBeNull();
     const field = screen().getByLabelText("Contexto do workspace");
-    // The server's cap: typing stops there, never a refusal after sending.
-    expect(field.getAttribute("maxlength")).toBe("20000");
+    // Nothing typed or pasted is cut: the limit shows near it, never a native cap.
+    expect(field.getAttribute("maxlength")).toBeNull();
     await type(field, "A Acme faz um app para clínicas.");
     await act(async () => fireEvent.blur(field));
     await settle(4);
@@ -125,8 +139,48 @@ describe("Configurações do workspace", () => {
     );
     expect(desktop.textContent).not.toContain("TELEMETRY=off");
     cleanup();
+    // In that app, on that very computer: the line says so and the button opens its Preferences › Servers.
+    const win = window as { __agentesDesktop?: unknown; __TAURI_INTERNALS__?: unknown };
+    const asked: Record<string, unknown>[] = [];
+    win.__agentesDesktop = { version: "0.8.6" };
+    win.__TAURI_INTERNALS__ = {
+      invoke: async (cmd: string, args: { request?: Record<string, unknown> }) => {
+        if (cmd !== "this_mac" || !args.request) return {};
+        asked.push(args.request);
+        return args.request.kind === "status" ? { orgs: [], agentsHere: true, local: true } : {};
+      },
+    };
+    try {
+      await go(seedState({ telemetry: { enabled: true, envOff: true, report: { report: 1, install: "desktop" } } }));
+      const here = screen().getByRole("region", { name: "Estatísticas de uso" });
+      expect(here.querySelector(".settings-row__status")?.textContent).toBe(
+        "Desligado no app do agentes.chat deste computador.Abrir Servidores",
+      );
+      await click(within(here).getByRole("button", { name: "Abrir Servidores" }));
+      expect(asked).toContainEqual({ kind: "prefs", tab: "servers" });
+    } finally {
+      delete win.__agentesDesktop;
+      delete win.__TAURI_INTERNALS__;
+    }
+    cleanup();
     await go();
     expect(screen().queryByRole("region", { name: "Estatísticas de uso" })).toBeNull();
+  });
+
+  test("Notificações: no phone gets them yet, so the row opens the phone app with a code", async () => {
+    await go(seedState(), "settings/notifications");
+    // How to turn them on is the ⓘ's, as on the rows beside it; the button keeps the name's line.
+    const row = document.getElementById("notice-phone-help")?.closest(".settings-row") as HTMLElement;
+    expect(document.getElementById("notice-phone-help")?.textContent).toBe("Ative no app do celular");
+    expect(document.getElementById("notice-phone-status")).toBeNull();
+    expect(row.classList.contains("settings-row--button")).toBe(true);
+    expect(row.textContent).not.toContain("›");
+    // The button's word is short enough for the name's line; a screen reader hears what it opens.
+    const open = within(row).getByRole("button", { name: "Abrir no celular" });
+    expect(open.textContent).toBe("Abrir");
+    await click(open);
+    await settle(4);
+    expect(screen().getByRole("dialog", { name: "Abrir no celular" })).toBeTruthy();
   });
 
   test("connected connectors are listed; disconnect asks first", async () => {
@@ -357,7 +411,7 @@ describe("Configurações do workspace", () => {
     expect(field.getAttribute("placeholder")).toBe("sk-or-v1-…");
     expect(within(add).getByRole("link", { name: "Crie a chave em openrouter.ai/keys." })).toBeTruthy();
     expect(add.textContent).toContain(
-      "As configurações de privacidade da OpenRouter decidem quais provedores podem guardar o que seus agentes enviam.",
+      "O que seus agentes enviam é repassado por OpenRouter à empresa que faz ou hospeda o modelo, sob os termos e as configurações de privacidade de OpenRouter.",
     );
     await click(within(add).getByRole("button", { name: "Salvar chave" }));
     await settle(4);
@@ -366,6 +420,21 @@ describe("Configurações do workspace", () => {
       label: "OpenRouter",
     });
     expect(document.body.textContent).toContain("O provedor não aceitou esta chave.");
+  });
+
+  test("a Command Code key: its line names Command Code as the one that passes what is sent on", async () => {
+    await go(seedState(), "settings/keys");
+    const keys = screen().getByRole("region", { name: "Chaves de provedor" });
+    await click(within(keys).getByRole("button", { name: "Adicionar chave" }));
+    const add = screen().getByRole("dialog", { name: "Adicionar chave de API" });
+    // Joined at run time: a literal key shape reads as a real key to the secret scan.
+    await type(within(add).getByLabelText("Chave da API"), ["user", "x".repeat(24)].join("_"));
+    await click(within(add).getByRole("button", { name: "Salvar chave" }));
+    await click(within(add).getByRole("button", { name: "Command Code" }));
+    expect(add.textContent).toContain(
+      "O que seus agentes enviam é repassado por Command Code à empresa que faz ou hospeda o modelo, sob os termos e as configurações de privacidade de Command Code.",
+    );
+    expect(add.textContent).not.toContain("OpenRouter");
   });
 
   test("a key with no credit: nothing saved, the provider's words in the dialog, and the page that fixes it", async () => {
@@ -432,9 +501,14 @@ describe("Configurações do workspace", () => {
     expect(keys().textContent).toContain("Padrão do workspace");
     // Platform key not offered by this server: not mentioned.
     expect(keys().textContent).not.toContain("chave do Claude deste servidor");
-    // The default key can go too: its dialog says what happens.
-    expect(within(keys()).getByRole("button", { name: "Apagar" }).hasAttribute("disabled")).toBe(false);
-    await click(within(keys()).getByRole("button", { name: "Trocar a chave" }));
+    // The default key can go too: its dialog says what happens. The row's actions are in its ⋯ menu.
+    const menu = await keyMenu("Claude da Acme");
+    expect(
+      within(menu)
+        .getAllByRole("menuitem")
+        .map((i) => i.textContent),
+    ).toEqual(["Trocar a chave", "Apagar"]);
+    await click(within(menu).getByRole("menuitem", { name: "Trocar a chave" }));
     const rotate = screen().getByRole("dialog", { name: "Trocar a chave Claude da Acme" });
     expect(rotate.textContent).toContain("Os agentes que usam esta chave passam para a nova na hora.");
     await type(within(rotate).getByLabelText("Chave da API"), "sk-ant-api03-new-key-9999");
@@ -467,10 +541,7 @@ describe("Configurações do workspace", () => {
     expect(state.calls.filter((c) => c.method === "orgs.updateSettings").at(-1)?.args[1]).toEqual({
       defaultCredentialId: state.credentials[1]?.id,
     });
-    const anthropicRow = within(keys()).getByText("Claude da Acme").closest(".ac-list__row") as HTMLElement;
-    const delOld = within(anthropicRow).getByRole("button", { name: "Apagar" });
-    expect(delOld.hasAttribute("disabled")).toBe(false);
-    await click(delOld);
+    await click(within(await keyMenu("Claude da Acme")).getByRole("menuitem", { name: "Apagar" }));
     await click(
       within(screen().getByRole("dialog", { name: /Apagar a chave/ })).getByRole("button", { name: "Apagar" }),
     );
@@ -496,14 +567,17 @@ describe("Configurações do workspace", () => {
     expect(plans.textContent).not.toContain("MacBook");
     await click(head);
     expect(head.getAttribute("aria-expanded")).toBe("true");
-    expect(plans.querySelector(".plan-row__body .plan-acct__sub")?.textContent).toBe("Claude Code");
+    // The logo names the maker: no line saying it again.
+    expect(plans.querySelector(".plan-row__body")?.textContent).not.toContain("Claude Code");
     expect(within(plans).getByRole("meter", { name: "Semana" }).getAttribute("aria-valuenow")).toBe("41");
-    // The week's bar split by agent, and one list: no line of parts under it.
+    // The bars stay plain until Detalhes opens; then the week's bar splits by agent, over one list.
+    expect(within(plans).getByRole("meter", { name: "Semana" }).querySelectorAll(".ac-meter__seg").length).toBe(0);
+    await act(async () => openDetails(plans));
     expect(within(plans).getByRole("meter", { name: "Semana" }).querySelectorAll(".ac-meter__seg").length).toBe(2);
     expect(plans.textContent).not.toContain("Ada ≈ 30%");
-    expect([...plans.querySelectorAll(".plan-shares__row")].map((r) => r.textContent)).toEqual([
-      "Ada · semana 30% · 4,5 mi tokens",
-      "Atlas · semana 11% · 600 mil tokens",
+    expect([...plans.querySelectorAll(".plan-shares__row")].map(shareRow)).toEqual([
+      "Ada · 30% · 4,5 mi tokens",
+      "Atlas · 11% · 600 mil tokens",
     ]);
     expect(plans.textContent).toContain("5,1 mi tokens este mês · ≈ US$\u00a092,00 pelo preço da API");
     const api = screen().getByRole("region", { name: "API do workspace" });
@@ -619,6 +693,8 @@ describe("Configurações do workspace", () => {
     expect(document.body.textContent).not.toContain("Acme builds rockets");
     cleanup();
     await go(state, "settings/connectors");
+    // Their own connections only: the team's side has no Adicionar for them.
+    await click(screen().getByRole("radio", { name: /Equipe/ }));
     expect(screen().queryByRole("button", { name: "Adicionar conector" })).toBeNull();
     cleanup();
     // IA e uso: the plans in percentages, never the workspace's keys, money or report.
@@ -720,6 +796,7 @@ describe("a plan account's agents (IA e uso › Contas)", () => {
     await settle(5);
     const plans = screen().getByRole("region", { name: "Contas" });
     await click(within(plans).getByRole("button", { name: /^A conta que os seus agentes dividem/ }));
+    await act(async () => openDetails(plans));
     const week = within(plans).getByRole("meter", { name: "Semana" });
     const segs = [...week.querySelectorAll<HTMLElement>(".ac-meter__seg")];
     // Colours only for the agents the list shows: the folded ones stay the plain use under them.
@@ -727,33 +804,34 @@ describe("a plan account's agents (IA e uso › Contas)", () => {
     expect(segs.every((s) => s.style.getPropertyValue("--seg-deep").startsWith("#"))).toBe(true);
     // The total stays at the bar's right.
     expect(plans.textContent).toContain("Semana41%");
-    const rows = () => [...plans.querySelectorAll(".plan-shares__row")].map((r) => r.textContent);
-    // One line of words per agent, starting at the list's left edge: no column titles over empty cells.
+    const rows = () => [...plans.querySelectorAll(".plan-shares__row")].map(shareRow);
+    // Columns per agent, one fact each, the window's name once over the shares.
     expect(rows()).toEqual([
-      "Ada · semana 30% · 4,5 mi tokens",
-      "Atlas · semana 11% · 600 mil tokens",
-      "Rio · semana 2% · 900 mil tokens",
-      "Nova · semana 1,5% · 700 mil tokens",
-      "Lia · semana 1,2% · 500 mil tokens",
-      "+2 agentes · semana 1,5% · 500 mil tokens",
+      "Ada · 30% · 4,5 mi tokens",
+      "Atlas · 11% · 600 mil tokens",
+      "Rio · 2% · 900 mil tokens",
+      "Nova · 1,5% · 700 mil tokens",
+      "Lia · 1,2% · 500 mil tokens",
+      "+2 agentes · 1,5% · 500 mil tokens",
     ]);
-    expect(plans.querySelector(".plan-shares__head")).toBeNull();
+    expect(plans.querySelector(".plan-group__label .plan-shares__share")?.textContent).toBe("semana");
     expect(plans.textContent).not.toContain("Este mês");
-    // When it renews, once, under the list; then how old the numbers are; then the month.
+    // Each window says when it renews under its own bar; fresh numbers say nothing of their age; Detalhes ends on the
+    // month.
     const text = plans.textContent ?? "";
-    expect(plans.querySelectorAll(".ac-planmeter__reset").length).toBe(1);
-    expect(plans.querySelector(".ac-planmeter__reset")?.textContent).toMatch(/^5h renova .+ · semana renova /);
+    expect(plans.querySelectorAll(".ac-planmeter__window .ac-planmeter__reset").length).toBeGreaterThan(0);
+    expect(text).not.toContain("Atualizado");
     const at = (piece: string) => text.indexOf(piece);
-    expect(at("+2 agentes")).toBeLessThan(at("5h renova"));
-    expect(at("5h renova")).toBeLessThan(at("Atualizado"));
-    expect(at("Atualizado")).toBeLessThan(at("5,1 mi tokens este mês"));
+    expect(at("renova")).toBeLessThan(at("Detalhes"));
+    expect(at("Detalhes")).toBeLessThan(at("+2 agentes"));
+    expect(at("+2 agentes")).toBeLessThan(at("5,1 mi tokens este mês"));
     expect(text.split("tokens este mês").length).toBe(2);
     // The folded row opens the rest in place.
     const more = within(plans).getByRole("button", { name: /\+2 agentes/ });
     expect(more.getAttribute("aria-expanded")).toBe("false");
     await click(more);
     await settle(2);
-    expect(rows().slice(5)).toEqual(["Theo · semana <1% · 300 mil tokens", "Bia · semana <1% · 200 mil tokens"]);
+    expect(rows().slice(5)).toEqual(["Theo · <1% · 300 mil tokens", "Bia · <1% · 200 mil tokens"]);
     expect(within(plans).queryByRole("button", { name: /\+2 agentes/ })).toBeNull();
   });
 });
@@ -875,4 +953,95 @@ test("Sua conta and Notificações in German and Japanese: every row keeps its �
     }
     cleanup();
   }
+});
+
+const endpointCred: Credential = {
+  id: "cred-custom",
+  provider: "custom",
+  label: "Gateway",
+  keyHint: "9f3c",
+  createdAt: "2026-11-01T10:00:00.000Z",
+  revokedAt: null,
+  endpoint: { style: "openai", baseURL: "https://llm.example.com/v1", models: [] },
+};
+
+test("a workspace's own endpoint key rotates whatever it looks like", async () => {
+  const { state } = await go(seedState({ credentials: [endpointCred] }), "settings/keys");
+  await click(within(await keyMenu("Gateway")).getByRole("menuitem", { name: "Trocar a chave" }));
+  const rotate = screen().getByRole("dialog", { name: "Trocar a chave Gateway" });
+  const field = within(rotate).getByLabelText("Chave da API");
+  // No provider's example or placeholder: this key is nobody's format.
+  expect(rotate.textContent).not.toContain("platform.claude.com");
+  expect(field.getAttribute("placeholder")).toBeNull();
+
+  await type(field, "tr_fake_endpoint_key");
+  await click(within(rotate).getByRole("button", { name: "Trocar a chave" }));
+  await settle(4);
+  // The fake logs the key redacted: the call itself is the proof the value passed the form's check.
+  expect(state.calls.find((c) => c.method === "agents.rotateCredential")?.args[1]).toBe("cred-custom");
+  expect(screen().queryByRole("dialog", { name: "Trocar a chave Gateway" })).toBeNull();
+});
+
+test("an endpoint key shorter than the server's floor is still caught", async () => {
+  const { state } = await go(seedState({ credentials: [endpointCred] }), "settings/keys");
+  await click(within(await keyMenu("Gateway")).getByRole("menuitem", { name: "Trocar a chave" }));
+  const rotate = screen().getByRole("dialog", { name: "Trocar a chave Gateway" });
+  await type(within(rotate).getByLabelText("Chave da API"), "tr_1");
+  await click(within(rotate).getByRole("button", { name: "Trocar a chave" }));
+  await settle(4);
+  expect(rotate.textContent).toContain("Cole a chave da API (pelo menos 8 caracteres).");
+  expect(state.calls.some((c) => c.method === "agents.rotateCredential")).toBe(false);
+});
+
+describe("the same key saved more than once", () => {
+  const key = (id: string, extra: Partial<Credential> = {}): Credential => ({
+    id,
+    provider: "custom",
+    label: "Gateway",
+    keyHint: "abcd",
+    endpoint: { style: "openai", baseURL: "https://llm.example.com/v1", models: [{ id: "m-1", check: "ok" }] },
+    createdAt: "2026-11-01T10:00:00.000Z",
+    revokedAt: null,
+    ...extra,
+  });
+
+  test("one row says how many copies, and Remover cópias folds them after the person confirms", async () => {
+    const credentials = [
+      key("cred-a", { copies: 3 }),
+      key("cred-b", { copyOf: "cred-a" }),
+      key("cred-c", { copyOf: "cred-a" }),
+      key("cred-d", { copyOf: "cred-a" }),
+    ];
+    const { state } = await go(seedState({ credentials }), "settings/keys");
+    const keys = screen().getByRole("region", { name: "Chaves de provedor" });
+    expect(within(keys).getAllByText("Gateway")).toHaveLength(1);
+    expect(keys.textContent).toContain("4 cópias iguais");
+    await click(within(await keyMenu("Gateway")).getByRole("menuitem", { name: "Remover cópias" }));
+    const confirm = screen().getByRole("dialog", { name: "Remover as cópias de Gateway?" });
+    expect(confirm.textContent).toContain("Os agentes, o padrão e os gastos das cópias passam para ela.");
+    await click(within(confirm).getByRole("button", { name: "Remover cópias" }));
+    await settle(4);
+    expect(state.calls.find((c) => c.method === "agents.removeCredentialCopies")?.args).toEqual([ORG_ID, "cred-a"]);
+    expect(document.body.textContent).toContain("3 cópias removidas.");
+    expect(keys.textContent).not.toContain("cópias iguais");
+  });
+
+  test("a key with no copies offers no Remover cópias", async () => {
+    await go(seedState({ credentials: [key("cred-a")] }), "settings/keys");
+    const items = within(await keyMenu("Gateway")).getAllByRole("menuitem");
+    expect(items.map((i) => i.textContent)).toEqual(["Trocar a chave", "Apagar"]);
+  });
+
+  test("saving a key the workspace already has says it was updated, and adds no row", async () => {
+    const claude = key("cred-a", { provider: "anthropic", label: "Claude", keyHint: "9999", endpoint: undefined });
+    const { state } = await go(seedState({ credentials: [claude] }), "settings/keys");
+    const keys = screen().getByRole("region", { name: "Chaves de provedor" });
+    await click(within(keys).getByRole("button", { name: "Adicionar chave" }));
+    const add = screen().getByRole("dialog", { name: "Adicionar chave de API" });
+    await type(within(add).getByLabelText("Chave da API"), "sk-ant-api03-same-key-9999");
+    await click(within(add).getByRole("button", { name: "Salvar chave" }));
+    await settle(4);
+    expect(state.credentials).toHaveLength(1);
+    expect(document.body.textContent).toContain("Essa chave já estava salva. Atualizei os dados.");
+  });
 });

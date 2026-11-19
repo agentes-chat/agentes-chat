@@ -9,11 +9,12 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
-import { act, fireEvent, render, within } from "@testing-library/react";
+import { act, fireEvent, render, waitFor, within } from "@testing-library/react";
 import { type ReactNode, StrictMode } from "react";
 import { AppProviders, type AppServices } from "@/app/providers";
 import { createQueryClient } from "@/app/query-client";
 import type { RouterContext } from "@/app/router-context";
+import { backToSignIn } from "@/app/unauthorized";
 import type { AuthClient } from "@/auth/client";
 import { OrgProvider } from "@/components/org-context";
 import { forgetComposerDrafts } from "@/hooks/useComposerDraft";
@@ -22,6 +23,7 @@ import { STORAGE_KEYS, sessionStore } from "@/lib/storage";
 import { createToastStore } from "@/lib/toast";
 import { RealtimeProvider } from "@/realtime/context";
 import { routeTree } from "@/routeTree.gen";
+import { fakeLiveOf } from "./fake-api";
 import { createFakeAuth } from "./fake-auth";
 import { fakeSockets } from "./fake-socket";
 
@@ -33,11 +35,12 @@ export function makeServices(
   api: ApiClient,
   auth: AuthClient = createFakeAuth().auth,
   createSocket: SocketFactory = fakeSockets().factory,
+  onUnauthorized: () => void = () => {},
 ): AppServices {
   const toasts = createToastStore();
   const i18n = createI18n("pt-BR");
   const queryClient = createQueryClient({
-    onUnauthorized: () => {},
+    onUnauthorized,
     onMutationError: (m) => toasts.show(m, "error"),
     describeError: (error) => errorText(i18n.t, error, i18n.language),
   });
@@ -51,7 +54,20 @@ export async function settle(times = 3) {
   for (let i = 0; i < times; i++) await act(() => new Promise((r) => setTimeout(r, 0)));
 }
 
+/**
+ * Waits for what a secret's send led to. The value is sealed first (WebCrypto, off the JS thread), which on a loaded
+ * machine outlasts any number of `settle` ticks.
+ */
+export const afterSealing = (check: () => void) => waitFor(check, { timeout: 10_000 });
+
 export const screen = () => within(document.body);
+
+/** A conversation header's search field, opened from its icon when it is still closed. */
+export function headerSearchBox(header = document.querySelector(".channel__header") as HTMLElement) {
+  const field = () => within(header).queryByRole("combobox", { name: "Buscar" }) as HTMLInputElement | null;
+  if (!field()) fireEvent.click(within(header).getByRole("button", { name: "Buscar" }));
+  return field() as HTMLInputElement;
+}
 
 /**
  * The app in another language, as a person's pick shows it, the page's `lang` too: CI's geometry capture keeps a
@@ -125,7 +141,8 @@ export async function renderPage(
   },
 ) {
   forgetExits();
-  const sockets = fakeSockets();
+  // A live file's socket reaches the fake API's live server (ADR 0196); the rest are the test's to drive.
+  const sockets = fakeSockets({ live: fakeLiveOf.get(options.api)?.server });
   const createSocket = options.createSocket ?? sockets.factory;
   const services = makeServices(options.api, options.auth, createSocket);
   const me = await options.api.account.me();
@@ -179,8 +196,11 @@ export async function renderApp(
   // Each app starts in its own language (pt-BR), whatever page language a test before it showed (`showIn`).
   document.documentElement.lang = "";
   forgetExits();
-  const sockets = fakeSockets();
-  const services = makeServices(options.api, options.auth, options.createSocket ?? sockets.factory);
+  const sockets = fakeSockets({ live: fakeLiveOf.get(options.api)?.server });
+  // An ended session is answered as the app answers it (`main.tsx`).
+  const services: AppServices = makeServices(options.api, options.auth, options.createSocket ?? sockets.factory, () =>
+    backToSignIn({ router, ...services }),
+  );
   const router = createRouter({
     routeTree,
     history: createMemoryHistory({ initialEntries: [path] }),

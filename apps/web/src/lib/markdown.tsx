@@ -1,15 +1,7 @@
 import { splitChannelRefs } from "@agenteschat/client/lib/channel-refs";
 import { loneIdRef, splitIdRefs } from "@agenteschat/client/lib/id-refs";
 import { linkPill } from "@agenteschat/client/lib/link-pills";
-import {
-  codeAndBoldParts,
-  headingId,
-  INLINE,
-  MENTION,
-  parseMarkdown,
-  parseWikiToken,
-  SAFE_URL,
-} from "@agenteschat/client/lib/markdown";
+import { headingId, INLINE, MENTION, parseMarkdown, parseWikiToken, SAFE_URL } from "@agenteschat/client/lib/markdown";
 import { parseFileLink, parseMessageLink } from "@agenteschat/client/lib/message-links";
 import { type ReactNode, useMemo } from "react";
 import { FileRef } from "@/chat/FileRef";
@@ -67,15 +59,40 @@ function withRefs(
 }
 
 function withMentions(text: string, key: string, mention?: MentionRenderer): ReactNode[] {
-  if (!mention) return [text];
+  if (!mention) return withRuns(text, key);
   const out: ReactNode[] = [];
   let last = 0;
   let n = 0;
   for (const m of text.matchAll(MENTION)) {
     const start = (m.index ?? 0) + (m[1]?.length ?? 0);
-    if (start > last) out.push(text.slice(last, start));
+    if (start > last) out.push(...withRuns(text.slice(last, start), `${key}-p${n}`));
     out.push(mention(m[2] ?? "", `${key}-m${n++}`));
     last = start + 1 + (m[2]?.length ?? 0);
+  }
+  if (last < text.length) out.push(...withRuns(text.slice(last), `${key}-p${n}`));
+  return out;
+}
+
+/** 32 or more characters with no space and a digit among them: a key, a hash or an id, never a word of a language. */
+const RUN = /\S{32,}/g;
+
+/**
+ * A code-like run (`RUN`) in the words as its own span that breaks at any letter: it fills each line to the edge as one
+ * block, where breaking only at its hyphens would leave ragged pieces and every line after cut mid-piece anyway.
+ */
+function withRuns(text: string, key: string): ReactNode[] {
+  const out: ReactNode[] = [];
+  let last = 0;
+  for (const m of text.matchAll(RUN)) {
+    if (!/\d/.test(m[0])) continue;
+    const at = m.index ?? 0;
+    if (at > last) out.push(text.slice(last, at));
+    out.push(
+      <span key={`${key}-r${at}`} className="md-run">
+        {m[0]}
+      </span>,
+    );
+    last = at + m[0].length;
   }
   if (last < text.length) out.push(text.slice(last));
   return out;
@@ -177,21 +194,6 @@ export function inlineWords(words: ReactNode, key = "w"): ReactNode {
   return typeof words === "string"
     ? renderInline(words, key, undefined, undefined, undefined, undefined, false)
     : words;
-}
-
-/** Code between backticks and **bold**, nothing else: words inside a control (an option, a button), where no link can go. */
-export function codeAndBold(text: string, key = "cb"): ReactNode[] {
-  return codeAndBoldParts(text).map((part, i) => {
-    const k = `${key}-${i}`;
-    if (part.mark === "code")
-      return (
-        <code key={k} className="ac-inlinecode">
-          {part.text}
-        </code>
-      );
-    if (part.mark === "bold") return <b key={k}>{part.text}</b>;
-    return part.text;
-  });
 }
 
 export interface MarkdownProps {

@@ -1,5 +1,6 @@
 import type { Agent, AgentAudience } from "@agenteschat/client";
 import type { AccessResource, Level, LevelState } from "@agenteschat/client/lib/access-levels";
+import type { EditorsValue } from "@agenteschat/client/lib/audience";
 import type { agentGrammar } from "@agenteschat/client/lib/grammar";
 import type { RepoChoice } from "@agenteschat/client/lib/repos";
 import { modeKey } from "@agenteschat/client/lib/workspace-mode";
@@ -35,6 +36,8 @@ export interface Draft {
   budget: string;
   owner: string;
   audience: AgentAudience;
+  /** "Quem pode editar": the choice and who is picked (kept while "owner" is chosen; saved empty then). */
+  editors: EditorsValue;
   levels: Record<string, LevelState>;
   repos: RepoChoice | undefined;
   skills: string[] | undefined;
@@ -58,7 +61,7 @@ export interface AgentEdit {
   /** The change for a key (a field, or `levels:{id}`). */
   changeOf: (key: string) => Change | undefined;
   can: (field: Field) => boolean;
-  errors: { name?: string; handle?: string; budget?: string; audience?: string; repos?: string };
+  errors: { name?: string; handle?: string; budget?: string; audience?: string; repos?: string; instructions?: string };
   /** The access tree's resources (empty while loading or unavailable). */
   resources: AccessResource[];
   accessState: "loading" | "ready" | "unavailable";
@@ -133,18 +136,23 @@ export function LockNote({ field }: { field: Field }) {
   const { org } = useOrg();
   const adminsOnly = useAdminsLock();
   const { viewer, ownerFirst } = useAgentEdit();
+  // Its owner edits how it works too (ADR 0085 addendum of 2026-11-17): instructions, role, skills, who edits it.
   const ownerToo =
+    field === "instructions" ||
+    field === "role" ||
+    field === "skills" ||
     field === "look" ||
     field === "levels" ||
     field === "repos" ||
     field === "audience" ||
+    field === "editors" ||
     field === "channels" ||
     field === "machine" ||
     field === "brain";
   return (
     <span className="agp-lock">
       <Icon name="lock" size={14} />
-      {ownerToo && ownerFirst && viewer === "member"
+      {ownerToo && ownerFirst && (viewer === "member" || viewer === "editor")
         ? t(modeKey(org, "agentPage.lock.adminsAndOwner"), { name: ownerFirst })
         : adminsOnly}
     </span>

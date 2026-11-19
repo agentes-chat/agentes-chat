@@ -51,7 +51,6 @@ test("every settings list with a name and pills uses the shared title line", asy
 test("Calendar's and Routines' lists show their words whole: they wrap, never end in a \"…\" that hides them", async () => {
   const top = topLevel(await builtCss("src/pages/routines.css", "src/pages/calendar.css"));
   for (const selector of [
-    ".routine-row__title",
     ".routine-row__sub",
     ".routine-row__to>span",
     ".routine-row__when-text b",
@@ -63,6 +62,9 @@ test("Calendar's and Routines' lists show their words whole: they wrap, never en
     expect([selector, last(top, selector, "text-overflow")]).toEqual([selector, undefined]);
     expect([selector, last(top, selector, "white-space")]).toEqual([selector, undefined]);
   }
+  // A routine's name is the exception: one line, ending in "…", with the whole name in its tooltip.
+  expect(last(top, ".routine-row__title", "white-space")).toBe("nowrap");
+  expect(last(top, ".routine-row__title", "text-overflow")).toBe("ellipsis");
   // Who and where it delivers keeps the row's width: its chips and its fix go under the words when there's no room.
   expect(last(top, ".routine-row__sub", "flex-wrap")).toBe("wrap");
   // A lane grows with its name, the routine's line on its middle.

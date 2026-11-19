@@ -1,6 +1,7 @@
 import { AGENT_FOLDERS_PROTOCOL, type PubSub, type SandboxProvider } from "@agenteschat/adapters";
 import { type Database, eq, schema } from "@agenteschat/db";
 import { getAgent, getAgentCached } from "./agents";
+import { managesAgent } from "./audience";
 import { recordAudit } from "./audit";
 import type { WorkspaceComputer } from "./context";
 import { checkDeviceUse, noteDeviceInUse, pickDevice, seenAgo, waitHint, workspaceDevices } from "./device-resolve";
@@ -17,14 +18,16 @@ import {
   REMOVED_COMPUTER_MESSAGE,
 } from "./machines";
 import { missionOfRun } from "./mission-context";
-import { can, requirePermission } from "./organizations";
+import { requirePermission } from "./organizations";
+import { isRightHand } from "./right-hand";
+import { machineScope, NO_HOME_MESSAGE, type ScopeContext, toolMachineId } from "./right-hand-seats";
 import { runnerUpdateWay } from "./runner-update";
+import { SANDBOX_SCOPE } from "./sandbox-scope";
 import type { ToolContext } from "./tools/types";
 
 const { orgSandboxSettings } = schema;
 
-/** The scope of the sandbox tools: on by default, and not covered by "all tools" (ADR 0021). */
-export const SANDBOX_SCOPE = "sandbox:run";
+export { SANDBOX_SCOPE };
 
 export const SANDBOX_LIMITS = {
   /** The most an organization's default command timeout (`execTimeoutSeconds`) can be. */
@@ -173,9 +176,11 @@ export async function withSandbox<T>(
       options,
     );
   }
-  if (agent?.machineId) {
-    return withMachine(deps, ctx, { machineId: agent.machineId, handle: agent.handle, name: agent.name }, fn, options);
+  const machineId = await toolMachineId(deps.db, agent);
+  if (agent && machineId) {
+    return withMachine(deps, ctx, { machineId, handle: agent.handle, name: agent.name }, fn, options);
   }
+  if (isRightHand(agent)) throw new SandboxUnavailableError(NO_HOME_MESSAGE);
   const preparing = await computerPreparing(deps, ctx.orgId);
   throw new SandboxUnavailableError(preparing ? PREPARING_COMPUTER_MESSAGE : NO_COMPUTER_MESSAGE);
 }
@@ -259,8 +264,8 @@ async function withMachine<T>(
  */
 export async function withConnectedMachine<T>(
   hub: MachineCaller,
-  ctx: Pick<ToolContext, "orgId" | "agentId" | "signal">,
-  { machineId, handle, name, device }: { machineId: string; handle: string; name?: string; device?: boolean },
+  ctx: ScopeContext & Pick<ToolContext, "signal">,
+  { machineId, device }: { machineId: string; handle?: string; name?: string; device?: boolean },
   fn: (computer: ComputerHandle) => Promise<T>,
   options: { allowPaused?: boolean } = {},
 ): Promise<T> {
@@ -286,7 +291,8 @@ export async function withConnectedMachine<T>(
       `The runner on the computer ${status.name} is out of date (it can't give each agent its own folder). ${runnerUpdateWay(status)}`,
     );
   }
-  const provider = createMachineSandboxProvider(hub, { id: ctx.agentId, handle, ...(name ? { name } : {}) }, device);
+  // The right hand's requests go to the seat its run works in (a person's own, the shared one), or nowhere (ADR 0175).
+  const provider = createMachineSandboxProvider(hub, await machineScope(hub, ctx, machineId), device);
   return fn({ id: machineId, provider, ref: `machine:${machineId}`, machineId });
 }
 
@@ -309,6 +315,8 @@ export async function agentComputerInfo(
       online: boolean;
       execAllowed: boolean;
       os: string;
+      /** Each agent works as its own OS user there (`hello.mode`, ADR 0058 §10). */
+      system: boolean;
       /** The runner's protocol (4+: background tasks; 10+: folders granted on the machine). */
       protocol: number;
       /** The owner paused it (protocol 9). */
@@ -320,7 +328,7 @@ export async function agentComputerInfo(
 > {
   const agent = await getAgentCached(deps.db, orgId, agentId);
   if (machineOverride && !machineOverride.machineId) return { kind: "removed" };
-  const machineId = machineOverride?.machineId ?? agent?.machineId;
+  const machineId = machineOverride?.machineId ?? (await toolMachineId(deps.db, agent));
   if (!machineId) return { kind: "none", preparing: await computerPreparing(deps, orgId) };
   const status = await deps.machines?.hub.status(machineId);
   if (!status || status.orgId !== orgId) return { kind: "removed" };
@@ -332,6 +340,7 @@ export async function agentComputerInfo(
     online: status.online,
     execAllowed: status.execAllowed,
     os: status.os,
+    system: status.executors?.mode === "system",
     protocol: status.protocol,
     paused: status.paused ?? null,
     folders: status.access ? status.access.folders.filter((f) => f.agents.includes(agentId)).map((f) => f.path) : [],
@@ -343,12 +352,12 @@ export interface AgentComputerView {
   target: ComputerTarget;
 }
 
-/** The agent's owner or an admin (`manage_agents`). */
+/** The agent's owner or who manages it (`managesAgent`, ADR 0085 addendum of 2026-11-17). */
 export async function requireComputerManager(db: Database, actorId: string, orgId: string, agentId: string) {
   const membership = await requirePermission(db, actorId, orgId, "read");
   const agent = await getAgent(db, orgId, agentId);
   if (!agent || agent.archivedAt) throw new NotFoundError("Agent not found");
-  if (!can(membership, "manage_agents") && agent.ownerUserId !== actorId) {
+  if (!managesAgent(agent, actorId, membership) && agent.ownerUserId !== actorId) {
     throw new ForbiddenError("Only an admin or the agent's owner can manage its computer");
   }
 }

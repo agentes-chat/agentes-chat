@@ -13,6 +13,7 @@ import {
   setThreadFollow,
   type ThreadDeps,
   unarchiveThread,
+  unreadFileConversations,
   unreadTaskConversations,
   updateThread,
 } from "@agenteschat/engine";
@@ -40,7 +41,7 @@ const Thread = z
     id: z.uuid().openapi({ description: "The root message id (what replies carry as `threadId`)." }),
     channelId: z.uuid(),
     channelName: z.string(),
-    channelKind: z.enum(["channel", "dm", "task"]),
+    channelKind: z.enum(["channel", "dm", "task", "file"]),
     title: z.string().nullable().openapi({ description: "Null: show `rootText`." }),
     rootText: z.string(),
     rootAuthor: Actor,
@@ -67,9 +68,26 @@ const Thread = z
     participants: z.array(Actor),
     working: z.boolean().openapi({
       description:
-        "An agent run is in progress (or waiting for an approval or an answer) in this thread; not one waiting for its computer.",
+        "An agent run is queued or running in this thread, or one a run here handed work to (`tell_agent`, `ask_agent`) is.",
     }),
-    needsYou: z.boolean(),
+    needsYou: z.boolean().openapi({
+      description: "An agent's question here waits on you, or an approval here that you may decide.",
+    }),
+    wait: z.enum(["approval", "input", "computer", "queued"]).nullable().openapi({
+      description:
+        "With nothing of its work running and nothing waiting on you: what it waits on (someone's approval or answer, its computer, a place in line).",
+    }),
+    since: z.string().nullable().openapi({
+      description:
+        "Since when the thread's state holds: what waits on you, the work (since it started or was handed off), or the wait.",
+    }),
+    worker: z.uuid().nullable().openapi({
+      description: "The agent of the run at it longest (working, else waiting): the state's orbit takes its tones.",
+    }),
+    laterAt: z.string().nullable().openapi({
+      description:
+        'The soonest return an agent set here, still ahead (`GET …/channels/{channelId}/follow-ups`): "Retorno às 00:32" when nothing else is on.',
+    }),
     openedByReplyAt: z.string().nullable().openapi({
       description:
         "When someone first replied from the thread panel (`openThread` on the reply): replies from then on live in the panel and the channel shows one line. Null: the channel shows its replies in the timeline.",
@@ -335,6 +353,27 @@ export function threadRoutes(deps: AppDeps) {
     async (c) => {
       const { orgId } = c.req.valid("param");
       return c.json({ tasks: await unreadTaskConversations(db, c.get("user").id, orgId) }, 200);
+    },
+  );
+
+  const UnreadFile = z
+    .object({ artifactId: z.uuid(), unread: z.number().int(), mentions: z.number().int() })
+    .openapi("UnreadFile");
+  app.openapi(
+    createRoute({
+      method: "get",
+      path: "/organizations/{orgId}/unread-files",
+      tags,
+      security,
+      summary: "Live files whose conversation has a reply you haven't read, with the ones that mention you",
+      description:
+        "Only files you read (ADR 0199). A reply counts when you follow the conversation or it mentions you, at most 100 each.",
+      request: { params: OrgParams },
+      responses: { 200: json(z.object({ files: z.array(UnreadFile) })), ...errors },
+    }),
+    async (c) => {
+      const { orgId } = c.req.valid("param");
+      return c.json({ files: await unreadFileConversations(db, c.get("user").id, orgId) }, 200);
     },
   );
 

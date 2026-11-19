@@ -128,11 +128,24 @@ describe("a name and a look on a settings card", () => {
       "rightHand.card.only.reports_to",
     );
   });
+  test("a department reads by its name, or none, and only admins move an agent", () => {
+    expect(settingLineText(t, "pt-BR", { field: "group", from: "Operações", to: "Vendas" }, names)).toEqual({
+      field: "rightHand.field.group",
+      from: "Operações",
+      to: "Vendas",
+    });
+    expect(settingLineText(t, "pt-BR", { field: "group", from: "Vendas", to: null }, names)).toEqual({
+      field: "rightHand.field.group",
+      from: "Vendas",
+      to: "rightHand.value.none",
+    });
+    expect(onlyKey({ settings: [{ field: "group", from: "Vendas", to: null }] })).toBe("rightHand.card.only.group");
+  });
 });
 
 describe("a skill line on a settings card", () => {
   const names = { model: (id: string) => id, person: () => undefined, channel: () => undefined, role: () => undefined };
-  test("reads as the skill by its name, off to on, and only admins change it, as on the agent's page", () => {
+  test("reads as the skill by its name, off to on, and only whoever can edit the agent changes it, as on its page", () => {
     expect(
       settingLineText(
         t,
@@ -147,7 +160,8 @@ describe("a skill line on a settings card", () => {
     });
     const key = onlyKey({ settings: [{ field: "skill", skillId: "s-excel", from: true, to: false }] });
     expect(key).toBe("rightHand.card.only.skill");
-    expect(en.rightHand.card.only.skill).toBe("Only admins change an agent's skills");
+    // Its owner, who manages it and the people its "Who can edit" names (ADR 0085 addendum of 2026-11-17).
+    expect(en.rightHand.card.only.skill).toBe("Only whoever can edit an agent changes its skills");
   });
 });
 

@@ -258,7 +258,19 @@ describe("what stays out of reach on a hold", () => {
   test("a saved key can't be changed, only removed", async () => {
     await open(held(seedState()), "settings/keys");
     expect(screen().queryByRole("button", { name: "Trocar a chave" })).toBeNull();
-    expect(screen().getByRole("button", { name: "Apagar" })).toBeTruthy();
+    const more = screen().getByRole("button", { name: "Ações de Claude da Acme" });
+    more.focus();
+    await act(async () => {
+      fireEvent.keyDown(more, { key: "Enter" });
+      fireEvent.keyUp(more, { key: "Enter" });
+    });
+    await settle(2);
+    const menu = screen().getByRole("menu");
+    expect(
+      within(menu)
+        .getAllByRole("menuitem")
+        .map((i) => i.textContent),
+    ).toEqual(["Apagar"]);
     expect(document.body.textContent).toContain("As chaves de API abrem com o plano do agentes.chat");
   });
 

@@ -100,7 +100,7 @@ describe("my own messages sit on the right", () => {
     const foot = row("w3").querySelector(".ac-msg__own-foot") as HTMLElement;
     expect([...foot.children].map((part) => part.className)).toEqual(["ac-msg__own-time", "ac-msg__aside"]);
     expect(foot.querySelector(".ac-msg__aside .ac-receipt__check")?.tagName).toBe("BUTTON");
-    expect(row("w3").querySelector(".ac-msg__aside--floating")).toBeNull();
+    expect(row("w3").querySelector(".ac-msg__gutter--aside")).toBeNull();
     // The rows before a run's last: no hover time in the far-left column, where everyone else's grouped rows have it.
     for (const id of ["w1", "w2", "w3"])
       expect(row(id).querySelector(".ac-msg__gutter, .ac-msg__gutter-time")).toBeNull();

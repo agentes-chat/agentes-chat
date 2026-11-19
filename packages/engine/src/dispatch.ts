@@ -110,6 +110,8 @@ export interface StartRunOptions {
   park?: number;
   /** A parked wake: when it started waiting. Its run's place in the computer's line counts from then. */
   parkedSince?: number;
+  /** How long the router took to pick the agent: kept in the run's first claim's profile. */
+  routerMs?: number;
 }
 
 /**
@@ -246,7 +248,11 @@ export async function startOrJoinRun(
   await enqueue(tx, {
     orgId: message.orgId,
     kind: "agent_run.execute",
-    payload: { runId: run.id, ...(options.parkedSince ? { lineSince: options.parkedSince } : {}) },
+    payload: {
+      runId: run.id,
+      ...(options.parkedSince ? { lineSince: options.parkedSince } : {}),
+      ...(options.routerMs !== undefined ? { routerMs: options.routerMs } : {}),
+    },
     dedupeKey: `agent_run.execute:${run.id}`,
     maxAttempts: 4,
   });
@@ -287,6 +293,24 @@ export async function deliverParked(
       out ? ("created" in out ? out.created.id : out.joined) : null,
     );
   });
+}
+
+/** The agent has no run left in its computer's line: its parked wakes look now, not at their next `INBOX_LOOK_MS`. */
+export async function kickParkedWakes(db: Executor, orgId: string, agentId: string) {
+  if ((await agentLineRank(db, orgId, agentId)) !== null) return;
+  const now = new Date();
+  await db
+    .update(outbox)
+    .set({ nextAttemptAt: now })
+    .where(
+      and(
+        eq(outbox.orgId, orgId),
+        eq(outbox.kind, INBOX_JOB),
+        eq(outbox.status, "pending"),
+        sql`${outbox.payload}->>'agentId' = ${agentId}`,
+        sql`${outbox.nextAttemptAt} > ${now}`,
+      ),
+    );
 }
 
 /**

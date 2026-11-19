@@ -90,10 +90,14 @@ describe("the rules every agent reads", () => {
       audienceMode: "everyone" as const,
       audienceUserIds: [],
       audienceRoleIds: [],
+      editorUserIds: [],
+      editorRoleIds: [],
       consultable: true,
       brain: "model",
       autonomyBrakes: {},
       reportsToAgentId: null,
+      groupId: null,
+      groupName: null,
     }));
     const personal = teamPrompt(team, "a0", null, new Set(), NO_PERSON, true);
     expect(personal).toStartWith("# Your fellow agents\nOther agents of this person: @a1 (Finance).");

@@ -15,13 +15,17 @@ import {
   codexContextOverride,
   codexEffort,
   codexProfileOf,
+  codexRefusal,
+  codexRulesNear,
   codexThreadKey,
   codexThreadsFile,
   codexTurnArgs,
-  codexVersionOk,
   handleCodexBrainTurn,
   runCodexTurn,
+  shellScript,
+  unwrapShell,
 } from "../../runner/brain-codex";
+import { CODEX_WINDOWS_CONFIG, WINDOWS_SANDBOX_MESSAGE } from "../../runner/codex-windows";
 import { handleRequest } from "../../runner/handlers";
 import { CODEX_MCP_SERVER } from "../../runner/mcp";
 import { agentWorkspace } from "../../runner/paths";
@@ -55,11 +59,16 @@ const TURN2 = [
   '{"type":"turn.completed","usage":{"input_tokens":200,"cached_input_tokens":0,"output_tokens":30,"reasoning_output_tokens":4}}',
 ];
 
-test("version gate: 0.163.0 and newer", () => {
-  expect(codexVersionOk("codex-cli 0.163.0")).toBe(true);
-  expect(codexVersionOk("codex-cli 0.170.1")).toBe(true);
-  expect(codexVersionOk("codex-cli 0.99.0")).toBe(false);
-  expect(codexVersionOk(undefined)).toBe(false);
+test("a Codex that refuses its command line: its own line; any other failure isn't one", () => {
+  const clap =
+    "error: unexpected argument '--ignore-rules' found\n\n  tip: to pass it as a value, use '-- --ignore-rules'\n\nUsage: codex exec [OPTIONS] [PROMPT]\n";
+  expect(codexRefusal(clap)).toBe("error: unexpected argument '--ignore-rules' found");
+  expect(codexRefusal("warning: x\nerror: unrecognized subcommand 'resume'\n")).toBe(
+    "error: unrecognized subcommand 'resume'",
+  );
+  expect(codexRefusal("stream disconnected before completion")).toBeNull();
+  // Codex's own runtime errors (a model it doesn't know, a config value) aren't its command line.
+  expect(codexRefusal("Error: unknown model 'gpt-x'\n")).toBeNull();
 });
 
 test("command line: first turn with instructions, resume by id without them, options before resume", () => {
@@ -71,18 +80,23 @@ test("command line: first turn with instructions, resume by id without them, opt
     instructions: 'Be "brief".\nUse tools.',
     mcp: { command: ["/usr/bin/bun", "/r/runner.js"] },
   });
-  expect(first.slice(0, 7)).toEqual([
+  expect(first.slice(0, 8)).toEqual([
     "exec",
     "--json",
     "--skip-git-repo-check",
+    "--ignore-rules",
     "-C",
     "/w/my app",
     "--sandbox",
     "workspace-write",
   ]);
-  // ADR 0053 §3: never the network (exec can't ask, so the sandbox is the limit).
-  expect(first.join(" ")).not.toContain("network_access");
+  // ADR 0053 §3: never the network (exec can't ask, so the sandbox is the limit), nor a folder but the agent's, nor
+  // anyone's own rules (an allow there runs a command outside the sandbox), whatever the Codex home's config says.
+  expect(first[first.indexOf("sandbox_workspace_write.network_access=false") - 1]).toBe("-c");
+  expect(first.join(" ")).not.toContain("network_access=true");
+  expect(first[first.indexOf("sandbox_workspace_write.writable_roots=[]") - 1]).toBe("-c");
   expect(first).toContain(`developer_instructions=${JSON.stringify('Be "brief".\nUse tools.')}`);
+  expect(first).toContain(`features.code_mode.direct_only_tool_namespaces=["mcp__${CODEX_MCP_SERVER}"]`);
   expect(first.slice(-5)).toEqual(["-m", "gpt-5.5", "-o", "/r/last.txt", "-"]);
   expect(first).not.toContain("resume");
   expect(first).not.toContain("--full-auto");
@@ -99,11 +113,137 @@ test("command line: first turn with instructions, resume by id without them, opt
     profile: "plan",
     writableRoots: ["/w/shared"],
   });
-  expect(plan.slice(5, 7)).toEqual(["--sandbox", "read-only"]);
+  expect(plan.slice(6, 8)).toEqual(["--sandbox", "read-only"]);
+  expect(plan).toContain("--ignore-rules");
   expect(plan.join(" ")).not.toContain("writable_roots");
   expect(plan.join(" ")).not.toContain("network_access");
   expect(codexProfileOf({ permissions: { mode: "plan" } })).toBe("plan");
   expect(codexProfileOf({})).toBe("work");
+});
+
+test("a command's script is read the way its shell reads it, newlines kept; a transcript shows it on one line", () => {
+  // POSIX: Codex's login shell, quoted as Codex joins its argv (a quote inside a quoted word too).
+  expect(shellScript("/bin/zsh -lc 'ls\nrm -rf ~/x'")).toBe("ls\nrm -rf ~/x");
+  expect(shellScript("/bin/bash -lc 'echo it'\"'\"'s'")).toBe("echo it's");
+  expect(shellScript('/bin/zsh -lc "npm test"')).toBe("npm test");
+  // PowerShell and cmd.exe (Codex's Windows shells, or one a model names on a Mac): the policy reads POSIX shells, so
+  // their line stays whole; a transcript shows their script (the path quoted, backslashes kept).
+  const pwsh = "'C:\\Program Files\\PowerShell\\7\\pwsh.exe' -NoProfile -Command 'npm test'";
+  expect(shellScript(pwsh)).toBe(pwsh);
+  expect(unwrapShell(pwsh)).toBe("npm test");
+  expect(
+    unwrapShell(
+      "'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe' -Command 'Get-ChildItem\nRemove-Item x'",
+    ),
+  ).toBe("Get-ChildItem Remove-Item x");
+  const cmd = "'C:\\Windows\\system32\\cmd.exe' /d /c 'dir'";
+  expect(shellScript(cmd)).toBe(cmd);
+  expect(unwrapShell(cmd)).toBe("dir");
+  // What it can't read word by word, or more than the shell's script: the line as given.
+  expect(shellScript('/bin/zsh -lc "echo $HOME"')).toBe('/bin/zsh -lc "echo $HOME"');
+  expect(shellScript("/bin/zsh -lc 'ls' && rm -rf ~/x")).toBe("/bin/zsh -lc 'ls' && rm -rf ~/x");
+  expect(shellScript("/bin/zsh -lc 'ls' extra")).toBe("/bin/zsh -lc 'ls' extra");
+  expect(shellScript("npm test")).toBe("npm test");
+  // The transcript's line.
+  expect(unwrapShell("/bin/zsh -lc 'ls\nrm -rf ~/x'")).toBe("ls rm -rf ~/x");
+  expect(unwrapShell('/bin/zsh -lc "echo $HOME"')).toBe("echo $HOME");
+});
+
+test("Windows: the instructions never go on the command line; a plan or work turn names MXC, a chat turn no sandbox", () => {
+  const base = { cwd: "C:\\w", lastFile: "C:\\t\\last.txt", runId: RUN, instructions: "Be brief. %USERPROFILE%" };
+  const work = codexTurnArgs({ ...base, windows: true });
+  expect(work.join(" ")).not.toContain("developer_instructions");
+  expect(work.join(" ")).not.toContain("Be brief");
+  for (const c of CODEX_WINDOWS_CONFIG) expect(work).toContain(c);
+  // The person's own rules left out (an allow there would run a command outside MXC, unasked), as everywhere.
+  expect(work).toContain("--ignore-rules");
+  expect(work).toContain("sandbox_workspace_write.network_access=false");
+  expect(codexTurnArgs({ ...base, windows: true, profile: "plan" })).toContain('windows.sandbox="mxc"');
+  const chat = codexTurnArgs({ ...base, windows: true, chat: true }).join(" ");
+  expect(chat).not.toContain("windows.sandbox");
+  expect(chat).not.toContain("developer_instructions");
+  // Elsewhere, as before.
+  expect(codexTurnArgs(base).join(" ")).toContain("developer_instructions");
+  expect(codexTurnArgs(base).join(" ")).not.toContain("windows.sandbox");
+  expect(codexTurnArgs(base)).toContain("--ignore-rules");
+});
+
+test("someone's own Codex rules near a turn: its home's, or a trusted project's in its folder or any above it", () => {
+  const root = tempDir("codex-rules-");
+  dirs.push(root);
+  const home = path.join(root, "home");
+  const project = path.join(root, "repos", "app");
+  const work = path.join(project, "src");
+  mkdirSync(path.join(home, "rules"), { recursive: true });
+  mkdirSync(path.join(project, ".codex", "rules"), { recursive: true });
+  mkdirSync(work, { recursive: true });
+  expect(codexRulesNear(home, work)).toBe(false);
+  // Only `*.rules` files are rules.
+  writeFileSync(path.join(home, "rules", "notes.txt"), "");
+  expect(codexRulesNear(home, work)).toBe(false);
+  // A project's, above the turn's folder: Codex reads it only where the home trusts a project (an AI account's
+  // home, the runner's own, trusts none).
+  writeFileSync(path.join(project, ".codex", "rules", "team.rules"), 'prefix_rule(pattern=["npm"])\n');
+  expect(codexRulesNear(home, work)).toBe(false);
+  writeFileSync(path.join(home, "config.toml"), `[projects."${project}"]\ntrust_level = "trusted"\n`);
+  expect(codexRulesNear(home, work)).toBe(true);
+  expect(codexRulesNear(home, path.join(root, "elsewhere"))).toBe(false);
+  // The home's own (Codex writes one when someone picks "don't ask again").
+  writeFileSync(path.join(home, "rules", "default.rules"), 'prefix_rule(pattern=["git", "push"], decision="allow")\n');
+  expect(codexRulesNear(home, path.join(root, "elsewhere"))).toBe(true);
+});
+
+test("Windows: a plan or work turn runs only where MXC holds Codex's commands; a chat turn never asks", async () => {
+  const dir = tempDir("codex-win-turn-");
+  dirs.push(dir);
+  const turn = async (mxc: boolean | null, chat = false) => {
+    const events: CodexBrainEvent[] = [];
+    const asked: string[] = [];
+    let spawned = 0;
+    await runCodexTurn(
+      {
+        runId: RUN,
+        sessionId: SESSION,
+        cwd: dir,
+        system: "Be brief.",
+        prompt: "Say pong",
+        mcp: { token: "t" },
+        ...(chat ? { chat: true } : {}),
+      },
+      {
+        threads: new CodexThreads(path.join(dir, "threads.json")),
+        workDir: path.join(dir, "turn"),
+        emit: (e) => events.push(e),
+        signal: new AbortController().signal,
+        codexVersion: () => "codex-cli 0.170.0",
+        platform: "win32",
+        // Not there: a turn that gets past the sandbox ends on the missing CLI, before anything starts.
+        bin: "C:\\nowhere\\codex.exe",
+        spawn: (() => {
+          spawned++;
+          throw new Error("nothing starts here");
+        }) as unknown as Spawn,
+        windowsSandbox: async (version) => {
+          asked.push(version);
+          return mxc;
+        },
+      },
+    );
+    return { events, asked, spawned };
+  };
+  const refused = await turn(false);
+  expect(refused.events).toEqual([{ type: "error", code: "windows_sandbox", message: WINDOWS_SANDBOX_MESSAGE }]);
+  expect(refused.asked).toEqual(["codex-cli 0.170.0"]);
+  expect((await turn(null)).events).toMatchObject([{ type: "error", code: "codex_failed", retryable: true }]);
+  const held = await turn(true);
+  expect(held.events).toEqual([
+    { type: "error", code: "codex_missing", message: "Codex is not installed on this computer." },
+  ]);
+  // The right hand: Codex refuses its own commands there with no sandbox, and the turn stops at the first anyway.
+  const chat = await turn(false, true);
+  expect(chat.asked).toEqual([]);
+  expect(chat.events).toMatchObject([{ type: "error", code: "codex_missing" }]);
+  expect(refused.spawned + held.spawned + chat.spawned).toBe(0);
 });
 
 test("MCP bridge overrides: stdio by run with the token through env_vars, or HTTP with a bearer from the env", () => {
@@ -311,48 +451,60 @@ test.skipIf(!posix)(
   15_000,
 );
 
-test.skipIf(!posix)("refuses an old or missing Codex without starting it; bad requests fail", async () => {
-  const root = tempDir("brain-codex-");
-  dirs.push(root);
-  const bin = path.join(root, "codex");
-  writeFileSync(bin, `#!/bin/sh\ntouch "${root}/started"\n`);
-  chmodSync(bin, 0o755);
-  const events: CodexBrainEvent[] = [];
-  const opts = {
-    threads: new CodexThreads(path.join(root, "threads.json")),
-    workDir: path.join(root, "turn"),
-    emit: (e: CodexBrainEvent) => events.push(e),
-    signal: new AbortController().signal,
-    bin,
-  };
-  const input = { runId: RUN, sessionId: SESSION, cwd: root, system: "", prompt: "hi", mcp: { token: "t" } };
-  await runCodexTurn(input, { ...opts, codexVersion: () => "codex-cli 0.162.0" });
-  expect(events).toMatchObject([{ type: "error", code: "codex_too_old" }]);
-  expect((events[0] as { message: string }).message).toContain("0.163.0");
-  await runCodexTurn(input, { ...opts, codexVersion: () => undefined });
-  expect(events[1]).toMatchObject({ type: "error", code: "codex_missing" });
-  expect(existsSync(path.join(root, "started"))).toBe(false);
-  // A codex that exits without a turn is an error, not an empty answer.
-  await runCodexTurn(input, { ...opts, codexVersion: () => "codex-cli 0.163.0" });
-  expect(existsSync(path.join(root, "started"))).toBe(true);
-  expect(events[2]).toMatchObject({ type: "error", code: "codex_failed" });
+test.skipIf(!posix)(
+  "runs any Codex version, refuses a missing one without starting it; bad requests fail",
+  async () => {
+    const root = tempDir("brain-codex-");
+    dirs.push(root);
+    const bin = path.join(root, "codex");
+    // An old Codex without a flag the turn passes: clap's error, exit 2.
+    writeFileSync(
+      bin,
+      `#!/bin/sh\ntouch "${root}/started"\necho "error: unexpected argument '--ignore-rules' found" >&2\necho "Usage: codex exec [OPTIONS]" >&2\nexit 2\n`,
+    );
+    chmodSync(bin, 0o755);
+    const events: CodexBrainEvent[] = [];
+    const opts = {
+      threads: new CodexThreads(path.join(root, "threads.json")),
+      workDir: path.join(root, "turn"),
+      emit: (e: CodexBrainEvent) => events.push(e),
+      signal: new AbortController().signal,
+      bin,
+    };
+    const input = { runId: RUN, sessionId: SESSION, cwd: root, system: "", prompt: "hi", mcp: { token: "t" } };
+    await runCodexTurn(input, { ...opts, codexVersion: () => undefined });
+    expect(events[0]).toMatchObject({ type: "error", code: "codex_missing" });
+    expect(existsSync(path.join(root, "started"))).toBe(false);
+    // No version is too old: it runs, and what it lacks is said in its own words, with where it is and the way out.
+    await runCodexTurn(input, { ...opts, codexVersion: () => "codex-cli 0.100.0" });
+    expect(existsSync(path.join(root, "started"))).toBe(true);
+    expect(events[1]).toEqual({
+      type: "error",
+      code: "codex_failed",
+      message: `Codex at ${bin} (codex-cli 0.100.0) said: error: unexpected argument '--ignore-rules' found. Update the Codex at that path.`,
+    });
+    // A codex that exits without a turn is an error, not an empty answer.
+    writeFileSync(bin, `#!/bin/sh\ntouch "${root}/started"\n`);
+    await runCodexTurn(input, { ...opts, codexVersion: () => "codex-cli 0.163.0" });
+    expect(events[2]).toMatchObject({ type: "error", code: "codex_failed" });
 
-  const ctx = { folder: root, exec: true, runnerHome: root, codexVersion: () => "codex-cli 0.163.0", bin };
-  const req = {
-    runId: RUN,
-    kind: "codex" as const,
-    session: { id: SESSION, resume: false },
-    system: "",
-    prompt: "hi",
-    mcp: { token: "t" },
-    agent: AGENT,
-  };
-  const scope = { signal: new AbortController().signal, emit: () => {} };
-  expect(await errorCode(() => handleCodexBrainTurn({ ...ctx, exec: false }, req, scope))).toBe("exec_disabled");
-  expect(await errorCode(() => handleCodexBrainTurn(ctx, { ...req, agent: undefined }, scope))).toBe("bad_request");
-  expect(await errorCode(() => handleCodexBrainTurn(ctx, { ...req, mcp: { token: "" } }, scope))).toBe("bad_request");
-  expect(await errorCode(() => handleCodexBrainTurn(ctx, { ...req, cwd: "nope" }, scope))).toBe("not_found");
-});
+    const ctx = { folder: root, exec: true, runnerHome: root, codexVersion: () => "codex-cli 0.163.0", bin };
+    const req = {
+      runId: RUN,
+      kind: "codex" as const,
+      session: { id: SESSION, resume: false },
+      system: "",
+      prompt: "hi",
+      mcp: { token: "t" },
+      agent: AGENT,
+    };
+    const scope = { signal: new AbortController().signal, emit: () => {} };
+    expect(await errorCode(() => handleCodexBrainTurn({ ...ctx, exec: false }, req, scope))).toBe("exec_disabled");
+    expect(await errorCode(() => handleCodexBrainTurn(ctx, { ...req, agent: undefined }, scope))).toBe("bad_request");
+    expect(await errorCode(() => handleCodexBrainTurn(ctx, { ...req, mcp: { token: "" } }, scope))).toBe("bad_request");
+    expect(await errorCode(() => handleCodexBrainTurn(ctx, { ...req, cwd: "nope" }, scope))).toBe("not_found");
+  },
+);
 
 // ── Accounts and effort (protocol 13, ADR 0041) ──────────────────────────────
 

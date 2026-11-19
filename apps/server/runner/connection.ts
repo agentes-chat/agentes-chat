@@ -5,6 +5,7 @@ import {
   type MachineLoad,
   type MachineRequest,
   parseServerFrame,
+  RUNNER_STOPPED_CLOSE,
   type RunnerFrame,
   type RunnerInfo,
   type ServerFrame,
@@ -25,7 +26,7 @@ export interface SocketHandlers {
 export interface Socket {
   readonly bufferedAmount?: number;
   send(data: string): void;
-  close(): void;
+  close(code?: number, reason?: string): void;
 }
 
 /** Opens a socket (real WebSocket in the runner, a fake in tests). */
@@ -58,9 +59,9 @@ export const webSocketDial: Dial = (url, handlers) => {
       return ws.bufferedAmount;
     },
     send: (data) => ws.send(data),
-    close: () => {
+    close: (code, reason) => {
       try {
-        ws.close();
+        ws.close(code, reason);
       } catch {
         // already closed
       }
@@ -148,6 +149,8 @@ export class RunnerConnection {
   private stopped = false;
   /** `reconnect()` was asked: the next dial goes out at once (no backoff). */
   private redial = false;
+  /** An operator's standby (ADR 0176): no link to the server until `resume()`. */
+  private parked = false;
   private endSession?: () => void;
   private wake?: () => void;
   /** The welcomed session's sender (null while connecting or down). */
@@ -173,9 +176,15 @@ export class RunnerConnection {
   async run(): Promise<ConnectionOutcome> {
     let attempt = 0;
     while (!this.stopped) {
+      if (this.parked) {
+        await this.sleep(2 ** 31 - 1);
+        attempt = 0;
+        continue;
+      }
       const end = await this.session();
       if (end.outcome) return end.outcome;
       if (this.stopped) break;
+      if (this.parked) continue;
       if (this.redial) {
         this.redial = false;
         attempt = 0;
@@ -202,6 +211,27 @@ export class RunnerConnection {
       this.redial = true;
       this.endSession();
     } else this.wake?.(); // waiting out a backoff: dial now
+  }
+
+  /**
+   * An operator's standby (ADR 0176): the socket closes as on any disconnect (what runs on it is aborted, so the
+   * server sees the computer leave), and nothing dials until `resume()`. Everything else on the computer runs on.
+   */
+  standby() {
+    if (this.stopped || this.parked) return;
+    this.parked = true;
+    this.endSession?.();
+  }
+
+  /** The standby is over: dials at once. */
+  resume() {
+    if (!this.parked) return;
+    this.parked = false;
+    this.wake?.();
+  }
+
+  get inStandby() {
+    return this.parked;
   }
 
   /** Closes the socket, aborts running requests and makes `run()` return. */
@@ -272,7 +302,8 @@ export class RunnerConnection {
         runner.close();
         tasks?.detach();
         opts.mcp?.detach();
-        socket?.close();
+        if (this.stopped) socket?.close(RUNNER_STOPPED_CLOSE, "stopped");
+        else socket?.close();
         this.endSession = undefined;
         opts.onState?.("offline");
         resolve({ welcomed, outcome });

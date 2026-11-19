@@ -1,5 +1,5 @@
 import { plural } from "@agenteschat/i18n/format";
-import { atHost } from "./en";
+import { atHost, sentences } from "./en";
 import type { EmailWords } from "./index";
 
 /**
@@ -39,6 +39,12 @@ export const words: EmailWords = {
       inviter
         ? [{ b: inviter }, `${email ? ` (${email})` : ""} lädt dich ein, `, { b: org }, ` als ${role} beizutreten.`]
         : ["Du bist eingeladen, ", { b: org }, ` als ${role} beizutreten.`],
+    starts: (channels, agents) =>
+      sentences(
+        channels && ["Du bist direkt in ", ...channels, " dabei."],
+        agents && ["Du arbeitest mit ", ...agents, " zusammen."],
+      ),
+    more: (n) => `${n} weiteren`,
     what: "Auf agentes.chat arbeiten Menschen und KI-Agenten zusammen.",
     noteFrom: (inviter, note) => [{ b: inviter ? `${inviter}: ` : "Nachricht: " }, `„${note}“`],
     button: "Einladung annehmen",
@@ -231,6 +237,11 @@ export const words: EmailWords = {
     preheader: "Gib die Anfrage unter Mitglieder frei oder lehne sie ab. Bis du antwortest, passiert nichts.",
     headline: "Eine Beitrittsanfrage wartet",
     body: (org) => ["Die Person hat den Einladungslink von ", { b: org }, " geöffnet und möchte beitreten."],
+    outside: (by) => [
+      "Diese Person arbeitet für ",
+      { b: by },
+      " und möchte als externe Person beitreten. Sie belegt keinen Platz in deinem Tarif, und du kannst sie jederzeit entfernen.",
+    ],
     note: "Gib nur Personen frei, die du erwartest. Sie treten als Mitglied bei, außer du wählst auf der Seite eine andere Rolle.",
     approve: "Freigeben",
     deny: "Ablehnen",
@@ -303,6 +314,14 @@ export const words: EmailWords = {
   deletionCode: {
     subjectWorkspace: (code) => `${code} ist dein Code zum Löschen eines Workspace`,
     subjectAccount: (code) => `${code} ist dein Code zum Löschen deines ganzen Kontos`,
+    subjectReset: (code) => `${code} ist dein Code zum Zurücksetzen eines Workspace`,
+    reset: (org) => [
+      "Gib diesen Code ein, um den Workspace ",
+      { b: org },
+      " zurückzusetzen. Seine Agenten, Unterhaltungen, Dateien und Erinnerungen werden sofort und endgültig gelöscht, und er beginnt neu wie ein neuer Workspace.",
+    ],
+    whyReset: (org) =>
+      `Du erhältst diese E-Mail, weil über dein Konto das Zurücksetzen von ${org} auf agentes.chat angefragt wurde.`,
     preheader: "Gib ihn in agentes.chat ein, um zu bestätigen. Er gilt 10 Minuten lang.",
     headline: "Dein Code",
     workspace: (org) => [
@@ -331,6 +350,48 @@ export const words: EmailWords = {
         { b: org },
         " zu löschen. Er ist sofort schreibgeschützt und wird 7 Tage später endgültig gelöscht.",
       ],
+    },
+  },
+  emailChange: {
+    code: {
+      subject: (code) => `${code} ist dein Code zum Ändern deiner E-Mail-Adresse`,
+      preheader: "Gib ihn in agentes.chat ein, um zu bestätigen. Er gilt 10 Minuten lang.",
+      headline: "Dein Code",
+      body: (email, newEmail) => [
+        "Gib diesen Code ein, um die E-Mail-Adresse des Kontos ",
+        { b: email },
+        " in ",
+        { b: newEmail },
+        " zu ändern.",
+      ],
+      support: (address) => [
+        "Er gilt 10 Minuten lang, und ohne ihn bleibt deine E-Mail-Adresse, wie sie ist. Wenn du das nicht warst, gib ihn nicht weiter und schreib an ",
+        { mail: address },
+        ".",
+      ],
+      noSupport:
+        "Er gilt 10 Minuten lang, und ohne ihn bleibt deine E-Mail-Adresse, wie sie ist. Wenn du das nicht warst, gib ihn nicht weiter und sag den Leuten Bescheid, die diesen Server betreiben.",
+      why: "Du erhältst diese E-Mail, weil über dein Konto eine neue E-Mail-Adresse auf agentes.chat angefragt wurde.",
+    },
+    link: {
+      subject: "Bestätige deine neue E-Mail-Adresse für agentes.chat",
+      preheader: "Ein Klick, und du meldest dich ab jetzt mit dieser Adresse an. Der Link gilt eine Stunde lang.",
+      headline: "Bestätige deine neue E-Mail-Adresse",
+      body: "Nur noch ein Schritt: Bestätige, dass diese Adresse dir gehört. Danach meldet sich dein Konto mit ihr an.",
+      button: "Neue E-Mail-Adresse bestätigen",
+      small: "Der Link gilt eine Stunde lang. Wenn du das nicht angefragt hast, kannst du diese E-Mail ignorieren.",
+      why: "Du erhältst diese E-Mail, weil jemand diese Adresse für ein agentes.chat-Konto verwenden möchte.",
+    },
+    changed: {
+      subject: "Die E-Mail-Adresse deines agentes.chat-Kontos wurde geändert",
+      preheader: "Wenn du das nicht warst, kannst du diese Adresse 7 Tage lang zurückholen.",
+      headline: "Deine E-Mail-Adresse wurde geändert",
+      body: (email, newEmail) => ["Das Konto ", { b: email }, " meldet sich jetzt mit ", { b: newEmail }, " an."],
+      notYou:
+        "Das warst nicht du? Drück innerhalb von 7 Tagen auf den Button. Diese Adresse kommt zurück, alle Sitzungen werden abgemeldet, die KI-Apps getrennt, und Anmeldewege, die seitdem hinzugekommen sind, funktionieren nicht mehr. Auch das Passwort wird gelöscht: Mit „Passwort vergessen“ legst du das nächste fest.",
+      button: "Das war ich nicht",
+      small: "Wenn du das warst, musst du nichts tun.",
+      why: "Du erhältst diese E-Mail, weil diese Adresse die E-Mail-Adresse eines agentes.chat-Kontos war.",
     },
   },
   deleting: {
@@ -518,5 +579,56 @@ export const words: EmailWords = {
       why: () =>
         "Du bekommst diese E-Mail, weil dieser Workspace auf agentes.chat dir gehört. Wir senden nur zwei solche Hinweise.",
     },
+  },
+  surface: {
+    linked: {
+      subject: (surface) => `${surface} wurde mit deinem agentes.chat-Konto verknüpft`,
+      preheader: "Dein Assistent antwortet dir jetzt dort. Wenn du das nicht warst, heb die Verknüpfung auf.",
+      headline: (surface) => `${surface} wurde verknüpft`,
+      body: (surface, display, org) => [
+        { b: display },
+        ` auf ${surface} spricht jetzt mit deinem Assistenten in `,
+        { b: org },
+        ".",
+      ],
+      notYou:
+        "Das warst nicht du? Heb die Verknüpfung auf. Nachrichten von dort erreichen dein Konto dann sofort nicht mehr.",
+      button: "Verknüpfung aufheben",
+      small:
+        "Wenn du das warst, musst du nichts tun. Du kannst die Verknüpfung jederzeit in den Einstellungen aufheben.",
+      why: (surface) => `Du erhältst diese E-Mail, weil ${surface} mit deinem agentes.chat-Konto verknüpft wurde.`,
+      picture: "Dein Assistent, jetzt auch auf deinem Handy",
+    },
+    unlinked: {
+      subject: (surface) => `${surface} wurde von deinem agentes.chat-Konto getrennt`,
+      preheader: "Die Identität hat sich geändert. Verknüpfe es in den Einstellungen neu, wenn du das warst.",
+      headline: (surface) => `${surface} wurde getrennt`,
+      body: (surface, display) => [
+        { b: display },
+        ` auf ${surface} wurde getrennt, weil sich die Identität geändert hat.`,
+      ],
+      small: "Verknüpfe es in den Einstellungen neu, wenn du das warst.",
+      why: (surface) => `Du erhältst diese E-Mail, weil ${surface} mit deinem agentes.chat-Konto verknüpft war.`,
+      picture: "Dein Assistent, nicht mehr auf deinem Handy",
+    },
+  },
+  supportReply: {
+    subject: "Eine Antwort auf deine Hilfeanfrage",
+    preheader: "Zu der Hilfe, um die du auf agentes.chat gebeten hast.",
+    headline: "Eine Antwort auf deine Hilfeanfrage",
+    answers: {
+      received: "Wir haben deine Anfrage erhalten und sehen sie uns an.",
+      need_more:
+        "Wir brauchen mehr Angaben, um dir zu helfen: was du gemacht hast, was du erwartet hast und was stattdessen passiert ist.",
+      resolved: "Was du gemeldet hast, ist behoben.",
+      handed_over: "Eine Person hat deine Anfrage jetzt übernommen und antwortet dir.",
+    },
+    from: (host) =>
+      host
+        ? atHost("Beantwortet von den Betreibern des agentes.chat-Servers", "auf", host)
+        : "Beantwortet von agentes.chat.",
+    ai: "Ein KI-Assistent hat diese Antwort geschrieben.",
+    reply: (address) => ["Zum Antworten schreib an ", { mail: address }, "."],
+    why: "Du erhältst diese E-Mail, weil du auf agentes.chat um Hilfe gebeten hast.",
   },
 };

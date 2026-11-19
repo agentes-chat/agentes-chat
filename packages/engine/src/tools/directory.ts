@@ -233,6 +233,8 @@ function directoryTools(
   sensitive: IsSensitive,
 ) {
   const areas = areasOf(tools, prefix);
+  // One connection's tools: a person's own connection makes both its person's alone, as each of its tools.
+  const owner = tools[0]?.ownerUserId ? { ownerUserId: tools[0].ownerUserId } : {};
   const find: ToolDefinition = {
     name: `${prefix}_find_tools`,
     description: `Find ${label} tools (${tools.length} in all${areas.length ? `, about: ${areas.join(", ")}` : ""}) by what you need to do. Returns the best matches with their exact names, what each needs (input) and whether it asks a person's approval. Then call one with \`${prefix}_use_tool\`.`,
@@ -256,6 +258,7 @@ function directoryTools(
     scope: "",
     connectionId,
     connectorLabel: label,
+    ...owner,
     execute: async (input) => ({ content: findTools(tools, prefix, label, input, sensitive) }),
   };
   const use: ToolDefinition = {
@@ -273,6 +276,7 @@ function directoryTools(
     scope: "",
     connectionId,
     connectorLabel: label,
+    ...owner,
     // Never runs itself: the gateway runs the real tool (`directoryRole`).
     execute: async () => ({ content: "Unknown tool", isError: true }),
   };
@@ -364,6 +368,7 @@ export function presentTools(
 export function toolGroupKey(tool: Pick<ToolDefinition, "scope" | "connectionId"> & { name?: string }) {
   if (tool.name && RARE_TOOLS.has(tool.name)) return RARE_GROUP;
   if (tool.name && DASHBOARD_TOOLS.has(tool.name) && !tool.connectionId) return DASHBOARD_GROUP;
+  if (tool.name && LIVE_FILE_TOOLS.has(tool.name) && !tool.connectionId) return LIVE_FILES_GROUP;
   const prefix = tool.scope.split(":")[0] ?? "";
   return prefix.startsWith("custom") ? `custom:${tool.connectionId ?? prefix}` : prefix;
 }
@@ -393,11 +398,13 @@ export const RARE_TOOLS: ReadonlySet<string> = new Set([
   "get_my_usage",
   "set_status",
   "set_reply_style",
+  "commit_co_author",
   "add_agent_to_channel",
   "update_thread",
   "cancel_follow_up",
   "offer_install_skill",
   "update_skill_from_source",
+  "create_skill",
   "read_conversation",
   "send_feedback",
   "offer_feedback",
@@ -416,6 +423,29 @@ export const DASHBOARD_TOOLS: ReadonlySet<string> = new Set([
 ]);
 const DASHBOARD_GROUP = "dashboards";
 
+/**
+ * Live files (ADR 0196 §6, ADR 0197): spreadsheets, presentations and canvases, and images onto a canvas. Under the
+ * Drive's scopes, in a group of their own, so a run about a spreadsheet loads these and not every Drive tool (and the
+ * other way round).
+ */
+export const LIVE_FILE_TOOLS: ReadonlySet<string> = new Set([
+  "create_spreadsheet",
+  "read_spreadsheet",
+  "edit_spreadsheet",
+  "create_presentation",
+  "read_presentation",
+  "edit_presentation",
+  "create_canvas",
+  "read_canvas",
+  "edit_canvas",
+  "read_document",
+  "edit_document",
+  "generate_image",
+  // Pictures from the web to put in a live file (ADR 0196 §8): no scope, like the web's other tools.
+  "image_search",
+]);
+export const LIVE_FILES_GROUP = "files";
+
 export const isCore = (tool: Pick<ToolDefinition, "name" | "scope" | "connectionId">) =>
   !RARE_TOOLS.has(tool.name) && (CORE_GROUPS.has(toolGroupKey(tool)) || CORE_TOOLS.has(tool.name));
 
@@ -429,9 +459,10 @@ export const isStableTool = (tool: Pick<ToolDefinition, "name" | "scope" | "conn
 /** How a group is named for the model and the judge ("Browser", "GitHub", a connector's label). */
 const GROUP_LABELS: Record<string, string> = {
   [RARE_GROUP]:
-    "More of the conversation (reading a channel or a message by its link, stickers, your status, reply style, threads, adding agents to channels, the agents' directory, your usage, instruction changes, your own settings, feedback on this app)",
+    "More of the conversation (reading a channel or a message by its link, stickers, your status, reply style, threads, adding agents to channels, the agents' directory, your usage, instruction changes, your own settings, the agents' line on commits, feedback on this app)",
   drive: "Files (Drive)",
   [DASHBOARD_GROUP]: "Dashboards and widgets (numbers and charts kept up to date, boards to share)",
+  [LIVE_FILES_GROUP]: "Live spreadsheets, slides, canvases and documents, and pictures in them",
   issues: "Issues",
   calendar: "Calendar",
   schedule: "Schedule, reminders and routines",
@@ -503,6 +534,8 @@ function onDemandTools(
   const groups = deferrableGroups(tools);
   const areas = groups.map((g) => `${g.label} (${g.tools.length})`);
   const label = "other";
+  // Its search lists a person's own connection's tools (only ever in that person's runs): its call is theirs to read.
+  const personal = [...tools, ...loaded].find((t) => t.ownerUserId)?.ownerUserId;
   const find: ToolDefinition = {
     name: ON_DEMAND_FIND,
     description: every
@@ -526,6 +559,7 @@ function onDemandTools(
       additionalProperties: false,
     },
     scope: "",
+    ...(personal ? { ownerUserId: personal } : {}),
     execute: async (input, ctx) => ({
       content: findTools(
         tools,

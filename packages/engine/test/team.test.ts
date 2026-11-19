@@ -6,18 +6,22 @@ import {
   addChannelMember,
   agentScopeNames,
   createAgent,
+  createAgentGroup,
   createCredential,
   drainOutbox,
   enableCaches,
+  forgetTeam,
   insertMessage,
   type MachineStatus,
   NO_PERSON,
   postPersonMessage,
   rosterScopeNames,
+  setAgentAudience,
   summarizeScopes,
   teamPrompt,
+  teamStatus,
 } from "../src";
-import { type Fixture, setup } from "./fixtures";
+import { addMember, type Fixture, setup } from "./fixtures";
 import { pairMachine } from "./machine-fixtures";
 
 let f: Fixture;
@@ -46,10 +50,14 @@ test("a big team is only a count with a pointer to find_agent", () => {
     audienceMode: "everyone" as const,
     audienceUserIds: [],
     audienceRoleIds: [],
+    editorUserIds: [],
+    editorRoleIds: [],
     consultable: true,
     brain: "model",
     autonomyBrakes: {},
     reportsToAgentId: null,
+    groupId: null,
+    groupName: null,
   }));
   const text = teamPrompt(team, "a0", null, new Set(), NO_PERSON);
   expect(text).toContain("19 other agents work in this organization.");
@@ -179,6 +187,95 @@ test("find_agent searches by what agents do and shows what they can do", async (
   expect(out).toContain("Responsible person:");
   expect(out).not.toContain("@design");
   expect(out).not.toContain("@dev:");
+});
+
+test("a teammate's department is in the team context, by name", async () => {
+  const requests: ModelRequest[] = [];
+  f = await setup({
+    askAgent: true,
+    reply: (req) => {
+      requests.push(req);
+      return { chunks: ["ok"] };
+    },
+  });
+  const infra = await addAgent("Infra", "infra", "Infrastructure");
+  await createAgentGroup({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, {
+    name: "Plataforma",
+    agentIds: [infra.id],
+  });
+
+  await post("@dev oi");
+  await drainOutbox(f.db, f.handlers);
+
+  const prompt = systemText(requests[0]?.system ?? []);
+  expect(prompt).toContain("@infra (Infrastructure, department: Plataforma)");
+});
+
+test("a private agent stays out of a teammate's find_agent, but not its owner's", async () => {
+  const results: string[] = [];
+  f = await setup({
+    askAgent: true,
+    reply: (req) => {
+      const last = JSON.stringify(req.messages.at(-1)?.content);
+      if (last.includes("tool_result")) {
+        results.push(last);
+        return { chunks: ["done"] };
+      }
+      return { chunks: [], toolUses: [{ name: "find_agent", input: {} }] };
+    },
+  });
+  const walt = await addMember(f.db, f.org.id, "member", "walt");
+  const duda = await addMember(f.db, f.org.id, "member", "duda");
+  for (const who of [walt, duda]) await addChannelMember(f.db, f.owner.id, f.org.id, f.general.id, { userId: who.id });
+  const bento = await addAgent("Bento", "bento", "Finanças pessoais");
+  await f.db.update(schema.agents).set({ ownerUserId: duda.id }).where(eq(schema.agents.id, bento.id));
+  // Owner-only, yet it takes consultations: before, any teammate's agent found it.
+  await setAgentAudience(f.db, duda.id, f.org.id, bento.id, { mode: "owner", userIds: [], roleIds: [] });
+  forgetTeam(f.org.id);
+  const ask = async (userId: string) => {
+    await postPersonMessage({ db: f.db, pubsub: f.pubsub }, userId, f.org.id, f.general.id, { body: "@dev quem há?" });
+    await drainOutbox(f.db, f.handlers);
+    return results.at(-1) ?? "";
+  };
+
+  expect(await ask(walt.id)).not.toContain("@bento");
+  expect(await ask(duda.id)).toContain("@bento");
+});
+
+test("find_agent says which department an agent is in", async () => {
+  const results: string[] = [];
+  f = await setup({
+    askAgent: true,
+    reply: (req) => {
+      const last = JSON.stringify(req.messages.at(-1)?.content);
+      if (last.includes("tool_result")) {
+        results.push(last);
+        return { chunks: ["done"] };
+      }
+      return { chunks: [], toolUses: [{ name: "find_agent", input: { query: "deploy" } }] };
+    },
+  });
+  const infra = await addAgent("Infra", "infra", "Infrastructure", "Cuida do deploy no Railway.");
+  await createAgentGroup({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, {
+    name: "Plataforma",
+    agentIds: [infra.id],
+  });
+
+  await post("@dev quem faz deploy?");
+  await drainOutbox(f.db, f.handlers);
+
+  expect(results[0] ?? "").toContain("Department: Plataforma");
+});
+
+test("team_status names the department of the agents it lists", async () => {
+  f = await setup();
+  const infra = await addAgent("Infra", "infra", "Infrastructure");
+  await createAgentGroup({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, {
+    name: "Plataforma",
+    agentIds: [infra.id],
+  });
+  const out = await teamStatus(f.db, f.org.id, f.owner.id);
+  expect(out).toContain("Departments:\n- Plataforma: @infra");
 });
 
 test("a whole-connection grant is named after its connector, not 'Connector'", async () => {

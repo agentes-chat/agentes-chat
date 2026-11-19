@@ -452,36 +452,30 @@ describe("Conectores → Email", () => {
     ]);
   });
 
-  test("someone else's mailbox: 'O que faz' read-only, and lowering who uses it ends there, without rules to set", async () => {
-    const { api, state, mail } = mailApi([
+  test("someone else's mailbox: a bare row under others' personal ones, with only Remover, and no flow opens on it", async () => {
+    const { api, state } = mailApi([
       {
         address: "joao@example.com",
+        label: "joao@example.com",
         ownerUserId: "u-joao",
         agents: [{ agentId: ADA_ID, level: "read_write", canDelete: false }],
       },
     ]);
-    mail.agentMail.set(
-      ADA_ID,
-      new Map([["mail-1", { accountId: "mail-1", level: "read_write", canDelete: false, policy: defaultPolicy() }]]),
-    );
     await renderApp(`/org/${ORG_ID}/settings/connectors?mail=connected&account=mail-1`, { api });
     await settle(8);
-    const actions = screen().getByRole("dialog", { name: "O que joao@example.com faz" });
-    expect(actions.textContent).toContain("Só João pode dar acesso: foi quem conectou esta caixa.");
-    expect(within(actions).queryByRole("radiogroup", { name: "Nível de Enviar" })).toBeNull();
-    await click(within(actions).getByRole("button", { name: "Continuar" }));
-    await settle(4);
-    expect(state.calls.some((c) => c.method === "mail.update")).toBe(false);
-    const who = screen().getByRole("dialog", { name: "Quem pode usar joao@example.com" });
+    expect(screen().queryByRole("dialog", { name: "O que joao@example.com faz" })).toBeNull();
+    const others = screen().getByRole("region", { name: /Pessoais de outras pessoas/ });
+    expect(others.textContent).toContain("Pessoal de João");
+    await openConnected();
+    expect(within(others).queryByRole("button", { name: /Quem usa|Ferramentas|Endereços/ })).toBeNull();
+    await click(within(others).getByRole("button", { name: "Remover joao@example.com" }));
     await click(
-      within(within(who).getByRole("radiogroup", { name: "Nível de Ada" })).getByRole("radio", { name: "Ler" }),
+      within(screen().getByRole("dialog", { name: "Remover joao@example.com?" })).getByRole("button", {
+        name: "Remover",
+      }),
     );
-    await click(within(who).getByRole("button", { name: "Continuar" }));
-    await settle(6);
-    expect(
-      state.calls.filter((c) => c.method === "mail.setAgent").map((c) => (c.args[3] as { level: string }).level),
-    ).toEqual(["read"]);
-    expect(screen().queryByRole("dialog", { name: "Regras em joao@example.com" })).toBeNull();
+    await settle(4);
+    expect(state.calls.find((c) => c.method === "mail.disconnect")?.args).toEqual([ORG_ID, "mail-1"]);
   });
 
   test("'Precisa reconectar': a new app password (PATCH), or Gmail signs in again", async () => {
@@ -540,7 +534,7 @@ describe("the agent's email rules", () => {
     await click(within(level).getByRole("radio", { name: "Ler e escrever" }));
     const row = level.closest("li") as HTMLElement;
     // Sends ask by default.
-    expect(row.textContent).toContain("Enviar pede aprovação");
+    expect(row.querySelector(".level-row__asks")?.textContent).toBe("Pede aprovação: Enviar, Responder, Encaminhar");
     await click(within(row).getByRole("switch", { name: /Pode apagar emails/ }));
     await click(within(row).getByLabelText("Regras de ana@example.com"));
     await settle(4);
@@ -582,29 +576,71 @@ describe("the agent's email rules", () => {
   });
 
   test("someone else's mailbox: read-only, says who gives it, and an admin removes the agent's access", async () => {
-    const { api, state, mail } = mailApi([{ address: "joao@example.com", ownerUserId: "u-joao" }]);
+    const { api, state, mail } = mailApi([
+      {
+        address: "joao@example.com",
+        label: "joao@example.com",
+        ownerUserId: "u-joao",
+        agents: [{ agentId: ADA_ID, level: "read", canDelete: false }],
+      },
+    ]);
     mail.agentMail.set(
       ADA_ID,
       new Map([["mail-1", { accountId: "mail-1", level: "read", canDelete: false, policy: defaultPolicy() }]]),
     );
     await renderApp(`/org/${ORG_ID}/agents/${ADA_ID}?tab=access`, { api });
     await settle(10);
-    // The level is shown, not picked.
-    expect(screen().queryByRole("radiogroup", { name: "Nível em joao@example.com" })).toBeNull();
-    const [row] = within(screen().getByRole("list", { name: "Email" })).getAllByRole("listitem") as [HTMLElement];
-    expect(row.textContent).toContain("Só João pode dar acesso: foi quem conectou esta caixa.");
-    expect(within(row).queryByRole("button", { name: "Salvar" })).toBeNull();
+    // The level is shown, not picked: the control, faded.
+    const shown = within(screen().getByRole("radiogroup", { name: "Nível em joao@example.com" })).getAllByRole("radio");
     expect(
-      within(row)
-        .getByRole("switch", { name: /Pode apagar emails/ })
-        .hasAttribute("disabled"),
-    ).toBe(true);
+      shown.map((r) => [r.textContent, r.getAttribute("aria-checked"), (r as HTMLButtonElement).disabled]),
+    ).toEqual([
+      ["Sem acesso", "false", true],
+      ["Ler", "true", true],
+      ["Ler e escrever", "false", true],
+    ]);
+    const [row] = within(screen().getByRole("list", { name: "Email" })).getAllByRole("listitem") as [HTMLElement];
+    expect(row.textContent).toContain("Só João dá acesso a esta caixa.");
+    expect(within(row).queryByRole("button", { name: "Salvar" })).toBeNull();
+    // It only reads: nothing to delete, so no switch for it.
+    expect(within(row).queryByRole("switch", { name: /Pode apagar emails/ })).toBeNull();
     await click(within(row).getByRole("button", { name: "Remover acesso" }));
     await settle(4);
     const call = state.calls.find((c) => c.method === "mail.setAgent");
     expect(call?.args.slice(1, 3)).toEqual([ADA_ID, "mail-1"]);
     expect(call?.args[3]).toEqual({ level: "none", canDelete: false, policy: defaultPolicy() });
     expect(screen().getByText("Ada não tem mais acesso a joao@example.com.")).toBeTruthy();
+  });
+
+  describe("'Pode apagar emails' under a level that only reads", () => {
+    const at = async (canDelete: boolean) => {
+      const { api, mail } = mailApi([{ address: "ana@example.com" }]);
+      mail.agentMail.set(
+        ADA_ID,
+        new Map([["mail-1", { accountId: "mail-1", level: "read", canDelete, policy: defaultPolicy() }]]),
+      );
+      await renderApp(`/org/${ORG_ID}/agents/${ADA_ID}?tab=access`, { api });
+      await settle(10);
+      const [row] = within(screen().getByRole("list", { name: "Email" })).getAllByRole("listitem") as [HTMLElement];
+      return row;
+    };
+    test("off: no switch", async () => {
+      expect(within(await at(false)).queryByRole("switch", { name: /Pode apagar emails/ })).toBeNull();
+    });
+    test("saved on: the switch is there, on, and stays under the pointer when turned off", async () => {
+      const row = await at(true);
+      const sw = within(row).getByRole("switch", { name: /Pode apagar emails/ });
+      expect(sw.getAttribute("aria-checked")).toBe("true");
+      expect(document.getElementById(sw.getAttribute("aria-describedby") ?? "")?.textContent).toBe(
+        "Mesmo ligado, cada exclusão pede aprovação.",
+      );
+      await click(sw);
+      expect(
+        within(row)
+          .getByRole("switch", { name: /Pode apagar emails/ })
+          .getAttribute("aria-checked"),
+      ).toBe("false");
+    });
   });
 
   test("a Gmail still connecting: its name, 'Conectando' and the way to Conectores, no level to pick", async () => {
@@ -678,7 +714,7 @@ describe("the agent's email rules", () => {
     await settle(10);
     const row = screen().getByRole("radiogroup", { name: "Nível em ana@example.com" }).closest("li") as HTMLElement;
     // 4 rules: senders, window, recipients, send without asking.
-    expect(within(row).getByLabelText("Regras de ana@example.com").textContent).toContain("4");
+    expect(within(row).getByLabelText("Regras de ana@example.com").parentElement?.textContent).toBe("Regras4");
     await click(within(row).getByLabelText("Regras de ana@example.com"));
     const auto = within(row).getByRole("switch", { name: /Enviar sem pedir aprovação/ });
     expect(auto.getAttribute("aria-checked")).toBe("true");

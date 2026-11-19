@@ -1,5 +1,7 @@
+import OpenAI from "openai";
 import { createAnthropicProvider } from "./anthropic";
 import { parseCustomModel } from "./catalog";
+import { openAIImages } from "./openai";
 import { createOpenRouterProvider } from "./openrouter";
 import { type Endpoint, type ModelProvider, type ModelResult, ProviderError } from "./types";
 
@@ -145,6 +147,12 @@ export function endpointHeaders(baseURL: string, session: string, version = "dev
 }
 
 /**
+ * Claude reads images wherever it is served (Amazon Bedrock's runtime and Mantle, a gateway): its ids all name it
+ * (`global.anthropic.claude-sonnet-5-5`). Another company's model on an Anthropic-compatible endpoint isn't trusted to.
+ */
+const readsImages = (model: string) => /claude/i.test(model);
+
+/**
  * The adapter for every workspace endpoint, registered once as `custom`: each call names its endpoint
  * (`StreamOptions.endpoint`) and goes through the catalog's own adapters with that address, Anthropic's in its
  * compatible mode or the Chat Completions one OpenRouter uses. The endpoint's model id is sent, the full
@@ -169,7 +177,7 @@ export function createCustomProvider(
           ? createAnthropicProvider({
               id: "custom",
               baseURL: endpoint.baseURL,
-              compat: { toolChoiceAny: false },
+              compat: { toolChoiceAny: false, images: readsImages(parsed.model) },
               fetch: http,
               maxRetries: options.maxRetries,
             })
@@ -183,6 +191,38 @@ export function createCustomProvider(
         streamOptions,
       );
       return { ...result, model: request.model };
+    },
+    /**
+     * Pictures from an endpoint that speaks OpenAI's Images API (`/images/generations`, `/images/edits`, ADR 0197):
+     * through the same bounded fetch, a picture it answers with as an address read through it too. The workspace
+     * prices them (`imageCostNanoUsd`): a cost the server reports is ignored.
+     */
+    async generateImage(request, { apiKey, endpoint }) {
+      if (endpoint?.style !== "openai") throw new ProviderError("this endpoint makes no pictures", false);
+      const model = parseCustomModel(request.model)?.model ?? request.model;
+      const client = new OpenAI({
+        apiKey,
+        baseURL: endpoint.baseURL,
+        fetch: bounded,
+        maxRetries: options.maxRetries ?? 2,
+      });
+      const fetchUrl = async (url: string) => {
+        let res: Response;
+        try {
+          if (!/^https?:\/\//i.test(url)) throw new Error("not a web address");
+          res = await bounded(url, { signal: request.signal });
+        } catch {
+          throw new ProviderError("could not read the endpoint's picture", true);
+        }
+        if (!res.ok) throw new ProviderError(`the endpoint answered ${res.status} for its picture`, true, res.status);
+        return new Uint8Array(await res.arrayBuffer());
+      };
+      const { costNanoUsd: _reported, ...result } = await openAIImages(
+        client,
+        { ...request, model },
+        { compatible: true, fetchUrl },
+      );
+      return result;
     },
   };
 }

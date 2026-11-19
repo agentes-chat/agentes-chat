@@ -223,7 +223,7 @@ describe("headers at their worst: the name wraps whole, the glyphs go under it a
     const { header, line, acts } = lineOf();
     expect(line.firstElementChild?.matches(".dm-who")).toBe(true);
     expect(within(header).getByRole("heading", { level: 1, name: LONG_PERSON })).toBeTruthy();
-    expect(within(acts).getByRole("combobox", { name: "Buscar" })).toBeTruthy();
+    expect(within(acts).getByRole("button", { name: "Buscar" })).toBeTruthy();
   });
 
   test("a DM with an agent: its tasks, the search and the side panel's toggle in one group", async () => {
@@ -261,7 +261,7 @@ describe("headers at their worst: the name wraps whole, the glyphs go under it a
     expect(line.firstElementChild?.matches(".dm-who")).toBe(true);
     expect(within(header).getByRole("heading", { level: 1, name: LONG_AGENT })).toBeTruthy();
     expect(acts.querySelector(".tm-pill")).not.toBeNull();
-    expect(within(acts).getByRole("combobox", { name: "Buscar" })).toBeTruthy();
+    expect(within(acts).getByRole("button", { name: "Buscar" })).toBeTruthy();
     expect(acts.lastElementChild?.matches(".dm-side-toggle")).toBe(true);
   });
 

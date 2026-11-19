@@ -199,7 +199,23 @@ describe("the iPhone setup window", () => {
 
       phone({ reason: "ui_not_authorized" });
       await at("Turn on UI Automation");
-      expect(step()?.textContent).toContain("The iPhone refused the test helper's taps. Unlock it");
+      // Each thing only the person can do on the iPhone, Check again, and the Mac's own repair.
+      expect(step()?.textContent).toContain("Agents see the iPhone's screen, but iOS refuses their taps.");
+      expect([...(step()?.querySelectorAll(".ac-setpath") ?? [])].map((p) => p.textContent)).toEqual([
+        "SettingsPrivacy & SecurityDeveloper Mode",
+        "SettingsDeveloperEnable UI Automation",
+      ]);
+      expect(step()?.textContent).toContain("Enter its passcode when it asks, and keep it unlocked.");
+      const runners = [...host.runners.values()];
+      const looked = runners.reduce((n, r) => n + r.looks, 0);
+      await act(async () => button(step() ?? undefined, "Check again")?.click());
+      await until(() => runners.reduce((n, r) => n + r.looks, 0) === looked + 1);
+      const repair = () => button(step() ?? undefined, "Repair the test helper");
+      await until(() => repair()?.disabled === false);
+      await act(async () => repair()?.click());
+      await until(() => runners.some((r) => r.repairs.length === 1));
+      const iphone = runners.flatMap((r) => r.phones).find((p) => p.platform === "ios");
+      expect(runners.flatMap((r) => r.repairs)).toEqual([iphone?.serial ?? ""]);
 
       for (const runner of host.runners.values()) runner.iphone = { ...runner.iphone, sdk: "26.2" };
       phone({ reason: "xcode_too_old", osVersion: "27.0" });
@@ -242,6 +258,38 @@ describe("the iPhone setup window", () => {
     // waiting, past the 5 s a test gets. Cut short, it went on running under the files after it (its window still
     // mounted, the clock moved 46 s on) and failed their tests.
   }, 30_000);
+
+  test("Developer Mode: a restart keeps the step, check again asks the Mac, and why the switch may be missing", async () => {
+    writePref(IPHONE_SETUP_PREF, true);
+    await mount("welcome", <WindowView name="welcome" />, async (el, host) => {
+      const step = () => el.querySelector('[aria-current="step"]');
+      await until(() => step()?.querySelector("b")?.textContent === "Turn on Developer Mode");
+      const runners = [...host.runners.values()];
+      await act(async () => button(step() ?? undefined, "I turned it on, check again")?.click());
+      await until(() => step()?.textContent?.includes("The iPhone still says Developer Mode is off."));
+      expect(runners.some((r) => r.looks === 1)).toBe(true);
+      // Why the switch may be missing, each with its one action, when asked.
+      await act(async () => button(step() ?? undefined, "Don't see the option?")?.click());
+      const causes = () => [...(step()?.querySelectorAll(".dk-ip__causes li") ?? [])].map((li) => li.textContent);
+      expect(causes()).toEqual([
+        "The iPhone hides the option until Xcode asks to show it.Open Xcode",
+        "Turned it on and the iPhone restarted? Unlock it. The alert with Turn On shows only after that.",
+      ]);
+      await act(async () => button(step() ?? undefined, "Open Xcode")?.click());
+      await until(() => causes()[0]?.startsWith("Xcode opened on"));
+
+      // It restarts and leaves the Mac's list: the step stays, under way.
+      const iphones = runners.map((r) => r.phones.filter((p) => p.platform === "ios"));
+      for (const runner of runners) runner.setPhones(runner.phones.filter((p) => p.platform !== "ios"));
+      await until(() => step()?.textContent?.includes("The iPhone is restarting."));
+      expect(step()?.querySelector("b")?.textContent).toBe("Turn on Developer Mode");
+      expect(step()?.getAttribute("data-state")).toBe("active");
+      runners.forEach((runner, i) => {
+        runner.setPhones([...runner.phones, ...(iphones[i] ?? [])]);
+      });
+      await until(() => step()?.textContent?.includes("The iPhone is back. Unlock it, tap Turn On"));
+    });
+  });
 
   test("without the ask, the welcome window is the first run", () =>
     mount("welcome", <WindowView name="welcome" />, async (el) => {

@@ -3,6 +3,7 @@ import {
   type AnyPgColumn,
   bigint,
   boolean,
+  check,
   foreignKey,
   index,
   integer,
@@ -155,6 +156,13 @@ export const agents = pgTable(
      */
     consultable: boolean().notNull().default(true),
     /**
+     * "Quem pode editar" (ADR 0085, addendum of 2026-11-17): besides its owner and who manages it, the people named
+     * and whoever holds one of `editor_role_ids` at the time edit how it works (instructions, role, skills and
+     * routines) and see it. Talking to it is still its audience's.
+     */
+    editorUserIds: text().array().notNull().default(sql`'{}'::text[]`),
+    editorRoleIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
+    /**
      * Autonomy brakes (ADR 0131): what it may start that nobody asked for directly (costly work, how much at once,
      * PRs an hour) and which agents it may call. Validated in code (`autonomySettings`); `{}` = the defaults.
      */
@@ -190,11 +198,17 @@ export const agents = pgTable(
      */
     missionCommandApproval: text(),
     /**
-     * How much it asks before acting (ADR 0173): `always` (every write to a connected app), `risky` (what is marked
-     * sensitive, the default) or `never` (only merge, deploy, rollback and the like). Validated in code
+     * How much it asks before acting (ADR 0173): `always` (before every change), `risky` (what is marked sensitive,
+     * the default) or `never` (nothing, merge, deploy and routines included). Validated in code
      * (`APPROVALS_LEVELS`). It never widens what the agent may use.
      */
     approvalsLevel: text().$type<"always" | "risky" | "never">().notNull().default("risky"),
+    /**
+     * Whether `approvals_level` is the agent's own choice. False: it follows the workspace's
+     * (`organization_settings.approvals_level`), copied here whenever that changes, so every reader keeps reading
+     * `approvals_level` alone.
+     */
+    approvalsLevelOwn: boolean().notNull().default(false),
     /**
      * Who thinks for it (ADR 0032): `model` (the API, default), `claude_code`
      * or `codex` on its computer; validated in code (`brain-settings.ts`).
@@ -202,11 +216,14 @@ export const agents = pgTable(
     brain: text().notNull().default("model"),
     /** The computer brain's model (`opus`, `sonnet`, `haiku`, a Codex model); null = the brain's default. */
     brainModel: text(),
-    /** When the computer brain can't answer, answer through the API (counts against the budget). */
+    /**
+     * Unused (ADR 0032's 2026-11-15 addendum: the API never stands in for a computer brain). Kept while the previous
+     * release still reads it during a deploy and on rollback; a migration of a later release drops it.
+     */
     brainFallback: boolean().notNull().default(true),
     /**
-     * Long work may go on into the plan's paid extra usage, where the provider reports it on (ADR 0118); off, it
-     * pauses at 95% of the plan like any other.
+     * Never read (ADR 0118's 2026-11-15 addendum: paid extra usage follows the plan, `paysExtraUsage`). Kept and dropped
+     * as `brainFallback` is; until then written `false` where the previous release wrote it, which still reads it.
      */
     brainExtraUsage: boolean().notNull().default(true),
     /**
@@ -225,6 +242,11 @@ export const agents = pgTable(
      * the plan stays lent if that person leaves.
      */
     brainAccountLentBy: text(),
+    /**
+     * "Só esta conta" (ADR 0041 §6): at its plan's limit a run waits for this account to reset instead of going on
+     * with the next account in the workspace's order (`nextAccountPlan`).
+     */
+    brainAccountPinned: boolean().notNull().default(false),
     /** How hard its computer brain thinks (`low`…`max`, ADR 0041); null = the CLI's default. */
     brainEffort: text(),
     /**
@@ -391,6 +413,23 @@ export const organizationSettings = pgTable("organization_settings", {
    * what exists or who may do what.
    */
   mode: text().$type<"team" | "personal">().notNull().default("team"),
+  /**
+   * Agents' commits end with their own `Co-authored-by: <name> <noreply@agentes.chat>` (ADR 0156). On unless a person
+   * asks an agent to turn it off (`commit_co_author`); no screen has it.
+   */
+  agentCoAuthor: boolean().notNull().default(true),
+  /**
+   * "Cuidar da equipe": the right hand watches for what stops the team (an ended sign-in, an app to reconnect) and
+   * tells the one person who can fix it. A workspace with no row here has it on.
+   */
+  teamWatch: boolean().notNull().default(true),
+  /** "Dar boas-vindas a quem entra": the right hand greets each person who joins, once. On without a row too. */
+  welcomePeople: boolean().notNull().default(true),
+  /**
+   * How much the workspace's agents ask before acting (ADR 0173 addendum 2026-11-15): what every agent without its
+   * own choice (`agents.approvals_level_own`) uses. A workspace with no row here is at `risky`.
+   */
+  approvalsLevel: text().$type<"always" | "risky" | "never">().notNull().default("risky"),
   updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -409,7 +448,6 @@ export interface AgentSetup {
   account?: string | null;
   effort?: string | null;
   contextTokens?: number | null;
-  fallback?: boolean;
   /** Its Autonomia (`agents.mission_command_approval`); null: the default. */
   autonomy?: string | null;
 }
@@ -429,7 +467,10 @@ export const rightHandBrains = pgTable(
     /** A computer brain (`claude_code`, `codex`…): an API key is the workspace's, never a person's. */
     brain: text().notNull(),
     brainModel: text(),
-    brainAccountId: uuid().notNull(),
+    /** Null: the plan the person's own computer is signed in to (`machineId`), as any agent's owner may use. */
+    brainAccountId: uuid(),
+    /** The computer whose own sign-in thinks, when there is no account: one the person paired. */
+    machineId: uuid(),
     /** Someone else's plan, given with `use_others_plans`: who gave it (themselves); its owner may take it back. */
     brainAccountLentBy: text().references(() => users.id, { onDelete: "set null" }),
     brainEffort: text(),
@@ -445,6 +486,29 @@ export const rightHandBrains = pgTable(
       columns: [t.orgId, t.brainAccountId],
       foreignColumns: [machineAccounts.orgId, machineAccounts.id],
     }).onDelete("cascade"),
+    foreignKey({ columns: [t.orgId, t.machineId], foreignColumns: [machines.orgId, machines.id] }).onDelete("cascade"),
     index().on(t.orgId, t.brainAccountId),
+    check("right_hand_brains_account_or_machine", sql`${t.brainAccountId} is not null or ${t.machineId} is not null`),
   ],
+);
+
+/**
+ * A place of the team's right hand on the workspace's computer (ADR 0175): one agents row answers everyone, so each
+ * person's files, browser and sign-ins there live under a row's id here, which the computer takes for an agent's
+ * (its OS user is named from the first 8 of it), and one more row is the place it works in where others read
+ * (`userId` is then the word `shared`, no person's id). Made on first use. `removedAt`: the person left, or the
+ * shared place ended; the row stays so the computer hears that id is gone, and the next use makes a new one.
+ */
+export const rightHandSeats = pgTable(
+  "right_hand_seats",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    orgId: uuid()
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    userId: text().notNull(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    removedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [uniqueIndex("right_hand_seats_one_live").on(t.orgId, t.userId).where(sql`${t.removedAt} is null`)],
 );

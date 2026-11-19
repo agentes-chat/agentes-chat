@@ -63,6 +63,18 @@ export const machineRpcReplyTopic = (rpcId: string) => `machine-rpc-reply:${rpcI
 /** Server-side: the `brain.event` frames of one run's brain turn on a connected computer (ADR 0032). */
 export const brainTopic = (runId: string) => `brain:${runId}`;
 
+/**
+ * Server-side: one live file's stored changes and presence, between the processes that hold it (ADR 0196 §4): each
+ * change's number (and the change itself when it fits), presence updates. Never forwarded to clients as is.
+ */
+export const liveTopic = (fileId: string) => `live:${fileId}`;
+
+/**
+ * Server-side: who is in each live file, as each process sees it (ADR 0196 §5), every workspace's on one topic, since
+ * the process asked who is in a file may hold none of it. Ids only. Never forwarded.
+ */
+export const livePresenceTopic = "live-presence";
+
 function deliver(handlers: Set<(event: RealtimeEvent) => void> | undefined, event: RealtimeEvent) {
   for (const handler of handlers ?? []) {
     try {
@@ -176,15 +188,15 @@ export async function createPostgresPubSub(
   // heartbeat must come back on the LISTEN, or it listens again. One that couldn't go out proves nothing.
   const heartbeat = JSON.stringify({ t: "pubsub.heartbeat", e: { type: "heartbeat" } });
   let sentAt: number | null = null;
-  let relistening = false;
+  let relistening: Promise<void> | null = null;
+  let closed = false;
   const beat = setInterval(() => {
-    if (relistening) return;
+    if (closed || relistening) return;
     if (sentAt !== null && heardAt < sentAt) {
       // A heartbeat sent now would go before the new LISTEN is in place, never to be heard: the next tick sends it.
       sentAt = null;
       gap = true;
-      relistening = true;
-      void unlisten()
+      relistening = unlisten()
         .catch(() => {})
         .then(listen)
         .then((off) => {
@@ -192,7 +204,7 @@ export async function createPostgresPubSub(
         })
         .catch(() => {})
         .finally(() => {
-          relistening = false;
+          relistening = null;
         });
       return;
     }
@@ -237,9 +249,12 @@ export async function createPostgresPubSub(
     },
     subscribe: (topic, handler) => registry.add(topic, handler),
     close: async () => {
+      closed = true;
       clearInterval(beat);
       flush();
       await flushing;
+      // A LISTEN already being replaced may finish after close starts. Remove that subscription too.
+      await relistening;
       await unlisten();
     },
   };

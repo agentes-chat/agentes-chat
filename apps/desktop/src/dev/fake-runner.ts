@@ -279,6 +279,10 @@ export class FakeRunner {
     },
   ];
   /** The Mac's side of an iPhone's setup; `iphone.download` fills the platform in about a second. */
+  /** How many times the iPhone setup asked to look at the iPhone again (`iphone.look`). */
+  looks = 0;
+  /** The iPhones whose test helper the window asked to repair. */
+  repairs: string[] = [];
   iphone: ControlIphoneSetup = {
     xcode: "27.0",
     platform: { state: "missing" },
@@ -527,6 +531,21 @@ export class FakeRunner {
       case "iphone.open":
         console.info("[fake] open", msg.app);
         return reply({ opened: true });
+      case "iphone.fixXcode":
+        this.iphone =
+          msg.action === "cancel"
+            ? { ...this.iphone, ...(this.iphone.fix ? { fix: { ...this.iphone.fix, state: "canceled" } } : {}) }
+            : { ...this.iphone, fix: { kind: msg.kind, state: msg.kind === "select" ? "asking" : "running", step: 0 } };
+        return reply(this.iphone);
+      case "cli.install":
+        // Its CLIs are all here already: there is nothing to install.
+        return reply({ install: msg.action === "start" ? { tool: msg.tool, state: "done" } : null });
+      case "iphone.look":
+        this.looks++;
+        return reply({ looking: true });
+      case "iphone.repair":
+        this.repairs.push(msg.serial);
+        return reply({ repairing: true });
       case "shutdown":
         return reply({ stopping: true });
     }

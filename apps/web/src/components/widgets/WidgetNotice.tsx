@@ -106,6 +106,10 @@ export function WidgetNoticeActions({
     );
   }
   const widgetId = notice.widgetId;
+  const connects = !!aiWay && "connect" in aiWay;
+  const resolves = notice.kind === "failed" && !!widgetId && !needsAi;
+  // Nothing to press here: no empty slot left in the row's gap.
+  if (!connects && !resolves && !open) return null;
   return (
     <span className="wn-acts">
       {aiWay && "connect" in aiWay && (

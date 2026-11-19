@@ -2,6 +2,7 @@ import type { ChannelEvent, UserEvent } from "../api/types";
 import { decodeBrowserFrameBytes } from "../browser/frame-bytes";
 import { type BrowserWatcher, createBrowserWatches } from "../browser/watches";
 import { steerStore } from "./steer";
+import type { TypingKind } from "./typing";
 
 /**
  * WebSocket client for `/api/ws?orgId=` (apps/server/src/realtime/ws.ts,
@@ -52,11 +53,15 @@ export const BROWSER_FRAMES_RENEW_MS = [1000, 2000, 4000];
 
 export type ConnectionStatus = "idle" | "connecting" | "open" | "reconnecting" | "closed";
 
-/** The part of the browser WebSocket we use (tests pass a fake). */
+/**
+ * The part of the browser WebSocket we use (tests pass a fake). Text frames here; bytes too on the sockets that carry
+ * them (a watched browser's frames, a live file's sync, ADR 0196 §3), which set `binaryType` to "arraybuffer".
+ */
 export interface SocketLike {
   readonly readyState: number;
-  send(data: string): void;
+  send(data: string | ArrayBufferLike | Uint8Array): void;
   close(code?: number, reason?: string): void;
+  binaryType?: string;
   onopen: ((ev: unknown) => void) | null;
   onmessage: ((ev: { data: unknown }) => void) | null;
   onclose: ((ev: { code: number }) => void) | null;
@@ -275,9 +280,17 @@ export class RealtimeConnection {
     };
   }
 
-  /** Tells the channel we're typing, in one of its threads or not (call it throttled: see `typingThrottle`). */
-  sendTyping(channelId: string, threadId?: string | null) {
-    this.send(threadId ? { type: "typing", channelId, threadId } : { type: "typing", channelId });
+  /**
+   * Tells the channel we're typing, or recording a voice message (`voice`), in one of its threads or not (call it
+   * throttled: see `typingThrottle`).
+   */
+  sendTyping(channelId: string, threadId?: string | null, kind: TypingKind = "typing") {
+    this.send({
+      type: "typing",
+      channelId,
+      ...(threadId ? { threadId } : {}),
+      ...(kind === "voice" ? { kind } : {}),
+    });
   }
 
   onStatus(listener: (status: ConnectionStatus) => void) {

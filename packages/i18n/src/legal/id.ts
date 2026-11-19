@@ -8,13 +8,13 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
       "Perjanjian untuk menggunakan agentes.chat: ruang kerja Anda, agen Anda, dan apa yang menjadi tanggung jawab masing-masing pihak.",
     courtesy:
       "Dokumen ini adalah terjemahan yang disediakan semata-mata untuk kemudahan. Apabila terdapat perbedaan dengan versi bahasa Inggris, versi bahasa Inggris yang berlaku.",
-    updated: "2026-11-06",
+    updated: "2026-11-18",
     sections: [
       {
         id: "agreement",
         heading: "1. Perjanjian",
         blocks: [
-          'Ketentuan Penggunaan ini ("Ketentuan") merupakan perjanjian yang mengikat antara CODARI GLOBAL, LLC, sebuah perusahaan dengan tanggung jawab terbatas (limited liability company) Wyoming yang menjalankan usaha dengan nama agentes.chat ("agentes.chat", "kami"), dan orang atau entitas yang membuat akun atau ruang kerja ("Anda"). Dengan membuat akun, bergabung dengan ruang kerja, atau dengan cara lain menggunakan agentes.chat di web, aplikasi Mac, atau aplikasi ponsel ("Layanan"), Anda menerima Ketentuan ini dan Kebijakan Privasi kami. Apabila Anda menggunakan Layanan atas nama perusahaan atau entitas lain, Anda menyatakan bahwa Anda berwenang untuk mengikat entitas tersebut.',
+          'Ketentuan Penggunaan ini ("Ketentuan") merupakan perjanjian yang mengikat antara AGENTESCHAT, LLC, sebuah perusahaan dengan tanggung jawab terbatas (limited liability company) Delaware yang menjalankan usaha dengan nama agentes.chat ("agentes.chat", "kami"), dan orang atau entitas yang membuat akun atau ruang kerja ("Anda"). Dengan membuat akun, bergabung dengan ruang kerja, atau dengan cara lain menggunakan agentes.chat di web, aplikasi Mac, atau aplikasi ponsel ("Layanan"), Anda menerima Ketentuan ini dan Kebijakan Privasi kami. Apabila Anda menggunakan Layanan atas nama perusahaan atau entitas lain, Anda menyatakan bahwa Anda berwenang untuk mengikat entitas tersebut.',
           "Anda harus berusia sekurang-kurangnya 18 tahun dan cakap untuk membuat kontrak agar dapat menggunakan Layanan.",
         ],
       },
@@ -99,10 +99,11 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
           "Setiap ruang kerja membayar paket agentes.chat-nya sendiri. Ketentuan berikut berlaku untuk setiap paket:",
           {
             list: [
+              "**Penjual.** Setiap pembelian dilakukan dari, dan ditagih oleh, AGENTESCHAT, LLC, perusahaan Amerika Serikat yang didirikan di Delaware.",
               "**Harga.** Paket dan harganya tercantum di halaman harga kami. Harga dinyatakan dalam dolar AS, dan pajak ditambahkan apabila berlaku. Bank atau penyedia pembayaran Anda dapat mengenakan biayanya sendiri atas pembelian dari luar negeri, seperti IOF di Brasil.",
               "**Perpanjangan.** Paket diperpanjang secara otomatis setiap bulan atau setiap tahun, bergantung pada periode yang dipilih, hingga dibatalkan. Kami mengirimkan pengingat sebelum paket tahunan diperpanjang.",
               "**Pembatalan.** Anda dapat membatalkan kapan saja, dan pembatalan berlaku pada akhir periode yang telah dibayar. Setelah itu, agen ruang kerja berhenti, komputernya dihapus 7 hari kemudian, dan percakapan serta berkasnya tetap dapat dibaca dan diunduh selama 90 hari, setelah itu semuanya dihapus.",
-              "**Tidak ada pengembalian dana.** Pembayaran bersifat final dan tidak dapat dikembalikan, baik seluruhnya maupun sebagian, termasuk untuk sisa periode setelah pembatalan, kecuali apabila hukum menentukan lain.",
+              "**Tidak ada pengembalian dana.** Setiap paket menimbulkan biaya operasional sejak dibeli, seperti penggunaan model AI, server, dan komputer ruang kerja. Karena itu, pembelian bersifat final dan tidak dapat dikembalikan, baik seluruhnya maupun sebagian, termasuk untuk sisa periode setelah pembatalan.",
               "**Pembayaran gagal.** Apabila suatu pembayaran gagal, kami mencobanya kembali selama beberapa hari berikutnya. Apabila tetap gagal, ruang kerja ditahan sementara (on hold): agennya berhenti, dan orang tetap dapat membaca dan menulis di dalamnya. Komputernya disimpan selama 7 hari, kemudian dilepaskan dan dihapus. Melakukan pembayaran akan memulihkan ruang kerja, pada komputer baru apabila komputer lama telah dilepaskan.",
               "**Perubahan harga.** Kami dapat mengubah harga bagi pelanggan baru kapan saja. Harga paket yang sudah Anda miliki hanya berubah karena pajak baru, mulai perpanjangan berikutnya, dengan pemberitahuan sekurang-kurangnya 30 hari sebelumnya.",
               "**Penggunaan wajar.** Beberapa fitur berjalan di atas layanan AI yang kami sediakan tanpa biaya tambahan, seperti memilih agen mana yang menjawab, menilai memori dan tindakan, serta menemukan apa yang perlu diklik di layar. Kami dapat membatasinya bagi ruang kerja yang penggunaannya jauh di atas normal.",
@@ -150,7 +151,7 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
         id: "law",
         heading: "16. Hukum yang berlaku",
         blocks: [
-          "Ketentuan ini diatur oleh hukum Negara Bagian Wyoming, Amerika Serikat, tidak termasuk kaidah hukum perdata internasionalnya (conflict-of-law rules), dan para pihak tunduk pada yurisdiksi eksklusif pengadilan negara bagian dan federal yang berkedudukan di Wyoming. Apabila Anda adalah konsumen di yurisdiksi yang hukumnya memberikan hak atau forum yang tidak dapat dikesampingkan, seperti Brasil, hak tersebut tidak terpengaruh.",
+          "Ketentuan ini, dan setiap pembelian yang dilakukan berdasarkan Ketentuan ini, diatur oleh hukum Amerika Serikat dan Negara Bagian Delaware, tidak termasuk kaidah hukum perdata internasional (conflict-of-law rules), dan para pihak tunduk pada yurisdiksi eksklusif pengadilan negara bagian dan federal yang berkedudukan di Delaware.",
         ],
       },
       {
@@ -164,7 +165,7 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "18. Kontak",
         blocks: [
-          "CODARI GLOBAL, LLC, yang menjalankan usaha dengan nama agentes.chat. Pemberitahuan: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · legal@agentes.chat · Hal lainnya: hello@agentes.chat",
+          "AGENTESCHAT, LLC, yang menjalankan usaha dengan nama agentes.chat. Pemberitahuan: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · legal@agentes.chat · Hal lainnya: hello@agentes.chat",
         ],
       },
     ],
@@ -175,13 +176,13 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
       "Apa yang kami kumpulkan, apa yang dikirim agen dan ke mana, siapa yang dapat melihat ruang kerja Anda, dan hak-hak yang Anda miliki.",
     courtesy:
       "Dokumen ini adalah terjemahan yang disediakan semata-mata untuk kemudahan. Apabila terdapat perbedaan dengan versi bahasa Inggris, versi bahasa Inggris yang berlaku.",
-    updated: "2026-11-06",
+    updated: "2026-11-18",
     sections: [
       {
         id: "overview",
         heading: "1. Ikhtisar",
         blocks: [
-          'CODARI GLOBAL, LLC, sebuah perusahaan dengan tanggung jawab terbatas (limited liability company) Wyoming yang menjalankan usaha dengan nama agentes.chat ("agentes.chat", "kami"), mengoperasikan agentes.chat: ruang kerja tempat manusia dan agen AI bekerja bersama, yang tersedia di web, sebagai aplikasi Mac, dan sebagai aplikasi ponsel ("Layanan"). Kebijakan ini membedakan dua peran:',
+          'AGENTESCHAT, LLC, sebuah perusahaan dengan tanggung jawab terbatas (limited liability company) Delaware yang menjalankan usaha dengan nama agentes.chat ("agentes.chat", "kami"), mengoperasikan agentes.chat: ruang kerja tempat manusia dan agen AI bekerja bersama, yang tersedia di web, sebagai aplikasi Mac, dan sebagai aplikasi ponsel ("Layanan"). Kebijakan ini membedakan dua peran:',
           {
             list: [
               "Untuk **data akun**, yaitu informasi yang diberikan orang kepada kami untuk membuat dan menggunakan akun, kami adalah pengendali data.",
@@ -230,15 +231,15 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
           "Agen adalah model AI yang membaca dan bertindak di dalam ruang kerja. Konten Ruang Kerja keluar dari server kami dalam keadaan-keadaan berikut, dan hanya dalam keadaan tersebut:",
           {
             list: [
-              "**Antara perangkat dan server kami.** Segala sesuatu yang dikirim antara server kami dan peramban, aplikasi, serta komputer yang terhubung dengannya, termasuk Konten Ruang Kerja, melewati Cloudflare, yang melindungi Layanan dari serangan. Untuk itu, Cloudflare mendekripsi lalu lintas ini di pusat datanya yang terdekat dengan setiap perangkat, dan menanganinya atas nama kami.",
-              "**Menjawab.** Ketika agen bekerja, agen mengirimkan konteks yang dibutuhkannya (konteks ruang kerja, instruksi agen, percakapan, memori yang relevan, dan hasil alat-alatnya) kepada penyedia model yang dipilih untuk agen tersebut. Dengan kunci API yang ditambahkan oleh ruang kerja, pemanggilan dilakukan di bawah akun dan perjanjian ruang kerja itu sendiri dengan penyedia tersebut. Dengan paket AI, seperti Claude atau ChatGPT, yang dihubungkan ke suatu agen, agen bekerja di bawah akun orang yang menghubungkan paket tersebut dan berdasarkan ketentuan penyedia.",
+              "**Antara perangkat dan server kami.** Segala sesuatu yang dikirim antara server kami dan peramban, aplikasi, serta komputer yang terhubung dengannya, termasuk Konten Ruang Kerja, melewati penyedia jaringan kami, yang melindungi Layanan dari serangan. Untuk itu, penyedia jaringan tersebut mendekripsi lalu lintas ini di pusat datanya yang terdekat dengan setiap perangkat, dan menanganinya atas nama kami.",
+              "**Menjawab.** Ketika agen bekerja, agen mengirimkan konteks yang dibutuhkannya (konteks ruang kerja, instruksi agen, percakapan, memori yang relevan, dan hasil alat-alatnya) kepada penyedia model yang dipilih untuk agen tersebut. Dengan kunci API yang ditambahkan oleh ruang kerja, pemanggilan dilakukan di bawah akun dan perjanjian ruang kerja itu sendiri dengan penyedia tersebut. Beberapa penyedia meneruskan pemanggilan kepada perusahaan yang membuat atau menghosting model, yang kemudian juga memprosesnya berdasarkan ketentuan penyedia tersebut. Dengan paket AI, seperti Claude atau ChatGPT, yang dihubungkan ke suatu agen, agen bekerja di bawah akun orang yang menghubungkan paket tersebut dan berdasarkan ketentuan penyedia.",
               "**Menentukan siapa yang membalas.** Model perutean membaca pesan baru, nama dan peran agen ruang kerja, serta percakapan terbaru untuk menentukan agen mana, jika ada, yang harus membalas. Model ini berjalan di TypeSafe atau, sebagai cadangan, di penyedia model ruang kerja. Perutean tidak pernah memberikan izin apa pun kepada agen.",
               "**Memori.** Agen menyimpan memori dari percakapan (ringkasan, fakta, dan pelajaran) agar semakin baik dari waktu ke waktu. Sebagian penilaian tentang memori (apakah sesuatu layak disimpan, atau bertentangan dengan apa yang sudah diketahui agen) dilakukan oleh TypeSafe. Memori dapat dilihat dan dihapus di halaman agen, dan dihapus bersama ruang kerja.",
               "**Pencarian.** Untuk menemukan pesan dan dokumen terkait, teks dapat diubah menjadi vektor (embedding) oleh Voyage AI.",
               "**Konektor.** Ketika ruang kerja menghubungkan suatu layanan (seperti GitHub, Google, Linear, Sentry, kotak masuk email, atau server MCP apa pun), kami menyimpan token aksesnya dalam keadaan terenkripsi dan membaca atau menulis ke layanan tersebut hanya dalam cakupan yang diberikan ruang kerja kepada setiap agen. Layanan yang terhubung memproses data tersebut berdasarkan ketentuannya sendiri. Sambungan ke kotak masuk Gmail dan Outlook, serta ke Google Drive, Google Calendar, Google Sheets, Google Docs, Slack, Microsoft Teams, OneDrive, HubSpot, Salesforce, Zendesk, Asana, Figma, Intercom, Dropbox, Square, Instagram, Facebook, LinkedIn, YouTube, Pinterest, Reddit, dan WhatsApp, melewati Composio, yang memproses apa yang dibaca dan ditulis agen di sana.",
               "**Basis data.** Sambungan basis data bersifat hanya-baca. Kredensial disimpan dalam keadaan terenkripsi dan setiap kueri diperiksa sebelum dijalankan.",
-              "**Komputer yang terhubung.** Ketika seseorang menghubungkan komputer, agen dapat menjalankan perintah dan menggunakan peramban di sana, dalam batas folder dan izin yang ditetapkan di komputer tersebut. Tampilan langsung peramban agen melewati Cloudflare dan memori server kami, dan tidak direkam. Ringkasan langkah-langkah yang diambil agen (seperti alamat yang dikunjungi dan tindakan) disimpan bersama pekerjaannya agar tim dapat melihat apa yang dilakukannya.",
-              "**Komputer ruang kerja.** Di agentes.chat Cloud, agen suatu ruang kerja bekerja pada komputer yang kami jalankan untuk ruang kerja tersebut, yang di-hosting oleh Contabo di Uni Eropa. Kami menghitung berapa banyak data yang dikirim dan diterima per hari oleh peramban, alat AI, dan program lain setiap agen di sana. Komputer tersebut dihapus setelah paket agentes.chat ruang kerja berakhir, sebagaimana diuraikan dalam Ketentuan Penggunaan.",
+              "**Komputer yang terhubung.** Ketika seseorang menghubungkan komputer, agen dapat menjalankan perintah dan menggunakan peramban di sana, dalam batas folder dan izin yang ditetapkan di komputer tersebut. Tampilan langsung peramban agen melewati penyedia jaringan kami dan memori server kami, dan tidak direkam. Ringkasan langkah-langkah yang diambil agen (seperti alamat yang dikunjungi dan tindakan) disimpan bersama pekerjaannya agar tim dapat melihat apa yang dilakukannya.",
+              "**Komputer ruang kerja.** Di agentes.chat Cloud, agen suatu ruang kerja bekerja pada komputer yang kami jalankan untuk ruang kerja tersebut, di server kami atau di server penyedia hosting, di Uni Eropa atau di Amerika Serikat. Kami menghitung berapa banyak data yang dikirim dan diterima per hari oleh peramban, alat AI, dan program lain setiap agen di sana. Komputer tersebut dihapus setelah paket agentes.chat ruang kerja berakhir, sebagaimana diuraikan dalam Ketentuan Penggunaan.",
             ],
           },
           "Tindakan yang sulit dibatalkan (seperti menggabungkan kode, melakukan deploy, atau mengirim atas nama seseorang) menjadi permintaan persetujuan kepada seseorang sebelum tindakan itu terjadi. Teks yang berasal dari luar ruang kerja (halaman web, email, berkas) ditandai sebagai tidak tepercaya sebelum agen membacanya.",
@@ -286,14 +287,14 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
         id: "transfers",
         heading: "9. Transfer internasional",
         blocks: [
-          "Aplikasi kami dan basis datanya berjalan di Amerika Serikat, dan penyedia yang disebutkan dalam kebijakan ini memproses data di Amerika Serikat, kecuali komputer ruang kerja, yang di-hosting oleh Contabo di Uni Eropa, dan Cloudflare, yang menangani lalu lintas di pusat datanya yang terdekat dengan setiap perangkat, di Amerika Serikat atau di tempat lain. Apabila data pribadi yang tunduk pada GDPR atau UK GDPR ditransfer ke negara ketiga, kami mengandalkan Klausul Kontrak Standar Komisi Eropa dan Adendum Inggris (UK Addendum). Untuk data yang tunduk pada LGPD, kami mengandalkan pengamanan kontraktual Pasal 33.",
+          "Aplikasi kami dan basis datanya berjalan di Amerika Serikat, dan penyedia yang disebutkan dalam kebijakan ini memproses data di Amerika Serikat, kecuali penyedia model dan layanan yang terhubung yang dipilih oleh ruang kerja, serta perusahaan tempat mereka meneruskan pemanggilan, yang dapat memproses data di negara lain berdasarkan ketentuannya sendiri. Komputer ruang kerja berjalan di Uni Eropa atau di Amerika Serikat, dan penyedia jaringan kami menangani lalu lintas di pusat datanya yang terdekat dengan setiap perangkat, di Amerika Serikat atau di tempat lain. Apabila data pribadi yang tunduk pada GDPR atau UK GDPR ditransfer ke negara ketiga, kami mengandalkan Klausul Kontrak Standar Komisi Eropa dan Adendum Inggris (UK Addendum). Untuk data yang tunduk pada LGPD, kami mengandalkan pengamanan kontraktual Pasal 33.",
         ],
       },
       {
         id: "apps",
         heading: "10. Aplikasi ponsel dan Mac",
         blocks: [
-          "Aplikasi ponsel mengirim notifikasi melalui Expo, Apple, dan Google. Notifikasi dapat menampilkan nama penulis dan awal pesan, dan Anda memilih notifikasi mana yang Anda terima. Aplikasi Mac dan komputer yang terhubung menyimpan sesi masuknya di perangkat. Menghapus akun Anda (juga tersedia di aplikasi) mengeluarkan semua perangkat dari sesi masuk.",
+          "Aplikasi ponsel mengirim notifikasi melalui Apple dan Google. Notifikasi dapat menampilkan nama penulis dan awal pesan, dan Anda memilih notifikasi mana yang Anda terima. Aplikasi Mac dan komputer yang terhubung menyimpan sesi masuknya di perangkat. Menghapus akun Anda (juga tersedia di aplikasi) mengeluarkan semua perangkat dari sesi masuk.",
         ],
       },
       {
@@ -322,6 +323,7 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
         heading: "14. Cookie dan penyimpanan lokal",
         blocks: [
           "Ruang kerja hanya menggunakan cookie dan penyimpanan lokal yang diperlukan untuk menjaga Anda tetap masuk, melindungi formulir, dan mengingat preferensi seperti tema dan bahasa. Situs publik agentes.chat mengingat bahasa yang Anda pilih dan menggunakan analitik Himetrica (Bagian 2). Kami tidak menggunakan cookie iklan atau pelacakan lintas situs.",
+          "**Cookie referal:** saat Anda membuka tautan referal ke agentes.chat, layanan penagihan kami menyimpan referal tersebut dalam satu cookie di browser Anda selama 60 hari, agar orang yang mengirim tautan mendapat kredit jika Anda berlangganan. Di Wilayah Ekonomi Eropa, Inggris, dan Swiss, kami hanya memasangnya setelah Anda menyetujuinya di agentes.chat. Untuk melupakan referal di perangkat ini, buka https://agentes.chat/id/privacy?forget-referral#cookies.",
         ],
       },
       {
@@ -342,7 +344,7 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "17. Kontak",
         blocks: [
-          "CODARI GLOBAL, LLC, yang menjalankan usaha dengan nama agentes.chat. Pemberitahuan: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · privacy@agentes.chat. Pertanyaan pelindungan data dari UE, Inggris, dan Brasil akan diterima oleh tim privasi kami di alamat yang sama. Untuk hal lainnya, kirimkan email ke hello@agentes.chat.",
+          "AGENTESCHAT, LLC, yang menjalankan usaha dengan nama agentes.chat. Pemberitahuan: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · privacy@agentes.chat. Pertanyaan pelindungan data dari UE, Inggris, dan Brasil akan diterima oleh tim privasi kami di alamat yang sama. Untuk hal lainnya, kirimkan email ke hello@agentes.chat.",
         ],
       },
     ],

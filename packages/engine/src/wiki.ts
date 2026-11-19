@@ -27,7 +27,14 @@ import { cutText } from "./format";
 import { getMessage } from "./messages";
 import { can, type Membership, requireActiveMembership } from "./organizations";
 import { maySql } from "./permissions";
-import { enqueueIndex, registerDocumentBuilder, registerReindexSource, type SearchDeps, searchVisible } from "./search";
+import {
+  enqueueIndex,
+  type QueryEmbedding,
+  registerDocumentBuilder,
+  registerReindexSource,
+  type SearchDeps,
+  searchVisible,
+} from "./search";
 import { type Audience, adminChannelSql, taskSeenSql } from "./task-access";
 import {
   pagesBySlug,
@@ -1123,8 +1130,11 @@ export interface WikiImportNote {
   attachments?: Record<string, string>;
 }
 
+/** Where an import's notes came from: an Obsidian vault, a GitHub link, or Markdown files. */
+export const WIKI_IMPORT_SOURCES = ["obsidian", "github", "files"] as const;
+
 export interface WikiImportInput {
-  source: { type: "obsidian"; name: string };
+  source: { type: (typeof WIKI_IMPORT_SOURCES)[number]; name: string };
   notes: WikiImportNote[];
   /** Put everything under this folder (empty = merge with the wiki's own folders). */
   folder?: string;
@@ -1143,6 +1153,13 @@ const importTitle = (name: string) =>
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, WIKI_LIMITS.title);
+
+/** An import without a name of its own. */
+const SOURCE_NAME: Record<WikiImportInput["source"]["type"], string> = {
+  obsidian: "Obsidian",
+  github: "GitHub",
+  files: "Markdown",
+};
 
 /**
  * Imports notes (an Obsidian vault, read by the app) as pages: one version
@@ -1171,7 +1188,7 @@ export async function importWikiPages(
       max: WIKI_IMPORT_MAX_NOTES,
     });
   }
-  const sourceName = input.source.name.replace(/\s+/g, " ").trim().slice(0, 80) || "Obsidian";
+  const sourceName = input.source.name.replace(/\s+/g, " ").trim().slice(0, 80) || SOURCE_NAME[input.source.type];
   const base = cleanFolder(input.folder);
   const skipped: string[] = [];
   const failed: { title: string; reason: "title" | "too_long" }[] = [];
@@ -2651,6 +2668,7 @@ async function searchPages(
   text: string,
   limit: number,
   minTextRank?: number,
+  queryEmbedding?: () => Promise<QueryEmbedding>,
 ): Promise<PageRow[]> {
   const q = text.trim();
   if (!q) return [];
@@ -2663,6 +2681,7 @@ async function searchPages(
       limit,
       match: "any",
       minTextRank,
+      queryEmbedding,
     }).catch(() => null);
     if (minTextRank !== undefined && !hits?.length) return [];
     if (hits && hits.length > 0) {
@@ -2788,7 +2807,14 @@ export async function createPageFromSource(
  */
 export async function retrieveWikiForRun(
   deps: WikiDeps,
-  input: { orgId: string; text: string; budgetChars?: number; reader: () => Promise<WikiActor> },
+  input: {
+    orgId: string;
+    text: string;
+    budgetChars?: number;
+    reader: () => Promise<WikiActor>;
+    /** `sharedQueryEmbedding` of `text`, shared with the run's memory search. */
+    queryEmbedding?: () => Promise<QueryEmbedding>;
+  },
 ): Promise<{ text: string; pageIds: string[]; held: boolean }> {
   const { db } = deps;
   const known = (await caches.contextPresence.getOrLoad(`${input.orgId}:wiki`, async () => {
@@ -2830,7 +2856,9 @@ export async function retrieveWikiForRun(
         .from(wikiPages)
         .where(and(inArray(wikiPages.id, named), isNull(wikiPages.deletedAt), visibleTo(wide)))
     : [];
-  const hits = await searchPages(deps, wide, input.orgId, input.text, 5, WIKI_MIN_RANK).catch(() => [] as PageRow[]);
+  const hits = await searchPages(deps, wide, input.orgId, input.text, 5, WIKI_MIN_RANK, input.queryEmbedding).catch(
+    () => [] as PageRow[],
+  );
   const seen = await visibleIds(db, actor, [...new Set([...namedRows, ...hits].map((p) => p.id))]);
   // What the message names, or the best match, kept from this conversation only: it goes to the person's DM. A page
   // always in context that this conversation may not read just stays out.

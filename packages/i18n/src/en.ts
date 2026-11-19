@@ -7,9 +7,14 @@ import type { Widen } from "./widen";
  * no exclamation marks, buttons start with a verb, "agentes" in lower case.
  */
 export const en = {
-  app: { name: "agentes" },
+  app: {
+    name: "agentes",
+    /** The browser tab's title on every screen that doesn't set its own. */
+    tabTitle: "agentes.chat · Your team and your agents, in the same conversation",
+  },
   common: {
     close: "Close",
+    details: "Details",
     joinSentences: "{{a}} {{b}}",
     cantUndo: "This can't be undone.",
     removeName: "Remove {{name}}",
@@ -31,6 +36,8 @@ export const en = {
     /** A mark on something offered but not out yet (an app for a system, a store): it can't be pressed. */
     soon: "Soon",
     unknownError: "Something went wrong. Try again.",
+    /** Under a field whose text is past its limit: its size, the limit, then the way out. */
+    overLimit: "The text has {{length}} characters and the limit is {{max}}. Shorten it.",
     /** A server error (a 5xx of its own): nothing the person did, and nothing they can fix. */
     ourSide: "Something went wrong on our side. Try again in a little while.",
     signedOut: "Your session ended. Sign in again to continue.",
@@ -76,7 +83,8 @@ export const en = {
     create: "Create role",
     base: "Base",
     everyoneName: "Everyone",
-    orderHint: "Order matters: whoever is higher manages the roles and people below.",
+    orderHint:
+      "Whoever is higher manages the roles and the people below. Each person's name color comes from their highest role. Drag to change the order.",
     reorder: "Reorder",
     reorderDone: "Done",
     moveUp: "Move {{name}} up",
@@ -117,6 +125,26 @@ export const en = {
         browser: "Their own agents' browser and sign-in requests made to them, never the full screen",
         full: "The full screen and terminal of their own agents and of the computers they connected",
       },
+      /** The five steps of one choice, as the select shows the one chosen. */
+      steps: {
+        off: "No access",
+        ownBrowser: "Their own agents' browser",
+        ownComputer: "Their own agents' computer",
+        anyBrowser: "Any agent's browser",
+        anyComputer: "Any agent's computer",
+      },
+      /** The steps in the select's list, under its two groups. */
+      short: { browser: "Browser", computer: "Computer" },
+      groupOwn: "Their own agents",
+      groupAny: "Any agent",
+      hint: "Browser: the browser and sign-in requests. Computer: also the whole screen and the terminal. Their own agents: the ones the person is responsible for and the computers they connected.",
+      /** A step as a sentence says it ("Who keeps their own agents' computer"). */
+      with: {
+        ownBrowser: "their own agents' browser",
+        ownComputer: "their own agents' computer",
+        anyBrowser: "any agent's browser",
+        anyComputer: "any agent's computer",
+      },
     },
     everyoneNote: "Applies to every person in the workspace. Other roles only add to it.",
     summary: {
@@ -153,10 +181,10 @@ export const en = {
     name: "Name",
     nameDesc: "How everyone sees it.",
     color: "Color",
-    colorDesc: "Paints the role's mark.",
+    colorDesc: "Paints the role's mark and the name of whoever has it as their highest.",
     colorOf: "{{color}} color",
     hoist: "Show apart in the members list",
-    hoistDesc: "People with this role get a group of their own in the members column.",
+    hoistDesc: "People with this role get a group of their own in the members column. Agents stay in theirs.",
     icon: "Icon",
     iconDesc: "Shown next to the name.",
     more: "More options",
@@ -175,7 +203,7 @@ export const en = {
     },
     newTitle: "Create role",
     newSub: "You can change everything later.",
-    namePlaceholder: "E.g. Moderators",
+    namePlaceholder: "E.g. Support",
     startFrom: "Start from",
     templates: {
       blank: "Nothing",
@@ -200,6 +228,151 @@ export const en = {
     rolesOf: "{{name}}'s roles",
     rolesCta: "Roles",
     aboveYou: "Above your role",
+    /** Settings › Roles (ADR 0085, addendum of 2026-11-13): the list, a role's page and its tabs. */
+    search: "Search roles",
+    noneYet: "No roles yet. Create one to give some people more.",
+    noMatch: "No role matches “{{q}}”.",
+    full: "This workspace already has {{max}} roles. Delete one to create another.",
+    loadError: "Couldn't load the roles. {{cause}}",
+    move: "Move {{name}}",
+    moveHint: "Drag it, or use Space and the arrow keys.",
+    /** What a role adds, in its row and its glance line: "+3 permissions · +2 channels · +1 agent". */
+    reach: {
+      permissions_one: "+{{count}} permission",
+      permissions_other: "+{{count}} permissions",
+      channels_one: "+{{count}} channel",
+      channels_other: "+{{count}} channels",
+      agents_one: "+{{count}} agent",
+      agents_other: "+{{count}} agents",
+      /** Everyone: what everyone has, with no "+". */
+      basePermissions_one: "{{count}} permission",
+      basePermissions_other: "{{count}} permissions",
+      baseChannels_one: "{{count}} channel",
+      baseChannels_other: "{{count}} channels",
+      baseAgents_one: "{{count}} agent",
+      baseAgents_other: "{{count}} agents",
+      owner: "Can do everything, always",
+      admin: "Can do everything",
+      none: "Only what Everyone can",
+      /** In the tip that names a role's channels: the ones the viewer doesn't see, counted. */
+      hidden_one: "{{count}} you can't see",
+      hidden_other: "{{count}} you can't see",
+    },
+    switchTo: "Go to another role",
+    look: "Change name, color and icon",
+    lookColor: "Change the color",
+    inviteWith: "Invite with this role",
+    tabs: {
+      permissions: "Permissions",
+      channels: "Channels",
+      agents: "Agents",
+      people: "People",
+    },
+    gone: "Someone deleted this role.",
+    backToList: "Back to roles",
+    searchPermission: "Search permissions",
+    noPermissionMatch: "No permission matches “{{q}}”.",
+    everyoneTip: "Everyone can. Click to choose who can.",
+    /** Who has something, as a chip: "Only Support and Ana". */
+    only: "Only {{names}}",
+    notHeld: "You don't have this permission.",
+    nowAbove: "This role is now above yours. Only someone higher can change it.",
+    agentsNote: "Roles are for people. Each agent has its own permissions, on its page.",
+    adminHint: "Can do everything but what only the owner does. Give it only to whoever runs the workspace.",
+    adminOn: "With Administrator, {{name}} can do everything but what only the owner does.",
+    adminAsk: {
+      title: "Turn on Administrator in {{name}}?",
+      text_one: "People with {{name}} can then do everything but what only the owner does. That's {{count}} person.",
+      text_other: "People with {{name}} can then do everything but what only the owner does. That's {{count}} people.",
+      confirm: "Turn on Administrator",
+    },
+    /** "Who can…": who holds one permission, Everyone or some roles. Lines naming people end with their names. */
+    who: {
+      title: "Who can {{short}}",
+      everyoneDesc: "Every person in the workspace",
+      some: "Only some roles",
+      owners: "Owners always can.",
+      losing: "Losing it:",
+      gaining: "Getting it:",
+      everyoneGains: "Everyone gets it.",
+      nobody: "Nobody loses it.",
+      noRoles: "There are no other roles yet.",
+      /** The agents' computers: who keeps a step when Everyone goes below it. `what`: `computer.with.*`. */
+      computersTitle: "Who keeps {{what}}",
+      computersLow: "Everyone gets {{what}}.",
+      computersNone: "Everyone stops using the agents' computers.",
+    },
+    /** A role's Channels. */
+    channels: {
+      line: "People with {{name}} see the checked channels and can join them.",
+      lineBase: "Everyone sees the checked channels and can join them.",
+      hint: "This is for people. An agent joins a channel when someone adds it.",
+      search: "Search channels",
+      general: "Everyone stays in #general.",
+      notYours: "Only whoever created #{{channel}} or arranges channels changes who sees it.",
+      removeTitle: "Take #{{channel}} away from {{name}}?",
+      leave: "Leaving the channel:",
+      openTitle: "Open #{{channel}} to {{name}}?",
+      openText: "People with {{name}} see the channel and all its history, and can join it.",
+      open: "Open",
+      openAllTitle: "Open #{{channel}} to everyone?",
+      openAllText: "All its history opens to the workspace.",
+      admin: "With Administrator, people with {{name}} see every channel.",
+      onlyGeneral: "There's only #general for now.",
+      noMatch: "No channel matches “{{q}}”.",
+    },
+    /** "Who sees #channel": the three words a channel's own details use. */
+    sees: {
+      title: "Who sees #{{channel}}",
+      private: "Only who's added",
+      privateDesc: "Nobody new sees it. Whoever is in stays.",
+      unsee: "Whoever is in stays. No longer seeing it:",
+    },
+    /** A role's Agents. */
+    agents: {
+      line: "People with {{name}} talk to the checked agents.",
+      lineBase: "Everyone talks to the checked agents.",
+      hint: "This is about people. What each agent does is on its page.",
+      noTalk: "People with only {{name}} don't talk to agents.",
+      turnOnTalk: "Turn on Talk to agents",
+      search: "Search agents",
+      notYours: "Only {{owner}}, who is responsible for {{name}}, or someone who edits agents changes it.",
+      notYoursNoOwner: "Only someone who edits agents changes it.",
+      none: "There are no agents yet.",
+      noMatch: "No agent matches “{{q}}”.",
+    },
+    /** "Who talks to Ada": the agent page's "Who can talk" in a dialog. */
+    talks: {
+      title: "Who talks to {{name}}",
+      some: "Only some roles and people",
+      ownerDesc: "Whoever is responsible for {{name}}",
+      losing: "No longer talking to {{agent}}:",
+    },
+    /** A role's People. */
+    holders: {
+      agent: "{{name}} is an agent. Agents have no role.",
+      seeAgents: "See Agents",
+      removed: "{{person}} no longer has {{name}}",
+      undo: "Undo",
+      selfTitle: "Remove yourself from {{name}}?",
+      selfText: "You lose what only {{name}} gives. Only someone above you can give it back.",
+      noMatch: "Nobody matches “{{q}}”.",
+    },
+    /** Giving a role that takes a mailbox from an agent asks first. */
+    mail: {
+      title: "{{agent}} loses {{owner}}'s mailbox",
+      titleMany: "Agents lose mailboxes",
+      lead: "With more people talking to them, the agents stop reading these mailboxes.",
+      of: "{{owner}}'s mailbox · {{agent}}",
+      again: "Only whoever gave the mailbox can give it again.",
+      addAnyway: "Add anyway",
+      giveAnyway: "Give anyway",
+    },
+    previewWhere: "in chat",
+    sameAs: "Same as",
+    deleteLeave: "Leaving channels they saw only through {{name}}:",
+    deleteReading: "Checking who leaves channels…",
+    ownerAdd: "Add owners",
   },
   permissions: {
     areas: {
@@ -246,6 +419,12 @@ export const en = {
       short: "talk",
       say: "talks to the agents",
     },
+    view_all_agents: {
+      title: "See all agents",
+      desc: "On Team and in the sidebar, except other people's personal agents. Without it, only the ones that answer them.",
+      short: "see all agents",
+      say: "sees all agents",
+    },
     assign_work: {
       title: "Give agents missions",
       desc: "Ask for long work that carries on by itself.",
@@ -254,9 +433,9 @@ export const en = {
     },
     manage_routines: {
       title: "Create routines",
-      desc: "Work the agent does on its own at set times.",
+      desc: "Work an agent does on its own at a set time, on the agents they talk to.",
       short: "create routines",
-      say: "creates routines",
+      say: "creates routines on the agents they talk to",
     },
     approve_actions: {
       title: "Approve agents' actions",
@@ -271,10 +450,10 @@ export const en = {
       say: "creates agents",
     },
     manage_agents: {
-      title: "Edit any agent",
-      desc: "Instructions, brain, budget and what each one uses.",
+      title: "Edit agents",
+      desc: "Instructions, brain, budget and what each one uses, on the agents they talk to. Other people's private agents stay out.",
       short: "edit agents",
-      say: "edits any agent",
+      say: "edits the agents they talk to",
     },
     pair_computers: {
       title: "Connect computers",
@@ -317,12 +496,6 @@ export const en = {
       desc: "The API keys agents think with.",
       short: "AI keys",
       say: "looks after AI keys",
-    },
-    use_others_plans: {
-      title: "Use other people's plans",
-      desc: "Give the agents they can edit a plan someone else connected. Its owner gets an email and can take it back.",
-      short: "use other people's plans",
-      say: "uses other people's plans",
     },
     edit_wiki: {
       title: "Edit the wiki",
@@ -385,6 +558,59 @@ export const en = {
       say: "looks after billing",
     },
   },
+  /** Where a workspace lives: the Cloud or one's own server (sign-in's Change, the desktop app's first screen). */
+  hosting: {
+    title: "Where does your workspace live?",
+    lead: "The app is the same. What changes is who looks after the server.",
+    recommended: "Recommended",
+    free: "Free · open source",
+    cloud: {
+      name: "agentes.chat Cloud",
+      short: "Always on, nothing to install.",
+      on: "The agents' computer always on",
+      care: "Updates and backups are on us",
+      ready: "Ready in minutes, nothing to install",
+      price: "Monthly plan per workspace",
+      continue: "Continue on Cloud",
+      enter: "Sign in to Cloud",
+    },
+    own: {
+      name: "On your own server",
+      short: "You install it, update it and back it up.",
+      server: "You look after the server and Postgres",
+      care: "Updates and backups are yours",
+      off: "The agents stop when it's off",
+      license: "Free forever, AGPL license",
+      continue: "Continue on my server",
+      address: "Server address",
+      connect: "Connect",
+      invalid: "That isn't an address. Write it as in the browser, for example agentes.example.com.",
+      unreachable: "We didn't find agentes.chat at {{host}}. Check the address and that the server is on.",
+      none: "Don't have one yet?",
+      noneLink: "See how to get yours, free",
+    },
+    get: {
+      title: "Get your own server",
+      server: "Install on a server",
+      serverText: "For a team, always on",
+      serverAction: "See the steps",
+      here: "Run it on your computer",
+      hereText: "For you or a small team, no Docker",
+      download: "Download the app",
+      how: "How it works",
+      foot: "Rather not look after anything?",
+      footLink: "Use Cloud",
+    },
+    /** Where the workspace is, before its agents' count (sidebar) or in the workspace list. */
+    badge: {
+      cloud: "Cloud",
+      own: "Your server",
+      here: "On this computer",
+    },
+    whyPaid: "Why pay?",
+    whyPaidText:
+      "Cloud includes the agents' always-on computer and someone who keeps the server running. Running it on your own server is free.",
+  },
   auth: {
     email: "Email",
     password: "Password",
@@ -401,6 +627,9 @@ export const en = {
     hidePassword: "Hide password",
     capsLock: "Caps Lock is on",
     tooManyTries: "Too many tries. Wait a few minutes and try again.",
+    /** Wrong passwords on one account, from this network or from all, ran out: `count` is the minutes until they open again. */
+    passwordTries_one: "Too many password tries on this account. Try again in {{count}} minute.",
+    passwordTries_other: "Too many password tries on this account. Try again in {{count}} minutes.",
     accountBlocked: "This account can't sign in.",
     passwordHelp: "At least 8 characters.",
     passwordOk: "Password ok.",
@@ -422,6 +651,8 @@ export const en = {
     termsMiddle: " and the ",
     privacy: "Privacy policy",
     termsAfter: ".",
+    // Under the sign-in on a registered host (ADR 0194): "agentes.chat" is the product's name, never translated.
+    poweredBy: "Powered by agentes.chat",
     signOut: "Sign out",
     earlyAccess: {
       otherEmail: "This invitation is for another address. Sign up with the address it was sent to.",
@@ -449,6 +680,9 @@ export const en = {
       nameLead: "What does your team call you?",
       namePlaceholder: "Your name",
       nameIsPassword: "Is this your name? It's the same as the password you typed.",
+      /** A sign-up with an address an account just left: held while that account's “This wasn't me” works. */
+      emailHeld:
+        "This email just left an account here and is held for 7 days. If that account is yours, press “This wasn't me” in the email we sent to it.",
       nameLooksLikePassword: "That looks like a password. Your name goes here.",
       newPassword: "Now a password.",
       newPasswordNamed: "Great, {{name}}. Now a password.",
@@ -471,6 +705,8 @@ export const en = {
       noPasswordLead:
         "On the computer that runs this server, open the app and choose Add a password in Settings\u00a0›\u00a0Your account.",
       backToSignIn: "Back to sign in",
+      /** Under the sign-in opened by "Add account": back to the account still signed in. */
+      backToAccount: "Back to {{name}}",
       toAuthorizeApp: "To connect an app to agentes.chat.",
     },
     desktop: {
@@ -507,11 +743,18 @@ export const en = {
     desktopOwner: {
       continue: "Continue on this {{device}}",
       text: "You set up agentes.chat on this {{device}}: no password needed.",
+      /** Continue on this Mac refused: the server's owner deleted their account, while others still have one. */
+      gone: "This server's owner deleted their account, so Continue on this {{device}} can't sign anyone in. Sign in with your own email instead.",
+      /** Continue on this Mac refused: no account is left, and the app opened its window to make the new owner. */
+      none: "No account is left on the agentes.chat on this {{device}}. Make its new owner in the window that opened.",
     },
-    /** The line over the sign-in in the desktop app: which server it signs in to (ADR 0158). */
+    /** The line under every sign-in: which server it signs in to (ADR 0158). */
     server: {
       into: "Signing in to <b>{{server}}</b>",
       intoHere: "Signing in to the agentes.chat <b>on this {{device}}</b>",
+      intoCloud: "Signing in to <b>agentes.chat Cloud</b>",
+      /** Change's name for screen readers: the email's Change sits on the same screen. */
+      change: "Change server",
     },
     /** "Forgot password" on a server that sends no email (ADR 0158). */
     forgotHere: {
@@ -563,13 +806,21 @@ export const en = {
     from: "Invited by {{name}}",
     crew_one: "{{names}} works there",
     crew_other: "{{names}} work there",
+    /** An invitation that starts the person with agents (ADR 0184): them, by name. */
+    crewYours_one: "{{names}} will work with you",
+    crewYours_other: "{{names}} will work with you",
     hello: "Hi. {{name}} invited you to {{org}}.",
     helloNoName: "Hi. {{org}} invited you.",
+    /** The roles the invitation gives (ADR 0184), as the email names them. */
+    helloAs: "Hi. {{name}} invited you to {{org}}, as {{roles}}.",
+    helloAsNoName: "Hi. {{org}} invited you, as {{roles}}.",
     nameLead: "First: what does the team call you?",
     newPasswordLead: "You'll use it to get into {{org}} now and every time after.",
     enter: "Join {{org}}",
     calledYou: "{{name}} invited you to {{org}}.",
     calledYouNoName: "{{org}} invited you.",
+    calledYouAs: "{{name}} invited you to {{org}}, as {{roles}}.",
+    calledYouAsNoName: "{{org}} invited you, as {{roles}}.",
     signedInLead: "You're signed in as {{email}}. Just join.",
     passwordLead: "{{name}} invited you to {{org}}. Your password, and you're in.",
     passwordLeadNoName: "{{org}} invited you. Your password, and you're in.",
@@ -654,6 +905,10 @@ export const en = {
       reasonSaid: "<b>Their note:</b> “{{reason}}”",
       closedTitle: "This link no longer works",
       closedText: "Ask whoever sent it for a new one.",
+      // A link that took all the people it may (ADR 0184).
+      fullTitle: "This link already took everyone it could.",
+      fullLead: "Ask {{name}} for a new link.",
+      fullLeadNoName: "Ask whoever sent it for a new link.",
       // Signed out where email goes out: one question per screen, then the page waits for the answer (ADR 0090).
       hello: "Hi. This is {{org}}'s invitation.",
       emailLead: "What's your email? An admin approves each new person.",
@@ -725,6 +980,8 @@ export const en = {
       steps: {
         name: "Workspace name",
         business: "What you do",
+        /** The person's own step: their photo, their name and their area. */
+        you: "About you",
         team: "Your team",
         plan: "Turn the team on",
         /** The rail's last step: connecting the AI the team thinks with. */
@@ -749,8 +1006,8 @@ export const en = {
         /** On the plan step, with the AI step right after it. */
         planThen: "Once the plan is on, the next screen is where you connect your AI.",
         /** The person's own area, asked once: on a team's rail after what it does, on a personal one after its purpose. */
-        area: "One last thing before the team.",
-        areaPersonal: "One last thing before your agents.",
+        you: "Before the team, a little about you.",
+        youPersonal: "Before your agents, a little about you.",
         /** The team step's question: does the person already have agents in another app. */
         ask: "Already have a team somewhere else? I'll bring all of it here.",
         /** How a team with no agents yet starts: the template for what it does, or just the two of them. */
@@ -782,10 +1039,19 @@ export const en = {
        * The person's own area (about them, never the workspace), asked once per account: on a team's rail after what
        * it does, on a personal one after what it is for. Optional; the operator API reads it.
        */
+      /** The person's own step (ADR 0162, amended 2026-11-12): their photo, their name and their area. */
+      you: {
+        title: "Now, about you",
+        lead: "Your name and photo show to the team and to the agents.",
+        leadPersonal: "Your name and photo show to your agents.",
+        photo: "Your photo",
+        build: "Build an avatar",
+        edit: "Edit avatar",
+        upload: "Upload a photo",
+        area: "What do you work on?",
+        areaHint: "Optional. Just so we know who uses agentes.chat.",
+      },
       area: {
-        title: "And you, what do you work on?",
-        lead: "Just so we know who uses agentes.chat.",
-        skip: "Skip this step",
         options: {
           dev: "Development",
           marketing: "Marketing",
@@ -1062,6 +1328,116 @@ export const en = {
         /** A workspace paused for any other reason. */
         paused: "Connect with MCP is off while this workspace is paused. Bring the agents this way for now.",
       },
+      haveFileButton: "I have a file or link",
+      sheet: {
+        title: "Bring the team from {{app}}",
+        otherTitle: "Bring them from another app",
+        workspaceTitle: "Bring them from another workspace",
+        fileTitle: "Bring them from a file or link",
+        fileLead: "The file from any app we know. It is recognized on its own.",
+        paths: {
+          lead: "Choose how to bring them. You check everything before anything is made.",
+          best: "the most complete",
+          safe: "{{app}}'s keys, passwords and sessions never come, whichever way you pick.",
+          command: {
+            title: "With a command",
+            line: "Brings everything, files and workflows too. Through a coding assistant or the terminal",
+          },
+          mcp: {
+            title: "Connecting {{app}}",
+            line: "It creates the agents here through MCP. No files or workflows",
+          },
+          prompt: {
+            title: "Asking {{app}}",
+            line: "It writes down what it knows and you paste it here. No files or workflows",
+          },
+        },
+        useRequest: "I'd rather paste the request and bring back the answer",
+        backToMcp: "Back to MCP",
+        waitingMore: "Waiting for the next ones…",
+        arrivedMore: "{{app}} may still be creating them. Whoever comes later shows up here.",
+        arrivedMoreAny: "Your AI app may still be creating them. Whoever comes later shows up here.",
+        readHere: "Read in your browser. Nothing changes here until you confirm.",
+        request: {
+          "grok-bot": {
+            lead: "The bot writes everything it has as JSON. You paste it here and check it before anything is made.",
+            copyStep: "Paste it in your chat with the bot",
+            answerStep: "Paste its whole answer here",
+            answerPlaceholder: "The JSON the bot answered",
+          },
+          "chatgpt-dots": {
+            lead: "Your dot writes everything it has to a file. You drop it here and check it before anything is made.",
+            copyStep: "Paste it in a new chat",
+            answerStep: "Drop the file it makes here",
+          },
+          other: {
+            copyStep: "Paste it in a new conversation in the other app",
+            answerStep: "Drop the file it gives back, or paste its answer",
+            answerPlaceholder: "The answer, or a GitHub link",
+          },
+          computer: {
+            lead: "An agent of {{app}} writes down what it knows in a file, and you check it before anything is made.",
+            copyStep: "In a chat with an agent of {{app}}, paste this request",
+            answerStep: "Drop the file it makes, or paste its answer",
+            answerPlaceholder: "{{app}}'s answer",
+          },
+        },
+        workspace: {
+          download: "Download the other workspace's file",
+          where: "There, in Settings\u00a0›\u00a0Import and export\u00a0›\u00a0Download the file.",
+          open: "Open {{org}} in a new tab",
+          drop: "Drop the .json here",
+        },
+        lead: "Your assistant reads {{app}} on this computer and writes a file where you choose. You check everything before anything is made.",
+        leadCommand:
+          "The command reads {{app}} on this computer and writes a file where you choose. You check everything before anything is made.",
+        pasteAssistant: "Paste this in your coding assistant",
+        pasteTerminal: "Paste this in a terminal",
+        pastePowerShell: "Paste this in PowerShell",
+        promptLabel: "Request for the coding assistant",
+        commandLabel: "Command",
+        copy: "Copy the request",
+        assistants: "Claude Code, Codex or another one that runs commands on this computer.",
+        commandHelp: "It asks where to save and writes a file. Nothing is sent.",
+        useCommand: "I'd rather run the command myself",
+        usePrompt: "Back to the request for the assistant",
+        os: { label: "This computer's system", unix: "Mac or Linux", windows: "Windows" },
+        dropStep: "Drop here the file it writes",
+        drop: "Drop the file here",
+        dropHelp: "{{file}}, in the folder you chose",
+        safe: "Read only. Keys, passwords and sign-ins in {{app}} are never read.",
+        ready_one: "{{count}} agent ready to come",
+        ready_other: "{{count}} agents ready to come",
+        readyOther: "Ready to come",
+        others_one: "And {{count}} more agent",
+        others_other: "And {{count}} more agents",
+        routines_one: "{{count}} routine",
+        routines_other: "{{count}} routines",
+        notes_one: "{{count}} memory",
+        notes_other: "{{count}} memories",
+        skills_one: "{{count}} skill",
+        skills_other: "{{count}} skills",
+        channels_one: "{{count}} channel",
+        channels_other: "{{count}} channels",
+        files_one: "{{count}} file of the agents, copied to the Drive",
+        files_other: "{{count}} files of the agents, copied to the Drive",
+        filesSize: "{{size}}. The whole workspace sees the folders.",
+        after: "Afterwards, one click each",
+        bring_one: "Bring the agent",
+        bring_other: "Bring the {{count}} agents",
+        choose: "Choose what comes",
+        arrivedTitle: "The team is here",
+        arrived_one: "{{names}} is here.",
+        arrived_other: "{{names}} are here.",
+        arrivedOther_one: "{{count}} item is here.",
+        arrivedOther_other: "{{count}} items are here.",
+        copying: "Copying the files to the Drive",
+        copyCount: "{{done}} of {{total}}",
+        keepOpen: "Keep this tab open until it ends.",
+        missed_one: "{{count}} item didn't come. The list says why.",
+        missed_other: "{{count}} items didn't come. The list says why for each.",
+        see: "See what came",
+      },
       otherName: "Another app",
       agenteschatName: "agentes.chat",
       where: {
@@ -1069,13 +1445,15 @@ export const en = {
           "Drop openbot-import.json (from Migrator by OpenBot) or openbot-transfer.json (from the instance transfer), or the .zip it came in.",
         openmausbot: "In OpenMausBot: right-click the team → Share team… → Save file.",
         hermes:
-          "In a terminal, run hermes profile export with the profile's name and drop the .tar.gz here. Or drag the ~/.hermes folder to bring every profile.",
+          "In a terminal, run `hermes profile export` with the profile's name and drop the .tar.gz here. Or drag the `~/.hermes` folder to bring every profile.",
         openclaw:
-          "Drag the whole ~/.openclaw folder (it brings every agent) or just one workspace. On a Mac, ⌘⇧. shows hidden folders in the file picker.",
+          "Drag the whole `~/.openclaw` folder (it brings every agent) or just one workspace. On a Mac, ⌘⇧. shows hidden folders in the file picker.",
         paperclip: "Drag the package folder (the one with COMPANY.md), drop a .zip of it or paste its GitHub link.",
         agenteschat:
           "In the other workspace: Settings → Import and export → Download the file. Then drop the .json here.",
       },
+      whereOther: "Download the file from the other workspace and drop the .json here.",
+      whereOtherLink: "Download from {{org}}",
       request: {
         "grok-bot": {
           title: "Ask your bot to export",
@@ -1188,17 +1566,125 @@ export const en = {
         model_other: "{{who}} use {{label}}, which isn't available here.",
         file_one: "{{who}} uses {{label}}.",
         file_other: "{{who}} use {{label}}.",
+        webhook_one:
+          "The routine {{label}}, of {{who}}, gets a new address here: change it in the site or app that called the old one.",
+        webhook_other:
+          "The routine {{label}}, of {{who}}, gets a new address here: change it in the site or app that called the old one.",
+      },
+      say: {
+        intro: "This is the workflow “{{title}}”, brought from {{app}}.",
+        skillAbout: "Runs the workflow “{{title}}”, brought from {{app}}, when someone asks.",
+        asked: "In {{app}} it started on its own. Here, it runs when someone asks.",
+        webhook: "It starts when this routine's address is called: what arrives is your input.",
+        pr: "It starts when a pull request is opened on GitHub: that pull request is your input.",
+        prIn: "It starts when a pull request is opened on GitHub in {{repos}}: that pull request is your input. If it is in another repository, stop without posting anything.",
+        text: "Start from this text: “{{text}}”",
+        keep: "(Keep in mind: {{text}})",
+        ask: "Ask @{{handle}}: “{{task}}”, with what you have so far, and use the answer.",
+        image: "Make an image: {{prompt}}",
+        video: "Make a video: {{prompt}}",
+        if: "If the answer to “{{rule}}” is yes, go on.",
+        otherwise: "Otherwise:",
+        stop: "Otherwise, stop here without posting anything.",
+        approval: "Before going on, ask the person in charge of you for approval, in the chat: “{{question}}”",
+        approvalPlain: "Before going on, ask the person in charge of you for approval, in the chat.",
+        channel: "Post the result in #{{channel}}.",
+        notify: "Send the result to the person in charge of you.",
+        file: "Save the result as a file in the Drive.",
+        githubComment: "Comment the result on GitHub.",
+        githubDo: "On GitHub, do this with the result: {{action}}.",
+        pass: "When you finish, pass your answer to @{{handle}}: {{instruction}}",
+        passPlain: "When you finish, pass your answer to @{{handle}}.",
+      },
+      choose: {
+        who: "Who comes",
+        with: "What comes with them",
+        flows: "The workflows",
+        agentOnly: "With its instructions from there",
+        same: "Already here, the same",
+        of: {
+          routine_one: "{{picked}} of {{count}} routine",
+          routine_other: "{{picked}} of {{count}} routines",
+          skill_one: "{{picked}} of {{count}} skill",
+          skill_other: "{{picked}} of {{count}} skills",
+          note_one: "{{picked}} of {{count}} memory",
+          note_other: "{{picked}} of {{count}} memories",
+          channel_one: "{{picked}} of {{count}} channel",
+          channel_other: "{{picked}} of {{count}} channels",
+        },
+        files_one: "{{count}} file for the Drive",
+        files_other: "{{count}} files for the Drive",
+        paused_one: "One arrives paused, as it was there",
+        paused_other: "{{count}} arrive paused, as they were there",
+        pausedOne: "arrives paused",
+        here_one: "One is already here",
+        here_other: "{{count}} are already here",
+        library: "From the library, for whoever you turn it on for",
+        passes: "passes its answer to {{names}}",
+        webhook: "new address",
+        pr: "when a pull request is opened",
+        routine: "Routine",
+        skill: "Skill",
+        asked: "runs when someone asks",
+        was: {
+          schedule: "there it had a schedule we can't read, here it runs when someone asks",
+          webhook: "there it started from an address, here it runs when someone asks",
+          message: "there it started from a message, here it runs when someone asks",
+          github: "there it started on GitHub, here it runs when someone asks",
+          discord: "there it started on Discord, here it runs when someone asks",
+          telegram: "there it started on Telegram, here it runs when someone asks",
+          slack: "there it started on Slack, here it runs when someone asks",
+          other: "there it started on its own, here it runs when someone asks",
+        },
+        flowsLead: "Here a workflow becomes a routine: its trigger is when it runs, and its steps go in the request.",
+        becomesRoutine: "Becomes a routine {{agent}} runs, with the steps in its request.",
+        becomesSkill: "Becomes a skill {{agent}} uses when someone asks, with the steps in it.",
+        postsIn: "Posts in #{{channel}}.",
+        step: {
+          when: "when the routine runs",
+          asked: "When someone asks",
+          text: "Starts from the text",
+          by: "asked by {{name}}",
+          image: "Image",
+          video: "Video",
+          if: "If",
+          stop: "goes on, otherwise stops",
+          else: "goes on, otherwise:",
+          approval: "Asks for approval in the chat",
+          channel: "Posts in #{{channel}}",
+          notify: "Sends you the result",
+          file: "Saves to the Drive",
+          github: "On GitHub",
+          lost: {
+            file: "A file from there",
+            slack: "Posts on Slack",
+            discord: "Posts on Discord",
+            telegram: "Posts on Telegram",
+            messaging: "Posts in a messaging chat",
+          },
+          notHere: "doesn't come",
+        },
+        bringWith_one: "Bring {{count}} agent and {{more}}",
+        bringWith_other: "Bring {{count}} agents and {{more}}",
+        more_one: "{{count}} more item",
+        more_other: "{{count}} more items",
+        notComing: "Messaging connections don't come ({{list}}): there's nothing to connect them to here.",
       },
       needDo: {
         connection: "Connect",
         app: "Connect",
         model: "Pick a model",
         file: "Open the Drive",
+        webhook: "Open routines",
       },
       linkSkipped_one: "{{count}} file past the link's limit",
       linkSkipped_other: "{{count}} files past the link's limit",
       linkSkippedHelp:
         "A link reads up to 200 files and 8 MB. To bring the rest, download the folder and drop it here.",
+      systemFiles_one: "{{count}} system file left out",
+      systemFiles_other: "{{count}} system files left out",
+      systemFilesHelp:
+        "Dependencies, caches and folders like node_modules and .git. We only read what belongs to the agents.",
       never: "Keys, passwords and chat history never come along.",
       go_one: "Import {{count}} item",
       go_other: "Import {{count}} items",
@@ -1263,6 +1749,16 @@ export const en = {
       errors: {
         empty: "There's nothing to read there. Check that you picked the right folder or file.",
         tooLarge: "It's too big to read here. Try just the agents' folder, without the rest.",
+        limit: {
+          files:
+            "Leaving out system files, that's {{have}} files. One import reads up to {{max}}. Drop just the agents' folder, without the rest.",
+          bytes:
+            "{{name}} is {{have}}. One import opens up to {{max}}. Drop just the agents' folder, without the rest.",
+          unpacked:
+            "Unpacked, it comes to {{have}}. One import reads up to {{max}}. Drop just the agents' folder, without the rest.",
+          text: "The pasted text is {{have}}. One import reads up to {{max}}. Ask for the export in parts, one agent at a time.",
+          file: "{{name}} is {{have}}. One import reads up to {{max}} per file. Ask for the export in parts, one agent at a time.",
+        },
         unknown:
           "We don't recognize these files. Pick the app they come from to see where the right file is, or use Another app.",
         newerVersion:
@@ -1341,6 +1837,7 @@ export const en = {
       minimax:
         "Paste the whole MiniMax key, with no spaces. Keys starting with sk-cp- belong to the plan and don't work here.",
       openrouter: "OpenRouter keys start with sk-or-v1-. Check it and paste it again.",
+      commandcode: "Paste the whole Command Code key, with no spaces. Check it and paste it again.",
     },
     keyFromOther: "Is it from another provider?",
     anthropicWorkspace: "Claude Console workspace ID",
@@ -1633,6 +2130,49 @@ export const en = {
       settingUp: "Setting up agentes-chat ({{version}}) ...",
     },
   },
+  /** The icon a person picks for the app on this device (ADR 0179): Settings › Account › This device, and the phone's You. */
+  appIcon: {
+    title: "App icon",
+    /** In a browser: the pick changes this browser's tab icon. */
+    hintWeb: "The icon on this browser's tabs.",
+    /** In the desktop app on a Mac: macOS shows the bundle's own icon wherever the app isn't running. */
+    hintMac: "The Dock's icon while the app is open. Finder and Launchpad keep the default one.",
+    /** In the desktop app on Windows and Linux. */
+    hintDesktop: "The taskbar's icon while the app is open.",
+    /** On Android, under the list: launchers redraw the home screen in their own time. */
+    hintAndroid: "Some home screens take a few seconds to show the new icon.",
+    failed: "Couldn't change the icon. Try again.",
+    /** Over the open workspace's agents in the picker (web and desktop only). */
+    agentsOf: "Agents in {{org}}",
+    /** On the phone, the name of an icon the person made (its sky, color and face or accessory). */
+    yours: "Your icon",
+    /** Under a ready-made icon's name, where a made one says its sky and face. */
+    readyOne: "Ready-made",
+    use: "Use this icon",
+    /** The same button when the icon shown is the one in use. */
+    inUse: "In use",
+    /** The made icon's parts. */
+    sky: "Background",
+    /** How the agent stands in the icon: facing, or leaning in from the corner. */
+    pose: "Position",
+    poses: { front: "Facing", peek: "Peeking" },
+    /** Under the positions: the peeking agent has a face, never an accessory. */
+    peekBare: "Peeking, it wears no accessory.",
+    expression: "Expression",
+    /** Over the icons that come ready. */
+    ready: "Ready-made",
+    /** Under the accessories: an icon has a face or an accessory, never both. */
+    oneOrOther: "With an accessory, the expression stays the plain one.",
+    /** The expressions besides the agents' eye styles (`look.eyesNames`). */
+    faces: { wink: "Winking", heart: "Hearts", star: "Stars", surprised: "Surprised", angry: "Angry" },
+    names: {
+      night: "Night",
+      moon: "Moon",
+      sky: "Sky",
+      peekNight: "Peeking at night",
+      peekSky: "Peeking in the sky",
+    },
+  },
   legal: {
     updated: "Last updated {{date}}",
     contents: "On this page",
@@ -1707,11 +2247,11 @@ export const en = {
     browser: "This browser",
     phone: "Phone",
     phoneOn: "In the phone app, even with the phone locked",
-    phoneOff: "Turn them on in the phone app, under You\u00a0›\u00a0Notifications",
+    phoneOff: "Turn them on in the phone app",
+    phoneOpen: "Open",
     mac: "Mac app",
     macHelp: "While the app is open, even in the background",
     on: "On",
-    off: "Off",
     failed: "Couldn't save that. Try again.",
     loadFailed: "Couldn't load your choices right now.",
     category: {
@@ -1732,14 +2272,14 @@ export const en = {
     on: "Turn on notifications",
     later: "Not now",
     done: "Notifications on in this browser",
-    failed: "Couldn't turn on notifications. Try again in Settings\u00a0›\u00a0Notifications.",
+    failed: "Couldn't turn on notifications in this browser.",
     someone: "An agent",
     now: "now",
     finished: { title: "{{name}} is done", body: "What you asked for is ready." },
     /** Under an agent's first answer to the person (ADR 0071): never on arrival. */
     inline: {
       title: "Want to know the moment {{name}} answers?",
-      why: "Even with the tab closed. Change it anytime in Settings\u00a0›\u00a0Notifications.",
+      why: "Even with the tab closed. Change it anytime in <link>Notifications</link>.",
     },
   },
   shell: {
@@ -1806,6 +2346,24 @@ export const en = {
     },
     inviteHint: "By email or link",
     profileHint: "Name, photo and @",
+    email: {
+      label: "Email",
+      title: "Change email",
+      new: "New email",
+      help: "You keep the same account, in the same workspaces and with the same plans.",
+      change: "Change email",
+      sent: "We sent a link to {{email}}. Your email changes when you open it.",
+      changed: "Done: you now sign in with {{email}}.",
+      same: "That's already your email.",
+      noMail:
+        "This server sends no email, so the new address can't be confirmed. Ask whoever runs the server to set up email.",
+      held: "This email just left another account and is held for it for 7 days. Use another one.",
+      taken: "Another account already uses this email. Use another one.",
+      /** Under the code sent to the current address: a fresh sign-in instead. */
+      cantOpen: "Can't open that inbox?",
+      signInInstead: "Sign in again and change it without the code. You'll come back here.",
+      useCode: "Use the code",
+    },
     openOnPhone: "Open on your phone",
     openOnPhoneHint: "Sign in to the app with a QR code",
     addPassword: "Add a password",
@@ -1823,9 +2381,12 @@ export const en = {
     /** Beside a workspace's name, only when another of the person's has the same name. */
     createdOn: "Created on {{date}}",
     newWorkspace: "New workspace",
-    /** In the desktop app, in place of New workspace: the app's window to add one (ADR 0154). */
+    /** The desktop app's window to add one (ADR 0154): in place of New workspace on agentes.chat, after it elsewhere. */
     addWorkspace: "Add workspace",
     addWorkspaceHint: "Join one you already have, create one, or use your team's server",
+    /** Another account on this server, signed in beside the one open (ADR 0183). */
+    addAccount: "Add account",
+    addAccountHint: "Sign in to another account without leaving this one",
     /** Beside a server's name above its workspaces, when it isn't agentes.chat. */
     yourServer: "Your server",
     /** A server's line in "Your workspaces" in the desktop app: the one on this computer, and its state (ADR 0158). */
@@ -1978,6 +2539,17 @@ export const en = {
       people: "You already pinned 5 people. Unpin one to pin this one.",
     },
   },
+  /** Settings › agentes.chat apps (`AppsDownload.tsx`): the desktop app for this computer and the phone apps. */
+  appsDownload: {
+    computer: "Computer",
+    computerText: "Your workspace in a window of its own, with the system's notifications.",
+    inApp: "You're already in the computer app.",
+    howTo: "How to install",
+    phone: "Phone",
+    phoneText: "Notifications in your pocket, to answer from anywhere.",
+    appStore: "App Store",
+    googlePlay: "Google Play",
+  },
   openOnPhone: {
     qr: "QR code to sign in to the agentes app",
     making: "Making the code…",
@@ -1995,6 +2567,77 @@ export const en = {
     localOnly: "This server only opens on the computer it runs on, so your phone can't reach it.",
     localOnlyHow:
       "In the agentes.chat app on that computer, turn on Reach it from your phone and teammates in Preferences › Servers. Then come back here.",
+    localOnlyHere: "Turn on Reach it from your phone and teammates. Then come back here.",
+  },
+  /** An outside chat app linked to a person's account (ADR 0187). {{surface}} is that app's name, as the server sets it. */
+  surface: {
+    link: {
+      /**
+       * The words are a recorded consent: a change of meaning needs a new key, never an edit. {{assistant}} is the
+       * workspace's built-in assistant by name. "stop" stays in English in every language: the chat app's service
+       * recognises it (and "parar" in Portuguese).
+       */
+      consent:
+        "{{assistant}} by agentes.chat may message you on {{surface}} about your workspaces, and call you only when something is urgent and you allow it. Write stop to turn this off.",
+      /** The link dialog's title. {{assistant}} is the workspace's built-in assistant by name. */
+      title: "Talk to {{assistant}} on {{surface}}",
+      qr: "QR code that opens {{surface}} with your code typed in",
+      making: "Making your code",
+      /** Under the QR code: the code itself, for typing it by hand. */
+      code: "Your code {{code}}",
+      open: "Open {{surface}}",
+      stepScan: "Scan the code with your phone, or open the app",
+      stepSend: "Send the message as it is",
+      stepSendText: "This moves on by itself once your message arrives.",
+      stepConfirm: "Check the sender and confirm here",
+      showCode: "Show the code again",
+      confirmTitle: "Is this your {{surface}}?",
+      sentBy: "This sender sent your code",
+      /** Under the sender: the one line that says to stop before linking someone else's sender. */
+      onlyYou: "Link it only if this is you.",
+      /** The workspace whose assistant answers on the chat app. */
+      workspace: "Answers in {{workspace}}",
+      confirm: "Yes, link it",
+      notMe: "Not me",
+      doneTitle: "{{surface}} is linked",
+      doneText: "{{assistant}} answers you there from now on.",
+      newCode: "Make a new code",
+      done: "Done",
+    },
+    /** Settings › Notifications › Where they arrive: the chat app's row. */
+    row: {
+      hint: "Talk with {{assistant}} and get its replies on {{surface}}.",
+      link: "Link",
+      /**
+       * Behind the ⓘ beside the app's name while nothing is linked. {{assistant}} is the workspace's built-in assistant
+       * by name.
+       */
+      none: "{{assistant}} can message you there",
+      pending: "A sender is waiting for you to confirm",
+      unlink: "Unlink",
+      unlinkTitle: "Unlink {{surface}}?",
+      unlinkText: "{{assistant}} stops answering you there. You can link it again any time.",
+      unlinked: "{{surface}} unlinked",
+    },
+    /** The page the "linked" email's undo opens. Signed out, so it learns the app's name only from the answer. */
+    undo: {
+      title: "Unlink the chat app?",
+      lead: "Your account was just linked to a chat app. If that wasn't you, unlink it here.",
+      button: "Unlink",
+      done: "{{surface}} unlinked",
+      doneLead: "{{display}} can't reach your account anymore.",
+      ended: "Already unlinked",
+      endedLead: "{{display}} on {{surface}} was unlinked before. Nothing else to do.",
+      gone: "This undo link no longer works",
+      /** In place of the sender's name when the server has none. */
+      sender: "That sender",
+    },
+    /** The tag on a person's message written in the chat app. */
+    via: "via {{surface}}",
+    viaTip: "Sent by {{person}} on {{surface}}",
+    /** The same, for a message the person forwarded there: someone else's words. */
+    forwarded: "forwarded via {{surface}}",
+    forwardedTip: "{{person}} forwarded this from {{surface}}. The words are someone else's.",
   },
   team: {
     title: "Team",
@@ -2225,7 +2868,13 @@ export const en = {
       unpin: "Unpin {{name}}'s message",
       empty: "Nothing pinned here yet",
     },
-    header: { pins: "Pinned messages", showMembers: "Show members", hideMembers: "Hide members" },
+    header: {
+      pins: "Pinned messages",
+      showMembers: "Show members",
+      hideMembers: "Hide members",
+      /** The header's ⋯: the conversation's own actions, its background among them. */
+      more: "More options",
+    },
     membersButton_one: "Channel members ({{count}})",
     membersButton_other: "Channel members ({{count}})",
     membersAgents: "Agents",
@@ -2237,11 +2886,10 @@ export const en = {
     reply: "Reply",
     quoteOf: "Reply to {{name}}: {{excerpt}}. See the message",
     quoteGone: "Original message deleted",
-    jumpTooFar: "That message is too far back to open from here.",
     quoteNoWords: "Message with no text",
     replyingTo: "Replying to {{name}}",
     cancelReply: "Cancel reply",
-    jumpMissing: "Couldn't reach that message here. It may be deleted or too far back.",
+    jumpMissing: "That message isn't available. It may have been deleted, or you can't see it.",
     emoji: "Emoji",
     uploading: "uploading…",
     uploadFailed: "was not uploaded",
@@ -2342,10 +2990,9 @@ export const en = {
       asFile: "Send as a file",
       fileName: "message.txt",
     },
-    /** A tall message, clipped in the conversation: the button under it and the dialog that shows it whole. */
+    /** Under words folded to their start (a tall message, a long text, an email): opens them in place, for good. */
     long: {
       more: "See more",
-      title: "Message from {{name}}",
     },
     retrySend: "Try again",
     thinking: "{{name}} is thinking…",
@@ -2387,8 +3034,8 @@ export const en = {
     asking_other: "{{names}} are waiting for an answer",
     outage_one: "{{names}}: the AI provider is down · retries by itself",
     outage_other: "{{names}}: the AI provider is down · retries by itself",
-    queued_one: "{{names}} is in line for the computer",
-    queued_other: "{{names}} are in line for the computer",
+    queued_one: "{{names}} is in line",
+    queued_other: "{{names}} are in line",
     away_one: "{{names}} is waiting for the computer",
     away_other: "{{names}} are waiting for the computer",
     /** Its plan's limit or its budget holds its answer (`receipts.ts` `plan` / `budget`). */
@@ -2401,8 +3048,6 @@ export const en = {
     /** A person stopped its run (Não rodar, Parar). */
     canceled_one: "{{names}} won't answer",
     canceled_other: "{{names}} won't answer",
-    /** One agent first in the computer's line. */
-    queuedNext: "{{names}} is in line for the computer · next",
     nobody: "No agent will answer",
     status: {
       seen: "Saw it",
@@ -2411,7 +3056,7 @@ export const en = {
       waiting: "Waiting for approval",
       asking: "Waiting for an answer",
       outage: "The AI provider is down · retries by itself",
-      queued: "In line for the computer",
+      queued: "In line",
       away: "Waiting for the computer",
       plan: "Waiting on the plan",
       budget: "Answers when the budget renews",
@@ -2425,7 +3070,23 @@ export const en = {
     },
     failedShort: "Couldn't answer",
     popoverTitle: "Agents",
+    /** The receipt popover's last line: when the message went out (touch screens have no hover time). */
+    sentToday: "Sent today at {{time}}",
+    sentYesterday: "Sent yesterday at {{time}}",
+    sentOn: "Sent on {{date}} at {{time}}",
     seenBy: "Seen by {{names}}",
+    /** A mention of everyone one agent answered for all of them, or that asked nothing of the agents. */
+    everyone: {
+      seen_one: "{{count}} agent saw it",
+      seen_other: "{{count}} agents saw it",
+      answering: "{{name}} answers for everyone",
+      answered: "{{name}} answered for everyone",
+      who: "who answered",
+      /** Behind the ⓘ: why only one agent answered. */
+      hintOne: "One answer served everyone, so only {{name}} answered. The other agents read the message.",
+      /** Behind the ⓘ: why no agent answered. */
+      hintNone: "The message asked nothing of the agents, so none answered. They all read it.",
+    },
     retry: "Try again",
     /** On its way (`receipts.retry` pressed): the line says so until the server answers. */
     retrying: "Trying again…",
@@ -2445,10 +3106,32 @@ export const en = {
    * is the admins' to change (`{{name}}`); "Lodi" only by default.
    */
   rightHand: {
+    /** Plans that can't think for the right hand now, greyed in its AI's picker, each with why and the way out. */
+    brain: {
+      unusable: {
+        title: "Needs a computer",
+        computerOnly: "{{owner}}'s, signed in on {{computer}} only. Lodi thinks with a plan signed in as an account.",
+        noComputer: "{{owner}}'s. It needs a computer, and the workspace has none connected.",
+        away: "{{owner}}'s, on {{computer}}, which is away.",
+        connect: "Connect a computer",
+        plans: "See plans",
+      },
+    },
     /** Muted, lowercase, on the right of its row in the sidebar. */
     label: "your right hand",
     /** The same where it starts a line: under its name on its page and side panel, and on its phone settings row. */
     labelCapitalized: "Your right hand",
+    /**
+     * In the dialog that picks its AI: plans it can't think with now, dimmed, each with why. `name` is the right
+     * hand's; `owner` a first name.
+     */
+    unusable: {
+      title: "Can't think for {{name}} now",
+      computerOnly: "Signed in on {{computer}} only. {{name}} thinks with a plan signed in as an account.",
+      away: "{{owner}}'s, on {{computer}}, which is away.",
+      awayYours: "Yours, on {{computer}}, which is away.",
+      connect: "Connect a computer",
+    },
     /** The one-time dot on its row until it is first opened. */
     newDot: "New",
     /** In its DM's header, after the label. */
@@ -2496,7 +3179,7 @@ export const en = {
     profile: {
       how: "How it works",
       permissions: "Acts with your permissions",
-      private: "Talks only with you in your DM",
+      private: "Keeps what is yours in your DM",
       channels: "Replies in channels when called",
       model: "Model",
       message: "Message",
@@ -2517,7 +3200,22 @@ export const en = {
       budgetHelp: "When it reaches the limit, it stops and tells you, like any agent.",
       audience: "Who can use it",
       audienceHelp: "Outside it, a person doesn't see {{name}} in the sidebar.",
-      lock: "{{name}} can't be archived or deleted. The only thing it posts without being asked is Team week, for admins.",
+      lock: "{{name}} can't be archived or deleted.",
+      /** What it does without being asked: the heading over its switches, then each switch and the line behind its ⓘ. */
+      own: {
+        title: "What {{name}} does by itself",
+        digest: "Summarize approvals waiting",
+        digestHelp:
+          "When several approvals wait for you, {{name}} sends one card in your DM that tells the routine ones from the risky ones.",
+        reminders: "Remember what we agreed on",
+        remindersHelp:
+          "{{name}} follows the tasks it handed over until they end, and reminds you of what you two agreed on with a time.",
+        teamWatch: "Look after the team",
+        teamWatchHelp:
+          "{{name}} notices what stops the team, like an AI sign-in that ended or an app to reconnect, and tells the person who can fix it.",
+        welcome: "Welcome people who join",
+        welcomeHelp: "{{name}} greets each person who joins and helps them set up their first agent.",
+      },
       audit: "See what {{name}} did",
       planHelp: "The plan's owner pays. When its computer is away, the conversation says so and offers an API key.",
       /** The face that opens the look's dialog, read aloud and on hover. */
@@ -2528,6 +3226,9 @@ export const en = {
       planName: "{{name}} plan",
       /** Each person's own AI for their conversation with the right hand (ADR 0137 §11). */
       mine: "Your AI",
+      /** Its dialog, drawn as any agent's "Quem pensa": the title, and the footer's line saying who it is for. */
+      mineTitle: "Who thinks for {{name}} with you",
+      mineOnly: "Only for your conversation with {{name}}.",
       mineHelp: "Your conversation with {{name}} thinks with your plan or one shared with you, and only yours does.",
       connectMine: "Connect my plan",
       useWorkspace: "Use the workspace's",
@@ -2549,15 +3250,29 @@ export const en = {
       fallbackNone: "Without your own plan, {{name}} can't answer you: the workspace's plan serves only {{owner}}.",
       /** What admins set for people with no plan of their own. */
       workspace: "AI for people without their own plan",
+      workspaceTitle: "Who thinks for {{name}} in the workspace",
+      workspaceOnly: "For people without their own plan.",
       workspaceHelp: "People without their own plan talk to {{name}} through this AI.",
       noPlans: "Connect a plan in AI and usage to use it here.",
       /** Under the switch that lends the workspace's plan: what it does, whatever its state. */
-      lend: "Lend this plan to people without one",
       /** The right hand's page, its two groups: what is the viewer's alone, and what admins set for everyone. */
       groupMine: "Just for you",
       groupWorkspace: "For the whole workspace",
       groupAdmins: "admins only",
     },
+    /** Its "Computador" row: the computer is the viewer's own seat (ADR 0175). */
+    computerYours: "Your own place on the workspace's computer. Only you can watch or control it.",
+    sharedName: "{{name}} (shared)",
+    sharedPlace:
+      "Used in channels and in work that runs on its own. The whole workspace shares this place. Keep nothing private here.",
+    /** The row where it has none for anyone: the workspace has no computer of its own. */
+    computerNoHome: "No computer yet. It gets one when this workspace has a computer of its own.",
+    /** The same row on a self-hosted server: this server made the agents' computer gives it one. `guide`: the setup guide. */
+    computerNoHomeServer: "No browser yet. Set up <guide>this server as the agents' computer</guide> to give it one.",
+    addComputer: "Add a computer",
+    /** The row where the workspace's computer runs every agent as one OS user. */
+    computerOneUser:
+      "No computer here. The workspace's computer runs every agent as one user, so it can't keep each person's place apart. A Linux server set up with the installer's --system option can.",
     /** "Workspace powers" on its page: what only the right hand does, one line each (`RIGHT_HAND_POWERS`). */
     powers: {
       title: "Workspace powers",
@@ -2570,6 +3285,8 @@ export const en = {
     card: {
       settings: "{{name}} · Settings",
       apply: "Apply",
+      /** In `apply`'s place on a card that deletes something for good (a role, a channel, an API key). */
+      delete: "Delete",
       dismiss: "Dismiss",
       decline: "Decline",
       askAdmin: "Ask an admin",
@@ -2600,10 +3317,11 @@ export const en = {
         delete: "Only admins delete an agent",
         audience: "Only admins and its owner change who talks to it",
         channels: "Only admins and its owner change its channels",
-        skill: "Only admins change an agent's skills",
+        skill: "Only whoever can edit an agent changes its skills",
         ai_account: "Only the account's owner gives it",
         name: "Only admins rename an agent",
         look: "Only admins and its owner change its look",
+        group: "Only admins move an agent to another department",
         reports_to: "Only admins change who an agent reports to",
         many: "Only admins make these changes",
       },
@@ -2618,6 +3336,7 @@ export const en = {
       channel: "Channel",
       name: "Name",
       look: "Look",
+      group: "Department",
       reports_to: "Reports to",
       skill: "{{name}} skill",
     },
@@ -2665,6 +3384,25 @@ export const en = {
     },
     /** Its approvals card (`offer_approvals`): each decided on it, as whoever clicks. */
     approvals: { title: "Approvals waiting for you", done: "Decided" },
+    /** Its summary of what waits on a person: the routine requests together, one tap for all of them. */
+    digest: {
+      /** The summary's first line: how many wait, then how they split (`split`) or that all are routine. */
+      waiting_one: "{{count}} approval waiting.",
+      waiting_other: "{{count}} approvals waiting.",
+      split: "{{routine}} routine, {{careful}} to look at with care.",
+      allRoutine: "All routine.",
+      /** Under the first rows of a long routine group: shows the rest in place. `count`: the requests it hides. */
+      more_one: "See {{count}} more",
+      more_other: "See the other {{count}}",
+      routine_one: "{{count}} routine request",
+      routine_other: "{{count}} routine requests",
+      /** Behind the ⓘ beside `routine`. */
+      help: "An action in a connected app that sends, deletes, pays, merges or deploys nothing. Every other request keeps its own card.",
+      approve_one: "Approve {{count}} request",
+      approve_other: "Approve these {{count}}",
+      /** Shows each routine request on its own card instead. */
+      each: "One by one",
+    },
     /** Its "Abrir" card (`offer_open_page`): one of the app's screens. */
     open: { open: "Open", web: "Open on the website", notAllowed: "You don't have access to this screen" },
     /** Its card of a change in the workspace (`workspace_action`): applied as whoever clicks, Undo on it after. */
@@ -2679,6 +3417,11 @@ export const en = {
       update_role: "Change the role <b>{{name}}</b>",
       delete_role: "Delete the role <b>{{name}}</b> for good",
       move_role: "Move the role <b>{{name}}</b>",
+      /** "Who can…": who may do one thing, Everyone and the roles at once. `short`: the permission (`permissions.*.short`). */
+      set_permission_holders: "Change who can <b>{{short}}</b>",
+      set_permission_holders_computers: "Change who uses <b>the agents' computers</b>",
+      /** Under it, when nobody but the owners would have it. */
+      holdersOwnersOnly: "Only owners",
       set_member_roles: "Change the roles of <b>{{name}}</b>: {{change}}",
       set_channel_permissions: "Change what {{who}} may do in <b>#{{channel}}</b>",
       set_my_status: "Set your status: <b>{{what}}</b>",
@@ -2701,6 +3444,15 @@ export const en = {
       update_workspace: "Change the workspace <b>{{name}}</b>",
       set_action_check_on: "Turn on the check of what the team already did",
       set_action_check_off: "Turn off the check of what the team already did",
+      /** `emails`: every address on the card, in a list ("ana@example.com, bia@example.com"). */
+      invite_people: "Invite <b>{{emails}}</b> to the workspace.",
+      /** Under it: the roles every address gets ("Sales and Support"). `count`: how many roles. */
+      invite_roles_one: "With the role {{roles}}.",
+      invite_roles_other: "With the roles {{roles}}.",
+      /** The same card once applied: who got an invitation ("ana@example.com and caio@example.com"). */
+      invite_people_sent_one: "Invitation sent to <b>{{emails}}</b>.",
+      invite_people_sent_other: "Invitations sent to <b>{{emails}}</b>.",
+      remove_ai_key: 'Delete the API key "{{name}}".',
     },
   },
   /** Lodi's weekly card in an admin's DM with it (ADR 0137 §9). */
@@ -2723,6 +3475,8 @@ export const en = {
     workedTasks_one: "{{name}} closed {{count}} task",
     workedTasks_other: "{{name}} closed {{count}} tasks",
     improve: "To improve",
+    /** The same heading on the day's card, over what waits on the reader and what is stuck. */
+    needsYou: "Needs you",
     approvals: {
       title_one: "{{count}} request from {{name}} waits for you",
       title_other: "{{count}} requests from {{name}} wait for you",
@@ -2773,6 +3527,50 @@ export const en = {
       messageNoAgent: "Steps {{steps}} don't need to wait for #{{on}}. They can go on in parallel.",
       done: "Message sent",
     },
+    /** What waits on the reader besides approvals: `{{count}}` items, `{{since}}` when the oldest began ("Mon, 9:41"). */
+    waiting: {
+      title_one: "{{count}} thing waits for you",
+      title_other: "{{count}} things wait for you",
+      line_one: "Waiting since {{since}}.",
+      line_other: "The oldest since {{since}}.",
+      action: "Open",
+      done: "Nothing left waiting",
+    },
+    /** An agent's work that failed, or that stopped and waits (`heldTitle`). `{{name}}` is the agent. */
+    stuck: {
+      title_one: "{{name}} stopped on an error",
+      title_other: "{{name}} stopped on an error {{count}} times",
+      heldTitle: "{{name}} stopped and waits to go on",
+      /** The cause, one short sentence under the title. */
+      why: {
+        budget: "The monthly budget ran out.",
+        plan: "The plan reached its limit.",
+        computer: "The computer did not answer.",
+        key: "The AI key or sign-in was refused.",
+        ai: "The AI did not answer.",
+        other: "Something went wrong. The conversation shows what.",
+      },
+      action: "Open conversation",
+    },
+    /** An agent with no work in four weeks, offered for archiving. `{{name}}` is the agent. */
+    retire: {
+      title: "Archive {{name}}",
+      line: "No work in 4 weeks, no routine and no open task.",
+      action: "Archive",
+    },
+    /** An agent on a large model whose work is light. `{{from}}` and `{{to}}` are model names. */
+    model: {
+      title: "{{name}} can use {{to}}.",
+      line: "It uses {{from}} today.",
+    },
+    /** Puts one suggestion away for good, and what its row says once it was. */
+    skip: "Dismiss",
+    skipped: "Dismissed",
+    /** Why the week's review proposes a change, where the proposal shows by itself. */
+    why: {
+      idle: "No work in 4 weeks, no routine and no open task.",
+      lightWork: "Its work is light enough for a smaller model.",
+    },
     applied: "Applied",
     undo: "Undo",
     gone: "No longer applies",
@@ -2804,10 +3602,10 @@ export const en = {
     settings: {
       label: "Team week",
       help: "Every week {{name}} tells you in your DM how the team did and what to fix. Only admins get it.",
-      /** "Resumo do dia": the same card every day, which anyone may turn on. */
+      /** "Resumo do dia": the day's card, which everyone gets unless they stop it. */
       dayLabel: "Daily summary",
       dayHelp:
-        "Every day {{name}} tells you in your DM what the team did and what waits for you, on days with something to say.",
+        "Every day {{name}} tells you in your DM what waits for you, what your agents finished and what is stuck, on days with something new.",
     },
   },
   routing: {
@@ -2867,6 +3665,7 @@ export const en = {
       cli_failedWhy: "{{name}} can't answer now: the plan's AI stopped with an error ({{why}}).",
       plan_limit: "{{name}} can't answer now: the plan reached its limit.",
       plan_not_shared: "Connect your own plan to talk to {{name}}: the workspace's plan serves only its owner.",
+      plans_not_yours: "The {{plan}} here is only {{owner}}'s. Connect your own and I'll answer.",
       /** A request no person made (another agent's, a routine's): nobody's own plan would answer it. */
       plan_unattended:
         "{{name}} didn't answer: the request didn't come from a person, and the workspace's plan serves only its owner.",
@@ -2911,6 +3710,7 @@ export const en = {
       channel: "Kept. The agents answer once the workspace has an agentes.chat plan.",
     },
     receipt: "Nobody will answer: no\u00a0AI connected",
+    notYours: { receipt: "Nobody will answer: the {{plan}} is only {{owner}}'s" },
     chip: "No AI",
   },
   connectAi: {
@@ -2925,36 +3725,50 @@ export const en = {
       api_key: "Add an API key",
     },
     /**
-     * A plan whose program is switched off on a computer the person connected. `program`: "Claude Code" or "Codex"
-     * (`brain.card`), as its switch is named in that computer's own settings.
+     * A coding CLI that isn't on a computer someone connected (`program`: "Claude Code" or "Codex"), and installing it
+     * from here. `claudeApp` sits behind an ⓘ on Windows and macOS, where a Claude chat app is likely.
      */
-    toolOff: {
-      text: "{{computer}} is connected, but {{program}} is switched off on it. For safety, it can only be turned on at the computer itself.",
-      where: "On {{computer}}",
-      /** `<mark/>`: the app's icon, drawn. */
-      one: "Click the agentes.chat icon <mark/> by the clock",
-      oneWindows: "On Windows, it may be behind the taskbar's ^ arrow.",
-      two: "Open <b>Preferences</b>",
-      three: "Under <b>Tools</b>, turn on <b>{{program}}</b>",
-      /** On a computer that may have no app: its command follows. */
-      terminal: "In the computer's terminal, run:",
-      /** In the app on that very computer: Open Tools follows. */
-      here: "Turn on <b>{{program}}</b> under <b>Tools</b>.",
-      waiting: "Waiting for you to turn it on. This screen changes by itself.",
+    cli: {
+      missing: "{{program}} isn't on {{computer}} yet.",
+      claudeApp: "The Claude app isn't enough: agents use Claude Code, which runs on the computer.",
+      install: "Install {{program}} for me",
+      check: "I installed it, check again",
+      checked: "Checked just now: {{program}} still isn't on {{computer}}.",
+      installing: "Installing {{program}} on {{computer}}. It takes about a minute.",
+      failed: "Couldn't install on {{computer}}: {{message}}",
+      stillMissing: "The installer finished, but {{computer}} still doesn't find {{program}}.",
+      /** Claude Code on Windows can't start without Git for Windows. */
+      gitMissing: "{{program}} needs Git for Windows on {{computer}}.",
+      getGit: "Download Git for Windows",
+      /** It is there and its own check of its version fails: `message` is its error. */
+      cantStart: "{{program}} is on {{computer}}, but it won't start: {{message}}",
+      outdated: "Update the agentes.chat app on {{computer}} to install from here.",
+      asked: "Request sent. {{name}} gets a button to install it.",
     },
     titleFor: "Connect an AI for {{name}}",
     /** What the person already has, before the new sign-ins: accounts on the agent's computer, the workspace's keys. */
     have: {
       title: "Already connected",
-      titleFor: "Already connected, for {{name}}",
       other: "Or connect another",
       manageKeys: "Manage or delete keys",
+      /** Over the accounts already connected: what picking one does. */
+      pickLine: "Pick an account already connected here. {{name}} thinks with it.",
+      /** Under a person's group: their accounts the viewer can't pick (not lent, or signed out), counted per account. */
+      onlyOwner_one: "{{count}} more of {{name}}'s accounts only {{name}} can give.",
+      onlyOwner_other: "{{count}} more of {{name}}'s accounts only {{name}} can give.",
+      /** After the email of one's own account made for all agents: how many other agents think with it. */
+      moreAgents_one: "and {{count}} more agent",
+      moreAgents_other: "and {{count}} more agents",
+      /** Someone else's plan, with room left (their row has no meter word otherwise). */
+      plenty: "Plenty left",
     },
     /** Connect opened from an agent's conversation (ADR 0160, addendum): what is already connected, to pick from. */
     chat: {
       mine: "Yours",
       yours: "Yours",
       keys: "Workspace key",
+      /** A group of the switch screen's accounts by AI: the workspace's API keys. */
+      apiKeys: "API keys",
       best: "Most room right now",
       atLimit: "At their limit",
       seeAll: "See all {{count}} accounts",
@@ -3048,7 +3862,8 @@ export const en = {
         title: "Your Gemini plan",
         tiers: "Google AI Pro, Google AI Ultra or Gemini Enterprise",
         /** Shown plainly wherever a personal Gemini plan is connected or chosen: Google's own rule for consumer plans. */
-        warning: "Google says using a personal Gemini plan inside other apps can get the account suspended.",
+        warning:
+          "Google says using a personal Gemini plan inside other apps can get the account suspended. To avoid that risk, use a Gemini API key or Gemini Enterprise.",
       },
       /** OpenCode's CLI (ADR 0132): its free models with no sign-in, or a key from OpenCode's console. */
       zen: { title: "OpenCode", tiers: "Free models, or your OpenCode key" },
@@ -3064,7 +3879,21 @@ export const en = {
       create: "Create your {{provider}} API key",
       paste: "Paste it here",
       forAll: "Every agent without a plan thinks with it.",
+      /** Before saving, opened for one agent: the key goes on that agent. */
+      forAgent: "{{agent}} will think with it.",
       saved: "Saved. Every agent without a plan thinks with it.",
+      /** Saved and put on the one agent the dialog was opened for. */
+      savedFor: "Saved. {{agent}} now thinks with {{label}}.",
+      /** Saved for everyone, and it is the key agents without their own AI use. */
+      savedAll: "Saved. Agents without their own AI think with it.",
+      /** Saved for everyone, and it became the workspace's key by itself: the old one ({{other}}) couldn't think. */
+      savedMade: "Saved. Your agents now think with it instead of {{other}}.",
+      /** Saved for everyone, but another key ({{other}}) is the workspace's: a button under it switches. */
+      savedOther: "Saved. Your agents still think with {{other}}.",
+      useForAll: "Use this key for everyone",
+      /** A workspace endpoint ({{name}}, its own name) none of whose models has answered a test call. */
+      untested: "None of {{name}}'s models has passed a test yet.",
+      testModels: "Test models",
       /** Saved, though the provider gave no answer about the key: it may still fail. */
       savedUnchecked:
         "Saved, but {{provider}} didn't answer, so the key couldn't be checked. If it fails, the chat says why.",
@@ -3072,7 +3901,9 @@ export const en = {
       closed: "API keys open with the workspace's agentes.chat plan.",
       notPlan: "A coding plan's key goes in its own option above.",
       billing: "Turn on billing for the key's project. Without billing, Google may use what your agents send.",
-      privacy: "Your OpenRouter privacy settings decide which providers may keep what your agents send.",
+      /** Under the key field or in the step's ⓘ, for a provider that passes calls on (OpenRouter, Command Code). */
+      privacy:
+        "{{provider}} passes what your agents send to the company that makes or hosts the model, under {{provider}}'s privacy terms and settings.",
     },
     wait: {
       signIn: "You sign in here as soon as the computer is ready.",
@@ -3121,6 +3952,15 @@ export const en = {
     /** An account of this plan the person already has on that computer, for all of their agents there. */
     use: "Use {{label}}",
     another: "Another account",
+    /** A plain plan panel's list of the person's accounts of that plan, each by its email (or the name they gave it). */
+    which: {
+      title: "Which {{brand}} account will {{name}} use?",
+      title_female: "Which {{brand}} account will {{name}} use?",
+      titleAll: "Which {{brand}} account will they use?",
+      mine: "Your {{brand}} accounts on {{computer}}",
+      /** The list's last line, and the title of its sign-in. */
+      other: "Sign in with another {{brand}} account",
+    },
     /** Before a new sign-in, where the person already has an account of that plan on that computer (`reusableAccount`). */
     reuse: {
       active: "You already have {{label}} here. Sign in to it again, or use another account.",
@@ -3145,15 +3985,23 @@ export const en = {
     agent: "For which agent",
     keyLocked: "Only an admin adds an API key.",
     accountsLocked: "Only {{name}} connects a plan on {{computer}}.",
+    /** Under `accountsLocked` (self-hosted servers): a computer of the person's own, where they sign their plan in. */
+    connectMine: "Connect my computer",
+    /** At the end, after a plan connected by someone who owns no agent yet. */
+    makeAgent: "Create an agent with this plan",
     later: "Connect later",
   },
   keyGuard: {
     title: "This looks like an API key",
-    text: "Everything in the chat is visible to people and agents. Save it as a workspace key instead: it's encrypted and nobody sees it.",
-    textMember: "Everything in the chat is visible to people and agents. A key is like a password.",
-    save: "Save as a key",
+    titleSecret: "This looks like a key or password",
+    vaultText:
+      "Everything in the chat is visible to people and agents. Keep it in the Vault: it's encrypted, and the agents you allow use it without seeing it.",
+    vault: "Save in the Vault",
+    useAsAi: "Use as AI key",
     remove: "Remove it",
     send: "Send anyway",
+    /** After "Save in the Vault", under the toast's "Saved in the Vault". */
+    saved: "Agents with access use it by the name {{name}}.",
   },
   /** An agent's proposal of costly work nobody asked for directly (ADR 0131): the card's buttons and who decided. */
   costlyCard: {
@@ -3176,7 +4024,7 @@ export const en = {
     lead: "When {{name}} asks a person before acting.",
     always: {
       title: "Always ask",
-      text: "Asks before changing anything in an app.",
+      text: "Asks before changing anything, here, on its computer or in an app.",
     },
     risky: {
       title: "Only what is risky",
@@ -3184,8 +4032,25 @@ export const en = {
     },
     never: {
       title: "Never ask",
-      text: "Still asks for merge, deploy and rollback.",
+      text: "Never asks, merge, deploy, payments and routines included.",
     },
+    /** The quiet link on a waiting approval that opens its agent's three choices in place. */
+    change: "Change when it asks",
+    /** The toast after a choice from that link. {{level}}: the choice's title. */
+    now: "{{name}} now: {{level}}.",
+    nowEveryAgent: "Every agent now: {{level}}.",
+    undo: "Undo",
+    /** In that dialog, for who may set the workspace's level: it also clears each agent's own choice. */
+    everyAgent: "For every agent in the workspace",
+    /** An agent's row value while it has no choice of its own. */
+    follows: "Follows the workspace",
+    /** Settings → Approvals: the button that opens the three choices. */
+    edit: "Change",
+    /** Settings → Approvals: the workspace's level. */
+    workspaceLead: "When agents ask a person before acting.",
+    workspaceHelp: "Each agent follows this choice until someone changes its own on the agent's page.",
+    ownAgents_one: "{{count}} agent has its own choice and won't change.",
+    ownAgents_other: "{{count}} agents have their own choice and won't change.",
   },
   /** Agent settings: what it may start that nobody asked for directly, and which agents it may call (ADR 0131). */
   brakes: {
@@ -3221,6 +4086,8 @@ export const en = {
   },
   /** Long work paused near a plan's or a budget's limit (ADR 0118), and its Continuar agora. */
   usageCard: {
+    /** Under a plan limit's wait note: when the plan was last read or asked about, quietly (it is asked every few minutes). */
+    checked: "Checked {{when}}",
     window: {
       five_hour: "of its 5 hours",
       seven_day: "of its week",
@@ -3231,6 +4098,9 @@ export const en = {
     line: "Picks up {{when}}, when the plan resets. Quick replies keep going.",
     /** Buttons under a wait's note, to the agent's page. */
     changeModel: "Change model",
+    changeAccount: "Choose another account",
+    /** An agent left without what it thought with (a plan not saved, its owner's plan gone): its "Quem pensa". */
+    chooseBrain: "Choose who thinks",
     raiseBudget: "Raise the budget",
     lineUnknown: "Picks up as soon as the plan resets. Quick replies keep going.",
     lineBudget: "Picks up {{when}}, or sooner if the budget goes up. Quick replies keep going.",
@@ -3249,9 +4119,6 @@ export const en = {
     answerAnyway: "Answer anyway",
     answerAnywayHint: "Answers now, reading everything posted since",
     answerAnywayForbidden: "Only who asked, the agent's owner or an admin can ask for this",
-    extraTitle: "Long work may use paid extra usage",
-    extraHint:
-      "With extra usage on in the plan, long work goes on past 95%. Off, it pauses at 95% and picks up when the plan resets.",
   },
   /** An agent's line of work waiting on its plan or budget (ADR 0118): the web's dialog, the phone's sheet. */
   usageQueue: {
@@ -3265,6 +4132,8 @@ export const en = {
     shared_one: "{{agents}} uses the same {{plan}} plan. Both agents' conversations go in the same line.",
     shared_other: "{{agents}} use the same {{plan}} plan. All their conversations go in the same line.",
     about: "About the line",
+    /** Behind the title's ⓘ when every account of the order is at its limit ({{accounts}}: how many). */
+    chain: "All {{accounts}} {{plan}} accounts hit their limit.",
     /** The two lists' switch: its name, then each side. */
     lists: "Conversations",
     queuedTab: "In line",
@@ -3343,7 +4212,6 @@ export const en = {
       aiAccount: "Thinks with {{account}}",
       aiModel: "Thinks through the API",
       aiNone: "No AI yet. Connect one after creating it",
-      reviewTitle: "Review {{name}}",
       lines: "What {{name}} gets",
       aChannel: "a channel",
       anApp: "an app",
@@ -3438,6 +4306,10 @@ export const en = {
       saved: "Saved to <b>memory</b>: {{text}}",
       /** A lasting rule a person gave the agent (a permission, a destination), kept for all its work for them. */
       saved_rule: "Saved to <b>my rules</b>: {{text}}",
+      /** A rule saved for the whole team (no agent owns it): every agent follows it. */
+      saved_team_rule: "Saved to the <b>team's rules</b>: {{text}}",
+      /** Something saved for the whole team (no agent owns it): every agent reads it. */
+      saved_team: "Saved to the <b>team's memory</b>: {{text}}",
       updated: "Updated <b>memory</b>: {{text}}",
       forgotten: "Removed from <b>memory</b>: {{text}}",
     },
@@ -3466,6 +4338,8 @@ export const en = {
     },
     skill: {
       created: "Turned what I learned into the skill <b>{{name}}</b>",
+      /** Made when a person asked (`create_skill`), not from its how-tos. */
+      created_asked: "Created the skill <b>{{name}}</b>",
       updated: "Fixed the skill <b>{{name}}</b>",
     },
     /** A teammate's settings changed from the right hand's card, by the person who clicked Aplicar (ADR 0137). */
@@ -3488,6 +4362,8 @@ export const en = {
       changed_update_role: "Changed the role <b>{{name}}</b>",
       changed_delete_role: "Deleted the role <b>{{name}}</b>",
       changed_move_role: "Moved the role <b>{{name}}</b>",
+      changed_set_permission_holders: "Changed who can <b>{{short}}</b>",
+      changed_set_permission_holders_computers: "Changed who uses <b>the agents' computers</b>",
       changed_set_member_roles: "Changed the roles of <b>{{name}}</b>: {{change}}",
       changed_set_channel_permissions: "Changed what {{who}} may do in <b>#{{channel}}</b>",
       changed_set_my_status: "Set your status: <b>{{what}}</b>",
@@ -3510,6 +4386,9 @@ export const en = {
       changed_update_workspace: "Changed the workspace <b>{{name}}</b>",
       changed_set_action_check_on: "Turned on the check of what the team already did",
       changed_set_action_check_off: "Turned off the check of what the team already did",
+      /** `invited`: the addresses that got an invitation, in a list. */
+      changed_invite_people: "Invited <b>{{invited}}</b> to the workspace",
+      changed_remove_ai_key: "Deleted the API key <b>{{name}}</b>",
     },
     other: "Made a change",
     /** On the line of a webhook routine the agent created: copies its secret address (only for who manages it). */
@@ -3575,6 +4454,7 @@ export const en = {
       },
       skill: {
         created: "Turned what I learned into the skills {{refs}}",
+        created_asked: "Created the skills {{refs}}",
         updated: "Fixed the skills {{refs}}",
       },
       agent: {
@@ -3762,7 +4642,7 @@ export const en = {
     askAccess: "Ask for access",
     detailsHiddenTitle: "How it works",
     detailsHidden:
-      "Only the people {{name}} answers, its owner and admins see its instructions, tools, memory and usage.",
+      "Only the people {{name}} answers, whoever can edit it, its owner and admins see its instructions, tools, memory and usage.",
   },
   presence: {
     online: "Online",
@@ -3771,6 +4651,10 @@ export const en = {
     hidden: "Invisible",
     offline: "Offline",
     out: "Out of office",
+    /** An agent's face (ADR 0084 addendum of 2026-11-13): free, at work, or waiting on you. Never a person's. */
+    available: "Available",
+    working: "Working",
+    waiting: "Waiting for you",
     lower: {
       online: "online",
       away: "away",
@@ -3836,7 +4720,7 @@ export const en = {
       waiting_approval: "Waiting for approval",
       waiting_answer: "Waiting for an answer",
       waiting_computer: "Waiting for the computer",
-      queued_computer: "In line for the computer",
+      queued_computer: "In line",
       waiting_plan: "Waiting on the plan",
       waiting_budget: "Waiting for the budget to reset",
       provider_down: "The AI provider is down · retries by itself",
@@ -3860,6 +4744,55 @@ export const en = {
     bySelf: "Written by {{name}} · clears when it's done",
     byAuto: "What it's doing now",
   },
+  /**
+   * An agent's work in a list's line and on its profile card (ADR 0084 addendum of 2026-11-13), lowercase: where it
+   * works or what it waits on. Its other words are `chat.consultPanel.helping` and `chat.consultPair.*`.
+   */
+  agentWork: {
+    working: "working",
+    you: "waiting for you",
+    /** Short, when the whole line doesn't fit. */
+    waiting: "waiting",
+    queued: "in line",
+    /** Its own work in the conversation the list belongs to (the members column). */
+    here: "here",
+    routine: "on a routine",
+    /** After "Waiting for you" on the profile card. */
+    yourApproval: "your approval",
+    yourAnswer: "your answer",
+    /** A return it set comes then (`followUps.when`): "follow-up at 12:32 AM". */
+    later: "follow-up {{when}}",
+    laterShort: "follow-up",
+    /** A run that waits on its plan's or its budget's limit (Agora's rows; the lists leave it to out of office). */
+    plan: "waiting for its plan",
+    budget: "waiting for its budget",
+    stopping: "stopping…",
+  },
+  /** An agent comes back to a conversation by itself (its `follow_up`, ADR 0037): a follow-up. */
+  followUps: {
+    /** When it comes: the day only more than 12 h away, so the words never turn at midnight. */
+    when: { at: "at {{time}}", today: "today at {{time}}", tomorrow: "tomorrow at {{time}}" },
+    /** The same, opening a label: "At 12:32 AM". */
+    whenLabel: { at: "At {{time}}", today: "Today at {{time}}", tomorrow: "Tomorrow at {{time}}" },
+    /** The bar above the composer while a follow-up waits here. The agent's words follow after " · ", as written. */
+    bar: {
+      at: "{{name}} follows up {{when}}",
+      /** Where even the sentence doesn't fit: the name and the time. */
+      short: "{{name}} {{time}}",
+      /** Its time came while what it asked here waits on an answer: the reader may answer it. */
+      heldYou: "{{name}} follows up once you answer",
+      held: "{{name}} follows up after an answer",
+    },
+    /** The list of the follow-ups here (the bar's ⋯, the phone's sheet). */
+    title: "Follow-ups",
+    /** A row's tip: it goes to the reply that said it. */
+    see: "See the message",
+    cancel: "Cancel follow-up",
+    /** A row's ×, for screen readers (`when`: "at 12:32 AM"). */
+    cancelOf: "Cancel {{name}}'s follow-up {{when}}",
+    /** The task manager's time column: how soon (`time`: "33 min"). */
+    inTime: "in {{time}}",
+  },
   mentions: {
     list: "People and agents",
     inChannel: "In this channel",
@@ -3871,7 +4804,11 @@ export const en = {
     add: "Add to channel",
     dismiss: "Not now",
     added: "{{name}} joined the channel.",
-    askAdmin: "Ask an admin to add them.",
+  },
+  /** "Pedir a um admin": what a person can't do here goes to whoever can, as an inbox row that does it. */
+  adminAsk: {
+    ask: "Ask an admin",
+    sent: "Sent to whoever can do it.",
   },
   channelRefs: {
     list: "Channels",
@@ -3915,9 +4852,8 @@ export const en = {
     merge: "Merge request",
     issue: "Issue",
   },
-  /** A long text an agent wrote, folded on a page: a run's record, a mission's summary. */
+  /** A list folded to its first rows (the approvals' digest): the button that folds it back. */
   folded: {
-    more: "Show more",
     less: "Show less",
   },
   secret: {
@@ -3955,6 +4891,9 @@ export const en = {
     computerAway:
       "{{agent}}'s computer isn't answering right now. This request stays open until {{time}}. Try again in a moment.",
     computerPaused: "{{agent}}'s computer is paused by its owner. This request stays open until {{time}}.",
+    /** Sealing a secret or a sign-in code needs the browser's crypto, which a plain-http address doesn't get. */
+    insecureContext:
+      "This page isn't open over https, so the browser won't lock the key. Open it at https:// (or localhost).",
     failed: "Couldn't deliver it. Is the agent's computer on?",
     changed: "This request changed while you answered. Nothing was sent. Send it again.",
     empty: "Type the value.",
@@ -4078,7 +5017,7 @@ export const en = {
     error: {
       title: "Give it a name.",
       website: "Use an https address, like app.example.com.",
-      keyName: "Use capital letters, numbers and _, starting with a letter, like ACME_API_KEY.",
+      keyName: "Use capital letters, numbers and _, starting with a letter, like `ACME_API_KEY`.",
       password: "Type the password.",
       value: "Type the value.",
       contact: "Fill in at least one field.",
@@ -4246,7 +5185,7 @@ export const en = {
       show: "Show the value of {{name}}",
       hide: "Hide the value of {{name}}",
       problem: {
-        name: "The name must look like ACME_API_KEY",
+        name: "The name must look like `ACME_API_KEY`",
         reserved: "Reserved name",
         empty: "No value",
         tooLarge: "Value too large",
@@ -4465,6 +5404,11 @@ export const en = {
   approval: {
     expiredChip: "Expired · {{when}}",
     canceledChip: "Canceled · {{when}}",
+    /** After an approved request's outcome on a shared card: it runs in the order asked. */
+    line: {
+      after: "runs after “{{title}}”",
+      notRun: "not run: the request before it wasn't approved",
+    },
     waitingFor: "Waiting for {{name}}",
     waitingAdmin: "Waiting for an admin",
     reasonLine: "Reason: {{reason}}",
@@ -4528,8 +5472,8 @@ export const en = {
       open: "Open",
       /** On a routine's card: lets that kind of action run in this routine from now on, and nowhere else. */
       routine: "Always in this routine",
-      /** The routine in `noteRoutine`, when its name isn't known. */
-      thisRoutine: "this routine",
+      /** The routine in `noteRoutine` and `doneRoutine`, when its name isn't known: it starts their sentence. */
+      thisRoutine: "This routine",
       /** `routine`: its name. `actions`: what it will do. */
       noteRoutine:
         "{{routine}} does {{actions}} on its own from now on, with any values. Outside this routine it still asks. To undo: the routine's settings.",
@@ -4543,8 +5487,9 @@ export const en = {
       bcc: "Bcc",
       subject: "Subject",
       noSubject: "(no subject)",
-      more: "Read all",
-      less: "Show less",
+      /** A connector's reply: who it goes to is the message's sender, not in its call. */
+      toSender: "To whoever sent the message",
+      toList: "To {{to}}",
       answers: "Answers <b>“{{subject}}”</b>",
       answersFrom: "Answers <b>“{{subject}}”</b>, from {{from}}",
       forwards: "Forwards <b>“{{subject}}”</b>",
@@ -4592,6 +5537,8 @@ export const en = {
     outcomeApprovedByYou: "Approved by you",
     outcomeRefusedBy: "Refused by {{name}}",
     outcomeRefusedByYou: "Refused by you",
+    /** The agent asked for the same action again in a later turn: that newer request is on the card under it. */
+    outcomeSuperseded: "Replaced by the version below",
     /** Decided by someone covering the person it was asked of (ADR 0139). */
     outcomeApprovedCovering: "Approved by {{name}}, covering {{for}}",
     outcomeRefusedCovering: "Refused by {{name}}, covering {{for}}",
@@ -4699,6 +5646,34 @@ export const en = {
     },
     /** Under `plan_model_dropped`: opens the agent's "Quem pensa". */
     planModelDropped: { choose: "Choose another model" },
+    planServes: { onlyMe: "Switch to Only me", done: "Only you use this plan now." },
+    /**
+     * What the right hand found wrong (`team_watch`), by cause: the notice's headline, its stored text and its push.
+     * `names`: what it is about, the first few by name, then "and 2 more". `count`: how many things in all.
+     */
+    teamWatch: {
+      sign_in_one: "The sign-in for {{names}} ended.",
+      sign_in_other: "The sign-ins for {{names}} ended.",
+      connector_one: "{{names}} needs reconnecting.",
+      connector_other: "{{names}} need reconnecting.",
+      mailbox_one: "The mailbox {{names}} needs reconnecting.",
+      mailbox_other: "The mailboxes {{names}} need reconnecting.",
+      database_one: "The database {{names}} needs reconnecting.",
+      database_other: "The databases {{names}} need reconnecting.",
+      budget_out_one: "{{names}} is out of budget.",
+      budget_out_other: "{{names}} are out of budget.",
+      budget_low_one: "{{names}} is about to run out of budget.",
+      budget_low_other: "{{names}} are about to run out of budget.",
+      computer_one: "{{names}} is offline with agents waiting.",
+      computer_other: "{{names}} are offline with agents waiting.",
+      /** The notice's one button: the way out, where the notice opens. */
+      act: {
+        sign_in: "Sign in again",
+        reconnect: "Reconnect",
+        budget: "Raise budget",
+        computer: "Switch computer",
+      },
+    },
     docTitleUnread: "({{count}}) Notifications",
     summaryWaiting_one: "{{count}} thing waiting on you",
     summaryWaiting_other: "{{count}} things waiting on you",
@@ -4707,6 +5682,8 @@ export const en = {
     summaryAllRead: "all read",
     summaryNothing: "Nothing new here.",
     readAll: "Mark all as read",
+    /** Everything in the filter to Done, except what waits on the person. */
+    doneAll: "Clear all",
     filters: "Filter notifications",
     filter: {
       all: "All",
@@ -4749,6 +5726,8 @@ export const en = {
       joinRequest_other: "{{name}} and others ask to join",
       joinRequestNames: "{{names}} ask to join",
       joinSuggestion: "{{by}} suggested {{name}}",
+      /** A request the server's operator filed for someone working for `outsideOf` (ADR 0191). */
+      joinOutside: "{{name}} asks to join as an outside collaborator for {{outsideOf}}, taking no seat",
       doing: {
         merge: "merge",
         deploy: "deploy",
@@ -4796,6 +5775,7 @@ export const en = {
       desktopTaken: "<b>{{name}}</b> took control of the screen of <b>{{agent}}</b>'s computer",
       /** Someone gave an agent the person's plan (`plan_lent`): `plan` its maker ("Claude"). */
       planLent: "<b>{{name}}</b> connected your {{plan}} plan to <b>{{agent}}</b>",
+      planServes: "Your {{plan}} now serves the whole workspace",
       /** The agent's model left its plan's list (`plan_model_dropped`): `runs` the model it uses now. */
       planModelDropped: "{{model}} left {{plan}}. <b>{{name}}</b> is using {{runs}} until you choose another model.",
       routineWaitingPlan: "<b>{{name}}</b> is waiting for its plan to reset to run a routine",
@@ -4814,16 +5794,24 @@ export const en = {
       joinRequest: "<b>{{name}}</b> asks to join",
       joinRequestMany: "<b>{{names}}</b> ask to join",
       joinSuggestion: "<b>{{by}}</b> suggested <b>{{name}}</b>",
+      /** A request the server's operator filed for someone working for `outsideOf` (ADR 0191). */
+      joinOutside: "<b>{{name}}</b> asks to join as an outside collaborator for <b>{{outsideOf}}</b>, taking no seat",
       /** ADR 0137: someone sent a change they can't make to the people who may ("Pedir a um admin"). */
       changeRequest: "<b>{{name}}</b> asks for a change to <b>{{agent}}</b>",
       /** Proposals wait on this person: `names`, the agents that made them. */
       proposalWaiting: "Improvement proposals from <b>{{names}}</b>",
       changeRequestAgent: "<b>{{name}}</b> asks for a new agent: <b>{{agent}}</b>",
+      /** A card of a workspace change (an invite, a role, a channel) sent on to who may apply it. */
+      changeRequestAction: "<b>{{name}}</b> asks for a change in the workspace",
       approvalCover: "<b>{{name}}</b> picked you in Who approves for me",
       approvalCoverDeclined: "<b>{{name}}</b> won't approve for you any more",
       approvalCoverEnded: "<b>{{name}}</b> ended who approves for you",
       rightHandDecided: "Requests <b>{{name}}</b> approved for you today: {{count}}",
       rightHandPaused: "<b>{{name}}</b> stopped approving for you: you undid 3 of its decisions this week",
+      /** "Pedir a um admin" (`admin_ask`): who asked, and what. */
+      adminAskChannel: "<b>{{name}}</b> asks you to add <b>{{agent}}</b> to #{{label}}",
+      adminAskCreate: "<b>{{name}}</b> asks to be able to create agents",
+      adminAskWebhook: "<b>{{name}}</b> asks you to set up the {{service}} webhook for routines",
       invitationAccepted: "<b>{{name}}</b> accepted your invitation and joined {{org}}",
       invitationAcceptedAny: "<b>{{name}}</b> accepted your invitation",
       reaction_one: "<b>{{names}}</b> reacted to your message",
@@ -4931,6 +5919,8 @@ export const en = {
       undo: "Undo",
       readAll_one: "{{count}} marked as read",
       readAll_other: "{{count}} marked as read",
+      doneAll_one: "{{count}} moved to Done",
+      doneAll_other: "{{count}} moved to Done",
       sent: "Reply sent",
       see: "See",
       answered: "{{name}} got your answer",
@@ -5020,9 +6010,21 @@ export const en = {
       failed: "Failed",
       running: "Running",
       scheduled: "Scheduled",
+      queued: "In line",
+      notRun: "Not run",
     },
+    /** Approved, waiting for a request the agent asked before it on the same card to be decided and done. */
+    queuedLine: "Approved. Runs after “{{title}}”, asked before it.",
+    /** Approved before a request asked ahead of it was refused or expired: it didn't run. */
+    notRunRefused: "“{{title}}”, asked before this, was refused after this was approved, so this didn't run.",
+    notRunExpired: "“{{title}}”, asked before this, expired undecided after this was approved, so this didn't run.",
+    notRunEarlier: "A request asked before this was refused or expired after this was approved, so this didn't run.",
+    /** Its place among the requests on its card, in the order the agent asked. */
+    position: "{{n}} of {{total}}",
     expiredLine: "Nobody decided within 24 h, so nothing was done.",
     canceledLine: "The run stopped before a decision.",
+    /** Replaced by the agent's newer request for the same action (`supersededById`). */
+    supersededLine: "The agent asked again with a newer version. This one wasn't done.",
     lesson: "{{name}} will keep it in mind: {{reason}}",
     again: "Ask again",
     againBody: "@{{handle}} the request “{{title}}” expired without a decision. If it still makes sense, ask again.",
@@ -5087,10 +6089,10 @@ export const en = {
       email: "The email",
       text: "What it will publish",
       textDone: "What it published",
+      textNot: "What it would have published",
       values: "What it will do",
       valuesDone: "What it did",
-      more: "Show all",
-      less: "Show less",
+      valuesNot: "What it would have done",
       trail: "How it got here",
       showSteps: "See each step",
       hideSteps: "Hide the steps",
@@ -5235,21 +6237,33 @@ export const en = {
         accountMove: "In use by {{agents}} · Move it here",
         accountAlso: "Also used by {{agents}}",
         accountOf: "{{name}}'s",
-        /** Under the account for someone who may use other people's plans (`use_others_plans`). */
-        accountOthers: "Other people's plans show whose they are. Their owner gets an email and can take it back.",
+        /** Under the accounts when other people's plans are listed (`canUseOthersPlans`). */
+        accountOthers: "Plans that serve the whole workspace show whose they are.",
+        /** Under the account in use when its runs go on with the next account of the order (ADR 0041 §6). */
+        movesOn: "Goes on with the next account at a limit",
+        pinned: "This account only",
+        pinnedHint: "At a limit, waits for this account to reset instead of moving to the next.",
         addAccount: "Add account",
         signInAgain: "Sign in again",
         connectPlan: "Connect another plan",
-        fallbackTitle: "If {{computer}} stops answering, answer through the API",
-        fallbackHint:
-          "It answers through the API and counts against {{name}}'s budget. Otherwise {{name}} tells whoever asked and waits for the computer to come back.",
         effort: "Effort",
-        efforts: { auto: "Automatic", low: "Low", medium: "Medium", high: "High", max: "Maximum" },
+        /** `none`: an API key with no effort chosen, which thinks as its provider does by default. */
+        efforts: {
+          auto: "Automatic",
+          none: "Model default",
+          low: "Low",
+          medium: "Medium",
+          high: "High",
+          max: "Maximum",
+        },
         effortsLower: { auto: "automatic", low: "low", medium: "medium", high: "high", max: "maximum" },
         effortText: {
           auto: "The Automatic model picks each task's effort. Pick a model to set the effort yourself.",
           low: "Answers fast. Good for simple questions.",
           medium: "The default. Thinks enough most of the time.",
+          /** On an API key, where medium is not the default. */
+          mediumKey: "Thinks enough most of the time.",
+          none: "The model thinks as much as it usually does. Pick a level to set the effort.",
           high: "Thinks more on hard tasks. Slower and costs more.",
           max: "Thinks as much as possible. Much slower and pricier.",
         },
@@ -5265,6 +6279,7 @@ export const en = {
         context: "Context window",
         contextText: {
           auto: "What the model takes.",
+          autoSummarizes: "On Claude Code and Codex, summarizes the conversation at {{size}}.",
           "200000": "Cheaper and faster. Summarizes early in long conversations.",
           "400000": "Remembers a lot, and each answer costs less than with 1M.",
           "1000000": "Remembers the most. Each answer rereads everything: slower and pricier.",
@@ -5275,6 +6290,8 @@ export const en = {
           defaults: "Back to defaults",
           contents: {
             model: "Context window",
+            /** An API key with a fixed model: its effort too. */
+            modelFixed: "Effort and context window",
             auto: "Context window and who it answers",
             fixed: "Effort, context window and who it answers",
             autoSpeed: "Speed, context window and who it answers",
@@ -5285,7 +6302,6 @@ export const en = {
           speed: "Fast speed",
           context: "Context: {{size}}",
           sharing: "Answers other people",
-          waits: "Waits for the computer",
         },
         copy: {
           row: "Use on other agents",
@@ -5396,6 +6412,12 @@ export const en = {
             status_unknown: "{{brand}} didn't say whether the account signed in. Try again.",
             no_token: "{{brand}} finished without showing the account's token. Try again.",
             not_kept: "The account signed in, but {{computer}} couldn't keep the sign-in. Try again.",
+            /**
+             * Grok Build signed in, but its sandbox doesn't start on the computer for an agent (runner `sandbox`). No
+             * "update the computer": on Cloud nobody in the workspace can.
+             */
+            sandbox:
+              "{{brand}} signed in, but its sandbox can't start on {{computer}}, so no agent could use it. Use an API key instead.",
           },
           /** Gemini signed in for all agents, but a copy of it doesn't work for each one: signing in again won't help. */
           geminiNotShared:
@@ -5446,11 +6468,13 @@ export const en = {
           /** When the time it's back isn't known. */
           limitSoon: "{{account}} is back when the plan renews",
           limitHelp: "Meanwhile {{name}} can think with another account that's already connected.",
+          /** Under the list, with an account at its limit picked: the row above says until when. */
+          fullWait: "On this account {{name}} waits until the plan renews.",
+          /** A link to the usage page, after `fullWait`. */
+          seeUsage: "See usage",
           wait: "Wait",
           modelTitle: "{{name}}'s model",
           moreTitle: "More options for {{name}}",
-          /** A switch: its ⓘ is `fallbackHint`. */
-          fallback: "Use the API key if the plan stops",
           /** A line under More options where several computers can run it. */
           computer: "Computer",
           doneTitle: "All set",
@@ -5557,6 +6581,7 @@ export const en = {
       budget: "Budget",
       owner: "Owner",
       audience: "Who can talk",
+      editors: "Who can edit",
       channels: "Channels",
       machine: "Computer",
       brain: "Who thinks",
@@ -5596,15 +6621,11 @@ export const en = {
       memberOwnerPersonal:
         "You see how {{name}} works. Who edits: {{owner}} (owner) and the people who run this space.",
       owner:
-        "You own {{name}}: you change the look, who can talk, the channels and the computer. The rest, only admins.",
+        "You own {{name}}: you change the instructions, role, skills, look, who can talk or edit, the channels and the computer. The rest, only admins.",
       ownerKeeper:
-        "You own {{name}}: you change the look, who can talk, the group conversations and the computer. The rest, only {{keeper}}.",
+        "You own {{name}}: you change the instructions, role, skills, look, who can talk or edit, the group conversations and the computer. The rest, only {{keeper}}.",
       ownerPersonal:
-        "You own {{name}}: you change the look, who can talk, the group conversations and the computer. The rest, only the people who run this space.",
-      ownerInstructions: "Only admins edit the instructions. As the owner, you approve proposed changes.",
-      ownerInstructionsKeeper: "Only {{keeper}} edits the instructions. As the owner, you approve proposed changes.",
-      ownerInstructionsPersonal:
-        "Only the people who run this space edit the instructions. As the owner, you approve proposed changes.",
+        "You own {{name}}: you change the instructions, role, skills, look, who can talk or edit, the group conversations and the computer. The rest, only the people who run this space.",
       ownerAccess: "Only admins give or take away access and repositories.",
       ownerAccessKeeper: "Only {{keeper}} gives or takes away access and repositories.",
       ownerAccessPersonal: "Only the people who run this space give or take away access and repositories.",
@@ -5689,13 +6710,11 @@ export const en = {
       search: "Search a connector or area",
       filter: "Filter",
       filters: { all: "All", on: "With access", ask: "Ask for approval" },
-      allConnectors: "Connectors:",
-      onlyRead: "Read only",
+      /** Opens the three levels, for every connector at once. */
+      setAll: "Change all",
       connectors: "{{org}}'s connectors",
       connectorsPersonal: "Your connectors",
-      oneLevel: "One level per app",
       builtin: "Built into agentes",
-      builtinHelp: "Drive, tasks, memory and more",
       noMatch: "Nothing matching “{{q}}”",
       noneHere: "Nothing in this filter",
       library: "Skills library",
@@ -5715,6 +6734,8 @@ export const en = {
       verified_other: "{{count}} verified",
       lessons: "Lessons",
       fromTeam: "learned from the team",
+      /** The right hand keeps what it learns per person: only that person's runs read it. */
+      fromTeamRightHand: "learned from you",
       proposals: "Proposals",
       waiting: "waiting for a decision",
       noneWaiting: "none waiting",
@@ -5740,6 +6761,7 @@ export const en = {
       rules: "Rules people gave",
       rulesNote:
         "Followed in all its work for whoever gave each one, wherever the work comes from. Rules from its owner or an admin hold for everyone.",
+      rulesNoteRightHand: "Rules you give in your DM hold only for you. Only you see them.",
       /** Who gave the rule and when ("From Ana · Nov 4"). */
       ruleBy: "From {{name}} · {{date}}",
       removeRule: "Remove",
@@ -5841,8 +6863,17 @@ export const en = {
         cli_stopped: "The {{brain}} program stopped with an error.",
         /** The agent's CLI ended without its answer and without a word (it crashed or was killed). */
         cli_closed: "The {{brain}} program closed unexpectedly.",
+        /**
+         * The agent's CLI couldn't start its sandbox on its computer (bubblewrap refused), before the model was asked.
+         * No "update the computer": on Cloud nobody in the workspace can.
+         */
+        cli_sandbox:
+          "The {{brain}} program can't start its sandbox on this computer. Choose another AI in the agent's settings.",
         account_missing:
           "The account chosen for this agent isn't on its computer anymore. Choose another one in the agent's settings, or add it again.",
+        /** A Codex turn on a Windows computer where MXC can't hold its commands (runner `windows_sandbox`). */
+        windows_sandbox:
+          "This Windows computer can't isolate Codex's commands: it needs Windows 11 24H2 or newer. Update Windows, choose Claude or an API key for this agent, or move it to a Linux computer.",
         our_error: "Something went wrong on our side and it stopped. Ask again in a little while.",
         unknown: "Failed.",
       },
@@ -5866,6 +6897,7 @@ export const en = {
       budget: "Budget",
       owner: "Owner",
       audience: "Who can talk",
+      editors: "Who can edit",
       channels: "Channels",
       computer: "Computer",
       danger: "Archive or delete",
@@ -6537,8 +7569,7 @@ export const en = {
     all: "All:",
     connectorsLabel: "Connectors and levels",
     connectOther: "Connect another app",
-    opensConnectors: "opens Connectors",
-    approvalsNote: "Merge, deploy and rollback always ask for approval in chat.",
+    approvalsNote: "Merge, deploy and rollback ask for approval in chat, unless the agent never asks.",
     approverOwner: "{{name}} approves.",
     approverAdmins: "An admin approves.",
     skillsTitle: "Workspace skills",
@@ -6602,6 +7633,8 @@ export const en = {
     budget: "Monthly budget (US$)",
     budgetHelp: "At the limit, {{name}} stops and says so.",
     budgetInvalid: "Use a value greater than zero.",
+    budgetCapped: "Uses the workspace default. Only an admin can raise it.",
+    budgetCappedAmount: "Uses the workspace default ({{amount}}). Only an admin can raise it.",
     warnsOwner: "We alert {{name}} at 80%.",
     warnsAdmins: "We alert the admins at 80%.",
     upTo: "up to {{amount}}/month",
@@ -6653,7 +7686,6 @@ export const en = {
     adminsOnlyPersonal: "Ask whoever runs this space to let you create agents.",
     proposalClosed: "This proposal was already decided or expired.",
     proposalNoAccess: "Only people in its conversation can see this proposal.",
-    backToChat: "Back to the conversation",
     and: " and ",
     routine: "Routine",
     routineKeep: "Create the routine {{name}}",
@@ -6815,8 +7847,8 @@ export const en = {
       readDesc: "Sees what's in {{app}}. Changes nothing.",
       write: "Read and write",
       writeDesc: "Also creates and edits in {{app}}.",
-      asks: "{{actions}} always ask for your approval, at any level.",
-      asksAny: "Sending, deleting and paying always ask for your approval, at any level.",
+      asks: "{{actions}} ask for your approval, unless the agent never asks.",
+      asksAny: "Sending, deleting and paying ask for your approval, unless the agent never asks.",
       remove: "Remove {{app}}",
       done: "Done",
     },
@@ -6831,6 +7863,55 @@ export const en = {
     otherSkill: "Another skill",
     namesLead: "How about",
     namesRoll: "Other names",
+    /**
+     * "Edit first" on an agent's proposal: the card filled in with the draft, and in the list's place the proposal
+     * (who proposed it and why, what the person changed, the first task, what is left for after it is created).
+     */
+    proposal: {
+      lead: "Adjust what {{name}} proposed. You can change everything later.",
+      leadNarrow: "{{name}}'s proposal: {{why}}",
+      side: "The proposal",
+      from: "Proposed by {{name}}",
+      changed: "What you changed",
+      changedNone: "Nothing yet. What you change on the card shows here, with Undo.",
+      undo: "Undo",
+      changes: {
+        changed: "changed",
+        added: "added",
+        removed: "removed",
+        how: "How it works",
+      },
+      firstTask: "First task",
+      firstTaskPlaceholder: "What to ask first (optional)",
+      firstTaskHint: "Ready in your chat with {{name}}. Just send it.",
+      firstTaskHintBlank: "Ready in your chat with it. Just send it.",
+      firstTaskNone: "With no task, the chat opens empty.",
+      after: "After it's created",
+      afterAi: "Connect an AI for {{name}} to think with",
+      afterAiBlank: "Connect an AI for it to think with",
+      afterApp: "Connect {{app}}",
+      afterNone: "Nothing. {{name}} starts working as soon as it's created.",
+      afterNoneBlank: "Nothing. It starts working as soon as it's created.",
+      discard: "Discard proposal",
+      otherChannel: "Another channel",
+      chooseChannels: "Choose channels",
+      channelsNone: "Only in its chat with you.",
+      channel: {
+        lead: "Where {{name}} will work.",
+        leadBlank: "Where it will work.",
+        does: "{{name}} answers when called in {{channel}} and reads what goes on there.",
+        doesBlank: "It answers when called in {{channel}} and reads what goes on there.",
+        remove: "Remove from {{channel}}",
+      },
+      routine: {
+        label: "Routine",
+        lead: "{{when}}, in {{channel}}.",
+        leadDm: "{{when}}, in its chat with you.",
+        starts: "Starts once {{name}} is created. Change its time and text in Routines.",
+        startsBlank: "Starts once it's created. Change its time and text in Routines.",
+        remove: "Remove the routine",
+      },
+    },
     /** One skill on the card. */
     skill: {
       opens: "{{name}} opens this manual when the topic comes up. You edit it in Skills.",
@@ -6875,6 +7956,14 @@ export const en = {
     rolesAdd: "Add role",
     rolesChange: "Change roles",
     moreOf: "More for {{name}}",
+    /**
+     * Someone working for the workspace from outside it (ADR 0191): `chip` beside their name, `title` as the fact on
+     * their profile card, with who they work for.
+     */
+    outside: {
+      chip: "Outside",
+      title: "Outside collaborator",
+    },
     /** On a server that sends no email, an owner's new-password link for a member (ADR 0158). */
     passwordLink: {
       item: "Make a new-password link",
@@ -6889,6 +7978,7 @@ export const en = {
     /** A personal workspace (ADR 0159): `role` is its helper role's own name ("Admin"). */
     everyoneNotePersonal: "Without a role, they use the agents. With {{role}}, they help you run it.",
     noRolesToGive: "No roles below yours to give.",
+    rolesAbove: "Roles above yours don't show.",
     roleFilter: "Role",
     rolesCount_one: "{{count}} role",
     rolesCount_other: "{{count}} roles",
@@ -6941,7 +8031,7 @@ export const en = {
       done: "{{name}} is no longer part of {{org}}.",
       left: "You left {{org}}.",
       goneTitle: "You're no longer part of {{org}}",
-      goneText: "Your access to this workspace ended. To come back, ask someone there for a new invite.",
+      goneText: "Your access ended. To come back, ask for a new invitation.",
     },
     // Addresses as chips, in the invite dialog and the onboarding's Team step (ADR 0090).
     chips: {
@@ -6958,9 +8048,6 @@ export const en = {
       title: "Invite to {{org}}",
       // A personal workspace's words (ADR 0159): its name ("Personal") reads oddly in a sentence.
       titlePersonal: "Invite someone to your workspace",
-      /** Under the title: the step out of four, and its name. */
-      stepOf: "Step {{n}} of {{total}} · {{step}}",
-      steps: { who: "Who", role: "Role", where: "Where they start", note: "Note" },
       emails: "Emails",
       moreEmails: "More emails…",
       checkMarked: "Check the marked emails: they won't get an invitation.",
@@ -6974,36 +8061,20 @@ export const en = {
       notePlaceholder: "Hi. Come join {{org}}: the team and the agents are all here.",
       notePlaceholderPersonal: "Hi. Come join me here: my agents can help you too.",
       or: "or send the link",
-      /** The first step's button with more than one address (with one, "Continue"). */
-      continueWith: "Continue with {{count}}",
       send_one: "Invite {{count}} person",
       send_other: "Invite {{count}} people",
       sent: "Invitation sent to {{email}}.",
       sentMany: "{{count}} invitations sent.",
       alsoIn: "They also join {{channels}}.",
-      // What the host asks on each step. `name`: the address's first word, capitalized ("Julia" from julia.m@…), so
-      // nothing here may need to know the person's gender.
-      who: {
-        title: "Who do you want to bring in?",
-        lead: "Give me their emails. Each person gets an invitation and joins directly.",
-      },
       orLink: {
         title: "Rather send a link?",
         text: "Whoever opens it asks to join, and you approve.",
         open: "See the link",
       },
       role: {
-        titleOne: "What role does {{name}} join with?",
-        titleMany: "What role do these people join with?",
-        lead: "The role says what each person can do. You can change it later.",
-        each: "A role for each person",
-        same: "The same role for everyone",
         // A personal workspace asks it plainly (ADR 0159): two choices, each one of the workspace's roles.
         titleOnePersonal: "What can {{name}} do here?",
-        titleManyPersonal: "What can they do here?",
         leadPersonal: "You can change it later.",
-        eachPersonal: "A choice for each person",
-        samePersonal: "The same for everyone",
         /** A member with no role of their own. */
         uses: "Uses the agents",
         usesText: "Talks to the agents and uses what's shared with them.",
@@ -7012,62 +8083,10 @@ export const en = {
         helpsText:
           "Can change agents, settings and who's here, as you can. Sees everything shared here, except your direct messages.",
       },
-      /**
-       * A personal workspace's role step (ADR 0159): the agents every member may talk to, which answer whoever joins.
-       * `<agents/>` is their names, joined as a list ("Leo and Bia"), each one a link.
-       */
-      reach: {
-        line_one: "<agents/> will answer whoever joins.",
-        line_other: "<agents/> will answer whoever joins.",
-      },
       where: {
-        titleOne: "Which channels does {{name}} join right away?",
-        titleMany: "Which channels do these people join right away?",
-        /** A personal workspace calls its channels group conversations. */
-        titleOnePersonal: "Which group conversations does {{name}} join right away?",
-        titleManyPersonal: "Which group conversations do these people join right away?",
-        lead: "Everyone starts in #{{channel}}. You pick the others.",
-        label: "Channels",
-        labelPersonal: "Group conversations",
-        everyone: "Everyone joins",
         private: "Private · you're in it",
         people_one: "{{count}} person",
         people_other: "{{count}} people",
-        fromChannel: "#{{channel}} comes checked: you invited from there.",
-      },
-      noteStep: {
-        title: "Want me to say something in the invitation?",
-        lead: "It goes in the email. If not, I'll send it as it is.",
-      },
-      /** Over the email as it arrives: the first names it goes to. */
-      mailFor: "This is how it reaches {{names}}",
-      // The invitation email in the words the server sends it in (packages/engine/src/email/words): keep them alike.
-      mail: {
-        from: "agentes.chat · to {{to}}",
-        toMany: "{{email}} and {{count}} more",
-        subject: "You're invited to a workspace on agentes.chat",
-        headline: "You're invited to a workspace",
-        body: "<b>{{name}}</b> ({{email}}) invited you to join <b>{{org}}</b> as a member.",
-        noteFrom: "<b>{{name}}:</b> “{{note}}”",
-        what: "agentes.chat is where people and AI agents work together.",
-        button: "Accept invitation",
-        small: "The invitation works for 7 days. Accept it with this email address.",
-      },
-      // The host's answer once the invitations went: `channels` is where they start ("#general and #eng").
-      done: {
-        title: "Done, I sent the invitation to {{names}}.",
-        leadOne: "When {{name}} joins, I'll greet them in {{channels}} and let you know.",
-        leadMany: "When each person joins, I'll greet them in {{channels}} and let you know.",
-        none: "No invitation went out this time.",
-        noneLead: "Each address's reason is below.",
-      },
-      /** Each address after the send: sent, or why not (as `members.batch` says it). */
-      result: {
-        invited: "Sent",
-        already_member: "already in {{org}}",
-        already_memberPersonal: "already here",
-        already_invited: "already had an invitation",
-        invalid_email: "invalid email",
       },
       again: "Invite more people",
       finish: "Done",
@@ -7134,9 +8153,9 @@ export const en = {
       who: "Who they are",
       whoPlaceholder: "Design freelancer, helping with the new site.",
       send: "Send to the admins",
-      sent_one: "Suggestion sent. {{names}} sees it in Members and invitations.",
-      sent_other: "Suggestion sent. {{names}} see it in Members and invitations.",
-      sentNoNames: "Suggestion sent. Whoever invites sees it in Members and invitations.",
+      sent_one: "Suggestion sent. {{names}} sees it in Invitations.",
+      sent_other: "Suggestion sent. {{names}} see it in Invitations.",
+      sentNoNames: "Suggestion sent. Whoever invites sees it in Invitations.",
       refused: {
         invalid: "Check the email: something like name@company.com.",
         member: "{{email}} is already in {{org}}.",
@@ -7154,6 +8173,8 @@ export const en = {
     arrival: {
       title: "Welcome to {{org}}, {{name}}",
       lead: "Here the team and the agents work together: write in #{{channel}} or call an agent by name.",
+      /** After the lead: the other channels the invitation started them in (ADR 0184). */
+      alsoIn: "You're also in {{channels}}.",
       sayHi: "Say hi in #{{channel}}",
       talkTo: "Talk to {{name}}",
       team: "See the team",
@@ -7163,6 +8184,8 @@ export const en = {
     batch: {
       already_member: "{{email}} is already in the workspace.",
       already_invited: "{{email}} already has a pending invitation. Use Resend.",
+      /** On an invite card already applied, where nothing resends: an address that was left out. */
+      had_invite: "{{email}} already had a pending invitation.",
       invalid_email: "{{email}} doesn't look like a valid email.",
     },
     activeNow: "Active now",
@@ -7176,6 +8199,10 @@ export const en = {
       viaLink: "Asked through the link {{when}}",
       suggested: "Suggested by {{name}} {{when}}",
       suggestedLabel: "{{by}} suggested {{name}}",
+      /** A request for an outside collaborator (ADR 0191): `outsideOf`, who they work for. */
+      outside: "Asked {{when}} to join as an outside collaborator for {{outsideOf}}",
+      /** Before the answer to an outside collaborator's request: approving works even when the workspace is full. */
+      outsideSeat: "Outside collaborators don't count toward your plan's people, and you can remove them at any time.",
       asked: "Asked {{ago}}",
       askedNow: "Asked just now",
       askedOn: "Asked on {{date}}",
@@ -7216,6 +8243,124 @@ export const en = {
     budgetLine: "{{percent}} of the {{month}} budget",
     noAgents: "No agents yet.",
   },
+  // One screen to invite (ADR 0184): Email or Link, then To, Role, Channels and Agents; the Invitations tab of People,
+  // with the requests waiting, the links and the email invitations; Edit link and Edit invitation.
+  invites: {
+    how: "How to invite",
+    byEmail: "Email",
+    byLink: "Link",
+    to: "To",
+    role: "Role",
+    roleHint: "What the person can do. Roles add to what Everyone can. Only for people.",
+    rolePersonal: "Can",
+    /** Under the phone's Role list. */
+    rolesFoot: "Roles add to what Everyone can. The role's channels and agents come ticked.",
+    channels: "Channels",
+    channelsPersonal: "Conversations",
+    channelsHint: "Where the person starts. The role's channels come ticked.",
+    channelsHintPersonal: "Where the person starts.",
+    agents: "Agents",
+    agentsHint:
+      "Who the person works with. They sit at the top of their list. A restricted agent starts answering them.",
+    addChannel: "Add a channel…",
+    addChannelPersonal: "Add a conversation…",
+    addAgent: "Add an agent…",
+    noChannel: "No channel matches “{{query}}”.",
+    noChannels: "No other channels yet.",
+    noAgent: "No agent matches “{{query}}”.",
+    noAgents: "No other agents yet.",
+    general: "Everyone joins #{{channel}}.",
+    rightHand: "Everyone has {{name}}.",
+    fromRole: "Comes with the {{role}} role.",
+    fromChannel: "You invited from here.",
+    groupRole_one: "From the {{roles}} role",
+    groupRole_other: "From the {{roles}} roles",
+    /** Why an agent can or can't go with an invitation, on its row in the list. */
+    agent: {
+      byRole: "Through the {{role}} role",
+      opens: "Restricted · you let them in",
+      locked: "Restricted · only {{name}} lets people in",
+      lockedNoOwner: "Restricted · only admins let people in",
+      mailbox: "Reads {{names}}'s email",
+      mailboxHint: "Opening it to more people takes that access away. Decide on the agent's page.",
+      plan: "Only answers {{name}}",
+      planMine: "Only answers you",
+      rightHand: "Everyone has {{name}}",
+    },
+    opens_one: "{{names}} starts answering whoever joins through this invitation.",
+    opens_other: "{{names}} start answering whoever joins through this invitation.",
+    noTalk: "With this role, the person doesn't talk to agents.",
+    admin: "With {{role}}, the person sees every agent.",
+    offline: "Couldn't reach the server. Nothing was sent.",
+    /** A send the server refused for something the sender may no longer give: the cause and the way out. */
+    refused: {
+      channelArchived: "#{{channel}} was archived. Remove the channel to send.",
+      channelLeft: "You're no longer in #{{channel}}. Remove the channel to send.",
+      channelGone: "One of the channels no longer exists. Remove the marked one to send.",
+      agentGone: "{{name}} left the team. Remove them from the invitation to send.",
+      agentLocked: "You can no longer let people talk to {{name}}. Remove them from the invitation to send.",
+      agentUnnamed: "One of the agents left the team. Take out the marked one to send.",
+      role: "You can no longer give the {{role}} role. Pick another.",
+      roleMany: "You can no longer give one of these roles. Pick others.",
+    },
+    link: "Link",
+    linkEmpty: "Make the link to copy it",
+    linkFailed: "Couldn't make the link. {{cause}}",
+    never: "Never expires",
+    untilDate: "Until {{date}}",
+    validFor: "Works for {{ttl}} once made.",
+    expiresIn: "Expires after",
+    maxUses: "Most people",
+    /** The phone's groups in Link mode and Edit link: what the person gets, then the link's own limits. */
+    onJoin: "On joining",
+    theLink: "The link",
+    ttl: {
+      "30m": "30 minutes",
+      "1h": "1 hour",
+      "1d": "1 day",
+      "7d": "7 days",
+      "30d": "30 days",
+      never: "Never expires",
+    },
+    people_one: "{{count}} person",
+    people_other: "{{count}} people",
+    noLimit: "No limit",
+    usedSoFar_one: "{{count}} already joined",
+    usedSoFar_other: "{{count}} already joined",
+    linkSaved: "Link saved. The address stays the same.",
+    invitationTitle: "Invitation for {{email}}",
+    invitationSaved: "Invitation for {{email}} updated.",
+    invitationExpired: "This invitation expired. Renew it to change what it gives.",
+    editInvitation: "Edit invite",
+    // The Invitations tab.
+    search: "Search email or role",
+    type: "Type",
+    types: { requests: "Requests", links: "Links", emails: "Emails" },
+    typesCount_one: "{{count}} type",
+    typesCount_other: "{{count}} types",
+    noMatch: "No invitation matches “{{query}}”.",
+    links: "Links",
+    emails: "Email invitations",
+    viaLinkOf: "Asked through {{name}}'s link {{when}}",
+    withLink: "With the link: {{gives}}.",
+    /** A request's link gives a role above the approver's: approving leaves it out (ADR 0184 §8). */
+    roleLeftOut_one: "{{roles}} is left out: it's above your role.",
+    roleLeftOut_other: "{{roles}} are left out: they're above your role.",
+    linkLabel: "Link {{name}}",
+    linkMore: "More actions for the {{name}} link",
+    usesOf_one: "{{uses}} of {{count}} person",
+    usesOf_other: "{{uses}} of {{count}} people",
+    joined_zero: "Nobody joined yet",
+    joined_one: "{{count}} person joined",
+    joined_other: "{{count}} people joined",
+    expiresLeft: "expires in {{left}}",
+    neverEnds: "never expires",
+    by: "by {{name}}",
+    edit: "Edit",
+    turnOff: "Turn off link",
+    editLink: "Edit link",
+    linkTurnedOff: "Link turned off.",
+  },
   empty: {
     thread: { title: "Threads", text: "Thread replies will show up here, without taking over the channel." },
     dm: {
@@ -7237,7 +8382,8 @@ export const en = {
     notFoundText: "The address doesn't exist or has changed.",
     goHome: "Back to start",
     noOrgTitle: "You're not part of this workspace",
-    noOrgText: "Ask someone in the workspace for an invitation, or go back to yours.",
+    noOrgText: "Ask someone there for an invitation.",
+    noOrgBack: "Back to your workspaces",
     crashTitle: "Something went wrong",
     crashText: "Reload the page to carry on.",
     crashCode: "If you ask for help, give the code {{id}}.",
@@ -7245,6 +8391,11 @@ export const en = {
     unreachableText: "It may be restarting. This page opens by itself as soon as it's back.",
     offlineTitle: "You're offline",
     offlineText: "This page opens by itself when you're back online.",
+    /** The page on a hostname that reaches the server but isn't set up there. */
+    unknownHostTitle: "This address isn't set up yet",
+    unknownHostText: "If it was just connected, try again in a few minutes.",
+    /** That page's browser tab title. */
+    unknownHostTab: "Address not set up · agentes.chat",
   },
   scopes: {
     context_read: {
@@ -7253,7 +8404,10 @@ export const en = {
     },
     memory_write: { label: "Remember", description: "Save and forget its own notes (memories)." },
     drive_read: { label: "Read files", description: "Read files in the Drive." },
-    drive_write: { label: "Write files", description: "Create reports, tables, org charts and diffs in the Drive." },
+    drive_write: {
+      label: "Write files",
+      description: "Create reports, spreadsheets, presentations, canvases and diffs in the Drive, and generate images.",
+    },
     issues_write: { label: "Tasks", description: "Create and update tasks." },
     github_repo_read: { label: "Read code", description: "Read files, commits and search code." },
     github_repo_write: {
@@ -7383,6 +8537,12 @@ export const en = {
     },
   },
   issues: {
+    /** A task another agent handed over: on its card and after its title in the list. */
+    handedBy: "handed by <0/>{{name}}",
+    /** Where a handed task came from, for a reader of that DM. */
+    fromDm: "from <0>your DM with {{name}}</0>",
+    /** The same, as plain words (the phone's line under the title, its Linked row). */
+    fromDmText: "from your DM with {{name}}",
     delete: {
       action: "Delete task",
       title: "Delete task #{{number}}?",
@@ -7395,6 +8555,15 @@ export const en = {
     },
     assigneeFilter: "Assignee",
     priorityFilter: "Priority",
+    labelFilter: "Label",
+    table: {
+      task: "Task",
+      github: "GitHub",
+      sortBy: "Sort by {{column}}",
+      /** The name of the handle at a column's end in the task list: dragging it changes that column's width. */
+      resize: "Resize column {{column}}",
+    },
+    fold: { open: "Open {{name}}", close: "Fold {{name}}", column: "Fold column" },
     title: "Tasks",
     summary: "{{open}} open · {{agents}} with agents",
     search: "Search tasks",
@@ -7430,7 +8599,10 @@ export const en = {
       saved: "Saved for you in this workspace",
       reset: "Back to default",
       by: { stage: "Stage", assignee: "Assignee", priority: "Priority" },
-      order: { manual: "Manual", priority: "Priority", due: "Due date" },
+      order: { manual: "Manual", priority: "Priority", due: "Due date", updated: "Recent" },
+      done: "Done",
+      doneIs: { all: "All", recent: "Last {{days}} days", hidden: "None" },
+      hideEmpty: "Hide empty groups",
       field: {
         project: "Project",
         assignee: "Assignee",
@@ -7456,6 +8628,8 @@ export const en = {
       canceled: "#{{number}} went back to its place.",
       assigned: "#{{number}} is now with {{name}}.",
       unassigned: "#{{number}} has no assignee now.",
+      /** Dragged off one of several who have it: the others still do. */
+      removed: "#{{number}} is no longer with {{name}}.",
       prioritized: "#{{number}} now has {{priority}} priority.",
     },
     canceledColumn: "Canceled",
@@ -7540,21 +8714,39 @@ export const en = {
     auto: "automatic",
     autoHint: "It changed column on its own, from the agent's work.",
     now: {
-      title: "Agents working now",
-      stalled_one: "{{count}} stalled",
-      stalled_other: "{{count}} stalled",
+      stalledCount_one: "{{count}} stalled task",
+      stalledCount_other: "{{count}} stalled tasks",
+      viewStalled: "See stalled",
+      continue: "Continue",
+      continueAll: "Continue all",
+      continueAllCount: "Continue all ({{count}})",
+      sent_one: "Asked. {{names}} picks up where they left off.",
+      sent_other: "Asked. {{names}} pick up where they left off.",
+      rowSent: "Asked: picks up where it left off.",
+      stalledTitle: "Stalled tasks",
+      stalledSub: "{{tasks}} · {{agents}}",
+      tasks_one: "{{count}} task",
+      tasks_other: "{{count}} tasks",
+      agents_one: "{{count}} agent",
+      agents_other: "{{count}} agents",
+      stalledText: "The agents stopped before finishing. Continue asks them to pick up where they left off.",
+      stoppedNow: "Stopped just now",
+      stoppedAgo: "Stopped {{ago}}",
+      stoppedYesterday: "Stopped yesterday",
+      stoppedOn: "Stopped on {{date}}",
     },
     work: {
       label: "{{name}}'s work",
       runningTitle: "{{name}} is working on it",
       waitingTitle: "{{name}} is waiting for you",
+      finishedTitle: "{{name}} finished it",
+      finishedMeta: "{{when}} · handed by {{name}}",
+      answer: "Answer",
       stalledTitle: "{{name}} stopped {{when}}",
       stalledText: "The task is still with {{name}}, but no run is going.",
       started: "started {{when}}",
       starting: "Starting…",
       stalled: "Stalled {{when}}",
-      noRun: "No run going.",
-      noRunStep: "No run going. Last step: {{step}}",
       lastStep: "Last step: {{step}}",
       waitingApproval: "Asks for approval",
       waitingInput: "Has a question",
@@ -7585,6 +8777,8 @@ export const en = {
     priority: { low: "Low", normal: "Normal", high: "High" },
     priorityLower: { low: "low", normal: "normal", high: "high" },
     noAssignee: "No assignee",
+    /** The dialog that picks who has a task: the list's name over it, and the button that closes it. */
+    assignees: { people: "People and agents", done: "Done" },
     agentRole: "Agent · {{role}}",
     pr: "PR #{{number}}",
     open: "#{{number}} {{title}}",
@@ -7726,7 +8920,10 @@ export const en = {
       status_changed: "changed the status to {{status}}",
       priority_changed: "changed the priority to {{priority}}",
       assigned: "assigned the task",
-      unassigned: "removed the assignee",
+      unassigned: "removed an assignee",
+      /** With who it was (`name`), when the event says. */
+      assigned_named: "assigned the task to {{name}}",
+      unassigned_named: "took {{name}} off the task",
       due_date_set: "set the due date to {{date}}",
       due_date_removed: "removed the due date",
       pr_linked: "linked PR #{{number}}",
@@ -7802,6 +8999,8 @@ export const en = {
       example: "Example",
       exampleCopied: "Example copied.",
       test: "Test",
+      /** Testar on a routine turned off: turns it on, then sends the test. */
+      turnOnAndTest: "Turn on and test",
       tested: "Test sent. The agent gets a sample and says what it would do with a real call.",
       calls: "Latest calls",
       noCalls: "No calls yet.",
@@ -7837,8 +9036,8 @@ export const en = {
         oneClick: "Create the webhook",
         /** After the one-click add: `repo` is owner/name. */
         added: "Webhook created in {{repo}}.",
-        byHand: "Or by hand: in the repository, Settings\u00a0›\u00a0Webhooks\u00a0›\u00a0Add webhook.",
-        open: "In the repository, open Settings\u00a0›\u00a0Webhooks\u00a0›\u00a0Add webhook.",
+        byHand: "Or create it by hand on GitHub.",
+        open: "Create the webhook in the repository, on GitHub.",
         openLink: "Open on GitHub",
         url: "Payload URL",
         type: "Content type: application/json",
@@ -7944,6 +9143,15 @@ export const en = {
       now: "now",
       lane: "{{name}}: next {{when}}",
       laneNone: "{{name}}: nothing in the next hours",
+      agentRoutines_one: "{{count}} routine",
+      agentRoutines_other: "{{count}} routines",
+      andMore: "{{name}} and {{count}} more",
+      pick: "See {{name}}'s routines",
+      restLater_one: "{{count}} more agent runs later",
+      restLater_other: "{{count}} more agents run later",
+      restIdle_one: "{{count}} with nothing in the next {{hours}} hours",
+      restIdle_other: "{{count}} with nothing in the next {{hours}} hours",
+      showAll: "Show all",
       legend: { ok: "answered", silent: "nothing new", failed: "failed", next: "will run" },
     },
     panel: {
@@ -7988,13 +9196,19 @@ export const en = {
     },
     /** The connected-app actions a routine's runs do without asking: the job its creator set it up for. */
     ownActions: {
-      hint: "Every run does these in your connected apps without asking. Any other action there asks a person first, and merge, deploy and rollback always ask.",
-      none: "In connected apps it asks a person before each action. To let it do its job on its own, tell the agent in the chat which actions it may do.",
+      hint: "Every run does these in your connected apps without asking, and other ordinary changes too. Other sends, deletes, payments and invites ask a person first. If the agent always asks, everything asks. If it never asks, nothing does.",
+      none: "In connected apps it makes ordinary changes without asking, as in a chat. Deleting, sending, paying, inviting and what an admin set to ask need a person's approval first. To let it send on its own, tell the agent in the chat which actions it may do. If the agent always asks, everything asks.",
       /** The one line a screen shows, with `hint` (or `none`) behind its ⓘ. */
       hintShort: "Every run does these without asking.",
-      noneShort: "It asks a person before each action.",
+      noneShort: "It asks a person only before deleting, sending or paying.",
       /** Screen reader name of the button that takes one action out of the routine's list. */
       remove: "Ask again before: {{action}}",
+    },
+    vaultKeys: {
+      title: "Vault keys it uses",
+      hint: "Only in this routine, only in its commands.",
+      named: "the Vault key {{key}}",
+      remove: "Ask again before using {{key}}",
     },
     ahead: {
       approved: "Approved · runs {{when}}",
@@ -8310,6 +9524,7 @@ export const en = {
       waiting_budget_late: "Missed its time: the budget renewed too late",
       stopped: "Stopped by someone",
       stoppedBy: "Stopped by {{name}}",
+      stalled: "Let go: nothing moved in it for 20 minutes",
       no_report: "Finished without telling the result",
       handoff_blocked: "Couldn't tell: the routine was paused or its creator can no longer post there",
       deleted: "Stopped: the routine was deleted",
@@ -8360,16 +9575,18 @@ export const en = {
       dontRunName: "Don't run {{name}} when the limit is back",
       canceledToast: "Canceled. It won't run when the limit is back.",
       continuedToast: "Run continuing.",
-      forbidden: "Only who created the routine, the agent's owner or an admin can continue it now",
+      forbidden:
+        "Only who created the routine, the agent's owner, whoever can edit the agent or an admin can continue it now",
       extra_off:
-        "This plan's window is used up and this agent's long work doesn't use paid extra usage. Turn that on in its AI settings to continue now, or it picks up after the reset",
+        "This plan's window is used up and this agent's long work doesn't use the plan's paid extra usage. It picks up after the reset",
       extra_used_up:
         "This plan's window is used up and its paid extra usage is used up or unavailable. It picks up after the reset",
     },
     pausedRunningToast: "Routine paused. The run in progress stopped too.",
     deleteBodyRunning:
       "It stops running and leaves the list, and the run in progress stops too. Past runs stay in the history.",
-    detailsHidden: "Only its creator, the agent's owner, admins and the people in the conversation see this.",
+    detailsHidden:
+      "Only its creator, the agent's owner, whoever can edit the agent, admins and the people in the conversation see this.",
   },
   missions: {
     chip: "Mission · {{done}} of {{count}}",
@@ -8675,7 +9892,6 @@ export const en = {
       releaseClosed: "The mission is closed: the session won't go on.",
       onlyDeciders: "Only those who decide in this mission allow commands.",
       pick: "Allow {{command}}",
-      showAll: "Show all",
     },
     decision: {
       approveAll_one: "Approve {{count}} provisional",
@@ -8869,13 +10085,11 @@ export const en = {
       homeHint: "The mission gets a thread: that's where {{name}} talks, asks for decisions and shows his work.",
       homeHint_female: "The mission gets a thread: that's where {{name}} talks, asks for decisions and shows her work.",
       offline: "{{name}} is offline. The plan starts when it's back.",
-      needsMachine: "Missions run on a connected computer. Connect one to {{name}} in Settings\u00a0›\u00a0Devices.",
       commandHint: "You can also start one by typing in any conversation's composer:",
-      approvals: "Merge, deploy and rollback always ask for approval",
+      approvals: "By default, merge, deploy and rollback ask for approval",
       start: "Start mission",
       created: "Mission created: {{name}} is putting the plan together.",
       who: "Who programs",
-      codexOld: "Codex on {{computer}} is too old for missions: update it there.",
     },
     commandApproval: {
       label: "Autonomy",
@@ -9075,6 +10289,13 @@ export const en = {
     status: {
       needsYou: "Waiting for you",
       working: "Working",
+      /** What its work waits on when none of it runs. */
+      approval: "Waiting for approval",
+      input: "Waiting for an answer",
+      computer: "Waiting for its computer",
+      queued: "In line",
+      /** A follow-up an agent set here (`followUps.when`). */
+      later: "Follow-up {{when}}",
       open: "Open",
       closed: "Closed",
       archived: "Archived",
@@ -9273,6 +10494,9 @@ export const en = {
     fetch: "Fetch models",
     listFailed: "The server listed no models ({{error}}). Type each model's id below.",
     choose: "Choose the models agents may use",
+    /** Over a long list of an endpoint's models. */
+    search: "Search models",
+    noMatch: "No model has “{{query}}”.",
     addModel: "Add a model",
     add: "Add",
     modelPlaceholder: "Model id, like llama-4",
@@ -9576,7 +10800,16 @@ export const en = {
     forAgent_one: "Turn it on for {{agent}}",
     forAgent_other: "Turn them on for {{agent}}",
     installedMany: "{{count}} skills installed.",
-    zipHelp: "A .zip with SKILL.md at its root.",
+    zipHelp: "A .zip of the skill's folder, up to {{max}} MB.",
+    /** Behind the ⓘ beside `zipHelp`. */
+    zipAbout:
+      "SKILL.md goes at the top of the .zip, or in its one folder. A skill keeps up to {{text}} MB of text and {{assets}} MB of images and other files.",
+    /** A .zip refused the moment it's picked, before anything is sent. */
+    zipTooLarge: "{{name}} is {{size}}. A skill's .zip can be up to {{max}} MB.",
+    /** The way out of `zipTooLarge`: the GitHub tab, which reads only the skill's folder. */
+    zipUseLink: "Use a GitHub link",
+    /** While the .zip goes to the server: how much of it has gone. */
+    zipSending: "Uploading the file… {{percent}}",
     zipPick: "Choose .zip",
     zipNone: "No file chosen",
     zipMissing: "Choose a .zip file.",
@@ -9613,6 +10846,16 @@ export const en = {
     agentsImproveHelp:
       "When an agent finds a skill wrong or missing a step, it fixes it right away: a new version you can undo, and whoever made the skill is told.",
     agentsImproveThis: "Agents improve this skill by themselves",
+    /** Skills split as the Vault does (ADR 0144): the team's and each person's. */
+    personal: {
+      note: "Only you see these skills. Your agents use them when you ask.",
+      emptyTitle: "Keep your own skills",
+      emptyText: "Only you see them, and your agents use them when you ask.",
+      others: "Others' personal skills",
+      of: "{{name}}'s personal",
+      forWhom: "Who it's for",
+      teamLocked: "Only people who manage agents add team skills.",
+    },
     agentChange: "{{agent}} changed it {{when}}",
     undoAgentChange: "Undo change",
     undo: "Undo",
@@ -9662,9 +10905,10 @@ export const en = {
       connection_gone: "Couldn't update it: the GitHub connection that read it is gone.",
       link_holds_several: "Couldn't update it: its link holds several skills now.",
       link_renamed: "Couldn't update it: its link holds another skill now.",
-      owner_gone:
-        "Couldn't update it: whoever turned on updating by itself can no longer manage skills. Turn it on again.",
+      owner_gone: "Couldn't update it: whoever turned on updating by itself can no longer manage skills.",
       other: "Couldn't update it from its link.",
+      /** Beside `owner_gone`: turns updating by itself on again, with the presser's rights. */
+      relight: "Turn on again",
     },
     notice: {
       updated: "{{name}} was updated from its link",
@@ -9693,7 +10937,7 @@ export const en = {
   jev: {
     title: "Jev",
     about:
-      "A fast model by TypeSafe, made for quick decisions. agentes.chat asks it small questions, like who should answer. You pay TypeSafe directly.",
+      "A fast model by TypeSafe, made for quick decisions. agentes.chat asks it small questions, like who should answer. You pay TypeSafe directly, or through OpenRouter at the same price.",
     lead: "Helps your agents work as a team.",
     how: "How Jev works",
     why: {
@@ -9731,16 +10975,53 @@ export const en = {
     line: {
       invalid: "TypeSafe didn't accept this key. Create a new one.",
       no_credit: "Add credit at TypeSafe. Jev resumes by itself.",
-      env: "Set in this server's settings (TYPESAFE_API_KEY).",
-      envInvalid: "TypeSafe didn't accept this key. Change it in this server's settings (TYPESAFE_API_KEY).",
+      env: "Set in this server's settings (`TYPESAFE_API_KEY`).",
+      envInvalid: "TypeSafe didn't accept this key. Change it in this server's settings (`TYPESAFE_API_KEY`).",
     },
     checkAgain: "Check again",
+    /** Where Jev is called and paid (ADR 0073 §9): the rows under the reasons once "Set up Jev" is pressed. */
+    via: {
+      label: "Where you pay for Jev",
+      typesafe: "TypeSafe",
+      typesafeText: "An account at TypeSafe itself, with prepaid credit.",
+      openrouter: "OpenRouter",
+      openrouterText: "With an OpenRouter key, at the same price.",
+      connected: "Key already connected",
+    },
+    /** Jev through OpenRouter: its steps, the workspace's own key, and the key's lines once saved. */
+    openRouter: {
+      create: "Create a key at OpenRouter",
+      createHint:
+        "With credit at OpenRouter. Jev costs the same as at TypeSafe: US$ {{price}} per million tokens. Picking who answers costs about US$ {{call}}.",
+      open: "Open OpenRouter",
+      placeholder: "Your OpenRouter key",
+      shape: "OpenRouter keys start with sk-or-v1-. Check it and paste it again.",
+      invalid: "OpenRouter didn't accept this key. Copy it again from the keys page.",
+      keyName: "OpenRouter key",
+      same: "The one in Provider keys",
+      forAll: "It pays for Jev in every workspace on this server.",
+      turnOn: "Turn on Jev",
+      otherKey: "Use another key",
+      line: {
+        invalid: "OpenRouter didn't accept this key. Create a new one.",
+        no_credit: "Add credit at OpenRouter. Jev resumes by itself.",
+        envInvalid: "OpenRouter didn't accept this key. Change it in this server's settings (`TYPESAFE_API_KEY`).",
+      },
+    },
     remove: {
       title: "Remove the Jev key?",
       text: "Agents keep working without it.",
     },
   },
   aiAccounts: {
+    /** An account of the viewer's that says no email and has no name of theirs yet (Claude's token for all agents). */
+    unnamed: "Unnamed account",
+    /** The pencil after an account's title, and the field it opens in the row. */
+    rename: {
+      action: "Rename {{label}}",
+      label: "Account name",
+      placeholder: "E.g. Work, Personal",
+    },
     share: {
       switch: "Answers other people",
       switchAll: "Answer other people",
@@ -9811,7 +11092,6 @@ export const en = {
       needsCloud: {
         online: "{{computer}} is restarting or reconnecting. This changes by itself once it's back.",
         installing: "{{program}} is being installed on {{computer}}. This changes by itself when it's done.",
-        updating: "{{program}} is being updated on {{computer}}. This changes by itself when it's done.",
         runnerOld:
           "The agentes.chat program on {{computer}} is out of date and an update is on its way. This changes by itself when it's done.",
         execOff: "{{computer}} can't run {{program}} yet. We're on it, and this changes by itself.",
@@ -9856,6 +11136,11 @@ export const en = {
       removeCopies: "Remove",
       copiesRemoved_one: "{{count}} unused login removed.",
       copiesRemoved_other: "{{count}} unused logins removed.",
+      /** Every Grok login the viewer owns at once (issue #319): one sign-in per agent, removed together. */
+      removeAllGrok: "Remove all Grok logins",
+      removeAllTitle: "Remove all {{n}} Grok logins?",
+      removeAllText: "They stop thinking for their agents on {{computers}}. Nobody else's logins are touched.",
+      removeAllDone: "{{n}} Grok logins removed.",
       disconnect: "Disconnect",
       renameTitle: "Rename {{label}}",
       nameLabel: "Name",
@@ -9868,6 +11153,31 @@ export const en = {
       disconnected: "{{label}} disconnected.",
       useFor: "Use for {{name}} too",
       useForMenu: "Use for…",
+      /** "Usar em todos os agentes" on a coding plan key's row: one model of the key for every agent that may take it. */
+      useAll: "Use on every agent",
+      useAllTitle: "Use {{plan}} on every agent",
+      useAllSub: "Choose the model they'll use with this key.",
+      useAllWorks: "Work with this key",
+      useAllRefused: "Refused for this key",
+      useAllAnswered: "Answered with this key",
+      useAllOff: "Turned off in {{maker}}",
+      useAllRegion: "Needs the Global region in {{maker}}",
+      useAllUntested_one: "{{count}} model not tried yet",
+      useAllUntested_other: "{{count}} models not tried yet",
+      textOnly: "Reads text only",
+      useAllTextOnly:
+        "{{model}} can't see images or PDFs. An agent that needs to see screenshots does better with another model.",
+      useAllAgents: "Every agent",
+      useAllAgentsLine_one: "{{count}} agent moves to this model",
+      useAllAgentsLine_other: "{{count}} agents move to this model",
+      useAllNone: "No agent can use this key right now.",
+      useAllGo_one: "Use on {{count}} agent",
+      useAllGo_other: "Use on {{count}} agents",
+      useAllPick: "Choose a model",
+      useAllDone_one: "{{count}} agent now thinks with {{model}}.",
+      useAllDone_other: "{{count}} agents now think with {{model}}.",
+      useAllMissed_one: "{{count}} agent didn't change. Open its page to see why.",
+      useAllMissed_other: "{{count}} agents didn't change. Open each one's page to see why.",
       revokeOnClaude: "To end it on Claude too, revoke it in Claude's settings.",
     },
     usage: {
@@ -9878,6 +11188,9 @@ export const en = {
         seven_day_sonnet: "Week · Sonnet",
         monthly: "Month",
         other: "Other limit",
+        /** Rows the plan reports by an English label ("Extra usage", "OAuth apps"), in the person's language. */
+        extraUsage: "Extra usage",
+        oauthApps: "OAuth apps",
       },
       short: {
         five_hour: "5h",
@@ -9886,9 +11199,15 @@ export const en = {
         seven_day_sonnet: "Sonnet",
         monthly: "month",
         other: "other",
+        extraUsage: "extra usage",
+        oauthApps: "OAuth apps",
       },
       resetsAt: "resets at {{time}}",
       resetsOn: "resets {{day}} at {{time}}",
+      /** The full meter's heading over a plan's own quotas, when some quotas bind only some models. */
+      allModels: "All models",
+      /** The heading over a model group's own quotas ({{name}}: "Claude and GPT", "Gemini 4 Argon"). */
+      onlyModels: "Only {{name}}",
       almost: "Almost at the limit",
       limited: "At the limit",
       limitedUntil: "At the limit until {{when}}",
@@ -9934,7 +11253,7 @@ export const en = {
     modeText: {
       everyone: "Anyone in the workspace can call {{name}}.",
       people: "Pick the people and roles that can talk to {{name}}.",
-      owner: "Only {{owner}} talks to {{name}}.",
+      owner: "Only {{owner}} talks to {{name}}. Lists show {{name}} only to {{owner}}, admins and whoever can edit.",
       noOwner: "Set an owner to use this option.",
       everyonePersonal: "Anyone here can call {{name}}.",
       peoplePersonal: "Pick the people who can talk to {{name}}.",
@@ -9972,6 +11291,28 @@ export const en = {
       some: "{{name}} only replies to some people.",
       nobody: "{{name}} isn't replying to anyone right now.",
     },
+  },
+  /**
+   * "Who can edit" (ADR 0085 addendum of 2026-11-17): who changes how an agent works (its instructions, role, skills
+   * and routines) besides who looks after it: its owner, admins, and whoever edits agents and talks to it.
+   */
+  editors: {
+    section: "Who can edit",
+    title: "Who can edit {{name}}",
+    mode: {
+      owner: "Only who looks after {{name}}",
+      people: "Also some people or roles",
+    },
+    modeText: {
+      /** `owner`: the owner's name. "owner" stays a plain label beside it: never give that person a gender. */
+      owner: "{{owner}} (owner), admins and whoever edits agents and talks to {{name}}.",
+      noOwner: "Admins and whoever edits agents and talks to {{name}}.",
+      people: "Pick who else can change how {{name}} works.",
+    },
+    rolesHint: "Whoever has the role can edit, including people who join it later.",
+    note: "Editing means changing {{name}}'s instructions, role, skills and routines. Apps, budget and owner stay with whoever edits agents.",
+    /** The overview's row when it names nobody: only its owner, admins and whoever edits agents and talks to it. */
+    summary: { owner: "Only who looks after it" },
   },
   composer: {
     commands: "Commands",
@@ -10047,6 +11388,10 @@ export const en = {
     keys: "Enter sends · Esc deletes",
     keysHold: "Release to send · Esc deletes",
     keysPaused: "Paused · Space listens · Enter sends · Esc deletes",
+    /** Esc on a take with text typed beside it: the take's row asks in place, before "Delete" and "Keep". */
+    askDiscard: "Delete the audio? Your text stays.",
+    askDelete: "Delete",
+    askKeep: "Keep",
     pausePlay: "Pause",
     seek: "Audio position",
     speedAt: "Speed {{speed}}×",
@@ -10054,10 +11399,13 @@ export const en = {
     notUnderstood: "Couldn't make out the audio. Nothing was sent.",
     refused: "The audio couldn't be sent in this conversation.",
     blockedMac: "The microphone is blocked. On a Mac: System Settings › Privacy › Microphone.",
+    openMacSettings: "Open Mac Settings",
     blockedWeb: "The microphone is blocked. Allow it from the lock next to the site's address.",
     noMic: "No microphone found.",
     failed: "Couldn't open the microphone. Try again.",
     noPlayback: "Can't play it right now. You can still send it or keep recording.",
+    /** Under a voice message that failed to load or play, before "Try again" (`common.retry`). */
+    cantPlay: "Couldn't play the audio.",
     settings: {
       title: "Voice messages",
       on: "Voice messages",
@@ -10160,6 +11508,7 @@ export const en = {
     someone: "someone",
   },
   palette: {
+    roleKeywords: "role roles create new permissions cargo",
     newWikiKeywords: "wiki new page create",
     actions: "Actions",
     inviteSub: "by email or link",
@@ -10182,6 +11531,20 @@ export const en = {
     page: "page",
     newConversation: "new conversation",
     askLabel: "{{name}}, {{text}}",
+    agents: "Agents",
+    settingsGroup: "Settings",
+    agentOption: "{{name}} · {{what}}",
+    agentPage: "Agent page",
+    changeModel: "Change AI model",
+    changeModelKeywords: "model ai intelligence who thinks brain plan claude codex chatgpt api effort",
+    agentKeywords: "agent options settings",
+    settingsKeywords: "settings preferences options",
+    keysKeywords: "model ai api key plan claude codex chatgpt provider",
+    themeOption: "Theme: {{theme}}",
+    themeKeywords: "theme appearance light dark night mode",
+    accountKeywords: "theme appearance light dark night mode language idioma",
+    newChannel: "New channel",
+    createKeywords: "create new add",
     empty: "Nothing for “{{q}}”.",
   },
   code: {
@@ -10394,6 +11757,17 @@ export const en = {
     saved: "Logo updated.",
     removed: "Logo removed.",
   },
+  orgAccent: {
+    label: "Accent color",
+    change: "Change color",
+    useDefault: "Use the default",
+    suggested: "Suggested colors",
+    sampleMention: "@Agent",
+    sampleLink: "A link",
+    save: "Save color",
+    saved: "Accent color updated.",
+    reset: "Back to the default color.",
+  },
   look: {
     previous: "Previous",
     next: "Next",
@@ -10549,12 +11923,21 @@ export const en = {
     openGraph: "See the graph",
     graphText: "Each dot is a page and each line a [[link]]. Click to open.",
     graphAgents: "Written by agents",
-    legend: { people: "People", agents: "Agents", obsidian: "Obsidian" },
+    legend: {
+      people: "People",
+      agents: "Agents",
+      /** The graph's color for every imported page. */
+      imported: "Imported",
+      obsidian: "Obsidian",
+      github: "GitHub",
+      files: "Imported",
+    },
     blankPage: "Blank page",
     newPage: "New page",
     emptyPage: "Empty page. Press E to write.",
     atRequestOf: "at the request of",
-    fromObsidian: "From Obsidian",
+    /** A page's origin, on the page: by where its import came from. */
+    from: { obsidian: "From Obsidian", github: "From GitHub", files: "Imported" },
     more: "More actions",
     copyLink: "Copy link",
     linkCopied: "Link copied: paste [[{{title}}]] in any page, message or task.",
@@ -10757,11 +12140,30 @@ export const en = {
       message: "About the page [[{{title}}]]:",
     },
     import: {
-      cta: "Import from Obsidian",
-      ctaText: "Vault .zip, folder or .md files",
+      cta: "Import",
       short: "Import",
-      title: "Import from Obsidian",
-      text: "Bring the whole vault: folders, tags, aliases and [[links]] keep working here.",
+      title: "Import into the wiki",
+      text: "Choose where the notes come from.",
+      titleFrom: { obsidian: "Import from Obsidian", github: "Import from GitHub", files: "Import files" },
+      textFrom: {
+        obsidian: "Bring the whole vault: folders, tags, aliases and [[links]] keep working here.",
+        github: "The repository's Markdown notes become pages, in its folders.",
+        files: "Markdown notes from any app: .md files, a folder or a .zip.",
+      },
+      /** The source cards' group: where the notes come from. */
+      from: "Where to import from",
+      source: { obsidian: "Obsidian", github: "GitHub", files: "Files" },
+      files: {
+        dropTitle: "Drop the .md files here",
+        dropText: "A folder or a .zip with the notes works too",
+      },
+      github: {
+        label: "GitHub link",
+        help: "The link of a repository, a folder or a .md file. Markdown notes become pages and the images they show go to the Drive. The rest of the repository stays out. A private repository is read through the workspace's GitHub.",
+        read: "Read the notes",
+        error: { notGithub: "Paste a github.com link." },
+      },
+      anotherLink: "Change link",
       dropTitle: "Drop the vault .zip here",
       dropText: "The vault folder or a few .md files work too",
       pickZip: "Choose .zip or .md",
@@ -10929,25 +12331,28 @@ export const en = {
       read: "{{name}} read it",
       resolved: "{{name}} closed the help request",
     },
-    well: {
-      readYours: "Read your note",
-      readOf: "Read {{name}}'s note",
-      nowYours: "Stopped to read your note",
-      nowOf: "Stopped to read {{name}}'s note",
-    },
-    choice: {
-      label: "How to send while {{name}} works",
-      join: "Add to what {{name}} is doing",
-      interrupt: "Stop and send",
-      joins: "adds",
-      interrupts: "stops and sends",
-    },
     strip: {
       see: "View",
       toStop: "to stop",
     },
   },
   brain: {
+    /** The model picker in place (a DM's header, the profile card, the side panel): the agent's AI and model. */
+    picker: {
+      open: "Change {{agent}}'s model",
+      ownSignIn: "This computer's account",
+      apiKey: "{{provider}} with an API key",
+      refused: "Refused for this key",
+      textOnly: "Reads text only",
+      search: "Search models",
+      account: "Account",
+      connect: "Connect an AI",
+      applies: "Applies from the next reply.",
+      more: "More options",
+      undo: "Undo",
+      saved: "{{agent}} now thinks with {{model}}.",
+      readOnly: "Only admins and the agent's owner change its model.",
+    },
     title: "Who thinks",
     auto: {
       label: "Automatic",
@@ -11015,15 +12420,14 @@ export const en = {
       no_computer: "Choose a connected computer under Computer to use it.",
       exec_off: "The computer was connected without permission to run programs.",
       runner_old: "Update the agentes.chat program on the computer to use it.",
-      /** `program`: "Claude Code" or "Codex" (`brain.card`). */
-      tool_off:
-        "{{program}} is turned off on {{computer}}. Turn it on there, in the agentes.chat app: Preferences → Tools.",
-      tool_offLinux:
-        "{{program}} is turned off on {{computer}}. Turn it on there, in the agentes.chat app or with {{command}}.",
+      /** The button that turns it on follows. */
+      tool_offOne: "{{program}} is turned off on {{computer}}.",
       not_installed: "{{program}} isn't installed on {{computer}}.",
+      cant_start: "{{program}} is on {{computer}}, but it won't start.",
       /** Its runner hasn't said which CLIs it has yet: nobody knows whether this one is there. */
       not_reported: "{{computer}} is still checking which programs it has. This changes by itself when it's done.",
-      outdated: "The version on {{computer}} is old. Update Codex to use it.",
+      /** The runner doesn't run this program on that computer's system (Cursor on Windows, for one). */
+      system: "{{program}} doesn't run on {{computer}}'s system yet.",
       no_computerCloud: "Ready as soon as {{computer}} is.",
     },
     notAvailableNow: "Chosen, but unavailable right now.",
@@ -11073,7 +12477,6 @@ export const en = {
       grok: "Grok Build · {{model}}",
       antigravity: "Antigravity CLI · {{model}}",
       opencode: "OpenCode · {{model}}",
-      noFallback: "{{brain}}, no API fallback",
     },
     mission: {
       modelLabel: "Model",
@@ -11102,14 +12505,19 @@ export const en = {
     openComputer: "Open the computer",
     /** The dialog's label for screen readers; the visible title is the computer's name. */
     label: "Line for {{name}}",
-    full: "Full",
-    fullNext: "Full · next starts in about {{n}} min",
     free: "Nobody in line",
     workingNow: "Working now · {{n}}",
     inLine: "In line · {{n}}",
     allStarted: "all started in ~{{n}} min",
     nothingWorking: "Nothing running right now",
-    rule: "People go first. Agents mentioned together start one at a time.",
+    rule: "New work starts when the computer has free memory. People go first. Agents mentioned together start one at a time.",
+    /** The viewer's own computers that may take their replies while this one is full (`machines.spill_own`). */
+    spill: {
+      title: "More computers, shorter line",
+      text: "When this computer is full, replies to you can start on one of yours. Long work and the agents' files stay here.",
+      /** The viewer's own sign-in there, "Claude Max". */
+      plan: "your {{plan}} plan",
+    },
     youFirst: "You go first",
     startsIn: "starts ~{{n}} min",
     /** {{after}} is `queue.who`: the agent's name, with an article where the language needs one. */
@@ -11151,16 +12559,8 @@ export const en = {
       agents: "a conversation between agents",
       private: "a private conversation",
     },
-    /** The waiting agent's live row, where "thinking" shows otherwise. */
-    live: {
-      nextEta: "Waiting for the computer. Next up, in about {{n}} min",
-      next: "Waiting for the computer. Next up",
-      /** Before the line knows its turn, or while it can't say where it is. */
-      waiting: "Waiting for the computer",
-      /** {{nth}} is the place in line (`queue.nth`), {{names}} the agents ahead. */
-      behind: "In line, {{nth}}. After {{names}}",
-      position: "In line, {{nth}}",
-    },
+    /** A turn waiting its turn, one line whatever holds it (its computer or its AI sign-in): the agent's row where "thinking" shows otherwise, and the task manager. */
+    waiting: "In line · starts soon",
     /** Places in line by the language's ordinal rule (one: 1st, 21st; two: 2nd; few: 3rd; other: 4th). Same text in each when your language has one form. */
     nth: {
       one: "{{n}}st",
@@ -11191,8 +12591,9 @@ export const en = {
   access: {
     matrixTitle: "Agent access",
     matrixHint:
-      "Sensitive actions (merge, deploy, share, pay) always ask for approval, at any level. To set it tool by tool, open the connector's Tools.",
+      "By default, sensitive actions (merge, deploy, share, pay) ask for approval. To set it tool by tool, open the connector.",
     matrixHow: "Click a cell to change it:",
+    openConnectors: "Open Connectors",
     kindLabel: "Show",
     kind: { connectors: "Connectors", builtin: "Built-in" },
     agentCol: "Agent",
@@ -11200,11 +12601,11 @@ export const en = {
     levelOf: "Level in {{name}}",
     cell: "{{agent}} in {{resource}}: {{level}}",
     cellAsks: "{{agent}} in {{resource}}: {{level}}, sensitive actions ask for approval",
-    asks: "{{tool}} asks for approval",
+    /** What asks at this level, in one line: the actions, comma-separated. */
+    asksList: "Asks for approval: {{tools}}",
     asksMore_one: "and {{count}} more",
     asksMore_other: "and {{count}} more",
     asksLegend: "asks for approval",
-    noneText: "No access.",
     customText: "Granted tool by tool. Pick a level to simplify it.",
     noTools: "No tools yet.",
     toolsMore_one: "{{tools}} and {{count}} more",
@@ -11309,6 +12710,9 @@ export const en = {
       block: "Block",
       poll: "Poll",
       choices: "Choices",
+      spreadsheet: "Spreadsheet",
+      slides: "Presentation",
+      canvas: "Canvas",
     },
     version: "v{{version}}",
     createdBy: "{{kind}} · made by {{name}}",
@@ -11378,8 +12782,6 @@ export const en = {
     thousand: "k",
     building: "Putting it together…",
     openBig: "Open large",
-    showAll: "Show all",
-    showLess: "Show less",
     keep: "Keep in Drive",
     kept: "Kept in Drive",
     inDrive: "In Drive",
@@ -11411,6 +12813,8 @@ export const en = {
     reopen: "Show again",
     answeredBy: "{{name}} picked",
     failed: "Your pick didn't go through. Try again.",
+    /** After the message's size and limit, when a written answer makes the reply too long. */
+    tooLongFix: "Shorten the answer.",
   },
   drive: {
     title: "Drive",
@@ -11453,6 +12857,9 @@ export const en = {
       block: "Blocks",
       poll: "Polls",
       choices: "Choices",
+      spreadsheet: "Spreadsheets",
+      slides: "Presentations",
+      canvas: "Canvases",
     },
     view: "View",
     viewGrid: "Grid",
@@ -11519,7 +12926,8 @@ export const en = {
       dmBetween: "Only {{names}} can see it: it came from a direct message",
     },
     private: "Private",
-    privateHint: "Only the people in the conversation see these files. In a channel, administrators do too.",
+    privateHint:
+      "Only the people in the conversation, or who made the file, see these files. In a channel and in the Drive, administrators do too.",
     downloadAs: "Download as",
     uploading_one: "Uploading {{count}} file",
     uploading_other: "Uploading {{count}} files",
@@ -11543,6 +12951,51 @@ export const en = {
     goneIn_one: "gone in {{count}} day",
     goneIn_other: "gone in {{count}} days",
     fileBadge: "FILE",
+    /** Folders (the shared Drive's own structure: everyone sees them, a file in one keeps who sees it). */
+    folders: "Folders",
+    folder: "Folder",
+    newFolder: "New folder",
+    renameFolder: "Rename folder",
+    renameFile: "Rename file",
+    rename: "Rename",
+    create: "Create",
+    openFolder: "Open",
+    folderMore: "More actions for {{name}}",
+    /** The trail under a folder's title: "Drive / Reports / 2026". */
+    path: "Folder path",
+    up: "Up one level",
+    folderEmptyTitle: "This folder is empty",
+    folderEmptyText: "Drop files here, or upload them. Dragging a file onto a folder moves it.",
+    folderEmptyViewer: "Files put in this folder show up here.",
+    move: "Move",
+    moveToMenu: "Move to…",
+    moveTitle_one: "Move {{count}} item",
+    moveTitle_other: "Move {{count}} items",
+    moveTo: "Folders",
+    moveSearch: "Search folders",
+    moveEmpty: "No folder named “{{q}}”.",
+    /** Beside the folder the items are in now. */
+    moveHere: "Here now",
+    moveToName: "Move to {{name}}",
+    moved_one: "Moved to {{name}}.",
+    moved_other: "{{count}} items moved to {{name}}.",
+    deleteFolder: "Delete folder",
+    deleteFolderTitle: "Delete “{{name}}”?",
+    deleteFolderBody:
+      "The folders inside it go too. Files you can delete go to the trash for 30 days. Anyone else's files move up to where this folder was.",
+    folderDeletedEmpty: "Folder deleted.",
+    folderDeleted_one: "Folder deleted. {{count}} file went to the trash.",
+    folderDeleted_other: "Folder deleted. {{count}} files went to the trash.",
+    folderDeletedKept_one: "Folder deleted. {{count}} file you can't delete moved up a level.",
+    folderDeletedKept_other: "Folder deleted. {{count}} files you can't delete moved up a level.",
+    /** A selection of folders and files: its menu, the selection bar and their one confirmation. */
+    delete: "Delete",
+    deleteItemsTitle_one: "Delete {{count}} item?",
+    deleteItemsTitle_other: "Delete {{count}} items?",
+    deleteItemsBody:
+      "Folders go with everything inside them. Files you can delete go to the trash for 30 days. Anyone else's files move up a level.",
+    itemsDeleted_one: "{{count}} item deleted.",
+    itemsDeleted_other: "{{count}} items deleted.",
   },
   storage: {
     title: "Storage",
@@ -11561,8 +13014,8 @@ export const en = {
       agentes: "agentes.chat storage",
       server: "this server",
     },
-    s3: "Your own bucket",
-    s3Text: "S3, R2, MinIO and others compatible with S3.",
+    s3: "Your own storage",
+    s3Text: "Cloudflare R2, Amazon S3, Backblaze B2 or another compatible with S3.",
     current: "In use",
     usage: {
       files: "{{size}}\u00a0of\u00a0files",
@@ -11613,6 +13066,148 @@ export const en = {
     backDone: "Storage switched to {{place}}.",
     required: "Fill in this field.",
     keysRequired: "Enter the access key and the secret.",
+    connect: {
+      open: "Connect storage",
+      edit: "Edit connection",
+      pickTitle: "Where is your storage?",
+      pickText: "Pick the service. We'll show where to click there and what to paste here.",
+      provider: {
+        r2: "Cloudflare R2",
+        s3: "Amazon S3",
+        b2: "Backblaze B2",
+        other: "Other",
+      },
+      providerText: {
+        r2: "The simplest to set up from scratch",
+        s3: "For those already on AWS",
+        b2: "For those with an account there",
+        other: "MinIO, Wasabi and others compatible with S3",
+      },
+      title: {
+        r2: "Connect Cloudflare R2",
+        s3: "Connect Amazon S3",
+        b2: "Connect Backblaze B2",
+        other: "Connect other storage",
+      },
+      editTitle: {
+        r2: "Edit Cloudflare R2",
+        s3: "Edit Amazon S3",
+        b2: "Edit Backblaze B2",
+        other: "Edit storage",
+      },
+      lede: {
+        r2: "Two steps in Cloudflare. Then we test before switching.",
+        s3: "Three steps in AWS. Then we test before switching.",
+        b2: "Two steps in Backblaze. Then we test before switching.",
+        other: "Any service compatible with S3. Then we test before switching.",
+      },
+      editLede: "Change what changed. Leave the keys blank to keep the saved ones.",
+      bucketName: "Bucket name",
+      accessKeyId: "Access key ID",
+      secret: "Secret access key",
+      r2Endpoint: "R2 address",
+      b2Endpoint: "Bucket endpoint",
+      region: "Region",
+      regionPick: "Pick the region",
+      regionOption: "{{name}} · {{code}}",
+      /** Under each field, what the service itself calls it, so people know what to paste where. */
+      theirName: {
+        r2Key: "In Cloudflare: Access Key ID",
+        r2Secret: "In Cloudflare: Secret Access Key",
+        r2Endpoint: "In Cloudflare: the endpoint, ending in r2.cloudflarestorage.com.",
+        s3Key: "In AWS: Access key",
+        s3Secret: "In AWS: Secret access key",
+        b2Key: "In Backblaze: keyID",
+        b2Secret: "In Backblaze: applicationKey",
+        b2Endpoint: "The region comes from it.",
+      },
+      /** Menu and button names in bold, in the English the services' dashboards show by default. */
+      step: {
+        bucketTitle: "Create a bucket",
+        keyTitle: "Create the access key",
+        userTitle: "Create a user just for agentes.chat",
+        r2Bucket: "In Cloudflare's dashboard, open <b>R2</b> and click <b>Create bucket</b>. Any name works.",
+        r2Key:
+          "On the R2 page, under <b>API Tokens</b>, click <b>Manage</b> and then <b>Create API Token</b>. Pick the <b>Object Read & Write</b> permission and your bucket. At the end, Cloudflare shows the three values below only once.",
+        s3Bucket: "In the AWS console, open <b>S3</b> and click <b>Create bucket</b>. Note the region you pick.",
+        s3User:
+          "In <b>IAM</b>, open <b>Users</b> and click <b>Create user</b>. Under permissions, create a policy with the text copied below: it gives access to this bucket only.",
+        s3Key:
+          "On the new user, open <b>Security credentials</b> and click <b>Create access key</b>. Pick <b>Application running outside AWS</b> and paste both values.",
+        b2Bucket:
+          "In Backblaze, open <b>Buckets</b> and click <b>Create a Bucket</b>. On the bucket page, copy the <b>Endpoint</b>.",
+        b2Key:
+          "Open <b>Application Keys</b> and click <b>Add a New Application Key</b>. Give it access to your bucket with <b>Read and Write</b>. The account's master key doesn't work here.",
+      },
+      openR2: "Open R2",
+      openS3: "Open S3",
+      openIam: "Open IAM",
+      openB2: "Open Backblaze",
+      copyPolicy: "Copy the policy",
+      policyCopied: "Policy copied, with the bucket {{bucket}}.",
+      back: "Back",
+      testAgain: "Test again",
+      passed: "Connection works: we wrote, read, listed and deleted a test file.",
+      /** After a test refused for permission: what to check in that service. */
+      permissionHint: {
+        r2: "In Cloudflare, check that the token has the <b>Object Read & Write</b> permission and access to the bucket {{bucket}}. Fix it and test again.",
+        s3: "In AWS, check that the user has the policy copied in step 2, with the bucket {{bucket}}. Fix it and test again.",
+        b2: "In Backblaze, check that the key has <b>Read and Write</b> and access to the bucket {{bucket}}. Fix it and test again.",
+      },
+      inUse: "{{provider}} · {{bucket}}",
+      inUseAt: "{{bucket}} at {{host}}",
+      /** A failed test step by its code (`stepErrorText` in `@agenteschat/client/lib/storage`). */
+      stepError: {
+        auth: "The access key or the secret wasn't accepted.",
+        permission: "The key isn't allowed to do this step.",
+        bucketMissing: "This bucket doesn't exist at this address.",
+        region: "The region isn't the bucket's.",
+        network: "Couldn't reach the address.",
+        address: "The address isn't valid.",
+        https: "Use an address that starts with https://.",
+        internal: "This address points to an internal network.",
+        hostNotFound: "We couldn't find this address.",
+        notFound: "The test file didn't come back when read.",
+        unexpected: "Unexpected failure talking to the storage.",
+        invalidBucket: "The bucket name isn't valid.",
+        keysRequired: "Enter both keys.",
+      },
+      /** Amazon S3's regions by code (`AWS_REGIONS`), as its console names them. */
+      awsRegion: {
+        "us-east-1": "US East (N. Virginia)",
+        "us-east-2": "US East (Ohio)",
+        "us-west-1": "US West (N. California)",
+        "us-west-2": "US West (Oregon)",
+        "ca-central-1": "Canada (Central)",
+        "ca-west-1": "Canada West (Calgary)",
+        "mx-central-1": "Mexico (Central)",
+        "sa-east-1": "South America (São Paulo)",
+        "eu-central-1": "Europe (Frankfurt)",
+        "eu-central-2": "Europe (Zurich)",
+        "eu-west-1": "Europe (Ireland)",
+        "eu-west-2": "Europe (London)",
+        "eu-west-3": "Europe (Paris)",
+        "eu-south-1": "Europe (Milan)",
+        "eu-south-2": "Europe (Spain)",
+        "eu-north-1": "Europe (Stockholm)",
+        "il-central-1": "Israel (Tel Aviv)",
+        "me-south-1": "Middle East (Bahrain)",
+        "me-central-1": "Middle East (UAE)",
+        "af-south-1": "Africa (Cape Town)",
+        "ap-east-1": "Asia Pacific (Hong Kong)",
+        "ap-south-1": "Asia Pacific (Mumbai)",
+        "ap-south-2": "Asia Pacific (Hyderabad)",
+        "ap-northeast-1": "Asia Pacific (Tokyo)",
+        "ap-northeast-2": "Asia Pacific (Seoul)",
+        "ap-northeast-3": "Asia Pacific (Osaka)",
+        "ap-southeast-1": "Asia Pacific (Singapore)",
+        "ap-southeast-2": "Asia Pacific (Sydney)",
+        "ap-southeast-3": "Asia Pacific (Jakarta)",
+        "ap-southeast-4": "Asia Pacific (Melbourne)",
+        "ap-southeast-5": "Asia Pacific (Malaysia)",
+        "ap-southeast-7": "Asia Pacific (Thailand)",
+      },
+    },
   },
   githubApp: {
     title: "GitHub repositories",
@@ -11692,7 +13287,7 @@ export const en = {
       create: "Create the app on GitHub",
       state: { off: "Off", on: "On", invalid: "Invalid" },
       line: {
-        env: "Set in this server's settings (GITHUB_APP_ID).",
+        env: "Set in this server's settings (`GITHUB_APP_ID`).",
         invalid: "This server can't open the saved app. Remove it and create it again.",
         /** The app isn't subscribed to what agents hear on GitHub: `events` are GitHub's own names for them. */
         events: "For agents to hear what happens on GitHub, tick these events on the app: {{events}}.",
@@ -11720,7 +13315,7 @@ export const en = {
     merge: {
       label: "Can merge without asking",
       none: "No repositories chosen. Every merge asks for approval.",
-      help: "In these repositories a merge runs with no approval card, goes in the audit and leaves a receipt in the conversation. Everything else that's sensitive still asks.",
+      help: "In these repositories a merge runs with no approval card, goes in the audit and leaves a receipt in the conversation. An agent that always asks still asks.",
       /** The one line a screen shows, with `help` behind its ⓘ. */
       short: "In these repositories a merge runs with no approval card.",
       dialogTitle: "Where {{name}} merges without asking",
@@ -11785,6 +13380,43 @@ export const en = {
       add: "Add MCP",
       list: "Connected MCP servers",
       none: "MCP servers you connect by their address show up here.",
+    },
+    /** Connections split as the Vault splits its items: the team's and each person's (ADR 0099 addendum). */
+    personal: {
+      note: "Only you open these connections. Your agents use them only when you ask.",
+      /** Over one connection's own screen on the phone. */
+      noteOne: "Only you open this connection. Your agents use it only when you ask.",
+      emptyTitle: "Connect your own accounts",
+      emptyText:
+        "Only you open your connections, and your agents use them only when you ask. Mailboxes follow their own rule.",
+      noApps: "Services you connect just for yourself show up here.",
+      /** Over the person's own mailboxes on Pessoal: their rule (ADR 0038), not the connections' one. */
+      mailTitle: "Your mailboxes",
+      mailNote:
+        "Agents you allowed use your mailboxes as you set, also for people who talk to them directly. When someone else asks for something that needs approval, you're the one who approves it.",
+      others: "Others' personal connections",
+      of: "Personal to {{name}}",
+      seeAll: "See all {{count}}",
+      forWhom: "Who it's for",
+      teamLocked: "Only people who manage connectors add the team's.",
+      mailLocked: "A mailbox always belongs to whoever connects it.",
+      done: "Your agents use it only when you ask.",
+      worksWhenAsked: "Works only when you ask.",
+      remove: "Remove",
+      removeName: "Remove {{name}}",
+      removeTitle: "Remove {{name}}?",
+      takeOff: "Take off an agent",
+      takeOffTitle: "Take {{name}} off an agent",
+      takeOffName: "Take {{name}} off {{agent}}",
+      takeOffOne: "Take off",
+      takenOff: "{{agent}} no longer uses {{name}}.",
+      turnOff: "Turn off",
+      turnOffName: "Turn off {{name}} for this agent",
+      moveToTeam: "Move to the team",
+      moveTitle: "Move {{name}} to the team?",
+      moveText:
+        "Everyone in the workspace sees it. People who manage agents choose which agents use it, and an agent's owner can turn it off on theirs. An agent that uses every connected app gets it right away.",
+      moved: "{{name}} now belongs to the team.",
     },
     addTitle: "Add connector",
     catalogText: "Connect once for {{org}}. Then choose what each agent can use.",
@@ -11856,7 +13488,7 @@ export const en = {
       github: {
         "1": "Read code, issues and pull requests",
         "2": "Open pull requests and comment",
-        ask: "Merge and deploy always ask for your approval",
+        ask: "By default, merge and deploy ask for your approval",
       },
       sentry: { "1": "See errors and events", "2": "See releases" },
       linear: { "1": "Read and create issues", "2": "Change status, projects and cycles" },
@@ -11875,13 +13507,13 @@ export const en = {
       cloudflare_bindings: {
         "1": "See Workers, KV, R2 and D1",
         "2": "Change Workers and storage",
-        ask: "Deploys always ask for your approval",
+        ask: "By default, deploys ask for your approval",
       },
       cloudflare_observability: { "1": "See Workers logs and metrics" },
       supabase: {
         "1": "See projects and functions",
         "2": "Query and change the database",
-        ask: "Deploys always ask for your approval",
+        ask: "By default, deploys ask for your approval",
       },
       supabase_readonly: { "1": "Query the database (read only)", "2": "Read the docs and debug" },
       intercom: { "1": "Read conversations and contacts", ask: "Replies always ask for your approval" },
@@ -12016,6 +13648,8 @@ export const en = {
     connectedAs: "Connected as {{account}}",
     /** A sign-in that lacks scopes the connector asks for now; `what` lists what reconnecting adds (`adds.*`). */
     reconnectAdds: "Reconnect {{name}} so agents can also {{what}}.",
+    /** On a connected server's row: the request headers it also sends (`<names/>`: X-API-Key). Reconnect is the menu item. */
+    sendsToo: "Also sends: <names/>. To change that, use Reconnect.",
     adds: { github_project: "use GitHub Projects (read boards and move cards)" },
     toolsCount_one: "{{count}} tool",
     toolsCount_other: "{{count}} tools",
@@ -12066,9 +13700,9 @@ export const en = {
       via: "Through Composio",
       needsReconnect: "Needs reconnecting",
       off_one:
-        "{{names}} and {{count}} more service connect through Composio. To turn them on, whoever runs this server sets COMPOSIO_API_KEY (see SELF_HOSTING.md).",
+        "{{names}} and {{count}} more service connect through Composio. To turn them on, whoever runs this server sets `COMPOSIO_API_KEY` (see `SELF_HOSTING.md`).",
       off_other:
-        "{{names}} and {{count}} more services connect through Composio. To turn them on, whoever runs this server sets COMPOSIO_API_KEY (see SELF_HOSTING.md).",
+        "{{names}} and {{count}} more services connect through Composio. To turn them on, whoever runs this server sets `COMPOSIO_API_KEY` (see `SELF_HOSTING.md`).",
       usage: "Composio: {{calls}} of {{limit}} calls in {{month}}",
       usageNoLimit: "Composio: {{calls}} calls in {{month}}",
       limitNotice: "This workspace used its Composio calls for the month",
@@ -12170,11 +13804,6 @@ export const en = {
      * orçamento da campanha) or "verb-last" (ja, ko: the words, then the verb).
      */
     order: "modifiers-first",
-    /**
-     * Which column of the tool catalog (`@agenteschat/client` `lib/tool-labels.ts`) names this language's tools, kept
-     * in English: "en", "pt-BR", or "none" (then a name is built from the verbs and nouns below).
-     */
-    catalog: "en",
     verb: {
       get: "Get",
       list: "List",
@@ -12342,6 +13971,692 @@ export const en = {
       org: "organization|organizations",
       ruleset: "ruleset|rulesets",
     },
+    /**
+     * The tools agents use most, each by its own name without its app (`merge_pull_request`): a short verb phrase
+     * with a capital letter and no full stop. A tool with no words here gets a name built from the verbs and nouns
+     * above.
+     */
+    label: {
+      // GitHub and GitLab: repositories, code, branches
+      git_clone: "Clone repository",
+      create_repository: "Create repository",
+      delete_repository: "Delete repository",
+      fork_repository: "Fork repository",
+      repository_ruleset_read: "Read rulesets",
+      create_repository_ruleset: "Create ruleset",
+      search_repositories: "Search repositories",
+      get_file_contents: "Read file",
+      create_or_update_file: "Create or change a file",
+      push_files: "Push files",
+      delete_file: "Delete file",
+      search_code: "Search the code",
+      list_commits: "List commits",
+      get_commit: "See commit",
+      search_commits: "Search commits",
+      list_branches: "List branches",
+      create_branch: "Create branch",
+      delete_branches: "Delete branches",
+      request_branch_push: "Push to a branch",
+      list_tags: "List tags",
+      list_releases: "List releases",
+      get_latest_release: "See the latest release",
+      create_release: "Create release",
+      create_gist: "Create gist",
+      get_me: "See the signed-in account",
+      search_users: "Search people",
+      list_notifications: "List notifications",
+      list_code_scanning_alerts: "List code alerts",
+      get_code_scanning_alert: "See code alert",
+      list_secret_scanning_alerts: "List leaked secret alerts",
+      get_secret_scanning_alert: "See leaked secret alert",
+      list_dependabot_alerts: "List dependency alerts",
+      get_dependabot_alert: "See dependency alert",
+      list_repository_security_advisories: "List the security advisories of a repository",
+      list_org_repository_security_advisories: "List the security advisories of an organization",
+      // Pull requests and merge requests
+      open_pull_request: "Open pull request",
+      create_pull_request: "Open pull request",
+      pull_request_read: "Read pull request",
+      get_pull_request: "See pull request",
+      list_pull_requests: "List pull requests",
+      search_pull_requests: "Search pull requests",
+      update_pull_request: "Change pull request",
+      update_pull_request_branch: "Update the branch of a pull request",
+      get_pull_request_files: "See the files of a pull request",
+      get_pull_request_diff: "See the changes of a pull request",
+      get_pull_request_status: "See the checks of a pull request",
+      get_pull_request_comments: "Read the comments of a pull request",
+      get_pull_request_reviews: "Read the reviews of a pull request",
+      pull_request_review_write: "Review pull request",
+      create_pull_request_review: "Review pull request",
+      add_comment_to_pending_review: "Comment on a review",
+      add_reply_to_pull_request_comment: "Reply to a review comment",
+      request_copilot_review: "Ask Copilot for a review",
+      merge_pull_request: "Merge a pull request",
+      create_merge_request: "Open merge request",
+      get_merge_request: "See merge request",
+      list_merge_requests: "List merge requests",
+      update_merge_request: "Change merge request",
+      get_merge_request_diffs: "See the changes of a merge request",
+      create_merge_request_note: "Comment on a merge request",
+      merge_merge_request: "Merge merge request",
+      // Issues, comments, labels, projects (GitHub, GitLab, Linear, Jira, Sentry, our task board)
+      create_issue: "Create issue",
+      get_issue: "See issue",
+      issue_read: "Read issue",
+      list_issues: "List issues",
+      search_issues: "Search issues",
+      update_issue: "Change issue",
+      issue_write: "Create or change an issue",
+      sub_issue_write: "Change sub-issues",
+      add_sub_issue: "Add sub-issue",
+      list_issue_types: "List issue types",
+      list_issue_statuses: "List statuses",
+      get_issue_details: "See the details of an issue",
+      add_issue_comment: "Comment on an issue",
+      create_issue_comment: "Comment on an issue",
+      create_issue_note: "Comment on an issue",
+      update_issue_comment: "Edit issue comment",
+      comment_issue: "Comment on a task",
+      create_comment: "Write comment",
+      list_comments: "List comments",
+      get_comments: "Read comments",
+      delete_comment: "Delete comment",
+      get_label: "See label",
+      list_labels: "List labels",
+      list_label: "List labels",
+      list_issue_labels: "List labels",
+      create_label: "Create label",
+      label_write: "Create or change a label",
+      list_discussions: "List discussions",
+      get_discussion: "See discussion",
+      get_discussion_comments: "Read the comments of a discussion",
+      list_discussion_categories: "List discussion categories",
+      discussion_comment_write: "Comment on a discussion",
+      list_milestones: "List milestones",
+      list_cycles: "List cycles",
+      list_projects: "List projects",
+      get_project: "See project",
+      create_project: "Create project",
+      update_project: "Change project",
+      projects_list: "List projects",
+      projects_get: "See project",
+      projects_write: "Change project",
+      find_projects: "Find projects",
+      list_teams: "List teams",
+      get_teams: "List teams",
+      get_team_members: "List team members",
+      find_teams: "Find teams",
+      create_team: "Create team",
+      find_organizations: "Find organizations",
+      // Jira and Confluence (Atlassian)
+      get_jira_issue: "See Jira issue",
+      create_jira_issue: "Create Jira issue",
+      edit_jira_issue: "Edit Jira issue",
+      search_jira_issues_using_jql: "Search Jira issues",
+      transition_jira_issue: "Change the status of a Jira issue",
+      transition_issue: "Change the status of an issue",
+      get_transitions_for_jira_issue: "See where a Jira issue can move",
+      add_comment_to_jira_issue: "Comment on a Jira issue",
+      get_visible_jira_projects: "List Jira projects",
+      lookup_jira_account_id: "Find Jira account",
+      get_confluence_page: "See Confluence page",
+      create_confluence_page: "Create Confluence page",
+      update_confluence_page: "Change Confluence page",
+      search_confluence_using_cql: "Search Confluence",
+      get_confluence_spaces: "List Confluence spaces",
+      get_pages_in_confluence_space: "List the pages of a space",
+      get_accessible_atlassian_resources: "List Atlassian sites",
+      user_info: "See the signed-in account",
+      // Workflows, pipelines, deploys (they always ask a person)
+      actions_list: "List workflow runs",
+      actions_get: "See workflow run",
+      actions_run_trigger: "Run workflow",
+      list_workflows: "List workflows",
+      list_workflow_runs: "List workflow runs",
+      run_workflow: "Run workflow",
+      rerun_workflow_run: "Run workflow again",
+      cancel_workflow_run: "Cancel workflow run",
+      get_job_logs: "Read job logs",
+      get_workflow_run_logs: "Read workflow logs",
+      list_pipelines: "List pipelines",
+      get_pipeline: "See pipeline",
+      create_pipeline: "Run pipeline",
+      retry_pipeline: "Run pipeline again",
+      cancel_pipeline: "Cancel pipeline",
+      list_deployments: "List deployments",
+      get_deployment: "See deployment",
+      get_deployment_build_logs: "Read build logs",
+      create_deployment: "Create deployment",
+      deploy_to_vercel: "Deploy to Vercel",
+      promote_deployment: "Promote deployment",
+      rollback_deployment: "Roll back a deployment",
+      search_vercel_documentation: "Search the Vercel docs",
+      get_access_to_vercel_url: "Open protected link",
+      web_fetch_vercel_url: "Read Vercel page",
+      check_domain_availability_and_price: "Check domain",
+      buy_domain: "Buy domain",
+      // Sentry
+      search_events: "Search events",
+      find_releases: "Find releases",
+      get_event_attachment: "Read event attachment",
+      analyze_issue_with_seer: "Analyze issue with Seer",
+      get_trace_details: "See trace",
+      find_dsns: "Find DSNs",
+      whoami: "See the signed-in account",
+      search_docs: "Search the docs",
+      search_documentation: "Search the docs",
+      get_doc: "Read doc page",
+      // Linear
+      list_users: "List people",
+      get_user: "See person",
+      get_users: "List people",
+      list_documents: "List documents",
+      // Slack and Microsoft Teams
+      send_message: "Send message",
+      post_message: "Post message",
+      schedule_message: "Schedule message",
+      updates_slack_message: "Edit message",
+      update_message: "Edit message",
+      deletes_message_from_chat: "Delete message",
+      delete_message: "Delete message",
+      search_messages: "Search messages",
+      find_channels: "Find channels",
+      list_channels: "List channels",
+      create_channel: "Create channel",
+      invite_user_to_channel: "Add someone to a channel",
+      fetch_conversation_history: "Read conversation",
+      get_channel_history: "Read channel",
+      fetch_message_thread_from_conversation: "Read thread",
+      get_thread_replies: "Read thread",
+      reply_to_thread: "Reply in a conversation",
+      find_users: "Find people",
+      find_user_by_email_address: "Find someone by email",
+      get_user_profile: "See profile",
+      download_slack_file: "Download file",
+      add_reaction_to_item: "React to a message",
+      add_reaction: "React to a message",
+      create_reminder: "Create reminder",
+      teams_list: "List teams",
+      teams_list_channels: "List channels",
+      teams_list_channel_messages: "Read channel",
+      list_message_replies: "Read replies",
+      chats_get_all_chats: "List chats",
+      list_user_chat_messages: "Read chat",
+      teams_post_channel_message: "Post in a channel",
+      teams_post_chat_message: "Send chat message",
+      post_message_reply: "Reply to a message",
+      create_meeting: "Create meeting",
+      // Gmail and email
+      send_email: "Send email",
+      create_email_draft: "Draft email",
+      send_draft: "Send draft",
+      list_drafts: "List drafts",
+      fetch_emails: "Read emails",
+      search_emails: "Search emails",
+      read_email: "Read email",
+      fetch_message_by_message_id: "Read email",
+      fetch_message_by_thread_id: "Read conversation",
+      list_threads: "List conversations",
+      forward_message: "Forward email",
+      add_label_to_email: "Label email",
+      move_to_trash: "Move to the trash",
+      get_profile: "See the signed-in account",
+      // Google Drive, OneDrive, Dropbox
+      find_file: "Find file",
+      find_folder: "Find folder",
+      get_file_metadata: "See the details of a file",
+      get_metadata: "See the details",
+      download_file: "Download file",
+      export_google_workspace_file: "Export file",
+      create_file_from_text: "Create file",
+      create_text_file: "Create file",
+      create_folder: "Create folder",
+      list_folders: "List folders",
+      move_file: "Move file",
+      move_item: "Move file",
+      move_file_or_folder: "Move file",
+      copy_item: "Copy file",
+      copy_file_or_folder: "Copy file",
+      create_permission: "Share file",
+      invite_user_to_item: "Share file",
+      create_link: "Create share link",
+      create_shared_link: "Create share link",
+      list_shared_links: "List share links",
+      search_items: "Search files",
+      list_items: "List files",
+      get_item: "See file",
+      delete_item: "Delete file",
+      list_files_in_folder: "List the files of a folder",
+      search_file_or_folder: "Search files",
+      // Google Docs and Sheets, Notion, documents and pages
+      search_documents: "Search documents",
+      get_document: "Read document",
+      get_document_plaintext: "Read document",
+      get_document_by_id: "Read document",
+      create_document: "Create document",
+      create_document_markdown: "Create document",
+      update_document: "Change document",
+      update_document_markdown: "Rewrite document",
+      update_document_section_markdown: "Change part of a document",
+      insert_text_action: "Add text to a document",
+      replace_all_text: "Replace text in a document",
+      copy_document: "Copy document",
+      export_document_as_pdf: "Export document as PDF",
+      search_spreadsheets: "Search spreadsheets",
+      get_spreadsheet_info: "See spreadsheet",
+      get_sheet_names: "List the tabs of a spreadsheet",
+      values_get: "Read cells",
+      batch_get: "Read cells",
+      lookup_spreadsheet_row: "Find row",
+      create_google_sheet1: "Create spreadsheet",
+      create_spreadsheet: "Create spreadsheet",
+      add_sheet: "Add tab",
+      values_update: "Write cells",
+      update_values_batch: "Write cells",
+      spreadsheets_values_append: "Add rows",
+      clear_values: "Clear cells",
+      delete_sheet: "Delete tab",
+      create_page: "Create page",
+      create_pages: "Create pages",
+      get_page: "Read page",
+      retrieve_page: "Read page",
+      update_page: "Change page",
+      move_pages: "Move pages",
+      duplicate_page: "Duplicate page",
+      delete_page: "Delete page",
+      search_pages: "Search pages",
+      append_block_children: "Add content to a page",
+      create_database: "Create database",
+      update_database: "Change database",
+      query_database: "Query database",
+      get_self: "See the signed-in account",
+      // Google Calendar and meetings
+      list_calendars: "List calendars",
+      events_list: "List events",
+      list_events: "List events",
+      find_event: "Find event",
+      events_get: "See event",
+      find_free_slots: "Find free time",
+      find_free_time: "Find free time",
+      create_event: "Create event",
+      quick_add: "Add event",
+      update_event: "Change event",
+      patch_event: "Change event",
+      delete_event: "Delete event",
+      propose_event: "Propose meeting",
+      // Figma
+      get_projects_in_team: "List the projects of a team",
+      get_files_in_project: "List the files of a project",
+      get_file_nodes: "Read parts of a file",
+      get_file_components: "List components",
+      get_file_styles: "List styles",
+      get_local_variables: "List variables",
+      get_variable_defs: "List variables",
+      render_images_of_file_nodes: "Export images",
+      get_comments_in_file: "Read comments",
+      add_comment_to_file: "Comment on a file",
+      get_design_context: "Read design",
+      get_screenshot: "Take a screenshot of a design",
+      // Stripe, Square, payments
+      create_customer: "Create customer",
+      list_customers: "List customers",
+      search_customers: "Search customers",
+      retrieve_customer: "See customer",
+      update_customer: "Change customer",
+      create_product: "Create product",
+      list_products: "List products",
+      create_price: "Create price",
+      list_prices: "List prices",
+      create_payment_link: "Create payment link",
+      create_invoice: "Create invoice",
+      create_invoice_item: "Add invoice item",
+      finalize_invoice: "Finalize invoice",
+      list_invoices: "List invoices",
+      get_invoice: "See invoice",
+      retrieve_balance: "See the balance",
+      get_balance: "See the balance",
+      create_refund: "Refund payment",
+      list_payment_intents: "List payments",
+      list_payments: "List payments",
+      cancel_payment: "Cancel payment",
+      list_subscriptions: "List subscriptions",
+      update_subscription: "Change subscription",
+      cancel_subscription: "Cancel subscription",
+      list_coupons: "List coupons",
+      create_coupon: "Create coupon",
+      list_disputes: "List disputes",
+      update_dispute: "Answer dispute",
+      search_stripe_resources: "Search Stripe",
+      fetch_stripe_resources: "Read from Stripe",
+      search_stripe_documentation: "Search the Stripe docs",
+      get_stripe_account_info: "See the Stripe account",
+      list_locations: "List locations",
+      search_orders: "Search orders",
+      retrieve_order: "See order",
+      search_catalog_objects: "Search the catalog",
+      upsert_catalog_object: "Create or change a catalog item",
+      // Asana, HubSpot, Salesforce, Intercom, Zendesk
+      get_multiple_workspaces: "List workspaces",
+      get_workspace_projects: "List projects",
+      get_sections_in_project: "List sections",
+      get_tasks_from_project: "List tasks",
+      search_tasks_in_workspace: "Search tasks",
+      get_task: "See task",
+      list_tasks: "List tasks",
+      get_stories_for_task: "Read the activity of a task",
+      create_task: "Create task",
+      update_task: "Change task",
+      create_subtask: "Create subtask",
+      create_task_comment: "Comment on a task",
+      add_task_to_section: "Move task to a section",
+      delete_task: "Delete task",
+      search_contacts_by_criteria: "Search contacts",
+      search_contacts: "Search contacts",
+      list_contacts: "List contacts",
+      read_contact: "See contact",
+      get_contact: "See contact",
+      create_contact: "Create contact",
+      update_contact: "Change contact",
+      archive_contact: "Archive contact",
+      search_companies: "Search companies",
+      get_company: "See company",
+      list_all_companies: "List companies",
+      create_company: "Create company",
+      update_company: "Change company",
+      search_deals: "Search deals",
+      get_deal: "See deal",
+      create_deal: "Create deal",
+      update_deal: "Change deal",
+      create_note: "Write note",
+      search_accounts: "Search accounts",
+      get_account: "See account",
+      create_account: "Create account",
+      update_account: "Change account",
+      search_leads: "Search leads",
+      get_lead: "See lead",
+      create_lead: "Create lead",
+      update_lead: "Change lead",
+      search_opportunities: "Search opportunities",
+      get_opportunity: "See opportunity",
+      create_opportunity: "Create opportunity",
+      update_opportunity: "Change opportunity",
+      list_conversations: "List conversations",
+      search_conversations: "Search conversations",
+      get_conversation: "Read conversation",
+      assign_conversation: "Assign conversation",
+      attach_tag_to_conversation: "Tag conversation",
+      close_conversation: "Close conversation",
+      reply_to_conversation: "Reply to a conversation",
+      list_all_admins: "List admins",
+      search_zendesk: "Search Zendesk",
+      list_zendesk_tickets: "List tickets",
+      get_zendesk_ticket_by_id: "See ticket",
+      get_ticket_comments: "Read the comments of a ticket",
+      search_zendesk_users: "Search people",
+      search_zendesk_organizations: "Search organizations",
+      create_zendesk_ticket: "Create ticket",
+      update_zendesk_ticket: "Change ticket",
+      reply_zendesk_ticket: "Reply to a ticket",
+      // Instagram, Facebook, LinkedIn, YouTube, Pinterest, Reddit, WhatsApp
+      get_user_info: "See the profile",
+      get_user_insights: "See the insights of the account",
+      get_ig_user_media: "List posts",
+      get_ig_media: "See post",
+      get_ig_media_insights: "See the insights of a post",
+      get_ig_user_stories: "List stories",
+      list_all_conversations: "List conversations",
+      list_all_messages: "Read conversation",
+      post_ig_user_media: "Prepare post",
+      create_carousel_container: "Prepare carousel",
+      post_ig_user_media_publish: "Publish post",
+      send_text_message: "Send message",
+      list_managed_pages: "List pages",
+      get_page_details: "See page",
+      get_page_posts: "List posts",
+      get_post: "See post",
+      get_scheduled_posts: "List scheduled posts",
+      get_page_insights: "See the insights of a page",
+      get_post_insights: "See the insights of a post",
+      get_page_photos: "List photos",
+      get_page_videos: "List videos",
+      create_post: "Create post",
+      create_photo_post: "Post photo",
+      create_multi_photo_post: "Post photos",
+      create_video_post: "Post video",
+      update_post: "Change post",
+      delete_post: "Delete post",
+      get_my_info: "See the signed-in account",
+      create_linked_in_post: "Create post",
+      create_article_or_url_share: "Share link",
+      upload_video: "Upload video",
+      get_videos: "See videos",
+      create_comment_on_post: "Comment on a post",
+      list_channel_videos: "List the videos of a channel",
+      get_video_details_batch: "See videos",
+      query_analytics: "See analytics",
+      list_comment_threads2: "List comments",
+      list_user_playlists: "List playlists",
+      list_playlist_items: "List the videos of a playlist",
+      update_video: "Change video",
+      update_thumbnail: "Change thumbnail",
+      post_comment: "Write comment",
+      create_comment_reply: "Reply to a comment",
+      set_comment_moderation_status: "Moderate comments",
+      create_playlist: "Create playlist",
+      add_video_to_playlist: "Add video to a playlist",
+      list_boards: "List boards",
+      get_board: "See board",
+      list_board_sections: "List the sections of a board",
+      list_pins: "List pins",
+      get_pin: "See pin",
+      search_own_content: "Search pins and boards",
+      get_account_analytics: "See the analytics of the account",
+      get_pin_analytics: "See the analytics of a pin",
+      get_top_pins: "See the top pins",
+      get_keyword_trends: "See search trends",
+      create_pin: "Create pin",
+      update_pin: "Change pin",
+      save_pin: "Save pin",
+      create_board: "Create board",
+      update_board: "Change board",
+      create_board_section: "Create section",
+      delete_pin: "Delete pin",
+      delete_board: "Delete board",
+      search_across_subreddits: "Search posts",
+      retrieve_reddit_post: "List the posts of a community",
+      retrieve_post_comments: "Read the comments of a post",
+      retrieve_specific_comment: "See comment",
+      get_subreddits_search: "Search communities",
+      get_subreddit_metadata: "See community",
+      get_subreddit_rules: "Read the rules of a community",
+      list_subreddit_post_flairs: "List flairs",
+      get_reddit_user_about: "See profile",
+      create_reddit_post: "Create post",
+      post_reddit_comment: "Write comment",
+      edit_reddit_comment_or_post: "Edit post or comment",
+      delete_reddit_post: "Delete post",
+      delete_reddit_comment: "Delete comment",
+      get_phone_numbers: "List phone numbers",
+      get_business_profile: "See the business profile",
+      get_message_templates: "List message templates",
+      get_template_status: "See template",
+      get_message_history: "See the delivery history",
+      create_message_template: "Create message template",
+      send_template_message: "Send template",
+      send_media: "Send media",
+      send_interactive_buttons: "Send buttons",
+      send_interactive_list: "Send list",
+      send_location: "Send location",
+      // Higgsfield and other image and video makers
+      generate_image: "Generate image",
+      generate_video: "Generate video",
+      image_to_video: "Turn image into a video",
+      text_to_image: "Generate image",
+      text_to_video: "Generate video",
+      text_to_speech: "Turn text into speech",
+      edit_image: "Edit image",
+      upscale_image: "Raise the resolution of an image",
+      upload_image: "Upload image",
+      get_upload_url: "Get upload link",
+      create_upload_url: "Get upload link",
+      get_generation: "See generation",
+      get_generation_status: "Check generation",
+      list_generations: "List generations",
+      list_models: "List models",
+      list_styles: "List styles",
+      get_credits: "See the credits",
+      // Databases (Supabase, Neon, Postgres)
+      execute_sql: "Run SQL",
+      run_sql: "Run SQL",
+      list_tables: "List tables",
+      apply_migration: "Apply migration",
+      list_migrations: "List migrations",
+      get_logs: "Read logs",
+      deploy_edge_function: "Deploy edge function",
+      generate_typescript_types: "Generate TypeScript types",
+      // Composio's own tools
+      search_tools: "Find tools",
+      multi_execute_tool: "Run actions in connected apps",
+      manage_connections: "Manage connections",
+      get_tool_schemas: "Read tool details",
+      remote_workbench: "Run code in the workbench",
+      remote_bash_tool: "Run command",
+      // The browser and the computer
+      browser_open: "Open page",
+      browser_navigate: "Open page",
+      browser_navigate_back: "Go back",
+      browser_back: "Go back",
+      browser_click: "Click on the page",
+      browser_hover: "Hover over the page",
+      browser_drag: "Drag on the page",
+      browser_fill: "Fill in a field",
+      browser_type: "Type on the page",
+      browser_type_secret: "Type password",
+      browser_press: "Press key",
+      browser_press_key: "Press key",
+      browser_select: "Pick option",
+      browser_select_option: "Pick option",
+      browser_scroll: "Scroll the page",
+      browser_read: "Read the page",
+      browser_snapshot: "Read the page",
+      browser_screenshot: "Take a screenshot",
+      browser_take_screenshot: "Take a screenshot",
+      browser_wait: "Wait for the page",
+      browser_wait_for: "Wait for the page",
+      browser_tabs: "Switch tabs",
+      browser_close: "Close the browser",
+      browser_upload: "Upload file",
+      browser_file_upload: "Upload file",
+      browser_handle_dialog: "Answer page dialog",
+      browser_console_messages: "Read the console",
+      browser_network_requests: "Read network requests",
+      browser_evaluate: "Run script on the page",
+      browser_do: "Use the browser",
+      browser_ask_person: "Ask someone to take over the browser",
+      browser_make_password: "Make a password",
+      desktop_do: "Use the computer",
+      desktop_read: "Read the screen",
+      desktop_screenshot: "Take a screenshot",
+      desktop_ask_person: "Ask someone to take over the computer",
+      computer_use: "Use the computer",
+      computer_status: "Check the computer",
+      left_click: "Click",
+      mouse_move: "Move the mouse",
+      screenshot: "Take a screenshot",
+      // agentes.chat's own tools
+      send_dm: "Send direct message",
+      read_conversation: "Read conversation",
+      add_agent_to_channel: "Add agent to a channel",
+      ask_agent: "Ask another agent",
+      tell_agent: "Tell another agent",
+      find_agent: "Find agent",
+      ask_user: "Ask a question",
+      ask_choices: "Offer choices",
+      request_approval: "Ask for approval",
+      request_permission: "Ask for access",
+      request_secret: "Ask for a key",
+      request_review: "Ask for a review",
+      request_folder_access: "Ask for a folder",
+      create_artifact: "Create file in Drive",
+      update_artifact: "Change file in Drive",
+      read_artifact: "Read file in Drive",
+      list_artifacts: "List Drive files",
+      share_artifact: "Share file",
+      read_spreadsheet: "Read spreadsheet",
+      edit_spreadsheet: "Edit spreadsheet",
+      create_presentation: "Create presentation",
+      read_presentation: "Read presentation",
+      edit_presentation: "Edit presentation",
+      create_canvas: "Create canvas",
+      read_canvas: "Read canvas",
+      edit_canvas: "Edit canvas",
+      read_document: "Read document",
+      edit_document: "Edit document",
+      upload_file: "Upload file",
+      import_file: "Import file",
+      export_file: "Export file",
+      read_file: "Read file",
+      write_file: "Write file",
+      list_files: "List files",
+      run_code: "Run code",
+      run_skill_script: "Run skill script",
+      start_task: "Start task on the computer",
+      keep_running: "Keep running on the computer",
+      commit_co_author: "Turn the agents' line on commits on or off",
+      web_search: "Search the web",
+      web_fetch: "Read web page",
+      image_search: "Search for pictures",
+      create_routine: "Create routine",
+      update_routine: "Change routine",
+      delete_routine: "Delete routine",
+      run_routine_now: "Run routine now",
+      list_routines: "List routines",
+      schedule_action: "Schedule action",
+      schedule_reminder: "Set reminder",
+      cancel_reminder: "Cancel reminder",
+      list_reminders: "List reminders",
+      follow_up: "Follow up later",
+      cancel_follow_up: "Cancel follow-up",
+      create_wiki_page: "Create wiki page",
+      update_wiki_page: "Change wiki page",
+      read_wiki_page: "Read wiki page",
+      search_wiki: "Search the wiki",
+      search_context: "Search what the team knows",
+      remember: "Remember something",
+      forget: "Forget something",
+      update_memory: "Change memory",
+      create_dashboard: "Create dashboard",
+      list_dashboards: "List dashboards",
+      share_dashboard: "Share dashboard",
+      create_widget: "Create widget",
+      update_widget: "Change widget",
+      load_skill: "Open skill",
+      read_skill_file: "Read skill file",
+      update_skill: "Change skill",
+      set_status: "Set status",
+      react: "React to a message",
+      send_gif: "Send GIF",
+      send_sticker: "Send sticker",
+      start_poll: "Start poll",
+      show_block: "Show card",
+      hand_off: "Hand off the work",
+      work_in_background: "Work in the background",
+      post_update: "Post update",
+      steer_work: "Steer the work",
+      stop_work: "Stop the work",
+      propose_agent: "Propose agent",
+      propose_mission: "Propose mission",
+      complete_mission: "Finish mission",
+      vault_save: "Save password",
+      vault_list: "List passwords",
+      vault_delete: "Delete password",
+      vault_make_password: "Make a password",
+      get_my_usage: "See my usage",
+      ignore_usage_limit: "Ignore the usage limit",
+      send_feedback: "Send feedback",
+      offer_feedback: "Offer to report a problem",
+    },
   },
   toolReview: {
     title: "Review what the agent can do on its own",
@@ -12429,7 +14744,7 @@ export const en = {
     see: "See",
     seeAsks: "See what asks for approval",
     agentTitle: "What {{name}} can use",
-    agentSub: "By connector and subject. Sensitive actions always ask for approval.",
+    agentSub: "By connector and subject. By default, sensitive actions ask for approval.",
   },
   connectFlow: {
     steps: "Steps",
@@ -12476,6 +14791,29 @@ export const en = {
     notApproved:
       "{{name}} only lets apps it approved sign in, and agentes.chat isn't approved yet. If it gives you an API key, you can connect with that.",
     serverSaid: "The server answered: {{detail}}",
+    /**
+     * A server by address: HTTP request headers an admin types once (a name and a value each), sent with every request
+     * to that server. `{{n}}` is a row's number; `<names/>` is the list of header names, such as X-API-Key.
+     */
+    headers: {
+      title: "Request headers",
+      help: "For a key that goes in another header, or a gateway in front of the server. Most servers need none.",
+      value: "Value",
+      nameOf: "Name of header {{n}}",
+      valueOf: "Value of header {{n}}",
+      remove: "Remove header {{n}}",
+      add: "Add header",
+      /** Reconnecting an account that has headers: their names (the values are never shown again). */
+      saved_one: "Saved: <names/>. It stays unless you type new ones.",
+      saved_other: "Saved: <names/>. They stay unless you type new ones.",
+      /** The link after `saved`: reconnect without them. */
+      drop: "Remove",
+      dropping_one: "<names/> will be removed when you reconnect.",
+      dropping_other: "<names/> will be removed when you reconnect.",
+      undo: "Undo",
+      /** The server said no to a connection that sent headers and no API key. */
+      refused: "The server didn't accept these headers. Check their values, or connect with an API key.",
+    },
     nothingYet: "Nothing is available to agents until step 3.",
     allCanUse: "Once connected, every agent can use it. You can adjust that later.",
     replace: "Replaces the current sign-in. Who uses it stays the same.",
@@ -12501,7 +14839,7 @@ export const en = {
     noAgents: "No agents yet. Grant access any time in “Who uses it”.",
     asksCount_one: "{{count}} action always asks for approval in the chat.",
     asksCount_other: "{{count}} actions always ask for approval in the chat.",
-    asksDefault: "Sensitive actions always ask for approval in the chat.",
+    asksDefault: "By default, sensitive actions ask for approval in the chat.",
     grant: "Grant",
     saved_one: "{{name}}: {{count}} agent can use it.",
     saved_other: "{{name}}: {{count}} agents can use it.",
@@ -12561,7 +14899,7 @@ export const en = {
       },
       railway: {
         "1": "In the Postgres service, open Data → Query and run the command below (change the password).",
-        "2": "In Variables, copy DATABASE_PUBLIC_URL (DATABASE_URL is internal and doesn't work from here).",
+        "2": "In Variables, copy `DATABASE_PUBLIC_URL` (`DATABASE_URL` is internal and doesn't work from here).",
         "3": "Swap the user and password in it for agentes_leitura and the password you chose, and paste it here.",
       },
       rds: {
@@ -12598,7 +14936,7 @@ export const en = {
       unreachable:
         "We couldn't reach the database server. Check the address and whether it accepts connections from outside.",
       blocked_host:
-        "This server isn't allowed. Use the database's public address (internal addresses, like Railway's DATABASE_URL, don't work from here).",
+        "This server isn't allowed. Use the database's public address (internal addresses, like Railway's `DATABASE_URL`, don't work from here).",
       tls: "The database didn't accept a secure connection. Turn on SSL in the database, or choose No encryption under Advanced (test databases only).",
       unknown: "Couldn't connect right now. Try again in a moment.",
       no_databases: "This user can't open any database on this server. Check its permissions or the start of the name.",
@@ -12684,7 +15022,6 @@ export const en = {
     },
     agent: {
       title: "Databases",
-      help: "Databases {{org}} connected. The agent only reads.",
       levelText: "Queries the tables the rules allow, read-only.",
       rulesOf: "Rules in {{name}}",
       saved: "{{name}}'s database access saved.",
@@ -12814,27 +15151,24 @@ export const en = {
     },
     agent: {
       title: "Email",
-      help: "One row per {{org}} mailbox.",
       none: "{{org}} hasn't connected any email yet.",
-      levelText: {
-        read: "Searches and reads email. Nothing changes in the mailbox.",
-        write: "Reads, drafts and organizes. Sending, replying and forwarding ask for approval.",
-      },
       canDelete: "Can delete email",
       canDeleteHelp: "Even when on, every deletion asks for approval.",
       rules: "Rules",
       rulesOf: "Rules for {{address}}",
       rulesCount_one: "{{count}} rule",
       rulesCount_other: "{{count}} rules",
-      noRules: "No extra rules",
       save: "Save",
       saved: "{{name}}'s email saved.",
       unsaved: "Unsaved changes",
       warning: "Reads email from anyone and sends without asking: a malicious email may try to trick the agent.",
       pending: "It hasn't finished connecting.",
       needsReconnect: "Agents can't use it until it's reconnected.",
-      ownerOnly: "Only {{name}} can give access: they connected this mailbox.",
+      ownerOnly: "Only {{name}} gives access to this mailbox.",
       ownerOnlyUnknown: "Only the person who connected this mailbox can give access.",
+      onlyYou: "{{name}} uses this mailbox only for you, in your DM.",
+      /** The same, said once over a list of mailboxes. */
+      onlyYouAll: "{{name}} uses your mailboxes only for you, in your DM.",
       remove: "Remove access",
       removed: "{{name}} no longer has access to {{address}}.",
       saveError: {
@@ -12991,6 +15325,8 @@ export const en = {
     previewLoading: "Loading the preview…",
     previewFailed: "Couldn't show the preview. Download the file to open it.",
     imageAlt: "Image: {{title}}",
+    /** Where a picture an agent is making will show, while it makes it. */
+    imageMaking: "Making the image…",
     pdfFrame: "PDF: {{title}}",
     tooBigToPreview: "Too large to preview. Download it to open.",
     downloadOnly: "No preview for this type of file. Download it to open.",
@@ -13035,6 +15371,28 @@ export const en = {
     },
   },
   errors: {
+    /** Linking an outside chat app (ADR 0187). The server's refusals carry no app name, so none is said. */
+    surface: {
+      off: "Linking chat apps was turned off. Reload to see your settings as they are now.",
+      notAllowed: "Linking a chat app isn't open to your account yet. Keep using the app here until it opens.",
+      noAssistant: "The assistant in this workspace isn't set to talk with you. Pick another workspace to link.",
+      noWorkspace: "You're no longer in this workspace. Pick another workspace to link.",
+      linkGone:
+        "This link isn't waiting anymore: it ran out after 10 minutes or was canceled. Make a new code to start again.",
+      taken: "That sender is linked to another agentes.chat account. Unlink it there, then send a new code.",
+      undoGone: "This undo link was already used or ran out. Unlink in your notification settings instead.",
+      codeGone: "This code is wrong, used or ran out after 10 minutes. Make a new code and send it again.",
+    },
+    wallpaper: {
+      notYours: "That photo isn't yours.",
+      invalid: "That background doesn't exist.",
+      tooLarge: "The photo can be up to 2 MB.",
+      type: "Use a JPEG, PNG or WebP photo.",
+    },
+    /** A request the server, or a proxy in front of it, refused for its size. */
+    tooLarge: "This is bigger than the server takes.",
+    /** The same, from a screen that knows the most it may send. */
+    tooLargeMax: "This is bigger than the server takes: up to {{max}} MB.",
     /** A new-password link an owner can't make (ADR 0158). */
     passwordLink: {
       email: "This server sends email: they ask for their own link in Forgot password.",
@@ -13065,7 +15423,8 @@ export const en = {
       accountInUse: "That account already thinks for another agent.",
       noAiYet: "There's still no AI connected.",
       filePurged: "This file was deleted more than 30 days ago and can't come back.",
-      looksSecret: "That looks like a password or a key, and everyone here would see it.",
+      looksSecret:
+        "That looks like a password or a key, and everyone here would see it. Ask the agent to request it privately instead.",
       blockSpec: "This block has a mistake in its parts or formulas, so it can't be shown. Fix it and try again.",
       takeControl: "Take control of the profile first.",
       profileBusy: "Someone else is using this profile.",
@@ -13083,9 +15442,14 @@ export const en = {
       createRefused: "You can't create a workspace right now.",
       noAgentToRemind: "No agent in this conversation can remind you.",
       agentCantRead: "Let the agent read this first, in its access settings.",
+      /** A routine on someone else's own connection: only that person's own routine waits on its events. */
+      connectionNotYours: "This connection is someone else's own. Only a routine of theirs can wait on its events.",
       neverHappens: "This schedule never happens.",
       soleOwner:
         "You're the only owner of a workspace with other members. Make someone else an owner, or delete the workspace, first.",
+      /** The same, when everyone else there is an outside collaborator, who can't be an owner (ADR 0191). */
+      soleOwnerOutside:
+        "You're the only owner of a workspace whose other people are outside collaborators, who can't be owners. Invite a member and make them an owner, or delete the workspace, first.",
       testFirst: "Test the connection with these settings before turning it on.",
       voiceLength: "The recording is too long or too short.",
       sendAgain: "The file didn't arrive whole. Send it again.",
@@ -13131,8 +15495,25 @@ export const en = {
        */
       misconfigured:
         "The connection to {{provider}} is set up wrong on the server, so it can't finish. Whoever runs the server needs to replace the key in the app's settings.",
+      /**
+       * A request header typed for a server by address was refused. `{{header}}` is its name as typed (X-API-Key),
+       * never translated, and so is Authorization.
+       */
+      headerName: "Use only letters, digits and hyphens in a header's name, like X-API-Key.",
+      headerValue:
+        "Type a value for {{header}}: up to 2,000 characters on one line, with no accented letters or emoji.",
+      headerReserved: "{{header}} is already sent with every request and can't be changed. Remove this header.",
+      headerTwice: "{{header}} is in the list twice. Remove one of them.",
+      headerAndKey: "The API key is already sent as Authorization. Clear the key, or remove this header.",
+      headersTooMany: "A server takes at most {{max}} headers. Remove one to add another.",
+      headersWithSignIn:
+        "This server asks for a sign-in, and a sign-in can't carry headers yet. Remove the headers to sign in, or connect with an API key.",
+      /** Reconnecting an account whose saved headers, kept encrypted, could no longer be opened. */
+      headersUnreadable: "The saved headers couldn't be read. Type them again, or remove them.",
     },
     wiki: {
+      githubNoNotes: "No Markdown notes in this link.",
+      githubTooLarge: "Too many notes to read from a link. Download the repository as a .zip and import it in Files.",
       noAccess: "You don't have access to this page.",
       audienceForbidden: "Only people who edit the wiki and manage roles choose who sees a page.",
       audienceExcludesYou: "Include yourself (one of your roles, or your name) to keep seeing the page.",
@@ -13162,7 +15543,8 @@ export const en = {
       aboveYou: "Only someone above this role changes it.",
       base: "Every workspace keeps the Everyone role.",
       unknown: "That role isn't there anymore.",
-      orderIncomplete: "The roles changed. Reload and try again.",
+      orderIncomplete: "The roles changed while you were moving them. Reload and try again.",
+      outsideOwner: "An outside collaborator can't be an owner.",
     },
     teamProposal: {
       undoExpired:
@@ -13186,6 +15568,9 @@ export const en = {
     },
     join: {
       linkClosed: "This link no longer works. Ask whoever sent it for a new one.",
+      linkFull: "This link already took everyone it could. Ask whoever sent it for a new one.",
+      /** Approving a request whose link took all its people (ADR 0184): the way out is the link's maximum. */
+      linkFullApproval: "This request's link already took everyone it could. To approve it, raise the link's maximum.",
       full: "This workspace has many requests waiting. Try again later, or ask someone there to invite you.",
       rateLimited: "Too many requests from here. Try again in an hour.",
       linkBusy: "Many people asked through this link in the last hour. Try again later.",
@@ -13194,6 +15579,8 @@ export const en = {
       answered: "Someone already answered this request.",
       expired: "This request expired: nobody answered it in 14 days.",
       codeNeeded: "Verify your email first.",
+      /** Approving an outside collaborator's request (ADR 0191) whose account was blocked or is being deleted. */
+      outsideClosed: "This account was blocked or is being deleted, so it can't join. The request is closed.",
     },
     /** An emailed code refused: asking to join (ADR 0072) and deleting (ADR 0088) alike. */
     code: {
@@ -13255,6 +15642,9 @@ export const en = {
       machineChanged: "The mission's computer changed. Try again.",
       executorUnavailable: "That way of programming isn't installed on the mission's computer.",
       executorOutdated: "Codex on that computer is too old: update it there.",
+      /** Codex on a Windows computer: the runner runs no Codex mission item there yet. */
+      codexWindows:
+        "Codex doesn't program missions on Windows yet: choose Claude Code, the agent itself or another computer.",
       invalidExecutor: "Choose who programs: Claude Code, Codex or the agent.",
       rateLimited: "The mission did too much in the last hour. Wait a little and try again.",
       pausedStuck: "The mission paused because it stopped moving forward.",
@@ -13273,6 +15663,9 @@ export const en = {
       noContext: "This thread didn't come from a range of a conversation.",
       notUndoable: "Only a thread made from a range can be undone.",
     },
+    followUp: {
+      notYours: "Only the person it's for, the agent's owner or an admin can cancel this follow-up.",
+    },
     routine: {
       tooFrequent: "A routine runs at most every 15 minutes. Pick a longer interval.",
       tooMany: "This agent already has 20 active routines. Pause or delete one first.",
@@ -13282,12 +15675,13 @@ export const en = {
       agentNotInChannel: "Add the agent to the conversation first.",
       webhookPaused: "Turn the routine on to test it.",
       continueExtraOff:
-        "This plan's window is used up and this agent's long work doesn't use paid extra usage. Turn that on in its AI settings to continue now, or it picks up after the reset.",
+        "This plan's window is used up and this agent's long work doesn't use the plan's paid extra usage. It picks up after the reset.",
       continueExtraUsedUp:
         "This plan's window is used up and its paid extra usage is used up or unavailable. It picks up after the reset.",
       actionsNeedApprover:
         "Only the agent's owner or someone who approves its actions can let a routine act on its own.",
-      editorOnly: "Only who created the routine, the agent's owner or an admin can change it.",
+      editorOnly:
+        "Only who created the routine, the agent's owner, whoever can edit the agent or an admin can change it.",
       widgetFixed: "This routine keeps a widget up to date. Change it from its widget.",
     },
     run: {
@@ -13317,9 +15711,39 @@ export const en = {
       sharingTooMany: "Choose at most {{max}} people and {{max}} roles.",
       notInDrive: "This lives only in its conversation, so it can't be shared.",
     },
+    drive: {
+      folderIntoItself: "A folder can't go inside itself or a folder inside it.",
+    },
+    /** Spreadsheets, presentations and canvases people and agents edit together (ADR 0196). */
+    live: {
+      readOnly: "This file is read-only now, so it can't be changed.",
+      tooLarge: "This file is at its size limit. Remove something from it first.",
+      assetTooLarge: "The picture is over {{max}} MB, the limit per picture.",
+      assetType: "Only pictures go in this file: PNG, JPEG, WebP or GIF.",
+      liveOnly: "This file is changed right where it is, so it can't be replaced as a whole.",
+    },
+    /** Uploaded Office files the server reads to show or to make editable (ADR 0198). */
+    office: {
+      unreadable: "This file couldn't be opened here. It may be damaged. Download it to open it in its own app.",
+      tooLarge: "This file is too large to open here. Download it to see it in its own app.",
+      unsupported: "Files like this one can only be downloaded.",
+      encrypted: "This file is protected with a password, so only its own app opens it.",
+      tooLargeToEdit: "This file is too large to edit here. You can still see it and download it.",
+    },
+    /** Images made on a canvas (ADR 0197). */
+    images: {
+      noModel: "To make images, add an OpenAI, Gemini or OpenRouter key in the workspace settings.",
+      modelUnavailable: "This image AI isn't available in the workspace anymore. Choose another one.",
+      reference: "Choose up to 4 images on this canvas to start from.",
+      notCanvas: "Images can only be made on a canvas.",
+      rate: "You asked for a lot of images in the last hour. Try again in a little while.",
+      personLimit: "You reached your AI usage limit for this month.",
+      provider: "The AI couldn't do it right now. Try again in a little while.",
+    },
     device: {
       notLinkMaker: "Only the person who made the link can let this computer join.",
       widenForbidden: "Admins can only narrow who can use someone's own device.",
+      spillOwnerOnly: "Only the person who connected this computer can let replies think on it. You can turn it off.",
       notHome: "Agents live on the workspace computer and use this one when they name it.",
     },
     machine: {
@@ -13333,8 +15757,13 @@ export const en = {
       targetSame: "The agents are already on that computer.",
       targetPaused: "That computer is paused. Choose another one.",
       pausePast: "Choose a time in the future.",
+      notOwner: "Only whoever connected this computer turns its tools on. Ask them.",
+      askSelf: "It's your computer: turn it on with the button.",
+      /** "Pedir a um admin" from someone who may do it themselves. */
+      adminAskSelf: "You can do this here yourself.",
       accountMethodUnsupported:
         "This computer can't connect Claude this way yet. Update the agentes.chat program on it, or use an API key.",
+      brainUnavailable: "This AI isn't set up on {{computer}} yet. Set it up there, or choose another one.",
       offline: "{{name}} is offline right now. Try again once it's back.",
       paused: "{{name}} is paused: nothing new starts on it until it's resumed.",
       timeout: "The computer didn't answer in time. Try again.",
@@ -13353,8 +15782,8 @@ export const en = {
       invalidDescription: "The description must have 1 to {{max}} characters.",
       tooLarge: "This skill has {{size}} MB of text and scripts, and the limit is {{max}} MB.",
       tooManyFiles: "This skill has {{files}} files, and the limit is {{max}}.",
-      repoTooLarge:
-        "The repository is too large to download (max {{max}} MB). Upload the skill's folder as a .zip instead.",
+      repoTooLarge: "The repository is too large to download (max {{max}} MB).",
+      linkTooLarge: "That link's folder has too many files to read. Paste the link of the skill's own folder.",
       noFrontmatter: "The SKILL.md needs a block at the top with its name and description, between two --- lines.",
       bodyTooLong: "The SKILL.md is too long (max {{max}} characters).",
       noSkillMdZip: "No SKILL.md at the top of the zip's folder.",
@@ -13369,23 +15798,34 @@ export const en = {
     agentGroup: {
       notFound: "This department no longer exists.",
       tooMany: "This workspace already has {{max}} departments. Delete one first.",
+      /** `agent_group.ambiguous`: a card names a department two of them are called; renaming one decides. */
+      ambiguous: "Two departments are called {{name}}. Rename one of them, then try again.",
     },
     /** `agent.right_hand_permanent`: archiving, deleting or adding the right hand to a channel (ADR 0137). */
     rightHand: {
       permanent:
         "The right hand is part of the workspace and stays out of channels. An @mention reaches it in any of them.",
+      /** `action_card.update_app`: a card this app shows without saying all it changes. */
+      updateApp: "This app is too old to apply this card. Update it, or make the change in Settings.",
+      /** `action_card.nobody_new`: an invite card whose addresses all belong to members or hold an invitation. */
+      nobodyNew:
+        "Everyone on this card is already here or already invited. Dismiss it, or resend an invitation in Members and invitations.",
     },
     agent: {
       ownerOrAdmin: "Only the agent's owner or an admin can do this.",
       detailsHidden: "Only who talks to {{agentName}} sees how it works.",
-      extraOwnerOnly: "Only the agent's owner turns its plan's paid extra usage on or off.",
       undoForbidden: "Only the person the agent worked for, its owner or an admin can undo this.",
-      /** `action.skills_admins`: skills are only admins' on the agent's page, so are their Undo and Redo. */
-      undoSkillsAdmins: "Only an admin can undo or redo a change to an agent's skills.",
+      /**
+       * `action.skills_admins`: an agent's skills are who edits it on its page (its owner, who manages it, its "Who can
+       * edit"), so are their Undo and Redo.
+       */
+      undoSkillsAdmins: "Only whoever can edit the agent can undo or redo a change to its skills.",
     },
     account: {
       notRestorable: "This account can't be restored anymore.",
       notOwner: "Only the person who connected this account or plan can do this.",
+      /** `account.order_forbidden`: the order of use of a provider's accounts (ADR 0041 §6). */
+      orderForbidden: "Only the person who connected this account or an admin can change its place in the order.",
     },
     channel: {
       membersForbidden: "Only the channel's creator or an admin can add or remove people.",
@@ -13401,7 +15841,7 @@ export const en = {
       titleRequired: "Give it a name.",
       tooLong: "That's too long. The limit is {{max}}.",
       notHttps: "Use an address that starts with https://",
-      keyNameInvalid: "Use capital letters, digits and _ in the name, like ACME_API_KEY.",
+      keyNameInvalid: "Use capital letters, digits and _ in the name, like `ACME_API_KEY`.",
       keyNameReserved: "This name is reserved. Pick another one.",
       keyNameTaken: "A key with this name is already saved here.",
       contactEmpty: "Fill in at least one field.",
@@ -13478,6 +15918,27 @@ export const en = {
     pausedUntil: "Paused until {{time}}",
     pausedHint: "Paused on the computer itself by whoever connected it.",
     /** Pausing a computer from the web or phone app, for whoever connected it and admins. */
+    oneClick: {
+      tools: {
+        claude: "Claude Code",
+        codex: "Codex",
+        cursor: "Cursor",
+        opencode: "OpenCode",
+        grok: "Grok Build",
+        antigravity: "Antigravity CLI",
+        commands: "commands",
+        browser: "the browser",
+        desktop: "the screen",
+        terminal: "the terminal",
+      },
+      allow: "Turn on {{tool}}",
+      ask: "Ask {{name}}",
+      asked: "Asked. {{name}} gets a button to turn it on.",
+      done: "On at {{machine}}.",
+      outdated: "Update the agentes.chat app on {{machine}} to turn it on from here.",
+      /** Its computer is offline: the button turns it on once the computer is back, and waits until then. */
+      offline: "{{machine}} is offline. Once it's back, the button turns on {{tool}}.",
+    },
     remotePause: {
       button: "Pause",
       menu: "Pause {{name}}",
@@ -13527,7 +15988,7 @@ export const en = {
       device: { mac: "Mac", windows: "PC", linux: "computer" },
       grantHere: "It's this {{device}}: allow folders in the app's Preferences.",
       openFolders: "Open Folders",
-      toolsHere: "It's this {{device}}: turn the browser on in the app's Preferences, under Tools.",
+      openServers: "Open Servers",
       openTools: "Open Tools",
       reconnect: "Reconnect",
       reconnecting: "Reconnecting this {{device}}…",
@@ -13535,8 +15996,6 @@ export const en = {
       offline: "This {{device}} is offline right now.",
       outageTitle: "This {{device}} lost its connection {{ago}}",
       toolsOff: "Off on this {{device}}. Turn it on in the app's Preferences, under Tools.",
-      browserTitle: "Turn the browser on on this {{device}}",
-      browserText: "One click in the app's Preferences, under Tools. This page notices by itself.",
       noReport: "This {{device}} hasn't reported what it allows yet. Update the app.",
       update: "Update the app",
     },
@@ -13636,16 +16095,21 @@ export const en = {
       commandsWarn: "Commands can reach other parts of the computer, not only the allowed folders.",
       on: "On",
       off: "Off",
+      enable: "Turn on",
+      enableLabel: "Turn on {{tool}}",
       disable: "Turn off",
       disableLabel: "Turn off {{tool}}",
       disableTitle: "Turn off {{tool}}?",
-      disableText: "Agents stop using {{tool}} on this computer. To turn it back on, only on the computer itself.",
+      disableText:
+        "Agents stop using {{tool}} on this computer. To turn it back on: on the computer itself, or here by whoever connected it.",
       disabled: "{{tool}} turned off.",
       grantTitle: "To allow more",
       grantText: "Allowing happens on the computer itself: open the agentes.chat app there (Preferences → Folders).",
       grantTextTerminal: "Allowing happens on the computer itself, in its Terminal:",
       grantTextAdmin: "Allowing happens on the computer itself, in its Terminal, as its administrator:",
       grantTerminal: "No app? In the computer's terminal:",
+      /** Under a one-click button: the same as a command to paste on that computer. */
+      preferTerminal: "I'd rather use the Terminal",
       grantOnlyOwner: "Only {{name}} allows more, on the computer itself. If you need something, ask them.",
       pathPlaceholder: "<folder>",
       agentPlaceholder: "<agent>",
@@ -13702,6 +16166,10 @@ export const en = {
     maxTasksHint: "How many background tasks agents run here at the same time. The rest wait their turn.",
     belongs: "Belongs to the workspace",
     belongsHint: "It stays when the person who connected it leaves, and everyone can use it while nobody owns it.",
+    spillOwn: "Your replies can think here",
+    spillOwnHint: "When an agent's computer is full, its replies to you start here.",
+    spillOthers: "Other people's agents can think here",
+    spillOthersHint: "When an agent's computer is full, its replies to other people can start here too.",
     connectedBy: "Connected by {{name}}",
     downloadFor: "Download for {{system}}",
     downloadApp: "Download the app",
@@ -13764,6 +16232,12 @@ export const en = {
       until: "until {{time}}",
       withHost: "with {{host}}",
       lastSeen: "last seen {{time}}",
+      /** A computer someone brought, by why it went offline: its runner stopped answering pings. */
+      offlineUnresponsive: "stopped answering at {{time}}",
+      /** Its runner stopped (its service stopped, the app quit). */
+      offlineStopped: "runner stopped at {{time}}",
+      /** The connection dropped. */
+      offlineDropped: "connection dropped at {{time}}",
     },
     line: {
       ready: "Agents can use it now.",
@@ -13772,6 +16246,11 @@ export const en = {
       offline: "Agents wait for it to come back.",
       offlineSeen: "Last seen {{time}}. Agents wait for it to come back.",
       offlineWithHost: "{{host}} is offline. Agents wait for it to come back.",
+      /** `command`: `agentes-runner doctor`, as code between its backticks. No network, or the computer too busy to answer. */
+      offlineUnresponsive: "Stopped answering at {{time}}, maybe no network or overloaded. Run `{{command}}` on it.",
+      offlineStopped: "The runner stopped at {{time}}. Start it again, or run `{{command}}` on it to see why.",
+      offlineDropped:
+        "The connection dropped at {{time}}. It reconnects by itself. If it doesn't, run `{{command}}` on it.",
     },
     /** Why a device isn't ready, by the code its computer reports. */
     reason: {
@@ -13782,6 +16261,7 @@ export const en = {
       ui_automation_off: "UI Automation is off",
       xcode_missing: "Xcode isn't installed on the Mac",
       xcode_too_old: "Xcode is too old for this iOS",
+      ios_behind_xcode: "This iPhone's iOS is older than Xcode's",
       device_support: "The Mac is getting the iPhone tools",
       helper_missing: "The test helper isn't set up yet",
       helper_expired: "The test helper needs renewing",
@@ -13812,6 +16292,7 @@ export const en = {
       ui_automation_off: "Turn on UI Automation",
       xcode_missing: "Install Xcode",
       xcode_too_old: "Update Xcode",
+      ios_behind_xcode: "Update the iPhone",
       device_support: "Keep the Mac on",
       helper_missing: "Open the app on the Mac",
       helper_expired: "Open the app on the Mac",
@@ -14048,6 +16529,7 @@ export const en = {
       pairingCode: "Wi-Fi pairing code",
       pair: "Pair",
       tryAgain: "Try again",
+      openLocalNetwork: "Open Local Network",
       qrLabel: "QR code for Wireless debugging on the phone",
       qrLine: "Not with the camera",
       /** "agentes-…" is how the camera names the Wi-Fi network it reads in the QR: keep it as written. */
@@ -14095,8 +16577,52 @@ export const en = {
         uiAutomation: "Turn on UI Automation",
         helper: "Test helper",
       },
+      /** The Xcode step's title while Xcode is installed but blocked (Command Line Tools still selected, license). */
+      xcodeBlockedTitle: "Xcode is installed but not in use",
       xcodeDone: "Version {{version}}",
       xcodeText: "Install Xcode from the App Store on {{mac}}. The setup goes on when it's there.",
+      /** Apple's name "Command Line Tools" stays in English. Shown above the command it means. */
+      xcodeCommandLineTools:
+        "The Mac still uses the Command Line Tools. Run this in Terminal, it asks for the Mac's password.",
+      /** Shown above the command it means. */
+      xcodeLicense:
+        "Xcode on {{mac}} waits for its license to be accepted. Run this in Terminal, it asks for the Mac's password.",
+      xcodeFix: {
+        /** Apple's name "Command Line Tools" stays in English. Above "Fix it for me". */
+        commandLineTools:
+          "The Mac still uses the Command Line Tools. Fixing it asks for the Mac's password, in a window that opens on that Mac.",
+        license:
+          "Xcode on {{mac}} waits for its license to be accepted. Fixing it asks for the Mac's password, in a window that opens on that Mac.",
+        fix: "Fix it for me",
+        update: "Update it for me",
+        terminal: "I'd rather use Terminal",
+        asking: "Type the password on {{mac}}. macOS opened its window on that Mac's screen.",
+        running: "Fixing Xcode on {{mac}}. It takes about a minute.",
+        updating: "Updating Xcode on {{mac}}.",
+        /** The three things the fix does, each ticked when done. */
+        phases: {
+          select: "Xcode in use",
+          license: "License accepted",
+          firstLaunch: "Components installed",
+        },
+        done: "Done. {{mac}} checks Xcode again.",
+        missed: "The password wasn't typed on {{mac}}. Nothing changed. Try again when you're at that Mac.",
+        /** `message`: the Mac's own error line, in English. */
+        failed: "Couldn't fix it on {{mac}}: {{message}}",
+        failedAny: "Couldn't fix it on {{mac}}.",
+        /** Every command ran, yet the Mac still reports Xcode blocked. Apple's "Command Line Tools" stays in English. */
+        stillCommandLineTools:
+          "The fix ran, but the Mac still uses the Command Line Tools. Try again, or run this in Terminal, it asks for the Mac's password.",
+        stillLicense:
+          "The fix ran, but Xcode on {{mac}} still waits for its license to be accepted. Try again, or run this in Terminal, it asks for the Mac's password.",
+        outdated:
+          "Update the agentes.chat app on {{mac}} to fix it with one click. Or run this in its Terminal, it asks for the Mac's password.",
+        follows: "This window moves on by itself once the Mac is done.",
+        /** The line macOS's password window shows on the Mac (the runner's own prompt), in its picture here. */
+        window: "agentes.chat wants to put Xcode in use to connect iPhones.",
+        /** macOS's default button in that window. */
+        ok: "OK",
+      },
       getXcode: "Get Xcode",
       toolsDone: "Downloaded by the Mac",
       toolsText: "The Mac downloads them, about 8 GB.",
@@ -14112,17 +16638,49 @@ export const en = {
       trustText: "Tap Trust on the iPhone and enter its passcode.",
       devModeDone: "On",
       devModeText: "Turn it on and tap Restart. After the restart, tap Turn On and enter your passcode.",
+      /** The iPhone left the Mac's list while on Developer Mode: it restarts to turn it on. */
+      devModeRestarting: "The iPhone is restarting. When it's back, unlock it and tap Turn On.",
+      /** It came back from the restart and Developer Mode is still off: iOS asks only once it's unlocked. */
+      devModeBack: "The iPhone is back. Unlock it, tap Turn On and enter your passcode.",
+      /** A button: the Mac looks at the iPhone again now. */
+      devModeCheck: "I turned it on, check again",
+      devModeStillOff: "The iPhone still says Developer Mode is off.",
+      /** Opens under Developer Mode: each reason the switch may be missing, with its one way out. */
+      devModeMissing: {
+        title: "Don't see the option?",
+        hidden: "The iPhone hides the option until Xcode asks to show it.",
+        /** For who can't open Xcode from here: someone who doesn't manage the Mac, or a Mac whose app is too old. */
+        hiddenOpen:
+          "The iPhone hides the option until Xcode asks to show it. Open Xcode on {{mac}} with the iPhone plugged in.",
+        openXcode: "Open Xcode",
+        opened: "Xcode opened on {{mac}}. Look in the iPhone's Settings again, then close Xcode.",
+        unlock: "Turned it on and the iPhone restarted? Unlock it. The alert with Turn On shows only after that.",
+        /** A Terminal command (`agentes-runner update`) shows under it. */
+        outdated:
+          "The agentes.chat app on {{mac}} is out of date. Update the app, or run this in Terminal if you installed it there.",
+      },
       uiAutomationText: "In Settings\u00a0›\u00a0Developer, after the restart.",
       helperText: "Built and renewed by the Mac every 7 days. A free Apple Account in Xcode is enough.",
       helperUntrustedText: "Tap the developer's name, then Trust.",
       teamLimitText: "Remove an app you built yourself from the iPhone: a free Apple Account allows 3.",
+      /** `sdk`: the iOS version the Mac's Xcode is for ("26.2"). Settings › General › Software Update are the iPhone's own menu names. */
+      iosBehind:
+        "This iPhone runs iOS {{ios}} and Xcode on this Mac is for iOS {{sdk}}. Update the iPhone: Settings › General › Software Update.",
       /** The iPhone is on a newer iOS than the Mac's Xcode knows. A Terminal command shows under it. */
       xcodeOld:
         "{{name}} runs iOS {{version}} and Xcode on {{mac}} knows iOS {{sdk}} at most. Install Xcode {{major}}, then run this in Terminal.",
       xcodeOldAny:
         "{{name}} runs iOS {{version}}, newer than Xcode on {{mac}} knows. Install Xcode {{major}}, then run this in Terminal.",
-      uiRefusedText:
-        "The iPhone refused the test helper's taps. Unlock it and enter its passcode if it asks. If it keeps happening, turn Settings\u00a0›\u00a0Developer\u00a0›\u00a0Enable UI Automation off and on.",
+      uiRefusedText: "Agents see the iPhone's screen, but iOS refuses their taps.",
+      /** Above two Settings paths (Developer Mode, Enable UI Automation): both switches on. */
+      uiTurnOn: "On the iPhone, turn both on:",
+      uiPasscode: "Enter its passcode when it asks, and keep it unlocked.",
+      /** A button: the Mac checks again now whether the iPhone lets the test helper tap. */
+      uiCheck: "Check again",
+      /** A button: the Mac stops the test helper, builds it again with its Xcode and checks it on the iPhone. */
+      repair: "Repair the test helper",
+      repairHint:
+        "The Mac stops the test helper and builds it again with its Xcode, in a few minutes. For taps that still fail once both are on.",
       /** An iPhone below iOS 17: the guide ends here. */
       tooOld:
         "{{name}} runs iOS {{version}}, and agents need iOS 17 or newer. Update it if it can, or plug in a newer iPhone.",
@@ -14141,8 +16699,6 @@ export const en = {
           "{{mac}} doesn't see an iPhone yet. Use a cable that carries data, not only power, unlock the iPhone and tap Trust if it asks.",
         trust:
           "No Trust prompt? Unplug the iPhone, unlock it and plug it in again, then tap Trust and enter its passcode.",
-        developerMode:
-          "Developer Mode turns on only after the iPhone restarts. Tap Restart, then Turn On once it's back. No switch there? Unplug the iPhone and plug it in again.",
         uiAutomation:
           "The switch shows once Developer Mode is on and the iPhone restarted. Keep it unlocked while you look.",
         helper:
@@ -14219,6 +16775,9 @@ export const en = {
       inUse: "<b>{{who}}</b> is using <b>{{deviceName}}</b>",
       access: "<b>{{who}}</b> asks to use <b>{{deviceName}}</b>",
       waiting: "<b>{{who}}</b> is waiting for <b>{{deviceName}}</b>",
+      toolRequest: "<b>{{who}}</b> asks you to turn on {{tool}} on your <b>{{deviceName}}</b>",
+      cliRequest: "<b>{{who}}</b> asks you to install {{tool}} on your <b>{{deviceName}}</b>",
+      folderRequest: "<b>{{who}}</b> asks for the folder {{path}} on your <b>{{deviceName}}</b>",
       once: "Allow once",
       always: "Always",
       no: "No",
@@ -14661,8 +17220,63 @@ export const en = {
     },
     system: "System",
     removed: "Removed",
+    /** Whoever runs the server read one piece of what the workspace wrote. The row's sentence, then why under it. */
+    operatorRead: {
+      /** `who`: one of `who.*`. `what`: one of `what.*`, written to follow "read". */
+      sentence: "{{who}} read {{what}}",
+      who: {
+        server: "Whoever runs this server",
+        cloud: "agentes.chat support",
+      },
+      what: {
+        message: "a message",
+        run_step: "a step of an agent's work",
+        agent: "an agent's instructions",
+        routine: "a routine",
+        task: "a background task",
+        channel: "a channel's name",
+        connection: "a connection's details",
+        support_request: "a support request",
+        direct: "something in a private conversation",
+        other: "something in the workspace",
+      },
+      /** Under the sentence, and after "Reason:" in the entry's panel. `name`: the member who asked for help. */
+      request: {
+        plain: "at {{name}}'s request",
+        app: "at {{name}}'s request, sent from the app",
+        email: "at {{name}}'s request, sent by email",
+        operator: "at {{name}}'s request, recorded by whoever runs this server",
+        support: "at {{name}}'s request, recorded by support",
+      },
+      fault: "to diagnose a failed or stuck run",
+      ai: "with an AI assistant",
+    },
+    /** Whoever runs the server answered a member's support request, by email to their account's address. */
+    operatorReply: {
+      /** `who`: one of `operatorRead.who.*`. */
+      sentence: "{{who}} answered by email",
+      /** Under the sentence, before `operatorRead.ai`, and after "Reason:" in the entry's panel. `name`: the member. */
+      request: "support request from {{name}}",
+    },
+    /** Whoever runs the server tells the workspace, afterwards, that it read content to investigate suspected abuse. */
+    operatorReview: {
+      /** `who`: one of `operatorRead.who.*`. As short as the language allows: a phone's list cuts it after one line. */
+      sentence: "{{who}} reviewed content for safety",
+      /**
+       * Under the sentence, its first words: how many, before a "·" and the days. `value`: the count as the language
+       * writes numbers. It stands alone, so it takes the form a count has by itself.
+       */
+      items_one: "{{value}} item",
+      items_other: "{{value}} items",
+      /**
+       * Under the sentence, after the count and a "·": the review's first and last day. `from`, `to`: short dates
+       * ("Nov 3"). A review of one day shows that date alone, without these words.
+       */
+      period: "{{from}} to {{to}}",
+    },
     change: {
       mergedWithoutAsking: "Merged in {{repo}} without asking",
+      accentChanged: "Changed the workspace's accent color",
       pattern: "{{verb}} {{area}}",
       approval: {
         approved: "Approved a request",
@@ -14674,6 +17288,17 @@ export const en = {
         left: "Left the workspace",
         role_changed: "Changed a member's role",
         password_link: "Made a new-password link for a member",
+      },
+      /** An approval, removal or leaving of someone working for `outsideOf` (ADR 0191). */
+      outside: {
+        approved: "Let in an outside collaborator for {{outsideOf}}",
+        removed: "Removed an outside collaborator for {{outsideOf}}",
+        left: "Left the workspace, an outside collaborator for {{outsideOf}}",
+      },
+      role: {
+        /** Everyone and the roles at once ("Who can…"). `short`: the permission (`permissions.*.short`). */
+        permission_set: "Changed who can {{short}}",
+        permission_set_computers: "Changed who uses the agents' computers",
       },
       apps: {
         connected: "Connected {{app}}",
@@ -14819,10 +17444,12 @@ export const en = {
     section: {
       account: "Your account",
       notifications: "Notifications",
+      download: "agentes.chat apps",
       general: "General",
       right_hand: "Right hand",
-      members: "Members and invitations",
-      roles: "Roles and permissions",
+      members: "Members",
+      invites: "Invitations",
+      roles: "Roles",
       /** The feature's name: it stays “Vault” in every language. */
       vault: "Vault",
       access: "Agents and access",
@@ -14854,13 +17481,15 @@ export const en = {
     sectionText: {
       account: "Your profile and how the app looks for you.",
       notifications: "What reaches you as an alert here. The inbox keeps everything.",
+      download: "The same workspace on your computer and your phone, with your account.",
       general: "Name, time zone and what every agent knows about the workspace.",
       right_hand: "The assistant that builds the team with each person, in their DM.",
-      members: "Who is in the workspace, and invitations.",
-      roles: "What each person can do. Roles add up.",
+      members: "Who is in the workspace.",
+      invites: "Who can come in and what they get.",
+      roles: "Each role adds permissions, channels and agents.",
       vault: "Your agents' passwords, keys and contacts. They never see a password.",
       access: "What each agent can use: one level per connector.",
-      connectors: "Services and MCP servers connected once for the whole workspace.",
+      connectors: "Services and MCP servers, connected for the team or just for you.",
       skills: "Markdown instructions agents open when they need them.",
       storage: "Where the workspace's files live.",
       usage: "The workspace's AI accounts, and how much each person and agent uses.",
@@ -14875,19 +17504,19 @@ export const en = {
       generalPersonal: "What your agents know about you, and how this workspace works.",
       usagePersonal: "How much AI your agents use, and your plan.",
       connectorsPersonal: "Your apps and MCP servers, connected once for your agents.",
-      membersPersonal: "Who's here with you, and invitations.",
+      membersPersonal: "Who's here with you.",
       rolesPersonal: "What each person here can do. The owner can do everything.",
     },
     /**
      * The license's required attribution (AGPL-3.0 section 7(b), see NOTICE): translate it, but keep
-     * "agentes.chat" and "Codari Global, LLC" and its meaning.
+     * "agentes.chat" and "AGENTESCHAT, LLC" and its meaning.
      */
     about: {
-      basedOn: "Based on <site>agentes.chat</site> by Codari Global, LLC",
+      basedOn: "Based on <site>agentes.chat</site> by AGENTESCHAT, LLC",
       version: "Version",
       license: "Free software under the <license>GNU Affero General Public License v3</license>, with no warranty.",
       source: "Source code",
-      copyright: "Copyright © 2026 Codari Global, LLC and contributors",
+      copyright: "Copyright © 2026 AGENTESCHAT, LLC and contributors",
     },
     title: "Settings",
     account: {
@@ -14924,6 +17553,8 @@ export const en = {
         /** The words of every message, in every look, smallest step first. */
         textSize: "Text size",
         textSizeHelp: "Of messages, in every conversation and on all your devices",
+        fullMessages: "Show full messages",
+        fullMessagesHelp: "Show long messages without “See more”, in every conversation and on all your devices",
         /** On the phone, under the text size slider: the choice sizes the whole app, on top of the system's own setting. */
         textSizePhone: "Applies to the whole app, on top of your phone's text size",
         textXs: "Smaller",
@@ -14942,6 +17573,50 @@ export const en = {
           new3: "2 left, I'll call tomorrow.",
           new4: "Report updated in the Drive.",
           newCount: "4 new",
+        },
+        /** A conversation's background, mine alone. */
+        wallpaper: {
+          title: "Background",
+          help: "Changes only for you, on all your devices",
+          rowHelp: "Behind every conversation, only for you, unless a conversation has its own from its menu.",
+          rowSub: "Only for you, in every conversation",
+          onlyHere: "Only in {{name}}, only for you",
+          none: "No background",
+          sameAsOthers: "Same as other conversations",
+          sameShort: "Same as others",
+          sky: "Sky",
+          drawings: "Drawings",
+          color: "Color",
+          photos: "Your photos",
+          choosePhoto: "Choose a photo",
+          skyAutoHelp:
+            "The first one follows the conversation: a sky of the agent's color in a DM, the workspace's sky in channels.",
+          skyAutoHelpDms: "The first one is a sky of the agent's color.",
+          skyAutoHelpChannels: "The first one is the workspace's sky.",
+          neutral: { paper: "Paper", mist: "Mist", sand: "Sand" },
+          name: {
+            skyAuto: "The conversation's sky",
+            skyAgent: "Agent's sky",
+            skyWorkspace: "Workspace's sky",
+            sky: "Sky · {{color}}",
+            drawingsAuto: "The conversation's drawings",
+            drawingsAgent: "Agent's drawings",
+            drawingsWorkspace: "Workspace's drawings",
+            drawings: "Drawings · {{color}}",
+            crowd: "Agents",
+            color: "Color · {{color}}",
+            photo: "Your photo",
+          },
+          choose: "Choose…",
+          menu: "Conversation background…",
+          preview: "Preview",
+          usePhoto: "Use this photo",
+          dragHint: "Drag the photo to choose the part that shows",
+          dim: "Darken in dark mode",
+          sending: "Sending the photo…",
+          failed: "Couldn't save the background. Try again.",
+          /** The web's picker: closes it (each choice is already saved). */
+          done: "Done",
         },
       },
       agentStyle: "How agents talk to you",
@@ -14993,8 +17668,8 @@ export const en = {
       /** Behind the row's ⓘ. */
       teamHelp: "Channels, people and roles for working together. Switching changes only what's in sight.",
       personalHelp: "Simpler, for you and your family if you invite them. Switching changes only what's in sight.",
-      toTeam: "Switch to team…",
-      toPersonal: "Switch to personal…",
+      toTeam: "Switch to team",
+      toPersonal: "Switch to personal",
     },
     telemetry: {
       title: "Usage statistics",
@@ -15002,6 +17677,7 @@ export const en = {
       help: "Counts such as people, agents, machine sizes, AI tokens used and how much data the agents' browsers send and receive. Never messages, files, names or sites.",
       envOff: "Turned off in this server's settings (TELEMETRY=off).",
       envOffDesktop: "Turned off in the agentes.chat app on this server's computer (Preferences\u00a0›\u00a0Servers).",
+      envOffHere: "Turned off in the agentes.chat app on this computer.",
       see: "See what is sent",
       dialogTitle: "What is sent",
       dialogText: "Once a day. This is the next report, exactly.",
@@ -15041,6 +17717,17 @@ export const en = {
     keySaid: "{{provider}} said: {{said}}",
     keyInUse: "{{agents}} still think with this key.",
     keyManagement: "This is a management key. Create a regular API key.",
+    /** Saving a key the workspace already had: that key was updated, no copy added. */
+    keyResaved: "This key was already saved. I updated its details.",
+    /** Quiet, on a key's line: the same key saved more than once, this row standing for all. */
+    keyCopies_one: "{{count}} identical copy",
+    keyCopies_other: "{{count}} identical copies",
+    keyMore: "Actions for {{label}}",
+    removeCopies: "Remove copies",
+    removeCopiesTitle: "Remove the copies of {{label}}?",
+    removeCopiesText: "One key stays. Agents, the default and past spend on the copies move to it.",
+    copiesRemoved_one: "{{count}} copy removed.",
+    copiesRemoved_other: "{{count}} copies removed.",
     autoModels: {
       title: "Models for Automatic",
       text: "Each task gets one of these, by how hard it is.",
@@ -15084,7 +17771,7 @@ export const en = {
     defaultBudgetHelp:
       "Agents without a budget of their own use this one. Change an agent's own budget on its page. Admins see amounts, members see percentages.",
     usageTotal: "{{amount}} in total since {{since}}",
-    kinds: { agent: "Agents", router: "Router", embedding: "Search", summary: "Summaries" },
+    kinds: { agent: "Agents", router: "Router", embedding: "Search", summary: "Summaries", image: "Images" },
     usageCalls_one: "{{count}} call",
     usageCalls_other: "{{count}} calls",
     usageHidden: "Only admins see the workspace's usage.",
@@ -15122,8 +17809,8 @@ export const en = {
         state: { off: "Off", on: "On", invalid: "Invalid key" },
         line: {
           invalid: "This server can't read this key. Paste it again.",
-          env: "Set in this server's settings (GIPHY_API_KEY).",
-          envInvalid: "This key can't be used. Change it in this server's settings (GIPHY_API_KEY).",
+          env: "Set in this server's settings (`GIPHY_API_KEY`).",
+          envInvalid: "This key can't be used. Change it in this server's settings (`GIPHY_API_KEY`).",
         },
         invalid: "GIPHY didn't accept this key. Copy it again from GIPHY Developers.",
         remove: {
@@ -15299,11 +17986,61 @@ export const en = {
     },
     actions: { raise: "Raise to {{amount}} this month", refuse: "Decline", see: "See their usage" },
   },
+  /** Settings › AI and usage: what a plan's use was for, under an account's agents. */
+  usage: {
+    kinds: {
+      label: "By kind",
+      /** Runs one agent started by handing work to another (tell_agent, ask_agent). */
+      handoffs: "Handoffs between agents",
+      people: "Conversations with people",
+      routines: "Routines",
+    },
+    hint: {
+      /** Shown when handoffs led the week's use; followed by the `message` link. */
+      handoffs: "Most of it came from handoffs between agents.",
+      /** Opens the DM with the agent that took most of the handed work. */
+      message: "Message {{name}}",
+    },
+  },
   usageViews: {
     signedOut: "Signed out",
     whose: "{{name}}'s",
+    /** An order of use (ADR 0041 §6): the accounts of one plan a run goes through at a limit, first to last. */
+    order: {
+      title: "{{plan}} · Order of use",
+      hint: "At a limit, agents go on with the next account that has room and go back to the first when it resets.",
+      terms: "Using several {{plan}} accounts is a gray area in {{plan}}'s terms.",
+      /** What the terms line's ⓘ is about ("common.about"). */
+      termsLabel: "{{plan}}'s terms",
+      termsHint: "A plan is meant for one person, so check {{plan}}'s terms before your agents rely on several.",
+      /** The grip's name: drag it, or press it for Move up and Move down. */
+      move: "Move {{name}}, number {{n}} in the order",
+    },
+    serves: {
+      everyone: "Everyone uses it",
+      onlyYou: "Only you use it",
+      only: "Only {{name}} uses it",
+      someone: "its owner",
+      label: "Who uses it",
+      all: "Everyone in the workspace",
+      me: "Only me",
+      savedEveryone: "Everyone in the workspace uses this plan now.",
+      savedOwner: "Only you use this plan now.",
+    },
+    logins_one: "{{count}} login",
+    logins_other: "{{count}} logins",
     noWindows: "The limit shows up after this account is used again.",
     unused: "No agent uses this account.",
+    /** The quota per model (OpenCode Go's caps): one line each, under the account's windows. */
+    models: {
+      /** A model out of quota: `when` is when it resets (`usageWhen`). */
+      exhausted: "No quota left · resets {{when}}",
+      exhaustedUnknown: "No quota left",
+      /** The plan refused the model for this key: it or the account is switched off there. */
+      off: "Turned off",
+      region: "Needs the Global region",
+      inactive: "No active subscription",
+    },
     usesNow: "uses it now",
     monthTokens: "{{tokens}} tokens this month",
     tokens: "{{tokens}} tokens",
@@ -15350,7 +18087,7 @@ export const en = {
       nowTag: "now",
       api: "API",
       apiMain: "{{name}} thinks through the API",
-      apiFallback: "Outside the plan: quick decisions, and when the plan couldn't answer",
+      apiFallback: "Outside the plan: quick decisions",
       removed: "Removed account",
       removedSub: "No longer on any computer",
       old: "{{brand}}, from before accounts",
@@ -15370,6 +18107,8 @@ export const en = {
   format: {
     // i18next's `list` format: Intl.ListFormat in the language ("Ada, Atlas, and Theo", "Ada、Atlas、Theo"). Keep as is.
     list: "{{names, list}}",
+    /** After the names a list shows, one per line: how many more it holds. */
+    andMore: "and {{count}} more",
     usd: "US$ {{value}}",
     tokensMillions: "{{value}}M",
     tokensThousands: "{{value}}k",
@@ -15386,6 +18125,22 @@ export const en = {
     tomorrowAt: "tomorrow {{time}}",
   },
   work: {
+    /** A handed work's line under the reply that handed it: "Handed to [face] Atlas · working on it · step 3 of 5 · 2 min". */
+    handed: {
+      lead: "Handed to <0/>{{name}}",
+      working: "working on it",
+      done: "done in {{duration}}",
+      waitingYou: "waiting for your answer",
+      waiting: "waiting for an answer",
+      waitingApprovalYou: "waiting for your approval",
+      waitingApproval: "waiting for approval",
+      waitingComputer: "waiting for the computer",
+      paused: "paused at the plan's limit",
+      queued: "in line",
+      failed: "didn't finish",
+      stopped: "stopped",
+      step: "step {{current}} of {{total}}",
+    },
     duration: {
       minutes_one: "{{count}} min",
       minutes_other: "{{count}} min",
@@ -15430,8 +18185,8 @@ export const en = {
     /** The same line when the agent's computer reads the message only once its current round of work ends. */
     statusReplyTurn:
       "I'm in the middle of a task ({{duration}}) and can't answer yet. Your message is queued and I'll read it when this round of work ends.",
-    /** The same line for an agent waiting in line for its computer: {{duration}} is how long it has waited. */
-    statusReplyQueued: "Waiting for the computer ({{duration}}). I'll read your message when my turn comes.",
+    /** The same line for an agent waiting its turn in line, whatever holds it: {{duration}} is how long it has waited. */
+    statusReplyQueued: "In line ({{duration}}). I'll read your message when my turn comes.",
     /** The same line for an agent whose computer is away. */
     statusReplyAway: "Waiting for my computer to come back. I'll read your message as soon as it's back.",
     /** The same line for an agent waiting on its plan's limit: {{when}} is when it is back ("Wednesday at 14:00"). */
@@ -15475,9 +18230,29 @@ export const en = {
     working: "In the background",
   },
   chat: {
+    /** A card's kind when another agent than the conversation's own asks (work handed to it). */
+    request: { asksYou: "{{name}} asks you" },
     speedFallback: {
       text: "ChatGPT refused Fast speed on this account or model, so this reply came at standard speed.",
       action: "Open agent",
+    },
+    /**
+     * Under the right hand's reply when another AI answered for its plan (`meta.noAi.standIn`): `via` is what answered
+     * (a key's or a plan's name, "Acme OpenAI"), `plan` the plan that couldn't ("Claude Max"). "Change" opens its page.
+     */
+    standIn: {
+      needsComputer: "Answered with {{via}}: {{plan}} needs a computer.",
+      away: "Answered with {{via}}: the computer {{plan}} is on is away.",
+      notShared: "Answered with {{via}}: {{plan}} serves only its owner.",
+      limit: "Answered with {{via}}: {{plan}} reached its limit.",
+      cant: "Answered with {{via}}: {{plan}} can't think right now.",
+      change: "Change",
+    },
+    /** Under a reply "Automático" gave with another model because the plan refused the one it maps to (`meta.modelStandIn`). */
+    modelStandIn: {
+      text: "{{plan}} refused {{from}} with this key. I answered with {{to}}, which works with it.",
+      useAll: "Use {{model}} for all",
+      pick: "Choose model",
     },
     /** When a waiting agent goes on (`usageWhen`). */
     usageWhen: { at: "at {{time}}", on: "{{day}} at {{time}}", date: "on {{date}}" },
@@ -15499,6 +18274,15 @@ export const en = {
       answered: "{{to}} answered. {{from}} is writing",
       writing: "{{from}} is writing",
       clock: "Waiting for {{time}}",
+      /** One agent at work on what another handed it: its name, then its step (`chat.activity.*`: "reading the Drive"). */
+      doing: "{{name}} {{doing}}",
+      yourApproval: "{{name}} is waiting for your approval",
+      yourAnswer: "{{name}} is waiting for your answer",
+      /** The work handed off came back: whoever handed it writes now. */
+      done: "{{to}} is done. {{from}} is writing",
+      notDone: "{{to}} didn't finish. {{from}} is writing",
+      /** The bar's tip over work handed off. */
+      handedOff: "{{to}} is working on what {{from}} handed off",
     },
     /** The card on top of a reply when the agent asked another agent (`meta.consulted`). */
     consultation: {
@@ -15525,6 +18309,7 @@ export const en = {
       waitingProvider: "{{name}}: the AI provider is down · retries by itself",
       /** Its part done, the agent waits on what it handed to other agents. */
       waitingAgents: "{{name}} handed part of it on and is waiting to hear back",
+      queued: "{{name}} is in line",
     },
     /**
      * The slim row before a reply whose agent asked others first ("Theo ⇄ Atlas · 2 min"): the short word after the
@@ -15540,8 +18325,14 @@ export const en = {
       waitingInput: "waiting for an answer",
       waitingComputer: "waiting for its computer",
       waitingProvider: "AI provider down",
+      /** What it waits on is yours to give: the row turns amber. */
+      waitingYourApproval: "waiting for your approval",
+      waitingYourAnswer: "waiting for your answer",
+      queued: "in line",
       /** Its part done, it waits on agents it handed some to. */
       handedOn: "waiting on other agents",
+      /** On a consulted agent's choice in the dialog of a row of several: its answer came. */
+      answered: "answered",
       noAnswer: "didn't answer",
       /** Work handed off that its agent couldn't finish. */
       notFinished: "didn't finish",
@@ -15551,12 +18342,6 @@ export const en = {
       labelMany: "{{from}}'s talks with {{to}}",
     },
     /** A question opened in the panel over the conversation ("Theo ⇄ Iris"): what the two agents said, read only. */
-    /** A long message from one agent to another, folded to its first paragraph: the whole opens in its thread. */
-    talk: {
-      readAll: "Read all",
-      more_one: "{{count}} more line",
-      more_other: "{{count}} more lines",
-    },
     consultPanel: {
       label: "Conversation between {{from}} and {{to}}",
       /** The phone's bar (the web draws the arrows as an icon between the names). */
@@ -15588,14 +18373,6 @@ export const en = {
       agentNote: "Note from {{from}}",
       agentNoteAnon: "Note from another agent",
       waitResult: "What {{name}} was waiting for came in",
-      followUp: "{{name}} will be back at {{time}} to «{{about}}»",
-      followUpOn: "{{name}} will be back on {{day}} at {{time}} to «{{about}}»",
-      followUpDone: "{{name}} came back at {{time}} to «{{about}}»",
-      followUpDoneOn: "{{name}} came back on {{day}} at {{time}} to «{{about}}»",
-      followUpCanceled: "{{name}} won't be back at {{time}} to «{{about}}»",
-      followUpCanceledOn: "{{name}} won't be back on {{day}} at {{time}} to «{{about}}»",
-      followUpWake: "{{name}} is back to «{{about}}»",
-      followUpCancel: "Cancel",
       other: "Notice for {{name}}",
       wakeSkipped: "{{name}}'s mention didn't reach {{agents}}",
       /** The same, on an older line that didn't keep whom. */
@@ -15664,6 +18441,8 @@ export const en = {
         plan: "The plan isn't approved yet",
         tooMany: "Too many to approve in a row",
         off: "Running commands is off for this agent",
+        /** Its agent is set to always ask: the command goes to a person first. */
+        asks: "This agent asks before every change",
         team: "The team already did this",
         /** In a personal workspace (ADR 0159). */
         teamPersonal: "This was already done",
@@ -15675,6 +18454,11 @@ export const en = {
         shell: "It runs other commands inside it",
         inline: "It runs code given inline",
         global: "It installs for the whole computer",
+        privilege: "It asks for more rights",
+        reverseShell: "It hands this computer's shell to another machine",
+        destroy: "It would wipe the computer or a whole home folder",
+        network: "It changes or goes around the proxy and firewall",
+        otherUser: "It reaches into another user's files",
         rules: "Outside what agents may do on their own",
         /** Calls the Tool Gateway refused (`data.refusal`): the agent lacks access, the kind of work, a key, a repository. */
         noAccess: "The agent doesn't have access to this",
@@ -15713,6 +18497,7 @@ export const en = {
         runningCode: "Ran code on the PC",
         browsing: "Used the browser",
         pcFiles: "Worked on the PC files",
+        creatingImage: "Made an image",
         exportingFile: "Saved a file to the Drive",
         importingFile: "Brought a file from the Drive",
         runningSkillScript: "Ran a script of the skill {{app}}",
@@ -15729,6 +18514,7 @@ export const en = {
         listingTasks: "Looked at the tasks",
         checkingTask: "Checked a task",
         cancelingTask: "Canceled a task",
+        keepingRunning: "Kept a program running",
         uploadingArtifact: "Sent a file to the Drive",
         gettingContext: "Looked up the context",
         cancelingReminder: "Canceled a reminder",
@@ -15747,6 +18533,7 @@ export const en = {
         offeringConnectApp: "Offered to connect an app",
         offeringSkill: "Offered to install a skill",
         updatingSkills: "Updated skills",
+        creatingSkill: "Created a skill",
         offeringInvites: "Offered to invite people",
         proposingAgent: "Proposed an agent",
         askingAgent: "Asked another agent",
@@ -15785,6 +18572,7 @@ export const en = {
         sendingDm: "Sent a direct message",
         settingStatus: "Updated its status",
         settingReplyStyle: "Adjusted how it replies",
+        settingCommitLine: "Adjusted the agents' line on commits",
         sendingFeedback: "Asked to send feedback",
         offeringFeedback: "Offered to report a problem",
         deletingRoutine: "Deleted a routine",
@@ -15798,6 +18586,7 @@ export const en = {
         usingTool: "Used the {{tool}} tool",
         thinking: "Thought",
         typing: "Wrote",
+        recordingVoice: "Recorded audio",
         writing: "Wrote",
       },
     },
@@ -15807,6 +18596,8 @@ export const en = {
       updatingRoutine: "changing a routine",
       thinking: "working",
       typing: "typing",
+      /** A person recording a voice message, after their name: "Marina is recording audio…". */
+      recordingVoice: "recording audio",
       writing: "writing",
       consulting: "checking {{app}}",
       creatingIssue: "creating a task",
@@ -15827,6 +18618,7 @@ export const en = {
       runningCode: "running code",
       browsing: "using the browser",
       pcFiles: "working with the PC's files",
+      creatingImage: "making an image",
       exportingFile: "saving a file to Drive",
       importingFile: "bringing a file from Drive",
       runningSkillScript: "running a script from the skill {{app}}",
@@ -15843,6 +18635,7 @@ export const en = {
       listingTasks: "looking at the tasks",
       checkingTask: "checking a task",
       cancelingTask: "canceling a task",
+      keepingRunning: "keeping a program running",
       uploadingArtifact: "sending a file to the Drive",
       gettingContext: "looking up the context",
       cancelingReminder: "canceling a reminder",
@@ -15861,6 +18654,7 @@ export const en = {
       offeringConnectApp: "getting an app ready to connect",
       offeringSkill: "getting a skill ready to install",
       updatingSkills: "updating skills",
+      creatingSkill: "creating a skill",
       offeringInvites: "getting invitations ready",
       proposingAgent: "proposing an agent",
       askingAgent: "asking another agent",
@@ -15899,6 +18693,7 @@ export const en = {
       sendingDm: "sending a direct message",
       settingStatus: "updating its status",
       settingReplyStyle: "adjusting how it replies",
+      settingCommitLine: "adjusting the agents' line on commits",
       sendingFeedback: "preparing feedback",
       offeringFeedback: "preparing a report",
       deletingRoutine: "deleting a routine",
@@ -16010,14 +18805,27 @@ export const en = {
       provider_wait_ours:
         "Something on our side is blocking my AI, not your account. I'll answer as soon as it's fixed.",
       provider_back: "My AI is back.",
-      brain_busy: "My computer is busy with other tasks right now. I'll answer as soon as it's free.",
-      brain_queued: "Still in line for the computer. I'll answer as soon as it has room.",
+      confidential_removed: "Removed: confidential text is kept for {{days}} days.",
+      brain_queued: "Still in line. I'll answer as soon as my turn comes.",
       brain_interrupted: "{{brain}} stopped before finishing. Already done, not repeated: {{tools}}.",
       plan_limit_cut: "I stopped at the {{plan}} plan's limit. I'll pick up where I left off {{when}}, when it resets.",
       plan_limit_cut_unknown:
         "I stopped at the {{plan}} plan's limit. I'll pick up where I left off as soon as it resets.",
-      plan_limit_wait: "The {{plan}} plan hit its limit. I'll answer {{when}}, when it resets.",
+      plan_limit_wait:
+        "The {{plan}} plan hit its limit. I'll answer {{when}}, when it resets. If it's freed sooner on {{plan}}, I'll notice and answer right away.",
       plan_limit_wait_unknown: "The {{plan}} plan hit its limit. I'll answer as soon as it resets.",
+      /** The run went on with the next account of the order at its plan's limit (ADR 0041 §6). */
+      plan_account_moved: "The {{from}} account hit its limit. I'm going on with the {{to}} account.",
+      /** The same, for long work at the pause line (99%) of its account. */
+      plan_account_moved_line: "The {{from}} account is near its limit. I'm going on with the {{to}} account.",
+      /** The same, for long work that would go on into its account's paid extra usage. */
+      plan_account_moved_extra:
+        "The {{from}} account would go into paid extra usage. I'm going on with the {{to}} account.",
+      /** Every account of the order at its limit: `accounts` of them, `when` the first resets. */
+      plan_limit_all_wait:
+        "All {{accounts}} {{plan}} accounts hit their limit. I'll answer {{when}}, when the first one resets.",
+      plan_limit_all_wait_unknown:
+        "All {{accounts}} {{plan}} accounts hit their limit. I'll answer as soon as one resets.",
       /** A model's own limit on a plan whose models each have one (OpenCode Go): the others still answer. */
       plan_model_limit_wait:
         "{{model}} hit its own limit on {{plan}}. The plan's other models keep working: change {{agent}}'s model or wait for it to reset {{when}}.",
@@ -16063,6 +18871,7 @@ export const en = {
       no_ai_plan_limit: "I can't answer now: the plan I think with reached its limit.",
       no_ai_plan_not_shared:
         "I can't answer you on the workspace's plan: it serves only its owner. Connect your own plan and I will.",
+      no_ai_plans_not_yours: "The {{plan}} here is only {{owner}}'s. Connect your own and I'll answer.",
       no_ai_plan_unattended:
         "I didn't answer: the request didn't come from a person, and the workspace's plan serves only its owner.",
       no_ai_runner_outdated: "I can't answer now: the program on my plan's computer needs an update.",
@@ -16089,6 +18898,9 @@ export const en = {
       action_install_skill: "Install a skill",
       action_update_skills: "Update skills",
       action_approvals: "Approvals waiting for you",
+      /** The right hand's greeting to someone who just joined the workspace, the first message of their DM with it. */
+      welcome_member:
+        "You just joined {{org}}. **What do you look after here?** Tell me and I set up your first agent with you.",
       action_open_page: "Open a screen",
       calendar_proposal: "Event proposal: {{title}}",
       action_workspace: "Proposed a change in the workspace",
@@ -16106,6 +18918,11 @@ export const en = {
       file_saved: "File saved.",
       issue_work_start: "Please do task #{{number}}.",
       issue_taken: "Took task #{{number}}.",
+      /** An outside chat surface (ADR 0187) unlinked the account on its own; the surface no longer reaches them. */
+      surfaceUnlinked:
+        "{{surface}} was unlinked because its identity changed. Link it again in Settings if it was you.",
+      /** A voice note sent from an outside chat surface had no words to post; the line goes back out there. */
+      surfaceVoiceDropped: "I couldn't make out that voice note. Could you send it again, or type it?",
       done: "Done.",
       stretch_paused_runs_one: "{{agents}} paused to check with you before going on",
       stretch_paused_runs_other: "{{agents}} paused to check with you before going on",
@@ -16201,6 +19018,55 @@ export const en = {
       label: "Update file",
       description: "Saves a new version of a file.",
     },
+    read_spreadsheet: {
+      label: "Read spreadsheet",
+      description: "Reads a spreadsheet's cells and formulas.",
+    },
+    read_presentation: {
+      label: "Read presentation",
+      description: "Reads a presentation's slides and notes.",
+    },
+    read_canvas: {
+      label: "Read canvas",
+      description: "Reads what is on a canvas: images, notes and text.",
+    },
+    create_spreadsheet: {
+      label: "Create spreadsheet",
+      description: "Makes a spreadsheet, with its first rows.",
+    },
+    edit_spreadsheet: {
+      label: "Edit spreadsheet",
+      description: "Changes cells, formulas, formats, rows and sheets while people watch.",
+    },
+    create_presentation: {
+      label: "Create presentation",
+      description: "Makes a presentation with its slides.",
+    },
+    edit_presentation: {
+      label: "Edit presentation",
+      description: "Changes slides, their text, pictures, charts and notes while people watch.",
+    },
+    create_canvas: {
+      label: "Create canvas",
+      description: "Makes a canvas for images, notes and ideas.",
+    },
+    edit_canvas: {
+      label: "Edit canvas",
+      description: "Adds and moves notes, text, pictures and arrows.",
+    },
+    read_document: {
+      label: "Read document",
+      description: "Reads a document's text, block by block.",
+    },
+    edit_document: {
+      label: "Edit document",
+      description: "Writes, rewrites and formats a document's text while people watch.",
+    },
+    generate_image: {
+      label: "Generate images",
+      description:
+        "Makes images with the workspace's image AI, in the conversation or on a canvas. Paid from its budget.",
+    },
     list_issues: {
       label: "View tasks",
       description: "Lists and opens tasks.",
@@ -16240,6 +19106,10 @@ export const en = {
     update_skill: {
       label: "Fix skill",
       description: "Fixes a skill it loaded. A person's skill becomes a proposal.",
+    },
+    create_skill: {
+      label: "Create skill",
+      description: "Turns what it did into a skill of its own when a person asks. Shows in Skills, with Undo.",
     },
     schedule_reminder: {
       label: "Create reminder",
@@ -16560,6 +19430,18 @@ export const en = {
       waitingNext: "<who/> goes on by himself when {{holder}} is done",
       waitingNext_female: "<who/> goes on by herself when {{holder}} is done",
       controlSub: "Browser profile · you're in control · the agents wait",
+      controlSubOn: "On {{machine}} · you're in control · the agents wait",
+      loginTitle: "Sign in to the {{name}} profile",
+      opening: "Opening the {{name}} profile…",
+      backWhen_one: "When you're done, {{count}} agent uses this profile.",
+      backWhen_other: "When you're done, {{count}} agents use this profile.",
+      backWhenNone: "When you're done, hand the profile back.",
+      handBack: "Hand back to the agents",
+      toolOff: "The browser is off on this computer.",
+      toolOffOther: "The browser is off on {{name}}'s computer.",
+      loginOn: "Turn on and sign in",
+      turningOn: "Browser on at {{machine}}. Opening the profile…",
+      notOpened: "The browser didn't open on {{machine}}.",
       backTitle: "Hand {{name}} back to the agents",
       done: "Done. <names/> can use this profile now",
       doneOne: "Done. <names/> can use this profile now",
@@ -16568,7 +19450,7 @@ export const en = {
     machine: {
       ready: "Ready",
       off: "Off",
-      offHelp: "Only someone at the computer turns it on, in the agentes.chat app: Preferences → Tools.",
+      offHelp: "Whoever connected the computer turns it on here or in the agentes.chat app on it: Preferences → Tools.",
       needsCommand: "Needs a command",
       notReady: "Not ready yet",
       turnOff: "Turn off",
@@ -16701,6 +19583,7 @@ export const en = {
       openingLong: "Opening {{name}}'s browser…",
       openingHelp: "The first time on this computer it may take a minute.",
       stuck: "Couldn't open {{name}}'s browser.",
+      noAnswer: "{{name}}'s browser didn't answer.",
       stuckHelp: "Try again restarts the browser. Logins stay saved.",
       subWorking: "{{name}} · {{now}}",
       subStarting: "{{name}} is opening the browser",
@@ -16891,6 +19774,25 @@ export const en = {
     writeAfter: ".",
     ask: "Need help? Ask the people who run this server.",
   },
+  /** Resetting a workspace (owners, Sua conta): what it made goes now and for good, and it starts over as a new one. */
+  resetOrg: {
+    /** The title over the account's danger rows for an owner: resetting, deleting the workspace, deleting the account. */
+    cardTitle: "Reset or delete",
+    row: {
+      title: "Reset workspace",
+      text: "Erases everything made in it and starts over, with the same people.",
+    },
+    goes: "Agents, conversations, DMs, files, tasks, routines and memory",
+    stays: "People, roles, invitations, AI accounts, computers and connectors",
+    fresh: "Then it opens like a new workspace, with the first setup",
+    /** Only where plans are billed. */
+    plan: "The plan stays the same, with no new charge",
+    now: "It happens at once and can't be undone.",
+    title: "Reset {{name}}?",
+    submit: "Reset workspace",
+    /** In the row once it started, until the workspace opens again as a new one. */
+    resetting: "Resetting {{name}}…",
+  },
   /** Deleting a workspace (owners): it turns read-only for everyone now and is deleted for good 7 days later. */
   deleteOrg: {
     card: {
@@ -16916,6 +19818,20 @@ export const en = {
     plan: "Its plan stops renewing. Nothing is refunded.",
     type: "Type {{name}} to confirm",
     submit: "Delete workspace",
+  },
+  /** “This wasn't me”: the page the notice to an account's old address links to (`/email-undo?token=`). */
+  emailUndo: {
+    title: "Bring your email back",
+    lead: "The address this link went to becomes your account's email again. Every session is signed out, the AI apps are disconnected and ways to sign in added since the change stop working. The password is cleared too, and “Forgot my password” sets the next one.",
+    button: "This wasn't me",
+    done: "Your email is back",
+    /** `{{email}}`: the address the account has again. Then: Sign in. */
+    doneLead:
+      "{{email}} is your account's email again. Every session is signed out, ways to sign in added since the change no longer work, and the password was cleared: “Forgot my password” sets the next one when you sign in.",
+    gone: "This link no longer works",
+    goneLead: "It was already used, or its 7 days are over.",
+    taken: "Another account has this email",
+    takenLead: "{{email}} is another account's email now, so it can't come back. Nothing changed.",
   },
   /** Proof that it's the person, before deleting (ADR 0088 §2): a code emailed to them, or their password. */
   proof: {
@@ -16969,8 +19885,6 @@ export const en = {
     card: {
       text: "Deletes your account in 7 days, in every workspace.",
       button: "Delete account…",
-      /** The card's title for an owner, over its two buttons: the account and the workspace. */
-      title: "Delete",
     },
     title: "Delete your whole account?",
     intro: "This deletes your whole account, not just one workspace.",
@@ -17003,6 +19917,9 @@ export const en = {
     serverOwner: "You set up this server. Its own settings will have no owner here, only in its environment.",
     blockers: "Before you can delete it",
     soleOwner: "You're the only owner of {{name}}. Make someone else an owner, or delete {{name}}.",
+    /** Everyone else in it is an outside collaborator, who can't be an owner (ADR 0191). */
+    soleOwnerOutside:
+      "You're the only owner of {{name}}, and its other people are outside collaborators, who can't be owners. Invite a member and make them an owner, or delete {{name}}.",
     /** The same, for a workspace still in its onboarding: it has no People page yet. */
     soleOwnerSettingUp:
       "You're the only owner of {{name}}. Finish setting it up to make someone else an owner, or delete {{name}}.",
@@ -17027,6 +19944,12 @@ export const en = {
     seatsPaid_other: "{{count}} paid seats",
     noLimit: "No limit",
     ownBucket: "On your own bucket, with no limit from us",
+  },
+  /** The referral service (ADR 0192): this server knows nothing of the program, only the way there. */
+  referrals: {
+    /** In the person's own menu, under Settings. */
+    open: "Refer and earn",
+    failed: "Couldn't open it now. Try again in a moment.",
   },
   /** A workspace's limits, set by the billing service (ADR 0079): people and files. */
   limits: {
@@ -17056,9 +19979,9 @@ export const en = {
       meter: "You've used {{used}} of {{limit}}.",
       near: "You've used {{used}} of {{limit}}. Uploads pause at the limit, and nothing is deleted.",
       full: "Uploads paused at {{limit}}. Nothing was deleted.",
-      fullAdmin:
-        "Change the agentes.chat plan, delete files you no longer use, or connect your own bucket in Settings\u00a0›\u00a0Storage.",
+      fullAdmin: "Change the agentes.chat plan, delete files you no longer use, or connect your own bucket.",
       dailyFull: "Today's uploads reached {{limit}}. You can upload again in a few hours.",
+      connectBucket: "Connect a bucket",
     },
   },
   computerSetup: {
@@ -17288,6 +20211,8 @@ export const en = {
       off: "Off",
       unavailable: "Not available",
       offHelp: "Turn on the screens and commands on this computer:",
+      /** Whoever connected it turns each switch on with the buttons that follow. */
+      offOne: "This computer needs both the screen and commands on.",
       linuxOnly: "Agents use apps on their own screens only on Linux computers.",
       agent: "{{name}} can't use apps on his screen on {{computer}} yet.",
       agent_female: "{{name}} can't use apps on her screen on {{computer}} yet.",
@@ -17376,6 +20301,8 @@ export const en = {
       unavailable: "{{name}}'s screen can't be shown right now",
       unavailableHelp: "Try again in a moment.",
       screensOff: "Screens are off on {{computer}}. Turn them on there:",
+      /** The buttons that turn them on follow. */
+      screensOffOne: "Screens are off on {{computer}}.",
       screensMissing: "{{computer}} can't show screens yet. On it:",
       outdated: "Update agentes on {{computer}} to see {{name}}'s screen.",
       noScreen: "{{name}} has no screen to show here",
@@ -17387,6 +20314,23 @@ export const en = {
     },
     closeAsk: "{{name}} waits 2 min for you to come back.",
     openAccess: "Open Tools and access",
+    /**
+     * What the agent keeps running on its computer (`keep_running`, ADR 0176): each line what is kept, then which
+     * agent kept it, since when and until when. Never "awake", "sleep" or "pause": people see what runs for them.
+     */
+    kept: {
+      title: "Kept running",
+      meta: "{{name}} · since {{since}} · {{until}}",
+      untilStops: "until it stops",
+      untilClosed: "until its browser closes",
+      until: "until {{time}}",
+      stop: "Stop",
+      stopOf: "Stop “{{what}}”",
+      actions: "Actions for “{{what}}”",
+      count_one: "Kept running · {{count}}",
+      count_other: "Kept running · {{count}}",
+      stopFailed: "Couldn't stop it. Try again.",
+    },
     phone: {
       now: "Now",
       trackpad: "Trackpad",
@@ -17395,8 +20339,22 @@ export const en = {
       turn: "Turn sideways",
       upright: "Turn upright",
       message: "Message {{name}}",
-      chooseOnWeb: "Choose it on agentes.chat, in Settings\u00a0›\u00a0Devices.",
     },
+  },
+  /** Agora (ADR 0128 addendum): the whole workspace's work in one place, a button beside "Go to…" and its list. */
+  agora: {
+    label: "Now",
+    /** Its tip, one line each. */
+    working_one: "{{count}} agent working",
+    working_other: "{{count}} agents working",
+    waiting_one: "{{count}} thing waiting for you",
+    waiting_other: "{{count}} things waiting for you",
+    sections: { you: "Waiting for you", working: "Working", waiting: "On hold" },
+    /** Under "Waiting for you", or alone: the sidebar's count of everything that waits on you, a link to that page. */
+    allWaiting_one: "{{count}} thing waiting for you",
+    allWaiting_other: "All {{count}} things waiting for you",
+    actions: "More actions",
+    openManager: "Open the task manager",
   },
   taskManager: {
     title: "Task manager",
@@ -17434,13 +20392,12 @@ export const en = {
       asked: "Asked by people",
       delegated: "Asked by agents",
       background: "Routines in the background",
+      returns: "Follow-ups",
     },
     state: {
       working: "Working",
-      ok: "Waits for your ok",
+      ok: "Waiting for you",
       answer: "Waits for an answer",
-      computerBusy: "Waits for room on the computer",
-      inLine: "In line · #{{position}}",
       computerOffline: "Waits for the computer",
       plan: "Waits for the plan",
       budget: "Waits for the budget",
@@ -17466,7 +20423,6 @@ export const en = {
       computerWait: "Waiting for the computer",
       computerWaitNext: "Back when it's ready",
       computerOfflineNext: "Back when it's on",
-      computerBusyNext: "Starts when there's room",
       okNext: "Goes on once someone approves",
       answerNext: "Goes on once someone answers",
       back: "Back {{when}}",
@@ -17532,6 +20488,10 @@ export const en = {
       stopped: "You stopped it",
       stoppedBy: "{{name}} stopped it",
       failed: "Couldn't finish",
+      /** A follow-up that won't come: canceled by its time (the agent or the person left), by you, by someone. */
+      returnCanceled: "Follow-up canceled",
+      returnCanceledYou: "You canceled the follow-up",
+      returnCanceledBy: "Follow-up canceled by {{name}}",
       none: "Nothing ended today yet.",
     },
     empty: {
@@ -17560,10 +20520,18 @@ export const en = {
     failed: "Couldn't stop it. Try again.",
     queue: {
       see: "See the line",
-      full_one: "Full · {{count}} in line",
-      full_other: "Full · {{count}} in line",
+      inLine_one: "{{count}} in line",
+      inLine_other: "{{count}} in line",
       room: "Has room",
       computers: "Computers",
+    },
+    /** Above the cards: what holds the waiting tasks now, each cause with its way out. Hidden when nothing waits. */
+    capacity: {
+      label: "What holds the tasks",
+      today_one: "Today: {{count}} task done · {{waiting}} waiting",
+      today_other: "Today: {{count}} tasks done · {{waiting}} waiting",
+      usage: "See usage",
+      computers: "See computers",
     },
     cards: { label: "Agents", previous: "Previous agents", next: "More agents" },
     table: "Tasks",
@@ -17636,6 +20604,8 @@ export const en = {
       agent_archived: "{{name}} was archived.",
       audience: "Whoever set it up can no longer talk to {{name}}.",
       failing: "It failed several times in a row and stopped.",
+      /** A widget that stopped after failing in a row; `cause` is the last failure's own sentence. */
+      failingLast: "It stopped after 5 failures in a row. The last one: {{cause}}",
       stopped: "The update was stopped.",
       missing_credential: "{{name}} has no AI key or plan to work with.",
       timeout: "The update took too long.",
@@ -18225,13 +21195,24 @@ export const en = {
     savedEveryonePersonal: "Everyone here sees the file now.",
     savedPeople: "The people you chose see the file now.",
     savedConversation: "Only the conversation sees the file now.",
+    /**
+     * A file of the Drive itself lives with its maker (ADR 0157): its first choice, who has access, the link's warning,
+     * who may change it and the saved toast. `Maker`: someone else opens it (an administrator), `name` is its maker.
+     */
+    onlyYou: "Only you",
+    onlyMaker: "Only {{name}}",
+    onlyYouLink: "Only you can open this link.",
+    onlyMakerLink: "Only {{name}} can open this link.",
+    readOnlyDrive: "Only who made the file and administrators change who sees it.",
+    savedOnlyYou: "Only you see the file now.",
+    savedOnlyMaker: "Only {{name}} sees the file now.",
     undo: "Undo",
     fileRef: "File {{title}}",
     fileRefNone: "File without access",
     /** Who sees the file (`text`, no full stop) and who Compartilhar added. */
     also: "{{text}}. Also shared with {{who}}.",
     /** Copiar links of several files, some only their conversation opens: the toast, with Compartilhar. */
-    someOnlyHere: "Some of these links open only for who's in the file's conversation.",
+    someOnlyHere: "Some of these links open only for who already sees the file.",
   },
   /**
    * A link a person opens in a browser that the server refuses (ADR 0157): each cause's title and words, the button
@@ -18576,6 +21557,10 @@ export const en = {
     fileType: "Only photos and videos can be attached.",
     fileTooLarge: "{{name}} is too large: the limit is {{mb}} MB.",
     fileTooMany: "One feedback takes up to {{images}} photos and one video.",
+    attachPhoto: "Add a photo",
+    photosHint: "Up to {{images}} photos of {{imageMb}} MB.",
+    photoType: "Only photos can be attached.",
+    photosTooMany: "One feedback takes up to {{images}} photos.",
     send: "Send",
     thanks: "Delivered. Thank you.",
     reply: "Everything is read. An answer, if one is needed, comes to {{email}}.",
@@ -18604,6 +21589,1541 @@ export const en = {
       always: "Always send",
       alwaysOn: "From now on, reports like this go without asking.",
       askFirst: "Ask before sending",
+    },
+  },
+  /** "Send a report" on a self-hosted server: what the agentes.chat team gets, shown in full before it goes. */
+  problemReport: {
+    button: "Send a report",
+    title: "Send a report to agentes.chat",
+    lead: "The agentes.chat team gets: versions, which settings are set (never their values), what failed, and the last lines of the logs. No messages, pages, names or keys.",
+    noteLabel: "What happened? (optional)",
+    notePlaceholder: "What you were doing when it stopped",
+    emailLabel: "Email for a reply (optional)",
+    emailHelp: "Only if you want an answer.",
+    showAll: "See everything that's sent",
+    copy: "Copy report",
+    copied: "Copied",
+    send: "Send",
+    sending: "Sending…",
+    cancel: "Cancel",
+    loading: "Gathering the details…",
+    sentTitle: "Report {{id}} sent",
+    sentText: "If you write to us, mention this code.",
+    sentTextReply: "We'll answer at {{email}}. Mention this code if you write to us.",
+    copyCode: "Copy code",
+    done: "Done",
+    noLogComputer: "{{computer}} didn't answer, so its log isn't included.",
+    oldRunner: "The agentes.chat app on {{computer}} is too old to include its log. Update it there to include it.",
+    noServerLines: "The server's log lines are included only when the installation's owner sends a report.",
+    off: "Sending is off on this server (`PROBLEM_REPORT_URL=off`). Copy the report to share it.",
+    errorRate: "Too many reports in a short time. Try again in {{minutes}} min, or copy the report.",
+    errorUnreachable: "agentes.chat didn't answer. Try again, or copy the report.",
+    errorRefused: "agentes.chat didn't accept this report (it may be from an older version). Copy the report instead.",
+    errorPreview: "Couldn't gather the details: {{reason}}",
+    emailInvalid: "That email doesn't look right. Fix it or leave it empty.",
+    settingsTitle: "Something not working?",
+    settingsText: "Send the technical details to the agentes.chat team.",
+  },
+  /** Live files: spreadsheets, presentations and canvases people and agents edit together (ADR 0196). */
+  live: {
+    /** The presentation editor (ADR 0196 §2): its rail, stage, toolbar, notes and presenting. */
+    slides: {
+      rail: {
+        label: "Slides",
+        slide: "Slide {{n}}",
+        slideHidden: "Slide {{n}}, hidden",
+        more: "More for slide {{n}}",
+        newAfter: "New slide",
+        duplicate: "Duplicate",
+        hide: "Hide when presenting",
+        show: "Show when presenting",
+        presentFrom: "Present from here",
+        moveUp: "Move up",
+        moveDown: "Move down",
+        delete: "Delete slide",
+        deleted: "Slide deleted",
+      },
+      stage: {
+        /** What a screen reader calls the stage (`aria-roledescription`). */
+        role: "slide",
+        label: "Slide {{n}} of {{total}}",
+        /** Over an element several people chose: the first one's name and how many more. */
+        peers: "{{name}} +{{count}}",
+      },
+      /** The selection as Ask an agent's context line says it. */
+      selection: {
+        slide: "Slide {{n}}",
+      },
+      element: {
+        text: "Text",
+        shapeText: "Text in the shape",
+      },
+      /** An empty text box's hint while editing (never presenting or in thumbnails). */
+      placeholder: {
+        title: "Click to add a title",
+        text: "Click to add text",
+      },
+      tools: {
+        label: "Presentation tools",
+        undo: "Undo",
+        redo: "Redo",
+        newSlide: "New slide",
+        newSlideLayout: "New slide with a layout",
+        layout: "Layout",
+        theme: "Theme",
+        text: "Text box",
+        image: "Image",
+        shape: "Shape",
+        chart: "Chart",
+        table: "Table",
+        size: "Text size",
+        bold: "Bold",
+        italic: "Italic",
+        underline: "Underline",
+        strike: "Strikethrough",
+        textColor: "Text color",
+        alignLeft: "Align left",
+        alignCenter: "Center",
+        alignRight: "Align right",
+        bullets: "Bulleted list",
+        numbers: "Numbered list",
+        indent: "Indent",
+        outdent: "Outdent",
+        link: "Link",
+        fill: "Fill",
+        stroke: "Outline",
+        lineColor: "Line color",
+        arrowEnd: "Arrow at the end",
+        arrange: "Arrange",
+        delete: "Delete",
+      },
+      layout: {
+        label: "Slide layout",
+      },
+      layouts: {
+        title: "Title",
+        titleBody: "Title and text",
+        section: "Section",
+        twoColumns: "Two columns",
+        imageLeft: "Image on the left",
+        imageRight: "Image on the right",
+        bigNumber: "Big number",
+        quote: "Quote",
+        titleOnly: "Title only",
+        blank: "Blank",
+      },
+      theme: {
+        label: "Theme",
+      },
+      themes: {
+        sky: "Sky",
+        night: "Night",
+        paper: "Paper",
+        graphite: "Graphite",
+        contrast: "Contrast",
+        forest: "Forest",
+      },
+      shapes: {
+        rect: "Rectangle",
+        ellipse: "Ellipse",
+        triangle: "Triangle",
+        diamond: "Diamond",
+        arrow: "Arrow",
+        line: "Line",
+      },
+      arrange: {
+        front: "Bring to front",
+        forward: "Bring forward",
+        backward: "Send backward",
+        back: "Send to back",
+      },
+      /** Lining chosen elements up (one alone, with the slide). */
+      align: {
+        left: "Align left edges",
+        center: "Center horizontally",
+        right: "Align right edges",
+        top: "Align tops",
+        middle: "Center vertically",
+        bottom: "Align bottoms",
+      },
+      colors: {
+        label: "Colors",
+        automatic: "Automatic",
+        noFill: "No fill",
+        noStroke: "No outline",
+        text: "Theme text",
+        muted: "Theme quiet text",
+        accent: "Theme accent",
+        accent2: "Second theme accent",
+        red: "Red",
+        orange: "Orange",
+        yellow: "Yellow",
+        green: "Green",
+        teal: "Teal",
+        blue: "Blue",
+        purple: "Purple",
+        pink: "Pink",
+        white: "White",
+        black: "Black",
+      },
+      link: {
+        address: "Link address",
+        placeholder: "https://acme.com",
+        apply: "Apply",
+        remove: "Remove link",
+        invalid: "Use an address that starts with https:// or an email",
+      },
+      image: {
+        upload: "Upload from computer",
+        drive: "From the Drive",
+        driveTitle: "Pick an image from the Drive",
+        driveSearch: "Search images",
+        clearSearch: "Clear search",
+        driveEmpty: "No images in the Drive yet",
+        driveMore: "Show more",
+        /** An empty image slot of a layout, while editing. */
+        empty: "Add an image",
+        missing: "Image not found",
+        replace: "Replace image",
+        contain: "Show it whole",
+        cover: "Fill the box",
+        onlyImages: "Only PNG, JPEG, WebP and GIF images go on a slide",
+        tooBig: "Use images up to 25 MB",
+        uploading_one: "Uploading image…",
+        uploading_other: "Uploading {{count}} images…",
+      },
+      chart: {
+        newTitle: "New chart",
+        editTitle: "Chart data",
+        editData: "Edit data",
+        type: "Chart type",
+        types: {
+          bar: "Bars",
+          line: "Line",
+          pie: "Pie",
+          number: "Number",
+        },
+        title: "Title",
+        unit: "Unit",
+        value: "Value",
+        delta: "Change",
+        label: "Label",
+        labelN: "Label {{n}}",
+        series: "Series",
+        seriesName: "Name of series {{n}}",
+        /** A new chart's first labels: "Item 1", "Item 2"… */
+        item: "Item",
+        cell: "{{label}}, {{series}}",
+        removeSeries: "Remove {{name}}",
+        removeRow: "Remove {{label}}",
+        addRow: "Add row",
+        addSeries: "Add series",
+        notNumber: "Type a number",
+        fix: "Fill every value with a number to see the chart",
+        insert: "Insert chart",
+        save: "Save",
+      },
+      table: {
+        size: "Table size",
+        dims: "{{rows}} × {{cols}}",
+        edit: "Table",
+        rowAbove: "Add a row at the top",
+        rowBelow: "Add a row at the bottom",
+        colLeft: "Add a column on the left",
+        colRight: "Add a column on the right",
+        deleteRow: "Remove the last row",
+        deleteCol: "Remove the last column",
+        header: "First row as header",
+        cell: "Row {{row}}, column {{col}}",
+      },
+      notes: {
+        title: "Speaker notes",
+        short: "Notes",
+        placeholder: "Click to add notes for this slide",
+      },
+      present: {
+        label: "Presentation",
+        controls: "Presentation controls",
+        previous: "Previous slide",
+        nextSlide: "Next slide",
+        count: "{{n}} / {{total}}",
+        exit: "Exit",
+        elapsed: "Time",
+        next: "Next",
+        lastSlide: "This is the last slide",
+        noNotes: "No notes for this slide",
+        following: "Following {{name}}",
+      },
+      /** Someone else presents: a line over the editor. */
+      presenting: {
+        who: "{{name}} is presenting",
+        follow: "Follow",
+      },
+      menu: {
+        cut: "Cut",
+        copy: "Copy",
+        paste: "Paste",
+        duplicate: "Duplicate",
+        editText: "Edit text",
+        editTable: "Edit cells",
+        selectAll: "Select all",
+        delete: "Delete",
+      },
+      clipboard: {
+        blocked: "Use ⌘V or Ctrl+V to paste here",
+      },
+      empty: {
+        title: "No slides yet",
+        body: "Add a slide to start",
+        add: "Add slide",
+      },
+      errors: {
+        tooMany: "A presentation holds up to 300 slides, and a slide up to 200 elements",
+        tooLarge: "That text is too long for one box",
+        notFound: "Someone just deleted that",
+        invalid: "That change didn't fit the presentation",
+      },
+      /** An uploaded presentation, slides one under another. */
+      deck: {
+        label_one: "Presentation with {{count}} slide",
+        label_other: "Presentation with {{count}} slides",
+        number: "Slide {{n}}",
+        hiddenNumber: "Slide {{n}} · hidden",
+      },
+    },
+    /** Documents (ADR 0200): the page's toolbar, its text, pictures, tables and links, and its keys. */
+    doc: {
+      /** The text's name for screen readers. */
+      body: "Document text",
+      /** The title field's name (it renames the document). */
+      title: "Document title",
+      /** An empty document's hint. */
+      placeholder: "Start writing, or ask an agent in the conversation",
+      toolbar: "Document tools",
+      undo: "Undo",
+      redo: "Redo",
+      /** "Text ▾": the block's style. */
+      style: {
+        label: "Text style",
+        text: "Text",
+        h1: "Heading 1",
+        h2: "Heading 2",
+        h3: "Heading 3",
+        quote: "Quote",
+        code: "Code",
+      },
+      bold: "Bold",
+      italic: "Italic",
+      underline: "Underline",
+      strike: "Strikethrough",
+      bulletList: "Bulleted list",
+      numberedList: "Numbered list",
+      quote: "Quote",
+      codeBlock: "Code block",
+      link: {
+        title: "Link",
+        address: "Link address",
+        placeholder: "Paste or type an address",
+        apply: "Apply",
+        remove: "Remove link",
+      },
+      image: {
+        /** The toolbar's button: where a picture comes from. */
+        add: "Image",
+        upload: "From your computer",
+        drive: "From the Drive",
+        /** With a picture selected: its size. */
+        menu: "Image size",
+        small: "Small",
+        medium: "Medium",
+        large: "Large",
+        full: "Page width",
+        natural: "Original size",
+        remove: "Remove image",
+        uploading_one: "Sending {{count}} image…",
+        uploading_other: "Sending {{count}} images…",
+        onlyImages: "Only PNG, JPEG, WebP or GIF images go in a document.",
+        tooBig: "An image is larger than 25 MB and was left out.",
+        /** In place of a picture that won't load. */
+        missing: "Image unavailable",
+      },
+      table: {
+        insert: "Table",
+        /** With the caret in a table: what to do with it. */
+        menu: "Table",
+        rowAbove: "Insert row above",
+        rowBelow: "Insert row below",
+        columnLeft: "Insert column to the left",
+        columnRight: "Insert column to the right",
+        header: "Header row",
+        deleteRow: "Delete row",
+        deleteColumn: "Delete column",
+        deleteTable: "Delete table",
+      },
+      /** What is selected, on the line of a message about the document. */
+      selection: {
+        text: "Selected text",
+        image: "Image",
+        table: "Table",
+      },
+      /** The keys, in "Keyboard shortcuts". */
+      keys: {
+        title: "In the document",
+        text: "Normal text",
+        heading: "Heading 1, 2 or 3",
+        strike: "Strikethrough",
+        code: "Code in the text",
+        bulletList: "Bulleted list",
+        numberedList: "Numbered list",
+        link: "Link",
+        lineBreak: "Line break",
+        nextCell: "Next cell of a table",
+      },
+    },
+    /** The three kinds, as the Drive's New menu offers them (ADR 0196 §9). */
+    kinds: {
+      spreadsheet: "Spreadsheet",
+      slides: "Presentation",
+      canvas: "Canvas",
+      document: "Document",
+      /** One quiet line under each in the New menu. */
+      spreadsheetHint: "Numbers and formulas, as a team",
+      slidesHint: "Slides to show",
+      canvasHint: "Images, notes and loose ideas",
+      documentHint: "Text written together",
+      /** The name a new file starts with, selected so the person types its own. */
+      untitled: {
+        spreadsheet: "Untitled spreadsheet",
+        slides: "Untitled presentation",
+        canvas: "Untitled canvas",
+        document: "Untitled document",
+      },
+      /** The Drive's button beside Upload. */
+      new: "New",
+      newMenu: "Make a new file",
+      /** On a file's card in a message: how much it holds. */
+      sheetCount_one: "{{count}} sheet",
+      sheetCount_other: "{{count}} sheets",
+      slideCount_one: "{{count}} slide",
+      slideCount_other: "{{count}} slides",
+    },
+    /** The live file's own page: its header, its states, versions and presence (ADR 0199). */
+    shell: {
+      /** The header's trail: the Drive, then where the file lives. */
+      crumbs: "Where it is",
+      /** The title field's name (it renames the file). */
+      title: "File name",
+      rename: "Rename",
+      status: {
+        saved: "Saved",
+        saving: "Saving…",
+        connecting: "Connecting…",
+        offline: "No connection. Your changes are kept and go out as soon as it's back.",
+        readOnly: "Read-only",
+        inTrash: "In the trash. Restore it to change it.",
+        closing: "The workspace is being deleted. Its files can only be read.",
+      },
+      present: "Present",
+      download: "Download",
+      /** What a live file downloads as (ADR 0198). */
+      formats: {
+        xlsx: "Excel (.xlsx)",
+        csv: "CSV (.csv, first sheet)",
+        pptx: "PowerPoint (.pptx)",
+        pdf: "PDF (.pdf)",
+        json: "JSON (.json)",
+        docx: "Word (.docx)",
+        md: "Markdown (.md)",
+      },
+      more: "More",
+      menu: {
+        versions: "Versions",
+        saveVersion: "Save version…",
+        duplicate: "Duplicate",
+        showInDrive: "Show in the Drive",
+        copyLink: "Copy link",
+        trash: "Move to the trash",
+        shortcuts: "Keyboard shortcuts",
+      },
+      /** The line under the title: who made it and where, and when it changed. */
+      meta: {
+        madeFrom: "<0>{{name}}</0> made it from the <1>{{place}}</1>",
+        made: "<0>{{name}}</0> made it",
+        /** A document opened from an uploaded Word file (ADR 0200). */
+        imported: "<0>{{name}}</0> imported it from <1>{{file}}</1>",
+        inChannel: "conversation in #{{channel}}",
+        with: "conversation with {{name}}",
+        between: "conversation between {{names}}",
+        inConversation: "conversation",
+        edited: "edited {{when}}",
+      },
+      /** A kind this app has no editor for yet. */
+      notHere: "This kind of file doesn't open here yet.",
+      /** A duplicate's name. */
+      copyTitle: "{{title}} (copy)",
+      duplicated: "Copy made: {{title}}",
+      open: "Open",
+      notFound: {
+        title: "This file doesn't exist or wasn't shared with you",
+        back: "Back to the Drive",
+      },
+      failed: {
+        title: "Couldn't open this file",
+        body: "Check your connection and try again.",
+        retry: "Try again",
+      },
+      loading: "Opening the file…",
+      /** What the server refused while the person edits. */
+      errors: {
+        tooLarge: "This file is at its size limit. Remove something to keep changing it.",
+        rate: "Too many changes at once. They go out in a moment.",
+        readOnly: "This file is read-only now.",
+        invalid: "A change couldn't be saved. Reload the page to see the file as it is.",
+      },
+      /** The faces in the header and the list they open. */
+      presence: {
+        title: "Who's here",
+        /** The faces' accessible name. */
+        label: "In this file: {{names}}",
+        you: "You",
+        agent: "(agent)",
+        more: "+{{count}}",
+        viewing: "viewing",
+        editing: "editing",
+        editingRange: "editing {{range}}",
+        atRange: "on {{range}}",
+        onSlide: "on slide {{n}}",
+        editingSlide: "editing slide {{n}}",
+        presenting: "presenting",
+        follow: "Follow",
+        unfollow: "Stop following",
+        following: "Following {{name}}",
+        stop: "Stop",
+        left: "{{name}} left the file.",
+        /** Faces on a Drive card: who is in the file now. */
+        inNow: "In it now: {{names}}",
+      },
+      /** The history beside the file (ADR 0196 §7). */
+      versions: {
+        title: "Versions",
+        close: "Close versions",
+        current: "Current version",
+        byAgent: "{{name}} (agent)",
+        number: "Version {{version}}",
+        viewing: "Version from {{when}}",
+        restore: "Restore this version",
+        back: "Back to the current one",
+        save: "Save version",
+        saveTitle: "Save a version",
+        saveHint: "A named version stays in the history, easy to find and to bring back.",
+        name: "Name",
+        namePlaceholder: "Before the review",
+        saved: "Version saved.",
+        nothingNew: "Nothing changed since the last version.",
+        restored: "Version {{version}} is back.",
+        empty: "No versions yet.",
+        failed: "Couldn't load the versions.",
+        retry: "Try again",
+        opening: "Opening this version…",
+        openFailed: "Couldn't open this version.",
+      },
+      shortcuts: {
+        title: "Keyboard shortcuts",
+        general: "General",
+        undo: "Undo",
+        redo: "Redo",
+        saveVersion: "Save a version",
+        show: "Show the shortcuts",
+        stopFollowing: "Stop following",
+        spreadsheet: "In the spreadsheet",
+        edit: "Edit the cell",
+        confirm: "Confirm and go down",
+        cancel: "Cancel the edit",
+        nextCell: "Next cell",
+        bold: "Bold",
+        italic: "Italic",
+        fillDown: "Fill down",
+        clear: "Clear the cells",
+        selectAll: "Select all",
+        slides: "In the presentation",
+        duplicate: "Duplicate",
+        remove: "Delete",
+        nudge: "Move a little",
+        presentNow: "Present",
+        canvas: "On the canvas",
+        select: "Select",
+        hand: "Move around",
+        note: "Note",
+        text: "Text",
+        zoom: "Zoom in and out",
+        fit: "Fit everything",
+      },
+    },
+    /** A live file's own conversation, beside it (ADR 0199): the task's, for a file. */
+    conversation: {
+      /** The header's toggle. */
+      button: "Conversation",
+      toggle_one: "Conversation, {{count}} message",
+      toggle_other: "Conversation, {{count}} messages",
+      close: "Close the conversation",
+      /** The handle on the docked conversation's left edge: drag, arrows, Home/End; a double click resets it. */
+      resize: "Conversation width",
+      resizeHint: "Drag to resize · double-click to reset",
+      title: {
+        canvas: "Canvas conversation",
+        spreadsheet: "Spreadsheet conversation",
+        slides: "Presentation conversation",
+        document: "Document conversation",
+        file: "File conversation",
+      },
+      placeholder: {
+        canvas: "Write about this canvas · use @ to call an agent",
+        spreadsheet: "Write about this spreadsheet · use @ to call an agent",
+        slides: "Write about this presentation · use @ to call an agent",
+        document: "Write about this document · use @ to call an agent",
+        file: "Write about this file · use @ to call an agent",
+      },
+      /** In the origin line: what was made. */
+      this: {
+        canvas: "this canvas",
+        spreadsheet: "this spreadsheet",
+        slides: "this presentation",
+        document: "this document",
+      },
+      /** At the conversation's top: where the file was made. */
+      origin: {
+        from: "<0>{{name}}</0> made {{what}} from the <1>{{place}}</1>",
+        made: "<0>{{name}}</0> made {{what}}",
+        /** A document opened from an uploaded Word file (ADR 0200). */
+        imported: "Imported from <1>{{file}}</1> by {{name}}",
+      },
+      /** Over the composer: what is selected in the file, sent with the message. */
+      about: {
+        range: "About {{range}} in {{sheet}}",
+        slide: "About slide {{n}}",
+        canvas: "About {{label}} on the canvas",
+        text: "About the selected text",
+        point: "About a spot on the canvas",
+        other: "About {{label}}",
+      },
+      drop: "Don't send the selection",
+      /** The line over a message about part of a file. */
+      aboutLine: "Show {{what}} ({{where}}) in the file",
+      untitled: "Untitled file",
+      /** The file's agent, called into the conversation ("Pedir ao Atlas"). */
+      ask: "Ask {{name}}",
+    },
+    /** Uploaded Office files, drawn from the server's reading of them (ADR 0198). */
+    office: {
+      loading: "Opening the file…",
+      failed: "This file can't be shown here. Download it to open it.",
+      loadFailed: "Couldn't open the preview",
+      retry: "Try again",
+      /** The quiet bar over the preview: what the file is. */
+      kind: {
+        excel: "Excel file",
+        ods: "Spreadsheet file",
+        csv: "CSV file",
+        powerpoint: "PowerPoint file",
+        word: "Word file",
+        file: "File",
+      },
+      editAs: {
+        workbook: "Edit as spreadsheet",
+        deck: "Edit as presentation",
+        document: "Edit as document",
+      },
+      editAsHint: "Makes an editable copy beside it. This file stays as it is.",
+      /** After "Edit as …": the copy, opened. */
+      made: "Editable copy made: {{title}}",
+      /** The isolated frame a Word document is drawn in. */
+      frame: "{{title}}, as a page",
+    },
+    /** What an agent is doing in a file, beside its face (its tools say which, ADR 0196 §6). */
+    activity: {
+      working: "working on the file",
+      readingFile: "reading the file",
+      readingCells: "reading {{range}}",
+      writingCells: "writing in {{range}}",
+      formatting: "formatting {{range}}",
+      sorting: "sorting {{range}}",
+      addingRows: "adding rows",
+      addingSheet: "adding a sheet",
+      creatingSpreadsheet: "setting up the spreadsheet",
+      addingSlides: "adding slides",
+      editingSlide: "editing slide {{n}}",
+      writingSlide: "writing slide {{n}}",
+      creatingPresentation: "setting up the presentation",
+      arrangingCanvas: "arranging the canvas",
+      addingNotes: "adding notes",
+      placingImages: "placing images",
+      generatingImages: "making images",
+      creatingCanvas: "setting up the canvas",
+      writingDocument: "writing in the document",
+    },
+    /** What the server writes into a live file or its history, in the language of whoever made the change. */
+    defaults: {
+      /** The first sheet of a new spreadsheet. */
+      sheetName: "Sheet {{n}}",
+      /** The note of the version written when an earlier one is brought back. */
+      restored: "Restored version {{version}}",
+      /** The note of the first version of a file made editable from an uploaded Office file (ADR 0198). */
+      fromFile: "Made from {{name}}",
+    },
+    /** Canvases: the plane, its tools, its shapes and what to do with them (ADR 0196 §2). */
+    canvas: {
+      /** The plane's name for screen readers, and what kind of place it is. */
+      label: "Canvas",
+      roledescription: "canvas",
+      loading: "Opening the canvas…",
+      /** What a few chosen things are called on Ask an agent's context line ("2 images"). */
+      count: {
+        image_one: "{{count}} image",
+        image_other: "{{count}} images",
+        note_one: "{{count}} note",
+        note_other: "{{count}} notes",
+        text_one: "{{count}} text",
+        text_other: "{{count}} texts",
+        frame_one: "{{count}} frame",
+        frame_other: "{{count}} frames",
+        shape_one: "{{count}} shape",
+        shape_other: "{{count}} shapes",
+        arrow_one: "{{count}} arrow",
+        arrow_other: "{{count}} arrows",
+        draw_one: "{{count}} drawing",
+        draw_other: "{{count}} drawings",
+        html_one: "{{count}} page",
+        html_other: "{{count}} pages",
+        file_one: "{{count}} file",
+        file_other: "{{count}} files",
+        items_one: "{{count}} item",
+        items_other: "{{count}} items",
+      },
+      kinds: {
+        image: "Image",
+        frame: "Frame",
+        html: "Page",
+        note: "Note",
+        text: "Text",
+        arrow: "Arrow",
+        line: "Line",
+        draw: "Drawing",
+        file: "File",
+      },
+      /** The tools dock, each with its key. */
+      tools: {
+        label: "Tools",
+        select: "Select",
+        hand: "Move around",
+        note: "Note",
+        text: "Text",
+        shape: "Shape",
+        arrow: "Arrow",
+        frame: "Frame",
+        image: "Upload an image",
+        shapes: "Shapes",
+        pen: "Pen",
+        comment: "Comment",
+        ask: "Ask the file's agent",
+      },
+      zoom: {
+        label: "Zoom",
+        out: "Zoom out",
+        in: "Zoom in",
+        actual: "Zoom to 100%",
+        fit: "Fit",
+        fitAll: "Fit everything",
+        selection: "Fit the selection",
+        /** The zoom's own button, which opens the fits. */
+        menu: "Zoom {{percent}}",
+      },
+      actions: {
+        cut: "Cut",
+        copy: "Copy",
+        paste: "Paste",
+        duplicate: "Duplicate",
+        delete: "Delete",
+        lock: "Lock",
+        unlock: "Unlock",
+        editText: "Edit the text",
+        openFile: "Open the file",
+        addNote: "New note",
+        addText: "New text",
+        selectAll: "Select all",
+      },
+      arrange: {
+        label: "Arrange",
+        front: "Bring to front",
+        forward: "Bring forward",
+        backward: "Send backward",
+        back: "Send to back",
+      },
+      /** The small bar over chosen notes, texts, shapes, arrows or a frame. */
+      bar: {
+        title: "Options",
+        color: "Note color",
+        fill: "Fill",
+        size: "Text size",
+        dashed: "Dashed",
+        label: "Label",
+        rename: "Rename",
+        noFill: "No fill",
+        auto: "Automatic",
+        soft: "Soft tones",
+        strong: "Strong tones",
+        stroke: "Border",
+        noStroke: "No border",
+        lineColor: "Color",
+        strokeWidth: "Width",
+        corners: "Corners",
+        editText: "Text",
+        more: "More",
+      },
+      colors: {
+        yellow: "Yellow",
+        pink: "Pink",
+        blue: "Blue",
+        green: "Green",
+        purple: "Purple",
+        gray: "Gray",
+      },
+      shapeKinds: {
+        rect: "Rectangle",
+        ellipse: "Ellipse",
+        diamond: "Diamond",
+        triangle: "Triangle",
+        star: "Star",
+        line: "Line",
+      },
+      sizes: {
+        s: "Small",
+        m: "Medium",
+        l: "Large",
+        xl: "Extra large",
+        /** On the size buttons themselves. */
+        short: { s: "S", m: "M", l: "L", xl: "XL" },
+      },
+      background: {
+        label: "Background",
+        dots: "Dots",
+        grid: "Grid",
+        plain: "Plain",
+      },
+      empty: {
+        title: "Blank canvas",
+        text: "Drag images here, add notes or ask an agent for images in the conversation.",
+        readOnly: "Nothing on this canvas yet.",
+        note: "New note",
+        upload: "Upload an image",
+      },
+      /** What a shape's text box says while it is empty, and its name for screen readers. */
+      placeholders: {
+        note: "Write something",
+        text: "Type here",
+        label: "Add a label",
+      },
+      textBox: {
+        note: "Note text",
+        text: "Text",
+        label: "Shape label",
+      },
+      errors: {
+        tooMany: "This canvas holds as many things as it can.",
+        tooLarge: "This canvas is too big to take more.",
+        other: "That change didn't go through. Try again.",
+        onlyImages: "Only images go on a canvas (PNG, JPEG, WebP or GIF).",
+        imageTooBig: "Images can be up to 25 MB.",
+        someImagesLeft: "Some images couldn't come along.",
+        copyImage: "The image couldn't be copied.",
+      },
+      newFrame: "Frame",
+      renameFrame: "Frame name",
+      arrowLabel: "Arrow label",
+      dropHere: "Drop to add to the canvas",
+      uploading: "Uploading the image…",
+      imageCopied: "Image copied",
+      imageFailed: "The image didn't load",
+      /** A downloaded image's file name when it has no prompt. */
+      imageFile: "image",
+      fileMissing: "This file is gone or wasn't shared with you",
+      loadingFile: "Opening…",
+      /** On an agent's page: it takes the pointer until a press outside it. */
+      interact: "Interact",
+      /** The side column of a chosen image. */
+      /** How an arrow runs. */
+      routes: {
+        straight: "Straight",
+        curve: "Curved",
+        elbow: "Elbow",
+      },
+      /** An arrow's heads. */
+      heads: {
+        label: "Arrowheads",
+        end: "At the end",
+        both: "At both ends",
+        start: "At the start",
+        none: "None",
+      },
+      /** The pen and its bar. */
+      pen: {
+        label: "Pen",
+        pen: "Pen",
+        marker: "Highlighter",
+        color: "Color",
+        size: "Thickness",
+        sizes: { s: "Thin", m: "Medium", l: "Thick" },
+        /** On the size buttons themselves. */
+        short: { s: "S", m: "M", l: "L" },
+      },
+      /** The colors people draw and outline with. */
+      inks: {
+        red: "Red",
+        ink: "Black",
+        blue: "Blue",
+        green: "Green",
+        orange: "Orange",
+      },
+      /** A picture's bar. */
+      image: {
+        crop: "Crop",
+        replace: "Replace image",
+        details: "Details",
+      },
+      /** What a picture's bar puts after the agent's @ in the file's conversation. */
+      ask: {
+        variations: "make variations of this image",
+      },
+      crop: {
+        label: "Crop the image",
+        apply: "Apply",
+        cancel: "Cancel",
+      },
+      /** The layers panel: every shape, who made it, an eye to hide it. */
+      layers: {
+        title: "Layers",
+        close: "Close layers",
+        empty: "Nothing on this canvas yet.",
+        hide: "Hide {{name}}",
+        show: "Show {{name}}",
+      },
+      /** A comment pinned on a spot of the canvas (a message in its conversation). */
+      comment: {
+        label: "Comment",
+        pin: "Comment {{n}} by {{name}}",
+      },
+      inspector: {
+        title: "Image",
+        generated: "Generated image",
+        close: "Close",
+        prompt: "Description",
+        model: "Model",
+        askedBy: "Asked by",
+        byAt: "{{name}} · {{when}}",
+        references: "Made from",
+        variations: "Variations",
+        edit: "Edit with AI",
+        download: "Download",
+        copy: "Copy image",
+        open: "Open",
+        size: "{{w}} × {{h}} pixels",
+        uploaded: "Uploaded to this canvas",
+      },
+    },
+    /** Generating images onto a canvas (ADR 0197). */
+    images: {
+      /** On a placeholder. */
+      queued: "Waiting its turn…",
+      making: "Making the image…",
+      askedBy: "Asked by {{name}}",
+      retry: "Try again",
+      /** Why the images of a request didn't come. */
+      failed: {
+        noKey: "No key is connected for this model",
+        budget: "The budget ran out",
+        limit: "You reached your spending limit",
+        blocked: "The provider refused this request",
+        provider: "The provider failed. Try again in a moment.",
+        tooMany: "This canvas has no more room",
+        other: "The image couldn't be made",
+      },
+    },
+    /** Spreadsheets. */
+    sheet: {
+      /**
+       * What an error in a cell means, in the cell's tip, by the error it shows (a circular reference shows #REF! and
+       * has its own words).
+       */
+      errors: {
+        null: "These ranges don't meet",
+        div0: "Division by zero",
+        value: "A value of the wrong kind, like text where a number goes",
+        ref: "A reference to cells that are gone",
+        name: "A function or name this spreadsheet doesn't know",
+        num: "A number that can't be worked out, or is too big",
+        na: "No value found",
+        calc: "This formula takes too long to work out",
+        spill: "The result doesn't fit here",
+        circular: "Circular reference",
+      },
+      loading: "Opening the spreadsheet…",
+      toolbar: "Spreadsheet tools",
+      /** The quiet line in place of the toolbar when nothing can be changed. */
+      readOnly: "Read only",
+      /** An uploaded workbook with no sheets. */
+      empty: "This spreadsheet is empty",
+      undo: "Undo",
+      redo: "Redo",
+      numberFormat: "Number format",
+      /** The number format menu, each beside a sample in the reader's language. */
+      formats: {
+        general: "Automatic",
+        number: "Number",
+        integer: "Whole number",
+        percent: "Percent",
+        percent2: "Percent with decimals",
+        currency: "Currency",
+        date: "Date",
+        time: "Time",
+        datetime: "Date and time",
+        scientific: "Scientific",
+        text: "Plain text",
+        custom: "Custom",
+      },
+      decimalsLess: "Fewer decimals",
+      decimalsMore: "More decimals",
+      bold: "Bold",
+      italic: "Italic",
+      underline: "Underline",
+      strike: "Strikethrough",
+      textColor: "Text color",
+      fillColor: "Fill color",
+      automatic: "Automatic",
+      noFill: "No fill",
+      /** The swatches' names, for screen readers and their tips. */
+      colors: {
+        red: "Red",
+        emerald: "Emerald",
+        magenta: "Magenta",
+        orange: "Orange",
+        cyan: "Cyan",
+        olive: "Olive",
+        plum: "Plum",
+        lime: "Lime",
+        slate: "Slate",
+        brown: "Brown",
+      },
+      alignLeft: "Align left",
+      alignCenter: "Center",
+      alignRight: "Align right",
+      wrap: "Wrap text",
+      merge: "Merge cells",
+      unmerge: "Unmerge cells",
+      borders: "Borders",
+      border: {
+        all: "All borders",
+        outer: "Outside borders",
+        inner: "Inside borders",
+        horizontal: "Inside horizontal borders",
+        vertical: "Inside vertical borders",
+        top: "Top border",
+        bottom: "Bottom border",
+        left: "Left border",
+        right: "Right border",
+        none: "No borders",
+      },
+      freeze: "Freeze",
+      frozen: {
+        none: "Nothing frozen",
+        rows: "Rows",
+        cols: "Columns",
+        row_one: "1 row",
+        row_other: "{{count}} rows",
+        col_one: "1 column",
+        col_other: "{{count}} columns",
+        upToRow: "Up to row {{n}}",
+        upToCol: "Up to column {{name}}",
+      },
+      sortAsc: "Sort A to Z",
+      sortDesc: "Sort Z to A",
+      functions: "Functions",
+      /** The name box at the formula bar's start ("B4", "B2:E9"). */
+      nameBox: "Cell or range. Type one to go there",
+      fx: "Formula",
+      formula: "Cell content",
+      cellLabel: "Cell {{cell}}",
+      cellWith: "Cell {{cell}}, {{value}}",
+      suggestions: "Functions",
+      moreRows_one: "Add {{count}} row",
+      moreRows_other: "Add {{count}} rows",
+      /** When the browser keeps the clipboard from the menu's Paste. */
+      pasteKeys: "To paste here, use {{keys}}",
+      /** The cells' and headers' right-click menu. */
+      menu: {
+        cut: "Cut",
+        copy: "Copy",
+        paste: "Paste",
+        pasteValues: "Paste values only",
+        insertRowsAbove_one: "Insert row above",
+        insertRowsAbove_other: "Insert {{count}} rows above",
+        insertRowsBelow_one: "Insert row below",
+        insertRowsBelow_other: "Insert {{count}} rows below",
+        insertColsLeft_one: "Insert column left",
+        insertColsLeft_other: "Insert {{count}} columns left",
+        insertColsRight_one: "Insert column right",
+        insertColsRight_other: "Insert {{count}} columns right",
+        deleteRows_one: "Delete row",
+        deleteRows_other: "Delete {{count}} rows",
+        deleteCols_one: "Delete column",
+        deleteCols_other: "Delete {{count}} columns",
+        clear: "Clear",
+        fitWidth: "Fit width to content",
+        fitHeight: "Fit height to content",
+        ask: "Ask an agent about the selection",
+      },
+      /** The selection's numbers at the end of the sheet tabs. */
+      status: {
+        label: "Selection totals",
+        sum: "Sum {{value}}",
+        average: "Average {{value}}",
+        count: "Count {{value}}",
+      },
+      tabs: {
+        label: "Sheets",
+        add: "Add sheet",
+        /** A new sheet's name before its number ("Sheet 2"). */
+        base: "Sheet",
+        rename: "Rename",
+        renameLabel: "Sheet name",
+        duplicate: "Duplicate",
+        color: "Color",
+        noColor: "No color",
+        delete: "Delete",
+        copyName: "{{name}} (copy)",
+        deleteTitle: "Delete {{name}}?",
+        deleteBody: "Everything on this sheet goes with it. Formulas on other sheets that use it show #REF!.",
+        deleteConfirm: "Delete sheet",
+      },
+      /** Why a change was refused, in a toast (the edit's reason). */
+      failed: {
+        other: "That change couldn't be made.",
+        no_sheet: "This sheet is gone.",
+        broken: "This spreadsheet has a problem and didn't take the change.",
+        limit: "The spreadsheet has reached its size limit.",
+        last_sheet: "A spreadsheet needs at least one sheet.",
+        last_row: "A sheet needs at least one row.",
+        last_col: "A sheet needs at least one column.",
+        sheet_name: "Give the sheet a name.",
+        sheet_name_taken: "There's already a sheet with that name.",
+        merged: "That can't be done on part of merged cells.",
+        formula: "That formula couldn't be read.",
+        text_too_long: "That text is too long for one cell.",
+        formula_too_long: "That formula is too long.",
+        range: "That range doesn't work here.",
+        value: "That value doesn't work here.",
+      },
+      /** What is wrong with a formula being typed, under the field. */
+      problem: {
+        empty: "Type something after the =",
+        unexpected: "Something in this formula can't be read",
+        unclosed_paren: "A parenthesis isn't closed",
+        unclosed_string: "A text's quotes aren't closed",
+        unclosed_sheet: "A sheet name's quote isn't closed",
+        missing_operand: "A value is missing beside an operator",
+        bad_array: "A list in braces is written wrong",
+        bad_range: "A range is written wrong",
+        bad_sheet: "There's no sheet with that name",
+        args: "A function got too many or too few values",
+        too_long: "The formula is too long",
+        too_deep: "The formula has too many parentheses inside each other",
+        too_far: "A reference goes past the largest a sheet can be",
+      },
+      /** Each function's arguments as its signature names them under the formula bar, in Excel's words. */
+      args: {
+        a1: "a1",
+        angle: "angle",
+        area_num: "area_num",
+        array: "array",
+        array1: "array1",
+        array2: "array2",
+        average_range: "average_range",
+        base: "base",
+        basis: "basis",
+        bottom: "bottom",
+        by_col: "by_col",
+        col_index_num: "col_index_num",
+        cols: "cols",
+        column_num: "column_num",
+        columns: "columns",
+        cost: "cost",
+        criteria: "criteria",
+        criteria1: "criteria1",
+        criteria2: "criteria2",
+        criteria_range1: "criteria_range1",
+        criteria_range2: "criteria_range2",
+        date: "date",
+        date_text: "date_text",
+        dates: "dates",
+        day: "day",
+        days: "days",
+        decimal_separator: "decimal_separator",
+        decimals: "decimals",
+        default_or_value2: "default_or_value2",
+        delimiter: "delimiter",
+        denominator: "denominator",
+        divisor: "divisor",
+        effect_rate: "effect_rate",
+        end_date: "end_date",
+        end_period: "end_period",
+        error_val: "error_val",
+        exactly_once: "exactly_once",
+        expression: "expression",
+        find_text: "find_text",
+        format_text: "format_text",
+        function_num: "function_num",
+        fv: "fv",
+        group_separator: "group_separator",
+        guess: "guess",
+        height: "height",
+        holidays: "holidays",
+        hour: "hour",
+        if_empty: "if_empty",
+        if_not_found: "if_not_found",
+        ignore_empty: "ignore_empty",
+        include: "include",
+        index_num: "index_num",
+        instance_num: "instance_num",
+        k: "k",
+        known_xs: "known_x's",
+        known_ys: "known_y's",
+        life: "life",
+        logical: "logical",
+        logical1: "logical1",
+        logical2: "logical2",
+        logical_test: "logical_test",
+        logical_test1: "logical_test1",
+        logical_test2: "logical_test2",
+        lookup_array: "lookup_array",
+        lookup_value: "lookup_value",
+        lookup_vector: "lookup_vector",
+        match_end: "match_end",
+        match_mode: "match_mode",
+        match_type: "match_type",
+        max_range: "max_range",
+        mean: "mean",
+        method: "method",
+        min_range: "min_range",
+        minute: "minute",
+        mode: "mode",
+        month: "month",
+        months: "months",
+        multiple: "multiple",
+        new_text: "new_text",
+        no_commas: "no_commas",
+        nominal_rate: "nominal_rate",
+        nper: "nper",
+        npery: "npery",
+        num_chars: "num_chars",
+        num_digits: "num_digits",
+        number: "number",
+        number1: "number1",
+        number2: "number2",
+        number_chosen: "number_chosen",
+        number_times: "number_times",
+        numerator: "numerator",
+        old_text: "old_text",
+        order: "order",
+        per: "per",
+        percent: "percent",
+        pmt: "pmt",
+        power: "power",
+        pv: "pv",
+        quart: "quart",
+        range: "range",
+        range_lookup: "range_lookup",
+        rate: "rate",
+        ref: "ref",
+        ref1: "ref1",
+        ref2: "ref2",
+        ref_text: "ref_text",
+        reference: "reference",
+        result1: "result1",
+        result2: "result2",
+        result_vector: "result_vector",
+        return_array: "return_array",
+        return_type: "return_type",
+        row_index_num: "row_index_num",
+        row_num: "row_num",
+        rows: "rows",
+        salvage: "salvage",
+        search_mode: "search_mode",
+        second: "second",
+        serial_number: "serial_number",
+        significance: "significance",
+        sort_index: "sort_index",
+        sort_order: "sort_order",
+        standard_dev: "standard_dev",
+        start: "start",
+        start_date: "start_date",
+        start_num: "start_num",
+        start_period: "start_period",
+        step: "step",
+        sum_range: "sum_range",
+        table_array: "table_array",
+        text: "text",
+        text1: "text1",
+        text2: "text2",
+        time_text: "time_text",
+        top: "top",
+        type: "type",
+        unit: "unit",
+        value: "value",
+        value1: "value1",
+        value2: "value2",
+        value_if_error: "value_if_error",
+        value_if_false: "value_if_false",
+        value_if_na: "value_if_na",
+        value_if_true: "value_if_true",
+        value_if_true1: "value_if_true1",
+        value_if_true2: "value_if_true2",
+        values: "values",
+        weekend: "weekend",
+        width: "width",
+        within_text: "within_text",
+        x: "x",
+        x_num: "x_num",
+        y_num: "y_num",
+        year: "year",
+      },
+      /** One line about each function, beside its name in the formula bar's suggestions (a name's dots as _). */
+      fn: {
+        ABS: "The number without its sign",
+        ACOS: "The arccosine of a number, in radians",
+        ACOSH: "The inverse hyperbolic cosine of a number",
+        AND: "TRUE when every condition is true",
+        ASIN: "The arcsine of a number, in radians",
+        ASINH: "The inverse hyperbolic sine of a number",
+        ATAN: "The arctangent of a number, in radians",
+        ATAN2: "The angle of a point from its x and y, in radians",
+        ATANH: "The inverse hyperbolic tangent of a number",
+        AVEDEV: "The average distance of the numbers from their mean",
+        AVERAGE: "The average of the numbers",
+        AVERAGEA: "The average of the values, counting text as 0",
+        AVERAGEIF: "The average of the cells that meet a condition",
+        AVERAGEIFS: "The average of the cells that meet every condition",
+        CEILING: "A number rounded up to a multiple",
+        CEILING_MATH: "A number rounded up to a multiple, or to a whole number",
+        CEILING_PRECISE: "A number rounded up to a multiple, whatever its sign",
+        CHAR: "The character with a code",
+        CHOOSE: "One of the values, by its position",
+        CLEAN: "The text without characters that can't be printed",
+        CODE: "The code of a text's first character",
+        COLUMN: "The column number of a reference",
+        COLUMNS: "How many columns a range has",
+        COMBIN: "How many groups of a size can be picked from a number of items",
+        CONCAT: "Texts joined into one",
+        CONCATENATE: "Texts joined into one",
+        CORREL: "How closely two sets of numbers move together",
+        COS: "The cosine of an angle in radians",
+        COSH: "The hyperbolic cosine of a number",
+        COUNT: "How many cells hold numbers",
+        COUNTA: "How many cells aren't empty",
+        COUNTBLANK: "How many cells are empty",
+        COUNTIF: "How many cells meet a condition",
+        COUNTIFS: "How many cells meet every condition",
+        COVARIANCE_P: "The covariance of two sets of numbers, as a whole population",
+        COVARIANCE_S: "The covariance of two sets of numbers, as a sample",
+        CUMIPMT: "The interest paid on a loan between two periods",
+        CUMPRINC: "The principal paid on a loan between two periods",
+        DATE: "A date from its year, month and day",
+        DATEDIF: "The time between two dates in days, months or years",
+        DATEVALUE: "A date written as text, turned into a date",
+        DAY: "The day of the month of a date",
+        DAYS: "How many days between two dates",
+        DAYS360: "The days between two dates in a 360-day year",
+        DEGREES: "Radians turned into degrees",
+        DEVSQ: "The sum of the squared distances from the mean",
+        DOLLAR: "A number as money, as text",
+        EDATE: "The date some months before or after a date",
+        EFFECT: "The effective yearly interest rate",
+        EOMONTH: "The last day of the month some months away",
+        ERROR_TYPE: "A number for the kind of error",
+        EVEN: "A number rounded up to the next even whole number",
+        EXACT: "TRUE when two texts are exactly the same",
+        EXP: "e raised to a power",
+        FACT: "The factorial of a number",
+        FALSE: "The value FALSE",
+        FILTER: "The rows of a range that meet a condition",
+        FIND: "Where a text starts inside another, matching case",
+        FIXED: "A number rounded and written as text",
+        FLOOR: "A number rounded down to a multiple",
+        FLOOR_MATH: "A number rounded down to a multiple, or to a whole number",
+        FLOOR_PRECISE: "A number rounded down to a multiple, whatever its sign",
+        FORECAST: "A future value along the straight line through known values",
+        FORECAST_LINEAR: "A future value along the straight line through known values",
+        FV: "What an investment will be worth in the end",
+        GCD: "The greatest common divisor",
+        GEOMEAN: "The geometric mean of the numbers",
+        HARMEAN: "The harmonic mean of the numbers",
+        HLOOKUP: "Looks for a value in a table's first row and returns one below it",
+        HOUR: "The hour of a time, 0 to 23",
+        IF: "One value when a condition is true, another when it isn't",
+        IFERROR: "A value, or another one when it is an error",
+        IFNA: "A value, or another one when it is #N/A",
+        IFS: "The value of the first condition that is true",
+        INDEX: "The value at a row and column of a range",
+        INDIRECT: "The cells a reference written as text points to",
+        INT: "A number rounded down to a whole number",
+        INTERCEPT: "Where the line through known values crosses the y axis",
+        IPMT: "The interest part of one loan payment",
+        IRR: "The internal rate of return of cash flows",
+        ISBLANK: "TRUE when the cell is empty",
+        ISERR: "TRUE when the value is an error other than #N/A",
+        ISERROR: "TRUE when the value is any error",
+        ISEVEN: "TRUE when the number is even",
+        ISFORMULA: "TRUE when the cell holds a formula",
+        ISLOGICAL: "TRUE when the value is TRUE or FALSE",
+        ISNA: "TRUE when the value is #N/A",
+        ISNONTEXT: "TRUE when the value isn't text",
+        ISNUMBER: "TRUE when the value is a number",
+        ISODD: "TRUE when the number is odd",
+        ISOWEEKNUM: "The ISO week number of a date",
+        ISREF: "TRUE when the value is a reference",
+        ISTEXT: "TRUE when the value is text",
+        LARGE: "The k-th largest number",
+        LCM: "The least common multiple",
+        LEFT: "The first characters of a text",
+        LEN: "How many characters a text has",
+        LN: "The natural logarithm of a number",
+        LOG: "The logarithm of a number in a base",
+        LOG10: "The base-10 logarithm of a number",
+        LOOKUP: "Looks for a value in a row or column and returns the matching one",
+        LOWER: "The text in lowercase",
+        MATCH: "The position of a value in a range",
+        MAX: "The largest number",
+        MAXA: "The largest value, counting text as 0",
+        MAXIFS: "The largest number among the cells that meet every condition",
+        MEDIAN: "The number in the middle",
+        MID: "Characters from the middle of a text",
+        MIN: "The smallest number",
+        MINA: "The smallest value, counting text as 0",
+        MINIFS: "The smallest number among the cells that meet every condition",
+        MINUTE: "The minute of a time, 0 to 59",
+        MOD: "The remainder of a division",
+        MODE: "The number that appears most often",
+        MODE_SNGL: "The number that appears most often",
+        MONTH: "The month of a date, 1 to 12",
+        MROUND: "A number rounded to the nearest multiple",
+        N: "A value as a number",
+        NA: "The error #N/A, for a value that's missing",
+        NETWORKDAYS: "How many workdays between two dates",
+        NETWORKDAYS_INTL: "How many workdays between two dates, with your own weekend",
+        NOMINAL: "The nominal yearly interest rate",
+        NOT: "The opposite of a condition",
+        NOW: "The date and time now",
+        NPER: "How many payments pay off a loan or reach a goal",
+        NPV: "The net present value of cash flows",
+        NUMBERVALUE: "Text read as a number, with the separators you give",
+        ODD: "A number rounded up to the next odd whole number",
+        OFFSET: "A range some rows and columns away from a reference",
+        OR: "TRUE when any condition is true",
+        PEARSON: "The Pearson correlation of two sets of numbers",
+        PERCENTILE: "The value below which a share of the numbers fall",
+        PERCENTILE_EXC: "The percentile of the numbers, ends excluded",
+        PERCENTILE_INC: "The percentile of the numbers, ends included",
+        PERCENTRANK: "Where a value ranks among the numbers, as a share",
+        PERCENTRANK_INC: "Where a value ranks among the numbers, as a share",
+        PI: "The number pi",
+        PMT: "The payment of a loan per period",
+        POWER: "A number raised to a power",
+        PPMT: "The principal part of one loan payment",
+        PRODUCT: "The numbers multiplied together",
+        PROPER: "The text with each word capitalized",
+        PV: "What a series of future payments is worth today",
+        QUARTILE: "A quartile of the numbers",
+        QUARTILE_EXC: "A quartile of the numbers, ends excluded",
+        QUARTILE_INC: "A quartile of the numbers, ends included",
+        QUOTIENT: "The whole part of a division",
+        RADIANS: "Degrees turned into radians",
+        RAND: "A random number between 0 and 1",
+        RANDBETWEEN: "A random whole number between two numbers",
+        RANK: "A number's position in a list",
+        RANK_AVG: "A number's position in a list, ties sharing the average",
+        RANK_EQ: "A number's position in a list, ties sharing the top",
+        RATE: "The interest rate per period of a loan or investment",
+        REPLACE: "A text with part of it replaced by position",
+        REPT: "A text repeated a number of times",
+        RIGHT: "The last characters of a text",
+        ROUND: "A number rounded to some digits",
+        ROUNDDOWN: "A number rounded toward zero",
+        ROUNDUP: "A number rounded away from zero",
+        ROW: "The row number of a reference",
+        ROWS: "How many rows a range has",
+        RSQ: "The square of the Pearson correlation",
+        SEARCH: "Where a text starts inside another, ignoring case",
+        SECOND: "The second of a time, 0 to 59",
+        SEQUENCE: "A list of numbers in order",
+        SIGN: "1 for a positive number, -1 for a negative, 0 for zero",
+        SIN: "The sine of an angle in radians",
+        SINH: "The hyperbolic sine of a number",
+        SLN: "The straight-line depreciation of an asset per period",
+        SLOPE: "The slope of the line through known values",
+        SMALL: "The k-th smallest number",
+        SORT: "A range sorted",
+        SQRT: "The square root of a number",
+        SQRTPI: "The square root of a number times pi",
+        STANDARDIZE: "How many standard deviations a value is from the mean",
+        STDEV: "The standard deviation of a sample",
+        STDEV_P: "The standard deviation of a whole population",
+        STDEV_S: "The standard deviation of a sample",
+        STDEVA: "The standard deviation of a sample, counting text as 0",
+        STDEVP: "The standard deviation of a whole population",
+        SUBSTITUTE: "A text with some words swapped for others",
+        SUBTOTAL: "A sum, average, count or other total that skips other subtotals",
+        SUM: "The numbers added up",
+        SUMIF: "The sum of the cells that meet a condition",
+        SUMIFS: "The sum of the cells that meet every condition",
+        SUMPRODUCT: "Ranges multiplied item by item, then added up",
+        SUMSQ: "The sum of the squares of the numbers",
+        SWITCH: "The result matching a value, or a default",
+        T: "The value when it is text, else empty text",
+        TAN: "The tangent of an angle in radians",
+        TANH: "The hyperbolic tangent of a number",
+        TEXT: "A value written as text in a number format",
+        TEXTAFTER: "The text after a delimiter",
+        TEXTBEFORE: "The text before a delimiter",
+        TEXTJOIN: "Texts joined with a delimiter between them",
+        TIME: "A time from its hour, minute and second",
+        TIMEVALUE: "A time written as text, turned into a time",
+        TODAY: "Today's date",
+        TRANSPOSE: "A range with its rows and columns swapped",
+        TRIM: "The text without extra spaces",
+        TRIMMEAN: "The average without the highest and lowest values",
+        TRUE: "The value TRUE",
+        TRUNC: "A number with its decimals cut off",
+        TYPE: "A number for the kind of value",
+        UNICHAR: "The Unicode character with a number",
+        UNICODE: "The Unicode number of a text's first character",
+        UNIQUE: "The values of a range without repeats",
+        UPPER: "The text in uppercase",
+        VALUE: "Text read as a number",
+        VAR: "The variance of a sample",
+        VAR_P: "The variance of a whole population",
+        VAR_S: "The variance of a sample",
+        VARA: "The variance of a sample, counting text as 0",
+        VARP: "The variance of a whole population",
+        VLOOKUP: "Looks for a value in a table's first column and returns one beside it",
+        WEEKDAY: "The day of the week of a date",
+        WEEKNUM: "The week of the year of a date",
+        WORKDAY: "The date some workdays away",
+        WORKDAY_INTL: "The date some workdays away, with your own weekend",
+        XIRR: "The internal rate of return of cash flows on dates",
+        XLOOKUP: "Looks for a value in a range and returns the matching one from another",
+        XMATCH: "The position of a value in a range, with more ways to match",
+        XNPV: "The net present value of cash flows on dates",
+        XOR: "TRUE when an odd number of conditions are true",
+        YEAR: "The year of a date",
+        YEARFRAC: "The share of a year between two dates",
+      },
     },
   },
 };

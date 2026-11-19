@@ -82,10 +82,11 @@ async function byKind(api: ApiClient) {
 }
 
 /** Channel #eng with one agent message carrying every kind of artifact. */
-async function openChannel() {
+async function openChannel(before?: (api: ApiClient, a: Awaited<ReturnType<typeof byKind>>) => Promise<void>) {
   const state = seedState();
   const api = createFakeApi(state);
   const a = await byKind(api);
+  await before?.(api, a);
   state.messages.push({
     id: "m-art",
     channelId: ENG_ID,
@@ -125,11 +126,12 @@ describe("artifact cards in the chat", () => {
     await openChannel();
     const meta = (tile: HTMLElement) => tile.querySelector(".artifact-tile__meta")?.textContent;
     const doc = card("Relatório de incidente: checkout");
-    // The document's own start, its headings and lists as in the document; no "made by" (the message says who).
-    expect(doc.querySelector(".artifact-tile__cover h2")?.textContent).toBe("Incidente no checkout");
-    expect(doc.querySelector(".artifact-tile__cover li")?.textContent).toBe("142 eventos desde ontem");
+    // A document is a live file (ADR 0200): its first page drawn small, its headings and lists as in the document,
+    // its kind alone under its name (no versions to count); no "made by" (the message says who).
+    expect(doc.querySelector(".lf-doc-mini__h")?.textContent).toBe("Incidente no checkout");
+    expect(doc.querySelector(".lf-doc-mini__p[data-list='bullet']")?.textContent).toBe("142 eventos desde ontem");
     expect(doc.querySelector(".artifact-tile__title")?.textContent).toBe("Relatório de incidente: checkout");
-    expect(meta(doc)).toBe("Documento · v2");
+    expect(meta(doc)).toBe("Documento");
     expect(doc.textContent).not.toContain("gerado por");
 
     const table = card("Pedidos mais comuns nos reviews");
@@ -173,7 +175,8 @@ describe("a tile's actions", () => {
     const acts = doc.querySelector(".artifact-tile__acts") as HTMLElement;
     await click(within(acts).getByRole("button", { name: "Baixar" }));
     await settle(2);
-    expect(saved.at(-1)?.name).toMatch(/\.md$/);
+    // A document downloads as Word (ADR 0200).
+    expect(saved.at(-1)?.name).toMatch(/\.docx$/);
     await pick(acts, "Mais ações: Relatório de incidente: checkout", "Copiar link");
     await settle(2);
     expect(copied.at(-1)).toContain("/drive");
@@ -208,38 +211,6 @@ describe("a file card's right click (desktop app)", () => {
 });
 
 describe("artifact viewer", () => {
-  test("document: rendered Markdown with code in mono, download and copy link", async () => {
-    const { a } = await openChannel();
-    const dialog = await openCard("Relatório de incidente: checkout");
-    expect(within(dialog).getByRole("heading", { name: "O que aconteceu" })).toBeTruthy();
-    expect(dialog.querySelector("pre.code-card__code code")?.textContent).toContain("if (!cart.items.length)");
-    expect(within(dialog).getByText("38 clientes").tagName).toBe("STRONG");
-    await pick(dialog, "Baixar", "Original");
-    await settle(3);
-    expect(saved[0]?.name).toBe("relatorio-de-incidente-checkout.md");
-    expect(saved[0]?.url.startsWith("data:text/markdown")).toBe(true);
-    await pick(dialog, "Baixar", "PDF");
-    expect(saved[1]?.name).toBe("relatorio-de-incidente-checkout.pdf");
-    expect(saved[1]?.url).toBe(`/api/app/organizations/${ORG_ID}/artifacts/${a.document.id}/file?version=2&format=pdf`);
-    await pick(dialog, "Baixar", "Word (.docx)");
-    expect(saved[2]?.name).toBe("relatorio-de-incidente-checkout.docx");
-    expect(saved[2]?.url).toBe(
-      `/api/app/organizations/${ORG_ID}/artifacts/${a.document.id}/file?version=2&format=docx`,
-    );
-    await pick(dialog, /^Mais ações: /, "Copiar link");
-    await settle(2);
-    expect(copied[0]).toBe(`http://localhost:3000/org/${ORG_ID}/drive?artifact=${a.document.id}`);
-    expect(screen().getByText("Link copiado.")).toBeTruthy();
-    // The whole text in one click, right after Baixar and Compartilhar: the document's Markdown as it was written.
-    const copy = within(dialog).getByRole("button", { name: "Copiar texto" });
-    expect(copy.previousElementSibling?.textContent).toContain("Compartilhar");
-    await click(copy);
-    await settle(2);
-    expect(copied[1]).toContain("## O que aconteceu");
-    expect(copied[1]).toContain("**38 clientes**");
-    expect(screen().getByText("Texto copiado.")).toBeTruthy();
-  });
-
   test("an uploaded text file (HTML, JSON, code): Copiar texto between Baixar and Enviar nova versão", async () => {
     const api = createFakeApi(seedState());
     const page = '<h2 id="combo">Como funciona</h2>\n<p>Texto da matéria.</p>\n';
@@ -363,56 +334,49 @@ describe("artifact viewer", () => {
 
 describe("versions and editing", () => {
   test("switch versions, see who changed what and the note", async () => {
-    await openChannel();
-    const dialog = await openCard("Relatório de incidente: checkout");
+    // A second version of the table after the message named its first: the card opens that first one.
+    await openChannel((api, a) =>
+      api.artifacts
+        .update(ORG_ID, a.table.id, {
+          content: {
+            kind: "table",
+            columns: ["Pedido", "Menções", "Nota média"],
+            rows: [["Modo offline", "38", "2,6"]],
+          },
+          note: "Acrescentei as menções desta semana.",
+          baseVersion: 1,
+        })
+        .then(() => undefined),
+    );
+    const dialog = await openCard("Pedidos mais comuns nos reviews");
+    expect(dialog.textContent).toContain("Vendo a v1. A mais recente é a v2.");
+    expect(dialog.textContent).toContain("Exportar em PDF");
     const history = within(dialog).getByRole("navigation", { name: "Versões" });
     const items = within(history).getAllByRole("button");
     expect(items).toHaveLength(2);
     expect(items[0]?.textContent).toContain("v2");
     expect(items[0]?.textContent).toContain("Atual");
-    expect(items[0]?.textContent).toContain("Acrescentei quem foi afetado.");
-    expect(items[0]?.getAttribute("aria-current")).toBe("true");
+    expect(items[0]?.textContent).toContain("Acrescentei as menções desta semana.");
     expect(items[1]?.textContent).toContain("Sem nota");
-    expect(dialog.textContent).toContain("38 clientes");
-
-    await click(items[1] as HTMLElement);
-    await settle(4);
-    const again = screen().getByRole("dialog", { name: "Relatório de incidente: checkout" });
-    expect(again.textContent).toContain("Vendo a v1. A mais recente é a v2.");
-    expect(again.textContent).not.toContain("38 clientes");
+    expect(items[1]?.getAttribute("aria-current")).toBe("true");
     // Old versions are read-only.
-    expect(within(again).queryByRole("button", { name: "Editar" })).toBeNull();
-    await click(within(again).getByRole("button", { name: "Ver a mais recente" }));
+    expect(within(dialog).queryByRole("button", { name: "Editar" })).toBeNull();
+    await click(within(dialog).getByRole("button", { name: "Ver a mais recente" }));
     await settle(4);
-    expect(screen().getByRole("dialog").textContent).toContain("38 clientes");
-  });
-
-  test("editing a document saves a new version with a note", async () => {
-    const { api, a } = await openChannel();
-    const dialog = await openCard("Relatório de incidente: checkout");
-    await click(within(dialog).getByRole("button", { name: "Editar" }));
-    expect(dialog.textContent).toContain("Editando: salvar cria a v3.");
-    await type(within(dialog).getByLabelText("Texto em Markdown"), "# Incidente\n\nResolvido às 19h.");
-    await type(within(dialog).getByLabelText("Nota da alteração (opcional)"), "Fechei o incidente.");
-    await click(within(dialog).getByRole("button", { name: "Salvar nova versão" }));
-    await settle(6);
-    expect(screen().getByText("Versão 3 salva.")).toBeTruthy();
-    const view = screen().getByRole("dialog");
-    expect(view.textContent).toContain("Resolvido às 19h.");
-    const history = within(view).getByRole("navigation", { name: "Versões" });
-    expect(within(history).getAllByRole("button")[0]?.textContent).toContain("Fechei o incidente.");
-    expect((await api.artifacts.versions(ORG_ID, a.document.id)).map((v) => v.version)).toEqual([3, 2, 1]);
+    const latest = screen().getByRole("dialog", { name: "Pedidos mais comuns nos reviews" });
+    expect(latest.textContent).not.toContain("Exportar em PDF");
+    expect(within(latest).getByRole("button", { name: "Editar" })).toBeTruthy();
   });
 
   test("a stale edit (someone saved first) is explained, not lost silently", async () => {
     const { api, a } = await openChannel();
-    const dialog = await openCard("Relatório de incidente: checkout");
+    const dialog = await openCard("Pedidos mais comuns nos reviews");
     await click(within(dialog).getByRole("button", { name: "Editar" }));
-    await api.artifacts.update(ORG_ID, a.document.id, {
-      content: { kind: "document", markdown: "outra" },
-      baseVersion: 2,
+    await api.artifacts.update(ORG_ID, a.table.id, {
+      content: { kind: "table", columns: ["Pedido", "Menções", "Nota média"], rows: [["Modo offline", "40", "2,6"]] },
+      baseVersion: 1,
     });
-    await type(within(dialog).getByLabelText("Texto em Markdown"), "minha versão");
+    await type(within(dialog).getByLabelText("Menções, linha 1"), "33");
     await click(within(dialog).getByRole("button", { name: "Salvar nova versão" }));
     await settle(4);
     expect(dialog.textContent).toContain("Alguém salvou uma versão nova enquanto você editava.");
@@ -709,55 +673,23 @@ describe("Drive", () => {
     expect(document.querySelector(".drive-group__head .ac-grouphead__title")?.textContent).toMatch(/^#/);
   });
 
-  test("a click shows the details: preview, Abrir, Baixar, Copiar link, versions, where", async () => {
+  test("a click opens the file in the viewer at once, with no details dialog before it", async () => {
     await goDrive();
     // The card says it opens a dialog (checked before: the open modal hides the page behind it).
     expect(card("Organograma do time").getAttribute("aria-haspopup")).toBe("dialog");
     await click(card("Organograma do time"));
-    await settle(4);
-    const panel = screen().getByRole("dialog", { name: "Organograma do time" });
-    expect(within(panel).getByRole("heading", { level: 2, name: "Organograma do time" })).toBeTruthy();
-    expect(panel.querySelector(".drive-pv--lg")).not.toBeNull();
-    expect(panel.textContent).toContain("Feito por");
-    expect(panel.textContent).toContain("Onde aparece");
-
-    // Baixar: diagrams have one format (the original).
-    await click(within(panel).getByRole("button", { name: "Baixar" }));
-    await settle(2);
-    expect(saved[0]?.name).toBe("organograma-do-time.mmd");
-    await click(within(panel).getByRole("button", { name: "Copiar link" }));
-    await settle(2);
-    expect(copied[0]).toContain("/drive?artifact=");
-    expect(within(panel).getByRole("button", { name: "Mais ações: Organograma do time" })).toBeTruthy();
+    await settle(6);
+    const viewer = screen().getByRole("dialog", { name: "Organograma do time" });
+    expect(viewer.querySelector(".artifact-sheet__title")?.textContent).toBe("Organograma do time");
+    // The file itself, with its actions: no step with "Abrir" in between.
+    expect(document.querySelector(".drive-details")).toBeNull();
+    expect(within(viewer).queryByRole("button", { name: "Abrir" })).toBeNull();
+    expect(within(viewer).getByRole("button", { name: "Mais ações: Organograma do time" })).toBeTruthy();
 
     // Esc closes it.
     await keyDown("Escape");
     await settle(2);
     expect(screen().queryByRole("dialog", { name: "Organograma do time" })).toBeNull();
-
-    // Abrir: the same viewer as everywhere.
-    await click(card("Organograma do time"));
-    await settle(4);
-    const details = screen().getByRole("dialog", { name: "Organograma do time" });
-    // Two "Abrir": the dialog header's icon (open in its own page) and the file action with a text label.
-    const openAction = within(details)
-      .getAllByRole("button", { name: "Abrir" })
-      .find((b) => b.textContent?.trim() === "Abrir");
-    await click(openAction as HTMLElement);
-    await settle(4);
-    expect(screen().getByRole("dialog", { name: "Organograma do time" })).toBeTruthy();
-  });
-
-  test("the details' … matches Copiar link; who can see it, in plain words", async () => {
-    await goDrive();
-    await click(card("Organograma do time"));
-    await settle(4);
-    const panel = screen().getByRole("dialog", { name: "Organograma do time" });
-    const more = within(panel).getByRole("button", { name: "Mais ações: Organograma do time" });
-    expect(more.className).toBe(within(panel).getByRole("button", { name: "Copiar link" }).className);
-    expect(panel.querySelector(".drive-audience")?.textContent).toBe(
-      "Todo o workspace pode ver: está no canal público #eng",
-    );
   });
 
   /** A file Atlas left in its DM with me, and one in the Drive only. */
@@ -771,11 +703,12 @@ describe("Drive", () => {
     await api.artifacts.create(ORG_ID, {
       title: "Rascunho da proposta",
       channelId: "dm-atlas",
-      content: { kind: "document", markdown: "# Proposta" },
+      // A file the viewer opens (a document is a live file with a page of its own, ADR 0200).
+      content: { kind: "table", columns: ["Item", "Valor"], rows: [["Proposta", "1"]] },
     });
     await api.artifacts.create(ORG_ID, {
       title: "Manual do time",
-      content: { kind: "document", markdown: "# Manual" },
+      content: { kind: "table", columns: ["Passo", "Quem"], rows: [["Abrir o turno", "Walter"]] },
     });
     return goDrive({ api });
   };
@@ -792,37 +725,11 @@ describe("Drive", () => {
     expect(within(privateSection).queryByRole("button", { name: "Manual do time" })).toBeNull();
 
     await click(card("Rascunho da proposta"));
-    await settle(4);
+    await settle(6);
     const panel = screen().getByRole("dialog", { name: "Rascunho da proposta" });
-    expect(panel.querySelector(".drive-audience")?.textContent).toBe(
-      "Só você e Atlas podem ver: veio de uma mensagem direta",
-    );
-    expect(panel.textContent).toContain("Mensagem direta com Atlas");
     await pick(panel, /^Mais ações: /, "Abrir a conversa");
     await settle(4);
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/dm/agent/${ATLAS_ID}`);
-  });
-
-  test("a Drive-only file is seen by the whole workspace and has no conversation to open", async () => {
-    await withDmFile();
-    await click(card("Manual do time"));
-    await settle(4);
-    const panel = screen().getByRole("dialog", { name: "Manual do time" });
-    expect(panel.querySelector(".drive-audience")?.textContent).toBe("Todo o workspace pode ver");
-    expect(panel.textContent).toContain("Só no Drive");
-    expect(panel.querySelector("button.drive-where")).toBeNull();
-  });
-
-  test("details list the versions; Ver opens an older one", async () => {
-    await goDrive();
-    await click(card("Relatório de incidente: checkout"));
-    await settle(6);
-    const panel = screen().getByRole("dialog", { name: "Relatório de incidente: checkout" });
-    expect(panel.querySelectorAll(".drive-versions li")).toHaveLength(2);
-    expect(panel.textContent).toContain("Acrescentei quem foi afetado.");
-    await click(within(panel).getByRole("button", { name: "Ver a v1" }));
-    await settle(6);
-    expect(screen().getByRole("dialog").textContent).toContain("Vendo a v1");
   });
 
   test("a shared link opens the viewer directly", async () => {
@@ -839,10 +746,10 @@ describe("Drive", () => {
     await click(screen().getByRole("checkbox", { name: "Selecionar Organograma do time" }));
     const bar = () => screen().getByRole("toolbar", { name: "Seleção" });
     expect(bar().textContent).toContain("1 selecionado");
-    // While selecting, a click selects (no details).
+    // While selecting, a click selects (the file doesn't open).
     await act(async () => fireEvent.click(card("Pedidos mais comuns nos reviews"), { metaKey: true }));
     expect(bar().textContent).toContain("2 selecionados");
-    expect(document.querySelector(".drive-details")).toBeNull();
+    expect(screen().queryByRole("dialog")).toBeNull();
 
     await click(within(bar()).getByRole("button", { name: "Copiar links" }));
     await settle(2);
@@ -1027,18 +934,18 @@ describe("deleting a file", () => {
   };
   test("the viewer header: one-line title with a tooltip, Baixar ▾, Editar, … with Mover para a lixeira", async () => {
     await openChannel();
-    const dialog = await openCard("Relatório de incidente: checkout");
+    const dialog = await openCard("Pedidos mais comuns nos reviews");
     const title = dialog.querySelector(".artifact-sheet__title") as HTMLElement;
-    expect(title.getAttribute("title")).toBe("Relatório de incidente: checkout");
+    expect(title.getAttribute("title")).toBe("Pedidos mais comuns nos reviews");
     expect(within(dialog).getByRole("button", { name: "Editar" }).getAttribute("title")).toBe("Editar");
     expect(within(dialog).queryByRole("button", { name: "Baixar PDF" })).toBeNull();
   });
 
   test("Mover para a lixeira asks, naming the file; then 'Movido para a lixeira · Desfazer' restores it", async () => {
     const { state } = await goDrive();
-    // From the details panel's "…".
+    // From the open file's "…".
     await click(screen().getByRole("button", { name: "Organograma do time" }));
-    await settle(4);
+    await settle(6);
     const panel = screen().getByRole("dialog", { name: "Organograma do time" });
     await pick(panel, /^Mais ações: /, "Mover para a lixeira");
     const confirm = screen().getByRole("dialog", { name: "Mover “Organograma do time” para a lixeira?" });
@@ -1047,7 +954,7 @@ describe("deleting a file", () => {
     await settle(5);
     expect(state.calls.some((c) => c.method === "artifacts.remove")).toBe(true);
     expect(screen().queryByRole("button", { name: "Organograma do time" })).toBeNull();
-    expect(document.querySelector(".drive-details")).toBeNull();
+    expect(screen().queryByRole("dialog", { name: "Organograma do time" })).toBeNull();
     expect(screen().getByText("Movido para a lixeira")).toBeTruthy();
     await click(screen().getByRole("button", { name: "Desfazer" }));
     await settle(5);

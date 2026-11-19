@@ -68,18 +68,27 @@ export const allAgentsLimitsPath = (unitPath = SYSTEM_UNIT_PATH) =>
 export const AGENTS_CGROUP = "/sys/fs/cgroup/agents.slice";
 export const agentCgroup = (uid: number) => path.join(AGENTS_CGROUP, agentSlice(uid));
 /**
- * Each agent's own /tmp, /dev/shm and /run/lock (`<uid>/tmp`, `shm`, `lock`): in memory as the computer's are, on a
- * tmpfs of the agent's own at `<uid>`, in a folder only root can reach.
+ * Each agent's own /dev/shm and /run/lock (`<uid>/shm`, `lock`): in memory as the computer's are, on a tmpfs of the
+ * agent's own at `<uid>`, in a folder only root can reach. Its /tmp is `<uid>/tmp` there too, in that tmpfs or
+ * (`agentTmpOnDisk`) bound from `AGENT_DISK_TMP_ROOT`.
  */
 export const AGENT_RAM_ROOT = "/run/agentes-runner-tmp";
 /** Each agent's own /var/tmp (`<uid>/var-tmp`): on disk as the computer's is, in a folder only root can reach. */
 export const AGENT_TMP_ROOT = "/var/lib/agentes-runner-tmp";
+/**
+ * The agents' /tmp on disk (`agentTmpOnDisk`), in a folder only root can reach: a filesystem of their own, `image`,
+ * made anew at every boot and mounted at `fs`, each agent's /tmp `fs/<uid>`. On the system disk: never under the
+ * workspace's paths, which the Cloud keeps on a data disk that moves and backups copy.
+ */
+export const AGENT_DISK_TMP_ROOT = "/var/cache/agentes-runner-tmp";
 export const agentTmp = (uid: number) => path.join(AGENT_RAM_ROOT, String(uid), "tmp");
 /**
- * systemd-tmpfiles' lines for them: what agents leave goes after 10 days, 30 in /var/tmp, as in a stock system. Each
- * agent's runtime dir (`run`, ADR 0169) never ages, as logind's don't: a container up for weeks keeps its state there.
+ * systemd-tmpfiles' lines for them: what agents leave goes after 10 days, 30 in /var/tmp, as in a stock system (the
+ * agents' /tmp on disk too, through its bind in the agent's tmpfs). The boot removes the image of the agents' /tmp on
+ * disk (`r!`: never on a later `--remove`), so a computer switched back to memory doesn't keep its room. Each agent's
+ * runtime dir (`run`, ADR 0169) never ages, as logind's don't: a container up for weeks keeps its state there.
  */
-export const AGENT_TMP_CLEANUP = `# agentes.chat runner: each agent's own temporary folders\ne ${AGENT_RAM_ROOT}/*/* - - - 10d\nx ${AGENT_RAM_ROOT}/*/run\ne ${AGENT_TMP_ROOT}/*/* - - - 30d\n`;
+export const AGENT_TMP_CLEANUP = `# agentes.chat runner: each agent's own temporary folders\ne ${AGENT_RAM_ROOT}/*/* - - - 10d\nx ${AGENT_RAM_ROOT}/*/run\ne ${AGENT_TMP_ROOT}/*/* - - - 30d\nr! ${AGENT_DISK_TMP_ROOT}/image\n`;
 /** In `/etc/tmpfiles.d`, two folders up from the unit's (`/etc/systemd/system`). */
 export const agentTmpCleanupPath = (unitPath = SYSTEM_UNIT_PATH) =>
   path.join(path.dirname(unitPath), "..", "..", "tmpfiles.d", `${SERVICE_NAME}.conf`);
@@ -390,6 +399,35 @@ export function removeUserService(d: Pick<ServiceDefinition, "unit" | "label">, 
   return file;
 }
 
+/**
+ * A runner removed from its workspace (`revoked`) takes its own login service away before it exits: a leftover
+ * launchd agent or systemd unit would start it at every login, only to be refused again. Not on `invalid_token`: a
+ * server reset or restored from a backup would uninstall runners still wanted. No `launchctl bootout` (it would kill
+ * this process mid-exit); the exit code already stops launchd and systemd from starting it again. Returns the file
+ * removed, or null when this runner wasn't started by one.
+ */
+export function removeOwnService(
+  o: { manager: string | undefined; home?: string; uid?: number; platform?: NodeJS.Platform },
+  run: RunCommand = runSync,
+): string | null {
+  const platform = o.platform ?? process.platform;
+  const home = o.home ?? os.homedir();
+  if (o.manager === "launchd" && platform === "darwin") {
+    const file = launchdPlistPath(home);
+    if (!existsSync(file)) return null;
+    rmSync(file, { force: true });
+    return file;
+  }
+  if (o.manager !== "systemd" || platform !== "linux") return null;
+  const system = (o.uid ?? process.getuid?.() ?? -1) === 0;
+  const file = system ? SYSTEM_UNIT_PATH : systemdUnitPath(home);
+  if (!existsSync(file)) return null;
+  run("systemctl", [...(system ? [] : ["--user"]), "disable", SERVICE_NAME]);
+  rmSync(file, { force: true });
+  run("systemctl", [...(system ? [] : ["--user"]), "daemon-reload"]);
+  return file;
+}
+
 /** Where the user unit or the launchd agent is installed (with systemd's state), or null. */
 export function userServiceStatus(d: Pick<ServiceDefinition, "unit" | "label">, run: RunCommand = runSync) {
   if (process.platform === "darwin") {
@@ -400,6 +438,32 @@ export function userServiceStatus(d: Pick<ServiceDefinition, "unit" | "label">, 
   if (!existsSync(file)) return null;
   const active = run("systemctl", ["--user", "is-active", d.unit]).output || "unknown";
   return `systemd user unit ${file} (${active})`;
+}
+
+/** Whether systemd keeps `user`'s services running after they log out (loginctl's Linger); null: it can't say. */
+export function lingerOn(user: string, run: RunCommand = runSync): boolean | null {
+  const r = run("loginctl", ["show-user", user, "--property=Linger"]);
+  const value = r.code === 0 ? /^Linger=(yes|no)$/m.exec(r.output)?.[1] : undefined;
+  return value === undefined ? null : value === "yes";
+}
+
+/**
+ * Turns linger on for `user` (most systems let people do it for themselves), so a user unit outlives their logout.
+ * True when it is on.
+ */
+export function keepAfterLogout(user: string, run: RunCommand = runSync): boolean {
+  if (lingerOn(user, run)) return true;
+  run("loginctl", ["enable-linger", user]);
+  return lingerOn(user, run) === true;
+}
+
+/** With the runner installed as this user's systemd unit: whether it outlives their logout. Null otherwise. */
+export function userUnitLinger(
+  o: { platform?: NodeJS.Platform; home?: string; user?: string } = {},
+  run: RunCommand = runSync,
+): boolean | null {
+  if ((o.platform ?? process.platform) !== "linux" || !existsSync(systemdUnitPath(o.home))) return null;
+  return lingerOn(o.user ?? os.userInfo().username, run);
 }
 
 /** Installs and starts the service. Returns the process exit code. */
@@ -416,7 +480,9 @@ export function installService(io: ServiceIo): number {
     if (!startUserUnit(SERVICE_NAME, systemdUnit(launch, io.args), { print, run })) return 1;
     print(`Installed ${systemdUnitPath()} and started it.`);
     print(`Logs: journalctl --user -u ${SERVICE_NAME} -f`);
-    print(`To keep it running after you log out: loginctl enable-linger ${os.userInfo().username}`);
+    const user = os.userInfo().username;
+    if (keepAfterLogout(user, run)) print(`Linger is on for ${user}: it keeps running after you log out.`);
+    else print(`It stops when you log out. To keep it running, run as root: loginctl enable-linger ${user}`);
     return 0;
   }
   if (process.platform === "darwin") {

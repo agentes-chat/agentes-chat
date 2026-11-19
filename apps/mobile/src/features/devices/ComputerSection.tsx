@@ -26,8 +26,15 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
   const mark = useDeviceMutation((api, orgId, on: boolean) =>
     api.devices.updateComputer(orgId, d.id, { belongsToWorkspace: on }),
   );
+  const spill = useDeviceMutation((api, orgId, input: { own?: boolean; others?: boolean }) =>
+    api.devices.updateComputer(orgId, d.id, { spill: input }),
+  );
   const brought = d.machineKind === "connected";
   const admin = can(org, "configure");
+  // What is being saved shows at once: a switch moves as it is tapped. Each change stays pending until the computers
+  // are read again (`useDeviceMutation`), so the saved value takes over with no flicker.
+  const spillOn = (key: "own" | "others") => (spill.isPending ? spill.variables?.[key] : undefined) ?? d.spill[key];
+  const belongs = (mark.isPending ? mark.variables : undefined) ?? d.belongsToWorkspace;
   const wifi = useWifiIphones(
     useOrgId(),
     d.id,
@@ -49,6 +56,32 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
                   }
                 : {})}
             />
+            {/* Spill-over: its owner turns these on; an admin may only turn them off. */}
+            {brought && d.mayManage && !d.systemMode
+              ? (["own", "others"] as const).map((key) => {
+                  const label = t(key === "own" ? "devices.spillOwn" : "devices.spillOthers");
+                  const on = spillOn(key);
+                  return (
+                    <GroupedRow
+                      key={key}
+                      label={label}
+                      labelLines={2}
+                      hint={{
+                        name: t("common.about", { label }),
+                        text: t(key === "own" ? "devices.spillOwnHint" : "devices.spillOthersHint"),
+                      }}
+                      toggle={on}
+                      disabled={d.ownerUserId !== meId && !on}
+                      onPress={() =>
+                        spill.mutate(
+                          { [key]: !on },
+                          { onError: (err) => toast({ title: errorText(t, err), icon: "x" }) },
+                        )
+                      }
+                    />
+                  );
+                })
+              : null}
             {brought && admin ? (
               <GroupedRow
                 label={t("mobile.devices.page.belongs")}
@@ -57,10 +90,9 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
                   name: t("common.about", { label: t("mobile.devices.page.belongs") }),
                   text: t("mobile.devices.page.belongsHint"),
                 }}
-                toggle={d.belongsToWorkspace}
-                disabled={mark.isPending}
+                toggle={belongs}
                 onPress={() =>
-                  mark.mutate(!d.belongsToWorkspace, {
+                  mark.mutate(!belongs, {
                     onError: (err) => toast({ title: errorText(t, err), icon: "x" }),
                   })
                 }

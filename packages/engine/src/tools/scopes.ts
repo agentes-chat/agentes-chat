@@ -5,15 +5,18 @@ import {
   type Executor,
   eq,
   inArray,
+  isNotNull,
   isNull,
   like,
+  ne,
   type SQL,
   schema,
   sql,
 } from "@agenteschat/db";
+import { managesAgent, REACH_COLUMNS } from "../audience";
 import { recordAudit } from "../audit";
 import { caches } from "../cache";
-import { NotFoundError, ValidationError } from "../errors";
+import { ForbiddenError, NotFoundError, ValidationError } from "../errors";
 import { requirePermission } from "../organizations";
 import { isRightHand, RIGHT_HAND_GRANTS } from "../right-hand";
 import type { ToolDefinition } from "./types";
@@ -150,7 +153,8 @@ export const BUILTIN_SCOPES: Record<string, { label: string; description: string
   "drive:read": { label: "Read files", description: "Read files in the Drive." },
   "drive:write": {
     label: "Write files",
-    description: "Create reports, tables, org charts, diffs and pages in the Drive.",
+    description:
+      "Create reports, spreadsheets, presentations, canvases, diffs and pages in the Drive, and generate images.",
   },
   "issues:read": { label: "Read issues", description: "List and read issues." },
   "calendar:read": { label: "View calendar", description: "View events and free time." },
@@ -316,7 +320,7 @@ export function impliedByWrite(scope: string) {
   return m ? `${m[1]}:write` : null;
 }
 
-/** Scopes that "all tools" (`*`) doesn't cover. */
+/** Scopes that "all tools" (`*`) doesn't cover: the agent's computer (commands, its browser, its desktop). */
 export const NOT_IN_ALL: ReadonlySet<string> = new Set(["sandbox:run", "browser:use", "desktop:use"]);
 
 export const isAllowed = (state: AccessState) => state === "granted" || state === "inherited";
@@ -353,9 +357,12 @@ async function loadScopeKeys(db: Executor, orgId: string, agentId: string): Prom
       .from(schema.agents)
       .where(and(eq(schema.agents.orgId, orgId), eq(schema.agents.id, agentId))),
   ]);
-  // The right hand's tools are fixed in code (ADR 0137): a grant row gives it nothing.
-  if (isRightHand(agent)) return new Set(RIGHT_HAND_GRANTS.map((scope) => grantKey(null, scope)));
-  return new Set(rows.map((r) => grantKey(r.connectionId, r.scope)));
+  const keys = new Set(rows.map((r) => grantKey(r.connectionId, r.scope)));
+  if (!isRightHand(agent)) return keys;
+  // The right hand (ADR 0137) holds its own grants on top of its rows. Its computer's scopes are rows like any
+  // agent's (ADR 0175), given when it is made, so an admin turns them off on its page.
+  for (const scope of RIGHT_HAND_GRANTS) keys.add(grantKey(null, scope));
+  return keys;
 }
 
 export async function hasScope(
@@ -386,7 +393,7 @@ const builtinOnly: GrantValidator = async (_db, _orgId, grant) =>
   grant.connectionId === null && !isBuiltinScope(grant.scope) ? `Unknown scope ${grant.scope}` : null;
 
 /**
- * Replaces an agent's grants (admins: `manage_agents`). Each grant is checked
+ * Replaces an agent's grants: who manages it (`managesAgent`, ADR 0085 addendum of 2026-11-17). Each grant is checked
  * against the scope catalogs; nothing outside them can be granted.
  */
 export async function setAgentScopes(
@@ -397,12 +404,15 @@ export async function setAgentScopes(
   grants: ScopeGrant[],
   validate: GrantValidator = builtinOnly,
 ) {
-  await requirePermission(db, actorId, orgId, "manage_agents");
+  const membership = await requirePermission(db, actorId, orgId, "manage_agents");
   const [agent] = await db
-    .select({ id: agents.id })
+    .select({ id: agents.id, builtin: agents.builtin, ...REACH_COLUMNS })
     .from(agents)
     .where(and(eq(agents.id, agentId), eq(agents.orgId, orgId), isNull(agents.deletedAt)));
   if (!agent) throw new NotFoundError("Agent not found");
+  if (!managesAgent(agent, actorId, membership)) throw new ForbiddenError();
+  // What is off for the right hand is kept tool by tool (`setAgentAccess`), which a plain list of scopes can't carry.
+  if (isRightHand(agent)) throw new ValidationError("Set what it may use on its page, under what it can use");
   // Mail grants stay as they are (the mail API manages them); any sent back here are ignored.
   const mail = await mailConnectionIds(
     db,
@@ -414,6 +424,25 @@ export async function setAgentScopes(
     const problem =
       (await builtinOnly(db, orgId, grant)) ?? (grant.connectionId ? await validate(db, orgId, grant) : null);
     if (problem) throw new ValidationError(problem);
+  }
+  // Someone else's personal connection: only its person gives it to an agent, so a grant on one it doesn't hold yet
+  // is refused (taking it off is anyone's who may change the agent).
+  const ids = [...new Set(grants.flatMap((g) => g.connectionId ?? []))];
+  if (ids.length > 0) {
+    const theirs = await db
+      .select({ id: schema.connectorConnections.id })
+      .from(schema.connectorConnections)
+      .where(
+        and(
+          inArray(schema.connectorConnections.id, ids),
+          isNotNull(schema.connectorConnections.ownerUserId),
+          ne(schema.connectorConnections.ownerUserId, actorId),
+        ),
+      );
+    const held = await freshGrantedKeys(db, orgId, agentId);
+    for (const g of grants)
+      if (theirs.some((t) => t.id === g.connectionId) && !held.has(grantKey(g.connectionId, g.scope)))
+        throw new ForbiddenError("Only its person gives a personal connection to an agent");
   }
   caches.scopes.delete(`${orgId}:${agentId}`);
   await db.transaction(async (tx) => {

@@ -111,10 +111,15 @@ const size = (r: ModelRequest) =>
  * card's question never written twice (ADR 0089 addendum 2026-11-10), and about 46,770 with team memory (`remember`'s
  * `for: "team"`) and a result claimed only when a call made it (ADR 0167), and about 46,970 with an agent asking for
  * its own settings on its card (`request_settings_change` named, its definition on demand: up front it would add 3,800,
- * ADR 0137). Where each workspace gets its own computer, `workspaceComputerText` adds 447 to that (about 47,410); the
- * ceiling leaves a little room above both.
+ * ADR 0137), and 47,631 with recall reading the asker's own DM with the agent from anywhere they ask, an empty search
+ * never told as "the first time", and the DM rule saying what may be said of it elsewhere. Where each workspace gets its
+ * own computer, `workspaceComputerText` adds 447 to that (48,078); and a sign-in whose link or
+ * code goes to a mailbox the agent reads being its own work adds 360; the live files' group (ADR 0196 §6) named with
+ * the others, in the prompt and in `find_tools`, adds about 170 (48,834 on the Cloud), and `ignore_usage_limit`, for a person telling the agent to go past
+ * its usage pause, adds 356 (49,190); the ceiling leaves a little
+ * room above them.
  */
-const OI_CEILING_CHARS = 47_500;
+const OI_CEILING_CHARS = 49_400;
 
 test("a DM 'oi' stays under the size ceiling", async () => {
   const [request] = await play(TURNS.find((t) => t.id === "greet-dm") as ScriptedTurn);

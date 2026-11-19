@@ -1,8 +1,9 @@
 import type { Artifact, ArtifactContent, ArtifactFileContent, ArtifactRef } from "@agenteschat/client";
-import { useArtifact } from "@agenteschat/client";
+import { isLiveFileKind, useArtifact } from "@agenteschat/client";
 import { documentStart, KIND_ICON, parseDelimited, patchCounts } from "@agenteschat/client/lib/artifacts";
-import { fileIcon, formatBytes, previewKind, previewKindOfName } from "@agenteschat/client/lib/files";
+import { fileIcon, formatBytes, pictureRatio, previewKind, previewKindOfName } from "@agenteschat/client/lib/files";
 import { Button, Icon, type IconName, Menu, Tip } from "@agenteschat/ui";
+import { useNavigate } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
 import { type CSSProperties, type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -10,6 +11,8 @@ import { ChoicesCard } from "@/components/blocks/ChoicesCard";
 import { LiveBlockCard } from "@/components/blocks/LiveBlock";
 import { PollCard } from "@/components/blocks/PollCard";
 import { MenuEntries } from "@/components/DesktopMenus";
+import { LiveCover } from "@/components/live/LiveCover";
+import { openLivePage } from "@/components/live/open";
 import { useOrg } from "@/components/org-context";
 import { contextMenuHandler, type MenuEntry } from "@/lib/context-menu";
 import { Markdown } from "@/lib/markdown";
@@ -34,7 +37,8 @@ const COVER_CHARS = 1200;
  * its kind and size under it. A click opens the viewer; Download and More show over the cover on hover, and the
  * desktop app's right click has the same actions. A picture is only the picture, as is a video its player: their name
  * and size are in their tip and in the viewer's header. A picture alone on its message shows whole inside its tile
- * (CSS: `.artifact-cards > :only-child`). Every tile has its size before what it holds loads (`LoadingTile`).
+ * (CSS: `.artifact-cards > :only-child`), in its own proportions when its size is known (`pictureRatio`). Every tile
+ * has its size before what it holds loads (`LoadingTile`).
  */
 export function ArtifactCard({ artifact: ref }: { artifact: ArtifactRef }) {
   const { t, i18n } = useTranslation();
@@ -45,6 +49,10 @@ export function ArtifactCard({ artifact: ref }: { artifact: ArtifactRef }) {
   const remove = useDeleteArtifact();
   const query = useArtifact(org.id, ref.deleted ? null : ref.id, ref.version);
   const a = query.data;
+  const navigate = useNavigate();
+  // A live file is the file as it is now (ADR 0196 §7), whichever version the message named: its head's preview.
+  const live = Boolean(a && isLiveFileKind(a.kind));
+  const head = useArtifact(org.id, live && ref.version ? ref.id : null).data;
   // Deleted (to the trash): a quiet placeholder, never a broken card.
   if (ref.deleted) {
     return (
@@ -61,13 +69,18 @@ export function ArtifactCard({ artifact: ref }: { artifact: ArtifactRef }) {
       </div>
     );
   }
-  if (!a) return <LoadingTile title={ref.title} />;
+  if (!a) return <LoadingTile title={ref.title} ratio={pictureRatio(ref)} />;
   // What lives in the conversation isn't a file: the thing itself, not a tile that opens it (ADR 0113).
   if (a.kind === "block") return <LiveBlockCard id={a.id} version={a.shownVersion} />;
   if (a.kind === "poll") return <PollCard id={a.id} version={a.shownVersion} />;
   if (a.kind === "choices") return <ChoicesCard id={a.id} version={a.shownVersion} />;
-  const open = () => viewer.open(a.id, a.shownVersion < a.version ? a.shownVersion : undefined);
-  const save = () => void download.save(a, undefined, a.shownVersion, a.content);
+  // A live file opens on its own page, as it is now (ADR 0196 §9); the rest in the viewer, at the version they name.
+  const open = () => {
+    if (live) openLivePage(navigate, org.id, a.id);
+    else viewer.open(a.id, a.shownVersion < a.version ? a.shownVersion : undefined);
+  };
+  // A live file downloads as it is now (its versions are checkpoints behind it, ADR 0196 §7).
+  const save = () => void download.save(a, undefined, live ? undefined : a.shownVersion, a.content);
   // Open, download, Compartilhar, its link (through the share dialog while only its conversation sees it), and the
   // trash for who may delete it: the right click and the More menu.
   const actions = (): MenuEntry[] => [
@@ -99,14 +112,25 @@ export function ArtifactCard({ artifact: ref }: { artifact: ArtifactRef }) {
         ] as const)
       : []),
   ];
-  const tile = (props: Pick<TileProps, "icon" | "meta" | "cover" | "media">) => (
+  const tile = (props: Pick<TileProps, "icon" | "meta" | "cover" | "media" | "ratio">) => (
     <>
       <Tile artifact={a} actions={actions} onOpen={open} onDownload={save} {...props} />
       {remove.dialog}
       {share.dialog}
     </>
   );
-  const content = a.content;
+  const content = live ? (head?.content ?? a.content) : a.content;
+  if (
+    content.kind === "document" ||
+    content.kind === "spreadsheet" ||
+    content.kind === "slides" ||
+    content.kind === "canvas"
+  )
+    return tile({
+      icon: KIND_ICON[a.kind],
+      meta: metaOf(t, content, a.shownVersion),
+      cover: <LiveCover content={content} fileId={a.id} size="tile" />,
+    });
   if (content.kind !== "file")
     return tile({
       icon: KIND_ICON[a.kind],
@@ -146,6 +170,7 @@ export function ArtifactCard({ artifact: ref }: { artifact: ArtifactRef }) {
   if (kind === "image" && content.size <= MAX_THUMB_BYTES)
     return tile({
       media: true,
+      ratio: pictureRatio(content) ?? pictureRatio(ref),
       icon: "image",
       meta,
       cover: <PictureCover content={content} artifactId={a.id} version={a.shownVersion} title={a.title} />,
@@ -158,7 +183,7 @@ export function ArtifactCard({ artifact: ref }: { artifact: ArtifactRef }) {
  * picture or a video by its name ("tela.png"), as the phone reads it; anything else a cover over its name, which wraps
  * as it will.
  */
-function LoadingTile({ title = "" }: { title?: string }) {
+function LoadingTile({ title = "", ratio }: { title?: string; ratio?: number }) {
   const kind = previewKindOfName(title);
   if (kind === "video")
     return (
@@ -169,7 +194,12 @@ function LoadingTile({ title = "" }: { title?: string }) {
       </div>
     );
   return (
-    <div className="artifact-tile artifact-tile--loading" data-media={kind === "image" || undefined} aria-busy="true">
+    <div
+      className="artifact-tile artifact-tile--loading"
+      data-media={kind === "image" || undefined}
+      {...(kind === "image" ? ratioProps(ratio) : {})}
+      aria-busy="true"
+    >
       <div className="artifact-tile__cover" />
       {kind !== "image" && (
         <div className="artifact-tile__foot ac-iconline" aria-hidden="true">
@@ -183,6 +213,10 @@ function LoadingTile({ title = "" }: { title?: string }) {
     </div>
   );
 }
+
+/** A tile in a picture's proportions: alone on its message it is that shape (CSS: `[data-ratio]`). */
+const ratioProps = (ratio: number | undefined) =>
+  ratio ? { "data-ratio": true, style: { "--ratio": String(ratio) } as CSSProperties } : {};
 
 const extOf = (name: string) => /\.([a-z0-9]{1,8})$/i.exec(name.trim())?.[1]?.toLowerCase() ?? "";
 
@@ -207,6 +241,17 @@ function metaOf(t: TFunction, content: ArtifactContent, version: number) {
       }
       return `${t("artifacts.files", { count: content.files.length })} · ${t("artifacts.counts", total)}`;
     }
+    // Live files (ADR 0196): how many sheets or slides; a canvas by its kind alone.
+    case "spreadsheet":
+      return content.preview.sheets > 1
+        ? `${kind} · ${t("live.kinds.sheetCount", { count: content.preview.sheets })}`
+        : kind;
+    case "slides":
+      return `${kind} · ${t("live.kinds.slideCount", { count: content.preview.count })}`;
+    case "canvas":
+    // A document is a live file (ADR 0200): no versions to count on its card.
+    case "document":
+      return kind;
     default:
       return `${kind} · ${t("artifacts.version", { version })}`;
   }
@@ -219,12 +264,14 @@ interface TileProps {
   cover: ReactNode;
   /** A picture: only the picture, its name and size in its tip; alone on its message it shows whole. */
   media?: boolean;
+  /** A picture's width over its height: alone on its message, its tile takes that shape. */
+  ratio?: number;
   actions: () => MenuEntry[];
   onOpen: () => void;
   onDownload: () => void;
 }
 
-function Tile({ artifact: a, icon, meta, cover, media, actions, onOpen, onDownload }: TileProps) {
+function Tile({ artifact: a, icon, meta, cover, media, ratio, actions, onOpen, onDownload }: TileProps) {
   const { t } = useTranslation();
   const sizeId = useId();
   // The whole tile opens the viewer; the actions sit above it.
@@ -243,6 +290,7 @@ function Tile({ artifact: a, icon, meta, cover, media, actions, onOpen, onDownlo
       className="artifact-tile"
       data-kind={a.kind}
       data-media={media || undefined}
+      {...(media ? ratioProps(ratio) : {})}
       onContextMenu={contextMenuHandler(() => [{ kind: "header", label: a.title }, ...actions()])}
     >
       {media ? (
@@ -312,17 +360,6 @@ function TileActions({
 function Cover({ content, title }: { content: ArtifactContent; title: string }) {
   const { t } = useTranslation();
   switch (content.kind) {
-    case "document":
-      // Its own headings, paragraphs and lists, smaller, fading at the foot; a first heading equal to the title isn't
-      // drawn again.
-      return (
-        <Markdown
-          source={documentStart(content.markdown, COVER_CHARS)}
-          title={title}
-          excerpt
-          className="artifact-tile__doc"
-        />
-      );
     case "table":
       return <CoverTable columns={content.columns} rows={content.rows} />;
     case "diff":
@@ -418,9 +455,13 @@ function PictureCover({
 }) {
   const { t } = useTranslation();
   const { url, failed } = usePreviewUrl(artifactId, version, content.contentType, true);
+  // Fetched after it showed (a picture just made or sent, not one read again from the cache): it comes in softly.
+  const fresh = useRef(url === null);
   if (failed) return <TypeCover content={content} />;
   return (
-    <span className="artifact-tile__picture">{url && <img src={url} alt={t("files.imageAlt", { title })} />}</span>
+    <span className="artifact-tile__picture">
+      {url && <img src={url} alt={t("files.imageAlt", { title })} data-fresh={fresh.current || undefined} />}
+    </span>
   );
 }
 

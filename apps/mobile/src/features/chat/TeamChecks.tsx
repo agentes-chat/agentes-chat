@@ -8,7 +8,7 @@ import { agoOf } from "../agents/logic";
 import { agoText } from "../agents/work";
 import { chatHref } from "../links/logic";
 import { boldRuns } from "./actions";
-import { useCardTop } from "./look";
+import { useCardTop, useMessageCardCorners } from "./look";
 
 const ICONS: Record<ReturnType<typeof targetKind>, IconName> = {
   email: "mail",
@@ -40,6 +40,7 @@ export function TeamChecks({ message: m }: { message: Message }) {
 function Row({ check, selfId }: { check: TeamCheck; selfId: string | null }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const cardCorners = useMessageCardCorners();
   const match = check.matches[0];
   const target = check.targets[0] ?? "";
   if (!match) return null;
@@ -55,7 +56,7 @@ function Row({ check, selfId }: { check: TeamCheck; selfId: string | null }) {
     .join(" · ");
   const channelId = match.channelId;
   return (
-    <View style={[styles.one, { backgroundColor: colors.raised, borderColor: colors.line2 }]}>
+    <View style={[styles.one, { backgroundColor: colors.raised, borderColor: colors.line2 }, cardCorners]}>
       <View style={styles.tx}>
         <LineIcon name={ICONS[targetKind(target)]} size={15} color={colors.muted} variant="small" />
       </View>
@@ -94,9 +95,11 @@ function Row({ check, selfId }: { check: TeamCheck; selfId: string | null }) {
 const styles = StyleSheet.create({
   list: { gap: 8 },
   bold: { fontWeight: "600" },
-  // The receipts' card: a hairline, the cut corner; the icon (as the conversation's event lines), the first line and
-  // the action (32, in a 50 row) share one middle.
+  // The receipts' card: a hairline, the cut corner, as wide as its words; the icon (as the conversation's event lines),
+  // the first line and the action (32, in a 50 row) share one middle.
   one: {
+    alignSelf: "flex-start",
+    maxWidth: "100%",
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 8,
@@ -111,6 +114,6 @@ const styles = StyleSheet.create({
   },
   // The "small" line (20) on the action's middle.
   tx: { paddingTop: (32 - 20) / 2 },
-  line: { flex: 1, minWidth: 0, alignItems: "flex-start", columnGap: 8 },
+  line: { flexShrink: 1, minWidth: 0, alignItems: "flex-start", columnGap: 8 },
   detail: { marginTop: 2 },
 });

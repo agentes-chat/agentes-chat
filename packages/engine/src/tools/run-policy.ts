@@ -15,14 +15,19 @@ import type { ToolDefinition } from "./types";
  *   refuses on its own when nobody is behind the run.
  * - `unattended` that a routine's report or work woke (`fedByRoutine`): what the routine read (inbound mail, a
  *   webhook) feeds it, so it keeps the routine's bounds (below), plus the reply where it is (`here`), never
- *   `hand_off` nor a mission's tools; every write to a connected app asks a person.
+ *   `hand_off` nor a mission's tools; every write to a connected app asks a person, except, on the run its report
+ *   or a teammate's answer to its question woke while that is all it read, the routine's own actions (`onOwnJob`,
+ *   ADR 0053 addendum 2026-11-13).
  * - `routine`: nothing that speaks for someone (reactions, GIFs and stickers, questions, reminders,
  *   routines, events, channels, secrets, permissions). It reports through `hand_off`, whose message may carry a GIF
  *   (its `gif`, as `post_message`'s, ADR 0091 addendum 2026-11-09). Otherwise it
  *   works as the agent (ADR 0109: one permission model, the agent's own): reads, the web and the browser,
  *   internal changes people can undo (issues, memory, wiki, Drive, Vault contacts, its own branches and pull
- *   requests, its computer); every write to a connected app asks a person, except the actions its creator allowed for its job
- *   (`routines.own_actions`: the gateway lets those through, `ownJobCovers`). It reaches other agents (`ask_agent`,
+ *   requests, its computer). At `risky`, while its creator still decides the agent's approvals (`creatorDecides`), it
+ *   writes to connected apps as a person's run does: what the tool marks as asking (a send, a delete, a payment, an
+ *   invite, a tool an admin set to ask, merge, deploy and rollback) asks. Otherwise every write to a connected app
+ *   asks a person, except the actions its creator allowed for its job (`routines.own_actions`: the gateway lets those
+ *   through, `ownJobCovers`). It reaches other agents (`ask_agent`,
  *   `tell_agent`) and posts where its creator can post (`post_message`, `send_dm` to its creator): the
  *   tools hold it to its creator's rooms and agents (ADR 0053 §2, amended 2026-10-31).
  * - `routine` redoing a widget (its brief's `widget`, ADR 0135 §5): it only reads (built-in reads, connected apps'
@@ -30,10 +35,11 @@ import type { ToolDefinition } from "./types";
  *   `hand_off` included: a widget's refresh never posts. `update_widget` is no other run's. What it starts with in
  *   hand, where a brain's harness would hold tools back behind a search: `widgetUpFront`.
  *
- * The agent's own approvals level (ADR 0173) only moves a run that isn't a routine's nor fed by one: at `always`
- * every write to a connected app asks, as a routine's does. A routine's run and one its reading feeds ask the same at
- * every level: text nobody checked feeds them (ADR 0053 §4). What `never` stops asking for is the gateway's
- * (`unaskedAtNever`), since it reads the call.
+ * The agent's own approvals level (ADR 0173, amended 2026-11-12) moves every run. At `always` every call that changes
+ * something answers `approve` (`asksAtAlways`): a connected app's write, an internal change, what speaks elsewhere, a
+ * tool this table doesn't know, on a person's run, the agent's own, a routine's and one a routine's reading feeds.
+ * At `never` nothing asks: this table still answers `approve` for a routine's write to a connected app, and the
+ * gateway lifts every card there (`unaskedAtNever`), so a refusal here is never lifted with it.
  *
  * Tool names are written here as plain strings (not imported) so the table loads before the tool
  * modules, which import the gateway.
@@ -84,7 +90,8 @@ export type InternalArea =
   | "browser"
   | "desktop"
   | "dashboards"
-  | "vault";
+  | "vault"
+  | "skills";
 
 /** How much an agent asks before acting (`agents.approvals_level`, ADR 0173). */
 export const APPROVALS_LEVELS = ["always", "risky", "never"] as const;
@@ -100,7 +107,11 @@ export async function approvalsLevelOf(db: Executor, orgId: string, agentId: str
   return row?.level ?? DEFAULT_APPROVALS_LEVEL;
 }
 
-export type PolicyTool = Pick<ToolDefinition, "name" | "scope" | "connectionId" | "sensitive">;
+/** A computer turn's `permissions.asks`: the level, when it isn't the default. */
+export const asksOf = (level: ApprovalsLevel): { asks?: "always" | "never" } =>
+  level === "risky" ? {} : { asks: level };
+
+export type PolicyTool = Pick<ToolDefinition, "name" | "scope" | "connectionId" | "sensitive" | "opensPullRequest">;
 
 const ALLOW: PolicyDecision = { action: "allow" };
 const APPROVE: PolicyDecision = { action: "approve" };
@@ -182,6 +193,7 @@ const READS = new Set([
   "get_context",
   "web_search",
   "web_fetch",
+  "image_search",
   "list_dashboards",
   "phone_screenshot",
   "phone_logs",
@@ -203,10 +215,53 @@ const MISSION = new Set([
   "request_approval",
 ]);
 
+/**
+ * Tools whose own card is the question (a secret, a permission, a setting, an event, an action approved ahead): an
+ * agent that always asks adds no approval in front of them.
+ */
+const ASKS_ITSELF = new Set([
+  "request_secret",
+  "request_permission",
+  "request_settings_change",
+  "request_folder_access",
+  "send_feedback",
+  "propose_event",
+  "schedule_action",
+]);
+
+/**
+ * Under a scope or a kind that also acts, these only look, or only show the person a card of their own: an agent
+ * that always asks doesn't ask for them. Opening a page counts as looking; a click, typing and `browser_do` don't.
+ */
+const LOOKS_ONLY = new Set([
+  "browser_open",
+  "browser_back",
+  "browser_tabs",
+  "browser_read",
+  "browser_scroll",
+  "browser_wait",
+  "browser_screenshot",
+  "browser_close",
+  "browser_profile",
+  "desktop_read",
+  "desktop_screenshot",
+  "git_clone",
+  "team_status",
+  "offer_approvals",
+  "offer_open_page",
+  // Their card is the question: what the person may change applies from it, anything else waits on it.
+  "propose_member_changes",
+  "propose_instruction_change",
+]);
+
 /** Internal changes outside their scope's own area, by name. */
 const INTERNAL_BY_NAME: Readonly<Record<string, InternalArea>> = {
   git_clone: "code",
   open_pull_request: "code",
+  // Their scope only says the agent may read skills: these rewrite one.
+  update_skill: "skills",
+  update_skill_from_source: "skills",
+  create_skill: "skills",
   // Boards and widgets for the person behind the run (ADR 0135 §10): private until the person widens them.
   create_dashboard: "dashboards",
   create_widget: "dashboards",
@@ -228,6 +283,19 @@ const INTERNAL_BY_SCOPE: Readonly<Record<string, InternalArea>> = {
 
 const isReadScope = (scope: string) => /[:.]read$/.test(scope);
 
+/**
+ * A tool name or an action's slug that opens a pull request, whatever its prefix (`github_create_pull_request`,
+ * `GITHUB_CREATE_A_PULL_REQUEST`, GitLab's `create_merge_request`). The name ends there: a review of one, or its
+ * merge, is another tool.
+ */
+export const opensPullRequestName = (name: string) => /(^|_)(create|open)_(a_)?(pull|merge)_request$/i.test(name);
+
+/** A connected app's tool that opens a pull request, by its name or by the actions this call runs (the gateway's mark). */
+export const opensPullRequest = (tool: PolicyTool) =>
+  Boolean(tool.connectionId) &&
+  !isReadScope(tool.scope) &&
+  (tool.opensPullRequest === true || opensPullRequestName(tool.name));
+
 /** What a tool does (see `ToolKind`): provenance first, then built-in name and scope. */
 export function toolKind(tool: PolicyTool): ToolKind {
   if (directoryRole(tool as ToolDefinition)) return { kind: "directory" };
@@ -237,6 +305,9 @@ export function toolKind(tool: PolicyTool): ToolKind {
   // workspace-changing actions. Their exact scopes distinguish them from MCP tools.
   if (tool.name === "git_clone" && tool.scope === "github:git.read") return { kind: "internal", area: "code" };
   if (tool.name === "open_pull_request" && tool.scope === "github:pr.write") return { kind: "internal", area: "code" };
+  // Opening a pull request is the agent's own code work, like a push to its own branch, through any connected app:
+  // nothing changes until someone merges it, and a merge is another tool.
+  if (opensPullRequest(tool)) return { kind: "internal", area: "code" };
   // The computer's own background task (`sandbox-tools.ts`) is code work; the mission's `start_task` has no scope.
   if (tool.name === "start_task" && tool.scope === "sandbox:run") return { kind: "internal", area: "code" };
   // A connected app's tool (a catalog connector, custom server, mailbox, or database) is a read
@@ -251,7 +322,9 @@ export function toolKind(tool: PolicyTool): ToolKind {
     tool.name === "set_status" ||
     tool.name === "withdraw_request" ||
     tool.name === "set_reply_style" ||
-    tool.name === "wait_for_device"
+    tool.name === "commit_co_author" ||
+    tool.name === "wait_for_device" ||
+    tool.name === "ignore_usage_limit"
   )
     return { kind: "self" };
   // Long work (ADR 0121): the run's own work only; who may go to the background is the tool source's.
@@ -307,15 +380,33 @@ const ROUTINE_HERE_REFUSAL: Readonly<Record<string, string>> = {
   share_artifact: REFUSALS.routineShare,
 };
 
+/** Whether an agent that always asks (ADR 0173) asks before a call of this tool: everything that changes something. */
+function asksAtAlways(what: ToolKind, tool: PolicyTool): boolean {
+  switch (what.kind) {
+    case "external":
+      return true;
+    case "elsewhere":
+      return !ASKS_ITSELF.has(tool.name);
+    case "internal":
+    case "unknown":
+      return !LOOKS_ONLY.has(tool.name);
+    default:
+      return false;
+  }
+}
+
 /** The table (see the file's comment): what `authority` may do with `tool`, at the agent's approvals level. */
 export function toolPolicy(
   authority: RunAuthority,
   tool: PolicyTool,
   level: ApprovalsLevel = DEFAULT_APPROVALS_LEVEL,
+  /** A routine's own run whose creator still decides its agent's approvals (the gateway reads it fresh). */
+  creatorDecides = false,
 ): PolicyDecision {
   const what = toolKind(tool);
+  const asks = level === "always" && asksAtAlways(what, tool);
   // A widget's refresh (ADR 0135 §5): reads and `update_widget`, nothing else.
-  if (authority.kind === "routine" && authority.brief?.widget) return widgetRunPolicy(what);
+  if (authority.kind === "routine" && authority.brief?.widget) return widgetRunPolicy(what, asks);
   if (what.kind === "widget") return refuse(REFUSALS.widgetToolOnly);
   if (what.kind === "directory" || what.kind === "pass" || what.kind === "self" || what.kind === "computer") {
     return ALLOW;
@@ -325,7 +416,7 @@ export function toolPolicy(
   const fed = authority.kind === "unattended" && fedByRoutine(authority);
   if (authority.kind !== "routine" && !fed) {
     if (what.kind === "hand_off") return refuse(REFUSALS.handOffOnly);
-    return level === "always" && what.kind === "external" ? APPROVE : ALLOW;
+    return asks ? APPROVE : ALLOW;
   }
   // What a routine read feeds a run its report or work woke (`fedByRoutine`): that run keeps the routine's
   // bounds, replies where it is, and asks a person before writing to a connected app.
@@ -336,13 +427,13 @@ export function toolPolicy(
       return fed ? refuse(REFUSALS.handOffOnly) : ALLOW;
     case "elsewhere":
       if (!ROUTINE_REACH.has(tool.name)) return refuse(fed ? REFUSALS.fedElsewhere : REFUSALS.routineElsewhere);
-      return ALLOW;
+      return asks ? APPROVE : ALLOW;
     case "here":
       return fed ? ALLOW : refuse(ROUTINE_HERE_REFUSAL[tool.name] ?? REFUSALS.routineHere);
     case "internal":
-      return ALLOW;
+      return asks ? APPROVE : ALLOW;
     case "external":
-      return APPROVE;
+      return !fed && creatorDecides && level === "risky" ? ALLOW : APPROVE;
     case "mission":
       return refuse(fed ? REFUSALS.fedMission : REFUSALS.missionOnly);
     case "unknown":
@@ -353,9 +444,10 @@ export function toolPolicy(
 /**
  * A widget's refresh run (ADR 0135 §5): the directory's way in (the real tool is judged on its own), the computer's
  * prompt, reads (built-in, connected apps', the web) and the browser to read with, and `update_widget`. Anything else
- * is refused with why, `hand_off` and `pass` included: it ends by calling `update_widget`.
+ * is refused with why, `hand_off` and `pass` included: it ends by calling `update_widget`. `asks`: its agent always
+ * asks and this tool acts (a click in the browser).
  */
-function widgetRunPolicy(what: ToolKind): PolicyDecision {
+function widgetRunPolicy(what: ToolKind, asks: boolean): PolicyDecision {
   switch (what.kind) {
     case "directory":
     case "computer":
@@ -363,7 +455,8 @@ function widgetRunPolicy(what: ToolKind): PolicyDecision {
     case "widget":
       return ALLOW;
     case "internal":
-      return what.area === "browser" ? ALLOW : refuse(REFUSALS.widgetOnly);
+      if (what.area !== "browser") return refuse(REFUSALS.widgetOnly);
+      return asks ? APPROVE : ALLOW;
     default:
       return refuse(REFUSALS.widgetOnly);
   }
@@ -419,9 +512,12 @@ const WHY_PROPERTY: JsonSchema = {
 const ownsWhy = (schema: JsonSchema) =>
   typeof schema.properties === "object" && schema.properties !== null && "why" in schema.properties;
 
-/** A tool's input schema with the required `why` added (as is when the tool has its own). */
-export function withWhy(schema: JsonSchema): JsonSchema {
-  if (ownsWhy(schema)) return schema;
+/**
+ * A tool's input schema with the required `why` added (as is when the tool has its own). `replace`: the tool's own
+ * `why` is optional and every call asks, so the required one takes its place.
+ */
+export function withWhy(schema: JsonSchema, replace = false): JsonSchema {
+  if (ownsWhy(schema) && !replace) return schema;
   const properties = (schema.properties ?? {}) as Record<string, unknown>;
   const required = Array.isArray(schema.required) ? schema.required.filter((r) => r !== "why") : [];
   return {

@@ -178,6 +178,52 @@ describe("My Home as a mural (ADR 0135)", () => {
     expect(widget("Vendas hoje").querySelector(".wk-num")?.textContent).toBe("R$18.420");
   });
 
+  test("a widget stopped after failing in a row says so, then the last failure and that failure's one way out", async () => {
+    const stoppedBy = (cause: string, ai: "ready" | "no_ai" = "no_ai") => {
+      const s = setup();
+      Object.assign(s.builds, { status: "failed", failure: { code: "failing", detail: null, cause } });
+      s.state.aiStatus = {
+        any: ai === "ready",
+        agents: s.state.agents.map((a) =>
+          ai === "ready" ? { agentId: a.id, state: ai } : { agentId: a.id, state: ai, reason: "no_key" as const },
+        ),
+      };
+      return s;
+    };
+    // No AI: Conectar, never Resolver (an update would only fail again).
+    const noAi = await open(`/org/${ORG_ID}/home`, stoppedBy("missing_credential"));
+    const card = widget("Tempo de build");
+    expect(card.textContent).toContain(
+      "Parou depois de 5 falhas seguidas. A última: Ada está sem chave ou plano de IA para trabalhar.",
+    );
+    expect(within(card).queryByRole("button", { name: "Resolver" })).toBeNull();
+    expect(calls(noAi.state, "dashboards.refreshWidget")).toEqual([]);
+    await click(within(card).getByRole("button", { name: "Conectar" }));
+    expect(screen().getByRole("dialog", { name: /Conectar uma IA/ })).toBeTruthy();
+    cleanup();
+
+    // An AI is there again: nothing starts it by itself (it stopped), and Resolver does, never Conectar.
+    const back = await open(`/org/${ORG_ID}/home`, stoppedBy("missing_credential", "ready"));
+    await settle(3);
+    const ready = widget("Tempo de build");
+    expect(ready.textContent).toContain("Parou depois de 5 falhas seguidas. A última: Ada está sem chave");
+    expect(calls(back.state, "dashboards.refreshWidget")).toEqual([]);
+    expect(within(ready).queryByRole("button", { name: "Conectar" })).toBeNull();
+    await click(within(ready).getByRole("button", { name: "Resolver" }));
+    await settle(3);
+    expect(last(back.state, "dashboards.refreshWidget")).toEqual([ORG_ID, back.builds.id]);
+    cleanup();
+
+    // Any other: trying again.
+    const slow = await open(`/org/${ORG_ID}/home`, stoppedBy("timeout"));
+    const again = widget("Tempo de build");
+    expect(again.textContent).toContain("Parou depois de 5 falhas seguidas. A última: A atualização demorou demais.");
+    expect(within(again).queryByRole("button", { name: "Conectar" })).toBeNull();
+    await click(within(again).getByRole("button", { name: "Resolver" }));
+    await settle(3);
+    expect(last(slow.state, "dashboards.refreshWidget")).toEqual([ORG_ID, slow.builds.id]);
+  });
+
   test("a widget whose agent has no AI says why with Conectar (or who can), and builds with no click once it has one", async () => {
     const waitingFor = (ai: "ready" | "no_ai", detail: string | null = null) => {
       const s = setup();

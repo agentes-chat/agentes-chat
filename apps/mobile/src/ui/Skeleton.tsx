@@ -19,7 +19,7 @@ import { useReducedMotion, useTheme } from "./theme";
 export function SkeletonRow({ name = 42, preview = 80 }: { name?: number; preview?: number }) {
   const { colors } = useTheme();
   const pulse = usePulse();
-  const bone = { backgroundColor: colors.sunken };
+  const bone = { backgroundColor: colors.plate };
   return (
     <Animated.View
       style={[styles.row, pulse]}
@@ -58,7 +58,7 @@ const SHAPES: [number, number][] = [
 ];
 
 /** The soft pulse every bone shares: 1 → 0.55 → 1 over 1.4 s, still with reduced motion. */
-function usePulse() {
+export function usePulse() {
   const reduced = useReducedMotion();
   const k = useSharedValue(1);
   useEffect(() => {

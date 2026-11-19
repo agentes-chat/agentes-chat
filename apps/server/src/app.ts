@@ -1,5 +1,4 @@
-import { createFcmPushSender } from "@agenteschat/adapters";
-import { MisconfiguredError, requestLocale } from "@agenteschat/engine";
+import { hostLook, MisconfiguredError, normalizeHost, requestLocale } from "@agenteschat/engine";
 import { helpDocsUrl } from "@agenteschat/i18n/help";
 import { appLocale } from "@agenteschat/i18n/locale";
 import type { AgentesModule, Edition, ModuleContext } from "@agenteschat/modules";
@@ -15,6 +14,8 @@ import { apiBodyLimit } from "./http/body-limit";
 import { errorPages } from "./http/error-page";
 import { apiError, domainErrorResponse, routeOf, validationHook } from "./http/errors";
 import { createLogger, type Logger, loggedPath } from "./logger";
+import { ownHosts } from "./operator/hosts";
+import { directPushSenders, relayServeSender } from "./push-senders";
 import { accessRoutes } from "./routes/app/access";
 import { accountRoutes } from "./routes/app/account";
 import { actionRoutes } from "./routes/app/actions";
@@ -38,13 +39,15 @@ import { databaseRoutes } from "./routes/app/databases";
 import { desktopRoutes } from "./routes/app/desktop";
 import { deviceWaitRoutes } from "./routes/app/device-waits";
 import { dmRoutes } from "./routes/app/dms";
-import { feedbackRoutes, registerFeedbackFiles } from "./routes/app/feedback";
+import { feedbackRoutes, registerFeedbackFiles, registerFeedbackInbox } from "./routes/app/feedback";
 import { gifKeyRoutes } from "./routes/app/gif-key";
 import { gifRoutes } from "./routes/app/gifs";
+import { imageRoutes } from "./routes/app/images";
 import { inviteRoutes } from "./routes/app/invites";
 import { issueRoutes } from "./routes/app/issues";
 import { jevRoutes } from "./routes/app/jev";
 import { knowledgeRoutes } from "./routes/app/knowledge";
+import { liveRoutes } from "./routes/app/live";
 import { machineAccountRoutes } from "./routes/app/machine-accounts";
 import { mailRoutes } from "./routes/app/mail";
 import { managementRoutes } from "./routes/app/management";
@@ -53,14 +56,17 @@ import { missionRoutes } from "./routes/app/missions";
 import { notificationRoutes } from "./routes/app/notifications";
 import { personUsageRoutes } from "./routes/app/person-usage";
 import { planUsageRoutes } from "./routes/app/plan-usage";
+import { problemReportRoutes } from "./routes/app/problem-reports";
 import { pushRoutes } from "./routes/app/push";
 import { questionRoutes } from "./routes/app/questions";
+import { referralRoutes } from "./routes/app/referrals";
 import { roleRoutes } from "./routes/app/roles";
 import { routineRoutes } from "./routes/app/routines";
 import { sandboxRoutes } from "./routes/app/sandboxes";
 import { secretRoutes } from "./routes/app/secrets";
 import { skillRoutes } from "./routes/app/skills";
 import { storageRoutes } from "./routes/app/storage";
+import { surfaceRoutes } from "./routes/app/surfaces";
 import { teamWeekRoutes } from "./routes/app/team-week";
 import { telemetryRoutes } from "./routes/app/telemetry";
 import { threadRoutes } from "./routes/app/threads";
@@ -122,13 +128,16 @@ export interface AppOptions {
  * - `/api/native/*`       public: the packages that run agentes.chat without Docker, for the installer (ADR 0060)
  * - `/api/hooks/*`        public: a webhook routine's own address (its chosen methods, ADR 0106)
  * - `/api/waitlist`       public: join the waiting list and confirm the email (the landing page, only with LANDING_URL)
+ * - `/api/partners/waitlist` public: join the partner program's waiting list (the landing page, only with LANDING_URL)
  * - `/api/oauth/*`        public: the OAuth 2.1 authorization server for AI apps (ADR 0119)
- * - `/api/push-relay/v1/*` other installations' Android pushes, server to server (only with PUSH_RELAY_SERVE, ADR 0152)
+ * - `/api/push-relay/v1/*` other installations' phone pushes, server to server (only with PUSH_RELAY_SERVE, ADR 0152)
  * - `/mcp`                AI apps' MCP endpoint, bearer tokens only (ADR 0119); `/.well-known/oauth-*` its discovery
  * - `/api/ws`             WebSocket (real-time)
+ * - `/api/live`           WebSocket: one live file, a spreadsheet, presentation or canvas (ADR 0196)
  * - `/api/openapi.json`   OpenAPI 3.1 document; `/api/reference` interactive docs
  * - `/install`            the self-host installer, `install.sh` (`curl -fsSL <server>/install | sh`)
  * - `/i/<code>`           a new computer's installer with a connect link baked in (`/i/<code>/ps` for Windows)
+ * - `/migrate.sh`         runs `agentes-runner migrate` once, without installing (`/migrate.ps1` for Windows; ADR 0055)
  * - `/install/docker-compose.yml` the compose file of this release, which the setup downloads
  * - `/sw.js`              the web app's service worker (browser push, ADR 0071)
  * - everything else       web app (single-page app), when built
@@ -171,6 +180,7 @@ export function createApp(options: AppOptions) {
     const deps: AppDeps = { log, ...options.services };
     registerInstance(api, deps, version);
     registerFeedbackFiles(api, deps);
+    registerFeedbackInbox(api, deps);
     api.use("/app/organizations/:orgId/agents/:agentId/:part", agentDetailsGate(deps));
     api.use("/app/organizations/:orgId/*", readOnlyWhileDeleting(deps));
     api.route("/app", accountRoutes(deps));
@@ -204,7 +214,11 @@ export function createApp(options: AppOptions) {
     api.route("/app", roleRoutes(deps));
     api.route("/app", storageRoutes(deps));
     api.route("/app", billingRoutes(deps));
+    api.route("/app", referralRoutes(deps));
     api.route("/app", artifactRoutes(deps));
+    api.route("/app", liveRoutes(deps));
+    // Pictures on canvases (ADR 0197): the image models, requests and Try again.
+    api.route("/app", imageRoutes(deps));
     api.route("/app", issueRoutes(deps));
     api.route("/app", threadRoutes(deps));
     api.route("/app", missionRoutes(deps));
@@ -223,11 +237,13 @@ export function createApp(options: AppOptions) {
     api.route("/app", teamWeekRoutes(deps));
     api.route("/app", dashboardRoutes(deps));
     api.route("/app", telemetryRoutes(deps));
+    api.route("/app", problemReportRoutes(deps));
     api.route("/app", jevRoutes(deps));
     api.route("/app", feedbackRoutes(deps));
     api.route("/app", gifKeyRoutes(deps));
     api.route("/app", speechKeyRoutes(deps));
     api.route("/app", voiceRoutes(deps));
+    api.route("/app", surfaceRoutes(deps));
     api.route("/app", webhookAdminRoutes(deps));
     api.route("/app", githubAppRoutes(deps));
     registerOauthRoutes(api, deps, { version, fetchDocument: options.appsFetchDocument });
@@ -255,12 +271,11 @@ export function createApp(options: AppOptions) {
       }),
     );
     if (deps.config.LANDING_URL) registerWaitlist(api, deps);
-    // The push relay for other installations' Android pushes (ADR 0152), with this server's Firebase account.
+    // The push relay for other installations' phone pushes (ADR 0152, ADR 0178), with this server's Firebase
+    // account and APNs key.
     if (deps.config.PUSH_RELAY_SERVE === "on") {
-      const account = deps.config.FIREBASE_SERVICE_ACCOUNT;
-      const fcm = account ? createFcmPushSender({ serviceAccount: account }) : null;
       const override = deps.extras?.pushRelaySender;
-      const sender = override === undefined ? fcm : override;
+      const sender = override === undefined ? relayServeSender(directPushSenders(deps.config)) : override;
       if (sender) {
         api.route(
           "/push-relay/v1",
@@ -402,10 +417,46 @@ export function createApp(options: AppOptions) {
     });
     // Hashed build files never change: the browser (and the Mac app's window) opens them from disk.
     // index.html is always revalidated, so a new deploy shows on the next open.
+    // No page of the app belongs in a search engine's index, whatever its status: sign-in pages and made-up
+    // addresses all answer with the same page. A header, never a robots.txt: a crawler kept out can't read it.
+    // On a registered host (ADR 0194) the page says so on its <html> before the app knows the host, so index.html's
+    // boot rules hide the product's mark. Every page from WEB_DIR passes here, the SPA fallback included.
+    // On a hostname that is neither the server's own nor registered, the app's page is a 404 marked
+    // data-unknown-host, and the web shows only its "not set up yet" screen. Only with the operator API on: hosts
+    // register only through it, so without it every name a proxy sends is the server's own.
+    const db = options.services?.db;
+    const config = options.services?.config;
+    const own = config ? ownHosts(config) : new Set<string>();
+    const unknownHost = (host: string | undefined) => {
+      const name = normalizeHost(host);
+      return Boolean(config?.OPERATOR_API_TOKEN && name && !own.has(name));
+    };
+    const appPage = (path: string) => !path.endsWith(".html") || path === "/index.html";
     app.use("/*", async (c, next) => {
       await next();
-      if (isApi(c.req.path) || !c.res.ok || c.res.headers.has("cache-control")) return;
-      if (c.res.headers.get("content-type")?.startsWith("text/html")) c.res.headers.set("cache-control", "no-cache");
+      if (isApi(c.req.path)) return;
+      const html = c.res.headers.get("content-type")?.startsWith("text/html");
+      if (html && db && c.res.ok && c.req.method === "GET") {
+        const host = c.req.header("host");
+        const mark = (await hostLook(db, host))
+          ? "data-host"
+          : appPage(c.req.path) && unknownHost(host)
+            ? "data-unknown-host"
+            : null;
+        if (mark) {
+          const page = (await c.res.text()).replace("<html", `<html ${mark}`);
+          c.res.headers.delete("content-length");
+          // The address may be registered a moment later: nothing keeps this answer.
+          if (mark === "data-unknown-host") c.res.headers.set("cache-control", "no-store");
+          c.res = new Response(page, {
+            status: mark === "data-unknown-host" ? 404 : c.res.status,
+            headers: c.res.headers,
+          });
+        }
+      }
+      if (html) c.res.headers.set("x-robots-tag", "noindex");
+      if (!c.res.ok || c.res.headers.has("cache-control")) return;
+      if (html) c.res.headers.set("cache-control", "no-cache");
       else if (c.req.path.startsWith("/assets/"))
         c.res.headers.set("cache-control", "public, max-age=31536000, immutable");
     });
@@ -413,6 +464,22 @@ export function createApp(options: AppOptions) {
     // A build file that isn't here (asked by a page from before a deploy) is a 404, never index.html: the boot fallback
     // and `vite:preloadError` then load the new version. No CDN keeps the 404.
     app.get("/assets/*", (c) => c.text("Not found", 404, { "cache-control": "no-store" }));
+    // Files crawlers and agents ask every site for: one this build doesn't ship is a 404, never index.html with a 200.
+    // Exact addresses at the root, never a pattern: an address inside a workspace may end like a file (a wiki page's
+    // slug), and the router tests a pattern against the rest of the path, not one segment.
+    const crawlerFiles = [
+      "/robots.txt",
+      "/llms.txt",
+      "/llms-full.txt",
+      "/ads.txt",
+      "/app-ads.txt",
+      "/humans.txt",
+      "/security.txt",
+      "/sitemap.xml",
+      "/sitemap_index.xml",
+      "/sitemap-index.xml",
+    ];
+    app.on("GET", crawlerFiles, (c) => c.text("Not found", 404));
     app.get("/*", (c, next) => (isApi(c.req.path) ? next() : spa(c, next)));
   }
 

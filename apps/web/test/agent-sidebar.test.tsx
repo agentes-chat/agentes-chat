@@ -4,6 +4,7 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 setupDom();
 
 import {
+  type ActiveRun,
   type ApiClient,
   asksPicture,
   PICTURE_IDLE_MS,
@@ -22,6 +23,7 @@ import {
   fakeBrowserOf,
   fakeMachinesOf,
   ORG_ID,
+  seedDm,
   seedState,
   withRightHand,
 } from "./fake-api";
@@ -71,8 +73,10 @@ const openDm = async ({ state = seedState(), desktop, forbidden, agentId = ADA_I
   const machines = fakeMachinesOf.get(api);
   if (!fake || !machines) throw new Error("no fakes");
   const m = machines.pair({ name: "Box", os: "linux" });
-  await api.sandbox.setTarget(ORG_ID, ADA_ID, m.id);
-  fake.desktops.set(ADA_ID, desktop ?? { available: true, reason: null, running: true, canControl: true });
+  // The right hand's computer is the workspace's own: the server names it, as a target does for any agent here.
+  for (const id of new Set([ADA_ID, agentId])) await api.sandbox.setTarget(ORG_ID, id, m.id);
+  for (const id of new Set([ADA_ID, agentId]))
+    fake.desktops.set(id, desktop ?? { available: true, reason: null, running: true, canControl: true });
   if (forbidden) fake.forbidden.add(ADA_ID);
   const calls = spyOn(api.desktop, "picture");
   await renderApp(`/org/${ORG_ID}/dm/agent/${agentId}`, { api });
@@ -187,6 +191,36 @@ describe("the toggle", () => {
 });
 
 describe("what the viewer sees", () => {
+  test("at work, heard here: the word under its name wears the face's badge, in the face's blue", async () => {
+    widthIs(DM_SIDE_WIDE_QUERY);
+    const state = seedState();
+    state.agentStatuses = [{ agentId: ADA_ID, presence: "online", status: null, activeAt: null }];
+    const channelId = seedDm(state, { type: "agent", id: ADA_ID });
+    const at = new Date(Date.now() - 60_000).toISOString();
+    state.activeRuns = {
+      [channelId]: [
+        {
+          runId: "r-ada",
+          agentId: ADA_ID,
+          channelId,
+          threadId: `m-${channelId}`,
+          status: "running",
+          triggerMessageId: `m-${channelId}`,
+          startedAt: at,
+          heartbeatAt: at,
+          createdAt: at,
+        } as ActiveRun,
+      ],
+    };
+    await openDm({ state });
+    const status = (side() as HTMLElement).querySelector("p.dm-side__status") as HTMLElement;
+    expect(status.textContent).toBe("Trabalhando agora");
+    expect(status.querySelector(".ac-presence")?.getAttribute("data-presence")).toBe("working");
+    // The kit gives the working badge its blue on faces only: this line takes it too.
+    const css = await Bun.file(new URL("../src/components/agents/agent-sidebar.css", import.meta.url)).text();
+    expect(css).toMatch(/\.dm-side__status \.ac-presence\[data-presence="working"\] \{\s*--presence: var\(--agent\);/);
+  });
+
   test("whoever may watch: the picture, Assumir o controle, the eye", async () => {
     widthIs(DM_SIDE_WIDE_QUERY);
     const { calls } = await openDm();
@@ -243,16 +277,33 @@ describe("what the viewer sees", () => {
     expect(screen().queryByRole("button", { name: "Computador" })).toBeTruthy();
   });
 
-  test("its right hand: no computer of its own, the viewer's plan for it", async () => {
+  test("its right hand: its computer as any agent's, and the viewer's own plan for it", async () => {
     widthIs(DM_SIDE_WIDE_QUERY);
     const state = withRightHand(seedState());
     const lodi = state.agents.find((a) => a.builtin === "right_hand");
     await openDm({ state, agentId: lodi?.id ?? "" });
-    expect(section("Computador")).toBeNull();
-    expect(section("Como pensa")).toBeTruthy();
+    const computer = section("Computador") as HTMLElement;
+    expect(computer).toBeTruthy();
+    expect(within(computer).getByRole("button", { name: "Assistir" })).toBeTruthy();
+    expect(section("Como pensa")?.textContent).toContain("Sua IA");
     // One role name, the sidebar's and its header's: never a second one in its panel.
     expect((side() as HTMLElement).querySelector(".dm-side__role")?.textContent).toBe("Seu braço direito");
     expect(side()?.textContent).not.toContain("Assistente do workspace");
+    // The sidebar closed, its header keeps the way in, as for any agent.
+    await act(async () => fireEvent.click(toggle() as HTMLElement));
+    expect(screen().getByRole("button", { name: "Computador" })).toBeTruthy();
+  });
+
+  test("its right hand with no computer in the workspace: why, the way to one, and never a computer to choose", async () => {
+    widthIs(DM_SIDE_WIDE_QUERY);
+    const state = withRightHand(seedState());
+    const lodi = state.agents.find((a) => a.builtin === "right_hand");
+    await openDm({ state, agentId: lodi?.id ?? "", desktop: { available: false, reason: "no_home", running: false } });
+    const computer = section("Computador") as HTMLElement;
+    // A self-hosted server: its guide to make this server the agents' computer.
+    expect(computer.textContent).toContain("Configure este servidor");
+    expect(computer.querySelector("a")).toBeTruthy();
+    expect(within(computer).queryByRole("button", { name: "Escolher um computador" })).toBeNull();
   });
 
   test("on Automático it is named by the maker of the key it thinks with, in its panel and its header", async () => {
@@ -306,7 +357,7 @@ describe("what the viewer sees", () => {
       prepare: async (api) => {
         await api.issues.create(ORG_ID, {
           title: "Relatório de faltas",
-          assignee: { type: "agent", id: ADA_ID },
+          assignees: [{ type: "agent", id: ADA_ID }],
         } as never);
       },
     });

@@ -15,10 +15,22 @@ import {
 } from "@agenteschat/client";
 import { type Level, levelsOf, resourcesOf } from "@agenteschat/client/lib/access-levels";
 import { groupOf, NO_GROUP } from "@agenteschat/client/lib/agent-groups";
-import { audienceOf, audiencePatch, seesDetails } from "@agenteschat/client/lib/audience";
+import {
+  audienceOf,
+  audiencePatch,
+  type EditorsValue,
+  editorsPatch,
+  editorsSummary,
+  editorsValueOf,
+  editsAgent,
+  managesAgent,
+  seesDetails,
+} from "@agenteschat/client/lib/audience";
 import { errorText } from "@agenteschat/client/lib/errors";
+import { FIELD_LIMITS } from "@agenteschat/client/lib/field-limits";
 import { joinNames } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
+import { overLimitText, tooLongToSend } from "@agenteschat/client/lib/message-length";
 import { can } from "@agenteschat/client/lib/permissions";
 import { pendingOnAgent } from "@agenteschat/client/lib/proposals";
 import { isAuto } from "@agenteschat/client/lib/providers";
@@ -70,6 +82,7 @@ import {
   type Field,
   type Look,
   lineChanges,
+  ownsOrManages,
   PERSONAL_AGENT_TABS,
   revertKey,
   type Saved,
@@ -79,6 +92,7 @@ import {
 } from "@/lib/agent-edit";
 import { fullLook, lookOf } from "@/lib/look";
 import { handleAfterRename, handleProblemText, readBudget, takenHandles } from "@/lib/new-agent";
+import { agentPanelSearch } from "@/lib/open-param";
 import { useToast } from "@/lib/toast";
 import { AccessTab } from "./agent/AccessTab";
 import { ActivityTab } from "./agent/ActivityTab";
@@ -106,6 +120,7 @@ const sortIds = (ids: string[]) => [...ids].sort();
 const MAIN_TABS: AgentTab[] = ["overview", "instructions", "memory", "activity"];
 const MORE_TABS = AGENT_TABS.filter((id) => !MAIN_TABS.includes(id) && id !== "advanced");
 const PERSONAL_TABS: readonly AgentTab[] = PERSONAL_AGENT_TABS;
+const RIGHT_HAND_TABS: readonly AgentTab[] = ["settings", "access", "memory"];
 const MORE_ICON: Partial<Record<AgentTab, IconName>> = {
   access: "plug",
   files: "file",
@@ -136,7 +151,7 @@ export function AgentPage(props: AgentPageProps) {
   const dir = useDirectory(org.id);
   const agent = dir.agentById.get(props.agentId);
   // Only the full profile edits, so only it asks before closing; every other view here closes on the request.
-  const full = Boolean(agent && !dir.loading && seesDetails(agent) && !isRightHand(agent));
+  const full = Boolean(agent && !dir.loading && seesDetails(agent));
   const closeRef = useRef(props.onClose);
   closeRef.current = full ? undefined : props.onClose;
   useEffect(() => {
@@ -156,13 +171,12 @@ export function AgentPage(props: AgentPageProps) {
       </div>
     );
   }
-  // The right hand (ADR 0137) has no tabs: its instructions are the product's. Its page is its settings, each
-  // person's own and, for who manages agents, the workspace's.
-  if (isRightHand(agent)) {
+  // The right hand (ADR 0137) to someone who sees only its card: its settings, each person's own.
+  if (isRightHand(agent) && !seesDetails(agent)) {
     return (
       <div className="page page--full">
         <PageHeader title={agent.name} meta={t("settings.sectionText.right_hand")} />
-        {tellsNameStory(agent) && <p className="small muted">{t("rightHand.profile.nameStory")}</p>}
+        {tellsNameStory(agent) && <p className="page__note">{t("rightHand.profile.nameStory")}</p>}
         <RightHandSettingsSection agent={agent} />
       </div>
     );
@@ -188,11 +202,23 @@ function AgentProfile({
   const toast = useToast();
   const navigate = useNavigate();
   const dir = useDirectory(org.id);
-  const admin = can(org, "manage_agents");
-  const viewer: Viewer = admin ? "admin" : agent.ownerUserId === me.user.id ? "owner" : "member";
+  // Per agent (ADR 0085 addendum of 2026-11-17): "Editar agentes" (`manage_agents`) reaches only some agents, and an
+  // agent's "Quem pode editar" lets more people edit how it works.
+  const admin = managesAgent(agent);
+  const viewer: Viewer = admin
+    ? "admin"
+    : agent.ownerUserId === me.user.id
+      ? "owner"
+      : editsAgent(agent)
+        ? "editor"
+        : "member";
   // A personal workspace's page (ADR 0159 §3): a shorter bar, the hard parts in Advanced; every address still works.
   const personal = isPersonal(org);
-  const view = shownAgentTab(tab, section, personal);
+  // The right hand's page (ADR 0137): its settings, what it may use and what it keeps for the viewer. Its
+  // instructions are the product's, and it is in no channel and on no computer, so the other tabs have nothing of
+  // its own.
+  const rightHand = isRightHand(agent);
+  const view = rightHand ? (RIGHT_HAND_TABS.includes(tab) ? tab : "settings") : shownAgentTab(tab, section, personal);
   const models = useModels();
   const detail = useAgentDetail(org.id, agent.id);
   const settings = useSettings(org.id);
@@ -202,7 +228,7 @@ function AgentProfile({
   const groups = useAgentGroups(org.id);
   const library = useAgentSkills(org.id, agent.id);
   const proposals = useProposals(org.id);
-  const runs = useRuns(org.id, agent.id, viewer !== "member");
+  const runs = useRuns(org.id, agent.id, ownsOrManages(viewer));
   const visible = useVisibleChannels();
   const items = useConnectedById();
   const update = useUpdateAgent(org.id, agent.id);
@@ -241,6 +267,7 @@ function AgentProfile({
       budget: admin && d ? (d.monthlyBudgetUsd ?? null) : undefined,
       owner: agent.ownerUserId ?? NO_OWNER,
       audience: audienceOf(agent),
+      editors: editorsValueOf(agent),
       levels: access.data ? levelsOf(access.data) : undefined,
       repos: repos.data ? repoChoiceOf(repos.data) : undefined,
       skills: library.data ? sortIds(library.data.filter((s) => s.enabled).map((s) => s.id)) : undefined,
@@ -267,6 +294,7 @@ function AgentProfile({
         : new Intl.NumberFormat(i18n.language, { useGrouping: false, maximumFractionDigits: 2 }).format(saved.budget)),
     owner: edits.owner ?? saved.owner,
     audience: edits.audience ?? saved.audience,
+    editors: edits.editors ?? saved.editors ?? editorsValueOf(agent),
     levels: { ...(saved.levels ?? {}), ...(edits.levels ?? {}) },
     repos: edits.repos ?? saved.repos,
     skills: edits.skills ?? saved.skills,
@@ -296,6 +324,14 @@ function AgentProfile({
     const names = [...roles, ...ids.map(first)];
     return names.length ? joinNames(names, t) : t("audience.summary.nobody");
   };
+  // "Quem pode editar" as its row on the overview says it, with the owner it has then.
+  const editorsText = (e: EditorsValue | undefined, owner: string) =>
+    editorsSummary(
+      t,
+      { name: agent.name, ownerUserId: owner === NO_OWNER ? null : owner, editors: e && editorsPatch(e) },
+      (id) => dir.memberById.get(id)?.name,
+      dir.roleName,
+    );
   const budgetText = (amount: number | null) =>
     amount === null
       ? settings.data?.defaultAgentBudgetUsd === undefined
@@ -320,6 +356,8 @@ function AgentProfile({
     // sections are; the apps' levels stay in "Can use".
     const advanced =
       personal &&
+      // The right hand's page has no Advanced: all of what it may use is on one tab.
+      !rightHand &&
       (field === "skills" || (field === "levels" && resourceById.get(resource ?? "")?.kind !== "connector"));
     const base = {
       key,
@@ -400,6 +438,13 @@ function AgentProfile({
           was: audienceText(saved.audience, saved.owner),
           now: audienceText(draft.audience, draft.owner),
         };
+      case "editors":
+        return {
+          ...base,
+          label: label("editors"),
+          was: editorsText(saved.editors, saved.owner),
+          now: editorsText(draft.editors, draft.owner),
+        };
       case "channels":
         return {
           ...base,
@@ -419,7 +464,8 @@ function AgentProfile({
   const errors = {
     name: fields.has("name") && !draft.name.trim() ? t("newAgent.errors.nameRequired") : undefined,
     handle: fields.has("handle")
-      ? (handleProblemText(t, draft.handle, takenHandles(dir.agents, dir.members, agent.id)) ?? undefined)
+      ? (handleProblemText(t, draft.handle, takenHandles([...dir.agentById.values()], dir.members, agent.id)) ??
+        undefined)
       : undefined,
     budget: edits.budget !== undefined && readBudget(edits.budget).invalid ? t("agent.budgetInvalid") : undefined,
     audience:
@@ -433,8 +479,13 @@ function AgentProfile({
       fields.has("repos") && draft.repos?.mode === "some" && draft.repos.list.length === 0
         ? t("repos.emptyError")
         : undefined,
+    instructions:
+      fields.has("instructions") && tooLongToSend(draft.instructions, FIELD_LIMITS.instructions)
+        ? overLimitText(t, i18n.language, draft.instructions.trim().length, FIELD_LIMITS.instructions)
+        : undefined,
   };
-  const problem = errors.name ?? errors.handle ?? errors.budget ?? errors.audience ?? errors.repos;
+  const problem =
+    errors.name ?? errors.handle ?? errors.budget ?? errors.audience ?? errors.repos ?? errors.instructions;
   const dirty = changes.length > 0;
 
   /* ---------- Editing ---------- */
@@ -483,7 +534,7 @@ function AgentProfile({
       failed = true;
       if (silent) toast.show(errorText(t, e), "error");
     };
-    // 1. The agent itself: one PATCH (the owner may send only the look and the audience).
+    // 1. The agent itself: one PATCH (who doesn't manage it sends only what `canEdit` lets them change).
     const patch: Partial<AgentInput> = {};
     const patchFields: Field[] = [];
     const put = <K extends keyof typeof patch>(field: Field, k: K, v: (typeof patch)[K]) => {
@@ -501,6 +552,8 @@ function AgentProfile({
     if (fields.has("audience")) {
       put("audience", "audience", audiencePatch(draft.audience));
     }
+    // "Quem pode editar": the whole lists, empty under "owner" (ADR 0085 addendum of 2026-11-17).
+    if (fields.has("editors")) put("editors", "editors", editorsPatch(draft.editors));
     if (fields.has("look")) put("look", "appearance", normalizeAppearance(draft.look));
     if (patchFields.length > 0) {
       try {
@@ -622,7 +675,11 @@ function AgentProfile({
   const dirtyRef = useRef(dirty);
   dirtyRef.current = dirty;
   const blocker = useBlocker({
-    shouldBlockFn: ({ current, next }) => dirtyRef.current && current.pathname !== next.pathname,
+    // In a conversation's panel the page is the URL's `?agent=` (`useAgentPanel`): Back to the conversation leaves it too.
+    shouldBlockFn: ({ current, next }) =>
+      dirtyRef.current &&
+      (current.pathname !== next.pathname ||
+        (Boolean(onClose) && agentPanelSearch(next.search as Record<string, unknown>).agent !== agent.id)),
     enableBeforeUnload: () => dirtyRef.current,
     withResolver: true,
   });
@@ -668,8 +725,9 @@ function AgentProfile({
   /* ---------- Tabs ---------- */
 
   const pending = pendingOnAgent(proposals.data ?? [], agent.id).length;
-  const failures =
-    viewer === "member" ? 0 : (runs.data ?? []).filter((r) => r.status === "failed" && thisMonth(r.createdAt)).length;
+  const failures = !ownsOrManages(viewer)
+    ? 0
+    : (runs.data ?? []).filter((r) => r.status === "failed" && thisMonth(r.createdAt)).length;
   const tabLabel = (id: AgentTab): ReactNode => {
     const n = changes.filter((c) => c.tab === id).length;
     let badge: ReactNode = null;
@@ -738,95 +796,120 @@ function AgentProfile({
 
   return (
     <AgentEditProvider value={value}>
-      <div className={cx("page page--full agp", onClose && "agp--panel")} data-dirty={dirty || undefined}>
-        <AgentHero
-          onArchive={() => setArchiving(true)}
-          panel={Boolean(onClose)}
-          onExpand={
-            onClose &&
-            (() =>
-              void navigate({
-                to: "/org/$orgId/agents/$agentId",
-                params: { orgId: org.id, agentId: agent.id },
-                search: { tab: tab === "overview" ? undefined : tab, sec: section },
-              }))
-          }
-        />
-        <div className="agp-tabs" ref={top}>
-          <Tabs
-            label={t("agentPage.tabsLabel", g)}
-            value={view}
-            onValueChange={(next) => goTo(next)}
-            items={(personal
-              ? [...PERSONAL_TABS, ...(PERSONAL_TABS.includes(view) ? [] : [view])]
-              : [...MAIN_TABS, ...(MORE_TABS.includes(view) ? [view] : [])]
-            ).map((id) => ({
-              value: id,
-              label: tabLabel(id),
-            }))}
-            after={
-              personal ? undefined : (
-                <Menu
-                  align="end"
-                  label={t("agentPage.tabs.more")}
-                  trigger={
-                    <button type="button" className="ac-tab agp-more">
-                      {t("agentPage.tabs.more")}
-                      {moreChanges > 0 && (
-                        <span
-                          className="agp-badge agp-badge--edit ac-num"
-                          title={t("agentPage.changesCount", { count: moreChanges })}
-                        >
-                          <Icon name="edit" size={14} />
-                          {moreChanges}
-                        </span>
-                      )}
-                      <Icon name="chevronDown" size={14} />
-                    </button>
-                  }
-                >
-                  {MORE_TABS.filter((id) => id !== view).map((id) => (
-                    <MenuItem key={id} icon={MORE_ICON[id]} onSelect={() => goTo(id)}>
-                      {tabLabel(id)}
-                    </MenuItem>
-                  ))}
-                </Menu>
-              )
-            }
-          >
-            <TabPanel value={view}>
-              <div className="agp-view" key={view}>
-                {view === "overview" && <OverviewTab />}
-                {view === "instructions" && <InstructionsTab />}
-                {view === "access" && <AccessTab part={personal ? "basic" : "all"} />}
-                {view === "memory" && <MemoryTab item={item} />}
-                {view === "files" && <FilesTab />}
-                {view === "usage" && <UsageTab />}
-                {view === "activity" && <ActivityTab />}
-                {view === "settings" && (
-                  <SettingsTab
-                    part={personal ? "basic" : "all"}
-                    section={section}
-                    onSection={(sec) => goTo("settings", sec)}
-                    onArchive={() => setArchiving(true)}
-                    onDelete={() => setDeleting(true)}
-                  />
-                )}
-                {view === "advanced" && (
-                  <AdvancedTab
-                    section={section}
-                    onSection={(sec) => goTo("settings", sec)}
-                    onOpen={(next) => goTo(next)}
-                    onArchive={() => setArchiving(true)}
-                    onDelete={() => setDeleting(true)}
-                  />
-                )}
-              </div>
-            </TabPanel>
-          </Tabs>
+      {rightHand ? (
+        <div className="page page--full" data-dirty={dirty || undefined}>
+          <PageHeader title={agent.name} meta={t("settings.sectionText.right_hand")} />
+          {tellsNameStory(agent) && <p className="page__note">{t("rightHand.profile.nameStory")}</p>}
+          <div className="tabs-bar">
+            <Tabs
+              label={t("agentPage.tabsLabel", g)}
+              value={view}
+              onValueChange={(next) => goTo(next)}
+              items={RIGHT_HAND_TABS.map((id) => ({ value: id, label: tabLabel(id) }))}
+            >
+              {null}
+            </Tabs>
+          </div>
+          {view === "access" ? (
+            <AccessTab />
+          ) : view === "memory" ? (
+            <MemoryTab item={item} />
+          ) : (
+            <RightHandSettingsSection agent={agent} />
+          )}
+          <SaveBar saving={saving} onSave={() => void save()} onDiscard={discard} onJump={(c) => goTo(c.tab, c.sec)} />
         </div>
-        <SaveBar saving={saving} onSave={() => void save()} onDiscard={discard} onJump={(c) => goTo(c.tab, c.sec)} />
-      </div>
+      ) : (
+        <div className={cx("page page--full agp", onClose && "agp--panel")} data-dirty={dirty || undefined}>
+          <AgentHero
+            onArchive={() => setArchiving(true)}
+            panel={Boolean(onClose)}
+            onExpand={
+              onClose &&
+              (() =>
+                void navigate({
+                  to: "/org/$orgId/agents/$agentId",
+                  params: { orgId: org.id, agentId: agent.id },
+                  search: { tab: tab === "overview" ? undefined : tab, sec: section },
+                }))
+            }
+          />
+          <div className="agp-tabs" ref={top}>
+            <Tabs
+              label={t("agentPage.tabsLabel", g)}
+              value={view}
+              onValueChange={(next) => goTo(next)}
+              items={(personal
+                ? [...PERSONAL_TABS, ...(PERSONAL_TABS.includes(view) ? [] : [view])]
+                : [...MAIN_TABS, ...(MORE_TABS.includes(view) ? [view] : [])]
+              ).map((id) => ({
+                value: id,
+                label: tabLabel(id),
+              }))}
+              after={
+                personal ? undefined : (
+                  <Menu
+                    align="end"
+                    label={t("agentPage.tabs.more")}
+                    trigger={
+                      <button type="button" className="ac-tab agp-more">
+                        {t("agentPage.tabs.more")}
+                        {moreChanges > 0 && (
+                          <span
+                            className="agp-badge agp-badge--edit ac-num"
+                            title={t("agentPage.changesCount", { count: moreChanges })}
+                          >
+                            <Icon name="edit" size={14} />
+                            {moreChanges}
+                          </span>
+                        )}
+                        <Icon name="chevronDown" size={14} />
+                      </button>
+                    }
+                  >
+                    {MORE_TABS.filter((id) => id !== view).map((id) => (
+                      <MenuItem key={id} icon={MORE_ICON[id]} onSelect={() => goTo(id)}>
+                        {tabLabel(id)}
+                      </MenuItem>
+                    ))}
+                  </Menu>
+                )
+              }
+            >
+              <TabPanel value={view}>
+                <div className="agp-view" key={view}>
+                  {view === "overview" && <OverviewTab />}
+                  {view === "instructions" && <InstructionsTab />}
+                  {view === "access" && <AccessTab part={personal ? "basic" : "all"} />}
+                  {view === "memory" && <MemoryTab item={item} />}
+                  {view === "files" && <FilesTab />}
+                  {view === "usage" && <UsageTab />}
+                  {view === "activity" && <ActivityTab />}
+                  {view === "settings" && (
+                    <SettingsTab
+                      part={personal ? "basic" : "all"}
+                      section={section}
+                      onSection={(sec) => goTo("settings", sec)}
+                      onArchive={() => setArchiving(true)}
+                      onDelete={() => setDeleting(true)}
+                    />
+                  )}
+                  {view === "advanced" && (
+                    <AdvancedTab
+                      section={section}
+                      onSection={(sec) => goTo("settings", sec)}
+                      onOpen={(next) => goTo(next)}
+                      onArchive={() => setArchiving(true)}
+                      onDelete={() => setDeleting(true)}
+                    />
+                  )}
+                </div>
+              </TabPanel>
+            </Tabs>
+          </div>
+          <SaveBar saving={saving} onSave={() => void save()} onDiscard={discard} onJump={(c) => goTo(c.tab, c.sec)} />
+        </div>
+      )}
       {picking && (
         <RepoDialog
           add={picking.add}
@@ -874,6 +957,7 @@ function AgentProfile({
               if (!closing) return blocker.proceed?.();
               setClosing(false);
               setEdits({});
+              dirtyRef.current = false;
               onClose?.();
             }}
           >

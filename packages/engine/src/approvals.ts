@@ -18,16 +18,17 @@ import {
   sql,
 } from "@agenteschat/db";
 import { type ActiveCover, activeCoversFrom, activeCoversTo } from "./approval-covers";
-import {
-  addApprovalRules,
-  addRoutineOwnActions,
-  COMMAND_RULE_TOOL,
-  type RememberedKind,
-  rememberedKindOf,
-} from "./approval-rules";
+import { resumeHeldRuns, wakeLine } from "./approval-order";
+import { addApprovalRules, addRoutineOwnActions, type RememberedKind, rememberedKindOf } from "./approval-rules";
+import { queueApprovalsDigest } from "./approvals-digest";
+import { ACCESS_COLUMNS, managesAgent, managesAgentSql, managesRoutinesOf, REACH_COLUMNS } from "./audience";
 import { recordAudit } from "./audit";
 import { approvalCardVia } from "./card-via";
 import { CONNECTOR_CATALOG } from "./connectors/catalog";
+import { toolPrefixOfConnection } from "./connectors/connections";
+import { isCustom } from "./connectors/custom";
+import { exposedToolName } from "./connectors/mcp";
+import { auditLabel } from "./connectors/personal";
 import { learnFromRefusal } from "./context/feedback";
 import type { MemoryJudging } from "./context/items";
 import { ConflictError, ForbiddenError, NotFoundError } from "./errors";
@@ -36,10 +37,12 @@ import { type MailPreview, parseMailDetail, withoutReplyPrefix } from "./mail/pr
 import { notifyApproval, notifyNewcomers, resolveApprovalNotifications } from "./notification-producers";
 import { can, type Membership, requirePermission } from "./organizations";
 import { enqueue } from "./outbox";
+import { quietEnd, withMootRequest } from "./parked-asks";
 import { maySql, type RolePermission } from "./permissions";
 import { accountInUse } from "./standing";
-import { taskReaderSql } from "./task-access";
-import { AHEAD_GRACE_MS, type Approval } from "./tools/gateway";
+import { fileConversationReaderSql, taskReaderSql } from "./task-access";
+import { AHEAD_GRACE_MS, type Approval, readsSqlOnly, routineCall } from "./tools/gateway";
+import { canonicalJson } from "./tools/json-schema";
 import { REQUEST_PERMISSION_TOOL } from "./tools/permission";
 import type { ApprovalOrigin } from "./tools/run-policy";
 
@@ -53,9 +56,11 @@ const {
   agentRuns,
   agentRunSteps,
   connectorConnections,
+  customTools,
   issues,
   mailAccounts,
   messages,
+  notifications,
   routines,
   users,
 } = schema;
@@ -93,6 +98,8 @@ export interface ApprovalView {
   /** Decided by someone covering this person (ADR 0139): "Aprovado por Bruno, cobrindo Ana". */
   decidedForUserId: string | null;
   decidedAt: string | null;
+  /** Canceled because the agent asked for the same action again in a later turn: that newer request. */
+  supersededById: string | null;
   reason: string | null;
   /** Whether the person asking may approve or refuse it. */
   canDecide: boolean;
@@ -100,8 +107,11 @@ export interface ApprovalView {
   ownerUserId: string | null;
   /** When the approved action ran (null: not yet, or never). */
   executedAt: string | null;
-  /** What the action returned once it ran (raw tool output, short). */
-  result: { ok: boolean; text: string } | null;
+  /**
+   * What the action returned once it ran (raw tool output, short). `notRunAfter`: it didn't run, because the request
+   * asked before it on its card (that id) was refused or expired after it was approved (`approval-order.ts`).
+   */
+  result: { ok: boolean; text: string; notRunAfter?: string } | null;
   /** The connector the action goes through (`github`), and its account (`acme`); null for built-in tools. */
   connector: string | null;
   connectorAccount: string | null;
@@ -127,6 +137,11 @@ export interface ApprovalView {
    * whose request it was, who decides it only when `requesterDecides` (an approver by role). Null: any other approval.
    */
   approvers: { label: string; requestedByUserId: string | null; requesterDecides: boolean } | null;
+  /**
+   * Still waiting, and plain enough to approve along with others in one tap (`routineIds`). The server alone says
+   * so: `decideApprovals` with `only: "routine"` decides nothing else.
+   */
+  routine: boolean;
 }
 
 /** What the approval row alone doesn't say: the connector, the issue (and, for one, the trail). */
@@ -136,6 +151,8 @@ interface ApprovalContext {
   email: ApprovalEmail | null;
   issue: { id: string; number: number; title: string } | null;
   trail: { text: string; at: string }[];
+  /** A person's own connection: its whole name and account, for that person's eyes alone (`viewsOf`). */
+  own?: { userId: string; label: string; account: string | null; stored: string };
 }
 
 /** The stored origin (`approvals.origin`), read safely: its card and its notification say it. */
@@ -151,10 +168,16 @@ export function approvalOriginOf(value: Approval["origin"]): ApprovalOrigin | nu
   return null;
 }
 
+/** The longest reason a person gives with a decision. Mirror: `APPROVAL_REASON_MAX` in packages/client approval-card.ts. */
+export const APPROVAL_REASON_MAX = 1000;
+
 const resultOf = (a: Approval): ApprovalView["result"] => {
-  const r = a.result as { content?: unknown; isError?: unknown } | null;
+  const r = a.result as { content?: unknown; isError?: unknown; notRunAfter?: unknown } | null;
   if (!r) return null;
-  return { ok: r.isError !== true, text: typeof r.content === "string" ? r.content.slice(0, 600) : "" };
+  const text = typeof r.content === "string" ? r.content.slice(0, 600) : "";
+  return typeof r.notRunAfter === "string"
+    ? { ok: false, text, notRunAfter: r.notRunAfter }
+    : { ok: r.isError !== true, text };
 };
 
 /** Batched: connections, the runs' narration up to each approval step, the runs' issues. */
@@ -172,6 +195,7 @@ async function approvalContexts(db: Database, rows: Approval[]): Promise<Map<str
             connector: connectorConnections.connector,
             label: connectorConnections.label,
             account: connectorConnections.accountLabel,
+            ownerUserId: connectorConnections.ownerUserId,
           })
           .from(connectorConnections)
           .where(inArray(connectorConnections.id, connectionIds))
@@ -234,9 +258,23 @@ async function approvalContexts(db: Database, rows: Approval[]): Promise<Map<str
     }
     const connection = row.connectionId ? connectionOf.get(row.connectionId) : undefined;
     const mailbox = row.connectionId ? mailboxOf.get(row.connectionId) : undefined;
+    // A person's own connection: its tools named the card as others read it (`auditLabel`), and so does the card.
+    const others = connection?.ownerUserId
+      ? { ...connection, label: auditLabel({ ...connection, accountLabel: connection.account }), account: null }
+      : connection;
     out.set(row.id, {
       connector: connection?.connector ?? (mailbox ? "email" : null),
-      connectorAccount: connection ? accountNote(connection) : (mailbox?.address ?? null),
+      connectorAccount: others ? accountNote(others) : (mailbox?.address ?? null),
+      ...(connection?.ownerUserId && others
+        ? {
+            own: {
+              userId: connection.ownerUserId,
+              label: connection.label,
+              account: accountNote(connection),
+              stored: others.label,
+            },
+          }
+        : {}),
       email: mailbox ? approvalEmail(row, mailbox) : null,
       issue: row.runId ? (issueOfRun.get(row.runId) ?? null) : null,
       trail: trail.slice(-12),
@@ -359,22 +397,92 @@ export async function openApprovalCard(
   return open?.messageId ?? null;
 }
 
-/** Views with their context (connector, issue); `trail` only when asked (one approval's details). */
-async function viewsOf(db: Database, rows: Approval[], canDecide: (row: Approval) => boolean, trail = false) {
-  const [contexts, cardThreads] = await Promise.all([
+/**
+ * The waiting calls among `rows` that go together in one tap (the right hand's digest): `routineCall` by the row, and
+ * a tool its own connection still lists as a plain write. A row does not say why its call asked, so the connection
+ * has the last word: a tool an admin set to ask every time or turned off, one our rules or the judge would have ask,
+ * one marked sensitive (our words, the catalog) or that its server says destroys, and one the connection no longer
+ * lists, each stay on their own card whatever their name. SQL proven read-only needs no such word.
+ */
+export async function routineIds(db: Executor, rows: Approval[]): Promise<Set<string>> {
+  const plain = rows.filter((r) => r.status === "pending" && routineCall(r));
+  const out = new Set(plain.filter(readsSqlOnly).map((r) => r.id));
+  const asked = plain.filter((r) => !out.has(r.id));
+  const ids = [...new Set(asked.flatMap((r) => r.connectionId ?? []))];
+  if (ids.length === 0) return out;
+  const [connections, tools] = await Promise.all([
+    db
+      .select({
+        id: connectorConnections.id,
+        connector: connectorConnections.connector,
+        label: connectorConnections.label,
+        toolPrefix: connectorConnections.toolPrefix,
+      })
+      .from(connectorConnections)
+      .where(and(inArray(connectorConnections.id, ids), isNull(connectorConnections.revokedAt))),
+    db
+      .select()
+      .from(customTools)
+      .where(and(inArray(customTools.connectionId, ids), isNull(customTools.removedAt))),
+  ]);
+  /** A connection and its tool as the agent calls it. */
+  const vouched = new Set<string>();
+  for (const c of connections) {
+    const prefix = toolPrefixOfConnection(c);
+    const names = isCustom(c)
+      ? tools
+          .filter(
+            (t) =>
+              t.connectionId === c.id &&
+              (t.access === "read" || t.access === "write") &&
+              t.suggestedAccess !== "approval" &&
+              !t.sensitive &&
+              t.destructiveHint !== true,
+          )
+          .map((t) => t.name)
+      : Object.entries(CONNECTOR_CATALOG[c.connector]?.tools ?? {})
+          .filter(([, tool]) => !tool.sensitive && !tool.ours)
+          .map(([name]) => name);
+    for (const name of names) vouched.add(`${c.id} ${exposedToolName(prefix, name)}`);
+  }
+  for (const r of asked) if (vouched.has(`${r.connectionId} ${r.tool}`)) out.add(r.id);
+  return out;
+}
+
+/**
+ * Views with their context (connector, issue); `trail` only when asked (one approval's details). `viewer` reads a card
+ * of their own connection with its whole name; anyone else, and a view with no one viewer, as others read it.
+ */
+async function viewsOf(
+  db: Database,
+  rows: Approval[],
+  canDecide: (row: Approval) => boolean,
+  trail = false,
+  viewer?: string,
+) {
+  const [contexts, cardThreads, routine] = await Promise.all([
     approvalContexts(db, rows).catch(() => new Map<string, ApprovalContext>()),
     approvalCardThreads(db, rows).catch(() => new Map<string, string | null>()),
+    routineIds(db, rows).catch(() => new Set<string>()),
   ]);
   return rows.map((r) => {
-    const { trail: steps, ...context } = contexts.get(r.id) ?? {
+    const {
+      trail: steps,
+      own,
+      ...context
+    } = contexts.get(r.id) ?? {
       connector: null,
       connectorAccount: null,
       email: null,
       issue: null,
       trail: [],
     };
-    const view = approvalView(r, canDecide(r));
+    const view = approvalView(r, canDecide(r), routine.has(r.id));
     const threadId = cardThreads.has(r.id) ? (cardThreads.get(r.id) ?? null) : view.threadId;
+    if (own && own.userId === viewer) {
+      context.connectorAccount = own.account;
+      if (view.title.startsWith(`${own.stored}: `)) view.title = own.label + view.title.slice(own.stored.length);
+    }
     return { ...view, threadId, ...context, ...(trail ? { trail: steps } : {}) };
   });
 }
@@ -389,7 +497,7 @@ export function scalarParams(params: Record<string, unknown>) {
   return out;
 }
 
-export const approvalView = (a: Approval, canDecide = false): ApprovalView => ({
+export const approvalView = (a: Approval, canDecide = false, routine = false): ApprovalView => ({
   id: a.id,
   runId: a.runId,
   missionId: a.missionId ?? null,
@@ -410,6 +518,7 @@ export const approvalView = (a: Approval, canDecide = false): ApprovalView => ({
   decidedByUserId: a.decidedByUserId,
   decidedForUserId: a.decidedForUserId ?? null,
   decidedAt: a.decidedAt ? a.decidedAt.toISOString() : null,
+  supersededById: a.supersededById ?? null,
   reason: a.reason,
   canDecide: canDecide && a.status === "pending",
   ownerUserId: a.ownerUserId,
@@ -432,13 +541,11 @@ export const approvalView = (a: Approval, canDecide = false): ApprovalView => ({
         requesterDecides: a.approvers.requesterDecides,
       }
     : null,
+  routine,
 });
 
-/** What "Aprovar sempre" would keep for an approval: a connector's kind, or with no connection only a command's. */
-function alwaysKindOf(a: Pick<Approval, "connectionId" | "approveAlways">): RememberedKind | null {
-  const kind = rememberedKindOf(a.approveAlways);
-  return kind && (a.connectionId || (kind.tool === COMMAND_RULE_TOOL && kind.actions.length === 1)) ? kind : null;
-}
+/** What "Aprovar sempre" would keep for an approval: the kind the gateway offered on it (`rememberKinds`). */
+const alwaysKindOf = (a: Pick<Approval, "approveAlways">): RememberedKind | null => rememberedKindOf(a.approveAlways);
 
 /** An approval ahead that may still run: waiting for a person, or approved and not run yet. */
 const aheadLive = (a: Pick<Approval, "runAt" | "status" | "executedAt">) =>
@@ -454,7 +561,8 @@ const BROWSER_PROFILE_PREFIX = "browser-profile:";
 
 /**
  * The keys that let someone decide any approval of its kind: `approve_actions`; for `request_permission`, the keys
- * that give the same access on the agent's page (`manage_agents`, and `manage_connectors` for a browser profile).
+ * that give the same access on the agent's page (`manage_agents`, and `manage_connectors` for a browser profile),
+ * where `manage_agents` counts only on an agent it reaches (`managesAgent`, ADR 0085 addendum of 2026-11-17).
  */
 export function decidingKeys(approval: Pick<Approval, "tool"> & Partial<Pick<Approval, "params">>): RolePermission[] {
   if (!adminsDecide(approval)) return ["approve_actions"];
@@ -464,23 +572,44 @@ export function decidingKeys(approval: Pick<Approval, "tool"> & Partial<Pick<App
     : ["manage_agents"];
 }
 
+/** The agent an access request asks for (`adminsDecide`), as `managesAgent` reads it. */
+type AskingAgent = Parameters<typeof managesAgent>[0];
+
 /**
- * Whether `actorId` may decide `approval`: whoever holds its `decidingKeys` (admins), the agent's owner
- * (`adminsDecide` aside), or for one asked with `request_approval` the people it names instead of the owner (ADR
- * 0126). The person whose request it was never decides it, unless they approve by role (admins, the role it names).
- * One in someone's own mailbox that someone else asked (`required`) only that person decides.
+ * Whether `actorId` may decide `approval`: whoever holds its `decidingKeys` (admins; for an access request, only on
+ * an agent they manage: `agent`, its agent, `managesAgent`), the agent's owner (`adminsDecide` aside), or for one
+ * asked with `request_approval` the people it names instead of the owner (ADR 0126). The person whose request it was
+ * never decides it, unless they approve by role (admins, the role it names). One in someone's own mailbox that someone
+ * else asked (`required`) only that person decides.
  */
 export function decides(
   approval: Pick<Approval, "ownerUserId" | "tool"> & Partial<Pick<Approval, "approvers" | "params">>,
   actorId: string,
-  membership: Pick<Membership, "permissions"> | null,
+  membership: Pick<Membership, "permissions" | "roleIds"> | null,
+  agent: AskingAgent | null,
 ) {
   const named = approval.approvers;
   if (named?.required) return named.userIds.includes(actorId);
-  if (decidingKeys(approval).every((key) => can(membership, key))) return true;
+  if (
+    decidingKeys(approval).every((key) => can(membership, key)) &&
+    (!adminsDecide(approval) || (!!agent && managesAgent(agent, actorId, membership)))
+  )
+    return true;
   if (named?.requestedBy === actorId && !named.requesterDecides) return false;
   if (adminsDecide(approval)) return false;
   return named?.userIds.length ? named.userIds.includes(actorId) : approval.ownerUserId === actorId;
+}
+
+/** The agents the access requests among `rows` ask for (`adminsDecide`), by id: what `decides` reads of each. */
+async function askingAgents(db: Executor, orgId: string, rows: readonly Pick<Approval, "agentId" | "tool">[]) {
+  const ids = [...new Set(rows.filter((r) => adminsDecide(r)).map((r) => r.agentId))];
+  const found = ids.length
+    ? await db
+        .select({ id: agents.id, ...REACH_COLUMNS })
+        .from(agents)
+        .where(and(eq(agents.orgId, orgId), inArray(agents.id, ids)))
+    : [];
+  return new Map<string, AskingAgent>(found.map((a) => [a.id, a]));
 }
 
 /** `decides` as SQL over `approvals` (the sidebar's count). */
@@ -488,7 +617,8 @@ export const decidableBySql = (actorId: string) => sql`(case
   when coalesce((${approvals.approvers} ->> 'required')::boolean, false)
     then ${approvals.approvers} -> 'userIds' @> to_jsonb(${actorId}::text)
   when ${approvals.tool} = ${REQUEST_PERMISSION_TOOL}
-    then ${maySql(approvals.orgId, actorId, "manage_agents")}
+    then exists (select 1 from ${agents} pa where pa.id = ${approvals.agentId} and pa.org_id = ${approvals.orgId}
+        and ${managesAgentSql("pa", sql`${actorId}::text`)})
       and (coalesce(${approvals.params} ->> 'permission', '') not like ${`${BROWSER_PROFILE_PREFIX}%`}
         or ${maySql(approvals.orgId, actorId, "manage_connectors")})
   when ${maySql(approvals.orgId, actorId, "approve_actions")} then true
@@ -543,7 +673,7 @@ export function coveredFor(approval: Coverable, actorId: string, covers: ActiveC
 }
 
 type Askable = Pick<Approval, "orgId" | "ownerUserId"> &
-  Partial<Pick<Approval, "tool" | "approvers" | "params" | "requestedByUserId" | "highRisk">>;
+  Partial<Pick<Approval, "agentId" | "tool" | "approvers" | "params" | "requestedByUserId" | "highRisk">>;
 
 /**
  * The people asked to decide (the card's badge, the live Aprovações list): whoever holds its `decidingKeys` (ADR 0085)
@@ -553,13 +683,17 @@ type Askable = Pick<Approval, "orgId" | "ownerUserId"> &
  */
 export async function approverIds(db: Database, approval: Askable, notified = false) {
   const keys = decidingKeys({ tool: approval.tool ?? "", params: approval.params ?? {} });
+  // An access request's `manage_agents` counts on its own agent only (`managesAgentSql`, ADR 0085 addendum of
+  // 2026-11-17): a private agent's request never goes to who merely holds the key.
+  const holds = (key: RolePermission) =>
+    key === "manage_agents" && approval.agentId
+      ? sql`exists (select 1 from ${agents} pa where pa.id = ${approval.agentId} and pa.org_id = ${approval.orgId}
+          and ${managesAgentSql("pa", sql`${organizationMembers.userId}`)})`
+      : maySql(approval.orgId, organizationMembers.userId, key);
   const members = await db
     .select({
       userId: organizationMembers.userId,
-      admin: sql<boolean>`(${sql.join(
-        keys.map((key) => maySql(approval.orgId, organizationMembers.userId, key)),
-        sql` and `,
-      )})`,
+      admin: sql<boolean>`(${sql.join(keys.map(holds), sql` and `)})`,
     })
     .from(organizationMembers)
     .innerJoin(users, eq(users.id, organizationMembers.userId))
@@ -645,6 +779,7 @@ export async function repointApprovals(
       ),
     )
     .returning();
+  const told = new Set<string>();
   for (const row of rows) {
     if (row.status !== "pending") continue;
     let current = row;
@@ -657,19 +792,27 @@ export async function repointApprovals(
     await resolveApprovalNotifications(deps, current).catch(() => {});
     // The new owner is told; with none left, the admins.
     await notifyNewcomers(deps, current).catch(() => {});
+    for (const id of await notifiedIds(deps.db, current).catch(() => [])) told.add(id);
   }
+  await queueApprovalsDigest(deps.db, orgId, [...told]).catch(() => {});
 }
 
 /**
- * `userId` left the workspace: the actions in their mailboxes that may still run (waiting for a person, or approved and
- * not run) never run, and a run waiting on one hears it. In the transaction that removes them; then `publishApproval`
- * each row returned.
+ * `userId` left the workspace: the actions in their mailboxes and personal connections that may still run (waiting
+ * for a person, or approved and not run) never run, and a run waiting on one hears it. In the transaction that
+ * removes them; then `publishApproval` each row returned.
  */
 export async function cancelMailboxApprovals(tx: Executor, orgId: string, userId: string, actorId: string) {
-  const theirs = tx
+  const mailboxes = await tx
     .select({ id: mailAccounts.id })
     .from(mailAccounts)
     .where(and(eq(mailAccounts.orgId, orgId), eq(mailAccounts.createdByUserId, userId)));
+  const connections = await tx
+    .select({ id: connectorConnections.id })
+    .from(connectorConnections)
+    .where(and(eq(connectorConnections.orgId, orgId), eq(connectorConnections.ownerUserId, userId)));
+  const theirs = [...mailboxes, ...connections].map((r) => r.id);
+  if (theirs.length === 0) return [];
   const rows = await tx
     .update(approvals)
     .set({ status: "canceled", decidedByUserId: actorId, decidedAt: new Date() })
@@ -690,6 +833,96 @@ export async function cancelMailboxApprovals(tx: Executor, orgId: string, userId
   return rows;
 }
 
+/** Params that name what an action is about (a message, a recipient, a pull request), besides any `…_id`/`…Id`. */
+const TARGET_KEYS = new Set([
+  "to",
+  "channel",
+  "owner",
+  "repo",
+  "name",
+  "number",
+  "pullNumber",
+  "pull_number",
+  "issue_number",
+  "path",
+  "branch",
+  "environment",
+]);
+const isTargetKey = (key: string) => TARGET_KEYS.has(key) || /(_id|Id)$/.test(key);
+
+/**
+ * What an action is about, as one comparable string: its target params, one level into objects (a tool that runs
+ * another by name keeps them under `arguments`). Null when it names nothing: such an action is never taken for another.
+ */
+export function approvalTarget(params: Record<string, unknown>): string | null {
+  const target: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(params ?? {})) {
+    if (isTargetKey(k)) target[k] = v;
+    else if (v && typeof v === "object" && !Array.isArray(v)) {
+      for (const [ik, iv] of Object.entries(v as Record<string, unknown>))
+        if (isTargetKey(ik)) target[`${k}.${ik}`] = iv;
+    }
+  }
+  return Object.keys(target).length > 0 ? canonicalJson(target) : null;
+}
+
+/**
+ * The agent asked for the same action again in a later run (same tool, connection, card and target), as when it
+ * reworded an email it was told to fix: its older requests still waiting on that card (`openApprovalCard` joined them:
+ * one conversation) are canceled as replaced by `newer` (`supersededById`). Their runs read that, not a refusal, and may
+ * end quietly (`mootRequests`). Two calls of one run, an action prepared ahead and an action naming no target are never
+ * replaced. In the transaction that links `newer` to its card; then `publishApproval` each row returned.
+ */
+export async function supersedeApprovals(tx: Executor, newer: Approval): Promise<Approval[]> {
+  const target = approvalTarget(newer.params);
+  if (!target || !newer.runId || !newer.messageId || newer.runAt) return [];
+  const older = await tx
+    .select()
+    .from(approvals)
+    .where(
+      and(
+        eq(approvals.orgId, newer.orgId),
+        eq(approvals.agentId, newer.agentId),
+        eq(approvals.tool, newer.tool),
+        newer.connectionId ? eq(approvals.connectionId, newer.connectionId) : isNull(approvals.connectionId),
+        eq(approvals.messageId, newer.messageId),
+        eq(approvals.status, "pending"),
+        isNull(approvals.runAt),
+        ne(approvals.id, newer.id),
+        ne(approvals.runId, newer.runId),
+        lt(approvals.createdAt, newer.createdAt),
+      ),
+    );
+  const ids = older.filter((r) => approvalTarget(r.params) === target).map((r) => r.id);
+  if (ids.length === 0) return [];
+  const rows = await tx
+    .update(approvals)
+    .set({ status: "canceled", supersededById: newer.id, decidedAt: new Date() })
+    .where(and(inArray(approvals.id, ids), eq(approvals.status, "pending")))
+    .returning();
+  for (const row of rows) {
+    if (row.runId) await markReplaced(tx, row.runId, row.id);
+    await enqueueResume(tx, row);
+    await auditDecision(tx, row, null);
+  }
+  await wakeLine(tx, rows);
+  return rows;
+}
+
+/** A replaced request's run, still waiting on it, reads that it was replaced and may end without a word. */
+async function markReplaced(tx: Executor, runId: string, approvalId: string) {
+  const [run] = await tx
+    .select({ transcript: agentRuns.transcript })
+    .from(agentRuns)
+    .where(and(eq(agentRuns.id, runId), inArray(agentRuns.status, ["waiting_approval", "waiting_input"])));
+  if (!run) return;
+  const text = `Replaced by your newer request for the same action in a later turn: this one was not done and nobody waits on it. If nothing else is left to do or say, ${quietEnd(run)}.`;
+  await tx
+    .update(agentRuns)
+    .set({ transcript: withMootRequest(approvalId, text) })
+    .where(eq(agentRuns.id, runId));
+}
+
 /** Tells the channel and every approver about an approval (card in the chat, badge on the Approvals screen). */
 export async function publishApproval(
   deps: { db: Database; pubsub?: PubSub },
@@ -700,14 +933,20 @@ export async function publishApproval(
   await publishChannelEvent(deps.pubsub, { type, channelId: approval.channelId, approval: view });
   const deciders = await approverIds(deps.db, approval);
   for (const userId of deciders) {
+    const [theirs = view] = approval.approvers?.personal
+      ? await viewsOf(deps.db, [approval], () => false, false, userId)
+      : [view];
     await publishUserEvent(deps.pubsub, approval.orgId, userId, {
       type,
-      approval: { ...view, canDecide: true, canCancel: approval.status === "approved" && aheadLive(approval) },
+      approval: { ...theirs, canDecide: true, canCancel: approval.status === "approved" && aheadLive(approval) },
     });
   }
   // The inbox: waiting for whoever is told (`notifiedIds`); out of it once decided or expired.
   if (type === "approval.created" && approval.status === "pending") {
-    await notifyApproval(deps, approval, await notifiedIds(deps.db, approval)).catch(() => {});
+    const told = await notifiedIds(deps.db, approval);
+    await notifyApproval(deps, approval, told).catch(() => {});
+    // Several waiting on one of them: the right hand sums them up on one card, a little later.
+    await queueApprovalsDigest(deps.db, approval.orgId, told).catch(() => {});
   } else if (type === "approval.decided") {
     await resolveApprovalNotifications(deps, approval).catch(() => {});
   }
@@ -752,7 +991,8 @@ export async function decideApproval(
     .where(and(eq(approvals.id, approvalId), eq(approvals.orgId, orgId)));
   if (!current) throw new NotFoundError("Approval not found");
   const membership = await requirePermission(db, actorId, current.orgId, "read");
-  const direct = decides(current, actorId, membership);
+  const asking = await askingAgents(db, orgId, [current]);
+  const direct = decides(current, actorId, membership, asking.get(current.agentId) ?? null);
   const forUserId = direct ? null : coveredFor(current, actorId, await activeCoversTo(db, orgId, actorId, at));
   if (!direct && !forUserId) {
     throw new ForbiddenError(
@@ -769,8 +1009,11 @@ export async function decideApproval(
   }
   const via = await approvalCardVia(db, orgId, input.via, approvalId);
   const kind = input.always ? alwaysKindOf(current) : null;
-  // Approving for good outlives the cover and changes the agent for everyone: never in someone else's name.
-  if (input.always && (input.decision !== "approve" || !kind || forUserId)) {
+  // Approving for good outlives the cover and changes the agent for everyone: never in someone else's name. A card
+  // that names who decides (someone's own mailbox) is kept for good by them alone: an admin's rule would take their
+  // say away on every later call.
+  const namedElsewhere = current.approvers ? !current.approvers.userIds.includes(actorId) : false;
+  if (input.always && (input.decision !== "approve" || !kind || forUserId || namedElsewhere)) {
     throw new ConflictError("This request can't be approved for good", "approval.always_unavailable");
   }
 
@@ -788,7 +1031,7 @@ export async function decideApproval(
               decidedByUserId: actorId,
               decidedForUserId: forUserId,
               decidedAt: at,
-              reason: input.reason?.trim().slice(0, 1000) || null,
+              reason: input.reason?.trim().slice(0, APPROVAL_REASON_MAX) || null,
             },
       )
       .where(eq(approvals.id, approvalId))
@@ -825,6 +1068,9 @@ export async function decideApproval(
     }
     if (updated?.status === "refused") await settleAheadRoutine(tx, updated);
     if (updated) await auditDecision(tx, updated, expired ? null : actorId, always, via);
+    // Not approved: what the agent asked after it on its card no longer waits for it. An approved one wakes them once
+    // its run has done it (`approval-order.ts`).
+    if (updated && updated.status !== "approved") await wakeLine(tx, [updated]);
     return expired ? { error: "This request has expired" as const, row: updated } : { row: updated };
   });
   if (outcome.row) await publishApproval(deps, outcome.row, "approval.decided");
@@ -832,7 +1078,7 @@ export async function decideApproval(
   // A refusal (with its reason) becomes an outcome and a lesson for the agent.
   if (outcome.row.status === "refused") await learnFromRefusal(deps, outcome.row).catch(() => null);
   // The person who decided may decide it: an action they approved ahead, they may still withdraw.
-  const [view = approvalView(outcome.row, true)] = await viewsOf(db, [outcome.row], () => true);
+  const [view = approvalView(outcome.row, true)] = await viewsOf(db, [outcome.row], () => true, false, actorId);
   return view;
 }
 
@@ -840,13 +1086,14 @@ export async function decideApproval(
  * "Aprovar tudo" / "Agora não para todos" on a card: decides exactly these approvals (the items the card listed
  * when the person clicked, never one that joined since), each its own row, decision and audit. Only the items
  * this person may decide are decided (`decides`, per item); the rest come back in `skipped`. Each run that
- * asked resumes once, after all of its items here are decided in the same transaction.
+ * asked resumes once, after all of its items here are decided in the same transaction. `only: "routine"` (the right
+ * hand's digest) decides the plain ones among them (`routineIds`) and leaves every other waiting, in `skipped` too.
  */
 export async function decideApprovals(
   deps: { db: Database; pubsub: PubSub; now?: () => Date; memory?: MemoryJudging },
   actorId: string,
   orgId: string,
-  input: { ids: string[]; decision: "approve" | "refuse"; reason?: string; via?: string },
+  input: { ids: string[]; decision: "approve" | "refuse"; reason?: string; via?: string; only?: "routine" },
 ): Promise<{ approvals: ApprovalView[]; skipped: string[] }> {
   const { db } = deps;
   const at = deps.now?.() ?? new Date();
@@ -855,8 +1102,13 @@ export async function decideApprovals(
   if (input.via) for (const id of ids) vias.set(id, await approvalCardVia(db, orgId, input.via, id));
   const membership = await requirePermission(db, actorId, orgId, "read");
   const covers = await activeCoversTo(db, orgId, actorId, at);
-  const forUserOf = (r: Approval) => (decides(r, actorId, membership) ? null : coveredFor(r, actorId, covers));
-  const allowed = (r: Approval) => decides(r, actorId, membership) || forUserOf(r) !== null;
+  // The agents of the access requests among them, once their rows are read (`decides`).
+  let asking = new Map<string, AskingAgent>();
+  const direct = (r: Approval) => decides(r, actorId, membership, asking.get(r.agentId) ?? null);
+  const forUserOf = (r: Approval) => (direct(r) ? null : coveredFor(r, actorId, covers));
+  const allowed = (r: Approval) => direct(r) || forUserOf(r) !== null;
+  /** Some still wait and none is this person's to decide. */
+  let theirs = false;
   const decided = await db.transaction(async (tx) => {
     const rows = ids.length
       ? await tx
@@ -868,7 +1120,11 @@ export async function decideApprovals(
       : [];
     const out: Approval[] = [];
     const resumed = new Set<string>();
-    for (const row of rows.filter(allowed)) {
+    asking = await askingAgents(tx, orgId, rows);
+    const mine = rows.filter(allowed);
+    theirs = rows.length > 0 && mine.length === 0;
+    const routine = input.only ? await routineIds(tx, mine) : null;
+    for (const row of routine ? mine.filter((r) => routine.has(r.id)) : mine) {
       const expired = row.expiresAt <= at;
       const [updated] = await tx
         .update(approvals)
@@ -880,7 +1136,7 @@ export async function decideApprovals(
                 decidedByUserId: actorId,
                 decidedForUserId: forUserOf(row),
                 decidedAt: at,
-                reason: input.reason?.trim().slice(0, 1000) || null,
+                reason: input.reason?.trim().slice(0, APPROVAL_REASON_MAX) || null,
               },
         )
         .where(eq(approvals.id, row.id))
@@ -892,38 +1148,50 @@ export async function decideApprovals(
       if (row.runId) resumed.add(row.runId);
       out.push(updated);
     }
+    await wakeLine(
+      tx,
+      out.filter((r) => r.status !== "approved"),
+    );
     return out;
   });
-  if (decided.length === 0 && ids.length > 0) {
-    const [any] = await db
-      .select({ id: approvals.id })
-      .from(approvals)
-      .where(and(eq(approvals.orgId, orgId), inArray(approvals.id, ids), eq(approvals.status, "pending")))
-      .limit(1);
-    if (any) throw new ForbiddenError("Only the agent's owner or an admin can decide this");
-  }
+  if (theirs) throw new ForbiddenError("Only the agent's owner or an admin can decide this");
   for (const row of decided) await publishApproval(deps, row, "approval.decided");
   for (const row of decided) {
     if (row.status === "refused") await learnFromRefusal(deps, row).catch(() => null);
   }
   const done = new Set(decided.map((r) => r.id));
   return {
-    approvals: await viewsOf(db, decided, () => false),
+    approvals: await viewsOf(db, decided, () => false, false, actorId),
     skipped: ids.filter((id) => !done.has(id)),
   };
 }
 
 /**
  * An approval's ending in the audit log: the person who approved or refused it, or the system when it
- * expired unanswered. The action it then ran is the agent's own row (`tool.call`, agent-audit.ts).
+ * expired unanswered. The action it then ran is the agent's own row (`tool.call`, agent-audit.ts). A card of a
+ * person's own connection names it as others do (`auditLabel`), its current name when it was renamed since; anyone
+ * else reads only that name and the agent (`listAudit`).
  */
-function auditDecision(
+async function auditDecision(
   tx: Executor,
   row: Approval,
   personId: string | null,
   always: (RememberedKind & { connectionId: string | null }) | null = null,
   via: string | null = null,
 ) {
+  const [c] = row.connectionId
+    ? await tx
+        .select({
+          label: connectorConnections.label,
+          accountLabel: connectorConnections.accountLabel,
+          ownerUserId: connectorConnections.ownerUserId,
+        })
+        .from(connectorConnections)
+        .where(eq(connectorConnections.id, row.connectionId))
+    : [];
+  // A card opened before its connection was renamed starts with a name no longer known: the tool stands for the rest.
+  const title =
+    !c?.ownerUserId || row.title.startsWith(`${auditLabel(c)}: `) ? row.title : `${auditLabel(c)}: ${row.tool}`;
   return recordAudit(tx, {
     orgId: row.orgId,
     actor: personId ? { type: "person", id: personId } : { type: "system", id: null },
@@ -932,10 +1200,11 @@ function auditDecision(
     details: {
       tool: row.tool,
       agentId: row.agentId,
-      title: row.title,
+      title,
       ...(row.reason ? { reason: row.reason } : {}),
       ...(always ? { always } : {}),
       ...(via ? { via } : {}),
+      ...(c?.ownerUserId ? { label: auditLabel(c), personalOf: c.ownerUserId } : {}),
     },
     runId: row.runId,
     channelId: row.channelId,
@@ -959,6 +1228,7 @@ export async function expireApprovals(deps: { db: Database; pubsub: PubSub }, no
       await enqueueResume(tx, row);
       await auditDecision(tx, row, null);
     }
+    await wakeLine(tx, rows);
     const lapsed = await tx
       .update(approvals)
       .set({ status: "expired" })
@@ -974,7 +1244,38 @@ export async function expireApprovals(deps: { db: Database; pubsub: PubSub }, no
     return [...rows, ...lapsed];
   });
   for (const row of expired) await publishApproval(deps, row, "approval.decided");
+  await resolveStaleApprovalNotifications(deps).catch(() => {});
+  // The same minute's safety net for runs waiting their turn behind a request whose run ended (`approval-order.ts`).
+  await resumeHeldRuns(deps.db, now).catch(() => 0);
   return expired.length;
+}
+
+/**
+ * An approval's notification left waiting after the request closed (a row canceled in place before each close told
+ * the inbox, a crash between the close and the inbox): out of the inbox, or on to the card's next request still
+ * waiting, so no conversation says a request waits when Approvals has none.
+ */
+export async function resolveStaleApprovalNotifications(deps: { db: Database; pubsub?: PubSub }) {
+  const stale = await deps.db
+    .selectDistinct({ id: approvals.id, orgId: approvals.orgId, messageId: approvals.messageId })
+    .from(notifications)
+    .innerJoin(
+      approvals,
+      and(
+        eq(approvals.orgId, notifications.orgId),
+        sql`${notifications.source}->>'approvalId' = ${approvals.id}::text`,
+      ),
+    )
+    .where(
+      and(
+        eq(notifications.kind, "approval"),
+        eq(notifications.waiting, true),
+        isNull(notifications.doneAt),
+        ne(approvals.status, "pending"),
+      ),
+    );
+  for (const row of stale) await resolveApprovalNotifications(deps, row);
+  return stale.length;
 }
 
 /**
@@ -1057,9 +1358,17 @@ export async function cancelableAhead(db: Database, actorId: string, orgId: stri
         .from(routines)
         .where(and(eq(routines.id, current.routineId), eq(routines.orgId, orgId)))
     : [];
+  // Who manages the agent's routines (`managesRoutinesOf`, ADR 0085 addendum of 2026-11-17), not the key alone.
+  const [agent] =
+    current.ownerUserId === actorId || routine?.createdByUserId === actorId || can(membership, "approve_actions")
+      ? []
+      : await db
+          .select(ACCESS_COLUMNS)
+          .from(agents)
+          .where(and(eq(agents.id, current.agentId), eq(agents.orgId, orgId)));
   const may =
     can(membership, "approve_actions") ||
-    can(membership, "manage_routines") ||
+    (!!agent && managesRoutinesOf(agent, actorId, membership)) ||
     current.ownerUserId === actorId ||
     routine?.createdByUserId === actorId;
   if (!may) throw new ForbiddenError("Only who may decide it or manage its routine can cancel this");
@@ -1081,7 +1390,7 @@ export async function cancelAheadApproval(
   const current = await cancelableAhead(deps.db, actorId, orgId, approvalId);
   const [ended] = await withdrawAhead(deps, eq(approvals.id, current.id), actorId, true);
   if (!ended) throw new ConflictError("This action already ran or ended", "approval.not_cancelable");
-  const [view = approvalView(ended)] = await viewsOf(deps.db, [ended], () => false);
+  const [view = approvalView(ended)] = await viewsOf(deps.db, [ended], () => false, false, actorId);
   return view;
 }
 
@@ -1167,8 +1476,24 @@ const seenBy = (db: Database, orgId: string, actorId: string) =>
         .from(channelMembers)
         .where(and(eq(channelMembers.orgId, orgId), eq(channelMembers.userId, actorId))),
     ),
-    // A task's conversation (ADR 0145): people are never its members; whoever sees the task sees its cards.
+    // A task's conversation (ADR 0145): people are never its members; whoever sees the task sees its cards. A live
+    // file's (ADR 0199): whoever reads the file.
     taskReaderSql(sql`${approvals.channelId}`, sql`${actorId}::text`),
+    fileConversationReaderSql(sql`${approvals.channelId}`, sql`${actorId}::text`),
+  );
+
+/** One in someone's own connection (`approvers.personal`): only they and who is in its conversation list it. */
+const personalSeenBy = (db: Database, orgId: string, actorId: string) =>
+  or(
+    sql`not coalesce((${approvals.approvers} ->> 'personal')::boolean, false)`,
+    sql`${approvals.approvers} -> 'userIds' @> to_jsonb(${actorId}::text)`,
+    inArray(
+      approvals.channelId,
+      db
+        .select({ id: channelMembers.channelId })
+        .from(channelMembers)
+        .where(and(eq(channelMembers.orgId, orgId), eq(channelMembers.userId, actorId))),
+    ),
   );
 
 /**
@@ -1197,12 +1522,19 @@ export async function listApprovals(
         options.agentId ? eq(approvals.agentId, options.agentId) : undefined,
         options.messageId ? eq(approvals.messageId, options.messageId) : undefined,
         admin ? undefined : seenBy(db, orgId, actorId),
+        personalSeenBy(db, orgId, actorId),
       ),
     )
     .orderBy(desc(approvals.createdAt))
     .limit(Math.min(options.limit ?? 100, 500));
-  const covers = await activeCoversTo(db, orgId, actorId);
-  return viewsOf(db, rows, (r) => decides(r, actorId, membership) || coveredFor(r, actorId, covers) !== null);
+  const [covers, asking] = await Promise.all([activeCoversTo(db, orgId, actorId), askingAgents(db, orgId, rows)]);
+  return viewsOf(
+    db,
+    rows,
+    (r) => decides(r, actorId, membership, asking.get(r.agentId) ?? null) || coveredFor(r, actorId, covers) !== null,
+    false,
+    actorId,
+  );
 }
 
 export async function getApproval(db: Database, actorId: string, orgId: string, approvalId: string) {

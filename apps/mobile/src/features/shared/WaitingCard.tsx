@@ -21,7 +21,7 @@ export interface WaitingCardProps {
   title?: string;
   /** Under the title: why it was asked in muted, then what it goes through (`WaitingSource`), what it costs. */
   children?: ReactNode;
-  /** Its deadline: the amber fuse and the time left, at the top line's right (`ExpiryLine`). */
+  /** Its deadline: the amber fuse and the time left, under the action from the card's edge (`ExpiryLine`). */
   expires?: { createdAt?: string | null; expiresAt: string } | null;
   /** Without a deadline, at the top line's right: where and when ("#marketing · 19:58"). */
   where?: string;
@@ -39,7 +39,7 @@ export interface WaitingCardProps {
 }
 
 /**
- * One thing waiting on you, as Atividade, Conversas' strip and an agent's profile show it, read as the chat's request
+ * One thing waiting on you, as Atividade and an agent's profile show it, read as the chat's request
  * card: the card with its cut corner (square bottom left, as the chat's blocks), the asking agent's sky faint across
  * the top (gray when no agent asks), its face with the name (15, regular: the request is the card's one bold) and
  * the kind under it (its icon quiet: no "waiting for you" mark, the card itself is the ask) and, at the right, where
@@ -170,11 +170,12 @@ const styles = StyleSheet.create({
   sourceMark: { flexShrink: 0 },
   // The decision under the request, as the chat card's foot (its 8 + 4 points above).
   ft: { paddingHorizontal: 16, paddingTop: 12 },
-  // The deadline at the foot's end, right-aligned under the decision (as the chat's card).
-  expiry: { flexDirection: "row", justifyContent: "flex-end", marginTop: 10 },
+  // The deadline under the decision, from the card's edge (as the chat's card).
+  expiry: { flexDirection: "row", marginTop: 10 },
   when: { fontVariant: ["tabular-nums"] },
-  // Where and when never take the name's room: at most half the line.
-  where: { flexShrink: 1, maxWidth: "50%" },
+  // Where and when never take the name's room: at most half the line. On the name's line, not between it and the
+  // kind under it.
+  where: { flexShrink: 1, maxWidth: "50%", alignSelf: "flex-start", paddingTop: 1 },
   footer: { marginTop: 12, marginHorizontal: 16, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth },
   medium: { fontWeight: weights.medium },
   grow: { flex: 1, minWidth: 0 },

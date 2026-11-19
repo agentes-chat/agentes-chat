@@ -194,7 +194,9 @@ test("a message during a computer turn is handed to it live; read ones join it, 
 });
 
 test("a burst before the first computer turn (ADR 0112): one turn whose prompt has all of it, as conversation lines", async () => {
-  f = await setup({ quietMs: 400 });
+  // The window is measured from the message's own time, and a run claimed after it ends skips it: it has to outlast
+  // the claim on a loaded runner, or the follow-ups come after a turn already over.
+  f = await setup({ quietMs: 2000 });
   const fx = f;
   await computerAgent(fx);
   const seen: BrainTurn[] = [];
@@ -213,7 +215,10 @@ test("a burst before the first computer turn (ADR 0112): one turn whose prompt h
   await post(fx, "@dev oi");
   const drained = drainOutbox(fx.db, handlers);
   const start = Date.now();
-  while (!(await fx.db.select().from(schema.agentRuns)).some((r) => r.status === "running")) {
+  for (;;) {
+    const status = (await fx.db.select().from(schema.agentRuns))[0]?.status;
+    if (status === "running") break;
+    if (status === "done") throw new Error("the run was claimed after its quiet window and answered alone");
     if (Date.now() - start > 15000) throw new Error("the run never started");
     await new Promise((r) => setTimeout(r, 5));
   }
@@ -682,4 +687,113 @@ test("Claude Code brain: a runner on protocol 15 takes brain.steer for the turn;
     // drain
   }
   expect(handedOff).toEqual([]);
+});
+
+/**
+ * A computer brain that answers the first message, finds the second one queued as its turn ends, and answers it (as
+ * the runner reports it with `answers: "each"`: the first answer as its own event, the read, then the rest). Its
+ * later turns answer at once.
+ */
+function answeringBrain(fx: Fixture, first: string, second: string) {
+  const handed: SteerMessage[][] = [];
+  const sent = gate();
+  /** Whether the first answer was in the conversation before the brain read on. */
+  let outBeforeRead = false;
+  let turns = 0;
+  const brain: Brain = {
+    kind: "claude_code",
+    async *run(_turn: BrainTurn, io: BrainIO) {
+      turns++;
+      if (turns > 1) {
+        yield { type: "done", text: `Turn ${turns}.` };
+        return;
+      }
+      io.steerable?.(async (messages) => {
+        handed.push(messages);
+        return { status: "accepted", accepted: messages.map((m) => m.uuid) };
+      });
+      try {
+        yield { type: "text_delta", text: first };
+        sent.open();
+        await waitUntil(() => handed.length > 0);
+        yield { type: "answer", text: first };
+        const main = await listMessages(fx.db, fx.owner.id, fx.org.id, fx.general.id);
+        outBeforeRead = main.at(-1)?.body === first;
+        yield { type: "steer_read", uuids: handed[0]?.map((m) => m.uuid) ?? [] };
+        yield { type: "text_delta", text: second };
+        yield { type: "done", text: second };
+      } finally {
+        io.steerable?.(null);
+      }
+    },
+  };
+  return { brain, handed, sent, outBeforeRead: () => outBeforeRead };
+}
+
+test("an answer the brain finished before reading a message goes out at once, on its own: the next one under it (ADR 0112)", async () => {
+  f = await setup();
+  const fx = f;
+  await computerAgent(fx);
+  const b = answeringBrain(fx, "Oi! Tudo certo por aqui.", "Recebi: já olho o deploy.");
+  const handlers = createJobHandlers({
+    ...fx.jobDeps,
+    brains: { claude_code: () => b.brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  await post(fx, "@dev oi, tudo bem?");
+  const drained = drainOutbox(fx.db, handlers);
+  await b.sent.promise;
+  await post(fx, "@dev e o deploy?");
+  await drained;
+
+  expect(b.handed).toHaveLength(1);
+  // Out while the next one was still being written, never held for it.
+  expect(b.outBeforeRead()).toBe(true);
+  const main = await listMessages(fx.db, fx.owner.id, fx.org.id, fx.general.id);
+  // Two messages, in the order written: never one with both.
+  expect(main.filter((m) => m.author.type === "agent").map((m) => m.body)).toEqual([
+    "Oi! Tudo certo por aqui.",
+    "Recebi: já olho o deploy.",
+  ]);
+  // The run's conversation keeps them apart too, the message it read between them.
+  const [run] = await fx.db.select().from(schema.agentRuns);
+  const kept = run?.transcript as { messages: { role: string; content: unknown }[] } | undefined;
+  const said = (kept?.messages ?? []).map((m) => ({ role: m.role, text: JSON.stringify(m.content) }));
+  const first = said.findIndex((m) => m.role === "assistant" && m.text.includes("Oi! Tudo certo"));
+  const read = said.findIndex((m) => m.role === "user" && m.text.includes("e o deploy?"));
+  const last = said.findIndex((m) => m.role === "assistant" && m.text.includes("já olho o deploy"));
+  expect(first).toBeGreaterThanOrEqual(0);
+  expect(first).toBeLessThan(read);
+  expect(read).toBeLessThan(last);
+  expect(said[last]?.text).not.toContain("Oi! Tudo certo");
+});
+
+test("an answer the turn's end would hold back (a secret asked in the chat) never goes out early", async () => {
+  const judged: string[] = [];
+  f = await setup({
+    judge: (kind, id, state) => {
+      if (kind !== "follow_through" || id !== "verdict") return undefined;
+      judged.push(String(state.reply));
+      return String(state.reply).includes("senha") ? "secret" : undefined;
+    },
+  });
+  const fx = f;
+  await computerAgent(fx);
+  const b = answeringBrain(fx, "Me passa a senha do banco aqui no chat.", "Já olho o deploy.");
+  const handlers = createJobHandlers({
+    ...fx.jobDeps,
+    brains: { claude_code: () => b.brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  await post(fx, "@dev conecta no banco");
+  const drained = drainOutbox(fx.db, handlers);
+  await b.sent.promise;
+  await post(fx, "@dev e o deploy?");
+  await drained;
+
+  // The judge read it before anything went out, and it stayed for the turn's end, where it is held back as ever.
+  expect(judged[0]).toBe("Me passa a senha do banco aqui no chat.");
+  expect(b.outBeforeRead()).toBe(false);
+  const main = await listMessages(fx.db, fx.owner.id, fx.org.id, fx.general.id);
+  expect(main.some((m) => m.author.type === "agent" && m.body.includes("senha"))).toBe(false);
 });

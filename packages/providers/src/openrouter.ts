@@ -9,11 +9,20 @@ import {
   type TokenPrices,
   usdToNanoUsd,
 } from "./catalog";
+import {
+  decodeImage,
+  type ImageRequest,
+  type ImageResult,
+  imageBlockedError,
+  MAX_IMAGES_PER_REQUEST,
+  type MadeImage,
+} from "./images";
 import { openAIError, saidIn } from "./openai";
 import {
   type ContentBlock,
   deniedError,
   estimateTokens,
+  hasToolImages,
   laidOut,
   type ModelProvider,
   type ModelRequest,
@@ -23,6 +32,7 @@ import {
   ProviderError,
   promptChars,
   type StopReason,
+  shortSaid,
   stableToolsFirst,
   withoutImages,
 } from "./types";
@@ -36,8 +46,9 @@ export const OPENROUTER_API = "https://openrouter.ai/api/v1";
 /** OpenRouter's app attribution: the product's name and site, never a self-hosted server's own address. */
 const ATTRIBUTION = { "HTTP-Referer": "https://agentes.chat", "X-OpenRouter-Title": "agentes.chat" };
 
-/** An OpenRouter model id (`z-ai/glm-5.3`, `~z-ai/glm-latest`): the catalog's ids never have a slash. */
-export const isOpenRouterModel = (model: string) => model.includes("/") && !isCustomModel(model);
+/** An OpenRouter model id (`z-ai/glm-5.3`, `~z-ai/glm-latest`): the catalog's ids have a slash only on Command Code's. */
+export const isOpenRouterModel = (model: string) =>
+  model.includes("/") && !isCustomModel(model) && !model.startsWith("commandcode:");
 
 /**
  * A model's provider: a workspace endpoint's by its id, the catalog's or the list's, else OpenRouter's by the id's
@@ -376,7 +387,7 @@ function toMessages(request: ModelRequest, claude: boolean): Message[] {
     }));
   const out: Message[] = system.length > 0 ? [{ role: "system", content: system }] : [];
   // ponytail: images left out for every model; send them once the catalog knows which OpenRouter models read images.
-  for (const m of withoutImages(request.messages)) {
+  for (const m of withoutImages(request.messages, request.model)) {
     const parts: ContentBlock[] = typeof m.content === "string" ? [{ type: "text", text: m.content }] : m.content;
     const text = parts.flatMap((b) => (b.type === "text" && b.text ? [b.text] : [])).join("\n\n");
     if (m.role === "assistant") {
@@ -409,6 +420,9 @@ function toMessages(request: ModelRequest, claude: boolean): Message[] {
 function toBody(request: ModelRequest, compatible: boolean) {
   const claude = !compatible && isClaude(request.model);
   const reasoning = compatible ? undefined : reasoningFor(request.effort, modelInfo(request.model));
+  // A workspace endpoint (#432): Chat Completions' own `reasoning_effort`, which OpenAI, vLLM, LiteLLM and most gateways
+  // take. `none` is left out, since not every model can turn thinking off, and so is a request with no effort.
+  const reasoningEffort = compatible && request.effort && request.effort !== "none" ? request.effort : undefined;
   return {
     model: request.model,
     messages: toMessages(request, claude),
@@ -424,6 +438,7 @@ function toBody(request: ModelRequest, compatible: boolean) {
         }
       : {}),
     ...(reasoning ? { reasoning } : {}),
+    ...(reasoningEffort ? { reasoning_effort: reasoningEffort } : {}),
     ...(request.outputSchema
       ? {
           response_format: {
@@ -639,6 +654,7 @@ export function createOpenRouterProvider(
                 cacheWriteTokens: 0,
               },
           ...(cost !== undefined ? { costNanoUsd: cost } : {}),
+          ...(hasToolImages(request.messages) ? { imagesLeftOut: true as const } : {}),
         };
       } catch (error) {
         const mapped = request.signal?.aborted
@@ -650,5 +666,87 @@ export function createOpenRouterProvider(
         throw mapped;
       }
     },
+    // A workspace's own endpoint makes pictures through the Images API (`custom.ts`), never this route.
+    ...(compatible
+      ? {}
+      : {
+          generateImage: (request: ImageRequest, { apiKey }: { apiKey: string }) =>
+            openRouterImages(options.fetch ?? fetch, request, apiKey),
+        }),
   };
+}
+
+/** A prompt OpenRouter or the model's maker refused: its moderation, or the maker's safety words. */
+const IMAGE_REFUSED = /moderation|flagged|content policy|safety|prohibited|blocked/i;
+
+/**
+ * Pictures over OpenRouter's Images API (ADR 0197): `POST /api/v1/images` with the aspect, 1K, `n` pictures and the
+ * references as data URLs, answered in base64 with what it charged (`usage.cost`, its upstream's too on the person's
+ * own provider key). Called again for the rest when a model makes fewer than `n`. A refused prompt is
+ * `imageBlockedError`; a failure after some pictures came returns those, with the failure in `error`.
+ */
+async function openRouterImages(http: typeof fetch, request: ImageRequest, apiKey: string): Promise<ImageResult> {
+  const count = Math.max(1, Math.min(MAX_IMAGES_PER_REQUEST, Math.floor(request.count)));
+  const made: MadeImage[] = [];
+  let cost: number | undefined;
+  let model: string | undefined;
+  for (let call = 0; call < count && made.length < count; call++) {
+    try {
+      let res: Response;
+      try {
+        res = await http(`${OPENROUTER_API}/images`, {
+          method: "POST",
+          headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}`, ...ATTRIBUTION },
+          body: JSON.stringify({
+            model: request.model,
+            prompt: request.prompt,
+            n: count - made.length,
+            aspect_ratio: request.aspect,
+            resolution: request.size ?? "1K",
+            ...(request.references?.length
+              ? {
+                  input_references: request.references.map((r) => ({
+                    type: "image_url",
+                    image_url: { url: `data:${r.mediaType};base64,${r.data}` },
+                  })),
+                }
+              : {}),
+          }),
+          signal: request.signal,
+        });
+      } catch {
+        throw request.signal?.aborted
+          ? new ProviderError("request aborted", false)
+          : new ProviderError("could not reach provider", true);
+      }
+      const body = (await res.json().catch(() => null)) as Raw | null;
+      if (!res.ok || !body || obj(body.error)) {
+        const error = obj(body?.error);
+        const said = typeof error?.message === "string" ? shortSaid(error.message) : "";
+        const status = res.ok ? Number(error?.code) || undefined : res.status;
+        if ((status === 400 || status === 403) && IMAGE_REFUSED.test(said)) throw imageBlockedError(said);
+        throw statusError(status, said);
+      }
+      if (typeof body.model === "string") model = body.model;
+      const spent = obj(body.usage) ? costOf(body.usage as Usage) : undefined;
+      if (spent !== undefined) cost = (cost ?? 0) + spent;
+      const before = made.length;
+      for (const item of Array.isArray(body.data) ? body.data : []) {
+        const data = obj(item)?.b64_json;
+        if (typeof data === "string" && data && made.length < count) made.push(decodeImage(data));
+      }
+      if (made.length === before) throw new ProviderError("the provider sent no picture", true);
+    } catch (error) {
+      const failure =
+        error instanceof ProviderError ? error : new ProviderError("could not read the provider's answer", true);
+      if (made.length === 0) throw failure;
+      return {
+        images: made,
+        ...(model ? { model } : {}),
+        ...(cost !== undefined ? { costNanoUsd: cost } : {}),
+        error: failure,
+      };
+    }
+  }
+  return { images: made, ...(model ? { model } : {}), ...(cost !== undefined ? { costNanoUsd: cost } : {}) };
 }
