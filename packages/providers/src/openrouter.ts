@@ -417,6 +417,23 @@ function toMessages(request: ModelRequest, claude: boolean): Message[] {
   return out;
 }
 
+/**
+ * A chunk's words. Some compatible servers send the start of the answer inside a parts array, beside the reasoning
+ * that leads it (Mistral does: `[{type: "thinking", …}, {type: "text", text: "Peguei"}]`), so reading only a string
+ * dropped the first words of every such reply. The thinking itself stays out of the answer.
+ */
+function deltaText(content: unknown): string {
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+  return content
+    .flatMap((part) => {
+      if (!part || typeof part !== "object") return [];
+      const p = part as { type?: unknown; text?: unknown };
+      return p.type === "text" && typeof p.text === "string" ? [p.text] : [];
+    })
+    .join("");
+}
+
 function toBody(request: ModelRequest, compatible: boolean) {
   const claude = !compatible && isClaude(request.model);
   const reasoning = compatible ? undefined : reasoningFor(request.effort, modelInfo(request.model));
@@ -586,10 +603,11 @@ export function createOpenRouterProvider(
           if (!choice) continue;
           if (choice.finish_reason) finish = choice.finish_reason;
           const delta = choice.delta;
-          if (typeof delta?.content === "string" && delta.content) {
-            text += delta.content;
-            partial.outputChars += delta.content.length;
-            onDelta(delta.content);
+          const piece = deltaText(delta?.content);
+          if (piece) {
+            text += piece;
+            partial.outputChars += piece.length;
+            onDelta(piece);
           }
           for (const tc of delta?.tool_calls ?? []) {
             // Some compatible servers leave out `index`: a new id is a new call, else the last one goes on.
