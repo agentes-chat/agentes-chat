@@ -254,7 +254,7 @@ const defaultRun: Run = (command, args) =>
       run.args,
       {
         encoding: "utf8",
-        timeout: 8000,
+        timeout: command === AGY_BIN && args[0] === "models" ? 20_000 : 8000,
         maxBuffer: 1024 * 1024,
         windowsHide: true,
         env: run.env ? { ...process.env, ...run.env } : process.env,
@@ -485,8 +485,10 @@ export function parseAgyModels(output: string): CursorModelInfo[] {
 const AGY_VERSION = /^(?:agy|antigravity(?: cli)?)?[\s:v]*\d+\.\d+\.\d+\b/i;
 
 /** Protocol 44 (ADR 0143): the Antigravity CLI and the models it lists (`agy models`). */
-function detectAntigravity(run: Run): Promise<Probe> {
-  return detectWithModels(run, AGY_BIN, AGY_VERSION, parseAgyModels);
+async function detectAntigravity(run: Run): Promise<Probe> {
+  const probe = await detectWithModels(run, AGY_BIN, AGY_VERSION, parseAgyModels);
+  // The network-backed catalog can fail or return no models even while the CLI still answers --version.
+  return probe.entry && !probe.entry.models?.length ? { ...probe, unsure: true } : probe;
 }
 
 /**

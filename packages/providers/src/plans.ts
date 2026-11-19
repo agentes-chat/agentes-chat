@@ -620,6 +620,14 @@ export const GROK_BUILD_MODELS: readonly { id: string; label: string }[] = [
 export const ANTIGRAVITY_MODELS: readonly { id: string; label: string }[] = [
   { id: "gemini-4-argon-high", label: "Gemini 4 Argon (High)" },
   { id: "gemini-4-argon-medium", label: "Gemini 4 Argon (Medium)" },
+  { id: "gemini-4-neon-high", label: "Gemini 4 Neon (High)" },
+  { id: "gemini-4-neon-xhigh", label: "Gemini 4 Neon (XHigh)" },
+  { id: "gemini-4-neon-medium", label: "Gemini 4 Neon (Medium)" },
+  { id: "gemini-4-neon-low", label: "Gemini 4 Neon (Low)" },
+  { id: "gemini-4-hydrogen-high", label: "Gemini 4 Hydrogen (High)" },
+  { id: "gemini-4-hydrogen-xhigh", label: "Gemini 4 Hydrogen (XHigh)" },
+  { id: "gemini-4-hydrogen-medium", label: "Gemini 4 Hydrogen (Medium)" },
+  { id: "gemini-4-hydrogen-low", label: "Gemini 4 Hydrogen (Low)" },
   { id: "gemini-3.8-flash-high", label: "Gemini 3.8 Flash (High)" },
   { id: "gemini-3.8-flash-medium", label: "Gemini 3.8 Flash (Medium)" },
   { id: "gemini-3.8-flash-low", label: "Gemini 3.8 Flash (Low)" },
@@ -643,4 +651,4 @@ export const providerFitsChoice = (provider: string | null | undefined, choice: 
   coding ? provider === choice : !provider || provider === GEMINI_ENTERPRISE_PROVIDER;
 
 /** An Antigravity model slug's model in the catalog: `gemini-4-argon-high` → `gemini-4-argon`. */
-export const antigravityBaseModel = (slug: string) => slug.replace(/-(?:low|medium|high)$/, "");
+export const antigravityBaseModel = (slug: string) => slug.replace(/-(?:low|medium|high|xhigh)$/, "");
