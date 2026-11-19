@@ -142,7 +142,7 @@ export function QueueDialog({
       closeLabel={t("common.close")}
       width={440}
       className="cq-dialog"
-      subtitle={queue ? queueStatusText(t, queueView(queue, names.viewerId), now) : undefined}
+      subtitle={queue ? queueStatusText(t, queueView(queue, names.viewerId)) : undefined}
     >
       <DialogBody>
         {queue ? (

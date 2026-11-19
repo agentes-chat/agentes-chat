@@ -2318,6 +2318,7 @@ export function sharingText(computer: string, size: { cpus: number; memoryGb: nu
     "- Before something heavy (a build, a big install or download, a dataset or a model, many browser tabs), run agentes-runner computer: it shows what is free now and which agents use the most. If what you are about to start needs more than is free, tell the person which agent is using the computer and what you'll do: wait until it frees up, or do a lighter version now.",
     '- When a command is killed (exit code 137, "Killed") or your commands are much slower than usual, run agentes-runner computer before trying again, and tell the person what happened and why.',
     "- When something heavy is done, stop what it left running in the background (a build's daemons: ./gradlew --stop), so the others get the memory back.",
+    "- Your home here is yours alone: no other agent can open a path in it. Pass work to another agent as a git branch or pull request (they clone it themselves), or through ~/shared when you have it, never as a path in your own home.",
   ].join("\n");
 }
 

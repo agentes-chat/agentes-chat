@@ -10905,6 +10905,29 @@ html:not([data-pointer]) .ac-filter__option:focus-visible {
   display: block;
   image-rendering: pixelated;
 }
+/* A strip whose bars are buttons (RunStrip's `bar`): each bar's button covers its column, a little taller for a finger. */
+.ac-run-bars {
+  position: relative;
+  display: block;
+  flex: none;
+}
+.ac-run-bars__bar {
+  position: absolute;
+  top: calc(-1 * var(--space-1));
+  bottom: calc(-1 * var(--space-1));
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+  cursor: pointer;
+}
+.ac-run-bars__bar:hover {
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+}
+html:not([data-pointer]) .ac-run-bars__bar:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
 /* An agent's month (MonthRuns): the row's whole width, 2px cells. */
 .ac-month-runs {
   display: block;

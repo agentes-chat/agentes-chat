@@ -356,6 +356,7 @@
     "repliesWord_one": "risposta",
     "repliesWord_many": "risposte",
     "repliesWord_other": "risposte",
+    "dayAt": "{{day}} {{time}}",
     "thread": "Thread",
     "closed": "chiuso",
     "options": "Opzioni",
@@ -394,9 +395,7 @@
       "delivered": "{{name}} l'ha ricevuto",
       "held": "{{name}} lo legge dopo la tua decisione",
       "read": "{{name}} l'ha letto",
-      "resolved": "{{name}} ha chiuso la richiesta di aiuto",
-      "well": "Ha letto la tua nota",
-      "wellNow": "Si è fermato per leggere la tua nota"
+      "resolved": "{{name}} ha chiuso la richiesta di aiuto"
     },
     "stopped": {
       "byYou": "Fermato qui",

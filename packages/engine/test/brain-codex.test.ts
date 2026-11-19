@@ -164,10 +164,26 @@ test("a first turn sends the context and the conversation; events pass through; 
     system: "You are Dev.",
     mcp: { token: "tok" },
     agent: { id: "agent", handle: "dev" },
+    // Each answer it finishes before it goes on is its own message (ADR 0112).
+    answers: "each",
   });
   expect(l.sent[0]?.prompt).toBe(
     "The conversation so far:\n\nUser: hi\n\nYou: hello\n\nNow answer this:\n\nrun the tests",
   );
+});
+
+test("an answer posted on its own is never the turn's text again, even when the runner ends without a done", async () => {
+  const l = link({
+    events: [
+      { type: "text_delta", text: "Oi!" },
+      { type: "answer", text: "Oi!" },
+      { type: "text_delta", text: "Já olho o deploy." },
+    ],
+  });
+  const brain = new CodexBrain({ link: l, mcp: async () => ({ token: "tok" }) });
+  const events = await collect(brain.run(turn(), io()));
+  expect(events.filter((e) => e.type === "answer")).toEqual([{ type: "answer", text: "Oi!" }]);
+  expect(events.at(-1)).toEqual({ type: "done", text: "Já olho o deploy.", session: { id: SESSION } });
 });
 
 test("each turn sends its tool names, sorted: a kept-alive Codex starts again when one is new", async () => {

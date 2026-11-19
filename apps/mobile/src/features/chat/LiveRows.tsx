@@ -27,6 +27,7 @@ import {
   type TextLayoutEvent,
   type TextStyle,
   View,
+  type ViewStyle,
 } from "react-native";
 import Animated, {
   css,
@@ -71,10 +72,12 @@ export function browsingRuns(runs: LiveRun[]): LiveRun[] {
 }
 
 /**
- * The working line, as the web's activity bar above the composer (ChannelPage `ActivityBar`,
+ * The working line, saying what the web's activity bar above the composer says (ChannelPage `ActivityBar`,
  * WorkingLine.tsx, `.ac-typing[data-active]`), one for everyone at work here and the one thing that says so while
- * their words wait for their replies (which show whole, once posted): a bare line on the conversation's ground, as
- * wide as the box under it whatever it says (no glass, no shadow, no band behind it: the faces and the words say it);
+ * their words wait for their replies (which show whole, once posted). On the phone it is the conversation's last line,
+ * under its last message and scrolling with it, as a reply on its way (above the composer only while there is no
+ * conversation yet): a bare line on the conversation's ground, as wide as the composer whatever it says (no glass, no
+ * shadow, no band behind it: the faces and the words say it);
  * a few small faces, each on a plate and popping in (an agent on its own asking another shows both, with an arrow;
  * three dots first while only people type); one line with names in ink, crossfading whenever it changes ("Theo e mais 2 estão
  * trabalhando · Marina está digitando…"), who records a voice message last, after three bars and their faces ("Rui
@@ -91,6 +94,7 @@ export function WorkingLine({
   onSeeConsult,
   stop,
   rest = null,
+  style,
 }: {
   runs: LiveRun[];
   consults: ConsultWithDetails[];
@@ -107,6 +111,8 @@ export function WorkingLine({
   stop?: { runs: LiveRun[]; onStop: (run: LiveRun) => void } | undefined;
   /** What the line holds while nobody works here: a return (`ReturnLine`). Work comes first. */
   rest?: ReactNode;
+  /** Its room where it is drawn (in the conversation: a turn's gap above it), only while it says something. */
+  style?: StyleProp<ViewStyle>;
 }) {
   const { t, i18n } = useTranslation();
   const dir = useRowDirectory();
@@ -195,7 +201,7 @@ export function WorkingLine({
   const openBrowser = browsing && onOpenBrowser ? () => onOpenBrowser(browsing.agentId) : undefined;
   const stopHere = stop?.runs ?? [];
   return (
-    <View style={styles.dock}>
+    <View style={[styles.dock, style]}>
       <Animated.View
         // In and out on an ease-out, under 200 ms: the line is chrome that comes and goes many times a day.
         entering={reduced ? undefined : LINE_IN}

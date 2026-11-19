@@ -96,15 +96,16 @@ const queue: ComputerQueue = {
   ],
 };
 
-test("the view: the viewer's own request is marked, the computer full, the next start known, the last one not", () => {
+test("the view: the viewer's own request is marked, one waiting line whatever holds it, the last start not known", () => {
   const view = queueView(queue, "me");
   expect(view.waiting.map((w) => w.mine)).toEqual([true, false, false, false]);
   expect(view.full).toBe(true);
-  expect(queueStatusText(en, view, NOW)).toBe("Full · next starts in about 1 min");
+  expect(queueStatusText(en, view)).toBe("In line · starts soon");
+  expect(queueStatusText(pt, view)).toBe("Na fila · começa em seguida");
   expect(queueAllStartedText(en, view, NOW)).toBeNull();
   expect(queueButtonText(en, queue)).toBe("Computer · 4 waiting");
   expect(queueButtonText(pt, { ...queue, waiting: [] })).toBe("Computador");
-  expect(queueStatusText(en, queueView({ ...queue, waiting: [] }, "me"), NOW)).toBe("Nobody in line");
+  expect(queueStatusText(en, queueView({ ...queue, waiting: [] }, "me"))).toBe("Nobody in line");
   const known = queueView({ ...queue, waiting: queue.waiting.slice(0, 2) }, "me");
   expect(queueAllStartedText(pt, known, NOW)).toBe("todos começam em ~3 min");
   // One in line: its row already says when it starts.

@@ -3271,6 +3271,63 @@ async function executeRunInner(
   /** The run's executed calls less those repeating one that already worked (`repeatedCalls`): what a nudge must grow. */
   const workDone = async (t: Transcript) =>
     (t.executedCalls ?? 0) - (t.executedCalls ? await repeatedCalls(db, run).catch(() => 0) : 0);
+  /**
+   * A computer brain finished an answer and went on in the same turn (a message handed to it mid-turn read after it,
+   * work moved to its background): the answer goes out now, as its own message, as a model brain's does before it
+   * reads on (ADR 0112), instead of waiting for what it writes next and joining it. A conversation's run only: a
+   * routine's speaks through its hand-off, long work's report goes home, and a mission's and an agents' DM's answers
+   * are read whole. It stays for the turn's end, leading the final answer as before, when the end would hold it back:
+   * words the silence word closes, our tools named to a person, or the judge finding it asks for a secret in the chat,
+   * claims a result no call produced, or gives up with ways left. True when nothing of it is left for the turn's end
+   * (posted, or nothing to say: the silence word alone, its last message word for word).
+   */
+  const answerNow = async (answer: string): Promise<boolean> => {
+    const t = transcript as Transcript;
+    const betweenAgents = Boolean(channelRow && isAgentOnlyDm(channelRow));
+    if (run.background || run.workId || plan.missionId || betweenAgents) return false;
+    if (isSentinelOnly(answer)) return true;
+    if (endsWithSentinel(answer)) return false;
+    const said = stripSentinel(answer);
+    if (!said.trim() || repeatsLastPost(said)) return true;
+    const request = t.request ?? triggerMessage?.body ?? triggerText;
+    const plain = !t.repo && !t.system.some((b) => b.text === TECHNICAL_STYLE_LINE);
+    const names = [...granted, ...tools].map((x) => x.name);
+    if (plain && toolsNamed(said, names, request).length > 0) return false;
+    if (judge) {
+      const verdict = await continuationVerdict(judge, {
+        orgId: run.orgId,
+        agentId: run.agentId,
+        runId: run.id,
+        request,
+        reply: said,
+        ...(await evidenceFor(t).gather()),
+        runKind: "conversation",
+        personal: await isPersonalWorkspace(db, run.orgId),
+      }).catch(() => null);
+      if (verdict === "secret" || verdict === "unbacked" || verdict === "untried") return false;
+    }
+    const posted = await db.transaction(async (tx) => {
+      const m = await post(tx, replyThreadId, said, withFallback(t, undefined));
+      await addRunStep(tx, run, "message", { messageId: m.id });
+      return m;
+    });
+    // Where it was written in the run's conversation: before the message it reads next. Saved with the turn (the
+    // bridge may be writing the transcript now).
+    t.messages.push({ role: "assistant", content: [{ type: "text", text: said }] });
+    t.postedUpTo = t.messages.length;
+    t.postedCount++;
+    // It is out: nothing failing from here on makes it go out again.
+    try {
+      const [view] = await withWikiLinks(db, run.orgId, [messageView(posted)]);
+      if (view) await publishMessageCreated(deps.pubsub, view);
+      // Nothing of a confidential thread is copied onto its task (ADR 0190).
+      if (typeof issueId === "string" && !isConfidential(posted.meta))
+        await mirrorReplyToIssue({ db, pubsub: deps.pubsub }, run, issueId, posted.body);
+    } catch {
+      // The apps read it with the conversation.
+    }
+    return true;
+  };
   let brain = createBrain(deps, thinker, run, plan.kind, turnToken, () => transcript as Transcript);
   /**
    * What the key stands in for since this claim's stand-in for the right hand, until it answers a turn: the plan and
@@ -5132,6 +5189,12 @@ async function executeRunInner(
               deltas.messageRead();
               live.read(uuids);
             },
+            // An answer it finished before reading on goes out now, as a model brain's does (ADR 0112).
+            onAnswer: async (answer) => {
+              if (!(await answerNow(answer))) return false;
+              deltas.answered();
+              return true;
+            },
             onSpeedFallback: (message) => {
               transcript.speedFallback = true;
               later(() => addRunStep(db, run, "context", { speedFallback: message }));
@@ -6409,6 +6472,11 @@ async function thinkOnce(
     onFile?(path: string): void;
     /** Messages handed to the turn mid-turn that it read (live steering). */
     onSteerRead?(uuids: string[]): void;
+    /**
+     * An answer a computer brain finished before it went on (`answer`): true once it went out as its own message.
+     * Otherwise it leads the turn's final answer, joined to it, as the runner joined it before (ADR 0112).
+     */
+    onAnswer?(text: string): Promise<boolean>;
     /** The brain's first event that isn't an error: a computer had room for the turn. Done before that event is read. */
     onTaken?(): void | Promise<void>;
     /** Fast failed and the turn answered at standard speed. */
@@ -6423,6 +6491,8 @@ async function thinkOnce(
   let taken = false;
   let usage: Extract<BrainEvent, { type: "usage" }> | null = null;
   let timings: BrainTurnTimings | undefined;
+  /** Answers it finished before it went on that didn't go out on their own (`onAnswer`): they lead its final one. */
+  const kept: string[] = [];
   /** The plan said `limit`: the turn is read on until `deadline`, for the answer the brain may still finish. */
   let limit: { resetsAt?: string; deadline: number } | null = null;
   const limitFailure = (message: string, worked?: boolean) =>
@@ -6496,11 +6566,15 @@ async function thinkOnce(
         },
       );
     } else if (event.type === "steer_read") hooks.onSteerRead?.(event.uuids);
-    else if (event.type === "file") hooks.onFile?.(event.path);
+    else if (event.type === "answer") {
+      // Its text and what it posts come before anything the brain says after it. Not out (a failure before it was
+      // saved): it leads the final answer.
+      if (!(await hooks.onAnswer?.(event.text).catch(() => false))) kept.push(event.text);
+    } else if (event.type === "file") hooks.onFile?.(event.path);
     else if (event.type === "speed_fallback") hooks.onSpeedFallback?.(event.message);
     // `event.session`: computer brains keep a stable session per conversation (`brainSessionId`); nothing to store.
     else if (event.type === "done") {
-      text = event.text;
+      text = kept.length > 0 ? [...kept, event.text].filter(Boolean).join("\n\n") : event.text;
       timings = event.timings;
     }
   }
@@ -6790,10 +6864,25 @@ function createTurnText(
       kept = showable(false);
       openAt = all.length;
     },
-    /** A person's message was read: what it writes next opens a paragraph, as in the answer it posts (`joinText`). */
+    /**
+     * A person's message was read: what it writes next opens a paragraph, as in the answer an older runner joins to
+     * what it wrote before (`joinText`).
+     */
     messageRead() {
       const stretch = all.slice(breaks.at(-1)?.[1] ?? 0);
       if (stretch.trim() && !stretch.endsWith("\n\n")) all += "\n\n";
+    },
+    /**
+     * An answer it finished went out as its own message (`answer`): nothing streamed before it is the turn's text any
+     * more, so a stop, a pause or a wait never posts it again. The apps keep saying it writes.
+     */
+    answered() {
+      takeStepWords(run.id);
+      all = "";
+      kept = "";
+      openAt = 0;
+      marks.length = 0;
+      breaks.length = 0;
     },
     /**
      * Everything streamed in this turn (kept when the run is canceled mid-stream), the stretches between the brain's

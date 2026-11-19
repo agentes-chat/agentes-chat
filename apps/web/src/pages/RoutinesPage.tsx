@@ -83,6 +83,7 @@ import {
   routineHookUrl,
   timezoneName,
 } from "@agenteschat/client/lib/routines";
+import { formatDuration } from "@agenteschat/client/lib/work";
 import {
   Button,
   CheckboxPill,
@@ -111,6 +112,7 @@ import {
   PageHeader,
   RecurrencePicker,
   type RecurrenceRule,
+  type RunBar,
   RunKey,
   RunLane,
   RunMark,
@@ -258,19 +260,6 @@ function useOpenWidget() {
     });
 }
 
-const targetIcon = (target: RoutineTarget): IconName =>
-  target.type === "dm"
-    ? "message"
-    : target.type === "conversation"
-      ? target.threadId
-        ? "reply"
-        : "channel"
-      : target.type === "artifact"
-        ? "file"
-        : target.type === "widget"
-          ? "grid"
-          : "channel";
-
 /** The agent's look for the pixel pieces (color and eyes). */
 function useLook() {
   const actors = useActors();
@@ -350,7 +339,16 @@ export function RoutinesPage() {
   const live = current.filter((r) => byStatus(r) && !isPaused(r));
   const paused = current.filter((r) => byStatus(r) && isPaused(r));
   const open = list.find((r) => r.id === openId) ?? null;
-  const toggleOpen = (id: string) => setOpenId(openId === id ? null : id);
+  // The tab the details open on: a run's bar opens them on its runs.
+  const [openTab, setOpenTab] = useState<"details" | "runs">("details");
+  const toggleOpen = (id: string) => {
+    setOpenTab("details");
+    setOpenId(openId === id ? null : id);
+  };
+  const openRuns = (id: string) => {
+    setOpenTab("runs");
+    setOpenId(id);
+  };
   const filtered = agents.length > 0 || query.length > 0 || status !== "all";
   // "N" opens "New routine" (not while typing), for who may make one.
   useEffect(() => {
@@ -377,6 +375,7 @@ export function RoutinesPage() {
               now={now}
               selected={r.id === openId}
               onOpen={() => toggleOpen(r.id)}
+              onOpenRuns={() => openRuns(r.id)}
               onEdit={() => setOpenId(r.id)}
             />
           ))}
@@ -526,6 +525,7 @@ export function RoutinesPage() {
                           now={now}
                           selected={r.id === openId}
                           onOpen={() => toggleOpen(r.id)}
+                          onOpenRuns={() => openRuns(r.id)}
                           onEdit={() => setOpenId(r.id)}
                         />
                       ))}
@@ -537,7 +537,15 @@ export function RoutinesPage() {
           </>
         )}
       </div>
-      {open && <RoutineDetails routine={open} now={now} onClose={() => setOpenId(null)} />}
+      {open && (
+        <RoutineDetails
+          key={`${open.id}-${openTab}`}
+          routine={open}
+          now={now}
+          tab={openTab}
+          onClose={() => setOpenId(null)}
+        />
+      )}
       <RoutineDialog open={creating} onClose={() => setCreating(false)} onWebhook={(r) => setOpenId(r.id)} />
     </div>
   );
@@ -774,17 +782,70 @@ function FixButton({ routine: r, fix, size = "sm" }: { routine: Routine; fix: Ro
   );
 }
 
+/** The trigger's icon: a widget's grid, a reminder's bell, a schedule's repeat. */
+function triggerIcon(r: Routine, widget: boolean, reminder: boolean): IconName {
+  if (widget) return "grid";
+  if (r.trigger.type === "event") return "bolt";
+  if (r.trigger.type === "email" || r.trigger.type === "connector") return "mail";
+  if (r.trigger.type === "webhook") return "link";
+  if (r.trigger.type === "once") return reminder ? "bell" : "calendar";
+  return "repeat";
+}
+
+/**
+ * The row's last runs as bars, each with its tip (when it ran, how long, how it went) and opening the routine's runs.
+ */
+function RowRuns({ routine: r, running, onOpenRuns }: { routine: Routine; running: boolean; onOpenRuns: () => void }) {
+  const { t, i18n } = useTranslation();
+  const actors = useActors();
+  const say = useSay();
+  const { color } = useLook()(r.agentId);
+  // The finished runs as `runPixels` keeps them: the same order, so a bar's index is its run's.
+  const finished = r.recentRuns.filter((x) => runPixelStatus(x.status));
+  const atWork = r.recentRuns.find((x) => isRunAtWork(x.status));
+  const bar = (i: number): RunBar => {
+    const x = i < 0 ? atWork : finished[i];
+    const took = x?.finishedAt ? formatDuration(t, Date.parse(x.finishedAt) - Date.parse(x.at)) : null;
+    const head = [x && capitalize(whenAt(t, i18n.language, x.at), i18n.language), took].filter(Boolean).join(" · ");
+    const how =
+      i < 0 || !x ? t("routines.runningNow") : say(runOutcome(x, (id) => actors.dir.memberById.get(id)?.name ?? null));
+    return {
+      label: head ? `${head}: ${how}` : how,
+      tip: (
+        <>
+          {head && (
+            <>
+              <b>{head}</b>
+              <br />
+            </>
+          )}
+          {how}
+        </>
+      ),
+      onPick: onOpenRuns,
+    };
+  };
+  return (
+    // Each bar's button says its run; with none, the strip is only dots.
+    <div className="routine-row__runs">
+      <RunStrip runs={runPixels(r.recentRuns)} color={color} slots={RUN_SLOTS} running={running} bar={bar} />
+    </div>
+  );
+}
+
 function RoutineRow({
   routine: r,
   now,
   selected,
   onOpen,
+  onOpenRuns,
   onEdit,
 }: {
   routine: Routine;
   now: Date;
   selected: boolean;
   onOpen: () => void;
+  onOpenRuns: () => void;
   onEdit: () => void;
 }) {
   const { t } = useTranslation();
@@ -793,12 +854,9 @@ function RoutineRow({
   const controls = useRoutineControls(r);
   const action = controls.action;
   const [deleting, setDeleting] = useState(false);
-  const target = useTargetLabel();
   const openWidget = useOpenWidget();
   const when = useWhen();
   const nextText = useNextText();
-  const words = useRunWords();
-  const look = useLook()(r.agentId);
   const agent = { type: "agent" as const, id: r.agentId };
   const widget = isWidgetRoutine(r) ? r.widget : null;
   // A widget's routine reads as its widget (ADR 0135 §4).
@@ -860,7 +918,7 @@ function RoutineRow({
       : r.canManage
         ? ([{ kind: "item", id: "edit", label: t("routines.edit"), icon: "edit", run: onEdit }] satisfies MenuEntry[])
         : []),
-    { kind: "item", id: "runs", label: t("routines.runs"), icon: "waiting", run: () => !selected && onOpen() },
+    { kind: "item", id: "runs", label: t("routines.runs"), icon: "waiting", run: onOpenRuns },
     // A copy is a new routine of mine for its agent: the server's create check (`duplicateRoutine`), not its editor's.
     ...(!widget && createsRoutinesFor(itsAgent)
       ? ([
@@ -914,32 +972,30 @@ function RoutineRow({
         onOpen();
       }}
     >
-      <span className="routine-row__who">{actors.avatar(agent, "sm")}</span>
+      <span className="routine-row__who">
+        {actors.avatar(agent, "sm")}
+        {/* Its agent, for a screen reader: the face says it to the eye. */}
+        <span className="ac-visually-hidden">{actors.name(agent)}</span>
+      </span>
       <div className="routine-row__main">
         <button type="button" className="routine-row__title" title={title} aria-expanded={selected} onClick={onOpen}>
           {title}
         </button>
+        {/* Two lines: its name, then when it runs and the next run. Chips only for trouble; where it delivers is in the
+            details the row opens. */}
         <span className="routine-row__sub">
           <span className="routine-row__to ac-iconline">
-            <Icon name={targetIcon(r.target)} size={14} />
+            <Icon name={triggerIcon(r, Boolean(widget), reminder)} size={14} />
             <span>
-              {widget
-                ? t("routines.widgetLine", { agent: actors.name(agent) })
-                : r.target.type === "conversation"
-                  ? t("routines.deliversIn", { agent: actors.name(agent), place: target(r.target) })
-                  : t("routines.deliversTo", { agent: actors.name(agent), target: target(r.target) })}
+              <span>{when(r)}</span>
+              {nextText(r, now) && (
+                <>
+                  {" · "}
+                  <span className={cx(running && "is-live")}>{nextText(r, now)}</span>
+                </>
+              )}
             </span>
           </span>
-          {widget && (
-            <Chip icon="grid" className="routine-row__chip">
-              {t("routines.widgetChip")}
-            </Chip>
-          )}
-          {reminder && (
-            <Chip icon="bell" className="routine-row__chip">
-              {t("routines.reminder")}
-            </Chip>
-          )}
           {mailTrouble(r) && (
             <Chip icon="alert" tone="waiting" className="routine-row__chip">
               {t(mailTrouble(r) === "error" ? "mail.routine.error" : "mail.routine.needsReconnect")}
@@ -949,36 +1005,7 @@ function RoutineRow({
           {fix && fix !== "resume" && <FixButton routine={r} fix={fix} />}
         </span>
       </div>
-      <div className="routine-row__when ac-mediarow ac-mediarow--row">
-        <span className="ac-mediarow__face routine-row__when-icon" aria-hidden="true">
-          <Icon
-            name={
-              r.trigger.type === "event"
-                ? "bolt"
-                : r.trigger.type === "email" || r.trigger.type === "connector"
-                  ? "mail"
-                  : r.trigger.type === "webhook"
-                    ? "link"
-                    : r.trigger.type === "once"
-                      ? reminder
-                        ? "bell"
-                        : "calendar"
-                      : "repeat"
-            }
-            size={16}
-          />
-        </span>
-        <span className="ac-mediarow__head routine-row__when-text">
-          <b>{when(r)}</b>
-        </span>
-        <span className="ac-mediarow__body routine-row__when-text">
-          <small className={cx(running && "is-live")}>{nextText(r, now)}</small>
-        </span>
-      </div>
-      <div className="routine-row__runs" role="img" aria-label={words.label(r)}>
-        <RunStrip runs={runPixels(r.recentRuns)} color={look.color} slots={RUN_SLOTS} running={running} />
-        <small>{words.caption(r, now)}</small>
-      </div>
+      <RowRuns routine={r} running={running} onOpenRuns={onOpenRuns} />
       <div className="routine-row__actions">
         {fired || !r.canManage ? (
           <span className="routine-row__ph routine-row__ph--switch" aria-hidden="true" />
@@ -1338,7 +1365,17 @@ function useWhereHint() {
  * runs; the webhook; what was prepared for later) and "Execuções"; the aside holds "No ar" and the fields that change
  * at once. "Rodar agora" (or Parar) and the one-tap fix are on the bar. Who can't change it sees the values.
  */
-function RoutineDetails({ routine: r, now, onClose }: { routine: Routine; now: Date; onClose: () => void }) {
+function RoutineDetails({
+  routine: r,
+  now,
+  tab: firstTab = "details",
+  onClose,
+}: {
+  routine: Routine;
+  now: Date;
+  tab?: "details" | "runs";
+  onClose: () => void;
+}) {
   const { t, i18n } = useTranslation();
   const { org } = useOrg();
   const actors = useActors();
@@ -1351,7 +1388,7 @@ function RoutineDetails({ routine: r, now, onClose }: { routine: Routine; now: D
   const say = useSay();
   const outages = useMachineOutages(org.id, r.state === "waiting_computer");
   const [switching, setSwitching] = useState(false);
-  const [tab, setTab] = useState<"details" | "runs">("details");
+  const [tab, setTab] = useState<"details" | "runs">(firstTab);
   const [saved, flashSaved] = useSavedFlash();
   const agent = { type: "agent" as const, id: r.agentId };
   const name = actors.name(agent);
@@ -1757,7 +1794,8 @@ function RoutineWeek({ routine: r, runs, now }: { routine: Routine; runs: Routin
     <div className="routine-week">
       <span className="routine-week__text">
         <b>{first ? say(first) : t("routines.health.none")}</b>
-        {rest.length > 0 && <span className="small muted">{rest.map(say).join(" · ")}</span>}
+        {/* The last run's line ("Parada há 5 min") lives here, out of the list's rows. */}
+        <span className="small muted">{[words.caption(r, now), ...rest.map(say)].filter(Boolean).join(" · ")}</span>
       </span>
       <span className="routine-week__days" role="img" aria-label={words.label(r)}>
         {days.map((d) => (

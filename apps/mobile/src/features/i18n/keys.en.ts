@@ -368,6 +368,8 @@ export const featureKeysEn = {
     replies_other: "{{count}} replies",
     repliesWord_one: "reply",
     repliesWord_other: "replies",
+    /** A conversation of bubbles says when it picks up again: "Today 15:35". */
+    dayAt: "{{day}} {{time}}",
     thread: "Thread",
     closed: "closed",
     options: "Options",
@@ -406,8 +408,6 @@ export const featureKeysEn = {
       held: "{{name}} reads it after your decision",
       read: "{{name}} read it",
       resolved: "{{name}} closed the help request",
-      well: "Read your note",
-      wellNow: "Stopped to read your note",
     },
     stopped: {
       byYou: "Stopped here",

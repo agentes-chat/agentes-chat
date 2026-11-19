@@ -6868,7 +6868,8 @@ export const en = {
         account_missing:
           "The account chosen for this agent isn't on its computer anymore. Choose another one in the agent's settings, or add it again.",
         /** A Codex turn on a Windows computer where MXC can't hold its commands (runner `windows_sandbox`). */
-        windows_sandbox: "This Windows computer can't isolate Codex's commands: it needs Windows 11 24H2 or newer.",
+        windows_sandbox:
+          "This Windows computer can't isolate Codex's commands: it needs Windows 11 24H2 or newer. Update Windows, choose Claude or an API key for this agent, or move it to a Linux computer.",
         our_error: "Something went wrong on our side and it stopped. Ask again in a little while.",
         unknown: "Failed.",
       },
@@ -8386,6 +8387,11 @@ export const en = {
     unreachableText: "It may be restarting. This page opens by itself as soon as it's back.",
     offlineTitle: "You're offline",
     offlineText: "This page opens by itself when you're back online.",
+    /** The page on a hostname that reaches the server but isn't set up there. */
+    unknownHostTitle: "This address isn't set up yet",
+    unknownHostText: "If it was just connected, try again in a few minutes.",
+    /** That page's browser tab title. */
+    unknownHostTab: "Address not set up · agentes.chat",
   },
   scopes: {
     context_read: {
@@ -12323,12 +12329,6 @@ export const en = {
       read: "{{name}} read it",
       resolved: "{{name}} closed the help request",
     },
-    well: {
-      readYours: "Read your note",
-      readOf: "Read {{name}}'s note",
-      nowYours: "Stopped to read your note",
-      nowOf: "Stopped to read {{name}}'s note",
-    },
     strip: {
       see: "View",
       toStop: "to stop",
@@ -12509,8 +12509,6 @@ export const en = {
     openComputer: "Open the computer",
     /** The dialog's label for screen readers; the visible title is the computer's name. */
     label: "Line for {{name}}",
-    full: "Full",
-    fullNext: "Full · next starts in about {{n}} min",
     free: "Nobody in line",
     workingNow: "Working now · {{n}}",
     inLine: "In line · {{n}}",

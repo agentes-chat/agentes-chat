@@ -19,10 +19,10 @@ import { useOrg } from "@/providers/org";
 import { Button, haptics, LineIcon, PixelOrbit, Text, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
 import { chatHref } from "../links/logic";
-import { BUBBLE_PART_CORNERS, useBubblePart } from "../shared/bubble-part";
+import { useBubblePart } from "../shared/bubble-part";
 import { useColors, useOrgId } from "../shared/hooks";
 import { tapHaptic, useSurface } from "../shared/parts";
-import { RowPartContext, useCardTop } from "./look";
+import { RowPartContext, useCardTop, useMessageCardCorners } from "./look";
 import { useRowDirectory, useRowMeId } from "./row-data";
 
 /** The conversation's list scrolls to one of its messages (false: it doesn't show it). */
@@ -104,6 +104,7 @@ function Line({
   const surface = useSurface();
   const part = useBubblePart();
   const cardTop = useCardTop();
+  const cardCorners = useMessageCardCorners();
   const inBody = useContext(RowPartContext) !== null;
   const line = useLine(work, inUpdatesThread);
   const { stop, t } = line;
@@ -176,10 +177,12 @@ function Line({
         styles.line,
         // In a conversation of bubbles, a bubble of the message that handed it (its fill, joined to it).
         inBody && part
-          ? [styles.inBody, { borderWidth: 0 }, surface, BUBBLE_PART_CORNERS]
+          ? [styles.inBody, { borderWidth: 0 }, surface]
           : inBody
             ? [styles.inBody, { backgroundColor: c.raised, borderColor: c.line2 }]
             : surface,
+        // The corners every card in a message has (none outside one: the screen's card above).
+        cardCorners,
         cardTop,
       ]}
       accessibilityRole="summary"

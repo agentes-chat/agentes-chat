@@ -16,6 +16,7 @@ import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { useOrg } from "@/providers/org";
 import { Button, LineIcon, PressScale, Text, useToast } from "@/ui";
 import { AskButtons, AskCard, AskFoot, ExpiryLine, useAskStore } from "../chat/asks";
+import { useMessageCardCorners } from "../chat/look";
 import { openComputer } from "../computer/AgentComputerRow";
 import { IconTile } from "../connectors/ConnectorIcon";
 import { useColors, useDirectory, useMeId, useOrgId, useWhen } from "../shared/hooks";
@@ -39,6 +40,7 @@ import { FrameView, useLiveConnection } from "./parts";
  * from the message (`meta.browserHandoff`) and is refreshed from the server. A push or the inbox opens this card.
  */
 export function HandoffCard({ handoff: fromMessage }: { handoff: BrowserHandoff }) {
+  const cardCorners = useMessageCardCorners();
   const { t } = useTranslation();
   const orgId = useOrgId();
   const meId = useMeId();
@@ -106,7 +108,7 @@ export function HandoffCard({ handoff: fromMessage }: { handoff: BrowserHandoff 
         fill={false}
         onPress={() => openComputer(h.agentId, h.seat)}
         accessibilityRole="button"
-        style={[styles.card, surface]}
+        style={[styles.card, surface, cardCorners]}
         contentStyle={styles.done}
       >
         <LineIcon name="laptop" variant="small" size={15} color={c.muted} />
