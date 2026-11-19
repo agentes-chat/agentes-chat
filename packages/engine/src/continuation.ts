@@ -671,12 +671,10 @@ async function answerTurnEnd(t: TurnEnd): Promise<TurnEndDecision> {
   if (!t.judged || !t.verdict) return { outcome: "done", rule: t.verdict ? "nothing_to_judge" : "no_judge" };
   if (!canNudge && !t.state.askPending && (t.state.askNudged || t.kind !== "conversation"))
     return { outcome: "done", rule: "cap" };
-  // The reads start together, and `comes_back`'s runs beside the judgment: the rules still apply in this order. The
-  // judgment itself waits for `wakes_later`, which spares it.
+  // The judgment's evidence starts beside `wakes_later`; the judgment itself waits for it, which spares it. `comes_back`
+  // is read only after a continue, the rare verdict, so most turn ends pay nothing for it.
   t.prepare?.();
-  const wakes = t.wakesLater().catch(() => false);
-  const back = t.kind === "conversation" && t.comesBack ? t.comesBack().catch(() => false) : Promise.resolve(false);
-  if (await wakes) return { outcome: "waiting", rule: "wakes_later" };
+  if (await t.wakesLater().catch(() => false)) return { outcome: "waiting", rule: "wakes_later" };
   let verdict: ContinuationVerdict;
   try {
     verdict = await t.verdict();
@@ -707,7 +705,7 @@ async function answerTurnEnd(t: TurnEnd): Promise<TurnEndDecision> {
     return { outcome: "done", rule: "asked", verdict };
   // A promise something already brings it back to (a follow-up still to come here, a reminder, its long work still
   // running here, whatever run set it): it rests on that, and a nudge would only post a second status.
-  if (verdict === "continue" && t.kind === "conversation" && (await back))
+  if (verdict === "continue" && t.kind === "conversation" && (await t.comesBack?.().catch(() => false)))
     return { outcome: "waiting", rule: "comes_back", verdict };
   if (verdict === "continue") {
     const progressed = t.state.count === 0 || t.executed > (t.state.executedAtNudge ?? 0);

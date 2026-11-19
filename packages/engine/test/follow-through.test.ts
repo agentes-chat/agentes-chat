@@ -1502,7 +1502,7 @@ describe("a turn end's reads and judgment", () => {
     return { d, ms: performance.now() - started };
   };
 
-  test("overlap: what the judgment reads and `comes_back` start beside `wakes_later`; the judgment waits only for it", async () => {
+  test("overlap: what the judgment reads starts beside `wakes_later`; `comes_back` is read only after a continue", async () => {
     let prepared = 0;
     let judgedAt = 0;
     const started = performance.now();
@@ -1520,8 +1520,9 @@ describe("a turn end's reads and judgment", () => {
     expect(d).toMatchObject({ outcome: "continue", rule: "promise" });
     expect(prepared).toBe(1);
     expect(judgedAt).toBeGreaterThanOrEqual(WAIT - 5);
-    // wakes_later, then the judgment; comes_back ran beside them, not after.
-    expect(ms).toBeLessThan(2.5 * WAIT);
+    // wakes_later, the judgment, then comes_back: a read most turn ends (a done) never pay for.
+    expect(ms).toBeGreaterThanOrEqual(3 * WAIT - 5);
+    expect(ms).toBeLessThan(4 * WAIT);
   });
 
   test("the rules keep their order, and something that brings it back still spares the judgment", async () => {
