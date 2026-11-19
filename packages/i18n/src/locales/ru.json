@@ -3649,7 +3649,8 @@
       "cursor": "На этом компьютере не выполнен вход в Cursor. Подключите аккаунт Cursor на странице {{name}}.",
       "grok": "На этом компьютере не выполнен вход в Grok. Подключите аккаунт Grok на странице {{name}}.",
       "antigravity": "На этом компьютере не выполнен вход в Gemini. Подключите аккаунт Gemini на странице {{name}}.",
-      "opencode": "OpenCode не может думать на этом компьютере. Подключите ключ OpenCode на странице {{name}}."
+      "opencode": "OpenCode не может думать на этом компьютере. Подключите ключ OpenCode на странице {{name}}.",
+      "commandcode": "Command Code не может думать на этом компьютере. Подключите ключ Command Code на странице {{name}}."
     },
     "notSignedInOn": {
       "claude_code": "На компьютере {{computer}} не выполнен вход в Claude Code. Подключите аккаунт Claude на странице {{name}}.",
@@ -3657,7 +3658,8 @@
       "cursor": "На компьютере {{computer}} не выполнен вход в Cursor. Подключите аккаунт Cursor на странице {{name}}.",
       "grok": "На компьютере {{computer}} не выполнен вход в Grok. Подключите аккаунт Grok на странице {{name}}.",
       "antigravity": "На компьютере {{computer}} не выполнен вход в Gemini. Подключите аккаунт Gemini на странице {{name}}.",
-      "opencode": "OpenCode не может думать на компьютере {{computer}}. Подключите ключ OpenCode на странице {{name}}."
+      "opencode": "OpenCode не может думать на компьютере {{computer}}. Подключите ключ OpenCode на странице {{name}}.",
+      "commandcode": "Command Code не может думать на компьютере {{computer}}. Подключите ключ Command Code на странице {{name}}."
     },
     "card": {
       "connected": "Теперь у {{name}} есть ИИ.",
@@ -3716,6 +3718,7 @@
       "grok": "Подключите тариф Grok",
       "gemini": "Подключите тариф Gemini",
       "zen": "Подключите OpenCode",
+      "commandcode": "Подключите Command Code",
       "api_key": "Добавить API-ключ"
     },
     "cli": {
@@ -3860,6 +3863,10 @@
         "title": "OpenCode",
         "tiers": "Бесплатные модели или ваш ключ OpenCode"
       },
+      "commandcode": {
+        "title": "Command Code",
+        "tiers": "Ваш ключ Command Code"
+      },
       "zai": {
         "tiers": "Lite, Pro или Max"
       },
@@ -3963,7 +3970,8 @@
       "cursor": "В Cursor выполнен вход как {{email}}, а не {{account}}. Выйдите на странице Cursor и попробуйте ещё раз.",
       "grok": "В Grok выполнен вход как {{email}}, а не {{account}}. Выйдите на странице Grok и попробуйте ещё раз.",
       "antigravity": "В Gemini выполнен вход как {{email}}, а не {{account}}. Выйдите на странице Google и попробуйте ещё раз.",
-      "opencode": "OpenCode вошёл как {{email}}, а не {{account}}. Попробуйте ещё раз с правильным ключом."
+      "opencode": "OpenCode вошёл как {{email}}, а не {{account}}. Попробуйте ещё раз с правильным ключом.",
+      "commandcode": "Command Code вошёл как {{email}}, а не {{account}}. Попробуйте ещё раз с правильным ключом."
     },
     "useAnyway": "Использовать {{email}}",
     "assignFailed": "Аккаунт {{label}} подключён, но переключить на него {{agent}} не удалось.",
@@ -6383,7 +6391,8 @@
             "cursor": "Добавить аккаунт Cursor",
             "grok": "Добавить аккаунт Grok",
             "antigravity": "Добавить аккаунт Gemini",
-            "opencode": "Добавить ключ OpenCode"
+            "opencode": "Добавить ключ OpenCode",
+            "commandcode": "Добавить ключ Command Code"
           },
           "stepOne": {
             "claude_code": "Аккаунт с вашим тарифом",
@@ -6447,7 +6456,8 @@
             "cursor": "Cursor вошёл как {{account}}, а этот аккаунт у вас уже подключён. Чтобы использовать другой, выйдите на странице Cursor и попробуйте снова.",
             "grok": "Grok вошёл как {{account}}, а этот аккаунт у вас уже подключён. Чтобы использовать другой, выйдите на странице Grok и попробуйте снова.",
             "antigravity": "Gemini вошёл как {{account}}, а этот аккаунт у вас уже подключён. Чтобы использовать другой, выйдите на странице Google и попробуйте снова.",
-            "opencode": "Этот ключ OpenCode уже подключён как {{account}}."
+            "opencode": "Этот ключ OpenCode уже подключён как {{account}}.",
+            "commandcode": "Этот ключ Command Code уже подключён как {{account}}."
           },
           "startFailed": "{{computer}} не отвечает. Попробуйте чуть позже.",
           "sendFailed": "Не удалось отправить код. Проверьте его и попробуйте ещё раз.",
@@ -11565,6 +11575,7 @@
       "grok": "Grok",
       "antigravity": "Gemini",
       "opencode": "OpenCode",
+      "commandcode": "Command Code",
       "needs": {
         "keys": "Обновите agentes на компьютере, чтобы использовать ключ тарифа"
       },
@@ -13182,6 +13193,7 @@
       "grok": "{{model}} по тарифу Grok",
       "gemini": "{{model}} по тарифу Gemini",
       "zen": "{{model}} через OpenCode",
+      "commandcode": "{{model}} через Command Code",
       "coding": "{{model}} по тарифу {{plan}}",
       "claudeOf": "{{model}} по тарифу Claude пользователя {{owner}}",
       "chatgptOf": "{{model}} по тарифу ChatGPT пользователя {{owner}}",
@@ -13189,6 +13201,7 @@
       "grokOf": "{{model}} по тарифу Grok пользователя {{owner}}",
       "geminiOf": "{{model}} по тарифу Gemini пользователя {{owner}}",
       "zenOf": "{{model}} через OpenCode пользователя {{owner}}",
+      "commandcodeOf": "{{model}} через Command Code пользователя {{owner}}",
       "codingOf": "{{model}} по тарифу {{plan}} пользователя {{owner}}",
       "claudeAuto": "Тариф Claude",
       "chatgptAuto": "Тариф ChatGPT",
@@ -13196,6 +13209,7 @@
       "grokAuto": "Тариф Grok",
       "geminiAuto": "Тариф Gemini",
       "zenAuto": "OpenCode",
+      "commandcodeAuto": "Command Code",
       "codingAuto": "{{plan}}",
       "claudeAutoOf": "Тариф Claude пользователя {{owner}}",
       "chatgptAutoOf": "Тариф ChatGPT пользователя {{owner}}",
@@ -13203,6 +13217,7 @@
       "grokAutoOf": "Тариф Grok пользователя {{owner}}",
       "geminiAutoOf": "Тариф Gemini пользователя {{owner}}",
       "zenAutoOf": "OpenCode пользователя {{owner}}",
+      "commandcodeAutoOf": "Command Code пользователя {{owner}}",
       "codingAutoOf": "{{plan}} пользователя {{owner}}",
       "on": "{{line}} на {{computer}}"
     },
@@ -13214,6 +13229,7 @@
       "codex": "Codex",
       "cursor": "Cursor",
       "opencode": "OpenCode",
+      "commandcode": "Command Code",
       "grok": "Grok Build",
       "antigravity": "Antigravity CLI"
     },
@@ -13227,6 +13243,7 @@
     "codexText": "Использует тариф ChatGPT того, кто подключил компьютер.",
     "cursorText": "Использует тариф Cursor того, кто подключил компьютер.",
     "grokText": "Использует тариф Grok того, кто подключил компьютер.",
+    "commandcodeText": "Использует тариф Command Code того, кто подключил компьютер.",
     "antigravityText": "Использует тариф Gemini того, кто подключил компьютер.",
     "opencodeText": "Бесплатные модели OpenCode или ключ OpenCode того, кто подключил компьютер.",
     "cursorModel": {
@@ -13286,7 +13303,8 @@
       "cursor": "Cursor · {{model}}",
       "grok": "Grok Build · {{model}}",
       "antigravity": "Antigravity CLI · {{model}}",
-      "opencode": "OpenCode · {{model}}"
+      "opencode": "OpenCode · {{model}}",
+      "commandcode": "Command Code · {{model}}"
     },
     "mission": {
       "modelLabel": "Модель",
@@ -17177,6 +17195,7 @@
         "codex": "Codex",
         "cursor": "Cursor",
         "opencode": "OpenCode",
+        "commandcode": "Command Code",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
         "commands": "команды",
@@ -17337,6 +17356,7 @@
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
         "opencode": "OpenCode",
+        "commandcode": "Command Code",
         "commands": "Команды",
         "browser": "Браузер"
       },
@@ -17345,6 +17365,7 @@
         "codex": "Как Claude Code, но с аккаунтом ChatGPT. Только в разрешённых папках.",
         "cursor": "Как Claude Code, но с аккаунтом Cursor. Только в разрешённых папках.",
         "grok": "Как Claude Code, но с аккаунтом Grok. Только в разрешённых папках.",
+        "commandcode": "Как Claude Code, но с аккаунтом Command Code. Только в разрешённых папках.",
         "antigravity": "Как Claude Code, но с аккаунтом Gemini. Только в разрешённых папках.",
         "opencode": "Как Claude Code, но с бесплатными моделями OpenCode или ключом OpenCode. Только в разрешённых папках.",
         "commands": "Выполняет команды в Терминале, например тесты и сборки."

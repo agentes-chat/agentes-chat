@@ -3236,7 +3236,8 @@
       "cursor": "이 컴퓨터에서 Cursor에 로그인되어 있지 않아요. {{name}}의 페이지에서 Cursor 계정을 연결하세요.",
       "grok": "이 컴퓨터에서 Grok에 로그인되어 있지 않아요. {{name}}의 페이지에서 Grok 계정을 연결하세요.",
       "antigravity": "이 컴퓨터에서 Gemini에 로그인되어 있지 않아요. {{name}}의 페이지에서 Gemini 계정을 연결하세요.",
-      "opencode": "이 컴퓨터에서 OpenCode가 생각할 수 없어요. {{name}}의 페이지에서 OpenCode 키를 연결하세요."
+      "opencode": "이 컴퓨터에서 OpenCode가 생각할 수 없어요. {{name}}의 페이지에서 OpenCode 키를 연결하세요.",
+      "commandcode": "이 컴퓨터에서 Command Code가 생각할 수 없어요. {{name}}의 페이지에서 Command Code 키를 연결하세요."
     },
     "notSignedInOn": {
       "claude_code": "{{computer}}에서 Claude Code에 로그인되어 있지 않아요. {{name}}의 페이지에서 Claude 계정을 연결하세요.",
@@ -3244,7 +3245,8 @@
       "cursor": "{{computer}}에서 Cursor에 로그인되어 있지 않아요. {{name}}의 페이지에서 Cursor 계정을 연결하세요.",
       "grok": "{{computer}}에서 Grok에 로그인되어 있지 않아요. {{name}}의 페이지에서 Grok 계정을 연결하세요.",
       "antigravity": "{{computer}}에서 Gemini에 로그인되어 있지 않아요. {{name}}의 페이지에서 Gemini 계정을 연결하세요.",
-      "opencode": "{{computer}}에서 OpenCode가 생각할 수 없어요. {{name}}의 페이지에서 OpenCode 키를 연결하세요."
+      "opencode": "{{computer}}에서 OpenCode가 생각할 수 없어요. {{name}}의 페이지에서 OpenCode 키를 연결하세요.",
+      "commandcode": "{{computer}}에서 Command Code가 생각할 수 없어요. {{name}}의 페이지에서 Command Code 키를 연결하세요."
     },
     "card": {
       "connected": "이제 {{name}}에게 AI가 있어요.",
@@ -3303,6 +3305,7 @@
       "grok": "Grok 요금제 연결",
       "gemini": "Gemini 요금제 연결",
       "zen": "OpenCode 연결",
+      "commandcode": "Command Code 연결",
       "api_key": "API 키 추가"
     },
     "cli": {
@@ -3430,6 +3433,10 @@
         "title": "OpenCode",
         "tiers": "무료 모델, 또는 내 OpenCode 키"
       },
+      "commandcode": {
+        "title": "Command Code",
+        "tiers": "내 Command Code 키"
+      },
       "zai": {
         "tiers": "Lite, Pro 또는 Max"
       },
@@ -3531,7 +3538,8 @@
       "cursor": "Cursor에 {{account}}이(가) 아닌 {{email}}(으)로 로그인되어 있어요. Cursor 페이지에서 로그아웃하고 다시 시도하세요.",
       "grok": "Grok에 {{account}}이(가) 아닌 {{email}}(으)로 로그인되어 있어요. Grok 페이지에서 로그아웃하고 다시 시도하세요.",
       "antigravity": "Gemini에 {{account}}이(가) 아닌 {{email}}(으)로 로그인되어 있어요. Google 페이지에서 로그아웃하고 다시 시도하세요.",
-      "opencode": "OpenCode가 {{account}}이 아닌 {{email}}(으)로 로그인했어요. 올바른 키로 다시 시도하세요."
+      "opencode": "OpenCode가 {{account}}이 아닌 {{email}}(으)로 로그인했어요. 올바른 키로 다시 시도하세요.",
+      "commandcode": "Command Code가 {{account}}이 아닌 {{email}}(으)로 로그인했어요. 올바른 키로 다시 시도하세요."
     },
     "useAnyway": "{{email}} 사용",
     "assignFailed": "{{label}} 계정은 연결됐지만 {{agent}}을(를) 이 계정으로 바꾸지 못했어요.",
@@ -5720,7 +5728,8 @@
             "cursor": "Cursor 계정 추가",
             "grok": "Grok 계정 추가",
             "antigravity": "Gemini 계정 추가",
-            "opencode": "OpenCode 키 추가"
+            "opencode": "OpenCode 키 추가",
+            "commandcode": "Command Code 키 추가"
           },
           "stepOne": {
             "claude_code": "요금제가 있는 계정",
@@ -5784,7 +5793,8 @@
             "cursor": "Cursor가 이미 연결한 계정인 {{account}}(으)로 로그인했어요. 다른 계정을 쓰려면 Cursor 페이지에서 로그아웃하고 다시 시도하세요.",
             "grok": "Grok가 이미 연결한 계정인 {{account}}(으)로 로그인했어요. 다른 계정을 쓰려면 Grok 페이지에서 로그아웃하고 다시 시도하세요.",
             "antigravity": "Gemini가 이미 연결한 계정인 {{account}}(으)로 로그인했어요. 다른 계정을 쓰려면 Google 페이지에서 로그아웃하고 다시 시도하세요.",
-            "opencode": "이 OpenCode 키는 이미 {{account}}(으)로 연결되어 있어요."
+            "opencode": "이 OpenCode 키는 이미 {{account}}(으)로 연결되어 있어요.",
+            "commandcode": "이 Command Code 키는 이미 {{account}}(으)로 연결되어 있어요."
           },
           "startFailed": "{{computer}}에서 응답이 없어요. 잠시 후 다시 시도하세요.",
           "sendFailed": "코드를 보내지 못했어요. 확인하고 다시 시도하세요.",
@@ -10383,6 +10393,7 @@
       "grok": "Grok",
       "antigravity": "Gemini",
       "opencode": "OpenCode",
+      "commandcode": "Command Code",
       "needs": {
         "keys": "요금제 키를 사용하려면 컴퓨터에서 agentes를 업데이트하세요"
       },
@@ -11806,6 +11817,7 @@
       "grok": "Grok 요금제의 {{model}}",
       "gemini": "Gemini 요금제의 {{model}}",
       "zen": "OpenCode의 {{model}}",
+      "commandcode": "Command Code의 {{model}}",
       "coding": "{{plan}}의 {{model}}",
       "claudeOf": "{{model}} · {{owner}}님의 Claude 요금제",
       "chatgptOf": "{{owner}}님의 ChatGPT 요금제의 {{model}}",
@@ -11813,6 +11825,7 @@
       "grokOf": "{{owner}}님의 Grok 요금제의 {{model}}",
       "geminiOf": "{{owner}}님의 Gemini 요금제의 {{model}}",
       "zenOf": "{{owner}}의 OpenCode에서 {{model}}",
+      "commandcodeOf": "{{owner}}의 Command Code에서 {{model}}",
       "codingOf": "{{owner}}님의 {{plan}}의 {{model}}",
       "claudeAuto": "Claude 요금제",
       "chatgptAuto": "ChatGPT 요금제",
@@ -11820,6 +11833,7 @@
       "grokAuto": "Grok 요금제",
       "geminiAuto": "Gemini 요금제",
       "zenAuto": "OpenCode",
+      "commandcodeAuto": "Command Code",
       "codingAuto": "{{plan}}",
       "claudeAutoOf": "{{owner}}님의 Claude 요금제",
       "chatgptAutoOf": "{{owner}}님의 ChatGPT 요금제",
@@ -11827,6 +11841,7 @@
       "grokAutoOf": "{{owner}}님의 Grok 요금제",
       "geminiAutoOf": "{{owner}}님의 Gemini 요금제",
       "zenAutoOf": "{{owner}}의 OpenCode",
+      "commandcodeAutoOf": "{{owner}}의 Command Code",
       "codingAutoOf": "{{owner}}님의 {{plan}}",
       "on": "{{computer}}의 {{line}}"
     },
@@ -11838,6 +11853,7 @@
       "codex": "Codex",
       "cursor": "Cursor",
       "opencode": "OpenCode",
+      "commandcode": "Command Code",
       "grok": "Grok Build",
       "antigravity": "Antigravity CLI"
     },
@@ -11851,6 +11867,7 @@
     "codexText": "컴퓨터를 연결한 사람의 ChatGPT 요금제를 사용해요.",
     "cursorText": "컴퓨터를 연결한 사람의 Cursor 요금제를 사용해요.",
     "grokText": "컴퓨터를 연결한 사람의 Grok 요금제를 사용해요.",
+    "commandcodeText": "컴퓨터를 연결한 사람의 Command Code 요금제를 사용해요.",
     "antigravityText": "컴퓨터를 연결한 사람의 Gemini 요금제를 사용해요.",
     "opencodeText": "OpenCode의 무료 모델, 또는 컴퓨터를 연결한 사람의 OpenCode 키를 사용해요.",
     "cursorModel": {
@@ -11910,7 +11927,8 @@
       "cursor": "Cursor · {{model}}",
       "grok": "Grok Build · {{model}}",
       "antigravity": "Antigravity CLI · {{model}}",
-      "opencode": "OpenCode · {{model}}"
+      "opencode": "OpenCode · {{model}}",
+      "commandcode": "Command Code · {{model}}"
     },
     "mission": {
       "modelLabel": "모델",
@@ -15549,6 +15567,7 @@
         "codex": "Codex",
         "cursor": "Cursor",
         "opencode": "OpenCode",
+        "commandcode": "Command Code",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
         "commands": "명령",
@@ -15707,6 +15726,7 @@
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
         "opencode": "OpenCode",
+        "commandcode": "Command Code",
         "commands": "명령",
         "browser": "브라우저"
       },
@@ -15715,6 +15735,7 @@
         "codex": "Claude Code와 같지만 ChatGPT 계정을 사용해요. 허용된 폴더에서만 작동해요.",
         "cursor": "Claude Code와 같지만 Cursor 계정을 사용해요. 허용된 폴더에서만 작동해요.",
         "grok": "Claude Code와 같지만 Grok 계정을 사용해요. 허용된 폴더에서만 작동해요.",
+        "commandcode": "Claude Code와 같지만 Command Code 계정을 사용해요. 허용된 폴더에서만 작동해요.",
         "antigravity": "Claude Code와 같지만 Gemini 계정을 사용해요. 허용된 폴더에서만 작동해요.",
         "opencode": "Claude Code와 같지만 OpenCode의 무료 모델이나 OpenCode 키를 사용해요. 허용된 폴더에서만 작동해요.",
         "commands": "테스트나 빌드 같은 터미널 명령을 실행해요."

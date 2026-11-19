@@ -7,6 +7,7 @@ import {
   brainTopic,
   CODEX_FOLDER_PROTOCOL,
   CODEX_WINDOWS_PROTOCOL,
+  COMMANDCODE_PROTOCOL,
   CURSOR_PROTOCOL,
   GROK_PROTOCOL,
   LOCKED_BRAIN_PROTOCOL,
@@ -87,6 +88,7 @@ export interface ComputerBrainLink {
       opencode?: { version: string };
       grok?: { version: string };
       antigravity?: { version: string };
+      commandcode?: { version: string };
       /** Every agent as its own user (`runnerUpdateWay`). */
       mode?: "system";
     };
@@ -106,6 +108,7 @@ export interface ComputerBrainLink {
         opencode?: boolean;
         grok?: boolean;
         antigravity?: boolean;
+        commandcode?: boolean;
         commands: boolean;
       };
     } | null;
@@ -174,7 +177,7 @@ function channel<T>() {
  * protocol 36, no version gate, no live steering). Everything else, from the request to the events, is shared.
  */
 interface CliBrainSpec {
-  kind: "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+  kind: "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "commandcode";
   name: string;
   /** The runner protocol it needs. */
   protocol: number;
@@ -187,6 +190,7 @@ interface CliBrainSpec {
     opencode?: { version: string };
     grok?: { version: string };
     antigravity?: { version: string };
+    commandcode?: { version: string };
   }): BrainEvent | null;
 }
 
@@ -282,9 +286,23 @@ export const codexModelRefused = (message: string) =>
 const REFUSED_MODEL_MS = 6 * 60 * 60_000;
 // ponytail: per-process memory, so each server process pays one refused turn per sign-in and model; store it if that matters.
 const refusedModels = new Map<string, number>();
+const COMMANDCODE_CLI: CliBrainSpec = {
+  kind: "commandcode",
+  name: "Command Code",
+  protocol: COMMANDCODE_PROTOCOL,
+  check: ({ commandcode }) =>
+    commandcode
+      ? null
+      : {
+          type: "error",
+          code: "commandcode_missing",
+          message: "Command Code's CLI is not installed on the computer.",
+          retryable: true,
+        },
+};
 
 export class CodexBrain implements Brain {
-  readonly kind: "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+  readonly kind: "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "commandcode";
 
   constructor(
     private readonly deps: CodexBrainDeps,
@@ -548,6 +566,17 @@ export class GrokBrain extends CodexBrain {
 export class AntigravityBrain extends CodexBrain {
   constructor(deps: CodexBrainDeps) {
     super(deps, ANTIGRAVITY_CLI);
+  }
+}
+
+/**
+ * The Command Code brain (ADR 0221): Command Code's CLI (`cmd acp`) on the agent's computer with a person's Command
+ * Code key, through the same `brain.turn` as Codex (`kind: "commandcode"`, runner protocol 80, `brain-commandcode.ts`
+ * there). A person's messages wait for the turn's end.
+ */
+export class CommandcodeBrain extends CodexBrain {
+  constructor(deps: CodexBrainDeps) {
+    super(deps, COMMANDCODE_CLI);
   }
 }
 
