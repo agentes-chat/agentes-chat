@@ -141,6 +141,8 @@ test("the plan's notifications have their own Activity line in both languages, n
       "desktop_taken",
       "plan_lent",
       "plan_serves",
+      "plan_limit_near",
+      "plan_limit_near_open",
       "plan_model_dropped",
       "catch_up_closed",
       "catch_up_closed_asker",

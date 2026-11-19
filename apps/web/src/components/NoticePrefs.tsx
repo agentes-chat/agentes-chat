@@ -18,6 +18,7 @@ const ICONS: Record<NoticeCategory, IconName> = {
   tasks: "issues",
   routines: "routines",
   computers: "computer",
+  plans: "chart",
   reactions: "smile",
 };
 

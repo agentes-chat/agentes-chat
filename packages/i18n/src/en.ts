@@ -2265,6 +2265,7 @@ export const en = {
       tasks: { title: "Tasks", help: "Tasks for you, comments and when one changes stage" },
       routines: { title: "Routines and missions", help: "When they stop, fail or wait for their computer" },
       computers: { title: "Computers", help: "A new computer joined or the workspace's one is ready" },
+      plans: { title: "Plan limits", help: "When an AI account reaches 90% of a limit" },
       reactions: { title: "Reactions", help: "When someone reacts to a message of yours" },
     },
   },
@@ -5776,6 +5777,9 @@ export const en = {
       /** Someone gave an agent the person's plan (`plan_lent`): `plan` its maker ("Claude"). */
       planLent: "<b>{{name}}</b> connected your {{plan}} plan to <b>{{agent}}</b>",
       planServes: "Your {{plan}} now serves the whole workspace",
+      /** An AI account reached 90% of a window (`plan_limit_near`): `window` its name, `resets` "resets at 3:40 PM". */
+      planLimitNear: "<b>{{account}}</b> used {{percent}}% of its limit ({{window}}), {{resets}}",
+      planLimitNearOpen: "<b>{{account}}</b> used {{percent}}% of its limit ({{window}})",
       /** The agent's model left its plan's list (`plan_model_dropped`): `runs` the model it uses now. */
       planModelDropped: "{{model}} left {{plan}}. <b>{{name}}</b> is using {{runs}} until you choose another model.",
       routineWaitingPlan: "<b>{{name}}</b> is waiting for its plan to reset to run a routine",
@@ -17965,6 +17969,40 @@ export const en = {
       handoffs: "Most of it came from handoffs between agents.",
       /** Opens the DM with the agent that took most of the handed work. */
       message: "Message {{name}}",
+    },
+  },
+  /** Quotas (ADR 0063 addendum 2026-11-17): every AI account's limits by maker, or its recent use where none is reported. */
+  quotas: {
+    title: "Quotas",
+    lead: "Each AI account's limits as its provider reports them, and recent use where it reports none.",
+    home: "Plan quotas",
+    seeAll: "See quotas",
+    empty: "No AI account yet.",
+    summary: {
+      limited_one: "{{count}} at the limit",
+      limited_other: "{{count}} at the limit",
+      almost_one: "{{count}} almost at the limit",
+      almost_other: "{{count}} almost at the limit",
+      ok: "All have room",
+      accounts_one: "{{count}} AI account",
+      accounts_other: "{{count}} AI accounts",
+    },
+    notReported: "No quota reported by the provider.",
+    /** The plan limits ring on every screen: the percent of the account closest to a limit. */
+    ring: {
+      ok: "Plan limits: {{percent}}% used on {{account}}, the account closest to its limit",
+      almost: "Plan limits: {{account}} almost at the limit, {{percent}}% used",
+      limited: "Plan limits: {{account}} at the limit",
+      none: "Plan limits: none of your accounts reports limits",
+      title: "Plan limits",
+    },
+    recent: {
+      title: "Recent use",
+      day: "Last 24 hours",
+      week: "Last 7 days",
+      month: "Last 30 days",
+      requests_one: "{{value}} call",
+      requests_other: "{{value}} calls",
     },
   },
   usageViews: {

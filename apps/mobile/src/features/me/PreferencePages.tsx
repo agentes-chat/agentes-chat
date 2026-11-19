@@ -89,6 +89,7 @@ const NOTICE_ICONS: Record<NoticeCategory, IconName> = {
   tasks: "issue",
   routines: "clock",
   computers: "laptop",
+  plans: "chart",
   reactions: "smile",
 };
 

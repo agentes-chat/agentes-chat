@@ -7,7 +7,20 @@ import {
   type WebPushResult,
   type WebPushSender,
 } from "@agenteschat/adapters";
-import { and, asc, type Database, eq, gt, inArray, isNull, lte, notInArray, or, schema } from "@agenteschat/db";
+import {
+  and,
+  asc,
+  type Database,
+  type Executor,
+  eq,
+  gt,
+  inArray,
+  isNull,
+  lte,
+  notInArray,
+  or,
+  schema,
+} from "@agenteschat/db";
 import { errorNumber } from "./errors";
 import { mediaOf } from "./media";
 import { voiceOf } from "./message-preview";
@@ -111,7 +124,7 @@ export function pushWorthy(
  * event, and a reminder or a snooze's wake under keys of their own.
  */
 export async function enqueuePush(
-  db: Database,
+  db: Executor,
   row: NotificationRow,
   now = new Date(),
   prefs?: NoticePrefs,
@@ -484,6 +497,7 @@ export async function deliverPush(
     still: latest.still ?? null,
     status: latest.statusTo ?? null,
     percent: latest.percent ?? null,
+    resetsAt: latest.resetsAt ?? null,
     reason: typeof latest.reason === "string" ? latest.reason : null,
     // Read once for every device: only the words change (ADR 0159), never who is told or when.
     personal: await isPersonalWorkspace(db, row.orgId),

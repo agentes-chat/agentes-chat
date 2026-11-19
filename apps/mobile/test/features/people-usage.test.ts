@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { waitingCardOf } from "@agenteschat/client/lib/notifications";
 import { personAmount, usageLimitLine } from "@agenteschat/client/lib/person-usage";
 import { notificationHref } from "../../src/features/links/logic";
-import { peopleMonthLine } from "../../src/features/usage/logic";
+import { peopleMonthLine, quotaRingFontSize } from "../../src/features/usage/logic";
 import { notification, translator } from "./fixtures";
 
 // The words as keys with their values, so the line's pieces show without the strings loaded.
@@ -102,4 +102,12 @@ describe("an account's use by kind on the phone (the web's KindShares)", () => {
     expect(screen).toContain("openDm({ agentId: target.id }, { compose: true })");
     expect(screen).toContain('t("usage.hint.message", { name: target.name })');
   });
+});
+
+test("the limits ring's number fits inside its stroke: 100 smaller than two digits", () => {
+  // The room inside the stroke on the 34-point circle, at a bold digit's width (about 0.62 of its size).
+  const inside = 34 - 2 * 3.5;
+  for (const text of ["–", "7", "50", "99", "100"])
+    expect(text.length * quotaRingFontSize(text) * 0.62).toBeLessThan(inside - 4);
+  expect(quotaRingFontSize("100")).toBeLessThan(quotaRingFontSize("99"));
 });

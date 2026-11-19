@@ -2198,6 +2198,10 @@
         "title": "Computer",
         "help": "È entrato un nuovo computer o quello dello spazio di lavoro è pronto"
       },
+      "plans": {
+        "title": "Limiti dei piani",
+        "help": "Quando un account IA raggiunge il 90% di un limite"
+      },
       "reactions": {
         "title": "Reazioni",
         "help": "Quando qualcuno reagisce a un tuo messaggio"
@@ -5537,6 +5541,8 @@
       "desktopTaken": "<b>{{name}}</b> ha preso il controllo dello schermo del computer di <b>{{agent}}</b>",
       "planLent": "<b>{{name}}</b> ha collegato il tuo piano {{plan}} a <b>{{agent}}</b>",
       "planServes": "Il tuo {{plan}} ora serve tutto il workspace",
+      "planLimitNear": "<b>{{account}}</b> ha usato il {{percent}}% del limite ({{window}}), {{resets}}",
+      "planLimitNearOpen": "<b>{{account}}</b> ha usato il {{percent}}% del limite ({{window}})",
       "planModelDropped": "{{model}} è uscito da {{plan}}. <b>{{name}}</b> usa {{runs}} finché non scegli un altro modello.",
       "routineWaitingPlan": "<b>{{name}}</b> aspetta che il suo piano si azzeri per eseguire una routine",
       "planResetUnknown": "{{plan}} non ha detto quando si azzera il limite. Il lavoro di <b>{{name}}</b> è ancora in attesa.",
@@ -18136,6 +18142,42 @@
     "hint": {
       "handoffs": "La maggior parte è venuta da passaggi tra agenti.",
       "message": "Scrivi a {{name}}"
+    }
+  },
+  "quotas": {
+    "title": "Quote",
+    "lead": "I limiti di ogni account di IA come li riporta il fornitore, e l'uso recente dove non li riporta.",
+    "home": "Quote dei piani",
+    "seeAll": "Vedi le quote",
+    "empty": "Ancora nessun account di IA.",
+    "summary": {
+      "limited_one": "{{count}} al limite",
+      "limited_many": "{{count}} al limite",
+      "limited_other": "{{count}} al limite",
+      "almost_one": "{{count}} quasi al limite",
+      "almost_many": "{{count}} quasi al limite",
+      "almost_other": "{{count}} quasi al limite",
+      "ok": "Tutti hanno margine",
+      "accounts_one": "{{count}} account di IA",
+      "accounts_many": "{{count}} account di IA",
+      "accounts_other": "{{count}} account di IA"
+    },
+    "notReported": "Nessuna quota riportata dal fornitore.",
+    "ring": {
+      "ok": "Limiti dei piani: {{percent}}% usato su {{account}}, l’account più vicino al limite",
+      "almost": "Limiti dei piani: {{account}} quasi al limite, {{percent}}% usato",
+      "limited": "Limiti dei piani: {{account}} al limite",
+      "none": "Limiti dei piani: nessuno dei tuoi account indica limiti",
+      "title": "Limiti dei piani"
+    },
+    "recent": {
+      "title": "Uso recente",
+      "day": "Ultime 24 ore",
+      "week": "Ultimi 7 giorni",
+      "month": "Ultimi 30 giorni",
+      "requests_one": "{{value}} chiamata",
+      "requests_many": "{{value}} chiamate",
+      "requests_other": "{{value}} chiamate"
     }
   },
   "usageViews": {

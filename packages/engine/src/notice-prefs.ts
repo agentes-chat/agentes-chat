@@ -1,4 +1,4 @@
-import { and, type Database, eq, schema, sql } from "@agenteschat/db";
+import { and, type Database, type Executor, eq, schema, sql } from "@agenteschat/db";
 import type { NotificationKind } from "./notifications";
 import { requirePermission } from "./organizations";
 
@@ -18,6 +18,7 @@ export const NOTICE_CATEGORIES = [
   "tasks",
   "routines",
   "computers",
+  "plans",
   "reactions",
 ] as const;
 export type NoticeCategory = (typeof NOTICE_CATEGORIES)[number];
@@ -38,6 +39,7 @@ export const NOTICE_KINDS: Record<NoticeCategory, readonly NotificationKind[]> =
     "routine_waiting_plan",
   ],
   computers: ["machine_connected", "computer_ready", "plan_reset_unknown", "device.in_use", "device.waiting"],
+  plans: ["plan_limit_near"],
   reactions: ["reaction"],
 };
 
@@ -49,6 +51,7 @@ export const NOTICE_DEFAULTS: Record<NoticeCategory, boolean> = {
   tasks: false,
   routines: true,
   computers: true,
+  plans: true,
   reactions: false,
 };
 
@@ -77,7 +80,7 @@ export function noticePrefsOf(raw: unknown): NoticePrefs {
   return out;
 }
 
-export async function readNoticePrefs(db: Database, orgId: string, userId: string): Promise<NoticePrefs> {
+export async function readNoticePrefs(db: Executor, orgId: string, userId: string): Promise<NoticePrefs> {
   const [row] = await db
     .select({ prefs: organizationMembers.noticePrefs })
     .from(organizationMembers)

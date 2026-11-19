@@ -87,6 +87,37 @@ function patchTargets(
  * the agents' computer views follow without a refetch where they can.
  * Returns whether the event was one of these.
  */
+/** Plan usage is read again at most this often per tab or phone, however many computers report. */
+export const PLAN_USAGE_EVERY_MS = 30_000;
+
+const planUsageReads = new WeakMap<QueryClient, Map<string, { next: number; timer?: ReturnType<typeof setTimeout> }>>();
+
+/**
+ * `GET …/usage/plans` is a heavy read and every window that moves a point is an event: the first event reads at once,
+ * those that follow within `PLAN_USAGE_EVERY_MS` become one read at its end.
+ */
+export function refreshPlanUsage(qc: QueryClient, orgId: string, now = Date.now()) {
+  const orgs = planUsageReads.get(qc) ?? new Map();
+  planUsageReads.set(qc, orgs);
+  const state = orgs.get(orgId) ?? { next: 0 };
+  orgs.set(orgId, state);
+  const read = () => {
+    state.next = Date.now() + PLAN_USAGE_EVERY_MS;
+    void qc.invalidateQueries({ queryKey: keys.planUsage(orgId) });
+  };
+  if (now >= state.next) {
+    state.next = now + PLAN_USAGE_EVERY_MS;
+    void qc.invalidateQueries({ queryKey: keys.planUsage(orgId) });
+    return;
+  }
+  if (state.timer) return;
+  state.timer = setTimeout(() => {
+    state.timer = undefined;
+    read();
+  }, state.next - now);
+  (state.timer as { unref?: () => void }).unref?.();
+}
+
 export function applyMachineEvent(qc: QueryClient, orgId: string, event: { type: string }): boolean {
   // What an agent keeps running (ADR 0176): only its list, nothing else about the computer changed.
   if (event.type === "machine.holds") {
@@ -137,7 +168,7 @@ export function applyMachineEvent(qc: QueryClient, orgId: string, event: { type:
     });
     void qc.invalidateQueries({ predicate: (q) => isAgentBrainKey(q.queryKey, orgId) });
     void qc.invalidateQueries({ queryKey: keys.aiAccounts(orgId) });
-    void qc.invalidateQueries({ queryKey: keys.planUsage(orgId) });
+    refreshPlanUsage(qc, orgId);
   }
   // The agent list carries each plan's limits (ADR 0063 §5), and the server says only when they would show otherwise.
   if (accounts) void qc.invalidateQueries({ queryKey: keys.agents(orgId) });

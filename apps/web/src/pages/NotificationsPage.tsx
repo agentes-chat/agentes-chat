@@ -204,6 +204,7 @@ function sourceOf(t: TFunction, n: AppNotification, channelName: (id: string) =>
     else if (cause === "computer") [icon, label] = ["computer", t("notifications.source.machine")];
     else if (cause) [icon, label] = ["plug", t("settings.section.connectors")];
   } else if (n.kind === "plan_lent" || n.kind === "plan_serves") [icon, label] = ["bulb", t("settings.section.usage")];
+  else if (n.kind === "plan_limit_near") [icon, label] = ["chart", t("quotas.title")];
   else if (n.kind === "plan_model_dropped") [icon, label] = ["bulb", t("brain.title")];
   else if (n.kind === "browser_handoff") [icon, label] = ["globe", t("notifications.source.browser")];
   else if (s.issueNumber != null)

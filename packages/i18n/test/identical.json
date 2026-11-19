@@ -1121,7 +1121,8 @@
       "live.slides.shapes.triangle",
       "live.slides.themes.graphite",
       "live.slides.tools.image",
-      "settings.kinds.image"
+      "settings.kinds.image",
+      "quotas.title"
     ],
     "de": [
       "live.sheet.args.k",

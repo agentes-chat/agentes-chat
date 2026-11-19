@@ -93,6 +93,7 @@ import {
 } from "./machines";
 import { recordAccountFailure } from "./operator-events";
 import { can, requirePermission } from "./organizations";
+import { checkPlanLimits } from "./plan-limit-alerts";
 import { runnerUpdateWay } from "./runner-update";
 import { scrubSignIns } from "./tool-detail";
 import { agentsMovedOnto, usageWaitKey, wakeAgentsBrainWaits, wakeOnRoom } from "./usage-pause";
@@ -212,6 +213,8 @@ const SIGNING_IN_KEEP_MS = ACCOUNT_LOGIN_TTL_MS + 60_000;
 export interface MachineAccountDeps {
   db: Database;
   pubsub?: PubSub;
+  /** What must not stop usage from being stored is logged here (a plan's alert). */
+  log?: { warn(message: string, data?: Record<string, unknown>): void };
 }
 
 export interface MachineAccountHubDeps extends MachineAccountDeps {
@@ -1051,6 +1054,12 @@ export async function syncMachineAccounts(
   forgetAgents(orgId, out.released);
   await wakeAgentsBrainWaits(deps, orgId, out.released);
   if (out.changed) await publishAccountsChanged(deps.pubsub, orgId, machineId);
+  await checkPlanLimits(
+    deps,
+    orgId,
+    machineId,
+    accounts.map((a) => a.usage),
+  );
   return out.remove;
 }
 
@@ -1076,6 +1085,7 @@ export async function storeOwnUsage(deps: MachineAccountDeps, orgId: string, mac
     if (usage) await wakeOnRoom(deps.db, orgId, machineId, k, undefined, usage).catch(() => []);
   }
   if (moved.length) await publishAccountsChanged(deps.pubsub, orgId, machineId);
+  await checkPlanLimits(deps, orgId, machineId, Object.values(own));
 }
 
 /**

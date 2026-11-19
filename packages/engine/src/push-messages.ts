@@ -54,6 +54,10 @@ export interface PushTextInput {
   /** `usage_limit`: what happened (`latest.statusTo`) and the share of the limit used. */
   status?: string | null;
   percent?: number | null;
+  /** `plan_limit_near`: when the window resets (`percent`: how much of it is used, `title`: the account). */
+  resetsAt?: string | null;
+  /** The clock `resetsAt` is told from (tests). */
+  now?: number;
   /** `widget_failed`: its coded reason (ADR 0135 §6); `agent_reported` sends the agent's words in `text`. */
   reason?: string | null;
   /** The workspace is personal (ADR 0159): the words for one person and their agents, where a team's would differ. */
@@ -64,6 +68,19 @@ const clip = (s: string, max: number) => {
   const one = s.replace(/\s+/g, " ").trim();
   return one.length > max ? `${one.slice(0, max - 1).trimEnd()}…` : one;
 };
+
+/**
+ * How far off a time is, in the device's language ("em 3 horas"): a push has no time zone to say the hour in. Null once
+ * it has passed.
+ */
+function timeFromNow(locale: PushLocale, iso: string, now: number): string | null {
+  const minutes = Math.ceil((Date.parse(iso) - now) / 60_000);
+  if (!(minutes > 0)) return null;
+  const say = new Intl.RelativeTimeFormat(locale, { numeric: "always" });
+  if (minutes < 60) return say.format(minutes, "minute");
+  const hours = Math.round(minutes / 60);
+  return hours < 48 ? say.format(hours, "hour") : say.format(Math.round(hours / 24), "day");
+}
 
 /**
  * Title and body of one push, in the device's language. A reminder of everything left unread says how many things
@@ -137,6 +154,14 @@ function renderOne(locale: PushLocale, input: PushTextInput): { title: string; b
         s.planResetUnknownTitle(input.title?.trim() || "AI"),
         s.planResetUnknownBody(input.label?.trim() || actor),
       );
+    case "plan_limit_near": {
+      // `title`: the account's name for a lock screen, never `label`, which may be its owner's email in their inbox.
+      const when = input.resetsAt ? timeFromNow(locale, input.resetsAt, input.now ?? Date.now()) : null;
+      return out(
+        s.planLimitNearTitle(input.title?.trim() || "AI", Math.round(input.percent ?? 90)),
+        when ? s.planLimitNearBody(when) : s.planLimitNearOpen,
+      );
+    }
     case "machine_connected":
       // Its name and who connected it: if nobody here expected it, it can be removed at once.
       return out(

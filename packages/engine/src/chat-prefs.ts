@@ -35,6 +35,8 @@ export interface ChatPrefs {
   wallpaper?: Wallpaper;
   /** A conversation's own background, by channel id (`saveConversationWallpaper`); absent: as the others. */
   wallpapers?: Record<string, Wallpaper>;
+  /** The color of each AI account in the limits ring, by the account's key; absent: its maker's. */
+  ringColors?: Record<string, WallpaperHue>;
 }
 
 /**
@@ -42,6 +44,7 @@ export interface ChatPrefs {
  * how each is painted is in packages/ui/src/sky/wallpaper.ts.
  */
 export const WALLPAPER_HUES = ["sky", "indigo", "violet", "rose", "amber", "green", "teal", "graphite"] as const;
+export type WallpaperHue = (typeof WALLPAPER_HUES)[number];
 export const WALLPAPER_NEUTRALS = ["paper", "mist", "sand"] as const;
 type Hue = (typeof WALLPAPER_HUES)[number];
 type Neutral = (typeof WALLPAPER_NEUTRALS)[number];
@@ -106,6 +109,15 @@ function wallpapersOf(v: unknown): Record<string, Wallpaper> | undefined {
   return out;
 }
 
+const MAX_RING_COLORS = 40;
+
+/** The limits ring's chosen colors as stored, the unknown ones dropped. */
+function ringColorsOf(v: unknown): Record<string, WallpaperHue> | undefined {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return undefined;
+  const known = Object.entries(v).filter(([, hue]) => WALLPAPER_HUES.includes(hue as WallpaperHue));
+  return Object.fromEntries(known.slice(0, MAX_RING_COLORS)) as Record<string, WallpaperHue>;
+}
+
 /** A photo background has to be the person's own upload: another's address would show them someone else's photo. */
 export function assertOwnWallpaper(w: Wallpaper | undefined, userId: string) {
   if (w?.kind !== "photo") return;
@@ -130,6 +142,7 @@ export function chatPrefsOf(stored: unknown): ChatPrefs {
     feedbackAuto: typeof o.feedbackAuto === "boolean" ? o.feedbackAuto : undefined,
     wallpaper: wallpaperOf(o.wallpaper),
     wallpapers: wallpapersOf(o.wallpapers),
+    ringColors: ringColorsOf(o.ringColors),
   };
   return Object.fromEntries(Object.entries(picks).filter(([, v]) => v !== undefined));
 }

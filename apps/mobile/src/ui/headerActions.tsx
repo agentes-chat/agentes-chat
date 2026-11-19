@@ -39,6 +39,8 @@ export interface HeaderAction {
 }
 
 const IOS = Platform.OS === "ios";
+/** Between a bar's separate round buttons. */
+const APART_GAP = 8;
 
 type Described = Omit<HeaderAction, "onPress" | "menu"> & { menu?: Omit<HeaderMenuItem, "onPress">[] };
 
@@ -54,20 +56,24 @@ const barIcon = ({ sf }: { sf: SFSymbolName }) => ({ type: "sfSymbol" as const, 
  * `headerRight` could be laid out in the wrong place on iOS 26. `lead` is a view of our own that has no system form (a
  * count beside a mark: an agent's tasks, a computer's line), first in the same group: a custom item that shares the
  * buttons' glass, so the bar is one capsule whether it shows or not. `left` is a custom element (the avatar on
- * Início), shown without the shared glass behind it. On Android both are React views in the bar, the right ones
- * (`lead` first) in a `HeaderCapsule` (the floating plate iOS 26 puts them in).
+ * Início), shown without the shared glass behind it. `apart` is a round button of our own before all of them, with its
+ * own plate and the bar's gap, never in their group. On Android they are React views in the bar, the right ones
+ * (`lead` first) in a `HeaderCapsule` (the floating plate iOS 26 puts them in), `apart` beside it.
  * The options only change when the actions' icons or labels change; presses always reach the latest
  * handlers.
  */
 export function useHeaderActionOptions({
   right,
   lead,
+  apart,
   left,
   leftActions,
 }: {
   right?: HeaderAction[] | undefined;
   /** Our own view first among the right actions, in their group (see above). */
   lead?: ReactNode;
+  /** A button of ours with its own plate (`IconButton` `plate`), apart from the right actions' group. */
+  apart?: ReactNode;
   left?: ReactNode;
   /** Native buttons on the left (iOS): unlike a custom `left` view, they keep the large title collapsing. */
   leftActions?: HeaderAction[] | undefined;
@@ -82,6 +88,8 @@ export function useHeaderActionOptions({
   const hasLeft = left != null;
   const leadSlot = useHeaderSlot(lead ?? null);
   const hasLead = lead != null;
+  const apartSlot = useHeaderSlot(apart ?? null);
+  const hasApart = apart != null;
   const describe = (list: HeaderAction[] | undefined) =>
     (list ?? []).map(({ icon, sf, label, disabled, menu }) => ({
       icon,
@@ -107,9 +115,25 @@ export function useHeaderActionOptions({
           </BarPressable>
         ),
       };
+      // Out of the shared glass: it brings its own plate. The gap is in the item: the bar places a `spacing` item after
+      // the native buttons, whatever its place in this list. Only the button inside takes presses.
+      const apartItems = [
+        {
+          type: "custom" as const,
+          element: (
+            <BarPressable>
+              <View style={styles.apartItem}>
+                <HeaderSlot slot={apartSlot} />
+              </View>
+            </BarPressable>
+          ),
+          hidesSharedBackground: true,
+        },
+      ];
       options.unstable_headerRightItems =
-        actions.length || hasLead
+        actions.length || hasLead || hasApart
           ? () => [
+              ...(hasApart ? apartItems : []),
               ...(hasLead ? [leadItem] : []),
               ...actions.map((a, i) =>
                 a.menu
@@ -163,26 +187,31 @@ export function useHeaderActionOptions({
           : undefined;
     } else {
       options.headerRight =
-        actions.length || hasLead
+        actions.length || hasLead || hasApart
           ? () => (
-              <HeaderCapsule>
-                {hasLead ? <HeaderSlot slot={leadSlot} /> : null}
-                {actions.map((a, i) => (
-                  <IconButton
-                    key={`${a.icon}:${a.label}`}
-                    icon={a.icon}
-                    label={a.label}
-                    disabled={a.disabled ?? false}
-                    onPress={press(i)}
-                  />
-                ))}
-              </HeaderCapsule>
+              <View style={styles.apart}>
+                {hasApart ? <HeaderSlot slot={apartSlot} /> : null}
+                {actions.length || hasLead ? (
+                  <HeaderCapsule>
+                    {hasLead ? <HeaderSlot slot={leadSlot} /> : null}
+                    {actions.map((a, i) => (
+                      <IconButton
+                        key={`${a.icon}:${a.label}`}
+                        icon={a.icon}
+                        label={a.label}
+                        disabled={a.disabled ?? false}
+                        onPress={press(i)}
+                      />
+                    ))}
+                  </HeaderCapsule>
+                ) : null}
+              </View>
             )
           : undefined;
       options.headerLeft = hasLeft ? () => <HeaderSlot slot={leftSlot} /> : undefined;
     }
     return options;
-  }, [signature, hasLeft, leftSlot, hasLead, leadSlot]);
+  }, [signature, hasLeft, leftSlot, hasLead, leadSlot, hasApart, apartSlot]);
 }
 
 /**
@@ -209,5 +238,7 @@ export function HeaderCapsule({ children }: { children: ReactNode }) {
 
 const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: 4 },
+  apart: { flexDirection: "row", alignItems: "center", gap: APART_GAP },
+  apartItem: { paddingRight: APART_GAP },
   capsule: { gap: 0, borderRadius: 20 },
 });

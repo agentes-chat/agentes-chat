@@ -2124,6 +2124,10 @@
         "title": "Bilgisayarlar",
         "help": "Yeni bir bilgisayar katıldı ya da çalışma alanının bilgisayarı hazır"
       },
+      "plans": {
+        "title": "Plan limitleri",
+        "help": "Bir yapay zekâ hesabı bir limitin %90'ına ulaştığında"
+      },
       "reactions": {
         "title": "Tepkiler",
         "help": "Biri mesajınıza tepki verdiğinde"
@@ -5336,6 +5340,8 @@
       "desktopTaken": "<b>{{name}}</b>, <b>{{agent}}</b> ajanının bilgisayar ekranını devraldı",
       "planLent": "<b>{{name}}</b>, {{plan}} planını <b>{{agent}}</b> ajanına bağladı",
       "planServes": "{{plan}} artık tüm workspace'e hizmet ediyor",
+      "planLimitNear": "<b>{{account}}</b> limitinin %{{percent}} kadarını kullandı ({{window}}), {{resets}}",
+      "planLimitNearOpen": "<b>{{account}}</b> limitinin %{{percent}} kadarını kullandı ({{window}})",
       "planModelDropped": "{{model}}, {{plan}} listesinden çıktı. Başka bir model seçene kadar <b>{{name}}</b> {{runs}} kullanıyor.",
       "routineWaitingPlan": "<b>{{name}}</b> bir rutini çalıştırmak için planının sıfırlanmasını bekliyor",
       "planResetUnknown": "{{plan}} sınırının ne zaman sıfırlanacağını söylemedi. <b>{{name}}</b> ajanının işi hâlâ bekliyor.",
@@ -17489,6 +17495,38 @@
     "hint": {
       "handoffs": "Çoğu ajanlar arası devirlerden geldi.",
       "message": "{{name}} ile mesajlaş"
+    }
+  },
+  "quotas": {
+    "title": "Kotalar",
+    "lead": "Her yapay zekâ hesabının sağlayıcının bildirdiği limitleri, bildirmediği yerde de son kullanım.",
+    "home": "Plan kotaları",
+    "seeAll": "Kotaları gör",
+    "empty": "Henüz yapay zekâ hesabı yok.",
+    "summary": {
+      "limited_one": "{{count}} limitte",
+      "limited_other": "{{count}} limitte",
+      "almost_one": "{{count}} limite yakın",
+      "almost_other": "{{count}} limite yakın",
+      "ok": "Hepsinde pay var",
+      "accounts_one": "{{count}} yapay zekâ hesabı",
+      "accounts_other": "{{count}} yapay zekâ hesabı"
+    },
+    "notReported": "Sağlayıcı kota bildirmiyor.",
+    "ring": {
+      "ok": "Plan limitleri: limite en yakın hesap {{account}}, %{{percent}} kullanıldı",
+      "almost": "Plan limitleri: {{account}} limite yakın, %{{percent}} kullanıldı",
+      "limited": "Plan limitleri: {{account}} limitte",
+      "none": "Plan limitleri: hesaplarınızın hiçbiri limit bildirmiyor",
+      "title": "Plan limitleri"
+    },
+    "recent": {
+      "title": "Son kullanım",
+      "day": "Son 24 saat",
+      "week": "Son 7 gün",
+      "month": "Son 30 gün",
+      "requests_one": "{{value}} çağrı",
+      "requests_other": "{{value}} çağrı"
     }
   },
   "usageViews": {

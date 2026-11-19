@@ -285,6 +285,7 @@ test("notification prefs: every category with its default, one switched per call
     ["tasks", false],
     ["routines", true],
     ["computers", true],
+    ["plans", true],
     ["reactions", false],
   ]);
   const res = await api("/notification-prefs", { method: "PUT", json: { category: "threads", on: true } });

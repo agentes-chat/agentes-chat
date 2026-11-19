@@ -17,6 +17,7 @@ import { useTranslation } from "react-i18next";
 import { openPalette } from "./CommandMenu";
 import { useOrg } from "./org-context";
 import { MyFace, OrgMark } from "./ProfilePhoto";
+import { QuotaRing } from "./QuotaRing";
 
 /**
  * Breakpoints (layout.css keeps the same numbers):
@@ -182,22 +183,28 @@ export function NavDrawerProvider({ children }: { children: ReactNode }) {
   return <NavDrawerContext.Provider value={value}>{children}</NavDrawerContext.Provider>;
 }
 
-/** "Abrir menu": only on narrow screens (the sidebar is always there otherwise). */
-export function NavToggle({ className }: { className?: string }) {
+/**
+ * "Abrir menu": only on narrow screens (the sidebar is always there otherwise). The plan limits ring stands beside it,
+ * the sidebar being closed there: every header with the menu has it, unless it places the ring itself (`bare`).
+ */
+export function NavToggle({ className, bare = false }: { className?: string; bare?: boolean }) {
   const { t } = useTranslation();
   const drawer = useNavDrawer();
   if (!drawer?.compact) return null;
   return (
-    <Button
-      variant="ghost"
-      iconOnly
-      icon="menu"
-      className={className ? `nav-toggle ${className}` : "nav-toggle"}
-      aria-label={t("shell.openNav")}
-      aria-controls={NAV_ID}
-      aria-expanded={drawer.open}
-      onClick={drawer.toggle}
-    />
+    <>
+      <Button
+        variant="ghost"
+        iconOnly
+        icon="menu"
+        className={className ? `nav-toggle ${className}` : "nav-toggle"}
+        aria-label={t("shell.openNav")}
+        aria-controls={NAV_ID}
+        aria-expanded={drawer.open}
+        onClick={drawer.toggle}
+      />
+      {!bare && <QuotaRing side="bottom" />}
+    </>
   );
 }
 
@@ -229,11 +236,12 @@ export function ShellBar() {
   if (!drawer?.compact) return null;
   return (
     <header className="shell__bar">
-      <NavToggle />
+      <NavToggle bare />
       <span className="shell__bar-org">
         {isPersonal(org) ? <MyFace size="sm" /> : <OrgMark logo={org.logo} size={22} />}
         <span className="shell__bar-name">{isPersonal(org) ? me.user.name : org.name}</span>
       </span>
+      <QuotaRing side="bottom" />
       <Button variant="ghost" iconOnly icon="search" aria-label={t("palette.jump")} onClick={openPalette} />
     </header>
   );

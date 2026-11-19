@@ -2198,6 +2198,10 @@
         "title": "Ordinateurs",
         "help": "Un nouvel ordinateur a rejoint, ou celui de l'espace de travail est prêt"
       },
+      "plans": {
+        "title": "Limites des forfaits",
+        "help": "Quand un compte d’IA atteint 90 % d’une limite"
+      },
       "reactions": {
         "title": "Réactions",
         "help": "Quand quelqu'un réagit à l'un de vos messages"
@@ -5536,6 +5540,8 @@
       "desktopTaken": "<b>{{name}}</b> a pris le contrôle de l'écran de l'ordinateur de <b>{{agent}}</b>",
       "planLent": "<b>{{name}}</b> a connecté votre forfait {{plan}} à <b>{{agent}}</b>",
       "planServes": "Votre {{plan}} sert désormais tout le workspace",
+      "planLimitNear": "<b>{{account}}</b> a utilisé {{percent}} % de sa limite ({{window}}), {{resets}}",
+      "planLimitNearOpen": "<b>{{account}}</b> a utilisé {{percent}} % de sa limite ({{window}})",
       "planModelDropped": "{{model}} a quitté {{plan}}. <b>{{name}}</b> utilise {{runs}} jusqu’à ce que tu choisisses un autre modèle.",
       "routineWaitingPlan": "<b>{{name}}</b> attend la réinitialisation de son abonnement pour exécuter une routine",
       "planResetUnknown": "{{plan}} n'a pas indiqué quand sa limite se réinitialise. Le travail de <b>{{name}}</b> attend toujours.",
@@ -18120,6 +18126,42 @@
     "hint": {
       "handoffs": "La plupart vient de transmissions entre agents.",
       "message": "Écrire à {{name}}"
+    }
+  },
+  "quotas": {
+    "title": "Quotas",
+    "lead": "Les limites de chaque compte d'IA telles que le fournisseur les indique, et l'usage récent là où il n'en indique pas.",
+    "home": "Quotas des forfaits",
+    "seeAll": "Voir les quotas",
+    "empty": "Aucun compte d'IA pour l'instant.",
+    "summary": {
+      "limited_one": "{{count}} à la limite",
+      "limited_many": "{{count}} à la limite",
+      "limited_other": "{{count}} à la limite",
+      "almost_one": "{{count}} presque à la limite",
+      "almost_many": "{{count}} presque à la limite",
+      "almost_other": "{{count}} presque à la limite",
+      "ok": "Tous ont de la marge",
+      "accounts_one": "{{count}} compte d'IA",
+      "accounts_many": "{{count}} comptes d'IA",
+      "accounts_other": "{{count}} comptes d'IA"
+    },
+    "notReported": "Aucun quota indiqué par le fournisseur.",
+    "ring": {
+      "ok": "Limites des forfaits : {{percent}} % utilisés sur {{account}}, le compte le plus proche de sa limite",
+      "almost": "Limites des forfaits : {{account}} presque à la limite, {{percent}} % utilisés",
+      "limited": "Limites des forfaits : {{account}} à la limite",
+      "none": "Limites des forfaits : aucun de vos comptes n’indique de limites",
+      "title": "Limites des forfaits"
+    },
+    "recent": {
+      "title": "Usage récent",
+      "day": "Dernières 24 heures",
+      "week": "7 derniers jours",
+      "month": "30 derniers jours",
+      "requests_one": "{{value}} appel",
+      "requests_many": "{{value}} appels",
+      "requests_other": "{{value}} appels"
     }
   },
   "usageViews": {

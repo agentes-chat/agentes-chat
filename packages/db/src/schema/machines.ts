@@ -397,6 +397,29 @@ export const machineAccounts = pgTable(
 );
 
 /**
+ * The windows of an AI account whose people were told it is near its limit (ADR 0063 addendum 2026-11-18): one row per
+ * account and window, taken over when a new period gets there. `accountKey` is a hash that stands for the account on
+ * every computer it is signed in on, so a row outlives any one login. `resetsAt` null: the provider gave no reset.
+ */
+export const planLimitAlerts = pgTable(
+  "plan_limit_alerts",
+  {
+    orgId: uuid()
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    accountKey: text().notNull(),
+    /** The window's kind and, for `other`, the provider's name for it. */
+    windowKey: text().notNull(),
+    resetsAt: timestamp({ withTimezone: true }),
+    /** When the reading that raised the alert was taken: a later report of an older reading never takes the row. */
+    alertedAt: timestamp({ withTimezone: true }).notNull(),
+    /** When the reading that showed a new period with room was taken: the next crossing after it is told again. */
+    rearmedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [primaryKey({ columns: [t.orgId, t.accountKey, t.windowKey] })],
+);
+
+/**
  * How NEW Claude sign-ins for all agents are made on computers where each agent is its own OS user, set through
  * the operator API: `setup_token` everywhere, or `cli_login` for the listed workspaces (`selected`), for the listed
  * ones plus `percent` of the rest (`percent`, by a stable hash of the workspace's id) or for all. Elsewhere such a

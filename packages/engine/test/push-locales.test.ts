@@ -18,6 +18,7 @@ const KINDS = [
   "routine_stalled",
   "routine_waiting_plan",
   "plan_reset_unknown",
+  "plan_limit_near",
   "machine_connected",
   "computer_ready",
   "browser_handoff",
@@ -79,4 +80,33 @@ test("a language without a word says it in English", () => {
   }
   expect(pushStrings("ru").questionBody).not.toBe(pushStrings("en").questionBody);
   expect(pushStrings("pt-BR").questionBody).not.toBe(pushStrings("en").questionBody);
+});
+
+test("a plan near its limit names the account and how long until it resets, in the device's language", () => {
+  const now = Date.parse("2026-11-18T12:00:00.000Z");
+  const near = (locale: Parameters<typeof renderPush>[0], resetsAt: string | null) =>
+    renderPush(locale, {
+      kind: "plan_limit_near",
+      waiting: false,
+      title: "Trabalho",
+      label: "ana@example.com",
+      percent: 91.6,
+      resetsAt,
+      now,
+    });
+  expect(near("pt-BR", "2026-11-18T15:00:00.000Z")).toEqual({
+    title: "Trabalho: 92% do limite usado",
+    body: "Renova em 3 horas.",
+  });
+  expect(near("en", "2026-11-18T12:20:00.000Z").body).toBe("Resets in 20 minutes.");
+  expect(near("en", "2026-11-21T12:00:00.000Z").body).toBe("Resets in 3 days.");
+  // Reset already, or never said: only where to look.
+  expect(near("en", "2026-11-18T11:00:00.000Z").body).toBe("See it in Quotas.");
+  expect(near("pt-BR", null).body).toBe("Veja em Cotas.");
+  for (const locale of LOCALE_CODES) {
+    const { title, body } = near(locale, "2026-11-18T15:00:00.000Z");
+    expect(title).toContain("Trabalho");
+    expect(title).toContain("92");
+    expect(body).toMatch(/3/);
+  }
 });

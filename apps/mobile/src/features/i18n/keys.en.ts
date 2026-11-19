@@ -1040,6 +1040,11 @@ export const featureKeysEn = {
       plan_lent_female_other: "{{names}} connected your {{plan}} plan to {{agent}}",
       plan_serves_one: "Your {{plan}} now serves the whole workspace",
       plan_serves_other: "Your {{plan}} now serves the whole workspace",
+      /** An AI account reached 90% of a window: `window` its name, `resets` "resets at 3:40 PM". */
+      plan_limit_near_one: "{{plan}} used {{percent}}% of its limit ({{window}}), {{resets}}",
+      plan_limit_near_other: "{{plan}} used {{percent}}% of its limit ({{window}}), {{resets}}",
+      plan_limit_near_open_one: "{{plan}} used {{percent}}% of its limit ({{window}})",
+      plan_limit_near_open_other: "{{plan}} used {{percent}}% of its limit ({{window}})",
       /** An agent's model left its plan's list (`plan_model_dropped`): `runs` the model it uses now. */
       plan_model_dropped_one: "{{model}} left {{plan}}. {{names}} is using {{runs}} for now",
       plan_model_dropped_other: "{{model}} left {{plan}}. {{names}} is using {{runs}} for now",

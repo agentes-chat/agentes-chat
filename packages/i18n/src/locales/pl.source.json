@@ -5240,6 +5240,12 @@
   "noticePrefs.category.computers.help": {
     "value": "A new computer joined or the workspace's one is ready"
   },
+  "noticePrefs.category.plans.title": {
+    "value": "Plan limits"
+  },
+  "noticePrefs.category.plans.help": {
+    "value": "When an AI account reaches 90% of a limit"
+  },
   "noticePrefs.category.reactions.title": {
     "value": "Reactions"
   },
@@ -13095,6 +13101,12 @@
   },
   "notifications.what.planServes": {
     "value": "Your {{plan}} now serves the whole workspace"
+  },
+  "notifications.what.planLimitNear": {
+    "value": "<b>{{account}}</b> used {{percent}}% of its limit ({{window}}), {{resets}}"
+  },
+  "notifications.what.planLimitNearOpen": {
+    "value": "<b>{{account}}</b> used {{percent}}% of its limit ({{window}})"
   },
   "notifications.what.planModelDropped": {
     "value": "{{model}} left {{plan}}. <b>{{name}}</b> is using {{runs}} until you choose another model."
@@ -43240,6 +43252,78 @@
   },
   "usage.hint.message": {
     "value": "Message {{name}}"
+  },
+  "quotas.title": {
+    "value": "Quotas"
+  },
+  "quotas.lead": {
+    "value": "Each AI account's limits as its provider reports them, and recent use where it reports none."
+  },
+  "quotas.home": {
+    "value": "Plan quotas"
+  },
+  "quotas.seeAll": {
+    "value": "See quotas"
+  },
+  "quotas.empty": {
+    "value": "No AI account yet."
+  },
+  "quotas.summary.limited": {
+    "value": {
+      "one": "{{count}} at the limit",
+      "other": "{{count}} at the limit"
+    }
+  },
+  "quotas.summary.almost": {
+    "value": {
+      "one": "{{count}} almost at the limit",
+      "other": "{{count}} almost at the limit"
+    }
+  },
+  "quotas.summary.ok": {
+    "value": "All have room"
+  },
+  "quotas.summary.accounts": {
+    "value": {
+      "one": "{{count}} AI account",
+      "other": "{{count}} AI accounts"
+    }
+  },
+  "quotas.notReported": {
+    "value": "No quota reported by the provider."
+  },
+  "quotas.ring.ok": {
+    "value": "Plan limits: {{percent}}% used on {{account}}, the account closest to its limit"
+  },
+  "quotas.ring.almost": {
+    "value": "Plan limits: {{account}} almost at the limit, {{percent}}% used"
+  },
+  "quotas.ring.limited": {
+    "value": "Plan limits: {{account}} at the limit"
+  },
+  "quotas.ring.none": {
+    "value": "Plan limits: none of your accounts reports limits"
+  },
+  "quotas.ring.title": {
+    "value": "Plan limits"
+  },
+  "quotas.recent.title": {
+    "value": "Recent use"
+  },
+  "quotas.recent.day": {
+    "value": "Last 24 hours"
+  },
+  "quotas.recent.week": {
+    "value": "Last 7 days"
+  },
+  "quotas.recent.month": {
+    "value": "Last 30 days"
+  },
+  "quotas.recent.requests": {
+    "value": {
+      "one": "{{value}} call",
+      "other": "{{value}} calls"
+    }
   },
   "usageViews.signedOut": {
     "value": "Signed out"

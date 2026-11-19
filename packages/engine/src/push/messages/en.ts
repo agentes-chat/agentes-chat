@@ -28,6 +28,9 @@ export interface PushStrings {
   routineWaitingPlanBody: string;
   planResetUnknownTitle: (plan: string) => string;
   planResetUnknownBody: (agent: string) => string;
+  planLimitNearTitle: (account: string, percent: number) => string;
+  planLimitNearBody: (when: string) => string;
+  planLimitNearOpen: string;
   machineConnectedTitle: string;
   computerReadyTitle: string;
   computerReadyBody: string;
@@ -135,6 +138,9 @@ export const en: PushStrings = {
   routineWaitingPlanBody: "It runs when the plan resets.",
   planResetUnknownTitle: (p) => `${p} didn't say when its limit resets`,
   planResetUnknownBody: (a) => `${a}'s work is still waiting.`,
+  planLimitNearTitle: (n, p) => `${n}: ${p}% of its limit used`,
+  planLimitNearBody: (w) => `Resets ${w}.`,
+  planLimitNearOpen: "See it in Quotas.",
   machineConnectedTitle: "A new computer joined the workspace",
   computerReadyTitle: "Your workspace's computer is ready",
   computerReadyBody: "Open an agent's page to see it live.",

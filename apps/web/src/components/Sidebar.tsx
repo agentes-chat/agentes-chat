@@ -177,6 +177,7 @@ import { OpenOnPhoneDialog } from "./OpenOnPhone";
 import { useOrg } from "./org-context";
 import { StatusLine } from "./Presence";
 import { MyFace, OrgMark } from "./ProfilePhoto";
+import { QuotaRing } from "./QuotaRing";
 import { sectionName, useSectionOrder } from "./SidebarOrder";
 import { SIDEBAR_TOOLS, SidebarSetupDialog, ToolList } from "./SidebarSetup";
 import { AgentGlow, AgentTrail, colorOf, MenuHorizon, SidebarHorizon, WorkspaceSky } from "./Sky";
@@ -984,6 +985,7 @@ export function Sidebar() {
           <div className="sidebar__org sidebar__org--person">
             <AccountMenu personal />
             <AgoraButton below={compact} className="sidebar__agora" />
+            <QuotaRing side={rail ? "right" : "bottom"} />
             {bell}
             <Button {...collapseProps} size="sm" className="sidebar__head-collapse" />
           </div>
@@ -1054,6 +1056,7 @@ export function Sidebar() {
           {rail && createAgentItem.length > 0 && <CreateAgentTile onOpen={newAgent} />}
           <div className="sidebar__me">
             <AccountMenu />
+            <QuotaRing side={rail ? "right" : "top"} />
             {bell}
           </div>
         </div>

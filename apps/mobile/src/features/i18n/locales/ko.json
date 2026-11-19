@@ -905,6 +905,8 @@
       "plan_lent_other": "{{names}} 님이 내 {{plan}} 플랜을 {{agent}}에 연결했어요",
       "plan_lent_female_other": "{{names}} 님이 내 {{plan}} 플랜을 {{agent}}에 연결했어요",
       "plan_serves_other": "내 {{plan}}이(가) 이제 workspace 전체를 지원해요",
+      "plan_limit_near_other": "{{plan}}이(가) 한도의 {{percent}}%를 사용했어요 ({{window}}), {{resets}}",
+      "plan_limit_near_open_other": "{{plan}}이(가) 한도의 {{percent}}%를 사용했어요 ({{window}})",
       "plan_model_dropped_other": "{{model}} 모델이 {{plan}}에서 빠졌어요. {{names}}은(는) 당분간 {{runs}}을(를) 써요",
       "computer_disk_full_other": "컴퓨터 디스크가 거의 찼어요",
       "computer_no_chrome_other": "컴퓨터에 Google Chrome이 필요해요. google.com/chrome에서 받으세요",

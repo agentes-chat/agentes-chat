@@ -2,6 +2,9 @@ import type { PeopleUsage } from "@agenteschat/client";
 import { capitalize, formatMonth, formatUsd } from "@agenteschat/client/lib/format";
 import type { TFunction } from "i18next";
 
+/** The limits ring's number on its 34-point circle: smaller at three digits, so 100 stays inside the stroke. */
+export const quotaRingFontSize = (text: string) => (text.length > 2 ? 11 : 13);
+
 /**
  * Uso por pessoa's month, as the web's line under its title: on plans only every amount is what the same use would
  * cost at the API's list price, said once on this line ("≈ US$ 12,51 pelo preço da API", why behind its ⓘ), so a

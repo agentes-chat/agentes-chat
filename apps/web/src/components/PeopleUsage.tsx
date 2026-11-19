@@ -83,6 +83,7 @@ import { AskAgentButton } from "@/components/AskAgentButton";
 import { fileSaver } from "@/components/artifacts/fileSaver";
 import { ErrorState, LoadingList } from "@/components/Loading";
 import { useOrg } from "@/components/org-context";
+import { PlanQuotas } from "@/components/PlanQuotas";
 import { RequestDone, RequestOpen } from "@/components/RequestCard";
 import { colorOf } from "@/components/Sky";
 import { useDirectory } from "@/hooks/useDirectory";
@@ -106,20 +107,23 @@ const partStyle = (dir: Dir, agentId: string) =>
 const agentName = (t: TFunction, dir: Dir, id: string) => dir.anyAgent(id)?.name ?? t("channel.unknownAgent");
 
 /**
- * The tabs of Orçamento e uso: Resumo (what was there) and Pessoas for who sees money, else Seu uso. Alone in a
- * personal workspace, only Resumo, without tabs (ADR 0159): an owner has no limit and nobody else uses it. A link to a
- * person still opens Pessoas.
+ * The tabs of Orçamento e uso: Resumo (what was there), Cotas (every AI account's limits, ADR 0063 addendum
+ * 2026-11-17) and Pessoas for who sees money, else Seu uso. Alone in a personal workspace, Resumo and Cotas (ADR 0159):
+ * an owner has no limit and nobody else uses it. A link to a person still opens Pessoas.
  */
-export function UsageTabs({ summary, person }: { summary: ReactNode; person?: string }) {
+export function UsageTabs({ summary, person, view }: { summary: ReactNode; person?: string; view?: "quotas" }) {
   const { t } = useTranslation();
   const { org } = useOrg();
   const { solo } = usePersonalView();
   const money = can(org, "view_usage");
-  const [tab, setTab] = useState<"summary" | "people">(person ? "people" : "summary");
+  const [tab, setTab] = useState<"summary" | "quotas" | "people">(person ? "people" : (view ?? "summary"));
   useEffect(() => {
     if (person) setTab("people");
   }, [person]);
-  if (solo && !person) return <>{summary}</>;
+  useEffect(() => {
+    if (view) setTab(view);
+  }, [view]);
+  const people = !solo || person;
   return (
     <Tabs
       value={tab}
@@ -127,11 +131,17 @@ export function UsageTabs({ summary, person }: { summary: ReactNode; person?: st
       label={t(settingsSectionNameKey(org, "usage"))}
       items={[
         { value: "summary", label: t("peopleUsage.tabs.summary") },
-        { value: "people", label: money ? t("peopleUsage.tabs.people") : t("peopleUsage.tabs.mine") },
+        { value: "quotas", label: t("quotas.title") },
+        ...(people
+          ? [{ value: "people" as const, label: money ? t("peopleUsage.tabs.people") : t("peopleUsage.tabs.mine") }]
+          : []),
       ]}
     >
       <TabPanel value="summary">{summary}</TabPanel>
-      <TabPanel value="people">{money ? <PeopleTab person={person} /> : <MyUsage />}</TabPanel>
+      <TabPanel value="quotas">
+        <PlanQuotas />
+      </TabPanel>
+      {people && <TabPanel value="people">{money ? <PeopleTab person={person} /> : <MyUsage />}</TabPanel>}
     </Tabs>
   );
 }

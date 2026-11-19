@@ -2052,6 +2052,10 @@
         "title": "Komputer",
         "help": "Komputer baru bergabung atau komputer ruang kerja sudah siap"
       },
+      "plans": {
+        "title": "Batas paket",
+        "help": "Saat akun AI mencapai 90% dari suatu batas"
+      },
       "reactions": {
         "title": "Reaksi",
         "help": "Saat seseorang bereaksi pada pesanmu"
@@ -5157,6 +5161,8 @@
       "desktopTaken": "<b>{{name}}</b> mengambil alih layar komputer <b>{{agent}}</b>",
       "planLent": "<b>{{name}}</b> menghubungkan paket {{plan}} kamu ke <b>{{agent}}</b>",
       "planServes": "{{plan}} kamu sekarang melayani seluruh workspace",
+      "planLimitNear": "<b>{{account}}</b> memakai {{percent}}% batasnya ({{window}}), {{resets}}",
+      "planLimitNearOpen": "<b>{{account}}</b> memakai {{percent}}% batasnya ({{window}})",
       "planModelDropped": "{{model}} keluar dari {{plan}}. <b>{{name}}</b> memakai {{runs}} sampai kamu memilih model lain.",
       "routineWaitingPlan": "<b>{{name}}</b> menunggu paketnya direset untuk menjalankan rutinitas",
       "planResetUnknown": "{{plan}} tidak memberi tahu kapan batasnya direset. Pekerjaan <b>{{name}}</b> masih menunggu.",
@@ -17008,6 +17014,34 @@
     "hint": {
       "handoffs": "Sebagian besar berasal dari serah terima antaragen.",
       "message": "Kirim pesan ke {{name}}"
+    }
+  },
+  "quotas": {
+    "title": "Kuota",
+    "lead": "Batas setiap akun AI seperti yang dilaporkan penyedianya, dan penggunaan terbaru jika penyedia tidak melaporkannya.",
+    "home": "Kuota paket",
+    "seeAll": "Lihat kuota",
+    "empty": "Belum ada akun AI.",
+    "summary": {
+      "limited_other": "{{count}} di batas",
+      "almost_other": "{{count}} hampir di batas",
+      "ok": "Semua masih longgar",
+      "accounts_other": "{{count}} akun AI"
+    },
+    "notReported": "Penyedia tidak melaporkan kuota.",
+    "ring": {
+      "ok": "Batas paket: {{percent}}% terpakai di {{account}}, akun yang paling dekat dengan batas",
+      "almost": "Batas paket: {{account}} hampir mencapai batas, {{percent}}% terpakai",
+      "limited": "Batas paket: {{account}} mencapai batas",
+      "none": "Batas paket: tidak ada akunmu yang melaporkan batas",
+      "title": "Batas paket"
+    },
+    "recent": {
+      "title": "Penggunaan terbaru",
+      "day": "24 jam terakhir",
+      "week": "7 hari terakhir",
+      "month": "30 hari terakhir",
+      "requests_other": "{{value}} panggilan"
     }
   },
   "usageViews": {

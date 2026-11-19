@@ -11,6 +11,7 @@ import {
   widgetNoticeOf,
   workspaceHeadline,
 } from "@agenteschat/client/lib/notifications";
+import { planLimitNotice } from "@agenteschat/client/lib/quotas";
 import type { Words } from "@agenteschat/client/lib/routine-view";
 import { teamWatchLine } from "@agenteschat/client/lib/team-watch";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
@@ -131,6 +132,12 @@ export function SystemFace({ n, className = "nt-av24" }: { n: AppNotification; c
         <Icon name="wallet" size={16} />
       </span>
     );
+  if (n.kind === "plan_limit_near")
+    return (
+      <span className={cx("nt-sys", className)} aria-hidden="true">
+        <Icon name="chart" size={16} />
+      </span>
+    );
   if (n.kind !== "org_standing") return null;
   const status = n.latest.statusTo;
   return (
@@ -141,6 +148,8 @@ export function SystemFace({ n, className = "nt-av24" }: { n: AppNotification; c
 }
 
 type WhatKey =
+  | "planLimitNear"
+  | "planLimitNearOpen"
   | "mention"
   | "mentionIn"
   | "mentionComment"
@@ -310,6 +319,10 @@ export function Headline({
     }
     case "plan_serves":
       return k("planServes", { plan: n.latest.plan ?? "" });
+    case "plan_limit_near": {
+      const { resets, ...limit } = planLimitNotice(t, i18n.language, n);
+      return resets ? k("planLimitNear", { ...limit, resets }) : k("planLimitNearOpen", limit);
+    }
     case "plan_model_dropped":
       return k("planModelDropped", {
         name,

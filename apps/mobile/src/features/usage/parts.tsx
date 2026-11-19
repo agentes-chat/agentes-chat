@@ -10,11 +10,13 @@ import {
 import { planName } from "@agenteschat/client/lib/plans";
 import { mixHex } from "@agenteschat/ui/agent/engine";
 import {
+  modelQuota,
   PLAN_ALMOST,
   PLAN_TONE,
   planAgeShown,
   planLevel,
   planLine,
+  planSections,
   planState,
   planWindows,
   renewals,
@@ -143,6 +145,8 @@ export function PlanMeter({
   const headline = plain ? null : state === "limited" ? text.limited(until) : state === "almost" ? text.almost : null;
   const passed = (iso: string | undefined) => iso !== undefined && Date.parse(iso) <= now;
   const renews = children ? renewals(rows, text, now) : null;
+  // The account's own windows first, then each model group's under its heading, as the web's meter.
+  const sections = rows.some((w) => modelQuota(w)) ? planSections(rows) : null;
   return (
     <View style={styles.meter}>
       {headline ? (
@@ -150,14 +154,22 @@ export function PlanMeter({
           {headline}
         </Text>
       ) : null}
-      {rows.map((w, i) => {
-        const name = text.window(w);
+      {(sections ?? rows.map((w) => ({ w, group: null, first: false }))).map(({ w, group, first }, i) => {
+        // A model group's quota (Antigravity's groups) under its group's heading, by its window's name alone.
+        const quota = sections ? modelQuota(w) : null;
+        const name = quota ? text.window({ kind: quota.kind }) : text.window(w);
+        const heading = sections && first ? text.group(group) : null;
         // A window that reset is empty again: its parts were the old window's. One read too long ago may have.
         const fresh = !passed(w.resetsAt) && !w.stale;
         const level = w.stale ? "ok" : planLevel(w.used);
         const tone = c[PLAN_TONE[level]];
         return (
           <View key={`${w.kind}:${w.label ?? i}`} style={styles.window}>
+            {heading ? (
+              <Text variant="caption" tone="muted" accessibilityRole="header" style={styles.bold}>
+                {heading}
+              </Text>
+            ) : null}
             <View style={styles.windowLine}>
               <Text variant="small" tone="ink2" style={styles.grow}>
                 {name}
@@ -169,7 +181,7 @@ export function PlanMeter({
             {w.stale ? null : (
               <Meter
                 value={w.used}
-                label={name}
+                label={quota ? `${text.group(group)} · ${name}` : name}
                 mark={PLAN_ALMOST}
                 color={tone}
                 {...(w.part !== undefined && fresh ? { part: w.part } : {})}

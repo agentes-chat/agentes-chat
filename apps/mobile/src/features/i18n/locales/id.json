@@ -905,6 +905,8 @@
       "plan_lent_other": "{{names}} menghubungkan paket {{plan}} kamu ke {{agent}}",
       "plan_lent_female_other": "{{names}} menghubungkan paket {{plan}} kamu ke {{agent}}",
       "plan_serves_other": "{{plan}} kamu sekarang melayani seluruh workspace",
+      "plan_limit_near_other": "{{plan}} memakai {{percent}}% batasnya ({{window}}), {{resets}}",
+      "plan_limit_near_open_other": "{{plan}} memakai {{percent}}% batasnya ({{window}})",
       "plan_model_dropped_other": "{{model}} keluar dari {{plan}}. {{names}} memakai {{runs}} untuk sementara",
       "computer_disk_full_other": "Disk komputer hampir penuh",
       "computer_no_chrome_other": "Komputer memerlukan Google Chrome. Unduh di google.com/chrome",

@@ -149,6 +149,54 @@ test("an account's windows split by agent and its month by agent; the email for 
   expect(JSON.stringify(seen)).not.toMatch(/usd|cost|ana@example/i);
 });
 
+test("an account's recent use over the last day, 7 days and 30 days, rolling: tokens, calls, money for admins", async () => {
+  const { spend, machineId } = await scene();
+  await spend(f.agent.id, PESSOAL, "claude-haiku-5-5", 1_000);
+  await spend(f.agent.id, PESSOAL, "claude-sonnet-5-5", 2_000);
+  await spend(f.agent.id, PESSOAL, "claude-opus-5-5", 4_000);
+  await spend(f.agent.id, PESSOAL, "claude-opus-5-1", 8_000);
+  const ago = (model: string, days: number) =>
+    f.db
+      .update(schema.usageRecords)
+      .set({ createdAt: new Date(Date.now() - days * 86_400_000) })
+      .where(eq(schema.usageRecords.model, model));
+  await ago("claude-sonnet-5-5", 3);
+  await ago("claude-opus-5-5", 20);
+  await ago("claude-opus-5-1", 40);
+  // A router call on the plan: not an agent's, so neither the month nor the recent use counts it.
+  await f.db.insert(schema.usageRecords).values({
+    orgId: f.org.id,
+    kind: "router",
+    provider: "claude_code",
+    billedTo: "plan",
+    machineId,
+    brainAccountId: PESSOAL,
+    model: "claude-haiku-5-5",
+    requestedModel: "claude-haiku-5-5",
+    inputTokens: 500,
+    outputTokens: 0,
+    costNanoUsd: 0,
+  });
+
+  // Its limits are known: Cotas shows them, no recent use.
+  let view = await orgPlanUsage(f.db, f.owner.id, f.org.id);
+  expect(view.accounts.find((a) => a.accountId === PESSOAL)?.recent).toBeUndefined();
+  // None known: its recent use instead.
+  await f.db.update(schema.machineAccounts).set({ usage: null }).where(eq(schema.machineAccounts.id, PESSOAL));
+  view = await orgPlanUsage(f.db, f.owner.id, f.org.id);
+  const recent = view.accounts.find((a) => a.accountId === PESSOAL)?.recent;
+  expect(recent?.day).toMatchObject({ tokens: 1_000, requests: 1 });
+  expect(recent?.week).toMatchObject({ tokens: 3_000, requests: 2 });
+  expect(recent?.month).toMatchObject({ tokens: 7_000, requests: 3 });
+  expect(recent?.month.equivalentUsd).toBeGreaterThan(recent?.week.equivalentUsd ?? 0);
+  // Nothing on the computer's own sign-in: zeros, never missing.
+  expect(view.accounts.find((a) => a.accountId === null)?.recent?.month).toMatchObject({ tokens: 0, requests: 0 });
+
+  const bia = await addMember(f.db, f.org.id, "member", "Bia");
+  const seen = await orgPlanUsage(f.db, bia.id, f.org.id);
+  expect(seen.accounts.find((a) => a.accountId === PESSOAL)?.recent?.month).toEqual({ tokens: 7_000, requests: 3 });
+});
+
 test("the agent's month: by account and day, the account it uses now, its own sign-in and the API", async () => {
   const { machineId, spend } = await scene();
   // Before Pessoal it used the computer's own sign-in, and the API once.

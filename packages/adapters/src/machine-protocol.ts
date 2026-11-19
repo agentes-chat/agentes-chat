@@ -1266,7 +1266,11 @@ export const OWN_USAGE_ID: Record<AccountKind, string> = {
   antigravity: "own:antigravity",
 };
 
-export const PLAN_USAGE_LIMITS = { windows: 8, label: 40 } as const;
+/**
+ * A snapshot's caps: 12 windows hold an account's own and several model groups' quotas (Antigravity's groups, Claude's
+ * per model) whole. A server older than this cap keeps the first 8.
+ */
+export const PLAN_USAGE_LIMITS = { windows: 12, label: 40 } as const;
 
 /** Where a sign-in is: waiting for the person, done (signed in), failed or expired (folder removed). */
 export type AccountLoginState = "waiting" | "done" | "failed" | "expired";

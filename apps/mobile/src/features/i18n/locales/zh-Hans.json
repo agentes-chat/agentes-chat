@@ -905,6 +905,8 @@
       "plan_lent_other": "{{names}} 把你的 {{plan}} 套餐连接到了 {{agent}}",
       "plan_lent_female_other": "{{names}} 把你的 {{plan}} 套餐连接到了 {{agent}}",
       "plan_serves_other": "你的 {{plan}} 现在服务整个 workspace",
+      "plan_limit_near_other": "{{plan}} 已用限额的 {{percent}}%（{{window}}），{{resets}}",
+      "plan_limit_near_open_other": "{{plan}} 已用限额的 {{percent}}%（{{window}}）",
       "plan_model_dropped_other": "{{model}} 已从 {{plan}} 下架。{{names}} 暂时使用 {{runs}}",
       "computer_disk_full_other": "一台电脑的磁盘快满了",
       "computer_no_chrome_other": "电脑需要 Google Chrome。请在 google.com/chrome 下载",

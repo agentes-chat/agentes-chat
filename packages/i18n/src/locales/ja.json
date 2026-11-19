@@ -2052,6 +2052,10 @@
         "title": "コンピューター",
         "help": "新しいコンピューターが加わったとき、ワークスペースのコンピューターの準備ができたとき"
       },
+      "plans": {
+        "title": "プランの上限",
+        "help": "AI アカウントが上限の 90% に達したとき"
+      },
       "reactions": {
         "title": "リアクション",
         "help": "誰かがあなたのメッセージにリアクションしたとき"
@@ -5144,6 +5148,8 @@
       "desktopTaken": "<b>{{name}}</b>が<b>{{agent}}</b>のコンピューターの画面の操作を引き継ぎました",
       "planLent": "<b>{{name}}</b>さんがあなたの {{plan}} プランを<b>{{agent}}</b>に接続しました",
       "planServes": "あなたの{{plan}}は workspace 全体で使えるようになりました",
+      "planLimitNear": "<b>{{account}}</b>が上限の {{percent}}% を使用 ({{window}})、{{resets}}",
+      "planLimitNearOpen": "<b>{{account}}</b>が上限の {{percent}}% を使用 ({{window}})",
       "planModelDropped": "{{model}}が{{plan}}から外れました。別のモデルを選ぶまで、<b>{{name}}</b>は{{runs}}を使います。",
       "routineWaitingPlan": "<b>{{name}}</b>はルーティンを実行するため、プランのリセットを待っています",
       "planResetUnknown": "{{plan}}は上限がいつリセットされるかを伝えませんでした。<b>{{name}}</b>の作業はまだ待機中です。",
@@ -16955,6 +16961,34 @@
     "hint": {
       "handoffs": "大半はエージェント間の引き継ぎによるものです。",
       "message": "{{name}}にメッセージ"
+    }
+  },
+  "quotas": {
+    "title": "クォータ",
+    "lead": "各AIアカウントの上限（プロバイダーが報告するもの）と、報告がない場合は最近の利用量です。",
+    "home": "プランのクォータ",
+    "seeAll": "クォータを見る",
+    "empty": "AIアカウントはまだありません。",
+    "summary": {
+      "limited_other": "{{count}} 件が上限",
+      "almost_other": "{{count}} 件が上限間近",
+      "ok": "すべて余裕あり",
+      "accounts_other": "AIアカウント {{count}} 件"
+    },
+    "notReported": "プロバイダーからクォータの報告はありません。",
+    "ring": {
+      "ok": "プランの上限: 上限に最も近い {{account}} で {{percent}}% 使用",
+      "almost": "プランの上限: {{account}} はまもなく上限、{{percent}}% 使用",
+      "limited": "プランの上限: {{account}} は上限に達しました",
+      "none": "プランの上限: 上限を報告しているあなたのアカウントはありません",
+      "title": "プランの上限"
+    },
+    "recent": {
+      "title": "最近の利用",
+      "day": "過去24時間",
+      "week": "過去7日間",
+      "month": "過去30日間",
+      "requests_other": "{{value}} 回の呼び出し"
     }
   },
   "usageViews": {

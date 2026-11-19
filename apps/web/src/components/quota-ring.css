@@ -1,0 +1,379 @@
+/* The plan limits ring (QuotaRing.tsx): a tile as the bell's beside it, holding the dial. */
+.quota-ring {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-h-md);
+  height: var(--control-h-md);
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+.quota-ring:hover,
+.quota-ring[data-state="open"] {
+  background: var(--side-hover);
+}
+/* On the account card, as tall as the bell beside it. */
+.sidebar__me .quota-ring {
+  align-self: stretch;
+  height: auto;
+}
+/* Off the account card (a personal workspace's top row): the size of the bell and the collapse beside it. */
+.sidebar:not([data-rail="true"]) .sidebar__org--person .quota-ring {
+  --quota-dial: 30px;
+  align-self: center;
+  width: var(--control-h-sm);
+  height: var(--control-h-sm);
+  border-radius: var(--control-r-sm);
+}
+.sidebar[data-rail="true"] .quota-ring {
+  align-self: center;
+  width: var(--control-h-md);
+  height: var(--control-h-md);
+  border-radius: var(--control-r-md);
+}
+
+/* Each account's color (`QUOTA_HUES`). */
+[data-hue="sky"] {
+  --quota-hue: #0284c7;
+}
+[data-theme="dark"] [data-hue="sky"] {
+  --quota-hue: #38bdf8;
+}
+[data-hue="indigo"] {
+  --quota-hue: #4f46e5;
+}
+[data-theme="dark"] [data-hue="indigo"] {
+  --quota-hue: #818cf8;
+}
+[data-hue="violet"] {
+  --quota-hue: #7c3aed;
+}
+[data-theme="dark"] [data-hue="violet"] {
+  --quota-hue: #a78bfa;
+}
+[data-hue="rose"] {
+  --quota-hue: #db2777;
+}
+[data-theme="dark"] [data-hue="rose"] {
+  --quota-hue: #f472b6;
+}
+[data-hue="amber"] {
+  --quota-hue: #c8603f;
+}
+[data-theme="dark"] [data-hue="amber"] {
+  --quota-hue: #e8926f;
+}
+[data-hue="green"] {
+  --quota-hue: #15803d;
+}
+[data-theme="dark"] [data-hue="green"] {
+  --quota-hue: #4ade80;
+}
+[data-hue="teal"] {
+  --quota-hue: #0f766e;
+}
+[data-theme="dark"] [data-hue="teal"] {
+  --quota-hue: #2dd4bf;
+}
+[data-hue="graphite"] {
+  --quota-hue: #57534e;
+}
+[data-theme="dark"] [data-hue="graphite"] {
+  --quota-hue: #a8a29e;
+}
+
+/* The dial: a circle per account in the tone of its level, the number in ink so it reads on any level. */
+.quota-dial {
+  position: relative;
+  flex: none;
+  display: block;
+  width: var(--quota-dial, 38px);
+  height: var(--quota-dial, 38px);
+  color: var(--ink);
+}
+.quota-dial,
+.quota-dial__ring,
+.quota-pop__key {
+  --quota-tone: var(--quota-hue, var(--ok));
+}
+:is(.quota-dial, .quota-dial__ring)[data-level="none"] {
+  --quota-tone: var(--muted);
+}
+:is(.quota-dial, .quota-dial__ring, .quota-pop__key)[data-level="almost"] {
+  --quota-tone: var(--warn);
+}
+:is(.quota-dial, .quota-dial__ring, .quota-pop__key):is([data-level="critical"], [data-level="limited"]) {
+  --quota-tone: var(--danger);
+}
+.quota-dial svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.quota-dial circle {
+  fill: none;
+}
+.quota-dial .quota-dial__disc {
+  fill: color-mix(in srgb, var(--quota-tone) 14%, transparent);
+}
+.quota-dial__track {
+  stroke: color-mix(in srgb, var(--ink) 12%, transparent);
+}
+.quota-dial__tick {
+  stroke: var(--muted);
+}
+.quota-dial__used {
+  stroke: var(--quota-tone);
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.24s ease-out;
+}
+.quota-dial__num {
+  --quota-num: 0.36;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(var(--quota-dial, 38px) * var(--quota-num));
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+/* Near a limit the number says so too. */
+.quota-dial:is([data-level="almost"], [data-level="critical"], [data-level="limited"]) .quota-dial__num {
+  color: var(--quota-tone);
+}
+.quota-dial[data-rings="2"] .quota-dial__num {
+  --quota-num: 0.31;
+}
+.quota-dial[data-rings="3"] .quota-dial__num {
+  --quota-num: 0.27;
+}
+.quota-dial[data-long] .quota-dial__num {
+  --quota-num: 0.3;
+}
+.quota-dial[data-long]:is([data-rings="2"], [data-rings="3"]) .quota-dial__num {
+  --quota-num: 0.22;
+}
+@media (prefers-reduced-motion: reduce) {
+  .quota-dial__used {
+    transition: none;
+  }
+}
+
+.quota-pop.ac-popover {
+  width: min(360px, calc(100vw - 24px));
+  max-width: none;
+  max-height: min(520px, var(--radix-popover-content-available-height));
+  overflow-y: auto;
+  padding: 0;
+}
+.quota-pop__in {
+  display: flex;
+  flex-direction: column;
+}
+/* The head: what the ring says, larger, with the window behind it. */
+.quota-pop__top {
+  --quota-dial: 64px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+.quota-pop__lead {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.quota-pop__title {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.quota-pop__keys {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* Which circle is whose: its color, the account and its tightest window, the percent at the end. */
+.quota-pop__key {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: 13px;
+  color: var(--ink);
+}
+.quota-pop__dot,
+.quota-pop__hues button {
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--quota-hue);
+  cursor: pointer;
+}
+.quota-pop__dot {
+  align-self: center;
+  width: 10px;
+  height: 10px;
+  background: var(--quota-tone);
+  transition: transform 0.12s ease-out;
+}
+.quota-pop__dot:hover,
+.quota-pop__dot[aria-expanded="true"] {
+  transform: scale(1.3);
+}
+/* The colors to pick from, under the account's line. */
+.quota-pop__hues {
+  flex-basis: 100%;
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+}
+.quota-pop__hues button {
+  width: 18px;
+  height: 18px;
+}
+.quota-pop__hues button[aria-checked="true"] {
+  box-shadow:
+    0 0 0 2px var(--glass-solid),
+    0 0 0 4px var(--quota-hue);
+}
+.quota-pop__keyname {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.quota-pop__keyname small {
+  margin-left: var(--space-1);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.quota-pop__key b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.quota-pop__list,
+.quota-pop__windows {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.quota-pop__windows {
+  gap: var(--space-3);
+}
+.quota-pop__account {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--line);
+}
+.quota-pop__head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0 var(--space-2);
+  min-width: 0;
+  font-size: 13.5px;
+}
+.quota-pop__name {
+  min-width: 0;
+  font-weight: 600;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.quota-pop__brand,
+.quota-pop__none,
+.quota-pop__reset {
+  color: var(--muted);
+}
+.quota-pop__brand {
+  font-size: 12.5px;
+}
+.quota-pop__none {
+  margin: 0;
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+/* The window's name and percent, its bar under them, then when it renews. */
+.quota-pop__window {
+  --meter-fill: var(--quota-hue, var(--ok));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-1) var(--space-2);
+  align-items: baseline;
+  font-size: 12.5px;
+}
+.quota-pop__window[data-level="almost"] {
+  --meter-fill: var(--warn);
+}
+.quota-pop__window:is([data-level="critical"], [data-level="limited"]) {
+  --meter-fill: var(--danger);
+}
+.quota-pop__window .ac-meter,
+.quota-pop__reset {
+  grid-column: 1 / -1;
+}
+.quota-pop__window .ac-meter {
+  height: 6px;
+}
+.quota-pop__wname {
+  min-width: 0;
+  color: var(--ink-muted);
+  overflow-wrap: anywhere;
+}
+.quota-pop__pct {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.quota-pop__window[data-level="almost"] .quota-pop__pct {
+  color: var(--warn);
+}
+.quota-pop__window:is([data-level="critical"], [data-level="limited"]) .quota-pop__pct {
+  color: var(--danger);
+}
+.quota-pop__reset {
+  font-size: 12px;
+}
+/* Always in reach under a long list. */
+.quota-pop__more {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: var(--control-h-md);
+  padding: 0 var(--space-4);
+  border-top: 1px solid var(--line);
+  background: var(--glass-solid);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+  transition: background-color 0.15s;
+}
+.quota-pop__more:hover {
+  background: color-mix(in srgb, var(--ink) 6%, var(--glass-solid));
+}

@@ -131,6 +131,11 @@ const Notification = z
       nowModel: z.string().optional().openapi({
         description: "`plan_model_dropped`: the model the agent's turns run now (`title`: the one that left).",
       }),
+      window: z
+        .object({ kind: z.string(), label: z.string().optional() })
+        .optional()
+        .openapi({ description: "`plan_limit_near`: the plan's window that reached 90%." }),
+      resetsAt: z.string().optional().openapi({ description: "`plan_limit_near`: when that window resets." }),
       holdKind: z
         .string()
         .optional()

@@ -2124,6 +2124,10 @@
         "title": "Computer",
         "help": "Ein neuer Computer ist dazugekommen oder der des Workspace ist bereit"
       },
+      "plans": {
+        "title": "Tariflimits",
+        "help": "Wenn ein KI-Konto 90 % eines Limits erreicht"
+      },
       "reactions": {
         "title": "Reaktionen",
         "help": "Wenn jemand auf eine Nachricht von dir reagiert"
@@ -5353,6 +5357,8 @@
       "desktopTaken": "<b>{{name}}</b> hat den Bildschirm des Computers von <b>{{agent}}</b> übernommen",
       "planLent": "<b>{{name}}</b> hat dein {{plan}}-Abo mit <b>{{agent}}</b> verbunden",
       "planServes": "Dein {{plan}} dient jetzt dem ganzen Workspace",
+      "planLimitNear": "<b>{{account}}</b> hat {{percent}} % des Limits genutzt ({{window}}), {{resets}}",
+      "planLimitNearOpen": "<b>{{account}}</b> hat {{percent}} % des Limits genutzt ({{window}})",
       "planModelDropped": "{{model}} ist nicht mehr bei {{plan}}. <b>{{name}}</b> nutzt {{runs}}, bis du ein anderes Modell wählst.",
       "routineWaitingPlan": "<b>{{name}}</b> wartet, bis sein Abo zurückgesetzt wird, um eine Routine auszuführen",
       "planResetUnknown": "{{plan}} hat nicht gesagt, wann das Limit zurückgesetzt wird. Die Arbeit von <b>{{name}}</b> wartet noch.",
@@ -17554,6 +17560,38 @@
     "hint": {
       "handoffs": "Der Großteil kam von Übergaben zwischen Agenten.",
       "message": "{{name}} schreiben"
+    }
+  },
+  "quotas": {
+    "title": "Kontingente",
+    "lead": "Die Limits jedes KI-Kontos, wie der Anbieter sie meldet, und die letzte Nutzung, wo er keine meldet.",
+    "home": "Plan-Kontingente",
+    "seeAll": "Kontingente ansehen",
+    "empty": "Noch kein KI-Konto.",
+    "summary": {
+      "limited_one": "{{count}} am Limit",
+      "limited_other": "{{count}} am Limit",
+      "almost_one": "{{count}} fast am Limit",
+      "almost_other": "{{count}} fast am Limit",
+      "ok": "Alle haben Luft",
+      "accounts_one": "{{count}} KI-Konto",
+      "accounts_other": "{{count}} KI-Konten"
+    },
+    "notReported": "Kein Kontingent vom Anbieter gemeldet.",
+    "ring": {
+      "ok": "Tariflimits: {{percent}} % genutzt bei {{account}}, dem Konto am nächsten am Limit",
+      "almost": "Tariflimits: {{account}} fast am Limit, {{percent}} % genutzt",
+      "limited": "Tariflimits: {{account}} am Limit",
+      "none": "Tariflimits: Keines deiner Konten meldet Limits",
+      "title": "Tariflimits"
+    },
+    "recent": {
+      "title": "Letzte Nutzung",
+      "day": "Letzte 24 Stunden",
+      "week": "Letzte 7 Tage",
+      "month": "Letzte 30 Tage",
+      "requests_one": "{{value}} Aufruf",
+      "requests_other": "{{value}} Aufrufe"
     }
   },
   "usageViews": {

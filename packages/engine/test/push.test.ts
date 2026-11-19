@@ -408,6 +408,7 @@ describe("push delivery", () => {
       "mentions",
       "routines",
       "computers",
+      "plans",
     ]);
     await setNoticePref(f.db, f.org.id, bia.id, "threads", true);
     const after = await setNoticePref(f.db, f.org.id, bia.id, "mentions", false);

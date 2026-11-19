@@ -16,7 +16,8 @@ import { requirePermission } from "./organizations";
 import { agentBudgetsThisMonth, budgetPercent, canViewCost, monthStartUtc } from "./usage";
 import { WEB_USAGE_PROVIDER } from "./web-tools";
 
-const { usageRecords, agents, agentRuns, agentConsultations, machines, machineAccounts, users } = schema;
+const { usageRecords, agents, agentRuns, agentConsultations, machines, machineAccounts, rightHandBrains, users } =
+  schema;
 
 /*
  * The usage views (ADR 0063): Configurações › Uso (every plan account by
@@ -95,6 +96,8 @@ const USE_KINDS: readonly UseKind[] = ["handoffs", "people", "routines"];
 const HANDOFF_HINT_PERCENT = 30;
 
 export interface PlanAccountUsage extends PlanAccountInfo {
+  /** The viewer's own agents or right hand think with it now (`orgPlanUsage`): its limits concern them. */
+  forMe?: boolean;
   /**
    * The plan's windows as last reported, each with the agents' parts, and the models at a limit of their own that
    * still hold (`models`: the quota per model, which the windows can't show); null: not known yet.
@@ -114,6 +117,23 @@ export interface PlanAccountUsage extends PlanAccountInfo {
    */
   hint: { kind: "handoffs"; agentId: string } | null;
   /** `view_usage` only: what the month's tokens would cost through the API; null when no model has a price. */
+  equivalentUsd?: number | null;
+  /**
+   * Its use over the last day, 7 days and 30 days, rolling (ADR 0063 addendum 2026-11-17): what the Cotas view shows for
+   * an account whose provider reports no limits. Only in `orgPlanUsage`, and only on an account with no limits known.
+   */
+  recent?: Record<RecentPeriod, RecentUse>;
+}
+
+/** The rolling periods an account's recent use is told over, in days. */
+export const RECENT_DAYS = { day: 1, week: 7, month: 30 } as const;
+export type RecentPeriod = keyof typeof RECENT_DAYS;
+
+export interface RecentUse {
+  tokens: number;
+  /** Model calls recorded (one row of `usage_records` each). */
+  requests: number;
+  /** `view_usage` only: what they would cost through the API; null when no model has a price. */
   equivalentUsd?: number | null;
 }
 
@@ -475,6 +495,89 @@ async function hourlySince(db: Database, orgId: string, usages: (PlanUsage | nul
   return readUsage(db, orgId, new Date(earliest), { hourly: true, planOnly: true });
 }
 
+interface RecentRow extends Counts {
+  key: string;
+  model: string;
+  requests: number;
+}
+
+/**
+ * Plan rows of the last 30 days by account and model, each in the shortest rolling period it falls in (`RECENT_DAYS`):
+ * `recentOf` sums the shorter periods into the longer ones.
+ */
+async function readRecent(db: Database, orgId: string, now: Date): Promise<Map<RecentPeriod, RecentRow[]>> {
+  const since = (days: number) => new Date(now.getTime() - days * 86_400_000).toISOString();
+  // Literals, never parameters: Postgres must see the same expression in the select and the group by. ISO times only.
+  const at = (days: number) => sql.raw(`'${since(days)}'::timestamptz`);
+  const period = sql<RecentPeriod>`case
+    when ${usageRecords.createdAt} >= ${at(RECENT_DAYS.day)} then 'day'
+    when ${usageRecords.createdAt} >= ${at(RECENT_DAYS.week)} then 'week'
+    else 'month' end`;
+  const rows = await db
+    .select({
+      machineId: usageRecords.machineId,
+      accountId: usageRecords.brainAccountId,
+      provider: usageRecords.provider,
+      model: usageRecords.model,
+      period,
+      requests: sql<string>`count(*)`,
+      input: sql<string>`sum(${usageRecords.inputTokens})`,
+      output: sql<string>`sum(${usageRecords.outputTokens})`,
+      cacheRead: sql<string>`sum(${usageRecords.cacheReadTokens})`,
+      cacheWrite: sql<string>`sum(${usageRecords.cacheWriteTokens})`,
+    })
+    .from(usageRecords)
+    .where(
+      and(
+        eq(usageRecords.orgId, orgId),
+        gte(usageRecords.createdAt, new Date(since(RECENT_DAYS.month))),
+        eq(usageRecords.billedTo, "plan"),
+        // The rows the month counts (`readUsage`): an agent's, never the router's or the organization's own calls.
+        sql`${usageRecords.agentId} is not null`,
+        sql`${usageRecords.machineId} is not null`,
+        sql`${usageRecords.provider} <> ${WEB_USAGE_PROVIDER}`,
+      ),
+    )
+    .groupBy(usageRecords.machineId, usageRecords.brainAccountId, usageRecords.provider, usageRecords.model, period);
+  const out = new Map<RecentPeriod, RecentRow[]>();
+  for (const r of rows) {
+    if (!r.machineId) continue;
+    const list = out.get(r.period) ?? [];
+    list.push({
+      key: sourceKeyOf(r.machineId, r.provider, r.accountId),
+      model: r.model,
+      requests: Number(r.requests),
+      input: Number(r.input),
+      output: Number(r.output),
+      cacheRead: Number(r.cacheRead),
+      cacheWrite: Number(r.cacheWrite),
+    });
+    out.set(r.period, list);
+  }
+  return out;
+}
+
+/** An account's use over each rolling period: a period holds the shorter ones too. */
+function recentOf(
+  key: string,
+  recent: Map<RecentPeriod, RecentRow[]>,
+  money: boolean,
+): Record<RecentPeriod, RecentUse> {
+  const order: RecentPeriod[] = ["day", "week", "month"];
+  const rows: RecentRow[] = [];
+  const out = {} as Record<RecentPeriod, RecentUse>;
+  for (const p of order) {
+    rows.push(...(recent.get(p) ?? []).filter((r) => r.key === key));
+    const equivalent = equivalentNano(rows);
+    out[p] = {
+      tokens: rows.reduce((s, r) => s + tokensOf(r), 0),
+      requests: rows.reduce((s, r) => s + r.requests, 0),
+      ...(money ? { equivalentUsd: equivalent === null ? null : nanoUsdToUsd(equivalent) } : {}),
+    };
+  }
+  return out;
+}
+
 /**
  * A plan's reading as the usage views show it: its windows with each agent's estimated part, and the models at a
  * limit of their own that still hold (`modelLimitOf`). The rest of the engine's bookkeeping stays where it is: this
@@ -652,7 +755,9 @@ export async function orgPlanUsage(
     if (key) keys.add(key);
   }
   const found = [...keys].flatMap((k) => accountOf(ctx, k, userId) ?? []);
-  const [hourly, mayTalk] = await Promise.all([
+  // Recent use is what Cotas shows in place of limits: read only while an account has none known.
+  const unknown = (u: PlanUsage | null) => !u || (u.windows.length === 0 && u.limited !== true);
+  const [hourly, mayTalk, recent, ownAi] = await Promise.all([
     hourlySince(
       db,
       orgId,
@@ -660,9 +765,27 @@ export async function orgPlanUsage(
       now,
     ),
     talkableBy(db, orgId, ctx, userId),
+    found.some((a) => unknown(a.usage)) ? readRecent(db, orgId, now) : null,
+    db
+      .select({ accountId: rightHandBrains.brainAccountId })
+      .from(rightHandBrains)
+      .where(and(eq(rightHandBrains.orgId, orgId), eq(rightHandBrains.userId, userId))),
   ]);
+  const forMe = new Set<string>();
+  for (const [id, a] of ctx.agents) {
+    const key = a.ownerId === userId ? currentKey(ctx, id) : null;
+    if (key) forMe.add(key);
+  }
+  for (const { accountId } of ownAi) {
+    const row = accountId ? ctx.accounts.get(accountId)?.row : undefined;
+    if (row) forMe.add(sourceKeyOf(row.machineId, row.kind, row.id));
+  }
   const accounts = found
-    .map((a) => accountUsage(ctx, a, money, month, hourly, now, mayTalk))
+    .map((a) => ({
+      ...accountUsage(ctx, a, money, month, hourly, now, mayTalk),
+      ...(forMe.has(a.info.key) ? { forMe: true } : {}),
+      ...(recent && unknown(a.usage) ? { recent: recentOf(a.info.key, recent, money) } : {}),
+    }))
     .sort(
       (a, b) =>
         a.machineName.localeCompare(b.machineName) ||

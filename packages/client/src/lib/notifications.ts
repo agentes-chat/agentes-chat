@@ -413,6 +413,7 @@ export type OpenTarget =
         section: "computers" | "members" | "invites" | "usage" | "connectors" | "billing" | "approvals" | "right_hand";
       };
     }
+  | { to: "/org/$orgId/settings/$section"; params: { section: "usage" }; search: { view: "quotas" } }
   | { to: "/org/$orgId/home"; search?: { widget: string } }
   | { to: "/org/$orgId/dashboards" }
   | { to: "/org/$orgId/dashboards/$dashboardId"; params: { dashboardId: string }; search?: { widget: string } }
@@ -515,6 +516,9 @@ export function openTarget(n: AppNotification): OpenTarget | null {
       params: { agentId: s.agentId },
       search: { sec: "brain", brain: "model" },
     };
+  // An AI account near its limit: Cotas, every account's windows and when each renews.
+  if (n.kind === "plan_limit_near")
+    return { to: "/org/$orgId/settings/$section", params: { section: "usage" }, search: { view: "quotas" } };
   // Someone gave an agent the person's plan: IA e uso, where their plans and the agents on them are.
   if (n.kind === "plan_lent" || n.kind === "plan_serves")
     return { to: "/org/$orgId/settings/$section", params: { section: "usage" } };

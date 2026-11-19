@@ -168,10 +168,69 @@ export const windowAmount = (
 ) => (w.stale ? text.ago(windowReadAt(usage, w) ?? "") : `${w.used}%`);
 
 /**
+ * The full meter's rows by whom they bind (the web's `PlanMeter` and the phone's) (`modelQuota`): the account's own first, then each model group's in the
+ * order its tightest quota comes, each row's order within kept; `first` starts a section (its heading).
+ */
+export function planSections<W extends { kind: string; label?: string }>(rows: readonly W[]) {
+  const groups: (string | null)[] = [];
+  for (const w of rows) {
+    const group = modelQuota(w)?.group ?? null;
+    if (!groups.includes(group)) groups.push(group);
+  }
+  // The account's own (no group) lead whatever their usage.
+  groups.sort((a, b) => Number(a !== null) - Number(b !== null));
+  return groups.flatMap((group) =>
+    rows.filter((w) => (modelQuota(w)?.group ?? null) === group).map((w, i) => ({ w, group, first: i === 0 })),
+  );
+}
+
+/**
  * A window of the whole plan: not an `other` one (a single model's week, extra usage, another model group's quota),
  * which never puts the plan at its limit; a refusal it causes still does (`limited`).
  */
 export const planOwn = (w: Pick<PlanMeterWindow, "kind">) => w.kind !== "other";
+
+/** A single model's week: Claude's Opus and Sonnet ones, which stop that model, not the account. */
+const modelWeek = (w: { kind: string }) => w.kind === "seven_day_opus" || w.kind === "seven_day_sonnet";
+
+/** How long a window lasts (a model group's by the length in its name); 0 where that isn't known. */
+export const windowLengthMs = (w: { kind: string; label?: string }) => WINDOW_MS[modelQuota(w)?.kind ?? w.kind] ?? 0;
+
+/** A window with no reset whose length has passed since it was read (`planBinding`'s rule): its number says nothing now. */
+export const windowExpired = (
+  w: { kind: string; label?: string; resetsAt?: string },
+  at: string | undefined,
+  now: number,
+) => !w.resetsAt && !(now - Date.parse(at ?? "") < windowLengthMs(w));
+
+/**
+ * The windows that say how much room an account has, tightest first, none past its length: the whole plan's, or where
+ * it reports none, its models' and model groups' quotas (Antigravity's). A single model's week never counts beside the
+ * plan's own, and paid extra usage or OAuth apps limit nothing.
+ */
+export function limitWindows<W extends PlanMeterWindow>(
+  usage: { windows: readonly W[]; at?: string },
+  now = Date.now(),
+) {
+  const rows = planWindows(usage, now).filter((w) => !windowExpired(w, usage.at, now));
+  const whole = rows.filter((w) => planOwn(w) && !modelWeek(w));
+  return whole.length > 0 ? whole : rows.filter((w) => modelOwn(w) || modelWeek(w));
+}
+
+/** The plan refused a request and no window of its own was full: it says so itself. */
+const planRefused = (usage: Pick<PlanMeterUsage, "windows" | "limited">) =>
+  usage.limited === true && !usage.windows.some((w) => planOwn(w) && w.usedPercent >= 100);
+
+/**
+ * How much of its limits an account has used (`limitWindows`), and whether it is at one: a limiting window full, or a
+ * refusal. Null: nothing limiting is known.
+ */
+export function limitRoom(usage: PlanMeterUsage, now = Date.now()): { used: number; limited: boolean } | null {
+  const used = limitWindows(usage, now)[0]?.used;
+  const refused = planRefused(usage);
+  if (used === undefined && !refused) return null;
+  return { used: used ?? 0, limited: refused || (used ?? 0) >= 100 };
+}
 
 /** A window of the whole plan is full now. */
 export const planFull = (usage: { windows: readonly PlanMeterWindow[] }, now = Date.now()) =>
@@ -188,7 +247,7 @@ export function planState(
 ): { state: PlanState; until: string | null; used: number } {
   const rows = planWindows(usage, now).filter(planOwn);
   const full = rows.filter((w) => w.used >= 100);
-  const refused = usage.limited === true && !usage.windows.some((w) => planOwn(w) && w.usedPercent >= 100);
+  const refused = planRefused(usage);
   const used = rows[0]?.used ?? 0;
   if (full.length === 0 && !refused) return { state: used >= PLAN_ALMOST ? "almost" : "ok", until: null, used };
   const resets = full.flatMap((w) => (w.resetsAt ? [w.resetsAt] : []));

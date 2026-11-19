@@ -2052,6 +2052,10 @@
         "title": "컴퓨터",
         "help": "새 컴퓨터가 연결되거나 워크스페이스 컴퓨터가 준비됐을 때"
       },
+      "plans": {
+        "title": "플랜 한도",
+        "help": "AI 계정이 한도의 90%에 도달했을 때"
+      },
       "reactions": {
         "title": "반응",
         "help": "누군가 내 메시지에 반응할 때"
@@ -5142,6 +5146,8 @@
       "desktopTaken": "<b>{{name}}</b> 님이 <b>{{agent}}</b>의 컴퓨터 화면 제어를 넘겨받았어요",
       "planLent": "<b>{{name}}</b> 님이 내 {{plan}} 플랜을 <b>{{agent}}</b>에 연결했어요",
       "planServes": "내 {{plan}}이(가) 이제 workspace 전체를 지원해요",
+      "planLimitNear": "<b>{{account}}</b>이(가) 한도의 {{percent}}%를 사용했어요 ({{window}}), {{resets}}",
+      "planLimitNearOpen": "<b>{{account}}</b>이(가) 한도의 {{percent}}%를 사용했어요 ({{window}})",
       "planModelDropped": "{{model}} 모델이 {{plan}}에서 빠졌어요. 다른 모델을 고를 때까지 <b>{{name}}</b>은(는) {{runs}}을(를) 써요.",
       "routineWaitingPlan": "<b>{{name}}</b>이(가) 루틴을 실행하려고 요금제 한도가 초기화되기를 기다리고 있어요",
       "planResetUnknown": "{{plan}}이(가) 한도 초기화 시점을 알려 주지 않았어요. <b>{{name}}</b>의 작업은 계속 대기 중이에요.",
@@ -16947,6 +16953,34 @@
     "hint": {
       "handoffs": "대부분 에이전트 간 인계에서 나왔어요.",
       "message": "{{name}}에게 메시지"
+    }
+  },
+  "quotas": {
+    "title": "할당량",
+    "lead": "각 AI 계정의 한도(제공업체가 알려 주는 대로)와, 알려 주지 않는 곳은 최근 사용량입니다.",
+    "home": "플랜 할당량",
+    "seeAll": "할당량 보기",
+    "empty": "아직 AI 계정이 없습니다.",
+    "summary": {
+      "limited_other": "{{count}}개 한도 도달",
+      "almost_other": "{{count}}개 한도 임박",
+      "ok": "모두 여유 있음",
+      "accounts_other": "AI 계정 {{count}}개"
+    },
+    "notReported": "제공업체가 할당량을 알려 주지 않습니다.",
+    "ring": {
+      "ok": "플랜 한도: 한도에 가장 가까운 {{account}}에서 {{percent}}% 사용",
+      "almost": "플랜 한도: {{account}} 한도 임박, {{percent}}% 사용",
+      "limited": "플랜 한도: {{account}} 한도 도달",
+      "none": "플랜 한도: 한도를 알려주는 내 계정이 없어요",
+      "title": "플랜 한도"
+    },
+    "recent": {
+      "title": "최근 사용",
+      "day": "최근 24시간",
+      "week": "최근 7일",
+      "month": "최근 30일",
+      "requests_other": "호출 {{value}}회"
     }
   },
   "usageViews": {

@@ -2370,6 +2370,18 @@
       "other": "Your {{plan}} now serves the whole workspace"
     }
   },
+  "activity.kind.plan_limit_near": {
+    "value": {
+      "one": "{{plan}} used {{percent}}% of its limit ({{window}}), {{resets}}",
+      "other": "{{plan}} used {{percent}}% of its limit ({{window}}), {{resets}}"
+    }
+  },
+  "activity.kind.plan_limit_near_open": {
+    "value": {
+      "one": "{{plan}} used {{percent}}% of its limit ({{window}})",
+      "other": "{{plan}} used {{percent}}% of its limit ({{window}})"
+    }
+  },
   "activity.kind.plan_model_dropped": {
     "value": {
       "one": "{{model}} left {{plan}}. {{names}} is using {{runs}} for now",

@@ -206,6 +206,10 @@ export const ChatPrefs = z
       description:
         "A conversation's own background, by channel id (`PUT`/`DELETE …/channels/{channelId}/wallpaper`); ignored in `PUT …/me/chat`.",
     }),
+    ringColors: z
+      .record(z.string().max(200), z.enum(WALLPAPER_HUES))
+      .optional()
+      .openapi({ description: "The color of each AI account in the limits ring, by its key; absent: its maker's." }),
   })
   .openapi("ChatPrefs");
 

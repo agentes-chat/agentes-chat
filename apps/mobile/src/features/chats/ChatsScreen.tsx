@@ -27,6 +27,7 @@ import { Tile } from "../shared/parts";
 import { useActiveWork, useHiddenAgents, useWorkingNow } from "../shared/queries";
 import { SheetHostProvider } from "../shared/SheetHost";
 import { useTabHeader } from "../shared/tabHeader";
+import { useQuotaRing } from "../usage/QuotaRing";
 import { alongInAccessory } from "../work-along/logic";
 import { useHasWorkAlong } from "../work-along/WorkAlong";
 import { DeletingNotice } from "./DeletingNotice";
@@ -113,6 +114,8 @@ function Home() {
   // What the person chose to open when the app starts goes over Conversas, once (ADR 0108).
   useOpenStart(focused);
   const header = useTabHeader();
+  // Beside "+", where the AI accounts' limits stand (ADR 0063 addendum 2026-11-18).
+  const quotaRing = useQuotaRing();
   const dir = useDirectory();
   // Each row kept while nothing in it changes, and what it says worked out here once for all of them: a row redraws
   // only when its own changed.
@@ -219,6 +222,7 @@ function Home() {
     <LargeTitleScreen
       title={t("mobile.chats.title")}
       {...header}
+      apart={quotaRing}
       // The sky stands behind the bar and the large title and scrolls with them: the title is drawn with it.
       drawnTitle
       backdrop={

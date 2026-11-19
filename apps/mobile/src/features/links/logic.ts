@@ -48,6 +48,7 @@ export type AppHref =
   | "/computer-setup"
   | "/connect-ai?ready=1"
   | "/usage"
+  | "/quotas"
   | "/proposals"
   | "/dashboards"
   | "/ai-accounts"
@@ -277,6 +278,8 @@ export function notificationHref(
   // Someone gave an agent the person's plan: their AI accounts, where the agents on each plan are.
   if (n.kind === "plan_lent") return "/ai-accounts";
   if (n.kind === "plan_serves") return "/usage";
+  // An AI account near its limit: Cotas.
+  if (n.kind === "plan_limit_near") return "/quotas";
   // What the right hand found (ADR 0177 §1) opens where it is fixed: the AI accounts, the agent whose budget it is,
   // the computer, the connections. A database is reconnected on the web alone, and a cause this build doesn't know
   // has no screen: neither opens anything here, so the tap goes to its web page (`notificationWebPath`).

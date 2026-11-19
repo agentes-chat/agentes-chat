@@ -2052,6 +2052,10 @@
         "title": "电脑",
         "help": "有新电脑加入，或工作区的电脑已就绪"
       },
+      "plans": {
+        "title": "套餐限额",
+        "help": "当 AI 账号达到某项限额的 90% 时"
+      },
       "reactions": {
         "title": "表情回应",
         "help": "有人对你的消息发表情回应时"
@@ -5146,6 +5150,8 @@
       "desktopTaken": "<b>{{name}}</b> 接管了 <b>{{agent}}</b> 的电脑屏幕",
       "planLent": "<b>{{name}}</b> 把你的 {{plan}} 套餐连接到了 <b>{{agent}}</b>",
       "planServes": "你的 {{plan}} 现在服务整个 workspace",
+      "planLimitNear": "<b>{{account}}</b> 已用限额的 {{percent}}%（{{window}}），{{resets}}",
+      "planLimitNearOpen": "<b>{{account}}</b> 已用限额的 {{percent}}%（{{window}}）",
       "planModelDropped": "{{model}} 已从 {{plan}} 下架。在你选择其他模型之前，<b>{{name}}</b> 会使用 {{runs}}。",
       "routineWaitingPlan": "<b>{{name}}</b> 正在等待套餐额度重置后运行例行工作",
       "planResetUnknown": "{{plan}} 没有说明额度何时重置。<b>{{name}}</b> 的工作仍在等待。",
@@ -17024,6 +17030,34 @@
     "hint": {
       "handoffs": "大部分来自智能体之间的交接。",
       "message": "给 {{name}} 发消息"
+    }
+  },
+  "quotas": {
+    "title": "配额",
+    "lead": "每个 AI 账号由提供方报告的限额，提供方不报告时显示最近的用量。",
+    "home": "套餐配额",
+    "seeAll": "查看配额",
+    "empty": "还没有 AI 账号。",
+    "summary": {
+      "limited_other": "{{count}} 个已达上限",
+      "almost_other": "{{count}} 个接近上限",
+      "ok": "全部尚有余量",
+      "accounts_other": "{{count}} 个 AI 账号"
+    },
+    "notReported": "提供方未报告配额。",
+    "ring": {
+      "ok": "套餐限额：最接近限额的账号 {{account}} 已用 {{percent}}%",
+      "almost": "套餐限额：{{account}} 接近限额，已用 {{percent}}%",
+      "limited": "套餐限额：{{account}} 已达限额",
+      "none": "套餐限额：你的账号都没有报告限额",
+      "title": "套餐限额"
+    },
+    "recent": {
+      "title": "最近用量",
+      "day": "最近 24 小时",
+      "week": "最近 7 天",
+      "month": "最近 30 天",
+      "requests_other": "{{value}} 次调用"
     }
   },
   "usageViews": {

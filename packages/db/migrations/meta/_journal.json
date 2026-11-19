@@ -2122,6 +2122,13 @@
       "when": 1795051928914,
       "tag": "0307_workspace_reset",
       "breakpoints": true
+    },
+    {
+      "idx": 305,
+      "version": "7",
+      "when": 1795060588340,
+      "tag": "0308_plan_limit_alerts",
+      "breakpoints": true
     }
   ]
 }

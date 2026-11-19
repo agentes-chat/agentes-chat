@@ -22,6 +22,7 @@ test("IA e uso: each row says who uses the plan, and its owner chooses in the ro
   expect(detail).toContain('checked={serves === "owner"}');
   // Its note opens the usage screen, where the choice is.
   expect(notificationHref({ kind: "plan_serves", source: { accountId: "a1" } })).toBe("/usage");
+  expect(notificationHref({ kind: "plan_limit_near", source: { accountId: "a1" } })).toBe("/quotas");
 });
 
 test("Conta › E-mail: the code sent to the current address, then a link to the new one keeps the same account", () => {

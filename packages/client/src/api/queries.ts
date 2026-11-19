@@ -3526,7 +3526,8 @@ export function useAuditRow(orgId: string, id: string): AuditRow | null {
 /** Configurações › Uso: every plan account by computer and the API per agent (ADR 0063). */
 export const usePlanUsage = (orgId: string) => {
   const api = useApi();
-  return useQuery({ queryKey: keys.planUsage(orgId), queryFn: () => api.orgs.planUsage(orgId) });
+  // Read on every screen for the limits ring, and heavy: a new screen uses what is at most this old.
+  return useQuery({ queryKey: keys.planUsage(orgId), queryFn: () => api.orgs.planUsage(orgId), staleTime: 30_000 });
 };
 
 /** Uso › Pessoas (ADR 0141): each person's use; "Agora" stays live while the page is open. */

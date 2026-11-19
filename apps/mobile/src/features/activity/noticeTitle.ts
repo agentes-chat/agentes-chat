@@ -3,6 +3,7 @@ import { appCreatedLine } from "@agenteschat/client/lib/apps";
 import { formatUsd } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { restrictionOf, workspaceHeadline } from "@agenteschat/client/lib/notifications";
+import { planLimitNotice } from "@agenteschat/client/lib/quotas";
 import { teamWatchLine } from "@agenteschat/client/lib/team-watch";
 import { useTranslation } from "react-i18next";
 import { useOrg } from "@/providers/org";
@@ -34,6 +35,7 @@ export function useNoticeTitle(n: AppNotification) {
         ? t("mobile.names.more", { first: who.first, second: who.second, count: who.more })
         : t("mobile.names.two", { first: who.first, second: who.second })
       : who.first;
+  const limit = n.kind === "plan_limit_near" ? planLimitNotice(t, i18n.language, n) : null;
   const kind =
     n.kind === "browser_handoff" && n.source.screen === "desktop"
       ? "desktop_handoff"
@@ -45,7 +47,9 @@ export function useNoticeTitle(n: AppNotification) {
             ? `approval_cover_${n.latest.statusTo}`
             : n.kind === "admin_ask"
               ? `admin_ask_${n.latest.reason ?? "create_agents"}`
-              : n.kind;
+              : n.kind === "plan_limit_near" && !limit?.resets
+                ? "plan_limit_near_open"
+                : n.kind;
   const device = deviceNoticeOf(n);
   const person = useNoticePerson(n);
   const orgName = useOrg().org?.name ?? "";
@@ -70,9 +74,14 @@ export function useNoticeTitle(n: AppNotification) {
                   count: n.kind === "catch_up_closed" ? n.count : who.total,
                   // `plan_reset_unknown`: the plan's name (`plan_lent`, `plan_model_dropped`: in `plan`).
                   plan:
-                    (n.kind === "plan_lent" || n.kind === "plan_serves" || n.kind === "plan_model_dropped"
-                      ? n.latest.plan
-                      : n.latest.title) ?? "",
+                    (limit
+                      ? limit.account
+                      : n.kind === "plan_lent" || n.kind === "plan_serves" || n.kind === "plan_model_dropped"
+                        ? n.latest.plan
+                        : n.latest.title) ?? "",
+                  // `plan_limit_near`: the window and when it resets.
+                  window: limit?.window ?? "",
+                  resets: limit?.resets ?? "",
                   // `plan_model_dropped`: the model that left the plan's list and what runs now.
                   model: n.latest.title ?? "",
                   runs: n.latest.nowModel ?? "",

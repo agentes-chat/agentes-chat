@@ -3,6 +3,7 @@ import {
   and,
   type Database,
   desc,
+  type Executor,
   eq,
   gt,
   gte,
@@ -22,7 +23,7 @@ import { NotFoundError, ValidationError } from "./errors";
 import { publishUserEvent } from "./events";
 import { cutText } from "./format";
 import type { PreviewMeta } from "./message-preview";
-import { noticeOn, noticePrefsOf, readNoticePrefs } from "./notice-prefs";
+import { type NoticePrefs, noticeOn, noticePrefsOf, readNoticePrefs } from "./notice-prefs";
 import { listMemberships, requirePermission } from "./organizations";
 import { enqueuePush } from "./push";
 import type { ApprovalOrigin } from "./tools/run-policy";
@@ -226,6 +227,13 @@ export const NOTIFICATION_KINDS = [
    */
   "usage_limit",
   /**
+   * An AI account reached 90% of a window (ADR 0063 addendum 2026-11-18, `plan-limit-alerts.ts`): who connected it and
+   * whose agents think with it, once per account, window and reset period. `source.label` the account's name,
+   * `source.machineId` and `source.accountId` (none for a computer's own sign-in), `latest.percent`, `latest.window` and
+   * `latest.resetsAt`. Opens Cotas.
+   */
+  "plan_limit_near",
+  /**
    * "Quem aprova por mim" (ADR 0139): the person chosen to cover someone hears it (`latest.statusTo` the mode,
    * `always` or `while_out`, and `latest.expiresAt` its end), and the covered person hears when the cover said no
    * (`declined`) or an admin ended it (`ended`). The covered person or who ended it is the actor. Inbox only.
@@ -421,8 +429,11 @@ export interface NotificationLatest {
   plan?: string;
   /** `plan_model_dropped`: the model the agent's turns run now. */
   nowModel?: string;
-  /** `usage_limit`: the share of the person's limit used. */
+  /** `usage_limit`: the share of the person's limit used; `plan_limit_near`: of the window's. */
   percent?: number;
+  /** `plan_limit_near`: the window, as the plan's meters name it, and when it resets (absent: not said). */
+  window?: { kind: string; label?: string };
+  resetsAt?: string;
   /** `usage_limit` to who decides: the limit, what "Aumentar" raises it to, where it comes from, this month's requests. */
   limitUsd?: number;
   raiseToUsd?: number;
@@ -594,39 +605,80 @@ export interface NotifyInput {
  * action that caused it.
  */
 export async function notify(deps: NotificationDeps, input: NotifyInput): Promise<NotificationView[]> {
-  const actorUser = input.actor?.type === "user" ? input.actor.id : null;
-  const wanted = [...new Set([...input.userIds].filter((u): u is string => !!u && u !== actorUser))];
-  if (wanted.length === 0) return [];
-  // People of this organization only (an agent's id never matches a member).
-  const members = await deps.db
-    .select({ userId: organizationMembers.userId, prefs: organizationMembers.noticePrefs })
-    .from(organizationMembers)
-    .where(and(eq(organizationMembers.orgId, input.orgId), inArray(organizationMembers.userId, wanted)));
   const out: NotificationView[] = [];
-  for (const member of members) {
-    const { userId } = member;
-    const row = await upsertOne(deps, input, userId);
-    if (!row) continue;
-    const view = notificationView(row);
-    out.push(view);
-    // Whether it reaches their devices as a notification (ADR 0071 §8): the desktop app's banner reads `alert`.
-    const prefs = noticePrefsOf(member.prefs);
-    const snoozed = row.snoozedUntil && row.snoozedUntil.getTime() > nowOf(deps).getTime();
-    if (!snoozed)
-      await publishUserEvent(deps.pubsub, input.orgId, userId, {
-        type: "notification.upserted",
-        notification: view,
-        alert: noticeOn(prefs, row.kind, row.waiting),
-      });
-    await publishCounts(deps, input.orgId, userId);
-    // Their phone and browsers too (ADR 0035, 0071), through the outbox; never undoes the notification. A group pushes
-    // once while unread: only the event that opened its row.
-    if (row.count === 1) await enqueuePush(deps.db, row, nowOf(deps), prefs).catch(() => false);
+  // One person at a time: whoever got their row was told, whatever happens with the next.
+  for (const member of await membersToTell(deps, input)) {
+    const row = await upsertOne(deps, input, member.userId);
+    if (row) out.push(...(await announceNotifications(deps, [{ row, prefs: noticePrefsOf(member.prefs) }])));
   }
   return out;
 }
 
-async function upsertOne(deps: NotificationDeps, input: NotifyInput, userId: string): Promise<Row | null> {
+/** The recipients who are people of this organization (an agent's id never matches a member), but the actor. */
+async function membersToTell(deps: { db: Executor }, input: NotifyInput) {
+  const actorUser = input.actor?.type === "user" ? input.actor.id : null;
+  const wanted = [...new Set([...input.userIds].filter((u): u is string => !!u && u !== actorUser))];
+  if (wanted.length === 0) return [];
+  return deps.db
+    .select({ userId: organizationMembers.userId, prefs: organizationMembers.noticePrefs })
+    .from(organizationMembers)
+    .where(and(eq(organizationMembers.orgId, input.orgId), inArray(organizationMembers.userId, wanted)));
+}
+
+/** A row `writeNotifications` created or merged, with what its person chose to hear. */
+export interface WrittenNotification {
+  row: Row;
+  prefs: NoticePrefs;
+}
+
+/**
+ * The rows alone, for who must commit them with something else (on a transaction's `db`), then call
+ * `announceNotifications`. Anyone else: `notify`.
+ */
+export async function writeNotifications(
+  deps: { db: Executor; now?: () => Date },
+  input: NotifyInput,
+): Promise<WrittenNotification[]> {
+  const out: WrittenNotification[] = [];
+  for (const member of await membersToTell(deps, input)) {
+    const row = await upsertOne(deps, input, member.userId);
+    if (row) out.push({ row, prefs: noticePrefsOf(member.prefs) });
+  }
+  return out;
+}
+
+/** Tells each person of their written row, on their screens and (`push`, unless already queued) their devices. */
+export async function announceNotifications(
+  deps: NotificationDeps,
+  written: readonly WrittenNotification[],
+  { push = true }: { push?: boolean } = {},
+): Promise<NotificationView[]> {
+  const out: NotificationView[] = [];
+  for (const { row, prefs } of written) {
+    const userId = row.userId;
+    const view = notificationView(row);
+    out.push(view);
+    // Whether it reaches their devices as a notification (ADR 0071 §8): the desktop app's banner reads `alert`.
+    const snoozed = row.snoozedUntil && row.snoozedUntil.getTime() > nowOf(deps).getTime();
+    if (!snoozed)
+      await publishUserEvent(deps.pubsub, row.orgId, userId, {
+        type: "notification.upserted",
+        notification: view,
+        alert: noticeOn(prefs, row.kind, row.waiting),
+      });
+    await publishCounts(deps, row.orgId, userId);
+    // Their phone and browsers too (ADR 0035, 0071), through the outbox; never undoes the notification. A group pushes
+    // once while unread: only the event that opened its row.
+    if (push && row.count === 1) await enqueuePush(deps.db, row, nowOf(deps), prefs).catch(() => false);
+  }
+  return out;
+}
+
+async function upsertOne(
+  deps: { db: Executor; now?: () => Date },
+  input: NotifyInput,
+  userId: string,
+): Promise<Row | null> {
   const { db } = deps;
   const now = nowOf(deps);
   const source = compact(input.source) as Record<string, unknown>;

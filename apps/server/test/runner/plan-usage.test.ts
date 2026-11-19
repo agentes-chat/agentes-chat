@@ -325,7 +325,7 @@ test("people hear at once only when a limit is hit or cleared or a window crosse
   expect(usageCrossed(u(100), u(100, true))).toBe(true);
 });
 
-test("on the wire: at most 8 known windows, 0–100, labels of 40 printable characters; the own sign-ins by brain", () => {
+test("on the wire: at most 12 known windows, 0–100, labels of 40 printable characters; the own sign-ins by brain", () => {
   expect(MACHINE_PROTOCOL_VERSION).toBeGreaterThanOrEqual(PLAN_USAGE_PROTOCOL);
   const windows = [
     { kind: "five_hour", usedPercent: 140.6, resetsAt: "2030-01-01T15:00:00Z" },
@@ -356,7 +356,7 @@ test("on the wire: at most 8 known windows, 0–100, labels of 40 printable char
     { kind: "seven_day", usedPercent: 0 },
     { kind: "other", label: `Fa ble ${"x".repeat(33)}`, usedPercent: 7 },
   ]);
-  expect(usage?.windows.length).toBeLessThanOrEqual(8);
+  expect(usage?.windows.length).toBeLessThanOrEqual(12);
   expect(usage?.windows.every((w) => w.kind !== ("weekly" as never))).toBe(true);
   expect(usage?.source).toBe("probe");
   expect(frame.ownUsage).toEqual({
