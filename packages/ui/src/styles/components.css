@@ -292,30 +292,6 @@ html[data-pointer] :focus-visible {
 }
 
 /*
- * A wrapping row that ends on one thing (`.ac-tail`: a time left, a status, a link): it ends the first line while it
- * fits there, and when it wraps it starts its own line at the row's start, never pushed to the end under the rest. A
- * spring of no width before it takes the first line's spare room; its gap is taken back so the spring never wraps on
- * its own. A row with another column gap sets `--tail-gap` to it.
- */
-.ac-tailrow {
-  display: flex;
-  flex-wrap: wrap;
-  column-gap: var(--tail-gap, var(--space-2));
-}
-.ac-tailrow::after {
-  content: "";
-  order: 1;
-  flex: 1 0 0;
-  margin-inline-start: calc(-1 * var(--tail-gap, var(--space-2)));
-}
-.ac-tailrow > .ac-tail {
-  order: 2;
-  margin-inline-start: 0;
-}
-.ac-tailrow > .ac-tail ~ * {
-  order: 3;
-}
-/*
  * A row of actions: 16px between what the eye sees, on touch too. A ghost shows only its icon or words until
  * hovered, so its plate reaches half into the gap on each side: its icon or words stand as far from the next shape
  * as two boxes do, and at either end of the row they sit on its edge. The gap is a column gap, so a row that wraps
@@ -1877,14 +1853,12 @@ html:not([data-pointer]) .ac-msg__time--details:focus-visible {
 .ac-approval--wide {
   max-width: none;
 }
+/* Its state ends the line, or starts its own under who asked (`.ac-tailrow`), never floating at the end. */
 .ac-approval__head {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   flex-wrap: wrap;
-}
-.ac-approval__head .ac-chip {
-  margin-left: auto;
 }
 .ac-approval__who {
   font-size: 13px;
@@ -9758,6 +9732,14 @@ html:not([data-pointer]) .ac-grouphead__title > button:focus-visible {
   gap: 8px;
   margin-left: auto;
 }
+/* Without a search, the filters and the actions are the row's two groups: side by side at its two ends, or each on its
+   own line from the row's start when they wrap, never the actions floating at the end under the filters. */
+.ac-toolbar:not(:has(> .ac-toolbar__search)):has(> .ac-toolbar__filters) {
+  justify-content: space-between;
+}
+.ac-toolbar:not(:has(> .ac-toolbar__search)):has(> .ac-toolbar__filters) > .ac-toolbar__actions {
+  margin-left: 0;
+}
 /* Buttons and selects in the row take the row's step, so "Nova issue" lines up with the search. */
 .ac-toolbar .ac-btn {
   height: var(--tool-h);
@@ -12638,6 +12620,31 @@ html:not([data-pointer]) .ac-carousel__arrow:focus-visible {
 /* A slot with nothing to offer (an action its viewer may not take) takes no room, not even a gap or a row. */
 .ac-actline > :is(span, div):empty {
   display: none;
+}
+
+/*
+ * A wrapping row that ends on one thing (`.ac-tail`: a time left, a status, a link): it ends the first line while it
+ * fits there, and when it wraps it starts its own line at the row's start, never pushed to the end under the rest. A
+ * spring of no width before it takes the first line's spare room; its gap is taken back so the spring never wraps on
+ * its own. A row with another column gap sets `--tail-gap` to it. After `.ac-actrow`, whose control it may be.
+ */
+.ac-tailrow {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--tail-gap, var(--space-2));
+}
+.ac-tailrow::after {
+  content: "";
+  order: 1;
+  flex: 1 0 0;
+  margin-inline-start: calc(-1 * var(--tail-gap, var(--space-2)));
+}
+.ac-tailrow > .ac-tail {
+  order: 2;
+  margin-inline-start: 0;
+}
+.ac-tailrow > .ac-tail ~ * {
+  order: 3;
 }
 
 /*

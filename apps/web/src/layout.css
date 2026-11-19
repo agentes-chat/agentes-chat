@@ -1560,8 +1560,8 @@ html:not([data-pointer]) .member-row--add:focus-visible {
   margin: 0;
   font-weight: 500;
 }
+/* Ends the chips' line, or starts its own under them (`.ac-tailrow`). */
 .memory-item__used {
-  margin-left: auto;
   font-size: 13px;
   color: var(--ink-muted);
   font-variant-numeric: tabular-nums;

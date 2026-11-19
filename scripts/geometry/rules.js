@@ -2543,7 +2543,8 @@
      * A wrapping row keeps one start edge: when one of its lines starts at the row's start with room to spare, no other
      * line is pushed away from it, by an auto margin (a time left, a status floating at the end under buttons) or by
      * the row ending its lines at the end (buttons under "Mudar quando perguntar"). A line set in by a fixed margin (an
-     * outcome on its item's words) and rows that end or centre every line are left alone.
+     * outcome on its item's words) and rows that end or centre every line are left alone, and so is a control under
+     * words alone: a row's own control at its end (a settings row's switch, a member's role), as `endline` places it.
      */
     strayend(out) {
       // The computed value keeps "auto" where the resolved one is already in pixels.
@@ -2554,8 +2555,10 @@
           return false;
         }
       };
+      const control = (el) => el.matches(CONTROL) || !!el.querySelector(CONTROL);
       for (const row of document.body.querySelectorAll("*")) {
-        if (!seen(row)) continue;
+        // A settings row's end (its value, its control) is `endline`'s: at the row's end, under the name or not.
+        if (!seen(row) || row.matches(".settings-row")) continue;
         const s = style(row);
         if (!s.display.includes("flex") || s.flexDirection !== "row" || s.flexWrap !== "wrap" || s.direction === "rtl")
           continue;
@@ -2576,11 +2579,12 @@
         if (lines.length < 2) continue;
         const firstOf = (line) => line.kids[0];
         const lastOf = (line) => line.kids[line.kids.length - 1];
-        const anchored = lines.some((l) => firstOf(l)[1].left <= start + 2 && lastOf(l)[1].right < end - 2);
-        if (!anchored) continue;
+        const anchored = lines.filter((l) => firstOf(l)[1].left <= start + 2 && lastOf(l)[1].right < end - 2);
+        if (!anchored.length) continue;
+        const acts = anchored.some((l) => l.kids.some(([kid]) => control(kid)));
         for (const line of lines) {
           const [kid, k] = firstOf(line);
-          if (k.left > start + 2 && (toEnd || auto(kid)))
+          if (k.left > start + 2 && (toEnd || auto(kid)) && (acts || !control(kid)))
             out.push({
               rule: "strayend",
               node: kid,

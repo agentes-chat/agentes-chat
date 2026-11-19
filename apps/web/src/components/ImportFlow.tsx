@@ -1040,7 +1040,7 @@ function Row({
     </>
   );
   return (
-    <li className="imp-row ac-actrow" data-off={(!checked && item.action !== "unchanged") || undefined}>
+    <li className="imp-row ac-actrow ac-tailrow" data-off={(!checked && item.action !== "unchanged") || undefined}>
       {pickable ? (
         <Checkbox
           id={rowId}
@@ -1065,7 +1065,7 @@ function Row({
         <span className="imp-row__text ac-actrow__text">{text}</span>
       )}
       {status && (
-        <Chip id={`${rowId}-status`} icon={status.icon} tone={status.tone} className="imp-row__chip">
+        <Chip id={`${rowId}-status`} icon={status.icon} tone={status.tone} className="imp-row__chip ac-tail">
           {t(`onboarding.import.status.${status.key}`)}
         </Chip>
       )}
