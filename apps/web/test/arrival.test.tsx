@@ -189,4 +189,51 @@ describe("feedback about what was clicked", () => {
     );
     expect(state.calls.some((c) => c.method === "system.uploadFeedbackFile")).toBe(false);
   });
+
+  test("a picture dragged from the computer onto the form is added as one picked or pasted", async () => {
+    const { state } = await open(seedState({ authConfig: { feedback: true } }));
+    await click(screen().getByRole("button", { name: "Enviar feedback" }));
+    const form = screen().getByRole("dialog", { name: "O que faltou, quebrou ou incomodou?" });
+    const box = within(form).getByRole("textbox");
+    const shot = new File(["x"], "captura.png", { type: "image/png" });
+    const carrying = (files: File[]) => ({ dataTransfer: { types: ["Files"], files, dropEffect: "none" } });
+    // Over it: the layer says what a release does, and the browser's own drop (the file's path as text) is held back.
+    await act(async () => fireEvent.dragEnter(box, carrying([shot])));
+    const over = form.querySelector(".arrival-feedback__drop");
+    expect(over?.textContent).toContain("Solte para anexar");
+    expect(fireEvent.dragOver(box, carrying([shot]))).toBe(false);
+    await act(async () => {
+      expect(fireEvent.drop(box, carrying([shot]))).toBe(false);
+    });
+    await settle(4);
+    expect(form.querySelector(".arrival-feedback__drop")).toBeNull();
+    expect(within(form).getByText("captura.png")).toBeTruthy();
+    expect((box as HTMLTextAreaElement).value).toBe("");
+    expect(state.calls.filter((c) => c.method === "system.uploadFeedbackFile")).toHaveLength(1);
+    // The same limits as the picker: anything but a picture or a video is refused before it is uploaded.
+    await act(async () => fireEvent.dragEnter(box, carrying([])));
+    await act(async () => {
+      fireEvent.drop(box, carrying([new File(["x"], "notas.pdf", { type: "application/pdf" })]));
+    });
+    await settle(2);
+    expect(state.calls.filter((c) => c.method === "system.uploadFeedbackFile")).toHaveLength(1);
+    // Text dragged in from elsewhere is the browser's, not a file.
+    expect(fireEvent.dragOver(box, { dataTransfer: { types: ["text/plain"], files: [] } })).toBe(true);
+  });
+
+  test("where it goes to the agentes.chat team, a dragged video is refused and the layer says photos", async () => {
+    const { state } = await open(seedState({ authConfig: { feedback: true, feedbackRelay: true } }));
+    await click(screen().getByRole("button", { name: "Enviar feedback" }));
+    const form = screen().getByRole("dialog", { name: "O que faltou, quebrou ou incomodou?" });
+    const box = within(form).getByRole("textbox");
+    const video = new File(["x"], "tela.mp4", { type: "video/mp4" });
+    const carrying = (files: File[]) => ({ dataTransfer: { types: ["Files"], files, dropEffect: "none" } });
+    await act(async () => fireEvent.dragEnter(box, carrying([video])));
+    expect(form.querySelector(".arrival-feedback__drop")?.textContent).toContain("Até 3 fotos de 5 MB.");
+    await act(async () => {
+      fireEvent.drop(box, carrying([video]));
+    });
+    await settle(2);
+    expect(state.calls.some((c) => c.method === "system.uploadFeedbackFile")).toBe(false);
+  });
 });
