@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { StyleSheet, TextInput, View } from "react-native";
 import { ComputerPortrait } from "@/computer/ComputerPortrait";
 import { useOrg } from "@/providers/org";
-import { Button, Chip, fieldText, GroupedField, GroupedList, Icon, InkOrbit, Text, useToast } from "@/ui";
+import { Button, Chip, CodeWords, fieldText, GroupedField, GroupedList, Icon, InkOrbit, Text, useToast } from "@/ui";
 import { AskButtons } from "../chat/asks";
 import { AgentFace } from "../shared/Face";
 import { useColors, useDirectory, useMeId, useWhen } from "../shared/hooks";
@@ -31,6 +31,7 @@ export function StatusLine({
   const { t } = useTranslation();
   const when = useWhen();
   const v = statusView(t, status, when, hostName);
+  const words = text ?? v.line;
   const leading =
     v.icon === "spin" ? (
       <InkOrbit size={12} />
@@ -44,9 +45,9 @@ export function StatusLine({
         tone={v.wait ? "wait" : "neutral"}
         {...(leading ? { leading } : v.icon && v.icon !== "face" && v.icon !== "spin" ? { icon: v.icon } : {})}
       />
-      {(text ?? v.line) ? (
+      {words ? (
         <Text variant="footnote" tone="faint" style={center ? styles.centerText : undefined}>
-          {text ?? v.line}
+          <CodeWords text={words} />
         </Text>
       ) : null}
     </View>

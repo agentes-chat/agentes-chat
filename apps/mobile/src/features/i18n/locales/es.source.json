@@ -1951,10 +1951,10 @@
     "value": "In OpenMausBot: right-click the team › Share team… › Save file. Then pick that file here."
   },
   "newAgent.import.where.hermes": {
-    "value": "Hermes exports from a terminal (hermes profile export), as a .tar.gz the phone can't open. Import it on the computer, or pick the profile's .md and .yaml files here."
+    "value": "Hermes exports from a terminal (`hermes profile export`), as a .tar.gz the phone can't open. Import it on the computer, or pick the profile's .md and .yaml files here."
   },
   "newAgent.import.where.openclaw": {
-    "value": "OpenClaw keeps agents in the ~/.openclaw folder on the computer. Pick a workspace's .md files here, or import the whole folder on the computer."
+    "value": "OpenClaw keeps agents in the `~/.openclaw` folder on the computer. Pick a workspace's .md files here, or import the whole folder on the computer."
   },
   "newAgent.import.where.paperclip": {
     "value": "Paste the package's GitHub link below, or pick its COMPANY.md and the other .md files."
@@ -6227,7 +6227,7 @@
     "value": "ACME_API_KEY"
   },
   "vault.field.keyNameHelp": {
-    "value": "Capital letters, digits and _, like ACME_API_KEY. Agents ask for the key by this name."
+    "value": "Capital letters, digits and _, like `ACME_API_KEY`. Agents ask for the key by this name."
   },
   "vault.field.value": {
     "value": "Value"

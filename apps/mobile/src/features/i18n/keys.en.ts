@@ -877,9 +877,9 @@ export const featureKeysEn = {
         openmausbot:
           "In OpenMausBot: right-click the team\u00a0›\u00a0Share team…\u00a0›\u00a0Save file. Then pick that file here.",
         hermes:
-          "Hermes exports from a terminal (hermes profile export), as a .tar.gz the phone can't open. Import it on the computer, or pick the profile's .md and .yaml files here.",
+          "Hermes exports from a terminal (`hermes profile export`), as a .tar.gz the phone can't open. Import it on the computer, or pick the profile's .md and .yaml files here.",
         openclaw:
-          "OpenClaw keeps agents in the ~/.openclaw folder on the computer. Pick a workspace's .md files here, or import the whole folder on the computer.",
+          "OpenClaw keeps agents in the `~/.openclaw` folder on the computer. Pick a workspace's .md files here, or import the whole folder on the computer.",
         paperclip: "Paste the package's GitHub link below, or pick its COMPANY.md and the other .md files.",
         agenteschat:
           "In the other workspace: Settings\u00a0›\u00a0Import and export\u00a0›\u00a0Download the file. Then pick the .json here.",
@@ -2712,7 +2712,7 @@ export const featureKeysEn = {
       newPassword: "New password",
       keyName: "Variable",
       keyNamePlaceholder: "ACME_API_KEY",
-      keyNameHelp: "Capital letters, digits and _, like ACME_API_KEY. Agents ask for the key by this name.",
+      keyNameHelp: "Capital letters, digits and _, like `ACME_API_KEY`. Agents ask for the key by this name.",
       value: "Value",
       newValue: "New value",
       description: "Description",

@@ -1364,9 +1364,9 @@ export const ptBR = {
           "Solte o openbot-import.json (do Migrator by OpenBot) ou o openbot-transfer.json (da transferência da instância), ou o .zip em que ele veio.",
         openmausbot: "No OpenMausBot: clique com o botão direito no time → Compartilhar time… → Salvar arquivo.",
         hermes:
-          "No terminal, rode hermes profile export com o nome do perfil e solte o .tar.gz aqui. Ou arraste a pasta ~/.hermes para trazer todos os perfis.",
+          "No terminal, rode `hermes profile export` com o nome do perfil e solte o .tar.gz aqui. Ou arraste a pasta `~/.hermes` para trazer todos os perfis.",
         openclaw:
-          "Arraste a pasta ~/.openclaw inteira (ela traz todos os agentes) ou só um workspace. No Mac, ⌘⇧. mostra as pastas ocultas na janela de escolher.",
+          "Arraste a pasta `~/.openclaw` inteira (ela traz todos os agentes) ou só um workspace. No Mac, ⌘⇧. mostra as pastas ocultas na janela de escolher.",
         paperclip: "Arraste a pasta do pacote (a que tem o COMPANY.md), solte um .zip dela ou cole o link do GitHub.",
         agenteschat:
           "No outro workspace: Configurações → Importar e exportar → Baixar o arquivo. Depois é só soltar o .json aqui.",
@@ -4874,7 +4874,7 @@ export const ptBR = {
     error: {
       title: "Dê um nome.",
       website: "Use um endereço https, como app.exemplo.com.br.",
-      keyName: "Use letras maiúsculas, números e _, começando com uma letra, como ACME_API_KEY.",
+      keyName: "Use letras maiúsculas, números e _, começando com uma letra, como `ACME_API_KEY`.",
       password: "Digite a senha.",
       value: "Digite o valor.",
       contact: "Preencha pelo menos um campo.",
@@ -5036,7 +5036,7 @@ export const ptBR = {
       show: "Mostrar o valor de {{name}}",
       hide: "Ocultar o valor de {{name}}",
       problem: {
-        name: "O nome precisa ser como ACME_API_KEY",
+        name: "O nome precisa ser como `ACME_API_KEY`",
         reserved: "Nome reservado",
         empty: "Sem valor",
         tooLarge: "Valor grande demais",
@@ -10937,8 +10937,8 @@ export const ptBR = {
     line: {
       invalid: "A TypeSafe não aceitou esta chave. Crie uma nova.",
       no_credit: "Adicione crédito na TypeSafe. O Jev volta sozinho.",
-      env: "Definida nas configurações deste servidor (TYPESAFE_API_KEY).",
-      envInvalid: "A TypeSafe não aceitou esta chave. Troque nas configurações deste servidor (TYPESAFE_API_KEY).",
+      env: "Definida nas configurações deste servidor (`TYPESAFE_API_KEY`).",
+      envInvalid: "A TypeSafe não aceitou esta chave. Troque nas configurações deste servidor (`TYPESAFE_API_KEY`).",
     },
     checkAgain: "Verificar de novo",
     /** Where Jev is called and paid (ADR 0073 §9): the rows under the reasons once "Set up Jev" is pressed. */
@@ -10967,7 +10967,8 @@ export const ptBR = {
       line: {
         invalid: "O OpenRouter não aceitou esta chave. Crie uma nova.",
         no_credit: "Adicione crédito no OpenRouter. O Jev volta sozinho.",
-        envInvalid: "O OpenRouter não aceitou esta chave. Troque nas configurações deste servidor (TYPESAFE_API_KEY).",
+        envInvalid:
+          "O OpenRouter não aceitou esta chave. Troque nas configurações deste servidor (`TYPESAFE_API_KEY`).",
       },
     },
     remove: {
@@ -13277,7 +13278,7 @@ export const ptBR = {
       create: "Criar o app no GitHub",
       state: { off: "Desligado", on: "Ligado", invalid: "Inválido" },
       line: {
-        env: "Definido nas configurações deste servidor (GITHUB_APP_ID).",
+        env: "Definido nas configurações deste servidor (`GITHUB_APP_ID`).",
         invalid: "Este servidor não consegue abrir o app salvo. Remova e crie de novo.",
         /** O app não assina o que os agentes ouvem no GitHub: `events` são os nomes que o próprio GitHub dá a eles. */
         events: "Para os agentes ouvirem o que acontece no GitHub, marque estes eventos no app: {{events}}.",
@@ -13686,9 +13687,9 @@ export const ptBR = {
       via: "Pela Composio",
       needsReconnect: "Precisa reconectar",
       off_one:
-        "{{names}} e mais {{count}} serviço conectam pela Composio. Para ligar, quem administra este servidor define COMPOSIO_API_KEY (veja SELF_HOSTING.md).",
+        "{{names}} e mais {{count}} serviço conectam pela Composio. Para ligar, quem administra este servidor define `COMPOSIO_API_KEY` (veja `SELF_HOSTING.md`).",
       off_other:
-        "{{names}} e mais {{count}} serviços conectam pela Composio. Para ligar, quem administra este servidor define COMPOSIO_API_KEY (veja SELF_HOSTING.md).",
+        "{{names}} e mais {{count}} serviços conectam pela Composio. Para ligar, quem administra este servidor define `COMPOSIO_API_KEY` (veja `SELF_HOSTING.md`).",
       usage: "Composio: {{calls}} de {{limit}} chamadas em {{month}}",
       usageNoLimit: "Composio: {{calls}} chamadas em {{month}}",
       limitNotice: "As chamadas da Composio deste mês acabaram",
@@ -14847,7 +14848,7 @@ export const ptBR = {
       },
       railway: {
         "1": "No serviço Postgres, abra Data → Query e rode o comando abaixo (troque a senha).",
-        "2": "Em Variables, copie o DATABASE_PUBLIC_URL (o DATABASE_URL é interno e não funciona daqui).",
+        "2": "Em Variables, copie o `DATABASE_PUBLIC_URL` (o `DATABASE_URL` é interno e não funciona daqui).",
         "3": "Troque nele o usuário e a senha por agentes_leitura e a senha que você escolheu, e cole aqui.",
       },
       rds: {
@@ -14884,7 +14885,7 @@ export const ptBR = {
       unreachable:
         "Não conseguimos falar com o servidor do banco. Confira o endereço e se ele aceita conexões de fora.",
       blocked_host:
-        "Esse servidor não é permitido. Use o endereço público do banco (endereços internos, como o DATABASE_URL do Railway, não funcionam daqui).",
+        "Esse servidor não é permitido. Use o endereço público do banco (endereços internos, como o `DATABASE_URL` do Railway, não funcionam daqui).",
       tls: "O banco não aceitou uma conexão segura. Ligue o SSL no banco, ou escolha Sem criptografia em Avançado (só bancos de teste).",
       unknown: "Não deu para conectar agora. Tente de novo em instantes.",
       no_databases:
@@ -15772,7 +15773,7 @@ export const ptBR = {
       titleRequired: "Dê um nome a ele.",
       tooLong: "Ficou longo demais. O limite é {{max}}.",
       notHttps: "Use um endereço que comece com https://",
-      keyNameInvalid: "Use letras maiúsculas, números e _ no nome, como ACME_API_KEY.",
+      keyNameInvalid: "Use letras maiúsculas, números e _ no nome, como `ACME_API_KEY`.",
       keyNameReserved: "Este nome é reservado. Escolha outro.",
       keyNameTaken: "Já existe uma chave com este nome aqui.",
       contactEmpty: "Preencha pelo menos um campo.",
@@ -16170,9 +16171,10 @@ export const ptBR = {
       offline: "Os agentes esperam ele voltar.",
       offlineSeen: "Visto às {{time}}. Os agentes esperam ele voltar.",
       offlineWithHost: "{{host}} está offline. Os agentes esperam ele voltar.",
-      offlineUnresponsive: "Parou de responder às {{time}}, talvez sem rede ou sobrecarregado. Rode {{command}} nele.",
-      offlineStopped: "O runner parou às {{time}}. Inicie de novo ou rode {{command}} nele para ver o motivo.",
-      offlineDropped: "A conexão caiu às {{time}}. Ele reconecta sozinho. Se não voltar, rode {{command}} nele.",
+      offlineUnresponsive:
+        "Parou de responder às {{time}}, talvez sem rede ou sobrecarregado. Rode `{{command}}` nele.",
+      offlineStopped: "O runner parou às {{time}}. Inicie de novo ou rode `{{command}}` nele para ver o motivo.",
+      offlineDropped: "A conexão caiu às {{time}}. Ele reconecta sozinho. Se não voltar, rode `{{command}}` nele.",
     },
     reason: {
       locked: "O celular está bloqueado",
@@ -17641,8 +17643,8 @@ export const ptBR = {
         state: { off: "Desligado", on: "Ligado", invalid: "Chave inválida" },
         line: {
           invalid: "Este servidor não consegue ler esta chave. Cole a chave de novo.",
-          env: "Definida nas configurações deste servidor (GIPHY_API_KEY).",
-          envInvalid: "Esta chave não serve. Troque nas configurações deste servidor (GIPHY_API_KEY).",
+          env: "Definida nas configurações deste servidor (`GIPHY_API_KEY`).",
+          envInvalid: "Esta chave não serve. Troque nas configurações deste servidor (`GIPHY_API_KEY`).",
         },
         invalid: "O GIPHY não aceitou esta chave. Copie de novo no GIPHY Developers.",
         remove: {

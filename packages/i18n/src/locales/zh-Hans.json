@@ -1280,8 +1280,8 @@
       "where": {
         "openbotrun": "拖入 openbot-import.json（来自 OpenBot 的 Migrator）或 openbot-transfer.json（来自实例迁移），或者包含它的 .zip。",
         "openmausbot": "在 OpenMausBot 中：右键点击团队 → 分享团队… → 保存文件。",
-        "hermes": "在终端中运行 hermes profile export 加上配置文件名，然后把 .tar.gz 拖到这里。也可以拖入 ~/.hermes 文件夹，一次带上所有配置文件。",
-        "openclaw": "拖入整个 ~/.openclaw 文件夹（会带上所有智能体），或者只拖一个工作区。在 Mac 上，在文件选择器中按 ⌘⇧. 可以显示隐藏文件夹。",
+        "hermes": "在终端中运行 `hermes profile export` 加上配置文件名，然后把 .tar.gz 拖到这里。也可以拖入 `~/.hermes` 文件夹，一次带上所有配置文件。",
+        "openclaw": "拖入整个 `~/.openclaw` 文件夹（会带上所有智能体），或者只拖一个工作区。在 Mac 上，在文件选择器中按 ⌘⇧. 可以显示隐藏文件夹。",
         "paperclip": "拖入包文件夹（包含 COMPANY.md 的那个），拖入它的 .zip，或者粘贴它的 GitHub 链接。",
         "agenteschat": "在另一个工作区中：设置 → 导入和导出 → 下载文件。然后把 .json 拖到这里。"
       },
@@ -4461,7 +4461,7 @@
     "error": {
       "title": "请给它起个名字。",
       "website": "请使用 https 地址，例如 app.example.com。",
-      "keyName": "请使用大写字母、数字和 _，并以字母开头，例如 ACME_API_KEY。",
+      "keyName": "请使用大写字母、数字和 _，并以字母开头，例如 `ACME_API_KEY`。",
       "password": "请输入密码。",
       "value": "请输入值。",
       "contact": "请至少填写一项。"
@@ -4609,7 +4609,7 @@
       "show": "显示 {{name}} 的值",
       "hide": "隐藏 {{name}} 的值",
       "problem": {
-        "name": "名称需类似 ACME_API_KEY",
+        "name": "名称需类似 `ACME_API_KEY`",
         "reserved": "保留名称",
         "empty": "没有值",
         "tooLarge": "值太大"
@@ -10187,8 +10187,8 @@
     "line": {
       "invalid": "TypeSafe 不接受这个密钥。请创建一个新的。",
       "no_credit": "在 TypeSafe 充值后，Jev 会自动恢复。",
-      "env": "已在此服务器的设置中配置（TYPESAFE_API_KEY）。",
-      "envInvalid": "TypeSafe 不接受这个密钥。请在此服务器的设置中更改（TYPESAFE_API_KEY）。"
+      "env": "已在此服务器的设置中配置（`TYPESAFE_API_KEY`）。",
+      "envInvalid": "TypeSafe 不接受这个密钥。请在此服务器的设置中更改（`TYPESAFE_API_KEY`）。"
     },
     "checkAgain": "重新检查",
     "via": {
@@ -10214,7 +10214,7 @@
       "line": {
         "invalid": "OpenRouter 不接受这个密钥。请创建一个新的。",
         "no_credit": "在 OpenRouter 充值后，Jev 会自动恢复。",
-        "envInvalid": "OpenRouter 不接受这个密钥。请在此服务器的设置中更改（TYPESAFE_API_KEY）。"
+        "envInvalid": "OpenRouter 不接受这个密钥。请在此服务器的设置中更改（`TYPESAFE_API_KEY`）。"
       }
     },
     "remove": {
@@ -12376,7 +12376,7 @@
         "invalid": "无效"
       },
       "line": {
-        "env": "已在此服务器的设置中配置（GITHUB_APP_ID）。",
+        "env": "已在此服务器的设置中配置（`GITHUB_APP_ID`）。",
         "invalid": "此服务器无法打开已保存的应用。请移除后重新创建。",
         "events": "要让智能体收到 GitHub 上发生的事，请在应用中勾选这些事件：{{events}}。"
       },
@@ -12944,7 +12944,7 @@
     "composio": {
       "via": "通过 Composio",
       "needsReconnect": "需要重新连接",
-      "off_other": "{{names}} 等另外 {{count}} 个服务通过 Composio 连接。要启用它们，请让运行此服务器的人设置 COMPOSIO_API_KEY（见 SELF_HOSTING.md）。",
+      "off_other": "{{names}} 等另外 {{count}} 个服务通过 Composio 连接。要启用它们，请让运行此服务器的人设置 `COMPOSIO_API_KEY`（见 `SELF_HOSTING.md`）。",
       "usage": "Composio：{{month}} 已调用 {{calls}} 次，上限 {{limit}} 次",
       "usageNoLimit": "Composio：{{month}} 已调用 {{calls}} 次",
       "limitNotice": "本工作区本月的 Composio 调用次数已用完",
@@ -14091,7 +14091,7 @@
       },
       "railway": {
         "1": "在 Postgres 服务中，打开 Data → Query，运行下面的命令（请修改密码）。",
-        "2": "在 Variables 中，复制 DATABASE_PUBLIC_URL（DATABASE_URL 是内部地址，从这里无法使用）。",
+        "2": "在 Variables 中，复制 `DATABASE_PUBLIC_URL`（`DATABASE_URL` 是内部地址，从这里无法使用）。",
         "3": "把其中的用户名和密码换成 agentes_leitura 和你设置的密码，然后粘贴到这里。"
       },
       "rds": {
@@ -14126,7 +14126,7 @@
     "error": {
       "auth": "用户名或密码不匹配，请检查后重试。",
       "unreachable": "无法连接到数据库服务器。请检查地址，以及它是否接受外部连接。",
-      "blocked_host": "不允许使用此服务器。请使用数据库的公网地址（内部地址，如 Railway 的 DATABASE_URL，从这里无法使用）。",
+      "blocked_host": "不允许使用此服务器。请使用数据库的公网地址（内部地址，如 Railway 的 `DATABASE_URL`，从这里无法使用）。",
       "tls": "数据库不接受安全连接。请在数据库中开启 SSL，或在“高级”中选择“不加密”（仅限测试数据库）。",
       "unknown": "暂时无法连接，请稍后再试。",
       "no_databases": "此用户无法打开此服务器上的任何数据库。请检查权限或名称开头。"
@@ -15019,7 +15019,7 @@
       "titleRequired": "请给它起个名字。",
       "tooLong": "太长了。上限是 {{max}}。",
       "notHttps": "请使用以 https:// 开头的地址",
-      "keyNameInvalid": "名称中请使用大写字母、数字和 _，例如 ACME_API_KEY。",
+      "keyNameInvalid": "名称中请使用大写字母、数字和 _，例如 `ACME_API_KEY`。",
       "keyNameReserved": "此名称已被保留。请换一个。",
       "keyNameTaken": "这里已保存了同名的密钥。",
       "contactEmpty": "请至少填写一项。",
@@ -15425,9 +15425,9 @@
       "offline": "智能体会等它回来。",
       "offlineSeen": "上次在线 {{time}}。智能体会等它回来。",
       "offlineWithHost": "{{host}} 已离线。智能体会等它回来。",
-      "offlineUnresponsive": "{{time}} 起无响应，可能没有网络或负载过高。请在这台电脑上运行 {{command}}。",
-      "offlineStopped": "runner 于 {{time}} 停止。请重新启动它，或在这台电脑上运行 {{command}} 查看原因。",
-      "offlineDropped": "连接于 {{time}} 断开，会自动重连。如果没有恢复，请在这台电脑上运行 {{command}}。"
+      "offlineUnresponsive": "{{time}} 起无响应，可能没有网络或负载过高。请在这台电脑上运行 `{{command}}`。",
+      "offlineStopped": "runner 于 {{time}} 停止。请重新启动它，或在这台电脑上运行 `{{command}}` 查看原因。",
+      "offlineDropped": "连接于 {{time}} 断开，会自动重连。如果没有恢复，请在这台电脑上运行 `{{command}}`。"
     },
     "reason": {
       "locked": "手机已锁定",
@@ -16827,8 +16827,8 @@
         },
         "line": {
           "invalid": "此服务器无法读取这个密钥，请重新粘贴。",
-          "env": "已在此服务器的设置中配置（GIPHY_API_KEY）。",
-          "envInvalid": "此密钥无法使用。请在此服务器的设置中更改（GIPHY_API_KEY）。"
+          "env": "已在此服务器的设置中配置（`GIPHY_API_KEY`）。",
+          "envInvalid": "此密钥无法使用。请在此服务器的设置中更改（`GIPHY_API_KEY`）。"
         },
         "invalid": "GIPHY 不接受这个密钥。请从 GIPHY Developers 重新复制。",
         "remove": {

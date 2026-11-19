@@ -844,8 +844,8 @@
       "where": {
         "openbotrun": "Elige openbot-import.json (de Migrator by OpenBot) u openbot-transfer.json (de la transferencia de instancia). Un .zip se abre primero en la app Archivos: un toque lo descomprime.",
         "openmausbot": "En OpenMausBot: clic derecho en el equipo › Compartir equipo… › Guardar archivo. Después elige ese archivo aquí.",
-        "hermes": "Hermes exporta desde una terminal (hermes profile export), como un .tar.gz que el teléfono no puede abrir. Impórtalo en la computadora o elige aquí los archivos .md y .yaml del perfil.",
-        "openclaw": "OpenClaw guarda los agentes en la carpeta ~/.openclaw de la computadora. Elige aquí los archivos .md de un espacio de trabajo o importa la carpeta completa en la computadora.",
+        "hermes": "Hermes exporta desde una terminal (`hermes profile export`), como un .tar.gz que el teléfono no puede abrir. Impórtalo en la computadora o elige aquí los archivos .md y .yaml del perfil.",
+        "openclaw": "OpenClaw guarda los agentes en la carpeta `~/.openclaw` de la computadora. Elige aquí los archivos .md de un espacio de trabajo o importa la carpeta completa en la computadora.",
         "paperclip": "Pega abajo el enlace de GitHub del paquete o elige su COMPANY.md y los demás archivos .md.",
         "agenteschat": "En el otro espacio de trabajo: Configuración › Importar y exportar › Descargar el archivo. Después elige el .json aquí."
       },
@@ -2636,7 +2636,7 @@
       "newPassword": "Nueva contraseña",
       "keyName": "Variable",
       "keyNamePlaceholder": "ACME_API_KEY",
-      "keyNameHelp": "Mayúsculas, dígitos y _, como ACME_API_KEY. Los agentes piden la clave por este nombre.",
+      "keyNameHelp": "Mayúsculas, dígitos y _, como `ACME_API_KEY`. Los agentes piden la clave por este nombre.",
       "value": "Valor",
       "newValue": "Nuevo valor",
       "description": "Descripción",

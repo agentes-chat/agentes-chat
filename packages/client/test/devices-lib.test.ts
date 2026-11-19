@@ -131,9 +131,11 @@ describe("status words", () => {
     expect(statusDetail(t, "en-US", off("stopped"), { now: NOW })).toBe("runner stopped at 2:02 PM");
     expect(statusDetail(t, "en-US", off("dropped"), { now: NOW })).toBe("connection dropped at 2:02 PM");
     expect(statusSentence(t, "en-US", off("stopped"), { now: NOW })).toBe(
-      "The runner stopped at 2:02 PM. Start it again, or run agentes-runner doctor on it to see why.",
+      "The runner stopped at 2:02 PM. Start it again, or run `agentes-runner doctor` on it to see why.",
     );
-    expect(statusSentence(t, "en-US", off("unresponsive"), { now: NOW })).toContain("Run agentes-runner doctor on it.");
+    expect(statusSentence(t, "en-US", off("unresponsive"), { now: NOW })).toContain(
+      "Run `agentes-runner doctor` on it.",
+    );
   });
 });
 

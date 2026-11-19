@@ -796,8 +796,8 @@
       "where": {
         "openbotrun": "选择 openbot-import.json（来自 OpenBot 的 Migrator）或 openbot-transfer.json（来自实例迁移）。.zip 文件需先在“文件”应用中打开：点按一下即可解压。",
         "openmausbot": "在 OpenMausBot 中：右键点击团队 › 分享团队… › 保存文件。然后在这里选择该文件。",
-        "hermes": "Hermes 通过终端导出（hermes profile export），生成手机无法打开的 .tar.gz 文件。请在电脑上导入，或在这里选择该配置的 .md 和 .yaml 文件。",
-        "openclaw": "OpenClaw 将智能体保存在电脑上的 ~/.openclaw 文件夹中。请在这里选择某个工作区的 .md 文件，或在电脑上导入整个文件夹。",
+        "hermes": "Hermes 通过终端导出（`hermes profile export`），生成手机无法打开的 .tar.gz 文件。请在电脑上导入，或在这里选择该配置的 .md 和 .yaml 文件。",
+        "openclaw": "OpenClaw 将智能体保存在电脑上的 `~/.openclaw` 文件夹中。请在这里选择某个工作区的 .md 文件，或在电脑上导入整个文件夹。",
         "paperclip": "在下方粘贴该包的 GitHub 链接，或选择它的 COMPANY.md 和其他 .md 文件。",
         "agenteschat": "在另一个工作区中：设置 › 导入和导出 › 下载文件。然后在这里选择该 .json 文件。"
       },
@@ -2417,7 +2417,7 @@
       "newPassword": "新密码",
       "keyName": "变量",
       "keyNamePlaceholder": "ACME_API_KEY",
-      "keyNameHelp": "使用大写字母、数字和 _，例如 ACME_API_KEY。智能体按这个名称请求密钥。",
+      "keyNameHelp": "使用大写字母、数字和 _，例如 `ACME_API_KEY`。智能体按这个名称请求密钥。",
       "value": "值",
       "newValue": "新值",
       "description": "描述",

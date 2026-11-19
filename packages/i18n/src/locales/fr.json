@@ -1358,8 +1358,8 @@
       "where": {
         "openbotrun": "Déposez openbot-import.json (issu de Migrator by OpenBot) ou openbot-transfer.json (issu du transfert d'instance), ou le .zip dans lequel il est arrivé.",
         "openmausbot": "Dans OpenMausBot : clic droit sur l'équipe → Partager l'équipe… → Enregistrer le fichier.",
-        "hermes": "Dans un terminal, lancez hermes profile export avec le nom du profil et déposez le .tar.gz ici. Ou faites glisser le dossier ~/.hermes pour amener tous les profils.",
-        "openclaw": "Faites glisser tout le dossier ~/.openclaw (il amène tous les agents) ou un seul workspace. Sur Mac, ⌘⇧. affiche les dossiers cachés dans le sélecteur de fichiers.",
+        "hermes": "Dans un terminal, lancez `hermes profile export` avec le nom du profil et déposez le .tar.gz ici. Ou faites glisser le dossier `~/.hermes` pour amener tous les profils.",
+        "openclaw": "Faites glisser tout le dossier `~/.openclaw` (il amène tous les agents) ou un seul workspace. Sur Mac, ⌘⇧. affiche les dossiers cachés dans le sélecteur de fichiers.",
         "paperclip": "Faites glisser le dossier du paquet (celui qui contient COMPANY.md), déposez-en un .zip ou collez son lien GitHub.",
         "agenteschat": "Dans l'autre espace de travail : Paramètres → Importer et exporter → Télécharger le fichier. Puis déposez le .json ici."
       },
@@ -4787,7 +4787,7 @@
     "error": {
       "title": "Donnez-lui un nom.",
       "website": "Utilisez une adresse https, comme app.example.com.",
-      "keyName": "Utilisez des majuscules, des chiffres et _, en commençant par une lettre, comme ACME_API_KEY.",
+      "keyName": "Utilisez des majuscules, des chiffres et _, en commençant par une lettre, comme `ACME_API_KEY`.",
       "password": "Saisissez le mot de passe.",
       "value": "Saisissez la valeur.",
       "contact": "Remplissez au moins un champ."
@@ -4948,7 +4948,7 @@
       "show": "Afficher la valeur de {{name}}",
       "hide": "Masquer la valeur de {{name}}",
       "problem": {
-        "name": "Le nom doit ressembler à ACME_API_KEY",
+        "name": "Le nom doit ressembler à `ACME_API_KEY`",
         "reserved": "Nom réservé",
         "empty": "Aucune valeur",
         "tooLarge": "Valeur trop volumineuse"
@@ -10979,8 +10979,8 @@
     "line": {
       "invalid": "TypeSafe n'a pas accepté cette clé. Créez-en une nouvelle.",
       "no_credit": "Ajoutez du crédit chez TypeSafe. Jev reprend tout seul.",
-      "env": "Défini dans les paramètres de ce serveur (TYPESAFE_API_KEY).",
-      "envInvalid": "TypeSafe n'a pas accepté cette clé. Changez-la dans les paramètres de ce serveur (TYPESAFE_API_KEY)."
+      "env": "Défini dans les paramètres de ce serveur (`TYPESAFE_API_KEY`).",
+      "envInvalid": "TypeSafe n'a pas accepté cette clé. Changez-la dans les paramètres de ce serveur (`TYPESAFE_API_KEY`)."
     },
     "checkAgain": "Vérifier à nouveau",
     "via": {
@@ -11006,7 +11006,7 @@
       "line": {
         "invalid": "OpenRouter n'a pas accepté cette clé. Créez-en une nouvelle.",
         "no_credit": "Ajoutez du crédit chez OpenRouter. Jev reprend tout seul.",
-        "envInvalid": "OpenRouter n'a pas accepté cette clé. Changez-la dans les paramètres de ce serveur (TYPESAFE_API_KEY)."
+        "envInvalid": "OpenRouter n'a pas accepté cette clé. Changez-la dans les paramètres de ce serveur (`TYPESAFE_API_KEY`)."
       }
     },
     "remove": {
@@ -13326,7 +13326,7 @@
         "invalid": "Invalide"
       },
       "line": {
-        "env": "Définie dans les paramètres de ce serveur (GITHUB_APP_ID).",
+        "env": "Définie dans les paramètres de ce serveur (`GITHUB_APP_ID`).",
         "invalid": "Ce serveur ne peut pas ouvrir l'app enregistrée. Retirez-la et créez-la de nouveau.",
         "events": "Pour que les agents entendent ce qui se passe sur GitHub, cochez ces événements dans l'app : {{events}}."
       },
@@ -13914,9 +13914,9 @@
     "composio": {
       "via": "Via Composio",
       "needsReconnect": "Reconnexion nécessaire",
-      "off_one": "{{names}} et {{count}} autre service se connectent via Composio. Pour les activer, la personne qui gère ce serveur définit COMPOSIO_API_KEY (voir SELF_HOSTING.md).",
-      "off_many": "{{names}} et {{count}} autres services se connectent via Composio. Pour les activer, la personne qui gère ce serveur définit COMPOSIO_API_KEY (voir SELF_HOSTING.md).",
-      "off_other": "{{names}} et {{count}} autres services se connectent via Composio. Pour les activer, la personne qui gère ce serveur définit COMPOSIO_API_KEY (voir SELF_HOSTING.md).",
+      "off_one": "{{names}} et {{count}} autre service se connectent via Composio. Pour les activer, la personne qui gère ce serveur définit `COMPOSIO_API_KEY` (voir `SELF_HOSTING.md`).",
+      "off_many": "{{names}} et {{count}} autres services se connectent via Composio. Pour les activer, la personne qui gère ce serveur définit `COMPOSIO_API_KEY` (voir `SELF_HOSTING.md`).",
+      "off_other": "{{names}} et {{count}} autres services se connectent via Composio. Pour les activer, la personne qui gère ce serveur définit `COMPOSIO_API_KEY` (voir `SELF_HOSTING.md`).",
       "usage": "Composio : {{calls}} appels sur {{limit}} en {{month}}",
       "usageNoLimit": "Composio : {{calls}} appels en {{month}}",
       "limitNotice": "Cet espace de travail a épuisé ses appels Composio du mois",
@@ -15103,7 +15103,7 @@
       },
       "railway": {
         "1": "Dans le service Postgres, ouvrez Data → Query et exécutez la commande ci-dessous (changez le mot de passe).",
-        "2": "Dans Variables, copiez DATABASE_PUBLIC_URL (DATABASE_URL est interne et ne fonctionne pas d'ici).",
+        "2": "Dans Variables, copiez `DATABASE_PUBLIC_URL` (`DATABASE_URL` est interne et ne fonctionne pas d'ici).",
         "3": "Remplacez-y l'utilisateur et le mot de passe par agentes_leitura et le mot de passe choisi, puis collez-la ici."
       },
       "rds": {
@@ -15138,7 +15138,7 @@
     "error": {
       "auth": "L'utilisateur ou le mot de passe ne correspond pas. Vérifiez-les et réessayez.",
       "unreachable": "Impossible de joindre le serveur de la base de données. Vérifiez l'adresse et qu'il accepte les connexions de l'extérieur.",
-      "blocked_host": "Ce serveur n'est pas autorisé. Utilisez l'adresse publique de la base de données (les adresses internes, comme le DATABASE_URL de Railway, ne fonctionnent pas d'ici).",
+      "blocked_host": "Ce serveur n'est pas autorisé. Utilisez l'adresse publique de la base de données (les adresses internes, comme le `DATABASE_URL` de Railway, ne fonctionnent pas d'ici).",
       "tls": "La base de données n'a pas accepté de connexion sécurisée. Activez SSL sur la base de données, ou choisissez Sans chiffrement sous Avancé (bases de test uniquement).",
       "unknown": "Connexion impossible pour le moment. Réessayez dans un instant.",
       "no_databases": "Cet utilisateur ne peut ouvrir aucune base de ce serveur. Vérifiez ses droits ou le début du nom."
@@ -16059,7 +16059,7 @@
       "titleRequired": "Donnez-lui un nom.",
       "tooLong": "C'est trop long. La limite est de {{max}}.",
       "notHttps": "Utilisez une adresse qui commence par https://",
-      "keyNameInvalid": "Utilisez des majuscules, des chiffres et _ dans le nom, comme ACME_API_KEY.",
+      "keyNameInvalid": "Utilisez des majuscules, des chiffres et _ dans le nom, comme `ACME_API_KEY`.",
       "keyNameReserved": "Ce nom est réservé. Choisissez-en un autre.",
       "keyNameTaken": "Une clé porte déjà ce nom ici.",
       "contactEmpty": "Remplissez au moins un champ.",
@@ -16469,9 +16469,9 @@
       "offline": "Les agents attendent son retour.",
       "offlineSeen": "Vu pour la dernière fois {{time}}. Les agents attendent son retour.",
       "offlineWithHost": "{{host}} est hors ligne. Les agents attendent son retour.",
-      "offlineUnresponsive": "Ne répond plus depuis {{time}}, peut-être sans réseau ou surchargé. Lancez {{command}} dessus.",
-      "offlineStopped": "Le runner s'est arrêté à {{time}}. Relancez-le, ou lancez {{command}} dessus pour savoir pourquoi.",
-      "offlineDropped": "La connexion a été perdue à {{time}}. Elle se rétablit d'elle-même. Sinon, lancez {{command}} dessus."
+      "offlineUnresponsive": "Ne répond plus depuis {{time}}, peut-être sans réseau ou surchargé. Lancez `{{command}}` dessus.",
+      "offlineStopped": "Le runner s'est arrêté à {{time}}. Relancez-le, ou lancez `{{command}}` dessus pour savoir pourquoi.",
+      "offlineDropped": "La connexion a été perdue à {{time}}. Elle se rétablit d'elle-même. Sinon, lancez `{{command}}` dessus."
     },
     "reason": {
       "locked": "Le téléphone est verrouillé",
@@ -17915,8 +17915,8 @@
         },
         "line": {
           "invalid": "Ce serveur ne peut pas lire cette clé. Collez-la de nouveau.",
-          "env": "Définie dans les paramètres de ce serveur (GIPHY_API_KEY).",
-          "envInvalid": "Cette clé est inutilisable. Changez-la dans les paramètres de ce serveur (GIPHY_API_KEY)."
+          "env": "Définie dans les paramètres de ce serveur (`GIPHY_API_KEY`).",
+          "envInvalid": "Cette clé est inutilisable. Changez-la dans les paramètres de ce serveur (`GIPHY_API_KEY`)."
         },
         "invalid": "GIPHY n'a pas accepté cette clé. Copiez-la de nouveau depuis GIPHY Developers.",
         "remove": {

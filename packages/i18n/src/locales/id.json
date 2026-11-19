@@ -1280,8 +1280,8 @@
       "where": {
         "openbotrun": "Letakkan openbot-import.json (dari Migrator milik OpenBot) atau openbot-transfer.json (dari transfer instans), atau .zip tempat file itu berada.",
         "openmausbot": "Di OpenMausBot: klik kanan tim → Share team… → Save file.",
-        "hermes": "Di terminal, jalankan hermes profile export dengan nama profilnya lalu letakkan .tar.gz di sini. Atau seret folder ~/.hermes untuk membawa semua profil.",
-        "openclaw": "Seret seluruh folder ~/.openclaw (membawa semua agen) atau satu ruang kerja saja. Di Mac, ⌘⇧. menampilkan folder tersembunyi di pemilih file.",
+        "hermes": "Di terminal, jalankan `hermes profile export` dengan nama profilnya lalu letakkan .tar.gz di sini. Atau seret folder `~/.hermes` untuk membawa semua profil.",
+        "openclaw": "Seret seluruh folder `~/.openclaw` (membawa semua agen) atau satu ruang kerja saja. Di Mac, ⌘⇧. menampilkan folder tersembunyi di pemilih file.",
         "paperclip": "Seret folder paket (yang berisi COMPANY.md), letakkan .zip-nya, atau tempel tautan GitHub-nya.",
         "agenteschat": "Di ruang kerja lain: Pengaturan → Impor dan ekspor → Unduh file. Lalu letakkan .json di sini."
       },
@@ -4471,7 +4471,7 @@
     "error": {
       "title": "Beri nama.",
       "website": "Gunakan alamat https, misalnya app.example.com.",
-      "keyName": "Gunakan huruf kapital, angka, dan _, diawali huruf, misalnya ACME_API_KEY.",
+      "keyName": "Gunakan huruf kapital, angka, dan _, diawali huruf, misalnya `ACME_API_KEY`.",
       "password": "Ketik kata sandinya.",
       "value": "Ketik nilainya.",
       "contact": "Isi setidaknya satu kolom."
@@ -4619,7 +4619,7 @@
       "show": "Tampilkan nilai {{name}}",
       "hide": "Sembunyikan nilai {{name}}",
       "problem": {
-        "name": "Nama harus seperti ACME_API_KEY",
+        "name": "Nama harus seperti `ACME_API_KEY`",
         "reserved": "Nama dicadangkan",
         "empty": "Tanpa nilai",
         "tooLarge": "Nilai terlalu besar"
@@ -10192,8 +10192,8 @@
     "line": {
       "invalid": "TypeSafe tidak menerima kunci ini. Buat yang baru.",
       "no_credit": "Tambahkan saldo di TypeSafe. Jev lanjut dengan sendirinya.",
-      "env": "Diatur di pengaturan server ini (TYPESAFE_API_KEY).",
-      "envInvalid": "TypeSafe tidak menerima kunci ini. Ubah di pengaturan server ini (TYPESAFE_API_KEY)."
+      "env": "Diatur di pengaturan server ini (`TYPESAFE_API_KEY`).",
+      "envInvalid": "TypeSafe tidak menerima kunci ini. Ubah di pengaturan server ini (`TYPESAFE_API_KEY`)."
     },
     "checkAgain": "Periksa lagi",
     "via": {
@@ -10219,7 +10219,7 @@
       "line": {
         "invalid": "OpenRouter tidak menerima kunci ini. Buat yang baru.",
         "no_credit": "Tambahkan saldo di OpenRouter. Jev lanjut dengan sendirinya.",
-        "envInvalid": "OpenRouter tidak menerima kunci ini. Ubah di pengaturan server ini (TYPESAFE_API_KEY)."
+        "envInvalid": "OpenRouter tidak menerima kunci ini. Ubah di pengaturan server ini (`TYPESAFE_API_KEY`)."
       }
     },
     "remove": {
@@ -12356,7 +12356,7 @@
         "invalid": "Tidak valid"
       },
       "line": {
-        "env": "Diatur di pengaturan server ini (GITHUB_APP_ID).",
+        "env": "Diatur di pengaturan server ini (`GITHUB_APP_ID`).",
         "invalid": "Server ini tidak bisa membuka aplikasi yang tersimpan. Hapus lalu buat lagi.",
         "events": "Agar agen mendengar apa yang terjadi di GitHub, centang event berikut di aplikasi: {{events}}."
       },
@@ -12928,7 +12928,7 @@
     "composio": {
       "via": "Lewat Composio",
       "needsReconnect": "Perlu dihubungkan ulang",
-      "off_other": "{{names}} dan {{count}} layanan lain terhubung lewat Composio. Untuk mengaktifkannya, pengelola server ini mengatur COMPOSIO_API_KEY (lihat SELF_HOSTING.md).",
+      "off_other": "{{names}} dan {{count}} layanan lain terhubung lewat Composio. Untuk mengaktifkannya, pengelola server ini mengatur `COMPOSIO_API_KEY` (lihat `SELF_HOSTING.md`).",
       "usage": "Composio: {{calls}} dari {{limit}} panggilan di {{month}}",
       "usageNoLimit": "Composio: {{calls}} panggilan di {{month}}",
       "limitNotice": "Ruang kerja ini sudah menghabiskan panggilan Composio bulan ini",
@@ -14075,7 +14075,7 @@
       },
       "railway": {
         "1": "Di layanan Postgres, buka Data → Query dan jalankan perintah di bawah (ganti kata sandinya).",
-        "2": "Di Variables, salin DATABASE_PUBLIC_URL (DATABASE_URL bersifat internal dan tidak bisa dipakai dari sini).",
+        "2": "Di Variables, salin `DATABASE_PUBLIC_URL` (`DATABASE_URL` bersifat internal dan tidak bisa dipakai dari sini).",
         "3": "Ganti user dan kata sandi di dalamnya dengan agentes_leitura dan kata sandi pilihanmu, lalu tempel di sini."
       },
       "rds": {
@@ -14110,7 +14110,7 @@
     "error": {
       "auth": "User atau kata sandi tidak cocok. Periksa lalu coba lagi.",
       "unreachable": "Kami tidak bisa menjangkau server database. Periksa alamatnya dan apakah server menerima koneksi dari luar.",
-      "blocked_host": "Server ini tidak diizinkan. Pakai alamat publik database (alamat internal, seperti DATABASE_URL di Railway, tidak bisa dipakai dari sini).",
+      "blocked_host": "Server ini tidak diizinkan. Pakai alamat publik database (alamat internal, seperti `DATABASE_URL` di Railway, tidak bisa dipakai dari sini).",
       "tls": "Database tidak menerima koneksi aman. Aktifkan SSL di database, atau pilih Tanpa enkripsi di bagian Lanjutan (hanya untuk database uji coba).",
       "unknown": "Tidak bisa terhubung sekarang. Coba lagi sebentar lagi.",
       "no_databases": "Pengguna ini tidak bisa membuka database apa pun di server ini. Periksa izinnya atau awalan namanya."
@@ -15003,7 +15003,7 @@
       "titleRequired": "Beri nama.",
       "tooLong": "Terlalu panjang. Batasnya {{max}}.",
       "notHttps": "Gunakan alamat yang diawali https://",
-      "keyNameInvalid": "Gunakan huruf kapital, angka, dan _ pada nama, misalnya ACME_API_KEY.",
+      "keyNameInvalid": "Gunakan huruf kapital, angka, dan _ pada nama, misalnya `ACME_API_KEY`.",
       "keyNameReserved": "Nama ini dicadangkan. Pilih nama lain.",
       "keyNameTaken": "Sudah ada kunci tersimpan dengan nama ini di sini.",
       "contactEmpty": "Isi setidaknya satu kolom.",
@@ -15409,9 +15409,9 @@
       "offline": "Agen menunggu sampai perangkat ini kembali.",
       "offlineSeen": "Terakhir terlihat {{time}}. Agen menunggu sampai perangkat ini kembali.",
       "offlineWithHost": "{{host}} sedang offline. Agen menunggu sampai komputer itu kembali.",
-      "offlineUnresponsive": "Berhenti merespons pukul {{time}}, mungkin tanpa jaringan atau kelebihan beban. Jalankan {{command}} di sana.",
-      "offlineStopped": "Runner berhenti pukul {{time}}. Jalankan lagi, atau jalankan {{command}} di sana untuk melihat sebabnya.",
-      "offlineDropped": "Koneksi terputus pukul {{time}}. Ia tersambung lagi sendiri. Jika tidak, jalankan {{command}} di sana."
+      "offlineUnresponsive": "Berhenti merespons pukul {{time}}, mungkin tanpa jaringan atau kelebihan beban. Jalankan `{{command}}` di sana.",
+      "offlineStopped": "Runner berhenti pukul {{time}}. Jalankan lagi, atau jalankan `{{command}}` di sana untuk melihat sebabnya.",
+      "offlineDropped": "Koneksi terputus pukul {{time}}. Ia tersambung lagi sendiri. Jika tidak, jalankan `{{command}}` di sana."
     },
     "reason": {
       "locked": "Ponselnya terkunci",
@@ -16811,8 +16811,8 @@
         },
         "line": {
           "invalid": "Server ini tidak bisa membaca kunci ini. Tempel lagi.",
-          "env": "Diatur di pengaturan server ini (GIPHY_API_KEY).",
-          "envInvalid": "Kunci ini tidak bisa dipakai. Ubah di pengaturan server ini (GIPHY_API_KEY)."
+          "env": "Diatur di pengaturan server ini (`GIPHY_API_KEY`).",
+          "envInvalid": "Kunci ini tidak bisa dipakai. Ubah di pengaturan server ini (`GIPHY_API_KEY`)."
         },
         "invalid": "GIPHY tidak menerima kunci ini. Salin lagi dari GIPHY Developers.",
         "remove": {

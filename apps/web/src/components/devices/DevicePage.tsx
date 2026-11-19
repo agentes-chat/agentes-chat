@@ -23,6 +23,7 @@ import {
   Card,
   CardHeader,
   Chip,
+  codeAndBold,
   Disclosure,
   EmptyState,
   Icon,
@@ -168,7 +169,7 @@ function StatusLine({
   return (
     <div className="dv-statusline" data-status={statusLook(status)} role="status">
       <span className="dv-statusline__text">
-        {sentence}
+        {sentence && codeAndBold(sentence)}
         {label && <small> · {label}</small>}
       </span>
       {action}

@@ -868,8 +868,8 @@
       "where": {
         "openbotrun": "Wybierz openbot-import.json (z Migratora OpenBot) albo openbot-transfer.json (z przeniesienia instancji). Plik .zip najpierw otwórz w aplikacji Pliki: jedno stuknięcie go rozpakuje.",
         "openmausbot": "W OpenMausBot: kliknij prawym przyciskiem zespół › Udostępnij zespół… › Zapisz plik. Potem wybierz ten plik tutaj.",
-        "hermes": "Hermes eksportuje z terminala (hermes profile export) do pliku .tar.gz, którego telefon nie otworzy. Zaimportuj go na komputerze albo wybierz tutaj pliki .md i .yaml profilu.",
-        "openclaw": "OpenClaw trzyma agentów w folderze ~/.openclaw na komputerze. Wybierz tutaj pliki .md z przestrzeni roboczej albo zaimportuj cały folder na komputerze.",
+        "hermes": "Hermes eksportuje z terminala (`hermes profile export`) do pliku .tar.gz, którego telefon nie otworzy. Zaimportuj go na komputerze albo wybierz tutaj pliki .md i .yaml profilu.",
+        "openclaw": "OpenClaw trzyma agentów w folderze `~/.openclaw` na komputerze. Wybierz tutaj pliki .md z przestrzeni roboczej albo zaimportuj cały folder na komputerze.",
         "paperclip": "Wklej poniżej link GitHub do pakietu albo wybierz jego COMPANY.md i pozostałe pliki .md.",
         "agenteschat": "W drugiej przestrzeni roboczej: Ustawienia › Import i eksport › Pobierz plik. Potem wybierz tutaj plik .json."
       },
@@ -2759,7 +2759,7 @@
       "newPassword": "Nowe hasło",
       "keyName": "Zmienna",
       "keyNamePlaceholder": "ACME_API_KEY",
-      "keyNameHelp": "Wielkie litery, cyfry i _, na przykład ACME_API_KEY. Agenci proszą o klucz pod tą nazwą.",
+      "keyNameHelp": "Wielkie litery, cyfry i _, na przykład `ACME_API_KEY`. Agenci proszą o klucz pod tą nazwą.",
       "value": "Wartość",
       "newValue": "Nowa wartość",
       "description": "Opis",

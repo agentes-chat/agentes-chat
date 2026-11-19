@@ -1445,9 +1445,9 @@ export const en = {
           "Drop openbot-import.json (from Migrator by OpenBot) or openbot-transfer.json (from the instance transfer), or the .zip it came in.",
         openmausbot: "In OpenMausBot: right-click the team → Share team… → Save file.",
         hermes:
-          "In a terminal, run hermes profile export with the profile's name and drop the .tar.gz here. Or drag the ~/.hermes folder to bring every profile.",
+          "In a terminal, run `hermes profile export` with the profile's name and drop the .tar.gz here. Or drag the `~/.hermes` folder to bring every profile.",
         openclaw:
-          "Drag the whole ~/.openclaw folder (it brings every agent) or just one workspace. On a Mac, ⌘⇧. shows hidden folders in the file picker.",
+          "Drag the whole `~/.openclaw` folder (it brings every agent) or just one workspace. On a Mac, ⌘⇧. shows hidden folders in the file picker.",
         paperclip: "Drag the package folder (the one with COMPANY.md), drop a .zip of it or paste its GitHub link.",
         agenteschat:
           "In the other workspace: Settings → Import and export → Download the file. Then drop the .json here.",
@@ -5017,7 +5017,7 @@ export const en = {
     error: {
       title: "Give it a name.",
       website: "Use an https address, like app.example.com.",
-      keyName: "Use capital letters, numbers and _, starting with a letter, like ACME_API_KEY.",
+      keyName: "Use capital letters, numbers and _, starting with a letter, like `ACME_API_KEY`.",
       password: "Type the password.",
       value: "Type the value.",
       contact: "Fill in at least one field.",
@@ -5185,7 +5185,7 @@ export const en = {
       show: "Show the value of {{name}}",
       hide: "Hide the value of {{name}}",
       problem: {
-        name: "The name must look like ACME_API_KEY",
+        name: "The name must look like `ACME_API_KEY`",
         reserved: "Reserved name",
         empty: "No value",
         tooLarge: "Value too large",
@@ -10975,8 +10975,8 @@ export const en = {
     line: {
       invalid: "TypeSafe didn't accept this key. Create a new one.",
       no_credit: "Add credit at TypeSafe. Jev resumes by itself.",
-      env: "Set in this server's settings (TYPESAFE_API_KEY).",
-      envInvalid: "TypeSafe didn't accept this key. Change it in this server's settings (TYPESAFE_API_KEY).",
+      env: "Set in this server's settings (`TYPESAFE_API_KEY`).",
+      envInvalid: "TypeSafe didn't accept this key. Change it in this server's settings (`TYPESAFE_API_KEY`).",
     },
     checkAgain: "Check again",
     /** Where Jev is called and paid (ADR 0073 §9): the rows under the reasons once "Set up Jev" is pressed. */
@@ -11005,7 +11005,7 @@ export const en = {
       line: {
         invalid: "OpenRouter didn't accept this key. Create a new one.",
         no_credit: "Add credit at OpenRouter. Jev resumes by itself.",
-        envInvalid: "OpenRouter didn't accept this key. Change it in this server's settings (TYPESAFE_API_KEY).",
+        envInvalid: "OpenRouter didn't accept this key. Change it in this server's settings (`TYPESAFE_API_KEY`).",
       },
     },
     remove: {
@@ -13287,7 +13287,7 @@ export const en = {
       create: "Create the app on GitHub",
       state: { off: "Off", on: "On", invalid: "Invalid" },
       line: {
-        env: "Set in this server's settings (GITHUB_APP_ID).",
+        env: "Set in this server's settings (`GITHUB_APP_ID`).",
         invalid: "This server can't open the saved app. Remove it and create it again.",
         /** The app isn't subscribed to what agents hear on GitHub: `events` are GitHub's own names for them. */
         events: "For agents to hear what happens on GitHub, tick these events on the app: {{events}}.",
@@ -13700,9 +13700,9 @@ export const en = {
       via: "Through Composio",
       needsReconnect: "Needs reconnecting",
       off_one:
-        "{{names}} and {{count}} more service connect through Composio. To turn them on, whoever runs this server sets COMPOSIO_API_KEY (see SELF_HOSTING.md).",
+        "{{names}} and {{count}} more service connect through Composio. To turn them on, whoever runs this server sets `COMPOSIO_API_KEY` (see `SELF_HOSTING.md`).",
       off_other:
-        "{{names}} and {{count}} more services connect through Composio. To turn them on, whoever runs this server sets COMPOSIO_API_KEY (see SELF_HOSTING.md).",
+        "{{names}} and {{count}} more services connect through Composio. To turn them on, whoever runs this server sets `COMPOSIO_API_KEY` (see `SELF_HOSTING.md`).",
       usage: "Composio: {{calls}} of {{limit}} calls in {{month}}",
       usageNoLimit: "Composio: {{calls}} calls in {{month}}",
       limitNotice: "This workspace used its Composio calls for the month",
@@ -14899,7 +14899,7 @@ export const en = {
       },
       railway: {
         "1": "In the Postgres service, open Data → Query and run the command below (change the password).",
-        "2": "In Variables, copy DATABASE_PUBLIC_URL (DATABASE_URL is internal and doesn't work from here).",
+        "2": "In Variables, copy `DATABASE_PUBLIC_URL` (`DATABASE_URL` is internal and doesn't work from here).",
         "3": "Swap the user and password in it for agentes_leitura and the password you chose, and paste it here.",
       },
       rds: {
@@ -14936,7 +14936,7 @@ export const en = {
       unreachable:
         "We couldn't reach the database server. Check the address and whether it accepts connections from outside.",
       blocked_host:
-        "This server isn't allowed. Use the database's public address (internal addresses, like Railway's DATABASE_URL, don't work from here).",
+        "This server isn't allowed. Use the database's public address (internal addresses, like Railway's `DATABASE_URL`, don't work from here).",
       tls: "The database didn't accept a secure connection. Turn on SSL in the database, or choose No encryption under Advanced (test databases only).",
       unknown: "Couldn't connect right now. Try again in a moment.",
       no_databases: "This user can't open any database on this server. Check its permissions or the start of the name.",
@@ -15841,7 +15841,7 @@ export const en = {
       titleRequired: "Give it a name.",
       tooLong: "That's too long. The limit is {{max}}.",
       notHttps: "Use an address that starts with https://",
-      keyNameInvalid: "Use capital letters, digits and _ in the name, like ACME_API_KEY.",
+      keyNameInvalid: "Use capital letters, digits and _ in the name, like `ACME_API_KEY`.",
       keyNameReserved: "This name is reserved. Pick another one.",
       keyNameTaken: "A key with this name is already saved here.",
       contactEmpty: "Fill in at least one field.",
@@ -16246,11 +16246,11 @@ export const en = {
       offline: "Agents wait for it to come back.",
       offlineSeen: "Last seen {{time}}. Agents wait for it to come back.",
       offlineWithHost: "{{host}} is offline. Agents wait for it to come back.",
-      /** `command`: `agentes-runner doctor`, shown as is. No network, or the computer too busy to answer. */
-      offlineUnresponsive: "Stopped answering at {{time}}, maybe no network or overloaded. Run {{command}} on it.",
-      offlineStopped: "The runner stopped at {{time}}. Start it again, or run {{command}} on it to see why.",
+      /** `command`: `agentes-runner doctor`, as code between its backticks. No network, or the computer too busy to answer. */
+      offlineUnresponsive: "Stopped answering at {{time}}, maybe no network or overloaded. Run `{{command}}` on it.",
+      offlineStopped: "The runner stopped at {{time}}. Start it again, or run `{{command}}` on it to see why.",
       offlineDropped:
-        "The connection dropped at {{time}}. It reconnects by itself. If it doesn't, run {{command}} on it.",
+        "The connection dropped at {{time}}. It reconnects by itself. If it doesn't, run `{{command}}` on it.",
     },
     /** Why a device isn't ready, by the code its computer reports. */
     reason: {
@@ -17785,8 +17785,8 @@ export const en = {
         state: { off: "Off", on: "On", invalid: "Invalid key" },
         line: {
           invalid: "This server can't read this key. Paste it again.",
-          env: "Set in this server's settings (GIPHY_API_KEY).",
-          envInvalid: "This key can't be used. Change it in this server's settings (GIPHY_API_KEY).",
+          env: "Set in this server's settings (`GIPHY_API_KEY`).",
+          envInvalid: "This key can't be used. Change it in this server's settings (`GIPHY_API_KEY`).",
         },
         invalid: "GIPHY didn't accept this key. Copy it again from GIPHY Developers.",
         remove: {

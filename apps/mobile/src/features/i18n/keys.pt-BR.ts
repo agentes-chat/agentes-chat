@@ -855,9 +855,9 @@ export const featureKeysPtBR = {
         openmausbot:
           "No OpenMausBot: clique com o botão direito na equipe\u00a0›\u00a0Compartilhar equipe…\u00a0›\u00a0Salvar arquivo. Depois escolha esse arquivo aqui.",
         hermes:
-          "O Hermes exporta pelo terminal (hermes profile export), num .tar.gz que o celular não abre. Importe pelo computador, ou escolha aqui os arquivos .md e .yaml do perfil.",
+          "O Hermes exporta pelo terminal (`hermes profile export`), num .tar.gz que o celular não abre. Importe pelo computador, ou escolha aqui os arquivos .md e .yaml do perfil.",
         openclaw:
-          "O OpenClaw guarda os agentes na pasta ~/.openclaw do computador. Escolha aqui os arquivos .md de um workspace, ou importe a pasta inteira pelo computador.",
+          "O OpenClaw guarda os agentes na pasta `~/.openclaw` do computador. Escolha aqui os arquivos .md de um workspace, ou importe a pasta inteira pelo computador.",
         paperclip: "Cole abaixo o link do pacote no GitHub, ou escolha o COMPANY.md e os outros arquivos .md.",
         agenteschat:
           "No outro workspace: Configurações\u00a0›\u00a0Importar e exportar\u00a0›\u00a0Baixar o arquivo. Depois escolha o .json aqui.",
@@ -2603,7 +2603,7 @@ export const featureKeysPtBR = {
       newPassword: "Nova senha",
       keyName: "Variável",
       keyNamePlaceholder: "ACME_API_KEY",
-      keyNameHelp: "Letras maiúsculas, números e _, como ACME_API_KEY. Os agentes pedem a chave por esse nome.",
+      keyNameHelp: "Letras maiúsculas, números e _, como `ACME_API_KEY`. Os agentes pedem a chave por esse nome.",
       value: "Valor",
       newValue: "Novo valor",
       description: "Descrição",

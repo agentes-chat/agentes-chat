@@ -796,8 +796,8 @@
       "where": {
         "openbotrun": "Pilih openbot-import.json (dari Migrator oleh OpenBot) atau openbot-transfer.json (dari transfer instance). File .zip dibuka dulu di aplikasi File: sekali ketuk untuk mengekstraknya.",
         "openmausbot": "Di OpenMausBot: klik kanan tim › Bagikan tim… › Simpan file. Lalu pilih file itu di sini.",
-        "hermes": "Hermes mengekspor dari terminal (hermes profile export), sebagai .tar.gz yang tidak bisa dibuka ponsel. Impor di komputer, atau pilih file .md dan .yaml profilnya di sini.",
-        "openclaw": "OpenClaw menyimpan agen di folder ~/.openclaw di komputer. Pilih file .md dari sebuah ruang kerja di sini, atau impor seluruh folder di komputer.",
+        "hermes": "Hermes mengekspor dari terminal (`hermes profile export`), sebagai .tar.gz yang tidak bisa dibuka ponsel. Impor di komputer, atau pilih file .md dan .yaml profilnya di sini.",
+        "openclaw": "OpenClaw menyimpan agen di folder `~/.openclaw` di komputer. Pilih file .md dari sebuah ruang kerja di sini, atau impor seluruh folder di komputer.",
         "paperclip": "Tempel tautan GitHub paketnya di bawah, atau pilih COMPANY.md dan file .md lainnya.",
         "agenteschat": "Di ruang kerja lain: Pengaturan › Impor dan ekspor › Unduh file. Lalu pilih .json-nya di sini."
       },
@@ -2417,7 +2417,7 @@
       "newPassword": "Kata sandi baru",
       "keyName": "Variabel",
       "keyNamePlaceholder": "ACME_API_KEY",
-      "keyNameHelp": "Huruf kapital, angka, dan _, misalnya ACME_API_KEY. Agen meminta kunci dengan nama ini.",
+      "keyNameHelp": "Huruf kapital, angka, dan _, misalnya `ACME_API_KEY`. Agen meminta kunci dengan nama ini.",
       "value": "Nilai",
       "newValue": "Nilai baru",
       "description": "Deskripsi",

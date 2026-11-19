@@ -1318,8 +1318,8 @@
       "where": {
         "openbotrun": "openbot-import.json (OpenBot'un Migrator aracından) veya openbot-transfer.json (örnek aktarımından) dosyasını ya da geldiği .zip dosyasını bırakın.",
         "openmausbot": "OpenMausBot'ta: ekibe sağ tıklayın → Ekibi paylaş… → Dosyayı kaydet.",
-        "hermes": "Bir terminalde profilin adıyla hermes profile export komutunu çalıştırın ve .tar.gz dosyasını buraya bırakın. Ya da tüm profilleri getirmek için ~/.hermes klasörünü sürükleyin.",
-        "openclaw": "~/.openclaw klasörünün tamamını (tüm ajanları getirir) ya da yalnızca bir çalışma alanını sürükleyin. Mac'te ⌘⇧. dosya seçicide gizli klasörleri gösterir.",
+        "hermes": "Bir terminalde profilin adıyla `hermes profile export` komutunu çalıştırın ve .tar.gz dosyasını buraya bırakın. Ya da tüm profilleri getirmek için `~/.hermes` klasörünü sürükleyin.",
+        "openclaw": "`~/.openclaw` klasörünün tamamını (tüm ajanları getirir) ya da yalnızca bir çalışma alanını sürükleyin. Mac'te ⌘⇧. dosya seçicide gizli klasörleri gösterir.",
         "paperclip": "Paket klasörünü (COMPANY.md dosyasının olduğu) sürükleyin, .zip halini bırakın ya da GitHub bağlantısını yapıştırın.",
         "agenteschat": "Diğer çalışma alanında: Ayarlar → İçe ve dışa aktarma → Dosyayı indir. Sonra .json dosyasını buraya bırakın."
       },
@@ -4614,7 +4614,7 @@
     "error": {
       "title": "Bir ad verin.",
       "website": "https adresi kullanın, örneğin app.example.com.",
-      "keyName": "Harfle başlayarak büyük harf, rakam ve _ kullanın, örneğin ACME_API_KEY.",
+      "keyName": "Harfle başlayarak büyük harf, rakam ve _ kullanın, örneğin `ACME_API_KEY`.",
       "password": "Şifreyi yazın.",
       "value": "Değeri yazın.",
       "contact": "En az bir alanı doldurun."
@@ -4775,7 +4775,7 @@
       "show": "{{name}} değerini göster",
       "hide": "{{name}} değerini gizle",
       "problem": {
-        "name": "Ad, ACME_API_KEY gibi olmalı",
+        "name": "Ad, `ACME_API_KEY` gibi olmalı",
         "reserved": "Ayrılmış ad",
         "empty": "Değer yok",
         "tooLarge": "Değer çok büyük"
@@ -10519,8 +10519,8 @@
     "line": {
       "invalid": "TypeSafe bu anahtarı kabul etmedi. Yeni bir tane oluşturun.",
       "no_credit": "TypeSafe'te kredi ekleyin. Jev kendiliğinden devam eder.",
-      "env": "Bu sunucunun ayarlarında tanımlı (TYPESAFE_API_KEY).",
-      "envInvalid": "TypeSafe bu anahtarı kabul etmedi. Bu sunucunun ayarlarından değiştirin (TYPESAFE_API_KEY)."
+      "env": "Bu sunucunun ayarlarında tanımlı (`TYPESAFE_API_KEY`).",
+      "envInvalid": "TypeSafe bu anahtarı kabul etmedi. Bu sunucunun ayarlarından değiştirin (`TYPESAFE_API_KEY`)."
     },
     "checkAgain": "Tekrar kontrol et",
     "via": {
@@ -10546,7 +10546,7 @@
       "line": {
         "invalid": "OpenRouter bu anahtarı kabul etmedi. Yeni bir tane oluşturun.",
         "no_credit": "OpenRouter'da kredi ekleyin. Jev kendiliğinden devam eder.",
-        "envInvalid": "OpenRouter bu anahtarı kabul etmedi. Bu sunucunun ayarlarından değiştirin (TYPESAFE_API_KEY)."
+        "envInvalid": "OpenRouter bu anahtarı kabul etmedi. Bu sunucunun ayarlarından değiştirin (`TYPESAFE_API_KEY`)."
       }
     },
     "remove": {
@@ -12769,7 +12769,7 @@
         "invalid": "Geçersiz"
       },
       "line": {
-        "env": "Bu sunucunun ayarlarında tanımlı (GITHUB_APP_ID).",
+        "env": "Bu sunucunun ayarlarında tanımlı (`GITHUB_APP_ID`).",
         "invalid": "Bu sunucu kayıtlı uygulamayı açamıyor. Kaldırıp yeniden oluşturun.",
         "events": "Ajanların GitHub'da olanları duyması için uygulamada şu olayları işaretleyin: {{events}}."
       },
@@ -13345,8 +13345,8 @@
     "composio": {
       "via": "Composio üzerinden",
       "needsReconnect": "Yeniden bağlanması gerekiyor",
-      "off_one": "{{names}} ve {{count}} hizmet daha Composio üzerinden bağlanır. Bunları açmak için bu sunucuyu yöneten kişi COMPOSIO_API_KEY değerini ayarlar (bkz. SELF_HOSTING.md).",
-      "off_other": "{{names}} ve {{count}} hizmet daha Composio üzerinden bağlanır. Bunları açmak için bu sunucuyu yöneten kişi COMPOSIO_API_KEY değerini ayarlar (bkz. SELF_HOSTING.md).",
+      "off_one": "{{names}} ve {{count}} hizmet daha Composio üzerinden bağlanır. Bunları açmak için bu sunucuyu yöneten kişi `COMPOSIO_API_KEY` değerini ayarlar (bkz. `SELF_HOSTING.md`).",
+      "off_other": "{{names}} ve {{count}} hizmet daha Composio üzerinden bağlanır. Bunları açmak için bu sunucuyu yöneten kişi `COMPOSIO_API_KEY` değerini ayarlar (bkz. `SELF_HOSTING.md`).",
       "usage": "Composio: {{month}} içinde {{limit}} çağrıdan {{calls}} tanesi",
       "usageNoLimit": "Composio: {{month}} içinde {{calls}} çağrı",
       "limitNotice": "Bu çalışma alanı bu ayki Composio çağrılarını kullandı",
@@ -14514,7 +14514,7 @@
       },
       "railway": {
         "1": "Postgres hizmetinde Data → Query bölümünü açın ve aşağıdaki komutu çalıştırın (şifreyi değiştirin).",
-        "2": "Variables bölümünde DATABASE_PUBLIC_URL değerini kopyalayın (DATABASE_URL dahilidir ve buradan çalışmaz).",
+        "2": "Variables bölümünde `DATABASE_PUBLIC_URL` değerini kopyalayın (`DATABASE_URL` dahilidir ve buradan çalışmaz).",
         "3": "İçindeki kullanıcı ve şifreyi agentes_leitura ve seçtiğiniz şifreyle değiştirip buraya yapıştırın."
       },
       "rds": {
@@ -14549,7 +14549,7 @@
     "error": {
       "auth": "Kullanıcı adı veya şifre eşleşmiyor. Kontrol edip tekrar deneyin.",
       "unreachable": "Veritabanı sunucusuna ulaşamadık. Adresi ve dışarıdan bağlantı kabul edip etmediğini kontrol edin.",
-      "blocked_host": "Bu sunucuya izin verilmiyor. Veritabanının herkese açık adresini kullanın (Railway'in DATABASE_URL değeri gibi dahili adresler buradan çalışmaz).",
+      "blocked_host": "Bu sunucuya izin verilmiyor. Veritabanının herkese açık adresini kullanın (Railway'in `DATABASE_URL` değeri gibi dahili adresler buradan çalışmaz).",
       "tls": "Veritabanı güvenli bağlantıyı kabul etmedi. Veritabanında SSL'i açın ya da Gelişmiş altında Şifreleme yok seçeneğini seçin (yalnızca test veritabanları).",
       "unknown": "Şu anda bağlanılamadı. Birazdan tekrar deneyin.",
       "no_databases": "Bu kullanıcı bu sunucudaki hiçbir veritabanını açamıyor. İzinlerini veya adın başını kontrol edin."
@@ -15456,7 +15456,7 @@
       "titleRequired": "Bir ad verin.",
       "tooLong": "Çok uzun. Sınır {{max}}.",
       "notHttps": "https:// ile başlayan bir adres kullanın",
-      "keyNameInvalid": "Adda büyük harf, rakam ve _ kullanın, örneğin ACME_API_KEY.",
+      "keyNameInvalid": "Adda büyük harf, rakam ve _ kullanın, örneğin `ACME_API_KEY`.",
       "keyNameReserved": "Bu ad ayrılmış. Başka bir ad seçin.",
       "keyNameTaken": "Burada bu adla kayıtlı bir anahtar zaten var.",
       "contactEmpty": "En az bir alanı doldurun.",
@@ -15864,9 +15864,9 @@
       "offline": "Ajanlar geri gelmesini bekliyor.",
       "offlineSeen": "Son görülme: {{time}}. Ajanlar geri gelmesini bekliyor.",
       "offlineWithHost": "{{host}} çevrimdışı. Ajanlar geri gelmesini bekliyor.",
-      "offlineUnresponsive": "{{time}} itibarıyla yanıt vermiyor, ağ yok ya da aşırı yüklü olabilir. Üzerinde {{command}} çalıştırın.",
-      "offlineStopped": "Runner {{time}} saatinde durdu. Yeniden başlatın ya da nedenini görmek için üzerinde {{command}} çalıştırın.",
-      "offlineDropped": "Bağlantı {{time}} saatinde koptu. Kendiliğinden yeniden bağlanır. Bağlanmazsa üzerinde {{command}} çalıştırın."
+      "offlineUnresponsive": "{{time}} itibarıyla yanıt vermiyor, ağ yok ya da aşırı yüklü olabilir. Üzerinde `{{command}}` çalıştırın.",
+      "offlineStopped": "Runner {{time}} saatinde durdu. Yeniden başlatın ya da nedenini görmek için üzerinde `{{command}}` çalıştırın.",
+      "offlineDropped": "Bağlantı {{time}} saatinde koptu. Kendiliğinden yeniden bağlanır. Bağlanmazsa üzerinde `{{command}}` çalıştırın."
     },
     "reason": {
       "locked": "Telefon kilitli",
@@ -17288,8 +17288,8 @@
         },
         "line": {
           "invalid": "Bu sunucu bu anahtarı okuyamıyor. Yeniden yapıştırın.",
-          "env": "Bu sunucunun ayarlarında tanımlı (GIPHY_API_KEY).",
-          "envInvalid": "Bu anahtar kullanılamıyor. Bu sunucunun ayarlarından değiştirin (GIPHY_API_KEY)."
+          "env": "Bu sunucunun ayarlarında tanımlı (`GIPHY_API_KEY`).",
+          "envInvalid": "Bu anahtar kullanılamıyor. Bu sunucunun ayarlarından değiştirin (`GIPHY_API_KEY`)."
         },
         "invalid": "GIPHY bu anahtarı kabul etmedi. GIPHY Developers'dan yeniden kopyalayın.",
         "remove": {

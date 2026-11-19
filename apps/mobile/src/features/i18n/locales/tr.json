@@ -820,8 +820,8 @@
       "where": {
         "openbotrun": "openbot-import.json (OpenBot Migrator'dan) veya openbot-transfer.json (örnek aktarımından) dosyasını seçin. .zip dosyası önce Dosyalar uygulamasında açılır: bir dokunuş arşivi açar.",
         "openmausbot": "OpenMausBot'ta: ekibe sağ tıklayın › Ekibi paylaş… › Dosyayı kaydet. Sonra o dosyayı burada seçin.",
-        "hermes": "Hermes terminalden dışa aktarır (hermes profile export), telefonun açamadığı bir .tar.gz olarak. Bilgisayardan içe aktarın ya da profilin .md ve .yaml dosyalarını burada seçin.",
-        "openclaw": "OpenClaw ajanları bilgisayardaki ~/.openclaw klasöründe tutar. Bir çalışma alanının .md dosyalarını burada seçin ya da tüm klasörü bilgisayardan içe aktarın.",
+        "hermes": "Hermes terminalden dışa aktarır (`hermes profile export`), telefonun açamadığı bir .tar.gz olarak. Bilgisayardan içe aktarın ya da profilin .md ve .yaml dosyalarını burada seçin.",
+        "openclaw": "OpenClaw ajanları bilgisayardaki `~/.openclaw` klasöründe tutar. Bir çalışma alanının .md dosyalarını burada seçin ya da tüm klasörü bilgisayardan içe aktarın.",
         "paperclip": "Paketin GitHub bağlantısını aşağıya yapıştırın ya da COMPANY.md ve diğer .md dosyalarını seçin.",
         "agenteschat": "Diğer çalışma alanında: Ayarlar › İçe ve dışa aktar › Dosyayı indir. Sonra .json dosyasını burada seçin."
       },
@@ -2531,7 +2531,7 @@
       "newPassword": "Yeni şifre",
       "keyName": "Değişken",
       "keyNamePlaceholder": "ACME_API_KEY",
-      "keyNameHelp": "Büyük harf, rakam ve _, örneğin ACME_API_KEY. Ajanlar anahtarı bu adla ister.",
+      "keyNameHelp": "Büyük harf, rakam ve _, örneğin `ACME_API_KEY`. Ajanlar anahtarı bu adla ister.",
       "value": "Değer",
       "newValue": "Yeni değer",
       "description": "Açıklama",

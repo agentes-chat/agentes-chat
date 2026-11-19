@@ -820,8 +820,8 @@
       "where": {
         "openbotrun": "Kies openbot-import.json (uit Migrator by OpenBot) of openbot-transfer.json (uit de instance transfer). Een .zip opent eerst in de app Bestanden: met één tik pak je hem uit.",
         "openmausbot": "In OpenMausBot: klik met rechts op het team › Share team… › Save file. Kies daarna dat bestand hier.",
-        "hermes": "Hermes exporteert vanuit een terminal (hermes profile export), als .tar.gz die de telefoon niet kan openen. Importeer het op de computer, of kies hier de .md- en .yaml-bestanden van het profiel.",
-        "openclaw": "OpenClaw bewaart agents in de map ~/.openclaw op de computer. Kies hier de .md-bestanden van een werkruimte, of importeer de hele map op de computer.",
+        "hermes": "Hermes exporteert vanuit een terminal (`hermes profile export`), als .tar.gz die de telefoon niet kan openen. Importeer het op de computer, of kies hier de .md- en .yaml-bestanden van het profiel.",
+        "openclaw": "OpenClaw bewaart agents in de map `~/.openclaw` op de computer. Kies hier de .md-bestanden van een werkruimte, of importeer de hele map op de computer.",
         "paperclip": "Plak hieronder de GitHub-link van het pakket, of kies de COMPANY.md en de andere .md-bestanden.",
         "agenteschat": "In de andere werkruimte: Instellingen › Importeren en exporteren › Het bestand downloaden. Kies daarna hier de .json."
       },
@@ -2531,7 +2531,7 @@
       "newPassword": "Nieuw wachtwoord",
       "keyName": "Variabele",
       "keyNamePlaceholder": "ACME_API_KEY",
-      "keyNameHelp": "Hoofdletters, cijfers en _, zoals ACME_API_KEY. Agenten vragen de sleutel op met deze naam.",
+      "keyNameHelp": "Hoofdletters, cijfers en _, zoals `ACME_API_KEY`. Agenten vragen de sleutel op met deze naam.",
       "value": "Waarde",
       "newValue": "Nieuwe waarde",
       "description": "Beschrijving",
