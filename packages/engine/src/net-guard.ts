@@ -89,6 +89,10 @@ export async function assertPublicHttpsUrl(raw: string, resolve: ResolveHost = r
   if (url.protocol !== "https:") throw new ValidationError("Use an https:// address", "url.https_required");
   if (url.username || url.password)
     throw new ValidationError("The address can't have a user or password", "url.credentials");
+  // Whatever `outboundFetch` will do with this address at request time, this must allow here: with the operator's
+  // own network open to workspaces (`allowPrivateOutbound`, `allowsPrivateEndpoints`), a server on it — a tailnet
+  // address, say, which is CGNAT — would otherwise be refused as internal when it is saved and then work anyway.
+  if (privateOutbound) return url;
   const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
   if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal")) {
     throw new ValidationError("This address points to an internal network", "url.internal");
