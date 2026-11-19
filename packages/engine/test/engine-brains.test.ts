@@ -3791,6 +3791,14 @@ test("no room on the computer: nothing in the chat, the person's message says it
   expect(wait).toBeGreaterThan(PERSON_ROOM_RETRY_MS - 2_000);
   expect(wait).toBeLessThanOrEqual(PERSON_ROOM_RETRY_MS);
 
+  // Nine older claims' profiles: the run keeps its first claim's and its latest as more come.
+  const [claimed] = (run?.profiles ?? []) as { stages: { stage: string; ms: number }[] }[];
+  const filler = { stages: [{ stage: "filler", ms: 1, queries: 0 }], total: { ms: 1, queries: 0 } };
+  await f.db
+    .update(schema.agentRuns)
+    .set({ profiles: [claimed, ...Array.from({ length: 9 }, () => filler)] })
+    .where(eq(schema.agentRuns.id, run?.id ?? ""));
+
   // Still full: it waits on, saying nothing more and never flashing "thinking" in the conversation.
   events.length = 0;
   const once = { now: new Date(Date.now() + COMPUTER_BUSY_RETRY_MS + 1_000), maxBatches: 1 };
@@ -3819,6 +3827,15 @@ test("no room on the computer: nothing in the chat, the person's message says it
     .from(schema.agentRunSteps)
     .where(eq(schema.agentRunSteps.runId, run?.id ?? ""));
   expect(after.filter((s) => s.data.roomFound === true)).toHaveLength(1);
+  // Each claim after a refusal starts with its wait for room, from that refusal.
+  const profiles = (run?.profiles ?? []) as { stages: { stage: string; ms: number }[] }[];
+  expect(profiles).toHaveLength(10);
+  expect(profiles[0]).toEqual(claimed);
+  expect(claimed?.stages.some((s) => s.stage === "room_wait")).toBe(false);
+  for (const later of profiles.slice(-2)) {
+    expect(later.stages.map((s) => s.stage).slice(0, 2)).toEqual(["room_wait", "claim"]);
+    expect(later.stages[0]?.ms).toBeGreaterThanOrEqual(0);
+  }
 });
 
 test("no room for over 30 minutes: the run never fails, it keeps its place and asks again (long work wakes through turns)", async () => {

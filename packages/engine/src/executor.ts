@@ -726,6 +726,8 @@ export interface Transcript {
     resetsAt?: string;
     /** A usage wait's: when its conversation first paused (`usageWait.since`), its place in line (`usageWaitPlace`). */
     since?: number;
+    /** When this wait began (ms): the claim that resumes it profiles a wait for room from here (`room_wait`). */
+    at?: number;
     /** A usage wait's plan in words ("Claude", "ChatGPT"): Rotinas says what it waits for. */
     plan?: string;
     /** A plan wait's model (null: the brain's default): a turn through on another model doesn't wake it. */
@@ -938,7 +940,10 @@ const CONTEXT_TOOLS: readonly string[] = [
 
 /** How long the first call waits for its pre-warm once the quiet window is over. */
 const PREWARM_WAIT_MS = 4000;
-/** A run's last claims whose stage profiles it keeps (`agent_runs.profiles`): long work claims many times. */
+/**
+ * The claims whose stage profiles a run keeps (`agent_runs.profiles`): its first (the router's stage, its first context)
+ * and its latest. Long work and a wait for room claim many times.
+ */
 const RUN_PROFILES_KEPT = 10;
 /** How soon a quiet window that ends at once is told from one still running (no pre-warm then). */
 const PREWARM_PROBE_MS = 50;
@@ -1144,6 +1149,8 @@ type RunJobOptions = {
   wait?: string;
   /** A parked wake's run: when the wake started waiting (`transcript.roomOrderSince`). */
   lineSince?: number;
+  /** A run the router started: how long its routing took, the first stage of its first claim's profile. */
+  routerMs?: number;
   jobId?: string;
   owned?: () => Promise<boolean>;
   failed?: (error: unknown) => void;
@@ -1189,9 +1196,11 @@ export async function executeRun(deps: EngineDeps, runId: string, options: RunJo
       // not in the transcript (appending there would rewrite the whole TOASTed conversation on every claim).
       if (prof.run) {
         const brain = prof.brain.length > 0 ? { brain: prof.brain } : {};
-        const kept = JSON.stringify([{ stages: prof.stages, total: prof.total(), ...brain }]);
+        const kept = JSON.stringify([
+          { stages: prof.stages, total: prof.total(), endedAt: new Date().toISOString(), ...brain },
+        ]);
         const capped = (list: SQL) =>
-          sql`case when jsonb_array_length(${list}) > ${RUN_PROFILES_KEPT} then (${list}) - 0 else ${list} end`;
+          sql`case when jsonb_array_length(${list}) > ${RUN_PROFILES_KEPT} then (${list}) - 1 else ${list} end`;
         await deps.db
           .update(agentRuns)
           .set({ profiles: capped(sql`coalesce(${agentRuns.profiles}, '[]'::jsonb) || ${kept}::jsonb`) })
@@ -1345,6 +1354,8 @@ async function executeRunInner(
   let waitedModel: string | null | undefined;
   /** When its wait's own timer was due: a claim before it was a wake (a turn through, a reading with room). */
   let waitedUntil: string | undefined;
+  /** When that wait began. */
+  let waitedAt: number | undefined;
   const started = await transitionRun(db, runId, "queued", "running");
   if (started) {
     run = started;
@@ -1399,6 +1410,7 @@ async function executeRunInner(
       waitedKey = stored?.waitingForBrain?.waitKey;
       waitedModel = stored?.waitingForBrain?.model;
       waitedUntil = stored?.waitingForBrain?.until;
+      waitedAt = stored?.waitingForBrain?.at;
       // This job runs the run from now on, not its wait: handed back at a shutdown or retried, it goes on with the
       // run instead of finding it no longer waiting and doing nothing.
       if (options.wait && options.jobId) {
@@ -1411,6 +1423,9 @@ async function executeRunInner(
   }
   // status is `running` here.
   prof.mark("claim");
+  if (fresh && options.routerMs !== undefined) prof.before("router", options.routerMs);
+  // Each refusal for room ends its claim: this one profiles the wait since the last refusal, so a run's waits add up.
+  if (waitedOn === "busy" && waitedAt !== undefined) prof.before("room_wait", prof.startedAt - waitedAt);
   prof.run = { id: run.id, orgId: run.orgId, agentId: run.agentId };
   steerGate.close = answerNoTurn(deps.pubsub, run.id);
   const claimedAt = Date.now();
@@ -3872,6 +3887,7 @@ async function executeRunInner(
       machineId,
       code: u.code,
       waitId: Bun.randomUUIDv7(),
+      at: Date.now(),
       ...(quietUntil !== null ? { quiet: true } : {}),
     };
     if (!stillBusy)

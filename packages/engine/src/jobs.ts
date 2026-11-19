@@ -798,12 +798,14 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
       if (typeof job.payload.line === "string")
         await publishQueueChanged(deps.pubsub, orgOf(job), job.payload.line).catch(() => {});
       const lineSince = typeof job.payload.lineSince === "number" ? job.payload.lineSince : undefined;
+      const routerMs = typeof job.payload.routerMs === "number" ? job.payload.routerMs : undefined;
       await queryTrace.run({ count: 0 }, () =>
         executeRun(deps, String(job.payload.runId), {
           ...ctx,
           jobId: job.id,
           ...(wait ? { wait } : {}),
           ...(lineSince ? { lineSince } : {}),
+          ...(routerMs !== undefined ? { routerMs } : {}),
         }),
       );
       // A mission's main-session turn that ended: write items queued behind it may start (ADR 0044).
