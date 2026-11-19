@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 68;
+export const MACHINE_PROTOCOL_VERSION = 71;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -682,6 +682,11 @@ export const SHARED_GROK_PROTOCOL = 67;
  * folder (ADR 0143). An older Mac runner refuses them, so the server reads it as too old for the Antigravity CLI.
  */
 export const ANTIGRAVITY_MAC_PROTOCOL = 68;
+/**
+ * `phone.repair`: a Mac repairs a real iPhone's test helper (stops it and its leftovers, builds it again with the Xcode
+ * installed now, checks it on the phone). Older runners answer `bad_request`: the server asks none of them.
+ */
+export const PHONE_REPAIR_PROTOCOL = 71;
 
 /**
  * `clis.check`: the coding CLIs looked up again now, the PATH read again first (the apps' "I installed it, check again").
@@ -2735,6 +2740,8 @@ export type MachineRequest = (
   | { op: "cli.install"; action: "start" | "status" | "cancel"; tool?: InstallableCli }
   /** `IPHONE_DEV_MODE_PROTOCOL`: open Xcode on this Mac (it shows Developer Mode on a plugged iPhone). */
   | { op: "xcode.open" }
+  /** `PHONE_REPAIR_PROTOCOL`: repair the test helper of the iPhone `serial`; answers once its rebuild started. */
+  | { op: "phone.repair"; serial: string }
 ) & {
   agent?: AgentScope;
   /** Protocol 34: a `browser.*` op in this browser profile's session instead of the agent's (ADR 0110). */
@@ -2815,6 +2822,7 @@ export const MACHINE_OPS: readonly MachineOp[] = [
   "clis.check",
   "cli.install",
   "xcode.open",
+  "phone.repair",
 ];
 
 /** What each op answers with `ok: true`. */
@@ -2986,6 +2994,7 @@ export interface MachineReplies {
   "clis.check": { executors: NonNullable<RunnerInfo["executors"]> };
   "cli.install": { install: CliInstall | null };
   "xcode.open": { opened: boolean };
+  "phone.repair": { repairing: boolean };
 }
 
 /** An element numbered on a `browser.capture` image: its ref and box (CSS pixels). */

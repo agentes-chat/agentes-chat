@@ -541,6 +541,8 @@ export class FakeRunner {
       case "iphone.look":
         this.looks++;
         return reply({ looking: true });
+      case "iphone.repair":
+        return reply({ repairing: true });
       case "shutdown":
         return reply({ stopping: true });
     }

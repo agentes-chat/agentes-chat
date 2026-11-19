@@ -142,6 +142,8 @@ export class ControlServer {
         return d.cliInstaller().handle(m);
       case "iphone.look":
         return d.iphoneLook();
+      case "iphone.repair":
+        return d.iphoneRepair(str(m.serial));
       case "shutdown":
         return { stopping: true };
       default:
