@@ -8153,21 +8153,16 @@ html:not([data-pointer]) .ac-video__rail:focus-visible .ac-video__knob {
     inset 0 0 0 2px var(--line-strong);
 }
 /* Formatting, floating over the text selected in the box (`FormatBar` places it from the selection). As wide as its
-   buttons, capped to the composer's width by the script: on a narrow one they wrap onto a second row. */
+   buttons, capped to the composer's width by the script: on a narrow one its row scrolls sideways, its ends faded. */
 .ac-formatbar {
   position: absolute;
   top: 0;
   left: 0;
   z-index: var(--z-floating);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-1);
   box-sizing: border-box;
   width: max-content;
   /* Until the script places and caps it: never past the text's cell, so it can't widen the page. */
   max-width: 100%;
-  padding: var(--space-1);
   border-radius: calc(var(--control-r-sm) + var(--space-1));
   background: var(--raised);
   box-shadow: var(--e3), var(--top);
@@ -8194,6 +8189,34 @@ html:not([data-pointer]) .ac-video__rail:focus-visible .ac-video__knob {
   .ac-formatbar[data-open] {
     transition: none;
   }
+}
+/* The padding is the row's, not the bar's: a scroller clips at its padding box, and a focus ring stays inside it. */
+.ac-formatbar__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  /* A button the arrow keys reach scrolls in clear of the fade. */
+  scroll-padding-inline: 48px;
+}
+.ac-formatbar__row::-webkit-scrollbar {
+  display: none;
+}
+.ac-formatbar__row[data-more="end"] {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent);
+}
+.ac-formatbar__row[data-more="start"] {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 48px);
+  mask-image: linear-gradient(to right, transparent, #000 48px);
+}
+.ac-formatbar__row[data-more="both"] {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent);
 }
 .ac-formatbar__item {
   display: inline-flex;
@@ -10713,7 +10736,11 @@ html:not([data-pointer]) .ac-filter__option:focus-visible {
     --bar-btn: var(--control-h-sm);
     gap: 8px;
   }
-  /* The floating bar keeps its 32px buttons (nine fit a phone's width on one row), their targets taller. */
+  /* The floating bar keeps its 32px buttons, their targets as tall as a finger's: the row grows to hold them, since it
+     clips what passes its padding. */
+  .ac-formatbar__row {
+    padding-block: calc((var(--touch-target) - var(--control-h-sm)) / 2);
+  }
   .ac-formatbar__btn {
     position: relative;
   }
