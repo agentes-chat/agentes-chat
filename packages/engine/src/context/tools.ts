@@ -569,7 +569,11 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
         } else if (str(input.channel)) {
           const name = str(input.channel).trim().replace(/^#/, "").toLowerCase();
           const [found] = await ctx.db
-            .select({ id: schema.channels.id })
+            .select({
+              id: schema.channels.id,
+              visibility: schema.channels.visibility,
+              archivedAt: schema.channels.archivedAt,
+            })
             .from(schema.channels)
             .where(
               and(
@@ -578,7 +582,17 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
                 eq(schema.channels.kind, "channel"),
               ),
             );
-          if (!found || !allowed.includes(found.id)) return notFound;
+          if (!found) return notFound;
+          if (!allowed.includes(found.id)) {
+            // A public channel's name is no secret in the workspace: say what is missing, so the agent can tell
+            // whoever asked instead of reporting an empty channel. A private one stays "not found".
+            return found.visibility === "public" && !found.archivedAt
+              ? {
+                  content: `You are not a member of #${name}, so you can't read it. Ask a person to add you to it, then try again.`,
+                  isError: true,
+                }
+              : notFound;
+          }
           place = { channelId: found.id, threadId: null };
         } else if (str(input.thread_id)) {
           const [root] = await describeMessages(
