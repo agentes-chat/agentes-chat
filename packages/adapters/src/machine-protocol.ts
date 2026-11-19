@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 71;
+export const MACHINE_PROTOCOL_VERSION = 73;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -686,7 +686,7 @@ export const ANTIGRAVITY_MAC_PROTOCOL = 68;
  * `phone.repair`: a Mac repairs a real iPhone's test helper (stops it and its leftovers, builds it again with the Xcode
  * installed now, checks it on the phone). Older runners answer `bad_request`: the server asks none of them.
  */
-export const PHONE_REPAIR_PROTOCOL = 71;
+export const PHONE_REPAIR_PROTOCOL = 73;
 
 /**
  * `clis.check`: the coding CLIs looked up again now, the PATH read again first (the apps' "I installed it, check again").
