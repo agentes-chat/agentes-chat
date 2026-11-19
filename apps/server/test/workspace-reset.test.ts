@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import { eq, like, schema } from "@agenteschat/db";
+import { eq, like, schema, sql } from "@agenteschat/db";
 import {
   type Browser,
   browser,
@@ -74,4 +74,18 @@ test("an owner resets the workspace with its own code; it starts over with its p
   );
   // Spent: the same code resets nothing again.
   expect(await answer(await resetOrg(owner, orgId, { code }))).toEqual([400, "reauth.code_wrong"]);
+});
+
+test("a reset that fails to start doesn't count against the workspace's day", async () => {
+  const owner = browser(t);
+  await signUp(owner, "owner@example.com");
+  const { orgId } = await seedOrg(owner);
+  await t.db.execute(sql`create function refuse_reset() returns trigger language plpgsql as $$
+    begin raise exception 'refused'; end $$`);
+  await t.db.execute(sql`create trigger refuse_reset before update of reset_requested_at on organizations
+    for each row when (new.reset_requested_at is not null) execute function refuse_reset()`);
+  const res = await resetOrg(owner, orgId, { code: await resetCode(owner, orgId) });
+  expect(res.status).toBe(500);
+  const day = { limit: 1, windowMs: 86_400_000 };
+  expect((await t.adapters.rateLimiter.consume(`org-reset:${orgId}`, day)).allowed).toBe(true);
 });

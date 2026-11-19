@@ -1722,10 +1722,17 @@ export function accountRoutes(deps: AppDeps) {
       const under = (await getOrganization(db, orgId))?.resetRequestedAt;
       if (under) return c.json({ reset: { startedAt: under.toISOString() } }, 202);
       await prove(c, user.id, orgId, c.req.valid("json"), true);
-      if (!(await deps.adapters.rateLimiter.consume(`org-reset:${orgId}`, DELETIONS_PER_DAY)).allowed) {
+      const limiter = deps.adapters.rateLimiter;
+      const key = `org-reset:${orgId}`;
+      if (!(await limiter.consume(key, DELETIONS_PER_DAY)).allowed) {
         return apiError(c, 429, "rate_limited", "This workspace was reset too many times today. Try again tomorrow.");
       }
-      const { startedAt } = await requestReset(db, user.id, orgId);
+      // Only a reset this request started counts against the day's.
+      const { startedAt, started } = await requestReset(db, user.id, orgId).catch(async (error) => {
+        await limiter.release(key);
+        throw error;
+      });
+      if (!started) await limiter.release(key);
       deps.wakeWorkers?.();
       return c.json({ reset: { startedAt: startedAt.toISOString() } }, 202);
     },
