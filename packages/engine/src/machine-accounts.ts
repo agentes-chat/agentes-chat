@@ -71,6 +71,7 @@ import {
   PLAN_STALE_MS,
   planCheckedAt,
   planFull,
+  planOwn,
   planState,
   resetSinceRead,
   windowReadAt,
@@ -317,13 +318,17 @@ const runMayMoveTo = (row: Pick<MachineAccountRow, "kind" | "provider" | "authMe
 /** The accounts of an order of use that have a place in it (`MachineAccountView.movable`). */
 const movableRow = and(eq(machineAccounts.shared, true), eq(machineAccounts.status, "active"));
 
-/** People would see a difference: a window moved a point or more, its reset moved, one came or went, or the limit. */
+/**
+ * People would see a difference: a window moved a point or more, its reset moved, it was read again or carried over
+ * (`PlanWindow.at`), one came or went, or the limit.
+ */
 export function usageMoved(prev: PlanUsage | null | undefined, next: PlanUsage | null | undefined): boolean {
   if (!prev || !next) return Boolean(prev) !== Boolean(next);
   if (Boolean(prev.limited) !== Boolean(next.limited) || prev.windows.length !== next.windows.length) return true;
   return next.windows.some((w) => {
     const p = prev.windows.find((x) => x.kind === w.kind && x.label === w.label);
-    return !p || Math.abs(p.usedPercent - w.usedPercent) >= 1 || p.resetsAt !== w.resetsAt;
+    // A window read again after its number went out of date shows a number again, not how old it is.
+    return !p || Math.abs(p.usedPercent - w.usedPercent) >= 1 || p.resetsAt !== w.resetsAt || p.at !== w.at;
   });
 }
 
@@ -1240,7 +1245,8 @@ export async function recheckStuckPlans(deps: Pick<MachineAccountHubDeps, "db" |
 /**
  * A reading that turns on the account outran (`recheckStuckPlans`): a window whose own reading went out of date
  * before the last turn, not asked about since it did; or, within `PLAN_STALE_MS` of a refusal for the limit that a
- * turn since got past, a window read before that refusal, asked at most every `every`. `asked`: the sweep's last ask.
+ * turn since got past, a window of the plan's own (`planOwn`) read before that refusal, asked at most every `every`.
+ * `asked`: the sweep's last ask.
  */
 function outdated(
   usage: PlanUsage & { checkedAt?: string },
@@ -1258,7 +1264,8 @@ function outdated(
     refused > now - PLAN_STALE_MS &&
     worked > refused &&
     now - asked >= every &&
-    usage.windows.some((w) => readAt(w) < refused)
+    // The plan's own: extra usage or a model's week the check never names again would ask every time.
+    usage.windows.some((w) => planOwn(w) && readAt(w) < refused)
   );
 }
 

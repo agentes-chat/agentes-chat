@@ -9,7 +9,7 @@ import {
 } from "@agenteschat/adapters";
 import { eq, schema } from "@agenteschat/db";
 import { planCheckedAt } from "@agenteschat/ui/plan-state";
-import { recheckStuckPlans } from "../src/machine-accounts";
+import { recheckStuckPlans, usageMoved } from "../src/machine-accounts";
 import type { MachineCaller, MachineStatus } from "../src/machine-hub";
 import { type Fixture, setup } from "./fixtures";
 import { pairMachine } from "./machine-fixtures";
@@ -193,6 +193,10 @@ test("a window whose own reading went out of date while turns ran is read again,
   expect(calls[0]?.req).toEqual({ op: "account", action: "list", fresh: [worked], recheck: [worked] });
   // Asked once for that reading: a check that didn't name the week either leaves it as it is.
   expect(await recheckStuckPlans({ db: fx.db, hub }, NOW + TOKEN_RECHECK_MS)).toEqual([]);
+  // Read again at the same number, the pages still hear of it: the week shows a number again, not its age.
+  const reread = { ...week(), windows: week().windows.map(({ at: _, ...w }) => w) };
+  expect(usageMoved(week(), reread)).toBe(true);
+  expect(usageMoved(week(), week())).toBe(false);
 });
 
 test("after a refusal for the limit that a turn got past, a window read before it is read again", async () => {
@@ -216,6 +220,15 @@ test("after a refusal for the limit that a turn got past, a window read before i
   // Still refused: no turn since.
   const still = await account({ ...usage, windows: usage.windows.map((w) => ({ ...w, usedPercent: 60 })) });
   await failed(still, ago(3 * 3600_000));
+  // Only extra usage was read before it (a window the check never names again): nothing to ask.
+  const extra = await account({
+    ...usage,
+    windows: [
+      { kind: "five_hour", usedPercent: 4, resetsAt: "2030-01-01T16:00:00.000Z" },
+      { kind: "other", label: "Extra usage", usedPercent: 10, at: ago(3 * 3600_000) },
+    ],
+  });
+  await failed(extra, ago(5 * 60_000));
   expect(await recheckStuckPlans({ db: fx.db, hub }, NOW)).toEqual([past]);
   expect(await recheckStuckPlans({ db: fx.db, hub }, NOW + 60_000)).toEqual([]);
 });
