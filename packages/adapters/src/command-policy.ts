@@ -546,16 +546,26 @@ export function secretRead(
   const cmds = simpleCommands(command);
   if (cmds) {
     return cmds.some(
-      (s) => s.argv.slice(1).some((a) => namesSecret(a, scope)) || s.reads.some((r) => namesSecret(r, scope)),
+      (s) =>
+        s.argv.slice(1).some((a, n) => !sshKeyArg(s.argv, n + 1) && namesSecret(a, scope)) ||
+        s.reads.some((r) => namesSecret(r, scope)),
     );
   }
   // Not plainly readable: any word that names a secret.
-  return commandParts(command).some((part) =>
-    part
-      .split(" ")
-      .slice(1)
-      .some((w) => namesSecret(bareWord(w), scope)),
-  );
+  return commandParts(command).some((part) => {
+    const words = part.split(" ");
+    return words.slice(1).some((w, n) => !sshKeyArg(words, n + 1) && namesSecret(bareWord(w), scope));
+  });
+}
+
+/** ssh, scp and sftp read the key they are given (`-i`, `-o IdentityFile=`) to sign in; it never leaves the computer. */
+const SSH_CLIENTS = new Set(["ssh", "scp", "sftp"]);
+function sshKeyArg(argv: readonly string[], at: number) {
+  if (!SSH_CLIENTS.has((argv[0] ?? "").split("/").pop() ?? "")) return false;
+  const word = argv[at] ?? "";
+  const before = argv[at - 1] ?? "";
+  if (before === "-i" || /^-i\S/.test(word) || /^-oIdentityFile=/i.test(word)) return true;
+  return before === "-o" && /^IdentityFile=/i.test(word);
 }
 
 /** Commands that only read, whatever their arguments (minus the options that write or run). */
@@ -2662,8 +2672,9 @@ function commandProblem(s: Loose, scope: CommandScope): string | null {
     const why = writeProblem(file, scope);
     if (why) return why;
   }
+  const keys = new Set(s.argv.filter((_, i) => i > 0 && sshKeyArg(s.argv, i)));
   for (const word of [...s.raw, ...s.reads]) {
-    if (written.includes(word)) continue;
+    if (written.includes(word) || keys.has(word)) continue;
     const why = wordProblem(word, scope);
     if (why) return why;
   }
