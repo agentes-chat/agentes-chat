@@ -1,13 +1,19 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { and, eq, isNull, rowsOf, schema, sql } from "@agenteschat/db";
+import { and, eq, isNull, like, rowsOf, schema, sql } from "@agenteschat/db";
 import {
   createFileArtifact,
   drainOutbox,
+  enqueue,
   enqueueWaitingResets,
+  insertMessage,
+  listMachineRequests,
   ORG_RESET_JOB,
+  type OutboxJob,
   postPersonMessage,
   RESET_ERASES,
   RESET_KEEPS,
+  RESET_KEEPS_JOBS,
+  RESET_STORED_FILES,
   RESET_TOMBSTONES,
   requestReset,
   resetWorkspace,
@@ -28,6 +34,13 @@ const count = async (table: string, orgId = f.org.id) =>
 
 const resetDeps = () => ({ db: f.db, pubsub: f.pubsub, artifacts: f.artifactDeps, blobs: f.artifactDeps.blobs });
 
+const orgMessages = async () =>
+  Number(
+    rowsOf<{ n: number }>(
+      await f.db.execute(sql`select count(*)::int as n from messages where org_id = ${f.org.id}::uuid`),
+    )[0]?.n,
+  );
+
 describe("workspace reset", () => {
   test("every tenant table is kept, tombstoned or erased, once", async () => {
     f = await setup();
@@ -41,6 +54,142 @@ describe("workspace reset", () => {
     const listed: string[] = [...RESET_KEEPS, ...RESET_TOMBSTONES, ...RESET_ERASES];
     expect(new Set(listed).size).toBe(listed.length);
     expect([...listed].sort()).toEqual([...tables].sort());
+  });
+
+  test("every erased table that names stored bytes has them collected", async () => {
+    f = await setup();
+    const erased: string[] = [...RESET_ERASES];
+    const stored = rowsOf<{ name: string }>(
+      await f.db.execute(sql`
+        select distinct table_name as name from information_schema.columns
+        where table_schema = 'public' and column_name in ('blob_key', 'storage_config_id')`),
+    )
+      .map((r) => r.name)
+      .filter((name) => erased.includes(name));
+    expect(stored.sort()).toEqual([...RESET_STORED_FILES].sort());
+  });
+
+  test("the jobs it keeps are jobs the server runs", async () => {
+    f = await setup();
+    for (const kind of RESET_KEEPS_JOBS) expect(f.handlers[kind]).toBeFunction();
+  });
+
+  test("jobs still waiting for what it erased go with it and do nothing if they ran; the kept ones stay", async () => {
+    f = await setup();
+    const msg = await insertMessage(f.db, {
+      orgId: f.org.id,
+      channelId: f.general.id,
+      author: { type: "person", userId: f.owner.id },
+      body: "oi",
+    });
+    const [run] = await f.db
+      .insert(schema.agentRuns)
+      .values({
+        orgId: f.org.id,
+        agentId: f.agent.id,
+        channelId: f.general.id,
+        threadRootId: msg.id,
+        triggerMessageId: msg.id,
+        trigger: "mention",
+        hop: 1,
+      })
+      .returning();
+    const [routine] = await f.db
+      .insert(schema.routines)
+      .values({
+        orgId: f.org.id,
+        agentId: f.agent.id,
+        name: "Daily",
+        prompt: "Look at the build.",
+        target: { type: "channel", channelId: f.general.id },
+        triggerType: "schedule",
+        timezone: "UTC",
+        createdByUserId: f.owner.id,
+      })
+      .returning();
+    const [routineRun] = await f.db
+      .insert(schema.routineRuns)
+      .values({ orgId: f.org.id, routineId: routine?.id ?? "", at: new Date(), trigger: "schedule" })
+      .returning();
+    const erased = {
+      "agent_run.execute": { runId: run?.id },
+      "message.posted": { messageId: msg.id },
+      "routine.run": { routineRunId: routineRun?.id },
+    };
+    const later = new Date(Date.now() + 3600_000);
+    for (const [kind, payload] of Object.entries(erased)) {
+      await enqueue(f.db, { orgId: f.org.id, kind, payload, dedupeKey: `test:${kind}`, runAt: later });
+    }
+    await enqueue(f.db, { orgId: f.org.id, kind: "email.send", payload: {}, dedupeKey: "test:email", runAt: later });
+    const jobs = await f.db.select().from(schema.outbox).where(like(schema.outbox.dedupeKey, "test:%"));
+
+    await requestReset(f.db, f.owner.id, f.org.id);
+    expect(await resetWorkspace(resetDeps(), f.org.id)).toBe(true);
+
+    const left = await f.db.select().from(schema.outbox).where(like(schema.outbox.dedupeKey, "test:%"));
+    expect(left.map((j) => j.kind)).toEqual(["email.send"]);
+    const ctx = { finalAttempt: false, owned: async () => true, failed: () => {} };
+    for (const job of jobs.filter((j: OutboxJob) => j.kind in erased)) await f.handlers[job.kind]?.(job, ctx);
+    expect(await count("agent_runs")).toBe(0);
+    expect(await count("routine_runs")).toBe(0);
+    expect(await orgMessages()).toBe(0);
+  });
+
+  test("its messages go in batches, and a reset cut short after them finishes on its next run", async () => {
+    f = await setup();
+    await f.db.update(schema.agents).set({ deletedAt: new Date() }).where(eq(schema.agents.orgId, f.org.id));
+    const more = await f.db
+      .insert(schema.channels)
+      .values([
+        { orgId: f.org.id, name: "launch" },
+        { orgId: f.org.id, name: "ops" },
+      ])
+      .returning();
+    for (const channel of [f.general, ...more]) {
+      for (let i = 0; i < 7; i++) {
+        await insertMessage(f.db, {
+          orgId: f.org.id,
+          channelId: channel.id,
+          author: { type: "person", userId: f.owner.id },
+          body: `m${i}`,
+        });
+      }
+    }
+    expect(await orgMessages()).toBe(21);
+    await requestReset(f.db, f.owner.id, f.org.id);
+    // The process dies once the messages are gone, before the transaction that erases the rest commits.
+    const crashing = new Proxy(f.db, {
+      get: (target, key) => {
+        if (key === "transaction") return () => Promise.reject(new Error("crash"));
+        const value = Reflect.get(target, key);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+    const cut = await resetWorkspace({ ...resetDeps(), db: crashing }, f.org.id, { messageBatch: 3 }).catch(
+      (e: Error) => e.message,
+    );
+    expect(cut).toBe("crash");
+    expect(await orgMessages()).toBe(0);
+    expect(await count("channels")).toBe(3);
+    const [waiting] = await f.db.select().from(schema.organizations).where(eq(schema.organizations.id, f.org.id));
+    expect(waiting?.resetRequestedAt).not.toBeNull();
+
+    expect(await resetWorkspace(resetDeps(), f.org.id, { messageBatch: 3 })).toBe(true);
+    const channels = await f.db.select().from(schema.channels).where(eq(schema.channels.orgId, f.org.id));
+    expect(channels.map((c) => c.name)).toEqual(["general"]);
+  });
+
+  test("the workspace's computer stays its own: no second one is asked for", async () => {
+    f = await setup();
+    await f.db.insert(schema.machineProvisioning).values({ orgId: f.org.id, state: "ready" });
+    const asked = async () =>
+      (await listMachineRequests(f.db, "external", { limit: 50 })).requests.some((r) => r.orgId === f.org.id);
+    expect(await asked()).toBe(false);
+    await requestReset(f.db, f.owner.id, f.org.id);
+    expect(await resetWorkspace(resetDeps(), f.org.id)).toBe(true);
+    expect(await asked()).toBe(false);
+    const [org] = await f.db.select().from(schema.organizations).where(eq(schema.organizations.id, f.org.id));
+    expect([org?.standing, org?.onboardingStep]).toEqual(["active", "context"]);
   });
 
   test("keeps the workspace, its people, AI accounts and usage, and starts it over", async () => {

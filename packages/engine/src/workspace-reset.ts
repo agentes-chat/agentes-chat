@@ -1,5 +1,5 @@
 import type { BlobStoreResolver } from "@agenteschat/adapters";
-import { and, type Database, eq, isNotNull, isNull, lte, rowsOf, schema, sql } from "@agenteschat/db";
+import { and, type Database, eq, isNotNull, isNull, lte, notInArray, rowsOf, schema, sql } from "@agenteschat/db";
 import { type AgentDeletionDeps, eraseAgent } from "./agent-deletion";
 import { recordAudit } from "./audit";
 import { invalidateOrg } from "./cache";
@@ -32,7 +32,7 @@ const KEPT_COLUMNS = { ...STANDING_COLUMNS, deletionHoldAt: organizations.deleti
  * Tenant tables a reset leaves as they are: the workspace's settings, its people and how they join, their own
  * settings there, AI accounts, computers, connectors, the Vault (people's own logins among them) and storage, usage
  * and the audit. `blobs` is a storage: the
- * erased files' bytes leave it through their store.
+ * erased files' bytes leave it through their store. `outbox` keeps only the jobs of `RESET_KEEPS_JOBS`.
  */
 export const RESET_KEEPS = [
   "organization_settings",
@@ -89,12 +89,33 @@ export const RESET_KEEPS = [
 ] as const;
 
 /**
+ * Jobs a reset leaves waiting: their rows are the kept tables' (people's email, the plan, usage, join requests,
+ * connectors, the Vault, computers, storage). Every other job of the workspace still waiting was for something it
+ * erases, and goes with it: run later, it would find nothing, or make again what was erased.
+ */
+export const RESET_KEEPS_JOBS = [
+  "email.send",
+  "plan.waiting",
+  "usage.person_limit",
+  "join_request.file",
+  "connector.forget_accounts",
+  "vault.sync",
+  "machine.tasks_offline",
+  "machine.wake_overdue",
+  "storage.migrate",
+  "feedback.send",
+] as const;
+
+/**
  * Tenant tables whose rows stay as tombstones: agents (`eraseAgent`: usage and audit name them, and their usage
  * cascades from them) and the right hand's places on computers (marked removed, so the computer drops their files).
  */
 export const RESET_TOMBSTONES = ["agents", "right_hand_seats"] as const;
 
-/** Tenant tables a reset empties. `messages` goes through its channels: no index of it starts with `org_id`. */
+/**
+ * Tenant tables a reset empties. `messages` goes through its channels (no index of it starts with `org_id`), first
+ * `MESSAGE_BATCH` at a time and then whatever came meanwhile.
+ */
 export const RESET_ERASES = [
   "agent_actions",
   "agent_budget_periods",
@@ -207,6 +228,21 @@ export const RESET_ERASES = [
   "wiki_pages",
 ] as const;
 
+/**
+ * The erased tables that name stored bytes (`blob_key`, in `storage_config_id`'s store): the bytes go after the rows.
+ * A file pull's bytes are a Drive version's or a skill's, named again.
+ */
+export const RESET_STORED_FILES = [
+  "artifact_versions",
+  "live_assets",
+  "voice_clips",
+  "skill_files",
+  "machine_file_pulls",
+] as const;
+
+/** Messages deleted per statement before the reset's transaction. */
+export const MESSAGE_BATCH = 5000;
+
 export type ResetDeps = AgentDeletionDeps & {
   /** Where the erased files' bytes are (absent: they stay, with no row naming them). */
   blobs?: BlobStoreResolver;
@@ -259,13 +295,13 @@ export async function requestReset(db: Database, actorId: string, orgId: string)
 /**
  * The `org.reset` job: a no-op unless a reset is under way, and while the workspace is kept as a deletion past its
  * date is (`keptFromDeletion`): it waits, and `enqueueWaitingResets` comes back for it. Every agent goes as deleting it does (its work stops, its
- * secrets and sign-ins leave its computer, its row stays as a tombstone), the right hand included. Then one
- * transaction empties `RESET_ERASES`, marks the right hand's places removed, makes the right hand and #general again
+ * secrets and sign-ins leave its computer, its row stays as a tombstone), the right hand included. Its messages go
+ * in batches; then one transaction empties `RESET_ERASES` and its jobs for them, marks the right hand's places removed, makes the right hand and #general again
  * (everyone in it, its maker the same), opens the onboarding and clears the reset. After it commits, the erased files'
  * bytes and browser profiles leave their stores and computers, and every member's apps hear `org.reset`. Safe to run
  * again: each step only takes what is still there. Returns whether it reset.
  */
-export async function resetWorkspace(deps: ResetDeps, orgId: string) {
+export async function resetWorkspace(deps: ResetDeps, orgId: string, { messageBatch = MESSAGE_BATCH } = {}) {
   const { db } = deps;
   const [org] = await db
     .select({ at: organizations.resetRequestedAt, by: organizations.resetRequestedBy, ...KEPT_COLUMNS })
@@ -286,6 +322,8 @@ export async function resetWorkspace(deps: ResetDeps, orgId: string) {
     .select({ id: schema.browserProfiles.id, machineId: schema.browserProfiles.machineId })
     .from(schema.browserProfiles)
     .where(and(eq(schema.browserProfiles.orgId, orgId), isNull(schema.browserProfiles.deletedAt)));
+  // Ahead of the transaction, each batch its own: a crash leaves the reset asked for, and the next run deletes the rest.
+  await eraseMessages(db, orgId, messageBatch);
 
   const done = await db.transaction(async (tx) => {
     await lockOrgMembers(tx, orgId);
@@ -309,7 +347,16 @@ export async function resetWorkspace(deps: ResetDeps, orgId: string) {
       .from(channels)
       .where(and(eq(channels.orgId, orgId), eq(channels.name, "general")))
       .limit(1);
-    // ponytail: one transaction for the whole workspace, as its deletion; batch by table if a reset outlives the job's lease.
+    await tx
+      .delete(schema.outbox)
+      .where(
+        and(
+          eq(schema.outbox.orgId, orgId),
+          eq(schema.outbox.status, "pending"),
+          notInArray(schema.outbox.kind, [...RESET_KEEPS_JOBS]),
+        ),
+      );
+    // ponytail: one transaction for every table but the messages' bulk; batch others if a reset outlives the job's lease.
     for (const table of RESET_ERASES) {
       if (table === "messages") {
         await tx.execute(
@@ -398,18 +445,28 @@ async function anOwner(db: Database, orgId: string) {
   return owner?.id ?? null;
 }
 
-/** Every stored file a reset erases: the Drive's versions and their words, live files' pictures, voice, skills. */
+/** Every stored file a reset erases (`RESET_STORED_FILES`), and the words read from the Drive's versions. */
 async function storedFiles(db: Database, orgId: string) {
-  return rowsOf<{ storageConfigId: string | null; blobKey: string }>(
-    await db.execute(sql`
-      select storage_config_id as "storageConfigId", blob_key as "blobKey" from artifact_versions where org_id = ${orgId}::uuid
-      union all
-      select storage_config_id, blob_key || ${transcriptKey("")} from artifact_versions where org_id = ${orgId}::uuid
-      union all
-      select storage_config_id, blob_key from live_assets where org_id = ${orgId}::uuid
-      union all
-      select storage_config_id, blob_key from voice_clips where org_id = ${orgId}::uuid and audio_deleted_at is null
-      union all
-      select storage_config_id, blob_key from skill_files where org_id = ${orgId}::uuid and blob_key is not null`),
+  const named = RESET_STORED_FILES.map(
+    (table) => sql`select storage_config_id as "storageConfigId", blob_key as "blobKey" from ${sql.identifier(table)}
+      where org_id = ${orgId}::uuid and blob_key is not null`,
   );
+  const words = sql`select storage_config_id, blob_key || ${transcriptKey("")} from artifact_versions
+    where org_id = ${orgId}::uuid`;
+  return rowsOf<{ storageConfigId: string | null; blobKey: string }>(
+    await db.execute(sql.join([...named, words], sql` union all `)),
+  );
+}
+
+async function eraseMessages(db: Database, orgId: string, batch: number) {
+  const all = await db.select({ id: channels.id }).from(channels).where(eq(channels.orgId, orgId));
+  for (const { id } of all) {
+    for (;;) {
+      const gone = rowsOf(
+        await db.execute(sql`delete from messages where (id, created_at) in
+          (select id, created_at from messages where channel_id = ${id}::uuid limit ${batch}) returning 1 as gone`),
+      );
+      if (gone.length < batch) break;
+    }
+  }
 }
