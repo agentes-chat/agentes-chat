@@ -1191,6 +1191,14 @@ a.dv-chiplink:hover {
   .dv-head > :last-child:not(.machine-page__title) {
     margin-inline-start: auto;
   }
+  /* Beside the portrait, the pause button is its icon: words there would be a second line of text next to it. */
+  .dv-pausebtn {
+    width: var(--control-h-sm);
+    padding: 0;
+  }
+  .dv-pausebtn .ac-btn__label {
+    display: none;
+  }
   .dv-statusline {
     flex-wrap: wrap;
     row-gap: var(--space-2);

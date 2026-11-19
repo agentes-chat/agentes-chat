@@ -200,17 +200,25 @@ function PauseControl({ machine, paused }: { machine: Machine; paused: boolean }
         onError: (err) => toast.show(errorText(t, err), "error"),
       },
     );
+  const words = t(paused ? "machines.remotePause.resume" : "machines.remotePause.button");
   if (!machine.remotePause) {
     return (
-      <Button size="sm" icon={paused ? "play" : "pause"} disabled>
-        {t(paused ? "machines.remotePause.resume" : "machines.remotePause.button")}
+      <Button size="sm" icon={paused ? "play" : "pause"} disabled className="dv-pausebtn" aria-label={words}>
+        {words}
       </Button>
     );
   }
   if (paused) {
     return (
-      <Button size="sm" icon="play" loading={pause.isPending} onClick={() => set("resume")}>
-        {t("machines.remotePause.resume")}
+      <Button
+        size="sm"
+        icon="play"
+        loading={pause.isPending}
+        onClick={() => set("resume")}
+        className="dv-pausebtn"
+        aria-label={words}
+      >
+        {words}
       </Button>
     );
   }
@@ -220,8 +228,8 @@ function PauseControl({ machine, paused }: { machine: Machine; paused: boolean }
       align="end"
       label={label}
       trigger={
-        <Button size="sm" icon="pause" loading={pause.isPending}>
-          {t("machines.remotePause.button")}
+        <Button size="sm" icon="pause" loading={pause.isPending} className="dv-pausebtn" aria-label={words}>
+          {words}
         </Button>
       }
     >
