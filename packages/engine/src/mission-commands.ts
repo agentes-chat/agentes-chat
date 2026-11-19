@@ -599,6 +599,8 @@ export function runPermissionPrompt(
     canRun: boolean;
     /** The agent always asks (ADR 0173): what isn't a plain read is sent to `run_code`, whose call asks a person. */
     asksFirst?: boolean;
+    /** The computer is a privileged one (ADR 0053 §3, addendum 2026-11-19): sudo and system changes run. */
+    privileged?: boolean;
   },
 ): string {
   if (str(args.request_id)) return deny("That request is unknown.", "unknown");
@@ -622,7 +624,7 @@ export function runPermissionPrompt(
       "off",
     );
   }
-  const reason = badActorReason(tool, input, scope ?? NO_SCOPE);
+  const reason = badActorReason(tool, input, scope ?? NO_SCOPE, { privileged: Boolean(opts.privileged) });
   if (reason === null) {
     return opts.asksFirst
       ? deny(

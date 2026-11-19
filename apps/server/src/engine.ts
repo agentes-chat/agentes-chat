@@ -354,6 +354,8 @@ export function buildEngine(o: EngineOptions) {
   });
   const workspaceComputer =
     config.MACHINE_PROVISIONING === "external" ? { billing: Boolean(config.BILLING_URL) } : undefined;
+  // Where agents may use sudo outside a mission (ADR 0053 §3, addendum 2026-11-19).
+  const privilegedComputers: ReadonlySet<string> = new Set(config.PRIVILEGED_COMPUTERS ?? []);
   const sandbox: SandboxDeps = {
     db,
     machines: { hub: machineHub },
@@ -361,6 +363,7 @@ export function buildEngine(o: EngineOptions) {
     // Git through our proxy (ADR 0024): the computer never gets a GitHub token.
     git: { publicUrl: config.PUBLIC_URL, secret: config.AGENTES_SECRET },
     publicUrl: config.PUBLIC_URL,
+    privilegedComputers,
   };
   // Missions (ADR 0029): their executors' MCP calls and reconnects come through the hub.
   const missionDeps = {
@@ -370,6 +373,7 @@ export function buildEngine(o: EngineOptions) {
     search: context,
     publicUrl: config.PUBLIC_URL,
     judge: context.judge,
+    privilegedComputers,
   };
   // The server's GitHub App (ADR 0156): `GITHUB_APP_*`, else the one its owner made from Settings, read on every call
   // (through the getters below), so one made or removed there works without a restart.

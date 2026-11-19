@@ -216,6 +216,8 @@ const OPEN = OPEN_MISSION_STATUSES;
 export interface MissionDeps {
   db: Database;
   pubsub?: PubSub;
+  /** Computers whose agents may use sudo and change the system outside a mission (ADR 0053 §3, addendum 2026-11-19). */
+  privilegedComputers?: ReadonlySet<string>;
   /** Connected computers: start, resume and cancel tasks; read and write `.agentes/`. */
   hub?: MachineCaller | null;
   /** Drive (uploads of review files and artifacts). */

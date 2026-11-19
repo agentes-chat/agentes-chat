@@ -1681,6 +1681,13 @@ natively on this machine for them takes `sudo agentes-runner services allow tcp/
 agentes.chat behind a `tailscale serve`, an nginx or a Caddy outside Docker). The Kotlin compile daemon
 doesn't run there: the computer keeps the default uid range, and Kotlin compiles inside Gradle.
 
+Outside a mission, agents' commands that use `sudo` or change the system are refused on every computer
+([ADR 0053 §3](docs/adr/0053-routines-unattended-work.md)). For a computer you give them for that work, put
+its id (the last part of its page's address, Settings › Computers) in `PRIVILEGED_COMPUTERS`, separated by
+commas: there `sudo` and system changes run, while secrets, wiping, the firewall and proxy, the runner,
+other users' files, powering it off, passwords and sudo's own rules stay refused. The agent's user still needs
+the computer to let it use `sudo` (a sudoers entry or an askpass helper).
+
 The agent browser opens an offline new tab in its responsible person's language, with no outside request.
 A computer on your server never measures or reports its public address: only a workspace's managed computer
 (`MACHINE_PROVISIONING=external`) does. The system runner's network options for integrators are in

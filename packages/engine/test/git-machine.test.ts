@@ -746,6 +746,25 @@ describe("prompt text and permissions", () => {
     expect(ask("cat ~/.aws/credentials")).toMatchObject({ behavior: "deny", code: "secret" });
   });
 
+  test("on a privileged computer sudo and system changes run; the rest of the rule holds (ADR 0053 §3)", () => {
+    const scope = { cwd: `${FOLDER}/repos/acme/app`, folders: [`${FOLDER}/repos/acme/app`, FOLDER] };
+    const ask = (command: string, privileged: boolean) =>
+      JSON.parse(
+        runPermissionPrompt({ tool_name: "Bash", input: { command }, scope }, { canRun: true, privileged }),
+      ) as {
+        behavior: string;
+        code?: string;
+      };
+    expect(ask("sudo -A apt-get install -y ffmpeg", true).behavior).toBe("allow");
+    expect(ask("echo hi | sudo tee /etc/motd", true).behavior).toBe("allow");
+    expect(ask("sudo systemctl restart nginx", true).behavior).toBe("allow");
+    expect(ask("sudo -A apt-get install -y ffmpeg", false)).toMatchObject({ behavior: "deny", code: "privilege" });
+    expect(ask("sudo cat ~/.aws/credentials", true)).toMatchObject({ behavior: "deny", code: "secret" });
+    expect(ask("sudo rm -rf /", true)).toMatchObject({ behavior: "deny", code: "destroy" });
+    expect(ask("sudo reboot", true)).toMatchObject({ behavior: "deny", code: "system" });
+    expect(ask("sudo su -", true)).toMatchObject({ behavior: "deny", code: "privilege" });
+  });
+
   test("an address carrying a key is refused before a read could allow it, WebFetch too (ADR 0117)", () => {
     const scope = { cwd: `${FOLDER}/repos/acme/app`, folders: [`${FOLDER}/repos/acme/app`, FOLDER] };
     const ask = (tool_name: string, input: Record<string, unknown>) =>

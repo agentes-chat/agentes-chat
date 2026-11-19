@@ -2497,12 +2497,13 @@ function wordProblem(word: string, scope: CommandScope): string | null {
 }
 
 /** Why a file a command writes is refused: the system's, a credential store (a project's `.env` aside), the runner's. */
-function writeProblem(file: string, scope: CommandScope): string | null {
+function writeProblem(file: string, scope: CommandScope, opts: BadActorOptions = {}): string | null {
   if (!file || elsewhere(file)) return null;
   if (/agentes-runner/i.test(file) && !insideFolders(scope, file)) return RUNNER;
   const r = resolveIn(scope, file);
   if (r === null) return OTHER;
-  if (SYSTEM_DIRS.test(r)) return SYSTEM_REASON;
+  // A privileged computer's system folders are its agents' to write; the rest below still holds there.
+  if (SYSTEM_DIRS.test(r) && !opts.privileged) return SYSTEM_REASON;
   if (storeSecret(file, scope)) return SECRETS;
   return otherHome(file, scope) ? OTHER : null;
 }
@@ -2596,10 +2597,20 @@ function hostAccess(args: readonly string[], scope: CommandScope) {
   });
 }
 
-function commandProblem(s: Loose, scope: CommandScope): string | null {
+function commandProblem(s: Loose, scope: CommandScope, opts: BadActorOptions = {}): string | null {
   const [first = "", ...args] = s.argv;
   const cmd = baseName(first);
-  if (PRIVILEGE.test(cmd)) return PRIVILEGE_REASON;
+  if (PRIVILEGE.test(cmd)) {
+    // On a privileged computer (ADR 0053 §3, addendum 2026-11-19) `sudo` is read through: the command it runs meets every
+    // other rule (secrets, wiping, the network, the runner, other users). `su`, `sudoedit`, a root shell with no
+    // command and an option this doesn't know stay refused.
+    if (!opts.privileged || cmd !== "sudo") return PRIVILEGE_REASON;
+    const inner = sudoCommand(args);
+    if (inner === null) return PRIVILEGE_REASON;
+    if (inner.length === 0) return null;
+    return commandProblem({ ...s, argv: inner }, scope, opts);
+  }
+  if (opts.privileged && privilegedNever(cmd, args)) return SYSTEM_REASON;
   if (WIPE_TOOLS.test(cmd)) return WIPE;
   if (cmd === "dd" && args.some((a) => /^of=\/dev\/(?!(null|zero|stdout|stderr|shm)(\/|$))/.test(a))) return WIPE;
   if (cmd === "diskutil" && /^(erase\w*|reformat|partitionDisk|zeroDisk|randomDisk|secureErase)$/i.test(args[0] ?? ""))
@@ -2640,15 +2651,19 @@ function commandProblem(s: Loose, scope: CommandScope): string | null {
   if (/^(nc|ncat|netcat)$/.test(cmd) && args.some((a) => /^-[a-zA-Z]*[ec]|^--(exec|sh-exec|lua-exec)/.test(a)))
     return REVERSE;
   if (cmd === "socat" && args.some((a) => /(^|[,!])(exec|system):/i.test(a))) return REVERSE;
-  if (SYSTEM_TOOLS.test(cmd)) return SYSTEM_REASON;
-  if (cmd === "systemctl" && !args.includes("--user") && args.some((a) => SYSTEMCTL_CHANGES.test(a)))
-    return SYSTEM_REASON;
-  if (cmd === "service" && args.some((a) => /^(start|stop|restart|reload|force-reload)$/.test(a))) return SYSTEM_REASON;
-  if (cmd === "sysctl" && args.some((a) => /^(-w|-p|--write|--load|--system)$/.test(a) || /^[\w.]+=/.test(a)))
-    return SYSTEM_REASON;
-  if (cmd === "launchctl" && args.some((a) => /^system(\/|$)/.test(a) || a.startsWith("/Library/")))
-    return SYSTEM_REASON;
-  if (cmd === "git" && args.includes("--system")) return SYSTEM_REASON;
+  // Changes to the system are a privileged computer's ordinary work.
+  if (!opts.privileged) {
+    if (SYSTEM_TOOLS.test(cmd)) return SYSTEM_REASON;
+    if (cmd === "systemctl" && !args.includes("--user") && args.some((a) => SYSTEMCTL_CHANGES.test(a)))
+      return SYSTEM_REASON;
+    if (cmd === "service" && args.some((a) => /^(start|stop|restart|reload|force-reload)$/.test(a)))
+      return SYSTEM_REASON;
+    if (cmd === "sysctl" && args.some((a) => /^(-w|-p|--write|--load|--system)$/.test(a) || /^[\w.]+=/.test(a)))
+      return SYSTEM_REASON;
+    if (cmd === "launchctl" && args.some((a) => /^system(\/|$)/.test(a) || a.startsWith("/Library/")))
+      return SYSTEM_REASON;
+    if (cmd === "git" && args.includes("--system")) return SYSTEM_REASON;
+  }
   if (FIREWALL_TOOLS.test(cmd)) return NETWORK;
   if (
     (cmd === "ip" || cmd === "route") &&
@@ -2669,7 +2684,7 @@ function commandProblem(s: Loose, scope: CommandScope): string | null {
   if (cmd === "git" && args.some((a) => /^https?\.(\S+\.)?proxy(=|$)/i.test(a))) return NETWORK;
   const written = writeTargets(cmd, args, s.writes);
   for (const file of written) {
-    const why = writeProblem(file, scope);
+    const why = writeProblem(file, scope, opts);
     if (why) return why;
   }
   const keys = new Set(s.argv.filter((_, i) => i > 0 && sshKeyArg(s.argv, i)));
@@ -2681,8 +2696,95 @@ function commandProblem(s: Loose, scope: CommandScope): string | null {
   return null;
 }
 
+/** `privileged`: the command runs on a computer its operator lets agents use sudo on (ADR 0053 §3, addendum 2026-11-19). */
+export interface BadActorOptions {
+  privileged?: boolean;
+}
+
+/** What a privileged computer still refuses: powering off or restarting it, passwords and sudo's own rules. */
+function privilegedNever(cmd: string, args: string[]): boolean {
+  if (/^(shutdown|reboot|halt|poweroff|telinit|kexec|visudo|passwd|chpasswd|chage)$/.test(cmd)) return true;
+  if (cmd === "init" && args.some((a) => /^[0-6sS]$/.test(a))) return true;
+  const power =
+    /^(reboot|soft-reboot|poweroff|halt|kexec|suspend|hibernate|hybrid-sleep|suspend-then-hibernate|emergency|rescue|isolate|default)$/;
+  return (cmd === "systemctl" || cmd === "loginctl") && args.some((a) => power.test(a));
+}
+
+/** sudo's options that take a value, short (`-u root`, `-uroot`) and long (`--user=root`, `--user root`). */
+const SUDO_VALUE_SHORT = new Set(["u", "g", "C", "D", "h", "p", "r", "t", "T", "U", "R"]);
+const SUDO_VALUE_LONG = new Set([
+  "--user",
+  "--group",
+  "--close-from",
+  "--chdir",
+  "--host",
+  "--prompt",
+  "--role",
+  "--type",
+  "--command-timeout",
+  "--other-user",
+  "--chroot",
+]);
+const SUDO_FLAG_SHORT = new Set(["A", "b", "E", "H", "n", "P", "S", "N", "k", "i", "s"]);
+const SUDO_FLAG_LONG =
+  /^--(askpass|background|preserve-env(=.*)?|set-home|non-interactive|preserve-groups|stdin|no-update|reset-timestamp|login|shell)$/;
+/** Options after which sudo runs nothing: validate, list, forget the timestamp, version, help. */
+const SUDO_RUNS_NOTHING_SHORT = new Set(["v", "l", "K", "V"]);
+const SUDO_RUNS_NOTHING_LONG = /^--(validate|list|remove-timestamp|version|help)$/;
+
+/**
+ * The command `sudo <args>` runs: [] when it runs nothing (`-v`, `-l`, `-K`), null for an edit (`-e`), a root
+ * shell with no command (`-i`, `-s`) or an option this doesn't know.
+ */
+function sudoCommand(args: string[]): string[] | null {
+  let shell = false;
+  let i = 0;
+  while (i < args.length) {
+    const a = args[i] ?? "";
+    if (a === "--") {
+      i++;
+      break;
+    }
+    if (a.startsWith("--")) {
+      const name = a.split("=")[0] ?? a;
+      if (SUDO_VALUE_LONG.has(name)) {
+        i += a.includes("=") ? 1 : 2;
+        continue;
+      }
+      if (SUDO_RUNS_NOTHING_LONG.test(a)) return [];
+      if (!SUDO_FLAG_LONG.test(a)) return null;
+      if (a === "--login" || a === "--shell") shell = true;
+      i++;
+      continue;
+    }
+    if (a.startsWith("-") && a.length > 1) {
+      let skipNext = false;
+      for (let j = 1; j < a.length; j++) {
+        const c = a[j] ?? "";
+        if (SUDO_VALUE_SHORT.has(c)) {
+          skipNext = j === a.length - 1;
+          break;
+        }
+        if (SUDO_RUNS_NOTHING_SHORT.has(c)) return [];
+        if (!SUDO_FLAG_SHORT.has(c)) return null;
+        if (c === "i" || c === "s") shell = true;
+      }
+      i += skipNext ? 2 : 1;
+      continue;
+    }
+    if (ASSIGNMENT.test(a)) {
+      i++;
+      continue;
+    }
+    break;
+  }
+  const rest = args.slice(i);
+  if (rest.length === 0) return shell ? null : [];
+  return rest;
+}
+
 /** `badActorReason` for a text: a shell command (`code` false) or Python/JavaScript code. */
-function badText(text: string, code: boolean, scope: CommandScope): string | null {
+function badText(text: string, code: boolean, scope: CommandScope, opts: BadActorOptions = {}): string | null {
   const flat = text.replace(/\\\r?\n/g, " ");
   if (REVERSE_SHELL.some((all) => all.every((r) => r.test(flat)))) return REVERSE;
   if (FORK_BOMB.test(flat)) return WIPE;
@@ -2695,7 +2797,7 @@ function badText(text: string, code: boolean, scope: CommandScope): string | nul
   let dumps = false;
   let sends = false;
   for (const s of cmds) {
-    const why = commandProblem(s, scope);
+    const why = commandProblem(s, scope, opts);
     if (why) return why;
     dumps ||= envDump(s.raw);
     sends ||= SENDERS.test(baseName(s.argv[0] ?? ""));
@@ -2715,18 +2817,19 @@ export function badActorReason(
   toolName: string,
   input: Record<string, unknown> | null | undefined,
   scope: CommandScope,
+  opts: BadActorOptions = {},
 ): string | null {
   const file = FILE_WRITE_TOOLS.has(toolName)
     ? [input?.file_path, input?.notebook_path].find((v): v is string => typeof v === "string")
     : undefined;
-  if (file !== undefined) return namesSecret(file, scope) ? SECRETS : writeProblem(file, scope);
+  if (file !== undefined) return namesSecret(file, scope) ? SECRETS : writeProblem(file, scope, opts);
   if (toolName !== "Bash") return null;
-  return badText(typeof input?.command === "string" ? input.command : "", false, scope);
+  return badText(typeof input?.command === "string" ? input.command : "", false, scope, opts);
 }
 
 /** `badActorReason` for `run_code`'s code (`language`: bash, python or node), where the computer's folders aren't known. */
-export const badActorCode = (code: string, language: string) =>
-  badText(code, language !== "bash", { cwd: "/nonexistent", folders: [] });
+export const badActorCode = (code: string, language: string, opts: BadActorOptions = {}) =>
+  badText(code, language !== "bash", { cwd: "/nonexistent", folders: [] }, opts);
 
 // ── "Aprovar sempre" for a command: its kind ──────────────────────────────────
 

@@ -1067,6 +1067,27 @@ export const envVars = {
       "Path-style bucket URLs (`https://endpoint/bucket/key`), for MinIO, Garage and similar stores. Off: virtual-hosted URLs (`https://bucket.endpoint/key`), as R2 and AWS expect.",
     section: "Storage",
   },
+  PRIVILEGED_COMPUTERS: {
+    schema: z
+      .string()
+      .optional()
+      .transform((value, ctx) => {
+        const ids = (value ?? "")
+          .split(",")
+          .map((id) => id.trim())
+          .filter(Boolean);
+        const bad = ids.find((id) => !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
+        if (bad !== undefined) {
+          ctx.addIssue({ code: "custom", message: `must be computer ids separated by commas (${bad})` });
+          return z.NEVER;
+        }
+        return ids.length > 0 ? ids : undefined;
+      }),
+    description:
+      "Connected computers (their ids, separated by commas) whose agents may use sudo and change the system outside a mission: installs, services, files under /etc. For a computer its operator gives to agents for that, such as the self-hosted machine they run on. The command under sudo still meets every other rule: secrets, wiping the computer or a home, the firewall and proxy, the runner and other users' files stay refused, and so do powering it off or restarting it, passwords and sudo's own rules (ADR 0053 §3). Unset: sudo is refused on every computer.",
+    section: "Sandbox",
+    example: "0190c3a2-7f4e-7b1a-9c2d-5e8f1a2b3c4d,0190c3a2-8a10-7c3e-b2f4-6d7e8f9a0b1c",
+  },
   HOST_COMPUTER_TOKEN: {
     schema: z
       .string()
