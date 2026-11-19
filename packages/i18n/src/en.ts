@@ -21586,7 +21586,7 @@ export const en = {
     noLogComputer: "{{computer}} didn't answer, so its log isn't included.",
     oldRunner: "The agentes.chat app on {{computer}} is too old to include its log. Update it there to include it.",
     noServerLines: "The server's log lines are included only when the installation's owner sends a report.",
-    off: "Sending is off on this server (PROBLEM_REPORT_URL=off). Copy the report to share it.",
+    off: "Sending is off on this server (`PROBLEM_REPORT_URL=off`). Copy the report to share it.",
     errorRate: "Too many reports in a short time. Try again in {{minutes}} min, or copy the report.",
     errorUnreachable: "agentes.chat didn't answer. Try again, or copy the report.",
     errorRefused: "agentes.chat didn't accept this report (it may be from an older version). Copy the report instead.",

@@ -6,7 +6,7 @@ import Constants from "expo-constants";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { Button, fonts, Text } from "@/ui";
+import { Button, CodeWords, fonts, Text } from "@/ui";
 import { useColors, useOrgId } from "../shared/hooks";
 import { TextArea } from "../shared/TextArea";
 
@@ -98,7 +98,7 @@ export function ReportProblemSheet({ onClose, ...props }: ReportProblemProps & {
       ) : (
         notes.map((n) => (
           <Text key={n} variant="footnote">
-            {n}
+            {off && n === t("problemReport.off") ? <CodeWords text={n} /> : n}
           </Text>
         ))
       )}

@@ -21629,7 +21629,7 @@
     "noLogComputer": "{{computer}} non ha risposto, quindi il suo log non è incluso.",
     "oldRunner": "L'app agentes.chat su {{computer}} è troppo vecchia per includere il suo log. Aggiornala lì per includerlo.",
     "noServerLines": "Le righe del log del server sono incluse solo quando è il proprietario dell'installazione a inviare la segnalazione.",
-    "off": "L'invio è disattivato su questo server (PROBLEM_REPORT_URL=off). Copia la segnalazione per condividerla.",
+    "off": "L'invio è disattivato su questo server (`PROBLEM_REPORT_URL=off`). Copia la segnalazione per condividerla.",
     "errorRate": "Troppe segnalazioni in poco tempo. Riprova tra {{minutes}} min o copia la segnalazione.",
     "errorUnreachable": "agentes.chat non ha risposto. Riprova o copia la segnalazione.",
     "errorRefused": "agentes.chat non ha accettato questa segnalazione (potrebbe venire da una versione precedente). Copia invece la segnalazione.",

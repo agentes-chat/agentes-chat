@@ -6,7 +6,18 @@ import {
   problemReportError,
   replyAddressOk,
 } from "@agenteschat/client/lib/problem-report";
-import { Button, Dialog, DialogBody, DialogFooter, Field, Icon, Input, Skeleton, Textarea } from "@agenteschat/ui";
+import {
+  Button,
+  codeAndBold,
+  Dialog,
+  DialogBody,
+  DialogFooter,
+  Field,
+  Icon,
+  Input,
+  Skeleton,
+  Textarea,
+} from "@agenteschat/ui";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useOrg } from "@/components/org-context";
@@ -148,7 +159,7 @@ export function ReportProblemDialog({
           notes.length > 0 && (
             <ul className="report-problem__notes">
               {notes.map((n) => (
-                <li key={n}>{n}</li>
+                <li key={n}>{off && n === t("problemReport.off") ? codeAndBold(n, "off") : n}</li>
               ))}
             </ul>
           )

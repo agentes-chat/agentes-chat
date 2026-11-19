@@ -20418,7 +20418,7 @@
     "noLogComputer": "{{computer}} 没有响应，因此未包含它的日志。",
     "oldRunner": "{{computer}} 上的 agentes.chat 应用版本太旧，无法包含其日志。请在那台电脑上更新应用后再试。",
     "noServerLines": "只有安装的所有者发送报告时，才会包含服务器的日志行。",
-    "off": "此服务器已关闭发送（PROBLEM_REPORT_URL=off）。请复制报告来分享。",
+    "off": "此服务器已关闭发送（`PROBLEM_REPORT_URL=off`）。请复制报告来分享。",
     "errorRate": "短时间内报告太多。请在 {{minutes}} 分钟后重试，或复制报告。",
     "errorUnreachable": "agentes.chat 没有响应。请重试，或复制报告。",
     "errorRefused": "agentes.chat 未接受此报告（可能来自旧版本）。请改为复制报告。",

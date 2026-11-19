@@ -21471,7 +21471,7 @@
     "noLogComputer": "{{computer}} no respondió, así que su registro no se incluye.",
     "oldRunner": "La app agentes.chat en {{computer}} es demasiado antigua para incluir su registro. Actualízala allí para incluirlo.",
     "noServerLines": "Las líneas del registro del servidor solo se incluyen cuando quien es dueño de la instalación envía el informe.",
-    "off": "El envío está desactivado en este servidor (PROBLEM_REPORT_URL=off). Copia el informe para compartirlo.",
+    "off": "El envío está desactivado en este servidor (`PROBLEM_REPORT_URL=off`). Copia el informe para compartirlo.",
     "errorRate": "Demasiados informes en poco tiempo. Inténtalo de nuevo en {{minutes}} min o copia el informe.",
     "errorUnreachable": "agentes.chat no respondió. Inténtalo de nuevo o copia el informe.",
     "errorRefused": "agentes.chat no aceptó este informe (puede ser de una versión anterior). Copia el informe.",

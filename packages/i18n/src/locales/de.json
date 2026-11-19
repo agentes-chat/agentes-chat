@@ -20884,7 +20884,7 @@
     "noLogComputer": "{{computer}} hat nicht geantwortet, sein Log ist daher nicht dabei.",
     "oldRunner": "Die agentes.chat-App auf {{computer}} ist zu alt, um ihr Log mitzuschicken. Aktualisiere sie dort, damit es dabei ist.",
     "noServerLines": "Die Log-Zeilen des Servers sind nur dabei, wenn die Person, der die Installation gehört, den Bericht sendet.",
-    "off": "Senden ist auf diesem Server aus (PROBLEM_REPORT_URL=off). Kopiere den Bericht, um ihn zu teilen.",
+    "off": "Senden ist auf diesem Server aus (`PROBLEM_REPORT_URL=off`). Kopiere den Bericht, um ihn zu teilen.",
     "errorRate": "Zu viele Berichte in kurzer Zeit. Versuch es in {{minutes}} Min. noch einmal oder kopiere den Bericht.",
     "errorUnreachable": "agentes.chat hat nicht geantwortet. Versuch es noch einmal oder kopiere den Bericht.",
     "errorRefused": "agentes.chat hat diesen Bericht nicht angenommen (er stammt vielleicht von einer älteren Version). Kopiere den Bericht stattdessen.",

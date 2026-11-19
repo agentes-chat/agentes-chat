@@ -21619,7 +21619,7 @@
     "noLogComputer": "{{computer}} n'a pas répondu, son journal n'est donc pas inclus.",
     "oldRunner": "L'app agentes.chat sur {{computer}} est trop ancienne pour inclure son journal. Mettez-la à jour là-bas pour l'inclure.",
     "noServerLines": "Les lignes du journal du serveur ne sont incluses que si le propriétaire de l'installation envoie le rapport.",
-    "off": "L'envoi est désactivé sur ce serveur (PROBLEM_REPORT_URL=off). Copiez le rapport pour le partager.",
+    "off": "L'envoi est désactivé sur ce serveur (`PROBLEM_REPORT_URL=off`). Copiez le rapport pour le partager.",
     "errorRate": "Trop de rapports en peu de temps. Réessayez dans {{minutes}} min ou copiez le rapport.",
     "errorUnreachable": "agentes.chat n'a pas répondu. Réessayez ou copiez le rapport.",
     "errorRefused": "agentes.chat n'a pas accepté ce rapport (il vient peut-être d'une ancienne version). Copiez plutôt le rapport.",

@@ -22201,7 +22201,7 @@
     "noLogComputer": "{{computer}} nie odpowiedział, więc jego log nie jest dołączony.",
     "oldRunner": "Aplikacja agentes.chat na {{computer}} jest za stara, by dołączyć log. Zaktualizuj ją tam, aby go dołączyć.",
     "noServerLines": "Wiersze logu serwera są dołączane tylko wtedy, gdy raport wysyła właściciel instalacji.",
-    "off": "Wysyłanie jest wyłączone na tym serwerze (PROBLEM_REPORT_URL=off). Skopiuj raport, aby go udostępnić.",
+    "off": "Wysyłanie jest wyłączone na tym serwerze (`PROBLEM_REPORT_URL=off`). Skopiuj raport, aby go udostępnić.",
     "errorRate": "Za dużo raportów w krótkim czasie. Spróbuj ponownie za {{minutes}} min albo skopiuj raport.",
     "errorUnreachable": "agentes.chat nie odpowiedział. Spróbuj ponownie albo skopiuj raport.",
     "errorRefused": "agentes.chat nie przyjął tego raportu (może pochodzić ze starszej wersji). Zamiast tego skopiuj raport.",

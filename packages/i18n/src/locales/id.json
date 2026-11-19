@@ -20335,7 +20335,7 @@
     "noLogComputer": "{{computer}} tidak menjawab, jadi lognya tidak disertakan.",
     "oldRunner": "Aplikasi agentes.chat di {{computer}} terlalu lama untuk menyertakan lognya. Perbarui di sana agar lognya ikut.",
     "noServerLines": "Baris log server hanya disertakan jika pemilik instalasi yang mengirim laporan.",
-    "off": "Pengiriman dimatikan di server ini (PROBLEM_REPORT_URL=off). Salin laporan untuk membagikannya.",
+    "off": "Pengiriman dimatikan di server ini (`PROBLEM_REPORT_URL=off`). Salin laporan untuk membagikannya.",
     "errorRate": "Terlalu banyak laporan dalam waktu singkat. Coba lagi dalam {{minutes}} menit, atau salin laporannya.",
     "errorUnreachable": "agentes.chat tidak menjawab. Coba lagi, atau salin laporannya.",
     "errorRefused": "agentes.chat tidak menerima laporan ini (mungkin dari versi lama). Salin laporannya saja.",

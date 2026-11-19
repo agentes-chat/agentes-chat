@@ -20226,7 +20226,7 @@
     "noLogComputer": "{{computer}}이(가) 응답하지 않아 로그가 포함되지 않았어요.",
     "oldRunner": "{{computer}}의 agentes.chat 앱이 오래되어 로그를 포함할 수 없어요. 포함하려면 그 컴퓨터에서 앱을 업데이트하세요.",
     "noServerLines": "서버 로그 줄은 설치 소유자가 보고서를 보낼 때만 포함돼요.",
-    "off": "이 서버에서는 보내기가 꺼져 있어요(PROBLEM_REPORT_URL=off). 공유하려면 보고서를 복사하세요.",
+    "off": "이 서버에서는 보내기가 꺼져 있어요(`PROBLEM_REPORT_URL=off`). 공유하려면 보고서를 복사하세요.",
     "errorRate": "짧은 시간에 보고서가 너무 많아요. {{minutes}}분 후 다시 시도하거나 보고서를 복사하세요.",
     "errorUnreachable": "agentes.chat이 응답하지 않았어요. 다시 시도하거나 보고서를 복사하세요.",
     "errorRefused": "agentes.chat이 이 보고서를 받지 않았어요(이전 버전일 수 있어요). 대신 보고서를 복사하세요.",

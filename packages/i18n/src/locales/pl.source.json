@@ -51007,7 +51007,7 @@
     "value": "The server's log lines are included only when the installation's owner sends a report."
   },
   "problemReport.off": {
-    "value": "Sending is off on this server (PROBLEM_REPORT_URL=off). Copy the report to share it."
+    "value": "Sending is off on this server (`PROBLEM_REPORT_URL=off`). Copy the report to share it."
   },
   "problemReport.errorRate": {
     "value": "Too many reports in a short time. Try again in {{minutes}} min, or copy the report."

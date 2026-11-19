@@ -20813,7 +20813,7 @@
     "noLogComputer": "{{computer}} yanıt vermedi, bu yüzden günlüğü eklenmedi.",
     "oldRunner": "{{computer}} üzerindeki agentes.chat uygulaması günlüğünü eklemek için çok eski. Eklemek için orada güncelleyin.",
     "noServerLines": "Sunucunun günlük satırları yalnızca kurulumun sahibi rapor gönderdiğinde eklenir.",
-    "off": "Bu sunucuda gönderme kapalı (PROBLEM_REPORT_URL=off). Paylaşmak için raporu kopyalayın.",
+    "off": "Bu sunucuda gönderme kapalı (`PROBLEM_REPORT_URL=off`). Paylaşmak için raporu kopyalayın.",
     "errorRate": "Kısa sürede çok fazla rapor. {{minutes}} dk sonra tekrar deneyin veya raporu kopyalayın.",
     "errorUnreachable": "agentes.chat yanıt vermedi. Tekrar deneyin veya raporu kopyalayın.",
     "errorRefused": "agentes.chat bu raporu kabul etmedi (eski bir sürümden olabilir). Bunun yerine raporu kopyalayın.",

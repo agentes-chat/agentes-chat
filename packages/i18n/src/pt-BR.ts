@@ -21482,7 +21482,7 @@ export const ptBR = {
     noLogComputer: "O {{computer}} não respondeu, então o log dele não vai junto.",
     oldRunner: "O app agentes.chat no {{computer}} é antigo demais para incluir o log. Atualize-o lá para incluir.",
     noServerLines: "As linhas do log do servidor só vão junto quando o dono da instalação envia o relatório.",
-    off: "O envio está desligado neste servidor (PROBLEM_REPORT_URL=off). Copie o relatório para compartilhar.",
+    off: "O envio está desligado neste servidor (`PROBLEM_REPORT_URL=off`). Copie o relatório para compartilhar.",
     errorRate: "Relatórios demais em pouco tempo. Tente de novo em {{minutes}} min ou copie o relatório.",
     errorUnreachable: "O agentes.chat não respondeu. Tente de novo ou copie o relatório.",
     errorRefused: "O agentes.chat não aceitou este relatório (pode ser de uma versão antiga). Copie o relatório.",
