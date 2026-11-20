@@ -4,7 +4,7 @@ import { createContext, type ReactNode, useContext, useMemo } from "react";
 import { Platform, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import Animated, { type AnimatedRef } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LivePause } from "@/agent/live";
+import { LivePause, useStillWhileScrolling } from "@/agent/live";
 import { CoverBarBackdrop, CoverParallax, FadingHeaderTitle } from "./cover";
 import { type HeaderAction, useHeaderActionOptions } from "./headerActions";
 import { LargeTitleHead, useLargeTitleScroll } from "./LargeTitleHead";
@@ -185,6 +185,8 @@ function DrawnTitleScreen({
   // under the bar. Folded away for a search, there is no title to settle.
   const scroll = useLargeTitleScroll(IOS ? headerHeight : 0, { snap: !collapsed });
   const { y } = scroll;
+  // The faces hold still while the list moves: their frames share the thread that places its rows.
+  const still = useStillWhileScrolling();
   const actionOptions = useHeaderActionOptions({ right: actions, left, leftActions });
   // Stable options: `setOptions` runs when the title or the actions change, not on every render.
   const options = useMemo<NativeStackNavigationOptions>(
@@ -206,9 +208,19 @@ function DrawnTitleScreen({
         <Animated.ScrollView
           ref={scroll.ref}
           onScroll={scroll.onScroll}
-          onScrollBeginDrag={onScrollBeginDrag}
-          onScrollEndDrag={scroll.onScrollEndDrag}
-          onMomentumScrollEnd={scroll.onMomentumScrollEnd}
+          onScrollBeginDrag={() => {
+            still.hold();
+            onScrollBeginDrag?.();
+          }}
+          onScrollEndDrag={(e) => {
+            still.settle();
+            scroll.onScrollEndDrag(e);
+          }}
+          onMomentumScrollBegin={still.hold}
+          onMomentumScrollEnd={(e) => {
+            still.settle();
+            scroll.onMomentumScrollEnd(e);
+          }}
           scrollEventThrottle={16}
           // The pixel orbit stands in for the wheel, hidden on iOS (Android keeps its own over the content).
           refreshControl={

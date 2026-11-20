@@ -297,21 +297,27 @@ function Home() {
                 onPress={() => router.push("/new-chat")}
               />
             ) : (
-              recent.slice(0, RECENT_MAX).map((r, i) => (
-                // Swiped left: Fixar no topo (or Tirar do topo) and a channel's Silenciar; held: the menu (`HomeRow`).
-                <HomeRow
-                  key={r.key}
-                  row={r}
-                  facts={factsOf(r, agentStates.get(r.key))}
-                  divider={i > 0}
-                  live={!collapsed.includes("recent") && live++ < LIVE_ROWS}
-                  pinLabel={menus.rowActionsOf(r).find((a) => a.key === "pin")?.label ?? null}
-                  onHold={menus.openRowMenu}
-                  holdLabel={holdLabel}
-                  holdActions={menus.rowActionsOf}
-                  onMute={muteRow}
-                />
-              ))
+              recent.slice(0, RECENT_MAX).map((r, i) => {
+                const facts = factsOf(r, agentStates.get(r.key));
+                // A face moves while its agent works: at rest each one would redraw 25 times a second for nothing.
+                const moves = !collapsed.includes("recent") && facts.face === "run" && live < LIVE_ROWS;
+                if (moves) live++;
+                return (
+                  // Swiped left: Fixar no topo (or Tirar do topo) and a channel's Silenciar; held: the menu (`HomeRow`).
+                  <HomeRow
+                    key={r.key}
+                    row={r}
+                    facts={facts}
+                    divider={i > 0}
+                    live={moves}
+                    pinLabel={menus.rowActionsOf(r).find((a) => a.key === "pin")?.label ?? null}
+                    onHold={menus.openRowMenu}
+                    holdLabel={holdLabel}
+                    holdActions={menus.rowActionsOf}
+                    onMute={muteRow}
+                  />
+                );
+              })
             )}
             {recent.length > RECENT_MAX ? (
               <SeeAllRow label={t("mobile.chats.seeAll")} onPress={() => openKindList("recent")} />

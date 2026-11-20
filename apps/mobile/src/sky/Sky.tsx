@@ -64,6 +64,8 @@ export function WorkspaceSky({
       kind="workspace"
       tones={[...tones, deepest, deepest, ink.dim, ink.bright]}
       pixel={4}
+      // Clouds drifting in 4-point cells: more would redraw the top of Conversas for steps nobody can see.
+      fps={15}
       fade={fade}
       fadeTop={fadeTop}
       extra={{ hour: hour === "day" ? 0 : 1, top: tones.length - 1 }}

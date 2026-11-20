@@ -3,6 +3,7 @@ import { Link } from "expo-router";
 import { memo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, StyleSheet, View } from "react-native";
+import { slideListeners } from "@/agent/live";
 import { TAB_BADGE } from "@/lib/nav";
 import { Count, LIST_AVATAR, LIST_PREVIEW, LineIcon, ListRow, PixelOrbit, Text } from "@/ui";
 import { router } from "@/ui/navigation";
@@ -263,6 +264,8 @@ export function OpensConversation({
     ? chatHref(r.channelId, r.kind === "thread" || r.kind === "mission" ? r.threadId : null)
     : null;
   const open = () => {
+    // The faces hold still from the tap: the new screen's first render starts with the thread to itself.
+    slideListeners.transitionStart();
     onOpen?.();
     if (onStart && r.kind === "dm") onStart(r.with.id);
     else if (href) router.push(href);

@@ -428,11 +428,29 @@ interface LiveStore {
   hold: (held: boolean) => void;
 }
 
+/** How long an agent's steps gather before the conversation is drawn again with them. */
+const PROGRESS_MS = 120;
+const PROGRESS_EVENTS: ReadonlySet<string> = new Set([
+  "agent.tool",
+  "agent.tool.output",
+  "agent.step",
+  "agent.thinking",
+  "agent.typing",
+  "agent.delta",
+]);
+
+/** An agent's steps come many a second and each would redraw the whole screen; anything else shows at once. */
+export const gathers = (action: { type: string; event?: { type: string } }) =>
+  action.type === "event" && PROGRESS_EVENTS.has(action.event?.type ?? "");
+
 function createLiveStore(): LiveStore {
   const listeners = new Set<() => void>();
   let held = false;
   let missed = false;
+  let timer: ReturnType<typeof setTimeout> | null = null;
   const tell = () => {
+    if (timer) clearTimeout(timer);
+    timer = null;
     for (const listener of [...listeners]) listener();
   };
   const store: LiveStore = {
@@ -443,7 +461,8 @@ function createLiveStore(): LiveStore {
       if (next === store.current) return;
       store.current = next;
       if (held) missed = true;
-      else tell();
+      else if (!gathers(action)) tell();
+      else timer ??= setTimeout(tell, PROGRESS_MS);
     },
     subscribe(listener) {
       listeners.add(listener);

@@ -155,7 +155,7 @@ describe("a screen of rows", () => {
     const all = src("chats/ConversationListScreen.tsx");
     for (const screen of [home, all]) {
       expect(screen).toContain("<HomeRow");
-      expect(screen).toContain("facts={factsOf(r, agentStates.get(r.key))}");
+      expect(screen).toContain("factsOf(r, agentStates.get(r.key))");
       expect(screen).toContain("onHold={menus.openRowMenu}");
       expect(screen).toContain("holdActions={menus.rowActionsOf}");
       expect(screen).toContain("onMute={muteRow}");

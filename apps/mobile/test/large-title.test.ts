@@ -32,8 +32,8 @@ describe("large titles settle", () => {
         "{ snap: !collapsed }",
         "<LargeTitleHead y=",
         "ref={scroll.ref}",
-        "onScrollEndDrag={scroll.onScrollEndDrag}",
-        "onMomentumScrollEnd={scroll.onMomentumScrollEnd}",
+        "scroll.onScrollEndDrag",
+        "scroll.onMomentumScrollEnd",
       ])
         expect({ file, piece, there: screen.includes(piece) }).toEqual({ file, piece, there: true });
       // No numbers of their own, and not the scroll view's snapToOffsets (it stops a fling at its last offset).

@@ -139,7 +139,8 @@ describe("Conversas with the strip and one list", () => {
   });
 
   test("Recentes: the home's rows with no grouping, no pin first and no pin mark, the first twenty and See all", () => {
-    expect(home).toContain("recent.slice(0, RECENT_MAX).map((r, i) => (");
+    expect(home).toContain("recent.slice(0, RECENT_MAX).map((r, i) => {");
+    expect(home).toContain('const moves = !collapsed.includes("recent") && facts.face === "run" && live < LIVE_ROWS;');
     expect(home).toContain('<SeeAllRow label={t("mobile.chats.seeAll")} onPress={() => openKindList("recent")} />');
     for (const gone of ["homeLayout", "categoryMenu", "pinned={", "mobile.chats.section", "useHomeCollapsed"])
       expect({ gone, home: home.includes(gone) }).toEqual({ gone, home: false });

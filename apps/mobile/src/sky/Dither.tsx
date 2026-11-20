@@ -35,6 +35,8 @@ export interface DitherProps {
   extra?: Record<string, number | number[]>;
   /** Moves with time (sky, fuse, plan track); the spend bar stays still. */
   animated?: boolean;
+  /** How many times a second it moves (`useDrawingClock`); every frame by default. */
+  fps?: number;
   /** Fade out to the bottom from this height share (2 = none). */
   fade?: number;
   /** Come in from nothing, in dither steps, down to this height share (0 = none): a band that doesn't start at the top. */
@@ -60,6 +62,7 @@ export function Dither({
   pixel,
   extra,
   animated = true,
+  fps,
   fade = 2,
   fadeTop = 0,
   clear = false,
@@ -78,7 +81,7 @@ export function Dither({
   const effect = effectOf(kind);
   const { pal, last } = paletteUniform(tones);
   const timed = animated && !reduced;
-  const clock = useDrawingClock(timed && !paused);
+  const clock = useDrawingClock(timed && !paused, fps);
   const base = {
     size: [size.width, size.height],
     px: pixel,
