@@ -53,7 +53,7 @@ describe("an agent's photo", () => {
 
     // A new look, or back to the default, keeps the photo.
     const look = { color: "rose", eyes: "happy", accessory: "crown" };
-    expect((await setAgentAppearance(f.db, f.owner.id, f.org.id, f.agent.id, look)).appearance).toEqual({
+    expect((await setAgentAppearance(f.db, f.owner.id, f.org.id, f.agent.id, look)).appearance as unknown).toEqual({
       ...look,
       photo,
     });
@@ -89,7 +89,7 @@ describe("each agent's recent conversations", () => {
       });
     const [secret] = await f.db
       .insert(schema.channels)
-      .values({ orgId: f.org.id, name: "secret", isPrivate: true })
+      .values({ orgId: f.org.id, name: "secret", visibility: "private" })
       .returning();
     if (!secret) throw new Error("no channel");
     const t0 = Date.now();
