@@ -260,6 +260,23 @@ describe("read_conversation", () => {
     expect((await read(ctx, { channel: "nada" })).content).toBe("Not found, or not a conversation you can read.");
   });
 
+  test("thread_id takes a conversation's own id, a DM's too; one the agent can't read stays not found", async () => {
+    f = await setup({ contextTools: true });
+    const diretoria = await createChannel(f.db, f.owner.id, f.org.id, { name: "diretoria", visibility: "private" });
+    const dm = await openDm(f.db, f.owner.id, f.org.id, { agentId: f.agent.id });
+    const ask = await insertMessage(f.db, {
+      orgId: f.org.id,
+      channelId: dm.id,
+      author: { type: "person", userId: f.owner.id },
+      body: "lembra o que eu te pedi aqui?",
+    });
+    const ctx = await runOn(dm.id, ask.id);
+    expect((await read(ctx, { thread_id: dm.id })).content).toContain("lembra o que eu te pedi aqui?");
+    expect((await read(ctx, { thread_id: diretoria.id })).content).toBe(
+      "Not found, or not a conversation you can read.",
+    );
+  });
+
   test("search_context names who wrote a message, where, and its link", async () => {
     f = await setup({ contextTools: true });
     const m = await insertMessage(f.db, {
