@@ -14246,6 +14246,7 @@
     "icloudHint": "Pakai alamat iCloud Mail-mu, seperti nama@icloud.com, meskipun Akun Apple-mu memakai {{name}}.",
     "password": "Kata sandi aplikasi",
     "passwordHelp": "Disimpan terenkripsi di server. Tidak ada yang bisa melihatnya lagi.",
+    "gmailAppPasswordNote": "Kata sandi aplikasi memerlukan Verifikasi 2 Langkah aktif di akun Google Anda.",
     "passwordInvalid": "Tempel kata sandi aplikasi.",
     "whatIs": "Apa itu kata sandi aplikasi?",
     "whatIsText": "Kata sandi khusus untuk agen. Kamu membuatnya di situs email-mu dan bisa menghapusnya kapan saja, tanpa mengubah kata sandimu sendiri.",

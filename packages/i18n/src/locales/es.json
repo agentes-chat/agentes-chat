@@ -15211,6 +15211,7 @@
     "icloudHint": "Usa tu dirección de iCloud Mail, como nombre@icloud.com, aunque tu Cuenta de Apple use {{name}}.",
     "password": "Contraseña de app",
     "passwordHelp": "Se guarda cifrada en el servidor. Nadie la vuelve a ver.",
+    "gmailAppPasswordNote": "Una contraseña de app requiere tener activada la verificación en dos pasos en tu cuenta de Google.",
     "passwordInvalid": "Pega la contraseña de app.",
     "whatIs": "¿Qué es una contraseña de app?",
     "whatIsText": "Una contraseña solo para los agentes. La creas en el sitio de tu correo y puedes borrarla cuando quieras, sin cambiar tu propia contraseña.",

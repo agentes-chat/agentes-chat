@@ -4,7 +4,8 @@
  *
  * - `MailConnector.open` gives a `MailProvider` for one account: Gmail and
  *   Outlook through Composio (`via = composio`), anything else over IMAP/SMTP
- *   (`via = imap`).
+ *   (`via = imap`); a server without Composio also reaches Gmail that way, with
+ *   an app password (ADR 0038 addendum of 2026-11-20).
  * - `MailPoller` (IMAP) lists messages that arrived since the last check.
  * - `ComposioClient` is the Composio-specific part (connect links, connected
  *   accounts, triggers, webhooks).

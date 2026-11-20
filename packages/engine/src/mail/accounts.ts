@@ -986,10 +986,12 @@ export async function suggestMailAddresses(deps: MailDeps, actorId: string, orgI
 
 /** Which paths this server offers (`GET …/mail/providers`). */
 export function mailProviders(mail: MailAdapters | null | undefined) {
+  const presets = mail?.imap?.presets ?? [];
   return {
     composio: !!mail?.composio,
     imap: !!mail?.imap,
-    presets: mail?.imap?.presets ?? [],
+    // Gmail by OAuth is the Composio path (ADR 0038); its IMAP preset is the fallback for a server without it.
+    presets: mail?.composio ? presets.filter((preset) => preset.id !== "gmail") : presets,
   };
 }
 

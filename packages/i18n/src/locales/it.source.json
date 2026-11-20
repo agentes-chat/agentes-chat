@@ -36330,6 +36330,9 @@
   "mail.passwordHelp": {
     "value": "Stored encrypted on the server. Nobody sees it again."
   },
+  "mail.gmailAppPasswordNote": {
+    "value": "An app password needs 2-Step Verification turned on in your Google Account."
+  },
   "mail.passwordInvalid": {
     "value": "Paste the app password."
   },

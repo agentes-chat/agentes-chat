@@ -32,6 +32,17 @@ export const ICLOUD: MailPreset = {
   appPasswordUrl: "https://account.apple.com",
 };
 
+export const GMAIL: MailPreset = {
+  id: "gmail",
+  label: "Gmail",
+  imapHost: "imap.gmail.com",
+  imapPort: 993,
+  smtpHost: "smtp.gmail.com",
+  smtpPort: 587,
+  username: "address",
+  appPasswordUrl: "https://myaccount.google.com/apppasswords",
+};
+
 export const PUBLIC_URL = "http://localhost:3000";
 
 /**
@@ -49,7 +60,7 @@ export async function mailSetup(options: { composio?: boolean; imap?: boolean; p
     imap:
       options.imap === false
         ? null
-        : { connector: box.connector, poller: poller.poller, tester: tester.tester, presets: [ICLOUD] },
+        : { connector: box.connector, poller: poller.poller, tester: tester.tester, presets: [ICLOUD, GMAIL] },
   };
   const keyWrappers = [createLocalKeyWrapper(SECRET)];
   const toolDeps: MailToolDeps = { keyWrappers, mail, publicUrl: PUBLIC_URL };

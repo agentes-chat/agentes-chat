@@ -834,7 +834,7 @@ export const envVars = {
   COMPOSIO_API_KEY: {
     schema: z.string().optional(),
     description:
-      "Composio project API key: Gmail and Outlook mailboxes for agents (ADR 0038) and the connectors that go through Composio, Google Drive, Slack and more (ADR 0107). Without it, Gmail and Outlook don't appear among the email connectors and those services are unavailable; IMAP mailboxes still work.",
+      "Composio project API key: Gmail and Outlook mailboxes for agents (ADR 0038) and the connectors that go through Composio, Google Drive, Slack and more (ADR 0107). Without it, those OAuth connections don't appear; Gmail can still be connected with an app password under 'Other email' on a server with IMAP (ADR 0038 addendum of 2026-11-20).",
     section: "Composio",
     secret: true,
   },
@@ -877,7 +877,8 @@ export const envVars = {
   },
   MAIL_IMAP_ENABLED: {
     schema: z.stringbool().default(true),
-    description: "IMAP/SMTP mailboxes for agents (iCloud, hosting providers, any server). `false` hides them.",
+    description:
+      "IMAP/SMTP mailboxes for agents (Gmail with an app password when Composio is absent, iCloud, hosting providers, any server). `false` hides them.",
     section: "Email for agents",
   },
   MAIL_POLL_SECONDS: {

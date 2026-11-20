@@ -9,7 +9,7 @@ import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { setNavigateAway } from "@/lib/navigate";
 import { openConnected, pick, service } from "./catalog";
 import { ADA_ID, ATLAS_ID, createFakeApi, fakeMailOf, ORG_ID, seedState } from "./fake-api";
-import { MAIL_PROVIDERS } from "./fakes/mail";
+import { GMAIL_PRESET, MAIL_PROVIDERS } from "./fakes/mail";
 import { renderApp, screen, settle } from "./render";
 
 afterEach(() => cleanup());
@@ -272,6 +272,26 @@ describe("Conectores → Email", () => {
     expect(within(flow()).getByRole("alert").textContent).toBe(
       "O email ou a senha de app não conferem. Confira e tente de novo.",
     );
+  });
+
+  test("on a server without Composio, Gmail connects with an app password in Outro email", async () => {
+    const { api, state, mail } = mailApi();
+    mail.providers = { ...MAIL_PROVIDERS, composio: false, presets: [...MAIL_PROVIDERS.presets, GMAIL_PRESET] };
+    const dialog = await openCatalog(api);
+    await pick(dialog, "Outro email");
+    await choose(within(flow()).getByRole("combobox", { name: "Onde fica o seu email" }), "Gmail");
+    expect(flow().textContent).toContain(
+      "A senha de app exige a verificação em duas etapas ligada na sua Conta Google.",
+    );
+    expect(within(flow()).getByRole("link", { name: "Abrir a página de Gmail" }).getAttribute("href")).toBe(
+      "https://myaccount.google.com/apppasswords",
+    );
+    await type(within(flow()).getByLabelText("Endereço de email"), "ana@gmail.com");
+    await type(within(flow()).getByLabelText("Senha de app"), "abcd-efgh-ijkl-mnop");
+    await click(within(flow()).getByRole("button", { name: "Conectar" }));
+    await settle(4);
+    const connect = state.calls.filter((c) => c.method === "mail.connectImap").at(-1);
+    expect(connect?.args[1]).toEqual({ preset: "gmail", address: "ana@gmail.com", password: "[redacted]" });
   });
 
   test("iCloud with its own domain: the sent folder's addresses come filled in, then the default From", async () => {
