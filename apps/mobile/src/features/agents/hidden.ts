@@ -5,7 +5,7 @@ import { useToast } from "@/ui";
 import { useOrgId } from "../shared/hooks";
 
 /**
- * "Esconder da lista", the web sidebar's "Esconder da sidebar" on Agentes: the same per-person list, saved with the
+ * "Esconder da lista", the web sidebar's "Esconder da barra lateral" on Agentes: the same per-person list, saved with the
  * sidebar view (`…/me/sidebar/view`), so an agent hidden on one device is hidden on every one. `hide` says so with
  * Desfazer; `show` brings it back (the Escondidos section). The functions are the same on every render (the rows are
  * memoized), always running the latest state.

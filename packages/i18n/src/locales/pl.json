@@ -2527,6 +2527,7 @@
     },
     "showAll": "Pokaż agentów, którzy ze mną nie rozmawiają",
     "hide": "Ukryj z paska bocznego",
+    "show": "Pokaż na pasku bocznym",
     "hiddenToast": "{{name}} zniknął z paska bocznego. Wróci w Dostosuj.",
     "collapseAll": "Zwiń wszystkie",
     "expandAll": "Rozwiń wszystkie",

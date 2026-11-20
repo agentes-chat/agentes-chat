@@ -468,13 +468,13 @@ describe("Fixar no topo", () => {
   });
 });
 
-describe("Esconder da sidebar", () => {
+describe("Esconder da barra lateral", () => {
   test("hiding from the row's menu takes it off the list, Personalizar brings it back", async () => {
     const state = seedState();
     await go(state);
     expect(rowsIn(section("Agentes"))).toContain("Ada");
     await rightClick(within(nav()).getByRole("link", { name: /^Ada/ }));
-    await pick("Esconder da sidebar");
+    await pick("Esconder da barra lateral");
     expect(rowsIn(section("Agentes"))).not.toContain("Ada");
     expect(rowsIn(section("Agentes"))).toContain("Atlas");
     // Saved with the sidebar view, so it holds on every device.
@@ -491,16 +491,58 @@ describe("Esconder da sidebar", () => {
     expect(views(state).at(-1)).toMatchObject({ hiddenAgents: [] });
   });
 
-  test("a hidden agent's unread still shows on the Agentes header", async () => {
-    const state = seedState();
+  test("a hidden agent that wrote to me is back until I read it, its unread on the Agentes header", async () => {
+    const hidden = (state: State) => {
+      state.sidebarView = { agentSort: "workspace", showAllAgents: false, pins: null, hiddenAgents: [ADA_ID] };
+      return state;
+    };
+    await go(hidden(seedState()));
+    expect(rowsIn(section("Agentes"))).not.toContain("Ada");
+    cleanup();
+
+    const state = hidden(seedState());
     seedDm(state, { type: "agent", id: ADA_ID }, { unread: 3 });
     await go(state);
-    await rightClick(within(nav()).getByRole("link", { name: /^Ada/ }));
-    await pick("Esconder da sidebar");
-    expect(rowsIn(section("Agentes"))).not.toContain("Ada");
-    // Closed, the section's header sums every agent's unread, the hidden one's too.
+    expect(rowsIn(section("Agentes"))).toContain("Ada");
     await click(within(nav()).getByRole("button", { name: "Agentes" }));
     expect(head("Agentes").textContent).toContain("3");
+  });
+
+  test("a hidden agent stays one Ctrl K away, and its DM's menu shows it again", async () => {
+    const state = seedState();
+    state.sidebarView = { agentSort: "workspace", showAllAgents: false, pins: null, hiddenAgents: [ADA_ID] };
+    const r = await go(state);
+    expect(rowsIn(section("Agentes"))).not.toContain("Ada");
+    await act(async () => fireEvent.keyDown(window, { key: "k", metaKey: true }));
+    const input = screen().getByRole("combobox", { name: "Ir para, ou pedir a um agente" });
+    await act(async () => fireEvent.change(input, { target: { value: "Ada" } }));
+    await settle(2);
+    const found = within(screen().getByRole("listbox", { name: "Resultados" }))
+      .getAllByRole("option")
+      .find((o) => o.textContent?.startsWith("Ada")) as HTMLElement;
+    expect(found).toBeTruthy();
+    await act(async () => fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" }));
+    await settle(2);
+
+    await act(async () =>
+      r.router.navigate({ to: "/org/$orgId/dm/agent/$agentId", params: { orgId: ORG_ID, agentId: ADA_ID } }),
+    );
+    await settle(6);
+    const more = screen()
+      .getAllByRole("button", { name: "Mais opções" })
+      .find((b) => !nav().contains(b)) as HTMLElement;
+    await act(async () => {
+      fireEvent.keyDown(more, { key: "Enter" });
+      fireEvent.keyUp(more, { key: "Enter" });
+    });
+    await settle(2);
+    await click(
+      within(screen().getByRole("menu", { name: "Mais opções" })).getByRole("menuitem", {
+        name: "Mostrar na barra lateral",
+      }),
+    );
+    expect(rowsIn(section("Agentes"))).toContain("Ada");
+    expect(views(state).at(-1)).toMatchObject({ hiddenAgents: [] });
   });
 
   test("the right hand has the same menu and leaves its own row", async () => {
@@ -508,7 +550,7 @@ describe("Esconder da sidebar", () => {
     const row = () => nav().querySelector("[data-right-hand]");
     expect(row()).not.toBeNull();
     await rightClick(row() as Element);
-    await pick("Esconder da sidebar");
+    await pick("Esconder da barra lateral");
     expect(row()).toBeNull();
   });
 });

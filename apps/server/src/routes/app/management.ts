@@ -1191,7 +1191,7 @@ export function managementRoutes(deps: AppDeps) {
         .array(z.string().min(1).max(64))
         .max(SIDEBAR_HIDDEN_LIMIT)
         .openapi({
-          description: `"Esconder da sidebar": agent ids taken off the AGENTES list, at most ${SIDEBAR_HIDDEN_LIMIT}; the agent keeps working and stays one search away. On a save, ids of agents outside this workspace are dropped, and the list left out keeps what is stored.`,
+          description: `"Esconder da barra lateral": agent ids taken off the AGENTES list, at most ${SIDEBAR_HIDDEN_LIMIT}; the agent keeps working and stays one search away. On a save, ids of agents outside this workspace are dropped, and the list left out keeps what is stored.`,
         }),
     })
     .openapi("SidebarView");

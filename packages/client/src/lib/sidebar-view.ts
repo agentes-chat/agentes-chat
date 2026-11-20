@@ -7,13 +7,11 @@ export type PinKind = keyof SidebarPins;
 /** AGENTES' orders, as its ⋯ menu lists them (`AGENT_SORTS`, packages/engine/src/sidebar-items.ts). */
 export const AGENT_SORTS = ["workspace", "mine", "working"] as const satisfies readonly SidebarView["agentSort"][];
 
-/** The view of someone who never changed it. */
-export const SIDEBAR_VIEW_DEFAULT: SidebarView = {
-  agentSort: "workspace",
-  showAllAgents: false,
-  pins: null,
-  hiddenAgents: [],
-};
+/**
+ * The view of someone who never changed it. No `hiddenAgents`: a change saved before the view loads leaves the field out,
+ * so the server keeps the stored list instead of emptying it.
+ */
+export const SIDEBAR_VIEW_DEFAULT: SidebarView = { agentSort: "workspace", showAllAgents: false, pins: null };
 const NO_PINS: SidebarPins = { agents: [], channels: [], people: [] };
 
 /**

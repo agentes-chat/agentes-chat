@@ -5879,6 +5879,9 @@
   "sidebarAgents.hide": {
     "value": "Hide from sidebar"
   },
+  "sidebarAgents.show": {
+    "value": "Show in sidebar"
+  },
   "sidebarAgents.hiddenToast": {
     "value": "{{name}} left the sidebar. Bring it back in Customize."
   },

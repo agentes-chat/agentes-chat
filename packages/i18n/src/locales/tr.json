@@ -2364,6 +2364,7 @@
     },
     "showAll": "Benimle konuşmayan ajanları göster",
     "hide": "Kenar çubuğundan gizle",
+    "show": "Kenar çubuğunda göster",
     "hiddenToast": "{{name}} kenar çubuğundan çıktı. Özelleştir'den geri gelir.",
     "collapseAll": "Tümünü daralt",
     "expandAll": "Tümünü genişlet",

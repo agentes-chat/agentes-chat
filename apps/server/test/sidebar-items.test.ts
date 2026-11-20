@@ -351,6 +351,11 @@ test("hidden agents ride the sidebar view: only this workspace's agents, once ea
   // An app from before the field saves the view without it: the list stays.
   expect((await put({ ...base, agentSort: "mine" })).status).toBe(200);
   expect(await read()).toMatchObject({ agentSort: "mine", hiddenAgents: [mine] });
+  // Only made-up ids: nothing to look up, nothing kept.
+  expect(
+    ((await (await put({ ...base, hiddenAgents: ["nope"] })).json()) as { view: { hiddenAgents: string[] } }).view
+      .hiddenAgents,
+  ).toEqual([]);
   // An empty list shows them all again.
   await put({ ...base, hiddenAgents: [] });
   expect((await read()).hiddenAgents).toEqual([]);

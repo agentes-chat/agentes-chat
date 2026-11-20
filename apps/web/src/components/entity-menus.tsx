@@ -19,6 +19,7 @@ import { useNavigate, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
+import { useHiddenSidebarAgents } from "@/hooks/useHiddenSidebarAgents";
 import { useSidebarPins } from "@/hooks/useSidebarPins";
 import { requestChannelDetails } from "@/lib/channel-details";
 import { copyText, type MenuEntry } from "@/lib/context-menu";
@@ -256,6 +257,7 @@ export function useAgentMenu() {
   const copyId = useCopyId();
   const mention = useMention();
   const pins = useSidebarPins();
+  const hidden = useHiddenSidebarAgents();
   /** `extra`: the sidebar row's own items (Mudar de grupo), after Fixar no topo. */
   return (
     a: Pick<Agent, "id" | "name" | "handle" | "ownerUserId" | "builtin" | "canTalk" | "canManage" | "canEdit">,
@@ -312,6 +314,32 @@ export function useAgentMenu() {
         : []),
       // The right hand has its own row on top of the sidebar.
       ...(isRightHand(a) ? [] : [pins.entry("agents", a.id)]),
+      // Esconder da barra lateral, or Mostrar na sidebar wherever a hidden agent is reached (Ctrl K, Equipe, a mention, its DM).
+      ...(opensDm(a) && hidden.loaded
+        ? ([
+            hidden.ids.has(a.id)
+              ? {
+                  kind: "item",
+                  id: "show-in-sidebar",
+                  label: t("sidebarAgents.show"),
+                  icon: "eye",
+                  run: () => hidden.show(a.id),
+                }
+              : {
+                  kind: "item",
+                  id: "hide-from-sidebar",
+                  label: t("sidebarAgents.hide"),
+                  icon: "eyeOff",
+                  run: () => {
+                    hidden.hide(a.id);
+                    toast.show(t("sidebarAgents.hiddenToast", { name: a.name }), "info", {
+                      label: t("channelCategories.undo"),
+                      run: () => hidden.show(a.id),
+                    });
+                  },
+                },
+          ] satisfies MenuEntry[])
+        : []),
       ...mention(a.handle),
       ...copyHandle(a.handle),
       ...markRead(dm?.channelId, dm?.unread ?? 0),

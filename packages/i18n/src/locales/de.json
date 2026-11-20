@@ -2364,6 +2364,7 @@
     },
     "showAll": "Agenten zeigen, die nicht mit mir sprechen",
     "hide": "Aus der Seitenleiste ausblenden",
+    "show": "In der Seitenleiste zeigen",
     "hiddenToast": "{{name}} ist aus der Seitenleiste verschwunden. Zurück unter Anpassen.",
     "collapseAll": "Alle einklappen",
     "expandAll": "Alle ausklappen",

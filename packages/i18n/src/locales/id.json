@@ -2284,6 +2284,7 @@
     },
     "showAll": "Tampilkan agen yang tidak berbicara dengan saya",
     "hide": "Sembunyikan dari bilah samping",
+    "show": "Tampilkan di bilah samping",
     "hiddenToast": "{{name}} keluar dari bilah samping. Kembali lewat Sesuaikan.",
     "collapseAll": "Ciutkan semua",
     "expandAll": "Bentangkan semua",

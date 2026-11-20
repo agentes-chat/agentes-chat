@@ -2364,6 +2364,7 @@
     },
     "showAll": "Agents tonen die niet met mij praten",
     "hide": "Verberg uit de zijbalk",
+    "show": "Toon in de zijbalk",
     "hiddenToast": "{{name}} staat niet meer in de zijbalk. Terug via Aanpassen.",
     "collapseAll": "Alles inklappen",
     "expandAll": "Alles uitklappen",

@@ -2284,6 +2284,7 @@
     },
     "showAll": "显示不与我对话的智能体",
     "hide": "从侧边栏隐藏",
+    "show": "在侧边栏显示",
     "hiddenToast": "{{name}}已从侧边栏移除。可在自定义中恢复。",
     "collapseAll": "全部收起",
     "expandAll": "全部展开",

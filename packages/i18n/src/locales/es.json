@@ -2445,6 +2445,7 @@
     },
     "showAll": "Mostrar agentes que no hablan conmigo",
     "hide": "Ocultar de la barra lateral",
+    "show": "Mostrar en la barra lateral",
     "hiddenToast": "{{name}} salió de la barra lateral. Vuelve en Personalizar.",
     "collapseAll": "Contraer todos",
     "expandAll": "Expandir todos",

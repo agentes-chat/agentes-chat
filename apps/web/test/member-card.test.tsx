@@ -249,6 +249,7 @@ describe("an agent's card", () => {
       "Ver perfil",
       "Abrir o computador",
       "Fixar no topo",
+      "Esconder da barra lateral",
       "Mencionar",
       "Copiar @ada",
       "Editar agente",

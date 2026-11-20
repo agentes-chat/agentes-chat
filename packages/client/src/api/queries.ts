@@ -6573,16 +6573,12 @@ export function useSetSidebarOrder(orgId: string, personal = false) {
 }
 
 /** How my sidebar shows the agents, and what I pinned, in this workspace (the default until it loads). */
-export const useSidebarView = (orgId: string): SidebarView => {
+const useSidebarViewQuery = (orgId: string) => {
   const api = useApi();
-  return (
-    useQuery({
-      queryKey: keys.sidebarView(orgId),
-      queryFn: () => api.orgs.sidebarView(orgId),
-      staleTime: 60_000,
-    }).data ?? SIDEBAR_VIEW_DEFAULT
-  );
+  return useQuery({ queryKey: keys.sidebarView(orgId), queryFn: () => api.orgs.sidebarView(orgId), staleTime: 60_000 });
 };
+
+export const useSidebarView = (orgId: string): SidebarView => useSidebarViewQuery(orgId).data ?? SIDEBAR_VIEW_DEFAULT;
 
 /**
  * Changes my sidebar view: the sidebar changes at once and the whole view goes to the server, one request at a time,
@@ -6618,17 +6614,12 @@ export function useSetSidebarView(orgId: string) {
 const SIDEBAR_HIDDEN_LIMIT = 200;
 
 /**
- * "Esconder da sidebar": the agents I took off the AGENTES list in this workspace, saved with my sidebar view so they
+ * "Esconder da barra lateral": the agents I took off the AGENTES list in this workspace, saved with my sidebar view so they
  * stay hidden on every device. `loaded` is false until the view arrives: `hide` and `show` do nothing before that, so a
  * change never starts from the default view and wipes what the server keeps.
  */
 export function useHiddenSidebarAgentIds(orgId: string) {
-  const api = useApi();
-  const view = useQuery({
-    queryKey: keys.sidebarView(orgId),
-    queryFn: () => api.orgs.sidebarView(orgId),
-    staleTime: 60_000,
-  });
+  const view = useSidebarViewQuery(orgId);
   const setView = useSetSidebarView(orgId);
   const ids = useMemo<ReadonlySet<string>>(() => new Set(view.data?.hiddenAgents ?? []), [view.data]);
   const loaded = view.data !== undefined;

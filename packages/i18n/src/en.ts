@@ -2511,6 +2511,8 @@ export const en = {
     sort: { workspace: "Workspace's order", mine: "Mine first", working: "Working first" },
     showAll: "Show agents that don't talk to me",
     hide: "Hide from sidebar",
+    /** A hidden agent's menu (Ctrl K, Team, a mention, its DM): it comes back to AGENTES. */
+    show: "Show in sidebar",
     hiddenToast: "{{name}} left the sidebar. Bring it back in Customize.",
     collapseAll: "Collapse all",
     expandAll: "Expand all",

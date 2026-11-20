@@ -13611,6 +13611,7 @@ html:not([data-pointer]) .sidebar__bell:focus-visible {
 .sidebar-setup__name {
   font-size: 14px;
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 .sidebar-setup__moves {
   display: flex;
