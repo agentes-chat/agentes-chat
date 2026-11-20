@@ -144,8 +144,11 @@ export function paintSky(color: string | null) {
   setSkyColors(color ? accentSky(color) : null);
 }
 
-/** A card inside a dark sheet: one step above the sheet, as the sheet is one above the screen. */
-const DARK_SHEET_CARD = "#292928";
+/**
+ * A card inside a dark sheet: one step above the sheet, as the sheet is one above the screen. VPS Zen: a step above the
+ * branch's lighter dark `raised` (#272726).
+ */
+const DARK_SHEET_CARD = "#343432";
 
 /**
  * The colors inside a form sheet. In dark the sheet is lifted one step above the screen behind it (the dark

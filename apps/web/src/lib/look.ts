@@ -1,8 +1,8 @@
 import { BLANK_LOOK } from "@agenteschat/client/lib/new-agent";
-import { type AgentAppearance, normalizeAppearance } from "@agenteschat/ui";
+import { type AgentAppearance, type AgentPhotoLook, normalizeAppearance } from "@agenteschat/ui";
 
 /** An agent's look for `<Avatar appearance>` (unknown values fall back to the default). */
-export const lookOf = (agent: { appearance?: unknown } | undefined | null): AgentAppearance | undefined =>
+export const lookOf = (agent: { appearance?: unknown } | undefined | null): AgentPhotoLook | undefined =>
   agent?.appearance ? normalizeAppearance(agent.appearance) : undefined;
 
 /** Every part of a look, the blank one's where it has none (the editors need all three). */

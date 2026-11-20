@@ -23293,6 +23293,24 @@ export const en = {
       },
     },
   },
+  /** VPS Zen: an agent's own photo (AgentPhoto.tsx). */
+  agentPhoto: {
+    button: "Photo",
+    title: "Agent photo",
+    help: "Drag to frame it. It shows instead of the drawn face, wherever the agent appears.",
+    remove: "Remove photo",
+    saved: "Photo saved",
+    removed: "Photo removed",
+  },
+  /** VPS Zen: an agent's conversations under its row in the sidebar (AgentChats.tsx). */
+  agentChats: {
+    show: "Show {{name}}'s conversations",
+    hide: "Hide {{name}}'s conversations",
+    list: "{{name}}'s conversations",
+    none: "No conversations in the last 14 days",
+    dm: "Direct message",
+    working: "Working here now",
+  },
 };
 
 export type Translations = Widen<typeof en>;

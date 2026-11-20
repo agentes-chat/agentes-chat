@@ -23856,5 +23856,21 @@
         "YEARFRAC": "Część roku między dwiema datami"
       }
     }
+  },
+  "agentPhoto": {
+    "button": "Zdjęcie",
+    "title": "Zdjęcie agenta",
+    "help": "Przeciągnij, aby wykadrować. Pojawia się zamiast narysowanej twarzy wszędzie, gdzie widać agenta.",
+    "remove": "Usuń zdjęcie",
+    "saved": "Zapisano zdjęcie",
+    "removed": "Usunięto zdjęcie"
+  },
+  "agentChats": {
+    "show": "Pokaż rozmowy: {{name}}",
+    "hide": "Ukryj rozmowy: {{name}}",
+    "list": "Rozmowy: {{name}}",
+    "none": "Brak rozmów w ciągu ostatnich 14 dni",
+    "dm": "Wiadomość bezpośrednia",
+    "working": "Pracuje tu teraz"
   }
 }

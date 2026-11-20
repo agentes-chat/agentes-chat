@@ -33,11 +33,17 @@ export interface AgentAppearance {
   accessory?: AgentAccessory;
 }
 
+/** VPS Zen: a look with the agent's uploaded photo, drawn instead of the symbol (`/api/app/agent-photos/…` only). */
+export type AgentPhotoLook = AgentAppearance & { photo?: string };
+
+/** VPS Zen: the only addresses an agent's photo may have (the server's `AGENT_PHOTO_PATH`). */
+const AGENT_PHOTO = /^\/api\/app\/agent-photos\/[^/]+\/[^/]+\/[0-9a-f]{16}\.(jpg|png|webp)$/;
+
 const pick = <T extends string>(list: readonly T[], v: unknown): T | undefined =>
   typeof v === "string" && (list as readonly string[]).includes(v) ? (v as T) : undefined;
 
 /** Only known values (the backend's allow-list); anything else falls back to the default look. */
-export function normalizeAppearance(raw: unknown): AgentAppearance {
+export function normalizeAppearance(raw: unknown): AgentPhotoLook {
   const o = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   return {
     color:
@@ -45,5 +51,6 @@ export function normalizeAppearance(raw: unknown): AgentAppearance {
       (typeof o.color === "string" && HEX_COLOR.test(o.color) ? (o.color.toLowerCase() as AgentColor) : undefined),
     eyes: pick(AGENT_EYES, o.eyes),
     accessory: pick(AGENT_ACCESSORIES, o.accessory),
+    ...(typeof o.photo === "string" && AGENT_PHOTO.test(o.photo) ? { photo: o.photo } : {}),
   };
 }

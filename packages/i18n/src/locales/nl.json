@@ -22664,5 +22664,21 @@
         "YEARFRAC": "Het deel van een jaar tussen twee datums"
       }
     }
+  },
+  "agentPhoto": {
+    "button": "Foto",
+    "title": "Foto van de agent",
+    "help": "Sleep om bij te snijden. Hij verschijnt in plaats van het getekende gezicht, overal waar de agent te zien is.",
+    "remove": "Foto verwijderen",
+    "saved": "Foto opgeslagen",
+    "removed": "Foto verwijderd"
+  },
+  "agentChats": {
+    "show": "Gesprekken van {{name}} tonen",
+    "hide": "Gesprekken van {{name}} verbergen",
+    "list": "Gesprekken van {{name}}",
+    "none": "Geen gesprekken in de afgelopen 14 dagen",
+    "dm": "Direct bericht",
+    "working": "Werkt hier nu"
   }
 }

@@ -39,6 +39,8 @@ export interface AgentAppearance {
   color: (typeof AGENT_LOOK.colors)[number] | `#${string}`;
   eyes: (typeof AGENT_LOOK.eyes)[number];
   accessory: (typeof AGENT_LOOK.accessories)[number];
+  /** VPS Zen: its uploaded photo (`agent-photo.ts`), never set from a look's input. */
+  photo?: string;
 }
 
 /** A look as it is sent, checked by `validateAppearance`. */
@@ -87,7 +89,13 @@ export async function setAgentAppearance(
   if (!options.checked && !ownsOrManagesAgent(agent, actorId, membership)) {
     throw new ForbiddenError("Only the agent's owner or an admin can change its look");
   }
-  const look = appearance === null ? null : validateAppearance(appearance);
+  // VPS Zen: a new look (or the default one) keeps the agent's photo; only `removeAgentPhoto` drops it.
+  const photo = (agent.appearance as { photo?: unknown } | null)?.photo;
+  const checkedLook = appearance === null ? null : validateAppearance(appearance);
+  const look =
+    typeof photo === "string"
+      ? { ...(checkedLook ?? { color: "sky" as const, eyes: "round" as const, accessory: "none" as const }), photo }
+      : checkedLook;
   const [updated] = await db
     .update(agents)
     .set({ appearance: look, updatedAt: new Date() })

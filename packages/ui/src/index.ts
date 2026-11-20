@@ -85,6 +85,7 @@ export {
   type AgentAppearance,
   type AgentColor,
   type AgentEyes,
+  type AgentPhotoLook,
   agentGradient,
   appearanceStyle,
   normalizeAppearance,

@@ -23245,5 +23245,21 @@
         "YEARFRAC": "La fraction d'année entre deux dates"
       }
     }
+  },
+  "agentPhoto": {
+    "button": "Photo",
+    "title": "Photo de l’agent",
+    "help": "Faites glisser pour la cadrer. Elle remplace le visage dessiné partout où l’agent apparaît.",
+    "remove": "Retirer la photo",
+    "saved": "Photo enregistrée",
+    "removed": "Photo retirée"
+  },
+  "agentChats": {
+    "show": "Afficher les conversations de {{name}}",
+    "hide": "Masquer les conversations de {{name}}",
+    "list": "Conversations de {{name}}",
+    "none": "Aucune conversation ces 14 derniers jours",
+    "dm": "Message direct",
+    "working": "Travaille ici en ce moment"
   }
 }

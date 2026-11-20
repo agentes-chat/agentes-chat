@@ -8016,18 +8016,17 @@ html:not([data-pointer]) .sky-welcome__close:focus-visible {
   box-shadow:
     inset 0 0 0 1px color-mix(in srgb, var(--sel-glow-color, var(--agent)) 62%, transparent),
     0 0 12px color-mix(in srgb, var(--sel-glow-color, var(--agent)) 38%, transparent);
-  animation: sidebar-working 2.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sidebar__item[data-busy="true"] {
+    animation: sidebar-working 2.2s ease-in-out infinite;
+  }
 }
 @keyframes sidebar-working {
   50% {
     box-shadow:
       inset 0 0 0 1px color-mix(in srgb, var(--sel-glow-color, var(--agent)) 90%, transparent),
       0 0 20px color-mix(in srgb, var(--sel-glow-color, var(--agent)) 60%, transparent);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .sidebar__item[data-busy="true"] {
-    animation: none;
   }
 }
 .sidebar__trail,
@@ -15193,4 +15192,81 @@ html:not([data-pointer]) .rh-set__face-edit:focus-visible {
 }
 .ac-workline--waiting .handed-line__state {
   color: var(--warn);
+}
+
+/* VPS Zen: an agent's conversations under its row (AgentChats.tsx): indented under its face, one line of name and one
+   of its last words, the time or my unread count at the end. */
+.agent-chats {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0 0 var(--space-2);
+  padding: 0 0 0 22px;
+  list-style: none;
+}
+.agent-chats__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 40px;
+  padding: 3px 8px;
+  border-radius: var(--control-r-md);
+  color: var(--ink-muted);
+  text-decoration: none;
+  font-size: 13px;
+}
+.agent-chats__item:hover {
+  background: var(--side-hover);
+  color: var(--ink);
+}
+.agent-chats__item[data-status="active"] {
+  background: var(--side-hover);
+  color: var(--ink);
+}
+.agent-chats__item[data-unread] .agent-chats__name {
+  color: var(--ink);
+  font-weight: 650;
+}
+.agent-chats__icon {
+  flex: none;
+}
+.agent-chats__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.agent-chats__name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 550;
+}
+.agent-chats__preview,
+.agent-chats__empty {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+.agent-chats__empty {
+  padding: 4px 8px;
+}
+.agent-chats__time {
+  flex: none;
+  font-size: 11.5px;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+.sidebar[data-rail="true"] .agent-chats {
+  display: none;
+}
+/* VPS Zen: Foto and Aleatório side by side in the identity card's head, the kit's 8px between buttons. */
+.agp-look-acts {
+  display: flex;
+  gap: 8px;
 }

@@ -20,6 +20,7 @@ import { accessRoutes } from "./routes/app/access";
 import { accountRoutes } from "./routes/app/account";
 import { actionRoutes } from "./routes/app/actions";
 import { agentImportRoutes } from "./routes/app/agent-imports";
+import { agentPhotoRoutes } from "./routes/app/agent-photos";
 import { agentRoutes } from "./routes/app/agents";
 import { approvalRoutes } from "./routes/app/approvals";
 import { appRoutes } from "./routes/app/apps";
@@ -247,6 +248,7 @@ export function createApp(options: AppOptions) {
     api.route("/app", voiceRoutes(deps));
     // VPS Zen: voice channels.
     api.route("/app", voiceRoomRoutes(deps));
+    api.route("/app", agentPhotoRoutes(deps));
     api.route("/app", surfaceRoutes(deps));
     api.route("/app", webhookAdminRoutes(deps));
     api.route("/app", githubAppRoutes(deps));

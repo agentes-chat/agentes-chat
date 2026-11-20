@@ -49,9 +49,10 @@ describe("composer row and formatting", () => {
     await open();
     expect(rowOf(composer())).toEqual(["Anexar arquivo", "Emojis, GIFs e figurinhas", "Mensagem para #eng", "Enviar"]);
     expect(screen().queryByRole("toolbar", { name: "Formatação" })).toBeNull();
-    // A draft that calls an agent grows no chip over the text: the @ picker and the sent message say who.
+    // VPS Zen (docs/vps-zen.md, ThinksPicker): a draft that calls an agent shows it over the text, with its model and
+    // effort one click away.
     await act(async () => fireEvent.change(composer(), { target: { value: "@ada olha isso" } }));
-    expect(composer().closest(".ac-composer")?.querySelector(".ac-composer__pills")).toBeNull();
+    expect(composer().closest(".ac-composer")?.querySelector(".ac-composer__agent")?.textContent).toContain("Ada");
     await act(async () => fireEvent.change(composer(), { target: { value: "" } }));
     const bar = within(article("o login está devolvendo 401")).getByRole("toolbar");
     await act(async () => fireEvent.click(within(bar).getByRole("button", { name: "Responder" })));
@@ -63,8 +64,8 @@ describe("composer row and formatting", () => {
     await settle(8);
     const dm = screen().getByRole("combobox", { name: "Mensagem para Ada" });
     expect(rowOf(dm)).toEqual(["Anexar arquivo", "Emojis, GIFs e figurinhas", "Mensagem para Ada", "Enviar"]);
-    // No chip for the DM's agent: the header and the placeholder already say who.
-    expect(dm.closest(".ac-composer")?.querySelector(".ac-composer__pills")).toBeNull();
+    // VPS Zen: the DM's agent too, for its model and effort chip.
+    expect(dm.closest(".ac-composer")?.querySelector(".ac-composer__agent")?.textContent).toContain("Ada");
     expect(screen().queryByRole("toolbar", { name: "Formatação" })).toBeNull();
   });
 

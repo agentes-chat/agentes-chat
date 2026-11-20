@@ -21903,5 +21903,21 @@
         "YEARFRAC": "Bagian tahun di antara dua tanggal"
       }
     }
+  },
+  "agentPhoto": {
+    "button": "Foto",
+    "title": "Foto agen",
+    "help": "Seret untuk membingkai. Foto ini tampil menggantikan wajah gambar di mana pun agen muncul.",
+    "remove": "Hapus foto",
+    "saved": "Foto disimpan",
+    "removed": "Foto dihapus"
+  },
+  "agentChats": {
+    "show": "Tampilkan percakapan {{name}}",
+    "hide": "Sembunyikan percakapan {{name}}",
+    "list": "Percakapan {{name}}",
+    "none": "Tidak ada percakapan dalam 14 hari terakhir",
+    "dm": "Pesan langsung",
+    "working": "Sedang bekerja di sini"
   }
 }

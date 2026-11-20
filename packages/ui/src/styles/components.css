@@ -6679,6 +6679,12 @@ html:not([data-pointer]) .ac-hint:focus-visible {
 .ac-avatar--framed.ac-avatar--running::after {
   content: none;
 }
+/* VPS Zen: a photo doesn't move, so an agent at work with one keeps the halo, drawn inside its tile. */
+.ac-avatar--framed.ac-avatar--running:has(> .ac-avatar__photo)::after {
+  content: "";
+  inset: 0;
+  border-color: var(--agent);
+}
 .ac-avatar--framed .ac-avatar__canvas {
   left: 0;
   top: 0;

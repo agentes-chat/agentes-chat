@@ -355,9 +355,10 @@ describe("composer in a DM", () => {
     await settle(8);
     const composer = screen().getByRole("combobox", { name: "Mensagem para Ada" }) as HTMLTextAreaElement;
     const card = composer.closest(".ac-composer") as HTMLElement;
-    expect(card.querySelector(".ac-composer__pills")).toBeNull();
+    // VPS Zen (docs/vps-zen.md, ThinksPicker): the DM's agent shows over the text, for its model and effort chip.
+    expect(card.querySelector(".ac-composer__agent")?.textContent).toContain("Ada");
     await type(composer, "@atlas olha isso");
-    expect(card.querySelector(".ac-composer__pills")).toBeNull();
+    expect(card.querySelector(".ac-composer__agent")?.textContent).toContain("Ada");
     await act(async () => fireEvent.change(composer, { target: { value: "" } }));
     await type(composer, "/");
     const menu = screen().getByRole("listbox", { name: "Comandos" });
