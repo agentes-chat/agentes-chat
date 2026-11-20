@@ -211,7 +211,7 @@ export function QueueSheet({ machineId, computer }: { machineId: string; compute
 }
 
 /**
- * "More computers, shorter line": my other online computers, each with its switch for my replies to start there while
+ * "Your computers": my other online computers, each with its switch for my replies to start there while
  * this one is full (`spill.own`). Nothing when I have none.
  */
 function SpillHere({ machineId }: { machineId: string }) {

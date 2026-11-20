@@ -326,6 +326,7 @@ function PictureCover({ fileId, version }: { fileId: string; version: number }) 
         <Image
           source={{ uri: link.data.uri, headers: link.data.headers, cacheKey: `${fileId}@${version}` }}
           recyclingKey={`${fileId}@${version}`}
+          cachePolicy="memory-disk"
           contentFit="cover"
           transition={pictureFade(`${fileId}@${version}`)}
           onLoad={() => pictureDrawn(`${fileId}@${version}`)}

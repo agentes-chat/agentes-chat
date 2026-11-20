@@ -3,6 +3,9 @@ export const KEY_SHAPES =
   /\b(sk-[A-Za-z0-9_-]{12,}|sk-ant-[A-Za-z0-9_-]{8,}|gh[pousr]_[A-Za-z0-9._-]{20,}|github_pat_[A-Za-z0-9_]{20,}|xox[abprs]-[A-Za-z0-9-]{10,})/g;
 /** Credential shapes that signed and presigned addresses carry by design (an AWS key id, a JWT). */
 export const SIGNED_SHAPES = /\b(AKIA[0-9A-Z]{16}|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{8,})/g;
+/** `text` with every key shape (`KEY_SHAPES`, `SIGNED_SHAPES`) replaced by `[REDACTED]`. */
+export const maskKeyShapes = (text: string) =>
+  text.replace(KEY_SHAPES, "[REDACTED]").replace(SIGNED_SHAPES, "[REDACTED]");
 /** A private key, by its first line. */
 export const PRIVATE_KEY = /-----BEGIN [A-Z ]*PRIVATE KEY-----/;
 

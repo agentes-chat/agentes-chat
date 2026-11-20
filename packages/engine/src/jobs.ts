@@ -77,7 +77,7 @@ import { FILE_JOIN_REQUEST_JOB, fileJoinRequest } from "./invite-requests";
 import { announceTaskConversation } from "./issues";
 import type { JevKey, JevKeySource } from "./jev-key";
 import { DEEP_MENTION_THRESHOLD, DEEP_WAKE_HOP, MENTION_WAKE_THRESHOLD, mentionNeedsNothing } from "./judge";
-import { platformCapReached } from "./limits";
+import { platformCapReached, platformCapRouter } from "./limits";
 import type { LiveDocs } from "./live/docs";
 import { liveImageJobHandlers } from "./live/images";
 import { liveJobHandlers } from "./live/jobs";
@@ -269,23 +269,26 @@ export function messageRouter(deps: JobDeps): RouterDeps | null {
   const steps = [
     ...(jev
       ? [
-          createJevRouterStrategy({
-            key: jev.key,
-            timeoutMs: jev.timeoutMs,
-            fetch: jev.fetch,
-            baseURL: jev.baseURL,
-            recordUsage: async (u) => {
-              await deps.gateway.recordExternalUsage({
-                orgId: u.orgId,
-                kind: "router",
-                provider: "typesafe",
-                model: u.model,
-                inputTokens: u.inputTokens,
-                outputTokens: u.outputTokens,
-                costNanoUsd: u.costNanoUsd,
-              });
-            },
-          }),
+          platformCapRouter(
+            deps.db,
+            createJevRouterStrategy({
+              key: jev.key,
+              timeoutMs: jev.timeoutMs,
+              fetch: jev.fetch,
+              baseURL: jev.baseURL,
+              recordUsage: async (u) => {
+                await deps.gateway.recordExternalUsage({
+                  orgId: u.orgId,
+                  kind: "router",
+                  provider: "typesafe",
+                  model: u.model,
+                  inputTokens: u.inputTokens,
+                  outputTokens: u.outputTokens,
+                  costNanoUsd: u.costNanoUsd,
+                });
+              },
+            }),
+          ),
         ]
       : []),
     router.strategy ?? createLlmRouterStrategy({ gateway: deps.gateway, resolveModel: smallModel }),
@@ -305,7 +308,8 @@ export function messageRouter(deps: JobDeps): RouterDeps | null {
     quietMs: router.quietMs,
     quietByTyping: router.quietByTyping,
     pubsub: deps.pubsub,
-    // Jev bills the platform: past the workspace's platform AI for the month, only @mentions start agents.
+    // Jev bills the platform: past the workspace's platform AI for the month, its own small model picks, else only
+    // @mentions start agents.
     ...(jev ? { platformCapReached: (orgId: string) => platformCapReached(deps.db, orgId) } : {}),
   };
 }

@@ -83,7 +83,10 @@ export function MemoryScreen({ agent: initialAgent }: { agent?: string } = {}) {
       onPress={() => openMemory(m.id)}
     />
   );
-  const found = search ? searchMemories(shown, search) : [];
+  // Worked out again only when the memories or the words change, not at each render (each letter, before it settles).
+  const found = useMemo(() => (search ? searchMemories(shown, search) : []), [shown, search]);
+  const recent = useMemo(() => justLearned(shown), [shown]);
+  const used = useMemo(() => mostUsed(shown), [shown]);
   const subtitle = !selected
     ? ""
     : selected.kind === "agent"
@@ -164,9 +167,9 @@ export function MemoryScreen({ agent: initialAgent }: { agent?: string } = {}) {
             onOpen={() => (selected.kind === "agent" ? router.push(`/agent/${selected.id}`) : openMemory(selected.id))}
           />
           <SectionHeader title={t("mobile.memory.recent")} />
-          {justLearned(shown).map(row)}
+          {recent.map(row)}
           <SectionHeader title={t("mobile.memory.mostUsed")} />
-          {mostUsed(shown).map(row)}
+          {used.map(row)}
         </Animated.View>
       ) : (memories.data ?? []).length > 0 ? (
         <EmptyState

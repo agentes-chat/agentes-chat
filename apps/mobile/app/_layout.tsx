@@ -1,8 +1,8 @@
-import { keys, useApi, useAuthConfig, useMe } from "@agenteschat/client";
+import { keys, type Me, meQuery, useApi, useAuthConfig } from "@agenteschat/client";
 import { ErrorBoundary } from "@agenteschat/client/lib/error-boundary";
 import { serverHost } from "@agenteschat/client/lib/server";
 import { skyHourOf } from "@agenteschat/ui/sky/workspace";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   type Href,
   type NativeStackNavigationOptions,
@@ -68,6 +68,9 @@ export default function RootLayout() {
   );
 }
 
+/** The signed-in person's id and account deletion, all the root gate reads of `me`. */
+const gateMeOf = (me: Me | null) => ({ userId: me?.user.id, deletion: me?.user.deletion });
+
 /**
  * Signed out → `(auth)`; signed in → `(app)` (the screens, which wait for the organization themselves). The
  * splash (`LaunchSplash`) stays up until the fonts, the session and the organization are known, so nobody sees
@@ -89,18 +92,20 @@ function Gate() {
   // The server down or out of reach (a self-hosted one, often): the splash stays and says so, never the first run.
   const down = useServerDown(signedIn && !session.pending);
   const ready = fontsReady && !session.pending && (!signedIn || !org.loading) && down === null;
-  // The account was deleted and waits for its date: its own screen, over everything else.
-  const me = useMe();
+  // The account was deleted and waits for its date: its own screen, over everything else. Only what the gate reads of
+  // `me`, so a write to the rest (a workspace's look, a preference) doesn't draw the whole app again. A cleared cache
+  // (signing in or out) reaches it with the session and the organization's gate, which draw it again.
+  const me = useQuery({ ...meQuery(useApi()), select: gateMeOf });
   // Where the phone's error reports go, once the server says (ADR 0104).
   const authConfig = useAuthConfig();
   const reportsTo = authConfig.isSuccess ? (authConfig.data.mobileErrorReports ?? null) : undefined;
   useEffect(() => {
     if (reportsTo !== undefined) void startErrorReports(reportsTo);
   }, [reportsTo]);
-  const userId = me.data?.user.id;
+  const userId = me.data?.userId;
   const orgId = org.state?.orgId;
   useEffect(() => setErrorScope({ orgId, userId }), [orgId, userId]);
-  const accountDeletion = ready && signedIn ? me.data?.user.deletion : undefined;
+  const accountDeletion = ready && signedIn ? me.data?.deletion : undefined;
   // A workspace being deleted opens as ever, read-only, under its notice (ADR 0088 §7): only a suspension covers it.
   const suspended = ready && signedIn && org.state ? suspendedOf(org.state.orgs, org.state.orgId) : null;
   // Apagar conta opened from that screen goes over it: the screen steps aside while it is open.

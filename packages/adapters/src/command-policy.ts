@@ -2,6 +2,8 @@ import path from "node:path";
 import { commandParts, ruleMatches } from "./machine-protocol";
 import { type OutboundCode, outboundUrlProblem } from "./outbound-url";
 
+export { maskKeyShapes } from "./outbound-url";
+
 /**
  * Deterministic command policy for computer turns (ADR 0029, ADR 0053 §3). No
  * model: plain parsing of the call Claude Code (or Codex) wants to make. The
@@ -1972,7 +1974,8 @@ export function outboundCallProblem(
  * What the computer decides by itself, before anyone is asked: the deny list
  * and secrets are refused (`how`: what the refusal says to do to ask a
  * person), plain reads allowed; in a `plan` turn everything else is refused
- * too. Null: the server decides (`permission_prompt`: a mission's card, or
+ * too. A refusal's `code` uses the server's prompt codes (`never`, `secret`,
+ * `outbound.*`), and `policy` for a plan turn's. Null: the server decides (`permission_prompt`: a mission's card, or
  * code's rules for a run). The runner's prompt tool for Claude Code and its
  * answers to Codex's command approvals both start here; pushes come next
  * there (`approvalNeeded`).
@@ -1983,14 +1986,14 @@ export function localVerdict(
   scope: CommandScope | undefined,
   profile: CommandProfile,
   how: string = ASK_IN_CHAT,
-): { behavior: "allow" } | { behavior: "deny"; message: string; code?: string } | null {
+): { behavior: "allow" } | { behavior: "deny"; message: string; code: string } | null {
   const denied = deniedMessage(toolName, input, how);
-  if (denied) return { behavior: "deny", message: denied };
+  if (denied) return { behavior: "deny", message: denied, code: denied === SECRET_MESSAGE ? "secret" : "never" };
   const outbound = outboundCallProblem(toolName, input);
   if (outbound) return { behavior: "deny", message: outbound.message, code: outbound.code };
-  if (secretRead(toolName, input, scope)) return { behavior: "deny", message: SECRET_MESSAGE };
+  if (secretRead(toolName, input, scope)) return { behavior: "deny", message: SECRET_MESSAGE, code: "secret" };
   if (scope && readOnlyCall(toolName, input, scope, profile)) return { behavior: "allow" };
-  if (profile === "plan") return { behavior: "deny", message: PLAN_MESSAGE };
+  if (profile === "plan") return { behavior: "deny", message: PLAN_MESSAGE, code: "policy" };
   return null;
 }
 

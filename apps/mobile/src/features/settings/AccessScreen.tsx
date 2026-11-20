@@ -172,7 +172,6 @@ export function AccessScreen() {
             );
           })
         : null}
-      {table ? <GroupedFooter>{t("mobile.settings.access.how")}</GroupedFooter> : null}
     </SettingsPage>
   );
 }

@@ -251,4 +251,8 @@ export const TILE_TINTS: Partial<Record<IconName, TileTint>> = {
   book: "brown",
   // Ours.
   agent: "agent",
+  // Files made in the Drive: each kind its own color, as the system gives each of its apps.
+  spreadsheet: "teal",
+  slides: "orange",
+  canvas: "cyan",
 };

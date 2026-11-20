@@ -123,6 +123,8 @@ function Home() {
   const active = useActiveWork();
   const waiting = useWaitingItems();
   const { collapsed, toggle } = useCollapsedSections();
+  // The widgets' section is memoized: its toggle stays one function.
+  const toggleWidgets = useCallback(() => toggle("widgets"), [toggle]);
   // An administrator reads every channel (ADR 0151): the ones they aren't in wait at the end of the home.
   const others = (useChannels(orgId).data ?? []).filter((c) => c.seenAsAdmin);
   const menus = useRowMenus();
@@ -270,7 +272,7 @@ function Home() {
       ) : (
         <>
           {/* Início's widgets, and the way to Dashboards ("See all"), not a tab (ADR 0135 §15). */}
-          <HomeWidgets collapsed={collapsed.includes("widgets")} onToggle={() => toggle("widgets")} />
+          <HomeWidgets collapsed={collapsed.includes("widgets")} onToggle={toggleWidgets} />
           <PinnedStrip
             items={strip}
             collapsed={collapsed.includes("pinned")}
@@ -305,7 +307,7 @@ function Home() {
                   facts={factsOf(r, agentStates.get(r.key))}
                   divider={i > 0}
                   live={!collapsed.includes("recent") && live++ < LIVE_ROWS}
-                  pinLabel={menus.rowActionsOf(r).find((a) => a.key === "pin")?.label ?? null}
+                  pinLabel={menus.pinLabelOf(r)}
                   onHold={menus.openRowMenu}
                   holdLabel={holdLabel}
                   holdActions={menus.rowActionsOf}

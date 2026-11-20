@@ -1,7 +1,7 @@
 import { markTerms } from "@agenteschat/client/lib/search-filters";
 import * as Clipboard from "expo-clipboard";
 import { type NativeStackNavigationOptions, Stack, useIsFocused } from "expo-router";
-import { type ReactNode, useLayoutEffect, useMemo, useRef } from "react";
+import { memo, type ReactNode, useCallback, useLayoutEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, StyleSheet, useWindowDimensions, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
@@ -102,28 +102,25 @@ const ACTION_GLYPH = 24;
  * 36 pt column, the label, a hint under it; the text and the hairline above start together at 64.
  */
 export function ActionList({ items }: { items: ActionItem[] }) {
-  const c = useColors();
   return (
     <GroupedList>
       {items.map((it) => (
-        <ActionRow
-          key={it.key}
-          item={it}
-          // `leading`, as a GroupedRow's: GroupedList starts the hairline after its column.
-          leading={
-            it.leading ??
-            (it.icon ? <Icon name={it.icon} size={ACTION_GLYPH} color={it.danger ? c.danger : c.muted} /> : null)
-          }
-        />
+        // `leading`, as a GroupedRow's: GroupedList starts the hairline after its column.
+        <ActionRow key={it.key} item={it} leading={Boolean(it.leading ?? it.icon)} />
       ))}
     </GroupedList>
   );
 }
 
-/** One action, on a GroupedRow's numbers: 16 pt sides, the 36 pt leading column, 12 apart, 52 tall at least. */
-function ActionRow({ item: it, leading }: { item: ActionItem; leading: ReactNode }) {
+/**
+ * One action, on a GroupedRow's numbers: 16 pt sides, the 36 pt leading column, 12 apart, 52 tall at least. Drawn
+ * again only when its item changes: a list that keeps its items (the search's results) redraws none of them.
+ */
+const ActionRow = memo(function ActionRow({ item: it }: { item: ActionItem; leading: boolean }) {
   const c = useColors();
   const fontScale = useFontScale();
+  const leading =
+    it.leading ?? (it.icon ? <Icon name={it.icon} size={ACTION_GLYPH} color={it.danger ? c.danger : c.muted} /> : null);
   const line = textLineOf("body", fontScale);
   // A hint that may wrap: the icon and what is on the right stay on the label's line, not the row's middle.
   const tall = Boolean(it.hint) && !it.oneLine;
@@ -188,7 +185,7 @@ function ActionRow({ item: it, leading }: { item: ActionItem; leading: ReactNode
       )}
     </RowPressable>
   );
-}
+});
 
 const IOS = Platform.OS === "ios";
 /** iOS 26's Liquid Glass bar (a saving word there is a prominent button). */
@@ -462,6 +459,16 @@ function HeaderTitle({
 }
 
 export { goBack } from "@/ui/navigation";
+
+/**
+ * `fn` as of the last render, behind a function that never changes: a memoized row it is handed to isn't redrawn
+ * because its parent made a new one.
+ */
+export function useLatest<A extends unknown[], R>(fn: (...args: A) => R): (...args: A) => R {
+  const ref = useRef(fn);
+  ref.current = fn;
+  return useCallback((...args: A) => ref.current(...args), []);
+}
 
 /** A light tap under the thumb (long press, reactions, picks). */
 export const tapHaptic = () => haptics.light();

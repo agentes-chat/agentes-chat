@@ -71,7 +71,7 @@ import {
   summarizeCall,
   type TeamCheck,
 } from "../team-actions";
-import { carriesCredential, promptAnswer, toolCommand, toolDetail } from "../tool-detail";
+import { carriesCredential, promptAnswer, promptRefused, toolCommand, toolDetail } from "../tool-detail";
 import { untrustedBlock } from "../untrusted";
 import { checkToolCall } from "./checks";
 import {
@@ -1656,7 +1656,10 @@ export function createToolGateway(deps: {
         return finish({ content: WHY_REFUSAL, isError: true, data: { code: "tool.why_missing" } });
       // Costly work nobody asked for directly (ADR 0131 §3): a person's go first, on every brain.
       const isPrompt = tool.name === PERMISSION_TOOL && builtIn;
-      const cost = ctx.runId && unrequested(authority) ? await costOf(ctx, tool.name, call.input) : null;
+      // A command the computer already refused never runs: nothing to hold or check with the team.
+      const refusedHere = isPrompt && promptRefused(tool.name, call.input);
+      const cost =
+        ctx.runId && unrequested(authority) && !refusedHere ? await costOf(ctx, tool.name, call.input) : null;
       if (cost) {
         const refusal = await costlyGate(
           { db: ctx.db, pubsub: deps.pubsub },
@@ -1683,7 +1686,7 @@ export function createToolGateway(deps: {
         check.data ? { ...output, data: { ...output.data, ...check.data } } : output;
 
       // Team actions (ADR 0064): before acting outside, has the team already done this to the same target?
-      const prompt = tool.name === PERMISSION_TOOL && builtIn ? promptQuestion(call.input) : null;
+      const prompt = !isPrompt ? null : refusedHere ? { poll: null, action: null } : promptQuestion(call.input);
       const targets = outside ? callTargets(call.input) : (prompt?.action?.targets ?? []);
       let teamReason: string | null = null;
       // Neither asked nor kept for a call of a confidential thread (ADR 0190): the check and the record hold the

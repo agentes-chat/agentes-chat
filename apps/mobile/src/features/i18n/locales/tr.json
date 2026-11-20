@@ -12,7 +12,6 @@
     "channelCount_one": "{{count}} kanal",
     "channelCount_other": "{{count}} kanal",
     "none": "Henüz kategori yok.",
-    "manageHelp": "Yeniden adlandırmak, taşımak veya silmek için bir kategoriye dokunun.",
     "manageHint": "Sıra, adlar ve silme",
     "deleteTitle": "{{name}} silinsin mi?",
     "order": "Listedeki yeri",
@@ -811,7 +810,6 @@
     "handleMention": "Çağırmak için @{{handle}} yazın.",
     "handleFromName": "Sohbette: @{{handle}}. Ajanın adından gelir. Değiştirebilirsiniz.",
     "handleFromNameEmpty": "Sohbetteki @ adı, ajanın adından gelir.",
-    "reviewLead": "Değiştirmek için bir satıra dokunun.",
     "planHint": "Ya da yapay zeka planınızı bağlayın: {{name}} anahtarı harcamadan onunla düşünür.",
     "partly": "Ajan oluşturuldu ama rolünün getirdiklerinin bir kısmı eklenemedi. Profilinden düzenleyin.",
     "import": {
@@ -1114,7 +1112,7 @@
     "agentStyle": "Ajanlar nasıl konuşur",
     "workspaces": "Çalışma alanları",
     "workspacesIn": "Bulunduğunuz yerler",
-    "workspacesFoot": "Her birinde oturumun açık kalır ve hepsinden bildirim alırsın. Açmak için bir çalışma alanına dokun.",
+    "workspacesFoot": "Her birinde oturumun açık kalır ve hepsinden bildirim alırsın.",
     "workspacesUnreachable": "Şu an yanıt yok",
     "addWorkspace": "Çalışma alanı ekle",
     "addWorkspaceCreate": "Yeni bir çalışma alanı oluştur",
@@ -2219,7 +2217,6 @@
   },
   "crash": {
     "title": "Bu ekranda bir şeyler ters gitti",
-    "subtitle": "Uygulama bunu gösterirken bir hatayla karşılaştı. Tekrar deneyin.",
     "retry": "Tekrar deneyin"
   },
   "notFound": {
@@ -2250,9 +2247,6 @@
     "deleteFailed": "Çalışma alanı silinemedi. Tekrar deneyin.",
     "holdReset": "Sıfırlamak için basılı tutun",
     "resetFailed": "Çalışma alanı sıfırlanamadı. Tekrar deneyin.",
-    "access": {
-      "how": "Düzeyini değiştirmek için bir satıra dokunun: Erişim yok, Okuma, Okuma ve yazma."
-    },
     "logo": {
       "failed": "Logo yüklenemedi",
       "tooBig": "Bu görsel çok büyük. Başka birini deneyin."
@@ -2510,7 +2504,7 @@
       "sealedHelp": "Güvenlik için burada kaydedilenler bir daha gösterilmez. Değiştirmek için yeniden yazın.",
       "changePassword": "Şifreyi değiştir",
       "changeValue": "Değeri değiştir",
-      "changeHelp": "Saklamak için Kaydet'e dokunun. Ajanlar bundan sonra yenisini kullanır.",
+      "changeHelp": "Kaydettikten sonra ajanlar yenisini kullanır.",
       "hidden": "Gizli",
       "saved": "Kaydedildi",
       "delete": "Sil",
@@ -2655,7 +2649,7 @@
     "bySelfUntil": "Yazan: {{name}} · {{when}}"
   },
   "dashboards": {
-    "homeRow": "Yalnızca siz · kendi widget'larınız",
+    "homeRow": "Yalnızca siz",
     "create": "Oluştur",
     "routineTarget": "widget'ı",
     "pin": {
@@ -2737,11 +2731,11 @@
     },
     "drive": {
       "title": "Ekibin ürettiği her şey tek yerde",
-      "text": "Ajanların ve kişilerin raporları, tabloları ve dosyaları burada kalır, kolayca bulunur.",
+      "text": "Ajanların ve kişilerin raporları, tabloları ve dosyaları burada kalır.",
       "viewerTitle": "Ekibin ürettiklerini bulun",
       "viewerText": "Ajanların ve kişilerin sohbetlerde oluşturdukları burada görünür.",
       "titlePersonal": "Ajanlarınızın ürettiği her şey tek yerde",
-      "textPersonal": "Ajanlarınızın raporları, tabloları ve dosyaları burada kalır, kolayca bulunur.",
+      "textPersonal": "Ajanlarınızın raporları, tabloları ve dosyaları burada kalır.",
       "viewerTitlePersonal": "Ajanlarınızın ürettiklerini bulun",
       "viewerTextPersonal": "Ajanların sohbetlerinizde oluşturdukları burada görünür."
     },
@@ -2807,7 +2801,7 @@
       "viewerTextPersonal": "Biri katıldığında burada görünür."
     },
     "chat": {
-      "title": "Her şey bir mesajla başlar",
+      "title": "Sohbeti başlatın",
       "text": "Aşağıya yazın, buradaki herkes görsün.",
       "viewerTitle": "Mesajlar burada görünür",
       "viewerText": "Biri yazınca burada okursunuz."
@@ -2848,8 +2842,8 @@
     "board": {
       "title": "Önemli olanı tek panoda görün",
       "text": "Bir widget ekleyin, bir ajandan isteyin veya sohbetten bir blok sabitleyin.",
-      "viewerTitle": "Bu pano şekilleniyor",
-      "viewerText": "Bu panoyu düzenleyen kişi widget'ları ekler ve burada görünürler."
+      "viewerTitle": "Widget'lar burada görünür",
+      "viewerText": "Bu panoyu düzenleyen kişi ekler."
     },
     "computers": {
       "title": "Ajanlarınıza başka bir bilgisayar verin",
@@ -2858,7 +2852,7 @@
       "viewerText": "Bilgisayarları bağlayan kişi ekler ve burada görünürler."
     },
     "connectors": {
-      "title": "Ajanlarınıza gerçek araçlar verin",
+      "title": "Ajanlarınıza araçlar verin",
       "text": "Bir hizmet bağlayın, orada okumaya ve işlem yapmaya başlasınlar.",
       "viewerTitle": "Ajanlarınızın araçları burada görünür",
       "viewerText": "Bağlayıcıları yöneten kişi aşağıdaki hizmetleri bağlar."
@@ -3011,7 +3005,7 @@
       "done": "Bitti",
       "placeholder": "Metni yazın",
       "titlePlaceholder": "Başlığı yazın",
-      "hint": "Her satır bir paragraftır. Yazdıklarınız siz yazarken dosyaya gider."
+      "hint": "Her satır bir paragraftır."
     },
     "show": {
       "nothing": "Tüm slaytlar gizli, bu yüzden gösterilecek bir şey yok.",

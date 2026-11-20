@@ -420,6 +420,17 @@ const RunTimings = z
           coldFirstEventMedianMs: Ms,
           coldFirstEventP90Ms: Ms,
           coldFirstEventP99Ms: Ms,
+          firstTokenMedianMs: Ms.openapi({
+            description: "Turn start to the model API's first streamed message (newer runners).",
+          }),
+          firstTokenP90Ms: Ms,
+          firstAssistantMedianMs: Ms.openapi({ description: "Turn start to the answer's first whole block." }),
+          firstAssistantP90Ms: Ms,
+          retriedTurns: Count.openapi({ description: "Turns in which the CLI retried an API call." }),
+          retries: Count.openapi({ description: "Those retries, all turns together." }),
+          retryDelayMs: Count.openapi({ description: "The waits they announced, summed." }),
+          thinkingCharsMedian: Ms.openapi({ description: "Characters of a turn's thinking text." }),
+          thinkingCharsP90: Ms,
         }),
       )
       .openapi({ description: `By brain, then model. At most ${RUN_TIMINGS_ROWS_MAX}: the ones with most turns.` }),

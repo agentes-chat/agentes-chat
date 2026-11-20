@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { chatScreenSource } from "./chat-screen-source";
 
 const src = (path: string) => readFileSync(join(import.meta.dir, "../../src", path), "utf8");
 
@@ -11,6 +12,6 @@ describe("a conversation's rows say each thing once", () => {
     );
     // `names` is off in a DM, whose bar says the agent's role under its name.
     expect(src("features/chat/look.ts")).toContain("names: !dm");
-    expect(src("features/chat/ChatScreen.tsx")).toContain("dir.agentById.get(dmAgentId)?.role || undefined");
+    expect(chatScreenSource()).toContain("dir.agentById.get(dmAgentId)?.role || undefined");
   });
 });

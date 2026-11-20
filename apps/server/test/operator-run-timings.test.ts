@@ -107,7 +107,28 @@ type Claim = {
   queries: number;
   stages: { stage: string; ms: number; queries: number; parts?: { stage: string; ms: number; queries: number }[] }[];
   stagesCut: boolean;
-  computerTurns: { warm: boolean; initMs: number | null; firstEventMs: number | null }[];
+  computerTurns: ({ warm: boolean } & Record<string, number | null | boolean>)[];
+};
+// A turn's measures past the three every runner gives, none of them said.
+const unsaid = {
+  firstTokenMs: null,
+  firstAssistantMs: null,
+  retries: null,
+  retryDelayMs: null,
+  thinkingBlocks: null,
+  thinkingChars: null,
+};
+// A window's computer starts with none of those either.
+const noModelTimes = {
+  firstTokenMedianMs: null,
+  firstTokenP90Ms: null,
+  firstAssistantMedianMs: null,
+  firstAssistantP90Ms: null,
+  retriedTurns: 0,
+  retries: 0,
+  retryDelayMs: 0,
+  thinkingCharsMedian: null,
+  thinkingCharsP90: null,
 };
 type Trace = { run: { error: string | null }; claims: Claim[] };
 const trace = async (runId: string) => ok<Trace>(await get(`/runs/${runId}/trace`));
@@ -250,8 +271,18 @@ test("computer starts and waits: per brain, each wait until the run's next step,
     profiles: [
       claim(stages(10), {
         brain: [
-          { warm: false, initMs: 4000, firstEventMs: 6000 },
-          { warm: true, firstEventMs: 800 },
+          {
+            warm: false,
+            initMs: 4000,
+            firstEventMs: 6000,
+            firstTokenMs: 5000,
+            firstAssistantMs: 9000,
+            retries: 2,
+            retryDelayMs: 1500,
+            thinkingBlocks: 1,
+            thinkingChars: 300,
+          },
+          { warm: true, firstEventMs: 800, retries: 0, thinkingBlocks: 1, thinkingChars: 100 },
           { warm: true, firstEventMs: 200 },
         ],
       }),
@@ -289,6 +320,15 @@ test("computer starts and waits: per brain, each wait until the run's next step,
       coldFirstEventMedianMs: 6000,
       coldFirstEventP90Ms: 6000,
       coldFirstEventP99Ms: 6000,
+      firstTokenMedianMs: 5000,
+      firstTokenP90Ms: 5000,
+      firstAssistantMedianMs: 9000,
+      firstAssistantP90Ms: 9000,
+      retriedTurns: 1,
+      retries: 2,
+      retryDelayMs: 1500,
+      thinkingCharsMedian: 200,
+      thinkingCharsP90: 280,
     },
   ]);
   const wait = (brain: string, cause: string, waits: number, runs: number, ...sec: number[]) => ({
@@ -468,6 +508,7 @@ test("a stored row of the wrong shape breaks no answer: what can't be read is sk
       coldFirstEventMedianMs: 900,
       coldFirstEventP90Ms: 900,
       coldFirstEventP99Ms: 900,
+      ...noModelTimes,
     },
   ]);
 
@@ -490,14 +531,14 @@ test("a stored row of the wrong shape breaks no answer: what can't be read is sk
       ],
       stagesCut: false,
       computerTurns: [
-        { warm: false, initMs: null, firstEventMs: null },
-        { warm: false, initMs: null, firstEventMs: 900 },
-        { warm: true, initMs: null, firstEventMs: 100 },
+        { warm: false, initMs: null, firstEventMs: null, ...unsaid },
+        { warm: false, initMs: null, firstEventMs: 900, ...unsaid },
+        { warm: true, initMs: null, firstEventMs: 100, ...unsaid },
       ],
     },
   ]);
   expect((await trace(huge.id)).claims).toEqual([
-    { ...none, computerTurns: [{ warm: false, initMs: null, firstEventMs: null }] },
+    { ...none, computerTurns: [{ warm: false, initMs: null, firstEventMs: null, ...unsaid }] },
   ]);
 
   const window = (n: number) => ({ kind: "five_hour", usedPercent: n });
@@ -641,7 +682,7 @@ test("a run of a confidential thread: its claims and its part in the timings are
         { stage: "model#1", ms: 700, queries: 0 },
       ],
       stagesCut: false,
-      computerTurns: [{ warm: true, initMs: null, firstEventMs: 300 }],
+      computerTurns: [{ warm: true, initMs: null, firstEventMs: 300, ...unsaid }],
     },
   ]);
   const found = await timings(windowOf(11));

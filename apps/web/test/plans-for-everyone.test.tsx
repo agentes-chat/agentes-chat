@@ -200,7 +200,7 @@ describe("Sua conta: the account's e-mail (ADR 0088 §2, addendum 2026-11-13)", 
     const { dialog } = await open(state);
     await type(within(dialog).getByLabelText("Novo e-mail"), "walter@novo.example.com");
     await click(within(dialog).getByRole("button", { name: "Mudar e-mail" }));
-    expect(dialog.textContent).toContain("Pronto: agora você entra com walter@novo.example.com.");
+    expect(dialog.textContent).toContain("Agora você entra com walter@novo.example.com.");
 
     const held = seedState();
     held.emailChangeError = new ApiError(409, "email.held", "This address left another account a moment ago");

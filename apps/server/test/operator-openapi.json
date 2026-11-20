@@ -2697,6 +2697,42 @@
                 },
                 "coldFirstEventP99Ms": {
                   "type": ["integer", "null"]
+                },
+                "firstTokenMedianMs": {
+                  "type": ["integer", "null"],
+                  "description": "Turn start to the model API's first streamed message (newer runners)."
+                },
+                "firstTokenP90Ms": {
+                  "type": ["integer", "null"]
+                },
+                "firstAssistantMedianMs": {
+                  "type": ["integer", "null"],
+                  "description": "Turn start to the answer's first whole block."
+                },
+                "firstAssistantP90Ms": {
+                  "type": ["integer", "null"]
+                },
+                "retriedTurns": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Turns in which the CLI retried an API call."
+                },
+                "retries": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Those retries, all turns together."
+                },
+                "retryDelayMs": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "The waits they announced, summed."
+                },
+                "thinkingCharsMedian": {
+                  "type": ["integer", "null"],
+                  "description": "Characters of a turn's thinking text."
+                },
+                "thinkingCharsP90": {
+                  "type": ["integer", "null"]
                 }
               },
               "required": [
@@ -2712,7 +2748,16 @@
                 "warmFirstEventP99Ms",
                 "coldFirstEventMedianMs",
                 "coldFirstEventP90Ms",
-                "coldFirstEventP99Ms"
+                "coldFirstEventP99Ms",
+                "firstTokenMedianMs",
+                "firstTokenP90Ms",
+                "firstAssistantMedianMs",
+                "firstAssistantP90Ms",
+                "retriedTurns",
+                "retries",
+                "retryDelayMs",
+                "thinkingCharsMedian",
+                "thinkingCharsP90"
               ]
             },
             "description": "By brain, then model. At most 300: the ones with most turns."
@@ -4870,9 +4915,49 @@
                         "type": ["integer", "null"],
                         "minimum": 0,
                         "description": "Turn start to its first event."
+                      },
+                      "firstTokenMs": {
+                        "type": ["integer", "null"],
+                        "minimum": 0,
+                        "description": "Turn start to the model API's first streamed message (time to first token)."
+                      },
+                      "firstAssistantMs": {
+                        "type": ["integer", "null"],
+                        "minimum": 0,
+                        "description": "Turn start to the answer's first whole block (a thinking block, text or a tool call)."
+                      },
+                      "retries": {
+                        "type": ["integer", "null"],
+                        "minimum": 0,
+                        "description": "API retries the CLI made in the turn."
+                      },
+                      "retryDelayMs": {
+                        "type": ["integer", "null"],
+                        "minimum": 0,
+                        "description": "The waits those retries announced, summed."
+                      },
+                      "thinkingBlocks": {
+                        "type": ["integer", "null"],
+                        "minimum": 0,
+                        "description": "Thinking blocks of the answer."
+                      },
+                      "thinkingChars": {
+                        "type": ["integer", "null"],
+                        "minimum": 0,
+                        "description": "Characters of their text: 0 with blocks means the API left the text out."
                       }
                     },
-                    "required": ["warm", "initMs", "firstEventMs"]
+                    "required": [
+                      "warm",
+                      "initMs",
+                      "firstEventMs",
+                      "firstTokenMs",
+                      "firstAssistantMs",
+                      "retries",
+                      "retryDelayMs",
+                      "thinkingBlocks",
+                      "thinkingChars"
+                    ]
                   },
                   "description": "How each of its turns on a computer started, as the computer said, at most 50."
                 }

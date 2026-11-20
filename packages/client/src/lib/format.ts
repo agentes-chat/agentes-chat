@@ -8,6 +8,32 @@ import type { TFunction } from "i18next";
  */
 
 /**
+ * Intl's formatters, made once per language and options: making one costs far more than using it, and these run for
+ * every row drawn. One that can't be made throws, as `new` does, and isn't kept. A date's formatter without its own
+ * `timeZone` is kept per the device's offset now, so a phone that changed zones formats in the new one.
+ */
+const formatters = new Map<string, Intl.DateTimeFormat | Intl.NumberFormat>();
+
+function made<T extends Intl.DateTimeFormat | Intl.NumberFormat>(key: string, make: () => T): T {
+  const found = formatters.get(key) as T | undefined;
+  if (found) return found;
+  const fresh = make();
+  formatters.set(key, fresh);
+  return fresh;
+}
+
+/** `new Intl.DateTimeFormat(locale, options)`, kept (see `formatters`). */
+export const dateFormat = (locale: string | undefined, options: Intl.DateTimeFormatOptions = {}) =>
+  made(
+    `d|${locale}|${options.timeZone ? "" : new Date().getTimezoneOffset()}|${JSON.stringify(options)}`,
+    () => new Intl.DateTimeFormat(locale, options),
+  );
+
+/** `new Intl.NumberFormat(locale, options)`, kept (see `formatters`). */
+export const numberFormat = (locale: string, options: Intl.NumberFormatOptions = {}) =>
+  made(`n|${locale}|${JSON.stringify(options)}`, () => new Intl.NumberFormat(locale, options));
+
+/**
  * Dollars as the language writes them ("$0.42", "US$ 0,42", "0,42 $"), with more decimals for tiny amounts (a few
  * Jev decisions' 0.0003); a spend too small for 4 decimals reads "<$0.0001", like formatPercent's "<1%", never zero.
  */
@@ -19,51 +45,40 @@ export function formatUsd(locale: string, value: number) {
 /** Budget use: "37,5%", "12%", "<1%" (members never see money, only this). */
 export function formatPercent(locale: string, value: number) {
   const fmt = (v: number, digits: number) =>
-    new Intl.NumberFormat(locale, { style: "percent", maximumFractionDigits: digits }).format(v / 100);
+    numberFormat(locale, { style: "percent", maximumFractionDigits: digits }).format(v / 100);
   if (value > 0 && value < 1) return `<${fmt(1, 0)}`;
   return fmt(value, value < 10 ? 1 : 0);
 }
 
 /** "1.240" */
-export const formatInt = (locale: string, value: number) => new Intl.NumberFormat(locale).format(Math.round(value));
+export const formatInt = (locale: string, value: number) => numberFormat(locale).format(Math.round(value));
 
 /** "0,042" / "0.0001": a price of a fraction of a cent, in the locale's decimal sign. */
 export const formatDecimal = (locale: string, value: number) =>
-  new Intl.NumberFormat(locale, { maximumFractionDigits: 4 }).format(value);
+  numberFormat(locale, { maximumFractionDigits: 4 }).format(value);
 
 /** "3,1 mi" / "12 mil" / "940" */
 export function formatTokensShort(t: TFunction, locale: string, value: number) {
-  const fmt = (v: number) => new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(v);
+  const fmt = (v: number) => numberFormat(locale, { maximumFractionDigits: 1 }).format(v);
   if (value >= 1_000_000) return t("format.tokensMillions", { value: fmt(value / 1_000_000) });
   if (value >= 10_000) return t("format.tokensThousands", { value: fmt(value / 1_000) });
   return formatInt(locale, value);
 }
 
-const dateFormats = new Map<string, Intl.DateTimeFormat>();
+const twelveHour = new Map<string, boolean>();
 
-/**
- * One formatter per language and options, kept: making one costs far more than using it, and opening a conversation
- * formats every message's time (over a thousand made for a conversation of 185 messages before they were kept).
- * A formatter fixes the time zone it was made in, so the device's offset is in the key: an app left open across a
- * time zone change formats in the new zone.
- */
-function dateFormat(locale: string, options: Intl.DateTimeFormatOptions) {
-  const key = `${locale}|${new Date().getTimezoneOffset()}|${JSON.stringify(options)}`;
-  let format = dateFormats.get(key);
-  if (!format) {
-    format = new Intl.DateTimeFormat(locale, options);
-    dateFormats.set(key, format);
-  }
-  return format;
-}
-
-/** Whether the locale writes 12-hour times ("1 PM") rather than 24-hour ("13:00"). */
+/** Whether the locale writes 12-hour times ("1 PM") rather than 24-hour ("13:00"). Asked twice per time drawn: kept. */
 export function uses12h(locale: string) {
-  try {
-    return dateFormat(locale, { hour: "numeric" }).resolvedOptions().hour12 === true;
-  } catch {
-    return false;
+  let found = twelveHour.get(locale);
+  if (found === undefined) {
+    try {
+      found = new Intl.DateTimeFormat(locale, { hour: "numeric" }).resolvedOptions().hour12 === true;
+    } catch {
+      found = false;
+    }
+    twelveHour.set(locale, found);
   }
+  return found;
 }
 
 /**
@@ -177,10 +192,18 @@ const RELATIVE_DAYS: Record<AppLocale, readonly [string, string, string]> = {
   ru: ["вчера", "сегодня", "завтра"],
 };
 
+const relativeFormats = new Map<string, Intl.RelativeTimeFormat>();
+
 /** "ontem", "today", "明日": the language's word for the day `offset` (-1, 0, 1) away, lowercase where it writes it so. */
 export function relativeDay(locale: string, offset: -1 | 0 | 1): string {
-  if (typeof Intl.RelativeTimeFormat === "function")
-    return new Intl.RelativeTimeFormat(locale, { numeric: "auto" }).format(offset, "day");
+  if (typeof Intl.RelativeTimeFormat === "function") {
+    let rtf = relativeFormats.get(locale);
+    if (!rtf) {
+      rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+      relativeFormats.set(locale, rtf);
+    }
+    return rtf.format(offset, "day");
+  }
   return RELATIVE_DAYS[appLocale([locale], true) ?? "en"][offset + 1] as string;
 }
 
@@ -406,7 +429,7 @@ export function shortTarget(text: string, max = 40) {
 /** "1,2 s", "760 ms", "22 min", "1,5 h": a line's time, finer than the block's (and the work states' one clock). */
 export function formatLineTime(locale: string, ms: number) {
   if (ms < 1000) return `${Math.max(1, Math.round(ms))} ms`;
-  if (ms < 60_000) return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(ms / 1000)} s`;
+  if (ms < 60_000) return `${numberFormat(locale, { maximumFractionDigits: 1 }).format(ms / 1000)} s`;
   if (ms < 3600_000) return `${Math.round(ms / 60_000)} min`;
-  return `${new Intl.NumberFormat(locale, { maximumFractionDigits: ms < 10 * 3600_000 ? 1 : 0 }).format(ms / 3600_000)} h`;
+  return `${numberFormat(locale, { maximumFractionDigits: ms < 10 * 3600_000 ? 1 : 0 }).format(ms / 3600_000)} h`;
 }

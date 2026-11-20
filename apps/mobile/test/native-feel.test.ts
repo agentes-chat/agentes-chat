@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { ICONS } from "../src/ui/icons.data";
 import { SF_SYMBOLS, sfSymbolOf, TILE_TINTS } from "../src/ui/icons.sf";
-import { appColors } from "../src/ui/palette";
+import { appColors, cardEdge } from "../src/ui/palette";
 
 const src = (file: string) => readFileSync(join(import.meta.dir, "..", file), "utf8");
 
@@ -72,10 +72,28 @@ describe("the system's lists", () => {
     );
   });
 
-  test("a grouped list is flat with the system's corner, separator, values and marks", () => {
+  test("a grouped list is flat with the system's corner and the cards' light edge, separator, values and marks", () => {
     const grouped = src("src/ui/Grouped.tsx");
     expect(grouped).not.toContain("boxShadow");
     expect(grouped).toContain('list: { borderRadius: LIST_CORNER, borderCurve: "continuous", overflow: "hidden" },');
+    // The ring of the cards' shadow as an outline, so a list and a card read as one family; nothing inside moves.
+    expect(grouped).toContain("<View style={[styles.list, { backgroundColor: c.raised }, cardEdge(scheme)]}>");
+    expect(cardEdge("dark")).toEqual({
+      outlineWidth: 1,
+      outlineColor: "rgba(255, 255, 255, 0.1)",
+      outlineStyle: "solid",
+    });
+    expect(cardEdge("light")).toEqual({
+      outlineWidth: 0.5,
+      outlineColor: "rgba(60, 60, 67, 0.12)",
+      outlineStyle: "solid",
+    });
+    // A header in its own case, semibold, never in capitals; a first letter in lower case (a long date) a capital.
+    expect(grouped).not.toContain("toLocaleUpperCase()");
+    expect(grouped).toContain(
+      'header: { paddingTop: 20, paddingBottom: 8, paddingHorizontal: 16, fontWeight: "600" },',
+    );
+    expect(grouped.match(/\{headerWords\(children\)\}/g)?.length).toBe(2);
     expect(grouped).toContain("backgroundColor: c.separator,");
     expect(grouped).toContain("<IconTile icon={icon} danger={danger} mark={mark ?? null} />");
     expect(grouped).toContain('<Text variant="body" numberOfLines={1} style={[styles.shrink, { color: c.label2 }]}>');

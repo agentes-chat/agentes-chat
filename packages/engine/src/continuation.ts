@@ -13,6 +13,7 @@ import { isAgentOnlyDm } from "./dms";
 import { decisionNudge, FOLLOW_THROUGH_NUDGE, FOLLOW_THROUGH_NUDGE_DM, MISSION_ASK_NUDGE } from "./follow-through";
 import { cutText, cutTextEnd } from "./format";
 import { type Judge, JudgeBudgetError } from "./judge";
+import { PLATFORM_CAP } from "./limits";
 import type { NoticeKind } from "./notices";
 import { notifyRunFailed } from "./notification-producers";
 import { ANSWER_NUDGE } from "./reply-policy";
@@ -54,6 +55,8 @@ export interface ContinuationState {
   secretNudged?: boolean;
   /** It was told once to write a reply that named its tools again (`toolNamesNudge`): the next one is posted. */
   toolsNudged?: boolean;
+  /** Its turn-end check failed once and it was told to check itself (`uncheckedNudge`): later failures end as done. */
+  uncheckedNudged?: boolean;
 }
 
 export type ContinuationVerdict = "done" | "continue" | "ask" | "untried" | "secret" | "unbacked";
@@ -65,6 +68,17 @@ export type ContinuationVerdict = "done" | "continue" | "ask" | "untried" | "sec
 export function untriedNudge(means: string[], tried: string[]) {
   const have = means.length > 0 ? means.join("; ") : "your tools and find_tools";
   return `You ended saying you couldn't, but you still have ways to try. Your means: ${have}. Already tried:\n${triedBlock(tried)}\nUse the ones that fit; when a search or a page gives nothing or is blocked, change the words, the source or the tool. Missing an access or a login? Look in the workspace first (your memory, search_context for who signed in or holds it) and ask the teammate who has it. ${SAFETY_FINAL} ${HAND_OVER_STEP} If no way is left at all, say what you tried and the one step a person must do.`;
+}
+
+/**
+ * What a run reads, once, when its turn-end check was refused past the workspace's platform AI for the month, with no
+ * small model of its own to check in its place: it checks its own reply, so an agent that stopped at an
+ * obstacle doesn't stay stopped. `held`: a conversation's reply is held meanwhile (`Transcript.held`) and goes out as
+ * it is when nothing is added; with no judge to merge them, what it adds goes out below it.
+ */
+export function uncheckedNudge(means: string[], tried: string[], held: boolean) {
+  const have = means.length > 0 ? means.join("; ") : "your tools and find_tools";
+  return `${held ? "Not posted yet: nobody has seen your reply above. " : ""}Your turn's check couldn't run, so check it yourself. If your reply gives what was asked, end your turn now without any text${held ? ": it is posted as it is" : ""}. If you stopped short (blocked, refused, a tool or an access missing), you still have ways to try. Your means: ${have}. Already tried:\n${triedBlock(tried)}\nUse the ones that fit; when something gives nothing or is blocked, change the words, the source or the tool. ${SAFETY_FINAL} ${HAND_OVER_STEP} If no way is left at all, say what you tried and the one step a person must do.${held ? " Write only what you add to your reply above: it is posted below it." : ""}`;
 }
 
 /**
@@ -691,7 +705,17 @@ async function answerTurnEnd(t: TurnEnd): Promise<TurnEndDecision> {
   let verdict: ContinuationVerdict;
   try {
     verdict = await t.verdict();
-  } catch {
+  } catch (error) {
+    // Refused past the platform AI for the month, the check would end every turn as done: once per run, the agent
+    // checks itself instead. Any other failure (no Jev on this server, a judge down or slow) ends as done, or every
+    // reply there would wait one more turn.
+    if (canNudge && !t.state.uncheckedNudged && error instanceof Error && error.message === PLATFORM_CAP)
+      return {
+        outcome: "continue",
+        rule: "untried",
+        judgeError: true,
+        nudge: uncheckedNudge(t.evidence?.means ?? [], t.evidence?.tried ?? [], t.kind !== "routine"),
+      };
     return { outcome: "done", rule: "judge_error", judgeError: true };
   }
   // No person reads a routine's run or an agents' DM: what it lacks goes out in its report or its answer, and
@@ -760,7 +784,12 @@ export function advance(state: ContinuationState, d: TurnEndDecision, executed: 
   // A reply held for its wording answers no ask: one it was told to ask still becomes the question card.
   if (d.rule === "local_paths") return { ...state, pathsNudged: true };
   if (d.rule === "tool_names") return { ...state, toolsNudged: true };
-  return { ...rest, count: state.count + 1, executedAtNudge: executed };
+  return {
+    ...rest,
+    count: state.count + 1,
+    executedAtNudge: executed,
+    ...(d.judgeError ? { uncheckedNudged: true } : {}),
+  };
 }
 
 /** Run errors the person already sees explained elsewhere, or that no one can act on. */

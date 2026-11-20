@@ -304,7 +304,7 @@ function QueueLists({
 }
 
 /**
- * "More computers, shorter line": the viewer's other online computers, each with its switch for their replies to start
+ * "Your computers": the viewer's other online computers, each with its switch for their replies to start
  * there while this one is full (`spill.own`). Nothing when they have none.
  */
 function SpillHere({ machineId }: { machineId: string }) {

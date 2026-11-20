@@ -10,6 +10,8 @@ import {
   MAX_KEPT,
 } from "../../src/features/chat/kept-sizes";
 import { type Inline, tableKey } from "../../src/features/chat/logic";
+import { OPEN_DRAW_DISTANCE, REACH_LAST, reachOf } from "../../src/features/chat/screen/reach";
+import { chatScreenSource } from "./chat-screen-source";
 
 const src = (file: string) => readFileSync(join(import.meta.dir, "../../src", file), "utf8");
 
@@ -117,9 +119,23 @@ describe("rows that measure themselves come back at their size", () => {
   });
 
   test("the conversation draws a screen past each edge once placed, so rows mount and measure out of sight", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
+    const reach = src("features/chat/screen/reach.ts");
     // While it opens at its end, a short reach: the list takes its whole reach at once there, two screens of rows.
-    expect(chat).toContain("drawDistance={placed ? Math.round(windowHeight) : OPEN_DRAW_DISTANCE}");
-    expect(chat).toContain("const OPEN_DRAW_DISTANCE = 250;");
+    expect(chat).toContain("drawDistance={reachOf(reachStep, windowHeight)}");
+    expect(reach).toContain("export const OPEN_DRAW_DISTANCE = 250;");
+    // Then a screen's height, a step per idle moment once it is placed and the push has ended; a drag takes it there
+    // at once, so a fling never outruns the rows.
+    expect(chat).toMatch(/if \(!placed \|\| !settled \|\| reachStep >= REACH_LAST\) return;\s*return whenIdle\(/);
+    expect(chat).toMatch(/dragging\.current = true;\s*setReachStep\(REACH_LAST\);/);
+  });
+
+  test("the list's reach grows from the opening one to a screen's height, ending where it always did", () => {
+    expect(reachOf(0, 844)).toBe(OPEN_DRAW_DISTANCE);
+    expect(reachOf(1, 844)).toBe(422);
+    expect(reachOf(REACH_LAST, 844)).toBe(844);
+    expect(reachOf(REACH_LAST, 812.6)).toBe(Math.round(812.6));
+    // Half a short window is never less than the opening reach.
+    expect(reachOf(1, 390)).toBe(OPEN_DRAW_DISTANCE);
   });
 });

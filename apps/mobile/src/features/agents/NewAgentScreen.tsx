@@ -1049,7 +1049,7 @@ function ReviewStep({ d }: StepProps) {
       }
     >
       <Locked when={busy}>
-        <StepHead title={t("actionCard.agentProposal.review")} lead={t("mobile.newAgent.reviewLead")} />
+        <StepHead title={t("actionCard.agentProposal.review")} />
         {/* Who it is, first row: a tap opens its name, @ and look, pushed over Revisar. */}
         <GroupedList>
           <GroupedRow
@@ -1197,11 +1197,7 @@ function ReviewStep({ d }: StepProps) {
             />
           ) : null}
         </GroupedList>
-        <GroupedFooter>
-          {proposed && listedApps.length + myMail.length > 0
-            ? t("common.joinSentences", { a: t("mobile.settings.access.how"), b: t("newAgent.approvalsNote") })
-            : t("newAgent.approvalsNote")}
-        </GroupedFooter>
+        <GroupedFooter>{t("newAgent.approvalsNote")}</GroupedFooter>
 
         {proposed?.routine ? (
           <>

@@ -24,6 +24,9 @@ import {
   type BrainSteerReply,
   type BrainSteerRequest,
   type BrainTurnRequest,
+  type BrainTurnTimings,
+  type BrainWarmReply,
+  type BrainWarmRequest,
   isAccountId,
   isBrainEffort,
   isContextTokens,
@@ -58,6 +61,7 @@ import {
   withSignIn,
   yieldRoute,
 } from "./accounts";
+import { type AwakeClock, awakeClock } from "./awake";
 import {
   BASH_DEFAULT_MS,
   CLAUDE_SILENCE,
@@ -118,7 +122,8 @@ import { claudeSessionExists, claudeSessionFile, type TaskSecrets, WRONG_SESSION
  *   Claude Code's own on the machine), plan usage, plan limits, and a final
  *   `done` or `error`.
  * - Block 5: one process per (agent, session) stays alive between turns
- *   (stdin open), closed after `idleMs` without a turn, at most
+ *   (stdin open), closed after `idleMs` without a turn (awake time: a computer that slept doesn't close them all on
+ *   waking, `AwakeClock`), at most
  *   `maxProcesses` kept per agent (the least recently used idle one of that
  *   agent's is closed for a new one). With all busy, a turn still gets its
  *   own process (live messages reach it too), and the cap is restored as
@@ -128,6 +133,7 @@ import { claudeSessionExists, claudeSessionFile, type TaskSecrets, WRONG_SESSION
  *   `reclaimIdle` closes one when the computer is short of memory for a turn
  *   (any agent's, the least recently used; the waiting turn's own session
  *   last).
+ *   `brain.warm` (protocol 74, `prewarm`) starts a session's process before its turn comes, the same way.
  *   A process that dies while idle is started again (resumed) on the next
  *   turn; one that dies mid-turn is replaced by a one-shot resume of the same
  *   turn. Turns of one session run one at a time (queued).
@@ -198,6 +204,11 @@ const FAST_FAIL_MS = 30_000;
 const SESSION_ID = /^[a-fA-F0-9-]{36}$/;
 const RUN_ID = /^[a-zA-Z0-9-]{8,64}$/;
 const MODEL = /^[A-Za-z0-9._:[\]-]{1,100}$/;
+/** The `--model` a turn names, if any. */
+const turnModel = (req: BrainTurnRequest) =>
+  typeof req.model === "string" && MODEL.test(req.model) ? req.model : undefined;
+/** How long Claude Code may take to answer one of our control requests before the process counts as refusing it. */
+export const CONTROL_REPLY_MS = 5_000;
 const STDERR_KEEP = 4000;
 
 /**
@@ -382,6 +393,19 @@ function taskOf(ev: Record<string, unknown>): ParsedTask | undefined {
   return undefined;
 }
 
+/** Where a request's model time went on its process, for its timings (`ClaudeStreamParser.stats`). */
+export interface ClaudeTurnStats {
+  /** The API's first streamed message of the main conversation (`message_start`), and its first whole block. */
+  firstTokenAt?: number;
+  firstAssistantAt?: number;
+  /** Every `api_retry`, subagents' too, and the waits they announced (`retry_delay_ms`). */
+  retries: number;
+  retryDelayMs: number;
+  /** The main conversation's thinking blocks, and the characters of their text (none when the API omits it). */
+  thinkingBlocks: number;
+  thinkingChars: number;
+}
+
 /**
  * Claude Code's `stream-json` output → `WireBrainEvent`s. One parser per
  * process (the session id persists); `beginTurn` resets what a turn tracks.
@@ -392,6 +416,8 @@ function taskOf(ev: Record<string, unknown>): ParsedTask | undefined {
  */
 export class ClaudeStreamParser {
   session?: string;
+  /** Counted from `resetStats` on, across the turns the CLI runs for one request (`beginTurn` leaves them). */
+  stats: ClaudeTurnStats = { retries: 0, retryDelayMs: 0, thinkingBlocks: 0, thinkingChars: 0 };
   /** The CLI compacted the conversation (`compact_boundary`) since the last turn that read "# This conversation". */
   compacted = false;
   /** Told at the compaction itself: a runner that dies before the turn ends still knows on its next start. */
@@ -428,6 +454,10 @@ export class ClaudeStreamParser {
   /** The calls of the main conversation (ours and its own) whose result hasn't come yet, oldest first. */
   inFlight(): InFlightTool[] {
     return [...this.tools.values()];
+  }
+
+  resetStats() {
+    this.stats = { retries: 0, retryDelayMs: 0, thinkingBlocks: 0, thinkingChars: 0 };
   }
 
   beginTurn() {
@@ -484,6 +514,10 @@ export class ClaudeStreamParser {
           this.onCompacted?.();
         }
         const retryInMs = ev.subtype === "api_retry" && num(ev.retry_delay_ms) > 0 ? num(ev.retry_delay_ms) : 0;
+        if (ev.subtype === "api_retry") {
+          this.stats.retries++;
+          this.stats.retryDelayMs += retryInMs;
+        }
         const task = taskOf(ev);
         return { events: [], ...(task ? { task } : {}), ...(retryInMs ? { retryInMs } : {}) };
       }
@@ -498,8 +532,10 @@ export class ClaudeStreamParser {
         if (main && (e.type === "message_start" || e.type === "message_stop")) this.openBlocks = 0;
         if (main && e.type === "content_block_start") this.openBlocks++;
         if (main && e.type === "content_block_stop") this.openBlocks = Math.max(0, this.openBlocks - 1);
-        if (main && e.type === "message_start")
+        if (main && e.type === "message_start") {
           this.streamedMessage = isObj(e.message) ? str(e.message.id) || null : null;
+          this.stats.firstTokenAt ??= Date.now();
+        }
         if (main && e.type === "content_block_delta" && delta.type === "text_delta" && str(delta.text)) {
           this.sawDelta = true;
           return { events: [{ type: "text_delta", text: str(delta.text) }] };
@@ -520,6 +556,7 @@ export class ClaudeStreamParser {
         } else {
           // A reply came through: an earlier retry's cause is not why the turn may fail later.
           this.failure = {};
+          this.stats.firstAssistantAt ??= Date.now();
         }
         const messageId = isObj(ev.message) ? str(ev.message.id) : "";
         if (messageId && isObj(ev.message) && isObj(ev.message.usage)) {
@@ -538,6 +575,10 @@ export class ClaudeStreamParser {
         for (const block of content) {
           if (!isObj(block)) continue;
           if (block.type === "tool_use") this.worked = true;
+          if (block.type === "thinking" || block.type === "redacted_thinking") {
+            this.stats.thinkingBlocks++;
+            this.stats.thinkingChars += str(block.thinking).length;
+          }
           if (block.type === "tool_use" && str(block.id) && str(block.name)) {
             this.tools.set(str(block.id), { name: str(block.name), input: block.input ?? {} });
             // Ours run through the bridge, which tells the engine as they start.
@@ -620,6 +661,8 @@ export class ClaudeStreamParser {
     const calls = num(ev.num_turns);
     const maxUncached = Math.max(0, ...this.uncached.values());
     const maxContext = Math.max(0, ...this.context.values());
+    // A Map keeps the order calls first came in: its last value is the turn's last call, the session's size now.
+    const lastContext = [...this.context.values()].at(-1) ?? 0;
     if (input > 0 || output > 0) {
       events.push({
         type: "usage",
@@ -632,6 +675,7 @@ export class ClaudeStreamParser {
         ...(calls > 0 ? { calls } : {}),
         ...(maxUncached > 0 ? { maxUncached } : {}),
         ...(maxContext > 0 ? { maxContext } : {}),
+        ...(lastContext > 0 ? { lastContext } : {}),
       });
     }
     this.tools.clear();
@@ -1073,6 +1117,8 @@ export class ClaudeProcess {
   ownTurnDue = false;
   /** Turns the CLI ran by itself and finished while no request listened (tests, logs). */
   ownTurns = 0;
+  /** A turn listened to it once (`onLine`). */
+  private listened = false;
   /** Its tasks running in the background (a dev server, a watcher), whichever turn started them. */
   private readonly backgroundTasks = new Set<string>();
   private ownTurnWaiters = new Set<() => void>();
@@ -1102,6 +1148,8 @@ export class ClaudeProcess {
   readonly ownSettings: boolean;
   private lineHandler: ((line: string) => void) | null = null;
   private exitHandlers = new Set<() => void>();
+  /** Our control requests waiting for their `control_response`, by request id. */
+  private controls = new Map<string, (response: Record<string, unknown>) => void>();
 
   constructor(
     command: string[],
@@ -1156,6 +1204,7 @@ export class ClaudeProcess {
         // Nothing after a breach reaches the turn, not even what was already on its way.
         if (this.breach) return;
         if (this.onControl && line.includes('"control_request"') && this.refuseControl(line)) return;
+        if (this.controls.size > 0 && line.includes('"control_response"') && this.controlAnswered(line)) return;
         if (line.includes('"task_')) this.noteTask(line);
         if (this.lineHandler) this.lineHandler(line);
         else this.noteIdle(line);
@@ -1227,6 +1276,45 @@ export class ClaudeProcess {
     }
   }
 
+  /**
+   * One control request of ours: "ok" once Claude Code said success (and its answer passes `check`), "refused" on its
+   * error, another answer or exit, "silent" when `ms` passed with no answer (a version that ignores the request).
+   */
+  control(
+    request: Record<string, unknown>,
+    ms: number,
+    check?: (response: Record<string, unknown>) => boolean,
+  ): Promise<"ok" | "refused" | "silent"> {
+    if (this.exited) return Promise.resolve("refused");
+    const id = `agentes-${crypto.randomUUID()}`;
+    return new Promise((resolve) => {
+      const done = (said: "ok" | "refused" | "silent") => {
+        clearTimeout(timer);
+        offExit();
+        this.controls.delete(id);
+        resolve(said);
+      };
+      const timer = setTimeout(() => done("silent"), ms);
+      const offExit = this.onExit(() => done("refused"));
+      this.controls.set(id, (r) =>
+        done(r.subtype === "success" && (!check || check(isObj(r.response) ? r.response : {})) ? "ok" : "refused"),
+      );
+      this.write(`${JSON.stringify({ type: "control_request", request_id: id, request })}\n`);
+    });
+  }
+
+  private controlAnswered(line: string) {
+    try {
+      const ev = JSON.parse(line) as Record<string, unknown>;
+      const r = ev.type === "control_response" && isObj(ev.response) ? ev.response : null;
+      const answer = r ? this.controls.get(str(r.request_id)) : undefined;
+      answer?.(r as Record<string, unknown>);
+      return answer !== undefined;
+    } catch {
+      return false;
+    }
+  }
+
   private noteTask(line: string) {
     try {
       const ev = JSON.parse(line) as Record<string, unknown>;
@@ -1260,6 +1348,8 @@ export class ClaudeProcess {
 
   /** A line no request listens to: a turn the CLI started by itself begins (or ends). */
   private noteIdle(line: string) {
+    // Before its first prompt (a warm start, `prewarm`) it runs no turn: its `init` says only that it started.
+    if (!this.listened) return;
     // Leftovers of the last turn (`command_lifecycle` completed, task summaries) say nothing.
     if (!/"type":\s*"(result|assistant|stream_event)"|"subtype":\s*"(init|task_notification)"/.test(line)) return;
     try {
@@ -1320,6 +1410,7 @@ export class ClaudeProcess {
 
   onLine(handler: ((line: string) => void) | null) {
     this.lineHandler = handler;
+    if (handler) this.listened = true;
   }
 
   onExit(handler: () => void): () => void {
@@ -1754,8 +1845,11 @@ export interface BrainManagerOptions {
   runnerHome?: string;
   /** How Claude Code starts (a worker under systemd: in the agent's AI CLIs slice, `scope-gate.ts`). */
   spawn?: Spawn;
+  /** How long a process may sit between turns, in time the computer was awake (`AwakeClock`). */
   idleMs?: number;
   maxProcesses?: number;
+  /** Tests: the awake time idle processes are measured in. */
+  clock?: Pick<AwakeClock, "read">;
   deltaMs?: number;
   /** Tests: `STEER_FOLLOW_UP_MS`. */
   steerFollowUpMs?: number;
@@ -1765,6 +1859,8 @@ export interface BrainManagerOptions {
   strayWaitMs?: number;
   /** Tests: `OWN_TURN_DUE_WAIT_MS`. */
   dueWaitMs?: number;
+  /** Tests: `CONTROL_REPLY_MS`. */
+  controlReplyMs?: number;
   /** Tests: how long each phase of a turn may stay quiet (`CLAUDE_SILENCE`). */
   silence?: ClaudeSilence;
   log?: (line: string) => void;
@@ -1779,6 +1875,9 @@ interface Live {
   account: string | null;
   /** Launch settings: a turn asking for others restarts the process (resumed). */
   sig: string;
+  /** The model and effort it runs on now: started with, or switched to since (`switchLive`). */
+  model?: string;
+  effort?: BrainEffort;
   /** What `ran` remembers for it: the session, in its account. */
   ranKey: string;
   /** Where its session's first system text is kept (`sessionSystem`). */
@@ -1797,8 +1896,15 @@ interface Live {
   opening: boolean;
   busy: boolean;
   lastUsed: number;
+  /** Awake time (`AwakeClock`) its last turn ended at. */
+  idleSince: number;
   idleTimer: ReturnType<typeof setTimeout> | null;
   persistent: boolean;
+  /**
+   * Started by `brain.warm` with the agent's last system text, its turn not come yet: a turn with another text starts
+   * its own process (the session's first text is the one it keeps).
+   */
+  guessed?: string;
   /** `drop` ran: a process closed while idle exits after, and its exit handler drops it again. */
   dropped?: boolean;
 }
@@ -1925,11 +2031,17 @@ export class BrainManager {
   private readonly running = new Map<string, Live>();
   /** Sessions that answered here (`ranKeyOf`): resumed next time even where Claude Code's folder can't be looked at. */
   private readonly ran = new Set<string>();
+  /** Claude Code versions that left a control request of ours unanswered: they get a new process at once instead. */
+  private readonly silentControls = new Set<string>();
   private closed = false;
   /** The accounts its agent thinks with, as root last said (`keepAccount`); undefined: not said. */
   private keep: ReadonlySet<string> | undefined;
   /** The same per agent, where one manager runs several agents' CLIs (root's). */
   private readonly keeps = new Map<string, ReadonlySet<string>>();
+  /** Each agent's system text as its last turn sent it (`prewarm`): the same in each of its conversations. */
+  private readonly systems = new Map<string, string>();
+  /** …and the folder its last turn ran in. */
+  private readonly cwds = new Map<string, string>();
   /** Ended background shells of sessions with no process to tell, by `brainKey`: their next turn hears of them. */
   private readonly notices = new Map<string, ToolNotice[]>();
   private readonly log: (line: string) => void;
@@ -2078,19 +2190,34 @@ export class BrainManager {
     }
     if (typeof req.runId !== "string" || !RUN_ID.test(req.runId))
       throw new RunnerError("bad_request", "Invalid run id");
+    if (typeof req.session?.id !== "string" || !SESSION_ID.test(req.session.id))
+      throw new RunnerError("bad_request", "The session must be a UUID");
+    if (typeof req.prompt !== "string" || !req.prompt.trim()) throw new RunnerError("bad_request", "Empty prompt");
+    const at = await this.place(req, ctx);
+    return "type" in at ? at : this.queueTurn(at.session, at.cwd, req, at.ctx);
+  }
+
+  /** Where a turn (or a warm start) of `req` runs: its session, folder and sign-in; an event when it can't. */
+  private async place(
+    req: BrainWarmRequest,
+    ctx: BrainTurnContext,
+  ): Promise<{ session: string; cwd: string; ctx: BrainTurnContext } | WireBrainEvent> {
     const session = typeof req.session?.id === "string" ? req.session.id : "";
     if (!SESSION_ID.test(session)) throw new RunnerError("bad_request", "The session must be a UUID");
-    if (typeof req.prompt !== "string" || !req.prompt.trim()) throw new RunnerError("bad_request", "Empty prompt");
     const chat = req.permissions?.mode === "chat";
     if (ctx.delegated) {
       if (req.personalMcp === true && !chat) return errorEvent("unsupported", PERSONAL_MCP_REFUSED, false);
       const at = await ctx.delegated.where(chat || typeof req.cwd !== "string" ? undefined : req.cwd);
-      return this.queueTurn(session, at.cwd, req, {
-        ...ctx,
-        folder: at.folder,
-        accountHome: ctx.delegated.configDir,
-        secrets: { env: {}, redact: redactTokenShapes },
-      });
+      return {
+        session,
+        cwd: at.cwd,
+        ctx: {
+          ...ctx,
+          folder: at.folder,
+          accountHome: ctx.delegated.configDir,
+          secrets: { env: {}, redact: redactTokenShapes },
+        },
+      };
     }
     let cwd = ctx.folder;
     // A `chat` turn starts in the agent's own folder, whatever the request names.
@@ -2116,13 +2243,17 @@ export class BrainManager {
         secrets: withSignIn(ctx.secrets, signIn),
       };
     }
-    return this.queueTurn(session, cwd, req, ctx);
+    return { session, cwd, ctx };
   }
 
-  private async queueTurn(session: string, cwd: string, req: BrainTurnRequest, ctx: BrainTurnContext) {
-    const key = brainKey(ctx.agent.id, session);
+  private queueTurn(session: string, cwd: string, req: BrainTurnRequest, ctx: BrainTurnContext) {
+    return this.queue(brainKey(ctx.agent.id, session), (key) => this.runTurn(key, session, cwd, req, ctx));
+  }
+
+  /** Turns of one session (and its warm starts) run one at a time. */
+  private async queue<T>(key: string, next: (key: string) => Promise<T>): Promise<T> {
     const prev = this.chains.get(key) ?? Promise.resolve();
-    const run = prev.catch(() => undefined).then(() => this.runTurn(key, session, cwd, req, ctx));
+    const run = prev.catch(() => undefined).then(() => next(key));
     this.chains.set(key, run);
     try {
       return await run;
@@ -2131,19 +2262,78 @@ export class BrainManager {
     }
   }
 
+  /**
+   * `brain.warm` (protocol 74): the session's process starts now, as its turn would start it, so the turn finds it
+   * open; one already open stays (its idle time starts again). It starts with the session's kept system text, else
+   * the agent's last turn's (`guessed`). Never for a sign-in several agents share, nor before this manager ran a
+   * turn of the agent's, nor past the agent's cap with none of its processes idle.
+   */
+  async prewarm(req: BrainWarmRequest, ctx: BrainTurnContext): Promise<BrainWarmReply> {
+    const no: BrainWarmReply = { open: false, started: false };
+    const system = this.systems.get(ctx.agent.id);
+    if (this.closed || req.kind !== "claude_code" || ctx.delegated || system === undefined) return no;
+    const at = await this.place(req, ctx).catch(() => null);
+    if (!at || "type" in at) return no;
+    // The agent's folder asked: where its last turn ran instead (a checkout the engine moves its turns to), if still
+    // one it may use.
+    const last = this.cwds.get(ctx.agent.id);
+    const allowed = (dir: string) => [at.ctx.folder, ...(at.ctx.grants ?? [])].some((root) => isInside(root, dir));
+    if (!req.cwd && req.permissions?.mode !== "chat" && last && allowed(last) && existsSync(last)) at.cwd = last;
+    return this.queue(brainKey(ctx.agent.id, at.session), async (key) => {
+      const open = this.live.get(key);
+      if (open && !open.proc.exited) {
+        if (!open.busy) {
+          open.lastUsed = Date.now();
+          this.armIdle(open);
+        }
+        return { open: true, started: false };
+      }
+      const turn: BrainTurnRequest = {
+        ...req,
+        runId: "warm",
+        system,
+        conversation: "",
+        prompt: "",
+        mcp: { token: "" },
+      };
+      await yieldRoute("claude_code", at.ctx.accountHome);
+      if (this.closed) return no;
+      if (this.alive(ctx.agent.id) >= this.max) {
+        const idle = this.lruIdle(ctx.agent.id);
+        if (!idle) return no;
+        this.closeIdle(idle);
+      }
+      const sig = this.signature(at.cwd, turn, at.ctx);
+      const resume = this.resumeFor(at.cwd, at.session, turn, at.ctx);
+      const live = await this.spawn(key, at.session, at.cwd, turn, at.ctx, sig, true, resume);
+      // `opening`: the turn would start from its own system text, not a kept one.
+      if (live.opening) live.guessed = system;
+      live.busy = false;
+      live.lastUsed = Date.now();
+      this.armIdle(live);
+      return { open: true, started: true };
+    });
+  }
+
   private signature(cwd: string, req: BrainTurnRequest, ctx: BrainTurnContext) {
     const secret = ctx.planKey?.key ?? ctx.oauthToken;
+    const model = turnModel(req);
     return JSON.stringify({
       cwd,
-      model: req.model ?? null,
+      // Another model or effort switches on the open process (`switchLive`). Not on a coding plan's key, whose model
+      // also sets its env; nor between a model or effort and none (the CLI's reset is to what it started with); nor
+      // to a model with another `--fallback-model`, which only a start sets.
+      model: ctx.planKey
+        ? (req.model ?? null)
+        : { set: model !== undefined, fallback: fallbackModelFor(model) ?? null },
       personal: req.personalMcp === true,
       perm: req.permissions ?? null,
       // Folders allowed or removed on the machine: the process restarts (resumed) with the new `--add-dir`s.
       dirs: ctx.grants ?? [],
-      // Another account or effort: a new process (in the other account, a new session); a new key or token too.
+      // Another account: a new process (in the other account, a new session); a new key or token too.
       account: ctx.accountHome ? (req.account ?? null) : null,
       key: secret ? createHash("sha256").update(secret).digest("hex").slice(0, 16) : null,
-      effort: isBrainEffort(req.effort) ? req.effort : null,
+      effort: isBrainEffort(req.effort),
       // Another context limit: a new process (resumed), started with it.
       context: isContextTokens(req.contextTokens) ? req.contextTokens : null,
       // Its commits' lines are in its env (`co-authors.ts`): turned off or the agent renamed, a new one (resumed).
@@ -2172,17 +2362,22 @@ export class BrainManager {
     };
     let warm = false;
     let started: Live | undefined;
-    const timed = (final: WireBrainEvent): WireBrainEvent => {
+    const since = (at: number | null | undefined) => (at != null && at >= startedAt ? at - startedAt : undefined);
+    const timed = (final: WireBrainEvent, used: Live): WireBrainEvent => {
       if (final.type !== "done") return final;
-      const initAt = started?.proc.initAt;
-      return {
-        ...final,
-        timings: {
-          warm,
-          ...(initAt != null && initAt >= startedAt ? { initMs: initAt - startedAt } : {}),
-          ...(firstEventMs !== undefined ? { firstEventMs } : {}),
-        },
+      const s = used.proc.parser.stats;
+      const measures: Omit<BrainTurnTimings, "warm"> = {
+        initMs: since(started?.proc.initAt),
+        firstEventMs,
+        firstTokenMs: since(s.firstTokenAt),
+        firstAssistantMs: since(s.firstAssistantAt),
+        retries: s.retries,
+        retryDelayMs: s.retryDelayMs,
+        thinkingBlocks: s.thinkingBlocks,
+        thinkingChars: s.thinkingChars,
       };
+      const kept = Object.entries(measures).filter(([, v]) => v !== undefined);
+      return { ...final, timings: { warm, ...Object.fromEntries(kept) } };
     };
     // A route on this sign-in stops first: two processes on one sign-in race on its refresh token. Kept right
     // before the process starts, since a route may begin during any await before it.
@@ -2190,14 +2385,32 @@ export class BrainManager {
     // The runner began to stop during the awaits since the turn came in: `close` wouldn't reach a process started now.
     if (this.closed) return errorEvent("runner_stopping", "The runner is stopping.", true);
     const sig = this.signature(cwd, req, ctx);
+    const system = typeof req.system === "string" ? req.system : "";
+    if (!ctx.delegated) {
+      this.systems.set(ctx.agent.id, system);
+      this.cwds.set(ctx.agent.id, cwd);
+    }
     let live = this.live.get(key);
+    // Warmed with another system text than this turn's: that text would be the session's for good.
+    if (live?.guessed !== undefined) {
+      const guessed = live.guessed;
+      live.guessed = undefined;
+      if (guessed !== system) {
+        this.drop(live);
+        rmSync(live.keptSystem, { force: true });
+        live = undefined;
+      }
+    }
     // A turn Claude Code runs by itself there (or one due): its output would read as this turn's. Wait for
     // its end (output discarded) and keep the process, with the agent's background jobs; kill only a stuck one.
     if (live && live.sig === sig && live.proc.onItsOwn) live = await this.awaitOwnTurn(live, session, ctx);
-    if (live && (live.proc.exited || live.sig !== sig)) {
+    if (live && (live.proc.exited || live.sig !== sig || !(await this.switchLive(live, req, ctx)))) {
       this.drop(live);
       live = undefined;
     }
+    // A turn of its own may have begun while it switched, and the runner may have begun to stop.
+    if (live?.proc.onItsOwn) live = await this.awaitOwnTurn(live, session, ctx);
+    if (this.closed) return errorEvent("runner_stopping", "The runner is stopping.", true);
     const keepAlive = req.keepAlive !== false;
     warm = Boolean(live);
     if (!live && keepAlive) {
@@ -2208,10 +2421,11 @@ export class BrainManager {
       started = live;
     }
     if (live) {
+      live.proc.parser.resetStats();
       const out = await this.onLive(live, req, ctx);
       // A background turn (a routine's run): nothing stays alive for it afterwards, not even a process it found.
       if (!keepAlive) this.drop(live);
-      if (out.final) return timed(out.final);
+      if (out.final) return timed(out.final, live);
       // Stalled and stopped: the same turn again, one-shot, resuming the session, told what hung (`stallNote`).
       if (out.stalled) {
         this.logStall(ctx, session, out.stalled, "resuming one-shot");
@@ -2230,6 +2444,50 @@ export class BrainManager {
       return this.oneShot(key, session, cwd, req, ctx, sig, resume, true, line);
     }
     return this.oneShot(key, session, cwd, req, ctx, sig, this.resumeFor(cwd, session, req, ctx), true);
+  }
+
+  /**
+   * The turn's model and effort on a process already open: Claude Code's `set_model`, and `apply_flag_settings` with
+   * `effortLevel` (answered by 2.1.328), instead of a new process (seconds of start). False when it refused one or
+   * didn't answer: the caller starts a new process, which takes both from its command line.
+   */
+  private async switchLive(live: Live, req: BrainTurnRequest, ctx: BrainTurnContext): Promise<boolean> {
+    const model = turnModel(req);
+    const effort = isBrainEffort(req.effort) ? req.effort : undefined;
+    if (live.model === model && live.effort === effort) return true;
+    const version = live.proc.cliVersion ?? "?";
+    if (this.silentControls.has(version)) return false;
+    live.busy = true;
+    if (live.idleTimer) clearTimeout(live.idleTimer);
+    live.idleTimer = null;
+    try {
+      const ms = this.opts.controlReplyMs ?? CONTROL_REPLY_MS;
+      const said =
+        model === live.model ? "ok" : await live.proc.control({ subtype: "set_model", model: model ?? null }, ms);
+      const appliedEffort =
+        said !== "ok" || effort === live.effort
+          ? said
+          : await live.proc.control({ subtype: "apply_flag_settings", settings: { effortLevel: effort ?? null } }, ms);
+      // A CLI whose `--effort` outranks the flag layer still says success: only `get_settings` shows the effort in force.
+      const saidEffort =
+        appliedEffort !== "ok" || effort === live.effort
+          ? appliedEffort
+          : await live.proc.control({ subtype: "get_settings" }, ms, (r) =>
+              isObj(r.applied) ? r.applied.effort === effort : false,
+            );
+      if (saidEffort === "ok") {
+        live.model = model;
+        live.effort = effort;
+        return true;
+      }
+      if (saidEffort === "silent") this.silentControls.add(version);
+      this.log(
+        `[${ctx.agent.handle}] Claude Code ${version} ${saidEffort === "silent" ? "didn't answer" : "refused"} a switch to ${model ?? "its default model"}, effort ${effort ?? "default"}; starting a new process`,
+      );
+      return false;
+    } finally {
+      live.busy = false;
+    }
   }
 
   /**
@@ -2704,6 +2962,8 @@ export class BrainManager {
       proc,
       account: ctx.accountHome && typeof req.account === "string" ? req.account : null,
       sig,
+      model: turnModel(req),
+      effort: isBrainEffort(req.effort) ? req.effort : undefined,
       ranKey,
       keptSystem,
       dir,
@@ -2720,6 +2980,7 @@ export class BrainManager {
       // Its turn comes next (`onLive`): a turn starting meanwhile must not take it for an idle one to close.
       busy: true,
       lastUsed: Date.now(),
+      idleSince: this.clock.read(),
       idleTimer: null,
       persistent,
     };
@@ -2795,15 +3056,28 @@ export class BrainManager {
     }
   }
 
+  private get clock() {
+    return this.opts.clock ?? awakeClock;
+  }
+
   private armIdle(live: Live) {
+    live.idleSince = this.clock.read();
+    this.checkIdle(live, this.opts.idleMs ?? BRAIN_IDLE_MS);
+  }
+
+  /** Closes `live` once it sat idle `idleMs` of awake time: a timer that fires after a sleep finds less and waits on. */
+  private checkIdle(live: Live, waitMs: number) {
     if (live.idleTimer) clearTimeout(live.idleTimer);
     live.idleTimer = setTimeout(() => {
+      live.idleTimer = null;
       if (live.busy) return;
       // Its dev server or watcher would die with it: looked at again later.
       if (live.proc.holdsWork) return this.armIdle(live);
+      const left = (this.opts.idleMs ?? BRAIN_IDLE_MS) - (this.clock.read() - live.idleSince);
+      if (left > 0) return this.checkIdle(live, left);
       this.log(`brain process ${live.key.split(":")[1]?.slice(0, 8) ?? ""} idle; closing`);
       this.drop(live);
-    }, this.opts.idleMs ?? BRAIN_IDLE_MS);
+    }, waitMs);
     live.idleTimer.unref?.();
   }
 

@@ -11,7 +11,6 @@
     "endOfList": "对所有人移到列表末尾。",
     "channelCount_other": "{{count}} 个频道",
     "none": "还没有分类。",
-    "manageHelp": "点按分类可重命名、移动或删除。",
     "manageHint": "排序、名称和删除",
     "deleteTitle": "删除 {{name}}？",
     "order": "在列表中的位置",
@@ -787,7 +786,6 @@
     "handleMention": "提及 @{{handle}} 即可呼叫。",
     "handleFromName": "聊天中：@{{handle}}。根据名字生成，可以更改。",
     "handleFromNameEmpty": "聊天中的 @ 根据名字生成。",
-    "reviewLead": "点按一行即可更改。",
     "planHint": "或者连接你的 AI 套餐：之后 {{name}} 会用它思考，不消耗密钥。",
     "partly": "智能体已创建，但其角色附带的部分内容没有成功。请在它的资料中调整。",
     "import": {
@@ -1035,7 +1033,7 @@
     "agentStyle": "智能体的说话方式",
     "workspaces": "工作区",
     "workspacesIn": "你所在的",
-    "workspacesFoot": "你在每个工作区都保持登录,并接收所有工作区的通知。点按工作区即可打开。",
+    "workspacesFoot": "你在每个工作区都保持登录，并接收所有工作区的通知。",
     "workspacesUnreachable": "暂时没有响应",
     "addWorkspace": "添加工作区",
     "addWorkspaceCreate": "创建新工作区",
@@ -2113,7 +2111,6 @@
   },
   "crash": {
     "title": "此页面出了点问题",
-    "subtitle": "应用在显示这些内容时出错了。请重试。",
     "retry": "重试"
   },
   "notFound": {
@@ -2144,9 +2141,6 @@
     "deleteFailed": "无法删除工作区，请重试。",
     "holdReset": "长按以重置",
     "resetFailed": "无法重置工作区。请重试。",
-    "access": {
-      "how": "点按一行可更改其级别：无权限、读取、读写。"
-    },
     "logo": {
       "failed": "无法上传标志",
       "tooBig": "图片太大了，请换一张。"
@@ -2396,7 +2390,7 @@
       "sealedHelp": "为了安全，这里保存的内容不会再显示。如需更改，请重新输入。",
       "changePassword": "更改密码",
       "changeValue": "更改值",
-      "changeHelp": "点按“保存”即可保留。之后智能体会使用新的值。",
+      "changeHelp": "保存后，智能体就会使用新的值。",
       "hidden": "已隐藏",
       "saved": "已保存",
       "delete": "删除",
@@ -2537,7 +2531,7 @@
     "bySelfUntil": "由 {{name}} 填写 · {{when}}"
   },
   "dashboards": {
-    "homeRow": "仅你自己 · 你自己的小组件",
+    "homeRow": "仅你自己",
     "create": "创建",
     "routineTarget": "它的小组件",
     "pin": {
@@ -2616,11 +2610,11 @@
     },
     "drive": {
       "title": "团队创作的一切，都在一处",
-      "text": "智能体和成员的报告、表格和文件都留在这里，方便查找。",
+      "text": "智能体和成员的报告、表格和文件都留在这里。",
       "viewerTitle": "查找团队创作的内容",
       "viewerText": "智能体和成员在聊天中创建的内容会显示在这里。",
       "titlePersonal": "智能体创作的一切，都在一处",
-      "textPersonal": "你的智能体的报告、表格和文件都留在这里，方便查找。",
+      "textPersonal": "你的智能体的报告、表格和文件都留在这里。",
       "viewerTitlePersonal": "查找你的智能体创作的内容",
       "viewerTextPersonal": "智能体在你的聊天中创建的内容会显示在这里。"
     },
@@ -2686,7 +2680,7 @@
       "viewerTextPersonal": "有人加入后，会显示在这里。"
     },
     "chat": {
-      "title": "一切从一条消息开始",
+      "title": "开始对话吧",
       "text": "在下方输入，这里的每个人都能看到。",
       "viewerTitle": "消息会显示在这里",
       "viewerText": "有人发消息后，你可以在这里查看。"
@@ -2727,8 +2721,8 @@
     "board": {
       "title": "在一个看板上查看重点",
       "text": "添加小组件，请智能体添加，或固定聊天中的内容块。",
-      "viewerTitle": "这个看板正在成形",
-      "viewerText": "能编辑这个看板的人添加小组件后，它们会显示在这里。"
+      "viewerTitle": "小组件会显示在这里",
+      "viewerText": "由能编辑这个看板的人添加。"
     },
     "computers": {
       "title": "给智能体再添一台电脑",
@@ -2737,7 +2731,7 @@
       "viewerText": "能连接电脑的人添加后，它们会显示在这里。"
     },
     "connectors": {
-      "title": "给智能体真正的工具",
+      "title": "为智能体配备工具",
       "text": "连接一个服务，它们就能在其中读取和操作。",
       "viewerTitle": "智能体的工具会显示在这里",
       "viewerText": "管理连接器的人会连接下方的服务。"
@@ -2879,7 +2873,7 @@
       "done": "完成",
       "placeholder": "输入文字",
       "titlePlaceholder": "输入标题",
-      "hint": "每一行是一个段落。你输入的内容会实时写进文件。"
+      "hint": "每一行是一个段落。"
     },
     "show": {
       "nothing": "所有幻灯片都已隐藏，没有可以展示的内容。",

@@ -11,7 +11,6 @@
     "endOfList": "Masuk ke akhir daftar untuk semua orang.",
     "channelCount_other": "{{count}} kanal",
     "none": "Belum ada kategori.",
-    "manageHelp": "Ketuk kategori untuk mengganti nama, memindahkan, atau menghapusnya.",
     "manageHint": "Urutan, nama, dan hapus",
     "deleteTitle": "Hapus {{name}}?",
     "order": "Posisi di daftar",
@@ -787,7 +786,6 @@
     "handleMention": "Sebut @{{handle}} untuk memanggilnya.",
     "handleFromName": "Di obrolan: @{{handle}}. Diambil dari namanya. Kamu bisa menggantinya.",
     "handleFromNameEmpty": "@ di obrolan diambil dari namanya.",
-    "reviewLead": "Ketuk baris untuk mengubahnya.",
     "planHint": "Atau hubungkan paket AI-mu: {{name}} lalu berpikir dengannya, tanpa memakai kunci.",
     "partly": "Agen sudah dibuat, tapi sebagian bawaan perannya tidak berhasil masuk. Sesuaikan di profilnya.",
     "import": {
@@ -1035,7 +1033,7 @@
     "agentStyle": "Cara agen berbicara",
     "workspaces": "Ruang kerja",
     "workspacesIn": "Kamu ada di",
-    "workspacesFoot": "Kamu tetap masuk di masing-masing dan menerima notifikasi dari semuanya. Ketuk workspace untuk membukanya.",
+    "workspacesFoot": "Kamu tetap masuk di masing-masing dan menerima notifikasi dari semuanya.",
     "workspacesUnreachable": "Belum ada respons sekarang",
     "addWorkspace": "Tambah workspace",
     "addWorkspaceCreate": "Buat workspace baru",
@@ -2113,7 +2111,6 @@
   },
   "crash": {
     "title": "Ada yang salah di layar ini",
-    "subtitle": "Aplikasi mengalami galat saat menampilkan ini. Coba lagi.",
     "retry": "Coba lagi"
   },
   "notFound": {
@@ -2144,9 +2141,6 @@
     "deleteFailed": "Tidak bisa menghapus ruang kerja. Coba lagi.",
     "holdReset": "Tahan untuk mengatur ulang",
     "resetFailed": "Ruang kerja tidak bisa diatur ulang. Coba lagi.",
-    "access": {
-      "how": "Ketuk baris untuk mengubah levelnya: Tanpa akses, Baca, Baca dan tulis."
-    },
     "logo": {
       "failed": "Tidak bisa mengunggah logo",
       "tooBig": "Gambar itu terlalu besar. Coba yang lain."
@@ -2396,7 +2390,7 @@
       "sealedHelp": "Demi keamanan, yang tersimpan di sini tidak ditampilkan lagi. Untuk mengubahnya, ketik ulang.",
       "changePassword": "Ganti kata sandi",
       "changeValue": "Ganti nilai",
-      "changeHelp": "Ketuk Simpan untuk menyimpannya. Setelah itu agen menggunakan yang baru.",
+      "changeHelp": "Agen menggunakan yang baru setelah kamu menyimpan.",
       "hidden": "Tersembunyi",
       "saved": "Tersimpan",
       "delete": "Hapus",
@@ -2537,7 +2531,7 @@
     "bySelfUntil": "Ditulis oleh {{name}} · {{when}}"
   },
   "dashboards": {
-    "homeRow": "Hanya kamu · widget milikmu sendiri",
+    "homeRow": "Hanya kamu",
     "create": "Buat",
     "routineTarget": "widget-nya",
     "pin": {
@@ -2616,11 +2610,11 @@
     },
     "drive": {
       "title": "Semua yang dibuat tim, di satu tempat",
-      "text": "Laporan, tabel, dan file dari agen dan orang tersimpan di sini, mudah ditemukan.",
+      "text": "Laporan, tabel, dan file dari agen dan orang tersimpan di sini.",
       "viewerTitle": "Temukan yang dibuat tim",
       "viewerText": "Yang dibuat agen dan orang di obrolan muncul di sini.",
       "titlePersonal": "Semua yang dibuat agenmu, di satu tempat",
-      "textPersonal": "Laporan, tabel, dan file dari agenmu tersimpan di sini, mudah ditemukan.",
+      "textPersonal": "Laporan, tabel, dan file dari agenmu tersimpan di sini.",
       "viewerTitlePersonal": "Temukan yang dibuat agenmu",
       "viewerTextPersonal": "Yang dibuat agen di obrolanmu muncul di sini."
     },
@@ -2686,7 +2680,7 @@
       "viewerTextPersonal": "Saat seseorang bergabung, mereka muncul di sini."
     },
     "chat": {
-      "title": "Semua dimulai dari satu pesan",
+      "title": "Mulai percakapannya",
       "text": "Tulis di bawah dan semua orang di sini akan melihatnya.",
       "viewerTitle": "Pesan muncul di sini",
       "viewerText": "Saat ada yang menulis, kamu membacanya di sini."
@@ -2727,8 +2721,8 @@
     "board": {
       "title": "Lihat yang penting di satu dasbor",
       "text": "Tambahkan widget, minta ke agen, atau sematkan blok dari obrolan.",
-      "viewerTitle": "Dasbor ini sedang terbentuk",
-      "viewerText": "Orang yang mengedit dasbor ini menambahkan widget, lalu muncul di sini."
+      "viewerTitle": "Widget muncul di sini",
+      "viewerText": "Orang yang mengedit dasbor ini yang menambahkannya."
     },
     "computers": {
       "title": "Beri agenmu komputer lain",
@@ -2737,7 +2731,7 @@
       "viewerText": "Orang yang menghubungkan komputer menambahkannya, lalu muncul di sini."
     },
     "connectors": {
-      "title": "Beri agenmu alat sungguhan",
+      "title": "Beri agenmu alat",
       "text": "Hubungkan layanan dan mereka mulai membaca dan bertindak di sana.",
       "viewerTitle": "Alat agenmu muncul di sini",
       "viewerText": "Orang yang mengelola konektor menghubungkan layanan di bawah."
@@ -2879,7 +2873,7 @@
       "done": "Selesai",
       "placeholder": "Ketik teksnya",
       "titlePlaceholder": "Ketik judulnya",
-      "hint": "Setiap baris adalah satu paragraf. Yang kamu ketik langsung masuk ke file."
+      "hint": "Setiap baris adalah satu paragraf."
     },
     "show": {
       "nothing": "Semua slide disembunyikan, jadi tidak ada yang bisa ditampilkan.",

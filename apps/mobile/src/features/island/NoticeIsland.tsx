@@ -40,6 +40,7 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
 import { setIslandLive } from "@/lib/push";
+import { useAppActive } from "@/lib/useAppActive";
 import { useOrg } from "@/providers/org";
 import { useRealtime } from "@/providers/realtime";
 import { haptics, Icon, type IconName, LineIcon, Text, useTheme } from "@/ui";
@@ -119,10 +120,14 @@ export function NoticeIsland() {
     return () => setIslandLive(false);
   }, [status]);
 
+  // Time runs out only for a notice still in its time (a shrunk one waits without it), and only with the app in front.
+  const counting = snap.items.some((i) => !i.small);
+  const inFront = useAppActive();
   useEffect(() => {
+    if (!counting || !inFront) return;
     const timer = setInterval(() => island.tick(TICK_MS), TICK_MS);
     return () => clearInterval(timer);
-  }, []);
+  }, [counting, inFront]);
   useEffect(() => {
     island.pause("open", open);
     return () => island.pause("open", false);

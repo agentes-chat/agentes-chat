@@ -350,7 +350,8 @@ export function withJudgeBudget(judge: Judge, budgetMs: number, slow: { timedOut
 
 /**
  * `primary`, and `fallback` on any error or timeout. Named after `fallback` while `primaryOn()` is false (no Jev key
- * now), so a decision never names a judge that wasn't asked.
+ * now), so a decision never names a judge that wasn't asked. When `fallback` fails before calling a model (no small
+ * model), the primary's error is the one thrown: why no judge answered (`JevOffError`, the platform cap).
  */
 export function withJudgeFallback(primary: Judge, fallback: Judge, primaryOn: () => boolean = () => true): Judge {
   return {
@@ -362,7 +363,9 @@ export function withJudgeFallback(primary: Judge, fallback: Judge, primaryOn: ()
         return await primary.ask(request);
       } catch (error) {
         if (request.calibrated) throw error;
-        return fallback.ask(request);
+        return fallback.ask(request).catch((second: unknown) => {
+          throw judgeCallOf(second).judge_model ? second : error;
+        });
       }
     },
   };

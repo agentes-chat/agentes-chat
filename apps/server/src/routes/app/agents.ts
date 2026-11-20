@@ -1078,7 +1078,7 @@ export function agentRoutes(deps: AppDeps) {
           },
           // New agents start on "Automático".
           NEW_AGENT_DEFAULTS,
-          // The person's Criar agente: what they pick is what the next one starts with (ADR 0094).
+          // The person's Criar agente: where it thinks is where the next one starts (ADR 0094; its model starts on Automático).
           { remember: true, pubsub: adapters.pubsub },
         );
       const agent = proposal

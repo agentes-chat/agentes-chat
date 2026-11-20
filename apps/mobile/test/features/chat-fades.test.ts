@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { chatScreenSource } from "./chat-screen-source";
 
 const src = (path: string) => readFileSync(join(import.meta.dir, "../../src", path), "utf8");
 
@@ -12,14 +13,14 @@ test("the composer's box is solid under its first line: the fade is a short band
   expect(wall).toContain("positions={[0, Math.min(1, DOCK_FADE / tall), 1]}");
   expect(wall).not.toContain("positions={[0, 0.3, 1]}");
   // On the page's own color: the band, then the page.
-  const chat = src("features/chat/ChatScreen.tsx");
+  const chat = chatScreenSource();
   expect(chat).toContain("<LinearGradient colors={[withOpacity(c.bg, 0), c.bg]} style={styles.dockFade} />");
   expect(chat).toContain("dockFade: { height: DOCK_FADE },");
   expect(chat).not.toContain("locations={[0, 0.3, 1]}");
 });
 
 test("the top is solid through the bar and fades only under it", () => {
-  const chat = src("features/chat/ChatScreen.tsx");
+  const chat = chatScreenSource();
   expect(chat).toContain(
     "const topFadeSolid = headerHeight > 0 ? Math.min(1, headerHeight / (headerHeight + 28)) : 0;",
   );

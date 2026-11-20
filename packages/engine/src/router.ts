@@ -667,7 +667,10 @@ export interface RouterDeps {
   hasAi?(orgId: string): Promise<boolean>;
   /** What picks now, for `ai-status`. */
   routing?: RoutingSetup;
-  /** Whether the workspace used up its platform AI for the month (`limits.ts`): only with a chain that bills it. */
+  /**
+   * Whether the workspace used up its platform AI for the month (`limits.ts`): only with a chain that bills it. Then
+   * nobody is picked, unless `routing` names a small model of its own.
+   */
   platformCapReached?(orgId: string): Promise<boolean>;
   /**
    * The agents among `agentIds` that are out of office now (`outOfOfficeIds`, ADR 0084 §12): their plan or budget ran
@@ -712,6 +715,8 @@ export interface RouteResult {
     | "already_routed"
     | "org_paused"
     | "org_deleting"
+    /** An agent's line the server wrote (`SYSTEM_LINE_META`): no other agent chimes in on it. */
+    | "system_line"
     /** The same person's next message right after it is one the router decides on too: that one decides for both. */
     | "continued";
   selected?: string[];
@@ -802,6 +807,7 @@ export async function routeMessage(
   if (waitsForPlan && message.authorType !== "person") return paused;
   const byAgent = message.authorType === "agent" && message.authorAgentId !== null;
   if (message.authorType !== "person" && !byAgent) return { runs: [], skipped: "not_a_person" };
+  if (byAgent && SYSTEM_LINE_META.some((k) => k in message.meta)) return { runs: [], skipped: "system_line" };
   if (message.mentionedAgentIds.length > 0) return { runs: [], skipped: "has_mentions" };
   if (message.hop >= deps.policy.maxHops) return { runs: [], skipped: "hop_limit" };
   if (byAgent && message.hop >= AGENT_CHIME_IN_MAX_HOP) return { runs: [], skipped: "hop_limit" };
@@ -895,7 +901,12 @@ export async function routeMessage(
   // never misses a key). Stored as `no_ai`, which "Responder agora" routes again once an AI is connected.
   if (waitsForPlan) return { ...(await unrouted(NO_AI, KEPT_ON_HOLD)), held: true };
   if (deps.hasAi && !(await deps.hasAi(message.orgId))) return unrouted(NO_AI);
-  if (await deps.platformCapReached?.(message.orgId)) return unrouted(PLATFORM_CAP);
+  // Past the workspace's platform AI for the month, its own small model still picks (the chain skips Jev).
+  if (
+    (await deps.platformCapReached?.(message.orgId)) &&
+    !(await deps.routing?.smallModel(message.orgId).catch(() => null))
+  )
+    return unrouted(PLATFORM_CAP);
   const quietMs = byAgent ? 0 : (deps.quietMs ?? 0);
   if (quietMs > 0) {
     const end = message.createdAt.getTime() + quietMs;
@@ -911,13 +922,19 @@ export async function routeMessage(
         threadId: message.threadId ?? null,
         userId: message.authorUserId as string,
       }) ?? Number.NEGATIVE_INFINITY) >= from;
-    const grace = from + Math.min(TYPING_GRACE_MS, quietMs);
-    // ponytail: the wait holds a worker slot; a delayed job of its own if routing ever runs short of slots.
-    if (log && grace > Date.now()) await Bun.sleep(grace - Date.now());
-    if (!log || typed()) {
-      const wait = end - Date.now();
-      if (wait > 0) await Bun.sleep(wait);
+    // Naming exactly one agent, with no typing since: the person said who it is for and nothing more is coming.
+    const namesOneAgent =
+      log !== null && namesIn(message.body, candidates.map(agentNameable), message.authorUserId).length === 1;
+    if (!namesOneAgent || typed()) {
+      const grace = from + Math.min(TYPING_GRACE_MS, quietMs);
+      // ponytail: the wait holds a worker slot; a delayed job of its own if routing ever runs short of slots.
+      if (log && grace > Date.now()) await Bun.sleep(grace - Date.now());
+      if (!log || typed()) {
+        const wait = end - Date.now();
+        if (wait > 0) await Bun.sleep(wait);
+      }
     }
+    // Not waited for, a next message already here (a busy queue) still decides for both.
     if (await continuedSoon(db, message, quietMs)) return { runs: [], skipped: "continued" };
   }
   // What each one can reach, by name ("Sentry"): a question about an app goes to who has it. A person's own
@@ -1052,12 +1069,7 @@ export async function routeMessage(
   const candidateIds = new Set(candidates.map((c) => c.agentId));
   const nameable: Nameable[] = [
     ...people.map((p) => ({ id: p.id, label: p.name, agent: false, keys: [firstWord(p.name), p.handle ?? ""] })),
-    ...candidates.map((c) => ({
-      id: c.agentId,
-      label: `@${c.handle}`,
-      agent: true,
-      keys: [c.handle, firstWord(c.name)],
-    })),
+    ...candidates.map(agentNameable),
   ];
   for (const m of [...history, ...(root ? [root] : [])]) {
     if (m.authorAgentId && m.agentHandle && !nameable.some((n) => n.id === m.authorAgentId))
@@ -1080,6 +1092,13 @@ export async function routeMessage(
     address = namesOf(m);
   }
   const namesPerson = address.some((n) => !n.agent);
+  // The agents the person's message names together, as one list ("ada, theo e mila").
+  const listed = byAgent
+    ? []
+    : listedAgents(
+        message.body,
+        nameable.filter((n) => n.agent && candidateIds.has(n.id)),
+      );
   const toPerson = namesPerson && !address.some((n) => n.agent);
   const continues = !byAgent && !toPerson;
   const recent = before.filter((m) => message.createdAt.getTime() - m.createdAt.getTime() <= windowMs);
@@ -1466,11 +1485,28 @@ export async function routeMessage(
   // The router's own pick; when it picks several agents, the message speaks to several. For someone else: only the
   // agent it speaks to, if any.
   const spokenTo = addressee ?? address.find((n) => n.agent && candidateIds.has(n.id))?.id ?? null;
-  const picked = options.forSomeoneElse
+  // Naming several agents as one list and no person ("ada, theo e mila, vocês estão aí?") speaks to each of them, unless
+  // the step heard it speak to one. Named apart ("ada pergunta pro theo…") it speaks to one (`SPOKEN_TO`).
+  const namedAll = !options.forSomeoneElse && !addressee && !namesPerson && listed.length >= 2;
+  // The channel's one agent spoke here within continuity's window: a short follow-up ("e o relatório?") is for it, whatever
+  // the need score says. An ok or a thanks still gets its reaction (`heldBack`).
+  const [sole] = candidates.length === 1 ? candidates : [];
+  const soleFollowUp =
+    !byAgent &&
+    !options.forSomeoneElse &&
+    sole !== undefined &&
+    !namesPerson &&
+    !peopleTalking &&
+    recent.some((m) => m.authorAgentId === sole.agentId && m.threadId === message.threadId) &&
+    isShortFollowUp(saidText);
+  const selectedByPolicy = options.forSomeoneElse
     ? spokenTo
       ? [spokenTo]
       : []
-    : selectAgents(candidates, decided, policy, { continuityAgentId: addressee ?? continuityAgentId });
+    : namedAll
+      ? listed.slice(0, policy.maxAgents)
+      : selectAgents(candidates, decided, policy, { continuityAgentId: addressee ?? continuityAgentId });
+  const picked = soleFollowUp && selectedByPolicy.length === 0 ? [sole.agentId] : selectedByPolicy;
   const scoreOf = (agentId: string | null) =>
     Math.max(0, ...decided.agents.filter((a) => a.agentId === agentId).map((a) => a.score));
   const clearPickScore = policy.clearPickScore ?? DEFAULT_ROUTER_POLICY.clearPickScore;
@@ -1527,6 +1563,7 @@ export async function routeMessage(
   // Theo mentioned it, 2026-10-19): its own earlier answer is no reason for silence.
   const duplicate =
     !followUp &&
+    !namedAll &&
     !(talkingTo !== null && picked.includes(talkingTo)) &&
     (decided.alreadyAnswered ?? 0) >= ALREADY_ANSWERED_THRESHOLD;
   const pick = followUp && talkingTo ? [talkingTo] : duplicate ? [] : picked;
@@ -1546,9 +1583,11 @@ export async function routeMessage(
   const heldBack =
     !byAgent &&
     !answersAgent &&
-    only !== undefined &&
-    !askedHere(only) &&
-    (social || (followUp && !picked.includes(only) && (decided.needsAgent ?? 1) < NO_AGENT_NEED));
+    (namedAll
+      ? social
+      : only !== undefined &&
+        !askedHere(only) &&
+        (social || (followUp && !picked.includes(only) && (decided.needsAgent ?? 1) < NO_AGENT_NEED)));
   const selected = forPeople || heldBack ? [] : pick;
   // R5 (ADR 0074, "A message for the agents always gets one"): a person's message the policy gave nobody, that
   // is for the agents, gets one: never one for a person, one already answered, or an ack ("valeu"). The agent it
@@ -1694,6 +1733,28 @@ export const DEFAULT_STRATEGY = "rule:default";
 /** The pick for a person alone with two or more agents that nobody took (ADR 0137 §5); it shares the default's cap. */
 export const ALONE_STRATEGY = "rule:alone";
 
+/**
+ * Meta of an agent's line the server wrote rather than the agent said: an approval or action card, a question or
+ * secret card, a line from a code (`bodyCode`), a notice, a work's status line and closing report, a stopped or cut
+ * run's line. Another agent chiming in on one only adds noise (ADR 0034).
+ */
+export const SYSTEM_LINE_META = [
+  "approvalId",
+  "actionCard",
+  "questionId",
+  "secretRequestId",
+  "bodyCode",
+  "notice",
+  "noAi",
+  "sayNow",
+  "workUpdate",
+  "workEnd",
+  "brainUnavailable",
+  "brainInterrupted",
+  "canceled",
+  "interrupted",
+] as const;
+
 /** The social reactions that answer someone (thanks, an ok, affection), never the room. */
 const FOR_SOMEONE: ReadonlySet<string> = new Set(["+1", "🙏", "❤️", "❤"]);
 
@@ -1800,6 +1861,12 @@ interface Nameable {
 /** Lower case, no accents: how names are compared with a message's words. */
 const fold = (text: string) => text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 const firstWord = (text: string) => fold(text).match(/[\p{L}\p{N}]+/u)?.[0] ?? "";
+const agentNameable = (c: Pick<RoutingCandidate, "agentId" | "handle" | "name">): Nameable => ({
+  id: c.agentId,
+  label: `@${c.handle}`,
+  agent: true,
+  keys: [c.handle, firstWord(c.name)],
+});
 
 /**
  * Who `body` names besides `authorId`, by @ or by name: a whole first name or handle, any case and accent
@@ -1809,6 +1876,49 @@ function namesIn(body: string, nameable: Nameable[], authorId: string | null): N
   const text = fold(body);
   const words = new Set([...(text.match(/[\p{L}\p{N}]+/gu) ?? []), ...(text.match(/[\p{L}\p{N}_-]+/gu) ?? [])]);
   return nameable.filter((n) => n.id !== authorId && n.keys.some((k) => k.length > 1 && words.has(fold(k))));
+}
+
+/**
+ * The words that join a list of names, in the app's languages with spaced words: "ada e theo", "ada and theo". Never
+ * any short word: "ada, ask theo" names them apart. No "o" (an article in Portuguese: "ada, o theo já viu?").
+ */
+const LIST_JOINERS: ReadonlySet<string> = new Set([
+  "and",
+  "or",
+  "e",
+  "ou",
+  "y",
+  "et",
+  "und",
+  "oder",
+  "ed",
+  "en",
+  "of",
+  "dan",
+  "atau",
+  "ve",
+  "veya",
+  "i",
+  "oraz",
+  "lub",
+  "и",
+  "или",
+]);
+
+/**
+ * The agents `body` names together as one list: two or more names in a row, at most a joiner (`LIST_JOINERS`)
+ * between two of them, and no other agent named apart. Else none.
+ */
+function listedAgents(body: string, agentNames: Nameable[]): string[] {
+  const words = fold(body).match(/[\p{L}\p{N}_-]+/gu) ?? [];
+  const idAt = words.map((w) => agentNames.find((n) => n.keys.some((k) => k.length > 1 && fold(k) === w))?.id);
+  const at = idAt.flatMap((id, i) => (id ? [i] : []));
+  const together = at.every(
+    (i, j) =>
+      j === 0 || i - (at[j - 1] ?? 0) === 1 || (i - (at[j - 1] ?? 0) === 2 && LIST_JOINERS.has(words[i - 1] ?? "")),
+  );
+  const ids = [...new Set(at.map((i) => idAt[i] as string))];
+  return together && ids.length >= 2 ? ids : [];
 }
 
 /** A short message without a mention ("and now?"): by length only. */

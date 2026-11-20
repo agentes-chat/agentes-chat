@@ -663,7 +663,7 @@ export const ptBR = {
       change: "Trocar",
       password: "Bom te ver de novo.",
       passwordLead: "Agora a sua senha.",
-      wrong: "Hmm, essa senha não bateu.",
+      wrong: "Essa senha não bateu.",
       social: "Você entra com {{providers}}.",
       socialLead: "Essa conta não tem senha. Continue por aqui.",
       createPassword: "Prefiro criar uma senha",
@@ -792,7 +792,7 @@ export const ptBR = {
     askNew: "Pedir um novo convite",
     askedNew: "Pedido enviado",
     askNewFailed:
-      "Não deu para pedir por aqui: este link pode ter sido trocado por um convite mais novo ou cancelado. Procure o e-mail de convite mais recente ou fale com quem convidou você.",
+      "Não deu para pedir por aqui. Alguém pode ter cancelado este link ou mandado um convite mais novo. Procure o e-mail de convite mais recente ou fale com quem convidou você.",
     // The invitation's page, in the sign-in's language: the workspace on top, its first agent asking (ADR 0090).
     from: "Convite de {{name}}",
     crew_one: "{{names}} trabalha lá",
@@ -2106,7 +2106,7 @@ export const ptBR = {
     lock: "Sempre com você: dinheiro, pessoas e cargos, chaves de IA, a sua caixa de e-mail e excluir.",
     coveringTitle: "Você aprova por",
     coveringSubtitle:
-      "O que pedem a essas pessoas chega para você também, e você decide em nome delas. Nunca o que foi pedido por você.",
+      "Os pedidos a essas pessoas chegam para você também, e você decide em nome delas, menos nos pedidos que você fez.",
     coveringWhileOut: "Quando a pessoa estiver fora",
     coveringUntil: "até {{date}}",
     coveringNow: "Cobrindo agora",
@@ -2258,7 +2258,7 @@ export const ptBR = {
       help: "Você continua com a mesma conta, nos mesmos workspaces e com os mesmos planos.",
       change: "Mudar e-mail",
       sent: "Enviamos um link para {{email}}. O seu e-mail muda quando você abrir o link.",
-      changed: "Pronto: agora você entra com {{email}}.",
+      changed: "Agora você entra com {{email}}.",
       same: "Esse já é o seu e-mail.",
       noMail:
         "Este servidor não envia e-mails, então não dá para confirmar o novo endereço. Peça a quem cuida do servidor para configurar o envio de e-mails.",
@@ -3478,16 +3478,17 @@ export const ptBR = {
       title_other: "{{count}} pedidos de {{name}} esperam você",
       line: "Esperando desde {{since}}.",
       action: "Ver e aprovar",
-      hide: "Fechar",
     },
     budget: {
       title: "Orçamento do {{name}}: {{from}} → {{to}}",
+      item: "Orçamento: {{from}} → {{to}}",
       title_female: "Orçamento da {{name}}: {{from}} → {{to}}",
       line_one: "Parou {{count}} vez no limite do mês.",
       line_other: "Parou {{count}} vezes no limite do mês.",
     },
     channel: {
       title: "Colocar o {{name}} em #{{channel}}",
+      item: "Colocar em #{{channel}}",
       title_female: "Colocar a {{name}} em #{{channel}}",
       line: "O {{name}} não está em nenhum canal, então ninguém falou com ele a semana toda.",
       line_female: "A {{name}} não está em nenhum canal, então ninguém falou com ela a semana toda.",
@@ -3503,6 +3504,7 @@ export const ptBR = {
     },
     routine: {
       title: "Rotina do {{name}} todo dia às {{time}}",
+      item: "Rotina todo dia às {{time}}",
       title_female: "Rotina da {{name}} todo dia às {{time}}",
       line_one: "Você pediu isto {{count}} vez esta semana: “{{text}}”",
       line_other: "Você pediu isto em {{count}} dias esta semana: “{{text}}”",
@@ -3513,6 +3515,11 @@ export const ptBR = {
       title: "{{name}} aprendeu: {{what}}",
       line: "Usado {{uses}}×. Virar skill?",
       action: "Virar skill",
+      uses: "Usado {{uses}}×",
+      group_one: "{{name}} aprendeu um jeito de trabalhar",
+      group_other: "{{name}} aprendeu {{count}} jeitos de trabalhar",
+      applyAll_one: "Virar skill",
+      applyAll_other: "Virar {{count}} skills",
       done: "Confirmado",
     },
     stalled: {
@@ -3548,12 +3555,14 @@ export const ptBR = {
     },
     retire: {
       title: "Arquivar o {{name}}",
+      item: "Arquivar",
       title_female: "Arquivar a {{name}}",
       line: "Sem trabalho há 4 semanas, sem rotina e sem tarefa aberta.",
       action: "Arquivar",
     },
     model: {
       title: "{{name}} pode usar o {{to}}.",
+      item: "Pode usar o {{to}}",
       line: "Hoje usa o {{from}}.",
     },
     skip: "Dispensar",
@@ -3568,7 +3577,7 @@ export const ptBR = {
     applyAll_one: "Aplicar a sugestão",
     applyAll_other: "Aplicar as {{count}}",
     notNow: "Agora não",
-    dismissed: "Nada muda por agora. Pergunte qualquer coisa sobre a semana aqui mesmo.",
+    dismissed: "Nada muda por agora. Pergunte qualquer coisa sobre a semana aqui.",
     change: "Mudar",
     every: {
       sun: "Todo domingo às {{time}}",
@@ -3654,7 +3663,7 @@ export const ptBR = {
         "O OpenCode não consegue pensar neste computador. Conecte uma chave do OpenCode na página da\u00a0{{name}}.",
     },
     card: {
-      connected: "Pronto: {{name}} já tem uma IA.",
+      connected: "{{name}} já tem uma IA.",
       answerNow: "Responder agora",
       answering: "{{name}} está respondendo…",
       stillMissing: "Ainda falta conectar uma IA para\u00a0{{name}}.",
@@ -3705,7 +3714,7 @@ export const ptBR = {
         ended: "Respondo aqui quando o workspace assinar o agentes.chat de novo.",
       },
       askAdmin: "Respondo aqui quando um admin resolver o plano do agentes.chat.",
-      plan: "O plano traz o computador dos agentes, sempre ligado. A IA é a que você já paga: Claude, ChatGPT e outras, ou uma chave de API.",
+      plan: "O plano traz o computador dos agentes. A IA é a que você já paga: Claude, ChatGPT e outras, ou uma chave de API.",
       activeTitle: "Plano ativo",
       activeLine: "Conecte uma IA e {{name}} responde aqui.",
       receipt: "Guardada",
@@ -3899,7 +3908,7 @@ export const ptBR = {
       untested: "Nenhum modelo do {{name}} passou no teste ainda.",
       testModels: "Testar modelos",
       savedUnchecked:
-        "Salva, mas {{provider}} não respondeu e a chave não pôde ser testada. Se ela falhar, a conversa diz o motivo.",
+        "Salva, mas {{provider}} não respondeu e não deu para testar a chave. Se ela falhar, a conversa diz o motivo.",
       closed: "As chaves de API abrem com o plano do agentes.chat do workspace.",
       notPlan: "A chave de um plano de código vai na opção dele, acima.",
       billing: "Ative o faturamento no projeto da chave. Sem faturamento, o Google pode usar o que os agentes enviam.",
@@ -3987,7 +3996,7 @@ export const ptBR = {
     forNewAgentsHint: "Os agentes que você criar pensam com ele.",
     done: "Pronto",
     agent: "Para qual agente",
-    keyLocked: "Uma chave de API, só um admin adiciona.",
+    keyLocked: "Só um admin adiciona uma chave de API.",
     accountsLocked: "Só {{name}} conecta um plano no {{computer}}.",
     /** Under `accountsLocked` (self-hosted servers): a computer of the person's own, where they sign their plan in. */
     connectMine: "Conectar meu computador",
@@ -4062,8 +4071,7 @@ export const ptBR = {
   /** Configurações do agente: o que ele pode começar sem ninguém pedir diretamente, e quais agentes pode chamar (ADR 0131). */
   brakes: {
     title: "Trabalho que ninguém pediu",
-    subtitle:
-      "O que ele começa sozinho, a partir de uma rotina, um alerta ou outro agente. O que uma pessoa pede nunca fica preso.",
+    subtitle: "O que ele começa sozinho, a partir de uma rotina, um alerta ou outro agente.",
     costly: "Pedir antes de trabalho caro",
     costlyHelp:
       "Antes de abrir um pull request, instalar pacotes ou um trabalho longo, ele pergunta à pessoa responsável.",
@@ -4265,10 +4273,10 @@ export const ptBR = {
     added: "{{name}} entrou no canal.",
     allow: "Deixar {{person}} falar com ele",
     allow_female: "Deixar {{person}} falar com ela",
-    allowed: "Pronto: {{person}} já pode falar com {{name}}.",
+    allowed: "{{person}} já pode falar com {{name}}.",
     allowMe: "Quero falar com ele",
     allowMe_female: "Quero falar com ela",
-    allowedMe: "Pronto: você já pode falar com {{name}}.",
+    allowedMe: "Você já pode falar com {{name}}.",
     mailLossTitle: "Tirar o acesso à caixa de email?",
     mailLoss:
       "{{name}} tem acesso à caixa de email de {{owners}}. Com mais pessoas falando com ele, elas poderiam chegar a esses emails por ele, então esse acesso é removido. Quem conectou a caixa de email pode dar de novo.",
@@ -6782,7 +6790,7 @@ export const ptBR = {
       forgotten: "Esquecido. Fica em Arquivadas se quiser de volta.",
       rules: "Regras que as pessoas deram",
       rulesNote:
-        "Valem em todo o trabalho para quem deu cada uma, venha o pedido de onde vier. As do responsável ou de um admin valem para todos.",
+        "Cada regra vale para quem a deu, venha o pedido de onde vier. As do responsável ou de um admin valem para todos.",
       rulesNoteRightHand: "As regras que você dá na sua DM valem só para você. Só você vê.",
       ruleBy: "De {{name}} · {{date}}",
       removeRule: "Remover",
@@ -6791,7 +6799,7 @@ export const ptBR = {
       playbook: "Como o {{name}} trabalha",
       playbook_female: "Como a {{name}} trabalha",
       playbookNote:
-        "Jeitos de trabalhar que guardou para si. Não aparecem na conversa. O que pegou de fora e não voltou a usar sai sozinho e fica em Arquivadas.",
+        "Jeitos de trabalhar que guardou para si. Não aparecem na conversa. O que pegou de fora e não voltou a usar vai sozinho para Arquivadas.",
       details: "Detalhes técnicos",
       skills: "Skills que criou",
       skillUses_zero: "nunca carregada",
@@ -7335,7 +7343,7 @@ export const ptBR = {
         done: "Leio {{apps}}",
         doneNone: "Sem apps por enquanto",
         title: "Os apps do trabalho",
-        desc: "Os que o time acabou de usar vêm primeiro. Ler nunca muda nada, e enviar, apagar e pagar pedem a sua aprovação.",
+        desc: "Ler nunca muda nada. Enviar, apagar e pagar pedem a sua aprovação.",
         connect: "Conectar",
         all: "Ver todos os apps",
         todoPersonal: "Conecte os seus apps.",
@@ -8254,7 +8262,7 @@ export const ptBR = {
     // A newcomer's first #general (ADR 0090).
     arrival: {
       title: "Boas-vindas à {{org}}, {{name}}",
-      lead: "Aqui o time e os agentes trabalham juntos: escreva no #{{channel}} ou chame um agente pelo nome.",
+      lead: "Escreva no #{{channel}} ou chame um agente pelo nome.",
       /** After the lead: the other channels the invitation started them in (ADR 0184). */
       alsoIn: "Você também está em {{channels}}.",
       sayHi: "Dizer oi no #{{channel}}",
@@ -11529,7 +11537,7 @@ export const ptBR = {
     tooShort: "Curto demais. Fale um pouco mais.",
     silent: "Não ouvi nada. Nada foi enviado.",
     notSent: "Não deu para enviar o áudio.",
-    limit: "Muitos áudios por hoje. Escreva por aqui e tente de novo amanhã.",
+    limit: "O limite de áudios de hoje acabou. Escreva por aqui ou tente de novo amanhã.",
     micBlocked: "O microfone está bloqueado",
     micBlockedHint: "Libere o microfone nos ajustes do aparelho para gravar.",
     openSettings: "Abrir ajustes",
@@ -12132,8 +12140,8 @@ export const ptBR = {
     audienceInFolder: "Dentro de {{folder}}, que é limitada: aqui só dá para restringir mais.",
     audienceFollows: "De {{folder}}",
     audienceUseFolder: "Definir para a pasta {{folder}}",
-    audienceFolderSaved: "Pronto. O público da pasta foi atualizado.",
-    audienceFolderOpened: "Pronto. A pasta não tem mais limite.",
+    audienceFolderSaved: "Acesso da pasta atualizado.",
+    audienceFolderOpened: "A pasta não tem mais limite.",
     audienceRootTitle: "Acesso à wiki toda",
     audienceRootText: "Vale para todas as páginas e pastas da wiki, e para as que vierem depois.",
     audienceInRoot: "A wiki toda está limitada: aqui só dá para limitar mais.",
@@ -12174,8 +12182,8 @@ export const ptBR = {
       agentsTitle_one: "Agentes que leem {{count}} página",
       agentsTitle_other: "Agentes que leem {{count}} páginas",
       agentsText: "Quem vê cada página entre as pessoas continua como está.",
-      agentsSaved_one: "Pronto. {{count}} página atualizada.",
-      agentsSaved_other: "Pronto. {{count}} páginas atualizadas.",
+      agentsSaved_one: "{{count}} página atualizada.",
+      agentsSaved_other: "{{count}} páginas atualizadas.",
     },
     trash: {
       title: "Lixeira",
@@ -12211,8 +12219,8 @@ export const ptBR = {
     audienceAgentDetail: "Agente",
     audiencePeople: "Pessoas",
     audienceNoMatch: "Ninguém com esse nome.",
-    audienceSaved: "Pronto. O acesso foi atualizado.",
-    audienceOpened: "Pronto. Todos podem ver e editar.",
+    audienceSaved: "Acesso atualizado.",
+    audienceOpened: "Todos podem ver e editar.",
     noAccessTitle: "Você não tem acesso a esta página",
     noAccessText: "Ela é só para algumas pessoas. Se precisar, peça a quem cuida da wiki.",
     delete: "Mover para a lixeira",
@@ -12671,7 +12679,7 @@ export const ptBR = {
     rule: "Um trabalho novo começa quando o computador tem memória livre. Pessoas vão primeiro. Agentes chamados juntos começam um de cada vez.",
     /** The viewer's own computers that may take their replies while this one is full (`machines.spill_own`). */
     spill: {
-      title: "Mais computadores, menos fila",
+      title: "Seus computadores",
       text: "Quando este computador estiver cheio, as respostas para você podem começar num computador seu. Trabalhos longos e os arquivos dos agentes continuam aqui.",
       /** The viewer's own sign-in there, "Claude Max". */
       plan: "seu plano {{plan}}",
@@ -16723,7 +16731,7 @@ export const ptBR = {
       uiCheck: "Verificar de novo",
       repair: "Reparar o assistente de testes",
       repairHint:
-        "O Mac para o assistente de testes e cria de novo com o Xcode dele, em alguns minutos. Para toques que ainda falham com os dois ligados.",
+        "Use quando os toques ainda falham com os dois ligados. O Mac para o assistente de testes e cria de novo com o Xcode dele, em alguns minutos.",
       tooOld:
         "{{name}} usa o iOS {{version}}, e os agentes precisam do iOS 17 ou mais novo. Atualize se ele aceitar, ou conecte um iPhone mais novo.",
       tooOldVersion: "16 ou anterior",
@@ -17678,7 +17686,7 @@ export const ptBR = {
       envOffHere: "Desligado no app do agentes.chat deste computador.",
       see: "Ver o que é enviado",
       dialogTitle: "O que é enviado",
-      dialogText: "Uma vez por dia. Este é o próximo envio, exatamente.",
+      dialogText: "Enviado uma vez por dia. Este é exatamente o próximo envio.",
     },
     tileState: {
       members_one: "{{count}} membro",

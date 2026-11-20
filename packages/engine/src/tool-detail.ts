@@ -51,6 +51,10 @@ function promptAsked(i: Record<string, unknown>): { tool: string; input: Record<
 export const promptPoll = (name: string, input: Record<string, unknown> | undefined) =>
   name === PERMISSION_TOOL && typeof input?.request_id === "string";
 
+/** The runner telling of a call its own command policy refused (`refused`): recorded, never asked, held or judged. */
+export const promptRefused = (name: string, input: Record<string, unknown> | undefined) =>
+  name === PERMISSION_TOOL && typeof input?.refused === "object" && input.refused !== null;
+
 /**
  * `permission_prompt`'s answer: `{behavior}` when decided (a `deny` says why: `message` to the agent, `code` for
  * the apps), `{status: "pending", request_id}` while a person decides.

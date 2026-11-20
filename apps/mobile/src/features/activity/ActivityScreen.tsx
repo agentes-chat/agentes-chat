@@ -11,7 +11,7 @@ import {
 } from "@agenteschat/client";
 import { approvalDetail, approvalSummary, approvalTitle } from "@agenteschat/client/lib/approval-words";
 import { errorText, restrictionLine } from "@agenteschat/client/lib/errors";
-import { timeLeft, upperFirst } from "@agenteschat/client/lib/format";
+import { dateFormat, timeLeft, upperFirst } from "@agenteschat/client/lib/format";
 import { mediaWord } from "@agenteschat/client/lib/media";
 import { latestText } from "@agenteschat/client/lib/message-body";
 import { canClearAll, teamWatchOf } from "@agenteschat/client/lib/notifications";
@@ -51,7 +51,7 @@ import { ASK_ICON, AskButtons } from "../chat/asks";
 import { dashboardWaitingCard } from "../dashboards/logic";
 import { deviceNoticeOf, isDeviceNotice } from "../devices/logic";
 import { DeviceNoticeActions, DeviceNoticeCard } from "../devices/notices";
-import { notificationHref, notificationWebPath, routineHref } from "../links/logic";
+import { type AppHref, notificationHref, notificationWebPath, routineHref } from "../links/logic";
 import { openWebPath } from "../links/open-web";
 import { ChangeRequestCard } from "../right-hand/SettingsCard";
 import { AdminAskAdd } from "../shared/AdminAsk";
@@ -105,7 +105,15 @@ export function ActivityScreen() {
   const waitingCount = Math.max(waiting.length, counts?.waiting ?? waiting.length);
   const pull = usePullRefresh(list.refetch);
   const tabHeader = useTabHeader();
-  const clearAll = useClearAll(filter, counts, items);
+  // What every row reads alike, read once here and handed down as plain values: a row's read, done and their undo
+  // (one function), whether "Clear all" or its undo is under way, and the AIs a "computer ready" row opens by.
+  const { mutate: act } = useNotificationAction(orgId);
+  const busy = useNotificationBulkPending(orgId);
+  const ai = useAiStatus(
+    orgId,
+    items.some((n) => n.kind === "computer_ready"),
+  ).data;
+  const clearAll = useClearAll(filter, counts, items, busy);
   const header = clearAll ? { ...tabHeader, actions: [clearAll, ...tabHeader.actions] } : tabHeader;
   const reduced = useReducedMotion();
   // A card decided while the page shows fades out and the rest close up; a new one fades in.
@@ -161,7 +169,7 @@ export function ActivityScreen() {
           <SectionHeader title={t(`mobile.activity.day.${group satisfies DayGroup}`)} />
           {/* Loose rows on the page, as Conversas' (no card around them). */}
           {groupItems.map((n, i) => (
-            <ActivityRow key={n.id} item={n} divider={i > 0} />
+            <ActivityRow key={n.id} item={n} divider={i > 0} href={notificationHref(n, ai)} busy={busy} act={act} />
           ))}
         </View>
       ))}
@@ -427,7 +435,7 @@ function nextRunWords(t: TFunction, when: ReturnType<typeof useWhen>, iso: strin
       : day === "tomorrow"
         ? t("mobile.activityNow.next.tomorrow", { time })
         : t("mobile.activityNow.next.later", {
-            day: new Intl.DateTimeFormat(when.locale, { weekday: "short", day: "numeric", month: "short" })
+            day: dateFormat(when.locale, { weekday: "short", day: "numeric", month: "short" })
               .format(new Date(iso))
               .replace(/\./g, ""),
             time,
@@ -443,11 +451,12 @@ function useClearAll(
   filter: ActivityFilter,
   counts: NotificationCounts | undefined,
   items: AppNotification[],
+  busy: boolean,
 ): HeaderAction | null {
   const { t } = useTranslation();
   const orgId = useOrgId();
+  // Its own: the toast's undo follows this call's answer, which a row's action (the rows share one) would replace.
   const act = useNotificationAction(orgId);
-  const busy = useNotificationBulkPending(orgId);
   const toast = useToast();
   if (!canClearAll(filter, counts, items)) return null;
   const run = () =>
@@ -479,17 +488,30 @@ function useClearAll(
  * and when, the snippet and where; a red dot on the right while unread. Swipe right to mark read or unread,
  * left for "Feito"; tapping opens where it happened.
  */
-const ActivityRow = memo(function ActivityRow({ item: n, divider }: { item: AppNotification; divider: boolean }) {
+const ActivityRow = memo(function ActivityRow({
+  item: n,
+  divider,
+  href,
+  busy,
+  act,
+}: {
+  item: AppNotification;
+  divider: boolean;
+  /**
+   * Where a tap opens (`notificationHref`): a routine's trouble opens the routine; the computer being ready, Connect an
+   * AI while no agent has one.
+   */
+  href: AppHref | null;
+  /** "Clear all" or its undo is under way: the row doesn't swipe. */
+  busy: boolean;
+  /** The screen's read and done (`useNotificationAction`). */
+  act: NotificationAct;
+}) {
   const { t, i18n } = useTranslation();
   const orgId = useOrgId();
   const c = useColors();
   const when = useWhen();
   const toast = useToast();
-  const act = useNotificationAction(orgId);
-  const busy = useNotificationBulkPending(orgId);
-  // A routine's trouble opens the routine; the computer being ready, Connect an AI while no agent has one.
-  const ai = useAiStatus(orgId, n.kind === "computer_ready").data;
-  const href = notificationHref(n, ai);
   // No screen of its own in the app (the workspace's billing hold): its page on the web, so a tap is never a dead end.
   const web = href ? null : notificationWebPath(n, orgId);
   const unread = n.readAt === null;
@@ -532,23 +554,23 @@ const ActivityRow = memo(function ActivityRow({ item: n, divider }: { item: AppN
 
   // The swipe taps on its own (SwipeRow); VoiceOver's actions call these too.
   const toggleRead = () => {
-    if (!busy) act.mutate({ type: "read", item: n, read: unread });
+    if (!busy) act({ type: "read", item: n, read: unread });
   };
   // In "Feitas" the same swipe moves it back to the inbox. Marked done, a toast offers the way back for a moment.
   const isDone = Boolean(n.doneAt);
   const done = () => {
     if (busy) return;
-    act.mutate({ type: "done", item: n, done: !isDone });
+    act({ type: "done", item: n, done: !isDone });
     if (!isDone)
       toast({
         title: t("mobile.activity.doneToast"),
         subtitle: title,
-        action: { label: t("mobile.activity.undo"), onPress: () => act.mutate({ type: "done", item: n, done: false }) },
+        action: { label: t("mobile.activity.undo"), onPress: () => act({ type: "done", item: n, done: false }) },
       });
   };
   const doneLabel = isDone ? t("mobile.activity.restore") : t("mobile.activity.done");
   const open = () => {
-    if (unread) act.mutate({ type: "read", item: n, read: true });
+    if (unread) act({ type: "read", item: n, read: true });
     if (href) router.push(href);
     else if (web) openWebPath(web);
   };
@@ -645,6 +667,9 @@ const ActivityRow = memo(function ActivityRow({ item: n, divider }: { item: AppN
     </View>
   );
 });
+
+/** A notification's read, done and their undo, as the screen hands it to its rows. */
+type NotificationAct = ReturnType<typeof useNotificationAction>["mutate"];
 
 /** Whether a phone notice still has its Stop under the row (`DeviceNoticeActions` draws it only then). */
 function deviceStoppable(n: AppNotification): boolean {

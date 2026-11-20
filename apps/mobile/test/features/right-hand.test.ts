@@ -23,6 +23,7 @@ import {
   rightHandPin,
 } from "../../src/features/chats/logic";
 import { SETTINGS_SECTIONS } from "../../src/features/settings/logic";
+import { chatScreenSource } from "./chat-screen-source";
 import { agent, at } from "./fixtures";
 
 const lodi = agent({ id: "a-lodi", name: "Lodi", builtin: "right_hand" });
@@ -256,7 +257,7 @@ test("its DM, cards and profile treat it apart through the one shared helper", (
   const src = (f: string) => readFileSync(new URL(`../../src/features/${f}`, import.meta.url), "utf8");
   // Its computer in its DM as any agent's, and its own line; its field says "Mensagem para …" on one line, as every
   // DM's.
-  const chat = src("chat/ChatScreen.tsx");
+  const chat = chatScreenSource();
   expect(chat).toContain("isRightHand(dmAgent)");
   expect(chat).not.toContain('t("rightHand.composerHint")');
   expect(chat).toContain("const dmComputer = dmAgentId && !isThread ? { agentId: dmAgentId, onOpen: leavePlace }");
@@ -290,7 +291,7 @@ test("it waves on the person's first visit only: its DM never read by them, on a
   expect(firstVisitOf([dm(lodi, 1)], lodi.id)).toBe(false);
   // Decided by the conversation, so the greeting moving into the list with the first message keeps it, not playing
   // again; under the greeting, decorative, playing once.
-  const chat = readFileSync(new URL("../../src/features/chat/ChatScreen.tsx", import.meta.url), "utf8");
+  const chat = chatScreenSource();
   expect(chat).toContain('useRightHandWave(orgId, rightHand && dmAgent ? dmAgent.id : "")');
   expect(
     chat.match(/<RightHandIntro agent=\{dmAgent\} channelId=\{channelId\} waveFrom=\{waveFrom\} \/>/g),

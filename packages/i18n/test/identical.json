@@ -1616,7 +1616,8 @@
       "voiceRooms.live",
       "voiceRooms.screen.native",
       "voiceRooms.room.kindText",
-      "voiceRooms.room.openChat"
+      "voiceRooms.room.openChat",
+      "teamWeek.budget.item"
     ],
     "it": [
       "live.sheet.args.a1",
@@ -2010,7 +2011,8 @@
       "onboarding.import.choose.step.video",
       "newAgentCard.proposal.routine.label",
       "newAgentCard.proposal.routine.lead",
-      "voiceRooms.room.openChat"
+      "voiceRooms.room.openChat",
+      "teamWeek.budget.item"
     ],
     "nl": [
       "usage.kinds.routines",
@@ -2674,7 +2676,8 @@
       "voiceRooms.settings.camera",
       "voiceRooms.room.kind",
       "voiceRooms.room.openChat",
-      "audit.operatorReview.items"
+      "audit.operatorReview.items",
+      "teamWeek.budget.item"
     ],
     "ja": [
       "live.sheet.args.k",

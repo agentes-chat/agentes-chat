@@ -20,7 +20,7 @@ import { createContext, useCallback, useContext, useMemo, useState } from "react
 import { type LayoutChangeEvent, StyleSheet, useWindowDimensions, type ViewStyle } from "react-native";
 import { useOrg } from "@/providers/org";
 import { useTheme } from "@/ui";
-import { appShadows, type Scheme } from "@/ui/palette";
+import { cardEdge, type Scheme } from "@/ui/palette";
 import { type Corners, RADIUS } from "@/ui/radius";
 import { BUBBLE_PART_CORNERS, MESSAGE_CARD_CORNERS, useBubblePart } from "../shared/bubble-part";
 import { keepSize, keptSize } from "./kept-sizes";
@@ -164,23 +164,13 @@ export function useMessageCardCorners(): Corners | null {
 /** `quietInset` in this conversation's look. */
 export const useQuietInset = () => quietInset(useRowLook());
 
-/** `liftedEdge` per scheme, made once. */
-const liftedEdges = new Map<Scheme, ViewStyle | null>();
-
 /**
- * A bubble's edge over a background (`RowLook.wallpaper`): the ring of the cards' light shadow (`e1`, its layer with no
- * blur), drawn as an outline, outside the bubble as that ring is, so nothing in it moves. The shadow's blurred layer
- * barely shows over a background, and as a `boxShadow` it cost each bubble two masked layers, drawn again on every
- * frame of a scroll.
+ * A bubble's edge over a background (`RowLook.wallpaper`): the cards' light edge (`cardEdge`), outside the bubble as
+ * their ring is, so nothing in it moves. The shadow's blurred layer barely shows over a background, and as a
+ * `boxShadow` it cost each bubble two masked layers, drawn again on every frame of a scroll.
  */
 export function liftedEdge(scheme: Scheme): ViewStyle | null {
-  let edge = liftedEdges.get(scheme);
-  if (edge === undefined) {
-    const ring = appShadows(scheme).e1.find((l) => l.blur === 0 && l.spread > 0);
-    edge = ring ? { outlineWidth: ring.spread, outlineColor: ring.color, outlineStyle: "solid" } : null;
-    liftedEdges.set(scheme, edge);
-  }
-  return edge;
+  return cardEdge(scheme);
 }
 
 /**

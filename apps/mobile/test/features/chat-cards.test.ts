@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { chatScreenSource } from "./chat-screen-source";
 
 /** A file of the app, as text: where a reply's parts go lives in components the tests can't render. */
 const source = (path: string) => readFileSync(join(import.meta.dir, "../../src/features/chat", path), "utf8");
@@ -139,7 +140,7 @@ describe("an exchange between the same two agents", () => {
     expect(source("row-data.tsx")).toContain("byRun: groupsByRun(asExchanges(list ?? []))");
     expect(source("ConsultGroup.tsx")).toContain("const group = runId ? list.byRun.get(runId) : undefined;");
     expect(source("ConsultGroup.tsx")).toContain("consultPair(items, now, askerId,");
-    expect(source("ChatScreen.tsx")).toContain("asExchanges(consultData)");
+    expect(chatScreenSource()).toContain("asExchanges(consultData)");
     expect(source("ConsultationScreen.tsx")).toContain("useExchangeConversation(");
   });
 });

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { applyReceiptEvent, receiptTicks } from "@agenteschat/client";
 import { dayInView } from "../../src/features/chat/logic";
 import { appColors, toastToneOf, toneColor } from "../../src/ui/palette";
+import { chatScreenSource } from "./chat-screen-source";
 import { message } from "./fixtures";
 
 const src = (file: string) => readFileSync(join(import.meta.dir, "../../src", file), "utf8");
@@ -47,10 +48,11 @@ describe("the floating date while the conversation scrolls", () => {
   });
 
   test("it shows while the person drags or flings the list and fades a moment after it stops", () => {
-    const screen = src("features/chat/ChatScreen.tsx");
+    const screen = chatScreenSource();
     // The faces hold still while it moves (`useStillWhileScrolling`): a drag or a glide holds them, the end lets go.
+    // (A drag also takes the list's reach to a screen's height at once: `setReachStep`.)
     expect(screen).toMatch(
-      /const onDragStart = useCallback\(\(\) => \{\s*dragging\.current = true;\s*still\.hold\(\);\s*showDay\(\);/,
+      /const onDragStart = useCallback\(\(\) => \{\s*dragging\.current = true;\s*setReachStep\(REACH_LAST\);\s*still\.hold\(\);\s*showDay\(\);/,
     );
     expect(screen).toContain("onScrollBeginDrag={onDragStart}");
     expect(screen).toMatch(/const onGlide = useCallback\(\(\) => \{\s*still\.hold\(\);\s*showDay\(\);/);
@@ -114,7 +116,7 @@ describe("a reply in a task's conversation", () => {
 
 describe("my message's clock from the moment it is sent", () => {
   test("sent into a channel with agents, it wears the clock before the server says anything, as the web's", () => {
-    const screen = src("features/chat/ChatScreen.tsx");
+    const screen = chatScreenSource();
     // At the optimistic write, as the web's: the clock is on my message's copy from its first frame (a GIF or a
     // sticker alone routes to nobody), and moves to its server id with it.
     const optimistic = screen.slice(
@@ -143,7 +145,7 @@ describe("my message's clock from the moment it is sent", () => {
 
 describe("a conversation with a pinned message", () => {
   test("no header fade over the first messages: the list starts below the pinned bar, whose hairline is the edge", () => {
-    const screen = src("features/chat/ChatScreen.tsx");
+    const screen = chatScreenSource();
     const fade = screen.indexOf("styles.topFade, { height: headerHeight + 28 }");
     expect(fade).toBeGreaterThan(0);
     // Inside the keyboard's gesture area (`DockGestureArea`), only without a pinned bar or card.
@@ -155,7 +157,7 @@ describe("a conversation with a pinned message", () => {
 
 describe("going to a message", () => {
   test("not shown after its page was read, it waits for a cached page refreshing before saying it's gone", () => {
-    const screen = src("features/chat/ChatScreen.tsx");
+    const screen = chatScreenSource();
     const refresh = screen.indexOf("if (!seekRefreshing) missing();");
     expect(refresh).toBeGreaterThan(0);
     expect(screen.lastIndexOf("if (isThread || (around?.id === seek && around.done)) {", refresh)).toBeGreaterThan(0);
@@ -165,7 +167,7 @@ describe("going to a message", () => {
 
 describe("back to the latest messages", () => {
   test("the round button sits at the bottom right, above the composer, riding the keyboard with it", () => {
-    const screen = src("features/chat/ChatScreen.tsx");
+    const screen = chatScreenSource();
     // In the composer's own dock, before the box: one view rides the keyboard and both move in the same frame.
     const dock = screen.indexOf("style={styles.composerDock}");
     expect(dock).toBeGreaterThan(0);

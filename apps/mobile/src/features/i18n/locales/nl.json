@@ -12,7 +12,6 @@
     "channelCount_one": "{{count}} kanaal",
     "channelCount_other": "{{count}} kanalen",
     "none": "Nog geen categorieën.",
-    "manageHelp": "Tik op een categorie om de naam te wijzigen, haar te verplaatsen of te verwijderen.",
     "manageHint": "Volgorde, namen en verwijderen",
     "deleteTitle": "{{name}} verwijderen?",
     "order": "Plek in de lijst",
@@ -811,7 +810,6 @@
     "handleMention": "Vermeld @{{handle}} om hem te roepen.",
     "handleFromName": "In het gesprek: @{{handle}}. Die komt van de naam. Je kunt hem wijzigen.",
     "handleFromNameEmpty": "Zijn @ in het gesprek komt van de naam.",
-    "reviewLead": "Tik op een regel om die te wijzigen.",
     "planHint": "Of koppel je AI-abonnement: {{name}} denkt er dan mee, zonder de sleutel te gebruiken.",
     "partly": "De agent is aangemaakt, maar een deel van wat bij zijn rol hoort, is niet gelukt. Pas het aan op zijn profiel.",
     "import": {
@@ -1114,7 +1112,7 @@
     "agentStyle": "Hoe agents praten",
     "workspaces": "Werkruimtes",
     "workspacesIn": "Je zit in",
-    "workspacesFoot": "Je blijft bij elk ingelogd en krijgt de meldingen van allemaal. Tik op een workspace om hem te openen.",
+    "workspacesFoot": "Je blijft bij elk ingelogd en krijgt de meldingen van allemaal.",
     "workspacesUnreachable": "Nu geen antwoord",
     "addWorkspace": "Workspace toevoegen",
     "addWorkspaceCreate": "Een nieuwe workspace maken",
@@ -2219,7 +2217,6 @@
   },
   "crash": {
     "title": "Er ging iets mis op dit scherm",
-    "subtitle": "De app liep tegen een fout aan bij het tonen hiervan. Probeer het opnieuw.",
     "retry": "Opnieuw proberen"
   },
   "notFound": {
@@ -2250,9 +2247,6 @@
     "deleteFailed": "De werkruimte kon niet worden verwijderd. Probeer het opnieuw.",
     "holdReset": "Houd ingedrukt om te resetten",
     "resetFailed": "De werkruimte kon niet worden gereset. Probeer het opnieuw.",
-    "access": {
-      "how": "Tik op een rij om het niveau te wijzigen: Geen toegang, Lezen, Lezen en schrijven."
-    },
     "logo": {
       "failed": "Het logo kon niet worden geüpload",
       "tooBig": "Die afbeelding is te groot. Probeer een andere."
@@ -2510,7 +2504,7 @@
       "sealedHelp": "Voor de veiligheid wordt wat hier is opgeslagen niet meer getoond. Typ het opnieuw om het te wijzigen.",
       "changePassword": "Wachtwoord wijzigen",
       "changeValue": "Waarde wijzigen",
-      "changeHelp": "Tik op Opslaan om het te bewaren. Daarna gebruiken agenten het nieuwe.",
+      "changeHelp": "Agents gebruiken het nieuwe nadat je hebt opgeslagen.",
       "hidden": "Verborgen",
       "saved": "Opgeslagen",
       "delete": "Verwijderen",
@@ -2655,7 +2649,7 @@
     "bySelfUntil": "Geschreven door {{name}} · {{when}}"
   },
   "dashboards": {
-    "homeRow": "Alleen jij · je eigen widgets",
+    "homeRow": "Alleen jij",
     "create": "Maken",
     "routineTarget": "zijn widget",
     "pin": {
@@ -2737,11 +2731,11 @@
     },
     "drive": {
       "title": "Alles wat het team maakt, op één plek",
-      "text": "Rapporten, tabellen en bestanden van agents en mensen blijven hier, makkelijk te vinden.",
+      "text": "Rapporten, tabellen en bestanden van agents en mensen blijven hier.",
       "viewerTitle": "Vind wat het team maakt",
       "viewerText": "Wat agents en mensen in gesprekken maken, verschijnt hier.",
       "titlePersonal": "Alles wat je agents maken, op één plek",
-      "textPersonal": "Rapporten, tabellen en bestanden van je agents blijven hier, makkelijk te vinden.",
+      "textPersonal": "Rapporten, tabellen en bestanden van je agents blijven hier.",
       "viewerTitlePersonal": "Vind wat je agents maken",
       "viewerTextPersonal": "Wat agents in je gesprekken maken, verschijnt hier."
     },
@@ -2807,7 +2801,7 @@
       "viewerTextPersonal": "Als iemand meedoet, verschijnt die hier."
     },
     "chat": {
-      "title": "Alles begint met een bericht",
+      "title": "Begin het gesprek",
       "text": "Schrijf hieronder en iedereen hier ziet het.",
       "viewerTitle": "Berichten verschijnen hier",
       "viewerText": "Als iemand schrijft, lees je het hier."
@@ -2848,8 +2842,8 @@
     "board": {
       "title": "Zie wat telt op één dashboard",
       "text": "Voeg een widget toe, vraag een agent om er een of pin een blok uit de chat.",
-      "viewerTitle": "Dit dashboard krijgt vorm",
-      "viewerText": "Wie dit dashboard bewerkt, voegt de widgets toe, en die verschijnen hier."
+      "viewerTitle": "De widgets verschijnen hier",
+      "viewerText": "Wie dit dashboard bewerkt, voegt ze toe."
     },
     "computers": {
       "title": "Geef je agents nog een computer",
@@ -2858,7 +2852,7 @@
       "viewerText": "Wie computers koppelt, voegt ze toe, en ze verschijnen hier."
     },
     "connectors": {
-      "title": "Geef je agents echt gereedschap",
+      "title": "Geef je agents gereedschap",
       "text": "Koppel een dienst en ze kunnen daarin lezen en handelen.",
       "viewerTitle": "Het gereedschap van je agents verschijnt hier",
       "viewerText": "Wie de connectors beheert, koppelt de diensten hieronder."
@@ -3011,7 +3005,7 @@
       "done": "Klaar",
       "placeholder": "Typ de tekst",
       "titlePlaceholder": "Typ de titel",
-      "hint": "Elke regel is een alinea. Wat je typt, gaat meteen het bestand in."
+      "hint": "Elke regel is een alinea."
     },
     "show": {
       "nothing": "Alle dia's zijn verborgen, dus er is niets te tonen.",

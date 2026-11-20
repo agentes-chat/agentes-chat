@@ -94,9 +94,22 @@ export function focusedFirst<R extends { id: string }>(requests: readonly R[], f
   return [...requests].sort((a, b) => (a.id === focus ? 0 : 1) - (b.id === focus ? 0 : 1));
 }
 
+/** One name order per language, made once: `localeCompare` with a language builds a collator on every comparison. */
+const nameOrders = new Map<string, Intl.Collator>();
+const nameOrder = (locale?: string): Intl.Collator => {
+  const key = locale ?? "";
+  let order = nameOrders.get(key);
+  if (!order) {
+    order = new Intl.Collator(locale, { sensitivity: "base" });
+    nameOrders.set(key, order);
+  }
+  return order;
+};
+
 /** The people of the workspace as Membros lists them: by name, in the person's language's order. */
 export function membersByName<M extends { name: string }>(members: readonly M[], locale?: string): M[] {
-  return [...members].sort((a, b) => a.name.localeCompare(b.name, locale, { sensitivity: "base" }));
+  const order = nameOrder(locale);
+  return [...members].sort((a, b) => order.compare(a.name, b.name));
 }
 
 /**

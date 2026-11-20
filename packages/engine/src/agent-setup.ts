@@ -1,6 +1,6 @@
 import { type BrainSpeed, isBrainSpeed } from "@agenteschat/adapters";
 import { and, type Database, eq, inArray, isNull, schema, sql } from "@agenteschat/db";
-import { type ContextLimit, isAutoModel, isContextLimit } from "@agenteschat/providers";
+import { AUTO_MODEL, type ContextLimit, isAutoModel, isContextLimit } from "@agenteschat/providers";
 import { type CodingPlan, planOf } from "@agenteschat/providers/plans";
 import {
   type Agent,
@@ -492,7 +492,11 @@ export interface NewAgentSetup {
   autonomy: CommandApproval | null;
 }
 
-/** `GET …/agent-setup` (whoever creates agents): what a new agent starts thinking with. */
+/**
+ * `GET …/agent-setup` (whoever creates agents): what a new agent starts thinking with. Where it thinks (brain, computer,
+ * account, key) follows the last setup; its model and effort start on "Automático" whatever that setup's were: a fixed
+ * model is a pin on the agent it was picked for, never a default for the next one.
+ */
 export async function getNewAgentSetup(
   deps: { db: Database },
   userId: string,
@@ -520,7 +524,7 @@ export async function getNewAgentSetup(
             ),
           )
       : [];
-    return { brain: "model", model: s.model, key: key?.id ?? null, contextTokens, autonomy };
+    return { brain: "model", model: AUTO_MODEL, key: key?.id ?? null, contextTokens, autonomy };
   }
   const machine = s.machineId ? await getMachine(deps.db, orgId, s.machineId) : null;
   if (!machine || !brainOptions(machine).some((o) => o.kind === s.brain && o.available)) return null;
@@ -530,7 +534,7 @@ export async function getNewAgentSetup(
   if (s.account && (!listed || listed.kind !== s.brain)) return null;
   return {
     brain: s.brain,
-    model: s.model,
+    model: AUTO_MODEL,
     key: null,
     contextTokens,
     computer: { machineId: machine.id, name: machine.name },
@@ -547,7 +551,7 @@ export async function getNewAgentSetup(
         }
       : null,
     ownSignIn: machine.pairedByUserId === userId,
-    effort: isBrainEffortSetting(s.effort) ? s.effort : null,
+    effort: AUTO_MODEL,
     autonomy,
   };
 }

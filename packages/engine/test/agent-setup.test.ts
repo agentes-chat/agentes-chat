@@ -330,9 +330,10 @@ describe("new agents start with the last setup", () => {
       model: "opus",
       effort: "high",
     });
+    // Where it thinks carries over; the model and effort start on Automático, never the other agent's pin.
     expect(await getNewAgentSetup(deps, fx.owner.id, fx.org.id)).toEqual({
       brain: "claude_code",
-      model: "opus",
+      model: "auto",
       key: null,
       contextTokens: null,
       computer: { machineId: w.mac, name: "MacBook" },
@@ -347,7 +348,7 @@ describe("new agents start with the last setup", () => {
         free: true,
       },
       ownSignIn: true,
-      effort: "high",
+      effort: "auto",
       autonomy: null,
     });
     // Anyone else sees whose it is: a plan thinks only for its owner's agents.
@@ -358,7 +359,7 @@ describe("new agents start with the last setup", () => {
     await updateAgent(fx.db, fx.owner.id, fx.org.id, w.theo, { model: "claude-haiku-5-5" });
     expect(await getNewAgentSetup(deps, fx.owner.id, fx.org.id)).toEqual({
       brain: "model",
-      model: "claude-haiku-5-5",
+      model: "auto",
       key: null,
       contextTokens: null,
       autonomy: null,

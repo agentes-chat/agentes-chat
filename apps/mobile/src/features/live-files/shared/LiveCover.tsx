@@ -229,7 +229,13 @@ export const SlideSketch = memo(function SlideSketch({
       importantForAccessibility="no-hide-descendants"
     >
       {bgPicture ? (
-        <Image source={bgPicture} contentFit="cover" style={StyleSheet.absoluteFill} accessible={false} />
+        <Image
+          source={bgPicture}
+          cachePolicy="memory-disk"
+          contentFit="cover"
+          style={StyleSheet.absoluteFill}
+          accessible={false}
+        />
       ) : null}
       {(slide?.elements ?? []).map((el, i) => (
         <SketchPart
@@ -271,6 +277,7 @@ function SketchPart({
         {source ? (
           <Image
             source={source}
+            cachePolicy="memory-disk"
             contentFit={el.fit ?? "cover"}
             style={[StyleSheet.absoluteFill, { borderRadius: 4 * k }]}
             accessible={false}

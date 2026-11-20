@@ -7,6 +7,7 @@ import {
   modelForTier,
   parseOpenRouterModels,
   setOpenRouterModels,
+  systemText,
 } from "@agenteschat/providers";
 import { CODING_PLANS, planModel } from "@agenteschat/providers/plans";
 import fixture from "../../providers/test/fixtures/openrouter-models.json";
@@ -32,6 +33,7 @@ import {
   needsAutoChoice,
   normalizeBrainModel,
   postPersonMessage,
+  QUICK_TURN_NOTE,
   updateAgent,
   updateOrgSettings,
   ValidationError,
@@ -429,6 +431,26 @@ describe("a run of an agent on Automático", () => {
     });
     await drainOutbox(f.db, f.handlers);
     expect(f.provider.calls.at(-1)?.request.model).toBe("claude-haiku-5-5");
+  });
+
+  test("a quick turn (small tier, low effort) is told to answer from what it has; any other turn is not", async () => {
+    const answer = { tier: "small", effort: "low" };
+    f = await setup({
+      judge: (kind, id) => (kind === "auto_model" ? (id === "tier" ? answer.tier : answer.effort) : undefined),
+      reply: () => ({ chunks: ["Oi!"] }),
+    });
+    await updateAgent(f.db, f.owner.id, f.org.id, f.agent.id, { model: AUTO_MODEL });
+    const ask = async (body: string) => {
+      await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, { body });
+      await drainOutbox(f.db, f.handlers);
+      return systemText(f.provider.calls.at(-1)?.request.system ?? "");
+    };
+    expect(await ask("@dev oi")).toContain(QUICK_TURN_NOTE);
+    answer.effort = "high";
+    expect(await ask("@dev oi de novo")).not.toContain("# A quick turn");
+    answer.tier = "medium";
+    answer.effort = "low";
+    expect(await ask("@dev revisa o PR")).not.toContain("# A quick turn");
   });
 
   test("the judge fails: the run still answers, on the medium tier with medium effort, and says why", async () => {

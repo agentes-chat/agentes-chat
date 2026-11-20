@@ -1,3 +1,4 @@
+import { BRAIN_TURN_MEASURES } from "@agenteschat/adapters";
 import { type Database, rowsOf, type SQL, sql } from "@agenteschat/db";
 import { BRAIN_KINDS } from "./brain-settings";
 import { ValidationError } from "./errors";
@@ -31,6 +32,12 @@ const MODEL_SQL = "^[A-Za-z][A-Za-z0-9_.:/-]{0,99}$";
 const CAUSE_SQL = "^[a-z_:]{1,60}$";
 
 const msOf = (v: unknown) => wholeOrNull(numberIn(v, 0, TIMING_MAX_MS));
+/** A computer turn's measures as its runner gave them (`BrainTurnTimings`), null where it gave none. */
+const turnMeasures = (t: Record<string, unknown>) =>
+  Object.fromEntries(BRAIN_TURN_MEASURES.map((k) => [k, msOf(t[k])])) as Record<
+    (typeof BRAIN_TURN_MEASURES)[number],
+    number | null
+  >;
 
 interface ClaimStage {
   stage: string;
@@ -73,9 +80,7 @@ export function runClaims(profiles: unknown) {
         stagesCut: stages.length > RUN_CLAIM_STAGES_MAX,
         computerTurns: (Array.isArray(claim.brain) ? claim.brain : [])
           .flatMap((t: unknown) =>
-            isJsonObject(t) && typeof t.warm === "boolean"
-              ? [{ warm: t.warm, initMs: msOf(t.initMs), firstEventMs: msOf(t.firstEventMs) }]
-              : [],
+            isJsonObject(t) && typeof t.warm === "boolean" ? [{ warm: t.warm, ...turnMeasures(t) }] : [],
           )
           .slice(0, RUN_CLAIM_TURNS_MAX),
       };
@@ -177,7 +182,10 @@ export async function operatorRunTimings(db: Database, query: RunTimingsQuery, n
         from st where ms is not null group by brain, model, stage
       ), b as (
         select c.brain, c.model, t.value->'warm' = 'true'::jsonb as warm,
-          ${sql.raw(msSql("t.value->'initMs'"))} as init, ${sql.raw(msSql("t.value->'firstEventMs'"))} as first
+          ${sql.raw(msSql("t.value->'initMs'"))} as init, ${sql.raw(msSql("t.value->'firstEventMs'"))} as first,
+          ${sql.raw(msSql("t.value->'firstTokenMs'"))} as token, ${sql.raw(msSql("t.value->'firstAssistantMs'"))} as said,
+          ${sql.raw(msSql("t.value->'retries'"))} as retries, ${sql.raw(msSql("t.value->'retryDelayMs'"))} as delay,
+          ${sql.raw(msSql("t.value->'thinkingChars'"))} as thought
         from c, jsonb_array_elements(${sql.raw(listSql("c.claim->'brain'"))}) t
         where jsonb_typeof(t.value->'warm') = 'boolean'
       )
@@ -196,7 +204,13 @@ export async function operatorRunTimings(db: Database, query: RunTimingsQuery, n
             ${sql.raw(pct(0.99, "first", "warm"))} as "warmFirstEventP99Ms",
             ${sql.raw(pct(0.5, "first", "not warm"))} as "coldFirstEventMedianMs",
             ${sql.raw(pct(0.9, "first", "not warm"))} as "coldFirstEventP90Ms",
-            ${sql.raw(pct(0.99, "first", "not warm"))} as "coldFirstEventP99Ms"
+            ${sql.raw(pct(0.99, "first", "not warm"))} as "coldFirstEventP99Ms",
+            ${sql.raw(pct(0.5, "token"))} as "firstTokenMedianMs", ${sql.raw(pct(0.9, "token"))} as "firstTokenP90Ms",
+            ${sql.raw(pct(0.5, "said"))} as "firstAssistantMedianMs",
+            ${sql.raw(pct(0.9, "said"))} as "firstAssistantP90Ms",
+            count(*) filter (where retries > 0)::int as "retriedTurns", sum(retries) as retries,
+            sum(delay) as "retryDelayMs", ${sql.raw(pct(0.5, "thought"))} as "thinkingCharsMedian",
+            ${sql.raw(pct(0.9, "thought"))} as "thinkingCharsP90"
           from b group by brain, model order by turns desc, brain, model limit ${sql.raw(kept)}
         ) g) as starts`),
     // A wait is a step written once: it lasts until the run's next step, its end, or the earlier of now and `to`.
@@ -264,6 +278,15 @@ export async function operatorRunTimings(db: Database, query: RunTimingsQuery, n
         coldFirstEventMedianMs: wholeOrNull(s.coldFirstEventMedianMs),
         coldFirstEventP90Ms: wholeOrNull(s.coldFirstEventP90Ms),
         coldFirstEventP99Ms: wholeOrNull(s.coldFirstEventP99Ms),
+        firstTokenMedianMs: wholeOrNull(s.firstTokenMedianMs),
+        firstTokenP90Ms: wholeOrNull(s.firstTokenP90Ms),
+        firstAssistantMedianMs: wholeOrNull(s.firstAssistantMedianMs),
+        firstAssistantP90Ms: wholeOrNull(s.firstAssistantP90Ms),
+        retriedTurns: Number(s.retriedTurns ?? 0),
+        retries: wholeOrNull(s.retries) ?? 0,
+        retryDelayMs: wholeOrNull(s.retryDelayMs) ?? 0,
+        thinkingCharsMedian: wholeOrNull(s.thinkingCharsMedian),
+        thinkingCharsP90: wholeOrNull(s.thinkingCharsP90),
       }))
       .sort((a, b) => inGroups(a, b) || b.turns - a.turns),
     waits: rowsOf<Group & { cause: string; waits: number; runs: number } & Measures>(waitRows)

@@ -642,7 +642,7 @@
       "change": "Wijzigen",
       "password": "Fijn je weer te zien.",
       "passwordLead": "Nu je wachtwoord.",
-      "wrong": "Hmm, dat wachtwoord klopt niet.",
+      "wrong": "Dat wachtwoord klopt niet.",
       "social": "Je logt in met {{providers}}.",
       "socialLead": "Dit account heeft geen wachtwoord. Ga hier verder.",
       "createPassword": "Ik maak liever een wachtwoord",
@@ -761,7 +761,7 @@
     "expiredText": "Uitnodigingen zijn 7 dagen geldig.",
     "askNew": "Om een nieuwe uitnodiging vragen",
     "askedNew": "Verzoek verstuurd",
-    "askNewFailed": "We konden het niet vanaf hier vragen: deze link is misschien vervangen door een nieuwere uitnodiging of geannuleerd. Zoek de nieuwste uitnodigingsmail, of vraag het aan wie je heeft uitgenodigd.",
+    "askNewFailed": "We konden het niet vanaf hier vragen. Iemand heeft deze link misschien geannuleerd of een nieuwere uitnodiging gestuurd. Zoek de nieuwste uitnodigingsmail, of vraag het aan wie je heeft uitgenodigd.",
     "from": "Uitgenodigd door {{name}}",
     "crew_one": "{{names}} werkt daar",
     "crew_other": "{{names}} werken daar",
@@ -2043,7 +2043,7 @@
     "riskyOn": "Deze persoon beslist deze ook.",
     "lock": "Altijd bij jou: geld, mensen en rollen, AI-sleutels, je mailbox en verwijderen.",
     "coveringTitle": "Je keurt goed voor",
-    "coveringSubtitle": "Wat aan deze mensen gevraagd wordt, komt ook bij jou, en je beslist namens hen. Nooit wat je zelf vroeg.",
+    "coveringSubtitle": "Verzoeken aan deze mensen komen ook bij jou, en je beslist namens hen, behalve bij verzoeken die je zelf deed.",
     "coveringWhileOut": "Als die persoon afwezig is",
     "coveringUntil": "tot {{date}}",
     "coveringNow": "Nu actief",
@@ -2214,7 +2214,7 @@
       "help": "Je houdt hetzelfde account, in dezelfde workspaces en met dezelfde abonnementen.",
       "change": "E-mail wijzigen",
       "sent": "We hebben een link naar {{email}} gestuurd. Je e-mailadres verandert zodra je hem opent.",
-      "changed": "Klaar: je logt nu in met {{email}}.",
+      "changed": "Je logt nu in met {{email}}.",
       "same": "Dat is al je e-mailadres.",
       "noMail": "Deze server verstuurt geen e-mail, dus het nieuwe adres kan niet worden bevestigd. Vraag wie de server beheert om e-mail in te stellen.",
       "held": "Dit e-mailadres heeft net een ander account verlaten en blijft 7 dagen voor dat account gereserveerd. Gebruik een ander.",
@@ -3342,16 +3342,17 @@
       "title_one": "{{count}} verzoek van {{name}} wacht op jou",
       "title_other": "{{count}} verzoeken van {{name}} wachten op jou",
       "line": "Wacht sinds {{since}}.",
-      "action": "Bekijken en goedkeuren",
-      "hide": "Verbergen"
+      "action": "Bekijken en goedkeuren"
     },
     "budget": {
       "title": "Budget van {{name}}: {{from}} → {{to}}",
+      "item": "Budget: {{from}} → {{to}}",
       "line_one": "Stopte {{count}} keer bij de maandlimiet.",
       "line_other": "Stopte {{count}} keer bij de maandlimiet."
     },
     "channel": {
       "title": "{{name}} in #{{channel}} zetten",
+      "item": "In #{{channel}} zetten",
       "line": "{{name}} zit in geen enkel kanaal, dus niemand sprak het de hele week."
     },
     "unanswered": {
@@ -3364,6 +3365,7 @@
     },
     "routine": {
       "title": "Routine van {{name}} elke dag om {{time}}",
+      "item": "Routine elke dag om {{time}}",
       "line_one": "Je vroeg dit deze week {{count}} keer: ‘{{text}}’",
       "line_other": "Je vroeg dit deze week op {{count}} dagen: ‘{{text}}’",
       "action": "Routine maken",
@@ -3373,6 +3375,11 @@
       "title": "{{name}} leerde: {{what}}",
       "line": "{{uses}}× gebruikt. Een skill van maken?",
       "action": "Maak er een skill van",
+      "uses": "{{uses}}× gebruikt",
+      "group_one": "{{name}} leerde een manier van werken",
+      "group_other": "{{name}} leerde {{count}} manieren van werken",
+      "applyAll_one": "Maak er een skill van",
+      "applyAll_other": "Maak er {{count}} skills van",
       "done": "Bevestigd"
     },
     "stalled": {
@@ -3408,11 +3415,13 @@
     },
     "retire": {
       "title": "{{name}} archiveren",
+      "item": "Archiveren",
       "line": "Al 4 weken geen werk, geen routine en geen open taak.",
       "action": "Archiveren"
     },
     "model": {
       "title": "{{name}} kan {{to}} gebruiken.",
+      "item": "Kan {{to}} gebruiken",
       "line": "Gebruikt nu {{from}}."
     },
     "skip": "Negeren",
@@ -3495,7 +3504,7 @@
       "opencode_female": "OpenCode kan niet denken op deze computer. Koppel een OpenCode-sleutel op de pagina van {{name}}."
     },
     "card": {
-      "connected": "Klaar: {{name}} heeft nu een AI.",
+      "connected": "{{name}} heeft nu een AI.",
       "answerNow": "Nu antwoorden",
       "answering": "{{name}} antwoordt…",
       "stillMissing": "{{name}} heeft nog steeds geen AI gekoppeld."
@@ -3530,7 +3539,7 @@
         "ended": "Ik antwoord hier zodra de workspace zich opnieuw op agentes.chat abonneert."
       },
       "askAdmin": "Ik antwoord hier zodra een beheerder het agentes.chat-abonnement heeft geregeld.",
-      "plan": "Het abonnement brengt de computer van de agents, altijd aan. De AI is die waarvoor je al betaalt: Claude, ChatGPT en andere, of een API-sleutel.",
+      "plan": "Het abonnement brengt de computer van de agents. De AI is die waarvoor je al betaalt: Claude, ChatGPT en andere, of een API-sleutel.",
       "activeTitle": "Abonnement actief",
       "activeLine": "Koppel een AI en {{name}} antwoordt hier.",
       "receipt": "Bewaard",
@@ -3710,7 +3719,7 @@
       "useForAll": "Deze sleutel voor iedereen gebruiken",
       "untested": "Nog geen model van {{name}} is door een test gekomen.",
       "testModels": "Modellen testen",
-      "savedUnchecked": "Opgeslagen, maar {{provider}} gaf geen antwoord, dus de sleutel kon niet worden gecontroleerd. Als hij faalt, staat de reden in het gesprek.",
+      "savedUnchecked": "Opgeslagen, maar {{provider}} gaf geen antwoord, dus we konden de sleutel niet controleren. Als hij faalt, staat de reden in het gesprek.",
       "closed": "API-sleutels gaan open met het agentes.chat-abonnement van de workspace.",
       "notPlan": "De sleutel van een codeerabonnement hoort bij die eigen optie hierboven.",
       "billing": "Zet facturering aan voor het project van de sleutel. Zonder facturering mag Google gebruiken wat je agents versturen.",
@@ -3851,7 +3860,7 @@
   },
   "brakes": {
     "title": "Werk waar niemand om vroeg",
-    "subtitle": "Wat hij zelf begint, na een routine, een melding of een andere agent. Waar een persoon om vraagt, wordt nooit tegengehouden.",
+    "subtitle": "Wat hij zelf begint, na een routine, een melding of een andere agent.",
     "costly": "Vragen voor duur werk",
     "costlyHelp": "Voordat hij een pull request opent, pakketten installeert of aan een lange klus begint, vraagt hij het de verantwoordelijke persoon.",
     "costlyAsk": "Eerst vragen",
@@ -4048,10 +4057,10 @@
     "added": "{{name}} is lid geworden van het kanaal.",
     "allow": "Laat {{person}} met hem praten",
     "allow_female": "Laat {{person}} met haar praten",
-    "allowed": "Klaar: {{person}} kan nu met {{name}} praten.",
+    "allowed": "{{person}} kan nu met {{name}} praten.",
     "allowMe": "Ik wil met hem praten",
     "allowMe_female": "Ik wil met haar praten",
-    "allowedMe": "Klaar: je kunt nu met {{name}} praten.",
+    "allowedMe": "Je kunt nu met {{name}} praten.",
     "mailLossTitle": "Toegang tot de mailbox weghalen?",
     "mailLoss": "{{name}} heeft toegang tot de mailbox van {{owners}}. Als meer mensen met hem praten, kunnen ze via hem bij die e-mails komen, dus deze toegang wordt weggehaald. Wie de mailbox heeft gekoppeld, kan die toegang opnieuw geven.",
     "mailLoss_female": "{{name}} heeft toegang tot de mailbox van {{owners}}. Als meer mensen met haar praten, kunnen ze via haar bij die e-mails komen, dus deze toegang wordt weggehaald. Wie de mailbox heeft gekoppeld, kan die toegang opnieuw geven.",
@@ -6429,14 +6438,14 @@
       "forgotten": "Vergeten. Het staat in Gearchiveerd als je het terug wilt.",
       "saved": "Opgeslagen. Het telt nu als geverifieerd.",
       "rules": "Regels van mensen",
-      "rulesNote": "Geldt bij al het werk voor wie de regel gaf, waar het verzoek ook vandaan komt. Regels van de eigenaar of een admin gelden voor iedereen.",
+      "rulesNote": "Elke regel geldt voor wie hem gaf, waar het verzoek ook vandaan komt. Regels van de eigenaar of een admin gelden voor iedereen.",
       "rulesNoteRightHand": "Regels die je in je DM geeft, gelden alleen voor jou. Alleen jij ziet ze.",
       "ruleBy": "Van {{name}} · {{date}}",
       "removeRule": "Verwijderen",
       "ruleRemoved": "Regel verwijderd. Hij staat in Gearchiveerd als je hem terug wilt.",
       "playbook": "Hoe {{name}} werkt",
       "playbook_female": "Hoe {{name}} werkt",
-      "playbookNote": "Werkwijzen die het voor zichzelf bewaart. Ze verschijnen niet in de chat. Wat het van buitenaf oppikte en nooit opnieuw gebruikte, verdwijnt vanzelf en blijft in Gearchiveerd.",
+      "playbookNote": "Werkwijzen die het voor zichzelf bewaart. Ze verschijnen niet in de chat. Wat het van buitenaf oppikte en nooit opnieuw gebruikte, gaat vanzelf naar Gearchiveerd.",
       "details": "Technische details",
       "skills": "Skills die hij maakte",
       "skillUses_one": "{{count}} keer geladen",
@@ -6965,7 +6974,7 @@
         "done": "Ik lees {{apps}}",
         "doneNone": "Voorlopig geen apps",
         "title": "Je werk-apps",
-        "desc": "Die het net gemaakte team zou gebruiken staan bovenaan. Lezen verandert nooit iets, en versturen, verwijderen en betalen vragen jouw akkoord.",
+        "desc": "Lezen verandert nooit iets. Versturen, verwijderen en betalen vragen jouw akkoord.",
         "connect": "Koppelen",
         "all": "Alle apps bekijken",
         "todoPersonal": "Koppel je apps.",
@@ -7797,7 +7806,7 @@
     },
     "suggest": {
       "title": "Wil je iemand naar {{org}} halen?",
-      "lead_one": "{{names}} nodigt hier mensen uit. Stel iemand voor: het voorstel komt aan en wordt met één klik goedgekeurd.",
+      "lead_one": "{{names}} nodigt hier mensen uit. Stel iemand voor: hij of zij krijgt het en keurt het met één klik goed.",
       "lead_other": "{{names}} nodigen hier mensen uit. Stel iemand voor: zij krijgen het en keuren het met één klik goed.",
       "leadNoNames": "Stel iemand voor: wie hier uitnodigt krijgt het en keurt het met één klik goed.",
       "button": "Iemand voorstellen",
@@ -7826,7 +7835,7 @@
     },
     "arrival": {
       "title": "Welkom bij {{org}}, {{name}}",
-      "lead": "Hier werken het team en de agents samen: schrijf in #{{channel}} of roep een agent bij naam.",
+      "lead": "Schrijf in #{{channel}} of roep een agent bij naam.",
       "alsoIn": "Je zit ook in {{channels}}.",
       "sayHi": "Zeg hallo in #{{channel}}",
       "talkTo": "Praat met {{name}}",
@@ -11159,7 +11168,7 @@
     "tooShort": "Te kort. Zeg nog iets meer.",
     "silent": "Niets gehoord. Er is niets verstuurd.",
     "notSent": "Kon de audio niet versturen.",
-    "limit": "Dat is veel audio voor vandaag. Typ hier en probeer het morgen opnieuw.",
+    "limit": "De audiolimiet van vandaag is op. Typ hier, of probeer het morgen opnieuw.",
     "micBlocked": "De microfoon is geblokkeerd",
     "micBlockedHint": "Sta de microfoon toe in de instellingen van je apparaat om op te nemen.",
     "openSettings": "Instellingen openen",
@@ -11785,8 +11794,8 @@
     "audienceInFolder": "In {{folder}}, dat beperkt is: hier kun je het alleen verder inperken.",
     "audienceFollows": "Van {{folder}}",
     "audienceUseFolder": "Instellen voor de map {{folder}}",
-    "audienceFolderSaved": "Klaar. De toegang tot de map is bijgewerkt.",
-    "audienceFolderOpened": "Klaar. De map heeft nu geen beperking.",
+    "audienceFolderSaved": "Toegang tot de map bijgewerkt.",
+    "audienceFolderOpened": "De map heeft nu geen beperking.",
     "audienceRootTitle": "Toegang tot de hele wiki",
     "audienceRootText": "Geldt voor elke pagina en map van de wiki, en voor alles wat later komt.",
     "audienceInRoot": "De hele wiki is beperkt: hier kun je hem alleen verder beperken.",
@@ -11827,8 +11836,8 @@
       "agentsTitle_one": "Agents die {{count}} pagina lezen",
       "agentsTitle_other": "Agents die {{count}} pagina's lezen",
       "agentsText": "Wie elke pagina ziet onder de mensen, blijft zoals het is.",
-      "agentsSaved_one": "Klaar. {{count}} pagina bijgewerkt.",
-      "agentsSaved_other": "Klaar. {{count}} pagina's bijgewerkt."
+      "agentsSaved_one": "{{count}} pagina bijgewerkt.",
+      "agentsSaved_other": "{{count}} pagina's bijgewerkt."
     },
     "trash": {
       "title": "Prullenbak",
@@ -11863,8 +11872,8 @@
     "audienceAgentDetail": "Agent",
     "audiencePeople": "Mensen",
     "audienceNoMatch": "Niemand met die naam.",
-    "audienceSaved": "Klaar. De toegang is bijgewerkt.",
-    "audienceOpened": "Klaar. Iedereen kan hem zien en bewerken.",
+    "audienceSaved": "Toegang bijgewerkt.",
+    "audienceOpened": "Iedereen kan hem zien en bewerken.",
     "noAccessTitle": "Je hebt geen toegang tot deze pagina",
     "noAccessText": "Hij is alleen voor bepaalde mensen. Heb je hem nodig, vraag het dan aan wie voor de wiki zorgt.",
     "delete": "Naar de prullenbak",
@@ -12316,7 +12325,7 @@
     "nothingWorking": "Er draait nu niets",
     "rule": "Nieuw werk start als de computer vrij geheugen heeft. Mensen gaan voor. Samen genoemde agenten starten een voor een.",
     "spill": {
-      "title": "Meer computers, kortere wachtrij",
+      "title": "Je computers",
       "text": "Als deze computer vol is, kunnen antwoorden voor jou op een van jouw computers starten. Lange taken en de bestanden van de agenten blijven hier.",
       "plan": "je {{plan}}-abonnement"
     },
@@ -16512,7 +16521,7 @@
       "uiPasscode": "Voer de toegangscode in als erom gevraagd wordt en houd hem ontgrendeld.",
       "uiCheck": "Opnieuw controleren",
       "repair": "Testhelper herstellen",
-      "repairHint": "De Mac stopt de testhelper en bouwt hem opnieuw met zijn Xcode, in een paar minuten. Voor tikken die nog mislukken als beide aanstaan.",
+      "repairHint": "Gebruik dit als tikken nog mislukken terwijl beide aanstaan. De Mac stopt de testhelper en bouwt hem opnieuw met zijn Xcode, in een paar minuten.",
       "tooOld": "{{name}} draait iOS {{version}}, en agents hebben iOS 17 of nieuwer nodig. Werk hem bij als dat kan, of sluit een nieuwere iPhone aan.",
       "tooOldVersion": "16 of ouder",
       "pluggedIn": "Hij is aangesloten",
@@ -17442,7 +17451,7 @@
       "envOffHere": "Uitgezet in de agentes.chat-app op deze computer.",
       "see": "Bekijk wat er wordt verstuurd",
       "dialogTitle": "Wat er wordt verstuurd",
-      "dialogText": "Eén keer per dag. Dit is precies het volgende rapport."
+      "dialogText": "Eén keer per dag verstuurd. Dit is precies het volgende rapport."
     },
     "tileState": {
       "members_one": "{{count}} lid",
@@ -20772,14 +20781,14 @@
       "failed": "Het team is niet gemaakt. De reden staat op de kaart in het gesprek.",
       "none": "Geen van deze",
       "noneSub": "Vertel wat je doet en {{name}} stelt het samen",
-      "tailor": "Vraag me later gewoon om het aan je bedrijf aan te passen.",
+      "tailor": "Vraag me later om het aan je bedrijf aan te passen.",
       "titlePersonal": "Je agents",
       "leadPersonal": "Kant-en-klare agents voor waar je hulp bij wilt. Daarna past {{name}} ze aan jou aan.",
       "heldLeadPersonal": "Kies wat het dichtst bij je wensen ligt. Je kunt later alles wijzigen.",
       "createPersonal": "Mijn agents maken",
       "failedPersonal": "Je agents zijn niet gemaakt. De reden staat op de kaart in het gesprek.",
       "noneSubPersonal": "Vertel wat je nodig hebt en {{name}} richt ze in",
-      "tailorPersonal": "Vraag me later gewoon om ze aan je routine aan te passen."
+      "tailorPersonal": "Vraag me later om ze aan je routine aan te passen."
     },
     "weekly": {
       "name": "De week van het team",

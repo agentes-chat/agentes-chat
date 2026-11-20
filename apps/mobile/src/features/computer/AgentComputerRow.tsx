@@ -12,6 +12,7 @@ import type { Seat } from "@agenteschat/client/lib/seat";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { Image } from "expo-image";
 import { useIsFocused } from "expo-router";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, type StyleProp, StyleSheet, View, type ViewStyle } from "react-native";
 import Animated from "react-native-reanimated";
@@ -61,6 +62,9 @@ export function AgentComputerCard({ agentId, style }: { agentId: string; style?:
   const shot = useDesktopPicture(orgId, agentId, { enabled: asks, working: Boolean(f?.working) });
   // A request's minutes left move on too. While the computer is on its way, the time every other line reads.
   const requestNow = useNow(f?.handoff && isWaitingHandoff(f.handoff) ? 15_000 : 60_000);
+  // One source per picture, never cached: each picture is shown once and replaced by the next.
+  const shotData = asks ? shot.data?.picture?.data : undefined;
+  const source = useMemo(() => (shotData ? { uri: `data:image/jpeg;base64,${shotData}` } : null), [shotData]);
   const surface = { backgroundColor: colors.raised, boxShadow: `${shadows.e1}, ${shadows.top}` };
   if (view.forbidden) return null;
   if (!view.ready || !f) return setupFailed ? null : <CardShape style={[styles.card, surface, style]} />;
@@ -99,7 +103,8 @@ export function AgentComputerCard({ agentId, style }: { agentId: string; style?:
       <Pressable onPress={press} accessible={false} style={[styles.frame, { borderBottomColor: colors.line2 }]}>
         {picture ? (
           <Image
-            source={{ uri: `data:image/jpeg;base64,${picture.data}` }}
+            source={source}
+            cachePolicy="none"
             contentFit="cover"
             contentPosition="left top"
             style={StyleSheet.absoluteFill}

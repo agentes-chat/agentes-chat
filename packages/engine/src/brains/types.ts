@@ -209,10 +209,14 @@ export type BrainEvent =
       model?: string;
       cacheRead?: number;
       cacheWrite?: number;
-      /** Computer brains: the API calls the turn made, and the most uncached input and whole input one of them read. */
+      /**
+       * Computer brains: the API calls the turn made, the most uncached input and whole input one of them read, and
+       * the whole input its last one read (the session's size as the turn ends).
+       */
       calls?: number;
       maxUncached?: number;
       maxContext?: number;
+      lastContext?: number;
     }
   | { type: "limit"; resetsAt?: string }
   | { type: "done"; text: string; session?: { id: string }; timings?: BrainTurnTimings }
@@ -251,4 +255,9 @@ export type BrainEvent =
 export interface Brain {
   kind: BrainKind;
   run(turn: BrainTurn, io: BrainIO): AsyncIterable<BrainEvent>;
+  /**
+   * The run was claimed: its computer starts the CLI its turn will most likely use now, while the engine builds the
+   * turn (`brain.warm`). Best effort, never fails; `turn` has no words yet.
+   */
+  warm?(turn: BrainTurn): Promise<void>;
 }
