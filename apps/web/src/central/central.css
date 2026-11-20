@@ -127,10 +127,10 @@
 .central-task:hover {
   border-color: var(--line-strong);
 }
-.central-agent:focus-visible,
-.central-task:focus-visible {
-  outline: 2px solid var(--agent);
-  outline-offset: 2px;
+html:not([data-pointer]) .central-agent:focus-visible,
+html:not([data-pointer]) .central-task:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 .central-agent[data-state="working"] {
   border-color: color-mix(in srgb, var(--agent) 55%, var(--line));

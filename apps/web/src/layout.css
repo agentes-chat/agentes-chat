@@ -8016,18 +8016,17 @@ html:not([data-pointer]) .sky-welcome__close:focus-visible {
   box-shadow:
     inset 0 0 0 1px color-mix(in srgb, var(--sel-glow-color, var(--agent)) 62%, transparent),
     0 0 12px color-mix(in srgb, var(--sel-glow-color, var(--agent)) 38%, transparent);
-  animation: sidebar-working 2.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sidebar__item[data-busy="true"] {
+    animation: sidebar-working 2.2s ease-in-out infinite;
+  }
 }
 @keyframes sidebar-working {
   50% {
     box-shadow:
       inset 0 0 0 1px color-mix(in srgb, var(--sel-glow-color, var(--agent)) 90%, transparent),
       0 0 20px color-mix(in srgb, var(--sel-glow-color, var(--agent)) 60%, transparent);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .sidebar__item[data-busy="true"] {
-    animation: none;
   }
 }
 .sidebar__trail,

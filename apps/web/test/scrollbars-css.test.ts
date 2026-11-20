@@ -82,6 +82,8 @@ const SIDEWAYS: Record<string, "strip" | "content"> = {
   ".lf-doc__body pre.lf-doc__code": "content",
   ".sl-rail__list": "strip",
   ".code-card__code": "content",
+  // VPS Zen: the Central's board of tasks by state, read with a pointer.
+  ".central-board": "content",
   ".code-card__preview": "content",
   ".level-matrix": "content",
   ".pu-table-card": "content",
