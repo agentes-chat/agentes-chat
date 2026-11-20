@@ -82,6 +82,7 @@ import { DELEGATED_RESULT_CHARS, type DelegatedBridge } from "./delegated-tools"
 import { RunnerError } from "./errors";
 import { descendantPids, killTree } from "./exec";
 import { cliSpawn } from "./executors";
+import { withFullAccessNote } from "./full-access";
 import { HARDENED_GIT_ARGS } from "./git-guard";
 import { readJson, writeJson } from "./json-file";
 import {
@@ -2092,6 +2093,16 @@ export class BrainManager {
   }
 
   /** The live process of a session, if any (tests). */
+  /** VPS Zen: each agent's running CLI processes, for its memory in the Central. */
+  pidsByAgent(): Map<string, number[]> {
+    const out = new Map<string, number[]>();
+    for (const l of this.live.values()) {
+      const pid = l.proc.child.pid;
+      if (!l.proc.exited && pid) out.set(l.agentId, [...(out.get(l.agentId) ?? []), pid]);
+    }
+    return out;
+  }
+
   process(agentId: string, session: string): ClaudeProcess | undefined {
     return this.live.get(brainKey(agentId, session))?.proc;
   }
@@ -2760,7 +2771,11 @@ export class BrainManager {
     const mode = req.permissions?.mode === "plan" || req.permissions?.mode === "chat" ? req.permissions.mode : "work";
     const asks = mode === "work" ? turnAsks(req.permissions?.asks) : undefined;
     const launch = brainProfileLaunch(mode, req.personalMcp === true, delegated !== undefined, asks === "always");
-    const system = typeof req.system === "string" ? req.system : "";
+    // A work turn on a computer with full access is told so (`full-access.ts`), unless its agent always asks.
+    const system = withFullAccessNote(
+      typeof req.system === "string" ? req.system : "",
+      mode === "work" && asks !== "always",
+    );
     const ranKey = ranKeyOf(req, session);
     // A `chat` turn reads nothing of the folder, its CLAUDE.md included.
     const withRepo = launch.settingSources === "" && mode !== "chat";

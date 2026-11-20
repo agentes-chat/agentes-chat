@@ -29,6 +29,7 @@ import {
 import { CODEX_WINDOWS_CONFIG, codexLaunch } from "./codex-windows";
 import { killTree } from "./exec";
 import { envValue } from "./executors";
+import { FULL_ACCESS_NOTE, fullAccess } from "./full-access";
 import {
   CODEX_MCP_ENV,
   codexWritableRoots,
@@ -214,10 +215,12 @@ export function codexAppServerArgs(input: {
  * asks before anything else (`untrusted`), and the runner answers with the command policy. On Windows
  * nothing asks (`never`): the sandbox is the limit (`codex-windows.ts`).
  */
-export const codexThreadPolicy = (profile: CommandProfile, windows = false) => ({
-  sandbox: codexSandbox(profile),
-  approvalPolicy: windows ? ("never" as const) : ("untrusted" as const),
-});
+export const codexThreadPolicy = (profile: CommandProfile, windows = false, full: boolean = fullAccess()) => {
+  const sandbox = codexSandbox(profile, full);
+  // Full access on this computer (`full-access.ts`): no sandbox and nothing to ask, so Codex asks nobody.
+  const never = windows || sandbox === "danger-full-access";
+  return { sandbox, approvalPolicy: never ? ("never" as const) : ("untrusted" as const) };
+};
 
 // ── JSON-RPC client ──────────────────────────────────────────────────────────
 
@@ -1157,7 +1160,9 @@ export class CodexAppServers implements CodexAppRunner {
         );
       }
     }
-    const instructions = input.system.trim();
+    const told = input.system.trim();
+    // A work turn on a computer with full access is told so (`full-access.ts`).
+    const instructions = told && common.sandbox === "danger-full-access" ? told + FULL_ACCESS_NOTE : told;
     try {
       const r = await client.request<ThreadResponse>("thread/start", {
         ...common,

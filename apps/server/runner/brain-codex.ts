@@ -34,6 +34,7 @@ import {
 import { RunnerError } from "./errors";
 import { killTree } from "./exec";
 import { cachedCodexVersion, envValue } from "./executors";
+import { FULL_ACCESS_NOTE, fullAccess } from "./full-access";
 import { CODEX_MCP_ENV, CODEX_MCP_SERVER, codexWritableRoots } from "./mcp";
 import { isInside, resolveForAgent } from "./paths";
 import type { Spawn } from "./scope-gate";
@@ -234,8 +235,15 @@ export function chatFolder(runnerHome: string, agentId: string): string {
 export const codexProfileOf = (req: { permissions?: { mode?: unknown } }): CommandProfile =>
   req.permissions?.mode === "plan" ? "plan" : "work";
 
-/** The Codex sandbox of a profile (`--sandbox`, the app-server's `sandbox`): never with the network. */
-export const codexSandbox = (profile: CommandProfile) => (profile === "plan" ? "read-only" : "workspace-write");
+/** Codex's sandboxes: `workspace-write` never with the network here; `danger-full-access` only with full access. */
+export type CodexSandbox = "read-only" | "workspace-write" | "danger-full-access";
+
+/**
+ * The Codex sandbox of a profile (`--sandbox`, the app-server's `sandbox`). On a computer with full access
+ * (`full-access.ts`) a work turn runs without one (`danger-full-access`: the whole computer and the network).
+ */
+export const codexSandbox = (profile: CommandProfile, full: boolean = fullAccess()): CodexSandbox =>
+  profile === "plan" ? "read-only" : full ? "danger-full-access" : "workspace-write";
 
 /**
  * The workspace sandbox without the network, whatever the Codex home's own config says (a person's `network_access =
@@ -476,8 +484,11 @@ export function codexTurnArgs(input: {
    */
   windows?: boolean;
 }): string[] {
-  const instructions = input.windows ? undefined : input.instructions?.trim();
   const sandbox = input.chat ? "read-only" : codexSandbox(input.profile ?? "work");
+  // Windows: the instructions go on stdin (`codexStdinPrompt`), never here.
+  const told = input.windows ? undefined : input.instructions?.trim();
+  // A work turn on a computer with full access is told so (`full-access.ts`); a chat turn has no tools to use.
+  const instructions = told && sandbox === "danger-full-access" ? told + FULL_ACCESS_NOTE : told;
   return [
     "exec",
     "--json",

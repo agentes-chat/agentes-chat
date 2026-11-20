@@ -248,6 +248,7 @@ export const keys = {
     ["org", orgId, "gifs", q, category ?? "", lang] as const,
   working: (orgId: string) => ["org", orgId, "working"] as const,
   taskManager: (orgId: string) => ["org", orgId, "task-manager"] as const,
+  central: (orgId: string) => ["org", orgId, "central"] as const,
   taskSteps: (orgId: string, runId: string) => ["org", orgId, "task-manager", "steps", runId] as const,
   reminders: (orgId: string) => ["org", orgId, "reminders"] as const,
   /** Every mailbox read (prefix). */

@@ -189,7 +189,8 @@ test("work_in_background: the anchor in the timeline, updates in its thread, the
     assignees: [{ type: "agent", id: f.agent.id }],
     blocked: null,
   });
-  expect(issues[0]?.backgroundWork?.plan.map((p) => p.state)).toEqual(["done", "doing", "todo"]);
+  // VPS Zen: a work done whole closes the steps it left open (`endWork`).
+  expect(issues[0]?.backgroundWork?.plan.map((p) => p.state)).toEqual(["done", "done", "done"]);
   const activity = await f.db.select().from(schema.issueActivity);
   expect(activity.some((a) => a.event === "work_update" && a.text === "Esquema lido; migrando as tabelas.")).toBe(true);
   // The move note told it what to do next, on its next call.

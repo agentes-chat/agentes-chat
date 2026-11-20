@@ -65,10 +65,19 @@ import { type MenuLook, menuLook, onMenuLookChange, setMenuLook } from "@/lib/co
 import { inDesktopApp } from "@/lib/desktop";
 import { useOpenParam } from "@/lib/open-param";
 import { ownPlanLines, planMeterText } from "@/lib/plan-usage";
-import { onSoundChoiceChange, type SoundChoice, setSoundChoice, soundChoice } from "@/lib/sounds";
+import { onSidebarFacesChange, setSidebarFaces, sidebarFacesOn } from "@/lib/sidebar-faces";
+import {
+  onSoundChoiceChange,
+  type SoundChoice,
+  setSoundChoice,
+  setTypingSound,
+  soundChoice,
+  typingSoundOn,
+} from "@/lib/sounds";
 import { STORAGE_KEYS, sessionStore } from "@/lib/storage";
 import { type ThemePreference, useTheme } from "@/lib/theme";
 import { useToast } from "@/lib/toast";
+import { VoiceVideoSettings } from "@/voice/VoiceSettings";
 import { LanguageSelect } from "./LanguageSelect";
 
 /**
@@ -94,6 +103,8 @@ export function AccountSection() {
   const theme = useTheme();
   const look = useSyncExternalStore(onMenuLookChange, menuLook, () => "ours" as const);
   const sounds = useSyncExternalStore(onSoundChoiceChange, soundChoice, soundChoice);
+  const typing = useSyncExternalStore(onSoundChoiceChange, typingSoundOn, typingSoundOn);
+  const faces = useSyncExternalStore(onSidebarFacesChange, sidebarFacesOn, sidebarFacesOn);
   const [profile, setProfile] = useState<"name" | "timezone" | null>(null);
   const [phone, setPhone] = useState(false);
   const icon = useAppIcon();
@@ -275,6 +286,27 @@ export function AccountSection() {
               />
             }
           />
+          <PrefRow
+            id="account-typing-sound"
+            icon="sound"
+            label={t("shell.typingSound")}
+            hint={t("shell.typingSoundHint")}
+            control={
+              <Switch
+                checked={typing && sounds !== "off"}
+                disabled={sounds === "off"}
+                onCheckedChange={setTypingSound}
+                aria-label={t("shell.typingSound")}
+              />
+            }
+          />
+          <PrefRow
+            id="account-sidebar-faces"
+            icon="members"
+            label={t("shell.sidebarFaces")}
+            hint={t("shell.sidebarFacesHint")}
+            control={<Switch checked={faces} onCheckedChange={setSidebarFaces} aria-label={t("shell.sidebarFaces")} />}
+          />
           {inDesktopApp() && (
             <PrefRow
               id="account-look"
@@ -297,6 +329,8 @@ export function AccountSection() {
         </div>
         <AppIconDialog open={iconPicker} onClose={() => setIconPicker(false)} />
       </Card>
+      {/* VPS Zen: microphone, speakers, camera, voice detection and screen quality for calls. */}
+      <VoiceVideoSettings />
       <Card aria-labelledby="account-delete" className="settings-danger">
         <CardHeader id="account-delete" icon="trash" title={t(owner ? "resetOrg.cardTitle" : "deleteAccount.menu")} />
         <div className="settings-rows">

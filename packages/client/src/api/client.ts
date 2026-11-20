@@ -102,6 +102,7 @@ import type {
   CalendarEventInput,
   CalendarEventPatch,
   CalendarRange,
+  CentralView,
   Channel,
   ChannelCard,
   ChannelCategory,
@@ -2091,6 +2092,8 @@ export interface ApiClient {
     list(orgId: string): Promise<WorkingRun[]>;
     /** The task manager (ADR 0128): tasks now, what each uses, each agent's last hour, what ended since `since`. */
     taskManager?(orgId: string, since?: string, doneToday?: boolean): Promise<TaskManagerView>;
+    /** VPS Zen: the Central. */
+    central?(orgId: string): Promise<CentralView>;
     /** A task's steps for "Ver passos", to whoever sees it in the task manager (no inputs, no outputs). */
     taskSteps?(orgId: string, runId: string): Promise<TaskSteps>;
     /** Continuar agora on runs paused near a limit (`wait.canContinue`). */

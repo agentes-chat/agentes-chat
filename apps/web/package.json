@@ -40,6 +40,7 @@
     "better-auth": "^1.7.7",
     "i18next": "^26.4.2",
     "lib0": "0.2.120",
+    "livekit-client": "^2",
     "mermaid": "^11.17.2",
     "prosemirror-commands": "1.7.2",
     "prosemirror-history": "1.5.1",

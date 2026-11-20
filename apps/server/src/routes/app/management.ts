@@ -13,6 +13,7 @@ import {
   cancelRun,
   canTalkTo,
   canViewCost,
+  centralView,
   continuePausedRuns,
   continueRun,
   editorsOf,
@@ -1919,6 +1920,20 @@ export function managementRoutes(deps: AppDeps) {
       });
       return c.json(view, 200);
     },
+  );
+
+  // VPS Zen: the Central, what every agent is doing in one answer.
+  app.openapi(
+    createRoute({
+      method: "get",
+      path: "/organizations/{orgId}/central",
+      tags: ["Usage"],
+      security,
+      summary: "The Central: agents, tasks with their last sign of life, who asked whom, pull requests and computers",
+      request: { params: OrgParams },
+      responses: { 200: json(z.object({}).passthrough().openapi("CentralView")), ...errors },
+    }),
+    async (c) => c.json(await centralView(db, c.get("user").id, c.req.valid("param").orgId), 200),
   );
 
   app.openapi(

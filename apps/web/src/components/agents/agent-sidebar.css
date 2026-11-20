@@ -260,6 +260,34 @@ html:not([data-pointer]) .dm-side__row--link:focus-visible {
   margin: 0;
   color: var(--ink);
 }
+/* The model and the effort, for whoever may change them (ThinksPicker): each control the section's full width under
+   its label, so the effort's four words keep one line. */
+.dm-side__pick {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+.dm-side__pick-label {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted);
+}
+.dm-side__pick-label:not(:first-child) {
+  margin-top: 4px;
+}
+.dm-side__pick-model {
+  width: 100%;
+}
+.dm-side__pick .ac-seg {
+  width: 100%;
+}
+.dm-side__pick-note {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  line-height: 17px;
+  color: var(--faint);
+}
 /* Its plan for this person is a row that opens, as the panel's other pressable rows: its plate reaches 8 past the
    section's sides, so its icon starts on the heading's edge and stays 8 inside the plate. */
 .dm-side__sec .settings-row--open {
@@ -271,4 +299,32 @@ html:not([data-pointer]) .dm-side__row--link:focus-visible {
 }
 .dm-side__sec .settings-row--open:hover {
   background: var(--side-hover);
+}
+/* VPS Zen: the model chip in the composer (ComposerBrainChip): a pill like the agent's beside it, pressable. */
+.composer-brain {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+}
+.composer-brain:hover,
+.composer-brain[data-state="open"] {
+  background: var(--hover, rgba(127, 127, 127, 0.08));
+}
+.composer-brain__effort {
+  color: var(--muted);
+  font-size: 12px;
+}
+.composer-brain__pop {
+  width: 300px;
+}
+.composer-brain__body {
+  padding: 12px;
+}
+.composer-brain__body .dm-side__pick {
+  margin: 0;
 }

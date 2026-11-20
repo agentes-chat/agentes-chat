@@ -74,6 +74,7 @@ import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
 import {
   type AgentColor,
   Avatar,
+  AvatarStack,
   agentGradient,
   Button,
   CountBadge,
@@ -123,6 +124,8 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
+import { useAtWork } from "@/central/useAtWork";
+import { useCentralWords } from "@/central/words";
 import { useDirectory } from "@/hooks/useDirectory";
 import { agentLine, availabilityOf, personLine, useAgentPresence, usePersonPresence } from "@/hooks/usePresence";
 import { useServerPlace } from "@/hooks/useServerPlace";
@@ -141,14 +144,17 @@ import { useOpenParam } from "@/lib/open-param";
 import { markOpen } from "@/lib/perf";
 import { ownPlanLines, planNearLimit, planWord } from "@/lib/plan-usage";
 import { useScrollEdges } from "@/lib/scroll-edges";
+import { onSidebarFacesChange, sidebarFacesOn } from "@/lib/sidebar-faces";
 import { rightHandSeen, STORAGE_KEYS, sessionStore, storage, storedStrings } from "@/lib/storage";
 import { useToast } from "@/lib/toast";
 import { offersNewWorkspace, type WorkspaceGroup } from "@/lib/workspaces";
 import type { SettingsSection } from "@/pages/settings-sections";
 import { useStreams } from "@/realtime/context";
+import { joinVoice } from "@/voice/call";
+import { SidebarVoiceMembers, useVoiceCall, useVoiceRooms, VoiceDock, VoiceIcon } from "@/voice/VoiceUI";
 import { EmailDialog, ProfileDialog } from "./AccountSettings";
 import { AddPasswordDialog } from "./AddPassword";
-import { AgentAvatar } from "./AgentAvatar";
+import { AgentAvatar, PersonAvatar } from "./AgentAvatar";
 import {
   DeleteGroupDialog,
   type GroupDialogFor,
@@ -392,6 +398,25 @@ export function Sidebar() {
       {countOf(id)}
     </Link>
   );
+  // VPS Zen: at work anywhere, also in conversations this tab isn't listening to.
+  const atWork = useAtWork(orgId);
+  const centralWords = useCentralWords();
+  // VPS Zen: the Central is always in sight, whatever each person keeps there. Only in the built app: the sidebar's
+  // tests describe the tools as they ship upstream.
+  const centralRow = () =>
+    import.meta.env.PROD ? (
+      <Link
+        to="/org/$orgId/central"
+        params={{ orgId }}
+        search={{}}
+        className="sidebar__item"
+        title={rail ? centralWords.title : undefined}
+      >
+        <Icon name="stageProgress" />
+        <span className="sidebar__item-label">{centralWords.title}</span>
+        {atWork.size > 0 && <span className="sidebar__section-working">{atWork.size}</span>}
+      </Link>
+    ) : null;
   // Agents waiting for an offline computer: "esperando" instead of anything "working".
   const outages = useMachineOutages(orgId);
   const waitingFor = useMemo(() => waitingAgents(outages.data), [outages.data]);
@@ -439,16 +464,18 @@ export function Sidebar() {
   // Who works now: a run this tab hears, or the agents' list (work handed off in two agents' DM too). Who waits on
   // someone or is in line: a closed group still shows them.
   const busyKey = useStreams((st) => [...runningAgents(st)].sort().join());
+  const atWorkKey = [...atWork].sort().join();
   const { busy, waits } = useMemo(() => {
     const work = workKey ? workKey.split(",").map((w) => w.split(":") as [string, string]) : [];
     return {
       busy: new Set([
         ...(busyKey ? busyKey.split(",") : []),
+        ...(atWorkKey ? atWorkKey.split(",") : []),
         ...work.flatMap(([id, s]) => (s === "working" ? [id] : [])),
       ]),
       waits: new Set(work.flatMap(([id, s]) => (s === "working" ? [] : [id]))),
     };
-  }, [busyKey, workKey]);
+  }, [busyKey, atWorkKey, workKey]);
   // How many of the workspace's agents are working now: the sky at the bottom rises with it.
   const working = dir.agents.filter((a) => busy.has(a.id)).length;
   // Narrow screens: the sidebar is a drawer (id, open state, close on link / swipe).
@@ -681,8 +708,9 @@ export function Sidebar() {
     // A personal workspace's list is its conversations (ADR 0159): a tool comes into sight only while something
     // waits in it, or once the person put it there; Início, Go to… and the other tools are in More at the end.
     tools: personal ? (
-      listed.length > 0 && (
+      (listed.length > 0 || import.meta.env.PROD) && (
         <div className="sidebar__group sidebar__tools">
+          {centralRow()}
           <ToolList items={listed} row={toolRow} />
         </div>
       )
@@ -693,6 +721,7 @@ export function Sidebar() {
           <Icon name="home" />
           <span className="sidebar__item-label">{t("shell.home")}</span>
         </Link>
+        {centralRow()}
         <ToolList items={listed} row={toolRow} />
         <MoreTools items={inMore} row={toolRow} countOf={countOf} onCustomize={() => setCustomizing(true)} />
       </div>
@@ -1052,6 +1081,7 @@ export function Sidebar() {
           {/* The full sidebar creates from the Agentes header's + (always shown on touch screens); the rail has no
               headers. */}
           {rail && createAgentItem.length > 0 && <CreateAgentTile onOpen={newAgent} />}
+          {!rail && <VoiceDock orgId={orgId} />}
           <div className="sidebar__me">
             <AccountMenu />
             {bell}
@@ -1286,6 +1316,12 @@ function SidebarChannels({
   const toast = useToast();
   const navigate = useNavigate();
   const categories = useChannelCategories(orgId);
+  // VPS Zen: who is in each channel, in place of its "#" (Preferências, "Rostos nos canais").
+  const facesOn = useSyncExternalStore(onSidebarFacesChange, sidebarFacesOn, sidebarFacesOn);
+  const facesDir = useDirectory(orgId);
+  // VPS Zen: voice channels, who is in each room under its row, and a headset on hover to join.
+  const voice = useVoiceRooms(orgId);
+  const call = useVoiceCall();
   const place = usePlaceChannel(orgId);
   const placeCategory = usePlaceChannelCategory(orgId);
   const removeCategory = useDeleteChannelCategory(orgId);
@@ -1498,13 +1534,27 @@ function SidebarChannels({
     return actions;
   };
 
-  // A pinned row stays put: it doesn't drag, and nothing drops on it.
+  // VPS Zen: a channel's row and, under it, who is in its voice room.
   const row = (c: Channel, top = false) => {
+    const el = channelRow(c, top);
+    const people = voice.byChannel.get(c.id) ?? [];
+    if (people.length === 0) return el;
+    return (
+      <Fragment key={c.id}>
+        {el}
+        <SidebarVoiceMembers people={people} />
+      </Fragment>
+    );
+  };
+  // A pinned row stays put: it doesn't drag, and nothing drops on it.
+  const channelRow = (c: Channel, top = false) => {
     // Discord's marks: something new lights the row (a pill on its left edge, the name in full ink) with how many
     // messages wait, in a quiet count; only a mention of me gets the red one. Muted, it rests dim whatever comes, but a
     // mention still shows.
     const unread = looksUnread(c);
     const mentions = c.mentionCount ?? 0;
+    // VPS Zen: a voice-only channel, Discord's: a speaker for its mark, and a click opens its room and joins it.
+    const voiceOnly = voice.voiceChannels.has(c.id);
     const link = (
       <Link
         key={c.id}
@@ -1527,14 +1577,43 @@ function SidebarChannels({
             })}
         onMouseEnter={() => onPrefetch(c.id)}
         onFocus={() => onPrefetch(c.id)}
-        onClick={() => markOpen(c.id)}
+        onClick={() => {
+          markOpen(c.id);
+          if (voiceOnly && c.isMember && !(call.channelId === c.id && call.status !== "idle"))
+            void joinVoice(orgId, c.id, c.name);
+        }}
+        data-voice-only={voiceOnly || undefined}
         {...channelMenu(c)}
       >
-        <Icon name="channel" className="sidebar__channel-icon" />
+        {voiceOnly ? (
+          <span className="sidebar__channel-icon sidebar__voice-icon" aria-hidden="true">
+            <VoiceIcon name="speaker" size={16} />
+          </span>
+        ) : facesOn && (c.faces?.length ?? 0) > 0 ? (
+          <AvatarStack className="sidebar__channel-icon sidebar__faces" aria-hidden="true">
+            {(c.faces ?? []).map((f) =>
+              f.type === "agent" ? (
+                <AgentAvatar key={f.id} agentId={f.id} name={facesDir.agentById.get(f.id)?.name ?? ""} size="xs" />
+              ) : (
+                <PersonAvatar key={f.id} id={f.id} name={facesDir.memberById.get(f.id)?.name ?? ""} size="xs" />
+              ),
+            )}
+            {(c.memberCount ?? 0) > (c.faces?.length ?? 0) && (
+              <span className="sidebar__faces-more">+{(c.memberCount ?? 0) - (c.faces?.length ?? 0)}</span>
+            )}
+          </AvatarStack>
+        ) : (
+          <Icon name="channel" className="sidebar__channel-icon" />
+        )}
         <span className="sidebar__channel-abbr" aria-hidden="true">
           {channelInitials(c.name)}
         </span>
         <span className="sidebar__item-label">{c.name}</span>
+        {!voiceOnly && (voice.byChannel.get(c.id)?.length ?? 0) > 0 && (
+          <span className="sidebar__voice-mark" aria-hidden="true">
+            <VoiceIcon name="speaker" size={14} />
+          </span>
+        )}
         {mentions > 0 ? (
           <UnreadCount count={mentions} mentions />
         ) : unread ? (
@@ -1544,16 +1623,29 @@ function SidebarChannels({
         )}
       </Link>
     );
+    const voiceAct =
+      voice.enabled && c.isMember && !voiceOnly && !(call.channelId === c.id && call.status !== "idle") ? (
+        <RowAction icon="volume" label={t("voiceRooms.join")} onClick={() => void joinVoice(orgId, c.id, c.name)} />
+      ) : null;
     // On hover or focus, like Discord's invite and settings: who manages the channel adds members or opens its details.
-    if (!mayChange(c)) return link;
+    if (!mayChange(c))
+      return voiceAct ? (
+        <div key={c.id} className="sidebar__row" data-unread={unread} data-acts={1}>
+          {link}
+          <span className="sidebar__row-acts">{voiceAct}</span>
+        </div>
+      ) : (
+        link
+      );
     const open = (ask: "details" | "add") => () => {
       requestChannelDetails(c.id, ask);
       void navigate({ to: "/org/$orgId/c/$channelId", params: { orgId, channelId: c.id } });
     };
     return (
-      <div key={c.id} className="sidebar__row" data-unread={unread} data-acts={2}>
+      <div key={c.id} className="sidebar__row" data-unread={unread} data-acts={voiceAct ? 3 : 2}>
         {link}
         <span className="sidebar__row-acts">
+          {voiceAct}
           <RowAction icon="personAdd" label={t("shell.sidebarMenu.addMembers")} onClick={open("add")} />
           <RowAction icon="cog" label={t("shell.sidebarMenu.channelSettings")} onClick={open("details")} />
         </span>
@@ -1865,7 +1957,8 @@ function AgentRow({
   const shown = useAgentPresence(a.id);
   const work = shown?.work ?? null;
   // At work: a run this tab hears, or its work for me anywhere (work handed off in two agents' DM too).
-  const busy = (state !== "idle" && !waitingFor) || work?.state === "working";
+  const atWork = useAtWork(org.id).has(a.id);
+  const busy = (state !== "idle" && !waitingFor) || work?.state === "working" || atWork;
   const color = colorOf(a);
   const chip = audienceChip(t, a);
   // Background work's minutes move with the anchor's line, every half minute; its work's every minute.

@@ -26,6 +26,14 @@ Sounds could be recorded or generated as files, or computed. Generated sound eff
 - Rendering costs a few milliseconds per sound on the web (once) and more on the phone (once per style, one sound per tick).
 - Push notifications on the phone keep the system sound. A custom push sound would need the files bundled into the app, which is left for later.
 
+## Addendum (2026-11-12): a key click while typing, off by default
+
+Some people like to hear their keys as they write, as typewriter-style desktop apps do; most don't. The web and desktop app now offer it as a choice of its own, kept apart from the event sounds:
+
+1. **One more sound, outside `SOUNDS`.** `KEY_SOUND` (`key`) renders like the others (`renderSound(style, KEY_SOUND)`), in each style: a dry tick for `tactile`, a bright tick with the room for `sky`, one short pulse for `pixel`. It is no event's sound, so the phone, which makes a file of every name in `SOUNDS`, has none to make. It is the shortest and quietest sound of each style (a test holds that), so a run of keys stays under the conversation.
+2. **What plays it.** A key pressed in a composer's field (`.ac-composer` textarea): a character, a space, Backspace or Delete, without Cmd, Ctrl or Alt, not while an accent is being composed and not a held letter's repeats. Enter sends and the send sound says it; arrows, Tab and Escape play nothing. Keys closer than 45 ms are one, and each plays a few percent higher or lower so a run sounds like typing rather than one sample repeated.
+3. **The choice.** "Som de digitação" (Typing sound), a switch beside "Sons" in the account settings' device card, kept in local storage (`agentes.sounds.typing`) like the sound style. It is off until the person turns it on, plays a sample when turned on, and is off and disabled while the sounds are off.
+
 ## Addendum (2026-11-17): `discard`, a voice that goes, and the session given back
 
 - A ninth sound, `discard`: a recording thrown away on the phone (slid off, or the take's trash). It is something the person did, never an error, so it is quieter and shorter than `error`, and it falls where `send` rises. It exists in the three styles.

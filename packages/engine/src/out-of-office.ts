@@ -3,7 +3,7 @@ import { and, type Database, eq, inArray, isNull, schema, sql } from "@agentesch
 import { NEXT_ACCOUNT_KINDS } from "@agenteschat/providers/plans";
 import type { Agent } from "./agents";
 import { brainOf } from "./brain-settings";
-import { planLimitOf } from "./brains/select";
+import { planLimitOf, spareAccountFor } from "./brains/select";
 import { isComputerBrain } from "./brains/types";
 import { isRightHand } from "./right-hand";
 import { monthStartUtc, orgDefaultAgentBudget } from "./usage";
@@ -69,6 +69,22 @@ export async function outOfOffice(
     const usable = account && account.machineId === a.machineId && account.kind === kind ? account : undefined;
     const usage = usable ? usable.usage : (machines.get(a.machineId)?.[kind] ?? null);
     const limited = planLimitOf(a.machineId, kind, usable?.id, usage, ms);
+    // VPS Zen: another account with room thinks for it meanwhile (`spareAccountFor`): not out.
+    if (limited && usable && a.ownerUserId) {
+      const owner = a.ownerUserId;
+      const spare = await spareAccountFor(
+        db,
+        { ...a, ownerUserId: owner },
+        kind,
+        a.machineId,
+        {
+          id: usable.id,
+          ...(usable.provider ? { provider: usable.provider } : {}),
+        },
+        ms,
+      ).catch(() => undefined);
+      if (spare) continue;
+    }
     if (limited) out.set(a.id, { reason: "plan", until: limited.until !== null ? new Date(limited.until) : null });
     if (limited && usable && movesOn(a, usable)) chained.push({ agent: a, own: usable, until: limited.until });
   }

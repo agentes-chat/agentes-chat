@@ -235,6 +235,14 @@ The agent's "Quem pensa" was a form: a select of what pays, a card under it with
 - **Motion.** Screens slide in from the side they come from, the dialog's height glides between them, bars fill as they show, a new mark comes in where the last stood and the trail lights after a switch; with reduced motion nothing moves.
 - The phone's "Pensa com" is unchanged.
 
+## Addendum (2026-11-12): the model and the effort in a DM's side panel
+
+Switching an agent's model took five steps from a conversation (its face, "Pensa com", "Modelo", the model, "Usar"), and the effort six on another screen of "Quem pensa", while the DM's side panel showed what thinks without a way to change it. People who switch often, to a stronger model for one task and back, felt every step.
+
+- **Under "Pensa com", two controls.** For whoever may change the agent (an admin or its owner, the agent page's rule, and the brain's `canEdit`), the side panel's "Como pensa" keeps the "Pensa com" line and adds "Modelo", the agent page's model list in a searchable select (`ModelSelect`), and "Esforço", the four levels as one segmented control. The model is two clicks, the effort one.
+- **Each saves at once**, as the phone's model page does: a plan's model with `modelInput` (Automático picks the effort too, and a fixed model after it starts at Médio), the effort with `setBrain({ effort })`, a key's model with the agent's own update. A failure says so and shows what is saved. While the agent works, a line says the change applies from its next task.
+- **The rest stays on the agent's page.** The account, the computer, the speed, the context window and who it answers are still in "Quem pensa"; anyone who may not change the agent reads the line as before, with no control.
+
 ## Addendum (2026-11-12): an image Codex makes is shown with the reply
 
 Codex has an image tool of its own. It keeps the image in its sign-in's folder (`generated_images/` under `CODEX_HOME`) and reports an `imageGeneration` item; in Codex's own apps the picture shows in the conversation, so the model answers "the image is above". Here nothing read that item: the picture stayed on the computer and the reply pointed at nothing.

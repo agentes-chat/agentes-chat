@@ -53,12 +53,13 @@ import {
   withSignIn,
   yieldRoute,
 } from "./accounts";
-import { codexThreadKey, unwrapShell } from "./brain-codex";
+import { type CodexSandbox, codexSandbox, codexThreadKey, unwrapShell } from "./brain-codex";
 import { coAuthorLines } from "./co-authors";
 import { commandApproval, ownBranches } from "./command-gate";
 import { RunnerError } from "./errors";
 import { shellCommand, windowsTaskkill } from "./exec";
 import { envValue, findOnWindowsPath, NO_CWD_LOOKUP, pickedCodex, winQuote } from "./executors";
+import { fullAccess } from "./full-access";
 import { readJson, writeJson } from "./json-file";
 import {
   CODEX_MCP_ENV,
@@ -508,7 +509,7 @@ export function executorCommand(
     /** The CLI as the line starts it, quoted (default `claude` / `codex`; Claude Code on Windows by its full path). */
     program?: string;
     /** Codex: where it works (`-C`), its sandbox, the file for its last message, the thread to resume. */
-    codex?: { cwd: string; sandbox: "read-only" | "workspace-write"; lastFile: string; thread?: string };
+    codex?: { cwd: string; sandbox: CodexSandbox; lastFile: string; thread?: string };
     /**
      * Protocol 10: the folders allowed for the agent besides its own. Claude
      * Code gets `--add-dir` for each, Codex its sandbox's writable roots.
@@ -1268,7 +1269,10 @@ export class TaskManager {
       writeFileSync(
         settingsFile,
         JSON.stringify({
-          permissions: { ask: [...PUSH_ASK_RULES], deny: [...MISSION_DENY_RULES] },
+          // Full access on this computer (`full-access.ts`): nothing kept for a person, nothing denied.
+          permissions: fullAccess()
+            ? { ask: [], deny: [] }
+            : { ask: [...PUSH_ASK_RULES], deny: [...MISSION_DENY_RULES] },
           ...accountSettings,
         }),
         { mode: 0o600 },
@@ -1304,7 +1308,7 @@ export class TaskManager {
             ? {
                 codex: {
                   cwd,
-                  sandbox: readOnly ? ("read-only" as const) : ("workspace-write" as const),
+                  sandbox: codexSandbox(readOnly ? "plan" : "work"),
                   lastFile: path.join(dir, "last.txt"),
                   ...(codexThread ? { thread: codexThread } : {}),
                 },

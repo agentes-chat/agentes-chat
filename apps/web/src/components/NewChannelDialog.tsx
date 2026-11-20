@@ -19,6 +19,7 @@ import {
   Input,
   Locked,
   RoleMark,
+  Segmented,
   Select,
   Token,
   TokenList,
@@ -29,6 +30,8 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { usePersonalView } from "@/hooks/usePersonalView";
+import { roomsKey, useVoiceRooms } from "@/voice/VoiceUI";
+import { setVoiceOnly } from "@/voice/views";
 import { CategorySelect } from "./ChannelCategoryDialogs";
 import { memberOf, PeoplePicker, type PickKey } from "./MemberPicker";
 import { useOrg } from "./org-context";
@@ -268,6 +271,9 @@ export function NewChannelDialog({
   const [categoryId, setCategoryId] = useState<string | null>(category);
   const [selected, setSelected] = useState<Set<PickKey>>(new Set());
   const [touched, setTouched] = useState(false);
+  // VPS Zen: a text channel, or a voice-only one (a room first, its chat beside it).
+  const voiceOn = useVoiceRooms(org.id).enabled;
+  const [kind, setKind] = useState<"text" | "voice">("text");
   const create = useMutation({
     mutationFn: async () => {
       const channel = await api.chat.createChannel(org.id, {
@@ -277,6 +283,10 @@ export function NewChannelDialog({
         ...(categoryId ? { categoryId } : {}),
       });
       for (const key of selected) await api.chat.addMember(org.id, channel.id, memberOf(key));
+      if (kind === "voice" && voiceOn) {
+        await setVoiceOnly(org.id, channel.id, true).catch(() => {});
+        await qc.invalidateQueries({ queryKey: roomsKey(org.id) });
+      }
       return channel;
     },
     onSuccess: async (channel) => {
@@ -295,6 +305,7 @@ export function NewChannelDialog({
     setCategoryId(category);
     setSelected(new Set());
     setTouched(false);
+    setKind("text");
     create.reset();
   }, [open, category, create.reset]);
   const taken = useHeldWhile(new Set((channels.data ?? []).map((c) => c.name)), create.isPending || create.isSuccess);
@@ -338,6 +349,23 @@ export function NewChannelDialog({
                 autoFocus
               />
             </Field>
+            {voiceOn && (
+              <Field label={t("voiceRooms.room.kind")} id="ch-kind" group>
+                <Segmented
+                  label={t("voiceRooms.room.kind")}
+                  value={kind}
+                  onValueChange={setKind}
+                  options={[
+                    { value: "text", label: t("voiceRooms.room.kindText") },
+                    {
+                      value: "voice",
+                      label: t("voiceRooms.room.kindVoice"),
+                      title: t("voiceRooms.room.kindVoiceHint"),
+                    },
+                  ]}
+                />
+              </Field>
+            )}
             <Field label={t("newChannel.topic")} id="ch-topic">
               <Input
                 value={topic}

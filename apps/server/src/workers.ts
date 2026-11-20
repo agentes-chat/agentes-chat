@@ -7,6 +7,7 @@ import {
   claimStuckPhoneSetups,
   clearOldOutboxPayloads,
   consolidateRunAt,
+  continueWorkAtStepLimit,
   createOutboxPump,
   type DesktopControl,
   enqueue,
@@ -396,6 +397,15 @@ export function startWorkers(deps: WorkerDeps) {
     // Long work whose run ended without closing it (a crash between the two) gets its end, once (ADR 0121 §7).
     const closed = await reconcileWorks({ db, pubsub: deps.pubsub });
     if (closed > 0) log.warn("background works closed by the sweep", { works: closed });
+    // VPS Zen: work that ran out of steps goes on by itself, once.
+    const continued = await continueWorkAtStepLimit(
+      { db, pubsub: deps.pubsub },
+      {
+        onError: (runId, error) =>
+          log.info("a run at its step limit stays for a person", { runId, error: String(error) }),
+      },
+    );
+    if (continued.length > 0) log.info("runs at their step limit continued", { runs: continued.length });
   });
 
   every("inboxes", WORKER_INTERVALS_MS.inboxes, async () => {

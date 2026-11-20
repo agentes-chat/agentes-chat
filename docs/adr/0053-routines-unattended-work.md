@@ -237,6 +237,27 @@ This changes §10's last bullet: background jobs take at most half of the long s
 
 ADR 0163 takes this further: workspaces take turns in each lane, the long lane grows as far as memory allows instead of 4 jobs per database connection, and worker processes add slots.
 
+## Addendum 2026-11-12: full access on one computer (§3)
+
+Some computers are given to agents outright: a server whose owner already gave the agents' Linux user sudo and the
+docker group, so that they run it (restart services, read logs, deploy). There the command policy only got in the
+way: sudo, `systemctl`, writes outside the folder and reading a `.env` were refused before Linux was asked, and the
+refusal told the agent to give up.
+
+`AGENTES_RUNNER_FULL_ACCESS=1` in the runner's environment (a systemd drop-in, `launchctl setenv`) turns this off on
+that one computer, for `work` turns (`apps/server/runner/full-access.ts`):
+
+- the permission prompt and the delegated gate allow every call, and `commandApproval` holds nothing;
+- Claude Code's work settings allow every tool with no `ask` or deny rules (only a system runner's own home stays
+  unread: its sign-ins aren't the agent's work);
+- Codex runs with `danger-full-access` and, through the app-server, `approvalPolicy: never`;
+- the turn's instructions end with a note saying so.
+
+It stays a computer's switch, not a server's, and off by default: the server keeps §3 for every other computer, a
+`plan` turn stays read only, the team's right hand keeps its tools off, and a push through our git proxy is still the
+server's to decide. Nothing the server stores changes, so no migration. What the agents can do there is what that
+Linux user can do: the switch is for computers whose owner decided exactly that.
+
 ## Addendum 2026-11-12: Codex on Windows (§3)
 
 Codex runs on Windows from runner protocol 60 (ADR 0032, "Codex"). There §3 holds through Windows' own isolation, not the command policy:

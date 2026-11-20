@@ -49,6 +49,7 @@ import { notifyIssueChanged } from "./notification-producers";
 import { can, getMembership, requireActiveMembership } from "./organizations";
 import { runReadOutsideById } from "./outside";
 import { membersWhoMaySql } from "./permissions";
+import { type ReviewStep, readyForDone, reviewStep, stateOf, type TaskPullRequest, taskRefsOf } from "./review-step";
 import { queueTaskCheck, queueTaskEnd, tellTaskEnd } from "./right-hand-follow";
 import { fireRoutineEvent } from "./routines";
 import { agentSearchChannels, enqueueIndex, registerDocumentBuilder } from "./search";
@@ -118,7 +119,10 @@ export interface IssueView {
   audience: IssueAudience;
   /** The issue this one is a sub-issue of. */
   parentIssueId: string | null;
-  pullRequests: { number: number; url: string; openedBy: WorkActor | null }[];
+  /** `state`: open, merged or closed on GitHub, from the workspace's GitHub webhook (VPS Zen); none heard: open. */
+  pullRequests: { number: number; url: string; openedBy: WorkActor | null; state?: "open" | "merged" | "closed" }[];
+  /** VPS Zen: in review, the one thing it waits on and who moves it (`review-step.ts`); null in any other stage. */
+  review: ReviewStep | null;
   /** The GitHub issue or pull request it is about: only a link, nothing syncs. */
   githubUrl: string | null;
   artifacts: { id: string; title: string; createdBy: WorkActor }[];
@@ -666,6 +670,13 @@ async function views(db: Database, rows: IssueRow[], reader?: string): Promise<I
     audience: taskAudienceOf(r, tied),
     parentIssueId: r.parentIssueId,
     pullRequests: r.pullRequests as unknown as IssueView["pullRequests"],
+    review: reviewStep({
+      status: r.status,
+      pullRequests: r.pullRequests as unknown as TaskPullRequest[],
+      criteria: r.criteria,
+      assignee: r.assigneeType && r.assigneeId ? { type: r.assigneeType as WorkActor["type"], id: r.assigneeId } : null,
+      createdBy: { type: r.createdByType as WorkActor["type"], id: r.createdById },
+    }),
     githubUrl: r.githubUrl,
     artifacts: r.artifactIds.flatMap((id) => {
       const f = byId.get(id);
@@ -834,6 +845,9 @@ function eventDetail(event: string | null, data: Record<string, unknown>) {
       if (!("dueDate" in data)) return {};
       return s(data.dueDate) ? out("due_date_set", { date: s(data.dueDate) as string }) : out("due_date_removed");
     case "pr_linked":
+    case "pr_merged":
+    case "pr_closed":
+    case "pr_reopened":
       return s(data.number) ? out(event, { number: s(data.number) as string }) : {};
     case "github_link":
       return out(s(data.url) ? "github_linked" : "github_unlinked");
@@ -2230,6 +2244,121 @@ export async function setIssueAudience(
     event: { type: "issue.audience", issueId: current.id },
   });
   return one(db, (await reload(db, row)) ?? row, readerOf(actor));
+}
+
+/**
+ * VPS Zen: a pull request event from the workspace's GitHub webhook (`handleWebhook`) moves the tasks it belongs to.
+ * A PR opened (or edited) naming `task #N` in its title, body or branch is linked to that open task, which goes to
+ * review as a PR linked by hand does. Each task holding the PR records its state; a merge that leaves the task with
+ * every PR merged and every criterion checked moves it to done, else the task stays in review and its review step
+ * (`review-step.ts`) names what is left. A close without a merge is an event in the task, and its step says so.
+ * Returns how many tasks changed. Redelivered events change nothing twice: each state is set, not toggled.
+ */
+export async function applyPullRequestEvent(
+  deps: IssueDeps,
+  orgId: string,
+  payload: Record<string, unknown>,
+): Promise<number> {
+  const { db } = deps;
+  const o = (v: unknown) => (v && typeof v === "object" ? (v as Record<string, unknown>) : {});
+  const pr = o(payload.pull_request);
+  const action = String(payload.action ?? "");
+  const url = typeof pr.html_url === "string" ? pr.html_url : "";
+  const number = Number(pr.number);
+  if (!isHttpsUrl(url) || !Number.isInteger(number) || number <= 0) return 0;
+  const merged = action === "closed" && pr.merged === true;
+  const state: TaskPullRequest["state"] =
+    action === "closed"
+      ? merged
+        ? "merged"
+        : "closed"
+      : action === "opened" || action === "reopened"
+        ? "open"
+        : undefined;
+  const linking = action === "opened" || action === "reopened" || action === "edited";
+  const refs = linking ? taskRefsOf(String(pr.title ?? ""), String(pr.body ?? ""), String(o(pr.head).ref ?? "")) : [];
+  const holding = await db
+    .select()
+    .from(issues)
+    .where(and(eq(issues.orgId, orgId), sql`${issues.pullRequests} @> ${JSON.stringify([{ url }])}::jsonb`));
+  const named = refs.length
+    ? await db
+        .select()
+        .from(issues)
+        .where(
+          and(
+            eq(issues.orgId, orgId),
+            inArray(issues.number, refs),
+            inArray(issues.status, ["todo", "in_progress", "in_review"]),
+          ),
+        )
+    : [];
+  const rows = [...holding, ...named.filter((n) => !holding.some((h) => h.id === n.id))];
+  let changed = 0;
+  for (const current of rows) {
+    const list = current.pullRequests as unknown as TaskPullRequest[];
+    const had = list.find((p) => p.url === url);
+    if (had && (!state || stateOf(had) === state)) continue;
+    const entry: TaskPullRequest = had
+      ? { ...had, ...(state ? { state } : {}), ...(merged ? { mergedAt: new Date().toISOString() } : {}) }
+      : { number, url, openedBy: null, state: state ?? "open" };
+    const prs = had ? list.map((p) => (p.url === url ? entry : p)) : [...list, entry];
+    const author: WorkActor =
+      had?.openedBy ??
+      (current.assigneeType && current.assigneeId
+        ? { type: current.assigneeType as WorkActor["type"], id: current.assigneeId }
+        : { type: current.createdByType as WorkActor["type"], id: current.createdById });
+    const set: Partial<typeof issues.$inferInsert> = {
+      pullRequests: prs as unknown as Record<string, unknown>[],
+      updatedAt: new Date(),
+    };
+    const events: { text: string; event: string; data: Record<string, unknown> }[] = [];
+    if (!had) {
+      events.push({ text: `linked PR #${number}`, event: "pr_linked", data: { url, number, auto: true } });
+      if (current.status === "todo" || current.status === "in_progress") {
+        Object.assign(set, { status: "in_review", columnId: null, boardRank: topRank() });
+        events.push({
+          text: `changed the status to ${STATUS_WORDS.in_review} (automatic: a PR was linked)`,
+          event: "status_changed",
+          data: { from: current.status, to: "in_review", auto: true },
+        });
+      }
+    } else if (state === "merged") {
+      events.push({ text: `PR #${number} merged on GitHub`, event: "pr_merged", data: { url, number, auto: true } });
+      const open = current.status === "in_progress" || current.status === "in_review";
+      if (open && readyForDone({ pullRequests: prs, criteria: current.criteria })) {
+        Object.assign(set, { status: "done", columnId: null, boardRank: topRank(), blocked: null });
+        events.push({
+          text: `changed the status to ${STATUS_WORDS.done} (automatic: every PR merged, every criterion checked)`,
+          event: "status_changed",
+          data: { from: current.status, to: "done", auto: true },
+        });
+      }
+    } else if (state === "closed") {
+      events.push({
+        text: `PR #${number} closed on GitHub without a merge`,
+        event: "pr_closed",
+        data: { url, number, auto: true },
+      });
+    } else if (state === "open") {
+      events.push({
+        text: `PR #${number} reopened on GitHub`,
+        event: "pr_reopened",
+        data: { url, number, auto: true },
+      });
+    }
+    const row = await db.transaction(async (tx) => {
+      const [updated] = await tx.update(issues).set(set).where(eq(issues.id, current.id)).returning();
+      if (!updated) return null;
+      for (const e of events) await addActivity(tx, updated, { kind: "event", author, ...e });
+      return updated;
+    });
+    if (!row) continue;
+    changed += 1;
+    await announce(deps, orgId, await one(db, row), "issue.updated");
+    if (row.status !== current.status) await notifyIssueChanged(deps, author, current, row).catch(() => {});
+  }
+  return changed;
 }
 
 /**

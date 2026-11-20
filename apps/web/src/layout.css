@@ -6327,7 +6327,7 @@ html:not([data-pointer]) .tr-ok:focus-visible {
   --side-active: var(--pane);
 }
 [data-theme="dark"] .sidebar {
-  --side-active: color-mix(in srgb, var(--ink) 7%, var(--side));
+  --side-active: color-mix(in srgb, var(--ink) 11%, var(--side));
 }
 .sidebar > *,
 .sidebar__scroll > * {
@@ -8010,6 +8010,25 @@ html:not([data-pointer]) .sky-welcome__close:focus-visible {
  */
 .sidebar__item[data-busy="true"] > :where(:not(.sidebar__trail, .sidebar__glow)) {
   position: relative;
+}
+/* VPS Zen: a working agent's row can't be missed: a lit edge in its color that breathes. */
+.sidebar__item[data-busy="true"] {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--sel-glow-color, var(--agent)) 62%, transparent),
+    0 0 12px color-mix(in srgb, var(--sel-glow-color, var(--agent)) 38%, transparent);
+  animation: sidebar-working 2.2s ease-in-out infinite;
+}
+@keyframes sidebar-working {
+  50% {
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, var(--sel-glow-color, var(--agent)) 90%, transparent),
+      0 0 20px color-mix(in srgb, var(--sel-glow-color, var(--agent)) 60%, transparent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebar__item[data-busy="true"] {
+    animation: none;
+  }
 }
 .sidebar__trail,
 .sidebar__glow {
@@ -15091,6 +15110,64 @@ html:not([data-pointer]) .rh-set__face-edit:focus-visible {
     width: auto;
     min-width: 0;
   }
+}
+
+/* VPS Zen: files dragged over the conversation (not only the composer's card) go to the composer. */
+.channel__col[data-dropping] {
+  position: relative;
+}
+.channel__col[data-dropping]::after {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border: 2px dashed var(--accent, #6b8afd);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent, #6b8afd) 8%, transparent);
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* VPS Zen: a channel's faces in place of its "#" (Sidebar.tsx, `sidebar-faces.ts`). The "#" slot is 14px wide
+   (`.sidebar__channel-icon` above), too narrow for a stack: the faces get a box of their own, 18px faces overlapping
+   by 6px, so the name starts after them instead of under them. The rail keeps the channel's initials. */
+.sidebar:not([data-rail="true"]) .sidebar__item > .sidebar__channel-icon.sidebar__faces {
+  width: auto;
+  height: 18px;
+  margin: 0;
+}
+.sidebar__faces {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  --stack-ring: var(--side, var(--surface-sunken));
+}
+.sidebar__faces > .ac-avatar {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  font-size: 8px;
+}
+.sidebar__faces > .ac-avatar + .ac-avatar,
+.sidebar__faces > .ac-avatar[data-kind="person"]:not(:has(img)) + .ac-avatar {
+  margin-left: -6px;
+}
+.sidebar__faces-more {
+  margin-left: 4px;
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--ink-muted);
+}
+.sidebar__item:has(> .sidebar__faces) > .sidebar__item-label {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar[data-rail="true"] .sidebar__item:has(> .sidebar__channel-abbr) > .sidebar__faces {
+  display: none;
 }
 
 /* A handed work's line under the reply that handed it (ADR 0121 addendum): the delegate's face inline, the state word

@@ -115,7 +115,27 @@ const Issue = z
       })
       .openapi({ description: "Who sees it besides administrators (ADR 0151)." }),
     parentIssueId: z.uuid().nullable().openapi({ description: "The issue this one is a sub-issue of." }),
-    pullRequests: z.array(z.object({ number: z.number(), url: z.string(), openedBy: Actor.nullable() })),
+    pullRequests: z.array(
+      z.object({
+        number: z.number(),
+        url: z.string(),
+        openedBy: Actor.nullable(),
+        state: z
+          .enum(["open", "merged", "closed"])
+          .optional()
+          .openapi({ description: "From the workspace's GitHub webhook; none heard yet: open." }),
+      }),
+    ),
+    review: z
+      .object({
+        kind: z.enum(["merge", "reopen", "criterion", "decide", "ready"]),
+        prs: z.array(z.object({ number: z.number(), url: z.string() })),
+        criterion: z.string().nullable(),
+        decider: z.object({ type: z.enum(["person", "agent"]), id: z.string().nullable() }),
+      })
+      .nullable()
+      .optional()
+      .openapi({ description: "In review: the one thing it waits on and who moves it; null in any other stage." }),
     githubUrl: z.string().nullable(),
     artifacts: z.array(z.object({ id: z.uuid(), title: z.string(), createdBy: Actor })),
     work: z

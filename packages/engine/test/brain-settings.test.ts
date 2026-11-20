@@ -66,7 +66,9 @@ describe("brain settings", () => {
       "Opus 5.5",
       "Sonnet 5.5",
       "Haiku 5.5",
+      "Fable 5.1",
     ]);
+    expect(brainModelOptions("claude_code").at(-1)?.value).toBe("claude-fable-5-1");
     // Fable runs under Claude Code's own alias, and a full id is kept as its alias.
     expect(normalizeBrainModel("claude_code", "fable")).toBe("fable");
     expect(normalizeBrainModel("claude_code", "claude-fable-5-2")).toBe("fable");
@@ -92,6 +94,7 @@ describe("brain settings", () => {
     expect(brainModelLabel("claude_code", "opus", "zai")).toBe("GLM-5.3");
     expect(brainModelLabel("claude_code", "auto", "minimax")).toBe("MiniMax M3.1 Flash");
     expect(brainModelLabel("claude_code", "opus")).toBe("Opus 5.5");
+    expect(brainModelLabel("claude_code", "claude-fable-5-1")).toBe("Fable 5.1");
     expect(normalizeBrainModel("claude_code", "haiku")).toBe("haiku");
     // One of a plan's other models is stored by its id and named after it there; while Claude thinks it runs Sonnet.
     expect(normalizeBrainModel("claude_code", "deepseek-v4.1-flash")).toBe("deepseek-v4.1-flash");

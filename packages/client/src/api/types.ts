@@ -1426,6 +1426,10 @@ export interface Channel {
   unreadCount?: number;
   /** Channel list only: of `unreadCount`, the messages that mention you (counted even while muted). */
   mentionCount?: number;
+  /** Channel list only (VPS Zen): up to 3 members for the sidebar's faces, agents first; empty when not a member. */
+  faces?: { type: "person" | "agent"; id: string }[];
+  /** Channel list only (VPS Zen): how many are in it; 0 when not a member. */
+  memberCount?: number;
   /** Channel list only: where the unread starts (when you last read it, or joined); null when not a member. */
   lastReadAt?: string | null;
   /** Channel list only: you muted it, so it never looks unread. */
@@ -4156,7 +4160,10 @@ export interface Issue {
    * Absent on an older server: as `everyone`.
    */
   audience?: { mode: "everyone" | "people"; userIds: string[]; channelId: string | null };
-  pullRequests: { number: number; url: string; openedBy: Actor | null }[];
+  /** `state`: from the workspace's GitHub webhook; none heard yet: open. */
+  pullRequests: { number: number; url: string; openedBy: Actor | null; state?: "open" | "merged" | "closed" }[];
+  /** In review: the one thing it waits on and who moves it; null in any other stage (absent on an older server). */
+  review?: IssueReviewStep | null;
   /** The GitHub issue or pull request it is about: only a link, nothing syncs. */
   githubUrl: string | null;
   artifacts: { id: string; title: string; createdBy: Actor }[];
@@ -4173,6 +4180,17 @@ export interface Issue {
   subIssues?: { id: string; number: number; title: string; status: IssueStatus; assignees: Actor[] }[];
   createdAt: string;
   updatedAt: string;
+}
+
+/**
+ * What a task in review waits on: a merge of `prs`, its PRs reopened (all closed unmerged), a `criterion`, a person's
+ * decision, or nothing (`ready`). `decider`: who moves it; a person with no id is whoever reviews.
+ */
+export interface IssueReviewStep {
+  kind: "merge" | "reopen" | "criterion" | "decide" | "ready";
+  prs: { number: number; url: string }[];
+  criterion: string | null;
+  decider: { type: "person" | "agent"; id: string | null };
 }
 
 /** Where a task's conversation lives (ADR 0145): the chat's routes read and post to this thread. */
@@ -7684,6 +7702,123 @@ export interface HiddenTasks {
   working: number;
   /** Per agent: its tasks still on. */
   byAgent: Record<string, number>;
+}
+
+/** VPS Zen: the Central (`GET …/central`), mirrors `packages/engine/src/vps-central.ts`. */
+export type CentralState =
+  | "queued"
+  | "working"
+  | "quiet"
+  | "stalled"
+  | "waiting_you"
+  | "waiting_other"
+  | "done"
+  | "failed"
+  | "stopped";
+
+export interface CentralTask {
+  runId: string;
+  agentId: string;
+  channelId: string;
+  channelKind: "channel" | "dm";
+  channelName: string | null;
+  betweenAgents: boolean;
+  threadId: string | null;
+  title: string | null;
+  state: CentralState;
+  waitsOn: string | null;
+  startedAt: string | null;
+  createdAt: string;
+  finishedAt: string | null;
+  lastSignalAt: string;
+  progress: { done: number; total: number; percent: number } | null;
+  latestUpdate: string | null;
+  requester:
+    | { kind: "person"; id: string; name: string }
+    | { kind: "agent"; id: string }
+    | { kind: "routine"; name: string }
+    | null;
+  origin: string | null;
+  now: { tool: string; detail: string | null } | null;
+  steps: number;
+  helpers: number;
+  error: string | null;
+  canStop: boolean;
+  canContinue: boolean;
+}
+
+export interface CentralAgent {
+  id: string;
+  name: string;
+  handle: string;
+  role: string;
+  brain: string;
+  model: string | null;
+  effort: string | null;
+  approvals: string;
+  hasInstructions: boolean;
+  machine: { id: string; name: string; online: boolean } | null;
+  activity: number[];
+  doneThisWeek: number;
+  failedThisWeek: number;
+  reportsToAgentId: string | null;
+  memory: { rssMb: number; processes: number; at: string } | null;
+}
+
+export interface CentralLink {
+  from: { kind: "agent"; id: string } | { kind: "person"; id: string; name: string };
+  toAgentId: string;
+  asks: number;
+  tasks: number;
+  lastAt: string;
+}
+
+export interface CentralTalk {
+  id: string;
+  fromAgentId: string;
+  toAgentId: string;
+  kind: string;
+  status: string;
+  createdAt: string;
+  answeredAt: string | null;
+  question: string | null;
+  answer: string | null;
+}
+
+export interface CentralPullRequest {
+  repo: string;
+  number: number;
+  agentId: string;
+  authored: boolean;
+  channelId: string;
+  threadId: string | null;
+  updatedAt: string;
+  url: string;
+}
+
+export interface CentralComputer {
+  id: string;
+  name: string;
+  online: boolean;
+  version: string | null;
+  cpus: number | null;
+  memoryGb: number | null;
+  memoryAvg: number | null;
+  memoryPeak: number | null;
+  diskFreeGb: number | null;
+  working: number;
+  inLine: number;
+}
+
+export interface CentralView {
+  at: string;
+  agents: CentralAgent[];
+  tasks: CentralTask[];
+  talks: CentralTalk[];
+  pullRequests: CentralPullRequest[];
+  computers: CentralComputer[];
+  links: CentralLink[];
+  hiddenTasks: number;
 }
 
 export interface TaskManagerView {

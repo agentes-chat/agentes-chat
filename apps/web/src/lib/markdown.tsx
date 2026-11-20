@@ -4,6 +4,7 @@ import { linkPill } from "@agenteschat/client/lib/link-pills";
 import { headingId, INLINE, MENTION, parseMarkdown, parseWikiToken, SAFE_URL } from "@agenteschat/client/lib/markdown";
 import { parseFileLink, parseMessageLink } from "@agenteschat/client/lib/message-links";
 import { type ReactNode, useMemo } from "react";
+import { HtmlPreview, isHtmlLang } from "@/central/HtmlPreview";
 import { FileRef } from "@/chat/FileRef";
 import { LinkPill } from "@/chat/LinkPill";
 import { MessageRef } from "@/chat/MessageRef";
@@ -277,6 +278,9 @@ export function Markdown({
         const lang = b.lang.toLowerCase();
         if (lang === "chart") return <ChartOrCode key={k} text={b.text} />;
         if (lang === "mermaid" && !excerpt) return <MermaidOrCode key={k} text={b.text} />;
+        // VPS Zen: an HTML block shows as the page, "Código" one press away; in a quoted excerpt it stays code.
+        if (isHtmlLang(lang) && !excerpt && b.text.trim())
+          return <CodeBlock key={k} lang={b.lang} text={b.text} preview={<HtmlPreview html={b.text} />} />;
         return <CodeBlock key={k} lang={b.lang} text={b.text} />;
       }
       case "list": {

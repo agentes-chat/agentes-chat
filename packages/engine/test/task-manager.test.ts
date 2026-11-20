@@ -174,6 +174,30 @@ describe("work agents asked of each other (ADR 0128)", () => {
     expect(row?.subject).toBe("Agora veja a fila.");
   });
 
+  test("VPS Zen: a computer brain's own calls (ownTool) are steps of the task, the now line and the count", async () => {
+    f = await setup();
+    const { helper } = await delegated();
+    await addRunStep(f.db, helper, "context", {
+      ownTool: { toolUseId: "t1", name: "Bash", detail: "Roda os testes", startedAt: "2026-11-13T03:00:00.000Z" },
+    });
+    await addRunStep(f.db, helper, "context", {
+      ownTool: { toolUseId: "t2", name: "Edit", detail: "src/app.ts", isError: true },
+    });
+    // Another context step says nothing of the work.
+    await addRunStep(f.db, helper, "context", { roomFound: true });
+    const { steps } = await taskSteps(f.db, f.owner.id, f.org.id, helper.id);
+    expect(steps.map((s) => [s.kind, s.data.name, s.data.detail ?? null, s.data.isError ?? null])).toEqual([
+      ["tool_call", "Bash", "Roda os testes", null],
+      ["tool_result", "Bash", null, null],
+      ["tool_call", "Edit", "src/app.ts", null],
+      ["tool_result", "Edit", null, true],
+    ]);
+    expect(steps[0]?.createdAt).toBe("2026-11-13T03:00:00.000Z");
+    const row = (await taskManager(f.db, f.owner.id, f.org.id)).tasks.find((t) => t.runId === helper.id);
+    expect(row?.steps).toBe(2);
+    expect(row?.now).toMatchObject({ tool: "Edit", detail: "src/app.ts" });
+  });
+
   test("hidden work asking its computer from the line counts as waiting, not working", async () => {
     f = await setup();
     const { infra, helper } = await delegated();

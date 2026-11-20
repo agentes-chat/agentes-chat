@@ -1,10 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { renderSound, SAMPLE_RATE, SOUND_STYLES, SOUNDS, wavBytes } from "../src/sfx/synth";
+import { KEY_SOUND, renderSound, SAMPLE_RATE, SOUND_STYLES, SOUNDS, type SynthSound, wavBytes } from "../src/sfx/synth";
+
+const EVERY: SynthSound[] = [...SOUNDS, KEY_SOUND];
 
 describe("synthesized sounds", () => {
   for (const style of SOUND_STYLES)
     test(`${style}: every sound is short, finite, below full scale, and silent at both ends`, () => {
-      for (const name of SOUNDS) {
+      for (const name of EVERY) {
         const x = renderSound(style, name);
         const seconds = x.length / SAMPLE_RATE;
         expect(seconds).toBeGreaterThan(0.03);
@@ -23,6 +25,18 @@ describe("synthesized sounds", () => {
 
   test("the same sound renders the same samples every time (every device hears the same)", () => {
     expect(renderSound("tactile", "attention")).toEqual(renderSound("tactile", "attention"));
+  });
+
+  test("a key click is the shortest and quietest sound, so a run of them stays under the conversation", () => {
+    for (const style of SOUND_STYLES) {
+      const peak = (x: Float32Array) => x.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
+      const key = renderSound(style, KEY_SOUND);
+      for (const name of SOUNDS) {
+        const other = renderSound(style, name);
+        expect(key.length).toBeLessThan(other.length);
+        expect(peak(key)).toBeLessThan(peak(other));
+      }
+    }
   });
 
   test("the styles sound different", () => {

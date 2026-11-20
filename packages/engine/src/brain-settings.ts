@@ -216,6 +216,10 @@ export const antigravityModels = (listed: readonly { id: string; label?: string 
     return { value: m.id, label: m.label || m.id, ...(catalogModelOf(base) ? { modelId: base } : {}) };
   });
 
+/** A Claude model's name without the family ("Claude Opus 5.5" → "Opus 5.5"), so a choice shows its version. */
+const claudeLabel = (modelId: string, fallback: string) =>
+  MODEL_CATALOG[modelId]?.label.replace(/^Claude\s+/, "") ?? fallback;
+
 /**
  * Claude Code's aliases (`--model fable|opus|sonnet|haiku`), mapped to today's ids in the catalog. Each is named by
  * its catalog row without the maker ("Opus 5.5"), so moving an alias to a new id renames it with no copy change.
@@ -229,6 +233,18 @@ export const CLAUDE_CODE_MODELS: readonly BrainModelOption[] = (
     { value: "haiku", modelId: "claude-haiku-5-5" },
   ] as const
 ).map((o) => ({ ...o, label: MODEL_CATALOG[o.modelId]?.label.replace(/^Claude /, "") ?? o.value }));
+
+/**
+ * Every Claude model Claude Code can run: the aliases first, then each other Anthropic row of the catalog by its full
+ * id (`--model claude-fable-5-1`), so a subscription's whole list shows, each with its version.
+ */
+export const claudeCodeModels = (): BrainModelOption[] => {
+  const aliased = new Set(CLAUDE_CODE_MODELS.map((o) => o.modelId));
+  const others = Object.entries(MODEL_CATALOG)
+    .filter(([id, m]) => m.provider === "anthropic" && !aliased.has(id))
+    .map(([id, m]) => ({ value: id, label: claudeLabel(id, m.label), modelId: id }));
+  return [...CLAUDE_CODE_MODELS, ...others];
+};
 
 /** Codex's models: the OpenAI rows of the catalog (any other name is accepted as typed). */
 export const codexModels = (): BrainModelOption[] =>
@@ -250,7 +266,7 @@ export function brainModelOptions(
 }
 
 function modelChoices(kind: BrainKind, machine?: { executors?: schema.MachineExecutors | null } | null) {
-  if (kind === "claude_code") return [...CLAUDE_CODE_MODELS];
+  if (kind === "claude_code") return claudeCodeModels();
   if (kind === "codex") return codexModels();
   if (kind === "cursor") return cursorModels(machine?.executors?.cursor?.models);
   if (kind === "opencode") return opencodeModels(machine?.executors?.opencode?.models);

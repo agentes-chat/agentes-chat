@@ -272,6 +272,7 @@ import { AgentPanel } from "@/components/AgentPanel";
 import { ApprovalAsk, ApprovalGroupAsk } from "@/components/ApprovalAsk";
 import { AgentPanelContext, AgentPanelShownContext, useOpenAgentPanel } from "@/components/agent-panel-context";
 import { AgentSidebar } from "@/components/agents/AgentSidebar";
+import { ComposerBrainChip } from "@/components/agents/ThinksPicker";
 import { ModelStandInLine } from "@/components/ai/ModelPicker";
 import { ArtifactCard } from "@/components/artifacts/ArtifactCard";
 import { ImageSet } from "@/components/artifacts/ArtifactViewer";
@@ -436,6 +437,9 @@ import {
   useStreams,
   useTypingSender,
 } from "@/realtime/context";
+import { VoiceChannelRoom } from "@/voice/VoiceRoom";
+import { useVoiceRooms, VoiceStage } from "@/voice/VoiceUI";
+import { useVoiceView } from "@/voice/views";
 import { ThreadPage } from "./ThreadPage";
 
 /** One clock for every "· 12 s" on screen: the block and the card above the box never differ by a second. */
@@ -687,20 +691,32 @@ export function ChannelPage({
     );
   }
   return (
-    // "Arquivos", "Ver plano", "Ver no arquivo": any mission card here opens the same files panel.
-    <MissionPanelProvider>
-      {/* A routine or a task an agent names here opens in its dialog over the conversation; leaving it closes it. */}
-      <InPlaceProvider key={`${channel.id}:${thread?.id ?? ""}:${adjustThreadId ?? ""}`}>
-        <ChannelView
-          channel={channel}
-          chrome={chrome}
-          focusMessageId={focusMessageId}
-          adjustThreadId={adjustThreadId}
-          thread={thread}
-        />
-      </InPlaceProvider>
-    </MissionPanelProvider>
+    <VoiceOnlyRoom channel={channel} plain={!chrome && !thread && !adjustThreadId && !focusMessageId}>
+      {/* "Arquivos", "Ver plano", "Ver no arquivo": any mission card here opens the same files panel. */}
+      <MissionPanelProvider>
+        {/* A routine or a task an agent names here opens in its dialog over the conversation; leaving it closes it. */}
+        <InPlaceProvider key={`${channel.id}:${thread?.id ?? ""}:${adjustThreadId ?? ""}`}>
+          <ChannelView
+            channel={channel}
+            chrome={chrome}
+            focusMessageId={focusMessageId}
+            adjustThreadId={adjustThreadId}
+            thread={thread}
+          />
+        </InPlaceProvider>
+      </MissionPanelProvider>
+    </VoiceOnlyRoom>
   );
+}
+
+/** VPS Zen: a voice-only channel opens on its room; "Chat" shows the conversation, as any channel's. */
+function VoiceOnlyRoom({ channel, plain, children }: { channel: Channel; plain: boolean; children: ReactNode }) {
+  const { org } = useOrg();
+  const { voiceChannels } = useVoiceRooms(org.id);
+  const view = useVoiceView(channel.id);
+  if (plain && channel.isMember && voiceChannels.has(channel.id) && view === "room")
+    return <VoiceChannelRoom channel={channel} />;
+  return <>{children}</>;
 }
 
 /**
@@ -1889,21 +1905,49 @@ function ChannelView({
     chrome?.panel ? null : channel.id,
     dmWithAgent ? colorOf(dmWithAgent) : undefined,
   );
-  // The composer's one pill: the mission this message answers, which can be called off.
-  const composerPills = missionReply ? (
-    <span className="ac-composer__pill composer-reply">
-      <Icon name="message" size={14} />
-      <span className="ac-composer__pill-text">{t("missions.reply.pill", { label: missionReply.label })}</span>
-      <button
-        type="button"
-        className="composer-reply__close"
-        aria-label={t("missions.reply.cancel")}
-        onClick={() => setMissionReply(null)}
-      >
-        <Icon name="close" size={14} />
-      </button>
-    </span>
-  ) : undefined;
+  const draftAgents = useMemo(
+    () =>
+      [
+        ...new Set(
+          tokenizeBody(draft).flatMap((tok) =>
+            tok.type === "mention" ? [dir.agentByHandle.get(tok.handle.toLowerCase())?.id] : [],
+          ),
+        ),
+      ]
+        .map((id) => (id ? dir.agentById.get(id) : undefined))
+        .filter((a): a is Agent => Boolean(a)),
+    [draft, dir.agentByHandle, dir.agentById],
+  );
+  const pillAgents = dmAgent ? [dmAgent] : draftAgents;
+  const composerPills =
+    pillAgents.length > 0 || missionReply ? (
+      <>
+        {missionReply && (
+          <span className="ac-composer__pill composer-reply">
+            <Icon name="message" size={14} />
+            <span className="ac-composer__pill-text">{t("missions.reply.pill", { label: missionReply.label })}</span>
+            <button
+              type="button"
+              className="composer-reply__close"
+              aria-label={t("missions.reply.cancel")}
+              onClick={() => setMissionReply(null)}
+            >
+              <Icon name="close" size={14} />
+            </button>
+          </span>
+        )}
+        {pillAgents.map((a) => (
+          <Fragment key={a.id}>
+            <span className="ac-composer__agent">
+              <AgentAvatar agentId={a.id} channelId={channel.id} name={a.name} size="xs" />
+              <span className="ac-composer__pill-text">{a.name}</span>
+            </span>
+            {/* VPS Zen: its model and effort, one click from the composer (ThinksPicker). */}
+            <ComposerBrainChip agent={a} />
+          </Fragment>
+        ))}
+      </>
+    ) : undefined;
   // "/" commands, for the DM agent or the channel's suggested agent.
   const commandAgent = dmAgent ?? suggestedAgent;
   const navigateTo = useNavigate();
@@ -2142,6 +2186,9 @@ function ChannelView({
       urls.clear();
     };
   }, []);
+  // VPS Zen: files dragged over the whole conversation, not only the composer's card.
+  const [pageDrop, setPageDrop] = useState(false);
+  const dropOn = isMember && !chrome?.locked && channel.can?.post !== false;
   const addFiles = (list: File[]) => {
     const room = MAX_ATTACHMENTS - files.length;
     if (list.length > room) toast.show(t("channel.tooManyFiles", { max: MAX_ATTACHMENTS }), "error");
@@ -2621,8 +2668,37 @@ function ChannelView({
                 )}
                 {/* Under the header: the conversation, and the members beside it (the header spans both, as Discord's). */}
                 <div className="channel__body">
-                  <div className="channel__col" data-wallpaper={wallpaper?.wallpaper.kind} style={wallpaper?.vars}>
+                  {/* biome-ignore lint/a11y/noStaticElementInteractions: VPS Zen, files dropped anywhere on the conversation go to the composer (the attach button is the accessible way) */}
+                  <div
+                    className="channel__col"
+                    data-wallpaper={wallpaper?.wallpaper.kind}
+                    style={wallpaper?.vars}
+                    data-dropping={pageDrop || undefined}
+                    onDragOver={(e) => {
+                      if (!dropOn || !Array.from(e.dataTransfer?.types ?? []).includes("Files")) return;
+                      e.preventDefault();
+                      if (!pageDrop) setPageDrop(true);
+                    }}
+                    onDragLeave={(e) => {
+                      if (!(e.relatedTarget instanceof Node && e.currentTarget.contains(e.relatedTarget)))
+                        setPageDrop(false);
+                    }}
+                    onDrop={(e) => {
+                      setPageDrop(false);
+                      // The composer's own card took them already.
+                      if (e.defaultPrevented || !dropOn) return;
+                      const dropped = Array.from(e.dataTransfer?.files ?? []);
+                      if (dropped.length === 0) return;
+                      e.preventDefault();
+                      addFiles(dropped);
+                      composer.current?.focus();
+                    }}
+                  >
                     {wallpaper && <ChatWallpaper wallpaper={wallpaper.wallpaper} strength={wallpaper.strength} />}
+                    {/* VPS Zen: the channel's voice call, or who is in it with a Join. */}
+                    {isMember && !chrome?.panel && (
+                      <VoiceStage orgId={org.id} channelId={channel.id} channelName={channel.name} />
+                    )}
                     {isMember && (
                       <ChannelPinnedBar
                         channelId={channel.id}

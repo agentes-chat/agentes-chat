@@ -1116,7 +1116,8 @@ describe("direct messages with an agent", () => {
     // Its role and owner under the name; what it thinks with on the header's model button.
     expect(document.body.textContent).toContain("Dev · de João");
     expect(document.querySelector(".channel__brain")?.textContent).toBe("Sonnet pelo plano do Claude");
-    expect(document.body.textContent).not.toContain("Claude Sonnet 5.5");
+    // VPS Zen: the composer's model chip may name the model; the header doesn't.
+    expect(document.querySelector(".channel__header")?.textContent).not.toContain("Claude Sonnet 5.5");
     const brain = document.querySelector(".channel__brain") as HTMLElement;
     expect(brain.querySelector(".ac-brand[data-mark='claude']")).not.toBeNull();
     cleanup();

@@ -106,8 +106,12 @@ test("a stall the computer recovered from is kept on the trail; its own calls ar
     .from(schema.agentRunSteps)
     .where(eq(schema.agentRunSteps.runId, run.id))
     .orderBy(asc(schema.agentRunSteps.seq));
-  // Its own calls write nothing; ours are the bridge's tool steps.
-  expect(steps.filter((s) => s.kind === "context" && JSON.stringify(s.data).includes("Bash"))).toEqual([]);
+  // VPS Zen (docs/vps-zen.md, "A computer brain's own calls as steps"): its own calls are `context` steps with
+  // `ownTool`, for "Ver passos", never `tool_call` steps (recovery and continuation replay those); ours are the
+  // bridge's tool steps.
+  const own = steps.filter((s) => s.kind === "context" && JSON.stringify(s.data).includes("Bash"));
+  expect(own.map((s) => (s.data as { ownTool?: { name?: string } }).ownTool?.name)).toEqual(["Bash"]);
+  expect(steps.some((s) => s.kind === "tool_call" && s.data.name === "Bash")).toBe(false);
   expect(steps.some((s) => s.kind === "tool_call" && s.data.name === "search_context")).toBe(true);
   const stalled = steps.filter((s) => s.kind === "error" && s.data.reason === "brain_stalled");
   expect(stalled.map((s) => s.data)).toEqual([

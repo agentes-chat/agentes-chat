@@ -63,6 +63,7 @@ const SIDEWAYS: Record<string, "strip" | "content"> = {
   ".newag .onb__steps": "strip",
   ".newag__tips": "strip",
   ".threads-tabs": "strip",
+  ".voice-stage__tiles--focus>.voice-stage__grid": "strip",
   ".nt-segwrap": "strip",
   ".mi-files__tabs": "strip",
   ".ac-seg": "strip",

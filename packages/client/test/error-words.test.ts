@@ -396,6 +396,8 @@ test("a provider refused this server's own OAuth app: what's wrong and who fixes
  * hit goes in `KNOWN` instead.
  */
 const PLAIN_LINE = new Set([
+  // VPS Zen: voice rooms on a server without LiveKit; the app doesn't offer them there.
+  "voice.off",
   // A file's conversation (ADR 0199): the apps start one only on a live file, never offer a task's or a file's
   // conversation to join, leave or rename, and build a message's `liveRef` from the selection themselves.
   "artifact.no_conversation",

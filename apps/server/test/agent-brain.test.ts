@@ -124,6 +124,8 @@ test("agent brain: defaults, who may, letting others talk to a plan, what the co
     "opus",
     "sonnet",
     "haiku",
+    // VPS Zen: every other Claude row by its id (`claudeCodeModels`); Fable 5.2 is already the `fable` alias.
+    "claude-fable-5-1",
   ]);
   const noComputer = await api(`/agents/${agentId}/brain`, { method: "PUT", json: { brain: "claude_code" } });
   expect(noComputer.status).toBe(409);

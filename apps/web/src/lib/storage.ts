@@ -118,6 +118,10 @@ export const STORAGE_KEYS = {
   appIcon: "agentes.appIcon",
   /** The app's sounds on this device: "tactile" (default), "sky", "pixel" or "off" (lib/sounds.ts). */
   sounds: "agentes.sounds",
+  /** A soft key click as the person types in the message box: "on", or anything else for off (lib/sounds.ts). */
+  typingSounds: "agentes.sounds.typing",
+  /** VPS Zen: the sidebar shows who is in each channel (faces) instead of "#": "off" turns it off. */
+  sidebarFaces: "agentes.sidebar.faces",
   /** In `sessionStore`, this tab's id; in `storage`, the tab the person used last (it plays sounds while hidden). */
   soundTab: "agentes.sounds.tab",
   /** The speed voice messages play at in this browser: "1" (default), "1.5" or "2" (lib/voice-speed.ts). */

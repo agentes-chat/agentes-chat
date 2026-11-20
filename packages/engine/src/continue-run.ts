@@ -36,6 +36,8 @@ export async function continueRun(
   userId: string,
   orgId: string,
   runId: string,
+  // VPS Zen: picked up by itself at its step limit (`continueWorkAtStepLimit`): the run isn't told a person asked.
+  options: { automatic?: boolean } = {},
 ): Promise<{ runId: string }> {
   const { db } = deps;
   const membership = await requireActiveMembership(db, userId, orgId);
@@ -117,7 +119,9 @@ export async function continueRun(
   const carried = stopped.transcript as unknown as Transcript;
   const line = skipped
     ? await answerAnywayText(db, stopped, carried, ended.closed, person?.name ?? "A person")
-    : `[${person?.name ?? "A person"} asked you to continue from where you stopped.]`;
+    : options.automatic
+      ? "[You reached your step limit before finishing. Continue from where you stopped.]"
+      : `[${person?.name ?? "A person"} asked you to continue from where you stopped.]`;
   const transcript = continuedTranscript(carried, line);
   const request = carried.request ?? row.request;
   if (request) transcript.request = request;

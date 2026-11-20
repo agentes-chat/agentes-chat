@@ -1681,6 +1681,23 @@ natively on this machine for them takes `sudo agentes-runner services allow tcp/
 agentes.chat behind a `tailscale serve`, an nginx or a Caddy outside Docker). The Kotlin compile daemon
 doesn't run there: the computer keeps the default uid range, and Kotlin compiles inside Gradle.
 
+**Full access on a computer.** On a computer you give to your agents outright (a server they run for you), the command
+policy can be turned off there alone: put `AGENTES_RUNNER_FULL_ACCESS=1` in its runner's environment. Then agents
+run any command in a work turn, with no card and no refusal from agentes.chat: sudo, `systemctl`, `docker`, files
+anywhere, Codex without its sandbox (ADR 0053, addendum 2026-11-12). What they can really do is what their Linux user
+can, so give that user sudo or the docker group only if you mean it. In simple mode, as root:
+
+```sh
+mkdir -p /home/agentes/.config/systemd/user/agentes-runner.service.d
+printf '[Service]\nEnvironment=AGENTES_RUNNER_FULL_ACCESS=1\n' \
+  > /home/agentes/.config/systemd/user/agentes-runner.service.d/full-access.conf
+chown -R agentes:agentes /home/agentes/.config/systemd
+systemctl --user -M agentes@ daemon-reload && systemctl --user -M agentes@ restart agentes-runner
+```
+
+Removing the file and restarting turns it off. A `plan` turn stays read only, and a push through the instance's git
+proxy is still decided by the server.
+
 The agent browser opens an offline new tab in its responsible person's language, with no outside request.
 A computer on your server never measures or reports its public address: only a workspace's managed computer
 (`MACHINE_PROVISIONING=external`) does. The system runner's network options for integrators are in

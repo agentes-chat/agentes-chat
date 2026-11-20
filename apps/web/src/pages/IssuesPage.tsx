@@ -82,6 +82,7 @@ import { useFilterCopy } from "@/components/filters";
 import { GitHubMark } from "@/components/GitHubMark";
 import { ErrorState, LoadingCards, LoadingList } from "@/components/Loading";
 import { useOrg } from "@/components/org-context";
+import { ReviewLine } from "@/components/ReviewStep";
 import { CardSky } from "@/components/Sky";
 import { TaskMentions, useTaskLive } from "@/components/TaskConversation";
 import { useRightHandLook } from "@/hooks/useRightHandLook";
@@ -1444,6 +1445,7 @@ function IssueCard({
     >
       {cardWaits(state) && <CardSky color={color(i) ?? "sky"} />}
       <span className="issue-card__title">{codeAndBold(i.title)}</span>
+      {i.review && <ReviewLine step={i.review} />}
       <CardFacts issue={i} fields={fields} />
       <CardResult issue={i} />
       <CardWho issue={i} state={state} assignee={fields.assignee} />

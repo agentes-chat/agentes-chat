@@ -6,9 +6,11 @@ import { QueueButton } from "@/components/ComputerQueue";
 import { ConversationMoreMenu, useConversationWallpaperMenu } from "@/components/ConversationMenu";
 import { useChannelMenu } from "@/components/entity-menus";
 import { NavToggle } from "@/components/NavDrawer";
+import { useOrg } from "@/components/org-context";
 import { HeaderSearch } from "@/components/search/HeaderSearch";
 import { ChannelThreadsButton } from "@/components/threads/ThreadLines";
 import { entityMenu } from "@/lib/entity-menu";
+import { VoiceHeaderButton } from "@/voice/VoiceUI";
 import "./channel-header.css";
 
 /**
@@ -50,6 +52,7 @@ export function ChannelHeader({
   const entries = () => channelEntries(channel, [wallpaper.entry]);
   const settings = t("shell.sidebarMenu.channelSettings");
   const total = people.length + agents.length;
+  const { org } = useOrg();
   return (
     <header className="channel__header">
       <NavToggle />
@@ -67,6 +70,8 @@ export function ChannelHeader({
         </div>
         <div className="channel__acts">
           <QueueButton machineId={queueMachine} />
+          {/* VPS Zen: the channel's voice room. */}
+          {isMember && <VoiceHeaderButton orgId={org.id} channelId={channel.id} channelName={channel.name} />}
           {isMember && <ChannelThreadsButton channelId={channel.id} channelName={channel.name} />}
           {isMember && <ChannelPinsButton channelId={channel.id} channelName={channel.name} />}
           <button

@@ -334,6 +334,8 @@
       "live.shell.formats.md",
       "live.doc.link.title",
       "live.doc.keys.link",
+      "voiceRooms.screen.native",
+      "voiceRooms.room.openChat",
       "audit.operatorReview.items"
     ],
     "es": [
@@ -615,7 +617,9 @@
       "live.shell.formats.pdf",
       "live.shell.formats.pptx",
       "live.shell.formats.xlsx",
-      "live.shell.shortcuts.general"
+      "live.shell.shortcuts.general",
+      "voiceRooms.screen.native",
+      "voiceRooms.room.openChat"
     ],
     "fr": [
       "usage.kinds.routines",
@@ -1122,7 +1126,9 @@
       "live.slides.shapes.triangle",
       "live.slides.themes.graphite",
       "live.slides.tools.image",
-      "settings.kinds.image"
+      "settings.kinds.image",
+      "voiceRooms.room.kind",
+      "voiceRooms.room.openChat"
     ],
     "de": [
       "live.sheet.args.k",
@@ -1607,6 +1613,10 @@
       "newAgentCard.proposal.routine.label",
       "newAgentCard.proposal.routine.lead",
       "orgAccent.sampleMention",
+      "voiceRooms.live",
+      "voiceRooms.screen.native",
+      "voiceRooms.room.kindText",
+      "voiceRooms.room.openChat",
       "teamWeek.budget.item"
     ],
     "it": [
@@ -2001,6 +2011,7 @@
       "onboarding.import.choose.step.video",
       "newAgentCard.proposal.routine.label",
       "newAgentCard.proposal.routine.lead",
+      "voiceRooms.room.openChat",
       "teamWeek.budget.item"
     ],
     "nl": [
@@ -2661,6 +2672,10 @@
       "live.sheet.args.criteria2",
       "live.sheet.args.k",
       "live.sheet.args.x",
+      "voiceRooms.live",
+      "voiceRooms.settings.camera",
+      "voiceRooms.room.kind",
+      "voiceRooms.room.openChat",
       "audit.operatorReview.items",
       "teamWeek.budget.item"
     ],
@@ -3495,7 +3510,8 @@
       "storage.connect.provider.b2",
       "storage.connect.awsRegion.il-central-1",
       "onboarding.import.choose.skill",
-      "onboarding.import.choose.step.video"
+      "onboarding.import.choose.step.video",
+      "voiceRooms.room.openChat"
     ],
     "tr": [
       "live.canvas.inspector.model",

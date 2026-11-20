@@ -71,6 +71,7 @@ import type {
   BrowserProfile,
   CalendarEvent,
   CalendarRange,
+  CentralView,
   Channel,
   ChannelCard,
   ChannelCategory,
@@ -396,6 +397,7 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         request<TaskManagerView>(`${org(orgId)}/task-manager`, {
           query: { since: since || undefined, doneToday: doneToday ? "true" : undefined },
         }),
+      central: (orgId) => request<CentralView>(`${org(orgId)}/central`),
       taskSteps: (orgId, runId) => request<TaskSteps>(`${org(orgId)}/task-manager/${enc(runId)}/steps`),
       continueTasks: (orgId, runIds) =>
         request<{ continued: number }>(`${org(orgId)}/task-manager/continue`, { json: { runIds } }),

@@ -23,6 +23,7 @@ import type {
   AuthConfig,
   Availability,
   BrainMachine,
+  CentralView,
   Channel,
   ChannelCategory,
   ChannelMember,
@@ -509,6 +510,7 @@ export interface FakeState {
    * task (`agents.cancelRun`) moves it to `ended`, stopped by me.
    */
   taskManager?: TaskManagerView;
+  central?: CentralView;
   /** A task's steps by run (`working.taskSteps`, the task manager's panel); a run not here has none yet. */
   taskSteps?: Record<string, TaskSteps>;
   /**
@@ -4594,6 +4596,19 @@ export function createFakeApi(state: FakeState = seedState(), options: { seed?: 
       ? {
           working: {
             list: async () => [],
+            central: async (): Promise<CentralView> =>
+              structuredClone(
+                state.central ?? {
+                  at: new Date().toISOString(),
+                  agents: [],
+                  tasks: [],
+                  talks: [],
+                  pullRequests: [],
+                  computers: [],
+                  links: [],
+                  hiddenTasks: 0,
+                },
+              ),
             taskManager: async (orgId: string, since?: string, doneToday?: boolean) => {
               state.calls.push({ method: "working.taskManager", args: [orgId, since, doneToday] });
               const view = structuredClone(state.taskManager as TaskManagerView);

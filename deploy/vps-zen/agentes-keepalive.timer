@@ -1,0 +1,10 @@
+[Unit]
+Description=VPS Zen keepalive, every minute
+
+[Timer]
+OnCalendar=*-*-* *:*:00
+AccuracySec=5s
+Persistent=false
+
+[Install]
+WantedBy=timers.target

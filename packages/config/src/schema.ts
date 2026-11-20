@@ -619,6 +619,26 @@ export const envVars = {
     section: "Chat",
     secret: true,
   },
+  // VPS Zen: voice and screen sharing in a channel, through a LiveKit server (Cloud or self-hosted).
+  LIVEKIT_URL: {
+    schema: z.string().optional(),
+    description:
+      "LiveKit server for voice channels, optional (VPS Zen): its `wss://` address. With it and the key pair, every channel gets a voice room where people talk, turn on the camera and share their screen; the sidebar shows who is in each. Without them, no voice anywhere.",
+    section: "Chat",
+    example: "wss://example.livekit.cloud",
+  },
+  LIVEKIT_API_KEY: {
+    schema: z.string().optional(),
+    description: "LiveKit API key for voice channels (VPS Zen). Signs the room tokens; never sent to a browser.",
+    section: "Chat",
+    secret: true,
+  },
+  LIVEKIT_API_SECRET: {
+    schema: z.string().optional(),
+    description: "LiveKit API secret for voice channels (VPS Zen). Signs the room tokens; never sent to a browser.",
+    section: "Chat",
+    secret: true,
+  },
   SPEECH_ENGINES: {
     schema: z.string().optional(),
     description:
