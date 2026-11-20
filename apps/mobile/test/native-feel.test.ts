@@ -80,7 +80,8 @@ describe("the system's lists", () => {
     expect(grouped).toContain("<View style={[styles.list, { backgroundColor: c.raised }, cardEdge(scheme)]}>");
     expect(cardEdge("dark")).toEqual({
       outlineWidth: 1,
-      outlineColor: "rgba(255, 255, 255, 0.1)",
+      // VPS Zen: the branch's dark hairline (packages/tokens).
+      outlineColor: "rgba(255, 255, 255, 0.14)",
       outlineStyle: "solid",
     });
     expect(cardEdge("light")).toEqual({
