@@ -42,6 +42,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
+import { reportError } from "@/lib/error-reports";
 import { motion, Text, useReducedMotion, useTheme } from "@/ui";
 import { Face } from "../../shared/Face";
 import { useDirectory } from "../../shared/hooks";
@@ -93,6 +94,20 @@ import {
   stretchable,
 } from "./logic";
 import { ArrowLabel, FrameName, type Motion, ShapeItem } from "./ShapeItems";
+
+/**
+ * A gesture's error, caught on the UI thread: thrown there it closed the app at the first touch. The gesture goes back
+ * to rest and the error is reported, with its message, for the next build to fix.
+ */
+const gestureFailed = (error: unknown) => {
+  "worklet";
+  scheduleOnRN(reportGestureError, error instanceof Error ? `${error.message}\n${error.stack ?? ""}` : String(error));
+};
+
+function reportGestureError(text: string) {
+  console.warn(`canvas gesture failed: ${text}`);
+  reportError(new Error(text), { where: "canvas.gesture" });
+}
 
 /**
  * A canvas's plane on the phone (ADR 0196 §2, §9): an endless world under a camera (`camera.ts`), panned with a finger
@@ -572,125 +587,165 @@ export function CanvasPlane({
     minDistance: 6,
     onBegin: (e) => {
       "worklet";
-      cancelAnimation(cx);
-      cancelAnimation(cy);
-      const now = { x: cx.value, y: cy.value, s: cs.value };
-      const p = { x: e.x, y: e.y };
-      const drawing = toolSv.value === "pen" || toolSv.value === "arrow";
-      if (drawing && e.numberOfPointers <= 1) {
-        // One finger draws with the pen or drags an arrow; two still move the canvas.
-        const w = toWorld(p, now);
-        mode.value = toolSv.value === "pen" ? "draw" : "arrow";
+      try {
+        cancelAnimation(cx);
+        cancelAnimation(cy);
+        const now = { x: cx.value, y: cy.value, s: cs.value };
+        const p = { x: e.x, y: e.y };
+        const drawing = toolSv.value === "pen" || toolSv.value === "arrow";
+        if (drawing && e.numberOfPointers <= 1) {
+          // One finger draws with the pen or drags an arrow; two still move the canvas.
+          const w = toWorld(p, now);
+          mode.value = toolSv.value === "pen" ? "draw" : "arrow";
+          inking.value = false;
+          ink.value = [w.x, w.y];
+          arrowFrom.value = w;
+          arrowTo.value = w;
+        } else if (drawing) mode.value = "pan";
+        else if (e.numberOfPointers <= 1 && canStretch.value && onHandle(p, selUnion.value, now)) {
+          mode.value = "stretch";
+          from.value = oneBox.value;
+          stretch.value = oneBox.value;
+        } else if (!readOnly && e.numberOfPointers <= 1 && onAnyBox(p, selBoxes.value, now)) mode.value = "move";
+        else mode.value = "pan";
+      } catch (error) {
+        mode.value = "pan";
         inking.value = false;
-        ink.value = [w.x, w.y];
-        arrowFrom.value = w;
-        arrowTo.value = w;
-      } else if (drawing) mode.value = "pan";
-      else if (e.numberOfPointers <= 1 && canStretch.value && onHandle(p, selUnion.value, now)) {
-        mode.value = "stretch";
-        from.value = oneBox.value;
-        stretch.value = oneBox.value;
-      } else if (!readOnly && e.numberOfPointers <= 1 && onAnyBox(p, selBoxes.value, now)) mode.value = "move";
-      else mode.value = "pan";
+        gestureFailed(error);
+      }
     },
     onActivate: () => {
       "worklet";
-      if (mode.value === "draw" || mode.value === "arrow") inking.value = true;
-      else if (mode.value === "move") scheduleOnRN(startMove);
-      else if (mode.value === "stretch") scheduleOnRN(startStretch);
-      else scheduleOnRN(moved);
+      try {
+        if (mode.value === "draw" || mode.value === "arrow") inking.value = true;
+        else if (mode.value === "move") scheduleOnRN(startMove);
+        else if (mode.value === "stretch") scheduleOnRN(startStretch);
+        else scheduleOnRN(moved);
+      } catch (error) {
+        mode.value = "pan";
+        inking.value = false;
+        gestureFailed(error);
+      }
     },
     onUpdate: (e) => {
       "worklet";
-      const s = cs.value;
-      if ((mode.value === "draw" || mode.value === "arrow") && e.numberOfPointers > 1) {
-        // A second finger: it was a move of the canvas, never a line.
+      try {
+        const s = cs.value;
+        if ((mode.value === "draw" || mode.value === "arrow") && e.numberOfPointers > 1) {
+          // A second finger: it was a move of the canvas, never a line.
+          mode.value = "pan";
+          inking.value = false;
+          ink.value = [];
+        }
+        if (mode.value === "draw") {
+          const w = toWorld({ x: e.x, y: e.y }, { x: cx.value, y: cy.value, s });
+          ink.modify((points) => {
+            "worklet";
+            const n = points.length;
+            // A point a hair from the last adds nothing (and the stroke has room for so many).
+            if (n < STROKE_MAX - 2 && Math.hypot(w.x - (points[n - 2] ?? 0), w.y - (points[n - 1] ?? 0)) * s >= 1.5)
+              points.push(w.x, w.y);
+            return points;
+          });
+          return;
+        }
+        if (mode.value === "arrow") {
+          arrowTo.value = toWorld({ x: e.x, y: e.y }, { x: cx.value, y: cy.value, s });
+          return;
+        }
+        if (mode.value === "move") {
+          drag.value = { x: drag.value.x + e.changeX / s, y: drag.value.y + e.changeY / s };
+          return;
+        }
+        if (mode.value === "stretch") {
+          stretch.value = stretchBox(from.value, e.translationX / s, e.translationY / s, ratio.value, s);
+          return;
+        }
+        const to = panBy({ x: cx.value, y: cy.value, s }, e.changeX, e.changeY);
+        cx.value = to.x;
+        cy.value = to.y;
+      } catch (error) {
         mode.value = "pan";
         inking.value = false;
-        ink.value = [];
+        gestureFailed(error);
       }
-      if (mode.value === "draw") {
-        const w = toWorld({ x: e.x, y: e.y }, { x: cx.value, y: cy.value, s });
-        ink.modify((points) => {
-          "worklet";
-          const n = points.length;
-          // A point a hair from the last adds nothing (and the stroke has room for so many).
-          if (n < STROKE_MAX - 2 && Math.hypot(w.x - (points[n - 2] ?? 0), w.y - (points[n - 1] ?? 0)) * s >= 1.5)
-            points.push(w.x, w.y);
-          return points;
-        });
-        return;
-      }
-      if (mode.value === "arrow") {
-        arrowTo.value = toWorld({ x: e.x, y: e.y }, { x: cx.value, y: cy.value, s });
-        return;
-      }
-      if (mode.value === "move") {
-        drag.value = { x: drag.value.x + e.changeX / s, y: drag.value.y + e.changeY / s };
-        return;
-      }
-      if (mode.value === "stretch") {
-        stretch.value = stretchBox(from.value, e.translationX / s, e.translationY / s, ratio.value, s);
-        return;
-      }
-      const to = panBy({ x: cx.value, y: cy.value, s }, e.changeX, e.changeY);
-      cx.value = to.x;
-      cy.value = to.y;
     },
     onDeactivate: (e) => {
       "worklet";
-      if (mode.value === "draw") {
-        scheduleOnRN(endDraw, ink.value.slice(), false);
-        return;
+      try {
+        if (mode.value === "draw") {
+          scheduleOnRN(endDraw, ink.value.slice(), false);
+          return;
+        }
+        if (mode.value === "arrow") {
+          const a = arrowFrom.value;
+          const b = arrowTo.value;
+          scheduleOnRN(endDraw, [a.x, a.y, b.x, b.y], true);
+          return;
+        }
+        if (mode.value === "move") {
+          scheduleOnRN(endMove, drag.value.x, drag.value.y);
+          return;
+        }
+        if (mode.value === "stretch") {
+          scheduleOnRN(endStretch, stretch.value);
+          return;
+        }
+        // Let go: the plane glides on and slows down.
+        const s = cs.value;
+        cx.value = withDecay({ velocity: -e.velocityX / s });
+        cy.value = withDecay({ velocity: -e.velocityY / s }, (done) => {
+          if (done) scheduleOnRN(publishView);
+        });
+      } catch (error) {
+        mode.value = "pan";
+        inking.value = false;
+        gestureFailed(error);
       }
-      if (mode.value === "arrow") {
-        const a = arrowFrom.value;
-        const b = arrowTo.value;
-        scheduleOnRN(endDraw, [a.x, a.y, b.x, b.y], true);
-        return;
-      }
-      if (mode.value === "move") {
-        scheduleOnRN(endMove, drag.value.x, drag.value.y);
-        return;
-      }
-      if (mode.value === "stretch") {
-        scheduleOnRN(endStretch, stretch.value);
-        return;
-      }
-      // Let go: the plane glides on and slows down.
-      const s = cs.value;
-      cx.value = withDecay({ velocity: -e.velocityX / s });
-      cy.value = withDecay({ velocity: -e.velocityY / s }, (done) => {
-        if (done) scheduleOnRN(publishView);
-      });
     },
   });
   const pinchFrom = useSharedValue(1);
   const pinch = usePinchGesture({
     onBegin: () => {
       "worklet";
-      cancelAnimation(cx);
-      cancelAnimation(cy);
-      cancelAnimation(cs);
-      pinchFrom.value = cs.value;
+      try {
+        cancelAnimation(cx);
+        cancelAnimation(cy);
+        cancelAnimation(cs);
+        pinchFrom.value = cs.value;
+      } catch (error) {
+        gestureFailed(error);
+      }
     },
     onActivate: () => {
       "worklet";
-      scheduleOnRN(moved);
+      try {
+        scheduleOnRN(moved);
+      } catch (error) {
+        gestureFailed(error);
+      }
     },
     onUpdate: (e) => {
       "worklet";
-      const to = zoomAt({ x: cx.value, y: cy.value, s: cs.value }, clampZoom(pinchFrom.value * e.scale), {
-        x: e.focalX,
-        y: e.focalY,
-      });
-      cx.value = to.x;
-      cy.value = to.y;
-      cs.value = to.s;
+      try {
+        const to = zoomAt({ x: cx.value, y: cy.value, s: cs.value }, clampZoom(pinchFrom.value * e.scale), {
+          x: e.focalX,
+          y: e.focalY,
+        });
+        cx.value = to.x;
+        cy.value = to.y;
+        cs.value = to.s;
+      } catch (error) {
+        gestureFailed(error);
+      }
     },
     onDeactivate: () => {
       "worklet";
-      scheduleOnRN(settle, cs.value);
+      try {
+        scheduleOnRN(settle, cs.value);
+      } catch (error) {
+        gestureFailed(error);
+      }
     },
   });
   const tap = useTapGesture({
@@ -698,8 +753,12 @@ export function CanvasPlane({
     maxDistance: 10,
     onDeactivate: (e) => {
       "worklet";
-      if (e.canceled) return;
-      scheduleOnRN(tapped, e.x, e.y);
+      try {
+        if (e.canceled) return;
+        scheduleOnRN(tapped, e.x, e.y);
+      } catch (error) {
+        gestureFailed(error);
+      }
     },
   });
   const hold = useLongPressGesture({
@@ -707,7 +766,11 @@ export function CanvasPlane({
     maxDistance: 10,
     onActivate: (e) => {
       "worklet";
-      scheduleOnRN(held, e.x, e.y);
+      try {
+        scheduleOnRN(held, e.x, e.y);
+      } catch (error) {
+        gestureFailed(error);
+      }
     },
   });
   const gestures = useSimultaneousGestures(pinch, pan, tap, hold);

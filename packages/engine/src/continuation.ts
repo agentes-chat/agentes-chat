@@ -13,11 +13,13 @@ import { isAgentOnlyDm } from "./dms";
 import { decisionNudge, FOLLOW_THROUGH_NUDGE, FOLLOW_THROUGH_NUDGE_DM, MISSION_ASK_NUDGE } from "./follow-through";
 import { cutText, cutTextEnd } from "./format";
 import { type Judge, JudgeBudgetError } from "./judge";
+import { PLATFORM_CAP } from "./limits";
 import type { NoticeKind } from "./notices";
 import { notifyRunFailed } from "./notification-producers";
 import { ANSWER_NUDGE } from "./reply-policy";
 import { deliverNoticeToRun } from "./run-resume";
 import type { AgentRun } from "./runs";
+import { isSayNow } from "./say-now";
 import { runStretchOf } from "./stretch";
 import { HAND_OVER_STEP } from "./tools/directory";
 import { neutralizeUntrusted, untrustedBlock } from "./untrusted";
@@ -53,6 +55,8 @@ export interface ContinuationState {
   secretNudged?: boolean;
   /** It was told once to write a reply that named its tools again (`toolNamesNudge`): the next one is posted. */
   toolsNudged?: boolean;
+  /** Its turn-end check failed once and it was told to check itself (`uncheckedNudge`): later failures end as done. */
+  uncheckedNudged?: boolean;
 }
 
 export type ContinuationVerdict = "done" | "continue" | "ask" | "untried" | "secret" | "unbacked";
@@ -64,6 +68,17 @@ export type ContinuationVerdict = "done" | "continue" | "ask" | "untried" | "sec
 export function untriedNudge(means: string[], tried: string[]) {
   const have = means.length > 0 ? means.join("; ") : "your tools and find_tools";
   return `You ended saying you couldn't, but you still have ways to try. Your means: ${have}. Already tried:\n${triedBlock(tried)}\nUse the ones that fit; when a search or a page gives nothing or is blocked, change the words, the source or the tool. Missing an access or a login? Look in the workspace first (your memory, search_context for who signed in or holds it) and ask the teammate who has it. ${SAFETY_FINAL} ${HAND_OVER_STEP} If no way is left at all, say what you tried and the one step a person must do.`;
+}
+
+/**
+ * What a run reads, once, when its turn-end check was refused past the workspace's platform AI for the month, with no
+ * small model of its own to check in its place: it checks its own reply, so an agent that stopped at an
+ * obstacle doesn't stay stopped. `held`: a conversation's reply is held meanwhile (`Transcript.held`) and goes out as
+ * it is when nothing is added; with no judge to merge them, what it adds goes out below it.
+ */
+export function uncheckedNudge(means: string[], tried: string[], held: boolean) {
+  const have = means.length > 0 ? means.join("; ") : "your tools and find_tools";
+  return `${held ? "Not posted yet: nobody has seen your reply above. " : ""}Your turn's check couldn't run, so check it yourself. If your reply gives what was asked, end your turn now without any text${held ? ": it is posted as it is" : ""}. If you stopped short (blocked, refused, a tool or an access missing), you still have ways to try. Your means: ${have}. Already tried:\n${triedBlock(tried)}\nUse the ones that fit; when something gives nothing or is blocked, change the words, the source or the tool. ${SAFETY_FINAL} ${HAND_OVER_STEP} If no way is left at all, say what you tried and the one step a person must do.${held ? " Write only what you add to your reply above: it is posted below it." : ""}`;
 }
 
 /**
@@ -353,6 +368,11 @@ export async function continuationVerdict(
     runKind: TurnKind;
     /** Agents and people its reply @named that aren't in the conversation (`unreachedNote`), "" none. */
     unreached?: string;
+    /**
+     * The titles of its own work already running in the background in this conversation (ADR 0121), which posts its
+     * results here by itself when it ends: a promise about what it will bring is kept by it.
+     */
+    backgroundWork?: string[];
     /** A personal workspace (ADR 0159): what is worth keeping is about the person, not a company. */
     personal?: boolean;
     /**
@@ -377,18 +397,21 @@ export async function continuationVerdict(
         tried: input.tried.slice(-20).map(neutralizeUntrusted),
         runKind: input.runKind,
         ...(input.unreached ? { unreached: input.unreached } : {}),
+        ...(input.backgroundWork?.length
+          ? { background_work: input.backgroundWork.slice(0, 5).map((title) => cutText(title, 160)) }
+          : {}),
       },
       questions: {
         verdict: {
           type: "choice",
           instructions:
-            "An AI agent in a team chat was asked `request` and ended its turn with `reply`, its last message. `tried`: each tool call it made in this run, with its argument and outcome. `means`: the general ways it has (web search, browser, terminal, tool directory, teammates). It won't act again until someone writes to it or something it set up wakes it. Is it done, should it go on by itself, does it still have untried ways, or does it need something only a person can give?",
+            "An AI agent in a team chat was asked `request` and ended its turn with `reply`, its last message. `tried`: each tool call it made in this run, with its argument and outcome. `means`: the general ways it has (web search, browser, terminal, tool directory, teammates). It won't act again until someone writes to it or something it set up wakes it. `background_work`, when given: its own work already running in the background in this conversation, which posts its results here by itself when it ends. Is it done, should it go on by itself, does it still have untried ways, or does it need something only a person can give?",
           criteria: {
-            done: "It gave the result or the answer `request` asked for, also when it adds a caveat, a limit of the data or a part it couldn't get. Or it said what it couldn't do, and either `tried` shows several different attempts (another query, another source, another tool or the browser), or what blocks it is something only a person can give (a code, a sign-in, a payment, a permission, a decision) and it already asked them for it (with its request: `tried` shows browser_ask_person, desktop_ask_person, request_secret, request_approval, request_permission or ask_user; for a decision, one direct question) or `means` has no way to hand it to them. A reply that says it can't, stops, or only offers in passing, because a step needs the person (a sign-in, a QR code, a code, a captcha, an approval, a permission) is not done while `means` can hand that step to them: that is untried. When the request left open how to do it, one direct question offering to start a way it names, with the step the person will do ('I can do it in my browser: you'll scan a QR code. Shall I start?'), is done. A refusal because the account or the data is someone else's, not the asking person's own, is done. Saying it or the team has no access, or asking people for one, without having looked in the workspace (search_context, find_agent, ask_agent or tell_agent in `tried`) is not done: that is untried. An offer that needs someone else's decision (a sensitive or external action, a choice between their options) counts as done only when asked as one direct question. When `request` asks only for information or advice (what the options are, which is best or cheapest, how something works) and the reply gives it, it is done, also when it offers to start one of the ways: starting is the person's choice. Work asked as a question ('can you…?', 'consegue…?', 'pode ver…?', 'dá pra…?') is work, not a question: offering to do it is not done.",
+            done: "It gave the result or the answer `request` asked for, also when it adds a caveat, a limit of the data or a part it couldn't get. Or it said what it couldn't do, and either `tried` shows several different attempts (another query, another source, another tool or the browser), or what blocks it is something only a person can give (a code, a sign-in, a payment, a permission, a decision) and it already asked them for it (with its request: `tried` shows browser_ask_person, desktop_ask_person, request_secret, request_approval, request_permission or ask_user; for a decision, one direct question) or `means` has no way to hand it to them. A reply that says it can't, stops, or only offers in passing, because a step needs the person (a sign-in, a QR code, a code, a captcha, an approval, a permission) is not done while `means` can hand that step to them: that is untried. When the request left open how to do it, one direct question offering to start a way it names, with the step the person will do ('I can do it in my browser: you'll scan a QR code. Shall I start?'), is done. A refusal because the account or the data is someone else's, not the asking person's own, is done. Saying it or the team has no access, or asking people for one, without having looked in the workspace (search_context, find_agent, ask_agent or tell_agent in `tried`) is not done: that is untried. An offer that needs someone else's decision (a sensitive or external action, a choice between their options) counts as done only when asked as one direct question. When `request` asks only for information or advice (what the options are, which is best or cheapest, how something works) and the reply gives it, it is done, also when it offers to start one of the ways: starting is the person's choice. Work asked as a question ('can you…?', 'consegue…?', 'pode ver…?', 'dá pra…?') is work, not a question: offering to do it is not done. When what it says will come later is what its `background_work` will bring (its findings, its result, word when it ends), that work posts it here by itself: done.",
             untried:
               "What `request` asked for is still missing: it said it couldn't or that it lacks a tool, or asked a person to do or connect something, or asked a person for information its means could find (an address, docs, what a name refers to), while `means` has ways that fit the task it hasn't used in `tried`, or it gave up after one empty or failed attempt without varying it. Handing the work to a teammate counts as an attempt. Also when it said it or the team lacks an access, a login or an account, or asked people for one or who has it, without first looking in the workspace (`tried` has no search_context, find_agent, ask_agent or tell_agent): a teammate or an earlier conversation may hold it. Also when it said it couldn't, stopped, or only offered in passing ('one option would be…', 'only if you want'), because a step needs the person (a sign-in, a QR code scanned with their phone, a code sent to them, a captcha, an approval, a permission, their consent to their own account) instead of doing everything up to it and handing that step over, while `means` can hand it over: a step that needs the person is never a blocker. Also when it handed a person, or refused as unsafe, a sign-in to an account it was given to use whose link or code goes to a mailbox `means` can read: getting it there is its own work. A call refused for safety ([refused for safety]) is final for that data: counting it as a way left to try is wrong. A caveat beside an answer it gave is not this: that answer is done. Nor a step it offers beyond information or advice `request` asked for (a connection, a key, a trial run): that step is the person's choice, not work left undone. Work asked as a question ('can you…?', 'consegue…?') is still work.",
             continue:
-              "It said it will do more itself (next, later, after a build), or stopped midway, and nothing it set up brings it back. A reply that asks the person whether to do something ('want me to…?', 'quer que eu faça?') is not this: it waits for their answer. Also when `unreached` is set and the reply hands work or a question to an agent it names, or says it told a person it names (that mention reached nobody); merely naming one is not that.",
+              "It said it will do more itself (next, later, after a build), or stopped midway, and nothing it set up brings it back. A promise about what its `background_work` will bring is kept by that work, not this. A reply that asks the person whether to do something ('want me to…?', 'quer que eu faça?') is not this: it waits for their answer. Also when `unreached` is set and the reply hands work or a question to an agent it names, or says it told a person it names (that mention reached nobody); merely naming one is not that.",
             ask: "To go on it needs something only a person can give (a decision, a test, access) that its `means` can't find, but it described the need or listed what's missing instead of asking one direct question. Not when it says it needs nothing from them, or what's missing only blocks optional extra work the request doesn't need, or `request` asked what is missing or left to do and the list answers it: that is done. A way to do the request itself, even worded 'only if you want', is never optional extra work.",
             secret:
               "It asks a person to type or paste a secret into the chat (a password, an API key, a token, a private key), or the work `request` asked it to do can't go on without one only a person has and it hasn't asked for it through a secure request (`tried` has no request_secret call). Not when it only names the key a step it offers would need.",
@@ -509,10 +532,14 @@ export async function runCalls(db: Database, run: { id: string; orgId: string })
     )
     .orderBy(schema.agentRunSteps.seq);
   const calls = new Map<string, RunCall>();
+  // Its lines on the way (`say_now`, ADR 0207) are talk: nothing it tried, did or could learn from.
+  const talk = new Set<string>();
   for (const { kind, data } of steps) {
     const id = typeof data.toolUseId === "string" ? data.toolUseId : `step:${calls.size}`;
     const name = typeof data.name === "string" ? data.name : "";
-    if (kind === "tool_call") calls.set(id, { name, input: data.input });
+    if (talk.has(id)) continue;
+    if (kind === "tool_call" && isSayNow(name)) talk.add(id);
+    else if (kind === "tool_call") calls.set(id, { name, input: data.input });
     else {
       const call = calls.get(id) ?? { name, input: undefined };
       const read = data.data as { outside?: unknown; confidential?: unknown; code?: unknown } | undefined;
@@ -678,7 +705,17 @@ async function answerTurnEnd(t: TurnEnd): Promise<TurnEndDecision> {
   let verdict: ContinuationVerdict;
   try {
     verdict = await t.verdict();
-  } catch {
+  } catch (error) {
+    // Refused past the platform AI for the month, the check would end every turn as done: once per run, the agent
+    // checks itself instead. Any other failure (no Jev on this server, a judge down or slow) ends as done, or every
+    // reply there would wait one more turn.
+    if (canNudge && !t.state.uncheckedNudged && error instanceof Error && error.message === PLATFORM_CAP)
+      return {
+        outcome: "continue",
+        rule: "untried",
+        judgeError: true,
+        nudge: uncheckedNudge(t.evidence?.means ?? [], t.evidence?.tried ?? [], t.kind !== "routine"),
+      };
     return { outcome: "done", rule: "judge_error", judgeError: true };
   }
   // No person reads a routine's run or an agents' DM: what it lacks goes out in its report or its answer, and
@@ -747,7 +784,12 @@ export function advance(state: ContinuationState, d: TurnEndDecision, executed: 
   // A reply held for its wording answers no ask: one it was told to ask still becomes the question card.
   if (d.rule === "local_paths") return { ...state, pathsNudged: true };
   if (d.rule === "tool_names") return { ...state, toolsNudged: true };
-  return { ...rest, count: state.count + 1, executedAtNudge: executed };
+  return {
+    ...rest,
+    count: state.count + 1,
+    executedAtNudge: executed,
+    ...(d.judgeError ? { uncheckedNudged: true } : {}),
+  };
 }
 
 /** Run errors the person already sees explained elsewhere, or that no one can act on. */

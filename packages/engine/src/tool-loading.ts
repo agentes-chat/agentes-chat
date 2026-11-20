@@ -1,6 +1,8 @@
 import { and, type Database, desc, eq, gt, isNull, ne, or, schema, sql } from "@agenteschat/db";
+import { isConfidentialRun } from "./confidential";
 import { cutText } from "./format";
-import type { Judge } from "./judge";
+import { JevOffError } from "./jev-key";
+import type { Judge, JudgeGroup } from "./judge";
 import { deferrableGroups, type ToolGroup, toolGroupKey } from "./tools/directory";
 import type { ToolDefinition } from "./tools/types";
 
@@ -27,10 +29,15 @@ export interface ToolGroupChoice {
   groups: string[];
   /** Each group's probability; empty when the judge didn't answer. */
   scores: Record<string, number>;
-  /** "judge", or why it fell back to the core tools and `keep` ("timeout", "error", "none"). */
+  /**
+   * "judge", or why it fell back: to the core tools and `keep` ("timeout", "none", and "error" on a server with no
+   * Jev key), to every group ("error" otherwise: the judge refused or failed).
+   */
   source: "judge" | "timeout" | "error" | "none";
   /** Groups loaded without asking (`keptToolGroups`). */
   kept: string[];
+  /** "error": what the judge said (`platform_cap`: the workspace's platform AI for the month is used up). */
+  reason?: string;
 }
 
 const describeGroup = (g: ToolGroup) =>
@@ -43,7 +50,11 @@ const describeGroup = (g: ToolGroup) =>
  * The tool groups a run loads up front: `keep`, and one calibrated yes/no per
  * other group the agent may use ("will it need these for this message?"), all
  * in one judge request. Without an answer in time, only `keep` (with the core
- * tools and `find_tools`).
+ * tools and `find_tools`); the same on a server with no Jev key (`JevOffError`)
+ * and in a confidential thread, where no run is ever judged. When the judge refuses or fails, every group: a
+ * judge that is down (or refused for the month) would otherwise leave each run
+ * with only what the previous one used, its other tools a search it may not
+ * think of.
  */
 export async function chooseToolGroups(
   judge: Judge,
@@ -62,13 +73,18 @@ export async function chooseToolGroups(
     /** Groups loaded without asking the judge (`keptToolGroups`). */
     keep?: string[];
     timeoutMs?: number;
+    /** Asked with the run's other start judgments (`JudgeGroup`). */
+    group?: JudgeGroup;
   },
 ): Promise<ToolGroupChoice> {
   const all = deferrableGroups(input.tools);
   const kept = all.filter((g) => input.keep?.includes(g.key)).map((g) => g.key);
   const groups = all.filter((g) => !kept.includes(g.key));
   const none = (source: ToolGroupChoice["source"]): ToolGroupChoice => ({ groups: kept, scores: {}, source, kept });
-  if (groups.length === 0) return none("none");
+  if (groups.length === 0) {
+    input.group?.skip("tool_groups");
+    return none("none");
+  }
   const questions = Object.fromEntries(
     groups.map((g, i) => [
       `g${i}`,
@@ -94,6 +110,7 @@ export async function chooseToolGroups(
         runId: input.runId,
         kind: "tool_groups",
         calibrated: true,
+        ...(input.group ? { group: input.group } : {}),
         state: {
           agent: {
             name: input.agent.name,
@@ -116,8 +133,11 @@ export async function chooseToolGroups(
       if (p >= TOOL_GROUP_THRESHOLD) chosen.push(g.key);
     });
     return { groups: chosen, scores, source: "judge", kept };
-  } catch {
-    return none("error");
+  } catch (error) {
+    // A confidential thread's run is never judged (ADR 0190): its refusal is no outage.
+    if (error instanceof JevOffError || isConfidentialRun(input.runId)) return none("error");
+    const reason = cutText(error instanceof Error ? error.message : String(error), 200);
+    return { groups: [...kept, ...groups.map((g) => g.key)], scores: {}, source: "error", kept, reason };
   } finally {
     clearTimeout(timer);
   }

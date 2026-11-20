@@ -1,12 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import type { Message } from "@agenteschat/client";
 import { upsertMessage } from "@agenteschat/client/lib/timeline";
 import { datedBehind } from "../../src/features/chat/send-order";
+import { chatScreenSource } from "./chat-screen-source";
 import { message } from "./fixtures";
 
-const src = (path: string) => readFileSync(join(import.meta.dir, "../../src", path), "utf8");
 const ids = (list: Message[] | undefined) => (list ?? []).map((m) => m.id);
 /** A copy of mine on its way, as the send writes it (`local-<clientId>`). */
 const mine = (clientId: string, createdAt: string) =>
@@ -56,7 +54,7 @@ describe("what I send while my files go up", () => {
   });
 
   test("the screen sends behind its files while they go up, and their request goes before what waits", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     expect(chat).toContain("return deliverFiles(local, how);");
     expect(chat).toContain("behindFiles(() => deliverFilesRef.current(m));");
     // Words, GIFs and stickers, the summary and what another app shared all go the same way.

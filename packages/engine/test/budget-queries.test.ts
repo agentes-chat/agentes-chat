@@ -1,5 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { currentQueryCount, eq, schema } from "@agenteschat/db";
+import { ProviderError } from "@agenteschat/providers";
 import {
   createChannel,
   createJobHandlers,
@@ -23,7 +24,7 @@ afterEach(async () => {
  * Round-trip budget of the hot path (the database may be ~185 ms away): a mention run on warm caches, as a running
  * server makes it. Counts SQL statements; transaction BEGIN/COMMIT are not counted. Raise these only on purpose.
  */
-async function mentionRun(options: { askAgent?: boolean } = {}) {
+async function mentionRun(options: { askAgent?: boolean; sayNow?: boolean } = {}) {
   let beforeModel = -1;
   const statusPicked = new Set<string>();
   f = await setup({
@@ -99,7 +100,7 @@ test("claim → model request stays within 18 statements; a whole mention run wi
 });
 
 test("with tools, as every production run has them (find_agent among them): within 24 before the model call, 46 in all", async () => {
-  const run = await mentionRun({ askAgent: true });
+  const run = await mentionRun({ askAgent: true, sayNow: true });
   // 4 more, all for the tool list and the prompt: who is behind the run (2, the Tool Gateway's policy), the connectors
   // it lacks (1) and whether the person may talk to agents ("# Your team", 1, beside the context's other reads).
   // 20 with the open requests it can withdraw (`withdraw_request`, one statement for its help, secrets and questions).
@@ -132,7 +133,11 @@ test("the run keeps its stage profile in its own column, for the operator's anal
     (kept as { stages: StageTiming[] }[] | undefined)?.map((p) => p.stages.map((s) => s.stage));
   expect(stages(row?.profiles)).toEqual([["claim", "context", "model#1", "turn_end#1", "persist", "events"]]);
   // When the claim ended, beside its stages: an ISO time, not a stage.
-  const [kept] = (row?.profiles ?? []) as { endedAt: string }[];
+  const [kept] = (row?.profiles ?? []) as { endedAt: string; stages: StageTiming[] }[];
+  // The context stage keeps its steps, back to back, inside its own time.
+  const context = kept?.stages[1];
+  expect(context?.parts?.map((s) => s.stage)).toEqual(["tools_granted", "ai_state", "checks", "build"]);
+  expect(context?.parts?.reduce((n, s) => n + s.ms, 0)).toBeLessThanOrEqual((context?.ms ?? 0) + 0.5);
   expect(new Date(kept?.endedAt ?? "").toISOString()).toBe(kept?.endedAt ?? "");
   expect(row?.transcript?.profiles).toBeUndefined();
   const steps = await f.db
@@ -140,4 +145,16 @@ test("the run keeps its stage profile in its own column, for the operator's anal
     .from(schema.agentRunSteps)
     .where(eq(schema.agentRunSteps.runId, run.runId));
   expect(steps.some((s) => "profile" in s.data)).toBe(false);
+});
+
+test("a run that fails before its last stage keeps the time after its last mark as an end stage", async () => {
+  f = await setup({ reply: () => new ProviderError("refused by the provider", false, 400) });
+  await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, { body: "@dev hi" });
+  await drainOutbox(f.db, f.handlers);
+  const [row] = await f.db
+    .select({ status: schema.agentRuns.status, profiles: schema.agentRuns.profiles })
+    .from(schema.agentRuns);
+  const [kept] = (row?.profiles ?? []) as { stages: StageTiming[] }[];
+  expect(row?.status).toBe("failed");
+  expect(kept?.stages.map((s) => s.stage)).toEqual(["claim", "context", "end"]);
 });

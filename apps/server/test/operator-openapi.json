@@ -36,9 +36,28 @@
           },
           "botCheck": {
             "$ref": "#/components/schemas/OperatorBotCheck"
+          },
+          "eventLoopLag": {
+            "type": ["object", "null"],
+            "properties": {
+              "p50Ms": {
+                "type": "number"
+              },
+              "p99Ms": {
+                "type": "number"
+              },
+              "maxMs": {
+                "type": "number"
+              },
+              "at": {
+                "type": "string"
+              }
+            },
+            "required": ["p50Ms", "p99Ms", "maxMs", "at"],
+            "description": "How late this process ran what was due over its last minute, from the runtime's own sampling (also logged as `event loop lag`). Null: no minute ended yet."
           }
         },
-        "required": ["ok", "version", "botCheck"]
+        "required": ["ok", "version", "botCheck", "eventLoopLag"]
       },
       "OperatorBotCheck": {
         "type": "object",
@@ -1923,7 +1942,7 @@
                   "properties": {
                     "cause": {
                       "type": "string",
-                      "description": "`brain_unavailable:<code>` (a wait for its computer: `busy` for room, `machine_offline`, `machine_paused`, …) or `provider_outage`. Ignore values you don't know."
+                      "description": "`brain_unavailable:<code>` (a wait for its computer: `busy` for room, `machine_offline`, `machine_paused`, …) or `provider_outage`. A wait for room names the gate that held it when it began: `busy:line` (another run ahead), `busy:sign_in` (its plan sign-in at its cap), `busy:spacing` (agents' turns start seconds apart), `busy:memory` (the computer refused it for room); plain `busy` before these were kept. Ignore values you don't know."
                     },
                     "waits": {
                       "type": "integer",
@@ -2396,7 +2415,7 @@
                   "properties": {
                     "cause": {
                       "type": "string",
-                      "description": "`brain_unavailable:<code>` (a wait for its computer: `busy` for room, `machine_offline`, `machine_paused`, …) or `provider_outage`. Ignore values you don't know."
+                      "description": "`brain_unavailable:<code>` (a wait for its computer: `busy` for room, `machine_offline`, `machine_paused`, …) or `provider_outage`. A wait for room names the gate that held it when it began: `busy:line` (another run ahead), `busy:sign_in` (its plan sign-in at its cap), `busy:spacing` (agents' turns start seconds apart), `busy:memory` (the computer refused it for room); plain `busy` before these were kept. Ignore values you don't know."
                     },
                     "waits": {
                       "type": "integer",
@@ -2599,7 +2618,7 @@
                 },
                 "stage": {
                   "type": "string",
-                  "description": "`claim`, `context`, `model` (each turn), `persist`, `events`… `other`: a name not shaped like one the server writes."
+                  "description": "`claim`, `context`, `model` (each turn), `persist`, `events`, `end`… a step inside a stage after it (`context.build`). `other`: a name not shaped like one the server writes."
                 },
                 "count": {
                   "type": "integer",
@@ -2678,6 +2697,42 @@
                 },
                 "coldFirstEventP99Ms": {
                   "type": ["integer", "null"]
+                },
+                "firstTokenMedianMs": {
+                  "type": ["integer", "null"],
+                  "description": "Turn start to the model API's first streamed message (newer runners)."
+                },
+                "firstTokenP90Ms": {
+                  "type": ["integer", "null"]
+                },
+                "firstAssistantMedianMs": {
+                  "type": ["integer", "null"],
+                  "description": "Turn start to the answer's first whole block."
+                },
+                "firstAssistantP90Ms": {
+                  "type": ["integer", "null"]
+                },
+                "retriedTurns": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Turns in which the CLI retried an API call."
+                },
+                "retries": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Those retries, all turns together."
+                },
+                "retryDelayMs": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "The waits they announced, summed."
+                },
+                "thinkingCharsMedian": {
+                  "type": ["integer", "null"],
+                  "description": "Characters of a turn's thinking text."
+                },
+                "thinkingCharsP90": {
+                  "type": ["integer", "null"]
                 }
               },
               "required": [
@@ -2693,7 +2748,16 @@
                 "warmFirstEventP99Ms",
                 "coldFirstEventMedianMs",
                 "coldFirstEventP90Ms",
-                "coldFirstEventP99Ms"
+                "coldFirstEventP99Ms",
+                "firstTokenMedianMs",
+                "firstTokenP90Ms",
+                "firstAssistantMedianMs",
+                "firstAssistantP90Ms",
+                "retriedTurns",
+                "retries",
+                "retryDelayMs",
+                "thinkingCharsMedian",
+                "thinkingCharsP90"
               ]
             },
             "description": "By brain, then model. At most 300: the ones with most turns."
@@ -2705,7 +2769,7 @@
               "properties": {
                 "cause": {
                   "type": "string",
-                  "description": "`brain_unavailable:<code>`, a wait for its computer or a sign-in on it, by its code: `busy` for room, `machine_offline`, `not_logged_in`, … `other`: not shaped like one. Ignore values you don't know."
+                  "description": "`brain_unavailable:<code>`, a wait for its computer or a sign-in on it, by its code: `busy` for room, `machine_offline`, `not_logged_in`, … `other`: not shaped like one. A wait for room names the gate that held it when it began: `busy:line` (another run ahead), `busy:sign_in` (its plan sign-in at its cap), `busy:spacing` (agents' turns start seconds apart), `busy:memory` (the computer refused it for room); plain `busy` before these were kept. Ignore values you don't know."
                 },
                 "brain": {
                   "type": ["string", "null"],
@@ -2743,6 +2807,177 @@
           }
         },
         "required": ["from", "to", "by", "runs", "profiled", "stages", "stagesMore", "computerStarts", "waits"]
+      },
+      "OperatorReplyTimes": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "bucket": {
+            "type": "string",
+            "enum": ["hour", "day"]
+          },
+          "replies": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "at": {
+                  "type": "string",
+                  "description": "The bucket's start, UTC: `YYYY-MM-DDTHH:00:00Z`.",
+                  "example": "2026-10-30T00:00:00Z"
+                },
+                "brain": {
+                  "type": "string",
+                  "enum": ["all", "model", "claude_code", "codex", "other"],
+                  "description": "`model` (a provider's API), `claude_code`, `codex`, `other` (another CLI, or no turn yet). `all`: every brain."
+                },
+                "trigger": {
+                  "type": "string",
+                  "enum": ["all", "mention", "router", "dm", "forum"],
+                  "description": "`dm`, `mention` or `router` (nobody was named). `all`: every trigger."
+                },
+                "runs": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Runs answering a person's message (hop 1), routines' left out."
+                },
+                "replied": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Of them, the ones that put a message in the conversation. The server's notices that it can't answer yet (no AI, a plan at its limit or switched, a computer or provider not answering) aren't one."
+                },
+                "p50Ms": {
+                  "type": ["integer", "null"],
+                  "description": "From the person's message to the run's first message, of the runs that replied."
+                },
+                "p90Ms": {
+                  "type": ["integer", "null"]
+                },
+                "p99Ms": {
+                  "type": ["integer", "null"]
+                },
+                "short": {
+                  "type": "object",
+                  "properties": {
+                    "runs": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "Runs answering a person's message (hop 1), routines' left out."
+                    },
+                    "replied": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "Of them, the ones that put a message in the conversation. The server's notices that it can't answer yet (no AI, a plan at its limit or switched, a computer or provider not answering) aren't one."
+                    },
+                    "p50Ms": {
+                      "type": ["integer", "null"],
+                      "description": "From the person's message to the run's first message, of the runs that replied."
+                    },
+                    "p90Ms": {
+                      "type": ["integer", "null"]
+                    },
+                    "p99Ms": {
+                      "type": ["integer", "null"]
+                    }
+                  },
+                  "required": ["runs", "replied", "p50Ms", "p90Ms", "p99Ms"],
+                  "description": "The same, of the asks under 40 characters."
+                }
+              },
+              "required": ["at", "brain", "trigger", "runs", "replied", "p50Ms", "p90Ms", "p99Ms", "short"]
+            },
+            "description": "Per bucket a row of every run (`brain` and `trigger` `all`), a row per brain (`trigger` `all`) and a row per trigger (`brain` `all`); buckets with no run are left out."
+          },
+          "computerStarts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "at": {
+                  "type": "string",
+                  "description": "The bucket's start, UTC: `YYYY-MM-DDTHH:00:00Z`.",
+                  "example": "2026-10-30T00:00:00Z"
+                },
+                "turns": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Turns on a computer that said how they started."
+                },
+                "warm": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Of them, on a process already open; the rest started cold."
+                },
+                "warmFirstEventP50Ms": {
+                  "type": ["integer", "null"],
+                  "description": "Turn start to its first event, warm."
+                },
+                "warmFirstEventP90Ms": {
+                  "type": ["integer", "null"]
+                },
+                "coldFirstEventP50Ms": {
+                  "type": ["integer", "null"],
+                  "description": "Turn start to its first event, cold."
+                },
+                "coldFirstEventP90Ms": {
+                  "type": ["integer", "null"]
+                }
+              },
+              "required": [
+                "at",
+                "turns",
+                "warm",
+                "warmFirstEventP50Ms",
+                "warmFirstEventP90Ms",
+                "coldFirstEventP50Ms",
+                "coldFirstEventP90Ms"
+              ]
+            },
+            "description": "Of every run but routines'. Buckets with none are left out."
+          },
+          "waits": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "at": {
+                  "type": "string",
+                  "description": "The bucket's start, UTC: `YYYY-MM-DDTHH:00:00Z`.",
+                  "example": "2026-10-30T00:00:00Z"
+                },
+                "cause": {
+                  "type": "string",
+                  "enum": ["room", "offline", "other"],
+                  "description": "`room`: its computer had no room yet (`busy`). `offline`: its computer was off or waking (`machine_offline`). `other`: a sign-in, a plan or a CLI."
+                },
+                "waits": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "runs": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Distinct runs that waited."
+                },
+                "p50Ms": {
+                  "type": ["integer", "null"],
+                  "description": "Each wait lasts until the run's next step, its end, or the earlier of now and `to`."
+                },
+                "p90Ms": {
+                  "type": ["integer", "null"]
+                }
+              },
+              "required": ["at", "cause", "waits", "runs", "p50Ms", "p90Ms"]
+            },
+            "description": "Waits for a computer, of every run but routines'. Buckets with none are left out."
+          }
+        },
+        "required": ["from", "to", "bucket", "replies", "computerStarts", "waits"]
       },
       "OperatorAiAccounts": {
         "type": "object",
@@ -4518,7 +4753,7 @@
                 },
                 "tool": {
                   "type": ["string", "null"],
-                  "description": "A tool call's and its result's."
+                  "description": "A tool call's and its result's. An error's whose `reason` is `brain_stalled`: the CLI's own tool it hung in."
                 },
                 "builtIn": {
                   "type": ["boolean", "null"],
@@ -4538,7 +4773,7 @@
                 },
                 "code": {
                   "type": ["string", "null"],
-                  "description": "An error's, or a tool result's own (`tool.unknown`, `tool.invalid_input`, `tool.failed`, `tool.not_allowed`…). On an error whose `reason` is `no_ai`: why the run had nothing to think with, one of `no_key`, `not_signed_in`, `no_computer`, `cli_missing`, `computer_away`, `computer_failed`, `cli_failed`, `plan_limit`, `model_limit`, `model_region`, `model_off`, `plan_inactive`, `commands_off`, `plan_not_shared`, `plans_not_yours`, `runner_outdated`, `plan_tools`, `plan_hold`, `plan_unattended`; null on a run from before the server kept it."
+                  "description": "An error's, or a tool result's own (`tool.unknown`, `tool.invalid_input`, `tool.failed`, `tool.not_allowed`…). On an error whose `reason` is `no_ai`: why the run had nothing to think with, one of `no_key`, `not_signed_in`, `no_computer`, `cli_missing`, `computer_away`, `computer_failed`, `cli_failed`, `plan_limit`, `model_limit`, `model_region`, `model_off`, `plan_inactive`, `commands_off`, `plan_not_shared`, `plans_not_yours`, `runner_outdated`, `plan_tools`, `plan_hold`, `plan_unattended`; null on a run from before the server kept it. On an error whose `reason` is `brain_stalled` (the computer stopped the CLI after it said nothing for too long): where it was, `model` (waiting for the model's answer), `tool` (in one of its own tools, `tool`) or `compacting`."
                 },
                 "errorClass": {
                   "type": ["string", "null"],
@@ -4562,7 +4797,7 @@
                 },
                 "reason": {
                   "type": ["string", "null"],
-                  "description": "An error's: `transient`, `provider_outage`, `brain_unavailable`, `usage_wait`, `no_ai`, `canceled`, `gave_up`, `recovered`, `interrupted`… A `context` step's that handed the run's unread messages on to another run (`redispatchedMessageIds`): why, one of `done`, `failed`, `canceled`, `interrupted`, `swept`, `held`."
+                  "description": "An error's: `transient`, `provider_outage`, `brain_unavailable`, `brain_stalled`, `usage_wait`, `no_ai`, `canceled`, `gave_up`, `recovered`, `interrupted`… A `context` step's that handed the run's unread messages on to another run (`redispatchedMessageIds`): why, one of `done`, `failed`, `canceled`, `interrupted`, `swept`, `held`."
                 },
                 "toRunId": {
                   "type": ["string", "null"],
@@ -4617,7 +4852,7 @@
                 "durationMs": {
                   "type": ["integer", "null"],
                   "minimum": 0,
-                  "description": "A tool result's: since its call; null when the call is on an earlier page."
+                  "description": "A tool result's: since its call; null when the call is on an earlier page. A `brain_stalled` error's: how long nothing came from the CLI."
                 },
                 "messageId": {
                   "type": ["string", "null"],
@@ -4793,7 +5028,7 @@
                     "properties": {
                       "stage": {
                         "type": "string",
-                        "description": "`claim`, `context`, `model#1` (the turn it is of), `persist`, `events`… `other`: a name not shaped like one the server writes."
+                        "description": "`claim`, `context`, `model#1` (the turn it is of), `persist`, `events`, `end` (after the last of them)… `other`: a name not shaped like one the server writes."
                       },
                       "ms": {
                         "type": "integer",
@@ -4802,6 +5037,27 @@
                       "queries": {
                         "type": "integer",
                         "minimum": 0
+                      },
+                      "parts": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "stage": {
+                              "type": "string"
+                            },
+                            "ms": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "queries": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": ["stage", "ms", "queries"]
+                        },
+                        "description": "Steps inside the stage, back to back from its start (`context`: `tools_granted`, `ai_state`, `checks`, `build`, `judging`, `summary`); what they leave of `ms` came after the last."
                       }
                     },
                     "required": ["stage", "ms", "queries"]
@@ -4830,9 +5086,49 @@
                         "type": ["integer", "null"],
                         "minimum": 0,
                         "description": "Turn start to its first event."
+                      },
+                      "firstTokenMs": {
+                        "type": ["integer", "null"],
+                        "minimum": 0,
+                        "description": "Turn start to the model API's first streamed message (time to first token)."
+                      },
+                      "firstAssistantMs": {
+                        "type": ["integer", "null"],
+                        "minimum": 0,
+                        "description": "Turn start to the answer's first whole block (a thinking block, text or a tool call)."
+                      },
+                      "retries": {
+                        "type": ["integer", "null"],
+                        "minimum": 0,
+                        "description": "API retries the CLI made in the turn."
+                      },
+                      "retryDelayMs": {
+                        "type": ["integer", "null"],
+                        "minimum": 0,
+                        "description": "The waits those retries announced, summed."
+                      },
+                      "thinkingBlocks": {
+                        "type": ["integer", "null"],
+                        "minimum": 0,
+                        "description": "Thinking blocks of the answer."
+                      },
+                      "thinkingChars": {
+                        "type": ["integer", "null"],
+                        "minimum": 0,
+                        "description": "Characters of their text: 0 with blocks means the API left the text out."
                       }
                     },
-                    "required": ["warm", "initMs", "firstEventMs"]
+                    "required": [
+                      "warm",
+                      "initMs",
+                      "firstEventMs",
+                      "firstTokenMs",
+                      "firstAssistantMs",
+                      "retries",
+                      "retryDelayMs",
+                      "thinkingBlocks",
+                      "thinkingChars"
+                    ]
                   },
                   "description": "How each of its turns on a computer started, as the computer said, at most 50."
                 }
@@ -10173,6 +10469,81 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/OperatorRunTimings"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request (`analytics.range`: the dates)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/analytics/reply-times": {
+      "get": {
+        "tags": ["Operator"],
+        "summary": "How long people waited for agents' replies, per hour or day, across workspaces",
+        "description": "Of the runs created in the window, 31 days at most: the time from a person's message to the agent's first message in the conversation, by brain and by trigger, all asks and short ones; how computer turns started; the waits for a computer. Counts and times only: no message, no name.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "An ISO 8601 instant: runs created at or after it.",
+              "example": "2026-10-30T00:00:00Z"
+            },
+            "required": true,
+            "description": "An ISO 8601 instant: runs created at or after it.",
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "An ISO 8601 instant: runs created before it, at most 31 days after `from`. Else 400 `analytics.range`.",
+              "example": "2026-10-31T00:00:00Z"
+            },
+            "required": true,
+            "description": "An ISO 8601 instant: runs created before it, at most 31 days after `from`. Else 400 `analytics.range`.",
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": ["hour", "day"],
+              "default": "day",
+              "description": "A row per UTC hour or day."
+            },
+            "required": false,
+            "description": "A row per UTC hour or day.",
+            "name": "bucket",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperatorReplyTimes"
                 }
               }
             }

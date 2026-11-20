@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { chatScreenSource } from "./chat-screen-source";
 
 const src = (path: string) => readFileSync(join(import.meta.dir, "../../src", path), "utf8");
 
@@ -27,7 +28,7 @@ test("one capsule holds the composer: the '+' at its start, the quiet buttons on
 });
 
 test("the capsule sits 16 from the screen's sides, and what lines up with it follows", () => {
-  const chat = src("features/chat/ChatScreen.tsx");
+  const chat = chatScreenSource();
   expect(chat).toContain("const DOCK_SIDE = 16;");
   expect(chat).toContain("composer: { paddingHorizontal: DOCK_SIDE, paddingTop: 6 },");
   expect(chat).toContain("float: { paddingHorizontal: DOCK_SIDE },");

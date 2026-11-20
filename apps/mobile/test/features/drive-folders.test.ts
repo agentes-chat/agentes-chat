@@ -20,7 +20,8 @@ describe("the phone's Drive folders", () => {
   test("a long press on a file or a folder opens its actions, as the web's right click", () => {
     const screen = read("src/features/drive/DriveScreen.tsx");
     expect(screen).toContain("onPress: () => arrange.newFolder(folderId)");
-    expect(screen).toContain("onLongPress={(x, open) => arrange.fileMenu(x, open, mayUpload)}");
+    expect(screen).toContain("useLatest((x: Artifact, open: () => void) => arrange.fileMenu(x, open, mayUpload))");
+    expect(screen).toContain("onLongPress={fileMenu}");
     const folders = read("src/features/drive/folders.tsx");
     expect(folders).toContain("onLongPress={() => onMenu(f)}");
     for (const label of ["artifacts.openFile", "mobile.files.sendCopy", "drive.rename", "drive.moveToMenu"]) {

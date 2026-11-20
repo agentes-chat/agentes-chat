@@ -1,4 +1,5 @@
 import { frozenBoard, useHomeBoard, type Widget } from "@agenteschat/client";
+import { memo, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useOrg } from "@/providers/org";
@@ -18,12 +19,20 @@ const STRIP_WIDGET = 162;
  * Home") and "See all", which pushes Dashboards; then its widgets small, side by side, on a strip that scrolls
  * sideways. Tapping one opens it. With none yet, one card asks for a widget (when the person edits that board).
  */
-export function HomeWidgets({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
+export const HomeWidgets = memo(function HomeWidgets({
+  collapsed,
+  onToggle,
+}: {
+  collapsed: boolean;
+  onToggle: () => void;
+}) {
   const { t } = useTranslation();
   const c = useColors();
   const { shadows } = useTheme();
   const { orgId, org } = useOrg();
   const home = useHomeBoard(orgId);
+  // One object while the board stays: each card is memoized on it.
+  const where = useMemo(() => ({ id: home.chosenId ?? HOME, home: !home.chosenId }), [home.chosenId]);
   if (home.loading && !home.board) return null;
   const board = home.board && frozenBoard(home.board, org);
   const title = home.chosenId ? (board?.title ?? home.chosenTitle ?? "") : t("dashboards.home");
@@ -43,12 +52,7 @@ export function HomeWidgets({ collapsed, onToggle }: { collapsed: boolean; onTog
         >
           {widgets.map((w) => (
             <View key={w.id} style={styles.item}>
-              <WidgetPeek
-                widget={w}
-                canEdit={canAdd}
-                board={{ id: home.chosenId ?? HOME, home: !home.chosenId }}
-                compact
-              />
+              <WidgetPeek widget={w} canEdit={canAdd} board={where} compact />
             </View>
           ))}
           {/* "Ver todos" ends the strip, on no plate: a round button with the arrow, its words under it. */}
@@ -87,7 +91,7 @@ export function HomeWidgets({ collapsed, onToggle }: { collapsed: boolean; onTog
       ) : null}
     </CollapsibleSection>
   );
-}
+});
 
 /** Between the cards: the lists' 12. */
 const GAP = 12;

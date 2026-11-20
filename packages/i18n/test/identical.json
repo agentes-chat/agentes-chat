@@ -1606,7 +1606,8 @@
       "settings.account.chat.wallpaper.neutral.sand",
       "newAgentCard.proposal.routine.label",
       "newAgentCard.proposal.routine.lead",
-      "orgAccent.sampleMention"
+      "orgAccent.sampleMention",
+      "teamWeek.budget.item"
     ],
     "it": [
       "live.sheet.args.a1",
@@ -1999,7 +2000,8 @@
       "onboarding.import.choose.skill",
       "onboarding.import.choose.step.video",
       "newAgentCard.proposal.routine.label",
-      "newAgentCard.proposal.routine.lead"
+      "newAgentCard.proposal.routine.lead",
+      "teamWeek.budget.item"
     ],
     "nl": [
       "usage.kinds.routines",
@@ -2659,7 +2661,8 @@
       "live.sheet.args.criteria2",
       "live.sheet.args.k",
       "live.sheet.args.x",
-      "audit.operatorReview.items"
+      "audit.operatorReview.items",
+      "teamWeek.budget.item"
     ],
     "ja": [
       "live.sheet.args.k",

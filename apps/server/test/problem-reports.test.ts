@@ -147,5 +147,7 @@ describe("problem reports", () => {
       origin,
     });
     expect(res.status).toBe(404);
+    // Nor is its button: the apps show it only where health says `selfhost`.
+    expect(((await (await t.app.request("/api/health")).json()) as { edition: string }).edition).toBe("cloud");
   });
 });

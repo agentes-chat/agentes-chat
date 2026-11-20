@@ -494,7 +494,7 @@ describe("# This turn", () => {
     expect(await turn()).not.toContain("# Containers");
     await f.db.update(schema.agents).set({ brain: "claude_code" }).where(eq(schema.agents.id, f.agent.id));
     expect(await turn()).toContain(
-      '# Containers on "MacBook"\ndocker, docker compose and podman work there: rootless Podman as your own user',
+      '# Containers on "MacBook"\ndocker, docker compose, docker buildx and podman work there, rootless, as your own user',
     );
     expect(seen).toHaveLength(8);
   });

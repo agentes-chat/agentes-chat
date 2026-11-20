@@ -18,11 +18,12 @@ const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
 export const SwipeTimeContext = createContext<SharedValue<number>>(makeMutable(0));
 
 /**
- * The way to the times in a conversation of bubbles (the bubbles hold none): pulled to the left, anywhere on it, my
- * own messages slide over and every message's time (with what became of mine) comes in at the screen's right edge,
- * one to one with the finger on the UI thread, resisting past `TIME_REVEAL`; let go, it springs back with the
- * finger's speed (a short ease with Reduce Motion). Leftward only and failed by 8 points to the right or up or down
- * first: a reply's swipe (to the right) and the scroll (up and down) keep theirs.
+ * The way to the times in a conversation of bubbles or compact rows, which hold none (`timesOnPull`): pulled to the
+ * left, anywhere on it, my own bubbles and every compact row slide over and every message's time (with what became of
+ * mine, in bubbles) comes in at the screen's right edge, one to one with the finger on the UI thread, resisting past
+ * `TIME_REVEAL`; let go, it springs back with the finger's speed (a short ease with Reduce Motion). Leftward only and
+ * failed by 8 points to the right or up or down first: a reply's swipe (to the right) and the scroll (up and down)
+ * keep theirs.
  */
 export function useSwipeTimePan(pull: SharedValue<number>, enabled: boolean, reduced: boolean) {
   // One config for the screen's life: a new one each render sent the gesture's settings to the native side again.
@@ -83,6 +84,15 @@ export function SwipeSlide({
   const pull = useContext(SwipeTimeContext);
   const slide = useAnimatedStyle(() => ({ transform: [{ translateX: on ? -pull.value : 0 }] }));
   return <Animated.View style={[style, slide]}>{children}</Animated.View>;
+}
+
+/**
+ * A compact row's face and words: they run to the screen's edge, so they slide over with the pull as my bubbles do,
+ * and the time comes in where they were.
+ */
+export function useSwipeSlide(on: boolean) {
+  const pull = useContext(SwipeTimeContext);
+  return useAnimatedStyle(() => ({ transform: [{ translateX: on ? -pull.value : 0 }] }));
 }
 
 /**

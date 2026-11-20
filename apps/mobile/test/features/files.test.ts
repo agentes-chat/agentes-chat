@@ -53,6 +53,7 @@ import {
 } from "../../src/features/files/zoom";
 import { ICONS } from "../../src/ui/icons.data";
 import { ownOptionsOf } from "../main-stack";
+import { chatScreenSource } from "./chat-screen-source";
 
 const src = (file: string) => readFileSync(join(import.meta.dir, "../../src", file), "utf8");
 
@@ -252,7 +253,7 @@ describe("viewer", () => {
 
   test("photos, videos and files go up as parts Expo's fetch sends, never React Native's { uri } part", () => {
     // Expo's fetch refuses `{ uri, name, type }` ("Unsupported FormDataPart implementation"): no upload ever left.
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     expect(chat).toContain("api.artifacts.upload(orgId, uploadPart(file), {");
     expect(chat).not.toContain("as unknown as Parameters<typeof api.artifacts.upload>[1]");
     expect(src("features/drive/useDriveUpload.ts")).toContain(
@@ -280,7 +281,7 @@ describe("viewer", () => {
   });
 
   test("sending with files is optimistic: the message shows at once with its files, the field is free", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     // In the conversation at once, under the clientId the real message comes back with.
     expect(chat).toContain(
       "qc.setQueryData<Message[]>(keys.messages(orgId, channelId), (list) => upsertMessage(list, local));",
@@ -610,13 +611,13 @@ describe("viewer", () => {
 });
 
 describe("a document's head", () => {
-  test("a file is a pushed screen: the native bar holds its name, Send a copy and the ⋯; its line under the bar", () => {
+  test("a file is a pushed screen: the native bar holds its name and its line, Send a copy and the ⋯", () => {
     // Pushed, never a full-screen modal: the app's sheets, menus and toasts live at the root, under a modal.
     expect(ownOptionsOf("file/[id]")).toBe("solid,");
     const viewer = src("features/files/DocumentViewer.tsx");
     expect(viewer).toContain("<PushedHeader");
     expect(viewer).toContain('title={info?.name ?? ""}');
-    expect(viewer).toContain("<BarNote>{line(info, [dir.nameOf(detail.createdBy)])}</BarNote>");
+    expect(viewer).toContain("subtitle={info && detail ? line(info, [dir.nameOf(detail.createdBy)]) : undefined}");
     expect(viewer).toContain("actions={bar}");
     // The system's share sheet says what it does; the ⋯ is the system's menu on iOS and the app's list on Android.
     expect(viewer).toContain('label: t("mobile.files.sendCopy")');
@@ -636,14 +637,16 @@ describe("a document's head", () => {
     expect(viewer).toContain("...(textual && text.data !== undefined");
   });
 
-  test("a picture's head too: × alone on the first row, the name and its line on the row under it", () => {
+  test("a picture's head: × on the left, the name and its line centred beside it, a space as wide on the right", () => {
     const viewer = readFileSync(join(import.meta.dir, "../../src/features/files/ImageViewer.tsx"), "utf8");
     const top = viewer.slice(viewer.indexOf("style={[styles.top,"), viewer.indexOf("</Chrome>"));
     expect(top.indexOf('icon="x"')).toBeGreaterThan(-1);
     expect(top.indexOf('icon="x"')).toBeLessThan(top.indexOf("{info?.name"));
-    expect(top).toContain("numberOfLines={3}");
-    expect(top).not.toContain("numberOfLines={1}");
-    expect(viewer).toContain('title: { flexBasis: "100%", gap: 2 }');
+    // One line each, a long name shortened in its middle so the kind of file stays.
+    expect(top).toContain('numberOfLines={1} ellipsizeMode="middle"');
+    expect(top.indexOf("{info?.name")).toBeLessThan(top.indexOf('<View pointerEvents="none" style={styles.round} />'));
+    expect(viewer).toContain('title: { flex: 1, minWidth: 0, alignItems: "center" },');
+    expect(viewer).not.toContain('flexBasis: "100%"');
   });
 
   test("a picture's actions are the row at the bottom, never repeated in a ⋯, and Share has one icon", () => {

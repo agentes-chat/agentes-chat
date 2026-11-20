@@ -25,6 +25,7 @@ import {
 } from "../src";
 import { deliverLive, listenLiveSteering } from "../src/live-steer";
 import { takeInbox } from "../src/run-inbox";
+import { addRunStep } from "../src/runs";
 import { type Fixture, setup } from "./fixtures";
 import { pairMachine } from "./machine-fixtures";
 
@@ -145,6 +146,9 @@ test("a message during a computer turn is handed to it live; read ones join it, 
   await post(fx, "@dev roda os testes");
   const drained = drainOutbox(fx.db, handlers);
   await started.promise;
+  // The turn runs the tests (a tool): its answer is a result, which goes out as it is (ADR 0112 addendum of 2026-11-19).
+  const [atWork] = await fx.db.select().from(schema.agentRuns);
+  if (atWork) await addRunStep(fx.db, atWork, "tool_call", { toolUseId: "c-1", name: "Bash", input: {} });
 
   const first = await post(fx, "@dev e atualiza a doc");
   const second = await post(fx, "@dev e o changelog");

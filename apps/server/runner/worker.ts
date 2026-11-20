@@ -596,6 +596,10 @@ export async function runWorker(o: WorkerOptions): Promise<number> {
     idleMs: state.limits.brainIdleMinutes * 60_000,
     maxProcesses: state.limits.brainMaxProcesses,
   });
+  const codexLimits = () => ({
+    idleMs: (state.limits.codexIdleMinutes ?? state.limits.brainIdleMinutes) * 60_000,
+    maxProcesses: state.limits.codexMaxProcesses ?? state.limits.brainMaxProcesses,
+  });
   const brains = new BrainManager({
     root: path.join(home, "brains"),
     mcp: mcpCommand,
@@ -608,7 +612,7 @@ export async function runWorker(o: WorkerOptions): Promise<number> {
   const codexRuns = new Map<string, McpTaskInfo>();
   const codexApp = new CodexAppServers({
     runs: codexRuns,
-    ...brainLimits(),
+    ...codexLimits(),
     ...(cli ? { spawn: cli } : {}),
     onRateLimits: (account, rateLimits) => {
       if (account) link.usage("codex", account, rateLimits);
@@ -669,6 +673,9 @@ export async function runWorker(o: WorkerOptions): Promise<number> {
     socketPath,
     task: (taskId) =>
       tasks.mcpTask(taskId) ?? brains.mcpTask(taskId) ?? codexRuns.get(taskId) ?? delegatedRuns.get(taskId) ?? null,
+    // A delegated CLI's calls find no process here (root runs it): harmless, as all its tools are this bridge's
+    // (`mcp__`), which the silence check never times.
+    onCall: (taskId, delta) => brains.bridgeCall(taskId, delta),
     log,
   });
   await mcp
@@ -839,7 +846,7 @@ export async function runWorker(o: WorkerOptions): Promise<number> {
     state = next;
     tasks.setLimits({ maxConcurrent: next.limits.maxConcurrentTasks, defaultMaxSeconds: next.limits.taskMaxSeconds });
     brains.setLimits(brainLimits());
-    codexApp.setLimits(brainLimits());
+    codexApp.setLimits(codexLimits());
     if (next.account !== undefined) {
       brains.keepAccount(next.account, next.accounts);
       tasks.keepAccount(next.account, next.accounts);

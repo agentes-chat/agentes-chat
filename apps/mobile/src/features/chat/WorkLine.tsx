@@ -1,4 +1,4 @@
-import { type Issue, type Message, useApi, useChannels, type WorkView } from "@agenteschat/client";
+import { type Channel, channelsQuery, type Issue, type Message, useApi, type WorkView } from "@agenteschat/client";
 import { managesAgent } from "@agenteschat/client/lib/audience";
 import { relativeTime } from "@agenteschat/client/lib/format";
 import { heldBack } from "@agenteschat/client/lib/issues";
@@ -10,9 +10,9 @@ import {
   workWaitsOnPerson,
 } from "@agenteschat/client/lib/long-work";
 import { can } from "@agenteschat/client/lib/permissions";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
-import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
+import { createContext, type ReactNode, useCallback, useContext } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Pressable, type StyleProp, StyleSheet, View, type ViewStyle } from "react-native";
 import { useOrg } from "@/providers/org";
@@ -21,7 +21,7 @@ import { router } from "@/ui/navigation";
 import { useFontScale } from "@/ui/text-scale";
 import { chatHref } from "../links/logic";
 import { useBubblePart } from "../shared/bubble-part";
-import { useColors, useOrgId } from "../shared/hooks";
+import { useColors, useNow, useOrgId } from "../shared/hooks";
 import { tapHaptic, useSurface } from "../shared/parts";
 import { RowPartContext, useCardTop } from "./look";
 import { useRowDirectory, useRowMeId } from "./row-data";
@@ -29,16 +29,9 @@ import { useRowDirectory, useRowMeId } from "./row-data";
 /** The conversation's list scrolls to one of its messages (false: it doesn't show it). */
 export const JumpToMessageContext = createContext<((messageId: string) => boolean) | null>(null);
 
-/** Redraws a live work's minutes every half minute. */
-function useNow(live: boolean) {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    if (!live) return;
-    const id = setInterval(() => setNow(new Date()), 30_000);
-    return () => clearInterval(id);
-  }, [live]);
-  return now;
-}
+/** A live work's minutes move every half minute; a finished one's line barely needs the clock (`useNow`). */
+const LIVE_TICK_MS = 30_000;
+const STILL_TICK_MS = 3_600_000;
 
 /** The phone's long-work line (ADR 0121), as the web's WorkLine: how it stands, its last update and its actions. */
 function useLine(work: WorkView, inUpdatesThread = false) {
@@ -50,7 +43,7 @@ function useLine(work: WorkView, inUpdatesThread = false) {
   const qc = useQueryClient();
   const toast = useToast();
   const live = work.status === "live" || work.status === "queued";
-  const now = useNow(live);
+  const now = new Date(useNow(live ? LIVE_TICK_MS : STILL_TICK_MS));
   const agent = dir.agentById.get(work.agentId);
   // As `mayStopRun` decides (who asked, the agent's owner, who manages it); the server has the last word, in a toast.
   const stop = useMutation({
@@ -452,7 +445,10 @@ export function useShareWork(issue: Issue): { share: () => void; pending: boolea
   const api = useApi();
   const qc = useQueryClient();
   const toast = useToast();
-  const channels = useChannels(orgId);
+  // Only whether its conversation holds it back, from the channel list: the list is read again for any message.
+  const channelId = issue.channelId;
+  const holds = useCallback((all: Channel[]) => heldBack({ channelId }, all), [channelId]);
+  const held = useQuery({ ...channelsQuery(api, orgId), select: holds }).data === true;
   const share = useMutation({
     mutationFn: () => api.issues.share(orgId, issue.id),
     onSuccess: () => {
@@ -467,7 +463,7 @@ export function useShareWork(issue: Issue): { share: () => void; pending: boolea
     work.requestedByUserId === meId ||
     (issue.createdBy.type === "person" && issue.createdBy.id === meId) ||
     admin;
-  if (!heldBack(issue, channels.data) || !mayShare) return null;
+  if (!held || !mayShare) return null;
   return {
     share: () => {
       tapHaptic();

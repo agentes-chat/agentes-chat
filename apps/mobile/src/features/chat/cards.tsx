@@ -43,7 +43,7 @@ import {
   decisionOutcome,
   requesterDecidesLine,
 } from "@agenteschat/client/lib/approval-words";
-import { formatTime, nextLabel, whenAt } from "@agenteschat/client/lib/format";
+import { nextLabel, whenAt } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { MAX_MESSAGE_LENGTH } from "@agenteschat/client/lib/message-length";
 import { modeKey } from "@agenteschat/client/lib/workspace-mode";
@@ -466,6 +466,7 @@ function ApprovalGroupItem({
   onAlways: () => void;
 }) {
   const { t, i18n } = useTranslation();
+  const when = useWhen();
   const meId = useRowMeId();
   const dir = useRowDirectory();
   const c = useColors();
@@ -499,7 +500,7 @@ function ApprovalGroupItem({
             <Text variant="footnote" tone="muted">
               {[
                 decisionOutcome(t, a, meId, (id) => dir.memberById.get(id)?.name),
-                a.decidedAt && formatTime(i18n.language, a.decidedAt),
+                a.decidedAt && when.time(a.decidedAt),
               ]
                 .filter(Boolean)
                 .join(" · ")}

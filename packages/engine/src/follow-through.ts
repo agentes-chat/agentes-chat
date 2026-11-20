@@ -309,21 +309,22 @@ const publishLine = async (pubsub: PubSub | undefined, line: Message) => {
 };
 
 /**
- * The run a tool call belongs to: a conversation's run, never a routine's background work or a mission task.
+ * The run a tool call belongs to: a conversation's run or a routine's background work (the run policy lets a
+ * routine set its own resume, which wakes it where it reports: `deliverNoticeToRun`), never a mission task.
  * `confidential`: its lines live where it answers, under its thread's root (`replyThreadOf`, ADR 0190).
  */
 async function conversationRun(ctx: ToolContext) {
-  if (!ctx.runId || ctx.background || ctx.bridge?.taskId) return null;
+  if (!ctx.runId || ctx.bridge?.taskId) return null;
   const [run] = await ctx.db
     .select()
     .from(agentRuns)
     .where(and(eq(agentRuns.id, ctx.runId), eq(agentRuns.orgId, ctx.orgId), eq(agentRuns.agentId, ctx.agentId)));
-  return run && !run.background ? { ...run, confidential: ctx.confidential === true } : null;
+  return run ? { ...run, confidential: ctx.confidential === true } : null;
 }
 
 /**
- * `follow_up` and `cancel_follow_up`, for every agent (no scope; routines' background runs are refused by
- * the run policy: they run again on their own schedule). Setting one posts its line in the run's
+ * `follow_up` and `cancel_follow_up`, for every agent (no scope; a routine's background run may set one to come
+ * back to work it is blocked on, besides firing again on its own schedule). Setting one posts its line in the run's
  * conversation (a `follow_up` notice that wakes nobody, `refs.state` `pending`) and queues the job that
  * wakes the agent there at its time (`wakeFollowUp`).
  */
@@ -350,7 +351,8 @@ export function createFollowUpToolSource(deps: { pubsub?: PubSub }): ToolSource 
         const run = await conversationRun(ctx);
         if (!run) return refused("Only a conversation's run can come back to it.");
         const channel = await getChannelCached(ctx.db, run.orgId, run.channelId);
-        if (channel && isAgentOnlyDm(channel))
+        // A routine's room is no agents' DM: its resume wakes it where it reports.
+        if (channel && isAgentOnlyDm(channel) && !run.background)
           return refused("Answer the agent that asked now: no person reads this conversation to come back to.");
         // Its wake is one more run this agent starts on its own (ADR 0089): past the stretch's limits it would be held.
         const atLimit = await refusedAtLimit(ctx.db, run, run.agentId);

@@ -20,14 +20,14 @@ import { namesText } from "@agenteschat/client/lib/format";
 import type { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Icon, Text } from "@/ui";
 import { router } from "@/ui/navigation";
 import { consultationHref } from "../links/logic";
 import { AgentFace } from "../shared/Face";
-import { useColors, useOrgId } from "../shared/hooks";
+import { useColors, useNow, useOrgId } from "../shared/hooks";
 import { usePresenceOf } from "../status/hooks";
 import { rowBodyInset } from "./logic";
 import { useRhythm, useRowLook } from "./look";
@@ -42,17 +42,9 @@ export const consultLineLabel = (
   to: ReturnType<typeof agentGrammar>,
 ) => t(consultLineKey(state, c), { name: to.name, context: to.context });
 
-/** A clock for the open questions' times; still once none is out. */
-function useTick(active: boolean) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (!active) return;
-    setNow(Date.now());
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, [active]);
-  return now;
-}
+/** The open questions' times count by the second; with none out the row's clock barely moves (`useNow`). */
+const OPEN_TICK_MS = 1000;
+const STILL_TICK_MS = 3_600_000;
 
 const NO_ITEMS: ConsultPairItem[] = [];
 const NO_CONSULTED: MessageConsultation[] = [];
@@ -137,7 +129,7 @@ export function ConsultPairRow({
   const dir = useRowDirectory();
   const c = useColors();
   const live = items.some((x) => x.status === "open");
-  const now = useTick(live);
+  const now = useNow(live ? OPEN_TICK_MS : STILL_TICK_MS);
   // The hand-off's run waits on me (its agent's work for me, ADR 0084 addendum): the row says so in amber, as on
   // the web.
   const presence = usePresenceOf();

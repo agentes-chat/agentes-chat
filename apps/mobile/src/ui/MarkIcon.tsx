@@ -28,6 +28,7 @@ export function MarkIcon({
     <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }} accessible={false}>
       <Image
         source={{ uri }}
+        cachePolicy="memory-disk"
         tintColor={color ?? colors.ink2}
         contentFit="contain"
         style={{ width: drawn, height: drawn }}

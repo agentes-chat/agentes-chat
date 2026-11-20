@@ -2,6 +2,7 @@ import { type AgentColorName, gradientOf, mixHex } from "@agenteschat/ui/agent/e
 import { memo, useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { useFrameTime, useLivePaused } from "@/agent/live";
+import { useAppActive } from "@/lib/useAppActive";
 import { useReducedMotion, useTheme } from "@/ui/theme";
 import { CellCanvas } from "../browser/TrailPixels";
 import { RUN_SLOTS } from "./logic";
@@ -60,8 +61,9 @@ export const RunStrip = memo(function RunStrip({
 }) {
   const tones = useRunTones();
   const reduced = useReducedMotion();
-  // A run at work is redrawn about 12 times a second, as on the web.
-  const frame = Math.floor(useFrameTime(running && !reduced, 0) * 12);
+  // A run at work is redrawn about 12 times a second, as on the web: the clock steps at that rate, so the strip
+  // renders only when its frame changes (the epsilon keeps a step's float error from reading as the frame before).
+  const frame = Math.floor(useFrameTime(running && !reduced, 0, 12) * 12 + 1e-6);
   const key = runs.map((r) => `${r.status}:${r.weight ?? 1}`).join(",");
   // biome-ignore lint/correctness/useExhaustiveDependencies: `key` stands for the runs
   const cells = useMemo(
@@ -166,12 +168,13 @@ function LaneSprite({
 }
 
 /**
- * Seconds, ticking every `ms` while `active` on a screen that is showing: the sprites hop and blink at a few frames
- * a second (the shared clock's 25 would redraw every lane that often for a blink).
+ * Seconds, ticking every `ms` while `active` on a screen that is showing and the app is in front: the sprites hop and
+ * blink at a few frames a second (the shared clock's 25 would redraw every lane that often for a blink).
  */
 function useTicker(active: boolean, ms: number): number {
   const paused = useLivePaused();
-  const on = active && !paused;
+  const inFront = useAppActive();
+  const on = active && !paused && inFront;
   const [t, setT] = useState(() => Date.now() / 1000);
   useEffect(() => {
     if (!on) return;

@@ -264,7 +264,10 @@ const Trace = z
           seq: z.number().int(),
           kind: z.enum(schema.agentRunStepKindEnum.enumValues),
           at: Time,
-          tool: z.string().nullable().openapi({ description: "A tool call's and its result's." }),
+          tool: z.string().nullable().openapi({
+            description:
+              "A tool call's and its result's. An error's whose `reason` is `brain_stalled`: the CLI's own tool it hung in.",
+          }),
           builtIn: z
             .boolean()
             .nullable()
@@ -279,7 +282,7 @@ const Trace = z
             .string()
             .nullable()
             .openapi({
-              description: `An error's, or a tool result's own (\`tool.unknown\`, \`tool.invalid_input\`, \`tool.failed\`, \`tool.not_allowed\`…). On an error whose \`reason\` is \`no_ai\`: why the run had nothing to think with, one of ${NO_AI_CARD_REASONS.map((r) => `\`${r}\``).join(", ")}; null on a run from before the server kept it.`,
+              description: `An error's, or a tool result's own (\`tool.unknown\`, \`tool.invalid_input\`, \`tool.failed\`, \`tool.not_allowed\`…). On an error whose \`reason\` is \`no_ai\`: why the run had nothing to think with, one of ${NO_AI_CARD_REASONS.map((r) => `\`${r}\``).join(", ")}; null on a run from before the server kept it. On an error whose \`reason\` is \`brain_stalled\` (the computer stopped the CLI after it said nothing for too long): where it was, \`model\` (waiting for the model's answer), \`tool\` (in one of its own tools, \`tool\`) or \`compacting\`.`,
             }),
           errorClass: z
             .enum(OPERATOR_ERROR_CLASSES)
@@ -294,7 +297,7 @@ const Trace = z
             .string()
             .nullable()
             .openapi({
-              description: `An error's: \`transient\`, \`provider_outage\`, \`brain_unavailable\`, \`usage_wait\`, \`no_ai\`, \`canceled\`, \`gave_up\`, \`recovered\`, \`interrupted\`… A \`context\` step's that handed the run's unread messages on to another run (\`redispatchedMessageIds\`): why, one of ${RELEASE_REASONS.map((r) => `\`${r}\``).join(", ")}.`,
+              description: `An error's: \`transient\`, \`provider_outage\`, \`brain_unavailable\`, \`brain_stalled\`, \`usage_wait\`, \`no_ai\`, \`canceled\`, \`gave_up\`, \`recovered\`, \`interrupted\`… A \`context\` step's that handed the run's unread messages on to another run (\`redispatchedMessageIds\`): why, one of ${RELEASE_REASONS.map((r) => `\`${r}\``).join(", ")}.`,
             }),
           toRunId: z.uuid().nullable().openapi({
             description:
@@ -323,7 +326,8 @@ const Trace = z
             .nullable()
             .openapi({ description: `A tool call's. ${INPUT_DIGEST}` }),
           durationMs: Count.nullable().openapi({
-            description: "A tool result's: since its call; null when the call is on an earlier page.",
+            description:
+              "A tool result's: since its call; null when the call is on an earlier page. A `brain_stalled` error's: how long nothing came from the CLI.",
           }),
           messageId: z.uuid().nullable().openapi({ description: "A `message` step's: the reply it posted." }),
           records: z.array(z.string()).openapi({
@@ -361,10 +365,17 @@ const Trace = z
               z.object({
                 stage: z.string().openapi({
                   description:
-                    "`claim`, `context`, `model#1` (the turn it is of), `persist`, `events`… `other`: a name not shaped like one the server writes.",
+                    "`claim`, `context`, `model#1` (the turn it is of), `persist`, `events`, `end` (after the last of them)… `other`: a name not shaped like one the server writes.",
                 }),
                 ms: Count,
                 queries: Count,
+                parts: z
+                  .array(z.object({ stage: z.string(), ms: Count, queries: Count }))
+                  .optional()
+                  .openapi({
+                    description:
+                      "Steps inside the stage, back to back from its start (`context`: `tools_granted`, `ai_state`, `checks`, `build`, `judging`, `summary`); what they leave of `ms` came after the last.",
+                  }),
               }),
             )
             .openapi({ description: `In the order they ran, at most ${RUN_CLAIM_STAGES_MAX}.` }),
@@ -375,6 +386,18 @@ const Trace = z
                 warm: z.boolean().openapi({ description: "On a process already open." }),
                 initMs: Count.nullable().openapi({ description: "A new process until it said it was ready." }),
                 firstEventMs: Count.nullable().openapi({ description: "Turn start to its first event." }),
+                firstTokenMs: Count.nullable().openapi({
+                  description: "Turn start to the model API's first streamed message (time to first token).",
+                }),
+                firstAssistantMs: Count.nullable().openapi({
+                  description: "Turn start to the answer's first whole block (a thinking block, text or a tool call).",
+                }),
+                retries: Count.nullable().openapi({ description: "API retries the CLI made in the turn." }),
+                retryDelayMs: Count.nullable().openapi({ description: "The waits those retries announced, summed." }),
+                thinkingBlocks: Count.nullable().openapi({ description: "Thinking blocks of the answer." }),
+                thinkingChars: Count.nullable().openapi({
+                  description: "Characters of their text: 0 with blocks means the API left the text out.",
+                }),
               }),
             )
             .openapi({

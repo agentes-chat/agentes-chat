@@ -4,13 +4,14 @@ import { memo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Text as RNText, StyleSheet, View } from "react-native";
 import { CHROME_MAX_SCALE, Icon, type IconName, PressScale, systemText, Text, useTheme, weights } from "@/ui";
+import { useRowDirectory } from "../chat/row-data";
 import type { FileRef } from "../files/logic";
 import { useOpenFile } from "../files/open";
 import { useRemoteFile } from "../files/source";
 import { PresentFaces } from "../live-files/shared/HereFaces";
 import { LiveCover } from "../live-files/shared/LiveCover";
 import { Face } from "../shared/Face";
-import { useDirectory, useOrgId, useWhen } from "../shared/hooks";
+import { useOrgId, useWhen } from "../shared/hooks";
 import { MONO, useSurface } from "../shared/parts";
 import { type CardPreview, cardPreview, cardShape, kindKey } from "./logic";
 
@@ -58,7 +59,7 @@ export const DriveCard = memo(function DriveCard({
   const { t } = useTranslation();
   const { colors: c } = useTheme();
   const surface = useSurface();
-  const dir = useDirectory();
+  const dir = useRowDirectory();
   const when = useWhen();
   const kind = kindKey(a);
   const author = dir.nameOf(a.createdBy);
@@ -120,7 +121,11 @@ function LivePreview({ content }: { content: ArtifactLiveContent }) {
   return (
     <View
       style={StyleSheet.absoluteFill}
-      onLayout={(e) => setBox({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height })}
+      onLayout={(e) => {
+        const { width, height } = e.nativeEvent.layout;
+        // The same box keeps its object: a layout pass that changed nothing doesn't draw the cover again.
+        setBox((was) => (was.width === width && was.height === height ? was : { width, height }));
+      }}
     >
       {box.width > 0 ? <LiveCover content={content} width={box.width} height={box.height} /> : null}
     </View>
@@ -135,6 +140,8 @@ function ImagePreview({ artifact: a }: { artifact: Artifact }) {
     <Image
       source={{ uri: link.data.uri, headers: link.data.headers, cacheKey: `${a.id}@${a.version}` }}
       recyclingKey={`${a.id}@${a.version}`}
+      // Kept decoded in memory too: a card scrolled back or a grid drawn again shows it without decoding it anew.
+      cachePolicy="memory-disk"
       contentFit="cover"
       transition={160}
       style={StyleSheet.absoluteFill}

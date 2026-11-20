@@ -232,6 +232,16 @@ describe("dashboards on the phone (ADR 0135)", () => {
     expect(formatWithUnit(6, undefined, "en")).toBe("6");
   });
 
+  test("a number's prefix is a text of its own on the number's baseline, so Android never cuts the digits", () => {
+    const view = readFileSync(join(import.meta.dir, "../../src/features/dashboards/WidgetView.tsx"), "utf8");
+    // As the first, smaller part of the number's own text, the line took its height and cut the digits' tops.
+    expect(view).not.toMatch(/\$\{spec\.prefix\}/);
+    expect(view).toContain(
+      "{spec.prefix ? <Text style={[styles.affix, { color: c.muted }]}>{spec.prefix}</Text> : null}",
+    );
+    expect(view).toContain('figure: { flexDirection: "row", alignItems: "baseline", gap: 4 },');
+  });
+
   test("bars keep every label while there's room, else every n-th; values only with room", () => {
     expect(barWords(5, 300)).toEqual({ every: 1, values: true });
     expect(barWords(24, 150).every).toBeGreaterThan(1);

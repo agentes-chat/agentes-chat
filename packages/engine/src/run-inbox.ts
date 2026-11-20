@@ -46,6 +46,24 @@ export const ACTIVE_RUN_STATUSES = ["queued", "running", "waiting_approval", "wa
 export const RELEASE_REASONS = ["done", "failed", "canceled", "interrupted", "swept", "held"] as const;
 export type ReleaseReason = (typeof RELEASE_REASONS)[number];
 
+/** Whether one of these messages (a run's unread ones) is a person's, not deleted: someone wrote, not an event. */
+export async function personAmong(db: Executor, orgId: string, ids: string[]): Promise<boolean> {
+  if (ids.length === 0) return false;
+  const [row] = await db
+    .select({ id: messages.id })
+    .from(messages)
+    .where(
+      and(
+        eq(messages.orgId, orgId),
+        inArray(messages.id, ids),
+        eq(messages.authorType, "person"),
+        isNull(messages.deletedAt),
+      ),
+    )
+    .limit(1);
+  return row !== undefined;
+}
+
 /**
  * The message a person stopped this run to send ("Parar e mandar" to a computer brain, whose turn can't be cut
  * halfway), or null when the run was stopped for itself (the stop button, a plain "stop"). Such a stop is no stop
@@ -114,21 +132,119 @@ export async function queueAfterRun(db: Executor, runId: string, messageId: stri
 }
 
 /**
- * Takes the run's unread messages (the inbox is emptied): the executor reads them, or hands them on. What waits for
- * after the task (`afterMessageIds`) stays: only an ending hands it on.
+ * A message that went into the run's task but isn't for its agent (`steerHandling` `elsewhere`, ADR 0112 addendum of
+ * 2026-11-19): out of its inbox while still unread, and out of the message's `steeredRunIds`, so nothing reads it as
+ * sent to that run (a reload's receipts, who wrote into the run, the router's history). False: read already, or the
+ * run no longer takes messages.
  */
-export async function takeInbox(db: Executor, runId: string): Promise<string[]> {
+export async function releaseFromRun(
+  db: Database,
+  run: Pick<AgentRun, "id" | "orgId">,
+  message: { id: string; createdAt: Date },
+): Promise<boolean> {
   return db.transaction(async (tx) => {
-    const [row] = await tx
-      .select({ pending: agentRuns.pendingMessageIds })
-      .from(agentRuns)
-      .where(eq(agentRuns.id, runId))
-      .for("update");
-    const ids = row?.pending ?? [];
-    if (ids.length === 0) return [];
-    await tx.update(agentRuns).set({ pendingMessageIds: [] }).where(eq(agentRuns.id, runId));
-    return ids;
+    const released = await tx
+      .update(agentRuns)
+      .set({
+        pendingMessageIds: sql`array_remove(${agentRuns.pendingMessageIds}, ${message.id}::uuid)`,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(agentRuns.id, run.id),
+          inArray(agentRuns.status, [...ACTIVE_RUN_STATUSES]),
+          sql`${message.id}::uuid = any(${agentRuns.pendingMessageIds})`,
+        ),
+      )
+      .returning({ id: agentRuns.id });
+    if (released.length === 0) return false;
+    const runs = sql`coalesce(${messages.meta}->'steeredRunIds', '[]'::jsonb) - ${run.id}::text`;
+    await tx
+      .update(messages)
+      .set({
+        meta: sql`case when jsonb_array_length(${runs}) = 0 then ${messages.meta} - 'steeredRunIds'
+          else jsonb_set(${messages.meta}, '{steeredRunIds}', ${runs}) end`,
+      })
+      .where(and(eq(messages.orgId, run.orgId), eq(messages.id, message.id), sentSince(message)));
+    return true;
   });
+}
+
+/** Bounds a statement on one message to its month's partition (its date in the app is the database's, cut to ms). */
+const sentSince = (message: { createdAt: Date }) =>
+  gte(messages.createdAt, new Date(message.createdAt.getTime() - 1000));
+
+/**
+ * Marks a message whose triage is under way (`meta.triage`, ADR 0112 addendum of 2026-11-19): a run's step waits for
+ * it a moment (`takeInbox`, `unreadNow` with `awaitTriage`) instead of reading first what may be for someone else. Cleared
+ * when the judge answers.
+ */
+export async function markTriage(db: Executor, message: Pick<Message, "id" | "orgId" | "createdAt">, on: boolean) {
+  await db
+    .update(messages)
+    .set({ meta: on ? sql`${messages.meta} || '{"triage":true}'::jsonb` : sql`${messages.meta} - 'triage'` })
+    .where(and(eq(messages.orgId, message.orgId), eq(messages.id, message.id), sentSince(message)));
+}
+
+/**
+ * How long a run waits at most for the triage of a message in its inbox (`markTriage`, ADR 0112 addendum of
+ * 2026-11-19), counted from the message's send: it may be for someone else (`releaseFromRun`), and a step that took it
+ * first would answer it. The judge answers in about a second; past this, the run reads it as before.
+ */
+export const TRIAGE_GRACE_MS = 2_000;
+const TRIAGE_POLL_MS = 150;
+
+/**
+ * SQL, read beside a run's inbox: one of its messages is under triage (`meta.triage`), sent less than
+ * `TRIAGE_GRACE_MS` ago on the database's clock (a triage that never ended holds nothing longer).
+ */
+const underTriage = sql<boolean>`exists (select 1 from ${messages} tm where tm.org_id = ${agentRuns.orgId}
+  and tm.id = any(${agentRuns.pendingMessageIds}) and tm.meta ? 'triage'
+  and tm.created_at > clock_timestamp() - ${`${TRIAGE_GRACE_MS} milliseconds`}::interval)`;
+
+/**
+ * Takes the run's unread messages (the inbox is emptied): the executor reads them, or hands them on. What waits for
+ * after the task (`afterMessageIds`) stays: only an ending hands it on. `awaitTriage`: while one of them is under
+ * triage, it waits for it (at most `TRIAGE_GRACE_MS`), in the same read, so nothing under triage costs no statement.
+ */
+export async function takeInbox(
+  db: Executor,
+  runId: string,
+  options: { awaitTriage?: boolean } = {},
+): Promise<string[]> {
+  const deadline = Date.now() + TRIAGE_GRACE_MS;
+  for (;;) {
+    const taken = await db.transaction(async (tx) => {
+      const [row] = await tx
+        .select({ pending: agentRuns.pendingMessageIds, triaging: options.awaitTriage ? underTriage : sql`false` })
+        .from(agentRuns)
+        .where(eq(agentRuns.id, runId))
+        .for("update");
+      const ids = row?.pending ?? [];
+      if (ids.length === 0) return [];
+      if (row?.triaging && Date.now() < deadline) return null;
+      await tx.update(agentRuns).set({ pendingMessageIds: [] }).where(eq(agentRuns.id, runId));
+      return ids;
+    });
+    if (taken) return taken;
+    await Bun.sleep(TRIAGE_POLL_MS);
+  }
+}
+
+/**
+ * The run's unread messages as they are now, without taking them. `awaitTriage`: once none is under triage (at most
+ * `TRIAGE_GRACE_MS`), in the same read.
+ */
+export async function unreadNow(db: Executor, runId: string, options: { awaitTriage?: boolean } = {}) {
+  const deadline = Date.now() + TRIAGE_GRACE_MS;
+  for (;;) {
+    const [row] = await db
+      .select({ pending: agentRuns.pendingMessageIds, triaging: options.awaitTriage ? underTriage : sql`false` })
+      .from(agentRuns)
+      .where(eq(agentRuns.id, runId));
+    if (!row?.triaging || Date.now() >= deadline) return row?.pending ?? [];
+    await Bun.sleep(TRIAGE_POLL_MS);
+  }
 }
 
 /**

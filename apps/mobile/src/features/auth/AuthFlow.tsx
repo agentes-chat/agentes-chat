@@ -7,7 +7,6 @@ import { openBrowserAsync } from "expo-web-browser";
 import { type ComponentRef, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Linking, Platform, Pressable, type TextInput, View } from "react-native";
-import { useKeyboardState } from "react-native-keyboard-controller";
 import { PixelOrbit } from "@/agent/PixelOrbit";
 import { useLaunched } from "@/features/launch/launched";
 import { readValueSync } from "@/lib/storage";
@@ -68,8 +67,6 @@ export function AuthFlow({
   const launched = useLaunched();
   // Under a step, or under an invitation's screen, it stays out of the way.
   const focused = useIsFocused();
-  // Whether the keyboard (and so its return key, the e-mail's action) is on screen.
-  const keyboardUp = useKeyboardState((state) => state.isVisible);
   const emailField = useRef<ComponentRef<typeof TextInput>>(null);
   const [offline, setOffline] = useState(false);
   // The server's last answer: a new password's link asked from here (a provider's unconfirmed account) carries its pass.
@@ -187,7 +184,7 @@ export function AuthFlow({
           autoCorrect={false}
           autoComplete="email"
           textContentType="username"
-          // The keyboard's blue key is the action ("continuar"); it stays gray until something is typed.
+          // The keyboard's blue key is the action, as Continue is; it stays gray until something is typed.
           returnKeyType="go"
           enablesReturnKeyAutomatically
           onSubmitEditing={submit}
@@ -230,21 +227,18 @@ export function AuthFlow({
         <Quiet label={t("auth.unconfirmedReset")} onPress={() => open("forgot", email.trim(), options)} />
       ) : null}
 
-      {/* The keyboard's blue key ("continuar") is the action while the keyboard is up, and Apple, Google and GitHub
-          take the place where the thumb is. With the keyboard put away there is no blue key: Continue stands in for
-          it, so the step never leaves anyone without a way on. */}
-      {keyboardUp ? null : (
-        <LastUsed on={lastWay === "email"}>
-          <Button
-            variant="primary"
-            wide
-            label={t("auth.flow.continue")}
-            loading={pending}
-            disabled={!ready}
-            onPress={submit}
-          />
-        </LastUsed>
-      )}
+      {/* Continue is always on screen, gray until the address is whole, beside the keyboard's blue key that does the
+          same: a button that showed only once the keyboard had gone left the screen with no way on while typing. */}
+      <LastUsed on={lastWay === "email"}>
+        <Button
+          variant="primary"
+          wide
+          label={t("auth.flow.continue")}
+          loading={pending}
+          disabled={!ready}
+          onPress={submit}
+        />
+      </LastUsed>
 
       <Locked when={pending} keepKeyboard style={{ paddingTop: 8 }}>
         <SocialButtons providers={allProviders} onError={socialRefused} earlyAccess={access} />

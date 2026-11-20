@@ -24,6 +24,7 @@ import {
   receiptShows,
 } from "../../src/features/chat/agent-receipts";
 import { endsOnNoAiCard, noAiBanner } from "../../src/features/chat/no-ai-banner";
+import { chatScreenSource } from "./chat-screen-source";
 import { message, translator } from "./fixtures";
 
 const routed = (
@@ -605,7 +606,7 @@ describe("a receipt never adds a line to its row", () => {
     expect(num(row, /whoRoom: \{ paddingRight: (\d+) \}/)).toBeGreaterThanOrEqual(16 + 4 + 12);
     // No line of its own: neither the steer line under my bubble nor "Visto" under the list's row.
     expect(row).not.toContain("SteerLine");
-    expect(src("features/chat/ChatScreen.tsx")).not.toContain('t("mobile.chat.seen")');
+    expect(chatScreenSource()).not.toContain('t("mobile.chat.seen")');
   });
 });
 

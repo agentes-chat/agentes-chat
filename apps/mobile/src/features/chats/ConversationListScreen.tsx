@@ -87,7 +87,7 @@ function ConversationList() {
             facts={factsOf(r, agentStates.get(r.key))}
             divider={i > 0}
             live={i < LIVE_ROWS}
-            pinLabel={menus.rowActionsOf(r).find((a) => a.key === "pin")?.label ?? null}
+            pinLabel={menus.pinLabelOf(r)}
             onHold={menus.openRowMenu}
             holdLabel={holdLabel}
             holdActions={menus.rowActionsOf}

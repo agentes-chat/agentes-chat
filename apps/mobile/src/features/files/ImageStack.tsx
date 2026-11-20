@@ -229,6 +229,7 @@ function StackCard({
           <Image
             source={{ uri: link.data.uri, headers: link.data.headers, cacheKey: key }}
             recyclingKey={key}
+            cachePolicy="memory-disk"
             contentFit="cover"
             transition={pictureFade(key)}
             onLoad={() => pictureDrawn(key)}

@@ -9,6 +9,7 @@ import {
   PAUSE_MS,
   ROW_BODY_INSET,
 } from "../../src/features/chat/logic";
+import { chatScreenSource } from "./chat-screen-source";
 import { message } from "./fixtures";
 
 const src = (file: string) => readFileSync(join(import.meta.dir, "../../src", file), "utf8");
@@ -58,9 +59,12 @@ describe("a conversation of bubbles breathes", () => {
     expect(shape(rows)).toEqual(["day", "a", "b"]);
   });
 
-  test("the time line is the day and the time, quieter than a day's, and only in bubbles", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
-    expect(chat).toContain('const timeLines = rowLook.style === "bubbles";');
+  test("the time line is the day and the time, quieter than a day's, only where messages hold no time", () => {
+    const chat = chatScreenSource();
+    expect(chat).toContain("const timeLines = timesOnPull(rowLook.style);");
+    expect(src("features/chat/look.ts")).toContain(
+      'export const timesOnPull = (style: ChatStyle) => style === "bubbles" || style === "compact";',
+    );
     expect(chat).toContain("buildRows(list, hidden, timeLines)");
     expect(chat).toContain(
       'dayLine(t("mobile.chat.dayAt", { day: when.day(item.iso), time: when.time(item.iso) }), true)',
@@ -70,7 +74,7 @@ describe("a conversation of bubbles breathes", () => {
   });
 
   test("air under the last message, and a capsule that floats narrower at rest and opens with the keyboard", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     expect(chat).toContain("listPad: { paddingTop: 8, paddingBottom: LIST_END_AIR },");
     expect(chat).toContain("const LIST_END_AIR = 22;");
     // 16 more on each side with no keyboard, 0 with it open: on its progress, frame by frame.

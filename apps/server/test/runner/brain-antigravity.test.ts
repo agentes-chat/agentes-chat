@@ -77,8 +77,11 @@ test("command line: headless stream-json in the sandbox; work takes edits, plan 
   expect(work.slice(0, 4)).toEqual(["-p", "oi", "--output-format", "stream-json"]);
   expect(work.join(" ")).toContain("--sandbox --disable-slash-commands --mode accept-edits");
   expect(work.join(" ")).toContain("--model gemini-4-argon-high");
-  // A slug names its thinking level: no `--effort` beside it.
+  // A slug names its thinking level: no `--effort` beside it, the extra one (`xhigh`) included.
   expect(work).not.toContain("--effort");
+  const extra = antigravityTurnArgs({ prompt: "oi", model: "gemini-4-neon-xhigh", chat: FIRST, effort: "max" });
+  expect(extra.join(" ")).toContain("--model gemini-4-neon-xhigh");
+  expect(extra).not.toContain("--effort");
   expect(work.join(" ")).toContain(`--conversation ${FIRST}`);
   expect(antigravityTurnArgs({ prompt: "oi", effort: "xhigh" }).join(" ")).toContain("--effort high");
   const plan = antigravityTurnArgs({ prompt: "oi", profile: "plan" }).join(" ");
@@ -522,6 +525,50 @@ test.skipIf(!posix)(
     await expect(win.begin("antigravity", "0193eeee-0000-7000-8000-0000000000d3")).rejects.toMatchObject({
       code: "bad_request",
     });
+  },
+  20_000,
+);
+
+test.skipIf(!posix)(
+  "the computer's models are what its signed-in accounts list, every account's once, kept for a restart",
+  async () => {
+    const home = tempDir("agy-accounts-");
+    dirs.push(home);
+    const root = path.join(home, "accounts");
+    // Another account here, on a plan with more models, listed them at its last look.
+    const other = "0193eeee-0000-7000-8000-0000000000d4";
+    mkdirSync(path.join(root, "antigravity", other), { recursive: true });
+    const paid = [
+      { id: "gemini-4-neon-high", label: "Gemini 4 Neon (High)" },
+      { id: "gemini-4-neon-xhigh", label: "Gemini 4 Neon (XHigh)" },
+      { id: "gemini-4-argon-high", label: "Gemini 4 Argon (High)" },
+    ];
+    writeFileSync(path.join(root, "agy-models.json"), JSON.stringify({ [other]: paid }));
+    const m = new AccountManager({
+      root,
+      orgId: () => ORG,
+      platform: "linux",
+      commands: { antigravity: [process.execPath, FAKE] },
+    });
+    managers.push(m);
+    expect(m.listedModels("antigravity")).toEqual(paid);
+    const id = "0193eeee-0000-7000-8000-0000000000d5";
+    const begun = await m.begin("antigravity", id);
+    const aad = accountCodeAad(id, ORG);
+    await m.code(id, aad, await sealSecret(begun.publicKey as string, "4/0AbCdEf-code", aad));
+    await waitFor(() => m.status(id).state === "done", 5000);
+    // Its own look lists fewer: the longer list leads, then what only the new account lists.
+    const flash = { id: "gemini-3.8-flash-medium", label: "Gemini 3.8 Flash (Medium)" };
+    expect(m.listedModels("antigravity")).toEqual([...paid, flash]);
+    const again = new AccountManager({ root });
+    managers.push(again);
+    expect(again.listedModels("antigravity")).toEqual([...paid, flash]);
+    // A removed account's models go with its folder.
+    rmSync(path.join(root, "antigravity", other), { recursive: true, force: true });
+    expect(again.listedModels("antigravity")).toEqual([
+      { id: "gemini-4-argon-high", label: "Gemini 4 Argon (High)" },
+      flash,
+    ]);
   },
   20_000,
 );

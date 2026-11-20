@@ -612,14 +612,26 @@ export const GROK_BUILD_MODELS: readonly { id: string; label: string }[] = [
 
 /**
  * The Antigravity CLI's models (ADR 0143) where the agent's computer listed none (`agy models` asks Google: none
- * offline), each slug a model at one thinking level, and the plans that include it (antigravity.google/docs/models,
- * read 2026-11-04): Gemini 4 Argon on paid Google AI Pro, Ultra and Enterprise, Gemini 3.8 Flash on every plan, the
- * older Flash and 3.1 Pro on Enterprise only. What the CLI lists comes first; with none chosen its own default runs.
+ * offline, none before an account here signed in), each slug a model at one thinking level, `xhigh` being the
+ * "Extra" one, and the plans that include it (antigravity.google/docs/models, read 2026-11-20): Gemini 4 Neon, the
+ * CLI's own default, and Argon on paid Google AI Pro, Ultra and Enterprise, Hydrogen on Pro (not its trial), Ultra
+ * and Enterprise, Gemini 3.8 Flash on every plan; Carbon on Ultra and Enterprise only, and the older Flash and 3.1
+ * Pro on Enterprise only, are left to the CLI's own listing. What the CLI lists comes first; with none chosen its own
+ * default runs.
  * ponytail: hand-copied list, the CLI's own listing replaces it wherever the runner reports one.
  */
 export const ANTIGRAVITY_MODELS: readonly { id: string; label: string }[] = [
+  { id: "gemini-4-neon-high", label: "Gemini 4 Neon (High)" },
+  { id: "gemini-4-neon-xhigh", label: "Gemini 4 Neon (XHigh)" },
+  { id: "gemini-4-neon-medium", label: "Gemini 4 Neon (Medium)" },
+  { id: "gemini-4-neon-low", label: "Gemini 4 Neon (Low)" },
+  { id: "gemini-4-hydrogen-high", label: "Gemini 4 Hydrogen (High)" },
+  { id: "gemini-4-hydrogen-xhigh", label: "Gemini 4 Hydrogen (XHigh)" },
+  { id: "gemini-4-hydrogen-medium", label: "Gemini 4 Hydrogen (Medium)" },
+  { id: "gemini-4-hydrogen-low", label: "Gemini 4 Hydrogen (Low)" },
   { id: "gemini-4-argon-high", label: "Gemini 4 Argon (High)" },
   { id: "gemini-4-argon-medium", label: "Gemini 4 Argon (Medium)" },
+  { id: "gemini-4-argon-low", label: "Gemini 4 Argon (Low)" },
   { id: "gemini-3.8-flash-high", label: "Gemini 3.8 Flash (High)" },
   { id: "gemini-3.8-flash-medium", label: "Gemini 3.8 Flash (Medium)" },
   { id: "gemini-3.8-flash-low", label: "Gemini 3.8 Flash (Low)" },
@@ -642,5 +654,11 @@ export const signInProviderOf = (provider: string | null | undefined): string | 
 export const providerFitsChoice = (provider: string | null | undefined, choice: string, coding: boolean) =>
   coding ? provider === choice : !provider || provider === GEMINI_ENTERPRISE_PROVIDER;
 
-/** An Antigravity model slug's model in the catalog: `gemini-4-argon-high` → `gemini-4-argon`. */
-export const antigravityBaseModel = (slug: string) => slug.replace(/-(?:low|medium|high)$/, "");
+/**
+ * An Antigravity model slug's thinking level, the slug's last word (`gemini-4-neon-xhigh` → `xhigh`): a slug that
+ * names one takes no `--effort`.
+ */
+export const ANTIGRAVITY_LEVEL = /-(?:low|medium|high|xhigh)$/;
+
+/** An Antigravity model slug's model in the catalog: `gemini-4-argon-high` → `gemini-4-argon`, `…-neon-xhigh` too. */
+export const antigravityBaseModel = (slug: string) => slug.replace(ANTIGRAVITY_LEVEL, "");

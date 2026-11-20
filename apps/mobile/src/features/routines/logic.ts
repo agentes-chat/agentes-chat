@@ -132,6 +132,18 @@ export interface AgentGroup<T> {
   routines: T[];
 }
 
+/** One name order per language, made once: `localeCompare` with a language builds a collator on every comparison. */
+const nameOrders = new Map<string, Intl.Collator>();
+const nameOrder = (locale?: string): Intl.Collator => {
+  const key = locale ?? "";
+  let order = nameOrders.get(key);
+  if (!order) {
+    order = new Intl.Collator(locale, { sensitivity: "base" });
+    nameOrders.set(key, order);
+  }
+  return order;
+};
+
 /**
  * The list broken by agent, one section each: the agents A to Z by `nameOf` (in `locale`), each one's routines in the
  * list's order (`routineSections`' live ones before its paused ones).
@@ -143,9 +155,10 @@ export function byAgent<T extends Pick<Routine, "agentId">>(
 ): AgentGroup<T>[] {
   const groups = new Map<string, T[]>();
   for (const r of list) groups.set(r.agentId, [...(groups.get(r.agentId) ?? []), r]);
+  const order = nameOrder(locale);
   return [...groups]
     .map(([agentId, routines]) => ({ agentId, routines }))
-    .sort((a, b) => nameOf(a.agentId).localeCompare(nameOf(b.agentId), locale, { sensitivity: "base" }));
+    .sort((a, b) => order.compare(nameOf(a.agentId), nameOf(b.agentId)));
 }
 
 // ── Icons (the phone's set) ─────────────────────────────────────────────────

@@ -74,6 +74,11 @@ export function stepLine(kind: string, data: Record<string, unknown>): string | 
     case "error":
       if (data.reason === "usage_wait")
         return data.code === "budget" ? "ran out of its monthly budget" : "hit its plan's limit";
+      // Its computer stopped a CLI that went quiet: sent again from where it was, or (the second time) ended.
+      if (data.reason === "brain_stalled")
+        return data.resumed === true
+          ? "a step stopped responding on its computer and was started again from where it was"
+          : "a step stopped responding on its computer twice, so that work stopped";
       return typeof data.reason === "string" ? `hit a problem: ${data.reason}` : "hit a problem";
     case "context":
       return Array.isArray(data.steeredMessageIds) ? "read new messages from people" : null;

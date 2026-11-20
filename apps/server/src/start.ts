@@ -80,6 +80,7 @@ import {
   SURFACE_PREFIX,
   setMessageLinkBase,
   setRestrictionNotices,
+  setScreenJudgments,
   setSurface,
   setWorkspaceComputers,
   shareCacheInvalidations,
@@ -94,6 +95,7 @@ import { createModelProviders, enableOpenRouterModels } from "@agenteschat/provi
 import { createApp } from "./app";
 import { createAuth } from "./auth";
 import { buildEngine } from "./engine";
+import { watchEventLoopLag } from "./event-loop-lag";
 import { startFreezeWatch } from "./freeze-watch";
 import { checkHumanCheckAtBoot, createHumanCheck } from "./http/human-check";
 import { createLogger, type Logger } from "./logger";
@@ -135,7 +137,7 @@ export interface StartOptions {
  * The engine's process-wide switches this config sets, every one of them here: `startServer` sets them at boot, and a
  * test that boots like a given setup (the Cloud) sets them the same way.
  */
-export function applyBootSwitches(config: Config) {
+export function applyBootSwitches(config: Config, log?: Logger) {
   // On agentes.chat Cloud a restriction names its kind and how to contest it, elsewhere it reads as before.
   setRestrictionNotices(config.PUBLIC_URL);
   // The links to messages that agents write and their tools return.
@@ -145,6 +147,7 @@ export function applyBootSwitches(config: Config) {
   setSurface(surfaceFromConfig(config));
   // Where each workspace gets its own computer, the computers people bring are targets, never agents' homes.
   setWorkspaceComputers(config.MACHINE_PROVISIONING === "external");
+  setScreenJudgments(config.SCREEN_JUDGMENTS, config.SCREEN_JUDGMENTS_ORGS, log);
 }
 
 /**
@@ -386,7 +389,7 @@ async function boot(
   shareCacheInvalidations(adapters.pubsub);
   // OpenRouter's public model list (ADR 0087): read only while a workspace has an OpenRouter key.
   enableOpenRouterModels(fetch);
-  applyBootSwitches(config);
+  applyBootSwitches(config, log);
   enableAccountContacts(config.PUBLIC_URL, adapters.email);
   if (config.OPERATOR_API_TOKEN) {
     // Before the API serves a page: a caller restarting after a restore must find these rows first.
@@ -646,6 +649,7 @@ async function boot(
   log.info(worker ? "running jobs only, answering /api/health alone (SERVER_ROLE=worker)" : "listening", {
     url: `http://${config.HOST}:${config.PORT}`,
   });
+  const eventLoopLag = watchEventLoopLag(log);
   const operator = worker
     ? null
     : serveOperatorApi({
@@ -658,6 +662,7 @@ async function boot(
         hub: engine.machineHub,
         emails: adapters.email.delivers,
         humanCheck: adapters.humanCheck,
+        eventLoopLag,
         rateLimiter: adapters.rateLimiter,
         sessions: engine.sessions,
         surface: services,

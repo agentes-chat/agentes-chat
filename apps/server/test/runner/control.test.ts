@@ -358,6 +358,24 @@ test("Grok Build's models are the ones a signed-in account listed, not the compu
   expect(s.of("hello")[0]?.executors).toEqual({ grok: { ...grok, models: [{ id: "grok-4.7" }, { id: "grok-4.6" }] } });
 });
 
+test("Antigravity's models are the ones its signed-in accounts listed: the computer's own `agy models` lists none", async () => {
+  const { home } = pairedHome();
+  // Signed out, the computer's own look finds the CLI and no models.
+  const antigravity = { version: "agy 1.5.12" };
+  writeFileSync(path.join(home, "executors.json"), JSON.stringify({ antigravity }));
+  const account = "0193eeee-0000-7000-8000-0000000000f1";
+  mkdirSync(path.join(home, "accounts", "antigravity", account), { recursive: true });
+  const listed = [
+    { id: "gemini-4-neon-high", label: "Gemini 4 Neon (High)" },
+    { id: "gemini-4-hydrogen-medium", label: "Gemini 4 Hydrogen (Medium)" },
+  ];
+  writeFileSync(path.join(home, "accounts", "agy-models.json"), JSON.stringify({ [account]: listed }));
+  const executorRun = () => new Promise<never>(() => {});
+  const c = control(home, { executors: undefined, executorRun });
+  const s = await c.connect();
+  expect(s.of("hello")[0]?.executors).toEqual({ antigravity: { ...antigravity, models: listed } });
+});
+
 test("a new install's hello leaves the CLIs out until the first look, then sends what it found", async () => {
   const { home } = pairedHome();
   let release: () => void = () => {};

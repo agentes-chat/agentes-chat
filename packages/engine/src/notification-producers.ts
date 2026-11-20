@@ -134,10 +134,12 @@ export const agentReplyGroup = (channelId: string, threadId: string | null) =>
 
 /**
  * Never news for a person: a notice only for its agent or never news (a follow-up's lines, whose reply notifies
- * instead; a stopped task's receipt; a mention its message's own line explains), or a long work's progress line
- * (ADR 0121), unread only for who follows its thread. Outside chat surfaces skip the same messages (ADR 0187).
+ * instead; a stopped task's receipt; a mention its message's own line explains), a long work's progress line
+ * (ADR 0121), unread only for who follows its thread, or the line an agent says before slow work (`say_now`,
+ * ADR 0207), whose reply notifies. Outside chat surfaces skip the same messages (ADR 0187).
  */
-export const quietForPeople = (meta: Record<string, unknown>) => isQuietNotice(meta) || Boolean(meta.workUpdate);
+export const quietForPeople = (meta: Record<string, unknown>) =>
+  isQuietNotice(meta) || Boolean(meta.workUpdate) || Boolean(meta.sayNow);
 
 /**
  * Job `notifications.message` (enqueued in the message's own statement):

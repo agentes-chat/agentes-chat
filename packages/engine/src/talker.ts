@@ -2,7 +2,6 @@ import type { PubSub } from "@agenteschat/adapters";
 import { and, type Database, desc, type Executor, eq, gt, schema, sql } from "@agenteschat/db";
 import { type Agent, getAgentCached } from "./agents";
 import { runBrainOf } from "./brains/select";
-import { endsAsking } from "./brakes";
 import { threadIsConfidential } from "./confidential";
 import { publishMessageCreated } from "./events";
 import type { ModelGateway } from "./gateway";
@@ -11,7 +10,7 @@ import { landedAfterSql } from "./message-place";
 import { insertMessage, type Message, messageView } from "./messages";
 import type { Notice } from "./notices";
 import { holdsMessages } from "./run-hold";
-import { type AgentRun, addRunStep, computerWaitOf, isTerminal, replyThreadOf, usageWaitOf } from "./runs";
+import { type AgentRun, addRunStep, computerWaitOf, isTerminal, replyThreadOf } from "./runs";
 import { runStretchOf } from "./stretch";
 import { loadTalkerSnapshot, type TalkerSnapshot } from "./talker-snapshot";
 import type { WaitMessageOutcome } from "./waits";
@@ -280,16 +279,13 @@ export function createTalker(deps: TalkerDeps): Talker {
           now: at,
         });
         const answer = await ask(deps, run, agent, snapshot);
-        // A question the cheap model let pass ("??", "what are you doing?") still hears where the work is (ADR 0131 §2).
-        if (answer === null && !endsAsking(message.body)) return decide("pass");
-        // The cheap model couldn't answer (no API key, an outage, too slow): the server's own status line, so a
-        // person asking a working agent always hears what it does (ADR 0131 §2).
-        // A computer brain's turn that didn't take the message live reads it only when that turn ends.
-        const turn = run.status === "running" && !live && runBrainOf(run, agent) !== "model";
-        const reply =
-          typeof answer === "string" ? { text: answer, meta: {} } : await statusReply(deps.db, run, at, { turn });
+        // Only words the model wrote go out as the agent (ADR 0131 addendum of 2026-11-19): a pass, or a model that
+        // couldn't answer (no API key, an outage, too slow), posts nothing in its place. The message's receipt says
+        // where it stands (read, in its computer's line, waiting for it or for the plan), and the task answers it
+        // when it reads it.
+        if (typeof answer !== "string") return decide(answer === null ? "pass" : "error");
         const waits = run.status !== "running" || computerWaitOf(run) !== null;
-        const posted = await postReply(deps, run, agent, message, reply.text, at, reply.meta, waits);
+        const posted = await postReply(deps, run, agent, message, answer, at, {}, waits);
         decide(posted ?? "reply");
       } catch {
         decide("error");
@@ -300,65 +296,6 @@ export function createTalker(deps: TalkerDeps): Talker {
 
 /** `ask`'s answer when the model gave none (an error or the timeout), as opposed to a pass. */
 const FAILED = Symbol("failed");
-
-/**
- * The server's status line for a working run (ADR 0131 §2): that it can't answer yet, how long it has worked, how many
- * steps, when it reads the message (its next step, or `turn`: when its computer's turn ends) and what it does now (its
- * automatic status line), worded by the apps (`talker_status`); the English is the fallback.
- */
-export async function statusReply(db: Executor, run: AgentRun, now: Date, options: { turn?: boolean } = {}) {
-  // Parked on its plan or budget it isn't working: the wait is the plan's, and it is back at the reset (`until`).
-  const usage = usageWaitOf(run);
-  if (usage) {
-    const until = (run.transcript as { waitingForBrain?: { resetsAt?: string } } | null)?.waitingForBrain?.resetsAt;
-    return {
-      text:
-        usage === "budget"
-          ? "I'm waiting for my monthly budget to renew. I'll read your message then, or sooner if an admin raises the limit."
-          : "I'm waiting for my plan to come back. I'll read your message when it's back.",
-      meta: {
-        bodyCode: "talker_status",
-        bodyParams: { minutes: "0", steps: "0", wait: usage, ...(until ? { until } : {}) },
-      },
-    };
-  }
-  const wait = computerWaitOf(run);
-  if (wait === "away") {
-    return {
-      text: "Waiting for my computer to come back. I'll read your message as soon as it's back.",
-      meta: { bodyCode: "talker_status", bodyParams: { minutes: "0", steps: "0", wait } },
-    };
-  }
-  if (wait === "queued") {
-    const since = (run.transcript as { roomWaitSince?: number } | null)?.roomWaitSince ?? run.updatedAt.getTime();
-    const minutes = Math.max(1, Math.round((now.getTime() - since) / 60_000));
-    return {
-      text: `In line (${minutes} min). I'll read your message when my turn comes.`,
-      meta: { bodyCode: "talker_status", bodyParams: { minutes: String(minutes), steps: "0", wait } },
-    };
-  }
-  const [a] = await db
-    .select({ runId: schema.agents.statusRunId, kind: schema.agents.statusKind, subject: schema.agents.statusSubject })
-    .from(schema.agents)
-    .where(eq(schema.agents.id, run.agentId));
-  const line = a?.runId === run.id && a.kind ? { kind: a.kind, subject: a.subject ?? "" } : null;
-  const start = run.startedAt ?? run.createdAt;
-  const minutes = Math.max(1, Math.round((now.getTime() - start.getTime()) / 60_000));
-  const steps = (run.transcript as { executedCalls?: unknown } | null)?.executedCalls;
-  const count = typeof steps === "number" && steps > 0 ? steps : 0;
-  return {
-    text: `I'm in the middle of a task (${minutes} min${count ? `, ${count} steps` : ""}) and can't answer yet. Your message is queued and I'll read it ${options.turn ? "when this round of work ends" : "at my next step"}.`,
-    meta: {
-      bodyCode: "talker_status",
-      bodyParams: {
-        minutes: String(minutes),
-        steps: String(count),
-        ...(options.turn ? { reads: "turn" } : {}),
-        ...(line ? { kind: line.kind, subject: line.subject } : {}),
-      },
-    },
-  };
-}
 
 /** The cheap model's decision: the reply's text, null to pass, or `FAILED` (timeout, error). */
 async function ask(deps: TalkerDeps, run: AgentRun, agent: Agent, snapshot: TalkerSnapshot) {

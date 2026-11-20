@@ -92,7 +92,6 @@ import { proposedRoutineWhen } from "../routines/rule";
 import { chooseAction, SettingsPage, useUnsavedGuard } from "../settings/parts";
 import { useColors, useDirectory, useMeId, useOrgId } from "../shared/hooks";
 import {
-  BarNote,
   BottomBar,
   FocusLive,
   goBack,
@@ -366,14 +365,13 @@ function StepPage({
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.fill, { backgroundColor: c.grouped }]}>
-      <PushedHeader title={t("newAgent.title")} solid={false} grouped />
+      <PushedHeader title={t("newAgent.title")} subtitle={subtitle} solid={false} grouped />
       <KeyboardAvoidingView behavior="padding" style={styles.fill}>
         <ScrollView
           contentInsetAdjustmentBehavior="automatic"
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[styles.body, bar ? null : { paddingBottom: 32 + insets.bottom }]}
         >
-          {subtitle ? <BarNote>{subtitle}</BarNote> : null}
           {children}
         </ScrollView>
         {bar ? <BottomBar bottom={insets.bottom}>{bar}</BottomBar> : null}
@@ -1051,7 +1049,7 @@ function ReviewStep({ d }: StepProps) {
       }
     >
       <Locked when={busy}>
-        <StepHead title={t("actionCard.agentProposal.review")} lead={t("mobile.newAgent.reviewLead")} />
+        <StepHead title={t("actionCard.agentProposal.review")} />
         {/* Who it is, first row: a tap opens its name, @ and look, pushed over Revisar. */}
         <GroupedList>
           <GroupedRow
@@ -1199,11 +1197,7 @@ function ReviewStep({ d }: StepProps) {
             />
           ) : null}
         </GroupedList>
-        <GroupedFooter>
-          {proposed && listedApps.length + myMail.length > 0
-            ? t("common.joinSentences", { a: t("mobile.settings.access.how"), b: t("newAgent.approvalsNote") })
-            : t("newAgent.approvalsNote")}
-        </GroupedFooter>
+        <GroupedFooter>{t("newAgent.approvalsNote")}</GroupedFooter>
 
         {proposed?.routine ? (
           <>

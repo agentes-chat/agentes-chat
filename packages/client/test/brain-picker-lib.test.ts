@@ -221,6 +221,9 @@ describe("Quem pensa as one list (the new agent's step)", () => {
     expect(brainModelLine(t, "claude_code", undefined, { value: "opus", label: "Opus" })).toBe(
       "agentPage.work.brain.modelLine.opus",
     );
+    expect(brainModelLine(t, "claude_code", undefined, { value: "fable", label: "Fable" })).toBe(
+      "agentPage.work.brain.modelLine.fable",
+    );
     expect(brainModelLine(t, "codex", undefined, { value: "gpt", label: "GPT" })).toBeUndefined();
   });
 

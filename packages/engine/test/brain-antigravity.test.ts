@@ -132,6 +132,14 @@ test("Quem pensa: Gemini where its runner and CLI are, its models as the CLI lis
   expect(option(machine({ executors: { detectedAt: "x" } }))).toMatchObject({ reason: "not_installed" });
   expect(option(machine({ executors: {} }))).toMatchObject({ reason: "not_reported" });
   expect(antigravityModels([]).map((m) => m.value)).toEqual(ANTIGRAVITY_MODELS.map((m) => m.id));
+  // With none listed, Gemini 4 Neon leads, the CLI's own default; every level is its model, the extra one too.
+  expect(antigravityModels([])[0]).toEqual({
+    value: "gemini-4-neon-high",
+    label: "Gemini 4 Neon (High)",
+    modelId: "gemini-4-neon",
+  });
+  expect(antigravityModels([{ id: "gemini-4-neon-xhigh" }])[0]?.modelId).toBe("gemini-4-neon");
+  expect(antigravityModels([{ id: "gemini-4-hydrogen-xhigh" }])[0]?.modelId).toBe("gemini-4-hydrogen");
   expect(defaultBrainModel("antigravity")).toBeNull();
   expect(isBrainKind("antigravity") && isComputerBrain("antigravity")).toBe(true);
   expect([BRAIN_NAMES.antigravity, BRAIN_PLAN_NAMES.antigravity, defaultAccountLabel("antigravity")]).toEqual([

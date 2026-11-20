@@ -1,5 +1,5 @@
 import { useChannels } from "@agenteschat/client";
-import { useCallback, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useOrg } from "@/providers/org";
 import { router } from "@/ui/navigation";
@@ -34,19 +34,25 @@ export function useRowMenus() {
   const meId = useMeId();
   const sheet = useSheet();
   const channels = useChannels(orgId).data ?? NO_CHANNELS;
+  // Every row asks for its channel: by id, made once per list.
+  const channelsById = useMemo(() => new Map(channels.map((c) => [c.id, c])), [channels]);
   const dir = useDirectory();
   const pins = usePins();
-  // What a row's long press offers: pin it on top (a channel, an agent's or a person's DM) or take it off, and move
-  // a channel (only where `movesChannel`). The same list fills the app's sheet and iOS's own menu.
+  // What a row pins or takes off (a channel, an agent's or a person's DM); null for one that has no pin, or a channel
+  // not in the list.
+  const pinOf = (r: ConversationRow) => {
+    if (r.kind === "channel")
+      return channelsById.has(r.channelId) ? { kind: "channels" as const, id: r.channelId } : null;
+    if (r.kind === "dm")
+      return { kind: r.with.type === "agent" ? ("agents" as const) : ("people" as const), id: r.with.id };
+    return null;
+  };
+  // What a row's long press offers: pin it on top or take it off, and move a channel (only where `movesChannel`). The
+  // same list fills the app's sheet and iOS's own menu.
   const rowActions = (r: ConversationRow): RowAction[] => {
-    const channel = r.kind === "channel" ? channels.find((c) => c.id === r.channelId) : undefined;
-    const pin =
-      r.kind === "channel"
-        ? { kind: "channels" as const, id: r.channelId }
-        : r.kind === "dm"
-          ? { kind: r.with.type === "agent" ? ("agents" as const) : ("people" as const), id: r.with.id }
-          : null;
-    if (!pin || (r.kind === "channel" && !channel)) return [];
+    const channel = r.kind === "channel" ? channelsById.get(r.channelId) : undefined;
+    const pin = pinOf(r);
+    if (!pin) return [];
     const pinned = pins.isPinned(pin.kind, pin.id);
     return [
       {
@@ -72,7 +78,7 @@ export function useRowMenus() {
   const rowMenu = (r: ConversationRow) => {
     const actions = rowActions(r);
     if (actions.length === 0) return;
-    const channel = r.kind === "channel" ? channels.find((c) => c.id === r.channelId) : undefined;
+    const channel = r.kind === "channel" ? channelsById.get(r.channelId) : undefined;
     sheet.open(
       <>
         <SheetTitle
@@ -98,5 +104,11 @@ export function useRowMenus() {
   latest.current = { rowMenu, rowActions };
   const openRowMenu = useCallback((r: ConversationRow) => latest.current.rowMenu(r), []);
   const rowActionsOf = useCallback((r: ConversationRow) => latest.current.rowActions(r), []);
-  return { openRowMenu, rowActionsOf };
+  // The swipe's words for a row: its menu's pin action's, without making the whole menu; null: none.
+  const pinLabelOf = (r: ConversationRow) => {
+    const pin = pinOf(r);
+    if (!pin) return null;
+    return pins.isPinned(pin.kind, pin.id) ? t("sidebarPins.unpin") : t("sidebarPins.pin");
+  };
+  return { openRowMenu, rowActionsOf, pinLabelOf };
 }

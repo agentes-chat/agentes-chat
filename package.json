@@ -49,7 +49,8 @@
     "typescript": "^7.0.2"
   },
   "patchedDependencies": {
-    "react-native-screens@4.30.0": "patches/react-native-screens@4.30.0.patch"
+    "react-native-screens@4.30.0": "patches/react-native-screens@4.30.0.patch",
+    "@legendapp/list@3.7.3": "patches/@legendapp%2Flist@3.7.3.patch"
   },
   "packageManager": "bun@1.4.4",
   "license": "AGPL-3.0-only"

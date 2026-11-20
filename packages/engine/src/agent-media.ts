@@ -143,6 +143,8 @@ export interface AgentMediaDeps {
  */
 const NOT_A_LIGHT_REPLY = [
   "talker",
+  // The line before slow work (ADR 0207): the reply comes after it.
+  "sayNow",
   "notice",
   "noAi",
   "actionCard",

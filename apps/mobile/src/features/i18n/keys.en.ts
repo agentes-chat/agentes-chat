@@ -15,7 +15,6 @@ export const featureKeysEn = {
     channelCount_one: "{{count}} channel",
     channelCount_other: "{{count}} channels",
     none: "No categories yet.",
-    manageHelp: "Tap a category to rename it, move it or delete it.",
     manageHint: "Order, names and delete",
     deleteTitle: "Delete {{name}}?",
     order: "Place in the list",
@@ -292,8 +291,8 @@ export const featureKeysEn = {
     to: "To:",
     people: "People",
     search: "Person or agent",
-    create: "Create",
     agentHint: "A name and what it does",
+    create: "Create",
     chatShort: "Conversation",
     chatHint: "A person or an agent",
     taskHint: "With an assignee and a due date",
@@ -867,7 +866,6 @@ export const featureKeysEn = {
     /** Under the name while it is typed: the @ follows the name until the person changes it. */
     handleFromName: "In the chat: @{{handle}}. It comes from the name. You can change it.",
     handleFromNameEmpty: "Its @ in the chat comes from the name.",
-    reviewLead: "Tap a line to change it.",
     planHint: "Or connect your AI plan: {{name}} then thinks with it, without spending the key.",
     planHint_female: "Or connect your AI plan: {{name}} then thinks with it, without spending the key.",
     partly: "The agent was created, but part of what its role brings didn't go through. Adjust it on its profile.",
@@ -1193,8 +1191,7 @@ export const featureKeysEn = {
     agentStyle: "How agents talk",
     workspaces: "Workspaces",
     workspacesIn: "You're in",
-    workspacesFoot:
-      "You stay signed in to each one and get notifications from all of them. Tap a workspace to open it.",
+    workspacesFoot: "You stay signed in to each one and get notifications from all of them.",
     /** A server in Workspaces that didn't answer. */
     workspacesUnreachable: "No answer right now",
     addWorkspace: "Add workspace",
@@ -2369,7 +2366,6 @@ export const featureKeysEn = {
   },
   crash: {
     title: "Something went wrong on this screen",
-    subtitle: "The app hit an error showing this. Try again.",
     retry: "Try again",
   },
   notFound: {
@@ -2407,9 +2403,6 @@ export const featureKeysEn = {
     deleteFailed: "Couldn't delete the workspace. Try again.",
     holdReset: "Hold to reset",
     resetFailed: "Couldn't reset the workspace. Try again.",
-    access: {
-      how: "Tap a row to change its level: No access, Read, Read and write.",
-    },
     logo: {
       failed: "Couldn't upload the logo",
       tooBig: "That image is too big. Try another one.",
@@ -2693,7 +2686,7 @@ export const featureKeysEn = {
       sealedHelp: "For safety, what's saved here never shows again. To change it, type it again.",
       changePassword: "Change password",
       changeValue: "Change value",
-      changeHelp: "Tap Save to keep it. Agents use the new one from then on.",
+      changeHelp: "Agents use the new one after you save.",
       hidden: "Hidden",
       saved: "Saved",
       delete: "Delete",
@@ -2840,7 +2833,7 @@ export const featureKeysEn = {
   },
   // Dashboards on the phone (ADR 0135); the rest of their words are the web's, `dashboards.*` and `widgets.*`.
   dashboards: {
-    homeRow: "Only you · your own widgets",
+    homeRow: "Only you",
     create: "Create",
     routineTarget: "its widget",
     pin: {
@@ -2926,11 +2919,11 @@ export const featureKeysEn = {
     },
     drive: {
       title: "Everything the team makes, in one place",
-      text: "Reports, tables and files from agents and people stay here, easy to find.",
+      text: "Reports, tables and files from agents and people stay here.",
       viewerTitle: "Find what the team makes",
       viewerText: "What agents and people create in the chats shows up here.",
       titlePersonal: "Everything your agents make, in one place",
-      textPersonal: "Reports, tables and files from your agents stay here, easy to find.",
+      textPersonal: "Reports, tables and files from your agents stay here.",
       viewerTitlePersonal: "Find what your agents make",
       viewerTextPersonal: "What agents create in your chats shows up here.",
     },
@@ -2996,7 +2989,7 @@ export const featureKeysEn = {
       viewerTextPersonal: "When someone joins, they show up here.",
     },
     chat: {
-      title: "It all starts with a message",
+      title: "Start the conversation",
       text: "Write below and everyone here sees it.",
       viewerTitle: "Messages show up here",
       viewerText: "When someone writes, you read it here.",
@@ -3037,8 +3030,8 @@ export const featureKeysEn = {
     board: {
       title: "See what matters on one board",
       text: "Add a widget, ask an agent for one or pin a block from the chat.",
-      viewerTitle: "This board is taking shape",
-      viewerText: "Whoever edits this board adds the widgets, and they show up here.",
+      viewerTitle: "Widgets show up here",
+      viewerText: "Whoever edits this board adds them.",
     },
     computers: {
       title: "Bring another computer to your agents",
@@ -3047,7 +3040,7 @@ export const featureKeysEn = {
       viewerText: "Whoever connects computers adds them, and they show up here.",
     },
     connectors: {
-      title: "Give your agents real tools",
+      title: "Give your agents tools",
       text: "Connect a service and they start reading and acting in it.",
       viewerTitle: "Your agents' tools show up here",
       viewerText: "Whoever manages connectors connects the services below.",
@@ -3209,7 +3202,7 @@ export const featureKeysEn = {
       done: "Done",
       placeholder: "Type the text",
       titlePlaceholder: "Type the title",
-      hint: "Each line is a paragraph. What you type goes into the file as you type.",
+      hint: "Each line is a paragraph.",
     },
     /** Presenting. */
     show: {

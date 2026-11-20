@@ -59,6 +59,7 @@ import {
   turnContext,
   userMessageLine,
 } from "../../runner/brain";
+import { CLAUDE_SILENCE, silenceLimit } from "../../runner/brain-silence";
 import { claudeAuth } from "../../runner/executors";
 import { handleRequest } from "../../runner/handlers";
 import { chatToolsBreach, delegatedToolsBreach, type IpcReply, McpBridge, McpToolCache } from "../../runner/mcp";
@@ -126,6 +127,14 @@ test("protocol 8: brain.turn requests and brain frames parse; bad events are dro
     event: { type: "done", text: "ok", timings: { warm: false, firstEventMs: 1200 } },
   });
   expect(done({ warm: false, initMs: 90_000_000 })).not.toHaveProperty("event.timings.initMs");
+  // Where the model's time went: whole numbers from 0 up to a day, the rest left out.
+  expect(
+    done({ warm: true, firstTokenMs: 300.4, firstAssistantMs: 2100, retries: 2, retryDelayMs: -1, thinkingChars: "9" }),
+  ).toEqual({
+    type: "brain.event",
+    runId: RUN(1),
+    event: { type: "done", text: "ok", timings: { warm: true, firstTokenMs: 300, firstAssistantMs: 2100, retries: 2 } },
+  });
   expect(done({ initMs: 5 })).toEqual({ type: "brain.event", runId: RUN(1), event: { type: "done", text: "ok" } });
 });
 
@@ -249,7 +258,7 @@ test("parser: partial deltas, our tool calls with results, usage, and the final 
   expect(p.session).toBe(SESSION(1));
 });
 
-test("parser: a turn's usage says how many API calls it made and the most uncached and whole input one read", () => {
+test("parser: a turn's usage says how many API calls it made, the most uncached and whole input one read, and the last's", () => {
   const p = new ClaudeStreamParser();
   p.beginTurn();
   const call = (id: string, input: number, written = 0) =>
@@ -270,6 +279,8 @@ test("parser: a turn's usage says how many API calls it made and the most uncach
   call("m2", 3400);
   // The biggest step is not the most uncached one: its context, cache included.
   call("m3", 40, 5000);
+  // The last call, after a compaction: what the session holds now, smaller than its biggest.
+  call("m4", 20);
   const end = p.push(
     line({
       type: "result",
@@ -290,6 +301,7 @@ test("parser: a turn's usage says how many API calls it made and the most uncach
       calls: 3,
       maxUncached: 3400,
       maxContext: 14040,
+      lastContext: 9020,
     },
   ]);
   // It reaches the server as said.
@@ -562,6 +574,8 @@ test("command line: stream-json both ways, opus falls back to sonnet, strict MCP
   expect(lean.join(" ")).toContain("--tools Bash,Read,Edit,Write,Glob,Grep,ToolSearch");
   expect(lean.join(" ")).not.toContain("WebFetch");
   expect(lean.slice(-2)).toEqual(["--session-id", SESSION(1)]);
+  expect(fallbackModelFor("fable")).toBe("opus");
+  expect(fallbackModelFor("claude-fable-5-2")).toBe("opus");
   expect(fallbackModelFor("claude-opus-5-5")).toBe("sonnet");
   expect(fallbackModelFor("sonnet")).toBeUndefined();
   expect(JSON.parse(userMessageLine("oi"))).toEqual({
@@ -1597,6 +1611,78 @@ test.if(posix)(
   },
 );
 
+test.if(posix)("a turn's timings keep its API retries, its thinking and when the model first answered", async () => {
+  const { turn } = setup();
+  const r = await turn(1, "RETRYWAIT THOUGHT");
+  expect(r.final).toMatchObject({ type: "done" });
+  const t = r.final.type === "done" ? r.final.timings : undefined;
+  expect(t).toMatchObject({ warm: false, retries: 1, retryDelayMs: 800, thinkingBlocks: 2, thinkingChars: 10 });
+  // The API's first message came 50 ms before its first whole block.
+  expect((t?.firstAssistantMs ?? 0) - (t?.firstTokenMs ?? 0)).toBeGreaterThanOrEqual(40);
+  // The next turn on the process counts its own.
+  const next = await turn(2, "second");
+  expect(next.final).toMatchObject({
+    type: "done",
+    timings: { warm: true, retries: 0, retryDelayMs: 0, thinkingBlocks: 0, thinkingChars: 0 },
+  });
+});
+
+test.if(posix)(
+  "another model or effort switches on the open process; another fallback, or none of them, starts a new one",
+  async () => {
+    const { spawns, turn } = setup();
+    const a = await turn(1, "ECHOMODEL", { model: "sonnet", effort: "low" });
+    expect(a.final).toMatchObject({ type: "done", text: "model sonnet effort low" });
+    const b = await turn(2, "ECHOMODEL", { model: "haiku", effort: "high" });
+    expect(b.final).toMatchObject({ type: "done", text: "model haiku effort high", timings: { warm: true } });
+    expect(spawns()).toHaveLength(1);
+    // Opus falls back to sonnet, which only a start sets.
+    const c = await turn(3, "ECHOMODEL", { model: "opus", effort: "high" });
+    expect(c.final).toMatchObject({ type: "done", text: "model opus effort high", timings: { warm: false } });
+    expect(spawns()).toHaveLength(2);
+    expect(spawns()[1]?.args.join(" ")).toContain("--fallback-model sonnet");
+    expect(spawns()[1]?.args.slice(-2)).toEqual(["--resume", SESSION(1)]);
+    // No effort at all: the CLI would go back to the one it started with, so a new process.
+    await turn(4, "ECHOMODEL", { model: "opus" });
+    expect(spawns()).toHaveLength(3);
+  },
+);
+
+test.if(posix)(
+  "a CLI that refuses the switch, or doesn't answer it, gets a new process (one that didn't answer is not asked again)",
+  async () => {
+    try {
+      process.env.FAKE_CLAUDE_NO_SWITCH = "refuse";
+      const refused = setup();
+      await refused.turn(1, "ECHOMODEL", { model: "sonnet", effort: "low" });
+      const r = await refused.turn(2, "ECHOMODEL", { model: "haiku", effort: "low" });
+      expect(r.final).toMatchObject({ type: "done", text: "model haiku effort low" });
+      expect(refused.spawns()).toHaveLength(2);
+      expect(refused.spawns()[1]?.args.join(" ")).toContain("--model haiku");
+
+      process.env.FAKE_CLAUDE_NO_SWITCH = "silent";
+      const said: string[] = [];
+      const silent = setup({ controlReplyMs: 150, log: (l) => said.push(l) });
+      await silent.turn(1, "ECHOMODEL", { effort: "low" });
+      const s = await silent.turn(2, "ECHOMODEL", { effort: "high" });
+      expect(s.final).toMatchObject({ type: "done", text: "model null effort high" });
+      await silent.turn(3, "ECHOMODEL", { effort: "medium" });
+      expect(silent.spawns()).toHaveLength(3);
+      expect(said.filter((l) => l.includes("didn't answer a switch"))).toHaveLength(1);
+
+      // Success said, but its `--effort` stays in force: `get_settings` shows it, and a new process takes the effort.
+      process.env.FAKE_CLAUDE_NO_SWITCH = "flag_wins";
+      const flagWins = setup();
+      await flagWins.turn(1, "ECHOMODEL", { effort: "low" });
+      const f = await flagWins.turn(2, "ECHOMODEL", { effort: "high" });
+      expect(f.final).toMatchObject({ type: "done", text: "model null effort high", timings: { warm: false } });
+      expect(flagWins.spawns()).toHaveLength(2);
+    } finally {
+      delete process.env.FAKE_CLAUDE_NO_SWITCH;
+    }
+  },
+);
+
 test.if(posix)(
   "other lines for the agent's commits (turned off, the agent renamed) restart the process, resumed",
   async () => {
@@ -1708,7 +1794,7 @@ test.if(posix)(
         [SIGNED_IN]: signedIn,
         [GO_ACCOUNT]: go,
       };
-      const { spawns, turn } = setup({
+      const { m, spawns, turn } = setup({
         accounts: { accountDir: (kind, id) => (kind === "claude_code" ? (folders[id] ?? null) : null) },
       });
       type Run = {
@@ -1754,6 +1840,11 @@ test.if(posix)(
         CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1",
         API_TIMEOUT_MS: "3000000",
       });
+      // The CLI applies that env: the model's wait is its API timeout plus its stream watchdog, not the default 10 min.
+      const proc = m.process(AGENT.id, SESSION(1));
+      expect(proc?.apiTimeoutMs).toBe(3_000_000);
+      const wait = { tools: [], compacting: false, bridgeCalls: 0, apiTimeoutMs: proc?.apiTimeoutMs };
+      expect(silenceLimit(wait, CLAUDE_SILENCE)?.ms).toBe(3_000_000 + 5 * 60_000);
       // The agent keeps its alias (the plan names the model), with no fallback model.
       expect(flag(glm, "--model")).toBe("opus");
       expect(glm?.args).not.toContain("--fallback-model");
@@ -3075,3 +3166,57 @@ test.if(posix)("turn.context: the worker's answer: the folder as the agent resol
   expect(said).toContain("?? CLAUDE.md");
   expect(said).toContain("first");
 });
+
+// ── Idle time across sleep, and warm starts (protocol 74) ────────────────────
+
+test.if(posix)(
+  "idle time is awake time: a timer that fires after the computer slept leaves the process open",
+  async () => {
+    let awake = 0;
+    const { m, turn } = setup({ idleMs: 60, clock: { read: () => awake } });
+    await turn(1, "hi");
+    const proc = m.process(AGENT.id, SESSION(1));
+    // The timers fired, but the time they waited was asleep: no awake time went by.
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(m.size).toBe(1);
+    expect(proc?.exited).toBe(false);
+    // Awake past the idle time: it closes at the next look.
+    awake = 1_000;
+    await waitFor(() => m.size === 0 && proc?.exited === true, 4000);
+  },
+);
+
+test.if(posix)(
+  "brain.warm starts the session's process with the agent's last system text, and the turn uses it",
+  async () => {
+    const { m, ws, spawns, turn } = setup();
+    const ctx = { agent: AGENT, folder: await agentWorkspace(ws, AGENT), emit: () => {} };
+    const warm = (n: number) =>
+      m.prewarm({ kind: "claude_code", session: { id: SESSION(n), resume: false }, cwd: "" }, ctx);
+    // Before any turn of the agent's: nothing to start it with.
+    expect(await warm(2)).toEqual({ open: false, started: false });
+    expect(spawns()).toHaveLength(0);
+    await turn(1, "hi", { system: "S1" });
+    expect(await warm(2)).toEqual({ open: true, started: true });
+    // The CLI writes its line once it runs, and says `init` before any prompt: no turn of its own.
+    await waitFor(() => spawns().length === 2, 4000);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(spawns().map((s) => [s.system, s.args.at(-2), s.args.at(-1)])).toEqual([
+      ["S1", "--session-id", SESSION(1)],
+      ["S1", "--session-id", SESSION(2)],
+    ]);
+    // Open already: kept.
+    expect(await warm(2)).toEqual({ open: true, started: false });
+    const b = await turn(2, "there", { system: "S1", session: { id: SESSION(2), resume: false } });
+    expect(b.final).toMatchObject({ type: "done", text: "echo 1: there" });
+    expect(b.final).toMatchObject({ timings: { warm: true } });
+    expect(spawns()).toHaveLength(2);
+    // The agent's text changed since: the turn starts its own process, with its own text.
+    expect(await warm(3)).toEqual({ open: true, started: true });
+    await waitFor(() => spawns().length === 3, 4000);
+    const c = await turn(3, "later", { system: "S2", session: { id: SESSION(3), resume: false } });
+    expect(c.final).toMatchObject({ type: "done" });
+    expect(spawns().map((s) => s.system)).toEqual(["S1", "S1", "S1", "S2"]);
+    expect(spawns().at(-1)?.args.slice(-2)).toEqual(["--session-id", SESSION(3)]);
+  },
+);

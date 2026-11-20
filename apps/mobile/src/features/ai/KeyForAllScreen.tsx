@@ -15,7 +15,7 @@ import { router } from "@/ui/navigation";
 import { Gap } from "../settings/parts";
 import { LoadFailed } from "../shared/FirstUse";
 import { useColors, useDirectory } from "../shared/hooks";
-import { BarNote, BottomBar, PushedHeader } from "../shared/parts";
+import { BottomBar, PushedHeader } from "../shared/parts";
 import { Note } from "./parts";
 
 /*
@@ -102,9 +102,8 @@ export function KeyForAllScreen({
   };
   return (
     <View style={[styles.screen, { backgroundColor: c.grouped }]}>
-      <PushedHeader title={t("aiAccounts.page.useAll")} solid={false} grouped />
+      <PushedHeader title={t("aiAccounts.page.useAll")} subtitle={plan?.label} solid={false} grouped />
       <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={styles.in}>
-        {plan ? <BarNote>{plan.label}</BarNote> : null}
         {ai.isPending ? (
           <SkeletonList rows={4} />
         ) : !account || !plan || !groups ? (

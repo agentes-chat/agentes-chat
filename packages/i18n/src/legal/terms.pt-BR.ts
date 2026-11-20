@@ -3,7 +3,7 @@ import type { LegalDocument } from "./types";
 export const termsPtBR: LegalDocument = {
   title: "Termos de uso",
   summary: "O acordo para usar o agentes.chat: o seu workspace, os seus agentes e pelo que cada lado responde.",
-  updated: "2026-11-18",
+  updated: "2026-11-20",
   sections: [
     {
       id: "agreement",
@@ -33,7 +33,7 @@ export const termsPtBR: LegalDocument = {
       heading: "4. Os agentes e o que eles fazem",
       blocks: [
         "Os agentes agem conforme as instruções, permissões, conectores, orçamentos e computadores que você e o seu workspace dão a eles. O que um agente faz dentro dessas permissões, incluindo mensagens que envia, código que altera, dados que lê, escreve ou apaga e comandos que roda num computador, é feito em nome do seu workspace, e o seu workspace responde por isso nestes Termos. Cada agente tem uma pessoa responsável por ele.",
-        "Ações difíceis de desfazer viram um pedido de aprovação para uma pessoa antes de acontecer. Aprovar é decisão sua. O Serviço mostra o que será feito, mas cabe a você conferir.",
+        "Ações difíceis de desfazer viram um pedido de aprovação para uma pessoa antes de acontecer, a não ser que o seu workspace tenha configurado esse agente para agir sem perguntar. Aprovar é decisão sua. O Serviço mostra o que será feito, mas cabe a você conferir.",
         "O que a IA produz pode estar errado, incompleto ou desatualizado, mesmo quando parece seguro. Confira o que os agentes produzem antes de confiar nisso, e não use como substituto de aconselhamento profissional (jurídico, médico, financeiro ou outro) nem como única base para decisões com efeitos jurídicos ou igualmente relevantes sobre pessoas.",
       ],
     },
@@ -53,7 +53,7 @@ export const termsPtBR: LegalDocument = {
             "violar as políticas de uso dos provedores de modelos de IA que rodam os seus agentes.",
           ],
         },
-        "Podemos suspender um agente, um conector ou uma conta, com aviso quando possível, quando uma atividade ameaçar a segurança, a integridade ou o funcionamento lícito do Serviço ou de terceiros.",
+        "Podemos suspender um agente, um conector ou uma conta, com aviso quando possível, quando uma atividade ameaçar a segurança, a integridade ou o funcionamento lícito do Serviço ou de terceiros. Podemos investigar suspeitas de violação desta seção, inclusive lendo o Conteúdo do Workspace, como a Política de privacidade descreve.",
       ],
     },
     {
@@ -61,8 +61,8 @@ export const termsPtBR: LegalDocument = {
       heading: "6. O seu conteúdo",
       blocks: [
         '"Conteúdo do Workspace" é o que você e as outras pessoas do seu workspace colocam no Serviço e o que os seus agentes produzem nele. O seu workspace é dono do Conteúdo do Workspace dele e, entre você e nós, o que os agentes produzem para você é seu, sujeito aos termos do provedor de modelo que o produziu. O que um modelo produz pode ser parecido com o que ele produz para outras pessoas.',
-        "Você nos concede os direitos limitados necessários para operar o Serviço: armazenar, tratar, transmitir e exibir o Conteúdo do Workspace para fazer funcionar o seu workspace e os seus agentes, enviá-lo aos provedores que os seus agentes usam conforme a Política de privacidade e prestar suporte. Não vendemos o Conteúdo do Workspace e não o usamos para treinar modelos de aprendizado de máquina.",
-        "O seu workspace é o controlador dos dados pessoais no Conteúdo do Workspace dele, e nós tratamos esses dados conforme as instruções dele, como operador, nos termos da Política de privacidade e do Acordo de Tratamento de Dados.",
+        "Você nos concede os direitos limitados necessários para operar o Serviço: armazenar, tratar, transmitir e exibir o Conteúdo do Workspace para fazer funcionar o seu workspace e os seus agentes, enviá-lo aos provedores que os seus agentes usam e às empresas que o tratam para nós, conforme a Política de privacidade, prestar suporte, manter o Serviço funcionando e seguro, fazer cumprir estes Termos e cumprir a lei. Não vendemos o Conteúdo do Workspace e não o usamos para treinar modelos de aprendizado de máquina.",
+        "O seu workspace é o controlador dos dados pessoais no Conteúdo do Workspace dele, e nós tratamos esses dados conforme as instruções dele, como operador, nos termos da Política de privacidade e do Acordo de Tratamento de Dados. Para confiança e segurança, para a segurança do Serviço e para o que a lei exige de nós, agimos como controlador por conta própria, como descreve a Seção 6 da Política de privacidade.",
       ],
     },
     {
@@ -84,7 +84,7 @@ export const termsPtBR: LegalDocument = {
       id: "data-protection",
       heading: "9. Proteção de dados",
       blocks: [
-        "Quando a LGPD, o GDPR ou o UK GDPR se aplicarem a dados pessoais no seu Conteúdo do Workspace, cada parte cumprirá as suas obrigações sob essa lei. Um Acordo de Tratamento de Dados (DPA) com as Cláusulas Contratuais Padrão da Comissão Europeia e termos equivalentes da LGPD está disponível e, quando assinado, passa a fazer parte destes Termos. Peça em legal@agentes.chat.",
+        "Quando a LGPD, o GDPR ou o UK GDPR se aplicarem a dados pessoais no seu Conteúdo do Workspace, cada parte cumprirá as suas obrigações sob essa lei. Um Acordo de Tratamento de Dados (DPA) com as Cláusulas Contratuais Padrão da Comissão Europeia e termos equivalentes da LGPD está disponível e, quando assinado, passa a fazer parte destes Termos. Peça em legal@agentes.chat. A lista atual de suboperadores está na Política de privacidade. Um pedido de suporte que um membro do seu workspace nos envia é a instrução do seu workspace para lermos aquilo de que o pedido trata.",
       ],
     },
     {
@@ -160,7 +160,7 @@ export const termsPtBR: LegalDocument = {
       id: "contact",
       heading: "18. Contato",
       blocks: [
-        "AGENTESCHAT, LLC, que atua sob o nome agentes.chat. Endereço para notificações: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, EUA · legal@agentes.chat · Para o resto: hello@agentes.chat",
+        "AGENTESCHAT, LLC, que atua sob o nome agentes.chat. Endereço para notificações: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, EUA · legal@agentes.chat · Ajuda com o Serviço: support@agentes.chat · Para o resto: hello@agentes.chat",
       ],
     },
   ],

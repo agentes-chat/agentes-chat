@@ -1118,6 +1118,8 @@ export function createModelGateway(deps: ModelGatewayDeps) {
       kind: "router" | "agent";
       provider: string;
       model: string;
+      /** What was asked for, when it isn't the model: a Jev call's judgment (`auto_model`), so spend per judgment shows. */
+      requestedModel?: string;
       inputTokens: number;
       outputTokens: number;
       costNanoUsd: number;
@@ -1132,7 +1134,7 @@ export function createModelGateway(deps: ModelGatewayDeps) {
           credentialId: null,
           provider: input.provider,
           model: input.model,
-          requestedModel: input.model,
+          requestedModel: input.requestedModel ?? input.model,
           inputTokens: input.inputTokens,
           outputTokens: input.outputTokens,
           costNanoUsd: input.costNanoUsd,

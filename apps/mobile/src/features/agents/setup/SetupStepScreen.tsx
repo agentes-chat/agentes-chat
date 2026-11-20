@@ -381,7 +381,6 @@ function AppsStep({ agent }: { agent: Agent }) {
           })}
         </GroupedList>
       ) : null}
-      {ordered.length > 0 ? <GroupedFooter>{t("mobile.settings.access.how")}</GroupedFooter> : null}
       <GroupedList>
         <GroupedRow
           icon="plus"

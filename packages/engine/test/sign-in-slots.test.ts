@@ -91,7 +91,7 @@ describe("plan sign-in slots", () => {
     const machineId = await computer();
     await working(machineId, ACCOUNT);
     const behind = await roomGate(f.db, newcomer(), machineId, person(), slot(ACCOUNT));
-    expect(behind?.signIn).toBe(true);
+    expect(behind?.cause).toBe("sign_in");
     // Two slots: the second run goes on.
     expect(await roomGate(f.db, newcomer(), machineId, person(), slot(ACCOUNT, 2))).toBeNull();
     expect(await roomGate(f.db, newcomer(), machineId, person(), slot(OTHER))).toBeNull();
@@ -105,7 +105,7 @@ describe("plan sign-in slots", () => {
     const { machineId: b } = await pairMachine({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, RUNNER);
     await working(a, ACCOUNT);
     await working(a, "own");
-    expect((await roomGate(f.db, newcomer(), b, person(), slot(ACCOUNT)))?.signIn).toBe(true);
+    expect((await roomGate(f.db, newcomer(), b, person(), slot(ACCOUNT)))?.cause).toBe("sign_in");
     expect(await roomGate(f.db, newcomer(), b, person(), { key: "own", cap: 1 })).toBeNull();
   });
 
@@ -116,7 +116,7 @@ describe("plan sign-in slots", () => {
     expect(await roomGate(f.db, first, machineId, person(), slot(ACCOUNT))).toBeNull();
     const [row] = await f.db.select().from(agentRuns).where(eq(agentRuns.id, first.id));
     expect((row?.transcript as { roomAsk?: { signIn?: string } } | undefined)?.roomAsk?.signIn).toBe(ACCOUNT);
-    expect((await roomGate(f.db, newcomer(), machineId, person(), slot(ACCOUNT)))?.signIn).toBe(true);
+    expect((await roomGate(f.db, newcomer(), machineId, person(), slot(ACCOUNT)))?.cause).toBe("sign_in");
   });
 
   for (const end of ["done", "failed", "canceled"] as const) {

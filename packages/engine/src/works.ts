@@ -1491,6 +1491,9 @@ export async function liveWorksHere(db: Executor, run: Pick<AgentRun, "orgId" | 
 const BRIEF_STEPS = 8;
 const BRIEF_UPDATES = 3;
 
+/** The heading of a run's context block on the agent's live works here (`workBrief`). */
+export const WORK_BRIEF_HEADING = "# Your background work here";
+
 /**
  * "# Your background work here" (§6): what a new run in the conversation knows of the agent's live works, enough to
  * answer a person about one at once (its title, plan, updates and latest steps) and to pass a change on.
@@ -1550,7 +1553,7 @@ export async function workBrief(db: Executor, run: Pick<AgentRun, "orgId" | "age
     }),
   );
   return [
-    "# Your background work here",
+    WORK_BRIEF_HEADING,
     "You are already working on this in the background (each one reports here by itself when it ends):",
     ...lines,
     `A person's message here comes to you, not to the work, which keeps running: answer it now. A question about the work (how it goes, what it covers, what it found): answer from the lines above, plainly, without starting that work again. If the message changes the work (a correction, a narrower or wider scope, more detail) or asks for a next step once it is done, pass it on with ${STEER_WORK_TOOL} and tell them in one short line what it answers: the work takes it on, or, from someone who didn't ask for the work, it runs once the work ends or is stopped, as them. Never say you will do it yourself later: this turn ends here. To stop one, ${STOP_WORK_TOOL}. Anything else, answer it normally here. Never poll or wait for your own work.`,

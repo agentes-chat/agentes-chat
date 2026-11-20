@@ -39,7 +39,7 @@ import { useFailed } from "../routines/hooks";
 import { useUnsavedGuard } from "../settings/parts";
 import { AgentFace } from "../shared/Face";
 import { useDirectory, useOrgId } from "../shared/hooks";
-import { BarNote, goBack, PushedHeader, successHaptic, useSurface } from "../shared/parts";
+import { goBack, PushedHeader, successHaptic, useSurface } from "../shared/parts";
 import { useBoard } from "./hooks";
 import { layoutChanged, moveWidgetItem, shownWidgetTitle, widgetPlace } from "./logic";
 import { dragTarget, footprint, moveIndex, orderWidgets } from "./organize-logic";
@@ -198,6 +198,7 @@ function Arrange({ board }: { board: Dashboard }) {
     <View style={[styles.screen, { backgroundColor: c.grouped }]}>
       <PushedHeader
         title={t("widgets.organize.start")}
+        subtitle={home ? t("dashboards.home") : board.title}
         solid={false}
         grouped
         action={{ label: t("widgets.organize.done"), disabled: save.isPending, onPress: done }}
@@ -207,7 +208,6 @@ function Arrange({ board }: { board: Dashboard }) {
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={[styles.in, { paddingBottom: 24 + insets.bottom }]}
       >
-        <BarNote>{home ? t("dashboards.home") : board.title}</BarNote>
         <GroupedFooter>{t("mobile.dashboards.organize.hint")}</GroupedFooter>
         {widgets.length === 0 ? <EmptyState size="inline" title={t("dashboards.empty.text")} /> : null}
         <Locked when={save.isPending}>

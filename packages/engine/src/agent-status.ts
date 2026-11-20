@@ -4,7 +4,7 @@ import { type AgentWork, agentWorkFor, bareWork } from "./agent-work";
 import { publishOrgEvent } from "./events";
 import { type PendingReturn, pendingReturns } from "./follow-through";
 import { cutText } from "./format";
-import type { Judge } from "./judge";
+import type { Judge, JudgeGroup } from "./judge";
 import { requirePermission } from "./organizations";
 import { type OutOfOffice, outOfOffice } from "./out-of-office";
 import { rightHandId } from "./right-hand";
@@ -708,15 +708,21 @@ export async function askRunStatus(
     message: string;
     recent: string[];
     candidates: StatusCandidate[];
+    /** Asked with the run's other start judgments (`JudgeGroup`). */
+    group?: JudgeGroup;
   },
 ): Promise<StatusPick | null> {
-  if (input.candidates.length === 0) return null;
+  if (input.candidates.length === 0) {
+    input.group?.skip("agent_status");
+    return null;
+  }
   const answers = await judge.ask({
     orgId: input.orgId,
     agentId: input.agentId,
     runId: input.runId,
     kind: "agent_status",
     calibrated: true,
+    ...(input.group ? { group: input.group } : {}),
     state: {
       agent: { name: input.agent.name, role: input.agent.role, instructions: cutText(input.agent.instructions, 1500) },
       message: cutText(input.message, 2000),

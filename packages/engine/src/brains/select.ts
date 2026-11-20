@@ -641,9 +641,8 @@ export function brainSpeedFor(
 /** A conversation's session is picked up again only this soon after its last turn (its prompt cache is gone after). */
 export const SESSION_IDLE_MS = 60 * 60_000;
 /**
- * …and only while its last turn read less than this (input + cache, summed
- * over the turn's model calls): past it every turn re-reads a huge history,
- * so a fresh session starts with the recent messages instead.
+ * …and only while it holds less than this as its last turn ended (what that turn's last model call read, cache
+ * included): past it every turn re-reads a huge history, so a fresh session starts with the recent messages instead.
  */
 export const SESSION_MAX_INPUT_TOKENS = 150_000;
 
@@ -681,7 +680,7 @@ async function sessionFor(
   conversation: string,
   machineId: string,
   accountId: string | null,
-  options: { fresh?: boolean; promptKey?: string },
+  options: { fresh?: boolean; promptKey?: string; peek?: boolean },
   now: Date,
 ): Promise<{ id: string; resume: boolean }> {
   if (run.brainSessionId) {
@@ -689,7 +688,7 @@ async function sessionFor(
   }
   let id: string | null = null;
   if (!options.fresh && !run.background) {
-    const { agentRuns, usageRecords, messages } = schema;
+    const { agentRuns, agentRunSteps, usageRecords, messages } = schema;
     const [last] = await db
       .select({
         id: agentRuns.id,
@@ -697,11 +696,18 @@ async function sessionFor(
         at: sql<Date>`coalesce(${agentRuns.finishedAt}, ${agentRuns.updatedAt})`.mapWith(
           (v: string | Date) => new Date(v),
         ),
-        // Qualified by hand: inside the subquery a bare "id" would be usage_records.id. A row's `input_tokens` is
-        // only the uncached part (`recordPlanUsage`), so the cache counts here too: a well-cached session reads
-        // almost all of its history from the cache.
-        input: sql<number>`coalesce((select max(u.input_tokens + u.cache_read_tokens + u.cache_write_tokens)
-          from ${usageRecords} u where u.run_id = "agent_runs"."id" and u.provider = ${kind}), 0)`.mapWith(Number),
+        // The session's size as the run's last turn ended. A usage row sums a whole turn over all of its calls, so
+        // it reads several times the context: the turn's step says what its last call read (`lastContext`), else
+        // (an older runner) its biggest call, else its input over its calls. Only a run with no such step reads
+        // its usage rows, cache included (`input_tokens` is only the uncached part, `recordPlanUsage`). Qualified
+        // by hand: inside a subquery a bare "id" would be the subquery's own.
+        input: sql<number>`coalesce(
+          (select coalesce((s.data->>'lastContext')::numeric, (s.data->>'maxContext')::numeric,
+              (s.data->>'inputTokens')::numeric / nullif((s.data->>'calls')::numeric, 0))
+            from ${agentRunSteps} s where s.run_id = "agent_runs"."id" and s.kind = 'model_call'
+            order by s.seq desc limit 1),
+          (select max(u.input_tokens + u.cache_read_tokens + u.cache_write_tokens)
+            from ${usageRecords} u where u.run_id = "agent_runs"."id" and u.provider = ${kind}), 0)`.mapWith(Number),
         promptKey: sql<string | null>`${agentRuns.transcript}->>'promptKey'`,
       })
       .from(agentRuns)
@@ -752,7 +758,8 @@ async function sessionFor(
     }
   }
   const sessionId = id ?? brainSessionId(agent.id, `${conversation}:${run.id}`, kind);
-  await db.update(schema.agentRuns).set({ brainSessionId: sessionId }).where(eq(schema.agentRuns.id, run.id));
+  if (!options.peek)
+    await db.update(schema.agentRuns).set({ brainSessionId: sessionId }).where(eq(schema.agentRuns.id, run.id));
   return { id: sessionId, resume: id ? await sessionUsed(db, run, kind, sessionId) : false };
 }
 
@@ -775,9 +782,10 @@ export async function resolveBrain(
   conversation: string,
   /**
    * `fresh`: a new computer session whatever the conversation had (routine runs). `promptKey`: the run's
-   * (`Transcript.promptKey`); the conversation's session is picked up only when it started with the same.
+   * (`Transcript.promptKey`); the conversation's session is picked up only when it started with the same. `peek`:
+   * nothing is kept on the run (the session it would most likely get, before its prompt key is known).
    */
-  options: { fresh?: boolean; now?: Date; promptKey?: string; thinker?: Agent } = {},
+  options: { fresh?: boolean; now?: Date; promptKey?: string; thinker?: Agent; peek?: boolean } = {},
 ): Promise<BrainPlan> {
   const mission: MissionTurn | null = await missionTurnFor(deps.db, run).catch(() => null);
   // The right hand: the AI of the person whose DM this is, else the workspace's; on a plan, its computer and owner.

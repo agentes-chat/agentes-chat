@@ -394,6 +394,28 @@ export const envVars = {
       "Jev model for judgments over images (an agent finding a target on a screenshot of its browser or desktop). Needs a release that takes images.",
     section: "Agents",
   },
+  SCREEN_JUDGMENTS: {
+    schema: z.enum(["full", "small", "shadow"]).default("full"),
+    description:
+      "What an agent's screen checks and finds send the judge. `full` (default): the whole page, up to 60k characters. `small`: what matters of a long page (its top, what changed, the lines with the check's words), and no judgment when the quoted words a check names are on the screen. `shadow`: both at once; `full` decides, `small` is only compared, and each judgment writes a `screen judgment shadow` log line (a warning when they disagree) with both decisions and sizes, never the page's text. `shadow` asks the judge twice. Applies to `SCREEN_JUDGMENTS_ORGS`.",
+    section: "Agents",
+  },
+  SCREEN_JUDGMENTS_ORGS: {
+    schema: z
+      .string()
+      .optional()
+      .transform((value) =>
+        value
+          ?.split(",")
+          .map((entry) => entry.trim())
+          .filter(Boolean),
+      )
+      .pipe(z.array(z.uuid()).optional()),
+    description:
+      "The organization ids (separated by commas) that get `SCREEN_JUDGMENTS`; every other organization gets `full`. Unset (default): every organization gets it.",
+    section: "Agents",
+    example: "00000000-0000-4000-8000-000000000000",
+  },
   OPENAI_CHEAP_MODEL: {
     schema: modelId.default("gpt-6-luna"),
     description:

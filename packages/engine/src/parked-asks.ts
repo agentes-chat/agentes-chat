@@ -77,7 +77,8 @@ export const CLOSED_NOTE_CODE = "catch_up_closed";
  * already be answered here. One statement.
  */
 export async function scheduleParkedChecks(db: Executor, m: Message) {
-  if (m.deletedAt || m.meta.notice || m.meta.usageWait || m.meta.talker) return;
+  // A line before slow work (`say_now`, ADR 0207) answers nothing a waiting run asked.
+  if (m.deletedAt || m.meta.notice || m.meta.usageWait || m.meta.talker || m.meta.sayNow) return;
   if (m.authorType !== "person" && m.authorType !== "agent") return;
   const card = m.authorType === "agent" && Boolean(m.meta.questionId || m.meta.secretRequest || m.meta.browserHandoff);
   // One check per run and window, a whole window after the first message in it: the replies it brings come in.

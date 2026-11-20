@@ -4,7 +4,7 @@ import { type LayoutChangeEvent, type StyleProp, View, type ViewStyle } from "re
 import { type SharedValue, useDerivedValue } from "react-native-reanimated";
 import { useLivePaused } from "@/agent/live";
 import { useReducedMotion } from "@/ui/theme";
-import { useDrawingClock } from "./clock";
+import { drawingFps, useDrawingClock } from "./clock";
 import { paletteUniform } from "./math";
 import { type DitherKind, shaderSource } from "./shaders";
 
@@ -78,7 +78,7 @@ export function Dither({
   const effect = effectOf(kind);
   const { pal, last } = paletteUniform(tones);
   const timed = animated && !reduced;
-  const clock = useDrawingClock(timed && !paused);
+  const clock = useDrawingClock(timed && !paused, drawingFps(kind));
   const base = {
     size: [size.width, size.height],
     px: pixel,

@@ -20,11 +20,21 @@ import { createContext, useCallback, useContext, useMemo, useState } from "react
 import { type LayoutChangeEvent, StyleSheet, useWindowDimensions, type ViewStyle } from "react-native";
 import { useOrg } from "@/providers/org";
 import { useTheme } from "@/ui";
-import { appShadows, type Scheme } from "@/ui/palette";
+import { cardEdge, type Scheme } from "@/ui/palette";
 import { type Corners, RADIUS } from "@/ui/radius";
 import { BUBBLE_PART_CORNERS, MESSAGE_CARD_CORNERS, useBubblePart } from "../shared/bubble-part";
 import { keepSize, keptSize } from "./kept-sizes";
-import { BUBBLES_EDGE, BUBBLES_END, BUBBLES_INSET, bubbleFill, CHAT_TEXT, quietInset } from "./logic";
+import {
+  BUBBLES_EDGE,
+  BUBBLES_END,
+  BUBBLES_INSET,
+  bubbleFill,
+  CHAT_TEXT,
+  COMPACT_FACE,
+  COMPACT_GAP,
+  MSG_INSET,
+  quietInset,
+} from "./logic";
 import { wallpaperKey } from "./wallpaper-logic";
 
 /** How this conversation's rows are drawn (`chatLookOf`, as on the web's `MessageLook`). */
@@ -66,7 +76,7 @@ export const useRowLook = () => useContext(RowLookContext);
 export function useConversationLook(dm: boolean, agentColor?: AgentColorName, channelId?: string | null): RowLook {
   const { org } = useOrg();
   const { colors, scheme } = useTheme();
-  const { style, tone } = chatLookOf(org?.chatPrefs, dm, isPersonal(org));
+  const { style, tone } = chatLookOf(org?.chatPrefs, dm, isPersonal(org), "phone");
   const text = CHAT_TEXT[textSizeOf(org?.chatPrefs)];
   const fill = bubbleFill(agentColor ?? "sky", tone, colors.bg, scheme === "dark");
   const wallpaper = Boolean(channelId) && hasWallpaper(wallpaperFor(org?.chatPrefs, channelId));
@@ -87,7 +97,7 @@ export function useConversationWallpaper(
   agentColor?: AgentColorName,
 ): { wallpaper: Wallpaper; strength: number } {
   const { org } = useOrg();
-  const { style } = chatLookOf(org?.chatPrefs, dm, isPersonal(org));
+  const { style } = chatLookOf(org?.chatPrefs, dm, isPersonal(org), "phone");
   const chosen = wallpaperFor(org?.chatPrefs, channelId);
   const own = dm ? wallpaperHueOf(agentColor) : null;
   const strength = wallpaperStrength(style === "bubbles");
@@ -154,24 +164,21 @@ export function useMessageCardCorners(): Corners | null {
 /** `quietInset` in this conversation's look. */
 export const useQuietInset = () => quietInset(useRowLook());
 
-/** `liftedEdge` per scheme, made once. */
-const liftedEdges = new Map<Scheme, ViewStyle | null>();
-
 /**
- * A bubble's edge over a background (`RowLook.wallpaper`): the ring of the cards' light shadow (`e1`, its layer with no
- * blur), drawn as an outline, outside the bubble as that ring is, so nothing in it moves. The shadow's blurred layer
- * barely shows over a background, and as a `boxShadow` it cost each bubble two masked layers, drawn again on every
- * frame of a scroll.
+ * A bubble's edge over a background (`RowLook.wallpaper`): the cards' light edge (`cardEdge`), outside the bubble as
+ * their ring is, so nothing in it moves. The shadow's blurred layer barely shows over a background, and as a
+ * `boxShadow` it cost each bubble two masked layers, drawn again on every frame of a scroll.
  */
 export function liftedEdge(scheme: Scheme): ViewStyle | null {
-  let edge = liftedEdges.get(scheme);
-  if (edge === undefined) {
-    const ring = appShadows(scheme).e1.find((l) => l.blur === 0 && l.spread > 0);
-    edge = ring ? { outlineWidth: ring.spread, outlineColor: ring.color, outlineStyle: "solid" } : null;
-    liftedEdges.set(scheme, edge);
-  }
-  return edge;
+  return cardEdge(scheme);
 }
+
+/**
+ * The looks whose messages hold no time of their own (bubbles, and compact, whose column of times took a line's
+ * width on a phone): a pull to the left shows each message's time at the screen's edge, and a line says when the
+ * conversation picks up after a pause.
+ */
+export const timesOnPull = (style: ChatStyle) => style === "bubbles" || style === "compact";
 
 /** The rows' frames per style. */
 export const lookRows = StyleSheet.create({
@@ -179,9 +186,8 @@ export const lookRows = StyleSheet.create({
   // A row with no face column (a DM): its bubble as far from the edge as mine.
   bubblesBare: { paddingLeft: BUBBLES_EDGE },
   bubblesSlot: { width: 30, paddingTop: 0 },
-  compactRow: { paddingLeft: 10, paddingRight: 12, gap: 6 },
-  compactSlot: { width: 18, paddingTop: 1 },
-  compactClock: { width: 34, textAlign: "right", lineHeight: 20, fontVariant: ["tabular-nums"] },
+  compactRow: { paddingLeft: MSG_INSET, paddingRight: 12, gap: COMPACT_GAP },
+  compactSlot: { width: COMPACT_FACE, paddingTop: 1 },
   // One line is 40 tall: its 24 and 8 above and under.
   bubble: {
     alignSelf: "flex-start",

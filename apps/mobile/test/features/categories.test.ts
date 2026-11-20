@@ -69,7 +69,7 @@ describe("arranging categories", () => {
     // The home's category header menu is gone with its sections.
     const menus = readFileSync(join(import.meta.dir, "../../src/features/categories/menus.tsx"), "utf8");
     expect(menus).not.toContain("categoryMenu");
-    expect(menus).toContain("return { openRowMenu, rowActionsOf };");
+    expect(menus).toContain("return { openRowMenu, rowActionsOf, pinLabelOf };");
   });
 });
 

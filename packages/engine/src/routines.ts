@@ -2159,11 +2159,23 @@ export async function listRoutineRuns(
 }
 
 /**
- * When a due routine fires: its slot plus a stable offset into that minute, from its id (0 to 59 s), so the
- * routines of one minute fire as a ramp instead of all at once. Its slot stays what it shows and records
- * (`next_run_at`, the run's `at`): the minute is right.
+ * How far past its slot a routine may fire, in seconds, by its cron's shape. Interval routines all share the top of
+ * the hour, so they spread over minutes (always under their interval, so no slot is skipped); a routine at a set
+ * hour keeps to its minute.
  */
-const firesAt = sql`${routines.nextRunAt} + ((hashtext(${routines.id}::text) & 2147483647) % 60) * interval '1 second'`;
+const fireSpread = sql`case
+  when split_part(${routines.cron}, ' ', 1) = '*/15' then 180
+  when split_part(${routines.cron}, ' ', 1) = '*/30' then 300
+  when split_part(${routines.cron}, ' ', 1) ~ '^[0-9]+$'
+    and (split_part(${routines.cron}, ' ', 2) = '*' or split_part(${routines.cron}, ' ', 2) like '*/%') then 600
+  else 60 end`;
+
+/**
+ * When a due routine fires: its slot plus a stable offset from its id (under `fireSpread`), so the routines of one
+ * slot fire as a ramp instead of all at once. Its slot stays what it shows and records (`next_run_at`, the run's
+ * `at`).
+ */
+const firesAt = sql`${routines.nextRunAt} + ((hashtext(${routines.id}::text) & 2147483647) % ${fireSpread}) * interval '1 second'`;
 
 /**
  * Worker tick: fires every scheduled routine whose slot has come (`firesAt`). Each

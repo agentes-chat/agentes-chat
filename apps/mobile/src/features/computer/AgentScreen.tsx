@@ -22,7 +22,7 @@ import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { type AgentColorName, bodyTones } from "@agenteschat/ui/agent/engine";
 import { Canvas, Fill, Shader, Skia } from "@shopify/react-native-skia";
 import * as Clipboard from "expo-clipboard";
-import { Stack } from "expo-router";
+import { Stack, useIsFocused } from "expo-router";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Keyboard, type LayoutChangeEvent, ScrollView, StyleSheet, TextInput, View } from "react-native";
@@ -970,22 +970,30 @@ function Trackpad({
     demo.value = l;
     ghost.value = { x: l.cursorX, y: l.cursorY, scale: l.cursorScale };
   }, false);
+  // The lesson is due until the first touch (read once, with the pad), and runs only while the screen shows: a screen
+  // pushed over it stops it, and it starts again when it comes back.
+  const focused = useIsFocused();
+  const [due, setDue] = useState(false);
+  const over = useRef(false);
   const lessonOver = () => {
-    lesson.setActive(false);
+    over.current = true;
+    setDue(false);
     void writeValue(STORED.trackpadTaught, "1");
   };
-  // biome-ignore lint/correctness/useExhaustiveDependencies: the lesson starts once, with the pad
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the lesson is read once, with the pad
   useEffect(() => {
     let alive = true;
     void readValue(STORED.trackpadTaught).then((v) => {
-      if (alive && v !== "1" && !reduced) lesson.setActive(true);
+      if (alive && !over.current && v !== "1" && !reduced) setDue(true);
     });
     return () => {
       alive = false;
-      lesson.setActive(false);
       ghost.value = GHOST_REST;
     };
   }, []);
+  useEffect(() => {
+    lesson.setActive(due && focused);
+  }, [lesson, due, focused]);
 
   const touch = (px: number, py: number) => {
     "worklet";

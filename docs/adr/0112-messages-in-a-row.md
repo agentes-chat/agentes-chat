@@ -67,3 +67,48 @@ Decision:
 Measured before shipping on 52 messages written for it (synthetic, no conversation of anyone's): 49 right (94%), every stop, correction and addition right; the three misses were follow-ups on the same file taken as additions and an off-topic quick question taken for after the task, all under 0.45 confidence. About 300 ms and 740 input tokens a message.
 
 Consequences: a message sent mid-task costs one Jev call, as the stop check did (that one asked only for short messages). A separate request is answered in its own message after the task instead of inside its final answer. A misjudged `interrupt` costs a cut step, or on a computer whose turn can't take messages a restart from the message, the same as the person pressing "Parar e mandar".
+
+## Addendum (2026-11-19): a conversation answers what it was told while it answered
+
+A reply could go out after the conversation had moved on. While a run that had only greeted the person was still writing, they asked for something, and the greeting was posted as if the request had never come; only the next turn took the request up. With the triage on, the request would also have been left for "after the task" of a run that had no task.
+
+1. **A run is at work once it calls a tool** (`runAtWork` in `runs.ts`), other than a way of talking (a reaction, a question card, its background works' own tools). Until then it is a conversation.
+2. **A conversation takes what is added** (`steering.ts`): while the run only talks, the triage's `answer` and `queue` are read with its next step like `add`. Nothing is left for after it (`after_message_ids`), and the fast reply doesn't speak for it: the run itself answers in a moment. `stop` and `interrupt` act as before.
+3. **An overtaken reply is rewritten, not sent** (`executor.ts`, the turn's end): when a turn of a run that only talks ends with a short reply (`OVERTAKEN_MAX_CHARS`, 200: a greeting, a quick answer) and a person's message came while it was written (unread, `personAmong`), the reply isn't posted. A longer one is substance (an explanation, a result): it goes out, and the next turn answers what came, as a person would send what they wrote and then answer the follow-up. The next turn reads the new messages after a note with its unsent draft (`overtakenNote`) and answers all of it in one message, as a person who sees new messages before pressing send would. At most twice in a row (`OVERTAKEN_MAX`, `transcript.overtaken`), so someone who keeps writing still gets an answer; never for a run at work (its reply is a result, and goes out), background work, a mission or an agents' DM. A computer brain that reads messages mid-turn (Claude Code, Codex) is unchanged: each of its answers goes out as it comes (addendum of 2026-11-18).
+
+Consequences: messages in a row sent while the agent writes get one answer that reads all of them, on every brain whose turn ends before it reads them (the API model, OpenCode, Cursor and the others). The rewrite costs nothing extra: the next turn ran anyway to read the new messages.
+
+## Addendum (2026-11-19, 2): in a channel, a line for someone else isn't the agent's
+
+In a channel others share, a message joins an agent's task without @mentioning it in two ways. The floor takes the follow-up of the person it works for, in the main timeline, within 30 minutes (`floor_runs` in `messages.ts`). In a thread, a reply joins when that person writes there or the agent spoke last (`talkingTo`). Both are deterministic, and the router never sees those messages. So when the person who asked turned to a colleague, by name or @, the line went into the agent's task as theirs. The triage only asked how the agent takes it, never whether it was for the agent. The run then made it part of the request and owed an answer to it (`widenRequest`, `oweAnswer`), and the follow-through judge held it to that answer. Reading the message turned into answering it.
+
+1. **The triage also asks whether it is for the agent** (`steerHandling` `elsewhere`, in the same call, at no extra cost).
+   - **When it is asked:** only where the message could be for someone else (`sharedConversation` in `steering.ts`): a person's message in a channel (not a DM, a task's conversation or a mission's thread) that neither @mentions the agent nor quotes it, not sent with "Parar e mandar".
+   - **What the judge sees:** whether the person who asked for the task wrote the message, or someone else in the channel did (`written_by`).
+   - **How sure it must be:** `ELSEWHERE_SURE` (0.75), above `STEER_SURE`. An unsure judge leaves the message to the agent as before, because a follow-up of theirs the agent never reads costs more than a line it reads and leaves.
+2. **A line for someone else leaves the task unread** (`releaseFromRun` in `run-inbox.ts`):
+   - It comes out of the run's inbox and out of the message's `steeredRunIds`, so a reload's receipts, who wrote into the run, and the router's history no longer count it as sent there.
+   - The app hears `agent.run.released`, and the receipt says the agent saw it.
+   - The router decides who answers it (`ROUTE_RELEASED_JOB`, through `routePersonMessage` in `jobs.ts`), as for any message nobody mentioned, so it may go to nobody. The agent it left isn't a candidate (`routeMessage`'s `except`): the router leans toward the agent the person was just talking to (a lower bar for it), which would hand the message straight back. And only an agent the message speaks to answers it (`forSomeoneElse`: the step's addressee, or an agent it names), never the agent best placed to answer nor one a rule supplies (R5's "a message for the agents always gets one", the channel's one agent, a follow-up, a step's failure), since the triage already found it for someone else.
+   - Nothing is posted for the agent, and no fast reply speaks for it.
+3. **The run waits for the triage a moment** (`awaitTriage` on `takeInbox` and `unreadNow`).
+   - **Why:** a computer brain mid-turn already got such a message only once the triage said how (addendum of 2026-11-18, 2), but the API model reads its inbox at every step and could take the message before the judge answered.
+   - **How:** a message under triage carries `meta.triage` (`markTriage`, cleared once the decision is acted on). A step, and a turn's end checking for new messages, wait while one in the inbox does, never past `TRIAGE_GRACE_MS` (2 s) from its send. The check rides on the inbox read the run already makes, so nothing under triage costs no statement.
+   - **What it doesn't cover:** a message the run read before the judge answered stays read, as any message the run read.
+
+Consequences:
+- In a channel, an agent at work no longer answers what the person who asked said to someone else, nor people chatting in its thread.
+- Where it can only be for the agent (a DM, an @mention, a quote, "Parar e mandar"), nothing changes.
+- Without a judge, nothing changes.
+- An API-model step may wait up to 2 s for a line just written in its channel.
+- A wrong `elsewhere` is a follow-up that agent doesn't read; the router may give it to another agent, or to nobody.
+- Covered by `steer-triage.test.ts`. The triage eval (`eval/steer-triage.ts`) adds 20 channel lines: none for the agent may be taken for someone else's, and 80% of the lines for someone else must be.
+
+Measured before shipping with Jev on the eval's 72 lines (written for it, no conversation of anyone's): 67 right (93%).
+- Not one line for the agent was taken for someone else's, including those that name a person.
+- 8 of the 10 lines for someone else were caught. The two missed were lines to the whole group, which the agent reads as before.
+- The 52 earlier lines came out as before (49 right).
+
+## Addendum (2026-11-19, 3): the line before slow work
+
+ADR 0207 lets a run post one short line of what it will do before slow work (`say_now`), and the line keeps to this record: while a person's message waits unread in the run's inbox it isn't posted (the run reads the message next and answers all of it in one message, so the line never answers a conversation that has moved on); the call is a way of talking (`TALK_TOOLS`), so a run that has only said its line is still a conversation (`runAtWork`, the addendum above); and an answer posted early (`answerNow`) or at the turn's end drops leading sentences that only repeat the line (`withoutSaidNow`).

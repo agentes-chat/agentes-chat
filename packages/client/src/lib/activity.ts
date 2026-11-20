@@ -291,6 +291,8 @@ const BUILTIN: Record<string, ActivityKind> = {
   request_branch_push: "pushingBranch",
   delete_branches: "deletingBranches",
   post_message: "postingMessage",
+  // The line it says before slow work (ADR 0207): a message of its own, never a line of the work (`work.ts`).
+  say_now: "postingMessage",
   send_dm: "sendingDm",
   set_status: "settingStatus",
   set_reply_style: "settingReplyStyle",

@@ -1,5 +1,7 @@
 import { modelInfo } from "@agenteschat/providers";
+import { caches } from "./cache";
 import { isConfidentialRun } from "./confidential";
+import { sha256 } from "./crypto";
 import { cutText } from "./format";
 import type { ModelGateway } from "./gateway";
 import { callJev, type JevKeySource } from "./jev-key";
@@ -81,6 +83,10 @@ export interface JudgeRequest {
   images?: Record<string, JudgeImage>;
   /** Its own wait for Jev (ms), when the caller can wait longer or must wait less than the judge's default. */
   timeoutMs?: number;
+  /** Told the tokens the call read and wrote, cached ones included, once the judge has them. */
+  onUsage?: (usage: { inputTokens: number; outputTokens: number }) => void;
+  /** Asked together with the other judgments of the group, as one Jev request (`JudgeGroup`). */
+  group?: JudgeGroup;
 }
 
 export interface Judge {
@@ -129,7 +135,8 @@ function boxOf(v: unknown): JudgeBox {
 
 /**
  * TypeSafe Jev (`POST /v1/systemone`, or OpenRouter's Decisions route with an OpenRouter key): one request, all
- * questions answered in parallel.
+ * questions answered in parallel. A text-only request sent the same way within 15 minutes gets the answers Jev gave it
+ * (`caches.jevAnswers`, on in the server), and the judgments of a `group` go as one request.
  */
 export function createJevJudge(options: {
   /** Read on every call (`jev-key.ts`): without one it throws `JevOffError`. */
@@ -144,76 +151,195 @@ export function createJevJudge(options: {
   visionTimeoutMs?: number;
   fetch?: typeof fetch;
 }): Judge {
+  const call = async (request: JudgeRequest, vision: boolean): Promise<Record<string, JudgeAnswer>> => {
+    const model = vision ? (options.visionModel ?? "jev-preview") : (options.model ?? "jev-latest");
+    const assets = Object.fromEntries(
+      Object.entries(request.images ?? {}).map(([key, image]) => [
+        key,
+        { data_base64: image.data, format: image.format },
+      ]),
+    );
+    const body = await callJev<{
+      model?: string;
+      answers?: Record<string, JudgeAnswer>;
+      usage?: { input_tokens?: number; output_tokens?: number; cost?: number };
+    }>(options.key, {
+      fetch: options.fetch,
+      baseURL: options.baseURL,
+      // Images and Box questions are off unless asked for on each request.
+      headers: vision ? { "TypeSafe-Danger-Zone-Images": "true" } : undefined,
+      body: {
+        state: request.state,
+        model,
+        questions: request.questions,
+        ...(Object.keys(assets).length > 0 ? { assets } : {}),
+      },
+      timeoutMs: vision
+        ? (options.visionTimeoutMs ?? Math.max(6000, options.timeoutMs ?? 0))
+        : (request.timeoutMs ?? options.timeoutMs ?? 2000),
+    }).catch((error: unknown) => {
+      throw withJudgeCall(error, model, "typesafe");
+    });
+    const inputTokens = body.usage?.input_tokens ?? 0;
+    request.onUsage?.({ inputTokens, outputTokens: body.usage?.output_tokens ?? 0 });
+    await options.gateway
+      .recordExternalUsage({
+        orgId: request.orgId,
+        agentId: request.agentId,
+        runId: request.runId,
+        kind: "router",
+        provider: "typesafe",
+        model: body.model ?? model,
+        requestedModel: request.kind,
+        inputTokens,
+        outputTokens: body.usage?.output_tokens ?? 0,
+        costNanoUsd: jevCostOf(body.usage),
+      })
+      .catch(() => {});
+    const out: Record<string, JudgeAnswer> = {};
+    for (const [id, q] of Object.entries(request.questions)) {
+      const a = body.answers?.[id];
+      const confidence = typeof a?.confidence === "number" ? { confidence: clamp(a.confidence) } : {};
+      if (q.type === "noul") out[id] = { noul: clamp(a?.noul) };
+      else if (q.type === "box") out[id] = { box: boxOf(a?.box), ...confidence };
+      else if (q.type === "score") {
+        out[id] = {
+          score: typeof a?.score === "number" ? Math.min(q.criteria.length - 1, Math.max(0, a.score)) : 0,
+          probabilities: a?.probabilities ?? {},
+          ...confidence,
+        };
+      } else {
+        out[id] = {
+          choice: typeof a?.choice === "string" ? a.choice : undefined,
+          probabilities: a?.probabilities ?? {},
+          ...confidence,
+        };
+      }
+    }
+    return out;
+  };
+  const textCall = (request: JudgeRequest) =>
+    caches.jevAnswers.getOrLoad(
+      `${request.orgId}:${sha256(JSON.stringify([options.model ?? "", request.state, request.questions]))}`,
+      () => call(request, false),
+    ) as Promise<Record<string, JudgeAnswer>>;
   return {
     name: "jev",
     async ask(request) {
       refuseConfidential(request);
-      const vision = judgeSeesImages(request);
-      const model = vision ? (options.visionModel ?? "jev-preview") : (options.model ?? "jev-latest");
-      const assets = Object.fromEntries(
-        Object.entries(request.images ?? {}).map(([key, image]) => [
-          key,
-          { data_base64: image.data, format: image.format },
-        ]),
-      );
-      const body = await callJev<{
-        model?: string;
-        answers?: Record<string, JudgeAnswer>;
-        usage?: { input_tokens?: number; output_tokens?: number; cost?: number };
-      }>(options.key, {
-        fetch: options.fetch,
-        baseURL: options.baseURL,
-        // Images and Box questions are off unless asked for on each request.
-        headers: vision ? { "TypeSafe-Danger-Zone-Images": "true" } : undefined,
-        body: {
-          state: request.state,
-          model,
-          questions: request.questions,
-          ...(Object.keys(assets).length > 0 ? { assets } : {}),
-        },
-        timeoutMs: vision
-          ? (options.visionTimeoutMs ?? Math.max(6000, options.timeoutMs ?? 0))
-          : (request.timeoutMs ?? options.timeoutMs ?? 2000),
-      }).catch((error: unknown) => {
-        throw withJudgeCall(error, model, "typesafe");
-      });
-      const inputTokens = body.usage?.input_tokens ?? 0;
-      await options.gateway
-        .recordExternalUsage({
-          orgId: request.orgId,
-          agentId: request.agentId,
-          runId: request.runId,
-          kind: "router",
-          provider: "typesafe",
-          model: body.model ?? model,
-          inputTokens,
-          outputTokens: body.usage?.output_tokens ?? 0,
-          costNanoUsd: jevCostOf(body.usage),
-        })
-        .catch(() => {});
-      const out: Record<string, JudgeAnswer> = {};
-      for (const [id, q] of Object.entries(request.questions)) {
-        const a = body.answers?.[id];
-        const confidence = typeof a?.confidence === "number" ? { confidence: clamp(a.confidence) } : {};
-        if (q.type === "noul") out[id] = { noul: clamp(a?.noul) };
-        else if (q.type === "box") out[id] = { box: boxOf(a?.box), ...confidence };
-        else if (q.type === "score") {
-          out[id] = {
-            score: typeof a?.score === "number" ? Math.min(q.criteria.length - 1, Math.max(0, a.score)) : 0,
-            probabilities: a?.probabilities ?? {},
-            ...confidence,
-          };
-        } else {
-          out[id] = {
-            choice: typeof a?.choice === "string" ? a.choice : undefined,
-            probabilities: a?.probabilities ?? {},
-            ...confidence,
-          };
-        }
-      }
-      return out;
+      if (judgeSeesImages(request)) return call(request, true);
+      // Without a key it fails at once (`JevOffError`): nothing waits on a group for that.
+      const on = typeof options.key === "string" || options.key.usable();
+      return request.group && on ? request.group.join(request, textCall) : textCall(request);
     },
   };
+}
+
+/** How long a grouped judgment waits for the others of its group before it goes alone with those that came. */
+export const JUDGE_GROUP_WAIT_MS = 100;
+
+interface GroupMember {
+  request: JudgeRequest;
+  resolve(answers: Record<string, JudgeAnswer>): void;
+  reject(error: unknown): void;
+}
+
+/**
+ * Judgments asked together (a run's start: `auto_model`, `agent_status`, `tool_groups`): Jev answers them in one
+ * request, each judgment's questions under its kind, so one round trip and one copy of the shared state serve them all.
+ * Each waits for the kinds still expected, at most `waitMs`; one asked after the group went goes alone, and a kind
+ * that won't be asked after all is `skip`ped so nobody waits for it. A member whose state disagrees with the others'
+ * goes alone. When the request fails, each member fails and takes its own fallback. Other judges ignore the group.
+ */
+export class JudgeGroup {
+  private readonly expected: Set<string>;
+  private members: GroupMember[] = [];
+  private timer: ReturnType<typeof setTimeout> | undefined;
+  private send: ((request: JudgeRequest) => Promise<Record<string, JudgeAnswer>>) | null = null;
+
+  constructor(
+    kinds: Iterable<string>,
+    private readonly waitMs = JUDGE_GROUP_WAIT_MS,
+  ) {
+    this.expected = new Set(kinds);
+  }
+
+  /** `kind` won't be asked in this group: the others stop waiting for it. */
+  skip(kind: string) {
+    this.expected.delete(kind);
+    if (this.expected.size === 0 && this.members.length > 0) this.flush();
+  }
+
+  join(
+    request: JudgeRequest,
+    send: (request: JudgeRequest) => Promise<Record<string, JudgeAnswer>>,
+  ): Promise<Record<string, JudgeAnswer>> {
+    if (!this.expected.delete(request.kind)) return send(request);
+    this.send ??= send;
+    const answers = new Promise<Record<string, JudgeAnswer>>((resolve, reject) => {
+      this.members.push({ request, resolve, reject });
+    });
+    if (this.expected.size === 0) this.flush();
+    else this.timer ??= setTimeout(() => this.flush(), this.waitMs);
+    return answers;
+  }
+
+  private flush() {
+    clearTimeout(this.timer);
+    this.expected.clear();
+    const send = this.send;
+    const members = this.members;
+    this.members = [];
+    if (!send) return;
+    const state: Record<string, unknown> = {};
+    const together: GroupMember[] = [];
+    for (const m of members) {
+      const fits = Object.entries(m.request.state).every(
+        ([k, v]) => !(k in state) || JSON.stringify(state[k]) === JSON.stringify(v),
+      );
+      if (!fits) {
+        send(m.request).then(m.resolve, m.reject);
+        continue;
+      }
+      Object.assign(state, m.request.state);
+      together.push(m);
+    }
+    // One label per set of kinds in the usage rows, whatever order they joined in.
+    together.sort((a, b) => a.request.kind.localeCompare(b.request.kind));
+    const [first] = together;
+    if (!first) return;
+    if (together.length === 1) {
+      send(first.request).then(first.resolve, first.reject);
+      return;
+    }
+    const questions: Record<string, JudgeQuestion> = {};
+    for (const m of together)
+      for (const [id, q] of Object.entries(m.request.questions)) questions[`${m.request.kind}__${id}`] = q;
+    const waits = together.map((m) => m.request.timeoutMs).filter((t): t is number => t !== undefined);
+    send({
+      orgId: first.request.orgId,
+      agentId: first.request.agentId,
+      runId: first.request.runId,
+      kind: together.map((m) => m.request.kind).join("+"),
+      state,
+      questions,
+      ...(waits.length > 0 ? { timeoutMs: Math.max(...waits) } : {}),
+    }).then(
+      (answers) => {
+        for (const m of together) {
+          const own: Record<string, JudgeAnswer> = {};
+          for (const id of Object.keys(m.request.questions)) {
+            const a = answers[`${m.request.kind}__${id}`];
+            if (a) own[id] = a;
+          }
+          m.resolve(own);
+        }
+      },
+      (error: unknown) => {
+        for (const m of together) m.reject(error);
+      },
+    );
+  }
 }
 
 const LLM_SYSTEM =
@@ -279,6 +405,11 @@ export function createLlmJudge(deps: {
         .catch((error: unknown) => {
           throw withJudgeCall(error, model, provider);
         });
+      const { usage } = result;
+      request.onUsage?.({
+        inputTokens: usage.inputTokens + usage.cacheReadTokens + usage.cacheWriteTokens,
+        outputTokens: usage.outputTokens,
+      });
       let parsed: Record<string, unknown> = {};
       try {
         const text = result.text.trim().replace(/^```(?:json)?\s*|\s*```$/g, "");
@@ -350,7 +481,8 @@ export function withJudgeBudget(judge: Judge, budgetMs: number, slow: { timedOut
 
 /**
  * `primary`, and `fallback` on any error or timeout. Named after `fallback` while `primaryOn()` is false (no Jev key
- * now), so a decision never names a judge that wasn't asked.
+ * now), so a decision never names a judge that wasn't asked. When `fallback` fails before calling a model (no small
+ * model), the primary's error is the one thrown: why no judge answered (`JevOffError`, the platform cap).
  */
 export function withJudgeFallback(primary: Judge, fallback: Judge, primaryOn: () => boolean = () => true): Judge {
   return {
@@ -362,7 +494,9 @@ export function withJudgeFallback(primary: Judge, fallback: Judge, primaryOn: ()
         return await primary.ask(request);
       } catch (error) {
         if (request.calibrated) throw error;
-        return fallback.ask(request);
+        return fallback.ask(request).catch((second: unknown) => {
+          throw judgeCallOf(second).judge_model ? second : error;
+        });
       }
     },
   };
@@ -370,13 +504,16 @@ export function withJudgeFallback(primary: Judge, fallback: Judge, primaryOn: ()
 
 // ── The judgments the product uses ────────────────────────────────────────────
 
-/** How an agent at work takes a message the person it works for sends meanwhile (`steerHandling`). */
-export type SteerHandling = "stop" | "interrupt" | "add" | "answer" | "queue";
+/**
+ * How an agent at work takes a message the person it works for sends meanwhile (`steerHandling`). `elsewhere`: in a
+ * conversation others share, the message isn't for the agent at all.
+ */
+export type SteerHandling = "stop" | "interrupt" | "add" | "answer" | "queue" | "elsewhere";
 
 /** How likely a way must be for the agent to take it: below, the message is read at the next pause (`add`). */
 export const STEER_SURE = 0.6;
 
-const STEER_CRITERIA: Record<SteerHandling, string> = {
+const STEER_CRITERIA: Record<Exclude<SteerHandling, "elsewhere">, string> = {
   stop: "Stop and drop the task: the message only tells the agent to stop, cancel or forget the task ('para', 'deixa', 'cancela'), asking for nothing else.",
   interrupt:
     "Stop at once and read the message, because going on as it is would waste work or something can't wait: it corrects or changes the task in progress (another target, file, period, recipient, branch or approach; a mistake pointed out), drops it for something else, or reports an urgent problem.",
@@ -388,19 +525,51 @@ const STEER_CRITERIA: Record<SteerHandling, string> = {
 };
 
 /**
+ * In a channel other people and agents share, a message written while the agent works may be for one of them (ADR
+ * 0112 addendum of 2026-11-19): the person who asked turns to a colleague, or people talk among themselves.
+ */
+const ELSEWHERE_CRITERION =
+  "Not for the agent: it talks to someone else in the channel (another person or another agent, by name or @), or people are just talking among themselves; it asks the agent nothing and adds nothing to its task.";
+
+/**
+ * How sure the judge must be that a message isn't for the agent: below, the agent reads it (`add`), as before. Above
+ * `STEER_SURE`: a follow-up of theirs the agent never reads costs more than a line it reads and leaves.
+ */
+export const ELSEWHERE_SURE = 0.75;
+
+/**
  * A message a person sent an agent while it works on a task for them (ADR 0112 addendum): how the agent takes it.
  * `stop` drops the task; `interrupt` reads it now (a correction that makes going on a waste, an urgent problem); `add`
  * folds it in at the next pause, as before; `answer` gets a short reply now while the work goes on (a greeting, a
- * question about the work); `queue` waits for the task to end and gets a run of its own (a separate request). One
- * judgment, in any language; a way less likely than `STEER_SURE` is `add`. `task`: what the agent works on (its
+ * question about the work); `queue` waits for the task to end and gets a run of its own (a separate request);
+ * `elsewhere`, only asked where others share the conversation (`shared`), isn't for the agent at all: the task never
+ * reads it and the router decides who answers it (ADR 0112 addendum of 2026-11-19). One judgment, in any language; a
+ * way less likely than `STEER_SURE` (`ELSEWHERE_SURE` for `elsewhere`) is `add`. `task`: what the agent works on (its
  * request), null when unknown. Never asked for a run of a confidential thread (`refuseConfidential`): it throws.
  */
 export async function steerHandling(
   judge: Judge,
-  input: { orgId: string; text: string; agentName: string; task: string | null; agentId?: string; runId?: string },
+  input: {
+    orgId: string;
+    text: string;
+    agentName: string;
+    task: string | null;
+    agentId?: string;
+    runId?: string;
+    /**
+     * Written in a channel others share, without @mentioning the agent: it may be for someone else (`elsewhere`).
+     * `fromAsker`: its writer is the person who asked for the task.
+     */
+    shared?: { fromAsker: boolean };
+  },
 ): Promise<SteerHandling> {
   const text = input.text.trim();
   if (!text) return "add";
+  const shared = input.shared;
+  const criteria: Record<string, string> = shared
+    ? { ...STEER_CRITERIA, elsewhere: ELSEWHERE_CRITERION }
+    : { ...STEER_CRITERIA };
+  const task = input.task ? "`task_in_progress`, which a person asked for" : "a task a person asked for";
   const answers = await judge.ask({
     orgId: input.orgId,
     agentId: input.agentId,
@@ -409,22 +578,28 @@ export async function steerHandling(
     state: {
       agent: input.agentName,
       ...(input.task ? { task_in_progress: cutText(input.task, 1500) } : { agent_is_working_on_a_task: true }),
+      ...(shared
+        ? { written_by: shared.fromAsker ? "the person who asked for the task" : "someone else in the channel" }
+        : {}),
       message: cutText(text, 2000),
     },
     questions: {
       handling: {
         type: "choice",
-        instructions: input.task
-          ? "`agent` is an AI teammate in a team chat. It is in the middle of `task_in_progress`, which the person asked for, and that person just sent `message` while it works. How should the agent handle `message`?"
-          : "`agent` is an AI teammate in a team chat, in the middle of a task the person asked for, and that person just sent `message` while it works. How should the agent handle `message`?",
-        criteria: STEER_CRITERIA,
+        instructions: shared
+          ? `\`agent\` is an AI teammate in a team chat channel that other people and agents share. It is in the middle of ${task}, and \`message\` was just written in the channel (\`written_by\`) while it works. How should the agent handle \`message\`?`
+          : input.task
+            ? "`agent` is an AI teammate in a team chat. It is in the middle of `task_in_progress`, which the person asked for, and that person just sent `message` while it works. How should the agent handle `message`?"
+            : "`agent` is an AI teammate in a team chat, in the middle of a task the person asked for, and that person just sent `message` while it works. How should the agent handle `message`?",
+        criteria,
       },
     },
   });
   const answer = answers.handling;
-  const choice = Object.keys(STEER_CRITERIA).find((k) => k === answer?.choice) as SteerHandling | undefined;
+  const choice = Object.keys(criteria).find((k) => k === answer?.choice) as SteerHandling | undefined;
   if (!choice) return "add";
-  return (answer?.probabilities?.[choice] ?? 1) >= STEER_SURE ? choice : "add";
+  const sure = choice === "elsewhere" ? ELSEWHERE_SURE : STEER_SURE;
+  return (answer?.probabilities?.[choice] ?? 1) >= sure ? choice : "add";
 }
 
 /**

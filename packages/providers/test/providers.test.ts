@@ -243,9 +243,11 @@ describe("pricing", () => {
     expect(perMTok("gemini-4-argon", "2026-12-01T00:00:00Z")).toEqual([4, 20, 0.2, 4]);
     expect(perMTok("gemini-3.8-flash", "2026-12-31T23:59:59Z")).toEqual([0.75, 3.75, 0.075, 0.75]);
     expect(perMTok("gemini-3.8-flash", "2027-01-01T00:00:00Z")).toEqual([1.5, 7.5, 0.15, 1.5]);
-    // Carbon: Argon's prices and day; Hydrogen: one price, no introduction.
+    // Carbon: Argon's prices and day; Neon and Hydrogen: one price, no introduction.
     expect(perMTok("gemini-4-carbon", "2026-11-30T23:59:59Z")).toEqual([2, 10, 0.1, 2]);
     expect(perMTok("gemini-4-carbon", "2026-12-01T00:00:00Z")).toEqual([4, 20, 0.2, 4]);
+    expect(perMTok("gemini-4-neon", "2026-11-20T12:00:00Z")).toEqual([3, 15, 0.15, 3]);
+    expect(perMTok("gemini-4-neon", "2027-06-01T00:00:00Z")).toEqual([3, 15, 0.15, 3]);
     expect(perMTok("gemini-4-hydrogen", "2026-11-17T12:00:00Z")).toEqual([1.5, 7.5, 0.075, 1.5]);
     expect(perMTok("gemini-4-hydrogen", "2027-06-01T00:00:00Z")).toEqual([1.5, 7.5, 0.075, 1.5]);
     expect(perMTok("gemini-3.5-flash-lite", "2026-10-27T12:00:00Z")).toEqual([0.3, 2.5, 0.03, 0.3]);

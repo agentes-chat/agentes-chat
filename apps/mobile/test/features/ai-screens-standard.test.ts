@@ -60,9 +60,8 @@ describe("headers: the native bar's, never one drawn in the content", () => {
     const sheet = source("ai/ConnectAi.tsx");
     expect(sheet).not.toContain('variant="title2"');
     expect(sheet).toContain('t("mobile.ai.question", agentGrammar(one.name))');
-    // The step and the agent go right under the bar, never as a title of our own in it.
-    expect(sheet).toContain("<PushedHeader title={title} solid={false} grouped />");
-    expect(sheet).toContain("{subtitle ? <BarNote>{subtitle}</BarNote> : null}");
+    // The step and the agent are the bar's line under its question.
+    expect(sheet).toContain("<PushedHeader title={title} subtitle={subtitle} solid={false} grouped />");
     const steps = source("ai/ConnectAiSteps.tsx");
     const hero = steps.slice(steps.indexOf("function Hero("), steps.indexOf("function CliMissingCard("));
     expect(hero).not.toContain("title2");

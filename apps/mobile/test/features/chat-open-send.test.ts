@@ -2,9 +2,10 @@ import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { openingDockHeight, rememberDockHeight } from "../../src/features/chat/dock-height";
+import { chatScreenSource } from "./chat-screen-source";
 
 const src = (path: string) => readFileSync(join(import.meta.dir, "../../src", path), "utf8");
-const chat = src("features/chat/ChatScreen.tsx");
+const chat = chatScreenSource();
 
 test("a conversation opens with the dock's room known before the list places its end", () => {
   // The height laid out last, or a one-line composer over the home indicator before any.

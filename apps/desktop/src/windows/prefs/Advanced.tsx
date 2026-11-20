@@ -12,17 +12,17 @@ import { shortPath } from "../../ui/time";
 
 /**
  * The runner's defaults (the same numbers `agentes-runner`'s `DEFAULT_LIMITS` uses when the config has none): on
- * Linux, where it reads free memory and closes idle conversations for a turn that needs room, they stay open longer.
+ * Linux, where it reads free memory and closes idle conversations once memory runs short, they stay open longer.
  */
 export const defaultLimits = (platform: Platform): Required<Omit<ControlConfigPatch, "name">> => ({
   maxConcurrentTasks: 3,
   taskMaxSeconds: 4 * 3600,
-  brainMaxProcesses: platform === "linux" ? 2 : 1,
-  brainIdleMinutes: platform === "linux" ? 20 : 3,
+  brainMaxProcesses: platform === "linux" ? 8 : 1,
+  brainIdleMinutes: platform === "linux" ? 60 : 3,
 });
 
 const TASK_MAX = ["3600", "14400", "28800"] as const;
-const idleChoices = (platform: Platform) => (platform === "linux" ? ["3", "10", "20", "30"] : ["3", "5", "10", "30"]);
+const idleChoices = (platform: Platform) => (platform === "linux" ? ["10", "20", "30", "60"] : ["3", "5", "10", "30"]);
 
 export function Advanced() {
   const { t } = useTranslation();

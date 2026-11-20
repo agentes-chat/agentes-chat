@@ -22,6 +22,7 @@ import {
   shownStatusSql,
   transitionRun,
 } from "./runs";
+import { linesSaid, withoutSaidNow } from "./say-now";
 import { cancelSecretRequests, publishSecret, syncSecretMessage } from "./secrets";
 import { USAGE_WAIT_CODES } from "./usage-pause";
 import { endWork } from "./works";
@@ -270,15 +271,19 @@ async function failInterrupted(deps: { db: Database; pubsub?: PubSub }, run: Age
   const { db } = deps;
   const threadId = replyThreadOf(run);
   const t = (run.transcript ?? {}) as StoredTranscript;
-  // A reply held for its wording is a finished answer: it wins over the working text its rewrite wrote since.
+  // A reply held for its wording is a finished answer: it wins over the working text its rewrite wrote since. Never
+  // the line it said on the way again (`say_now`, ADR 0207).
   const said =
     t.heldWording ||
-    (t.messages ?? [])
-      .slice(t.postedUpTo ?? 0)
-      .filter((m) => m.role === "assistant")
-      .map((m) => textOf(m.content).trim())
-      .filter(Boolean)
-      .join("\n\n");
+    withoutSaidNow(
+      (t.messages ?? [])
+        .slice(t.postedUpTo ?? 0)
+        .filter((m) => m.role === "assistant")
+        .map((m) => textOf(m.content).trim())
+        .filter(Boolean)
+        .join("\n\n"),
+      await linesSaid(db, run).catch(() => []),
+    );
   const note = `_${INTERRUPTED_BY_RESTART}. Ask again to continue._`;
   const result = await db.transaction(async (tx) => {
     if (!(await claimStale(tx, run.id, at))) return null;

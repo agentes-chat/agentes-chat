@@ -7,6 +7,7 @@ import {
   modelForTier,
   parseOpenRouterModels,
   setOpenRouterModels,
+  systemText,
 } from "@agenteschat/providers";
 import { CODING_PLANS, planModel } from "@agenteschat/providers/plans";
 import fixture from "../../providers/test/fixtures/openrouter-models.json";
@@ -32,6 +33,7 @@ import {
   needsAutoChoice,
   normalizeBrainModel,
   postPersonMessage,
+  QUICK_TURN_NOTE,
   updateAgent,
   updateOrgSettings,
   ValidationError,
@@ -84,7 +86,7 @@ describe("chooseAutoModel", () => {
 
   test("acting for the person with tools is never the small tier: it only answers", async () => {
     const judge = createFakeJudge(() => "medium");
-    await chooseAutoModel(judge, { ...input, message: "me manda um print do dinzo.com.br" });
+    await chooseAutoModel(judge, { ...input, message: "abre example.com e tira uma captura da tela" });
     const tier = judge.calls[0]?.questions.tier as { criteria: Record<string, string> } | undefined;
     const acting =
       "acting for the person with tools (opening a site, taking a screenshot, clicking or filling in a page, running a command, changing files, sending something)";
@@ -243,11 +245,20 @@ describe("one decision, mapped per brain", () => {
     expect(pick("medium", { medium: "claude-sonnet-5-5" })).toBe("~z-ai/glm-latest");
   });
 
-  test("an API model on auto with a computer brain: the API model is chosen too (a fallback thinks with it)", () => {
-    const both = { model: AUTO_MODEL, brain: "codex", brainModel: "gpt-6-sol", brainEffort: null };
-    const plan: BrainPlan = { kind: "codex", model: "gpt-6-sol" };
-    expect(needsAutoChoice(both, plan)).toBe(true);
-    expect(autoApplied(both, plan, choice, "anthropic")).toEqual({ apiModel: "claude-haiku-5-5" });
+  test("an API model on auto with a computer brain whose model and effort are pinned: nothing is asked", () => {
+    const both = { model: AUTO_MODEL, brain: "codex", brainModel: "gpt-6-sol", brainEffort: "high" };
+    const plan: BrainPlan = { kind: "codex", model: "gpt-6-sol", effort: "high" };
+    expect(autoWanted(both)).toBe(false);
+    expect(needsAutoChoice(both, plan)).toBe(false);
+    expect(autoApplied(both, plan, choice, "anthropic")).toEqual({});
+    expect(withAuto(both, plan, {}).plan).toEqual(plan);
+    // Its effort left to the CLI's default is no auto either.
+    expect(needsAutoChoice({ ...both, brainEffort: null }, { kind: "codex", model: "gpt-6-sol" })).toBe(false);
+    // The right hand stands in on its key with the API model: that one is still chosen.
+    const lodi = { ...both, builtin: "right_hand" };
+    expect(autoWanted(lodi)).toBe(true);
+    expect(needsAutoChoice(lodi, plan)).toBe(true);
+    expect(autoApplied(lodi, plan, choice, "anthropic")).toEqual({ apiModel: "claude-haiku-5-5" });
   });
 
   test("nothing on auto: nothing to choose (a stale computer setting on the API brain asks nobody)", () => {
@@ -429,6 +440,26 @@ describe("a run of an agent on Automático", () => {
     });
     await drainOutbox(f.db, f.handlers);
     expect(f.provider.calls.at(-1)?.request.model).toBe("claude-haiku-5-5");
+  });
+
+  test("a quick turn (small tier, low effort) is told to answer from what it has; any other turn is not", async () => {
+    const answer = { tier: "small", effort: "low" };
+    f = await setup({
+      judge: (kind, id) => (kind === "auto_model" ? (id === "tier" ? answer.tier : answer.effort) : undefined),
+      reply: () => ({ chunks: ["Oi!"] }),
+    });
+    await updateAgent(f.db, f.owner.id, f.org.id, f.agent.id, { model: AUTO_MODEL });
+    const ask = async (body: string) => {
+      await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, { body });
+      await drainOutbox(f.db, f.handlers);
+      return systemText(f.provider.calls.at(-1)?.request.system ?? "");
+    };
+    expect(await ask("@dev oi")).toContain(QUICK_TURN_NOTE);
+    answer.effort = "high";
+    expect(await ask("@dev oi de novo")).not.toContain("# A quick turn");
+    answer.tier = "medium";
+    answer.effort = "low";
+    expect(await ask("@dev revisa o PR")).not.toContain("# A quick turn");
   });
 
   test("the judge fails: the run still answers, on the medium tier with medium effort, and says why", async () => {

@@ -13,6 +13,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
+import { LivePause } from "@/agent/live";
 import { needsHeaderBlur } from "@/lib/nav";
 import { Dither } from "@/sky/Dither";
 import { softTones } from "@/sky/math";
@@ -96,6 +97,7 @@ export const HeaderPill = memo(function HeaderPill({
   onHold,
   holdHint,
   collapsed = false,
+  inView = true,
 }: {
   lead?: ReactNode;
   title: string;
@@ -117,6 +119,11 @@ export const HeaderPill = memo(function HeaderPill({
   onHold?: () => void;
   /** What a screen reader says the hold does. */
   holdHint?: string;
+  /**
+   * Whether its screen shows: the bar draws the pill outside the screen's own pause (`FocusLive`), so its sky stops
+   * here while a screen is pushed over the conversation.
+   */
+  inView?: boolean;
 }) {
   const { colors, shadows } = useTheme();
   const reduced = useReducedMotion();
@@ -206,15 +213,17 @@ export const HeaderPill = memo(function HeaderPill({
         {/* The same Liquid Glass as the bar's own buttons beside it (iOS 26); the blur and a hairline before. */}
         <Glass liquid intensity={70} style={[styles.pill, closed && styles.pillClosed, { borderColor: colors.line2 }]}>
           {color ? (
-            <Dither
-              kind="pill"
-              tones={softTones(color, colors.glassSolid)}
-              pixel={3}
-              clear
-              liveWidth={pillWidth}
-              liveWork={work}
-              style={[styles.sky, { width: room }]}
-            />
+            <LivePause paused={!inView}>
+              <Dither
+                kind="pill"
+                tones={softTones(color, colors.glassSolid)}
+                pixel={3}
+                clear
+                liveWidth={pillWidth}
+                liveWork={work}
+                style={[styles.sky, { width: room }]}
+              />
+            </LivePause>
           ) : null}
           {lead ? <View style={styles.lead}>{lead}</View> : null}
           <Animated.View

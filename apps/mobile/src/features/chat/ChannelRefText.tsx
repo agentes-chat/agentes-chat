@@ -1,13 +1,17 @@
 import {
+  type Channel,
+  channelsQuery,
+  useApi,
   useArchivedChannels,
   useChannelCard,
-  useChannels,
   useJoinChannel,
   useUnarchiveChannel,
 } from "@agenteschat/client";
 import { joinable } from "@agenteschat/client/lib/channel-access";
 import { channelCardFacts, resolveChannelRef } from "@agenteschat/client/lib/channel-refs";
 import { errorText } from "@agenteschat/client/lib/errors";
+import { useQuery } from "@tanstack/react-query";
+import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Text as RNText, StyleSheet, View } from "react-native";
 import { Button, Icon, Text, useToast } from "@/ui";
@@ -16,6 +20,8 @@ import { chatHref } from "../links/logic";
 import { useColors, useOrgId } from "../shared/hooks";
 import { SheetTitle } from "../shared/PromptForm";
 import { useSheetIfAny } from "../shared/SheetHost";
+
+const NO_CHANNELS: Channel[] = [];
 
 /**
  * `#name` in a message (the web's `ChannelRef`): a tap opens the channel it means, a long press shows its card
@@ -27,9 +33,13 @@ export function ChannelRefText({ name, text, refs }: { name: string; text: strin
   const c = useColors();
   const toast = useToast();
   const orgId = useOrgId();
+  const api = useApi();
   const sheet = useSheetIfAny();
-  const channels = useChannels(orgId).data ?? [];
-  const ref = resolveChannelRef(name, refs, channels);
+  // Only the channel this name means from the list: the list is read again for a message anywhere in the workspace.
+  const resolve = useCallback((all: Channel[]) => resolveChannelRef(name, refs, all), [name, refs]);
+  const resolved = useQuery({ ...channelsQuery(api, orgId), select: resolve });
+  // Before the list loads, as against an empty one.
+  const ref = resolved.data === undefined ? resolveChannelRef(name, refs, NO_CHANNELS) : resolved.data;
   const lookup = useChannelCard(orgId, ref?.id ?? "", Boolean(ref && !ref.known));
   if (!ref || (!ref.known && !lookup.data)) return <RNText>{text}</RNText>;
   const shown = ref.known?.name ?? lookup.data?.name ?? name;

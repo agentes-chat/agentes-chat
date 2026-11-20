@@ -27,6 +27,7 @@ import {
 } from "../../src/features/chat/logic";
 import { appColors } from "../../src/ui/palette";
 import { typeScale } from "../../src/ui/type-scale";
+import { chatScreenSource } from "./chat-screen-source";
 
 const read = (rel: string) => Bun.file(new URL(`../../src/features/${rel}`, import.meta.url).pathname).text();
 
@@ -55,10 +56,23 @@ describe("the bubbles' colors", () => {
 });
 
 describe("the rows follow the same choice as the web", () => {
-  test("defaults: channels on the left, DMs in bubbles", () => {
+  test("defaults: on the web channels on the left, on the phone in bubbles as DMs; the person's choice wins", () => {
     expect(chatLookOf(undefined, false).style).toBe("left");
     expect(chatLookOf(undefined, true).style).toBe("bubbles");
+    expect(chatLookOf(undefined, false, false, "phone").style).toBe("bubbles");
+    expect(chatLookOf({ channelStyle: "compact" }, false, false, "phone").style).toBe("compact");
     expect(mineOnRight("left")).toBe(false);
+  });
+
+  test("compact holds no column of times: a pull shows them, its face at the rows' edge", async () => {
+    const row = await read("chat/MessageRow.tsx");
+    expect(row).not.toContain("compactClock");
+    expect(row).toContain("{inBubble || compact ? (");
+    expect(row).toContain("const slide = useSwipeSlide(compact);");
+    expect(await read("chat/look.ts")).toContain(
+      "compactRow: { paddingLeft: MSG_INSET, paddingRight: 12, gap: COMPACT_GAP },",
+    );
+    expect(await read("me/ChatLookPage.tsx")).not.toContain("compactClock");
   });
 
   test("a personal workspace opens every conversation in bubbles; the person's choice wins (ADR 0159)", async () => {
@@ -66,9 +80,9 @@ describe("the rows follow the same choice as the web", () => {
     expect(chatLookOf(undefined, true, true).style).toBe("bubbles");
     expect(chatLookOf({ channelStyle: "compact" }, false, true).style).toBe("compact");
     // Every conversation and the preview read the workspace's mode.
-    expect(await read("chat/look.ts")).toContain("chatLookOf(org?.chatPrefs, dm, isPersonal(org))");
+    expect(await read("chat/look.ts")).toContain('chatLookOf(org?.chatPrefs, dm, isPersonal(org), "phone")');
     const page = await read("me/ChatLookPage.tsx");
-    expect(page).toContain("chatLookOf(prefs, dm, isPersonal(org))");
+    expect(page).toContain('chatLookOf(prefs, dm, isPersonal(org), "phone")');
     // Its channels are its group conversations: the tab and the tone's header say so.
     expect(page).toContain('label: t(modeKey(org, "settings.account.chat.channels"))');
     expect(page).toContain('modeKey(org, "settings.account.chat.toneChannels")');
@@ -78,7 +92,7 @@ describe("the rows follow the same choice as the web", () => {
     const row = await read("chat/MessageRow.tsx");
     expect(row).toContain("const onRight = mine && mineOnRight(look.style);");
     expect(row).toContain("if (onRight) {");
-    const chat = await read("chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     expect(chat).toContain("<RowLookContext.Provider value={rowLook}>");
     expect(chat).toContain('Boolean(dm) || thread.data?.channelKind === "dm"');
   });
@@ -91,7 +105,7 @@ describe("the rows follow the same choice as the web", () => {
   });
 
   test("opening at the last read message goes to the line, once, with no glide", async () => {
-    const chat = await read("chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     expect(chat).toContain("firstUnreadId(list, openFrom.at, meId)");
     expect(chat).toContain("void openAtLine(key).then(() => {");
     // The "Novas" line itself, at the top of the room under the bar: sent to the list's top as it was, it landed
@@ -148,7 +162,7 @@ describe("the rows follow the same choice as the web", () => {
       "look.faces ? WORDS_START[look.style] : rowBodyInset(look).left",
     );
     expect(await read("chat/ConsultGroup.tsx")).toContain("const inset = rowBodyInset(useRowLook());");
-    expect(await read("chat/ChatScreen.tsx")).toContain("const quiet = quietInset(rowLook);");
+    expect(chatScreenSource()).toContain("const quiet = quietInset(rowLook);");
     for (const file of [
       "chat/EventLine.tsx",
       "chat/issue-work.tsx",
@@ -183,7 +197,7 @@ describe("the rows follow the same choice as the web", () => {
     expect(openAtOf(undefined)).toBe("latest");
     expect(openAtOf({ openAt: "read" })).toBe("read");
     expect(await read("me/ChatLookPage.tsx")).toContain("const openAt = openAtOf(prefs);");
-    expect(await read("chat/ChatScreen.tsx")).toContain("opensAtLastRead(org?.chatPrefs");
+    expect(chatScreenSource()).toContain("opensAtLastRead(org?.chatPrefs");
   });
 });
 

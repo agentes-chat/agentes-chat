@@ -55,8 +55,7 @@ describe("Tarefas' projects on the phone", () => {
     const screen = src("IssuesScreen.tsx");
     // Asked once for both views, so the header and its pull to refresh are one.
     expect(screen.match(/useIssues\(orgId, "", shown\)/g)).toHaveLength(1);
-    expect(screen).toContain('<BoardCard issue={i} live={card <= LIVE_CARDS} project={project === ""} />');
-    expect(screen).toContain('project={project === ""} />');
+    expect(screen).toMatch(/<BoardCard\s+issue=\{i\}\s+live=\{card <= LIVE_CARDS\}\s+project=\{project === ""\}/);
     expect(screen).toContain('{project && i.project ? <ProjectName project={i.project} variant="small" /> : null}');
     expect(src("parts.tsx")).toContain("{project && i.project ? <ProjectName project={i.project} /> : null}");
     // A long name wraps inside the card's line, its dot on the first line: never cut.

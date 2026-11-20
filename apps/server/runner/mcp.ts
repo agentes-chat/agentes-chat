@@ -14,6 +14,8 @@ import {
   INLINE_CODE_DENY_RULES,
   localVerdict,
   MISSION_DENY_RULES,
+  maskKeyShapes,
+  outboundCallProblem,
   PUSH_ASK_RULES,
   SECRET_BASH_DENY_RULES,
   SECRET_READ_DENY_RULES,
@@ -305,6 +307,11 @@ export class McpBridge {
       socketPath: string;
       /** The task's MCP token and state (from the task journal). */
       task: (taskId: string) => McpTaskInfo | null;
+      /**
+       * A tool call of `taskId`'s starts being relayed (+1) or got its answer (-1): a brain process waits on us
+       * meanwhile, so its turn's silence isn't its own (`BrainManager.bridgeCall`).
+       */
+      onCall?: (taskId: string, delta: 1 | -1) => void;
       log?: (line: string) => void;
       callTimeoutMs?: number;
     },
@@ -519,7 +526,12 @@ export class McpBridge {
       args,
       ...(info.serverToken ? { token: info.serverToken } : {}),
     };
-    return this.relayAndWait(callId, tool, frame, !info.runId || RESEND_SAFE.has(tool));
+    this.opts.onCall?.(taskId, 1);
+    try {
+      return await this.relayAndWait(callId, tool, frame, !info.runId || RESEND_SAFE.has(tool));
+    } finally {
+      this.opts.onCall?.(taskId, -1);
+    }
   }
 
   private relayAndWait(callId: string, tool: string, frame: RunnerFrame, resend: boolean) {
@@ -689,6 +701,8 @@ export const ALWAYS_LOADED: ReadonlySet<string> = new Set([
   "react",
   "ask_user",
   "ask_choices",
+  // The line before slow work (ADR 0207): in hand from the first round. The server also marks it `upFront`.
+  "say_now",
   "request_approval",
   "remember",
   "update_memory",
@@ -938,7 +952,7 @@ type McpContext = PromptContext & { delegated?: DelegatedSurface };
  * the runner asks the same for each of Codex's command and file approvals (ADR
  * 0053 §3): one decision for both. First what the computer decides by itself
  * (`localVerdict`): deny-list commands and secrets are refused at once (never
- * shown to anyone); plain reads (`ls` of any folder, read-only git, a GET with
+ * shown to anyone; the server is told, for the run's steps); plain reads (`ls` of any folder, read-only git, a GET with
  * curl in a work turn) are allowed at once, with no card and nothing posted;
  * in a `plan` turn everything else is refused. Then pushes, read with git
  * (`commandApproval`): one that waits for a person is refused here with why
@@ -974,7 +988,17 @@ export async function permissionPrompt(
   const verdict = localVerdict(toolName, input, opts.scope, opts.profile ?? "work", how);
   // A background task's executor has no run_code to be pointed to: it keeps "stop and say so".
   const said = (message: string) => (opts.asks === "never" && !opts.task ? unaskedMessage(message) : message);
-  if (verdict?.behavior === "deny") return { behavior: "deny", message: said(verdict.message) };
+  const asked = {
+    tool_name: toolName.slice(0, 64),
+    input,
+    ...(typeof args.tool_use_id === "string" ? { tool_use_id: args.tool_use_id.slice(0, 128) } : {}),
+    ...(opts.scope ? { scope: opts.scope } : {}),
+  };
+  if (verdict?.behavior === "deny") {
+    const message = said(verdict.message);
+    reportRefusal(call, asked, { code: verdict.code, message });
+    return { behavior: "deny", message };
+  }
   if (verdict?.behavior === "allow") return { behavior: "allow", updatedInput: input };
   if (toolName === "Bash" && typeof input.command === "string") {
     const own = opts.branches ?? [];
@@ -1006,12 +1030,7 @@ export async function permissionPrompt(
       return { error: "agentes.chat answered something unexpected." };
     }
   };
-  let out = await ask({
-    tool_name: toolName.slice(0, 64),
-    input,
-    ...(typeof args.tool_use_id === "string" ? { tool_use_id: args.tool_use_id.slice(0, 128) } : {}),
-    ...(opts.scope ? { scope: opts.scope } : {}),
-  });
+  let out = await ask(asked);
   const requestId = "request_id" in out && typeof out.request_id === "string" ? out.request_id : "";
   for (;;) {
     if ("error" in out && out.error) return { behavior: "deny", message: `Not allowed: ${out.error}` };
@@ -1023,6 +1042,24 @@ export async function permissionPrompt(
     await sleep(opts.pollMs ?? PERMISSION_POLL_MS);
     out = await ask({ request_id: requestId });
   }
+}
+
+/**
+ * Tells the server of a call the computer refused by itself (`localVerdict`), so the run keeps a step of it: nothing
+ * is asked and the answer changes nothing. Not awaited: a runner that is reconnecting must not hold the refusal. A key
+ * the command carries (the reason for an `outbound.credential` refusal) never leaves the computer.
+ */
+export function reportRefusal(
+  call: ToolCaller,
+  asked: { tool_name: string; input: Record<string, unknown> } & Record<string, unknown>,
+  refused: { code: string; message: string },
+) {
+  const masked = redactDeep(asked.input, maskKeyShapes) as Record<string, unknown>;
+  // A key the policy still finds after masking (percent-encoded, a private key): the call goes without its input.
+  const input = outboundCallProblem(asked.tool_name, masked)?.code === "outbound.credential" ? {} : masked;
+  void call(PERMISSION_TOOL, { ...asked, input, refused: { code: refused.code, message: refused.message } }).catch(
+    () => undefined,
+  );
 }
 
 /**
@@ -1170,11 +1207,16 @@ export function mcpScopeFromEnv(env: NodeJS.ProcessEnv): CommandScope | undefine
   const runnerHome = env.AGENTES_RUNNER_HOME?.trim();
   // Windows has no HOME, as a rule: the home is USERPROFILE (without one, `~` would read as the agent's folder).
   const home = env.HOME || (process.platform === "win32" ? env.USERPROFILE : undefined);
+  const runtime = env.XDG_RUNTIME_DIR?.trim();
   return {
     cwd,
     folders: folders.length ? folders : [cwd],
     ...(home ? { home } : {}),
     ...(runnerHome && path.isAbsolute(runnerHome) ? { runnerHome } : {}),
+    // A system-mode launch's engines live in the agent's runtime dir (`systemLauncher`).
+    ...(runtime && path.isAbsolute(runtime) && env.DOCKER_HOST?.startsWith(`unix://${runtime}/`)
+      ? { rootlessContainers: true }
+      : {}),
   };
 }
 

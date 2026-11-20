@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { type SetupRowFacts, setupRow, setupSteps } from "@agenteschat/client/lib/setup-checklist";
 import { setupStepsInSight } from "../../src/features/agents/setup/steps";
 import { pushedByDefault } from "../main-stack";
+import { chatScreenSource } from "./chat-screen-source";
 import { agent, translator } from "./fixtures";
 
 // A new agent's setup checklist on the phone (ADR 0155 §2): the web's words and rules, its own screens.
@@ -43,7 +44,7 @@ test("who sees it on the phone: who manages it every step, its owner theirs, the
 });
 
 test("the DM draws the checklist on top for whoever sets it up, not the first day nor the no-AI line", () => {
-  const chat = src("chat/ChatScreen.tsx");
+  const chat = chatScreenSource();
   expect(chat).toContain("const setupIntro = useSetupSteps(dmAgent).length > 0 && !rightHand && !isThread;");
   // No no-AI line over it (nor over the plan hold's).
   expect(chat).toContain("member && !rightHand && !planHeld && !setupIntro");

@@ -40,6 +40,7 @@ import {
   type ToolNotice,
   type TurnContext,
 } from "@agenteschat/adapters/machine-protocol";
+import { saysDiskFull } from "@agenteschat/adapters/redact";
 import type { AccountGrant } from "./accounts";
 import { type AgentUser, keepContainers, readAgentUsers, rootlessContainers, systemLauncher } from "./agent-users";
 import { type BindPolicyOptions, ensureBrowserBindPolicy } from "./browser-bind-policy";
@@ -98,6 +99,8 @@ import type { HostedExit } from "./tasks";
 export const WORKER_TASKS_FILE = "worker-tasks.json";
 /** How long a worker may take to say hello once started. */
 const WORKER_START_TIMEOUT_MS = 20_000;
+/** How long a crashed worker's last stderr lines get to arrive after its exit. */
+const CRASH_WORDS_WAIT_MS = 200;
 /** A worker that ran this long before it stopped starts again without a wait. */
 const WORKER_STABLE_MS = 60_000;
 /** Pings keep each worker's session alive; well inside its watchdog (two heartbeats). */
@@ -162,7 +165,15 @@ export interface WorkerState {
   commitHost?: string;
   access: RunnerAccess;
   paused: RunnerPause;
-  limits: { maxConcurrentTasks: number; taskMaxSeconds: number; brainIdleMinutes: number; brainMaxProcesses: number };
+  limits: {
+    maxConcurrentTasks: number;
+    taskMaxSeconds: number;
+    brainIdleMinutes: number;
+    brainMaxProcesses: number;
+    /** Codex app-servers' own (`CODEX_DEFAULT_LIMITS`); absent: the brains'. */
+    codexIdleMinutes?: number;
+    codexMaxProcesses?: number;
+  };
   /** People watching or controlling its agent's desktop (root's): its Chrome there isn't idle meanwhile. */
   desktopViewers?: number;
   /** Its agent holds its browser (`keep_running`, ADR 0176): it isn't closed as idle meanwhile. */
@@ -184,10 +195,10 @@ export type WorkerDesktopUse = "desktop" | "browser";
 /** Browser requests that may start the agent's Chrome, whose answers say what they waited on (protocol 27). */
 const BROWSER_SETUP_OPS: ReadonlySet<string> = new Set(["browser.act", "browser.batch", "browser.warm"]);
 
-/** The account a request's CLI signs in with: a turn's or route's, or a Claude Code or Codex task's (protocol 31). */
+/** The account a request's CLI signs in with: a turn's, route's or warm start's, or a Claude Code or Codex task's (protocol 31). */
 export function accountOf(req: MachineRequest): { kind: AccountKind; account: string } | null {
   const cli =
-    req.op === "brain.turn" || req.op === "brain.route"
+    req.op === "brain.turn" || req.op === "brain.route" || req.op === "brain.warm"
       ? req.kind
       : req.op === "task.start" && (req.executor === "claude" || req.executor === "codex")
         ? req.executor
@@ -476,6 +487,8 @@ interface Worker {
   hostedTasks: Set<(err: RunnerError) => void>;
   /** What root asked it for such a turn, in order, by what the answer names. */
   asks: Map<string, Ask[]>;
+  /** Its process said its disk is full (`saysDiskFull`): its stop says so, so the run ends on that cause. */
+  diskFull: boolean;
 }
 
 interface Ask {
@@ -1123,6 +1136,7 @@ export class Supervisor {
         hosted: new Set(),
         hostedTasks: new Set(),
         asks: new Map(),
+        diskFull: false,
       };
       this.workers.set(user.id, w);
     }
@@ -1186,6 +1200,7 @@ export class Supervisor {
       return;
     }
     w.proc = proc;
+    w.diskFull = false;
     const tag = `[${w.user.user}]`;
     // A broken pipe ends in the worker's exit, handled below.
     proc.stdin.on("error", () => {});
@@ -1204,7 +1219,10 @@ export class Supervisor {
       readLines(
         proc.stderr,
         16 * 1024,
-        (line) => this.opts.log(`${tag} ${line}`),
+        (line) => {
+          if (saysDiskFull(line)) w.diskFull = true;
+          this.opts.log(`${tag} ${line}`);
+        },
         () => this.opts.log(`${tag} (a log line too long was left out)`),
       );
     }
@@ -1214,8 +1232,16 @@ export class Supervisor {
       proc.kill();
     }, WORKER_START_TIMEOUT_MS);
     slow.unref?.();
-    void proc.exited.then((code) => {
+    void proc.exited.then(async (code) => {
       clearTimeout(slow);
+      // A crash's last words (a full disk) may still be in the pipe after its exit: read before saying why it stopped.
+      const stderr = proc.stderr;
+      if (stderr && !stderr.readableEnded && typeof code === "number" && code !== 0) {
+        await new Promise<void>((resolve) => {
+          stderr.once("end", resolve);
+          setTimeout(resolve, CRASH_WORDS_WAIT_MS).unref?.();
+        });
+      }
       this.stopped(w, proc, code);
     });
   }
@@ -1235,7 +1261,9 @@ export class Supervisor {
     w.browserPaced = false;
     this.endSession(
       w,
-      "The agent's worker on this computer stopped while this ran: it may have stopped partway or finished. Check before running it again.",
+      w.diskFull
+        ? "The agent's worker on this computer stopped because the disk is full (no space left on device)."
+        : "The agent's worker on this computer stopped while this ran: it may have stopped partway or finished. Check before running it again.",
       true,
     );
     this.endShows(w, "The agent's worker stopped on this computer. Try again.");

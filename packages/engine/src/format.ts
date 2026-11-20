@@ -8,6 +8,15 @@ export const cutText = (text: string, max: number) => text.slice(0, max).replace
 /** `cutText` for text people read: a cut ends in "…", never passing for the whole. */
 export const cutMarked = (text: string, max: number) => (text.length > max ? `${cutText(text, max - 1)}…` : text);
 
+/** A sentence's words as they compare: lower case, no accents, no punctuation or emoji, single spaces. */
+export const plainWords = (s: string) =>
+  s
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+
 /** "Ana's", for the English the agents read. */
 export const possessive = (name: string) => `${name}'s`;
 

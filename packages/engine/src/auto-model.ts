@@ -15,8 +15,9 @@ import type { BrainKind } from "./brains/types";
 import { caches } from "./cache";
 import { defaultCredentials, usableCredentialRow } from "./credentials";
 import { cutText } from "./format";
-import type { Judge } from "./judge";
+import type { Judge, JudgeGroup } from "./judge";
 import { missionOfThread } from "./missions";
+import { isRightHand } from "./right-hand";
 import { orgModelProvider } from "./router";
 
 /**
@@ -115,7 +116,32 @@ export async function chooseAutoModel(
     /** It has tools beyond the conversation. */
     tools: boolean;
     timeoutMs?: number;
+    /** Asked with the run's other start judgments (`JudgeGroup`). */
+    group?: JudgeGroup;
+    /**
+     * The same work every time (a routine's prompt, `routineAutoModel`'s key): a choice the judge made for it stands
+     * for a day, unasked.
+     */
+    cacheKey?: string;
   },
+): Promise<AutoChoice> {
+  if (!input.cacheKey) return askAutoChoice(judge, input);
+  let asked = false;
+  const choice = (await caches.routineAutoModel.getOrLoad(
+    input.cacheKey,
+    () => {
+      asked = true;
+      return askAutoChoice(judge, input);
+    },
+    (c) => (c as AutoChoice).source === "judge",
+  )) as AutoChoice;
+  if (!asked) input.group?.skip("auto_model");
+  return choice;
+}
+
+async function askAutoChoice(
+  judge: Judge,
+  input: Omit<Parameters<typeof chooseAutoModel>[1], "cacheKey">,
 ): Promise<AutoChoice> {
   const about =
     "An AI agent of a team (`agent`) is about to work on `message` (`recent` is what was said before it; `run` says whether a routine started it in the background, whether it is part of a mission, whether it works on a computer with files and a shell, and whether it has tools). Missions and code work usually need more; greetings and quick questions the least.";
@@ -130,6 +156,7 @@ export async function chooseAutoModel(
         agentId: input.agentId,
         runId: input.runId,
         kind: "auto_model",
+        ...(input.group ? { group: input.group } : {}),
         state: {
           agent: {
             name: input.agent.name,
@@ -179,7 +206,14 @@ export async function chooseAutoModel(
 
 // ── One decision, mapped per brain ───────────────────────────────────────────
 
-type AutoAgent = Pick<Agent, "model" | "brain" | "brainModel" | "brainEffort">;
+type AutoAgent = Pick<Agent, "model" | "brain" | "brainModel" | "brainEffort"> & { builtin?: string | null };
+
+/**
+ * The agent's `auto` API model thinks in a run on `kind`: on the API brain, or as the right hand's stand-in on its key
+ * (the only computer brain the API stands in for). A computer brain whose model and effort are both pinned asks nothing.
+ */
+const autoApiModelFor = (agent: AutoAgent, kind: BrainKind) =>
+  isAutoModel(agent.model) && (kind === "model" || isRightHand(agent));
 
 /** The agent's effort is `auto` and it applies to this brain (its own computer brain, like `brainEffortFor`). */
 const autoEffortFor = (agent: AutoAgent, kind: BrainKind) =>
@@ -187,12 +221,12 @@ const autoEffortFor = (agent: AutoAgent, kind: BrainKind) =>
 
 /** Some setting of the agent is `auto`: the judge is asked early, while the run's context is built. */
 export const autoWanted = (agent: AutoAgent) =>
-  isAutoModel(agent.model) ||
+  autoApiModelFor(agent, brainOf(agent.brain)) ||
   (brainOf(agent.brain) !== "model" && (isAutoModel(agent.brainModel) || isAutoModel(agent.brainEffort)));
 
 /** This run needs a choice: its API model, its brain's model or effort. */
 export const needsAutoChoice = (agent: AutoAgent, plan: Pick<BrainPlan, "kind" | "model">) =>
-  isAutoModel(agent.model) || isAutoModel(plan.model) || autoEffortFor(agent, plan.kind);
+  autoApiModelFor(agent, plan.kind) || isAutoModel(plan.model) || autoEffortFor(agent, plan.kind);
 
 /** A computer brain's model for a tier: Claude Code's alias (`haiku`, `sonnet`, `opus`), a Codex model. */
 export function brainModelForTier(kind: BrainKind, tier: ModelTier): string | undefined {
@@ -279,7 +313,7 @@ export function autoApplied(
   endpoint?: AutoEndpoint | null,
 ): AutoApplied {
   const out: AutoApplied = {};
-  if (isAutoModel(agent.model)) {
+  if (autoApiModelFor(agent, plan.kind)) {
     const model = choice.apiModel ?? autoModelFor(provider, choice.tier, tiers, endpoint);
     if (model) out.apiModel = model;
   }

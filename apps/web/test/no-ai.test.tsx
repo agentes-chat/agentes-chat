@@ -883,7 +883,7 @@ describe("the agent's no-AI card", () => {
   test("connected elsewhere: 'Responder agora'; still no AI: it says so and keeps Connect", async () => {
     const state = withCard({}, aiStatus(true));
     await open(state);
-    expect(cardRow().textContent).toContain("Pronto: Ada já tem uma IA.");
+    expect(cardRow().textContent).toContain("Ada já tem uma IA.");
     state.answerNowError = new ApiError(409, "ai.still_missing", "There is still no AI connected");
     await click(within(cardRow()).getByRole("button", { name: "Responder agora" }));
     expect(calls(state, "chat.answerNow").map((c) => c.args)).toEqual([[ORG_ID, "m-noai"]]);

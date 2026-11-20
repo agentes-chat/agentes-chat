@@ -1550,6 +1550,15 @@ up the same way. Containers stop when the computer restarts and come back, those
 agent's next request. Agents on Codex, Cursor, Grok or Antigravity get none: their CLI's own sandbox is what holds
 them, and the containers service runs outside it. [ADR 0169](docs/adr/0169-agents-containers.md) has the rest.
 
+**Docker and KVM (`--system`).** With Docker's rootless install there too (Docker's apt repository: `docker-ce
+docker-ce-cli containerd.io docker-ce-rootless-extras docker-buildx-plugin docker-compose-plugin`, in place of
+`podman-docker` and `docker-compose`), each agent gets Docker's own daemon, rootless under its user, started by its
+first `docker` command (ADR 0209): `docker`, `docker compose` and `docker buildx` are Docker's, `podman` stays Podman.
+The package starts a root daemon of its own, which no agent reaches (nobody joins `docker`); stop it if you don't use
+it: `systemctl disable --now docker.service docker.socket containerd.service`. Where the computer has `/dev/kvm` (bare
+metal, or a VM with nested virtualization), each agent joins its group, so Android's emulator and QEMU run with KVM as
+the agent; every agent's VMs are its own. Restart the runner after either.
+
 **The shared folder.** Every computer has one folder all of its agents read and write, so what one of
 them downloads, clones or installs, the others use instead of fetching it again. With `--system` it is
 `/srv/agentes/shared`, owned by root and the group `agentes-shared`, which the runner makes and adds

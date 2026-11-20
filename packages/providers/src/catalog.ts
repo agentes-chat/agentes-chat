@@ -297,8 +297,9 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     tier: "small",
   },
   // Gemini (Interactions API), Standard tier, from ai.google.dev/gemini-api/docs/pricing (2026-10-27; Gemini 4 Carbon
-  // and Hydrogen 2026-11-17). Thinking is billed as output. Caching is implicit, with no write charge, so a cache
-  // write costs the input rate (none is ever reported). Carbon, Argon and 3.8 Flash cost half until the day in `intro`.
+  // and Hydrogen 2026-11-17; Neon 2026-11-20, where the page now lives at aistudio.google.com/docs/pricing). Thinking
+  // is billed as output. Caching is implicit, with no write charge, so a cache write costs the input rate (none is
+  // ever reported). Carbon, Argon and 3.8 Flash cost half until the day in `intro`.
   // Gemini 4 Carbon, Google's strongest reasoning model, thinks more per turn than Argon at Argon's prices: no tier
   // and no pick for routing or system tasks, so Automatic never chooses it (Argon stays the large one), people do.
   "gemini-4-carbon": {
@@ -306,6 +307,15 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     label: "Gemini 4 Carbon",
     prices: { input: 4000, output: 20000, cacheRead: 200, cacheWrite: 4000 },
     intro: { until: "2026-12-01", prices: { input: 2000, output: 10000, cacheRead: 100, cacheWrite: 2000 } },
+    contextWindow: 1_048_576,
+    serverSideFallback: false,
+  },
+  // Gemini 4 Neon (2026-11-18), Google's fast reasoning model, close to Carbon for less, one price across its whole
+  // window: like Carbon, no tier and no pick for system tasks, so Automatic never chooses it, people do.
+  "gemini-4-neon": {
+    provider: "gemini",
+    label: "Gemini 4 Neon",
+    prices: { input: 3000, output: 15000, cacheRead: 150, cacheWrite: 3000 },
     contextWindow: 1_048_576,
     serverSideFallback: false,
   },

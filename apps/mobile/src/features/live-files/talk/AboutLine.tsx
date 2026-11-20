@@ -1,12 +1,14 @@
 import type { ArtifactAuthor, ArtifactDetail, LiveKind, LiveRef } from "@agenteschat/client";
 import { useArtifact } from "@agenteschat/client";
 import { joinNames } from "@agenteschat/client/lib/format";
+import { memo } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Icon, type IconName, Text, TOUCH } from "@/ui";
 import { router } from "@/ui/navigation";
+import { useRowDirectory, useRowMeId } from "../../chat/row-data";
 import { chatHref } from "../../links/logic";
-import { useColors, useDirectory, useMeId, useOrgId } from "../../shared/hooks";
+import { useColors, useOrgId } from "../../shared/hooks";
 import { LIVE_ICON } from "../routes";
 import { useOpenLiveRef } from "./hooks";
 import { aboutParts, aboutWords } from "./logic";
@@ -124,12 +126,12 @@ function placeOf(
  * At the top of a file's conversation: "Atlas made this canvas from the conversation with Ada" (the conversation a
  * link), "Imported from Plan.docx by Ada" for a document opened from an upload.
  */
-export function FileOrigin({ artifactId, kind }: { artifactId: string; kind: LiveKind }) {
+export const FileOrigin = memo(function FileOrigin({ artifactId, kind }: { artifactId: string; kind: LiveKind }) {
   const { t } = useTranslation();
   const c = useColors();
   const orgId = useOrgId();
-  const meId = useMeId();
-  const dir = useDirectory();
+  const meId = useRowMeId();
+  const dir = useRowDirectory();
   const file = useArtifact(orgId, artifactId).data;
   if (!file) return <View style={styles.originRoom} />;
   const name = dir.nameOf(file.createdBy);
@@ -168,7 +170,7 @@ export function FileOrigin({ artifactId, kind }: { artifactId: string; kind: Liv
       </Text>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   line: { flexDirection: "row", alignItems: "center", gap: 5, minHeight: LINE, maxWidth: "100%" },

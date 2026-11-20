@@ -2,8 +2,11 @@
  * Triage eval (ADR 0112 addendum of 2026-11-18): a person writes to an agent in the middle of a task they asked for;
  * does the production judgment (`steerHandling`, at `STEER_SURE`) take the message the right way: stop the task, read a
  * correction now, fold a detail in at the next pause, answer a quick question at once, or leave a separate request for
- * after the task? Cases in Portuguese and English, written for this eval. It passes when 90% are right, every stop is
- * caught and nothing else is ever taken for a stop.
+ * after the task? In a channel others share (addendum of 2026-11-19), a line may also be for someone else
+ * (`elsewhere`, at `ELSEWHERE_SURE`): the person who asked turns to a colleague, or people talk among themselves. Cases
+ * in Portuguese and English, written for this eval. It passes when 90% are right, every stop is caught, nothing else is
+ * ever taken for a stop, no line for the agent is ever taken for someone else's, and 80% of the lines for someone else
+ * are.
  *
  * Manual, never in CI (it calls the real service and costs a little):
  *
@@ -83,6 +86,33 @@ const CASES: [task: string, message: string, way: SteerHandling][] = [
   [DECK, "quando terminar, traduz a apresentação pra inglês", "queue"],
 ];
 
+/**
+ * In a channel others share, written by the person who asked (`fromAsker`) or by someone else there: lines for someone
+ * else, and lines for the agent that name a person or sound like chat, which must stay the agent's.
+ */
+const CHANNEL_CASES: [task: string, message: string, fromAsker: boolean, way: SteerHandling][] = [
+  [REPORT, "Maria, você viu o e-mail do cliente?", true, "elsewhere"],
+  [BUG, "@joao consegue revisar meu PR depois?", true, "elsewhere"],
+  [FLIGHTS, "Pedro, já reservou o hotel?", true, "elsewhere"],
+  [DEPLOY, "Bruno, tô entrando na call em 2 min", true, "elsewhere"],
+  [COSTS, "pessoal, almoço hoje às 13h?", true, "elsewhere"],
+  [MEETING, "kkkkkk boa, Ana", false, "elsewhere"],
+  [CONTRACT, "Carla, você fica com o cliente Beta essa semana?", false, "elsewhere"],
+  [EMAIL, "bom dia, time!", false, "elsewhere"],
+  [AUTH, "@sara can you take the on-call tonight?", true, "elsewhere"],
+  [NOTES, "thanks Mike, that fixed it", false, "elsewhere"],
+  [REPORT, "inclui o gráfico por região também", true, "add"],
+  [MEETING, "chama a Marina também", true, "add"],
+  [EMAIL, "manda com cópia pro Pedro", true, "add"],
+  [FLIGHTS, "a Ana vai junto, então são duas passagens", true, "add"],
+  [BUG, "na verdade o bug é no app-mobile, não no web", true, "interrupt"],
+  [REPORT, "para", true, "stop"],
+  [FLIGHTS, "já terminou?", true, "answer"],
+  [COSTS, "valeu, Alf!", true, "answer"],
+  [DECK, "Alf, tá aí?", true, "answer"],
+  [REPORT, "Alf, depois vê por que o deploy de ontem falhou", true, "queue"],
+];
+
 const ORG = "00000000-0000-0000-0000-000000000000";
 const which = process.argv.includes("--judge") ? process.argv[process.argv.indexOf("--judge") + 1] : "jev";
 const noUsage = { recordExternalUsage: async () => null };
@@ -106,15 +136,21 @@ if (which === "jev") {
   });
 }
 
-const WAYS: SteerHandling[] = ["stop", "interrupt", "add", "answer", "queue"];
-const rows = await Promise.all(
-  CASES.map(async ([task, text, want]) => ({
+const WAYS: SteerHandling[] = ["stop", "interrupt", "add", "answer", "queue", "elsewhere"];
+const rows = await Promise.all([
+  ...CASES.map(async ([task, text, want]) => ({
     task,
     text,
     want,
     got: await steerHandling(judge, { orgId: ORG, text, agentName: "Alf", task }),
   })),
-);
+  ...CHANNEL_CASES.map(async ([task, text, fromAsker, want]) => ({
+    task,
+    text: `[channel] ${text}`,
+    want,
+    got: await steerHandling(judge, { orgId: ORG, text, agentName: "Alf", task, shared: { fromAsker } }),
+  })),
+]);
 const confusion = new Map<string, number>();
 for (const r of rows) {
   const key = `${r.want}>${r.got}`;
@@ -129,8 +165,14 @@ for (const want of WAYS)
 const right = rows.filter((r) => r.got === r.want).length;
 const stopsMissed = rows.filter((r) => r.want === "stop" && r.got !== "stop").length;
 const falseStops = rows.filter((r) => r.want !== "stop" && r.got === "stop").length;
+// A line for the agent taken for someone else's is never read: the worst mistake here.
+const falseElsewhere = rows.filter((r) => r.want !== "elsewhere" && r.got === "elsewhere").length;
+const elsewhere = rows.filter((r) => r.want === "elsewhere");
+const elsewhereCaught = elsewhere.filter((r) => r.got === "elsewhere").length / elsewhere.length;
 const share = right / rows.length;
 console.log(
-  `\n${right}/${rows.length} right (${Math.round(share * 100)}%), ${stopsMissed} stops missed, ${falseStops} false stops`,
+  `\n${right}/${rows.length} right (${Math.round(share * 100)}%), ${stopsMissed} stops missed, ${falseStops} false stops, ${falseElsewhere} lines for the agent taken for someone else's, ${Math.round(elsewhereCaught * 100)}% of the lines for someone else caught`,
 );
-process.exit(share >= 0.9 && stopsMissed === 0 && falseStops === 0 ? 0 : 1);
+process.exit(
+  share >= 0.9 && stopsMissed === 0 && falseStops === 0 && falseElsewhere === 0 && elsewhereCaught >= 0.8 ? 0 : 1,
+);

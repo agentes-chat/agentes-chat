@@ -27,7 +27,7 @@ import {
   TOOL_CALL,
 } from "@agenteschat/client/lib/audit";
 import { humanize } from "@agenteschat/client/lib/custom-tools";
-import { formatTime, whenAt } from "@agenteschat/client/lib/format";
+import { whenAt } from "@agenteschat/client/lib/format";
 import { can } from "@agenteschat/client/lib/permissions";
 import type { TFunction } from "i18next";
 import { Fragment, useEffect, useMemo, useState } from "react";
@@ -80,7 +80,7 @@ const MARK_ICON: Record<AuditMark, IconName> = {
 };
 
 export function AuditScreen({ agentId: first = null }: { agentId?: string | null } = {}) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const when = useWhen();
   const dir = useDirectory();
   const { orgId, org } = useOrg();
@@ -175,7 +175,8 @@ export function AuditScreen({ agentId: first = null }: { agentId?: string | null
               <GroupedHeader>{day}</GroupedHeader>
               <GroupedList>
                 {list.map((row) => (
-                  <AuditRowView key={row.id} row={row} time={formatTime(i18n.language, row.at)} />
+                  // The list's kept clock format (`useWhen`), not a new one per row.
+                  <AuditRowView key={row.id} row={row} time={when.time(row.at)} />
                 ))}
               </GroupedList>
             </Fragment>

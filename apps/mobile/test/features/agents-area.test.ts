@@ -43,7 +43,12 @@ describe("Agents", () => {
     const screen = src("agents/AgentsScreen.tsx");
     expect(screen).toContain("const AgentRow = memo(function AgentRow(");
     expect(screen.match(/useNow\(\)/g)).toHaveLength(1);
-    expect(screen.match(/\{\.\.\.lineProps\(l\)\}\s+now=\{now\}/g)).toHaveLength(3);
+    // Every row's props come from the screen's one read (`rowOf`); only a row that says how long gets the clock.
+    expect(screen.match(/\{\.\.\.rowOf\(l\)\}/g)).toHaveLength(3);
+    expect(screen).toContain("now: ticks ? now : 0,");
+    const row = screen.slice(screen.indexOf("const AgentRow = memo("), screen.indexOf("function useGreeting("));
+    for (const hook of ["usePresenceOf(", "useAiStatus(", "usePlanHold(", "useAgentWorkLine(", "useNow("])
+      expect({ hook, read: row.includes(hook) }).toEqual({ hook, read: false });
     expect(screen).toContain("() => teamLines(agents, work, dms.data ?? [], asking, offline, atWork),");
     expect(screen).not.toContain("line={l}");
   });

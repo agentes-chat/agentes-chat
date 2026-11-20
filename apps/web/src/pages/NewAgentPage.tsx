@@ -1499,7 +1499,7 @@ function NewAgentFlow({ channelId = null }: { channelId?: string | null }) {
             onChange={(o: BrainPickOption) => {
               const p = o.pick;
               setAiPicked(true);
-              mood.react(o.value.toLowerCase().includes("opus") ? "star" : "happy", 800);
+              mood.react(/opus|fable/i.test(o.value) ? "star" : "happy", 800);
               if (p.kind === "model") {
                 setModel(p.model);
                 setPlan(null);

@@ -203,7 +203,7 @@ async function workAnalytics(db: Database, query: { from: string; to: string }, 
     read(sql`
       with w as (
         select case when s.data->>'reason' = 'brain_unavailable'
-            then 'brain_unavailable:' || coalesce(s.data->>'code', 'other') else s.data->>'reason' end as cause,
+            then 'brain_unavailable:' || coalesce(s.data->>'code', 'other') || coalesce(':' || (s.data->>'room'), '') else s.data->>'reason' end as cause,
           extract(epoch from least(coalesce(
             (select min(n.created_at) from agent_run_steps n where n.run_id = s.run_id and n.seq > s.seq),
             ar.finished_at, now()), ${end}::timestamptz) - s.created_at)::float8 as sec

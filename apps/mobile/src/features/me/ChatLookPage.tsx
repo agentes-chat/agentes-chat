@@ -155,11 +155,6 @@ function PreviewRow({ line, first, dm, color }: { line: Line; first: boolean; dm
   );
   return (
     <View style={[styles.row, bubbled && lookRows.bubblesRow, compact && lookRows.compactRow, { marginTop: top }]}>
-      {compact ? (
-        <Text variant="caption" tone="faint" style={lookRows.compactClock}>
-          {line.time}
-        </Text>
-      ) : null}
       {faced ? (
         <View style={[styles.slot, bubbled && lookRows.bubblesSlot, compact && lookRows.compactSlot]}>{face}</View>
       ) : null}
@@ -549,7 +544,7 @@ export function ChatLookPage() {
   const dm = kind === "dms";
   const prefs = org?.chatPrefs;
   // A personal workspace's channels are its group conversations, in bubbles until the person picks (ADR 0159).
-  const { style, tone } = chatLookOf(prefs, dm, isPersonal(org));
+  const { style, tone } = chatLookOf(prefs, dm, isPersonal(org), "phone");
   const textSize = textSizeOf(prefs);
   // While the slider moves the preview follows it; the size is saved when the thumb lands.
   const [sizeDraft, setSizeDraft] = useState<ChatTextSize | null>(null);

@@ -23,6 +23,7 @@ import {
   toolNow,
   toolPhrase,
   toolWhy,
+  waitStep,
   workApps,
   workFromSteps,
   workMeta,
@@ -183,6 +184,45 @@ describe("the block's lines", () => {
     expect(
       workSteps({ steps: 2, calls: [{ name: "tiktok_find_tools", connector: "TikTok Ads" }], durationMs: 0 }),
     ).toBe(2);
+  });
+
+  test("the line before slow work (`say_now`, ADR 0207) is its own message, not a line; `post_message` is one", () => {
+    expect(toolItemsLive([call("1", "say_now")])).toEqual([]);
+    const items = toolItemsLive([
+      call("1", "mcp__agentes__say_now"),
+      call("2", "browser_open"),
+      call("3", "post_message"),
+    ]);
+    expect(items.map((i) => (i.kind === "call" ? `${i.line.kind}×${i.line.count}` : i.kind))).toEqual([
+      "browsing×1",
+      "postingMessage×1",
+    ]);
+    expect(toolCalls(items)).toBe(2);
+    expect(toolApps(items)).toEqual([{ kind: "browsing" }, { kind: "postingMessage" }]);
+    // Going out right after a call refused for its arguments: the step line names that call's work, never the line.
+    const slipped = call("1", "github_search_issues", { connector: "GitHub", failed: true, slip: true });
+    const going = [slipped, call("2", "say_now", { running: true, ms: undefined })];
+    expect(toolItemsLive(going).map((i) => (i.kind === "call" ? `${i.line.key}:${i.line.state}` : i.kind))).toEqual([
+      "1:run",
+    ]);
+    expect(waitStep(t, going)).toBe('Chat.activity.consulting|{"app":"GitHub"} · search issues…');
+    // Saved: the run's steps leave it out, and so do the closed block's count and logos.
+    const at = (s: number) => new Date(Date.UTC(2026, 10, 19, 10, 0, s)).toISOString();
+    const saved = workFromSteps([
+      {
+        seq: 1,
+        kind: "tool_call",
+        data: { toolUseId: "t1", name: "say_now", input: { text: "Bora! Vou abrir o painel e já te mando." } },
+        createdAt: at(0),
+      },
+      { seq: 2, kind: "tool_result", data: { toolUseId: "t1", content: "Posted." }, createdAt: at(1) },
+      { seq: 3, kind: "tool_call", data: { toolUseId: "t2", name: "browser_open", input: {} }, createdAt: at(1) },
+      { seq: 4, kind: "tool_result", data: { toolUseId: "t2", content: "ok" }, createdAt: at(3) },
+    ]);
+    expect(saved.steps.map((s) => s.tool)).toEqual(["browser_open"]);
+    expect(toolCalls(toolItemsSaved(saved))).toBe(1);
+    expect(workSteps({ steps: 1, calls: [{ name: "say_now", n: 1 }], durationMs: 900 })).toBe(0);
+    expect(workApps([{ name: "mcp__agentes__say_now" }, { name: "browser_open" }])).toEqual([{ kind: "browsing" }]);
   });
 
   test("coming back later is ours, not apps called follow and cancel", () => {

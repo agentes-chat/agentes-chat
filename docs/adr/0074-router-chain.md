@@ -95,3 +95,9 @@ The reply rule (a quote or thread reply to an agent, a short follow-up) picked t
 ## Addendum (2026-11-18): a person's plan picks only on installations that already let it
 
 The plan step no longer runs on new installations: the cheap pick of who answers never spends a person's Claude or ChatGPT plan. Installations that had a workspace when this shipped keep it as before. Migration 0304 sets `instance_telemetry.router_plan_fallback` only where a workspace exists; `planSignInsOf` returns no sign-in without it, so the step skips and the status reads the rules, as on the Cloud. Without Jev or a key for a small model, a new installation's messages nobody mentioned go to the rules.
+
+## Addendum (2026-11-19): a message the triage found for someone else gets no agent by rule
+
+A person's message that went into an agent's task in a channel, and that the triage then found for someone else (ADR 0112 addendum of 2026-11-19, 2), comes back to the router (`ROUTE_RELEASED_JOB`) with two differences (`routeMessage`'s options):
+- **`except`:** the agent whose task it left isn't a candidate. The lower bar for the agent the person was just talking to would hand it straight back.
+- **`forSomeoneElse`:** only an agent the message speaks to answers it: the step's `addressee`, or an agent the message names. Not the agent the step finds best placed to answer, and no rule supplies one: not R5's "a message for the agents always gets one", the channel's one agent (R2), a follow-up, or the fallback after a step's failure. Otherwise a line to a person the workspace doesn't know went to the best placed agent.

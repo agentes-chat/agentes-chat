@@ -1,4 +1,4 @@
-import { hostLook, MisconfiguredError, normalizeHost, requestLocale } from "@agenteschat/engine";
+import { hostLook, isAgentesCloud, MisconfiguredError, normalizeHost, requestLocale } from "@agenteschat/engine";
 import { helpDocsUrl } from "@agenteschat/i18n/help";
 import { appLocale } from "@agenteschat/i18n/locale";
 import type { AgentesModule, Edition, ModuleContext } from "@agenteschat/modules";
@@ -158,7 +158,8 @@ export function createApp(options: AppOptions) {
 
   registerHealth(api, {
     version,
-    edition: options.edition,
+    // agentes.chat itself runs the self-host image: its apps must still hide what only a self-hosted server has.
+    edition: options.services && isAgentesCloud(options.services.config.PUBLIC_URL) ? "cloud" : options.edition,
     modules: options.modules.map((m) => m.name),
     pingDatabase: options.pingDatabase,
     draining: options.draining,

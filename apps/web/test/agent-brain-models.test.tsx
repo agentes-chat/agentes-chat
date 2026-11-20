@@ -526,7 +526,7 @@ describe("Quem pensa: Automático", () => {
     // Each with what it is for.
     expect(rowsOf(d)).toEqual([
       ["Automático", "Escolhe o modelo e o esforço para cada tarefa"],
-      ["Opus 5.5", "O mais capaz. Gasta o plano mais rápido."],
+      ["Opus 5.5", "Muito capaz. Gasta o plano mais rápido."],
       ["Sonnet 5.5", "Equilibrado. Bom para quase tudo."],
       ["Haiku 5.5", "Rápido e leve. Para tarefas simples."],
     ]);
