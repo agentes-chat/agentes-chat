@@ -7332,6 +7332,22 @@ export function useTaskManager(
   });
 }
 
+/** VPS Zen: the Central. Every screen that asks shares one answer, at the shortest interval among them. */
+export function useCentral(orgId: string, pollMs: number | false = 3_000) {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.central(orgId),
+    queryFn: () => {
+      const working = part(api, "working");
+      if (!working.central) throw new Error("This server has no Central yet");
+      return working.central(orgId);
+    },
+    enabled: Boolean(api.working?.central),
+    staleTime: 1_000,
+    refetchInterval: pollMs,
+  });
+}
+
 /**
  * A task's steps for "Ver passos" (ADR 0128), to whoever sees it in the task manager: `workFromSteps(data.steps,
  * data.run)` draws them like the chat's work block. `pollMs` while it still works.

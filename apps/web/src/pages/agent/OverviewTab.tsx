@@ -6,6 +6,7 @@ import { modeKey } from "@agenteschat/client/lib/workspace-mode";
 import { Button, Card, Icon } from "@agenteschat/ui";
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
+import { AgentNowCard } from "@/central/AgentNowCard";
 import { AgentSetupCard } from "@/components/AgentSetup";
 import { useOrg } from "@/components/org-context";
 import { useDirectory } from "@/hooks/useDirectory";
@@ -43,6 +44,7 @@ export function OverviewTab() {
       <ReadOnlyNote />
       {/* A new agent's checklist (ADR 0155 §2), while something is left. */}
       <AgentSetupCard agent={agent} place="profile" />
+      <AgentNowCard agentId={agent.id} />
       <div className="agp-overview">
         {(approvals > 0 || pending.length > 0) && (
           <div className="agp-attns">

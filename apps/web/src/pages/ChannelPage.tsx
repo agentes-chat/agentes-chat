@@ -2692,11 +2692,11 @@ function ChannelView({
                       composer.current?.focus();
                     }}
                   >
+                    {wallpaper && <ChatWallpaper wallpaper={wallpaper.wallpaper} strength={wallpaper.strength} />}
                     {/* VPS Zen: the channel's voice call, or who is in it with a Join. */}
                     {isMember && !chrome?.panel && (
                       <VoiceStage orgId={org.id} channelId={channel.id} channelName={channel.name} />
                     )}
-                    {wallpaper && <ChatWallpaper wallpaper={wallpaper.wallpaper} strength={wallpaper.strength} />}
                     {isMember && (
                       <ChannelPinnedBar
                         channelId={channel.id}

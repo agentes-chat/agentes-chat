@@ -11,6 +11,7 @@ import {
   sampleLoad,
   TrafficWindow,
 } from "@agenteschat/adapters/host-stats";
+import type { AgentMemory } from "@agenteschat/adapters/machine-protocol";
 import {
   type AccountKind,
   type AgentScope,
@@ -64,6 +65,7 @@ import { AccountBrains } from "./account-brains";
 import { accountSelfCheck, SELF_CHECK_EVERY_MS, SELF_CHECK_RETRY_MS } from "./account-check";
 import { AccountManager, grokSandboxFails, lchownTree, SYSTEM_ACCOUNTS_ROOT } from "./accounts";
 import { ActivityLog } from "./activity";
+import { readAgentMemory } from "./agent-memory";
 import {
   AccountUsers,
   type AgentUser,
@@ -445,6 +447,8 @@ export class RunnerDaemon implements RequestObserver {
   private readonly timers: ReturnType<typeof setInterval>[] = [];
   /** Protocol 22: how busy this computer got over the last day (rides on `pong`). */
   private readonly load = new LoadWindow();
+  /** VPS Zen: the last reading of each agent's memory (`agent-memory.ts`). */
+  private agentMemory: AgentMemory = {};
   /** The agents' browsers' last day of traffic (protocol 23). */
   private readonly traffic = new TrafficWindow();
   /** The computer's shared folder (ADR 0115) once the session made it, and its last measured size. */
@@ -789,6 +793,15 @@ export class RunnerDaemon implements RequestObserver {
     const clis = setInterval(() => this.executors(), EXECUTORS_TTL_MS);
     clis.unref?.();
     this.timers.push(clis);
+    // VPS Zen: each agent's memory, every half minute (a `ps`), carried with the load.
+    const memory = setInterval(() => {
+      const pids = this.session?.brains.pidsByAgent();
+      void readAgentMemory(pids ?? new Map()).then((m) => {
+        this.agentMemory = m;
+      });
+    }, 30_000);
+    memory.unref?.();
+    this.timers.push(memory);
     const sample = () => {
       const s = this.session;
       this.traffic.add((s?.supervisor ?? s?.browser)?.takeTraffic() ?? { up: 0, down: 0 });
@@ -1582,7 +1595,10 @@ export class RunnerDaemon implements RequestObserver {
         };
       },
       executors: () => this.helloExecutors(),
-      load: () => this.load.summary(),
+      load: () => {
+        const load = this.load.summary();
+        return load ? { ...load, agents: this.agentMemory } : load;
+      },
       browserTraffic: () => this.traffic.summary(),
       egress: () => this.egress.current,
       context,

@@ -40,6 +40,10 @@ const PLACED_BY_HAND: Record<string, string> = {
     "menu items are one line (no wrapping) of 14px text on their own 20px line, which the 16px icon sits on",
   "apps/web/src/components/import-flow.css .imp-row__mark":
     "an import plan row's 18px check column centres on the row's 26px lead tile (.imp-row__lead), not on its text",
+  "apps/web/src/pages/issues.css .issue-review-line__dot":
+    "VPS Zen: a 6px status dot on the baseline of a line that wraps, not an icon on a first line",
+  "apps/web/src/voice/voice.css .voice-meter__mark":
+    "VPS Zen: the threshold tick of the voice meter, placed on the meter's track, beside no text",
 };
 
 /** Where the opening tag that starts at `start` ends: braces are skipped, so an `=>` in an attribute doesn't end it. */
