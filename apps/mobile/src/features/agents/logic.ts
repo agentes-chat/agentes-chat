@@ -161,6 +161,19 @@ export function freeSections(
     .filter((s) => s.lines.length > 0);
 }
 
+/**
+ * "Esconder da lista" (the web sidebar's, saved with the same view): the free agents the person took off Agentes'
+ * lists, and the ones they took off, in the lists' order. Only free agents hide: one that asks you or is at work stays
+ * in its section, so a request never goes unseen behind a hidden row.
+ */
+export function splitHidden(free: TeamLine[], hidden: ReadonlySet<string>): { shown: TeamLine[]; hidden: TeamLine[] } {
+  if (hidden.size === 0) return { shown: free, hidden: [] };
+  return {
+    shown: free.filter((l) => !hidden.has(l.agent.id)),
+    hidden: free.filter((l) => hidden.has(l.agent.id)),
+  };
+}
+
 /** "há 4 min": how long ago, in the largest whole unit (under a minute: now). */
 export type Ago = { unit: "now" } | { unit: "minutes" | "hours" | "days"; count: number };
 

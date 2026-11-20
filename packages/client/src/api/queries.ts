@@ -6573,16 +6573,12 @@ export function useSetSidebarOrder(orgId: string, personal = false) {
 }
 
 /** How my sidebar shows the agents, and what I pinned, in this workspace (the default until it loads). */
-export const useSidebarView = (orgId: string): SidebarView => {
+const useSidebarViewQuery = (orgId: string) => {
   const api = useApi();
-  return (
-    useQuery({
-      queryKey: keys.sidebarView(orgId),
-      queryFn: () => api.orgs.sidebarView(orgId),
-      staleTime: 60_000,
-    }).data ?? SIDEBAR_VIEW_DEFAULT
-  );
+  return useQuery({ queryKey: keys.sidebarView(orgId), queryFn: () => api.orgs.sidebarView(orgId), staleTime: 60_000 });
 };
+
+export const useSidebarView = (orgId: string): SidebarView => useSidebarViewQuery(orgId).data ?? SIDEBAR_VIEW_DEFAULT;
 
 /**
  * Changes my sidebar view: the sidebar changes at once and the whole view goes to the server, one request at a time,
@@ -6611,6 +6607,32 @@ export function useSetSidebarView(orgId: string) {
     const next = change(qc.getQueryData<SidebarView>(key) ?? SIDEBAR_VIEW_DEFAULT);
     qc.setQueryData(key, next);
     save.mutate(next);
+  };
+}
+
+/** At most this many hidden agents (`SIDEBAR_HIDDEN_LIMIT`, packages/engine/src/sidebar-items.ts). */
+const SIDEBAR_HIDDEN_LIMIT = 200;
+
+/**
+ * "Esconder da barra lateral": the agents I took off the AGENTES list in this workspace, saved with my sidebar view so they
+ * stay hidden on every device. `loaded` is false until the stored list arrives: `hide` and `show` do nothing before
+ * that, so a change never starts from a view without it and wipes what the server keeps.
+ */
+export function useHiddenSidebarAgentIds(orgId: string) {
+  const view = useSidebarViewQuery(orgId);
+  const setView = useSetSidebarView(orgId);
+  const ids = useMemo<ReadonlySet<string>>(() => new Set(view.data?.hiddenAgents ?? []), [view.data]);
+  // A change saved before the view arrives puts a view without the list in the cache until the server answers with it.
+  const loaded = view.data?.hiddenAgents !== undefined;
+  const change = (next: (now: string[]) => string[]) => {
+    if (!loaded) return;
+    setView((now) => ({ ...now, hiddenAgents: next(now.hiddenAgents ?? []).slice(0, SIDEBAR_HIDDEN_LIMIT) }));
+  };
+  return {
+    ids,
+    loaded,
+    hide: (agentId: string) => change((now) => [...new Set([...now, agentId])]),
+    show: (agentId: string) => change((now) => now.filter((id) => id !== agentId)),
   };
 }
 

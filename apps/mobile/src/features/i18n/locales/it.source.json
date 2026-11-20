@@ -1856,6 +1856,12 @@
   "agents.managerQuiet": {
     "value": "Nothing in progress"
   },
+  "agents.hide": {
+    "value": "Hide from list"
+  },
+  "agents.hiddenToast": {
+    "value": "{{name}} hidden from the list"
+  },
   "agents.state.waitsYou": {
     "value": "waiting for you"
   },

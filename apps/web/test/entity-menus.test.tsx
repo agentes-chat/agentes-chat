@@ -132,7 +132,7 @@ const withDms = () => {
 };
 
 describe("an agent", () => {
-  test("Shift+F10 on its row: talk, profile, pin, copy @, a new group with it, edit (owner or admin), link, id", async () => {
+  test("Shift+F10 on its row: talk, profile, pin, hide, copy @, a new group with it, edit (owner or admin), link, id", async () => {
     await go(undefined, withDms());
     const row = within(nav()).getByRole("link", { name: /^Ada/ });
     row.focus();
@@ -142,6 +142,7 @@ describe("an agent", () => {
       "Mensagem direta",
       "Ver perfil",
       "Fixar no topo",
+      "Esconder da barra lateral",
       "Copiar @ada",
       "Novo setor com Ada",
       "Editar agente",

@@ -73,7 +73,8 @@ import { useSectorMenu } from "../team/SectorScreen";
 import { TeamEntry } from "../team/TeamEntry";
 import { ARRIVAL_LOOK_MS, clearArrived, useArrived } from "./arrival";
 import { openAgentDelete } from "./DeleteAgentScreen";
-import { agoOf, freeSections, plainRole, type TeamLine, teamLines } from "./logic";
+import { useHiddenAgents } from "./hidden";
+import { agoOf, freeSections, plainRole, splitHidden, type TeamLine, teamLines } from "./logic";
 import { agoShort, workTitle } from "./work";
 
 /** Rows whose agent moves (a long team stays light). */
@@ -133,6 +134,12 @@ export function AgentsScreen() {
     [agents, work, dms.data, asking, offline, atWork],
   );
   const busy = waiting.length + working.length;
+  // "Esconder da lista": the free agents the person took off, kept apart in Escondidos (waiting and working stay).
+  const hiddenAgents = useHiddenAgents();
+  const { shown: freeShown, hidden: freeHidden } = useMemo(
+    () => splitHidden(free, hiddenAgents.ids),
+    [free, hiddenAgents.ids],
+  );
   // A routine's run works in the background, in no conversation (never "Trabalhando"): the agent is out on it.
   const onRoutine = useMemo(() => {
     const out = new Map<string, string>();
@@ -150,9 +157,9 @@ export function AgentsScreen() {
     () => [
       ...waiting.map((l) => l.agent.id),
       ...working.map((l) => l.agent.id),
-      ...freeSections(free, groups.data ?? [], pins.pins.agents).flatMap((s) => s.lines.map((l) => l.agent.id)),
+      ...freeSections(freeShown, groups.data ?? [], pins.pins.agents).flatMap((s) => s.lines.map((l) => l.agent.id)),
     ],
-    [waiting, working, free, groups.data, pins.pins.agents],
+    [waiting, working, freeShown, groups.data, pins.pins.agents],
   );
   const greeting = useGreeting(order);
   const gazeOf = (id: string): Gaze | undefined => {
@@ -291,9 +298,9 @@ export function AgentsScreen() {
             ))}
           </>
         ) : null}
-        {free.length > 0 && !groups.isPending ? (
+        {freeShown.length > 0 && !groups.isPending ? (
           <FreeSections
-            free={free}
+            free={freeShown}
             groups={groups.data ?? []}
             pinned={pins.pins.agents}
             before={busy}
@@ -301,6 +308,44 @@ export function AgentsScreen() {
             gazeOf={gazeOf}
             rowOf={rowOf}
           />
+        ) : null}
+        {freeHidden.length > 0 ? (
+          <>
+            <SectionHeader title={t("shell.sidebarSetup.hiddenAgents")} count={freeHidden.length} />
+            {freeHidden.map((l, i) => (
+              <SwipeRow
+                key={l.agent.id}
+                left={{
+                  label: t("shell.sidebarSetup.showAgent"),
+                  icon: "eye",
+                  color: c.agent,
+                  ink: c.onAgent,
+                  onAction: () => hiddenAgents.show(l.agent.id),
+                }}
+              >
+                {/* The swipe's pane shows under the row, so the row is opaque. */}
+                <View style={{ backgroundColor: c.bg }}>
+                  <ListRow
+                    onPress={() => router.push(`/agent/${l.agent.id}`)}
+                    accessibilityRole="button"
+                    accessibilityLabel={[l.agent.name, t("shell.sidebarSetup.hiddenAgents")].join(", ")}
+                    accessibilityActions={[{ name: "show", label: t("shell.sidebarSetup.showAgent") }]}
+                    onAccessibilityAction={() => hiddenAgents.show(l.agent.id)}
+                    onLongPress={() => hiddenAgents.show(l.agent.id)}
+                    delayLongPress={380}
+                    divider={i > 0}
+                    leading={<AgentFace agentId={l.agent.id} size={52} mode="rest" live={false} />}
+                    title={l.agent.name}
+                    sub={
+                      <Text variant="small" tone="faint" numberOfLines={1} style={LIST_PREVIEW}>
+                        {l.agent.role.trim() || t("shell.sidebarSetup.hiddenAgents")}
+                      </Text>
+                    }
+                  />
+                </View>
+              </SwipeRow>
+            ))}
+          </>
         ) : null}
         {archived.length > 0 ? (
           <>
@@ -403,6 +448,7 @@ function FreeSections({
   // A personal workspace's free agents are its person's, not a team (ADR 0159).
   const { org } = useOrg();
   const { collapsed, toggle } = useCollapsedSections<string>(STORED.agentGroupsCollapsed, null);
+  const { hide, loaded: hideable } = useHiddenAgents();
   const sectorMenu = useSectorMenu();
   const manages = can(org, "manage_agents");
   let shown = before;
@@ -419,6 +465,7 @@ function FreeSections({
             // The newcomer and the ones looking at it move while it arrives, wherever they sit in the list.
             live={first + i < LIVE_ROWS || greeting !== null}
             pinned={i < pinnedCount}
+            onHide={hideable ? hide : undefined}
             arriving={greeting === l.agent.id}
             gaze={gazeOf(l.agent.id)}
           />
@@ -538,6 +585,7 @@ const AgentRow = memo(function AgentRow({
   arriving = false,
   gaze,
   routine,
+  onHide,
 }: RowProps & {
   divider: boolean;
   live: boolean;
@@ -547,6 +595,8 @@ const AgentRow = memo(function AgentRow({
   arriving?: boolean;
   /** Where its face looks while a newcomer arrives (up or down at the newcomer's row). */
   gaze?: Gaze | undefined;
+  /** A free agent's "Esconder da lista" (swipe and long press); the row has neither without it. */
+  onHide?: ((agentId: string, name: string) => void) | undefined;
 }) {
   const { t } = useTranslation();
   const c = useColors();
@@ -658,11 +708,25 @@ const AgentRow = memo(function AgentRow({
       ) : null}
     </Animated.View>
   );
-  return (
+  const hide = onHide ? () => onHide(a.id, a.name) : undefined;
+  const row = (
     // Only the newcomer's row carries a style; the rest stay plain views.
     <Animated.View style={arriving ? entrance : undefined}>
       <ListRow
         onPress={() => router.push(`/agent/${a.id}`)}
+        {...(hide
+          ? {
+              onLongPress: () =>
+                chooseAction(
+                  a.name,
+                  [{ icon: "eyeoff", label: t("mobile.agents.hide"), onPress: hide }],
+                  t("common.cancel"),
+                ),
+              delayLongPress: 380,
+              accessibilityActions: [{ name: "hide", label: t("mobile.agents.hide") }],
+              onAccessibilityAction: hide,
+            }
+          : {})}
         accessibilityRole="button"
         accessibilityLabel={[
           said,
@@ -699,6 +763,13 @@ const AgentRow = memo(function AgentRow({
         sub={(state === "free" || (state === "out" && statusText === null)) && !role ? null : sub}
       />
     </Animated.View>
+  );
+  if (!hide) return row;
+  return (
+    <SwipeRow right={{ label: t("mobile.agents.hide"), icon: "eyeoff", color: c.muted, ink: c.bg, onAction: hide }}>
+      {/* The swipe's pane shows under the row, so the row is opaque. */}
+      <View style={{ backgroundColor: c.bg }}>{row}</View>
+    </SwipeRow>
   );
 });
 

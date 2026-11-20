@@ -33,6 +33,9 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
+import { useDirectory } from "@/hooks/useDirectory";
+import { useHiddenSidebarAgents } from "@/hooks/useHiddenSidebarAgents";
+import { AgentAvatar } from "./AgentAvatar";
 import { useOrg } from "./org-context";
 import { sectionName, useSectionOrder } from "./SidebarOrder";
 
@@ -165,6 +168,8 @@ export function SidebarSetupDialog({ open, onClose }: { open: boolean; onClose: 
   const save = useSetSidebarItem(org.id, personal);
   const sections = useSectionOrder(org.id, personal);
   const tools = useToolOrder(org.id, personal);
+  const hiddenAgents = useHiddenSidebarAgents();
+  const hiddenList = useDirectory(org.id).agents.filter((a) => hiddenAgents.ids.has(a.id));
   // What another device changed since this one loaded shows as the dialog opens.
   useEffect(() => {
     if (open) void refetch();
@@ -268,6 +273,23 @@ export function SidebarSetupDialog({ open, onClose }: { open: boolean; onClose: 
             </li>
           ))}
         </ol>
+        {hiddenList.length > 0 && (
+          <>
+            <h3 className="sidebar-setup__heading">{t("shell.sidebarSetup.hiddenAgents")}</h3>
+            <ul className="sidebar-setup" data-hidden-agents="">
+              {hiddenList.map((a) => (
+                <li key={a.id} className="sidebar-setup__row">
+                  {/* Its own face, as the sidebar drew it: the name alone with a generic icon reads as any agent. */}
+                  <AgentAvatar agent={a} name={a.name} size="xs" />
+                  <span className="sidebar-setup__name">{a.name}</span>
+                  <Button size="sm" variant="ghost" onClick={() => hiddenAgents.show(a.id)}>
+                    {t("shell.sidebarSetup.showAgent")}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
       </DialogBody>
       <DialogFooter>
         <Button
