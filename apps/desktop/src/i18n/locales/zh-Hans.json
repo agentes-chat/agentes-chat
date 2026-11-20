@@ -814,6 +814,8 @@
   },
   "cover": {
     "offline": "没有网络连接 · 正在重试…",
+    "loading": "正在加载…",
+    "servers": "切换服务器",
     "unreachable": "无法连接到 {{host}} · 正在重试…",
     "tailnet": "这台 {{device}} 上的 Tailscale 已连接吗？",
     "starting": "正在这台 {{device}} 上启动 agentes.chat…",

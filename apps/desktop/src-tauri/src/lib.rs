@@ -13,6 +13,8 @@ mod cover;
 mod deep_link;
 mod discover;
 mod dock;
+mod gate;
+mod gate_cloudflare;
 mod graphics;
 mod host_sync;
 mod local_server;
@@ -347,8 +349,17 @@ fn runners_list(runners: tauri::State<'_, Runners>) -> Vec<RunnerInfo> {
 }
 
 #[tauri::command]
-fn runner_send(runners: tauri::State<'_, Runners>, home_id: String, line: String) -> Result<(), String> {
-    runners.send(&home_id, &line)
+async fn runner_send(app: AppHandle, home_id: String, line: String) -> Result<(), String> {
+    // Pairing asks the server before the home names it: the session of the gate in front of it goes first (ADR 0195).
+    // Reading the window's cookies waits for the web view: off the command's own thread.
+    tauri::async_runtime::spawn_blocking(move || {
+        if let Some(server) = gate::pairing_server(&line) {
+            gate::hand_session(&app, &home_id, &server, true);
+        }
+        app.state::<Runners>().send(&home_id, &line)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -627,6 +638,7 @@ pub fn run() {
         .manage(local_server::LocalServer::default())
         .manage(host_sync::HostSync::default())
         .manage(deep_link::PendingLink::default())
+        .manage(gate::GateLogin::default())
         .manage(main_window::Bridge::default())
         .manage(main_window::Notices::default())
         .manage(workspaces::Workspaces::default())
@@ -704,10 +716,12 @@ pub fn run() {
             menus::app_menu_set,
             menus::context_menu,
             cover::page_ready,
+            gate::server_behind_gate,
             cover::cover_retry,
             cover::cover_hide,
             cover::cover_server,
             cover::cover_details,
+            cover::cover_servers_menu,
             prepare::screen_access,
             prepare::screen_request,
             prepare::disk_access,
@@ -777,6 +791,7 @@ pub fn run() {
                 window_state::remember(window, true);
                 // Full screen in or out: the page's title bar keeps or drops the room for the buttons.
                 main_window::fit_page(window.app_handle());
+                cover::fit(window.app_handle());
             }
             WindowEvent::ThemeChanged(theme) if window.label() == main_window::LABEL => {
                 let color = main_window::backdrop(*theme);

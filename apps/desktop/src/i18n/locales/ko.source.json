@@ -2228,6 +2228,12 @@
   "cover.offline": {
     "value": "No internet connection · trying again…"
   },
+  "cover.loading": {
+    "value": "Loading…"
+  },
+  "cover.servers": {
+    "value": "Switch server"
+  },
   "cover.unreachable": {
     "value": "Can't reach {{host}} · trying again…"
   },

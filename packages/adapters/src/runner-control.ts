@@ -266,6 +266,13 @@ export type ControlRequest =
    * (not paired, or refused). An older runner answers `bad_request`.
    */
   | { type: "reconnect" }
+  /**
+   * ADR 0195: what the gate in front of `server` takes from the runner, shown on its requests to that server only
+   * and kept in memory, never written. For `cloudflare-access`, the person's session (the `CF_Authorization` cookie
+   * the app's window holds); `token: null` forgets it. A runner paired with another server keeps nothing
+   * (`applied: false`); a kind it doesn't know is `bad_request`.
+   */
+  | { type: "gate.set"; server: string; kind: "cloudflare-access"; token: string | null }
   /** Closes an agent's browser on this computer (the tray's "Parar"); its profile stays. */
   | { type: "browser.stop"; agentId: string }
   /**
@@ -327,6 +334,7 @@ export interface ControlReplies {
   "access.pending": { requests: ControlAccessRequest[] };
   "access.answer": { access: RunnerAccess };
   reconnect: { reconnecting: boolean };
+  "gate.set": { applied: boolean };
   "browser.stop": { stopped: boolean };
   "accounts.list": { accounts: RunnerAccountInfo[] };
   /** The URL the CLI opened (shown in case the browser didn't open) and, for Codex, the code to type there. */
@@ -363,6 +371,11 @@ export type ControlEvent =
   | { kind: "pair.done"; org: { id: string; name: string }; machine: { id: string; name: string } }
   /** `link_invalid`: the link expired or was used (an older runner says `internal`). */
   | { kind: "pair.failed"; code: "expired" | "denied" | "network" | "internal" | "link_invalid"; message: string }
+  /**
+   * ADR 0195: the gate in front of `server` turned the runner away (no session, or it ran out): the app signs the
+   * person in again and sends the new one (`gate.set`).
+   */
+  | { kind: "gate.required"; server: string; gate: "cloudflare-access" }
   | { kind: "access.requested"; request: ControlAccessRequest }
   | { kind: "access.resolved"; requestId: string; decision: "granted" | "denied" | "expired" }
   | { kind: "access.changed"; access: RunnerAccess }

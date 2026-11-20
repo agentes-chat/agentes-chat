@@ -169,9 +169,33 @@ function fade() {
   root?.setAttribute("data-fading", "");
 }
 
-const w = window as { __coverShown?: () => void; __coverFade?: () => void };
+/**
+ * Over a gate's sign-in (cover.rs `gate_pill`) the cover is only a pill in the window's corner, and none of the checks
+ * run (the page under it is the gate's, not the server's): `loading` while the next page of the sign-in loads,
+ * `servers` once it is there, with the app's servers to switch to (the server's own page, which has them, isn't there).
+ */
+type Pill = "loading" | "servers";
+let compact: Pill | null = null;
+const serversMenu = () => void invoke("cover_servers_menu").catch(() => {});
+function setCompact(mode: Pill | false) {
+  const next = mode || null;
+  if (compact === next) return;
+  compact = next;
+  if (next) root?.setAttribute("data-compact", next);
+  else root?.removeAttribute("data-compact");
+  root?.removeAttribute("data-fading");
+  if (next) buttons(next === "servers" ? [[words.servers, serversMenu]] : []);
+  say(next === "loading" ? words.loading : "");
+}
+
+const w = window as {
+  __coverShown?: () => void;
+  __coverFade?: () => void;
+  __coverCompact?: (mode: Pill | false) => void;
+};
 w.__coverShown = shown;
 w.__coverFade = fade;
+w.__coverCompact = setCompact;
 
 /** The server the main window opens (servers.json, through Rust); agentes.chat before one is chosen. */
 const currentServer = () =>
@@ -325,7 +349,7 @@ function showHere(
 }
 
 async function check() {
-  if (document.visibilityState !== "visible" || root?.hasAttribute("data-fading")) return;
+  if (compact || document.visibilityState !== "visible" || root?.hasAttribute("data-fading")) return;
   const waited = performance.now() - shownAt;
   const server = await currentServer();
   const here = await localStatus();

@@ -12,7 +12,6 @@ import {
   connectLink,
   isLoopback,
   parseConnectLink,
-  type ServerCheck,
 } from "@agenteschat/client/lib/server";
 import { isEmail } from "@agenteschat/client/lib/text";
 import {
@@ -34,9 +33,11 @@ import { type FormEvent, type ReactNode, useCallback, useEffect, useLayoutEffect
 import { useTranslation } from "react-i18next";
 import { useHost } from "../app";
 import {
+  type AppServerCheck,
   type Candidate,
   CHECK_MS,
   type ConnectProblem,
+  checkServerOrGate,
   connectOutcome,
   escapeAction,
   type FirstScreen,
@@ -165,7 +166,7 @@ export function FirstRun() {
       if (from !== "link") setTrail((t) => [...t, from]);
       setScreen("link");
       if (!parsed) return;
-      const check = await host.checkServer(parsed.server);
+      const check = await checkServerOrGate(host, parsed.server);
       if (seq !== linkSeq.current) return;
       const view = linkView(parsed, check, list.current);
       if (view.kind === "front") {
@@ -550,7 +551,7 @@ function Connect({
   const [problem, setProblem] = useState<{ problem: ConnectProblem; host: string } | null>(null);
   const [looking, setLooking] = useState(true);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [checks, setChecks] = useState<(ServerCheck | null)[]>([]);
+  const [checks, setChecks] = useState<(AppServerCheck | null)[]>([]);
   // "Look again" bumps it: discovery runs once more from the start.
   const [scan, setScan] = useState(0);
 
@@ -571,7 +572,7 @@ function Connect({
       await Promise.race([
         Promise.all(
           listed.map(async (c, i) => {
-            const check = await host.checkServer(c.server).catch(() => null);
+            const check = await checkServerOrGate(host, c.server).catch(() => null);
             if (live) setChecks((now) => now.map((x, j) => (j === i ? check : x)));
           }),
         ),
@@ -597,7 +598,7 @@ function Connect({
     if (!typed.ok) return setProblem({ problem: typed.problem, host: typed.host });
     setProblem(null);
     setChecking(typed.server);
-    const check = await host.checkServer(typed.server);
+    const check = await checkServerOrGate(host, typed.server);
     setChecking(null);
     const outcome = connectOutcome(typed.server, check, own);
     const claim = outcome.kind === "problem" && outcome.problem === "no-owner" ? claimHere(typed.server) : null;
@@ -856,7 +857,7 @@ function RunHere({
     const use = async () => {
       if (view.claim) return onLink(connectLink(view.server, { claim: view.claim }));
       setChecking(true);
-      const outcome = connectOutcome(view.server, await host.checkServer(view.server), ownAddresses(status));
+      const outcome = connectOutcome(view.server, await checkServerOrGate(host, view.server), ownAddresses(status));
       setChecking(false);
       if (outcome.kind === "problem") setProblem(outcome);
       else if (outcome.kind === "use") await onUse(outcome.server);

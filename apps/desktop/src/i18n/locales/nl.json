@@ -819,6 +819,8 @@
   },
   "cover": {
     "offline": "Geen internetverbinding · we proberen het opnieuw…",
+    "loading": "Laden…",
+    "servers": "Andere server",
     "unreachable": "{{host}} is niet bereikbaar · we proberen het opnieuw…",
     "tailnet": "Is Tailscale verbonden op deze {{device}}?",
     "starting": "agentes.chat starten op deze {{device}}…",

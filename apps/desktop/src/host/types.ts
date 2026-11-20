@@ -140,6 +140,11 @@ export interface Host {
   discover(): Promise<Candidate[]>;
   /** Whether `server` is an agentes.chat server this app can use (`GET /api/instance`). */
   checkServer(server: string): Promise<ServerCheck>;
+  /**
+   * Whether a gate (Cloudflare Access, ADR 0195) stands in front of `server` and wants its sign-in: asked by Rust
+   * without following the redirect, which `checkServer` from the web view only sees as unreachable.
+   */
+  serverBehindGate(server: string): Promise<boolean>;
   /** The connect link (`agenteschat://connect…`) waiting for an answer, taken once; null when none. */
   takeLink(): Promise<string | null>;
   /** A connect link arrived (the welcome window takes it). */

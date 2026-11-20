@@ -6,7 +6,7 @@
  *   bun build --compile --target=bun-darwin-arm64 apps/server/runner/main.ts --outfile agentes-runner
  */
 import { spawnSync } from "node:child_process";
-import { mkdirSync, realpathSync, renameSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, realpathSync, renameSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -55,6 +55,7 @@ import {
   readStoredConfig,
   runnerHome,
   type StoredConfig,
+  type StoredGate,
   updateConfig,
   writeConfig,
 } from "./config";
@@ -66,6 +67,8 @@ import { runDesktopBrowser } from "./desktop-browser";
 import { DesktopSessions, type DesktopSessionsOptions, runnerUser, systemDesktopUser } from "./desktop-session";
 import { localSources, runDoctor } from "./doctor";
 import { RUNNER_VERSION } from "./errors";
+import { setStoredGate, withGates } from "./gate";
+import { CLOUDFLARE_ACCESS } from "./gate-cloudflare";
 import { defaultHostState, HostComputer, readTokenFile, runnerChild } from "./host";
 import { writeJson } from "./json-file";
 import { hasBunTerminal, runningCompiled, thisRunner } from "./launch";
@@ -218,6 +221,9 @@ const VALUE_FLAGS = new Set([
   "token-file",
   "state",
   "enroll-file",
+  "gate",
+  "gate-client-id",
+  "gate-client-secret-file",
   "rotate",
   "link",
   "minutes",
@@ -293,9 +299,26 @@ const isHostComputer = (stored: StoredConfig | null) => stored?.mode === "system
  * With `--enroll-file`, redeems a code issued for this computer instead (ADR 0056 §10). Inside the
  * installer's frame (AGENTES_FRAME=1) it draws on its line and leaves the end to the installer.
  */
+/**
+ * `--gate cloudflare-access --gate-client-id <id> --gate-client-secret-file <path>`: a service token for the gate in
+ * front of `server`. The secret is read from a file (never from the command line, which other users can list); the
+ * file is left as it is.
+ */
+function gateFromFlags(p: Parsed, server: string): StoredGate | undefined {
+  const kind = flagString(p, "gate");
+  if (kind === undefined) return undefined;
+  if (kind !== CLOUDFLARE_ACCESS) throw new Error(`--gate takes ${CLOUDFLARE_ACCESS}`);
+  const clientId = flagString(p, "gate-client-id")?.trim();
+  const secretFile = flagString(p, "gate-client-secret-file");
+  if (!clientId || !secretFile) throw new Error("--gate needs --gate-client-id and --gate-client-secret-file");
+  const clientSecret = readFileSync(expandHome(secretFile), "utf8").trim();
+  if (!clientSecret) throw new Error(`${secretFile} is empty`);
+  return { server, kind, clientId, clientSecret };
+}
+
 async function pair(p: Parsed): Promise<number> {
   const usage =
-    "Usage: agentes-runner pair --server <url> [--enroll-file <path> | --link <code>] [--dir <workspace>] [--name <name>] [--no-exec] [--new]";
+    "Usage: agentes-runner pair --server <url> [--enroll-file <path> | --link <code>] [--dir <workspace>] [--name <name>] [--no-exec] [--new] [--gate cloudflare-access --gate-client-id <id> --gate-client-secret-file <path>]";
   const term = createTerm();
   term.intro("connect this computer");
   // Typed wide: the code's callback sets it, and TypeScript would keep it narrowed to null.
@@ -337,6 +360,14 @@ async function pair(p: Parsed): Promise<number> {
   const prev = storedOrNull(home);
   const managed = managedMessage(prev);
   if (managed) return refuse(managed);
+  // ADR 0195: a gate in front of the server (Cloudflare Access) and the service token this computer shows it.
+  let gate: StoredGate | undefined;
+  try {
+    gate = gateFromFlags(p, server) ?? (prev?.gate?.server === server ? prev.gate : undefined);
+  } catch (err) {
+    return refuse(err instanceof Error ? err.message : String(err));
+  }
+  if (gate) setStoredGate(server, gate);
   // Created only once the connection worked.
   const workspace = expandHome(flagString(p, "dir") ?? prev?.workspace ?? "~/agentes");
   const exec = !p.flags.has("no-exec");
@@ -411,6 +442,8 @@ async function pair(p: Parsed): Promise<number> {
     tools: { claude: exec, codex: exec, cursor: exec, opencode: exec, grok: exec, antigravity: exec, commands: exec },
     desktop: false,
   });
+  if (gate) next.gate = gate;
+  else delete next.gate;
   writeConfig(next, home);
   const found = await toolchains;
   if (found) {
@@ -1465,6 +1498,8 @@ async function checkTerminal(
 }
 
 async function main(argv: string[]): Promise<number> {
+  // Every request to a server behind a gate (Cloudflare Access) carries what it takes, and only to that server (ADR 0195).
+  globalThis.fetch = withGates(globalThis.fetch);
   let p: Parsed;
   try {
     p = parseArgs(argv);

@@ -197,9 +197,15 @@ fn computer_name() -> Option<String> {
 }
 
 /// The welcome window's pair link: who made it and for which workspace, asked of its server over plain HTTPS
-/// (no cookies: the link is the only thing it knows). `link_expired`, or `unreachable`.
+/// (no cookies: the link is the only thing it knows, but the session of a gate in front of the server, ADR 0195).
+/// `link_expired`, or `unreachable`.
 #[tauri::command]
-pub async fn pair_link_info(window: tauri::Window, server: String, code: String) -> Result<LinkInfo, String> {
+pub async fn pair_link_info(
+    app: tauri::AppHandle,
+    window: tauri::Window,
+    server: String,
+    code: String,
+) -> Result<LinkInfo, String> {
     if window.label() != "welcome" {
         return Err("only the welcome window asks this".into());
     }
@@ -207,7 +213,11 @@ pub async fn pair_link_info(window: tauri::Window, server: String, code: String)
     tauri::async_runtime::spawn_blocking(move || {
         let agent = ureq::AgentBuilder::new().timeout(INFO_TIMEOUT).redirects(0).build();
         let url = format!("{}/api/machines/connect-links/{}", pair.server, pair.code);
-        let response = match agent.get(&url).set("Accept", "application/json").call() {
+        let mut request = agent.get(&url).set("Accept", "application/json");
+        if let Some((name, value)) = crate::gate::session_header(&app, &pair.server) {
+            request = request.set(name, &value);
+        }
+        let response = match request.call() {
             Ok(r) | Err(ureq::Error::Status(_, r)) => r,
             Err(_) => return Err("unreachable".to_string()),
         };

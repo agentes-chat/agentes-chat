@@ -168,6 +168,8 @@ fn refresh(app: &AppHandle) {
     let mut next = Vec::with_capacity(file.servers.len());
     // Read once for every server, and never with Tauri's own read (cookies.rs: it stops the app on macOS).
     let window_cookies = crate::cookies::read(&page);
+    // A gate's session the window renewed reaches the runners within the minute (ADR 0195).
+    crate::gate::hand_to_runners(app, Some(&window_cookies));
     for server in &file.servers {
         let Ok(url) = server.parse::<Url>() else { continue };
         let cookie = cookie_header(window_cookies.iter().filter(|c| sent_to(*c, &url)).map(|c| (c.name(), c.value())));
@@ -182,6 +184,13 @@ fn refresh(app: &AppHandle) {
                     next.push(ServerWorkspaces { here, agents_here, ..unreachable(old, now_ms()) });
                 }
             }
+        }
+    }
+    // The page open in the window, behind a gate whose session ran out, goes back to the gate's sign-in (ADR 0195).
+    if let Some(site) = open.as_deref().filter(|o| file.servers.iter().any(|s| s == o)) {
+        if let Ok(url) = site.parse::<Url>() {
+            let cookie = cookie_header(window_cookies.iter().filter(|c| sent_to(*c, &url)).map(|c| (c.name(), c.value())));
+            crate::gate::recheck_open(app, &agent, site, &cookie);
         }
     }
     let changed = next != before;
@@ -632,6 +641,10 @@ pub fn with_session(
         Ok(response) | Err(ureq::Error::Status(_, response)) => response,
         Err(e) => return Err(e.to_string()),
     };
+    // A gate whose session ran out answers before the server (ADR 0195): sign in there again, as without a session.
+    if crate::gate::wants_sign_in(response.status(), response.header("location"), response.header("www-authenticate")) {
+        return Err("signed_out".into());
+    }
     let status = response.status();
     let mut text = String::new();
     response.into_reader().take(BODY_MAX).read_to_string(&mut text).map_err(|e| e.to_string())?;

@@ -70,6 +70,11 @@ export interface TransportOptions {
   baseUrl?: string;
   fetch?: FetchLike;
   headers?: HeadersSource;
+  /**
+   * Sees every answer `fetch` gets, before it is read (uploads with progress go through the platform's XHR and are
+   * not seen): the phone notices a gate in front of the server turning it away (ADR 0195 §10).
+   */
+  onResponse?: (res: Response) => void;
   /** `READ_TIMEOUT_MS` unless given. */
   readTimeoutMs?: number;
 }
@@ -91,7 +96,9 @@ function transport(options: TransportOptions): Transport {
   return {
     fetch: async (input, init) => {
       try {
-        return await send(input, init);
+        const res = await send(input, init);
+        options.onResponse?.(res);
+        return res;
       } catch (error) {
         throw error instanceof TypeError ? new NetworkError(error) : error;
       }

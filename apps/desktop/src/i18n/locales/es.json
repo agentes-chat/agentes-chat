@@ -824,6 +824,8 @@
   },
   "cover": {
     "offline": "Sin conexión a internet · reintentando…",
+    "loading": "Cargando…",
+    "servers": "Cambiar de servidor",
     "unreachable": "No logramos conectar con {{host}} · reintentando…",
     "tailnet": "¿Tailscale está conectado en esta {{device}}?",
     "starting": "Iniciando agentes.chat en esta {{device}}…",

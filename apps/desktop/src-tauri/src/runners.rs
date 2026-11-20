@@ -333,6 +333,18 @@ impl Runners {
         });
     }
 
+    /// Each running home and the server its `config.json` names (none before it is paired).
+    pub fn servers(&self) -> Vec<(String, Option<String>)> {
+        self.lock()
+            .iter()
+            .filter(|(_, r)| r.child.is_some())
+            .map(|(id, r)| {
+                let server = home_config(&r.dir).and_then(|c| c.get("server")?.as_str().map(str::to_string));
+                (id.clone(), server)
+            })
+            .collect()
+    }
+
     pub fn send(&self, home_id: &str, line: &str) -> Result<(), String> {
         if line.len() > MAX_LINE || line.contains('\n') {
             return Err("bad line".into());
@@ -505,6 +517,16 @@ fn handle_line(app: &AppHandle, home_id: &str, generation: u64, raw: &[u8]) {
                         runner.hello = Some(value);
                     }
                 }
+                drop(map);
+                // A runner that just started knows no gate session yet (ADR 0195).
+                crate::gate::hand_to_runner_soon(app, home_id);
+            }
+        }
+    }
+    if line.contains("\"gate.required\"") {
+        if let Ok(value) = serde_json::from_str::<serde_json::Value>(line) {
+            if let Some(server) = value.pointer("/event/server").and_then(|s| s.as_str()) {
+                crate::gate::runner_turned_away(app, home_id, server);
             }
         }
     }

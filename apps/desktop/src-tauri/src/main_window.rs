@@ -107,8 +107,14 @@ fn route(url: &Url, site: &Url) -> Route {
 }
 
 /// The route for `url` against the server open now; with none, nothing stays in the window.
+/// A server behind a gate (Cloudflare Access): its sign-in page, and the gate's pages during it, stay (gate.rs).
 fn route_now(app: &AppHandle, url: &Url) -> Route {
-    site(app).map(|s| route(url, &s)).unwrap_or_else(|| outside_or_drop(url))
+    site(app)
+        .map(|s| match crate::gate::stays(app, url, &s) {
+            Some(true) => Route::Stay,
+            _ => route(url, &s),
+        })
+        .unwrap_or_else(|| outside_or_drop(url))
 }
 
 fn open_outside(app: &AppHandle, url: &Url) {
@@ -186,6 +192,14 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
     // The window holds two web views (the site, and the app's cover over it), so it is found by its parts.
     // Already open: never a reload (where the person was, drafts, scroll stay), only the route moves.
     if let Some(page) = app.get_webview(LABEL) {
+        // The window shows the gate's sign-in: the page asked for waits until the server's page is back
+        // (its route would otherwise run on the sign-in's own page).
+        if page.url().is_ok_and(|u| !same_site(&u, &site)) {
+            if let Some(url) = url.filter(|u| go_in_page(u).is_some()) {
+                crate::gate::defer(app, url);
+            }
+            return front(app);
+        }
         if let Some(js) = url.as_ref().and_then(go_in_page) {
             page.eval(js).map_err(|e| e.to_string())?;
         }
@@ -234,8 +248,9 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
         // older apps don't take them), that it lists the other servers' workspaces (`workspaces`,
         // ADR 0154), that it takes the person's app icon (`appIcon`, ADR 0179) and how this computer draws
         // (`renderer`, and Linux's `system` facts: graphics.rs); nothing else.
+        // Never on a gate's sign-in page (gate.rs, Cloudflare Access), which isn't the site's.
         .initialization_script(format!(
-            "window.__agentesDesktop = Object.freeze({{ version: {version:?}, platform: {PLATFORM:?}, servers: true, files: true, connectorReturn: true, workspaces: true, appIcon: true, renderer: {renderer:?}, system: {system} }});",
+            "if (!location.hostname.endsWith(\".cloudflareaccess.com\")) window.__agentesDesktop = Object.freeze({{ version: {version:?}, platform: {PLATFORM:?}, servers: true, files: true, connectorReturn: true, workspaces: true, appIcon: true, renderer: {renderer:?}, system: {system} }});",
             renderer = crate::graphics::renderer(),
             system = serde_json::to_string(&crate::graphics::system()).unwrap_or_else(|_| "null".into()),
         ))
@@ -270,10 +285,29 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
         })
         // A whole page loading again (⌘R, macOS ended it, a full navigation): the cover, never a blank window.
         .on_page_load(move |page, payload| match payload.event() {
+            // A page of a gate's sign-in: the page before it stays in sight under a small pill (cover.rs `gate_pill`).
+            PageLoadEvent::Started if crate::gate::on_login_page(payload.url()) => {
+                crate::cover::gate_pill(&on_load, true)
+            }
             PageLoadEvent::Started => crate::cover::show(&on_load, Duration::ZERO),
             // The page's own sizes follow the zoom (desktop.css), and the bar knows about full screen.
             PageLoadEvent::Finished => {
                 fit_page(&on_load);
+                let url = payload.url();
+                if crate::gate::on_login_page(url) {
+                    // A gate's sign-in never says it painted (`page_ready`): it shows as soon as it loaded.
+                    crate::cover::login_page_shown(&on_load);
+                    return;
+                }
+                if self::site(&on_load).is_some_and(|s| same_site(url, &s)) {
+                    if let Some(js) = crate::gate::back_on_site(&on_load).as_ref().and_then(go_in_page) {
+                        let _ = page.eval(js);
+                    }
+                    // Back from a gate's sign-in, the runners get the new session (reading cookies waits for the
+                    // web view: a thread of its own).
+                    let app = on_load.clone();
+                    std::thread::spawn(move || crate::gate::hand_to_runners(&app, None));
+                }
                 crate::cover::site_loaded(&on_load, &page);
             }
         })

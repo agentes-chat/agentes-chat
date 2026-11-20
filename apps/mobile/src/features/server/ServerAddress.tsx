@@ -1,9 +1,10 @@
-import { checkServer, normalizeServer, serverHost } from "@agenteschat/client/lib/server";
+import { normalizeServer, serverHost } from "@agenteschat/client/lib/server";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { API_URL } from "@/config";
 import { Quiet } from "@/features/auth/AuthFlow";
 import { connectToServer, problemText } from "@/features/server";
+import { checkServerOrGate } from "@/lib/gate";
 import { ALLOW_HTTP, serverUrl } from "@/lib/server";
 import { AuthField } from "@/ui/auth/AuthField";
 import { AuthLink } from "@/ui/auth/AuthLink";
@@ -52,8 +53,10 @@ export function ServerAddress({
     if (!server) return setError(t("mobile.auth.server.invalid"));
     setBusy(true);
     setError(null);
-    const check = await checkServer(server);
+    // Behind a gate (ADR 0195 §10): the app moves there, and the gate's sign-in shows over it.
+    const { check, gated } = await checkServerOrGate(server);
     if (check.ok) return switchTo(check.server);
+    if (gated) return switchTo(server);
     haptics.warning();
     const host = serverHost(check.server);
     setError(t(problemText(check.problem, check.server), { host }));
