@@ -16,6 +16,7 @@ export {
   type AgentAppearance,
   type AgentColor,
   type AgentEyes,
+  type AgentPhotoLook,
   normalizeAppearance,
 } from "@agenteschat/tokens/look";
 

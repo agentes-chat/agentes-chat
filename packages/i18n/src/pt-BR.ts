@@ -23092,4 +23092,22 @@ export const ptBR = {
       },
     },
   },
+  /** VPS Zen: an agent's own photo (AgentPhoto.tsx). */
+  agentPhoto: {
+    button: "Foto",
+    title: "Foto do agente",
+    help: "Arraste para enquadrar. Ela aparece no lugar do rosto desenhado, onde o agente aparecer.",
+    remove: "Remover foto",
+    saved: "Foto salva",
+    removed: "Foto removida",
+  },
+  /** VPS Zen: an agent's conversations under its row in the sidebar (AgentChats.tsx). */
+  agentChats: {
+    show: "Mostrar as conversas de {{name}}",
+    hide: "Esconder as conversas de {{name}}",
+    list: "Conversas de {{name}}",
+    none: "Nenhuma conversa nos últimos 14 dias",
+    dm: "Mensagem direta",
+    working: "Trabalhando aqui agora",
+  },
 } satisfies LocaleStrings;

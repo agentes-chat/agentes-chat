@@ -5,7 +5,7 @@ import { cx } from "../cx";
 import { initialsOf } from "../names";
 import { recipeOfUrl } from "../person/engine.js";
 import { canDrawPortraits, PersonPortrait } from "../person/PersonPortrait";
-import { type AgentAppearance, appearanceStyle } from "./AgentLook";
+import { type AgentPhotoLook, appearanceStyle } from "./AgentLook";
 import { type BadgePresence, PresenceBadge } from "./PresenceBadge";
 
 export type AvatarKind = "person" | "agent";
@@ -31,8 +31,8 @@ export interface AvatarProps extends HTMLAttributes<HTMLSpanElement> {
   running?: boolean;
   /** The living agent symbol's state (agents only). */
   state?: AgentState;
-  /** The agent's look: color, eyes and an accessory (agents only). */
-  appearance?: AgentAppearance;
+  /** The agent's look: color, eyes and an accessory, or its photo (agents only). */
+  appearance?: AgentPhotoLook;
   /**
    * The presence badge on the corner (ADR 0084): a person's (online, away, busy, hidden to themselves, offline) or
    * an agent's, from its work. Null or left out: none.
@@ -74,7 +74,7 @@ function AgentBody({
   reactionKey,
   framed,
 }: {
-  appearance: AgentAppearance | undefined;
+  appearance: AgentPhotoLook | undefined;
   state: AgentState;
   expression: Expression | undefined;
   name: string;
@@ -170,7 +170,10 @@ export function Avatar({
       style={agent ? { ...appearanceStyle(appearance), ...style } : style}
       {...rest}
     >
-      {agent ? (
+      {agent && appearance?.photo ? (
+        // VPS Zen: an agent's uploaded photo stands where its symbol would; the halo and badge still say its state.
+        <img className="ac-avatar__photo" src={appearance.photo} alt="" />
+      ) : agent ? (
         <AgentBody
           appearance={appearance}
           state={mood}

@@ -55121,5 +55121,41 @@
   },
   "live.sheet.fn.YEARFRAC": {
     "value": "The share of a year between two dates"
+  },
+  "agentPhoto.button": {
+    "value": "Photo"
+  },
+  "agentPhoto.title": {
+    "value": "Agent photo"
+  },
+  "agentPhoto.help": {
+    "value": "Drag to frame it. It shows instead of the drawn face, wherever the agent appears."
+  },
+  "agentPhoto.remove": {
+    "value": "Remove photo"
+  },
+  "agentPhoto.saved": {
+    "value": "Photo saved"
+  },
+  "agentPhoto.removed": {
+    "value": "Photo removed"
+  },
+  "agentChats.show": {
+    "value": "Show {{name}}'s conversations"
+  },
+  "agentChats.hide": {
+    "value": "Hide {{name}}'s conversations"
+  },
+  "agentChats.list": {
+    "value": "{{name}}'s conversations"
+  },
+  "agentChats.none": {
+    "value": "No conversations in the last 14 days"
+  },
+  "agentChats.dm": {
+    "value": "Direct message"
+  },
+  "agentChats.working": {
+    "value": "Working here now"
   }
 }

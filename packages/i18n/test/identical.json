@@ -1128,7 +1128,8 @@
       "live.slides.tools.image",
       "settings.kinds.image",
       "voiceRooms.room.kind",
-      "voiceRooms.room.openChat"
+      "voiceRooms.room.openChat",
+      "agentPhoto.button"
     ],
     "de": [
       "live.sheet.args.k",

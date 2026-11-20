@@ -155,6 +155,7 @@ import { SidebarVoiceMembers, useVoiceCall, useVoiceRooms, VoiceDock, VoiceIcon 
 import { EmailDialog, ProfileDialog } from "./AccountSettings";
 import { AddPasswordDialog } from "./AddPassword";
 import { AgentAvatar, PersonAvatar } from "./AgentAvatar";
+import { AgentChats, useAgentChatsOpen } from "./AgentChats";
 import {
   DeleteGroupDialog,
   type GroupDialogFor,
@@ -2019,90 +2020,106 @@ function AgentRow({
     ? `${[a.name, a.role].filter(Boolean).join(" · ")}\n${doingTitle}`
     : [a.name, a.role, now ?? word, line?.text].filter(Boolean).join(" · ");
   const roleTag = !locked && !out;
+  // VPS Zen: its conversations under its row (`AgentChats.tsx`), opened by the chevron beside its settings.
+  const [chatsOpen, toggleChats] = useAgentChatsOpen(a.id);
   return (
-    <div className="sidebar__row" data-agent-row={a.id} data-live={live || undefined} data-acts={edits ? 1 : undefined}>
-      <Link
-        {...rowMenu}
-        to="/org/$orgId/dm/agent/$agentId"
-        params={{ orgId: org.id, agentId: a.id }}
-        className="sidebar__item"
-        title={title}
-        onMouseEnter={onPrefetch}
-        onFocus={onPrefetch}
-        onClick={onOpen}
-        data-unread={unread > 0}
-        data-busy={busy}
-        data-presence={shown?.presence}
-        style={{ ...selectionSky(color), "--sel-glow-color": agentGradient(color)[1] } as CSSProperties}
-        {...drag}
+    <>
+      <div
+        className="sidebar__row"
+        data-agent-row={a.id}
+        data-live={live || undefined}
+        data-acts={edits ? 2 : 1}
+        data-chats-open={chatsOpen || undefined}
       >
-        {busy && <AgentTrail color={color} />}
-        {busy && <AgentGlow color={color} />}
-        <AgentAvatar
-          agentId={a.id}
-          name={a.name}
-          size="sm"
-          presence={shown?.presence ?? null}
-          presenceLabel={word ?? undefined}
-          asleep={isOutOfOffice(shown?.line)}
-          {...(waitingFor ? { state: "idle" as const, expression: "closed" as const } : {})}
-        />
-        <span className="sidebar__item-text">
-          <span className={doing || under ? "sidebar__item-label ac-captop" : "sidebar__item-label"}>
-            {a.name}
-            {working && (
-              <PixelSpinner
-                size={14}
-                color={color}
-                label={state === "idle" && doingTitle ? doingTitle : now}
-                className="sidebar__item-spin"
-              />
+        <Link
+          {...rowMenu}
+          to="/org/$orgId/dm/agent/$agentId"
+          params={{ orgId: org.id, agentId: a.id }}
+          className="sidebar__item"
+          title={title}
+          onMouseEnter={onPrefetch}
+          onFocus={onPrefetch}
+          onClick={onOpen}
+          data-unread={unread > 0}
+          data-busy={busy}
+          data-presence={shown?.presence}
+          style={{ ...selectionSky(color), "--sel-glow-color": agentGradient(color)[1] } as CSSProperties}
+          {...drag}
+        >
+          {busy && <AgentTrail color={color} />}
+          {busy && <AgentGlow color={color} />}
+          <AgentAvatar
+            agentId={a.id}
+            name={a.name}
+            size="sm"
+            presence={shown?.presence ?? null}
+            presenceLabel={word ?? undefined}
+            asleep={isOutOfOffice(shown?.line)}
+            {...(waitingFor ? { state: "idle" as const, expression: "closed" as const } : {})}
+          />
+          <span className="sidebar__item-text">
+            <span className={doing || under ? "sidebar__item-label ac-captop" : "sidebar__item-label"}>
+              {a.name}
+              {working && (
+                <PixelSpinner
+                  size={14}
+                  color={color}
+                  label={state === "idle" && doingTitle ? doingTitle : now}
+                  className="sidebar__item-spin"
+                />
+              )}
+            </span>
+            {doing ? (
+              <AgentWorkLine line={doing} className="sidebar__item-role" />
+            ) : (
+              under && <span className={cx("sidebar__item-role", roleTag && "ac-tag")}>{under}</span>
             )}
           </span>
-          {doing ? (
-            <AgentWorkLine line={doing} className="sidebar__item-role" />
-          ) : (
-            under && <span className={cx("sidebar__item-role", roleTag && "ac-tag")}>{under}</span>
-          )}
-        </span>
-        {unread > 0 ? (
-          <UnreadCount count={unread} />
-        ) : waitingFor && !doing ? (
-          <span className="sidebar__item-meta sidebar__waiting" title={t("outage.sidebar.tip", { name: waitingFor })}>
-            <Icon name="waiting" size={14} />
-            {t("outage.sidebar.waiting")}
-          </span>
-        ) : pinned ? (
-          <PinnedMark />
-        ) : (
-          chip && (
-            <span className="sidebar__item-meta sidebar__item-meta--audience">
-              <span
-                className="sidebar__lock"
-                role="img"
-                aria-label={chip}
-                title={audienceNotice(t, a, (id) => dir.memberById.get(id)?.name, dir.roleName) || chip}
-              >
-                <Icon name="lock" size={14} />
-              </span>
+          {unread > 0 ? (
+            <UnreadCount count={unread} />
+          ) : waitingFor && !doing ? (
+            <span className="sidebar__item-meta sidebar__waiting" title={t("outage.sidebar.tip", { name: waitingFor })}>
+              <Icon name="waiting" size={14} />
+              {t("outage.sidebar.waiting")}
             </span>
-          )
-        )}
-      </Link>
-      {edits && (
+          ) : pinned ? (
+            <PinnedMark />
+          ) : (
+            chip && (
+              <span className="sidebar__item-meta sidebar__item-meta--audience">
+                <span
+                  className="sidebar__lock"
+                  role="img"
+                  aria-label={chip}
+                  title={audienceNotice(t, a, (id) => dir.memberById.get(id)?.name, dir.roleName) || chip}
+                >
+                  <Icon name="lock" size={14} />
+                </span>
+              </span>
+            )
+          )}
+        </Link>
         <span className="sidebar__row-acts">
           <RowAction
-            icon="cog"
-            label={t("shell.sidebarMenu.agentSettings", { name: a.name })}
-            onClick={() => {
-              if (requestAgentPanel(a.id, "settings")) return;
-              onOpen();
-              void navigate({ to: "/org/$orgId/dm/agent/$agentId", params: { orgId: org.id, agentId: a.id } });
-            }}
+            icon={chatsOpen ? "chevronUp" : "chevronDown"}
+            label={t(chatsOpen ? "agentChats.hide" : "agentChats.show", { name: a.name })}
+            onClick={toggleChats}
           />
+          {edits && (
+            <RowAction
+              icon="cog"
+              label={t("shell.sidebarMenu.agentSettings", { name: a.name })}
+              onClick={() => {
+                if (requestAgentPanel(a.id, "settings")) return;
+                onOpen();
+                void navigate({ to: "/org/$orgId/dm/agent/$agentId", params: { orgId: org.id, agentId: a.id } });
+              }}
+            />
+          )}
         </span>
-      )}
-    </div>
+      </div>
+      {chatsOpen && <AgentChats orgId={org.id} agentId={a.id} agentName={a.name} />}
+    </>
   );
 }
 

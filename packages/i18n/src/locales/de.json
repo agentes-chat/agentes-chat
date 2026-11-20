@@ -22481,5 +22481,21 @@
         "YEARFRAC": "Der Anteil eines Jahres zwischen zwei Daten"
       }
     }
+  },
+  "agentPhoto": {
+    "button": "Foto",
+    "title": "Foto des Agenten",
+    "help": "Zum Zuschneiden ziehen. Es erscheint statt des gezeichneten Gesichts, überall wo der Agent auftaucht.",
+    "remove": "Foto entfernen",
+    "saved": "Foto gespeichert",
+    "removed": "Foto entfernt"
+  },
+  "agentChats": {
+    "show": "Unterhaltungen von {{name}} zeigen",
+    "hide": "Unterhaltungen von {{name}} ausblenden",
+    "list": "Unterhaltungen von {{name}}",
+    "none": "Keine Unterhaltungen in den letzten 14 Tagen",
+    "dm": "Direktnachricht",
+    "working": "Arbeitet gerade hier"
   }
 }

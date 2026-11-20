@@ -23256,5 +23256,21 @@
         "YEARFRAC": "La frazione di anno tra due date"
       }
     }
+  },
+  "agentPhoto": {
+    "button": "Foto",
+    "title": "Foto dell’agente",
+    "help": "Trascina per inquadrarla. Appare al posto del volto disegnato, ovunque compaia l’agente.",
+    "remove": "Rimuovi foto",
+    "saved": "Foto salvata",
+    "removed": "Foto rimossa"
+  },
+  "agentChats": {
+    "show": "Mostra le conversazioni di {{name}}",
+    "hide": "Nascondi le conversazioni di {{name}}",
+    "list": "Conversazioni di {{name}}",
+    "none": "Nessuna conversazione negli ultimi 14 giorni",
+    "dm": "Messaggio diretto",
+    "working": "Sta lavorando qui ora"
   }
 }

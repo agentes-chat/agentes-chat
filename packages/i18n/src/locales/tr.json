@@ -22409,5 +22409,21 @@
         "YEARFRAC": "İki tarih arasındaki sürenin yıl içindeki payı"
       }
     }
+  },
+  "agentPhoto": {
+    "button": "Fotoğraf",
+    "title": "Ajan fotoğrafı",
+    "help": "Çerçevelemek için sürükleyin. Ajanın göründüğü her yerde çizilmiş yüzün yerine görünür.",
+    "remove": "Fotoğrafı kaldır",
+    "saved": "Fotoğraf kaydedildi",
+    "removed": "Fotoğraf kaldırıldı"
+  },
+  "agentChats": {
+    "show": "{{name}} konuşmalarını göster",
+    "hide": "{{name}} konuşmalarını gizle",
+    "list": "{{name}} konuşmaları",
+    "none": "Son 14 günde konuşma yok",
+    "dm": "Doğrudan mesaj",
+    "working": "Şu anda burada çalışıyor"
   }
 }

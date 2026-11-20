@@ -3,7 +3,7 @@ import { agentStateIn } from "@agenteschat/client";
 import { type AgentFace, agentFaceWord, isOutOfOffice } from "@agenteschat/client/lib/presence";
 import { splitAtNames } from "@agenteschat/client/lib/text";
 import {
-  type AgentAppearance,
+  type AgentPhotoLook,
   type AgentState,
   Avatar,
   type AvatarProps,
@@ -26,7 +26,7 @@ type AgentAvatarProps = Omit<AvatarProps, "kind" | "running" | "state" | "appear
   /** An agent object at hand (an onboarding preset, the customizer's draft). */
   agent?: { id?: string; appearance?: unknown } | null;
   /** Overrides the look (the customizer's preview and choices). */
-  appearance?: AgentAppearance;
+  appearance?: AgentPhotoLook;
   channelId?: string;
   state?: AgentState;
   /** Shows the "running" halo (a preview without a live run). */
@@ -71,7 +71,7 @@ export function AgentWho({
 }: {
   agentId?: string;
   name: string;
-  appearance?: AgentAppearance;
+  appearance?: AgentPhotoLook;
 }) {
   return (
     <span className="ac-who" ref={markLead}>

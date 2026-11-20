@@ -29,7 +29,7 @@ import {
   Select,
   SettingNote,
 } from "@agenteschat/ui";
-import type { CSSProperties, ReactNode } from "react";
+import { type CSSProperties, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AudienceChoice, EditorsChoice } from "@/components/AgentAudience";
 import { AgentAvatar } from "@/components/AgentAvatar";
@@ -44,6 +44,7 @@ import {
   RoleTag,
   usd,
 } from "@/components/AgentFields";
+import { AgentPhotoDialog } from "@/components/AgentPhoto";
 import { AgentSecretsList } from "@/components/AgentSecrets";
 import { LoadingLine } from "@/components/Loading";
 import { useOrg } from "@/components/org-context";
@@ -58,6 +59,7 @@ import {
   FIELD_PLACE,
   ownsOrManages,
 } from "@/lib/agent-edit";
+import { lookOf } from "@/lib/look";
 import { BLANK_LOOK, cleanHandle } from "@/lib/new-agent";
 import { BrakesCard } from "./BrakesCard";
 import { CardHead, useAgentEdit, WasLine } from "./context";
@@ -249,6 +251,7 @@ export function SettingsTab({
   // Where I may put it or take it out (the channels' ⓘ says so when some aren't).
   const placeable = visibleChannels.filter((c) => addsAgentsTo(c, me.user.id, org));
   const look = draft.look;
+  const [photoOpen, setPhotoOpen] = useState(false);
   return (
     <>
       <ReadOnlyNote />
@@ -291,15 +294,21 @@ export function SettingsTab({
               }}
               action={
                 can("look") ? (
-                  <Button
-                    size="sm"
-                    icon="shuffle"
-                    onClick={() =>
-                      set("look", { ...BLANK_LOOK, ...randomAppearance(look) } as Required<AgentAppearance>)
-                    }
-                  >
-                    {t("newAgent.shuffle")}
-                  </Button>
+                  <>
+                    {/* VPS Zen: its own photo (AgentPhoto.tsx), saved at once, apart from the save bar. */}
+                    <Button size="sm" icon="image" onClick={() => setPhotoOpen(true)}>
+                      {t("agentPhoto.button")}
+                    </Button>
+                    <Button
+                      size="sm"
+                      icon="shuffle"
+                      onClick={() =>
+                        set("look", { ...BLANK_LOOK, ...randomAppearance(look) } as Required<AgentAppearance>)
+                      }
+                    >
+                      {t("newAgent.shuffle")}
+                    </Button>
+                  </>
                 ) : undefined
               }
             >
@@ -308,7 +317,13 @@ export function SettingsTab({
                   className="agp-id__look"
                   style={{ "--a": agentGradient(look.color)[0], "--b": agentGradient(look.color)[1] } as CSSProperties}
                 >
-                  <AgentAvatar size="lg" framed={false} name={draft.name || agent.name} appearance={look} />
+                  <AgentAvatar
+                    size="lg"
+                    framed={false}
+                    name={draft.name || agent.name}
+                    appearance={{ ...look, photo: lookOf(agent)?.photo }}
+                  />
+                  <AgentPhotoDialog open={photoOpen} onClose={() => setPhotoOpen(false)} agent={agent} />
                 </span>
                 <div className="agp-id__fields">
                   <IdentityCard />
