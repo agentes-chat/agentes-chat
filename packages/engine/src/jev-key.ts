@@ -36,6 +36,27 @@ export const openRouterJevModel = (model: string) =>
 const OPENROUTER_URL = "https://openrouter.ai";
 /** OpenRouter's attribution: the product, never a self-hosted server's own address (as for its models, ADR 0087 §5). */
 const OPENROUTER_HEADERS = { "HTTP-Referer": "https://agentes.chat", "X-OpenRouter-Title": "agentes.chat" };
+/** TypeSafe's own address: where Jev is called unless the key was saved with an endpoint of its own. */
+const TYPESAFE_URL = "https://api.typesafe.ai";
+
+/**
+ * The address a key is called at, as it is called: no trailing slash, and no `/v1` (the call appends
+ * `/v1/systemone`, as a gateway that speaks TypeSafe's protocol serves it). Null or empty: TypeSafe's own address.
+ * A gateway that proxies TypeSafe (`new-api` and its kind) names Jev's models in its own list and keeps this route.
+ */
+export function jevBaseURLOf(raw: string | null | undefined): string | null {
+  const text = raw?.trim().replace(/\/+$/, "").replace(/\/v1$/, "");
+  if (!text) return null;
+  let url: URL;
+  try {
+    url = new URL(text);
+  } catch {
+    throw new ValidationError("That endpoint isn't a URL.", "jev_endpoint_invalid");
+  }
+  if (url.protocol !== "https:" && url.protocol !== "http:")
+    throw new ValidationError("That endpoint isn't an http(s) address.", "jev_endpoint_invalid");
+  return text;
+}
 
 export interface JevKeyView {
   source: "env" | "settings" | null;
@@ -43,6 +64,11 @@ export interface JevKeyView {
   via: JevVia | null;
   /** The key's last 4 characters. The key itself never leaves the server. */
   hint: string | null;
+  /**
+   * Where Jev is called: a gateway that speaks TypeSafe's protocol. Null: TypeSafe's own address. Shown so its owner
+   * knows which gateway answers, since the key on it is theirs too.
+   */
+  endpoint: string | null;
   state: JevShownState;
 }
 
@@ -56,16 +82,27 @@ export interface JevKey {
   /** How a call went. `key`: the one it was made with, so an answer for a key replaced since is dropped. */
   report(state: JevState, retryAfterMs?: number, key?: string): void;
   view(): Promise<JevKeyView>;
+  /**
+   * The address a live call is made at: the saved gateway, else this server's, else null (TypeSafe's own). `callJev`
+   * reads it, so a call made by the router or the judge reaches the gateway without every caller knowing about it.
+   */
+  baseURL(): string | null;
   /** Checked with TypeSafe or OpenRouter first: a refused key is never stored (`jev_key_invalid`). */
   /** `from`: a workspace's own key it was copied from (§9), named in the audit rows. */
-  save(apiKey: string, userId: string, from?: { orgId: string; credentialId: string }): Promise<JevKeyView>;
+  /** `baseURL`: the gateway that speaks TypeSafe's protocol, when it isn't TypeSafe itself. */
+  save(
+    apiKey: string,
+    userId: string,
+    from?: { orgId: string; credentialId: string },
+    baseURL?: string | null,
+  ): Promise<JevKeyView>;
   remove(userId: string): Promise<JevKeyView>;
   /** Asks again. An answer that says nothing about the key leaves its state as it was. */
   check(): Promise<JevKeyView>;
 }
 
 /** A fixed key (evals, tests), or the installation's. */
-export type JevKeySource = string | Pick<JevKey, "key" | "report" | "usable">;
+export type JevKeySource = string | (Pick<JevKey, "key" | "report" | "usable"> & Partial<Pick<JevKey, "baseURL">>);
 
 /** No Jev key to call with now: the next step decides. */
 export class JevOffError extends Error {
@@ -140,7 +177,7 @@ async function systemOne(apiKey: string, call: JevCall) {
   const openRouter = via === "openrouter";
   const url = openRouter
     ? `${OPENROUTER_URL}/api/alpha/decisions`
-    : `${(call.baseURL ?? "https://api.typesafe.ai").replace(/\/$/, "")}/v1/systemone`;
+    : `${(call.baseURL ?? TYPESAFE_URL).replace(/\/$/, "")}/v1/systemone`;
   const auth = { authorization: `Bearer ${apiKey}`, "content-type": "application/json" };
   let res: Response;
   try {
@@ -173,7 +210,9 @@ export async function callJev<T>(source: JevKeySource, call: JevCall): Promise<T
   const jev = typeof source === "string" ? { key: async () => source, report: () => {} } : source;
   const apiKey = await jev.key();
   if (!apiKey) throw new JevOffError();
-  const r = await systemOne(apiKey, call);
+  // The gateway the key was saved with, unless the caller named one: a call reaches it like the check does.
+  const baseURL = call.baseURL ?? (typeof source === "string" ? undefined : (source.baseURL?.() ?? undefined));
+  const r = await systemOne(apiKey, { ...call, baseURL });
   if (r.state) jev.report(r.state, r.retryAfterMs, apiKey);
   if (r.state !== "ok" || r.body === null) {
     const who = jevViaOf(apiKey) === "openrouter" ? "OpenRouter" : "TypeSafe";
@@ -244,9 +283,10 @@ export function createJevKey(deps: {
   const env = deps.envKey?.trim() || null;
   // An env key that can't be sent reads as not accepted, and nothing calls with it.
   const envKey = env && KEY_SHAPE.test(env) ? env : null;
-  const tsa = { fetch: deps.fetch, baseURL: deps.baseURL };
+  /** The address a call is made at: the key's own endpoint, else this server's, else TypeSafe's. */
+  const baseURLOf = (endpoint?: string | null) => endpoint ?? saved?.endpoint ?? deps.baseURL ?? undefined;
   /** The saved row as last read. `key` is null when it doesn't open (another `AGENTES_SECRET`). */
-  let saved: { key: string | null; hint: string; at: number } | null = null;
+  let saved: { key: string | null; hint: string; endpoint: string | null; at: number } | null = null;
   let readAt = Number.NEGATIVE_INFINITY;
   let reading: Promise<void> | null = null;
   let state: JevState = env ? (envKey ? "unchecked" : "invalid") : "off";
@@ -271,7 +311,7 @@ export function createJevKey(deps: {
     const at = row.updatedAt.getTime();
     if (saved?.at === at) return;
     const key = await openSecret(deps.keyWrappers, row, AAD).catch(() => null);
-    saved = { key, hint: row.keyHint, at };
+    saved = { key, hint: row.keyHint, endpoint: row.endpoint ?? null, at };
     restart(key ? "unchecked" : "invalid");
   }
   const refresh = () => {
@@ -289,6 +329,7 @@ export function createJevKey(deps: {
     source: env ? "env" : saved ? "settings" : null,
     via: env ? jevViaOf(env) : saved?.key ? jevViaOf(saved.key) : null,
     hint: env ? env.slice(-4) : (saved?.hint ?? null),
+    endpoint: baseURLOf() ?? null,
     state: !env && !saved ? "off" : state === "invalid" || state === "no_credit" ? state : "ok",
   });
 
@@ -311,20 +352,24 @@ export function createJevKey(deps: {
       return now() < skipUntil ? null : current();
     },
     usable: () => current() !== null && now() >= skipUntil,
+    baseURL: () => baseURLOf() ?? null,
     report,
     async view() {
       await refresh();
       return snapshot();
     },
-    async save(apiKey, userId, from) {
+    async save(apiKey, userId, from, baseURL) {
       if (env) throw envError();
       const key = apiKey.trim();
       if (!KEY_SHAPE.test(key)) throw invalidError(key);
-      const checked = await checkJevKey(key, tsa);
+      // No address sent: the key is replaced at the gateway it was saved with. Null or empty: back to TypeSafe's.
+      const endpoint = baseURL === undefined ? (saved?.endpoint ?? null) : jevBaseURLOf(baseURL);
+      const checked = await checkJevKey(key, { fetch: deps.fetch, baseURL: endpoint ?? deps.baseURL });
       if (checked === "invalid") throw invalidError(key);
       const values = {
         ...(await sealSecret(deps.keyWrapper, key, AAD)),
         keyHint: key.slice(-4),
+        endpoint,
         updatedBy: userId,
         updatedAt: new Date(),
       };
@@ -336,10 +381,11 @@ export function createJevKey(deps: {
         await auditEveryOrg(tx, NAME, { type: "person", id: userId }, "jev.key_saved", {
           hint: values.keyHint,
           via: jevViaOf(key),
+          ...(endpoint ? { endpoint } : {}),
           ...(from ? { fromOrgId: from.orgId, fromCredentialId: from.credentialId } : {}),
         });
       });
-      saved = { key, hint: values.keyHint, at: values.updatedAt.getTime() };
+      saved = { key, hint: values.keyHint, endpoint, at: values.updatedAt.getTime() };
       readAt = now();
       restart("unchecked");
       if (checked === "ok" || checked === "no_credit") report(checked);
@@ -357,7 +403,7 @@ export function createJevKey(deps: {
       await refresh();
       const key = current();
       if (key) {
-        const checked = await checkJevKey(key, tsa);
+        const checked = await checkJevKey(key, { fetch: deps.fetch, baseURL: baseURLOf() });
         if (checked === "ok" || checked === "invalid" || checked === "no_credit") report(checked, undefined, key);
       }
       return snapshot();

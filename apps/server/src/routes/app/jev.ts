@@ -27,6 +27,10 @@ const Jev = z
         "Who the key is from: Jev is called and paid through TypeSafe, or through OpenRouter with an OpenRouter key. Null: no key, or a saved one this server can't open.",
     }),
     hint: z.string().nullable().openapi({ description: "The key's last 4 characters. The key is never returned." }),
+    endpoint: z.string().nullable().openapi({
+      description:
+        "Where Jev is called: a gateway that speaks TypeSafe's protocol (ADR 0073). Null: TypeSafe's own address.",
+    }),
     state: z.enum(["off", "ok", "invalid", "no_credit"]).openapi({
       description:
         "What its owner can fix: TypeSafe or OpenRouter refused the key, or its account is out of credit. Else `ok`.",
@@ -42,6 +46,10 @@ const ApiKey = z.union([
     apiKey: z.string().trim().min(8).max(512).openapi({
       description:
         "A TypeSafe key, or an OpenRouter key (`sk-or-…`), checked with a tiny Jev call before it is stored. Printable ASCII with no spaces, else 422 `jev_key_invalid` before any check, like a key that is refused.",
+    }),
+    baseURL: z.string().trim().max(2048).nullish().openapi({
+      description:
+        "A gateway that speaks TypeSafe's protocol (`https://gateway.example.com`): the key was made there, and its models answer `POST {baseURL}/v1/systemone` (ADR 0073). Null or missing: TypeSafe's own address. 422 `jev_endpoint_invalid` for anything that isn't an http(s) address.",
     }),
   }),
   z.object({
@@ -99,13 +107,15 @@ export function jevRoutes(deps: AppDeps) {
       path: "/jev",
       tags,
       summary: "Add or replace the Jev key",
-      description: `${notFound} A TypeSafe key, or an OpenRouter key (pasted, or the workspace's own) that calls the same Jev through OpenRouter. Checked first: a refused key is not stored (422 \`jev_key_invalid\`). 409 \`jev_key_env\` while \`TYPESAFE_API_KEY\` is set. Recorded in every workspace's audit log, with the key's last 4 characters.`,
+      description: `${notFound} A TypeSafe key, or an OpenRouter key (pasted, or the workspace's own) that calls the same Jev through OpenRouter. \`baseURL\` points Jev at a gateway that speaks TypeSafe's protocol instead of TypeSafe itself (\`POST {baseURL}/v1/systemone\`). Checked first: a refused key is not stored (422 \`jev_key_invalid\`). 409 \`jev_key_env\` while \`TYPESAFE_API_KEY\` is set. Recorded in every workspace's audit log, with the key's last 4 characters and the gateway, when there is one.`,
       security,
       request: { body: body(ApiKey) },
       responses: {
         200: json(Jev),
         ...errors,
-        422: errorResponse("TypeSafe or OpenRouter refused the key, or it can't be one (`jev_key_invalid`)"),
+        422: errorResponse(
+          "TypeSafe or OpenRouter refused the key, or it can't be one (`jev_key_invalid`); or the gateway's address isn't an http(s) URL (`jev_endpoint_invalid`)",
+        ),
         ...tooMany,
       },
     }),
@@ -114,6 +124,8 @@ export function jevRoutes(deps: AppDeps) {
       const jev = await ownerOnly(user.id);
       if (!(await allowed(user.id))) return apiError(c, 429, "rate_limited", "Too many tries. Wait a minute.");
       const input = c.req.valid("json");
+      // A key copied from the workspace's own OpenRouter keys calls OpenRouter, with no gateway: that is cleared.
+      const baseURL = "apiKey" in input ? input.baseURL : null;
       let apiKey: string;
       let from: { orgId: string; credentialId: string } | undefined;
       if ("apiKey" in input) apiKey = input.apiKey;
@@ -127,9 +139,12 @@ export function jevRoutes(deps: AppDeps) {
         from = { orgId: input.orgId, credentialId: input.credentialId };
       }
       try {
-        return c.json(await withMonth(await jev.save(apiKey, user.id, from)), 200);
+        return c.json(await withMonth(await jev.save(apiKey, user.id, from, baseURL)), 200);
       } catch (error) {
-        if (error instanceof ValidationError && error.code === "jev_key_invalid") {
+        if (
+          error instanceof ValidationError &&
+          (error.code === "jev_key_invalid" || error.code === "jev_endpoint_invalid")
+        ) {
           return apiError(c, 422, error.code, error.message);
         }
         throw error;

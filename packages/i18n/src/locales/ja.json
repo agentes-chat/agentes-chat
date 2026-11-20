@@ -10165,7 +10165,9 @@
       "typesafeText": "TypeSafeのアカウントで、前払いのクレジットを使います。",
       "openrouter": "OpenRouter",
       "openrouterText": "OpenRouterのキーで、同じ料金です。",
-      "connected": "キーは接続済み"
+      "connected": "キーは接続済み",
+      "gateway": "自分のゲートウェイ",
+      "gatewayText": "TypeSafe のプロトコルを話すゲートウェイ。そこでもらったキーを使います。"
     },
     "openRouter": {
       "create": "OpenRouterでキーを作成",
@@ -10188,6 +10190,19 @@
     "remove": {
       "title": "Jevのキーを削除しますか？",
       "text": "キーがなくてもエージェントは動き続けます。"
+    },
+    "gateway": {
+      "keyName": "ゲートウェイのキー",
+      "address": "ゲートウェイのアドレス",
+      "addressHint": "応答する場所。末尾に /v1 は付けません。下のキーでそこの POST /v1/systemone を呼びます。",
+      "key": "もらったキーを貼り付け",
+      "placeholder": "ゲートウェイのキー",
+      "invalid": "そのアドレスは http(s) のアドレスではありません。ゲートウェイが公開しているものを貼ってください。",
+      "keyInvalid": "ゲートウェイがこのキーを受け付けませんでした。そちらでコピーし直してください。",
+      "line": "{{address}} 経由",
+      "line_invalid": "ゲートウェイがこのキーを受け付けませんでした。そちらで新しく作ってください。",
+      "line_no_credit": "ゲートウェイにクレジットを追加してください。Jev は自動で再開します。",
+      "line_envInvalid": "ゲートウェイがこのキーを受け付けませんでした。このサーバーの設定（`TYPESAFE_API_KEY`）で変更してください。"
     }
   },
   "aiAccounts": {

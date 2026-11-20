@@ -10642,7 +10642,9 @@
       "typesafeText": "Een account bij TypeSafe zelf, met prepaid tegoed.",
       "openrouter": "OpenRouter",
       "openrouterText": "Met een OpenRouter-sleutel, voor dezelfde prijs.",
-      "connected": "Sleutel al gekoppeld"
+      "connected": "Sleutel al gekoppeld",
+      "gateway": "Je eigen gateway",
+      "gatewayText": "Een gateway die het protocol van TypeSafe spreekt, met de sleutel die hij je gaf."
     },
     "openRouter": {
       "create": "Maak een sleutel aan bij OpenRouter",
@@ -10665,6 +10667,19 @@
     "remove": {
       "title": "De Jev-sleutel verwijderen?",
       "text": "Agents blijven ook zonder werken."
+    },
+    "gateway": {
+      "keyName": "Gatewaysleutel",
+      "address": "Het adres van je gateway",
+      "addressHint": "Waar hij antwoordt, zonder /v1 erachter: Jev roept daar POST /v1/systemone aan met de sleutel hieronder.",
+      "key": "Plak de sleutel die hij je gaf",
+      "placeholder": "Je gatewaysleutel",
+      "invalid": "Dat adres is geen http(s)-adres. Plak het adres dat je gateway publiceert.",
+      "keyInvalid": "Je gateway accepteerde deze sleutel niet. Kopieer hem daar opnieuw.",
+      "line": "Via {{address}}",
+      "line_invalid": "Je gateway accepteerde deze sleutel niet. Maak daar een nieuwe.",
+      "line_no_credit": "Zet tegoed op je gateway. Jev gaat vanzelf weer verder.",
+      "line_envInvalid": "Je gateway accepteerde deze sleutel niet. Wijzig hem in de instellingen van deze server (`TYPESAFE_API_KEY`)."
     }
   },
   "aiAccounts": {

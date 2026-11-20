@@ -2129,6 +2129,13 @@
       "when": 1795061928914,
       "tag": "0308_machine_disconnects",
       "breakpoints": true
+    },
+    {
+      "idx": 306,
+      "version": "7",
+      "when": 1795116065231,
+      "tag": "0309_jev_endpoint",
+      "breakpoints": true
     }
   ]
 }

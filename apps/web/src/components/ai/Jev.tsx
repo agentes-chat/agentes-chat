@@ -8,6 +8,7 @@ import {
   useRemoveJevKey,
   useSaveJevKey,
 } from "@agenteschat/client";
+import { endpointAddressLooksValid } from "@agenteschat/client/lib/endpoints";
 import { errorCode, errorText } from "@agenteschat/client/lib/errors";
 import { formatDecimal, formatUsd } from "@agenteschat/client/lib/format";
 import { can } from "@agenteschat/client/lib/permissions";
@@ -51,9 +52,16 @@ const TYPESAFE_KEYS = `${TYPESAFE_CONSOLE}/keys`;
 /** OpenRouter's pages for Jev through it: where its keys are made, and where credit is added. */
 const OPENROUTER_KEYS = "https://openrouter.ai/keys";
 const OPENROUTER_CREDITS = "https://openrouter.ai/settings/credits";
+/** The shape of an address, in the field where a gateway's is typed: no one's gateway in particular. */
+const GATEWAY_EXAMPLE = "https://gateway.example.com";
 
 /** Where Jev is called and paid: TypeSafe itself, or OpenRouter with an OpenRouter key. */
 type JevVia = NonNullable<JevKey["via"]>;
+/**
+ * The rows under "Set up Jev": those two, and a gateway of the viewer's that speaks TypeSafe's protocol (ADR 0073) —
+ * the same protocol, another address, so the server still records it as TypeSafe's.
+ */
+type JevChoice = JevVia | "gateway";
 /** What Jev costs (US$): per million tokens it reads, and about one pick of who answers. */
 const JEV_PRICE = 0.042;
 const JEV_CALL = 0.0001;
@@ -217,6 +225,97 @@ export function JevSteps({
 }
 
 /**
+ * The steps to a gateway's key: where it answers (Jev calls `POST {address}/v1/systemone`, ADR 0073) and the key that
+ * gateway gave. Jev is one model there (`jev-latest`), so nothing else is asked.
+ */
+function GatewaySteps({
+  address,
+  onAddressChange,
+  value,
+  onChange,
+  error,
+  onSave,
+  saving,
+  onCancel,
+  focus,
+}: {
+  address: string;
+  onAddressChange: (value: string) => void;
+  value: string;
+  onChange: (value: string) => void;
+  /** Under the key's field, in place of where the key is kept: why it wasn't saved. */
+  error?: string | null;
+  onSave: () => void;
+  saving?: boolean;
+  onCancel: () => void;
+  /** Whether the address takes the focus when the steps appear (Settings). */
+  focus?: boolean;
+}) {
+  const { t } = useTranslation();
+  const id = useId();
+  const addressField = `${id}-address`;
+  const keyField = `${id}-key`;
+  const below = `${id}-below`;
+  const key = value.trim();
+  const base = address.trim();
+  const ready = key.length >= JEV_KEY_MIN && endpointAddressLooksValid(base);
+  return (
+    <div className="agp-addacct jev-steps">
+      <Step n={1}>
+        <StepTitle title={t("jev.gateway.address")} hint={t("jev.gateway.addressHint")} htmlFor={addressField} />
+        <span className="agp-addacct__paste">
+          <Locked when={Boolean(saving)}>
+            <Input
+              id={addressField}
+              value={address}
+              inputMode="url"
+              autoComplete="off"
+              spellCheck={false}
+              placeholder={GATEWAY_EXAMPLE}
+              autoFocus={focus}
+              invalid={Boolean(base) && !endpointAddressLooksValid(base)}
+              onChange={(e) => onAddressChange(e.target.value)}
+            />
+          </Locked>
+        </span>
+      </Step>
+      <Step n={2}>
+        <StepTitle title={t("jev.gateway.key")} htmlFor={keyField} />
+        <span className="agp-addacct__paste">
+          <Locked when={Boolean(saving)}>
+            <Input
+              id={keyField}
+              type="password"
+              value={value}
+              autoComplete="off"
+              spellCheck={false}
+              placeholder={t("jev.gateway.placeholder")}
+              invalid={Boolean(error)}
+              aria-describedby={below}
+              onChange={(e) => onChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter") return;
+                e.preventDefault();
+                if (ready && !saving) onSave();
+              }}
+            />
+          </Locked>
+          <Button variant="primary" disabled={!ready} loading={saving} onClick={onSave}>
+            {t("settings.saveKey")}
+          </Button>
+          <Button variant="ghost" onClick={onCancel}>
+            {t("common.cancel")}
+          </Button>
+        </span>
+        <p id={below} className={error ? "jev-steps__below ac-field__error" : "jev-steps__below ac-field__example"}>
+          {error ?? t("jev.steps.sealed")}
+        </p>
+      </Step>
+    </div>
+  );
+}
+
+/**
  * Settings › AI accounts, after Provider keys: who picks the agents for a message nobody mentioned, for admins, and
  * under it Jev's key for the installation's owner on a self-hosted server (the API answers null to everyone else).
  */
@@ -275,12 +374,16 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
     ? credentials.data?.find((c) => c.provider === "openrouter" && !c.revokedAt && !c.endpoint)
     : undefined;
   const [steps, setSteps] = useState<null | "set" | "replace">(null);
-  const [via, setVia] = useState<JevVia>("typesafe");
+  const [via, setVia] = useState<JevChoice>("typesafe");
   // With the workspace's OpenRouter key on offer: another one pasted instead.
   const [paste, setPaste] = useState(false);
   // What opened last takes the focus (its field, or Turn on Jev); moving between the rows with the arrows keeps it there.
   const [focusIn, setFocusIn] = useState(false);
-  const [draft, setDraft] = useState("");
+  // Each way to a key keeps what was typed in it: a key pasted for a gateway is not OpenRouter's.
+  const [drafts, setDrafts] = useState<Record<JevChoice, string>>({ typesafe: "", openrouter: "", gateway: "" });
+  const draft = drafts[via];
+  // The gateway's address while it is set up, kept from the saved one when the key is replaced.
+  const [address, setAddress] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [removing, setRemoving] = useState(false);
   const box = useRef<HTMLElement>(null);
@@ -304,11 +407,22 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
   const env = view.source === "env";
   const chip = CHIP[view.state];
   const openRouter = view.via === "openrouter";
+  // A key saved with a gateway: its own console is where credit and other keys live, not ours to link to.
+  const gateway = Boolean(view.endpoint);
   // The workspace's key is offered unless it is the one being replaced (one refused, say).
   const offered = steps === "replace" && workspaceKey?.keyHint === view.hint ? undefined : workspaceKey;
   const open = (kind: "set" | "replace") => {
-    // Replacing keeps where it is paid; a first key starts where a key is ready.
-    setVia(kind === "replace" ? (view.via ?? "typesafe") : workspaceKey ? "openrouter" : "typesafe");
+    // Replacing keeps where it is paid, a gateway's address with it; a first key starts where a key is ready.
+    setVia(
+      kind === "replace"
+        ? view.endpoint
+          ? "gateway"
+          : (view.via ?? "typesafe")
+        : workspaceKey
+          ? "openrouter"
+          : "typesafe",
+    );
+    setAddress(view.endpoint ?? "");
     setPaste(false);
     setError(null);
     setFocusIn(true);
@@ -316,31 +430,79 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
   };
   const close = () => {
     setSteps(null);
-    setDraft("");
+    setDrafts({ typesafe: "", openrouter: "", gateway: "" });
+    setAddress("");
     setError(null);
     setPaste(false);
     refocus.current = true;
   };
-  // A refused key in the words of whoever refused it: an OpenRouter key goes to OpenRouter, whichever row it was in.
-  const failed = (openRouterKey: boolean) => (e: unknown) =>
-    setError(errorCode(e) === "jev_key_invalid" && openRouterKey ? t("jev.openRouter.invalid") : errorText(t, e));
+  // A refused key or address in the words of whoever refused it: the row it was saved in names the place.
+  const failed = (choice: JevChoice) => (e: unknown) => {
+    const code = errorCode(e);
+    setError(
+      code === "jev_endpoint_invalid"
+        ? t("jev.gateway.invalid")
+        : code === "jev_key_invalid"
+          ? t(
+              choice === "gateway"
+                ? "jev.gateway.keyInvalid"
+                : choice === "openrouter"
+                  ? "jev.openRouter.invalid"
+                  : "jev.steps.invalid",
+            )
+          : errorText(t, e),
+    );
+  };
   const submit = () => {
     const key = draft.trim();
+    if (via === "gateway") {
+      const gateway = address.trim();
+      if (!endpointAddressLooksValid(gateway)) {
+        setError(t("jev.gateway.invalid"));
+        return;
+      }
+      save.mutate({ apiKey: key, baseURL: gateway }, { onSuccess: close, onError: failed("gateway") });
+      return;
+    }
     if (via === "openrouter" && !keyLooksValid("openrouter", key)) {
       setError(t("jev.openRouter.shape"));
       return;
     }
-    save.mutate(key, { onSuccess: close, onError: failed(key.startsWith("sk-or-")) });
+    // A key that is TypeSafe's own, or OpenRouter's: no gateway stays attached to it.
+    save.mutate(
+      { apiKey: key, baseURL: null },
+      { onSuccess: close, onError: failed(key.startsWith("sk-or-") ? "openrouter" : "typesafe") },
+    );
   };
   const turnOn = (credential: Credential) =>
-    save.mutate({ orgId: org.id, credentialId: credential.id }, { onSuccess: close, onError: failed(true) });
+    save.mutate({ orgId: org.id, credentialId: credential.id }, { onSuccess: close, onError: failed("openrouter") });
   const stepsOf = (replace: boolean, shown: JevVia) => (
     <JevSteps
       via={shown}
       replace={replace}
-      value={draft}
+      value={drafts[shown]}
       onChange={(v) => {
-        setDraft(v);
+        setDrafts((held) => ({ ...held, [shown]: v }));
+        setError(null);
+      }}
+      error={error}
+      onSave={submit}
+      saving={save.isPending}
+      onCancel={close}
+      focus={focusIn}
+    />
+  );
+  // A gateway of the viewer's: its address and the key it gave, nothing else (Jev is `jev-latest` there).
+  const gatewaySteps = () => (
+    <GatewaySteps
+      address={address}
+      onAddressChange={(v) => {
+        setAddress(v);
+        setError(null);
+      }}
+      value={drafts.gateway}
+      onChange={(v) => {
+        setDrafts((held) => ({ ...held, gateway: v }));
         setError(null);
       }}
       error={error}
@@ -423,19 +585,26 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
           description: t("jev.via.openrouterText"),
           children: offered && !paste ? ready(offered) : stepsOf(replace, "openrouter"),
         },
+        {
+          value: "gateway",
+          leading: <Icon name="plug" size={16} />,
+          title: t("jev.via.gateway"),
+          tag: view.endpoint ? t("jev.via.connected") : undefined,
+          description: t("jev.via.gatewayText"),
+          children: gatewaySteps(),
+        },
       ]}
     />
   );
-  const site =
-    view.state === "invalid" ? (
-      <OpenPage href={openRouter ? OPENROUTER_KEYS : TYPESAFE_KEYS}>
-        {t(openRouter ? "jev.openRouter.open" : "jev.steps.openKeys")}
-      </OpenPage>
-    ) : view.state === "no_credit" ? (
-      <OpenPage href={openRouter ? OPENROUTER_CREDITS : TYPESAFE_CONSOLE}>
-        {t(openRouter ? "jev.openRouter.open" : "jev.steps.openSite")}
-      </OpenPage>
-    ) : null;
+  const site = gateway ? null : view.state === "invalid" ? (
+    <OpenPage href={openRouter ? OPENROUTER_KEYS : TYPESAFE_KEYS}>
+      {t(openRouter ? "jev.openRouter.open" : "jev.steps.openKeys")}
+    </OpenPage>
+  ) : view.state === "no_credit" ? (
+    <OpenPage href={openRouter ? OPENROUTER_CREDITS : TYPESAFE_CONSOLE}>
+      {t(openRouter ? "jev.openRouter.open" : "jev.steps.openSite")}
+    </OpenPage>
+  ) : null;
   const ghost = (
     label: string,
     onClick: () => void,
@@ -474,16 +643,30 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
   );
   const note = env
     ? view.state === "invalid"
-      ? t(openRouter ? "jev.openRouter.line.envInvalid" : "jev.line.envInvalid")
+      ? t(
+          gateway
+            ? "jev.gateway.line_envInvalid"
+            : openRouter
+              ? "jev.openRouter.line.envInvalid"
+              : "jev.line.envInvalid",
+        )
       : t("jev.line.env")
     : view.state === "invalid" || view.state === "no_credit"
-      ? t(openRouter ? `jev.openRouter.line.${view.state}` : `jev.line.${view.state}`)
+      ? t(
+          gateway
+            ? `jev.gateway.line_${view.state}`
+            : openRouter
+              ? `jev.openRouter.line.${view.state}`
+              : `jev.line.${view.state}`,
+        )
       : null;
   const facts = [
-    view.hint && t("settings.keyEndsIn", { hint: view.hint }),
-    view.month.decisions > 0 &&
-      t("jev.month", { count: view.month.decisions, cost: formatUsd(i18n.language, view.month.costUsd) }),
-  ].filter(Boolean);
+    view.endpoint ? t("jev.gateway.line", { address: view.endpoint }) : null,
+    view.hint ? t("settings.keyEndsIn", { hint: view.hint }) : null,
+    view.month.decisions > 0
+      ? t("jev.month", { count: view.month.decisions, cost: formatUsd(i18n.language, view.month.costUsd) })
+      : null,
+  ].filter((fact) => fact !== null);
 
   return (
     <section id="jev" ref={box} tabIndex={-1} className="jev" aria-labelledby="jev-title">
@@ -522,7 +705,9 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
           <>
             <div className="ac-list__row jev__key">
               <span className="list-col">
-                <span className="ai-accounts__name">{t(openRouter ? "jev.openRouter.keyName" : "jev.keyName")}</span>
+                <span className="ai-accounts__name">
+                  {t(gateway ? "jev.gateway.keyName" : openRouter ? "jev.openRouter.keyName" : "jev.keyName")}
+                </span>
                 <span className="small muted">
                   {facts.map((fact, i) => (
                     <Fragment key={String(fact)}>

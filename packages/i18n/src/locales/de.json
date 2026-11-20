@@ -10598,7 +10598,9 @@
       "typesafeText": "Ein Konto direkt bei TypeSafe, mit Prepaid-Guthaben.",
       "openrouter": "OpenRouter",
       "openrouterText": "Mit einem OpenRouter-Schlüssel, zum selben Preis.",
-      "connected": "Schlüssel schon verbunden"
+      "connected": "Schlüssel schon verbunden",
+      "gateway": "Dein eigener Gateway",
+      "gatewayText": "Ein Gateway, das TypeSafes Protokoll spricht, mit dem Schlüssel, den es dir gab."
     },
     "openRouter": {
       "create": "Erstelle einen Schlüssel bei OpenRouter",
@@ -10621,6 +10623,19 @@
     "remove": {
       "title": "Jev-Schlüssel entfernen?",
       "text": "Die Agenten arbeiten ohne ihn weiter."
+    },
+    "gateway": {
+      "keyName": "Gateway-Schlüssel",
+      "address": "Die Adresse deines Gateways",
+      "addressHint": "Wo es antwortet, ohne /v1 am Ende: Jev ruft dort POST /v1/systemone mit dem Schlüssel unten auf.",
+      "key": "Den Schlüssel einfügen, den es dir gab",
+      "placeholder": "Dein Gateway-Schlüssel",
+      "invalid": "Diese Adresse ist keine http(s)-Adresse. Füge die ein, die dein Gateway veröffentlicht.",
+      "keyInvalid": "Dein Gateway hat diesen Schlüssel nicht angenommen. Kopiere ihn dort erneut.",
+      "line": "Über {{address}}",
+      "line_invalid": "Dein Gateway hat diesen Schlüssel nicht angenommen. Erstelle dort einen neuen.",
+      "line_no_credit": "Lade Guthaben bei deinem Gateway auf. Jev läuft von selbst wieder an.",
+      "line_envInvalid": "Dein Gateway hat diesen Schlüssel nicht angenommen. Ändere ihn in den Einstellungen dieses Servers (`TYPESAFE_API_KEY`)."
     }
   },
   "aiAccounts": {

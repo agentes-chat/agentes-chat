@@ -1,0 +1,1 @@
+ALTER TABLE "instance_secrets" ADD COLUMN "endpoint" text;

@@ -11393,7 +11393,9 @@
       "typesafeText": "Konto bezpośrednio w TypeSafe, z przedpłaconymi środkami.",
       "openrouter": "OpenRouter",
       "openrouterText": "Z kluczem OpenRouter, w tej samej cenie.",
-      "connected": "Klucz już połączony"
+      "connected": "Klucz już połączony",
+      "gateway": "Własna brama",
+      "gatewayText": "Brama mówiąca protokołem TypeSafe, z kluczem, który ci dała."
     },
     "openRouter": {
       "create": "Utwórz klucz w OpenRouter",
@@ -11416,6 +11418,19 @@
     "remove": {
       "title": "Usunąć klucz Jeva?",
       "text": "Agenci będą działać dalej bez niego."
+    },
+    "gateway": {
+      "keyName": "Klucz bramy",
+      "address": "Adres twojej bramy",
+      "addressHint": "Gdzie odpowiada, bez /v1 na końcu: Jev wywołuje tam POST /v1/systemone z kluczem poniżej.",
+      "key": "Wklej klucz, który ci dała",
+      "placeholder": "Klucz twojej bramy",
+      "invalid": "Ten adres nie jest adresem http(s). Wklej ten, który publikuje twoja brama.",
+      "keyInvalid": "Twoja brama nie przyjęła tego klucza. Skopiuj go tam ponownie.",
+      "line": "Przez {{address}}",
+      "line_invalid": "Twoja brama nie przyjęła tego klucza. Utwórz tam nowy.",
+      "line_no_credit": "Dodaj środki w swojej bramie. Jev wznowi sam.",
+      "line_envInvalid": "Twoja brama nie przyjęła tego klucza. Zmień go w ustawieniach tego serwera (`TYPESAFE_API_KEY`)."
     }
   },
   "aiAccounts": {

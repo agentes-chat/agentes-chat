@@ -11024,7 +11024,9 @@
       "typesafeText": "Un account direttamente su TypeSafe, con credito prepagato.",
       "openrouter": "OpenRouter",
       "openrouterText": "Con una chiave OpenRouter, allo stesso prezzo.",
-      "connected": "Chiave già collegata"
+      "connected": "Chiave già collegata",
+      "gateway": "Il tuo gateway",
+      "gatewayText": "Un gateway che parla il protocollo di TypeSafe, con la chiave che ti ha dato."
     },
     "openRouter": {
       "create": "Crea una chiave su OpenRouter",
@@ -11047,6 +11049,19 @@
     "remove": {
       "title": "Rimuovere la chiave di Jev?",
       "text": "Gli agenti continuano a lavorare anche senza."
+    },
+    "gateway": {
+      "keyName": "Chiave del gateway",
+      "address": "L'indirizzo del tuo gateway",
+      "addressHint": "Dove risponde, senza /v1 in fondo: Jev chiama POST /v1/systemone lì, con la chiave qui sotto.",
+      "key": "Incolla la chiave che ti ha dato",
+      "placeholder": "La chiave del tuo gateway",
+      "invalid": "Quell'indirizzo non è un indirizzo http(s). Incolla quello che pubblica il tuo gateway.",
+      "keyInvalid": "Il tuo gateway non ha accettato questa chiave. Copiala di nuovo da lì.",
+      "line": "Tramite {{address}}",
+      "line_invalid": "Il tuo gateway non ha accettato questa chiave. Creane una nuova lì.",
+      "line_no_credit": "Aggiungi credito sul tuo gateway. Jev riparte da solo.",
+      "line_envInvalid": "Il tuo gateway non ha accettato questa chiave. Cambiala nelle impostazioni di questo server (`TYPESAFE_API_KEY`)."
     }
   },
   "aiAccounts": {

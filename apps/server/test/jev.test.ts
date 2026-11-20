@@ -76,6 +76,7 @@ test("only the installation's first account reaches it: signed out 401, anyone e
     source: null,
     via: null,
     hint: null,
+    endpoint: null,
     state: "off",
     month: { decisions: 0, costUsd: 0 },
   });
@@ -140,6 +141,51 @@ test("saved: shown by its last 4 only, recorded in every workspace without the k
   expect(gone).toHaveLength(2);
 });
 
+test("a gateway of the installation's own: saved with the key, every call goes there", async () => {
+  const { t, owner, ts } = await server();
+  // An address Jev can't call: refused before the gateway or the key is touched.
+  const bad = await owner("/api/app/jev", {
+    method: "PUT",
+    json: { apiKey: SECRET_KEY, baseURL: "gateway.example.com" },
+  });
+  expect(bad.status).toBe(422);
+  expect(((await bad.json()) as { error: { code: string } }).error.code).toBe("jev_endpoint_invalid");
+  expect(ts.urls).toEqual([]);
+
+  // What a `new-api` gateway lists is pasted with /v1; the call appends /v1/systemone to the address itself.
+  const saved = await owner("/api/app/jev", {
+    method: "PUT",
+    json: { apiKey: SECRET_KEY, baseURL: " https://gateway.example.com/v1/ " },
+  });
+  expect(saved.status).toBe(200);
+  const text = await saved.text();
+  expect(text).not.toContain("do_not_leak");
+  expect(JSON.parse(text)).toMatchObject({
+    source: "settings",
+    hint: "9f2c",
+    state: "ok",
+    endpoint: "https://gateway.example.com",
+  });
+  expect(ts.urls).toEqual(["https://gateway.example.com/v1/systemone"]);
+
+  // Read back, and checked again: still the gateway, never TypeSafe's own address.
+  expect(JSON.parse(await (await owner("/api/app/jev")).text())).toMatchObject({
+    endpoint: "https://gateway.example.com",
+  });
+  expect((await owner("/api/app/jev/check", { json: {} })).status).toBe(200);
+  expect(ts.urls).toEqual(["https://gateway.example.com/v1/systemone", "https://gateway.example.com/v1/systemone"]);
+
+  // The workspace's own OpenRouter key is that key: no gateway stays attached to it.
+  const acme = await org(owner, "Acme");
+  const own = await providerKey(t, acme, "openrouter", "sk-or-v1-do_not_leak_1a2b");
+  const handed = await owner("/api/app/jev", { method: "PUT", json: { orgId: acme, credentialId: own } });
+  expect(await handed.json()).toMatchObject({ via: "openrouter", endpoint: null });
+
+  // Back to TypeSafe's own address when the address sent is empty.
+  const cleared = await owner("/api/app/jev", { method: "PUT", json: { apiKey: SECRET_KEY, baseURL: null } });
+  expect(await cleared.json()).toMatchObject({ endpoint: null });
+  expect(ts.urls.at(-1)).toBe("https://api.typesafe.ai/v1/systemone");
+});
 test("with TYPESAFE_API_KEY set: shown read-only, 409 on save and remove", async () => {
   const { owner } = await server({ env: { TYPESAFE_API_KEY: "ts_env_key_abcd" } });
   expect(await (await owner("/api/app/jev")).json()).toMatchObject({ source: "env", hint: "abcd", state: "ok" });

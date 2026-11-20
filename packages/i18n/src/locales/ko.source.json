@@ -25832,6 +25832,12 @@
   "jev.via.connected": {
     "value": "Key already connected"
   },
+  "jev.via.gateway": {
+    "value": "Your own gateway"
+  },
+  "jev.via.gatewayText": {
+    "value": "A gateway that speaks TypeSafe's protocol, with the key it gave you."
+  },
   "jev.openRouter.create": {
     "value": "Create a key at OpenRouter"
   },
@@ -25879,6 +25885,39 @@
   },
   "jev.remove.text": {
     "value": "Agents keep working without it."
+  },
+  "jev.gateway.keyName": {
+    "value": "Gateway key"
+  },
+  "jev.gateway.address": {
+    "value": "Your gateway's address"
+  },
+  "jev.gateway.addressHint": {
+    "value": "Where it answers, without a trailing /v1: Jev calls POST /v1/systemone there, with the key below."
+  },
+  "jev.gateway.key": {
+    "value": "Paste the key it gave you"
+  },
+  "jev.gateway.placeholder": {
+    "value": "Your gateway's key"
+  },
+  "jev.gateway.invalid": {
+    "value": "That address isn't an http(s) address. Paste the one your gateway publishes."
+  },
+  "jev.gateway.keyInvalid": {
+    "value": "Your gateway didn't accept this key. Copy it again from there."
+  },
+  "jev.gateway.line": {
+    "value": "Through {{address}}"
+  },
+  "jev.gateway.line_invalid": {
+    "value": "Your gateway didn't accept this key. Create a new one there."
+  },
+  "jev.gateway.line_no_credit": {
+    "value": "Add credit at your gateway. Jev resumes by itself."
+  },
+  "jev.gateway.line_envInvalid": {
+    "value": "Your gateway didn't accept this key. Change it in this server's settings (TYPESAFE_API_KEY)."
   },
   "aiAccounts.unnamed": {
     "value": "Unnamed account"

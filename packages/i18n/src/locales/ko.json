@@ -10159,7 +10159,9 @@
       "typesafeText": "TypeSafe 계정에서 선불 크레딧으로 결제해요.",
       "openrouter": "OpenRouter",
       "openrouterText": "OpenRouter 키로, 같은 가격이에요.",
-      "connected": "키가 이미 연결됨"
+      "connected": "키가 이미 연결됨",
+      "gateway": "내 게이트웨이",
+      "gatewayText": "TypeSafe 프로토콜을 쓰는 게이트웨이입니다. 거기서 받은 키를 씁니다."
     },
     "openRouter": {
       "create": "OpenRouter에서 키 만들기",
@@ -10182,6 +10184,19 @@
     "remove": {
       "title": "Jev 키를 삭제할까요?",
       "text": "키가 없어도 에이전트는 계속 일해요."
+    },
+    "gateway": {
+      "keyName": "게이트웨이 키",
+      "address": "게이트웨이 주소",
+      "addressHint": "응답하는 곳입니다. 끝에 /v1 은 붙이지 마세요. 아래 키로 그곳의 POST /v1/systemone 을 호출합니다.",
+      "key": "게이트웨이에서 받은 키 붙여넣기",
+      "placeholder": "게이트웨이 키",
+      "invalid": "그 주소는 http(s) 주소가 아닙니다. 게이트웨이가 공개한 주소를 붙여넣으세요.",
+      "keyInvalid": "게이트웨이가 이 키를 받지 않았습니다. 거기서 다시 복사하세요.",
+      "line": "{{address}} 사용",
+      "line_invalid": "게이트웨이가 이 키를 받지 않았습니다. 거기서 새로 만드세요.",
+      "line_no_credit": "게이트웨이에 크레딧을 추가하세요. Jev 는 스스로 다시 시작합니다.",
+      "line_envInvalid": "게이트웨이가 이 키를 받지 않았습니다. 이 서버 설정(`TYPESAFE_API_KEY`)에서 바꾸세요."
     }
   },
   "aiAccounts": {

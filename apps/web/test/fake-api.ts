@@ -1559,7 +1559,9 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         const apiKey =
           typeof input === "string"
             ? input
-            : `sk-or-v1-${state.credentials.find((c) => c.id === input.credentialId)?.keyHint ?? "0000"}`;
+            : "credentialId" in input
+              ? `sk-or-v1-${state.credentials.find((c) => c.id === input.credentialId)?.keyHint ?? "0000"}`
+              : input.apiKey;
         const verdict = state.jevVerdicts?.[apiKey];
         if (verdict === "invalid") throw new ApiError(422, "jev_key_invalid", "TypeSafe didn't accept this key.");
         if (verdict === "rate_limited") {
@@ -1571,6 +1573,7 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           source: "settings",
           via: apiKey.startsWith("sk-or-") ? "openrouter" : "typesafe",
           hint: apiKey.slice(-4),
+          endpoint: typeof input === "object" && "apiKey" in input ? (input.baseURL ?? null) : null,
           state: verdict ?? "ok",
         };
         return state.jev;
@@ -1583,7 +1586,7 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
       removeJev: async () => {
         log("system.removeJev");
         if (!state.jev) throw new ApiError(404, "not_found", "Not found");
-        state.jev = { ...state.jev, source: null, via: null, hint: null, state: "off" };
+        state.jev = { ...state.jev, source: null, via: null, hint: null, endpoint: null, state: "off" };
         return state.jev;
       },
       gifKey: async () => state.gifKey ?? null,

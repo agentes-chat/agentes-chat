@@ -10183,7 +10183,7 @@
       "openKeys": "打开 API 密钥",
       "paste": "粘贴到这里",
       "placeholder": "你的 TypeSafe 密钥",
-      "sealed": "已在此服务器上加密，不会再次显示。",
+      "sealed": "保存后会加密存放在此服务器，不会再次显示。",
       "invalid": "TypeSafe 不接受这个密钥。请从密钥页面重新复制。",
       "savedNoCredit": "已保存。在 TypeSafe 充值后，Jev 会自动开始工作。"
     },
@@ -10208,7 +10208,9 @@
       "typesafeText": "直接使用 TypeSafe 账户，预付费额度。",
       "openrouter": "OpenRouter",
       "openrouterText": "使用 OpenRouter 密钥，价格相同。",
-      "connected": "密钥已连接"
+      "connected": "密钥已连接",
+      "gateway": "你自己的网关",
+      "gatewayText": "一个会说 TypeSafe 协议的网关，用它给你的密钥。"
     },
     "openRouter": {
       "create": "在 OpenRouter 创建密钥",
@@ -10231,6 +10233,19 @@
     "remove": {
       "title": "移除 Jev 密钥？",
       "text": "没有它，智能体也会继续工作。"
+    },
+    "gateway": {
+      "keyName": "网关密钥",
+      "address": "网关地址",
+      "addressHint": "它应答的地方，末尾不要 /v1：Jev 会用下面的密钥调用那里的 POST /v1/systemone。",
+      "key": "粘贴它给你的密钥",
+      "placeholder": "你的网关密钥",
+      "invalid": "这个地址不是 http(s) 地址。请粘贴你的网关公布的地址。",
+      "keyInvalid": "你的网关不接受这个密钥。从那边的后台重新复制。",
+      "line": "经由 {{address}}",
+      "line_invalid": "你的网关不接受这个密钥。去那边新建一个。",
+      "line_no_credit": "在你的网关充值。Jev 会自己恢复。",
+      "line_envInvalid": "你的网关不接受这个密钥。请在这个服务器的设置里更换（`TYPESAFE_API_KEY`）。"
     }
   },
   "aiAccounts": {

@@ -102,11 +102,11 @@ describe("the key, saved and read", () => {
     const ts = typesafe(200);
     const key = jevKey(ts.fetch);
     await key.ready();
-    expect(await key.view()).toEqual({ source: null, via: null, hint: null, state: "off" });
+    expect(await key.view()).toEqual({ source: null, via: null, hint: null, state: "off", endpoint: null });
     expect(key.usable()).toBe(false);
 
     const view = await key.save("  ts_live_secret_9f2c  ", f.owner.id);
-    expect(view).toEqual({ source: "settings", via: "typesafe", hint: "9f2c", state: "ok" });
+    expect(view).toEqual({ source: "settings", via: "typesafe", hint: "9f2c", state: "ok", endpoint: null });
     expect(JSON.stringify(view)).not.toContain("secret");
     expect(ts.keys).toEqual(["ts_live_secret_9f2c"]);
     const [row] = await f.db.select().from(schema.instanceSecrets);
@@ -119,7 +119,7 @@ describe("the key, saved and read", () => {
     expect(audit[0]).toMatchObject({ actorType: "person", actorId: f.owner.id, details: { hint: "9f2c" } });
     expect(JSON.stringify(audit)).not.toContain("ts_live_secret");
 
-    expect(await key.remove(f.owner.id)).toEqual({ source: null, via: null, hint: null, state: "off" });
+    expect(await key.remove(f.owner.id)).toEqual({ source: null, via: null, hint: null, state: "off", endpoint: null });
     expect(await f.db.select().from(schema.instanceSecrets)).toEqual([]);
     expect(await key.key()).toBeNull();
     const removed = await f.db.select().from(schema.auditLog).where(eq(schema.auditLog.action, "jev.key_removed"));
@@ -167,7 +167,7 @@ describe("the key, saved and read", () => {
     f = await setup();
     const key = jevKey(typesafe(200).fetch, "ts_from_env_abcd");
     await key.ready();
-    expect(await key.view()).toEqual({ source: "env", via: "typesafe", hint: "abcd", state: "ok" });
+    expect(await key.view()).toEqual({ source: "env", via: "typesafe", hint: "abcd", state: "ok", endpoint: null });
     expect(key.usable()).toBe(true);
     await expect(key.save("ts_other_key_1", f.owner.id)).rejects.toMatchObject({ code: "jev_key_env" });
     await expect(key.remove(f.owner.id)).rejects.toMatchObject({ code: "jev_key_env" });
@@ -182,7 +182,7 @@ describe("the key, saved and read", () => {
     const ts = typesafe(200);
     const key = jevKey(ts.fetch);
     await key.ready();
-    expect(await key.view()).toEqual({ source: "settings", via: null, hint: "ey_1", state: "invalid" });
+    expect(await key.view()).toEqual({ source: "settings", via: null, hint: "ey_1", state: "invalid", endpoint: null });
     expect(key.usable()).toBe(false);
     expect(await live(key, ts.fetch)).toBe("off");
     expect(ts.keys).toEqual([]);
@@ -202,7 +202,13 @@ describe("the key, saved and read", () => {
     const after = jevKey(restarted.fetch);
     await after.ready();
     expect(after.usable()).toBe(true);
-    expect(await after.view()).toEqual({ source: "settings", via: "typesafe", hint: "ey_1", state: "ok" });
+    expect(await after.view()).toEqual({
+      source: "settings",
+      via: "typesafe",
+      hint: "ey_1",
+      state: "ok",
+      endpoint: null,
+    });
     expect(restarted.keys).toEqual([]);
   });
 
@@ -300,7 +306,13 @@ describe("a broken key is skipped for a while", () => {
     await key.save("ts_new_key_1111", f.owner.id);
     release();
     expect(await call).toBe("failed");
-    expect(await key.view()).toEqual({ source: "settings", via: "typesafe", hint: "1111", state: "ok" });
+    expect(await key.view()).toEqual({
+      source: "settings",
+      via: "typesafe",
+      hint: "1111",
+      state: "ok",
+      endpoint: null,
+    });
     expect(await key.key()).toBe("ts_new_key_1111");
   });
 
@@ -413,6 +425,7 @@ describe("Jev through OpenRouter (ADR 0073 §9)", () => {
       via: "openrouter",
       hint: "7a1e",
       state: "ok",
+      endpoint: null,
     });
     expect(or.calls.map((c) => [c.url, c.body.model])).toEqual([
       ["https://openrouter.ai/api/alpha/decisions", "~typesafe/jev-latest"],
@@ -430,8 +443,65 @@ describe("Jev through OpenRouter (ADR 0073 §9)", () => {
     const or = recorder();
     const key = jevKey(or.fetch, "sk-or-v1-from_env_beef");
     await key.ready();
-    expect(await key.view()).toEqual({ source: "env", via: "openrouter", hint: "beef", state: "ok" });
+    expect(await key.view()).toEqual({ source: "env", via: "openrouter", hint: "beef", state: "ok", endpoint: null });
     expect(await live(key, or.fetch)).toBe("answered");
     expect(or.calls[0]?.url).toBe("https://openrouter.ai/api/alpha/decisions");
+  });
+});
+
+describe("Jev at a gateway of the workspace's own (ADR 0073)", () => {
+  test("an address is saved with the key, and every call goes there", async () => {
+    f = await setup();
+    const gateway = recorder();
+    const key = jevKey(gateway.fetch);
+    await key.ready();
+    // What people paste with /v1 on the end still saves the address /v1/systemone is added to.
+    expect(await key.save("ts_gateway_key_1", f.owner.id, undefined, " https://gateway.test/v1/ ")).toEqual({
+      source: "settings",
+      via: "typesafe",
+      hint: "ey_1",
+      state: "ok",
+      endpoint: "https://gateway.test",
+    });
+    expect(gateway.calls.map((c) => c.url)).toEqual(["https://gateway.test/v1/systemone"]);
+    expect((await key.check()).state).toBe("ok");
+    expect(gateway.calls.map((c) => c.url)).toEqual([
+      "https://gateway.test/v1/systemone",
+      "https://gateway.test/v1/systemone",
+    ]);
+
+    // Saved, the address outlives the process: a new one calls the gateway before any key is saved again.
+    const restarted = recorder();
+    const after = jevKey(restarted.fetch);
+    await after.ready();
+    expect(await after.view()).toMatchObject({ endpoint: "https://gateway.test", state: "ok" });
+    expect(await live(after, restarted.fetch)).toBe("answered");
+    expect(restarted.calls[0]?.url).toBe("https://gateway.test/v1/systemone");
+  });
+
+  test("an address that isn't http(s) never reaches the gateway, and a key replaced without one keeps it", async () => {
+    f = await setup();
+    const gateway = recorder();
+    const key = jevKey(gateway.fetch);
+    for (const address of ["gateway.test", "ftp://gateway.test", "https://"]) {
+      await expect(key.save("ts_gateway_key_1", f.owner.id, undefined, address)).rejects.toMatchObject({
+        code: "jev_endpoint_invalid",
+      });
+    }
+    expect(gateway.calls).toEqual([]);
+    expect(await f.db.select().from(schema.instanceSecrets)).toEqual([]);
+
+    await key.save("ts_gateway_key_1", f.owner.id, undefined, "https://gateway.test");
+    // A screen that sends no address keeps the gateway the key was saved with.
+    expect(await key.save("ts_gateway_key_2", f.owner.id)).toMatchObject({ endpoint: "https://gateway.test" });
+    expect(gateway.calls.at(-1)?.url).toBe("https://gateway.test/v1/systemone");
+    // Removing the key removes its address with it.
+    expect(await key.remove(f.owner.id)).toEqual({
+      source: null,
+      via: null,
+      hint: null,
+      state: "off",
+      endpoint: null,
+    });
   });
 });

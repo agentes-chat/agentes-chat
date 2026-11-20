@@ -10542,7 +10542,9 @@
       "typesafeText": "Doğrudan TypeSafe'te bir hesap, ön ödemeli krediyle.",
       "openrouter": "OpenRouter",
       "openrouterText": "Bir OpenRouter anahtarıyla, aynı fiyata.",
-      "connected": "Anahtar zaten bağlı"
+      "connected": "Anahtar zaten bağlı",
+      "gateway": "Kendi ağ geçidin",
+      "gatewayText": "TypeSafe protokolünü konuşan, sana verdiği anahtarla çalışan bir ağ geçidi."
     },
     "openRouter": {
       "create": "OpenRouter'da bir anahtar oluşturun",
@@ -10565,6 +10567,19 @@
     "remove": {
       "title": "Jev anahtarı kaldırılsın mı?",
       "text": "Ajanlar onsuz da çalışmaya devam eder."
+    },
+    "gateway": {
+      "keyName": "Ağ geçidi anahtarı",
+      "address": "Ağ geçidinin adresi",
+      "addressHint": "Yanıt verdiği yer, sonunda /v1 olmadan: Jev aşağıdaki anahtarla orada POST /v1/systemone çağırır.",
+      "key": "Sana verdiği anahtarı yapıştır",
+      "placeholder": "Ağ geçidinin anahtarı",
+      "invalid": "Bu adres bir http(s) adresi değil. Ağ geçidinin yayımladığı adresi yapıştır.",
+      "keyInvalid": "Ağ geçidin bu anahtarı kabul etmedi. Oradan yeniden kopyala.",
+      "line": "{{address}} üzerinden",
+      "line_invalid": "Ağ geçidin bu anahtarı kabul etmedi. Orada yeni bir tane oluştur.",
+      "line_no_credit": "Ağ geçidine kredi ekle. Jev kendi kendine devam eder.",
+      "line_envInvalid": "Ağ geçidin bu anahtarı kabul etmedi. Bu sunucunun ayarlarında değiştir (`TYPESAFE_API_KEY`)."
     }
   },
   "aiAccounts": {

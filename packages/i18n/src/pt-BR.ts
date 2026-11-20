@@ -10962,6 +10962,8 @@ export const ptBR = {
       openrouter: "OpenRouter",
       openrouterText: "Com uma chave do OpenRouter, pelo mesmo preço.",
       connected: "Chave já conectada",
+      gateway: "O seu próprio gateway",
+      gatewayText: "Um gateway que fala o protocolo da TypeSafe, com a chave que ele deu.",
     },
     /** Jev through OpenRouter: its steps, the workspace's own key, and the key's lines once saved. */
     openRouter: {
@@ -10987,6 +10989,21 @@ export const ptBR = {
     remove: {
       title: "Remover a chave do Jev?",
       text: "Os agentes continuam trabalhando sem ele.",
+    },
+    /** Jev at a gateway of the viewer's that speaks TypeSafe's protocol (ADR 0073): its address, and the key it gave. */
+    gateway: {
+      keyName: "Chave do gateway",
+      address: "O endereço do seu gateway",
+      addressHint: "Onde ele responde, sem /v1 no fim: o Jev chama POST /v1/systemone ali, com a chave abaixo.",
+      key: "Cole a chave que ele deu",
+      placeholder: "A chave do seu gateway",
+      invalid: "Esse endereço não é um endereço http(s). Cole o que o seu gateway publica.",
+      keyInvalid: "O seu gateway não aceitou esta chave. Copie de novo de lá.",
+      line: "Pelo {{address}}",
+      line_invalid: "O seu gateway não aceitou esta chave. Crie uma nova lá.",
+      line_no_credit: "Adicione crédito no seu gateway. O Jev volta sozinho.",
+      line_envInvalid:
+        "O seu gateway não aceitou esta chave. Troque nas configurações deste servidor (`TYPESAFE_API_KEY`).",
     },
   },
   aiAccounts: {

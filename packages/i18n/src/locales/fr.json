@@ -11004,7 +11004,9 @@
       "typesafeText": "Un compte directement chez TypeSafe, avec du crédit prépayé.",
       "openrouter": "OpenRouter",
       "openrouterText": "Avec une clé OpenRouter, au même prix.",
-      "connected": "Clé déjà connectée"
+      "connected": "Clé déjà connectée",
+      "gateway": "Votre propre passerelle",
+      "gatewayText": "Une passerelle qui parle le protocole de TypeSafe, avec la clé qu'elle vous a donnée."
     },
     "openRouter": {
       "create": "Créez une clé chez OpenRouter",
@@ -11027,6 +11029,19 @@
     "remove": {
       "title": "Supprimer la clé Jev ?",
       "text": "Les agents continuent de travailler sans elle."
+    },
+    "gateway": {
+      "keyName": "Clé de la passerelle",
+      "address": "L'adresse de votre passerelle",
+      "addressHint": "Là où elle répond, sans /v1 à la fin : Jev appelle POST /v1/systemone à cette adresse avec la clé ci-dessous.",
+      "key": "Collez la clé qu'elle vous a donnée",
+      "placeholder": "La clé de votre passerelle",
+      "invalid": "Cette adresse n'est pas une adresse http(s). Collez celle que votre passerelle publie.",
+      "keyInvalid": "Votre passerelle n'a pas accepté cette clé. Copiez-la de nouveau depuis là-bas.",
+      "line": "Via {{address}}",
+      "line_invalid": "Votre passerelle n'a pas accepté cette clé. Créez-en une nouvelle là-bas.",
+      "line_no_credit": "Ajoutez du crédit à votre passerelle. Jev reprend tout seul.",
+      "line_envInvalid": "Votre passerelle n'a pas accepté cette clé. Changez-la dans les réglages de ce serveur (`TYPESAFE_API_KEY`)."
     }
   },
   "aiAccounts": {

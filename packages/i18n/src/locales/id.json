@@ -10213,7 +10213,9 @@
       "typesafeText": "Akun langsung di TypeSafe, dengan saldo prabayar.",
       "openrouter": "OpenRouter",
       "openrouterText": "Dengan kunci OpenRouter, harganya sama.",
-      "connected": "Kunci sudah terhubung"
+      "connected": "Kunci sudah terhubung",
+      "gateway": "Gateway milikmu",
+      "gatewayText": "Gateway yang berbicara protokol TypeSafe, dengan kunci yang diberikannya."
     },
     "openRouter": {
       "create": "Buat kunci di OpenRouter",
@@ -10236,6 +10238,19 @@
     "remove": {
       "title": "Hapus kunci Jev?",
       "text": "Agen tetap bekerja tanpanya."
+    },
+    "gateway": {
+      "keyName": "Kunci gateway",
+      "address": "Alamat gateway-mu",
+      "addressHint": "Tempat ia menjawab, tanpa /v1 di akhir: Jev memanggil POST /v1/systemone di sana dengan kunci di bawah.",
+      "key": "Tempel kunci yang diberikannya",
+      "placeholder": "Kunci gateway-mu",
+      "invalid": "Alamat itu bukan alamat http(s). Tempel alamat yang dipublikasikan gateway-mu.",
+      "keyInvalid": "Gateway-mu tidak menerima kunci ini. Salin lagi dari sana.",
+      "line": "Lewat {{address}}",
+      "line_invalid": "Gateway-mu tidak menerima kunci ini. Buat yang baru di sana.",
+      "line_no_credit": "Tambahkan kredit di gateway-mu. Jev lanjut sendiri.",
+      "line_envInvalid": "Gateway-mu tidak menerima kunci ini. Ubah di pengaturan server ini (`TYPESAFE_API_KEY`)."
     }
   },
   "aiAccounts": {

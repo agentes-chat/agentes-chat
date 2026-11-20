@@ -10,11 +10,19 @@ import { renderApp, screen, settle } from "./render";
 
 afterEach(() => cleanup());
 
-const OFF: JevKey = { source: null, via: null, hint: null, state: "off", month: { decisions: 0, costUsd: 0 } };
+const OFF: JevKey = {
+  source: null,
+  via: null,
+  hint: null,
+  endpoint: null,
+  state: "off",
+  month: { decisions: 0, costUsd: 0 },
+};
 const ON: JevKey = {
   source: "settings",
   via: "typesafe",
   hint: "9f2c",
+  endpoint: null,
   state: "ok",
   month: { decisions: 1240, costUsd: 0.13 },
 };
@@ -217,7 +225,7 @@ describe("Jev's key in Configurações › IA e uso", () => {
     await type(field(), "  ts_live_9f2c  ");
     expect(save().hasAttribute("disabled")).toBe(false);
     await click(save(), 6);
-    expect(calls(state, "system.saveJev")).toEqual([["ts_live_9f2c"]]);
+    expect(calls(state, "system.saveJev")).toEqual([[{ apiKey: "ts_live_9f2c", baseURL: null }]]);
     expect(card().querySelector(".ac-chip")?.textContent).toBe("Ligado");
     expect(card().textContent).toContain("Termina em 9f2c");
     expect(within(card()).queryByLabelText("Cole aqui")).toBeNull();
@@ -263,7 +271,7 @@ describe("Jev's key in Configurações › IA e uso", () => {
     expect([...card().querySelectorAll(".agp-addacct__step > i")].map((n) => n.textContent)).toEqual(["1", "2"]);
     await type(field(), "ts_new_key_7777");
     await click(within(card()).getByRole("button", { name: "Salvar chave" }), 6);
-    expect(calls(state, "system.saveJev")).toEqual([["ts_new_key_7777"]]);
+    expect(calls(state, "system.saveJev")).toEqual([[{ apiKey: "ts_new_key_7777", baseURL: null }]]);
     expect(card().textContent).toContain("Termina em 7777");
 
     // Removed with Trocar a chave open and a key half typed: the card starts over, its steps closed and empty.
@@ -432,7 +440,7 @@ describe("Jev through OpenRouter (ADR 0073 §9)", () => {
 
     await type(field(), OPENROUTER_PASTED);
     await click(within(card()).getByRole("button", { name: "Salvar chave" }), 6);
-    expect(calls(state, "system.saveJev")).toEqual([[OPENROUTER_PASTED]]);
+    expect(calls(state, "system.saveJev")).toEqual([[{ apiKey: OPENROUTER_PASTED, baseURL: null }]]);
     expect(card().querySelector(".ac-chip")?.textContent).toBe("Ligado");
     expect(card().textContent).toContain("Chave do OpenRouter");
     expect(card().textContent).toContain("Termina em 7a1e");
@@ -504,5 +512,82 @@ describe("Jev through OpenRouter (ADR 0073 §9)", () => {
     expect(radio("OpenRouter").getAttribute("aria-checked")).toBe("true");
     await click(radio("TypeSafe"));
     expect(within(card()).getByRole("link", { name: "Abrir a TypeSafe" })).toBeTruthy();
+  });
+});
+
+describe("Jev at a gateway of the viewer's own (ADR 0073)", () => {
+  const GATEWAY_KEY = "ts_live_gateway_9f2c";
+  const radio = (name: string) => within(card()).getByRole("radio", { name: new RegExp(`^${name}`) });
+  const addressField = () => within(card()).getByLabelText("O endereço do seu gateway") as HTMLInputElement;
+  const keyField = () => within(card()).getByLabelText("Cole a chave que ele deu") as HTMLInputElement;
+  const save = () => within(card()).getByRole("button", { name: "Salvar chave" }) as HTMLButtonElement;
+
+  test("the third way asks for the gateway's address and its key, and the card says where Jev is paid", async () => {
+    const { state } = await open({ jev: OFF });
+    await click(within(card()).getByRole("button", { name: "Configurar o Jev" }));
+    await click(radio("O seu próprio gateway"));
+
+    // An address Jev can't call and a short key: nothing to save yet.
+    expect(addressField().getAttribute("placeholder")).toBe("https://gateway.example.com");
+    await type(addressField(), "gateway.example.com");
+    expect(addressField().getAttribute("aria-invalid")).toBe("true");
+    await type(keyField(), GATEWAY_KEY);
+    expect(save().disabled).toBe(true);
+    expect(calls(state, "system.saveJev")).toEqual([]);
+
+    // Jev calls POST /v1/systemone at that address, with that key.
+    await type(addressField(), "https://gateway.example.com");
+    expect(addressField().getAttribute("aria-invalid")).toBeNull();
+    await click(save(), 6);
+    expect(calls(state, "system.saveJev")).toEqual([[{ apiKey: GATEWAY_KEY, baseURL: "https://gateway.example.com" }]]);
+    expect(card().querySelector(".ac-chip")?.textContent).toBe("Ligado");
+    expect(card().textContent).toContain("Chave do gateway");
+    expect(card().textContent).toContain("Pelo https://gateway.example.com");
+    expect(card().textContent).toContain("Termina em 9f2c");
+  });
+
+  test("a key the gateway refuses is said in the gateway's words", async () => {
+    await open({ jev: OFF, jevVerdicts: { [GATEWAY_KEY]: "invalid" } });
+    await click(within(card()).getByRole("button", { name: "Configurar o Jev" }));
+    await click(radio("O seu próprio gateway"));
+    await type(addressField(), "https://gateway.example.com");
+    await type(keyField(), GATEWAY_KEY);
+    await click(save(), 6);
+    expect(document.getElementById(keyField().getAttribute("aria-describedby") ?? "")?.textContent).toBe(
+      "O seu gateway não aceitou esta chave. Copie de novo de lá.",
+    );
+  });
+
+  test("a key typed for one way stays there, never in another's field", async () => {
+    const { state } = await open({ jev: OFF });
+    await click(within(card()).getByRole("button", { name: "Configurar o Jev" }));
+    await click(radio("O seu próprio gateway"));
+    await type(addressField(), "https://gateway.example.com");
+    await type(keyField(), GATEWAY_KEY);
+
+    // OpenRouter's field is its own: the gateway's key is not carried into it.
+    await click(radio("OpenRouter"));
+    const pasted = within(card()).getByLabelText("Cole aqui") as HTMLInputElement;
+    expect(pasted.value).toBe("");
+    expect(calls(state, "system.saveJev")).toEqual([]);
+
+    // Coming back finds the gateway's address and key as they were typed.
+    await click(radio("O seu próprio gateway"));
+    expect(addressField().value).toBe("https://gateway.example.com");
+    expect(keyField().value).toBe(GATEWAY_KEY);
+  });
+  test("replacing the key starts from the gateway it was saved with", async () => {
+    const saved: JevKey = {
+      source: "settings",
+      via: "typesafe",
+      hint: "9f2c",
+      endpoint: "https://gateway.example.com",
+      state: "ok",
+      month: { decisions: 0, costUsd: 0 },
+    };
+    await open({ jev: saved });
+    await click(within(card()).getByRole("button", { name: "Trocar a chave" }));
+    expect(radio("O seu próprio gateway").getAttribute("aria-checked")).toBe("true");
+    expect(addressField().value).toBe("https://gateway.example.com");
   });
 });

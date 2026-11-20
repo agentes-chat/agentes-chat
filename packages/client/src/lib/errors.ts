@@ -312,6 +312,8 @@ const KNOWN = {
   human_check_blocked: "errors.humanCheckBlocked",
   // TypeSafe refused the key pasted for Jev: said under its field, nothing kept.
   jev_key_invalid: "jev.steps.invalid",
+  // A gateway address pasted for Jev that isn't one (ADR 0073): said under its field, nothing kept.
+  jev_endpoint_invalid: "jev.gateway.invalid",
   // GIPHY refused the key pasted for GIFs (ADR 0091): said under its field, nothing kept.
   gif_key_invalid: "settings.media.giphy.invalid",
   // A key's test call on save: nothing kept (`keyRefusal` adds the provider's words and where to fix it).

@@ -11004,6 +11004,8 @@ export const en = {
       openrouter: "OpenRouter",
       openrouterText: "With an OpenRouter key, at the same price.",
       connected: "Key already connected",
+      gateway: "Your own gateway",
+      gatewayText: "A gateway that speaks TypeSafe's protocol, with the key it gave you.",
     },
     /** Jev through OpenRouter: its steps, the workspace's own key, and the key's lines once saved. */
     openRouter: {
@@ -11028,6 +11030,20 @@ export const en = {
     remove: {
       title: "Remove the Jev key?",
       text: "Agents keep working without it.",
+    },
+    /** Jev at a gateway of the viewer's that speaks TypeSafe's protocol (ADR 0073): its address, and the key it gave. */
+    gateway: {
+      keyName: "Gateway key",
+      address: "Your gateway's address",
+      addressHint: "Where it answers, without a trailing /v1: Jev calls POST /v1/systemone there, with the key below.",
+      key: "Paste the key it gave you",
+      placeholder: "Your gateway's key",
+      invalid: "That address isn't an http(s) address. Paste the one your gateway publishes.",
+      keyInvalid: "Your gateway didn't accept this key. Copy it again from there.",
+      line: "Through {{address}}",
+      line_invalid: "Your gateway didn't accept this key. Create a new one there.",
+      line_no_credit: "Add credit at your gateway. Jev resumes by itself.",
+      line_envInvalid: "Your gateway didn't accept this key. Change it in this server's settings (`TYPESAFE_API_KEY`).",
     },
   },
   aiAccounts: {
