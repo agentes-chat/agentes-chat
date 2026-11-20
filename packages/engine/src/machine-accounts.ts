@@ -147,6 +147,8 @@ export interface MachineAccountView {
   named: boolean;
   /** Its owner's eyes only. */
   email: string | null;
+  /** Only shown to its owner, separate from the email used for login matching. */
+  displayEmail?: string;
   plan: string | null;
   status: MachineAccountStatus;
   /** False: the computer's last look at its status said nothing for sure (protocol 50); `status` is the last known. */
@@ -287,6 +289,7 @@ function accountView(
     label: row.label,
     named: !isDefaultAccountLabel(kindOf(row), row.label, row.provider),
     email: mine ? row.email : null,
+    ...(mine && row.status === "active" && row.displayEmail ? { displayEmail: row.displayEmail } : {}),
     plan: row.plan,
     status: statusOf(row.status),
     statusKnown: !row.statusUnknown,
@@ -790,6 +793,7 @@ async function settleAccount(
   }
   // A signed-out CLI may not say its email or plan any more: keep what we knew. A token says neither.
   const email = info.email ?? row.email;
+  const displayReading = info.displayEmail === undefined ? {} : { displayEmail: info.displayEmail };
   const plan = info.plan ?? row.plan;
   const keyHint = info.keyHint ?? row.keyHint;
   const state = reportedState(info, row);
@@ -845,7 +849,7 @@ async function settleAccount(
       defaultAccountLabel(kindOf(row), await takenLabels(db, orgId, row.createdBy, row.id), row.provider);
     const [done] = await db
       .update(machineAccounts)
-      .set({ email, plan, keyHint, ...state, label, shared, ...usage, updatedAt: now })
+      .set({ email, ...displayReading, plan, keyHint, ...state, label, shared, ...usage, updatedAt: now })
       .where(
         and(eq(machineAccounts.orgId, orgId), eq(machineAccounts.id, row.id), eq(machineAccounts.status, "signing_in")),
       )
@@ -863,6 +867,7 @@ async function settleAccount(
   }
   const same =
     email === row.email &&
+    (info.displayEmail === undefined || info.displayEmail === row.displayEmail) &&
     plan === row.plan &&
     keyHint === row.keyHint &&
     status === row.status &&
@@ -874,7 +879,7 @@ async function settleAccount(
   if (same && !info.usage) return { row, released: [], changed: false };
   const [fresh] = await db
     .update(machineAccounts)
-    .set({ email, plan, keyHint, ...state, shared, ...usage, updatedAt: now })
+    .set({ email, ...displayReading, plan, keyHint, ...state, shared, ...usage, updatedAt: now })
     .where(and(eq(machineAccounts.orgId, orgId), eq(machineAccounts.id, row.id)))
     .returning();
   const released = await unshare(db, orgId, row, shared, now);
@@ -999,6 +1004,7 @@ export async function syncMachineAccounts(
             ...candidate,
             label: same?.label ?? defaultAccountLabel(a.kind, await takenLabels(tx, orgId, owner, a.id), provider),
             email: a.email ?? null,
+            displayEmail: a.displayEmail ?? null,
             plan: a.plan ?? null,
             keyHint: a.keyHint ?? null,
             ...reportedState(a),
@@ -1019,6 +1025,7 @@ export async function syncMachineAccounts(
             : {
                 machineId,
                 email: a.email ?? elsewhere.email,
+                ...(a.displayEmail === undefined ? {} : { displayEmail: a.displayEmail }),
                 plan: a.plan ?? elsewhere.plan,
                 keyHint: a.keyHint ?? elsewhere.keyHint,
                 ...reportedState(a, elsewhere),

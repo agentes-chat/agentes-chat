@@ -17854,6 +17854,7 @@ export const ptBR = {
     },
   },
   usageViews: {
+    googleEmailUnavailable: "E-mail da conta Google indisponível.",
     signedOut: "Saiu da conta",
     whose: "de {{name}}",
     /** The order of use of a plan's accounts at a limit (ADR 0041 §6). */

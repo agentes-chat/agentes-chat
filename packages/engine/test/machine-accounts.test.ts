@@ -59,6 +59,7 @@ import {
   ValidationError,
 } from "../src";
 import { isDefaultAccountLabel } from "../src/machine-accounts";
+import { orgPlanUsage } from "../src/plan-usage";
 import { addMember, addUser, type Fixture, setup } from "./fixtures";
 import { pairMachine } from "./machine-fixtures";
 
@@ -2353,4 +2354,56 @@ test("a name is the automatic one only as the server gives it; any other is its 
   expect(isDefaultAccountLabel("claude_code", "Claude pessoal")).toBe(false);
   expect(isDefaultAccountLabel("claude_code", "Claudette")).toBe(false);
   expect(isDefaultAccountLabel("claude_code", "ana@acme.com")).toBe(false);
+});
+
+test("Gemini's display email is private and can change without matching or removing logins", async () => {
+  f = await setup();
+  const { machineId } = await ownedMachine();
+  const admin = await addMember(f.db, f.org.id, "admin", "bia");
+  const reports = Array.from({ length: 2 }, () => ({
+    id: crypto.randomUUID(),
+    kind: "antigravity" as const,
+    loggedIn: true,
+    displayEmail: "same@example.com",
+  }));
+  const [first, second] = reports;
+  if (!first || !second) throw new Error("expected two logins");
+  const sync = (accounts: RunnerAccountInfo[]) => syncMachineAccounts({ db: f.db }, f.org.id, machineId, accounts);
+  await sync(reports);
+  // A report from an older runner can still update quota without replacing a stored address.
+  await sync([
+    { ...first, displayEmail: null },
+    {
+      id: second.id,
+      kind: second.kind,
+      loggedIn: true,
+      usage: { source: "probe", at: new Date().toISOString(), windows: [{ kind: "seven_day", usedPercent: 10 }] },
+    },
+  ]);
+  const owner = await orgPlanUsage(f.db, f.owner.id, f.org.id);
+  expect(owner.accounts.find((a) => a.accountId === first.id)?.displayEmail).toBeUndefined();
+  expect(owner.accounts.find((a) => a.accountId === second.id)).toMatchObject({
+    displayEmail: "same@example.com",
+    email: null,
+    signedOut: false,
+  });
+  const other = await orgPlanUsage(f.db, admin.id, f.org.id);
+  expect(other.accounts.find((a) => a.accountId === second.id)?.displayEmail).toBeUndefined();
+  expect((await accountRows(machineId)).map((row) => row.status)).toEqual(["active", "active"]);
+});
+
+test("usage shows an OpenCode key suffix only to the person who connected it", async () => {
+  f = await setup();
+  const { machineId } = await ownedMachine();
+  const admin = await addMember(f.db, f.org.id, "admin", "bia");
+  const id = crypto.randomUUID();
+  await syncMachineAccounts({ db: f.db }, f.org.id, machineId, [
+    { id, kind: "opencode", provider: "zen", loggedIn: true, keyHint: "Q7f2" },
+  ]);
+  const owner = await orgPlanUsage(f.db, f.owner.id, f.org.id);
+  expect(owner.accounts.find((a) => a.accountId === id)).toMatchObject({ keyHint: "Q7f2", email: null });
+  const other = await orgPlanUsage(f.db, admin.id, f.org.id);
+  const shared = other.accounts.find((a) => a.accountId === id);
+  expect(shared).toBeDefined();
+  expect(shared?.keyHint).toBeUndefined();
 });

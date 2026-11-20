@@ -21,6 +21,7 @@ import {
   fetchPlanKeyUsage,
   oldestRead,
   probeClaudeUsage,
+  probeCodexEmail,
   probeCodexUsage,
   usageCrossed,
   withRateLimit,
@@ -597,6 +598,22 @@ test.if(posix)("Codex's probe: account/rateLimits/read on a short-lived app-serv
 });
 
 // ── The manager ──────────────────────────────────────────────────────────────
+
+test.if(posix)("Codex reads only the signed-in ChatGPT address, without requesting refresh", async () => {
+  const { home, log } = probeSetup();
+  const read = (account: unknown) =>
+    probeCodexEmail({
+      command: [process.execPath, FAKE_CODEX],
+      cwd: home,
+      env: { ...process.env, FAKE_CODEX_ACCOUNT: JSON.stringify(account) },
+    });
+  expect(await read({ type: "chatgpt", email: "owner@example.com", planType: "pro" })).toBe("owner@example.com");
+  expect(await read({ type: "apiKey", email: "ignored@example.com" })).toBeNull();
+  expect(await read({ type: "chatgpt", email: null })).toBeNull();
+  expect(await read(null)).toBeNull();
+  const methods = logged(log).flatMap((line) => (typeof line.rpc === "string" ? [line.rpc] : []));
+  expect(methods).toEqual(Array.from({ length: 4 }, () => ["initialize", "account/read"]).flat());
+});
 
 function manager(over: Partial<AccountManagerOptions> = {}) {
   const home = tempDir("usage-home-");

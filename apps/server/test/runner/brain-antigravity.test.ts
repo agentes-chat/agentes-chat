@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { accountCodeAad } from "@agenteschat/adapters/machine-protocol";
 import { cutAtWord } from "@agenteschat/adapters/redact";
@@ -24,6 +24,7 @@ import {
   AGY_PLANTED,
   AGY_SIGN_IN_FILE,
   agyAuthOf,
+  agyDisplayEmail,
   agyKeychain,
   agyRuntimeDir,
   agySignInOf,
@@ -668,6 +669,64 @@ test("a Gemini sign-in for all agents as a turn gets it: root's file and seat, i
   rmSync(path.dirname(file), { recursive: true, force: true });
   writeFileSync(path.dirname(file), "x");
   expect(() => odd.release?.()).not.toThrow();
+});
+
+test.skipIf(process.platform !== "linux")(
+  "the Gemini probe reads a final status line even if the CLI exits promptly",
+  async () => {
+    const scratch = tempDir("agy-email-probe-");
+    dirs.push(scratch);
+    const script = `
+    const settings = await Bun.file(process.env.HOME + "/.gemini/antigravity-cli/settings.json").json();
+    const callback = Bun.spawn(["/bin/sh", "-c", settings.statusLine.command], { stdin: "pipe" });
+    callback.stdin.write(JSON.stringify({ email: "person@example.com" }));
+    callback.stdin.end();
+    process.exit(await callback.exited);
+  `;
+    const email = await agyDisplayEmail(
+      { auth: TOKEN, type: "oauth-personal" },
+      [process.execPath, "-e", script, "--"],
+      scratch,
+    );
+    expect(email).toBe("person@example.com");
+    expect(readdirSync(scratch)).toEqual([]);
+  },
+);
+
+test.skipIf(!posix)("a Gemini reconnect ignores the unfinished email probe of the preceding sign-in", async () => {
+  const home = tempDir("agy-email-");
+  dirs.push(home);
+  const earlier = Promise.withResolvers<string>();
+  const latest = Promise.withResolvers<string>();
+  const probes = [earlier, latest];
+  let started = 0;
+  const m = new AccountManager({
+    root: path.join(home, "accounts"),
+    orgId: () => ORG,
+    platform: "linux",
+    commands: { antigravity: [process.execPath, FAKE] },
+    probeAgyEmail: async () => probes[started++]?.promise,
+  });
+  managers.push(m);
+  const signIn = async (again: boolean) => {
+    const begun = await m.begin("antigravity", ACCOUNT, again);
+    const aad = accountCodeAad(ACCOUNT, ORG);
+    if (!begun.publicKey) throw new Error("missing sign-in key");
+    await m.code(ACCOUNT, aad, await sealSecret(begun.publicKey, "4/0AbCdEf-code", aad));
+    await waitFor(() => m.status(ACCOUNT).state === "done", 2500);
+  };
+  await m.list();
+  await signIn(false);
+  await waitFor(() => started === 1, 2500);
+  await signIn(true);
+  expect(m.status(ACCOUNT)).toMatchObject({ account: { displayEmail: null } });
+  await waitFor(() => started === 2, 2500);
+  latest.resolve("latest@example.com");
+  await waitFor(() => m.snapshot()?.[0]?.displayEmail === "latest@example.com", 2500);
+  earlier.resolve("earlier@example.com");
+  await Bun.sleep(0);
+  expect((await m.list())[0]?.displayEmail).toBe("latest@example.com");
+  expect(m.status(ACCOUNT)).toMatchObject({ account: { displayEmail: "latest@example.com" } });
 });
 
 test.skipIf(!posix)(

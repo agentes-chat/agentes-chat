@@ -343,6 +343,8 @@ export const machineAccounts = pgTable(
     /** What people call it ("Trabalho"); "Claude 2" when nobody named it (ADR 0059 §4). */
     label: text().notNull(),
     email: text(),
+    /** The provider account shown to its owner, independent of login matching. */
+    displayEmail: text(),
     /** `pro`, `max`, `ultra`, `team`, `enterprise`… from what the CLI says. */
     plan: text(),
     /**

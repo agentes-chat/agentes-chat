@@ -37,9 +37,14 @@ What the CLI does, read in antigravity.google/docs (cli/headless, cli/reference,
 8. **Before it ships**, on a Linux computer with a Google AI Pro account and an Enterprise seat: that `agy acp --login` prints its link and takes the code on a pipe (else the runner drives it in a terminal, like `claude setup-token`) and honors `auth.type` from the settings for an Enterprise sign-in (its license picker), that the sign-in lands in the account's home with no D-Bus, that `agy models` and `agy -p /usage` answer as parsed, that the stdio MCP server inherits `AGENTES_MCP_RUN` and `AGENTES_MCP_TOKEN`, what `init` lists under `--agent agenteschat-chat` (MCP tool names, any lazy-MCP meta-tool, which the guard stops until it is known), the `AGY_ERROR` fields and a quota's words, whether `--mode accept-edits` with `proceed-in-sandbox` edits in the workspace without approvals, and that `agy -p /usage` and `agy -p /logout` are answered by the CLI (never sent to the model) with the account's settings.
 9. **Install**: the core installs no coding CLI. Self-hosters run Google's installer (SELF_HOSTING.md); the Cloud image pins a release binary as `/usr/local/bin/agy` with `AGY_CLI_DISABLE_AUTO_UPDATE`, with a runner of protocol 44.
 
+## Connected Google account
+
+On Linux, the runner can read the signed-in address of a personal Google account from the Antigravity CLI's [status line JSON](https://antigravity.google/docs/cli/statusline/). It starts the CLI in the background in a private, temporary copy of that account's home without sending a prompt. It drops the copy when the read ends and clears leftovers from earlier runs before probing. The server sends the address to the person who connected the account for display in AI & usage. The address is independent of the fields that match logins or bind agents to accounts.
+
 ## Not done
 
 - Gemini plans on Windows computers (the Credential Manager is per user); the computer's own sign-in.
+- Reading the connected Google account on macOS and on Gemini Enterprise.
 - A `plan` turn's sandboxed commands can still write in the workspace: the CLI has no per-run flag for a read-only sandbox, and the settings are shared by every turn on the account.
 - The CLI's own telemetry has no settings key or flag outside ACP (`--disable-telemetry`): it stays as the account set it.
 - The agent's shell sees the account's folder as its `HOME`, so a work turn's commands have no `~/.gitconfig` or SSH keys of the computer's user (the sandbox keeps them out anyway).

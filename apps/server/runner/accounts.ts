@@ -60,6 +60,7 @@ import {
   AGY_SIGN_IN_FILE,
   type AgySignIn,
   agyAuthOf,
+  agyDisplayEmail,
   agyKeychain,
   agyRuntimeDir,
   agySignInFrom,
@@ -92,6 +93,7 @@ import {
   fetchPlanKeyUsage,
   oldestRead,
   probeClaudeUsage,
+  probeCodexEmail,
   probeCodexUsage,
   usageCrossed,
   withRateLimit,
@@ -1401,6 +1403,8 @@ export interface AccountManagerOptions {
   usageTimeoutMs?: number;
   /** Tests: how long a status look may take (`STATUS_TIMEOUT_MS`). */
   statusTimeoutMs?: number;
+  /** Tests: read the display address from a private sign-in copy. */
+  probeAgyEmail?: typeof agyDisplayEmail;
   fetch?: typeof fetch;
   log?: (line: string) => void;
   /** An account was added or removed, a fresh look changed the list (`hello`, the app's status), or usage moved. */
@@ -2261,6 +2265,7 @@ export class AccountManager {
         }
       } else if (code === 0) {
         // Signed in anew: a turn refused before (`refused`) says nothing about this sign-in.
+        this.displayEmails.delete(login.id);
         await rm(this.marker(login.kind, login.id, "invalid"), { force: true }).catch(() => undefined);
         const status: { said?: string } = {};
         const info = await this.lookUp(login.kind, login.id, status);
@@ -2285,6 +2290,13 @@ export class AccountManager {
           if (login.state !== "waiting") return;
           if (!unshared) {
             await rm(path.join(login.dir, SIGNING_IN), { force: true }).catch(() => undefined);
+            if (
+              login.again &&
+              (login.kind === "antigravity" || login.kind === "codex" || login.kind === "grok") &&
+              !info.displayEmail
+            ) {
+              info.displayEmail = null;
+            }
             // A ChatGPT or Gemini sign-in for all agents: root's alone from now on (`grant`).
             if (login.shared) {
               await writeFile(this.marker(login.kind, login.id, "shared"), "", { mode: 0o600 });
@@ -2293,6 +2305,8 @@ export class AccountManager {
             this.settle(login, "done");
             login.account = info;
             this.added(info);
+            if (login.kind === "antigravity" || login.kind === "codex")
+              this.lookUpDisplayEmail(login.kind, login.id, login.dir);
             this.log(`account ${login.id.slice(0, 8)} (${login.kind}) signed in`);
             return;
           }
@@ -2566,9 +2580,76 @@ export class AccountManager {
               ? parseAgyStatus(r.status, `${r.stdout}\n${r.stderr}`, agyAuthOf(dir))
               : parseCodexStatus(r.status, `${r.stdout}\n${r.stderr}`);
     if (isListingKind(kind) && status.loggedIn) this.keepListed(kind, id, LISTED_BY[kind](r.stdout));
+    let displayEmail: string | undefined;
+    if (kind === "grok" && status.loggedIn) {
+      const email = readGrokAuth(dir)?.email;
+      if (isLoginEmail(email)) displayEmail = email;
+    }
     // Timed out, or didn't start.
     const unknown = r.status === null ? { statusUnknown: true as const } : {};
-    return { id, kind, ...status, ...unknown, ...shared };
+    if ((kind === "antigravity" || kind === "codex") && status.loggedIn && !out) this.lookUpDisplayEmail(kind, id, dir);
+    return { id, kind, ...status, ...unknown, ...shared, ...(displayEmail ? { displayEmail } : {}) };
+  }
+
+  private readonly displayEmails = new Map<string, { email?: string; retryAt: number }>();
+  private agyEmailScratch: Promise<string> | undefined;
+
+  private async prepareAgyEmailScratch() {
+    const scratch = path.join(this.opts.root, ".antigravity-identity");
+    // Also removes private copies left behind if the previous runner was killed.
+    await rm(scratch, { recursive: true, force: true });
+    await mkdir(scratch, { recursive: true, mode: 0o700 });
+    return scratch;
+  }
+
+  private async readAgyDisplayEmail(id: string, dir: string, current: () => boolean) {
+    // Copy under the account's lock. The auxiliary CLI only sees the copy, so turns can start during the probe.
+    if (!this.opts.probeAgyEmail && (process.platform !== "linux" || typeof Bun === "undefined" || !Bun.Terminal))
+      return;
+    const signIn = await this.serial(id, async () => (current() ? agySignInOf(dir) : null), this.cliOps);
+    if (signIn?.type !== "oauth-personal" || !current()) return;
+    this.agyEmailScratch ??= this.prepareAgyEmailScratch().catch((error) => {
+      this.agyEmailScratch = undefined;
+      throw error;
+    });
+    const scratch = await this.agyEmailScratch;
+    if (current()) return (this.opts.probeAgyEmail ?? agyDisplayEmail)(signIn, this.command("antigravity"), scratch);
+  }
+
+  private lookUpDisplayEmail(kind: "antigravity" | "codex", id: string, dir: string) {
+    if (this.closed || this.logins.get(id)?.state === "waiting") return;
+    const previous = this.displayEmails.get(id);
+    if (previous && (previous.email || previous.retryAt > Date.now())) return;
+    const attempt = { retryAt: Date.now() + 5 * 60_000 };
+    this.displayEmails.set(id, attempt);
+    const current = () => !this.closed && this.displayEmails.get(id) === attempt;
+    const reading =
+      kind === "antigravity"
+        ? this.readAgyDisplayEmail(id, dir, current)
+        : this.serial(
+            id,
+            async () => {
+              // Keep the same refresh guard as the quota probe. Never rotate an agent's sign-in for a label.
+              if (!current() || this.lentTo(kind, id) !== null || !codexProbeSafe(dir, (this.opts.now ?? Date.now)()))
+                return;
+              return probeCodexEmail({
+                command: this.command(kind),
+                cwd: dir,
+                env: this.env(kind, dir),
+                timeoutMs: 3000,
+              });
+            },
+            this.cliOps,
+          );
+    void reading
+      .then((email) => {
+        if (!email || !current()) return;
+        this.displayEmails.set(id, { ...attempt, email });
+        const login = this.logins.get(id);
+        if (login?.account) login.account = { ...login.account, displayEmail: email };
+        this.changed();
+      })
+      .catch(() => undefined);
   }
 
   /** Per CLI, what each account signed in here last listed, by its id (`""`: an older runner's single list). */
@@ -2663,9 +2744,9 @@ export class AccountManager {
   /** Every account on this machine with its status and usage (cached for `ACCOUNTS_TTL_MS`). */
   async list(): Promise<RunnerAccountInfo[]> {
     if (this.cache && Date.now() - this.cache.at <= (this.opts.listTtlMs ?? ACCOUNTS_TTL_MS)) {
-      return this.withUsage(this.cache.value);
+      return this.withAccountReadings(this.cache.value);
     }
-    return this.withUsage(await this.refresh());
+    return this.withAccountReadings(await this.refresh());
   }
 
   /** A fresh look (one at a time). `announce`: tell the observer even when nothing changed (the server may think otherwise). */
@@ -2694,7 +2775,7 @@ export class AccountManager {
     if (!this.cache || Date.now() - this.cache.at > (this.opts.listTtlMs ?? ACCOUNTS_TTL_MS)) {
       this.refresh().catch(() => undefined);
     }
-    return this.cache ? this.withUsage(this.cache.value) : undefined;
+    return this.cache ? this.withAccountReadings(this.cache.value) : undefined;
   }
 
   /**
@@ -2749,6 +2830,7 @@ export class AccountManager {
     if (this.cache) this.cache = { ...this.cache, value: this.cache.value.filter((a) => a.id !== id) };
     this.usage.delete(id);
     this.knownLoggedIn.delete(id);
+    this.displayEmails.delete(id);
     this.listing = null;
     this.log(`account ${id.slice(0, 8)} (${kind}) removed`);
     this.changed();
@@ -2970,10 +3052,13 @@ export class AccountManager {
 
   // ── Usage (protocol 19) ────────────────────────────────────────────────────
 
-  private withUsage(list: RunnerAccountInfo[]): RunnerAccountInfo[] {
+  private withAccountReadings(list: RunnerAccountInfo[]): RunnerAccountInfo[] {
     return list.map((a) => {
       const usage = this.usage.get(a.id);
-      return usage ? { ...a, usage } : a;
+      const displayEmail = a.loggedIn ? this.displayEmails.get(a.id)?.email : undefined;
+      return usage || displayEmail
+        ? { ...a, ...(usage ? { usage } : {}), ...(displayEmail ? { displayEmail } : {}) }
+        : a;
     });
   }
 

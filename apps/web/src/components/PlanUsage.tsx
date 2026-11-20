@@ -275,11 +275,19 @@ function AccountRow({
   const where = accountWhere(t, account, computer);
   const hasDetails = hasShares || account.monthTokens > 0 || Boolean(where);
   // Whose it is, who uses it and how many logins it stands for: each moves to the next line whole.
-  const facts = [accountOwner(t, account), servesText(t, account), loginsText(t, account)].filter((f): f is string =>
-    Boolean(f),
-  );
+  const facts = [
+    account.mine ? t("settings.section.account") : accountOwner(t, account),
+    servesText(t, account),
+    loginsText(t, account),
+  ].filter((f): f is string => Boolean(f));
   const owner = facts.length > 0;
   const chips = Boolean(account.plan) || Boolean(account.signedOut);
+  const title = accountName(t, account);
+  const email =
+    account.mine && !account.signedOut
+      ? (account.displayEmail ?? (!account.provider && account.kind !== "opencode" ? account.email : undefined))
+      : undefined;
+  const keyHint = account.mine && account.kind === "opencode" ? account.keyHint : undefined;
   return (
     <div className={place ? "plan-row plan-row--placed" : "plan-row"} data-open={open || undefined} {...drop}>
       {place}
@@ -299,7 +307,7 @@ function AccountRow({
             whose it is under both. The space that parts them ends the name, so neither starts with it. */}
         <span className="plan-acct__name">
           <span className="plan-row__title">
-            {accountName(t, account)}
+            {title}
             {(chips || owner) && WIDE_SPACE}
           </span>
           {(chips || owner) && (
@@ -318,6 +326,12 @@ function AccountRow({
               ))}
             </span>
           )}
+          {email && email !== title && (
+            <span className="plan-row__email" dir="ltr">
+              {email}
+            </span>
+          )}
+          {keyHint && <span className="plan-row__identity">{t("aiAccounts.page.keyEnds", { hint: keyHint })}</span>}
         </span>
         {line?.top && (
           <span
@@ -406,8 +420,15 @@ function AccountRow({
               )}
               {account.mine && account.accountId && (
                 <div className="plan-own">
+                  {account.kind === "antigravity" && !account.signedOut && !email && (
+                    <p className="plan-empty">{t("usageViews.googleEmailUnavailable")}</p>
+                  )}
                   {account.serves && <WhoUses accountId={account.accountId} account={account} />}
-                  <AccountActions machineId={account.machineId} accountId={account.accountId} />
+                  <AccountActions
+                    machineId={account.machineId}
+                    accountId={account.accountId}
+                    keyHintShown={!!keyHint}
+                  />
                 </div>
               )}
             </>

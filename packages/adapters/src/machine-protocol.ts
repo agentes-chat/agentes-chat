@@ -1183,6 +1183,8 @@ export interface RunnerAccountInfo {
   /** The CLI's status command says it is signed in. */
   loggedIn: boolean;
   email?: string;
+  /** The provider's account email for display only. Null clears an earlier reading after sign-in. */
+  displayEmail?: string | null;
   /** `pro`, `max`, `ultra`, `team`, `enterprise`… from what the CLI says. */
   plan?: string;
   /** Protocol 19: the plan's usage limits, as last seen. */
@@ -3595,6 +3597,11 @@ export function parseAccounts(v: unknown[]): RunnerAccountInfo[] {
   for (const a of v.slice(0, MAX_MACHINE_ACCOUNTS)) {
     if (!isObject(a) || !isAccountId(a.id) || !isAccountKind(a.kind)) continue;
     const email = isString(a.email) && a.email.length <= 254 && /^[^\s@]+@[^\s@]+$/.test(a.email) ? a.email : undefined;
+    const displayEmail =
+      (a.kind === "antigravity" || a.kind === "codex" || a.kind === "grok") &&
+      (a.displayEmail === null || isLoginEmail(a.displayEmail))
+        ? a.displayEmail
+        : undefined;
     const plan = isString(a.plan) && /^[\w.-]{1,40}$/.test(a.plan) ? a.plan : undefined;
     const usage = parsePlanUsage(a.usage);
     const provider = isPlanProviderWord(a.provider) ? a.provider : undefined;
@@ -3606,6 +3613,7 @@ export function parseAccounts(v: unknown[]): RunnerAccountInfo[] {
       kind: a.kind,
       loggedIn: a.loggedIn === true,
       ...(email ? { email } : {}),
+      ...(displayEmail !== undefined ? { displayEmail } : {}),
       ...(plan ? { plan } : {}),
       ...(usage ? { usage } : {}),
       ...(provider ? { provider } : {}),

@@ -105,7 +105,7 @@ describe("IA e uso: the viewer's own accounts", () => {
     const [work, mm] = rows();
     // Closed: its name, plan and owner, and one meter for its fullest window.
     const head = work?.querySelector(".plan-row__head") as HTMLElement;
-    expect(head.textContent).toContain("Trabalho\u2002Team\u2002de Walter");
+    expect(head.textContent).toContain("Trabalho\u2002Team\u2002Sua conta");
     expect(head.querySelector(".ac-planmeter__line")?.textContent).toBe("5h 84%");
     expect(within(head).getAllByRole("meter")).toHaveLength(1);
     // Near its limit: just the words; each window's bar says when it renews. The row still starts closed.
@@ -145,6 +145,8 @@ describe("IA e uso: the viewer's own accounts", () => {
     const [oc, gemini] = rows();
     expect(oc?.textContent).toContain("OpenCode");
     expect(oc?.querySelector(".ac-brand")?.getAttribute("data-mark")).toBe("opencode");
+    expect(oc?.querySelector(".plan-row__identity")?.textContent).toBe("chave …Q7f2");
+    expect((await opened(oc)).querySelector(".ai-accounts__own")?.textContent).not.toContain("Q7f2");
     expect(gemini?.querySelector(".ac-brand")?.getAttribute("data-mark")).toBe("gemini");
     expect(document.querySelectorAll(".plan-row .ac-brand__initial")).toHaveLength(0);
   });
@@ -255,6 +257,66 @@ describe("IA e uso: the viewer's own accounts", () => {
       "acct_mm",
       "MiniMax do Walt",
     ]);
+  });
+
+  test("shows the connected Gemini address below an alias or in place of an unnamed title", async () => {
+    const gemini = { ...base, kind: "antigravity" as const, email: null, usedBy: [] };
+    await page([
+      { ...gemini, id: "acct_gemini", label: "Gemini PRO", named: true, displayEmail: "personal@example.com" },
+      { ...gemini, id: "acct_gemini_other", label: "Gemini 2", named: false, displayEmail: "other@example.com" },
+    ]);
+    const named = rows().find((row) => row.textContent?.includes("Gemini PRO"));
+    expect(named?.querySelector(".plan-row__email")?.textContent).toBe("personal@example.com");
+    const unnamed = rows().find((row) => row.textContent?.includes("other@example.com"));
+    expect(unnamed?.querySelector(".plan-row__title")?.textContent?.trim()).toBe("other@example.com");
+    expect(unnamed?.querySelector(".plan-row__email")).toBeNull();
+  });
+
+  test("shows the provider addresses and identifies the viewer's accounts without their profile name", async () => {
+    await page([
+      { ...base, id: "acct_claude", label: "Claude do trabalho", named: true, email: "claude@example.com", usedBy: [] },
+      {
+        ...base,
+        kind: "cursor",
+        id: "acct_cursor",
+        label: "Cursor pessoal",
+        named: true,
+        email: "cursor@example.com",
+        usedBy: [],
+      },
+      {
+        ...base,
+        kind: "codex",
+        id: "acct_codex",
+        label: "Codex Plus",
+        named: true,
+        email: null,
+        displayEmail: "chatgpt@example.com",
+        ownerName: "Gemini QA",
+        usedBy: [],
+      },
+      {
+        ...base,
+        kind: "grok",
+        id: "acct_grok",
+        label: "Grok",
+        named: true,
+        email: null,
+        displayEmail: "grok@example.com",
+        ownerName: "Gemini QA",
+        usedBy: [],
+      },
+    ]);
+    expect(
+      rows()
+        .map((row) => row.querySelector(".plan-row__email")?.textContent)
+        .sort(),
+    ).toEqual(["chatgpt@example.com", "claude@example.com", "cursor@example.com", "grok@example.com"]);
+    for (const title of ["Codex Plus", "Grok"]) {
+      const row = rows().find((item) => item.querySelector(".plan-row__title")?.textContent?.trim() === title);
+      expect(row?.querySelector(".plan-row__owner")?.textContent).toBe("Sua conta");
+      expect(row?.textContent).not.toContain("de Gemini");
+    }
   });
 });
 

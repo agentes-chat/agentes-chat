@@ -74,6 +74,8 @@ export interface PlanAccountInfo {
   mine: boolean;
   /** Its owner's eyes only. */
   email: string | null;
+  displayEmail?: string;
+  keyHint?: string;
   signedOut: boolean;
   /** Who it thinks for (ADR 0059 §3); null for the computer's own sign-in, which thinks for its pairer's agents. */
   serves: PlanServes | null;
@@ -399,6 +401,8 @@ function accountOf(ctx: Context, key: string, viewerId: string | null): FoundAcc
       ownerName,
       mine,
       email: mine ? row.email : null,
+      ...(mine && row.status === "active" && row.displayEmail ? { displayEmail: row.displayEmail } : {}),
+      ...(mine && row.kind === "opencode" && row.keyHint ? { keyHint: row.keyHint } : {}),
       signedOut: row.status === "signed_out",
       serves: servesOf(row.serves),
       seat:

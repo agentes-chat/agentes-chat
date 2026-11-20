@@ -58,7 +58,15 @@ if (args[0] === "logout") {
 if (args[0] === "login") {
   process.stdout.write("To sign in, open https://accounts.x.ai/device on any device\nand enter the code: WDJB-MJHT\n");
   await new Promise((resolve) => setTimeout(resolve, Number(env.FAKE_GROK_LOGIN_MS ?? 200)));
-  writeFileSync(auth, "{}");
+  const email = env.FAKE_GROK_EMAIL;
+  writeFileSync(
+    auth,
+    email
+      ? JSON.stringify({
+          "https://accounts.x.ai/sign-in": { key: "test-access", refresh_token: "test-refresh", email },
+        })
+      : "{}",
+  );
   process.stdout.write("Signed in.\n");
   process.exit(0);
 }
