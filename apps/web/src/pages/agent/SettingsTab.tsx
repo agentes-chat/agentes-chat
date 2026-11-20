@@ -294,7 +294,7 @@ export function SettingsTab({
               }}
               action={
                 can("look") ? (
-                  <>
+                  <span className="agp-look-acts">
                     {/* VPS Zen: its own photo (AgentPhoto.tsx), saved at once, apart from the save bar. */}
                     <Button size="sm" icon="image" onClick={() => setPhotoOpen(true)}>
                       {t("agentPhoto.button")}
@@ -308,7 +308,7 @@ export function SettingsTab({
                     >
                       {t("newAgent.shuffle")}
                     </Button>
-                  </>
+                  </span>
                 ) : undefined
               }
             >

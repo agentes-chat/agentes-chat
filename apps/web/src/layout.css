@@ -15265,3 +15265,8 @@ html:not([data-pointer]) .rh-set__face-edit:focus-visible {
 .sidebar[data-rail="true"] .agent-chats {
   display: none;
 }
+/* VPS Zen: Foto and Aleatório side by side in the identity card's head, the kit's 8px between buttons. */
+.agp-look-acts {
+  display: flex;
+  gap: 8px;
+}
