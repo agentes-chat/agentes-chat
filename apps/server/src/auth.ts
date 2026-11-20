@@ -992,7 +992,8 @@ export async function confirmsOnThisMac(
 
 /**
  * Proof that the person at this session is the account's own, before deleting the workspace `orgId`, or their account
- * when it is null (ADR 0088 §2): the code emailed to them (`spendDeletionCode`). On a server that sends no email, their
+ * when it is null, or with `reset` before resetting the workspace (ADR 0088 §2): the code emailed to them
+ * (`spendDeletionCode`). On a server that sends no email, their
  * password instead, with 5 tries per 15 minutes per account (429 after), or, for the owner `confirmsOnThisMac`, a
  * sign-in in the last 10 minutes when no password comes. Throws `reauth.code` without a code, `reauth.sign_in` for
  * that owner's older sign-in, and `reauth.password` without a password or with a wrong one.
@@ -1004,10 +1005,11 @@ export async function deletionProof(
   userId: string,
   orgId: string | null,
   proof: { code?: string; password?: string },
+  reset = false,
 ) {
   if (deps.emailDelivers) {
     if (!proof.code) throw new ForbiddenError("Type the code we emailed you", "reauth.code");
-    return spendDeletionCode(deps, userId, orgId, proof.code);
+    return spendDeletionCode(deps, userId, orgId, proof.code, new Date(), reset);
   }
   if (!proof.password && (await confirmsOnThisMac(deps, userId))) {
     if (await signedInLately(auth, headers, userId)) return;

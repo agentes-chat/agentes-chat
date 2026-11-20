@@ -98,6 +98,16 @@ const KIND_TYPE: Record<Exclude<ArtifactKind, "file">, FileTypeKey> = {
   canvas: "canvas",
 };
 
+/** Code files read in the code font; any other text in the app's. */
+const CODE_EXT = new Set(
+  "ts tsx js jsx mjs cjs json py rb go rs java kt swift c h cc cpp hpp cs php sh bash zsh yml yaml toml sql css scss html xml vue svelte lua dart".split(
+    " ",
+  ),
+);
+
+/** A file whose name says it is code ("app.ts"), read in the code font. */
+export const isCodeName = (name: string) => CODE_EXT.has(extensionOf(name));
+
 /** "relatorio.final.PDF" → "pdf" ("" without one). */
 export function extensionOf(name: string): string {
   const m = /\.([a-z0-9]{1,8})$/i.exec(name.trim());

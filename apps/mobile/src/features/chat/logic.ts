@@ -54,15 +54,29 @@ export const MSG_AVATAR = 34;
 export const MSG_GAP = 12;
 /** Where a message's words start: event lines, receipts and what hangs under a message line up there. */
 export const MSG_TEXT = MSG_INSET + MSG_AVATAR + MSG_GAP;
-/** A `bubbles` row's own padding at its start (`lookRows.bubblesRow`). */
+/** A `bubbles` row's own padding at its start (`lookRows.bubblesRow`), where its face stands. */
 export const BUBBLES_INSET = 10;
+/**
+ * A bubble with no face beside it (a DM) stands as far from the screen's edge as mine do on the other side
+ * (`lookRows.bubblesBare`, MessageRow's `styles.me`).
+ */
+export const BUBBLES_EDGE = 16;
+/** Where someone else's bubbles stop at the right: air beside them, and room for the times a pull shows. */
+export const BUBBLES_END = 60;
+
+/**
+ * A `compact` row's face, at the rows' edge (`MSG_INSET`) beside the name on its first line, and the gap to the
+ * words. No column of times: a pull to the left shows them, as in bubbles (`timesOnPull`).
+ */
+export const COMPACT_FACE = 18;
+export const COMPACT_GAP = 6;
 
 /** How far a row's body stands in from the conversation's edges, at each end. */
 export const ROW_BODY_INSET: Record<ChatStyle, { left: number; right: number }> = {
   left: { left: MSG_TEXT, right: 16 },
   comfortable: { left: MSG_TEXT, right: 16 },
-  bubbles: { left: 48, right: 44 },
-  compact: { left: 74, right: 12 },
+  bubbles: { left: 48, right: BUBBLES_END },
+  compact: { left: MSG_INSET + COMPACT_FACE + COMPACT_GAP, right: 12 },
 };
 
 interface InsetLook {
@@ -74,7 +88,7 @@ interface InsetLook {
 /** `ROW_BODY_INSET` in a look: a row with no face starts its body at its own padding. */
 export function rowBodyInset({ style, faces }: InsetLook) {
   const inset = ROW_BODY_INSET[style];
-  return faces ? inset : { ...inset, left: style === "bubbles" ? BUBBLES_INSET : MSG_INSET };
+  return faces ? inset : { ...inset, left: style === "bubbles" ? BUBBLES_EDGE : MSG_INSET };
 }
 
 /**
@@ -183,8 +197,16 @@ const dayKey = (iso: string) => {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 };
 
+/**
+ * In a conversation of bubbles (no time on the messages, a pull shows them), how long a pause is before the next
+ * message gets a line saying when ("Today 15:35"): long enough that an agent's usual task doesn't split a question
+ * from its answer.
+ */
+export const PAUSE_MS = 15 * 60_000;
+
 export type ChatRow =
-  | { kind: "day"; key: string; iso: string }
+  /** A day's line; `at`: with the time too (each day's first message and each after a pause, in bubbles). */
+  | { kind: "day"; key: string; iso: string; at?: true }
   | {
       kind: "message";
       key: string;
@@ -226,10 +248,17 @@ export function standsAlone(m: Message) {
  * found, told by its agent, stands alone with its own header; the report it answers folds into it, and a
  * routine's call written as its creator is left out, like the web's `buildTimeline`. The sticker or GIF an agent
  * adds right after its own reply (ADR 0091) always groups under that reply, whatever the reply carries.
+ * `times` (bubbles, whose messages show no time): each day's line says the time too, and a message after a pause
+ * (`PAUSE_MS`) gets a line of its own ("Today 15:35").
  */
-export function buildRows(messages: Message[], hidden: (m: Message) => boolean = () => false): ChatRow[] {
+export function buildRows(
+  messages: Message[],
+  hidden: (m: Message) => boolean = () => false,
+  times = false,
+): ChatRow[] {
   const rows: ChatRow[] = [];
   let lastDay = "";
+  let lastAt = 0;
   let prev: Message | null = null;
   const answered = answeredNotices(messages);
   // A return's line (the dock holds it), a mention its message's own line explains.
@@ -244,11 +273,16 @@ export function buildRows(messages: Message[], hidden: (m: Message) => boolean =
     )
       continue;
     const day = dayKey(m.createdAt);
+    const at = new Date(m.createdAt).getTime();
     if (day !== lastDay) {
-      rows.push({ kind: "day", key: `day-${day}`, iso: m.createdAt });
+      rows.push({ kind: "day", key: `day-${day}`, iso: m.createdAt, ...(times && { at: true as const }) });
       lastDay = day;
       prev = null;
+    } else if (times && at - lastAt >= PAUSE_MS) {
+      rows.push({ kind: "day", key: `at-${messageKey(m)}`, iso: m.createdAt, at: true });
+      prev = null;
     }
+    lastAt = at;
     // A fast reply while its task works keeps its header ("enquanto trabalha"), and a reply to a message starts its
     // own block under its quote, as on the web.
     const grouped =

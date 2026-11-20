@@ -5,6 +5,7 @@ import {
   type PlanUsage,
   type ProviderFailureCause,
   type PubSub,
+  saysDiskFull,
 } from "@agenteschat/adapters";
 import {
   and,
@@ -68,6 +69,7 @@ import type { BlockSpecReader } from "./block-state";
 import { ASK_CHOICES_TOOL, SHOW_BLOCK_TOOL, someoneAnswers } from "./blocks";
 import { brainOf } from "./brain-settings";
 import { brainSessionId, missingTurnFolder, recordPlanUsage } from "./brains/claude-code";
+import { codexModelRefused } from "./brains/codex";
 import { ModelBrain } from "./brains/model";
 import type { ComputerTurn } from "./brains/prompt";
 import {
@@ -87,6 +89,7 @@ import {
   refusalScope,
   regionRefusal,
   resolveBrain,
+  spareAccountFor,
   storedPlanUsage,
   UNAVAILABLE_CODES,
 } from "./brains/select";
@@ -139,6 +142,7 @@ import { REACT_TOOL } from "./chat-tools";
 import {
   kickRoomQueue,
   publishQueueChanged,
+  type RoomWaitCause,
   roomGate,
   roomHead,
   SIGN_IN_CONCURRENCY,
@@ -234,7 +238,7 @@ import { agentRepositoryList, repositoriesPrompt } from "./git/repos";
 import { askVerdict, handOffHolds, repeatedAsk, saysNeedsNothing } from "./hand-off";
 import { UPDATE_ISSUE_TOOL } from "./issue-tools";
 import { linkRunToIssue, mirrorReplyToIssue } from "./issues";
-import { type Judge, judgeCallOf } from "./judge";
+import { type Judge, judgeCallOf, TURN_END_CHECK_BUDGET_MS, withJudgeBudget } from "./judge";
 import {
   KEY_LINE_PERSON_MINUTES,
   type KeyLinePlace,
@@ -307,7 +311,16 @@ import { seatState } from "./right-hand-seats";
 import { routineBriefOf } from "./routine-brief";
 import { missStaleRoutineRun, routineRunWaitingForComputer, routineRunWaitingForPlan } from "./routine-firing";
 import { closeRoutineRun, type RoutineRunEnd, recordRoutineReportMessage, routineFailureEnd } from "./routine-ledger";
-import { type ReleaseReason, releaseHeldInbox, releaseInbox, stoppedToSend, takeInbox, whileHeld } from "./run-inbox";
+import {
+  personAmong,
+  type ReleaseReason,
+  releaseHeldInbox,
+  releaseInbox,
+  stoppedToSend,
+  takeInbox,
+  unreadNow,
+  whileHeld,
+} from "./run-inbox";
 import { deliverNoticeToRun } from "./run-resume";
 import { issueRunToolToken, revokeRunToolTokens } from "./run-tool-tokens";
 import {
@@ -339,6 +352,7 @@ import {
   cliFailureText,
   cliRefusedStart,
   cliWords,
+  DISK_FULL,
   isTerminal,
   keyRefused,
   NO_AI,
@@ -349,12 +363,15 @@ import {
   providerFailureText,
   type RunStatus,
   replyThreadOf,
+  runAtWork,
   runErrorDetail,
   STUCK_ERROR,
   stopNote,
   transitionRun,
 } from "./runs";
 import { SANDBOX_SCOPE, truncateOutput } from "./sandbox";
+import { isSayNow, linesSaid, SAY_NOW_TOOL, type SaidNow, sayNowApplies, sayNowText, withoutSaidNow } from "./say-now";
+import { sharedQueryEmbedding } from "./search";
 import { secretResult } from "./secrets";
 import { enabledSkills } from "./skills";
 import {
@@ -434,6 +451,7 @@ import { movedNote, queuedNote, workMayStart, workStartsNote } from "./work-tool
 import {
   dropWorkNotices,
   endWork,
+  liveWorksHere,
   moveToBackground,
   pauseWorkTimer,
   resumeWorkTimer,
@@ -441,6 +459,7 @@ import {
   WORK_AUTO_AFTER_CALLS,
   WORK_AUTO_AFTER_MS,
   WORK_AUTO_MIN_MS,
+  WORK_BRIEF_HEADING,
   WORK_IN_BACKGROUND_TOOL,
   WORK_JOB_YIELD_MS,
   WORK_LIMITS,
@@ -473,7 +492,7 @@ const DECIDED_LINE_MAX = 2000;
 /** How many apps a reply's `meta.work.calls` names: its closed block stacks only a few logos. */
 const WORK_CALLS = 12;
 /** The calls a reply's `meta.work` never counts, by name: a reaction, and looking a tool up. */
-const UNCOUNTED_TOOLS = `^(${REACT_TOOL}|${ON_DEMAND_FIND}|${ON_DEMAND_USE})$|_${ON_DEMAND_FIND}$`;
+const UNCOUNTED_TOOLS = `^(${REACT_TOOL}|${SAY_NOW_TOOL}|${ON_DEMAND_FIND}|${ON_DEMAND_USE})$|_${ON_DEMAND_FIND}$`;
 
 /**
  * What the agent engine needs (ADR 0032). The engine is this file: it owns the
@@ -617,6 +636,11 @@ export interface Transcript {
    * pause card drops it.
    */
   heldWording?: string;
+  /**
+   * How many of its replies people overtook (`overtakenNote`): written while only talking, and the person wrote again
+   * before they went out, so each was rewritten with the rest instead of sent. At most `OVERTAKEN_MAX`.
+   */
+  overtaken?: number;
   /** What replies once streamed counted their pieces with: read by nothing now, kept on old runs' transcripts. */
   deltaSeq?: number;
   /** Memory changes made by tools, not yet attached to a posted message (`meta.memoryUpdates`). */
@@ -637,6 +661,8 @@ export interface Transcript {
   feedbackOffer?: PendingFeedbackOffer;
   /** A switch a call found off on its computer, not yet on a posted message (`meta.toolOff`, its one-click card). */
   toolOff?: { machineId: string; tool: string };
+  /** The line it told them on the way (`say_now`, ADR 0207), with where it called it: never its reply. */
+  saidNow?: SaidNow[];
   /** The agent reacted (`react`) instead of replying: an empty final answer posts nothing. */
   reacted?: boolean;
   /** A file it opened was left out by a text-only connection, not yet on a posted message (`meta.filesTextOnly`). */
@@ -725,6 +751,8 @@ export interface Transcript {
     resetsAt?: string;
     /** A usage wait's: when its conversation first paused (`usageWait.since`), its place in line (`usageWaitPlace`). */
     since?: number;
+    /** When this wait began (ms): the claim that resumes it profiles a wait for room from here (`room_wait`). */
+    at?: number;
     /** A usage wait's plan in words ("Claude", "ChatGPT"): Rotinas says what it waits for. */
     plan?: string;
     /** A plan wait's model (null: the brain's default): a turn through on another model doesn't wake it. */
@@ -939,7 +967,10 @@ const CONTEXT_TOOLS: readonly string[] = [
 
 /** How long the first call waits for its pre-warm once the quiet window is over. */
 const PREWARM_WAIT_MS = 4000;
-/** A run's last claims whose stage profiles it keeps (`agent_runs.profiles`): long work claims many times. */
+/**
+ * The claims whose stage profiles a run keeps (`agent_runs.profiles`): its first (the router's stage, its first context)
+ * and its latest. Long work and a wait for room claim many times.
+ */
 const RUN_PROFILES_KEPT = 10;
 /** How soon a quiet window that ends at once is told from one still running (no pre-warm then). */
 const PREWARM_PROBE_MS = 50;
@@ -966,6 +997,11 @@ export const MAX_EARLY_COMPUTER_DROPS = 10;
  * until it runs: long work (ADR 0121) wakes through agent turns, and a dropped turn could end it halfway.
  */
 export const COMPUTER_BUSY_RETRY_MS = 15_000;
+/**
+ * The same for a run a person waits on (`roomPeople`): its turn may fit the runner's person floor or its open CLI's
+ * any moment, and a newer runner's `room.freed` usually comes first anyway.
+ */
+export const PERSON_ROOM_RETRY_MS = 3_000;
 /**
  * Waiting for room is a live state on the person's message, not a chat line: only a run still in line after this long
  * says so, once per agent and conversation.
@@ -1144,6 +1180,8 @@ type RunJobOptions = {
   wait?: string;
   /** A parked wake's run: when the wake started waiting (`transcript.roomOrderSince`). */
   lineSince?: number;
+  /** A run the router started: how long its routing took, the first stage of its first claim's profile. */
+  routerMs?: number;
   jobId?: string;
   owned?: () => Promise<boolean>;
   failed?: (error: unknown) => void;
@@ -1179,6 +1217,8 @@ export async function executeRun(deps: EngineDeps, runId: string, options: RunJo
   try {
     return await executeRunInner(deps, runId, options, prof, abort.signal, steerGate);
   } finally {
+    // A run that ended before its last stage (failed, passed, paused) still accounts for the time since its last mark.
+    if (prof.stages.at(-1)?.stage !== "events") prof.end();
     steerGate.close();
     clearInterval(heartbeat);
     unregisterRunAbort(runId, abort);
@@ -1189,9 +1229,11 @@ export async function executeRun(deps: EngineDeps, runId: string, options: RunJo
       // not in the transcript (appending there would rewrite the whole TOASTed conversation on every claim).
       if (prof.run) {
         const brain = prof.brain.length > 0 ? { brain: prof.brain } : {};
-        const kept = JSON.stringify([{ stages: prof.stages, total: prof.total(), ...brain }]);
+        const kept = JSON.stringify([
+          { stages: prof.stages, total: prof.total(), endedAt: new Date().toISOString(), ...brain },
+        ]);
         const capped = (list: SQL) =>
-          sql`case when jsonb_array_length(${list}) > ${RUN_PROFILES_KEPT} then (${list}) - 0 else ${list} end`;
+          sql`case when jsonb_array_length(${list}) > ${RUN_PROFILES_KEPT} then (${list}) - 1 else ${list} end`;
         await deps.db
           .update(agentRuns)
           .set({ profiles: capped(sql`coalesce(${agentRuns.profiles}, '[]'::jsonb) || ${kept}::jsonb`) })
@@ -1345,13 +1387,16 @@ async function executeRunInner(
   let waitedModel: string | null | undefined;
   /** When its wait's own timer was due: a claim before it was a wake (a turn through, a reading with room). */
   let waitedUntil: string | undefined;
+  /** When that wait began. */
+  let waitedAt: number | undefined;
   const started = await transitionRun(db, runId, "queued", "running");
   if (started) {
     run = started;
     fresh = true;
   } else {
     const [loaded] = await db.select().from(agentRuns).where(eq(agentRuns.id, runId));
-    if (!loaded) throw new PermanentJobError(`agent run ${runId} not found`);
+    // Erased since its job was queued (its channel deleted, its workspace reset): nothing left to run.
+    if (!loaded) return;
     run = loaded;
     if (isTerminal(run.status) || run.status === "queued") return;
     if (run.status === "running") {
@@ -1399,6 +1444,7 @@ async function executeRunInner(
       waitedKey = stored?.waitingForBrain?.waitKey;
       waitedModel = stored?.waitingForBrain?.model;
       waitedUntil = stored?.waitingForBrain?.until;
+      waitedAt = stored?.waitingForBrain?.at;
       // This job runs the run from now on, not its wait: handed back at a shutdown or retried, it goes on with the
       // run instead of finding it no longer waiting and doing nothing.
       if (options.wait && options.jobId) {
@@ -1411,6 +1457,9 @@ async function executeRunInner(
   }
   // status is `running` here.
   prof.mark("claim");
+  if (fresh && options.routerMs !== undefined) prof.before("router", options.routerMs);
+  // Each refusal for room ends its claim: this one profiles the wait since the last refusal, so a run's waits add up.
+  if (waitedOn === "busy" && waitedAt !== undefined) prof.before("room_wait", prof.startedAt - waitedAt);
   prof.run = { id: run.id, orgId: run.orgId, agentId: run.agentId };
   steerGate.close = answerNoTurn(deps.pubsub, run.id);
   const claimedAt = Date.now();
@@ -1682,7 +1731,13 @@ async function executeRunInner(
       });
   };
   /** Messages people sent to this conversation while the run was active (one run per agent and conversation). */
-  const takeSteering = () => takeInbox(db, run.id);
+  /**
+   * A message just written in a channel others share may not be for this agent: its triage takes it out of the inbox
+   * (`steerHandling` `elsewhere`, ADR 0112 addendum of 2026-11-19), so the run waits a moment for it instead of reading
+   * it first (in the same read). Without a judge there is no triage to wait for.
+   */
+  const awaitTriage = Boolean(deps.context?.judge);
+  const takeSteering = () => takeInbox(db, run.id, { awaitTriage });
   /**
    * The run ended: messages it took but never read get a run of their own (`releaseInbox`), so
    * nothing sent to the agent is swallowed by an ending.
@@ -1892,6 +1947,7 @@ async function executeRunInner(
             .where(and(eq(schema.messages.orgId, run.orgId), eq(schema.messages.id, run.triggerMessageId))),
     deps.tools ? deps.tools.granted(ctx, heldBack) : Promise.resolve([]),
   ]);
+  prof.part("tools_granted");
   let tools = presentTools(granted, isSensitive, ctx.loadedGroups);
   /**
    * Only Claude Code defers our tools itself: a run that lists every tool and thinks with another brain (the model
@@ -1912,11 +1968,15 @@ async function executeRunInner(
   if (needsContext) {
     const ai = await agentAiState({ db, gateway: deps.gateway, machines: deps.machines }, agent, run);
     if (ai.state === "no_ai") return failNoAi(ai.reason ?? "no_key", ai.own, undefined, undefined, ai);
+    prof.part("ai_state");
   }
   if (!askingForRoom) await publishChannelEvent(deps.pubsub, event("running"));
   // Tools on demand (ADR 0043): a new run lists the core tools and the groups the judge expects it to need.
   let toolChoice = null as ToolGroupChoice | null;
   const judge = deps.context?.judge;
+  /** A turn end's checks timed out once: the run's later ones take their default at once (`withJudgeBudget`). */
+  const slowChecks = { timedOut: false };
+  const turnEndJudge = () => (judge ? withJudgeBudget(judge, TURN_END_CHECK_BUDGET_MS, slowChecks) : undefined);
   /** The latest messages where the run answers, read once for every judge that needs them. */
   let recentRead: Promise<string[]> | null = null;
   const recentMessages = () => {
@@ -2163,6 +2223,8 @@ async function executeRunInner(
         .catch(() => {});
     }
   }
+  // The checks before the context: the trigger's thread, how the run was routed, a catch-up's triage.
+  prof.part("checks");
   /** Whether this run read outside content (`runReadOutside`): sticky once true. */
   let readOutside = false;
   const outsideMemo: OutsideMemo = {};
@@ -2225,8 +2287,9 @@ async function executeRunInner(
     // per logo of the closed block, in order of first use: per service, else app, else screen, else tool (a
     // connector's dozens of tools would push the next apps past the few kept). A reaction already shows on the
     // message it reacts to, looking a tool up is how our tools load (`find_tools`, a big connector's own, a
-    // `use_tool` that named none), and the runner asking again about a command waiting on a person is that command's
-    // line (`promptPoll`): none is counted, as the apps leave them out of the opened block (`UNLISTED`).
+    // `use_tool` that named none), the line before slow work is a message already (`say_now`, ADR 0207), and the runner
+    // asking again about a command waiting on a person is that command's line (`promptPoll`): none is counted, as the
+    // apps leave them out of the opened block (`UNLISTED`).
     const name = sql<string>`${agentRunSteps.data}->>'name'`;
     const screen = sql`substring(${name} from '^(?:mcp__agentes__)?(browser|desktop)_')`;
     const app = sql`coalesce(${agentRunSteps.data}->>'service', ${agentRunSteps.data}->>'connector', ${screen}, ${name})`;
@@ -2373,7 +2436,17 @@ async function executeRunInner(
     const skillList = tools.some((t) => t.name === "load_skill")
       ? await enabledSkills(db, run.orgId, agent.id, run.id)
       : [];
-    const readsWiki = tools.some((t) => t.name === "read_wiki_page");
+    // A routine's instructions name what it checks; the wiki stays one `read_wiki_page` away.
+    const searchesWiki = tools.some((t) => t.name === "read_wiki_page") && !viaRoutine;
+    // Only the kinds searched below: with vectors for the wiki alone, a run that doesn't search it pays for none.
+    const queryEmbedding = contextDeps
+      ? sharedQueryEmbedding(
+          contextDeps,
+          run.orgId,
+          (trigger?.body ?? "").trim().slice(0, 500),
+          searchesWiki ? ["context_item", "wiki"] : ["context_item"],
+        )
+      : undefined;
     const personBehind = () => runAuthority(db, run).then((a) => a.personId);
     // Limited to some GitHub repositories: which ones, and where to start.
     const repositories = granted.some((t) => t.scope.startsWith("github:"))
@@ -2385,9 +2458,12 @@ async function executeRunInner(
       ? browsersPrompt(await agentBrowserProfiles(db, run.orgId, agent.id), agent.browserProfileId)
       : "";
     // Listed in every run of the agent (`EVERY_TOOL`): the prompt speaks of them only where they apply.
-    const [workApplies, choicesApply] = every
-      ? await Promise.all([workMayStart(ctx), someoneAnswers(ctx)])
-      : [true, true];
+    const [workApplies, choicesApply, sayNowHere] = await Promise.all([
+      every ? workMayStart(ctx) : true,
+      every ? someoneAnswers(ctx) : true,
+      // Listed in every run with an id: the line before slow work is spoken of only where people read it as it goes.
+      tools.some((t) => t.name === SAY_NOW_TOOL) ? sayNowApplies(db, run, sealedAtClaim).catch(() => false) : false,
+    ]);
     const [context, memory, wikiPages, rules] = await Promise.all([
       buildRunContext(db, run, agent, {
         maxMessages: deps.contextMessages,
@@ -2396,6 +2472,7 @@ async function executeRunInner(
         react: tools.some((t) => t.name === REACT_TOOL),
         followUp: tools.some((t) => t.name === FOLLOW_UP_TOOL),
         work: workApplies && tools.some((t) => t.name === WORK_IN_BACKGROUND_TOOL),
+        sayNow: sayNowHere,
         blocks: tools.some((t) => t.name === SHOW_BLOCK_TOOL),
         // Granted is enough: on demand their group is one `use_tool` away (ADR 0196 §6). `image_search` is every
         // agent's (no scope), so it says nothing about the Drive's.
@@ -2443,17 +2520,18 @@ async function executeRunInner(
                 personIds: personId ? [personId] : [],
                 runId: run.id,
                 withOwn: memoryArmOf(run.id) === "with",
+                queryEmbedding,
               }),
             )
             .catch(() => ({ text: "", itemIds: [] as string[], matchedIds: [] as string[] }))
         : Promise.resolve({ text: "", itemIds: [] as string[], matchedIds: [] as string[] }),
-      // A routine's instructions name what it checks; the wiki stays one `read_wiki_page` away.
-      readsWiki && !viaRoutine
+      searchesWiki
         ? retrieveWikiForRun(
             { db, search: contextDeps },
             {
               orgId: run.orgId,
               text: trigger?.body ?? "",
+              queryEmbedding,
               reader: async () => ({
                 type: "agent",
                 agentId: agent.id,
@@ -2465,7 +2543,11 @@ async function executeRunInner(
         : Promise.resolve({ text: "", pageIds: [] as string[], held: false }),
       rulesForRun(db, run, agent).catch(() => ({ text: "", itemIds: [] as string[] })),
     ]);
-    await judging;
+    prof.part("build");
+    if (judging) {
+      await judging;
+      prof.part("judging");
+    }
     // Its thread turned confidential after the claim read the message that asked: it is a run of that thread now.
     if (context.confidential && !ctx.confidential) {
       ctx.confidential = true;
@@ -2488,6 +2570,7 @@ async function executeRunInner(
           conversation: true,
           text: `# Earlier in this thread (summary)\n${itemLabel(summary)} ${summary.content}`,
         });
+      prof.part("summary");
     }
     // Per turn like memory: who the run acts for picks the rules, so they never move the cached prompt.
     if (rules.text) {
@@ -2902,8 +2985,10 @@ async function executeRunInner(
     ]
       .filter(Boolean)
       .join("\n\n");
+    // Never the line it said on the way again (`say_now`): a cut turn's lines are only in the conversation yet.
+    const unsaid = withoutSaidNow(wrote, await linesSaid(db, run).catch(() => []));
     // The apps show `canceled.text`, not the body: the right hand's is scrubbed here, before both (ADR 0137 §4).
-    const shown = isRightHand(agent) ? await scrubRightHandReply(db, run, wrote) : wrote;
+    const shown = isRightHand(agent) ? await scrubRightHandReply(db, run, unsaid) : unsaid;
     // Cut mid-stream: what it was writing stays in the transcript too ("Continuar" picks up from there).
     if (partial.trim() && t.messages.at(-1)?.role !== "assistant")
       t.messages.push({ role: "assistant", content: [{ type: "text", text: partial.trim() }] });
@@ -3252,7 +3337,8 @@ async function executeRunInner(
    */
   const evidenceFor = (t: Transcript) => {
     const evidence = { means: [] as string[], tried: [] as string[] };
-    const gather = async () => {
+    let gathering: Promise<typeof evidence> | null = null;
+    const read = async () => {
       const names = new Set([...granted, ...tools].map((x) => x.name));
       const own =
         // The right hand's turn is locked (`RIGHT_HAND_TURN`): a nudge toward shell or files would get it killed.
@@ -3271,11 +3357,86 @@ async function executeRunInner(
       evidence.tried = t.executedCalls ? await triedCalls(db, run, t.harnessTried) : (t.harnessTried ?? []);
       return evidence;
     };
+    /** Read once: started early beside the turn end's other reads (`prepare`), awaited by the judgment. */
+    const gather = () => {
+      gathering ??= read();
+      return gathering;
+    };
     return { evidence, gather };
   };
   /** The run's executed calls less those repeating one that already worked (`repeatedCalls`): what a nudge must grow. */
   const workDone = async (t: Transcript) =>
     (t.executedCalls ?? 0) - (t.executedCalls ? await repeatedCalls(db, run).catch(() => 0) : 0);
+  /**
+   * A computer brain finished an answer and went on in the same turn (a message handed to it mid-turn read after it,
+   * work moved to its background): the answer goes out now, as its own message, as a model brain's does before it
+   * reads on (ADR 0112), instead of waiting for what it writes next and joining it. A conversation's run only: a
+   * routine's speaks through its hand-off, long work's report goes home, and a mission's and an agents' DM's answers
+   * are read whole. It stays for the turn's end, leading the final answer as before, when the end would hold it back:
+   * words the silence word closes, our tools named to a person, or the judge finding it asks for a secret in the chat,
+   * claims a result no call produced, or gives up with ways left. True when nothing of it is left for the turn's end
+   * (posted, or nothing to say: the silence word alone, its last message word for word).
+   */
+  /**
+   * The titles of the agent's own work running in the background in this conversation (ADR 0121), other than this
+   * run's: the follow-through judge reads a promise about what that work will bring as kept by it, so a reply turn
+   * beside it ("I'll bring the findings when it ends") isn't pushed into doing the work itself.
+   */
+  const backgroundWorkHere = async () => {
+    // Read again only where the run's context found some (`workBrief`, read before the model call): none then, none now.
+    const found = (transcript as Transcript | null)?.system.some((b) => b.text.startsWith(WORK_BRIEF_HEADING));
+    if (run.workId || !found) return [];
+    return (await liveWorksHere(db, run).catch(() => [])).map((w) => w.title || "untitled background work");
+  };
+  const answerNow = async (answer: string): Promise<boolean> => {
+    const t = transcript as Transcript;
+    const betweenAgents = Boolean(channelRow && isAgentOnlyDm(channelRow));
+    if (run.background || run.workId || plan.missionId || betweenAgents) return false;
+    if (isSentinelOnly(answer)) return true;
+    if (endsWithSentinel(answer)) return false;
+    // This turn's lines on the way (`say_now`) reach the transcript when the turn ends: the conversation has them now.
+    const said = withoutSaidNow(stripSentinel(answer), await linesSaid(db, run).catch(() => t.saidNow ?? []));
+    if (!said.trim() || repeatsLastPost(said)) return true;
+    const request = t.request ?? triggerMessage?.body ?? triggerText;
+    const plain = !t.repo && !t.system.some((b) => b.text === TECHNICAL_STYLE_LINE);
+    const names = [...granted, ...tools].map((x) => x.name);
+    if (plain && toolsNamed(said, names, request).length > 0) return false;
+    if (judge) {
+      const verdict = await continuationVerdict(judge, {
+        orgId: run.orgId,
+        agentId: run.agentId,
+        runId: run.id,
+        request,
+        reply: said,
+        ...(await evidenceFor(t).gather()),
+        runKind: "conversation",
+        personal: await isPersonalWorkspace(db, run.orgId),
+        backgroundWork: await backgroundWorkHere(),
+      }).catch(() => null);
+      if (verdict === "secret" || verdict === "unbacked" || verdict === "untried") return false;
+    }
+    const posted = await db.transaction(async (tx) => {
+      const m = await post(tx, replyThreadId, said, withFallback(t, undefined));
+      await addRunStep(tx, run, "message", { messageId: m.id });
+      return m;
+    });
+    // Where it was written in the run's conversation: before the message it reads next. Saved with the turn (the
+    // bridge may be writing the transcript now).
+    t.messages.push({ role: "assistant", content: [{ type: "text", text: said }] });
+    t.postedUpTo = t.messages.length;
+    t.postedCount++;
+    // It is out: nothing failing from here on makes it go out again.
+    try {
+      const [view] = await withWikiLinks(db, run.orgId, [messageView(posted)]);
+      if (view) await publishMessageCreated(deps.pubsub, view);
+      // Nothing of a confidential thread is copied onto its task (ADR 0190).
+      if (typeof issueId === "string" && !isConfidential(posted.meta))
+        await mirrorReplyToIssue({ db, pubsub: deps.pubsub }, run, issueId, posted.body);
+    } catch {
+      // The apps read it with the conversation.
+    }
+    return true;
+  };
   let brain = createBrain(deps, thinker, run, plan.kind, turnToken, () => transcript as Transcript);
   /**
    * What the key stands in for since this claim's stand-in for the right hand, until it answers a turn: the plan and
@@ -3416,12 +3577,9 @@ async function executeRunInner(
    * A run that changed something posts its receipts instead (`endWithReceipts`).
    */
   const endQuietly = async (how: "pass" | "sentinel" | "empty", reason: string): Promise<boolean> => {
-    const [still] = await db
-      .select({ pending: agentRuns.pendingMessageIds })
-      .from(agentRuns)
-      .where(eq(agentRuns.id, run.id));
+    const still = { pending: await unreadNow(db, run.id, { awaitTriage }) };
     const t = transcript as Transcript;
-    if ((still?.pending.length ?? 0) > 0) {
+    if (still.pending.length > 0) {
       delete t.passed;
       return false;
     }
@@ -3656,10 +3814,11 @@ async function executeRunInner(
    * its first look one just gone too (`computerBackSoon`). Still away: the run waits for the computer (the API never
    * stands in, ADR 0032's 2026-11-15 addendum, but for the right hand's key, ADR 0137 §7 amended 2026-11-15), or
    * (nothing to think with) it fails with `no_ai`. A computer with no
-   * room for the turn (`busy`) is asked again every `COMPUTER_BUSY_RETRY_MS` until it runs.
+   * room for the turn (`busy`) is asked again every `COMPUTER_BUSY_RETRY_MS` (`PERSON_ROOM_RETRY_MS` when a person waits)
+   * until it runs.
    */
   const brainUnavailable = async (
-    u: BrainUnavailability & { queued?: boolean; retryAt?: number },
+    u: BrainUnavailability & { queued?: boolean; retryAt?: number; room?: RoomWaitCause },
     look?: "first" | "again",
   ): Promise<"fallback" | "waited" | "failed" | "no" | "back" | "canceled" | "moved"> => {
     const from = plan.kind;
@@ -3851,10 +4010,16 @@ async function executeRunInner(
       machineId,
       code: u.code,
       waitId: Bun.randomUUIDv7(),
+      at: Date.now(),
       ...(quietUntil !== null ? { quiet: true } : {}),
     };
     if (!stillBusy)
-      await addRunStep(db, run, "error", { reason: "brain_unavailable", code: u.code, message: u.message });
+      await addRunStep(db, run, "error", {
+        reason: "brain_unavailable",
+        code: u.code,
+        message: u.message,
+        ...(busy && u.room ? { room: u.room } : {}),
+      });
     // Online and full, it sends no "back" signal: ask again soon. Just gone: look again when the grace is over (back
     // before that, `resumeRunsWaitingForMachine` resumes it and this job finds another wait). Queued before the wait
     // is stored, so a crash in between leaves at worst a job that finds another wait and does nothing.
@@ -3864,7 +4029,11 @@ async function executeRunInner(
         kind: "agent_run.execute",
         payload: { runId: run.id, wait: t.waitingForBrain.waitId },
         dedupeKey: `agent_run.execute:${run.id}:${busy ? "room" : "offline_note"}:${t.waitingForBrain.waitId}`,
-        runAt: new Date(busy ? (u.retryAt ?? Date.now() + COMPUTER_BUSY_RETRY_MS) : (quietUntil as number)),
+        runAt: new Date(
+          busy
+            ? (u.retryAt ?? Date.now() + (t.roomPeople ? PERSON_ROOM_RETRY_MS : COMPUTER_BUSY_RETRY_MS))
+            : (quietUntil as number),
+        ),
         maxAttempts: 4,
       });
     }
@@ -4020,10 +4189,11 @@ async function executeRunInner(
     // what it wrote before an earlier call of the turn (narration, or a draft it dropped half-written for that call
     // and wrote again after it).
     const asked = await bridgedQuestionCard(t);
-    let text = pauseLead(stripSentinel(said));
+    // Never the line it said on the way again (`say_now`, ADR 0207): the turn's lines are on the transcript by now.
+    let text = withoutSaidNow(pauseLead(stripSentinel(said)), t.saidNow);
     let at: Date | undefined;
     if (asked && textBefore) {
-      text = stripSentinel(textBefore(asked.askedAt, ASKED_GRACE_MS));
+      text = withoutSaidNow(stripSentinel(textBefore(asked.askedAt, ASKED_GRACE_MS)), t.saidNow);
       at = new Date(asked.cardAt.getTime() - 1);
     } else if (text) {
       // A secret or an approval: what it wrote says what the card is for, so it reads before the card.
@@ -4076,8 +4246,10 @@ async function executeRunInner(
     await deferred;
     const t = transcript as Transcript;
     const name = isComputerBrain(from) ? BRAIN_NAMES[from] : "Claude Code";
-    // A reply it held back (`held`, `heldWording`) is still part of what it said.
-    const said = [t.held || t.heldWording, stripSentinel(partial)].filter(Boolean).join("\n\n");
+    // A reply it held back (`held`, `heldWording`) is still part of what it said; never its line on the way again
+    // (`say_now`: this turn's lines are only in the conversation yet).
+    const lines = await linesSaid(db, run).catch(() => []);
+    const said = [t.held || t.heldWording, withoutSaidNow(stripSentinel(partial), lines)].filter(Boolean).join("\n\n");
     // What the CLI said goes where everyone in the conversation reads it: without its paths, stack or secrets.
     const why = cliErrorWords(failure.message);
     const note = `_${name} stopped before finishing (${why}). Already done, not repeated: ${executed.join(", ")}._`;
@@ -4292,6 +4464,13 @@ async function executeRunInner(
     const budget = u.code === "budget" || u.pause?.source === "budget";
     const paused = u.code === "usage_pause";
     const machineId = plan.session?.machineId ?? agent.machineId ?? "";
+    // VPS Zen: the plan's own limit (not one model's, not the budget) with another account that has room on this
+    // computer: it goes on there in a few seconds, quietly (`spareAccountFor`; `resolveBrain` picks it on the resume).
+    const spare =
+      !budget && !scope && plan.account && machineId && isComputerBrain(plan.kind)
+        ? await spareAccountFor(db, agent, plan.kind, machineId, plan.account, now).catch(() => undefined)
+        : undefined;
+    if (spare && u.code === "plan_limit") notePlanLimit(machineId, plan.kind, u.resetsAt, now, plan.account?.id);
     const wait = t.usageWait ?? { since: now, step: 0 };
     const key = budget
       ? usageWaitKey({ code: "budget", agentId: agent.id })
@@ -4319,9 +4498,10 @@ async function executeRunInner(
       const brainBack = Date.parse(t.fallback.resetsAt ?? "");
       at = Math.min(at, brainBack > now ? brainBack : now + ladderDelay(wait.step++));
     }
-    const runAt = new Date(at + RESUME_AFTER_MS + RESUME_GAP_MS * line.place);
+    const runAt = spare ? new Date(now + 5_000) : new Date(at + RESUME_AFTER_MS + RESUME_GAP_MS * line.place);
     // The region a model needs, a model switched off or no subscription has no reset: its note says what to do.
     const tellOwner =
+      !spare &&
       !budget &&
       !paused &&
       scope !== "region" &&
@@ -4344,7 +4524,7 @@ async function executeRunInner(
     const name = planName(plan.kind, plan.account?.provider);
     // A routine's run waits quietly (Rotinas says so); any other says it once per wait.
     const firstPark = t.brainNotice !== u.code;
-    const say = !(run.background || viaRoutine !== null || u.soon) && firstPark;
+    const say = !spare && !(run.background || viaRoutine !== null || u.soon) && firstPark;
     const waitId = Bun.randomUUIDv7();
     let joined = null as Message | null;
     const note = say
@@ -4480,7 +4660,7 @@ async function executeRunInner(
     // The line pauses together: whoever is behind it waits for the same reset, in its place, 60 s apart (with an
     // unknown reset, on the safety timer until the head gets through).
     if (!u.soon) {
-      const base = known ? at : now + LINE_SAFETY_MS;
+      const base = spare ? now : known ? at : now + LINE_SAFETY_MS;
       await retimeLine(db, line.behind, (i) => new Date(base + RESUME_AFTER_MS + RESUME_GAP_MS * (line.place + 1 + i)));
     }
     const moved = await transitionRun(db, run.id, "running", "waiting_input", {
@@ -4922,13 +5102,14 @@ async function executeRunInner(
         if (behind) {
           // Not working on the computer: no slot of a sign-in is its (`kickSignInLine` reads it as it leaves).
           delete transcript.roomAsk;
-          if (behind.signIn && slot) transcript.signInWait = { key: slot.key };
+          if (behind.cause === "sign_in" && slot) transcript.signInWait = { key: slot.key };
           else delete transcript.signInWait;
           const handled = await brainUnavailable({
             code: "busy",
             message: "Waiting in line.",
             queued: true,
             retryAt: behind.retryAt,
+            room: behind.cause,
           });
           if (handled === "waited" || handled === "failed") return;
         } else {
@@ -5115,7 +5296,8 @@ async function executeRunInner(
               ownStep(call);
             },
             onExecuted: (call) => {
-              executedNow.push(call);
+              // Its line on the way (`say_now`) is talk, not work: a turn that fails after it did nothing to keep.
+              if (!isSayNow(call.name)) executedNow.push(call);
               // VPS Zen: a call of its own (Claude Code's Bash, Read, Edit; Codex's commands) leaves a step on the
               // run, so the task manager's "Ver passos" shows what it really did (`ownToolStep`).
               if (!turnTools.some((t) => t.name === call.name)) {
@@ -5133,6 +5315,18 @@ async function executeRunInner(
               if (!stepTold.delete(call.id)) ownStep(call);
               // The text it streams next is another model call's: never one reply with what it wrote before.
               deltas.toolEnded();
+            },
+            // Its CLI went quiet and the computer stopped it: on the trail, where it was and for how long.
+            onStalled: (stall) => {
+              const step = {
+                reason: "brain_stalled",
+                code: stall.phase,
+                ...(stall.tool ? { tool: stall.tool } : {}),
+                ...(stall.label ? { label: stall.label } : {}),
+                silentMs: stall.silentMs,
+                resumed: stall.resumed,
+              };
+              later(() => addRunStep(db, run, "error", step));
             },
             onFile: (path) => {
               const machineId = turnPlan.session?.machineId;
@@ -5153,6 +5347,12 @@ async function executeRunInner(
               deltas.messageRead();
               live.read(uuids);
             },
+            // An answer it finished before reading on goes out now, as a model brain's does (ADR 0112).
+            onAnswer: async (answer) => {
+              if (!(await answerNow(answer))) return false;
+              deltas.answered();
+              return true;
+            },
             onSpeedFallback: (message) => {
               transcript.speedFallback = true;
               later(() => addRunStep(db, run, "context", { speedFallback: message }));
@@ -5169,7 +5369,9 @@ async function executeRunInner(
           // was handed and never confirmed reading goes back there.
         ).finally(() => live.endTurn());
         const ownExecuted = turnPlan.kind === "model" ? result.executedCount : ownExecutedNow();
-        transcript.executedCalls = (transcript.executedCalls ?? 0) + result.toolCalls.length + ownExecuted;
+        // Its line on the way (`say_now`) is talk: never counted as progress (a nudged run must do the work).
+        const worked = result.toolCalls.filter((c) => !isSayNow(c.name)).length;
+        transcript.executedCalls = (transcript.executedCalls ?? 0) + worked + ownExecuted;
         callsCounted = true;
         // A turn ran: a later limit is a new wait, with its own note.
         if (transcript.usageWait || USAGE_WAIT_CODES.has(transcript.brainNotice ?? "")) {
@@ -5254,7 +5456,9 @@ async function executeRunInner(
         if (turnPlan.kind !== "model") {
           // What the bridge kept during this turn (cards, a reaction) is the engine's now.
           const bridged = await takeBridgeResult(db, run.id).catch(() => ({ effects: null, calls: 0 }));
+          const saidBefore = transcript.saidNow?.length ?? 0;
           mergeToolEffects(transcript, bridged.effects);
+          heardSaidNow(transcript, saidBefore);
           if (!callsCounted) transcript.executedCalls = (transcript.executedCalls ?? 0) + ownExecutedNow();
           transcript.executedCalls = (transcript.executedCalls ?? 0) + bridged.calls;
           // A bridged call paused the run before the brain failed: the run waits for the person, with the
@@ -5275,6 +5479,8 @@ async function executeRunInner(
         // they would run them again. Post what the brain said and what it did instead, and end the run there.
         if (turnPlan.kind !== "model") {
           const executed = await executedSince(db, run.id, turnStepSeq, executedNow);
+          // A full disk there fails every turn the same way, a wait for the computer included: only freeing space helps.
+          if (error instanceof BrainFailure && saysDiskFull(error.message)) return fail(DISK_FULL);
           // The computer dropped mid-turn: the turn resumes there when it is back (its session keeps what it did).
           const machineId = turnPlan.session?.machineId;
           if (machineId && error instanceof BrainFailure && error.code === "machine_offline") {
@@ -5287,6 +5493,21 @@ async function executeRunInner(
               const labels = executed.map((c) => c.label);
               return waitForDroppedComputer(turnPlan.kind, machineId, prompt, labels, error.serverStop, early);
             }
+          }
+          // Codex's sign-in refused the agent's model before anything ran: the rest of the run goes on the sign-in's
+          // default, in a fresh session, the conversation so far in its first prompt (`codexModelRefused`).
+          if (
+            error instanceof BrainFailure &&
+            codexModelRefused(error.message) &&
+            executed.length === 0 &&
+            plan.model &&
+            plan.session &&
+            !plan.missionId
+          ) {
+            const fresh = Bun.randomUUIDv7();
+            await db.update(agentRuns).set({ brainSessionId: fresh }).where(eq(agentRuns.id, run.id));
+            plan = { ...plan, model: undefined, session: { ...plan.session, id: fresh, resume: false } };
+            continue;
           }
           // The folder its session works in isn't on the computer anymore: every later turn would be refused the
           // same way. A fresh session takes the turn in the agent's own folder, told the one before was lost. A
@@ -5371,7 +5592,12 @@ async function executeRunInner(
               continue;
             }
           }
-          const handled = await brainUnavailable({ code: error.code, message: error.message, ...refusal });
+          const handled = await brainUnavailable({
+            code: error.code,
+            message: error.message,
+            ...refusal,
+            ...(error.code === "busy" ? { room: "memory" as const } : {}),
+          });
           if (handled === "fallback" || handled === "moved") continue;
           if (handled === "waited" || handled === "failed") return;
         }
@@ -5477,14 +5703,24 @@ async function executeRunInner(
       // Side effects of the tools a computer brain ran through the bridge (cards, a `react`): for this reply.
       if (turnPlan.kind !== "model") {
         const bridged = await takeBridgeResult(db, run.id);
+        const saidBefore = transcript.saidNow?.length ?? 0;
         mergeToolEffects(transcript, bridged.effects);
+        heardSaidNow(transcript, saidBefore);
         transcript.executedCalls = (transcript.executedCalls ?? 0) + bridged.calls;
       }
       // A computer brain's turn with nothing to say (its tools ran through the bridge) adds no empty message.
       if (result.content.length > 0) transcript.messages.push({ role: "assistant", content: result.content });
       // Text before tool calls is narration of the work: kept on the model call's step for its activity, never live.
       const turnText = dropSquashedEcho(textOf(result.content).trim());
-      const narration = result.stopReason === "tool_use" && turnText ? turnText : "";
+      // Text it wrote before its calls, without the line it said on the way in the same response (`say_now`).
+      const lines = result.toolCalls.filter((c) => isSayNow(c.name));
+      const narration =
+        result.stopReason === "tool_use" && turnText
+          ? withoutSaidNow(
+              turnText,
+              lines.map((c) => ({ text: sayNowText((c.input as { text?: unknown }).text) })),
+            )
+          : "";
       // The calls a computer turn ran itself (Codex's commands and edits, Claude Code's Bash, WebSearch…):
       // the report tells action from talk by them. Ours through the bridge have steps of their own.
       const ours = new Set(turnTools.map((t) => t.name));
@@ -5540,7 +5776,10 @@ async function executeRunInner(
         const waits: string[] = [];
         // What it wrote before these calls is the first one's step line (`takeStepWords`), never posted.
         if (!run.background) holdStepWords(run.id, isRightHand(agent) ? scrubSignIns(turnText, "••••").text : turnText);
-        for (const use of toolUses) {
+        // Its line on the way (`say_now`, ADR 0207) goes out before the work it announces, whatever order it wrote them in.
+        const saidBefore = transcript.saidNow?.length ?? 0;
+        const callingAt = transcript.messages.length - 1;
+        for (const use of [...toolUses.filter((u) => isSayNow(u.name)), ...toolUses.filter((u) => !isSayNow(u.name))]) {
           // Canceled during a tool, or the server is shutting down: the rest never run.
           if (signal.aborted) break;
           const outcome = await invokeWithChip(toolScope, use);
@@ -5583,6 +5822,10 @@ async function executeRunInner(
           }
         }
         takeStepWords(run.id);
+        heardSaidNow(transcript, saidBefore, callingAt);
+        // Results in the order the model called them, the line on the way included.
+        const calledAt = (id: string) => toolUses.findIndex((u) => u.id === id);
+        calls.sort((a, b) => calledAt(a.toolUseId) - calledAt(b.toolUseId));
         // The server is shutting down: the calls that never started say so, and the step ends as any other (its
         // results saved, its approvals and questions asked); the next instance takes the run from there.
         if (shuttingDown()) {
@@ -5670,7 +5913,7 @@ async function executeRunInner(
         // Only this turn's text: what leads to a question, or what says more than an approval's or a secret's
         // card, with a reply it held back (`heldWords`). Earlier narration is in the steps. A background run never
         // posts by itself (ADR 0053 §5): its cards speak for it.
-        const text = stripSentinel(turnText);
+        const text = withoutSaidNow(stripSentinel(turnText), t.saidNow);
         const spoken = run.background ? "" : asks.length > 0 ? text : pauseLead(text);
         const said = await heldWords(repeatsLastPost(spoken) ? "" : spoken);
         // Its cards are its next step: a reply held for its wording no longer stands in for an answer.
@@ -5718,8 +5961,9 @@ async function executeRunInner(
       const updates = transcript.memoryUpdates ?? [];
       const saved = (transcript.artifacts ?? []).length > 0 ? "File saved." : "";
       const anythingPosted = transcript.postedCount > 0;
-      // The silence word (NO_REPLY) is never posted, on any run (reply-policy.ts): what it really wrote.
-      const said = stripSentinel(turnText);
+      // The silence word (NO_REPLY) is never posted, on any run (reply-policy.ts): what it really wrote, without the line
+      // it already said on the way (`say_now`) when it writes it again.
+      const said = withoutSaidNow(stripSentinel(turnText), transcript.saidNow);
       const sentinelOnly = isSentinelOnly(turnText);
       // Quiet on purpose: only the word, or a note it closes ("Nada novo desde ontem.\n\nNO_REPLY").
       const wantsQuiet = endsWithSentinel(turnText);
@@ -5745,6 +5989,7 @@ async function executeRunInner(
           : [];
         const judging = evidenceFor(transcript);
         const work = await workDone(transcript);
+        const checker = turnEndJudge();
         const decision = await decideTurnEnd({
           state,
           kind: "routine",
@@ -5762,22 +6007,25 @@ async function executeRunInner(
           judged: record,
           mission: false,
           wakesLater: () => wakesLater(db, run),
-          verdict: judge
-            ? async () =>
-                continuationVerdict(judge, {
+          prepare: () => void judging.gather().catch(() => {}),
+          verdict: checker
+            ? async () => {
+                const [gathered, personal] = await Promise.all([judging.gather(), isPersonalWorkspace(db, run.orgId)]);
+                return continuationVerdict(checker, {
                   orgId: run.orgId,
                   agentId: run.agentId,
                   runId: run.id,
                   request: transcript.request ?? triggerMessage?.body ?? triggerText,
                   reply: record,
-                  ...(await judging.gather()),
+                  ...gathered,
                   runKind: "routine",
-                  personal: await isPersonalWorkspace(db, run.orgId),
+                  personal,
                   onLearn: (signal) => {
                     learned = signal;
                   },
-                  onLearnFailed: (error) => reportJudgeLearn(judge, error),
-                })
+                  onLearnFailed: (error) => reportJudgeLearn(checker, error),
+                });
+              }
             : null,
           evidence: judging.evidence,
         });
@@ -5972,6 +6220,7 @@ async function executeRunInner(
       );
       const localPaths = theirs ? [] : cited;
       const work = await workDone(t);
+      const checker = turnEndJudge();
       let decision = await decideTurnEnd({
         state,
         kind: betweenAgents ? "agents_dm" : "conversation",
@@ -5991,23 +6240,31 @@ async function executeRunInner(
           (plan.missionId ? await missionAsksPerson(db, plan.missionId) : false) ||
           wakesLater(db, run, (t as { detachedWaits?: { waitId: string }[] }).detachedWaits),
         comesBack: () => comesBackHere(db, run),
-        verdict: judge
-          ? async () =>
-              continuationVerdict(judge, {
+        prepare: () => void judging.gather().catch(() => {}),
+        verdict: checker
+          ? async () => {
+              const [gathered, personal, backgroundWork] = await Promise.all([
+                judging.gather(),
+                isPersonalWorkspace(db, run.orgId),
+                backgroundWorkHere(),
+              ]);
+              return continuationVerdict(checker, {
                 orgId: run.orgId,
                 agentId: run.agentId,
                 runId: run.id,
                 request,
                 reply: judged,
-                ...(await judging.gather()),
+                ...gathered,
                 runKind: betweenAgents ? "agents_dm" : "conversation",
                 unreached,
-                personal: await isPersonalWorkspace(db, run.orgId),
+                personal,
+                backgroundWork,
                 onLearn: (signal) => {
                   learned = signal;
                 },
-                onLearnFailed: (error) => reportJudgeLearn(judge, error),
-              })
+                onLearnFailed: (error) => reportJudgeLearn(checker, error),
+              });
+            }
           : null,
         evidence: judging.evidence,
       });
@@ -6021,10 +6278,10 @@ async function executeRunInner(
       // On its way to asking a person, by the verdict `ask` or by repeating a promise (`continue`), yet asking them for
       // nothing it needs (a status note, an optional offer, a question it already asked): it is its answer, never a
       // nudge to ask nor a question card the run would wait on. On a judge error the rule stands.
-      if (judge && (decision.rule === "ask" || decision.rule === "ask_card")) {
+      if (checker && (decision.rule === "ask" || decision.rule === "ask_card")) {
         const asks = (await repeatedAsk(db, run, judged))
           ? "none"
-          : await askVerdict(judge, {
+          : await askVerdict(checker, {
               orgId: run.orgId,
               agentId: run.agentId,
               runId: run.id,
@@ -6108,12 +6365,37 @@ async function executeRunInner(
       }
       if (!text && !anythingPosted && !silent) return fail("empty_reply");
       // Someone wrote while it answered: post this answer, then read the new message(s) and go on.
-      const [still] = await db
-        .select({ pending: agentRuns.pendingMessageIds })
-        .from(agentRuns)
-        .where(eq(agentRuns.id, run.id));
+      const still = { pending: await unreadNow(db, run.id, { awaitTriage }) };
       // At the cap this answer ends the run instead: what came in gets a run of its own.
-      if (((still?.pending.length ?? 0) > 0 && run.turns < maxTurns) || keep) {
+      if ((still.pending.length > 0 && run.turns < maxTurns) || keep) {
+        // Overtaken (ADR 0112 addendum of 2026-11-19): a short reply of a run that only talked (no tool called yet),
+        // and the person wrote again before it went out. Sent as it is it would answer a conversation that has moved
+        // on. It is rewritten instead: the next turn reads what came and answers all of it in one message, as a person
+        // who sees new messages before pressing send would. A long
+        // reply is substance, a result or an explanation: it goes out, and the next turn answers what came. Twice in a
+        // row at most, so someone who keeps writing still gets an answer.
+        if (
+          !keep &&
+          text &&
+          text.length <= OVERTAKEN_MAX_CHARS &&
+          (t.overtaken ?? 0) < OVERTAKEN_MAX &&
+          !run.background &&
+          !run.workId &&
+          !plan.missionId &&
+          !betweenAgents &&
+          (await personAmong(db, run.orgId, still.pending)) &&
+          !(await runAtWork(db, run.id))
+        ) {
+          t.overtaken = (t.overtaken ?? 0) + 1;
+          // A draft: never picked up again as unposted words (a fallback, the restart sweep).
+          t.postedUpTo = t.messages.length;
+          const note = overtakenNote(text);
+          appendUserText(t, note);
+          if (plan.kind !== "model") nextPrompt = note;
+          await saveTranscript(db, t);
+          later(() => addRunStep(db, run, "context", { overtaken: t.overtaken }));
+          continue;
+        }
         const posted =
           text && !repeatsLastPost(text)
             ? await db.transaction(async (tx) => {
@@ -6430,10 +6712,17 @@ async function thinkOnce(
     onFile?(path: string): void;
     /** Messages handed to the turn mid-turn that it read (live steering). */
     onSteerRead?(uuids: string[]): void;
+    /**
+     * An answer a computer brain finished before it went on (`answer`): true once it went out as its own message.
+     * Otherwise it leads the turn's final answer, joined to it, as the runner joined it before (ADR 0112).
+     */
+    onAnswer?(text: string): Promise<boolean>;
     /** The brain's first event that isn't an error: a computer had room for the turn. Done before that event is read. */
     onTaken?(): void | Promise<void>;
     /** Fast failed and the turn answered at standard speed. */
     onSpeedFallback?(message: string): void;
+    /** The computer stopped the brain's CLI for its silence (`stalled`): resumed there, or the turn ends. */
+    onStalled?(stall: Extract<BrainEvent, { type: "stalled" }>): void;
     /** A failed turn that is the plan's refusal, though the CLI didn't call it a limit. */
     refusedByPlan?(message: string): boolean;
   } = {},
@@ -6444,6 +6733,8 @@ async function thinkOnce(
   let taken = false;
   let usage: Extract<BrainEvent, { type: "usage" }> | null = null;
   let timings: BrainTurnTimings | undefined;
+  /** Answers it finished before it went on that didn't go out on their own (`onAnswer`): they lead its final one. */
+  const kept: string[] = [];
   /** The plan said `limit`: the turn is read on until `deadline`, for the answer the brain may still finish. */
   let limit: { resetsAt?: string; deadline: number } | null = null;
   const limitFailure = (message: string, worked?: boolean) =>
@@ -6478,6 +6769,7 @@ async function thinkOnce(
     }
     if (event.type === "text_delta") onDelta(event.text);
     else if (event.type === "tool_started") hooks.onStarted?.(event);
+    else if (event.type === "stalled") hooks.onStalled?.(event);
     else if (event.type === "tool_call") {
       // Executed elsewhere (a computer brain through the runner bridge, which recorded its steps): shown only.
       if (event.executed) {
@@ -6517,11 +6809,15 @@ async function thinkOnce(
         },
       );
     } else if (event.type === "steer_read") hooks.onSteerRead?.(event.uuids);
-    else if (event.type === "file") hooks.onFile?.(event.path);
+    else if (event.type === "answer") {
+      // Its text and what it posts come before anything the brain says after it. Not out (a failure before it was
+      // saved): it leads the final answer.
+      if (!(await hooks.onAnswer?.(event.text).catch(() => false))) kept.push(event.text);
+    } else if (event.type === "file") hooks.onFile?.(event.path);
     else if (event.type === "speed_fallback") hooks.onSpeedFallback?.(event.message);
     // `event.session`: computer brains keep a stable session per conversation (`brainSessionId`); nothing to store.
     else if (event.type === "done") {
-      text = event.text;
+      text = kept.length > 0 ? [...kept, event.text].filter(Boolean).join("\n\n") : event.text;
       timings = event.timings;
     }
   }
@@ -6612,11 +6908,13 @@ async function executedSince(
       if (id) inputs.set(id, data.input);
       continue;
     }
-    if (data.isError === true || typeof data.name !== "string") continue;
+    // Its line on the way (`say_now`) is talk: a turn cut after it still has everything left to do.
+    if (data.isError === true || typeof data.name !== "string" || isSayNow(data.name)) continue;
     const input = id ? inputs.get(id) : undefined;
     calls.set(id ?? `step:${calls.size}`, { name: data.name, label: executedLabel(data.name, input) });
   }
-  for (const c of reported) calls.set(c.id, { name: c.name, label: executedLabel(c.name, c.input) });
+  for (const c of reported)
+    if (!isSayNow(c.name)) calls.set(c.id, { name: c.name, label: executedLabel(c.name, c.input) });
   return [...new Map([...calls.values()].map((c) => [c.label, c])).values()];
 }
 
@@ -6708,18 +7006,38 @@ const hasToolUse = (m: Transcript["messages"][number]) =>
   typeof m.content !== "string" && m.content.some((b) => b.type === "tool_use");
 
 /**
+ * What it told them on the way (`say_now`, ADR 0207) since `from`: the line is the last words people saw from it (an
+ * exact repeat is never posted again), and it still owes its reply (no pass, no quiet end). `at`: the assistant
+ * message that called it (model loop), where the text it wrote before its reply ends.
+ */
+function heardSaidNow(t: Transcript, from: number, at?: number) {
+  const fresh = (t.saidNow ?? []).slice(from);
+  if (fresh.length === 0) return;
+  if (at !== undefined) for (const said of fresh) said.at = at;
+  t.lastPosted = fresh.at(-1)?.text.trim();
+  t.answerOwed = true;
+}
+
+/**
  * When the final model call wrote nothing: the agent's last narration since
  * the last post ("Installed Go and built it."), else a plain "Done." when it
  * used tools, else nothing (an empty reply fails the run).
  */
 function closingSummary(t: Transcript, anythingPosted: boolean): string {
-  const turns = t.messages.slice(t.postedUpTo).filter((m) => m.role === "assistant");
-  const last = turns
-    .map((m) => stripSentinel(textOf(m.content)))
+  // What it wrote up to its line on the way (`say_now`) was that line: never the reply. The work it called in that
+  // same response is work, though: a run that did it and wrote nothing after still closes with "Done.".
+  const said = t.saidNow?.at(-1)?.at;
+  const from = said === undefined ? t.postedUpTo : Math.max(t.postedUpTo, said + 1);
+  const last = t.messages
+    .slice(from)
+    .filter((m) => m.role === "assistant")
+    .map((m) => withoutSaidNow(stripSentinel(textOf(m.content)), t.saidNow))
     .filter(Boolean)
     .at(-1);
   if (last) return last;
-  const usedTools = turns.some(hasToolUse);
+  const usedTools = t.messages
+    .slice(t.postedUpTo)
+    .some((m) => typeof m.content !== "string" && m.content.some((b) => b.type === "tool_use" && !isSayNow(b.name)));
   return usedTools && !anythingPosted ? DONE_TEXT : "";
 }
 
@@ -6841,10 +7159,25 @@ function createTurnText(
       kept = showable(false);
       openAt = all.length;
     },
-    /** A person's message was read: what it writes next opens a paragraph, as in the answer it posts (`joinText`). */
+    /**
+     * A person's message was read: what it writes next opens a paragraph, as in the answer an older runner joins to
+     * what it wrote before (`joinText`).
+     */
     messageRead() {
       const stretch = all.slice(breaks.at(-1)?.[1] ?? 0);
       if (stretch.trim() && !stretch.endsWith("\n\n")) all += "\n\n";
+    },
+    /**
+     * An answer it finished went out as its own message (`answer`): nothing streamed before it is the turn's text any
+     * more, so a stop, a pause or a wait never posts it again. The apps keep saying it writes.
+     */
+    answered() {
+      takeStepWords(run.id);
+      all = "";
+      kept = "";
+      openAt = 0;
+      marks.length = 0;
+      breaks.length = 0;
     },
     /**
      * Everything streamed in this turn (kept when the run is canceled mid-stream), the stretches between the brain's
@@ -7016,6 +7349,15 @@ export function continuedTranscript(stopped: Transcript, line: string): Transcri
 }
 
 /** Adds text to the conversation as the person's side (joined to a last user message, never two in a row). */
+/** Replies in a row a run may rewrite because people overtook them (`Transcript.overtaken`). */
+export const OVERTAKEN_MAX = 2;
+/** The longest reply rewritten when overtaken: a greeting or a quick answer. A longer one is substance, and goes out. */
+export const OVERTAKEN_MAX_CHARS = 200;
+
+/** What the next turn reads before the messages that overtook its reply: its draft, unsent, and to answer all of it. */
+export const overtakenNote = (draft: string) =>
+  `[Your reply was not sent: they wrote again before it went out (their new messages follow). It was: "${cutText(draft.trim(), 600)}". Answer everything they said, the earlier messages too, in one message, as your first answer to them.]`;
+
 export function appendUserText(t: Pick<Transcript, "messages">, text: string) {
   const last = t.messages.at(-1);
   if (last?.role === "user") {

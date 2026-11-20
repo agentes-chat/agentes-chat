@@ -15,15 +15,15 @@ test("in bubbles, the cards under someone else's words are bubbles of that messa
   // Every card on the shared surface takes the bubble's fill and no shadow there.
   const parts = src("features/shared/parts.tsx");
   expect(parts).toMatch(/part\s*\?\s*\{ backgroundColor: part\.fill, \.\.\.part\.edge \}/);
-  // The ones with their own frame: what it changed, and the work it handed.
+  // The ones with their own frame: what it changed, and the work it handed; their corners are every message card's
+  // (`useMessageCardCorners`, card-corners.test.ts).
   expect(src("features/chat/Receipts.tsx")).toContain(
-    "? [styles.card, { backgroundColor: part.fill, borderWidth: 0 }, BUBBLE_PART_CORNERS, part.edge]",
+    "? [styles.card, { backgroundColor: part.fill, borderWidth: 0 }, cardCorners, part.edge]",
   );
-  expect(src("features/chat/WorkLine.tsx")).toContain(
-    "? [styles.inBody, { borderWidth: 0 }, surface, BUBBLE_PART_CORNERS]",
-  );
-  expect(src("features/shared/bubble-part.ts")).toMatch(
-    /borderRadius: 18,\s*borderTopLeftRadius: 6,\s*borderBottomLeftRadius: 6,/,
+  // The work it handed is a quiet line under the bubble, its mark where the bubble's words start.
+  expect(src("features/chat/WorkLine.tsx")).toContain("quietInBubble: { paddingLeft: 14 },");
+  expect(src("features/shared/bubble-part.ts")).toContain(
+    "export const BUBBLE_PART_CORNERS = corners(RADIUS.sm, RADIUS.xl, RADIUS.xl, RADIUS.sm);",
   );
 });
 

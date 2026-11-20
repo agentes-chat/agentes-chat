@@ -4,7 +4,6 @@ import { type ReactNode, type RefObject, useCallback, useEffect, useLayoutEffect
 import { useTranslation } from "react-i18next";
 import { Keyboard, ScrollView, type ScrollViewInstance, StyleSheet, View, type ViewStyle } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { hintBack } from "./hints";
 import { sheetColors } from "./palette";
 import { SHEET_GAP, SHEET_X } from "./rhythm";
@@ -229,14 +228,15 @@ function OnSheet({ children }: { children: ReactNode }) {
 
 /**
  * The body of every sheet's content (a screen's sheets, their steps, the sheets that are routes): `SHEET_X` at the
- * sides, `top` (room for the grabber), room over the bottom edge, and `SHEET_GAP` between its blocks.
+ * sides, `top` (room for the grabber), 24 over the bottom edge, and `SHEET_GAP` between its blocks. The home indicator's
+ * room is TrueSheet's own (`insetAdjustment` and `contentInsetAdjustment`, both automatic): added here as well, every
+ * sheet ended on an empty band twice that tall.
  */
 export function useSheetBody(top = 24): ViewStyle {
-  const insets = useSafeAreaInsets();
   return {
     paddingHorizontal: SHEET_X,
     paddingTop: top,
-    paddingBottom: 24 + Math.max(0, insets.bottom - 8),
+    paddingBottom: 24,
     gap: SHEET_GAP,
   };
 }

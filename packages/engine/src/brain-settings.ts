@@ -95,7 +95,6 @@ import {
 } from "./machines";
 import {
   agentMissionApproval,
-  CODEX_MIN_VERSION,
   type CommandApproval,
   type MissionDeps,
   type MissionRow,
@@ -221,17 +220,19 @@ export const antigravityModels = (listed: readonly { id: string; label?: string 
 const claudeLabel = (modelId: string, fallback: string) =>
   MODEL_CATALOG[modelId]?.label.replace(/^Claude\s+/, "") ?? fallback;
 
-/** Claude Code's aliases (`--model opus|sonnet|haiku`), mapped to today's ids in the catalog, labelled with the version. */
-export const CLAUDE_CODE_MODELS: readonly BrainModelOption[] = [
-  { value: "opus", label: claudeLabel("claude-opus-5-5", "Opus"), modelId: "claude-opus-5-5" },
-  {
-    value: "sonnet",
-    label: claudeLabel("claude-sonnet-5-5", "Sonnet"),
-    modelId: "claude-sonnet-5-5",
-    recommended: true,
-  },
-  { value: "haiku", label: claudeLabel("claude-haiku-5-5", "Haiku"), modelId: "claude-haiku-5-5" },
-];
+/**
+ * Claude Code's aliases (`--model fable|opus|sonnet|haiku`), mapped to today's ids in the catalog. Each is named by
+ * its catalog row without the maker ("Opus 5.5"), so moving an alias to a new id renames it with no copy change.
+ * Fable, the strongest, first: Claude's plans run it in Claude Code under its own alias.
+ */
+export const CLAUDE_CODE_MODELS: readonly BrainModelOption[] = (
+  [
+    { value: "fable", modelId: "claude-fable-5-2" },
+    { value: "opus", modelId: "claude-opus-5-5" },
+    { value: "sonnet", modelId: "claude-sonnet-5-5", recommended: true },
+    { value: "haiku", modelId: "claude-haiku-5-5" },
+  ] as const
+).map((o) => ({ ...o, label: MODEL_CATALOG[o.modelId]?.label.replace(/^Claude /, "") ?? o.value }));
 
 /**
  * Every Claude model Claude Code can run: the aliases first, then each other Anthropic row of the catalog by its full
@@ -312,7 +313,7 @@ export function normalizeBrainModel(kind: BrainKind, value: unknown, stored?: st
     const alias = CLAUDE_CODE_MODELS.find((o) => o.value === v.toLowerCase() || o.modelId === v);
     if (alias) return alias.value;
     if (/^claude-[a-z0-9.-]{1,60}$/.test(v) || isPlanModelId(v)) return v;
-    throw new ValidationError("Choose Opus, Sonnet, Haiku or one of the plan's models", "brain.invalid_model", {
+    throw new ValidationError("Choose Fable, Opus, Sonnet, Haiku or one of the plan's models", "brain.invalid_model", {
       brain: kind,
     });
   }
@@ -333,7 +334,6 @@ export type BrainUnavailable =
   | "runner_old"
   | "tool_off"
   | "not_installed"
-  | "outdated"
   /** Its runner hasn't said which CLIs it has yet (`detectedAt`): nobody knows whether this one is there. */
   | "not_reported"
   /** It is there and can't start (`executors.broken`, with its own error): not missing, so installing it won't help. */
@@ -341,16 +341,10 @@ export type BrainUnavailable =
   /** Its runner doesn't run this CLI on the computer's system (`brainRunsOn`): Cursor on Windows, for one. */
   | "system";
 
-export interface CodexVersionRequirement {
-  detected: string;
-  minimum: string;
-}
-
 export interface BrainOption {
   kind: BrainKind;
   available: boolean;
   reason?: BrainUnavailable;
-  codexVersion?: CodexVersionRequirement;
   models: BrainModelOption[];
   defaultModel: string | null;
 }
@@ -401,17 +395,12 @@ export function brainOptions(machine: MachineLike | null): BrainOption[] {
     else if (machine.protocol < BRAIN_PROTOCOL) reason = "runner_old";
     else if (executor === "codex" && machine.os === "windows" && machine.protocol < CODEX_WINDOWS_PROTOCOL)
       reason = "runner_old";
-    else if (!found?.available.includes(executor))
-      reason = executor === "codex" && found?.codexTooOld ? "outdated" : missingCli(machine, executor);
+    else if (!found?.available.includes(executor)) reason = missingCli(machine, executor);
     else if (machine.access?.tools && machine.access.tools[executor] !== true) reason = "tool_off";
-    const detected = machine?.executors?.codex?.version;
     return {
       kind,
       available: !reason,
       ...(reason ? { reason } : {}),
-      ...(reason === "outdated" && detected
-        ? { codexVersion: { detected: detected.replace(/^codex-cli\s+/i, ""), minimum: CODEX_MIN_VERSION } }
-        : {}),
       models: brainModelOptions(kind),
       defaultModel: defaultBrainModel(kind),
     };
@@ -2031,7 +2020,6 @@ export interface AiComputer {
   };
   /** Why a CLI of `brains` can't think there, as `brainOptions` says it. */
   off: Partial<Record<BrainKind, BrainUnavailable>>;
-  codexVersion?: CodexVersionRequirement;
   /** What it can think with now: Claude Code (Claude and the coding plans), Codex (ChatGPT), Cursor, OpenCode, Grok, Antigravity. */
   brains: {
     claude_code: boolean;
@@ -2083,7 +2071,6 @@ export async function listAiAccounts(deps: BrainDeps, userId: string, orgId: str
     accounts: accounts.flat(),
     computers: rows.map((m) => {
       const options = brainOptions(m);
-      const codexVersion = options.find((o) => o.kind === "codex")?.codexVersion;
       const can = (kind: BrainKind) => options.some((o) => o.kind === kind && o.available);
       return {
         machineId: m.id,
@@ -2102,7 +2089,6 @@ export async function listAiAccounts(deps: BrainDeps, userId: string, orgId: str
           key: sharesSignIns(m, "key"),
         },
         off: Object.fromEntries(options.flatMap((o) => (o.reason ? [[o.kind, o.reason]] : []))),
-        ...(codexVersion ? { codexVersion } : {}),
         brains: {
           claude_code: can("claude_code"),
           codex: can("codex"),

@@ -4,6 +4,7 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 setupDom();
 
 import type { AuditRow } from "@agenteschat/client";
+import { formatInt, formatShortDate } from "@agenteschat/client/lib/format";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { ADA_ID, ATLAS_ID, createFakeApi, GENERAL_ID, ORG_ID, seedState } from "./fake-api";
 import { renderApp, screen, settle, showIn } from "./render";
@@ -342,6 +343,123 @@ describe("Configurações → Auditoria", () => {
       expect(document.querySelector(".audit-row__title")?.textContent).toBe(title);
       expect(document.querySelector(".audit-row__sub")?.textContent).toBe(sub);
     }
+  });
+
+  // Whoever runs the server tells the workspace afterwards that it read content to investigate suspected abuse: the
+  // row says who and what, the line under it how many items and which days, the count first. A phone's width cuts
+  // the sentence after who, so the line under it is what tells two reviews apart. One item and 10,000, one day and
+  // two years, and the longest languages are the worst cases for CI's geometry check.
+  test("the operator's disclosure of a safety review: who reviewed, and under it how many items and which days", async () => {
+    const year = new Date().getFullYear();
+    const disclosed = (id: string, minutes: number, details: Record<string, unknown>): AuditRow =>
+      row({
+        id,
+        at: at(minutes),
+        actor: { type: "system", id: null, name: null },
+        action: "operator.content_review_disclosed",
+        target: { type: "organization", id: null },
+        details,
+        runId: null,
+        channelId: null,
+        channel: null,
+        onBehalfOf: null,
+        outcome: null,
+      });
+    const week = { from: `${year}-03-03T12:00:00.000Z`, to: `${year}-03-09T12:00:00.000Z` };
+    const day = { from: `${year}-03-09T10:00:00.000Z`, to: `${year}-03-09T13:00:00.000Z` };
+    const years = { from: `${year - 1}-12-28T12:00:00.000Z`, to: `${year}-01-03T12:00:00.000Z` };
+    const { r } = await go(
+      seedState({
+        audit: [
+          disclosed("d1", 1, { ...years, count: 10000 }),
+          disclosed("d2", 2, { ...day, count: 1, cloud: true }),
+          disclosed("d3", 3, { ...week, count: 2 }),
+          disclosed("d4", 4, { ...week, count: 12 }),
+          disclosed("d5", 5, { ...week, count: 21 }),
+        ],
+      }),
+    );
+    const subs = () => [...document.querySelectorAll(".audit-row__sub")].map((e) => e.textContent);
+    const own = "Quem cuida deste servidor analisou conteúdo por segurança";
+    expect(titles()).toEqual([own, "O suporte do agentes.chat analisou conteúdo por segurança", own, own, own]);
+    expect(subs()).toEqual([
+      `10.000 itens · 28 dez ${year - 1} a 3 jan ${year}`,
+      "1 item · 9 mar",
+      "2 itens · 3 mar a 9 mar",
+      "12 itens · 3 mar a 9 mar",
+      "21 itens · 3 mar a 9 mar",
+    ]);
+    // It ended in nothing to show: no chip.
+    expect(section().querySelector(".audit-row .ac-chip")).toBeNull();
+    // Each language's own plural forms, the count the line's first word in all of them, with the dates as the page
+    // writes them there.
+    type Short = (iso: string, year?: boolean) => string;
+    const said: Record<"de" | "pl" | "ru", { who: [string, string]; under: (d: Short, n: string) => string[] }> = {
+      de: {
+        who: [
+          "Die Person, die diesen Server betreibt, hat Inhalte aus Sicherheitsgründen geprüft",
+          "Der Support von agentes.chat hat Inhalte aus Sicherheitsgründen geprüft",
+        ],
+        under: (d, n) => [
+          `${n} Elemente · ${d(years.from, true)} bis ${d(years.to, true)}`,
+          `1 Element · ${d(day.from)}`,
+          ...["2", "12", "21"].map((count) => `${count} Elemente · ${d(week.from)} bis ${d(week.to)}`),
+        ],
+      },
+      pl: {
+        who: [
+          "Osoba zarządzająca tym serwerem: sprawdzono treści ze względów bezpieczeństwa",
+          "Wsparcie agentes.chat: sprawdzono treści ze względów bezpieczeństwa",
+        ],
+        under: (d, n) => [
+          `${n} elementów · od ${d(years.from, true)} do ${d(years.to, true)}`,
+          `1 element · ${d(day.from)}`,
+          ...["2 elementy", "12 elementów", "21 elementów"].map(
+            (items) => `${items} · od ${d(week.from)} do ${d(week.to)}`,
+          ),
+        ],
+      },
+      ru: {
+        who: [
+          "Администратор этого сервера: проверка содержимого в целях безопасности",
+          "Поддержка agentes.chat: проверка содержимого в целях безопасности",
+        ],
+        under: (d, n) => [
+          `${n} элементов · с ${d(years.from, true)} по ${d(years.to, true)}`,
+          `1 элемент · ${d(day.from)}`,
+          ...["2 элемента", "12 элементов", "21 элемент"].map(
+            (items) => `${items} · с ${d(week.from)} по ${d(week.to)}`,
+          ),
+        ],
+      },
+    };
+    const german: Short = (iso, withYear = false) => formatShortDate("de", iso, withYear);
+    for (const lang of ["pl", "ru", "de"] as const) {
+      await showIn(r.services, lang);
+      const short: Short = (iso, withYear = false) => formatShortDate(lang, iso, withYear);
+      const [server, cloud] = said[lang].who;
+      expect([...document.querySelectorAll(".audit-row__title")].map((e) => e.textContent)).toEqual([
+        server,
+        cloud,
+        server,
+        server,
+        server,
+      ]);
+      expect(subs()).toEqual(said[lang].under(short, formatInt(lang, 10000)));
+    }
+    // The panel says it whole once: the sentence, then the count and the days where a reason goes, under no heading
+    // (they are no reason). The three values are not listed again under Detalhes.
+    await click(document.querySelector(".audit-row") as HTMLElement);
+    const panel = () => document.querySelector(".audit-panel") as HTMLElement;
+    const line = () => panel().querySelector(".audit-panel__reason");
+    expect(panel().querySelector(".audit-panel__lead")?.textContent).toBe(said.de.who[0]);
+    expect(line()?.textContent).toBe(said.de.under(german, formatInt("de", 10000))[0]);
+    expect(line()?.querySelector("strong")).toBeNull();
+    await showIn(r.services, "pt-BR");
+    expect(panel().querySelector(".audit-panel__lead")?.textContent).toBe(own);
+    expect(line()?.textContent).toBe(`10.000 itens · 28 dez ${year - 1} a 3 jan ${year}`);
+    expect(panel().textContent).not.toMatch(/Motivo|10000|T12:00|cloud/);
+    expect(panel().querySelector(".audit-panel__sent")).toBeNull();
   });
 
   test("the panel hangs from <body>, so it stays put while the list scrolls", async () => {

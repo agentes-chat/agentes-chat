@@ -394,7 +394,7 @@
     },
     "view_all_agents": {
       "title": "Alle agents zien",
-      "desc": "In Team en de zijbalk. Zonder dit alleen de agents die de persoon antwoorden.",
+      "desc": "In Team en de zijbalk, behalve de persoonlijke agents van anderen. Zonder dit alleen de agents die de persoon antwoorden.",
       "short": "alle agents zien",
       "say": "ziet alle agents"
     },
@@ -1318,8 +1318,8 @@
       "where": {
         "openbotrun": "Sleep openbot-import.json (van Migrator by OpenBot) of openbot-transfer.json (van de instance-overdracht) hierheen, of de .zip waarin het kwam.",
         "openmausbot": "In OpenMausBot: klik met rechts op het team → Share team… → Save file.",
-        "hermes": "Voer in een terminal hermes profile export uit met de naam van het profiel en sleep de .tar.gz hierheen. Of sleep de map ~/.hermes om alle profielen mee te nemen.",
-        "openclaw": "Sleep de hele map ~/.openclaw (die neemt elke agent mee) of alleen één workspace. Op een Mac toont ⌘⇧. verborgen mappen in de bestandskiezer.",
+        "hermes": "Voer in een terminal `hermes profile export` uit met de naam van het profiel en sleep de .tar.gz hierheen. Of sleep de map `~/.hermes` om alle profielen mee te nemen.",
+        "openclaw": "Sleep de hele map `~/.openclaw` (die neemt elke agent mee) of alleen één workspace. Op een Mac toont ⌘⇧. verborgen mappen in de bestandskiezer.",
         "paperclip": "Sleep de pakketmap (die met COMPANY.md), sleep er een .zip van hierheen of plak de GitHub-link.",
         "agenteschat": "In de andere werkruimte: Instellingen → Importeren en exporteren → Het bestand downloaden. Sleep daarna de .json hierheen."
       },
@@ -3800,11 +3800,13 @@
   },
   "keyGuard": {
     "title": "Dit lijkt op een API-sleutel",
-    "text": "Alles in de chat is zichtbaar voor mensen en agents. Sla het liever op als sleutel van de werkruimte: die is versleuteld en niemand ziet hem.",
-    "textMember": "Alles in de chat is zichtbaar voor mensen en agents. Een sleutel is net als een wachtwoord.",
-    "save": "Opslaan als sleutel",
+    "titleSecret": "Dit lijkt op een sleutel of wachtwoord",
+    "vaultText": "Alles in de chat is zichtbaar voor mensen en agenten. Bewaar hem in de Vault: hij is versleuteld, en de agenten die je toestaat gebruiken hem zonder hem te zien.",
+    "vault": "Opslaan in de Vault",
+    "useAsAi": "Gebruiken als AI-sleutel",
     "remove": "Verwijderen",
-    "send": "Toch versturen"
+    "send": "Toch versturen",
+    "saved": "Agenten met toegang gebruiken hem onder de naam {{name}}."
   },
   "costlyCard": {
     "go": "Ga je gang",
@@ -4747,7 +4749,7 @@
     "error": {
       "title": "Geef het een naam.",
       "website": "Gebruik een https-adres, zoals app.example.com.",
-      "keyName": "Gebruik hoofdletters, cijfers en _, beginnend met een letter, zoals ACME_API_KEY.",
+      "keyName": "Gebruik hoofdletters, cijfers en _, beginnend met een letter, zoals `ACME_API_KEY`.",
       "password": "Typ het wachtwoord.",
       "value": "Typ de waarde.",
       "contact": "Vul minstens één veld in."
@@ -4908,7 +4910,7 @@
       "show": "Waarde van {{name}} tonen",
       "hide": "Waarde van {{name}} verbergen",
       "problem": {
-        "name": "De naam moet eruitzien als ACME_API_KEY",
+        "name": "De naam moet eruitzien als `ACME_API_KEY`",
         "reserved": "Gereserveerde naam",
         "empty": "Geen waarde",
         "tooLarge": "Waarde te groot"
@@ -5971,7 +5973,8 @@
         },
         "speedText": "Antwoordt sneller in gesprekken en verbruikt het abonnement 2,5× zo snel. Routines en lange taken blijven op standaard.",
         "modelLine": {
-          "opus": "De krachtigste. Verbruikt het abonnement sneller.",
+          "fable": "De krachtigste. Verbruikt het abonnement veel sneller.",
+          "opus": "Zeer krachtig. Verbruikt het abonnement sneller.",
           "sonnet": "Gebalanceerd. Goed voor bijna alles.",
           "haiku": "Snel en licht. Voor simpele taken."
         },
@@ -6521,12 +6524,13 @@
         "computer_busy": "De computer bleef bezig met andere taken.",
         "computer_failed": "De computer liep tegen een probleem aan en stopte.",
         "computer_timeout": "De computer deed er te lang over om te antwoorden.",
+        "disk_full": "De schijf van deze computer is vol. Verwijder bestanden die je daar niet meer nodig hebt (een agent kan dat zodra er weer wat ruimte is), of vraag een beheerder om ruimte vrij te maken.",
         "cli_failed": "Het programma {{brain}} is gestopt met een fout: {{detail}}",
         "cli_stopped": "Het programma {{brain}} is gestopt met een fout.",
         "cli_closed": "Het programma {{brain}} werd onverwacht afgesloten.",
         "cli_sandbox": "Het programma {{brain}} kan zijn sandbox niet starten op deze computer. Kies een andere AI in de instellingen van de agent.",
         "account_missing": "Het account dat voor deze agent gekozen is staat niet meer op zijn computer. Kies een ander in de instellingen van de agent of voeg het opnieuw toe.",
-        "windows_sandbox": "Deze Windows-computer kan de opdrachten van Codex niet isoleren: hij heeft Windows 11 24H2 of nieuwer nodig.",
+        "windows_sandbox": "Deze Windows-computer kan de opdrachten van Codex niet isoleren: hij heeft Windows 11 24H2 of nieuwer nodig. Werk Windows bij, kies Claude of een API-sleutel voor deze agent, of verplaats hem naar een Linux-computer.",
         "our_error": "Er ging iets mis aan onze kant en de taak is gestopt. Vraag het over een poosje opnieuw.",
         "unknown": "Mislukt."
       }
@@ -7281,6 +7285,7 @@
     "modelAndCost": "Model en kosten",
     "model": "Model",
     "modelDesc": {
+      "fable": "De krachtigste, voor het zwaarste werk",
       "sonnet": "Aanbevolen voor de meeste",
       "opus": "Lange, moeilijke taken",
       "haiku": "Snel en goedkoop",
@@ -8032,7 +8037,10 @@
     "unreachableTitle": "agentes.chat is niet bereikbaar",
     "unreachableText": "Misschien wordt het opnieuw opgestart. Deze pagina opent vanzelf zodra het weer werkt.",
     "offlineTitle": "Je bent offline",
-    "offlineText": "Deze pagina opent vanzelf zodra je weer online bent."
+    "offlineText": "Deze pagina opent vanzelf zodra je weer online bent.",
+    "unknownHostTitle": "Dit adres is nog niet ingesteld",
+    "unknownHostText": "Is het net gekoppeld, probeer het dan over een paar minuten opnieuw.",
+    "unknownHostTab": "Adres niet ingesteld · agentes.chat"
   },
   "scopes": {
     "context_read": {
@@ -9272,6 +9280,7 @@
       "computer_busy": "De computer bleef bezig met andere taken",
       "computer_failed": "De computer liep tegen een probleem aan en stopte",
       "computer_timeout": "De computer deed er te lang over om te antwoorden",
+      "disk_full": "De schijf van de computer was vol",
       "cli_failed": "Het AI-programma op de computer is gestopt met een fout",
       "account_missing": "Het account van de agent staat niet meer op zijn computer",
       "our_error": "Er ging iets mis aan onze kant"
@@ -9812,8 +9821,7 @@
       "approvals": "Standaard vragen merge, deploy en rollback om goedkeuring",
       "start": "Missie starten",
       "created": "Missie gemaakt: {{name}} stelt het plan op.",
-      "who": "Wie programmeert",
-      "codexOld": "Codex op {{computer}} is te oud voor missies: werk het daar bij."
+      "who": "Wie programmeert"
     },
     "commandApproval": {
       "label": "Autonomie",
@@ -10757,8 +10765,8 @@
     "line": {
       "invalid": "TypeSafe heeft deze sleutel niet geaccepteerd. Maak een nieuwe aan.",
       "no_credit": "Voeg tegoed toe bij TypeSafe. Jev gaat vanzelf weer verder.",
-      "env": "Ingesteld in de instellingen van deze server (TYPESAFE_API_KEY).",
-      "envInvalid": "TypeSafe heeft deze sleutel niet geaccepteerd. Wijzig hem in de instellingen van deze server (TYPESAFE_API_KEY)."
+      "env": "Ingesteld in de instellingen van deze server (`TYPESAFE_API_KEY`).",
+      "envInvalid": "TypeSafe heeft deze sleutel niet geaccepteerd. Wijzig hem in de instellingen van deze server (`TYPESAFE_API_KEY`)."
     },
     "checkAgain": "Opnieuw controleren",
     "via": {
@@ -10784,7 +10792,7 @@
       "line": {
         "invalid": "OpenRouter heeft deze sleutel niet geaccepteerd. Maak een nieuwe aan.",
         "no_credit": "Voeg tegoed toe bij OpenRouter. Jev gaat vanzelf weer verder.",
-        "envInvalid": "OpenRouter heeft deze sleutel niet geaccepteerd. Wijzig hem in de instellingen van deze server (TYPESAFE_API_KEY)."
+        "envInvalid": "OpenRouter heeft deze sleutel niet geaccepteerd. Wijzig hem in de instellingen van deze server (`TYPESAFE_API_KEY`)."
       }
     },
     "remove": {
@@ -10870,7 +10878,6 @@
       "needsCloud": {
         "online": "{{computer}} start opnieuw op of maakt opnieuw verbinding. Dit verandert vanzelf zodra hij terug is.",
         "installing": "{{program}} wordt geïnstalleerd op {{computer}}. Dit verandert vanzelf als het klaar is.",
-        "updating": "{{program}} wordt bijgewerkt op {{computer}}. Dit verandert vanzelf als het klaar is.",
         "runnerOld": "Het agentes.chat-programma op {{computer}} is verouderd en een update is onderweg. Dit verandert vanzelf als het klaar is.",
         "execOff": "{{computer}} kan {{program}} nog niet uitvoeren. We zijn ermee bezig, en dit verandert vanzelf.",
         "toolOff": "{{program}} is nog niet toegestaan op {{computer}}. Dat ligt aan ons: probeer het later opnieuw.",
@@ -11019,8 +11026,8 @@
       "everyone_female": "Iedereen in de werkruimte kan {{name}} roepen.",
       "people": "Kies de mensen en rollen die met {{name}} mogen praten.",
       "people_female": "Kies de mensen en rollen die met {{name}} mogen praten.",
-      "owner": "Alleen {{owner}} praat met {{name}}.",
-      "owner_female": "Alleen {{owner}} praat met {{name}}.",
+      "owner": "Alleen {{owner}} praat met {{name}}. In lijsten zien alleen {{owner}}, admins en wie mag bewerken {{name}}.",
+      "owner_female": "Alleen {{owner}} praat met {{name}}. In lijsten zien alleen {{owner}}, admins en wie mag bewerken {{name}}.",
       "noOwner": "Stel een eigenaar in om deze optie te gebruiken.",
       "everyonePersonal": "Iedereen hier kan {{name}} roepen.",
       "everyonePersonal_female": "Iedereen hier kan {{name}} roepen.",
@@ -12142,12 +12149,6 @@
       "read": "{{name}} heeft het gelezen",
       "resolved": "{{name}} heeft het hulpverzoek gesloten"
     },
-    "well": {
-      "readYours": "Las je notitie",
-      "readOf": "Las de notitie van {{name}}",
-      "nowYours": "Stopte om je notitie te lezen",
-      "nowOf": "Stopte om de notitie van {{name}} te lezen"
-    },
     "strip": {
       "see": "Bekijken",
       "toStop": "om te stoppen"
@@ -12243,11 +12244,6 @@
       "not_installed": "{{program}} is niet geïnstalleerd op {{computer}}.",
       "cant_start": "{{program}} staat op {{computer}}, maar start niet.",
       "not_reported": "{{computer}} controleert nog welke programma's erop staan. Dit verandert vanzelf als het klaar is.",
-      "outdated": "De versie op {{computer}} is oud. Werk Codex bij om het te gebruiken.",
-      "outdatedCodex": "Op {{computer}} is Codex CLI {{detected}} gevonden. Werk bij naar versie {{minimum}} of hoger.",
-      "codexUpdateGuide": "Codex CLI bijwerken",
-      "codexRecheckHere": "Kies na het bijwerken Opnieuw controleren bij Codex in Voorkeuren › Tools.",
-      "codexRecheckThere": "Werk Codex CLI bij op {{computer}}. Als daar de desktopapp draait, kies je Opnieuw controleren bij Codex in Voorkeuren › Tools.",
       "system": "{{program}} werkt nog niet op het systeem van {{computer}}.",
       "no_computerCloud": "Klaar zodra {{computer}} klaar is."
     },
@@ -12313,8 +12309,6 @@
     "see": "Wachtrij bekijken",
     "openComputer": "Computer openen",
     "label": "Wachtrij van {{name}}",
-    "full": "Vol",
-    "fullNext": "Vol · de volgende start over ongeveer {{n}} min",
     "free": "Niemand in de wachtrij",
     "workingNow": "Nu bezig · {{n}}",
     "inLine": "In de wachtrij · {{n}}",
@@ -13054,7 +13048,7 @@
         "invalid": "Ongeldig"
       },
       "line": {
-        "env": "Ingesteld in de instellingen van deze server (GITHUB_APP_ID).",
+        "env": "Ingesteld in de instellingen van deze server (`GITHUB_APP_ID`).",
         "invalid": "Deze server kan de opgeslagen app niet openen. Verwijder hem en maak hem opnieuw.",
         "events": "Vink deze events aan in de app, zodat agents horen wat er op GitHub gebeurt: {{events}}."
       },
@@ -13630,8 +13624,8 @@
     "composio": {
       "via": "Via Composio",
       "needsReconnect": "Moet opnieuw gekoppeld worden",
-      "off_one": "{{names}} en nog {{count}} dienst koppelen via Composio. Om ze aan te zetten, stelt wie deze server beheert COMPOSIO_API_KEY in (zie SELF_HOSTING.md).",
-      "off_other": "{{names}} en nog {{count}} diensten koppelen via Composio. Om ze aan te zetten, stelt wie deze server beheert COMPOSIO_API_KEY in (zie SELF_HOSTING.md).",
+      "off_one": "{{names}} en nog {{count}} dienst koppelen via Composio. Om ze aan te zetten, stelt wie deze server beheert `COMPOSIO_API_KEY` in (zie `SELF_HOSTING.md`).",
+      "off_other": "{{names}} en nog {{count}} diensten koppelen via Composio. Om ze aan te zetten, stelt wie deze server beheert `COMPOSIO_API_KEY` in (zie `SELF_HOSTING.md`).",
       "usage": "Composio: {{calls}} van {{limit}} aanroepen in {{month}}",
       "usageNoLimit": "Composio: {{calls}} aanroepen in {{month}}",
       "limitNotice": "Deze werkruimte heeft de Composio-aanroepen van deze maand opgebruikt",
@@ -14799,7 +14793,7 @@
       },
       "railway": {
         "1": "Open in de Postgres-service Data → Query en voer de opdracht hieronder uit (verander het wachtwoord).",
-        "2": "Kopieer bij Variables DATABASE_PUBLIC_URL (DATABASE_URL is intern en werkt niet vanaf hier).",
+        "2": "Kopieer bij Variables `DATABASE_PUBLIC_URL` (`DATABASE_URL` is intern en werkt niet vanaf hier).",
         "3": "Vervang daarin de gebruiker en het wachtwoord door agentes_leitura en het wachtwoord dat je koos, en plak hem hier."
       },
       "rds": {
@@ -14834,7 +14828,7 @@
     "error": {
       "auth": "De gebruiker of het wachtwoord klopt niet. Controleer ze en probeer het opnieuw.",
       "unreachable": "We konden de databaseserver niet bereiken. Controleer het adres en of hij verbindingen van buitenaf accepteert.",
-      "blocked_host": "Deze server is niet toegestaan. Gebruik het publieke adres van de database (interne adressen, zoals DATABASE_URL van Railway, werken niet vanaf hier).",
+      "blocked_host": "Deze server is niet toegestaan. Gebruik het publieke adres van de database (interne adressen, zoals `DATABASE_URL` van Railway, werken niet vanaf hier).",
       "tls": "De database accepteerde geen beveiligde verbinding. Zet SSL aan in de database, of kies Geen versleuteling onder Geavanceerd (alleen voor testdatabases).",
       "unknown": "Kon nu geen verbinding maken. Probeer het zo opnieuw.",
       "no_databases": "Deze gebruiker kan geen enkele database op deze server openen. Controleer de rechten of het begin van de naam."
@@ -15741,7 +15735,7 @@
       "titleRequired": "Geef het een naam.",
       "tooLong": "Dat is te lang. De limiet is {{max}}.",
       "notHttps": "Gebruik een adres dat begint met https://",
-      "keyNameInvalid": "Gebruik hoofdletters, cijfers en _ in de naam, zoals ACME_API_KEY.",
+      "keyNameInvalid": "Gebruik hoofdletters, cijfers en _ in de naam, zoals `ACME_API_KEY`.",
       "keyNameReserved": "Deze naam is gereserveerd. Kies een andere.",
       "keyNameTaken": "Er staat hier al een sleutel met deze naam.",
       "contactEmpty": "Vul minstens één veld in.",
@@ -16137,7 +16131,10 @@
       "since": "sinds {{time}}",
       "until": "tot {{time}}",
       "withHost": "met {{host}}",
-      "lastSeen": "laatst gezien {{time}}"
+      "lastSeen": "laatst gezien {{time}}",
+      "offlineUnresponsive": "reageert niet meer sinds {{time}}",
+      "offlineStopped": "runner gestopt om {{time}}",
+      "offlineDropped": "verbinding verbroken om {{time}}"
     },
     "line": {
       "ready": "Agents kunnen het nu gebruiken.",
@@ -16145,7 +16142,10 @@
       "busy_other": "{{count}} van {{max}} taken bezig",
       "offline": "Agents wachten tot het terug is.",
       "offlineSeen": "Laatst gezien {{time}}. Agents wachten tot het terug is.",
-      "offlineWithHost": "{{host}} is offline. Agents wachten tot het terug is."
+      "offlineWithHost": "{{host}} is offline. Agents wachten tot het terug is.",
+      "offlineUnresponsive": "Reageert niet meer sinds {{time}}, misschien geen netwerk of overbelast. Voer daar `{{command}}` uit.",
+      "offlineStopped": "De runner stopte om {{time}}. Start hem opnieuw, of voer daar `{{command}}` uit om te zien waarom.",
+      "offlineDropped": "De verbinding werd om {{time}} verbroken. Hij maakt zelf opnieuw verbinding. Zo niet, voer daar `{{command}}` uit."
     },
     "reason": {
       "locked": "De telefoon is vergrendeld",
@@ -16507,7 +16507,12 @@
       "iosBehind": "Deze iPhone draait iOS {{ios}} en Xcode op deze Mac is voor iOS {{sdk}}. Werk de iPhone bij: Instellingen › Algemeen › Software-update.",
       "xcodeOld": "{{name}} draait iOS {{version}} en Xcode op {{mac}} kent hooguit iOS {{sdk}}. Installeer Xcode {{major}} en voer dit daarna uit in Terminal.",
       "xcodeOldAny": "{{name}} draait iOS {{version}}, nieuwer dan Xcode op {{mac}} kent. Installeer Xcode {{major}} en voer dit daarna uit in Terminal.",
-      "uiRefusedText": "De iPhone weigerde de tikken van de testhelper. Ontgrendel hem en voer de toegangscode in als hij erom vraagt. Blijft het gebeuren, zet dan Instellingen › Ontwikkelaar › Schakel UI-automatisering in uit en weer aan.",
+      "uiRefusedText": "Agents zien het scherm van de iPhone, maar iOS weigert hun tikken.",
+      "uiTurnOn": "Zet op de iPhone allebei aan:",
+      "uiPasscode": "Voer de toegangscode in als erom gevraagd wordt en houd hem ontgrendeld.",
+      "uiCheck": "Opnieuw controleren",
+      "repair": "Testhelper herstellen",
+      "repairHint": "De Mac stopt de testhelper en bouwt hem opnieuw met zijn Xcode, in een paar minuten. Voor tikken die nog mislukken als beide aanstaan.",
       "tooOld": "{{name}} draait iOS {{version}}, en agents hebben iOS 17 of nieuwer nodig. Werk hem bij als dat kan, of sluit een nieuwere iPhone aan.",
       "tooOldVersion": "16 of ouder",
       "pluggedIn": "Hij is aangesloten",
@@ -17050,6 +17055,12 @@
       "sentence": "{{who}} antwoordde per e-mail",
       "request": "supportverzoek van {{name}}"
     },
+    "operatorReview": {
+      "sentence": "{{who}} controleerde inhoud om veiligheidsredenen",
+      "items_one": "{{value}} item",
+      "items_other": "{{value}} items",
+      "period": "{{from}} t/m {{to}}"
+    },
     "change": {
       "mergedWithoutAsking": "Gemerged in {{repo}} zonder te vragen",
       "accentChanged": "Heeft de accentkleur van de werkruimte gewijzigd",
@@ -17567,8 +17578,8 @@
         },
         "line": {
           "invalid": "Deze server kan deze sleutel niet lezen. Plak hem opnieuw.",
-          "env": "Ingesteld in de instellingen van deze server (GIPHY_API_KEY).",
-          "envInvalid": "Deze sleutel is niet te gebruiken. Wijzig hem in de instellingen van deze server (GIPHY_API_KEY)."
+          "env": "Ingesteld in de instellingen van deze server (`GIPHY_API_KEY`).",
+          "envInvalid": "Deze sleutel is niet te gebruiken. Wijzig hem in de instellingen van deze server (`GIPHY_API_KEY`)."
         },
         "invalid": "GIPHY accepteerde deze sleutel niet. Kopieer hem opnieuw bij GIPHY Developers.",
         "remove": {
@@ -18164,6 +18175,11 @@
         "shell": "Het voert er andere opdrachten in uit",
         "inline": "Het voert meegegeven code direct uit",
         "global": "Het installeert voor de hele computer",
+        "privilege": "Het vraagt om meer rechten",
+        "reverseShell": "Het geeft de shell van deze computer aan een andere machine",
+        "destroy": "Het zou de computer of een hele thuismap wissen",
+        "network": "Het wijzigt of omzeilt de proxy en firewall",
+        "otherUser": "Het komt aan bestanden van een andere gebruiker",
         "rules": "Buiten wat agents zelf mogen doen",
         "noAccess": "De agent heeft hier geen toegang toe",
         "policy": "Niet toegestaan bij dit soort werk",
@@ -19442,6 +19458,21 @@
     "writeAfter": ".",
     "ask": "Hulp nodig? Vraag het aan de mensen die deze server beheren."
   },
+  "resetOrg": {
+    "cardTitle": "Resetten of verwijderen",
+    "row": {
+      "title": "Werkruimte resetten",
+      "text": "Wist alles wat erin is gemaakt en begint opnieuw, met dezelfde mensen."
+    },
+    "goes": "Agents, gesprekken, privéberichten, bestanden, taken, routines en geheugen",
+    "stays": "Mensen, rollen, uitnodigingen, AI-accounts, computers en connectors",
+    "fresh": "Daarna opent hij als een nieuwe werkruimte, met de eerste inrichting",
+    "plan": "Het abonnement blijft hetzelfde, zonder nieuwe afschrijving",
+    "now": "Dit gebeurt meteen en kan niet ongedaan worden gemaakt.",
+    "title": "{{name}} resetten?",
+    "submit": "Werkruimte resetten",
+    "resetting": "{{name}} wordt gereset…"
+  },
   "deleteOrg": {
     "card": {
       "title": "Werkruimte verwijderen",
@@ -19513,8 +19544,7 @@
     "menu": "Account verwijderen",
     "card": {
       "text": "Verwijdert je account over 7 dagen, in alle werkruimtes.",
-      "button": "Account verwijderen…",
-      "title": "Verwijderen"
+      "button": "Account verwijderen…"
     },
     "title": "Je hele account verwijderen?",
     "intro": "Dit verwijdert je hele account, niet alleen één werkruimte.",
@@ -21176,6 +21206,38 @@
       "alwaysOn": "Vanaf nu gaan zulke meldingen weg zonder te vragen.",
       "askFirst": "Vragen voor het versturen"
     }
+  },
+  "problemReport": {
+    "button": "Rapport versturen",
+    "title": "Rapport naar agentes.chat versturen",
+    "lead": "Het agentes.chat-team krijgt: versies, welke instellingen zijn ingesteld (nooit hun waarden), wat misging en de laatste regels van de logs. Geen berichten, pagina's, namen of sleutels.",
+    "noteLabel": "Wat gebeurde er? (optioneel)",
+    "notePlaceholder": "Wat je deed toen het stopte",
+    "emailLabel": "E-mail voor een antwoord (optioneel)",
+    "emailHelp": "Alleen als je een antwoord wilt.",
+    "showAll": "Alles bekijken wat wordt verstuurd",
+    "copy": "Rapport kopiëren",
+    "copied": "Gekopieerd",
+    "send": "Versturen",
+    "sending": "Versturen…",
+    "cancel": "Annuleren",
+    "loading": "Details verzamelen…",
+    "sentTitle": "Rapport {{id}} verstuurd",
+    "sentText": "Als je ons schrijft, noem dan deze code.",
+    "sentTextReply": "We antwoorden op {{email}}. Noem deze code als je ons schrijft.",
+    "copyCode": "Code kopiëren",
+    "done": "Klaar",
+    "noLogComputer": "{{computer}} reageerde niet, dus de log ervan zit er niet bij.",
+    "oldRunner": "De agentes.chat-app op {{computer}} is te oud om de log mee te sturen. Werk hem daar bij om hem mee te sturen.",
+    "noServerLines": "De logregels van de server zitten er alleen bij als de eigenaar van de installatie het rapport verstuurt.",
+    "off": "Versturen staat uit op deze server (`PROBLEM_REPORT_URL=off`). Kopieer het rapport om het te delen.",
+    "errorRate": "Te veel rapporten in korte tijd. Probeer het over {{minutes}} min opnieuw of kopieer het rapport.",
+    "errorUnreachable": "agentes.chat reageerde niet. Probeer het opnieuw of kopieer het rapport.",
+    "errorRefused": "agentes.chat heeft dit rapport niet geaccepteerd (het komt misschien van een oudere versie). Kopieer het rapport in plaats daarvan.",
+    "errorPreview": "De details konden niet worden verzameld: {{reason}}",
+    "emailInvalid": "Dat e-mailadres lijkt niet te kloppen. Pas het aan of laat het leeg.",
+    "settingsTitle": "Werkt er iets niet?",
+    "settingsText": "Stuur de technische details naar het agentes.chat-team."
   },
   "live": {
     "slides": {

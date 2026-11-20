@@ -30,6 +30,7 @@ import { PASS_TOOL } from "./reply-policy";
 import { routineBriefOf } from "./routine-brief";
 import type { BridgeIdentity } from "./run-tool-tokens";
 import { type AgentRun, replyThreadOf } from "./runs";
+import { isSayNow, type SaidNow } from "./say-now";
 import { publishSecret, type SecretRequestRow, secretLabelOf, secretRequestView, syncSecretMessage } from "./secrets";
 import { artifactToolDetail, promptAnswer, promptPoll, toolCode, toolCommand, toolDetail } from "./tool-detail";
 import { directoryRole, HARNESS_PREFIX, ON_DEMAND_USE, resolveDirectoryTool } from "./tools/directory";
@@ -134,6 +135,8 @@ export interface ToolSideEffects {
   feedbackOffer?: PendingFeedbackOffer;
   /** A call refused for a switch off on its computer (`ToolOffError`): its reply's one-click card (`meta.toolOff`). */
   toolOff?: { machineId: string; tool: string };
+  /** The line it told them on the way (`say_now`, ADR 0207): never its reply, which it still owes. */
+  saidNow?: SaidNow[];
 }
 
 /** A task handed on, as a reply's chip reads it: the task, its agent and its conversation's root (the thread). */
@@ -284,6 +287,9 @@ export function absorbToolData(t: ToolSideEffects, data: Record<string, unknown>
   const off = data.toolOff as { machineId?: unknown; tool?: unknown } | undefined;
   if (off && typeof off.machineId === "string" && typeof off.tool === "string")
     t.toolOff = { machineId: off.machineId, tool: off.tool };
+  const said = data.saidNow as { text?: unknown; messageId?: unknown } | undefined;
+  if (said && typeof said.text === "string" && typeof said.messageId === "string")
+    t.saidNow = [...(t.saidNow ?? []), { text: said.text, messageId: said.messageId }];
   const update = data.memoryUpdate as MemoryUpdate | undefined;
   if (update) t.memoryUpdates = [...(t.memoryUpdates ?? []), update];
   return update ?? null;
@@ -306,6 +312,7 @@ export function mergeToolEffects(t: ToolSideEffects, e: ToolSideEffects | null |
   if (e.tasks?.length) t.tasks = [...(t.tasks ?? []), ...e.tasks];
   if (e.feedbackOffer) t.feedbackOffer = e.feedbackOffer;
   if (e.toolOff) t.toolOff = e.toolOff;
+  if (e.saidNow?.length) t.saidNow = [...(t.saidNow ?? []), ...e.saidNow];
 }
 
 const hasEffects = (e: ToolSideEffects) =>
@@ -323,7 +330,8 @@ const hasEffects = (e: ToolSideEffects) =>
       e.desktop?.length ||
       e.tasks?.length ||
       e.feedbackOffer ||
-      e.toolOff,
+      e.toolOff ||
+      e.saidNow?.length,
   );
 
 /** The transcript key where the bridge leaves a computer-brain turn's side effects for the engine. */
@@ -350,7 +358,8 @@ async function recordBridgeEffects(
   const effects: ToolSideEffects = {};
   absorbBrowserCall(effects, call, outcome.type === "result" && outcome.output.isError === true);
   const update = outcome.type === "result" ? absorbToolData(effects, outcome.output.data) : null;
-  const executed = outcome.type === "result" ? 1 : 0;
+  // Its line on the way (`say_now`, ADR 0207) is talk, never counted as work done.
+  const executed = outcome.type === "result" && !isSayNow(call.name) ? 1 : 0;
   if (!hasEffects(effects) && executed === 0) return;
   await deps.db.transaction(async (tx) => {
     const [row] = await tx
@@ -541,8 +550,9 @@ export async function invokeWithChip(
   // The agent's line follows what it does now (ADR 0084 §10), beside the call, never in its way.
   if (def) void followWork(deps, ctx, def).catch(() => {});
   const words = takeStepWords(where.runId);
-  // What it wrote before staying quiet was never meant for people: shown, it would vanish with the pass.
-  const said = use.name === PASS_TOOL ? undefined : words;
+  // What it wrote before staying quiet was never meant for people: shown, it would vanish with the pass. Before its line
+  // on the way (`say_now`) it is that line again, which the chat already shows.
+  const said = use.name === PASS_TOOL || isSayNow(use.name) ? undefined : words;
   await publishChannelEvent(deps.pubsub, {
     type: "agent.tool",
     ...where,
@@ -667,7 +677,9 @@ export async function bridgeToolsFor(deps: RunToolsDeps, id: BridgeIdentity): Pr
   // Our own tools before the connectors': a cap on the list (`MCP_TOOLS_MAX`) only ever drops connector tools.
   const ordered = [...tools.filter((t) => !t.connectionId), ...tools.filter((t) => t.connectionId)];
   const authority = run ? await runAuthorityById(deps.db, run.orgId, run.id) : null;
-  if (!(authority?.kind === "routine" && authority.brief?.widget)) return ordered.map(brainToolOf);
+  // The line before slow work (ADR 0207) is in hand from the first round, never behind a computer brain's tool search.
+  if (!(authority?.kind === "routine" && authority.brief?.widget))
+    return ordered.map((t) => (isSayNow(t.name) ? { ...brainToolOf(t), upFront: true } : brainToolOf(t)));
   // A widget's refresh (ADR 0135 §5): what it reads with and answers through, in hand from the first round.
   let room = WIDGET_UP_FRONT_MAX;
   return ordered.map((t) => (widgetUpFront(t) && room-- > 0 ? { ...brainToolOf(t), upFront: true } : brainToolOf(t)));

@@ -27,6 +27,8 @@ export interface MachinePlanUsage {
     label?: string;
     usedPercent: number;
     resetsAt?: string;
+    /** When this window was last read, where that is before `at` (`PlanWindow.at`). */
+    at?: string;
   }[];
   limited?: boolean;
   source: "turn" | "probe";
@@ -46,7 +48,8 @@ export interface MachinePlanUsage {
 export interface MachineExecutors {
   /** `loggedIn`/`authMethod`/`plan`: from `claude auth status` (protocol 8; absent = unknown). */
   claude?: { version: string; loggedIn?: boolean; authMethod?: string; plan?: string };
-  codex?: { version: string };
+  /** `path`: the copy its runner starts, the newest it found. */
+  codex?: { version: string; path?: string };
   /** Cursor's CLI (protocol 36, ADR 0114) and the models its sign-in lists; `inPlan`: the CLI said the plan includes it. */
   cursor?: { version: string; models?: { id: string; label?: string; inPlan?: boolean }[] };
   /** OpenCode's CLI (protocol 39, ADR 0132) and the models it lists; `free`: OpenCode's free tier. */
@@ -158,6 +161,14 @@ export interface MachineAccess {
  */
 export type MachineKind = "connected" | "host" | "managed";
 
+/** One runner socket that closed: when it opened and closed, and the close code and reason. */
+export interface MachineDisconnect {
+  connectedAt: string;
+  at: string;
+  code: number;
+  reason: string;
+}
+
 /**
  * Connected computers (ADR 0025): machines people paired, where our runner
  * keeps one outbound WebSocket open. The token is stored as SHA-256 only;
@@ -247,6 +258,8 @@ export const machines = pgTable(
     /** The server process holding its socket. */
     connectedReplica: text(),
     lastSeenAt: timestamp({ withTimezone: true }),
+    /** Its runner's last sockets that closed, newest first (at most `MACHINE_DISCONNECTS_KEPT`): why it went offline. */
+    disconnects: jsonb().$type<MachineDisconnect[]>().notNull().default([]),
     /**
      * The operator put the workspace's own computer (`managed`) in standby (ADR 0161): asleep by design, it is woken
      * when something wants it. Its runner's next hello clears it.

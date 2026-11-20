@@ -55,7 +55,7 @@
     const el = worded(labelOrEl);
     const classes = (typeof el.className === "string" ? el.className : (el.className?.baseVal ?? ""))
       .split(/\s+/)
-      .filter((c) => c && !/^(ac-captop|ac-iconline|ac-actrow|is-|has-)/.test(c))
+      .filter((c) => c && !/^(ac-captop|ac-iconline|ac-actrow|ac-tail|is-|has-)/.test(c))
       .slice(0, 3);
     return el.tagName.toLowerCase() + classes.map((c) => `.${c}`).join("");
   };
@@ -1511,7 +1511,9 @@
      */
     clip(out) {
       for (const el of document.body.querySelectorAll("*")) {
-        if (!seen(el) || el.closest("svg")) continue;
+        // Inside a row `content-visibility` skips (a conversation's rows before their first frame), the row keeps its
+        // placeholder height while its content is measured whole, spilling over the rows below: nothing a person sees.
+        if (!seen(el) || el.closest("svg") || !el.checkVisibility({ contentVisibilityAuto: true })) continue;
         const s = style(el);
         const reach = { top: 0, bottom: 0, left: 0, right: 0 };
         for (const l of outerShadows(s.boxShadow)) {
@@ -2537,6 +2539,63 @@
         const need = word + parseFloat(style(name).paddingRight) + parseFloat(s.columnGap) + group;
         if (right - name.getBoundingClientRect().left >= need + 1)
           out.push({ ...base, side: "under", px: +(mid - line.bottom).toFixed(1) });
+      }
+    },
+    /**
+     * A wrapping row keeps one start edge: when one of its lines starts at the row's start with room to spare, no other
+     * line is pushed away from it, by an auto margin (a time left, a status floating at the end under buttons) or by
+     * the row ending its lines at the end (buttons under "Mudar quando perguntar"). A line set in by a fixed margin (an
+     * outcome on its item's words) and rows that end or centre every line are left alone, and so is a control under
+     * words alone: a row's own control at its end (a settings row's switch, a member's role), as `endline` places it.
+     */
+    strayend(out) {
+      // The computed value keeps "auto" where the resolved one is already in pixels.
+      const auto = (el) => {
+        try {
+          return String(el.computedStyleMap().get("margin-left")) === "auto";
+        } catch {
+          return false;
+        }
+      };
+      const control = (el) => el.matches(CONTROL) || !!el.querySelector(CONTROL);
+      for (const row of document.body.querySelectorAll("*")) {
+        // A settings row's end (its value, its control) is `endline`'s: at the row's end, under the name or not.
+        if (!seen(row) || row.matches(".settings-row")) continue;
+        const s = style(row);
+        if (!s.display.includes("flex") || s.flexDirection !== "row" || s.flexWrap !== "wrap" || s.direction === "rtl")
+          continue;
+        const toEnd = ["flex-end", "end", "right"].includes(s.justifyContent);
+        if (!toEnd && !["normal", "flex-start", "start", "left"].includes(s.justifyContent)) continue;
+        const kids = flow(row);
+        if (kids.length < 2) continue;
+        const r = row.getBoundingClientRect();
+        const start = r.left + parseFloat(s.borderLeftWidth) + parseFloat(s.paddingLeft);
+        const end = r.right - parseFloat(s.borderRightWidth) - parseFloat(s.paddingRight);
+        const lines = [];
+        for (const kid of kids) {
+          const k = kid.getBoundingClientRect();
+          const line = lines.find((l) => sameLine(l.box, k));
+          if (line) line.kids.push([kid, k]);
+          else lines.push({ box: k, kids: [[kid, k]] });
+        }
+        if (lines.length < 2) continue;
+        const firstOf = (line) => line.kids[0];
+        const lastOf = (line) => line.kids[line.kids.length - 1];
+        const anchored = lines.filter((l) => firstOf(l)[1].left <= start + 2 && lastOf(l)[1].right < end - 2);
+        if (!anchored.length) continue;
+        const acts = anchored.some((l) => l.kids.some(([kid]) => control(kid)));
+        for (const line of lines) {
+          const [kid, k] = firstOf(line);
+          if (k.left > start + 2 && (toEnd || auto(kid)) && (acts || !control(kid)))
+            out.push({
+              rule: "strayend",
+              node: kid,
+              el: sig(kid),
+              box: sig(row),
+              px: +(k.left - start).toFixed(1),
+              text: words(kid),
+            });
+        }
       }
     },
   };

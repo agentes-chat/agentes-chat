@@ -103,6 +103,11 @@ function OrgLayout() {
   useEffect(() => {
     if (gone) void navigate({ to: "/", replace: true });
   }, [gone, navigate]);
+  // A workspace its owner reset (`org.reset` reads `GET /me` again) is theirs to set up again, as opening it would be.
+  const restart = Boolean(membership && settingUp(membership)) && path !== `/org/${orgId}/onboarding`;
+  useEffect(() => {
+    if (restart) void navigate({ to: "/onboarding", replace: true });
+  }, [restart, navigate]);
   // Outside the shell the app's window has no title bar: the page's top drags it.
   const strip = inDesktopApp() && <DesktopDragStrip />;
 

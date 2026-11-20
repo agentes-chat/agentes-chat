@@ -30,6 +30,8 @@ import { PixelWave, wavePaths } from "./VoiceBars";
 const WAVE = 24;
 /** The speed chip's height. */
 const SPEED_H = 22;
+/** The play button: big enough to hit at a glance, its glyph filled. */
+const PLAY = 36;
 /** Past this many characters the first line is cut, so "Ver tudo" is offered without measuring the text. */
 const ONE_LINE = 40;
 /** The list recycles rows: what a message had open lives outside them (where a clip stands: `placeOf`). */
@@ -196,14 +198,18 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
               accessibilityRole="button"
               accessibilityLabel={playing || starting ? t("voice.stop") : t("voice.play")}
               accessibilityState={{ busy: starting }}
-              hitSlop={8}
+              // 36 drawn, the 44 a finger needs.
+              hitSlop={(TOUCH - PLAY) / 2}
               style={[styles.play, { backgroundColor: canPlay ? c.ink : c.sunken }]}
             >
               <View style={styles.center}>
                 {starting ? (
                   <ActivityIndicator size="small" color={c.bg} />
                 ) : (
-                  <Icon name={playing ? "pause" : "play"} size={14} color={canPlay ? c.bg : c.muted} />
+                  // The filled glyphs (a line one read thin); play a touch right, where its weight sits.
+                  <View style={playing ? null : styles.playNudge}>
+                    <Icon name={playing ? "pause" : "play"} size={17} filled color={canPlay ? c.bg : c.muted} />
+                  </View>
                 )}
               </View>
             </PressScale>
@@ -302,8 +308,9 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 6,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  player: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 28 },
-  play: { width: 28, height: 28, borderRadius: 14 },
+  player: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: PLAY },
+  play: { width: PLAY, height: PLAY, borderRadius: PLAY / 2 },
+  playNudge: { marginLeft: 2 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   wave: { flex: 1, minWidth: 0, height: WAVE, flexDirection: "row" },
   dim: { opacity: 0.5, marginLeft: 6 },
@@ -314,6 +321,6 @@ const styles = StyleSheet.create({
   speedText: { fontVariant: ["tabular-nums"], fontWeight: "600" },
   pressed: { opacity: 0.6 },
   retry: { fontWeight: "600", textDecorationLine: "underline" },
-  // Under the wave, past the play button; "Ver tudo" on its own line below the words.
-  words: { paddingLeft: 38, paddingBottom: 2, gap: 2 },
+  // Under the wave, past the play button (its 36 and the row's 10); "Ver tudo" on its own line below the words.
+  words: { paddingLeft: PLAY + 10, paddingBottom: 2, gap: 2 },
 });

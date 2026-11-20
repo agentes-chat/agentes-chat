@@ -98,7 +98,7 @@ import {
 import type { AgentTab } from "@agenteschat/client/lib/agent-edit";
 import { foldTalk, TALK_LINE_CHARS, talksToAgent } from "@agenteschat/client/lib/agent-talk";
 import { returnsHere } from "@agenteschat/client/lib/agent-work";
-import { looksLikeApiKey } from "@agenteschat/client/lib/api-key-text";
+import { type FoundKey, looksLikeApiKey } from "@agenteschat/client/lib/api-key-text";
 import { approvalCardItems, asOfNow, cardDeadline } from "@agenteschat/client/lib/approval-card";
 import { artifactRefs } from "@agenteschat/client/lib/artifacts";
 import { canTalk, unavailableNotice } from "@agenteschat/client/lib/audience";
@@ -142,8 +142,8 @@ import { useHeldWhile } from "@agenteschat/client/lib/hold";
 import { issueTakenOf, issueWorkOf, taskConversationOf } from "@agenteschat/client/lib/issues";
 import { workAnchorBody, workContinuable, workIsOver } from "@agenteschat/client/lib/long-work";
 import { supersededBrainNotices } from "@agenteschat/client/lib/machine-outages";
-import { hasWideBlock, plainLine } from "@agenteschat/client/lib/markdown";
-import { isMediaAfterReply, isMediaAlone, messageMediaOf, quoteText, textOrMedia } from "@agenteschat/client/lib/media";
+import { hasWideBlock } from "@agenteschat/client/lib/markdown";
+import { isMediaAfterReply, isMediaAlone, messageMediaOf, quoteText } from "@agenteschat/client/lib/media";
 import { serverBody } from "@agenteschat/client/lib/message-body";
 import { joinDrafts, tooLongToSend } from "@agenteschat/client/lib/message-length";
 import {
@@ -232,6 +232,7 @@ import {
   memo,
   type ReactElement,
   type ReactNode,
+  startTransition,
   useCallback,
   useContext,
   useEffect,
@@ -328,7 +329,7 @@ import { ArrivalCard, useArrival } from "@/components/invite/Arrival";
 import { InviteOfferRow, useInviteDialog, useInviteOffer } from "@/components/invite/InviteDialog";
 import { useLeaveChannelWithUndo } from "@/components/LeaveChannelDialog";
 import { useUploadFailed } from "@/components/Limits";
-import { LiveCodeToggle, type SteerNote } from "@/components/LiveCode";
+import { LiveCodeToggle } from "@/components/LiveCode";
 import { ErrorState, LoadingConversation } from "@/components/Loading";
 import { LiveQuoteBar, LiveRefLine } from "@/components/live/TalkBits";
 import { useFileTalk } from "@/components/live/talk";
@@ -1518,7 +1519,8 @@ function ChannelView({
   });
   // Otherwise every conversation opens at its last message (coming back to one included).
   // Opened at a message: not pinned to the bottom until the person scrolls down.
-  const stick = useRef(!focusMessageId && !readFrom);
+  const [opensAtEnd] = useState(() => !focusMessageId && !readFrom);
+  const stick = useRef(opensAtEnd);
   const lastScrollTop = useRef<number | null>(null);
   // A smooth scroll in progress: its intermediate positions don't mean "the person scrolled up".
   const autoScrollUntil = useRef(0);
@@ -2223,12 +2225,12 @@ function ChannelView({
   const uploading = files.some((f) => f.status === "uploading");
 
   // A key pasted in the message: nothing goes out until the person chooses (`KeyGuardDialog`).
-  const [keyAsk, setKeyAsk] = useState<{ text: string; key: string; interrupt?: boolean } | null>(null);
+  const [keyAsk, setKeyAsk] = useState<{ text: string; found: FoundKey; interrupt?: boolean } | null>(null);
   const onSend = (text: string, opts?: { interrupt?: boolean; keyChecked?: boolean }) => {
     if (uploading || (!text && attached.length === 0)) return;
-    const key = opts?.keyChecked ? null : looksLikeApiKey(text);
-    if (key) {
-      setKeyAsk({ text, key, interrupt: opts?.interrupt });
+    const found = opts?.keyChecked ? null : looksLikeApiKey(text);
+    if (found) {
+      setKeyAsk({ text, found, interrupt: opts?.interrupt });
       return;
     }
     if (attached.length === 0 && parseMissionCommand(text)) {
@@ -2299,11 +2301,11 @@ function ChannelView({
           onRecording: () => sendTyping(undefined, "voice"),
           onTake: ({ blob, durationMs, peaks }) => {
             const typed = draft.trim();
-            const key = looksLikeApiKey(typed);
-            const text = key ? "" : typed;
+            const found = looksLikeApiKey(typed);
+            const text = found ? "" : typed;
             toBottom(true);
             setQuote(null);
-            if (key) setKeyAsk({ text: typed, key });
+            if (found) setKeyAsk({ text: typed, found });
             else if (text) setDraft("");
             const sentFiles = files.filter((f) => f.status === "done" && f.ref);
             const uploading = setInterval(() => sendTyping(undefined, "voice", true), 1000);
@@ -2900,6 +2902,7 @@ function ChannelView({
                                   consultGroups={consultGroups}
                                   seenId={thread ? null : seenId}
                                   marks={contextMarkIds}
+                                  progressive={opensAtEnd}
                                 />
                                 {/* A thread's root is on screen from the channel: only its replies are loading. */}
                                 {thread && messages.isPlaceholderData && thread.replyCount > 0 && (
@@ -3363,6 +3366,9 @@ function Parts({ resetKey, children }: { resetKey: unknown; children: ReactNode 
  * meanwhile). One flat keyed list: an answer seen live is drawn under its block's key, so the final message takes a
  * drawn block's place without a remount. Memoized: a run's events don't re-render it.
  */
+/** The rows a conversation opening at its end draws first: more than a tall screen shows. */
+const FIRST_ROWS = 30;
+
 const Timeline = memo(function Timeline({
   items,
   ready,
@@ -3375,6 +3381,7 @@ const Timeline = memo(function Timeline({
   consultGroups,
   seenId = null,
   marks,
+  progressive = false,
 }: {
   items: ReturnType<typeof buildTimeline>;
   /** The first page loaded: rows from then on slide in. */
@@ -3396,8 +3403,17 @@ const Timeline = memo(function Timeline({
   seenId?: string | null;
   /** Messages that are a thread's context and still in the channel: the gutter mark. */
   marks: ReadonlySet<string>;
+  /** It opens at its end: the last rows are drawn first, the ones above them right after (`FIRST_ROWS`). */
+  progressive?: boolean;
 }) {
   const { t, i18n } = useTranslation();
+  // A conversation opening at its end shows its last rows: they are drawn first and the rest in a transition, which
+  // yields to the page, instead of a hundred rows in one task that holds the page still for most of a second.
+  const [whole, setWhole] = useState(!progressive);
+  useEffect(() => {
+    if (!whole && ready) startTransition(() => setWhole(true));
+  }, [whole, ready]);
+  const from = whole ? 0 : Math.max(0, items.length - FIRST_ROWS);
   const models = useModels();
   const modelLabels = useMemo(
     () => new Map((models.data?.models ?? []).map((m) => [m.id, m.label] as const)),
@@ -3523,6 +3539,7 @@ const Timeline = memo(function Timeline({
     );
   };
   for (const [at, item] of items.entries()) {
+    if (at < from) continue;
     const grouped = item.kind === "message" && item.grouped && !afterUnshown();
     const after = items[at + 1];
     // Where it sits in its author's run: my own rows' bubbles square the corners they share.
@@ -4499,29 +4516,13 @@ export const TimelineMessage = memo(function TimelineMessage({
   // it answers on demand (that report's own line folds into this message).
   const routine = routineReplyOf(m);
   const [reportOpen, setReportOpen] = useState(false);
-  // The other messages it shows a piece of: its routine's report, and the messages its run read (`steerNote`).
-  const shownIds = useMemo(
-    () => [
-      ...(routine?.noticeId ? [routine.noticeId] : []),
-      ...[...(live?.work ?? []), ...(seenLive?.work ?? [])].flatMap((w) => (w.kind === "steer" ? [w.messageId] : [])),
-    ],
-    [routine?.noticeId, live?.work, seenLive?.work],
-  );
+  // The other message it shows a piece of: its routine's report.
+  const shownIds = useMemo(() => (routine?.noticeId ? [routine.noticeId] : []), [routine?.noticeId]);
   const shown = useCachedMessages(org.id, m.channelId, m.threadId, shownIds);
   const report = routine?.noticeId ? routineReportText(shown, routine.noticeId) : null;
   // A short reply it gave while its task kept working (the talker): its message, "enquanto trabalha".
   const talker = m.author.type === "agent" && isTalkerReply(m.meta);
   const wikiLink = useWikiLinkRenderer();
-  /** A message that went into this run's work, as the well inside it shows it. */
-  const steerNote = (messageId: string): SteerNote | undefined => {
-    const found = shown.find((x) => x.id === messageId);
-    if (!found) return undefined;
-    return {
-      author: dir.authorName(found.author),
-      mine: found.author.type === "person" && found.author.id === me.user.id,
-      text: plainLine(textOrMedia(t, found.body, found.meta)),
-    };
-  };
   // A stopped run's message (`meta.canceled`): the text so far, and "Interrompido por Walter" as a note.
   // A text the server wrote (`meta.bodyCode`, a deploy's notice) is shown in the person's language.
   const stopped = useMemo(
@@ -4932,7 +4933,7 @@ export const TimelineMessage = memo(function TimelineMessage({
                 />
               </div>
             )}
-            <LiveTools work={live.work ?? []} agentName={name} color={colorOf(agent)} steerNote={steerNote} stopped />
+            <LiveTools work={live.work ?? []} agentName={name} color={colorOf(agent)} stopped />
             {/* Last, after its tools: for the person still in control of its browser (they hand back from it). */}
             <RunBrowserCard run={live} name={name} />
           </Parts>
@@ -5061,14 +5062,7 @@ export const TimelineMessage = memo(function TimelineMessage({
             )}
             {/* Its tools after its words and what it changed: the same place live, kept and saved. */}
             {keptSteps?.length && seenLive ? (
-              <LiveTools
-                work={keptSteps}
-                agentName={name}
-                color={colorOf(agent)}
-                steerNote={steerNote}
-                done
-                stopped={stopped.canceled}
-              />
+              <LiveTools work={keptSteps} agentName={name} color={colorOf(agent)} done stopped={stopped.canceled} />
             ) : null}
             {/* A question to another agent (in their DM) carries the asking run: its work shows on that run's reply. */}
             {m.author.type === "agent" &&

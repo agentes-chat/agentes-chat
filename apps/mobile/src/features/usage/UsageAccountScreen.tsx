@@ -70,7 +70,7 @@ export function UsageAccountScreen({ accountKey }: { accountKey: string }) {
     <View style={[styles.screen, { backgroundColor: c.grouped }]}>
       <PushedHeader
         title={account ? accountName(t, account) : t("settings.section.usage")}
-        {...(subtitle ? { subtitle } : {})}
+        subtitle={subtitle || undefined}
         solid={false}
         grouped
       />

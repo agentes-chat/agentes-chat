@@ -4,7 +4,7 @@ import { MODEL_TIERS, type ModelTier } from "@agenteschat/providers";
 import { othersPersonalTools } from "./agent-audit";
 import { getAgent } from "./agents";
 import { decidableBySql } from "./approvals";
-import { listsAllAgents, managesAgent, seesAgentDetailsSql } from "./audience";
+import { listsAgentSql, managesAgent } from "./audience";
 import { recordAudit } from "./audit";
 import type { AutoModels } from "./auto-model";
 import { caches } from "./cache";
@@ -276,6 +276,7 @@ export async function updateOrgSettings(
     }
   });
   caches.orgs.delete(`${orgId}:`);
+  caches.membership.deletePrefix(`${orgId}:`);
   caches.orgs.delete(`${orgId}:agent-budget`);
   // Agents on the default budget whose runs wait for it look again now (the rest park again quietly).
   if (input.defaultAgentBudgetNanoUsd !== undefined) await resumeBudgetWaits(db, orgId, null);
@@ -322,7 +323,7 @@ export async function orgOverview(db: Database, actorId: string, orgId: string, 
       and(
         eq(agents.orgId, orgId),
         isNull(agents.archivedAt),
-        listsAllAgents(membership) ? undefined : seesAgentDetailsSql("agents", sql`${actorId}::text`),
+        listsAgentSql("agents", sql`${actorId}::text`, membership),
       ),
     );
   const [pending] = await db

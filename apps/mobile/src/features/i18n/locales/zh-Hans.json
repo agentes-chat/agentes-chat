@@ -330,6 +330,7 @@
     "startedWith": "始于与 {{name}} 的对话",
     "replies_other": "{{count}} 条回复",
     "repliesWord_other": "回复",
+    "dayAt": "{{day}} {{time}}",
     "thread": "话题",
     "closed": "已关闭",
     "options": "选项",
@@ -364,9 +365,7 @@
       "delivered": "{{name}} 已收到",
       "held": "{{name}} 会在你做出决定后读取",
       "read": "{{name}} 已读",
-      "resolved": "{{name}} 已关闭求助请求",
-      "well": "已读你的留言",
-      "wellNow": "停下来读了你的留言"
+      "resolved": "{{name}} 已关闭求助请求"
     },
     "stopped": {
       "byYou": "在这里停止",
@@ -548,8 +547,6 @@
     "file": "文件",
     "media": "GIF",
     "noCamera": "无法访问相机。请在手机的设置中允许。",
-    "mission": "开始专项任务",
-    "missionHint": "有计划、从头到尾的长期工作",
     "summary": "总结聊天",
     "summaryHint": "你不在时发生了什么",
     "remind": "稍后提醒我",
@@ -797,8 +794,8 @@
       "where": {
         "openbotrun": "选择 openbot-import.json（来自 OpenBot 的 Migrator）或 openbot-transfer.json（来自实例迁移）。.zip 文件需先在“文件”应用中打开：点按一下即可解压。",
         "openmausbot": "在 OpenMausBot 中：右键点击团队 › 分享团队… › 保存文件。然后在这里选择该文件。",
-        "hermes": "Hermes 通过终端导出（hermes profile export），生成手机无法打开的 .tar.gz 文件。请在电脑上导入，或在这里选择该配置的 .md 和 .yaml 文件。",
-        "openclaw": "OpenClaw 将智能体保存在电脑上的 ~/.openclaw 文件夹中。请在这里选择某个工作区的 .md 文件，或在电脑上导入整个文件夹。",
+        "hermes": "Hermes 通过终端导出（`hermes profile export`），生成手机无法打开的 .tar.gz 文件。请在电脑上导入，或在这里选择该配置的 .md 和 .yaml 文件。",
+        "openclaw": "OpenClaw 将智能体保存在电脑上的 `~/.openclaw` 文件夹中。请在这里选择某个工作区的 .md 文件，或在电脑上导入整个文件夹。",
         "paperclip": "在下方粘贴该包的 GitHub 链接，或选择它的 COMPANY.md 和其他 .md 文件。",
         "agenteschat": "在另一个工作区中：设置 › 导入和导出 › 下载文件。然后在这里选择该 .json 文件。"
       },
@@ -1864,7 +1861,7 @@
       "tooOld": "这台 iPhone 运行 iOS {{version}}，而智能体需要 iOS 17 或更新版本。能更新就更新，或者换一台更新的 iPhone。",
       "xcodeOld": "这台 iPhone 运行 iOS {{version}}，比 {{host}} 上的 Xcode 支持的版本更新。请在那台 Mac 上安装 Xcode {{major}}，然后在终端中运行 xcrun devicectl manage ddis update。",
       "teamMissing": "Xcode 已登录，但还没有显示团队。在 Xcode 中新建任意 iOS App，在 Signing & Capabilities 下选择你的团队，然后在这台 iPhone 上运行一次。",
-      "uiRefused": "这台 iPhone 拒绝了测试助手的点按。请解锁它，如有要求就输入密码。如果反复出现，把 设置 › 开发者 › 启用 UI 自动化 关闭再打开。",
+      "uiRefused": "智能体能看到这台 iPhone 的屏幕，但 iOS 拒绝了它们的点按。",
       "pluggedIn": "已经插好了",
       "wifi": {
         "also": "也在 {{host}} 的 Wi-Fi 上：{{name}}",
@@ -2145,6 +2142,8 @@
     "deleteIntro": "{{name}} 会立即对所有人变为只读，并在 7 天后永久删除。",
     "holdDelete": "长按以删除",
     "deleteFailed": "无法删除工作区，请重试。",
+    "holdReset": "长按以重置",
+    "resetFailed": "无法重置工作区。请重试。",
     "access": {
       "how": "点按一行可更改其级别：无权限、读取、读写。"
     },
@@ -2416,7 +2415,7 @@
       "newPassword": "新密码",
       "keyName": "变量",
       "keyNamePlaceholder": "ACME_API_KEY",
-      "keyNameHelp": "使用大写字母、数字和 _，例如 ACME_API_KEY。智能体按这个名称请求密钥。",
+      "keyNameHelp": "使用大写字母、数字和 _，例如 `ACME_API_KEY`。智能体按这个名称请求密钥。",
       "value": "值",
       "newValue": "新值",
       "description": "描述",

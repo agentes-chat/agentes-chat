@@ -131,7 +131,7 @@ export const keptFromDeletion = (
   org: Pick<OrgStanding, "state" | "reason" | "notice"> & { deletionHoldAt: Date | null },
 ) => refusesNewWorkspace(org) || org.deletionHoldAt !== null;
 /** `keptFromDeletion` in SQL. */
-const keptOrg = sql<boolean>`(${heldOrg} or ${organizations.deletionHoldAt} is not null)`;
+export const keptOrg = sql<boolean>`(${heldOrg} or ${organizations.deletionHoldAt} is not null)`;
 /**
  * Its date passed, by the database's clock when the statement runs: after the lock it waited for, never when its
  * transaction began. Restoring reads the same clock the same way (`restorable`).
@@ -187,13 +187,15 @@ const DAY_MS = 86_400_000;
 /**
  * Emails `userId` a code that proves it's them before deleting the workspace `orgId`, or their account when it is null
  * (ADR 0088 §2), with the rules of every emailed code (`sendProofCode`). The email says what it deletes and whom to write
- * to if it wasn't them. Only where the server sends email: the routes check it.
+ * to if it wasn't them. With `reset`, before resetting the workspace instead, a code for that only. Only where the
+ * server sends email: the routes check it.
  */
 export async function sendDeletionCode(
   deps: { db: Database; rateLimiter: RateLimiter; emails: { publicUrl: string; support?: string | null } },
   userId: string,
   orgId: string | null,
   now = new Date(),
+  reset = false,
 ) {
   const org = orgId ? await getOrganization(deps.db, orgId) : null;
   if (orgId && !org) throw new NotFoundError("This workspace no longer exists");
@@ -201,7 +203,7 @@ export async function sendDeletionCode(
   return sendProofCode(
     deps,
     userId,
-    orgId ? `workspace:${orgId}` : "account",
+    proofPurpose(orgId, reset),
     {
       template: (code, account) => ({
         kind: "deletion_code",
@@ -209,6 +211,7 @@ export async function sendDeletionCode(
         code,
         email: account.email,
         ...stamp,
+        ...(reset ? { reset: true as const } : {}),
         support: deps.emails.support ?? null,
         url: deps.emails.publicUrl.replace(/\/$/, ""),
       }),
@@ -217,9 +220,12 @@ export async function sendDeletionCode(
   );
 }
 
+const proofPurpose = (orgId: string | null, reset: boolean) =>
+  orgId ? (reset ? (`reset:${orgId}` as const) : (`workspace:${orgId}` as const)) : ("account" as const);
+
 /**
- * Spends the code that proves it's `userId` before deleting the workspace `orgId` (their account when null), once
- * (`spendProofCode`): a code sent for anything else, or to anyone else, is wrong here.
+ * Spends the code that proves it's `userId` before deleting the workspace `orgId` (their account when null), or with
+ * `reset` before resetting it, once (`spendProofCode`): a code sent for anything else, or to anyone else, is wrong here.
  */
 export const spendDeletionCode = (
   deps: { db: Database },
@@ -227,7 +233,8 @@ export const spendDeletionCode = (
   orgId: string | null,
   code: string,
   now = new Date(),
-) => spendProofCode(deps, userId, orgId ? `workspace:${orgId}` : "account", code, "", now);
+  reset = false,
+) => spendProofCode(deps, userId, proofPurpose(orgId, reset), code, "", now);
 
 /** Codes that ran out a day ago, whatever they proved: their rows go (the hourly `deletions` tick). */
 export async function pruneDeletionCodes(db: Database, now = new Date()) {
@@ -352,6 +359,7 @@ export async function closeForDeletion(
  */
 export async function afterClosing(deps: DeletionDeps, closed: Closed) {
   caches.standing.delete(`${closed.orgId}:`);
+  caches.membership.deletePrefix(`${closed.orgId}:`);
   const event: OrgDeletingEvent = {
     type: "org.deleting",
     orgId: closed.orgId,
@@ -459,6 +467,7 @@ export async function restoreWorkspace(
     }
   });
   caches.standing.delete(`${orgId}:`);
+  caches.membership.deletePrefix(`${orgId}:`);
 }
 
 const nameOf = async (tx: Executor, userId: string) =>
@@ -579,6 +588,7 @@ export async function purgeWorkspace(deps: PurgeDeps, orgId: string, options: { 
   }
   for (const install of gone.installs) forgetInstallationTokens(install.id);
   caches.standing.delete(`${orgId}:`);
+  caches.membership.deletePrefix(`${orgId}:`);
   // On a server without the operator API, the only trace it leaves.
   deps.log?.info("workspace deleted", { orgId, requestedBy: gone.requestedBy, via: gone.via });
   return true;
@@ -1094,6 +1104,7 @@ export async function scheduleAccountDeletion(deps: DeletionDeps, userId: string
   });
   // Their open sockets lose every subscription now.
   for (const m of orgs) {
+    caches.membership.delete(`${m.orgId}:${userId}`);
     await publishOrgEvent(deps.pubsub, { type: "membership.revoked", orgId: m.orgId, userId, quiet: true });
     await announceMembers(deps.pubsub, m.orgId);
   }

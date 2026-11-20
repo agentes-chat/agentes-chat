@@ -362,6 +362,8 @@ export const featureKeysPtBR = {
     replies_other: "{{count}} respostas",
     repliesWord_one: "resposta",
     repliesWord_other: "respostas",
+    /** A conversation of bubbles says when it picks up again: "Today 15:35". */
+    dayAt: "{{day}} {{time}}",
     thread: "Thread",
     closed: "fechada",
     options: "Opções",
@@ -399,8 +401,6 @@ export const featureKeysPtBR = {
       held: "{{name}} lê depois da sua decisão",
       read: "{{name}} leu",
       resolved: "{{name}} encerrou o pedido de ajuda",
-      well: "Leu seu recado",
-      wellNow: "Parou para ler seu recado",
     },
     stopped: {
       byYou: "Parou aqui",
@@ -585,11 +585,9 @@ export const featureKeysPtBR = {
     camera: "Câmera",
     photos: "Fotos",
     file: "Arquivo",
-    /** The fourth tile: the GIFs and stickers, out of the field so it only sends. */
+    /** The fourth tile: the GIFs and stickers (also beside the mic in the empty field). */
     media: "GIFs",
     noCamera: "Sem acesso à câmera. Libere nos Ajustes do celular.",
-    mission: "Começar uma missão",
-    missionHint: "Um trabalho longo, com plano, do começo ao fim",
     summary: "Resumir a conversa",
     summaryHint: "O que aconteceu enquanto você estava fora",
     remind: "Lembrar depois",
@@ -855,9 +853,9 @@ export const featureKeysPtBR = {
         openmausbot:
           "No OpenMausBot: clique com o botão direito na equipe\u00a0›\u00a0Compartilhar equipe…\u00a0›\u00a0Salvar arquivo. Depois escolha esse arquivo aqui.",
         hermes:
-          "O Hermes exporta pelo terminal (hermes profile export), num .tar.gz que o celular não abre. Importe pelo computador, ou escolha aqui os arquivos .md e .yaml do perfil.",
+          "O Hermes exporta pelo terminal (`hermes profile export`), num .tar.gz que o celular não abre. Importe pelo computador, ou escolha aqui os arquivos .md e .yaml do perfil.",
         openclaw:
-          "O OpenClaw guarda os agentes na pasta ~/.openclaw do computador. Escolha aqui os arquivos .md de um workspace, ou importe a pasta inteira pelo computador.",
+          "O OpenClaw guarda os agentes na pasta `~/.openclaw` do computador. Escolha aqui os arquivos .md de um workspace, ou importe a pasta inteira pelo computador.",
         paperclip: "Cole abaixo o link do pacote no GitHub, ou escolha o COMPANY.md e os outros arquivos .md.",
         agenteschat:
           "No outro workspace: Configurações\u00a0›\u00a0Importar e exportar\u00a0›\u00a0Baixar o arquivo. Depois escolha o .json aqui.",
@@ -2015,8 +2013,7 @@ export const featureKeysPtBR = {
         "Este iPhone usa o iOS {{version}}, mais novo do que o Xcode no {{host}} conhece. Instale lá o Xcode {{major}} e rode xcrun devicectl manage ddis update no Terminal.",
       teamMissing:
         "O Xcode está conectado, mas ainda não mostra um time. No Xcode, crie qualquer app de iOS, escolha seu time em Signing & Capabilities e rode neste iPhone uma vez.",
-      uiRefused:
-        "Este iPhone recusou os toques do app de testes. Desbloqueie e digite seu código se ele pedir. Se continuar, desligue e ligue Ajustes\u00a0›\u00a0Desenvolvedor\u00a0›\u00a0Ativar Automação da IU.",
+      uiRefused: "Os agentes veem a tela deste iPhone, mas o iOS recusa os toques deles.",
       pluggedIn: "Já está ligado",
       wifi: {
         also: "Também no Wi-Fi de {{host}}: {{name}}",
@@ -2315,6 +2312,8 @@ export const featureKeysPtBR = {
     deleteIntro: "{{name}} fica só para leitura para todos agora e é apagado de vez em 7 dias.",
     holdDelete: "Segure para apagar",
     deleteFailed: "Não deu para apagar o workspace. Tente de novo.",
+    holdReset: "Segure para recomeçar",
+    resetFailed: "Não deu para recomeçar o workspace. Tente de novo.",
     access: {
       how: "Toque numa linha para trocar o nível: Sem acesso, Ler, Ler e escrever.",
     },
@@ -2601,7 +2600,7 @@ export const featureKeysPtBR = {
       newPassword: "Nova senha",
       keyName: "Variável",
       keyNamePlaceholder: "ACME_API_KEY",
-      keyNameHelp: "Letras maiúsculas, números e _, como ACME_API_KEY. Os agentes pedem a chave por esse nome.",
+      keyNameHelp: "Letras maiúsculas, números e _, como `ACME_API_KEY`. Os agentes pedem a chave por esse nome.",
       value: "Valor",
       newValue: "Novo valor",
       description: "Descrição",

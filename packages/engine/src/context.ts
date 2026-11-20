@@ -20,7 +20,7 @@ import { agentStyleLine, agentStyleOf, isAgentStyle } from "./agent-style";
 import type { Agent } from "./agents";
 import { readerOf, readerOfMessage } from "./agents-dm-reads";
 import type { AiStatusDeps } from "./ai-status";
-import { canTalkTo, NO_PERSON, speakerFor, viaAgent } from "./audience";
+import { findsAgent, NO_PERSON, speakerFor, viaAgent } from "./audience";
 import { runAuthority, UUID } from "./authority";
 import { type BlockSpecReader, blockStateNotes } from "./block-state";
 import { isSandboxedBrain } from "./brains/types";
@@ -199,6 +199,13 @@ export function howYouWork(level: ApprovalsLevel, personal: boolean): string {
 export const WORK_IN_BACKGROUND_LINE =
   '- If a request will take more than ~2 minutes or several rounds of tools (builds, migrations, investigations, multi-file changes, reports), call work_in_background first. In `say`, tell them in one short line that you\'re on it (e.g. "Vou cuidar disso em segundo plano. Te aviso aqui."), in their language, without a time: the line under it shows when the next update comes, and when it finished. Quick answers never go to the background. Set `card` when the work is substantial: likely over ~15 min, a plan of 3 or more steps, or a deliverable someone will look at (a pull request, a document, a report, a migration, a data import). Never poll or wait for your own work.';
 
+/**
+ * Before slow work (ADR 0207): the line of "How you work" for a run whose conversation people read as it goes, with
+ * `say_now` listed. The result still goes in the reply; a quick answer gets no line first.
+ */
+export const SAY_NOW_LINE =
+  "- Before work that takes more than a few seconds, first tell them in one short line what you'll do (say_now, in the same response as your first work call), then work: your final message brings the result. Once per request; never for a quick answer, nor with work_in_background (its `say` is that line).";
+
 export const finishWhatYouStart = (followUp: boolean) =>
   `- Finish what you start. Never end your turn on a promise you don't keep in it ('I'll send the numbers', 'vou checar de novo', 'te aviso quando terminar'): do it now. ${
     followUp
@@ -345,6 +352,8 @@ export function collapseRepeats(entries: { key: string; line: string }[], max: n
 const QUIET_TOOLS = [
   "ask_user",
   "react",
+  // The line before slow work (ADR 0207) is in its conversation already.
+  "say_now",
   // A GIF or a sticker (ADR 0091) is in its conversation already: not work to recall elsewhere.
   "send_gif",
   "send_sticker",
@@ -634,6 +643,8 @@ export async function buildRunContext(
     followUp?: boolean;
     /** `work_in_background` is available (ADR 0121): long requests go to the background. */
     work?: boolean;
+    /** `say_now` is available and people read this conversation as it goes (ADR 0207): one line before slow work. */
+    sayNow?: boolean;
     /** `show_block` and `start_poll` are available: when to use them (a routine's run is refused them). */
     blocks?: boolean;
     /**
@@ -1074,7 +1085,7 @@ export async function buildRunContext(
         teamPrompt(teamRows, agent.id, requester, here, talks, personal),
         linePrompt(
           // Its line as this person may know it: an agent they can't talk to stays out, as in "# Your team".
-          teamRows.filter((a) => a.id === agent.id || canTalkTo(a, requester, viaAgent(talks))),
+          teamRows.filter((a) => a.id === agent.id || findsAgent(a, requester, viaAgent(talks))),
           agent.id,
         ),
       ]
@@ -1139,7 +1150,7 @@ export async function buildRunContext(
     {
       text: [
         options.toolsAvailable
-          ? `${howYouWork(agent.approvalsLevel, personal)}\n${finishWhatYouStart(Boolean(options.followUp))}${options.work ? `\n${WORK_IN_BACKGROUND_LINE}` : ""}`
+          ? `${howYouWork(agent.approvalsLevel, personal)}\n${finishWhatYouStart(Boolean(options.followUp))}${options.sayNow ? `\n${SAY_NOW_LINE}` : ""}${options.work ? `\n${WORK_IN_BACKGROUND_LINE}` : ""}`
           : "",
         [
           "# How to reply",
@@ -2318,6 +2329,7 @@ export function sharingText(computer: string, size: { cpus: number; memoryGb: nu
     "- Before something heavy (a build, a big install or download, a dataset or a model, many browser tabs), run agentes-runner computer: it shows what is free now and which agents use the most. If what you are about to start needs more than is free, tell the person which agent is using the computer and what you'll do: wait until it frees up, or do a lighter version now.",
     '- When a command is killed (exit code 137, "Killed") or your commands are much slower than usual, run agentes-runner computer before trying again, and tell the person what happened and why.',
     "- When something heavy is done, stop what it left running in the background (a build's daemons: ./gradlew --stop), so the others get the memory back.",
+    "- Your home here is yours alone: no other agent can open a path in it. Pass work to another agent as a git branch or pull request (they clone it themselves), or through ~/shared when you have it, never as a path in your own home.",
   ].join("\n");
 }
 

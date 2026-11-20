@@ -381,7 +381,7 @@
     },
     "view_all_agents": {
       "title": "すべてのエージェントを表示",
-      "desc": "チームとサイドバーで。オフにすると、その人に応答するエージェントだけになります。",
+      "desc": "チームとサイドバーで。ほかの人の個人用エージェントは除きます。オフにすると、その人に応答するエージェントだけになります。",
       "short": "すべてのエージェントを表示",
       "say": "すべてのエージェントを表示"
     },
@@ -1280,8 +1280,8 @@
       "where": {
         "openbotrun": "openbot-import.json（OpenBotのMigratorから）またはopenbot-transfer.json（インスタンスの移行から）、もしくはそれが入っていた.zipをドロップしてください。",
         "openmausbot": "OpenMausBotで、チームを右クリック → チームを共有… → ファイルを保存。",
-        "hermes": "ターミナルでプロファイル名を指定してhermes profile exportを実行し、.tar.gzをここにドロップしてください。すべてのプロファイルを移すには、~/.hermesフォルダをドラッグしてください。",
-        "openclaw": "~/.openclawフォルダ全体（すべてのエージェントを移行）か、ワークスペース1つだけをドラッグしてください。Macでは、ファイル選択画面で⌘⇧.を押すと隠しフォルダが表示されます。",
+        "hermes": "ターミナルでプロファイル名を指定して`hermes profile export`を実行し、.tar.gzをここにドロップしてください。すべてのプロファイルを移すには、`~/.hermes`フォルダをドラッグしてください。",
+        "openclaw": "`~/.openclaw`フォルダ全体（すべてのエージェントを移行）か、ワークスペース1つだけをドラッグしてください。Macでは、ファイル選択画面で⌘⇧.を押すと隠しフォルダが表示されます。",
         "paperclip": "パッケージのフォルダ（COMPANY.mdがあるもの）をドラッグするか、その.zipをドロップするか、GitHubのリンクを貼り付けてください。",
         "agenteschat": "もう一方のワークスペースで、設定 → インポートとエクスポート → ファイルをダウンロード。その.jsonをここにドロップしてください。"
       },
@@ -3647,11 +3647,13 @@
   },
   "keyGuard": {
     "title": "APIキーのようです",
-    "text": "チャットの内容は人にもエージェントにもすべて見えます。代わりにワークスペースのキーとして保存してください。暗号化され、誰にも見えません。",
-    "textMember": "チャットの内容は人にもエージェントにもすべて見えます。キーはパスワードと同じです。",
-    "save": "キーとして保存",
+    "titleSecret": "キーまたはパスワードのようです",
+    "vaultText": "チャットの内容は人にもエージェントにも見えます。Vaultに保存しましょう。暗号化され、許可したエージェントは中身を見ずに使えます。",
+    "vault": "Vaultに保存",
+    "useAsAi": "AIキーとして使う",
     "remove": "削除する",
-    "send": "このまま送信"
+    "send": "このまま送信",
+    "saved": "アクセスできるエージェントは {{name}} という名前で使います。"
   },
   "costlyCard": {
     "go": "進めて",
@@ -4578,7 +4580,7 @@
     "error": {
       "title": "名前を付けてください。",
       "website": "httpsのアドレスを使ってください。例: app.example.com",
-      "keyName": "大文字、数字、_を使い、英字で始めてください。例: ACME_API_KEY",
+      "keyName": "大文字、数字、_を使い、英字で始めてください。例: `ACME_API_KEY`",
       "password": "パスワードを入力してください。",
       "value": "値を入力してください。",
       "contact": "少なくとも1つの項目を入力してください。"
@@ -4726,7 +4728,7 @@
       "show": "{{name}}の値を表示",
       "hide": "{{name}}の値を隠す",
       "problem": {
-        "name": "名前はACME_API_KEYのような形式にしてください",
+        "name": "名前は`ACME_API_KEY`のような形式にしてください",
         "reserved": "予約されている名前",
         "empty": "値がありません",
         "tooLarge": "値が大きすぎます"
@@ -5726,7 +5728,8 @@
         },
         "speedText": "会話での返信が速くなり、プランを2.5倍の速さで消費します。ルーティンと長いタスクは標準のままです。",
         "modelLine": {
-          "opus": "最も高性能です。プランの消費が早くなります。",
+          "fable": "最も高性能です。プランの消費がかなり早くなります。",
+          "opus": "高性能です。プランの消費が早くなります。",
           "sonnet": "バランス型です。ほとんどの用途に向いています。",
           "haiku": "高速で軽量です。簡単なタスク向けです。"
         },
@@ -6240,12 +6243,13 @@
         "computer_busy": "コンピューターが他のタスクで埋まっていました。",
         "computer_failed": "コンピューターで問題が起きて停止しました。",
         "computer_timeout": "コンピューターの応答に時間がかかりすぎました。",
+        "disk_full": "このコンピューターのディスクがいっぱいです。不要になったファイルを削除するか（少し空きができればエージェントも削除できます）、管理者に空き容量を作ってもらってください。",
         "cli_failed": "エラーで{{brain}}が停止しました: {{detail}}",
         "cli_stopped": "エラーで{{brain}}が停止しました。",
         "cli_closed": "突然{{brain}}が終了しました。",
         "cli_sandbox": "{{brain}}がこのコンピューターでサンドボックスを起動できません。エージェントの設定で別のAIを選んでください。",
         "account_missing": "このエージェント用に選んだアカウントが、もうコンピューターにありません。エージェントの設定で別のアカウントを選ぶか、もう一度追加してください。",
-        "windows_sandbox": "この Windows コンピューターでは Codex のコマンドを隔離できません。Windows 11 24H2 以降が必要です。",
+        "windows_sandbox": "この Windows コンピューターでは Codex のコマンドを隔離できません。Windows 11 24H2 以降が必要です。Windows を更新するか、このエージェントに Claude または API キーを選ぶか、Linux コンピューターに移してください。",
         "our_error": "こちら側で問題が発生し、タスクが止まりました。少し時間をおいてもう一度依頼してください。",
         "unknown": "失敗しました。"
       }
@@ -6968,6 +6972,7 @@
     "modelAndCost": "モデルとコスト",
     "model": "モデル",
     "modelDesc": {
+      "fable": "最も高性能。最も難しい仕事向け",
       "sonnet": "ほとんどの用途におすすめ",
       "opus": "長く難しいタスク向け",
       "haiku": "高速で低コスト",
@@ -7688,7 +7693,10 @@
     "unreachableTitle": "agentes.chatに接続できません",
     "unreachableText": "再起動中かもしれません。復旧しだい、このページは自動で開きます。",
     "offlineTitle": "オフラインです",
-    "offlineText": "オンラインに戻ると、このページは自動で開きます。"
+    "offlineText": "オンラインに戻ると、このページは自動で開きます。",
+    "unknownHostTitle": "このアドレスはまだ設定されていません",
+    "unknownHostText": "接続したばかりなら、数分後にもう一度お試しください。",
+    "unknownHostTab": "未設定のアドレス · agentes.chat"
   },
   "scopes": {
     "context_read": {
@@ -8898,6 +8906,7 @@
       "computer_busy": "コンピューターがほかのタスクでふさがっていました",
       "computer_failed": "コンピューターで問題が起きて停止しました",
       "computer_timeout": "コンピューターの応答に時間がかかりすぎました",
+      "disk_full": "コンピューターのディスクがいっぱいでした",
       "cli_failed": "コンピューターのAIプログラムがエラーで停止しました",
       "account_missing": "エージェントのアカウントがもうコンピューターにありません",
       "our_error": "こちら側で問題が発生しました"
@@ -9385,8 +9394,7 @@
       "approvals": "既定では、マージ、デプロイ、ロールバックは承認を求めます",
       "start": "ミッションを開始",
       "created": "ミッションを作成しました。{{name}}が計画をまとめています。",
-      "who": "プログラムを書くのは",
-      "codexOld": "{{computer}}のCodexはミッションに対応していない古いバージョンです。そちらでアップデートしてください。"
+      "who": "プログラムを書くのは"
     },
     "commandApproval": {
       "label": "自律度",
@@ -10281,8 +10289,8 @@
     "line": {
       "invalid": "TypeSafeがこのキーを受け付けませんでした。新しいキーを作成してください。",
       "no_credit": "TypeSafeでクレジットを追加してください。Jevは自動で再開します。",
-      "env": "このサーバーの設定（TYPESAFE_API_KEY）で設定されています。",
-      "envInvalid": "TypeSafeがこのキーを受け付けませんでした。このサーバーの設定（TYPESAFE_API_KEY）で変更してください。"
+      "env": "このサーバーの設定（`TYPESAFE_API_KEY`）で設定されています。",
+      "envInvalid": "TypeSafeがこのキーを受け付けませんでした。このサーバーの設定（`TYPESAFE_API_KEY`）で変更してください。"
     },
     "checkAgain": "もう一度確認",
     "via": {
@@ -10308,7 +10316,7 @@
       "line": {
         "invalid": "OpenRouterがこのキーを受け付けませんでした。新しいキーを作成してください。",
         "no_credit": "OpenRouterでクレジットを追加してください。Jevは自動で再開します。",
-        "envInvalid": "OpenRouterがこのキーを受け付けませんでした。このサーバーの設定（TYPESAFE_API_KEY）で変更してください。"
+        "envInvalid": "OpenRouterがこのキーを受け付けませんでした。このサーバーの設定（`TYPESAFE_API_KEY`）で変更してください。"
       }
     },
     "remove": {
@@ -10386,7 +10394,6 @@
       "needsCloud": {
         "online": "{{computer}}は再起動または再接続中です。戻りしだい自動で切り替わります。",
         "installing": "{{computer}}に{{program}}をインストール中です。終わりしだい自動で切り替わります。",
-        "updating": "{{computer}}の{{program}}をアップデート中です。終わりしだい自動で切り替わります。",
         "runnerOld": "{{computer}}のagentes.chatプログラムが古く、アップデートを準備中です。終わりしだい自動で切り替わります。",
         "execOff": "{{computer}}はまだ{{program}}を実行できません。対応中で、自動で切り替わります。",
         "toolOff": "{{computer}}では{{program}}がまだ許可されていません。こちら側の問題です。後でもう一度お試しください。",
@@ -10520,7 +10527,7 @@
     "modeText": {
       "everyone": "ワークスペースの誰でも{{name}}を呼べます。",
       "people": "{{name}}と話せる人とロールを選んでください。",
-      "owner": "{{name}}と話せるのは{{owner}}だけです。",
+      "owner": "{{name}}と話せるのは{{owner}}だけです。一覧で{{name}}が見えるのは、{{owner}}、管理者、編集できる人だけです。",
       "noOwner": "このオプションを使うにはオーナーを設定してください。",
       "everyonePersonal": "ここにいる誰でも{{name}}を呼べます。",
       "peoplePersonal": "{{name}}と話せる人を選んでください。"
@@ -11578,12 +11585,6 @@
       "read": "{{name}}が読みました",
       "resolved": "{{name}}がヘルプリクエストを閉じました"
     },
-    "well": {
-      "readYours": "あなたのメモを読みました",
-      "readOf": "{{name}}のメモを読みました",
-      "nowYours": "手を止めてあなたのメモを読みました",
-      "nowOf": "手を止めて{{name}}のメモを読みました"
-    },
     "strip": {
       "see": "表示",
       "toStop": "で停止"
@@ -11677,11 +11678,6 @@
       "not_installed": "{{computer}}に{{program}}がインストールされていません。",
       "cant_start": "{{program}} は {{computer}} にありますが、起動しません。",
       "not_reported": "{{computer}}は、入っているプログラムをまだ確認しています。終わりしだい自動で切り替わります。",
-      "outdated": "{{computer}}のバージョンが古くなっています。使うにはCodexをアップデートしてください。",
-      "outdatedCodex": "{{computer}} で Codex CLI {{detected}} が見つかりました。{{minimum}} 以降に更新してください。",
-      "codexUpdateGuide": "Codex CLI の更新方法",
-      "codexRecheckHere": "更新後、環境設定 › ツールの Codex の行で「もう一度確認」を選びます。",
-      "codexRecheckThere": "{{computer}} で Codex CLI を更新してください。デスクトップアプリがある場合は、環境設定 › ツールの Codex の行で「もう一度確認」を選びます。",
       "system": "{{program}}は{{computer}}のシステムではまだ動きません。",
       "no_computerCloud": "{{computer}}の準備ができ次第使えます。"
     },
@@ -11745,8 +11741,6 @@
     "see": "待ち行列を見る",
     "openComputer": "コンピューターを開く",
     "label": "{{name}}の待ち行列",
-    "full": "満杯",
-    "fullNext": "満杯 · 次は約{{n}}分後に開始",
     "free": "待っている人はいません",
     "workingNow": "作業中 · {{n}}",
     "inLine": "待機中 · {{n}}",
@@ -12454,7 +12448,7 @@
         "invalid": "無効"
       },
       "line": {
-        "env": "このサーバーの設定で指定されています（GITHUB_APP_ID）。",
+        "env": "このサーバーの設定で指定されています（`GITHUB_APP_ID`）。",
         "invalid": "このサーバーは保存されたアプリを開けません。削除して作り直してください。",
         "events": "エージェントがGitHubの出来事を受け取れるよう、アプリでこれらのイベントにチェックを入れてください：{{events}}。"
       },
@@ -13026,7 +13020,7 @@
     "composio": {
       "via": "Composio経由",
       "needsReconnect": "再接続が必要",
-      "off_other": "{{names}}ほか{{count}}個のサービスはComposio経由で接続します。有効にするには、このサーバーの運用者がCOMPOSIO_API_KEYを設定してください（SELF_HOSTING.mdを参照）。",
+      "off_other": "{{names}}ほか{{count}}個のサービスはComposio経由で接続します。有効にするには、このサーバーの運用者が`COMPOSIO_API_KEY`を設定してください（`SELF_HOSTING.md`を参照）。",
       "usage": "Composio: {{month}}は{{limit}}回中{{calls}}回を使用",
       "usageNoLimit": "Composio: {{month}}は{{calls}}回を使用",
       "limitNotice": "このワークスペースは今月のComposioの呼び出し回数を使い切りました",
@@ -14173,7 +14167,7 @@
       },
       "railway": {
         "1": "PostgresサービスでData → Queryを開き、下のコマンドを実行します（パスワードは変更してください）。",
-        "2": "VariablesでDATABASE_PUBLIC_URLをコピーします（DATABASE_URLは内部用で、ここからは使えません）。",
+        "2": "Variablesで`DATABASE_PUBLIC_URL`をコピーします（`DATABASE_URL`は内部用で、ここからは使えません）。",
         "3": "その中のユーザーとパスワードを、agentes_leituraと選んだパスワードに置き換えて、ここに貼り付けます。"
       },
       "rds": {
@@ -14208,7 +14202,7 @@
     "error": {
       "auth": "ユーザーまたはパスワードが一致しません。確認して、もう一度お試しください。",
       "unreachable": "データベースサーバーに接続できませんでした。アドレスと、外部からの接続を受け付けているかを確認してください。",
-      "blocked_host": "このサーバーは許可されていません。データベースの公開アドレスを使ってください（RailwayのDATABASE_URLのような内部アドレスは、ここからは使えません）。",
+      "blocked_host": "このサーバーは許可されていません。データベースの公開アドレスを使ってください（Railwayの`DATABASE_URL`のような内部アドレスは、ここからは使えません）。",
       "tls": "データベースが安全な接続を受け付けませんでした。データベースでSSLを有効にするか、「詳細」で「暗号化なし」を選んでください（テスト用データベースのみ）。",
       "unknown": "今は接続できませんでした。少し待ってからお試しください。",
       "no_databases": "このユーザーはこのサーバーのどのデータベースも開けません。権限か名前の先頭を確認してください。"
@@ -15101,7 +15095,7 @@
       "titleRequired": "名前を付けてください。",
       "tooLong": "長すぎます。上限は{{max}}です。",
       "notHttps": "https://で始まるアドレスを使ってください",
-      "keyNameInvalid": "名前には大文字、数字、_を使ってください。例: ACME_API_KEY",
+      "keyNameInvalid": "名前には大文字、数字、_を使ってください。例: `ACME_API_KEY`",
       "keyNameReserved": "この名前は予約されています。別の名前を選んでください。",
       "keyNameTaken": "この名前のキーはすでに保存されています。",
       "contactEmpty": "少なくとも1つの項目を入力してください。",
@@ -15496,14 +15490,20 @@
       "since": "{{time}}から",
       "until": "{{time}}まで",
       "withHost": "{{host}}とともに",
-      "lastSeen": "最終接続 {{time}}"
+      "lastSeen": "最終接続 {{time}}",
+      "offlineUnresponsive": "{{time}} から応答なし",
+      "offlineStopped": "{{time}} にランナー停止",
+      "offlineDropped": "{{time}} に接続が切断"
     },
     "line": {
       "ready": "エージェントが今すぐ使えます。",
       "busy_other": "{{max}}件中{{count}}件のタスクを実行中",
       "offline": "エージェントは復帰を待っています。",
       "offlineSeen": "最終接続 {{time}}。エージェントは復帰を待っています。",
-      "offlineWithHost": "{{host}}はオフラインです。エージェントは復帰を待っています。"
+      "offlineWithHost": "{{host}}はオフラインです。エージェントは復帰を待っています。",
+      "offlineUnresponsive": "{{time}} から応答がありません。ネットワークがないか、負荷が高すぎる可能性があります。そのコンピューターで `{{command}}` を実行してください。",
+      "offlineStopped": "{{time}} にランナーが停止しました。もう一度起動するか、そのコンピューターで `{{command}}` を実行して原因を確認してください。",
+      "offlineDropped": "{{time}} に接続が切れました。自動で再接続します。戻らない場合は、そのコンピューターで `{{command}}` を実行してください。"
     },
     "reason": {
       "locked": "スマートフォンがロックされています",
@@ -15863,7 +15863,12 @@
       "iosBehind": "この iPhone は iOS {{ios}} で、この Mac の Xcode は iOS {{sdk}} 向けです。iPhone をアップデートしてください:設定 › 一般 › ソフトウェアアップデート。",
       "xcodeOld": "{{name}}はiOS {{version}}ですが、{{mac}}のXcodeが対応するのはiOS {{sdk}}までです。Xcode {{major}}をインストールしてから、ターミナルでこれを実行してください。",
       "xcodeOldAny": "{{name}}はiOS {{version}}で、{{mac}}のXcodeより新しいバージョンです。Xcode {{major}}をインストールしてから、ターミナルでこれを実行してください。",
-      "uiRefusedText": "iPhoneがテストヘルパーのタップを拒否しました。ロックを解除し、求められたらパスコードを入力してください。続く場合は、設定 › デベロッパ › UIオートメーションを有効にするをオフにしてからオンにしてください。",
+      "uiRefusedText": "エージェントはiPhoneの画面を見られますが、iOSがタップを拒否しています。",
+      "uiTurnOn": "iPhoneで、次の2つをオンにします：",
+      "uiPasscode": "求められたらパスコードを入力し、ロックを解除したままにします。",
+      "uiCheck": "もう一度確認",
+      "repair": "テストヘルパーを修復",
+      "repairHint": "Macがテストヘルパーを停止し、そのXcodeで数分かけて作り直します。両方オンでもタップが失敗するときに使います。",
       "tooOld": "{{name}}はiOS {{version}}です。エージェントにはiOS 17以降が必要です。可能ならアップデートするか、新しいiPhoneをつないでください。",
       "tooOldVersion": "16以前",
       "pluggedIn": "つなぎました",
@@ -16392,6 +16397,11 @@
       "sentence": "{{who}}がメールで回答",
       "request": "{{name}}のサポートへの依頼"
     },
+    "operatorReview": {
+      "sentence": "{{who}}が安全上の理由でコンテンツを確認",
+      "items_other": "{{value}}件",
+      "period": "{{from}}〜{{to}}"
+    },
     "change": {
       "mergedWithoutAsking": "{{repo}}で確認なしでマージしました",
       "accentChanged": "ワークスペースのアクセントカラーを変更",
@@ -16903,8 +16913,8 @@
         },
         "line": {
           "invalid": "このサーバーはこのキーを読み取れません。もう一度貼り付けてください。",
-          "env": "このサーバーの設定で指定されています（GIPHY_API_KEY）。",
-          "envInvalid": "このキーは使えません。このサーバーの設定で変更してください（GIPHY_API_KEY）。"
+          "env": "このサーバーの設定で指定されています（`GIPHY_API_KEY`）。",
+          "envInvalid": "このキーは使えません。このサーバーの設定で変更してください（`GIPHY_API_KEY`）。"
         },
         "invalid": "GIPHYがこのキーを受け付けませんでした。GIPHY Developersからもう一度コピーしてください。",
         "remove": {
@@ -17481,6 +17491,11 @@
         "shell": "内部で別のコマンドを実行します",
         "inline": "インラインで渡されたコードを実行します",
         "global": "コンピューター全体にインストールします",
+        "privilege": "より強い権限を求めています",
+        "reverseShell": "このコンピューターのシェルを別のマシンに渡します",
+        "destroy": "コンピューターやホームフォルダー全体を消してしまいます",
+        "network": "プロキシやファイアウォールを変更または迂回します",
+        "otherUser": "別のユーザーのファイルにアクセスします",
         "rules": "エージェントが自分で行える範囲外です",
         "noAccess": "エージェントにはこれへのアクセス権がありません",
         "policy": "この種類の作業では許可されていません",
@@ -18703,6 +18718,21 @@
     "writeAfter": "までご連絡ください。",
     "ask": "お困りのことがあれば、このサーバーの管理者にお問い合わせください。"
   },
+  "resetOrg": {
+    "cardTitle": "リセットまたは削除",
+    "row": {
+      "title": "ワークスペースをリセット",
+      "text": "中で作られたものをすべて消して、同じメンバーで最初からやり直します。"
+    },
+    "goes": "エージェント、会話、DM、ファイル、タスク、ルーティン、メモリ",
+    "stays": "メンバー、ロール、招待、AI アカウント、コンピューター、コネクタ",
+    "fresh": "その後、最初のセットアップ付きの新しいワークスペースとして開きます",
+    "plan": "プランはそのままで、新たな請求はありません",
+    "now": "すぐに実行され、元に戻せません。",
+    "title": "{{name}} をリセットしますか？",
+    "submit": "ワークスペースをリセット",
+    "resetting": "{{name}} をリセットしています…"
+  },
   "deleteOrg": {
     "card": {
       "title": "ワークスペースを削除",
@@ -18774,8 +18804,7 @@
     "menu": "アカウントを削除",
     "card": {
       "text": "7日後に、すべてのワークスペースでアカウントを削除します。",
-      "button": "アカウントを削除…",
-      "title": "削除"
+      "button": "アカウントを削除…"
     },
     "title": "アカウント全体を削除しますか？",
     "intro": "ワークスペース1つではなく、アカウント全体を削除します。",
@@ -20342,6 +20371,38 @@
       "alwaysOn": "今後、このような報告は確認なしで送信されます。",
       "askFirst": "送信前に確認する"
     }
+  },
+  "problemReport": {
+    "button": "レポートを送信",
+    "title": "agentes.chat にレポートを送信",
+    "lead": "agentes.chat チームに届くのは、バージョン、設定されている項目（値は含みません）、失敗した内容、ログの最後の行です。メッセージ、ページ、名前、キーは含まれません。",
+    "noteLabel": "何が起きましたか？（任意）",
+    "notePlaceholder": "止まったときに何をしていたか",
+    "emailLabel": "返信用のメール（任意）",
+    "emailHelp": "返信が必要な場合のみ。",
+    "showAll": "送信される内容をすべて見る",
+    "copy": "レポートをコピー",
+    "copied": "コピーしました",
+    "send": "送信",
+    "sending": "送信中…",
+    "cancel": "キャンセル",
+    "loading": "詳細を集めています…",
+    "sentTitle": "レポート {{id}} を送信しました",
+    "sentText": "お問い合わせの際はこのコードをお伝えください。",
+    "sentTextReply": "{{email}} に返信します。お問い合わせの際はこのコードをお伝えください。",
+    "copyCode": "コードをコピー",
+    "done": "完了",
+    "noLogComputer": "{{computer}} が応答しなかったため、そのログは含まれていません。",
+    "oldRunner": "{{computer}} の agentes.chat アプリが古いため、ログを含められません。含めるには、そちらでアプリを更新してください。",
+    "noServerLines": "サーバーのログ行は、インストールの所有者がレポートを送信した場合のみ含まれます。",
+    "off": "このサーバーでは送信がオフです（`PROBLEM_REPORT_URL=off`）。共有するにはレポートをコピーしてください。",
+    "errorRate": "短時間にレポートが多すぎます。{{minutes}} 分後にもう一度試すか、レポートをコピーしてください。",
+    "errorUnreachable": "agentes.chat から応答がありませんでした。もう一度試すか、レポートをコピーしてください。",
+    "errorRefused": "agentes.chat はこのレポートを受け付けませんでした（古いバージョンのものかもしれません）。代わりにレポートをコピーしてください。",
+    "errorPreview": "詳細を集められませんでした: {{reason}}",
+    "emailInvalid": "メールアドレスが正しくないようです。修正するか、空のままにしてください。",
+    "settingsTitle": "うまく動かないことがありますか？",
+    "settingsText": "技術的な詳細を agentes.chat チームに送信します。"
   },
   "live": {
     "slides": {

@@ -384,7 +384,7 @@ const CORE_TOOLS: ReadonlySet<string> = new Set(["read_wiki_page", "search_wiki"
 
 /**
  * Tools of the core groups that few runs use (token-trim B3): a group of their own, loaded on demand like any other.
- * Never what the agent reaches for on its own (react, ask_user, request_permission, remember, save_how_to,
+ * Never what the agent reaches for on its own (react, ask_user, say_now, request_permission, remember, save_how_to,
  * update_memory, forget, update_skill, search_context, the web, ask_agent, tell_agent, follow_up,
  * work_in_background, post_message, send_dm, post_update, show_block, the skill and wiki readers).
  */

@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next";
 import { Platform, Text as RNText, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
-import { Button, EmptyState, type HeaderAction, type HeaderMenuItem, SCREEN_X, useToast } from "@/ui";
+import { Button, EmptyState, type HeaderAction, type HeaderMenuItem, SCREEN_X, systemText, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
 import { ISOLATED_WEB_VIEW, STORAGE_STANDINS } from "../blocks/logic";
 import { CodeText, RawToggle } from "../chat/CodeCard";
@@ -20,7 +20,7 @@ import { LoadFailed } from "../shared/FirstUse";
 import { useColors, useDirectory, useOrgId } from "../shared/hooks";
 import { copyText, MONO, PushedHeader, successHaptic } from "../shared/parts";
 import { useFileActions } from "./actions";
-import { fileInfo, textChunks } from "./logic";
+import { fileInfo, isCodeName, textChunks } from "./logic";
 import { useFileLine } from "./MessageFiles";
 import { openFile } from "./open";
 import { PageBones } from "./PageBones";
@@ -124,9 +124,10 @@ export function DocumentViewer({
 
   return (
     <>
+      {/* The file's name as the bar's title; what it is and who sent it, the line under it. */}
       <PushedHeader
         title={info?.name ?? ""}
-        {...(info && detail ? { subtitle: line(info, [dir.nameOf(detail.createdBy)]) } : {})}
+        subtitle={info && detail ? line(info, [dir.nameOf(detail.createdBy)]) : undefined}
         actions={bar}
       />
       {query.isError && !detail ? (
@@ -189,13 +190,15 @@ function useFileText(detail: ArtifactDetail | undefined, enabled: boolean) {
 }
 
 /**
- * Markdown with the messages' renderer, plain text in mono, across the screen as a page reads. JSON formatted and
- * colored as a code block reads it, the text as written one press away ("Original").
+ * Markdown with the messages' renderer, code in mono and any other text in the app's, across the screen as a page
+ * reads. JSON formatted and colored as a code block reads it, the text as written one press away ("Original").
  */
 function TextPage({ detail, markdown, json }: { detail: ArtifactDetail; markdown: boolean; json: boolean }) {
   const c = useColors();
   const insets = useSafeAreaInsets();
   const text = useFileText(detail, true);
+  // A note or a log reads as words; only code keeps the code font.
+  const code = isCodeName(fileInfo(detail).name);
   const formatted = useMemo(() => (json && text.data !== undefined ? formatJson(text.data) : null), [json, text.data]);
   const [raw, setRaw] = useState(false);
   if (text.isError)
@@ -218,7 +221,7 @@ function TextPage({ detail, markdown, json }: { detail: ArtifactDetail; markdown
         // In pieces: a long file in one text view was taller than the phone draws, and showed blank.
         textChunks(text.data).map((piece, i) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: the pieces of one fixed text, in order
-          <RNText key={i} selectable style={[styles.mono, { color: c.ink2 }]}>
+          <RNText key={i} selectable style={[code ? styles.mono : styles.prose, { color: c.ink2 }]}>
             {piece}
           </RNText>
         ))
@@ -324,5 +327,7 @@ const styles = StyleSheet.create({
   page: { paddingHorizontal: SCREEN_X, paddingTop: 12 },
   white: { backgroundColor: "#fff" },
   mono: { fontFamily: MONO, fontSize: 13, lineHeight: 19 },
+  // The app's body, as a message's words.
+  prose: systemText("body"),
   json: { gap: 10, alignItems: "flex-start" },
 });

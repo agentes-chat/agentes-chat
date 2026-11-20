@@ -343,6 +343,7 @@
     "replies_other": "{{count}} Antworten",
     "repliesWord_one": "Antwort",
     "repliesWord_other": "Antworten",
+    "dayAt": "{{day}} {{time}}",
     "thread": "Thread",
     "closed": "geschlossen",
     "options": "Optionen",
@@ -379,9 +380,7 @@
       "delivered": "{{name}} hat es erhalten",
       "held": "{{name}} liest es nach deiner Entscheidung",
       "read": "{{name}} hat es gelesen",
-      "resolved": "{{name}} hat die Hilfeanfrage geschlossen",
-      "well": "Hat deine Notiz gelesen",
-      "wellNow": "Hat angehalten, um deine Notiz zu lesen"
+      "resolved": "{{name}} hat die Hilfeanfrage geschlossen"
     },
     "stopped": {
       "byYou": "Hier gestoppt",
@@ -564,8 +563,6 @@
     "file": "Datei",
     "media": "GIFs",
     "noCamera": "Kein Kamerazugriff. Erlaube ihn in den Einstellungen des Handys.",
-    "mission": "Mission starten",
-    "missionHint": "Lange Arbeit, mit Plan, von Anfang bis Ende",
     "summary": "Chat zusammenfassen",
     "summaryHint": "Was passiert ist, während du weg warst",
     "remind": "Später erinnern",
@@ -821,8 +818,8 @@
       "where": {
         "openbotrun": "Wähle openbot-import.json (aus dem Migrator von OpenBot) oder openbot-transfer.json (aus dem Instanz-Transfer). Eine .zip öffnet sich zuerst in der Dateien-App: Ein Tippen entpackt sie.",
         "openmausbot": "In OpenMausBot: Rechtsklick auf das Team › Team teilen… › Datei speichern. Wähle dann diese Datei hier.",
-        "hermes": "Hermes exportiert über ein Terminal (hermes profile export) als .tar.gz, die das Handy nicht öffnen kann. Importiere sie am Computer oder wähle hier die .md- und .yaml-Dateien des Profils.",
-        "openclaw": "OpenClaw speichert Agenten im Ordner ~/.openclaw auf dem Computer. Wähle hier die .md-Dateien eines Workspace oder importiere den ganzen Ordner am Computer.",
+        "hermes": "Hermes exportiert über ein Terminal (`hermes profile export`) als .tar.gz, die das Handy nicht öffnen kann. Importiere sie am Computer oder wähle hier die .md- und .yaml-Dateien des Profils.",
+        "openclaw": "OpenClaw speichert Agenten im Ordner `~/.openclaw` auf dem Computer. Wähle hier die .md-Dateien eines Workspace oder importiere den ganzen Ordner am Computer.",
         "paperclip": "Füge unten den GitHub-Link des Pakets ein oder wähle seine COMPANY.md und die anderen .md-Dateien.",
         "agenteschat": "Im anderen Workspace: Einstellungen › Import und Export › Datei herunterladen. Wähle dann hier die .json."
       },
@@ -1964,7 +1961,7 @@
       "tooOld": "Dieses iPhone läuft mit iOS {{version}}, Agenten brauchen iOS 17 oder neuer. Aktualisiere es, wenn das geht, oder nimm ein neueres iPhone.",
       "xcodeOld": "Dieses iPhone läuft mit iOS {{version}}, neuer als Xcode auf {{host}} kennt. Installiere dort Xcode {{major}} und führe dann xcrun devicectl manage ddis update im Terminal aus.",
       "teamMissing": "Xcode ist angemeldet, zeigt aber noch kein Team. Erstelle in Xcode eine beliebige iOS-App, wähle unter Signing & Capabilities dein Team und führe sie einmal auf diesem iPhone aus.",
-      "uiRefused": "Dieses iPhone hat die Eingaben der Test-App abgelehnt. Entsperre es und gib deinen Code ein, wenn es danach fragt. Passiert es wieder, schalte Einstellungen › Entwickler › UI-Automatisierung aktivieren aus und wieder ein.",
+      "uiRefused": "Agenten sehen den Bildschirm dieses iPhone, aber iOS lehnt ihre Berührungen ab.",
       "pluggedIn": "Es ist angeschlossen",
       "wifi": {
         "also": "Auch im WLAN von {{host}}: {{name}}",
@@ -2251,6 +2248,8 @@
     "deleteIntro": "{{name}} ist ab sofort für alle schreibgeschützt und wird in 7 Tagen endgültig gelöscht.",
     "holdDelete": "Zum Löschen gedrückt halten",
     "deleteFailed": "Der Workspace ließ sich nicht löschen. Versuch es noch einmal.",
+    "holdReset": "Zum Zurücksetzen gedrückt halten",
+    "resetFailed": "Der Workspace konnte nicht zurückgesetzt werden. Versuch es noch mal.",
     "access": {
       "how": "Tippe auf eine Zeile, um die Stufe zu ändern: Kein Zugriff, Lesen, Lesen und schreiben."
     },
@@ -2530,7 +2529,7 @@
       "newPassword": "Neues Passwort",
       "keyName": "Variable",
       "keyNamePlaceholder": "ACME_API_KEY",
-      "keyNameHelp": "Großbuchstaben, Ziffern und _, etwa ACME_API_KEY. Agenten fragen den Schlüssel unter diesem Namen an.",
+      "keyNameHelp": "Großbuchstaben, Ziffern und _, etwa `ACME_API_KEY`. Agenten fragen den Schlüssel unter diesem Namen an.",
       "value": "Wert",
       "newValue": "Neuer Wert",
       "description": "Beschreibung",

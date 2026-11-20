@@ -84,7 +84,7 @@ describe("chooseAutoModel", () => {
 
   test("acting for the person with tools is never the small tier: it only answers", async () => {
     const judge = createFakeJudge(() => "medium");
-    await chooseAutoModel(judge, { ...input, message: "me manda um print do dinzo.com.br" });
+    await chooseAutoModel(judge, { ...input, message: "abre example.com e tira uma captura da tela" });
     const tier = judge.calls[0]?.questions.tier as { criteria: Record<string, string> } | undefined;
     const acting =
       "acting for the person with tools (opening a site, taking a screenshot, clicking or filling in a page, running a command, changing files, sending something)";

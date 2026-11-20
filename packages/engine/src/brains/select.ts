@@ -23,7 +23,7 @@ import {
   planOf,
   speedFits,
 } from "@agenteschat/providers/plans";
-import { planFull, planState } from "@agenteschat/ui/plan-state";
+import { PLAN_PAUSE, planFull, planState } from "@agenteschat/ui/plan-state";
 import type { Agent } from "../agents";
 import type { ModelGateway } from "../gateway";
 import type { MachineStatus } from "../machine-hub";
@@ -40,7 +40,6 @@ import {
 import { runnerUpdateWay } from "../runner-update";
 import type { AgentRun } from "../runs";
 import { accountUnavailable, brainSessionId, claudeCodeAvailability, cliMissingMessage, toolOff } from "./claude-code";
-import { codexVersionOk } from "./codex";
 import { BRAIN_NAMES, BRAIN_PLAN_NAMES, type BrainAccount, type BrainKind, type BrainSession } from "./types";
 
 const KINDS: readonly BrainKind[] = ["model", "claude_code", "codex", "cursor", "opencode", "grok", "antigravity"];
@@ -451,9 +450,6 @@ export function computerBrainUnavailable(
   if (status.executors?.detectedAt && !codex) {
     return { code: "codex_missing", message: cliMissingMessage("Codex", status, "codex") };
   }
-  if (codex && !codexVersionOk(codex.version)) {
-    return { code: "codex_too_old", message: `Codex on ${status.name} is too old. Update it there.` };
-  }
   return accountUnavailable(status, account, "codex");
 }
 
@@ -473,6 +469,7 @@ export const UNAVAILABLE_CODES: ReadonlySet<string> = new Set([
   "cli_missing",
   "not_logged_in",
   "codex_missing",
+  // Only runners from before Codex counted at any version still refuse with it.
   "codex_too_old",
   "cursor_missing",
   "opencode_missing",
@@ -665,7 +662,7 @@ async function ownBrainAccountFor(
   agent: Pick<Agent, "orgId" | "brain" | "brainAccountId" | "machineId">,
   kind: BrainKind,
   machineId: string | null,
-): Promise<BrainAccount | undefined> {
+): Promise<(BrainAccount & { usage: PlanUsage | null }) | undefined> {
   if (!agent.brainAccountId || !machineId || machineId !== agent.machineId || kindOf(agent.brain) !== kind) {
     return undefined;
   }
@@ -677,6 +674,7 @@ async function ownBrainAccountFor(
       status: machineAccounts.status,
       kind: machineAccounts.kind,
       provider: machineAccounts.provider,
+      usage: machineAccounts.usage,
     })
     .from(machineAccounts)
     .where(
@@ -692,6 +690,7 @@ async function ownBrainAccountFor(
     id: row.id,
     label: row.label,
     status: row.status === "active" ? "active" : "signed_out",
+    usage: (row.usage as PlanUsage | null | undefined) ?? null,
     ...(row.provider ? { provider: row.provider } : {}),
   };
 }

@@ -12,7 +12,7 @@
     },
     "apps/desktop": {
       "name": "@agenteschat/desktop",
-      "version": "0.8.11",
+      "version": "0.8.14",
       "dependencies": {
         "@agenteschat/adapters": "workspace:*",
         "@agenteschat/client": "workspace:*",
@@ -47,7 +47,7 @@
         "@agenteschat/ui": "workspace:*",
         "@better-auth/expo": "^1.7.10",
         "@expo/metro-runtime": "~58.0.14",
-        "@legendapp/list": "3.7.0",
+        "@legendapp/list": "3.7.3",
         "@lodev09/react-native-true-sheet": "4.1.0",
         "@noble/ciphers": "^2.4.0",
         "@noble/curves": "^2.4.0",
@@ -114,7 +114,7 @@
     },
     "apps/server": {
       "name": "@agenteschat/server",
-      "version": "0.1.7",
+      "version": "0.1.10",
       "dependencies": {
         "@agenteschat/adapters": "workspace:*",
         "@agenteschat/client": "workspace:*",
@@ -781,7 +781,7 @@
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
-    "@legendapp/list": ["@legendapp/list@3.7.0", "", { "dependencies": { "use-sync-external-store": "^1.5.0" }, "peerDependencies": { "react": "*", "react-dom": "*", "react-native": "*" }, "optionalPeers": ["react-dom", "react-native"] }, "sha512-Er2D5eKIv+rfbakJ3ra4pD7NCNtOj2m1nrU6s6Ea3dO+x3vgt0h9NE0dn5WHOLIRkPEWHiwbslgl95QxZiEkjg=="],
+    "@legendapp/list": ["@legendapp/list@3.7.3", "", { "dependencies": { "use-sync-external-store": "^1.5.0" }, "peerDependencies": { "react": "*", "react-dom": "*", "react-native": "*" }, "optionalPeers": ["react-dom", "react-native"] }, "sha512-trGu1i4xo1+r6gG6GI3qrrZAfYHbB25uVj32/KnxhaQ7/eW4AqzhM5cW21Oye4dpg+180Ts1aejRuI8z6Xc4eg=="],
 
     "@livekit/mutex": ["@livekit/mutex@1.1.1", "", {}, "sha512-EsshAucklmpuUAfkABPxJNhzj9v2sG7JuzFDL4ML1oJQSV14sqrpTYnsaOudMAw9yOaW53NU3QQTlUQoRs4czw=="],
 

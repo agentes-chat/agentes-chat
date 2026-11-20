@@ -1272,7 +1272,8 @@ async function resendView(deps: { db: Database; pubsub: PubSub }, orgId: string,
 
 export async function postPersonMessage(
   /**
-   * `judge`: tells a plain "stop" from a correction while an agent works (none = never a stop).
+   * `judge`: how an agent at work takes the message (`steerHandling`: a stop, a correction now, a separate request
+   * after the task, a quick reply at once; none = read at the next pause, never a stop).
    * `talker`: the agents' conversation layer, for fast replies while they work (none = no fast replies).
    * `gifs`: the server's GIF provider (ADR 0091; none = no GIFs).
    */

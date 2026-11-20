@@ -289,10 +289,10 @@ describe("creating an agent on the phone", () => {
     // The screens are components the tests can't render: what they wire in, as text.
     const read = (f: string) => Bun.file(new URL(`../../src/features/agents/${f}`, import.meta.url).pathname).text();
     const [screen, look] = await Promise.all([read("NewAgentScreen.tsx"), read("LookPicker.tsx")]);
-    // Where the step stands is the native bar's subtitle ("2 of 4"), never a bar of its own drawn under it.
+    // Where the step stands is the bar's line under its title ("2 of 4"), never a progress bar of its own.
     expect(screen).not.toContain("newAgent.stepOf");
     expect(screen).toContain('return at ? t("mobile.choices.step", at) : undefined;');
-    expect(screen).toContain("{...(subtitle ? { subtitle } : {})}");
+    expect(screen).toContain('<PushedHeader title={t("newAgent.title")} subtitle={subtitle} solid={false} grouped />');
     expect(screen).not.toContain("function StepBar");
     // A role is a row with the check, never a ringed card; with none chosen yet there is no bar to press.
     expect(screen).toContain("checked={role === id}");

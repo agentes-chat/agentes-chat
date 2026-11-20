@@ -56,6 +56,13 @@ const Health = z
     ok: z.literal(true),
     version: z.string(),
     botCheck: BotCheck.openapi({ description: "The bot check before public forms (ADR 0075)." }),
+    eventLoopLag: z
+      .object({ p50Ms: z.number(), p99Ms: z.number(), maxMs: z.number(), at: z.string() })
+      .nullable()
+      .openapi({
+        description:
+          "How late this process ran what was due over its last minute, from the runtime's own sampling (also logged as `event loop lag`). Null: no minute ended yet.",
+      }),
   })
   .openapi("OperatorHealth");
 
@@ -203,7 +210,10 @@ const LookState = z
   })
   .openapi("OperatorLookState");
 
-export function registerOperatorOrgs(api: OpenAPIHono, { db, version, humanCheck, pubsub, blobs }: OperatorDeps) {
+export function registerOperatorOrgs(
+  api: OpenAPIHono,
+  { db, version, humanCheck, eventLoopLag, pubsub, blobs }: OperatorDeps,
+) {
   const started = new Date();
   api.openapi(
     createRoute({
@@ -221,7 +231,15 @@ export function registerOperatorOrgs(api: OpenAPIHono, { db, version, humanCheck
         passed: 0,
         testing: false,
       };
-      return c.json({ ok: true as const, version, botCheck: { ...check, since: check.since.toISOString() } }, 200);
+      return c.json(
+        {
+          ok: true as const,
+          version,
+          botCheck: { ...check, since: check.since.toISOString() },
+          eventLoopLag: eventLoopLag?.() ?? null,
+        },
+        200,
+      );
     },
   );
 

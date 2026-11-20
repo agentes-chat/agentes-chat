@@ -369,6 +369,7 @@
     "repliesWord_few": "odpowiedzi",
     "repliesWord_many": "odpowiedzi",
     "repliesWord_other": "odpowiedzi",
+    "dayAt": "{{day}} {{time}}",
     "thread": "Wątek",
     "closed": "zamknięty",
     "options": "Opcje",
@@ -409,9 +410,7 @@
       "delivered": "{{name}} ma to już u siebie",
       "held": "{{name}} przeczyta to po twojej decyzji",
       "read": "Przeczytane przez: {{name}}",
-      "resolved": "{{name}} zamyka prośbę o pomoc",
-      "well": "Przeczytane",
-      "wellNow": "Przerwa na przeczytanie twojej uwagi"
+      "resolved": "{{name}} zamyka prośbę o pomoc"
     },
     "stopped": {
       "byYou": "Zatrzymano tutaj",
@@ -596,8 +595,6 @@
     "file": "Plik",
     "media": "GIF-y",
     "noCamera": "Brak dostępu do aparatu. Zezwól na niego w Ustawieniach telefonu.",
-    "mission": "Rozpocznij misję",
-    "missionHint": "Długa praca, z planem, od początku do końca",
     "summary": "Podsumuj czat",
     "summaryHint": "Co się działo, gdy cię nie było",
     "remind": "Przypomnij mi później",
@@ -869,8 +866,8 @@
       "where": {
         "openbotrun": "Wybierz openbot-import.json (z Migratora OpenBot) albo openbot-transfer.json (z przeniesienia instancji). Plik .zip najpierw otwórz w aplikacji Pliki: jedno stuknięcie go rozpakuje.",
         "openmausbot": "W OpenMausBot: kliknij prawym przyciskiem zespół › Udostępnij zespół… › Zapisz plik. Potem wybierz ten plik tutaj.",
-        "hermes": "Hermes eksportuje z terminala (hermes profile export) do pliku .tar.gz, którego telefon nie otworzy. Zaimportuj go na komputerze albo wybierz tutaj pliki .md i .yaml profilu.",
-        "openclaw": "OpenClaw trzyma agentów w folderze ~/.openclaw na komputerze. Wybierz tutaj pliki .md z przestrzeni roboczej albo zaimportuj cały folder na komputerze.",
+        "hermes": "Hermes eksportuje z terminala (`hermes profile export`) do pliku .tar.gz, którego telefon nie otworzy. Zaimportuj go na komputerze albo wybierz tutaj pliki .md i .yaml profilu.",
+        "openclaw": "OpenClaw trzyma agentów w folderze `~/.openclaw` na komputerze. Wybierz tutaj pliki .md z przestrzeni roboczej albo zaimportuj cały folder na komputerze.",
         "paperclip": "Wklej poniżej link GitHub do pakietu albo wybierz jego COMPANY.md i pozostałe pliki .md.",
         "agenteschat": "W drugiej przestrzeni roboczej: Ustawienia › Import i eksport › Pobierz plik. Potem wybierz tutaj plik .json."
       },
@@ -2164,7 +2161,7 @@
       "tooOld": "Ten iPhone ma iOS {{version}}, a agenci potrzebują iOS 17 lub nowszego. Zaktualizuj go, jeśli się da, albo użyj nowszego iPhone'a.",
       "xcodeOld": "Ten iPhone ma iOS {{version}}, nowszy niż zna Xcode na {{host}}. Zainstaluj tam Xcode {{major}}, a potem uruchom xcrun devicectl manage ddis update w Terminalu.",
       "teamMissing": "Xcode jest zalogowany, ale nie pokazuje jeszcze zespołu. W Xcode utwórz dowolną aplikację iOS, wybierz swój zespół w Signing & Capabilities i uruchom ją raz na tym iPhonie.",
-      "uiRefused": "Ten iPhone odrzucił stuknięcia pomocnika testowego. Odblokuj go i wpisz kod, jeśli poprosi. Jeśli to się powtarza, wyłącz i włącz Ustawienia › Deweloper › Włącz automatyzację UI.",
+      "uiRefused": "Agenci widzą ekran tego iPhone'a, ale iOS odrzuca ich stuknięcia.",
       "pluggedIn": "Jest podłączony",
       "wifi": {
         "also": "Też w sieci Wi-Fi komputera {{host}}: {{name}}",
@@ -2463,6 +2460,8 @@
     "deleteIntro": "{{name}} od razu staje się dla wszystkich tylko do odczytu, a po 7 dniach zostaje trwale usunięta.",
     "holdDelete": "Przytrzymaj, aby usunąć",
     "deleteFailed": "Nie udało się usunąć przestrzeni roboczej. Spróbuj ponownie.",
+    "holdReset": "Przytrzymaj, aby zresetować",
+    "resetFailed": "Nie udało się zresetować przestrzeni roboczej. Spróbuj ponownie.",
     "access": {
       "how": "Stuknij wiersz, aby zmienić poziom: Brak dostępu, Odczyt, Odczyt i zapis."
     },
@@ -2758,7 +2757,7 @@
       "newPassword": "Nowe hasło",
       "keyName": "Zmienna",
       "keyNamePlaceholder": "ACME_API_KEY",
-      "keyNameHelp": "Wielkie litery, cyfry i _, na przykład ACME_API_KEY. Agenci proszą o klucz pod tą nazwą.",
+      "keyNameHelp": "Wielkie litery, cyfry i _, na przykład `ACME_API_KEY`. Agenci proszą o klucz pod tą nazwą.",
       "value": "Wartość",
       "newValue": "Nowa wartość",
       "description": "Opis",

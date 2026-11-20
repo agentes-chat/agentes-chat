@@ -81,7 +81,7 @@ export interface BrainPickOption {
 }
 
 /** Claude's own models describe themselves by family; any other, by its price ("Grátis" for a free one). */
-const CLAUDE_FAMILIES = ["sonnet", "opus", "haiku"] as const;
+const CLAUDE_FAMILIES = ["sonnet", "opus", "haiku", "fable"] as const;
 const claudeFamily = (model: Model) =>
   model.provider === "anthropic" ? CLAUDE_FAMILIES.find((f) => model.id.toLowerCase().includes(f)) : undefined;
 const freeModel = (model: Model) => model.inputUsdPerMTok === 0 && model.outputUsdPerMTok === 0;

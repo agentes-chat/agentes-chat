@@ -1,5 +1,6 @@
 import { useImportVaultKeys, useVault, type VaultAccess, type VaultScope } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
+import { plainInline } from "@agenteschat/client/lib/markdown";
 import {
   ENV_MAX_BYTES,
   ENV_MAX_KEYS,
@@ -154,7 +155,7 @@ function EnvReview({ draft }: { draft: EnvDraft }) {
   };
   const stateOf = (row: EnvReviewRow) =>
     row.state === "problem"
-      ? t(`vault.env.problem.${row.problem}`)
+      ? plainInline(t(`vault.env.problem.${row.problem}`))
       : row.state === "exists"
         ? t("vault.env.exists")
         : t("vault.env.new");

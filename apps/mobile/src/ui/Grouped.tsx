@@ -1,6 +1,7 @@
 import { Children, isValidElement, type ReactNode } from "react";
 import { type AccessibilityActionEvent, Pressable, StyleSheet, View } from "react-native";
 import Animated, { FadeIn, LayoutAnimationConfig } from "react-native-reanimated";
+import { CodeWords } from "./CodeWords";
 import { haptics } from "./haptics";
 import { Icon, type IconName } from "./Icon";
 import { IconTile } from "./IconTile";
@@ -21,6 +22,8 @@ import { leadBox } from "./type-scale";
  * the smaller of the two framed sizes), so a face never spills into the gap before the text.
  */
 const LEAD = GROUPED_ROW.lead;
+/** An icon's tile in a row (IconTile's own size). */
+const TILE = 30;
 /** The remove ×'s glyph, inside its 44-point button. */
 const REMOVE_GLYPH = 16;
 /**
@@ -152,19 +155,20 @@ export function GroupedFooter({
   /** An ⓘ after the footer's one sentence, with the rest of the explanation; its text shows under the sentence. */
   hint?: { name: string; text: string };
 }) {
+  const words = typeof children === "string" ? <CodeWords text={children} /> : children;
   if (hint)
     return (
       <View style={styles.footer}>
         <InfoHint {...hint} variant="footnote">
           <Text variant="footnote" tone="faint">
-            {children}
+            {words}
           </Text>
         </InfoHint>
       </View>
     );
   return (
     <Text variant="footnote" tone="faint" style={styles.footer}>
-      {children}
+      {words}
     </Text>
   );
 }
@@ -322,12 +326,18 @@ function Row({
   const tall = !flat && (labelLines !== 1 || subLines !== 1 || Boolean(below) || Boolean(belowText));
   const line = tall ? textLineOf("body", fontScale) : null;
   const onLine = (size: number) => (line ? [leadBox(line, size), styles.onLine] : null);
+  // A tree row's name wraps: its tile stays centred on the first line, as on a one-line row, and takes no more than
+  // that line's height, so a one-line tree row is as tall as any other.
+  const tileOnLine =
+    depth > 0 && line
+      ? { marginTop: line.middle - TILE / 2, marginBottom: line.height - line.middle - TILE / 2 }
+      : null;
   const lead = (
     <>
       {/* One column for whatever leads (an icon's tile, a 24 to 36 face, a mark): the text, and the hairline above,
           start at 64 in every row, so a list mixing tiles and faces reads as one column. */}
       {icon ? (
-        <View style={styles.lead}>
+        <View style={[styles.lead, tileOnLine]}>
           {/* The system Settings' 30-point tile, in the 36 column: 11 from the row's top and bottom. */}
           <IconTile icon={icon} danger={danger} mark={mark ?? null} />
         </View>

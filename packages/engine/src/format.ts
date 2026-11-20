@@ -56,6 +56,18 @@ export const stringsOf = (value: unknown): string[] =>
 export const wholeIn = (value: unknown, min: number, max: number): number | null =>
   typeof value === "number" && Number.isInteger(value) && value >= min && value <= max ? value : null;
 
+/** A JSON object, never an array: what Postgres's `jsonb_typeof` calls `object`. */
+export const isJsonObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+/** `value` when it is a finite number from `min` to `max`, else null: a stored measure that may hold anything. */
+export const numberIn = (value: unknown, min: number, max: number): number | null =>
+  typeof value === "number" && Number.isFinite(value) && value >= min && value <= max ? value : null;
+
+/** A measure the database worked out, to the nearest whole; null where it measured nothing. */
+export const wholeOrNull = (value: unknown): number | null =>
+  value === null || value === undefined ? null : Math.round(Number(value));
+
 /** Postgres text and jsonb refuse NUL and lone UTF-16 surrogates: `text` without either. */
 export const pgSafeText = (text: string) =>
   text.replaceAll("\0", "").replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "");

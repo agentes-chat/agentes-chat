@@ -72,6 +72,7 @@ import {
   createReactToolSource,
   createReleaseAsksToolSource,
   createSandboxToolSource,
+  createSayNowToolSource,
   createScheduleToolSource,
   createSessionScreening,
   createSetStatusToolSource,
@@ -466,6 +467,7 @@ export function buildEngine(o: EngineOptions) {
         rateLimiter: adapters.rateLimiter,
       }),
       createReactToolSource({ pubsub: adapters.pubsub }),
+      createSayNowToolSource({ pubsub: adapters.pubsub }),
       // A GIF or the agent's sticker when asked (ADR 0091): listed by the workspace's switches and the agent's.
       createMediaToolSource({ pubsub: adapters.pubsub, gifs: adapters.gifs ?? null }),
       // Long work goes to the background and reports back by itself, on every brain (ADR 0121).
@@ -557,6 +559,7 @@ export function buildEngine(o: EngineOptions) {
         pubsub: adapters.pubsub,
         artifacts,
         publicUrl: config.PUBLIC_URL,
+        rateLimiter: adapters.rateLimiter,
       }),
       browserTools,
       // Reading the web, for every agent and run (ADR 0109): a search service when configured, else the agent's

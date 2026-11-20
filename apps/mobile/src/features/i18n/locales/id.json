@@ -330,6 +330,7 @@
     "startedWith": "Dimulai di percakapan dengan {{name}}",
     "replies_other": "{{count}} balasan",
     "repliesWord_other": "balasan",
+    "dayAt": "{{day}} {{time}}",
     "thread": "Utas",
     "closed": "ditutup",
     "options": "Opsi",
@@ -364,9 +365,7 @@
       "delivered": "{{name}} sudah menerimanya",
       "held": "{{name}} membacanya setelah kamu memutuskan",
       "read": "{{name}} sudah membacanya",
-      "resolved": "{{name}} menutup permintaan bantuan",
-      "well": "Membaca catatanmu",
-      "wellNow": "Berhenti untuk membaca catatanmu"
+      "resolved": "{{name}} menutup permintaan bantuan"
     },
     "stopped": {
       "byYou": "Berhenti di sini",
@@ -548,8 +547,6 @@
     "file": "File",
     "media": "GIF",
     "noCamera": "Tidak ada akses kamera. Izinkan di Pengaturan ponsel.",
-    "mission": "Mulai misi",
-    "missionHint": "Pekerjaan panjang, dengan rencana, dari awal sampai akhir",
     "summary": "Rangkum obrolan",
     "summaryHint": "Apa yang terjadi selama kamu pergi",
     "remind": "Ingatkan aku nanti",
@@ -797,8 +794,8 @@
       "where": {
         "openbotrun": "Pilih openbot-import.json (dari Migrator oleh OpenBot) atau openbot-transfer.json (dari transfer instance). File .zip dibuka dulu di aplikasi File: sekali ketuk untuk mengekstraknya.",
         "openmausbot": "Di OpenMausBot: klik kanan tim › Bagikan tim… › Simpan file. Lalu pilih file itu di sini.",
-        "hermes": "Hermes mengekspor dari terminal (hermes profile export), sebagai .tar.gz yang tidak bisa dibuka ponsel. Impor di komputer, atau pilih file .md dan .yaml profilnya di sini.",
-        "openclaw": "OpenClaw menyimpan agen di folder ~/.openclaw di komputer. Pilih file .md dari sebuah ruang kerja di sini, atau impor seluruh folder di komputer.",
+        "hermes": "Hermes mengekspor dari terminal (`hermes profile export`), sebagai .tar.gz yang tidak bisa dibuka ponsel. Impor di komputer, atau pilih file .md dan .yaml profilnya di sini.",
+        "openclaw": "OpenClaw menyimpan agen di folder `~/.openclaw` di komputer. Pilih file .md dari sebuah ruang kerja di sini, atau impor seluruh folder di komputer.",
         "paperclip": "Tempel tautan GitHub paketnya di bawah, atau pilih COMPANY.md dan file .md lainnya.",
         "agenteschat": "Di ruang kerja lain: Pengaturan › Impor dan ekspor › Unduh file. Lalu pilih .json-nya di sini."
       },
@@ -1864,7 +1861,7 @@
       "tooOld": "iPhone ini memakai iOS {{version}}, dan agen butuh iOS 17 atau lebih baru. Perbarui jika bisa, atau pakai iPhone yang lebih baru.",
       "xcodeOld": "iPhone ini memakai iOS {{version}}, lebih baru dari yang dikenal Xcode di {{host}}. Instal Xcode {{major}} di sana, lalu jalankan xcrun devicectl manage ddis update di Terminal.",
       "teamMissing": "Xcode sudah masuk tapi belum menampilkan tim. Di Xcode, buat app iOS apa saja, pilih timmu di Signing & Capabilities, lalu jalankan di iPhone ini sekali.",
-      "uiRefused": "iPhone ini menolak ketukan helper pengujian. Buka kuncinya dan masukkan kode sandimu jika diminta. Jika terus terjadi, matikan lalu nyalakan lagi Pengaturan › Pengembang › Aktifkan Otomatisasi UI.",
+      "uiRefused": "Agen bisa melihat layar iPhone ini, tetapi iOS menolak ketukan mereka.",
       "pluggedIn": "Sudah tercolok",
       "wifi": {
         "also": "Juga di Wi-Fi {{host}}: {{name}}",
@@ -2145,6 +2142,8 @@
     "deleteIntro": "{{name}} langsung jadi hanya-baca untuk semua orang dan dihapus selamanya dalam 7 hari.",
     "holdDelete": "Tahan untuk menghapus",
     "deleteFailed": "Tidak bisa menghapus ruang kerja. Coba lagi.",
+    "holdReset": "Tahan untuk mengatur ulang",
+    "resetFailed": "Ruang kerja tidak bisa diatur ulang. Coba lagi.",
     "access": {
       "how": "Ketuk baris untuk mengubah levelnya: Tanpa akses, Baca, Baca dan tulis."
     },
@@ -2416,7 +2415,7 @@
       "newPassword": "Kata sandi baru",
       "keyName": "Variabel",
       "keyNamePlaceholder": "ACME_API_KEY",
-      "keyNameHelp": "Huruf kapital, angka, dan _, misalnya ACME_API_KEY. Agen meminta kunci dengan nama ini.",
+      "keyNameHelp": "Huruf kapital, angka, dan _, misalnya `ACME_API_KEY`. Agen meminta kunci dengan nama ini.",
       "value": "Nilai",
       "newValue": "Nilai baru",
       "description": "Deskripsi",

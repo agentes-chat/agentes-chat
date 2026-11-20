@@ -381,7 +381,7 @@
     },
     "view_all_agents": {
       "title": "Lihat semua agen",
-      "desc": "Di Tim dan bilah samping. Tanpa ini, hanya agen yang menjawab orang itu.",
+      "desc": "Di Tim dan bilah samping, kecuali agen pribadi orang lain. Tanpa ini, hanya agen yang menjawab orang itu.",
       "short": "lihat semua agen",
       "say": "melihat semua agen"
     },
@@ -1280,8 +1280,8 @@
       "where": {
         "openbotrun": "Letakkan openbot-import.json (dari Migrator milik OpenBot) atau openbot-transfer.json (dari transfer instans), atau .zip tempat file itu berada.",
         "openmausbot": "Di OpenMausBot: klik kanan tim → Share team… → Save file.",
-        "hermes": "Di terminal, jalankan hermes profile export dengan nama profilnya lalu letakkan .tar.gz di sini. Atau seret folder ~/.hermes untuk membawa semua profil.",
-        "openclaw": "Seret seluruh folder ~/.openclaw (membawa semua agen) atau satu ruang kerja saja. Di Mac, ⌘⇧. menampilkan folder tersembunyi di pemilih file.",
+        "hermes": "Di terminal, jalankan `hermes profile export` dengan nama profilnya lalu letakkan .tar.gz di sini. Atau seret folder `~/.hermes` untuk membawa semua profil.",
+        "openclaw": "Seret seluruh folder `~/.openclaw` (membawa semua agen) atau satu ruang kerja saja. Di Mac, ⌘⇧. menampilkan folder tersembunyi di pemilih file.",
         "paperclip": "Seret folder paket (yang berisi COMPANY.md), letakkan .zip-nya, atau tempel tautan GitHub-nya.",
         "agenteschat": "Di ruang kerja lain: Pengaturan → Impor dan ekspor → Unduh file. Lalu letakkan .json di sini."
       },
@@ -3656,11 +3656,13 @@
   },
   "keyGuard": {
     "title": "Ini sepertinya kunci API",
-    "text": "Semua yang ada di chat terlihat oleh orang dan agen. Simpan sebagai kunci ruang kerja saja: kunci itu dienkripsi dan tidak ada yang bisa melihatnya.",
-    "textMember": "Semua yang ada di chat terlihat oleh orang dan agen. Kunci itu seperti kata sandi.",
-    "save": "Simpan sebagai kunci",
+    "titleSecret": "Ini sepertinya kunci atau kata sandi",
+    "vaultText": "Semua yang ada di chat terlihat oleh orang dan agen. Simpan di Vault: dienkripsi, dan agen yang kamu izinkan menggunakannya tanpa melihatnya.",
+    "vault": "Simpan di Vault",
+    "useAsAi": "Gunakan sebagai kunci AI",
     "remove": "Hapus",
-    "send": "Tetap kirim"
+    "send": "Tetap kirim",
+    "saved": "Agen yang punya akses menggunakannya dengan nama {{name}}."
   },
   "costlyCard": {
     "go": "Lanjutkan",
@@ -4588,7 +4590,7 @@
     "error": {
       "title": "Beri nama.",
       "website": "Gunakan alamat https, misalnya app.example.com.",
-      "keyName": "Gunakan huruf kapital, angka, dan _, diawali huruf, misalnya ACME_API_KEY.",
+      "keyName": "Gunakan huruf kapital, angka, dan _, diawali huruf, misalnya `ACME_API_KEY`.",
       "password": "Ketik kata sandinya.",
       "value": "Ketik nilainya.",
       "contact": "Isi setidaknya satu kolom."
@@ -4736,7 +4738,7 @@
       "show": "Tampilkan nilai {{name}}",
       "hide": "Sembunyikan nilai {{name}}",
       "problem": {
-        "name": "Nama harus seperti ACME_API_KEY",
+        "name": "Nama harus seperti `ACME_API_KEY`",
         "reserved": "Nama dicadangkan",
         "empty": "Tanpa nilai",
         "tooLarge": "Nilai terlalu besar"
@@ -5740,7 +5742,8 @@
         },
         "speedText": "Menjawab lebih cepat dalam percakapan dan menghabiskan paket 2,5× lebih cepat. Rutinitas dan tugas panjang tetap standar.",
         "modelLine": {
-          "opus": "Paling mampu. Menghabiskan paket lebih cepat.",
+          "fable": "Paling mampu. Menghabiskan paket jauh lebih cepat.",
+          "opus": "Sangat mampu. Menghabiskan paket lebih cepat.",
           "sonnet": "Seimbang. Cocok untuk hampir semua hal.",
           "haiku": "Cepat dan ringan. Untuk tugas sederhana."
         },
@@ -6254,12 +6257,13 @@
         "computer_busy": "Komputer terus sibuk dengan tugas lain.",
         "computer_failed": "Komputer mengalami masalah dan berhenti.",
         "computer_timeout": "Komputer terlalu lama menjawab.",
+        "disk_full": "Disk komputer ini penuh. Hapus file yang tidak kamu perlukan lagi di sana (agen bisa melakukannya setelah ada sedikit ruang), atau minta admin mengosongkan ruang.",
         "cli_failed": "Program {{brain}} berhenti karena kesalahan: {{detail}}",
         "cli_stopped": "Program {{brain}} berhenti karena kesalahan.",
         "cli_closed": "Program {{brain}} tertutup tiba-tiba.",
         "cli_sandbox": "Program {{brain}} tidak bisa menjalankan sandbox-nya di komputer ini. Pilih AI lain di pengaturan agen.",
         "account_missing": "Akun yang dipilih untuk agen ini sudah tidak ada di komputernya. Pilih akun lain di pengaturan agen, atau tambahkan lagi.",
-        "windows_sandbox": "Komputer Windows ini tidak dapat mengisolasi perintah Codex: perlu Windows 11 24H2 atau yang lebih baru.",
+        "windows_sandbox": "Komputer Windows ini tidak dapat mengisolasi perintah Codex: perlu Windows 11 24H2 atau yang lebih baru. Perbarui Windows, pilih Claude atau kunci API untuk agen ini, atau pindahkan ke komputer Linux.",
         "our_error": "Ada yang salah di pihak kami dan tugasnya berhenti. Minta lagi sebentar lagi.",
         "unknown": "Gagal."
       }
@@ -6992,6 +6996,7 @@
     "modelAndCost": "Model dan biaya",
     "model": "Model",
     "modelDesc": {
+      "fable": "Paling mampu, untuk pekerjaan tersulit",
       "sonnet": "Disarankan untuk sebagian besar",
       "opus": "Tugas panjang dan sulit",
       "haiku": "Cepat dan murah",
@@ -7715,7 +7720,10 @@
     "unreachableTitle": "agentes.chat tidak bisa dijangkau",
     "unreachableText": "Mungkin sedang dimulai ulang. Halaman ini terbuka sendiri begitu kembali normal.",
     "offlineTitle": "Kamu sedang offline",
-    "offlineText": "Halaman ini terbuka sendiri saat kamu kembali online."
+    "offlineText": "Halaman ini terbuka sendiri saat kamu kembali online.",
+    "unknownHostTitle": "Alamat ini belum disiapkan",
+    "unknownHostText": "Kalau baru saja dihubungkan, coba lagi dalam beberapa menit.",
+    "unknownHostTab": "Alamat belum disiapkan · agentes.chat"
   },
   "scopes": {
     "context_read": {
@@ -8934,6 +8942,7 @@
       "computer_busy": "Komputernya terus sibuk dengan tugas lain",
       "computer_failed": "Komputer mengalami masalah dan berhenti",
       "computer_timeout": "Komputer terlalu lama menjawab",
+      "disk_full": "Disk komputer penuh",
       "cli_failed": "Program AI di komputer berhenti karena kesalahan",
       "account_missing": "Akun agen sudah tidak ada di komputernya",
       "our_error": "Ada yang salah di pihak kami"
@@ -9428,8 +9437,7 @@
       "approvals": "Secara default, merge, deploy, dan rollback meminta persetujuan",
       "start": "Mulai misi",
       "created": "Misi dibuat: {{name}} sedang menyusun rencananya.",
-      "who": "Siapa yang menulis kode",
-      "codexOld": "Codex di {{computer}} terlalu lama untuk misi: perbarui di sana."
+      "who": "Siapa yang menulis kode"
     },
     "commandApproval": {
       "label": "Otonomi",
@@ -10329,8 +10337,8 @@
     "line": {
       "invalid": "TypeSafe tidak menerima kunci ini. Buat yang baru.",
       "no_credit": "Tambahkan saldo di TypeSafe. Jev lanjut dengan sendirinya.",
-      "env": "Diatur di pengaturan server ini (TYPESAFE_API_KEY).",
-      "envInvalid": "TypeSafe tidak menerima kunci ini. Ubah di pengaturan server ini (TYPESAFE_API_KEY)."
+      "env": "Diatur di pengaturan server ini (`TYPESAFE_API_KEY`).",
+      "envInvalid": "TypeSafe tidak menerima kunci ini. Ubah di pengaturan server ini (`TYPESAFE_API_KEY`)."
     },
     "checkAgain": "Periksa lagi",
     "via": {
@@ -10356,7 +10364,7 @@
       "line": {
         "invalid": "OpenRouter tidak menerima kunci ini. Buat yang baru.",
         "no_credit": "Tambahkan saldo di OpenRouter. Jev lanjut dengan sendirinya.",
-        "envInvalid": "OpenRouter tidak menerima kunci ini. Ubah di pengaturan server ini (TYPESAFE_API_KEY)."
+        "envInvalid": "OpenRouter tidak menerima kunci ini. Ubah di pengaturan server ini (`TYPESAFE_API_KEY`)."
       }
     },
     "remove": {
@@ -10434,7 +10442,6 @@
       "needsCloud": {
         "online": "{{computer}} sedang memulai ulang atau menyambung lagi. Ini berubah sendiri begitu ia kembali.",
         "installing": "{{program}} sedang dipasang di {{computer}}. Ini berubah sendiri setelah selesai.",
-        "updating": "{{program}} sedang diperbarui di {{computer}}. Ini berubah sendiri setelah selesai.",
         "runnerOld": "Program agentes.chat di {{computer}} sudah usang dan pembaruannya sedang dalam perjalanan. Ini berubah sendiri setelah selesai.",
         "execOff": "{{computer}} belum bisa menjalankan {{program}}. Kami sedang menanganinya, dan ini berubah sendiri.",
         "toolOff": "{{program}} belum diizinkan di {{computer}}. Itu urusan kami: coba lagi nanti.",
@@ -10568,7 +10575,7 @@
     "modeText": {
       "everyone": "Siapa pun di ruang kerja bisa memanggil {{name}}.",
       "people": "Pilih orang dan peran yang bisa bicara dengan {{name}}.",
-      "owner": "Hanya {{owner}} yang bicara dengan {{name}}.",
+      "owner": "Hanya {{owner}} yang bicara dengan {{name}}. Di daftar, {{name}} hanya terlihat oleh {{owner}}, admin, dan yang boleh mengedit.",
       "noOwner": "Tetapkan pemilik untuk memakai opsi ini.",
       "everyonePersonal": "Siapa pun di sini bisa memanggil {{name}}.",
       "peoplePersonal": "Pilih orang yang bisa bicara dengan {{name}}."
@@ -11630,12 +11637,6 @@
       "read": "{{name}} sudah membacanya",
       "resolved": "{{name}} menutup permintaan bantuan"
     },
-    "well": {
-      "readYours": "Membaca catatanmu",
-      "readOf": "Membaca catatan {{name}}",
-      "nowYours": "Berhenti untuk membaca catatanmu",
-      "nowOf": "Berhenti untuk membaca catatan {{name}}"
-    },
     "strip": {
       "see": "Lihat",
       "toStop": "untuk menghentikan"
@@ -11729,11 +11730,6 @@
       "not_installed": "{{program}} belum terpasang di {{computer}}.",
       "cant_start": "{{program}} ada di {{computer}}, tetapi tidak mau berjalan.",
       "not_reported": "{{computer}} masih memeriksa program apa saja yang dimilikinya. Ini berubah sendiri setelah selesai.",
-      "outdated": "Versi di {{computer}} sudah lama. Perbarui Codex untuk memakainya.",
-      "outdatedCodex": "Codex CLI {{detected}} ditemukan di {{computer}}. Perbarui ke versi {{minimum}} atau yang lebih baru.",
-      "codexUpdateGuide": "Cara memperbarui Codex CLI",
-      "codexRecheckHere": "Setelah memperbarui, pilih Periksa lagi pada baris Codex di Preferensi › Alat.",
-      "codexRecheckThere": "Perbarui Codex CLI di {{computer}}. Jika komputer itu menjalankan aplikasi desktop, pilih Periksa lagi pada baris Codex di Preferensi › Alat.",
       "system": "{{program}} belum berjalan di sistem {{computer}}.",
       "no_computerCloud": "Siap begitu {{computer}} siap."
     },
@@ -11798,8 +11794,6 @@
     "see": "Lihat antrean",
     "openComputer": "Buka komputer",
     "label": "Antrean {{name}}",
-    "full": "Penuh",
-    "fullNext": "Penuh · berikutnya mulai sekitar {{n}} mnt lagi",
     "free": "Tidak ada yang mengantre",
     "workingNow": "Sedang bekerja · {{n}}",
     "inLine": "Dalam antrean · {{n}}",
@@ -12507,7 +12501,7 @@
         "invalid": "Tidak valid"
       },
       "line": {
-        "env": "Diatur di pengaturan server ini (GITHUB_APP_ID).",
+        "env": "Diatur di pengaturan server ini (`GITHUB_APP_ID`).",
         "invalid": "Server ini tidak bisa membuka aplikasi yang tersimpan. Hapus lalu buat lagi.",
         "events": "Agar agen mendengar apa yang terjadi di GitHub, centang event berikut di aplikasi: {{events}}."
       },
@@ -13079,7 +13073,7 @@
     "composio": {
       "via": "Lewat Composio",
       "needsReconnect": "Perlu dihubungkan ulang",
-      "off_other": "{{names}} dan {{count}} layanan lain terhubung lewat Composio. Untuk mengaktifkannya, pengelola server ini mengatur COMPOSIO_API_KEY (lihat SELF_HOSTING.md).",
+      "off_other": "{{names}} dan {{count}} layanan lain terhubung lewat Composio. Untuk mengaktifkannya, pengelola server ini mengatur `COMPOSIO_API_KEY` (lihat `SELF_HOSTING.md`).",
       "usage": "Composio: {{calls}} dari {{limit}} panggilan di {{month}}",
       "usageNoLimit": "Composio: {{calls}} panggilan di {{month}}",
       "limitNotice": "Ruang kerja ini sudah menghabiskan panggilan Composio bulan ini",
@@ -14226,7 +14220,7 @@
       },
       "railway": {
         "1": "Di layanan Postgres, buka Data → Query dan jalankan perintah di bawah (ganti kata sandinya).",
-        "2": "Di Variables, salin DATABASE_PUBLIC_URL (DATABASE_URL bersifat internal dan tidak bisa dipakai dari sini).",
+        "2": "Di Variables, salin `DATABASE_PUBLIC_URL` (`DATABASE_URL` bersifat internal dan tidak bisa dipakai dari sini).",
         "3": "Ganti user dan kata sandi di dalamnya dengan agentes_leitura dan kata sandi pilihanmu, lalu tempel di sini."
       },
       "rds": {
@@ -14261,7 +14255,7 @@
     "error": {
       "auth": "User atau kata sandi tidak cocok. Periksa lalu coba lagi.",
       "unreachable": "Kami tidak bisa menjangkau server database. Periksa alamatnya dan apakah server menerima koneksi dari luar.",
-      "blocked_host": "Server ini tidak diizinkan. Pakai alamat publik database (alamat internal, seperti DATABASE_URL di Railway, tidak bisa dipakai dari sini).",
+      "blocked_host": "Server ini tidak diizinkan. Pakai alamat publik database (alamat internal, seperti `DATABASE_URL` di Railway, tidak bisa dipakai dari sini).",
       "tls": "Database tidak menerima koneksi aman. Aktifkan SSL di database, atau pilih Tanpa enkripsi di bagian Lanjutan (hanya untuk database uji coba).",
       "unknown": "Tidak bisa terhubung sekarang. Coba lagi sebentar lagi.",
       "no_databases": "Pengguna ini tidak bisa membuka database apa pun di server ini. Periksa izinnya atau awalan namanya."
@@ -15154,7 +15148,7 @@
       "titleRequired": "Beri nama.",
       "tooLong": "Terlalu panjang. Batasnya {{max}}.",
       "notHttps": "Gunakan alamat yang diawali https://",
-      "keyNameInvalid": "Gunakan huruf kapital, angka, dan _ pada nama, misalnya ACME_API_KEY.",
+      "keyNameInvalid": "Gunakan huruf kapital, angka, dan _ pada nama, misalnya `ACME_API_KEY`.",
       "keyNameReserved": "Nama ini dicadangkan. Pilih nama lain.",
       "keyNameTaken": "Sudah ada kunci tersimpan dengan nama ini di sini.",
       "contactEmpty": "Isi setidaknya satu kolom.",
@@ -15549,14 +15543,20 @@
       "since": "sejak {{time}}",
       "until": "sampai {{time}}",
       "withHost": "bersama {{host}}",
-      "lastSeen": "terakhir terlihat {{time}}"
+      "lastSeen": "terakhir terlihat {{time}}",
+      "offlineUnresponsive": "berhenti merespons pukul {{time}}",
+      "offlineStopped": "runner berhenti pukul {{time}}",
+      "offlineDropped": "koneksi terputus pukul {{time}}"
     },
     "line": {
       "ready": "Agen bisa memakainya sekarang.",
       "busy_other": "{{count}} dari {{max}} tugas berjalan",
       "offline": "Agen menunggu sampai perangkat ini kembali.",
       "offlineSeen": "Terakhir terlihat {{time}}. Agen menunggu sampai perangkat ini kembali.",
-      "offlineWithHost": "{{host}} sedang offline. Agen menunggu sampai komputer itu kembali."
+      "offlineWithHost": "{{host}} sedang offline. Agen menunggu sampai komputer itu kembali.",
+      "offlineUnresponsive": "Berhenti merespons pukul {{time}}, mungkin tanpa jaringan atau kelebihan beban. Jalankan `{{command}}` di sana.",
+      "offlineStopped": "Runner berhenti pukul {{time}}. Jalankan lagi, atau jalankan `{{command}}` di sana untuk melihat sebabnya.",
+      "offlineDropped": "Koneksi terputus pukul {{time}}. Ia tersambung lagi sendiri. Jika tidak, jalankan `{{command}}` di sana."
     },
     "reason": {
       "locked": "Ponselnya terkunci",
@@ -15916,7 +15916,12 @@
       "iosBehind": "iPhone ini menjalankan iOS {{ios}} dan Xcode di Mac ini untuk iOS {{sdk}}. Perbarui iPhone: Pengaturan › Umum › Pembaruan Perangkat Lunak.",
       "xcodeOld": "{{name}} memakai iOS {{version}}, sedangkan Xcode di {{mac}} paling tinggi mengenal iOS {{sdk}}. Instal Xcode {{major}}, lalu jalankan ini di Terminal.",
       "xcodeOldAny": "{{name}} memakai iOS {{version}}, lebih baru dari yang dikenal Xcode di {{mac}}. Instal Xcode {{major}}, lalu jalankan ini di Terminal.",
-      "uiRefusedText": "iPhone menolak ketukan helper pengujian. Buka kuncinya dan masukkan kode sandinya jika diminta. Jika terus terjadi, matikan lalu nyalakan lagi Pengaturan › Pengembang › Aktifkan Otomatisasi UI.",
+      "uiRefusedText": "Agen bisa melihat layar iPhone, tetapi iOS menolak ketukan mereka.",
+      "uiTurnOn": "Di iPhone, nyalakan keduanya:",
+      "uiPasscode": "Masukkan kode sandinya saat diminta, dan biarkan tetap tidak terkunci.",
+      "uiCheck": "Periksa lagi",
+      "repair": "Perbaiki helper pengujian",
+      "repairHint": "Mac menghentikan helper pengujian dan membuatnya lagi dengan Xcode-nya, dalam beberapa menit. Untuk ketukan yang masih gagal saat keduanya sudah nyala.",
       "tooOld": "{{name}} memakai iOS {{version}}, dan agen butuh iOS 17 atau lebih baru. Perbarui jika bisa, atau colokkan iPhone yang lebih baru.",
       "tooOldVersion": "16 atau lebih lama",
       "pluggedIn": "Sudah tercolok",
@@ -16445,6 +16450,11 @@
       "sentence": "{{who}} menjawab lewat email",
       "request": "permintaan dukungan dari {{name}}"
     },
+    "operatorReview": {
+      "sentence": "{{who}} meninjau konten demi keamanan",
+      "items_other": "{{value}} item",
+      "period": "{{from}} sampai {{to}}"
+    },
     "change": {
       "mergedWithoutAsking": "Merge di {{repo}} tanpa bertanya",
       "accentChanged": "Mengubah warna aksen ruang kerja",
@@ -16956,8 +16966,8 @@
         },
         "line": {
           "invalid": "Server ini tidak bisa membaca kunci ini. Tempel lagi.",
-          "env": "Diatur di pengaturan server ini (GIPHY_API_KEY).",
-          "envInvalid": "Kunci ini tidak bisa dipakai. Ubah di pengaturan server ini (GIPHY_API_KEY)."
+          "env": "Diatur di pengaturan server ini (`GIPHY_API_KEY`).",
+          "envInvalid": "Kunci ini tidak bisa dipakai. Ubah di pengaturan server ini (`GIPHY_API_KEY`)."
         },
         "invalid": "GIPHY tidak menerima kunci ini. Salin lagi dari GIPHY Developers.",
         "remove": {
@@ -17534,6 +17544,11 @@
         "shell": "Menjalankan perintah lain di dalamnya",
         "inline": "Menjalankan kode yang ditulis langsung",
         "global": "Memasang untuk seluruh komputer",
+        "privilege": "Meminta hak lebih",
+        "reverseShell": "Menyerahkan shell komputer ini ke mesin lain",
+        "destroy": "Akan menghapus komputer atau seluruh folder home",
+        "network": "Mengubah atau melewati proxy dan firewall",
+        "otherUser": "Menjangkau file pengguna lain",
         "rules": "Di luar yang boleh dilakukan agen sendiri",
         "noAccess": "Agen tidak punya akses ke ini",
         "policy": "Tidak diizinkan dalam jenis pekerjaan ini",
@@ -18756,6 +18771,21 @@
     "writeAfter": ".",
     "ask": "Butuh bantuan? Tanyakan ke pengelola server ini."
   },
+  "resetOrg": {
+    "cardTitle": "Atur ulang atau hapus",
+    "row": {
+      "title": "Atur ulang ruang kerja",
+      "text": "Menghapus semua yang dibuat di dalamnya dan mulai lagi, dengan orang-orang yang sama."
+    },
+    "goes": "Agen, percakapan, DM, file, tugas, rutinitas, dan memori",
+    "stays": "Orang, peran, undangan, akun AI, komputer, dan konektor",
+    "fresh": "Setelah itu ruang kerja terbuka seperti baru, dengan penyiapan awal",
+    "plan": "Paketnya tetap sama, tanpa tagihan baru",
+    "now": "Terjadi seketika dan tidak bisa dibatalkan.",
+    "title": "Atur ulang {{name}}?",
+    "submit": "Atur ulang ruang kerja",
+    "resetting": "Mengatur ulang {{name}}…"
+  },
   "deleteOrg": {
     "card": {
       "title": "Hapus ruang kerja",
@@ -18827,8 +18857,7 @@
     "menu": "Hapus akun",
     "card": {
       "text": "Menghapus akunmu dalam 7 hari, di semua ruang kerja.",
-      "button": "Hapus akun…",
-      "title": "Hapus"
+      "button": "Hapus akun…"
     },
     "title": "Hapus seluruh akunmu?",
     "intro": "Ini menghapus seluruh akunmu, bukan hanya satu ruang kerja.",
@@ -20443,6 +20472,38 @@
       "alwaysOn": "Mulai sekarang, laporan seperti ini dikirim tanpa bertanya.",
       "askFirst": "Tanya dulu sebelum mengirim"
     }
+  },
+  "problemReport": {
+    "button": "Kirim laporan",
+    "title": "Kirim laporan ke agentes.chat",
+    "lead": "Tim agentes.chat menerima: versi, pengaturan mana yang diisi (tanpa nilainya), apa yang gagal, dan baris terakhir log. Tanpa pesan, halaman, nama, atau kunci.",
+    "noteLabel": "Apa yang terjadi? (opsional)",
+    "notePlaceholder": "Apa yang sedang kamu lakukan saat berhenti",
+    "emailLabel": "Email untuk balasan (opsional)",
+    "emailHelp": "Hanya jika kamu ingin dijawab.",
+    "showAll": "Lihat semua yang dikirim",
+    "copy": "Salin laporan",
+    "copied": "Tersalin",
+    "send": "Kirim",
+    "sending": "Mengirim…",
+    "cancel": "Batal",
+    "loading": "Mengumpulkan detail…",
+    "sentTitle": "Laporan {{id}} terkirim",
+    "sentText": "Jika kamu menghubungi kami, sebutkan kode ini.",
+    "sentTextReply": "Kami akan menjawab ke {{email}}. Sebutkan kode ini jika kamu menghubungi kami.",
+    "copyCode": "Salin kode",
+    "done": "Selesai",
+    "noLogComputer": "{{computer}} tidak menjawab, jadi lognya tidak disertakan.",
+    "oldRunner": "Aplikasi agentes.chat di {{computer}} terlalu lama untuk menyertakan lognya. Perbarui di sana agar lognya ikut.",
+    "noServerLines": "Baris log server hanya disertakan jika pemilik instalasi yang mengirim laporan.",
+    "off": "Pengiriman dimatikan di server ini (`PROBLEM_REPORT_URL=off`). Salin laporan untuk membagikannya.",
+    "errorRate": "Terlalu banyak laporan dalam waktu singkat. Coba lagi dalam {{minutes}} menit, atau salin laporannya.",
+    "errorUnreachable": "agentes.chat tidak menjawab. Coba lagi, atau salin laporannya.",
+    "errorRefused": "agentes.chat tidak menerima laporan ini (mungkin dari versi lama). Salin laporannya saja.",
+    "errorPreview": "Tidak bisa mengumpulkan detail: {{reason}}",
+    "emailInvalid": "Email itu sepertinya tidak benar. Perbaiki atau biarkan kosong.",
+    "settingsTitle": "Ada yang tidak berfungsi?",
+    "settingsText": "Kirim detail teknis ke tim agentes.chat."
   },
   "live": {
     "slides": {

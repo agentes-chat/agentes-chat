@@ -14,10 +14,27 @@ import "./auth.css";
  * the bottom. `languages={false}` for a signed-in screen in that look, already in the person's language.
  */
 export function AuthShell({ children, languages = true }: { children: ReactNode; languages?: boolean }) {
-  const col = useRef<HTMLElement>(null);
-  const { t } = useTranslation();
   // A registered host (ADR 0194): its look in place of the product's, here only.
   const host = useAuthConfig().data?.host ?? null;
+  return (
+    <AuthFrame host={host} languages={languages}>
+      {children}
+    </AuthFrame>
+  );
+}
+
+/** `AuthShell`'s look for a known `host` (null: the product's own), asking the server nothing. */
+export function AuthFrame({
+  host = null,
+  languages = true,
+  children,
+}: {
+  host?: HostLook | null;
+  languages?: boolean;
+  children: ReactNode;
+}) {
+  const col = useRef<HTMLElement>(null);
+  const { t } = useTranslation();
   return (
     <div className={host ? "auth auth--host" : "auth"}>
       {/* Signed out only: a `languages={false}` screen shows inside a workspace, whose shell paints its own accent. */}

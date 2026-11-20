@@ -394,7 +394,7 @@
     },
     "view_all_agents": {
       "title": "Tüm ajanları görme",
-      "desc": "Ekip'te ve kenar çubuğunda. Bu olmadan yalnızca kişiye yanıt verenler.",
+      "desc": "Ekip'te ve kenar çubuğunda, başkalarının kişisel ajanları hariç. Bu olmadan yalnızca kişiye yanıt verenler.",
       "short": "tüm ajanları görme",
       "say": "tüm ajanları görür"
     },
@@ -1318,8 +1318,8 @@
       "where": {
         "openbotrun": "openbot-import.json (OpenBot'un Migrator aracından) veya openbot-transfer.json (örnek aktarımından) dosyasını ya da geldiği .zip dosyasını bırakın.",
         "openmausbot": "OpenMausBot'ta: ekibe sağ tıklayın → Ekibi paylaş… → Dosyayı kaydet.",
-        "hermes": "Bir terminalde profilin adıyla hermes profile export komutunu çalıştırın ve .tar.gz dosyasını buraya bırakın. Ya da tüm profilleri getirmek için ~/.hermes klasörünü sürükleyin.",
-        "openclaw": "~/.openclaw klasörünün tamamını (tüm ajanları getirir) ya da yalnızca bir çalışma alanını sürükleyin. Mac'te ⌘⇧. dosya seçicide gizli klasörleri gösterir.",
+        "hermes": "Bir terminalde profilin adıyla `hermes profile export` komutunu çalıştırın ve .tar.gz dosyasını buraya bırakın. Ya da tüm profilleri getirmek için `~/.hermes` klasörünü sürükleyin.",
+        "openclaw": "`~/.openclaw` klasörünün tamamını (tüm ajanları getirir) ya da yalnızca bir çalışma alanını sürükleyin. Mac'te ⌘⇧. dosya seçicide gizli klasörleri gösterir.",
         "paperclip": "Paket klasörünü (COMPANY.md dosyasının olduğu) sürükleyin, .zip halini bırakın ya da GitHub bağlantısını yapıştırın.",
         "agenteschat": "Diğer çalışma alanında: Ayarlar → İçe ve dışa aktarma → Dosyayı indir. Sonra .json dosyasını buraya bırakın."
       },
@@ -3787,11 +3787,13 @@
   },
   "keyGuard": {
     "title": "Bu bir API anahtarına benziyor",
-    "text": "Sohbetteki her şeyi kişiler ve ajanlar görür. Bunun yerine çalışma alanı anahtarı olarak kaydedin: şifrelenir ve kimse görmez.",
-    "textMember": "Sohbetteki her şeyi kişiler ve ajanlar görür. Anahtar bir şifre gibidir.",
-    "save": "Anahtar olarak kaydet",
+    "titleSecret": "Bu bir anahtar ya da şifreye benziyor",
+    "vaultText": "Sohbete giden her şeyi kişiler ve ajanlar görür. Vault'ta saklayın: şifrelenir ve izin verdiğiniz ajanlar onu görmeden kullanır.",
+    "vault": "Vault'a kaydet",
+    "useAsAi": "Yapay zekâ anahtarı olarak kullan",
     "remove": "Kaldır",
-    "send": "Yine de gönder"
+    "send": "Yine de gönder",
+    "saved": "Erişimi olan ajanlar onu {{name}} adıyla kullanır."
   },
   "costlyCard": {
     "go": "Devam et",
@@ -4732,7 +4734,7 @@
     "error": {
       "title": "Bir ad verin.",
       "website": "https adresi kullanın, örneğin app.example.com.",
-      "keyName": "Harfle başlayarak büyük harf, rakam ve _ kullanın, örneğin ACME_API_KEY.",
+      "keyName": "Harfle başlayarak büyük harf, rakam ve _ kullanın, örneğin `ACME_API_KEY`.",
       "password": "Şifreyi yazın.",
       "value": "Değeri yazın.",
       "contact": "En az bir alanı doldurun."
@@ -4893,7 +4895,7 @@
       "show": "{{name}} değerini göster",
       "hide": "{{name}} değerini gizle",
       "problem": {
-        "name": "Ad, ACME_API_KEY gibi olmalı",
+        "name": "Ad, `ACME_API_KEY` gibi olmalı",
         "reserved": "Ayrılmış ad",
         "empty": "Değer yok",
         "tooLarge": "Değer çok büyük"
@@ -5932,7 +5934,8 @@
         },
         "speedText": "Sohbetlerde daha hızlı yanıt verir ve planı 2,5× daha hızlı tüketir. Rutinler ve uzun görevler standart hızda kalır.",
         "modelLine": {
-          "opus": "En yetenekli olanı. Planı daha hızlı tüketir.",
+          "fable": "En yetenekli olanı. Planı çok daha hızlı tüketir.",
+          "opus": "Çok yetenekli. Planı daha hızlı tüketir.",
           "sonnet": "Dengeli. Neredeyse her şey için iyi.",
           "haiku": "Hızlı ve hafif. Basit görevler için."
         },
@@ -6470,12 +6473,13 @@
         "computer_busy": "Bilgisayar başka görevlerle meşgul kaldı.",
         "computer_failed": "Bilgisayar bir sorunla karşılaştı ve durdu.",
         "computer_timeout": "Bilgisayarın yanıt vermesi çok uzun sürdü.",
+        "disk_full": "Bu bilgisayarın diski dolu. Orada artık ihtiyacınız olmayan dosyaları silin (biraz yer açılınca bunu bir ajan da yapabilir) ya da bir yöneticiden yer açmasını isteyin.",
         "cli_failed": "Bir hata {{brain}} programını durdurdu: {{detail}}",
         "cli_stopped": "Bir hata {{brain}} programını durdurdu.",
         "cli_closed": "Beklenmedik şekilde {{brain}} programı kapandı.",
         "cli_sandbox": "{{brain}} programı bu bilgisayarda sandbox'ını başlatamıyor. Ajanın ayarlarından başka bir yapay zekâ seçin.",
         "account_missing": "Bu ajan için seçilen hesap artık bilgisayarında değil. Ajanın ayarlarından başka bir hesap seçin ya da yeniden ekleyin.",
-        "windows_sandbox": "Bu Windows bilgisayar Codex'in komutlarını yalıtamıyor: Windows 11 24H2 veya daha yenisi gerekiyor.",
+        "windows_sandbox": "Bu Windows bilgisayar Codex'in komutlarını yalıtamıyor: Windows 11 24H2 veya daha yenisi gerekiyor. Windows'u güncelleyin, bu ajan için Claude'u ya da bir API anahtarını seçin veya onu bir Linux bilgisayara taşıyın.",
         "our_error": "Bizim tarafımızda bir şeyler ters gitti ve görev durdu. Birazdan yeniden isteyin.",
         "unknown": "Başarısız oldu."
       }
@@ -7206,6 +7210,7 @@
     "modelAndCost": "Model ve maliyet",
     "model": "Model",
     "modelDesc": {
+      "fable": "En yetenekli olanı, en zor işler için",
       "sonnet": "Çoğu iş için önerilen",
       "opus": "Uzun, zor görevler",
       "haiku": "Hızlı ve ucuz",
@@ -7953,7 +7958,10 @@
     "unreachableTitle": "agentes.chat'e ulaşılamıyor",
     "unreachableText": "Yeniden başlatılıyor olabilir. Geri döner dönmez bu sayfa kendiliğinden açılır.",
     "offlineTitle": "Çevrimdışısınız",
-    "offlineText": "Yeniden çevrimiçi olduğunuzda bu sayfa kendiliğinden açılır."
+    "offlineText": "Yeniden çevrimiçi olduğunuzda bu sayfa kendiliğinden açılır.",
+    "unknownHostTitle": "Bu adres henüz ayarlanmadı",
+    "unknownHostText": "Yeni bağlandıysa birkaç dakika sonra tekrar deneyin.",
+    "unknownHostTab": "Adres ayarlanmadı · agentes.chat"
   },
   "scopes": {
     "context_read": {
@@ -9184,6 +9192,7 @@
       "computer_busy": "Bilgisayar başka görevlerle meşgul kaldı",
       "computer_failed": "Bilgisayar bir sorunla karşılaştı ve durdu",
       "computer_timeout": "Bilgisayarın yanıt vermesi çok uzun sürdü",
+      "disk_full": "Bilgisayarın diski doluydu",
       "cli_failed": "Bilgisayardaki yapay zeka programı bir hatayla durdu",
       "account_missing": "Ajanın hesabı artık bilgisayarında değil",
       "our_error": "Bizim tarafımızda bir şeyler ters gitti"
@@ -9717,8 +9726,7 @@
       "approvals": "Varsayılan olarak birleştirme, dağıtım ve geri alma onay ister",
       "start": "Misyonu başlat",
       "created": "Misyon oluşturuldu: {{name}} planı hazırlıyor.",
-      "who": "Kim programlıyor",
-      "codexOld": "{{computer}} üzerindeki Codex misyonlar için çok eski: orada güncelleyin."
+      "who": "Kim programlıyor"
     },
     "commandApproval": {
       "label": "Özerklik",
@@ -10657,8 +10665,8 @@
     "line": {
       "invalid": "TypeSafe bu anahtarı kabul etmedi. Yeni bir tane oluşturun.",
       "no_credit": "TypeSafe'te kredi ekleyin. Jev kendiliğinden devam eder.",
-      "env": "Bu sunucunun ayarlarında tanımlı (TYPESAFE_API_KEY).",
-      "envInvalid": "TypeSafe bu anahtarı kabul etmedi. Bu sunucunun ayarlarından değiştirin (TYPESAFE_API_KEY)."
+      "env": "Bu sunucunun ayarlarında tanımlı (`TYPESAFE_API_KEY`).",
+      "envInvalid": "TypeSafe bu anahtarı kabul etmedi. Bu sunucunun ayarlarından değiştirin (`TYPESAFE_API_KEY`)."
     },
     "checkAgain": "Tekrar kontrol et",
     "via": {
@@ -10684,7 +10692,7 @@
       "line": {
         "invalid": "OpenRouter bu anahtarı kabul etmedi. Yeni bir tane oluşturun.",
         "no_credit": "OpenRouter'da kredi ekleyin. Jev kendiliğinden devam eder.",
-        "envInvalid": "OpenRouter bu anahtarı kabul etmedi. Bu sunucunun ayarlarından değiştirin (TYPESAFE_API_KEY)."
+        "envInvalid": "OpenRouter bu anahtarı kabul etmedi. Bu sunucunun ayarlarından değiştirin (`TYPESAFE_API_KEY`)."
       }
     },
     "remove": {
@@ -10762,7 +10770,6 @@
       "needsCloud": {
         "online": "{{computer}} yeniden başlıyor ya da yeniden bağlanıyor. Geri döndüğünde bu kendiliğinden değişir.",
         "installing": "{{program}}, {{computer}} üzerine kuruluyor. Bittiğinde bu kendiliğinden değişir.",
-        "updating": "{{program}}, {{computer}} üzerinde güncelleniyor. Bittiğinde bu kendiliğinden değişir.",
         "runnerOld": "{{computer}} üzerindeki agentes.chat programı eski ve güncelleme yolda. Bittiğinde bu kendiliğinden değişir.",
         "execOff": "{{computer}} henüz {{program}} çalıştıramıyor. İlgileniyoruz, bu kendiliğinden değişir.",
         "toolOff": "{{program}}, {{computer}} üzerinde henüz izinli değil. Bu bizim tarafımızda: daha sonra yeniden dene.",
@@ -10906,7 +10913,7 @@
     "modeText": {
       "everyone": "Çalışma alanındaki herkes {{name}} ajanına seslenebilir.",
       "people": "{{name}} ile konuşabilecek kişileri ve rolleri seçin.",
-      "owner": "{{name}} ile yalnızca {{owner}} konuşur.",
+      "owner": "{{name}} ile yalnızca {{owner}} konuşur. Listelerde {{name}} ajanını yalnızca {{owner}}, yöneticiler ve düzenleyebilenler görür.",
       "noOwner": "Bu seçeneği kullanmak için bir sahip belirleyin.",
       "everyonePersonal": "Buradaki herkes {{name}} ajanına seslenebilir.",
       "peoplePersonal": "{{name}} ile konuşabilecek kişileri seçin."
@@ -12012,12 +12019,6 @@
       "read": "{{name}} okudu",
       "resolved": "{{name}} yardım isteğini kapattı"
     },
-    "well": {
-      "readYours": "Notunuzu okudu",
-      "readOf": "{{name}} notunu okudu",
-      "nowYours": "Notunuzu okumak için durdu",
-      "nowOf": "{{name}} notunu okumak için durdu"
-    },
     "strip": {
       "see": "Gör",
       "toStop": "durdurmak için"
@@ -12111,11 +12112,6 @@
       "not_installed": "{{program}}, {{computer}} üzerinde yüklü değil.",
       "cant_start": "{{program}}, {{computer}} üzerinde var ama açılmıyor.",
       "not_reported": "{{computer}} hangi programların olduğunu hâlâ kontrol ediyor. Bittiğinde bu kendiliğinden değişir.",
-      "outdated": "{{computer}} üzerindeki sürüm eski. Kullanmak için Codex'i güncelleyin.",
-      "outdatedCodex": "{{computer}} üzerinde Codex CLI {{detected}} bulundu. {{minimum}} veya daha yeni bir sürüme güncelleyin.",
-      "codexUpdateGuide": "Codex CLI nasıl güncellenir?",
-      "codexRecheckHere": "Güncellemeden sonra Tercihler › Araçlar bölümünde Codex satırındaki Tekrar kontrol et seçeneğini seçin.",
-      "codexRecheckThere": "Codex CLI aracını {{computer}} üzerinde güncelleyin. Bu bilgisayarda masaüstü uygulaması çalışıyorsa Tercihler › Araçlar bölümünde Codex satırındaki Tekrar kontrol et seçeneğini seçin.",
       "system": "{{program}} henüz {{computer}} sisteminde çalışmıyor.",
       "no_computerCloud": "{{computer}} hazır olur olmaz hazır."
     },
@@ -12180,8 +12176,6 @@
     "see": "Sırayı gör",
     "openComputer": "Bilgisayarı aç",
     "label": "{{name}} sırası",
-    "full": "Dolu",
-    "fullNext": "Dolu · sıradaki yaklaşık {{n}} dk sonra başlar",
     "free": "Sırada kimse yok",
     "workingNow": "Şu an çalışıyor · {{n}}",
     "inLine": "Sırada · {{n}}",
@@ -12921,7 +12915,7 @@
         "invalid": "Geçersiz"
       },
       "line": {
-        "env": "Bu sunucunun ayarlarında tanımlı (GITHUB_APP_ID).",
+        "env": "Bu sunucunun ayarlarında tanımlı (`GITHUB_APP_ID`).",
         "invalid": "Bu sunucu kayıtlı uygulamayı açamıyor. Kaldırıp yeniden oluşturun.",
         "events": "Ajanların GitHub'da olanları duyması için uygulamada şu olayları işaretleyin: {{events}}."
       },
@@ -13497,8 +13491,8 @@
     "composio": {
       "via": "Composio üzerinden",
       "needsReconnect": "Yeniden bağlanması gerekiyor",
-      "off_one": "{{names}} ve {{count}} hizmet daha Composio üzerinden bağlanır. Bunları açmak için bu sunucuyu yöneten kişi COMPOSIO_API_KEY değerini ayarlar (bkz. SELF_HOSTING.md).",
-      "off_other": "{{names}} ve {{count}} hizmet daha Composio üzerinden bağlanır. Bunları açmak için bu sunucuyu yöneten kişi COMPOSIO_API_KEY değerini ayarlar (bkz. SELF_HOSTING.md).",
+      "off_one": "{{names}} ve {{count}} hizmet daha Composio üzerinden bağlanır. Bunları açmak için bu sunucuyu yöneten kişi `COMPOSIO_API_KEY` değerini ayarlar (bkz. `SELF_HOSTING.md`).",
+      "off_other": "{{names}} ve {{count}} hizmet daha Composio üzerinden bağlanır. Bunları açmak için bu sunucuyu yöneten kişi `COMPOSIO_API_KEY` değerini ayarlar (bkz. `SELF_HOSTING.md`).",
       "usage": "Composio: {{month}} içinde {{limit}} çağrıdan {{calls}} tanesi",
       "usageNoLimit": "Composio: {{month}} içinde {{calls}} çağrı",
       "limitNotice": "Bu çalışma alanı bu ayki Composio çağrılarını kullandı",
@@ -14666,7 +14660,7 @@
       },
       "railway": {
         "1": "Postgres hizmetinde Data → Query bölümünü açın ve aşağıdaki komutu çalıştırın (şifreyi değiştirin).",
-        "2": "Variables bölümünde DATABASE_PUBLIC_URL değerini kopyalayın (DATABASE_URL dahilidir ve buradan çalışmaz).",
+        "2": "Variables bölümünde `DATABASE_PUBLIC_URL` değerini kopyalayın (`DATABASE_URL` dahilidir ve buradan çalışmaz).",
         "3": "İçindeki kullanıcı ve şifreyi agentes_leitura ve seçtiğiniz şifreyle değiştirip buraya yapıştırın."
       },
       "rds": {
@@ -14701,7 +14695,7 @@
     "error": {
       "auth": "Kullanıcı adı veya şifre eşleşmiyor. Kontrol edip tekrar deneyin.",
       "unreachable": "Veritabanı sunucusuna ulaşamadık. Adresi ve dışarıdan bağlantı kabul edip etmediğini kontrol edin.",
-      "blocked_host": "Bu sunucuya izin verilmiyor. Veritabanının herkese açık adresini kullanın (Railway'in DATABASE_URL değeri gibi dahili adresler buradan çalışmaz).",
+      "blocked_host": "Bu sunucuya izin verilmiyor. Veritabanının herkese açık adresini kullanın (Railway'in `DATABASE_URL` değeri gibi dahili adresler buradan çalışmaz).",
       "tls": "Veritabanı güvenli bağlantıyı kabul etmedi. Veritabanında SSL'i açın ya da Gelişmiş altında Şifreleme yok seçeneğini seçin (yalnızca test veritabanları).",
       "unknown": "Şu anda bağlanılamadı. Birazdan tekrar deneyin.",
       "no_databases": "Bu kullanıcı bu sunucudaki hiçbir veritabanını açamıyor. İzinlerini veya adın başını kontrol edin."
@@ -15608,7 +15602,7 @@
       "titleRequired": "Bir ad verin.",
       "tooLong": "Çok uzun. Sınır {{max}}.",
       "notHttps": "https:// ile başlayan bir adres kullanın",
-      "keyNameInvalid": "Adda büyük harf, rakam ve _ kullanın, örneğin ACME_API_KEY.",
+      "keyNameInvalid": "Adda büyük harf, rakam ve _ kullanın, örneğin `ACME_API_KEY`.",
       "keyNameReserved": "Bu ad ayrılmış. Başka bir ad seçin.",
       "keyNameTaken": "Burada bu adla kayıtlı bir anahtar zaten var.",
       "contactEmpty": "En az bir alanı doldurun.",
@@ -16004,7 +15998,10 @@
       "since": "{{time}} itibarıyla",
       "until": "bitiş: {{time}}",
       "withHost": "{{host}} ile birlikte",
-      "lastSeen": "son görülme: {{time}}"
+      "lastSeen": "son görülme: {{time}}",
+      "offlineUnresponsive": "{{time}} itibarıyla yanıt vermiyor",
+      "offlineStopped": "runner {{time}} saatinde durdu",
+      "offlineDropped": "bağlantı {{time}} saatinde koptu"
     },
     "line": {
       "ready": "Ajanlar onu şimdi kullanabilir.",
@@ -16012,7 +16009,10 @@
       "busy_other": "{{max}} görevden {{count}} tanesi çalışıyor",
       "offline": "Ajanlar geri gelmesini bekliyor.",
       "offlineSeen": "Son görülme: {{time}}. Ajanlar geri gelmesini bekliyor.",
-      "offlineWithHost": "{{host}} çevrimdışı. Ajanlar geri gelmesini bekliyor."
+      "offlineWithHost": "{{host}} çevrimdışı. Ajanlar geri gelmesini bekliyor.",
+      "offlineUnresponsive": "{{time}} itibarıyla yanıt vermiyor, ağ yok ya da aşırı yüklü olabilir. Üzerinde `{{command}}` çalıştırın.",
+      "offlineStopped": "Runner {{time}} saatinde durdu. Yeniden başlatın ya da nedenini görmek için üzerinde `{{command}}` çalıştırın.",
+      "offlineDropped": "Bağlantı {{time}} saatinde koptu. Kendiliğinden yeniden bağlanır. Bağlanmazsa üzerinde `{{command}}` çalıştırın."
     },
     "reason": {
       "locked": "Telefon kilitli",
@@ -16374,7 +16374,12 @@
       "iosBehind": "Bu iPhone iOS {{ios}} kullanıyor ve bu Mac'teki Xcode iOS {{sdk}} için. iPhone'u güncelleyin: Ayarlar › Genel › Yazılım Güncelleme.",
       "xcodeOld": "{{name}} iOS {{version}} kullanıyor ve {{mac}} üzerindeki Xcode en fazla iOS {{sdk}} sürümünü biliyor. Xcode {{major}} yükleyin, ardından bunu Terminal'de çalıştırın.",
       "xcodeOldAny": "{{name}} iOS {{version}} kullanıyor, bu {{mac}} üzerindeki Xcode'un bildiğinden yeni. Xcode {{major}} yükleyin, ardından bunu Terminal'de çalıştırın.",
-      "uiRefusedText": "iPhone, test yardımcısının dokunuşlarını reddetti. Kilidini açın ve isterse parolasını girin. Tekrar olursa Ayarlar › Geliştirici › UI Otomasyonunu Etkinleştir seçeneğini kapatıp açın.",
+      "uiRefusedText": "Ajanlar iPhone'un ekranını görüyor ama iOS dokunmalarını reddediyor.",
+      "uiTurnOn": "iPhone'da ikisini de açın:",
+      "uiPasscode": "İstediğinde parolasını girin ve kilidini açık tutun.",
+      "uiCheck": "Tekrar kontrol et",
+      "repair": "Test yardımcısını onar",
+      "repairHint": "Mac test yardımcısını durdurur ve kendi Xcode'u ile birkaç dakikada yeniden oluşturur. İkisi de açıkken hâlâ başarısız olan dokunmalar için.",
       "tooOld": "{{name}} iOS {{version}} kullanıyor ve ajanlar iOS 17 veya daha yenisini gerektirir. Mümkünse güncelleyin ya da daha yeni bir iPhone takın.",
       "tooOldVersion": "16 veya daha eski",
       "pluggedIn": "Taktım",
@@ -16917,6 +16922,12 @@
       "sentence": "{{who}} e-postayla yanıt verdi",
       "request": "{{name}} adlı üyenin destek talebi"
     },
+    "operatorReview": {
+      "sentence": "{{who}} güvenlik amacıyla içerik inceledi",
+      "items_one": "{{value}} öğe",
+      "items_other": "{{value}} öğe",
+      "period": "{{from}} – {{to}}"
+    },
     "change": {
       "mergedWithoutAsking": "{{repo}} içinde sormadan birleştirdi",
       "accentChanged": "Çalışma alanının vurgu rengini değiştirdi",
@@ -17434,8 +17445,8 @@
         },
         "line": {
           "invalid": "Bu sunucu bu anahtarı okuyamıyor. Yeniden yapıştırın.",
-          "env": "Bu sunucunun ayarlarında tanımlı (GIPHY_API_KEY).",
-          "envInvalid": "Bu anahtar kullanılamıyor. Bu sunucunun ayarlarından değiştirin (GIPHY_API_KEY)."
+          "env": "Bu sunucunun ayarlarında tanımlı (`GIPHY_API_KEY`).",
+          "envInvalid": "Bu anahtar kullanılamıyor. Bu sunucunun ayarlarından değiştirin (`GIPHY_API_KEY`)."
         },
         "invalid": "GIPHY bu anahtarı kabul etmedi. GIPHY Developers'dan yeniden kopyalayın.",
         "remove": {
@@ -18020,6 +18031,11 @@
         "shell": "İçinde başka komutlar çalıştırıyor",
         "inline": "Satır içinde verilen kodu çalıştırıyor",
         "global": "Tüm bilgisayara kurulum yapıyor",
+        "privilege": "Daha fazla yetki istiyor",
+        "reverseShell": "Bu bilgisayarın kabuğunu başka bir makineye veriyor",
+        "destroy": "Bilgisayarı ya da bütün bir ev klasörünü silerdi",
+        "network": "Proxy ve güvenlik duvarını değiştiriyor ya da atlatıyor",
+        "otherUser": "Başka bir kullanıcının dosyalarına erişiyor",
         "rules": "Ajanların kendi başına yapabileceklerinin dışında",
         "noAccess": "Ajanın buna erişimi yok",
         "policy": "Bu tür işlerde izin verilmiyor",
@@ -19250,6 +19266,21 @@
     "writeAfter": ".",
     "ask": "Yardım mı lazım? Bu sunucuyu yönetenlere sorun."
   },
+  "resetOrg": {
+    "cardTitle": "Sıfırla veya sil",
+    "row": {
+      "title": "Çalışma alanını sıfırla",
+      "text": "İçinde yapılan her şeyi siler ve aynı kişilerle baştan başlar."
+    },
+    "goes": "Ajanlar, konuşmalar, özel mesajlar, dosyalar, görevler, rutinler ve bellek",
+    "stays": "Kişiler, roller, davetler, yapay zekâ hesapları, bilgisayarlar ve bağlayıcılar",
+    "fresh": "Sonra ilk kurulumla yeni bir çalışma alanı gibi açılır",
+    "plan": "Plan aynı kalır, yeni ücret alınmaz",
+    "now": "Hemen olur ve geri alınamaz.",
+    "title": "{{name}} sıfırlansın mı?",
+    "submit": "Çalışma alanını sıfırla",
+    "resetting": "{{name}} sıfırlanıyor…"
+  },
   "deleteOrg": {
     "card": {
       "title": "Çalışma alanını sil",
@@ -19321,8 +19352,7 @@
     "menu": "Hesabı sil",
     "card": {
       "text": "Hesabınızı 7 gün sonra tüm çalışma alanlarında siler.",
-      "button": "Hesabı sil…",
-      "title": "Sil"
+      "button": "Hesabı sil…"
     },
     "title": "Hesabınızın tamamı silinsin mi?",
     "intro": "Bu, tek bir çalışma alanını değil hesabınızın tamamını siler.",
@@ -20922,6 +20952,38 @@
       "alwaysOn": "Bundan sonra bu tür bildirimler sormadan gider.",
       "askFirst": "Göndermeden önce sor"
     }
+  },
+  "problemReport": {
+    "button": "Rapor gönder",
+    "title": "agentes.chat'e rapor gönderin",
+    "lead": "agentes.chat ekibi şunları alır: sürümler, hangi ayarların tanımlı olduğu (değerleri asla), neyin başarısız olduğu ve günlüklerin son satırları. Mesaj, sayfa, ad veya anahtar yoktur.",
+    "noteLabel": "Ne oldu? (isteğe bağlı)",
+    "notePlaceholder": "Durduğunda ne yapıyordunuz",
+    "emailLabel": "Yanıt için e-posta (isteğe bağlı)",
+    "emailHelp": "Yalnızca yanıt istiyorsanız.",
+    "showAll": "Gönderilen her şeyi görün",
+    "copy": "Raporu kopyala",
+    "copied": "Kopyalandı",
+    "send": "Gönder",
+    "sending": "Gönderiliyor…",
+    "cancel": "İptal",
+    "loading": "Ayrıntılar toplanıyor…",
+    "sentTitle": "{{id}} raporu gönderildi",
+    "sentText": "Bize yazarsanız bu kodu belirtin.",
+    "sentTextReply": "{{email}} adresine yanıt vereceğiz. Bize yazarsanız bu kodu belirtin.",
+    "copyCode": "Kodu kopyala",
+    "done": "Tamam",
+    "noLogComputer": "{{computer}} yanıt vermedi, bu yüzden günlüğü eklenmedi.",
+    "oldRunner": "{{computer}} üzerindeki agentes.chat uygulaması günlüğünü eklemek için çok eski. Eklemek için orada güncelleyin.",
+    "noServerLines": "Sunucunun günlük satırları yalnızca kurulumun sahibi rapor gönderdiğinde eklenir.",
+    "off": "Bu sunucuda gönderme kapalı (`PROBLEM_REPORT_URL=off`). Paylaşmak için raporu kopyalayın.",
+    "errorRate": "Kısa sürede çok fazla rapor. {{minutes}} dk sonra tekrar deneyin veya raporu kopyalayın.",
+    "errorUnreachable": "agentes.chat yanıt vermedi. Tekrar deneyin veya raporu kopyalayın.",
+    "errorRefused": "agentes.chat bu raporu kabul etmedi (eski bir sürümden olabilir). Bunun yerine raporu kopyalayın.",
+    "errorPreview": "Ayrıntılar toplanamadı: {{reason}}",
+    "emailInvalid": "Bu e-posta doğru görünmüyor. Düzeltin veya boş bırakın.",
+    "settingsTitle": "Bir şey çalışmıyor mu?",
+    "settingsText": "Teknik ayrıntıları agentes.chat ekibine gönderin."
   },
   "live": {
     "slides": {

@@ -2,8 +2,9 @@ import { type ArtifactDetail, useLivePresence } from "@agenteschat/client";
 import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
-import { Icon, PressScale, Sky, Text, useTheme } from "@/ui";
+import { LineIcon, PressScale, Sky, Text, useTheme } from "@/ui";
 import { router } from "@/ui/navigation";
+import { useMessageCardCorners } from "../chat/look";
 import { useDirectory, useOrgId } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
 import { LIVE_ICON, liveRoute } from "./routes";
@@ -17,11 +18,12 @@ const COVER = 132;
  * A live file on its message (ADR 0196 §9), as a block's card is (a hairline, the bottom-left corner cut, the agent's
  * sky along its top when an agent made it): what it holds drawn small from its preview (never the document itself, so
  * a conversation opens no file), its name, its kind and size, and the faces of who is in it now. A tap opens it on its
- * own screen, as it is now.
+ * own screen, as it is now. In a message, the message card's corners, as every card there (`useMessageCardCorners`).
  */
 export const LiveFileCard = memo(function LiveFileCard({ detail, width }: { detail: ArtifactDetail; width: number }) {
   const { t } = useTranslation();
   const { colors: c } = useTheme();
+  const cardCorners = useMessageCardCorners();
   const orgId = useOrgId();
   const dir = useDirectory();
   const presence = useLivePresence(orgId, [detail.id]);
@@ -45,7 +47,7 @@ export const LiveFileCard = memo(function LiveFileCard({ detail, width }: { deta
       onPress={() => router.push(liveRoute(kind, detail.id))}
       accessibilityRole="button"
       accessibilityLabel={`${detail.title}, ${label}`}
-      style={[styles.card, { width, backgroundColor: c.raised, borderColor: c.line2 }]}
+      style={[styles.card, { width, backgroundColor: c.raised, borderColor: c.line2 }, cardCorners]}
     >
       <View
         style={[styles.cover, { height: COVER, borderBottomColor: c.line }]}
@@ -64,7 +66,8 @@ export const LiveFileCard = memo(function LiveFileCard({ detail, width }: { deta
         ) : null}
       </View>
       <View style={styles.foot}>
-        <Icon name={LIVE_ICON[kind]} size={16} color={c.faint} />
+        {/* On the title's first line, as an attachment's icon: centred on the whole foot it floated between lines. */}
+        <LineIcon name={LIVE_ICON[kind]} size={16} color={c.faint} variant="footnote" />
         <View style={styles.words}>
           <Text variant="footnote" numberOfLines={2} style={styles.title}>
             {detail.title}
@@ -89,7 +92,7 @@ const styles = StyleSheet.create({
   },
   cover: { overflow: "hidden", borderBottomWidth: StyleSheet.hairlineWidth },
   sky: { position: "absolute", top: 0, left: 0, right: 0, height: 6, opacity: 0.7 },
-  foot: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 10 },
+  foot: { flexDirection: "row", alignItems: "flex-start", gap: 8, paddingHorizontal: 12, paddingVertical: 10 },
   words: { flex: 1, minWidth: 0 },
   title: { fontWeight: "600" },
 });

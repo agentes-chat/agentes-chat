@@ -541,6 +541,7 @@ const styles = StyleSheet.create({
     padding: 12,
     gap: 10,
   },
-  proposalActions: { flexDirection: "row", justifyContent: "flex-end", flexWrap: "wrap", gap: 8 },
+  // From the card's edge, as the face and the words above them (the web's row drops them under at its start too).
+  proposalActions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   segments: { paddingHorizontal: 16 },
 });

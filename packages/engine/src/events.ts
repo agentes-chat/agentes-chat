@@ -386,6 +386,18 @@ export type ChannelEvent =
       newRunId: string;
       messageIds: string[];
     }
+  /**
+   * A message that went into the agent's task isn't for it (the triage, `steerHandling` `elsewhere`): it saw it and
+   * won't answer it; the router decides who does (`message.routed` follows).
+   */
+  | {
+      type: "agent.run.released";
+      channelId: string;
+      threadId: string | null;
+      agentId: string;
+      runId: string;
+      messageId: string;
+    }
   /** The run ended without posting: nobody called it by name and it had nothing to add (`pass`). */
   | { type: "agent.passed"; channelId: string; threadId: string | null; agentId: string; runId: string }
   /**

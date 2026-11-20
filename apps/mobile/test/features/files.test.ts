@@ -610,13 +610,13 @@ describe("viewer", () => {
 });
 
 describe("a document's head", () => {
-  test("a file is a pushed screen: the native bar holds its name, its line, Enviar cópia and the ⋯", () => {
+  test("a file is a pushed screen: the native bar holds its name and its line, Send a copy and the ⋯", () => {
     // Pushed, never a full-screen modal: the app's sheets, menus and toasts live at the root, under a modal.
     expect(ownOptionsOf("file/[id]")).toBe("solid,");
     const viewer = src("features/files/DocumentViewer.tsx");
     expect(viewer).toContain("<PushedHeader");
     expect(viewer).toContain('title={info?.name ?? ""}');
-    expect(viewer).toContain("subtitle: line(info, [dir.nameOf(detail.createdBy)])");
+    expect(viewer).toContain("subtitle={info && detail ? line(info, [dir.nameOf(detail.createdBy)]) : undefined}");
     expect(viewer).toContain("actions={bar}");
     // The system's share sheet says what it does; the ⋯ is the system's menu on iOS and the app's list on Android.
     expect(viewer).toContain('label: t("mobile.files.sendCopy")');
@@ -636,14 +636,16 @@ describe("a document's head", () => {
     expect(viewer).toContain("...(textual && text.data !== undefined");
   });
 
-  test("a picture's head too: × alone on the first row, the name and its line on the row under it", () => {
+  test("a picture's head: × on the left, the name and its line centred beside it, a space as wide on the right", () => {
     const viewer = readFileSync(join(import.meta.dir, "../../src/features/files/ImageViewer.tsx"), "utf8");
     const top = viewer.slice(viewer.indexOf("style={[styles.top,"), viewer.indexOf("</Chrome>"));
     expect(top.indexOf('icon="x"')).toBeGreaterThan(-1);
     expect(top.indexOf('icon="x"')).toBeLessThan(top.indexOf("{info?.name"));
-    expect(top).toContain("numberOfLines={3}");
-    expect(top).not.toContain("numberOfLines={1}");
-    expect(viewer).toContain('title: { flexBasis: "100%", gap: 2 }');
+    // One line each, a long name shortened in its middle so the kind of file stays.
+    expect(top).toContain('numberOfLines={1} ellipsizeMode="middle"');
+    expect(top.indexOf("{info?.name")).toBeLessThan(top.indexOf('<View pointerEvents="none" style={styles.round} />'));
+    expect(viewer).toContain('title: { flex: 1, minWidth: 0, alignItems: "center" },');
+    expect(viewer).not.toContain('flexBasis: "100%"');
   });
 
   test("a picture's actions are the row at the bottom, never repeated in a ⋯, and Share has one icon", () => {

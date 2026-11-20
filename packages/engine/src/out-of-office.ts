@@ -3,7 +3,7 @@ import { and, type Database, eq, inArray, isNull, schema, sql } from "@agentesch
 import { NEXT_ACCOUNT_KINDS } from "@agenteschat/providers/plans";
 import type { Agent } from "./agents";
 import { brainOf } from "./brain-settings";
-import { planLimitOf } from "./brains/select";
+import { planLimitOf, spareAccountFor } from "./brains/select";
 import { isComputerBrain } from "./brains/types";
 import { isRightHand } from "./right-hand";
 import { monthStartUtc, orgDefaultAgentBudget } from "./usage";

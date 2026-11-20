@@ -56,7 +56,7 @@ export function BrakesSection({ agent }: { agent: Agent }) {
       cancel: t("common.cancel"),
       onConfirm: () => save({ go: [], never: [] }),
     });
-  const others = [...dir.agentById.values()].filter((a) => !a.former && a.id !== agent.id);
+  const others = dir.agents.filter((a) => !a.former && a.id !== agent.id);
   // The picker's taps reach the latest `save` (the brakes as they are then).
   const latest = useRef(save);
   useLayoutEffect(() => {

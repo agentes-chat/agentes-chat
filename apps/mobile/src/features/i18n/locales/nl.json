@@ -343,6 +343,7 @@
     "replies_other": "{{count}} antwoorden",
     "repliesWord_one": "antwoord",
     "repliesWord_other": "antwoorden",
+    "dayAt": "{{day}} {{time}}",
     "thread": "Thread",
     "closed": "gesloten",
     "options": "Opties",
@@ -379,9 +380,7 @@
       "delivered": "{{name}} heeft het ontvangen",
       "held": "{{name}} leest het na jouw beslissing",
       "read": "{{name}} heeft het gelezen",
-      "resolved": "{{name}} heeft het hulpverzoek gesloten",
-      "well": "Heeft je bericht gelezen",
-      "wellNow": "Stopte om je bericht te lezen"
+      "resolved": "{{name}} heeft het hulpverzoek gesloten"
     },
     "stopped": {
       "byYou": "Hier gestopt",
@@ -564,8 +563,6 @@
     "file": "Bestand",
     "media": "GIF's",
     "noCamera": "Geen toegang tot de camera. Sta het toe in de Instellingen van de telefoon.",
-    "mission": "Een missie starten",
-    "missionHint": "Lang werk, met een plan, van begin tot eind",
     "summary": "Het gesprek samenvatten",
     "summaryHint": "Wat er gebeurde terwijl je weg was",
     "remind": "Herinner me later",
@@ -821,8 +818,8 @@
       "where": {
         "openbotrun": "Kies openbot-import.json (uit Migrator by OpenBot) of openbot-transfer.json (uit de instance transfer). Een .zip opent eerst in de app Bestanden: met één tik pak je hem uit.",
         "openmausbot": "In OpenMausBot: klik met rechts op het team › Share team… › Save file. Kies daarna dat bestand hier.",
-        "hermes": "Hermes exporteert vanuit een terminal (hermes profile export), als .tar.gz die de telefoon niet kan openen. Importeer het op de computer, of kies hier de .md- en .yaml-bestanden van het profiel.",
-        "openclaw": "OpenClaw bewaart agents in de map ~/.openclaw op de computer. Kies hier de .md-bestanden van een werkruimte, of importeer de hele map op de computer.",
+        "hermes": "Hermes exporteert vanuit een terminal (`hermes profile export`), als .tar.gz die de telefoon niet kan openen. Importeer het op de computer, of kies hier de .md- en .yaml-bestanden van het profiel.",
+        "openclaw": "OpenClaw bewaart agents in de map `~/.openclaw` op de computer. Kies hier de .md-bestanden van een werkruimte, of importeer de hele map op de computer.",
         "paperclip": "Plak hieronder de GitHub-link van het pakket, of kies de COMPANY.md en de andere .md-bestanden.",
         "agenteschat": "In de andere werkruimte: Instellingen › Importeren en exporteren › Het bestand downloaden. Kies daarna hier de .json."
       },
@@ -1964,7 +1961,7 @@
       "tooOld": "Deze iPhone draait iOS {{version}}, en agents hebben iOS 17 of nieuwer nodig. Werk hem bij als dat kan, of gebruik een nieuwere iPhone.",
       "xcodeOld": "Deze iPhone draait iOS {{version}}, nieuwer dan Xcode op {{host}} kent. Installeer daar Xcode {{major}} en voer daarna xcrun devicectl manage ddis update uit in Terminal.",
       "teamMissing": "Xcode is ingelogd maar toont nog geen team. Maak in Xcode een willekeurige iOS-app, kies je team bij Signing & Capabilities en voer hem één keer uit op deze iPhone.",
-      "uiRefused": "Deze iPhone weigerde de tikken van de testhelper. Ontgrendel hem en voer je toegangscode in als hij erom vraagt. Blijft het gebeuren, zet dan Instellingen › Ontwikkelaar › Schakel UI-automatisering in uit en weer aan.",
+      "uiRefused": "Agents zien het scherm van deze iPhone, maar iOS weigert hun tikken.",
       "pluggedIn": "Hij is aangesloten",
       "wifi": {
         "also": "Ook op de wifi van {{host}}: {{name}}",
@@ -2251,6 +2248,8 @@
     "deleteIntro": "{{name}} wordt meteen voor iedereen alleen-lezen en wordt over 7 dagen definitief verwijderd.",
     "holdDelete": "Ingedrukt houden om te verwijderen",
     "deleteFailed": "De werkruimte kon niet worden verwijderd. Probeer het opnieuw.",
+    "holdReset": "Houd ingedrukt om te resetten",
+    "resetFailed": "De werkruimte kon niet worden gereset. Probeer het opnieuw.",
     "access": {
       "how": "Tik op een rij om het niveau te wijzigen: Geen toegang, Lezen, Lezen en schrijven."
     },
@@ -2530,7 +2529,7 @@
       "newPassword": "Nieuw wachtwoord",
       "keyName": "Variabele",
       "keyNamePlaceholder": "ACME_API_KEY",
-      "keyNameHelp": "Hoofdletters, cijfers en _, zoals ACME_API_KEY. Agenten vragen de sleutel op met deze naam.",
+      "keyNameHelp": "Hoofdletters, cijfers en _, zoals `ACME_API_KEY`. Agenten vragen de sleutel op met deze naam.",
       "value": "Waarde",
       "newValue": "Nieuwe waarde",
       "description": "Beschrijving",

@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { Platform, StyleSheet, View } from "react-native";
 import { GestureDetector, usePanGesture } from "react-native-gesture-handler";
 import Animated, { type SharedValue, useAnimatedStyle, useSharedValue } from "react-native-reanimated";
-import { Glass, PressScale, Text, useTheme } from "@/ui";
+import { Glass, PressScale, SCREEN_X, Text, useTheme } from "@/ui";
 import type { WBox } from "./camera";
 import { type CropRect, clampCrop, MIN_CROP } from "./logic";
 
@@ -65,7 +65,13 @@ export function CropOverlay({
             <Text variant="subhead" style={styles.title} numberOfLines={1}>
               {t("live.canvas.crop.label")}
             </Text>
-            <PressScale haptic={false} onPress={onCancel} accessibilityRole="button" style={styles.button}>
+            <PressScale
+              haptic={false}
+              onPress={onCancel}
+              accessibilityRole="button"
+              style={styles.button}
+              contentStyle={styles.buttonIn}
+            >
               <Text variant="subhead" tone="muted">
                 {t("live.canvas.crop.cancel")}
               </Text>
@@ -75,6 +81,7 @@ export function CropOverlay({
               onPress={apply}
               accessibilityRole="button"
               style={[styles.button, { backgroundColor: c.ink }]}
+              contentStyle={styles.buttonIn}
             >
               <Text variant="subhead" style={[styles.strong, { color: c.bg }]}>
                 {t("live.canvas.crop.apply")}
@@ -199,7 +206,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     boxShadow: "0px 1px 3px rgba(0, 0, 0, 0.35)",
   },
-  barAt: { position: "absolute", top: 12, left: 12, right: 12, alignItems: "flex-start" },
+  barAt: { position: "absolute", top: 12, left: SCREEN_X, right: SCREEN_X, alignItems: "flex-start" },
   bar: {
     flexDirection: "row",
     alignItems: "center",
@@ -212,6 +219,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   title: { fontWeight: "600", marginRight: 4, flexShrink: 1 },
-  button: { minHeight: 40, minWidth: 44, paddingHorizontal: 12, borderRadius: 12, justifyContent: "center" },
+  button: { minHeight: 40, minWidth: 44, paddingHorizontal: 12, borderRadius: 12 },
+  buttonIn: { justifyContent: "center" },
   strong: { fontWeight: "600" },
 });

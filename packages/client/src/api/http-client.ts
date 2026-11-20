@@ -137,6 +137,7 @@ import type {
   InviteLink,
   InviteLinkChanged,
   InviteLinkMade,
+  IphoneRepairView,
   Issue,
   IssueActivity,
   IssueColumn,
@@ -203,6 +204,7 @@ import type {
   PhoneSignIn,
   PlanServes,
   Poll,
+  ProblemReportPreview,
   Proposal,
   ReactionCount,
   Reminder,
@@ -593,6 +595,9 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       instance: () => request<Instance>("/api/instance"),
       telemetry: () => nullOn(404, () => request<ServerTelemetry>("/api/app/telemetry")),
       setTelemetry: (enabled) => request<ServerTelemetry>("/api/app/telemetry", { method: "PUT", json: { enabled } }),
+      previewProblemReport: (input) =>
+        request<ProblemReportPreview>("/api/app/problem-reports/preview", { json: input }),
+      sendProblemReport: (input) => request<{ id: string }>("/api/app/problem-reports/send", { json: input }),
       sendFeedback: (input) => request<void>("/api/app/feedback", { json: input }),
       uploadFeedbackFile: (file) => {
         const form = new FormData();
@@ -683,6 +688,9 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       deleteWorkspace: async (orgId, input = {}) =>
         (await request<{ deletion: { dueAt: string } }>(`${org(orgId)}/deletion`, { json: input })).deletion,
       restore: (orgId) => request<void>(`${org(orgId)}/deletion`, { method: "DELETE" }),
+      resetCode: (orgId) => request<CodeSent>(`${org(orgId)}/reset/code`, { json: {} }),
+      reset: async (orgId, input = {}) =>
+        (await request<{ reset: { startedAt: string } }>(`${org(orgId)}/reset`, { json: input })).reset,
       setAvatar: (orgId, input) =>
         request<{ avatarUrl: string }>(`${org(orgId)}/me/avatar`, { method: "PUT", json: input }),
       removeAvatar: (orgId) => request<void>(`${org(orgId)}/me/avatar`, { method: "DELETE" }),
@@ -1353,6 +1361,8 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         request<XcodeFixView>(`${org(orgId)}/devices/computers/${enc(machineId)}/xcode-fix`, { method: "DELETE" }),
       openXcode: (orgId, machineId) =>
         request<{ opened: boolean }>(`${org(orgId)}/devices/computers/${enc(machineId)}/xcode-open`, { json: {} }),
+      repairIphone: (orgId, phoneId) =>
+        request<IphoneRepairView>(`${org(orgId)}/devices/phones/${enc(phoneId)}/repair`, { json: {} }),
     },
     machines: {
       list: async (orgId) => (await request<{ machines: Machine[] }>(`${org(orgId)}/machines`)).machines,

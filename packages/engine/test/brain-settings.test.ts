@@ -62,13 +62,17 @@ const mac = (patch: Record<string, unknown> = {}) => ({
 describe("brain settings", () => {
   test("a coding plan's models: any of them by id, its aliases named after what they run there", () => {
     expect(brainModelOptions("claude_code").map((o) => o.label)).toEqual([
+      "Fable 5.2",
       "Opus 5.5",
       "Sonnet 5.5",
       "Haiku 5.5",
-      "Fable 5.2",
       "Fable 5.1",
     ]);
     expect(brainModelOptions("claude_code").at(-1)?.value).toBe("claude-fable-5-1");
+    // Fable runs under Claude Code's own alias, and a full id is kept as its alias.
+    expect(normalizeBrainModel("claude_code", "fable")).toBe("fable");
+    expect(normalizeBrainModel("claude_code", "claude-fable-5-2")).toBe("fable");
+    expect(brainModelId("claude_code", "fable")).toBe("claude-fable-5-2");
     expect(brainModelOptions("codex").every((o) => o.modelId?.startsWith("gpt"))).toBe(true);
     // Codex offers the catalog's OpenAI rows, the Astras among them; the newest Sol is its default.
     expect(brainModelOptions("codex").map((o) => o.label)).toEqual([
@@ -235,15 +239,13 @@ describe("brain settings", () => {
       ["claude_code", true, null],
       ["codex", false, "not_reported"],
     ]);
-    const oldCodex = mac({ executors: { codex: { version: "codex-cli 0.100.0" }, detectedAt: "x" } });
-    expect(reasons(oldCodex).slice(1, 3)).toEqual([
-      ["claude_code", false, "not_installed"],
-      ["codex", false, "outdated"],
-    ]);
-    expect(brainOptions(oldCodex).find((o) => o.kind === "codex")?.codexVersion).toEqual({
-      detected: "0.100.0",
-      minimum: "0.163.0",
-    });
+    // Codex counts at any version, whatever its line says.
+    for (const version of ["codex-cli 0.100.0", "codex-cli 0.170.0", ""]) {
+      expect(reasons(mac({ executors: { codex: { version }, detectedAt: "x" } })).slice(1, 3)).toEqual([
+        ["claude_code", false, "not_installed"],
+        ["codex", true, null],
+      ]);
+    }
     // There and failing to start: said as that, never "not installed".
     const broken = mac({ executors: { codex: { version: "0.170.0" }, broken: { claude: "boom" }, detectedAt: "x" } });
     expect(reasons(broken).slice(1, 3)).toEqual([

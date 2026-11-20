@@ -335,7 +335,8 @@
       "live.doc.link.title",
       "live.doc.keys.link",
       "voiceRooms.screen.native",
-      "voiceRooms.room.openChat"
+      "voiceRooms.room.openChat",
+      "audit.operatorReview.items"
     ],
     "es": [
       "devices.iphone.path.general",
@@ -2672,7 +2673,8 @@
       "voiceRooms.live",
       "voiceRooms.settings.camera",
       "voiceRooms.room.kind",
-      "voiceRooms.room.openChat"
+      "voiceRooms.room.openChat",
+      "audit.operatorReview.items"
     ],
     "ja": [
       "live.sheet.args.k",

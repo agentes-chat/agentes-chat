@@ -61,7 +61,7 @@ export const EventLine = memo(function EventLine({
   const consulted = consultationOfNotice(message.meta);
   const line = eventLineOf(message, {
     author: dir.nameOf(message.author) || t("channel.unknownAgent"),
-    agentByHandle: (handle) => agentsByAnyHandle(dir.agents).get(handle.toLowerCase())?.name ?? null,
+    agentByHandle: (handle) => agentsByAnyHandle([...dir.agentById.values()]).get(handle.toLowerCase())?.name ?? null,
   });
   if (consulted)
     return (

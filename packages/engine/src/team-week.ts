@@ -566,7 +566,10 @@ async function suggestedLately(db: Database, w: Window): Promise<Set<string>> {
 /** The model one size down from a large one, for the brain it thinks with. Null: not large, or nothing in between. */
 function smallerModel(a: TeamAgent): { from: string; to: string } | null {
   // Claude Code names its models by size.
-  if (a.brain === "claude_code") return a.brain_model === "opus" ? { from: "opus", to: "sonnet" } : null;
+  if (a.brain === "claude_code") {
+    const to = a.brain_model === "fable" ? "opus" : a.brain_model === "opus" ? "sonnet" : null;
+    return to && a.brain_model ? { from: a.brain_model, to } : null;
+  }
   const info = a.brain === "model" ? modelInfo(a.model) : undefined;
   if (info?.tier !== "large") return null;
   const to = modelForTier(info.provider, "medium");

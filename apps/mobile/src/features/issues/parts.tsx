@@ -10,15 +10,15 @@ import {
   isOpen,
   taskAgentId,
 } from "@agenteschat/client/lib/issues";
-import { codeAndBoldParts } from "@agenteschat/client/lib/markdown";
 import { stepPhrase } from "@agenteschat/client/lib/work";
 import { bodyTones } from "@agenteschat/ui/agent/engine";
 import { memo, type ReactNode, useCallback } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { Text as RNText, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import {
   Chip,
+  CodeWords,
   Icon,
   IconButton,
   type IconName,
@@ -39,7 +39,7 @@ import { router } from "@/ui/navigation";
 import { Face } from "../shared/Face";
 import { useColors, useDirectory, useOrgId } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
-import { MentionCount, MONO, Tile, useSurface } from "../shared/parts";
+import { MentionCount, Tile, useSurface } from "../shared/parts";
 import { criteriaProgress, type IssueState, issueState, latestPr } from "./logic";
 
 /** An agent's step in the person's words ("Mexeu nos arquivos do PC · trips.service.ts"), as the web says it. */
@@ -85,22 +85,9 @@ export function ColumnHeader({ label, count, onNew }: { label: string; count: nu
 
 /** A task's title, whole, with its `code` as the inline code pill and its **bold** (the web card's); no links. */
 export function TaskTitle({ title, ...text }: { title: string } & Omit<TextProps, "children">) {
-  const c = useColors();
   return (
     <Text {...text}>
-      {codeAndBoldParts(title).map((part, k) =>
-        part.mark ? (
-          <RNText
-            // biome-ignore lint/suspicious/noArrayIndexKey: the pieces of one title, in order
-            key={k}
-            style={part.mark === "code" ? [styles.code, { backgroundColor: c.sunken, color: c.ink2 }] : styles.heavy}
-          >
-            {part.text}
-          </RNText>
-        ) : (
-          part.text
-        ),
-      )}
+      <CodeWords text={title} />
     </Text>
   );
 }
@@ -556,7 +543,6 @@ const styles = StyleSheet.create({
   // A person's photo is 20 (an agent's body 24): either sits in the 24 box, on the name's first line.
   face: { width: 24, height: 24, alignItems: "center", justifyContent: "center" },
   name: { flexShrink: 1 },
-  code: { fontFamily: MONO },
   column: {
     flexDirection: "row",
     alignItems: "center",

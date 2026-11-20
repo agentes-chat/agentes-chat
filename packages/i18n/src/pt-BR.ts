@@ -420,7 +420,7 @@ export const ptBR = {
     },
     view_all_agents: {
       title: "Ver todos os agentes",
-      desc: "Na Equipe e na barra lateral. Sem isto, só os que respondem à pessoa.",
+      desc: "Na Equipe e na barra lateral, menos os agentes pessoais dos outros. Sem isto, só os que respondem à pessoa.",
       short: "ver todos os agentes",
       say: "vê todos os agentes",
     },
@@ -1364,9 +1364,9 @@ export const ptBR = {
           "Solte o openbot-import.json (do Migrator by OpenBot) ou o openbot-transfer.json (da transferência da instância), ou o .zip em que ele veio.",
         openmausbot: "No OpenMausBot: clique com o botão direito no time → Compartilhar time… → Salvar arquivo.",
         hermes:
-          "No terminal, rode hermes profile export com o nome do perfil e solte o .tar.gz aqui. Ou arraste a pasta ~/.hermes para trazer todos os perfis.",
+          "No terminal, rode `hermes profile export` com o nome do perfil e solte o .tar.gz aqui. Ou arraste a pasta `~/.hermes` para trazer todos os perfis.",
         openclaw:
-          "Arraste a pasta ~/.openclaw inteira (ela traz todos os agentes) ou só um workspace. No Mac, ⌘⇧. mostra as pastas ocultas na janela de escolher.",
+          "Arraste a pasta `~/.openclaw` inteira (ela traz todos os agentes) ou só um workspace. No Mac, ⌘⇧. mostra as pastas ocultas na janela de escolher.",
         paperclip: "Arraste a pasta do pacote (a que tem o COMPANY.md), solte um .zip dela ou cole o link do GitHub.",
         agenteschat:
           "No outro workspace: Configurações → Importar e exportar → Baixar o arquivo. Depois é só soltar o .json aqui.",
@@ -3998,11 +3998,15 @@ export const ptBR = {
   /** An API key pasted in a message, before it goes out. */
   keyGuard: {
     title: "Isso parece uma chave de API",
-    text: "Tudo o que vai no chat fica visível para as pessoas e os agentes. Salve como chave do workspace: ela fica cifrada e ninguém vê.",
-    textMember: "Tudo o que vai no chat fica visível para as pessoas e os agentes. Uma chave é como uma senha.",
-    save: "Salvar como chave",
+    titleSecret: "Isso parece uma chave ou senha",
+    vaultText:
+      "Tudo o que vai no chat fica visível para as pessoas e os agentes. Guarde no Cofre: ela fica cifrada, e os agentes que você autorizar usam sem ver.",
+    vault: "Salvar no Cofre",
+    useAsAi: "Usar como chave de IA",
     remove: "Tirar do texto",
     send: "Enviar mesmo assim",
+    /** After "Save in the Vault", under the toast's "Saved in the Vault". */
+    saved: "Os agentes com acesso usam pelo nome {{name}}.",
   },
   /** An agent's card whose button opens the app's own dialog, filled in (`meta.actionCard`). */
   /** A stretch's pause card once someone pressed Continuar (ADR 0089). */
@@ -4996,7 +5000,7 @@ export const ptBR = {
     error: {
       title: "Dê um nome.",
       website: "Use um endereço https, como app.exemplo.com.br.",
-      keyName: "Use letras maiúsculas, números e _, começando com uma letra, como ACME_API_KEY.",
+      keyName: "Use letras maiúsculas, números e _, começando com uma letra, como `ACME_API_KEY`.",
       password: "Digite a senha.",
       value: "Digite o valor.",
       contact: "Preencha pelo menos um campo.",
@@ -5158,7 +5162,7 @@ export const ptBR = {
       show: "Mostrar o valor de {{name}}",
       hide: "Ocultar o valor de {{name}}",
       problem: {
-        name: "O nome precisa ser como ACME_API_KEY",
+        name: "O nome precisa ser como `ACME_API_KEY`",
         reserved: "Nome reservado",
         empty: "Sem valor",
         tooLarge: "Valor grande demais",
@@ -6260,7 +6264,8 @@ export const ptBR = {
           "Responde mais rápido nas conversas e gasta o plano 2,5× mais depressa. Rotinas e tarefas longas seguem no padrão.",
         /** The model picker's line under each Claude Code model (other models show their name only). */
         modelLine: {
-          opus: "O mais capaz. Gasta o plano mais rápido.",
+          fable: "O mais capaz. Gasta o plano bem mais rápido.",
+          opus: "Muito capaz. Gasta o plano mais rápido.",
           sonnet: "Equilibrado. Bom para quase tudo.",
           haiku: "Rápido e leve. Para tarefas simples.",
         },
@@ -6872,6 +6877,8 @@ export const ptBR = {
         /** The computer's own program (the one that runs the agent's CLI there) failed; its code shows only on hover. */
         computer_failed: "O computador teve um problema e parou.",
         computer_timeout: "O computador demorou demais para responder.",
+        disk_full:
+          "O disco deste computador está cheio. Apague arquivos de que você não precisa mais nele (um agente consegue fazer isso quando houver um pouco de espaço) ou peça a um admin para liberar espaço.",
         /** The agent's CLI on its computer (`brain`: Claude Code, Codex…) stopped on an error; `detail`: what it said. */
         cli_failed: "O {{brain}} parou com um erro: {{detail}}",
         /** The same, when it said nothing about it. */
@@ -6885,7 +6892,7 @@ export const ptBR = {
           "A conta escolhida para este agente não está mais no computador dele. Escolha outra nas configurações do agente ou adicione de novo.",
         /** A Codex turn on a Windows computer where MXC can't hold its commands (runner `windows_sandbox`). */
         windows_sandbox:
-          "Este computador com Windows não consegue isolar os comandos do Codex: ele precisa do Windows 11 24H2 ou mais novo.",
+          "Este computador com Windows não consegue isolar os comandos do Codex: ele precisa do Windows 11 24H2 ou mais novo. Atualize o Windows, escolha o Claude ou uma chave de API para este agente, ou mova-o para um computador Linux.",
         our_error: "Algo deu errado do nosso lado e a tarefa parou. Peça de novo daqui a pouco.",
         unknown: "Falhou.",
       },
@@ -7650,6 +7657,7 @@ export const ptBR = {
     modelAndCost: "Modelo e custo",
     model: "Modelo",
     modelDesc: {
+      fable: "O mais capaz, para o trabalho mais difícil",
       sonnet: "Recomendado para a maioria",
       opus: "Tarefas longas e difíceis",
       haiku: "Rápido e barato",
@@ -8469,6 +8477,9 @@ export const ptBR = {
     unreachableText: "Ele pode estar reiniciando. Esta página abre sozinha assim que ele voltar.",
     offlineTitle: "Você está sem internet",
     offlineText: "Esta página abre sozinha quando a internet voltar.",
+    unknownHostTitle: "Este endereço ainda não está configurado",
+    unknownHostText: "Se ele acabou de ser conectado, tente de novo em alguns minutos.",
+    unknownHostTab: "Endereço não configurado · agentes.chat",
   },
   scopes: {
     context_read: { label: "Ler o contexto", description: "Buscar mensagens, resumos e fatos nos canais do agente." },
@@ -9659,6 +9670,7 @@ export const ptBR = {
       computer_busy: "O computador continuou ocupado com outras tarefas",
       computer_failed: "O computador teve um problema e parou",
       computer_timeout: "O computador demorou demais para responder",
+      disk_full: "O disco do computador estava cheio",
       /** The agent's CLI on its computer (Claude Code, Codex…) stopped on an error of its own. */
       cli_failed: "A IA do computador parou com um erro",
       account_missing: "A conta do agente não está mais no computador dele",
@@ -10194,7 +10206,6 @@ export const ptBR = {
       start: "Começar missão",
       created: "Missão criada: {{name}} está montando o plano.",
       who: "Quem programa",
-      codexOld: "O Codex no {{computer}} é antigo demais para missões: atualize-o lá.",
     },
     commandApproval: {
       label: "Autonomia",
@@ -11080,8 +11091,8 @@ export const ptBR = {
     line: {
       invalid: "A TypeSafe não aceitou esta chave. Crie uma nova.",
       no_credit: "Adicione crédito na TypeSafe. O Jev volta sozinho.",
-      env: "Definida nas configurações deste servidor (TYPESAFE_API_KEY).",
-      envInvalid: "A TypeSafe não aceitou esta chave. Troque nas configurações deste servidor (TYPESAFE_API_KEY).",
+      env: "Definida nas configurações deste servidor (`TYPESAFE_API_KEY`).",
+      envInvalid: "A TypeSafe não aceitou esta chave. Troque nas configurações deste servidor (`TYPESAFE_API_KEY`).",
     },
     checkAgain: "Verificar de novo",
     /** Where Jev is called and paid (ADR 0073 §9): the rows under the reasons once "Set up Jev" is pressed. */
@@ -11110,7 +11121,8 @@ export const ptBR = {
       line: {
         invalid: "O OpenRouter não aceitou esta chave. Crie uma nova.",
         no_credit: "Adicione crédito no OpenRouter. O Jev volta sozinho.",
-        envInvalid: "O OpenRouter não aceitou esta chave. Troque nas configurações deste servidor (TYPESAFE_API_KEY).",
+        envInvalid:
+          "O OpenRouter não aceitou esta chave. Troque nas configurações deste servidor (`TYPESAFE_API_KEY`).",
       },
     },
     remove: {
@@ -11214,7 +11226,6 @@ export const ptBR = {
       needsCloud: {
         online: "O {{computer}} está reiniciando ou se reconectando. Isto muda sozinho quando ele voltar.",
         installing: "O {{program}} está sendo instalado no {{computer}}. Isto muda sozinho quando terminar.",
-        updating: "O {{program}} está sendo atualizado no {{computer}}. Isto muda sozinho quando terminar.",
         runnerOld:
           "O programa do agentes.chat no {{computer}} está desatualizado e a atualização já está a caminho. Isto muda sozinho quando ela terminar.",
         execOff: "O {{computer}} ainda não consegue rodar o {{program}}. Já estamos cuidando, e isto muda sozinho.",
@@ -11383,8 +11394,10 @@ export const ptBR = {
       everyone_female: "Qualquer pessoa do workspace pode chamar a {{name}}.",
       people: "Escolha as pessoas e os cargos que podem falar com o {{name}}.",
       people_female: "Escolha as pessoas e os cargos que podem falar com a {{name}}.",
-      owner: "Só {{owner}} fala com o {{name}}.",
-      owner_female: "Só {{owner}} fala com a {{name}}.",
+      owner:
+        "Só {{owner}} fala com o {{name}}. Nas listas, o {{name}} aparece só para {{owner}}, admins e quem pode editar.",
+      owner_female:
+        "Só {{owner}} fala com a {{name}}. Nas listas, a {{name}} aparece só para {{owner}}, admins e quem pode editar.",
       noOwner: "Defina um responsável para usar esta opção.",
       everyonePersonal: "Qualquer pessoa daqui pode chamar o {{name}}.",
       everyonePersonal_female: "Qualquer pessoa daqui pode chamar a {{name}}.",
@@ -12480,12 +12493,6 @@ export const ptBR = {
       read: "{{name}} leu",
       resolved: "{{name}} encerrou o pedido de ajuda",
     },
-    well: {
-      readYours: "Leu seu recado",
-      readOf: "Leu o recado de {{name}}",
-      nowYours: "Parou para ler seu recado",
-      nowOf: "Parou para ler o recado de {{name}}",
-    },
     strip: {
       see: "Ver",
       toStop: "para parar",
@@ -12582,14 +12589,6 @@ export const ptBR = {
       not_installed: "O {{program}} não está instalado no {{computer}}.",
       cant_start: "O {{program}} está no {{computer}}, mas não abre.",
       not_reported: "O {{computer}} ainda está vendo quais programas tem. Isto muda sozinho quando terminar.",
-      outdated: "A versão no {{computer}} é antiga. Atualize o Codex para usar.",
-      outdatedCodex:
-        "O Codex CLI {{detected}} foi encontrado no {{computer}}. Atualize para a versão {{minimum}} ou superior.",
-      codexUpdateGuide: "Como atualizar o Codex CLI",
-      codexRecheckHere:
-        "Depois de atualizar, clique em Verificar de novo na linha do Codex em Preferências › Ferramentas.",
-      codexRecheckThere:
-        "Atualize o Codex CLI no {{computer}}. Se ele usa o app para computador, clique em Verificar de novo na linha do Codex em Preferências › Ferramentas.",
       system: "O {{program}} ainda não roda no sistema do {{computer}}.",
       no_computerCloud: "Disponível assim que o {{computer}} ficar pronto.",
     },
@@ -12664,8 +12663,6 @@ export const ptBR = {
     /** In the line's dialog opened from a DM: on to the agent's computer. */
     openComputer: "Abrir o computador",
     label: "Fila de {{name}}",
-    full: "Cheio",
-    fullNext: "Cheio · o próximo começa em cerca de {{n}} min",
     free: "Ninguém na fila",
     workingNow: "Trabalhando agora · {{n}}",
     inLine: "Na fila · {{n}}",
@@ -13437,7 +13434,7 @@ export const ptBR = {
       create: "Criar o app no GitHub",
       state: { off: "Desligado", on: "Ligado", invalid: "Inválido" },
       line: {
-        env: "Definido nas configurações deste servidor (GITHUB_APP_ID).",
+        env: "Definido nas configurações deste servidor (`GITHUB_APP_ID`).",
         invalid: "Este servidor não consegue abrir o app salvo. Remova e crie de novo.",
         /** O app não assina o que os agentes ouvem no GitHub: `events` são os nomes que o próprio GitHub dá a eles. */
         events: "Para os agentes ouvirem o que acontece no GitHub, marque estes eventos no app: {{events}}.",
@@ -13846,9 +13843,9 @@ export const ptBR = {
       via: "Pela Composio",
       needsReconnect: "Precisa reconectar",
       off_one:
-        "{{names}} e mais {{count}} serviço conectam pela Composio. Para ligar, quem administra este servidor define COMPOSIO_API_KEY (veja SELF_HOSTING.md).",
+        "{{names}} e mais {{count}} serviço conectam pela Composio. Para ligar, quem administra este servidor define `COMPOSIO_API_KEY` (veja `SELF_HOSTING.md`).",
       off_other:
-        "{{names}} e mais {{count}} serviços conectam pela Composio. Para ligar, quem administra este servidor define COMPOSIO_API_KEY (veja SELF_HOSTING.md).",
+        "{{names}} e mais {{count}} serviços conectam pela Composio. Para ligar, quem administra este servidor define `COMPOSIO_API_KEY` (veja `SELF_HOSTING.md`).",
       usage: "Composio: {{calls}} de {{limit}} chamadas em {{month}}",
       usageNoLimit: "Composio: {{calls}} chamadas em {{month}}",
       limitNotice: "As chamadas da Composio deste mês acabaram",
@@ -15007,7 +15004,7 @@ export const ptBR = {
       },
       railway: {
         "1": "No serviço Postgres, abra Data → Query e rode o comando abaixo (troque a senha).",
-        "2": "Em Variables, copie o DATABASE_PUBLIC_URL (o DATABASE_URL é interno e não funciona daqui).",
+        "2": "Em Variables, copie o `DATABASE_PUBLIC_URL` (o `DATABASE_URL` é interno e não funciona daqui).",
         "3": "Troque nele o usuário e a senha por agentes_leitura e a senha que você escolheu, e cole aqui.",
       },
       rds: {
@@ -15044,7 +15041,7 @@ export const ptBR = {
       unreachable:
         "Não conseguimos falar com o servidor do banco. Confira o endereço e se ele aceita conexões de fora.",
       blocked_host:
-        "Esse servidor não é permitido. Use o endereço público do banco (endereços internos, como o DATABASE_URL do Railway, não funcionam daqui).",
+        "Esse servidor não é permitido. Use o endereço público do banco (endereços internos, como o `DATABASE_URL` do Railway, não funcionam daqui).",
       tls: "O banco não aceitou uma conexão segura. Ligue o SSL no banco, ou escolha Sem criptografia em Avançado (só bancos de teste).",
       unknown: "Não deu para conectar agora. Tente de novo em instantes.",
       no_databases:
@@ -15932,7 +15929,7 @@ export const ptBR = {
       titleRequired: "Dê um nome a ele.",
       tooLong: "Ficou longo demais. O limite é {{max}}.",
       notHttps: "Use um endereço que comece com https://",
-      keyNameInvalid: "Use letras maiúsculas, números e _ no nome, como ACME_API_KEY.",
+      keyNameInvalid: "Use letras maiúsculas, números e _ no nome, como `ACME_API_KEY`.",
       keyNameReserved: "Este nome é reservado. Escolha outro.",
       keyNameTaken: "Já existe uma chave com este nome aqui.",
       contactEmpty: "Preencha pelo menos um campo.",
@@ -16319,6 +16316,9 @@ export const ptBR = {
       until: "até {{time}}",
       withHost: "com {{host}}",
       lastSeen: "visto às {{time}}",
+      offlineUnresponsive: "parou de responder às {{time}}",
+      offlineStopped: "o runner parou às {{time}}",
+      offlineDropped: "a conexão caiu às {{time}}",
     },
     line: {
       ready: "Os agentes já podem usá-lo.",
@@ -16327,6 +16327,10 @@ export const ptBR = {
       offline: "Os agentes esperam ele voltar.",
       offlineSeen: "Visto às {{time}}. Os agentes esperam ele voltar.",
       offlineWithHost: "{{host}} está offline. Os agentes esperam ele voltar.",
+      offlineUnresponsive:
+        "Parou de responder às {{time}}, talvez sem rede ou sobrecarregado. Rode `{{command}}` nele.",
+      offlineStopped: "O runner parou às {{time}}. Inicie de novo ou rode `{{command}}` nele para ver o motivo.",
+      offlineDropped: "A conexão caiu às {{time}}. Ele reconecta sozinho. Se não voltar, rode `{{command}}` nele.",
     },
     reason: {
       locked: "O celular está bloqueado",
@@ -16713,8 +16717,13 @@ export const ptBR = {
         "{{name}} usa o iOS {{version}} e o Xcode em {{mac}} conhece no máximo o iOS {{sdk}}. Instale o Xcode {{major}} e rode isto no Terminal.",
       xcodeOldAny:
         "{{name}} usa o iOS {{version}}, mais novo do que o Xcode em {{mac}} conhece. Instale o Xcode {{major}} e rode isto no Terminal.",
-      uiRefusedText:
-        "O iPhone recusou os toques do assistente de testes. Desbloqueie e digite o código se ele pedir. Se continuar, desligue e ligue Ajustes\u00a0›\u00a0Desenvolvedor\u00a0›\u00a0Ativar Automação de UI.",
+      uiRefusedText: "Os agentes veem a tela do iPhone, mas o iOS recusa os toques deles.",
+      uiTurnOn: "No iPhone, ligue os dois:",
+      uiPasscode: "Digite o código quando ele pedir e deixe o iPhone desbloqueado.",
+      uiCheck: "Verificar de novo",
+      repair: "Reparar o assistente de testes",
+      repairHint:
+        "O Mac para o assistente de testes e cria de novo com o Xcode dele, em alguns minutos. Para toques que ainda falham com os dois ligados.",
       tooOld:
         "{{name}} usa o iOS {{version}}, e os agentes precisam do iOS 17 ou mais novo. Atualize se ele aceitar, ou conecte um iPhone mais novo.",
       tooOldVersion: "16 ou anterior",
@@ -17274,6 +17283,12 @@ export const ptBR = {
       sentence: "{{who}} respondeu por e-mail",
       request: "pedido de suporte de {{name}}",
     },
+    operatorReview: {
+      sentence: "{{who}} analisou conteúdo por segurança",
+      items_one: "{{value}} item",
+      items_other: "{{value}} itens",
+      period: "{{from}} a {{to}}",
+    },
     change: {
       mergedWithoutAsking: "Fez o merge em {{repo}} sem perguntar",
       accentChanged: "Mudou a cor de destaque do workspace",
@@ -17795,8 +17810,8 @@ export const ptBR = {
         state: { off: "Desligado", on: "Ligado", invalid: "Chave inválida" },
         line: {
           invalid: "Este servidor não consegue ler esta chave. Cole a chave de novo.",
-          env: "Definida nas configurações deste servidor (GIPHY_API_KEY).",
-          envInvalid: "Esta chave não serve. Troque nas configurações deste servidor (GIPHY_API_KEY).",
+          env: "Definida nas configurações deste servidor (`GIPHY_API_KEY`).",
+          envInvalid: "Esta chave não serve. Troque nas configurações deste servidor (`GIPHY_API_KEY`).",
         },
         invalid: "O GIPHY não aceitou esta chave. Copie de novo no GIPHY Developers.",
         remove: {
@@ -18443,6 +18458,11 @@ export const ptBR = {
         shell: "Roda outros comandos por dentro",
         inline: "Roda código passado direto no comando",
         global: "Instala para o computador todo",
+        privilege: "Pede mais permissões",
+        reverseShell: "Entrega o terminal deste computador a outra máquina",
+        destroy: "Apagaria o computador ou uma pasta pessoal inteira",
+        network: "Mexe no proxy e no firewall ou passa por fora deles",
+        otherUser: "Mexe em arquivos de outro usuário",
         rules: "Fora do que agentes podem fazer sozinhos",
         noAccess: "O agente não tem acesso a isso",
         policy: "Não é permitido neste tipo de trabalho",
@@ -19795,6 +19815,25 @@ export const ptBR = {
     writeAfter: ".",
     ask: "Precisa de ajuda? Fale com quem cuida deste servidor.",
   },
+  /** Resetting a workspace (owners, Sua conta): what it made goes now and for good, and it starts over as a new one. */
+  resetOrg: {
+    /** The title over the account's danger rows for an owner: resetting, deleting the workspace, deleting the account. */
+    cardTitle: "Recomeçar ou apagar",
+    row: {
+      title: "Recomeçar o workspace",
+      text: "Apaga o que foi feito nele e começa de novo, com as mesmas pessoas.",
+    },
+    goes: "Os agentes, as conversas, as DMs, os arquivos, as tarefas, as rotinas e a memória",
+    stays: "As pessoas, os cargos, os convites, as contas de IA, os computadores e os conectores",
+    fresh: "Depois ele abre como um workspace novo, com a configuração do começo",
+    /** Only where plans are billed. */
+    plan: "O plano continua o mesmo, sem cobrança nova",
+    now: "Acontece na hora e não tem volta.",
+    title: "Recomeçar {{name}}?",
+    submit: "Recomeçar workspace",
+    /** In the row once it started, until the workspace opens again as a new one. */
+    resetting: "Recomeçando {{name}}…",
+  },
   /** Deleting a workspace (owners): it turns read-only for everyone now and is deleted for good 7 days later. */
   deleteOrg: {
     card: {
@@ -19887,8 +19926,6 @@ export const ptBR = {
     card: {
       text: "Apaga a sua conta em 7 dias, em todos os workspaces.",
       button: "Apagar conta…",
-      /** The card's title for an owner, over its two buttons: the account and the workspace. */
-      title: "Apagar",
     },
     title: "Apagar a sua conta inteira?",
     intro: "Isto apaga a sua conta inteira, não só um workspace.",
@@ -21594,6 +21631,39 @@ export const ptBR = {
       alwaysOn: "Daqui em diante, relatos assim vão sem perguntar.",
       askFirst: "Perguntar antes de enviar",
     },
+  },
+  /** "Send a report" on a self-hosted server: what the agentes.chat team gets, shown in full before it goes. */
+  problemReport: {
+    button: "Enviar um relatório",
+    title: "Enviar um relatório para o agentes.chat",
+    lead: "A equipe do agentes.chat recebe: versões, quais configurações estão definidas (nunca os valores), o que falhou e as últimas linhas dos logs. Sem mensagens, páginas, nomes ou chaves.",
+    noteLabel: "O que aconteceu? (opcional)",
+    notePlaceholder: "O que você estava fazendo quando parou",
+    emailLabel: "E-mail para resposta (opcional)",
+    emailHelp: "Só se você quiser uma resposta.",
+    showAll: "Ver tudo o que é enviado",
+    copy: "Copiar relatório",
+    copied: "Copiado",
+    send: "Enviar",
+    sending: "Enviando…",
+    cancel: "Cancelar",
+    loading: "Reunindo os detalhes…",
+    sentTitle: "Relatório {{id}} enviado",
+    sentText: "Se nos escrever, cite este código.",
+    sentTextReply: "Vamos responder em {{email}}. Cite este código se nos escrever.",
+    copyCode: "Copiar código",
+    done: "Pronto",
+    noLogComputer: "O {{computer}} não respondeu, então o log dele não vai junto.",
+    oldRunner: "O app agentes.chat no {{computer}} é antigo demais para incluir o log. Atualize-o lá para incluir.",
+    noServerLines: "As linhas do log do servidor só vão junto quando o dono da instalação envia o relatório.",
+    off: "O envio está desligado neste servidor (`PROBLEM_REPORT_URL=off`). Copie o relatório para compartilhar.",
+    errorRate: "Relatórios demais em pouco tempo. Tente de novo em {{minutes}} min ou copie o relatório.",
+    errorUnreachable: "O agentes.chat não respondeu. Tente de novo ou copie o relatório.",
+    errorRefused: "O agentes.chat não aceitou este relatório (pode ser de uma versão antiga). Copie o relatório.",
+    errorPreview: "Não deu para reunir os detalhes: {{reason}}",
+    emailInvalid: "Esse e-mail não parece certo. Corrija ou deixe vazio.",
+    settingsTitle: "Algo não está funcionando?",
+    settingsText: "Envie os detalhes técnicos para a equipe do agentes.chat.",
   },
   live: {
     /** The presentation editor (ADR 0196 §2): its rail, stage, toolbar, notes and presenting. */

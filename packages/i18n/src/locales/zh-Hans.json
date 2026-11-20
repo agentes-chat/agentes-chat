@@ -381,7 +381,7 @@
     },
     "view_all_agents": {
       "title": "查看所有智能体",
-      "desc": "在团队和侧边栏中。关闭后，只显示会回应此人的智能体。",
+      "desc": "在团队和侧边栏中，但不包括他人的个人智能体。关闭后，只显示会回应此人的智能体。",
       "short": "查看所有智能体",
       "say": "查看所有智能体"
     },
@@ -1280,8 +1280,8 @@
       "where": {
         "openbotrun": "拖入 openbot-import.json（来自 OpenBot 的 Migrator）或 openbot-transfer.json（来自实例迁移），或者包含它的 .zip。",
         "openmausbot": "在 OpenMausBot 中：右键点击团队 → 分享团队… → 保存文件。",
-        "hermes": "在终端中运行 hermes profile export 加上配置文件名，然后把 .tar.gz 拖到这里。也可以拖入 ~/.hermes 文件夹，一次带上所有配置文件。",
-        "openclaw": "拖入整个 ~/.openclaw 文件夹（会带上所有智能体），或者只拖一个工作区。在 Mac 上，在文件选择器中按 ⌘⇧. 可以显示隐藏文件夹。",
+        "hermes": "在终端中运行 `hermes profile export` 加上配置文件名，然后把 .tar.gz 拖到这里。也可以拖入 `~/.hermes` 文件夹，一次带上所有配置文件。",
+        "openclaw": "拖入整个 `~/.openclaw` 文件夹（会带上所有智能体），或者只拖一个工作区。在 Mac 上，在文件选择器中按 ⌘⇧. 可以显示隐藏文件夹。",
         "paperclip": "拖入包文件夹（包含 COMPANY.md 的那个），拖入它的 .zip，或者粘贴它的 GitHub 链接。",
         "agenteschat": "在另一个工作区中：设置 → 导入和导出 → 下载文件。然后把 .json 拖到这里。"
       },
@@ -3649,11 +3649,13 @@
   },
   "keyGuard": {
     "title": "这看起来像一个 API 密钥",
-    "text": "聊天中的所有内容，成员和智能体都能看到。请改为保存成工作区密钥：它会被加密，谁也看不到。",
-    "textMember": "聊天中的所有内容，成员和智能体都能看到。密钥就像密码一样。",
-    "save": "保存为密钥",
+    "titleSecret": "这看起来像一个密钥或密码",
+    "vaultText": "聊天里的内容人和智能体都能看到。把它存进 Vault：它会被加密，你允许的智能体使用时看不到它。",
+    "vault": "保存到 Vault",
+    "useAsAi": "用作 AI 密钥",
     "remove": "删掉它",
-    "send": "仍然发送"
+    "send": "仍然发送",
+    "saved": "有权限的智能体以 {{name}} 这个名字使用它。"
   },
   "costlyCard": {
     "go": "可以做",
@@ -4578,7 +4580,7 @@
     "error": {
       "title": "请给它起个名字。",
       "website": "请使用 https 地址，例如 app.example.com。",
-      "keyName": "请使用大写字母、数字和 _，并以字母开头，例如 ACME_API_KEY。",
+      "keyName": "请使用大写字母、数字和 _，并以字母开头，例如 `ACME_API_KEY`。",
       "password": "请输入密码。",
       "value": "请输入值。",
       "contact": "请至少填写一项。"
@@ -4726,7 +4728,7 @@
       "show": "显示 {{name}} 的值",
       "hide": "隐藏 {{name}} 的值",
       "problem": {
-        "name": "名称需类似 ACME_API_KEY",
+        "name": "名称需类似 `ACME_API_KEY`",
         "reserved": "保留名称",
         "empty": "没有值",
         "tooLarge": "值太大"
@@ -5747,7 +5749,8 @@
         },
         "speedText": "在对话中回复更快，套餐额度消耗速度为 2.5 倍。例行工作和长任务仍按标准速度。",
         "modelLine": {
-          "opus": "能力最强，套餐额度消耗更快。",
+          "fable": "能力最强，套餐额度消耗快得多。",
+          "opus": "能力很强，套餐额度消耗更快。",
           "sonnet": "均衡，几乎适合所有场景。",
           "haiku": "快速轻量，适合简单任务。"
         },
@@ -6273,12 +6276,13 @@
         "computer_busy": "电脑一直忙于其他任务。",
         "computer_failed": "电脑遇到问题，已停止。",
         "computer_timeout": "电脑响应时间过长。",
+        "disk_full": "这台电脑的磁盘已满。请删除上面不再需要的文件（腾出一点空间后，智能体也能帮你删除），或请管理员释放空间。",
         "cli_failed": "因为出错，{{brain}} 程序已停止：{{detail}}",
         "cli_stopped": "因为出错，{{brain}} 程序已停止。",
         "cli_closed": "程序 {{brain}} 意外关闭。",
         "cli_sandbox": "程序 {{brain}} 无法在这台电脑上启动它的沙盒。请在智能体设置中选择其他 AI。",
         "account_missing": "为这个智能体选择的账号已不在它的电脑上。请在智能体设置中选择另一个账号，或重新添加。",
-        "windows_sandbox": "这台 Windows 电脑无法隔离 Codex 的命令：需要 Windows 11 24H2 或更高版本。",
+        "windows_sandbox": "这台 Windows 电脑无法隔离 Codex 的命令：需要 Windows 11 24H2 或更高版本。请更新 Windows，为这个智能体选择 Claude 或 API 密钥，或把它移到一台 Linux 电脑上。",
         "our_error": "我们这边出了点问题，任务已停止。请稍后再提一次。",
         "unknown": "失败。"
       }
@@ -7005,6 +7009,7 @@
     "modelAndCost": "模型和费用",
     "model": "模型",
     "modelDesc": {
+      "fable": "能力最强，适合最难的工作",
       "sonnet": "适合大多数情况",
       "opus": "长时间、高难度的任务",
       "haiku": "快速又便宜",
@@ -7725,7 +7730,10 @@
     "unreachableTitle": "无法连接 agentes.chat",
     "unreachableText": "它可能正在重启。恢复后此页面会自动打开。",
     "offlineTitle": "你已离线",
-    "offlineText": "恢复联网后此页面会自动打开。"
+    "offlineText": "恢复联网后此页面会自动打开。",
+    "unknownHostTitle": "此地址尚未设置",
+    "unknownHostText": "如果刚刚完成连接，请过几分钟再试。",
+    "unknownHostTab": "地址未设置 · agentes.chat"
   },
   "scopes": {
     "context_read": {
@@ -8941,6 +8949,7 @@
       "computer_busy": "电脑一直忙于其他任务",
       "computer_failed": "电脑遇到问题，已停止",
       "computer_timeout": "电脑响应时间过长",
+      "disk_full": "电脑的磁盘已满",
       "cli_failed": "电脑上的 AI 程序因出错而停止",
       "account_missing": "智能体的账号已不在它的电脑上",
       "our_error": "我们这边出了点问题"
@@ -9428,8 +9437,7 @@
       "approvals": "默认情况下，合并、部署和回滚需要审批",
       "start": "开始专项任务",
       "created": "专项任务已创建：{{name}} 正在制定计划。",
-      "who": "由谁编程",
-      "codexOld": "{{computer}} 上的 Codex 版本太旧，无法运行专项任务：请在那台电脑上更新。"
+      "who": "由谁编程"
     },
     "commandApproval": {
       "label": "自主程度",
@@ -10324,8 +10332,8 @@
     "line": {
       "invalid": "TypeSafe 不接受这个密钥。请创建一个新的。",
       "no_credit": "在 TypeSafe 充值后，Jev 会自动恢复。",
-      "env": "已在此服务器的设置中配置（TYPESAFE_API_KEY）。",
-      "envInvalid": "TypeSafe 不接受这个密钥。请在此服务器的设置中更改（TYPESAFE_API_KEY）。"
+      "env": "已在此服务器的设置中配置（`TYPESAFE_API_KEY`）。",
+      "envInvalid": "TypeSafe 不接受这个密钥。请在此服务器的设置中更改（`TYPESAFE_API_KEY`）。"
     },
     "checkAgain": "重新检查",
     "via": {
@@ -10351,7 +10359,7 @@
       "line": {
         "invalid": "OpenRouter 不接受这个密钥。请创建一个新的。",
         "no_credit": "在 OpenRouter 充值后，Jev 会自动恢复。",
-        "envInvalid": "OpenRouter 不接受这个密钥。请在此服务器的设置中更改（TYPESAFE_API_KEY）。"
+        "envInvalid": "OpenRouter 不接受这个密钥。请在此服务器的设置中更改（`TYPESAFE_API_KEY`）。"
       }
     },
     "remove": {
@@ -10437,7 +10445,6 @@
       "needsCloud": {
         "online": "{{computer}} 正在重启或重新连接。它回来后这里会自动更新。",
         "installing": "正在 {{computer}} 上安装 {{program}}。完成后这里会自动更新。",
-        "updating": "正在 {{computer}} 上更新 {{program}}。完成后这里会自动更新。",
         "runnerOld": "{{computer}} 上的 agentes.chat 程序版本较旧，更新正在路上。完成后这里会自动更新。",
         "execOff": "{{computer}} 暂时还不能运行 {{program}}。我们正在处理，这里会自动更新。",
         "toolOff": "{{computer}} 上还未允许 {{program}}。这是我们这边的问题：请稍后再试。",
@@ -10576,8 +10583,8 @@
       "everyone_female": "工作区中的任何人都可以呼叫 {{name}}。",
       "people": "选择可以和 {{name}} 对话的成员和角色。",
       "people_female": "选择可以和 {{name}} 对话的成员和角色。",
-      "owner": "只有 {{owner}} 可以和 {{name}} 对话。",
-      "owner_female": "只有 {{owner}} 可以和 {{name}} 对话。",
+      "owner": "只有 {{owner}} 可以和 {{name}} 对话。在列表中，只有 {{owner}}、管理员和可编辑的人能看到 {{name}}。",
+      "owner_female": "只有 {{owner}} 可以和 {{name}} 对话。在列表中，只有 {{owner}}、管理员和可编辑的人能看到 {{name}}。",
       "noOwner": "设置所有者后才能使用此选项。",
       "everyonePersonal": "这里的任何人都可以呼叫 {{name}}。",
       "everyonePersonal_female": "这里的任何人都可以呼叫 {{name}}。",
@@ -11648,12 +11655,6 @@
       "read": "{{name}} 已读",
       "resolved": "{{name}} 关闭了求助请求"
     },
-    "well": {
-      "readYours": "已读你的留言",
-      "readOf": "已读 {{name}} 的留言",
-      "nowYours": "停下来阅读你的留言",
-      "nowOf": "停下来阅读 {{name}} 的留言"
-    },
     "strip": {
       "see": "查看",
       "toStop": "以停止"
@@ -11749,11 +11750,6 @@
       "not_installed": "{{computer}} 上没有安装 {{program}}。",
       "cant_start": "{{program}} 在 {{computer}} 上，但无法启动。",
       "not_reported": "{{computer}} 还在检查有哪些程序。完成后这里会自动更新。",
-      "outdated": "{{computer}} 上的版本太旧。请更新 Codex 后使用。",
-      "outdatedCodex": "在 {{computer}} 上检测到 Codex CLI {{detected}}。请更新到 {{minimum}} 或更高版本。",
-      "codexUpdateGuide": "如何更新 Codex CLI",
-      "codexRecheckHere": "更新后，请在偏好设置 › 工具的 Codex 一行中选择「重新检查」。",
-      "codexRecheckThere": "请在 {{computer}} 上更新 Codex CLI。如果该电脑运行桌面应用，请在偏好设置 › 工具的 Codex 一行中选择「重新检查」。",
       "system": "{{program}} 暂时还不能在 {{computer}} 的系统上运行。",
       "no_computerCloud": "{{computer}} 一就绪即可使用。"
     },
@@ -11818,8 +11814,6 @@
     "see": "查看队列",
     "openComputer": "打开电脑",
     "label": "{{name}} 的队列",
-    "full": "已满",
-    "fullNext": "已满 · 下一个约 {{n}} 分钟后开始",
     "free": "没有排队",
     "workingNow": "正在工作 · {{n}}",
     "inLine": "排队中 · {{n}}",
@@ -12527,7 +12521,7 @@
         "invalid": "无效"
       },
       "line": {
-        "env": "已在此服务器的设置中配置（GITHUB_APP_ID）。",
+        "env": "已在此服务器的设置中配置（`GITHUB_APP_ID`）。",
         "invalid": "此服务器无法打开已保存的应用。请移除后重新创建。",
         "events": "要让智能体收到 GitHub 上发生的事，请在应用中勾选这些事件：{{events}}。"
       },
@@ -13095,7 +13089,7 @@
     "composio": {
       "via": "通过 Composio",
       "needsReconnect": "需要重新连接",
-      "off_other": "{{names}} 等另外 {{count}} 个服务通过 Composio 连接。要启用它们，请让运行此服务器的人设置 COMPOSIO_API_KEY（见 SELF_HOSTING.md）。",
+      "off_other": "{{names}} 等另外 {{count}} 个服务通过 Composio 连接。要启用它们，请让运行此服务器的人设置 `COMPOSIO_API_KEY`（见 `SELF_HOSTING.md`）。",
       "usage": "Composio：{{month}} 已调用 {{calls}} 次，上限 {{limit}} 次",
       "usageNoLimit": "Composio：{{month}} 已调用 {{calls}} 次",
       "limitNotice": "本工作区本月的 Composio 调用次数已用完",
@@ -14242,7 +14236,7 @@
       },
       "railway": {
         "1": "在 Postgres 服务中，打开 Data → Query，运行下面的命令（请修改密码）。",
-        "2": "在 Variables 中，复制 DATABASE_PUBLIC_URL（DATABASE_URL 是内部地址，从这里无法使用）。",
+        "2": "在 Variables 中，复制 `DATABASE_PUBLIC_URL`（`DATABASE_URL` 是内部地址，从这里无法使用）。",
         "3": "把其中的用户名和密码换成 agentes_leitura 和你设置的密码，然后粘贴到这里。"
       },
       "rds": {
@@ -14277,7 +14271,7 @@
     "error": {
       "auth": "用户名或密码不匹配，请检查后重试。",
       "unreachable": "无法连接到数据库服务器。请检查地址，以及它是否接受外部连接。",
-      "blocked_host": "不允许使用此服务器。请使用数据库的公网地址（内部地址，如 Railway 的 DATABASE_URL，从这里无法使用）。",
+      "blocked_host": "不允许使用此服务器。请使用数据库的公网地址（内部地址，如 Railway 的 `DATABASE_URL`，从这里无法使用）。",
       "tls": "数据库不接受安全连接。请在数据库中开启 SSL，或在“高级”中选择“不加密”（仅限测试数据库）。",
       "unknown": "暂时无法连接，请稍后再试。",
       "no_databases": "此用户无法打开此服务器上的任何数据库。请检查权限或名称开头。"
@@ -15170,7 +15164,7 @@
       "titleRequired": "请给它起个名字。",
       "tooLong": "太长了。上限是 {{max}}。",
       "notHttps": "请使用以 https:// 开头的地址",
-      "keyNameInvalid": "名称中请使用大写字母、数字和 _，例如 ACME_API_KEY。",
+      "keyNameInvalid": "名称中请使用大写字母、数字和 _，例如 `ACME_API_KEY`。",
       "keyNameReserved": "此名称已被保留。请换一个。",
       "keyNameTaken": "这里已保存了同名的密钥。",
       "contactEmpty": "请至少填写一项。",
@@ -15565,14 +15559,20 @@
       "since": "自 {{time}} 起",
       "until": "至 {{time}}",
       "withHost": "与 {{host}} 一起",
-      "lastSeen": "上次在线 {{time}}"
+      "lastSeen": "上次在线 {{time}}",
+      "offlineUnresponsive": "{{time}} 起无响应",
+      "offlineStopped": "runner 于 {{time}} 停止",
+      "offlineDropped": "连接于 {{time}} 断开"
     },
     "line": {
       "ready": "智能体现在就可以使用它。",
       "busy_other": "{{max}} 个任务中有 {{count}} 个正在运行",
       "offline": "智能体会等它回来。",
       "offlineSeen": "上次在线 {{time}}。智能体会等它回来。",
-      "offlineWithHost": "{{host}} 已离线。智能体会等它回来。"
+      "offlineWithHost": "{{host}} 已离线。智能体会等它回来。",
+      "offlineUnresponsive": "{{time}} 起无响应，可能没有网络或负载过高。请在这台电脑上运行 `{{command}}`。",
+      "offlineStopped": "runner 于 {{time}} 停止。请重新启动它，或在这台电脑上运行 `{{command}}` 查看原因。",
+      "offlineDropped": "连接于 {{time}} 断开，会自动重连。如果没有恢复，请在这台电脑上运行 `{{command}}`。"
     },
     "reason": {
       "locked": "手机已锁定",
@@ -15932,7 +15932,12 @@
       "iosBehind": "此 iPhone 运行 iOS {{ios}},而这台 Mac 上的 Xcode 适用于 iOS {{sdk}}。请更新 iPhone:设置 › 通用 › 软件更新。",
       "xcodeOld": "{{name}} 运行 iOS {{version}}，而 {{mac}} 上的 Xcode 最高只支持 iOS {{sdk}}。安装 Xcode {{major}}，然后在终端中运行下面的命令。",
       "xcodeOldAny": "{{name}} 运行 iOS {{version}}，比 {{mac}} 上的 Xcode 支持的版本更新。安装 Xcode {{major}}，然后在终端中运行下面的命令。",
-      "uiRefusedText": "iPhone 拒绝了测试助手的点按。请解锁它，如有要求就输入密码。如果反复出现，把 设置 › 开发者 › 启用 UI 自动化 关闭再打开。",
+      "uiRefusedText": "智能体能看到 iPhone 的屏幕，但 iOS 拒绝了它们的点按。",
+      "uiTurnOn": "在 iPhone 上打开以下两项：",
+      "uiPasscode": "需要时输入密码，并保持 iPhone 解锁。",
+      "uiCheck": "再检查一次",
+      "repair": "修复测试助手",
+      "repairHint": "Mac 会停止测试助手，并用它的 Xcode 在几分钟内重新构建。适用于两项都打开后点按仍然失败的情况。",
       "tooOld": "{{name}} 运行 iOS {{version}}，而智能体需要 iOS 17 或更新版本。能更新就更新，或者连接一台更新的 iPhone。",
       "tooOldVersion": "16 或更早版本",
       "pluggedIn": "已经插好了",
@@ -16461,6 +16466,11 @@
       "sentence": "{{who}}通过邮件回复了",
       "request": "{{name}} 的支持请求"
     },
+    "operatorReview": {
+      "sentence": "{{who}}出于安全原因审查了内容",
+      "items_other": "{{value}} 项内容",
+      "period": "{{from}}至{{to}}"
+    },
     "change": {
       "mergedWithoutAsking": "未经询问在 {{repo}} 中合并",
       "accentChanged": "更改了工作区的强调色",
@@ -16972,8 +16982,8 @@
         },
         "line": {
           "invalid": "此服务器无法读取这个密钥，请重新粘贴。",
-          "env": "已在此服务器的设置中配置（GIPHY_API_KEY）。",
-          "envInvalid": "此密钥无法使用。请在此服务器的设置中更改（GIPHY_API_KEY）。"
+          "env": "已在此服务器的设置中配置（`GIPHY_API_KEY`）。",
+          "envInvalid": "此密钥无法使用。请在此服务器的设置中更改（`GIPHY_API_KEY`）。"
         },
         "invalid": "GIPHY 不接受这个密钥。请从 GIPHY Developers 重新复制。",
         "remove": {
@@ -17555,6 +17565,11 @@
         "shell": "会在内部运行其他命令",
         "inline": "会运行内联代码",
         "global": "会为整台电脑安装",
+        "privilege": "它要求更高的权限",
+        "reverseShell": "它把这台电脑的 shell 交给另一台机器",
+        "destroy": "它会清空电脑或整个主文件夹",
+        "network": "它修改或绕过代理和防火墙",
+        "otherUser": "它会访问其他用户的文件",
         "rules": "超出了智能体可自行执行的范围",
         "noAccess": "智能体无权访问此内容",
         "policy": "此类工作中不允许",
@@ -18825,6 +18840,21 @@
     "writeAfter": "。",
     "ask": "需要帮助？请询问这台服务器的管理员。"
   },
+  "resetOrg": {
+    "cardTitle": "重置或删除",
+    "row": {
+      "title": "重置工作区",
+      "text": "清除其中创建的所有内容，并以同样的成员重新开始。"
+    },
+    "goes": "智能体、对话、私信、文件、任务、例行任务和记忆",
+    "stays": "成员、角色、邀请、AI 账号、电脑和连接器",
+    "fresh": "之后它会像新工作区一样打开，带有初始设置",
+    "plan": "套餐保持不变，不会再次收费",
+    "now": "立即生效，无法撤销。",
+    "title": "重置 {{name}}？",
+    "submit": "重置工作区",
+    "resetting": "正在重置 {{name}}…"
+  },
   "deleteOrg": {
     "card": {
       "title": "删除工作区",
@@ -18896,8 +18926,7 @@
     "menu": "删除账号",
     "card": {
       "text": "7 天后在所有工作区中删除你的账号。",
-      "button": "删除账号…",
-      "title": "删除"
+      "button": "删除账号…"
     },
     "title": "删除你的整个账号？",
     "intro": "这会删除你的整个账号，而不只是一个工作区。",
@@ -20526,6 +20555,38 @@
       "alwaysOn": "从现在起，这类报告会直接发送，不再询问。",
       "askFirst": "发送前先询问"
     }
+  },
+  "problemReport": {
+    "button": "发送报告",
+    "title": "向 agentes.chat 发送报告",
+    "lead": "agentes.chat 团队会收到：版本、哪些设置已配置（不含其值）、出错的内容，以及日志的最后几行。不包含消息、页面、名称或密钥。",
+    "noteLabel": "发生了什么？（可选）",
+    "notePlaceholder": "停止时你正在做什么",
+    "emailLabel": "用于回复的邮箱（可选）",
+    "emailHelp": "仅在你需要回复时填写。",
+    "showAll": "查看发送的全部内容",
+    "copy": "复制报告",
+    "copied": "已复制",
+    "send": "发送",
+    "sending": "正在发送…",
+    "cancel": "取消",
+    "loading": "正在收集详细信息…",
+    "sentTitle": "报告 {{id}} 已发送",
+    "sentText": "如果你给我们写信，请注明此代码。",
+    "sentTextReply": "我们会回复到 {{email}}。如果你给我们写信，请注明此代码。",
+    "copyCode": "复制代码",
+    "done": "完成",
+    "noLogComputer": "{{computer}} 没有响应，因此未包含它的日志。",
+    "oldRunner": "{{computer}} 上的 agentes.chat 应用版本太旧，无法包含其日志。请在那台电脑上更新应用后再试。",
+    "noServerLines": "只有安装的所有者发送报告时，才会包含服务器的日志行。",
+    "off": "此服务器已关闭发送（`PROBLEM_REPORT_URL=off`）。请复制报告来分享。",
+    "errorRate": "短时间内报告太多。请在 {{minutes}} 分钟后重试，或复制报告。",
+    "errorUnreachable": "agentes.chat 没有响应。请重试，或复制报告。",
+    "errorRefused": "agentes.chat 未接受此报告（可能来自旧版本）。请改为复制报告。",
+    "errorPreview": "无法收集详细信息：{{reason}}",
+    "emailInvalid": "这个邮箱看起来不对。请修改或留空。",
+    "settingsTitle": "有功能不正常吗？",
+    "settingsText": "将技术详细信息发送给 agentes.chat 团队。"
   },
   "live": {
     "slides": {

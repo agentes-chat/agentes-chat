@@ -484,6 +484,10 @@ export const PlanWindow = z.object({
   label: z.string().optional().openapi({ description: "`other`: the provider's name for it." }),
   usedPercent: z.number().openapi({ description: "0–100." }),
   resetsAt: z.string().optional(),
+  at: z
+    .string()
+    .optional()
+    .openapi({ description: "When this window was last read, where that is before the reading's `at`." }),
 });
 
 export const PlanUsage = z
@@ -599,6 +603,10 @@ export const Agent = z
     seesDetails: z.boolean().openapi({
       description:
         "Whether the current person sees how it works: who edits it (`canEdit`) and whoever it answers. Without it `instructions` is empty and its tools, memory, usage and activity answer 403 `agent.details_hidden`.",
+    }),
+    listed: z.boolean().optional().openapi({
+      description:
+        "Whether the current person's lists and pickers name it: every agent with `view_all_agents` or `manage_agents`, but a private one (it answers only its owner) only for who sees how it works (`seesDetails`). False: it stays out of every list; its messages and its public card still show. Absent (older servers): true.",
     }),
     appearance: AgentAppearance.nullable().openapi({ description: "Its look; null = the default." }),
     mediaReplies: z.boolean().openapi({
@@ -1069,22 +1077,16 @@ export const BrainUnavailable = z.enum([
   "runner_old",
   "tool_off",
   "not_installed",
-  "outdated",
   "not_reported",
   "system",
   "cant_start",
 ]);
-
-export const CodexVersionRequirement = z
-  .object({ detected: z.string(), minimum: z.string() })
-  .openapi("CodexVersionRequirement");
 
 export const BrainOption = z
   .object({
     kind: BrainKind,
     available: z.boolean(),
     reason: BrainUnavailable.optional().openapi({ description: "Why it can't be chosen now (computer brains)." }),
-    codexVersion: CodexVersionRequirement.optional(),
     models: z.array(
       z.object({
         value: z.string().openapi({ description: "What is stored and passed to the CLI (`opus`, `gpt-…`)." }),

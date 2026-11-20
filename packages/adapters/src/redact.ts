@@ -383,6 +383,10 @@ export function errorLineOf(output: string): string {
   return lines.filter((l) => ERROR_LINE.test(l)).at(-1) ?? lines.at(-1) ?? "";
 }
 
+/** Whether a program's words say its disk is full, or its user's disk quota is (`ENOSPC: no space left on device`). */
+export const saysDiskFull = (said: string) =>
+  /\b(?:ENOSPC|EDQUOT)\b|no space left on device|disk quota exceeded/i.test(said);
+
 /** `text` in at most `max` characters: when longer, cut after its last whole word, with "…". */
 export function cutAtWord(text: string, max: number): string {
   if (text.length <= max) return text;

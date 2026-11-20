@@ -435,7 +435,7 @@ describe("Perfil: o mês, com os limites do plano (ADR 0063 §5)", () => {
     const parts = await Bun.file(new URL("../../src/features/usage/parts.tsx", import.meta.url).pathname).text();
     expect(parts).toContain('const tone = c[PLAN_TONE[planLevel(shown.top?.used ?? 0, shown.state === "limited")]];');
     expect(parts).toContain('{ color: c[PLAN_TONE[planLevel(used, state === "limited")]] }');
-    expect(parts).toContain("const level = planLevel(w.used);");
+    expect(parts).toContain('const level = w.stale ? "ok" : planLevel(w.used);');
     expect(parts.match(/color=\{tone\}/g)).toHaveLength(2);
   });
 

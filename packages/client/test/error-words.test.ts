@@ -537,6 +537,7 @@ const PLAIN_LINE = new Set([
   "reveal.limit_day",
   "reveal.limit_minute",
   "reveal.limit_request",
+  "reveal.limit_untold",
   "reveal.limit_workspace",
   "reveal.no_email",
   "reveal.no_error",

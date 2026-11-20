@@ -171,6 +171,8 @@ export type EmailTemplate =
       url: string;
       /** With `orgName`: a personal workspace's (ADR 0159). */
       personal?: true;
+      /** With `orgName`: the code resets the workspace instead of deleting it. */
+      reset?: true;
     }
   /**
    * A code to type before the account's address becomes `newEmail` (ADR 0088 §2, addendum 2026-11-13), to its current
@@ -867,6 +869,14 @@ function docOf(t: EmailTemplate, sender: string | null): EmailDoc {
     case "deletion_code": {
       const c = inMode(w.deletionCode, t.personal);
       const org = t.orgName === undefined ? null : inertText(t.orgName);
+      if (org !== null && t.reset)
+        return doc(
+          c.subjectReset(t.code),
+          c.preheader,
+          c.headline,
+          [{ p: c.reset(org) }, { code: t.code }, { small: t.support ? c.support(t.support) : c.noSupport }],
+          c.whyReset(org),
+        );
       return doc(
         org === null ? c.subjectAccount(t.code) : c.subjectWorkspace(t.code),
         c.preheader,

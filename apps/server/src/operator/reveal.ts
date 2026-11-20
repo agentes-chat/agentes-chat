@@ -1,6 +1,9 @@
 import { createMemoryRateLimiter } from "@agenteschat/adapters";
 import {
   ConflictError,
+  DISCLOSURE_MAX_COUNT,
+  DISCLOSURE_MAX_DAYS,
+  operatorDisclose,
   operatorReply,
   operatorReveal,
   REPLIES_PER_DAY,
@@ -17,13 +20,15 @@ import {
   REVEAL_PURPOSES,
   REVEAL_REASON_CHARS,
   REVEAL_REQUEST_DAYS,
+  REVEAL_UNTOLD_PER_DAY,
   SUPPORT_WORDS_KEEP_DAYS,
   TooManyError,
 } from "@agenteschat/engine";
 import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi";
-import { errorResponse } from "../http/errors";
+import { apiError, errorResponse } from "../http/errors";
 import { body, json, OrgParams } from "../routes/app/context";
 import type { OperatorDeps } from "./app";
+import { Instant } from "./runs";
 
 const tags = ["Operator"];
 
@@ -43,7 +48,7 @@ const RevealRequest = z
     limit: z.number().int().min(1).max(REVEAL_MAX_CHARS).default(REVEAL_MAX_CHARS),
     purpose: z.enum(REVEAL_PURPOSES).openapi({
       description:
-        "`member_request`: a member asked for help (`requestId`). `fault`: a run failed or got stuck (`runId`).",
+        "`member_request`: a member asked for help (`requestId`). `fault`: a run failed or got stuck (`runId`). `trust_safety`: a safety review, to investigate suspected abuse (neither).",
     }),
     reason: z.string().trim().min(REVEAL_REASON_CHARS.min).max(REVEAL_REASON_CHARS.max).openapi({
       description:
@@ -56,19 +61,20 @@ const RevealRequest = z
       .max(REVEAL_OPERATOR_MAX)
       .openapi({ description: "Who reads, as your own service names them. Kept in the `content.viewed` event." }),
     assistedByAi: z.boolean().openapi({
-      description: "Whether an AI assistant reads the answer. The workspace's audit entry says so.",
+      description:
+        "Whether an AI assistant reads the answer. The workspace's audit entry says so, and the `content.viewed` event.",
     }),
     requestId: z
       .uuid()
       .optional()
       .openapi({
-        description: `A support request of this workspace made in the last ${REVEAL_REQUEST_DAYS} days. With \`member_request\`, the proof: what its member reads in the app now is what opens. With \`fault\`, optional: the report the run was about, which the run's days then count back from.`,
+        description: `A support request of this workspace made in the last ${REVEAL_REQUEST_DAYS} days. With \`member_request\`, the proof: what its member reads in the app now is what opens. With \`fault\`, optional: the report the run was about, which the run's days then count back from. Refused with \`trust_safety\`.`,
       }),
     runId: z
       .uuid()
       .optional()
       .openapi({
-        description: `With \`fault\`, the proof: a run of this workspace made in the last ${REVEAL_FAULT_DAYS} days (or up to ${REVEAL_FAULT_DAYS} days before \`requestId\`'s request) that failed, stands still for over an hour with nothing a person is asked to do, or holds a failed step.`,
+        description: `With \`fault\`, the proof: a run of this workspace made in the last ${REVEAL_FAULT_DAYS} days (or up to ${REVEAL_FAULT_DAYS} days before \`requestId\`'s request) that failed, stands still for over an hour with nothing a person is asked to do, or holds a failed step. Refused with \`trust_safety\`.`,
       }),
   })
   .openapi("OperatorRevealRequest");
@@ -126,6 +132,21 @@ const Replied = z
   })
   .openapi("OperatorReplied");
 
+// Strict, as a read is: a reason, an item or a word sent along is refused, never kept.
+const DisclosureRequest = z
+  .strictObject({
+    from: Instant.openapi({ description: "When the first of the reads was made." }),
+    to: Instant.openapi({
+      description: `When the last was made: after \`from\`, at most ${DISCLOSURE_MAX_DAYS} days after it, and not in the future.`,
+    }),
+    count: z.number().int().min(1).max(DISCLOSURE_MAX_COUNT).openapi({
+      description: "How many items you read. Your own count: this server checks it against nothing.",
+    }),
+  })
+  .openapi("OperatorDisclosureRequest");
+
+const Disclosure = z.object({ from: Instant, to: Instant, count: z.number().int() }).openapi("OperatorDisclosure");
+
 export function registerOperatorReveal(api: OpenAPIHono, { db, config, emails, rateLimiter }: OperatorDeps) {
   const limiter = rateLimiter ?? createMemoryRateLimiter();
   // One count for every call the reveal token makes, a read or a reply.
@@ -141,16 +162,16 @@ export function registerOperatorReveal(api: OpenAPIHono, { db, config, emails, r
       tags,
       summary: "Read one field of one record of what a workspace wrote, with a reason",
       description:
-        `Only with \`OPERATOR_API_REVEAL_TOKEN\`. One record a call, at most ${REVEAL_MAX_CHARS} characters, for one of two purposes that a record of the workspace proves. For \`member_request\`: the support request is this workspace's and recent (403 \`reveal.no_request\`), its member still is one (\`reveal.requester\`) and reads the record in the app now (\`reveal.not_visible\`). For \`fault\`: the run failed or got stuck in its days (\`reveal.no_fault\`), the record is its step, the message that started it or one it wrote, its agent's instructions, its routine or a task it started, or, for a run that went on past a failed step, that step's \`error\` and its call's \`input\` alone (\`reveal.not_the_fault\`), and it is not of a direct conversation (\`reveal.direct_conversation\`). What a run of a confidential thread holds opens under neither purpose: its steps and a task it started answer 403 \`reveal.confidential\` where the proof would have opened them, and a message of such a thread reads as its stub. ` +
-        "Before any text is read, the read is recorded: a `content.viewed` event with the reason, and an entry in the workspace's own audit log (`operator.content_read`) with what was read, the purpose and its proof, never the reason. A record of another workspace, a deleted one and one nobody has answer the same 404. An `error` of something that did not fail is 409 `reveal.no_error`. " +
-        `At most ${REVEAL_PER_MINUTE.limit} calls a minute (429 \`reveal.limit_minute\`) and ${REVEAL_PER_WORKSPACE_DAY} reads of one workspace in 24 hours (\`reveal.limit_workspace\`).`,
+        `Only with \`OPERATOR_API_REVEAL_TOKEN\`. One record a call, at most ${REVEAL_MAX_CHARS} characters, for one of three purposes. Two are proved by a record of the workspace. For \`member_request\`: the support request is this workspace's and recent (403 \`reveal.no_request\`), its member still is one (\`reveal.requester\`) and reads the record in the app now (\`reveal.not_visible\`). For \`fault\`: the run failed or got stuck in its days (\`reveal.no_fault\`), the record is its step, the message that started it or one it wrote, its agent's instructions, its routine or a task it started, or, for a run that went on past a failed step, that step's \`error\` and its call's \`input\` alone (\`reveal.not_the_fault\`), and it is not of a direct conversation (\`reveal.direct_conversation\`). For \`trust_safety\`, a safety review to investigate suspected abuse, no record proves the purpose and the call names none (\`requestId\` or \`runId\` with it is a 400): this server has no record of an abuse investigation, so your own service answers for the cause. It opens every kind but a support request's words (\`reveal.not_visible\`), and of a direct conversation never a message that no agent wrote and that started no run (\`reveal.direct_conversation\`). What a run of a confidential thread holds opens under no purpose: its steps and a task it started answer 403 \`reveal.confidential\` where the purpose would have opened them, and a message of such a thread reads as its stub. ` +
+        "Before any text is read, the read is recorded: a `content.viewed` event with the reason, and, for `member_request` and `fault`, an entry in the workspace's own audit log (`operator.content_read`) with what was read, the purpose and its proof, never the reason. A read for `trust_safety` writes the event and no entry: you tell the workspace afterwards with `POST /orgs/{orgId}/content-reads/disclosure`, when your review ends and 7 days after the read at the latest. A record of another workspace, a deleted one and one nobody has answer the same 404. An `error` of something that did not fail is 409 `reveal.no_error`. " +
+        `At most ${REVEAL_PER_MINUTE.limit} calls a minute (429 \`reveal.limit_minute\`), ${REVEAL_PER_WORKSPACE_DAY} reads of one workspace in 24 hours (\`reveal.limit_workspace\`) and, on the whole server, ${REVEAL_UNTOLD_PER_DAY} reads for \`trust_safety\` in 24 hours (\`reveal.limit_untold\`).`,
       request: { params: OrgParams, body: body(RevealRequest) },
       responses: {
         200: json(Revealed),
         400: errorResponse("Invalid request"),
         401: errorResponse("Missing or wrong token"),
         403: errorResponse(
-          "Not the reveal token, the door is closed, the purpose's proof does not open this, or a confidential thread keeps it",
+          "Not the reveal token, the door is closed, the purpose does not open this, or a confidential thread keeps it",
         ),
         404: errorResponse("No such record in this workspace"),
         409: errorResponse("It holds no error (`reveal.no_error`)"),
@@ -190,6 +211,34 @@ export function registerOperatorReveal(api: OpenAPIHono, { db, config, emails, r
       if (!emails) throw new ConflictError("This server sends no email, so no reply can go out", "reveal.no_email");
       const mail = { publicUrl: config.PUBLIC_URL, support: config.SUPPORT_EMAIL ?? null };
       return c.json(await operatorReply(db, c.req.valid("param").orgId, c.req.valid("json"), mail), 200);
+    },
+  );
+
+  api.openapi(
+    createRoute({
+      method: "post",
+      path: "/orgs/{orgId}/content-reads/disclosure",
+      tags,
+      summary: "Tell a workspace, afterwards, that its content was read to investigate suspected abuse",
+      description:
+        "Only with `OPERATOR_API_TOKEN`. An operator that read content for `trust_safety` tells the workspace afterwards that it did: one entry in the workspace's own audit log (`operator.content_review_disclosed`, actor `system`) with the period and how many items, and nothing else: no reason, no record, no text. You owe it when your review ends, and 7 days after the read at the latest. The same `from` and `to` again answer the entry first written and write nothing, so a call that timed out can be sent again; another period writes its own entry.",
+      request: { params: OrgParams, body: body(DisclosureRequest) },
+      responses: {
+        200: json(Disclosure),
+        400: errorResponse(
+          "Invalid request: a period that has not ended, is backwards or too long, or a count out of bounds",
+        ),
+        401: errorResponse("Missing or wrong token"),
+        403: errorResponse("Not the full token"),
+        404: errorResponse("Not found"),
+      },
+    }),
+    async (c) => {
+      const { from, to, count } = c.req.valid("json");
+      const period = { from: new Date(from), to: new Date(to), count };
+      const disclosed = await operatorDisclose(db, c.req.valid("param").orgId, period);
+      if (!disclosed) return apiError(c, 404, "not_found", "No workspace with this id");
+      return c.json(disclosed, 200);
     },
   );
 }

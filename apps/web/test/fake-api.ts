@@ -79,6 +79,7 @@ import type {
   PersonLimits,
   PersonUsage,
   PlanAccountUsage,
+  ProblemReportPreview,
   Proposal,
   ReactionCount,
   RightHandApprovals,
@@ -410,6 +411,10 @@ export interface FakeState {
   setupResults?: Record<string, Omit<AgentSetupResult, "agentId">>;
   /** `system.telemetry`: the usage report's switch; unset = I'm not the installation's owner (null). */
   telemetry?: ServerTelemetry;
+  /** `system.previewProblemReport`: the report shown; unset = a small one with sending on. A function may wait or throw. */
+  problemReport?: ProblemReportPreview | (() => Promise<ProblemReportPreview>);
+  /** `system.sendProblemReport`: its code, or what it throws; unset = `R-7K3QXM`. */
+  problemReportSend?: { id: string } | ApiError;
   /** `system.jev`: the installation's Jev key; unset = I'm not its owner on a self-hosted server (null). */
   jev?: JevKey;
   /**
@@ -1421,11 +1426,15 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
       mode === "everyone" || a.ownerUserId === me || (mode === "people" && (a.audience?.userIds ?? []).includes(me))
     );
   };
-  // The server's `listsAgentTo`: Equipe, its sectors and the counts name only these (who it answers or who edits it).
-  const listed = () => {
-    const all = listsAllAgents(state.me ? withPermissions(state.me).organizations[0] : undefined);
-    return state.agents.filter((a) => all || talksToMe(a) || rightsOf(a).canEdit);
-  };
+  // The server's `listsAgentTo`: Equipe, its sectors, the counts and every list name only these. Who sees every agent
+  // sees all but a private one (it answers only its owner); else who it answers, who edits it and admins.
+  const listsToMe = (a: Agent) =>
+    (listsAllAgents(state.me ? withPermissions(state.me).organizations[0] : undefined) &&
+      answersOthers(audienceOf(a), a.ownerUserId)) ||
+    talksToMe(a) ||
+    rightsOf(a).canEdit ||
+    seesCost();
+  const listed = () => state.agents.filter(listsToMe);
   /** Whether my workspace keys include `key`, as `me` resolves them (`withPermissions`). */
   const holds = (key: string) =>
     (state.me ? withPermissions(state.me).organizations[0]?.permissions : undefined)?.includes(key) === true;
@@ -1502,6 +1511,25 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         if (!state.telemetry) throw new ApiError(404, "not_found", "Not found");
         state.telemetry = { ...state.telemetry, enabled };
         return state.telemetry;
+      },
+      previewProblemReport: async (input) => {
+        log("system.previewProblemReport", input);
+        const p = state.problemReport;
+        if (typeof p === "function") return p();
+        return (
+          p ?? {
+            report: { format: 1, source: "server", place: input.place },
+            text: '{\n  "format": 1\n}',
+            send: "on",
+            missing: {},
+          }
+        );
+      },
+      sendProblemReport: async (input) => {
+        log("system.sendProblemReport", input);
+        const r = state.problemReportSend ?? { id: "R-7K3QXM" };
+        if (r instanceof ApiError) throw r;
+        return r;
       },
       sendFeedback: async (input) => {
         log("system.sendFeedback", input);
@@ -1891,6 +1919,16 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           organizations: me.organizations.map((o) => (o.id === orgId ? { ...o, deletion, onboarding: undefined } : o)),
         };
         return { dueAt };
+      },
+      resetCode: async (orgId) => {
+        log("orgs.resetCode", orgId);
+        if (state.codeError) throw state.codeError;
+        return { email: requireMe().user.email, resendIn: 60 };
+      },
+      reset: async (orgId, input) => {
+        log("orgs.reset", orgId, input);
+        if (state.deletionError) throw state.deletionError;
+        return { startedAt: new Date().toISOString() };
       },
       restore: async (orgId) => {
         log("orgs.restore", orgId);
@@ -2366,8 +2404,9 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         const all = listsAllAgents(state.me ? withPermissions(state.me).organizations[0] : undefined);
         const ids = new Set(listed().map((a) => a.id));
         return structuredClone(state.agentGroups ?? [])
-          .map((g) => (all ? g : { ...g, agentIds: g.agentIds.filter((id) => ids.has(id)) }))
-          .filter((g) => all || g.agentIds.length > 0);
+          .map((g) => ({ ...g, agentIds: g.agentIds.filter((id) => ids.has(id)), was: g.agentIds.length }))
+          .filter((g) => g.agentIds.length > 0 || (all && g.was === 0))
+          .map(({ was: _was, ...g }) => g);
       },
       create: async (orgId, input) => {
         state.calls.push({ method: "agentGroups.create", args: [orgId, input] });
@@ -2504,6 +2543,7 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
             canTalk,
             ...withRights(a, seesDetails),
             seesDetails,
+            listed: listsToMe(a),
           };
         }),
       create: async (orgId, input) => {

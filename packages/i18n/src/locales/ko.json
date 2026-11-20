@@ -381,7 +381,7 @@
     },
     "view_all_agents": {
       "title": "모든 에이전트 보기",
-      "desc": "팀과 사이드바에서요. 끄면 그 사람에게 답하는 에이전트만 보여요.",
+      "desc": "팀과 사이드바에서요. 다른 사람의 개인 에이전트는 빼고요. 끄면 그 사람에게 답하는 에이전트만 보여요.",
       "short": "모든 에이전트 보기",
       "say": "모든 에이전트 보기"
     },
@@ -1280,8 +1280,8 @@
       "where": {
         "openbotrun": "openbot-import.json(OpenBot의 Migrator에서 만든 파일)이나 openbot-transfer.json(인스턴스 이전에서 만든 파일), 또는 이 파일이 담긴 .zip을 끌어다 놓으세요.",
         "openmausbot": "OpenMausBot에서 팀을 오른쪽 클릭 → 팀 공유… → 파일 저장.",
-        "hermes": "터미널에서 프로필 이름과 함께 hermes profile export를 실행하고 .tar.gz를 여기에 끌어다 놓으세요. 또는 ~/.hermes 폴더를 끌어다 놓으면 모든 프로필을 가져와요.",
-        "openclaw": "~/.openclaw 폴더 전체(모든 에이전트를 가져와요)나 워크스페이스 하나만 끌어다 놓으세요. Mac에서는 파일 선택 창에서 ⌘⇧.를 누르면 숨김 폴더가 보여요.",
+        "hermes": "터미널에서 프로필 이름과 함께 `hermes profile export`를 실행하고 .tar.gz를 여기에 끌어다 놓으세요. 또는 `~/.hermes` 폴더를 끌어다 놓으면 모든 프로필을 가져와요.",
+        "openclaw": "`~/.openclaw` 폴더 전체(모든 에이전트를 가져와요)나 워크스페이스 하나만 끌어다 놓으세요. Mac에서는 파일 선택 창에서 ⌘⇧.를 누르면 숨김 폴더가 보여요.",
         "paperclip": "패키지 폴더(COMPANY.md가 있는 폴더)를 끌어다 놓거나, 그 폴더의 .zip을 놓거나, GitHub 링크를 붙여넣으세요.",
         "agenteschat": "다른 워크스페이스에서: 설정 → 가져오기 및 내보내기 → 파일 다운로드. 그다음 .json을 여기에 끌어다 놓으세요."
       },
@@ -3645,11 +3645,13 @@
   },
   "keyGuard": {
     "title": "API 키처럼 보여요",
-    "text": "채팅의 모든 내용은 사람과 에이전트가 볼 수 있어요. 대신 워크스페이스 키로 저장하세요. 암호화되어 아무도 볼 수 없어요.",
-    "textMember": "채팅의 모든 내용은 사람과 에이전트가 볼 수 있어요. 키는 비밀번호와 같아요.",
-    "save": "키로 저장",
+    "titleSecret": "키나 비밀번호처럼 보여요",
+    "vaultText": "채팅에 올린 내용은 사람과 에이전트 모두 볼 수 있어요. Vault에 보관하세요. 암호화되고, 허용한 에이전트는 내용을 보지 않고 사용해요.",
+    "vault": "Vault에 저장",
+    "useAsAi": "AI 키로 사용",
     "remove": "지우기",
-    "send": "그래도 보내기"
+    "send": "그래도 보내기",
+    "saved": "접근 권한이 있는 에이전트는 {{name}} 이름으로 사용해요."
   },
   "costlyCard": {
     "go": "진행해 주세요",
@@ -4576,7 +4578,7 @@
     "error": {
       "title": "이름을 지어 주세요.",
       "website": "https 주소를 쓰세요. 예: app.example.com",
-      "keyName": "대문자, 숫자, _를 쓰고 영문자로 시작하세요. 예: ACME_API_KEY",
+      "keyName": "대문자, 숫자, _를 쓰고 영문자로 시작하세요. 예: `ACME_API_KEY`",
       "password": "비밀번호를 입력하세요.",
       "value": "값을 입력하세요.",
       "contact": "최소 한 칸은 채워 주세요."
@@ -4724,7 +4726,7 @@
       "show": "{{name}}의 값 보기",
       "hide": "{{name}}의 값 숨기기",
       "problem": {
-        "name": "이름은 ACME_API_KEY 같은 형식이어야 해요",
+        "name": "이름은 `ACME_API_KEY` 같은 형식이어야 해요",
         "reserved": "예약된 이름",
         "empty": "값 없음",
         "tooLarge": "값이 너무 커요"
@@ -5724,7 +5726,8 @@
         },
         "speedText": "대화에서 더 빨리 답하고 요금제를 2.5배 빨리 소진해요. 루틴과 긴 작업은 표준 속도로 유지돼요.",
         "modelLine": {
-          "opus": "가장 뛰어나요. 요금제를 더 빨리 소진해요.",
+          "fable": "가장 뛰어나요. 요금제를 훨씬 빨리 소진해요.",
+          "opus": "매우 뛰어나요. 요금제를 더 빨리 소진해요.",
           "sonnet": "균형 잡힌 모델이에요. 거의 모든 일에 좋아요.",
           "haiku": "빠르고 가벼워요. 간단한 작업용이에요."
         },
@@ -6238,12 +6241,13 @@
         "computer_busy": "컴퓨터가 다른 작업으로 계속 바빴어요.",
         "computer_failed": "컴퓨터에 문제가 생겨 멈췄어요.",
         "computer_timeout": "컴퓨터가 응답하는 데 너무 오래 걸렸어요.",
+        "disk_full": "이 컴퓨터의 디스크가 가득 찼어요. 더 이상 필요 없는 파일을 지우거나(공간이 조금 생기면 에이전트가 지울 수 있어요) 관리자에게 공간을 비워 달라고 요청하세요.",
         "cli_failed": "오류로 {{brain}} 프로그램이 멈췄어요: {{detail}}",
         "cli_stopped": "오류로 {{brain}} 프로그램이 멈췄어요.",
         "cli_closed": "갑자기 {{brain}} 프로그램이 종료됐어요.",
         "cli_sandbox": "{{brain}} 프로그램이 이 컴퓨터에서 샌드박스를 시작할 수 없어요. 에이전트 설정에서 다른 AI를 고르세요.",
         "account_missing": "이 에이전트에 고른 계정이 더 이상 컴퓨터에 없어요. 에이전트 설정에서 다른 계정을 고르거나 다시 추가하세요.",
-        "windows_sandbox": "이 Windows 컴퓨터에서는 Codex의 명령을 격리할 수 없어요. Windows 11 24H2 이상이 필요해요.",
+        "windows_sandbox": "이 Windows 컴퓨터에서는 Codex의 명령을 격리할 수 없어요. Windows 11 24H2 이상이 필요해요. Windows를 업데이트하거나, 이 에이전트에 Claude나 API 키를 선택하거나, Linux 컴퓨터로 옮기세요.",
         "our_error": "저희 쪽에서 문제가 생겨 작업이 멈췄어요. 잠시 후 다시 요청해 주세요.",
         "unknown": "실패했어요."
       }
@@ -6966,6 +6970,7 @@
     "modelAndCost": "모델 및 비용",
     "model": "모델",
     "modelDesc": {
+      "fable": "가장 뛰어난 모델, 가장 어려운 작업용",
       "sonnet": "대부분에 추천",
       "opus": "길고 어려운 작업",
       "haiku": "빠르고 저렴함",
@@ -7685,7 +7690,10 @@
     "unreachableTitle": "agentes.chat에 연결할 수 없어요",
     "unreachableText": "다시 시작하는 중일 수 있어요. 돌아오는 대로 이 페이지가 자동으로 열려요.",
     "offlineTitle": "오프라인 상태예요",
-    "offlineText": "다시 온라인이 되면 이 페이지가 자동으로 열려요."
+    "offlineText": "다시 온라인이 되면 이 페이지가 자동으로 열려요.",
+    "unknownHostTitle": "이 주소는 아직 설정되지 않았어요",
+    "unknownHostText": "방금 연결했다면 몇 분 뒤에 다시 시도하세요.",
+    "unknownHostTab": "설정되지 않은 주소 · agentes.chat"
   },
   "scopes": {
     "context_read": {
@@ -8895,6 +8903,7 @@
       "computer_busy": "컴퓨터가 다른 작업으로 계속 바빴어요",
       "computer_failed": "컴퓨터에 문제가 생겨 멈췄어요",
       "computer_timeout": "컴퓨터가 응답하는 데 너무 오래 걸렸어요",
+      "disk_full": "컴퓨터의 디스크가 가득 찼어요",
       "cli_failed": "컴퓨터의 AI 프로그램이 오류로 멈췄어요",
       "account_missing": "에이전트의 계정이 더 이상 컴퓨터에 없어요",
       "our_error": "저희 쪽에서 문제가 생겼어요"
@@ -9380,8 +9389,7 @@
       "approvals": "기본적으로 머지, 배포, 롤백은 승인을 요청해요",
       "start": "미션 시작",
       "created": "미션을 만들었어요. {{name}}이(가) 계획을 세우고 있어요.",
-      "who": "프로그래밍 담당",
-      "codexOld": "{{computer}}의 Codex가 미션에 쓰기에는 너무 오래됐어요. 그 컴퓨터에서 업데이트하세요."
+      "who": "프로그래밍 담당"
     },
     "commandApproval": {
       "label": "자율성",
@@ -10275,8 +10283,8 @@
     "line": {
       "invalid": "TypeSafe가 이 키를 받지 않았어요. 새 키를 만드세요.",
       "no_credit": "TypeSafe에서 크레딧을 충전하세요. Jev가 알아서 다시 시작해요.",
-      "env": "이 서버의 설정(TYPESAFE_API_KEY)에서 지정돼요.",
-      "envInvalid": "TypeSafe가 이 키를 받지 않았어요. 이 서버의 설정(TYPESAFE_API_KEY)에서 바꾸세요."
+      "env": "이 서버의 설정(`TYPESAFE_API_KEY`)에서 지정돼요.",
+      "envInvalid": "TypeSafe가 이 키를 받지 않았어요. 이 서버의 설정(`TYPESAFE_API_KEY`)에서 바꾸세요."
     },
     "checkAgain": "다시 확인",
     "via": {
@@ -10302,7 +10310,7 @@
       "line": {
         "invalid": "OpenRouter가 이 키를 받지 않았어요. 새 키를 만드세요.",
         "no_credit": "OpenRouter에서 크레딧을 충전하세요. Jev가 알아서 다시 시작해요.",
-        "envInvalid": "OpenRouter가 이 키를 받지 않았어요. 이 서버의 설정(TYPESAFE_API_KEY)에서 바꾸세요."
+        "envInvalid": "OpenRouter가 이 키를 받지 않았어요. 이 서버의 설정(`TYPESAFE_API_KEY`)에서 바꾸세요."
       }
     },
     "remove": {
@@ -10380,7 +10388,6 @@
       "needsCloud": {
         "online": "{{computer}}이(가) 다시 시작하거나 다시 연결하는 중이에요. 돌아오면 저절로 바뀌어요.",
         "installing": "{{computer}}에 {{program}}을(를) 설치하는 중이에요. 끝나면 저절로 바뀌어요.",
-        "updating": "{{computer}}의 {{program}}을(를) 업데이트하는 중이에요. 끝나면 저절로 바뀌어요.",
         "runnerOld": "{{computer}}의 agentes.chat 프로그램이 오래되어 업데이트가 오고 있어요. 끝나면 저절로 바뀌어요.",
         "execOff": "{{computer}}이(가) 아직 {{program}}을(를) 실행할 수 없어요. 해결 중이고, 저절로 바뀌어요.",
         "toolOff": "{{computer}}에서 {{program}}이(가) 아직 허용되지 않았어요. 저희 쪽 문제예요. 나중에 다시 시도하세요.",
@@ -10514,7 +10521,7 @@
     "modeText": {
       "everyone": "워크스페이스의 누구나 {{name}}을(를) 부를 수 있어요.",
       "people": "{{name}}과(와) 대화할 수 있는 사람과 역할을 고르세요.",
-      "owner": "{{owner}}님만 {{name}}과(와) 대화해요.",
+      "owner": "{{owner}}님만 {{name}}과(와) 대화해요. 목록에서는 {{owner}}님, 관리자, 편집할 수 있는 사람만 {{name}}을(를) 볼 수 있어요.",
       "noOwner": "이 옵션을 쓰려면 소유자를 지정하세요.",
       "everyonePersonal": "여기 있는 누구나 {{name}}을(를) 부를 수 있어요.",
       "peoplePersonal": "{{name}}과(와) 대화할 수 있는 사람을 고르세요."
@@ -11572,12 +11579,6 @@
       "read": "{{name}}이(가) 읽었어요",
       "resolved": "{{name}}이(가) 도움 요청을 닫았어요"
     },
-    "well": {
-      "readYours": "내 메모를 읽었어요",
-      "readOf": "{{name}}의 메모를 읽었어요",
-      "nowYours": "멈추고 내 메모를 읽었어요",
-      "nowOf": "멈추고 {{name}}의 메모를 읽었어요"
-    },
     "strip": {
       "see": "보기",
       "toStop": "중지"
@@ -11671,11 +11672,6 @@
       "not_installed": "{{computer}}에 {{program}}이(가) 설치되어 있지 않아요.",
       "cant_start": "{{program}}이(가) {{computer}}에 있지만 실행되지 않습니다.",
       "not_reported": "{{computer}}에 어떤 프로그램이 있는지 아직 확인하는 중이에요. 끝나면 저절로 바뀌어요.",
-      "outdated": "{{computer}}의 버전이 오래됐어요. 사용하려면 Codex를 업데이트하세요.",
-      "outdatedCodex": "{{computer}}에서 Codex CLI {{detected}} 버전을 찾았습니다. {{minimum}} 이상으로 업데이트하세요.",
-      "codexUpdateGuide": "Codex CLI 업데이트 방법",
-      "codexRecheckHere": "업데이트한 뒤 환경설정 › 도구의 Codex 행에서 다시 확인을 선택하세요.",
-      "codexRecheckThere": "{{computer}}에서 Codex CLI를 업데이트하세요. 데스크톱 앱이 있다면 환경설정 › 도구의 Codex 행에서 다시 확인을 선택하세요.",
       "system": "{{program}}은(는) 아직 {{computer}}의 시스템에서 실행되지 않아요.",
       "no_computerCloud": "{{computer}}이(가) 준비되면 바로 쓸 수 있어요."
     },
@@ -11739,8 +11735,6 @@
     "see": "대기열 보기",
     "openComputer": "컴퓨터 열기",
     "label": "{{name}} 대기열",
-    "full": "가득 참",
-    "fullNext": "가득 참 · 다음 차례는 약 {{n}}분 후 시작",
     "free": "대기 중인 항목 없음",
     "workingNow": "지금 작업 중 · {{n}}",
     "inLine": "대기 중 · {{n}}",
@@ -12448,7 +12442,7 @@
         "invalid": "잘못됨"
       },
       "line": {
-        "env": "이 서버의 설정에서 지정됨(GITHUB_APP_ID).",
+        "env": "이 서버의 설정에서 지정됨(`GITHUB_APP_ID`).",
         "invalid": "이 서버가 저장된 앱을 열 수 없어요. 제거하고 다시 만드세요.",
         "events": "에이전트가 GitHub에서 일어나는 일을 받을 수 있도록 앱에서 다음 이벤트를 체크하세요: {{events}}."
       },
@@ -13020,7 +13014,7 @@
     "composio": {
       "via": "Composio를 통해",
       "needsReconnect": "다시 연결 필요",
-      "off_other": "{{names}} 외 서비스 {{count}}개는 Composio를 통해 연결돼요. 켜려면 이 서버를 운영하는 사람이 COMPOSIO_API_KEY를 설정해야 해요(SELF_HOSTING.md 참고).",
+      "off_other": "{{names}} 외 서비스 {{count}}개는 Composio를 통해 연결돼요. 켜려면 이 서버를 운영하는 사람이 `COMPOSIO_API_KEY`를 설정해야 해요(`SELF_HOSTING.md` 참고).",
       "usage": "Composio: {{month}} 호출 {{calls}}/{{limit}}회",
       "usageNoLimit": "Composio: {{month}} 호출 {{calls}}회",
       "limitNotice": "이 워크스페이스는 이번 달 Composio 호출을 모두 사용했어요",
@@ -14167,7 +14161,7 @@
       },
       "railway": {
         "1": "Postgres 서비스에서 Data → Query를 열고 아래 명령을 실행하세요(비밀번호는 바꾸세요).",
-        "2": "Variables에서 DATABASE_PUBLIC_URL을 복사하세요(DATABASE_URL은 내부용이라 여기서는 작동하지 않아요).",
+        "2": "Variables에서 `DATABASE_PUBLIC_URL`을 복사하세요(`DATABASE_URL`은 내부용이라 여기서는 작동하지 않아요).",
         "3": "그 안의 사용자와 비밀번호를 agentes_leitura와 정한 비밀번호로 바꿔서 여기에 붙여넣으세요."
       },
       "rds": {
@@ -14202,7 +14196,7 @@
     "error": {
       "auth": "사용자나 비밀번호가 맞지 않아요. 확인하고 다시 시도하세요.",
       "unreachable": "데이터베이스 서버에 연결하지 못했어요. 주소와 외부 연결 허용 여부를 확인하세요.",
-      "blocked_host": "이 서버는 허용되지 않아요. 데이터베이스의 공개 주소를 사용하세요(Railway의 DATABASE_URL 같은 내부 주소는 여기서 작동하지 않아요).",
+      "blocked_host": "이 서버는 허용되지 않아요. 데이터베이스의 공개 주소를 사용하세요(Railway의 `DATABASE_URL` 같은 내부 주소는 여기서 작동하지 않아요).",
       "tls": "데이터베이스가 보안 연결을 받지 않았어요. 데이터베이스에서 SSL을 켜거나, 고급 설정에서 암호화 안 함을 선택하세요(테스트 데이터베이스만).",
       "unknown": "지금은 연결할 수 없어요. 잠시 후 다시 시도하세요.",
       "no_databases": "이 사용자는 이 서버의 어떤 데이터베이스도 열 수 없습니다. 권한이나 이름의 시작 부분을 확인하세요."
@@ -15095,7 +15089,7 @@
       "titleRequired": "이름을 지어 주세요.",
       "tooLong": "너무 길어요. 최대 {{max}}까지예요.",
       "notHttps": "https://로 시작하는 주소를 쓰세요",
-      "keyNameInvalid": "이름에는 대문자, 숫자, _를 쓰세요. 예: ACME_API_KEY",
+      "keyNameInvalid": "이름에는 대문자, 숫자, _를 쓰세요. 예: `ACME_API_KEY`",
       "keyNameReserved": "예약된 이름이에요. 다른 이름을 고르세요.",
       "keyNameTaken": "이 이름의 키가 이미 저장되어 있어요.",
       "contactEmpty": "최소 한 칸은 채워 주세요.",
@@ -15488,14 +15482,20 @@
       "since": "{{time}}부터",
       "until": "{{time}}까지",
       "withHost": "{{host}}와(과) 함께",
-      "lastSeen": "마지막 확인 {{time}}"
+      "lastSeen": "마지막 확인 {{time}}",
+      "offlineUnresponsive": "{{time}}부터 응답 없음",
+      "offlineStopped": "{{time}}에 러너 중지됨",
+      "offlineDropped": "{{time}}에 연결 끊김"
     },
     "line": {
       "ready": "에이전트가 지금 사용할 수 있어요.",
       "busy_other": "작업 {{max}}개 중 {{count}}개 실행 중",
       "offline": "에이전트는 다시 연결될 때까지 기다려요.",
       "offlineSeen": "마지막 확인 {{time}}. 에이전트는 다시 연결될 때까지 기다려요.",
-      "offlineWithHost": "{{host}}이(가) 오프라인이에요. 에이전트는 다시 연결될 때까지 기다려요."
+      "offlineWithHost": "{{host}}이(가) 오프라인이에요. 에이전트는 다시 연결될 때까지 기다려요.",
+      "offlineUnresponsive": "{{time}}부터 응답이 없습니다. 네트워크가 없거나 과부하일 수 있습니다. 그 컴퓨터에서 `{{command}}`을(를) 실행하세요.",
+      "offlineStopped": "{{time}}에 러너가 중지되었습니다. 다시 시작하거나, 그 컴퓨터에서 `{{command}}`을(를) 실행해 원인을 확인하세요.",
+      "offlineDropped": "{{time}}에 연결이 끊겼습니다. 자동으로 다시 연결됩니다. 돌아오지 않으면 그 컴퓨터에서 `{{command}}`을(를) 실행하세요."
     },
     "reason": {
       "locked": "휴대폰이 잠겨 있어요",
@@ -15855,7 +15855,12 @@
       "iosBehind": "이 iPhone은 iOS {{ios}}이고 이 Mac의 Xcode는 iOS {{sdk}}용입니다. iPhone을 업데이트하세요: 설정 › 일반 › 소프트웨어 업데이트.",
       "xcodeOld": "{{name}}은(는) iOS {{version}}을(를) 쓰는데 {{mac}}의 Xcode는 iOS {{sdk}}까지만 알아요. Xcode {{major}}을(를) 설치한 다음 터미널에서 이것을 실행하세요.",
       "xcodeOldAny": "{{name}}은(는) {{mac}}의 Xcode가 아는 것보다 새로운 iOS {{version}}을(를) 써요. Xcode {{major}}을(를) 설치한 다음 터미널에서 이것을 실행하세요.",
-      "uiRefusedText": "iPhone이 테스트 도우미의 탭을 거부했어요. 잠금을 해제하고 요청하면 암호를 입력하세요. 계속 그러면 설정 › 개발자 › UI 자동화 활성화를 껐다가 다시 켜세요.",
+      "uiRefusedText": "에이전트는 iPhone 화면을 볼 수 있지만 iOS가 탭을 거부하고 있어요.",
+      "uiTurnOn": "iPhone에서 두 가지를 모두 켜세요:",
+      "uiPasscode": "요청하면 암호를 입력하고 잠금 해제 상태로 두세요.",
+      "uiCheck": "다시 확인",
+      "repair": "테스트 도우미 복구",
+      "repairHint": "Mac이 테스트 도우미를 멈추고 자기 Xcode로 몇 분 안에 다시 만들어요. 둘 다 켰는데도 탭이 실패할 때 쓰세요.",
       "tooOld": "{{name}}은(는) iOS {{version}}을(를) 쓰는데 에이전트에는 iOS 17 이상이 필요해요. 가능하면 업데이트하거나 더 새로운 iPhone을 연결하세요.",
       "tooOldVersion": "16 이하",
       "pluggedIn": "연결했어요",
@@ -16384,6 +16389,11 @@
       "sentence": "{{who}}이 이메일로 답했어요",
       "request": "{{name}}님의 지원 요청"
     },
+    "operatorReview": {
+      "sentence": "{{who}}이 안전을 위해 콘텐츠를 검토했어요",
+      "items_other": "{{value}}개 항목",
+      "period": "{{from}}~{{to}}"
+    },
     "change": {
       "mergedWithoutAsking": "{{repo}}에서 묻지 않고 병합했어요",
       "accentChanged": "워크스페이스의 강조 색상을 변경했어요",
@@ -16895,8 +16905,8 @@
         },
         "line": {
           "invalid": "이 서버가 이 키를 읽을 수 없어요. 다시 붙여넣으세요.",
-          "env": "이 서버의 설정에서 지정됨(GIPHY_API_KEY).",
-          "envInvalid": "이 키는 사용할 수 없어요. 이 서버의 설정에서 바꾸세요(GIPHY_API_KEY)."
+          "env": "이 서버의 설정에서 지정됨(`GIPHY_API_KEY`).",
+          "envInvalid": "이 키는 사용할 수 없어요. 이 서버의 설정에서 바꾸세요(`GIPHY_API_KEY`)."
         },
         "invalid": "GIPHY가 이 키를 받아들이지 않았어요. GIPHY Developers에서 다시 복사하세요.",
         "remove": {
@@ -17473,6 +17483,11 @@
         "shell": "내부에서 다른 명령을 실행해요",
         "inline": "인라인으로 받은 코드를 실행해요",
         "global": "컴퓨터 전체에 설치해요",
+        "privilege": "더 높은 권한을 요구합니다",
+        "reverseShell": "이 컴퓨터의 셸을 다른 기기에 넘깁니다",
+        "destroy": "컴퓨터나 홈 폴더 전체를 지울 수 있습니다",
+        "network": "프록시와 방화벽을 바꾸거나 우회합니다",
+        "otherUser": "다른 사용자의 파일에 접근합니다",
         "rules": "에이전트가 스스로 할 수 있는 범위를 벗어나요",
         "noAccess": "에이전트에게 여기에 대한 접근 권한이 없어요",
         "policy": "이런 종류의 작업에서는 허용되지 않아요",
@@ -18695,6 +18710,21 @@
     "writeAfter": ".",
     "ask": "도움이 필요하면 이 서버를 운영하는 사람에게 문의하세요."
   },
+  "resetOrg": {
+    "cardTitle": "초기화 또는 삭제",
+    "row": {
+      "title": "워크스페이스 초기화",
+      "text": "안에서 만든 것을 모두 지우고 같은 사람들과 처음부터 다시 시작해요."
+    },
+    "goes": "에이전트, 대화, DM, 파일, 작업, 루틴, 메모리",
+    "stays": "사람, 역할, 초대, AI 계정, 컴퓨터, 커넥터",
+    "fresh": "그다음 처음 설정과 함께 새 워크스페이스처럼 열려요",
+    "plan": "요금제는 그대로이고 새로 청구되지 않아요",
+    "now": "바로 실행되고 되돌릴 수 없어요.",
+    "title": "{{name}}을(를) 초기화할까요?",
+    "submit": "워크스페이스 초기화",
+    "resetting": "{{name}} 초기화 중…"
+  },
   "deleteOrg": {
     "card": {
       "title": "워크스페이스 삭제",
@@ -18766,8 +18796,7 @@
     "menu": "계정 삭제",
     "card": {
       "text": "7일 후 모든 워크스페이스에서 계정을 삭제해요.",
-      "button": "계정 삭제…",
-      "title": "삭제"
+      "button": "계정 삭제…"
     },
     "title": "계정 전체를 삭제할까요?",
     "intro": "워크스페이스 하나가 아니라 계정 전체를 삭제해요.",
@@ -20334,6 +20363,38 @@
       "alwaysOn": "이제부터 이런 보고는 묻지 않고 보내요.",
       "askFirst": "보내기 전에 묻기"
     }
+  },
+  "problemReport": {
+    "button": "보고서 보내기",
+    "title": "agentes.chat에 보고서 보내기",
+    "lead": "agentes.chat 팀이 받는 내용: 버전, 설정된 항목(값은 제외), 실패한 내용, 로그의 마지막 줄. 메시지, 페이지, 이름, 키는 포함되지 않아요.",
+    "noteLabel": "무슨 일이 있었나요? (선택)",
+    "notePlaceholder": "멈췄을 때 하고 있던 일",
+    "emailLabel": "답장받을 이메일 (선택)",
+    "emailHelp": "답장을 원할 때만 입력하세요.",
+    "showAll": "보내는 내용 모두 보기",
+    "copy": "보고서 복사",
+    "copied": "복사했어요",
+    "send": "보내기",
+    "sending": "보내는 중…",
+    "cancel": "취소",
+    "loading": "세부 정보를 모으는 중…",
+    "sentTitle": "보고서 {{id}}을(를) 보냈어요",
+    "sentText": "문의할 때 이 코드를 알려 주세요.",
+    "sentTextReply": "{{email}}(으)로 답장할게요. 문의할 때 이 코드를 알려 주세요.",
+    "copyCode": "코드 복사",
+    "done": "완료",
+    "noLogComputer": "{{computer}}이(가) 응답하지 않아 로그가 포함되지 않았어요.",
+    "oldRunner": "{{computer}}의 agentes.chat 앱이 오래되어 로그를 포함할 수 없어요. 포함하려면 그 컴퓨터에서 앱을 업데이트하세요.",
+    "noServerLines": "서버 로그 줄은 설치 소유자가 보고서를 보낼 때만 포함돼요.",
+    "off": "이 서버에서는 보내기가 꺼져 있어요(`PROBLEM_REPORT_URL=off`). 공유하려면 보고서를 복사하세요.",
+    "errorRate": "짧은 시간에 보고서가 너무 많아요. {{minutes}}분 후 다시 시도하거나 보고서를 복사하세요.",
+    "errorUnreachable": "agentes.chat이 응답하지 않았어요. 다시 시도하거나 보고서를 복사하세요.",
+    "errorRefused": "agentes.chat이 이 보고서를 받지 않았어요(이전 버전일 수 있어요). 대신 보고서를 복사하세요.",
+    "errorPreview": "세부 정보를 모으지 못했어요: {{reason}}",
+    "emailInvalid": "이메일이 올바르지 않아요. 고치거나 비워 두세요.",
+    "settingsTitle": "제대로 안 되는 게 있나요?",
+    "settingsText": "기술 세부 정보를 agentes.chat 팀에 보내세요."
   },
   "live": {
     "slides": {

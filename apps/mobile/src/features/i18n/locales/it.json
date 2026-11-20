@@ -356,6 +356,7 @@
     "repliesWord_one": "risposta",
     "repliesWord_many": "risposte",
     "repliesWord_other": "risposte",
+    "dayAt": "{{day}} {{time}}",
     "thread": "Thread",
     "closed": "chiuso",
     "options": "Opzioni",
@@ -394,9 +395,7 @@
       "delivered": "{{name}} l'ha ricevuto",
       "held": "{{name}} lo legge dopo la tua decisione",
       "read": "{{name}} l'ha letto",
-      "resolved": "{{name}} ha chiuso la richiesta di aiuto",
-      "well": "Ha letto la tua nota",
-      "wellNow": "Si è fermato per leggere la tua nota"
+      "resolved": "{{name}} ha chiuso la richiesta di aiuto"
     },
     "stopped": {
       "byYou": "Fermato qui",
@@ -580,8 +579,6 @@
     "file": "File",
     "media": "GIF",
     "noCamera": "Nessun accesso alla fotocamera. Consentilo nelle Impostazioni del telefono.",
-    "mission": "Avvia una missione",
-    "missionHint": "Un lavoro lungo, con un piano, dall'inizio alla fine",
     "summary": "Riassumi la chat",
     "summaryHint": "Cosa è successo mentre eri via",
     "remind": "Ricordamelo più tardi",
@@ -845,8 +842,8 @@
       "where": {
         "openbotrun": "Scegli openbot-import.json (da Migrator di OpenBot) o openbot-transfer.json (dal trasferimento dell'istanza). Un .zip si apre prima nell'app File: un tocco lo decomprime.",
         "openmausbot": "In OpenMausBot: clic destro sul team › Condividi team… › Salva file. Poi scegli quel file qui.",
-        "hermes": "Hermes esporta da un terminale (hermes profile export), in un .tar.gz che il telefono non può aprire. Importalo dal computer o scegli qui i file .md e .yaml del profilo.",
-        "openclaw": "OpenClaw tiene gli agenti nella cartella ~/.openclaw del computer. Scegli qui i file .md di uno spazio di lavoro o importa l'intera cartella dal computer.",
+        "hermes": "Hermes esporta da un terminale (`hermes profile export`), in un .tar.gz che il telefono non può aprire. Importalo dal computer o scegli qui i file .md e .yaml del profilo.",
+        "openclaw": "OpenClaw tiene gli agenti nella cartella `~/.openclaw` del computer. Scegli qui i file .md di uno spazio di lavoro o importa l'intera cartella dal computer.",
         "paperclip": "Incolla qui sotto il link GitHub del pacchetto o scegli il suo COMPANY.md e gli altri file .md.",
         "agenteschat": "Nell'altro spazio di lavoro: Impostazioni › Importa ed esporta › Scarica il file. Poi scegli qui il .json."
       },
@@ -2059,7 +2056,7 @@
       "tooOld": "Questo iPhone usa iOS {{version}}, e gli agenti hanno bisogno di iOS 17 o successivo. Aggiornalo se può, o usa un iPhone più recente.",
       "xcodeOld": "Questo iPhone usa iOS {{version}}, più recente di quanto conosca Xcode su {{host}}. Installa lì Xcode {{major}}, poi esegui xcrun devicectl manage ddis update nel Terminale.",
       "teamMissing": "Xcode ha effettuato l'accesso ma non mostra ancora un team. In Xcode crea un'app iOS qualsiasi, scegli il tuo team in Signing & Capabilities ed eseguila una volta su questo iPhone.",
-      "uiRefused": "Questo iPhone ha rifiutato i tocchi dell'app di test. Sbloccalo e inserisci il codice se lo chiede. Se succede ancora, disattiva e riattiva Impostazioni › Sviluppatore › Abilita automazione UI.",
+      "uiRefused": "Gli agenti vedono lo schermo di questo iPhone, ma iOS rifiuta i loro tocchi.",
       "pluggedIn": "È collegato",
       "wifi": {
         "also": "Anche sul Wi-Fi di {{host}}: {{name}}",
@@ -2350,6 +2347,8 @@
     "deleteIntro": "{{name}} diventa subito di sola lettura per tutti e viene eliminato per sempre tra 7 giorni.",
     "holdDelete": "Tieni premuto per eliminare",
     "deleteFailed": "Non è stato possibile eliminare lo spazio di lavoro. Riprova.",
+    "holdReset": "Tieni premuto per reimpostare",
+    "resetFailed": "Non è stato possibile reimpostare lo spazio di lavoro. Riprova.",
     "access": {
       "how": "Tocca una riga per cambiarne il livello: Nessun accesso, Lettura, Lettura e scrittura."
     },
@@ -2635,7 +2634,7 @@
       "newPassword": "Nuova password",
       "keyName": "Variabile",
       "keyNamePlaceholder": "ACME_API_KEY",
-      "keyNameHelp": "Lettere maiuscole, cifre e _, come ACME_API_KEY. Gli agenti chiedono la chiave con questo nome.",
+      "keyNameHelp": "Lettere maiuscole, cifre e _, come `ACME_API_KEY`. Gli agenti chiedono la chiave con questo nome.",
       "value": "Valore",
       "newValue": "Nuovo valore",
       "description": "Descrizione",

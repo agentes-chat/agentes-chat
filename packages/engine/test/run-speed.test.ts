@@ -1,7 +1,17 @@
 import { afterEach, expect, setDefaultTimeout, test } from "bun:test";
 import { schema } from "@agenteschat/db";
 import { type ModelRequest, systemText, textOf } from "@agenteschat/providers";
-import { createLlmJudge, drainOutbox, postPersonMessage, type ToolSource } from "../src";
+import {
+  createLlmJudge,
+  drainOutbox,
+  type Judge,
+  JudgeBudgetError,
+  postPersonMessage,
+  type ToolSource,
+  TURN_END_CHECK_BUDGET_MS,
+  withJudgeBudget,
+} from "../src";
+import { continuationVerdict } from "../src/continuation";
 import { type Fixture, setup } from "./fixtures";
 
 /**
@@ -163,4 +173,95 @@ test("the small model judging without Jev: the questions lead as a cached prefix
   expect(JSON.parse(user)).toEqual({ state: expect.any(Object) });
   const steps = await f.db.select().from(schema.agentRunSteps);
   expect(steps.some((s) => (s.data.continuation as { rule?: string } | undefined)?.rule === "judge_error")).toBe(true);
+});
+
+test("a turn end's checks share one wait: a checker that never answers holds the reply TURN_END_CHECK_BUDGET_MS, not its own timeout", async () => {
+  f = await setup({ reply: () => ({ chunks: ["Pronto: está salvo."] }) });
+  const base = f.context.judge;
+  if (!base) throw new Error("the fixture has a judge");
+  f.context.judge = {
+    name: base.name,
+    ask: (request) => (request.kind === "follow_through" ? new Promise(() => {}) : base.ask(request)),
+  };
+  const started = performance.now();
+  await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, {
+    body: "@dev salva isso",
+  });
+  await drainOutbox(f.db, f.handlers);
+  const elapsed = performance.now() - started;
+
+  const [run] = await f.db.select().from(schema.agentRuns);
+  expect(run?.status).toBe("done");
+  const posted = (await f.db.select().from(schema.messages)).filter((m) => m.authorType === "agent");
+  expect(posted.map((m) => m.body)).toContain("Pronto: está salvo.");
+  expect(elapsed).toBeGreaterThanOrEqual(TURN_END_CHECK_BUDGET_MS - 50);
+  expect(elapsed).toBeLessThan(TURN_END_CHECK_BUDGET_MS + 3_000);
+  const steps = await f.db.select().from(schema.agentRunSteps);
+  expect(steps.some((s) => (s.data.continuation as { rule?: string } | undefined)?.rule === "judge_error")).toBe(true);
+});
+
+test("withJudgeBudget: one wait for all of a turn end's checks; after a timeout the run's later checks fail at once", async () => {
+  const asked: string[] = [];
+  const judge: Judge = {
+    name: "fake",
+    ask: async (request) => {
+      asked.push(request.kind);
+      await Bun.sleep(request.kind === "slow" ? 1_000 : 40);
+      return { verdict: { choice: "done", probabilities: { done: 1 } } };
+    },
+  };
+  const ask = (j: Judge, kind: string) => j.ask({ orgId: "o", kind, state: {}, questions: {} });
+  const slow = { timedOut: false };
+
+  // In the wait: answered as the judge answers.
+  expect(await ask(withJudgeBudget(judge, 500, slow), "quick")).toEqual({
+    verdict: { choice: "done", probabilities: { done: 1 } },
+  });
+  expect(slow.timedOut).toBe(false);
+
+  // Two checks of one turn end share its wait: the second gets only what the first left.
+  const turnEnd = withJudgeBudget(judge, 100, slow);
+  await ask(turnEnd, "quick");
+  const started = performance.now();
+  await expect(ask(turnEnd, "slow")).rejects.toBeInstanceOf(JudgeBudgetError);
+  expect(performance.now() - started).toBeLessThan(150);
+  expect(slow.timedOut).toBe(true);
+
+  // The run's next turn end doesn't wait again, nor asks.
+  asked.length = 0;
+  await expect(ask(withJudgeBudget(judge, 500, slow), "quick")).rejects.toBeInstanceOf(JudgeBudgetError);
+  expect(asked).toEqual([]);
+});
+
+test("continuationVerdict: past the turn end's wait it neither asks again without the learn question nor reports it", async () => {
+  let asks = 0;
+  const slow = { timedOut: true };
+  const judge = withJudgeBudget(
+    {
+      name: "fake",
+      ask: async () => {
+        asks++;
+        return {};
+      },
+    },
+    1_000,
+    slow,
+  );
+  const failed: unknown[] = [];
+  await expect(
+    continuationVerdict(judge, {
+      orgId: "o",
+      agentId: "a",
+      runId: "r",
+      request: "salva isso",
+      reply: "Pronto.",
+      means: [],
+      tried: [],
+      runKind: "conversation",
+      onLearn: () => {},
+      onLearnFailed: (error) => failed.push(error),
+    }),
+  ).rejects.toBeInstanceOf(JudgeBudgetError);
+  expect(asks).toBe(0);
+  expect(failed).toEqual([]);
 });

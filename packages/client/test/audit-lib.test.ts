@@ -7,6 +7,7 @@ import {
   auditOutcome,
   auditQueryOf,
   auditReason,
+  auditReasonLabel,
   auditSentence,
   auditSubLine,
   auditToolSaid,
@@ -254,6 +255,74 @@ describe("Auditoria in words (web and phone)", () => {
       ["chars", 0],
       ["assistedByAi", true],
     ]);
+  });
+
+  test("whoever runs the server discloses a safety review: who and what in the sentence, how many items and which days under it", () => {
+    const year = new Date().getFullYear();
+    const disclosed = (details: Record<string, unknown>) =>
+      row({
+        actor: { type: "system", id: null, name: null },
+        action: "operator.content_review_disclosed",
+        target: { type: "organization", id: null },
+        details,
+        runId: null,
+        channelId: null,
+        channel: null,
+        onBehalfOf: null,
+        outcome: null,
+      });
+    const week = { from: `${year}-03-03T12:00:00.000Z`, to: `${year}-03-09T12:00:00.000Z` };
+    const own = disclosed({ ...week, count: 12 });
+    // The sentence holds no number and no date: rows of different reviews are told apart by the line under them.
+    expect(auditSentence(t, own, "en")).toEqual({
+      name: null,
+      text: "audit.operatorReview.sentence(audit.operatorRead.who.server)",
+    });
+    // Under it the count first, then the days. The count twice: once to pick the plural form, once as the language
+    // writes numbers.
+    const under = (details: Record<string, unknown>) => auditSubLine(t, disclosed(details), "en");
+    expect(under({ ...week, count: 12 })).toBe(
+      "audit.operatorReview.items(12,12) · audit.operatorReview.period(Mar 3,Mar 9)",
+    );
+    expect(under({ ...week, count: 10000 })).toBe(
+      "audit.operatorReview.items(10000,10,000) · audit.operatorReview.period(Mar 3,Mar 9)",
+    );
+    // A review that began and ended on one day names that day once. On agentes.chat's own servers, its support.
+    const day = disclosed({
+      from: `${year}-03-09T10:00:00.000Z`,
+      to: `${year}-03-09T13:00:00.000Z`,
+      count: 1,
+      cloud: true,
+    });
+    expect(auditSentence(t, day, "en").text).toBe("audit.operatorReview.sentence(audit.operatorRead.who.cloud)");
+    expect(auditSubLine(t, day, "en")).toBe("audit.operatorReview.items(1,1) · Mar 9");
+    // A date of another year says its year, and so does the one beside it.
+    expect(under({ from: `${year - 1}-12-28T12:00:00.000Z`, to: `${year}-01-03T12:00:00.000Z`, count: 3 })).toBe(
+      `audit.operatorReview.items(3,3) · audit.operatorReview.period(Dec 28, ${year - 1},Jan 3, ${year})`,
+    );
+    // The dates as the reader's language writes them.
+    expect(auditSubLine(t, own, "pt-BR")).toBe(
+      "audit.operatorReview.items(12,12) · audit.operatorReview.period(3 mar,9 mar)",
+    );
+    // The panel says the same line where a reason goes, under no heading: it is no reason. A read's line keeps its
+    // heading.
+    expect([auditReason(t, own, "en"), auditReasonLabel(t, own)]).toEqual([auditSubLine(t, own, "en"), null]);
+    const read = row({ action: "operator.content_read", details: { purpose: "fault" }, outcome: null });
+    expect(auditReasonLabel(t, read)).toBe("audit.panel.reason.other");
+    // No outcome, the sentence is the panel's title, and the three values the line says are not listed again.
+    expect([auditOutcome(t, own), auditHint(t, own)]).toEqual([null, null]);
+    expect(auditDetailEntries(day.details, day.action)).toEqual([]);
+    // Another action's `from`, `to` and `count` stay details.
+    expect(auditDetailEntries(day.details, "member.role_changed").map(([key]) => key)).toEqual(["from", "to", "count"]);
+    // An entry without its period, or with one that is no date, keeps its sentence and says nothing under it.
+    for (const details of [{ count: 3 }, { from: "soon", to: week.to, count: 3 }]) {
+      const broken = disclosed(details);
+      expect([
+        auditSentence(t, broken, "en").text,
+        auditSubLine(t, broken, "en"),
+        auditReason(t, broken, "en"),
+      ]).toEqual(["audit.operatorReview.sentence(audit.operatorRead.who.server)", "", null]);
+    }
   });
 
   test("a merge done without asking says where", () => {

@@ -181,6 +181,8 @@ export interface Speaker {
    * takes consultations answers it even outside its audience (`consultable`, ADR 0085 addendum).
    */
   viaAgent?: true;
+  /** An owner or administrator of the workspace (`findsAgent`). */
+  admin?: boolean;
 }
 
 /** No person (a routine's run): talks, holds no role. */
@@ -189,6 +191,7 @@ export const NO_PERSON: Speaker = { talks: true, roleIds: [] };
 export const speakerOf = (membership: Pick<Membership, "permissions" | "roleIds"> | null): Speaker => ({
   talks: can(membership, "talk_to_agents"),
   roleIds: membership?.roleIds ?? [],
+  admin: can(membership, "administrator"),
 });
 
 /** The same person, as another agent asking for them. */
@@ -306,17 +309,38 @@ export const agentRights = (a: AgentAccessFields, userId: string, membership: Vi
   canManageRoutines: managesRoutinesOf(a, userId, membership),
 });
 
-/** Whether the workspace's lists of agents (Equipe, its sectors, the counts) name every agent for this person. */
+/**
+ * Whether the workspace's lists of agents (Equipe, its sectors, the counts) name every agent for this person, private
+ * ones (`isPrivateAgent`) aside.
+ */
 export const listsAllAgents = (membership: Pick<Membership, "permissions"> | null) =>
   can(membership, "view_all_agents") || can(membership, "manage_agents");
 
+/** It answers nobody but its owner: "private means unlisted", so only who sees how it works lists it. */
+export const isPrivateAgent = (a: AudienceFields) => !answersOthers(audienceOf(a), a.ownerUserId);
+
 /**
- * Whether those lists name the agent for this person: every agent with `listsAllAgents`, else only the ones whose
- * workings they see (`seesAgentDetails`). It narrows lists only: the agent's public card and its messages in shared
- * channels still show. `seesAgentDetailsSql` is the same rule as SQL for who doesn't list all.
+ * Whether those lists name the agent for this person: every agent but a private one (`isPrivateAgent`) with
+ * `listsAllAgents`, and the ones whose workings they see (`seesAgentDetails`: its owner, administrators, its "Quem pode
+ * editar"). It narrows lists only: the agent's public card and its messages in shared channels still show.
+ * `listsAgentSql` is the same rule as SQL.
  */
 export const listsAgentTo = (a: AgentAccessFields, userId: string, membership: Viewer) =>
-  listsAllAgents(membership ?? null) || seesAgentDetails(a, userId, membership);
+  (listsAllAgents(membership ?? null) && !isPrivateAgent(a)) || seesAgentDetails(a, userId, membership);
+
+/**
+ * Whether a run for `person` finds the agent among its teammates (`find_agent`, "# Your team", the handles it is
+ * offered): one it may ask for them (`canTalkTo` with `speaker`), and a private one (`isPrivateAgent`) only for its
+ * owner, an administrator or who its "Quem pode editar" names, so a teammate's agent doesn't discover it either.
+ */
+export const findsAgent = (a: AgentAccessFields, person: string | null, speaker: Speaker) =>
+  canTalkTo(a, person, speaker) &&
+  (!isPrivateAgent(a) ||
+    (!!person &&
+      (a.ownerUserId === person ||
+        speaker.admin === true ||
+        a.editorUserIds.includes(person) ||
+        a.editorRoleIds.some((id) => speaker.roleIds.includes(id)))));
 
 /** The agent, for someone who sees how it works (`seesAgentDetails`); 403 `agent.details_hidden` for anyone else. */
 export async function requireAgentDetails(db: Database, userId: string, orgId: string, agentId: string) {
@@ -407,12 +431,22 @@ export function editsAgentSql(alias: string, userId: SQL): SQL<boolean> {
           and er.user_id = ${userId} and er.role_id = any(${a}.editor_role_ids)))))`;
 }
 
-/**
- * `seesAgentDetails` in SQL: who edits it (`editsAgentSql`) or whom it answers (`audienceSql`). For who doesn't list
- * every agent (`listsAllAgents`), the agents their lists name (`listsAgentTo`): a named editor's included.
- */
+/** `seesAgentDetails` in SQL: who edits it (`editsAgentSql`) or whom it answers (`audienceSql`). */
 export const seesAgentDetailsSql = (alias: string, userId: SQL): SQL<boolean> =>
   sql<boolean>`(${editsAgentSql(alias, userId)} or ${audienceSql(alias, userId)})`;
+
+/** `isPrivateAgent` in SQL: neither everyone nor anyone but its owner, by name or role. */
+export function privateAgentSql(alias: string): SQL<boolean> {
+  const a = sql.raw(alias);
+  return sql<boolean>`not (${a}.audience_mode = 'everyone' or (${a}.audience_mode = 'people'
+    and (cardinality(${a}.audience_role_ids) > 0 or not (${a}.audience_user_ids <@ array[${a}.owner_user_id]))))`;
+}
+
+/** `listsAgentTo` in SQL, for the person `userId` whose membership is `membership`. */
+export const listsAgentSql = (alias: string, userId: SQL, membership: Pick<Membership, "permissions"> | null) =>
+  listsAllAgents(membership)
+    ? sql<boolean>`(not ${privateAgentSql(alias)} or ${seesAgentDetailsSql(alias, userId)})`
+    : seesAgentDetailsSql(alias, userId);
 
 /** `managesRoutinesOf` in SQL: who edits it, or `manage_routines` where it reaches. */
 export const managesRoutinesSql = (alias: string, userId: SQL): SQL<boolean> =>

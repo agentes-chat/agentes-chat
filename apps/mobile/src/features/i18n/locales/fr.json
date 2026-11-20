@@ -356,6 +356,7 @@
     "repliesWord_one": "réponse",
     "repliesWord_many": "réponses",
     "repliesWord_other": "réponses",
+    "dayAt": "{{day}} {{time}}",
     "thread": "Fil",
     "closed": "fermé",
     "options": "Options",
@@ -394,9 +395,7 @@
       "delivered": "{{name}} l'a reçu",
       "held": "{{name}} le lira après votre décision",
       "read": "{{name}} l'a lu",
-      "resolved": "{{name}} a clos la demande d'aide",
-      "well": "A lu votre note",
-      "wellNow": "S'est arrêté pour lire votre note"
+      "resolved": "{{name}} a clos la demande d'aide"
     },
     "stopped": {
       "byYou": "Arrêté ici",
@@ -580,8 +579,6 @@
     "file": "Fichier",
     "media": "GIFs",
     "noCamera": "Pas d'accès à l'appareil photo. Autorisez-le dans les Réglages du téléphone.",
-    "mission": "Lancer une mission",
-    "missionHint": "Un travail long, avec un plan, du début à la fin",
     "summary": "Résumer la discussion",
     "summaryHint": "Ce qui s'est passé pendant votre absence",
     "remind": "Me le rappeler plus tard",
@@ -845,8 +842,8 @@
       "where": {
         "openbotrun": "Choisissez openbot-import.json (de Migrator by OpenBot) ou openbot-transfer.json (du transfert d'instance). Un .zip s'ouvre d'abord dans l'app Fichiers : un toucher le décompresse.",
         "openmausbot": "Dans OpenMausBot : clic droit sur l'équipe › Partager l'équipe… › Enregistrer le fichier. Choisissez ensuite ce fichier ici.",
-        "hermes": "Hermes exporte depuis un terminal (hermes profile export), en .tar.gz que le téléphone ne peut pas ouvrir. Importez-le sur l'ordinateur ou choisissez ici les fichiers .md et .yaml du profil.",
-        "openclaw": "OpenClaw garde les agents dans le dossier ~/.openclaw de l'ordinateur. Choisissez ici les fichiers .md d'un espace de travail ou importez tout le dossier sur l'ordinateur.",
+        "hermes": "Hermes exporte depuis un terminal (`hermes profile export`), en .tar.gz que le téléphone ne peut pas ouvrir. Importez-le sur l'ordinateur ou choisissez ici les fichiers .md et .yaml du profil.",
+        "openclaw": "OpenClaw garde les agents dans le dossier `~/.openclaw` de l'ordinateur. Choisissez ici les fichiers .md d'un espace de travail ou importez tout le dossier sur l'ordinateur.",
         "paperclip": "Collez le lien GitHub du paquet ci-dessous ou choisissez son COMPANY.md et les autres fichiers .md.",
         "agenteschat": "Dans l'autre espace de travail : Paramètres › Importer et exporter › Télécharger le fichier. Choisissez ensuite le .json ici."
       },
@@ -2059,7 +2056,7 @@
       "tooOld": "Cet iPhone est sous iOS {{version}}, et les agents ont besoin d'iOS 17 ou plus récent. Mettez-le à jour s'il le peut, ou utilisez un iPhone plus récent.",
       "xcodeOld": "Cet iPhone est sous iOS {{version}}, plus récent que ce que connaît Xcode sur {{host}}. Installez-y Xcode {{major}}, puis lancez xcrun devicectl manage ddis update dans Terminal.",
       "teamMissing": "Xcode est connecté mais n'affiche pas encore d'équipe. Dans Xcode, créez n'importe quelle app iOS, choisissez votre équipe dans Signing & Capabilities et lancez-la une fois sur cet iPhone.",
-      "uiRefused": "Cet iPhone a refusé les touchers de l'app de test. Déverrouillez-le et saisissez votre code s'il le demande. Si cela continue, désactivez puis réactivez Réglages › Développeur › Activer l'automatisation de l'IU.",
+      "uiRefused": "Les agents voient l'écran de cet iPhone, mais iOS refuse leurs touchers.",
       "pluggedIn": "Il est branché",
       "wifi": {
         "also": "Aussi sur le Wi-Fi de {{host}} : {{name}}",
@@ -2350,6 +2347,8 @@
     "deleteIntro": "{{name}} passe tout de suite en lecture seule pour tout le monde et sera supprimé définitivement dans 7 jours.",
     "holdDelete": "Maintenir pour supprimer",
     "deleteFailed": "Impossible de supprimer l'espace de travail. Réessayez.",
+    "holdReset": "Maintenez pour réinitialiser",
+    "resetFailed": "Impossible de réinitialiser l'espace de travail. Réessayez.",
     "access": {
       "how": "Touchez une ligne pour changer son niveau : Aucun accès, Lecture, Lecture et écriture."
     },
@@ -2635,7 +2634,7 @@
       "newPassword": "Nouveau mot de passe",
       "keyName": "Variable",
       "keyNamePlaceholder": "ACME_API_KEY",
-      "keyNameHelp": "Majuscules, chiffres et _, comme ACME_API_KEY. Les agents demandent la clé par ce nom.",
+      "keyNameHelp": "Majuscules, chiffres et _, comme `ACME_API_KEY`. Les agents demandent la clé par ce nom.",
       "value": "Valeur",
       "newValue": "Nouvelle valeur",
       "description": "Description",

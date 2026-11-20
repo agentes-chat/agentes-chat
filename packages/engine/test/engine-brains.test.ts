@@ -67,6 +67,8 @@ import {
   notePlanLimit,
   OUTAGE_PARK,
   openDm,
+  operatorRunTimings,
+  PERSON_ROOM_RETRY_MS,
   postPersonMessage,
   queueOnRun,
   receiptsFor,
@@ -80,7 +82,6 @@ import {
   SESSION_MAX_INPUT_TOKENS,
   sessionLostNote,
   setAgentBrain,
-  statusReply,
   storeMachineAccess,
   type ToolSource,
   taskManager,
@@ -3777,7 +3778,8 @@ test("no room on the computer: nothing in the chat, the person's message says it
   expect(listed?.receipts?.handled).toMatchObject([
     { agentId: f.agent.id, status: "waiting_input", computer: "queued" },
   ]);
-  // The run's own job ended with its first try; the next look is a job of its own, a few seconds later.
+  // The run's own job ended with its first try; the next look is a job of its own, a few seconds later (a person
+  // waits on it: sooner than an agent's own work would).
   const jobs = await f.db.select().from(schema.outbox).where(eq(schema.outbox.kind, "agent_run.execute"));
   expect(jobs.find((j) => j.dedupeKey === `agent_run.execute:${run?.id}`)).toMatchObject({
     status: "done",
@@ -3785,7 +3787,17 @@ test("no room on the computer: nothing in the chat, the person's message says it
   });
   const retry = jobs.find((j) => j.dedupeKey?.includes(":room:"));
   expect(retry?.status).toBe("pending");
-  expect((retry?.nextAttemptAt.getTime() ?? 0) - Date.now()).toBeGreaterThan(COMPUTER_BUSY_RETRY_MS - 5_000);
+  const wait = (retry?.nextAttemptAt.getTime() ?? 0) - Date.now();
+  expect(wait).toBeGreaterThan(PERSON_ROOM_RETRY_MS - 2_000);
+  expect(wait).toBeLessThanOrEqual(PERSON_ROOM_RETRY_MS);
+
+  // Nine older claims' profiles: the run keeps its first claim's and its latest as more come.
+  const [claimed] = (run?.profiles ?? []) as { stages: { stage: string; ms: number }[] }[];
+  const filler = { stages: [{ stage: "filler", ms: 1, queries: 0 }], total: { ms: 1, queries: 0 } };
+  await f.db
+    .update(schema.agentRuns)
+    .set({ profiles: [claimed, ...Array.from({ length: 9 }, () => filler)] })
+    .where(eq(schema.agentRuns.id, run?.id ?? ""));
 
   // Still full: it waits on, saying nothing more and never flashing "thinking" in the conversation.
   events.length = 0;
@@ -3815,6 +3827,15 @@ test("no room on the computer: nothing in the chat, the person's message says it
     .from(schema.agentRunSteps)
     .where(eq(schema.agentRunSteps.runId, run?.id ?? ""));
   expect(after.filter((s) => s.data.roomFound === true)).toHaveLength(1);
+  // Each claim after a refusal starts with its wait for room, from that refusal.
+  const profiles = (run?.profiles ?? []) as { stages: { stage: string; ms: number }[] }[];
+  expect(profiles).toHaveLength(10);
+  expect(profiles[0]).toEqual(claimed);
+  expect(claimed?.stages.some((s) => s.stage === "room_wait")).toBe(false);
+  for (const later of profiles.slice(-2)) {
+    expect(later.stages.map((s) => s.stage).slice(0, 2)).toEqual(["room_wait", "claim"]);
+    expect(later.stages[0]?.ms).toBeGreaterThanOrEqual(0);
+  }
 });
 
 test("no room for over 30 minutes: the run never fails, it keeps its place and asks again (long work wakes through turns)", async () => {
@@ -4127,8 +4148,6 @@ test("a run that waited in line counts its work from the turn it got, not from t
     yield { type: "text_delta", text: "Pronto." };
     await Bun.sleep(0);
     await Bun.sleep(0);
-    const [row] = await f.db.select().from(schema.agentRuns);
-    notes.push((await statusReply(f.db, row as NonNullable<typeof row>, new Date())).meta.bodyParams.minutes);
     notes.push(
       Date.now() - Date.parse((await activeRunsIn(f.db, f.org.id, f.general.id))[0]?.startedAt ?? "") < 60_000,
     );
@@ -4151,7 +4170,7 @@ test("a run that waited in line counts its work from the turn it got, not from t
   });
   await drainOutbox(f.db, handlers, { now: new Date(Date.now() + COMPUTER_BUSY_RETRY_MS + 1_000) });
   // Once as the ask starts, once as the computer takes the turn.
-  expect(notes).toEqual(["1", true, 2]);
+  expect(notes).toEqual([true, 2]);
 });
 
 test("a person's message during the ask joins the wait: its receipt says the line, as a reload would", async () => {
@@ -4308,6 +4327,13 @@ test("a Claude plan sign-in at its cap: the next run waits in line like any othe
   expect(run?.status).toBe("waiting_input");
   expect(run?.transcript).toMatchObject({ waitingForBrain: { code: "busy" }, signInWait: { key: "own" } });
   expect(seen).toHaveLength(0);
+  // The run timings tell this wait from the computer's own refusal and the line's spacing.
+  const timings = await operatorRunTimings(f.db, {
+    from: new Date(Date.now() - 3_600_000).toISOString(),
+    to: new Date(Date.now() + 60_000).toISOString(),
+    orgId: f.org.id,
+  });
+  expect(timings.waits.map((w) => w.cause)).toEqual(["brain_unavailable:busy:sign_in"]);
   const line = await computerQueue(f.db, f.owner.id, f.org.id, machineId);
   // In line like any turn waiting for room: the same status, no reason for the apps to tell apart.
   expect(line.waiting.map((w) => w.runId)).toEqual([run?.id ?? ""]);
@@ -4387,6 +4413,14 @@ test("only the head of the computer's line asks it: an agent's run waits behind 
     ((await runById(f, fromAgents.id))?.transcript as { waitingForBrain?: { waitId?: string } } | null)?.waitingForBrain
       ?.waitId;
   const waitId = await waitOf();
+  // The person's run asks again on its own sooner (`PERSON_ROOM_RETRY_MS`): held off here, only the agent's look runs.
+  for (const j of await f.db.select().from(schema.outbox)) {
+    if (j.status === "pending" && j.dedupeKey?.startsWith(`agent_run.execute:${personRun?.id}:`))
+      await f.db
+        .update(schema.outbox)
+        .set({ nextAttemptAt: new Date(Date.now() + 60_000) })
+        .where(eq(schema.outbox.id, j.id));
+  }
   await drainOutbox(f.db, handlers, { now: new Date(Date.now() + 11_000) });
   expect(seen.length).toBe(asked);
   expect((await runById(f, fromAgents.id))?.status).toBe("waiting_input");
@@ -4695,6 +4729,36 @@ test("a session whose folder is gone from the computer goes on fresh in the agen
   expect((await timeline(f)).map((m) => m.body)).toEqual(["@dev oi", "Pronto."]);
 });
 
+test("a computer whose disk is full ends the run on that, whatever code its failure came with", async () => {
+  f = await setup();
+  await computerAgent(f);
+  const { brain } = scriptedComputerBrain((n) => [
+    n === 0
+      ? { type: "error", code: "runner_error", message: "ENOSPC: no space left on device, write", retryable: false }
+      : {
+          type: "error",
+          code: "machine_offline",
+          message: "The agent's worker on this computer stopped because the disk is full (no space left on device).",
+          retryable: true,
+        },
+  ]);
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  await post(f, "@dev oi");
+  await drainOutbox(f.db, handlers);
+  // A dropped worker's turn doesn't wait for a computer that is there: the next turn would drop the same way.
+  await post(f, "@dev de novo");
+  await drainOutbox(f.db, handlers);
+  const runs = await f.db.select().from(schema.agentRuns);
+  expect(runs.map((r) => [r.status, r.error])).toEqual([
+    ["failed", "disk_full"],
+    ["failed", "disk_full"],
+  ]);
+});
+
 test("a Codex session whose folder is gone: a fresh session, once per run", async () => {
   f = await setup();
   await computerAgent(f);
@@ -4717,6 +4781,38 @@ test("a Codex session whose folder is gone: a fresh session, once per run", asyn
   expect(seen).toHaveLength(2);
   expect(seen[1]?.session).toMatchObject({ resume: false, ownFolder: true });
   expect(f.provider.calls).toHaveLength(0);
+});
+
+test("a model Codex's sign-in refuses: the turn goes again with no model in a fresh session, which later runs keep", async () => {
+  f = await setup({});
+  await computerAgent(f, { brain: "codex", brainModel: "gpt-6.1-sol" });
+  const refusal = "The 'gpt-6.1-sol' model is not supported when using Codex with a ChatGPT account.";
+  const { brain, seen } = scriptedComputerBrain((_n, turn) =>
+    turn.model
+      ? [{ type: "error", code: "codex_failed", message: refusal, retryable: true }]
+      : [{ type: "done", text: "Feito." }],
+  );
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { codex: () => ({ ...brain, kind: "codex" }) },
+    machines: {
+      status: async (id) =>
+        statusOf(id, {
+          protocol: MACHINE_PROTOCOL_VERSION,
+          executors: { codex: { version: "codex-cli 0.166.0" }, detectedAt: new Date().toISOString() },
+        }),
+    },
+  });
+  await post(f, "@dev oi");
+  await drainOutbox(f.db, handlers);
+  expect(seen).toHaveLength(2);
+  expect(seen[1]?.model).toBeUndefined();
+  // A Codex thread keeps the model it opened with: never the refused turn's session again.
+  expect(seen[1]?.session?.id).not.toBe(seen[0]?.session?.id);
+  expect(seen[1]?.session?.resume).toBe(false);
+  expect((await timeline(f)).at(-1)?.body).toBe("Feito.");
+  const [run] = await f.db.select().from(schema.agentRuns);
+  expect(run?.brainSessionId).toBe(seen[1]?.session?.id ?? "");
 });
 
 test("in a busy channel, its teammates now and why its session was lost reach the computer brain whole", async () => {

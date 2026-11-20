@@ -10,7 +10,7 @@ import {
   type TextInputSelectionChangeEvent,
   View,
 } from "react-native";
-import { Button, IconButton, Text, useFieldText, useTheme } from "@/ui";
+import { Button, IconButton, SCREEN_X, Text, useFieldText, useTheme } from "@/ui";
 
 /**
  * The cell bar under a spreadsheet (ADR 0196): the active cell's address and what it holds as the person would type it
@@ -99,7 +99,7 @@ export function CellBar({
               accessibilityRole="button"
               accessibilityLabel={t("mobile.live.sheet.typeKey", { key })}
               hitSlop={4}
-              style={({ pressed }) => [styles.key, { backgroundColor: pressed ? c.plate : c.sunken }]}
+              style={({ pressed }) => [styles.key, { backgroundColor: pressed ? c.line2 : c.plate }]}
             >
               <RNText allowFontScaling={false} style={[styles.keyText, { color: c.ink2 }]}>
                 {key}
@@ -131,7 +131,7 @@ export function CellBar({
             placeholder={t("mobile.live.sheet.placeholder")}
             placeholderTextColor={c.faint}
             accessibilityLabel={t("mobile.live.sheet.editing", { cell: label })}
-            style={[field, styles.input, { color: c.ink, backgroundColor: c.sunken }]}
+            style={[field, styles.input, { color: c.ink, backgroundColor: c.plate }]}
           />
           <IconButton icon="check" small label={t("mobile.live.sheet.done")} onPress={onDone} />
         </View>
@@ -159,7 +159,7 @@ export function CellBar({
 }
 
 const styles = StyleSheet.create({
-  bar: { borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: 12, paddingTop: 8, paddingBottom: 8 },
+  bar: { borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: SCREEN_X, paddingTop: 8, paddingBottom: 8 },
   idle: { minHeight: 52 },
   row: { flexDirection: "row", alignItems: "center", gap: 8 },
   ref: { fontWeight: "600", minWidth: 36, fontVariant: ["tabular-nums"] },

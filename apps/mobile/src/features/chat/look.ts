@@ -21,8 +21,20 @@ import { type LayoutChangeEvent, StyleSheet, useWindowDimensions, type ViewStyle
 import { useOrg } from "@/providers/org";
 import { useTheme } from "@/ui";
 import { appShadows, type Scheme } from "@/ui/palette";
+import { type Corners, RADIUS } from "@/ui/radius";
+import { BUBBLE_PART_CORNERS, MESSAGE_CARD_CORNERS, useBubblePart } from "../shared/bubble-part";
 import { keepSize, keptSize } from "./kept-sizes";
-import { BUBBLES_INSET, bubbleFill, CHAT_TEXT, quietInset } from "./logic";
+import {
+  BUBBLES_EDGE,
+  BUBBLES_END,
+  BUBBLES_INSET,
+  bubbleFill,
+  CHAT_TEXT,
+  COMPACT_FACE,
+  COMPACT_GAP,
+  MSG_INSET,
+  quietInset,
+} from "./logic";
 import { wallpaperKey } from "./wallpaper-logic";
 
 /** How this conversation's rows are drawn (`chatLookOf`, as on the web's `MessageLook`). */
@@ -64,7 +76,7 @@ export const useRowLook = () => useContext(RowLookContext);
 export function useConversationLook(dm: boolean, agentColor?: AgentColorName, channelId?: string | null): RowLook {
   const { org } = useOrg();
   const { colors, scheme } = useTheme();
-  const { style, tone } = chatLookOf(org?.chatPrefs, dm, isPersonal(org));
+  const { style, tone } = chatLookOf(org?.chatPrefs, dm, isPersonal(org), "phone");
   const text = CHAT_TEXT[textSizeOf(org?.chatPrefs)];
   const fill = bubbleFill(agentColor ?? "sky", tone, colors.bg, scheme === "dark");
   const wallpaper = Boolean(channelId) && hasWallpaper(wallpaperFor(org?.chatPrefs, channelId));
@@ -85,7 +97,7 @@ export function useConversationWallpaper(
   agentColor?: AgentColorName,
 ): { wallpaper: Wallpaper; strength: number } {
   const { org } = useOrg();
-  const { style } = chatLookOf(org?.chatPrefs, dm, isPersonal(org));
+  const { style } = chatLookOf(org?.chatPrefs, dm, isPersonal(org), "phone");
   const chosen = wallpaperFor(org?.chatPrefs, channelId);
   const own = dm ? wallpaperHueOf(agentColor) : null;
   const strength = wallpaperStrength(style === "bubbles");
@@ -138,6 +150,17 @@ export const useOwnTop = (marginTop: number) => (useContext(RowPartContext) === 
 /** `useOwnTop` for a card, the one thing in a body with room of its own: `CHAT_RHYTHM`'s `card` under words. */
 export const useCardTop = (marginTop = 0) => ({ marginTop: useContext(RowPartContext) ?? marginTop });
 
+/**
+ * A card's corners in a message's body, the same for every card there: a bubble part's in a conversation of bubbles
+ * (`BUBBLE_PART_CORNERS`), the conversation's card in the other looks (`MESSAGE_CARD_CORNERS`). Null outside a body (a
+ * mission's screen, the inbox): the card's own. Spread last, over the card's own radius.
+ */
+export function useMessageCardCorners(): Corners | null {
+  const part = useBubblePart();
+  const inBody = useContext(RowPartContext) !== null;
+  return part ? BUBBLE_PART_CORNERS : inBody ? MESSAGE_CARD_CORNERS : null;
+}
+
 /** `quietInset` in this conversation's look. */
 export const useQuietInset = () => quietInset(useRowLook());
 
@@ -160,12 +183,27 @@ export function liftedEdge(scheme: Scheme): ViewStyle | null {
   return edge;
 }
 
+/**
+ * The looks whose messages hold no time of their own (bubbles, and compact, whose column of times took a line's
+ * width on a phone): a pull to the left shows each message's time at the screen's edge, and a line says when the
+ * conversation picks up after a pause.
+ */
+export const timesOnPull = (style: ChatStyle) => style === "bubbles" || style === "compact";
+
 /** The rows' frames per style. */
 export const lookRows = StyleSheet.create({
-  bubblesRow: { paddingLeft: BUBBLES_INSET, paddingRight: 44, gap: 8 },
+  bubblesRow: { paddingLeft: BUBBLES_INSET, paddingRight: BUBBLES_END, gap: 8 },
+  // A row with no face column (a DM): its bubble as far from the edge as mine.
+  bubblesBare: { paddingLeft: BUBBLES_EDGE },
   bubblesSlot: { width: 30, paddingTop: 0 },
-  compactRow: { paddingLeft: 10, paddingRight: 12, gap: 6 },
-  compactSlot: { width: 18, paddingTop: 1 },
-  compactClock: { width: 34, textAlign: "right", lineHeight: 20, fontVariant: ["tabular-nums"] },
-  bubble: { alignSelf: "flex-start", maxWidth: "100%", paddingVertical: 7, paddingHorizontal: 13, borderRadius: 18 },
+  compactRow: { paddingLeft: MSG_INSET, paddingRight: 12, gap: COMPACT_GAP },
+  compactSlot: { width: COMPACT_FACE, paddingTop: 1 },
+  // One line is 40 tall: its 24 and 8 above and under.
+  bubble: {
+    alignSelf: "flex-start",
+    maxWidth: "100%",
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: RADIUS.xl,
+  },
 });

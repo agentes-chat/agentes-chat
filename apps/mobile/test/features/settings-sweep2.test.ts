@@ -169,7 +169,7 @@ describe("forms", () => {
   test("a workspace computer's address never renders as bare text: ternaries, not `&&`", () => {
     const machine = src("features/settings/MachineScreen.tsx");
     expect(machine).not.toMatch(/\{managed && [^\n]*&& \(/);
-    expect(machine).toContain("{managed && m.online && m.egress?.ip ? (");
+    expect(machine).toContain("{moreOpen && egressIp ? (");
   });
 });
 

@@ -4,7 +4,7 @@ import { serviceKey, toolActivity } from "./activity";
 import { approvalTitle } from "./approval-words";
 import { billingHoldOf } from "./billing";
 import { reviewFlaggedOf } from "./errors";
-import { lowerFirst } from "./format";
+import { formatInt, formatShortDate, lowerFirst } from "./format";
 import { COMPUTERS_ROW } from "./roles";
 import { stepLabel, toolWhy } from "./work";
 
@@ -19,6 +19,8 @@ export const OPERATOR_READ = "operator.content_read";
 /** Whoever runs the server answered a member's support request, by email to their account's address. */
 export const OPERATOR_REPLIED = "operator.support_replied";
 const byOperator = (row: AuditRow) => row.action === OPERATOR_READ || row.action === OPERATOR_REPLIED;
+/** Whoever runs the server tells the workspace, afterwards, that it read content to investigate suspected abuse. */
+export const OPERATOR_DISCLOSED = "operator.content_review_disclosed";
 
 /** The shortcuts over the list: one view at a time. */
 export type AuditShow = "all" | "problems" | "waiting" | "people";
@@ -46,8 +48,10 @@ const notThrough = (row: AuditRow) =>
  * A row's reason as its panel says it: a billing hold's code (ADR 0079) and the category an automatic review hold
  * names (`review.<category>`) in words, never as they come. A call that didn't go through says why only in words, by
  * its refusal's code (`details.refusal`, as its line in the chat): what the tool said goes to the technical part.
+ * A disclosure has no reason: its panel says there how many items and which days, as the list does under its row.
  */
-export function auditReason(t: TFunction, row: AuditRow): string | null {
+export function auditReason(t: TFunction, row: AuditRow, locale?: string): string | null {
+  if (row.action === OPERATOR_DISCLOSED) return operatorReviewed(t, row, locale ?? "en");
   if (byOperator(row)) return operatorWhy(t, row);
   if (notThrough(row)) return toolWhy(t, { refusal: auditStr(row.details.refusal) });
   const reason = auditStr(row.details.reason);
@@ -85,6 +89,7 @@ export function auditPhrase(t: TFunction, row: AuditRow, locale?: string): strin
     return t("audit.operatorRead.sentence", { who: operatorWho(t, row), what: t(`audit.operatorRead.what.${what}`) });
   }
   if (row.action === OPERATOR_REPLIED) return t("audit.operatorReply.sentence", { who: operatorWho(t, row) });
+  if (row.action === OPERATOR_DISCLOSED) return t("audit.operatorReview.sentence", { who: operatorWho(t, row) });
   if (row.action === "organization.accent_changed") return t("audit.change.accentChanged");
   if (row.action === "agent.merged_without_asking") {
     return t("audit.change.mergedWithoutAsking", { repo: row.target.id ?? "" });
@@ -153,6 +158,21 @@ const READ_KINDS = [
 /** Who the operator is to the workspace's people: on agentes.chat's own servers, its support. */
 const operatorWho = (t: TFunction, row: AuditRow) =>
   t(row.details.cloud === true ? "audit.operatorRead.who.cloud" : "audit.operatorRead.who.server");
+
+/**
+ * Under a disclosure's sentence, the count first: "12 items · Nov 3 to Nov 9", or "1 item · Nov 3" when both ends are
+ * one day here. The year shows when either date is of another one. Null for an entry without its period.
+ */
+function operatorReviewed(t: TFunction, row: AuditRow, locale: string) {
+  const [from, to] = [auditStr(row.details.from), auditStr(row.details.to)];
+  if (!from || !to || Number.isNaN(Date.parse(from) + Date.parse(to))) return null;
+  const count = Number(row.details.count) || 0;
+  const thisYear = new Date().getFullYear();
+  const year = [from, to].some((iso) => new Date(iso).getFullYear() !== thisYear);
+  const [first, last] = [formatShortDate(locale, from, year), formatShortDate(locale, to, year)];
+  const items = t("audit.operatorReview.items", { count, value: formatInt(locale, count) });
+  return `${items} · ${first === last ? first : t("audit.operatorReview.period", { from: first, to: last })}`;
+}
 
 /**
  * Under the operator's sentence. A read: at whose request and how that request arrived, or to diagnose a run. An
@@ -322,8 +342,9 @@ export function auditBehind(t: TFunction, row: AuditRow) {
   return null;
 }
 
-/** The line under the sentence: about what · who asked · where. */
-export function auditSubLine(t: TFunction, row: AuditRow) {
+/** The line under the sentence: about what · who asked · where. A disclosure's: how many items · which days. */
+export function auditSubLine(t: TFunction, row: AuditRow, locale?: string) {
+  if (row.action === OPERATOR_DISCLOSED) return operatorReviewed(t, row, locale ?? "en") ?? "";
   if (byOperator(row)) return operatorWhy(t, row) ?? "";
   return [auditHint(t, row), auditBehind(t, row), auditWhere(t, row)].filter(Boolean).join(" · ");
 }
@@ -382,6 +403,10 @@ export function auditOutcome(t: TFunction, row: AuditRow): AuditOutcome | null {
 export const auditReasonKey = (row: AuditRow) =>
   row.outcome === "refused" || row.outcome === "failed" || row.outcome === "pending" ? row.outcome : "other";
 
+/** That heading in words. Null for a disclosure: how many items and which days are no reason, and stand under none. */
+export const auditReasonLabel = (t: TFunction, row: AuditRow) =>
+  row.action === OPERATOR_DISCLOSED ? null : t(`audit.panel.reason.${auditReasonKey(row)}`);
+
 /** The approval as it stands now: "Aprovado por Ana", "Ainda ninguém respondeu". */
 export function auditApprovalText(t: TFunction, a: NonNullable<AuditRow["approval"]>) {
   const who = a.decidedBy?.name ?? t("audit.panel.someone");
@@ -404,10 +429,14 @@ export function auditSecretText(t: TFunction, s: NonNullable<AuditRow["secret"]>
 /** A value the audit kept hidden (a secret-looking field's). */
 export const AUDIT_HIDDEN = "***";
 
-/** A change's details worth showing: never an id (`connectionId`, `agentIds`…), nor the call's own fields. */
+/**
+ * A change's details worth showing: never an id (`connectionId`, `agentIds`…), nor the call's own fields. None of a
+ * disclosure (`action`): the count and the days are all its entry holds, and its panel says them in words.
+ */
 const HIDDEN_DETAILS = new Set(["kind", "behind", "input", "reason", "refusal", "routine", "cloud"]);
 const AN_ID = /(?:^ids?|Ids?|_ids?)$/;
-export function auditDetailEntries(details: Record<string, unknown>): [string, unknown][] {
+export function auditDetailEntries(details: Record<string, unknown>, action?: string): [string, unknown][] {
+  if (action === OPERATOR_DISCLOSED) return [];
   return Object.entries(details).filter(([k, v]) => !HIDDEN_DETAILS.has(k) && !AN_ID.test(k) && v !== null && v !== "");
 }
 

@@ -1,7 +1,7 @@
 import { type BrainSpeed, isBrainSpeed } from "@agenteschat/adapters";
 import { and, type Database, eq, inArray, isNull, schema, sql } from "@agenteschat/db";
 import { type ContextLimit, isAutoModel, isContextLimit } from "@agenteschat/providers";
-import { type CodingPlan, PLAN_ALIASES, planOf } from "@agenteschat/providers/plans";
+import { type CodingPlan, planOf } from "@agenteschat/providers/plans";
 import {
   type Agent,
   type AgentInput,
@@ -17,6 +17,7 @@ import {
   brainModelLabel,
   brainOf,
   brainOptions,
+  CLAUDE_CODE_MODELS,
   defaultBrainModel,
   isBrainEffortSetting,
   isBrainKind,
@@ -157,7 +158,7 @@ function readSetup(input: AgentSetupInput): Setup {
 function modelFits(kind: BrainKind, model: string | null, plan: CodingPlan | undefined) {
   if (kind !== "claude_code" || model === null || isAutoModel(model)) return true;
   if (plan) return plan.claudeCode.models.some((m) => m.id === model || m.alias === model);
-  return PLAN_ALIASES.some((a) => a === model) || model.startsWith("claude-");
+  return CLAUDE_CODE_MODELS.some((o) => o.value === model) || model.startsWith("claude-");
 }
 
 const sameModel = (kind: BrainKind, a: string | null, b: string | null) =>

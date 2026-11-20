@@ -420,7 +420,7 @@
     },
     "view_all_agents": {
       "title": "Widok wszystkich agentów",
-      "desc": "W Zespole i na pasku bocznym. Bez tego tylko ci, którzy odpowiadają tej osobie.",
+      "desc": "W Zespole i na pasku bocznym, poza osobistymi agentami innych. Bez tego tylko ci, którzy odpowiadają tej osobie.",
       "short": "widok wszystkich agentów",
       "say": "widzi wszystkich agentów"
     },
@@ -1397,8 +1397,8 @@
       "where": {
         "openbotrun": "Upuść openbot-import.json (z Migratora OpenBot) lub openbot-transfer.json (z transferu instancji) albo plik .zip, w którym przyszedł.",
         "openmausbot": "W OpenMausBot: kliknij zespół prawym przyciskiem → Udostępnij zespół… → Zapisz plik.",
-        "hermes": "W terminalu uruchom hermes profile export z nazwą profilu i upuść tutaj plik .tar.gz. Albo przeciągnij folder ~/.hermes, żeby przenieść wszystkie profile.",
-        "openclaw": "Przeciągnij cały folder ~/.openclaw (przenosi wszystkich agentów) albo tylko jedną przestrzeń roboczą. Na Macu ⌘⇧. pokazuje ukryte foldery w oknie wyboru plików.",
+        "hermes": "W terminalu uruchom `hermes profile export` z nazwą profilu i upuść tutaj plik .tar.gz. Albo przeciągnij folder `~/.hermes`, żeby przenieść wszystkie profile.",
+        "openclaw": "Przeciągnij cały folder `~/.openclaw` (przenosi wszystkich agentów) albo tylko jedną przestrzeń roboczą. Na Macu ⌘⇧. pokazuje ukryte foldery w oknie wyboru plików.",
         "paperclip": "Przeciągnij folder pakietu (ten z COMPANY.md), upuść jego plik .zip albo wklej link do GitHub.",
         "agenteschat": "W drugiej przestrzeni roboczej: Ustawienia → Import i eksport → Pobierz plik. Potem upuść tutaj plik .json."
       },
@@ -4084,11 +4084,13 @@
   },
   "keyGuard": {
     "title": "To wygląda na klucz API",
-    "text": "Wszystko na czacie widzą osoby i agenci. Zapisz to lepiej jako klucz przestrzeni roboczej: jest szyfrowany i nikt go nie widzi.",
-    "textMember": "Wszystko na czacie widzą osoby i agenci. Klucz jest jak hasło.",
-    "save": "Zapisz jako klucz",
+    "titleSecret": "To wygląda na klucz lub hasło",
+    "vaultText": "Wszystko na czacie widzą ludzie i agenci. Przechowuj go w Vault: jest zaszyfrowany, a agenci, którym pozwolisz, używają go, nie widząc go.",
+    "vault": "Zapisz w Vault",
+    "useAsAi": "Użyj jako klucza AI",
     "remove": "Usuń",
-    "send": "Wyślij mimo to"
+    "send": "Wyślij mimo to",
+    "saved": "Agenci z dostępem używają go pod nazwą {{name}}."
   },
   "costlyCard": {
     "go": "Działaj",
@@ -5062,7 +5064,7 @@
     "error": {
       "title": "Nadaj mu nazwę.",
       "website": "Użyj adresu https, na przykład app.example.com.",
-      "keyName": "Użyj wielkich liter, cyfr i _, zaczynając od litery, na przykład ACME_API_KEY.",
+      "keyName": "Użyj wielkich liter, cyfr i _, zaczynając od litery, na przykład `ACME_API_KEY`.",
       "password": "Wpisz hasło.",
       "value": "Wpisz wartość.",
       "contact": "Wypełnij co najmniej jedno pole."
@@ -5249,7 +5251,7 @@
       "show": "Pokaż wartość {{name}}",
       "hide": "Ukryj wartość {{name}}",
       "problem": {
-        "name": "Nazwa musi wyglądać jak ACME_API_KEY",
+        "name": "Nazwa musi wyglądać jak `ACME_API_KEY`",
         "reserved": "Nazwa zarezerwowana",
         "empty": "Brak wartości",
         "tooLarge": "Wartość za duża"
@@ -6388,7 +6390,8 @@
         },
         "speedText": "Odpowiada szybciej w rozmowach i zużywa plan 2,5× szybciej. Rutyny i długie zadania zostają przy standardowej szybkości.",
         "modelLine": {
-          "opus": "Najbardziej zaawansowany. Szybciej zużywa plan.",
+          "fable": "Najbardziej zaawansowany. Zużywa plan znacznie szybciej.",
+          "opus": "Bardzo zaawansowany. Szybciej zużywa plan.",
           "sonnet": "Zrównoważony. Dobry prawie do wszystkiego.",
           "haiku": "Szybki i lekki. Do prostych zadań."
         },
@@ -6988,12 +6991,13 @@
         "computer_busy": "Komputer był zajęty innymi zadaniami.",
         "computer_failed": "Komputer napotkał problem i się zatrzymał.",
         "computer_timeout": "Komputer zbyt długo nie odpowiadał.",
+        "disk_full": "Dysk tego komputera jest pełny. Usuń z niego pliki, których już nie potrzebujesz (agent może to zrobić, gdy zwolni się trochę miejsca), albo poproś administratora o zwolnienie miejsca.",
         "cli_failed": "Program {{brain}} zatrzymał się z błędem: {{detail}}",
         "cli_stopped": "Program {{brain}} zatrzymał się z błędem.",
         "cli_closed": "Program {{brain}} nagle się zamknął.",
         "cli_sandbox": "Program {{brain}} nie może uruchomić swojego sandboxa na tym komputerze. Wybierz inną AI w ustawieniach agenta.",
         "account_missing": "Konta wybranego dla tego agenta nie ma już na jego komputerze. Wybierz inne w ustawieniach agenta albo dodaj je ponownie.",
-        "windows_sandbox": "Ten komputer z Windows nie może odizolować poleceń Codex: potrzebuje Windows 11 24H2 lub nowszego.",
+        "windows_sandbox": "Ten komputer z Windows nie może odizolować poleceń Codex: potrzebuje Windows 11 24H2 lub nowszego. Zaktualizuj Windows, wybierz Claude albo klucz API dla tego agenta lub przenieś go na komputer z Linuksem.",
         "our_error": "Coś poszło nie tak po naszej stronie i zadanie się zatrzymało. Poproś ponownie za chwilę.",
         "unknown": "Błąd."
       }
@@ -7767,6 +7771,7 @@
     "modelAndCost": "Model i koszt",
     "model": "Model",
     "modelDesc": {
+      "fable": "Najbardziej zaawansowany, do najtrudniejszej pracy",
       "sonnet": "Zalecany w większości przypadków",
       "opus": "Długie, trudne zadania",
       "haiku": "Szybki i tani",
@@ -8572,7 +8577,10 @@
     "unreachableTitle": "Brak połączenia z agentes.chat",
     "unreachableText": "Może trwa ponowne uruchamianie. Ta strona otworzy się sama, gdy tylko wszystko wróci.",
     "offlineTitle": "Jesteś offline",
-    "offlineText": "Ta strona otworzy się sama, gdy wrócisz do sieci."
+    "offlineText": "Ta strona otworzy się sama, gdy wrócisz do sieci.",
+    "unknownHostTitle": "Ten adres nie jest jeszcze skonfigurowany",
+    "unknownHostText": "Jeśli został właśnie podłączony, spróbuj ponownie za kilka minut.",
+    "unknownHostTab": "Adres nieskonfigurowany · agentes.chat"
   },
   "scopes": {
     "context_read": {
@@ -9853,6 +9861,7 @@
       "computer_busy": "Komputer był zajęty innymi zadaniami",
       "computer_failed": "Komputer napotkał problem i się zatrzymał",
       "computer_timeout": "Komputer zbyt długo nie odpowiadał",
+      "disk_full": "Dysk komputera był pełny",
       "cli_failed": "Program AI na komputerze zatrzymał się z błędem",
       "account_missing": "Konta agenta nie ma już na jego komputerze",
       "our_error": "Coś poszło nie tak po naszej stronie"
@@ -10478,8 +10487,7 @@
       "approvals": "Domyślnie merge, wdrożenie i rollback wymagają zatwierdzenia",
       "start": "Rozpocznij misję",
       "created": "Utworzono misję: {{name}} przygotowuje plan.",
-      "who": "Kto programuje",
-      "codexOld": "Codex na {{computer}} jest za stary na misje: zaktualizuj go tam."
+      "who": "Kto programuje"
     },
     "commandApproval": {
       "label": "Autonomia",
@@ -11506,8 +11514,8 @@
     "line": {
       "invalid": "TypeSafe nie przyjął tego klucza. Utwórz nowy.",
       "no_credit": "Doładuj środki w TypeSafe. Jev wznowi pracę sam.",
-      "env": "Ustawiony w ustawieniach tego serwera (TYPESAFE_API_KEY).",
-      "envInvalid": "TypeSafe nie przyjął tego klucza. Zmień go w ustawieniach tego serwera (TYPESAFE_API_KEY)."
+      "env": "Ustawiony w ustawieniach tego serwera (`TYPESAFE_API_KEY`).",
+      "envInvalid": "TypeSafe nie przyjął tego klucza. Zmień go w ustawieniach tego serwera (`TYPESAFE_API_KEY`)."
     },
     "checkAgain": "Sprawdź ponownie",
     "via": {
@@ -11533,7 +11541,7 @@
       "line": {
         "invalid": "OpenRouter nie przyjął tego klucza. Utwórz nowy.",
         "no_credit": "Doładuj środki w OpenRouter. Jev wznowi pracę sam.",
-        "envInvalid": "OpenRouter nie przyjął tego klucza. Zmień go w ustawieniach tego serwera (TYPESAFE_API_KEY)."
+        "envInvalid": "OpenRouter nie przyjął tego klucza. Zmień go w ustawieniach tego serwera (`TYPESAFE_API_KEY`)."
       }
     },
     "remove": {
@@ -11619,7 +11627,6 @@
       "needsCloud": {
         "online": "{{computer}} uruchamia się ponownie albo łączy się od nowa. To zmieni się samo, gdy wróci.",
         "installing": "{{program}} jest instalowany na komputerze {{computer}}. To zmieni się samo, gdy skończy.",
-        "updating": "{{program}} jest aktualizowany na komputerze {{computer}}. To zmieni się samo, gdy skończy.",
         "runnerOld": "Program agentes.chat na komputerze {{computer}} jest nieaktualny, a aktualizacja jest w drodze. To zmieni się samo, gdy się skończy.",
         "execOff": "{{computer}} nie może jeszcze uruchomić programu {{program}}. Zajmujemy się tym, a to zmieni się samo.",
         "toolOff": "{{program}} nie jest jeszcze dozwolony na {{computer}}. To po naszej stronie: spróbuj ponownie później.",
@@ -11788,8 +11795,8 @@
       "everyone_female": "Każdy w przestrzeni roboczej może zawołać {{name}}.",
       "people": "Wybierz osoby i role, które mogą rozmawiać z {{name}}.",
       "people_female": "Wybierz osoby i role, które mogą rozmawiać z {{name}}.",
-      "owner": "Z {{name}} rozmawia tylko {{owner}}.",
-      "owner_female": "Z {{name}} rozmawia tylko {{owner}}.",
+      "owner": "Z {{name}} rozmawia tylko {{owner}}. Na listach {{name}} widzą tylko {{owner}}, admini i osoby, które mogą edytować.",
+      "owner_female": "Z {{name}} rozmawia tylko {{owner}}. Na listach {{name}} widzą tylko {{owner}}, admini i osoby, które mogą edytować.",
       "noOwner": "Ustaw właściciela, żeby użyć tej opcji.",
       "everyonePersonal": "Każdy tutaj może zawołać {{name}}.",
       "everyonePersonal_female": "Każdy tutaj może zawołać {{name}}.",
@@ -13008,12 +13015,6 @@
       "read": "{{name}}: przeczytane",
       "resolved": "{{name}}: prośba o pomoc zamknięta"
     },
-    "well": {
-      "readYours": "Twoja notatka przeczytana",
-      "readOf": "Notatka od {{name}} przeczytana",
-      "nowYours": "Przerwa na przeczytanie twojej notatki",
-      "nowOf": "Przerwa na przeczytanie notatki od {{name}}"
-    },
     "strip": {
       "see": "Zobacz",
       "toStop": "aby zatrzymać"
@@ -13109,11 +13110,6 @@
       "not_installed": "{{program}} nie jest zainstalowany na komputerze {{computer}}.",
       "cant_start": "{{program}} jest na {{computer}}, ale się nie uruchamia.",
       "not_reported": "{{computer}} wciąż sprawdza, jakie ma programy. To zmieni się samo, gdy skończy.",
-      "outdated": "Wersja na komputerze {{computer}} jest stara. Zaktualizuj Codex, żeby z niego korzystać.",
-      "outdatedCodex": "Na komputerze {{computer}} wykryto Codex CLI {{detected}}. Zaktualizuj do wersji {{minimum}} lub nowszej.",
-      "codexUpdateGuide": "Jak zaktualizować Codex CLI",
-      "codexRecheckHere": "Po aktualizacji wybierz Sprawdź ponownie w wierszu Codex w Preferencjach › Narzędzia.",
-      "codexRecheckThere": "Zaktualizuj Codex CLI na komputerze {{computer}}. Jeśli działa na nim aplikacja komputerowa, wybierz Sprawdź ponownie w wierszu Codex w Preferencjach › Narzędzia.",
       "system": "{{program}} nie działa jeszcze w systemie komputera {{computer}}.",
       "no_computerCloud": "Gotowe, gdy tylko {{computer}} będzie gotowy."
     },
@@ -13180,8 +13176,6 @@
     "see": "Zobacz kolejkę",
     "openComputer": "Otwórz komputer",
     "label": "Kolejka: {{name}}",
-    "full": "Pełny",
-    "fullNext": "Pełny · następny zacznie za około {{n}} min",
     "free": "Nikt nie czeka",
     "workingNow": "Pracuje teraz · {{n}}",
     "inLine": "W kolejce · {{n}}",
@@ -13985,7 +13979,7 @@
         "invalid": "Nieprawidłowa"
       },
       "line": {
-        "env": "Ustawiona w ustawieniach tego serwera (GITHUB_APP_ID).",
+        "env": "Ustawiona w ustawieniach tego serwera (`GITHUB_APP_ID`).",
         "invalid": "Ten serwer nie może otworzyć zapisanej aplikacji. Usuń ją i utwórz ponownie.",
         "events": "Aby agenci słyszeli, co dzieje się w GitHub, zaznacz w aplikacji te zdarzenia: {{events}}."
       },
@@ -14577,10 +14571,10 @@
     "composio": {
       "via": "Przez Composio",
       "needsReconnect": "Wymaga ponownego połączenia",
-      "off_one": "{{names}} i jeszcze {{count}} usługa łączą się przez Composio. Aby je włączyć, osoba zarządzająca tym serwerem ustawia COMPOSIO_API_KEY (zobacz SELF_HOSTING.md).",
-      "off_few": "{{names}} i jeszcze {{count}} usługi łączą się przez Composio. Aby je włączyć, osoba zarządzająca tym serwerem ustawia COMPOSIO_API_KEY (zobacz SELF_HOSTING.md).",
-      "off_many": "{{names}} i jeszcze {{count}} usług łączy się przez Composio. Aby je włączyć, osoba zarządzająca tym serwerem ustawia COMPOSIO_API_KEY (zobacz SELF_HOSTING.md).",
-      "off_other": "{{names}} i jeszcze {{count}} usługi łączą się przez Composio. Aby je włączyć, osoba zarządzająca tym serwerem ustawia COMPOSIO_API_KEY (zobacz SELF_HOSTING.md).",
+      "off_one": "{{names}} i jeszcze {{count}} usługa łączą się przez Composio. Aby je włączyć, osoba zarządzająca tym serwerem ustawia `COMPOSIO_API_KEY` (zobacz `SELF_HOSTING.md`).",
+      "off_few": "{{names}} i jeszcze {{count}} usługi łączą się przez Composio. Aby je włączyć, osoba zarządzająca tym serwerem ustawia `COMPOSIO_API_KEY` (zobacz `SELF_HOSTING.md`).",
+      "off_many": "{{names}} i jeszcze {{count}} usług łączy się przez Composio. Aby je włączyć, osoba zarządzająca tym serwerem ustawia `COMPOSIO_API_KEY` (zobacz `SELF_HOSTING.md`).",
+      "off_other": "{{names}} i jeszcze {{count}} usługi łączą się przez Composio. Aby je włączyć, osoba zarządzająca tym serwerem ustawia `COMPOSIO_API_KEY` (zobacz `SELF_HOSTING.md`).",
       "usage": "Composio: {{calls}} z {{limit}} wywołań w {{month}}",
       "usageNoLimit": "Composio: {{calls}} wywołań w {{month}}",
       "limitNotice": "Ta przestrzeń robocza wykorzystała już wywołania Composio w tym miesiącu",
@@ -15790,7 +15784,7 @@
       },
       "railway": {
         "1": "W usłudze Postgres otwórz Data → Query i uruchom poniższe polecenie (zmień hasło).",
-        "2": "W Variables skopiuj DATABASE_PUBLIC_URL (DATABASE_URL jest wewnętrzny i stąd nie działa).",
+        "2": "W Variables skopiuj `DATABASE_PUBLIC_URL` (`DATABASE_URL` jest wewnętrzny i stąd nie działa).",
         "3": "Zamień w nim użytkownika i hasło na agentes_leitura i wybrane hasło, a potem wklej go tutaj."
       },
       "rds": {
@@ -15825,7 +15819,7 @@
     "error": {
       "auth": "Użytkownik lub hasło się nie zgadzają. Sprawdź je i spróbuj ponownie.",
       "unreachable": "Nie udało się połączyć z serwerem bazy danych. Sprawdź adres i czy przyjmuje połączenia z zewnątrz.",
-      "blocked_host": "Ten serwer jest niedozwolony. Użyj publicznego adresu bazy danych (adresy wewnętrzne, jak DATABASE_URL w Railway, stąd nie działają).",
+      "blocked_host": "Ten serwer jest niedozwolony. Użyj publicznego adresu bazy danych (adresy wewnętrzne, jak `DATABASE_URL` w Railway, stąd nie działają).",
       "tls": "Baza danych nie przyjęła bezpiecznego połączenia. Włącz SSL w bazie albo wybierz Bez szyfrowania w sekcji Zaawansowane (tylko testowe bazy danych).",
       "unknown": "Nie udało się teraz połączyć. Spróbuj za chwilę.",
       "no_databases": "Ten użytkownik nie może otworzyć żadnej bazy na tym serwerze. Sprawdź uprawnienia lub początek nazwy."
@@ -16760,7 +16754,7 @@
       "titleRequired": "Nadaj mu nazwę.",
       "tooLong": "To jest za długie. Limit to {{max}}.",
       "notHttps": "Użyj adresu zaczynającego się od https://",
-      "keyNameInvalid": "Użyj w nazwie wielkich liter, cyfr i _, na przykład ACME_API_KEY.",
+      "keyNameInvalid": "Użyj w nazwie wielkich liter, cyfr i _, na przykład `ACME_API_KEY`.",
       "keyNameReserved": "Ta nazwa jest zarezerwowana. Wybierz inną.",
       "keyNameTaken": "Klucz o tej nazwie jest tu już zapisany.",
       "contactEmpty": "Wypełnij co najmniej jedno pole.",
@@ -17158,7 +17152,10 @@
       "since": "od {{time}}",
       "until": "do {{time}}",
       "withHost": "razem z {{host}}",
-      "lastSeen": "ostatnio online: {{time}}"
+      "lastSeen": "ostatnio online: {{time}}",
+      "offlineUnresponsive": "nie odpowiada od {{time}}",
+      "offlineStopped": "runner zatrzymany o {{time}}",
+      "offlineDropped": "połączenie zerwane o {{time}}"
     },
     "line": {
       "ready": "Agenci mogą go teraz używać.",
@@ -17168,7 +17165,10 @@
       "busy_other": "Zadania w toku: {{count}} z {{max}}",
       "offline": "Agenci czekają, aż wróci.",
       "offlineSeen": "Ostatnio online: {{time}}. Agenci czekają, aż wróci.",
-      "offlineWithHost": "{{host}} jest offline. Agenci czekają, aż wróci."
+      "offlineWithHost": "{{host}} jest offline. Agenci czekają, aż wróci.",
+      "offlineUnresponsive": "Nie odpowiada od {{time}}, może brak sieci lub przeciążenie. Uruchom na nim `{{command}}`.",
+      "offlineStopped": "Runner zatrzymał się o {{time}}. Uruchom go ponownie albo uruchom na nim `{{command}}`, by zobaczyć dlaczego.",
+      "offlineDropped": "Połączenie zerwało się o {{time}}. Łączy się ponownie samo. Jeśli nie wróci, uruchom na nim `{{command}}`."
     },
     "reason": {
       "locked": "Telefon jest zablokowany",
@@ -17534,7 +17534,12 @@
       "iosBehind": "Ten iPhone ma iOS {{ios}}, a Xcode na tym Macu jest dla iOS {{sdk}}. Zaktualizuj iPhone'a: Ustawienia › Ogólne › Uaktualnienia.",
       "xcodeOld": "{{name}} ma iOS {{version}}, a Xcode na {{mac}} zna najwyżej iOS {{sdk}}. Zainstaluj Xcode {{major}}, a potem uruchom to w Terminalu.",
       "xcodeOldAny": "{{name}} ma iOS {{version}}, nowszy niż zna Xcode na {{mac}}. Zainstaluj Xcode {{major}}, a potem uruchom to w Terminalu.",
-      "uiRefusedText": "iPhone odrzucił stuknięcia pomocnika testowego. Odblokuj go i wpisz jego kod, jeśli poprosi. Jeśli to się powtarza, wyłącz i włącz Ustawienia › Deweloper › Włącz automatyzację UI.",
+      "uiRefusedText": "Agenci widzą ekran iPhone'a, ale iOS odrzuca ich stuknięcia.",
+      "uiTurnOn": "Na iPhonie włącz obie opcje:",
+      "uiPasscode": "Wpisz jego kod, gdy o niego poprosi, i nie blokuj go.",
+      "uiCheck": "Sprawdź ponownie",
+      "repair": "Napraw pomocnika testowego",
+      "repairHint": "Mac zatrzymuje pomocnika testowego i buduje go od nowa swoim Xcode, w kilka minut. Na stuknięcia, które nadal nie działają mimo włączenia obu opcji.",
       "tooOld": "{{name}} ma iOS {{version}}, a agenci potrzebują iOS 17 lub nowszego. Zaktualizuj go, jeśli się da, albo podłącz nowszego iPhone'a.",
       "tooOldVersion": "16 lub starszy",
       "pluggedIn": "Jest podłączony",
@@ -18106,6 +18111,14 @@
       "sentence": "{{who}}: odpowiedziano e-mailem",
       "request": "prośba o wsparcie od osoby: {{name}}"
     },
+    "operatorReview": {
+      "sentence": "{{who}}: sprawdzono treści ze względów bezpieczeństwa",
+      "items_one": "{{value}} element",
+      "items_few": "{{value}} elementy",
+      "items_many": "{{value}} elementów",
+      "items_other": "{{value}} elementu",
+      "period": "od {{from}} do {{to}}"
+    },
     "change": {
       "mergedWithoutAsking": "Scalono w {{repo}} bez pytania",
       "accentChanged": "Zmieniono kolor akcentu przestrzeni roboczej",
@@ -18635,8 +18648,8 @@
         },
         "line": {
           "invalid": "Ten serwer nie może odczytać tego klucza. Wklej go ponownie.",
-          "env": "Ustawiony w ustawieniach tego serwera (GIPHY_API_KEY).",
-          "envInvalid": "Tego klucza nie można użyć. Zmień go w ustawieniach tego serwera (GIPHY_API_KEY)."
+          "env": "Ustawiony w ustawieniach tego serwera (`GIPHY_API_KEY`).",
+          "envInvalid": "Tego klucza nie można użyć. Zmień go w ustawieniach tego serwera (`GIPHY_API_KEY`)."
         },
         "invalid": "GIPHY nie zaakceptowało tego klucza. Skopiuj go ponownie z GIPHY Developers.",
         "remove": {
@@ -19260,6 +19273,11 @@
         "shell": "Uruchamia w sobie inne polecenia",
         "inline": "Uruchamia kod podany w linii",
         "global": "Instaluje dla całego komputera",
+        "privilege": "Prosi o większe uprawnienia",
+        "reverseShell": "Oddaje powłokę tego komputera innej maszynie",
+        "destroy": "Wymazałoby komputer lub cały folder domowy",
+        "network": "Zmienia lub omija proxy i zaporę",
+        "otherUser": "Sięga do plików innego użytkownika",
         "rules": "Poza tym, co agenci mogą robić samodzielnie",
         "noAccess": "Agent nie ma do tego dostępu",
         "policy": "Niedozwolone przy takiej pracy",
@@ -20553,6 +20571,21 @@
     "writeAfter": ".",
     "ask": "Potrzebujesz pomocy? Zapytaj osoby, które prowadzą ten serwer."
   },
+  "resetOrg": {
+    "cardTitle": "Zresetuj lub usuń",
+    "row": {
+      "title": "Zresetuj przestrzeń roboczą",
+      "text": "Usuwa wszystko, co w niej powstało, i zaczyna od nowa, z tymi samymi osobami."
+    },
+    "goes": "Agenci, rozmowy, wiadomości prywatne, pliki, zadania, rutyny i pamięć",
+    "stays": "Osoby, role, zaproszenia, konta AI, komputery i konektory",
+    "fresh": "Potem otwiera się jak nowa przestrzeń robocza, z początkową konfiguracją",
+    "plan": "Plan zostaje ten sam, bez nowej opłaty",
+    "now": "Dzieje się od razu i nie da się tego cofnąć.",
+    "title": "Zresetować {{name}}?",
+    "submit": "Zresetuj przestrzeń roboczą",
+    "resetting": "Resetowanie {{name}}…"
+  },
   "deleteOrg": {
     "card": {
       "title": "Usuń przestrzeń roboczą",
@@ -20624,8 +20657,7 @@
     "menu": "Usuń konto",
     "card": {
       "text": "Usuwa twoje konto za 7 dni, we wszystkich przestrzeniach roboczych.",
-      "button": "Usuń konto…",
-      "title": "Usuń"
+      "button": "Usuń konto…"
     },
     "title": "Usunąć całe twoje konto?",
     "intro": "To usuwa całe twoje konto, a nie tylko jedną przestrzeń roboczą.",
@@ -22312,6 +22344,38 @@
       "alwaysOn": "Od teraz takie zgłoszenia będą wysyłane bez pytania.",
       "askFirst": "Pytaj przed wysłaniem"
     }
+  },
+  "problemReport": {
+    "button": "Wyślij raport",
+    "title": "Wyślij raport do agentes.chat",
+    "lead": "Zespół agentes.chat dostaje: wersje, które ustawienia są ustawione (nigdy ich wartości), co się nie udało i ostatnie wiersze logów. Bez wiadomości, stron, nazw i kluczy.",
+    "noteLabel": "Co się stało? (opcjonalnie)",
+    "notePlaceholder": "Co robiłeś, gdy przestało działać",
+    "emailLabel": "E-mail do odpowiedzi (opcjonalnie)",
+    "emailHelp": "Tylko jeśli chcesz odpowiedź.",
+    "showAll": "Zobacz wszystko, co jest wysyłane",
+    "copy": "Kopiuj raport",
+    "copied": "Skopiowano",
+    "send": "Wyślij",
+    "sending": "Wysyłanie…",
+    "cancel": "Anuluj",
+    "loading": "Zbieranie szczegółów…",
+    "sentTitle": "Raport {{id}} wysłany",
+    "sentText": "Jeśli do nas napiszesz, podaj ten kod.",
+    "sentTextReply": "Odpowiemy na {{email}}. Podaj ten kod, jeśli do nas napiszesz.",
+    "copyCode": "Kopiuj kod",
+    "done": "Gotowe",
+    "noLogComputer": "{{computer}} nie odpowiedział, więc jego log nie jest dołączony.",
+    "oldRunner": "Aplikacja agentes.chat na {{computer}} jest za stara, by dołączyć log. Zaktualizuj ją tam, aby go dołączyć.",
+    "noServerLines": "Wiersze logu serwera są dołączane tylko wtedy, gdy raport wysyła właściciel instalacji.",
+    "off": "Wysyłanie jest wyłączone na tym serwerze (`PROBLEM_REPORT_URL=off`). Skopiuj raport, aby go udostępnić.",
+    "errorRate": "Za dużo raportów w krótkim czasie. Spróbuj ponownie za {{minutes}} min albo skopiuj raport.",
+    "errorUnreachable": "agentes.chat nie odpowiedział. Spróbuj ponownie albo skopiuj raport.",
+    "errorRefused": "agentes.chat nie przyjął tego raportu (może pochodzić ze starszej wersji). Zamiast tego skopiuj raport.",
+    "errorPreview": "Nie udało się zebrać szczegółów: {{reason}}",
+    "emailInvalid": "Ten e-mail wygląda na niepoprawny. Popraw go albo zostaw puste.",
+    "settingsTitle": "Coś nie działa?",
+    "settingsText": "Wyślij szczegóły techniczne zespołowi agentes.chat."
   },
   "live": {
     "slides": {

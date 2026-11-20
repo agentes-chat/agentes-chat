@@ -517,8 +517,9 @@ const ActivityRow = memo(function ActivityRow({ item: n, divider }: { item: AppN
         ? ""
         : failed
           ? failed.sub
-          : // A widget's or routine's name is often its line too: said once ("Assinaturas hoje", not twice).
-            [emojisOf(n).join(" "), [...new Set([line, placeOf(n)].filter(Boolean))].join(" · ")]
+          : // Where first, then the words, as the web inbox ("#canal · snippet"). A widget's or routine's name is
+            // often its line too: said once ("Assinaturas hoje", not twice).
+            [emojisOf(n).join(" "), [...new Set([placeOf(n), line].filter(Boolean))].join(" · ")]
               .filter(Boolean)
               .join(" ");
   const time = when.short(n.updatedAt);

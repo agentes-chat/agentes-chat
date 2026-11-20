@@ -291,6 +291,13 @@ export const words: EmailWords = {
   deletionCode: {
     subjectWorkspace: (code) => `${code} adalah kodemu untuk menghapus ruang kerja`,
     subjectAccount: (code) => `${code} adalah kodemu untuk menghapus seluruh akunmu`,
+    subjectReset: (code) => `${code} adalah kodemu untuk mengatur ulang ruang kerja`,
+    reset: (org) => [
+      "Ketik kode ini untuk mengatur ulang ruang kerja ",
+      { b: org },
+      ". Agen, percakapan, file, dan memorinya langsung dihapus permanen, dan ruang kerja ini mulai lagi seperti baru.",
+    ],
+    whyReset: (org) => `Kamu menerima email ini karena akunmu meminta pengaturan ulang ${org} di agentes.chat.`,
     preheader: "Ketik di agentes.chat untuk mengonfirmasi. Kodenya berlaku 10 menit.",
     headline: "Kodemu",
     workspace: (org) => [

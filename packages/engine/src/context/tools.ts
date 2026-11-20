@@ -35,7 +35,14 @@ import { can, getMembership } from "../organizations";
 import { personWords, runReadOutsideById, UNASKED_DESTINATION, unaskedDestination } from "../outside";
 import { personBehindCall, wikiActorOfCall } from "../requester";
 import { isRightHandId, rightHandReader } from "../right-hand";
-import { agentSearchChannels, agentVisibleChannels, indexSource, searchForUser, searchVisible } from "../search";
+import {
+  agentSearchChannels,
+  agentVisibleChannels,
+  indexSource,
+  type QueryEmbedding,
+  searchForUser,
+  searchVisible,
+} from "../search";
 import { closedRefusal } from "../standing";
 import { noAgentText } from "../team";
 import type { ToolContext, ToolDefinition, ToolSource } from "../tools/types";
@@ -1533,6 +1540,8 @@ export async function retrieveForRun(
     runId?: string;
     /** The holdout arm (`memoryArmOf`): its own items come in whatever the request, as before ADR 0167. */
     withOwn?: boolean;
+    /** `sharedQueryEmbedding` of `text`, shared with the run's wiki search. */
+    queryEmbedding?: () => Promise<QueryEmbedding>;
   },
 ): Promise<{ text: string; itemIds: string[]; matchedIds: string[] }> {
   const { db } = deps;
@@ -1640,6 +1649,7 @@ export async function retrieveForRun(
       kinds: ["context_item"],
       limit: 15,
       match: "any",
+      queryEmbedding: input.queryEmbedding,
     }).catch(() => []);
     const rank = new Map(hits.map((h, i) => [h.sourceId, i]));
     searched = (
@@ -1812,7 +1822,7 @@ export function pickDistinct(candidates: ContextItem[], known: string): ContextI
 }
 
 /** Tools whose calls say nothing about how a task was done. */
-const STEP_NOISE = ["search_context", "get_summary", "expand", "react", "ask_user", "save_how_to"];
+const STEP_NOISE = ["search_context", "get_summary", "expand", "react", "ask_user", "say_now", "save_how_to"];
 /** Words too common to tell one step from another (English and Portuguese). */
 const STEP_STOP_WORDS = new Set(
   "the and for from with that this you your what how com que para por uma dos das nos nas como sobre isso esse essa".split(

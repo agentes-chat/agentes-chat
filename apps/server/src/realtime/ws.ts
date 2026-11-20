@@ -102,7 +102,7 @@ export interface RealtimeDeps {
   streams?: StreamSockets;
   /** Live files (ADR 0196): one socket per open spreadsheet, presentation or canvas (`/api/live`). */
   live?: LiveSockets;
-  /** How often an open socket checks its session and channels again (`SESSION_RECHECK_MS`; tests go faster). */
+  /** How often an open socket checks its session again, before jitter (`SESSION_RECHECK_MS`; tests go faster). */
   sessionRecheckMs?: number;
 }
 
@@ -174,8 +174,15 @@ export type ClientFrame =
 
 export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const MAX_SUBSCRIPTIONS = 200;
-/** Bound the lifetime of an idle socket after its session is revoked. */
-export const SESSION_RECHECK_MS = 15_000;
+/**
+ * Bound the lifetime of an idle socket after its session is revoked. Membership loss arrives at once over pub/sub
+ * (`membership.revoked`), so the durable channel re-read, every `MEMBERSHIP_RECHECK_TICKS` ticks, only catches a
+ * lost event.
+ */
+export const SESSION_RECHECK_MS = 60_000;
+export const MEMBERSHIP_RECHECK_TICKS = 5;
+/** A socket's own recheck period: up to a quarter more, so sockets reconnected together don't recheck in waves. */
+export const sessionRecheckPeriod = (base: number, random = Math.random) => base + Math.floor(random() * (base / 4));
 /** Incoming frames recheck at most once this often, to avoid a database query per mouse event. */
 const SESSION_FRAME_RECHECK_MS = 2_000;
 const MEMBERSHIP_CHECK_TIMEOUT_MS = 5_000;
@@ -762,12 +769,15 @@ export function createRealtime(deps: RealtimeDeps) {
           if (ws.readyState === 1) send(ws, { type: "unsubscribed", channelId, reason });
         };
         let rechecking = false;
+        let ticks = 0;
+        const period = sessionRecheckPeriod(deps.sessionRecheckMs ?? SESSION_RECHECK_MS);
         ws.data.sessionTimer = setInterval(() => {
           if (rechecking || ws.readyState !== 1) return;
           rechecking = true;
           void (async () => {
             try {
               if (!(await liveSession(ws, true))) return;
+              if (++ticks % MEMBERSHIP_RECHECK_TICKS !== 0) return;
               let timeout: ReturnType<typeof setTimeout> | undefined;
               const deadline = new Promise<never>((_, reject) => {
                 timeout = setTimeout(
@@ -798,7 +808,7 @@ export function createRealtime(deps: RealtimeDeps) {
               rechecking = false;
             }
           })();
-        }, deps.sessionRecheckMs ?? SESSION_RECHECK_MS);
+        }, period);
         ws.data.system.push(
           deps.pubsub.subscribe(orgTopic(orgId), (raw) => {
             const event = raw as unknown as OrgEvent;
@@ -915,9 +925,9 @@ export function createRealtime(deps: RealtimeDeps) {
         ws.data.subscriptions.set(channelId, off);
         send(ws, { type: "subscribed", channelId });
       },
-      async close(socket: Bun.ServerWebSocket<SocketData>, code: number) {
+      async close(socket: Bun.ServerWebSocket<SocketData>, code: number, reason?: string) {
         if (isFrames(socket)) return frameSocket.close(socket);
-        if (isMachine(socket)) return deps.machines?.close(socket);
+        if (isMachine(socket)) return deps.machines?.close(socket, code, reason);
         if (isStream(socket)) return deps.streams?.close(socket, code);
         if (isLive(socket)) return deps.live?.close(socket);
         const ws = socket as BrowserSocket;

@@ -142,7 +142,7 @@ export function QueueDialog({
       closeLabel={t("common.close")}
       width={440}
       className="cq-dialog"
-      subtitle={queue ? queueStatusText(t, queueView(queue, names.viewerId), now) : undefined}
+      subtitle={queue ? queueStatusText(t, queueView(queue, names.viewerId)) : undefined}
     >
       <DialogBody>
         {queue ? (
@@ -247,9 +247,9 @@ function QueueLists({
                 onStop={() => stop([w.runId], undefined, true)}
                 stopping={stopping.has(w.runId)}
               >
-                <span className="cq__l1">
+                <span className="cq__l1 ac-tailrow">
                   <b>{agentName(w.agentId)}</b>
-                  <span className="cq__time">{queueLeftText(t, w, now)}</span>
+                  <span className="cq__time ac-tail">{queueLeftText(t, w, now)}</span>
                 </span>
                 <span className="cq__l2">
                   {[
@@ -282,10 +282,10 @@ function QueueLists({
                   onStop={() => stop([w.runId], undefined, true)}
                   stopping={stopping.has(w.runId)}
                 >
-                  <span className="cq__l1">
+                  <span className="cq__l1 ac-tailrow">
                     <b>{agentName(w.agentId)}</b>
                     <span className="cq__nth">{nthText(t, i18n.language, w.position)}</span>
-                    <span className="cq__time">{queueStartText(t, w, names.agent, now)}</span>
+                    <span className="cq__time ac-tail">{queueStartText(t, w, names.agent, now)}</span>
                   </span>
                   <span className="cq__l2">
                     {[queuePurposeText(t, w.purpose, names), queueWhereText(t, names.place(w.where))].join(" · ")}

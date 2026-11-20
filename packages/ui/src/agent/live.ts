@@ -136,7 +136,9 @@ const reduced = () => {
   return motionQuery?.matches === true;
 };
 
-const sizeOf = (box: HTMLElement) => sizes.get(box) ?? box.clientWidth;
+// From the ResizeObserver, which reads it while the layout is fresh. Read here, right after another avatar's canvas
+// changed size, it would lay the whole page out again for each avatar: a conversation opens with a hundred of them.
+const sizeOf = (box: HTMLElement) => sizes.get(box) ?? (typeof ResizeObserver === "function" ? 0 : box.clientWidth);
 
 /** How many agents the loop is drawing (tests). */
 export function liveAgentCount() {
@@ -343,11 +345,10 @@ export function addLiveAgent(agent: LiveAgent): () => void {
   if (typeof ResizeObserver === "function") {
     resizes ??= new ResizeObserver((entries) => {
       const t = clock() / 1000;
-      for (const e of entries) {
-        const box = e.target as HTMLElement;
-        sizes.set(box, box.clientWidth);
-        for (const a of agents) if (a.box === box) drawLive(a, t);
-      }
+      // Every size first, while the layout is fresh, then the drawing: a canvas that changes size makes it stale.
+      const boxes = entries.map((e) => e.target as HTMLElement);
+      for (const box of boxes) sizes.set(box, box.clientWidth);
+      for (const box of boxes) for (const a of agents) if (a.box === box) drawLive(a, t);
     });
     resizes.observe(agent.box);
   }

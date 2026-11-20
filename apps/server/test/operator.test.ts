@@ -270,13 +270,17 @@ test("the reveal token: POST under /reveal and nothing else; the other two never
 });
 
 test("health, with the bot check: off without its keys, else its state, since when, the networks it refused and the tokens it passed", async () => {
-  const off = await body<{ ok: boolean; version: string; botCheck: Record<string, unknown> & { since: string } }>(
-    await op("/health"),
-  );
+  const off = await body<{
+    ok: boolean;
+    version: string;
+    botCheck: Record<string, unknown> & { since: string };
+    eventLoopLag: unknown;
+  }>(await op("/health"));
   expect(off).toEqual({
     ok: true,
     version: "test",
     botCheck: { state: "off", since: off.botCheck.since, blocked: 0, passed: 0, testing: false },
+    eventLoopLag: null,
   });
   expect(off.botCheck.since).toMatch(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/);
 
@@ -287,12 +291,14 @@ test("health, with the bot check: off without its keys, else its state, since wh
     probe: async () => "unreachable" as const,
     status: () => ({ state: "unreachable" as const, since, blocked: 21, passed: 3, testing: false }),
   };
-  const app = createOperatorApp({ ...deps, humanCheck }, TOKEN);
+  const eventLoopLag = { p50Ms: 1.2, p99Ms: 48.5, maxMs: 310, at: "2026-10-27T12:01:00.000Z" };
+  const app = createOperatorApp({ ...deps, humanCheck, eventLoopLag: () => eventLoopLag }, TOKEN);
   const res = await app.request("/api/operator/v1/health", { headers: { authorization: BEARER } });
   expect(await body(res)).toEqual({
     ok: true,
     version: "test",
     botCheck: { state: "unreachable", since: "2026-10-27T12:00:00.000Z", blocked: 21, passed: 3, testing: false },
+    eventLoopLag,
   });
 });
 

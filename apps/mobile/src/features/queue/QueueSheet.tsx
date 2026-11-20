@@ -162,7 +162,7 @@ export function QueueSheet({ machineId, computer }: { machineId: string; compute
   return (
     <>
       <View accessible accessibilityRole="header" accessibilityLabel={t("queue.label", { name: q.data.name })}>
-        <SheetTitle title={q.data.name} subtitle={queueStatusText(t, view, now)} />
+        <SheetTitle title={q.data.name} subtitle={queueStatusText(t, view)} />
       </View>
       <View style={styles.group}>
         <GroupHead title={t("queue.workingNow", { n: view.working.length })} />

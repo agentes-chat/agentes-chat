@@ -18,7 +18,7 @@ describe("a row comes back as the person left it", () => {
 
   test("a reply shows the work it showed the first time, however late it comes back", () => {
     const items = [{ kind: "say" as const, key: "s1", text: "Vou olhar" }];
-    rememberTurn("run-k1", { items, quotes: {}, at: 1000 });
+    rememberTurn("run-k1", { items, at: 1000 });
     expect(keptTurn("msg-k1", "run-k1", 2000)?.items).toEqual(items);
     // A minute later, the same reply still finds it; another reply of an old run doesn't.
     expect(keptTurn("msg-k1", "run-k1", 61_000)?.items).toEqual(items);
@@ -26,7 +26,6 @@ describe("a row comes back as the person left it", () => {
     // What it showed stays even if its run's work moved on.
     rememberTurn("run-k1", {
       items: [...items, { kind: "say" as const, key: "s2", text: "Pronto" }],
-      quotes: {},
       at: 70_000,
     });
     expect(keptTurn("msg-k1", "run-k1", 71_000)?.items).toEqual(items);

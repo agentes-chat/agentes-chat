@@ -49,6 +49,7 @@ export function SettingsPage(props: SettingsPageProps) {
 
 interface SettingsPageProps {
   title: string;
+  /** What the page is about (whose role, which channel): the bar's line under its title. */
   subtitle?: string | undefined;
   action?: HeaderWordAction;
   /** An icon button on the bar's right in place of a word. Prefer `actions`. */
@@ -138,7 +139,7 @@ function CompactPage({
     <View style={[styles.fill, { backgroundColor: c.grouped }]}>
       <PushedHeader
         title={title}
-        {...(subtitle ? { subtitle } : {})}
+        subtitle={subtitle}
         solid={false}
         grouped
         {...(busy

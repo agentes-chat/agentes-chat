@@ -149,7 +149,8 @@ export function FileOrigin({ artifactId, kind }: { artifactId: string; kind: Liv
         <Text
           key="place"
           variant="caption"
-          style={[styles.bold, place.href ? { color: c.agent } : null]}
+          // A way to the conversation in the words' own ink, underlined: the brand's blue is the agents', not links'.
+          style={[styles.bold, place.href ? { color: c.ink2, textDecorationLine: "underline" } : null]}
           {...(place.href
             ? { onPress: () => place.href && router.push(place.href), accessibilityRole: "link" as const }
             : {})}

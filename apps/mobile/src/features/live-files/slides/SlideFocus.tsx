@@ -25,17 +25,7 @@ import { Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import PagerView from "react-native-pager-view";
 import type * as Y from "yjs";
-import {
-  type HeaderMenuItem,
-  Icon,
-  type IconName,
-  PressScale,
-  SCREEN_X,
-  Text,
-  useReducedMotion,
-  useTheme,
-  useToast,
-} from "@/ui";
+import { type HeaderMenuItem, type IconName, SCREEN_X, Text, useReducedMotion, useTheme, useToast } from "@/ui";
 import { goBack, router } from "@/ui/navigation";
 import { Face } from "../../shared/Face";
 import { errorHaptic } from "../../shared/parts";
@@ -44,6 +34,7 @@ import { setFollowing, useFollowing } from "../shared/follow";
 import { PresentFaces } from "../shared/HereFaces";
 import { LiveBar } from "../shared/LiveBar";
 import { usePeerLook } from "../shared/peers";
+import { Tool, ToolBar } from "../shared/Tools";
 import type { LiveDoc } from "../shared/useLiveDoc";
 import { useAskAgent } from "../talk/hooks";
 import { FileTalkLine } from "../talk/TalkLine";
@@ -376,7 +367,7 @@ export function SlideFocus({
         ) : null}
       </View>
       {current ? (
-        <View style={[styles.tools, { borderTopColor: c.line2, backgroundColor: c.bg }]}>
+        <ToolBar>
           {edit ? (
             <>
               <Tool icon="textTool" label={t("mobile.live.slides.tools.text")} onPress={() => addText(current)} />
@@ -399,7 +390,7 @@ export function SlideFocus({
             disabled={current.hidden === true && deck.slides.every((s) => s.hidden)}
             onPress={() => router.push(slideShowRoute(fileId, { at: current.id }))}
           />
-        </View>
+        </ToolBar>
       ) : null}
       <FileTalkLine file={detail} />
     </>
@@ -599,36 +590,6 @@ function Notes({ doc, slideId, edit }: { doc: Y.Doc; slideId: string; edit: bool
   );
 }
 
-/** A tool under the slide: its icon over its word, a finger's size. */
-function Tool({
-  icon,
-  label,
-  onPress,
-  disabled = false,
-}: {
-  icon: IconName;
-  label: string;
-  onPress: () => void;
-  disabled?: boolean;
-}) {
-  const { colors: c } = useTheme();
-  return (
-    <PressScale
-      onPress={onPress}
-      disabled={disabled}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ disabled }}
-      style={[styles.tool, disabled && styles.off]}
-    >
-      <Icon name={icon} size={22} color={c.ink} />
-      <Text variant="caption" tone="ink2" numberOfLines={1}>
-        {label}
-      </Text>
-    </PressScale>
-  );
-}
-
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   page: { paddingHorizontal: SCREEN_X, paddingTop: 12, paddingBottom: 32 },
@@ -641,13 +602,4 @@ const styles = StyleSheet.create({
   peerFace: { position: "absolute", right: -10, top: -10, borderWidth: 2, borderRadius: 10, overflow: "hidden" },
   notes: { marginTop: 24, gap: 8 },
   notesLabel: { fontWeight: "600" },
-  tools: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    paddingHorizontal: 8,
-    paddingTop: 4,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  tool: { minWidth: 72, minHeight: 52, alignItems: "center", justifyContent: "center", gap: 2, paddingHorizontal: 8 },
-  off: { opacity: 0.4 },
 });

@@ -93,6 +93,12 @@ export const organizations = pgTable("organizations", {
   /** The operator's deletion hold (a legal hold): the deletion waits while it is set. Never shown to the workspace. */
   deletionHoldAt: timestamp({ withTimezone: true }),
   deletionHoldReason: text(),
+  /**
+   * Set while an owner's reset is under way (`org.reset` job): its content goes and it starts over as a new one. The
+   * job clears both in the transaction that erases it, so a retry after that erases nothing new.
+   */
+  resetRequestedAt: timestamp({ withTimezone: true }),
+  resetRequestedBy: text().references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
 });
 

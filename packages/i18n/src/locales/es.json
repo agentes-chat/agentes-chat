@@ -407,7 +407,7 @@
     },
     "view_all_agents": {
       "title": "Ver todos los agentes",
-      "desc": "En Equipo y en la barra lateral. Sin esto, solo los que le responden a la persona.",
+      "desc": "En Equipo y en la barra lateral, salvo los agentes personales de otros. Sin esto, solo los que le responden a la persona.",
       "short": "ver todos los agentes",
       "say": "ve todos los agentes"
     },
@@ -1357,8 +1357,8 @@
       "where": {
         "openbotrun": "Suelta openbot-import.json (de Migrator by OpenBot) u openbot-transfer.json (de la transferencia de instancia), o el .zip en el que vino.",
         "openmausbot": "En OpenMausBot: clic derecho en el equipo → Share team… → Save file.",
-        "hermes": "En una terminal, ejecuta hermes profile export con el nombre del perfil y suelta aquí el .tar.gz. O arrastra la carpeta ~/.hermes para traer todos los perfiles.",
-        "openclaw": "Arrastra la carpeta ~/.openclaw completa (trae todos los agentes) o solo un espacio de trabajo. En una Mac, ⌘⇧. muestra las carpetas ocultas en el selector de archivos.",
+        "hermes": "En una terminal, ejecuta `hermes profile export` con el nombre del perfil y suelta aquí el .tar.gz. O arrastra la carpeta `~/.hermes` para traer todos los perfiles.",
+        "openclaw": "Arrastra la carpeta `~/.openclaw` completa (trae todos los agentes) o solo un espacio de trabajo. En una Mac, ⌘⇧. muestra las carpetas ocultas en el selector de archivos.",
         "paperclip": "Arrastra la carpeta del paquete (la que tiene COMPANY.md), suelta un .zip de ella o pega su enlace de GitHub.",
         "agenteschat": "En el otro espacio de trabajo: Configuración → Importar y exportar → Descargar el archivo. Luego suelta aquí el .json."
       },
@@ -3938,11 +3938,13 @@
   },
   "keyGuard": {
     "title": "Esto parece una clave de API",
-    "text": "Todo lo que está en el chat lo ven personas y agentes. Mejor guárdala como clave del espacio de trabajo: se cifra y nadie la ve.",
-    "textMember": "Todo lo que está en el chat lo ven personas y agentes. Una clave es como una contraseña.",
-    "save": "Guardar como clave",
+    "titleSecret": "Esto parece una clave o contraseña",
+    "vaultText": "Todo lo que va al chat lo ven las personas y los agentes. Guárdala en el Vault: queda cifrada y los agentes que autorices la usan sin verla.",
+    "vault": "Guardar en el Vault",
+    "useAsAi": "Usar como clave de IA",
     "remove": "Quitar la clave",
-    "send": "Enviar de todos modos"
+    "send": "Enviar de todos modos",
+    "saved": "Los agentes con acceso la usan con el nombre {{name}}."
   },
   "costlyCard": {
     "go": "Adelante",
@@ -4901,7 +4903,7 @@
     "error": {
       "title": "Ponle un nombre.",
       "website": "Usa una dirección https, como app.example.com.",
-      "keyName": "Usa mayúsculas, números y _, empezando con una letra, como ACME_API_KEY.",
+      "keyName": "Usa mayúsculas, números y _, empezando con una letra, como `ACME_API_KEY`.",
       "password": "Escribe la contraseña.",
       "value": "Escribe el valor.",
       "contact": "Completa al menos un campo."
@@ -5062,7 +5064,7 @@
       "show": "Mostrar el valor de {{name}}",
       "hide": "Ocultar el valor de {{name}}",
       "problem": {
-        "name": "El nombre debe ser como ACME_API_KEY",
+        "name": "El nombre debe ser como `ACME_API_KEY`",
         "reserved": "Nombre reservado",
         "empty": "Sin valor",
         "tooLarge": "Valor demasiado grande"
@@ -6140,7 +6142,8 @@
         },
         "speedText": "Responde más rápido en las conversaciones y consume el plan 2,5× más deprisa. Las rutinas y las tareas largas siguen en estándar.",
         "modelLine": {
-          "opus": "El más capaz. Consume el plan más rápido.",
+          "fable": "El más capaz. Consume el plan mucho más rápido.",
+          "opus": "Muy capaz. Consume el plan más rápido.",
           "sonnet": "Equilibrado. Bueno para casi todo.",
           "haiku": "Rápido y ligero. Para tareas simples."
         },
@@ -6702,12 +6705,13 @@
         "computer_busy": "La computadora siguió ocupada con otras tareas.",
         "computer_failed": "La computadora tuvo un problema y se detuvo.",
         "computer_timeout": "La computadora tardó demasiado en responder.",
+        "disk_full": "El disco de esta computadora está lleno. Borra en ella los archivos que ya no necesites (un agente puede hacerlo en cuanto haya un poco de espacio) o pide a un admin que libere espacio.",
         "cli_failed": "El programa {{brain}} se detuvo con un error: {{detail}}",
         "cli_stopped": "El programa {{brain}} se detuvo con un error.",
         "cli_closed": "El programa {{brain}} se cerró de repente.",
         "cli_sandbox": "El programa {{brain}} no puede iniciar su sandbox en esta computadora. Elige otra IA en la configuración del agente.",
         "account_missing": "La cuenta elegida para este agente ya no está en su computadora. Elige otra en la configuración del agente o agrégala de nuevo.",
-        "windows_sandbox": "Esta computadora con Windows no puede aislar los comandos de Codex: necesita Windows 11 24H2 o una versión más reciente.",
+        "windows_sandbox": "Esta computadora con Windows no puede aislar los comandos de Codex: necesita Windows 11 24H2 o una versión más reciente. Actualiza Windows, elige Claude o una clave de API para este agente, o muévelo a una computadora con Linux.",
         "our_error": "Algo salió mal de nuestro lado y la tarea se detuvo. Pide de nuevo en un rato.",
         "unknown": "Falló."
       }
@@ -7461,6 +7465,7 @@
     "modelAndCost": "Modelo y costo",
     "model": "Modelo",
     "modelDesc": {
+      "fable": "El más capaz, para el trabajo más difícil",
       "sonnet": "Recomendado para la mayoría",
       "opus": "Tareas largas y difíciles",
       "haiku": "Rápido y económico",
@@ -8239,7 +8244,10 @@
     "unreachableTitle": "No se puede conectar con agentes.chat",
     "unreachableText": "Puede que se esté reiniciando. Esta página se abre sola en cuanto vuelva.",
     "offlineTitle": "No tienes conexión",
-    "offlineText": "Esta página se abre sola cuando vuelvas a tener conexión."
+    "offlineText": "Esta página se abre sola cuando vuelvas a tener conexión.",
+    "unknownHostTitle": "Esta dirección aún no está configurada",
+    "unknownHostText": "Si se acaba de conectar, vuelve a intentarlo en unos minutos.",
+    "unknownHostTab": "Dirección sin configurar · agentes.chat"
   },
   "scopes": {
     "context_read": {
@@ -9506,6 +9514,7 @@
       "computer_busy": "La computadora siguió ocupada con otras tareas",
       "computer_failed": "La computadora tuvo un problema y se detuvo",
       "computer_timeout": "La computadora tardó demasiado en responder",
+      "disk_full": "El disco de la computadora estaba lleno",
       "cli_failed": "El programa de IA de la computadora se detuvo con un error",
       "account_missing": "La cuenta del agente ya no está en su computadora",
       "our_error": "Algo salió mal de nuestro lado"
@@ -10085,8 +10094,7 @@
       "approvals": "Por defecto, merge, deploy y rollback piden aprobación",
       "start": "Empezar misión",
       "created": "Misión creada: {{name}} está armando el plan.",
-      "who": "Quién programa",
-      "codexOld": "Codex en {{computer}} es demasiado antiguo para misiones: actualízalo ahí."
+      "who": "Quién programa"
     },
     "commandApproval": {
       "label": "Autonomía",
@@ -11068,8 +11076,8 @@
     "line": {
       "invalid": "TypeSafe no aceptó esta clave. Crea una nueva.",
       "no_credit": "Añade crédito en TypeSafe. Jev vuelve a funcionar solo.",
-      "env": "Definida en la configuración de este servidor (TYPESAFE_API_KEY).",
-      "envInvalid": "TypeSafe no aceptó esta clave. Cámbiala en la configuración de este servidor (TYPESAFE_API_KEY)."
+      "env": "Definida en la configuración de este servidor (`TYPESAFE_API_KEY`).",
+      "envInvalid": "TypeSafe no aceptó esta clave. Cámbiala en la configuración de este servidor (`TYPESAFE_API_KEY`)."
     },
     "checkAgain": "Volver a comprobar",
     "via": {
@@ -11095,7 +11103,7 @@
       "line": {
         "invalid": "OpenRouter no aceptó esta clave. Crea una nueva.",
         "no_credit": "Añade crédito en OpenRouter. Jev vuelve a funcionar solo.",
-        "envInvalid": "OpenRouter no aceptó esta clave. Cámbiala en la configuración de este servidor (TYPESAFE_API_KEY)."
+        "envInvalid": "OpenRouter no aceptó esta clave. Cámbiala en la configuración de este servidor (`TYPESAFE_API_KEY`)."
       }
     },
     "remove": {
@@ -11174,7 +11182,6 @@
       "needsCloud": {
         "online": "{{computer}} se está reiniciando o reconectando. Esto cambia solo cuando vuelva.",
         "installing": "{{program}} se está instalando en {{computer}}. Esto cambia solo cuando termine.",
-        "updating": "{{program}} se está actualizando en {{computer}}. Esto cambia solo cuando termine.",
         "runnerOld": "El programa de agentes.chat en {{computer}} está desactualizado y la actualización ya viene en camino. Esto cambia solo cuando termine.",
         "execOff": "{{computer}} todavía no puede ejecutar {{program}}. Ya estamos en eso, y esto cambia solo.",
         "toolOff": "{{program}} todavía no está habilitado en {{computer}}. Eso es cosa nuestra: inténtalo de nuevo más tarde.",
@@ -11328,7 +11335,7 @@
     "modeText": {
       "everyone": "Cualquiera del espacio de trabajo puede llamar a {{name}}.",
       "people": "Elige las personas y los roles que pueden hablar con {{name}}.",
-      "owner": "Solo {{owner}} habla con {{name}}.",
+      "owner": "Solo {{owner}} habla con {{name}}. En las listas, solo {{owner}}, los admins y quien puede editar ven a {{name}}.",
       "noOwner": "Define un responsable para usar esta opción.",
       "everyonePersonal": "Cualquiera de aquí puede llamar a {{name}}.",
       "peoplePersonal": "Elige las personas que pueden hablar con {{name}}."
@@ -12467,12 +12474,6 @@
       "read": "{{name}} lo leyó",
       "resolved": "{{name}} cerró el pedido de ayuda"
     },
-    "well": {
-      "readYours": "Leyó tu nota",
-      "readOf": "Leyó la nota de {{name}}",
-      "nowYours": "Se detuvo para leer tu nota",
-      "nowOf": "Se detuvo para leer la nota de {{name}}"
-    },
     "strip": {
       "see": "Ver",
       "toStop": "para detener"
@@ -12566,11 +12567,6 @@
       "not_installed": "{{program}} no está instalado en {{computer}}.",
       "cant_start": "{{program}} está en {{computer}}, pero no abre.",
       "not_reported": "{{computer}} todavía está comprobando qué programas tiene. Esto cambia solo cuando termine.",
-      "outdated": "La versión de {{computer}} es antigua. Actualiza Codex para usarlo.",
-      "outdatedCodex": "Se encontró Codex CLI {{detected}} en {{computer}}. Actualízalo a la versión {{minimum}} o posterior.",
-      "codexUpdateGuide": "Cómo actualizar Codex CLI",
-      "codexRecheckHere": "Después de actualizar, pulsa Volver a comprobar en la fila de Codex en Preferencias › Herramientas.",
-      "codexRecheckThere": "Actualiza Codex CLI en {{computer}}. Si tiene la aplicación de escritorio, pulsa Volver a comprobar en la fila de Codex en Preferencias › Herramientas.",
       "system": "{{program}} todavía no funciona en el sistema de {{computer}}.",
       "no_computerCloud": "Listo en cuanto {{computer}} lo esté."
     },
@@ -12636,8 +12632,6 @@
     "see": "Ver cola",
     "openComputer": "Abrir la computadora",
     "label": "Cola de {{name}}",
-    "full": "Llena",
-    "fullNext": "Llena · el siguiente empieza en unos {{n}} min",
     "free": "Nadie en la cola",
     "workingNow": "Trabajando ahora · {{n}}",
     "inLine": "En la cola · {{n}}",
@@ -13404,7 +13398,7 @@
         "invalid": "No válida"
       },
       "line": {
-        "env": "Definida en la configuración de este servidor (GITHUB_APP_ID).",
+        "env": "Definida en la configuración de este servidor (`GITHUB_APP_ID`).",
         "invalid": "Este servidor no puede abrir la app guardada. Quítala y créala de nuevo.",
         "events": "Para que los agentes escuchen lo que pasa en GitHub, marca estos eventos en la app: {{events}}."
       },
@@ -13992,9 +13986,9 @@
     "composio": {
       "via": "A través de Composio",
       "needsReconnect": "Hay que volver a conectarlo",
-      "off_one": "{{names}} y {{count}} servicio más se conectan a través de Composio. Para activarlos, quien administra este servidor configura COMPOSIO_API_KEY (consulta SELF_HOSTING.md).",
-      "off_many": "{{names}} y {{count}} servicios más se conectan a través de Composio. Para activarlos, quien administra este servidor configura COMPOSIO_API_KEY (consulta SELF_HOSTING.md).",
-      "off_other": "{{names}} y {{count}} servicios más se conectan a través de Composio. Para activarlos, quien administra este servidor configura COMPOSIO_API_KEY (consulta SELF_HOSTING.md).",
+      "off_one": "{{names}} y {{count}} servicio más se conectan a través de Composio. Para activarlos, quien administra este servidor configura `COMPOSIO_API_KEY` (consulta `SELF_HOSTING.md`).",
+      "off_many": "{{names}} y {{count}} servicios más se conectan a través de Composio. Para activarlos, quien administra este servidor configura `COMPOSIO_API_KEY` (consulta `SELF_HOSTING.md`).",
+      "off_other": "{{names}} y {{count}} servicios más se conectan a través de Composio. Para activarlos, quien administra este servidor configura `COMPOSIO_API_KEY` (consulta `SELF_HOSTING.md`).",
       "usage": "Composio: {{calls}} de {{limit}} llamadas en {{month}}",
       "usageNoLimit": "Composio: {{calls}} llamadas en {{month}}",
       "limitNotice": "Este espacio de trabajo usó sus llamadas de Composio del mes",
@@ -15181,7 +15175,7 @@
       },
       "railway": {
         "1": "En el servicio de Postgres, abre Data → Query y ejecuta el comando de abajo (cambia la contraseña).",
-        "2": "En Variables, copia DATABASE_PUBLIC_URL (DATABASE_URL es interna y no funciona desde aquí).",
+        "2": "En Variables, copia `DATABASE_PUBLIC_URL` (`DATABASE_URL` es interna y no funciona desde aquí).",
         "3": "Cambia el usuario y la contraseña por agentes_leitura y la contraseña que elegiste, y pégalo aquí."
       },
       "rds": {
@@ -15216,7 +15210,7 @@
     "error": {
       "auth": "El usuario o la contraseña no coinciden. Revísalos e intenta de nuevo.",
       "unreachable": "No pudimos llegar al servidor de la base de datos. Revisa la dirección y si acepta conexiones desde fuera.",
-      "blocked_host": "Este servidor no está permitido. Usa la dirección pública de la base de datos (las direcciones internas, como la DATABASE_URL de Railway, no funcionan desde aquí).",
+      "blocked_host": "Este servidor no está permitido. Usa la dirección pública de la base de datos (las direcciones internas, como la `DATABASE_URL` de Railway, no funcionan desde aquí).",
       "tls": "La base de datos no aceptó una conexión segura. Activa SSL en la base de datos, o elige Sin cifrado en Avanzado (solo bases de datos de prueba).",
       "unknown": "No se pudo conectar ahora. Intenta de nuevo en un momento.",
       "no_databases": "Este usuario no puede abrir ninguna base de este servidor. Revisa sus permisos o el comienzo del nombre."
@@ -16137,7 +16131,7 @@
       "titleRequired": "Ponle un nombre.",
       "tooLong": "Es demasiado largo. El límite es {{max}}.",
       "notHttps": "Usa una dirección que empiece con https://",
-      "keyNameInvalid": "Usa mayúsculas, dígitos y _ en el nombre, como ACME_API_KEY.",
+      "keyNameInvalid": "Usa mayúsculas, dígitos y _ en el nombre, como `ACME_API_KEY`.",
       "keyNameReserved": "Este nombre está reservado. Elige otro.",
       "keyNameTaken": "Ya hay una clave guardada con este nombre aquí.",
       "contactEmpty": "Completa al menos un campo.",
@@ -16534,7 +16528,10 @@
       "since": "desde {{time}}",
       "until": "hasta {{time}}",
       "withHost": "con {{host}}",
-      "lastSeen": "visto por última vez {{time}}"
+      "lastSeen": "visto por última vez {{time}}",
+      "offlineUnresponsive": "dejó de responder a las {{time}}",
+      "offlineStopped": "el runner se detuvo a las {{time}}",
+      "offlineDropped": "la conexión se cayó a las {{time}}"
     },
     "line": {
       "ready": "Los agentes ya pueden usarlo.",
@@ -16543,7 +16540,10 @@
       "busy_other": "{{count}} de {{max}} tareas en curso",
       "offline": "Los agentes esperan a que vuelva.",
       "offlineSeen": "Visto por última vez {{time}}. Los agentes esperan a que vuelva.",
-      "offlineWithHost": "{{host}} está sin conexión. Los agentes esperan a que vuelva."
+      "offlineWithHost": "{{host}} está sin conexión. Los agentes esperan a que vuelva.",
+      "offlineUnresponsive": "Dejó de responder a las {{time}}, quizá sin red o sobrecargado. Ejecuta `{{command}}` en él.",
+      "offlineStopped": "El runner se detuvo a las {{time}}. Inícialo de nuevo o ejecuta `{{command}}` en él para ver por qué.",
+      "offlineDropped": "La conexión se cayó a las {{time}}. Se reconecta sola. Si no vuelve, ejecuta `{{command}}` en él."
     },
     "reason": {
       "locked": "El teléfono está bloqueado",
@@ -16907,7 +16907,12 @@
       "iosBehind": "Este iPhone tiene iOS {{ios}} y Xcode en este Mac es para iOS {{sdk}}. Actualiza el iPhone: Ajustes › General › Actualización de software.",
       "xcodeOld": "{{name}} usa iOS {{version}} y Xcode en {{mac}} conoce como mucho iOS {{sdk}}. Instala Xcode {{major}} y luego ejecuta esto en Terminal.",
       "xcodeOldAny": "{{name}} usa iOS {{version}}, más nuevo de lo que conoce Xcode en {{mac}}. Instala Xcode {{major}} y luego ejecuta esto en Terminal.",
-      "uiRefusedText": "El iPhone rechazó los toques de la app de pruebas. Desbloquéalo y escribe su código si lo pide. Si vuelve a pasar, desactiva y activa Configuración › Desarrollador › Activar automatización de la IU.",
+      "uiRefusedText": "Los agentes ven la pantalla del iPhone, pero iOS rechaza sus toques.",
+      "uiTurnOn": "En el iPhone, activa las dos opciones:",
+      "uiPasscode": "Escribe su código cuando lo pida y mantenlo desbloqueado.",
+      "uiCheck": "Comprobar de nuevo",
+      "repair": "Reparar la app de pruebas",
+      "repairHint": "El Mac detiene la app de pruebas y la vuelve a crear con su Xcode, en unos minutos. Para toques que siguen fallando con las dos opciones activadas.",
       "tooOld": "{{name}} usa iOS {{version}}, y los agentes necesitan iOS 17 o posterior. Actualízalo si se puede, o conecta un iPhone más nuevo.",
       "tooOldVersion": "16 o anterior",
       "pluggedIn": "Ya está conectado",
@@ -17464,6 +17469,13 @@
       "sentence": "{{who}} respondió por correo",
       "request": "solicitud de soporte de {{name}}"
     },
+    "operatorReview": {
+      "sentence": "{{who}} revisó contenido por seguridad",
+      "items_one": "{{value}} elemento",
+      "items_many": "{{value}} elementos",
+      "items_other": "{{value}} elementos",
+      "period": "del {{from}} al {{to}}"
+    },
     "change": {
       "mergedWithoutAsking": "Hizo merge en {{repo}} sin preguntar",
       "accentChanged": "Cambió el color de acento del espacio de trabajo",
@@ -17987,8 +17999,8 @@
         },
         "line": {
           "invalid": "Este servidor no puede leer esta clave. Pégala de nuevo.",
-          "env": "Definida en la configuración de este servidor (GIPHY_API_KEY).",
-          "envInvalid": "Esta clave no se puede usar. Cámbiala en la configuración de este servidor (GIPHY_API_KEY)."
+          "env": "Definida en la configuración de este servidor (`GIPHY_API_KEY`).",
+          "envInvalid": "Esta clave no se puede usar. Cámbiala en la configuración de este servidor (`GIPHY_API_KEY`)."
         },
         "invalid": "GIPHY no aceptó esta clave. Cópiala de nuevo desde GIPHY Developers.",
         "remove": {
@@ -18593,6 +18605,11 @@
         "shell": "Ejecuta otros comandos dentro",
         "inline": "Ejecuta código escrito en línea",
         "global": "Instala para toda la computadora",
+        "privilege": "Pide más permisos",
+        "reverseShell": "Entrega la terminal de esta computadora a otra máquina",
+        "destroy": "Borraría la computadora o una carpeta personal entera",
+        "network": "Cambia el proxy y el firewall o los esquiva",
+        "otherUser": "Accede a archivos de otro usuario",
         "rules": "Fuera de lo que los agentes pueden hacer por su cuenta",
         "noAccess": "El agente no tiene acceso a esto",
         "policy": "No está permitido en este tipo de trabajo",
@@ -19831,6 +19848,21 @@
     "writeAfter": ".",
     "ask": "¿Necesitas ayuda? Pregúntales a quienes administran este servidor."
   },
+  "resetOrg": {
+    "cardTitle": "Reiniciar o eliminar",
+    "row": {
+      "title": "Reiniciar espacio de trabajo",
+      "text": "Borra todo lo que se hizo en él y empieza de cero, con las mismas personas."
+    },
+    "goes": "Agentes, conversaciones, mensajes directos, archivos, tareas, rutinas y memoria",
+    "stays": "Personas, roles, invitaciones, cuentas de IA, computadoras y conectores",
+    "fresh": "Después se abre como un espacio de trabajo nuevo, con la configuración inicial",
+    "plan": "El plan sigue igual, sin cobros nuevos",
+    "now": "Ocurre al instante y no se puede deshacer.",
+    "title": "¿Reiniciar {{name}}?",
+    "submit": "Reiniciar espacio de trabajo",
+    "resetting": "Reiniciando {{name}}…"
+  },
   "deleteOrg": {
     "card": {
       "title": "Eliminar espacio de trabajo",
@@ -19902,8 +19934,7 @@
     "menu": "Eliminar cuenta",
     "card": {
       "text": "Elimina tu cuenta en 7 días, en todos los espacios de trabajo.",
-      "button": "Eliminar cuenta…",
-      "title": "Eliminar"
+      "button": "Eliminar cuenta…"
     },
     "title": "¿Eliminar toda tu cuenta?",
     "intro": "Esto elimina toda tu cuenta, no solo un espacio de trabajo.",
@@ -21581,6 +21612,38 @@
       "alwaysOn": "De ahora en adelante, informes como este salen sin preguntar.",
       "askFirst": "Preguntar antes de enviar"
     }
+  },
+  "problemReport": {
+    "button": "Enviar un informe",
+    "title": "Enviar un informe a agentes.chat",
+    "lead": "El equipo de agentes.chat recibe: versiones, qué ajustes están definidos (nunca sus valores), qué falló y las últimas líneas de los registros. Sin mensajes, páginas, nombres ni claves.",
+    "noteLabel": "¿Qué pasó? (opcional)",
+    "notePlaceholder": "Qué estabas haciendo cuando se detuvo",
+    "emailLabel": "Correo para la respuesta (opcional)",
+    "emailHelp": "Solo si quieres una respuesta.",
+    "showAll": "Ver todo lo que se envía",
+    "copy": "Copiar informe",
+    "copied": "Copiado",
+    "send": "Enviar",
+    "sending": "Enviando…",
+    "cancel": "Cancelar",
+    "loading": "Reuniendo los detalles…",
+    "sentTitle": "Informe {{id}} enviado",
+    "sentText": "Si nos escribes, menciona este código.",
+    "sentTextReply": "Te responderemos en {{email}}. Menciona este código si nos escribes.",
+    "copyCode": "Copiar código",
+    "done": "Listo",
+    "noLogComputer": "{{computer}} no respondió, así que su registro no se incluye.",
+    "oldRunner": "La app agentes.chat en {{computer}} es demasiado antigua para incluir su registro. Actualízala allí para incluirlo.",
+    "noServerLines": "Las líneas del registro del servidor solo se incluyen cuando quien es dueño de la instalación envía el informe.",
+    "off": "El envío está desactivado en este servidor (`PROBLEM_REPORT_URL=off`). Copia el informe para compartirlo.",
+    "errorRate": "Demasiados informes en poco tiempo. Inténtalo de nuevo en {{minutes}} min o copia el informe.",
+    "errorUnreachable": "agentes.chat no respondió. Inténtalo de nuevo o copia el informe.",
+    "errorRefused": "agentes.chat no aceptó este informe (puede ser de una versión anterior). Copia el informe.",
+    "errorPreview": "No se pudieron reunir los detalles: {{reason}}",
+    "emailInvalid": "Ese correo no parece correcto. Corrígelo o déjalo vacío.",
+    "settingsTitle": "¿Algo no funciona?",
+    "settingsText": "Envía los detalles técnicos al equipo de agentes.chat."
   },
   "live": {
     "slides": {

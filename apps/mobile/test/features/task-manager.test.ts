@@ -155,16 +155,19 @@ describe("one line a row", () => {
     for (const row of ["computer.name", "title"]) expect(screen).toContain(`<OneLine title={${row}}`);
   });
 
-  test("what holds the waiting work: today's line, then up to three causes, each one line that opens its way out", () => {
+  test("what holds the waiting work: its heading, then up to three causes, each one line that opens its way out", () => {
     const screen = read("TaskManagerScreen.tsx");
     expect(screen).toContain("const causes = shownCauses(all);");
-    // A computer in the strip is not listed again under Computadores.
-    expect(screen).toContain("const listed = computersBesides(computers, causes);");
-    expect(screen).toContain("{listed.map((m, i) => (");
-    expect(screen).toContain('t("taskManager.capacity.today", {');
-    // Today's count is asked by this screen alone: an agent's tasks, a task and a DM's header count what ended.
-    expect(screen).toContain("useTasksToday({ doneToday: true })");
-    for (const other of ["TaskScreen.tsx", "AgentTasksScreen.tsx", "AgentTasksButton.tsx"])
+    // One block for what holds the work: no today's line, no second Computadores list.
+    expect(screen).toContain(
+      '<SectionHeader title={t("taskManager.capacity.label")} count={causes.length + lined.length} />',
+    );
+    expect(screen).not.toContain("taskManager.capacity.today");
+    expect(screen).not.toContain("taskManager.queue.computers");
+    // A computer with a line is a row of the same block, opening its line.
+    expect(screen).toContain("const lined = computersBesides(computers, causes).filter((m) => m.inLine > 0);");
+    // No screen asks for today's count any more.
+    for (const other of ["TaskManagerScreen.tsx", "TaskScreen.tsx", "AgentTasksScreen.tsx", "AgentTasksButton.tsx"])
       expect(read(other)).not.toContain("doneToday: true");
     expect(read("hooks.ts")).toContain("doneToday: options.doneToday ?? false,");
     expect(screen).toContain('<OneLine title={title} line={line} variant="subhead" />');
@@ -175,7 +178,7 @@ describe("one line a row", () => {
     ])
       expect(screen).toContain(way);
     // Nothing waits, nothing shows.
-    expect(screen).toContain("{causes.length > 0 ? (");
+    expect(screen).toContain("{causes.length + lined.length > 0 ? (");
   });
 
   test("its screen says it whole: the title and what it is about with no limit of lines, the state's words", () => {

@@ -23,7 +23,6 @@ import {
   runMessageLink,
   runOutcome,
   runPixelStatus,
-  runPixels,
   runsPerDay,
   stopWordsKey,
   usageContinueBlock,
@@ -68,7 +67,6 @@ import {
   useOrgId,
   usePullRefresh,
 } from "../shared/hooks";
-import { agentLook } from "../shared/logic";
 import { FocusLive, goBack, PushedHeader } from "../shared/parts";
 import { EventWebhookSetup } from "./EventWebhookSetup";
 import {
@@ -93,7 +91,7 @@ import {
   routineTitle,
   targetIcon,
 } from "./logic";
-import { RunStrip } from "./RunPixels";
+import { RoutineRunBars } from "./parts";
 import { nextLabel } from "./rule";
 import { WebhookCard } from "./WebhookCard";
 
@@ -343,12 +341,7 @@ function Details({ routine: r, refetch }: { routine: Routine; refetch: () => Pro
                 </Text>
               ) : null}
               <View style={styles.strip}>
-                <RunStrip
-                  runs={runPixels(r.recentRuns)}
-                  color={agentLook(dir.agentById.get(r.agentId)).color}
-                  running={running}
-                  label={words.label(r)}
-                />
+                <RoutineRunBars routine={r} running={running} />
                 <Text variant="caption" tone="faint" style={styles.shrink}>
                   {words.caption(r, at)}
                 </Text>

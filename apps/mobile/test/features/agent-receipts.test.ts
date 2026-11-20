@@ -598,7 +598,7 @@ describe("a receipt never adds a line to its row", () => {
     expect(line).toContain("<ReceiptMark message={m} mine receipt={receipt} seenBy={seenBy} />");
     // The turn's last bubble ends on the cut corner, on the side it stands.
     expect(row).toContain("solo: { borderBottomRightRadius: BUBBLE_CUT }");
-    expect(row).toContain("end: { borderTopRightRadius: 6, borderBottomRightRadius: BUBBLE_CUT }");
+    expect(row).toContain("end: { borderTopRightRadius: RADIUS.sm, borderBottomRightRadius: BUBBLE_CUT }");
     // Someone else's: absolutely placed in room their name line always keeps, so a mark that comes wraps nothing.
     expect(row).toContain('m.author.type === "person" && !inBubble && !compact && styles.whoRoom');
     expect(row).toMatch(/whoMark: \{ position: "absolute"/);

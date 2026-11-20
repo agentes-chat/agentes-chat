@@ -236,24 +236,35 @@ export function ApprovalSheet({
     ) : (
       <>
         {who}
+        {/* The agent's why in plain words, as the web's request: not a row among the facts. */}
+        {said ? (
+          <Text variant="body" accessibilityLabel={`${t("mobile.approval.sheet.why")}: ${said}`}>
+            {said}
+          </Text>
+        ) : null}
         <ApprovalAheadLine approval={a} />
         {a.email ? <ApprovalEmailLetter email={a.email} full /> : null}
-        <View>
-          <GroupedHeader>{t("mobile.approval.sheet.request")}</GroupedHeader>
-          <GroupedList>
-            {said ? <GroupedRow key="why" label={t("mobile.approval.sheet.why")} sub={said} subLines={6} /> : null}
-            {detail ? <GroupedRow key="detail" label={detail} labelLines={4} /> : null}
-            {facts.map((f) => {
-              const label = f.label ?? t("mobile.approval.sheet.service");
-              return f.value.length > SHORT_VALUE ? (
-                <GroupedRow key={label} label={label} sub={f.value} subLines={8} />
-              ) : (
-                <GroupedRow key={label} label={label} value={f.value} />
-              );
-            })}
-          </GroupedList>
-          {foot ? <GroupedFooter>{foot}</GroupedFooter> : null}
-        </View>
+        {detail || facts.length > 0 ? (
+          <View>
+            <GroupedHeader>{t("mobile.approval.sheet.request")}</GroupedHeader>
+            <GroupedList>
+              {detail ? <GroupedRow key="detail" label={detail} labelLines={4} /> : null}
+              {facts.map((f) => {
+                const label = f.label ?? t("mobile.approval.sheet.service");
+                return f.value.length > SHORT_VALUE ? (
+                  <GroupedRow key={label} label={label} sub={f.value} subLines={8} />
+                ) : (
+                  <GroupedRow key={label} label={label} value={f.value} />
+                );
+              })}
+            </GroupedList>
+            {foot ? <GroupedFooter>{foot}</GroupedFooter> : null}
+          </View>
+        ) : foot ? (
+          <Text variant="footnote" tone="muted">
+            {foot}
+          </Text>
+        ) : null}
         {pending && a.canDecide && (approveAlwaysOffered(a) || when.shown) ? (
           <View>
             <GroupedHeader>{t("mobile.approval.sheet.nextTime")}</GroupedHeader>

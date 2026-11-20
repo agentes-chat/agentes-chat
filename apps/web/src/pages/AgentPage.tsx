@@ -464,7 +464,8 @@ function AgentProfile({
   const errors = {
     name: fields.has("name") && !draft.name.trim() ? t("newAgent.errors.nameRequired") : undefined,
     handle: fields.has("handle")
-      ? (handleProblemText(t, draft.handle, takenHandles(dir.agents, dir.members, agent.id)) ?? undefined)
+      ? (handleProblemText(t, draft.handle, takenHandles([...dir.agentById.values()], dir.members, agent.id)) ??
+        undefined)
       : undefined,
     budget: edits.budget !== undefined && readBudget(edits.budget).invalid ? t("agent.budgetInvalid") : undefined,
     audience:
