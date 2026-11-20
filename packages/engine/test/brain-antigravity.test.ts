@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { ANTIGRAVITY_PROTOCOL, LOCKED_BRAIN_PROTOCOL, SHARED_GEMINI_PROTOCOL } from "@agenteschat/adapters";
 import {
   ANTIGRAVITY_MODELS,
+  antigravityBaseModel,
   GEMINI_ENTERPRISE_PROVIDER,
   sharedSignIn,
   signInProviderOf,
@@ -132,6 +133,10 @@ test("Quem pensa: Gemini where its runner and CLI are, its models as the CLI lis
   expect(option(machine({ executors: { detectedAt: "x" } }))).toMatchObject({ reason: "not_installed" });
   expect(option(machine({ executors: {} }))).toMatchObject({ reason: "not_reported" });
   expect(antigravityModels([]).map((m) => m.value)).toEqual(ANTIGRAVITY_MODELS.map((m) => m.id));
+  // Every thinking level of a slug names the same catalog model, `xhigh` included (`agy models` 1.5.8).
+  expect(
+    ["gemini-4-hydrogen-low", "gemini-4-hydrogen-high", "gemini-4-hydrogen-xhigh"].map(antigravityBaseModel),
+  ).toEqual(["gemini-4-hydrogen", "gemini-4-hydrogen", "gemini-4-hydrogen"]);
   expect(defaultBrainModel("antigravity")).toBeNull();
   expect(isBrainKind("antigravity") && isComputerBrain("antigravity")).toBe(true);
   expect([BRAIN_NAMES.antigravity, BRAIN_PLAN_NAMES.antigravity, defaultAccountLabel("antigravity")]).toEqual([
