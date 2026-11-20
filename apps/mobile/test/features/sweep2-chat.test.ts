@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { chatScreenSource } from "./chat-screen-source";
 
 const src = (file: string) => readFileSync(join(import.meta.dir, "../../src", file), "utf8");
 
@@ -35,12 +36,12 @@ describe("an empty conversation scrolls clear of the bar and the keyboard", () =
       expect(greeting).toContain("paddingTop: topInset + 8, paddingBottom: bottomInset + 16");
       expect(greeting).toContain("scrollIndicatorInsets={{ top: topInset, bottom: bottomInset }}");
     }
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     expect(chat.match(/topInset=\{headerHeight\}/g)).toHaveLength(2);
   });
 
   test("a DM's intro answers taps with the keyboard up, lets it go on a drag and reaches its last rows above it", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     expect(chat).toMatch(
       /const introScroll = \{[\s\S]*keyboardShouldPersistTaps: "handled"[\s\S]*keyboardDismissMode: "interactive"[\s\S]*automaticallyAdjustKeyboardInsets: true/,
     );

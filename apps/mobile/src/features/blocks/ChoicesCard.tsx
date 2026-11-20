@@ -16,7 +16,8 @@ import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { Button, IconButton, MEDIA_ROW, MediaRow, PressScale, Sky, Text, useToast } from "@/ui";
 import { initialText } from "@/ui/type-scale";
 import { useMessageCardCorners } from "../chat/look";
-import { useColors, useDirectory, useOrgId } from "../shared/hooks";
+import { useRowDirectory } from "../chat/row-data";
+import { useColors, useOrgId } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
 import { PromptForm } from "../shared/PromptForm";
 import { useSheetIfAny } from "../shared/SheetHost";
@@ -31,7 +32,7 @@ export function ChoicesCard({ id, version }: { id: string; version?: number }) {
   const { t, i18n } = useTranslation();
   const c = useColors();
   const orgId = useOrgId();
-  const dir = useDirectory();
+  const dir = useRowDirectory();
   const toast = useToast();
   // Outside a conversation (a task's activity) there is no sheet to write in: the options alone.
   const sheet = useSheetIfAny();

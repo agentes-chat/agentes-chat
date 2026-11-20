@@ -13,7 +13,6 @@
     "channelCount_many": "{{count}} canales",
     "channelCount_other": "{{count}} canales",
     "none": "Todavía no hay categorías.",
-    "manageHelp": "Toca una categoría para cambiarle el nombre, moverla o eliminarla.",
     "manageHint": "Orden, nombres y eliminar",
     "deleteTitle": "¿Eliminar {{name}}?",
     "order": "Lugar en la lista",
@@ -835,7 +834,6 @@
     "handleMention": "Menciona a @{{handle}} para llamarlo.",
     "handleFromName": "En el chat: @{{handle}}. Se crea a partir del nombre. Puedes cambiarlo.",
     "handleFromNameEmpty": "Su @ en el chat se crea a partir del nombre.",
-    "reviewLead": "Toca una línea para cambiarla.",
     "planHint": "O conecta tu plan de IA: así {{name}} piensa con él, sin gastar la clave.",
     "partly": "El agente se creó, pero parte de lo que trae su rol no se aplicó. Ajústalo en su perfil.",
     "import": {
@@ -1190,7 +1188,7 @@
     "agentStyle": "Cómo hablan los agentes",
     "workspaces": "Espacios de trabajo",
     "workspacesIn": "Estás en",
-    "workspacesFoot": "Sigues conectado en cada uno y recibes los avisos de todos. Toca un workspace para abrirlo.",
+    "workspacesFoot": "Sigues conectado en cada uno y recibes los avisos de todos.",
     "workspacesUnreachable": "Sin respuesta ahora",
     "addWorkspace": "Añadir workspace",
     "addWorkspaceCreate": "Crear un workspace nuevo",
@@ -2318,7 +2316,6 @@
   },
   "crash": {
     "title": "Algo salió mal en esta pantalla",
-    "subtitle": "La app tuvo un error al mostrar esto. Inténtalo de nuevo.",
     "retry": "Reintentar"
   },
   "notFound": {
@@ -2349,9 +2346,6 @@
     "deleteFailed": "No se pudo eliminar el espacio de trabajo. Inténtalo de nuevo.",
     "holdReset": "Mantén pulsado para reiniciar",
     "resetFailed": "No se pudo reiniciar el espacio de trabajo. Inténtalo de nuevo.",
-    "access": {
-      "how": "Toca una fila para cambiar su nivel: Sin acceso, Leer, Leer y escribir."
-    },
     "logo": {
       "failed": "No se pudo subir el logo",
       "tooBig": "Esa imagen es demasiado grande. Prueba con otra."
@@ -2615,7 +2609,7 @@
       "sealedHelp": "Por seguridad, lo que se guardó aquí ya no se muestra. Para cambiarlo, escríbelo de nuevo.",
       "changePassword": "Cambiar contraseña",
       "changeValue": "Cambiar valor",
-      "changeHelp": "Toca Guardar para conservarlo. Desde entonces, los agentes usan el nuevo.",
+      "changeHelp": "Los agentes usan el nuevo después de que lo guardes.",
       "hidden": "Oculto",
       "saved": "Guardado",
       "delete": "Eliminar",
@@ -2760,7 +2754,7 @@
     "bySelfUntil": "Escrito por {{name}} · {{when}}"
   },
   "dashboards": {
-    "homeRow": "Solo tú · tus propios widgets",
+    "homeRow": "Solo tú",
     "create": "Crear",
     "routineTarget": "su widget",
     "pin": {
@@ -2845,11 +2839,11 @@
     },
     "drive": {
       "title": "Todo lo que crea el equipo, en un solo lugar",
-      "text": "Informes, tablas y archivos de agentes y personas quedan aquí, fáciles de encontrar.",
+      "text": "Informes, tablas y archivos de agentes y personas quedan aquí.",
       "viewerTitle": "Encuentra lo que crea el equipo",
       "viewerText": "Lo que agentes y personas crean en los chats aparece aquí.",
       "titlePersonal": "Todo lo que crean tus agentes, en un solo lugar",
-      "textPersonal": "Los informes, tablas y archivos de tus agentes quedan aquí, fáciles de encontrar.",
+      "textPersonal": "Los informes, tablas y archivos de tus agentes quedan aquí.",
       "viewerTitlePersonal": "Encuentra lo que crean tus agentes",
       "viewerTextPersonal": "Lo que los agentes crean en tus chats aparece aquí."
     },
@@ -2915,7 +2909,7 @@
       "viewerTextPersonal": "Cuando alguien se una, aparecerá aquí."
     },
     "chat": {
-      "title": "Todo empieza con un mensaje",
+      "title": "Empieza la conversación",
       "text": "Escribe aquí abajo y todos lo verán.",
       "viewerTitle": "Los mensajes aparecen aquí",
       "viewerText": "Cuando alguien escriba, lo lees aquí."
@@ -2956,8 +2950,8 @@
     "board": {
       "title": "Ve lo que importa en un solo panel",
       "text": "Agrega un widget, pide uno a un agente o fija un bloque del chat.",
-      "viewerTitle": "Este panel está tomando forma",
-      "viewerText": "Quien edita este panel agrega los widgets, y aparecen aquí."
+      "viewerTitle": "Los widgets aparecen aquí",
+      "viewerText": "Quien edita este panel los agrega."
     },
     "computers": {
       "title": "Lleva otro computador a tus agentes",
@@ -2966,7 +2960,7 @@
       "viewerText": "Quien conecta computadores los agrega, y aparecen aquí."
     },
     "connectors": {
-      "title": "Dales a tus agentes herramientas de verdad",
+      "title": "Dales herramientas a tus agentes",
       "text": "Conecta un servicio y empezarán a leer y actuar en él.",
       "viewerTitle": "Las herramientas de tus agentes aparecen aquí",
       "viewerText": "Quien gestiona los conectores conecta los servicios de abajo."
@@ -3130,7 +3124,7 @@
       "done": "Listo",
       "placeholder": "Escribe el texto",
       "titlePlaceholder": "Escribe el título",
-      "hint": "Cada línea es un párrafo. Lo que escribes va al archivo mientras escribes."
+      "hint": "Cada línea es un párrafo."
     },
     "show": {
       "nothing": "Todas las diapositivas están ocultas, así que no hay nada que mostrar.",

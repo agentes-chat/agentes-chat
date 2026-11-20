@@ -259,6 +259,29 @@ export const channelsQuery = (api: ApiClient, orgId: string) =>
     staleTime: 30_000,
     ...BACK_TO_TAB,
   });
+
+/** The workspace's people (`usePeople`); also for a `select` of one person. */
+export const peopleQuery = (api: ApiClient, orgId: string) =>
+  queryOptions({ queryKey: keys.people(orgId), queryFn: () => api.orgs.people(orgId), staleTime: 30_000 });
+
+/** The agents' statuses (`useAgentStatuses`); also for a `select` of one agent. */
+export const agentStatusQuery = (api: ApiClient, orgId: string) =>
+  queryOptions({
+    queryKey: keys.agentStatus(orgId),
+    queryFn: () => api.agents.statuses(orgId),
+    staleTime: 15_000,
+    refetchInterval: 30_000,
+    enabled: orgId.length > 0,
+  });
+
+/** Which agents have an AI (`useAiStatus`); also for a `select` of one agent. */
+export const aiStatusQuery = (api: ApiClient, orgId: string) =>
+  queryOptions({
+    queryKey: keys.aiStatus(orgId),
+    queryFn: () => api.agents.aiStatus(orgId),
+    staleTime: 30_000,
+    enabled: orgId.length > 0,
+  });
 /**
  * An invitation's preview (its page, and the sign-in that leads to it). One that got no answer is asked twice more:
  * the server may be restarting, and it's no expired link.
@@ -3092,7 +3115,7 @@ function levelsChanged(qc: QueryClient, orgId: string) {
 
 export const usePeople = (orgId: string) => {
   const api = useApi();
-  return useQuery({ queryKey: keys.people(orgId), queryFn: () => api.orgs.people(orgId), staleTime: 30_000 });
+  return useQuery(peopleQuery(api, orgId));
 };
 
 /**
@@ -3314,13 +3337,7 @@ export function useCancelUsageQueue(orgId: string, agentId: string) {
  */
 export const useAgentStatuses = (orgId: string, enabled = true) => {
   const api = useApi();
-  return useQuery({
-    queryKey: keys.agentStatus(orgId),
-    queryFn: () => api.agents.statuses(orgId),
-    staleTime: 15_000,
-    refetchInterval: 30_000,
-    enabled: enabled && orgId.length > 0,
-  });
+  return useQuery({ ...agentStatusQuery(api, orgId), enabled: enabled && orgId.length > 0 });
 };
 
 /**
@@ -3683,9 +3700,7 @@ export const useAiStatus = (
 ) => {
   const api = useApi();
   return useQuery({
-    queryKey: keys.aiStatus(orgId),
-    queryFn: () => api.agents.aiStatus(orgId),
-    staleTime: 30_000,
+    ...aiStatusQuery(api, orgId),
     enabled: enabled && orgId.length > 0,
     refetchInterval: typeof pollMs === "function" ? (query) => pollMs(query.state.data) : pollMs,
   });
@@ -7150,17 +7165,22 @@ export function useTasksUnread(orgId: string) {
  * read per client, however many members hear it.
  */
 export const UNREAD_REFRESH_MS = 2000;
+/** And up to this much more, at random: every member hears the same message, and their reads must not land at once. */
+export const UNREAD_SPREAD_MS = 3000;
 const activityTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
-/** Runs `read` once `UNREAD_REFRESH_MS` after the first call for `key`; calls meanwhile join it. */
+/** Runs `read` once, `UNREAD_REFRESH_MS` plus some of `UNREAD_SPREAD_MS` after the first call for `key`; calls meanwhile join it. */
 function readOncePerBurst(key: string, read: () => void) {
   if (activityTimers.has(key)) return;
   activityTimers.set(
     key,
-    setTimeout(() => {
-      activityTimers.delete(key);
-      read();
-    }, UNREAD_REFRESH_MS),
+    setTimeout(
+      () => {
+        activityTimers.delete(key);
+        read();
+      },
+      UNREAD_REFRESH_MS + Math.random() * UNREAD_SPREAD_MS,
+    ),
   );
 }
 
@@ -7172,6 +7192,25 @@ function readOncePerBurst(key: string, read: () => void) {
 export function readConversationListsOncePerBurst(qc: QueryClient, orgId: string) {
   readOncePerBurst(`${orgId}:dms`, () => void qc.invalidateQueries({ queryKey: keys.dms(orgId) }));
   readOncePerBurst(`${orgId}:channels`, () => void qc.invalidateQueries({ queryKey: keys.channels(orgId) }));
+}
+
+/**
+ * The conversation lists read now (news of a DM or a mention shows at once; a read under way serves it). A read that
+ * starts here comes after every `channel.activity` heard so far, so the burst read those asked for is dropped; with a
+ * read already under way (it may predate them) the burst read stays.
+ */
+export function readConversationListsNow(qc: QueryClient, orgId: string) {
+  for (const [list, queryKey] of [
+    ["dms", keys.dms(orgId)],
+    ["channels", keys.channels(orgId)],
+  ] as const) {
+    const underWay = qc.isFetching({ queryKey }) > 0;
+    void qc.invalidateQueries({ queryKey }, { cancelRefetch: false });
+    const timer = activityTimers.get(`${orgId}:${list}`);
+    if (underWay || timer === undefined) continue;
+    clearTimeout(timer);
+    activityTimers.delete(`${orgId}:${list}`);
+  }
 }
 
 /**
@@ -7235,8 +7274,15 @@ export function applyUnreadEvent(qc: QueryClient, orgId: string, event: { type: 
     }
   } else if (e.type === "channel.read") {
     clearUnread(qc, orgId, e.channelId);
-    void qc.invalidateQueries({ queryKey: keys.channels(orgId) });
-    void qc.invalidateQueries({ queryKey: keys.dms(orgId) });
+    // The counts already show it: a list whose burst read is on its way reads with it (each message of a conversation
+    // open here marks it read, and that read comes back here too). One with no burst, or a read under way that may
+    // predate this one, reads at once.
+    for (const [list, queryKey] of [
+      ["channels", keys.channels(orgId)],
+      ["dms", keys.dms(orgId)],
+    ] as const)
+      if (!activityTimers.has(`${orgId}:${list}`) || qc.isFetching({ queryKey }) > 0)
+        void qc.invalidateQueries({ queryKey });
     void qc.invalidateQueries({ queryKey: keys.unreadThreads(orgId) });
   } else if (e.type === "channel.muted") setMuted(qc, orgId, e.channelId, e.muted);
   else if (e.type === "chat.prefs") putChatPrefs(qc, orgId, e.chatPrefs);

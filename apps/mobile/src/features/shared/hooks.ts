@@ -21,15 +21,13 @@ import { NavigationContext } from "expo-router/react-navigation";
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AppState, type AppStateStatus } from "react-native";
-import { useOrg } from "@/providers/org";
+import { useOrgId } from "@/providers/org";
 import { useRealtime } from "@/providers/realtime";
 import { haptics, rememberAgentLooks, useTheme, useToast } from "@/ui";
 import { agentLook, daysAgo, type PacedClock, pacedClock, whenKind } from "./logic";
 
-/** The current organization's id. */
-export function useOrgId(): string {
-  return useOrg().orgId;
-}
+/** The current organization's id, from its own context: a change of `me` doesn't draw its readers again. */
+export { useOrgId };
 
 /**
  * Which words the computers get here: the Cloud's or self-host's (`computerEdition`). The server's

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { chatScreenSource } from "./chat-screen-source";
 
 const src = (file: string) => readFileSync(join(import.meta.dir, "../../src", file), "utf8");
 
@@ -20,7 +21,7 @@ describe('the composer\'s "+"', () => {
   });
 
   test("GIFs and stickers sit beside the mic in the empty field too, where they can be sent", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     expect(chat).toContain("const mediaFromField = useLatest(openMedia);");
     expect(chat).toContain('(canSendMedia ? { label: t("media.picker.send"), onPress: mediaFromField } : null)');
     expect(chat).toContain("media={composerMedia}");

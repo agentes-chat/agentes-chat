@@ -167,7 +167,12 @@ describe("Conversas with the strip and one list", () => {
     expect([...HOME_SECTIONS]).toEqual(["widgets", "pinned", "recent", "otherChannels"]);
     expect(home).toContain("const { collapsed, toggle } = useCollapsedSections();");
     for (const key of ["widgets", "pinned", "recent", "otherChannels"])
-      expect({ key, toggles: home.includes(`onToggle={() => toggle("${key}")}`) }).toEqual({ key, toggles: true });
+      expect({
+        key,
+        toggles:
+          home.includes(`onToggle={() => toggle("${key}")}`) ||
+          home.includes(`useCallback(() => toggle("${key}"), [toggle])`),
+      }).toEqual({ key, toggles: true });
   });
 
   test("a face opens its conversation as its row does, and its long press is the row's own", () => {

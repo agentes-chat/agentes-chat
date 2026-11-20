@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { SOUNDS } from "@agenteschat/ui/sfx";
+import { chatScreenSource } from "./chat-screen-source";
 
 const src = (path: string) => readFileSync(join(import.meta.dir, "../../src", path), "utf8");
 const take = () => src("features/voice/useVoiceTake.ts");
@@ -109,7 +110,7 @@ describe("each touch answers", () => {
     expect(entrances).toContain("}).duration(motion.base);");
     expect(entrances).toContain("export const FADE_OUT = FadeOut.duration(motion.fast);");
     // One rise for a row arriving and for the voice's line and bar.
-    expect(src("features/chat/ChatScreen.tsx")).toContain("const ENTER = RISE_IN;");
+    expect(chatScreenSource()).toContain("const ENTER = RISE_IN;");
     const composer = src("ui/Composer.tsx");
     expect(composer).toMatch(
       /entering=\{reducedMotion \? undefined : RISE_IN\}\s*exiting=\{reducedMotion \? undefined : FADE_OUT\}\s*style=\{\[styles\.bar,/,

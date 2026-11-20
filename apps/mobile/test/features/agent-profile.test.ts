@@ -18,6 +18,7 @@ import {
   usesOf,
   type WorkItem,
 } from "../../src/features/agents/logic";
+import { chatScreenSource } from "./chat-screen-source";
 import { agent, translator } from "./fixtures";
 
 const NOW = new Date(2026, 9, 17, 15, 0);
@@ -425,7 +426,7 @@ describe("Perfil: o mês, com os limites do plano (ADR 0063 §5)", () => {
     // Its owner and admins change it on its AI page, pushed from this row; the conversation's bar has no button for it.
     expect(screen).toContain("? { chevron: true, onPress: () => openAgentAi(agent.id) }");
     expect(screen).not.toContain("ModelPickerSheet");
-    const chat = await Bun.file(new URL("../../src/features/chat/ChatScreen.tsx", import.meta.url).pathname).text();
+    const chat = chatScreenSource();
     expect(chat).not.toContain("DmModelButton");
     const t = await translator("pt-BR");
     expect(t("agentPage.work.cell.effort", { level: "médio" })).toBe("esforço médio");

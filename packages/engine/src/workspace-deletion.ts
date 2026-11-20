@@ -359,6 +359,7 @@ export async function closeForDeletion(
  */
 export async function afterClosing(deps: DeletionDeps, closed: Closed) {
   caches.standing.delete(`${closed.orgId}:`);
+  caches.membership.deletePrefix(`${closed.orgId}:`);
   const event: OrgDeletingEvent = {
     type: "org.deleting",
     orgId: closed.orgId,
@@ -466,6 +467,7 @@ export async function restoreWorkspace(
     }
   });
   caches.standing.delete(`${orgId}:`);
+  caches.membership.deletePrefix(`${orgId}:`);
 }
 
 const nameOf = async (tx: Executor, userId: string) =>
@@ -586,6 +588,7 @@ export async function purgeWorkspace(deps: PurgeDeps, orgId: string, options: { 
   }
   for (const install of gone.installs) forgetInstallationTokens(install.id);
   caches.standing.delete(`${orgId}:`);
+  caches.membership.deletePrefix(`${orgId}:`);
   // On a server without the operator API, the only trace it leaves.
   deps.log?.info("workspace deleted", { orgId, requestedBy: gone.requestedBy, via: gone.via });
   return true;
@@ -1101,6 +1104,7 @@ export async function scheduleAccountDeletion(deps: DeletionDeps, userId: string
   });
   // Their open sockets lose every subscription now.
   for (const m of orgs) {
+    caches.membership.delete(`${m.orgId}:${userId}`);
     await publishOrgEvent(deps.pubsub, { type: "membership.revoked", orgId: m.orgId, userId, quiet: true });
     await announceMembers(deps.pubsub, m.orgId);
   }

@@ -1,8 +1,16 @@
-import { type Issue, type IssueColumn, useIssueColumns, useIssueProjects, useIssues } from "@agenteschat/client";
+import {
+  type Issue,
+  type IssueColumn,
+  type UnreadTask,
+  useIssueColumns,
+  useIssueProjects,
+  useIssues,
+  useUnreadTasks,
+} from "@agenteschat/client";
 import { dueLabel } from "@agenteschat/client/lib/format";
 import { liveProjectFilter, NO_PROJECT } from "@agenteschat/client/lib/issue-projects";
 import { assigneeNames } from "@agenteschat/client/lib/issues";
-import { Fragment, useMemo, useRef, useState } from "react";
+import { Fragment, memo, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   RefreshControl,
@@ -33,10 +41,11 @@ import {
 } from "@/ui";
 import { mediaRowAxis } from "@/ui/media-row";
 import { router } from "@/ui/navigation";
+import { useRowDirectory } from "../chat/row-data";
 import { mayCreate } from "../new/logic";
 import { Face } from "../shared/Face";
 import { FirstUse, LoadFailed } from "../shared/FirstUse";
-import { useColors, useDirectory, useMeId, useOrgId, usePullRefresh } from "../shared/hooks";
+import { useColors, useMeId, useOrgId, usePullRefresh } from "../shared/hooks";
 import { PushedLargeTitle } from "../shared/PushedLargeTitle";
 import { type BoardColumn, issueBoard, taskListSections, taskTitleText } from "./logic";
 import {
@@ -227,9 +236,10 @@ function TaskList({
  * A task in the list, in the app's list row: the check in the lead column (green once done, faint before), the title in
  * the row's own type on two lines at most (its screen says it whole), then who has it (the agent's face, moving while
  * it works) and its one state in the board card's words ("Pergunta algo" in the attention color), else its due date in
- * words. A long name wraps beside its face, and a state that doesn't fit goes under it, whole.
+ * words. A long name wraps beside its face, and a state that doesn't fit goes under it, whole. Drawn again only when
+ * its task changes: a letter typed in the search redraws none of the rows that stay.
  */
-function TaskRow({
+const TaskRow = memo(function TaskRow({
   issue: i,
   divider,
   live,
@@ -243,7 +253,7 @@ function TaskRow({
 }) {
   const { t, i18n } = useTranslation();
   const c = useColors();
-  const dir = useDirectory();
+  const dir = useRowDirectory();
   const { state, words } = useCardState(i);
   const done = i.status === "done";
   const running = state?.kind === "running";
@@ -289,7 +299,7 @@ function TaskRow({
       onPress={() => router.push(`/issues/${i.number}`)}
     />
   );
-}
+});
 
 /**
  * Quadro, under the views: the stage chips with their counts, then the stages side by side, one column a swipe wide
@@ -308,6 +318,14 @@ function Board({
 }) {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
+  const unreadList = useUnreadTasks(useOrgId()).data;
+  // Each task's unread replies and mentions of me (ADR 0145), read once for the board: a card that reads the whole list
+  // itself is drawn again, every card, whenever any task's count changes.
+  const unread = useMemo(() => {
+    const byTask = new Map<string, UnreadTask>();
+    for (const u of unreadList ?? []) if (!byTask.has(u.issueId)) byTask.set(u.issueId, u);
+    return byTask;
+  }, [unreadList]);
   const pager = useRef<ScrollViewInstance>(null);
   const [tab, setTab] = useState(0);
   // A tab tapped: where the pager is going, so the columns it passes on the way don't light up.
@@ -352,7 +370,7 @@ function Board({
         onScroll={(e) => onPagerScroll(e.nativeEvent.contentOffset.x)}
       >
         {board.map((b) => (
-          <Column key={b.stage} column={b} width={columnWidth} mayNew={mayNew} project={project} />
+          <Column key={b.stage} column={b} width={columnWidth} mayNew={mayNew} project={project} unread={unread} />
         ))}
       </ScrollView>
     </>
@@ -365,11 +383,13 @@ function Column({
   width,
   mayNew,
   project,
+  unread,
 }: {
   column: BoardColumn;
   width: number;
   mayNew: boolean;
   project: string;
+  unread: ReadonlyMap<string, UnreadTask>;
 }) {
   const { t } = useTranslation();
   const c = useColors();
@@ -406,9 +426,16 @@ function Column({
             ) : null}
             {g.items.map((i) => {
               card += 1;
+              const counts = unread.get(i.id);
               return (
                 <Animated.View key={i.id} {...fade} layout={layout}>
-                  <BoardCard issue={i} live={card <= LIVE_CARDS} project={project === ""} />
+                  <BoardCard
+                    issue={i}
+                    live={card <= LIVE_CARDS}
+                    project={project === ""}
+                    mentions={counts?.mentions ?? 0}
+                    unread={counts?.unread ?? 0}
+                  />
                 </Animated.View>
               );
             })}

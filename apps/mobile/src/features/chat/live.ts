@@ -44,6 +44,7 @@ import {
   type ReactionCount,
   type ReceiptsState,
   readConversationListsOncePerBurst,
+  readList,
   reconcileConsults,
   reconcileRuns,
   refreshRepliedThread,
@@ -315,9 +316,10 @@ function applyToCache(qc: QueryClient, orgId: string, channelId: string, event: 
       break;
     case "agent.run":
     case "run.finished":
-      // "Trabalhando agora" on Início, and the task manager (an agent's DM header counts its tasks here too).
-      void qc.invalidateQueries({ queryKey: keys.working(orgId) });
-      void qc.invalidateQueries({ queryKey: keys.taskManager(orgId) });
+      // "Working now" on Home, and the task manager (an agent's DM header counts its tasks here too), paced with the
+      // same run's `agent.status` on the workspace's topic (`applyWorkspaceEvent`).
+      readList(qc, `${orgId}:working`, { queryKey: keys.working(orgId) });
+      readList(qc, `${orgId}:task-manager`, { queryKey: keys.taskManager(orgId) });
       break;
     case "message.reactions":
       cacheReactions(qc, orgId, channelId, event.messageId, event.reactions);
@@ -419,6 +421,11 @@ function applyToCache(qc: QueryClient, orgId: string, channelId: string, event: 
  */
 interface LiveStore {
   current: LiveState;
+  /**
+   * The runs as drawn: `current.streams`, but a command's output (`agent.tool.output`, many times a second) reaches it
+   * at most once a frame. Any other change brings it up to date at once, so a run that ends leaves with its message.
+   */
+  shownStreams: StreamsState;
   dispatch: (action: Action) => void;
   subscribe: (listener: () => void) => () => void;
   /**
@@ -428,22 +435,47 @@ interface LiveStore {
   hold: (held: boolean) => void;
 }
 
+/** Events that only add to a run's work while it goes on: drawn at most once a frame. */
+const FRAME_PACED: ReadonlySet<string> = new Set(["agent.tool.output"]);
+
+/** The action changed only the runs, with an event drawn once a frame. */
+const framePaced = (action: Action, before: LiveState, next: LiveState) =>
+  action.type === "event" &&
+  FRAME_PACED.has(action.event.type) &&
+  next.consults === before.consults &&
+  next.receipts === before.receipts &&
+  next.typing === before.typing &&
+  next.notices === before.notices;
+
 function createLiveStore(): LiveStore {
   const listeners = new Set<() => void>();
   let held = false;
   let missed = false;
-  const tell = () => {
+  let frame: number | null = null;
+  // Everything heard so far goes on screen, output still waiting for its frame included.
+  const show = () => {
+    if (frame !== null) cancelAnimationFrame(frame);
+    frame = null;
+    store.shownStreams = store.current.streams;
     for (const listener of [...listeners]) listener();
   };
   const store: LiveStore = {
     current: { streams: emptyStreams, consults: {}, receipts: {}, typing: {}, notices: [] },
+    shownStreams: emptyStreams,
     dispatch(action) {
-      const next = reduce(store.current, action);
+      const before = store.current;
+      const next = reduce(before, action);
       // An event that changes nothing doesn't re-render.
-      if (next === store.current) return;
+      if (next === before) return;
       store.current = next;
       if (held) missed = true;
-      else tell();
+      else if (!framePaced(action, before, next)) show();
+      else if (frame === null)
+        frame = requestAnimationFrame(() => {
+          frame = null;
+          if (held) missed = true;
+          else show();
+        });
     },
     subscribe(listener) {
       listeners.add(listener);
@@ -455,7 +487,7 @@ function createLiveStore(): LiveStore {
       held = on;
       if (on || !missed) return;
       missed = false;
-      tell();
+      show();
     },
   };
   return store;
@@ -540,7 +572,7 @@ export function useChatLive(orgId: string, channelId: string, enabled: boolean, 
   const [store] = useState(createLiveStore);
   const stateRef = store;
   const { dispatch } = store;
-  const streams = useSyncExternalStore(store.subscribe, () => store.current.streams);
+  const streams = useSyncExternalStore(store.subscribe, () => store.shownStreams);
   const consultsState = useSyncExternalStore(store.subscribe, () => store.current.consults);
   const receipts = useSyncExternalStore(store.subscribe, () => store.current.receipts);
   const notices = useSyncExternalStore(store.subscribe, () => store.current.notices);
@@ -578,10 +610,8 @@ export function useChatLive(orgId: string, channelId: string, enabled: boolean, 
         .catch(() => {});
     };
     check();
-    const off = connection?.onReconnect(() => {
-      check();
-      void qc.invalidateQueries({ queryKey: ["org", orgId, "channel", channelId] });
-    });
+    // The conversation's lists read again with everything else on a reconnect (`RealtimeProvider`).
+    const off = connection?.onReconnect(check);
     const offSubscribed = connection?.onSubscribed((id) => {
       if (id !== channelId) return;
       check();

@@ -1,10 +1,10 @@
 import { type NativeStackNavigationOptions, Stack, useIsFocused } from "expo-router";
 import { useHeaderHeight } from "expo-router/react-navigation";
-import { createContext, type ReactNode, useContext, useMemo } from "react";
-import { Platform, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { createContext, type ReactNode, useCallback, useContext, useMemo } from "react";
+import { Platform, RefreshControl, type ScrollEvent, ScrollView, StyleSheet, View } from "react-native";
 import Animated, { type AnimatedRef } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LivePause } from "@/agent/live";
+import { LivePause, useStillWhileScrolling } from "@/agent/live";
 import { CoverBarBackdrop, CoverParallax, FadingHeaderTitle } from "./cover";
 import { type HeaderAction, useHeaderActionOptions } from "./headerActions";
 import { LargeTitleHead, useLargeTitleScroll } from "./LargeTitleHead";
@@ -87,6 +87,39 @@ export function LargeTitleScreen(props: LargeTitleScreenProps) {
 }
 
 /**
+ * The list's drag and glide handlers that hold the faces still while it moves, as a conversation's do
+ * (`useStillWhileScrolling`: their frames share the thread that places the rows): a drag or a glide holds them, its
+ * end lets them go. Each also runs the screen's own handler for that event (`then`).
+ */
+function useStillList(then: {
+  onScrollBeginDrag?: (() => void) | undefined;
+  onScrollEndDrag?: ((e: ScrollEvent) => void) | undefined;
+  onMomentumScrollEnd?: ((e: ScrollEvent) => void) | undefined;
+}) {
+  const { hold, settle } = useStillWhileScrolling();
+  const { onScrollBeginDrag: began, onScrollEndDrag: dragEnded, onMomentumScrollEnd: glideEnded } = then;
+  const onScrollBeginDrag = useCallback(() => {
+    hold();
+    began?.();
+  }, [hold, began]);
+  const onScrollEndDrag = useCallback(
+    (e: ScrollEvent) => {
+      settle();
+      dragEnded?.(e);
+    },
+    [settle, dragEnded],
+  );
+  const onMomentumScrollEnd = useCallback(
+    (e: ScrollEvent) => {
+      settle();
+      glideEnded?.(e);
+    },
+    [settle, glideEnded],
+  );
+  return { onScrollBeginDrag, onScrollEndDrag, onMomentumScrollBegin: hold, onMomentumScrollEnd };
+}
+
+/**
  * The system's large title over the tab's scroll view, set up as the pushed screens': the system's bar (the tab
  * stacks' clear one is for a drawn title, and under it the system's large title never folded while the list scrolled
  * inside the tabs) and the scroll view as the screen's first view, insets left to the system.
@@ -110,6 +143,7 @@ function SystemTitleScreen({
   const foot = useContext(TabFoot);
   const bar = useScrollUnderPushedOptions();
   const actionOptions = useHeaderActionOptions({ right: actions, left, leftActions });
+  const still = useStillList({ onScrollBeginDrag });
   // Stable options: `setOptions` runs when the title or the actions change, not on every render.
   const options = useMemo<NativeStackNavigationOptions>(
     () => ({
@@ -131,7 +165,10 @@ function SystemTitleScreen({
         <ScrollView
           contentInsetAdjustmentBehavior="automatic"
           style={[styles.screen, { backgroundColor: grouped ? colors.grouped : colors.bg }]}
-          onScrollBeginDrag={onScrollBeginDrag}
+          onScrollBeginDrag={still.onScrollBeginDrag}
+          onScrollEndDrag={still.onScrollEndDrag}
+          onMomentumScrollBegin={still.onMomentumScrollBegin}
+          onMomentumScrollEnd={still.onMomentumScrollEnd}
           refreshControl={pull ? <RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} /> : undefined}
           keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled"
@@ -183,7 +220,14 @@ function DrawnTitleScreen({
   // height): the automatic adjustment didn't apply under the tab stacks' clear bar inside the system tabs, so the
   // list rested under the bar with the large title hidden, shown only while pulled. Android lays it out from the top,
   // under the bar. Folded away for a search, there is no title to settle.
-  const scroll = useLargeTitleScroll(IOS ? headerHeight : 0, { snap: !collapsed });
+  const titled = useLargeTitleScroll(IOS ? headerHeight : 0, { snap: !collapsed });
+  // The title's settling once the list stops, and the faces held still while it moves.
+  const still = useStillList({
+    onScrollBeginDrag,
+    onScrollEndDrag: titled.onScrollEndDrag,
+    onMomentumScrollEnd: titled.onMomentumScrollEnd,
+  });
+  const scroll = { ...titled, ...still };
   const { y } = scroll;
   const actionOptions = useHeaderActionOptions({ right: actions, left, leftActions });
   // Stable options: `setOptions` runs when the title or the actions change, not on every render.
@@ -206,8 +250,9 @@ function DrawnTitleScreen({
         <Animated.ScrollView
           ref={scroll.ref}
           onScroll={scroll.onScroll}
-          onScrollBeginDrag={onScrollBeginDrag}
+          onScrollBeginDrag={scroll.onScrollBeginDrag}
           onScrollEndDrag={scroll.onScrollEndDrag}
+          onMomentumScrollBegin={scroll.onMomentumScrollBegin}
           onMomentumScrollEnd={scroll.onMomentumScrollEnd}
           scrollEventThrottle={16}
           // The pixel orbit stands in for the wheel, hidden on iOS (Android keeps its own over the content).

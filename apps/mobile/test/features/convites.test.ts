@@ -641,7 +641,9 @@ describe("the arrival card (#general for a newcomer's first day)", () => {
   });
 
   test("the Agentes tab shows the pinned agents first, the invitation's included", () => {
-    expect(src("features/agents/AgentsScreen.tsx")).toContain("freeSections(free, groups, pins.pins.agents)");
+    const screen = src("features/agents/AgentsScreen.tsx");
+    expect(screen).toContain("freeSections(free, groups, pinned)");
+    expect(screen).toContain("pinned={pins.pins.agents}");
   });
 });
 

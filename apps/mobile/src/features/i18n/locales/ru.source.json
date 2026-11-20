@@ -29,9 +29,6 @@
   "categories.none": {
     "value": "No categories yet."
   },
-  "categories.manageHelp": {
-    "value": "Tap a category to rename it, move it or delete it."
-  },
   "categories.manageHint": {
     "value": "Order, names and delete"
   },
@@ -1928,9 +1925,6 @@
   "newAgent.handleFromNameEmpty": {
     "value": "Its @ in the chat comes from the name."
   },
-  "newAgent.reviewLead": {
-    "value": "Tap a line to change it."
-  },
   "newAgent.planHint": {
     "value": "Or connect your AI plan: {{name}} then thinks with it, without spending the key.",
     "female": "Or connect your AI plan: {{name}} then thinks with it, without spending the key."
@@ -2740,7 +2734,7 @@
     "value": "You're in"
   },
   "me.workspacesFoot": {
-    "value": "You stay signed in to each one and get notifications from all of them. Tap a workspace to open it."
+    "value": "You stay signed in to each one and get notifications from all of them."
   },
   "me.workspacesUnreachable": {
     "value": "No answer right now"
@@ -5475,9 +5469,6 @@
   "crash.title": {
     "value": "Something went wrong on this screen"
   },
-  "crash.subtitle": {
-    "value": "The app hit an error showing this. Try again."
-  },
   "crash.retry": {
     "value": "Try again"
   },
@@ -5543,9 +5534,6 @@
   },
   "settings.resetFailed": {
     "value": "Couldn't reset the workspace. Try again."
-  },
-  "settings.access.how": {
-    "value": "Tap a row to change its level: No access, Read, Read and write."
   },
   "settings.logo.failed": {
     "value": "Couldn't upload the logo"
@@ -6170,7 +6158,7 @@
     "value": "Change value"
   },
   "vault.item.changeHelp": {
-    "value": "Tap Save to keep it. Agents use the new one from then on."
+    "value": "Agents use the new one after you save."
   },
   "vault.item.hidden": {
     "value": "Hidden"
@@ -6524,7 +6512,7 @@
     "value": "Written by {{name}} · {{when}}"
   },
   "dashboards.homeRow": {
-    "value": "Only you · your own widgets"
+    "value": "Only you"
   },
   "dashboards.create": {
     "value": "Create"
@@ -6695,7 +6683,7 @@
     "value": "Everything the team makes, in one place"
   },
   "empty.drive.text": {
-    "value": "Reports, tables and files from agents and people stay here, easy to find."
+    "value": "Reports, tables and files from agents and people stay here."
   },
   "empty.drive.viewerTitle": {
     "value": "Find what the team makes"
@@ -6707,7 +6695,7 @@
     "value": "Everything your agents make, in one place"
   },
   "empty.drive.textPersonal": {
-    "value": "Reports, tables and files from your agents stay here, easy to find."
+    "value": "Reports, tables and files from your agents stay here."
   },
   "empty.drive.viewerTitlePersonal": {
     "value": "Find what your agents make"
@@ -6851,7 +6839,7 @@
     "value": "When someone joins, they show up here."
   },
   "empty.chat.title": {
-    "value": "It all starts with a message"
+    "value": "Start the conversation"
   },
   "empty.chat.text": {
     "value": "Write below and everyone here sees it."
@@ -6932,10 +6920,10 @@
     "value": "Add a widget, ask an agent for one or pin a block from the chat."
   },
   "empty.board.viewerTitle": {
-    "value": "This board is taking shape"
+    "value": "Widgets show up here"
   },
   "empty.board.viewerText": {
-    "value": "Whoever edits this board adds the widgets, and they show up here."
+    "value": "Whoever edits this board adds them."
   },
   "empty.computers.title": {
     "value": "Bring another computer to your agents"
@@ -6950,7 +6938,7 @@
     "value": "Whoever connects computers adds them, and they show up here."
   },
   "empty.connectors.title": {
-    "value": "Give your agents real tools"
+    "value": "Give your agents tools"
   },
   "empty.connectors.text": {
     "value": "Connect a service and they start reading and acting in it."
@@ -7313,7 +7301,7 @@
     "value": "Type the title"
   },
   "live.text.hint": {
-    "value": "Each line is a paragraph. What you type goes into the file as you type."
+    "value": "Each line is a paragraph."
   },
   "live.show.nothing": {
     "value": "Every slide is hidden, so there is nothing to show."

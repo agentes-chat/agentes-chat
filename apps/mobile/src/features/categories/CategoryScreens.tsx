@@ -299,7 +299,6 @@ export function CategoriesScreen() {
           onPress={() => router.push(categoryHrefs.create())}
         />
       </GroupedList>
-      <GroupedFooter>{t("mobile.categories.manageHelp")}</GroupedFooter>
     </SettingsPage>
   );
 }

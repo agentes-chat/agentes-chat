@@ -6,6 +6,7 @@ import {
   type ContextDeps,
   claimStuckPhoneSetups,
   clearOldOutboxPayloads,
+  consolidateRunAt,
   createOutboxPump,
   type DesktopControl,
   enqueue,
@@ -506,15 +507,18 @@ export function startWorkers(deps: WorkerDeps) {
       const queued = await enqueueIdleReflections(context);
       if (queued > 0) log.info("idle threads queued for reflection", { queued });
     });
-    // One consolidation job per organization per day (dedupe key = org + date: replicas don't double it).
+    // One consolidation job per organization per day (dedupe key = org + date: replicas don't double it), spread
+    // over hours: they share the long lane with agent runs.
     every("consolidation", WORKER_INTERVALS_MS.consolidation, async () => {
-      const day = new Date().toISOString().slice(0, 10);
+      const now = new Date();
+      const day = now.toISOString().slice(0, 10);
       for (const org of await db.select({ id: schema.organizations.id }).from(schema.organizations)) {
         await enqueue(db, {
           orgId: org.id,
           kind: "context.consolidate",
           payload: {},
           dedupeKey: `context.consolidate:${org.id}:${day}`,
+          runAt: consolidateRunAt(org.id, now),
         });
       }
     });

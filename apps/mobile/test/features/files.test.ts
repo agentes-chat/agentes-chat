@@ -53,6 +53,7 @@ import {
 } from "../../src/features/files/zoom";
 import { ICONS } from "../../src/ui/icons.data";
 import { ownOptionsOf } from "../main-stack";
+import { chatScreenSource } from "./chat-screen-source";
 
 const src = (file: string) => readFileSync(join(import.meta.dir, "../../src", file), "utf8");
 
@@ -252,7 +253,7 @@ describe("viewer", () => {
 
   test("photos, videos and files go up as parts Expo's fetch sends, never React Native's { uri } part", () => {
     // Expo's fetch refuses `{ uri, name, type }` ("Unsupported FormDataPart implementation"): no upload ever left.
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     expect(chat).toContain("api.artifacts.upload(orgId, uploadPart(file), {");
     expect(chat).not.toContain("as unknown as Parameters<typeof api.artifacts.upload>[1]");
     expect(src("features/drive/useDriveUpload.ts")).toContain(
@@ -280,7 +281,7 @@ describe("viewer", () => {
   });
 
   test("sending with files is optimistic: the message shows at once with its files, the field is free", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     // In the conversation at once, under the clientId the real message comes back with.
     expect(chat).toContain(
       "qc.setQueryData<Message[]>(keys.messages(orgId, channelId), (list) => upsertMessage(list, local));",

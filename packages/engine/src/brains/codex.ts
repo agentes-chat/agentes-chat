@@ -267,6 +267,20 @@ const ANTIGRAVITY_CLI: CliBrainSpec = {
         },
 };
 
+/**
+ * A ChatGPT sign-in offers Codex its own list of models, not the API's (catalog rows a plan may not have, or not yet),
+ * and refuses any other: "The '<model>' model is not supported when using Codex with a ChatGPT account." It refuses
+ * before the model runs, so the executor takes the turn again with no model, in a fresh session: a Codex thread keeps
+ * the model it was given, and a turn can't clear it.
+ */
+export const codexModelRefused = (message: string) =>
+  /model is not supported when using Codex with a ChatGPT account/i.test(message);
+
+/** How long a sign-in's refusal of a model is remembered: its turns leave that model out meanwhile. */
+const REFUSED_MODEL_MS = 6 * 60 * 60_000;
+// ponytail: per-process memory, so each server process pays one refused turn per sign-in and model; store it if that matters.
+const refusedModels = new Map<string, number>();
+
 export class CodexBrain implements Brain {
   readonly kind: "codex" | "cursor" | "opencode" | "grok" | "antigravity";
 
@@ -278,6 +292,18 @@ export class CodexBrain implements Brain {
   }
 
   async *run(turn: BrainTurn, io: BrainIO): AsyncIterable<BrainEvent> {
+    const key =
+      turn.model && turn.session ? `${this.kind}:${turn.account?.id ?? turn.session.machineId}:${turn.model}` : null;
+    const refused = key !== null && (refusedModels.get(key) ?? 0) > Date.now();
+    for await (const event of this.attempt(refused ? { ...turn, model: undefined } : turn, io)) {
+      if (key && event.type === "error" && codexModelRefused(event.message)) {
+        refusedModels.set(key, Date.now() + REFUSED_MODEL_MS);
+      }
+      yield event;
+    }
+  }
+
+  private async *attempt(turn: BrainTurn, io: BrainIO): AsyncIterable<BrainEvent> {
     const session = turn.session;
     const { name } = this.cli;
     if (!session) {

@@ -1240,6 +1240,7 @@ export class RunnerDaemon implements RequestObserver {
     const mcp = new McpBridge({
       socketPath,
       task: (taskId) => tasks.mcpTask(taskId) ?? brains.mcpTask(taskId) ?? codexRuns.get(taskId) ?? null,
+      onCall: (taskId, delta) => brains.bridgeCall(taskId, delta),
       log,
     });
     await mcp

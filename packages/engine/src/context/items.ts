@@ -234,12 +234,13 @@ export function normalizeSubject(subject: string) {
   return [...new Set(wordList(subject))].sort().join(" ").slice(0, 200);
 }
 
-const words = (t: string) => new Set(normalizeSubject(t).split(" ").filter(Boolean));
+/** The word set `similarity` compares: build it once to compare one text with many. */
+export const wordSet = (t: string) => new Set(normalizeSubject(t).split(" ").filter(Boolean));
 
 /** Jaccard similarity of the word sets: ≥ 0.8 counts as the same item. */
-export function similarity(a: string, b: string) {
-  const wa = words(a);
-  const wb = words(b);
+export const similarity = (a: string, b: string) => wordSetSimilarity(wordSet(a), wordSet(b));
+
+export function wordSetSimilarity(wa: Set<string>, wb: Set<string>) {
   if (wa.size === 0 && wb.size === 0) return 1;
   let inter = 0;
   for (const w of wa) if (wb.has(w)) inter++;

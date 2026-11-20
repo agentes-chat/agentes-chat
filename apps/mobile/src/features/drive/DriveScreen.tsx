@@ -1,4 +1,4 @@
-import { isLiveFileKind, LIVE_PRESENCE_BATCH, useArtifacts, useLivePresence } from "@agenteschat/client";
+import { type Artifact, isLiveFileKind, LIVE_PRESENCE_BATCH, useArtifacts, useLivePresence } from "@agenteschat/client";
 import { folderChildren, folderTrail } from "@agenteschat/client/lib/drive";
 import { can } from "@agenteschat/client/lib/permissions";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
@@ -23,6 +23,7 @@ import { chooseAction } from "../settings/parts";
 import { FirstUse, LoadFailed } from "../shared/FirstUse";
 import { useOrgId, usePullRefresh, useWhen } from "../shared/hooks";
 import { PushedLargeTitle } from "../shared/PushedLargeTitle";
+import { useLatest } from "../shared/parts";
 import { SheetHostProvider } from "../shared/SheetHost";
 import { DriveCard, driveRef, UploadingCard } from "./DriveCard";
 import { FolderPath, FolderRows, useFolderActions } from "./folders";
@@ -41,6 +42,18 @@ import { useDriveUpload } from "./useDriveUpload";
 
 /** Cards shown at first and added by "Mostrar mais" (each card loads its own preview). */
 const PAGE = 24;
+
+/** A month's heading format per language and whether it says the year, made once: a format is costly to build. */
+const monthFormats = new Map<string, Intl.DateTimeFormat>();
+const monthFormat = (locale: string, withYear: boolean) => {
+  const key = `${locale}\n${withYear}`;
+  let format = monthFormats.get(key);
+  if (!format) {
+    format = new Intl.DateTimeFormat(locale, { month: "long", ...(withYear ? { year: "numeric" as const } : {}) });
+    monthFormats.set(key, format);
+  }
+  return format;
+};
 
 /**
  * Drive, pushed from Você: the search, the type chips (Tudo, Documentos, Planilhas, Apresentações, Quadros, Imagens,
@@ -118,14 +131,14 @@ function DriveBody({ highlightId = null, folderId = null }: { highlightId?: stri
   const presence = useLivePresence(orgId, liveIds);
   const label = (s: DriveDaySection) =>
     s.label.kind === "month"
-      ? new Intl.DateTimeFormat(when.locale, {
-          month: "long",
-          ...(s.label.year !== new Date().getFullYear() ? { year: "numeric" as const } : {}),
-        })
+      ? monthFormat(when.locale, s.label.year !== new Date().getFullYear())
           .format(new Date(s.label.year, s.label.month, 1))
           .replace(/^./, (x) => x.toLocaleUpperCase())
       : t(`mobile.drive.section.${s.label.kind}`);
   const mayUpload = can(useOrg().org, "upload_files");
+  // One long press for every card, reading the menu as of this render: a new one each render would draw every card
+  // again (they are memoized) at each letter typed in the search.
+  const fileMenu = useLatest((x: Artifact, open: () => void) => arrange.fileMenu(x, open, mayUpload));
   const uploader = useDriveUpload(list.refetch, folderId);
   const maker = useCreateLive();
   const newItems: HeaderMenuItem[] = [
@@ -249,7 +262,7 @@ function DriveBody({ highlightId = null, folderId = null }: { highlightId?: stri
                           artifact={a}
                           highlighted={a.id === highlightId}
                           siblings={shownRefs}
-                          onLongPress={(x, open) => arrange.fileMenu(x, open, mayUpload)}
+                          onLongPress={fileMenu}
                           present={presence.data?.[a.id]}
                         />
                       ))}

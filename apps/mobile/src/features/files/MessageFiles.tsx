@@ -211,6 +211,7 @@ function InlineImage({
         <Image
           source={{ uri: link.data.uri, headers: link.data.headers, cacheKey: key }}
           recyclingKey={key}
+          cachePolicy="memory-disk"
           contentFit="contain"
           transition={pictureFade(key)}
           onLoad={() => pictureDrawn(key)}
@@ -393,7 +394,13 @@ function LocalMedia({
       {video ? (
         <VideoFirstFrame uri={file.uri} />
       ) : (
-        <Image source={{ uri: file.uri }} contentFit="cover" transition={0} style={StyleSheet.absoluteFill} />
+        <Image
+          source={{ uri: file.uri }}
+          cachePolicy="memory-disk"
+          contentFit="cover"
+          transition={0}
+          style={StyleSheet.absoluteFill}
+        />
       )}
       {video && !sending ? (
         <View style={styles.length} pointerEvents="none">

@@ -75,6 +75,7 @@ import {
   withOpacity,
 } from "../../src/features/chat/turn";
 import { pacedClock } from "../../src/features/shared/logic";
+import { chatScreenSource } from "./chat-screen-source";
 import { at, message, translator } from "./fixtures";
 
 /** A screen's source, for the wiring a test can't render (React Native). */
@@ -171,16 +172,14 @@ describe("timeline", () => {
   });
 
   test("my row takes its place in the run: the bubble's corners and the time under the run's last", async () => {
-    expect(await source("features/chat/ChatScreen.tsx")).toContain(
-      "run={runPosition(item.grouped, item.continued ?? false)}",
-    );
+    expect(chatScreenSource()).toContain("run={runPosition(item.grouped, item.continued ?? false)}");
     const row = await source("features/chat/MessageRow.tsx");
     expect(row).toContain("BUBBLE_RUN[run]");
     expect(row).toContain('(run === "end" || run === "solo")');
   });
 
   test("reading marks read up to the message posted last, wherever its place, and counts a reply placed above as new", async () => {
-    const screen = await source("features/chat/ChatScreen.tsx");
+    const screen = chatScreenSource();
     expect(screen).toContain("const postedNow = useMemo(() => lastPostedId(list), [list]);");
     expect(screen).toContain("if (peeking || !focused || !inFront || !member || !postedNow) return;");
     expect(screen).toContain("unseenBelow(scrollRows, seenKey, seenPostedId)");
@@ -425,7 +424,7 @@ describe("working line", () => {
     const take = await source("features/voice/useVoiceTake.ts");
     const tick = take.slice(take.indexOf("const tick = useCallback("), take.indexOf("const record = useCallback("));
     expect(tick).toContain('if (phaseNow === "hold" || phaseNow === "locked") targetRef.current.onRecording?.();');
-    const screen = await source("features/chat/ChatScreen.tsx");
+    const screen = chatScreenSource();
     // Recording never waits on what was just written (an agent asked in it waits for the take); the upload's frames do.
     expect(screen).toContain(
       'const onRecording = useCallback(() => sendTyping(threadId, undefined, "voice"), [sendTyping, threadId]);',
@@ -609,7 +608,7 @@ describe("working line", () => {
     expect(line).not.toContain("seeable");
     expect(line).toContain("const stopHere = stop?.runs ?? [];");
     expect(line).toContain('<LineStop runs={stopHere} onStop={stop.onStop} place="word" />');
-    const screen = await source("features/chat/ChatScreen.tsx");
+    const screen = chatScreenSource();
     expect(screen).toContain("const busy = busyRuns.length > 0;");
     expect(screen).toContain("const working = useMemo<ComposerWorking | null>(() => (busy ? {} : null), [busy]);");
   });
@@ -619,7 +618,7 @@ describe("working line", () => {
     expect(lines).not.toContain("TurnRow");
     expect(lines).not.toContain("RevealText");
     expect(lines).not.toContain("WaitLine");
-    const screen = await source("features/chat/ChatScreen.tsx");
+    const screen = chatScreenSource();
     expect(screen).not.toContain('kind: "run"');
     expect(screen).toContain("entering={isFresh(item.key) ? ENTER : undefined}");
     // 24 points drawn, 44 to the finger.
@@ -1497,7 +1496,7 @@ describe("reading a conversation", () => {
     );
 
   test("only the screen in view reads: under another screen or with the app in the background nothing is marked, and coming back marks it", async () => {
-    const screen = await source("features/chat/ChatScreen.tsx");
+    const screen = chatScreenSource();
     const reading = readMarkOf(screen);
     // The screen's focus is read once, before "Novas" (which goes when the screen is left), and handed to the mark.
     expect(screen.match(/const focused = useIsFocused\(\);/g)).toHaveLength(1);
@@ -1517,7 +1516,7 @@ describe("reading a conversation", () => {
   });
 
   test("a reply in one of the conversation's threads marks it read again", async () => {
-    const screen = await source("features/chat/ChatScreen.tsx");
+    const screen = chatScreenSource();
     const reading = readMarkOf(screen);
     expect(reading).toContain("const threadReplies = useThreadActivity(orgId, channelId);");
     expect(reading.slice(reading.lastIndexOf("}, ["))).toContain("postedNow, threadReplies]);");

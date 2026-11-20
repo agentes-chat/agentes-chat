@@ -69,6 +69,7 @@ import type { BlockSpecReader } from "./block-state";
 import { ASK_CHOICES_TOOL, SHOW_BLOCK_TOOL, someoneAnswers } from "./blocks";
 import { brainOf } from "./brain-settings";
 import { brainSessionId, missingTurnFolder, recordPlanUsage } from "./brains/claude-code";
+import { codexModelRefused } from "./brains/codex";
 import { ModelBrain } from "./brains/model";
 import type { ComputerTurn } from "./brains/prompt";
 import {
@@ -140,6 +141,7 @@ import { REACT_TOOL } from "./chat-tools";
 import {
   kickRoomQueue,
   publishQueueChanged,
+  type RoomWaitCause,
   roomGate,
   roomHead,
   SIGN_IN_CONCURRENCY,
@@ -1208,6 +1210,8 @@ export async function executeRun(deps: EngineDeps, runId: string, options: RunJo
   try {
     return await executeRunInner(deps, runId, options, prof, abort.signal, steerGate);
   } finally {
+    // A run that ended before its last stage (failed, passed, paused) still accounts for the time since its last mark.
+    if (prof.stages.at(-1)?.stage !== "events") prof.end();
     steerGate.close();
     clearInterval(heartbeat);
     unregisterRunAbort(runId, abort);
@@ -1936,6 +1940,7 @@ async function executeRunInner(
             .where(and(eq(schema.messages.orgId, run.orgId), eq(schema.messages.id, run.triggerMessageId))),
     deps.tools ? deps.tools.granted(ctx, heldBack) : Promise.resolve([]),
   ]);
+  prof.part("tools_granted");
   let tools = presentTools(granted, isSensitive, ctx.loadedGroups);
   /**
    * Only Claude Code defers our tools itself: a run that lists every tool and thinks with another brain (the model
@@ -1956,6 +1961,7 @@ async function executeRunInner(
   if (needsContext) {
     const ai = await agentAiState({ db, gateway: deps.gateway, machines: deps.machines }, agent, run);
     if (ai.state === "no_ai") return failNoAi(ai.reason ?? "no_key", ai.own, undefined, undefined, ai);
+    prof.part("ai_state");
   }
   if (!askingForRoom) await publishChannelEvent(deps.pubsub, event("running"));
   // Tools on demand (ADR 0043): a new run lists the core tools and the groups the judge expects it to need.
@@ -2210,6 +2216,8 @@ async function executeRunInner(
         .catch(() => {});
     }
   }
+  // The checks before the context: the trigger's thread, how the run was routed, a catch-up's triage.
+  prof.part("checks");
   /** Whether this run read outside content (`runReadOutside`): sticky once true. */
   let readOutside = false;
   const outsideMemo: OutsideMemo = {};
@@ -2528,7 +2536,11 @@ async function executeRunInner(
         : Promise.resolve({ text: "", pageIds: [] as string[], held: false }),
       rulesForRun(db, run, agent).catch(() => ({ text: "", itemIds: [] as string[] })),
     ]);
-    await judging;
+    prof.part("build");
+    if (judging) {
+      await judging;
+      prof.part("judging");
+    }
     // Its thread turned confidential after the claim read the message that asked: it is a run of that thread now.
     if (context.confidential && !ctx.confidential) {
       ctx.confidential = true;
@@ -2551,6 +2563,7 @@ async function executeRunInner(
           conversation: true,
           text: `# Earlier in this thread (summary)\n${itemLabel(summary)} ${summary.content}`,
         });
+      prof.part("summary");
     }
     // Per turn like memory: who the run acts for picks the rules, so they never move the cached prompt.
     if (rules.text) {
@@ -3798,7 +3811,7 @@ async function executeRunInner(
    * until it runs.
    */
   const brainUnavailable = async (
-    u: BrainUnavailability & { queued?: boolean; retryAt?: number },
+    u: BrainUnavailability & { queued?: boolean; retryAt?: number; room?: RoomWaitCause },
     look?: "first" | "again",
   ): Promise<"fallback" | "waited" | "failed" | "no" | "back" | "canceled" | "moved"> => {
     const from = plan.kind;
@@ -3994,7 +4007,12 @@ async function executeRunInner(
       ...(quietUntil !== null ? { quiet: true } : {}),
     };
     if (!stillBusy)
-      await addRunStep(db, run, "error", { reason: "brain_unavailable", code: u.code, message: u.message });
+      await addRunStep(db, run, "error", {
+        reason: "brain_unavailable",
+        code: u.code,
+        message: u.message,
+        ...(busy && u.room ? { room: u.room } : {}),
+      });
     // Online and full, it sends no "back" signal: ask again soon. Just gone: look again when the grace is over (back
     // before that, `resumeRunsWaitingForMachine` resumes it and this job finds another wait). Queued before the wait
     // is stored, so a crash in between leaves at worst a job that finds another wait and does nothing.
@@ -5069,13 +5087,14 @@ async function executeRunInner(
         if (behind) {
           // Not working on the computer: no slot of a sign-in is its (`kickSignInLine` reads it as it leaves).
           delete transcript.roomAsk;
-          if (behind.signIn && slot) transcript.signInWait = { key: slot.key };
+          if (behind.cause === "sign_in" && slot) transcript.signInWait = { key: slot.key };
           else delete transcript.signInWait;
           const handled = await brainUnavailable({
             code: "busy",
             message: "Waiting in line.",
             queued: true,
             retryAt: behind.retryAt,
+            room: behind.cause,
           });
           if (handled === "waited" || handled === "failed") return;
         } else {
@@ -5266,6 +5285,18 @@ async function executeRunInner(
               // The text it streams next is another model call's: never one reply with what it wrote before.
               deltas.toolEnded();
             },
+            // Its CLI went quiet and the computer stopped it: on the trail, where it was and for how long.
+            onStalled: (stall) => {
+              const step = {
+                reason: "brain_stalled",
+                code: stall.phase,
+                ...(stall.tool ? { tool: stall.tool } : {}),
+                ...(stall.label ? { label: stall.label } : {}),
+                silentMs: stall.silentMs,
+                resumed: stall.resumed,
+              };
+              later(() => addRunStep(db, run, "error", step));
+            },
             onFile: (path) => {
               const machineId = turnPlan.session?.machineId;
               if (!machineId || !deps.shareFile || run.background) return;
@@ -5432,6 +5463,21 @@ async function executeRunInner(
               return waitForDroppedComputer(turnPlan.kind, machineId, prompt, labels, error.serverStop, early);
             }
           }
+          // Codex's sign-in refused the agent's model before anything ran: the rest of the run goes on the sign-in's
+          // default, in a fresh session, the conversation so far in its first prompt (`codexModelRefused`).
+          if (
+            error instanceof BrainFailure &&
+            codexModelRefused(error.message) &&
+            executed.length === 0 &&
+            plan.model &&
+            plan.session &&
+            !plan.missionId
+          ) {
+            const fresh = Bun.randomUUIDv7();
+            await db.update(agentRuns).set({ brainSessionId: fresh }).where(eq(agentRuns.id, run.id));
+            plan = { ...plan, model: undefined, session: { ...plan.session, id: fresh, resume: false } };
+            continue;
+          }
           // The folder its session works in isn't on the computer anymore: every later turn would be refused the
           // same way. A fresh session takes the turn in the agent's own folder, told the one before was lost. A
           // mission's folder is the mission's to make again.
@@ -5515,7 +5561,12 @@ async function executeRunInner(
               continue;
             }
           }
-          const handled = await brainUnavailable({ code: error.code, message: error.message, ...refusal });
+          const handled = await brainUnavailable({
+            code: error.code,
+            message: error.message,
+            ...refusal,
+            ...(error.code === "busy" ? { room: "memory" as const } : {}),
+          });
           if (handled === "fallback" || handled === "moved") continue;
           if (handled === "waited" || handled === "failed") return;
         }
@@ -6639,6 +6690,8 @@ async function thinkOnce(
     onTaken?(): void | Promise<void>;
     /** Fast failed and the turn answered at standard speed. */
     onSpeedFallback?(message: string): void;
+    /** The computer stopped the brain's CLI for its silence (`stalled`): resumed there, or the turn ends. */
+    onStalled?(stall: Extract<BrainEvent, { type: "stalled" }>): void;
     /** A failed turn that is the plan's refusal, though the CLI didn't call it a limit. */
     refusedByPlan?(message: string): boolean;
   } = {},
@@ -6685,6 +6738,7 @@ async function thinkOnce(
     }
     if (event.type === "text_delta") onDelta(event.text);
     else if (event.type === "tool_started") hooks.onStarted?.(event);
+    else if (event.type === "stalled") hooks.onStalled?.(event);
     else if (event.type === "tool_call") {
       // Executed elsewhere (a computer brain through the runner bridge, which recorded its steps): shown only.
       if (event.executed) {

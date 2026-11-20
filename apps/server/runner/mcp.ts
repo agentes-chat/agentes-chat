@@ -305,6 +305,11 @@ export class McpBridge {
       socketPath: string;
       /** The task's MCP token and state (from the task journal). */
       task: (taskId: string) => McpTaskInfo | null;
+      /**
+       * A tool call of `taskId`'s starts being relayed (+1) or got its answer (-1): a brain process waits on us
+       * meanwhile, so its turn's silence isn't its own (`BrainManager.bridgeCall`).
+       */
+      onCall?: (taskId: string, delta: 1 | -1) => void;
       log?: (line: string) => void;
       callTimeoutMs?: number;
     },
@@ -519,7 +524,12 @@ export class McpBridge {
       args,
       ...(info.serverToken ? { token: info.serverToken } : {}),
     };
-    return this.relayAndWait(callId, tool, frame, !info.runId || RESEND_SAFE.has(tool));
+    this.opts.onCall?.(taskId, 1);
+    try {
+      return await this.relayAndWait(callId, tool, frame, !info.runId || RESEND_SAFE.has(tool));
+    } finally {
+      this.opts.onCall?.(taskId, -1);
+    }
   }
 
   private relayAndWait(callId: string, tool: string, frame: RunnerFrame, resend: boolean) {

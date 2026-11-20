@@ -1,6 +1,5 @@
 import { type BlockChange, useBlockReply, useBlockValues } from "@agenteschat/client";
 import type { ChartSpec } from "@agenteschat/client/lib/chart";
-import { clockHour } from "@agenteschat/client/lib/format";
 import type { AgentColorName } from "@agenteschat/ui/agent/engine";
 import {
   type BlockViewPart,
@@ -34,7 +33,8 @@ import { ChartView } from "../chat/ChartCard";
 import { keepSize, keptHeightAfter, keptSize, PAST_RULE } from "../chat/kept-sizes";
 import { useLayoutKey } from "../chat/look";
 import { Table } from "../chat/MessageSpans";
-import { useColors, useDirectory, useMeId, useOrgId } from "../shared/hooks";
+import { useRowDirectory, useRowMeId } from "../chat/row-data";
+import { useColors, useOrgId, useWhen } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
 import { TextArea } from "../shared/TextArea";
 import { INLINE_HEIGHT } from "./logic";
@@ -73,9 +73,10 @@ export function SpecBlock({
   screen?: boolean;
 }) {
   const { t, i18n } = useTranslation();
+  const when = useWhen();
   const c = useColors();
   const orgId = useOrgId();
-  const dir = useDirectory();
+  const dir = useRowDirectory();
   const toast = useToast();
   const agent = dir.agentById.get(agentId);
   const accent = agentLook(agent).color;
@@ -145,11 +146,7 @@ export function SpecBlock({
     );
   };
   const same = sent !== null && sent.text === view.send?.text;
-  const time = sent
-    ? new Intl.DateTimeFormat(i18n.language, { hour: clockHour(i18n.language), minute: "2-digit" }).format(
-        new Date(sent.at),
-      )
-    : "";
+  const time = sent ? when.time(sent.at) : "";
 
   return (
     <View>
@@ -627,7 +624,7 @@ function More({
  */
 function Result({ label, text, change }: { label: string; text: string; change: BlockChange | undefined }) {
   const c = useColors();
-  const meId = useMeId();
+  const meId = useRowMeId();
   const reduced = useReducedMotion();
   const y = useSharedValue(0);
   const fade = useSharedValue(1);

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { looksLikeApiKey } from "@agenteschat/client/lib/api-key-text";
 import { connectAiNow, handKeyToConnectAi, startConnectAi } from "../../src/features/ai/connect-flow";
 import { handKeyToVault, keyGuardChoices, keyGuardTitle, takeKeyForVault } from "../../src/features/chat/key-guard";
+import { chatScreenSource } from "./chat-screen-source";
 
 const src = (file: string) => readFileSync(join(import.meta.dir, "../../src", file), "utf8");
 
@@ -44,7 +45,7 @@ describe("the phone's key guard (the web's KeyGuardDialog)", () => {
   });
 
   test("every way out of the composer asks first: a send, with files or a slash, and a voice take's words", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     const send = chat.slice(chat.indexOf("const onSend = ("), chat.indexOf("const cmd = parseSlash(text);"));
     expect(send).toContain("const found = keyChecked ? null : looksLikeApiKey(text);");
     // Before the files' send, which would take the words along as their caption.

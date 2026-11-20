@@ -2,11 +2,12 @@ import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { composerLift, listKeyboardRoom } from "../../src/features/chat/dock-height";
+import { chatScreenSource } from "./chat-screen-source";
 
 const src = (path: string) => readFileSync(join(import.meta.dir, "../../src", path), "utf8");
 
 test("the dock grows at the conversation's end (a request out of view, the reply bar): the conversation keeps ending above it", () => {
-  const chat = src("features/chat/ChatScreen.tsx");
+  const chat = chatScreenSource();
   expect(chat).toContain("followingEnd.current = atEnd && !readHold;");
   // One place does it: two frames on, only a list the grown dock left short (still scrolling down) goes on to the end.
   expect(chat).toMatch(
@@ -22,7 +23,7 @@ test("the dock grows at the conversation's end (a request out of view, the reply
 });
 
 test("the dock's height redraws only what is drawn from it, never the whole conversation", () => {
-  const chat = src("features/chat/ChatScreen.tsx");
+  const chat = chatScreenSource();
   // Held outside the screen's state: a field growing a line, the working line coming or going drew the whole screen.
   expect(chat).not.toContain("setComposerHeight");
   expect(chat).toContain("const [dock] = useState(createDockHeight);");
@@ -36,7 +37,7 @@ test("the dock's height redraws only what is drawn from it, never the whole conv
 });
 
 test("above the conversation's end, the dock's height and the keyboard move nothing", () => {
-  const chat = src("features/chat/ChatScreen.tsx");
+  const chat = chatScreenSource();
   // The library's default moved the words being read each time an agent started or finished (the dock's height).
   expect(chat).toContain('keyboardLiftBehavior="whenAtEnd"');
 });
@@ -51,7 +52,7 @@ test("a pushed screen's large title is the system's on iOS, over a scroll view t
 });
 
 test("the dock rides the keyboard library's values alone: nothing rewrites them from a notification's height", () => {
-  const chat = src("features/chat/ChatScreen.tsx");
+  const chat = chatScreenSource();
   // On iOS 26 and later a notification's height can be off by the suggestion row (40 points): rewritten from one,
   // the dock floated that much over the keys once the row left after a message was sent.
   expect(chat).not.toMatch(/keyboardAt\.(height|progress)\.(value =|set\()/);
@@ -64,7 +65,7 @@ test("the dock rides the keyboard library's values alone: nothing rewrites them 
   expect(chat).toContain("contentInsetEndAdjustment={listEnd}");
   // A drag holds the list's room while the keys follow the finger.
   expect(chat).toMatch(
-    /showDay\(\);\s*\/\/[^\n]*\n\s*keyboardDragStarted\(\);\s*\}, \[showDay, still, keyboardDragStarted\]\);/,
+    /showDay\(\);\s*\/\/[^\n]*\n\s*keyboardDragStarted\(\);\s*\}, \[showDay, still, keyboardDragStarted, dragging\]\);/,
   );
   expect(chat).toMatch(/hideDay\(\);\s*keyboardDragSettled\(\);/);
 });
@@ -104,7 +105,7 @@ test("the dock's lift and the list's keyboard room agree for every reading of th
 });
 
 test("a cover freezes the list only once a keyboard that was up has gone: no keyboard-tall gap over the dock after", () => {
-  const chat = src("features/chat/ChatScreen.tsx");
+  const chat = chatScreenSource();
   expect(chat).toMatch(
     /const cover = useCallback\(\(\) => \{\s*covered\.current = true;\s*if \(KeyboardController\.isVisible\(\)\) freezeOnHide\.current = true;\s*else freeze\.value = true;/,
   );
@@ -118,7 +119,7 @@ test("a cover freezes the list only once a keyboard that was up has gone: no key
 });
 
 test("a long reply lands at its start only once it is measured, against the room the keyboard leaves", () => {
-  const chat = src("features/chat/ChatScreen.tsx");
+  const chat = chatScreenSource();
   // The list says a new size from its estimate before it measures the row: an unknown size never counts as tall.
   expect(chat).toContain("if (size === undefined || size <= room.height - BAND_GAP) return;");
   // The keyboard's share is where the dock rides, as it rides (not a notification's height).
@@ -127,7 +128,7 @@ test("a long reply lands at its start only once it is measured, against the room
 });
 
 test('going to a message takes its place in the list\'s own rows, where the "Novas" line is one', () => {
-  const chat = src("features/chat/ChatScreen.tsx");
+  const chat = chatScreenSource();
   expect(chat).not.toContain("rowsRef.current.findIndex(");
   expect(chat).toContain("const index = key === undefined ? undefined : listRef.current?.getState().indexByKey(key);");
   // Pins, "Ver resultado" and "Ver" land in the room under the bar.
@@ -136,19 +137,19 @@ test('going to a message takes its place in the list\'s own rows, where the "Nov
 });
 
 test('held where the list landed at its end (the "Novas" line, "Ver"), it follows again: no round button over nothing', () => {
-  const chat = src("features/chat/ChatScreen.tsx");
+  const chat = chatScreenSource();
   expect(chat).toContain('...aimAt(index, 0.5, "end") })?.then(releaseAtEnd);');
   expect(chat).toMatch(/goingToLine\.current = false;\s*\/\/[^\n]*\n\s*releaseAtEnd\(\);\s*revealOpened\(\);/);
 });
 
 test("no suggestion pills over the conversation", () => {
-  const chat = src("features/chat/ChatScreen.tsx");
+  const chat = chatScreenSource();
   expect(chat).not.toContain("composerSuggestions");
   expect(chat).not.toMatch(/\bsuggestions=/);
 });
 
 test("who is working is the conversation's last line, scrolling with it: above the composer only before there is one", () => {
-  const chat = src("features/chat/ChatScreen.tsx");
+  const chat = chatScreenSource();
   // The list's footer, one element for the screen's life: the line redraws with each step of work, the list never does.
   expect(chat).toContain("const WORK_FOOTER = <WorkFooter />;");
   expect(chat).toContain("ListFooterComponent={WORK_FOOTER}");
@@ -171,7 +172,7 @@ test("who is working is the conversation's last line, scrolling with it: above t
 });
 
 test('an agent\'s "pensando…" comes with my message, in the same frame: the conversation grows once, with it', () => {
-  const chat = src("features/chat/ChatScreen.tsx");
+  const chat = chatScreenSource();
   const optimistic = chat.slice(
     chat.indexOf("onOptimistic: (local) => {"),
     chat.indexOf("onSent: (message, local) => {"),
@@ -200,7 +201,7 @@ test("a read that tells the receipts nothing new doesn't draw the conversation a
 });
 
 test('a picker\'s "preparing" thumbnail comes only once the picker covers the screen', () => {
-  const chat = src("features/chat/ChatScreen.tsx");
+  const chat = chatScreenSource();
   // Set as the picker opened, it showed in the dock (growing it, moving the conversation) before the picker came up.
   expect(chat).toContain("const covered = setTimeout(() => setPreparing(true), PICKER_COVERS_MS);");
   expect(chat.match(/await whilePicking\(/g)).toHaveLength(2);

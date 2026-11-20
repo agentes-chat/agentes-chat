@@ -13,6 +13,7 @@ import {
   wallpaperKey,
   wallpaperTargetOf,
 } from "../../src/features/chat/wallpaper-logic";
+import { chatScreenSource } from "./chat-screen-source";
 
 const read = (rel: string) => Bun.file(new URL(`../../src/features/${rel}`, import.meta.url).pathname).text();
 const pixel = (bytes: Uint8Array, w: number, x: number, y: number) => {
@@ -111,7 +112,7 @@ describe("a conversation's background on the phone", () => {
   });
 
   test("the conversation paints its background behind everything, and fades under the bar into it", async () => {
-    const chat = await read("chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     expect(chat).toContain("<ChatWallpaper");
     expect(chat).toContain("<WallpaperBand");
     expect(chat).toContain("useConversationLook(convoDm, dmAgentColor, channelId)");
@@ -121,8 +122,11 @@ describe("a conversation's background on the phone", () => {
     expect(row).toContain("const otherFill = lifted ? lift : c.bubble;");
     expect(row).toContain("const bubbleEdge = lifted ? liftedEdge(scheme) : null;");
     expect(row).not.toContain("boxShadow");
+    // The edge is the cards' own (`cardEdge`), the one the grouped lists carry too.
     const look = await read("chat/look.ts");
-    expect(look).toContain("appShadows(scheme).e1.find((l) => l.blur === 0 && l.spread > 0)");
-    expect(look).toContain('{ outlineWidth: ring.spread, outlineColor: ring.color, outlineStyle: "solid" }');
+    expect(look).toContain("return cardEdge(scheme);");
+    const palette = await Bun.file(new URL("../../src/ui/palette.ts", import.meta.url).pathname).text();
+    expect(palette).toContain("appShadows(scheme).e1.find((l) => l.blur === 0 && l.spread > 0)");
+    expect(palette).toContain('{ outlineWidth: ring.spread, outlineColor: ring.color, outlineStyle: "solid" }');
   });
 });

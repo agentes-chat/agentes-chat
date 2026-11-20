@@ -292,7 +292,7 @@ const workTotals = z.object({
       z.object({
         cause: z.string().openapi({
           description:
-            "`brain_unavailable:<code>` (a wait for its computer: `busy` for room, `machine_offline`, `machine_paused`, …) or `provider_outage`. Ignore values you don't know.",
+            "`brain_unavailable:<code>` (a wait for its computer: `busy` for room, `machine_offline`, `machine_paused`, …) or `provider_outage`. A wait for room names the gate that held it when it began: `busy:line` (another run ahead), `busy:sign_in` (its plan sign-in at its cap), `busy:spacing` (agents' turns start seconds apart), `busy:memory` (the computer refused it for room); plain `busy` before these were kept. Ignore values you don't know.",
         }),
         waits: Count,
         medianSec: z.number().int().nullable(),
@@ -392,7 +392,7 @@ const RunTimings = z
           ...TimingsGroup,
           stage: z.string().openapi({
             description:
-              "`claim`, `context`, `model` (each turn), `persist`, `events`… `other`: a name not shaped like one the server writes.",
+              "`claim`, `context`, `model` (each turn), `persist`, `events`, `end`… a step inside a stage after it (`context.build`). `other`: a name not shaped like one the server writes.",
           }),
           count: Count.openapi({ description: "Stages measured, not runs: a run has one `model` per turn." }),
           medianMs: Ms,
@@ -428,7 +428,7 @@ const RunTimings = z
         z.object({
           cause: z.string().openapi({
             description:
-              "`brain_unavailable:<code>`, a wait for its computer or a sign-in on it, by its code: `busy` for room, `machine_offline`, `not_logged_in`, … `other`: not shaped like one. Ignore values you don't know.",
+              "`brain_unavailable:<code>`, a wait for its computer or a sign-in on it, by its code: `busy` for room, `machine_offline`, `not_logged_in`, … `other`: not shaped like one. A wait for room names the gate that held it when it began: `busy:line` (another run ahead), `busy:sign_in` (its plan sign-in at its cap), `busy:spacing` (agents' turns start seconds apart), `busy:memory` (the computer refused it for room); plain `busy` before these were kept. Ignore values you don't know.",
           }),
           ...TimingsGroup,
           waits: Count,

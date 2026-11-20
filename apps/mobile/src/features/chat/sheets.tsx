@@ -1,6 +1,10 @@
 import {
   ApiError,
+  type Channel,
   cachePinned,
+  channelsQuery,
+  type DirectMessage,
+  dmsQuery,
   keys,
   type Message,
   type Mission,
@@ -8,9 +12,7 @@ import {
   type ThreadInfo,
   useApi,
   useChannelCategories,
-  useChannels,
   useCloseMission,
-  useDms,
   useFollowThread,
   useMissionControl,
   usePinMessage,
@@ -27,7 +29,7 @@ import { conversationWallpaperOf } from "@agenteschat/client/lib/wallpaper";
 import { chartBlocksOf } from "@agenteschat/ui/widgets/spec";
 import { type QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
-import type { ReactNode } from "react";
+import { type ReactNode, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import { serverUrl } from "@/lib/server";
@@ -632,14 +634,19 @@ export function ChannelOptions({
   const count = pins.data?.length ?? 0;
   // A channel's sidebar category (ADR 0080), for whoever may move it.
   const moves = useMovesChannel(channelId);
-  const channel = useChannels(orgId).data?.find((c) => c.id === channelId);
+  // Only what this sheet reads of the lists (its category, whether it is a DM): they are read again for any message.
+  const api = useApi();
+  const categoryOf = useCallback(
+    (all: Channel[]) => all.find((c) => c.id === channelId)?.categoryId ?? null,
+    [channelId],
+  );
+  const isDm = useCallback((all: DirectMessage[]) => all.some((d) => d.channelId === channelId), [channelId]);
+  const categoryId = useQuery({ ...channelsQuery(api, orgId), select: categoryOf }).data;
   const categories = useChannelCategories(orgId);
-  const categoryName = channel?.categoryId
-    ? categories.data?.find((c) => c.id === channel.categoryId)?.name
-    : undefined;
+  const categoryName = categoryId ? categories.data?.find((c) => c.id === categoryId)?.name : undefined;
   // This conversation's own background, mine alone; none of its own: it follows the others.
   const { org } = useOrg();
-  const dm = Boolean(useDms(orgId).data?.some((d) => d.channelId === channelId));
+  const dm = useQuery({ ...dmsQuery(api, orgId), select: isDm }).data === true;
   const ownWallpaper = conversationWallpaperOf(org?.chatPrefs, channelId);
   const nameOf = useWallpaperName();
   return (

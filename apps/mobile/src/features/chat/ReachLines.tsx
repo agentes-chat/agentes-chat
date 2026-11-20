@@ -1,9 +1,11 @@
 import {
   type Agent,
   type AgentAudience,
+  type Channel,
+  channelsQuery,
   type ForeignMailbox,
   type Message,
-  useChannels,
+  useApi,
   useWidenAudience,
 } from "@agenteschat/client";
 import {
@@ -20,7 +22,9 @@ import {
 import { errorText } from "@agenteschat/client/lib/errors";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { type ReachEntry, reachKey, reachOf, reachOpens } from "@agenteschat/client/lib/reach";
+import { useQuery } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
+import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, StyleSheet, View } from "react-native";
 import { useOrg } from "@/providers/org";
@@ -70,10 +74,13 @@ function Row({
   const { colors } = useTheme();
   const cardCorners = useMessageCardCorners();
   const orgId = useOrgId();
+  const api = useApi();
   const dir = useRowDirectory();
-  const channel = useChannels(orgId).data?.find((c) => c.id === channelId);
+  // Only this conversation's name from the channel list: the list is read again for a message anywhere.
+  const nameIn = useCallback((all: Channel[]) => all.find((c) => c.id === channelId)?.name ?? null, [channelId]);
+  const channelName = useQuery({ ...channelsQuery(api, orgId), select: nameIn }).data;
   // A DM isn't in the channel list: "in this conversation".
-  const place = channel ? t("reach.inChannel", { name: channel.name }) : t("reach.inHere");
+  const place = typeof channelName === "string" ? t("reach.inChannel", { name: channelName }) : t("reach.inHere");
   const agent = dir.agentById.get(e.agentId);
   const g = agentGrammar(agent?.name ?? `@${e.handle}`);
   const handed = Boolean(e.consultationId);

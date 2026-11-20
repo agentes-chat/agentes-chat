@@ -7,12 +7,12 @@ const src = (file: string) => readFileSync(join(import.meta.dir, "../../src", fi
 const flat = (file: string) => src(file).replace(/\s+/g, " ");
 
 describe("the screens before the app never leave anyone without a way on", () => {
-  test("the e-mail step: with the keyboard put away, Continue stands in for its return key", () => {
+  test("the e-mail step: Continue is on screen with the keyboard up or down, gray until the address is whole", () => {
     const flow = flat("features/auth/AuthFlow.tsx");
-    expect(flow).toContain("const keyboardUp = useKeyboardState((state) => state.isVisible);");
-    // Continue, spinning while the lookup runs, only while the keyboard (and its blue key) is away.
+    // Never hidden behind whether the keyboard is up: spinning while the lookup runs, off until the address is whole.
+    expect(flow).not.toContain("useKeyboardState");
     expect(flow).toContain(
-      '{keyboardUp ? null : ( <LastUsed on={lastWay === "email"}> <Button variant="primary" wide label={t("auth.flow.continue")} loading={pending}',
+      '<LastUsed on={lastWay === "email"}> <Button variant="primary" wide label={t("auth.flow.continue")} loading={pending} disabled={!ready} onPress={submit} /> </LastUsed>',
     );
   });
 

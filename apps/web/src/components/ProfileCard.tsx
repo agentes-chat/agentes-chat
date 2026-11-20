@@ -53,7 +53,8 @@ import {
 } from "@agenteschat/ui";
 import { useNavigate } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
-import { type ReactNode, useRef, useState } from "react";
+import { type ReactNode, type RefObject, useLayoutEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { AudienceChoice, audienceValid } from "@/components/AgentAudience";
 import { AgentAvatar } from "@/components/AgentAvatar";
@@ -111,58 +112,85 @@ export function ProfileTrigger({
   const { t } = useTranslation();
   // Hover leaves the focus where it is (the box someone types in), a press or a key brings it in.
   const card = useHoverCard(HOVER_OPEN_MS);
-  const { org } = useOrg();
-  const dir = useDirectory(org.id);
-  const agentEntries = useAgentMenu();
-  const personEntries = usePersonMenu();
   const button = useRef<HTMLButtonElement>(null);
   // The trigger takes the focus before the card goes: what opens from the card (the agent's panel) gives it back there.
   const leave = () => {
     if (document.activeElement?.closest(".mcard__frame")) button.current?.focus();
     card.close();
   };
+  // The right click's entries come from a builder mounted the first time they are asked for, at once (`flushSync`):
+  // its hooks (the directory, conversations, pins, live runs…) cost every trigger on every render, and a conversation
+  // draws two triggers a message, nearly all of them never right-clicked.
+  const [menuWanted, setMenuWanted] = useState(false);
+  const build = useRef<(() => MenuEntry[]) | null>(null);
   const menu = entityMenu(() => {
-    if (actor.type === "agent") {
-      const agent = dir.agentById.get(actor.id);
-      return agent ? agentEntries(agent) : [];
-    }
-    const member = dir.memberById.get(actor.id);
-    return member ? personEntries(member, () => button.current?.click()) : [];
+    if (!build.current) flushSync(() => setMenuWanted(true));
+    return build.current?.() ?? [];
   });
   return (
-    <Popover
-      hover={card}
-      label={t("profile.cardLabel")}
-      side={side}
-      className={`profile-card mcard mcard--${actor.type}`}
-      trigger={
-        <button
-          ref={button}
-          type="button"
-          {...menu}
-          className={className ? `profile-trigger ${className}` : "profile-trigger"}
-          aria-label={label}
-          aria-describedby={describedBy}
-          aria-haspopup="dialog"
-          tabIndex={decorative ? -1 : undefined}
-          aria-hidden={decorative || undefined}
-        >
-          {children}
-        </button>
-      }
-    >
-      {card.open && (
-        // A press inside a card the pointer opened keeps it (its menus and pickers open outside it).
-        <div className="mcard__frame" onPointerDownCapture={() => card.open === "hover" && card.onOpenChange(true)}>
-          {actor.type === "agent" ? (
-            <AgentCard agentId={actor.id} onDone={leave} />
-          ) : (
-            <PersonCard userId={actor.id} onDone={leave} />
-          )}
-        </div>
-      )}
-    </Popover>
+    <>
+      {menuWanted && <ProfileMenuBuilder actor={actor} build={build} openCard={() => button.current?.click()} />}
+      <Popover
+        hover={card}
+        label={t("profile.cardLabel")}
+        side={side}
+        className={`profile-card mcard mcard--${actor.type}`}
+        trigger={
+          <button
+            ref={button}
+            type="button"
+            {...menu}
+            className={className ? `profile-trigger ${className}` : "profile-trigger"}
+            aria-label={label}
+            aria-describedby={describedBy}
+            aria-haspopup="dialog"
+            tabIndex={decorative ? -1 : undefined}
+            aria-hidden={decorative || undefined}
+          >
+            {children}
+          </button>
+        }
+      >
+        {card.open && (
+          // A press inside a card the pointer opened keeps it (its menus and pickers open outside it).
+          <div className="mcard__frame" onPointerDownCapture={() => card.open === "hover" && card.onOpenChange(true)}>
+            {actor.type === "agent" ? (
+              <AgentCard agentId={actor.id} onDone={leave} />
+            ) : (
+              <PersonCard userId={actor.id} onDone={leave} />
+            )}
+          </div>
+        )}
+      </Popover>
+    </>
   );
+}
+
+/** The entries of a trigger's right click, as the agent's or the person's menu has them (`ProfileTrigger`). */
+function ProfileMenuBuilder({
+  actor,
+  build,
+  openCard,
+}: {
+  actor: Actor;
+  build: RefObject<(() => MenuEntry[]) | null>;
+  openCard: () => void;
+}) {
+  const { org } = useOrg();
+  const dir = useDirectory(org.id);
+  const agentEntries = useAgentMenu();
+  const personEntries = usePersonMenu();
+  useLayoutEffect(() => {
+    build.current = () => {
+      if (actor.type === "agent") {
+        const agent = dir.agentById.get(actor.id);
+        return agent ? agentEntries(agent) : [];
+      }
+      const member = dir.memberById.get(actor.id);
+      return member ? personEntries(member, openCard) : [];
+    };
+  });
+  return null;
 }
 
 /** Discord's shape: the banner, its round buttons (a shortcut, then ⋯), the big face over its edge, then the body. */

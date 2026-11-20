@@ -22,7 +22,7 @@ import { joinsChannels } from "@agenteschat/client/lib/right-hand";
 import { picksForMe, replyAloneKey } from "@agenteschat/client/lib/routing";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { RefreshControl, StyleSheet, View } from "react-native";
 import { LayoutAnimationConfig } from "react-native-reanimated";
@@ -46,7 +46,7 @@ import { AgentFace, Face, OpensAgent } from "../shared/Face";
 import { LoadFailed } from "../shared/FirstUse";
 import { useColors, useDirectory, useMeId, useNow, useOrgId, usePullRefresh } from "../shared/hooks";
 import { PushedLargeTitle } from "../shared/PushedLargeTitle";
-import { goBack, Loaded, successHaptic, tapHaptic } from "../shared/parts";
+import { goBack, Loaded, successHaptic, tapHaptic, useLatest } from "../shared/parts";
 import { usePresenceOf } from "../status/hooks";
 import { lineText } from "../status/logic";
 import { addTargets, channelMembersHrefs } from "./members";
@@ -146,7 +146,9 @@ export function ChannelMembersScreen({ channelId }: { channelId: string }) {
   const pull = usePullRefresh(roster.refetch);
   const routing = useAiStatus(orgId).data?.routing;
   const channels = useChannels(orgId).data;
-  const channel = channels?.find((x) => x.id === channelId);
+  // The channels by id, once per list: every agent's work line names where it works.
+  const channelsById = useMemo(() => new Map((channels ?? []).map((ch) => [ch.id, ch])), [channels]);
+  const channel = channelsById.get(channelId);
   const channelName = channel?.name ?? "";
   const removal = useRemoveMember(channelId, channelName);
   // An agent's work first, as the web's members column says it ("aqui" for this channel), then how it replies.
@@ -159,7 +161,7 @@ export function ChannelMembersScreen({ channelId }: { channelId: string }) {
       presence.agent(id)?.work,
       {
         agentName: (x) => dir.agentById.get(x)?.name,
-        channelName: (x) => channels?.find((ch) => ch.id === x)?.name,
+        channelName: (x) => channelsById.get(x)?.name,
         here: channelId,
       },
       now,
@@ -211,23 +213,23 @@ export function ChannelMembersScreen({ channelId }: { channelId: string }) {
    * be taken out, the short menu with that action (asked again before it goes); an agent with nothing to change here,
    * its profile. Not on my own row: taking myself out of my own list reads as a mistake (as on the web).
    */
-  const opens = (w: Who, mine: boolean) => {
-    if (w.kind === "agent" && (w.setsReply || editable))
-      return { chevron: true, onPress: () => router.push(channelMembersHrefs.agent(channelId, w.id)) };
-    if (w.kind === "person" && editable && !mine)
-      return {
-        more: true,
-        onPress: () =>
-          chooseAction(
-            w.name,
-            [{ label: t("channelMembers.remove"), icon: "x", destructive: true, onPress: () => removal.ask(w) }],
-            t("common.cancel"),
-          ),
-      };
-    if (w.kind === "agent" && opensDetails(dir.anyAgent(w.id)))
-      return { chevron: true, onPress: () => router.push(`/agent/${w.id}`) };
-    return {};
+  const opens = (w: Who, mine: boolean): RowOpens => {
+    if (w.kind === "agent" && (w.setsReply || editable)) return "screen";
+    if (w.kind === "person" && editable && !mine) return "menu";
+    if (w.kind === "agent" && opensDetails(dir.anyAgent(w.id))) return "profile";
+    return null;
   };
+  // What a tap does, one function for every row (the rows are memoized), reading this render's state.
+  const open = useLatest((w: Pick<Who, "kind" | "id" | "name">, what: Exclude<RowOpens, null>) => {
+    if (what === "screen") router.push(channelMembersHrefs.agent(channelId, w.id));
+    else if (what === "profile") router.push(`/agent/${w.id}`);
+    else
+      chooseAction(
+        w.name,
+        [{ label: t("channelMembers.remove"), icon: "x", destructive: true, onPress: () => removal.ask(w) }],
+        t("common.cancel"),
+      );
+  });
 
   return (
     <PushedLargeTitle
@@ -283,20 +285,20 @@ export function ChannelMembersScreen({ channelId }: { channelId: string }) {
                     <GroupedList>
                       {g.rows.map((w) => {
                         const mine = w.kind === "person" && w.id === meId;
-                        const face = (
-                          <Face who={{ type: w.kind, id: w.id }} size={FACE} live={false} presence ring={c.raised} />
-                        );
                         return (
-                          <GroupedRow
+                          <RosterRow
                             key={`${w.kind}:${w.id}`}
-                            // An agent's face opens its profile, as on every surface about it; the row its options.
-                            leading={w.kind === "agent" ? <OpensAgent agentId={w.id}>{face}</OpensAgent> : face}
+                            kind={w.kind}
+                            id={w.id}
+                            name={w.name}
                             label={mine ? `${w.name}${t("common.youSuffix")}` : w.name}
                             sub={subtitleOf(w)}
-                            subLines={w.kind === "agent" ? 2 : 1}
                             // Off for now (the web's Offline rows): in faint, under its own header.
                             faint={off(w)}
-                            {...opens(w, mine)}
+                            opens={opens(w, mine)}
+                            ring={c.raised}
+                            onOpen={open}
+                            leading
                           />
                         );
                       })}
@@ -318,6 +320,56 @@ export function ChannelMembersScreen({ channelId }: { channelId: string }) {
     </PushedLargeTitle>
   );
 }
+
+/** What a member's row opens: its agent's screen here, the menu to take a person out, the agent's profile; nothing. */
+type RowOpens = "screen" | "menu" | "profile" | null;
+
+/**
+ * One member: the face (an agent's opens its profile), the name, the line under it, faint while off. Drawn again only
+ * when what it shows changes, not at every change of anyone's presence.
+ */
+const RosterRow = memo(function RosterRow({
+  kind,
+  id,
+  name,
+  label,
+  sub,
+  faint,
+  opens,
+  ring,
+  onOpen,
+}: {
+  kind: Kind;
+  id: string;
+  name: string;
+  label: string;
+  sub: string;
+  faint: boolean;
+  opens: RowOpens;
+  /** The surface the face's presence badge is ringed in. */
+  ring: string;
+  onOpen: (w: Pick<Who, "kind" | "id" | "name">, what: Exclude<RowOpens, null>) => void;
+  /** Always with a face: GroupedList reads it to start the hairline after the face's column, as a GroupedRow's. */
+  leading: boolean;
+}) {
+  const face = <Face who={{ type: kind, id }} size={FACE} live={false} presence ring={ring} />;
+  const what = opens;
+  const tap =
+    what === null
+      ? {}
+      : { ...(what === "menu" ? { more: true } : { chevron: true }), onPress: () => onOpen({ kind, id, name }, what) };
+  return (
+    <GroupedRow
+      // An agent's face opens its profile, as on every surface about it; the row its options.
+      leading={kind === "agent" ? <OpensAgent agentId={id}>{face}</OpensAgent> : face}
+      label={label}
+      sub={sub}
+      subLines={kind === "agent" ? 2 : 1}
+      faint={faint}
+      {...tap}
+    />
+  );
+});
 
 /**
  * What I do about a channel for myself, as the web's channel menu: mute it, and leave it. A public one goes at once;

@@ -24,17 +24,12 @@ import {
   smoothPath,
 } from "@agenteschat/ui/sky/chart";
 import { Canvas, Path, Rect, Skia } from "@shopify/react-native-skia";
-import { type ComponentRef, memo, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { type ComponentRef, memo, type ReactNode, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
-import Animated, {
-  cancelAnimation,
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-} from "react-native-reanimated";
+import Animated, { Easing, useAnimatedStyle } from "react-native-reanimated";
+import { useLivePaused } from "@/agent/live";
+import { useDrawingClock } from "@/sky/clock";
 import {
   CardHorizon,
   CHROME_MAX_SCALE,
@@ -79,6 +74,9 @@ import {
 /** The card's padding: the edge-to-edge chart cancels it. */
 const PAD_X = 18;
 const PAD_Y = 16;
+/** The build's band crosses the field once in this long, easing in and out. */
+const SWEEP_MS = 1400;
+const SWEEP_EASE = Easing.inOut(Easing.quad);
 
 function useWidth(): [number, (e: LayoutChangeEvent) => void] {
   const [width, setWidth] = useState(0);
@@ -586,14 +584,14 @@ export function BuildingSweep({
   const tones = widgetTones(color, scheme === "dark");
   const [width, onLayout] = useWidth();
   const band = Math.max(24, Math.round(width * 0.4));
-  const at = useSharedValue(0);
-  useEffect(() => {
-    if (reduced || width === 0) return;
-    at.set(0);
-    at.set(withRepeat(withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.quad) }), -1, false));
-    return () => cancelAnimation(at);
-  }, [reduced, width, at]);
-  const sweep = useAnimatedStyle(() => ({ transform: [{ translateX: -band + at.get() * (width + band) }] }));
+  // Off screen (a tab not shown, a screen pushed over the home) its time stops where it was, and it carries on from
+  // there when it shows again: each pass is the eased crossing of `SWEEP_MS` on that time.
+  const paused = useLivePaused();
+  const clock = useDrawingClock(!reduced && !paused && width > 0);
+  const sweep = useAnimatedStyle(() => {
+    const at = SWEEP_EASE((clock.get() % SWEEP_MS) / SWEEP_MS);
+    return { transform: [{ translateX: -band + at * (width + band) }] };
+  });
   const box = roundRectPath(0, 0, width, height, 6);
   return (
     <View style={styles.building} accessibilityRole={still ? "text" : "progressbar"} accessibilityLabel={text}>

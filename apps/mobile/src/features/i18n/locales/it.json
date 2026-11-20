@@ -13,7 +13,6 @@
     "channelCount_many": "{{count}} canali",
     "channelCount_other": "{{count}} canali",
     "none": "Ancora nessuna categoria.",
-    "manageHelp": "Tocca una categoria per rinominarla, spostarla o eliminarla.",
     "manageHint": "Ordine, nomi ed eliminazione",
     "deleteTitle": "Eliminare {{name}}?",
     "order": "Posizione nell'elenco",
@@ -835,7 +834,6 @@
     "handleMention": "Menziona @{{handle}} per chiamarlo.",
     "handleFromName": "In chat: @{{handle}}. Viene dal nome. Puoi cambiarlo.",
     "handleFromNameEmpty": "Il suo @ in chat viene dal nome.",
-    "reviewLead": "Tocca una riga per cambiarla.",
     "planHint": "Oppure collega il tuo piano di IA: così {{name}} pensa con quello, senza consumare la chiave.",
     "partly": "L'agente è stato creato, ma una parte di ciò che porta il suo ruolo non è andata a buon fine. Sistemala nel suo profilo.",
     "import": {
@@ -1190,7 +1188,7 @@
     "agentStyle": "Come parlano gli agenti",
     "workspaces": "Spazi di lavoro",
     "workspacesIn": "Fai parte di",
-    "workspacesFoot": "Resti connesso a ciascuno e ricevi le notifiche di tutti. Tocca un workspace per aprirlo.",
+    "workspacesFoot": "Resti connesso a ciascuno e ricevi le notifiche di tutti.",
     "workspacesUnreachable": "Nessuna risposta ora",
     "addWorkspace": "Aggiungi workspace",
     "addWorkspaceCreate": "Crea un nuovo workspace",
@@ -2318,7 +2316,6 @@
   },
   "crash": {
     "title": "Qualcosa è andato storto in questa schermata",
-    "subtitle": "L'app ha avuto un errore mostrando questo. Riprova.",
     "retry": "Riprova"
   },
   "notFound": {
@@ -2349,9 +2346,6 @@
     "deleteFailed": "Non è stato possibile eliminare lo spazio di lavoro. Riprova.",
     "holdReset": "Tieni premuto per reimpostare",
     "resetFailed": "Non è stato possibile reimpostare lo spazio di lavoro. Riprova.",
-    "access": {
-      "how": "Tocca una riga per cambiarne il livello: Nessun accesso, Lettura, Lettura e scrittura."
-    },
     "logo": {
       "failed": "Non è stato possibile caricare il logo",
       "tooBig": "L'immagine è troppo grande. Provane un'altra."
@@ -2615,7 +2609,7 @@
       "sealedHelp": "Per sicurezza, ciò che è salvato qui non si vede più. Per cambiarlo, scrivilo di nuovo.",
       "changePassword": "Cambia password",
       "changeValue": "Cambia valore",
-      "changeHelp": "Tocca Salva per tenerlo. Da quel momento gli agenti usano quello nuovo.",
+      "changeHelp": "Gli agenti usano quello nuovo dopo che lo salvi.",
       "hidden": "Nascosto",
       "saved": "Salvato",
       "delete": "Elimina",
@@ -2760,7 +2754,7 @@
     "bySelfUntil": "Scritto da {{name}} · {{when}}"
   },
   "dashboards": {
-    "homeRow": "Solo tu · i tuoi widget",
+    "homeRow": "Solo tu",
     "create": "Crea",
     "routineTarget": "il suo widget",
     "pin": {
@@ -2845,11 +2839,11 @@
     },
     "drive": {
       "title": "Tutto ciò che il team crea, in un solo posto",
-      "text": "Report, tabelle e file di agenti e persone restano qui, facili da trovare.",
+      "text": "Report, tabelle e file di agenti e persone restano qui.",
       "viewerTitle": "Trova ciò che il team crea",
       "viewerText": "Qui compare ciò che agenti e persone creano nelle chat.",
       "titlePersonal": "Tutto ciò che creano i tuoi agenti, in un solo posto",
-      "textPersonal": "Report, tabelle e file dei tuoi agenti restano qui, facili da trovare.",
+      "textPersonal": "Report, tabelle e file dei tuoi agenti restano qui.",
       "viewerTitlePersonal": "Trova ciò che creano i tuoi agenti",
       "viewerTextPersonal": "Qui compare ciò che gli agenti creano nelle tue chat."
     },
@@ -2915,7 +2909,7 @@
       "viewerTextPersonal": "Quando qualcuno si unisce, compare qui."
     },
     "chat": {
-      "title": "Tutto inizia con un messaggio",
+      "title": "Inizia la conversazione",
       "text": "Scrivi qui sotto e lo vedranno tutti.",
       "viewerTitle": "I messaggi compaiono qui",
       "viewerText": "Quando qualcuno scrive, lo leggi qui."
@@ -2956,8 +2950,8 @@
     "board": {
       "title": "Vedi ciò che conta in un solo pannello",
       "text": "Aggiungi un widget, chiedine uno a un agente o fissa un blocco dalla chat.",
-      "viewerTitle": "Questo pannello sta prendendo forma",
-      "viewerText": "Chi modifica questo pannello aggiunge i widget, e compaiono qui."
+      "viewerTitle": "I widget compaiono qui",
+      "viewerText": "Li aggiunge chi modifica questo pannello."
     },
     "computers": {
       "title": "Dai ai tuoi agenti un altro computer",
@@ -2966,7 +2960,7 @@
       "viewerText": "Chi collega i computer li aggiunge, e compaiono qui."
     },
     "connectors": {
-      "title": "Dai ai tuoi agenti strumenti veri",
+      "title": "Dai strumenti ai tuoi agenti",
       "text": "Collega un servizio e inizieranno a leggere e agire lì.",
       "viewerTitle": "Gli strumenti dei tuoi agenti compaiono qui",
       "viewerText": "Chi gestisce i connettori collega i servizi qui sotto."
@@ -3130,7 +3124,7 @@
       "done": "Fatto",
       "placeholder": "Scrivi il testo",
       "titlePlaceholder": "Scrivi il titolo",
-      "hint": "Ogni riga è un paragrafo. Quello che scrivi entra nel file mentre lo scrivi."
+      "hint": "Ogni riga è un paragrafo."
     },
     "show": {
       "nothing": "Tutte le diapositive sono nascoste, quindi non c'è niente da mostrare.",

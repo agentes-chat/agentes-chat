@@ -124,9 +124,11 @@ export function ReportProblemSheet({ onClose, ...props }: ReportProblemProps & {
         accessibilityLabel={t("problemReport.emailLabel")}
         editable={!busy}
       />
-      <Text variant="footnote" tone={emailBad ? "danger" : "muted"}>
-        {emailBad ? t("problemReport.emailInvalid") : t("problemReport.emailHelp")}
-      </Text>
+      {emailBad ? (
+        <Text variant="footnote" tone="danger">
+          {t("problemReport.emailInvalid")}
+        </Text>
+      ) : null}
       {data && (
         <>
           <Pressable

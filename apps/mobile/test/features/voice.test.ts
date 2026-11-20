@@ -24,6 +24,7 @@ import {
   waveAt,
 } from "../../src/features/voice/logic";
 import { joinM4a } from "../../src/features/voice/m4a";
+import { chatScreenSource } from "./chat-screen-source";
 
 const u32 = (...v: number[]) => {
   const out = new Uint8Array(v.length * 4);
@@ -208,7 +209,7 @@ describe("a voice note with typed text and files", () => {
       /const back = item \? takeBack\(item, targetRef\.current\) : null;\s*if \(back\) targetRef\.current\.takeBack\?\.\(back\);/,
     );
     expect(src("features/voice/outbox.ts")).toContain('onRefused(verdict === "limit" ? "limit" : "refused", item);');
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     expect(chat).toContain("takeBack: voiceTakeBack,");
     // The files come back from what was uploaded for the take, to wait above the field again.
     expect(chat).toMatch(/sentWithVoice\.current\.set\(a\.id, file\)/);
@@ -247,7 +248,7 @@ describe("a voice note with typed text and files", () => {
   });
 
   test("sending uploads the waiting files first, and a failed upload keeps the take", () => {
-    const screen = src("features/chat/ChatScreen.tsx");
+    const screen = chatScreenSource();
     expect(screen).toMatch(/const withVoice = async \(typed: string\) => \{[\s\S]{0,600}uploadPending\(pending\)/);
     expect(screen).toContain("prepare: prepareVoice,");
     const take = src("features/voice/useVoiceTake.ts");

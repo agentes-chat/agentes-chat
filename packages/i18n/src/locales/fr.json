@@ -657,7 +657,7 @@
       "change": "Modifier",
       "password": "Ravi de vous revoir.",
       "passwordLead": "Maintenant, votre mot de passe.",
-      "wrong": "Hum, ce mot de passe ne correspond pas.",
+      "wrong": "Ce mot de passe ne correspond pas.",
       "social": "Vous vous connectez avec {{providers}}.",
       "socialLead": "Ce compte n'a pas de mot de passe. Continuez ici.",
       "createPassword": "Je préfère créer un mot de passe",
@@ -776,7 +776,7 @@
     "expiredText": "Les invitations sont valables 7 jours.",
     "askNew": "Demander une nouvelle invitation",
     "askedNew": "Demande envoyée",
-    "askNewFailed": "Impossible de faire la demande d'ici : ce lien a peut-être été remplacé par une invitation plus récente ou annulé. Cherchez l'e-mail d'invitation le plus récent, ou demandez à la personne qui vous a invité.",
+    "askNewFailed": "Impossible de faire la demande d'ici. Quelqu'un a peut-être annulé ce lien ou envoyé une invitation plus récente. Cherchez l'e-mail d'invitation le plus récent, ou demandez à la personne qui vous a invité.",
     "from": "Invitation de {{name}}",
     "crew_one": "{{names}} y travaille",
     "crew_many": "{{names}} y travaillent",
@@ -2117,7 +2117,7 @@
     "riskyOn": "Cette personne décide aussi celles-ci.",
     "lock": "Toujours à vous : argent, personnes et rôles, clés d’IA, votre boîte mail et la suppression.",
     "coveringTitle": "Vous approuvez pour",
-    "coveringSubtitle": "Ce qu’on demande à ces personnes vous arrive aussi, et vous décidez en leur nom. Jamais ce que vous avez demandé.",
+    "coveringSubtitle": "Les demandes adressées à ces personnes vous arrivent aussi, et vous décidez en leur nom, sauf pour les demandes que vous avez faites.",
     "coveringWhileOut": "Quand la personne est absente",
     "coveringUntil": "jusqu’au {{date}}",
     "coveringNow": "En ce moment",
@@ -2288,7 +2288,7 @@
       "help": "Vous gardez le même compte, dans les mêmes workspaces et avec les mêmes forfaits.",
       "change": "Changer d'e-mail",
       "sent": "Nous avons envoyé un lien à {{email}}. Votre e-mail change quand vous l'ouvrez.",
-      "changed": "C'est fait : vous vous connectez désormais avec {{email}}.",
+      "changed": "Vous vous connectez désormais avec {{email}}.",
       "same": "C'est déjà votre e-mail.",
       "noMail": "Ce serveur n'envoie pas d'e-mails, donc la nouvelle adresse ne peut pas être confirmée. Demandez à la personne qui gère le serveur de configurer l'envoi d'e-mails.",
       "held": "Cet e-mail vient de quitter un autre compte et lui reste réservé 7 jours. Utilisez-en un autre.",
@@ -3358,17 +3358,18 @@
       "title_many": "{{count}} demandes de {{name}} vous attendent",
       "title_other": "{{count}} demandes de {{name}} vous attendent",
       "line": "En attente depuis {{since}}.",
-      "action": "Voir et approuver",
-      "hide": "Masquer"
+      "action": "Voir et approuver"
     },
     "budget": {
       "title": "Budget de {{name}} : {{from}} → {{to}}",
+      "item": "Budget : {{from}} → {{to}}",
       "line_one": "S’est arrêté {{count}} fois à la limite du mois.",
       "line_many": "S’est arrêté {{count}} fois à la limite du mois.",
       "line_other": "S’est arrêté {{count}} fois à la limite du mois."
     },
     "channel": {
       "title": "Mettre {{name}} dans #{{channel}}",
+      "item": "Mettre dans #{{channel}}",
       "line": "{{name}} n’est dans aucun canal, donc personne ne lui a parlé de la semaine."
     },
     "unanswered": {
@@ -3382,6 +3383,7 @@
     },
     "routine": {
       "title": "Routine de {{name}} tous les jours à {{time}}",
+      "item": "Routine tous les jours à {{time}}",
       "line_one": "Vous l’avez demandé {{count}} fois cette semaine : « {{text}} »",
       "line_many": "Vous l’avez demandé {{count}} jours cette semaine : « {{text}} »",
       "line_other": "Vous l’avez demandé {{count}} jours cette semaine : « {{text}} »",
@@ -3392,6 +3394,13 @@
       "title": "{{name}} a appris : {{what}}",
       "line": "Utilisé {{uses}}×. En faire une compétence ?",
       "action": "En faire une compétence",
+      "uses": "Utilisé {{uses}}×",
+      "group_one": "{{name}} a appris une façon de travailler",
+      "group_many": "{{name}} a appris {{count}} façons de travailler",
+      "group_other": "{{name}} a appris {{count}} façons de travailler",
+      "applyAll_one": "En faire une compétence",
+      "applyAll_many": "En faire {{count}} compétences",
+      "applyAll_other": "En faire {{count}} compétences",
       "done": "Confirmé"
     },
     "stalled": {
@@ -3431,11 +3440,13 @@
     },
     "retire": {
       "title": "Archiver {{name}}",
+      "item": "Archiver",
       "line": "Aucun travail depuis 4 semaines, ni routine ni tâche ouverte.",
       "action": "Archiver"
     },
     "model": {
       "title": "{{name}} peut utiliser {{to}}.",
+      "item": "Peut utiliser {{to}}",
       "line": "Utilise {{from}} aujourd'hui."
     },
     "skip": "Ignorer",
@@ -3451,7 +3462,7 @@
     "applyAll_many": "Appliquer les {{count}}",
     "applyAll_other": "Appliquer les {{count}}",
     "notNow": "Pas maintenant",
-    "dismissed": "Rien ne change pour l’instant. Posez toutes vos questions sur la semaine ici même.",
+    "dismissed": "Rien ne change pour l’instant. Posez toutes vos questions sur la semaine ici.",
     "change": "Modifier",
     "every": {
       "sun": "Tous les dimanches à {{time}}",
@@ -3513,7 +3524,7 @@
       "opencode": "OpenCode ne peut pas réfléchir sur cet ordinateur. Connectez une clé OpenCode sur la page de {{name}}."
     },
     "card": {
-      "connected": "C'est fait : {{name}} a maintenant une IA.",
+      "connected": "{{name}} a maintenant une IA.",
       "answerNow": "Répondre maintenant",
       "answering": "{{name}} répond…",
       "stillMissing": "{{name}} n'a toujours aucune IA connectée."
@@ -3548,7 +3559,7 @@
         "ended": "Je répondrai ici dès que le workspace se réabonnera à agentes.chat."
       },
       "askAdmin": "Je répondrai ici dès qu'un admin aura réglé l'abonnement agentes.chat.",
-      "plan": "L'abonnement apporte l'ordinateur des agents, toujours allumé. L'IA est celle que vous payez déjà : Claude, ChatGPT et d'autres, ou une clé API.",
+      "plan": "L'abonnement apporte l'ordinateur des agents. L'IA est celle que vous payez déjà : Claude, ChatGPT et d'autres, ou une clé API.",
       "activeTitle": "Abonnement actif",
       "activeLine": "Connectez une IA et {{name}} répond ici.",
       "receipt": "Gardé",
@@ -3732,7 +3743,7 @@
       "useForAll": "Utiliser cette clé pour tous",
       "untested": "Aucun modèle de {{name}} n’a encore réussi de test.",
       "testModels": "Tester les modèles",
-      "savedUnchecked": "Enregistrée, mais {{provider}} n'a pas répondu et la clé n'a pas pu être vérifiée. Si elle échoue, la conversation dit pourquoi.",
+      "savedUnchecked": "Enregistrée, mais {{provider}} n'a pas répondu, donc nous n'avons pas pu vérifier la clé. Si elle échoue, la conversation dit pourquoi.",
       "closed": "Les clés API s'ouvrent avec l'abonnement agentes.chat du workspace.",
       "notPlan": "La clé d'un abonnement de code va dans sa propre option ci-dessus.",
       "billing": "Activez la facturation pour le projet de la clé. Sans facturation, Google peut utiliser ce que vos agents envoient.",
@@ -3874,7 +3885,7 @@
   },
   "brakes": {
     "title": "Travail que personne n'a demandé",
-    "subtitle": "Ce qu'il commence seul, à partir d'une routine, d'une alerte ou d'un autre agent. Ce qu'une personne demande n'est jamais retenu.",
+    "subtitle": "Ce qu'il commence seul, à partir d'une routine, d'une alerte ou d'un autre agent.",
     "costly": "Demander avant un travail coûteux",
     "costlyHelp": "Avant d'ouvrir une pull request, d'installer des paquets ou un long travail, il demande à la personne responsable.",
     "costlyAsk": "Demander d'abord",
@@ -4079,10 +4090,10 @@
     "added": "{{name}} a rejoint le canal.",
     "allow": "Laisser {{person}} lui parler",
     "allow_female": "Laisser {{person}} lui parler",
-    "allowed": "C'est fait : {{person}} peut maintenant parler à {{name}}.",
+    "allowed": "{{person}} peut maintenant parler à {{name}}.",
     "allowMe": "Je veux lui parler",
     "allowMe_female": "Je veux lui parler",
-    "allowedMe": "C'est fait : tu peux maintenant parler à {{name}}.",
+    "allowedMe": "Vous pouvez maintenant parler à {{name}}.",
     "mailLossTitle": "Retirer l'accès à la boîte mail ?",
     "mailLoss": "{{name}} a accès à la boîte mail de {{owners}}. Si plus de personnes lui parlent, elles pourraient atteindre ces e-mails par son intermédiaire, donc cet accès est retiré. La personne qui a connecté la boîte mail peut le redonner.",
     "mailLoss_female": "{{name}} a accès à la boîte mail de {{owners}}. Si plus de personnes lui parlent, elles pourraient atteindre ces e-mails par son intermédiaire, donc cet accès est retiré. La personne qui a connecté la boîte mail peut le redonner.",
@@ -6522,14 +6533,14 @@
       "forgotten": "Oublié. C'est dans Archivés si vous voulez le récupérer.",
       "saved": "Enregistré. C'est maintenant considéré comme vérifié.",
       "rules": "Règles données par l'équipe",
-      "rulesNote": "Suivies dans tout le travail pour la personne qui a donné chacune, d'où que vienne la demande. Celles du responsable ou d'un admin valent pour tous.",
+      "rulesNote": "Chaque règle vaut pour la personne qui l'a donnée, d'où que vienne la demande. Celles du responsable ou d'un admin valent pour tous.",
       "rulesNoteRightHand": "Les règles que vous donnez dans votre DM valent seulement pour vous. Vous seul les voyez.",
       "ruleBy": "De {{name}} · {{date}}",
       "removeRule": "Retirer",
       "ruleRemoved": "Règle retirée. Elle est dans Archivés si vous voulez la récupérer.",
       "playbook": "Comment {{name}} travaille",
       "playbook_female": "Comment {{name}} travaille",
-      "playbookNote": "Des façons de travailler qu'il garde pour lui. Elles n'apparaissent pas dans la conversation. Ce qu'il a pris de l'extérieur et n'a plus jamais utilisé part tout seul et reste dans Archivés.",
+      "playbookNote": "Des façons de travailler qu'il garde pour lui. Elles n'apparaissent pas dans la conversation. Ce qu'il a pris de l'extérieur et n'a plus jamais utilisé passe tout seul dans Archivés.",
       "details": "Détails techniques",
       "skills": "Compétences qu'il a créées",
       "skillUses_one": "chargée {{count}} fois",
@@ -7080,7 +7091,7 @@
         "done": "Je lis {{apps}}",
         "doneNone": "Pas d'applis pour l'instant",
         "title": "Vos applis de travail",
-        "desc": "Celles que l'équipe que vous venez de créer utiliserait passent en premier. Lire ne change jamais rien, et envoyer, supprimer et payer demandent votre accord.",
+        "desc": "Lire ne change jamais rien. Envoyer, supprimer et payer demandent votre accord.",
         "connect": "Connecter",
         "all": "Voir toutes les applis",
         "todoPersonal": "Connectez vos applis.",
@@ -7923,9 +7934,9 @@
     },
     "suggest": {
       "title": "Vous voulez faire venir quelqu'un dans {{org}} ?",
-      "lead_one": "{{names}} invite des personnes ici. Suggérez quelqu'un : la suggestion arrive et s'approuve en un clic.",
-      "lead_many": "{{names}} invitent des personnes ici. Suggérez quelqu'un : ils la reçoivent et l'approuvent en un clic.",
-      "lead_other": "{{names}} invitent des personnes ici. Suggérez quelqu'un : ils la reçoivent et l'approuvent en un clic.",
+      "lead_one": "{{names}} invite des personnes ici. Suggérez quelqu'un : la suggestion lui parvient et un clic suffit pour l'approuver.",
+      "lead_many": "{{names}} invitent des personnes ici. Suggérez quelqu'un : ils la reçoivent et l'approuvent en un clic.",
+      "lead_other": "{{names}} invitent des personnes ici. Suggérez quelqu'un : ils la reçoivent et l'approuvent en un clic.",
       "leadNoNames": "Suggérez quelqu'un : la personne qui invite ici la reçoit et l'approuve en un clic.",
       "button": "Suggérer quelqu'un",
       "dialogTitle": "Suggérer quelqu'un pour {{org}}",
@@ -7954,7 +7965,7 @@
     },
     "arrival": {
       "title": "Bienvenue dans {{org}}, {{name}}",
-      "lead": "Ici, l'équipe et les agents travaillent ensemble : écrivez dans #{{channel}} ou appelez un agent par son nom.",
+      "lead": "Écrivez dans #{{channel}} ou appelez un agent par son nom.",
       "alsoIn": "Vous êtes aussi dans {{channels}}.",
       "sayHi": "Dites bonjour dans #{{channel}}",
       "talkTo": "Parler à {{name}}",
@@ -11388,7 +11399,7 @@
     "tooShort": "Trop court. Dites-en un peu plus.",
     "silent": "Rien entendu. Rien n'a été envoyé.",
     "notSent": "Impossible d'envoyer l'audio.",
-    "limit": "Ça fait beaucoup d'audio pour aujourd'hui. Écrivez ici et réessayez demain.",
+    "limit": "La limite d'audio du jour est atteinte. Écrivez ici, ou réessayez demain.",
     "micBlocked": "Le microphone est bloqué",
     "micBlockedHint": "Autorisez le microphone dans les réglages de votre appareil pour enregistrer.",
     "openSettings": "Ouvrir les réglages",
@@ -12018,8 +12029,8 @@
     "audienceInFolder": "Dans {{folder}}, qui est restreint : ici, vous pouvez seulement restreindre davantage.",
     "audienceFollows": "Hérité de {{folder}}",
     "audienceUseFolder": "Définir pour le dossier {{folder}}",
-    "audienceFolderSaved": "C'est fait. L'audience du dossier a été mise à jour.",
-    "audienceFolderOpened": "C'est fait. Le dossier n'a plus de restriction.",
+    "audienceFolderSaved": "Accès au dossier mis à jour.",
+    "audienceFolderOpened": "Le dossier n'a plus de restriction.",
     "audienceRootTitle": "Accès à tout le wiki",
     "audienceRootText": "Vaut pour toutes les pages et tous les dossiers du wiki, et pour ceux ajoutés plus tard.",
     "audienceInRoot": "Tout le wiki est limité : ici, vous pouvez seulement le restreindre davantage.",
@@ -12060,8 +12071,9 @@
       "agentsTitle_one": "Agents qui lisent {{count}} page",
       "agentsTitle_other": "Agents qui lisent {{count}} pages",
       "agentsText": "Qui voit chaque page parmi les personnes ne change pas.",
-      "agentsSaved_one": "C'est fait. {{count}} page mise à jour.",
-      "agentsSaved_other": "C'est fait. {{count}} pages mises à jour."
+      "agentsSaved_one": "{{count}} page mise à jour.",
+      "agentsSaved_many": "{{count}} pages mises à jour.",
+      "agentsSaved_other": "{{count}} pages mises à jour."
     },
     "trash": {
       "title": "Corbeille",
@@ -12096,8 +12108,8 @@
     "audienceAgentDetail": "Agent",
     "audiencePeople": "Personnes",
     "audienceNoMatch": "Personne de ce nom.",
-    "audienceSaved": "C'est fait. L'accès a été mis à jour.",
-    "audienceOpened": "C'est fait. Tout le monde peut la voir et la modifier.",
+    "audienceSaved": "Accès mis à jour.",
+    "audienceOpened": "Tout le monde peut la voir et la modifier.",
     "noAccessTitle": "Vous n'avez pas accès à cette page",
     "noAccessText": "Elle est réservée à certaines personnes. Si vous en avez besoin, demandez à la personne qui s'occupe du wiki.",
     "delete": "Mettre à la corbeille",
@@ -12571,7 +12583,7 @@
     "nothingWorking": "Rien ne tourne en ce moment",
     "rule": "Un nouveau travail démarre quand l'ordinateur a de la mémoire libre. Les personnes passent en premier. Les agents mentionnés ensemble démarrent un par un.",
     "spill": {
-      "title": "Plus d'ordinateurs, moins d'attente",
+      "title": "Vos ordinateurs",
       "text": "Quand cet ordinateur est plein, les réponses pour vous peuvent démarrer sur l'un des vôtres. Les travaux longs et les fichiers des agents restent ici.",
       "plan": "ton forfait {{plan}}"
     },
@@ -16844,7 +16856,7 @@
       "uiPasscode": "Saisissez son code quand il le demande et gardez-le déverrouillé.",
       "uiCheck": "Vérifier à nouveau",
       "repair": "Réparer l'app de test",
-      "repairHint": "Le Mac arrête l'app de test et la recrée avec son Xcode, en quelques minutes. Pour les touchers qui échouent encore une fois les deux activés.",
+      "repairHint": "Utilisez-le quand les touchers échouent encore avec les deux activés. Le Mac arrête l'app de test et la recrée avec son Xcode, en quelques minutes.",
       "tooOld": "{{name}} est sous iOS {{version}}, et les agents ont besoin d'iOS 17 ou plus récent. Mettez-le à jour s'il le peut, ou branchez un iPhone plus récent.",
       "tooOldVersion": "16 ou antérieur",
       "pluggedIn": "Il est branché",
@@ -17789,7 +17801,7 @@
       "envOffHere": "Désactivé dans l'app agentes.chat de cet ordinateur.",
       "see": "Voir ce qui est envoyé",
       "dialogTitle": "Ce qui est envoyé",
-      "dialogText": "Une fois par jour. Voici exactement le prochain rapport."
+      "dialogText": "Envoyé une fois par jour. Voici exactement le prochain rapport."
     },
     "tileState": {
       "members_one": "{{count}} membre",
@@ -21181,14 +21193,14 @@
       "failed": "L'équipe n'a pas été créée. La raison est sur la carte de la conversation.",
       "none": "Aucun de ceux-ci",
       "noneSub": "Dis ce que tu fais et {{name}} la monte",
-      "tailor": "Ensuite, demandez-moi simplement de l'adapter à votre activité.",
+      "tailor": "Ensuite, demandez-moi de l'adapter à votre activité.",
       "titlePersonal": "Tes agents",
       "leadPersonal": "Des agents prêts pour ce dont tu as besoin. Ensuite {{name}} les ajuste avec toi.",
       "heldLeadPersonal": "Choisissez ce qui se rapproche le plus de vos besoins. Vous changez tout après.",
       "createPersonal": "Créer mes agents",
       "failedPersonal": "Tes agents n'ont pas été créés. La raison est sur la carte de la conversation.",
       "noneSubPersonal": "Dis ce dont tu as besoin et {{name}} les met en place",
-      "tailorPersonal": "Ensuite, demandez-moi simplement de les adapter à votre quotidien."
+      "tailorPersonal": "Ensuite, demandez-moi de les adapter à votre quotidien."
     },
     "weekly": {
       "name": "La semaine de l'équipe",

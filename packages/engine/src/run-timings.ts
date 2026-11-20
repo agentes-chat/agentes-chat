@@ -32,6 +32,29 @@ const CAUSE_SQL = "^[a-z_:]{1,60}$";
 
 const msOf = (v: unknown) => wholeOrNull(numberIn(v, 0, TIMING_MAX_MS));
 
+interface ClaimStage {
+  stage: string;
+  ms: number;
+  queries: number;
+  parts?: ClaimStage[];
+}
+/** A stage as stored, or none when its time is no measure; its steps (`parts`) the same way, one level deep. */
+function stageOf(s: unknown, deep: boolean): ClaimStage[] {
+  if (!isJsonObject(s)) return [];
+  const ms = msOf(s.ms);
+  if (ms === null) return [];
+  const stage = typeof s.stage === "string" && STAGE.test(s.stage) ? s.stage : "other";
+  const parts = deep && Array.isArray(s.parts) ? s.parts.flatMap((p) => stageOf(p, false)) : [];
+  return [
+    {
+      stage,
+      ms,
+      queries: wholeOrNull(numberIn(s.queries, 0, QUERIES_MAX)) ?? 0,
+      ...(parts.length > 0 ? { parts: parts.slice(0, RUN_CLAIM_STAGES_MAX) } : {}),
+    },
+  ];
+}
+
 /** A run's kept claims as its trace gives them, oldest first: `profiles` as stored, which may hold anything. */
 export function runClaims(profiles: unknown) {
   if (!Array.isArray(profiles)) return [];
@@ -39,13 +62,7 @@ export function runClaims(profiles: unknown) {
     .filter(isJsonObject)
     .slice(-RUN_CLAIMS_MAX)
     .map((claim) => {
-      const stages = (Array.isArray(claim.stages) ? claim.stages : []).flatMap((s: unknown) => {
-        if (!isJsonObject(s)) return [];
-        const ms = msOf(s.ms);
-        if (ms === null) return [];
-        const stage = typeof s.stage === "string" && STAGE.test(s.stage) ? s.stage : "other";
-        return [{ stage, ms, queries: wholeOrNull(numberIn(s.queries, 0, QUERIES_MAX)) ?? 0 }];
-      });
+      const stages = (Array.isArray(claim.stages) ? claim.stages : []).flatMap((s: unknown) => stageOf(s, true));
       const total = isJsonObject(claim.total) ? claim.total : {};
       const sum = (field: "ms" | "queries") => stages.reduce((n, s) => n + s[field], 0);
       return {
@@ -80,6 +97,8 @@ export interface RunTimingsQuery {
 const msSql = (value: string) =>
   `case when jsonb_typeof(${value}) = 'number' then case when (${value})::numeric between 0 and ${TIMING_MAX_MS}
       then (${value})::numeric::float8 end end`;
+const stageSql = (value: string) =>
+  `case when ${value}->>'stage' ~ '${STAGE.source}' then regexp_replace(${value}->>'stage', '#[0-9]+$', '') else 'other' end`;
 const listSql = (value: string) => `case when jsonb_typeof(${value}) = 'array' then ${value} else '[]'::jsonb end`;
 const pct = (q: number, column: string, filter = "") =>
   `percentile_cont(${q}) within group (order by ${column})${filter ? ` filter (where ${filter})` : ""}`;
@@ -141,12 +160,17 @@ export async function operatorRunTimings(db: Database, query: RunTimingsQuery, n
         ) r
         left join lateral jsonb_array_elements(${sql.raw(listSql("r.profiles"))}) e
           on jsonb_typeof(e.value) = 'object'
-      ), st as (
-        select c.brain, c.model,
-          case when s.value->>'stage' ~ '${sql.raw(STAGE.source)}'
-            then regexp_replace(s.value->>'stage', '#[0-9]+$', '') else 'other' end as stage,
-          ${sql.raw(msSql("s.value->'ms'"))} as ms
+      ), cs as (
+        select c.brain, c.model, s.value as s
         from c, jsonb_array_elements(${sql.raw(listSql("c.claim->'stages'"))}) s
+      ), st as (
+        select cs.brain, cs.model, ${sql.raw(stageSql("cs.s"))} as stage, ${sql.raw(msSql("cs.s->'ms'"))} as ms
+        from cs
+        union all
+        -- A stage's steps, each named after it: context.build.
+        select cs.brain, cs.model, ${sql.raw(stageSql("cs.s"))} || '.' || ${sql.raw(stageSql("p.value"))},
+          ${sql.raw(msSql("p.value->'ms'"))}
+        from cs, jsonb_array_elements(${sql.raw(listSql("cs.s->'parts'"))}) p
       ), sg as (
         select brain, model, stage, count(*)::int as count, ${sql.raw(pct(0.5, "ms"))} as "medianMs",
           ${sql.raw(pct(0.9, "ms"))} as "p90Ms", ${sql.raw(pct(0.99, "ms"))} as "p99Ms", max(ms) as "maxMs"
@@ -182,7 +206,7 @@ export async function operatorRunTimings(db: Database, query: RunTimingsQuery, n
     read(sql`
       with w as materialized (
         select ar.id, ${brain} as brain, ${model} as model,
-          'brain_unavailable:' || coalesce(s.data->>'code', 'other') as said,
+          'brain_unavailable:' || coalesce(s.data->>'code', 'other') || coalesce(':' || (s.data->>'room'), '') as said,
           greatest(extract(epoch from coalesce(
             (select n.created_at from agent_run_steps n where n.run_id = s.run_id and n.seq > s.seq
               order by n.seq limit 1),

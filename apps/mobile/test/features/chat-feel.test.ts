@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { keepSameRows, sameItems } from "../../src/features/chat/logic";
+import { chatScreenSource } from "./chat-screen-source";
 
 const src = (file: string) => readFileSync(join(import.meta.dir, "../../src", file), "utf8");
 /** The text from `from` up to `to` (or the end). */
@@ -35,7 +36,7 @@ describe("swiping a message to answer it", () => {
     expect(swipe).toContain("const pan = usePanGesture(config);");
     // The mark under the row mounts only once a finger lands on it.
     expect(swipe).toContain("{marked ? <ReplyMark x={x} armed={armed} /> : null}");
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     expect(chat).toContain("<SwipeReply enabled={canReply && !m.local} onReply={reply}>");
     expect(chat).toMatch(/\{NATIVE_MENU \? \(\s*<MessageMenuFor/);
     expect(chat).not.toContain("NATIVE_MENU && !m.local");
@@ -51,7 +52,7 @@ describe("swiping a message to answer it", () => {
 
 describe("the conversation's rows", () => {
   test("a receipt, a thread's link or the lit row redraws its own row, never every row on screen with its menu", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     // Each message row is one memoized piece, handed what is its own and callbacks that keep their identity.
     expect(chat).toContain("const ChatMessage = memo(function ChatMessage({");
     expect(chat).toMatch(/const hands = useMemo<RowHands>\(\s*\(\) => \(\{ onReply, onMission, onRemind, onLongPress,/);
@@ -67,7 +68,7 @@ describe("the conversation's rows", () => {
   });
 
   test("someone typing or an agent's step redraws the screen, not the list: nothing it is handed is made anew", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     expect(chat).toContain(
       "const ConversationList = memo(KeyboardAwareLegendList) as unknown as typeof KeyboardAwareLegendList;",
     );
@@ -114,7 +115,7 @@ describe("the conversation's rows", () => {
   });
 
   test("run events rebuild only the live rows; the messages' rows and what reads them keep", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     expect(chat).toContain("browsingRef.current = sameItems(browsingRef.current, browsingRuns(runs));");
     expect(chat).toContain(`const makingKey = makingNow.map((r) => \`\${r.runId}:\${r.agentId}\`).join(" ");`);
     expect(chat).toContain("const making = useMemo(() => makingNow, [makingKey]);");
@@ -130,7 +131,7 @@ describe("the conversation's rows", () => {
 
   test("a new row rises in on the strong ease-out", () => {
     // The app's one rise (`RISE_IN`), also the voice take's line and bar.
-    expect(src("features/chat/ChatScreen.tsx")).toContain("const ENTER = RISE_IN;");
+    expect(chatScreenSource()).toContain("const ENTER = RISE_IN;");
     const entrances = src("ui/entrances.ts");
     expect(entrances).toContain("100: { opacity: 1, transform: [{ translateY: 0 }], easing: motion.easeOut },");
     expect(src("ui/theme.tsx")).toContain("easeOut: Easing.bezier(0.23, 1, 0.32, 1),");
@@ -138,7 +139,7 @@ describe("the conversation's rows", () => {
 });
 
 describe("older pages", () => {
-  const chat = src("features/chat/ChatScreen.tsx");
+  const chat = chatScreenSource();
 
   test("a page that didn't come is not the start: the row above the oldest message offers to try again", () => {
     expect(chat).toContain(".catch(() => setOlderFailed(true))");
@@ -167,7 +168,7 @@ describe("older pages", () => {
 
 describe('the "New" line', () => {
   test("it comes in the same frame as the first new row and stays put until the person leaves the screen", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     // Derived in the render that brings the row (put a render later, it pushed the row down under the person's eyes).
     expect(chat).toContain("const dividerKey = placedDivider ?? unseen.firstKey;");
     expect(chat).toContain("if (!focused) setPlacedDivider(null);");
@@ -177,14 +178,14 @@ describe('the "New" line', () => {
   });
 
   test("the older pages' row keeps its room once the start is reached", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     expect(chat).toContain("<View style={styles.older} />");
   });
 });
 
 describe("sheets that open the next thing", () => {
   test("stack the next step over the sheet, or wait for it to be gone (`sheet.close` says when), never a guessed time", () => {
-    const chat = src("features/chat/ChatScreen.tsx");
+    const chat = chatScreenSource();
     expect(chat).not.toContain("SHEET_LEAVE_MS");
     expect(chat).not.toMatch(/setTimeout\(\(\) => open(NewMission|Remind)\(\), \d+\)/);
     // The message the last conversation opened at goes with it (`m`): the params merge.
@@ -202,7 +203,7 @@ describe("sheets that open the next thing", () => {
 
 describe("the composer", () => {
   const composer = src("ui/Composer.tsx");
-  const chat = src("features/chat/ChatScreen.tsx");
+  const chat = chatScreenSource();
 
   test("the picker and the pills float above the measured box: typing never moves the conversation", () => {
     expect(composer).toContain("{float ? null : floating}");

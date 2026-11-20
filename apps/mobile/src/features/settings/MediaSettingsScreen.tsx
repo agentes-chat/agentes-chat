@@ -59,7 +59,6 @@ export function MediaSettingsScreen() {
   return (
     <SettingsPage title={title} frozen={settingsFrozen(org, "media")}>
       <Loaded>
-        <GroupedFooter>{t("settings.sectionText.media")}</GroupedFooter>
         {!editable ? (
           <View style={styles.note}>
             <Note icon="lock">{t("settings.readOnly")}</Note>

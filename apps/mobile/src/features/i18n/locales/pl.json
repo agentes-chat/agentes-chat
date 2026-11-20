@@ -14,7 +14,6 @@
     "channelCount_many": "{{count}} kanałów",
     "channelCount_other": "{{count}} kanału",
     "none": "Nie ma jeszcze kategorii.",
-    "manageHelp": "Stuknij kategorię, aby zmienić jej nazwę, przenieść ją albo usunąć.",
     "manageHint": "Kolejność, nazwy i usuwanie",
     "deleteTitle": "Usunąć {{name}}?",
     "order": "Miejsce na liście",
@@ -859,7 +858,6 @@
     "handleMention": "Napisz @{{handle}}, aby go zawołać.",
     "handleFromName": "Na czacie: @{{handle}}. Pochodzi z nazwy. Możesz to zmienić.",
     "handleFromNameEmpty": "Jego @ na czacie pochodzi z nazwy.",
-    "reviewLead": "Stuknij wiersz, aby go zmienić.",
     "planHint": "Albo połącz swój plan AI: wtedy {{name}} myśli za jego pomocą, bez zużywania klucza.",
     "partly": "Agent został utworzony, ale część tego, co przynosi jego rola, nie przeszła. Popraw to w jego profilu.",
     "import": {
@@ -1272,7 +1270,7 @@
     "agentStyle": "Jak mówią agenci",
     "workspaces": "Przestrzenie robocze",
     "workspacesIn": "Należysz do",
-    "workspacesFoot": "Pozostajesz zalogowany w każdym i dostajesz powiadomienia ze wszystkich. Stuknij workspace, aby go otworzyć.",
+    "workspacesFoot": "Pozostajesz zalogowany w każdym i dostajesz powiadomienia ze wszystkich.",
     "workspacesUnreachable": "Na razie brak odpowiedzi",
     "addWorkspace": "Dodaj workspace",
     "addWorkspaceCreate": "Utwórz nowy workspace",
@@ -2431,7 +2429,6 @@
   },
   "crash": {
     "title": "Coś poszło nie tak na tym ekranie",
-    "subtitle": "Aplikacja napotkała błąd przy wyświetlaniu tego widoku. Spróbuj ponownie.",
     "retry": "Spróbuj ponownie"
   },
   "notFound": {
@@ -2462,9 +2459,6 @@
     "deleteFailed": "Nie udało się usunąć przestrzeni roboczej. Spróbuj ponownie.",
     "holdReset": "Przytrzymaj, aby zresetować",
     "resetFailed": "Nie udało się zresetować przestrzeni roboczej. Spróbuj ponownie.",
-    "access": {
-      "how": "Stuknij wiersz, aby zmienić poziom: Brak dostępu, Odczyt, Odczyt i zapis."
-    },
     "logo": {
       "failed": "Nie udało się wgrać logo",
       "tooBig": "Ten obraz jest za duży. Spróbuj innego."
@@ -2738,7 +2732,7 @@
       "sealedHelp": "Ze względów bezpieczeństwa to, co tu zapisano, nie jest już pokazywane. Aby to zmienić, wpisz ponownie.",
       "changePassword": "Zmień hasło",
       "changeValue": "Zmień wartość",
-      "changeHelp": "Stuknij Zapisz, aby to zachować. Od tej chwili agenci używają nowej wartości.",
+      "changeHelp": "Agenci używają nowej wartości, gdy ją zapiszesz.",
       "hidden": "Ukryte",
       "saved": "Zapisano",
       "delete": "Usuń",
@@ -2891,7 +2885,7 @@
     "bySelfUntil": "Ustawione przez: {{name}} · {{when}}"
   },
   "dashboards": {
-    "homeRow": "Tylko ty · twoje własne widżety",
+    "homeRow": "Tylko ty",
     "create": "Utwórz",
     "routineTarget": "jego widżet",
     "pin": {
@@ -2979,11 +2973,11 @@
     },
     "drive": {
       "title": "Wszystko, co tworzy zespół, w jednym miejscu",
-      "text": "Raporty, tabele i pliki agentów i osób zostają tutaj, łatwe do znalezienia.",
+      "text": "Raporty, tabele i pliki agentów i osób zostają tutaj.",
       "viewerTitle": "Znajdź to, co tworzy zespół",
       "viewerText": "Tutaj pojawia się to, co agenci i osoby tworzą na czatach.",
       "titlePersonal": "Wszystko, co tworzą twoi agenci, w jednym miejscu",
-      "textPersonal": "Raporty, tabele i pliki twoich agentów zostają tutaj, łatwe do znalezienia.",
+      "textPersonal": "Raporty, tabele i pliki twoich agentów zostają tutaj.",
       "viewerTitlePersonal": "Znajdź to, co tworzą twoi agenci",
       "viewerTextPersonal": "To, co agenci tworzą w twoich rozmowach, pojawia się tutaj."
     },
@@ -3049,7 +3043,7 @@
       "viewerTextPersonal": "Gdy ktoś dołączy, pojawi się tutaj."
     },
     "chat": {
-      "title": "Wszystko zaczyna się od wiadomości",
+      "title": "Rozpocznij rozmowę",
       "text": "Napisz poniżej, a wszyscy tutaj to zobaczą.",
       "viewerTitle": "Tutaj pojawiają się wiadomości",
       "viewerText": "Gdy ktoś napisze, przeczytasz to tutaj."
@@ -3090,8 +3084,8 @@
     "board": {
       "title": "Zobacz to, co ważne, na jednym panelu",
       "text": "Dodaj widżet, poproś o niego agenta albo przypnij blok z czatu.",
-      "viewerTitle": "Ten panel nabiera kształtu",
-      "viewerText": "Osoba edytująca ten panel doda widżety, a one pojawią się tutaj."
+      "viewerTitle": "Widżety pojawią się tutaj",
+      "viewerText": "Dodaje je osoba edytująca ten panel."
     },
     "computers": {
       "title": "Daj agentom kolejny komputer",
@@ -3100,7 +3094,7 @@
       "viewerText": "Osoba łącząca komputery doda je, a one pojawią się tutaj."
     },
     "connectors": {
-      "title": "Daj agentom prawdziwe narzędzia",
+      "title": "Daj agentom narzędzia",
       "text": "Połącz usługę, a zaczną w niej czytać i działać.",
       "viewerTitle": "Tutaj pojawiają się narzędzia agentów",
       "viewerText": "Osoba zarządzająca konektorami połączy usługi poniżej."
@@ -3275,7 +3269,7 @@
       "done": "Gotowe",
       "placeholder": "Wpisz tekst",
       "titlePlaceholder": "Wpisz tytuł",
-      "hint": "Każdy wiersz to akapit. To, co wpisujesz, trafia do pliku na bieżąco."
+      "hint": "Każdy wiersz to akapit."
     },
     "show": {
       "nothing": "Wszystkie slajdy są ukryte, więc nie ma czego pokazać.",

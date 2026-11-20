@@ -244,7 +244,7 @@ describe("a computer's line", () => {
     await click(within(turn as HTMLElement).getByRole("button", { name: "Ver fila" }));
     await settle(6);
     const dialog = screen().getByRole("dialog", { name: "Fila de Studio" });
-    expect(dialog.textContent).toContain("Mais computadores, menos fila");
+    expect(dialog.textContent).toContain("Seus computadores");
     const own = within(dialog).getByRole("switch", { name: "Suas respostas podem pensar aqui: MacBook da Ana" });
     expect(own.getAttribute("aria-checked")).toBe("true");
     expect(dialog.querySelector(".cq-spill__name small")?.textContent).toContain("seu plano Claude Max");

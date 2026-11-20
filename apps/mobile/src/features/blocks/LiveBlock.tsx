@@ -1,6 +1,5 @@
 import { type BlockChange, useArtifact, useBlockReply, useKeepBlock, useSharedBlock } from "@agenteschat/client";
 import { type BlockEvent, blockEvent, blockPage, DRAFT_SETTLE_MS } from "@agenteschat/client/lib/blocks";
-import { clockHour } from "@agenteschat/client/lib/format";
 import { chartRamp } from "@agenteschat/ui/sky/chart";
 import { randomUUID } from "expo-crypto";
 import { LinearGradient } from "expo-linear-gradient";
@@ -12,9 +11,10 @@ import { WebView } from "react-native-webview";
 import { Button, IconButton, SCREEN_X, Sky, Text, useTheme, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
 import { useMessageCardCorners } from "../chat/look";
+import { useRowDirectory } from "../chat/row-data";
 import { PageBones } from "../files/PageBones";
 import { LoadFailed } from "../shared/FirstUse";
-import { useColors, useDirectory, useErrorToast, useOrgId } from "../shared/hooks";
+import { useColors, useErrorToast, useOrgId, useWhen } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
 import { PushedHeader } from "../shared/parts";
 import { hostScript, INLINE_HEIGHT, ISOLATED_WEB_VIEW, themeScript, withLiveBlock } from "./logic";
@@ -189,10 +189,11 @@ export function LiveBlock({
   agentId: string;
   screen?: boolean;
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const when = useWhen();
   const c = useColors();
   const orgId = useOrgId();
-  const dir = useDirectory();
+  const dir = useRowDirectory();
   const toast = useToast();
   const agent = dir.agentById.get(agentId);
   const blockKey = `${id}@${version}`;
@@ -278,11 +279,7 @@ export function LiveBlock({
   }
 
   const same = sent !== null && sent.text === draft?.text;
-  const time = sent
-    ? new Intl.DateTimeFormat(i18n.language, { hour: clockHour(i18n.language), minute: "2-digit" }).format(
-        new Date(sent.at),
-      )
-    : "";
+  const time = sent ? when.time(sent.at) : "";
   return (
     <View style={screen ? styles.fill : undefined}>
       <View style={screen ? styles.fill : [styles.view, { height: tall && open ? height : INLINE_HEIGHT }]}>
@@ -360,7 +357,7 @@ export function LiveBlockCard({ id, version }: { id: string; version?: number })
   const { t } = useTranslation();
   const c = useColors();
   const orgId = useOrgId();
-  const dir = useDirectory();
+  const dir = useRowDirectory();
   const query = useArtifact(orgId, id, version);
   const a = query.data;
   if (a?.content.kind !== "block") {

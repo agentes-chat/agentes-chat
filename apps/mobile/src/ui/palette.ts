@@ -183,6 +183,30 @@ export function appShadows(scheme: Scheme): Record<ShadowName, ShadowLayer[]> {
   return scheme === "dark" ? tokenShadows.dark : { ...tokenShadows.light, ...NATIVE_LIGHT_SHADOWS };
 }
 
+/** An outline drawn outside a view (React Native's `outline*`), so nothing inside it moves. */
+export interface Edge {
+  readonly outlineWidth: number;
+  readonly outlineColor: string;
+  readonly outlineStyle: "solid";
+}
+
+/** `cardEdge` per scheme, made once. */
+const cardEdges = new Map<Scheme, Edge | null>();
+
+/**
+ * The cards' light edge: the ring of their `e1` shadow (its layer with no blur), as an outline. A grouped list carries
+ * it too, so lists and cards read as one family, and so does a bubble over a background.
+ */
+export function cardEdge(scheme: Scheme): Edge | null {
+  let edge = cardEdges.get(scheme);
+  if (edge === undefined) {
+    const ring = appShadows(scheme).e1.find((l) => l.blur === 0 && l.spread > 0);
+    edge = ring ? { outlineWidth: ring.spread, outlineColor: ring.color, outlineStyle: "solid" } : null;
+    cardEdges.set(scheme, edge);
+  }
+  return edge;
+}
+
 /** A `#rrggbb` color at `alpha` (0–1), as `#rrggbbaa`. */
 export const withAlpha = (hex: string, alpha: number) =>
   `${hex.slice(0, 7)}${Math.round(alpha * 255)
