@@ -7150,17 +7150,22 @@ export function useTasksUnread(orgId: string) {
  * read per client, however many members hear it.
  */
 export const UNREAD_REFRESH_MS = 2000;
+/** And up to this much more, at random: every member hears the same message, and their reads must not land at once. */
+export const UNREAD_SPREAD_MS = 3000;
 const activityTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
-/** Runs `read` once `UNREAD_REFRESH_MS` after the first call for `key`; calls meanwhile join it. */
+/** Runs `read` once, `UNREAD_REFRESH_MS` plus some of `UNREAD_SPREAD_MS` after the first call for `key`; calls meanwhile join it. */
 function readOncePerBurst(key: string, read: () => void) {
   if (activityTimers.has(key)) return;
   activityTimers.set(
     key,
-    setTimeout(() => {
-      activityTimers.delete(key);
-      read();
-    }, UNREAD_REFRESH_MS),
+    setTimeout(
+      () => {
+        activityTimers.delete(key);
+        read();
+      },
+      UNREAD_REFRESH_MS + Math.random() * UNREAD_SPREAD_MS,
+    ),
   );
 }
 

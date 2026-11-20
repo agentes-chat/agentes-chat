@@ -76,16 +76,17 @@ export class TtlCache<V> {
   }
 
   /**
-   * Returns the cached value or loads, caches and returns it (`undefined`/null results are cached too). A load an
-   * invalidation overtook (here or from another process) is returned but not kept: its read may predate the write.
+   * Returns the cached value or loads, caches and returns it (`undefined`/null results are cached too, unless `keep`
+   * refuses them). A load an invalidation overtook (here or from another process) is returned but not kept: its read
+   * may predate the write.
    */
-  async getOrLoad(key: string, load: () => Promise<V>): Promise<V> {
+  async getOrLoad(key: string, load: () => Promise<V>, keep?: (value: V) => boolean): Promise<V> {
     if (!enabled) return load();
     const hit = this.entries.get(key);
     if (hit && hit.expires >= Date.now()) return hit.value;
     const started = this.generation;
     const value = await load();
-    if (this.generation === started) this.set(key, value);
+    if (this.generation === started && (keep?.(value) ?? true)) this.set(key, value);
     return value;
   }
 }
@@ -107,6 +108,11 @@ export const caches = {
   rangeVisible: new TtlCache<unknown>(TTL_MS),
   /** A person's time zone in an org, else the org's (`orgId:userId`): the "Now" block of every run. */
   zones: new TtlCache<unknown>(TTL_MS),
+  /**
+   * A person's membership (`getMembership`, `orgId:userId`), read by nearly every request and socket check. Only a
+   * membership is kept, never its absence, so someone who just joined is let in at once.
+   */
+  membership: new TtlCache<unknown>(5_000),
   /** An org's standing (`standing.ts`), read before every model and computer call: a hold bites within 5 s everywhere. */
   standing: new TtlCache<unknown>(5_000),
   /** Whether an org spent its platform AI for the month (`limits.ts`), read before every Jev call and route. */

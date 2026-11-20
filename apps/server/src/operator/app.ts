@@ -4,6 +4,7 @@ import type { Database } from "@agenteschat/db";
 import { type MachineHub, type SessionScreening, SURFACE_PREFIX, safeEqual } from "@agenteschat/engine";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { Context } from "hono";
+import type { EventLoopLag } from "../event-loop-lag";
 import { apiError, domainErrorResponse, routeOf, validationHook } from "../http/errors";
 import type { Logger } from "../logger";
 import type { AppDeps } from "../routes/app/context";
@@ -47,6 +48,8 @@ export interface OperatorDeps {
   emails?: boolean;
   /** The bot check (ADR 0075), reported by `/health`; absent: `off`. */
   humanCheck?: HumanCheck | null;
+  /** This process's last reading of its event loop's delay, reported by `/health`; absent: null. */
+  eventLoopLag?: () => EventLoopLag | null;
   /** Counts the reveal door's calls a minute; absent: this process counts its own. */
   rateLimiter?: RateLimiter;
   /** Screened sessions (ADR 0076), read through the review door; absent: none, so every one is a 404. */

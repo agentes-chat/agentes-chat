@@ -2162,7 +2162,25 @@ export type WireBrainEvent =
    * A file a tool of the brain's own made (Codex's image generation), kept in the agent's folder (`path`, relative
    * to it): the server sends it to the Drive and its card goes with the reply. An older server drops the event.
    */
-  | { type: "file"; path: string };
+  | { type: "file"; path: string }
+  /**
+   * The CLI printed nothing for longer than the phase it was in allows, and the runner stopped it (Claude Code,
+   * `brain-silence.ts`): waiting for the `model`, while it was `compacting`, or in one of its own tools (`tool`, the
+   * tool's name, `label` what it ran on, masked). `resumed`: the same turn goes on in a resumed session; else the turn
+   * ends (`brain_stalled`). An older server drops the event.
+   */
+  | {
+      type: "stalled";
+      phase: BrainStallPhase;
+      tool?: string;
+      label?: string;
+      silentMs: number;
+      resumed: boolean;
+    };
+
+/** Where a stalled brain turn was (`stalled`). */
+export const BRAIN_STALL_PHASES = ["model", "compacting", "tool"] as const;
+export type BrainStallPhase = (typeof BRAIN_STALL_PHASES)[number];
 
 /**
  * `brain.steer` (protocol 15): messages for the turn of `runId` in progress.
@@ -3711,6 +3729,18 @@ export function parseBrainEvent(v: unknown): WireBrainEvent | null {
         : null;
     case "file":
       return isString(v.path) && v.path.length > 0 && v.path.length <= 1024 ? { type: "file", path: v.path } : null;
+    case "stalled": {
+      const phase = BRAIN_STALL_PHASES.find((p) => p === v.phase);
+      if (!phase) return null;
+      return {
+        type: "stalled",
+        phase,
+        ...(isString(v.tool) && v.tool ? { tool: v.tool.slice(0, BRAIN_LIMITS.toolName) } : {}),
+        ...(isString(v.label) && v.label ? { label: v.label.slice(0, 200) } : {}),
+        silentMs: num(v.silentMs),
+        resumed: v.resumed === true,
+      };
+    }
     default:
       return null;
   }

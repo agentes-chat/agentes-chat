@@ -423,6 +423,38 @@ describe("the gateway applies the run policy", () => {
     );
   });
 
+  test("tool sources are read at once and merged in their order", async () => {
+    await gatewaySetup();
+    const { ctx } = await runAs("person");
+    const own = (description: string): ToolDefinition => ({
+      name: "permission_prompt",
+      description,
+      inputSchema: { type: "object" },
+      scope: "",
+      connectionId: null,
+      execute: async () => ({ content: description }),
+    });
+    let fastCalled = () => {};
+    const fastStarted = new Promise<void>((resolve) => {
+      fastCalled = resolve;
+    });
+    // Read one after the other, the slow source would wait here alone and give nothing.
+    const slow: ToolSource = {
+      name: "slow",
+      tools: async () =>
+        (await Promise.race([fastStarted.then(() => true), Bun.sleep(1000).then(() => false)])) ? [own("slow")] : [],
+    };
+    const fast: ToolSource = {
+      name: "fast",
+      tools: async () => {
+        fastCalled();
+        return [own("fast")];
+      },
+    };
+    const gateway = createToolGateway({ sources: [slow, fast] });
+    expect((await gateway.list(ctx)).find((t) => t.name === "permission_prompt")?.description).toBe("slow");
+  });
+
   test("a connector cannot shadow server-owned Git tools", async () => {
     await gatewaySetup();
     const { ctx } = await runAs("person");

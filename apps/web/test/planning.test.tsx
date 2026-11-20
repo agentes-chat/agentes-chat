@@ -8,6 +8,7 @@ import { toYmd } from "@agenteschat/client/lib/format";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { mondayOf } from "@/pages/CalendarPage";
 import { splitCriteria } from "@/pages/IssuesPage";
+import { pinClockInDescribe } from "./clock";
 import { ADA_ID, ATLAS_ID, createFakeApi, ORG_ID, seedState } from "./fake-api";
 import { nextCronRun, parseSchedulePhrase } from "./fakes/planning";
 import { renderApp, screen, settle } from "./render";
@@ -1115,6 +1116,7 @@ describe("Rotinas", () => {
 });
 
 describe("Calendário", () => {
+  pinClockInDescribe();
   const openPanel = async () => {
     const show = screen().queryByRole("button", { name: "Mostrar painel" });
     if (show) await click(show);

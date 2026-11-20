@@ -507,6 +507,8 @@ const errorClassSql = (data: SQL) => {
 /** What a long work paused near (`usage_wait` with a `pause`). */
 const PAUSE_SOURCES = ["plan", "budget"] as const;
 const USAGE_WAIT = sql`(${KIND} = 'error' and ${DATA}->>'reason' = 'usage_wait')`;
+/** An error step of a turn whose CLI the computer stopped for its silence (`brain_stalled`). */
+const STALLED = sql`(${KIND} = 'error' and ${DATA}->>'reason' = 'brain_stalled')`;
 
 // Each fact is read only from the kind of step that writes it: on another kind the same name may hold text.
 const stepColumns = {
@@ -514,7 +516,9 @@ const stepColumns = {
   kind: KIND,
   at: agentRunSteps.createdAt,
   toolUseId: sql<string | null>`case when ${KIND} in ('tool_call', 'tool_result') then ${DATA}->>'toolUseId' end`,
-  tool: sql<string | null>`case when ${KIND} in ('tool_call', 'tool_result') then ${DATA}->>'name' end`,
+  // And the CLI's own tool a stalled turn hung in.
+  tool: sql<string | null>`case when ${KIND} in ('tool_call', 'tool_result') then ${DATA}->>'name'
+    when ${STALLED} then ${DATA}->>'tool' end`,
   // Only the call's step holds the mark: a result reads it from the call it answers.
   builtIn: sql<boolean | null>`case when ${KIND} = 'tool_call' then ${builtInSql(sql`${DATA}`)}
     when ${KIND} = 'tool_result' then coalesce((select ${builtInSql(sql`c.data`)} from ${agentRunSteps} c
@@ -546,6 +550,11 @@ const stepColumns = {
   chars: sql<number | null>`case when ${KIND} = 'tool_call' then length(${DATA}->>'input')
     when ${KIND} = 'tool_result' then length(${DATA}->>'content') end`.mapWith(Number),
   inputHash: sql<string | null>`case when ${KIND} = 'tool_call' then ${inputHashSql(sql`${DATA}`)} end`,
+  // How long nothing came from the computer's CLI before a stall.
+  keptMs: sql<number | null>`case
+    when ${STALLED} and jsonb_typeof(${DATA}->'silentMs') = 'number' then (${DATA}->>'silentMs')::float8 end`.mapWith(
+    Number,
+  ),
   messageId: sql<string | null>`case when ${KIND} = 'message' then ${DATA}->>'messageId' end`,
   records: sql<string[] | null>`case when ${KIND} = 'context'
     then (select jsonb_agg(k) from jsonb_object_keys(${DATA}) k) end`.mapWith(namesOf),
@@ -632,7 +641,7 @@ export async function operatorRunTrace(
     : [];
 
   const called = new Map<string, Date>();
-  const trail = steps.reverse().map(({ toolUseId, inputHash, pauseSource, pauseUsed, pauseWindow, ...s }) => {
+  const trail = steps.reverse().map(({ toolUseId, inputHash, pauseSource, pauseUsed, pauseWindow, keptMs, ...s }) => {
     if (s.kind === "tool_call" && toolUseId) called.set(toolUseId, s.at);
     const since = s.kind === "tool_result" && toolUseId ? called.get(toolUseId) : undefined;
     const reason = s.kind === "context" ? listedOf(RELEASE_REASONS, s.reason) : codeOf(s.reason);
@@ -653,7 +662,11 @@ export async function operatorRunTrace(
       model: codeOf(s.model),
       stopReason: codeOf(s.stopReason),
       inputDigest: inputDigestOf(query.secret, run.orgId, inputHash),
-      durationMs: since ? s.at.getTime() - since.getTime() : null,
+      durationMs: since
+        ? s.at.getTime() - since.getTime()
+        : typeof keptMs === "number" && Number.isFinite(keptMs) && keptMs >= 0
+          ? Math.round(keptMs)
+          : null,
       messageId: uuidOf(s.messageId),
       records: s.records ?? [],
     };

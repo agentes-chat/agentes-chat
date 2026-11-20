@@ -39,10 +39,28 @@ export function formatTokensShort(t: TFunction, locale: string, value: number) {
   return formatInt(locale, value);
 }
 
+const dateFormats = new Map<string, Intl.DateTimeFormat>();
+
+/**
+ * One formatter per language and options, kept: making one costs far more than using it, and opening a conversation
+ * formats every message's time (over a thousand made for a conversation of 185 messages before they were kept).
+ * A formatter fixes the time zone it was made in, so the device's offset is in the key: an app left open across a
+ * time zone change formats in the new zone.
+ */
+function dateFormat(locale: string, options: Intl.DateTimeFormatOptions) {
+  const key = `${locale}|${new Date().getTimezoneOffset()}|${JSON.stringify(options)}`;
+  let format = dateFormats.get(key);
+  if (!format) {
+    format = new Intl.DateTimeFormat(locale, options);
+    dateFormats.set(key, format);
+  }
+  return format;
+}
+
 /** Whether the locale writes 12-hour times ("1 PM") rather than 24-hour ("13:00"). */
 export function uses12h(locale: string) {
   try {
-    return new Intl.DateTimeFormat(locale, { hour: "numeric" }).resolvedOptions().hour12 === true;
+    return dateFormat(locale, { hour: "numeric" }).resolvedOptions().hour12 === true;
   } catch {
     return false;
   }
@@ -56,7 +74,7 @@ export const clockHour = (locale: string): "numeric" | "2-digit" => (uses12h(loc
 
 /** "10:42", "8:39 PM" */
 export const formatTime = (locale: string, iso: string) =>
-  new Intl.DateTimeFormat(locale, { hour: clockHour(locale), minute: "2-digit" }).format(new Date(iso));
+  dateFormat(locale, { hour: clockHour(locale), minute: "2-digit" }).format(new Date(iso));
 
 /**
  * The clock alone, without its day period: "8:39" for "8:39 PM", "1:32" for "오후 1:32", "10:42" in 24-hour
@@ -64,9 +82,7 @@ export const formatTime = (locale: string, iso: string) =>
  * says the whole time).
  */
 export function formatClock(locale: string, iso: string) {
-  const parts = new Intl.DateTimeFormat(locale, { hour: clockHour(locale), minute: "2-digit" }).formatToParts(
-    new Date(iso),
-  );
+  const parts = dateFormat(locale, { hour: clockHour(locale), minute: "2-digit" }).formatToParts(new Date(iso));
   const digits = parts.flatMap((p, i) => (p.type === "hour" || p.type === "minute" ? [i] : []));
   return parts
     .slice(digits[0], (digits.at(-1) ?? parts.length - 1) + 1)
@@ -83,7 +99,7 @@ export const clockAt = (locale: string, iso: string, now = new Date()) =>
  * the short month without its period and without the "de" Portuguese and Spanish put around it.
  */
 export const formatShortDate = (locale: string, iso: string, year = false) =>
-  new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", ...(year ? { year: "numeric" } : {}) })
+  dateFormat(locale, { day: "numeric", month: "short", ...(year ? { year: "numeric" } : {}) })
     .formatToParts(new Date(iso))
     .map((p) =>
       p.type === "month" ? p.value.replace(/\.$/, "") : p.type === "literal" ? p.value.replace(/^ de $/, " ") : p.value,
@@ -91,12 +107,11 @@ export const formatShortDate = (locale: string, iso: string, year = false) =>
     .join("");
 
 /** "outubro" */
-export const formatMonth = (locale: string, date: Date) =>
-  new Intl.DateTimeFormat(locale, { month: "long" }).format(date);
+export const formatMonth = (locale: string, date: Date) => dateFormat(locale, { month: "long" }).format(date);
 
 /** "março de 2026" */
 export const formatMonthYear = (locale: string, iso: string) =>
-  new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(new Date(iso));
+  dateFormat(locale, { month: "long", year: "numeric" }).format(new Date(iso));
 
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 
@@ -133,7 +148,7 @@ export const lowerFirst = (s: string, locale?: string) =>
 
 /** "Segunda-feira" */
 export const formatWeekday = (locale: string, iso: string) =>
-  capitalize(new Intl.DateTimeFormat(locale, { weekday: "long" }).format(new Date(iso)));
+  capitalize(dateFormat(locale, { weekday: "long" }).format(new Date(iso)));
 
 /** Day divider label: "Hoje", "Ontem", a weekday within the week ("Segunda-feira"), "12 out", "12 out 2025". */
 export function dayLabel(t: TFunction, locale: string, iso: string, now = new Date()) {
@@ -180,7 +195,7 @@ export function ordinalForm(locale: string, n: number): Intl.LDMLPluralRule {
 
 /** "terça-feira, 14 de outubro de 2026 às 21:10" (tooltip on a message's time). */
 export const formatFullDate = (locale: string, iso: string) =>
-  new Intl.DateTimeFormat(locale, { dateStyle: "full", timeStyle: "short" }).format(new Date(iso));
+  dateFormat(locale, { dateStyle: "full", timeStyle: "short" }).format(new Date(iso));
 
 /** "agora", "há 2 min", "há 3 h", "ontem", "12 out". */
 export function relativeTime(t: TFunction, locale: string, iso: string, now = new Date()) {
@@ -240,7 +255,7 @@ export function sentAtLine(t: TFunction, locale: string, iso: string, now = new 
 
 /** A time ahead, weekday and time on this device's clock: "seg 20 out, 09:00". */
 export const nextLabel = (locale: string, iso: string) =>
-  new Intl.DateTimeFormat(locale, {
+  dateFormat(locale, {
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -257,8 +272,7 @@ export function upcomingAt(t: TFunction, locale: string, iso: string, now = new 
   const time = formatTime(locale, iso);
   if (days <= 0) return t("format.todayAt", { time });
   if (days === 1) return t("format.tomorrowAt", { time });
-  if (days < 7)
-    return `${new Intl.DateTimeFormat(locale, { weekday: "short" }).format(new Date(iso)).replace(/\.$/, "")} ${time}`;
+  if (days < 7) return `${dateFormat(locale, { weekday: "short" }).format(new Date(iso)).replace(/\.$/, "")} ${time}`;
   return formatShortDate(locale, iso);
 }
 
