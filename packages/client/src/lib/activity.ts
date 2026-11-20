@@ -253,6 +253,7 @@ const BUILTIN: Record<string, ActivityKind> = {
   request_folder_access: "requestingAccess",
   request_secret: "requestingSecret",
   use_tool: "findingTools",
+  find_in_app: "gettingContext",
   follow_up: "followingUp",
   get_my_usage: "checkingUsage",
   ignore_usage_limit: "updatingWork",
