@@ -30,6 +30,19 @@ export { contrastRatio } from "@agenteschat/ui/sky/math";
  */
 export const TAB_BADGE = { background: light.danger, text: "#ffffff" } as const;
 
+/**
+ * Android's floating tab bar, in dp: the capsule's height (and the "new" button's side), its margin at the screen's
+ * sides and over the gesture bar, the gap to what stands beside or above it, and the capsule's padding.
+ */
+export const FLOATING_BAR = { height: 56, side: 16, below: 8, gap: 8, inset: 4 } as const;
+
+/** What a tab root keeps clear at its foot on Android: the safe area, the floating bar and the gap over it. */
+export const floatingBarRoom = (safeBottom: number) =>
+  safeBottom + FLOATING_BAR.below + FLOATING_BAR.height + FLOATING_BAR.gap;
+
+/** Only Conversas has the "new" button beside the floating bar. */
+export const tabHasNewAction = (routeName: string | undefined) => routeName === "(chats)";
+
 /** A quick double tap's two presses fall within this. */
 export const AGAIN_MS = 600;
 

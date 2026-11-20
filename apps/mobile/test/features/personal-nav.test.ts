@@ -14,7 +14,10 @@ describe("the tabs of a personal workspace", () => {
     expect(tabs).toMatch(
       /\{\s*name: "threads",\s*glyph: "threads",\s*label: "mobile\.tabs\.threads",\s*sf: \{[^}]*\},\s*teamOnly: true,\s*\}/,
     );
-    expect(tabs).toContain("hidden={personal && tab.teamOnly === true}");
+    // One rule for both bars: the system's `hidden` on iOS, the router's `href: null` on Android.
+    expect(tabs).toContain("hidden: personal && tab.teamOnly === true,");
+    expect(tabs).toContain("hidden={hidden}");
+    expect(tabs).toContain("...(hidden ? { href: null } : {}),");
     // A hidden tab can't be opened: the pushed list lives at /conversations/threads.
     const route = read("app/(app)/(main)/conversations/[kind].tsx");
     expect(route).toContain('if (kind === "threads" && personal) return <ThreadsScreen pushed />;');

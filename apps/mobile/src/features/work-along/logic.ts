@@ -3,7 +3,7 @@ import { SHORT_NAME } from "@agenteschat/client/lib/agora";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import type { WorkItem } from "@agenteschat/client/lib/working";
 import type { TFunction } from "i18next";
-import { needsHeaderBlur } from "@/lib/nav";
+import { floatingBarRoom, needsHeaderBlur } from "@/lib/nav";
 import { type AppHref, chatHref } from "../links/logic";
 
 /**
@@ -88,7 +88,8 @@ export const ALONG_STRIP = 48;
 const LEGACY_TAB_BAR = 49;
 
 /**
- * How far over the screen's bottom the strip sits: on the tab bar's top. Android lays a tab root out above its bar;
- * older iOS lays it under its translucent bar.
+ * How far over the screen's bottom the strip sits: over the tab bar. Both lay a tab root out under their bar, older
+ * iOS's translucent one and Android's floating one (the strip keeps the bar's gap there).
  */
-export const alongStripBottom = (os: string, safeBottom: number) => (os === "ios" ? safeBottom + LEGACY_TAB_BAR : 0);
+export const alongStripBottom = (os: string, safeBottom: number) =>
+  os === "ios" ? safeBottom + LEGACY_TAB_BAR : floatingBarRoom(safeBottom);

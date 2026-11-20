@@ -29,6 +29,9 @@ export function useMyFace(): { name: string; photo: ReturnType<typeof usePersonP
   return { name: me.data?.user.name ?? "", photo };
 }
 
+/** "New": start a conversation or create something (the bar's "+"; on Android, Conversas' button by the tab bar). */
+export const openNew = () => router.push("/new");
+
 /**
  * The bar of the three tabs: on the left the workspace you are in (its logo, your photo small on its corner)
  * opens Você; "+" on the right pushes "New" (start a conversation or create something), in the native bar. A personal
@@ -40,9 +43,7 @@ export function useTabHeader(): { left: ReactNode; actions: HeaderAction[] } {
   const personal = isPersonal(org);
   const c = useColors();
   const face = useMyFace();
-  const actions: HeaderAction[] = [
-    { icon: "plus", sf: "plus", label: t("mobile.new.title"), onPress: () => router.push("/new") },
-  ];
+  const actions: HeaderAction[] = [{ icon: "plus", sf: "plus", label: t("mobile.new.title"), onPress: openNew }];
   return {
     left: (
       <Pressable

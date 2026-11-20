@@ -91,18 +91,20 @@ describe("the work-along line, the phone's Agora (ADR 0128 addendum)", () => {
     expect(along?.others).toBe(1);
   });
 
-  test("iOS 26 holds it in the tab bar's accessory; Android and older iOS in a 48-point strip on the bar's top", () => {
+  test("iOS 26 holds it in the tab bar's accessory; Android and older iOS in a 48-point strip over the bar", () => {
     expect(alongInAccessory("ios", "26.1")).toBe(true);
     expect(alongInAccessory("ios", "18.4")).toBe(false);
     expect(alongInAccessory("android", 35)).toBe(false);
     expect(ALONG_STRIP).toBe(48);
-    expect(alongStripBottom("android", 24)).toBe(0);
+    // Android: the safe area, the bar's margin, the bar and the gap over it.
+    expect(alongStripBottom("android", 24)).toBe(96);
     expect(alongStripBottom("ios", 34)).toBe(83);
     // The tab roots keep its room at their lists' end, so no row moves under it; the layout gives it only where no
     // accessory holds the line.
     const shell = readFileSync(join(import.meta.dir, "../../src/ui/LargeTitleScreen.tsx"), "utf8");
     expect(shell).toContain("bottom: safe.bottom + TAB_BAR + footRoom");
-    expect(shell).toContain("paddingBottom: bottomInset + (IOS ? 0 : footRoom)");
+    expect(shell).toContain("const androidFoot = IOS ? 0 : footRoom + floatingBarRoom(safe.bottom);");
+    expect(shell).toContain("paddingBottom: bottomInset + androidFoot");
     // Under the system's large title the system keeps the list clear of the tab bar; the strip's room is ours.
     expect(shell).toContain("contentContainerStyle={{ paddingBottom: bottomInset + (foot?.height ?? 0) }}");
     const layout = readFileSync(join(import.meta.dir, "../../app/(app)/(main)/(tabs)/_layout.tsx"), "utf8");

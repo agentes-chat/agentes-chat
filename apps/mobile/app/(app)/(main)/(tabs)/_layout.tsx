@@ -1,9 +1,11 @@
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
+import { type BottomTabBarProps, type BottomTabNavigationOptions, Tabs } from "expo-router/js-tabs";
 import { NativeTabs } from "expo-router/native-tabs";
 import { memo, useLayoutEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Platform } from "react-native";
+import { type ColorValue, Platform } from "react-native";
 import { useUnreadConversations, useUnreadThreads, useWaitingCount } from "@/features/shared/queries";
+import { FloatingTabBar, TabGlyphIcon } from "@/features/tab-bar/FloatingTabBar";
 import { ALONG_STRIP, alongInAccessory } from "@/features/work-along/logic";
 import { AccessoryLine, AlongStrip, useHasWorkAlong } from "@/features/work-along/WorkAlong";
 import { TAB_BADGE, tabBadge } from "@/lib/nav";
@@ -13,8 +15,8 @@ import { type TabGlyph, tabGlyphKey } from "@/ui/tabGlyphs";
 import { tabGlyphFamily } from "@/ui/tabIcons";
 
 /**
- * The tabs. `sf`: the system's symbols on iOS, outline and filled when selected (as the system's own apps); Agentes
- * keeps our agent, which the system has no drawing of. Android draws our glyphs.
+ * The tabs, of both platforms' bars. `sf`: the system's symbols on iOS, outline and filled when selected (as the
+ * system's own apps); Agentes keeps our agent, which the system has no drawing of. Android draws our glyphs.
  */
 const TABS: {
   name: string;
@@ -67,6 +69,18 @@ const ICONS = Object.fromEntries(
   ]),
 );
 
+/** The same glyphs in Android's floating bar, which hands each its state and color. */
+const BAR_ICONS = Object.fromEntries(
+  TABS.map((tab) => [
+    tab.name,
+    ({ focused, color }: { focused: boolean; color: ColorValue }) => (
+      <TabGlyphIcon glyph={tab.glyph} selected={focused} color={String(color)} />
+    ),
+  ]),
+);
+
+const renderFloatingBar = (props: BottomTabBarProps) => <FloatingTabBar {...props} />;
+
 /** iOS 26 holds the work-along line in the bar's own accessory; elsewhere it is a strip on the tab roots. */
 const ACCESSORY = alongInAccessory(Platform.OS, Platform.Version);
 
@@ -100,14 +114,13 @@ const BarSources = memo(function BarSources({ onChange }: { onChange: (bar: BarS
 });
 
 /**
- * Conversas (the home), Threads (threads and missions), Agentes, Atividade and Buscar in the system tab bar
- * (UITabBarController on iOS, Liquid Glass on iOS 26; Material bottom navigation on Android). The system's symbols on
- * iOS (Agentes: our agent) and our own glyphs on Android, outline, filled when selected, as template images the bar
- * tints. Badges for unread conversations (Conversas: channels
- * and DMs; Threads: its rows, never both) and what waits on you. Every tab holds a stack with a native header. A
- * personal workspace (ADR 0159) leaves Threads out of the bar (`hidden`, the system bar's own way: changing it redraws
- * the tabs from Conversas); its row in You › Work opens the same list, pushed. A tab change is the system's own: no
- * animation and no haptic of ours (the system tab bars give none).
+ * Conversas (the home), Threads (threads and missions), Agentes, Atividade and Buscar: in the system tab bar on iOS
+ * (UITabBarController, Liquid Glass on iOS 26), in our floating bar on Android, which the system's Material bar can't
+ * be (ADR 0035, addendum 2026-11-18). The system's symbols on iOS (Agentes: our agent) and our own glyphs on Android,
+ * outline, filled when selected. Badges for unread conversations (Conversas: channels and DMs; Threads: its rows, never
+ * both) and what waits on you. Every tab holds a stack with a native header. A personal workspace (ADR 0159) leaves
+ * Threads out of the bar (changing it redraws the tabs from Conversas); its row in You › Work opens the same list,
+ * pushed. A tab change is immediate: no animation and no haptic of ours (the system tab bars give none).
  */
 export default function TabsLayout() {
   const { t } = useTranslation();
@@ -126,53 +139,88 @@ export default function TabsLayout() {
     }),
     [colors],
   );
+  // As the system's bar did on Android: every tab ready from the start, its stack kept while another shows.
+  const floating = useMemo<BottomTabNavigationOptions>(
+    () => ({ headerShown: false, lazy: false, sceneStyle: { backgroundColor: colors.bg } }),
+    [colors.bg],
+  );
+  /** What both bars say of a tab. */
+  const factsOf = (tab: (typeof TABS)[number]) => {
+    const label = t(tab.label);
+    const count = counts[tab.name] ?? 0;
+    const badge = tabBadge(count);
+    return {
+      label,
+      count,
+      badge,
+      hidden: personal && tab.teamOnly === true,
+      accessibilityLabel: badge ? t("mobile.tabs.withCount", { label, count }) : label,
+    };
+  };
   return (
     <TabFoot.Provider value={foot}>
       <BarSources onChange={setBar} />
-      <NativeTabs
-        tintColor={colors.ink}
-        iconColor={look.iconColor}
-        labelStyle={look.labelStyle}
-        backgroundColor={colors.bg}
-        // iOS draws badge text in white whatever we ask: a red dark enough for it, in both themes.
-        badgeBackgroundColor={TAB_BADGE.background}
-        badgeTextColor={TAB_BADGE.text}
-        indicatorColor={colors.sunken}
-        rippleColor={colors.plate}
-        labelVisibilityMode="labeled"
-        // iOS 26: reading down a list, the bar folds to the current tab and comes back on the way up (the system's own).
-        minimizeBehavior="onScrollDown"
-      >
-        {along && ACCESSORY ? (
-          <NativeTabs.BottomAccessory>
-            <AccessoryLine />
-          </NativeTabs.BottomAccessory>
-        ) : null}
-        {TABS.map((tab) => {
-          const label = t(tab.label);
-          const count = counts[tab.name] ?? 0;
-          const badge = tabBadge(count);
-          return (
-            <NativeTabs.Trigger
-              key={tab.name}
-              name={tab.name}
-              hidden={personal && tab.teamOnly === true}
-              {...(tab.role ? { role: tab.role } : {})}
-              accessibilityLabel={badge ? t("mobile.tabs.withCount", { label, count }) : label}
-              contentStyle={look.content}
-            >
-              {/* `sf` wins on iOS; `src` is Android's (and Agentes' on iOS). */}
-              <NativeTabs.Trigger.Icon
-                renderingMode="template"
-                src={ICONS[tab.name]}
-                {...(tab.sf ? { sf: tab.sf } : {})}
+      {Platform.OS === "android" ? (
+        // Back from another tab goes to Conversas, as from the system's bar.
+        <Tabs backBehavior="initialRoute" tabBar={renderFloatingBar} screenOptions={floating}>
+          {TABS.map((tab) => {
+            const { label, count, badge, hidden, accessibilityLabel } = factsOf(tab);
+            return (
+              <Tabs.Screen
+                key={tab.name}
+                name={tab.name}
+                options={{
+                  title: label,
+                  tabBarAccessibilityLabel: accessibilityLabel,
+                  tabBarIcon: BAR_ICONS[tab.name],
+                  ...(badge ? { tabBarBadge: count } : {}),
+                  ...(hidden ? { href: null } : {}),
+                }}
               />
-              <NativeTabs.Trigger.Label>{label}</NativeTabs.Trigger.Label>
-              {badge ? <NativeTabs.Trigger.Badge>{badge}</NativeTabs.Trigger.Badge> : null}
-            </NativeTabs.Trigger>
-          );
-        })}
-      </NativeTabs>
+            );
+          })}
+        </Tabs>
+      ) : (
+        <NativeTabs
+          tintColor={colors.ink}
+          iconColor={look.iconColor}
+          labelStyle={look.labelStyle}
+          backgroundColor={colors.bg}
+          // iOS draws badge text in white whatever we ask: a red dark enough for it, in both themes.
+          badgeBackgroundColor={TAB_BADGE.background}
+          badgeTextColor={TAB_BADGE.text}
+          // iOS 26: reading down a list, the bar folds to the current tab and comes back on the way up (the system's own).
+          minimizeBehavior="onScrollDown"
+        >
+          {along && ACCESSORY ? (
+            <NativeTabs.BottomAccessory>
+              <AccessoryLine />
+            </NativeTabs.BottomAccessory>
+          ) : null}
+          {TABS.map((tab) => {
+            const { label, badge, hidden, accessibilityLabel } = factsOf(tab);
+            return (
+              <NativeTabs.Trigger
+                key={tab.name}
+                name={tab.name}
+                hidden={hidden}
+                {...(tab.role ? { role: tab.role } : {})}
+                accessibilityLabel={accessibilityLabel}
+                contentStyle={look.content}
+              >
+                {/* `sf` wins over `src`, which is Agentes' own. */}
+                <NativeTabs.Trigger.Icon
+                  renderingMode="template"
+                  src={ICONS[tab.name]}
+                  {...(tab.sf ? { sf: tab.sf } : {})}
+                />
+                <NativeTabs.Trigger.Label>{label}</NativeTabs.Trigger.Label>
+                {badge ? <NativeTabs.Trigger.Badge>{badge}</NativeTabs.Trigger.Badge> : null}
+              </NativeTabs.Trigger>
+            );
+          })}
+        </NativeTabs>
+      )}
     </TabFoot.Provider>
   );
 }

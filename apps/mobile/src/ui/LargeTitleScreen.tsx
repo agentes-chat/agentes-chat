@@ -1,10 +1,11 @@
-import { type NativeStackNavigationOptions, Stack, useIsFocused } from "expo-router";
+import { type NativeStackNavigationOptions, Stack, useIsFocused, useScrollToTop } from "expo-router";
 import { useHeaderHeight } from "expo-router/react-navigation";
 import { createContext, type ReactNode, useContext, useMemo } from "react";
 import { Platform, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import Animated, { type AnimatedRef } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LivePause } from "@/agent/live";
+import { floatingBarRoom } from "@/lib/nav";
 import { CoverBarBackdrop, CoverParallax, FadingHeaderTitle } from "./cover";
 import { type HeaderAction, useHeaderActionOptions } from "./headerActions";
 import { LargeTitleHead, useLargeTitleScroll } from "./LargeTitleHead";
@@ -179,12 +180,16 @@ function DrawnTitleScreen({
   const safe = useSafeAreaInsets();
   const foot = useContext(TabFoot);
   const footRoom = foot?.height ?? 0;
+  // Android's tab bar floats over the screen, which runs to the display's edge: the list ends clear of it and the strip.
+  const androidFoot = IOS ? 0 : footRoom + floatingBarRoom(safe.bottom);
   // On iOS the scroll view is inset by the clear bar ourselves (contentInset, resting at minus the header
   // height): the automatic adjustment didn't apply under the tab stacks' clear bar inside the system tabs, so the
   // list rested under the bar with the large title hidden, shown only while pulled. Android lays it out from the top,
   // under the bar. Folded away for a search, there is no title to settle.
   const scroll = useLargeTitleScroll(IOS ? headerHeight : 0, { snap: !collapsed });
   const { y } = scroll;
+  // Tapping the tab in sight goes back to the top: the system's bar does it itself on iOS.
+  useScrollToTop(IOS ? NO_SCROLL : scroll.ref);
   const actionOptions = useHeaderActionOptions({ right: actions, left, leftActions });
   // Stable options: `setOptions` runs when the title or the actions change, not on every render.
   const options = useMemo<NativeStackNavigationOptions>(
@@ -228,7 +233,7 @@ function DrawnTitleScreen({
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{
             paddingTop: IOS ? 0 : headerHeight,
-            paddingBottom: bottomInset + (IOS ? 0 : footRoom),
+            paddingBottom: bottomInset + androidFoot,
           }}
         >
           {/* The art reaches up behind the clear bar and the status bar on both platforms (no band above it). */}
@@ -259,6 +264,8 @@ function DrawnTitleScreen({
 }
 
 const IOS = Platform.OS === "ios";
+/** Nothing to scroll: `useScrollToTop` stays out of the way. */
+const NO_SCROLL = { current: null };
 /** Room for the system tab bar over the list's end (iOS; the floating bar and its margin), so the last row clears it. */
 const TAB_BAR = 76;
 

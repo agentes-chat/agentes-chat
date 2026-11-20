@@ -78,3 +78,11 @@ The app already used the platform's tab bar, headers and sheets, with our line i
 - **Presses.** A list row (`RowPressable`) lights at once in the system's gray, goes out over 0.3 s, and a row that opens a screen stays lit until that screen covers it, so the list is plain again on the way back. A row tap gives no haptic, as the system's lists give none; switches, picks and swipes keep theirs.
 
 Android keeps our line icons for now; the colored tiles and the row presses apply there too.
+
+## Addendum (2026-11-18): Android's tab bar floats
+
+Android's system tab bar (Material bottom navigation, what `NativeTabs` draws there) runs edge to edge and can't float. On Android the tabs are now the router's JavaScript tabs (`expo-router/js-tabs`) with our own bar; iOS keeps `NativeTabs` unchanged. Both read the one tab list in `app/(app)/(main)/(tabs)/_layout.tsx`.
+
+- **The bar.** `apps/mobile/src/features/tab-bar/FloatingTabBar.tsx`: a capsule over the screen, icons alone, the selected tab on a lozenge, the kit's glass (opaque on Android). Conversas has its "new" button beside the capsule, and gives up the "+" in its header on Android.
+- **What the system bar did and we now do.** `backBehavior="initialRoute"` and `lazy: false` keep its back button and its tabs ready from the start. `useScrollToTop` in `LargeTitleScreen` keeps a tap on the current tab scrolling up. The bar leaves with the keyboard.
+- **Room.** Screens now run under the bar: `floatingBarRoom` (`src/lib/nav.ts`) is what a tab root keeps clear at its list's end and where the work-along strip stands.

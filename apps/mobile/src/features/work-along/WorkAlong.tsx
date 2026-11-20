@@ -162,9 +162,9 @@ export function AccessoryLine() {
 }
 
 /**
- * Android and iOS before 26 (no accessory there): the same line in a 48-point strip on the tab bar's top edge, on the
- * tab roots, sliding up from behind the bar. The lists keep its height at their end (`ALONG_STRIP`). It reads the line
- * itself, so its clock redraws only it.
+ * Android and iOS before 26 (no accessory there): the same line in a 48-point strip over the tab bar, on the tab roots,
+ * sliding up from the bar's side. The lists keep its height at their end (`ALONG_STRIP`). It reads the line itself, so
+ * its clock redraws only it.
  */
 export function AlongStrip() {
   const { colors } = useTheme();
