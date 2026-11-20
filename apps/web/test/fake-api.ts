@@ -4638,6 +4638,8 @@ export function createFakeApi(state: FakeState = seedState(), options: { seed?: 
           ownerName: a.ownerName,
           mine: a.mine,
           email: a.email,
+          ...(a.mine && a.displayEmail ? { displayEmail: a.displayEmail } : {}),
+          ...(a.mine && a.kind === "opencode" && a.keyHint ? { keyHint: a.keyHint } : {}),
           signedOut: a.status === "signed_out",
           ...(a.serves ? { serves: a.serves } : {}),
           usage: a.usage && { ...a.usage, windows: a.usage.windows.map((w) => ({ ...w, agents: [] })) },

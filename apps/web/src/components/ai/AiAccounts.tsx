@@ -50,7 +50,15 @@ type Row = AiAccountsView["accounts"][number];
 type Open = { type: "rename" | "again" | "remove" | "all"; account: PlanAccount<Row> };
 
 /** The viewer's own account's notes and actions, by one of its logins; nothing for an account that isn't theirs. */
-export function AccountActions({ machineId, accountId }: { machineId: string; accountId: string }) {
+export function AccountActions({
+  machineId,
+  accountId,
+  keyHintShown,
+}: {
+  machineId: string;
+  accountId: string;
+  keyHintShown?: boolean;
+}) {
   const { t } = useTranslation();
   const { org, me } = useOrg();
   const api = useApi();
@@ -118,13 +126,14 @@ export function AccountActions({ machineId, accountId }: { machineId: string; ac
   const plan = planOf(a.provider);
   const note = signInNote(t, account, Boolean(plan));
   // The email is the account's own line: here only what stands for it.
-  const identity = a.email
-    ? null
-    : a.keyHint
-      ? t("aiAccounts.page.keyEnds", { hint: a.keyHint })
-      : identityUnknown(a, machine)
-        ? t("aiAccounts.page.identityUnknown")
-        : null;
+  const identity =
+    a.email || keyHintShown
+      ? null
+      : a.keyHint
+        ? t("aiAccounts.page.keyEnds", { hint: a.keyHint })
+        : identityUnknown(a, machine)
+          ? t("aiAccounts.page.identityUnknown")
+          : null;
   return (
     <div className="ai-accounts__own">
       {identity && <span className="small muted">{identity}</span>}

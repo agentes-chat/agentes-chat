@@ -1912,7 +1912,14 @@ test.if(posix)(
     await waitFor(() => m.status(id).state !== "waiting", 5000);
     expect(m.status(id)).toEqual({
       state: "done",
-      account: { id, kind: "grok", loggedIn: true, shared: true, authMethod: "cli_login" },
+      account: {
+        id,
+        kind: "grok",
+        loggedIn: true,
+        shared: true,
+        authMethod: "cli_login",
+        displayEmail: "grok@acme.test",
+      },
     });
     const granted = await m.grant("grok", id);
     expect(granted?.kind).toBe("grok_auth");

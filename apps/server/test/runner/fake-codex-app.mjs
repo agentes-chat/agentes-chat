@@ -159,6 +159,9 @@ function appServer() {
             secondary: { usedPercent: 55, windowDurationMins: 10080, resetsAt: 1900500000 },
           },
         });
+      case "account/read":
+        if (params.refreshToken !== false) return fail("Account identity reads must not refresh credentials");
+        return ok({ account: JSON.parse(process.env.FAKE_CODEX_ACCOUNT ?? "null"), requiresOpenaiAuth: true });
       case "thread/start":
         total.input = 0;
         total.cached = 0;

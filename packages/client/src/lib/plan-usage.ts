@@ -669,12 +669,14 @@ export function usageOrderSections<R extends Pick<PlanAccountInfo, "machineId" |
  */
 export const accountName = (
   t: TFunction,
-  a: Pick<PlanAccountInfo, "label" | "named" | "email" | "plan" | "provider" | "machineName" | "mine" | "kind">,
+  a: Pick<
+    PlanAccountInfo,
+    "label" | "named" | "email" | "displayEmail" | "plan" | "provider" | "machineName" | "mine" | "kind"
+  >,
 ) =>
   a.label === null
     ? ownSignInName(t, a.mine, a.machineName, a.kind)
-    : // Someone else's and a key account (an OpenCode one is too: the usage views carry no key's end) by their name
-      // alone, as before: the row's chip says the plan.
+    : // Someone else's and a key account by their name alone: the row's chip says the plan.
       a.mine && a.kind !== "opencode" && !isPlanId(a.provider)
       ? accountTitle(t, { ...a, label: a.label, keyHint: null })
       : a.label;

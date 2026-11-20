@@ -6310,6 +6310,7 @@ export interface MachineAccount {
   named?: boolean;
   /** Only for its owner. */
   email: string | null;
+  displayEmail?: string;
   /** `pro`, `max`, `ultra`, `team`… from what the CLI says (`planWordOf` names it). */
   plan: string | null;
   status: "active" | "signed_out";
@@ -8114,6 +8115,9 @@ export interface PlanAccountInfo {
   mine: boolean;
   /** Only for its owner. */
   email: string | null;
+  displayEmail?: string;
+  /** The last characters of an OpenCode key, only for its owner. */
+  keyHint?: string;
   signedOut: boolean;
   /** Who it thinks for; null for the computer's own sign-in (absent: an older server). */
   serves?: PlanServes | null;

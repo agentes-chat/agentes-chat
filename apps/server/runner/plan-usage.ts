@@ -2,6 +2,7 @@ import { type ChildProcess, spawn } from "node:child_process";
 import type { EventEmitter } from "node:events";
 import { createInterface } from "node:readline";
 import {
+  isLoginEmail,
   PLAN_USAGE_LIMITS,
   type PlanUsage,
   type PlanWindow,
@@ -456,8 +457,12 @@ export function checkClaudeToken(p: UsageProbe, prev: PlanUsage | undefined): Pr
   );
 }
 
-/** `account/rateLimits/read` on a short-lived `codex app-server` (after `initialize`): the snapshot, or null. */
-export function probeCodexUsage(p: UsageProbe): Promise<PlanUsage | null> {
+function readCodexAccount<T>(
+  p: UsageProbe,
+  method: "account/rateLimits/read" | "account/read",
+  params: Record<string, unknown>,
+  read: (result: Record<string, unknown>) => T | null,
+): Promise<T | null> {
   return jsonLines(
     p,
     ["app-server"],
@@ -466,12 +471,24 @@ export function probeCodexUsage(p: UsageProbe): Promise<PlanUsage | null> {
       if (msg.id === 1) {
         if (!isObj(msg.result)) return null;
         send({ method: "initialized" });
-        send({ id: 2, method: "account/rateLimits/read", params: {} });
+        send({ id: 2, method, params });
       } else if (msg.id === 2) {
-        return isObj(msg.result) ? codexUsage(msg.result.rateLimits, "probe") : null;
+        return isObj(msg.result) ? read(msg.result) : null;
       }
       return undefined;
     },
+  );
+}
+
+/** `account/rateLimits/read` on a short-lived `codex app-server`: the snapshot, or null. */
+export function probeCodexUsage(p: UsageProbe): Promise<PlanUsage | null> {
+  return readCodexAccount(p, "account/rateLimits/read", {}, (result) => codexUsage(result.rateLimits, "probe"));
+}
+
+/** The public app-server account endpoint supplies the address without starting a turn or requesting token refresh. */
+export function probeCodexEmail(p: UsageProbe): Promise<string | null> {
+  return readCodexAccount(p, "account/read", { refreshToken: false }, ({ account }) =>
+    isObj(account) && account.type === "chatgpt" && isLoginEmail(account.email) ? account.email : null,
   );
 }
 

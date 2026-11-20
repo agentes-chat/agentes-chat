@@ -224,7 +224,7 @@ const drawnAs = (svg: Element | null | undefined, name: keyof typeof icons) =>
   svg?.querySelector("path")?.getAttribute("d") === icons[name].find(([tag]) => tag === "path")?.[1].d;
 /** A stylesheet's text, its comments left out. */
 const stylesheet = async (path: string) =>
-  (await Bun.file(new URL(path, import.meta.url).pathname).text()).replace(/\/\*[\s\S]*?\*\//g, "");
+  (await Bun.file(new URL(path, import.meta.url)).text()).replaceAll("\r\n", "\n").replace(/\/\*[\s\S]*?\*\//g, "");
 /** The body of the first rule whose selector is `selector`, at any indent (inside a media query too). */
 const ruleOf = (css: string, selector: string) =>
   css.split(new RegExp(`\\n *${selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} \\{`))[1]?.split("}")[0] ?? "";

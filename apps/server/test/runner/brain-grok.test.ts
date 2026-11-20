@@ -31,6 +31,7 @@ import { removeDirs, tempDir, waitFor } from "./helpers";
 const dirs: string[] = [];
 const managers: AccountManager[] = [];
 afterEach(async () => {
+  delete process.env.FAKE_GROK_EMAIL;
   for (const m of managers.splice(0)) await m.close();
   delete process.env.FAKE_GROK_LOG;
   delete process.env.FAKE_GROK_TOOLS;
@@ -389,6 +390,7 @@ test.skipIf(!posix)("Grok turned off on the computer refuses the turn", async ()
 });
 
 test.skipIf(!posix)("sign-in on the computer: Grok's device link and code, then signed in", async () => {
+  process.env.FAKE_GROK_EMAIL = "grok@example.com";
   const home = tempDir("grok-accounts-");
   dirs.push(home);
   const m = new AccountManager({
@@ -402,7 +404,8 @@ test.skipIf(!posix)("sign-in on the computer: Grok's device link and code, then 
   expect(begun).toMatchObject({ url: "https://accounts.x.ai/device", userCode: "WDJB-MJHT" });
   expect(begun.publicKey).toBeUndefined();
   await waitFor(() => m.status(id).state === "done", 5000);
-  expect(m.status(id).account).toMatchObject({ kind: "grok", loggedIn: true });
+  expect(m.status(id).account).toMatchObject({ kind: "grok", loggedIn: true, displayEmail: "grok@example.com" });
+  expect(m.status(id).account?.email).toBeUndefined();
   expect(m.accountDir("grok", id)).toBe(path.join(home, "accounts", "grok", id));
   // The models it lists signed in, which the computer's own `grok models` (signed out) doesn't: kept for a restart.
   const listed = [{ id: "grok-4.7" }, { id: "grok-4.6" }, { id: "grok-4.5" }];

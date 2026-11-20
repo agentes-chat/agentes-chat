@@ -257,7 +257,10 @@ export const labelTitle = (a: Pick<MachineAccount, "label" | "plan">) =>
     ? `${a.label} · ${planName(a.plan)}`
     : a.label;
 
-type TitledAccount = Pick<MachineAccount, "label" | "plan" | "email" | "mine" | "named" | "keyHint" | "provider">;
+type TitledAccount = Pick<
+  MachineAccount,
+  "label" | "plan" | "email" | "displayEmail" | "mine" | "named" | "keyHint" | "provider"
+>;
 
 /** Read by its name (`labelTitle`), not its email: someone else's (whose email the viewer never gets), or a key account (its key's end tells it apart). */
 const byLabel = (a: Pick<TitledAccount, "mine" | "keyHint" | "provider">) =>
@@ -271,11 +274,11 @@ const byLabel = (a: Pick<TitledAccount, "mine" | "keyHint" | "provider">) =>
 export function accountTitle(t: TFunction, a: TitledAccount): string {
   if (byLabel(a)) return labelTitle(a);
   if (a.named === true) return a.label;
-  return a.email ?? t("aiAccounts.unnamed");
+  return a.displayEmail ?? a.email ?? t("aiAccounts.unnamed");
 }
 
 /** Whether the title is "Unnamed account": the viewer's own account with no name of theirs and no email. */
-export const unnamedAccount = (a: TitledAccount) => !byLabel(a) && a.named !== true && !a.email;
+export const unnamedAccount = (a: TitledAccount) => !byLabel(a) && a.named !== true && !a.displayEmail && !a.email;
 
 /**
  * An account inside a sentence ("Ada agora pensa com …", "Você já tem … aqui"): its title, or for an unnamed one its
@@ -290,7 +293,11 @@ export const accountInLine = (t: TFunction, a: TitledAccount & Pick<MachineAccou
  */
 export function accountSub(a: TitledAccount): string | undefined {
   if (byLabel(a)) return undefined;
-  return [a.named === true ? a.email : null, a.plan ? planName(a.plan) : null].filter(Boolean).join(" · ") || undefined;
+  return (
+    [a.named === true ? (a.displayEmail ?? a.email) : null, a.plan ? planName(a.plan) : null]
+      .filter(Boolean)
+      .join(" · ") || undefined
+  );
 }
 
 /** `accountSub` before the rest of an account's line ("Max · Também usada por Infra"). */

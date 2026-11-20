@@ -1,7 +1,10 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtemp, rm } from "node:fs/promises";
 import path from "node:path";
-import { isObject } from "@agenteschat/adapters/machine-protocol";
+import { setTimeout as sleep } from "node:timers/promises";
+import { isLoginEmail, isObject } from "@agenteschat/adapters/machine-protocol";
+import { shQuote } from "./install-script";
 import { readSmallJson } from "./json-file";
 import { CODEX_MCP_SERVER } from "./mcp";
 
@@ -60,13 +63,14 @@ function writeIfChanged(file: string, text: string) {
  * here: turns pass `--disable-slash-commands`, and `/usage` and `/logout` must reach the CLI, not the model.
  * `gcp`: the seat's project from the home whose sign-in this one copies.
  */
-export function writeAgySettings(home: string, auth?: AgyAuth, gcp?: Record<string, unknown>) {
+export function writeAgySettings(home: string, auth?: AgyAuth, gcp?: Record<string, unknown>, statusLine?: string) {
   const was = readSettings(home);
   const kept = auth ?? agyAuthOf(home) ?? "oauth-personal";
   const seat = gcp ?? (isObject(was.gcp) ? was.gcp : undefined);
   const settings = {
     auth: { type: kept },
     ...(kept === "oauth-business" && seat ? { gcp: seat } : {}),
+    ...(statusLine ? { statusLine: { type: "command", command: statusLine } } : {}),
     toolPermission: "proceed-in-sandbox",
     enableTerminalSandbox: true,
     allowNonWorkspaceAccess: false,
@@ -115,9 +119,68 @@ export function agySignInOf(home: string): AgySignIn | null {
 }
 
 /** A copy of that sign-in in another home: its settings first, then its file. */
-export function placeAgySignIn(home: string, signIn: AgySignIn) {
-  writeAgySettings(home, signIn.type, signIn.gcp);
+export function placeAgySignIn(home: string, signIn: AgySignIn, statusLine?: string) {
+  writeAgySettings(home, signIn.type, signIn.gcp, statusLine);
   writeIfChanged(path.join(home, AGY_SIGN_IN_FILE), JSON.stringify(signIn.auth));
+}
+
+/** Google's status-line JSON supplies the signed-in email before the first prompt. Read only a private copy. */
+export async function agyDisplayEmail(
+  signIn: AgySignIn,
+  command: string[],
+  scratch: string,
+): Promise<string | undefined> {
+  if (process.platform !== "linux" || typeof Bun === "undefined" || !Bun.Terminal) return undefined;
+  if (signIn.type !== "oauth-personal") return undefined;
+  const home = await mkdtemp(path.join(scratch, "session-"));
+  try {
+    const emailFile = path.join(home, "email");
+    const readStatus = [
+      "const payload = await new Response(Bun.stdin.stream().pipeThrough(new TransformStream({",
+      "  start() { this.size = 0 },",
+      "  transform(chunk, controller) {",
+      "    this.size += chunk.byteLength;",
+      '    if (this.size > 262144) throw new Error("Status line too large");',
+      "    controller.enqueue(chunk);",
+      "  }",
+      "}))).json();",
+      'if (typeof payload?.email === "string" && payload.email.length <= 254) {',
+      '  const { writeFile } = await import("node:fs/promises");',
+      "  await writeFile(process.argv.at(-1), payload.email, { mode: 0o600 });",
+      "}",
+    ].join("\n");
+    const statusLine = `BUN_BE_BUN=1 ${shQuote(process.execPath)} -e ${shQuote(readStatus)} -- ${shQuote(emailFile)}`;
+    placeAgySignIn(home, signIn, statusLine);
+    const workspace = path.join(home, "workspace");
+    mkdirSync(workspace, { mode: 0o700 });
+    const child = Bun.spawn([...command, "--sandbox"], {
+      cwd: workspace,
+      env: {
+        HOME: home,
+        PATH: process.env.PATH,
+        LANG: "C.UTF-8",
+        TERM: "xterm-256color",
+        XDG_RUNTIME_DIR: agyRuntimeDir(home),
+        AGY_CLI_DISABLE_AUTO_UPDATE: "1",
+      },
+      terminal: { cols: 120, rows: 32, data() {} },
+    });
+    try {
+      const deadline = Date.now() + 6000;
+      while (Date.now() < deadline) {
+        const email = existsSync(emailFile) ? readFileSync(emailFile, "utf8") : null;
+        if (isLoginEmail(email)) return email;
+        if (child.exitCode !== null) break;
+        await sleep(150);
+      }
+    } finally {
+      if (child.exitCode === null) child.kill("SIGKILL");
+      await child.exited;
+      child.terminal?.close();
+    }
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
 }
 
 /** Turns of this process on a copy, by home. */

@@ -24,6 +24,8 @@ const PlanAccountInfo = z.object({
   }),
   mine: z.boolean().openapi({ description: "The caller owns it." }),
   email: z.string().nullable().openapi({ description: "Only for its owner." }),
+  displayEmail: z.string().optional().openapi({ description: "The connected provider account, only for its owner." }),
+  keyHint: z.string().optional().openapi({ description: "The end of an OpenCode key, only for its owner." }),
   signedOut: z.boolean(),
 });
 

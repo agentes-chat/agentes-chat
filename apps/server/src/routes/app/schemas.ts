@@ -1142,6 +1142,7 @@ export const MachineAccount = z
         'Its owner gave it its name; false: the name is the automatic one ("Claude 2"), and the apps show the account by its email.',
     }),
     email: z.string().nullable().openapi({ description: "Only for its owner." }),
+    displayEmail: z.string().optional().openapi({ description: "The connected provider account, only for its owner." }),
     plan: z
       .string()
       .nullable()
