@@ -15791,6 +15791,7 @@ export const en = {
       noSkillMd: "No SKILL.md in {{path}} or the folders inside it.",
       tooManySkills: "This link holds more than {{max}} skills. Link one of its folders.",
       invalidName: "The name must use lowercase letters, numbers and hyphens, up to {{max}} characters.",
+      nameTaken: "A skill already uses the name {{name}}. Choose a different name.",
       invalidDescription: "The description must have 1 to {{max}} characters.",
       tooLarge: "This skill has {{size}} MB of text and scripts, and the limit is {{max}} MB.",
       tooManyFiles: "This skill has {{files}} files, and the limit is {{max}}.",

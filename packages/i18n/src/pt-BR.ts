@@ -15729,6 +15729,7 @@ export const ptBR = {
       noSkillMd: "Nenhum SKILL.md em {{path}} nem nas pastas dentro dela.",
       tooManySkills: "Este link tem mais de {{max}} skills. Use o link de uma das pastas dele.",
       invalidName: "O nome precisa ter só letras minúsculas, números e hífens, até {{max}} caracteres.",
+      nameTaken: "Já existe uma skill com o nome {{name}}. Escolha outro nome.",
       invalidDescription: "A descrição precisa ter de 1 a {{max}} caracteres.",
       tooLarge: "Esta skill tem {{size}} MB de texto e scripts, e o limite é {{max}} MB.",
       tooManyFiles: "Esta skill tem {{files}} arquivos, e o limite é {{max}}.",

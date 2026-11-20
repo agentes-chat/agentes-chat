@@ -4935,6 +4935,8 @@ export interface SkillInput {
   description: string;
   body: string;
   defaultForNewAgents?: boolean;
+  /** Return a conflict if this name already belongs to a skill. */
+  createOnly?: boolean;
   /** The person's own skill, not the team's. */
   personal?: boolean;
 }

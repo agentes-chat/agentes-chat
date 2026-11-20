@@ -747,7 +747,13 @@ export function InstallSkillDialog({
       action.mutate(
         {
           type: "create",
-          input: { name: writtenName, description: form.description.trim(), body: form.body, ...mine },
+          input: {
+            name: writtenName,
+            description: form.description.trim(),
+            body: form.body,
+            createOnly: true,
+            ...mine,
+          },
         },
         { onSuccess: done, onError },
       );

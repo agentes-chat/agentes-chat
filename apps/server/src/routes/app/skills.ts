@@ -298,12 +298,13 @@ export function skillRoutes(deps: AppDeps) {
               description: z.string().max(1024),
               body: z.string().max(200_000),
               defaultForNewAgents: z.boolean().optional(),
+              createOnly: z.boolean().optional().openapi({ description: "Return 409 if the name is already in use." }),
               personal: Personal,
             }),
           ]),
         ),
       },
-      responses: { 201: json(SkillDetail, "Created"), ...errors },
+      responses: { 201: json(SkillDetail, "Created"), ...errors, 409: errorResponse("Name already in use") },
     }),
     async (c) => {
       const input = c.req.valid("json");
@@ -314,6 +315,7 @@ export function skillRoutes(deps: AppDeps) {
       const saved = await saveSkill(skills(), c.get("user").id, c.req.valid("param").orgId, {
         ...parsed,
         source: "manual",
+        createOnly: "createOnly" in input ? input.createOnly : undefined,
         defaultForNewAgents: input.defaultForNewAgents,
         owner: input.personal ? c.get("user").id : null,
       });

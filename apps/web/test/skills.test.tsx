@@ -4,6 +4,7 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 setupDom();
 
 import { join } from "node:path";
+import { ApiError } from "@agenteschat/client";
 import { activityText, toolActivity } from "@agenteschat/client/lib/activity";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { createI18n } from "@/i18n";
@@ -349,7 +350,39 @@ describe("Configurações → Skills", () => {
     await type(within(dialog).getByLabelText("Instruções (Markdown)"), "# Deploy\n\n1. Confira o CI.");
     await click(within(dialog).getByRole("button", { name: "Instalar" }));
     await settle(6);
-    expect(state.calls.find((c) => c.method === "skills.create")?.args[1]).toMatchObject({ name: "relatorio-semanal" });
+    expect(state.calls.find((c) => c.method === "skills.create")?.args[1]).toMatchObject({
+      name: "relatorio-semanal",
+      createOnly: true,
+    });
+  });
+
+  test("Escrever shows a name collision and keeps the form ready to rename", async () => {
+    const { api, section } = await settings();
+    const create = api.skills.create;
+    api.skills.create = (org, input) => {
+      if (input.name === "relatorio-semanal" && input.createOnly) {
+        return Promise.reject(new ApiError(409, "skill.name_taken", "Name taken", { name: input.name }));
+      }
+      return create(org, input);
+    };
+    await click(within(section()).getByRole("button", { name: "Instalar skill" }));
+    const dialog = screen().getByRole("dialog", { name: "Instalar skill" });
+    await pickTab(within(dialog).getByRole("tab", { name: "Escrever" }));
+    const name = within(dialog).getByLabelText("Nome") as HTMLInputElement;
+    const body = within(dialog).getByLabelText("Instruções (Markdown)") as HTMLTextAreaElement;
+    await type(name, "Relatório semanal");
+    await type(within(dialog).getByLabelText("Quando usar"), "Ao escrever um relatório.");
+    await type(body, "# Instruções");
+    await click(within(dialog).getByRole("button", { name: "Instalar" }));
+    await settle(6);
+    expect(within(dialog).getByRole("alert").textContent).toContain(
+      "Já existe uma skill com o nome relatorio-semanal. Escolha outro nome.",
+    );
+    expect(body.value).toBe("# Instruções");
+    await type(name, "Relatório mensal");
+    await click(within(dialog).getByRole("button", { name: "Instalar" }));
+    await settle(6);
+    expect(screen().getByRole("dialog", { name: "relatorio-mensal" })).toBeTruthy();
   });
 
   test("Enviar arquivo sends standalone skill Markdown as text", async () => {
