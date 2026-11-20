@@ -314,7 +314,7 @@ export function useAgentMenu() {
         : []),
       // The right hand has its own row on top of the sidebar.
       ...(isRightHand(a) ? [] : [pins.entry("agents", a.id)]),
-      // Esconder da barra lateral, or Mostrar na sidebar wherever a hidden agent is reached (Ctrl K, Equipe, a mention, its DM).
+      // Esconder da barra lateral, or Mostrar na barra lateral wherever a hidden agent is reached (Ctrl K, Equipe, a mention, its DM).
       ...(opensDm(a) && hidden.loaded
         ? ([
             hidden.ids.has(a.id)

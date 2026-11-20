@@ -29,5 +29,5 @@ export function useHiddenAgents() {
     },
     show: (agentId: string) => latest.current.hidden.show(agentId),
   });
-  return { ids: hidden.ids, hide: stable.current.hide, show: stable.current.show };
+  return { ids: hidden.ids, loaded: hidden.loaded, hide: stable.current.hide, show: stable.current.show };
 }

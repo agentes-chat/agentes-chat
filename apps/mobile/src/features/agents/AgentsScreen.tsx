@@ -448,7 +448,7 @@ function FreeSections({
   // A personal workspace's free agents are its person's, not a team (ADR 0159).
   const { org } = useOrg();
   const { collapsed, toggle } = useCollapsedSections<string>(STORED.agentGroupsCollapsed, null);
-  const { hide } = useHiddenAgents();
+  const { hide, loaded: hideable } = useHiddenAgents();
   const sectorMenu = useSectorMenu();
   const manages = can(org, "manage_agents");
   let shown = before;
@@ -465,7 +465,7 @@ function FreeSections({
             // The newcomer and the ones looking at it move while it arrives, wherever they sit in the list.
             live={first + i < LIVE_ROWS || greeting !== null}
             pinned={i < pinnedCount}
-            onHide={hide}
+            onHide={hideable ? hide : undefined}
             arriving={greeting === l.agent.id}
             gaze={gazeOf(l.agent.id)}
           />

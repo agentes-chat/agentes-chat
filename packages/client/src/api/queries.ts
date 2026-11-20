@@ -6615,14 +6615,15 @@ const SIDEBAR_HIDDEN_LIMIT = 200;
 
 /**
  * "Esconder da barra lateral": the agents I took off the AGENTES list in this workspace, saved with my sidebar view so they
- * stay hidden on every device. `loaded` is false until the view arrives: `hide` and `show` do nothing before that, so a
- * change never starts from the default view and wipes what the server keeps.
+ * stay hidden on every device. `loaded` is false until the stored list arrives: `hide` and `show` do nothing before
+ * that, so a change never starts from a view without it and wipes what the server keeps.
  */
 export function useHiddenSidebarAgentIds(orgId: string) {
   const view = useSidebarViewQuery(orgId);
   const setView = useSetSidebarView(orgId);
   const ids = useMemo<ReadonlySet<string>>(() => new Set(view.data?.hiddenAgents ?? []), [view.data]);
-  const loaded = view.data !== undefined;
+  // A change saved before the view arrives puts a view without the list in the cache until the server answers with it.
+  const loaded = view.data?.hiddenAgents !== undefined;
   const change = (next: (now: string[]) => string[]) => {
     if (!loaded) return;
     setView((now) => ({ ...now, hiddenAgents: next(now.hiddenAgents ?? []).slice(0, SIDEBAR_HIDDEN_LIMIT) }));

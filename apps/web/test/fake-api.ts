@@ -2043,12 +2043,16 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         return [...(order ?? sidebarItemOrder(personalOrg(orgId)))];
       },
       sidebarView: async () =>
-        structuredClone(state.sidebarView ?? { agentSort: "workspace", showAllAgents: false, pins: null }),
+        // Like the server, the view always holds the list.
+        structuredClone({
+          hiddenAgents: [],
+          ...(state.sidebarView ?? { agentSort: "workspace", showAllAgents: false, pins: null }),
+        }),
       setSidebarView: async (orgId, view) => {
         log("orgs.setSidebarView", orgId, view);
         // Like the server: a save without `hiddenAgents` keeps the stored list.
-        const hiddenAgents = view.hiddenAgents ?? state.sidebarView?.hiddenAgents;
-        state.sidebarView = structuredClone({ ...view, ...(hiddenAgents ? { hiddenAgents } : {}) });
+        const hiddenAgents = view.hiddenAgents ?? state.sidebarView?.hiddenAgents ?? [];
+        state.sidebarView = structuredClone({ ...view, hiddenAgents });
         return structuredClone(state.sidebarView);
       },
       setAvatar: async (orgId, input) => {
