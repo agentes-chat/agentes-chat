@@ -316,6 +316,32 @@ test.skipIf(!posix)("detection: the CLI's version line and the models it lists",
   });
 });
 
+test("Antigravity keeps the last catalog and retries when models returns no rows or exits", async () => {
+  const antigravity = {
+    version: "agy 1.5.12",
+    models: [{ id: "gemini-4-neon-medium", label: "Gemini 4 Neon (Medium)" }],
+  };
+  for (const status of [0, 1]) {
+    const result = await detectExecutors(
+      (command, args) =>
+        command === "agy"
+          ? args[0] === "--version"
+            ? { status: 0, stdout: "agy 1.5.12\n" }
+            : { status, stdout: "Fetching available models...\n" }
+          : { status: 127, stdout: "" },
+      { antigravity },
+    );
+    expect(result.found.antigravity).toEqual(antigravity);
+    expect(result.unsure).toBe(true);
+  }
+});
+
+test("an Antigravity XHigh slug already supplies the effort", () => {
+  const args = antigravityTurnArgs({ prompt: "oi", model: "gemini-4-neon-xhigh", chat: FIRST, effort: "max" });
+  expect(args).toContain("gemini-4-neon-xhigh");
+  expect(args).not.toContain("--effort");
+});
+
 function turnContext(root: string) {
   const ws = path.join(root, "ws");
   const home = path.join(root, "home");

@@ -94,7 +94,11 @@ export const isOurAgyTool = (name: unknown) => typeof name === "string" && OURS.
 
 /** `--effort`: low, medium or high (`xhigh` and `max` as high); a slug that names its level (`…-high`) takes none. */
 const agyEffort = (effort?: BrainEffort, model?: string) =>
-  model && /-(?:low|medium|high)$/.test(model) ? undefined : effort === "xhigh" || effort === "max" ? "high" : effort;
+  model && /-(?:low|medium|high|xhigh)$/.test(model)
+    ? undefined
+    : effort === "xhigh" || effort === "max"
+      ? "high"
+      : effort;
 
 /** The `agy` arguments for one turn. */
 export function antigravityTurnArgs(input: {
