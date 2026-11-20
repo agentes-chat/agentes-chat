@@ -250,7 +250,7 @@ describe("Configurações → Skills", () => {
     expect(within(failed).getByRole("button", { name: "Tentar de novo" })).toBeTruthy();
   });
 
-  test("Instalar skill › Enviar .zip: a .zip past the limit is refused when picked; one on its way shows how much went, and Cancelar stops it", async () => {
+  test("Instalar skill › Enviar arquivo: ZIP size, upload progress and cancellation", async () => {
     const { api, section } = await settings();
     const pending: { input: unknown; progress?: (sent: number) => void; signal?: AbortSignal }[] = [];
     api.skills.import = (_org, input, upload) =>
@@ -262,7 +262,7 @@ describe("Configurações → Skills", () => {
       });
     await click(within(section()).getByRole("button", { name: "Instalar skill" }));
     const dialog = screen().getByRole("dialog", { name: "Instalar skill" });
-    await pickTab(within(dialog).getByRole("tab", { name: "Enviar .zip" }));
+    await pickTab(within(dialog).getByRole("tab", { name: "Enviar arquivo" }));
     const pick = async (name: string, size: number) => {
       const input = dialog.querySelector('input[type="file"]') as HTMLInputElement;
       const file = new File([new Uint8Array([80, 75, 3, 4])], name, { type: "application/zip" });
@@ -279,7 +279,7 @@ describe("Configurações → Skills", () => {
     // The way out is a button: the GitHub tab, which reads only the skill's folder.
     await click(within(dialog).getByRole("button", { name: "Usar um link do GitHub" }));
     expect(within(dialog).getByRole("tab", { name: "Link do GitHub" }).getAttribute("aria-selected")).toBe("true");
-    await pickTab(within(dialog).getByRole("tab", { name: "Enviar .zip" }));
+    await pickTab(within(dialog).getByRole("tab", { name: "Enviar arquivo" }));
 
     await pick("skill.zip", 4);
     expect(within(dialog).queryByRole("alert")).toBeNull();
@@ -319,10 +319,12 @@ describe("Configurações → Skills", () => {
 
     await click(within(section()).getByRole("button", { name: "Instalar skill" }));
     dialog = screen().getByRole("dialog", { name: "Instalar skill" });
-    await pickTab(within(dialog).getByRole("tab", { name: "Enviar .zip" }));
+    await pickTab(within(dialog).getByRole("tab", { name: "Enviar arquivo" }));
     // What the .zip holds, nothing about its scripts: they can run on the agent's computer, as its sheet says.
-    expect(within(dialog).getByText(/^Um \.zip/).textContent).toStartWith("Um .zip da pasta da skill, até 56 MB.");
-    expect(within(dialog).getByText(/^Um \.zip/).textContent).not.toContain("script");
+    expect(within(dialog).getByText(/^Um \.md/).textContent).toStartWith(
+      "Um .md com o nome e a descrição da skill ou um .zip da pasta, até 56 MB.",
+    );
+    expect(within(dialog).getByText(/^Um \.md/).textContent).not.toContain("script");
     expect(dialog.querySelector('input[type="file"]')?.className).toContain("ac-visually-hidden");
     const file = new File([new Uint8Array([80, 75, 3, 4])], "suporte.zip", { type: "application/zip" });
     await act(async () => {
@@ -341,12 +343,28 @@ describe("Configurações → Skills", () => {
     await click(within(section()).getByRole("button", { name: "Instalar skill" }));
     dialog = screen().getByRole("dialog", { name: "Instalar skill" });
     await pickTab(within(dialog).getByRole("tab", { name: "Escrever" }));
-    await type(within(dialog).getByLabelText("Nome"), "Deploy seguro");
+    await type(within(dialog).getByLabelText("Nome"), "Relatório semanal");
+    expect(within(dialog).getByText("Será salva como relatorio-semanal")).toBeTruthy();
     await type(within(dialog).getByLabelText("Quando usar"), "Antes de qualquer deploy.");
     await type(within(dialog).getByLabelText("Instruções (Markdown)"), "# Deploy\n\n1. Confira o CI.");
     await click(within(dialog).getByRole("button", { name: "Instalar" }));
     await settle(6);
-    expect(state.calls.find((c) => c.method === "skills.create")?.args[1]).toMatchObject({ name: "Deploy seguro" });
+    expect(state.calls.find((c) => c.method === "skills.create")?.args[1]).toMatchObject({ name: "relatorio-semanal" });
+  });
+
+  test("Enviar arquivo sends standalone skill Markdown as text", async () => {
+    const { state, section } = await settings();
+    await click(within(section()).getByRole("button", { name: "Instalar skill" }));
+    const dialog = screen().getByRole("dialog", { name: "Instalar skill" });
+    await pickTab(within(dialog).getByRole("tab", { name: "Enviar arquivo" }));
+    const input = dialog.querySelector('input[type="file"]') as HTMLInputElement;
+    expect(input.accept).toContain(".md");
+    const markdown = "---\nname: weekly-report\ndescription: Write a report.\n---\n# Report";
+    const file = new File([markdown], "weekly-report.MD");
+    await act(async () => fireEvent.change(input, { target: { files: [file] } }));
+    await click(within(dialog).getByRole("button", { name: "Instalar" }));
+    await settle(6);
+    expect(state.calls.find((c) => c.method === "skills.import")?.args[1]).toEqual({ markdown });
   });
 
   test("Instalar skill: a repository holding several skills lists them to pick; GitHub's refusals in words", async () => {

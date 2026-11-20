@@ -1347,16 +1347,18 @@ export interface ApiClient {
     /** "Escrever". */
     create(orgId: string, input: SkillInput): Promise<SkillDetail>;
     /**
-     * A GitHub link (a skill's folder or a file in it) or the folder as a zip in base64 (writes are JSON only). A link
+     * A GitHub link (a skill's folder or a file in it), a folder as a zip in base64, or standalone Markdown. A link
      * holding several skills (or any, with `list`) installs nothing and answers with them to pick from
      * (`importPicked`), those that can't be installed apart. A private repository is read through the workspace's
      * GitHub, on the server. `forAgentId`: the agent whose card opened the install, which gets what installs turned on
      * when the installer may change its skills. `personal`: the person's own skill, which any member installs (from a
-     * public repository unless they manage agents). `upload`: a zip's Cancel and how much of it has been sent.
+     * public repository unless they manage agents). `upload`: cancellation and progress for a file upload.
      */
     import(
       orgId: string,
-      input: ({ url: string; list?: boolean; forAgentId?: string } | { zipBase64: string }) & { personal?: boolean },
+      input: ({ url: string; list?: boolean; forAgentId?: string } | { zipBase64: string } | { markdown: string }) & {
+        personal?: boolean;
+      },
       upload?: UploadOptions,
     ): Promise<SkillDetail | SkillPick>;
     /** Installs the skills picked among a link's choices (their `path`), on for `forAgentId` as `import` does. */

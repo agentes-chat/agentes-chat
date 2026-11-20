@@ -5445,9 +5445,7 @@ export function useSkillAction(orgId: string, { silent = false } = {}) {
       action:
         | {
             type: "import";
-            input: ({ url: string; list?: boolean; forAgentId?: string } | { zipBase64: string }) & {
-              personal?: boolean;
-            };
+            input: Parameters<ApiClient["skills"]["import"]>[1];
             upload?: UploadOptions;
           }
         | { type: "importPicked"; url: string; paths: string[]; forAgentId?: string; personal?: boolean }

@@ -10768,7 +10768,7 @@ export const en = {
     defaultForNew: "Turn on for new agents",
     editLinkNote: "This skill came from a link: “Update from link” replaces what you change here.",
     newVersion: "Saving creates a new version.",
-    tab: { github: "GitHub link", zip: "Upload .zip", write: "Write" },
+    tab: { github: "GitHub link", zip: "Upload .zip", file: "Upload file", write: "Write" },
     githubUrl: "GitHub link",
     githubHelp: "A skill's folder, or a repository with several to pick from.",
     githubInvalid: "Use a GitHub link (https://github.com/…).",
@@ -10807,6 +10807,10 @@ export const en = {
     forAgent_other: "Turn them on for {{agent}}",
     installedMany: "{{count}} skills installed.",
     zipHelp: "A .zip of the skill's folder, up to {{max}} MB.",
+    fileHelp: "A .md with the skill's name and description, or a .zip of its folder, up to {{max}} MB.",
+    filePick: "Choose .zip or .md",
+    fileMissing: "Choose a .zip or .md file.",
+    markdownTooLarge: "A skill's .md file can be up to {{max}}.",
     /** Behind the ⓘ beside `zipHelp`. */
     zipAbout:
       "SKILL.md goes at the top of the .zip, or in its one folder. A skill keeps up to {{text}} MB of text and {{assets}} MB of images and other files.",
@@ -10825,6 +10829,8 @@ export const en = {
     body: "Instructions (Markdown)",
     bodyHelp: "The body of SKILL.md.",
     writeMissing: "Fill in the name, when to use and the instructions.",
+    writeInvalidName: "Use a name with at least one letter from A to Z or a number.",
+    writeNamePreview: "Saved as {{name}}",
     files: "Files",
     needsSandbox: "not kept",
     assetLimit: "A skill keeps up to {{max}} MB of images and other files.",

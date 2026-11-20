@@ -10730,7 +10730,7 @@ export const ptBR = {
     defaultForNew: "Ligar em agentes novos",
     editLinkNote: "Esta skill veio de um link: “Atualizar do link” substitui o que você mudar aqui.",
     newVersion: "Salvar cria uma versão nova.",
-    tab: { github: "Link do GitHub", zip: "Enviar .zip", write: "Escrever" },
+    tab: { github: "Link do GitHub", zip: "Enviar .zip", file: "Enviar arquivo", write: "Escrever" },
     githubUrl: "Link do GitHub",
     githubHelp: "A pasta de uma skill, ou um repositório com várias para escolher.",
     githubInvalid: "Use um link do GitHub (https://github.com/…).",
@@ -10767,6 +10767,10 @@ export const ptBR = {
     forAgent_other: "Ficam ligadas para {{agent}}",
     installedMany: "{{count}} skills instaladas.",
     zipHelp: "Um .zip da pasta da skill, até {{max}} MB.",
+    fileHelp: "Um .md com o nome e a descrição da skill ou um .zip da pasta, até {{max}} MB.",
+    filePick: "Escolher .zip ou .md",
+    fileMissing: "Escolha um arquivo .zip ou .md.",
+    markdownTooLarge: "O arquivo .md da skill pode ter até {{max}}.",
     /** Behind the ⓘ beside `zipHelp`. */
     zipAbout:
       "O SKILL.md fica no topo do .zip, ou na única pasta dele. Uma skill guarda até {{text}} MB de texto e {{assets}} MB de imagens e outros arquivos.",
@@ -10785,6 +10789,8 @@ export const ptBR = {
     body: "Instruções (Markdown)",
     bodyHelp: "O corpo do SKILL.md.",
     writeMissing: "Preencha o nome, quando usar e as instruções.",
+    writeInvalidName: "Use um nome com pelo menos uma letra de A a Z ou um número.",
+    writeNamePreview: "Será salva como {{name}}",
     files: "Arquivos",
     needsSandbox: "não guardado",
     assetLimit: "Uma skill guarda até {{max}} MB de imagens e outros arquivos.",

@@ -25,6 +25,7 @@ import { errorText } from "@agenteschat/client/lib/errors";
 import {
   formatBytes,
   SKILL_ASSET_MB,
+  SKILL_MARKDOWN_BYTES,
   SKILL_TEXT_MB,
   SKILL_ZIP_BYTES,
   SKILL_ZIP_MB,
@@ -58,6 +59,7 @@ import {
   skillWaitingChip,
   skippedSkillText,
 } from "@agenteschat/client/lib/skills";
+import { slugify } from "@agenteschat/client/lib/text";
 import {
   Alert,
   Avatar,
@@ -526,7 +528,7 @@ const returnHere = (orgId: string, url: string, forAgentId?: string) => {
 };
 
 /**
- * Instalar skill: a GitHub link, a .zip or written here. A link holding several skills (or a repository picked from
+ * Instalar skill: a GitHub link, an uploaded file or written here. A link holding several skills (or a repository picked from
  * the connected GitHub) lists them to pick. A private repository is read on the server through the workspace's
  * GitHub, and the dialog says which connection read it. When none can, it says the repository looks private or
  * missing and offers to connect GitHub (or to ask whoever manages connectors). Once GitHub is connected it reads the
@@ -573,9 +575,9 @@ export function InstallSkillDialog({
   const forName = forAgentId ? dir.agentById.get(forAgentId)?.name : undefined;
   /** "Fica ligada para Ada": on by default, shown (and sent) only while the link is the card's own. */
   const [turnOn, setTurnOn] = useState(true);
-  /** A .zip on its way: the share of it sent, from the moment it's read for sending until the server answers. */
+  /** A file on its way: the share sent, from the moment it's read until the server answers. */
   const [sending, setSending] = useState<number | null>(null);
-  /** Stops the .zip on its way: Cancel, or the dialog closing. */
+  /** Stops the upload: Cancel, or the dialog closing. */
   const stop = useRef<AbortController | null>(null);
   const busy = action.isPending || sending !== null;
   const timerStep = useStepText(action.isPending && sending === null, [
@@ -592,8 +594,10 @@ export function InstallSkillDialog({
   const [tab, setTab] = useState<InstallTab>("github");
   const [url, setUrl] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const tooBig = file !== null && file.size > SKILL_ZIP_BYTES;
+  const isMarkdown = file ? /\.md$/i.test(file.name) : false;
+  const tooBig = file !== null && file.size > (isMarkdown ? SKILL_MARKDOWN_BYTES : SKILL_ZIP_BYTES);
   const [form, setForm] = useState({ name: "", description: "", body: "" });
+  const writtenName = slugify(form.name).slice(0, 64).replace(/-$/, "");
   const unsaved = useEdited(open, form);
   const [error, setError] = useState<string | null>(null);
   /** A link the workspace's GitHub couldn't read either, and whether GitHub is connected. */
@@ -714,21 +718,21 @@ export function InstallSkillDialog({
         },
       );
     } else if (tab === "zip") {
-      if (!file) return setError(t("skills.zipMissing"));
+      if (!file || (!isMarkdown && !/\.zip$/i.test(file.name))) return setError(t("skills.fileMissing"));
       if (tooBig) return;
       const stopper = new AbortController();
       stop.current = stopper;
       setSending(0);
-      let zipBase64: string;
+      let input: { markdown: string } | { zipBase64: string };
       try {
-        zipBase64 = await fileToBase64(file);
+        input = isMarkdown ? { markdown: await file.text() } : { zipBase64: await fileToBase64(file) };
       } catch {
         setSending(null);
         return setError(t("common.unknownError"));
       }
       if (stopper.signal.aborted) return setSending(null);
       action.mutate(
-        { type: "import", input: { zipBase64, ...mine }, upload: { signal: stopper.signal, onProgress: setSending } },
+        { type: "import", input: { ...input, ...mine }, upload: { signal: stopper.signal, onProgress: setSending } },
         {
           onSuccess: done,
           onError: (e) => {
@@ -739,10 +743,11 @@ export function InstallSkillDialog({
       );
     } else {
       if (!writeOk) return setError(t("skills.writeMissing"));
+      if (!writtenName) return setError(t("skills.writeInvalidName"));
       action.mutate(
         {
           type: "create",
-          input: { name: form.name.trim(), description: form.description.trim(), body: form.body, ...mine },
+          input: { name: writtenName, description: form.description.trim(), body: form.body, ...mine },
         },
         { onSuccess: done, onError },
       );
@@ -789,7 +794,7 @@ export function InstallSkillDialog({
                 label={t("skills.installHow")}
                 items={[
                   { value: "github", label: t("skills.tab.github") },
-                  { value: "zip", label: t("skills.tab.zip") },
+                  { value: "zip", label: t("skills.tab.file") },
                   { value: "write", label: t("skills.tab.write") },
                 ]}
               >
@@ -896,8 +901,8 @@ export function InstallSkillDialog({
                 </TabPanel>
                 <TabPanel value="zip">
                   <span className="ac-hintline small muted">
-                    {t("skills.zipHelp", { max: SKILL_ZIP_MB })}
-                    <InfoHint name={t("common.about", { label: t("skills.tab.zip") })}>
+                    {t("skills.fileHelp", { max: SKILL_ZIP_MB })}
+                    <InfoHint name={t("common.about", { label: t("skills.tab.file") })}>
                       {t("skills.zipAbout", { text: SKILL_TEXT_MB, assets: SKILL_ASSET_MB })}
                     </InfoHint>
                   </span>
@@ -905,9 +910,9 @@ export function InstallSkillDialog({
                   <input
                     ref={fileInput}
                     type="file"
-                    accept=".zip,application/zip"
+                    accept=".zip,.md,application/zip,text/markdown"
                     className="ac-visually-hidden"
-                    aria-label={t("skills.zipPick")}
+                    aria-label={t("skills.filePick")}
                     onChange={(e) => {
                       setFile(e.target.files?.[0] ?? null);
                       setError(null);
@@ -915,7 +920,7 @@ export function InstallSkillDialog({
                   />
                   <div className="row" style={{ gap: 8, alignItems: "center" }}>
                     <Button type="button" icon="attach" onClick={() => fileInput.current?.click()}>
-                      {t("skills.zipPick")}
+                      {t("skills.filePick")}
                     </Button>
                     <span className="small muted">
                       {file ? `${file.name} · ${formatBytes(i18n.language, file.size)}` : t("skills.zipNone")}
@@ -924,11 +929,13 @@ export function InstallSkillDialog({
                   {file && tooBig && (
                     <div className="skill-hidden">
                       <Alert>
-                        {t("skills.zipTooLarge", {
-                          name: file.name,
-                          size: formatBytes(i18n.language, file.size),
-                          max: SKILL_ZIP_MB,
-                        })}
+                        {isMarkdown
+                          ? t("skills.markdownTooLarge", { max: formatBytes(i18n.language, SKILL_MARKDOWN_BYTES) })
+                          : t("skills.zipTooLarge", {
+                              name: file.name,
+                              size: formatBytes(i18n.language, file.size),
+                              max: SKILL_ZIP_MB,
+                            })}
                       </Alert>
                       <div className="row">
                         <Button size="sm" icon="link" onClick={() => setTab("github")}>
@@ -939,7 +946,15 @@ export function InstallSkillDialog({
                   )}
                 </TabPanel>
                 <TabPanel value="write">
-                  <Field label={t("skills.name")} id="skill-name">
+                  <Field
+                    label={t("skills.name")}
+                    id="skill-name"
+                    example={
+                      writtenName && form.name.trim() !== writtenName
+                        ? t("skills.writeNamePreview", { name: writtenName })
+                        : undefined
+                    }
+                  >
                     <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
                   </Field>
                   <Field

@@ -10,6 +10,42 @@ afterEach(async () => {
 
 const skill = (name: string) => `---\nname: ${name}\ndescription: Use for ${name}.\n---\n# ${name}`;
 
+test("imports a standalone skill Markdown file", async () => {
+  t = await createTestServer();
+  const b = browser(t);
+  await signUp(b, "owner@example.com");
+  const { orgId } = await seedOrg(b);
+  const path = `/api/app/organizations/${orgId}/skills/import`;
+  const response = await b(path, { json: { markdown: skill("weekly-report") } });
+  expect(response.status).toBe(201);
+  expect(await response.json()).toMatchObject({ name: "weekly-report", body: "# weekly-report", source: "upload" });
+
+  const invalid = await b(path, { json: { markdown: "# Missing frontmatter" } });
+  expect(invalid.status).toBe(400);
+  expect(await invalid.json()).toMatchObject({ error: { code: "skill.no_frontmatter" } });
+});
+
+test("imports a ZIP with a Windows PowerShell-style empty directory entry", async () => {
+  t = await createTestServer();
+  const b = browser(t);
+  await signUp(b, "owner@example.com");
+  const { orgId } = await seedOrg(b);
+  const archive = zip([
+    ["weekly-report\\empty\\", ""],
+    ["weekly-report\\SKILL.md", skill("weekly-report")],
+    ["weekly-report\\templates\\report.md", "# Template"],
+  ]);
+  const response = await b(`/api/app/organizations/${orgId}/skills/import`, {
+    json: { zipBase64: Buffer.from(archive).toString("base64") },
+  });
+  expect(response.status).toBe(201);
+  expect(await response.json()).toMatchObject({
+    name: "weekly-report",
+    source: "upload",
+    files: [{ path: "templates/report.md", status: "stored" }],
+  });
+});
+
 /**
  * Fake GitHub: acme/skills' archive (two skills, deflated as codeload sends them) through codeload's redirect.
  * `limited`: every answer is GitHub limiting us.
