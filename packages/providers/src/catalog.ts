@@ -309,6 +309,15 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     contextWindow: 1_048_576,
     serverSideFallback: false,
   },
+  // Gemini 4 Neon (2026-11-18), for complex engineering and knowledge work, one price across its whole window, twice
+  // Hydrogen's: no tier, so Automatic never chooses it, people do.
+  "gemini-4-neon": {
+    provider: "gemini",
+    label: "Gemini 4 Neon",
+    prices: { input: 3000, output: 15000, cacheRead: 150, cacheWrite: 3000 },
+    contextWindow: 1_048_576,
+    serverSideFallback: false,
+  },
   "gemini-4-argon": {
     provider: "gemini",
     label: "Gemini 4 Argon",
