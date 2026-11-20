@@ -183,6 +183,8 @@ const HERE = new Set([
 
 /** Reads under a scope that also writes, by name. */
 const READS = new Set([
+  // Where things are in the app (issue #1001): reads code, writes nothing.
+  "find_in_app",
   "list_routines",
   "list_reminders",
   "find_agent",
