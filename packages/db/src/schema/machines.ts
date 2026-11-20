@@ -342,6 +342,8 @@ export const machineAccounts = pgTable(
     kind: text().notNull(),
     /** What people call it ("Trabalho"); "Claude 2" when nobody named it (ADR 0059 §4). */
     label: text().notNull(),
+    /** Null on legacy rows, whose names still follow the old naming convention. */
+    labelCustomized: boolean(),
     email: text(),
     /** `pro`, `max`, `ultra`, `team`, `enterprise`… from what the CLI says. */
     plan: text(),

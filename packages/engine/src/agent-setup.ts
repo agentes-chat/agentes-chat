@@ -474,7 +474,7 @@ export interface NewAgentSetup {
   account?: {
     id: string;
     label: string;
-    /** Its owner gave it its name (`isDefaultAccountLabel`); else the apps show it by its email. */
+    /** Its owner gave it its name; else the apps show it by its email. */
     named: boolean;
     /** The caller's own's only. */
     email: string | null;
