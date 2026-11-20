@@ -535,6 +535,9 @@ const GESTURE_MS = 1500;
  * a new message brings the list to it instead of waiting behind the pill.
  */
 const IDLE_CATCH_UP_MS = 20_000;
+/** The latest rows put on screen before the rest of a Windows DM is mounted. */
+const FIRST_DM_ROWS = 18;
+const DM_HISTORY_BATCH = 12;
 /** Older messages per scroll-up page. */
 const OLDER_PAGE = 50;
 /** Older pages a channel already loaded, and whether there are no more. */
@@ -1866,6 +1869,31 @@ function ChannelView({
     row?.scrollIntoView?.({ block: "end", behavior: reducedMotion ? "auto" : "smooth" });
   };
 
+  const canStageHistory =
+    opensAtEnd &&
+    !thread &&
+    !adjustThreadId &&
+    desktopPlatform() === "windows" &&
+    Boolean(chrome?.dmAgentId || chrome?.dmPersonId);
+  const [historyLimit, setHistoryLimit] = useState(FIRST_DM_ROWS);
+  const historyTopHeight = useRef<number | null>(null);
+  const visibleRowLimit = canStageHistory ? historyLimit : Infinity;
+  const showRecentFirst = timeline.length > visibleRowLimit;
+  useEffect(() => {
+    if (visibleRowLimit === Infinity || !serverRead) return;
+    const next = visibleRowLimit + DM_HISTORY_BATCH;
+    const nextLimit = next < timeline.length ? next : Infinity;
+    const appendBatch = () => {
+      startTransition(() => setHistoryLimit((current) => Math.max(current, nextLimit)));
+    };
+    // Let the first rows paint, then yield a frame between batches so input can run.
+    let frame = requestAnimationFrame(() => {
+      if (visibleRowLimit === FIRST_DM_ROWS && showRecentFirst) frame = requestAnimationFrame(appendBatch);
+      else appendBatch();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [visibleRowLimit, showRecentFirst, serverRead, timeline.length]);
+
   // Dev only: "click → first paint of messages".
   const fromCache = useRef(messages.data !== undefined);
   // biome-ignore lint/correctness/useExhaustiveDependencies: reports once the rows (or an empty channel) are on screen
@@ -2028,8 +2056,13 @@ function ChannelView({
   // without waiting for observers (some environments have none).
   // biome-ignore lint/correctness/useExhaustiveDependencies: runs when the data changes
   useLayoutEffect(() => {
+    const el = scroller.current;
+    if (el && historyTopHeight.current !== null) {
+      el.scrollTop = el.scrollHeight - historyTopHeight.current;
+      historyTopHeight.current = null;
+    }
     if (stick.current && Date.now() >= autoScrollUntil.current) follow();
-  }, [messages.dataUpdatedAt, timeline.length]);
+  }, [messages.dataUpdatedAt, timeline.length, showRecentFirst]);
 
   // `?m=` (or a quote clicked): the message on screen, or the page around it read from the server at any distance;
   // scrolled to and lit once.
@@ -2092,6 +2125,7 @@ function ChannelView({
     }
     jumping.current = true;
     setAround(null);
+    setHistoryLimit(Infinity);
     setFocusTarget(messageId);
     setFocusDone(false);
   };
@@ -2717,7 +2751,16 @@ function ChannelView({
                                 Date.now() - lastUpGesture.current < GESTURE_MS ||
                                 (byPerson && selectingIn(e.currentTarget));
                               if (byPerson) datePill.current?.poke();
-                              if (byPerson && e.currentTarget.scrollTop < 240) loadOlder();
+                              if (byPerson && e.currentTarget.scrollTop < 240) {
+                                if (showRecentFirst) {
+                                  // At scrollTop 0 the browser does not anchor the current first row.
+                                  if (upByPerson && e.currentTarget.scrollTop === 0) {
+                                    historyTopHeight.current = e.currentTarget.scrollHeight;
+                                    letGo();
+                                  }
+                                  setHistoryLimit(Infinity);
+                                } else loadOlder();
+                              }
                               if (upByPerson && previousTop !== null && e.currentTarget.scrollTop < previousTop) {
                                 letGo();
                                 return;
@@ -2816,6 +2859,7 @@ function ChannelView({
                               <>
                                 <Timeline
                                   items={timeline}
+                                  rowLimit={visibleRowLimit}
                                   ready={serverRead}
                                   slots={gap ? NO_SLOTS : slots}
                                   runKeys={runKeys.current}
@@ -2826,7 +2870,7 @@ function ChannelView({
                                   consultGroups={consultGroups}
                                   seenId={thread ? null : seenId}
                                   marks={contextMarkIds}
-                                  progressive={opensAtEnd}
+                                  progressive={opensAtEnd && !canStageHistory}
                                 />
                                 {/* A thread's root is on screen from the channel: only its replies are loading. */}
                                 {thread && messages.isPlaceholderData && thread.replyCount > 0 && (
@@ -3295,6 +3339,7 @@ const FIRST_ROWS = 30;
 
 const Timeline = memo(function Timeline({
   items,
+  rowLimit,
   ready,
   slots,
   runKeys,
@@ -3308,6 +3353,7 @@ const Timeline = memo(function Timeline({
   progressive = false,
 }: {
   items: ReturnType<typeof buildTimeline>;
+  rowLimit: number;
   /** The first page loaded: rows from then on slide in. */
   ready: boolean;
   /** The agents' blocks at work (`chat/run-slots.ts`). */
@@ -3337,7 +3383,7 @@ const Timeline = memo(function Timeline({
   useEffect(() => {
     if (!whole && ready) startTransition(() => setWhole(true));
   }, [whole, ready]);
-  const from = whole ? 0 : Math.max(0, items.length - FIRST_ROWS);
+  const limit = whole ? rowLimit : Math.min(FIRST_ROWS, rowLimit);
   const models = useModels();
   const modelLabels = useMemo(
     () => new Map((models.data?.models ?? []).map((m) => [m.id, m.label] as const)),
@@ -3462,10 +3508,10 @@ const Timeline = memo(function Timeline({
       />
     );
   };
-  for (const [at, item] of items.entries()) {
-    if (at < from) continue;
-    const grouped = item.kind === "message" && item.grouped && !afterUnshown();
-    const after = items[at + 1];
+  const visibleItems = items.length > limit ? items.slice(-limit) : items;
+  for (const [at, item] of visibleItems.entries()) {
+    const grouped = item.kind === "message" && item.grouped && (at > 0 || visibleItems === items) && !afterUnshown();
+    const after = visibleItems[at + 1];
     // Where it sits in its author's run: my own rows' bubbles square the corners they share.
     const run = runPosition(grouped, after?.kind === "message" && after.grouped && !unshown.has(item.key));
     if (divider?.key === item.key) {

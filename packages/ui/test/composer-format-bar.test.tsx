@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { fileURLToPath } from "node:url";
 import { setupDom } from "../testing/dom";
 
 setupDom();
@@ -11,7 +12,7 @@ import { EDGE_ROOM, placeOverSelection, TIP_GAP } from "../src/floating";
 afterEach(cleanup);
 
 const body = () => within(document.body);
-const css = () => Bun.file(new URL("../src/styles/components.css", import.meta.url).pathname).text();
+const css = () => Bun.file(fileURLToPath(new URL("../src/styles/components.css", import.meta.url))).text();
 
 const FORMAT: ComposerFormatLabels = {
   toolbar: "Formatação",
