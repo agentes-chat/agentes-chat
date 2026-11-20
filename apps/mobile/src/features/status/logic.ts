@@ -62,3 +62,23 @@ export const lineText = (s: { emoji: string | null; text: string }) => (s.emoji 
 export function personLine(t: TFunction, language: string, s: MemberStatus, now = new Date()): string {
   return s.until ? `${lineText(s)} · ${lowerFirst(clearsText(t, language, s.until, now), language)}` : lineText(s);
 }
+
+const NONE: ReadonlyMap<string, never> = new Map<string, never>();
+
+/**
+ * A list as a map by `key`, made once per list: every face on screen asks who is how, and the people's and agents'
+ * lists change identity only when the server's answer does, so each face reads its row in O(1) instead of indexing
+ * the whole list again.
+ */
+export function indexedBy<T>(key: (item: T) => string): (list: readonly T[] | undefined) => ReadonlyMap<string, T> {
+  const made = new WeakMap<readonly T[], ReadonlyMap<string, T>>();
+  return (list) => {
+    if (!list) return NONE;
+    let index = made.get(list);
+    if (!index) {
+      index = new Map(list.map((item) => [key(item), item]));
+      made.set(list, index);
+    }
+    return index;
+  };
+}

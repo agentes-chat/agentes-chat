@@ -4,6 +4,7 @@ import { agentPresenceShown, agentWhyKey, STATUS_SUGGESTIONS, statusEndNote } fr
 import {
   availabilityOf,
   draftOf,
+  indexedBy,
   inputOf,
   isSuggestion,
   lineText,
@@ -135,5 +136,31 @@ describe("how a status reads in a row, a pill and a profile", () => {
     // Out of office and held keep their faces.
     expect(agentPresenceShown(row("out"), true)).toBe("out");
     expect(agentPresenceShown(row("offline", true), true, true)).toBe("offline");
+  });
+});
+
+describe("who is how, read by id (each face in O(1))", () => {
+  const byId = indexedBy((r: { id: string; n: number }) => r.id);
+
+  test("a list is indexed once: the same list hands back the same map", () => {
+    const list = [
+      { id: "a", n: 1 },
+      { id: "b", n: 2 },
+    ];
+    const index = byId(list);
+    expect(index.get("b")?.n).toBe(2);
+    expect(index.get("c")).toBeUndefined();
+    expect(byId(list)).toBe(index);
+  });
+
+  test("a new answer is a new list: indexed again, never read stale", () => {
+    const first = byId([{ id: "a", n: 1 }]);
+    const next = byId([{ id: "a", n: 5 }]);
+    expect(next).not.toBe(first);
+    expect(next.get("a")?.n).toBe(5);
+  });
+
+  test("no list yet reads as nobody", () => {
+    expect(byId(undefined).size).toBe(0);
   });
 });

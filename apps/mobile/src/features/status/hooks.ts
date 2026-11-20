@@ -1,6 +1,7 @@
 import {
   type AgentStatus,
   type AgentWork,
+  type AiStatus,
   type MemberPresence,
   type MemberStatus,
   type Person,
@@ -11,7 +12,6 @@ import {
 } from "@agenteschat/client";
 import { WORK_TICK_MS, type WorkLine, workDetail, workLine } from "@agenteschat/client/lib/agent-work";
 import { lowerFirst } from "@agenteschat/client/lib/format";
-import { aiStateOf } from "@agenteschat/client/lib/no-ai";
 import {
   type AgentFace,
   agentFaceOf,
@@ -26,7 +26,7 @@ import {
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useDirectory, useMeId, useNow, useOrgId } from "../shared/hooks";
-import { lineText, personLine } from "./logic";
+import { indexedBy, lineText, personLine } from "./logic";
 
 /**
  * Who is how (ADR 0084): people's presence and line (`GET …/people`) and agents' (`GET …/agent-status`, an agent
@@ -51,6 +51,11 @@ export interface AgentShown {
   noAi: boolean;
 }
 
+/** The people and the agents by id, shared by every face that reads them (`indexedBy`). */
+const peopleById = indexedBy((p: Person) => p.userId);
+const agentsById = indexedBy((a: AgentStatus) => a.agentId);
+const aiById = indexedBy((a: AiStatus["agents"][number]) => a.agentId);
+
 export function usePresenceOf(): PresenceOf {
   const orgId = useOrgId();
   const { t, i18n } = useTranslation();
@@ -58,8 +63,9 @@ export function usePresenceOf(): PresenceOf {
   const agents = useAgentStatuses(orgId);
   const ai = useAiStatus(orgId);
   return useMemo(() => {
-    const byUser = new Map((people.data ?? []).map((p) => [p.userId, p]));
-    const byAgent = new Map((agents.data ?? []).map((a) => [a.agentId, a]));
+    const byUser = peopleById(people.data);
+    const byAgent = agentsById(agents.data);
+    const byAi = aiById(ai.data?.agents);
     return {
       person: (userId) => {
         const p = byUser.get(userId);
@@ -68,7 +74,7 @@ export function usePresenceOf(): PresenceOf {
       agent: (agentId) => {
         if (!agents.data) return null;
         const status = byAgent.get(agentId);
-        const { presence, noAi } = agentFaceOf(status, aiStateOf(ai.data, agentId));
+        const { presence, noAi } = agentFaceOf(status, byAi.get(agentId)?.state);
         // Without an AI it does nothing: no line either.
         const line = !noAi && status?.status ? agentStatusText(t, status.status, i18n.language) : null;
         return { presence, work: status?.work ?? null, line, status, noAi };

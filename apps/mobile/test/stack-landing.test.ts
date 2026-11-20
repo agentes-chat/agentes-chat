@@ -21,7 +21,7 @@ describe("the app's stack: every screen pushed with its bar and a way back, unle
 
   test("what the layout lists is a screen that exists, with options of its own", () => {
     const layout = mainLayout();
-    const own = layout.slice(layout.indexOf("const own:"), layout.indexOf("return ({ route }"));
+    const own = layout.slice(layout.indexOf("const own:"), layout.indexOf("return ({ route, navigation }"));
     const names = [...own.matchAll(/^ {6}"?([^"\s:]+)"?: /gm)].map((m) => m[1] ?? "");
     expect(names).toContain("(tabs)");
     expect(names.length).toBeGreaterThan(10);
@@ -32,6 +32,18 @@ describe("the app's stack: every screen pushed with its bar and a way back, unle
     // A conversation keeps its opaque bar (its list lays out below it); the tabs keep none of their own.
     expect(ownOptionsOf("chat/[channelId]")).toBe("solid,");
     expect(ownOptionsOf("(tabs)")).toBe("base,");
+  });
+});
+
+describe("the tabs under a pushed screen", () => {
+  test("freeze while covered and wake when they are on top again", () => {
+    const layout = mainLayout();
+    expect(layout).toContain(
+      'if (route.name === "(tabs)") return { ...options, unstable_nativeProps: tabsFreeze(navigation, route.key) };',
+    );
+    expect(layout).toContain(
+      "freezeOnBlur: true, shouldFreeze: key !== undefined && navigation.getState().routes.at(-1)?.key !== key",
+    );
   });
 });
 

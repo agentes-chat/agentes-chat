@@ -34,6 +34,23 @@ const NEW_AGENT_ROUTES = [
   "new-agent/import-preview",
 ];
 
+/** What the stack hands each screen's options: its route, and its navigation to read what lies over it. */
+interface StackScreenArgs {
+  route: { key?: string; name: string; params?: object };
+  navigation: { getState: () => { routes: readonly { key: string }[] } };
+}
+
+/**
+ * The tabs freeze while a screen is pushed over them (react-native-screens' `freezeOnBlur`): the conversation lists,
+ * badges and work lines under an open conversation stop redrawing at every message and step, and catch up once in
+ * sight again. The native views stay as they were, so the edge swipe back still shows them. Nothing that must go on
+ * in the background lives under the tabs: the connection, push, sounds, the icon's badge and the outbox are the
+ * signed-in app's (`../_layout.tsx`, `AppWork`) or the providers'.
+ */
+function tabsFreeze(navigation: StackScreenArgs["navigation"], key: string | undefined) {
+  return { freezeOnBlur: true, shouldFreeze: key !== undefined && navigation.getState().routes.at(-1)?.key !== key };
+}
+
 export default function MainStack() {
   const { colors } = useTheme();
   const pushed = usePushedOptions();
@@ -116,8 +133,9 @@ export default function MainStack() {
       "computer/[agentId]": solid,
       "browser-profile/[profileId]": solid,
     };
-    return ({ route }: { route: { name: string; params?: object } }): NativeStackNavigationOptions => {
+    return ({ route, navigation }: StackScreenArgs): NativeStackNavigationOptions => {
       const options = own[route.name] ?? page;
+      if (route.name === "(tabs)") return { ...options, unstable_nativeProps: tabsFreeze(navigation, route.key) };
       return isStill(route.params) ? { ...options, animation: "none" } : options;
     };
   }, [colors, pushed, scrollUnder]);
