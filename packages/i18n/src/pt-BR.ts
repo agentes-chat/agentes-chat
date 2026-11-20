@@ -3388,6 +3388,12 @@ export const ptBR = {
       line: "Usado {{uses}}×. Virar skill?",
       action: "Virar skill",
       done: "Confirmado",
+      details: "Ver detalhes",
+      hideDetails: "Fechar detalhes",
+      detailsTitle: "O que ficou guardado",
+      detailsGone: "Esse aprendizado não está mais na memória.",
+      detailsUses: "Usado {{uses}}× · último uso {{when}}",
+      detailsUsesNever: "Usado {{uses}}×",
     },
     stalled: {
       title: "Passos parados em #{{number}} {{title}}",

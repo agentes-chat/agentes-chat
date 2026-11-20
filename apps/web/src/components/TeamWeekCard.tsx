@@ -7,13 +7,14 @@ import {
   useCardProposals,
   useChannels,
   useDecideProposal,
+  useMemory,
   useModelLabel,
   useSetTeamWeekPrefs,
   useTeamWeekPrefs,
   useWaitingOnMe,
 } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
-import { clockAt, formatUsd, joinNames } from "@agenteschat/client/lib/format";
+import { clockAt, formatUsd, joinNames, relativeTime } from "@agenteschat/client/lib/format";
 import { can } from "@agenteschat/client/lib/permissions";
 import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import { type TeamWeekPeriod, teamWeekOn, teamWeekWhen } from "@agenteschat/client/lib/right-hand-prefs";
@@ -376,15 +377,69 @@ function FixRow({
         <span className="tw__fix-t">
           <b className="ac-captop">{title}</b>
           <span>{line}</span>
+          {row.kind === "howto" && (
+            <button
+              type="button"
+              className="ac-link small tw__details-toggle"
+              aria-expanded={showing}
+              onClick={() => setShowing((v) => !v)}
+            >
+              {t(showing ? "teamWeek.howto.hideDetails" : "teamWeek.howto.details")}
+            </button>
+          )}
         </span>
         <span className="tw__fix-side">{side}</span>
       </div>
+      {showing && row.kind === "howto" && <HowtoDetails agentId={row.agentId} itemId={row.itemId} uses={row.uses} />}
       {showing && row.kind === "approvals" && (
         <div className="tw__approvals">
           {row.approvalIds.map((id) => (
             <CardApproval key={id} id={id} />
           ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * "Ver detalhes" under a lesson that may become a skill: the whole of what the agent kept, where it came from and how
+ * often it was used, read before pressing Virar skill (on a phone the title alone is cut short).
+ */
+function HowtoDetails({ agentId, itemId, uses }: { agentId: string; itemId: string; uses: number }) {
+  const { t, i18n } = useTranslation();
+  const { org } = useOrg();
+  const memory = useMemory(org.id, agentId);
+  const item = memory.data?.find((m) => m.id === itemId);
+  return (
+    <div className="tw__details">
+      <b className="small">{t("teamWeek.howto.detailsTitle")}</b>
+      {memory.isPending ? (
+        <span className="small tw__details-meta">{t("common.loading")}</span>
+      ) : item ? (
+        <>
+          <p className="tw__details-text">{item.text}</p>
+          {item.source && <span className="small tw__details-meta">{item.source}</span>}
+          <span className="small tw__details-meta">
+            {item.lastUsedAt
+              ? t("teamWeek.howto.detailsUses", {
+                  uses: item.uses || uses,
+                  when: relativeTime(t, i18n.language, item.lastUsedAt),
+                })
+              : t("teamWeek.howto.detailsUsesNever", { uses: item.uses || uses })}
+          </span>
+        </>
+      ) : memory.isError ? (
+        <>
+          <span className="small tw__details-meta" role="status">
+            {errorText(t, memory.error)}
+          </span>
+          <Button size="sm" disabled={memory.isFetching} onClick={() => void memory.refetch()}>
+            {t("common.retry")}
+          </Button>
+        </>
+      ) : (
+        <span className="small tw__details-meta">{t("teamWeek.howto.detailsGone")}</span>
       )}
     </div>
   );

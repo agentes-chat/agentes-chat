@@ -66,6 +66,55 @@ function lodiWeek(c: TeamWeekCard) {
   return s;
 }
 
+test("a learned item's details can be read before creating a skill", async () => {
+  const s = lodiWeek(
+    card({
+      rows: [
+        { id: "howto:mem-4", kind: "howto", agentId: ADA_ID, itemId: "mem-4", title: "Revisar pagamentos", uses: 2 },
+      ],
+    }),
+  );
+  const learned = s.memories.find((m) => m.id === "mem-4");
+  if (!learned) throw new Error("missing learning fixture");
+  await renderApp(`/org/${ORG_ID}/dm/agent/${LODI_ID}`, { api: createFakeApi(s) });
+  await settle(8);
+  expect(screen.queryByText(learned.text)).toBeNull();
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Ver detalhes" })));
+  await settle(4);
+  expect(screen.getByText(learned.text)).toBeTruthy();
+  expect(screen.getByText(learned.source)).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Virar skill" })).toBeTruthy();
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Fechar detalhes" })));
+  expect(screen.queryByText(learned.text)).toBeNull();
+});
+
+test("a temporary loading error can be retried without saying the learned item is gone", async () => {
+  const s = lodiWeek(
+    card({
+      rows: [
+        { id: "howto:mem-4", kind: "howto", agentId: ADA_ID, itemId: "mem-4", title: "Revisar pagamentos", uses: 2 },
+      ],
+    }),
+  );
+  const api = createFakeApi(s);
+  const list = api.memory.list;
+  const learned = s.memories.find((m) => m.id === "mem-4");
+  if (!learned) throw new Error("missing learning fixture");
+  let offline = true;
+  api.memory.list = async (...args) => {
+    if (offline) throw new TypeError("network failure");
+    return list(...args);
+  };
+  await renderApp(`/org/${ORG_ID}/dm/agent/${LODI_ID}`, { api });
+  await settle(8);
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Ver detalhes" })));
+  const retry = await screen.findByRole("button", { name: "Tentar de novo" });
+  expect(screen.queryByText("Esse aprendizado não está mais na memória.")).toBeNull();
+  offline = false;
+  await act(async () => fireEvent.click(retry));
+  expect(await screen.findByText(learned.text)).toBeTruthy();
+});
+
 test("the week's card: its numbers, what worked, a row per fix and the schedule; rows apply as the person", async () => {
   const s = lodiWeek(card());
   await renderApp(`/org/${ORG_ID}/dm/agent/${LODI_ID}`, { api: createFakeApi(s) });

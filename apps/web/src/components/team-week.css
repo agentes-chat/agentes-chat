@@ -226,3 +226,26 @@
   gap: var(--space-2);
   max-width: 100%;
 }
+
+/* "Ver detalhes" under a lesson: its whole text, where it came from, how often it was used. */
+.tw__details-toggle {
+  align-self: flex-start;
+  margin-top: 2px;
+}
+.tw__details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.tw__details-text {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.tw__details-meta {
+  color: var(--muted);
+}
