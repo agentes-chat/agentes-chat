@@ -117,9 +117,11 @@ const size = (r: ModelRequest) =>
  * code goes to a mailbox the agent reads being its own work adds 360; the live files' group (ADR 0196 §6) named with
  * the others, in the prompt and in `find_tools`, adds about 170 (48,834 on the Cloud), and `ignore_usage_limit`, for a person telling the agent to go past
  * its usage pause, adds 356 (49,190), and `say_now`, one short line before slow work (ADR 0207), its definition and
- * its line in "# How you work" add about 765 (about 49,955); the ceiling leaves a little room above them.
+ * its line in "# How you work" add about 765 (about 49,955); `find_in_app`, where things are in the app (issue #1001),
+ * its line in "# How you work" and the end of "What you can do" add 325 (50,269); the ceiling leaves a little room
+ * above them.
  */
-const OI_CEILING_CHARS = 50_200;
+const OI_CEILING_CHARS = 50_500;
 
 test("a DM 'oi' stays under the size ceiling", async () => {
   const [request] = await play(TURNS.find((t) => t.id === "greet-dm") as ScriptedTurn);
