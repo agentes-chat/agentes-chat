@@ -18,6 +18,7 @@ export * from "./ai-accounts";
 export * from "./ai-accounts-analytics";
 export * from "./ai-intent";
 export * from "./ai-status";
+export * from "./app-guide";
 export * from "./appearance";
 export * from "./approval-covers";
 export * from "./approval-requests";
