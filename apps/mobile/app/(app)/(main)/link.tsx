@@ -29,6 +29,7 @@ export default function LinkRoute() {
     person?: string;
     notification?: string;
     m?: string;
+    rightHand?: string;
     web?: string;
   }>();
   const { orgId, orgs, setOrgId } = useOrg();
@@ -44,7 +45,7 @@ export default function LinkRoute() {
   );
   const wanted = "org" in place ? place.org : orgId;
   const foreign = "web" in place ? place.web : null;
-  const { to, thread, agent, person, notification, m } = p;
+  const { to, thread, agent, person, notification, m, rightHand } = p;
   // It leaves once, whatever finishes first: the lookup, its failure or the wait running out.
   const settled = useRef(false);
   const land = useCallback((href: Href) => {
@@ -64,7 +65,7 @@ export default function LinkRoute() {
       return;
     }
     let alive = true;
-    resolveLink(api, orgId, { to, thread, agent, person, notification, m })
+    resolveLink(api, orgId, { to, thread, agent, person, notification, m, rightHand })
       .catch((e: unknown) => {
         if (alive && !settled.current) failedRef.current(e);
         return "/";
@@ -75,7 +76,7 @@ export default function LinkRoute() {
     return () => {
       alive = false;
     };
-  }, [api, orgId, wanted, foreign, setOrgId, to, thread, agent, person, notification, m, land]);
+  }, [api, orgId, wanted, foreign, setOrgId, to, thread, agent, person, notification, m, rightHand, land]);
   useEffect(() => {
     const timer = setTimeout(() => {
       if (settled.current) return;

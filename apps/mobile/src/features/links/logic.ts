@@ -184,6 +184,26 @@ export function hrefForPush(p: PushPayload, ai?: Pick<AiStatus, "any" | "agents"
 }
 
 /**
+ * A launcher shortcut's link (`agenteschat:///shortcut/<name>`, declared by plugins/with-app-shortcuts.js) -> the app's
+ * own path, never the URL: the approvals waiting for you, a new task, and the right hand's DM (which needs a lookup,
+ * so it goes through `/link`, ADR 0137). Null for anything else.
+ */
+export function shortcutHref(url: string): string | null {
+  const m = /^(?:agenteschat:\/\/)?\/*shortcut\/([a-z-]+)\/?(?:[?#].*)?$/i.exec(url.trim());
+  switch (m?.[1]?.toLowerCase()) {
+    case "approvals":
+      // `at` makes each use re-select "Esperando você" (ActivityScreen re-applies the filter when it changes).
+      return `/activity?filter=waiting&at=${Date.now()}`;
+    case "new-task":
+      return "/issues/new";
+    case "right-hand":
+      return "/link?rightHand=1";
+    default:
+      return null;
+  }
+}
+
+/**
  * `agenteschat://chat/<id>?thread=<id>` (or the same path on its own) → the
  * route, checked; anything else → null.
  */

@@ -1,5 +1,6 @@
 import { openOwnPage } from "@/features/ai/parts";
 import { appLinkFromUrl } from "@/features/links/app-links";
+import { shortcutHref } from "@/features/links/logic";
 import { workspaceOnScreen } from "@/features/links/on-screen";
 import { rememberLink } from "@/features/links/pending";
 import { SHARE_ROUTE } from "@/features/share/inbox";
@@ -8,13 +9,19 @@ import { SHARE_ROUTE } from "@/features/share/inbox";
  * Every URL the system opens the app with (a universal link / App Link to the website, or `agenteschat://`), before
  * expo-router reads it: the website's address becomes the app's screen (`appLinkFromUrl`), and a page the app has no
  * screen for opens in the browser, the app staying where it was (on its start at launch). A screen of the workspace on
- * screen opens straight away; another workspace's, or one that needs a lookup, goes through `/link`. What another app
+ * screen opens straight away; another workspace's, or one that needs a lookup, goes through `/link`. A launcher shortcut opens its own path (`shortcutHref`). What another app
  * shared through the system's share sheet opens "Compartilhar com…".
  */
 export function redirectSystemPath({ path, initial }: { path: string; initial: boolean }): string {
   try {
     // The share extension opens the app with `agenteschat://dataUrl=…` (expo-share-intent): "Compartilhar com…".
     if (path.includes("dataUrl=")) return SHARE_ROUTE;
+    // A launcher shortcut (long press on the icon): the app's own path, signed out waiting for the sign-in like a web link.
+    const shortcut = shortcutHref(path);
+    if (shortcut) {
+      if (shortcut.startsWith("/link?")) rememberLink(shortcut);
+      return shortcut;
+    }
     const link = appLinkFromUrl(path, workspaceOnScreen());
     if (!link) return path;
     if ("web" in link) {

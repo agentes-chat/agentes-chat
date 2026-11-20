@@ -175,6 +175,13 @@ describe("the link screen", () => {
   const api = {
     threads: { get: async (_o: string, id: string) => ({ id, channelId: "c9" }) as never },
     dms: { open: async (_o: string, to: object) => ({ channelId: "agentId" in to ? "d-agent" : "d-person" }) },
+    agents: {
+      list: async () =>
+        [
+          { id: "a-rh", builtin: "right_hand" },
+          { id: "a2", builtin: null },
+        ] as never,
+    },
     notifications: {
       read: async (_o: string, id: string) =>
         ({ id, kind: "mention", source: { channelId: "c2", messageId: "m9" }, actors: [], latest: {} }) as never,
@@ -189,6 +196,12 @@ describe("the link screen", () => {
     expect(await resolveLink(api, O, { person: "u1", m: "m2" })).toBe("/chat/d-person?m=m2");
     expect(await resolveLink(api, O, { notification: "n1" })).toBe("/chat/c2?m=m9");
     expect(await resolveLink(api, O, {})).toBe("/");
+  });
+
+  test("the launcher's Braço direito opens the DM with the right hand, or Conversas without one", async () => {
+    expect(await resolveLink(api, O, { rightHand: "1" })).toBe("/chat/d-agent");
+    const none = { ...api, agents: { list: async () => [] } };
+    expect(await resolveLink(none, O, { rightHand: "1" })).toBe("/");
   });
 
   test("a workspace the person isn't in opens the address on the website, never its ids in the current one", () => {
