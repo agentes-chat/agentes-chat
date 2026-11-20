@@ -504,6 +504,12 @@ test.skipIf(!posix)(
     });
     managers.push(m);
     const id = "0193eeee-0000-7000-8000-0000000000d2";
+    // Another account here, on a plan with fewer models: what it listed stays beside the new one's.
+    const free = "0193eeee-0000-7000-8000-0000000000d9";
+    mkdirSync(path.join(home, "accounts", "antigravity", free), { recursive: true });
+    const freeListed = [{ id: "claude-sonnet-4-6", label: "Claude Sonnet 4.6 (Thinking)" }];
+    writeFileSync(path.join(home, "accounts", "agy-models.json"), JSON.stringify({ [free]: freeListed }));
+    expect(m.agyModels()).toEqual(freeListed);
     const begun = await m.begin("antigravity", id, false, undefined, "enterprise");
     expect(begun.url).toBe("https://accounts.google.com/o/oauth2/auth?client_id=agy&state=s1");
     expect(typeof begun.publicKey).toBe("string");
@@ -516,6 +522,18 @@ test.skipIf(!posix)(
       state: "done",
       account: { kind: "antigravity", loggedIn: true, provider: "enterprise" },
     });
+    // The models it lists signed in, which the computer's own `agy models` (signed out) doesn't: kept for a restart.
+    const listed = [
+      { id: "gemini-4-argon-high", label: "Gemini 4 Argon (High)" },
+      { id: "gemini-3.8-flash-medium", label: "Gemini 3.8 Flash (Medium)" },
+    ];
+    // Every account's models once, the account listing the most first: the free one's shorter list hides nothing.
+    const all = [...listed, ...freeListed];
+    await waitFor(() => m.agyModels()?.length === all.length, 5000);
+    expect(m.agyModels()).toEqual(all);
+    const again = new AccountManager({ root: path.join(home, "accounts") });
+    managers.push(again);
+    expect(again.agyModels()).toEqual(all);
     // Windows keeps every sign-in in the user's one Credential Manager: refused.
     const win = new AccountManager({ root: path.join(home, "win"), orgId: () => ORG, platform: "win32" });
     managers.push(win);

@@ -80,6 +80,7 @@ import {
   GROK_BIN,
   isExecutable,
   OPENCODE_BIN,
+  parseAgyModels,
   parseGrokModels,
   resolveCommand,
 } from "./executors";
@@ -555,8 +556,15 @@ export function watchCodexAuth(home: string, granted: string, send: (auth: strin
   };
 }
 
-/** Beside the account folders: the models Grok Build lists to a signed-in account (`AccountManager.grokModels`). */
-const GROK_MODELS_FILE = "grok-models.json";
+/**
+ * Beside the account folders: the models a CLI lists to a signed-in account (`AccountManager.grokModels`,
+ * `AccountManager.agyModels`). The computer's own CLI is signed out, so its list is empty or a sign-in notice.
+ */
+type ListedModelsKind = "grok" | "antigravity";
+const LISTED_MODELS_FILE: Record<ListedModelsKind, string> = {
+  grok: "grok-models.json",
+  antigravity: "agy-models.json",
+};
 
 /**
  * Grok Build keeps its sign-in in `GROK_HOME/auth.json`, an entry per issuer: the grok.com one under
@@ -2546,39 +2554,80 @@ export class AccountManager {
             : kind === "antigravity"
               ? parseAgyStatus(r.status, `${r.stdout}\n${r.stderr}`, agyAuthOf(dir))
               : parseCodexStatus(r.status, `${r.stdout}\n${r.stderr}`);
-    if (kind === "grok" && status.loggedIn) this.keepGrokModels(parseGrokModels(r.stdout));
+    if (status.loggedIn && (kind === "grok" || kind === "antigravity"))
+      this.keepModels(kind, id, (kind === "grok" ? parseGrokModels : parseAgyModels)(r.stdout));
     // Timed out, or didn't start.
     const unknown = r.status === null ? { statusUnknown: true as const } : {};
     return { id, kind, ...status, ...unknown, ...shared };
   }
 
-  private grokList: CursorModelInfo[] | undefined;
-  private get grokModelsFile() {
-    return path.join(this.opts.root, GROK_MODELS_FILE);
-  }
+  /** Per kind, what each signed-in account listed (by account id): accounts on one plan see fewer models than another's. */
+  private readonly listed: Partial<Record<ListedModelsKind, Record<string, CursorModelInfo[]>>> = {};
 
   /**
-   * The models Grok Build last listed for an account signed in here (its status look runs `grok models` in that
+   * The models Grok Build last listed for the accounts signed in here (its status look runs `grok models` in each
    * account's folder), kept across restarts: a folder lent to an agent is never looked at again. Undefined before one.
    */
   grokModels(): CursorModelInfo[] | undefined {
-    if (this.grokList === undefined) {
-      const kept = readSmallJson(this.grokModelsFile, 64 * 1024);
-      const list = Array.isArray(kept) ? kept.filter((m): m is CursorModelInfo => typeof m?.id === "string") : [];
-      this.grokList = list.length > 0 ? list : undefined;
-    }
-    return this.grokList;
+    return this.keptModels("grok");
   }
 
-  private keepGrokModels(list: CursorModelInfo[]) {
-    if (list.length === 0 || JSON.stringify(list) === JSON.stringify(this.grokModels())) return;
-    this.grokList = list;
+  /** Same for the Antigravity CLI: `agy models` in a signed-in account's folder. The computer's own is signed out. */
+  agyModels(): CursorModelInfo[] | undefined {
+    return this.keptModels("antigravity");
+  }
+
+  /**
+   * Every model some account here listed, once: the account that lists the most first, so a plan's newer models lead.
+   * Two accounts of one CLI can be on different plans (a free Google account lists no Gemini 4), and the picker is the
+   * computer's, so one account's shorter list must not hide what another can run.
+   */
+  private keptModels(kind: ListedModelsKind): CursorModelInfo[] | undefined {
+    const lists = Object.values(this.listedBy(kind)).sort((a, b) => b.length - a.length);
+    const seen = new Set<string>();
+    const all: CursorModelInfo[] = [];
+    for (const m of lists.flat()) {
+      if (seen.has(m.id)) continue;
+      seen.add(m.id);
+      all.push(m);
+    }
+    return all.length > 0 ? all : undefined;
+  }
+
+  private listedBy(kind: ListedModelsKind): Record<string, CursorModelInfo[]> {
+    let by = this.listed[kind];
+    if (by === undefined) {
+      const kept = readSmallJson(path.join(this.opts.root, LISTED_MODELS_FILE[kind]), 64 * 1024);
+      const models = (v: unknown) =>
+        Array.isArray(v) ? v.filter((m): m is CursorModelInfo => typeof m?.id === "string") : [];
+      by = {};
+      // An earlier runner kept one list, of whichever account it looked at last: kept until an account lists again.
+      if (Array.isArray(kept)) by[""] = models(kept);
+      else if (kept && typeof kept === "object")
+        for (const [id, v] of Object.entries(kept as Record<string, unknown>)) by[id] = models(v);
+      for (const id of Object.keys(by)) if (by[id]?.length === 0) delete by[id];
+      this.listed[kind] = by;
+    }
+    return by;
+  }
+
+  private keepModels(kind: ListedModelsKind, id: string, list: CursorModelInfo[]) {
+    if (list.length === 0) return;
+    const before = this.listedBy(kind);
+    const next: Record<string, CursorModelInfo[]> = {};
+    // A removed account's models go with it; the old single list too, once an account has listed.
+    for (const [other, models] of Object.entries(before))
+      if (other !== "" && other !== id && existsSync(path.join(this.opts.root, kind, other))) next[other] = models;
+    next[id] = list;
+    if (JSON.stringify(next) === JSON.stringify(before)) return;
+    const shown = JSON.stringify(this.keptModels(kind));
+    this.listed[kind] = next;
     try {
-      writeJson(this.grokModelsFile, list);
+      writeJson(path.join(this.opts.root, LISTED_MODELS_FILE[kind]), next);
     } catch {
       // kept in memory until the next look
     }
-    this.changed();
+    if (JSON.stringify(this.keptModels(kind)) !== shown) this.changed();
   }
 
   private async lookAll(): Promise<RunnerAccountInfo[]> {
