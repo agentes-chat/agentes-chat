@@ -1104,6 +1104,8 @@ test("service files: systemd unit, launchd plist and the Windows task command", 
   expect(unit).toContain("RestartPreventExitStatus=0 2 3");
   // Restarting the runner (an update) leaves background tasks running.
   expect(unit).toContain("KillMode=process");
+  // A child killed at the unit's memory limit doesn't stop the runner, which would then never restart (exit 0).
+  expect(unit).toContain("OOMPolicy=continue");
   expect(unit).toContain('Environment="AGENTES_RUNNER_HOME=/home/me/.agentes-runner"');
   expect(unit).toContain("Description=agentes.chat runner (connected computer)");
   // The server's own computer as a user unit: the setup's simple mode (ADR 0153 §5).
