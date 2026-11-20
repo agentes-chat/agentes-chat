@@ -1,0 +1,1 @@
+ALTER TABLE "machine_accounts" ADD COLUMN "label_customized" boolean;

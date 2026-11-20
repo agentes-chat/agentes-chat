@@ -59,6 +59,7 @@ import {
   ValidationError,
 } from "../src";
 import { isDefaultAccountLabel } from "../src/machine-accounts";
+import { orgPlanUsage } from "../src/plan-usage";
 import { addMember, addUser, type Fixture, setup } from "./fixtures";
 import { pairMachine } from "./machine-fixtures";
 
@@ -113,7 +114,12 @@ async function sharedMachine() {
   return paired;
 }
 
-async function addAccount(machineId: string, id: string, kind: "claude_code" | "codex" | "opencode", over = {}) {
+async function addAccount(
+  machineId: string,
+  id: string,
+  kind: "claude_code" | "codex" | "opencode" | "antigravity",
+  over = {},
+) {
   await f.db.insert(schema.machineAccounts).values({
     id,
     orgId: f.org.id,
@@ -1146,7 +1152,13 @@ test("one login per agent where the account allows it: a key's logins share its 
     report(DESKTOP_ID, "MnOp"),
   ]);
   expect(remove).toEqual([]);
-  expect(await accountRow(DESKTOP_ID)).toMatchObject({ label: "Time", createdBy: f.owner.id, status: "active" });
+  expect(await accountRow(DESKTOP_ID)).toMatchObject({
+    label: "Time",
+    labelCustomized: true,
+    createdBy: f.owner.id,
+    status: "active",
+  });
+  expect(await signedIn(KEY)).toMatchObject({ label: "Time", named: true });
 
   // ChatGPT's like Claude's: the same ChatGPT account again is one more login, under its name.
   const chatgpt = codexRunner(machineId, "ana@example.com");
@@ -2342,7 +2354,29 @@ test("hello keeps what a new Claude sign-in for all agents can use on the comput
   expect((await executors())?.claudeLoginMethods).toBeUndefined();
 });
 
-test("a name is the automatic one only as the server gives it; any other is its owner's", () => {
+test("a legacy Gemini account can explicitly keep a name that looks automatic", async () => {
+  f = await setup();
+  const { machineId } = await ownedMachine();
+  const first = crypto.randomUUID();
+  const second = crypto.randomUUID();
+  await addAccount(machineId, first, "antigravity", { label: "Gemini PRO", email: null });
+  await addAccount(machineId, second, "antigravity", { label: "Gemini 2", email: null });
+
+  const listed = async () => (await listAiAccounts({ db: f.db }, f.owner.id, f.org.id)).accounts;
+  expect((await listed()).find((a) => a.id === first)).toMatchObject({ label: "Gemini PRO", named: false });
+  const rename = () => renameMachineAccount({ db: f.db }, f.owner.id, f.org.id, machineId, first, "Gemini PRO");
+  expect(await rename()).toMatchObject({ label: "Gemini PRO", named: true });
+  expect(await rename()).toMatchObject({ label: "Gemini PRO", named: true });
+  expect((await listed()).find((a) => a.id === first)).toMatchObject({ label: "Gemini PRO", named: true });
+  expect((await listed()).find((a) => a.id === second)).toMatchObject({ label: "Gemini 2", named: false });
+  const usage = await orgPlanUsage(f.db, f.owner.id, f.org.id);
+  expect(usage.accounts.find((a) => a.accountId === first)).toMatchObject({ label: "Gemini PRO", named: true });
+  expect(usage.accounts.find((a) => a.accountId === second)).toMatchObject({ label: "Gemini 2", named: false });
+  const audit = await f.db.select().from(schema.auditLog).where(eq(schema.auditLog.action, "account.renamed"));
+  expect(audit.map((a) => a.targetId)).toEqual([first]);
+});
+
+test("legacy automatic names follow the old naming convention", () => {
   expect(isDefaultAccountLabel("claude_code", "Claude")).toBe(true);
   expect(isDefaultAccountLabel("claude_code", "Claude 2")).toBe(true);
   // Servers before ADR 0059's 2026-10-30 amendment put the plan in it.

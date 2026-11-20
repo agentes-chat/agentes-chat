@@ -256,6 +256,21 @@ describe("IA e uso: the viewer's own accounts", () => {
       "MiniMax do Walt",
     ]);
   });
+
+  test("a Gemini name that looks automatic appears in the usage list after saving", async () => {
+    const gemini = { ...base, kind: "antigravity" as const, email: null, usedBy: [] };
+    await page([
+      { ...gemini, id: "acct_gemini", label: "Gemini PRO", named: false },
+      { ...gemini, id: "acct_gemini_other", label: "Gemini AI PRO", named: true },
+    ]);
+    const row = rows().find((item) => item.textContent?.includes("Conta sem nome"));
+    await click(within(await opened(row)).getByRole("button", { name: "Renomear" }));
+    const rename = screen().getByRole("dialog", { name: "Renomear Conta sem nome" });
+    await act(async () => fireEvent.change(within(rename).getByLabelText("Nome"), { target: { value: "Gemini PRO" } }));
+    await click(within(rename).getByRole("button", { name: "Salvar" }));
+    expect(rows().some((item) => item.textContent?.includes("Gemini PRO"))).toBe(true);
+    expect(rows().some((item) => item.textContent?.includes("Gemini AI PRO"))).toBe(true);
+  });
 });
 
 describe("IA e uso: the same account signed in again and again", () => {

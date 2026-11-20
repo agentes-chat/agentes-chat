@@ -143,7 +143,7 @@ export interface MachineAccountView {
   id: string;
   kind: AccountKind;
   label: string;
-  /** Its owner gave it its name (`isDefaultAccountLabel`): else the apps show it by its email. */
+  /** Its owner gave it its name: else the apps show it by its email. */
   named: boolean;
   /** Its owner's eyes only. */
   email: string | null;
@@ -255,6 +255,12 @@ export function isDefaultAccountLabel(kind: AccountKind, label: string, provider
   return rest.length === 0 || (rest.length === 1 && OLD_LABEL_WORDS.test(rest[0] ?? "") && label[base.length] === " ");
 }
 
+export function accountIsNamed(
+  row: Pick<MachineAccountRow, "kind" | "label" | "labelCustomized" | "provider">,
+): boolean {
+  return row.labelCustomized ?? !isDefaultAccountLabel(kindOf(row), row.label, row.provider);
+}
+
 /** The names of an owner's accounts in the organization (`exceptId`'s aside). */
 async function takenLabels(db: Executor, orgId: string, ownerId: string | null, exceptId: string) {
   const rows = await db
@@ -285,7 +291,7 @@ function accountView(
     id: row.id,
     kind: kindOf(row),
     label: row.label,
-    named: !isDefaultAccountLabel(kindOf(row), row.label, row.provider),
+    named: accountIsNamed(row),
     email: mine ? row.email : null,
     plan: row.plan,
     status: statusOf(row.status),
@@ -840,12 +846,23 @@ async function settleAccount(
   const usage = info.usage ? { usage: accountReading(row.provider, row.usage, info.usage) } : {};
   if (signingIn) {
     // A login of an account its owner already has here (one per agent) takes that account's name.
+    const same = await sameAccount(db, row, identity);
     const label =
-      (await sameAccount(db, row, identity))?.label ??
+      same?.label ??
       defaultAccountLabel(kindOf(row), await takenLabels(db, orgId, row.createdBy, row.id), row.provider);
     const [done] = await db
       .update(machineAccounts)
-      .set({ email, plan, keyHint, ...state, label, shared, ...usage, updatedAt: now })
+      .set({
+        email,
+        plan,
+        keyHint,
+        ...state,
+        label,
+        labelCustomized: same ? same.labelCustomized : false,
+        shared,
+        ...usage,
+        updatedAt: now,
+      })
       .where(
         and(eq(machineAccounts.orgId, orgId), eq(machineAccounts.id, row.id), eq(machineAccounts.status, "signing_in")),
       )
@@ -998,6 +1015,7 @@ export async function syncMachineAccounts(
           .values({
             ...candidate,
             label: same?.label ?? defaultAccountLabel(a.kind, await takenLabels(tx, orgId, owner, a.id), provider),
+            labelCustomized: same ? same.labelCustomized : false,
             email: a.email ?? null,
             plan: a.plan ?? null,
             keyHint: a.keyHint ?? null,
@@ -1604,6 +1622,7 @@ export async function beginAccountLogin(
       machineId: machine.id,
       kind,
       label: defaultAccountLabel(kind, [], provider),
+      labelCustomized: false,
       status: "signing_in",
       createdBy: userId,
       provider: plan || cliKey || enterprise ? provider : null,
@@ -1856,32 +1875,35 @@ export async function renameMachineAccount(
   if (account.createdBy !== userId) {
     throw new ForbiddenError("Only the account's owner can rename it", "account.not_owner");
   }
-  const logins = await sameLogins(deps.db, account);
-  const renamed = logins.filter((r) => r.label !== label);
-  if (renamed.length === 0) return accountViewOf(deps.db, orgId, account, userId);
-  await deps.db
-    .update(machineAccounts)
-    .set({ label, updatedAt: new Date() })
-    .where(
-      and(
-        eq(machineAccounts.orgId, orgId),
-        inArray(
-          machineAccounts.id,
-          renamed.map((r) => r.id),
+  const changed = await deps.db.transaction(async (tx) => {
+    const logins = await sameLogins(tx, account).for("update");
+    const renamed = logins.filter((r) => r.label !== label || r.labelCustomized !== true);
+    if (renamed.length === 0) return false;
+    await tx
+      .update(machineAccounts)
+      .set({ label, labelCustomized: true, updatedAt: new Date() })
+      .where(
+        and(
+          eq(machineAccounts.orgId, orgId),
+          inArray(
+            machineAccounts.id,
+            renamed.map((r) => r.id),
+          ),
         ),
-      ),
-    );
-  for (const r of renamed) {
-    await recordAudit(deps.db, {
-      orgId,
-      actor: { type: "person", id: userId },
-      action: "account.renamed",
-      target: { type: "machine_account", id: r.id },
-      details: { machineId: machine.id, from: r.label, to: label },
-    });
-  }
-  await publishAccountsChanged(deps.pubsub, orgId, machine.id);
-  return accountViewOf(deps.db, orgId, { ...account, label }, userId);
+      );
+    for (const r of renamed) {
+      await recordAudit(tx, {
+        orgId,
+        actor: { type: "person", id: userId },
+        action: "account.renamed",
+        target: { type: "machine_account", id: r.id },
+        details: { machineId: machine.id, from: r.label, to: label },
+      });
+    }
+    return true;
+  });
+  if (changed) await publishAccountsChanged(deps.pubsub, orgId, machine.id);
+  return accountViewOf(deps.db, orgId, { ...account, label, labelCustomized: true }, userId);
 }
 
 /**
