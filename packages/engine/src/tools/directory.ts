@@ -470,7 +470,7 @@ const GROUP_LABELS: Record<string, string> = {
   sandbox: "Computer and code",
   browser: "Browser",
   setup:
-    "Workspace setup (connect an AI, an app or an MCP server, invite people, create channels, propose agents, archive or delete agents; the right hand: approvals, people, any screen)",
+    "Workspace setup (connect an AI, an app or an MCP server, invite people, create channels, propose agents, archive or delete agents, open any of the app's screens for a person; the right hand: approvals, people)",
   vault: "Vault (saving contact details, changing a saved username or description)",
   github: "GitHub",
   sentry: "Sentry",
