@@ -59,6 +59,7 @@ import {
   ValidationError,
 } from "../src";
 import { isDefaultAccountLabel } from "../src/machine-accounts";
+import { orgPlanUsage } from "../src/plan-usage";
 import { addMember, addUser, type Fixture, setup } from "./fixtures";
 import { pairMachine } from "./machine-fixtures";
 
