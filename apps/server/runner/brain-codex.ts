@@ -23,6 +23,7 @@ import {
   withoutContainers,
   withoutSignIns,
 } from "./accounts";
+import { codexExecImageEvents, codexExecImages } from "./brain-codex-images";
 import { CODEX_ROUTE_OFF } from "./brain-route";
 import {
   CODEX_WINDOWS_CONFIG,
@@ -952,6 +953,9 @@ async function runCodexExec(input: CodexTurnInput, opts: CodexTurnOptions, versi
   };
   // ADR 0041: the account's folder is this turn's Codex home, and nothing else signs it in.
   const env = input.account ? accountEnv("codex", input.account.home, base) : base;
+  const imageHome =
+    !input.chat && input.folder ? envValue(env, "CODEX_HOME", platform) || codexHomeOf(input.account) : undefined;
+  const imagesBefore = imageHome ? codexExecImages(imageHome, thread) : [];
   const mapper = new CodexEventMapper({
     cwd: input.cwd,
     ...(input.model ? { model: input.model } : {}),
@@ -1059,6 +1063,11 @@ async function runCodexExec(input: CodexTurnInput, opts: CodexTurnOptions, versi
   if (refused) {
     const said = opts.redact ? opts.redact(refused) : refused;
     return fail("codex_failed", `Codex at ${launch.file} (${version}) said: ${said}. Update the Codex at that path.`);
+  }
+  const finishedThread = mapper.thread ?? thread;
+  if (mapper.completed && !mapper.failed && imageHome && input.folder && finishedThread) {
+    const existing = finishedThread === thread ? imagesBefore : [];
+    for (const event of codexExecImageEvents(imageHome, finishedThread, existing, input.folder)) opts.emit(event);
   }
   for (const event of mapper.finish({
     exitCode: exit.code,

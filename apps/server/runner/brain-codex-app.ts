@@ -25,6 +25,7 @@ import {
   codexThreadKey,
   shellScript,
 } from "./brain-codex";
+import { CODEX_IMAGES_FOLDER } from "./brain-codex-images";
 import { CODEX_WINDOWS_CONFIG, codexLaunch } from "./codex-windows";
 import { killTree } from "./exec";
 import { envValue } from "./executors";
@@ -413,8 +414,6 @@ export class CodexAppClient {
 
 // ── Notifications → brain events ─────────────────────────────────────────────
 
-/** Where an image Codex made is kept in the agent's folder, for the server to fetch. */
-export const CODEX_IMAGES_FOLDER = "generated-images";
 const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp"]);
 
 /**
