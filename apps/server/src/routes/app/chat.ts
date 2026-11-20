@@ -579,7 +579,7 @@ export function chatRoutes(deps: AppDeps) {
             .openapi({ description: "Page forwards from this time: the oldest `limit` after it." }),
           around: z.uuid().optional().openapi({
             description:
-              "The page with this top-level message in its middle (404 when it is deleted or not in this channel).",
+              "The page with this message in its middle, in the channel timeline or the selected thread (404 when it is deleted or elsewhere).",
           }),
           limit: z.coerce.number().int().min(1).max(200).optional(),
           include: z

@@ -3522,15 +3522,18 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
       // Copies, as over HTTP: each read is new objects, never the ones an earlier read returned.
       messages: async (_orgId, channelId, options = {}) => {
         const inChannel = state.messages.filter((m) => m.channelId === channelId);
-        if (options.threadId) {
+        if (options.threadId && !options.around && !options.after) {
           const root = inChannel.find((m) => m.id === options.threadId);
+          const replies = inChannel.filter(
+            (m) => m.threadId === options.threadId && (!options.before || m.createdAt < options.before),
+          );
           return structuredClone([
             ...(root ? [root] : []),
-            ...inChannel.filter((m) => m.threadId === options.threadId),
+            ...(options.limit ? replies.slice(-options.limit) : replies),
           ]);
         }
         if (options.around || options.after) log("chat.messages", channelId, options);
-        const all = inChannel.filter((m) => m.threadId === null);
+        const all = inChannel.filter((m) => m.threadId === (options.threadId ?? null));
         // Like the server: `around` is the page with the message in its middle; gone or elsewhere is a 404.
         if (options.around) {
           const at = all.findIndex((m) => m.id === options.around);

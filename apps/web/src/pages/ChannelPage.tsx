@@ -1285,34 +1285,40 @@ function ChannelView({
   // Older pages, loaded on scroll-up. Kept in the query cache, so they belong to this session: signing
   // out clears them, and they never show to whoever signs in next in the same tab.
   const olderKey = keys.olderPages(org.id, channel.id);
-  const [older, setOlder] = useState<MessageType[]>(() => qc.getQueryData<OlderPages>(olderKey)?.pages ?? []);
+  const [older, setOlder] = useState<MessageType[]>(() =>
+    thread ? [] : (qc.getQueryData<OlderPages>(olderKey)?.pages ?? []),
+  );
   const [olderState, setOlderState] = useState<"idle" | "loading" | "done">(() =>
-    qc.getQueryData<OlderPages>(olderKey)?.done ? "done" : "idle",
+    !thread && qc.getQueryData<OlderPages>(olderKey)?.done ? "done" : "idle",
   );
   // Going to a message far back shows the page around it on its own (`older`), apart from the latest page: newer
   // pages come as the person scrolls down, until they reach it.
   const [gap, setGap] = useState(false);
   const [newerLoading, setNewerLoading] = useState(false);
   const anchor = useRef<{ height: number; top: number } | null>(null);
+  const threadScope = thread ? { threadId: thread.id } : {};
+  // A thread read includes its root separately, even when its latest page starts much later.
+  const firstRecent = () =>
+    thread ? messages.data?.find((message) => message.threadId === thread.id) : messages.data?.[0];
   const loadOlder = (limit = OLDER_PAGE) => {
-    // A thread view loads its whole conversation at once.
-    if (thread || olderState !== "idle" || !messages.data) return;
-    const oldest = older[0] ?? messages.data[0];
-    if (!oldest || messages.data.length < MESSAGES_PAGE) {
+    if ((thread && older.length === 0) || olderState !== "idle" || !messages.data) return;
+    const oldest = older[0] ?? firstRecent();
+    if (!oldest || (!gap && messages.data.length < MESSAGES_PAGE)) {
       setOlderState("done");
       return;
     }
     setOlderState("loading");
     api.chat
-      .messages(org.id, channel.id, { before: oldest.createdAt, limit })
-      .then((page) => {
+      .messages(org.id, channel.id, { ...threadScope, before: oldest.createdAt, limit })
+      .then((result) => {
+        const page = thread ? result.filter((message) => message.threadId === thread.id) : result;
         // Keep what's on screen where it is: remember the distance from the bottom.
         const el = scroller.current;
         if (el) anchor.current = { height: el.scrollHeight, top: el.scrollTop };
         setOlder((prev) => {
           const known = new Set(prev.map((m) => m.id));
           const next = [...page.filter((m) => !known.has(m.id)), ...prev];
-          if (!gap) qc.setQueryData<OlderPages>(olderKey, { pages: next, done: page.length < limit });
+          if (!thread && !gap) qc.setQueryData<OlderPages>(olderKey, { pages: next, done: page.length < limit });
           return next;
         });
         setOlderState(page.length < limit ? "done" : "idle");
@@ -1321,23 +1327,25 @@ function ChannelView({
   };
   /** Shows the page around a message: joined to the latest page when they meet, apart (`gap`) when not. */
   const showAround = (page: MessageType[]) => {
-    const start = channelMessages.data?.[0]?.createdAt;
+    const start = firstRecent()?.createdAt;
     const joins = !start || (page.at(-1)?.createdAt ?? "") >= start;
-    const kept = joins && start ? page.filter((m) => m.createdAt < start) : page;
+    // The latest page may still be catching up. Keep server-confirmed rows it doesn't have, even newer ones.
+    const recentIds = new Set(messages.data?.map((message) => message.id));
+    const kept = joins ? page.filter((message) => !recentIds.has(message.id)) : page;
     setOlder(kept);
     setGap(!joins);
     setOlderState("idle");
-    qc.setQueryData<OlderPages>(olderKey, { pages: joins ? kept : [], done: false });
+    if (!thread) qc.setQueryData<OlderPages>(olderKey, { pages: joins ? kept : [], done: false });
   };
   const loadNewer = () => {
     const newest = older.at(-1);
     if (!gap || newerLoading || !newest) return;
     setNewerLoading(true);
     api.chat
-      .messages(org.id, channel.id, { after: newest.createdAt, limit: OLDER_PAGE })
+      .messages(org.id, channel.id, { ...threadScope, after: newest.createdAt, limit: OLDER_PAGE })
       .then((page) => {
         const known = new Set(older.map((m) => m.id));
-        const start = channelMessages.data?.[0]?.createdAt;
+        const start = firstRecent()?.createdAt;
         const met = page.length < OLDER_PAGE || (start !== undefined && (page.at(-1)?.createdAt ?? "") >= start);
         if (!met) {
           setOlder([...older, ...page.filter((m) => !known.has(m.id))]);
@@ -1368,15 +1376,23 @@ function ChannelView({
     }
     return lines;
   }, [threadList]);
+  const topMessages = useMemo(() => {
+    if (gap) return older;
+    const recent = channelMessages.data ?? [];
+    if (older.length === 0) return recent;
+    // Ordinary prepended pages already come in order. A jump can return rows that overlap the latest page.
+    return recent[0] && (older.at(-1)?.createdAt ?? "") >= recent[0].createdAt
+      ? mergeTimeline(older, [recent])
+      : [...older, ...recent];
+  }, [older, gap, channelMessages.data]);
   // The channel's messages: only what was said in the channel (agents asked there answer there).
   const channelList = useMemo(() => {
     if (thread) return null;
-    const top = gap ? older : [...older, ...(channelMessages.data ?? [])];
-    const hidden = hiddenByThreads(threadList, top);
+    const hidden = hiddenByThreads(threadList, topMessages);
     // My replies from the panel wait in the channel's page until sent: they belong to the thread.
-    const visible = top.filter((m) => !m.threadId && !hidden(m));
+    const visible = topMessages.filter((m) => !m.threadId && !hidden(m));
     return { visible, lines: threadLines };
-  }, [thread, older, gap, channelMessages.data, threadList, threadLines]);
+  }, [thread, topMessages, threadList, threadLines]);
   // The channel's threads as the timeline draws them (none in a thread view). Every row reads this context, so it
   // must not change with the messages: a new message or an older page would draw every row again.
   const threadsView = useMemo<ChannelThreadsView | null>(() => {
@@ -1389,8 +1405,8 @@ function ChannelView({
   }, [thread, threadList, threadLines, panel?.id]);
   // Messages that are a thread's context and still in the channel: the gutter mark.
   const contextMarkIds = useMemo(
-    () => (thread ? NO_MARKS : contextMarks(threadList, [...older, ...(channelMessages.data ?? [])], channel.id)),
-    [thread, threadList, older, channelMessages.data, channel.id],
+    () => (thread ? NO_MARKS : contextMarks(threadList, topMessages, channel.id)),
+    [thread, threadList, topMessages, channel.id],
   );
   const timeline = useMemo(() => {
     if (thread) {
@@ -1399,7 +1415,9 @@ function ChannelView({
       const mine = (channelMessages.data ?? []).filter((m) => m.local && m.threadId === thread.id);
       // A task's conversation: not its root, which stands for the task beside it (ADR 0145); a live file's the same
       // (ADR 0199).
-      const list = mergeTimeline(threadMessages.data ?? [], [mine]).filter(
+      const recent = threadMessages.data ?? [];
+      const page = gap ? recent.filter((message) => message.id === thread.id) : recent;
+      const list = mergeTimeline(older, [page, gap ? undefined : mine]).filter(
         (m) =>
           !taskConversationOf(m.meta) &&
           !fileConversationOf(m.meta) &&
@@ -1425,7 +1443,7 @@ function ChannelView({
       threadsView?.byId.get(m.id)?.state === "closed" ||
       Boolean(channelList?.lines.has(m.id));
     return ungroupAfter(items, special);
-  }, [thread, channelList, channelMessages.data, threadMessages.data, threadsView]);
+  }, [thread, channelList, channelMessages.data, threadMessages.data, threadsView, older, gap]);
 
   // The agents' blocks (one per run, from "pensando" to its final message: `chat/run-slots.ts`), at the end. They
   // change when runs start or end, never on another of a run's events.
@@ -2036,11 +2054,19 @@ function ChannelView({
   // The target whose page was asked for, and whether it came.
   const [around, setAround] = useState<{ id: string; done: boolean } | null>(null);
   const jumping = useRef(false);
+  const jumpVersion = useRef(0);
+  useEffect(
+    () => () => {
+      jumpVersion.current += 1;
+    },
+    [],
+  );
   const found = focusTarget ? timeline.some((i) => i.kind === "message" && i.message.id === focusTarget) : false;
   // biome-ignore lint/correctness/useExhaustiveDependencies: steps while the timeline grows
   useEffect(() => {
     if (focusDone || !focusTarget || !serverRead) return;
     if (found) {
+      jumpVersion.current += 1;
       setFocusDone(true);
       // A search hit's Ir para: the message is there, so the panel over it goes (the header's field keeps the words).
       if (jumping.current && !panel) setSearchOpen(false);
@@ -2065,25 +2091,32 @@ function ChannelView({
       toBottom();
       toast.show(text, "error");
     };
-    // A thread view holds all it can show; a page read around it that still doesn't show it: deleted or not visible.
-    if (thread || (around?.id === focusTarget && around.done)) {
+    // A page around the message that still can't show it: deleted or not visible in this conversation.
+    if (around?.id === focusTarget && around.done) {
       // A cached page refreshing may still bring it.
       if (!messages.isFetching) missing();
       return;
     }
     if (around?.id === focusTarget) return;
     setAround({ id: focusTarget, done: false });
+    const version = jumpVersion.current;
     api.chat
-      .messages(org.id, channel.id, { around: focusTarget, limit: FOCUS_PAGE })
+      .messages(org.id, channel.id, { ...threadScope, around: focusTarget, limit: FOCUS_PAGE })
       .then((page) => {
-        showAround(page);
+        if (version !== jumpVersion.current) return;
+        if (page.some((message) => message.id === focusTarget)) showAround(page);
         setAround({ id: focusTarget, done: true });
       })
-      .catch(missing);
+      .catch((error: unknown) => {
+        if (version === jumpVersion.current) missing(error);
+      });
   }, [found, focusDone, focusTarget, serverRead, around, messages.isFetching]);
   /** A quote was clicked: the original on screen, or paged in like `?m=`. */
   const jumpTo = (messageId: string) => {
+    jumpVersion.current += 1;
     if (highlightMessage(scroller.current, messageId)) {
+      jumping.current = false;
+      setFocusDone(true);
       stick.current = false;
       if (!panel) setSearchOpen(false);
       return;

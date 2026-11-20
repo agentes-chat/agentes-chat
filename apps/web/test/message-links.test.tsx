@@ -3,6 +3,7 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 
 setupDom();
 
+import { ApiError, THREAD_PAGE } from "@agenteschat/client";
 import { messagePath } from "@agenteschat/client/lib/message-links";
 import { act, cleanup, fireEvent } from "@testing-library/react";
 import { messageLink } from "@/components/MessageMore";
@@ -206,6 +207,66 @@ describe("a link to a message far back", () => {
     await settle(6);
     expect(row("far-999")).not.toBeNull();
     expect(row("far-2")).toBeNull();
+  });
+
+  test("opens a message returned around the link even if it is newer than the cached latest page", async () => {
+    const state = longChannel(110);
+    const api = createFakeApi(state);
+    const read = api.chat.messages;
+    api.chat.messages = async (orgId, channelId, options) => {
+      const messages = await read(orgId, channelId, options);
+      return channelId === GENERAL_ID && !options?.around ? messages.filter((m) => m.id !== "far-109") : messages;
+    };
+    await renderApp(`/org/${ORG_ID}/c/${GENERAL_ID}?m=far-109`, { api });
+    await settle(10);
+    expect(row("far-109")?.classList.contains("ac-msg--focus")).toBe(true);
+    expect(document.body.textContent).not.toContain("Essa mensagem não está disponível.");
+  });
+
+  test("a failed request from a previous link cannot interrupt the current jump", async () => {
+    const api = createFakeApi(longChannel(500));
+    const read = api.chat.messages;
+    const first = Promise.withResolvers<Awaited<ReturnType<typeof read>>>();
+    api.chat.messages = (orgId, channelId, options) =>
+      options?.around === "far-2" ? first.promise : read(orgId, channelId, options);
+    const { router } = await renderApp(`/org/${ORG_ID}/c/${GENERAL_ID}?m=far-2`, { api });
+    await settle(6);
+    await act(async () =>
+      router.navigate({
+        to: "/org/$orgId/c/$channelId",
+        params: { orgId: ORG_ID, channelId: GENERAL_ID },
+        search: { m: "far-150" },
+      }),
+    );
+    await settle(8);
+    await act(async () => first.reject(new ApiError(404, "not_found", "Message not found")));
+    await settle(8);
+    expect(row("far-150")?.classList.contains("ac-msg--focus")).toBe(true);
+    expect(document.body.textContent).not.toContain("Essa mensagem não está disponível.");
+  });
+
+  test("opens a reply older than the initial thread page and returns to the latest replies", async () => {
+    const state = withLinks("");
+    const reply = state.messages.find((m) => m.id === REPLY);
+    if (!reply) throw new Error("Missing fixture reply");
+    const start = Date.parse(reply.createdAt);
+    for (let index = 1; index <= THREAD_PAGE + 150; index++) {
+      state.messages.push({
+        ...reply,
+        id: `next-${index}`,
+        body: `Resposta ${index}`,
+        createdAt: new Date(start + index * 1000).toISOString(),
+      });
+    }
+    const api = createFakeApi(state);
+    await renderApp(`/org/${ORG_ID}/threads/${TARGET}?m=${REPLY}`, { api });
+    await settle(12);
+    expect(row(REPLY)?.classList.contains("ac-msg--focus")).toBe(true);
+    expect(row(`next-${THREAD_PAGE + 150}`)).toBeNull();
+    expect(document.body.textContent).not.toContain("Essa mensagem não está disponível.");
+    await act(async () => fireEvent.click(toLatest()));
+    await settle(6);
+    expect(row(`next-${THREAD_PAGE + 150}`)).not.toBeNull();
   });
 
   test("one that's deleted or not visible says so, without blaming the distance", async () => {
