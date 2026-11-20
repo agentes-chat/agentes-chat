@@ -1211,6 +1211,16 @@ test.if(posix)(
   },
 );
 
+test.if(posix)("a dead process's error never names the notice Claude Code goes on after as why", async () => {
+  const { turn } = setup();
+  expect((await turn(1, "NOTICED please")).final).toEqual({
+    type: "error",
+    code: "claude_failed",
+    message: "Claude Code ended without an answer (exit 3)",
+    retryable: false,
+  });
+});
+
 test.if(posix)("a process that dies mid-turn: the same turn runs again one-shot, resuming the session", async () => {
   const { m, spawns, turn } = setup();
   const r = await turn(1, "CRASH please");

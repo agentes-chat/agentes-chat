@@ -1765,9 +1765,15 @@ const errorEvent = (code: string, message: string, retryable: boolean): WireBrai
   retryable,
 });
 
+/**
+ * A notice Claude Code writes on stderr and goes on after (`[claude-code:unrecognized_model] {…}`, once per process
+ * for a model outside its own catalog, which a coding plan's are): never what made a process end.
+ */
+const CLI_NOTICE_LINE = /^\[claude-code:[\w-]+\].*$/gm;
+
 /** What a dead process's stderr says went wrong (`errorLineOf`), with the turn's secrets masked. */
 const redactedLine = (stderr: string, ctx: BrainTurnContext) => {
-  const line = errorLineOf(stderr).slice(0, 500);
+  const line = errorLineOf(stderr.replace(CLI_NOTICE_LINE, "")).slice(0, 500);
   return ctx.secrets?.redact ? ctx.secrets.redact(line) : line;
 };
 
