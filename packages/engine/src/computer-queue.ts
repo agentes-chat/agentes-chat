@@ -70,6 +70,12 @@ const rankSql = (now: number) =>
 export type RoomRank = 0 | 1 | 2;
 
 /**
+ * Which gate held a run waiting for room, kept on its wait step (`room`): another run ahead in the line, its plan
+ * sign-in at its cap, `ROOM_ASK_SPACING_MS`, or the runner's own room check (`no_slot`, free memory on Linux).
+ */
+export type RoomWaitCause = "line" | "sign_in" | "spacing" | "memory";
+
+/**
  * Runs one Claude plan sign-in thinks for at once, by default (`CLAUDE_PLAN_CONCURRENCY`). A personal plan used by
  * many sessions at once reads as automated use to its provider; past this the next run waits in its computer's line
  * for one of them to end. Long work can hold a slot for hours, so 1 would park every reply behind it.
@@ -188,7 +194,7 @@ export async function roomGate(
   machineId: string,
   place: { rank: RoomRank; since: number },
   signIn?: SignInSlot,
-): Promise<{ retryAt: number; signIn?: true } | null> {
+): Promise<{ retryAt: number; cause: RoomWaitCause } | null> {
   const now = Date.now();
   const rank = place.rank === 2 && place.since < now - ROOM_RANK_AGE_MS ? 1 : place.rank;
   const behind = await db.transaction(async (tx) => {
@@ -206,7 +212,7 @@ export async function roomGate(
         ),
       )
       .limit(1);
-    if (ahead) return { retryAt: now + ROOM_BEHIND_RETRY_MS };
+    if (ahead) return { retryAt: now + ROOM_BEHIND_RETRY_MS, cause: "line" as const };
     if (signIn) {
       if (!ownSignIn(signIn.key))
         await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`sign-in:${signIn.key}`}))`);
@@ -224,7 +230,8 @@ export async function roomGate(
             sql`${agentRuns.heartbeatAt} > ${new Date(now - RUN_STALE_MS).toISOString()}::timestamptz`,
           ),
         );
-      if (Number(taken?.n ?? 0) >= signIn.cap) return { retryAt: now + ROOM_BEHIND_RETRY_MS, signIn: true as const };
+      if (Number(taken?.n ?? 0) >= signIn.cap)
+        return { retryAt: now + ROOM_BEHIND_RETRY_MS, cause: "sign_in" as const };
     }
     if (rank > 0) {
       const [last] = await tx
@@ -239,7 +246,7 @@ export async function roomGate(
           ),
         );
       const at = Number(last?.at ?? 0);
-      if (now - at < ROOM_ASK_SPACING_MS) return { retryAt: at + ROOM_ASK_SPACING_MS };
+      if (now - at < ROOM_ASK_SPACING_MS) return { retryAt: at + ROOM_ASK_SPACING_MS, cause: "spacing" as const };
     }
     await tx
       .update(agentRuns)

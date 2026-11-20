@@ -232,6 +232,7 @@ import {
   memo,
   type ReactElement,
   type ReactNode,
+  startTransition,
   useCallback,
   useContext,
   useEffect,
@@ -1502,7 +1503,8 @@ function ChannelView({
   });
   // Otherwise every conversation opens at its last message (coming back to one included).
   // Opened at a message: not pinned to the bottom until the person scrolls down.
-  const stick = useRef(!focusMessageId && !readFrom);
+  const [opensAtEnd] = useState(() => !focusMessageId && !readFrom);
+  const stick = useRef(opensAtEnd);
   const lastScrollTop = useRef<number | null>(null);
   // A smooth scroll in progress: its intermediate positions don't mean "the person scrolled up".
   const autoScrollUntil = useRef(0);
@@ -2824,6 +2826,7 @@ function ChannelView({
                                   consultGroups={consultGroups}
                                   seenId={thread ? null : seenId}
                                   marks={contextMarkIds}
+                                  progressive={opensAtEnd}
                                 />
                                 {/* A thread's root is on screen from the channel: only its replies are loading. */}
                                 {thread && messages.isPlaceholderData && thread.replyCount > 0 && (
@@ -3287,6 +3290,9 @@ function Parts({ resetKey, children }: { resetKey: unknown; children: ReactNode 
  * meanwhile). One flat keyed list: an answer seen live is drawn under its block's key, so the final message takes a
  * drawn block's place without a remount. Memoized: a run's events don't re-render it.
  */
+/** The rows a conversation opening at its end draws first: more than a tall screen shows. */
+const FIRST_ROWS = 30;
+
 const Timeline = memo(function Timeline({
   items,
   ready,
@@ -3299,6 +3305,7 @@ const Timeline = memo(function Timeline({
   consultGroups,
   seenId = null,
   marks,
+  progressive = false,
 }: {
   items: ReturnType<typeof buildTimeline>;
   /** The first page loaded: rows from then on slide in. */
@@ -3320,8 +3327,17 @@ const Timeline = memo(function Timeline({
   seenId?: string | null;
   /** Messages that are a thread's context and still in the channel: the gutter mark. */
   marks: ReadonlySet<string>;
+  /** It opens at its end: the last rows are drawn first, the ones above them right after (`FIRST_ROWS`). */
+  progressive?: boolean;
 }) {
   const { t, i18n } = useTranslation();
+  // A conversation opening at its end shows its last rows: they are drawn first and the rest in a transition, which
+  // yields to the page, instead of a hundred rows in one task that holds the page still for most of a second.
+  const [whole, setWhole] = useState(!progressive);
+  useEffect(() => {
+    if (!whole && ready) startTransition(() => setWhole(true));
+  }, [whole, ready]);
+  const from = whole ? 0 : Math.max(0, items.length - FIRST_ROWS);
   const models = useModels();
   const modelLabels = useMemo(
     () => new Map((models.data?.models ?? []).map((m) => [m.id, m.label] as const)),
@@ -3447,6 +3463,7 @@ const Timeline = memo(function Timeline({
     );
   };
   for (const [at, item] of items.entries()) {
+    if (at < from) continue;
     const grouped = item.kind === "message" && item.grouped && !afterUnshown();
     const after = items[at + 1];
     // Where it sits in its author's run: my own rows' bubbles square the corners they share.

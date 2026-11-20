@@ -451,6 +451,7 @@ async function standingWritten(
   { notify = true }: { notify?: boolean } = {},
 ) {
   caches.standing.delete(`${orgId}:`);
+  caches.membership.deletePrefix(`${orgId}:`);
   if (seen) {
     await publishOrgEvent(deps.pubsub, {
       type: "org.broadcast",
@@ -587,7 +588,9 @@ export async function setUserBlocked(
   });
   if (!done) return null;
   const { orgIds, ...state } = done;
-  for (const orgId of orgIds)
+  for (const orgId of orgIds) {
+    caches.membership.delete(`${orgId}:${userId}`);
     await publishOrgEvent(deps.pubsub, { type: "membership.revoked", orgId, userId, quiet: true });
+  }
   return state;
 }

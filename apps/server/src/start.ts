@@ -94,6 +94,7 @@ import { createModelProviders, enableOpenRouterModels } from "@agenteschat/provi
 import { createApp } from "./app";
 import { createAuth } from "./auth";
 import { buildEngine } from "./engine";
+import { watchEventLoopLag } from "./event-loop-lag";
 import { startFreezeWatch } from "./freeze-watch";
 import { checkHumanCheckAtBoot, createHumanCheck } from "./http/human-check";
 import { createLogger, type Logger } from "./logger";
@@ -646,6 +647,7 @@ async function boot(
   log.info(worker ? "running jobs only, answering /api/health alone (SERVER_ROLE=worker)" : "listening", {
     url: `http://${config.HOST}:${config.PORT}`,
   });
+  const eventLoopLag = watchEventLoopLag(log);
   const operator = worker
     ? null
     : serveOperatorApi({
@@ -658,6 +660,7 @@ async function boot(
         hub: engine.machineHub,
         emails: adapters.email.delivers,
         humanCheck: adapters.humanCheck,
+        eventLoopLag,
         rateLimiter: adapters.rateLimiter,
         sessions: engine.sessions,
         surface: services,

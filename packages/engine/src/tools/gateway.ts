@@ -614,9 +614,14 @@ export function createToolGateway(deps: {
 
   async function allTools(ctx: ToolContext) {
     const byName = new Map<string, ToolDefinition>();
-    const rightHand = isRightHand(await getAgentCached(ctx.db, ctx.orgId, ctx.agentId));
-    for (const source of deps.sources) {
-      for (const tool of await source.tools(ctx)) {
+    // Sources are independent reads: all run at once, and the merge below keeps their order.
+    const [agent, lists] = await Promise.all([
+      getAgentCached(ctx.db, ctx.orgId, ctx.agentId),
+      Promise.all(deps.sources.map((source) => source.tools(ctx))),
+    ]);
+    const rightHand = isRightHand(agent);
+    for (const list of lists) {
+      for (const tool of list) {
         if (!TOOL_NAME.test(tool.name)) continue;
         if (rightHand && RIGHT_HAND_NOT_OFFERED.has(tool.name)) continue;
         const current = byName.get(tool.name);

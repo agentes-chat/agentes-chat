@@ -276,6 +276,7 @@ export async function updateOrgSettings(
     }
   });
   caches.orgs.delete(`${orgId}:`);
+  caches.membership.deletePrefix(`${orgId}:`);
   caches.orgs.delete(`${orgId}:agent-budget`);
   // Agents on the default budget whose runs wait for it look again now (the rest park again quietly).
   if (input.defaultAgentBudgetNanoUsd !== undefined) await resumeBudgetWaits(db, orgId, null);

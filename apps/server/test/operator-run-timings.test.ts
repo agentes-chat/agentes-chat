@@ -105,7 +105,7 @@ type Claim = {
   endedAt: string | null;
   totalMs: number;
   queries: number;
-  stages: { stage: string; ms: number; queries: number }[];
+  stages: { stage: string; ms: number; queries: number; parts?: { stage: string; ms: number; queries: number }[] }[];
   stagesCut: boolean;
   computerTurns: { warm: boolean; initMs: number | null; firstEventMs: number | null }[];
 };
@@ -593,6 +593,25 @@ test("a claim's end and a stage no code here names come through; a claim kept wi
     ["router", 1, 12],
     ["turn_end", 1, 8],
     ["claim", 2, 5],
+  ]);
+});
+
+test("a stage's steps come with it in the trace, and count in the timings as the stage's, by name", async () => {
+  const from = day(21);
+  const parts = [
+    { stage: "tools_granted", ms: 30, queries: 12 },
+    { stage: "build", ms: 200, queries: 40 },
+  ];
+  const kept = await run({
+    createdAt: new Date(from),
+    brain: "claude_code",
+    profiles: [{ stages: [{ stage: "context", ms: 260, queries: 55, parts }], total: { ms: 260, queries: 55 } }],
+  });
+  expect((await trace(kept.id)).claims[0]?.stages).toEqual([{ stage: "context", ms: 260, queries: 55, parts }]);
+  expect((await timings(windowOf(21))).stages.map((s) => [s.stage, s.count, s.medianMs])).toEqual([
+    ["context", 1, 260],
+    ["context.build", 1, 200],
+    ["context.tools_granted", 1, 30],
   ]);
 });
 
