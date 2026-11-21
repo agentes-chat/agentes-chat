@@ -61,6 +61,27 @@ const groupRows = (db: Executor, orgId: string) =>
     .where(eq(agentGroups.orgId, orgId))
     .orderBy(asc(agentGroups.position), asc(agentGroups.createdAt));
 
+/**
+ * The groups a name means, for who names one in words (the right hand's cards): the ones called exactly that, else the
+ * ones called that in any case. One is the group; none, no group has that name; more, the name can't tell them apart.
+ */
+export async function agentGroupsNamed(db: Executor, orgId: string, name: string) {
+  const wanted = name.trim();
+  const found = await db
+    .select({ id: agentGroups.id, name: agentGroups.name })
+    .from(agentGroups)
+    .where(and(eq(agentGroups.orgId, orgId), sql`lower(${agentGroups.name}) = lower(${wanted})`));
+  const exact = found.filter((g) => g.name === wanted);
+  return exact.length ? exact : found;
+}
+
+/**
+ * Holds, to the end of `tx`, every other card creating a group in this workspace: the second of two cards naming one new
+ * group then finds the first's (`agentGroupsNamed`) instead of making another.
+ */
+export const lockAgentGroupNames = (tx: Executor, orgId: string) =>
+  tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`agent-group-names:${orgId}`}))`);
+
 /** The workspace's groups with their agents (archived ones left out). No permission check. */
 export async function agentGroupViews(db: Executor, orgId: string): Promise<AgentGroupView[]> {
   const groups = await groupRows(db, orgId);

@@ -2595,7 +2595,8 @@ export type ProposalSettingField =
  * `channel_remove` / `reply_mode` its seat in `channelId` (null: not in it, else whether it answers without a
  * mention); `skill` whether it has the skill in `skillId` on (its name in `label.to`); `name` its name; `look`
  * `{ color, eyes, accessory }`; `reports_to` an agent id or null (Responde a); `group` its department's name or
- * null; `archive` true. `label`: the server's names for ids.
+ * null (`newGroup`: no department has that name, applying the card creates it); `archive` true. `label`: the server's
+ * names for ids.
  */
 export interface ProposalSettingLine {
   field: ProposalSettingField;
@@ -2604,6 +2605,7 @@ export interface ProposalSettingLine {
   channelId?: string;
   skillId?: string;
   label?: { from?: string; to?: string };
+  newGroup?: boolean;
 }
 
 export interface Proposal {

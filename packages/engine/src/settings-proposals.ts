@@ -1,7 +1,7 @@
 import type { PubSub } from "@agenteschat/adapters";
 import { and, type Database, type Executor, eq, isNull, schema } from "@agenteschat/db";
 import { accessInputOf, replaceableGrants, setAgentAccess } from "./access";
-import { moveAgentToGroup } from "./agent-groups";
+import { agentGroupsNamed, createAgentGroup, lockAgentGroupNames, moveAgentToGroup } from "./agent-groups";
 import { type Agent, archiveAgent, getAgent, unarchiveAgent, updateAgent, validateAgentFields } from "./agents";
 import { setAgentAppearance, validateAppearance } from "./appearance";
 import { agentEditorIds, agentManagerIds, audienceOf, editsAgent, managesAgent, setAgentAudience } from "./audience";
@@ -155,15 +155,6 @@ async function departmentOf(db: Executor, agent: Agent) {
   return row?.name ?? null;
 }
 
-/** Department names aren't unique: a name two of them share is refused, never resolved to one of them. */
-function departmentsNamed(db: Executor, orgId: string, name: string) {
-  return db
-    .select({ id: agentGroups.id })
-    .from(agentGroups)
-    .where(and(eq(agentGroups.orgId, orgId), eq(agentGroups.name, name)))
-    .limit(2);
-}
-
 async function skillOn(db: Executor, agent: Agent, skillId: string) {
   if (!skillId) return null;
   const [row] = await db
@@ -188,7 +179,7 @@ async function setValue(
   actorId: string,
   orgId: string,
   agentId: string,
-  line: Pick<ReceiptLine, "field" | "channelId" | "skillId">,
+  line: Pick<ReceiptLine, "field" | "channelId" | "skillId" | "to" | "newGroup">,
   value: unknown,
 ) {
   const { db, pubsub } = deps;
@@ -233,15 +224,22 @@ async function setValue(
       return void (await setReportsTo(deps, actorId, orgId, [
         { agentId, reportsToAgentId: typeof value === "string" ? value : null },
       ]));
-    // A department: the editor resolves the name the card holds, and checks who may move an agent (ADR 0083).
+    // A department: the editors resolve the name the card holds, and check who may create one and move the agent, as
+    // on the team screen (ADR 0083). A name two departments share is refused, never resolved to one of them.
     case "group": {
       const name = typeof value === "string" && value.trim() ? value.trim() : null;
-      const named = name ? await departmentsNamed(db, orgId, name) : [];
-      if (name && named.length === 0) throw new NotFoundError("That department is gone", "agent_group.not_found");
+      if (!name) return void (await moveAgentToGroup(deps, actorId, orgId, agentId, { groupId: null }));
+      // Only a line that said so creates it, and only going to it (apply, Redo): Undo never makes a department.
+      const creates = line.newGroup === true && value === line.to;
+      if (creates) await lockAgentGroupNames(db, orgId);
+      const named = await agentGroupsNamed(db, orgId, name);
       if (named.length > 1)
-        throw new ValidationError(`Two departments are called ${name}`, "agent_group.ambiguous", { name: name ?? "" });
+        throw new ValidationError(`Two departments are called ${name}`, "agent_group.ambiguous", { name });
       const [group] = named;
-      return void (await moveAgentToGroup(deps, actorId, orgId, agentId, { groupId: group?.id ?? null }));
+      if (group) return void (await moveAgentToGroup(deps, actorId, orgId, agentId, { groupId: group.id }));
+      if (!creates) throw new NotFoundError("That department is gone", "agent_group.not_found");
+      // Created with the agent in it: `createAgentGroup` checks `manage_agents` and that the clicker manages the agent.
+      return void (await createAgentGroup(deps, actorId, orgId, { name, agentIds: [agentId] }));
     }
     case "model": {
       const agent = await getAgent(db, orgId, agentId);
@@ -442,7 +440,10 @@ export async function settingLines(
       w.field === "reports_to" && typeof from === "string"
         ? { ...w.label, from: (await getAgent(db, orgId, from))?.name }
         : w.label;
-    lines.push({ ...w, to, from, ...(label ? { label } : {}) });
+    // A department no one has made yet: the card says applying it creates it (ADR 0083 amendment of 2026-11-21).
+    const newGroup =
+      w.field === "group" && typeof to === "string" && (await agentGroupsNamed(db, orgId, to)).length === 0;
+    lines.push({ ...w, to, from, ...(label ? { label } : {}), ...(newGroup ? { newGroup } : {}) });
   }
   return { lines, skipped };
 }
@@ -507,9 +508,10 @@ async function refusal(db: Database, orgId: string, requesterId: string, agent: 
       if (w.to === null) return null;
       if (typeof w.to !== "string" || !w.to.trim()) return "say which department, or none.";
       const name = w.to.trim();
-      const named = await departmentsNamed(db, orgId, name);
-      if (named.length > 1) return `two departments are called "${name}": ask the person to rename one of them first.`;
-      return named.length ? null : `there is no department called "${name}" here.`;
+      // A name no department has is a new one, which the card creates.
+      return (await agentGroupsNamed(db, orgId, name)).length > 1
+        ? `two departments are called "${name}": ask the person to rename one of them first.`
+        : null;
     }
     default: {
       const [channel] = await db
