@@ -29,6 +29,7 @@ import {
   type ModelResult,
   type ModelUsage,
   type PartialUsage,
+  PDF_MEDIA_TYPE,
   ProviderError,
   promptChars,
   type StopReason,
@@ -344,6 +345,7 @@ interface Chunk {
 type Message =
   | { role: "system"; content: { type: "text"; text: string; cache_control?: { type: "ephemeral"; ttl?: "1h" } }[] }
   | { role: "user"; content: string }
+  | { role: "user"; content: { type: "image_url"; image_url: { url: string } }[] }
   | { role: "tool"; tool_call_id: string; content: string }
   | {
       role: "assistant";
@@ -371,7 +373,27 @@ export function reasoningFor(
   return best ? { effort: best } : undefined;
 }
 
-function toMessages(request: ModelRequest, claude: boolean): Message[] {
+/** What a tool result's words say to an endpoint that reads pictures: the pictures themselves ride beside them. */
+function toolResultText(block: Extract<ContentBlock, { type: "tool_result" }>, model?: string): string {
+  const text = block.isError ? `ERROR: ${block.content}` : block.content;
+  const pdf = (block.images ?? []).some((i) => i.mediaType === PDF_MEDIA_TYPE);
+  if (!pdf) return text;
+  const ai = model ? `this agent's AI (${model})` : "this agent's AI";
+  return `${text}\n[The PDF is not shown to you: ${ai} reads pictures through this connection, not PDFs. Tell the person exactly that, and that an AI that reads PDFs (Claude, GPT or Gemini), picked in this agent's settings, would see it. Never say the file came empty.]`;
+}
+
+/** Whether the endpoint's 400 refuses pictures ("Image input is not enabled for this model", Mistral's words). */
+function imageRefusal(error: unknown): boolean {
+  if (!(error instanceof OpenAI.APIError) || error.status !== 400) return false;
+  return /image input is not enabled|images? (?:are|is) not (?:supported|enabled)|does(?:n't| not) (?:accept|support) imag/i.test(
+    error.message,
+  );
+}
+
+/** The endpoints that refused pictures, per `${baseURL}|${model}`: learned once, so only the first turn pays for it. */
+const noImageModels = new Set<string>();
+
+function toMessages(request: ModelRequest, claude: boolean, images = false): Message[] {
   const blocks = typeof request.system === "string" ? [{ text: request.system, cache: true }] : request.system;
   const system = blocks
     .filter((b) => b.text.length > 0)
@@ -386,8 +408,9 @@ function toMessages(request: ModelRequest, claude: boolean): Message[] {
         : {}),
     }));
   const out: Message[] = system.length > 0 ? [{ role: "system", content: system }] : [];
-  // ponytail: images left out for every model; send them once the catalog knows which OpenRouter models read images.
-  for (const m of withoutImages(request.messages, request.model)) {
+  // An endpoint that reads pictures gets them; every other one gets the note saying why it doesn't (OpenRouter's own
+  // models stay text-only here until the catalog knows which of them read pictures).
+  for (const m of images ? request.messages : withoutImages(request.messages, request.model)) {
     const parts: ContentBlock[] = typeof m.content === "string" ? [{ type: "text", text: m.content }] : m.content;
     const text = parts.flatMap((b) => (b.type === "text" && b.text ? [b.text] : [])).join("\n\n");
     if (m.role === "assistant") {
@@ -409,15 +432,27 @@ function toMessages(request: ModelRequest, claude: boolean): Message[] {
       continue;
     }
     for (const b of parts) {
-      if (b.type === "tool_result")
-        out.push({ role: "tool", tool_call_id: b.toolUseId, content: b.isError ? `ERROR: ${b.content}` : b.content });
+      if (b.type !== "tool_result") continue;
+      const pictures = images ? (b.images ?? []).filter((i) => i.mediaType !== PDF_MEDIA_TYPE) : [];
+      const words = images ? toolResultText(b, request.model) : b.isError ? `ERROR: ${b.content}` : b.content;
+      out.push({ role: "tool", tool_call_id: b.toolUseId, content: words });
+      // Chat Completions gives a tool's answer words only: its pictures follow in a message of their own, which is how
+      // a compatible endpoint that takes them sees what the tool returned (Mistral reads them there, 2026-11-19).
+      if (pictures.length > 0)
+        out.push({
+          role: "user",
+          content: pictures.map((i) => ({
+            type: "image_url" as const,
+            image_url: { url: `data:${i.mediaType};base64,${i.data}` },
+          })),
+        });
     }
     if (text) out.push({ role: "user", content: text });
   }
   return out;
 }
 
-function toBody(request: ModelRequest, compatible: boolean) {
+function toBody(request: ModelRequest, compatible: boolean, images = false) {
   const claude = !compatible && isClaude(request.model);
   const reasoning = compatible ? undefined : reasoningFor(request.effort, modelInfo(request.model));
   // A workspace endpoint (#432): Chat Completions' own `reasoning_effort`, which OpenAI, vLLM, LiteLLM and most gateways
@@ -425,7 +460,7 @@ function toBody(request: ModelRequest, compatible: boolean) {
   const reasoningEffort = compatible && request.effort && request.effort !== "none" ? request.effort : undefined;
   return {
     model: request.model,
-    messages: toMessages(request, claude),
+    messages: toMessages(request, claude, images),
     max_tokens: request.maxTokens,
     stream: true as const,
     ...(request.tools && request.tools.length > 0
@@ -574,10 +609,26 @@ export function createOpenRouterProvider(
           maxRetries: options.maxRetries ?? 2,
           fetch: options.fetch,
         });
-        const stream = await client.chat.completions.create(
-          toBody(request, compatible !== undefined) as unknown as ChatCompletionCreateParamsStreaming,
-          { signal: request.signal },
-        );
+        // Pictures go to a compatible endpoint until one refuses them; the refusal is remembered, so only a first
+        // turn pays for finding out, and the text-only note says why the rest of them saw nothing.
+        const imageKey = `${compatible?.baseURL ?? ""}|${request.model}`;
+        let images = compatible !== undefined && !noImageModels.has(imageKey);
+        const open = (payload: Record<string, unknown>) =>
+          client.chat.completions.create(payload as unknown as ChatCompletionCreateParamsStreaming, {
+            signal: request.signal,
+          });
+        let body = toBody(request, compatible !== undefined, images) as unknown as Record<string, unknown>;
+        let stream: Awaited<ReturnType<typeof open>>;
+        try {
+          stream = await open(body);
+        } catch (error) {
+          // A 400 comes before the stream starts, so nothing was said yet: the same turn goes again without them.
+          if (!images || !imageRefusal(error)) throw error;
+          noImageModels.add(imageKey);
+          images = false;
+          body = toBody(request, compatible !== undefined, false) as unknown as Record<string, unknown>;
+          stream = await open(body);
+        }
         for await (const raw of stream) {
           const chunk = raw as unknown as Chunk;
           if (typeof chunk.model === "string" && chunk.model) model = chunk.model;
@@ -654,7 +705,8 @@ export function createOpenRouterProvider(
                 cacheWriteTokens: 0,
               },
           ...(cost !== undefined ? { costNanoUsd: cost } : {}),
-          ...(hasToolImages(request.messages) ? { imagesLeftOut: true as const } : {}),
+          // Only when they were: an endpoint that took the pictures left nothing out.
+          ...(hasToolImages(request.messages) && !images ? { imagesLeftOut: true as const } : {}),
         };
       } catch (error) {
         const mapped = request.signal?.aborted
