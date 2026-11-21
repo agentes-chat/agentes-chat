@@ -7,7 +7,16 @@ import type { CommandProfile } from "@agenteschat/adapters/command-policy";
 import type { AgentScope, BrainSteerReply } from "@agenteschat/adapters/machine-protocol";
 import { isAccountId } from "@agenteschat/adapters/machine-protocol";
 import { redactSecrets } from "@agenteschat/adapters/secret-box";
-import { ACCOUNT_MISSING_MESSAGE, accountEnv, opencodeKeyOf, withoutSignIns } from "./accounts";
+import {
+  ACCOUNT_MISSING_MESSAGE,
+  ACCOUNT_SIGNED_OUT,
+  accountEnv,
+  accountSignIn,
+  opencodeKeyOf,
+  type AccountFolders,
+  type AccountGrant,
+  withoutSignIns,
+} from "./accounts";
 import { ACP_METHOD_NOT_FOUND, ACP_PROTOCOL_VERSION, AcpConnection, AcpError } from "./acp";
 import {
   CODEX_TOOL_OUTPUT_MAX,
@@ -877,7 +886,8 @@ export interface OpencodeBrainContext {
   sessions?: CodexThreads;
   bin?: string;
   grants?: string[];
-  accounts?: { accountDir(kind: "opencode", id: string): string | null };
+  accounts?: AccountFolders;
+  grant?: AccountGrant;
   spawn?: Spawn;
 }
 
@@ -919,8 +929,12 @@ export async function handleOpencodeBrainTurn(
   const accountId: unknown = req.account;
   if (accountId !== undefined && accountId !== null && accountId !== "") {
     if (!isAccountId(accountId)) throw new RunnerError("bad_request", "Invalid account id");
-    const home = ctx.accounts?.accountDir("opencode", accountId);
-    if (!home) {
+    const signIn = await accountSignIn(ctx.accounts, "opencode", accountId, ctx.grant);
+    if (signIn === "signed_out") {
+      scope.emit({ type: "error", code: "not_logged_in", message: ACCOUNT_SIGNED_OUT, retryable: true });
+      return;
+    }
+    if (signIn === "missing") {
       scope.emit({
         type: "error",
         code: "account_missing",
@@ -929,8 +943,8 @@ export async function handleOpencodeBrainTurn(
       });
       return;
     }
-    const key = await opencodeKeyOf(home);
-    account = { id: accountId, home, ...(key ? { key } : {}) };
+    const key = signIn.cliKey?.key ?? (await opencodeKeyOf(signIn.home));
+    account = { id: accountId, home: signIn.home, ...(key ? { key } : {}) };
   }
   const secrets = chat ? null : await agentSecrets(ctx.secretsDir, req.agent);
   const file = opencodeSessionsFile(ctx.runnerHome);
