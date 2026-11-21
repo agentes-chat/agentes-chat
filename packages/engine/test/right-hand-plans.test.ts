@@ -98,6 +98,34 @@ async function world() {
 
 const codeOf = (p: Promise<unknown>) => p.then(() => null).catch((e: { code?: string }) => e.code);
 
+test("Lodi's AI lists the plans that serve everyone on every computer, not only the one it would sign in on", async () => {
+  const { fx, deps, bia, caio, lodi } = await world();
+  const id = (await lodi()).id;
+  // A newer computer (the server's own runner, say) with Caio's plan for everyone.
+  const server = await pairMachine({ db: fx.db, pubsub: fx.pubsub }, caio.id, fx.org.id, {
+    name: "Server",
+    protocol: ACCOUNTS_PROTOCOL,
+    exec: true,
+  });
+  const ON_SERVER = "0193dddd-0000-4000-8000-0000000000c2";
+  await fx.db.insert(schema.machineAccounts).values({
+    id: ON_SERVER,
+    orgId: fx.org.id,
+    machineId: server.machineId,
+    kind: "codex",
+    label: "server",
+    status: "active",
+    createdBy: caio.id,
+    shared: true,
+  });
+  const ids = async (userId: string, scope?: string) =>
+    (await getAgentBrain(deps, userId, fx.org.id, id, scope)).accounts.map((a) => a.id).sort();
+  // The workspace's AI, set by the owner, whose oldest computer is the Mac.
+  expect(await ids(fx.owner.id)).toEqual([ANAS, CAIOS, ON_SERVER].sort());
+  // Bia's own AI: she connected no computer, and still sees every plan that serves her.
+  expect(await ids(bia.id, "mine")).toEqual([ANAS, CAIOS, ON_SERVER].sort());
+});
+
 test("Lodi takes a Claude plan signed in as an account, never a computer's own sign-in, and stays on no computer", async () => {
   const { fx, deps, machineId, caio, lodi } = await world();
   const id = (await lodi()).id;

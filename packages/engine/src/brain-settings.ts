@@ -555,20 +555,35 @@ async function brainAccounts(
   agent: Pick<Agent, "ownerUserId" | "brainAccountId" | "builtin">,
   machine: Pick<MachineRow, "id" | "protocol" | "pairedByUserId" | "kind"> | null,
 ): Promise<BrainAccounts> {
-  if (!machine) return NO_ACCOUNTS;
+  const rightHand = isRightHand(agent);
+  if (!machine && !rightHand) return NO_ACCOUNTS;
+  // The right hand is on no computer (ADR 0137 §1): its plans are on every one, and picking one picks its computer
+  // (`settingsAgent`). Any other agent's are its own computer's.
+  const places = machine && !rightHand ? [machine.id] : await liveMachineIds(db, orgId);
+  const listed = (await Promise.all(places.map((id) => listMachineAccounts({ db }, orgId, id, userId)))).flat();
+  const accounts = listed.filter(
+    (a) =>
+      (a.ownerId !== null && a.serves === "everyone") ||
+      (agent.ownerUserId !== null && a.ownerId === agent.ownerUserId) ||
+      a.id === agent.brainAccountId,
+  );
+  if (!machine) return { ...NO_ACCOUNTS, accounts };
   const supported = machine.protocol >= ACCOUNTS_PROTOCOL;
-  const accounts = await listMachineAccounts({ db }, orgId, machine.id, userId);
   return {
-    accounts: accounts.filter(
-      (a) =>
-        (a.ownerId !== null && a.serves === "everyone") ||
-        (agent.ownerUserId !== null && a.ownerId === agent.ownerUserId) ||
-        a.id === agent.brainAccountId,
-    ),
+    accounts,
     canManageAccounts: supported && agent.ownerUserId === userId && mayAddAccounts(machine, userId),
     accountsSupported: supported,
   };
 }
+
+const liveMachineIds = async (db: Database, orgId: string) =>
+  (
+    await db
+      .select({ id: schema.machines.id })
+      .from(schema.machines)
+      .where(and(eq(schema.machines.orgId, orgId), isNull(schema.machines.deletedAt)))
+      .orderBy(schema.machines.createdAt)
+  ).map((m) => m.id);
 
 interface BrainDeps {
   db: Database;
