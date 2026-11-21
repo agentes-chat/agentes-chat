@@ -126,10 +126,19 @@ export function TimeGrid({
     const drawn = new Map<string, number>();
     for (const el of scroller.current?.querySelectorAll<HTMLElement>("[data-measure]") ?? [])
       if (el.offsetHeight > 0) drawn.set(el.dataset.measure ?? "", el.offsetHeight);
-    const moved =
-      drawn.size !== heights.size || [...drawn].some(([key, h]) => Math.abs((heights.get(key) ?? 0) - h) > 0.5);
-    if (moved) setHeights(drawn);
+    // Heights only grow while the same days show: a block that grew moves what starts under it beside it, which
+    // narrows it and can make it taller or shorter again, so following every change could flip forever (React #185).
+    const next = new Map(heights);
+    let moved = false;
+    for (const [key, h] of drawn)
+      if (h - (heights.get(key) ?? 0) > 0.5) {
+        next.set(key, h);
+        moved = true;
+      }
+    if (moved) setHeights(next);
   });
+  // biome-ignore lint/correctness/useExhaustiveDependencies: start over for another set of days
+  useLayoutEffect(() => setHeights((h) => (h.size ? new Map() : h)), [daysKey]);
 
   const colAt = (clientX: number, clientY: number) => {
     const hit = typeof document.elementFromPoint === "function" ? document.elementFromPoint(clientX, clientY) : null;

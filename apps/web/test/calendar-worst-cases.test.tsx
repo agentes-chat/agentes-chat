@@ -275,6 +275,56 @@ describe("Calendário at its worst", () => {
     }
   });
 
+  /** Stands in for a layout engine's height of the stacks of runs; the rest measures 0, as in happy-dom. */
+  const stackHeights = async (height: (stack: HTMLElement) => number, run: () => Promise<void>) => {
+    const was = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "offsetHeight");
+    Object.defineProperty(HTMLElement.prototype, "offsetHeight", {
+      configurable: true,
+      get(this: HTMLElement) {
+        return this.dataset.measure?.startsWith("runs-") ? height(this) : 0;
+      },
+    });
+    try {
+      await run();
+    } finally {
+      if (was) Object.defineProperty(HTMLElement.prototype, "offsetHeight", was);
+      else delete (HTMLElement.prototype as { offsetHeight?: number }).offsetHeight;
+    }
+  };
+
+  test("a height that flips as the blocks move settles at its tallest instead of re-measuring forever (React #185)", async () => {
+    // Alone the stack is drawn tall enough to reach the meeting, which then goes beside it; beside it, it is drawn
+    // short enough to leave the meeting under it again: each layout measures the other one.
+    await stackHeights(
+      (stack) => (stack.style.getPropertyValue("--cols") === "1" ? 120 : 30),
+      async () => {
+        await go();
+        const daily = within(col(0)).getByRole("button", { name: "Daily de produto, 10:00–11:00" });
+        expect(daily.style.getPropertyValue("--cols")).toBe("2");
+      },
+    );
+  });
+
+  test("another set of days measures again: a height kept from the last week doesn't hold this one's layout", async () => {
+    let tall = true;
+    await stackHeights(
+      () => (tall ? 120 : 0),
+      async () => {
+        await go();
+        const daily = () => within(col(0)).getByRole("button", { name: "Daily de produto, 10:00–11:00" });
+        expect(daily().style.getPropertyValue("--cols")).toBe("2");
+        // The name now fits on a line; the next week and back to this one start the heights over.
+        tall = false;
+        for (let i = 0; i < 7; i++) await act(async () => fireEvent.keyDown(document.body, { key: "ArrowRight" }));
+        await settle(3);
+        expect(col(0)).toBeNull();
+        await act(async () => fireEvent.keyDown(document.body, { key: "t" }));
+        await settle(3);
+        expect(daily().style.getPropertyValue("--cols")).toBe("1");
+      },
+    );
+  });
+
   test("agenda: every day's rows, a reminder at 23:50 among them", async () => {
     await go("Agenda");
     expect(document.querySelector(".cal-agenda")).not.toBeNull();
