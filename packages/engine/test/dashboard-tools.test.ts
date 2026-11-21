@@ -4,6 +4,7 @@ import { type Database, eq, schema, sql } from "@agenteschat/db";
 import { type ModelRequest, systemText } from "@agenteschat/providers";
 import type { FakeReply } from "@agenteschat/providers/testing";
 import {
+  createAgent,
   createDashboard,
   createDashboardToolSource,
   type DashboardDeps,
@@ -53,6 +54,7 @@ async function setupAgent(calls: (req: ModelRequest) => Call[], results: string[
 
 const dash = (): DashboardDeps => ({ db: f.db, pubsub: f.pubsub, context: f.context });
 const isRoutineRun = (req: ModelRequest) => systemText(req.system ?? "").includes("This is a routine run");
+const isWidgetRun = (req: ModelRequest) => systemText(req.system ?? "").includes("This is a widget update");
 
 async function ask(body: string, userId = f.owner.id) {
   await postPersonMessage({ db: f.db, pubsub: f.pubsub }, userId, f.org.id, f.general.id, { body: `@dev ${body}` });
@@ -487,5 +489,132 @@ describe("share_dashboard and list_dashboards", () => {
     expect(board).toMatchObject({ audience: "private" });
     expect(board?.proposal).toMatchObject({ audience: "workspace" });
     expect((await notificationsOf(f, "dashboard_proposal")).map((n) => n.userId)).toEqual([f.owner.id]);
+  });
+});
+
+describe("change_widget and remove_widget", () => {
+  const SALES = { title: "Vendas hoje", prompt: "Quanto vendemos hoje", schedule: "day", data: KPI };
+  const ORDERS = { title: "Pedidos abertos", prompt: "Pedidos ainda abertos", schedule: "manual", data: KPI };
+  const changeRuns = () =>
+    f.db
+      .select()
+      .from(schema.routineRuns)
+      .then((rows) => rows.filter((r) => (r.event as { type?: string } | null)?.type === "widget.change"));
+
+  test("list_dashboards names each widget by id; change_widget asks its own run, another agent's is refused", async () => {
+    let step = "";
+    let mine = "";
+    let theirs = "";
+    const results = await setupAgent((req) => {
+      if (isWidgetRun(req)) return [];
+      if (step === "create") {
+        return [
+          { name: "create_widget", input: SALES },
+          { name: "create_widget", input: ORDERS },
+        ];
+      }
+      if (step === "list") return [{ name: "list_dashboards", input: {} }];
+      if (step === "change") {
+        return [{ name: "change_widget", input: { widget_id: mine, change: "Mostre em reais, sem centavos" } }];
+      }
+      if (step === "theirs") return [{ name: "change_widget", input: { widget_id: theirs, change: "Outro título" } }];
+      return [];
+    });
+    step = "create";
+    await ask("acompanha as vendas e os pedidos na minha Home");
+    const [sales, orders] = await widgets();
+    mine = sales?.id ?? "";
+    theirs = orders?.id ?? "";
+    const other = await createAgent(
+      f.db,
+      f.owner.id,
+      f.org.id,
+      { name: "Ops", handle: "ops", role: "Operations", instructions: "", credentialId: f.credential.id },
+      { model: "claude-sonnet-5-5" },
+    );
+    await f.db.update(schema.dashboardWidgets).set({ agentId: other.id }).where(eq(schema.dashboardWidgets.id, theirs));
+
+    step = "list";
+    await ask("o que tem na minha Home?");
+    expect(results.at(-1)).toContain(`Vendas hoje [${mine}]`);
+    expect(results.at(-1)).toContain(`Pedidos abertos [${theirs}] (only when someone asks, another agent's)`);
+
+    step = "change";
+    await ask("o widget de vendas: sem centavos");
+    expect(results.at(-1)).toContain("Asked: your update run redoes «Vendas hoje»");
+    const [asked] = await changeRuns();
+    expect(asked?.event).toMatchObject({ text: "Mostre em reais, sem centavos", byUserId: f.owner.id });
+    // The same widget, changed in place: no second one.
+    expect(await widgets()).toHaveLength(2);
+
+    step = "theirs";
+    await ask("muda o título dos pedidos");
+    expect(results.at(-1)).toContain("another agent's widget");
+    expect(await changeRuns()).toHaveLength(1);
+  });
+
+  test("with no AI for its updates, the change isn't kept, and the reply says to ask again once there is one", async () => {
+    let step = "";
+    let target = "";
+    const results = await setupAgent(
+      (req) => {
+        if (isWidgetRun(req)) return [];
+        if (step === "create") return [{ name: "create_widget", input: SALES }];
+        if (step === "change") return [{ name: "change_widget", input: { widget_id: target, change: "Sem centavos" } }];
+        return [];
+      },
+      [],
+      // The chat thinks on its key; where an update looks, there's none.
+      { gateway: { hasModelCredential: async () => false } },
+    );
+    step = "create";
+    await ask("acompanha as vendas na minha Home");
+    target = (await widgets())[0]?.id ?? "";
+    step = "change";
+    await ask("o widget de vendas: sem centavos");
+    expect(results.at(-1)).toContain("The change wasn't kept");
+    expect(results.at(-1)).toContain("Tell ana to connect one on your page");
+    expect(await changeRuns()).toHaveLength(0);
+  });
+
+  test("remove_widget takes its own widget off when the person asks; a routine's run neither removes nor changes", async () => {
+    let step = "";
+    let target = "";
+    const results = await setupAgent((req) => {
+      if (isWidgetRun(req)) return [];
+      if (isRoutineRun(req)) {
+        return [
+          { name: "change_widget", input: { widget_id: target, change: "Sem centavos" } },
+          { name: "remove_widget", input: { widget_id: target } },
+        ];
+      }
+      if (step === "create") return [{ name: "create_widget", input: SALES }];
+      if (step === "remove") return [{ name: "remove_widget", input: { widget_id: target } }];
+      return [];
+    });
+    step = "create";
+    await ask("acompanha as vendas na minha Home");
+    const [sales] = await widgets();
+    target = sales?.id ?? "";
+
+    const routine = await channelRoutine(f, { prompt: "Arrume a Home." });
+    await runRoutineNow(routineDeps(f), f.owner.id, f.org.id, routine.id);
+    await drainOutbox(f.db, f.handlers);
+    // Both refused, change_widget and remove_widget alike.
+    expect(results.at(-1)?.split("Nobody asked for this in a conversation")).toHaveLength(3);
+    expect(await widgets()).toHaveLength(1);
+    expect(await changeRuns()).toHaveLength(0);
+
+    step = "remove";
+    await ask("apaga o widget de vendas, não preciso mais");
+    expect(results.at(-1)).toContain("Removed «Vendas hoje» from ana's Home");
+    expect(await widgets()).toHaveLength(0);
+    // Its routine went with it.
+    const [its] = await f.db
+      .select()
+      .from(schema.routines)
+      .where(eq(schema.routines.id, sales?.routineId ?? ""));
+    expect(its).toMatchObject({ active: false, nextRunAt: null });
+    expect(its?.deletedAt).not.toBeNull();
   });
 });

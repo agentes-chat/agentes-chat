@@ -14414,6 +14414,8 @@
       "share_dashboard": "Dashboard delen",
       "create_widget": "Widget maken",
       "update_widget": "Widget bijwerken",
+      "change_widget": "Wijziging van widget vragen",
+      "remove_widget": "Widget verwijderen",
       "load_skill": "Skill openen",
       "read_skill_file": "Skillbestand lezen",
       "update_skill": "Skill bijwerken",

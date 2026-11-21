@@ -35331,6 +35331,12 @@
   "toolNames.label.update_widget": {
     "value": "Change widget"
   },
+  "toolNames.label.change_widget": {
+    "value": "Ask a widget for a change"
+  },
+  "toolNames.label.remove_widget": {
+    "value": "Remove widget"
+  },
   "toolNames.label.load_skill": {
     "value": "Open skill"
   },

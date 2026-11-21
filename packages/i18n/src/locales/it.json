@@ -14870,6 +14870,8 @@
       "share_dashboard": "Condividi dashboard",
       "create_widget": "Crea widget",
       "update_widget": "Modifica widget",
+      "change_widget": "Chiedi una modifica al widget",
+      "remove_widget": "Rimuovi widget",
       "load_skill": "Apri skill",
       "read_skill_file": "Leggi file della skill",
       "update_skill": "Modifica skill",
