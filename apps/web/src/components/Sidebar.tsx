@@ -412,9 +412,9 @@ export function Sidebar() {
   // …and the unread and latest ones as soon as the workspace opens.
   usePrefetchRecent(orgId);
   // The right hand (ADR 0137): the first row of AGENTES; outside its audience, none.
-  const rightHand = dir.agents.find((a) => isRightHand(a) && a.canTalk !== false);
+  const workspaceRightHand = dir.agents.find((a) => isRightHand(a) && a.canTalk !== false);
   const dmOf = new Map((dms.data ?? []).map((d) => [d.with.id, d]));
-  const rightHandDm = rightHand ? dmOf.get(rightHand.id) : undefined;
+  const rightHandDm = workspaceRightHand ? dmOf.get(workspaceRightHand.id) : undefined;
   // New agent: one dialog for every way in (ADR 0164); outside the shell (a test's page), the full form.
   const newAgentDialog = useNewAgent();
   const newAgent = () =>
@@ -468,19 +468,29 @@ export function Sidebar() {
   const manages = can(org, "manage_agents");
   const team = dir.agents.filter((a) => !isRightHand(a));
   const shownAgents = team.filter((a) => canTalk(a) || (manages && view.showAllAgents && opensDm(a)));
+  const filterScope = `${me.user.id}:${orgId}`;
+  const [workingFilterScope, setWorkingFilterScope] = useState<string | null>(null);
+  const workingOnly = !personal && !rail && workingFilterScope === filterScope;
+  const workingTeam = shownAgents.filter((a) => busy.has(a.id));
+  const workingRightHand = workspaceRightHand && busy.has(workspaceRightHand.id);
+  const rightHand = workingOnly && !workingRightHand ? undefined : workspaceRightHand;
+  const workingLabel = t("sidebarAgents.working", { count: workingTeam.length + Number(Boolean(workingRightHand)) });
+  const listedAgents = workingOnly ? workingTeam : shownAgents;
   const groups = useAgentGroups(orgId).data ?? [];
-  const byGroup = agentSections(shownAgents, groups, (a) => a.id);
+  const byGroup = agentSections(listedAgents, groups, (a) => a.id);
   const ordered = (items: Agent[]) => {
     const { top, rest } = splitPinned(items, pins.agents, (a) => a.id);
     return { top, rest: sortAgents(rest, view.agentSort, me.user.id, busy) };
   };
   const loose = ordered(byGroup.ungrouped);
   // Members never see an empty group; who arranges the agents keeps them, to drop agents in.
-  const agentGroups = byGroup.groups.filter((g) => g.items.length > 0 || (manages && g.group.agentIds.length === 0));
+  const agentGroups = byGroup.groups.filter(
+    (g) => g.items.length > 0 || (!workingOnly && manages && g.group.agentIds.length === 0),
+  );
   const groupIds = agentGroups.map((g) => `group:${g.group.id}` as SectionId);
   // A long team starts with its groups closed. Closed, a group still shows who works, waits or wrote to me.
   const groupsOpen = shownAgents.length <= 12;
-  const organize = manages && !rail;
+  const organize = manages && !rail && !workingOnly;
   const drag = useAgentDrag(groups);
   const moveAgent = useMoveAgent(groups);
   const [groupDialog, setGroupDialog] = useState<GroupDialogFor | null>(null);
@@ -494,7 +504,6 @@ export function Sidebar() {
     onDelete: () => setDeletingGroup(group),
   });
   const agentsUnread = shownAgents.reduce((n, a) => n + (dmOf.get(a.id)?.unread ?? 0), 0);
-  const workingAgents = shownAgents.filter((a) => busy.has(a.id)).length;
   // "Mudar de grupo" in an agent's right click: the keyboard's way to what dragging does.
   const groupEntries = (a: Agent): MenuEntry[] => {
     const current = groupOf(groups, a.id)?.id ?? null;
@@ -558,7 +567,7 @@ export function Sidebar() {
   const navRef = useRef<HTMLDivElement>(null);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   // The list fades out at an edge only while there is more to scroll past it (no hard cut); re-checked as lists load.
-  useScrollEdges(navRef, [channels.data, directs.length, shownAgents.length, groups.length, rail]);
+  useScrollEdges(navRef, [channels.data, directs.length, listedAgents.length, rightHand, groups.length, rail]);
 
   // A tablet's open sidebar folds back on a new page, a width change, Esc (before the page sees it: Esc in a channel
   // would stop an agent; an open menu closes first), a press outside it and focus leaving it (Tab past its end would
@@ -710,7 +719,8 @@ export function Sidebar() {
         pinned={pins.channels}
       />
     ),
-    agents: (dir.loading ||
+    agents: (workingOnly ||
+      dir.loading ||
       rightHand ||
       (team.length > 0 ? shownAgents.length > 0 || manages : createAgentItem.length > 0)) && (
       <>
@@ -724,11 +734,23 @@ export function Sidebar() {
             sections={sections}
             className="sidebar__section--part"
             headProps={sectionMenu("agents")}
-            // Who works, workspace-wide, at a glance (ADR 0084 addendum); closed, the part hides its groups too: their
-            // unread count with its own.
+            // Who works among the agents shown in this sidebar (ADR 0084 addendum).
             status={
-              workingAgents > 0 && (
-                <span className="sidebar__section-working">{t("sidebarAgents.working", { count: workingAgents })}</span>
+              (workingTeam.length > 0 || workingRightHand || workingOnly) && (
+                <button
+                  type="button"
+                  className="sidebar__section-working"
+                  aria-label={t("sidebarAgents.workingOnly")}
+                  aria-description={workingLabel}
+                  aria-pressed={workingOnly}
+                  title={t("sidebarAgents.workingOnly")}
+                  onClick={() => {
+                    setWorkingFilterScope(workingOnly ? null : filterScope);
+                    if (!workingOnly && !sections.isOpen("agents")) sections.setAll(["agents"], true);
+                  }}
+                >
+                  {workingLabel}
+                </button>
               )
             }
             summary={agentsUnread > 0 && <UnreadCount count={agentsUnread} />}
@@ -847,7 +869,7 @@ export function Sidebar() {
             </SidebarSection>
           );
         })}
-        {listsAllAgents(org) && team.length > shownAgents.length && (
+        {!workingOnly && listsAllAgents(org) && team.length > shownAgents.length && (
           <Link to="/org/$orgId/team" params={{ orgId }} className="sidebar__item sidebar__see-all">
             <Icon name="agent" />
             <span className="sidebar__item-label">
