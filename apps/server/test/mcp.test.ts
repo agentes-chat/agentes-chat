@@ -389,11 +389,11 @@ describe("tools", () => {
     const { b, orgId, channelId } = await setup();
     const app = await connectApp(t, b, orgId);
     const agents = (await callTool(t, app.access, "list_agents", {})).structuredContent as {
-      agents: { handle: string; can_message: boolean }[];
+      agents: { handle: string; can_message: boolean; department: unknown }[];
     };
-    expect(agents.agents.map((a) => [a.handle, a.can_message])).toEqual([
-      ["lodi", true],
-      ["dev", true],
+    expect(agents.agents.map((a) => [a.handle, a.can_message, a.department])).toEqual([
+      ["lodi", true, null],
+      ["dev", true, null],
     ]);
     const channels = (await callTool(t, app.access, "list_channels", { query: "gen" })).structuredContent as {
       channels: { id: string; is_member: boolean }[];
@@ -528,6 +528,23 @@ describe("tools", () => {
     const res = await callTool(t, app.access, "send_to_agent", { agent: "dev", message: "x", wait_seconds: 0 });
     expect(res.isError).toBe(true);
     expect(res.content[0]?.text).toContain("retry_after");
+  });
+
+  test("list_agents: each agent's department and look, as the sidebar shows them", async () => {
+    const { b, orgId, agentId } = await setup();
+    await b(`/api/app/organizations/${orgId}/agent-groups`, { json: { name: "Suporte", icon: "message" } });
+    await b(`/api/app/organizations/${orgId}/agent-groups`, {
+      json: { name: "Engenharia", agentIds: [agentId], color: "teal", icon: "code" },
+    });
+    const look = { color: "rose", eyes: "happy", accessory: "crown" };
+    await t.db.update(schema.agents).set({ appearance: look }).where(eq(schema.agents.id, agentId));
+    const app = await connectApp(t, b, orgId);
+    const { agents } = (await callTool(t, app.access, "list_agents", { query: "dev" })).structuredContent as {
+      agents: { handle: string; department: unknown; appearance: unknown }[];
+    };
+    expect(agents).toHaveLength(1);
+    expect(agents[0]?.department).toEqual({ name: "Engenharia", color: "teal", icon: "code", position: 1 });
+    expect(agents[0]?.appearance).toEqual(look);
   });
 
   test("a paused workspace: tools answer an error result, not a 401", async () => {
