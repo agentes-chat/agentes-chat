@@ -7,7 +7,7 @@ import { can } from "@agenteschat/client/lib/permissions";
 import { sectorGap, sectorLineChanges, sectorReach, sectorSupervisor } from "@agenteschat/client/lib/team-views";
 import { AvatarStack, Button, Card, Icon, Select } from "@agenteschat/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar, PersonAvatar } from "@/components/AgentAvatar";
 import {
@@ -323,7 +323,8 @@ function SectorCard({
  * The server applies all of the lines or none, each only for who manages its agent and the agent it goes under, which
  * changes too (`setReportsTo`, ADR 0085 addendum of 2026-11-17): the choice is offered to who manages every agent of
  * the department, among the agents they manage (the current supervisor still named), and Apply to who manages the
- * ones left and their supervisor.
+ * ones left and their supervisor. A setor stores no supervisor of its own, only its agents' lines: with no agents its
+ * picker waits, disabled, with a line that says so.
  */
 function SectorSupervisor({
   group,
@@ -339,6 +340,7 @@ function SectorSupervisor({
   const { t } = useTranslation();
   const look = useTeamLookups(groups);
   const setReportsTo = useSetReportsTo();
+  const waitId = useId();
   const now = sectorSupervisor(group, team.agents);
   const apply = (supervisorId: string | null) => {
     const changes = sectorLineChanges(group, team.agents, supervisorId, now?.supervisor.id);
@@ -354,6 +356,7 @@ function SectorSupervisor({
   const off = now?.off.length ?? 0;
   const mine = group.agentIds.flatMap((id) => team.agents.find((a) => a.id === id) ?? []);
   const picks = arranges && mine.every((a) => managesAgent(a));
+  const waits = picks && mine.length === 0;
   const applies = arranges && !!now && managesAgent(now.supervisor) && now.off.every((a) => managesAgent(a));
   // What a department's agents may go under: agents I manage, the one they go under now kept so the picker names it.
   const choices = team.agents.filter((a) => !look.isLodi(a) && (managesAgent(a) || a.id === now?.supervisor.id));
@@ -363,6 +366,8 @@ function SectorSupervisor({
         <Select
           size="sm"
           aria-label={t("team.sectors.supervisorOf", { name: group.name })}
+          aria-describedby={waits ? waitId : undefined}
+          disabled={waits}
           value={now?.supervisor.id ?? NOBODY}
           onValueChange={(v) => apply(v === NOBODY ? null : v)}
           options={[
@@ -377,6 +382,11 @@ function SectorSupervisor({
         </span>
       ) : (
         <span className="muted">{t("team.sectors.none")}</span>
+      )}
+      {waits && (
+        <span id={waitId} className="team-sector-card__off">
+          {t("team.sectors.supervisorNoAgents")}
+        </span>
       )}
       {now && off > 0 && (
         <span className="team-sector-card__off">

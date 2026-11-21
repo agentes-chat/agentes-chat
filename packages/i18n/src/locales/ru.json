@@ -2810,6 +2810,7 @@
       "backupOf": "Заместитель в отделе {{name}}",
       "supervisor": "Руководитель",
       "supervisorOf": "Руководитель отдела {{name}}",
+      "supervisorNoAgents": "Руководитель начнёт действовать, когда в отделе появятся агенты.",
       "unsupervised_one": "{{count}} агент без руководителя",
       "unsupervised_few": "{{count}} агента без руководителя",
       "unsupervised_many": "{{count}} агентов без руководителя",

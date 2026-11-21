@@ -2542,6 +2542,7 @@
       "backupOf": "{{name}} 대리",
       "supervisor": "감독",
       "supervisorOf": "{{name}}의 감독",
+      "supervisorNoAgents": "감독은 부서에 에이전트가 생기면 적용돼요.",
       "unsupervised_other": "감독이 없는 에이전트 {{count}}명",
       "apply": "적용",
       "supervisorDone_other": "{{sector}}의 에이전트 {{count}}명이 이제 {{name}}에게 보고해요",

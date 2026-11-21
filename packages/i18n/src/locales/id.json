@@ -2542,6 +2542,7 @@
       "backupOf": "Pengganti di {{name}}",
       "supervisor": "Supervisor",
       "supervisorOf": "Supervisor {{name}}",
+      "supervisorNoAgents": "Supervisor berlaku setelah departemen punya agen.",
       "unsupervised_other": "{{count}} agen tanpa supervisor",
       "apply": "Terapkan",
       "supervisorDone_other": "{{count}} agen {{sector}} sekarang melapor ke {{name}}",

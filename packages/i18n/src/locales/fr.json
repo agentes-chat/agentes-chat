@@ -2721,6 +2721,7 @@
       "backupOf": "Suppléant dans {{name}}",
       "supervisor": "Superviseur",
       "supervisorOf": "Superviseur de {{name}}",
+      "supervisorNoAgents": "Le superviseur s'applique dès que le service a des agents.",
       "unsupervised_one": "{{count}} agent sans superviseur",
       "unsupervised_many": "{{count}} agents sans superviseur",
       "unsupervised_other": "{{count}} agents sans superviseur",
