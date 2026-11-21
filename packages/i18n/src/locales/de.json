@@ -13388,6 +13388,11 @@
         "2": "Nachrichtenvorlagen erstellen",
         "ask": "Nachrichten senden fragt immer nach deiner Freigabe"
       },
+      "boavoz": {
+        "1": "Unterhaltungen, Kontakte und Leads ansehen",
+        "2": "Antworten, die KI pausieren und Kampagnen senden",
+        "ask": "Senden, Löschen und Bezahlen fragt immer nach deiner Freigabe"
+      },
       "database": {
         "1": "Tabellen ansehen",
         "2": "Daten abfragen, um zu antworten",
@@ -13539,7 +13544,8 @@
       "youtube": "Videos, Kommentare, Playlists und Statistiken des YouTube-Kanals.",
       "pinterest": "Pins, Pinnwände und Statistiken auf Pinterest.",
       "reddit": "Beiträge, Kommentare und Communitys auf Reddit.",
-      "whatsapp": "Nachrichten und Vorlagen von WhatsApp Business."
+      "whatsapp": "Nachrichten und Vorlagen von WhatsApp Business.",
+      "boavoz": "KI-Kundenservice auf WhatsApp, Instagram und im Website-Chat: Unterhaltungen, Leads und Kampagnen."
     }
   },
   "toolNames": {

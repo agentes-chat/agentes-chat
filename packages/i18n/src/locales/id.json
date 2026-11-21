@@ -12908,6 +12908,11 @@
         "2": "Membuat template pesan",
         "ask": "Mengirim pesan selalu meminta persetujuanmu"
       },
+      "boavoz": {
+        "1": "Melihat percakapan, kontak, dan lead",
+        "2": "Membalas, menjeda AI, dan mengirim kampanye",
+        "ask": "Mengirim, menghapus, dan membayar selalu meminta persetujuanmu"
+      },
       "database": {
         "1": "Melihat tabel",
         "2": "Menjalankan query ke data untuk menjawab",
@@ -13054,7 +13059,8 @@
       "youtube": "Video, komentar, playlist, dan analitik kanal YouTube.",
       "pinterest": "Pin, papan, dan analitik Pinterest.",
       "reddit": "Postingan, komentar, dan komunitas Reddit.",
-      "whatsapp": "Pesan dan template WhatsApp Business."
+      "whatsapp": "Pesan dan template WhatsApp Business.",
+      "boavoz": "Layanan pelanggan AI di WhatsApp, Instagram, dan chat situs: percakapan, lead, dan kampanye."
     }
   },
   "toolNames": {

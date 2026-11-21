@@ -32517,6 +32517,15 @@
   "connectors.can.whatsapp.ask": {
     "value": "Sending messages always asks for your approval"
   },
+  "connectors.can.boavoz.1": {
+    "value": "See conversations, contacts and leads"
+  },
+  "connectors.can.boavoz.2": {
+    "value": "Reply, pause the AI and send campaigns"
+  },
+  "connectors.can.boavoz.ask": {
+    "value": "Sending, deleting and paying always asks for your approval"
+  },
   "connectors.can.database.1": {
     "value": "See the tables"
   },
@@ -32936,6 +32945,9 @@
   },
   "connectors.descriptions.whatsapp": {
     "value": "WhatsApp Business messages and templates."
+  },
+  "connectors.descriptions.boavoz": {
+    "value": "AI customer service on WhatsApp, Instagram and website chat: conversations, leads and campaigns."
   },
   "toolNames.order": {
     "value": "modifiers-first"
