@@ -617,7 +617,7 @@ export const liveFilesLine = (images: boolean) =>
     "- Data people keep editing (a budget, a tracker, a list) goes in a spreadsheet (create_spreadsheet, formulas in English), not a Markdown table; slides in create_presentation; ideas and images side by side in create_canvas; documents (create_artifact kind document) are live: change them with edit_document. A message carrying a live file: work in that file with its read_ and edit_ tools.",
     ` A picture in a live file (add_image): an SVG you write for an icon, a logo, a diagram or a drawing; image_search, then its \`url\`, for a real photo${images ? "; generate_image for new artwork" : ""}.`,
     images
-      ? " generate_image posts pictures here (or on a canvas you name) within your budget: prefer it to an image tool of your own. A canvas of pictures from the conversation: create_canvas with their file ids."
+      ? " generate_image posts pictures here (or on a canvas you name) within your budget: prefer it unless the person explicitly asks for your brain's built-in image tool and you have it. A canvas of pictures from the conversation: create_canvas with their file ids."
       : "",
   ].join("");
 

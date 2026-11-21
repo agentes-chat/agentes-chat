@@ -39,6 +39,62 @@ const posix = process.platform !== "win32";
 const RUN = "0193aaaa-0000-7000-8000-0000000000a1";
 const SESSION = "0193cccc-0000-7000-8000-000000000001";
 const THREAD = "01a1463b-6712-7b53-9f12-2499fb614d2d";
+test("exec publishes only the new image of its resumed Codex thread before the answer", async () => {
+  const root = tempDir("codex-exec-image-");
+  dirs.push(root);
+  const home = path.join(root, "home");
+  const folder = path.join(root, "agent");
+  const generated = path.join(home, "generated_images", THREAD);
+  mkdirSync(generated, { recursive: true });
+  mkdirSync(folder);
+  const previous = "exec-ecc5f150-b8a9-454d-bcec-0ba6c2378314.png";
+  const current = "exec-ecc5f150-b8a9-454d-bcec-0ba6c2378315.png";
+  const pixels = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9dWlsAAAAASUVORK5CYII=",
+    "base64",
+  );
+  writeFileSync(path.join(generated, previous), pixels);
+  const threads = new CodexThreads(path.join(root, "threads.json"));
+  threads.set(codexThreadKey(SESSION, undefined), THREAD);
+  const events: CodexBrainEvent[] = [];
+  await runCodexTurn(
+    { runId: RUN, sessionId: SESSION, cwd: folder, folder, system: "", prompt: "Make an image", mcp: { token: "t" } },
+    {
+      threads,
+      workDir: path.join(root, "turn"),
+      emit: (event) => events.push(event),
+      signal: new AbortController().signal,
+      platform: "linux",
+      bin: process.execPath,
+      codexVersion: () => "codex-cli 0.169.0",
+      env: { CODEX_HOME: home },
+      spawn: ((_, _args, options) => {
+        writeFileSync(path.join(generated, current), pixels);
+        writeFileSync(path.join(generated, "notes.png"), pixels);
+        const lines = [
+          { type: "thread.started", thread_id: THREAD },
+          { type: "item.completed", item: { id: "answer", type: "agent_message", text: "Pronto." } },
+          { type: "turn.completed", usage: { input_tokens: 1, output_tokens: 1 } },
+        ];
+        return spawn(
+          process.execPath,
+          ["-e", `for(const line of ${JSON.stringify(lines)}) console.log(JSON.stringify(line))`],
+          options,
+        );
+      }) as Spawn,
+    },
+  );
+  const files = events.filter((event) => event.type === "file");
+  expect(files).toHaveLength(1);
+  expect(events.findIndex((event) => event.type === "file")).toBeLessThan(
+    events.findIndex((event) => event.type === "done"),
+  );
+  expect(events.some((event) => event.type === "tool_call" && event.name === "image_generation")).toBe(true);
+  const file = files[0]?.path ?? "";
+  expect(file).toBe(`generated-images/${current}`);
+  expect(readFileSync(path.join(folder, file))).toEqual(pixels);
+});
+
 const AGENT = { id: "0193aaaa-bbbb-7ccc-8ddd-eeeeffff0000", handle: "dev" };
 
 /** A real codex-cli 0.163.0 first turn, then a resumed one with a command and an edit. */
