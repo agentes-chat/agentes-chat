@@ -5,6 +5,7 @@ import {
   CUSTOM_PROVIDER,
   checksInOrder,
   draftOfEndpoint,
+  ENDPOINT_PRESETS,
   ENDPOINT_SEARCH_FROM,
   ENDPOINT_STYLES,
   type EndpointDraft,
@@ -18,6 +19,7 @@ import {
   withChecks,
   withListedModels,
   withoutModel,
+  withPreset,
   withTypedModel,
 } from "@agenteschat/client/lib/endpoints";
 import {
@@ -106,14 +108,27 @@ export function EndpointForm({
     const models = endpointModelsOf(draft);
     if (!models) return;
     if (editing && credential) {
+      // Only an address the person actually moved is sent: one left alone is not judged again (a local server, or one
+      // saved under other rules, still takes a models-only edit).
+      const address = draft.baseURL.trim();
+      const moved = draft.style !== credential.endpoint?.style || address !== credential.endpoint?.baseURL;
       change.mutate(
-        { credentialId: credential.id, models },
+        { credentialId: credential.id, models, where: moved ? { style: draft.style, baseURL: address } : undefined },
         {
           onSuccess: (r) =>
             setSaved({
               cred: {
                 ...credential,
-                ...(credential.endpoint ? { endpoint: { ...credential.endpoint, models: r.models } } : {}),
+                ...(credential.endpoint
+                  ? {
+                      endpoint: {
+                        ...credential.endpoint,
+                        style: draft.style,
+                        baseURL: draft.baseURL.trim(),
+                        models: r.models,
+                      },
+                    }
+                  : {}),
               },
               checks: r.checks,
             }),
@@ -132,7 +147,9 @@ export function EndpointForm({
     );
   };
   const saving = add.isPending || change.isPending;
-  const ready = editing ? endpointModelsOf(draft) !== null : endpointReady(draft);
+  const ready = editing
+    ? endpointModelsOf(draft) !== null && endpointAddressLooksValid(draft.baseURL)
+    : endpointReady(draft);
   const unpriced = draft.models.some((m) => m.on && !m.input.trim() && !m.output.trim());
 
   const Body = onCancel ? DialogBody : FormStack;
@@ -190,6 +207,24 @@ export function EndpointForm({
           {lead}
           {!editing && (
             <>
+              {/* Presets are a row of actions, not a field: nine of them wrap on a phone, and a stack's fields are each
+                  one control high (`check:geometry`'s fieldwidth). The kit's label names the row instead. */}
+              <div className="endpoint-presets">
+                <span className="ac-field__label">{t("endpoint.preset")}</span>
+                <div className="ac-acts endpoint-presets__acts">
+                  {ENDPOINT_PRESETS.map((p) => (
+                    <Button
+                      key={p.label}
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDraft((d) => withPreset(d, p))}
+                    >
+                      {p.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
               <Field label={t("endpoint.name")} id={`${ids}-name`}>
                 <Input
                   value={draft.name}
@@ -198,42 +233,46 @@ export function EndpointForm({
                   onChange={(e) => set({ name: e.target.value })}
                 />
               </Field>
-              <Field label={t("endpoint.style")} group>
-                <Segmented<EndpointStyle>
-                  label={t("endpoint.style")}
-                  value={draft.style}
-                  onValueChange={(style) => set({ style })}
-                  options={ENDPOINT_STYLES.map((s) => ({ value: s, label: t(`endpoint.styles.${s}`) }))}
-                />
-              </Field>
-              <Field
-                label={t("endpoint.address")}
-                id={`${ids}-url`}
-                example={t("endpoint.addressHelp", { example: endpointBaseExample(draft.style) })}
-              >
-                <Input
-                  value={draft.baseURL}
-                  inputMode="url"
-                  autoComplete="off"
-                  spellCheck={false}
-                  placeholder={endpointBaseExample(draft.style)}
-                  onChange={(e) => set({ baseURL: e.target.value })}
-                />
-              </Field>
-              <Field
-                label={t("endpoint.key")}
-                id={`${ids}-key`}
-                hint={{ name: t("common.about", { label: t("endpoint.key") }), text: t("endpoint.keyHelp") }}
-              >
-                <Input
-                  type="password"
-                  autoComplete="off"
-                  spellCheck={false}
-                  value={draft.apiKey}
-                  onChange={(e) => set({ apiKey: e.target.value })}
-                />
-              </Field>
             </>
+          )}
+          {/* An endpoint's own address and API stay editable once saved (ADR 0146 §1): a gateway that moved, or an
+              address typed wrong, is fixable without losing the credential, its key or the agents using it. */}
+          <Field label={t("endpoint.style")} group>
+            <Segmented<EndpointStyle>
+              label={t("endpoint.style")}
+              value={draft.style}
+              onValueChange={(style) => set({ style })}
+              options={ENDPOINT_STYLES.map((s) => ({ value: s, label: t(`endpoint.styles.${s}`) }))}
+            />
+          </Field>
+          <Field
+            label={t("endpoint.address")}
+            id={`${ids}-url`}
+            example={t("endpoint.addressHelp", { example: endpointBaseExample(draft.style) })}
+          >
+            <Input
+              value={draft.baseURL}
+              inputMode="url"
+              autoComplete="off"
+              spellCheck={false}
+              placeholder={endpointBaseExample(draft.style)}
+              onChange={(e) => set({ baseURL: e.target.value })}
+            />
+          </Field>
+          {!editing && (
+            <Field
+              label={t("endpoint.key")}
+              id={`${ids}-key`}
+              hint={{ name: t("common.about", { label: t("endpoint.key") }), text: t("endpoint.keyHelp") }}
+            >
+              <Input
+                type="password"
+                autoComplete="off"
+                spellCheck={false}
+                value={draft.apiKey}
+                onChange={(e) => set({ apiKey: e.target.value })}
+              />
+            </Field>
           )}
           <Field
             label={t("endpoint.addModel")}

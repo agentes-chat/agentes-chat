@@ -72,6 +72,18 @@ test("an endpoint: its list, saved with a test per model, its models in the pick
     { id: "qwen-3", prices: { input: 0.5, output: 1, cacheRead: 0.5, cacheWrite: 0.5 }, check: "no_tools" },
   ]);
 
+  // Its address moves with the models, the credential and its key staying (ADR 0146 §1).
+  const moved = await api(`/credentials/${key.id}/models`, {
+    method: "PUT",
+    json: { models: [{ id: "qwen-3" }], baseURL: "https://gw2.example/v1/chat/completions", style: "openai" },
+  });
+  expect(moved.status).toBe(200);
+  const keys = (await (await api("/credentials")).json()) as { credentials: { id: string; endpoint?: unknown }[] };
+  expect(keys.credentials.find((c) => c.id === key.id)?.endpoint).toMatchObject({
+    baseURL: "https://gw2.example/v1",
+    style: "openai",
+  });
+
   // A member neither lists, adds nor changes one.
   const member = await joinByInvitation(t, owner, orgId, "bia@example.com");
   const asMember = (path: string, init?: Parameters<typeof member>[1]) =>

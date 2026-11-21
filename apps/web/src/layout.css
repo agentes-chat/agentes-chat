@@ -10867,6 +10867,16 @@ html:not([data-pointer]) .agp-cell:focus-visible {
   padding: 0;
   list-style: none;
 }
+/* The servers a person may start from: a label and a row of actions of its own, above the fields (never a field of the
+   stack, whose controls are one height): nine of them wrap under a phone's width. */
+.endpoint-presets {
+  display: grid;
+  gap: var(--space-2);
+}
+.endpoint-presets__acts {
+  flex-wrap: wrap;
+  row-gap: var(--space-2);
+}
 .agp-addacct__code output {
   font-size: 24px;
   font-weight: 650;
