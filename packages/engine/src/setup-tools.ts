@@ -128,7 +128,7 @@ export const APP_PAGES = {
 } as const;
 export type AppPage = keyof typeof APP_PAGES;
 /** Who may use each screen, when not everyone (the screen still checks it). */
-const PAGE_PERMISSION: Partial<Record<AppPage, RolePermission | "manage_owners">> = {
+export const PAGE_PERMISSION: Partial<Record<AppPage, RolePermission | "manage_owners">> = {
   billing: "manage_billing",
   delete_workspace: "manage_owners",
   workspace: "configure",
@@ -1319,7 +1319,7 @@ function rightHandCards(deps: { pubsub?: PubSub }): ToolDefinition[] {
     {
       name: OFFER_OPEN_PAGE_TOOL,
       description:
-        "Open one of the app's screens for this person with a card whose button takes them there: billing, deleting the workspace or their account, their password, API keys, the audit log and the rest. Use it for what needs that screen's own dialog or what workspace_action and your other cards don't do, or when they ask to see a screen: it asks for what it always does (an email code and the typed name to delete, Stripe to pay, our dialog for a key) and checks who may. Never take a key, password or token in the chat.",
+        "Open one of the app's screens for this person with a card whose button takes them there: billing, deleting the workspace or their account, their password, API keys, the audit log and the rest. Use it for what needs that screen's own dialog or what your other tools and cards don't do, or when they ask to see a screen: it asks for what it always does (an email code and the typed name to delete, Stripe to pay, our dialog for a key) and checks who may. Never take a key, password or token in the chat.",
       scope: SETUP_SCOPE,
       inputSchema: {
         type: "object",
