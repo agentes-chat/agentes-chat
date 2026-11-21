@@ -1,0 +1,898 @@
+{
+  "about": "Every model agentes.chat knows (ADR 0195): what it is, where it runs (`on`: an API key's provider, `commandcode`, a coding plan through Claude Code as `plan:<id>`, ChatGPT through Codex as `codex`, a computer's CLI as `cli:<name>`) and at what price there, in USD per million tokens. `roles` says which family does what on each of them: the family's newest model there (`released`, each model's first release day as models.dev lists it, the maker's own where it gives one) takes the role, so every model of a family a role names has one. Within a route, models keep the file's order (a plan's picker groups them by maker, the aliases' makers first, and Automatic's fallback on a plan takes its first free tagged one). The catalog, the plans' model lists, Claude Code's aliases and the CLIs' fallback lists are all read from this file (`packages/providers/src/registry.ts`).",
+  "updatedAt": "2026-11-20",
+  "sources": {
+    "anthropic": "First-party list prices, platform.claude.com pricing (2026-10-20, Claude Fable 5.1 2026-11-09, Claude Fable 5.2 2026-11-17); windows from the models overview. Cache writes at the 5-minute rate (1.25 × input); a 1-hour write costs `LONG_CACHE_WRITE` × input.",
+    "openai": "Standard tier, developers.openai.com/api/docs/pricing (2026-10-20, GPT-6.1 Terra 2026-10-31, GPT-6 Astra 2026-11-09, GPT-6.2 Sol and Astra 2026-11-17); cache writes at the 30-minute rate. Above 272K prompt tokens, input, cached input and cache writes cost 2×, output 1.5×. Windows from each model's page (2026-10-26, Terra's 2026-10-31, Astra's 2026-11-09, 6.2's 2026-11-17).",
+    "gemini": "Interactions API, Standard tier, ai.google.dev/gemini-api/docs/pricing (2026-10-27; Gemini 4 Carbon and Hydrogen 2026-11-17; Neon 2026-11-20, where the page now lives at aistudio.google.com/docs/pricing). Thinking is billed as output. Caching is implicit with no write charge, so a cache write costs the input rate (none is ever reported). `intro`: half price until that day.",
+    "deepseek": "DeepSeek's pricing page (2026-10-24). A cache write costs the input rate. Its peak rates are stored (off-peak is half), so budgets err high.",
+    "moonshot": "Kimi's pricing page (2026-10-24). A cache write costs the input rate.",
+    "zai": "Z.ai's pricing page (2026-10-24). A cache write costs the input rate.",
+    "minimax": "MiniMax's pricing page (2026-10-24). A cache write costs the input rate.",
+    "commandcode": "Command Code's published rates (commandcode.ai/docs/resources/pricing-limits); its model list has no prices. Claude's and GPT's rows keep their makers' long-context prices. DeepSeek through it costs half outside its peak hours (`offPeak`).",
+    "plan:zai": "docs.z.ai/devpack/tool/claude and docs.z.ai/devpack/overview (2026-10-24, 2026-10-30). Every tier has both models; Flash spends about a third of GLM-5.3's credits per token.",
+    "plan:kimi": "kimi.com/code/docs (Claude Code; models page, 2026-10-30). `kimi-for-coding` (K2.8 Preview), K3.1 Pro and both K3 need Plus or above, the high-speed models Pro or above. K3.1 Pro Highspeed spends about 2× K3.1 Pro's quota; K2.7 Code Highspeed about 3× K2.7 Code's (not in the plan). K3 256K spends about half of K3's.",
+    "plan:minimax": "platform.minimax.io/docs/coding-plan/claude-code and /intro (2026-10-24, 2026-10-30).",
+    "plan:opencode": "opencode.ai/v2/docs/console/go and its live list (opencode.ai/inference/go/v1/models; 32 models on 2026-11-17, all here), which replaces this one once read: what only we know of each model is its role and tag. Each model has its own monthly cap; `cheap`: 20,000 or more requests a month by OpenCode's estimates. DeepSeek's models answer only once the OpenCode workspace allows the Global region, the ones that train on what they're sent only once it allows that. Zen's own free models aren't Go's: they answer only to the OpenCode CLI (`cli:opencode-free`).",
+    "codex": "Models ChatGPT's Fast mode serves (developers.openai.com/api/docs/guides/fast-mode), ids as Codex lists them in its `service_tiers` (codex-cli 0.166.0; GPT-6.2 Sol and Astra from the guide and the pricing page's Fast table, 2026-11-17): Codex drops the tier without a word for any other model. Codex's model picker lists the `openai` rows.",
+    "cli:grok": "Grok Build's models where the computer listed none (`grok models` asks xAI: none offline): grok-4.5 and grok-4.6 as Grok Build 1.0.34 listed them, grok-4.7 as OpenCode Go lists it (2026-11-04).",
+    "cli:antigravity": "The Antigravity CLI's models where the computer listed none (`agy models` asks Google: none offline, none before an account here signed in), each at its thinking `levels`, `xhigh` being the \"Extra\" one (antigravity.google/docs/models, 2026-11-20): Gemini 4 Neon, the CLI's own default, and Argon on paid Google AI Pro, Ultra and Enterprise, Hydrogen on Pro (not its trial), Ultra and Enterprise, Gemini 3.8 Flash on every plan; Carbon on Ultra and Enterprise only, and the older Flash and 3.1 Pro on Enterprise only, are left to the CLI's own listing.",
+    "cli:opencode-free": "OpenCode's free tier (ADR 0132): models OpenCode serves at no cost and only to its own CLI (opencode.ai/docs/zen, 2026-11-02; read again 2026-11-09), where `opencode models` listed none."
+  },
+  "roles": {
+    "anthropic": {
+      "large": "claude-opus",
+      "medium": "claude-sonnet",
+      "small": "claude-haiku",
+      "recommended": "claude-sonnet",
+      "cheap": "claude-haiku",
+      "router": "claude-haiku"
+    },
+    "openai": {
+      "medium": "gpt-sol",
+      "small": "gpt-luna",
+      "recommended": "gpt-sol",
+      "cheap": "gpt-luna",
+      "router": "gpt-luna"
+    },
+    "gemini": {
+      "large": "gemini-argon",
+      "medium": "gemini-everyday",
+      "small": "gemini-flash-lite",
+      "recommended": "gemini-everyday",
+      "cheap": "gemini-flash-lite",
+      "router": "gemini-flash-lite"
+    },
+    "deepseek": {
+      "large": "deepseek-pro",
+      "small": "deepseek-flash",
+      "recommended": "deepseek-flash",
+      "cheap": "deepseek-flash",
+      "router": "deepseek-flash"
+    },
+    "moonshot": { "medium": "kimi-k3", "recommended": "kimi-k3" },
+    "zai": {
+      "medium": "glm",
+      "small": "glm-flash",
+      "recommended": "glm",
+      "cheap": "glm-flash",
+      "router": "glm-flash"
+    },
+    "minimax": {
+      "medium": "minimax-m",
+      "small": "minimax-flash",
+      "recommended": "minimax-m",
+      "cheap": "minimax-flash",
+      "router": "minimax-m"
+    },
+    "commandcode": {
+      "large": "claude-sonnet",
+      "medium": "glm",
+      "small": "deepseek-flash",
+      "recommended": "glm",
+      "cheap": "deepseek-flash",
+      "router": "claude-haiku"
+    },
+    "claude-code": {
+      "fable": "claude-fable",
+      "opus": "claude-opus",
+      "sonnet": "claude-sonnet",
+      "haiku": "claude-haiku"
+    },
+    "plan:zai": { "sonnet": "glm", "haiku": "glm-flash" },
+    "plan:kimi": { "opus": "kimi-k3", "sonnet": "kimi-for-coding" },
+    "plan:minimax": { "sonnet": "minimax-flash" },
+    "plan:opencode": { "sonnet": "minimax-m", "haiku": "claude-haiku" }
+  },
+  "models": {
+    "claude-fable-5-2": {
+      "label": "Claude Fable 5.2",
+      "maker": "anthropic",
+      "family": "claude-fable",
+      "released": "2026-11-09",
+      "contextWindow": 1000000,
+      "note": "Its whole 1M-token window at these prices (2026-11-17).",
+      "on": {
+        "anthropic": {
+          "prices": { "input": 8, "output": 40, "cacheRead": 0.2, "cacheWrite": 10 },
+          "serverSideFallback": true
+        }
+      }
+    },
+    "claude-fable-5-1": {
+      "label": "Claude Fable 5.1",
+      "maker": "anthropic",
+      "family": "claude-fable",
+      "released": "2026-09-01",
+      "contextWindow": 1000000,
+      "note": "Its whole 1M-token window at these prices (2026-11-09).",
+      "on": {
+        "anthropic": {
+          "prices": { "input": 10, "output": 50, "cacheRead": 0.25, "cacheWrite": 12.5 },
+          "serverSideFallback": true
+        }
+      }
+    },
+    "claude-opus-5-5": {
+      "label": "Claude Opus 5.5",
+      "maker": "anthropic",
+      "family": "claude-opus",
+      "released": "2026-09-22",
+      "contextWindow": 1000000,
+      "on": {
+        "anthropic": {
+          "prices": { "input": 4, "output": 20, "cacheRead": 0.2, "cacheWrite": 5 },
+          "serverSideFallback": true
+        },
+        "commandcode": { "prices": { "input": 4, "output": 20, "cacheRead": 0.2, "cacheWrite": 5 } }
+      }
+    },
+    "claude-sonnet-5-5": {
+      "label": "Claude Sonnet 5.5",
+      "maker": "anthropic",
+      "family": "claude-sonnet",
+      "released": "2026-09-28",
+      "contextWindow": 1000000,
+      "on": {
+        "anthropic": {
+          "prices": { "input": 2, "output": 10, "cacheRead": 0.1, "cacheWrite": 2.5 },
+          "serverSideFallback": true
+        },
+        "commandcode": { "prices": { "input": 2, "output": 10, "cacheRead": 0.1, "cacheWrite": 2.5 } }
+      }
+    },
+    "claude-haiku-5-5": {
+      "label": "Claude Haiku 5.5",
+      "maker": "anthropic",
+      "family": "claude-haiku",
+      "released": "2026-10-07",
+      "contextWindow": 1000000,
+      "on": {
+        "anthropic": {
+          "prices": { "input": 0.1, "output": 0.5, "cacheRead": 0.01, "cacheWrite": 0.125 },
+          "longContext": {
+            "aboveInputTokens": 100000,
+            "prices": { "input": 0.5, "output": 2.5, "cacheRead": 0.05, "cacheWrite": 0.625 }
+          },
+          "leastThinking": "off"
+        },
+        "commandcode": {
+          "prices": { "input": 0.1, "output": 0.5, "cacheRead": 0.01, "cacheWrite": 0.125 },
+          "longContext": {
+            "aboveInputTokens": 100000,
+            "prices": { "input": 0.5, "output": 2.5, "cacheRead": 0.05, "cacheWrite": 0.625 }
+          },
+          "leastThinking": "off"
+        },
+        "plan:opencode": {}
+      }
+    },
+    "glm-5.3": {
+      "label": "GLM-5.3",
+      "maker": "zai",
+      "family": "glm",
+      "released": "2026-08-14",
+      "contextWindow": 1000000,
+      "on": {
+        "zai": { "prices": { "input": 1.4, "output": 4.4, "cacheRead": 0.26, "cacheWrite": 1.4 } },
+        "commandcode": {
+          "id": "zai-org/GLM-5.3",
+          "prices": { "input": 1.4, "output": 4.4, "cacheRead": 0.26, "cacheWrite": 1.4 }
+        },
+        "plan:zai": { "id": "glm-5.3[1m]", "tag": "smart" },
+        "plan:opencode": { "tag": "smart" }
+      }
+    },
+    "glm-5.3-flash": {
+      "label": "GLM-5.3 Flash",
+      "maker": "zai",
+      "family": "glm-flash",
+      "released": "2026-08-26",
+      "contextWindow": 1000000,
+      "note": "Always thinks (Z.ai: it \"cannot be disabled\"), still the line's fastest for routing.",
+      "on": {
+        "zai": { "prices": { "input": 0.15, "output": 0.5, "cacheRead": 0.03, "cacheWrite": 0.15 } },
+        "commandcode": {
+          "id": "z-ai/glm-5.3-flash",
+          "prices": { "input": 0.15, "output": 0.5, "cacheRead": 0.03, "cacheWrite": 0.15 },
+          "contextWindow": 1048576
+        },
+        "plan:zai": { "id": "glm-5.3-flash[1m]", "tag": "cheap" },
+        "plan:opencode": { "tag": "cheap" },
+        "cli:opencode-free": { "id": "opencode/glm-5.3-flash-free", "label": "GLM-5.3 Flash Free" }
+      }
+    },
+    "glm-5.3-flashx": {
+      "label": "GLM-5.3 FlashX",
+      "maker": "zai",
+      "released": "2026-08-26",
+      "contextWindow": 1000000,
+      "on": {
+        "commandcode": {
+          "id": "z-ai/glm-5.3-flashx",
+          "prices": { "input": 0.37, "output": 1.25, "cacheRead": 0.075, "cacheWrite": 0.37 },
+          "structuredOutput": false
+        }
+      }
+    },
+    "glm-5.2": {
+      "label": "GLM-5.2",
+      "maker": "zai",
+      "family": "glm",
+      "released": "2026-06-13",
+      "on": { "plan:opencode": {} }
+    },
+    "kimi-for-coding": {
+      "label": "Kimi for Coding",
+      "maker": "moonshot",
+      "family": "kimi-for-coding",
+      "released": "2026-09-11",
+      "note": "K2.8 Preview.",
+      "on": { "plan:kimi": {} }
+    },
+    "kimi-k3.1-pro": {
+      "label": "Kimi K3.1 Pro",
+      "maker": "moonshot",
+      "family": "kimi-k3",
+      "released": "2026-10-23",
+      "contextWindow": 1048576,
+      "note": "Kimi's strongest and cheapest; K3, the previous flagship, stays choosable.",
+      "on": {
+        "moonshot": { "prices": { "input": 2, "output": 10, "cacheRead": 0.2, "cacheWrite": 2 } },
+        "commandcode": {
+          "id": "moonshotai/Kimi-K3.1-Pro",
+          "prices": { "input": 2, "output": 10, "cacheRead": 0.2, "cacheWrite": 2 }
+        },
+        "plan:kimi": { "id": "k3.1-pro", "label": "K3.1 Pro", "tag": "smart" },
+        "plan:opencode": { "tag": "smart" }
+      }
+    },
+    "kimi-k3.1-pro-highspeed": {
+      "label": "K3.1 Pro Highspeed",
+      "maker": "moonshot",
+      "family": "kimi-k3-highspeed",
+      "released": "2026-10-23",
+      "on": { "plan:kimi": { "id": "k3.1-pro-highspeed", "tag": "fast" } }
+    },
+    "kimi-k2.7-code-highspeed": {
+      "label": "Kimi K2.7 Code HighSpeed",
+      "maker": "moonshot",
+      "contextWindow": 262000,
+      "on": {
+        "commandcode": {
+          "id": "moonshotai/Kimi-K2.7-Code-Highspeed",
+          "prices": { "input": 1.9, "output": 8, "cacheRead": 0.38, "cacheWrite": 1.9 }
+        },
+        "plan:kimi": { "id": "kimi-for-coding-highspeed", "label": "K2.7 Code Highspeed", "tag": "fast" }
+      }
+    },
+    "kimi-k3": {
+      "label": "Kimi K3",
+      "maker": "moonshot",
+      "family": "kimi-k3",
+      "released": "2026-07-16",
+      "contextWindow": 1048576,
+      "on": {
+        "moonshot": { "prices": { "input": 3, "output": 15, "cacheRead": 0.3, "cacheWrite": 3 } },
+        "plan:kimi": { "id": "k3", "label": "K3" },
+        "plan:opencode": {}
+      }
+    },
+    "kimi-k3-256k": {
+      "label": "K3 256K",
+      "maker": "moonshot",
+      "on": { "plan:kimi": { "id": "k3-256k" } }
+    },
+    "kimi-k2.7-code": {
+      "label": "Kimi K2.7 Code",
+      "maker": "moonshot",
+      "released": "2026-06-12",
+      "contextWindow": 256000,
+      "on": {
+        "commandcode": {
+          "id": "moonshotai/Kimi-K2.7-Code",
+          "prices": { "input": 0.95, "output": 4, "cacheRead": 0.19, "cacheWrite": 0.95 }
+        },
+        "plan:opencode": {}
+      }
+    },
+    "qwen4-max": {
+      "label": "Qwen4 Max",
+      "maker": "Alibaba",
+      "on": { "plan:opencode": {} }
+    },
+    "qwen3.8-max": {
+      "label": "Qwen3.8 Max",
+      "maker": "Alibaba",
+      "released": "2026-07-19",
+      "on": { "plan:opencode": { "tag": "smart" } }
+    },
+    "qwen3.8-flash": {
+      "label": "Qwen3.8 Flash",
+      "maker": "Alibaba",
+      "released": "2026-08-26",
+      "on": { "plan:opencode": { "tag": "cheap" } }
+    },
+    "qwen3.7-plus": {
+      "label": "Qwen3.7 Plus",
+      "maker": "Alibaba",
+      "released": "2026-06-02",
+      "on": { "plan:opencode": { "tag": "cheap" } }
+    },
+    "deepseek-flash": {
+      "label": "DeepSeek Flash",
+      "maker": "deepseek",
+      "family": "deepseek-flash",
+      "released": "2026-10-17",
+      "contextWindow": 1000000,
+      "note": "DeepSeek's alias, served by DeepSeek-V4.1-Flash-1017.",
+      "on": {
+        "deepseek": {
+          "prices": { "input": 0.3, "output": 1.2, "cacheRead": 0.006, "cacheWrite": 0.3 },
+          "leastThinking": "off"
+        }
+      }
+    },
+    "deepseek-v4-pro": {
+      "label": "DeepSeek V4 Pro",
+      "maker": "deepseek",
+      "family": "deepseek-pro",
+      "released": "2026-04-24",
+      "contextWindow": 1000000,
+      "images": false,
+      "on": {
+        "deepseek": { "prices": { "input": 1.32, "output": 3.96, "cacheRead": 0.044, "cacheWrite": 1.32 } },
+        "commandcode": {
+          "id": "deepseek/deepseek-v4-pro",
+          "prices": { "input": 1.32, "output": 3.96, "cacheRead": 0.044, "cacheWrite": 1.32 },
+          "offPeak": {
+            "prices": { "input": 0.66, "output": 1.98, "cacheRead": 0.022, "cacheWrite": 0.66 },
+            "peakHoursUtc": [[1, 4], [6, 10]]
+          }
+        },
+        "plan:opencode": { "needs": "globalRegion" }
+      }
+    },
+    "deepseek-v4.1-flash": {
+      "label": "DeepSeek V4.1 Flash",
+      "maker": "deepseek",
+      "family": "deepseek-flash",
+      "released": "2026-10-17",
+      "contextWindow": 1000000,
+      "images": false,
+      "on": {
+        "commandcode": {
+          "id": "deepseek/deepseek-v4.1-flash",
+          "prices": { "input": 0.3, "output": 1.2, "cacheRead": 0.006, "cacheWrite": 0.3 },
+          "offPeak": {
+            "prices": { "input": 0.15, "output": 0.6, "cacheRead": 0.003, "cacheWrite": 0.15 },
+            "peakHoursUtc": [[1, 4], [6, 10]]
+          }
+        },
+        "plan:opencode": { "tag": "cheap", "needs": "globalRegion" },
+        "cli:opencode-free": { "id": "opencode/deepseek-v4.1-flash-free", "label": "DeepSeek V4.1 Flash Free" }
+      }
+    },
+    "deepseek-v4.1-flash-fast": {
+      "label": "DeepSeek V4.1 Flash Fast",
+      "maker": "deepseek",
+      "released": "2026-10-17",
+      "contextWindow": 1000000,
+      "on": {
+        "commandcode": {
+          "id": "deepseek/deepseek-v4.1-flash-fast",
+          "prices": { "input": 0.32, "output": 1.16, "cacheRead": 0.032, "cacheWrite": 0.32 },
+          "offPeak": {
+            "prices": { "input": 0.16, "output": 0.58, "cacheRead": 0.016, "cacheWrite": 0.16 },
+            "peakHoursUtc": [[1, 4], [6, 10]]
+          }
+        }
+      }
+    },
+    "deepseek-v4.1-flash-ultrafast": {
+      "label": "DeepSeek V4.1 Flash Ultrafast",
+      "maker": "deepseek",
+      "released": "2026-10-17",
+      "contextWindow": 1048576,
+      "on": {
+        "commandcode": {
+          "id": "deepseek/deepseek-v4.1-flash-ultrafast",
+          "prices": { "input": 2.4, "output": 9.6, "cacheRead": 0.048, "cacheWrite": 2.4 }
+        }
+      }
+    },
+    "mimo-v2.6-pro": {
+      "label": "MiMo V2.6 Pro",
+      "maker": "Xiaomi",
+      "released": "2026-09-22",
+      "contextWindow": 1048576,
+      "on": {
+        "commandcode": {
+          "id": "xiaomi/mimo-v2.6-pro",
+          "prices": { "input": 0.435, "output": 0.87, "cacheRead": 0.004, "cacheWrite": 0.435 },
+          "structuredOutput": false
+        },
+        "plan:opencode": {}
+      }
+    },
+    "mimo-v2.6-pro-ultraspeed": {
+      "label": "MiMo V2.6 Pro UltraSpeed",
+      "maker": "Xiaomi",
+      "contextWindow": 1048576,
+      "on": {
+        "commandcode": {
+          "id": "xiaomi/mimo-v2.6-pro-ultraspeed",
+          "prices": { "input": 4.35, "output": 8.7, "cacheRead": 0.036, "cacheWrite": 4.35 },
+          "structuredOutput": false
+        }
+      }
+    },
+    "mimo-v2.6-flash": {
+      "label": "MiMo V2.6 Flash",
+      "maker": "Xiaomi",
+      "released": "2026-09-22",
+      "contextWindow": 1048576,
+      "on": {
+        "commandcode": {
+          "id": "xiaomi/mimo-v2.6-flash",
+          "prices": { "input": 0.14, "output": 0.28, "cacheRead": 0.003, "cacheWrite": 0.14 },
+          "structuredOutput": false
+        },
+        "plan:opencode": { "tag": "cheap" },
+        "cli:opencode-free": { "id": "opencode/mimo-v2.6-flash-free", "label": "MiMo V2.6 Flash Free" }
+      }
+    },
+    "gpt-6.2-astra": {
+      "label": "GPT-6.2 Astra",
+      "maker": "openai",
+      "family": "gpt-astra",
+      "released": "2026-11-17",
+      "contextWindow": 1050000,
+      "note": "OpenAI's flagship (\"our most capable model\"), at 4× GPT-6.2 Sol's prices.",
+      "on": {
+        "openai": {
+          "prices": { "input": 8, "output": 40, "cacheRead": 0.4, "cacheWrite": 10 },
+          "longContext": {
+            "aboveInputTokens": 272000,
+            "prices": { "input": 16, "output": 60, "cacheRead": 0.8, "cacheWrite": 20 }
+          },
+          "reasoning": true
+        },
+        "codex": { "fast": true }
+      }
+    },
+    "gpt-6.2-sol": {
+      "label": "GPT-6.2 Sol",
+      "maker": "openai",
+      "family": "gpt-sol",
+      "released": "2026-11-17",
+      "contextWindow": 1050000,
+      "note": "OpenAI's everyday model. It refuses reasoning effort `none`, so `none` goes as `low`.",
+      "on": {
+        "openai": {
+          "prices": { "input": 2, "output": 10, "cacheRead": 0.1, "cacheWrite": 2.5 },
+          "longContext": {
+            "aboveInputTokens": 272000,
+            "prices": { "input": 4, "output": 15, "cacheRead": 0.2, "cacheWrite": 5 }
+          },
+          "reasoning": true
+        },
+        "codex": { "fast": true }
+      }
+    },
+    "gpt-6-astra": {
+      "label": "GPT-6 Astra",
+      "maker": "openai",
+      "family": "gpt-astra",
+      "released": "2026-09-04",
+      "contextWindow": 1050000,
+      "note": "OpenAI's flagship, 5× GPT-6.1 Sol's prices.",
+      "on": {
+        "openai": {
+          "prices": { "input": 10, "output": 50, "cacheRead": 1, "cacheWrite": 12.5 },
+          "longContext": {
+            "aboveInputTokens": 272000,
+            "prices": { "input": 20, "output": 75, "cacheRead": 2, "cacheWrite": 25 }
+          },
+          "reasoning": true
+        },
+        "codex": { "fast": true }
+      }
+    },
+    "gpt-6.1-sol": {
+      "label": "GPT-6.1 Sol",
+      "maker": "openai",
+      "family": "gpt-sol",
+      "released": "2026-09-29",
+      "contextWindow": 1050000,
+      "on": {
+        "openai": {
+          "prices": { "input": 2, "output": 10, "cacheRead": 0.1, "cacheWrite": 2.5 },
+          "longContext": {
+            "aboveInputTokens": 272000,
+            "prices": { "input": 4, "output": 15, "cacheRead": 0.2, "cacheWrite": 5 }
+          },
+          "reasoning": true
+        },
+        "commandcode": {
+          "prices": { "input": 2, "output": 10, "cacheRead": 0.1, "cacheWrite": 2.5 },
+          "longContext": {
+            "aboveInputTokens": 272000,
+            "prices": { "input": 4, "output": 15, "cacheRead": 0.2, "cacheWrite": 5 }
+          }
+        },
+        "codex": { "fast": true }
+      }
+    },
+    "gpt-6.1-terra": {
+      "label": "GPT-6.1 Terra",
+      "maker": "openai",
+      "family": "gpt-terra",
+      "released": "2026-10-26",
+      "contextWindow": 1050000,
+      "on": {
+        "openai": {
+          "prices": { "input": 1, "output": 5, "cacheRead": 0.05, "cacheWrite": 1.25 },
+          "longContext": {
+            "aboveInputTokens": 272000,
+            "prices": { "input": 2, "output": 7.5, "cacheRead": 0.1, "cacheWrite": 2.5 }
+          },
+          "reasoning": true
+        },
+        "codex": { "fast": true }
+      }
+    },
+    "gpt-6-sol": {
+      "label": "GPT-6 Sol",
+      "maker": "openai",
+      "family": "gpt-sol",
+      "released": "2026-09-22",
+      "contextWindow": 1050000,
+      "on": {
+        "openai": {
+          "prices": { "input": 2, "output": 10, "cacheRead": 0.2, "cacheWrite": 2.5 },
+          "longContext": {
+            "aboveInputTokens": 272000,
+            "prices": { "input": 4, "output": 15, "cacheRead": 0.4, "cacheWrite": 5 }
+          },
+          "reasoning": true
+        },
+        "codex": { "fast": true }
+      }
+    },
+    "gpt-6-luna": {
+      "label": "GPT-6 Luna",
+      "maker": "openai",
+      "family": "gpt-luna",
+      "released": "2026-09-22",
+      "contextWindow": 1050000,
+      "on": {
+        "openai": {
+          "prices": { "input": 0.1, "output": 0.5, "cacheRead": 0.01, "cacheWrite": 0.125 },
+          "longContext": {
+            "aboveInputTokens": 272000,
+            "prices": { "input": 0.2, "output": 0.75, "cacheRead": 0.02, "cacheWrite": 0.25 }
+          },
+          "reasoning": true,
+          "leastThinking": "off"
+        },
+        "commandcode": {
+          "prices": { "input": 0.1, "output": 0.5, "cacheRead": 0.01, "cacheWrite": 0.125 },
+          "longContext": {
+            "aboveInputTokens": 272000,
+            "prices": { "input": 0.2, "output": 0.75, "cacheRead": 0.02, "cacheWrite": 0.25 }
+          }
+        },
+        "plan:opencode": { "tag": "cheap" },
+        "codex": { "fast": true }
+      }
+    },
+    "gpt-5.6-sol": {
+      "label": "GPT-5.6 Sol",
+      "maker": "openai",
+      "family": "gpt-sol",
+      "released": "2026-07-09",
+      "on": { "codex": { "fast": true } }
+    },
+    "gpt-5.6-terra": {
+      "label": "GPT-5.6 Terra",
+      "maker": "openai",
+      "family": "gpt-terra",
+      "released": "2026-07-09",
+      "on": { "codex": { "fast": true } }
+    },
+    "gpt-5.6-luna": {
+      "label": "GPT-5.6 Luna",
+      "maker": "openai",
+      "family": "gpt-luna",
+      "released": "2026-07-09",
+      "on": { "plan:opencode": {}, "codex": { "fast": true } }
+    },
+    "gemini-4-carbon": {
+      "label": "Gemini 4 Carbon",
+      "maker": "gemini",
+      "family": "gemini-carbon",
+      "released": "2026-11-10",
+      "contextWindow": 1048576,
+      "note": "Google's strongest reasoning model; it thinks more per turn than Argon.",
+      "on": {
+        "gemini": {
+          "prices": { "input": 4, "output": 20, "cacheRead": 0.2, "cacheWrite": 4 },
+          "intro": {
+            "until": "2026-12-01",
+            "prices": { "input": 2, "output": 10, "cacheRead": 0.1, "cacheWrite": 2 }
+          }
+        }
+      }
+    },
+    "gemini-4-neon": {
+      "label": "Gemini 4 Neon",
+      "maker": "gemini",
+      "family": "gemini-neon",
+      "released": "2026-11-18",
+      "contextWindow": 1048576,
+      "note": "Google's fast reasoning model, close to Carbon for less, at one price across its whole window.",
+      "on": {
+        "gemini": { "prices": { "input": 3, "output": 15, "cacheRead": 0.15, "cacheWrite": 3 } },
+        "cli:antigravity": { "levels": ["high", "xhigh", "medium", "low"] }
+      }
+    },
+    "gemini-4-argon": {
+      "label": "Gemini 4 Argon",
+      "maker": "gemini",
+      "family": "gemini-argon",
+      "released": "2026-10-13",
+      "contextWindow": 1048576,
+      "on": {
+        "gemini": {
+          "prices": { "input": 4, "output": 20, "cacheRead": 0.2, "cacheWrite": 4 },
+          "intro": {
+            "until": "2026-12-01",
+            "prices": { "input": 2, "output": 10, "cacheRead": 0.1, "cacheWrite": 2 }
+          }
+        },
+        "plan:opencode": { "tag": "smart" },
+        "cli:antigravity": { "levels": ["high", "medium", "low"] }
+      }
+    },
+    "gemini-4-hydrogen": {
+      "label": "Gemini 4 Hydrogen",
+      "maker": "gemini",
+      "family": "gemini-everyday",
+      "released": "2026-11-12",
+      "contextWindow": 1048576,
+      "note": "Google's recommended upgrade from Gemini 3.8 Flash, at one price across its whole window.",
+      "on": {
+        "gemini": { "prices": { "input": 1.5, "output": 7.5, "cacheRead": 0.075, "cacheWrite": 1.5 } },
+        "cli:antigravity": { "levels": ["high", "xhigh", "medium", "low"] }
+      }
+    },
+    "gemini-3.8-flash": {
+      "label": "Gemini 3.8 Flash",
+      "maker": "gemini",
+      "family": "gemini-everyday",
+      "released": "2026-09-02",
+      "contextWindow": 1048576,
+      "on": {
+        "gemini": {
+          "prices": { "input": 1.5, "output": 7.5, "cacheRead": 0.15, "cacheWrite": 1.5 },
+          "intro": {
+            "until": "2027-01-01",
+            "prices": { "input": 0.75, "output": 3.75, "cacheRead": 0.075, "cacheWrite": 0.75 }
+          }
+        },
+        "commandcode": {
+          "id": "google/gemini-3.8-flash",
+          "prices": { "input": 1.5, "output": 7.5, "cacheRead": 0.15, "cacheWrite": 1.5 },
+          "contextWindow": 1000000
+        },
+        "cli:antigravity": { "levels": ["high", "medium", "low"] }
+      }
+    },
+    "gemini-3.5-flash-lite": {
+      "label": "Gemini 3.5 Flash-Lite",
+      "maker": "gemini",
+      "family": "gemini-flash-lite",
+      "released": "2026-07-21",
+      "contextWindow": 1048576,
+      "note": "It can't stop thinking: `minimal` is the least.",
+      "on": {
+        "gemini": {
+          "prices": { "input": 0.3, "output": 2.5, "cacheRead": 0.03, "cacheWrite": 0.3 },
+          "leastThinking": "minimal"
+        }
+      }
+    },
+    "MiniMax-M3": {
+      "label": "MiniMax M3",
+      "maker": "minimax",
+      "family": "minimax-m",
+      "released": "2026-06-01",
+      "contextWindow": 1000000,
+      "note": "Routes for MiniMax: thinking off by default, while M3.1 Flash always thinks (at `max` unless told) for the same cost a call.",
+      "on": {
+        "minimax": {
+          "prices": { "input": 0.3, "output": 1.2, "cacheRead": 0.06, "cacheWrite": 0.3 },
+          "longContext": {
+            "aboveInputTokens": 512000,
+            "prices": { "input": 0.6, "output": 2.4, "cacheRead": 0.12, "cacheWrite": 0.6 }
+          },
+          "leastThinking": "off"
+        },
+        "plan:opencode": { "id": "minimax-m3" }
+      }
+    },
+    "MiniMax-M3.1-Flash": {
+      "label": "MiniMax M3.1 Flash",
+      "maker": "minimax",
+      "family": "minimax-flash",
+      "released": "2026-10-19",
+      "contextWindow": 1000000,
+      "on": {
+        "minimax": { "prices": { "input": 0.15, "output": 0.6, "cacheRead": 0.015, "cacheWrite": 0.15 } },
+        "commandcode": {
+          "id": "minimax/minimax-m3.1-flash",
+          "prices": { "input": 0.15, "output": 0.6, "cacheRead": 0.015, "cacheWrite": 0.15 },
+          "structuredOutput": false
+        },
+        "plan:minimax": { "id": "MiniMax-M3.1-Flash[1m]" },
+        "plan:opencode": { "id": "minimax-m3.1-flash" }
+      }
+    },
+    "grok-4.7": {
+      "label": "Grok 4.7",
+      "maker": "xAI",
+      "released": "2026-09-21",
+      "on": { "plan:opencode": {}, "cli:grok": {} }
+    },
+    "grok-4.6": {
+      "label": "Grok 4.6",
+      "maker": "xAI",
+      "released": "2026-08-12",
+      "on": { "cli:grok": {} }
+    },
+    "grok-4.5": {
+      "label": "Grok 4.5",
+      "maker": "xAI",
+      "released": "2026-07-08",
+      "on": { "cli:grok": {} }
+    },
+    "longcat-2.0": {
+      "label": "LongCat 2.0",
+      "maker": "Meituan",
+      "released": "2026-06-30",
+      "on": { "plan:opencode": { "tag": "cheap" } }
+    },
+    "longcat-2.5-free": {
+      "label": "LongCat 2.5 Free",
+      "maker": "Meituan",
+      "on": { "plan:opencode": { "free": true }, "cli:opencode-free": { "id": "opencode/longcat-2.5-free" } }
+    },
+    "hy3": {
+      "label": "Hy3",
+      "maker": "Tencent",
+      "released": "2026-07-06",
+      "on": { "plan:opencode": { "tag": "cheap" } }
+    },
+    "hy4": {
+      "label": "Hy4",
+      "maker": "Tencent",
+      "released": "2026-11-04",
+      "on": { "plan:opencode": {} }
+    },
+    "hy4-preview": {
+      "label": "Hy4 Preview",
+      "maker": "Tencent",
+      "on": { "plan:opencode": {} }
+    },
+    "hy4-flash-free": {
+      "label": "Hy4 Flash Free",
+      "maker": "Tencent",
+      "on": { "plan:opencode": { "free": true } }
+    },
+    "step-5-preview": {
+      "label": "Step 5 Preview",
+      "maker": "StepFun",
+      "released": "2026-09-16",
+      "on": { "plan:opencode": {} }
+    },
+    "muse-spark-1.3": {
+      "label": "Muse Spark 1.3",
+      "maker": "Meta",
+      "released": "2026-09-02",
+      "contextWindow": 1048576,
+      "on": {
+        "commandcode": {
+          "id": "meta/muse-spark-1.3",
+          "prices": { "input": 1.25, "output": 4.25, "cacheRead": 0.15, "cacheWrite": 1.25 }
+        }
+      }
+    },
+    "muse-spark-1.3-contributor": {
+      "label": "Muse Spark 1.3 Contributor",
+      "maker": "Meta",
+      "contextWindow": 1048576,
+      "on": {
+        "commandcode": {
+          "id": "meta/muse-spark-1.3-contributor",
+          "prices": { "input": 0.1, "output": 0.2, "cacheRead": 0.002, "cacheWrite": 0.1 }
+        },
+        "plan:opencode": { "needs": "paidTraining" }
+      }
+    },
+    "muse-spark-1.2-contributor": {
+      "label": "Muse Spark 1.2 Contributor",
+      "maker": "Meta",
+      "on": { "plan:opencode": { "needs": "paidTraining" } }
+    },
+    "muse-spark-open": {
+      "label": "Muse Spark Open",
+      "maker": "Meta",
+      "contextWindow": 1048576,
+      "on": {
+        "commandcode": {
+          "id": "meta/muse-spark-open",
+          "prices": { "input": 1.25, "output": 4.25, "cacheRead": 0.15, "cacheWrite": 1.25 }
+        }
+      }
+    },
+    "muse-ember": {
+      "label": "Muse Ember",
+      "maker": "Meta",
+      "contextWindow": 1048576,
+      "on": {
+        "commandcode": {
+          "id": "meta/muse-ember",
+          "prices": { "input": 0.1, "output": 0.5, "cacheRead": 0.004, "cacheWrite": 0.1 }
+        }
+      }
+    },
+    "beam-free": {
+      "label": "Beam Free",
+      "maker": "Reflection",
+      "on": { "plan:opencode": { "free": true }, "cli:opencode-free": { "id": "opencode/beam-free" } }
+    },
+    "crouton-alpha-free": {
+      "label": "Crouton Alpha Free",
+      "maker": "OpenCode",
+      "on": { "cli:opencode-free": { "id": "opencode/crouton-alpha-free" } }
+    },
+    "iceman-contributor-free": {
+      "label": "Iceman Contributor Free",
+      "maker": "OpenCode",
+      "on": { "plan:opencode": { "needs": "freeTraining", "free": true } }
+    },
+    "iceman-free": {
+      "label": "Iceman Free",
+      "on": { "cli:opencode-free": { "id": "opencode/iceman-free" } }
+    },
+    "big-pickle": {
+      "label": "Big Pickle",
+      "on": { "cli:opencode-free": { "id": "opencode/big-pickle" } }
+    },
+    "flint-40b-free": {
+      "label": "Flint 40B Free",
+      "on": { "cli:opencode-free": { "id": "opencode/flint-40b-free" } }
+    },
+    "inkling-2-small-free": {
+      "label": "Inkling 2 Small Free",
+      "on": { "cli:opencode-free": { "id": "opencode/inkling-2-small-free" } }
+    },
+    "jev-1.13-free": {
+      "label": "Jev 1.13 Free",
+      "on": { "cli:opencode-free": { "id": "opencode/jev-1.13-free" } }
+    },
+    "nemotron-3-ultra-free": {
+      "label": "Nemotron 3 Ultra Free",
+      "on": { "cli:opencode-free": { "id": "opencode/nemotron-3-ultra-free" } }
+    },
+    "nemotron-3.5-lightning-free": {
+      "label": "Nemotron 3.5 Lightning Free",
+      "on": { "cli:opencode-free": { "id": "opencode/nemotron-3.5-lightning-free" } }
+    },
+    "nemotron-3.5-super-vl-free": {
+      "label": "Nemotron 3.5 Super VL Free",
+      "on": { "cli:opencode-free": { "id": "opencode/nemotron-3.5-super-vl-free" } }
+    }
+  }
+}

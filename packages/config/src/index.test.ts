@@ -33,8 +33,8 @@ describe("loadConfig", () => {
     expect(config.PORT).toBe(3000);
     expect(config.RUN_MIGRATIONS_ON_BOOT).toBe(true);
     expect(config.ALLOW_SIGNUP).toBe(false);
-    expect(config.AGENT_DEFAULT_MODEL).toBe("claude-sonnet-5-5");
-    expect(config.ROUTER_MODEL).toBe("claude-haiku-5-5");
+    // Unset: the model registry's picks (`DEFAULT_MODELS`, ADR 0195).
+    expect(config.ROUTER_MODEL).toBeUndefined();
     expect(config.AGENT_MAX_HOPS).toBe(100);
     expect(config.S3_PATH_STYLE).toBe(false);
     expect(config.MILLIONSEND_API_URL).toBe("https://api.millionsend.com");
@@ -147,7 +147,7 @@ describe("loadConfig", () => {
   });
 
   test("rejects malformed model ids", () => {
-    expect(() => loadConfig({ ...valid, AGENT_DEFAULT_MODEL: "Claude Sonnet" })).toThrow(/AGENT_DEFAULT_MODEL/);
+    expect(() => loadConfig({ ...valid, ROUTER_MODEL: "Claude Haiku" })).toThrow(/ROUTER_MODEL/);
   });
 
   test("external provisioning needs the operator API, which serves its requests, and no computer of the server's own", () => {

@@ -3,23 +3,19 @@
  * owner pastes ("key accounts", ADR 0059). Pure data, read by the runner (where
  * a turn goes, which variable holds the key, what each model alias runs), the
  * engine and the apps (names, where the key is made, the model choices): it
- * imports nothing. A plan with a `modelsUrl` goes by that list once the server
- * has read it (`readPlanModels`), this table being its fallback. The key travels
- * sealed to the computer and stays there; our server never holds or routes it,
- * and the endpoint a turn uses comes from the runner's own copy of this file.
+ * imports only the model registry (`registry.ts`, ADR 0195), where each plan's
+ * models are (`plan:<id>`). A plan with a `modelsUrl` goes by that list once the
+ * server has read it (`readPlanModels`), the registry being its fallback. The
+ * key travels sealed to the computer and stays there; our server never holds or
+ * routes it, and the endpoint a turn uses comes from the runner's own copy of
+ * this file, never from the registry.
  *
  * Settings as each maker documents them for Claude Code (read 2026-10-24):
  * docs.z.ai/devpack/tool/claude, kimi.com/code/docs (third-party tools, Claude
  * Code), platform.minimax.io/docs/coding-plan/claude-code and
- * opencode.ai/v2/docs/console/harnesses/claude-code. Each plan's models as its
- * maker lists them (read 2026-10-30): docs.z.ai/devpack/overview,
- * kimi.com/code/docs/en/kimi-code/models.html,
- * platform.minimax.io/docs/coding-plan/intro, and opencode.ai/v2/docs/console/go
- * with its live list (opencode.ai/inference/go/v1/models). Flagships in their
- * makers' words (read 2026-10-30): docs.z.ai/guides/llm/glm-5.3, Kimi's models
- * page, Alibaba's Qwen3.8-Max announcement and
- * ai.google.dev/gemini-api/docs/models/gemini-4-argon.
+ * opencode.ai/v2/docs/console/harnesses/claude-code.
  */
+import { roleModel, routeModels } from "./registry";
 
 /** Claude Code's model aliases: "Automático" picks one per run, and the plan names the model each one runs. */
 export type PlanAlias = "opus" | "sonnet" | "haiku";
@@ -97,6 +93,39 @@ export interface CodingPlan {
   limitsPerModel?: true;
 }
 
+/**
+ * A plan's models from the registry (`plan:<id>`, ADR 0195), each maker's together, the aliases' makers first (the
+ * alias each one runs is the registry's role for its family on the plan). A plan of one maker names none.
+ */
+function planModels(plan: string): PlanModel[] {
+  const route = `plan:${plan}`;
+  const rows = routeModels(route).map(([id, model, r]): PlanModel => {
+    const alias = PLAN_ALIASES.find((a) => roleModel(route, a) === id);
+    return {
+      id: r.id ?? id,
+      label: r.label ?? model.label,
+      ...(alias ? { alias } : {}),
+      ...(r.tag ? { tag: r.tag } : {}),
+      ...(r.needs ? { needs: r.needs } : {}),
+      ...(r.free ? { free: true as const } : {}),
+      ...(model.images === false ? { images: false as const } : {}),
+      ...(model.maker ? { maker: model.maker } : {}),
+    };
+  });
+  const makers = [...new Set(rows.map((m) => m.maker))];
+  if (makers.length < 2) return rows.map(({ maker: _, ...m }) => m);
+  const aliasRank = (maker: string | undefined) => {
+    const ranks = rows
+      .filter((m) => m.maker === maker && m.alias)
+      .map((m) => PLAN_ALIASES.indexOf(m.alias as PlanAlias));
+    return ranks.length ? Math.min(...ranks) : PLAN_ALIASES.length;
+  };
+  return makers
+    .map((maker, at) => ({ maker, rank: aliasRank(maker), at }))
+    .sort((a, b) => a.rank - b.rank || a.at - b.at)
+    .flatMap(({ maker }) => rows.filter((m) => m.maker === maker));
+}
+
 export const CODING_PLANS = {
   zai: {
     label: "GLM Coding",
@@ -107,11 +136,7 @@ export const CODING_PLANS = {
     claudeCode: {
       baseUrl: "https://api.z.ai/api/anthropic",
       tokenEnv: "ANTHROPIC_AUTH_TOKEN",
-      // Every tier has both; Flash spends about a third of GLM-5.3's credits per token.
-      models: [
-        { id: "glm-5.3[1m]", label: "GLM-5.3", alias: "sonnet", tag: "smart" },
-        { id: "glm-5.3-flash[1m]", label: "GLM-5.3 Flash", alias: "haiku", tag: "cheap" },
-      ],
+      models: planModels("zai"),
       env: { API_TIMEOUT_MS: "3000000" },
     },
     usage: { url: "https://api.z.ai/api/monitor/usage/quota/limit", auth: "raw" },
@@ -125,17 +150,7 @@ export const CODING_PLANS = {
     claudeCode: {
       baseUrl: "https://api.kimi.ai/coding/",
       tokenEnv: "ANTHROPIC_API_KEY",
-      // `kimi-for-coding` (K2.8 Preview), K3.1 Pro and both K3 need Plus or above, the high-speed models Pro or
-      // above. K3.1 Pro Highspeed spends about 2× K3.1 Pro's quota; K2.7 Code Highspeed is another model, at about
-      // 3× the quota of K2.7 Code (not in the plan). K3 256K spends about half of K3's.
-      models: [
-        { id: "kimi-for-coding", label: "Kimi for Coding", alias: "sonnet" },
-        { id: "k3.1-pro", label: "K3.1 Pro", alias: "opus", tag: "smart" },
-        { id: "k3.1-pro-highspeed", label: "K3.1 Pro Highspeed", tag: "fast" },
-        { id: "kimi-for-coding-highspeed", label: "K2.7 Code Highspeed", tag: "fast" },
-        { id: "k3", label: "K3" },
-        { id: "k3-256k", label: "K3 256K" },
-      ],
+      models: planModels("kimi"),
     },
     usage: { url: "https://api.kimi.com/coding/v1/usages", auth: "bearer" },
   },
@@ -148,7 +163,7 @@ export const CODING_PLANS = {
     claudeCode: {
       baseUrl: "https://api.minimax.io/anthropic",
       tokenEnv: "ANTHROPIC_AUTH_TOKEN",
-      models: [{ id: "MiniMax-M3.1-Flash[1m]", label: "MiniMax M3.1 Flash", alias: "sonnet" }],
+      models: planModels("minimax"),
     },
   },
   opencode: {
@@ -161,72 +176,9 @@ export const CODING_PLANS = {
     claudeCode: {
       baseUrl: "https://opencode.ai/inference/go/anthropic",
       tokenEnv: "ANTHROPIC_AUTH_TOKEN",
-      // Go answers in Anthropic's format for every model, translating the others. Each model has its own
-      // monthly cap; `cheap`: 20,000 or more requests a month on Go by OpenCode's own estimates. DeepSeek's
-      // models answer only once the OpenCode workspace allows the Global region, the ones that train on what
-      // they're sent only once it allows that (paid and free are separate switches); none has an alias, so
-      // "Automático" never picks one.
-      // The fallback for `modelsUrl` (32 on 2026-11-17, all of them here), and what only we know of each model:
-      // its alias and tag. Zen's own free models (`deepseek-v4.1-flash-free`, `glm-5.3-flash-free`, `big-pickle`…)
-      // aren't Go's: OpenCode serves its free tier only to the OpenCode CLI ("Free-tier chat models require
-      // OpenCode", opencode.ai/v2/docs/console/models, read 2026-11-06), so they can't answer through Claude Code.
-      models: [
-        { id: "minimax-m3", label: "MiniMax M3", alias: "sonnet", maker: "minimax" },
-        { id: "minimax-m3.1-flash", label: "MiniMax M3.1 Flash", maker: "minimax" },
-        { id: "claude-haiku-5-5", label: "Claude Haiku 5.5", alias: "haiku", maker: "anthropic" },
-        { id: "glm-5.3", label: "GLM-5.3", tag: "smart", maker: "zai" },
-        { id: "glm-5.3-flash", label: "GLM-5.3 Flash", tag: "cheap", maker: "zai" },
-        { id: "glm-5.2", label: "GLM-5.2", maker: "zai" },
-        { id: "kimi-k3.1-pro", label: "Kimi K3.1 Pro", tag: "smart", maker: "moonshot" },
-        { id: "kimi-k3", label: "Kimi K3", maker: "moonshot" },
-        { id: "kimi-k2.7-code", label: "Kimi K2.7 Code", maker: "moonshot" },
-        { id: "qwen4-max", label: "Qwen4 Max", maker: "Alibaba" },
-        { id: "qwen3.8-max", label: "Qwen3.8 Max", tag: "smart", maker: "Alibaba" },
-        { id: "qwen3.8-flash", label: "Qwen3.8 Flash", tag: "cheap", maker: "Alibaba" },
-        { id: "qwen3.7-plus", label: "Qwen3.7 Plus", tag: "cheap", maker: "Alibaba" },
-        { id: "deepseek-v4-pro", label: "DeepSeek V4 Pro", needs: "globalRegion", maker: "deepseek", images: false },
-        {
-          id: "deepseek-v4.1-flash",
-          label: "DeepSeek V4.1 Flash",
-          tag: "cheap",
-          needs: "globalRegion",
-          maker: "deepseek",
-          images: false,
-        },
-        { id: "mimo-v2.6-pro", label: "MiMo V2.6 Pro", maker: "Xiaomi" },
-        { id: "mimo-v2.6-flash", label: "MiMo V2.6 Flash", tag: "cheap", maker: "Xiaomi" },
-        { id: "gpt-6-luna", label: "GPT-6 Luna", tag: "cheap", maker: "openai" },
-        { id: "gpt-5.6-luna", label: "GPT-5.6 Luna", maker: "openai" },
-        { id: "gemini-4-argon", label: "Gemini 4 Argon", tag: "smart", maker: "gemini" },
-        { id: "grok-4.7", label: "Grok 4.7", maker: "xAI" },
-        { id: "longcat-2.0", label: "LongCat 2.0", tag: "cheap", maker: "Meituan" },
-        { id: "longcat-2.5-free", label: "LongCat 2.5 Free", free: true, maker: "Meituan" },
-        { id: "hy3", label: "Hy3", tag: "cheap", maker: "Tencent" },
-        { id: "hy4", label: "Hy4", maker: "Tencent" },
-        { id: "hy4-preview", label: "Hy4 Preview", maker: "Tencent" },
-        { id: "hy4-flash-free", label: "Hy4 Flash Free", free: true, maker: "Tencent" },
-        { id: "step-5-preview", label: "Step 5 Preview", maker: "StepFun" },
-        {
-          id: "muse-spark-1.3-contributor",
-          label: "Muse Spark 1.3 Contributor",
-          needs: "paidTraining",
-          maker: "Meta",
-        },
-        {
-          id: "muse-spark-1.2-contributor",
-          label: "Muse Spark 1.2 Contributor",
-          needs: "paidTraining",
-          maker: "Meta",
-        },
-        { id: "beam-free", label: "Beam Free", free: true, maker: "Reflection" },
-        {
-          id: "iceman-contributor-free",
-          label: "Iceman Contributor Free",
-          needs: "freeTraining",
-          free: true,
-          maker: "OpenCode",
-        },
-      ],
+      // Go answers in Anthropic's format for every model, translating the others; its list replaces the
+      // registry's (`modelsUrl`), which keeps what only we know of each model: its alias and tag.
+      models: planModels("opencode"),
       // Its models that aren't Claude refuse some of Claude Code's betas; the OpenCode CLI, if the agent runs
       // it, reads no project config that could point it elsewhere.
       env: { CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS: "1", OPENCODE_DISABLE_PROJECT_CONFIG: "1" },
@@ -239,22 +191,12 @@ export const CODING_PLANS = {
 } as const satisfies Record<string, CodingPlan>;
 
 /**
- * The models ChatGPT's Fast mode serves (developers.openai.com/api/docs/guides/fast-mode, ids as Codex lists them in
- * its `service_tiers`, codex-cli 0.166.0; GPT-6.2 Sol and Astra from the guide and the pricing page's Fast table,
- * 2026-11-17). Codex drops the tier without a word for any other model.
+ * The models ChatGPT's Fast mode serves, ids as Codex lists them (the registry's `codex` route, `fast`). Codex drops
+ * the tier without a word for any other model.
  */
-export const FAST_MODE_MODELS: readonly string[] = [
-  "gpt-6.2-sol",
-  "gpt-6.2-astra",
-  "gpt-6.1-sol",
-  "gpt-6.1-terra",
-  "gpt-6-astra",
-  "gpt-6-sol",
-  "gpt-6-luna",
-  "gpt-5.6-sol",
-  "gpt-5.6-terra",
-  "gpt-5.6-luna",
-];
+export const FAST_MODE_MODELS: readonly string[] = routeModels("codex").flatMap(([id, , r]) =>
+  r.fast ? [r.id ?? id] : [],
+);
 
 /**
  * Velocidade (ADR 0149) means something for this brain, sign-in and model: Codex on a ChatGPT sign-in (no key account
@@ -571,71 +513,41 @@ export const sharedSignIn = (kind: string, provider?: string | null) =>
       SHARED_SIGN_INS[kind];
 
 /**
- * OpenCode's free tier (ADR 0132): models OpenCode serves at no cost and only to its own CLI ("Free-tier chat models
- * require OpenCode", opencode.ai/docs/zen, read 2026-11-02; its free list read again 2026-11-09). Its CLI runs them
- * with no key at all. What `opencode models` lists on the computer comes first; this list is the fallback where it
- * listed nothing.
- * ponytail: hand-copied list, the CLI's own listing replaces it wherever the runner reports one.
+ * OpenCode's free tier (ADR 0132): models OpenCode serves at no cost and only to its own CLI, which runs them with no
+ * key at all. What `opencode models` lists on the computer comes first; this list (the registry's `cli:opencode-free`)
+ * is the fallback where it listed nothing.
  */
-export const OPENCODE_FREE_MODELS: readonly { id: string; label: string }[] = [
-  { id: "opencode/big-pickle", label: "Big Pickle" },
-  { id: "opencode/beam-free", label: "Beam Free" },
-  { id: "opencode/crouton-alpha-free", label: "Crouton Alpha Free" },
-  { id: "opencode/deepseek-v4.1-flash-free", label: "DeepSeek V4.1 Flash Free" },
-  { id: "opencode/flint-40b-free", label: "Flint 40B Free" },
-  { id: "opencode/glm-5.3-flash-free", label: "GLM-5.3 Flash Free" },
-  { id: "opencode/iceman-free", label: "Iceman Free" },
-  { id: "opencode/inkling-2-small-free", label: "Inkling 2 Small Free" },
-  { id: "opencode/jev-1.13-free", label: "Jev 1.13 Free" },
-  { id: "opencode/longcat-2.5-free", label: "LongCat 2.5 Free" },
-  { id: "opencode/mimo-v2.6-flash-free", label: "MiMo V2.6 Flash Free" },
-  { id: "opencode/nemotron-3-ultra-free", label: "Nemotron 3 Ultra Free" },
-  { id: "opencode/nemotron-3.5-lightning-free", label: "Nemotron 3.5 Lightning Free" },
-  { id: "opencode/nemotron-3.5-super-vl-free", label: "Nemotron 3.5 Super VL Free" },
-];
+export const OPENCODE_FREE_MODELS: readonly { id: string; label: string }[] = routeModels("cli:opencode-free")
+  .map(([id, m, r]) => ({ id: r.id ?? `opencode/${id}`, label: r.label ?? m.label }))
+  .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 
 /** A model of OpenCode's free tier by its `provider/model` id: one OpenCode serves (`opencode/`) named `-free`, or listed. */
 export const isOpencodeFreeModel = (id: string) =>
   /^opencode\/[\w.-]+-free$/.test(id) || OPENCODE_FREE_MODELS.some((m) => m.id === id);
 
 /**
- * Grok Build's models (ADR 0142) where the agent's computer listed none (`grok models` asks xAI: none offline). What
- * the CLI lists comes first; with none chosen its own default runs.
- * ponytail: hand-copied list (grok-4.5 and grok-4.6 as Grok Build 1.0.34 listed them, grok-4.7 as OpenCode Go lists
- * it, 2026-11-04), the CLI's own listing replaces it wherever the runner reports one.
+ * Grok Build's models (ADR 0142) where the agent's computer listed none (`grok models` asks xAI: none offline): the
+ * registry's `cli:grok`. What the CLI lists comes first; with none chosen its own default runs.
  */
-export const GROK_BUILD_MODELS: readonly { id: string; label: string }[] = [
-  { id: "grok-4.7", label: "Grok 4.7" },
-  { id: "grok-4.6", label: "Grok 4.6" },
-  { id: "grok-4.5", label: "Grok 4.5" },
-];
+export const GROK_BUILD_MODELS: readonly { id: string; label: string }[] = routeModels("cli:grok").map(
+  ([id, m, r]) => ({
+    id: r.id ?? id,
+    label: r.label ?? m.label,
+  }),
+);
 
 /**
  * The Antigravity CLI's models (ADR 0143) where the agent's computer listed none (`agy models` asks Google: none
- * offline, none before an account here signed in), each slug a model at one thinking level, `xhigh` being the
- * "Extra" one, and the plans that include it (antigravity.google/docs/models, read 2026-11-20): Gemini 4 Neon, the
- * CLI's own default, and Argon on paid Google AI Pro, Ultra and Enterprise, Hydrogen on Pro (not its trial), Ultra
- * and Enterprise, Gemini 3.8 Flash on every plan; Carbon on Ultra and Enterprise only, and the older Flash and 3.1
- * Pro on Enterprise only, are left to the CLI's own listing. What the CLI lists comes first; with none chosen its own
- * default runs.
- * ponytail: hand-copied list, the CLI's own listing replaces it wherever the runner reports one.
+ * offline): the registry's `cli:antigravity`, each slug a model at one of its thinking `levels`. What the CLI lists
+ * comes first; with none chosen its own default runs.
  */
-export const ANTIGRAVITY_MODELS: readonly { id: string; label: string }[] = [
-  { id: "gemini-4-neon-high", label: "Gemini 4 Neon (High)" },
-  { id: "gemini-4-neon-xhigh", label: "Gemini 4 Neon (XHigh)" },
-  { id: "gemini-4-neon-medium", label: "Gemini 4 Neon (Medium)" },
-  { id: "gemini-4-neon-low", label: "Gemini 4 Neon (Low)" },
-  { id: "gemini-4-hydrogen-high", label: "Gemini 4 Hydrogen (High)" },
-  { id: "gemini-4-hydrogen-xhigh", label: "Gemini 4 Hydrogen (XHigh)" },
-  { id: "gemini-4-hydrogen-medium", label: "Gemini 4 Hydrogen (Medium)" },
-  { id: "gemini-4-hydrogen-low", label: "Gemini 4 Hydrogen (Low)" },
-  { id: "gemini-4-argon-high", label: "Gemini 4 Argon (High)" },
-  { id: "gemini-4-argon-medium", label: "Gemini 4 Argon (Medium)" },
-  { id: "gemini-4-argon-low", label: "Gemini 4 Argon (Low)" },
-  { id: "gemini-3.8-flash-high", label: "Gemini 3.8 Flash (High)" },
-  { id: "gemini-3.8-flash-medium", label: "Gemini 3.8 Flash (Medium)" },
-  { id: "gemini-3.8-flash-low", label: "Gemini 3.8 Flash (Low)" },
-];
+export const ANTIGRAVITY_MODELS: readonly { id: string; label: string }[] = routeModels("cli:antigravity").flatMap(
+  ([id, m, r]) =>
+    (r.levels ?? []).map((level) => ({
+      id: `${r.id ?? id}-${level}`,
+      label: `${r.label ?? m.label} (${level === "xhigh" ? "XHigh" : `${level.charAt(0).toUpperCase()}${level.slice(1)}`})`,
+    })),
+);
 
 /**
  * An Antigravity CLI account's `provider` when it signs in to Gemini Enterprise (`oauth-business`, ADR 0143); none:

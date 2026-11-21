@@ -50,13 +50,13 @@ describe("pricing", () => {
     expect(MODEL_CATALOG["claude-fable-5-1"]?.tier).toBeUndefined();
   });
 
-  test("Fable 5.2: $8 / $0.20 / $10 / $40 across its whole 1M window, chosen only by people", () => {
+  test("Fable 5.2: $8 / $0.20 / $10 / $40, one block in the registry, chosen only by people", () => {
     const perMTok = [usage(1e6, 0), usage(0, 0, 1e6), usage(0, 0, 0, 1e6), usage(0, 1e6)].map(
       (u) => costNanoUsd("claude-fable-5-2", u) / 1e9,
     );
     expect(perMTok).toEqual([8, 0.2, 10, 40]);
     expect(MODEL_CATALOG["claude-fable-5-2"]).toMatchObject({ provider: "anthropic", serverSideFallback: true });
-    // Like 5.1: no tier, not suggested, and Claude Code's aliases stay on Opus, Sonnet and Haiku.
+    // Its family holds no role: no tier, not suggested, and Claude Code's aliases stay on Opus, Sonnet and Haiku.
     const fable = MODEL_CATALOG["claude-fable-5-2"];
     expect([fable?.tier, fable?.recommended, fable?.cheap, fable?.router]).toEqual([
       undefined,
@@ -107,7 +107,7 @@ describe("pricing", () => {
     expect(costNanoUsd("gpt-6.2-astra", usage(100_001, 1000, 100_000, 72_000))).toBe(
       100_001 * 16000 + 1000 * 60000 + 100_000 * 800 + 72_000 * 20000,
     );
-    // GPT-6.2 Sol takes 6.1 Sol's tier and suggestion; GPT-6.2 Astra, like GPT-6 Astra, none.
+    // The newest Sol takes its line's roles; the newest Astra, like every Astra, none.
     expect(MODEL_CATALOG["gpt-6.2-sol"]).toMatchObject({ tier: "medium", recommended: true, reasoning: true });
     expect(MODEL_CATALOG["gpt-6.1-sol"]?.tier).toBeUndefined();
     expect(MODEL_CATALOG["gpt-6.2-astra"]?.tier).toBeUndefined();

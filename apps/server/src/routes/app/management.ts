@@ -201,8 +201,14 @@ const Settings = z
     defaultCredentialIds: z.record(z.string(), z.uuid()).openapi({
       description: "Default key per provider (`{ anthropic, openai }`): agents without a key, router, summaries.",
     }),
-    routerModel: z.string().nullable().openapi({ description: "Null = the deployment's ROUTER_MODEL." }),
-    summaryModel: z.string().nullable().openapi({ description: "Null = the deployment's SUMMARY_MODEL." }),
+    routerModel: z
+      .string()
+      .nullable()
+      .openapi({ description: "Null = the deployment's ROUTER_MODEL, else the model registry's routing pick." }),
+    summaryModel: z
+      .string()
+      .nullable()
+      .openapi({ description: "Null = the deployment's SUMMARY_MODEL, else the model registry's cheap model." }),
     timezone: z.string().openapi({ example: "America/Sao_Paulo" }),
     teamSize: z.enum(["solo", "small", "medium", "large"]).nullable(),
     defaultAgentBudgetUsd: z.number().optional().openapi({

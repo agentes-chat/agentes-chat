@@ -61,7 +61,7 @@ function isOrigin(value: string): boolean {
   }
 }
 
-/** Claude model ids accepted as defaults. Prices live in `@agenteschat/providers` (`MODEL_CATALOG`). */
+/** A model id the deployment names. Models, prices and the defaults live in the model registry (ADR 0195). */
 const modelId = z.string().regex(/^[a-z0-9][a-z0-9.-]*$/, "must be a model id such as claude-sonnet-5-5");
 
 /** A comma-separated list, trimmed and normalized, empty entries dropped; each entry checked by `ok`. */
@@ -374,12 +374,6 @@ export const envVars = {
       "SHA-256 fingerprints of the Android app's signing certificates (`AA:BB:…`), comma-separated: Google Play's app signing key (Play Console › Test and release › App integrity › App signing), and the upload key's for builds installed outside Play.",
     section: "Sign-in",
   },
-  AGENT_DEFAULT_MODEL: {
-    schema: modelId.default("claude-sonnet-5-5"),
-    description:
-      "Unused: new agents start on Automático (`auto`, each run picks the model and effort), whatever this says. Still checked when set; to be removed.",
-    section: "Agents",
-  },
   ROUTER_ENABLED: {
     schema: z.stringbool().default(true),
     description:
@@ -387,9 +381,9 @@ export const envVars = {
     section: "Agents",
   },
   ROUTER_MODEL: {
-    schema: modelId.default("claude-haiku-5-5"),
+    schema: modelId.optional(),
     description:
-      "Small model the router uses on a Claude key when Jev doesn't decide. An OpenAI key uses `OPENAI_CHEAP_MODEL`, other providers their catalog's routing pick. Any model in the catalog. An organization can override it in its settings.",
+      "Small model the router uses on a Claude key when Jev doesn't decide. Unset: the model registry's routing pick for Claude (its newest Haiku). An OpenAI key uses `OPENAI_CHEAP_MODEL`, other providers their own routing pick. Any model in the catalog. An organization can override it in its settings.",
     section: "Agents",
   },
   ROUTER_STRATEGY: {
@@ -443,9 +437,9 @@ export const envVars = {
     example: "00000000-0000-4000-8000-000000000000",
   },
   OPENAI_CHEAP_MODEL: {
-    schema: modelId.default("gpt-6-luna"),
+    schema: modelId.optional(),
     description:
-      "Small OpenAI model for the organization's own calls on an OpenAI key: picking who answers when Jev doesn't, summaries, reflection.",
+      "Small OpenAI model for the organization's own calls on an OpenAI key: picking who answers when Jev doesn't, summaries, reflection. Unset: the model registry's cheap OpenAI model.",
     section: "Agents",
   },
   ROUTER_MIN_SCORE: {
@@ -552,9 +546,9 @@ export const envVars = {
     example: "100.64.0.0/10,fd7a:115c:a1e0::/48",
   },
   SUMMARY_MODEL: {
-    schema: modelId.default("claude-haiku-5-5"),
+    schema: modelId.optional(),
     description:
-      "Model that writes thread and channel summaries and extracts decisions, facts and lessons (reflection). An organization can override it. Billed to the organization (usage kind `summary`).",
+      "Model that writes thread and channel summaries and extracts decisions, facts and lessons (reflection). Unset: the model registry's cheap Claude model. An organization can override it. Billed to the organization (usage kind `summary`).",
     section: "Agents",
   },
   REFLECT_EVERY_MESSAGES: {

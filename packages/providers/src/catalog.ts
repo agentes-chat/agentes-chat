@@ -1,14 +1,12 @@
+import { type ALIAS_ROLES, type RegistryPrices, type RegistryRole, roleModel, routeModels, sentId } from "./registry";
 import type { ModelUsage } from "./types";
 
 /**
  * Prices in nano-USD per token (1e-9 USD), i.e. USD per million tokens × 1000,
- * so every cost is an exact integer. First-party Anthropic API list prices,
- * checked on Anthropic's pricing page (2026-10-20, Fable 5.1 2026-11-09); cache
- * reads are listed per model (Fable 5.1: $0.25/MTok, Opus 5.5: $0.20/MTok,
- * Sonnet 5.5: $0.10/MTok), cache writes use the 5-minute rate (1.25 × input);
- * 1-hour writes cost `LONG_CACHE_WRITE` × input.
- * Update this table when prices change: usage records store the computed cost,
- * so history is never repriced.
+ * so every cost is an exact integer. They come from the model registry
+ * (`models.json`, ADR 0195), in USD per million tokens with where and when each
+ * was read. Change them there: usage records store the computed cost, so
+ * history is never repriced.
  */
 export interface TokenPrices {
   input: number;
@@ -32,9 +30,10 @@ export interface ProviderInfo {
 }
 
 /**
- * Model providers agentes.chat can talk to. Adding one is an entry here,
- * catalog rows with its prices, and an adapter for its protocol; the database
- * stores the provider id as text, so no migration is needed.
+ * Model providers agentes.chat can talk to. Adding one is an entry here, its
+ * models on its route in the model registry (`models.json`, ADR 0195), and an
+ * adapter for its protocol; the database stores the provider id as text, so no
+ * migration is needed.
  */
 export const PROVIDERS = {
   anthropic: { label: "Claude", protocol: "anthropic" },
@@ -144,529 +143,62 @@ export const isAutoModel = (model: string | null | undefined) => model === AUTO_
 /** Context window assumed for a model without one in the catalog: the smallest current one, so runs stay inside it. */
 export const DEFAULT_CONTEXT_WINDOW = 200_000;
 
-// DeepSeek's peak hours through Command Code, at full price; the other 17 hours of a weekday and all weekend cost half.
-const DEEPSEEK_PEAK = [
-  [1, 4],
-  [6, 10],
-] as const;
+const toNano = (usdPerMillion: number) => Math.round(usdPerMillion * 1000);
 
-export const MODEL_CATALOG: Record<string, ModelInfo> = {
-  // Claude Fable 5.2, Fable 5.1's successor at a lower price: $8 / $0.20 / $10 / $40 across its whole 1M-token
-  // window (2026-11-17). Like 5.1, no tier and no pick for routing or system tasks: people choose it.
-  "claude-fable-5-2": {
-    provider: "anthropic",
-    label: "Claude Fable 5.2",
-    prices: { input: 8000, output: 40000, cacheRead: 200, cacheWrite: 10000 },
-    contextWindow: 1_000_000,
-    serverSideFallback: true,
-  },
-  // Its 1M-token window from platform.claude.com/docs/en/about-claude/models/overview, all of it at these prices
-  // (2026-11-09). No tier and no pick for routing or system tasks: "Automático" never chooses it, people do.
-  "claude-fable-5-1": {
-    provider: "anthropic",
-    label: "Claude Fable 5.1",
-    prices: { input: 10000, output: 50000, cacheRead: 250, cacheWrite: 12500 },
-    contextWindow: 1_000_000,
-    serverSideFallback: true,
-  },
-  "claude-opus-5-5": {
-    provider: "anthropic",
-    label: "Claude Opus 5.5",
-    prices: { input: 4000, output: 20000, cacheRead: 200, cacheWrite: 5000 },
-    contextWindow: 1_000_000,
-    serverSideFallback: true,
-    tier: "large",
-  },
-  "claude-sonnet-5-5": {
-    provider: "anthropic",
-    label: "Claude Sonnet 5.5",
-    prices: { input: 2000, output: 10000, cacheRead: 100, cacheWrite: 2500 },
-    contextWindow: 1_000_000,
-    serverSideFallback: true,
-    recommended: true,
-    tier: "medium",
-  },
-  "claude-haiku-5-5": {
-    provider: "anthropic",
-    label: "Claude Haiku 5.5",
-    prices: { input: 100, output: 500, cacheRead: 10, cacheWrite: 125 },
-    longContext: { aboveInputTokens: 100_000, prices: { input: 500, output: 2500, cacheRead: 50, cacheWrite: 625 } },
-    contextWindow: 1_000_000,
-    serverSideFallback: false,
-    cheap: true,
-    router: true,
-    leastThinking: "off",
-    tier: "small",
-  },
-  // OpenAI, Standard tier, checked on developers.openai.com/api/docs/pricing (2026-10-20, GPT-6.1 Terra
-  // 2026-10-31, GPT-6 Astra 2026-11-09, GPT-6.2 Sol and Astra 2026-11-17); cache writes at the 30-minute rate.
-  // Above 272K prompt tokens, input, cached input and cache writes cost 2×, output 1.5×. Context windows from each
-  // model's page (2026-10-26, Terra's 2026-10-31, Astra's 2026-11-09, 6.2's 2026-11-17).
-  // GPT-6.2 Astra, OpenAI's flagship ("our most capable model"), 4× GPT-6.2 Sol's prices: like GPT-6 Astra, no tier
-  // and no pick for routing or system tasks, so Automatic never chooses it, people do.
-  "gpt-6.2-astra": {
-    provider: "openai",
-    label: "GPT-6.2 Astra",
-    prices: { input: 8000, output: 40000, cacheRead: 400, cacheWrite: 10000 },
-    longContext: {
-      aboveInputTokens: 272_000,
-      prices: { input: 16000, output: 60000, cacheRead: 800, cacheWrite: 20000 },
-    },
-    contextWindow: 1_050_000,
-    serverSideFallback: false,
-    reasoning: true,
-  },
-  // GPT-6.2 Sol, OpenAI's everyday model at GPT-6.1 Sol's prices, takes its tier and its place as the suggested
-  // model (and Codex's default). It refuses reasoning effort `none`, which goes as `low` (no `leastThinking`).
-  "gpt-6.2-sol": {
-    provider: "openai",
-    label: "GPT-6.2 Sol",
-    prices: { input: 2000, output: 10000, cacheRead: 100, cacheWrite: 2500 },
-    longContext: {
-      aboveInputTokens: 272_000,
-      prices: { input: 4000, output: 15000, cacheRead: 200, cacheWrite: 5000 },
-    },
-    contextWindow: 1_050_000,
-    serverSideFallback: false,
-    reasoning: true,
-    recommended: true,
-    tier: "medium",
-  },
-  // OpenAI's previous flagship, 5× GPT-6.1 Sol's prices: no tier and no pick for routing or system tasks, so
-  // Automatic never chooses it, people do.
-  "gpt-6-astra": {
-    provider: "openai",
-    label: "GPT-6 Astra",
-    prices: { input: 10000, output: 50000, cacheRead: 1000, cacheWrite: 12500 },
-    longContext: {
-      aboveInputTokens: 272_000,
-      prices: { input: 20000, output: 75000, cacheRead: 2000, cacheWrite: 25000 },
-    },
-    contextWindow: 1_050_000,
-    serverSideFallback: false,
-    reasoning: true,
-  },
-  "gpt-6.1-sol": {
-    provider: "openai",
-    label: "GPT-6.1 Sol",
-    prices: { input: 2000, output: 10000, cacheRead: 100, cacheWrite: 2500 },
-    longContext: {
-      aboveInputTokens: 272_000,
-      prices: { input: 4000, output: 15000, cacheRead: 200, cacheWrite: 5000 },
-    },
-    contextWindow: 1_050_000,
-    serverSideFallback: false,
-    reasoning: true,
-  },
-  // No tier and no pick for routing or system tasks: "Automático" never chooses it, people do.
-  "gpt-6.1-terra": {
-    provider: "openai",
-    label: "GPT-6.1 Terra",
-    prices: { input: 1000, output: 5000, cacheRead: 50, cacheWrite: 1250 },
-    longContext: {
-      aboveInputTokens: 272_000,
-      prices: { input: 2000, output: 7500, cacheRead: 100, cacheWrite: 2500 },
-    },
-    contextWindow: 1_050_000,
-    serverSideFallback: false,
-    reasoning: true,
-  },
-  "gpt-6-sol": {
-    provider: "openai",
-    label: "GPT-6 Sol",
-    prices: { input: 2000, output: 10000, cacheRead: 200, cacheWrite: 2500 },
-    longContext: {
-      aboveInputTokens: 272_000,
-      prices: { input: 4000, output: 15000, cacheRead: 400, cacheWrite: 5000 },
-    },
-    contextWindow: 1_050_000,
-    serverSideFallback: false,
-    reasoning: true,
-  },
-  "gpt-6-luna": {
-    provider: "openai",
-    label: "GPT-6 Luna",
-    prices: { input: 100, output: 500, cacheRead: 10, cacheWrite: 125 },
-    longContext: { aboveInputTokens: 272_000, prices: { input: 200, output: 750, cacheRead: 20, cacheWrite: 250 } },
-    contextWindow: 1_050_000,
-    serverSideFallback: false,
-    reasoning: true,
-    cheap: true,
-    router: true,
-    leastThinking: "off",
-    tier: "small",
-  },
-  // Gemini (Interactions API), Standard tier, from ai.google.dev/gemini-api/docs/pricing (2026-10-27; Gemini 4 Carbon
-  // and Hydrogen 2026-11-17; Neon 2026-11-20, where the page now lives at aistudio.google.com/docs/pricing). Thinking
-  // is billed as output. Caching is implicit, with no write charge, so a cache write costs the input rate (none is
-  // ever reported). Carbon, Argon and 3.8 Flash cost half until the day in `intro`.
-  // Gemini 4 Carbon, Google's strongest reasoning model, thinks more per turn than Argon at Argon's prices: no tier
-  // and no pick for routing or system tasks, so Automatic never chooses it (Argon stays the large one), people do.
-  "gemini-4-carbon": {
-    provider: "gemini",
-    label: "Gemini 4 Carbon",
-    prices: { input: 4000, output: 20000, cacheRead: 200, cacheWrite: 4000 },
-    intro: { until: "2026-12-01", prices: { input: 2000, output: 10000, cacheRead: 100, cacheWrite: 2000 } },
-    contextWindow: 1_048_576,
-    serverSideFallback: false,
-  },
-  // Gemini 4 Neon (2026-11-18), Google's fast reasoning model, close to Carbon for less, one price across its whole
-  // window: like Carbon, no tier and no pick for system tasks, so Automatic never chooses it, people do.
-  "gemini-4-neon": {
-    provider: "gemini",
-    label: "Gemini 4 Neon",
-    prices: { input: 3000, output: 15000, cacheRead: 150, cacheWrite: 3000 },
-    contextWindow: 1_048_576,
-    serverSideFallback: false,
-  },
-  "gemini-4-argon": {
-    provider: "gemini",
-    label: "Gemini 4 Argon",
-    prices: { input: 4000, output: 20000, cacheRead: 200, cacheWrite: 4000 },
-    intro: { until: "2026-12-01", prices: { input: 2000, output: 10000, cacheRead: 100, cacheWrite: 2000 } },
-    contextWindow: 1_048_576,
-    serverSideFallback: false,
-    tier: "large",
-  },
-  // Gemini 4 Hydrogen, Google's "recommended upgrade from Gemini 3.8 Flash", one price across its whole window: it
-  // takes 3.8 Flash's tier and its place as the suggested model.
-  "gemini-4-hydrogen": {
-    provider: "gemini",
-    label: "Gemini 4 Hydrogen",
-    prices: { input: 1500, output: 7500, cacheRead: 75, cacheWrite: 1500 },
-    contextWindow: 1_048_576,
-    serverSideFallback: false,
-    recommended: true,
-    tier: "medium",
-  },
-  "gemini-3.8-flash": {
-    provider: "gemini",
-    label: "Gemini 3.8 Flash",
-    prices: { input: 1500, output: 7500, cacheRead: 150, cacheWrite: 1500 },
-    intro: { until: "2027-01-01", prices: { input: 750, output: 3750, cacheRead: 75, cacheWrite: 750 } },
-    contextWindow: 1_048_576,
-    serverSideFallback: false,
-  },
-  // It can't stop thinking: `minimal` is the least.
-  "gemini-3.5-flash-lite": {
-    provider: "gemini",
-    label: "Gemini 3.5 Flash-Lite",
-    prices: { input: 300, output: 2500, cacheRead: 30, cacheWrite: 300 },
-    contextWindow: 1_048_576,
-    serverSideFallback: false,
-    cheap: true,
-    router: true,
-    leastThinking: "minimal",
-    tier: "small",
-  },
-  // Anthropic-compatible providers, from each one's pricing page (2026-10-24). A cache write costs the
-  // input rate. DeepSeek stores its peak rates (off-peak is half), so budgets err high. `deepseek-flash` is
-  // served by DeepSeek-V4.1-Flash-1017.
-  "deepseek-flash": {
-    provider: "deepseek",
-    label: "DeepSeek Flash",
-    prices: { input: 300, output: 1200, cacheRead: 6, cacheWrite: 300 },
-    contextWindow: 1_000_000,
-    serverSideFallback: false,
-    cheap: true,
-    router: true,
-    leastThinking: "off",
-    recommended: true,
-    tier: "small",
-  },
-  "deepseek-v4-pro": {
-    provider: "deepseek",
-    label: "DeepSeek V4 Pro",
-    prices: { input: 1320, output: 3960, cacheRead: 44, cacheWrite: 1320 },
-    contextWindow: 1_000_000,
-    serverSideFallback: false,
-    tier: "large",
-  },
-  // K3.1 Pro is Kimi's strongest and cheapest; K3 (previous flagship) stays choosable, never picked by "Automático".
-  "kimi-k3.1-pro": {
-    provider: "moonshot",
-    label: "Kimi K3.1 Pro",
-    prices: { input: 2000, output: 10000, cacheRead: 200, cacheWrite: 2000 },
-    contextWindow: 1_048_576,
-    serverSideFallback: false,
-    recommended: true,
-    tier: "medium",
-  },
-  "kimi-k3": {
-    provider: "moonshot",
-    label: "Kimi K3",
-    prices: { input: 3000, output: 15000, cacheRead: 300, cacheWrite: 3000 },
-    contextWindow: 1_048_576,
-    serverSideFallback: false,
-  },
-  "glm-5.3": {
-    provider: "zai",
-    label: "GLM-5.3",
-    prices: { input: 1400, output: 4400, cacheRead: 260, cacheWrite: 1400 },
-    contextWindow: 1_000_000,
-    serverSideFallback: false,
-    recommended: true,
-    tier: "medium",
-  },
-  // Always thinks (Z.ai: it "cannot be disabled"), still the line's fastest for routing.
-  "glm-5.3-flash": {
-    provider: "zai",
-    label: "GLM-5.3 Flash",
-    prices: { input: 150, output: 500, cacheRead: 30, cacheWrite: 150 },
-    contextWindow: 1_000_000,
-    serverSideFallback: false,
-    cheap: true,
-    router: true,
-    tier: "small",
-  },
-  // Routes for MiniMax: thinking off by default, while M3.1 Flash always thinks (at `max` unless told) for the
-  // same cost a call.
-  "MiniMax-M3": {
-    provider: "minimax",
-    label: "MiniMax M3",
-    prices: { input: 300, output: 1200, cacheRead: 60, cacheWrite: 300 },
-    longContext: { aboveInputTokens: 512_000, prices: { input: 600, output: 2400, cacheRead: 120, cacheWrite: 600 } },
-    contextWindow: 1_000_000,
-    serverSideFallback: false,
-    router: true,
-    leastThinking: "off",
-    recommended: true,
-    tier: "medium",
-  },
-  "MiniMax-M3.1-Flash": {
-    provider: "minimax",
-    label: "MiniMax M3.1 Flash",
-    prices: { input: 150, output: 600, cacheRead: 15, cacheWrite: 150 },
-    contextWindow: 1_000_000,
-    serverSideFallback: false,
-    cheap: true,
-    tier: "small",
-  },
-  // Command Code at its published rates (commandcode.ai/docs/resources/pricing-limits); its model list has no prices.
-  // Claude's and GPT's rows keep their makers' long-context prices.
-  "commandcode:claude-opus-5-5": {
-    provider: "commandcode",
-    pick: false,
-    label: "Claude Opus 5.5",
-    prices: { input: 4000, output: 20000, cacheRead: 200, cacheWrite: 5000 },
-    contextWindow: 1_000_000,
-    serverSideFallback: false,
-  },
-  "commandcode:claude-sonnet-5-5": {
-    provider: "commandcode",
-    pick: false,
-    label: "Claude Sonnet 5.5",
-    prices: { input: 2000, output: 10000, cacheRead: 100, cacheWrite: 2500 },
-    contextWindow: 1_000_000,
-    serverSideFallback: false,
-    tier: "large",
-  },
-  "commandcode:claude-haiku-5-5": {
-    provider: "commandcode",
-    pick: false,
-    label: "Claude Haiku 5.5",
-    prices: { input: 100, output: 500, cacheRead: 10, cacheWrite: 125 },
-    longContext: { aboveInputTokens: 100_000, prices: { input: 500, output: 2500, cacheRead: 50, cacheWrite: 625 } },
-    contextWindow: 1_000_000,
-    serverSideFallback: false,
-    router: true,
-    leastThinking: "off",
-  },
-  "commandcode:gpt-6.1-sol": {
-    provider: "commandcode",
-    pick: false,
-    label: "GPT-6.1 Sol",
-    prices: { input: 2000, output: 10000, cacheRead: 100, cacheWrite: 2500 },
-    longContext: {
-      aboveInputTokens: 272_000,
-      prices: { input: 4000, output: 15000, cacheRead: 200, cacheWrite: 5000 },
-    },
-    contextWindow: 1_050_000,
-    serverSideFallback: false,
-  },
-  "commandcode:gpt-6-luna": {
-    provider: "commandcode",
-    pick: false,
-    label: "GPT-6 Luna",
-    prices: { input: 100, output: 500, cacheRead: 10, cacheWrite: 125 },
-    longContext: { aboveInputTokens: 272_000, prices: { input: 200, output: 750, cacheRead: 20, cacheWrite: 250 } },
-    contextWindow: 1_050_000,
-    serverSideFallback: false,
-  },
-  "commandcode:zai-org/GLM-5.3": {
-    provider: "commandcode",
-    pick: false,
-    label: "GLM-5.3",
-    prices: { input: 1400, output: 4400, cacheRead: 260, cacheWrite: 1400 },
-    contextWindow: 1_000_000,
-    serverSideFallback: false,
-    recommended: true,
-    tier: "medium",
-  },
-  "commandcode:moonshotai/Kimi-K3.1-Pro": {
-    provider: "commandcode",
-    pick: false,
-    label: "Kimi K3.1 Pro",
-    prices: { input: 2000, output: 10000, cacheRead: 200, cacheWrite: 2000 },
-    contextWindow: 1_048_576,
-    serverSideFallback: false,
-  },
-  "commandcode:deepseek/deepseek-v4-pro": {
-    provider: "commandcode",
-    pick: false,
-    label: "DeepSeek V4 Pro",
-    prices: { input: 1320, output: 3960, cacheRead: 44, cacheWrite: 1320 },
-    offPeak: {
-      prices: { input: 660, output: 1980, cacheRead: 22, cacheWrite: 660 },
-      peakHoursUtc: DEEPSEEK_PEAK,
-    },
-    contextWindow: 1_000_000,
-    serverSideFallback: false,
-  },
-  "commandcode:deepseek/deepseek-v4.1-flash": {
-    provider: "commandcode",
-    pick: false,
-    label: "DeepSeek V4.1 Flash",
-    prices: { input: 300, output: 1200, cacheRead: 6, cacheWrite: 300 },
-    offPeak: {
-      prices: { input: 150, output: 600, cacheRead: 3, cacheWrite: 150 },
-      peakHoursUtc: DEEPSEEK_PEAK,
-    },
-    contextWindow: 1_000_000,
-    serverSideFallback: false,
-    cheap: true,
-    tier: "small",
-  },
-  "commandcode:google/gemini-3.8-flash": {
-    provider: "commandcode",
-    pick: false,
-    label: "Gemini 3.8 Flash",
-    prices: { input: 1500, output: 7500, cacheRead: 150, cacheWrite: 1500 },
-    contextWindow: 1_000_000,
-    serverSideFallback: false,
-  },
-  "commandcode:deepseek/deepseek-v4.1-flash-fast": {
-    provider: "commandcode",
-    pick: false,
-    label: "DeepSeek V4.1 Flash Fast",
-    prices: { input: 320, output: 1160, cacheRead: 32, cacheWrite: 320 },
-    offPeak: {
-      prices: { input: 160, output: 580, cacheRead: 16, cacheWrite: 160 },
-      peakHoursUtc: DEEPSEEK_PEAK,
-    },
-    contextWindow: 1_000_000,
-    serverSideFallback: false,
-  },
-  "commandcode:deepseek/deepseek-v4.1-flash-ultrafast": {
-    provider: "commandcode",
-    pick: false,
-    label: "DeepSeek V4.1 Flash Ultrafast",
-    prices: { input: 2400, output: 9600, cacheRead: 48, cacheWrite: 2400 },
-    contextWindow: 1_048_576,
-    serverSideFallback: false,
-  },
-  "commandcode:z-ai/glm-5.3-flash": {
-    provider: "commandcode",
-    pick: false,
-    label: "GLM-5.3 Flash",
-    prices: { input: 150, output: 500, cacheRead: 30, cacheWrite: 150 },
-    contextWindow: 1_048_576,
-    serverSideFallback: false,
-  },
-  "commandcode:z-ai/glm-5.3-flashx": {
-    provider: "commandcode",
-    pick: false,
-    label: "GLM-5.3 FlashX",
-    prices: { input: 370, output: 1250, cacheRead: 75, cacheWrite: 370 },
-    contextWindow: 1_000_000,
-    serverSideFallback: false,
-    structuredOutput: false,
-  },
-  "commandcode:moonshotai/Kimi-K2.7-Code": {
-    provider: "commandcode",
-    pick: false,
-    label: "Kimi K2.7 Code",
-    prices: { input: 950, output: 4000, cacheRead: 190, cacheWrite: 950 },
-    contextWindow: 256_000,
-    serverSideFallback: false,
-  },
-  "commandcode:moonshotai/Kimi-K2.7-Code-Highspeed": {
-    provider: "commandcode",
-    pick: false,
-    label: "Kimi K2.7 Code HighSpeed",
-    prices: { input: 1900, output: 8000, cacheRead: 380, cacheWrite: 1900 },
-    contextWindow: 262_000,
-    serverSideFallback: false,
-  },
-  "commandcode:minimax/minimax-m3.1-flash": {
-    provider: "commandcode",
-    pick: false,
-    label: "MiniMax M3.1 Flash",
-    prices: { input: 150, output: 600, cacheRead: 15, cacheWrite: 150 },
-    contextWindow: 1_000_000,
-    serverSideFallback: false,
-    structuredOutput: false,
-  },
-  "commandcode:xiaomi/mimo-v2.6-pro": {
-    provider: "commandcode",
-    pick: false,
-    label: "MiMo V2.6 Pro",
-    prices: { input: 435, output: 870, cacheRead: 4, cacheWrite: 435 },
-    contextWindow: 1_048_576,
-    serverSideFallback: false,
-    structuredOutput: false,
-  },
-  "commandcode:xiaomi/mimo-v2.6-pro-ultraspeed": {
-    provider: "commandcode",
-    pick: false,
-    label: "MiMo V2.6 Pro UltraSpeed",
-    prices: { input: 4350, output: 8700, cacheRead: 36, cacheWrite: 4350 },
-    contextWindow: 1_048_576,
-    serverSideFallback: false,
-    structuredOutput: false,
-  },
-  "commandcode:xiaomi/mimo-v2.6-flash": {
-    provider: "commandcode",
-    pick: false,
-    label: "MiMo V2.6 Flash",
-    prices: { input: 140, output: 280, cacheRead: 3, cacheWrite: 140 },
-    contextWindow: 1_048_576,
-    serverSideFallback: false,
-    structuredOutput: false,
-  },
-  "commandcode:meta/muse-spark-1.3": {
-    provider: "commandcode",
-    pick: false,
-    label: "Muse Spark 1.3",
-    prices: { input: 1250, output: 4250, cacheRead: 150, cacheWrite: 1250 },
-    contextWindow: 1_048_576,
-    serverSideFallback: false,
-  },
-  "commandcode:meta/muse-spark-1.3-contributor": {
-    provider: "commandcode",
-    pick: false,
-    label: "Muse Spark 1.3 Contributor",
-    prices: { input: 100, output: 200, cacheRead: 2, cacheWrite: 100 },
-    contextWindow: 1_048_576,
-    serverSideFallback: false,
-  },
-  "commandcode:meta/muse-spark-open": {
-    provider: "commandcode",
-    pick: false,
-    label: "Muse Spark Open",
-    prices: { input: 1250, output: 4250, cacheRead: 150, cacheWrite: 1250 },
-    contextWindow: 1_048_576,
-    serverSideFallback: false,
-  },
-  "commandcode:meta/muse-ember": {
-    provider: "commandcode",
-    pick: false,
-    label: "Muse Ember",
-    prices: { input: 100, output: 500, cacheRead: 4, cacheWrite: 100 },
-    contextWindow: 1_048_576,
-    serverSideFallback: false,
-  },
-};
+const nanoPrices = (p: RegistryPrices): TokenPrices => ({
+  input: toNano(p.input),
+  output: toNano(p.output),
+  cacheRead: toNano(p.cacheRead),
+  cacheWrite: toNano(p.cacheWrite),
+});
+
+/** A model's id in the catalog on a provider: Command Code's carry its prefix (`commandcode.ts`). */
+const catalogId = (provider: ProviderId, id: string) => (provider === "commandcode" ? `commandcode:${id}` : id);
+
+/**
+ * The API providers' models in the registry (`models.json`, ADR 0195), in `PROVIDERS`' order and then the file's,
+ * with the roles the registry gives each one there. Command Code's are its long list (`pick: false`). A row without
+ * prices is left out (we never make a call we can't price; the registry test fails on it), never a load error: the
+ * apps and the runner import this file too.
+ */
+function catalogFromRegistry(): Record<string, ModelInfo> {
+  const catalog: Record<string, ModelInfo> = {};
+  for (const provider of PROVIDER_IDS) {
+    const holds = (role: RegistryRole, id: string) => roleModel(provider, role) === id;
+    for (const [id, model, r] of routeModels(provider)) {
+      if (!r.prices) continue;
+      const tier = MODEL_TIERS.find((t) => holds(t, id));
+      const contextWindow = r.contextWindow ?? model.contextWindow;
+      const long = r.longContext;
+      catalog[catalogId(provider, r.id ?? id)] = {
+        provider,
+        label: r.label ?? model.label,
+        prices: nanoPrices(r.prices),
+        ...(r.intro ? { intro: { until: r.intro.until, prices: nanoPrices(r.intro.prices) } } : {}),
+        ...(r.offPeak
+          ? { offPeak: { prices: nanoPrices(r.offPeak.prices), peakHoursUtc: r.offPeak.peakHoursUtc } }
+          : {}),
+        ...(long ? { longContext: { aboveInputTokens: long.aboveInputTokens, prices: nanoPrices(long.prices) } } : {}),
+        ...(contextWindow ? { contextWindow } : {}),
+        ...(r.maxOutputTokens ? { maxOutputTokens: r.maxOutputTokens } : {}),
+        serverSideFallback: r.serverSideFallback === true,
+        ...(r.reasoning ? { reasoning: true } : {}),
+        ...(r.efforts ? { efforts: r.efforts } : {}),
+        ...(r.leastThinking ? { leastThinking: r.leastThinking } : {}),
+        ...(r.structuredOutput === false ? { structuredOutput: false as const } : {}),
+        ...(holds("cheap", id) ? { cheap: true } : {}),
+        ...(holds("router", id) ? { router: true } : {}),
+        ...(holds("recommended", id) ? { recommended: true } : {}),
+        ...(tier ? { tier } : {}),
+        ...(provider === "commandcode" ? { pick: false } : {}),
+      };
+    }
+  }
+  return catalog;
+}
+
+/** Every API provider's model, by the id calls send (`commandcode:` ones by Command Code's): read from the registry. */
+export const MODEL_CATALOG: Record<string, ModelInfo> = catalogFromRegistry();
 
 /** Models a provider lists at run time (OpenRouter's, `openrouter.ts`), beside the fixed catalog. */
 let listed = new Map<string, ModelInfo>();
@@ -876,3 +408,29 @@ export function outputTokensWithin(model: string, promptTokens: number, nanoUsd:
 
 export const nanoUsdToUsd = (nano: number) => nano / 1e9;
 export const usdToNanoUsd = (usd: number) => Math.round(usd * 1e9);
+
+/**
+ * The Claude model behind Claude Code's alias (`opus` → the newest Opus in the registry), by the id Claude's route
+ * sends (its catalog id), for its price and name.
+ */
+export function claudeCodeAliasModel(alias: (typeof ALIAS_ROLES)[number]): string | null {
+  const id = roleModel("claude-code", alias);
+  return id ? sentId("anthropic", id) : null;
+}
+
+function required(model: string | null, what: string): string {
+  if (!model) throw new Error(`models.json names no ${what}`);
+  return model;
+}
+
+/**
+ * What the server runs where its environment names no model (`ROUTER_MODEL`, `SUMMARY_MODEL`, `OPENAI_CHEAP_MODEL`):
+ * the registry's picks. Only the server asks, so it refuses to start when the registry names none; the apps never do.
+ */
+export function defaultModels() {
+  return {
+    claudeRouter: required(routerModelOf("anthropic"), "routing model for Claude"),
+    claudeCheap: required(cheapModelOf("anthropic"), "cheap Claude model"),
+    openaiCheap: required(cheapModelOf("openai"), "cheap OpenAI model"),
+  };
+}

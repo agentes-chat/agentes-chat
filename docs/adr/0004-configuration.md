@@ -9,7 +9,7 @@
 - `bun run docs:env` generates `.env.example`; a config test fails when it is stale.
 - Only `bun run dev` / `start` need `DATABASE_URL` and `AGENTES_SECRET`. Tests, lint and typecheck never read `.env`.
 - One master secret, `AGENTES_SECRET`. Purpose keys are derived with HKDF-SHA256 (`@agenteschat/engine` `deriveSecret`): `sessions` (Better Auth secret) and `provider-credentials-kek` (key-encryption key, ADR 0007). Purpose names are frozen.
-- Model defaults are config: `AGENT_DEFAULT_MODEL=claude-sonnet-5-5`, `ROUTER_MODEL=claude-haiku-5-5` (reserved until the router exists). Prices are code (`MODEL_CATALOG`), not config.
+- Model defaults are config: `AGENT_DEFAULT_MODEL=claude-sonnet-5-5`, `ROUTER_MODEL=claude-haiku-5-5` (reserved until the router exists). Prices are code (`MODEL_CATALOG`), not config. *Amended 2026-11-17 (ADR 0195): prices, models and the default models live in the model registry (`models.json`); `ROUTER_MODEL`, `SUMMARY_MODEL` and `OPENAI_CHEAP_MODEL` are unset by default (the registry's picks), and `AGENT_DEFAULT_MODEL` is gone.*
 - Secrets are masked by `redactConfig` when the config is logged.
 
 ## Consequences

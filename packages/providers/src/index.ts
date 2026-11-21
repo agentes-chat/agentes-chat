@@ -18,6 +18,7 @@ export * from "./images";
 export * from "./key-check";
 export * from "./openai";
 export * from "./openrouter";
+export * from "./registry";
 export * from "./types";
 
 /**
