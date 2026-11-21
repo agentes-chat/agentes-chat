@@ -7,6 +7,7 @@ import { reportError } from "@/lib/error-reports";
 import { router } from "@/ui/navigation";
 import { receiveShare, SHARE_ROUTE, sharedFromIntent } from "./inbox";
 import { pickedOfShareLink } from "./picked";
+import { noteShare } from "./share-probe";
 
 /**
  * After the app opens on a share's link, when to ask the system again for what was shared (ms). The extension writes
@@ -42,9 +43,41 @@ export function ShareInbox() {
   link.current = url;
   // The link whose share was taken (or reported lost): it is asked for no more.
   const settled = useRef<string | null>(null);
+  // Diagnostic build: the native module's raw answers and errors, as they come.
+  useEffect(() => {
+    const module = ShareIntentModule as unknown as {
+      addListener?: (name: string, fn: (e: { value?: unknown }) => void) => { remove: () => void };
+    } | null;
+    if (!module?.addListener) {
+      noteShare("module: missing");
+      return;
+    }
+    const change = module.addListener("onChange", (e) => {
+      const raw = typeof e?.value === "string" ? e.value : JSON.stringify(e?.value);
+      noteShare(`onChange ${String(raw).slice(0, 420)}`);
+    });
+    const fail = module.addListener("onError", (e) => noteShare(`onError ${String(e?.value).slice(0, 300)}`));
+    return () => {
+      change.remove();
+      fail.remove();
+    };
+  }, []);
+  useEffect(() => {
+    if (url) noteShare(`url ${url.slice(0, 160)}`);
+  }, [url]);
+  useEffect(() => {
+    if (error) noteShare(`hook error ${error}`);
+  }, [error]);
+
   useEffect(() => {
     if (!hasShareIntent) return;
+    noteShare(
+      `intent type=${shareIntent.type} files=${shareIntent.files?.length ?? "null"} paths=${
+        shareIntent.files?.filter((f) => f?.path).length ?? 0
+      } text=${shareIntent.text?.length ?? 0} url=${shareIntent.webUrl ? "yes" : "no"}`,
+    );
     const shared = sharedFromIntent(shareIntent);
+    noteShare(shared ? `shared files=${shared.files.length} text=${shared.text?.length ?? 0}` : "shared: null");
     resetShareIntent();
     if (!shared) return;
     settled.current = link.current;
@@ -57,7 +90,10 @@ export function ShareInbox() {
     if (Platform.OS !== "ios" || !isShareLink(url) || settled.current === url) return;
     const timers = SHARE_ASK_AGAIN_MS.map((ms) =>
       setTimeout(() => {
-        if (settled.current !== url) void ShareIntentModule?.getShareIntent(url);
+        if (settled.current !== url) {
+          noteShare(`ask again ${ms}ms`);
+          void ShareIntentModule?.getShareIntent(url);
+        }
       }, ms),
     );
     const lost = setTimeout(() => {

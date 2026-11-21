@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Keyboard, ScrollView, type ScrollViewInstance, StyleSheet, View } from "react-native";
+import { Keyboard, Text as RNText, ScrollView, type ScrollViewInstance, StyleSheet, View } from "react-native";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -43,6 +43,7 @@ import { useConversations } from "../shared/queries";
 import { TextArea } from "../shared/TextArea";
 import { handShare } from "./handoff";
 import { clearShare, SHARE_MAX_FILES, type Shared, type SharedFile, shareMessage, useShared } from "./inbox";
+import { useShareProbe } from "./share-probe";
 
 /** The sheet at rest shows what came and the first agents; typing the line takes the whole screen. */
 const DETENTS_REST = [0.72, 1];
@@ -199,12 +200,15 @@ export function ShareScreen() {
             {!shared ? (
               gaveUp ? (
                 // The sheet's whole content, not a line of a list: its mark over the words, with room around them.
-                <EmptyState
-                  size="panel"
-                  icon="share"
-                  title={t("mobile.share.nothing")}
-                  subtitle={t("mobile.share.nothingHint")}
-                />
+                <>
+                  <EmptyState
+                    size="panel"
+                    icon="share"
+                    title={t("mobile.share.nothing")}
+                    subtitle={t("mobile.share.nothingHint")}
+                  />
+                  <ShareProbe />
+                </>
               ) : (
                 <View style={styles.waiting}>
                   <PixelOrbit color="sky" size={16} />
@@ -398,3 +402,15 @@ const styles = StyleSheet.create({
   // The footer's own room; the sheet adds the home indicator's under it at rest.
   bar: { paddingHorizontal: SHEET_X, paddingVertical: 12 },
 });
+
+/** Diagnostic build only: the handoff's steps, under the empty state. */
+function ShareProbe() {
+  const lines = useShareProbe();
+  return (
+    <RNText selectable style={probeStyle}>
+      {lines.length > 0 ? lines.join("\n") : "no share events"}
+    </RNText>
+  );
+}
+
+const probeStyle = { fontFamily: "Menlo", fontSize: 10, lineHeight: 13, color: "#dc2626", padding: 12 } as const;
