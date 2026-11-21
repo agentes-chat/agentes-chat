@@ -223,3 +223,24 @@ Consequences:
   choice. Widening who sets an agent's level is a separate decision.
 - Desfazer after "Para todos os agentes" sets the workspace's level back and saves each cleared own choice again,
   one request per agent that had one.
+
+## Addendum 2026-11-20 (this fork): Autonomia dos agentes
+
+People of this fork's workspaces asked their agents to do things and then got asked whether to do them. The levels
+already said how much an agent asks; what was missing was one switch for the whole workspace, and a way to keep only
+what can't be undone behind a card.
+
+1. **"Autonomia dos agentes"** is a switch in Settings › General (owners and administrators, beside the workspace's
+   level). On, every agent that follows the workspace is at `never`; off, the workspace goes back to `risky`. It is
+   the workspace's level seen as one switch, so it is stored in the same column and needs no migration
+   (`packages/engine/src/agent-autonomy.ts`, `PUT …/organizations/{orgId}/agent-autonomy`, `agentAutonomy` in the
+   workspace's settings).
+2. **"Perguntar antes do que é destrutivo"**, under it while on (on by default): the workspace's row keeps
+   `autonomous` (its agents still get `never`), and the Tool Gateway still asks before a connected app's or a
+   mailbox's delete, payment or send (`destructiveTool`: read on the tool's name), through `unaskedAtNever`'s fourth
+   argument. Merges, deploys, rollbacks and commands on a computer don't ask. The prompt says what still asks
+   (`approvalsLine`'s third argument). Off, nothing asks, as `never` above.
+3. **An agent with its own level keeps it**, and the guard is the workspace's: it applies only to the agents that
+   follow it (`asksDestructiveOf`).
+4. On a computer, asking is the computer's own switch: full access (ADR 0053's addendum of 2026-11-12, amended
+   2026-11-20) lifts the command policy, the CLIs' permission prompts and folder requests.

@@ -3854,7 +3854,11 @@
     "workspaceLead": "Wann die Agenten vor dem Handeln eine Person fragen.",
     "workspaceHelp": "Jeder Agent folgt dieser Wahl, bis jemand seine eigene auf der Seite des Agenten ändert.",
     "ownAgents_one": "{{count}} Agent hat eine eigene Wahl und ändert sich nicht.",
-    "ownAgents_other": "{{count}} Agenten haben eine eigene Wahl und ändern sich nicht."
+    "ownAgents_other": "{{count}} Agenten haben eine eigene Wahl und ändern sich nicht.",
+    "autonomy": "Autonomie der Agenten",
+    "autonomyHelp": "Eingeschaltet tun Agenten, worum sie gebeten werden, ohne um Freigabe zu fragen, Merges, Deploys und Befehle auf ihrem Computer eingeschlossen. Ein Agent mit eigener Wahl auf seiner Seite behält sie.",
+    "autonomyDestructive": "Vor destruktiven Aktionen fragen",
+    "autonomyDestructiveHelp": "Löschen, Bezahlen oder Senden nach außerhalb des Workspace über eine verbundene App braucht weiterhin eine Freigabe."
   },
   "brakes": {
     "title": "Arbeit, um die niemand gebeten hat",

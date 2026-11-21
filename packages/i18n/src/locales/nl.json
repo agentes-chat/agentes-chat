@@ -3856,7 +3856,11 @@
     "workspaceLead": "Wanneer agents iemand vragen voordat ze iets doen.",
     "workspaceHelp": "Elke agent volgt deze keuze tot iemand die van de agent wijzigt op zijn pagina.",
     "ownAgents_one": "{{count}} agent heeft een eigen keuze en verandert niet.",
-    "ownAgents_other": "{{count}} agents hebben een eigen keuze en veranderen niet."
+    "ownAgents_other": "{{count}} agents hebben een eigen keuze en veranderen niet.",
+    "autonomy": "Autonomie van agents",
+    "autonomyHelp": "Aan doen agents wat hun gevraagd wordt zonder om goedkeuring te vragen, merges, deploys en opdrachten op hun computer inbegrepen. Een agent met een eigen keuze op zijn pagina houdt die.",
+    "autonomyDestructive": "Vragen vóór destructieve acties",
+    "autonomyDestructiveHelp": "Verwijderen, betalen of buiten de workspace verzenden via een gekoppelde app vraagt nog steeds om goedkeuring."
   },
   "brakes": {
     "title": "Werk waar niemand om vroeg",

@@ -2687,10 +2687,25 @@ export interface OrgSettings {
   mode?: WorkspaceMode;
   /** What agents without their own choice ask before acting (ADR 0173); absent from an older server. */
   approvalsLevel?: ApprovalsLevel;
+  /** VPS Zen: "Autonomia dos agentes", the same level seen as one switch; absent from an older server. */
+  agentAutonomy?: AgentAutonomy;
+}
+
+/** VPS Zen: "Autonomia dos agentes" (`packages/engine/src/agent-autonomy.ts`). */
+export interface AgentAutonomy {
+  /** Agents that follow the workspace do what they were asked without asking. */
+  on: boolean;
+  /** With `on`: a connected app's delete, payment or send still asks a person. */
+  asksDestructive: boolean;
 }
 
 /** `OrgSettings` the server works out itself, or sets through its own call: never in a PATCH. */
-export type ReadOnlyOrgSettings = "gifsAvailable" | "agentMediaAvailable" | "voiceAvailable" | "approvalsLevel";
+export type ReadOnlyOrgSettings =
+  | "gifsAvailable"
+  | "agentMediaAvailable"
+  | "voiceAvailable"
+  | "approvalsLevel"
+  | "agentAutonomy";
 
 /** Automático's sizes: quick tasks, everyday work, hard work. */
 export type ModelTier = "small" | "medium" | "large";

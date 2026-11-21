@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { PassThrough } from "node:stream";
 import {
@@ -549,6 +549,40 @@ test("jobs and the activity log: each request is a job while it runs and a line 
   await waitFor(() => s.sent.some((f) => f.id === "x1"));
   expect(s.sent.find((f) => f.id === "x1")).toMatchObject({ ok: false, error: { code: "exec_disabled" } });
   await waitFor(() => c.events("activity").some((e) => e.kind === "activity" && e.entry.result === "refused"));
+});
+
+test("access requests on a computer with full access: granted at once, nobody asked (VPS Zen)", async () => {
+  const { home } = pairedHome();
+  const folder = tempDir("proj-");
+  dirs.push(folder);
+  const before = process.env.AGENTES_RUNNER_FULL_ACCESS;
+  process.env.AGENTES_RUNNER_FULL_ACCESS = "1";
+  try {
+    const c = control(home);
+    const s = await c.connect();
+    s.frame({ type: "agents", agents: [AGENT] });
+    s.frame({
+      type: "request",
+      id: "f1",
+      op: "access.request",
+      requestId: "req-0000000f",
+      path: folder,
+      reason: "clone the repo",
+      agent: AGENT,
+    });
+    await waitFor(() => s.sent.some((f) => f.id === "f1"));
+    expect(s.sent.find((f) => f.id === "f1")).toMatchObject({
+      ok: true,
+      data: { requestId: "req-0000000f", status: "granted" },
+    });
+    expect((stored(home).access as { folders: unknown[] }).folders).toEqual([
+      { path: realpathSync(folder), agents: [AGENT.id] },
+    ]);
+    expect(c.events("access.requested")).toEqual([]);
+  } finally {
+    if (before === undefined) delete process.env.AGENTES_RUNNER_FULL_ACCESS;
+    else process.env.AGENTES_RUNNER_FULL_ACCESS = before;
+  }
 });
 
 test("access requests: pending until the person answers on the machine; the answer reaches the server", async () => {

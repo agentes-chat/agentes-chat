@@ -4004,7 +4004,11 @@
     "workspaceHelp": "Ogni agente segue questa scelta finché qualcuno non cambia la sua nella pagina dell’agente.",
     "ownAgents_one": "{{count}} agente ha una scelta propria e non cambia.",
     "ownAgents_many": "{{count}} agenti hanno una scelta propria e non cambiano.",
-    "ownAgents_other": "{{count}} agenti hanno una scelta propria e non cambiano."
+    "ownAgents_other": "{{count}} agenti hanno una scelta propria e non cambiano.",
+    "autonomy": "Autonomia degli agenti",
+    "autonomyHelp": "Attiva, gli agenti fanno ciò che viene chiesto senza chiedere approvazione, merge, deploy e comandi sul loro computer compresi. Un agente con una scelta propria nella sua pagina la mantiene.",
+    "autonomyDestructive": "Chiedi prima delle azioni distruttive",
+    "autonomyDestructiveHelp": "Eliminare, pagare o inviare fuori dal workspace tramite un'app collegata richiede ancora approvazione."
   },
   "brakes": {
     "title": "Lavoro che nessuno ha chiesto",

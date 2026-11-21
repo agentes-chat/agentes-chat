@@ -85,6 +85,7 @@ import type {
   Agent,
   AgentAction,
   AgentAudience,
+  AgentAutonomy,
   AgentComputer,
   AgentDatabase,
   AgentDatabaseInput,
@@ -3053,7 +3054,31 @@ export function useSetWorkspaceApprovalsLevel(orgId: string) {
   return useMutation({
     mutationFn: (input: { level: ApprovalsLevel; everyAgent?: boolean }) => api.orgs.setApprovalsLevel(orgId, input),
     onSuccess: ({ level }) => {
-      qc.setQueryData<OrgSettings>(keys.settings(orgId), (s) => (s ? { ...s, approvalsLevel: level } : s));
+      // VPS Zen: "Autonomia dos agentes" is the same level (`never` is it on, nothing asked).
+      qc.setQueryData<OrgSettings>(keys.settings(orgId), (s) =>
+        s
+          ? {
+              ...s,
+              approvalsLevel: level,
+              agentAutonomy: { on: level === "never", asksDestructive: level !== "never" },
+            }
+          : s,
+      );
+      levelsChanged(qc, orgId);
+    },
+  });
+}
+
+/** VPS Zen: "Autonomia dos agentes" on or off; every agent that follows the workspace takes it. */
+export function useSetAgentAutonomy(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: AgentAutonomy) => api.orgs.setAgentAutonomy(orgId, input),
+    onSuccess: ({ on, asksDestructive }) => {
+      qc.setQueryData<OrgSettings>(keys.settings(orgId), (s) =>
+        s ? { ...s, agentAutonomy: { on, asksDestructive }, approvalsLevel: on ? "never" : "risky" } : s,
+      );
       levelsChanged(qc, orgId);
     },
   });

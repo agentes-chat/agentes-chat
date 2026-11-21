@@ -3709,7 +3709,11 @@
     "edit": "Ubah",
     "workspaceLead": "Kapan agen bertanya kepada seseorang sebelum bertindak.",
     "workspaceHelp": "Setiap agen mengikuti pilihan ini sampai seseorang mengubah pilihannya di halaman agen.",
-    "ownAgents_other": "{{count}} agen punya pilihan sendiri dan tidak berubah."
+    "ownAgents_other": "{{count}} agen punya pilihan sendiri dan tidak berubah.",
+    "autonomy": "Otonomi agen",
+    "autonomyHelp": "Jika aktif, agen melakukan apa yang diminta tanpa meminta persetujuan, termasuk merge, deploy, dan perintah di komputernya. Agen yang punya pilihan sendiri di halamannya tetap memakainya.",
+    "autonomyDestructive": "Tanya sebelum tindakan destruktif",
+    "autonomyDestructiveHelp": "Menghapus, membayar, atau mengirim ke luar workspace melalui aplikasi yang terhubung tetap meminta persetujuan."
   },
   "brakes": {
     "title": "Pekerjaan yang tidak diminta siapa pun",

@@ -2,6 +2,7 @@ import type { PubSub } from "@agenteschat/adapters";
 import { and, asc, type Database, desc, eq, gte, inArray, isNull, lt, schema, sql } from "@agenteschat/db";
 import { MODEL_TIERS, type ModelTier } from "@agenteschat/providers";
 import { othersPersonalTools } from "./agent-audit";
+import { type AgentAutonomy, agentLevelOf, autonomyOf } from "./agent-autonomy";
 import { getAgent } from "./agents";
 import { decidableBySql } from "./approvals";
 import { listsAgentSql, managesAgent } from "./audience";
@@ -94,6 +95,8 @@ export interface OrgSettings extends MediaSettings {
   welcomePeople: boolean;
   /** What agents without their own choice ask before acting (ADR 0173). Set with `setWorkspaceApprovalsLevel`. */
   approvalsLevel: ApprovalsLevel;
+  /** VPS Zen: "Autonomia dos agentes" (`agent-autonomy.ts`), the same level seen as one switch. */
+  agentAutonomy: AgentAutonomy;
 }
 
 export const TEAM_SIZES = ["solo", "small", "medium", "large"] as const;
@@ -120,7 +123,8 @@ export async function getOrgSettings(db: Database, actorId: string, orgId: strin
     mode: isWorkspaceMode(s?.mode) ? s.mode : "team",
     teamWatch: s?.teamWatch ?? true,
     welcomePeople: s?.welcomePeople ?? true,
-    approvalsLevel: s?.approvalsLevel ?? DEFAULT_APPROVALS_LEVEL,
+    approvalsLevel: agentLevelOf(s?.approvalsLevel, DEFAULT_APPROVALS_LEVEL),
+    agentAutonomy: autonomyOf(s?.approvalsLevel),
     ...mediaSettingsFrom(s),
   };
 }

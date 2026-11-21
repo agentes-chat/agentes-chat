@@ -15,7 +15,8 @@ export async function workspaceApprovalsLevel(db: Executor, orgId: string): Prom
     .select({ level: organizationSettings.approvalsLevel })
     .from(organizationSettings)
     .where(eq(organizationSettings.orgId, orgId));
-  return row?.level ?? DEFAULT_APPROVALS_LEVEL;
+  // VPS Zen: the row may hold `autonomous` ("Autonomia dos agentes", `agent-autonomy.ts`), which is `never` for agents.
+  return (row?.level as string | undefined) === "autonomous" ? "never" : (row?.level ?? DEFAULT_APPROVALS_LEVEL);
 }
 
 /** How many of the workspace's agents hold their own level, so a workspace change leaves them alone. */
@@ -38,20 +39,23 @@ export async function setWorkspaceApprovalsLevel(
   actorId: string,
   orgId: string,
   level: ApprovalsLevel,
-  options: { everyAgent?: boolean; pubsub?: PubSub } = {},
+  options: { everyAgent?: boolean; pubsub?: PubSub; stored?: "autonomous" | ApprovalsLevel } = {},
 ): Promise<{ level: ApprovalsLevel; ownAgents: number }> {
   await requirePermission(db, actorId, orgId, "administrator");
   if (!APPROVALS_LEVELS.includes(level)) {
     throw new ValidationError(`approvalsLevel must be one of: ${APPROVALS_LEVELS.join(", ")}`);
   }
   const everyAgent = options.everyAgent === true;
+  // VPS Zen: what the workspace's own row keeps (`autonomous` for "Autonomia dos agentes" that still asks before
+  // what is destructive, `agent-autonomy.ts`); its agents always take `level`.
+  const stored = (options.stored ?? level) as ApprovalsLevel;
   const changed = await db.transaction(async (tx) => {
     await tx
       .insert(organizationSettings)
-      .values({ orgId, approvalsLevel: level })
+      .values({ orgId, approvalsLevel: stored })
       .onConflictDoUpdate({
         target: organizationSettings.orgId,
-        set: { approvalsLevel: level, updatedAt: new Date() },
+        set: { approvalsLevel: stored, updatedAt: new Date() },
       });
     const rows = await tx
       .update(agents)
@@ -69,7 +73,7 @@ export async function setWorkspaceApprovalsLevel(
       actor: { type: "person", id: actorId },
       action: "organization.approvals_level",
       target: { type: "organization", id: orgId },
-      details: { approvalsLevel: level, everyAgent, agents: rows.length },
+      details: { approvalsLevel: level, everyAgent, agents: rows.length, ...(stored !== level ? { stored } : {}) },
     });
     return rows;
   });

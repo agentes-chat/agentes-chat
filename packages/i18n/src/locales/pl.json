@@ -4146,7 +4146,11 @@
     "ownAgents_one": "{{count}} agent ma własny wybór i się nie zmieni.",
     "ownAgents_few": "{{count}} agenci mają własny wybór i się nie zmienią.",
     "ownAgents_many": "{{count}} agentów ma własny wybór i się nie zmieni.",
-    "ownAgents_other": "{{count}} agenta ma własny wybór i się nie zmieni."
+    "ownAgents_other": "{{count}} agenta ma własny wybór i się nie zmieni.",
+    "autonomy": "Autonomia agentów",
+    "autonomyHelp": "Gdy włączona, agenci robią to, o co ich poproszono, bez proszenia o zgodę, łącznie z merge, wdrożeniami i poleceniami na ich komputerze. Agent z własnym wyborem na swojej stronie go zachowuje.",
+    "autonomyDestructive": "Pytaj przed działaniami nieodwracalnymi",
+    "autonomyDestructiveHelp": "Usuwanie, płacenie lub wysyłanie poza workspace przez połączoną aplikację nadal wymaga zgody."
   },
   "brakes": {
     "title": "Praca, o którą nikt nie prosił",

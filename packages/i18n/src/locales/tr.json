@@ -3843,7 +3843,11 @@
     "workspaceLead": "Ajanların harekete geçmeden önce birine ne zaman sorduğu.",
     "workspaceHelp": "Biri ajanın sayfasında kendi seçimini değiştirene kadar her ajan bu seçimi izler.",
     "ownAgents_one": "{{count}} ajanın kendi seçimi var ve değişmez.",
-    "ownAgents_other": "{{count}} ajanın kendi seçimi var ve değişmez."
+    "ownAgents_other": "{{count}} ajanın kendi seçimi var ve değişmez.",
+    "autonomy": "Ajan özerkliği",
+    "autonomyHelp": "Açıkken ajanlar kendilerinden isteneni onay istemeden yapar, birleştirmeler, dağıtımlar ve bilgisayarlarındaki komutlar dahil. Sayfasında kendi seçimi olan bir ajan onu korur.",
+    "autonomyDestructive": "Yıkıcı işlemlerden önce sor",
+    "autonomyDestructiveHelp": "Bağlı bir uygulama üzerinden silme, ödeme veya çalışma alanı dışına gönderme hâlâ onay ister."
   },
   "brakes": {
     "title": "Kimsenin istemediği iş",

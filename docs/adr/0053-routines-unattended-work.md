@@ -258,6 +258,19 @@ It stays a computer's switch, not a server's, and off by default: the server kee
 server's to decide. Nothing the server stores changes, so no migration. What the agents can do there is what that
 Linux user can do: the switch is for computers whose owner decided exactly that.
 
+Amended 2026-11-20 (this fork): two places still asked a person on such a computer, and now don't.
+
+- **Claude Code runs a `work` turn with `--permission-mode bypassPermissions`** instead of `acceptEdits`
+  (`brainProfileLaunch`'s `full`), unless its agent always asks (ADR 0173) or the turn is `plan`; the settings' deny
+  rules on a system runner's own home still hold.
+- **A folder an agent asks for is granted at once** (`grantOnFullAccess` in `daemon.ts`), made first when it is
+  missing and the runner's user may make it, instead of waiting for someone to run `agentes-runner folders allow` at
+  the computer. A folder `checkFolder` refuses (the runner's own home) still waits.
+
+`agentes-runner folders` and `tools` also work on a server's computer run in simple mode (`host` as one user, not
+root), which writes no top-level config: a home with no token of its own whose `orgs/` holds connections is the
+server's computer too (`isHostComputer`), so the command an agent's request prints works there.
+
 ## Addendum 2026-11-12: Codex on Windows (§3)
 
 Codex runs on Windows from runner protocol 60 (ADR 0032, "Codex"). There §3 holds through Windows' own isolation, not the command policy:

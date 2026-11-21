@@ -82,7 +82,7 @@ import { DELEGATED_RESULT_CHARS, type DelegatedBridge } from "./delegated-tools"
 import { RunnerError } from "./errors";
 import { descendantPids, killTree } from "./exec";
 import { cliSpawn } from "./executors";
-import { withFullAccessNote } from "./full-access";
+import { fullAccess, withFullAccessNote } from "./full-access";
 import { HARDENED_GIT_ARGS } from "./git-guard";
 import { readJson, writeJson } from "./json-file";
 import {
@@ -886,7 +886,7 @@ export interface ClaudeLaunch {
   strictMcp: boolean;
   /** Commands off the allow list ask a person through our tool. */
   promptTool: boolean;
-  permissionMode: "acceptEdits" | "dontAsk" | "default";
+  permissionMode: "acceptEdits" | "dontAsk" | "default" | "bypassPermissions";
   /** Protocol 10: folders allowed for the agent besides its own (`--add-dir` each). */
   addDirs?: string[];
   /** Protocol 13: `--effort` (anything else is left out). */
@@ -965,12 +965,15 @@ export function repoInstructions(cwd: string): string {
  * permission prompt (`dontAsk`: whatever isn't allowed is refused), whatever `personalMcp` says.
  * `delegated`: the same `plan` and `work` for a CLI whose tools the agent's worker serves.
  * `asksFirst`: the agent always asks (ADR 0173), so a `work` turn accepts no edit by itself: each reaches the prompt.
+ * `full`: full access on this computer (`full-access.ts`): a `work` turn of an agent that doesn't always ask runs with
+ * `bypassPermissions`, so Claude Code asks nobody (the settings' deny rules on the runner's own home still hold).
  */
 export function brainProfileLaunch(
   mode: "plan" | "work" | "chat",
   personalMcp: boolean,
   delegated = false,
   asksFirst = false,
+  full = fullAccess(),
 ): Pick<
   ClaudeLaunch,
   | "strictMcp"
@@ -1014,7 +1017,7 @@ export function brainProfileLaunch(
   return {
     strictMcp: !personalMcp,
     promptTool: true,
-    permissionMode: asksFirst ? "default" : "acceptEdits",
+    permissionMode: asksFirst ? "default" : full ? "bypassPermissions" : "acceptEdits",
     // With the owner's own MCP servers the owner's settings stay, and so does every tool of Claude Code but the web.
     ...(personalMcp
       ? { disallowedTools: WEB_BUILTIN_TOOLS }

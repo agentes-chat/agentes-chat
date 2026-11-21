@@ -26,6 +26,7 @@ import type {
   Agent,
   AgentAccess,
   AgentAction,
+  AgentAutonomy,
   AgentBrain,
   AgentBrowserSettings,
   AgentChannel,
@@ -782,6 +783,8 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
           method: "PUT",
           json: input,
         }),
+      setAgentAutonomy: (orgId, input) =>
+        request<AgentAutonomy & { ownAgents: number }>(`${org(orgId)}/agent-autonomy`, { method: "PUT", json: input }),
       overview: (orgId) => request<OrgOverview>(`${org(orgId)}/overview`),
       people: async (orgId) => (await request<{ people: Person[] }>(`${org(orgId)}/people`)).people,
       allInvitations: async (orgId) =>

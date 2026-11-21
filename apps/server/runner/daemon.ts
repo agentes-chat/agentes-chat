@@ -115,6 +115,7 @@ import { DesktopSessions, type DesktopUser, runnerUser, systemDesktopUser } from
 import { EgressObservation, probeEgress } from "./egress";
 import { NetworkChangingError, RUNNER_VERSION, RunnerError } from "./errors";
 import { cachedExecutors, EXECUTORS_TTL_MS, type ExecutorRun } from "./executors";
+import { fullAccess } from "./full-access";
 import { systemGitCache } from "./git";
 import { closeIdleUnderPressure, type HandlerContext, type RequestObserver, type RequestOutcome } from "./handlers";
 import { Holds } from "./holds";
@@ -2696,6 +2697,7 @@ export class RunnerDaemon implements RequestObserver {
     if (allowedFor(this.access(), id, abs)) return { requestId: req.requestId, status: "granted" };
     const handle = String(agent.handle ?? "");
     const name = this.agentName(agent);
+    if (this.grantOnFullAccess(agent, id, name, abs)) return { requestId: req.requestId, status: "granted" };
     const existing = this.requests.get(req.requestId);
     const stored = this.requests.add({
       requestId: req.requestId,
@@ -2718,6 +2720,32 @@ export class RunnerDaemon implements RequestObserver {
       );
     }
     return { requestId: req.requestId, status: "pending" };
+  }
+
+  /**
+   * Full access on this computer (`full-access.ts`): its owner already decided its agents may use all of it, so a
+   * folder an agent asks for is granted at once (made first when it is missing and this user may make it) instead of
+   * waiting for a person at the terminal. False when it can't be (a folder `checkFolder` refuses, such as the runner's
+   * own home): the request then waits as on any other computer.
+   */
+  private grantOnFullAccess(agent: AgentScope, id: string, name: string, abs: string): boolean {
+    if (!fullAccess()) return false;
+    try {
+      mkdirSync(abs, { recursive: true });
+    } catch {
+      // Not ours to make: `checkFolder` says why below.
+    }
+    let real: string;
+    try {
+      real = checkFolder(abs, this.checkOpts());
+      this.writeAccess(addFolder(this.access(), real, [id]));
+    } catch (err) {
+      if (err instanceof ControlError) return false;
+      throw err;
+    }
+    // The activity log says it as any other grant (`folderAllowed`, from the access change).
+    this.opts.print?.(`${name || this.agentName(agent)} got the folder ${real} (full access on this computer).`);
+    return true;
   }
 
   /** `access.reduce` from the site: removes, never widens. */

@@ -4067,6 +4067,14 @@ export const ptBR = {
     workspaceHelp: "Cada agente segue esta escolha até alguém mudar a dele na página do agente.",
     ownAgents_one: "{{count}} agente tem a própria escolha e não muda.",
     ownAgents_other: "{{count}} agentes têm a própria escolha e não mudam.",
+    /** VPS Zen: Configurações → Geral, a chave do workspace para agentes que agem sem perguntar antes. */
+    autonomy: "Autonomia dos agentes",
+    autonomyHelp:
+      "Ligada, os agentes fazem o que foi pedido sem pedir aprovação, merge, deploy e comandos no computador incluídos. Um agente com escolha própria na página dele não muda.",
+    /** VPS Zen: abaixo dessa chave, enquanto ela está ligada. */
+    autonomyDestructive: "Perguntar antes do que é destrutivo",
+    autonomyDestructiveHelp:
+      "Apagar, pagar ou enviar para fora do workspace por um app conectado ainda pede aprovação.",
   },
   /** Configurações do agente: o que ele pode começar sem ninguém pedir diretamente, e quais agentes pode chamar (ADR 0131). */
   brakes: {

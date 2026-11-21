@@ -16,6 +16,7 @@ import {
 } from "@agenteschat/db";
 import { isAppLocale, localeInfo } from "@agenteschat/i18n/locale";
 import type { ModelMessage, SystemBlock } from "@agenteschat/providers";
+import { asksDestructiveOf } from "./agent-autonomy";
 import { agentStyleLine, agentStyleOf, isAgentStyle } from "./agent-style";
 import type { Agent } from "./agents";
 import { readerOf, readerOfMessage } from "./agents-dm-reads";
@@ -249,8 +250,12 @@ export const REQUEST_APPROVAL_LINE_PERSONAL = inPersonalWords(REQUEST_APPROVAL_L
  * What waits for a person's approval, by the agent's approvals level (ADR 0173), in "# How to reply": an agent that
  * never asks is told nothing waits, and one that always asks that every change does.
  */
-export function approvalsLine(level: ApprovalsLevel, personal: boolean): string {
+export function approvalsLine(level: ApprovalsLevel, personal: boolean, asksDestructive = false): string {
   const request = personal ? REQUEST_APPROVAL_LINE_PERSONAL : REQUEST_APPROVAL_LINE;
+  // VPS Zen: "Autonomia dos agentes" that still asks before what is destructive (`agent-autonomy.ts`).
+  if (level === "never" && asksDestructive) {
+    return `- This workspace gave its agents autonomy: when a person asks you for something, do it, without asking first, in words or with ask_user, unless the decision is really the person's (a product choice, a priority). Merges, deploys, rollbacks and commands on your computer run the moment you call them, so call one only when it is what was asked or what your instructions say. Only deleting, paying or sending to people outside the workspace through a connected app waits for a person's approval; you will be told the outcome. Write why you ask as text in the same response as such a call: only that text is posted with the request. ${request}`;
+  }
   if (level === "never") {
     return `- You are set to never ask: none of your tools waits for a person's approval, whatever its description or another line here says. A merge, a deploy, a rollback, a send, a delete, a payment and a command on your computer run the moment you call them, in a routine too, so call one only when it is what was asked or what your instructions say. Never tell anyone an action waits for their approval, and don't ask before acting either, in words or with ask_user, unless the decision is really the person's (a product choice, a priority). If a coding CLI's own shell on your computer refuses a merge, a deploy or a publish, run the same command with run_code, which runs it at once: never tell the person you can't. Only the tools whose job is asking still open a card (request_approval, request_permission, ask_user). ${request}`;
   }
@@ -690,7 +695,7 @@ export async function buildRunContext(
   // Independent lookups go out together (the database may be remote); org,
   // channel and members come from the per-process cache when enabled.
   const scope = and(eq(messages.orgId, run.orgId), eq(messages.channelId, run.channelId), isNull(messages.deletedAt));
-  const [org, channel, triggerRows, threadInfo, mode, teamMemory] = await Promise.all([
+  const [org, channel, triggerRows, threadInfo, mode, teamMemory, asksDestructive] = await Promise.all([
     getOrgCached(db, run.orgId),
     getChannelCached(db, run.orgId, run.channelId),
     options.trigger
@@ -707,6 +712,8 @@ export async function buildRunContext(
     workspaceMode(db, run.orgId),
     // What people asked every agent to keep (ADR 0167): with the org's context, in the cached prompt.
     teamMemoryForPrompt(db, run.orgId).catch(() => ""),
+    // VPS Zen: "Autonomia dos agentes" that still asks before what is destructive (`agent-autonomy.ts`).
+    options.toolsAvailable && agent.approvalsLevel === "never" ? asksDestructiveOf(db, run.orgId, agent.id) : false,
   ]);
   const personal = mode === "personal";
   // A range from another channel counts only while everyone here can still see it (re-checked, cached).
@@ -1178,7 +1185,7 @@ export async function buildRunContext(
           "- Keep it as short as the news: a report with nothing for the person to decide fits in one or two short paragraphs; leave out what didn't change and numbers that don't move the story.",
           "- When something is fine, say it in a few words ('the rest was quiet'). No ritual openings or closings ('I remain available', 'let me know if you need anything'); a greeting only when it is natural, like the first message here of the morning, yours or the person's ('Now' below gives the local time and when the previous message here was). Caveats about your own tools or data only when they change the answer. When something is the person's to decide, end with that one question, asked directly.",
           options.toolsAvailable
-            ? approvalsLine(agent.approvalsLevel, personal)
+            ? approvalsLine(agent.approvalsLevel, personal, asksDestructive)
             : "- You can only write chat messages for now; you cannot run tools or take actions outside this conversation. Say so if asked.",
           options.askUser
             ? "- When a request is still ambiguous after you have looked with your tools, or when the decision is really the person's (a product choice, a priority), ask one short clarifying question with `ask_user` (offer 2 to 4 choices when the answer is one of a few options) and wait: what you need answered before going on goes on that card, not in your text. Never for an approval an action's card asks, and never the question in your text too. Like an approval, it posts only the text of that same turn."

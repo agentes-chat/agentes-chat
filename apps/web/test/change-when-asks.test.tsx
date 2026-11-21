@@ -190,3 +190,36 @@ describe("Settings → Aprovações", () => {
     expect(within(section).getByRole("button", { name: /Aprovações/ }).textContent).toBe("AprovaçõesNunca perguntar");
   });
 });
+
+describe("Settings → Autonomia dos agentes (VPS Zen)", () => {
+  const row = (label: string) =>
+    screen().getByText(label, { selector: ".settings-row__label" }).closest(".settings-row") as HTMLElement;
+
+  test("one switch for the workspace's level; while on, whether what is destructive still asks", async () => {
+    const state = following();
+    await renderApp(`/org/${ORG_ID}/settings/general`, { api: createFakeApi(state) });
+    await settle(6);
+    const autonomy = within(row("Autonomia dos agentes")).getByRole("switch");
+    expect(autonomy.getAttribute("aria-checked")).toBe("false");
+    expect(
+      screen().queryByText("Perguntar antes do que é destrutivo", { selector: ".settings-row__label" }),
+    ).toBeNull();
+    await click(autonomy);
+    expect(calls(state, "orgs.setAgentAutonomy")).toEqual([[ORG_ID, { on: true, asksDestructive: true }]]);
+    expect(state.agents.find((a) => a.id === ADA_ID)?.approvalsLevel).toBe("never");
+    expect(state.agents.find((a) => a.id !== ADA_ID)?.approvalsLevel).toBe("always");
+    const destructive = within(row("Perguntar antes do que é destrutivo")).getByRole("switch");
+    expect(destructive.getAttribute("aria-checked")).toBe("true");
+    await click(destructive);
+    expect(calls(state, "orgs.setAgentAutonomy").at(-1)).toEqual([ORG_ID, { on: true, asksDestructive: false }]);
+    expect(row("Aprovações").textContent).toContain("Nunca perguntar");
+  });
+
+  test("a member doesn't see it", async () => {
+    const state = following();
+    if (state.me?.organizations[0]) state.me.organizations[0].role = "member";
+    await renderApp(`/org/${ORG_ID}/settings/general`, { api: createFakeApi(state) });
+    await settle(6);
+    expect(screen().queryByText("Autonomia dos agentes", { selector: ".settings-row__label" })).toBeNull();
+  });
+});

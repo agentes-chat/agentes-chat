@@ -623,6 +623,12 @@ test("profiles (ADR 0053 §3): plan has our tools only, no settings files, no ed
   expect(at(asks, "--permission-mode")).toBe("default");
   expect(asks).toContain("--permission-prompt-tool");
   expect(brainProfileLaunch("work", false, true, true).permissionMode).toBe("default");
+  // Full access on the computer (VPS Zen): a work turn asks nobody, unless its agent always asks; plan stays read only.
+  expect(brainProfileLaunch("work", false, false, false, true).permissionMode).toBe("bypassPermissions");
+  expect(brainProfileLaunch("work", true, false, false, true).permissionMode).toBe("bypassPermissions");
+  expect(brainProfileLaunch("work", false, false, true, true).permissionMode).toBe("default");
+  expect(brainProfileLaunch("plan", false, false, false, true).permissionMode).toBe("default");
+  expect(brainProfileLaunch("work", false, false, false, false).permissionMode).toBe("acceptEdits");
   expect(brainProfileLaunch("work", false, true).permissionMode).toBe("acceptEdits");
 });
 

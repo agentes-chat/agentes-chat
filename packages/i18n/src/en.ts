@@ -4188,6 +4188,14 @@ export const en = {
     workspaceHelp: "Each agent follows this choice until someone changes its own on the agent's page.",
     ownAgents_one: "{{count}} agent has its own choice and won't change.",
     ownAgents_other: "{{count}} agents have their own choice and won't change.",
+    /** VPS Zen: Settings → General, the workspace's switch for agents that act without asking first. */
+    autonomy: "Agent autonomy",
+    autonomyHelp:
+      "On, agents do what they're asked without asking for approval, merges, deploys and commands on their computer included. An agent with its own choice on its page keeps it.",
+    /** VPS Zen: under that switch, while it is on. */
+    autonomyDestructive: "Ask before destructive actions",
+    autonomyDestructiveHelp:
+      "Deleting, paying or sending outside the workspace through a connected app still asks for approval.",
   },
   /** Agent settings: what it may start that nobody asked for directly, and which agents it may call (ADR 0131). */
   brakes: {
