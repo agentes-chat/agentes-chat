@@ -1,4 +1,5 @@
-import { afterAll, afterEach, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { fileURLToPath } from "node:url";
 import { setupDom } from "@agenteschat/ui/testing/dom";
 
 setupDom();
@@ -9,7 +10,7 @@ import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { ADA_ID, comfortable, createFakeApi, ENG_ID, NOW, ORG_ID, seedState, withChatPrefs } from "./fake-api";
 import { renderApp, screen, settle } from "./render";
 
-const ROOT = new URL("../../../", import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL("../../../", import.meta.url));
 const TALL = "Relatório longo do trimestre";
 
 // No layout here: the tall message's words measure past the rule's height, any other under it.
@@ -31,7 +32,27 @@ Object.defineProperty(HTMLElement.prototype, "clientHeight", {
   },
 });
 
-afterEach(() => cleanup());
+const nativeResizeObserver = globalThis.ResizeObserver;
+beforeEach(() => {
+  // Happy DOM has no layout pass. Notify the clipping observer after the row mounts instead.
+  globalThis.ResizeObserver = class {
+    private disconnected = false;
+    constructor(private callback: ResizeObserverCallback) {}
+    observe(target: Element) {
+      if (!target.closest(".msg-clip")) return;
+      queueMicrotask(() => {
+        if (!this.disconnected) this.callback([], this as unknown as ResizeObserver);
+      });
+    }
+    disconnect() {
+      this.disconnected = true;
+    }
+  } as unknown as typeof ResizeObserver;
+});
+afterEach(() => {
+  cleanup();
+  globalThis.ResizeObserver = nativeResizeObserver;
+});
 
 const said = (id: string, who: string, body: string, minutes: number, extra: Partial<Message> = {}) =>
   ({

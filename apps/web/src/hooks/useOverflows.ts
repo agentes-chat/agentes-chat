@@ -12,11 +12,13 @@ export function useOverflows(box: RefObject<HTMLElement | null>, active = true, 
   useLayoutEffect(() => {
     const el = box.current;
     if (!el || !active) return;
-    const measure = () => setCut(el.scrollHeight > (over ?? el.clientHeight) + 1);
-    // A conversation's rows are skipped while off screen (`content-visibility: auto` in layout.css): measuring one
-    // lays it out anyway, about 10 ms each, a second for a conversation that opens with a hundred. A skipped one is
-    // measured by the observer once it comes on screen, before that frame is painted (hence at once, not later).
-    if (el.checkVisibility?.({ contentVisibilityAuto: true }) !== false) measure();
+    // Reading a skipped row's height lays it out. Wait for the observer to see it on screen, and
+    // commit the updated overflow state before that frame is painted.
+    const measure = () => {
+      if (el.checkVisibility?.({ contentVisibilityAuto: true }) === false) return;
+      setCut(el.scrollHeight > (over ?? el.clientHeight) + 1);
+    };
+    measure();
     if (typeof ResizeObserver === "undefined") return;
     const resized = new ResizeObserver(() => flushSync(measure));
     // The box itself while it still grows towards its `max-height`, its first child for what it holds past it.

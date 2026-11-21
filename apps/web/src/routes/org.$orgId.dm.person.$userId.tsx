@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { preloadDm } from "@/lib/dm-preload";
 import { agentPanelSearch, threadSearch } from "@/lib/open-param";
 import { DmPage } from "@/pages/DmPage";
 
@@ -13,6 +14,8 @@ export const Route = createFileRoute("/org/$orgId/dm/person/$userId")({
     ...agentPanelSearch(search),
     ...(typeof search.m === "string" && search.m ? { m: search.m } : {}),
   }),
+  loader: ({ context: { queryClient, api }, params: { orgId, userId } }) =>
+    preloadDm(queryClient, api, orgId, { userId }),
   component: function PersonDm() {
     const { userId } = Route.useParams();
     return <DmPage key={userId} target={{ userId }} focusMessageId={Route.useSearch().m} />;
