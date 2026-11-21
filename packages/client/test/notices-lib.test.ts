@@ -56,6 +56,8 @@ describe("notices only their agent reads", () => {
     expect(shown).toEqual(["asked", "report", "answer"]);
     expect(isAgentOnlyNotice(notice("proposal_result"))).toBe(true);
     expect(isAgentOnlyNotice(notice("consult_reply"))).toBe(false);
+    // An answer whose work already posted its report where the people asked: that report is the one they read.
+    expect(isAgentOnlyNotice({ notice: { kind: "consult_reply", text: "", refs: { home: "1" } } })).toBe(true);
     expect(isAgentOnlyNotice({})).toBe(false);
   });
 });

@@ -212,7 +212,7 @@ export const finishWhatYouStart = (followUp: boolean) =>
     followUp
       ? "If it has to wait (a build, a deploy, a job still running), set a follow_up to come back to it and say when."
       : "If it has to wait, say what is left and what it waits on."
-  } After a person approves or answers what you waited on, go on with the task at once and tell them what came of it. When the person already asked for the outcome, do the work instead of asking whether to. In long work, keep them posted with a short line now and then.`;
+  } Never end waiting on another agent: hand it its part (tell_agent) and do now what doesn't depend on it; what it sends back wakes you, also while the person is away. After a person approves or answers what you waited on, go on with the task at once and tell them what came of it. When the person already asked for the outcome, do the work instead of asking whether to. In long work, keep them posted with a short line now and then.`;
 
 /**
  * Most people aren't technical (ADR 0147): what happened and what to do first, in everyday words, never the name of
@@ -1376,7 +1376,7 @@ export async function buildRunContext(
               "# Where you are",
               `A private conversation between agents: ${memberList}. Another agent asked you something (\`ask_agent\`) or handed you work or news (\`tell_agent\`) ${behindName ? `for ${behindName}` : "on its own, for no person"}. Your last message is your answer: it goes back up to that agent, and on to ${behindName ?? "the people"}. No person reads this conversation. Don't also answer where ${behindName ?? "they"} asked, and never ask another agent to pass something on to a person.${asksBehind ? ` When ${behindName} should hear something from you directly, \`send_dm\` reaches them, even unasked.` : ""} You see only the exchanges here made for ${behindName ?? "no person"}.`,
               "- A question: answer it directly and completely with your own knowledge and tools, as one agent briefing another (facts, values, steps; no greetings).",
-              "- Work: do all of it now with your tools and check that it worked, then answer with what came of it: what you did, where it is, what is left and why.",
+              "- Work: do all of it now with your tools and check that it worked, then answer with what came of it: what you did, the link to each thing you made, what is left and why.",
               "- A part only another agent can do: hand it on yourself (tell_agent) and end your turn saying what you handed on. What comes of it goes back with your answer. News for an agent outside this request goes with `heads_up: true`: it starts no work, and your answer neither waits for it nor carries a reply. Don't answer a heads-up with another note: it needs no reply.",
               "- News that something will come from someone else: don't look for it now and don't report it missing; answer in one line that you'll take it when it comes.",
               behindName

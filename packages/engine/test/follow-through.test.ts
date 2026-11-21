@@ -307,6 +307,34 @@ test("a follow-up a person asked for comes at its time even when the agent's las
   expect(line?.meta.notice).toMatchObject({ refs: { state: "done" } });
 });
 
+test("follow_up never waits on another agent: it is told to hand that agent its part instead", async () => {
+  f = await setup({ followUps: true });
+  await createAgent(
+    f.db,
+    f.owner.id,
+    f.org.id,
+    { name: "Iris", handle: "iris", role: "Review", credentialId: f.credential.id },
+    { model: "claude-sonnet-5-5" },
+  );
+  await ask(f, "@dev acompanha o layout novo");
+  const [run] = await f.db.select().from(schema.agentRuns);
+  if (!run) throw new Error("no run");
+  let n = 0;
+  const call = (input: Record<string, unknown>) =>
+    invokeToolForRun(
+      { db: f.db, pubsub: f.pubsub, tools: f.tools },
+      { orgId: f.org.id, agentId: f.agent.id, runId: run.id, machineId: "" },
+      { id: `fu-${++n}`, name: FOLLOW_UP_TOOL, input: { minutes: 20, about: "ver o layout", ...input } },
+    );
+  for (const note of ["Check whether @iris approved the layout.", "See if Iris signed off on the new copy."]) {
+    const out = await call({ note });
+    expect(out.result).toMatchObject({ isError: true });
+    expect(out.result.content).toContain("not for waiting on @iris: hand it its part with tell_agent");
+  }
+  // Its own name, or a word that only contains another agent's, is no wait on a teammate.
+  expect((await call({ note: "Check the Irish sales export job I started." })).result.isError).toBeUndefined();
+});
+
 test("follow_up bounds: a day ahead at most, two per run, three per conversation, none past the stretch's limit", async () => {
   f = await setup({ followUps: true });
   await ask(f, "@dev acompanha o deploy");

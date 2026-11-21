@@ -15,6 +15,7 @@ import {
   workEligible,
   workView,
 } from "../src";
+import { isAgentOnlyNotice } from "../src/notices";
 import { type Fixture, setup } from "./fixtures";
 
 let f: Fixture;
@@ -286,6 +287,44 @@ describe("work handed to another agent reports where the person asked (F1)", () 
     expect(issue.backgroundWork?.result).toEqual({ text: "Report saved in Drive.", messageId: copy?.id ?? "" });
     // Nothing woke the agent that handed it to relay it.
     expect((await f.db.select().from(schema.agentRuns)).filter((r) => r.agentId === f.agent.id)).toHaveLength(1);
+  });
+
+  test("a review its delegate handed on after reporting home wakes the agent working for the person", async () => {
+    f = await setup({
+      askAgent: true,
+      judge: (kind) => (kind === "note_reply" || kind === "handed_part_open" ? 0.9 : undefined),
+    });
+    await addAgent("Atlas");
+    await addAgent("Iris");
+    const dev = await devRun("@dev get the report ready");
+    await tell(dev, "@atlas", "Build the October sales report.");
+    await f.db.update(schema.agentRuns).set({ status: "done" }).where(eq(schema.agentRuns.id, dev.id));
+    const [c] = await consultations();
+    const atlas = await runOf(c?.targetRunId);
+    // It read the note at its first step.
+    await f.db
+      .update(schema.agentRuns)
+      .set({ status: "running", pendingMessageIds: [] })
+      .where(eq(schema.agentRuns.id, atlas.id));
+    await tell(await runOf(atlas.id), "@iris", "Review the October sales report in Drive.");
+    await reports(await runOf(atlas.id), "Report saved in Drive; Iris is reviewing it.");
+    // Atlas reported home, but its answer waits for Iris's part.
+    expect((await consultations()).map((r) => r.status)).toEqual(["open", "open"]);
+    const review = (await consultations())[1];
+    await reports(await runOf(review?.targetRunId), "Rejected: the refunds total is off by one day.");
+    const [handed] = await consultations();
+    expect(handed).toMatchObject({ status: "answered", answer: expect.stringContaining("Rejected: the refunds") });
+    const notice = (await f.db.select().from(schema.messages)).find(
+      (m) => m.channelId === f.general.id && (m.meta.notice as { kind?: string } | undefined)?.kind === "consult_reply",
+    );
+    // Its work's report reached the person, but what Iris said after it did not reach the agent that must act on it.
+    expect((notice?.meta.notice as { refs?: Record<string, string> } | undefined)?.refs).toMatchObject({
+      home: "1",
+      wake: "1",
+    });
+    // The report's copy is what people read: the notice is the sender's alone, never a second post of the same reply.
+    expect(isAgentOnlyNotice(notice?.meta)).toBe(true);
+    expect((await f.db.select().from(schema.agentRuns)).filter((r) => r.agentId === f.agent.id)).toHaveLength(2);
   });
 
   test("a stop posts its end where the person asked", async () => {

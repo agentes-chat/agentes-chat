@@ -11,7 +11,7 @@ import { getChannelCached } from "./context";
 import { publishDelivery } from "./delivery";
 import { isAgentOnlyDm } from "./dms";
 import { decisionNudge, FOLLOW_THROUGH_NUDGE, FOLLOW_THROUGH_NUDGE_DM, MISSION_ASK_NUDGE } from "./follow-through";
-import { cutText, cutTextEnd } from "./format";
+import { cutText, cutTextEnd, hasWord } from "./format";
 import { type Judge, JudgeBudgetError } from "./judge";
 import { PLATFORM_CAP } from "./limits";
 import type { NoticeKind } from "./notices";
@@ -305,17 +305,6 @@ export function localPathsCited(reply: string, request: string, work: ComputerWo
   });
 }
 
-const WORD_CHAR = /[\p{L}\p{N}_]/u;
-
-/** `word` in `text` as a whole word: the folder `out` isn't in "stdout", nor `precos.md` in "precos.md.bak". */
-function hasWord(text: string, word: string) {
-  if (!word) return false;
-  for (let i = text.indexOf(word); i >= 0; i = text.indexOf(word, i + 1))
-    if (!WORD_CHAR.test(text[i - 1] ?? "") && !/^(?:[\p{L}\p{N}_]|\.[\p{L}\p{N}])/u.test(text.slice(i + word.length)))
-      return true;
-  return false;
-}
-
 /** What a run reads, once, when its reply cites files on its computer to people (`localPathsCited`): not posted. */
 export function localPathsNudge(paths: string[]) {
   const cited = paths
@@ -411,7 +400,7 @@ export async function continuationVerdict(
             untried:
               "What `request` asked for is still missing: it said it couldn't or that it lacks a tool, or asked a person to do or connect something, or asked a person for information its means could find (an address, docs, what a name refers to), while `means` has ways that fit the task it hasn't used in `tried`, or it gave up after one empty or failed attempt without varying it. Handing the work to a teammate counts as an attempt. Also when it said it or the team lacks an access, a login or an account, or asked people for one or who has it, without first looking in the workspace (`tried` has no search_context, find_agent, ask_agent or tell_agent): a teammate or an earlier conversation may hold it. Also when it said it couldn't, stopped, or only offered in passing ('one option would be…', 'only if you want'), because a step needs the person (a sign-in, a QR code scanned with their phone, a code sent to them, a captcha, an approval, a permission, their consent to their own account) instead of doing everything up to it and handing that step over, while `means` can hand it over: a step that needs the person is never a blocker. Also when it handed a person, or refused as unsafe, a sign-in to an account it was given to use whose link or code goes to a mailbox `means` can read: getting it there is its own work. A call refused for safety ([refused for safety]) is final for that data: counting it as a way left to try is wrong. A caveat beside an answer it gave is not this: that answer is done. Nor a step it offers beyond information or advice `request` asked for (a connection, a key, a trial run): that step is the person's choice, not work left undone. Work asked as a question ('can you…?', 'consegue…?') is still work.",
             continue:
-              "It said it will do more itself (next, later, after a build), or stopped midway, and nothing it set up brings it back. A promise about what its `background_work` will bring is kept by that work, not this. A reply that asks the person whether to do something ('want me to…?', 'quer que eu faça?') is not this: it waits for their answer. Also when `unreached` is set and the reply hands work or a question to an agent it names, or says it told a person it names (that mention reached nobody); merely naming one is not that.",
+              "It said it will do more itself (next, later, after a build), or stopped midway, and nothing it set up brings it back. A promise about what its `background_work` will bring is kept by that work, not this. A reply that asks the person whether to do something ('want me to…?', 'quer que eu faça?') is not this: it waits for their answer. Also when `unreached` is set and the reply hands work or a question to an agent it names, or says it told a person it names (that mention reached nobody); merely naming one is not that. Also, even beside a result, when it ends waiting on another agent or says another agent still has to do, confirm, review or send something for `request` to be finished, and `tried` has no tell_agent or ask_agent to that agent: nothing brings that part about unless it hands it over.",
             ask: "To go on it needs something only a person can give (a decision, a test, access) that its `means` can't find, but it described the need or listed what's missing instead of asking one direct question. Not when it says it needs nothing from them, or what's missing only blocks optional extra work the request doesn't need, or `request` asked what is missing or left to do and the list answers it: that is done. A way to do the request itself, even worded 'only if you want', is never optional extra work.",
             secret:
               "It asks a person to type or paste a secret into the chat (a password, an API key, a token, a private key), or the work `request` asked it to do can't go on without one only a person has and it hasn't asked for it through a secure request (`tried` has no request_secret call). Not when it only names the key a step it offers would need.",

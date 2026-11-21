@@ -231,3 +231,14 @@ export function inertLinks(text: string): string {
 /** A JSON value with every string in it made inert (`inertLinks`). */
 export const inertJson = <T>(value: T): T =>
   JSON.parse(JSON.stringify(value, (_key, v) => (typeof v === "string" ? inertLinks(v) : v)));
+
+const WORD_CHAR = /[\p{L}\p{N}_]/u;
+
+/** `word` in `text` as a whole word: the folder `out` isn't in "stdout", nor `precos.md` in "precos.md.bak". */
+export function hasWord(text: string, word: string) {
+  if (!word) return false;
+  for (let i = text.indexOf(word); i >= 0; i = text.indexOf(word, i + 1))
+    if (!WORD_CHAR.test(text[i - 1] ?? "") && !/^(?:[\p{L}\p{N}_]|\.[\p{L}\p{N}])/u.test(text.slice(i + word.length)))
+      return true;
+  return false;
+}

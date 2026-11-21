@@ -9,6 +9,7 @@ import {
   inArray,
   isNotNull,
   isNull,
+  ne,
   rowsOf,
   schema,
   sql,
@@ -26,9 +27,9 @@ import { eligibleChannelAgents } from "./dispatch";
 import { isAgentOnlyDm } from "./dms";
 import { ConflictError, ForbiddenError, NotFoundError } from "./errors";
 import { publishMessageCreated } from "./events";
-import { cutText, cutTextEnd } from "./format";
+import { cutText, cutTextEnd, hasWord } from "./format";
 import type { Judge } from "./judge";
-import { getMessage, insertMessage, type Message, messageView } from "./messages";
+import { getMessage, insertMessage, type Message, messageView, parseMentionHandles } from "./messages";
 import { isWithdrawnHandoff } from "./open-requests";
 import { can } from "./organizations";
 import { enqueue } from "./outbox";
@@ -119,7 +120,7 @@ export async function followThroughVerdict(
 
 /** What a run reads, once, when it ended with work it said it would do still undone and nothing keeps it. */
 export const FOLLOW_THROUGH_NUDGE =
-  "You ended saying you would do more, and nothing you set up brings you back to it. Do it now with your tools and tell them what came of it. If it has to wait (a build, a deploy, a job still running), set a follow_up to come back to it and say when, in one line.";
+  "You ended saying you would do more, and nothing you set up brings you back to it. Do it now with your tools and tell them what came of it. A part another agent must do (a review, a sign-off, a fix): hand it to that agent now with tell_agent, and what comes of it wakes you here. If it has to wait (a build, a deploy, a job still running), set a follow_up to come back to it and say when, in one line.";
 
 /**
  * The same, for a run in an agents' DM answering another agent (ADR 0095): its last message goes back as the
@@ -323,6 +324,25 @@ async function conversationRun(ctx: ToolContext) {
 }
 
 /**
+ * The handle of another active agent of the workspace that `text` names (its @handle, or its name as a whole word),
+ * or null. A follow-up set to check on a teammate posts its wake and its "still waiting" reply where people read,
+ * while that agent's own answer wakes this one anyway.
+ */
+async function agentNamedIn(db: Executor, run: Pick<AgentRun, "orgId" | "agentId">, text: string) {
+  const handles = new Set(parseMentionHandles(text));
+  const lower = text.toLowerCase();
+  const others = await db
+    .select({ handle: agents.handle, name: agents.name })
+    .from(agents)
+    .where(and(eq(agents.orgId, run.orgId), isNull(agents.archivedAt), ne(agents.id, run.agentId)));
+  const named = others.find(
+    (a) =>
+      handles.has(a.handle.toLowerCase()) || (a.name.trim().length >= 3 && hasWord(lower, a.name.trim().toLowerCase())),
+  );
+  return named?.handle ?? null;
+}
+
+/**
  * `follow_up` and `cancel_follow_up`, for every agent (no scope; a routine's background run may set one to come
  * back to work it is blocked on, besides firing again on its own schedule). Setting one posts its line in the run's
  * conversation (a `follow_up` notice that wakes nobody, `refs.state` `pending`) and queues the job that
@@ -365,6 +385,11 @@ export function createFollowUpToolSource(deps: { pubsub?: PubSub }): ToolSource 
             ? Date.parse(given)
             : Number.NaN
           : now + Number(input.minutes ?? 0) * 60_000;
+        const waitsOn = await agentNamedIn(ctx.db, run, `${str(input.note)} ${str(input.about)}`);
+        if (waitsOn)
+          return refused(
+            `A follow-up is for your own checks (a build, a deploy, a job still running), not for waiting on @${waitsOn}: hand it its part with tell_agent, or ask it with ask_agent. What comes of either wakes you here by itself.`,
+          );
         if (!Number.isFinite(due) || (!given && !input.minutes))
           return refused("Say when: `minutes` from now, or `at` as an ISO 8601 time with its offset.");
         if (due < now + 30_000) return refused("That time has passed: pick one at least a minute ahead.");

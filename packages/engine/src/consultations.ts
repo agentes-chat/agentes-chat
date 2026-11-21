@@ -824,7 +824,8 @@ export function consultationResult(
  * What the asker reads when the answer comes as a notice (`consult_reply`: it didn't wait, or a person woke it
  * meanwhile), with its question, since it may have asked other things since. A note's says what came of the work
  * (`refs.kind` `note`); `wake`: the notice of a report that wakes the agent (`reportHandOffs`); `pending`: the
- * colleagues of that turn still waiting on a person or their computer when it wakes.
+ * colleagues of that turn still waiting on a person or their computer when it wakes; `home`: its work's report already
+ * reached the people (`handedHomeOf`), so the notice is the sender's alone.
  */
 export function consultationNotice(
   c: Pick<
@@ -832,7 +833,7 @@ export function consultationNotice(
     "id" | "kind" | "status" | "answer" | "question" | "askerRunId" | "askerAgentId" | "targetAgentId"
   >,
   handle: string,
-  options: { wake?: boolean; pending?: string; hidden?: boolean; readOutside?: boolean } = {},
+  options: { wake?: boolean; pending?: string; hidden?: boolean; readOutside?: boolean; home?: boolean } = {},
 ): Notice {
   const quoted = `"${c.question.slice(0, 300)}${c.question.length > 300 ? "…" : ""}"`;
   const note = c.kind === "note";
@@ -868,6 +869,7 @@ export function consultationNotice(
       ...(note ? { kind: "note" } : {}),
       ...(options.wake ? { wake: "1" } : {}),
       ...(options.pending ? { pending: options.pending } : {}),
+      ...(options.home ? { home: "1" } : {}),
     },
   };
 }
@@ -881,7 +883,10 @@ const ANSWER_MAX = 16_000;
 /** How the answer a run in an agents' DM owes carries a part another agent did (`handBack`): agents read it so. */
 const handedPartLine = (handle: string, by: string, text: string) =>
   `[@${handle}, to whom @${by} handed part of it]: ${text}`;
-const HANDED_PART = /^\[@([\w-]+), to whom @[\w-]+ handed part of it\]: /;
+const HANDED_PART_MARK = /\[@([\w-]+), to whom @[\w-]+ handed part of it\]: /;
+const HANDED_PART = new RegExp(`^${HANDED_PART_MARK.source}`);
+/** An answer that carries what came back from a part handed on (`handBack`), after the report its run wrote. */
+const carriesHandedPart = (answer: string | null) => HANDED_PART_MARK.test(answer ?? "");
 const BEFORE_HANDED_PART = /\n\n(?=\[@[\w-]+, to whom @[\w-]+ handed part of it\]: )/;
 
 /**
@@ -1296,7 +1301,8 @@ async function settleOwed(
  * is only written; the last wakes the agent, and a run of its already at work there that takes it reads the earlier
  * ones with it. Only for a run in a person's conversation (an agents' DM hands back instead).
  */
-export async function reportHandOffs(deps: Pick<Deps, "db" | "pubsub">, asker: AgentRun) {
+export async function reportHandOffs(deps: Pick<Deps, "db" | "pubsub" | "judge">, asker: AgentRun) {
+  const asks = await openAsksBack(deps, asker);
   const delivered = await deps.db.transaction(async (tx) => {
     const claimed = await tx
       .update(agentConsultations)
@@ -1333,13 +1339,14 @@ export async function reportHandOffs(deps: Pick<Deps, "db" | "pubsub">, asker: A
     const pending = waiting.map((w) => `@${w.handle}`).join(", ");
     claimed.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || (a.id < b.id ? -1 : 1));
     // A hand-off whose work already reported to the person (`handOverWork`) is only written down: relaying it would
-    // repeat it. The asker wakes once, at most, and only for one that ended with nothing posted home.
+    // repeat it. The asker wakes once, at most: for one that ended with nothing posted home, or one where what came
+    // back after that report leaves work for an agent (`openAsksBack`), which the agent working for the person moves.
     const home = await handedHomeOf(
       tx,
       asker.orgId,
       claimed.map((c) => c.id),
     );
-    const wakes = claimed.some((c) => !home.has(c.id));
+    const wakes = claimed.some((c) => !home.has(c.id) || asks.has(c.id));
     const out: Awaited<ReturnType<typeof deliverNoticeToRun>>[] = [];
     for (const [i, row] of claimed.entries()) {
       const wake = wakes && i === claimed.length - 1;
@@ -1349,6 +1356,7 @@ export async function reportHandOffs(deps: Pick<Deps, "db" | "pubsub">, asker: A
         hidden: await keptFromPeople(tx, row),
         ...(wake && pending ? { pending } : {}),
         readOutside: await answerReadOutside(tx, row),
+        home: home.has(row.id),
       });
       // A routine's run never reads them itself: all of them land where it reports, so none is lost when it ends unread.
       out.push(await deliverNoticeToRun(tx, asker, notice, { wake, joinRun: !asker.background }));
@@ -1375,6 +1383,72 @@ export async function reportHandOffs(deps: Pick<Deps, "db" | "pubsub">, asker: A
   });
   for (const d of delivered) await publishDelivery(deps.pubsub, d).catch(() => {});
   return delivered;
+}
+
+/**
+ * Of the closed hand-offs of `asker` not reported yet whose work reported home before a part it handed on came back
+ * (`handBack`), the ones where that part leaves work for an agent: a review's verdict asking for a fix, a confirmation
+ * still owed. Its words reached the person, who may be away, and no agent would act on them. One judge call each, before
+ * the claim's locks; with no judge, or when it fails, a part counts as leaving work.
+ */
+async function openAsksBack(deps: Pick<Deps, "db" | "judge">, asker: AgentRun) {
+  const rows = (
+    await deps.db
+      .select({ id: agentConsultations.id, question: agentConsultations.question, answer: agentConsultations.answer })
+      .from(agentConsultations)
+      .where(
+        and(
+          eq(agentConsultations.orgId, asker.orgId),
+          eq(agentConsultations.askerRunId, asker.id),
+          eq(agentConsultations.kind, "note"),
+          eq(agentConsultations.status, "answered"),
+          isNull(agentConsultations.reportedAt),
+        ),
+      )
+  ).filter((r) => carriesHandedPart(r.answer));
+  const home = await handedHomeOf(
+    deps.db,
+    asker.orgId,
+    rows.map((r) => r.id),
+  );
+  const out = new Set<string>();
+  for (const r of rows) {
+    if (!home.has(r.id)) continue;
+    const leaves = deps.judge
+      ? await partLeavesWork(deps.judge, { orgId: asker.orgId, agentId: asker.agentId, runId: asker.id, ...r }).catch(
+          () => true,
+        )
+      : true;
+    if (leaves) out.add(r.id);
+  }
+  return out;
+}
+
+/** One judge call: what came back from parts handed on leaves something for an agent to do. */
+async function partLeavesWork(
+  judge: Judge,
+  input: { orgId: string; agentId: string; runId: string; question: string; answer: string | null },
+) {
+  const parts = (input.answer ?? "").split(BEFORE_HANDED_PART).filter((p) => HANDED_PART.test(p));
+  const answers = await judge.ask({
+    orgId: input.orgId,
+    agentId: input.agentId,
+    runId: input.runId,
+    kind: "handed_part_open",
+    state: { note: cutText(input.question, 2000), parts: cutText(parts.join("\n\n"), 3000) },
+    questions: {
+      open: {
+        type: "noul",
+        instructions:
+          "An AI agent handed `note` to another agent, which handed parts on to other agents; `parts` is what came back from them. Does it leave something an agent still has to do for `note` to be finished?",
+        criteria: {
+          true: "It rejects or asks for changes (a fix, a redo), says something is still to be confirmed, sent, reviewed or made, or says a part couldn't be done.",
+          false: "It only says the part is done, approved or delivered, or gives information with nothing left to do.",
+        },
+      },
+    },
+  });
+  return (answers.open?.noul ?? 0) >= 0.5;
 }
 
 /**

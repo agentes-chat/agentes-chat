@@ -52,10 +52,13 @@ export const AGENT_ONLY_NOTICES: ReadonlySet<string> = new Set<NoticeKind>([
   "work_follow_up",
 ]);
 
-/** A message that is a notice only its agent reads: left out of the conversation. */
+/**
+ * A message that is a notice only its agent reads: left out of the conversation. Also an answer whose work already
+ * posted its report where the people asked (`refs.home`): that report is the one message they read.
+ */
 export const isAgentOnlyNotice = (meta: Meta) => {
-  const kind = (meta?.notice as { kind?: unknown } | undefined)?.kind;
-  return typeof kind === "string" && AGENT_ONLY_NOTICES.has(kind);
+  const notice = meta?.notice as { kind?: unknown; refs?: { home?: unknown } } | undefined;
+  return (typeof notice?.kind === "string" && AGENT_ONLY_NOTICES.has(notice.kind)) || notice?.refs?.home === "1";
 };
 
 /** The notice card of a message, or null (none, or a fast reply that shows as a normal message). */

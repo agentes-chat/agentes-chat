@@ -50,16 +50,24 @@ export const AGENT_ONLY_NOTICES: readonly NoticeKind[] = [
   "work_follow_up",
 ];
 
-/** Whether a message is a notice only its agent reads (`AGENT_ONLY_NOTICES`). */
+/**
+ * A `consult_reply` of work whose report already reached the people where they asked (`refs.home`, ADR 0095 addendum
+ * of 2026-11-21): the report is that message, so the notice is only its sender's, or each result would show twice.
+ */
+const reportedHome = (meta: Record<string, unknown> | null | undefined) =>
+  (meta?.notice as { refs?: { home?: unknown } } | undefined)?.refs?.home === "1";
+
+/** Whether a message is a notice only its agent reads (`AGENT_ONLY_NOTICES`, or a result already posted home). */
 export const isAgentOnlyNotice = (meta: Record<string, unknown> | null | undefined) =>
-  AGENT_ONLY_NOTICES.includes((meta?.notice as { kind?: unknown } | undefined)?.kind as NoticeKind);
+  AGENT_ONLY_NOTICES.includes((meta?.notice as { kind?: unknown } | undefined)?.kind as NoticeKind) ||
+  reportedHome(meta);
 
 /** The same, in SQL, on a message's `meta` (`sql\`m.meta\``). */
 export const agentOnlyNoticeSql = (meta: SQL): SQL =>
-  sql`coalesce(${meta}->'notice'->>'kind', '') in (${sql.join(
+  sql`(coalesce(${meta}->'notice'->>'kind', '') in (${sql.join(
     AGENT_ONLY_NOTICES.map((k) => sql`${k}`),
     sql`, `,
-  )})`;
+  )}) or coalesce(${meta}->'notice'->'refs'->>'home', '') = '1')`;
 
 /**
  * Notices people see in the conversation but that are never news: a person stopping a task is a receipt (ADR 0128), a
@@ -147,11 +155,11 @@ export function handoffGuidance(report: string | undefined, personal = false) {
  * to do first about a part that couldn't be finished.
  */
 export const HANDED_BACK_GUIDANCE =
-  "Everything you handed off in that turn is back (each reply is above). Tell the people here once what came of it: what each one did, where it is, what is left and who has it. If one couldn't finish, decide first: hand it again with what was missing, give it to another agent, or say what was tried and what is left.";
+  "Everything you handed off in that turn is back (each reply is above). Tell the people here once what came of it: what each one did, where it is, what is left and who has it. If one couldn't finish, decide first: hand it again with what was missing, give it to another agent, or say what was tried and what is left. A reply that leaves something to do (a fix a review asked for, a confirmation another agent still owes): hand it now to whoever does it, never wait for it to come by itself.";
 
 /** The same, when colleagues of that turn still wait on a person or their computer (`pending`: their handles). */
 export const handedBackPartly = (pending: string) =>
-  `Part of what you handed off in that turn is back (each reply is above). Still out, waiting on a person or a computer: ${pending}. Tell the people here once what came of the parts that are back, and who still has the rest: what comes of it reaches you here by itself. If one couldn't finish, decide first: hand it again with what was missing, give it to another agent, or say what was tried and what is left.`;
+  `Part of what you handed off in that turn is back (each reply is above). Still out, waiting on a person or a computer: ${pending}. Tell the people here once what came of the parts that are back, and who still has the rest: what comes of it reaches you here by itself. If one couldn't finish, decide first: hand it again with what was missing, give it to another agent, or say what was tried and what is left. A reply that leaves something to do (a fix a review asked for, a confirmation another agent still owes): hand it now to whoever does it.`;
 
 /**
  * How the right hand's turn woken by news of a task it handed over tells the person it was for (`right-hand-follow.ts`):
@@ -183,7 +191,11 @@ export function noticeText(
       // Neutral: the text says whether it answered, didn't in time, or couldn't. The guidance only on the notice
       // that woke the run (`refs.wake`): the earlier ones of the same report come before it.
       if (n.refs?.kind === "note")
-        return `[What ${from ?? "another agent"} did with the work you handed it]: ${n.text}${
+        return `[What ${from ?? "another agent"} did with the work you handed it${
+          n.refs.home
+            ? "; its report already reached the people where they asked, so don't repeat it: only what came after it is new to them"
+            : ""
+        }]: ${n.text}${
           current && n.refs.wake ? `\n${n.refs.pending ? handedBackPartly(n.refs.pending) : HANDED_BACK_GUIDANCE}` : ""
         }`;
       return `[Reply to your question to ${from ?? "another agent"}]: ${n.text}`;
