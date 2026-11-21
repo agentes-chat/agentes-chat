@@ -8,6 +8,7 @@ import {
   createContextToolSource,
   createRoutine,
   createScheduleToolSource,
+  EXPAND_NOT_FOUND,
   indexSource,
   insertContextItem,
   insertMessage,
@@ -204,7 +205,7 @@ describe("the agents' DM reads only what was made for the same person (consultat
     const expand = async (ctx: ToolContext) =>
       (await toolsOf(createContextToolSource(f.context), ctx))("expand", { item_id: item.id });
     expect((await expand(forAna.infra)).isError).toBeFalsy();
-    expect(await expand(forBob.infra)).toMatchObject({ isError: true, content: "Not found." });
+    expect(await expand(forBob.infra)).toMatchObject({ isError: true, content: EXPAND_NOT_FOUND });
 
     const memory = (personId: string) =>
       retrieveForRun(f.context, {
