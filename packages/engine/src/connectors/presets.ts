@@ -822,6 +822,18 @@ export const MCP_PRESETS: readonly McpPreset[] = [
     serverUrl: "https://mcp.abacatepay.com/mcp",
   },
   {
+    id: "acainfe",
+    category: "payments",
+    label: "açaínfe",
+    description: "açaínfe Brazilian service invoices (NFS-e): companies, products, customers, sales and invoices.",
+    icon: "acainfe",
+    serverUrl: "https://api.acainfe.com/mcp",
+    // Checked 2026-11-17: no OAuth (401 with `Bearer realm="acainfe"`, no protected-resource metadata), so it
+    // connects with an açaínfe API key (made in açaínfe's app, Agentes de IA). A key reaches one company, which
+    // `get_company` names.
+    account: { tool: "get_company", id: ["tenant.id"], name: "tenant.legalName" },
+  },
+  {
     id: "hubspot",
     category: "sales",
     label: "HubSpot",

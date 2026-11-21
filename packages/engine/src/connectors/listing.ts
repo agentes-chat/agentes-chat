@@ -86,6 +86,7 @@ export const CONNECTOR_BRANDS: Record<string, { file: string; color: string | nu
   superwall: { file: "superwall", color: null },
   paddle: { file: "paddle", color: null },
   abacatepay: { file: "abacatepay", color: "#337D63" },
+  acainfe: { file: "acainfe", color: "#FF9F1C" },
   instagram: { file: "instagram", color: null },
   facebook: { file: "facebook", color: "#0866FF" },
   linkedin: { file: "linkedin", color: "#0A66C2" },

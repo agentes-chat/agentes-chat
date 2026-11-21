@@ -13872,6 +13872,11 @@
         "1": "Vedere addebiti e clienti",
         "2": "Creare addebiti Pix"
       },
+      "acainfe": {
+        "1": "Vedere l'azienda, i prodotti, le vendite e le fatture",
+        "2": "Emettere e inviare fatture, e registrare clienti e prodotti",
+        "ask": "Annullare fatture e rimborsare vendite chiede sempre la tua approvazione"
+      },
       "instagram": {
         "1": "Vedere post, storie e statistiche",
         "2": "Pubblicare post e leggere i messaggi diretti",
@@ -14057,6 +14062,7 @@
       "superwall": "Paywall, campagne ed esperimenti.",
       "paddle": "Clienti, abbonamenti, transazioni e prodotti.",
       "abacatepay": "Addebiti Pix, clienti e prelievi.",
+      "acainfe": "Fatture di servizi brasiliane (NFS-e): azienda, prodotti, clienti, vendite e fatture.",
       "instagram": "Account business e creator di Instagram: post, storie, statistiche e messaggi diretti.",
       "facebook": "Pagine Facebook: post, foto, video, commenti e statistiche.",
       "linkedin": "Post, video e commenti su LinkedIn a nome del membro che accede.",

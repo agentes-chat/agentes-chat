@@ -1059,6 +1059,68 @@ describe("custom MCP servers", () => {
     expect(await f.db.select().from(schema.oauthClients)).toHaveLength(1);
   });
 
+  test("açaínfe: no OAuth, so it asks for the key; a key reaches one company, named by get_company", async () => {
+    f = await setup();
+    const acainfe = "https://api.acainfe.com/mcp";
+    // As açaínfe answered on 2026-11-17: 401 with a bare Bearer challenge and no protected-resource metadata.
+    const http = (async (input: string | URL) => {
+      const url = String(input);
+      if (url === acainfe) {
+        return Response.json(
+          { jsonrpc: "2.0", error: { code: -32001, message: "API key inválida ou ausente" }, id: null },
+          { status: 401, headers: { "www-authenticate": 'Bearer realm="acainfe"' } },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    }) as unknown as typeof fetch;
+    const bearer: (string | undefined)[] = [];
+    const connect: McpConnect = async (_connection, headers) => {
+      bearer.push(headers.authorization);
+      const server = new McpServer({ name: "acainfe", version: "1.0.0" });
+      server.registerTool(
+        "get_company",
+        {
+          description: "Dados fiscais da empresa, pendências e integrações",
+          inputSchema: {},
+          annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+        },
+        async () => ({
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                tenant: { id: "7c1e4b2a-0f3d-4e5a-9b8c-1d2e3f4a5b6c", legalName: "Empresa Exemplo LTDA" },
+                readiness: { canIssue: true, missing: [] },
+              }),
+            },
+          ],
+        }),
+      );
+      const [client, transport] = InMemoryTransport.createLinkedPair();
+      await server.connect(transport);
+      return mcpSessionOver(client);
+    };
+    const deps = depsOf(f, { http, connect, resolveHost: async () => ["93.184.216.34"] });
+    expect(await connectCustomServer(deps, f.owner.id, f.org.id, { serverUrl: acainfe, label: "açaínfe" })).toEqual({
+      status: "needs_key",
+    });
+    const connected = await connectCustomServer(deps, f.owner.id, f.org.id, {
+      serverUrl: acainfe,
+      apiKey: "acai_test_key_123",
+      label: "açaínfe",
+    });
+    if (connected.status !== "connected") throw new Error(`expected connected, got ${connected.status}`);
+    expect(connected.server).toMatchObject({
+      label: "açaínfe (Empresa Exemplo LTDA)",
+      authType: "api_key",
+      accountLabel: "Empresa Exemplo LTDA",
+    });
+    const [row] = await f.db.select().from(schema.connectorConnections);
+    expect(row?.accountId).toBe("7c1e4b2a-0f3d-4e5a-9b8c-1d2e3f4a5b6c");
+    expect(bearer).toContain("Bearer acai_test_key_123");
+    expect(JSON.stringify(await f.db.select().from(schema.connectorConnections))).not.toContain("acai_test_key_123");
+  });
+
   test("offline_access goes with the scopes asked for when the authorization server lists it (Vercel asks only openid), never alone", async () => {
     f = await setup();
     const vercel = oauthServer({ scopes: ["openid"], serverScopes: ["openid", "email", "profile", "offline_access"] });

@@ -32454,6 +32454,15 @@
   "connectors.can.abacatepay.2": {
     "value": "Create Pix charges"
   },
+  "connectors.can.acainfe.1": {
+    "value": "See the company, products, sales and invoices"
+  },
+  "connectors.can.acainfe.2": {
+    "value": "Issue and send invoices, and register customers and products"
+  },
+  "connectors.can.acainfe.ask": {
+    "value": "Cancelling invoices and refunding sales always asks for your approval"
+  },
   "connectors.can.instagram.1": {
     "value": "See posts, stories and insights"
   },
@@ -32915,6 +32924,9 @@
   },
   "connectors.descriptions.abacatepay": {
     "value": "Pix charges, customers and withdrawals."
+  },
+  "connectors.descriptions.acainfe": {
+    "value": "Brazilian service invoices (NFS-e): companies, products, customers, sales and invoices."
   },
   "connectors.descriptions.instagram": {
     "value": "Instagram business and creator accounts: posts, stories, insights and direct messages."
