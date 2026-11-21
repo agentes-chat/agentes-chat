@@ -514,6 +514,17 @@ test("a chat turn's kill: any tool_call of Cursor's own, started or completed; o
   expect(cursorChatBreach(call({}))).toContain("unknown");
 });
 
+test("a chat turn's kill: Cursor's dynamic tools pass only for our namespace", () => {
+  const call = (tool_call: Record<string, unknown>) => ({ type: "tool_call", subtype: "started", tool_call });
+  const dynamic = (namespace: string) => ({ args: { namespace, toolName: "find_tools", arguments: {} } });
+  expect(cursorChatBreach(call({ CallDynamicTool: dynamic(CODEX_MCP_SERVER) }))).toBeNull();
+  expect(cursorChatBreach(call({ GetDynamicTools: { args: {} } }))).toBeNull();
+  expect(cursorChatBreach(call({ GetDynamicTools: dynamic(CODEX_MCP_SERVER) }))).toBeNull();
+  expect(cursorChatBreach(call({ CallDynamicTool: dynamic("github") }))).toContain("CallDynamicTool github:find_tools");
+  expect(cursorChatBreach(call({ CallDynamicTool: { args: {} } }))).toContain("CallDynamicTool");
+  expect(cursorChatBreach(call({ GetDynamicTools: dynamic("github") }))).toContain("GetDynamicTools github");
+});
+
 test.skipIf(!posix)(
   "a fake Cursor: a chat turn runs in its empty folder with our MCP and the deny rules alone, and its shell call kills it",
   async () => {
