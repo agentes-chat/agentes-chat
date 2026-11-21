@@ -36,15 +36,22 @@ export function SessionProvider({
   const queryClient = useQueryClient();
   const user = session.data?.user ?? null;
   const signedIn = Boolean(user);
-  // Pending only until the first answer. Signed out, Better Auth marks every refetch pending again (its
-  // `onRequest` sets `isPending: data === null`), and it refetches whenever the app comes back to the
-  // foreground: the gate then read "still checking", opened `(app)` and remounted the sign-in screen, which lost
-  // the e-mail, the step and what a password manager was about to fill in. Kept per client: another server's
-  // session is read from the start. The client is a callable proxy: kept through an updater, or React would call
-  // it as one.
-  const [answeredBy, setAnsweredBy] = useState<typeof auth | null>(null);
-  if (answeredBy !== auth && !session.isPending) setAnsweredBy(() => auth);
-  const answered = answeredBy === auth;
+  // Better Auth can expose a cached/empty atom before its first SecureStore-backed request has completed. The
+  // session gate must wait for that request explicitly; otherwise a returning user briefly sees sign-in/sign-up
+  // and can mistake the transient route for a lost session. A refetch on the first mount also makes this boundary
+  // independent of the hook's initial atom state. Kept per client because another server has its own cookie.
+  const [hydratedBy, setHydratedBy] = useState<typeof auth | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    setHydratedBy(null);
+    void session.refetch().finally(() => {
+      if (!cancelled) setHydratedBy(() => auth);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [auth, session.refetch]);
+  const answered = hydratedBy === auth && !session.isPending;
 
   const userId = user?.id ?? null;
   const userName = user?.name ?? "";
@@ -94,7 +101,7 @@ export function SessionProvider({
   const value = useMemo<SessionState>(
     () => ({
       signedIn,
-      pending: !answered && !user,
+      pending: !answered,
       user: user ? { id: user.id, name: user.name, email: user.email } : null,
       refresh: () => session.refetch(),
     }),
