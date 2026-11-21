@@ -1217,6 +1217,8 @@ export const en = {
     },
     back: "Back",
     leave: "Back to {{name}}",
+    /** The onboarding rail's back arrow, for someone with another workspace: this one stays, to finish later. */
+    leaveLater: "Back to {{name}}, finish later",
     actions: {
       continue: "Continue",
       create_one: "Create {{count}} agent",
@@ -1229,7 +1231,11 @@ export const en = {
     /** The first question (ADR 0159): who the workspace is for. "For me" makes a personal one at once. */
     purpose: {
       title: "What will you use agentes.chat for?",
-      lead: "You can change this later, nothing is lost.",
+      lead: "You can switch the workspace mode anytime in Settings, without losing anything.",
+      /** The web's lead, short: the note under the answers says the choice can change (`switchTitle`, `switchText`). */
+      pick: "Choose how you want to see agentes.chat.",
+      switchTitle: "Switch anytime.",
+      switchText: "The workspace mode changes in Settings, and nothing is lost.",
       personal: "For me",
       personalText: "Agents that look after your day.",
       team: "For my team",
@@ -1237,9 +1243,9 @@ export const en = {
       /** A quiet line of what it does, under each answer. */
       personalExamples: "Your day at 7 · Bills · Training",
       teamExamples: "Customer support · Finance · Reports",
-      /** The web's cards (ADR 0162): one line under the title, then a pill per agent of the drawing. */
-      personalLine: "Agents that look after your day.",
-      teamLine: "People and agents in one place.",
+      /** The web's answers (ADR 0162): what each view is, under its title (the simpler keeps every feature). */
+      personalLine: "A simpler view, with every feature.",
+      teamLine: "The full view, with channels and people.",
       /** What each agent of a card's drawing does, on its pill: a few words. */
       activities: {
         agenda: "Daily agenda",

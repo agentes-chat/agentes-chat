@@ -2720,6 +2720,9 @@
   "onboarding.leave": {
     "value": "Back to {{name}}"
   },
+  "onboarding.leaveLater": {
+    "value": "Back to {{name}}, finish later"
+  },
   "onboarding.actions.continue": {
     "value": "Continue"
   },
@@ -2745,7 +2748,16 @@
     "value": "What will you use agentes.chat for?"
   },
   "onboarding.purpose.lead": {
-    "value": "You can change this later, nothing is lost."
+    "value": "You can switch the workspace mode anytime in Settings, without losing anything."
+  },
+  "onboarding.purpose.pick": {
+    "value": "Choose how you want to see agentes.chat."
+  },
+  "onboarding.purpose.switchTitle": {
+    "value": "Switch anytime."
+  },
+  "onboarding.purpose.switchText": {
+    "value": "The workspace mode changes in Settings, and nothing is lost."
   },
   "onboarding.purpose.personal": {
     "value": "For me"
@@ -2766,10 +2778,10 @@
     "value": "Customer support · Finance · Reports"
   },
   "onboarding.purpose.personalLine": {
-    "value": "Agents that look after your day."
+    "value": "A simpler view, with every feature."
   },
   "onboarding.purpose.teamLine": {
-    "value": "People and agents in one place."
+    "value": "The full view, with channels and people."
   },
   "onboarding.purpose.activities.agenda": {
     "value": "Daily agenda"
