@@ -4002,7 +4002,11 @@
     "workspaceHelp": "Chaque agent suit ce choix jusqu’à ce que quelqu’un change le sien sur la page de l’agent.",
     "ownAgents_one": "{{count}} agent a son propre choix et ne change pas.",
     "ownAgents_many": "{{count}} agents ont leur propre choix et ne changent pas.",
-    "ownAgents_other": "{{count}} agents ont leur propre choix et ne changent pas."
+    "ownAgents_other": "{{count}} agents ont leur propre choix et ne changent pas.",
+    "autonomy": "Autonomie des agents",
+    "autonomyHelp": "Activée, les agents font ce qu'on leur demande sans demander d'approbation, merges, déploiements et commandes sur leur ordinateur compris. Un agent qui a son propre choix sur sa page le garde.",
+    "autonomyDestructive": "Demander avant les actions destructrices",
+    "autonomyDestructiveHelp": "Supprimer, payer ou envoyer hors du workspace via une app connectée demande toujours une approbation."
   },
   "brakes": {
     "title": "Travail que personne n'a demandé",

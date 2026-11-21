@@ -9497,6 +9497,18 @@
       "other": "{{count}} agents have their own choice and won't change."
     }
   },
+  "approvalsLevel.autonomy": {
+    "value": "Agent autonomy"
+  },
+  "approvalsLevel.autonomyHelp": {
+    "value": "On, agents do what they're asked without asking for approval, merges, deploys and commands on their computer included. An agent with its own choice on its page keeps it."
+  },
+  "approvalsLevel.autonomyDestructive": {
+    "value": "Ask before destructive actions"
+  },
+  "approvalsLevel.autonomyDestructiveHelp": {
+    "value": "Deleting, paying or sending outside the workspace through a connected app still asks for approval."
+  },
   "brakes.title": {
     "value": "Work nobody asked for"
   },

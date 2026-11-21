@@ -3702,7 +3702,11 @@
     "edit": "更改",
     "workspaceLead": "智能体在行动前何时询问人。",
     "workspaceHelp": "每个智能体都跟随此选择，直到有人在智能体页面上更改它自己的设置。",
-    "ownAgents_other": "{{count}} 个智能体有自己的选择，不会改变。"
+    "ownAgents_other": "{{count}} 个智能体有自己的选择，不会改变。",
+    "autonomy": "智能体自主",
+    "autonomyHelp": "开启后，智能体会直接完成被要求的事，不再请求批准，包括合并、部署和其电脑上的命令。在智能体页面上有自己选择的智能体保持不变。",
+    "autonomyDestructive": "在破坏性操作前询问",
+    "autonomyDestructiveHelp": "通过已连接的应用删除、付款或向工作区外部发送仍需批准。"
   },
   "brakes": {
     "title": "没人要求的工作",

@@ -4,6 +4,7 @@ import {
   type ApprovalsLevel,
   useAgents,
   useChangeWhenAsks,
+  useSetAgentAutonomy,
   useSettings,
   useSetWorkspaceApprovalsLevel,
   useUndoWhenAsks,
@@ -15,7 +16,7 @@ import {
   ownApprovalsCount,
 } from "@agenteschat/client/lib/approvals-level";
 import { can } from "@agenteschat/client/lib/permissions";
-import { Button, Checkbox, cx, Dialog, DialogBody, InfoHint, OptionList } from "@agenteschat/ui";
+import { Button, Checkbox, cx, Dialog, DialogBody, InfoHint, OptionList, Switch } from "@agenteschat/ui";
 import { type ReactNode, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useOrg } from "@/components/org-context";
@@ -157,6 +158,72 @@ export function WhenAsksLink({
  * (owners and administrators, ADR 0085 addendum of 2026-11-17): the workspace's level, which every agent without its
  * own choice follows. The dialog says how many agents keep their own.
  */
+/**
+ * VPS Zen: "Autonomia dos agentes" (`packages/engine/src/agent-autonomy.ts`), the workspace's level as one switch, and
+ * under it while on, "Perguntar antes do que é destrutivo". Owners and administrators, like the level's row below it,
+ * which says the same level in its three words.
+ */
+export function AgentAutonomyRows() {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const settings = useSettings(org.id);
+  const set = useSetAgentAutonomy(org.id);
+  if (!can(org, "administrator")) return null;
+  const saved = settings.data?.agentAutonomy ?? { on: false, asksDestructive: true };
+  const shown = (set.isPending ? set.variables : undefined) ?? saved;
+  const title = t("approvalsLevel.autonomy");
+  const destructive = t("approvalsLevel.autonomyDestructive");
+  const disabled = !settings.data || set.isPending;
+  return (
+    <>
+      <div className="settings-row ac-actrow">
+        <div className="settings-row__text ac-actrow__text">
+          <span className="ac-hintline">
+            <label className="settings-row__label" htmlFor="set-agent-autonomy">
+              {title}
+            </label>
+            <InfoHint name={t("common.about", { label: title })} id="set-agent-autonomy-hint">
+              {t("approvalsLevel.autonomyHelp")}
+            </InfoHint>
+          </span>
+        </div>
+        <div className="settings-row__control">
+          <Switch
+            id="set-agent-autonomy"
+            checked={shown.on}
+            onCheckedChange={(on) => set.mutate({ on, asksDestructive: shown.asksDestructive })}
+            disabled={disabled}
+            aria-describedby="set-agent-autonomy-hint"
+          />
+        </div>
+      </div>
+      {shown.on && (
+        <div className="settings-row ac-actrow">
+          <div className="settings-row__text ac-actrow__text">
+            <span className="ac-hintline">
+              <label className="settings-row__label" htmlFor="set-agent-autonomy-destructive">
+                {destructive}
+              </label>
+              <InfoHint name={t("common.about", { label: destructive })} id="set-agent-autonomy-destructive-hint">
+                {t("approvalsLevel.autonomyDestructiveHelp")}
+              </InfoHint>
+            </span>
+          </div>
+          <div className="settings-row__control">
+            <Switch
+              id="set-agent-autonomy-destructive"
+              checked={shown.asksDestructive}
+              onCheckedChange={(asksDestructive) => set.mutate({ on: true, asksDestructive })}
+              disabled={disabled}
+              aria-describedby="set-agent-autonomy-destructive-hint"
+            />
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 export function WorkspaceApprovalsRow() {
   const { t } = useTranslation();
   const { org } = useOrg();

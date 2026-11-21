@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { removeDirs, tempDir } from "./helpers";
 
@@ -133,6 +133,26 @@ test("two organizations: tools needs --org and lists them; the one it names is t
   const status = await runner(home, "status");
   expect(status.output).toContain("Connected to Acme");
   expect(status.output).toContain("Connected to Beta");
+});
+
+test("a host in simple mode (no machine config at all): folders allow writes the organization's grant", async () => {
+  const home = hostHome([{ id: "org-a", name: "Acme" }]);
+  // `host` run as one user (not system mode) writes no top-level config: only the organizations' homes.
+  rmSync(path.join(home, "config.json"));
+  const folder = tempDir("host-folder-");
+  dirs.push(folder);
+  writeFileSync(
+    path.join(home, "orgs", "org-a", "machine-agents.json"),
+    JSON.stringify([{ id: "0193aaaa-bbbb-7ccc-8ddd-eeeeffff0001", handle: "ada", name: "Ada" }]),
+  );
+  const r = await runner(home, "folders", "allow", folder, "--agent", "ada");
+  expect(r.stderr).toBe("");
+  expect(r.exit).toBe(0);
+  expect(readOrg(home, "org-a").access.folders).toEqual([
+    { path: realpathSync(folder), agents: ["0193aaaa-bbbb-7ccc-8ddd-eeeeffff0001"] },
+  ]);
+  const status = await runner(home, "status");
+  expect(status.output).toContain("Connected to Acme");
 });
 
 test("no organization yet: not connected, and where each organization's switches are", async () => {

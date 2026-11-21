@@ -330,6 +330,8 @@ export interface FakeState {
   lodiSwitches?: { teamWatch?: boolean; welcomePeople?: boolean };
   /** The workspace's approvals level (ADR 0173); unset: `risky`. */
   approvalsLevel?: "always" | "risky" | "never";
+  /** VPS Zen: "Autonomia dos agentes" asks before what is destructive (with `approvalsLevel` at `never`). */
+  asksDestructive?: boolean;
   memories: Memory[];
   proposals: Proposal[];
   reactions: Record<string, ReactionCount[]>;
@@ -2168,6 +2170,10 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         teamWatch: state.lodiSwitches?.teamWatch ?? true,
         welcomePeople: state.lodiSwitches?.welcomePeople ?? true,
         approvalsLevel: state.approvalsLevel ?? "risky",
+        agentAutonomy: {
+          on: state.approvalsLevel === "never",
+          asksDestructive: state.approvalsLevel !== "never" || state.asksDestructive !== false,
+        },
         ...mediaSettings(state),
         mode: personalOrg(orgId) ? "personal" : "team",
         // Money: admins only, like the backend.
@@ -2181,6 +2187,19 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           if (everyAgent || a.approvalsLevelOwn === false)
             Object.assign(a, { approvalsLevel: level, approvalsLevelOwn: false });
         return { level, ownAgents: state.agents.filter((a) => a.approvalsLevelOwn === true).length };
+      },
+      setAgentAutonomy: async (orgId, { on, asksDestructive }) => {
+        log("orgs.setAgentAutonomy", orgId, { on, asksDestructive });
+        const level = on ? "never" : "risky";
+        state.approvalsLevel = level;
+        state.asksDestructive = on ? asksDestructive : true;
+        for (const a of state.agents)
+          if (a.approvalsLevelOwn === false) Object.assign(a, { approvalsLevel: level, approvalsLevelOwn: false });
+        return {
+          on,
+          asksDestructive: on ? asksDestructive : true,
+          ownAgents: state.agents.filter((a) => a.approvalsLevelOwn === true).length,
+        };
       },
       updateSettings: async (orgId, input) => {
         log("orgs.updateSettings", orgId, input);

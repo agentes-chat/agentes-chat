@@ -40,6 +40,7 @@ import type {
   AgentAccess,
   AgentAction,
   AgentAudience,
+  AgentAutonomy,
   AgentBrain,
   AgentBrainInput,
   AgentBrowserSettings,
@@ -701,6 +702,8 @@ export interface ApiClient {
       orgId: string,
       input: { level: ApprovalsLevel; everyAgent?: boolean },
     ): Promise<{ level: ApprovalsLevel; ownAgents: number }>;
+    /** VPS Zen: "Autonomia dos agentes" on or off. */
+    setAgentAutonomy(orgId: string, input: AgentAutonomy): Promise<AgentAutonomy & { ownAgents: number }>;
     overview(orgId: string): Promise<OrgOverview>;
     /** Members with presence. */
     people(orgId: string): Promise<Person[]>;

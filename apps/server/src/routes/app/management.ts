@@ -68,6 +68,7 @@ import {
   STATUS_TEXT_MAX,
   STOP_REASON_MAX,
   seesAgentDetails,
+  setAgentAutonomy,
   setAgentChannels,
   setAgentStyle,
   setChatPrefs,
@@ -188,6 +189,18 @@ const IssuesView = z
       "How you look at Tarefas in one workspace: `board` or `list`, grouped by `stage`, `assignee` or `priority`, in `manual` order (the board's), by `priority`, by `due` date or by the last change (`updated`), what the cards show (`fields`), the assignee filter (`agent:<id>`, `person:<id>`, `none`), the priority filter and the label filter (empty: every task), which finished tasks show (`all`, `recent`: changed in the last 7 days, `hidden`), whether canceled tasks show, whether groups with no task show (`hideEmpty`), the groups folded shut (`collapsed`: column ids, assignee keys or priorities), and the widths given to the list's columns in pixels (`widths`: `title` and the card fields; only the ones changed, each between its column's least and most).",
   });
 
+/** VPS Zen: "Autonomia dos agentes" (`packages/engine/src/agent-autonomy.ts`). */
+const AgentAutonomy = z
+  .object({
+    on: z
+      .boolean()
+      .openapi({ description: "Agents that follow the workspace do what they were asked without asking." }),
+    asksDestructive: z.boolean().openapi({
+      description: "With `on`: a connected app's delete, payment or send still asks a person.",
+    }),
+  })
+  .openapi("AgentAutonomy");
+
 const Settings = z
   .object({
     name: z.string(),
@@ -247,6 +260,7 @@ const Settings = z
       description:
         "What every agent without its own choice asks before acting (ADR 0173). `risky` by default. Set with `PUT …/approvals-level`.",
     }),
+    agentAutonomy: AgentAutonomy,
     voiceAvailable: z.boolean().openapi({
       description: "Read only: this server has a speech engine now, from its environment or from its owner's Settings.",
     }),
@@ -705,6 +719,32 @@ export function managementRoutes(deps: AppDeps) {
       const seesCost = await canViewCost(db, actor, orgId);
       // Only who configures the workspace gets here (`updateOrgSettings`).
       return c.json({ ...settingsFor(settings, seesCost, true), ...(await mediaAvailable()) }, 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "put",
+      path: "/organizations/{orgId}/agent-autonomy",
+      tags: ["Organization"],
+      security,
+      summary: 'Turn "Autonomia dos agentes" on or off (owners and administrators)',
+      description:
+        "On: every agent that follows the workspace does what it was asked without an approval card (the workspace's level is `never`); with `asksDestructive`, a connected app's delete, payment or send still asks. Off: the workspace goes back to `risky`. An agent with its own level keeps it.",
+      request: { params: OrgParams, body: body(AgentAutonomy) },
+      responses: {
+        200: json(
+          AgentAutonomy.extend({
+            ownAgents: z.number().openapi({ description: "Agents that keep their own choice." }),
+          }),
+        ),
+        ...errors,
+      },
+    }),
+    async (c) => {
+      const { orgId } = c.req.valid("param");
+      const out = await setAgentAutonomy(db, c.get("user").id, orgId, c.req.valid("json"), { pubsub: adapters.pubsub });
+      return c.json(out, 200);
     },
   );
 

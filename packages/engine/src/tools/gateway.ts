@@ -10,6 +10,7 @@ import {
 import { startInFlight } from "@agenteschat/adapters/in-flight";
 import { and, desc, eq, inArray, isNotNull, isNull, or, schema, sql } from "@agenteschat/db";
 import { auditsCall, callSubject, callTitle, recordToolCall, type ToolCallSubject } from "../agent-audit";
+import { asksDestructiveOf, destructiveTool } from "../agent-autonomy";
 import { getAgentCached } from "../agents";
 import {
   COMMAND_RULE_TOOL,
@@ -227,7 +228,14 @@ export const asksByChoice = (tool: Pick<ToolDefinition, "name" | "scope" | "conn
  * brakes all read it. It lifts asking and nothing else: the policy's refusals, scopes, a tool turned off, the budget
  * and the tools' own checks all come before or apart from it. A call outside a run (a mission task's) has no level.
  */
-export function unaskedAtNever(level: ApprovalsLevel, tool: ToolDefinition, authority: RunAuthority | null): boolean {
+export function unaskedAtNever(
+  level: ApprovalsLevel,
+  tool: ToolDefinition,
+  authority: RunAuthority | null,
+  asksDestructive = false,
+): boolean {
+  // VPS Zen: "Autonomia dos agentes" that still asks before what is destructive (`agent-autonomy.ts`).
+  if (asksDestructive && destructiveTool(tool)) return false;
   return level === "never" && authority !== null && !asksByChoice(tool);
 }
 
@@ -649,17 +657,18 @@ export function createToolGateway(deps: {
     known?: Map<string, ToolDefinition>,
     heldBack?: string[],
   ): Promise<ToolDefinition[]> {
-    const [keys, all, level, decides] = await Promise.all([
+    const [keys, all, level, decides, guarded] = await Promise.all([
       grantedScopeKeys(ctx.db, ctx.orgId, ctx.agentId),
       known ?? allTools(ctx),
       approvalsLevelOf(ctx.db, ctx.orgId, ctx.agentId),
       creatorDecides(ctx, authority),
+      asksDestructiveOf(ctx.db, ctx.orgId, ctx.agentId),
     ]);
     return [...all.values()]
       .filter((t) => isAllowed(accessWithNeeds(keys, t).state))
       .flatMap((t) => {
         const decision = policyFor(authority, t, level, decides);
-        if (decision.action !== "refuse") return [asListed(t, decision, unaskedAtNever(level, t, authority))];
+        if (decision.action !== "refuse") return [asListed(t, decision, unaskedAtNever(level, t, authority, guarded))];
         heldBack?.push(t.name);
         return [];
       })
@@ -818,13 +827,14 @@ export function createToolGateway(deps: {
     const check = await checkToolCall(tool, input, ctx);
     if (!check.ok) return no(check.message);
     const slot = await request.slot();
-    const [owner, origin, level] = await Promise.all([
+    const [owner, origin, level, guarded] = await Promise.all([
       ownerOf(ctx),
       ctx.runId ? consultationOrigin(ctx.db, ctx.orgId, ctx.runId) : null,
       approvalsLevelOf(ctx.db, ctx.orgId, ctx.agentId),
+      asksDestructiveOf(ctx.db, ctx.orgId, ctx.agentId),
     ]);
     // An agent that never asks: nothing waits for approval, so the stored call is the run's to do at its time.
-    const unasked = unaskedAtNever(level, tool, authority);
+    const unasked = unaskedAtNever(level, tool, authority, guarded);
     const described = tool.describe?.(input) ?? { title: tool.name, detail: canonicalJson(input) };
     const connectionId = tool.connectionId ?? null;
     const [approval] = await ctx.db
@@ -1279,11 +1289,12 @@ export function createToolGateway(deps: {
       // The model's arguments land in jsonb and text columns (steps, approvals, the audit): a NUL would fail them.
       const requested = { ...raw, input: pgSafeJson(raw.input) };
       // Who is behind the run decides what it may do: listing already hid refused tools, this is the call.
-      const [all, authority, level, sealed] = await Promise.all([
+      const [all, authority, level, sealed, guarded] = await Promise.all([
         allTools(ctx),
         authorityOf(ctx),
         approvalsLevelOf(ctx.db, ctx.orgId, ctx.agentId),
         ctx.runId ? runConfidentiality(ctx.db, ctx.orgId, ctx.runId) : null,
+        asksDestructiveOf(ctx.db, ctx.orgId, ctx.agentId),
       ]);
       // The caller's own context hears it too: where the run posts next follows its thread (`replyThreadOf`).
       if (sealed?.connectionIds) ctx.confidential = true;
@@ -1507,7 +1518,7 @@ export function createToolGateway(deps: {
       // A call that asks a person says why (shown on its card); the tool itself never sees it. It is
       // asked for last: a call refused for any other reason (its input, a repository outside the agent's
       // list) gets that reason first.
-      const never = unaskedAtNever(level, tool, authority);
+      const never = unaskedAtNever(level, tool, authority, guarded);
       const wouldAsk = needsApproval(tool, decision) || asksWithWhy(tool, call.input);
       unasked = never && wouldAsk;
       let approves = wouldAsk && !never;

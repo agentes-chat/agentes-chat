@@ -284,9 +284,12 @@ function storedOrNull(home = runnerHome()): StoredConfig | null {
 /**
  * Whether this home is the server's own computer (`agentes-runner host`): its top-level config is the machine's
  * (`mode: "system"`), never a connection's, so it has no token — the connections are the organizations', one per home
- * (`hostOrgHomes`). A runner of someone's own is a system-mode home too, and always paired: its token is here.
+ * (`hostOrgHomes`). A runner of someone's own is a system-mode home too, and always paired: its token is here. A host
+ * in simple mode (`hostSystemMode()` false, run as one user) writes no top-level config at all: a home with no token
+ * of its own whose `orgs/` holds connections is the server's computer too, so `folders` and `tools` work there.
  */
-const isHostComputer = (stored: StoredConfig | null) => stored?.mode === "system" && !stored.token;
+const isHostComputer = (stored: StoredConfig | null, home = runnerHome()) =>
+  !stored?.token && (stored?.mode === "system" || hostOrgHomes(home).length > 0);
 
 /**
  * The device-code connection from a terminal (ADR 0036 §5): prints a code and a link, waits for the site.
@@ -914,7 +917,7 @@ function status(): number {
   const stored = storedOrNull(home);
   const config = readConfig(home);
   // The server's own computer has no connection of its own: one per organization, each in its own home.
-  const orgs = !config && isHostComputer(stored) ? hostOrgHomes(home) : [];
+  const orgs = !config && isHostComputer(stored, home) ? hostOrgHomes(home) : [];
   const bun = (process.versions as { bun?: string }).bun;
   // The version worth reporting is the one of the runner serving this home, which keeps in the lock what it puts
   // in its `hello`. This command may be another install's shim: its own constant is only the answer when no runner
@@ -939,7 +942,7 @@ function status(): number {
     );
   } else if (orgs.length) {
     for (const orgHome of orgs) printOrgConnection(term, orgHome);
-  } else term.fail("Not connected.", isHostComputer(stored) ? HOST_COMPUTER_NOTE : undefined);
+  } else term.fail("Not connected.", isHostComputer(stored, home) ? HOST_COMPUTER_NOTE : undefined);
   if (running) term.step(`Running: pid ${running.pid}${running.mode ? ` (${running.mode})` : ""}`);
   else term.warn("Running: no");
   const service = serviceStatus(undefined, stored?.mode === "system");
@@ -1016,7 +1019,7 @@ function pairedOrExit(p: Parsed, home: string): { stored: StoredConfig; config: 
   const stored = storedOrNull(home);
   const config = stored ? pairedConfig(stored, configPath(home)) : null;
   if (config && stored) return { stored, config, home };
-  if (!isHostComputer(stored)) {
+  if (!isHostComputer(stored, home)) {
     console.error("This computer isn't connected yet. Run: agentes-runner pair --server <url>");
     return null;
   }
