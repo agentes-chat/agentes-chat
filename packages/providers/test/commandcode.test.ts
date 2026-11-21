@@ -219,4 +219,76 @@ describe("calls (scripted transport)", () => {
     expect(wrong).toBeInstanceOf(ProviderError);
     expect(none.requests).toHaveLength(0);
   });
+
+  test("forwards tool result images to multimodal Command Code models and omits them on text-only models", async () => {
+    const messages = [
+      { role: "user" as const, content: "read this screenshot" },
+      {
+        role: "assistant" as const,
+        content: [{ type: "tool_use" as const, id: "t1", name: "read_artifact", input: {} }],
+      },
+      {
+        role: "user" as const,
+        content: [
+          {
+            type: "tool_result" as const,
+            toolUseId: "t1",
+            content: "shot.png",
+            images: [{ mediaType: "image/png", data: "UE5H" }],
+          },
+        ],
+      },
+    ];
+
+    for (const model of ["commandcode:deepseek/deepseek-v4.1-flash", "commandcode:z-ai/glm-5.3-flash"]) {
+      const { fetcher, requests } = scripted(
+        chat([
+          { choices: [{ index: 0, delta: { content: "saw it" }, finish_reason: "stop" }] },
+          { choices: [], usage: { prompt_tokens: 10, completion_tokens: 2 } },
+        ]),
+      );
+      const res = await createCommandCodeProvider({ fetch: fetcher, maxRetries: 0 }).stream(
+        { model, system: "s", messages, maxTokens: 100 },
+        { apiKey: "user_k123456789", onDelta: () => {} },
+      );
+      expect(res.imagesLeftOut).toBeUndefined();
+      const sent = requests[0]?.body.messages as Record<string, unknown>[];
+      expect(sent.slice(-2)).toEqual([
+        { role: "tool", tool_call_id: "t1", content: "shot.png" },
+        { role: "user", content: [{ type: "image_url", image_url: { url: "data:image/png;base64,UE5H" } }] },
+      ]);
+    }
+
+    const claudeScript = scripted(
+      message([
+        { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } },
+        { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "saw it" } },
+        { type: "content_block_stop", index: 0 },
+        { type: "message_delta", delta: { stop_reason: "end_turn", stop_sequence: null }, usage: { output_tokens: 2 } },
+      ]),
+    );
+    const claudeRes = await createCommandCodeProvider({ fetch: claudeScript.fetcher, maxRetries: 0 }).stream(
+      { model: "commandcode:claude-sonnet-5-5", system: "s", messages, maxTokens: 100 },
+      { apiKey: "user_k123456789", onDelta: () => {} },
+    );
+    expect(claudeRes.imagesLeftOut).toBeUndefined();
+    expect(JSON.stringify(claudeScript.requests[0]?.body.messages)).toContain('"type":"image"');
+
+    for (const model of ["commandcode:deepseek/deepseek-v4-pro", "commandcode:zai-org/GLM-5.3"]) {
+      const { fetcher, requests } = scripted(
+        chat([
+          { choices: [{ index: 0, delta: { content: "text only" }, finish_reason: "stop" }] },
+          { choices: [], usage: { prompt_tokens: 10, completion_tokens: 2 } },
+        ]),
+      );
+      const res = await createCommandCodeProvider({ fetch: fetcher, maxRetries: 0 }).stream(
+        { model, system: "s", messages, maxTokens: 100 },
+        { apiKey: "user_k123456789", onDelta: () => {} },
+      );
+      expect(res.imagesLeftOut).toBe(true);
+      const bodyStr = JSON.stringify(requests[0]?.body.messages);
+      expect(bodyStr).not.toContain("image_url");
+      expect(bodyStr).toContain("reads text only through this connection");
+    }
+  });
 });

@@ -29,6 +29,7 @@ import {
   type ModelResult,
   type ModelUsage,
   type PartialUsage,
+  PDF_MEDIA_TYPE,
   ProviderError,
   promptChars,
   type StopReason,
@@ -186,6 +187,9 @@ export function parseOpenRouterModels(body: unknown): Record<string, ModelInfo> 
       const long = pricing.longContext ?? targetPricing.longContext;
       pricing = { prices, ...(long ? { longContext: { ...long, prices: higher(long.prices, prices) } } : {}) };
     }
+    const inputs = strings(obj(m.architecture)?.input_modalities);
+    const targetInputs = aimed ? strings(obj(aimed.architecture)?.input_modalities) : inputs;
+    const images = inputs.includes("image") && targetInputs.includes("image");
     const maxOut = obj(m.top_provider)?.max_completion_tokens;
     const reasoning = obj(m.reasoning);
     const listed = reasoning?.supported_efforts;
@@ -206,6 +210,7 @@ export function parseOpenRouterModels(body: unknown): Record<string, ModelInfo> 
         contextWindow: window,
         ...(typeof maxOut === "number" && Number.isInteger(maxOut) && maxOut > 0 ? { maxOutputTokens: maxOut } : {}),
         serverSideFallback: false,
+        ...(images ? { images: true } : {}),
         ...(efforts.length > 0 ? { reasoning: true } : {}),
         ...(Array.isArray(listed) ? { efforts } : {}),
         ...(reasoning && !mandatory ? { leastThinking: "off" as const } : {}),
@@ -341,9 +346,11 @@ interface Chunk {
   }[];
 }
 
+type UserPart = { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
+
 type Message =
   | { role: "system"; content: { type: "text"; text: string; cache_control?: { type: "ephemeral"; ttl?: "1h" } }[] }
-  | { role: "user"; content: string }
+  | { role: "user"; content: string | UserPart[] }
   | { role: "tool"; tool_call_id: string; content: string }
   | {
       role: "assistant";
@@ -371,7 +378,7 @@ export function reasoningFor(
   return best ? { effort: best } : undefined;
 }
 
-function toMessages(request: ModelRequest, claude: boolean): Message[] {
+function toMessages(request: ModelRequest, claude: boolean, pictures = false): Message[] {
   const blocks = typeof request.system === "string" ? [{ text: request.system, cache: true }] : request.system;
   const system = blocks
     .filter((b) => b.text.length > 0)
@@ -386,8 +393,7 @@ function toMessages(request: ModelRequest, claude: boolean): Message[] {
         : {}),
     }));
   const out: Message[] = system.length > 0 ? [{ role: "system", content: system }] : [];
-  // ponytail: images left out for every model; send them once the catalog knows which OpenRouter models read images.
-  for (const m of withoutImages(request.messages, request.model)) {
+  for (const m of withoutImages(request.messages, request.model, pictures)) {
     const parts: ContentBlock[] = typeof m.content === "string" ? [{ type: "text", text: m.content }] : m.content;
     const text = parts.flatMap((b) => (b.type === "text" && b.text ? [b.text] : [])).join("\n\n");
     if (m.role === "assistant") {
@@ -408,16 +414,25 @@ function toMessages(request: ModelRequest, claude: boolean): Message[] {
       });
       continue;
     }
+    const images: UserPart[] = [];
     for (const b of parts) {
-      if (b.type === "tool_result")
+      if (b.type === "tool_result") {
         out.push({ role: "tool", tool_call_id: b.toolUseId, content: b.isError ? `ERROR: ${b.content}` : b.content });
+        for (const img of b.images ?? []) {
+          if (img.mediaType !== PDF_MEDIA_TYPE) {
+            images.push({ type: "image_url", image_url: { url: `data:${img.mediaType};base64,${img.data}` } });
+          }
+        }
+      }
     }
-    if (text) out.push({ role: "user", content: text });
+    if (images.length > 0) {
+      out.push({ role: "user", content: [...(text ? [{ type: "text" as const, text }] : []), ...images] });
+    } else if (text) out.push({ role: "user", content: text });
   }
   return out;
 }
 
-function toBody(request: ModelRequest, compatible: boolean) {
+function toBody(request: ModelRequest, compatible: boolean, pictures = false) {
   const claude = !compatible && isClaude(request.model);
   const reasoning = compatible ? undefined : reasoningFor(request.effort, modelInfo(request.model));
   // A workspace endpoint (#432): Chat Completions' own `reasoning_effort`, which OpenAI, vLLM, LiteLLM and most gateways
@@ -425,7 +440,7 @@ function toBody(request: ModelRequest, compatible: boolean) {
   const reasoningEffort = compatible && request.effort && request.effort !== "none" ? request.effort : undefined;
   return {
     model: request.model,
-    messages: toMessages(request, claude),
+    messages: toMessages(request, claude, pictures),
     max_tokens: request.maxTokens,
     stream: true as const,
     ...(request.tools && request.tools.length > 0
@@ -545,7 +560,7 @@ export function createOpenRouterProvider(
      * Another server's Chat Completions (a workspace's own endpoint, ADR 0146): sent to `baseURL` with no
      * OpenRouter attribution, routing, reasoning or cache markers, usage asked for, and its reported cost ignored.
      */
-    compatible?: { id: string; baseURL: string };
+    compatible?: { id: string; baseURL: string; images?: (model: string) => boolean };
   } = {},
 ): ModelProvider {
   const compatible = options.compatible;
@@ -553,6 +568,9 @@ export function createOpenRouterProvider(
     id: compatible?.id ?? "openrouter",
     async stream(input, { apiKey, onDelta }): Promise<ModelResult> {
       const request = laidOut(input);
+      const pictures = compatible
+        ? (compatible.images?.(request.model) ?? false)
+        : modelInfo(request.model)?.images === true;
       const partial: PartialUsage = {
         inputTokens: null,
         cacheReadTokens: 0,
@@ -575,7 +593,7 @@ export function createOpenRouterProvider(
           fetch: options.fetch,
         });
         const stream = await client.chat.completions.create(
-          toBody(request, compatible !== undefined) as unknown as ChatCompletionCreateParamsStreaming,
+          toBody(request, compatible !== undefined, pictures) as unknown as ChatCompletionCreateParamsStreaming,
           { signal: request.signal },
         );
         for await (const raw of stream) {
@@ -654,7 +672,7 @@ export function createOpenRouterProvider(
                 cacheWriteTokens: 0,
               },
           ...(cost !== undefined ? { costNanoUsd: cost } : {}),
-          ...(hasToolImages(request.messages) ? { imagesLeftOut: true as const } : {}),
+          ...(hasToolImages(request.messages, pictures) ? { imagesLeftOut: true as const } : {}),
         };
       } catch (error) {
         const mapped = request.signal?.aborted

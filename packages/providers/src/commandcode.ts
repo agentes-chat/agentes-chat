@@ -1,4 +1,5 @@
 import { createAnthropicProvider } from "./anthropic";
+import { modelInfo } from "./catalog";
 import { createOpenRouterProvider } from "./openrouter";
 import { type ModelProvider, type ModelResult, ProviderError } from "./types";
 
@@ -18,12 +19,16 @@ export function createCommandCodeProvider(options: { fetch?: typeof fetch; maxRe
   const messages = createAnthropicProvider({
     id: "commandcode",
     baseURL: COMMANDCODE_API,
-    compat: { toolChoiceAny: true },
+    compat: { toolChoiceAny: true, images: true },
     fetch: options.fetch,
     maxRetries: options.maxRetries,
   });
   const chat = createOpenRouterProvider({
-    compatible: { id: "commandcode", baseURL: `${COMMANDCODE_API}/v1` },
+    compatible: {
+      id: "commandcode",
+      baseURL: `${COMMANDCODE_API}/v1`,
+      images: (model) => modelInfo(`${PREFIX}${model}`)?.images === true,
+    },
     fetch: options.fetch,
     maxRetries: options.maxRetries,
   });
