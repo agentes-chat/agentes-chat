@@ -447,7 +447,7 @@ import {
   wakePlanWaits,
 } from "./usage-pause";
 import { recordWikiReads, retrieveWikiForRun } from "./wiki";
-import { RESTRICTED_HERE, sendHeldToDm } from "./wiki-dm";
+import { RESTRICTED_HERE, RESTRICTED_NOT_HERE, sendHeldToDm } from "./wiki-dm";
 import { withWikiLinks } from "./wiki-links";
 import { movedNote, queuedNote, workMayStart, workStartsNote } from "./work-tools";
 import {
@@ -2647,7 +2647,8 @@ async function executeRunInner(
           triggerMessageId: run.triggerMessageId,
         },
       ).catch(() => false);
-      if (held) system.push({ turn: true, found: true, text: `# Restricted content\n${RESTRICTED_HERE}` });
+      const line = held ? RESTRICTED_HERE : RESTRICTED_NOT_HERE;
+      system.push({ turn: true, found: true, text: `# Restricted content\n${line}` });
     }
     if (wikiPages.text) {
       const pageIds = wikiPages.pageIds;

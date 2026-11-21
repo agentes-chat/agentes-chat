@@ -18,7 +18,7 @@ import {
   type WikiDeps,
   wikiPageHeld,
 } from "./wiki";
-import { RESTRICTED_HERE, sendHeldToDm } from "./wiki-dm";
+import { RESTRICTED_HERE, RESTRICTED_NOT_HERE, sendHeldToDm } from "./wiki-dm";
 import { inWorkspaceWords } from "./workspace-mode";
 
 /** `search_wiki` as a personal workspace's agents read it (ADR 0159). */
@@ -89,6 +89,10 @@ export function createWikiToolSource(deps: Omit<WikiDeps, "db">): ToolSource {
     return { type: "agent", agentId: ctx.agentId, requestedByUserId: userId, channelId: ctx.channelId };
   }
 
+  /** What a run is told of a page kept from its conversation only (ADR 0023 addendum), never a bare "not found". */
+  const heldNote = async (ctx: ToolContext) =>
+    (await sendHeldToDm({ db: ctx.db, pubsub: deps.pubsub }, heldRun(ctx))) ? RESTRICTED_HERE : RESTRICTED_NOT_HERE;
+
   const tools: ToolDefinition[] = [
     {
       name: "search_wiki",
@@ -105,8 +109,7 @@ export function createWikiToolSource(deps: Omit<WikiDeps, "db">): ToolSource {
         try {
           const actor = await wikiActorOfCall(ctx);
           const { pages, held } = await searchWikiForRun(wiki(ctx), actor, ctx.orgId, str(input.query), 8);
-          const note =
-            held && (await sendHeldToDm({ db: ctx.db, pubsub: deps.pubsub }, heldRun(ctx))) ? RESTRICTED_HERE : "";
+          const note = held ? await heldNote(ctx) : "";
           if (pages.length === 0) return { content: note || "No wiki pages match." };
           return {
             content: [
@@ -137,12 +140,7 @@ export function createWikiToolSource(deps: Omit<WikiDeps, "db">): ToolSource {
       async execute(input, ctx) {
         try {
           const actor = await wikiActorOfCall(ctx);
-          if (
-            (await wikiPageHeld(ctx.db, actor, ctx.orgId, str(input.page))) &&
-            (await sendHeldToDm({ db: ctx.db, pubsub: deps.pubsub }, heldRun(ctx)))
-          ) {
-            return { content: RESTRICTED_HERE };
-          }
+          if (await wikiPageHeld(ctx.db, actor, ctx.orgId, str(input.page))) return { content: await heldNote(ctx) };
           const p = await getWikiPage(ctx.db, actor, ctx.orgId, str(input.page));
           await recordWikiReads(ctx.db, {
             orgId: ctx.orgId,
