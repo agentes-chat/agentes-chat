@@ -278,7 +278,8 @@ test("release target, session cap and Chrome names", () => {
   const GB = 1024 ** 3;
   expect(defaultMaxSessions(2 * GB)).toBe(1);
   expect(defaultMaxSessions(8 * GB)).toBe(6);
-  expect(defaultMaxSessions(64 * GB)).toBe(8);
+  expect(defaultMaxSessions(16 * GB)).toBe(13);
+  expect(defaultMaxSessions(64 * GB)).toBe(16);
 });
 
 test("only the computer's Google Chrome is driven, at its standard path on each system", () => {
