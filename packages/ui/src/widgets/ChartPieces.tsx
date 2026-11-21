@@ -7,7 +7,17 @@ import { type RefObject, useLayoutEffect, useMemo, useRef, useState } from "reac
 import type { AgentColorName } from "../agent/engine.js";
 import { cx } from "../cx";
 import { useDarkTheme } from "../hooks/useDarkTheme";
-import { areaCells, CHART_CELL, chartAreaTones, chartInk, linePoints, lineTops, smoothPath } from "../sky/chart";
+import {
+  areaCells,
+  CHART_CELL,
+  chartAreaTones,
+  chartInk,
+  LINE_MARK_ROOM,
+  lineMarksFit,
+  linePoints,
+  lineTops,
+  smoothPath,
+} from "../sky/chart";
 import { parseColor } from "../sky/math";
 
 /** Paints cells (one canvas pixel each, drawn at `CHART_CELL` points) in the color `tone(value)` gives. */
@@ -92,7 +102,9 @@ export function paintLineArea(
 
 /**
  * A line over its dither area, in an agent's tones, as wide as its box: no axes, no tips. `bleed` runs it edge to
- * edge (a sparkline), `dot` marks the last point with a square, as a widget's line ends.
+ * edge (a sparkline), `dot` marks the last point with a square, as a widget's line ends. `marks` (one per value, as
+ * the reader reads it) shows each value over its point, each point a small square, when they all fit side by side
+ * (`lineMarksFit`); otherwise none show.
  */
 export function DitherLine({
   values,
@@ -100,6 +112,7 @@ export function DitherLine({
   height,
   bleed = false,
   dot = false,
+  marks,
   className,
 }: {
   values: readonly number[];
@@ -108,19 +121,28 @@ export function DitherLine({
   height: number;
   bleed?: boolean;
   dot?: boolean;
+  marks?: readonly string[];
   className?: string;
 }) {
   const dark = useDarkTheme();
   const [box, width] = useElementWidth<HTMLDivElement>();
   const area = useRef<HTMLCanvasElement>(null);
   const tone = color as AgentColorName;
+  const pad = bleed ? 3 : 6;
+  const marked = !bleed && marks !== undefined && marks.length === values.length && lineMarksFit(marks, width, pad);
   const points = useMemo(() => {
     if (width < 10 || values.length < 2) return [];
-    const pad = bleed ? 3 : 6;
+    // The values take the room above the line; the line keeps the rest.
+    if (marked) {
+      return linePoints(values, width, height - LINE_MARK_ROOM, pad).map(([x, y]): [number, number] => [
+        x,
+        y + LINE_MARK_ROOM,
+      ]);
+    }
     const flat = linePoints(values, width, height, pad);
     if (!bleed) return flat;
     return flat.map(([, y], i): [number, number] => [(i * width) / Math.max(1, values.length - 1), y]);
-  }, [values, width, height, bleed]);
+  }, [values, width, height, bleed, pad, marked]);
   const ink = chartInk(tone, dark);
 
   useLayoutEffect(() => {
@@ -145,8 +167,26 @@ export function DitherLine({
               fill={ink}
             />
           )}
+          {marked &&
+            points.slice(0, -1).map(([x, y], i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: the points, in order
+              <rect key={i} x={Math.round(x) - 2} y={Math.round(y) - 2} width={4} height={4} fill={ink} />
+            ))}
         </svg>
       )}
+      {marked &&
+        points.map(([x, y], i) => (
+          <span
+            // biome-ignore lint/suspicious/noArrayIndexKey: the values, in order
+            key={i}
+            className="ac-dline__mark"
+            // The first and the last stay inside the box: they sit from its edge, the rest centred on their point.
+            data-end={i === 0 ? "start" : i === points.length - 1 ? "end" : undefined}
+            style={{ left: x, top: y - 6 }}
+          >
+            {marks?.[i]}
+          </span>
+        ))}
     </div>
   );
 }

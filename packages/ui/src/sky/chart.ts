@@ -138,6 +138,20 @@ export function smoothPath(points: readonly (readonly [number, number])[]): stri
   return d;
 }
 
+/** Room above a line for the value over each point (`LineMarks`): a 12px caption and the gap to its point. */
+export const LINE_MARK_ROOM = 20;
+
+/**
+ * Whether each point's value fits over it, side by side without touching: the widest value (at about 7.5 points a
+ * character of a 12px caption, digits being even) and 6 points between neighbours, against the space between points.
+ */
+// ponytail: an estimate by characters, not a measure; measure the text if a font with wider digits comes.
+export function lineMarksFit(marks: readonly string[], width: number, pad = 8): boolean {
+  if (marks.length < 2 || width < 10) return false;
+  const between = (width - 2 * pad) / (marks.length - 1);
+  return Math.max(...marks.map((m) => m.length)) * 7.5 + 6 <= between;
+}
+
 /** Where each point sits in a `width` × `height` box (padding `pad`), with a little room above and below. */
 export function linePoints(values: readonly number[], width: number, height: number, pad = 8): [number, number][] {
   const lo = Math.min(...values);
