@@ -15,7 +15,8 @@
 // signs out. `-p <prompt> --output-format stream-json` prints one turn: init (the conversation:
 // `--conversation`'s, or a new one when it doesn't know that one; its tools: our server's alone with `--agent`, else
 // the CLI's own and ours, or $FAKE_AGY_TOOLS), a text delta, a shell step (none with "BRIDGE_ONLY"), a call to our
-// server (a tool of the CLI's own with "OWN_TOOL"), the last delta with usage and the result. "LIMIT": an AGY_ERROR
+// server (a tool of the CLI's own with "OWN_TOOL"; through `call_mcp_tool`, as 1.5.x does, with "MCP_CALL", or to
+// another server with "MCP_OTHER"), the last delta with usage and the result. "LIMIT": an AGY_ERROR
 // quota line on stderr and exit 3. "ENV": the shell step's output is the env.
 import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -190,13 +191,23 @@ if (args[0] === "-p") {
       },
     });
   }
-  const call = prompt.includes("OWN_TOOL") ? "view_file" : "agenteschat_agentes/post_message";
+  // "MCP_CALL" / "MCP_OTHER": the call goes through the CLI 1.5.x's `call_mcp_tool`, to our server or to another's.
+  const server = prompt.includes("MCP_OTHER") ? "linear" : prompt.includes("MCP_CALL") ? "agenteschat_agentes" : null;
+  const call = server
+    ? "call_mcp_tool"
+    : prompt.includes("OWN_TOOL")
+      ? "view_file"
+      : "agenteschat_agentes/post_message";
   step({
     step_index: 3,
     state: "DONE",
     step_type: "tool",
     tool_name: call,
-    tool_info: { name: call, parameters: {}, output: "ok" },
+    tool_info: {
+      name: call,
+      parameters: server ? { ServerName: server, ToolName: "post_message", Arguments: {} } : {},
+      output: "ok",
+    },
   });
   step({
     step_index: 4,

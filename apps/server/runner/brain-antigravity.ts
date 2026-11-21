@@ -50,8 +50,8 @@ import { agentSecrets } from "./secrets";
  *   without asking), `plan` doesn't (an edit needs an approval nobody gives in headless mode, so it is refused).
  * - `chat` (the team's right hand, ADR 0137 §4): `--agent agenteschat-chat` (no built-in tool, no commands, never a
  *   subagent), in an empty folder with none of the agent's secrets. `antigravityChatBreach` kills the turn on an
- *   `init` listing any tool but our server's, on anything before `init`, on a tool step that isn't ours and on a
- *   subagent.
+ *   `init` without a tool list, on anything before `init`, on a tool step that isn't ours (a `call_mcp_tool` to our
+ *   server is) and on a subagent.
  * - Our server's calls are not repeated as `tool_call`: the engine ran them. The CLI's own tools are, as what the turn
  *   tried. Usage is the plan's (`source: "plan"`): the turn's `agent_response` steps summed (`result.usage` counts
  *   the whole conversation).
@@ -93,6 +93,17 @@ export const AGY_RUN_ENV = "AGENTES_MCP_RUN";
 const OURS = new RegExp(`^(?:mcp[_.:/-]{1,2})?${CODEX_MCP_SERVER}(?:__|[_.:/-])[\\w.-]+$`);
 export const isOurAgyTool = (name: unknown) => typeof name === "string" && OURS.test(name);
 
+/** The meta-tool the CLI (1.5.x) calls every MCP tool through; it names the server and the tool in its parameters. */
+const AGY_MCP_CALL = "call_mcp_tool";
+
+/**
+ * A tool step of ours: named as `isOurAgyTool` says, or `call_mcp_tool` aimed at our server (`ServerName`, as the
+ * step's `tool_info.parameters` carry it). A call to any other server is the CLI's own and stays one.
+ */
+export const isOurAgyStep = (name: unknown, info: Record<string, unknown>) =>
+  isOurAgyTool(name) ||
+  (name === AGY_MCP_CALL && isRecord(info.parameters) && info.parameters.ServerName === CODEX_MCP_SERVER);
+
 /**
  * `--effort`: low, medium or high (`xhigh` and `max` as high: not every model has the extra level); a slug that names
  * its level (`…-high`, `…-xhigh`) takes none.
@@ -128,17 +139,17 @@ export function antigravityTurnArgs(input: {
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
 /**
- * A `chat` turn's guard (protocol 44), line by line: `init` must list our server's tools alone, nothing may come
- * before it, and no step may be a tool that isn't ours or a subagent. Null when the line is fine.
+ * A `chat` turn's guard (protocol 44), line by line: `init` must list its tools, nothing may come before it, and no
+ * step may be a tool that isn't ours or a subagent. Null when the line is fine. `init` is not held to our tools
+ * alone: from CLI 1.5.6 it lists the CLI's built-in tools whatever the agent's `tools` says (ADR 0143 §5, amended),
+ * so what stops a built-in is its step, which kills the turn.
  */
 export function antigravityChatBreach(ev: Record<string, unknown>, sawInit: boolean): string | null {
   const stop = (why: string) => `${why}, so the turn stopped.`;
   if (ev.event === "init") {
     const tools = isRecord(ev.init) ? ev.init.tools : undefined;
     if (!Array.isArray(tools)) return "The Antigravity CLI didn't list its tools, so the turn stopped before it began.";
-    const theirs = tools.filter((t) => !isOurAgyTool(t)).map((t) => String(t).slice(0, 64));
-    if (theirs.length === 0) return null;
-    return `The Antigravity CLI offers tools of its own here (${theirs.slice(0, 8).join(", ")}), so the turn stopped before it could use them.`;
+    return null;
   }
   if (!sawInit) return stop("The Antigravity CLI answered before listing its tools");
   if (ev.event !== "step_update") return null;
@@ -146,7 +157,7 @@ export function antigravityChatBreach(ev: Record<string, unknown>, sawInit: bool
   if (step.subagent_info !== undefined) return stop("The Antigravity CLI started another agent");
   const info = isRecord(step.tool_info) ? step.tool_info : {};
   const name = step.tool_name ?? info.name;
-  if ((step.step_type === "tool" || name !== undefined) && !isOurAgyTool(name)) {
+  if ((step.step_type === "tool" || name !== undefined) && !isOurAgyStep(name, info)) {
     return stop(`The Antigravity CLI used a tool of its own (${String(name ?? "unknown").slice(0, 64)})`);
   }
   return null;
@@ -372,7 +383,7 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
       const name = typeof step.tool_name === "string" ? step.tool_name : String(info.name ?? "tool");
       worked = true;
       // Our bridge's calls: the engine ran them.
-      if (isOurAgyTool(name)) return;
+      if (isOurAgyStep(name, info)) return;
       flush("", true);
       const error = isRecord(info.error) ? info.error : null;
       const output = error ? String(error.message ?? error.type ?? "failed") : String(info.output ?? "");

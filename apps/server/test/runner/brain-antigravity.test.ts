@@ -39,6 +39,7 @@ import {
   antigravityProblem,
   antigravityTurnArgs,
   handleAntigravityBrainTurn,
+  isOurAgyStep,
   isOurAgyTool,
   parseAgyError,
 } from "../../runner/brain-antigravity";
@@ -167,14 +168,14 @@ test.skipIf(process.platform !== "darwin")(
   },
 );
 
-test("a chat turn's guard: init with our server's tools alone; a tool of its own, a subagent or an answer first stop it", () => {
+test("a chat turn's guard: init with our server's tools alone; a tool step of its own, a subagent or an answer first stop it", () => {
   const init = (tools: unknown) => ({ event: "init", conversation_id: FIRST, init: { tools } });
   expect(
     antigravityChatBreach(init([`${CODEX_MCP_SERVER}/post_message`, `mcp_${CODEX_MCP_SERVER}_read`]), false),
   ).toBeNull();
-  expect(antigravityChatBreach(init([`${CODEX_MCP_SERVER}/post_message`, "run_command"]), false)).toContain(
-    "run_command",
-  );
+  // CLI 1.5.6 and later list their built-in tools at `init` whatever the agent's `tools` says (ADR 0143 §5): the
+  // list is no breach, the step that uses one is.
+  expect(antigravityChatBreach(init([`${CODEX_MCP_SERVER}/post_message`, "run_command"]), false)).toBeNull();
   expect(antigravityChatBreach({ event: "init", init: {} }, false)).toContain("didn't list its tools");
   const say = { event: "step_update", step_update: { step_type: "agent_response", text_delta: "hi" } };
   expect(antigravityChatBreach(say, false)).toContain("before listing");
@@ -186,6 +187,33 @@ test("a chat turn's guard: init with our server's tools alone; a tool of its own
   const sub = { event: "step_update", step_update: { step_type: "agent_response", subagent_info: { subagents: [] } } };
   expect(antigravityChatBreach(sub, true)).toContain("another agent");
   expect(isOurAgyTool(`evil_${CODEX_MCP_SERVER}/x`)).toBe(false);
+});
+
+test("a chat turn's guard: call_mcp_tool is ours only when it names our server", () => {
+  // The step as CLI 1.5.9 sends it when a turn calls one of our tools.
+  const call = (parameters: unknown) => ({
+    event: "step_update",
+    step_update: {
+      conversation_id: FIRST,
+      step_index: 16,
+      state: "ACTIVE",
+      step_type: "tool",
+      tool_name: "call_mcp_tool",
+      tool_info: { name: "call_mcp_tool", parameters },
+    },
+  });
+  const ours = { ServerName: CODEX_MCP_SERVER, ToolName: "list_issues", Arguments: {} };
+  expect(antigravityChatBreach(call(ours), true)).toBeNull();
+  // Another server's tool, a call that names none and a malformed one are the CLI's own: they stop the turn.
+  expect(antigravityChatBreach(call({ ...ours, ServerName: "linear" }), true)).toContain("call_mcp_tool");
+  expect(antigravityChatBreach(call({ ToolName: "list_issues" }), true)).toContain("call_mcp_tool");
+  expect(antigravityChatBreach(call(undefined), true)).toContain("call_mcp_tool");
+  expect(antigravityChatBreach(call(`${CODEX_MCP_SERVER}`), true)).toContain("call_mcp_tool");
+  expect(isOurAgyStep("call_mcp_tool", { parameters: ours })).toBe(true);
+  expect(isOurAgyStep("call_mcp_tool", { parameters: { ...ours, ServerName: `evil_${CODEX_MCP_SERVER}` } })).toBe(
+    false,
+  );
+  expect(isOurAgyStep("run_command", { parameters: ours })).toBe(false);
 });
 
 test("a turn that went wrong: AGY_ERROR's quota is a plan limit with its reset, a refused sign-in, anything else", () => {
@@ -480,9 +508,18 @@ test.skipIf(!posix)(
       code: "tools_not_locked",
       message: expect.stringContaining("view_file"),
     });
+    // The CLI 1.5.x lists its built-ins at `init` (ADR 0143 §5, amended): that alone is no breach.
     process.env.FAKE_AGY_TOOLS = `${CODEX_MCP_SERVER}/post_message,run_command`;
     const listed = await run(ctx, turn({ ...chat, runId: RUN.replace(/1$/, "8"), prompt: "BRIDGE_ONLY" }));
-    expect(listed.at(-1)).toMatchObject({ code: "tools_not_locked", message: expect.stringContaining("run_command") });
+    expect(listed.at(-1)).toMatchObject({ type: "done" });
+    // Our server's tool through `call_mcp_tool`: the engine ran it, so it is not repeated as a `tool_call`.
+    const mcp = await run(ctx, turn({ ...chat, runId: RUN.replace(/1$/, "9"), prompt: "BRIDGE_ONLY MCP_CALL" }));
+    expect(mcp.at(-1)).toMatchObject({ type: "done" });
+    expect(mcp.some((e) => e.type === "tool_call")).toBe(false);
+    // Another server's tool through the same meta-tool is the CLI's own: it stops the turn.
+    const other = await run(ctx, turn({ ...chat, runId: RUN.replace(/1$/, "a"), prompt: "BRIDGE_ONLY MCP_OTHER" }));
+    expect(other.at(-1)).toMatchObject({ type: "error", code: "tools_not_locked" });
+    expect(other.at(-1)).toMatchObject({ message: expect.stringContaining("call_mcp_tool") });
   },
   20_000,
 );
