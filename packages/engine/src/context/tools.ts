@@ -544,7 +544,11 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
         properties: {
           message: { type: "string", maxLength: 300 },
           channel: { type: "string", maxLength: 100 },
-          thread_id: { type: "string", maxLength: 36 },
+          thread_id: {
+            type: "string",
+            maxLength: 36,
+            description: "A thread's first message id, or a conversation's id (a DM's too).",
+          },
           around: { type: "string", maxLength: 40, description: "ISO date-time" },
           limit: { type: "integer", minimum: 1, maximum: CONVERSATION_MAX },
         },
@@ -576,7 +580,11 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
         } else if (str(input.channel)) {
           const name = str(input.channel).trim().replace(/^#/, "").toLowerCase();
           const [found] = await ctx.db
-            .select({ id: schema.channels.id })
+            .select({
+              id: schema.channels.id,
+              visibility: schema.channels.visibility,
+              archivedAt: schema.channels.archivedAt,
+            })
             .from(schema.channels)
             .where(
               and(
@@ -585,7 +593,17 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
                 eq(schema.channels.kind, "channel"),
               ),
             );
-          if (!found || !allowed.includes(found.id)) return notFound;
+          if (!found) return notFound;
+          if (!allowed.includes(found.id)) {
+            // A public channel's name is no secret in the workspace: say what is missing, so the agent can tell
+            // whoever asked instead of reporting an empty channel. A private one stays "not found".
+            return found.visibility === "public" && !found.archivedAt
+              ? {
+                  content: `You are not a member of #${name}, so you can't read it. Ask a person to add you to it, then try again.`,
+                  isError: true,
+                }
+              : notFound;
+          }
           place = { channelId: found.id, threadId: null };
         } else if (str(input.thread_id)) {
           const [root] = await describeMessages(
@@ -593,8 +611,11 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
             ctx.orgId,
             [str(input.thread_id)].filter((v) => UUID.test(v)),
           );
-          if (!root || !allowed.includes(root.channelId)) return notFound;
-          place = { channelId: root.channelId, threadId: root.threadId ?? root.id };
+          const id = str(input.thread_id);
+          // A conversation's own id (a DM's, which has no name to give as `channel`) reads that conversation.
+          if (!root && allowed.includes(id)) place = { channelId: id, threadId: null };
+          else if (!root || !allowed.includes(root.channelId)) return notFound;
+          else place = { channelId: root.channelId, threadId: root.threadId ?? root.id };
         } else if (!allowed.includes(ctx.channelId)) return notFound;
         const scope = and(
           eq(messages.orgId, ctx.orgId),
