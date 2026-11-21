@@ -159,6 +159,8 @@ export const ROUTINE_EVENTS = [
   "email.received",
   /** A call to the routine's own address (only through a `webhook` trigger: ADR 0106). */
   "webhook.received",
+  /** A message to the workspace's Telegram bot: a private chat with it, or one that mentions or answers it (ADR 0170). */
+  "telegram.message",
 ] as const;
 export type RoutineEvent = (typeof ROUTINE_EVENTS)[number];
 /**

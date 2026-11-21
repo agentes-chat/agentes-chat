@@ -6,6 +6,7 @@ import {
   ForbiddenSignatureError,
   HOOK_LIMIT_PER_IP,
   handleComposioWebhook,
+  handleTelegramWebhook,
   handleWebhook,
   NotFoundError,
   receiveRoutineHook,
@@ -57,6 +58,30 @@ export function registerWebhookReceiver(api: OpenAPIHono, deps: AppDeps) {
       return c.json({ ok: true, type: result.type, fired: result.fired }, 202);
     } catch (error) {
       if (error instanceof ComposioSignatureError) return c.json({ error: "invalid signature" }, 401);
+      if (error instanceof NotFoundError) return c.json({ error: "not found" }, 404);
+      if (error instanceof SyntaxError) return c.json({ error: "invalid body" }, 400);
+      throw error;
+    }
+  });
+  // A workspace's Telegram bot (ADR 0170 §5): its updates, checked by the secret `setWebhook` gave Telegram.
+  api.post("/webhooks/telegram/:connectionId", async (c) => {
+    const ip = requestLimitIp(c.req.raw.headers, deps.config.TRUSTED_PROXIES);
+    if (!(await deps.adapters.rateLimiter.consume(`telegram-hook-ip:${ip}`, HOOK_LIMIT_PER_IP)).allowed) {
+      c.header("retry-after", "60");
+      return c.json({ error: "rate limited" }, 429);
+    }
+    const raw = await readWebhookText(c.req.raw, 1_000_000);
+    if (raw === null) return c.json({ error: "too large" }, 413);
+    try {
+      const result = await handleTelegramWebhook(
+        webhookDeps,
+        c.req.param("connectionId"),
+        c.req.header("x-telegram-bot-api-secret-token") ?? null,
+        raw,
+      );
+      if (result.fired > 0) deps.wakeWorkers?.();
+      return c.json({ ok: true }, 200);
+    } catch (error) {
       if (error instanceof NotFoundError) return c.json({ error: "not found" }, 404);
       if (error instanceof SyntaxError) return c.json({ error: "invalid body" }, 400);
       throw error;

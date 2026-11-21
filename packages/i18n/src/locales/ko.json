@@ -7767,6 +7767,14 @@
     "custom_write": {
       "label": "쓰기 도구",
       "description": "쓰기 도구를 사용해요. 민감하다고 표시된 도구는 항상 승인을 요청해요."
+    },
+    "telegram_messages_read": {
+      "label": "메시지 읽기",
+      "description": "봇의 채팅을 나열하고, 사람들이 봇에게 또는 봇이 있는 곳에 쓴 내용을 읽습니다."
+    },
+    "telegram_messages_write": {
+      "label": "메시지 보내기",
+      "description": "봇으로 메시지와 파일을 보내고, 수정하고, 고정합니다. 메시지 삭제, 사용자 차단, 초대 링크는 승인을 요청합니다."
     }
   },
   "issues": {
@@ -8616,6 +8624,9 @@
       },
       "deploy": {
         "succeeded": "배포 완료"
+      },
+      "telegram": {
+        "message": "텔레그램 봇에게 온 메시지"
       }
     },
     "when": {
@@ -12853,6 +12864,11 @@
         "1": "테이블 보기",
         "2": "데이터를 조회해 답변하기",
         "3": "아무것도 변경하지 않음"
+      },
+      "telegram": {
+        "1": "사람들이 봇에게 쓴 내용 읽기",
+        "2": "봇으로 메시지와 파일 보내기",
+        "ask": "삭제, 차단, 초대 링크는 항상 승인을 요청합니다"
       }
     },
     "connectedList": "연결됨",
@@ -12995,7 +13011,8 @@
       "youtube": "YouTube 채널의 동영상, 댓글, 재생목록, 분석.",
       "pinterest": "Pinterest 핀, 보드, 분석.",
       "reddit": "Reddit 게시물, 댓글, 커뮤니티.",
-      "whatsapp": "WhatsApp Business 메시지와 템플릿."
+      "whatsapp": "WhatsApp Business 메시지와 템플릿.",
+      "telegram": "내 텔레그램 봇: 채팅, 그룹, 채널."
     }
   },
   "toolNames": {
@@ -13826,7 +13843,15 @@
       "get_my_usage": "내 사용량 조회",
       "ignore_usage_limit": "사용 한도 무시",
       "send_feedback": "피드백 보내기",
-      "offer_feedback": "문제 신고 제안"
+      "offer_feedback": "문제 신고 제안",
+      "list_chats": "채팅 목록",
+      "read_messages": "메시지 읽기",
+      "get_chat": "채팅 보기",
+      "send_file": "파일 보내기",
+      "edit_message": "메시지 수정",
+      "pin_message": "메시지 고정",
+      "ban_member": "멤버 차단",
+      "create_invite_link": "초대 링크 만들기"
     }
   },
   "toolReview": {
@@ -14007,6 +14032,10 @@
       "asks_other": "작업 {{count}}개는 채팅에서 승인을 요청해요.",
       "adjust": "조정",
       "ok": "완료"
+    },
+    "telegram": {
+      "token": "봇 토큰",
+      "steps": "텔레그램에서 @BotFather를 열고 /newbot을 보낸 뒤, 이름과 “bot”으로 끝나는 사용자 이름을 정하고 받은 토큰을 여기에 붙여 넣으세요. 그룹을 읽으려면 봇을 추가하고, 채널에 게시하려면 그곳의 관리자로 지정하세요."
     }
   },
   "database": {

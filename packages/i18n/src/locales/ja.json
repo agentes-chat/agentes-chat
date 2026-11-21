@@ -7770,6 +7770,14 @@
     "custom_write": {
       "label": "書き込みツール",
       "description": "書き込みツールを使います。重要とマークされたものは必ず承認を求めます。"
+    },
+    "telegram_messages_read": {
+      "label": "メッセージを読む",
+      "description": "ボットのチャットを一覧し、ボット宛てやボットがいる場所で書かれた内容を読みます。"
+    },
+    "telegram_messages_write": {
+      "label": "メッセージを送る",
+      "description": "ボットとしてメッセージやファイルを送信・編集・ピン留めします。メッセージの削除、メンバーのBAN、招待リンクは承認が必要です。"
     }
   },
   "issues": {
@@ -8619,6 +8627,9 @@
       },
       "deploy": {
         "succeeded": "デプロイが完了したとき"
+      },
+      "telegram": {
+        "message": "Telegramボットへのメッセージ"
       }
     },
     "when": {
@@ -12859,6 +12870,11 @@
         "1": "テーブルを見る",
         "2": "データにクエリして答える",
         "3": "何も変更しません"
+      },
+      "telegram": {
+        "1": "ボット宛てのメッセージを読む",
+        "2": "ボットとしてメッセージやファイルを送る",
+        "ask": "削除、BAN、招待リンクは必ずあなたの承認を求めます"
       }
     },
     "connectedList": "接続済み",
@@ -13001,7 +13017,8 @@
       "youtube": "YouTubeチャンネルの動画、コメント、再生リスト、アナリティクス。",
       "pinterest": "Pinterestのピン、ボード、アナリティクス。",
       "reddit": "Redditの投稿、コメント、コミュニティ。",
-      "whatsapp": "WhatsApp Businessのメッセージとテンプレート。"
+      "whatsapp": "WhatsApp Businessのメッセージとテンプレート。",
+      "telegram": "あなたのTelegramボット：そのチャット、グループ、チャンネル。"
     }
   },
   "toolNames": {
@@ -13832,7 +13849,15 @@
       "get_my_usage": "自分の使用量を表示",
       "ignore_usage_limit": "利用上限を無視",
       "send_feedback": "フィードバックを送信",
-      "offer_feedback": "問題の報告を提案"
+      "offer_feedback": "問題の報告を提案",
+      "list_chats": "チャットを一覧",
+      "read_messages": "メッセージを読む",
+      "get_chat": "チャットを見る",
+      "send_file": "ファイルを送る",
+      "edit_message": "メッセージを編集",
+      "pin_message": "メッセージをピン留め",
+      "ban_member": "メンバーをBAN",
+      "create_invite_link": "招待リンクを作成"
     }
   },
   "toolReview": {
@@ -14013,6 +14038,10 @@
       "asks_other": "{{count}}件の操作は、チャットで承認を求めます。",
       "adjust": "調整",
       "ok": "完了"
+    },
+    "telegram": {
+      "token": "ボットのトークン",
+      "steps": "Telegramで@BotFatherを開き、/newbotを送信し、名前と「bot」で終わるユーザー名を決めて、表示されたトークンをここに貼り付けます。グループを読むにはボットを追加し、チャンネルに投稿するにはそこで管理者にします。"
     }
   },
   "database": {

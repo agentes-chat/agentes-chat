@@ -8115,6 +8115,14 @@
     "custom_write": {
       "label": "Schrijftools",
       "description": "De schrijftools gebruiken. Tools die als gevoelig zijn gemarkeerd, vragen altijd om goedkeuring."
+    },
+    "telegram_messages_read": {
+      "label": "Berichten lezen",
+      "description": "De chats van de bot tonen en lezen wat mensen hem schreven of waar hij zit."
+    },
+    "telegram_messages_write": {
+      "label": "Berichten sturen",
+      "description": "Berichten en bestanden als de bot sturen, bewerken en vastzetten. Berichten verwijderen, mensen verbannen en uitnodigingslinks vragen om goedkeuring."
     }
   },
   "issues": {
@@ -8988,6 +8996,9 @@
       },
       "deploy": {
         "succeeded": "Deploy voltooid"
+      },
+      "telegram": {
+        "message": "Bericht aan de Telegram-bot"
       }
     },
     "when": {
@@ -13460,6 +13471,11 @@
         "1": "De tabellen bekijken",
         "2": "De data bevragen om te antwoorden",
         "3": "Wijzigt nooit iets"
+      },
+      "telegram": {
+        "1": "Lezen wat mensen de bot schrijven",
+        "2": "Berichten en bestanden als de bot sturen",
+        "ask": "Verwijderen, verbannen en uitnodigingslinks vragen altijd om je goedkeuring"
       }
     },
     "connectedList": "Gekoppeld",
@@ -13607,7 +13623,8 @@
       "youtube": "Video's, reacties, afspeellijsten en statistieken van het YouTube-kanaal.",
       "pinterest": "Pins, borden en statistieken op Pinterest.",
       "reddit": "Posts, reacties en community's op Reddit.",
-      "whatsapp": "Berichten en sjablonen van WhatsApp Business."
+      "whatsapp": "Berichten en sjablonen van WhatsApp Business.",
+      "telegram": "Een eigen Telegram-bot: zijn chats, groepen en kanalen."
     }
   },
   "toolNames": {
@@ -14438,7 +14455,15 @@
       "get_my_usage": "Mijn gebruik bekijken",
       "ignore_usage_limit": "Gebruikslimiet negeren",
       "send_feedback": "Feedback sturen",
-      "offer_feedback": "Aanbieden om een probleem te melden"
+      "offer_feedback": "Aanbieden om een probleem te melden",
+      "list_chats": "Chats tonen",
+      "read_messages": "Berichten lezen",
+      "get_chat": "Chat bekijken",
+      "send_file": "Bestand sturen",
+      "edit_message": "Bericht bewerken",
+      "pin_message": "Bericht vastzetten",
+      "ban_member": "Lid verbannen",
+      "create_invite_link": "Uitnodigingslink maken"
     }
   },
   "toolReview": {
@@ -14640,6 +14665,10 @@
       "asks_other": "{{count}} acties vragen om goedkeuring in de chat.",
       "adjust": "Aanpassen",
       "ok": "Klaar"
+    },
+    "telegram": {
+      "token": "Bottoken",
+      "steps": "Open in Telegram @BotFather, stuur /newbot, kies een naam en een gebruikersnaam die op “bot” eindigt en plak hier de token die je krijgt. Om een groep te lezen, voeg je de bot toe. Om in een kanaal te posten, maak je hem daar admin."
     }
   },
   "database": {

@@ -403,3 +403,38 @@ export const composioUsageDays = pgTable(
   },
   (t) => [primaryKey({ columns: [t.day, t.toolkit, t.orgId, t.action] }), index().on(t.orgId)],
 );
+
+/**
+ * What a Telegram bot connection heard (ADR 0170 §5): Telegram keeps a bot's updates for a day and has no history
+ * method, so its chats and their recent messages are only these rows (30 days). One row per update (`update_id`, by
+ * webhook or `getUpdates`), plus the bot's own sends (no `update_id`), so a chat reads as a conversation.
+ */
+export const telegramUpdates = pgTable(
+  "telegram_updates",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    orgId: uuid()
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    connectionId: uuid()
+      .notNull()
+      .references(() => connectorConnections.id, { onDelete: "cascade" }),
+    updateId: bigint({ mode: "number" }),
+    chatId: text().notNull(),
+    chatType: text().notNull(),
+    chatTitle: text(),
+    senderName: text(),
+    senderId: text(),
+    messageId: bigint({ mode: "number" }),
+    text: text(),
+    /** `message`, `edited`, `sent` (the bot's own) or `member` (the bot added, removed or made admin: `status`). */
+    kind: text().notNull(),
+    status: text(),
+    receivedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique().on(t.connectionId, t.updateId),
+    index().on(t.connectionId, t.chatId, t.receivedAt),
+    index().on(t.receivedAt),
+  ],
+);

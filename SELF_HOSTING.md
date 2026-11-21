@@ -757,6 +757,8 @@ internet instead, and need it public:
   panel in **Settings → Connectors** checks the installations with GitHub when it opens.
 - Composio's events (`/api/webhooks/composio`, with `COMPOSIO_API_KEY`): new mail for routines, and connector
   accounts that expired.
+- A Telegram bot's messages arrive at `/api/webhooks/telegram/…` when the internet reaches the instance; otherwise the
+  server asks Telegram for them every 30 seconds, which works on a private network too.
 - AI apps that call from their own servers (Apps de IA, below): claude.ai, the Claude apps and ChatGPT reach
   `/mcp` from the internet. Claude Code, Cursor and VS Code on a computer that reaches the server don't need it.
 
@@ -918,6 +920,11 @@ The model may give at most 1024 numbers per vector; fewer are padded with zeros.
 volume. With all four `S3_*` variables set they go to that bucket instead, and with neither, into
 Postgres. Choose before the first upload: a file stays in the store it was written to. An
 organization can also keep its files in a bucket of its own (**Settings → Storage**).
+
+**Social and ads connectors of our own (optional).** Telegram needs nothing from you: each workspace makes a bot with
+@BotFather and pastes its token in **Add connector → Telegram**. X, Threads, Meta Ads and TikTok each need a developer
+app you register with the vendor, their variables set as `docs/social-apps-checklist.md` says, step by step; without
+them the service doesn't show as connectable.
 
 **Services through Composio (optional).** Google Drive, Google Calendar, Sheets and Docs, Slack,
 Microsoft Teams, OneDrive, HubSpot, Salesforce, Zendesk, Instagram, Facebook Pages, LinkedIn, YouTube,

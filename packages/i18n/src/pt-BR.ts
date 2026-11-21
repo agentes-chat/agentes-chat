@@ -8516,6 +8516,15 @@ export const ptBR = {
       label: "Ferramentas de escrita",
       description: "Usar as ferramentas de escrita. As marcadas como sensíveis sempre pedem aprovação.",
     },
+    telegram_messages_read: {
+      label: "Ler mensagens",
+      description: "Listar as conversas do bot e ler o que as pessoas escreveram para ele ou onde ele está.",
+    },
+    telegram_messages_write: {
+      label: "Enviar mensagens",
+      description:
+        "Enviar, editar e fixar mensagens e arquivos como o bot. Apagar mensagens, banir pessoas e links de convite pedem aprovação.",
+    },
   },
   issues: {
     handedBy: "passada por <0/>{{name}}",
@@ -9374,6 +9383,7 @@ export const ptBR = {
       "github.pr_opened": "PR aberto no GitHub",
       "issue.created": "Tarefa criada no agentes",
       "deploy.succeeded": "Deploy concluído",
+      "telegram.message": "Mensagem para o bot do Telegram",
     },
     when: { event: "Quando: {{event}}" },
     form: {
@@ -13674,6 +13684,11 @@ export const ptBR = {
         ask: "Enviar mensagens sempre pede sua aprovação",
       },
       database: { "1": "Ver as tabelas", "2": "Consultar os dados para responder", "3": "Nunca altera nada" },
+      telegram: {
+        "1": "Ler o que as pessoas escrevem para o bot",
+        "2": "Enviar mensagens e arquivos como o bot",
+        ask: "Apagar, banir e links de convite sempre pedem sua aprovação",
+      },
     },
     connectedList: "Conectados",
     connected: "Conectado",
@@ -13824,6 +13839,7 @@ export const ptBR = {
       pinterest: "Pins, pastas e métricas do Pinterest.",
       reddit: "Posts, comentários e comunidades do Reddit.",
       whatsapp: "Mensagens e modelos do WhatsApp Business.",
+      telegram: "Um bot seu do Telegram: suas conversas, grupos e canais.",
     },
   },
   toolNames: {
@@ -14655,6 +14671,14 @@ export const ptBR = {
       ignore_usage_limit: "Ignorar o limite de uso",
       send_feedback: "Enviar feedback",
       offer_feedback: "Oferecer um relato de problema",
+      list_chats: "Listar conversas",
+      read_messages: "Ler mensagens",
+      get_chat: "Ver conversa",
+      send_file: "Enviar arquivo",
+      edit_message: "Editar mensagem",
+      pin_message: "Fixar mensagem",
+      ban_member: "Banir membro",
+      create_invite_link: "Criar link de convite",
     },
   },
   toolReview: {
@@ -14844,6 +14868,11 @@ export const ptBR = {
       asks_other: "{{count}} ações pedem aprovação no chat.",
       adjust: "Ajustar",
       ok: "Pronto",
+    },
+    telegram: {
+      token: "Token do bot",
+      steps:
+        "No Telegram, abra o @BotFather, envie /newbot, escolha um nome e um usuário que termine em “bot” e cole aqui o token que ele der. Para ler um grupo, adicione o bot a ele. Para postar num canal, torne-o admin lá.",
     },
   },
   database: {

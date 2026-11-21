@@ -216,6 +216,7 @@ export const RESET_ERASES = [
   "surface_deliveries",
   "team_action_checks",
   "team_actions",
+  "telegram_updates",
   "thread_follows",
   "thread_reads",
   "thread_reflections",

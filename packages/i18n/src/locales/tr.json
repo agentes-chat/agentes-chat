@@ -8036,6 +8036,14 @@
     "custom_write": {
       "label": "Yazma araçları",
       "description": "Yazma araçlarını kullanma. Hassas olarak işaretlenenler her zaman onay ister."
+    },
+    "telegram_messages_read": {
+      "label": "Mesajları okuma",
+      "description": "Botun sohbetlerini listeler, ona veya bulunduğu yerde yazılanları okur."
+    },
+    "telegram_messages_write": {
+      "label": "Mesaj gönderme",
+      "description": "Bot olarak mesaj ve dosya gönderir, düzenler ve sabitler. Mesaj silme, kişi yasaklama ve davet bağlantıları onay ister."
     }
   },
   "issues": {
@@ -8900,6 +8908,9 @@
       },
       "deploy": {
         "succeeded": "Dağıtım tamamlandı"
+      },
+      "telegram": {
+        "message": "Telegram botuna mesaj"
       }
     },
     "when": {
@@ -13327,6 +13338,11 @@
         "1": "Tabloları görür",
         "2": "Yanıt vermek için verileri sorgular",
         "3": "Hiçbir şeyi değiştirmez"
+      },
+      "telegram": {
+        "1": "İnsanların bota yazdıklarını okuma",
+        "2": "Bot olarak mesaj ve dosya gönderme",
+        "ask": "Silme, yasaklama ve davet bağlantıları her zaman onayınızı ister"
       }
     },
     "connectedList": "Bağlı",
@@ -13474,7 +13490,8 @@
       "youtube": "YouTube kanalının videoları, yorumları, oynatma listeleri ve analizleri.",
       "pinterest": "Pinterest pinleri, panoları ve analizleri.",
       "reddit": "Reddit gönderileri, yorumları ve toplulukları.",
-      "whatsapp": "WhatsApp Business mesajları ve şablonları."
+      "whatsapp": "WhatsApp Business mesajları ve şablonları.",
+      "telegram": "Size ait bir Telegram botu: sohbetleri, grupları ve kanalları."
     }
   },
   "toolNames": {
@@ -14305,7 +14322,15 @@
       "get_my_usage": "Kullanımımı görüntüle",
       "ignore_usage_limit": "Kullanım sınırını yok say",
       "send_feedback": "Geri bildirim gönder",
-      "offer_feedback": "Sorun bildirmeyi öner"
+      "offer_feedback": "Sorun bildirmeyi öner",
+      "list_chats": "Sohbetleri listele",
+      "read_messages": "Mesajları oku",
+      "get_chat": "Sohbeti gör",
+      "send_file": "Dosya gönder",
+      "edit_message": "Mesajı düzenle",
+      "pin_message": "Mesajı sabitle",
+      "ban_member": "Üyeyi yasakla",
+      "create_invite_link": "Davet bağlantısı oluştur"
     }
   },
   "toolReview": {
@@ -14507,6 +14532,10 @@
       "asks_other": "{{count}} işlem sohbette onay ister.",
       "adjust": "Ayarla",
       "ok": "Tamam"
+    },
+    "telegram": {
+      "token": "Bot token'ı",
+      "steps": "Telegram'da @BotFather'ı açın, /newbot gönderin, bir ad ve “bot” ile biten bir kullanıcı adı seçin, sonra verdiği token'ı buraya yapıştırın. Bir grubu okumak için botu gruba ekleyin. Bir kanalda paylaşmak için orada yönetici yapın."
     }
   },
   "database": {

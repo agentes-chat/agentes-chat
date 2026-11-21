@@ -7807,6 +7807,14 @@
     "custom_write": {
       "label": "写入类工具",
       "description": "使用写入类工具。标记为敏感的工具始终需要审批。"
+    },
+    "telegram_messages_read": {
+      "label": "读取消息",
+      "description": "列出机器人的聊天，读取别人发给它或在它所在之处写的内容。"
+    },
+    "telegram_messages_write": {
+      "label": "发送消息",
+      "description": "以机器人身份发送、编辑和置顶消息与文件。删除消息、封禁成员和邀请链接需要审批。"
     }
   },
   "issues": {
@@ -8662,6 +8670,9 @@
       },
       "deploy": {
         "succeeded": "部署完成"
+      },
+      "telegram": {
+        "message": "发给 Telegram 机器人的消息"
       }
     },
     "when": {
@@ -12928,6 +12939,11 @@
         "1": "查看数据表",
         "2": "查询数据来回答问题",
         "3": "从不更改任何内容"
+      },
+      "telegram": {
+        "1": "读取别人发给机器人的内容",
+        "2": "以机器人身份发送消息和文件",
+        "ask": "删除、封禁和邀请链接始终需要你的审批"
       }
     },
     "connectedList": "已连接",
@@ -13070,7 +13086,8 @@
       "youtube": "YouTube 频道的视频、评论、播放列表和数据分析。",
       "pinterest": "Pinterest 的 Pin 图、图板和数据分析。",
       "reddit": "Reddit 的帖子、评论和社区。",
-      "whatsapp": "WhatsApp Business 消息和模板。"
+      "whatsapp": "WhatsApp Business 消息和模板。",
+      "telegram": "你自己的 Telegram 机器人：它的聊天、群组和频道。"
     }
   },
   "toolNames": {
@@ -13901,7 +13918,15 @@
       "get_my_usage": "查看我的用量",
       "ignore_usage_limit": "忽略用量上限",
       "send_feedback": "发送反馈",
-      "offer_feedback": "提议报告问题"
+      "offer_feedback": "提议报告问题",
+      "list_chats": "列出聊天",
+      "read_messages": "读取消息",
+      "get_chat": "查看聊天",
+      "send_file": "发送文件",
+      "edit_message": "编辑消息",
+      "pin_message": "置顶消息",
+      "ban_member": "封禁成员",
+      "create_invite_link": "创建邀请链接"
     }
   },
   "toolReview": {
@@ -14082,6 +14107,10 @@
       "asks_other": "{{count}} 项操作会在聊天中请求审批。",
       "adjust": "调整",
       "ok": "完成"
+    },
+    "telegram": {
+      "token": "机器人令牌",
+      "steps": "在 Telegram 中打开 @BotFather，发送 /newbot，取一个名字和以“bot”结尾的用户名，然后把它给你的令牌粘贴到这里。要读取群组，把机器人加进去。要在频道发帖，把它设为那里的管理员。"
     }
   },
   "database": {

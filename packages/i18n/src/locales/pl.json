@@ -8657,6 +8657,14 @@
     "custom_write": {
       "label": "Narzędzia do zapisu",
       "description": "Korzystanie z narzędzi do zapisu. Te oznaczone jako wrażliwe zawsze proszą o zatwierdzenie."
+    },
+    "telegram_messages_read": {
+      "label": "Czytanie wiadomości",
+      "description": "Lista czatów bota i odczyt tego, co ludzie do niego napisali lub tam, gdzie jest."
+    },
+    "telegram_messages_write": {
+      "label": "Wysyłanie wiadomości",
+      "description": "Wysyłanie, edytowanie i przypinanie wiadomości i plików jako bot. Usuwanie wiadomości, banowanie osób i linki zaproszeń wymagają zatwierdzenia."
     }
   },
   "issues": {
@@ -9559,6 +9567,9 @@
       },
       "deploy": {
         "succeeded": "Wdrożenie zakończone"
+      },
+      "telegram": {
+        "message": "Wiadomość do bota w Telegramie"
       }
     },
     "when": {
@@ -14401,6 +14412,11 @@
         "1": "Podgląd tabel",
         "2": "Zapytania do danych, żeby odpowiedzieć",
         "3": "Nigdy niczego nie zmienia"
+      },
+      "telegram": {
+        "1": "Czytanie tego, co ludzie piszą do bota",
+        "2": "Wysyłanie wiadomości i plików jako bot",
+        "ask": "Usuwanie, banowanie i linki zaproszeń zawsze proszą o Twoje zatwierdzenie"
       }
     },
     "connectedList": "Połączone",
@@ -14558,7 +14574,8 @@
       "youtube": "Filmy, komentarze, playlisty i statystyki kanału YouTube.",
       "pinterest": "Piny, tablice i statystyki na Pintereście.",
       "reddit": "Posty, komentarze i społeczności na Reddicie.",
-      "whatsapp": "Wiadomości i szablony WhatsApp Business."
+      "whatsapp": "Wiadomości i szablony WhatsApp Business.",
+      "telegram": "Twój bot w Telegramie: jego czaty, grupy i kanały."
     }
   },
   "toolNames": {
@@ -15389,7 +15406,15 @@
       "get_my_usage": "Zobacz moje zużycie",
       "ignore_usage_limit": "Ignoruj limit użycia",
       "send_feedback": "Wyślij opinię",
-      "offer_feedback": "Zaproponuj zgłoszenie problemu"
+      "offer_feedback": "Zaproponuj zgłoszenie problemu",
+      "list_chats": "Lista czatów",
+      "read_messages": "Czytaj wiadomości",
+      "get_chat": "Pokaż czat",
+      "send_file": "Wyślij plik",
+      "edit_message": "Edytuj wiadomość",
+      "pin_message": "Przypnij wiadomość",
+      "ban_member": "Zbanuj członka",
+      "create_invite_link": "Utwórz link zaproszenia"
     }
   },
   "toolReview": {
@@ -15633,6 +15658,10 @@
       "asks_other": "{{count}} akcji prosi o zatwierdzenie na czacie.",
       "adjust": "Dostosuj",
       "ok": "Gotowe"
+    },
+    "telegram": {
+      "token": "Token bota",
+      "steps": "W Telegramie otwórz @BotFather, wyślij /newbot, wybierz nazwę i nazwę użytkownika kończącą się na „bot”, a potem wklej tu otrzymany token. Aby czytać grupę, dodaj do niej bota. Aby publikować na kanale, zrób go tam administratorem."
     }
   },
   "database": {

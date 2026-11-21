@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { KeyWrapper } from "@agenteschat/adapters";
 import { and, asc, type Database, type Executor, eq, isNull, lt, ne, or, schema, sql } from "@agenteschat/db";
 import { StreamableHTTPError } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { reachableFromInternet } from "../apps/urls";
 import { type AuditEntry, recordAudit } from "../audit";
 import { caches } from "../cache";
 import { openSecret, randomToken, sealSecret, sha256 } from "../crypto";
@@ -16,6 +17,8 @@ import { type ComposioConnectors, completeComposioOAuth, forgetComposioAccount }
 import { beginMcpOAuth, isCustom, storeCustomConnection } from "./custom";
 import { offersCatalog } from "./listing";
 import type { McpConnect } from "./mcp";
+import { NATIVE_SERVICES } from "./native/services";
+import { NativeError } from "./native/types";
 import { clientAuth, getOAuthClient, type McpOAuthDeps, probeMcpServer } from "./oauth-mcp";
 import { oauthReturnTo } from "./oauth-return";
 import {
@@ -188,6 +191,8 @@ export interface ConnectionSecret {
   apiKey?: string;
   /** A server by address: the request headers a person typed for it, names as typed (ADR 0186). */
   headers?: Record<string, string>;
+  /** Telegram: what its webhook calls carry in `X-Telegram-Bot-Api-Secret-Token`. */
+  webhookSecret?: string;
 }
 
 export interface ConnectorDeps {
@@ -291,6 +296,7 @@ async function storeConnection(
     secret: ConnectionSecret | null;
     tokenExpiresAt?: Date | null;
     accountLabel?: string | null;
+    accountId?: string | null;
     oauthClientId?: string | null;
     resource?: string | null;
     oauthScopes?: string | null;
@@ -336,6 +342,7 @@ async function storeConnection(
         kekId: sealed?.kekId ?? null,
         tokenExpiresAt: input.tokenExpiresAt ?? null,
         accountLabel: input.accountLabel ?? null,
+        accountId: input.accountId ?? null,
         oauthClientId: input.oauthClientId ?? null,
         resource: input.resource ?? null,
         oauthScopes: input.oauthScopes ?? null,
@@ -390,6 +397,8 @@ export async function createApiKeyConnection(
   const serverUrl = checkServerUrl(def.serverUrl);
   const apiKey = input.apiKey?.trim();
   if (apiKey !== undefined && apiKey.length < 8) throw new ValidationError("apiKey looks too short");
+  const secret = apiKey ? { apiKey } : null;
+  const account = secret ? await nativeAccount(deps, input.connector, secret) : null;
   const { connection } = await storeConnection(deps, {
     orgId,
     actorId,
@@ -397,10 +406,54 @@ export async function createApiKeyConnection(
     authType: apiKey ? "api_key" : "none",
     serverUrl,
     label: input.label,
-    secret: apiKey ? { apiKey } : null,
+    secret,
+    ...(account ? { accountLabel: account.label, accountId: account.id } : {}),
     owner: input.personal ? actorId : null,
   });
-  return connection;
+  return secret ? nativeConnected(deps, connection, secret) : connection;
+}
+
+const nativeHttp = (deps: Pick<ConnectorDeps, "http">) => deps.http ?? fetch;
+
+/**
+ * A connector of our own checks the key or sign-in before it is stored and names its account (`@acme_bot`); a key the
+ * vendor refuses is the person's to fix, so it fails the connect. Null for any other connector.
+ */
+async function nativeAccount(deps: ConnectorDeps, connector: string, secret: ConnectionSecret) {
+  const service = CONNECTOR_CATALOG[connector]?.native ? NATIVE_SERVICES[connector] : undefined;
+  if (!service?.account) return null;
+  try {
+    return await service.account(secret, nativeHttp(deps));
+  } catch (error) {
+    if (error instanceof NativeError) {
+      throw new ValidationError(
+        error.message,
+        error.code === "connector.failed" ? "connector.busy" : "connector.key_refused",
+      );
+    }
+    throw error;
+  }
+}
+
+/** What a connector of our own sets up once stored (Telegram's webhook), its secret sealed again when it changed. */
+async function nativeConnected(deps: ConnectorDeps, connection: ConnectorConnection, secret: ConnectionSecret) {
+  const service = CONNECTOR_CATALOG[connection.connector]?.native ? NATIVE_SERVICES[connection.connector] : undefined;
+  if (!service?.connected) return connection;
+  const base = (await reachableFromInternet(deps.publicUrl, deps.resolveHost).catch(() => false))
+    ? deps.publicUrl
+    : null;
+  const next = await service.connected(secret, connection, nativeHttp(deps), base).catch(() => undefined);
+  if (!next) return connection;
+  const wrapper = deps.keyWrappers[0];
+  if (!wrapper) throw new Error("no key wrapper");
+  const sealed = await sealSecret(wrapper, JSON.stringify(next), aadFor(connection.orgId, connection.id));
+  const [row] = await deps.db
+    .update(connectorConnections)
+    .set({ secretCiphertext: sealed.ciphertext, wrappedDataKey: sealed.wrappedDataKey, kekId: sealed.kekId })
+    .where(eq(connectorConnections.id, connection.id))
+    .returning();
+  caches.connections.delete(`${connection.orgId}:active`);
+  return row ?? connection;
 }
 
 /**
@@ -523,6 +576,15 @@ export async function revokeAtProvider(deps: ConnectorDeps, orgId: string, conne
     .select()
     .from(connectorConnections)
     .where(and(eq(connectorConnections.id, connectionId), eq(connectorConnections.orgId, orgId)));
+  const service = c && CONNECTOR_CATALOG[c.connector]?.native ? NATIVE_SERVICES[c.connector] : undefined;
+  if (c && !c.revokedAt && service?.revoke) {
+    const secret = await openConnectionSecret(deps.keyWrappers, c).catch(() => null);
+    if (!secret) return false;
+    return service
+      .revoke(secret, nativeHttp(deps), deps.oauthApps?.[c.connector])
+      .then(() => true)
+      .catch(() => false);
+  }
   if (!c || c.revokedAt || c.connector !== "github" || c.authType !== "oauth") return false;
   const app = deps.oauthApps?.github;
   const secret = await openConnectionSecret(deps.keyWrappers, c).catch(() => null);
@@ -1010,10 +1072,16 @@ const refreshing = new Map<string, Promise<ConnectionSecret | null>>();
  * that expires within a minute. Returns the HTTP headers to send.
  */
 export async function connectionHeaders(deps: ConnectorDeps, c: ConnectorConnection): Promise<Record<string, string>> {
+  const secret = await connectionSecret(deps, c);
+  return secret ? secretHeaders(secret, c.serverUrl) : {};
+}
+
+/** A connection's secret, its OAuth token refreshed first when it expires within a minute. Backend only. */
+export async function connectionSecret(deps: ConnectorDeps, c: ConnectorConnection): Promise<ConnectionSecret | null> {
   const secret = await openConnectionSecret(deps.keyWrappers, c);
-  if (!secret) return {};
+  if (!secret) return null;
   const at = deps.now?.() ?? new Date();
-  if (!expiring(c, secret, at)) return secretHeaders(secret, c.serverUrl);
+  if (!expiring(c, secret, at)) return secret;
   let pending = refreshing.get(c.id);
   if (!pending) {
     pending = refreshOnce(deps, c.id, at).finally(() => refreshing.delete(c.id));
@@ -1021,7 +1089,7 @@ export async function connectionHeaders(deps: ConnectorDeps, c: ConnectorConnect
   }
   const fresh = await pending;
   caches.connections.delete(`${c.orgId}:active`);
-  return fresh ? secretHeaders(fresh, c.serverUrl) : {};
+  return fresh;
 }
 
 const expiring = (c: ConnectorConnection, secret: ConnectionSecret, at: Date) =>

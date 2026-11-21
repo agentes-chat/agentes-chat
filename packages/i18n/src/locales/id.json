@@ -7797,6 +7797,14 @@
     "custom_write": {
       "label": "Alat tulis",
       "description": "Pakai alat tulis. Yang ditandai sensitif selalu minta persetujuan."
+    },
+    "telegram_messages_read": {
+      "label": "Baca pesan",
+      "description": "Daftar obrolan bot dan baca apa yang orang tulis kepadanya atau di tempat ia berada."
+    },
+    "telegram_messages_write": {
+      "label": "Kirim pesan",
+      "description": "Kirim, ubah, dan sematkan pesan dan file sebagai bot. Menghapus pesan, memblokir orang, dan tautan undangan meminta persetujuan."
     }
   },
   "issues": {
@@ -8655,6 +8663,9 @@
       },
       "deploy": {
         "succeeded": "Deploy selesai"
+      },
+      "telegram": {
+        "message": "Pesan ke bot Telegram"
       }
     },
     "when": {
@@ -12912,6 +12923,11 @@
         "1": "Melihat tabel",
         "2": "Menjalankan query ke data untuk menjawab",
         "3": "Tidak pernah mengubah apa pun"
+      },
+      "telegram": {
+        "1": "Baca apa yang orang tulis ke bot",
+        "2": "Kirim pesan dan file sebagai bot",
+        "ask": "Menghapus, memblokir, dan tautan undangan selalu meminta persetujuan Anda"
       }
     },
     "connectedList": "Terhubung",
@@ -13054,7 +13070,8 @@
       "youtube": "Video, komentar, playlist, dan analitik kanal YouTube.",
       "pinterest": "Pin, papan, dan analitik Pinterest.",
       "reddit": "Postingan, komentar, dan komunitas Reddit.",
-      "whatsapp": "Pesan dan template WhatsApp Business."
+      "whatsapp": "Pesan dan template WhatsApp Business.",
+      "telegram": "Bot Telegram milik Anda: obrolan, grup, dan kanalnya."
     }
   },
   "toolNames": {
@@ -13885,7 +13902,15 @@
       "get_my_usage": "Lihat pemakaian saya",
       "ignore_usage_limit": "Abaikan batas penggunaan",
       "send_feedback": "Kirim masukan",
-      "offer_feedback": "Tawarkan laporan masalah"
+      "offer_feedback": "Tawarkan laporan masalah",
+      "list_chats": "Daftar obrolan",
+      "read_messages": "Baca pesan",
+      "get_chat": "Lihat obrolan",
+      "send_file": "Kirim file",
+      "edit_message": "Ubah pesan",
+      "pin_message": "Sematkan pesan",
+      "ban_member": "Blokir anggota",
+      "create_invite_link": "Buat tautan undangan"
     }
   },
   "toolReview": {
@@ -14066,6 +14091,10 @@
       "asks_other": "{{count}} tindakan meminta persetujuan di chat.",
       "adjust": "Sesuaikan",
       "ok": "Selesai"
+    },
+    "telegram": {
+      "token": "Token bot",
+      "steps": "Di Telegram, buka @BotFather, kirim /newbot, pilih nama dan username yang berakhiran “bot”, lalu tempel token yang diberikannya di sini. Untuk membaca grup, tambahkan bot ke grup itu. Untuk memposting di kanal, jadikan admin di sana."
     }
   },
   "database": {

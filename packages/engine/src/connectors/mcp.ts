@@ -623,8 +623,8 @@ export function createConnectorToolSource(
     if (isCustom(connection)) return customToolsOf(connection, run);
     const out: ToolDefinition[] = [];
     const def = CONNECTOR_CATALOG[connection.connector];
-    // A sign-in that stopped working has no tools until Reconectar.
-    if (!def || connection.status === "needs_reconnect") return out;
+    // A sign-in that stopped working has no tools until Reconectar. A connector of our own has no MCP server.
+    if (!def || def.native || connection.status === "needs_reconnect") return out;
     const prefix = toolPrefixOfConnection(connection);
     const named = auditLabel(connection);
     let listed: McpTool[];

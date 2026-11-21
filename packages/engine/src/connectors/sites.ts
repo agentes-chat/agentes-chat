@@ -78,6 +78,7 @@ export const CONNECTOR_SITES: Record<string, readonly string[]> = {
   pinterest: ["pinterest.com"],
   reddit: ["reddit.com"],
   whatsapp: ["web.whatsapp.com"],
+  telegram: ["web.telegram.org"],
 };
 
 function matches(site: string, host: string, path: string) {

@@ -1865,6 +1865,17 @@ export async function storedFileOfArtifact(
   };
 }
 
+/** An uploaded file's bytes as the actor reads it, for a connector that posts it elsewhere (ADR 0170). */
+export async function fileBytesOf(deps: ArtifactDeps, actor: ArtifactActor, orgId: string, artifactId: string) {
+  if (!UUID.test(artifactId)) throw new ValidationError(`${artifactId} isn't a Drive file's id`);
+  const a = await readable(deps, actor, orgId, artifactId);
+  if (a.kind !== "file") throw new ValidationError(`this artifact is a ${a.kind}, not an uploaded file`);
+  const v = await versionRow(deps.db, a);
+  const { body } = await readVersion(deps, a, v);
+  const name = v.fileName ?? "file";
+  return { name, contentType: fileContentType(name, v.contentType), bytes: body };
+}
+
 /**
  * A picture, a video or a PDF the actor reads (ADR 0208), with what it is: not in the trash, its current version's
  * type one the apps show (`mediaOfType`). Null for anything else, a refusal included (it reads as not found).

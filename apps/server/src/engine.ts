@@ -68,6 +68,7 @@ import {
   createMissionRunToolSource,
   createMissionToolSource,
   createModelGateway,
+  createNativeConnectorToolSource,
   createPassToolSource,
   createPermissionToolSource,
   createReactToolSource,
@@ -530,6 +531,8 @@ export function buildEngine(o: EngineOptions) {
         githubApp: githubAppAccess,
         callerIdentity: mcpCallerIdentity(config),
       }),
+      // Connectors of our own (ADR 0170): no MCP server, every tool served here.
+      createNativeConnectorToolSource({ ...connectorDeps, artifacts }),
       // People's mailboxes (ADR 0038): only when the server has a mail path (Composio, IMAP).
       createMailToolSource({
         keyWrappers,

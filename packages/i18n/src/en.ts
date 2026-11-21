@@ -8571,6 +8571,15 @@ export const en = {
       label: "Write tools",
       description: "Use the write tools. Those marked sensitive always ask for approval.",
     },
+    telegram_messages_read: {
+      label: "Read messages",
+      description: "List the bot's chats and read what people wrote to it or where it is.",
+    },
+    telegram_messages_write: {
+      label: "Send messages",
+      description:
+        "Send, edit and pin messages and files as the bot. Deleting messages, banning people and invite links ask for approval.",
+    },
   },
   issues: {
     /** A task another agent handed over: on its card and after its title in the list. */
@@ -9426,6 +9435,7 @@ export const en = {
       "github.pr_opened": "PR opened on GitHub",
       "issue.created": "Task created in agentes",
       "deploy.succeeded": "Deploy finished",
+      "telegram.message": "Message to the Telegram bot",
     },
     when: { event: "When: {{event}}" },
     form: {
@@ -13686,6 +13696,11 @@ export const en = {
         ask: "Sending messages always asks for your approval",
       },
       database: { "1": "See the tables", "2": "Query the data to answer", "3": "Never changes anything" },
+      telegram: {
+        "1": "Read what people write to the bot",
+        "2": "Send messages and files as the bot",
+        ask: "Deleting, banning and invite links always ask for your approval",
+      },
     },
     connectedList: "Connected",
     connected: "Connected",
@@ -13840,6 +13855,7 @@ export const en = {
       pinterest: "Pinterest pins, boards and analytics.",
       reddit: "Reddit posts, comments and communities.",
       whatsapp: "WhatsApp Business messages and templates.",
+      telegram: "A Telegram bot of yours: its chats, groups and channels.",
     },
   },
   toolNames: {
@@ -14701,6 +14717,14 @@ export const en = {
       ignore_usage_limit: "Ignore the usage limit",
       send_feedback: "Send feedback",
       offer_feedback: "Offer to report a problem",
+      list_chats: "List chats",
+      read_messages: "Read messages",
+      get_chat: "See chat",
+      send_file: "Send file",
+      edit_message: "Edit message",
+      pin_message: "Pin message",
+      ban_member: "Ban member",
+      create_invite_link: "Create invite link",
     },
   },
   toolReview: {
@@ -14898,6 +14922,11 @@ export const en = {
       asks_other: "{{count}} actions ask for approval in the chat.",
       adjust: "Adjust",
       ok: "Done",
+    },
+    telegram: {
+      token: "Bot token",
+      steps:
+        "In Telegram, open @BotFather, send /newbot, pick a name and a username that ends in “bot”, then paste the token it gives you here. To read a group, add the bot to it. To post in a channel, make it an admin there.",
     },
   },
   database: {

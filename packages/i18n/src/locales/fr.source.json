@@ -54962,5 +54962,62 @@
   },
   "live.sheet.fn.YEARFRAC": {
     "value": "The share of a year between two dates"
+  },
+  "scopes.telegram_messages_read.label": {
+    "value": "Read messages"
+  },
+  "scopes.telegram_messages_read.description": {
+    "value": "List the bot's chats and read what people wrote to it or where it is."
+  },
+  "scopes.telegram_messages_write.label": {
+    "value": "Send messages"
+  },
+  "scopes.telegram_messages_write.description": {
+    "value": "Send, edit and pin messages and files as the bot. Deleting messages, banning people and invite links ask for approval."
+  },
+  "connectors.descriptions.telegram": {
+    "value": "A Telegram bot of yours: its chats, groups and channels."
+  },
+  "connectors.can.telegram.1": {
+    "value": "Read what people write to the bot"
+  },
+  "connectors.can.telegram.2": {
+    "value": "Send messages and files as the bot"
+  },
+  "connectors.can.telegram.ask": {
+    "value": "Deleting, banning and invite links always ask for your approval"
+  },
+  "toolNames.label.list_chats": {
+    "value": "List chats"
+  },
+  "toolNames.label.read_messages": {
+    "value": "Read messages"
+  },
+  "toolNames.label.get_chat": {
+    "value": "See chat"
+  },
+  "toolNames.label.send_file": {
+    "value": "Send file"
+  },
+  "toolNames.label.edit_message": {
+    "value": "Edit message"
+  },
+  "toolNames.label.pin_message": {
+    "value": "Pin message"
+  },
+  "toolNames.label.ban_member": {
+    "value": "Ban member"
+  },
+  "toolNames.label.create_invite_link": {
+    "value": "Create invite link"
+  },
+  "routines.event.telegram.message": {
+    "value": "Message to the Telegram bot"
+  },
+  "connectFlow.telegram.token": {
+    "value": "Bot token"
+  },
+  "connectFlow.telegram.steps": {
+    "value": "In Telegram, open @BotFather, send /newbot, pick a name and a username that ends in “bot”, then paste the token it gives you here. To read a group, add the bot to it. To post in a channel, make it an admin there."
   }
 }

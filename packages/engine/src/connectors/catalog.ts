@@ -33,6 +33,8 @@ export interface ConnectorTool {
    * `Co-authored-by` and the person's credit when given.
    */
   sign?: { field: "body" | "message" | "commit_message"; always?: true };
+  /** A sensitive tool of ours that asks every time: no "Aprovar sempre" (it spends money or lets people in). */
+  askAlways?: true;
 }
 
 /** Catalog groups (the app translates them, `connectors.category.*`): development, product, docs, data (analytics), payments, sales, support, marketing, automation, social. */
@@ -53,10 +55,26 @@ export interface ConnectorDefinition {
   label: string;
   description: string;
   category: ConnectorCategory;
-  /** Its MCP endpoint (streamable HTTP). */
+  /** Its MCP endpoint (streamable HTTP); a `native` connector's vendor API base, stored and never opened. */
   serverUrl: string;
   auth: ("oauth" | "api_key")[];
-  oauth?: { authorizeUrl: string; tokenUrl: string; scopes: string[]; scopeSeparator?: string };
+  oauth?: {
+    authorizeUrl: string;
+    tokenUrl: string;
+    scopes: string[];
+    scopeSeparator?: string;
+    /** The client's id and secret go in HTTP Basic, never in the form (X refuses them there). */
+    clientAuth?: "basic";
+    /** What the vendor calls the client's id in the authorize URL, the token call and the refresh (`client_key`). */
+    clientIdParam?: string;
+    /** `false`: the vendor's web flow takes no PKCE. */
+    pkce?: false;
+  };
+  /**
+   * Served by agentes.chat itself (ADR 0170): no MCP server, every tool `ours`, run by `connectors/native/<id>.ts`
+   * through `createNativeConnectorToolSource`.
+   */
+  native?: true;
   /** Sent with every request to its MCP server, besides the sign-in. */
   headers?: Record<string, string>;
   scopes: Record<string, ConnectorScope>;
@@ -252,6 +270,50 @@ export const CONNECTOR_CATALOG: Record<string, ConnectorDefinition> = {
       create_issue: { scope: "issues.write" },
       update_issue: { scope: "issues.write" },
       create_comment: { scope: "issues.write" },
+    },
+  },
+  telegram: {
+    id: "telegram",
+    category: "social",
+    label: "Telegram",
+    description: "A Telegram bot of yours: its chats, groups and channels.",
+    serverUrl: "https://api.telegram.org",
+    auth: ["api_key"],
+    native: true,
+    scopes: {
+      "messages.read": s("Read messages", "List the bot's chats and read what people wrote to it or where it is."),
+      "messages.write": s(
+        "Send messages",
+        "Send, edit and pin messages and files as the bot. Deleting messages, banning people and invite links ask for approval.",
+      ),
+    },
+    tools: {
+      list_chats: { scope: "messages.read", ours: true },
+      read_messages: { scope: "messages.read", ours: true },
+      get_chat: { scope: "messages.read", ours: true },
+      send_message: { scope: "messages.write", ours: true },
+      send_file: { scope: "messages.write", ours: true },
+      edit_message: { scope: "messages.write", ours: true },
+      pin_message: { scope: "messages.write", ours: true },
+      delete_message: {
+        scope: "messages.write",
+        ours: true,
+        sensitive: true,
+        title: "Delete message {message_id} in Telegram chat {chat_id}",
+      },
+      ban_member: {
+        scope: "messages.write",
+        ours: true,
+        sensitive: true,
+        title: "Ban {user_id} from Telegram chat {chat_id}",
+      },
+      create_invite_link: {
+        scope: "messages.write",
+        ours: true,
+        sensitive: true,
+        askAlways: true,
+        title: "Create an invite link to Telegram chat {chat_id}",
+      },
     },
   },
 };

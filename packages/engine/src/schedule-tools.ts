@@ -181,6 +181,8 @@ const EVENT_WORDS: Record<RoutineEvent, string> = {
   "deploy.succeeded": "a deploy succeeds",
   "email.received": "new mail arrives",
   "webhook.received": "its webhook address is called",
+  "telegram.message":
+    "someone writes to the workspace's Telegram bot (a private chat, or a mention or reply in a group)",
 };
 
 /** The zone a routine's times are read in (schedules and one-offs have their own). */

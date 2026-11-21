@@ -45,6 +45,7 @@ const APPS: Record<string, string> = {
   pinterest: "Pinterest",
   reddit: "Reddit",
   whatsapp: "WhatsApp",
+  telegram: "Telegram",
 };
 
 /** Not an app, only where a tool came from: `mcp__server__tool`, `mcp.server.ai`. */

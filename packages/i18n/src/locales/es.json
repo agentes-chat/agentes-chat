@@ -8323,6 +8323,14 @@
     "custom_write": {
       "label": "Herramientas de escritura",
       "description": "Usar las herramientas de escritura. Las marcadas como sensibles siempre piden aprobación."
+    },
+    "telegram_messages_read": {
+      "label": "Leer mensajes",
+      "description": "Listar los chats del bot y leer lo que la gente le escribió o donde está."
+    },
+    "telegram_messages_write": {
+      "label": "Enviar mensajes",
+      "description": "Enviar, editar y fijar mensajes y archivos como el bot. Borrar mensajes, expulsar personas y los enlaces de invitación piden aprobación."
     }
   },
   "issues": {
@@ -9217,6 +9225,9 @@
       },
       "deploy": {
         "succeeded": "Deploy terminado"
+      },
+      "telegram": {
+        "message": "Mensaje al bot de Telegram"
       }
     },
     "when": {
@@ -13820,6 +13831,11 @@
         "1": "Ver las tablas",
         "2": "Consultar los datos para responder",
         "3": "Nunca cambia nada"
+      },
+      "telegram": {
+        "1": "Leer lo que la gente le escribe al bot",
+        "2": "Enviar mensajes y archivos como el bot",
+        "ask": "Borrar, expulsar y los enlaces de invitación siempre piden tu aprobación"
       }
     },
     "connectedList": "Conectados",
@@ -13972,7 +13988,8 @@
       "youtube": "Videos, comentarios, listas de reproducción y estadísticas del canal de YouTube.",
       "pinterest": "Pines, tableros y estadísticas de Pinterest.",
       "reddit": "Publicaciones, comentarios y comunidades de Reddit.",
-      "whatsapp": "Mensajes y plantillas de WhatsApp Business."
+      "whatsapp": "Mensajes y plantillas de WhatsApp Business.",
+      "telegram": "Un bot tuyo de Telegram: sus chats, grupos y canales."
     }
   },
   "toolNames": {
@@ -14803,7 +14820,15 @@
       "get_my_usage": "Ver mi uso",
       "ignore_usage_limit": "Ignorar el límite de uso",
       "send_feedback": "Enviar feedback",
-      "offer_feedback": "Ofrecer reportar un problema"
+      "offer_feedback": "Ofrecer reportar un problema",
+      "list_chats": "Listar chats",
+      "read_messages": "Leer mensajes",
+      "get_chat": "Ver chat",
+      "send_file": "Enviar archivo",
+      "edit_message": "Editar mensaje",
+      "pin_message": "Fijar mensaje",
+      "ban_member": "Expulsar miembro",
+      "create_invite_link": "Crear enlace de invitación"
     }
   },
   "toolReview": {
@@ -15024,6 +15049,10 @@
       "asks_other": "{{count}} acciones piden aprobación en el chat.",
       "adjust": "Ajustar",
       "ok": "Listo"
+    },
+    "telegram": {
+      "token": "Token del bot",
+      "steps": "En Telegram, abre @BotFather, envía /newbot, elige un nombre y un usuario que termine en «bot» y pega aquí el token que te dé. Para leer un grupo, añade el bot. Para publicar en un canal, hazlo admin allí."
     }
   },
   "database": {

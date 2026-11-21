@@ -8077,6 +8077,14 @@
     "custom_write": {
       "label": "Schreib-Tools",
       "description": "Die Schreib-Tools nutzen. Als sensibel markierte fragen immer nach Freigabe."
+    },
+    "telegram_messages_read": {
+      "label": "Nachrichten lesen",
+      "description": "Die Chats des Bots auflisten und lesen, was Leute ihm oder dort geschrieben haben, wo er ist."
+    },
+    "telegram_messages_write": {
+      "label": "Nachrichten senden",
+      "description": "Nachrichten und Dateien als Bot senden, bearbeiten und anheften. Nachrichten löschen, Leute sperren und Einladungslinks fragen nach Freigabe."
     }
   },
   "issues": {
@@ -8944,6 +8952,9 @@
       },
       "deploy": {
         "succeeded": "Deploy abgeschlossen"
+      },
+      "telegram": {
+        "message": "Nachricht an den Telegram-Bot"
       }
     },
     "when": {
@@ -13392,6 +13403,11 @@
         "1": "Tabellen ansehen",
         "2": "Daten abfragen, um zu antworten",
         "3": "Ändert nie etwas"
+      },
+      "telegram": {
+        "1": "Lesen, was Leute dem Bot schreiben",
+        "2": "Nachrichten und Dateien als Bot senden",
+        "ask": "Löschen, Sperren und Einladungslinks fragen immer nach deiner Freigabe"
       }
     },
     "connectedList": "Verbunden",
@@ -13539,7 +13555,8 @@
       "youtube": "Videos, Kommentare, Playlists und Statistiken des YouTube-Kanals.",
       "pinterest": "Pins, Pinnwände und Statistiken auf Pinterest.",
       "reddit": "Beiträge, Kommentare und Communitys auf Reddit.",
-      "whatsapp": "Nachrichten und Vorlagen von WhatsApp Business."
+      "whatsapp": "Nachrichten und Vorlagen von WhatsApp Business.",
+      "telegram": "Ein eigener Telegram-Bot: seine Chats, Gruppen und Kanäle."
     }
   },
   "toolNames": {
@@ -14370,7 +14387,15 @@
       "get_my_usage": "Meine Nutzung anzeigen",
       "ignore_usage_limit": "Nutzungslimit ignorieren",
       "send_feedback": "Feedback senden",
-      "offer_feedback": "Problemmeldung anbieten"
+      "offer_feedback": "Problemmeldung anbieten",
+      "list_chats": "Chats auflisten",
+      "read_messages": "Nachrichten lesen",
+      "get_chat": "Chat ansehen",
+      "send_file": "Datei senden",
+      "edit_message": "Nachricht bearbeiten",
+      "pin_message": "Nachricht anheften",
+      "ban_member": "Mitglied sperren",
+      "create_invite_link": "Einladungslink erstellen"
     }
   },
   "toolReview": {
@@ -14572,6 +14597,10 @@
       "asks_other": "{{count}} Aktionen fragen im Chat nach Freigabe.",
       "adjust": "Anpassen",
       "ok": "Fertig"
+    },
+    "telegram": {
+      "token": "Bot-Token",
+      "steps": "Öffne in Telegram @BotFather, sende /newbot, wähle einen Namen und einen Benutzernamen, der auf „bot“ endet, und füge hier das Token ein, das er dir gibt. Um eine Gruppe zu lesen, füge den Bot hinzu. Um in einem Kanal zu posten, mach ihn dort zum Admin."
     }
   },
   "database": {
