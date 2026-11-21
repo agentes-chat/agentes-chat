@@ -3,6 +3,7 @@ import { chmodSync, mkdtempSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {
+  adoptServicePath,
   adoptWindowsPath,
   loginShellPath,
   mergePath,
@@ -31,6 +32,17 @@ test("the usual folders include the ones Claude Code and Homebrew install into",
   const dirs = usualDirs("/Users/ana");
   expect(dirs).toContain("/Users/ana/.local/bin");
   expect(dirs).toContain("/opt/homebrew/bin");
+});
+
+test("a service's PATH frozen from another user's shell still finds this user's ~/.local/bin and the system's", () => {
+  if (process.platform === "win32") return;
+  const env: NodeJS.ProcessEnv = { PATH: "/root/.local/bin:/root/.nvm/bin:/usr/bin" };
+  adoptServicePath(env, "/home/agentes");
+  const dirs = env.PATH?.split(":") ?? [];
+  expect(dirs.slice(0, 3)).toEqual(["/root/.local/bin", "/root/.nvm/bin", "/usr/bin"]);
+  expect(dirs).toContain("/home/agentes/.local/bin");
+  expect(dirs).toContain("/bin");
+  expect(dirs.filter((d) => d === "/usr/bin")).toHaveLength(1);
 });
 
 test("Windows: the registry's Path, %NAME% expanded, as reg query prints it", () => {
