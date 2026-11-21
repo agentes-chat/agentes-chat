@@ -3246,6 +3246,20 @@
       "opencode": "OpenCode tidak bisa berpikir di komputer ini. Hubungkan kunci OpenCode di halaman {{name}}.",
       "opencode_female": "OpenCode tidak bisa berpikir di komputer ini. Hubungkan kunci OpenCode di halaman {{name}}."
     },
+    "notSignedInOn": {
+      "claude_code": "Claude Code belum masuk di {{computer}}. Hubungkan akun Claude di halaman {{name}}.",
+      "claude_code_female": "Claude Code belum masuk di {{computer}}. Hubungkan akun Claude di halaman {{name}}.",
+      "codex": "Codex belum masuk di {{computer}}. Hubungkan akun ChatGPT di halaman {{name}}.",
+      "codex_female": "Codex belum masuk di {{computer}}. Hubungkan akun ChatGPT di halaman {{name}}.",
+      "cursor": "Cursor belum masuk di {{computer}}. Hubungkan akun Cursor di halaman {{name}}.",
+      "cursor_female": "Cursor belum masuk di {{computer}}. Hubungkan akun Cursor di halaman {{name}}.",
+      "grok": "Grok belum masuk di {{computer}}. Hubungkan akun Grok di halaman {{name}}.",
+      "grok_female": "Grok belum masuk di {{computer}}. Hubungkan akun Grok di halaman {{name}}.",
+      "antigravity": "Gemini belum masuk di {{computer}}. Hubungkan akun Gemini di halaman {{name}}.",
+      "antigravity_female": "Gemini belum masuk di {{computer}}. Hubungkan akun Gemini di halaman {{name}}.",
+      "opencode": "OpenCode tidak bisa berpikir di {{computer}}. Hubungkan kunci OpenCode di halaman {{name}}.",
+      "opencode_female": "OpenCode tidak bisa berpikir di {{computer}}. Hubungkan kunci OpenCode di halaman {{name}}."
+    },
     "card": {
       "connected": "{{name}} sekarang punya AI.",
       "answerNow": "Jawab sekarang",
@@ -15996,6 +16010,8 @@
       "none": "Tidak ada yang pindah komputer.",
       "resumed_other": "{{count}} tugas berjalan lagi",
       "stillWaiting_other": "{{count}} masih menunggu {{name}}",
+      "planDropped": "Paket {{plan}} milik {{name}} masuk di {{from}}. Masuk juga di {{to}}, atau tetap pakai {{from}}.",
+      "signIn": "Masuk di {{name}}",
       "skipped": "{{name}} tetap: {{reason}}",
       "skip": {
         "other": "tidak bisa pindah sekarang",

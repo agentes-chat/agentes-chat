@@ -157,7 +157,7 @@ export function NoAiCard({ message }: { message: Message }) {
       ? t("noAi.card.connected", { name })
       : answer === "still_missing"
         ? t("noAi.card.stillMissing", { name })
-        : t(noAiLineKey(card), agentGrammar(name));
+        : t(noAiLineKey(card), { ...agentGrammar(name), computer: card.computer });
   // Its agent has an AI now (or is answering): a decided request, one pill with "Answer now" in it.
   if (ready || answering || answer === "pending")
     return (

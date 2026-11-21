@@ -3376,6 +3376,14 @@
       "antigravity": "Gemini bu bilgisayarda giriş yapmamış. {{name}} sayfasından bir Gemini hesabı bağlayın.",
       "opencode": "OpenCode bu bilgisayarda düşünemiyor. {{name}} sayfasından bir OpenCode anahtarı bağlayın."
     },
+    "notSignedInOn": {
+      "claude_code": "Claude Code {{computer}} bilgisayarında giriş yapmamış. {{name}} sayfasından bir Claude hesabı bağlayın.",
+      "codex": "Codex {{computer}} bilgisayarında giriş yapmamış. {{name}} sayfasından bir ChatGPT hesabı bağlayın.",
+      "cursor": "Cursor {{computer}} bilgisayarında giriş yapmamış. {{name}} sayfasından bir Cursor hesabı bağlayın.",
+      "grok": "Grok {{computer}} bilgisayarında giriş yapmamış. {{name}} sayfasından bir Grok hesabı bağlayın.",
+      "antigravity": "Gemini {{computer}} bilgisayarında giriş yapmamış. {{name}} sayfasından bir Gemini hesabı bağlayın.",
+      "opencode": "OpenCode {{computer}} bilgisayarında düşünemiyor. {{name}} sayfasından bir OpenCode anahtarı bağlayın."
+    },
     "card": {
       "connected": "{{name}} artık bir yapay zekaya sahip.",
       "answerNow": "Şimdi yanıtla",
@@ -16468,6 +16476,8 @@
       "resumed_other": "{{count}} görev yeniden başladı",
       "stillWaiting_one": "{{count}} tanesi hâlâ {{name}} bilgisayarını bekliyor",
       "stillWaiting_other": "{{count}} tanesi hâlâ {{name}} bilgisayarını bekliyor",
+      "planDropped": "{{name}} adlı ajanın {{plan}} planı {{from}} üzerinde oturum açmış. {{to}} üzerinde de oturum açın ya da {{from}} ile devam edin.",
+      "signIn": "{{name}} üzerinde oturum aç",
       "skipped": "{{name}} kaldı: {{reason}}",
       "skip": {
         "other": "şu anda geçiş yapılamadı",

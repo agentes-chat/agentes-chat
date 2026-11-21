@@ -3239,6 +3239,14 @@
       "antigravity": "这台电脑上的 Gemini 未登录。请在 {{name}} 的页面上连接 Gemini 账号。",
       "opencode": "OpenCode 无法在这台电脑上思考。请在 {{name}} 的页面连接一个 OpenCode 密钥。"
     },
+    "notSignedInOn": {
+      "claude_code": "{{computer}}上的 Claude Code 未登录。请在 {{name}} 的页面上连接 Claude 账号。",
+      "codex": "{{computer}}上的 Codex 未登录。请在 {{name}} 的页面上连接 ChatGPT 账号。",
+      "cursor": "{{computer}}上的 Cursor 未登录。请在 {{name}} 的页面上连接 Cursor 账号。",
+      "grok": "{{computer}}上的 Grok 未登录。请在 {{name}} 的页面上连接 Grok 账号。",
+      "antigravity": "{{computer}}上的 Gemini 未登录。请在 {{name}} 的页面上连接 Gemini 账号。",
+      "opencode": "OpenCode 无法在{{computer}}上思考。请在 {{name}} 的页面连接一个 OpenCode 密钥。"
+    },
     "card": {
       "connected": "{{name}} 现在有 AI 了。",
       "answerNow": "立即回复",
@@ -16012,6 +16020,8 @@
       "none": "没有人更换电脑。",
       "resumed_other": "{{count}} 个任务已重新开始",
       "stillWaiting_other": "{{count}} 个仍在等待 {{name}}",
+      "planDropped": "{{name}} 的 {{plan}} 套餐登录在 {{from}} 上。请也在 {{to}} 上登录，或继续使用 {{from}}。",
+      "signIn": "在 {{name}} 上登录",
       "skipped": "{{name}} 未更换：{{reason}}",
       "skip": {
         "other": "目前无法更换",

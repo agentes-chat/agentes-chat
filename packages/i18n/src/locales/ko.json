@@ -3238,6 +3238,14 @@
       "antigravity": "이 컴퓨터에서 Gemini에 로그인되어 있지 않아요. {{name}}의 페이지에서 Gemini 계정을 연결하세요.",
       "opencode": "이 컴퓨터에서 OpenCode가 생각할 수 없어요. {{name}}의 페이지에서 OpenCode 키를 연결하세요."
     },
+    "notSignedInOn": {
+      "claude_code": "{{computer}}에서 Claude Code에 로그인되어 있지 않아요. {{name}}의 페이지에서 Claude 계정을 연결하세요.",
+      "codex": "{{computer}}에서 Codex에 로그인되어 있지 않아요. {{name}}의 페이지에서 ChatGPT 계정을 연결하세요.",
+      "cursor": "{{computer}}에서 Cursor에 로그인되어 있지 않아요. {{name}}의 페이지에서 Cursor 계정을 연결하세요.",
+      "grok": "{{computer}}에서 Grok에 로그인되어 있지 않아요. {{name}}의 페이지에서 Grok 계정을 연결하세요.",
+      "antigravity": "{{computer}}에서 Gemini에 로그인되어 있지 않아요. {{name}}의 페이지에서 Gemini 계정을 연결하세요.",
+      "opencode": "{{computer}}에서 OpenCode가 생각할 수 없어요. {{name}}의 페이지에서 OpenCode 키를 연결하세요."
+    },
     "card": {
       "connected": "이제 {{name}}에게 AI가 있어요.",
       "answerNow": "지금 답하기",
@@ -15935,6 +15943,8 @@
       "none": "컴퓨터를 바꾼 에이전트가 없어요.",
       "resumed_other": "작업 {{count}}개를 다시 시작했어요",
       "stillWaiting_other": "{{count}}개가 아직 {{name}}을(를) 기다려요",
+      "planDropped": "{{name}}의 {{plan}} 플랜은 {{from}}에 로그인되어 있어요. {{to}}에서도 로그인하거나 {{from}}을 계속 사용하세요.",
+      "signIn": "{{name}}에서 로그인",
       "skipped": "{{name}}은(는) 그대로예요: {{reason}}",
       "skip": {
         "other": "지금은 바꿀 수 없어요",

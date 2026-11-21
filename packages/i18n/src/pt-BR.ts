@@ -3538,6 +3538,26 @@ export const ptBR = {
       opencode_female:
         "O OpenCode não consegue pensar neste computador. Conecte uma chave do OpenCode na página da\u00a0{{name}}.",
     },
+    /** The same, naming the computer it isn't signed in on (`NoAiCard.computer`). */
+    notSignedInOn: {
+      claude_code:
+        "O Claude Code está sem login no {{computer}}. Conecte uma conta do Claude na página do\u00a0{{name}}.",
+      claude_code_female:
+        "O Claude Code está sem login no {{computer}}. Conecte uma conta do Claude na página da\u00a0{{name}}.",
+      codex: "O Codex está sem login no {{computer}}. Conecte uma conta do ChatGPT na página do\u00a0{{name}}.",
+      codex_female: "O Codex está sem login no {{computer}}. Conecte uma conta do ChatGPT na página da\u00a0{{name}}.",
+      cursor: "O Cursor está sem login no {{computer}}. Conecte uma conta do Cursor na página do\u00a0{{name}}.",
+      cursor_female: "O Cursor está sem login no {{computer}}. Conecte uma conta do Cursor na página da\u00a0{{name}}.",
+      grok: "O Grok está sem login no {{computer}}. Conecte uma conta do Grok na página do\u00a0{{name}}.",
+      grok_female: "O Grok está sem login no {{computer}}. Conecte uma conta do Grok na página da\u00a0{{name}}.",
+      antigravity: "O Gemini está sem login no {{computer}}. Conecte uma conta do Gemini na página do\u00a0{{name}}.",
+      antigravity_female:
+        "O Gemini está sem login no {{computer}}. Conecte uma conta do Gemini na página da\u00a0{{name}}.",
+      opencode:
+        "O OpenCode não consegue pensar no {{computer}}. Conecte uma chave do OpenCode na página do\u00a0{{name}}.",
+      opencode_female:
+        "O OpenCode não consegue pensar no {{computer}}. Conecte uma chave do OpenCode na página da\u00a0{{name}}.",
+    },
     card: {
       connected: "{{name}} já tem uma IA.",
       answerNow: "Responder agora",
@@ -16814,6 +16834,9 @@ export const ptBR = {
       resumed_other: "{{count}} tarefas recomeçaram",
       stillWaiting_one: "{{count}} ainda espera o {{name}}",
       stillWaiting_other: "{{count}} ainda esperam o {{name}}",
+      planDropped:
+        "O plano do {{plan}} de {{name}} está conectado no {{from}}. Entre também no {{to}}, ou mantenha o {{from}}.",
+      signIn: "Entrar no {{name}}",
       skipped: "{{name}} ficou: {{reason}}",
       skip: {
         other: "não deu para trocar agora",

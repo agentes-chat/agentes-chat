@@ -3520,6 +3520,14 @@
       "antigravity": "Gemini no tiene la sesión iniciada en esta computadora. Conecta una cuenta de Gemini en la página de {{name}}.",
       "opencode": "OpenCode no puede pensar en esta computadora. Conecta una clave de OpenCode en la página de {{name}}."
     },
+    "notSignedInOn": {
+      "claude_code": "Claude Code no tiene la sesión iniciada en {{computer}}. Conecta una cuenta de Claude en la página de {{name}}.",
+      "codex": "Codex no tiene la sesión iniciada en {{computer}}. Conecta una cuenta de ChatGPT en la página de {{name}}.",
+      "cursor": "Cursor no tiene la sesión iniciada en {{computer}}. Conecta una cuenta de Cursor en la página de {{name}}.",
+      "grok": "Grok no tiene la sesión iniciada en {{computer}}. Conecta una cuenta de Grok en la página de {{name}}.",
+      "antigravity": "Gemini no tiene la sesión iniciada en {{computer}}. Conecta una cuenta de Gemini en la página de {{name}}.",
+      "opencode": "OpenCode no puede pensar en {{computer}}. Conecta una clave de OpenCode en la página de {{name}}."
+    },
     "card": {
       "connected": "{{name}} ya tiene una IA.",
       "answerNow": "Responder ahora",
@@ -17016,6 +17024,8 @@
       "stillWaiting_one": "{{count}} sigue esperando a {{name}}",
       "stillWaiting_many": "{{count}} siguen esperando a {{name}}",
       "stillWaiting_other": "{{count}} siguen esperando a {{name}}",
+      "planDropped": "El plan de {{plan}} de {{name}} tiene la sesión iniciada en {{from}}. Inicia sesión también en {{to}} o quédate con {{from}}.",
+      "signIn": "Iniciar sesión en {{name}}",
       "skipped": "{{name}} se quedó: {{reason}}",
       "skip": {
         "other": "no se pudo cambiar ahora",

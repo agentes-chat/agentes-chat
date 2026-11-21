@@ -8383,6 +8383,24 @@
   "noAi.notSignedIn.opencode": {
     "value": "OpenCode can't think on this computer. Connect an OpenCode key on {{name}}'s page."
   },
+  "noAi.notSignedInOn.claude_code": {
+    "value": "Claude Code isn't signed in on {{computer}}. Connect a Claude account on {{name}}'s page."
+  },
+  "noAi.notSignedInOn.codex": {
+    "value": "Codex isn't signed in on {{computer}}. Connect a ChatGPT account on {{name}}'s page."
+  },
+  "noAi.notSignedInOn.cursor": {
+    "value": "Cursor isn't signed in on {{computer}}. Connect a Cursor account on {{name}}'s page."
+  },
+  "noAi.notSignedInOn.grok": {
+    "value": "Grok isn't signed in on {{computer}}. Connect a Grok account on {{name}}'s page."
+  },
+  "noAi.notSignedInOn.antigravity": {
+    "value": "Gemini isn't signed in on {{computer}}. Connect a Gemini account on {{name}}'s page."
+  },
+  "noAi.notSignedInOn.opencode": {
+    "value": "OpenCode can't think on {{computer}}. Connect an OpenCode key on {{name}}'s page."
+  },
   "noAi.card.connected": {
     "value": "{{name}} has an AI now."
   },
@@ -40729,6 +40747,12 @@
       "one": "{{count}} still waits for {{name}}",
       "other": "{{count}} still wait for {{name}}"
     }
+  },
+  "outage.done.planDropped": {
+    "value": "{{name}}'s {{plan}} plan is signed in on {{from}}. Sign in on {{to}} too, or keep {{from}}."
+  },
+  "outage.done.signIn": {
+    "value": "Sign in on {{name}}"
   },
   "outage.done.skipped": {
     "value": "{{name}} stayed: {{reason}}"

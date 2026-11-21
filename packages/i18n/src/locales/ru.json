@@ -3660,6 +3660,14 @@
       "antigravity": "На этом компьютере не выполнен вход в Gemini. Подключите аккаунт Gemini на странице {{name}}.",
       "opencode": "OpenCode не может думать на этом компьютере. Подключите ключ OpenCode на странице {{name}}."
     },
+    "notSignedInOn": {
+      "claude_code": "На компьютере {{computer}} не выполнен вход в Claude Code. Подключите аккаунт Claude на странице {{name}}.",
+      "codex": "На компьютере {{computer}} не выполнен вход в Codex. Подключите аккаунт ChatGPT на странице {{name}}.",
+      "cursor": "На компьютере {{computer}} не выполнен вход в Cursor. Подключите аккаунт Cursor на странице {{name}}.",
+      "grok": "На компьютере {{computer}} не выполнен вход в Grok. Подключите аккаунт Grok на странице {{name}}.",
+      "antigravity": "На компьютере {{computer}} не выполнен вход в Gemini. Подключите аккаунт Gemini на странице {{name}}.",
+      "opencode": "OpenCode не может думать на компьютере {{computer}}. Подключите ключ OpenCode на странице {{name}}."
+    },
     "card": {
       "connected": "Теперь у {{name}} есть ИИ.",
       "answerNow": "Ответить сейчас",
@@ -17600,6 +17608,8 @@
       "stillWaiting_few": "{{count}} всё ещё ждут {{name}}",
       "stillWaiting_many": "{{count}} всё ещё ждут {{name}}",
       "stillWaiting_other": "{{count}} всё ещё ждут {{name}}",
+      "planDropped": "План {{plan}} агента {{name}} подключён на компьютере {{from}}. Войдите и на {{to}} или оставьте {{from}}.",
+      "signIn": "Войти на {{name}}",
       "skipped": "{{name}} остался: {{reason}}",
       "skip": {
         "other": "сейчас не получилось перенести",

@@ -3240,6 +3240,14 @@
       "antigravity": "このコンピューターでGeminiにログインしていません。{{name}}のページでGeminiアカウントを接続してください。",
       "opencode": "このコンピューターではOpenCodeが動きません。{{name}}のページでOpenCodeのキーを接続してください。"
     },
+    "notSignedInOn": {
+      "claude_code": "{{computer}}でClaude Codeにログインしていません。{{name}}のページでClaudeアカウントを接続してください。",
+      "codex": "{{computer}}でCodexにログインしていません。{{name}}のページでChatGPTアカウントを接続してください。",
+      "cursor": "{{computer}}でCursorにログインしていません。{{name}}のページでCursorアカウントを接続してください。",
+      "grok": "{{computer}}でGrokにログインしていません。{{name}}のページでGrokアカウントを接続してください。",
+      "antigravity": "{{computer}}でGeminiにログインしていません。{{name}}のページでGeminiアカウントを接続してください。",
+      "opencode": "{{computer}}ではOpenCodeが動きません。{{name}}のページでOpenCodeのキーを接続してください。"
+    },
     "card": {
       "connected": "{{name}}にAIが接続されました。",
       "answerNow": "今すぐ返信させる",
@@ -15943,6 +15951,8 @@
       "none": "コンピューターを切り替えたエージェントはいません。",
       "resumed_other": "{{count}}件のタスクを再開しました",
       "stillWaiting_other": "{{count}}件はまだ{{name}}を待っています",
+      "planDropped": "{{name}}の{{plan}}プランは{{from}}でログインしています。{{to}}でもログインするか、{{from}}のままにしてください。",
+      "signIn": "{{name}}でログイン",
       "skipped": "{{name}}は切り替えませんでした: {{reason}}",
       "skip": {
         "other": "今は切り替えられませんでした",

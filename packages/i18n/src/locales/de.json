@@ -3386,6 +3386,20 @@
       "opencode": "OpenCode kann auf diesem Computer nicht denken. Verbinde einen OpenCode-Schlüssel auf der Seite von {{name}}.",
       "opencode_female": "OpenCode kann auf diesem Computer nicht denken. Verbinde einen OpenCode-Schlüssel auf der Seite von {{name}}."
     },
+    "notSignedInOn": {
+      "claude_code": "Claude Code ist auf {{computer}} nicht angemeldet. Verbinde ein Claude-Konto auf der Seite von {{name}}.",
+      "claude_code_female": "Claude Code ist auf {{computer}} nicht angemeldet. Verbinde ein Claude-Konto auf der Seite von {{name}}.",
+      "codex": "Codex ist auf {{computer}} nicht angemeldet. Verbinde ein ChatGPT-Konto auf der Seite von {{name}}.",
+      "codex_female": "Codex ist auf {{computer}} nicht angemeldet. Verbinde ein ChatGPT-Konto auf der Seite von {{name}}.",
+      "cursor": "Cursor ist auf {{computer}} nicht angemeldet. Verbinde ein Cursor-Konto auf der Seite von {{name}}.",
+      "cursor_female": "Cursor ist auf {{computer}} nicht angemeldet. Verbinde ein Cursor-Konto auf der Seite von {{name}}.",
+      "grok": "Grok ist auf {{computer}} nicht angemeldet. Verbinde ein Grok-Konto auf der Seite von {{name}}.",
+      "grok_female": "Grok ist auf {{computer}} nicht angemeldet. Verbinde ein Grok-Konto auf der Seite von {{name}}.",
+      "antigravity": "Gemini ist auf {{computer}} nicht angemeldet. Verbinde ein Gemini-Konto auf der Seite von {{name}}.",
+      "antigravity_female": "Gemini ist auf {{computer}} nicht angemeldet. Verbinde ein Gemini-Konto auf der Seite von {{name}}.",
+      "opencode": "OpenCode kann auf {{computer}} nicht denken. Verbinde einen OpenCode-Schlüssel auf der Seite von {{name}}.",
+      "opencode_female": "OpenCode kann auf {{computer}} nicht denken. Verbinde einen OpenCode-Schlüssel auf der Seite von {{name}}."
+    },
     "card": {
       "connected": "{{name}} hat jetzt eine KI.",
       "answerNow": "Jetzt antworten",
@@ -16533,6 +16547,8 @@
       "resumed_other": "{{count}} Aufgaben laufen wieder",
       "stillWaiting_one": "{{count}} wartet noch auf {{name}}",
       "stillWaiting_other": "{{count}} warten noch auf {{name}}",
+      "planDropped": "Der {{plan}}-Plan von {{name}} ist auf {{from}} angemeldet. Melde dich auch auf {{to}} an oder behalte {{from}}.",
+      "signIn": "Auf {{name}} anmelden",
       "skipped": "{{name}} ist geblieben: {{reason}}",
       "skip": {
         "other": "konnte gerade nicht wechseln",

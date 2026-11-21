@@ -3526,6 +3526,20 @@
       "opencode": "OpenCode non può pensare su questo computer. Collega una chiave OpenCode nella pagina di {{name}}.",
       "opencode_female": "OpenCode non può pensare su questo computer. Collega una chiave OpenCode nella pagina di {{name}}."
     },
+    "notSignedInOn": {
+      "claude_code": "Claude Code non ha effettuato l'accesso su {{computer}}. Collega un account Claude nella pagina di {{name}}.",
+      "claude_code_female": "Claude Code non ha effettuato l'accesso su {{computer}}. Collega un account Claude nella pagina di {{name}}.",
+      "codex": "Codex non ha effettuato l'accesso su {{computer}}. Collega un account ChatGPT nella pagina di {{name}}.",
+      "codex_female": "Codex non ha effettuato l'accesso su {{computer}}. Collega un account ChatGPT nella pagina di {{name}}.",
+      "cursor": "Cursor non ha effettuato l'accesso su {{computer}}. Collega un account Cursor nella pagina di {{name}}.",
+      "cursor_female": "Cursor non ha effettuato l'accesso su {{computer}}. Collega un account Cursor nella pagina di {{name}}.",
+      "grok": "Grok non ha effettuato l'accesso su {{computer}}. Collega un account Grok nella pagina di {{name}}.",
+      "grok_female": "Grok non ha effettuato l'accesso su {{computer}}. Collega un account Grok nella pagina di {{name}}.",
+      "antigravity": "Gemini non ha effettuato l'accesso su {{computer}}. Collega un account Gemini nella pagina di {{name}}.",
+      "antigravity_female": "Gemini non ha effettuato l'accesso su {{computer}}. Collega un account Gemini nella pagina di {{name}}.",
+      "opencode": "OpenCode non può pensare su {{computer}}. Collega una chiave OpenCode nella pagina di {{name}}.",
+      "opencode_female": "OpenCode non può pensare su {{computer}}. Collega una chiave OpenCode nella pagina di {{name}}."
+    },
     "card": {
       "connected": "Ora {{name}} ha un'IA.",
       "answerNow": "Rispondi ora",
@@ -17107,6 +17121,8 @@
       "stillWaiting_one": "{{count}} aspetta ancora {{name}}",
       "stillWaiting_many": "{{count}} aspettano ancora {{name}}",
       "stillWaiting_other": "{{count}} aspettano ancora {{name}}",
+      "planDropped": "Il piano {{plan}} di {{name}} ha l'accesso su {{from}}. Accedi anche su {{to}}, oppure tieni {{from}}.",
+      "signIn": "Accedi su {{name}}",
       "skipped": "{{name}} è rimasto: {{reason}}",
       "skip": {
         "other": "non è stato possibile cambiare ora",
