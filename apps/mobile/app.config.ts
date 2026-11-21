@@ -12,6 +12,10 @@ import versions from "./versions.json";
  * - `ANDROID_VERSION_CODE`: the build's version code, set by the Android workflow (EAS numbers its own builds).
  * - `APPLE_TEAM_ID`: the Apple team that signs the iOS app and its share extension (a build setting, never in the
  *   repo).
+ * - `APP_ID`: the bundle id (iOS) and package (Android) the app is built under; defaults to `chat.agentes.app`. Who
+ *   builds and signs the app under their own Apple team or Play account sets their own, since those ids belong to
+ *   one account each. The share extension, the widget and the app group follow it. The variant's suffix still
+ *   applies.
  * - `IOS_BUILD_NUMBER`: the build's number on iOS, set by the iOS workflow.
  * - `APP_PLATFORM`: "ios" | "android", set by each build workflow (EAS says it in `EAS_BUILD_PLATFORM`): which of the
  *   two versions in versions.json the build takes.
@@ -27,6 +31,7 @@ const variant = process.env.APP_VARIANT ?? "production";
 const platform = process.env.APP_PLATFORM ?? process.env.EAS_BUILD_PLATFORM;
 const version = platform === "android" ? versions.android : versions.ios;
 const suffix = variant === "production" ? "" : `.${variant}`;
+const appId = process.env.APP_ID || "chat.agentes.app";
 const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? "https://app.agentes.chat";
 // Links to this host open the app (universal links / App Links); the server publishes the matching /.well-known
 // files (apps/server/src/app-links.ts).
@@ -121,7 +126,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   icon: `${ICONS}/peekNight/ios.png`,
   userInterfaceStyle: "automatic",
   ios: {
-    bundleIdentifier: `chat.agentes.app${suffix}`,
+    bundleIdentifier: `${appId}${suffix}`,
     ...(process.env.APPLE_TEAM_ID ? { appleTeamId: process.env.APPLE_TEAM_ID } : {}),
     ...(process.env.IOS_BUILD_NUMBER ? { buildNumber: process.env.IOS_BUILD_NUMBER } : {}),
     // Light, dark and tinted (iOS 18).
@@ -138,7 +143,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     config: { usesNonExemptEncryption: false },
   },
   android: {
-    package: `chat.agentes.app${suffix}`,
+    package: `${appId}${suffix}`,
     // Firebase's config comes from the build's environment, so the public repo carries none and a self-built app
     // brings its own Firebase project.
     ...(process.env.GOOGLE_SERVICES_JSON ? { googleServicesFile: process.env.GOOGLE_SERVICES_JSON } : {}),
