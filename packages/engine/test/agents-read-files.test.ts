@@ -589,6 +589,19 @@ describe("what reading by id must not open", () => {
     expect(read.content).toContain("Nobody is behind this run");
   });
 
+  test("a routine's run told its report conversation's file is out of reach, not that the id is wrong", async () => {
+    f = await world();
+    const routine = await channelRoutine(f, { target: { type: "dm" } });
+    const run = await agentRunRow(f, (await fire(f, routine.id, new Date())).agentRunId);
+    const dm = await openDm(f.db, f.owner.id, f.org.id, { agentId: f.agent.id });
+    const file = await upload(dm.id);
+    const read = await bridged(run, "read_artifact", { artifact_id: file.id });
+    expect(read.isError).toBe(true);
+    expect(read.content).not.toContain("Plano Ouro");
+    expect(read.content).toContain("the conversation this routine reports to");
+    expect(read.content).not.toContain("The id may be wrong");
+  });
+
   test("a file asking for someone else's file gets nothing: the second read is refused as any other", async () => {
     let bobsId = "";
     let fileId = "";
