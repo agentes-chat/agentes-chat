@@ -386,15 +386,24 @@ describe("tools", () => {
   });
 
   test("list_agents, list_channels and list_recent_tasks", async () => {
-    const { b, orgId, channelId } = await setup();
+    const { b, orgId, channelId, agentId } = await setup();
     const app = await connectApp(t, b, orgId);
+    await b(`/api/app/organizations/${orgId}/agent-groups`, { json: { name: "Engineering", agentIds: [agentId] } });
+    await t.db
+      .update(schema.agents)
+      .set({ appearance: { color: "sky", eyes: "round", accessory: "none" } })
+      .where(eq(schema.agents.id, agentId));
     const agents = (await callTool(t, app.access, "list_agents", {})).structuredContent as {
-      agents: { handle: string; can_message: boolean }[];
+      agents: { handle: string; can_message: boolean; department: string | null; appearance: unknown }[];
     };
     expect(agents.agents.map((a) => [a.handle, a.can_message])).toEqual([
       ["lodi", true],
       ["dev", true],
     ]);
+    const dev = agents.agents.find((a) => a.handle === "dev");
+    expect(dev?.department).toBe("Engineering");
+    expect(dev?.appearance).toEqual({ color: "sky", eyes: "round", accessory: "none" });
+    expect(agents.agents.find((a) => a.handle === "lodi")?.department).toBeNull();
     const channels = (await callTool(t, app.access, "list_channels", { query: "gen" })).structuredContent as {
       channels: { id: string; is_member: boolean }[];
     };
@@ -501,11 +510,15 @@ describe("tools", () => {
         (await callTool(t, anaApp.access, "list_channels", {})).structuredContent as { channels: { id: string }[] }
       ).channels.map((c) => c.id),
     ).not.toContain(priv.id);
-    // An agent that answers only its owner.
+    // An agent that answers only its owner, alone in its department: neither is listed to her.
+    await b(`/api/app/organizations/${orgId}/agent-groups`, { json: { name: "Skunkworks", agentIds: [agentId] } });
     await t.db
       .update(schema.agents)
       .set({ audienceMode: "people", audienceUserIds: [] })
       .where(eq(schema.agents.id, agentId));
+    const listed = await callTool(t, anaApp.access, "list_agents", {});
+    expect((listed.structuredContent as { agents: { id: string }[] }).agents.map((a) => a.id)).not.toContain(agentId);
+    expect(listed.content[0]?.text).not.toContain("Skunkworks");
     const blocked = await callTool(t, anaApp.access, "send_to_agent", { agent: "dev", message: "hi", wait_seconds: 0 });
     expect(blocked.isError).toBe(true);
     expect(blocked.content[0]?.text).toContain("Dev");
