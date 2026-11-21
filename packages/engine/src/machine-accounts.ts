@@ -79,7 +79,7 @@ import {
 } from "@agenteschat/ui/plan-state";
 import { recordAudit } from "./audit";
 import { liveModelLimits } from "./brains/select";
-import { BRAIN_PLAN_NAMES } from "./brains/types";
+import { BRAIN_NAMES, BRAIN_PLAN_NAMES, brainRunsOn } from "./brains/types";
 import { caches } from "./cache";
 import { claudeAuthMethodFor, claudeAuthPolicy } from "./claude-auth-policy";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "./errors";
@@ -1535,6 +1535,13 @@ export async function beginAccountLogin(
   }
   const plan = planOf(provider);
   const { machine } = await memberMachine(deps.db, userId, orgId, machineId);
+  // A CLI its runner won't run on this system (Grok Build or Cursor on Windows) would sign in and fail every turn.
+  if (!brainRunsOn(kind, machine.os)) {
+    throw new ConflictError(`${BRAIN_NAMES[kind]} doesn't run on ${machine.name}'s system yet.`, "account.system", {
+      program: BRAIN_NAMES[kind],
+      computer: machine.name,
+    });
+  }
   let existing: MachineAccountRow | null = null;
   if (accountId !== undefined) {
     existing = await getListedAccount(deps.db, orgId, machine.id, accountId);

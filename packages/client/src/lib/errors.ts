@@ -561,6 +561,7 @@ const KNOWN = {
   "status.too_long": "errors.said.tooLong",
   "wiki.body_too_long": "errors.said.tooLong",
   "account.runner_old": "errors.said.updateComputerApp",
+  "account.system": "brain.reasons.system",
   "machine.access_outdated": "errors.said.updateComputerApp",
   "machine.cli_outdated": "errors.said.updateComputerApp",
   "machine.outdated": "errors.said.updateComputerApp",

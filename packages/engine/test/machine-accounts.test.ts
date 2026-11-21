@@ -1665,6 +1665,23 @@ test("a Grok sign-in is asked for all agents only from protocol 67 (issue #319)"
   expect(await ask(SHARED_GROK_PROTOCOL)).toMatchObject({ kind: "grok", shared: true });
 });
 
+test("Grok Build and Cursor don't sign in on a Windows computer: refused before the runner is asked (issue #156)", async () => {
+  f = await setup();
+  const { machineId } = await ownedMachine(SHARED_GROK_PROTOCOL);
+  await f.db.update(schema.machines).set({ os: "windows" }).where(eq(schema.machines.id, machineId));
+  const runner = fakeHub(machineId, () => ({ url: "https://grok.com/device?user_code=KJ4D-9QRS" }), {
+    protocol: SHARED_GROK_PROTOCOL,
+  });
+  for (const [kind, program] of [
+    ["grok", "Grok Build"],
+    ["cursor", "Cursor"],
+  ] as const) {
+    const refused = await beginAccountLogin(runner.deps, f.owner.id, f.org.id, machineId, kind).catch((e) => e);
+    expect(refused).toMatchObject({ code: "account.system", params: { program } });
+  }
+  expect(runner.calls).toEqual([]);
+});
+
 test("one sign-in for all agents (protocol 29): asked for, it thinks for two agents, once; out and gone for both", async () => {
   f = await setup();
   const { machineId } = await ownedMachine(SHARED_ACCOUNTS_PROTOCOL);
