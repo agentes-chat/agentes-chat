@@ -8,6 +8,7 @@ import { Easing, LinearTransition } from "react-native-reanimated";
 import { useOrg } from "@/providers/org";
 import { motion, Text } from "@/ui";
 import { keepSize, keptHeightAfter, keptSize, keptWordHeights, PAST_RULE, restoreWordHeights } from "./kept-sizes";
+import { noteFrame, PROBE_EDGES, ProbeContext, ProbeLabel } from "./layout-probe";
 import { useLayoutKey } from "./look";
 import { withOpacity } from "./turn";
 
@@ -121,23 +122,27 @@ export function ClippedMessage({
   }, [open, id]);
   return (
     // One tree whether it clips or not: the words never remount when their height is first known.
-    <View>
-      {/* Opened at once, never with a layout transition: inside the conversation's list an animated height left the
+    <ProbeContext.Provider value={id}>
+      <View onLayout={(e) => noteFrame(id, "outer", e)}>
+        {/* Opened at once, never with a layout transition: inside the conversation's list an animated height left the
           words' frame at the fold while the bubble already took their whole height, an empty bubble under the cut
           words (seen on a phone). */}
-      <View
-        style={
-          foldable
-            ? [styles.clip, shows === null ? undefined : { maxHeight: shows }]
-            : unmeasured
-              ? styles.unmeasured
-              : undefined
-        }
-      >
         <View
-          ref={words}
-          onLayout={(e) => {
-            const next = keptHeightAfter(height, e.nativeEvent.layout.height, folded);
+          onLayout={(e) => noteFrame(id, "clip", e)}
+          style={
+            foldable
+              ? [styles.clip, shows === null ? undefined : { maxHeight: shows }]
+              : unmeasured
+                ? styles.unmeasured
+                : undefined
+          }
+        >
+          <View
+            ref={words}
+            style={PROBE_EDGES.words}
+            onLayout={(e) => {
+              noteFrame(id, "words", e);
+              const next = keptHeightAfter(height, e.nativeEvent.layout.height, folded);
             if (next === null) return;
             keepSize(sizeKey, next);
             // Under the fold before and after, the words look the same at either height (the first frame's cap stands
@@ -175,7 +180,9 @@ export function ClippedMessage({
           </Text>
         </Pressable>
       ) : null}
-    </View>
+        {open ? <ProbeLabel id={id} /> : null}
+      </View>
+    </ProbeContext.Provider>
   );
 }
 

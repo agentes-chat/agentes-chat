@@ -12,9 +12,10 @@ import {
   useSyncExternalStore,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { AccessibilityInfo, Platform, View } from "react-native";
+import { AccessibilityInfo, type LayoutChangeEvent, Platform, View } from "react-native";
 import { useToast } from "@/ui";
 import { useOrgId } from "../shared/hooks";
+import { noteFrame } from "./layout-probe";
 import { QUICK_REACTIONS } from "./logic";
 import { useRowDirectory, useRowMeId } from "./row-data";
 import { type MessageAction, type MessageActionHands, type MessageActionsContext, messageActionsOf } from "./sheets";
@@ -53,6 +54,7 @@ export function MessageMenu({
   reactLabel,
   groups,
   onArm,
+  onLayout,
   children,
 }: {
   href: string;
@@ -65,6 +67,8 @@ export function MessageMenu({
   groups: MenuItem[][] | null;
   /** A finger landed on the row: build the menu now, before a hold opens it. */
   onArm?: (() => void) | undefined;
+  /** Diagnostic build: the lifted view's frame. */
+  onLayout?: ((e: LayoutChangeEvent) => void) | undefined;
   children: ReactNode;
 }) {
   if (Platform.OS !== "ios") return <>{children}</>;
@@ -72,7 +76,7 @@ export function MessageMenu({
     <Link href={href as Href} asChild onPress={(e) => e.preventDefault()}>
       <Link.Trigger>
         {/* One plain view for the menu to lift (the row can be a fragment: a pair row, a quote). */}
-        <View collapsable={false} onTouchStart={onArm}>
+        <View collapsable={false} onTouchStart={onArm} onLayout={onLayout}>
           {children}
         </View>
       </Link.Trigger>
@@ -179,6 +183,7 @@ export function MessageMenuFor({
         reactLabel={t("mobile.chat.react")}
         groups={items}
         onArm={armed ? undefined : arm}
+        onLayout={(e) => noteFrame(context.message.id, "trig", e)}
       >
         {children}
       </MessageMenu>

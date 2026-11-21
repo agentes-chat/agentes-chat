@@ -1,13 +1,14 @@
 import { parseChart } from "@agenteschat/client/lib/chart";
 import type { AgentColorName } from "@agenteschat/ui/agent/engine";
-import { memo, useMemo, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { memo, useContext, useMemo, useState } from "react";
+import { type LayoutChangeEvent, Pressable, StyleSheet, type TextLayoutEvent, View } from "react-native";
 import { Icon, Text } from "@/ui";
 import { useColors } from "../shared/hooks";
 import { tapHaptic } from "../shared/parts";
 import { ChartCard } from "./ChartCard";
 import { CodeCard } from "./CodeCard";
 import { keepOpen, keptOpen } from "./kept-sizes";
+import { noteFrame, noteLines, PROBE_EDGES, ProbeContext } from "./layout-probe";
 import { blocksOf, CHAT_TEXT_MAX_SCALE, type Inline } from "./logic";
 import { useRowLook } from "./look";
 import { Spans, Table } from "./MessageSpans";
@@ -56,35 +57,49 @@ export const MessageText = memo(function MessageText({
   const fit = sized ? { maxFontSizeMultiplier: CHAT_TEXT_MAX_SCALE } : {};
   const spans = (inline: Inline[]) => <Spans inline={inline} channelRefs={channelRefs} everyone={everyone} ink={ink} />;
   const tone = muted ? "muted" : "ink";
+  const probe = useContext(ProbeContext);
   return (
-    <View style={styles.wrap}>
+    <View
+      style={[styles.wrap, probe ? PROBE_EDGES.wrap : undefined]}
+      onLayout={probe ? (e) => noteFrame(probe, "wrap", e) : undefined}
+    >
       {blocks.map((b, i) => {
+        const at = probe
+          ? { onLayout: (e: LayoutChangeEvent) => noteFrame(probe, `b${i}:${b.kind}`, e) }
+          : {};
+        const edge = probe ? PROBE_EDGES.block : undefined;
+        const lines = probe ? { onTextLayout: (e: TextLayoutEvent) => noteLines(probe, i, e) } : {};
         switch (b.kind) {
           case "code":
             // biome-ignore lint/suspicious/noArrayIndexKey: the blocks of one text, in order
-            return <Fenced key={i} lang={b.lang} text={b.text} accent={accent} />;
+            return (
+              // biome-ignore lint/suspicious/noArrayIndexKey: the blocks of one text, in order
+              <View key={i} {...at} style={edge}>
+                <Fenced lang={b.lang} text={b.text} accent={accent} />
+              </View>
+            );
           case "table":
             return (
               // biome-ignore lint/suspicious/noArrayIndexKey: the blocks of one text, in order
-              <View key={i} style={ink ? [styles.cut, { backgroundColor: c.bg }] : undefined}>
+              <View key={i} {...at} style={[ink ? [styles.cut, { backgroundColor: c.bg }] : undefined, edge]}>
                 <Table header={b.header} rows={b.rows} align={b.align} />
               </View>
             );
           case "heading":
             return (
               // biome-ignore lint/suspicious/noArrayIndexKey: the blocks of one text, in order
-              <Text key={i} variant={variant} tone="ink" style={[line, styles.heading, inked]} {...fit}>
+              <Text key={i} variant={variant} tone="ink" style={[line, styles.heading, inked, edge]} {...fit} {...at} {...lines}>
                 {spans(b.inline)}
               </Text>
             );
           case "bullet":
             return (
               // biome-ignore lint/suspicious/noArrayIndexKey: the blocks of one text, in order
-              <View key={i} style={styles.bullet}>
+              <View key={i} style={[styles.bullet, edge]} {...at}>
                 <Text variant={variant} tone="faint" style={[line, styles.mark, inked]} {...fit}>
                   {b.ordinal ? `${b.ordinal}.` : "•"}
                 </Text>
-                <Text variant={variant} tone={tone} style={[line, styles.flex, inked]} {...fit}>
+                <Text variant={variant} tone={tone} style={[line, styles.flex, inked]} {...fit} {...lines}>
                   {spans(b.inline)}
                 </Text>
               </View>
@@ -92,15 +107,15 @@ export const MessageText = memo(function MessageText({
           case "details":
             return (
               // biome-ignore lint/suspicious/noArrayIndexKey: the blocks of one text, in order
-              <View key={i} style={ink ? [styles.cut, { backgroundColor: c.bg }] : undefined}>
+              <View key={i} {...at} style={[ink ? [styles.cut, { backgroundColor: c.bg }] : undefined, edge]}>
                 <Details summary={b.summary} body={b.body} muted={muted} accent={accent} channelRefs={channelRefs} />
               </View>
             );
           case "quote":
             return (
               // biome-ignore lint/suspicious/noArrayIndexKey: the blocks of one text, in order
-              <View key={i} style={[styles.quote, { borderLeftColor: ink ?? c.line2 ?? c.line }]}>
-                <Text variant={variant} tone="muted" style={[line, inked]} {...fit}>
+              <View key={i} style={[styles.quote, { borderLeftColor: ink ?? c.line2 ?? c.line }, edge]} {...at}>
+                <Text variant={variant} tone="muted" style={[line, inked]} {...fit} {...lines}>
                   {spans(b.inline)}
                 </Text>
               </View>
@@ -108,7 +123,16 @@ export const MessageText = memo(function MessageText({
           default:
             return (
               // biome-ignore lint/suspicious/noArrayIndexKey: the blocks of one text, in order
-              <Text key={i} variant={variant} tone={tone} style={[line, inked]} selectable={selectable} {...fit}>
+              <Text
+                key={i}
+                variant={variant}
+                tone={tone}
+                style={[line, inked, edge]}
+                selectable={selectable}
+                {...fit}
+                {...at}
+                {...lines}
+              >
                 {spans(b.inline)}
               </Text>
             );
@@ -170,12 +194,14 @@ function Details({
         </View>
       </Pressable>
       {open ? (
+        <ProbeContext.Provider value={null}>
         <MessageText
           body={body}
           muted={muted}
           {...(accent ? { accent } : {})}
           {...(channelRefs ? { channelRefs } : {})}
         />
+        </ProbeContext.Provider>
       ) : null}
     </View>
   );

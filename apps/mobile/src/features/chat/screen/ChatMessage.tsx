@@ -7,6 +7,7 @@ import { PushOfferLine } from "../../push/PushOfferLine";
 import { FanStrip } from "../../queue/parts";
 import { useColors } from "../../shared/hooks";
 import { AgentReceiptLine, EveryoneLine } from "../AgentReceipts";
+import { noteFrame } from "../layout-probe";
 import { MessageMenuFor } from "../MessageMenu";
 import { MessageRow } from "../MessageRow";
 import { useRowDirectory } from "../row-data";
@@ -122,6 +123,7 @@ export const ChatMessage = memo(function ChatMessage({
     <Animated.View
       entering={fresh && m.author.id !== meId ? ENTER : undefined}
       style={lit ? { backgroundColor: c.sunken } : undefined}
+      onLayout={(e) => noteFrame(m.id, "cell", e)}
     >
       {/* Swipe right to answer it (a quote above the field); hold it for the system's menu (iOS) or the app's sheet. A
           message still on its way can't be swiped, and its menu offers only copying its words; the same views stand

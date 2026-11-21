@@ -132,6 +132,7 @@ import { ApprovalInline, QuestionCard, ThreadLink } from "./cards";
 import { FeedbackOfferRow } from "./FeedbackOffer";
 import { HandedTaskChips, IssueWorkCard } from "./issue-work";
 import { keepOpen, keptOpen } from "./kept-sizes";
+import { noteFrame, PROBE_EDGES } from "./layout-probe";
 import { cacheContinued } from "./live";
 import {
   approvalIdOf,
@@ -923,6 +924,7 @@ function RowBody({
         onLongPress={press}
         delayLongPress={380}
         accessibilityHint={press ? t("mobile.chat.longPressHint") : undefined}
+        onLayout={(e) => noteFrame(m.id, "row", e)}
         style={({ pressed }) => [
           styles.msg,
           bubbled && lookRows.bubblesRow,
@@ -967,14 +969,32 @@ function RowBody({
         <Animated.View style={[styles.body, { gap: rhythm.part }, inBubble && giveWay.style, compact && slide]}>
           <RowParts top={partTop} part={bubblePart} head={bubbleHead}>
             {nameOrWords ? (
-              <View onLayout={inBubble ? giveWay.onArea : undefined}>
+              <View
+                onLayout={
+                  inBubble
+                    ? (e) => {
+                        giveWay.onArea(e);
+                        noteFrame(m.id, "area", e);
+                      }
+                    : undefined
+                }
+              >
                 {inBubble ? (
                   <>
                     {pinLine}
                     {reportOpened}
                     <View
-                      onLayout={giveWay.onBubble}
-                      style={[lookRows.bubble, OTHER_RUN[run], { backgroundColor: otherBubble }, bubbleEdge]}
+                      onLayout={(e) => {
+                        giveWay.onBubble(e);
+                        noteFrame(m.id, "bubble", e);
+                      }}
+                      style={[
+                        lookRows.bubble,
+                        OTHER_RUN[run],
+                        { backgroundColor: otherBubble },
+                        bubbleEdge,
+                        PROBE_EDGES.bubble,
+                      ]}
                     >
                       {!grouped && (look.names || tagged) ? who(true) : null}
                       {quote ? <QuotePlate reply={quote} onJump={onQuote} /> : null}

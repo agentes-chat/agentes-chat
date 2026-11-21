@@ -2,7 +2,7 @@ import { everyoneWord, isEveryoneWord } from "@agenteschat/client/lib/everyone";
 import { linkPill } from "@agenteschat/client/lib/link-pills";
 import { parseFileLink, parseMessageLink } from "@agenteschat/client/lib/message-links";
 import { LinearGradient } from "expo-linear-gradient";
-import { type ComponentRef, useEffect, useMemo, useRef, useState } from "react";
+import { type ComponentRef, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Text as RNText, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 import { ScrollView as GestureScrollView } from "react-native-gesture-handler";
@@ -19,6 +19,7 @@ import { ChannelRefText } from "./ChannelRefText";
 import { FileRefText } from "./FileRefText";
 import { IdRefText } from "./IdRefText";
 import { keepColumns, keptColumns } from "./kept-sizes";
+import { noteValue, ProbeContext } from "./layout-probe";
 import { LinkPillText } from "./LinkPillText";
 import {
   type Block,
@@ -228,6 +229,12 @@ export function Table({
     scroller.current?.flashScrollIndicators();
   }, [hidden.right]);
   const fadeTo = surface ?? c.bg;
+  const probe = useContext(ProbeContext);
+  useEffect(() => {
+    if (!probe) return;
+    const copy = unmeasured ? "new" : late ? "late" : "no";
+    noteValue(probe, `table${content.length}`, `copy=${copy} frame=${Math.round(frame)} total=${Math.round(total)}`);
+  });
   // In a conversation the cells follow the person's Tamanho do texto, as the words around the table do.
   const sized = useRowLook().text;
   const words = (inline: Inline[], col: number, head: boolean) => (
