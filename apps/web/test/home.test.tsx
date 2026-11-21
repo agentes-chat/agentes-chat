@@ -214,6 +214,16 @@ const section = (name: string) => screen().getByRole("region", { name });
 const rows = (name: string) => within(section(name)).getAllByRole("listitem");
 
 describe("Início", () => {
+  test("nobody working: one quiet line with the manager's link, no Trabalhando agora card", async () => {
+    const quiet = createFakeApi(seedState());
+    await renderApp(`/org/${ORG_ID}/home`, { api: quiet });
+    await settle(4);
+    expect(screen().queryByRole("region", { name: "Trabalhando agora" })).toBeNull();
+    const line = document.querySelector(".home-quiet") as HTMLElement;
+    expect(line.textContent).toContain("Nenhum agente trabalhando agora.");
+    expect(within(line).getByRole("link", { name: "Abrir no gerenciador" })).toBeTruthy();
+  });
+
   test("what waits on me first, then who works, what got done and what comes next", async () => {
     const { api, state } = busy();
     const { router, services } = await renderApp(`/org/${ORG_ID}/home`, { api });

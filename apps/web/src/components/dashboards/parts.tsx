@@ -106,7 +106,7 @@ export function OwnerLine({ owner, mine }: { owner: DashboardOwner | null; mine:
   if (!owner) return null;
   const you = mine && owner.kind === "person";
   return (
-    <span className="db-by">
+    <span className="db-by ac-iconline">
       {owner.kind === "agent" ? (
         <AgentAvatar agentId={owner.id} name={owner.name} size="xs" />
       ) : (

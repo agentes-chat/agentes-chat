@@ -99,9 +99,12 @@ export function TeamPage() {
           !!data &&
           [
             t("team.people", { count: dir.members.length }),
-            t("team.agents", { count: agents.length }),
-            t("team.sectorsCount", { count: groups.length }),
-          ].join(" · ")
+            // A zero with nothing behind it says nothing (foundations §12).
+            agents.length > 0 && t("team.agents", { count: agents.length }),
+            groups.length > 0 && t("team.sectorsCount", { count: groups.length }),
+          ]
+            .filter(Boolean)
+            .join(" · ")
         }
         actions={!noAgents && makes}
       >
@@ -126,6 +129,7 @@ export function TeamPage() {
         <EmptyState
           size="page"
           agent={look}
+          scene="team"
           title={t(maker ? "team.emptyTitle" : "team.emptyViewerTitle")}
           actions={makes}
         >

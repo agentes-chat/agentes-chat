@@ -60,7 +60,9 @@ describe("Issues (board and list)", () => {
   test("board by status with counts, summary, PR, priority and due date", async () => {
     await go("issues");
     expect(screen().getByRole("heading", { level: 1, name: "Tarefas" })).toBeTruthy();
-    expect(screen().getByText("5 em aberto · 3 com agentes")).toBeTruthy();
+    // One fact in the header: who works on what is a filter of the page, not a second count beside it.
+    expect(screen().getByText("5 em aberto")).toBeTruthy();
+    expect(screen().queryByText(/com agentes/)).toBeNull();
     expect(cardTitles(column("A fazer"))).toEqual([
       "Tabela de concorrentes atualizada",
       "Confirmação do agendamento por WhatsApp",

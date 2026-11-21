@@ -751,8 +751,10 @@ describe("the task manager page", () => {
     await open(seedState({ taskManager: { tasks: [], ended: [], activity: {} } }), "task-manager");
     expect(document.body.textContent).toContain("Nenhum agente trabalhando agora");
     expect(document.querySelector(".tm-chip")).toBeNull();
-    await click(screen().getByRole("button", { name: /Terminadas hoje/ }));
-    expect(document.body.textContent).toContain("Nada terminou hoje ainda.");
+    // Nothing ended: no section, no zero, and the empty state draws its own scene (not the waving agent).
+    expect(screen().queryByRole("button", { name: /Terminadas hoje/ })).toBeNull();
+    expect(document.body.textContent).not.toContain("Nada terminou hoje ainda.");
+    expect(document.querySelector('.ac-empty [data-scene="tasks"]')).not.toBeNull();
   });
 
   test("Início's agents at work open it", async () => {

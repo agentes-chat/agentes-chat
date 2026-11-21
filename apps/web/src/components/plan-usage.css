@@ -545,6 +545,12 @@ html:not([data-pointer]) .plan-row__place--grip:focus-visible {
   color: inherit;
   text-decoration: none;
 }
+/* The face leads the name's first line (`.ac-iconline`'s formula): the name has a line under it. */
+.plan-api__row > .ac-avatar:first-child {
+  align-self: start;
+  line-height: inherit;
+  translate: 0 calc(0.5lh - var(--cap-mid) - 50%);
+}
 .plan-api__row + .plan-api__row {
   border-top: 1px solid var(--line);
 }

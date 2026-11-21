@@ -8147,6 +8147,7 @@
     },
     "title": "Taken",
     "summary": "{{open}} open · {{agents}} bij agents",
+    "openCount": "{{open}} openstaand",
     "search": "Taken zoeken",
     "view": "Weergave",
     "board": "Bord",

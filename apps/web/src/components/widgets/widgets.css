@@ -106,8 +106,9 @@
 }
 .wd__row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 6px 10px;
   min-width: 0;
   padding: var(--row-py) 14px;
   font-size: 14px;
@@ -117,8 +118,9 @@
   flex: none;
   color: var(--ink2);
 }
+/* A basis of 16 characters: an action that would leave the words less goes under them, not squeezing them. */
 .wd__grow {
-  flex: 1;
+  flex: 1 1 16ch;
   min-width: 0;
   overflow-wrap: anywhere;
 }

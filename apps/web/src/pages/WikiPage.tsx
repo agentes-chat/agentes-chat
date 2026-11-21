@@ -1,5 +1,5 @@
 import type { WikiPageSummary } from "@agenteschat/client";
-import { keys, useWikiPage, useWikiReads, useWikiTrash, useWikiTree } from "@agenteschat/client";
+import { keys, useWikiGraph, useWikiPage, useWikiReads, useWikiTrash, useWikiTree } from "@agenteschat/client";
 import { relativeTime } from "@agenteschat/client/lib/format";
 import { can } from "@agenteschat/client/lib/permissions";
 import { isImportedPage, outlineOf, type WikiFolder, wikiSlug, wikiTree } from "@agenteschat/client/lib/wiki";
@@ -650,6 +650,9 @@ function WikiHome({
   const { org } = useOrg();
   const dir = useDirectory(org.id);
   const reads = useWikiReads(org.id);
+  const graph = useWikiGraph(org.id, true);
+  // A graph of fewer than two linked pages draws nothing worth a box.
+  const linked = new Set((graph.data?.edges ?? []).flatMap((e) => [e.from, e.to])).size >= 2;
   const recent = [...pages].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 6);
   const top = (reads.data ?? []).slice(0, 5);
   const max = top[0]?.total ?? 1;
@@ -658,6 +661,84 @@ function WikiHome({
     f.pages.length + f.folders.reduce((n, sub) => n + count(sub), 0);
   const name = (a: WikiPageSummary["updatedBy"]) =>
     a.type === "agent" ? (dir.agentById.get(a.id)?.name ?? "") : (dir.memberById.get(a.id)?.name ?? "");
+  const noReads = !reads.isLoading && top.length === 0;
+  const readsSection = (
+    <section className="wiki-home__sec" aria-label={t("wiki.topReads")}>
+      <GroupHeading title={t("wiki.topReads")} note={t("wiki.last7Days")} />
+      <div className="wiki-panel">
+        {reads.isLoading ? (
+          <LoadingList count={3} />
+        ) : (
+          top.map((r) => (
+            <Link
+              key={r.slug}
+              to="/org/$orgId/wiki/$slug"
+              params={{ orgId: org.id, slug: r.slug }}
+              className="wiki-read"
+            >
+              <span className="wiki-read__crew">
+                {r.agents.slice(0, 3).map((a) => (
+                  <AgentAvatar
+                    key={a.agentId}
+                    agentId={a.agentId}
+                    name={dir.agentById.get(a.agentId)?.name ?? ""}
+                    size="sm"
+                  />
+                ))}
+              </span>
+              <span className="wiki-read__t">
+                <b>{r.title}</b>
+                <small>
+                  {r.agents
+                    .slice(0, 3)
+                    .map((a) => dir.agentById.get(a.agentId)?.name)
+                    .filter(Boolean)
+                    .join(", ")}
+                </small>
+              </span>
+              <span className="wiki-read__bar" aria-hidden="true">
+                <i style={{ width: `${Math.round((r.total / max) * 100)}%` }} />
+              </span>
+              <span className="ac-num wiki-read__n" title={t("wiki.uses.count", { count: r.total })}>
+                {r.total}
+              </span>
+            </Link>
+          ))
+        )}
+      </div>
+    </section>
+  );
+  const foldersSection = (
+    <section className="wiki-home__sec" aria-label={t("wiki.folders")}>
+      <GroupHeading title={t("wiki.folders")} count={t("wiki.pageCount", { count: pages.length })} />
+      <div className="wiki-panel">
+        {tops.length > 0 && (
+          <div className="wiki-folders">
+            {tops.map((f) => (
+              <div key={f.path} className="wiki-folder">
+                <span className="wiki-folder__icon">
+                  <Icon name="drive" size={16} />
+                </span>
+                <span>
+                  <b>{f.name}</b>
+                  <small>{t("wiki.pageCount", { count: count(f) })}</small>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+        {linked && (
+          <button type="button" className="wiki-minigraph" onClick={onGraph} aria-label={t("wiki.openGraph")}>
+            <WikiGraphView mini />
+            <span className="wiki-minigraph__label">
+              <Icon name="diagram" size={14} />
+              {t("wiki.openGraph")}
+            </span>
+          </button>
+        )}
+      </div>
+    </section>
+  );
   return (
     <div className="wiki-home">
       <HomeHead onNew={onNew} onImport={onImport} onNav={onNav} />
@@ -706,81 +787,18 @@ function WikiHome({
             ))}
           </div>
         </section>
-        <div className="wiki-home__two">
-          <section className="wiki-home__sec" aria-label={t("wiki.topReads")}>
-            <GroupHeading title={t("wiki.topReads")} note={t("wiki.last7Days")} />
-            <div className="wiki-panel">
-              {reads.isLoading ? (
-                <LoadingList count={3} />
-              ) : top.length === 0 ? (
-                <p className="wiki-panel__empty small muted">{t("wiki.topReadsEmpty")}</p>
-              ) : (
-                top.map((r) => (
-                  <Link
-                    key={r.slug}
-                    to="/org/$orgId/wiki/$slug"
-                    params={{ orgId: org.id, slug: r.slug }}
-                    className="wiki-read"
-                  >
-                    <span className="wiki-read__crew">
-                      {r.agents.slice(0, 3).map((a) => (
-                        <AgentAvatar
-                          key={a.agentId}
-                          agentId={a.agentId}
-                          name={dir.agentById.get(a.agentId)?.name ?? ""}
-                          size="sm"
-                        />
-                      ))}
-                    </span>
-                    <span className="wiki-read__t">
-                      <b>{r.title}</b>
-                      <small>
-                        {r.agents
-                          .slice(0, 3)
-                          .map((a) => dir.agentById.get(a.agentId)?.name)
-                          .filter(Boolean)
-                          .join(", ")}
-                      </small>
-                    </span>
-                    <span className="wiki-read__bar" aria-hidden="true">
-                      <i style={{ width: `${Math.round((r.total / max) * 100)}%` }} />
-                    </span>
-                    <span className="ac-num wiki-read__n" title={t("wiki.uses.count", { count: r.total })}>
-                      {r.total}
-                    </span>
-                  </Link>
-                ))
-              )}
-            </div>
-          </section>
-          <section className="wiki-home__sec" aria-label={t("wiki.folders")}>
-            <GroupHeading title={t("wiki.folders")} count={t("wiki.pageCount", { count: pages.length })} />
-            <div className="wiki-panel">
-              {tops.length > 0 && (
-                <div className="wiki-folders">
-                  {tops.map((f) => (
-                    <div key={f.path} className="wiki-folder">
-                      <span className="wiki-folder__icon">
-                        <Icon name="drive" size={16} />
-                      </span>
-                      <span>
-                        <b>{f.name}</b>
-                        <small>{t("wiki.pageCount", { count: count(f) })}</small>
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <button type="button" className="wiki-minigraph" onClick={onGraph} aria-label={t("wiki.openGraph")}>
-                <WikiGraphView mini />
-                <span className="wiki-minigraph__label">
-                  <Icon name="diagram" size={14} />
-                  {t("wiki.openGraph")}
-                </span>
-              </button>
-            </div>
-          </section>
-        </div>
+        {noReads ? (
+          <>
+            {foldersSection}
+            {/* Nothing read yet: one quiet line, not a box holding a sentence. */}
+            <p className="wiki-home__quiet small muted">{t("wiki.topReadsEmpty")}</p>
+          </>
+        ) : (
+          <div className="wiki-home__two">
+            {readsSection}
+            {foldersSection}
+          </div>
+        )}
       </div>
     </div>
   );

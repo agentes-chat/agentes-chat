@@ -7838,6 +7838,7 @@
     },
     "title": "任务",
     "summary": "{{open}} 个未完成 · {{agents}} 个由智能体负责",
+    "openCount": "{{open}} 个未完成",
     "search": "搜索任务",
     "view": "视图",
     "board": "看板",

@@ -375,6 +375,20 @@ describe("Calendário: views, moves and series", () => {
     expect(details.querySelector(".cal-details__people")).toBeNull();
   });
 
+  test("a source with nothing in view has no filter chip; the ones with items keep theirs with their count", async () => {
+    await go();
+    const opener = screen().queryByRole("button", { name: "Filtros" });
+    if (opener) await click(opener);
+    await settle(2);
+    const chips = [...document.querySelectorAll<HTMLElement>("[aria-label='Filtros'] button[aria-pressed]")].map(
+      (b) => b.textContent ?? "",
+    );
+    expect(chips.length).toBeGreaterThan(0);
+    // Never "Lembretes 0": a zero chip would filter nothing.
+    for (const text of chips) expect(text).not.toMatch(/(^|\D)0$/);
+    expect(chips.some((c) => /Agentes\s*[1-9]/.test(c) || /Rotinas\s*[1-9]/.test(c))).toBe(true);
+  });
+
   test("Agentes e pessoas: everyone with something in view, agents first, by count; unchecking hides theirs", async () => {
     await go();
     // With the panel closed, in the Filtros popover.

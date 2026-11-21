@@ -276,8 +276,8 @@ html:not([data-pointer]) .issues-layout:focus-visible {
   color: var(--ink-muted);
 }
 .issues-display__foot > span {
+  /* `.ac-iconline` (the check leads the first line of a note that wraps) sets the alignment. */
   display: inline-flex;
-  align-items: center;
   gap: 4px;
 }
 .issues-display__foot .ac-icon {

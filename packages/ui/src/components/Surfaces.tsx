@@ -16,6 +16,7 @@ import { AgentSticker } from "./AgentSticker";
 import { InfoHint } from "./InfoHint";
 import { SkyGlow } from "./PixelSky";
 import { ProviderLogo } from "./ProviderLogo";
+import { type EmptyScene, ToolScene } from "./ToolScenes";
 
 /** Neutral card (`surface-raised` + `line`). State never tints it: use a Chip. */
 export function Card({
@@ -150,6 +151,11 @@ export interface EmptyStateProps {
   agent?: AgentAppearance | true;
   /** What the agent does. A wave plays once and holds, the other moods loop. */
   mood?: StickerMood;
+  /**
+   * What the place is about, drawn in the agent's frame in place of the waving agent (Lodi stays a small helper in
+   * some): `files`, `team`, `approval`, `routine` or `board`. Without it, or with `default`, the agent as before.
+   */
+  scene?: EmptyScene | "default";
 }
 
 /**
@@ -168,6 +174,7 @@ export function EmptyState({
   size,
   agent,
   mood = "wave",
+  scene = "default",
 }: EmptyStateProps) {
   const stands = agent && size !== "inline";
   const look = agent === true ? undefined : agent;
@@ -185,12 +192,16 @@ export function EmptyState({
       {stands && (
         <div className="ac-empty__agent" aria-hidden="true">
           <SkyGlow bare color={look?.color ?? "sky"} surface="--empty-surface" />
-          <AgentSticker
-            appearance={look}
-            mood={mood}
-            size={EMPTY_AGENT[size === "panel" ? "panel" : "page"]}
-            playFor={mood === "wave" ? WAVE_SECONDS : undefined}
-          />
+          {scene === "default" ? (
+            <AgentSticker
+              appearance={look}
+              mood={mood}
+              size={EMPTY_AGENT[size === "panel" ? "panel" : "page"]}
+              playFor={mood === "wave" ? WAVE_SECONDS : undefined}
+            />
+          ) : (
+            <ToolScene scene={scene} size={EMPTY_AGENT[size === "panel" ? "panel" : "page"]} />
+          )}
         </div>
       )}
       {!!art && (

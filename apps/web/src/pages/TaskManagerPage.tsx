@@ -82,7 +82,6 @@ import {
 import { TaskPanel } from "@/components/tasks/TaskPanel";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useNow } from "@/hooks/useNow";
-import { useRightHandLook } from "@/hooks/useRightHandLook";
 import { useToast } from "@/lib/toast";
 import "./task-manager.css";
 
@@ -126,7 +125,6 @@ export function TaskManagerPage({
   const { t } = useTranslation();
   const { org, me } = useOrg();
   const dir = useDirectory(org.id);
-  const look = useRightHandLook();
   const view = useTaskManager(org.id, { since: todayStart() });
   const now = useNow(1_000);
   const programText = useProgramText();
@@ -444,7 +442,7 @@ export function TaskManagerPage({
       )}
 
       {view.data && all.length === 0 && !hidden?.total && (
-        <EmptyState size="page" agent={look} mood="deal" title={t("taskManager.empty.title")}>
+        <EmptyState size="page" agent scene="tasks" title={t("taskManager.empty.title")}>
           {t("taskManager.empty.body")}
         </EmptyState>
       )}
@@ -572,19 +570,15 @@ export function TaskManagerPage({
         </section>
       )}
 
-      {view.data && (
+      {/* Nothing ended today: no section to open, and no zero to read. */}
+      {view.data && endedRows.length > 0 && (
         <section className="tm-ended" aria-label={t("taskManager.ended.title")}>
           <button type="button" className="tm-more" aria-expanded={endedOpen} onClick={() => setEndedOpen((o) => !o)}>
             <Icon name="chevronRight" size={16} className="tm-more__chevron" />
             {t("taskManager.ended.title")}
             <CountChip size="sm">{endedRows.length}</CountChip>
           </button>
-          {endedOpen &&
-            (endedRows.length > 0 ? (
-              <ul className="tm-list tm-list--ended ac-card">{endedRows.map((r) => r.node)}</ul>
-            ) : (
-              <p className="tm-none">{t("taskManager.ended.none")}</p>
-            ))}
+          {endedOpen && <ul className="tm-list tm-list--ended ac-card">{endedRows.map((r) => r.node)}</ul>}
         </section>
       )}
 

@@ -801,6 +801,7 @@ export function DrivePage({
               <EmptyState
                 size="page"
                 agent={look}
+                scene="files"
                 title={t("drive.emptyTitle")}
                 actions={
                   uploads && (

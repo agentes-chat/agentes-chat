@@ -183,26 +183,36 @@ export function HomePage() {
             ) : null,
           horizon: !(waitingCount === 0 && calm),
         }}
-        working={{
-          title: t("home.working.title"),
-          count: working.length,
-          action: (
-            <Link className="home-sec__more" to="/org/$orgId/task-manager" params={{ orgId: org.id }}>
-              {t("taskManager.actions.openManager")}
-            </Link>
-          ),
-          body:
-            working.length > 0 ? (
-              <ul className="home-list">
-                {working.slice(0, HOME_ROWS).map((w) => (
-                  <WorkRow key={w.key} w={w} dir={dir} now={now} />
-                ))}
-              </ul>
-            ) : (
-              <p className="wg__empty">{t("home.working.none")}</p>
-            ),
-        }}
+        working={
+          working.length > 0
+            ? {
+                title: t("home.working.title"),
+                count: working.length,
+                action: (
+                  <Link className="home-sec__more" to="/org/$orgId/task-manager" params={{ orgId: org.id }}>
+                    {t("taskManager.actions.openManager")}
+                  </Link>
+                ),
+                body: (
+                  <ul className="home-list">
+                    {working.slice(0, HOME_ROWS).map((w) => (
+                      <WorkRow key={w.key} w={w} dir={dir} now={now} />
+                    ))}
+                  </ul>
+                ),
+              }
+            : null
+        }
       />
+      {/* Nobody working: one quiet line, not a card holding a sentence. */}
+      {loaded && working.length === 0 && (
+        <p className="home-quiet small muted">
+          {t("home.working.none")}{" "}
+          <Link className="home-sec__more" to="/org/$orgId/task-manager" params={{ orgId: org.id }}>
+            {t("taskManager.actions.openManager")}
+          </Link>
+        </p>
+      )}
 
       {done.length > 0 && (
         <Section title={t("home.done.title")} count={done.length} more={done.length > HOME_ROWS}>

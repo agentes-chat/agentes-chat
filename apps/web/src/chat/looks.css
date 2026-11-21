@@ -620,6 +620,13 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+/* The narrowest phones: a card's name beside its radio would be a word a line in half the width. */
+@media (max-width: 359px) {
+  .chat-look__cards,
+  .chat-look__cards--styles {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 .ac-option.chat-look__card {
   position: relative;
   display: flex;
