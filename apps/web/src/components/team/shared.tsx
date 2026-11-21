@@ -74,7 +74,8 @@ export const sectorStyle = (group: AgentGroup | null | undefined) =>
     : undefined;
 
 /** What an agent is up to: working, no AI yet, or available (nothing while it waits for its computer or plan). */
-export function AgentNow({ agent }: { agent: TeamAgent }) {
+/** `quietNoAi`: the list says "no AI" once above the table, so a row without one shows nothing. */
+export function AgentNow({ agent, quietNoAi }: { agent: TeamAgent; quietNoAi?: boolean }) {
   const { t } = useTranslation();
   const { org } = useOrg();
   const ai = aiStateOf(useAiStatus(org.id).data, agent.id);
@@ -85,7 +86,7 @@ export function AgentNow({ agent }: { agent: TeamAgent }) {
         {t("team.workingNow")}
       </span>
     );
-  if (ai === "no_ai") return <NoAiChip agentId={agent.id} />;
+  if (ai === "no_ai") return quietNoAi ? null : <NoAiChip agentId={agent.id} />;
   if (ai !== "ready") return null;
   return (
     <span className="team-now">

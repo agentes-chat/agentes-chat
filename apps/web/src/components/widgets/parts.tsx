@@ -24,6 +24,9 @@ import { useOrg } from "@/components/org-context";
 import { colorOf } from "@/components/Sky";
 import { useDirectory } from "@/hooks/useDirectory";
 
+/** The refresh mode a card leaves unsaid: it is on the card only when a widget differs, and in its title always. */
+export const DEFAULT_SCHEDULE = "manual";
+
 /** The widget's agent as a board shows it: its name and its color (sky when it is gone). */
 export function useWidgetAgent(agentId: string) {
   const { t } = useTranslation();
@@ -208,15 +211,20 @@ export function WidgetFoot({
   }
   // The agent's face leads the card's title (`WidgetCard`'s `face`): the footer only says who and when.
   return (
-    <span className="wg__when">
+    <span className="wg__when" title={t(`widgets.schedules.${widget.schedule}`)}>
       <b>{name}</b>
       {widget.refreshedAt && (
         <>
           {" "}
           <span className="wg__dot">·</span> {relativeTime(t, i18n.language, widget.refreshedAt, new Date(now))}
         </>
-      )}{" "}
-      <span className="wg__dot">·</span> {schedule}
+      )}
+      {widget.schedule !== DEFAULT_SCHEDULE && (
+        <>
+          {" "}
+          <span className="wg__dot">·</span> {schedule}
+        </>
+      )}
     </span>
   );
 }

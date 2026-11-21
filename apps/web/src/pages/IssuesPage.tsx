@@ -56,6 +56,7 @@ import {
   MenuSeparator,
   PageHeader,
   SearchField,
+  Tip,
   Toolbar,
   WorkSweep,
 } from "@agenteschat/ui";
@@ -788,6 +789,10 @@ function StalledLine({ issues, onOpen }: { issues: Issue[]; onOpen: (n: number) 
     groups.map((g) => g.name),
     4,
   );
+  const whoAll = joinNames(
+    groups.map((g) => g.name),
+    t,
+  );
   return (
     <>
       {left.length === 0 ? (
@@ -800,14 +805,21 @@ function StalledLine({ issues, onOpen }: { issues: Issue[]; onOpen: (n: number) 
           <Icon name="pause" size={16} className="issues-stalled__icon" />
           <span className="issues-stalled__text">
             <b>{t("issues.now.stalledCount", { count: left.length })}</b>
-            <span className="issues-stalled__who">
+            {/* The faces and the count say it; the names are in the faces' tip (and read by a screen reader). */}
+            <Tip
+              className="issues-stalled__who"
+              look="ac-msg__tip"
+              tip={whoAll}
+              tabIndex={0}
+              role="group"
+              aria-label={whoAll}
+            >
               <AvatarStack>
                 {groups.slice(0, 4).map((g) => (
                   <AgentAvatar key={g.agent.id} agentId={g.agent.id} name={g.name} size="sm" expression="closed" />
                 ))}
               </AvatarStack>
-              {names}
-            </span>
+            </Tip>
           </span>
           <span className="issues-stalled__acts">
             <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>

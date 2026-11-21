@@ -1635,6 +1635,15 @@ html:not([data-pointer]) .wiki-graph__node:focus-visible {
   background: #7c5cff;
 }
 
+@keyframes wiki-nav-in {
+  from {
+    transform: translateX(-105%);
+  }
+  to {
+    transform: none;
+  }
+}
+
 @keyframes wiki-in {
   from {
     opacity: 0;
@@ -1668,11 +1677,14 @@ html:not([data-pointer]) .wiki-graph__node:focus-visible {
     width: min(300px, 86vw);
     background: var(--bg);
     box-shadow: var(--e3);
-    transform: translateX(-105%);
-    transition: transform 0.3s var(--out);
+  }
+  /* Closed it takes no box at all (a sheet parked off to the side still lays out outside its page, and its links
+     stay in the tab order); opening slides it in. */
+  .wiki-nav:not([data-open]) {
+    display: none;
   }
   .wiki-nav[data-open] {
-    transform: none;
+    animation: wiki-nav-in 0.3s var(--out) both;
   }
   .wiki__scrim {
     display: block;
@@ -1728,8 +1740,10 @@ html:not([data-pointer]) .wiki-graph__node:focus-visible {
   }
   .wiki-card,
   .wiki-graph__edges line,
-  .wiki-graph__node,
-  .wiki-nav {
+  .wiki-graph__node {
     transition: none;
+  }
+  .wiki-nav[data-open] {
+    animation: none;
   }
 }

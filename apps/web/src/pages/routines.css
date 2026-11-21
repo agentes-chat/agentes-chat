@@ -87,8 +87,8 @@
 /* Its face on the first line of a name that wraps (`.ac-iconline` places it), the lines in the lane's middle. */
 .routines-horizon__label {
   display: grid;
-  /* The agent's face, its name and how many routines it has. */
-  grid-template-columns: auto auto minmax(0, 1fr);
+  /* The agent's face, then its name with how many routines it has under it: the label's own column, nothing past it. */
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: start;
   align-content: center;
   gap: 8px;
@@ -113,7 +113,13 @@
   color: var(--ink2);
   overflow-wrap: anywhere;
 }
+.routines-horizon__who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
 .routines-horizon__label small {
+  overflow-wrap: anywhere;
   font-size: 12px;
   line-height: 16px;
   color: var(--faint);
@@ -752,8 +758,7 @@ html:not([data-pointer]) .routine-row__title:focus-visible {
   .routines-horizon {
     --lab: 40px;
   }
-  .routines-horizon__label b,
-  .routines-horizon__label small,
+  .routines-horizon__who,
   .routines-horizon__legend {
     display: none;
   }

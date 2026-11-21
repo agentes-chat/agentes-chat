@@ -120,8 +120,11 @@ describe("Issues (board and list)", () => {
     expect(screen().queryByRole("region", { name: "Agentes trabalhando agora" })).toBeNull();
     const line = screen().getByRole("region", { name: "Tarefas paradas" });
     expect(line.querySelector(".issues-stalled")).toBeTruthy();
-    expect(line.textContent).toContain("Juno");
-    expect(line.textContent).not.toContain("Bento");
+    // The faces and the count say who; the names live in the faces' tip and label, not in the line.
+    const who = line.querySelector(".issues-stalled__who");
+    expect(who?.getAttribute("aria-label")).toContain("Juno");
+    expect(who?.getAttribute("aria-label")).not.toContain("Bento");
+    expect(line.textContent).not.toContain("Juno");
     // Nothing comes after the board's split, up to the work area: when what is above squeezes it, it keeps a window's
     // height and the page scrolls down to it (over-pages.css), with nothing for its columns to run over.
     let el: Element | null = document.querySelector(".issues-boardframe.page-split");
@@ -934,6 +937,9 @@ describe("Rotinas", () => {
     await settle(5);
     const card = screen().getByRole("article", { name: "PRs parados" });
     expect(card.textContent).toContain("De segunda a sexta, às 08:30");
+    // No run yet: only the next one is told, no empty dotted track.
+    expect(card.querySelector(".ac-run-strip")).toBeNull();
+    expect(card.querySelector(".routine-row__runs")?.children.length).toBe(0);
   });
 
   test("Nova rotina: a template from one search fills the form, and all of it stays editable", async () => {

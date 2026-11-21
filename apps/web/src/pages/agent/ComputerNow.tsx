@@ -32,7 +32,7 @@ export function ComputerNow() {
   const { org } = useOrg();
   const dir = useDirectory(org.id);
   const toast = useToast();
-  const { agent, g, openWork } = useAgentEdit();
+  const { agent, g, openWork, viewer } = useAgentEdit();
   const view = useAgentComputer(agent, { runs: true });
   const openComputer = useOpenComputer();
   const actions = useBrowserHandoffMutations(org.id);
@@ -64,6 +64,9 @@ export function ComputerNow() {
     now: new Date(now),
   });
   const button = entryButton(state);
+  // No computer yet where it may be chosen: "Como trabalha" has its own Computador row saying so and opening the choice
+  // (Work.tsx), so this entry would be a second door to the same dialog.
+  if (state.kind === "noComputer" && viewer !== "member") return null;
   const help = () => {
     if (state.kind !== "needsYou") return;
     actions.takeControl.mutate(state.handoff.id, {

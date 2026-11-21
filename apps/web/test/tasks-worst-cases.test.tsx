@@ -266,7 +266,8 @@ describe("Tarefas at their worst", () => {
     const line = screen().getByRole("region", { name: "Tarefas paradas" });
     const text = line.textContent ?? "";
     expect(text).toMatch(/\d+ tarefas? paradas?/);
-    expect(text).toContain("Ada");
+    expect(line.querySelector(".issues-stalled__who")?.getAttribute("aria-label")).toContain("Ada");
+    expect(text).not.toContain("Ada");
     for (const word of ["Trabalhando", "Pede aprovação", "Pergunta algo", "Nenhuma execução", "Pedir para continuar"])
       expect(text).not.toContain(word);
     // The same tasks on every fetch (the worst cases are built anew each time, a stall's time with them): a task

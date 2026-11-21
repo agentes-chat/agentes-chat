@@ -224,6 +224,22 @@ describe("My Home as a mural (ADR 0135)", () => {
     expect(last(slow.state, "dashboards.refreshWidget")).toEqual([ORG_ID, slow.builds.id]);
   });
 
+  test('a card names its refresh mode only when it is not the default ("quando pedem"), which stays in its title', async () => {
+    const s = setup();
+    s.fake.addWidget(s.home.id, {
+      agentId: ADA_ID,
+      title: "Visitas",
+      spec: { kind: "kpi", value: 12 },
+      schedule: "manual",
+      layout: { position: 5, w: 1, h: 1 },
+    });
+    await open(`/org/${ORG_ID}/home`, s);
+    const manual = widget("Visitas").querySelector(".wg__foot");
+    expect(manual?.textContent).not.toContain("quando pedem");
+    expect(manual?.querySelector(".wg__when")?.getAttribute("title")).toBe("Só quando você pedir");
+    expect(widget("Vendas hoje").querySelector(".wg__foot")?.textContent).toContain("a cada hora");
+  });
+
   test("a widget whose agent has no AI says why with Conectar (or who can), and builds with no click once it has one", async () => {
     const waitingFor = (ai: "ready" | "no_ai", detail: string | null = null) => {
       const s = setup();

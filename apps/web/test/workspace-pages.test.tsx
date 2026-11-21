@@ -589,6 +589,36 @@ describe("Equipe (ADR 0148)", () => {
     expect(atlas.textContent).not.toContain("Disponível");
   });
 
+  test("Lista: no zero counts on the filters, no SETOR eyebrow, and Sem IA said once when every agent lacks one", async () => {
+    const state = seedState({
+      aiStatus: {
+        any: false,
+        agents: [
+          { agentId: ADA_ID, state: "no_ai", reason: "no_key" },
+          { agentId: ATLAS_ID, state: "no_ai", reason: "no_key" },
+        ],
+      },
+    });
+    state.agentGroups = [{ id: "g-eng", name: "Engenharia", agentIds: [ADA_ID, ATLAS_ID] }];
+    await go("team", state);
+    // The chips stay in place; a count shows only above zero.
+    const chips = [...document.querySelectorAll("button[aria-pressed]")].filter((c) =>
+      /Meus|Trabalhando|Esperando|Sem responsável/.test(c.textContent ?? ""),
+    );
+    expect(chips.length).toBeGreaterThan(0);
+    // Nobody works and every agent has an owner here, so those two chips carry no number; Esperando keeps its 2.
+    for (const c of chips) expect(c.textContent).not.toMatch(/(Trabalhando agora|Sem responsável|Meus)\s*0/);
+    expect(chips.find((c) => /Trabalhando/.test(c.textContent ?? ""))?.textContent).toBe("Trabalhando agora");
+    expect(chips.find((c) => /Sem responsável/.test(c.textContent ?? ""))?.textContent).toBe("Sem responsável");
+    // The setor's name alone titles its group.
+    expect(document.querySelector(".team-table .team-eyebrow")).toBeNull();
+    expect(document.querySelector(".team-table__section")?.textContent).toContain("Engenharia");
+    // Every agent lacks an AI: nothing per row, one line above the table with the action.
+    expect(within(screen().getByRole("table")).queryByRole("button", { name: "Sem IA" })).toBeNull();
+    const line = document.querySelector(".team-noai") as HTMLElement;
+    expect(line.textContent).toContain("Conectar uma IA");
+  });
+
   test("without Ver todos os agentes, a member's Equipe and its counts name only the agents that answer them", async () => {
     const member = (keyOn: boolean, personal = false) => {
       const state = seedState();

@@ -93,6 +93,17 @@
 .team-table__role {
   max-width: 220px;
 }
+/* The owner's name keeps one line (rule 17): the column is as wide as the name, Função yields. */
+.team-table__owner,
+.team-table__owner .team-who {
+  white-space: nowrap;
+}
+.team-table__owner {
+  width: 1%;
+}
+.team-noai {
+  padding: 4px 2px 10px;
+}
 .team-table__menu {
   width: 1%;
 }
