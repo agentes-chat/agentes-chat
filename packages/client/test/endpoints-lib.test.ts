@@ -66,6 +66,23 @@ describe("the endpoint form", () => {
     expect(endpointReady(d)).toBe(true);
   });
 
+  test("prices an endpoint listed fill a new model's fields; a model already in the form keeps what was typed", () => {
+    let d = withListedModels(emptyEndpointDraft(), [
+      { id: "a", prices: { input: 2.5, output: 10 } },
+      { id: "b" },
+      { id: "c", prices: { input: 0.1, output: 0.4 } },
+    ]);
+    expect(d.models.map((m) => [m.id, m.input, m.output])).toEqual([
+      ["a", "2.5", "10"],
+      ["b", "", ""],
+      ["c", "0.1", "0.4"],
+    ]);
+    d = { ...d, models: d.models.map((m) => (m.id === "a" ? { ...m, on: true, input: "3", output: "12" } : m)) };
+    d = withListedModels(d, [{ id: "a", prices: { input: 2.5, output: 10 } }]);
+    expect(d.models[0]).toEqual({ id: "a", on: true, input: "3", output: "12" });
+    expect(endpointModelsOf(d)).toEqual([{ id: "a", prices: { input: 3, output: 12 } }]);
+  });
+
   test("prices: both or neither, a comma reads as a point, junk is refused", () => {
     expect(parsePrice("")).toBeUndefined();
     expect(parsePrice("0,5")).toBe(0.5);

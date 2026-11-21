@@ -200,6 +200,7 @@ import type {
   JoinClaim,
   JoinRequest,
   LearnedSkill,
+  ListedEndpointModel,
   LiveActivityInput,
   Machine,
   MachineAccess,
@@ -885,7 +886,7 @@ export interface ApiClient {
     endpointModels(
       orgId: string,
       input: { style: EndpointStyle; baseURL: string; apiKey?: string },
-    ): Promise<{ baseURL: string; models: { id: string; label?: string }[]; error?: string }>;
+    ): Promise<{ baseURL: string; models: ListedEndpointModel[]; error?: string }>;
     /** Changes an endpoint's models and prices, then tests each again. */
     setEndpointModels(
       orgId: string,

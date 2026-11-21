@@ -21,6 +21,8 @@ Extra headers were left out: the key goes as each API sends it (`Authorization: 
 
 Before saving, `POST …/credentials/endpoint-models` reads the endpoint's list with the key, which isn't stored (`GET {base}/models`, or `{base}/v1/models` for Anthropic's; `{ data: [{ id }] }` or Ollama's `{ models }`, ten seconds, 2 MB, at most 500 ids that look like one). When there is no list the reason shows and the admin types ids. At most 30 models are kept.
 
+*Amendment (2026-11-21):* a LiteLLM proxy knows what its models cost. After a list, `{root}/model_group/info` (the address without its `/v1`, what LiteLLM's Model Hub reads) is read with the same key and guarded fetch, five seconds and 2 MB at most: each group's `input_cost_per_token` and `output_cost_per_token`, in US$ per million tokens, fill the new models' price fields, which the admin can still change. Both or neither, none negative or above the form's ceiling, and 0/0 left out so a free model stays unpriced. Any other server answers 404 or junk there, and its list stays as it was (`parseModelGroupPrices`, `modelGroupPrices`).
+
 Saving runs one call per model through the Model Gateway (`kind = summary`, so tokens and cost are recorded with `org_id`), asking it to call a `report_status` tool: `ok` when it calls it, `no_tools` when it only answers (agents work through tools, so the admin is told), `failed` with the server's words (masked like every provider error). `PUT …/credentials/{id}/models` changes the models and prices and tests them again; each model keeps its last result.
 
 ### 3. Model ids carry their credential

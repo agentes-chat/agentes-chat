@@ -537,7 +537,7 @@ export function agentRoutes(deps: AppDeps) {
       security,
       summary: "What a workspace's own endpoint lists (ADR 0146), before it is saved (admins)",
       description:
-        "Reads `GET {baseURL}/models` (Chat Completions) or `GET {baseURL}/v1/models` (Anthropic) with the key, which is not stored. On agentes.chat Cloud only public https addresses are reached (`url.https_required`, `url.internal`). A list the endpoint doesn't give comes back empty with `error`: the admin types ids instead.",
+        "Reads `GET {baseURL}/models` (Chat Completions) or `GET {baseURL}/v1/models` (Anthropic) with the key, which is not stored. On agentes.chat Cloud only public https addresses are reached (`url.https_required`, `url.internal`). A list the endpoint doesn't give comes back empty with `error`: the admin types ids instead. A LiteLLM proxy's models come with the prices its `GET /model_group/info` gives, in US$ per million tokens.",
       request: {
         params: OrgParams,
         body: body(
@@ -552,7 +552,16 @@ export function agentRoutes(deps: AppDeps) {
         200: json(
           z.object({
             baseURL: z.string().openapi({ description: "The address as it will be stored." }),
-            models: z.array(z.object({ id: z.string(), label: z.string().optional() })),
+            models: z.array(
+              z.object({
+                id: z.string(),
+                label: z.string().optional(),
+                prices: z
+                  .object({ input: z.number(), output: z.number() })
+                  .optional()
+                  .openapi({ description: "What the server charges, in US$ per million tokens, when it says." }),
+              }),
+            ),
             error: z.string().optional(),
           }),
         ),

@@ -61,13 +61,13 @@ async function cappedJson(res: Response, max: number): Promise<unknown> {
 /**
  * An endpoint's model list, with the key: `GET {baseURL}/models` for Chat Completions, `GET {baseURL}/v1/models` for
  * Anthropic Messages. Ten seconds and 2 MB at most. A refusal or an unreadable answer throws a `ProviderError` whose
- * message the admin reads.
+ * message the admin reads. A LiteLLM proxy's models come with the prices it knows (`modelGroupPrices`).
  */
 export async function listEndpointModels(
   endpoint: Endpoint,
   apiKey: string,
   http: typeof fetch,
-): Promise<{ id: string; label?: string }[]> {
+): Promise<ListedModel[]> {
   const url = endpoint.style === "anthropic" ? `${endpoint.baseURL}/v1/models` : `${endpoint.baseURL}/models`;
   const headers: Record<string, string> =
     endpoint.style === "anthropic"
@@ -90,7 +90,77 @@ export async function listEndpointModels(
     if (error instanceof ProviderError) throw error;
     throw new ProviderError("could not read the model list", false);
   }
-  return parseEndpointModels(body);
+  const models = parseEndpointModels(body);
+  if (models.length === 0) return models;
+  const prices = await modelGroupPrices(endpoint, apiKey, http);
+  return models.map((m) => {
+    const p = prices.get(m.id);
+    return p ? { ...m, prices: p } : m;
+  });
+}
+
+/** A listed model, with the prices its server told (US dollars per million tokens), when it told them. */
+export interface ListedModel {
+  id: string;
+  label?: string;
+  prices?: { input: number; output: number };
+}
+
+const INFO_TIMEOUT_MS = 5_000;
+/** A price per token above this (US$ 10,000 per million) is the form's ceiling: not a price. */
+const MAX_PER_MILLION = 10_000;
+
+/** US dollars per token in US dollars per million tokens, to six decimals (no `2.9999999999999996`). */
+const perMillion = (v: unknown) =>
+  typeof v === "number" && Number.isFinite(v) && v >= 0 ? Math.round(v * 1e12) / 1e6 : null;
+
+/**
+ * LiteLLM's model groups (`GET /model_group/info`, what its Model Hub reads): `{ data: [{ model_group,
+ * input_cost_per_token, output_cost_per_token }] }`, the group being the id `/v1/models` lists. Prices are kept in
+ * US$ per million tokens when both are there, neither is negative or above the form's ceiling, and one isn't 0
+ * (a free model stays unpriced, so its budget still says it can't count it).
+ */
+export function parseModelGroupPrices(body: unknown): Map<string, { input: number; output: number }> {
+  const root = obj(body);
+  const rows = Array.isArray(root?.data) ? root.data : [];
+  const out = new Map<string, { input: number; output: number }>();
+  for (const row of rows) {
+    const r = obj(row);
+    const id = r?.model_group;
+    if (typeof id !== "string" || !MODEL_ID.test(id) || out.has(id)) continue;
+    const input = perMillion(r?.input_cost_per_token);
+    const output = perMillion(r?.output_cost_per_token);
+    if (input === null || output === null || input > MAX_PER_MILLION || output > MAX_PER_MILLION) continue;
+    if (input === 0 && output === 0) continue;
+    out.set(id, { input, output });
+  }
+  return out;
+}
+
+/**
+ * The prices a LiteLLM proxy knows for its models, read from `{root}/model_group/info` (the address without its
+ * `/v1`) with the same key and the same guarded fetch, five seconds and 2 MB at most. Anything else answers it with
+ * a refusal, a 404 or junk: no prices, and the list stays as the server gave it.
+ */
+async function modelGroupPrices(
+  endpoint: Endpoint,
+  apiKey: string,
+  http: typeof fetch,
+): Promise<Map<string, { input: number; output: number }>> {
+  const root = endpoint.baseURL.replace(/\/v1$/, "");
+  try {
+    const res = await http(`${root}/model_group/info`, {
+      headers: { authorization: `Bearer ${apiKey}`, accept: "application/json" },
+      signal: AbortSignal.timeout(INFO_TIMEOUT_MS),
+    });
+    if (!res.ok) {
+      await res.body?.cancel().catch(() => {});
+      return new Map();
+    }
+    return parseModelGroupPrices(await cappedJson(res, LIST_MAX_BYTES));
+  } catch {
+    return new Map();
+  }
 }
 
 /** A reply's ceilings: a server people pointed us at (stuck, or hostile) can't fill this process's memory or hold a worker. */

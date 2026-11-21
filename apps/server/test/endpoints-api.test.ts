@@ -11,6 +11,21 @@ const gatewayList = (async (url: string | URL | Request) =>
     ? new Response(JSON.stringify({ data: [{ id: "llama-4" }, { id: "qwen-3" }] }))
     : new Response("not found", { status: 404 })) as unknown as typeof fetch;
 
+/** A LiteLLM proxy: its model list, and its model groups with their prices per token. */
+const litellmList = (async (url: string | URL | Request) =>
+  String(url) === "https://gw.example/v1/models"
+    ? new Response(JSON.stringify({ data: [{ id: "llama-4" }, { id: "qwen-3" }] }))
+    : String(url) === "https://gw.example/model_group/info"
+      ? new Response(
+          JSON.stringify({
+            data: [
+              { model_group: "llama-4", input_cost_per_token: 2e-7, output_cost_per_token: 6e-7 },
+              { model_group: "qwen-3" },
+            ],
+          }),
+        )
+      : new Response("not found", { status: 404 })) as unknown as typeof fetch;
+
 const resolveHost = async (host: string) => (host === "inside.example" ? ["10.0.0.7"] : ["93.184.216.34"]);
 
 const endpoint = {
@@ -84,6 +99,20 @@ test("an endpoint: its list, saved with a test per model, its models in the pick
     (await asMember("/credentials", { json: { provider: "custom", label: "x", apiKey: "", endpoint } })).status,
   ).toBe(403);
   expect((await asMember(`/credentials/${key.id}/models`, { method: "PUT", json: { models: [] } })).status).toBe(403);
+});
+
+test("a LiteLLM endpoint's list comes with the prices it knows, in US$ per million tokens", async () => {
+  t = await createTestServer({ http: litellmList, resolveHost });
+  const owner = browser(t);
+  await signUp(owner, "owner@example.com");
+  const { orgId } = await seedOrg(owner);
+  const listed = await owner(`/api/app/organizations/${orgId}/credentials/endpoint-models`, {
+    json: { style: "openai", baseURL: "https://gw.example/v1", apiKey: "gw-key-1234567" },
+  });
+  expect(await listed.json()).toEqual({
+    baseURL: "https://gw.example/v1",
+    models: [{ id: "llama-4", prices: { input: 0.2, output: 0.6 } }, { id: "qwen-3" }],
+  });
 });
 
 test("on the Cloud's rules: http, internal and private addresses are refused", async () => {

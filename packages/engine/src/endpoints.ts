@@ -4,6 +4,7 @@ import {
   customModelId,
   ENDPOINT_STYLES,
   type EndpointStyle,
+  type ListedModel,
   listEndpointModels,
   type ModelInfo,
   parseCustomModel,
@@ -154,7 +155,7 @@ export async function listEndpoint(
   orgId: string,
   input: { style: EndpointStyle; baseURL: string; apiKey?: string },
   net: EndpointNet,
-): Promise<{ baseURL: string; models: { id: string; label?: string }[]; error?: string }> {
+): Promise<{ baseURL: string; models: ListedModel[]; error?: string }> {
   await requirePermission(db, actorId, orgId, "manage_credentials");
   const baseURL = await endpointAddress(input.baseURL, input.style, net);
   try {

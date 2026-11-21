@@ -891,6 +891,13 @@ export interface EndpointModel {
   check?: EndpointCheckResult;
 }
 
+/** A model an endpoint listed before it is saved, with the prices its server told (a LiteLLM proxy's), US$ per million tokens. */
+export interface ListedEndpointModel {
+  id: string;
+  label?: string;
+  prices?: { input: number; output: number };
+}
+
 export interface EndpointCheck {
   model: string;
   check: EndpointCheckResult;

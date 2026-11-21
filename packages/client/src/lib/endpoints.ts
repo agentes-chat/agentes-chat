@@ -1,4 +1,10 @@
-import type { EndpointCheck, EndpointCheckResult, EndpointModel, EndpointStyle } from "../api/types";
+import type {
+  EndpointCheck,
+  EndpointCheckResult,
+  EndpointModel,
+  EndpointStyle,
+  ListedEndpointModel,
+} from "../api/types";
 
 /**
  * "Outro provedor" (ADR 0146), web and phone: a workspace's own OpenAI- or Anthropic-compatible endpoint (a gateway,
@@ -39,10 +45,23 @@ export const endpointBaseExample = (style: EndpointStyle) =>
 const MODEL_ID = /^[\w.:/@+-]{1,200}$/;
 export const MAX_ENDPOINT_MODELS = 100;
 
-/** The models an endpoint listed, merged in: the ones already there keep their choice and prices, new ones start off. */
-export function withListedModels(draft: EndpointDraft, listed: readonly { id: string }[]): EndpointDraft {
+/**
+ * The models an endpoint listed, merged in: the ones already there keep their choice and prices, new ones start off,
+ * with the prices the server told (a LiteLLM proxy's) already in their fields.
+ */
+export function withListedModels(
+  draft: EndpointDraft,
+  listed: readonly Pick<ListedEndpointModel, "id" | "prices">[],
+): EndpointDraft {
   const have = new Set(draft.models.map((m) => m.id));
-  const fresh = listed.filter((m) => !have.has(m.id)).map((m) => ({ id: m.id, on: false, input: "", output: "" }));
+  const fresh = listed
+    .filter((m) => !have.has(m.id))
+    .map((m) => ({
+      id: m.id,
+      on: false,
+      input: m.prices ? String(m.prices.input) : "",
+      output: m.prices ? String(m.prices.output) : "",
+    }));
   return { ...draft, models: [...draft.models, ...fresh] };
 }
 
