@@ -143,6 +143,10 @@ html:not([data-pointer]) .thread-marker__open:focus-visible {
   min-height: 0;
   overflow-y: auto;
 }
+/* Its thumb shows on hover or with focus inside, as a scrolling column's (rule 30). */
+.thread-pop__list:not(:hover, :focus-within) {
+  --scroll-thumb: transparent;
+}
 /* A MediaRow: a face or a kind tile (32), the name with its time or state at the line's end, what it says under them,
    two lines at most, with a row's usual room on each side. */
 .thread-pop__row {

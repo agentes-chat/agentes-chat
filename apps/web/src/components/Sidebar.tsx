@@ -172,6 +172,7 @@ import { useInviteDialog } from "./invite/InviteDialog";
 import { useNow } from "./missions/MissionBits";
 import { COMPACT_QUERY, useMediaQuery, useNavDrawer } from "./NavDrawer";
 import { NewChannelDialog } from "./NewChannelDialog";
+import { NotificationDock } from "./NotificationDock";
 import { useNewAgent } from "./new-agent/NewAgentDialog";
 import { OpenOnPhoneDialog } from "./OpenOnPhone";
 import { useOrg } from "./org-context";
@@ -313,6 +314,8 @@ export function Sidebar() {
   const [customizing, setCustomizing] = useState(false);
   const navigate = useNavigate();
   const onProposals = useRouterState({ select: (r) => r.location.pathname.endsWith("/proposals") });
+  const onInbox = useRouterState({ select: (r) => r.location.pathname.endsWith("/notifications") });
+  const [dockOpen, setDockOpen] = useState(false);
   useEffect(() => {
     const open = () => setCreatingChannel(true);
     window.addEventListener(NEW_CHANNEL_EVENT, open);
@@ -921,26 +924,34 @@ export function Sidebar() {
     ),
   };
 
-  // The inbox: at the end of my row in the foot, or beside me on top in a personal workspace.
+  // The inbox: at the end of my row in the foot, or beside me on top in a personal workspace. A click opens its dock
+  // beside it (the latest, compact); the inbox page is the dock's "Ver tudo".
   const bell = (
-    <Link
-      to="/org/$orgId/notifications"
-      params={{ orgId }}
-      className="sidebar__bell"
-      title={t("shell.notifications")}
-      aria-label={
-        unreadNotifications > 0
-          ? t("shell.unreadNotifications", { count: unreadNotifications })
-          : t("shell.notifications")
+    <NotificationDock
+      open={dockOpen}
+      onOpenChange={setDockOpen}
+      align={personal ? "start" : "end"}
+      trigger={
+        <button
+          type="button"
+          className="sidebar__bell"
+          data-status={onInbox || dockOpen ? "active" : undefined}
+          title={t("shell.notifications")}
+          aria-label={
+            unreadNotifications > 0
+              ? t("shell.unreadNotifications", { count: unreadNotifications })
+              : t("shell.notifications")
+          }
+        >
+          <Icon name="bell" />
+          {unreadNotifications > 0 && (
+            <CountBadge key={bumps} className={cx("sidebar__unread", bumps > 0 && "sidebar__bump")}>
+              {badgeCount(unreadNotifications)}
+            </CountBadge>
+          )}
+        </button>
       }
-    >
-      <Icon name="bell" />
-      {unreadNotifications > 0 && (
-        <CountBadge key={bumps} className={cx("sidebar__unread", bumps > 0 && "sidebar__bump")}>
-          {badgeCount(unreadNotifications)}
-        </CountBadge>
-      )}
-    </Link>
+    />
   );
   // The sidebar's toggle, in one place at every width: beside ⌘K (beside the bell in a personal workspace), under them
   // in the rail. In a phone's drawer it closes the drawer.
