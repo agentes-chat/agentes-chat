@@ -575,6 +575,16 @@ describe("agents learn on their own (ADR 0120)", () => {
     for (const part of ["port 2222", "as deploy", "~/.ssh/vps_example"]) expect(saved[0]?.content).toContain(part);
   });
 
+  test("notes follow the language of the person the turn was for, never an example's Portuguese", async () => {
+    f = await setup();
+    await f.db.update(schema.users).set({ locale: "en" }).where(eq(schema.users.id, f.owner.id));
+    const { run } = await personRun("@dev check the deploy");
+    await learnRun(f.context, { orgId: f.org.id, runId: run.id });
+    const call = f.provider.calls.find((c) => isLearn(systemText(c.request.system)));
+    expect(systemText(call?.request.system ?? "")).not.toContain("Como gravar");
+    expect(JSON.stringify(call?.request.messages)).toContain("App language of the person this turn was for: en");
+  });
+
   test("guards: daily cap, a live run, credentials, a person's item, update_skill rules, a run that saved already", async () => {
     f = await setup();
     const today = new Date().toISOString().slice(0, 10);

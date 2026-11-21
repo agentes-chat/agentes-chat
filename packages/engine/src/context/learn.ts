@@ -24,7 +24,7 @@ import { cutText, cutTextEnd } from "../format";
 import { agentBudgetState } from "../gateway";
 import { enqueue } from "../outbox";
 import { runReadOutsideById } from "../outside";
-import { personBehindCall } from "../requester";
+import { lineLocale, personBehindCall } from "../requester";
 import { isRightHand } from "../right-hand";
 import { addRunStep } from "../runs";
 import type { ToolContext } from "../tools/types";
@@ -317,7 +317,7 @@ const LEARN_SYSTEM = [
   "You keep the memory of an AI agent that works in a team of people and agents. Read one finished turn of its work and extract what is worth keeping for next time, as JSON.",
   'Kinds: how_to (a way it worked out and will reuse: the exact address, command, parameters, script path; steps first), preference (how a person wants things done), fact (a lasting fact about the company, its business or its people), decision, lesson (what to do differently, or keep doing), term (a word or name the team uses, and what it means), access (who in the team holds which access: an agent signed in to a service in its browser, given a login, a key, a connector or a mailbox, or a person or agent named as who handles a service; key: the holder\'s @handle or name, then the service, as in "@ana stripe dashboard"; content: who holds it and how, as in "@ana is signed in to the Stripe dashboard in its browser as ana@example.com"; one that was lost is an access too, saying so; how this agent reaches a system is an access too: host, port, user and the path of a key file on its own computer, key "@its-handle ssh host", as in "@ana reaches vps.example.com over SSH on port 2222 as deploy with the key at ~/.ssh/vps").',
   "How its systems work (where code lives, which file does what, how a tool behaves) is a how_to or a lesson, never a fact.",
-  'title: one plain line a person who doesn\'t code understands, in the language the people in the conversation write, with no paths, code or ids ("Como gravar senhas no Supabase sem expô-las"); content holds the technical detail. key: a short stable name for what it is about, in English, technical words welcome ("supabase secrets storage"; for a term, the term itself): the same thing learned again gets the same key, two different things never share one.',
+  'title: one plain line a person who doesn\'t code understands, with no paths, code or ids ("How to store passwords in Supabase without exposing them"); content holds the technical detail. Write title and content in the language the people in the conversation write; when their messages do not show it, in the app language the input names, never the language of the notes already in memory. key: a short stable name for what it is about, in English, technical words welcome ("supabase secrets storage"; for a term, the term itself): the same thing learned again gets the same key, two different things never share one.',
   "Scope: own (only this agent), team (how the team works), workspace (everyone should know), person (one person's own preference: give their name as it appears in the messages in about_person).",
   "Ground everything: cite refs (m1… messages, s1… tool calls) for each item. Never infer traits, roles, moods or preferences. A one-off request is not a standing preference. If unsure, leave it out.",
   'Write each item as a statement of fact ("Ana prefers reports in Portuguese"), never as an order ("Always write in Portuguese").',
@@ -546,6 +546,7 @@ export async function learnRun(deps: ContextDeps, input: { orgId: string; runId:
   );
   const text = [
     `Agent: @${agent.handle} (${agent.role})`,
+    `App language of the person this turn was for: ${await lineLocale(db, run.orgId, null, run.id)}`,
     "Messages:",
     ...lines,
     "Tool calls:",
