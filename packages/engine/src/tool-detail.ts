@@ -223,7 +223,13 @@ export function carriesCredential(value: unknown): boolean {
   return PRIVATE_KEY.test(text) || text.replace(SECRET, "") !== text;
 }
 
-const PRIVATE_KEY_BLOCK = /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(-----END [A-Z ]*PRIVATE KEY-----|$)/g;
+/**
+ * A private key's block (PGP's too), from its first line to its last or the text's end, its first line's words also
+ * wrapped over lines; and the end of one whose start was in an earlier text (a message, a page of a file), from the
+ * text's start.
+ */
+const PRIVATE_KEY_BLOCK =
+  /-----BEGIN[A-Z0-9\s]*?\sPRIVATE\s+KEY(?:\s+BLOCK)?-----[\s\S]*?(?:-----END[A-Z0-9\s]*?\sPRIVATE\s+KEY(?:\s+BLOCK)?-----|$)|^(?:(?!-----BEGIN)[\s\S])*?-----END[A-Z0-9\s]*?\sPRIVATE\s+KEY(?:\s+BLOCK)?-----/g;
 
 /** `maskSecrets`, private keys too (from their first line on): text people read that must hold none. */
 export const maskCredentials = (text: string) => maskSecrets(text).replace(PRIVATE_KEY_BLOCK, "••••");
@@ -267,6 +273,12 @@ export function scrubSignIns(text: string, note: string): { text: string; found:
 }
 
 /**
+ * An address's user and a password that holds `/` or `@` (`postgres://app:pa/ss@host`): up to the first `@` with no
+ * other in the host after it. Looked for before `USERINFO`, which would stop at the password's first such character.
+ * The password is 256 characters at most, so each `://` costs that much, never the rest of a long word.
+ */
+const USERINFO_PASSWORD = /:\/\/(?<=\b[a-z][a-z0-9+.-]*:\/\/)[^\s/?#@'":]+:[^\s'"]{0,256}?@(?![^\s'"/?#]*@)/gi;
+/**
  * An address's user and password (`postgres://user:pass@host`), found from its `://` with its scheme checked behind
  * it. Looked for from each letter a scheme could start at, one long word of dots or dashes costs the square of its
  * length.
@@ -290,12 +302,44 @@ const SECRET_OPTION = new RegExp(
 );
 
 /**
+ * Keys of cloud providers and services that `SECRET` leaves: AWS's temporary and other key ids, Google's API keys,
+ * OAuth tokens and client secrets, Stripe's secret and restricted keys and webhook secrets, GitLab's, npm's, Hugging
+ * Face's, DigitalOcean's and SendGrid's tokens, and a JWT with no signature.
+ */
+const SERVICE_KEYS =
+  /\b(?:A(?:SIA|BIA|CCA)[0-9A-Z]{16}\b|AIza[0-9A-Za-z_-]{35}|ya29\.[A-Za-z0-9_-]{20,}|GOCSPX-[A-Za-z0-9_-]{20,}|[rs]k_(?:live|test)_[A-Za-z0-9]{16,}|whsec_[A-Za-z0-9+/=]{24,}|glpat-[A-Za-z0-9_-]{20,}|npm_[A-Za-z0-9]{36}|hf_[A-Za-z0-9]{30,}|do[opr]_v1_[a-f0-9]{64}|SG\.[\w-]{22}\.[\w-]{43}|eyJ[\w-]{10,}\.eyJ[\w-]{10,}\.)/g;
+/** The value after a credential's name that `redactCommon` reads as no such name: AWS's secret key, Azure's account key, a connection string's `Pwd`. */
+const SECRET_NAMED =
+  /\b(?:(?:(?:aws[_-]?)?secret[_-]?access[_-]?key|account[_-]?key|private[_-]?key)["']?\s*[=:]|pwd\s*=)\s*/gi;
+/**
+ * An `Authorization` or `Cookie` header's value whole after its scheme's word, whatever the scheme (`Digest ***`,
+ * `AWS4-HMAC-SHA256 ***`, a bare token): inside a quoted text up to its closing quote, else to the line's end, also a
+ * line end JSON writes (`\n`).
+ */
+const HEADER_VALUE =
+  /(?:(["'])((?:proxy-)?authorization|(?:set-)?cookie)(\s*:[^\S\r\n]*(?:[A-Za-z][\w-]{0,19}[^\S\r\n]+)?)[^\r\n]+?(?=\\*\1)|(?<!["'\w-])((?:proxy-)?authorization|(?:set-)?cookie)(\s*:[^\S\r\n]*(?:[A-Za-z][\w-]{0,19}[^\S\r\n]+)?)[^\r\n]+?(?=\\[nr]|[\r\n]|$))/gi;
+
+/**
  * `maskCredentials`, an address's user and password (`postgres://***@host`, first: `redactCommon` would read a
  * `token:` there as a value to mask up to the next space), the shapes `redactCommon` knows (bearer headers,
- * `token=` values) and the value after a secret-named option (`--password ***`): text that leaves its place.
+ * `token=` values), service keys, an `Authorization` or `Cookie` header's value and the value after a secret-named
+ * option (`--password ***`): text that leaves its place.
  */
 export const redactCredentials = (text: string) =>
-  maskValuesAfter(redactCommon(maskCredentials(text).replace(USERINFO, "://***@")), SECRET_OPTION);
+  maskValuesAfter(
+    maskValuesAfter(
+      redactCommon(
+        maskCredentials(text)
+          .replace(USERINFO_PASSWORD, "://***@")
+          .replace(USERINFO, "://***@")
+          .replace(SERVICE_KEYS, "••••"),
+      ).replace(HEADER_VALUE, (_, quote, name, is, bare, bareIs) =>
+        quote ? `${quote}${name}${is}***` : `${bare}${bareIs}***`,
+      ),
+      SECRET_NAMED,
+    ),
+    SECRET_OPTION,
+  );
 
 /** An absolute path two parts deep or more (`/home/ada/x.jsonl`, `~/x/y`, `C:\Users\x`), never a URL's. */
 const ABSOLUTE_PATH = /(?<![\w:/.~\\-])(?:~|[A-Za-z]:)?(?:[\\/][^\s\\/:"'()<>,;]+){2,}[\\/]?/g;

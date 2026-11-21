@@ -221,6 +221,7 @@ const ConversationRead = z
             "Why it holds no text: deleted, of a confidential thread, or what a person said in a direct conversation that started no run.",
         }),
         ...Text,
+        after: z.string().openapi({ description: "The `cursor` of a page that goes on after this message." }),
       }),
     ),
     next: z.string().nullable().openapi({ description: "The next page's `cursor`; null: the last page." }),
@@ -260,6 +261,10 @@ const RunTranscript = z
         name: z.string().nullable().openapi({ description: "A tool's name; a model call's model." }),
         toolUseId: z.string().nullable().openapi({ description: "Pairs a call with its result." }),
         isError: z.boolean().nullable().openapi({ description: "A tool result's: it failed." }),
+        withheld: z.enum(["direct_conversation"]).nullable().openapi({
+          description:
+            "Why it holds no text: in a direct conversation's run, the result of a tool that reads conversations.",
+        }),
         ...Text,
       }),
     ),
@@ -384,7 +389,7 @@ export function registerOperatorReveal(api: OpenAPIHono, { db, config, emails, r
       path: "/reveal/orgs/{orgId}/runs/{runId}/transcript",
       tags,
       summary: "Read one run's transcript, with a reason",
-      description: `${READ_RECORD} Step by step, ${CONTENT_READ_MAX_ITEMS} at most a page: what the model wrote between calls, each tool call's input and its result, errors and what the run posted, with the message that started it. A run of a confidential thread answers 403 \`reveal.confidential\`.`,
+      description: `${READ_RECORD} Step by step, ${CONTENT_READ_MAX_ITEMS} at most a page: what the model wrote between calls, each tool call's input and its result, errors and what the run posted, with the message that started it. In a direct conversation's run, a result of a tool that reads conversations holds no text (\`withheld\`). A run of a confidential thread answers 403 \`reveal.confidential\`.`,
       request: {
         params: OrgParams.extend({ runId: z.uuid().openapi({ param: { name: "runId", in: "path" } }) }),
         body: body(RunTranscriptRequest),

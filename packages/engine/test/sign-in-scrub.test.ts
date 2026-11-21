@@ -74,5 +74,63 @@ test("an option with a long name and an address with a long scheme are read in l
   let list = "";
   for (let n = 1; list.length < 200_000; n++) list += `"--token",${"\\".repeat(n)}"x `;
   expect(redactCredentials(list)).not.toBe(list);
+  // And addresses that each open a password and never end one, and headers that never close their quote.
+  const addresses = "a://u:x".repeat(30_000);
+  expect(redactCredentials(addresses)).toBe(addresses);
+  expect(redactCredentials(`"cookie:${" x".repeat(100_000)}`)).toBe(`"cookie:${" x".repeat(100_000)}`);
   expect(performance.now() - started).toBeLessThan(250);
+});
+
+test("common credential shapes are masked: cloud keys, JWTs, passwords in addresses, private keys, headers", () => {
+  const masked = (text: string) => redactCredentials(text);
+  // Key shapes, all made up.
+  for (const key of [
+    "ASIAFAKEFAKEFAKEFAKE",
+    `AIza${"F".repeat(35)}`,
+    `ya29.${"fake".repeat(6)}`,
+    `GOCSPX-${"fake".repeat(6)}`,
+    `sk_live_${"FAKE".repeat(6)}`,
+    `rk_test_${"FAKE".repeat(6)}`,
+    `whsec_${"FAKE".repeat(8)}`,
+    `glpat-${"fake".repeat(6)}`,
+    `npm_${"fake".repeat(9)}`,
+    `hf_${"fake".repeat(9)}`,
+    `dop_v1_${"f".repeat(64)}`,
+    `SG.${"f".repeat(22)}.${"f".repeat(43)}`,
+    "eyJhbGciOiJub25lIn0.eyJzdWIiOiJmYWtlLXVzZXIifQ.",
+  ]) {
+    expect(masked(`use ${key} here`)).toBe("use •••• here");
+  }
+  expect(masked("aws_secret_access_key = fakeFAKEfake/FAKEfakeFAKE+fakeFAKEfake0")).toBe("aws_secret_access_key = ***");
+  expect(masked('{"SecretAccessKey": "fakeFAKEfake/FAKEfake"}')).not.toContain("fakeFAKEfake");
+  expect(masked("AccountName=demo;AccountKey=ZmFrZS1rZXk=;EndpointSuffix=example.com")).not.toContain("ZmFrZS1rZXk");
+  expect(masked("Server=db.example.com;Uid=app;Pwd=fake-pass;")).toBe("Server=db.example.com;Uid=app;Pwd=***");
+
+  // A password with `/` or `@` in an address, which the first `@` alone would leave half there.
+  expect(masked("postgres://app:fa/ke@db.example.com:5432/x")).toBe("postgres://***@db.example.com:5432/x");
+  expect(masked("mysql://app:fa@ke@db.example.com/x?to=ana@example.com")).toBe(
+    "mysql://***@db.example.com/x?to=ana@example.com",
+  );
+
+  // A private key's block: PGP's, one whose first line is wrapped, and the end of one that started in an earlier text.
+  expect(masked("-----BEGIN PGP PRIVATE KEY BLOCK-----\nfake\n-----END PGP PRIVATE KEY BLOCK-----\nthanks")).toBe(
+    "••••\nthanks",
+  );
+  expect(masked("here:\n-----BEGIN RSA PRIVATE\nKEY-----\nZmFrZQ==\nZmFrZQ==")).toBe("here:\n••••");
+  expect(masked("ZmFrZQ==\nZmFrZQ==\n-----END RSA PRIVATE KEY-----\nthanks")).toBe("••••\nthanks");
+  expect(masked("a -----BEGIN EC PRIVATE KEY-----\nZmFrZQ==\n-----END EC PRIVATE KEY----- b")).toBe("a •••• b");
+
+  // An Authorization or Cookie header's value whole after its scheme's word, whatever the scheme.
+  expect(masked('Authorization: Digest username="ana", response="0fake0fake0fake0"\nAccept: */*')).toBe(
+    "Authorization: Digest ***\nAccept: */*",
+  );
+  expect(masked("authorization: AWS4-HMAC-SHA256 Credential=x/2026/s3, Signature=0fake0fake")).toBe(
+    "authorization: AWS4-HMAC-SHA256 ***",
+  );
+  expect(masked("curl -H 'Authorization: fake-bare-token' https://example.com")).toBe(
+    "curl -H 'Authorization: ***' https://example.com",
+  );
+  expect(masked('{"line":"Cookie: sid=fake-session","ok":true}')).toBe('{"line":"Cookie: ***","ok":true}');
+  expect(masked("Authorization: Bearer fake-token-0000")).toBe("Authorization: Bearer ***");
+  expect(masked("the authorization header was missing")).toBe("the authorization header was missing");
 });

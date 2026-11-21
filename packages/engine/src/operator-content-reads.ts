@@ -3,10 +3,12 @@ import { and, asc, type Database, eq, gt, inArray, isNull, type SQL, schema, sql
 import { z } from "zod";
 import { recordAudit } from "./audit";
 import { confidentialThreadSql } from "./confidential";
+import { EXPAND_TOOL, READ_CONVERSATION_TOOL } from "./context/tools";
 import { decodeCursor, encodeCursor } from "./cursor";
 import { TooManyError, ValidationError } from "./errors";
 import { cutText, pgSafeText } from "./format";
 import { recordContentViewed } from "./operator-events";
+import { micros } from "./operator-paging";
 import {
   checkRevealReason,
   noSuchRecord,
@@ -61,14 +63,23 @@ function shown(raw: string | null | undefined) {
 
 /**
  * The read's record, committed before anything is read: a `content.viewed` event and an audit entry of the
- * workspace. A direct conversation's entry names no conversation, as the door's single reads do.
+ * workspace. A direct conversation's entry names no conversation, as the door's single reads do: `names` (the ids
+ * that point at it) go in the event alone.
  */
 async function onRecord(
   db: Database,
   orgId: string,
   input: InvestigationInput,
-  read: { ref: string; field: string; target: { type: string; id: string | null }; facts: Record<string, unknown> },
+  read: {
+    ref: string;
+    field: string;
+    direct: boolean;
+    target: { type: string; id: string };
+    facts?: Record<string, unknown>;
+    names: Record<string, unknown>;
+  },
 ) {
+  const direct = read.direct ? { direct: true } : {};
   await db.transaction(async (tx) => {
     await recordContentViewed(tx, {
       orgId,
@@ -79,17 +90,21 @@ async function onRecord(
       purpose: "investigation",
       field: read.field,
       assistedByAi: input.assistedByAi,
+      ...direct,
+      ...read.names,
       ...read.facts,
     });
     await recordAudit(tx, {
       orgId,
       actor: { type: "system", id: null },
       action: "operator.content_read",
-      target: read.target,
+      target: { type: read.target.type, id: read.direct ? null : read.target.id },
       details: {
         field: read.field,
         purpose: "investigation",
         assistedByAi: input.assistedByAi,
+        ...direct,
+        ...(read.direct ? {} : read.names),
         ...read.facts,
         ...cloudNotice(),
       },
@@ -122,7 +137,7 @@ export interface ConversationReadInput extends InvestigationInput {
   cursor?: string;
 }
 
-/** A page of messages ends at this key: `[createdAt, id]`. */
+/** A page of messages ends at this key: `[createdAt with its microseconds, id]`. */
 const MessageCursor = z.tuple([z.iso.datetime(), z.uuid()]);
 
 export const WITHHELD = ["deleted", "confidential", "direct_conversation"] as const;
@@ -155,15 +170,10 @@ export async function operatorConversationRead(
   await onRecord(db, orgId, input, {
     ref: `reveal:conversation:${channelId}${threadId ? `:${threadId}` : ""}`,
     field: "messages",
-    target: { type: "conversation", id: direct ? null : channelId },
-    facts: {
-      ...(direct ? { direct: true } : {}),
-      channelId,
-      ...(threadId ? { threadId } : {}),
-      from: from.toISOString(),
-      to: to.toISOString(),
-      ...(after ? { after: after[1] } : {}),
-    },
+    direct,
+    target: { type: "conversation", id: channelId },
+    names: { channelId, ...(threadId ? { threadId } : {}), ...(after ? { after: after[1] } : {}) },
+    facts: { from: from.toISOString(), to: to.toISOString() },
   });
 
   const ofPeople = sql<boolean>`${messages.authorType} = 'person' and not exists (
@@ -180,6 +190,7 @@ export async function operatorConversationRead(
     .select({
       id: messages.id,
       createdAt: messages.createdAt,
+      storedAt: micros(messages.createdAt),
       threadId: messages.threadId,
       authorType: messages.authorType,
       authorUserId: messages.authorUserId,
@@ -205,15 +216,16 @@ export async function operatorConversationRead(
     )
     .orderBy(asc(messages.createdAt), asc(messages.id))
     .limit(limit + 1);
-  const page = rows.slice(0, limit);
-  const last = page.at(-1);
+  const page = rows
+    .slice(0, limit)
+    .map(({ body, storedAt, ...m }) => ({ ...m, ...shown(body), after: encodeCursor([storedAt, m.id]) }));
   return {
     channelId,
     direct,
     from,
     to,
-    messages: page.map(({ body, ...m }) => ({ ...m, ...shown(body) })),
-    next: rows.length > limit && last ? encodeCursor([last.createdAt.toISOString(), last.id]) : null,
+    messages: page,
+    next: rows.length > limit ? (page.at(-1)?.after ?? null) : null,
   };
 }
 
@@ -223,6 +235,17 @@ export interface RunTranscriptInput extends InvestigationInput {
   afterSeq: number;
   limit: number;
 }
+
+/**
+ * The tools whose result is what was said in a conversation (a stretch of one, a search of the workspace's, a
+ * thread's summary, an earlier call's result whole): in a direct conversation's run, what people said to each other.
+ */
+const READS_CONVERSATIONS: ReadonlySet<string> = new Set([
+  READ_CONVERSATION_TOOL,
+  "search_context",
+  "get_summary",
+  EXPAND_TOOL,
+]);
 
 /** What a step says, as text: what the model wrote, a call's input, a result, an error, a message the run posted. */
 function stepText(kind: string, data: Record<string, unknown>, posted: Map<string, string | null>): string | null {
@@ -244,8 +267,9 @@ function stepText(kind: string, data: Record<string, unknown>, posted: Map<strin
 
 /**
  * One run's transcript, step by step from `afterSeq`: what the model wrote between calls, each tool call's input and
- * its result, errors, the messages it posted, and what started it. A run of a confidential thread is refused (403
- * `reveal.confidential`). One 404 for a run of another workspace, of a deleted conversation and nobody's.
+ * its result, errors, the messages it posted, and what started it. In a direct conversation's run, a result of a tool
+ * that reads conversations holds no text (`withheld`), as the conversation's own read keeps what people said to each
+ * other. A run of a confidential thread is refused (403 `reveal.confidential`). One 404 for a run of another workspace, of a deleted conversation and nobody's.
  */
 export async function operatorRunTranscript(db: Database, orgId: string, input: RunTranscriptInput, now = new Date()) {
   await checkRead(db, orgId, input, now);
@@ -273,12 +297,10 @@ export async function operatorRunTranscript(db: Database, orgId: string, input: 
   await onRecord(db, orgId, input, {
     ref: `reveal:run:${run.id}`,
     field: "transcript",
-    target: { type: "run_step", id: run.direct ? null : run.id },
-    facts: {
-      ...(run.direct ? { direct: true } : {}),
-      runId: run.id,
-      ...(input.afterSeq > 0 ? { afterSeq: input.afterSeq } : {}),
-    },
+    direct: run.direct,
+    target: { type: "run_step", id: run.id },
+    names: { runId: run.id },
+    facts: input.afterSeq > 0 ? { afterSeq: input.afterSeq } : {},
   });
 
   const steps = await db
@@ -299,19 +321,24 @@ export async function operatorRunTranscript(db: Database, orgId: string, input: 
   const posted = new Map(bodies.map((m) => [m.id, m.deletedAt ? null : m.body]));
   const name = (s: (typeof page)[number]) =>
     typeof s.data.name === "string" ? s.data.name : typeof s.data.model === "string" ? s.data.model : null;
-  const { direct: _direct, confidential: _confidential, ...about } = run;
+  const { direct, confidential: _confidential, ...about } = run;
   return {
     run: about,
     request: shown(posted.get(run.triggerMessageId)),
-    steps: page.map((s) => ({
-      seq: s.seq,
-      kind: s.kind,
-      at: s.at,
-      name: name(s),
-      toolUseId: typeof s.data.toolUseId === "string" ? s.data.toolUseId : null,
-      isError: s.kind === "tool_result" ? s.data.isError === true : null,
-      ...shown(stepText(s.kind, s.data, posted)),
-    })),
+    steps: page.map((s) => {
+      const withheld: "direct_conversation" | null =
+        direct && s.kind === "tool_result" && READS_CONVERSATIONS.has(name(s) ?? "") ? "direct_conversation" : null;
+      return {
+        seq: s.seq,
+        kind: s.kind,
+        at: s.at,
+        name: name(s),
+        toolUseId: typeof s.data.toolUseId === "string" ? s.data.toolUseId : null,
+        isError: s.kind === "tool_result" ? s.data.isError === true : null,
+        withheld,
+        ...shown(withheld ? null : stepText(s.kind, s.data, posted)),
+      };
+    }),
     nextSeq: steps.length > input.limit ? (page.at(-1)?.seq ?? null) : null,
   };
 }
@@ -333,8 +360,9 @@ export async function operatorAgentSettings(
   await onRecord(db, orgId, input, {
     ref: `reveal:agent:${found.id}`,
     field: "settings",
+    direct: false,
     target: { type: "agent", id: found.id },
-    facts: { agentId: found.id },
+    names: { agentId: found.id },
   });
   const [a] = await db
     .select({

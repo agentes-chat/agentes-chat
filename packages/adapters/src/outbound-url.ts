@@ -7,7 +7,7 @@ export const SIGNED_SHAPES = /\b(AKIA[0-9A-Z]{16}|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z
 export const maskKeyShapes = (text: string) =>
   text.replace(KEY_SHAPES, "[REDACTED]").replace(SIGNED_SHAPES, "[REDACTED]");
 /** A private key, by its first line. */
-export const PRIVATE_KEY = /-----BEGIN [A-Z ]*PRIVATE KEY-----/;
+export const PRIVATE_KEY = /-----BEGIN[A-Z0-9\s]*?\sPRIVATE\s+KEY/;
 
 export type OutboundCode = "outbound.private_text" | "outbound.credential" | "outbound.long";
 

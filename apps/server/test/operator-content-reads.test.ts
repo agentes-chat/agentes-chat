@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, expect, test } from "bun:test";
-import { type Database, eq, schema } from "@agenteschat/db";
+import { type Database, eq, schema, sql } from "@agenteschat/db";
 import { addRunStep, markThreadConfidential } from "@agenteschat/engine";
 import { createLogger } from "../src/logger";
 import { createOperatorApp } from "../src/operator/app";
@@ -22,7 +22,10 @@ const HOUR = 3600_000;
 let t: TestServer;
 let db: Database;
 let app: ReturnType<typeof createOperatorApp>;
-const w = {} as Record<"orgId" | "generalId" | "agentId" | "dmId" | "runId" | "sealedRunId" | "otherOrgId", string>;
+const w = {} as Record<
+  "orgId" | "generalId" | "agentId" | "dmId" | "runId" | "dmRunId" | "sealedRunId" | "otherOrgId" | "ownerId",
+  string
+>;
 
 const post = (path: string, json: unknown, token = REVEAL) =>
   app.request(`/api/operator/v1/reveal/orgs/${w.orgId}${path}`, {
@@ -78,6 +81,7 @@ beforeAll(async () => {
     .from(schema.users)
     .where(eq(schema.users.email, "owner@example.com"));
   const ownerId = ownerUser?.id ?? "";
+  w.ownerId = ownerId;
   await db
     .update(schema.agents)
     .set({ instructions: `Answer in rhyme. Deploy key ${FAKE_KEY}`, role: "Support" })
@@ -102,14 +106,15 @@ beforeAll(async () => {
   const sealed = await say(w.generalId, "sealed words");
   await markThreadConfidential(db, { orgId: w.orgId, channelId: w.generalId, rootId: sealed });
   await say(w.dmId, "what two people said");
+  const dmAsk = await say(w.dmId, "@dev what did we agree on?");
 
-  const run = async (trigger: string) => {
+  const run = async (trigger: string, channelId = w.generalId) => {
     const [r] = await db
       .insert(schema.agentRuns)
       .values({
         orgId: w.orgId,
         agentId: w.agentId,
-        channelId: w.generalId,
+        channelId,
         threadRootId: trigger,
         triggerMessageId: trigger,
         trigger: "mention",
@@ -134,6 +139,14 @@ beforeAll(async () => {
   await step("tool_call", { toolUseId: "u1", name: "deploy", input: { target: "prod", password: "hunter2-fake" } });
   await step("tool_result", { toolUseId: "u1", name: "deploy", content: "x".repeat(5000), isError: true });
   await step("message", { messageId: reply });
+
+  w.dmRunId = await run(dmAsk, w.dmId);
+  const dmStep = (kind: Parameters<typeof addRunStep>[2], data: Record<string, unknown>) =>
+    addRunStep(db, { id: w.dmRunId, orgId: w.orgId }, kind, data);
+  await dmStep("tool_call", { toolUseId: "d1", name: "read_conversation", input: { channel_id: w.dmId } });
+  await dmStep("tool_result", { toolUseId: "d1", name: "read_conversation", content: "Ana: what two people said" });
+  await dmStep("tool_result", { toolUseId: "d2", name: "search_context", content: "what two people said" });
+  await dmStep("tool_result", { toolUseId: "d3", name: "web_search", content: "a page of the web" });
 });
 
 afterAll(() => t.close());
@@ -176,7 +189,11 @@ test("a conversation's messages, masked, with what is kept out saying why", asyn
   expect(read.next).toBeNull();
 
   const dm = (await (await post(`/conversations/${w.dmId}/messages`, window())).json()) as typeof read;
-  expect(dm.messages.map((m) => [m.text, m.withheld])).toEqual([[null, "direct_conversation"]]);
+  // What a person said that started a run is the run's request; what they said to each other is not read.
+  expect(dm.messages.map((m) => [m.text, m.withheld])).toEqual([
+    [null, "direct_conversation"],
+    ["@dev what did we agree on?", null],
+  ]);
 });
 
 test("the read is on record: the reason in the feed, never in the workspace's audit log", async () => {
@@ -201,6 +218,9 @@ test("the read is on record: the reason in the feed, never in the workspace's au
       ["conversation", null],
     ]),
   );
+  // A direct conversation's entry names none: its ids are in the operator's feed alone.
+  expect(JSON.stringify(audit)).not.toContain(w.dmId);
+  expect(audit.find((a) => a.targetId === null)?.details).toMatchObject({ direct: true });
   expect(JSON.stringify(audit)).not.toContain(WHY.reason);
   expect(JSON.stringify(audit)).not.toContain(WHY.caseRef);
   expect(audit.every((a) => a.details.purpose === "investigation" && a.actorType === "system")).toBe(true);
@@ -292,4 +312,62 @@ test("an agent's instructions and settings, masked", async () => {
   const [entry] = await entries();
   expect(entry).toMatchObject({ targetType: "agent", targetId: w.agentId });
   expect(entry?.details).toMatchObject({ field: "settings", purpose: "investigation", agentId: w.agentId });
+});
+
+test("a page ends at its last message to the microsecond: messages a microsecond apart are each read once", async () => {
+  const [room] = await db
+    .insert(schema.channels)
+    .values({ orgId: w.orgId, name: "same-millisecond", kind: "channel", visibility: "public" })
+    .returning({ id: schema.channels.id });
+  const base = new Date(Date.now() - 60_000).toISOString();
+  for (const n of [1, 2, 3]) {
+    await db.insert(schema.messages).values({
+      orgId: w.orgId,
+      channelId: room?.id ?? "",
+      authorType: "person",
+      authorUserId: w.ownerId,
+      body: `message ${n}`,
+      createdAt: sql`${base}::timestamptz + ${n} * interval '1 microsecond'`,
+    });
+  }
+  type Page = { messages: { text: string; after: string }[]; next: string | null };
+  const read = async (cursor?: string) =>
+    (await (
+      await post(`/conversations/${room?.id}/messages`, { ...window(), limit: 1, ...(cursor ? { cursor } : {}) })
+    ).json()) as Page;
+  const texts: string[] = [];
+  let page = await read();
+  for (let calls = 0; calls < 5; calls++) {
+    texts.push(...page.messages.map((m) => m.text));
+    if (!page.next) break;
+    expect(page.next).toBe(page.messages.at(-1)?.after ?? "");
+    page = await read(page.next);
+  }
+  expect(texts).toEqual(["message 1", "message 2", "message 3"]);
+  // Each message's own `after` goes on from it: a caller that gives fewer than a page says where it stopped.
+  const all = await read();
+  expect((await read(all.messages[0]?.after)).messages.map((m) => m.text)).toEqual(["message 2"]);
+});
+
+test("a direct conversation's run: results of tools that read conversations are withheld, its entry names no run", async () => {
+  const res = await post(`/runs/${w.dmRunId}/transcript`, {});
+  expect(res.status).toBe(200);
+  const read = (await res.json()) as {
+    request: { text: string | null };
+    steps: { kind: string; name: string | null; text: string | null; withheld: string | null }[];
+  };
+  expect(read.request.text).toBe("@dev what did we agree on?");
+  expect(read.steps.map((s) => [s.kind, s.name, s.text, s.withheld])).toEqual([
+    ["tool_call", "read_conversation", `channel_id: ${w.dmId}`, null],
+    ["tool_result", "read_conversation", null, "direct_conversation"],
+    ["tool_result", "search_context", null, "direct_conversation"],
+    ["tool_result", "web_search", "a page of the web", null],
+  ]);
+  expect(JSON.stringify(read)).not.toContain("what two people said");
+
+  const [event] = await events();
+  expect(event?.data).toMatchObject({ direct: true, runId: w.dmRunId });
+  const audit = await entries();
+  expect(audit.map((a) => [a.targetType, a.targetId])).toEqual([["run_step", null]]);
+  expect(JSON.stringify(audit)).not.toContain(w.dmRunId);
 });
