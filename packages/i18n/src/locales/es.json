@@ -13690,6 +13690,11 @@
         "1": "Ver campañas y resultados",
         "2": "Crear y ajustar campañas"
       },
+      "querya": {
+        "1": "Ver informes, términos de búsqueda e ideas de palabras clave de Google Ads",
+        "2": "Preparar cambios en campañas, presupuestos, pujas y palabras clave",
+        "ask": "Aplicar un cambio en Google Ads pide tu aprobación"
+      },
       "google_docs": {
         "1": "Buscar y leer documentos",
         "2": "Crear y editar documentos"
@@ -13952,6 +13957,7 @@
       "amplitude": "Gráficos, dashboards y experimentos.",
       "himetrica": "Visitantes, embudos, ingresos y tráfico de búsqueda.",
       "meta_ads": "Campañas de anuncios de Facebook e Instagram y sus resultados.",
+      "querya": "Informes, investigación de palabras clave y cambios en campañas de Google Ads, con vista previa y deshacer.",
       "klaviyo": "Campañas, flujos, listas y perfiles.",
       "millionsend": "Campañas de correo, listas y contactos.",
       "semrush": "Datos de palabras clave, dominios y backlinks.",

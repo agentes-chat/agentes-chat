@@ -32319,6 +32319,15 @@
   "connectors.can.meta_ads.2": {
     "value": "Create and adjust campaigns"
   },
+  "connectors.can.querya.1": {
+    "value": "See Google Ads reports, search terms and keyword ideas"
+  },
+  "connectors.can.querya.2": {
+    "value": "Prepare changes to campaigns, budgets, bids and keywords"
+  },
+  "connectors.can.querya.ask": {
+    "value": "Applying a change to Google Ads asks for your approval"
+  },
   "connectors.can.google_docs.1": {
     "value": "Search and read documents"
   },
@@ -32873,6 +32882,9 @@
   },
   "connectors.descriptions.meta_ads": {
     "value": "Facebook and Instagram ad campaigns and results."
+  },
+  "connectors.descriptions.querya": {
+    "value": "Google Ads reports, keyword research and campaign changes, with preview and undo."
   },
   "connectors.descriptions.klaviyo": {
     "value": "Campaigns, flows, lists and profiles."

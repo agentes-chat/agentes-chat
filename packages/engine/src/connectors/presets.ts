@@ -952,6 +952,19 @@ export const MCP_PRESETS: readonly McpPreset[] = [
     soon: true,
   },
   {
+    id: "querya",
+    category: "marketing",
+    label: "Querya",
+    description:
+      "Google Ads through Querya: reports, search terms, keyword research and campaign changes with preview and undo.",
+    icon: "querya",
+    serverUrl: "https://mcp.querya.io/mcp",
+    // Checked 2026-11-17: its authorization server (auth.querya.io) registers clients (RFC 7591, `none`), takes PKCE
+    // S256 and always gives a refresh token. The person signs in with Google there and picks the Google Ads accounts
+    // Querya may reach. Its write tools only prepare a validated plan; `confirm_change_plan` (marked
+    // `destructiveHint`) is the one that changes the account, and `undo_change` reverts it.
+  },
+  {
     id: "klaviyo",
     category: "marketing",
     label: "Klaviyo",

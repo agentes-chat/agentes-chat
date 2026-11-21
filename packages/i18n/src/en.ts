@@ -13617,6 +13617,11 @@ export const en = {
       amplitude: { "1": "See charts and dashboards", "2": "Create charts" },
       himetrica: { "1": "See visits, funnels and revenue", "2": "Create and edit funnels" },
       meta_ads: { "1": "See campaigns and results", "2": "Create and adjust campaigns" },
+      querya: {
+        "1": "See Google Ads reports, search terms and keyword ideas",
+        "2": "Prepare changes to campaigns, budgets, bids and keywords",
+        ask: "Applying a change to Google Ads asks for your approval",
+      },
       google_docs: { "1": "Search and read documents", "2": "Create and edit documents" },
       google_sheets: { "1": "Read spreadsheets", "2": "Add rows and update cells" },
       google_calendar: {
@@ -13819,6 +13824,7 @@ export const en = {
       amplitude: "Charts, dashboards and experiments.",
       himetrica: "Visitors, funnels, revenue and search traffic.",
       meta_ads: "Facebook and Instagram ad campaigns and results.",
+      querya: "Google Ads reports, keyword research and campaign changes, with preview and undo.",
       klaviyo: "Campaigns, flows, lists and profiles.",
       millionsend: "Email campaigns, lists and contacts.",
       semrush: "Keyword, domain and backlink data.",

@@ -12782,6 +12782,11 @@
         "1": "Melihat kampanye dan hasilnya",
         "2": "Membuat dan menyesuaikan kampanye"
       },
+      "querya": {
+        "1": "Lihat laporan, istilah penelusuran, dan ide kata kunci Google Ads",
+        "2": "Siapkan perubahan pada kampanye, anggaran, bid, dan kata kunci",
+        "ask": "Menerapkan perubahan di Google Ads meminta persetujuanmu"
+      },
       "google_docs": {
         "1": "Mencari dan membaca dokumen",
         "2": "Membuat dan mengedit dokumen"
@@ -13034,6 +13039,7 @@
       "amplitude": "Grafik, dashboard, dan eksperimen.",
       "himetrica": "Pengunjung, funnel, pendapatan, dan trafik pencarian.",
       "meta_ads": "Kampanye iklan Facebook dan Instagram beserta hasilnya.",
+      "querya": "Laporan, riset kata kunci, dan perubahan kampanye Google Ads, dengan pratinjau dan urungkan.",
       "klaviyo": "Kampanye, flow, daftar, dan profil.",
       "millionsend": "Kampanye email, daftar, dan kontak.",
       "semrush": "Data kata kunci, domain, dan backlink.",

@@ -13608,6 +13608,11 @@ export const ptBR = {
       amplitude: { "1": "Ver gráficos e dashboards", "2": "Criar gráficos" },
       himetrica: { "1": "Ver visitas, funis e receita", "2": "Criar e editar funis" },
       meta_ads: { "1": "Ver campanhas e resultados", "2": "Criar e ajustar campanhas" },
+      querya: {
+        "1": "Ver relatórios, termos de pesquisa e ideias de palavras-chave do Google Ads",
+        "2": "Preparar alterações em campanhas, orçamentos, lances e palavras-chave",
+        ask: "Aplicar uma alteração no Google Ads pede sua aprovação",
+      },
       google_docs: { "1": "Buscar e ler documentos", "2": "Criar e editar documentos" },
       google_sheets: { "1": "Ler planilhas", "2": "Adicionar linhas e atualizar células" },
       google_calendar: {
@@ -13803,6 +13808,7 @@ export const ptBR = {
       amplitude: "Gráficos, dashboards e experimentos.",
       himetrica: "Visitantes, funis, receita e busca orgânica.",
       meta_ads: "Campanhas e resultados de anúncios no Facebook e Instagram.",
+      querya: "Relatórios, pesquisa de palavras-chave e alterações em campanhas do Google Ads, com prévia e desfazer.",
       klaviyo: "Campanhas, fluxos, listas e perfis.",
       millionsend: "Campanhas de email, listas e contatos.",
       semrush: "Dados de palavras-chave, domínios e backlinks.",

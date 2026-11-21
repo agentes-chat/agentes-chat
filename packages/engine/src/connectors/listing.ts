@@ -72,6 +72,7 @@ export const CONNECTOR_BRANDS: Record<string, { file: string; color: string | nu
   amplitude: { file: "amplitude", color: "#1E61F0" },
   himetrica: { file: "himetrica", color: "#F97015" },
   meta: { file: "meta", color: "#0467DF" },
+  querya: { file: "querya", color: "#FF0019" },
   klaviyo: { file: "klaviyo", color: null },
   millionsend: { file: "millionsend", color: null },
   semrush: { file: "semrush", color: "#FF642D" },

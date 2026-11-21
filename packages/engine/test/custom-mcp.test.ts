@@ -1059,6 +1059,130 @@ describe("custom MCP servers", () => {
     expect(await f.db.select().from(schema.oauthClients)).toHaveLength(1);
   });
 
+  test("Querya: registers us as a public client, asks for the scopes its metadata lists, and its tools come classified", async () => {
+    f = await setup();
+    const querya = "https://mcp.querya.io/mcp";
+    const issuer = "https://auth.querya.io";
+    const seen = { challenge: "", register: [] as Record<string, unknown>[], bearer: [] as (string | undefined)[] };
+    const metadata = {
+      resource: querya,
+      authorization_servers: [issuer],
+      scopes_supported: ["ads.read", "ads.write"],
+      bearer_methods_supported: ["header"],
+      resource_name: "Querya — MCP server for Google Ads",
+      resource_documentation: "https://querya.io/docs",
+    };
+    // As Querya and its authorization server answered on 2026-11-17.
+    const http = (async (input: string | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === querya) {
+        return Response.json(
+          { error: "invalid_token", error_description: "Missing Authorization header" },
+          {
+            status: 401,
+            headers: {
+              "www-authenticate":
+                'Bearer error="invalid_token", error_description="Missing Authorization header", scope="ads.read", resource_metadata="https://mcp.querya.io/.well-known/oauth-protected-resource/mcp"',
+            },
+          },
+        );
+      }
+      if (url.startsWith("https://mcp.querya.io/.well-known/oauth-protected-resource")) return Response.json(metadata);
+      if (url === `${issuer}/.well-known/oauth-authorization-server`) {
+        return Response.json({
+          issuer,
+          authorization_endpoint: `${issuer}/authorize`,
+          token_endpoint: `${issuer}/token`,
+          registration_endpoint: `${issuer}/register`,
+          revocation_endpoint: `${issuer}/revoke`,
+          jwks_uri: `${issuer}/.well-known/jwks.json`,
+          scopes_supported: ["ads.read", "ads.write"],
+          response_types_supported: ["code"],
+          response_modes_supported: ["query"],
+          grant_types_supported: ["authorization_code", "refresh_token"],
+          code_challenge_methods_supported: ["S256"],
+          token_endpoint_auth_methods_supported: ["none", "client_secret_post"],
+          revocation_endpoint_auth_methods_supported: ["none", "client_secret_post"],
+          client_id_metadata_document_supported: true,
+          authorization_response_iss_parameter_supported: true,
+          service_documentation: "https://querya.io/docs",
+        });
+      }
+      if (url === `${issuer}/register`) {
+        const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+        seen.register.push(body);
+        return Response.json({ ...body, client_id: "querya-client", client_id_issued_at: 1794960000 }, { status: 201 });
+      }
+      if (url === `${issuer}/token`) {
+        const form = new URLSearchParams(String(init?.body));
+        const verified =
+          createHash("sha256")
+            .update(form.get("code_verifier") ?? "")
+            .digest("base64url") === seen.challenge;
+        if (!verified || form.get("resource") !== querya || form.get("client_id") !== "querya-client")
+          return Response.json({ error: "invalid_grant" }, { status: 400 });
+        return Response.json({
+          access_token: "querya-at",
+          token_type: "Bearer",
+          expires_in: 3600,
+          refresh_token: "querya-rt",
+          scope: "ads.read ads.write",
+        });
+      }
+      return new Response("not found", { status: 404 });
+    }) as unknown as typeof fetch;
+    const connect: McpConnect = async (_connection, headers) => {
+      seen.bearer.push(headers.authorization);
+      const server = new McpServer({ name: "querya", version: "1.0.0" });
+      const tool = (name: string, annotations: Record<string, boolean>) =>
+        server.registerTool(name, { description: name, inputSchema: {}, annotations }, async () => ({
+          content: [{ type: "text", text: "ok" }],
+        }));
+      tool("list_accounts", { readOnlyHint: true, openWorldHint: false });
+      tool("get_performance_report", { readOnlyHint: true, openWorldHint: true });
+      // Write tools only prepare a validated plan; confirming it is what changes the account.
+      tool("confirm_change_plan", { readOnlyHint: false, destructiveHint: true, openWorldHint: true });
+      tool("delete_alert", { readOnlyHint: false, destructiveHint: true, openWorldHint: false });
+      const [client, transport] = InMemoryTransport.createLinkedPair();
+      await server.connect(transport);
+      return mcpSessionOver(client);
+    };
+    const deps = depsOf(f, { http, connect, resolveHost: async () => ["93.184.216.34"] });
+    const started = await connectCustomServer(deps, f.owner.id, f.org.id, { serverUrl: querya, label: "Querya" });
+    if (started.status !== "oauth") throw new Error(`expected oauth, got ${started.status}`);
+    const url = new URL(started.authorizeUrl);
+    expect(url.origin + url.pathname).toBe(`${issuer}/authorize`);
+    expect(Object.fromEntries(url.searchParams)).toMatchObject({
+      client_id: "querya-client",
+      code_challenge_method: "S256",
+      resource: querya,
+      // The scopes its metadata lists; no offline_access, which it doesn't list (it gives a refresh token anyway).
+      scope: "ads.read ads.write",
+    });
+    expect(seen.register).toHaveLength(1);
+    expect(seen.register[0]).toMatchObject({ client_name: "agentes.chat", token_endpoint_auth_method: "none" });
+    seen.challenge = url.searchParams.get("code_challenge") ?? "";
+    const { connection } = await completeOAuth(
+      deps,
+      { id: f.owner.id },
+      { state: url.searchParams.get("state") ?? "", code: "code-1" },
+    );
+    expect(connection).toMatchObject({ label: "Querya" });
+    await refreshCustomServer(deps, f.owner.id, f.org.id, connection.id);
+    expect(seen.bearer).toContain("Bearer querya-at");
+    const tools = await f.db
+      .select()
+      .from(schema.customTools)
+      .where(eq(schema.customTools.connectionId, connection.id));
+    // Reads are free; confirming a plan asks (its `destructiveHint`), and deleting asks by its verb.
+    expect(Object.fromEntries(tools.map((t) => [t.name, t.suggestedAccess]))).toEqual({
+      list_accounts: "read",
+      get_performance_report: "read",
+      confirm_change_plan: "approval",
+      delete_alert: "approval",
+    });
+  });
+
   test("offline_access goes with the scopes asked for when the authorization server lists it (Vercel asks only openid), never alone", async () => {
     f = await setup();
     const vercel = oauthServer({ scopes: ["openid"], serverScopes: ["openid", "email", "profile", "offline_access"] });
