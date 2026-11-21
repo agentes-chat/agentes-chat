@@ -2192,6 +2192,13 @@
       "agentSettings": "Einstellungen von {{name}}"
     },
     "sidebarSetup": {
+      "inTools": "Nur in Werkzeuge",
+      "reviewTools": "Zu prüfen",
+      "organizeTools": "Organisation",
+      "workspaceTools": "Arbeitsbereich",
+      "inQuickAccess": "Im Schnellzugriff",
+      "pinTool": "{{name}} an den Schnellzugriff anheften",
+      "removeTool": "{{name}} aus dem Schnellzugriff entfernen",
       "description": "Wähle, was oben in deiner Seitenleiste sichtbar bleibt. Nur für dich, in diesem Workspace.",
       "always": "Immer",
       "more": "Unter Mehr",
@@ -2291,6 +2298,7 @@
     "channelsPersonal": "Gruppenunterhaltungen",
     "agents": "Agenten",
     "directMessages": "Direktnachrichten",
+    "create": "Erstellen",
     "createAgent": "Agent erstellen",
     "importAgents": "Agenten aus einer anderen App holen",
     "account": "Konto",
@@ -19749,7 +19757,8 @@
     }
   },
   "agora": {
-    "label": "Jetzt",
+    "label": "Aktivität",
+    "openActivity": "Agentenaktivität ansehen",
     "working_one": "{{count}} Agent arbeitet",
     "working_other": "{{count}} Agenten arbeiten",
     "waiting_one": "{{count}} Sache wartet auf dich",

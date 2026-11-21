@@ -2192,6 +2192,13 @@
       "agentSettings": "Instellingen van {{name}}"
     },
     "sidebarSetup": {
+      "inTools": "Alleen in Hulpmiddelen",
+      "reviewTools": "Te bekijken",
+      "organizeTools": "Organisatie",
+      "workspaceTools": "Werkruimte",
+      "inQuickAccess": "In Snelle toegang",
+      "pinTool": "{{name}} vastzetten in Snelle toegang",
+      "removeTool": "{{name}} uit Snelle toegang verwijderen",
       "description": "Kies wat bovenaan je zijbalk in beeld blijft. Alleen voor jou, in deze werkruimte.",
       "always": "Altijd",
       "more": "Onder Meer",
@@ -2291,6 +2298,7 @@
     "channelsPersonal": "Groepsgesprekken",
     "agents": "Agents",
     "directMessages": "Directe berichten",
+    "create": "Maken",
     "createAgent": "Agent maken",
     "importAgents": "Agents uit een andere app halen",
     "account": "Account",
@@ -19932,7 +19940,8 @@
     }
   },
   "agora": {
-    "label": "Nu",
+    "label": "Activiteit",
+    "openActivity": "Activiteit van agents bekijken",
     "working_one": "{{count}} agent bezig",
     "working_other": "{{count}} agents bezig",
     "waiting_one": "{{count}} ding wacht op jou",

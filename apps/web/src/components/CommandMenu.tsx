@@ -7,7 +7,7 @@ import { can, makesAgents } from "@agenteschat/client/lib/permissions";
 import { settingsSectionNameKey } from "@agenteschat/client/lib/personal-view";
 import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
-import { Avatar, CommandPalette, Icon, type PaletteItem } from "@agenteschat/ui";
+import { Avatar, CommandPalette, type DialogProps, Icon, type PaletteItem } from "@agenteschat/ui";
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -26,7 +26,9 @@ export const isPaletteShortcut = (e: Pick<KeyboardEvent, "key" | "metaKey" | "ct
   (e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "k";
 
 /** Opens the palette from elsewhere (a button). */
-export const openPalette = () => window.dispatchEvent(new Event("agentes:palette"));
+export const openPalette = () => openPaletteFrom();
+export const openPaletteFrom = (returnFocus?: DialogProps["returnFocus"]) =>
+  window.dispatchEvent(new CustomEvent("agentes:palette", { detail: returnFocus }));
 
 /**
  * The ⌘K palette: go to any channel, agent, person, page or settings section,
@@ -45,7 +47,8 @@ export function CommandMenu() {
   const newAgent = useNewAgent();
   const theme = useTheme();
   const [creatingChannel, setCreatingChannel] = useState(false);
-  const [open, setOpen] = useState(false);
+  const [palette, setPalette] = useState<{ returnFocus?: DialogProps["returnFocus"] } | null>(null);
+  const open = palette !== null;
   // The wiki only when the palette is open (no request on every page).
   const wiki = useWikiTree(org.id, open);
 
@@ -53,9 +56,12 @@ export function CommandMenu() {
     const onKey = (e: KeyboardEvent) => {
       if (!isPaletteShortcut(e)) return;
       e.preventDefault();
-      setOpen((o) => !o);
+      setPalette((current) => (current ? null : {}));
     };
-    const onOpen = () => setOpen(true);
+    const onOpen = (event: Event) => {
+      const returnFocus = (event as CustomEvent<DialogProps["returnFocus"]>).detail;
+      setPalette((current) => current ?? { returnFocus });
+    };
     window.addEventListener("keydown", onKey);
     window.addEventListener("agentes:palette", onOpen);
     return () => {
@@ -114,7 +120,7 @@ export function CommandMenu() {
       { key: "proposals", to: "/org/$orgId/proposals", icon: "bulb", label: t("shell.proposals") },
       { key: "issues", to: "/org/$orgId/issues", icon: "issues", label: t("shell.issues") },
       { key: "routines", to: "/org/$orgId/routines", icon: "routines", label: t("shell.routines") },
-      { key: "task-manager", to: "/org/$orgId/task-manager", icon: "stageProgress", label: t("taskManager.title") },
+      { key: "task-manager", to: "/org/$orgId/task-manager", icon: "activity", label: t("taskManager.title") },
       { key: "calendar", to: "/org/$orgId/calendar", icon: "calendar", label: t("shell.calendar") },
       { key: "drive", to: "/org/$orgId/drive", icon: "drive", label: t("shell.drive") },
       { key: "team", to: "/org/$orgId/team", icon: "agent", label: t("shell.team") },
@@ -351,7 +357,8 @@ export function CommandMenu() {
       <NewChannelDialog open={creatingChannel} onOpenChange={setCreatingChannel} />
       <CommandPalette
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={(next) => setPalette((current) => (next ? (current ?? {}) : null))}
+        returnFocus={palette?.returnFocus}
         items={items}
         extra={extra}
         label={t("palette.open")}

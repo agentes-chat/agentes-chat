@@ -53,7 +53,7 @@ import "./agora.css";
 
 /*
  * Agora (ADR 0128 addendum of 2026-11-14): the whole workspace's work in one place. A 32px button beside "Ir para…" (a
- * 40px tile under ⌘K in the rail, the end of the Mac app's title bar) whose glyph is the state: the task manager's icon
+ * 40px tile under ⌘K in the rail, the end of the Mac app's title bar) whose glyph is the state: the activity pulse
  * at rest, the orbit in the longest-running agent's tones while work runs, the amber wait mark when something waits on
  * you. No count: the bell and "Esperando você" count. Its popover reads the task manager's list only while open (every
  * 3 s): what waits on you, who works, what waits on someone or something else, one line a row, whole in its tip.
@@ -65,7 +65,17 @@ const SECTIONS: AgoraSection[] = ["you", "working", "waiting"];
  * `below`: its list opens under it (the Mac app's title bar, a phone's drawer), else on its right, clear of the
  * sidebar's agents. `size`: the title bar's buttons'; the sidebar's sizes it as the collapse beside it.
  */
-export function AgoraButton({ below = false, size, className }: { below?: boolean; size?: "sm"; className?: string }) {
+export function AgoraButton({
+  below = false,
+  size,
+  className,
+  showLabel = false,
+}: {
+  below?: boolean;
+  size?: "sm";
+  className?: string;
+  showLabel?: boolean;
+}) {
   const { t } = useTranslation();
   const { org } = useOrg();
   const dir = useDirectory(org.id);
@@ -113,21 +123,22 @@ export function AgoraButton({ below = false, size, className }: { below?: boolea
             ref={button}
             variant="ghost"
             size={size}
-            iconOnly
+            iconOnly={!showLabel}
             className={cx("agora-btn", className)}
             data-mark={glyph.mark}
             aria-label={t("agora.label")}
             // Its state for screen readers off the keys' focus too (the tip says it on hover and focus).
             aria-description={tip.replaceAll("\n", ". ")}
-            title={tip}
+            title={`${t("agora.openActivity")}\n${tip}`}
           >
             {glyph.mark === "you" ? (
               <WaitMark />
             ) : glyph.mark === "working" ? (
               <PixelSpinner size={16} color={glyph.agentId ? colorOf(dir.anyAgent(glyph.agentId)) : undefined} />
             ) : (
-              <Icon name="stageProgress" size={16} />
+              <Icon name="activity" size={16} />
             )}
+            {showLabel && <span className="sidebar__item-label">{t("agora.label")}</span>}
           </Button>
         }
       >

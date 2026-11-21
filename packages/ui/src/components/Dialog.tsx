@@ -12,9 +12,10 @@ import {
   useState,
 } from "react";
 import { cx } from "../cx";
-import { focusHeld, lastTabbable } from "../device";
+import { lastTabbable } from "../device";
 import { Button } from "./Button";
 import { SearchField } from "./Toolbar";
+import { type DialogFocusTarget, useDialogReturnFocus } from "./useDialogReturnFocus";
 
 /** What a form inside a dialog says of its unsaved writing (`useUnsavedInDialog`), by the form. */
 export const UnsavedContext = createContext<((form: object, unsaved: boolean) => void) | null>(null);
@@ -75,6 +76,8 @@ export interface DialogProps {
    * an autoFocus field the focus before this dialog's trap is up, and the trap of the dialog under it takes it back.
    */
   initialFocus?: RefObject<HTMLElement | null>;
+  /** Where to return focus when the opening control is inside a surface that closes as this dialog opens. */
+  returnFocus?: DialogFocusTarget;
   /**
    * The content is a screen of its own with its own way out (a flow's ×): no head, the title for screen readers only,
    * `closeLabel` unused.
@@ -106,17 +109,11 @@ export function Dialog({
   subtitle,
   actions,
   initialFocus,
+  returnFocus,
   bare = false,
   unsaved = false,
 }: DialogProps) {
-  // Controlled dialogs have no Radix Trigger to return focus to, so remember
-  // what had focus when it opened and give focus back on close.
-  const wasOpen = useRef(false);
-  const returnTo = useRef<HTMLElement | null>(null);
-  if (open && !wasOpen.current && typeof document !== "undefined") {
-    returnTo.current = document.activeElement as HTMLElement | null;
-  }
-  wasOpen.current = open;
+  const restoreFocus = useDialogReturnFocus(open, returnFocus);
   // Toasts float over the dialog: pressing one isn't pressing outside it, which would close it. Read as the press
   // starts, since a toast's own button can remove the toast before Radix looks, at the click.
   const onToast = useRef(false);
@@ -164,14 +161,7 @@ export function Dialog({
           // React passes a portal's events up the component tree: a form sent in a dialog opened from another
           // dialog's form would send that form too.
           onSubmit={(e) => e.stopPropagation()}
-          onCloseAutoFocus={(e) => {
-            const target = returnTo.current;
-            if (focusHeld()) e.preventDefault();
-            else if (target?.isConnected) {
-              e.preventDefault();
-              target.focus();
-            }
-          }}
+          onCloseAutoFocus={restoreFocus}
           // Without a description, tell Radix there is none (it warns otherwise).
           {...(description ? {} : { "aria-describedby": undefined })}
         >

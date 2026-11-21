@@ -2265,6 +2265,13 @@
       "agentSettings": "Configuración de {{name}}"
     },
     "sidebarSetup": {
+      "inTools": "Solo en Herramientas",
+      "reviewTools": "Para revisar",
+      "organizeTools": "Organización",
+      "workspaceTools": "Espacio de trabajo",
+      "inQuickAccess": "En Acceso rápido",
+      "pinTool": "Fijar {{name}} en Acceso rápido",
+      "removeTool": "Quitar {{name}} de Acceso rápido",
       "description": "Elige qué queda a la vista arriba de tu barra lateral. Solo para ti, en este espacio de trabajo.",
       "always": "Siempre",
       "more": "En Más",
@@ -2366,6 +2373,7 @@
     "channelsPersonal": "Conversaciones en grupo",
     "agents": "Agentes",
     "directMessages": "Mensajes directos",
+    "create": "Crear",
     "createAgent": "Crear agente",
     "importAgents": "Traer agentes de otra app",
     "account": "Cuenta",
@@ -20320,7 +20328,8 @@
     }
   },
   "agora": {
-    "label": "Ahora",
+    "label": "Actividad",
+    "openActivity": "Ver la actividad de los agentes",
     "working_one": "{{count}} agente trabajando",
     "working_many": "{{count}} agentes trabajando",
     "working_other": "{{count}} agentes trabajando",

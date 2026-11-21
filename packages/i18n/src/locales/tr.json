@@ -2192,6 +2192,13 @@
       "agentSettings": "{{name}} ayarları"
     },
     "sidebarSetup": {
+      "inTools": "Yalnızca Araçlar'da",
+      "reviewTools": "İncelenecek",
+      "organizeTools": "Düzenleme",
+      "workspaceTools": "Çalışma alanı",
+      "inQuickAccess": "Hızlı erişimde",
+      "pinTool": "{{name}} öğesini Hızlı erişime sabitle",
+      "removeTool": "{{name}} öğesini Hızlı erişimden kaldır",
       "description": "Kenar çubuğunuzun üstünde nelerin görünür kalacağını seçin. Yalnızca sizin için, bu çalışma alanında.",
       "always": "Her zaman",
       "more": "Daha fazla içinde",
@@ -2291,6 +2298,7 @@
     "channelsPersonal": "Grup sohbetleri",
     "agents": "Ajanlar",
     "directMessages": "Doğrudan mesajlar",
+    "create": "Oluştur",
     "createAgent": "Ajan oluştur",
     "importAgents": "Başka bir uygulamadan ajan getir",
     "account": "Hesap",
@@ -19678,7 +19686,8 @@
     }
   },
   "agora": {
-    "label": "Şimdi",
+    "label": "Etkinlik",
+    "openActivity": "Ajan etkinliğini görüntüle",
     "working_one": "{{count}} ajan çalışıyor",
     "working_other": "{{count}} ajan çalışıyor",
     "waiting_one": "{{count}} şey sizi bekliyor",

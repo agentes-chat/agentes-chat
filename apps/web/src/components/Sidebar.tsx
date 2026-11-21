@@ -9,6 +9,7 @@ import type {
   Member,
   SidebarSection as SectionKey,
   SidebarItem,
+  SidebarPlace,
 } from "@agenteschat/client";
 import {
   agentStateIn,
@@ -34,7 +35,9 @@ import {
   usePlaceChannelCategory,
   usePrefetchMessages,
   usePrefetchRecent,
+  useSetSidebarItem,
   useSidebarItems,
+  useSidebarToolOrder,
   useSkills,
   useTasksUnread,
   useUnreadThreads,
@@ -79,6 +82,8 @@ import {
   CountBadge,
   CountChip,
   cx,
+  Dialog,
+  DialogBody,
   Icon,
   type IconName,
   Kbd,
@@ -114,6 +119,7 @@ import {
   Fragment,
   type HTMLAttributes,
   type ReactNode,
+  type RefObject,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -134,7 +140,7 @@ import { switchAccount } from "@/lib/accounts";
 import { requestAgentPanel } from "@/lib/agent-panel-ask";
 import { requestChannelDetails } from "@/lib/channel-details";
 import type { MenuEntry } from "@/lib/context-menu";
-import { onPhoneAsk, takePhoneAsk, thisMac } from "@/lib/desktop";
+import { desktopPlatform, onPhoneAsk, takePhoneAsk, thisMac } from "@/lib/desktop";
 import { entityMenu } from "@/lib/entity-menu";
 import { navigateAway } from "@/lib/navigate";
 import { useOpenParam } from "@/lib/open-param";
@@ -164,13 +170,13 @@ import { ArchivedChannelsDialog } from "./ArchivedChannelsDialog";
 import { ChangeAvatarDialog } from "./AvatarBuilder";
 import { FeedbackMark } from "./arrival/FeedbackDialog";
 import { MoveChannelDialog, NewCategoryDialog, RenameCategoryDialog } from "./ChannelCategoryDialogs";
-import { openPalette } from "./CommandMenu";
+import { openPalette, openPaletteFrom } from "./CommandMenu";
 import { DeleteAccountDialog } from "./DeleteAccount";
 import { MenuEntries } from "./DesktopMenus";
 import { useAgentMenu, useChannelMenu, usePersonMenu } from "./entity-menus";
 import { useInviteDialog } from "./invite/InviteDialog";
 import { useNow } from "./missions/MissionBits";
-import { COMPACT_QUERY, useMediaQuery, useNavDrawer } from "./NavDrawer";
+import { COMPACT_QUERY, NAV_ID, useMediaQuery, useNavDrawer } from "./NavDrawer";
 import { NewChannelDialog } from "./NewChannelDialog";
 import { useNewAgent } from "./new-agent/NewAgentDialog";
 import { OpenOnPhoneDialog } from "./OpenOnPhone";
@@ -178,7 +184,7 @@ import { useOrg } from "./org-context";
 import { StatusLine } from "./Presence";
 import { MyFace, OrgMark } from "./ProfilePhoto";
 import { sectionName, useSectionOrder } from "./SidebarOrder";
-import { SIDEBAR_TOOLS, SidebarSetupDialog, ToolList } from "./SidebarSetup";
+import { PERSONAL_TOOL_GROUPS, SIDEBAR_TOOLS, SidebarSetupDialog, ToolList } from "./SidebarSetup";
 import { AgentGlow, AgentTrail, colorOf, MenuHorizon, SidebarHorizon, WorkspaceSky } from "./Sky";
 import { SetStatusDialog, useSaveStatus } from "./StatusDialog";
 
@@ -305,12 +311,14 @@ export function Sidebar() {
   const overview = useOverview(orgId);
   // A new channel: `true` with no category, or the category whose + opened it.
   const [creatingChannel, setCreatingChannel] = useState<boolean | string>(false);
+  const createTrigger = useRef<HTMLButtonElement>(null);
+  const afterCreateMenu = useRef<(() => void) | null>(null);
   // A new category: empty, or with the channel whose menu asked for it.
   const [newCategory, setNewCategory] = useState<{ withChannel?: string } | null>(null);
   // Archived channels this person may bring back: "Canais arquivados" in Canais' + while there are some.
   const archivedChannels = useArchivedChannels(orgId).data ?? [];
   const [showArchived, setShowArchived] = useState(false);
-  const [customizing, setCustomizing] = useState(false);
+  const [customizing, setCustomizing] = useState<"sidebar" | "tools" | null>(null);
   const navigate = useNavigate();
   const onProposals = useRouterState({ select: (r) => r.location.pathname.endsWith("/proposals") });
   useEffect(() => {
@@ -339,6 +347,13 @@ export function Sidebar() {
   const unreadThreads = useUnreadThreads(orgId).data ?? 0;
   // The tools on top, each where I put it (the rest in More); one there "when there's something" while its count is.
   const sidebarItems = useSidebarItems(orgId).data;
+  const setSidebarItem = useSetSidebarItem(orgId, personal);
+  const savedToolOrder = useSidebarToolOrder(orgId, personal);
+  const toolsTrigger = useRef<HTMLButtonElement>(null);
+  const sidebarToast = useToast();
+  const placeOf = (id: SidebarItem) => sidebarPlace(sidebarItems, id, personal);
+  const changeToolPlace = (item: SidebarItem, place: SidebarPlace) =>
+    setSidebarItem.mutate({ item, place }, { onError: (error) => sidebarToast.show(errorText(t, error), "error") });
   // An unread reply counts as "something" for a Threads set to show "when there's something": it comes into the list
   // lit, and leaves once read, as Approvals does once nothing waits.
   // Proposals are a tab of Aprovações and count there, unless the person gave them a row of their own.
@@ -564,6 +579,17 @@ export function Sidebar() {
   // would stop an agent; an open menu closes first), a press outside it and focus leaving it (Tab past its end would
   // land on the page under it).
   const sideRef = useRef<HTMLElement>(null);
+  // A resize can hide Tools inside the closed drawer while a dialog is still open.
+  const toolsFocusTarget = () => {
+    if (!window.matchMedia(COMPACT_QUERY).matches || sideRef.current?.dataset.open === "true") {
+      return toolsTrigger.current;
+    }
+    return (
+      Array.from(document.querySelectorAll<HTMLElement>(`[aria-controls="${NAV_ID}"][aria-expanded="false"]`)).find(
+        (button) => button.getClientRects().length > 0 && getComputedStyle(button).visibility === "visible",
+      ) ?? null
+    );
+  };
   // biome-ignore lint/correctness/useExhaustiveDependencies: a new page or width closes it
   useEffect(() => closeTabletSidebar(), [pathname, tablet]);
   useEffect(() => {
@@ -642,12 +668,13 @@ export function Sidebar() {
   const listedChannels = (channels.data ?? []).filter(
     (c) => !dmChannels.has(c.id) && !(personal && alone && quietGeneral(c)),
   );
-  const channelsShown = !personal || listedChannels.length > 0 || newChannelItem.length > 0;
+  const channelsShown =
+    !personal || listedChannels.length > 0 || (newChannelItem.length > 0 && (!rail || channels.isLoading));
   // A tool's link keeps the browser's menu, from the mouse and the keyboard alike.
   const spaceEvent = (e: { target: EventTarget }) => !(e.target instanceof Element && e.target.closest("a[href]"));
   const sidebarMenu = entityMenu(() => [
     { kind: "header", label: t("shell.sidebarMenu.title") },
-    item("customize", t("shell.customizeSidebar"), "settings", () => setCustomizing(true)),
+    item("customize", t("shell.customizeSidebar"), "settings", () => setCustomizing("sidebar")),
     { kind: "separator" },
     ...newChannelItem,
     ...newCategoryItem,
@@ -678,12 +705,26 @@ export function Sidebar() {
     </>
   );
   const blocks: Record<SectionKey, ReactNode> = {
-    // A personal workspace's list is its conversations (ADR 0159): a tool comes into sight only while something
-    // waits in it, or once the person put it there; Início, Go to… and the other tools are in More at the end.
+    // The person's shortcuts scroll with their conversations. Home stays in the fixed header.
     tools: personal ? (
       listed.length > 0 && (
         <div className="sidebar__group sidebar__tools">
-          <ToolList items={listed} row={toolRow} />
+          <ToolList
+            items={listed}
+            row={toolRow}
+            action={(id) =>
+              !rail && !compact && placeOf(id) === "always" ? (
+                <RowAction
+                  icon="close"
+                  label={t("shell.sidebarSetup.removeTool", { name: t(`shell.${id}`) })}
+                  onClick={() => {
+                    toolsTrigger.current?.focus();
+                    changeToolPlace(id, "more");
+                  }}
+                />
+              ) : null
+            }
+          />
         </div>
       )
     ) : (
@@ -694,7 +735,7 @@ export function Sidebar() {
           <span className="sidebar__item-label">{t("shell.home")}</span>
         </Link>
         <ToolList items={listed} row={toolRow} />
-        <MoreTools items={inMore} row={toolRow} countOf={countOf} onCustomize={() => setCustomizing(true)} />
+        <MoreTools items={inMore} row={toolRow} countOf={countOf} onCustomize={() => setCustomizing("sidebar")} />
       </div>
     ),
     channels: channelsShown && (
@@ -708,6 +749,7 @@ export function Sidebar() {
         headProps={sectionMenu("channels")}
         addEntries={[...newChannelItem, ...newCategoryItem, ...archivedItem]}
         pinned={pins.channels}
+        showFirstConversationAction={!rail}
       />
     ),
     agents: (dir.loading ||
@@ -855,10 +897,8 @@ export function Sidebar() {
             </span>
           </Link>
         )}
-        {/* New agent right under the agents, in a personal workspace (ADR 0159) and a team's (ADR 0164); the rail's
-            tile, with no headers there (a team's rail has its own in the foot). */}
-        {createAgentItem.length > 0 &&
-          (rail ? personal && <CreateAgentTile onOpen={newAgent} /> : <NewAgentRow onOpen={newAgent} />)}
+        {/* New agent stays under the list in the expanded sidebar (ADR 0159, ADR 0164). */}
+        {!rail && createAgentItem.length > 0 && <NewAgentRow onOpen={newAgent} />}
       </>
     ),
     // A personal workspace lists people only once someone else is a member (a family, ADR 0159).
@@ -979,11 +1019,10 @@ export function Sidebar() {
         <WorkspaceSky part="side" rail={rail} />
         {personal ? (
           // A personal workspace (ADR 0159): the person on top (their account, settings and workspaces in one menu),
-          // Agora, the bell and the collapse beside them. The desktop app's title bar has its own Agora and collapse
+          // the bell and the collapse beside them. The desktop app's title bar has its own activity and collapse
           // (desktop.css).
           <div className="sidebar__org sidebar__org--person">
             <AccountMenu personal />
-            <AgoraButton below={compact} className="sidebar__agora" />
             {bell}
             <Button {...collapseProps} size="sm" className="sidebar__head-collapse" />
           </div>
@@ -1005,6 +1044,23 @@ export function Sidebar() {
             </div>
           </>
         )}
+        {personal && (
+          <div className="sidebar__fixed-links">
+            <Link
+              to="/org/$orgId/home"
+              params={{ orgId }}
+              className="sidebar__item"
+              aria-label={t("shell.home")}
+              title={t("shell.moreWhat.homePersonal")}
+            >
+              <Icon name="home" />
+              <span className="sidebar__item-label">{t("shell.home")}</span>
+            </Link>
+            {desktopPlatform() !== "mac" && (
+              <AgoraButton below={compact} showLabel className="sidebar__item sidebar__activity" />
+            )}
+          </div>
+        )}
       </div>
 
       {/* Space, not lines, between the tools, the channels, the agents and the people. A right click on the space
@@ -1020,10 +1076,77 @@ export function Sidebar() {
         {sectionOrder.order.filter((id) => blocks[id]).map((id) => sectionOrder.block(id, blocks[id], !rail))}
       </div>
 
-      {/* A personal workspace's end (ADR 0159): one More, holding Início, Go to… and every tool not in sight. */}
+      {/* The personal workspace's fixed shortcuts, followed by More (ADR 0159). */}
       {personal && (
         <div className="sidebar__end">
-          <MoreTools items={inMore} row={toolRow} countOf={countOf} onCustomize={() => setCustomizing(true)} home />
+          {rail && (createAgentItem.length > 0 || newChannelItem.length > 0) && (
+            <Menu
+              label={t("shell.create")}
+              side="right"
+              align="end"
+              onClosed={() => {
+                const create = afterCreateMenu.current;
+                if (!create) return;
+                afterCreateMenu.current = null;
+                // The dialog remembers its opener. The selected menu item is already gone.
+                createTrigger.current?.focus();
+                create();
+              }}
+              trigger={
+                <button
+                  ref={createTrigger}
+                  type="button"
+                  className="sidebar__item"
+                  aria-label={t("shell.create")}
+                  title={t("shell.create")}
+                >
+                  <Icon name="plus" />
+                </button>
+              }
+            >
+              {createAgentItem.length > 0 && (
+                <MenuItem
+                  icon="agent"
+                  onSelect={() => {
+                    afterCreateMenu.current = newAgent;
+                  }}
+                >
+                  {t("sidebarAgents.newAgent")}
+                </MenuItem>
+              )}
+              {newChannelItem.length > 0 && (
+                <MenuItem
+                  icon="channel"
+                  onSelect={() => {
+                    afterCreateMenu.current = () => setCreatingChannel(true);
+                  }}
+                >
+                  {t("shell.sidebarMenu.newChannelPersonal")}
+                </MenuItem>
+              )}
+            </Menu>
+          )}
+          <Link
+            to="/org/$orgId/settings/$section"
+            params={{ orgId, section: "account" }}
+            activeOptions={{ exact: true, includeSearch: false }}
+            className="sidebar__item"
+            aria-label={t("shell.settings")}
+            title={rail ? t("shell.settings") : undefined}
+          >
+            <Icon name="cog" />
+            <span className="sidebar__item-label">{t("shell.settings")}</span>
+          </Link>
+          <PersonalTools
+            order={savedToolOrder}
+            placeOf={placeOf}
+            countOf={countOf}
+            changePlace={changeToolPlace}
+            onCustomize={() => setCustomizing("tools")}
+            triggerRef={toolsTrigger}
+            returnFocus={toolsFocusTarget}
+            compact={compact}
+          />
         </div>
       )}
 
@@ -1038,7 +1161,11 @@ export function Sidebar() {
         onOpenChange={(open) => !open && setNewCategory(null)}
         withChannel={newCategory?.withChannel}
       />
-      <SidebarSetupDialog open={customizing} onClose={() => setCustomizing(false)} />
+      <SidebarSetupDialog
+        open={customizing !== null}
+        onClose={() => setCustomizing(null)}
+        returnFocus={customizing === "tools" ? toolsFocusTarget : undefined}
+      />
       {groupDialog && <GroupNameDialog purpose={groupDialog} onClose={() => setGroupDialog(null)} />}
       {deletingGroup && <DeleteGroupDialog group={deletingGroup} onClose={() => setDeletingGroup(null)} />}
 
@@ -1264,6 +1391,7 @@ function SidebarChannels({
   headProps,
   addEntries,
   pinned,
+  showFirstConversationAction,
 }: {
   channels: Channel[];
   loading: boolean;
@@ -1279,6 +1407,7 @@ function SidebarChannels({
   addEntries: MenuEntry[];
   /** The channels pinned on top of "Canais" ("Fixar no topo"), in order. */
   pinned: readonly string[];
+  showFirstConversationAction: boolean;
 }) {
   const { t } = useTranslation();
   const { org, me } = useOrg();
@@ -1601,7 +1730,7 @@ function SidebarChannels({
         {loose.map((c) => row(c))}
         {/* A personal workspace with no group conversation yet (ADR 0159): a row to create the first; after it, the
             header's + does. */}
-        {isPersonal(org) && mayCreate && !loading && all.length === 0 && (
+        {showFirstConversationAction && isPersonal(org) && mayCreate && !loading && all.length === 0 && (
           <button type="button" className="sidebar__item sidebar__new-channel" onClick={() => onNewChannel(null)}>
             <Icon name="plus" className="sidebar__channel-icon" />
             <span className="sidebar__item-label">{t("shell.sidebarMenu.newChannelPersonal")}</span>
@@ -1701,10 +1830,155 @@ function SidebarChannels({
   );
 }
 
-/** The tools whose line in More has a personal workspace's words (ADR 0159); the others' fit both. */
-type PersonalWhat = Exclude<SidebarItem, "routines" | "drive" | "waiting">;
-const hasPersonalWhat = (id: SidebarItem): id is PersonalWhat =>
+/** The other tools reuse the same descriptions in both workspace modes. */
+type PersonalToolDescription = Exclude<SidebarItem, "routines" | "drive" | "waiting">;
+const hasPersonalToolDescription = (id: SidebarItem): id is PersonalToolDescription =>
   id !== "routines" && id !== "drive" && id !== "waiting";
+
+/** The personal workspace's tool directory keeps an entry in place as its shortcut moves. */
+function PersonalTools({
+  order,
+  placeOf,
+  countOf,
+  changePlace,
+  onCustomize,
+  triggerRef,
+  returnFocus,
+  compact,
+}: {
+  order: readonly SidebarItem[];
+  placeOf: (id: SidebarItem) => SidebarPlace;
+  countOf: (id: SidebarItem) => ReactNode;
+  changePlace: (id: SidebarItem, place: SidebarPlace) => void;
+  onCustomize: () => void;
+  triggerRef: RefObject<HTMLButtonElement | null>;
+  returnFocus: () => HTMLElement | null;
+  compact: boolean;
+}) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const [open, setOpen] = useState(false);
+  const label = t("shell.sidebarSetup.tools");
+  const trigger = (
+    <button
+      ref={triggerRef}
+      type="button"
+      className="sidebar__item sidebar__more"
+      title={label}
+      aria-label={label}
+      {...(compact ? { "aria-haspopup": "dialog" as const, "aria-expanded": open, onClick: () => setOpen(true) } : {})}
+    >
+      <Icon name="grid" />
+      <span className="sidebar__item-label">{label}</span>
+      <Icon name="chevronRight" size={16} className="sidebar__more-chevron" />
+    </button>
+  );
+  const content = (
+    <>
+      <button
+        type="button"
+        className="ac-menu__item sidebar__more-item"
+        onClick={() => {
+          setOpen(false);
+          openPaletteFrom(returnFocus);
+        }}
+      >
+        <span className="ac-menu__leading">
+          <Icon name="search" />
+        </span>
+        <span className="ac-menu__label">{t("palette.jump")}</span>
+        <span className="sidebar__goto-keys" aria-hidden="true">
+          <Kbd>{modKey()}</Kbd>
+          <Kbd>K</Kbd>
+        </span>
+      </button>
+      <div className="sidebar__tool-catalog">
+        {PERSONAL_TOOL_GROUPS.map((group) => (
+          <section key={group} className="sidebar__tool-group" aria-label={t(`shell.sidebarSetup.${group}`)}>
+            <h3>{t(`shell.sidebarSetup.${group}`)}</h3>
+            {order
+              .filter((id) => SIDEBAR_TOOLS[id].group === group)
+              .map((id) => {
+                const name = t(`shell.${id}`);
+                const description = t(
+                  hasPersonalToolDescription(id) ? `shell.moreWhat.${id}Personal` : `shell.moreWhat.${id}`,
+                );
+                const fixed = placeOf(id) === "always";
+                const action = t(fixed ? "shell.sidebarSetup.removeTool" : "shell.sidebarSetup.pinTool", { name });
+                return (
+                  <div key={id} className="sidebar__catalog-row">
+                    <Link
+                      to={SIDEBAR_TOOLS[id].to}
+                      params={{ orgId: org.id }}
+                      className="ac-menu__item sidebar__more-item"
+                      onClick={() => setOpen(false)}
+                    >
+                      <span className="ac-menu__leading">
+                        <Icon name={SIDEBAR_TOOLS[id].icon} />
+                      </span>
+                      <span className="ac-menu__label">
+                        <span className="sidebar__catalog-title">
+                          <span>{name}</span>
+                          {fixed && (
+                            <span className="sidebar__catalog-fixed">{t("shell.sidebarSetup.inQuickAccess")}</span>
+                          )}
+                        </span>
+                        <span className="ac-menu__desc">{description}</span>
+                      </span>
+                      {countOf(id)}
+                    </Link>
+                    <Button
+                      variant="ghost"
+                      iconOnly
+                      icon={fixed ? "close" : "pin"}
+                      aria-label={action}
+                      title={action}
+                      onClick={() => changePlace(id, fixed ? "more" : "always")}
+                    />
+                  </div>
+                );
+              })}
+          </section>
+        ))}
+      </div>
+      <div className="ac-menu__separator" aria-hidden="true" />
+      <button
+        type="button"
+        className="ac-menu__item sidebar__more-item"
+        onClick={() => {
+          setOpen(false);
+          onCustomize();
+        }}
+      >
+        <span className="ac-menu__leading">
+          <Icon name="settings" />
+        </span>
+        <span className="ac-menu__label">{t("shell.customizeSidebar")}</span>
+      </button>
+    </>
+  );
+
+  return compact ? (
+    <>
+      {trigger}
+      <Dialog open={open} onOpenChange={setOpen} title={label} closeLabel={t("common.close")}>
+        <DialogBody className="sidebar__tools-catalog-dialog">{content}</DialogBody>
+      </Dialog>
+    </>
+  ) : (
+    <Popover
+      open={open}
+      onOpenChange={setOpen}
+      label={label}
+      side="right"
+      align="end"
+      className="sidebar__tools-catalog-menu"
+      trigger={trigger}
+    >
+      {content}
+    </Popover>
+  );
+}
 
 /**
  * More: the tools the person keeps out of the list, in a panel beside the sidebar (so nothing below moves), each with a
@@ -1716,18 +1990,14 @@ function MoreTools({
   row,
   countOf,
   onCustomize,
-  home = false,
 }: {
   items: SidebarItem[];
   row: (id: SidebarItem) => ReactNode;
   countOf: (id: SidebarItem) => ReactNode;
   onCustomize: () => void;
-  /** At a personal workspace's end (ADR 0159): Início and Go to… open its list, and it opens upward. */
-  home?: boolean;
 }) {
   const { t } = useTranslation();
   const { org } = useOrg();
-  const personal = isPersonal(org);
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
   return (
@@ -1737,7 +2007,6 @@ function MoreTools({
         onOpenChange={setOpen}
         label={t("shell.more")}
         side="right"
-        align={home ? "end" : "start"}
         className="sidebar__more-menu"
         trigger={
           <button ref={trigger} type="button" className="sidebar__item sidebar__more" title={t("shell.more")}>
@@ -1747,38 +2016,6 @@ function MoreTools({
           </button>
         }
       >
-        {home && (
-          <>
-            <Link
-              to="/org/$orgId/home"
-              params={{ orgId: org.id }}
-              className="ac-menu__item sidebar__more-item"
-              onClick={() => setOpen(false)}
-            >
-              <Icon name="home" />
-              <span className="ac-menu__label">
-                {t("shell.home")}
-                <span className="ac-menu__desc">{t("shell.moreWhat.homePersonal")}</span>
-              </span>
-            </Link>
-            <button
-              type="button"
-              className="ac-menu__item sidebar__more-item"
-              onClick={() => {
-                setOpen(false);
-                openPalette();
-              }}
-            >
-              <Icon name="search" />
-              <span className="ac-menu__label">{t("palette.jump")}</span>
-              <span className="sidebar__goto-keys" aria-hidden="true">
-                <Kbd>{modKey()}</Kbd>
-                <Kbd>K</Kbd>
-              </span>
-            </button>
-            <div className="ac-menu__separator" aria-hidden="true" />
-          </>
-        )}
         {items.map((id) => (
           <Link
             key={id}
@@ -1790,9 +2027,7 @@ function MoreTools({
             <Icon name={SIDEBAR_TOOLS[id].icon} />
             <span className="ac-menu__label">
               {t(`shell.${id}`)}
-              <span className="ac-menu__desc">
-                {t(personal && hasPersonalWhat(id) ? `shell.moreWhat.${id}Personal` : `shell.moreWhat.${id}`)}
-              </span>
+              <span className="ac-menu__desc">{t(`shell.moreWhat.${id}`)}</span>
             </span>
             {countOf(id)}
           </Link>
@@ -2207,10 +2442,8 @@ function AccountMenu({ personal = false }: { personal?: boolean }) {
   const { signOut } = useSignOut();
   const referrals = useAuthConfig().data?.referralsUrl;
   const openReferrals = useOpenReferrals();
-  const openSettings = (section?: SettingsSection) =>
-    void (section
-      ? navigate({ to: "/org/$orgId/settings/$section", params: { orgId: org.id, section } })
-      : navigate({ to: "/org/$orgId/settings", params: { orgId: org.id } }));
+  const openSettings = (section: SettingsSection) =>
+    void navigate({ to: "/org/$orgId/settings/$section", params: { orgId: org.id, section } });
   // A dialog opens once the menu is gone and focus is back on this row, so closing the dialog lands here too.
   const afterMenu = useRef<(() => void) | null>(null);
   const openAfter = (open: () => void) => () => {
@@ -2323,10 +2556,17 @@ function AccountMenu({ personal = false }: { personal?: boolean }) {
             {t("settings.section.account")}
           </MenuItem>
         )}
-        {/* In a personal workspace: every section, what a team's workspace menu opens. In a team's: Your account. */}
-        <MenuItem icon="settings" onSelect={() => openSettings(personal ? undefined : "account")}>
-          {t("shell.settings")}
-        </MenuItem>
+        {personal ? (
+          can(org, "configure") && (
+            <MenuItem icon="settings" onSelect={() => openSettings("general")}>
+              {t("settings.section.generalPersonal")}
+            </MenuItem>
+          )
+        ) : (
+          <MenuItem icon="settings" onSelect={() => openSettings("account")}>
+            {t("shell.settings")}
+          </MenuItem>
+        )}
         {referrals && (
           <MenuItem icon="coin" disabled={openReferrals.isPending} onSelect={() => openReferrals.mutate()}>
             {t("referrals.open")}

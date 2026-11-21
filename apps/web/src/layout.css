@@ -628,6 +628,20 @@ html:not([data-pointer]) .consult-pair__row:focus-visible {
   flex-direction: column;
   gap: 16px;
 }
+.sidebar__fixed-links {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+.sidebar__activity.ac-btn {
+  justify-content: flex-start;
+}
+.sidebar[data-rail="true"] .sidebar__fixed-links {
+  align-items: center;
+}
+.sidebar[data-rail="true"] .sidebar__activity.ac-btn {
+  justify-content: center;
+}
 .sidebar__scroll {
   position: relative;
   flex: 1 1 auto;
@@ -13431,6 +13445,62 @@ html:not([data-pointer]) .sidebar__more:focus-visible {
 .sidebar__more-item[data-status="active"] {
   background: var(--surface-sunken);
 }
+.sidebar__tools-catalog-menu {
+  width: calc(var(--control-h-md) * 10);
+  max-width: min(calc(100vw - var(--space-8)), var(--radix-popover-content-available-width));
+}
+.sidebar__tools-catalog-dialog {
+  gap: var(--space-2);
+}
+.sidebar__tool-catalog {
+  display: grid;
+  gap: var(--space-3);
+  padding-block: var(--space-2);
+}
+.sidebar__tool-group {
+  min-width: 0;
+}
+.sidebar__tool-group > h3 {
+  margin: 0;
+  padding: var(--space-1) var(--space-2);
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.sidebar__catalog-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.sidebar__catalog-row > .sidebar__more-item {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--control-h-md);
+  white-space: normal;
+}
+.sidebar__catalog-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--space-2);
+}
+.sidebar__catalog-fixed {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.sidebar__catalog-row > .ac-btn {
+  flex: none;
+}
+.sidebar__tool-with-action > .sidebar__item {
+  padding-inline-end: var(--control-h-md);
+}
+@media (pointer: coarse) {
+  .sidebar__catalog-row > :is(.sidebar__more-item, .ac-btn) {
+    min-height: var(--touch-target);
+  }
+  .sidebar__catalog-row > .ac-btn {
+    min-width: var(--touch-target);
+  }
+}
 /* Its count on the name's 20px line, not the middle of the name and the line under it. */
 .sidebar__more-item > :is(.ac-count, .ac-countchip) {
   margin-left: auto;
@@ -13488,7 +13558,8 @@ html:not([data-pointer]) .sidebar__more:focus-visible {
 .sidebar__block[data-section="tools"] > .sidebar__grip {
   height: 32px;
 }
-.sidebar__tools > .sidebar__item {
+.sidebar__tools > .sidebar__item,
+.sidebar__tool-with-action > .sidebar__item {
   position: relative;
 }
 .sidebar__tool-grip {
@@ -13754,6 +13825,21 @@ html:not([data-pointer]) .sidebar__bell:focus-visible {
   display: flex;
   gap: var(--space-2);
 }
+/* The dialog gives each choice a share of the available space even on wide screens. */
+.sidebar-setup__choices.ac-seg {
+  height: auto;
+  min-width: 0;
+  min-height: var(--seg-h);
+}
+.sidebar-setup__choices.ac-seg > .ac-seg__item {
+  height: auto;
+  min-width: 0;
+  min-height: calc(var(--seg-h) - 2 * var(--seg-in));
+  padding: var(--space-1) var(--space-2);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
 /* No room beside the name on a phone: the arrows stay on its line, the choices go under it. */
 @media (max-width: 680px) {
   .sidebar-setup {
@@ -13763,6 +13849,14 @@ html:not([data-pointer]) .sidebar__bell:focus-visible {
   .sidebar-setup__row > .ac-seg {
     grid-row: 2;
     grid-column: 2 / -1;
+  }
+}
+@media (max-width: 360px) {
+  .sidebar-setup__row > .sidebar-setup__choices.ac-seg {
+    grid-column: 1 / -1;
+  }
+  .sidebar-setup__choices.ac-seg > .ac-seg__item {
+    padding-inline: var(--space-1);
   }
 }
 /* Phones and touch screens keep the taller rows a finger hits, and the Go to… field and its toggle at 40px. */
