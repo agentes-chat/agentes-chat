@@ -614,7 +614,7 @@ function manager(over: Partial<AccountManagerOptions> = {}) {
     ...over,
   });
   managers.push(m);
-  const folder = (kind: "claude_code" | "codex", id: string) => {
+  const folder = (kind: "claude_code" | "codex" | "opencode", id: string) => {
     const dir = path.join(home, "accounts", kind, id);
     mkdirSync(dir, { recursive: true });
     return dir;
@@ -685,6 +685,24 @@ test.if(posix)("a coding plan's key account: its provider's endpoint; a 429 back
   m.probeUsage([ACCOUNT]);
   await new Promise((r) => setTimeout(r, 100));
   expect(asked).toBe(1);
+  expect(probes()).toHaveLength(0);
+});
+
+test("an OpenCode CLI account's API key reads OpenCode Go's usage; with no key nothing is asked", async () => {
+  const asked: string[] = [];
+  const fetch = (async (url: string, init: RequestInit) => {
+    asked.push(`${url} ${new Headers(init.headers).get("Authorization")}`);
+    return new Response(JSON.stringify({ usage: { rolling: { percent: 30 }, monthly: { percent: 13 } } }));
+  }) as unknown as typeof globalThis.fetch;
+  const { m, folder, probes } = manager({ fetch, usageTtlMs: 0 });
+  const dir = folder("opencode", ACCOUNT);
+  m.probeUsage([ACCOUNT]);
+  await new Promise((r) => setTimeout(r, 50));
+  expect(asked).toEqual([]);
+  writeFileSync(path.join(dir, "opencode-key.json"), JSON.stringify({ key: KEY }), { mode: 0o600 });
+  m.probeUsage([ACCOUNT]);
+  await waitFor(() => asked.length === 1);
+  expect(asked[0]).toBe(`https://opencode.ai/zen/go/v1/usage Bearer ${KEY}`);
   expect(probes()).toHaveLength(0);
 });
 

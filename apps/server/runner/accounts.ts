@@ -3112,9 +3112,15 @@ export class AccountManager {
       shared && target.kind === "codex" && codexProbeSafe(target.cwd, (this.opts.now ?? Date.now)());
     if (!own && (this.lentTo(target.kind, id) !== null || (shared && !codexReadable))) return null;
     const probe = { command: this.command(target.kind, Boolean(own)), cwd: target.cwd, env: target.env, ...limits };
-    // Cursor's CLI reports no plan usage: its turns' `usage` is all there is.
-    // Nor does OpenCode's: its key's usage is on OpenCode's console. Grok Build shows its plan's only in its TUI.
-    if (target.kind === "cursor" || target.kind === "opencode" || target.kind === "grok") return null;
+    // OpenCode's CLI reports none, but its API key reads OpenCode Go's usage endpoint; a key with no Go plan gets none.
+    if (target.kind === "opencode") {
+      const key = own ? null : await opencodeKeyOf(target.cwd);
+      return key
+        ? fetchPlanKeyUsage("opencode", key, { ...limits, ...(this.opts.fetch ? { fetch: this.opts.fetch } : {}) })
+        : null;
+    }
+    // Cursor's CLI reports no plan usage: its turns' `usage` is all there is. Grok Build shows its plan's only in its TUI.
+    if (target.kind === "cursor" || target.kind === "grok") return null;
     // The Antigravity CLI answers `/usage` itself in print mode: the plan's quotas and when they refresh.
     if (target.kind === "antigravity") {
       if (own) return null;
