@@ -62,7 +62,8 @@ export async function routineDeliveryBlock(tx: Executor, brief: RoutineBrief): P
  * agent there or starts one that acts or decides on it (never a run working for a person). Only
  * while the routine run is still open: one stopped, replaced or given up meanwhile
  * tells nobody (null). The routine run is `reported`, with the text as its record and `code`
- * (`auto_report` when its final text was delivered for it). In the caller's transaction; publish
+ * (`auto_report` when its final text was delivered for it). A `missingReport` notice instead ends it
+ * `failed/no_report`, atomically with the message, so retries cannot deliver it twice. In the caller's transaction; publish
  * with `publishDelivery` after the commit.
  */
 export async function deliverRoutineReport(
@@ -73,6 +74,8 @@ export async function deliverRoutineReport(
     text: string;
     code?: string | null;
     wake?: boolean;
+    /** Deterministic missing-report notice: no wake, and the ledger remains failed. */
+    missingReport?: boolean;
     /** Found before the transaction (`hand_off`'s `gif`); only with the message itself, never with `wake`. */
     gif?: GifMedia | null;
   },
@@ -82,7 +85,12 @@ export async function deliverRoutineReport(
   const text = maskCredentials(input.text);
   const [open] = await tx
     .update(routineRuns)
-    .set({ status: "reported", summary: text.slice(0, 4000), code: input.code ?? null })
+    .set({
+      status: input.missingReport ? "failed" : "reported",
+      summary: text.slice(0, 4000),
+      code: input.missingReport ? "no_report" : (input.code ?? null),
+      ...(input.missingReport ? { finishedAt: new Date() } : {}),
+    })
     .where(
       and(
         eq(routineRuns.id, brief.routineRunId),
@@ -94,7 +102,7 @@ export async function deliverRoutineReport(
     .returning({ id: routineRuns.id });
   if (!open) return null;
   const relays = await runReadOutsideById(tx, run.orgId, run.id);
-  if (!input.wake) {
+  if (input.missingReport || !input.wake) {
     // Agents and people it names outside that conversation: its mention reaches nobody, and the tool's result says so.
     const unreached = await unreachedAgents(tx, {
       orgId: run.orgId,

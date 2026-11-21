@@ -6,6 +6,7 @@ import {
   agentRunRow,
   channelRoutine,
   fire,
+  messagesIn,
   minutesFromNow,
   notificationsOf,
   routineDeps,
@@ -20,6 +21,22 @@ afterEach(async () => {
 });
 
 const ledger = () => ({ db: f.db, pubsub: f.pubsub });
+
+test("concurrent missing-report closures deliver one failure notice and count one failure", async () => {
+  f = await setup();
+  const routine = await channelRoutine(f, { report: "always" });
+  const rr = await fire(f, routine.id, minutesFromNow(-10));
+  const run = await agentRunRow(f, rr.agentRunId);
+  await Promise.all([
+    closeRoutineRun(ledger(), run, { status: "done", text: "" }),
+    closeRoutineRun(ledger(), run, { status: "done", text: "NO_REPLY" }),
+  ]);
+  expect(await routineRunRow(f, rr.id)).toMatchObject({ status: "failed", code: "no_report" });
+  expect(await routineRow(f, routine.id)).toMatchObject({ failuresInRow: 1 });
+  const messages = await messagesIn(f, f.general.id);
+  expect(messages).toHaveLength(1);
+  expect(messages[0]?.body).toContain(rr.id);
+});
 
 test("fatigue: the first failure after a good run notifies once, the fifth in a row pauses; a good run resets", async () => {
   f = await setup();

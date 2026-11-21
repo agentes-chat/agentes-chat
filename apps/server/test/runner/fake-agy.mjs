@@ -210,7 +210,9 @@ if (args[0] === "-p") {
     result: {
       conversation_id: conversation,
       status: "SUCCESS",
-      response: "Let me check. All good.\n",
+      ...(prompt.includes("MISSING_RESPONSE")
+        ? {}
+        : { response: prompt.includes("EMPTY_RESPONSE") ? "  \n" : "Let me check. All good.\n" }),
       num_turns: 1,
       usage: { input_tokens: 9000, output_tokens: 400, cache_read_tokens: 0, total_tokens: 9400 },
     },
