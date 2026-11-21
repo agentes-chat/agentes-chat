@@ -39,6 +39,9 @@ export interface EndpointNet {
 }
 
 export const MAX_ENDPOINT_MODELS = 100;
+/** The context windows an endpoint model may declare: from a small local model's to the largest hosted ones. */
+export const MIN_ENDPOINT_CONTEXT = 1024;
+export const MAX_ENDPOINT_CONTEXT = 10_000_000;
 const MODEL_ID = /^[\w.:/@+-]{1,200}$/;
 /** What a key-less server (a local Ollama) is sent: the SDKs need some key. */
 export const ENDPOINT_NO_KEY = "none";
@@ -82,7 +85,14 @@ export async function endpointAddress(raw: string, style: EndpointStyle, net: En
   return `${url.origin}${base}`;
 }
 
-/** The models an admin chose, checked: ids that look like one, names and prices that make sense, at most 100. */
+/** A declared token count: absent, or a whole number in `[min, max]`. */
+const tokenCount = (v: unknown, min: number, max: number) =>
+  v === undefined || (Number.isSafeInteger(v) && (v as number) >= min && (v as number) <= max);
+
+/**
+ * The models an admin chose, checked: ids that look like one, names, prices and context windows that make sense, at
+ * most 100.
+ */
 export function cleanEndpointModels(models: EndpointModel[], previous: EndpointModel[] = []): EndpointModel[] {
   if (models.length === 0) throw new ValidationError("Choose at least one model", "endpoint.no_models");
   if (models.length > MAX_ENDPOINT_MODELS)
@@ -97,8 +107,26 @@ export function cleanEndpointModels(models: EndpointModel[], previous: EndpointM
     const p = m.prices;
     if (p && Object.values(p).some((v) => !Number.isSafeInteger(v) || v < 0))
       throw new ValidationError("Prices can't be negative", "endpoint.prices");
+    const { contextWindow, maxOutputTokens } = m;
+    if (!tokenCount(contextWindow, MIN_ENDPOINT_CONTEXT, MAX_ENDPOINT_CONTEXT))
+      throw new ValidationError(
+        `${id}: the context window is a whole number of tokens from ${MIN_ENDPOINT_CONTEXT} to ${MAX_ENDPOINT_CONTEXT}`,
+        "endpoint.context_window",
+      );
+    if (!tokenCount(maxOutputTokens, 1, (contextWindow ?? MAX_ENDPOINT_CONTEXT) - 1))
+      throw new ValidationError(
+        `${id}: the output limit is a whole number of tokens, smaller than the context window`,
+        "endpoint.max_output",
+      );
     const check = previous.find((o) => o.id === id)?.check;
-    return { id, ...(label ? { label } : {}), ...(p ? { prices: p } : {}), ...(check ? { check } : {}) };
+    return {
+      id,
+      ...(label ? { label } : {}),
+      ...(p ? { prices: p } : {}),
+      ...(contextWindow ? { contextWindow } : {}),
+      ...(maxOutputTokens ? { maxOutputTokens } : {}),
+      ...(check ? { check } : {}),
+    };
   });
 }
 
@@ -111,6 +139,11 @@ const infoOf = (endpointName: string, m: EndpointModel): ModelInfo => ({
   ...(m.prices ? {} : { unpriced: true as const }),
   serverSideFallback: false,
   structuredOutput: false,
+  ...(m.contextWindow ? { contextWindow: m.contextWindow } : {}),
+  // A declared window leaves room for the prompt: without its own limit, a call asks for at most a quarter of it.
+  ...(m.maxOutputTokens || m.contextWindow
+    ? { maxOutputTokens: m.maxOutputTokens ?? Math.floor((m.contextWindow as number) / 4) }
+    : {}),
 });
 
 /**

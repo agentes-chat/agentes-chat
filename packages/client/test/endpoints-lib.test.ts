@@ -9,6 +9,7 @@ import {
   endpointReady,
   modelsShown,
   modelUnpriced,
+  parseContextWindow,
   parsePrice,
   pricesProblem,
   withChecks,
@@ -84,6 +85,26 @@ describe("the endpoint form", () => {
     expect(endpointModelsOf(d)).toEqual([{ id: "a", prices: { input: 1, output: 2 } }, { id: "b" }]);
     expect(endpointModelsOf({ models: [{ id: "a", on: true, input: "1", output: "" }] })).toBeNull();
     expect(endpointModelsOf({ models: [] })).toBeNull();
+  });
+
+  test("context window: a whole number of tokens in range, read with separators; kept through the form", () => {
+    expect(parseContextWindow("")).toBeUndefined();
+    expect(parseContextWindow("32768")).toBe(32_768);
+    expect(parseContextWindow("32.768")).toBe(32_768);
+    expect(parseContextWindow("131 072")).toBe(131_072);
+    expect(parseContextWindow("100")).toBeNull();
+    expect(parseContextWindow("32k")).toBeNull();
+    expect(endpointModelsOf({ models: [{ id: "a", on: true, input: "", output: "", context: "abc" }] })).toBeNull();
+    const d = draftOfEndpoint("Ollama", {
+      style: "openai",
+      baseURL: "http://localhost:11434/v1",
+      models: [{ id: "q", contextWindow: 32_768, maxOutputTokens: 4096 }, { id: "r" }],
+    });
+    expect(d.models[0]).toEqual({ id: "q", on: true, input: "", output: "", context: "32768", maxOutputTokens: 4096 });
+    expect(endpointModelsOf(d)).toEqual([{ id: "q", contextWindow: 32_768, maxOutputTokens: 4096 }, { id: "r" }]);
+    // A smaller window drops a kept output limit that no longer fits under it.
+    const smaller = { models: [{ ...(d.models[0] as (typeof d.models)[number]), context: "4096" }] };
+    expect(endpointModelsOf(smaller)).toEqual([{ id: "q", contextWindow: 4096 }]);
   });
 
   test("an address worth sending; a saved endpoint back in the form; results in the form's order", () => {

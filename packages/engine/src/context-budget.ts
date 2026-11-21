@@ -3,6 +3,7 @@ import {
   contextWindowOf,
   contextWindowWithin,
   type ModelMessage,
+  modelInfo,
   type SystemBlock,
   type ToolSpec,
   textOf,
@@ -444,9 +445,14 @@ export async function fitContextWindow(
   },
 ): Promise<{ messages: ModelMessage[]; removed: Set<string>; report: ContextBudgetReport } | null> {
   const windowTokens = contextWindowWithin(input.windowTokens ?? contextWindowOf(input.model), input.limitTokens);
+  // The output the call may really ask for: the gateway caps it at the model's own limit (`maxOutputTokens`).
+  const outputTokens = Math.min(
+    input.maxOutputTokens,
+    modelInfo(input.model)?.maxOutputTokens ?? input.maxOutputTokens,
+  );
   const budgetTokens = contextBudgetTokens(
     windowTokens,
-    input.maxOutputTokens,
+    outputTokens,
     input.limitTokens ? Number.POSITIVE_INFINITY : MAX_CONTEXT_TOKENS,
   );
   const estimatedTokens = estimateRequestTokens(input);

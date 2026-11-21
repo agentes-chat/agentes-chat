@@ -10545,6 +10545,11 @@ export const en = {
     priceUnit: "US$ per million tokens",
     priceBoth: "Fill in input and output, or neither.",
     priceInvalid: "Use a number, like 0.50",
+    /** A model's context window field, for screen readers. */
+    context: "{{model}}: context window",
+    contextShort: "Context (tokens)",
+    contextHelp: "Context: the window its server is set up with, like 32768 on Ollama. Leave it empty for the default.",
+    contextInvalid: "Use a whole number of tokens from 1024 to 10000000, like 32768",
     unpriced: "A model without prices costs nothing in budgets: only its tokens are counted.",
     save: "Save and test",
     saveModels: "Save and test again",

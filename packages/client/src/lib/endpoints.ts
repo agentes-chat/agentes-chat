@@ -8,12 +8,17 @@ export const CUSTOM_PROVIDER = "custom";
 
 export const ENDPOINT_STYLES: readonly EndpointStyle[] = ["openai", "anthropic"];
 
-/** One model of the form: on or off, with its prices as typed (US dollars per million tokens). */
+/**
+ * One model of the form: on or off, with its prices as typed (US dollars per million tokens) and its context window
+ * as typed (tokens). `maxOutputTokens` has no field: a saved one is kept as it is.
+ */
 export interface EndpointModelDraft {
   id: string;
   on: boolean;
   input: string;
   output: string;
+  context?: string;
+  maxOutputTokens?: number;
 }
 
 export interface EndpointDraft {
@@ -38,6 +43,9 @@ export const endpointBaseExample = (style: EndpointStyle) =>
 
 const MODEL_ID = /^[\w.:/@+-]{1,200}$/;
 export const MAX_ENDPOINT_MODELS = 100;
+/** The context windows the server takes (`cleanEndpointModels`). */
+export const MIN_ENDPOINT_CONTEXT = 1024;
+export const MAX_ENDPOINT_CONTEXT = 10_000_000;
 
 /** The models an endpoint listed, merged in: the ones already there keep their choice and prices, new ones start off. */
 export function withListedModels(draft: EndpointDraft, listed: readonly { id: string }[]): EndpointDraft {
@@ -68,6 +76,17 @@ export function parsePrice(text: string): number | undefined | null {
   return /^\d+(\.\d+)?$/.test(t) && Number.isFinite(n) && n <= 10_000 ? n : null;
 }
 
+/** A typed context window: empty is none; dots, commas and spaces between digits are read away; null when it isn't one. */
+export function parseContextWindow(text: string | undefined): number | undefined | null {
+  const t = (text ?? "").trim().replace(/[\s.,_]/g, "");
+  if (!t) return undefined;
+  const n = Number(t);
+  return /^\d+$/.test(t) && n >= MIN_ENDPOINT_CONTEXT && n <= MAX_ENDPOINT_CONTEXT ? n : null;
+}
+
+/** Whether a model's typed context window is fine. */
+export const contextProblem = (m: Pick<EndpointModelDraft, "context">) => parseContextWindow(m.context) === null;
+
 /** Whether a model's typed prices are fine: both or neither. */
 export function pricesProblem(m: Pick<EndpointModelDraft, "input" | "output">): "invalid" | "both" | null {
   const input = parsePrice(m.input);
@@ -79,11 +98,21 @@ export function pricesProblem(m: Pick<EndpointModelDraft, "input" | "output">): 
 /** The chosen models as the API takes them; null while a price is wrong or none is chosen. */
 export function endpointModelsOf(draft: Pick<EndpointDraft, "models">): EndpointModel[] | null {
   const on = draft.models.filter((m) => m.on);
-  if (on.length === 0 || on.length > MAX_ENDPOINT_MODELS || on.some((m) => pricesProblem(m))) return null;
+  if (on.length === 0 || on.length > MAX_ENDPOINT_MODELS || on.some((m) => pricesProblem(m) || contextProblem(m)))
+    return null;
   return on.map((m) => {
     const input = parsePrice(m.input);
     const output = parsePrice(m.output);
-    return { id: m.id, ...(input != null && output != null ? { prices: { input, output } } : {}) };
+    const contextWindow = parseContextWindow(m.context);
+    // A kept output limit must stay under the window, as the server checks: one that no longer fits is dropped.
+    const maxOutputTokens =
+      m.maxOutputTokens && (!contextWindow || m.maxOutputTokens < contextWindow) ? m.maxOutputTokens : undefined;
+    return {
+      id: m.id,
+      ...(input != null && output != null ? { prices: { input, output } } : {}),
+      ...(contextWindow ? { contextWindow } : {}),
+      ...(maxOutputTokens ? { maxOutputTokens } : {}),
+    };
   });
 }
 
@@ -97,7 +126,7 @@ export function endpointAddressLooksValid(raw: string): boolean {
   }
 }
 
-/** Ready to save: a name, an address and at least one model with fine prices. */
+/** Ready to save: a name, an address and at least one model with fine prices and context window. */
 export const endpointReady = (draft: EndpointDraft) =>
   draft.name.trim().length > 0 && endpointAddressLooksValid(draft.baseURL) && endpointModelsOf(draft) !== null;
 
@@ -116,6 +145,8 @@ export function draftOfEndpoint(
       on: true,
       input: m.prices ? String(m.prices.input) : "",
       output: m.prices ? String(m.prices.output) : "",
+      ...(m.contextWindow ? { context: String(m.contextWindow) } : {}),
+      ...(m.maxOutputTokens ? { maxOutputTokens: m.maxOutputTokens } : {}),
     })),
   };
 }

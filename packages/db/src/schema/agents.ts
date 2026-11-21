@@ -36,6 +36,13 @@ export interface StoredEndpoint {
     id: string;
     label?: string;
     prices?: { input: number; output: number; cacheRead: number; cacheWrite: number };
+    /**
+     * Its context window in tokens (prompt + output), as the server running it is set up (an Ollama `num_ctx`, a vLLM
+     * `--max-model-len`). Absent: `DEFAULT_CONTEXT_WINDOW`, too large for most local models.
+     */
+    contextWindow?: number;
+    /** The most output tokens one call may ask for. Absent with a `contextWindow`: a quarter of it. */
+    maxOutputTokens?: number;
     /** The last test call: answered and called a tool, answered without calling it, or failed. */
     check?: "ok" | "no_tools" | "failed";
   }[];

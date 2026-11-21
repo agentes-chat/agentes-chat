@@ -10857,7 +10857,7 @@ html:not([data-pointer]) .agp-cell:focus-visible {
 }
 .endpoint-model__prices {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: var(--space-2);
 }
 .endpoint-checks {

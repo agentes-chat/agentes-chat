@@ -24568,6 +24568,18 @@
   "endpoint.priceInvalid": {
     "value": "Use a number, like 0.50"
   },
+  "endpoint.context": {
+    "value": "{{model}}: context window"
+  },
+  "endpoint.contextShort": {
+    "value": "Context (tokens)"
+  },
+  "endpoint.contextHelp": {
+    "value": "Context: the window its server is set up with, like 32768 on Ollama. Leave it empty for the default."
+  },
+  "endpoint.contextInvalid": {
+    "value": "Use a whole number of tokens from 1024 to 10000000, like 32768"
+  },
   "endpoint.unpriced": {
     "value": "A model without prices costs nothing in budgets: only its tokens are counted."
   },
