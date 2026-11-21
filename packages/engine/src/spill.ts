@@ -93,6 +93,14 @@ export interface AccountMove {
   tried: string[];
 }
 
+/** `Transcript.accountSwitch`: each account by id and the name the run's details show it by. */
+export interface AccountSwitch {
+  from: { id: string; name: string };
+  to: { id: string; name: string };
+  /** What moved it: its plan's limit, the pause line (99%) of long work, or the paid extra usage it would go into. */
+  cause: "limit" | "line" | "extra";
+}
+
 /** Where `nextAccountPlan` landed: the plan on the next account, else how many accounts are all limited and the first reset. */
 export type NextAccount =
   | { plan: BrainPlan; lentBy: string | null; lenderName?: string }

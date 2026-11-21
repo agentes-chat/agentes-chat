@@ -86,7 +86,9 @@ describe("You in a personal workspace", () => {
 
   test("Agents' Team row stays a team's: a personal workspace has it in You › Work", () => {
     const agents = read("src/features/agents/AgentsScreen.tsx");
-    expect(agents).toContain("{total > 0 && !isPersonal(org) ? <TeamEntry divider={showsManager} /> : null}");
+    expect(agents).toMatch(
+      /\{total > 0 && !isPersonal\(org\) \? \(\s*<LandRow[^>]*>\s*<TeamEntry divider=\{showsManager\} \/>/,
+    );
   });
 
   test("a personal workspace in the lists wears your face and says whose it is", () => {

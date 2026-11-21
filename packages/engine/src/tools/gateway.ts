@@ -23,6 +23,7 @@ import {
   SQL_READS,
   sqlReadsTarget,
 } from "../approval-rules";
+import { type AgentOwnerFields, NO_OWNER, OWNER_COLUMNS } from "../audience";
 import {
   fedByRoutine,
   MAX_AUTHORITY_CHAIN,
@@ -71,7 +72,7 @@ import {
   summarizeCall,
   type TeamCheck,
 } from "../team-actions";
-import { carriesCredential, promptAnswer, toolCommand, toolDetail } from "../tool-detail";
+import { carriesCredential, promptAnswer, promptRefused, toolCommand, toolDetail } from "../tool-detail";
 import { untrustedBlock } from "../untrusted";
 import { checkToolCall } from "./checks";
 import {
@@ -844,7 +845,8 @@ export function createToolGateway(deps: {
         title: cutMarked(described.title, 300),
         detail: cutMarked(described.detail ?? "", APPROVAL_DETAIL_CHARS),
         why: request.why,
-        ownerUserId: owner,
+        ownerUserId: owner.ownerUserId,
+        ownerRoleId: owner.ownerRoleId,
         requestedByUserId: authority.personId,
         highRisk: highRisk(tool.name, tool.scope),
         // Decided by its time at the latest (else its run asks then), and within a day like any request.
@@ -911,7 +913,7 @@ export function createToolGateway(deps: {
       .select({
         ownActions: routines.ownActions,
         creator: routines.createdByUserId,
-        owner: agents.ownerUserId,
+        owner: OWNER_COLUMNS,
         target: routines.target,
       })
       .from(routines)
@@ -1656,7 +1658,10 @@ export function createToolGateway(deps: {
         return finish({ content: WHY_REFUSAL, isError: true, data: { code: "tool.why_missing" } });
       // Costly work nobody asked for directly (ADR 0131 §3): a person's go first, on every brain.
       const isPrompt = tool.name === PERMISSION_TOOL && builtIn;
-      const cost = ctx.runId && unrequested(authority) ? await costOf(ctx, tool.name, call.input) : null;
+      // A command the computer already refused never runs: nothing to hold or check with the team.
+      const refusedHere = isPrompt && promptRefused(tool.name, call.input);
+      const cost =
+        ctx.runId && unrequested(authority) && !refusedHere ? await costOf(ctx, tool.name, call.input) : null;
       if (cost) {
         const refusal = await costlyGate(
           { db: ctx.db, pubsub: deps.pubsub },
@@ -1683,7 +1688,7 @@ export function createToolGateway(deps: {
         check.data ? { ...output, data: { ...output.data, ...check.data } } : output;
 
       // Team actions (ADR 0064): before acting outside, has the team already done this to the same target?
-      const prompt = tool.name === PERMISSION_TOOL && builtIn ? promptQuestion(call.input) : null;
+      const prompt = !isPrompt ? null : refusedHere ? { poll: null, action: null } : promptQuestion(call.input);
       const targets = outside ? callTargets(call.input) : (prompt?.action?.targets ?? []);
       let teamReason: string | null = null;
       // Neither asked nor kept for a call of a confidential thread (ADR 0190): the check and the record hold the
@@ -1772,7 +1777,8 @@ export function createToolGateway(deps: {
             detail: cutMarked(onCard(described.detail ?? ""), APPROVAL_DETAIL_CHARS),
             why,
             origin: authority ? approvalOrigin(authority) : null,
-            ownerUserId: owner,
+            ownerUserId: owner.ownerUserId,
+            ownerRoleId: owner.ownerRoleId,
             expiresAt: new Date(now().getTime() + APPROVAL_TTL_MS),
             approveAlways: remember,
             approvers: asked?.approvers ?? null,
@@ -1885,12 +1891,13 @@ export function createToolGateway(deps: {
     },
   };
 
-  async function ownerOf(ctx: ToolContext) {
+  /** Who answers for the agent now (a person or a role): what its approval keeps as who decides it. */
+  async function ownerOf(ctx: ToolContext): Promise<AgentOwnerFields> {
     const rows = await ctx.db
-      .select({ ownerUserId: agents.ownerUserId })
+      .select(OWNER_COLUMNS)
       .from(agents)
       .where(sql`${agents.id} = ${ctx.agentId} and ${agents.orgId} = ${ctx.orgId}`);
-    return rows[0]?.ownerUserId ?? null;
+    return rows[0] ?? NO_OWNER;
   }
 }
 

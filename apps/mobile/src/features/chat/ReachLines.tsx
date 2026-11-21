@@ -30,6 +30,7 @@ import { Alert, StyleSheet, View } from "react-native";
 import { useOrg } from "@/providers/org";
 import { Button, LineIcon, ROW_CARD_INSET, RowAction, Text, useTheme, useToast } from "@/ui";
 import { useOrgId } from "../shared/hooks";
+import { roleIdsOf } from "../shared/owner";
 import { tapHaptic } from "../shared/parts";
 import { boldRuns } from "./actions";
 import { ConsultPairRow, useConsultById } from "./ConsultGroup";
@@ -155,8 +156,9 @@ export function AllowTalkAction({ agent, userId }: { agent: Agent; userId: strin
   const ask = useWidenAsk(agent);
   const person = dir.memberById.get(userId)?.name;
   const audience = audienceWith(agent, userId);
-  if (!person || !audience || !me || modeOf(agent) === "everyone" || !canEditAudience(org ?? undefined, agent, me))
-    return null;
+  // Who holds the role that answers for it changes it too (ADR 0085, addendum of 2026-11-21).
+  const mine = me ? canEditAudience(org ?? undefined, agent, me, roleIdsOf(dir.memberById, me)) : false;
+  if (!person || !audience || !me || modeOf(agent) === "everyone" || !mine) return null;
   const g = agentGrammar(agent.name);
   return (
     <RowAction
@@ -185,10 +187,12 @@ export function LetMeTalkButton({ agent }: { agent: Agent }) {
   const orgId = useOrgId();
   const { org } = useOrg();
   const me = useRowMeId();
+  const dir = useRowDirectory();
   const toast = useToast();
   const save = useWidenAudience(orgId, agent.id);
   const ask = useWidenAsk(agent);
-  const audience = me ? audienceWithMe(org ?? undefined, agent, me) : null;
+  // Holding the role that answers for it, I may let myself in as its owner (ADR 0085, addendum of 2026-11-21).
+  const audience = me ? audienceWithMe(org ?? undefined, agent, me, roleIdsOf(dir.memberById, me)) : null;
   if (!audience) return null;
   const g = agentGrammar(agent.name);
   return (

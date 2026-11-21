@@ -159,6 +159,7 @@
     "forwards": "“{{subject}}” iletilir",
     "forwardsFrom": "“{{subject}}” iletilir, gönderen: {{from}}",
     "onlyOwner": "Yalnızca {{name}} veya bir yönetici karar verebilir.",
+    "onlyOwnerRole": "Yalnızca {{role}} rolüne sahip olanlar veya bir yönetici karar verebilir.",
     "onlyAdmins": "Yalnızca bir yönetici karar verebilir.",
     "notFound": "Bu istek artık yok ya da görme izniniz yok.",
     "trait": {
@@ -189,6 +190,7 @@
     "pinned": "Sabitlenenler",
     "recent": "Son sohbetler",
     "seeAll": "Tüm sohbetleri gör",
+    "splitEmpty": "Sohbetlerin burada açılır.",
     "wait": {
       "verb": {
         "approval": "onayınızı bekliyor",
@@ -276,8 +278,8 @@
     "to": "Kime:",
     "people": "Kişiler",
     "search": "Kişi veya ajan",
-    "create": "Oluştur",
     "agentHint": "Adı ve ne yaptığı",
+    "create": "Oluştur",
     "chatShort": "Sohbet",
     "chatHint": "Bir kişi veya bir ajan",
     "taskHint": "Sorumlu kişi ve son tarihle",
@@ -759,10 +761,12 @@
     "section": {
       "missions": "Misyonlar",
       "threads": "İleti dizileri"
-    }
+    },
+    "splitEmpty": "İleti dizilerin burada açılır."
   },
   "agents": {
     "title": "Ajanlar",
+    "splitEmpty": "Ajanlarının sayfaları burada açılır.",
     "subtitle_one": "Ekipte {{count}} ajan · {{working}} çalışıyor",
     "subtitle_other": "Ekipte {{count}} ajan · {{working}} çalışıyor",
     "free": "Boşta",
@@ -1096,6 +1100,8 @@
     "notificationsOnHint": "Açıksa tarayıcıya ve masaüstü uygulamasına da gelir.",
     "notificationsOffHint": "Burada bildirim almak için açın. Aşağıdaki türler tüm cihazlarınız için geçerlidir.",
     "notificationsKindsHint": "Etkinlik her şeyi tutar. Bu ayar, tüm cihazlarınızda bu çalışma alanı için geçerlidir.",
+    "liveActivity": "Dynamic Island'da ajanlar",
+    "liveActivityHint": "Bir ajan istediğin bir şey üzerinde çalışırken ekranın üstünde, her uygulamada ve Kilitli Ekran'da görünür. Uygulama kapalıyken iOS 17.2 veya üstü gerekir.",
     "version": "agentes.chat · sürüm {{version}}",
     "edit": "Düzenle",
     "status": "Durum",
@@ -1230,6 +1236,16 @@
       "fullscreen": "Tam ekran",
       "open": "Aç",
       "cantPlay": "Bu video bu telefonda oynatılamıyor."
+    },
+    "talk": {
+      "hint": {
+        "image": "Yorum yapmak istediğiniz yere dokunun",
+        "video": "Bu ana yorum yapmak için videoya dokunun",
+        "pdf": "Bir nokta işaretlemek için sayfaya dokunun"
+      },
+      "markVideo": "Videonun bu anına yorum yap",
+      "pdfPage": "Sayfa {{page}} / {{count}}",
+      "pdfFailed": "Bu PDF gösterilemedi."
     }
   },
   "issues": {
@@ -1534,6 +1550,7 @@
       "ruleBody": "{{name}} bu kurala uymayı bırakır. Kuralı veren kişi aynısını yeniden verebilir.",
       "ruleRemove": "Kaldır",
       "footOwner": "Bunları yalnızca {{name}} veya bir yönetici düzeltebilir.",
+      "footOwnerRole": "Yalnızca {{role}} rolüne sahip olanlar veya bir yönetici bunu düzeltebilir.",
       "footAdmins": "Bunları yalnızca bir yönetici düzeltebilir.",
       "emptyF": "{{name}} henüz sizin hakkınızda bir şey kaydetmedi.",
       "emptyM": "{{name}} henüz sizin hakkınızda bir şey kaydetmedi.",
@@ -1583,6 +1600,7 @@
       },
       "asksYou": "Birleştirme ve yayınlama, ajan hiç sormayacak şekilde ayarlanmadıkça onayınızı ister.",
       "asksOwner": "Birleştirme ve yayınlama, ajan hiç sormayacak şekilde ayarlanmadıkça {{name}} kişisinin onayını ister.",
+      "asksOwnerRole": "Ajan hiç sormayacak şekilde ayarlanmadıysa birleştirme ve yayınlama, {{role}} rolüne sahip birinin onayını ister.",
       "asksAdmins": "Birleştirme ve yayınlama, ajan hiç sormayacak şekilde ayarlanmadıkça bir yöneticinin onayını ister.",
       "empty": "Şimdilik yalnızca sohbet."
     }

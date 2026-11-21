@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 73;
+export const MACHINE_PROTOCOL_VERSION = 76;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -290,6 +290,8 @@ export interface MachineSize {
   memoryGb: number;
   diskGb: number;
   limit?: { cpus: number; memoryGb: number };
+  /** `TASK_LIMIT_PROTOCOL`: the background tasks it runs at once. */
+  maxTasks?: number;
 }
 
 /**
@@ -2091,13 +2093,56 @@ export const CURSOR_MODEL_LIMITS = { models: 60, id: 80, label: 80 } as const;
 
 /**
  * How a brain turn started on the runner (Claude Code; an older runner leaves it out): on a process already open
- * (`warm`), how long a new one took to say it was ready (`initMs`), and the first event after the turn began.
+ * (`warm`), how long a new one took to say it was ready (`initMs`), and the first event after the turn began. A newer
+ * runner adds where the model's own time went: the API's first streamed message (`firstTokenMs`) and the first whole
+ * block of the answer (`firstAssistantMs`) from the turn's start, the CLI's API retries and the waits they announced,
+ * and the thinking blocks with the characters of their text (0 when the API leaves the text out).
  */
 export interface BrainTurnTimings {
   warm: boolean;
+  /** Not `warm`: why the turn started a new process (`BRAIN_COLD_CAUSES`). */
+  cold?: BrainColdCause;
   initMs?: number;
   firstEventMs?: number;
+  firstTokenMs?: number;
+  firstAssistantMs?: number;
+  retries?: number;
+  retryDelayMs?: number;
+  thinkingBlocks?: number;
+  thinkingChars?: number;
 }
+
+/**
+ * Why a turn started a new Claude Code process: a session that never ran on this runner (a new conversation, or a
+ * fresh session the server started for an old one), or the end of the session's last process: idle past its limit,
+ * closed for another conversation of the agent (its cap) or for memory, another launch asked (folder, permissions,
+ * account, sign-in), a warm start with another system text, exited by itself, closed after its turn (canceled,
+ * died, a background turn), or a session that ran before with no process left in this runner (it restarted).
+ */
+export const BRAIN_COLD_CAUSES = [
+  "new_session",
+  "idle",
+  "cap",
+  "memory",
+  "settings",
+  "warm_mismatch",
+  "exited",
+  "closed",
+  "restart",
+] as const;
+export type BrainColdCause = (typeof BRAIN_COLD_CAUSES)[number];
+
+/** The measures of `BrainTurnTimings` past `warm`, each a whole number from 0 up to a day. */
+export const BRAIN_TURN_MEASURES = [
+  "initMs",
+  "firstEventMs",
+  "firstTokenMs",
+  "firstAssistantMs",
+  "retries",
+  "retryDelayMs",
+  "thinkingBlocks",
+  "thinkingChars",
+] as const;
 
 /**
  * One event of a brain turn on the wire (`brain.event`), the same shape as
@@ -2125,11 +2170,13 @@ export type WireBrainEvent =
       /**
        * The API calls the turn made (Claude Code's `num_turns`, Codex's model requests), the most uncached input one of
        * them read (Claude Code), and the most input one read, cache included: its context at that step. An older
-       * runner sends none.
+       * runner sends none. `lastContext`: what the turn's last call read, cache included, the session's size as it
+       * ends (an older runner sends none: the engine takes the biggest call, else the turn's input over `calls`).
        */
       calls?: number;
       maxUncached?: number;
       maxContext?: number;
+      lastContext?: number;
     }
   | { type: "limit"; resetsAt?: string }
   | { type: "done"; text: string; session?: { id: string }; timings?: BrainTurnTimings }
@@ -2316,6 +2363,42 @@ export const ROUTE_PROTOCOL = 24;
 export const ROUTE_TIMEOUT_MS = 30_000;
 /** Largest `brain.route` fields (characters; the schema as JSON). */
 export const ROUTE_LIMITS = { system: 8000, prompt: 32_000, schema: 8000 } as const;
+
+/**
+ * `brain.warm` (protocol 74): the engine claimed a run that will think with Claude Code here, and asks before it builds
+ * the turn's context: the session's CLI starts now (or stays open), with the launch the turn will most likely ask for,
+ * so the turn finds it warm. Best effort: the runner may decline (no room, nothing to start it with) and the turn
+ * starts its CLI as before; a turn whose launch differs starts its own. The server sends it to no older runner.
+ */
+export const BRAIN_WARM_PROTOCOL = 74;
+
+/**
+ * Background tasks at once, from the apps (protocol 75): `hello.size.maxTasks` and `runner.state.maxTasks` say the
+ * computer's limit, and `limits.set` changes it as its owner asked. An older runner says none: it runs 3, its old
+ * default, unless its config says otherwise.
+ */
+export const TASK_LIMIT_PROTOCOL = 75;
+
+/**
+ * Protocol 76 (ADR 0143): outside system mode the runner brings its own Antigravity CLI (`AGY_PIN`, at least that
+ * version) where the person's is older or missing and Gemini thinks there, so a computer's Gemini models follow the
+ * app's version. An older runner runs whatever `agy` the person installed.
+ */
+export const AGY_COPY_PROTOCOL = 76;
+/** The tasks a computer may run at once (`maxConcurrentTasks` in the runner's config). */
+export const TASK_LIMIT_BOUNDS = [1, 20] as const;
+
+/** What `brain.turn` would start its CLI with, without the turn's own words (no prompt, system text or run). */
+export type BrainWarmRequest = Pick<
+  BrainTurnRequest,
+  "kind" | "session" | "cwd" | "model" | "personalMcp" | "permissions" | "account" | "effort" | "contextTokens"
+>;
+
+/** `open`: the session has a CLI now; `started`: this request started it. */
+export interface BrainWarmReply {
+  open: boolean;
+  started: boolean;
+}
 
 /** `brain.route` (protocol 24): one answer in `schema`'s shape from the account's CLI. */
 export interface BrainRouteRequest {
@@ -2640,6 +2723,8 @@ export type MachineRequest = (
   | ({ op: "brain.steer" } & BrainSteerRequest)
   /** Protocol 24: a plan picks who answers a message (ADR 0074); the request's agent is the one it is lent to. */
   | ({ op: "brain.route" } & BrainRouteRequest)
+  /** Protocol 74: start (or keep) a session's Claude Code before its turn comes (`BRAIN_WARM_PROTOCOL`). */
+  | ({ op: "brain.warm" } & BrainWarmRequest)
   /** Protocol 11: clone or update the agent's checkouts through our git proxy. */
   | ({ op: "git.sync" } & GitSyncRequest)
   /** Protocol 14: the mission's worktree (ADR 0044). */
@@ -2792,6 +2877,8 @@ export type MachineRequest = (
   | { op: "phone.pair.cancel"; pairingId: string }
   /** `REMOTE_PAUSE_PROTOCOL`: pause (until `until`, null: until resumed) or resume, for the person `by`. */
   | { op: "pause.set"; paused: boolean; until?: string | null; by: string }
+  /** `TASK_LIMIT_PROTOCOL`: the background tasks it runs at once, from now on (stored in its config). */
+  | { op: "limits.set"; maxTasks: number }
   /**
    * A phone guide is open and waits for a phone: for the next minute, a Windows runner also looks for a plugged phone
    * Windows has no USB driver for (adb never lists one) and reports it as `no_driver`. From `IPHONE_DEV_MODE_PROTOCOL`
@@ -2857,6 +2944,7 @@ export const MACHINE_OPS: readonly MachineOp[] = [
   "brain.turn",
   "brain.steer",
   "brain.route",
+  "brain.warm",
   "git.sync",
   "mission.worktree",
   "access.request",
@@ -2896,6 +2984,7 @@ export const MACHINE_OPS: readonly MachineOp[] = [
   "phone.pair.status",
   "phone.pair.cancel",
   "pause.set",
+  "limits.set",
   "phone.look",
   "phone.wifi",
   "keep.start",
@@ -2970,6 +3059,7 @@ export interface MachineReplies {
   "brain.turn": { runId: string; final: WireBrainEvent };
   "brain.steer": BrainSteerReply;
   "brain.route": BrainRouteReply;
+  "brain.warm": BrainWarmReply;
   "git.sync": { repos: GitSyncRepo[] };
   /** `remove` answers `{ removed }` (`false`: the folder was already gone). */
   "mission.worktree": Partial<MissionWorktreeEnsured> & { removed?: boolean };
@@ -3068,6 +3158,7 @@ export interface MachineReplies {
   "phone.pair.status": PhonePairing;
   "phone.pair.cancel": { canceled: boolean };
   "pause.set": { paused: RunnerPause };
+  "limits.set": { maxTasks: number };
   "phone.look": { looking: boolean };
   "phone.wifi": { available: WifiIphone[] };
   "keep.start": { held: true };
@@ -3266,7 +3357,12 @@ export type RunnerFrame =
   /** Protocol 8: a `brain.turn` sent its last event. */
   | { type: "brain.done"; runId: string }
   /** Protocol 9: the pause state changed on the machine (paused, resumed, new `until`). */
-  | { type: "runner.state"; paused: RunnerPause }
+  | {
+      type: "runner.state";
+      paused: RunnerPause;
+      /** `TASK_LIMIT_PROTOCOL`: the tasks it runs at once, sent when that changed on the computer. */
+      maxTasks?: number;
+    }
   /** Protocol 10: what the machine allows changed (the person granted, removed, or turned a tool on or off). */
   | { type: "access.changed"; access: RunnerAccess }
   /**
@@ -3668,19 +3764,25 @@ export function parseBrainEvent(v: unknown): WireBrainEvent | null {
         ...(num(v.calls) > 0 ? { calls: num(v.calls) } : {}),
         ...(num(v.maxUncached) > 0 ? { maxUncached: num(v.maxUncached) } : {}),
         ...(num(v.maxContext) > 0 ? { maxContext: num(v.maxContext) } : {}),
+        ...(num(v.lastContext) > 0 ? { lastContext: num(v.lastContext) } : {}),
       };
     case "limit":
       return { type: "limit", ...(isString(v.resetsAt) ? { resetsAt: v.resetsAt.slice(0, 40) } : {}) };
     case "done": {
       if (!isString(v.text)) return null;
       const session = isObject(v.session) && isString(v.session.id) ? { id: v.session.id.slice(0, 64) } : undefined;
-      // A runner reports these itself: past a day it is a wrong clock, not a slow start, and would skew the percentiles.
+      // A runner reports these itself: past a day it is a wrong clock, not a slow start, and would skew the percentiles
+      // (the counts share the bound, far above any real turn's).
       const DAY_MS = 86_400_000;
       const ms = (x: unknown) =>
         finite(x) !== undefined && (x as number) >= 0 && (x as number) <= DAY_MS ? Math.round(x as number) : undefined;
       const t = isObject(v.timings) && typeof v.timings.warm === "boolean" ? v.timings : null;
-      const initMs = ms(t?.initMs);
-      const firstEventMs = ms(t?.firstEventMs);
+      const measures = t
+        ? BRAIN_TURN_MEASURES.flatMap((k) => {
+            const n = ms(t[k]);
+            return n === undefined ? [] : [[k, n] as const];
+          })
+        : [];
       return {
         type: "done",
         text: v.text.slice(0, BRAIN_LIMITS.doneText),
@@ -3689,8 +3791,10 @@ export function parseBrainEvent(v: unknown): WireBrainEvent | null {
           ? {
               timings: {
                 warm: t.warm as boolean,
-                ...(initMs !== undefined ? { initMs } : {}),
-                ...(firstEventMs !== undefined ? { firstEventMs } : {}),
+                ...(!t.warm && (BRAIN_COLD_CAUSES as readonly unknown[]).includes(t.cold)
+                  ? { cold: t.cold as BrainColdCause }
+                  : {}),
+                ...Object.fromEntries(measures),
               },
             }
           : {}),
@@ -3876,7 +3980,8 @@ export function parseRunnerFrame(raw: string): RunnerFrame | null {
     }
     case "runner.state": {
       const paused = parsePause(f.paused);
-      return paused ? { type: "runner.state", paused } : null;
+      if (!paused) return null;
+      return { type: "runner.state", paused, ...(taskLimit(f.maxTasks) ? { maxTasks: f.maxTasks } : {}) };
     }
     case "access.changed": {
       const access = parseAccess(f.access);
@@ -4274,6 +4379,8 @@ export const MISSION_MCP_TOOLS: readonly MissionMcpTool[] = [
         request_id: { type: "string", maxLength: 64 },
         /** Added by the runner: where the task runs and its folders (the code-side rules check paths). */
         scope: { type: "object" },
+        /** Added by the runner: it refused this call by itself (`localVerdict`'s code and words), told for the run's steps. */
+        refused: { type: "object" },
       },
     },
   },
@@ -4541,8 +4648,16 @@ export function parseMachineSize(v: unknown): MachineSize | null {
     isObject(l) && inRange(l.cpus, [1, v.cpus]) && between(l.memoryGb, 0, v.memoryGb)
       ? { limit: { cpus: l.cpus, memoryGb: l.memoryGb } }
       : {};
-  return { cpus: v.cpus, memoryGb: v.memoryGb, diskGb: v.diskGb, ...limit };
+  return {
+    cpus: v.cpus,
+    memoryGb: v.memoryGb,
+    diskGb: v.diskGb,
+    ...limit,
+    ...(taskLimit(v.maxTasks) ? { maxTasks: v.maxTasks } : {}),
+  };
 }
+
+const taskLimit = (v: unknown): v is number => inRange(v, TASK_LIMIT_BOUNDS);
 
 /** `pong.load` (protocol 22): sane numbers, else none. */
 export function parseMachineLoad(v: unknown): MachineLoad | null {

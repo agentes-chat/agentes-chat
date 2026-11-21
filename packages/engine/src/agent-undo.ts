@@ -2,7 +2,7 @@ import type { PubSub } from "@agenteschat/adapters";
 import { and, type Database, desc, eq, gt, gte, isNull, ne, or, schema, sql } from "@agenteschat/db";
 import { actionsFor, actionView, describeAction, publishMessageActions, UNDO_WINDOW_MS } from "./agent-actions";
 import { getAgent } from "./agents";
-import { editsAgent, managesAgent } from "./audience";
+import { editsAgent, managesAgent, ownsAgent } from "./audience";
 import { recordAudit } from "./audit";
 import { caches } from "./cache";
 import { addChannelMember, archiveChannel, removeChannelMember, unarchiveChannel } from "./channels";
@@ -604,7 +604,7 @@ async function requireMayUndo(db: Database, userId: string, a: Row) {
     throw new ForbiddenError("Only an admin can undo or redo a change to an agent's skills", "action.skills_admins");
   }
   if (a.requestedByUserId === userId) return;
-  if (agent?.ownerUserId === userId) return;
+  if (agent && ownsAgent(agent, userId, membership.roleIds)) return;
   throw new ForbiddenError(
     "Only the person the agent worked for, its owner or an admin can undo this",
     "action.not_allowed",

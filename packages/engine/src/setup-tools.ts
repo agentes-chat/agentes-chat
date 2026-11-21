@@ -29,7 +29,7 @@ import { decideProposal, proposeSettings, type SettingsProposalCard } from "./co
 import type { ContextDeps } from "./context/summaries";
 import { publishMessageCreated } from "./events";
 import { firstOf } from "./format";
-import { insertMessage, messageView } from "./messages";
+import { insertMessage, messageView, parseMentionHandles } from "./messages";
 import { can, getMembership } from "./organizations";
 import type { RolePermission } from "./permissions";
 import { personBehindCall } from "./requester";
@@ -59,7 +59,7 @@ import {
 } from "./workspace-actions";
 import { isPersonalWorkspace } from "./workspace-mode";
 
-const { agentActions, agentGroups, agentRuns, channels, machineAccounts, messages, orgRoles, skills } = schema;
+const { agentActions, agentGroups, agentRuns, agents, channels, machineAccounts, messages, orgRoles, skills } = schema;
 
 /** The setup tools' scope: a tool group of its own, loaded when a message is about setting up (ADR 0043). */
 export const SETUP_SCOPE = "setup:write";
@@ -1494,6 +1494,7 @@ interface SettingsChangeInput {
   model?: unknown;
   ai_account?: unknown;
   budget_usd?: unknown;
+  budget_cut?: unknown;
   budget_default?: unknown;
   owner?: unknown;
   who_talks?: { everyone?: unknown; roles?: unknown; people?: unknown };
@@ -1518,9 +1519,10 @@ const names = (v: unknown) => (Array.isArray(v) ? v.map((x) => str(x).trim()).fi
 async function wantedLines(ctx: ToolContext, change: SettingsChangeInput): Promise<WantedLine[] | string> {
   const lines: WantedLine[] = [];
   if (typeof change.model === "string") lines.push({ field: "model", to: change.model.trim() });
-  if (change.budget_default === true) lines.push({ field: "budget", to: null });
+  const cut = change.budget_cut === true ? { pausesNow: true } : {};
+  if (change.budget_default === true) lines.push({ field: "budget", to: null, ...cut });
   else if (typeof change.budget_usd === "number")
-    lines.push({ field: "budget", to: Math.round(change.budget_usd * NANO_PER_USD) });
+    lines.push({ field: "budget", to: Math.round(change.budget_usd * NANO_PER_USD), ...cut });
   if (typeof change.owner === "string") {
     const found = await findMember(ctx, change.owner);
     if (found.length !== 1)
@@ -1676,7 +1678,17 @@ const CHANGE_PROPERTIES = {
     maxLength: 200,
     description: "A Claude or ChatGPT plan signed in on a computer, by its name: only its owner gives it.",
   },
-  budget_usd: { type: "number", minimum: 0, maximum: 100_000, description: "Monthly, in US dollars." },
+  budget_usd: {
+    type: "number",
+    minimum: 0,
+    maximum: 100_000,
+    description: "Monthly, in US dollars. More than what it spent this month, or it stops at once.",
+  },
+  budget_cut: {
+    type: "boolean",
+    description:
+      "True only when the person wants the budget at or below this month's spend, which stops the agent at once: the card says so.",
+  },
   budget_default: { type: "boolean", description: "True: back to the workspace's default budget." },
   owner: {
     type: "string",
@@ -1757,6 +1769,27 @@ const REASON = {
 };
 
 /**
+ * A teammate the reason of an own-settings card names (its @handle, or its name as a whole word, as written) while it
+ * doesn't name the caller: such a card meant to change that teammate, and applied to the caller instead.
+ */
+async function teammateNamed(ctx: ToolContext, self: { name: string; handle: string }, reason: string) {
+  const words = (text: string) =>
+    ` ${text
+      .split(/[^\p{L}\p{N}_]+/u)
+      .filter(Boolean)
+      .join(" ")} `;
+  const said = words(reason);
+  const handles = new Set(parseMentionHandles(reason));
+  const names = (a: { name: string; handle: string }) => handles.has(a.handle) || said.includes(words(a.name));
+  if (names(self)) return null;
+  const team = await ctx.db
+    .select({ id: agents.id, name: agents.name, handle: agents.handle })
+    .from(agents)
+    .where(and(eq(agents.orgId, ctx.orgId), isNull(agents.archivedAt)));
+  return team.find((a) => a.id !== ctx.agentId && words(a.name).trim() && names(a)) ?? null;
+}
+
+/**
  * `propose_settings_change` (ADR 0137, amending 0092 §5): a teammate's settings as one card in this conversation,
  * one row per agent and whoever decides it, applied by who clicks Aplicar. Rows the person who asked may decide, in
  * their own words (`ownWords`), apply as the card is posted: it shows them done with Desfazer. Never an agent's own row
@@ -1808,6 +1841,12 @@ function settingsTool(deps: { pubsub?: PubSub }, own = false): ToolDefinition {
         const forUserId = await personBehindCall(ctx);
         if (!forUserId) return { content: "Only a person's request can propose a change.", isError: true };
         const self = own ? await getAgentCached(ctx.db, ctx.orgId, ctx.agentId) : null;
+        const other = self ? await teammateNamed(ctx, self, str(input.reason)) : null;
+        if (other)
+          return {
+            content: `Your reason names ${other.name} (@${other.handle}), but this card changes only your own settings. For ${other.name}'s, use ${PROPOSE_SETTINGS_TOOL}, or ask a person who manages agents. If the change really is yours, say why about yourself.`,
+            isError: true,
+          };
         const changes = (
           own ? [{ ...input, agent: self?.handle }] : Array.isArray(input.changes) ? input.changes : []
         ) as SettingsChangeInput[];

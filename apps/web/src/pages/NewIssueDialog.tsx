@@ -32,12 +32,12 @@ import {
 import { type ClipboardEvent, type KeyboardEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useActors } from "@/components/actors";
-import { useFileDrop } from "@/components/drive/DriveUploads";
 import { PendingTile } from "@/components/IssueFiles";
 import { useOrg } from "@/components/org-context";
 import { WhoSeesButton, WhoSeesDialog } from "@/components/WhoSees";
 import { useComposerFiles } from "@/hooks/useComposerFiles";
 import { useEdited } from "@/hooks/useEdited";
+import { useFileDrop } from "@/hooks/useFileDrop";
 import { usePersonalView } from "@/hooks/usePersonalView";
 import { useTextLimit } from "@/hooks/useTextLimit";
 import { columnIdOf, columnsOf, PRIORITIES, splitCriteria, useColumnTitle } from "@/lib/issues";

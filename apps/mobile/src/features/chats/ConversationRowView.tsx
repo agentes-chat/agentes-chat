@@ -6,6 +6,7 @@ import { Platform, StyleSheet, View } from "react-native";
 import { TAB_BADGE } from "@/lib/nav";
 import { Count, LIST_AVATAR, LIST_PREVIEW, LineIcon, ListRow, PixelOrbit, Text } from "@/ui";
 import { router } from "@/ui/navigation";
+import { withAlpha } from "@/ui/palette";
 import type { RowAction } from "../categories/menus";
 import { WaitMark } from "../chat/WaitMark";
 import { chatHref } from "../links/logic";
@@ -15,10 +16,13 @@ import { Tile } from "../shared/parts";
 import type { ConversationRow } from "./logic";
 import type { AgentRowState } from "./now";
 import type { RowFacts } from "./rowFacts";
+import { chatOfRow, useChatOpener, useIsChosen } from "./split";
 import { useRowFacts } from "./useRows";
 
 /** The avatar column. */
 const AVATAR = LIST_AVATAR;
+/** The open conversation's row beside the list (ADR 0212): the ink this faint over the page, in both themes. */
+const CHOSEN_TINT = 0.08;
 /** The orbit before what an agent does: the preview line's own height, so it reads as a word of it. */
 const ORBIT = 16;
 
@@ -74,6 +78,10 @@ export const ConversationItem = memo(function ConversationItem({
 }: ConversationItemProps) {
   const { t } = useTranslation();
   const c = useColors();
+  // Beside the list (ADR 0212) the open conversation's row stays lit, and a press opens it there: nothing is pushed.
+  // Conversas and Threads each light their own (the opener's split).
+  const opener = useChatOpener();
+  const chosen = useIsChosen(opener, chatOfRow(r));
   const agentDm = r.kind === "dm" && r.with.type === "agent";
   const leading =
     r.kind === "dm" ? (
@@ -175,6 +183,8 @@ export const ConversationItem = memo(function ConversationItem({
           accessibilityLabel={a11y}
           divider={divider}
           unread={r.unread > 0}
+          opens={!opener}
+          {...(chosen ? { background: withAlpha(c.ink, CHOSEN_TINT), accessibilityState: { selected: true } } : {})}
           leading={leading}
           title={name}
           time={meta ?? facts.time}
@@ -258,6 +268,7 @@ export function OpensConversation({
 }) {
   const { t } = useTranslation();
   const orgId = useOrgId();
+  const opener = useChatOpener();
   const starts = Boolean(onStart && r.kind === "dm");
   const href = r.channelId
     ? chatHref(r.channelId, r.kind === "thread" || r.kind === "mission" ? r.threadId : null)
@@ -265,14 +276,18 @@ export function OpensConversation({
   const open = () => {
     onOpen?.();
     if (onStart && r.kind === "dm") onStart(r.with.id);
-    else if (href) router.push(href);
+    else if (opener && r.channelId) {
+      const chat = chatOfRow(r);
+      if (chat) opener.open(chat);
+    } else if (href) router.push(href);
   };
   const prefetch = usePrefetchConversation(orgId);
   const warm = () => {
     if (r.channelId) prefetch(r.channelId, r.kind === "thread" || r.kind === "mission" ? r.threadId : null);
   };
   const peekHref = starts && r.kind === "dm" ? (`/agent/${r.with.id}` as const) : href;
-  const peeks = Platform.OS === "ios" && peekHref !== null;
+  // Beside the list (ADR 0212) the conversation opens next to it: no preview to peek at, the long press is the menu.
+  const peeks = Platform.OS === "ios" && peekHref !== null && !opener;
   const hold: HoldProps =
     onHold && !peeks
       ? {

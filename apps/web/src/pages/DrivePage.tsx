@@ -45,9 +45,9 @@ import { type MouseEvent, useDeferredValue, useEffect, useMemo, useRef, useState
 import { useTranslation } from "react-i18next";
 import { ActorAvatar } from "@/components/AgentAvatar";
 import { useArtifactDownload, useDeleteArtifact } from "@/components/artifacts/ArtifactActions";
-import { artifactLink, useArtifactViewer, useAuthorName } from "@/components/artifacts/ArtifactViewer";
 import { useFileShare } from "@/components/artifacts/ShareDialog";
 import { UploadButton, useDriveUpload, useFilePicker } from "@/components/artifacts/Upload";
+import { artifactLink, useArtifactViewer, useAuthorName } from "@/components/artifacts/viewer-context";
 import {
   DriveCrumbs,
   FolderCard,
@@ -57,7 +57,7 @@ import {
 } from "@/components/drive/DriveFolders";
 import { DriveCard, DriveRow, type ItemProps } from "@/components/drive/DriveItems";
 import { DriveTrash } from "@/components/drive/DriveTrash";
-import { DropOverlay, UploadProgress, useFileDrop } from "@/components/drive/DriveUploads";
+import { DropOverlay, UploadProgress } from "@/components/drive/DriveUploads";
 import { useActorFilterOptions } from "@/components/filters";
 import { ErrorState, LoadingList } from "@/components/Loading";
 import { LivePresenceScope } from "@/components/live/LiveCover";
@@ -66,6 +66,7 @@ import { cachedKind, openLivePage } from "@/components/live/open";
 import { COMPACT_QUERY } from "@/components/NavDrawer";
 import { useOrg } from "@/components/org-context";
 import { SelectionBar } from "@/components/SelectionBar";
+import { useFileDrop } from "@/hooks/useFileDrop";
 import { useRightHandLook } from "@/hooks/useRightHandLook";
 import type { MenuEntry } from "@/lib/context-menu";
 import { entityMenu } from "@/lib/entity-menu";
@@ -91,7 +92,8 @@ export function DrivePage({
   folder = null,
   onFolder = () => undefined,
 }: {
-  open?: { id: string; version?: number };
+  /** `at`: a picture's, a video's or a PDF's comment to open the viewer at (ADR 0208). */
+  open?: { id: string; version?: number; at?: string };
   folder?: string | null;
   onFolder?: (id: string | null) => void;
 }) {
@@ -206,13 +208,14 @@ export function DrivePage({
   // its kind first, from what this app already loaded or from the server, so the viewer never flashes on the way.
   const openId = open?.id;
   const openVersion = open?.version;
+  const openAt = open?.at;
   useEffect(() => {
     if (!openId) return;
     let gone = false;
     const go = (kind: ArtifactKind | null) => {
       if (gone) return;
       if (isLiveFileKind(kind)) openLivePage(navigate, org.id, openId, { version: openVersion, replace: true });
-      else viewer.open(openId, openVersion);
+      else viewer.open(openId, openVersion, undefined, openAt ? { at: openAt } : undefined);
     };
     const known = cachedKind(qc, org.id, openId);
     if (known) go(known);
@@ -228,7 +231,7 @@ export function DrivePage({
     return () => {
       gone = true;
     };
-  }, [openId, openVersion, viewer, qc, api, navigate, org.id]);
+  }, [openId, openVersion, openAt, viewer, qc, api, navigate, org.id]);
 
   const channelLabel = (a: Artifact) =>
     a.audience.kind === "channel"

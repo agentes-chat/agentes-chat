@@ -519,6 +519,29 @@ describe("use (retrieval into prompts)", () => {
 });
 
 describe("context tools through the Tool Gateway", () => {
+  test("an administrator's own words: typed, never refused; an agent's text from them, held to what they say", async () => {
+    f = await setup();
+    const member = await addMember(f.db, f.org.id, "member");
+    const text = "The three logos are approved: no need to ask me again for these.";
+    // The judge reads both texts: it refuses what the administrator's message doesn't say.
+    const judge = createFakeJudge((kind, _id, state) =>
+      kind === "permission_change" && !String(state.administrators_own_message ?? "").includes("logos") ? 0.95 : 0,
+    );
+    const by = (userId: string | null, words?: string) => ({ db: f.db, userId, words });
+    await checkPermissionText(judge, f.org.id, text, by(f.owner.id));
+    await checkPermissionText(judge, f.org.id, text, by(f.owner.id, "Approved the three logos, go ahead."));
+    await expect(checkPermissionText(judge, f.org.id, text, by(f.owner.id, "Review PR 7."))).rejects.toMatchObject({
+      code: "context.changes_permissions",
+    });
+    await expect(
+      checkPermissionText(judge, f.org.id, text, by(member.id, "Approved the three logos.")),
+    ).rejects.toBeInstanceOf(ValidationError);
+    expect(judge.calls.at(0)?.state).toMatchObject({
+      administrators_own_message: "Approved the three logos, go ahead.",
+    });
+    expect(judge.calls.at(-1)?.state).not.toHaveProperty("administrators_own_message");
+  });
+
   test("remember, search, expand, forget; remember refuses secrets and permission rules", async () => {
     let step = 0;
     let rememberedId = "";
@@ -700,7 +723,7 @@ describe("flow: conversation → reflect → correction → lesson → recurrenc
     );
     await decideProposal(f.db, f.owner.id, f.org.id, proposal?.id ?? "", "accept");
     const [agent] = await f.db.select().from(schema.agents).where(eq(schema.agents.id, f.agent.id));
-    expect(agent?.instructions).toBe("Answer briefly.\n\n## Learned\n- Add a changelog entry to every PR.");
+    expect(agent?.instructions).toBe("Answer briefly.\n\n- Add a changelog entry to every PR.");
 
     await post(f, "@dev one more");
     await drainOutbox(f.db, f.handlers);
@@ -1238,7 +1261,7 @@ describe("proposals for teammates (one card, a row per agent and kind of change)
     // Nothing changes until a person accepts.
     expect((await agentRow(ada.id))?.instructions).toBe("Seja breve.");
     for (const r of made) await decideProposal(f.db, f.owner.id, f.org.id, r.id, "accept");
-    expect((await agentRow(lia.id))?.instructions).toBe("Seja breve.\n\n## Learned\n- Responder sempre em português.");
+    expect((await agentRow(lia.id))?.instructions).toBe("Seja breve.\n\n- Responder sempre em português.");
     expect(await auditOf(ada.id)).toContainEqual(["proposal.accepted", f.owner.id]);
   });
 

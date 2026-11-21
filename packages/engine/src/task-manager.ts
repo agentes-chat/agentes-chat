@@ -10,7 +10,7 @@ import {
   waitsOnViewerIn,
   workStateOf,
 } from "./agent-work";
-import { ACCESS_COLUMNS, managesAgentSql } from "./audience";
+import { ACCESS_COLUMNS, managesAgentSql, ownsAgent, ownsAgentSql } from "./audience";
 import { runAuthorityById } from "./authority";
 import type { ModelScope } from "./brains/select";
 import { TtlCache } from "./cache";
@@ -266,6 +266,7 @@ type Row = {
   background: boolean | string;
   brain: string | null;
   owner_user_id: string | null;
+  owner_role_id: string | null;
   machine_id: string | null;
   machine_name: string | null;
   requester_id: string | null;
@@ -308,19 +309,25 @@ interface StoredWait {
   since?: number;
 }
 
+/** Who answers for the row's agent: a person or a role (ADR 0085, addendum of 2026-11-21). */
+const ownerOfRow = (r: Pick<Row, "owner_user_id" | "owner_role_id">) => ({
+  ownerUserId: r.owner_user_id,
+  ownerRoleId: r.owner_role_id,
+});
+
 const iso = (v: string | Date | null) => (v === null ? null : new Date(v).toISOString());
 const truthy = (v: boolean | string) => v === true || v === "t";
 const str = (v: unknown) => (typeof v === "string" && v ? v : null);
 const parsed = <T>(v: T | string | null): T | null => (typeof v === "string" ? (JSON.parse(v) as T) : v);
 
-/** The columns of a run named `r`, on channel `c` and agent `a`, as `seesRunSql` reads them. */
-const RUN_COLUMNS = {
+/** The columns of a run named `r`, on channel `c` and agent `a`, as `seesRunSql` reads them, for the viewer. */
+const runColumns = (userId: string) => ({
   channelId: sql`c.id`,
   kind: sql`c.kind`,
   dmKey: sql`c.dm_key`,
   background: sql`r.background`,
-  ownerUserId: sql`a.owner_user_id`,
-};
+  owns: ownsAgentSql("a", sql`${userId}::text`),
+});
 
 /** Whether the caller manages the run's agent `a` (`managesAgentSql`, ADR 0085 addendum of 2026-11-17). */
 const managesSql = (userId: string) => managesAgentSql("a", sql`${userId}::text`);
@@ -331,7 +338,7 @@ const managesSql = (userId: string) => managesAgentSql("a", sql`${userId}::text`
  * to who manages that very agent, so a private agent's work stays out of sight of who merely holds "Edit agents".
  * Never NULL, as `seesRunSql`: `not` of it counts the hidden ones.
  */
-const seesSql = (userId: string, orgId: string) => seesRunSql(RUN_COLUMNS, userId, orgId, managesSql(userId));
+const seesSql = (userId: string, orgId: string) => seesRunSql(runColumns(userId), userId, orgId, managesSql(userId));
 
 /** The oldest card a run waiting on a person waits on (an approval, a question, a secret): its message. */
 const CARD_OF_RUN = sql`(case when r.status in ('waiting_approval', 'waiting_input') then (
@@ -372,7 +379,7 @@ async function visibleRuns(
     await db.execute(sql`select r.id, r.agent_id, r.channel_id, ${shownStatusSql} as status, r.thread_root_id, r.trigger_message_id,
         r.started_at, r.created_at, r.finished_at, r.error, c.kind, c.name, c.dm_key, t.title,
         array_to_json(r.pending_message_ids || r.after_message_ids) as pending, r.background, r.brain,
-        a.owner_user_id, a.machine_id, mc.name as machine_name,
+        a.owner_user_id, a.owner_role_id, a.machine_id, mc.name as machine_name,
         trig.author_user_id as requester_id, ru.name as requester_name, trig.author_agent_id as asker_agent_id,
         ${which.active ? sql`consult.question` : sql`null`} as question,
         rt.id as routine_id, rt.name as routine_name, w.title as work_title, w.plan as work_plan,
@@ -714,7 +721,7 @@ export async function taskManager(
     steps: Number(r.steps ?? 0),
     // Unread, a separate request left for after the task (`after_message_ids`) too.
     pendingMessageIds: pendingIds(r.pending),
-    canStop: truthy(r.manages) || r.requester_id === userId || r.owner_user_id === userId,
+    canStop: truthy(r.manages) || r.requester_id === userId || ownsAgent(ownerOfRow(r), userId, membership.roleIds),
     held: heldOf(r),
     line: null,
     wait: waitOf(r),
@@ -737,7 +744,7 @@ export async function taskManager(
       wait.canContinue = await mayContinuePause(db, userId, membership, {
         run: { orgId, agentId: r.agent_id, triggerMessageId: r.trigger_message_id },
         requester: r.requester_id,
-        ownerUserId: r.owner_user_id,
+        ...ownerOfRow(r),
         routineId: r.routine_id,
         routineCreatorId: r.routine_creator,
         agent: pausedAgents.find((a) => a.id === r.agent_id),

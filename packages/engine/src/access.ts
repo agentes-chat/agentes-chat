@@ -1,6 +1,6 @@
 import { and, asc, type Database, type Executor, eq, inArray, isNull, schema } from "@agenteschat/db";
 import { getAgent } from "./agents";
-import { managesAgent, REACH_COLUMNS } from "./audience";
+import { managesAgent, ownsAgent, REACH_COLUMNS } from "./audience";
 import { recordAudit } from "./audit";
 import { BROWSER_SCOPE, BROWSER_TOOL_INFO, BROWSER_TOOLS, DESKTOP_SCOPE, DESKTOP_TOOL_INFO } from "./browser/types";
 import { caches } from "./cache";
@@ -138,6 +138,7 @@ export const BUILTIN_TOOLS: Record<string, string[]> = {
 const UNLISTED_TOOLS: Record<string, string[]> = {
   "context:read": ["read_conversation"],
   "schedule:write": ["delete_routine", "run_routine_now"],
+  "sandbox:run": ["review_media"],
 };
 
 /**
@@ -637,7 +638,7 @@ export async function setAgentAccess(
   const agent = await getAgent(db, orgId, agentId);
   if (!agent) throw new NotFoundError("Agent not found");
   const admin = managesAgent(agent, actorId, membership);
-  if (!admin && agent.ownerUserId !== actorId) {
+  if (!admin && !ownsAgent(agent, actorId, membership.roleIds)) {
     throw new ForbiddenError("Only an admin or the agent's owner can change its access");
   }
   const live = await db

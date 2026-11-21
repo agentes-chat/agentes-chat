@@ -23,6 +23,7 @@ import {
   memoryScorecard,
   NotFoundError,
   ownerDecides,
+  ownsAgent,
   type Proposal as ProposalRow,
   requirePermission,
   resolveNotifications,
@@ -555,7 +556,7 @@ export function memoryRoutes(deps: AppDeps) {
       const membership = await requirePermission(db, userId, orgId, "read");
       const agent = await getAgent(db, orgId, agentId);
       if (!agent) throw new NotFoundError("Agent not found");
-      if (!can(membership, "review_memory") && agent.ownerUserId !== userId)
+      if (!can(membership, "review_memory") && !ownsAgent(agent, userId, membership.roleIds))
         throw new ForbiddenError("Only the agent's owner or who reviews memory sees this");
       return c.json(await memoryScorecard(db, orgId, agentId, c.req.valid("query").days ?? 7), 200);
     },

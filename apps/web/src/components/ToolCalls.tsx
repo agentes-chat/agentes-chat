@@ -47,7 +47,8 @@ import {
 import type { TFunction } from "i18next";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ConnectorIcon } from "@/components/ConnectorCatalog";
+import { AccountSwitchLine } from "@/chat/AccountRef";
+import { ConnectorIcon } from "@/components/ConnectorIcon";
 import { CodePanel, formatBytes, OutputView } from "@/components/LiveCode";
 import { useOrg } from "@/components/org-context";
 
@@ -367,7 +368,12 @@ export function SavedTools({
       )
     : null;
   const items = work ? toolItemsSaved(work) : [];
-  const blockItems = useBlockItems(items);
+  const toolItems = useBlockItems(items);
+  const switched = run.data?.run?.accountSwitch;
+  // It went on with another account: said here, never in the chat.
+  const blockItems: ToolBlockItem[] = switched
+    ? [{ kind: "note", key: "account", node: <AccountSwitchLine move={switched} /> }, ...toolItems]
+    : toolItems;
   // Nothing more to show than the message does: no tools (lookups and reactions aren't counted), or only the ones
   // its own cards show (where it browsed).
   // No `meta.work` (a reply saved before it): a block that loads the run's steps when opened, gone if it called none.

@@ -375,7 +375,13 @@ export function settingLineText(
         : (t as unknown as (key: string) => string)(
             `rightHand.field.${line.field === "delete" ? "archive" : line.field}`,
           );
-  return { field, from: value(line.from, "from"), to: value(line.to, "to") };
+  const to = value(line.to, "to");
+  // A budget at or below the month's spend stops the agent the moment it is applied: the card says so.
+  return {
+    field,
+    from: value(line.from, "from"),
+    to: line.pausesNow ? `${to} · ${t("rightHand.value.pausesNow")}` : to,
+  };
 }
 
 /**

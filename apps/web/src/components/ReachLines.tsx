@@ -25,6 +25,7 @@ import { Trans, useTranslation } from "react-i18next";
 import { ConsultPairRow, useConsultById } from "@/components/ConsultGroup";
 import { useOrg } from "@/components/org-context";
 import { useDirectory } from "@/hooks/useDirectory";
+import { useMyRoleIds } from "@/hooks/useMyRoleIds";
 import { useToast } from "@/lib/toast";
 import "./agent-actions.css";
 
@@ -152,7 +153,8 @@ export function AllowTalkButton({ agent, userId, className }: { agent: Agent; us
   const asks = useWidenAsk(agent);
   const person = dir.memberById.get(userId)?.name;
   const audience = audienceWith(agent, userId);
-  if (!person || !audience || modeOf(agent) === "everyone" || !canEditAudience(org, agent, me.user.id)) return null;
+  const mine = canEditAudience(org, agent, me.user.id, dir.rolesOf(me.user.id));
+  if (!person || !audience || modeOf(agent) === "everyone" || !mine) return null;
   const g = agentGrammar(agent.name);
   return (
     <>
@@ -179,10 +181,11 @@ export function AllowTalkButton({ agent, userId, className }: { agent: Agent; us
 export function LetMeTalkButton({ agent }: { agent: Agent }) {
   const { t } = useTranslation();
   const { org, me } = useOrg();
+  const myRoleIds = useMyRoleIds();
   const toast = useToast();
   const save = useWidenAudience(org.id, agent.id);
   const asks = useWidenAsk(agent);
-  const audience = audienceWithMe(org, agent, me.user.id);
+  const audience = audienceWithMe(org, agent, me.user.id, myRoleIds);
   if (!audience) return null;
   const g = agentGrammar(agent.name);
   return (

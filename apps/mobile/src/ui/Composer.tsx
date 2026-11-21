@@ -135,6 +135,8 @@ export interface ComposerProps {
   onLongAsFile?: (text: string) => void;
   /** Each change that leaves text in the field ("está digitando…" for the others; the screen throttles it). */
   onType?: (text: string) => void;
+  /** The field took the keyboard (true) or let it go (a conversation in a sheet rises with it, ADR 0208). */
+  onFocusChange?: ((focused: boolean) => void) | undefined;
   /**
    * Where the words wait when the person leaves before sending (a conversation, a thread): they are back in the field
    * when the person returns, until sent or erased. Kept while the app runs.
@@ -320,6 +322,7 @@ export function Composer({
   sendEmpty = false,
   onLongAsFile,
   onType,
+  onFocusChange,
   draftKey,
   media,
   voice,
@@ -385,6 +388,10 @@ export function Composer({
   const mediaButton = media && !has ? media : null;
   // Files waiting don't take it away: a take started then goes with them.
   const mic = voice && !typed ? voice.mic : null;
+  // The mic that comes back for the send button (the words sent or erased) comes in as the button does; the one the
+  // field opens with is just there.
+  const micReturns = useRef(false);
+  if (typed) micReturns.current = true;
   // A take too short to send: the field shakes once, as a refused entry does (with the haptic and the line saying so).
   const shakeStyle = useShake(voice?.nope ?? 0, reducedMotion);
 
@@ -646,8 +653,14 @@ export function Composer({
                 if (selection) setSelection(undefined);
               }}
               multiline
-              onFocus={() => setFocused(true)}
-              onBlur={() => setFocused(false)}
+              onFocus={() => {
+                setFocused(true);
+                onFocusChange?.(true);
+              }}
+              onBlur={() => {
+                setFocused(false);
+                onFocusChange?.(false);
+              }}
               accessibilityLabel={placeholder}
               style={[inputText, styles.inputFill, { color: colors.ink }]}
             />
@@ -682,7 +695,14 @@ export function Composer({
             />
           ) : null}
           {voice?.overlay ?? null}
-          {mic ? <View style={styles.micBox}>{mic}</View> : null}
+          {mic ? (
+            <Animated.View
+              entering={micReturns.current ? (reducedMotion ? SEND_FADE_IN : SEND_IN) : undefined}
+              style={styles.micBox}
+            >
+              {mic}
+            </Animated.View>
+          ) : null}
         </Animated.View>
       </View>
     </View>

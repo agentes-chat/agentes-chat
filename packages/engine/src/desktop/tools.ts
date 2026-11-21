@@ -27,8 +27,10 @@ import {
   MAX_WAIT_MS,
   type PlanReport,
   runPlan,
+  type ScreenJudgmentShadow,
   type ScreenStep,
   type ScreenVerb,
+  screenJudgmentsData,
   screenStepOf,
   type TargetCache,
 } from "../screen";
@@ -357,6 +359,7 @@ export function createDesktopToolSource(deps: DesktopToolDeps): ToolSource {
     const started = new Date();
     let handedBack = false;
     const acted: DesktopAction[] = [];
+    const shadow: ScreenJudgmentShadow[] = [];
     const report = await runPlan(
       {
         judge,
@@ -391,6 +394,7 @@ export function createDesktopToolSource(deps: DesktopToolDeps): ToolSource {
         // What covers a target on a desktop is usually a real dialog ("Save changes?"): never closed on a guess.
         dismiss: false,
         now,
+        shadow,
       },
       steps,
     );
@@ -404,6 +408,7 @@ export function createDesktopToolSource(deps: DesktopToolDeps): ToolSource {
     const data: Record<string, unknown> = {
       desktopTrail: trailOf(report),
       timing: { ms: report.ms, steps: report.steps.map((s) => s.ms) },
+      ...screenJudgmentsData(shadow),
     };
     const waiting = paused as ToolOutput | null;
     if (waiting) {
@@ -491,6 +496,7 @@ export function createDesktopToolSource(deps: DesktopToolDeps): ToolSource {
         await markPageRead(ctx.db, ctx, "desktop");
         const question = typeof input.find === "string" ? input.find.trim() : "";
         if (question && deps.judge) {
+          const shadow: ScreenJudgmentShadow[] = [];
           const found = await findInPage({
             judge,
             orgId: ctx.orgId,
@@ -498,17 +504,22 @@ export function createDesktopToolSource(deps: DesktopToolDeps): ToolSource {
             runId: ctx.runId,
             question,
             observation: screen,
+            shadow,
           }).catch(() => null);
           const part = found?.searched
             ? ` (searched ${found.searched.lines} of the screen's ${found.searched.of} lines)`
             : "";
           if (found && found.answered !== "no") {
             const partly = found.answered === "partly" ? " (it may only partly answer it)" : "";
-            return { content: `Where the screen answers "${question}"${partly}${part}:\n${screenBlock(found.text)}` };
+            return {
+              content: `Where the screen answers "${question}"${partly}${part}:\n${screenBlock(found.text)}`,
+              data: screenJudgmentsData(shadow),
+            };
           }
           if (found) {
             return {
               content: `Nothing on the screen answers "${question}"${part}. Read the whole screen (no \`find\`) to look yourself, or open where it would be.`,
+              data: screenJudgmentsData(shadow),
             };
           }
         }

@@ -68,6 +68,7 @@ const {
   users,
   sessions,
   pushDevices,
+  liveActivityDevices,
   machineProvisioning,
   machines,
   machineAccounts,
@@ -1052,6 +1053,7 @@ export async function scheduleAccountDeletion(deps: DeletionDeps, userId: string
     if (!dueAt) throw new NotFoundError("This account no longer exists");
     await tx.delete(sessions).where(eq(sessions.userId, userId));
     await tx.delete(pushDevices).where(eq(pushDevices.userId, userId));
+    await tx.delete(liveActivityDevices).where(eq(liveActivityDevices.userId, userId));
     for (const m of mine) await followOwner(tx, m.orgId);
     await recordOperatorEvent(tx, { type: "user.deletion_requested", userId, data: { dueAt: dueAt.toISOString() } });
     await enqueueAccountContact(tx, userId);

@@ -4,7 +4,7 @@ import { routineRow, routineSnapshot } from "./agent-undo";
 import { agentsByHandle, currentHandles, getAgentCached } from "./agents";
 import { decidesAgentApprovals } from "./approval-rules";
 import { cancelAheadApproval, cancelableAhead } from "./approvals";
-import { canTalkTo, speakerFor } from "./audience";
+import { canTalkTo, NO_OWNER, OWNER_COLUMNS, speakerFor } from "./audience";
 import { runAuthorityById } from "./authority";
 import { cardPlace } from "./consultations";
 import { getChannelCached } from "./context";
@@ -556,7 +556,7 @@ async function ownActionsText(ctx: ToolContext, r: RoutineView) {
   const agent = await getAgentCached(ctx.db, ctx.orgId, r.agentId);
   const writes =
     r.createdByUserId !== null &&
-    (await decidesAgentApprovals(ctx.db, ctx.orgId, r.createdByUserId, agent?.ownerUserId ?? null));
+    (await decidesAgentApprovals(ctx.db, ctx.orgId, r.createdByUserId, agent ?? NO_OWNER));
   const rest = writes
     ? "Its other changes in connected apps run without asking too, except a send, a delete, a payment or an invite, which ask a person first unless a person approved its kind for good."
     : "Any other action in a connected app asks a person first, unless a person approved its kind for good.";
@@ -788,7 +788,7 @@ export function createScheduleToolSource(deps: Omit<RoutineDeps, "db">): ToolSou
               audienceRoleIds: agents.audienceRoleIds,
               consultable: agents.consultable,
               brain: agents.brain,
-              ownerUserId: agents.ownerUserId,
+              ...OWNER_COLUMNS,
             })
             .from(agents)
             .where(and(eq(agents.orgId, ctx.orgId), isNull(agents.archivedAt)));

@@ -1,7 +1,9 @@
 import type { PubSub } from "@agenteschat/adapters";
 import { and, type Executor, eq, gte, schema, sql } from "@agenteschat/db";
 import { threadIsConfidential } from "./confidential";
+import { inAgentOnlyDm } from "./dms";
 import { publishMessageCreated } from "./events";
+import { plainWords } from "./format";
 import { insertMessage, messageView } from "./messages";
 import { runReadOutside } from "./outside";
 import { endsWithSentinel, isSentinelOnly } from "./reply-policy";
@@ -9,6 +11,7 @@ import { personAmong } from "./run-inbox";
 import { type AgentRun, isTerminal, replyThreadOf } from "./runs";
 import { runStretchOf } from "./stretch";
 import { maskCredentials, scrubSignIns } from "./tool-detail";
+import { listsEveryTool } from "./tools/directory";
 import type { ToolContext, ToolDefinition, ToolOutput, ToolSource } from "./tools/types";
 import { withWikiLinks } from "./wiki-links";
 import { movableRun } from "./works";
@@ -191,20 +194,11 @@ export function createSayNowToolSource(deps: { pubsub?: PubSub }): ToolSource {
   return {
     name: "say-now",
     async tools(ctx) {
-      // The same list in every run but a background one: where it doesn't apply, it says why.
-      return ctx.runId && !ctx.background ? [tool] : [];
+      // The same list in every run but a background one or one between agents: where it doesn't apply, it says why.
+      return ctx.runId && !ctx.background && (listsEveryTool(ctx) || !(await inAgentOnlyDm(ctx))) ? [tool] : [];
     },
   };
 }
-
-/** A sentence's words as they compare: lower case, no accents, no punctuation or emoji. */
-const wordsOf = (s: string) =>
-  s
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/\p{M}/gu, "")
-    .replace(/[^\p{L}\p{N}]+/gu, " ")
-    .trim();
 
 /**
  * A reply without what it already told them on the way (`say_now`): models often write the line again as the first
@@ -215,7 +209,7 @@ const wordsOf = (s: string) =>
  */
 export function withoutSaidNow(text: string, said: readonly Pick<SaidNow, "text">[] | undefined): string {
   if (!said?.length || !text.trim()) return text;
-  const lines = said.map((s) => wordsOf(s.text)).filter(Boolean);
+  const lines = said.map((s) => plainWords(s.text)).filter(Boolean);
   if (lines.length === 0) return text;
   const start = text.trimStart();
   let rest = start;
@@ -226,7 +220,7 @@ export function withoutSaidNow(text: string, said: readonly Pick<SaidNow, "text"
     if (!match) break;
     // A heading that runs into a list ("Os voos mais baratos:") leads the answer: it never repeats the line.
     if (match[2] === "\n" && /:\s*$/.test(match[1] ?? "")) break;
-    const sentence = wordsOf(match[1] ?? "");
+    const sentence = plainWords(match[1] ?? "");
     rest = rest.slice(match[0].length);
     // Punctuation or emoji alone joins the sentences around it.
     if (!sentence) continue;

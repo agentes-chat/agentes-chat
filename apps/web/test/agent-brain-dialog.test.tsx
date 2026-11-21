@@ -145,6 +145,29 @@ describe("Quem pensa (its dialog)", () => {
     );
   });
 
+  test("Gemini: its models alone, and why its newest one isn't among them", async () => {
+    const state = seedState();
+    const api = createFakeApi(state);
+    const base = fakeAgentBrain(ADA_ID);
+    const gemini = {
+      kind: "antigravity" as const,
+      available: true,
+      models: [{ value: "gemini-3.8-flash-high", label: "Gemini 3.8 Flash (High)", modelId: "gemini-3.8-flash" }],
+      defaultModel: null,
+      missing: { modelId: "gemini-4-neon", label: "Gemini 4 Neon", why: "plan" as const },
+    };
+    const options = [...base.options, gemini];
+    const machines = [{ machineId: "machine_1", name: "MacBook", online: true, options }];
+    api.agents.brain = async () => ({ ...base, brain: "antigravity", options, machines });
+    await open(state, api);
+    const d = await brainDialog();
+    await toScreen(d, "Modelo");
+    expect(brainRows(d).map((r) => r.title)).toContain("Gemini 3.8 Flash (High)");
+    expect(shownText(d)).toContain(
+      "O Gemini 4 Neon vem com o Google AI Pro e o Ultra. Nenhuma conta do Gemini no computador do agente tem esse plano.",
+    );
+  });
+
   test("on the computer it already works on: no side words on the plans, nothing about the computer", async () => {
     const state = seedState();
     const api = createFakeApi(state);

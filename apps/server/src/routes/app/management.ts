@@ -358,6 +358,7 @@ const AgentDetail = z
     instructions: z.string(),
     model: z.string(),
     ownerUserId: z.string().nullable(),
+    ownerRoleId: z.uuid().nullable().openapi({ description: "A role that answers for it instead of a person." }),
     credentialId: z.uuid().nullable().openapi({ description: "Null = platform key (Cloud)." }),
     budgetUsedPercent: z
       .number()
@@ -422,6 +423,17 @@ const Run = z
       .string()
       .nullable()
       .openapi({ description: "GitHub repository it was refused (not in the agent's repositories)." }),
+    accountSwitch: z
+      .object({
+        from: z.object({ id: z.uuid(), name: z.string() }),
+        to: z.object({ id: z.uuid(), name: z.string() }),
+        cause: z.enum(["limit", "line", "extra"]),
+      })
+      .nullable()
+      .openapi({
+        description:
+          "It went on with another account than its agent's own: the first it left, the last it moved to, and why (its plan's limit, the pause line of long work, or the paid extra usage it would go into). Said in its details, never in the chat.",
+      }),
   })
   .openapi("Run");
 
@@ -1628,6 +1640,7 @@ export function managementRoutes(deps: AppDeps) {
           instructions: seesDetails ? v.instructions : "",
           model: v.model,
           ownerUserId: v.ownerUserId,
+          ownerRoleId: v.ownerRoleId ?? null,
           credentialId: seesDetails ? d.agent.credentialId : null,
           budgetUsedPercent: month.budgetUsedPercent,
           ...(seesCost

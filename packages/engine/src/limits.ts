@@ -5,6 +5,7 @@ import { formatBytes } from "./format";
 import type { Judge } from "./judge";
 import { recordOperatorEvent } from "./operator-events";
 import { can, requirePermission } from "./organizations";
+import { RouterSkip, type RouterStrategy } from "./router";
 import { storedBytes, usesOwnBucket } from "./storage";
 import { monthStartUtc } from "./usage";
 
@@ -286,8 +287,25 @@ export function platformCapJudge(db: Database, jev: Judge): Judge {
   return {
     name: jev.name,
     async ask(request) {
-      if (await platformCapReached(db, request.orgId)) throw new Error("platform_cap");
+      if (await platformCapReached(db, request.orgId)) throw new Error(PLATFORM_CAP);
       return jev.ask(request);
+    },
+  };
+}
+
+/**
+ * The router's Jev step, skipped for a workspace past its platform AI for the month: the chain's next step (the
+ * workspace's own small model) picks in its place. With none, `routeMessage` says so (`platform_cap`).
+ */
+export function platformCapRouter(db: Database, jev: RouterStrategy): RouterStrategy {
+  return {
+    get name() {
+      return jev.name;
+    },
+    ...(jev.on ? { on: () => jev.on?.() ?? true } : {}),
+    async decide(input) {
+      if (await platformCapReached(db, input.orgId)) throw new RouterSkip(PLATFORM_CAP);
+      return jev.decide(input);
     },
   };
 }

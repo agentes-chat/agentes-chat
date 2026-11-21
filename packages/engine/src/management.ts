@@ -4,9 +4,10 @@ import { MODEL_TIERS, type ModelTier } from "@agenteschat/providers";
 import { othersPersonalTools } from "./agent-audit";
 import { getAgent } from "./agents";
 import { decidableBySql } from "./approvals";
-import { listsAgentSql, managesAgent } from "./audience";
+import { listsAgentSql, managesAgent, ownsAgent } from "./audience";
 import { recordAudit } from "./audit";
 import type { AutoModels } from "./auto-model";
+import { resolveDefaultBudgetPaused } from "./budget-paused-rows";
 import { caches } from "./cache";
 import {
   announceChannelLeavers,
@@ -21,7 +22,6 @@ import { proposalsWaitingFor } from "./context/proposals";
 import { invalidateDefaults, modelInfoFor } from "./credentials";
 import { ConflictError, ForbiddenError, isUniqueViolation, NotFoundError, ValidationError } from "./errors";
 import { publishChannelEvent, publishChannelsChanged } from "./events";
-import { agentBudgetState } from "./gateway";
 import {
   AGENT_MEDIA_LEVELS,
   type AgentMediaLevel,
@@ -33,8 +33,10 @@ import {
 } from "./media";
 import { can, lockOrgMembers, requireActiveMembership, requirePermission } from "./organizations";
 import { isRightHand, rightHandPermanent } from "./right-hand";
+import type { AccountSwitch } from "./spill";
 import { type ApprovalsLevel, DEFAULT_APPROVALS_LEVEL } from "./tools/run-policy";
 import {
+  agentBudgetState,
   agentBudgetsThisMonth,
   budgetPercent,
   DEFAULT_AGENT_BUDGET_NANO_USD,
@@ -279,7 +281,10 @@ export async function updateOrgSettings(
   caches.membership.deletePrefix(`${orgId}:`);
   caches.orgs.delete(`${orgId}:agent-budget`);
   // Agents on the default budget whose runs wait for it look again now (the rest park again quietly).
-  if (input.defaultAgentBudgetNanoUsd !== undefined) await resumeBudgetWaits(db, orgId, null);
+  if (input.defaultAgentBudgetNanoUsd !== undefined) {
+    await resumeBudgetWaits(db, orgId, null);
+    await resolveDefaultBudgetPaused({ db }, orgId);
+  }
   caches.orgs.delete(`${orgId}:action-check`);
   caches.orgs.delete(`${orgId}:auto-models`);
   caches.orgs.delete(mediaSettingsCacheKey(orgId));
@@ -445,7 +450,7 @@ export async function setAgentChannels(
   const agent = await getAgent(db, orgId, agentId);
   if (!agent || agent.archivedAt) throw new NotFoundError("Agent not found");
   const admin = managesAgent(agent, actorId, membership);
-  if (!admin && agent.ownerUserId !== actorId) {
+  if (!admin && !ownsAgent(agent, actorId, membership.roleIds)) {
     throw new ForbiddenError("Only an admin or the agent's owner can change where it works");
   }
   if (input.length > 0 && isRightHand(agent)) throw rightHandPermanent("added to a channel");
@@ -660,7 +665,7 @@ export async function requireUsageAccess(db: Database, actorId: string, orgId: s
   if (can(membership, "view_usage")) return;
   if (agentId) {
     const agent = await getAgent(db, orgId, agentId);
-    if (agent?.ownerUserId === actorId) return;
+    if (agent && ownsAgent(agent, actorId, membership.roleIds)) return;
   }
   throw new ForbiddenError();
 }
@@ -695,6 +700,8 @@ export interface RunSummary {
   repo: string | null;
   /** A GitHub repository it was refused (not in the agent's list), if any. */
   deniedRepo: string | null;
+  /** It went on with another account than its agent's own (`Transcript.accountSwitch`), if it did. */
+  accountSwitch: AccountSwitch | null;
 }
 
 /** Run history, newest first, with tokens and cost from the usage records of each run. */
@@ -726,6 +733,7 @@ export async function listRuns(
       deniedRepo: sql<
         string | null
       >`case when jsonb_typeof(${t}->'deniedRepo') = 'string' then ${t}->>'deniedRepo' end`,
+      accountSwitch: sql<AccountSwitch | null>`${t}->'accountSwitch'`,
     })
     .from(agentRuns)
     .where(
@@ -802,6 +810,7 @@ export async function listRuns(
       finishedAt: r.finishedAt,
       repo: r.repo,
       deniedRepo: r.deniedRepo,
+      accountSwitch: r.accountSwitch ?? null,
     };
   });
 }

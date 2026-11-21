@@ -183,7 +183,7 @@ export function createChatToolSource(deps: {
     {
       name: POST_MESSAGE_TOOL,
       description:
-        'Post a new message in another channel, e.g. "manda no #geral". `channel`: its name. `move_here`: asked to continue in a channel or out of a thread (its own channel too): your replies and background work go on at its top level, and a line here links there. Files: `artifact_ids`; one from a DM goes as a copy. Only channels the person who asked is in (when nobody asked, yours). Then say where you posted. For this conversation, just reply.',
+        'Post a new message in another channel, e.g. "manda no #geral". `channel`: its name. `move_here`: asked to continue in a channel or out of a thread (its own channel too): your replies and background work go on at its top level, and a line here links there. Files: `artifact_ids`; one from a DM goes as a copy. Only channels the person who asked is in (when nobody asked, yours). Then say where you posted. From a thread, its own channel posts at its top level.',
       scope: "",
       inputSchema: {
         type: "object",
@@ -256,10 +256,8 @@ export function createChatToolSource(deps: {
           const [run] = await ctx.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.id, ctx.runId));
           const inThread = replyThreadOf(ctx) !== null;
           const movable = (moving || (here && inThread)) && !!run && (await movableRun(ctx.db, run));
-          if (here && !(moving && inThread && movable)) {
-            const out = inThread && movable ? " To continue at this channel's top level instead, set `move_here`." : "";
-            return { content: `${SAME_CONVERSATION}${out}`, isError: true };
-          }
+          // From a thread of the same channel, a post there is a new message at its top level: what was asked.
+          if (here && !inThread) return { content: SAME_CONVERSATION, isError: true };
           if (moving && !movable) {
             return { content: "This work stays where it is: post without `move_here`.", isError: true };
           }

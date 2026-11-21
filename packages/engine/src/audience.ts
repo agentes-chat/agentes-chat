@@ -11,7 +11,7 @@ import { enqueue } from "./outbox";
 import { channelMaySql, maySql } from "./permissions";
 import { dropForeignMailGrants, type ForeignMailbox, foreignMailboxes } from "./tools/scopes";
 
-const { agents, users, organizationMembers, orgRoles } = schema;
+const { agents, users, organizationMembers, organizationMemberRoles, orgRoles } = schema;
 
 /** Who can talk to an agent. */
 export type AudienceMode = "everyone" | "people" | "owner";
@@ -35,8 +35,68 @@ export type AudienceInput = Omit<AgentAudience, "roleIds"> & { roleIds?: string[
 
 type AudienceFields = Pick<
   Agent,
-  "audienceMode" | "audienceUserIds" | "audienceRoleIds" | "ownerUserId" | "consultable" | "brain"
+  "audienceMode" | "audienceUserIds" | "audienceRoleIds" | "ownerUserId" | "ownerRoleId" | "consultable" | "brain"
 >;
+
+/** Who answers for an agent: a person, a role (whoever holds it at the time) or nobody (ADR 0085, addendum of 2026-11-21). */
+export type AgentOwnerFields = Pick<Agent, "ownerUserId" | "ownerRoleId">;
+
+/** The `agents` columns that say who answers for it (`AgentOwnerFields`), for a partial select to spread. */
+export const OWNER_COLUMNS = { ownerUserId: agents.ownerUserId, ownerRoleId: agents.ownerRoleId };
+
+/** Nobody answers for it (an agent not found, a run with no agent). */
+export const NO_OWNER: AgentOwnerFields = { ownerUserId: null, ownerRoleId: null };
+
+/** It has someone accountable: a person or a role. Without either, the admins are (`approverIds`, `keysReach`). */
+export const hasOwner = (a: AgentOwnerFields) => !!a.ownerUserId || !!a.ownerRoleId;
+
+/**
+ * Whether this person answers for the agent: its owner, or holding its owner role now (ADR 0085, addendum of
+ * 2026-11-21). Every "its owner may" and "its owner is asked" rule reads this. What needs one person (whose personal
+ * plan thinks for it, whose name signs its commits, whose devices it reaches) reads `ownerUserId` alone, so an agent a
+ * role answers for works there as one with no owner. `ownsAgentSql` is the same rule in SQL.
+ */
+export const ownsAgent = (a: AgentOwnerFields, userId: string | null | undefined, roleIds: readonly string[]) =>
+  !!userId && (a.ownerUserId === userId || (!!a.ownerRoleId && roleIds.includes(a.ownerRoleId)));
+
+/** `ownsAgent` in SQL, for a row aliased `alias` with `org_id`, `owner_user_id` and `owner_role_id` (an agent or an approval). */
+export function ownsAgentSql(alias: string, userId: SQL): SQL<boolean> {
+  const a = sql.raw(alias);
+  return sql<boolean>`(${a}.owner_user_id = ${userId} or (${a}.owner_role_id is not null
+    and exists (select 1 from organization_member_roles owr where owr.org_id = ${a}.org_id
+      and owr.user_id = ${userId} and owr.role_id = ${a}.owner_role_id)))`;
+}
+
+/**
+ * Who answers for the agent now, as member ids: its owner, or whoever holds its owner role (`ownsAgent`). Empty with
+ * neither, or a role nobody holds: the callers then turn to the admins, as for an agent with no owner.
+ */
+export async function agentOwnerIds(db: Executor, orgId: string, a: AgentOwnerFields): Promise<string[]> {
+  if (a.ownerUserId) return [a.ownerUserId];
+  if (!a.ownerRoleId) return [];
+  const rows = await db
+    .select({ userId: organizationMemberRoles.userId })
+    .from(organizationMemberRoles)
+    .innerJoin(
+      organizationMembers,
+      and(
+        eq(organizationMembers.orgId, organizationMemberRoles.orgId),
+        eq(organizationMembers.userId, organizationMemberRoles.userId),
+      ),
+    )
+    .where(and(eq(organizationMemberRoles.orgId, orgId), eq(organizationMemberRoles.roleId, a.ownerRoleId)));
+  return rows.map((r) => r.userId);
+}
+
+/** The agent's owner role, by name, for what a person or a model reads ("Tecnologia"); null without one or once gone. */
+export async function ownerRoleName(db: Executor, orgId: string, a: Pick<Agent, "ownerRoleId">) {
+  if (!a.ownerRoleId) return null;
+  const [row] = await db
+    .select({ name: orgRoles.name })
+    .from(orgRoles)
+    .where(and(eq(orgRoles.orgId, orgId), eq(orgRoles.id, a.ownerRoleId)));
+  return row?.name ?? null;
+}
 
 export const OWNER_ONLY: AgentAudience = { mode: "owner", userIds: [], roleIds: [] };
 
@@ -219,7 +279,7 @@ export async function speakerFor(db: Database, orgId: string, userId: string | n
  * between agents never dispatch in SQL: their agents' DM wakes nobody, `settleReach` asks the rest by note).
  */
 export function canTalkTo(a: AudienceFields, userId: string | null, person: Speaker): boolean {
-  if (userId && a.ownerUserId === userId) return true;
+  if (ownsAgent(a, userId, person.roleIds)) return true;
   if (!person.talks) return false;
   if (person.viaAgent && userId && takesConsultations(a)) return true;
   if (a.audienceMode === "everyone") return true;
@@ -236,6 +296,7 @@ export type AgentAccessFields = AudienceFields & Pick<Agent, "editorUserIds" | "
  */
 export const REACH_COLUMNS = {
   ownerUserId: agents.ownerUserId,
+  ownerRoleId: agents.ownerRoleId,
   audienceMode: agents.audienceMode,
   audienceUserIds: agents.audienceUserIds,
   audienceRoleIds: agents.audienceRoleIds,
@@ -263,7 +324,7 @@ type Viewer = Pick<Membership, "permissions" | "roleIds"> | null | undefined;
 export function keysReach(a: AudienceFields, userId: string, membership: Viewer): boolean {
   if (!membership) return false;
   if (can(membership, "administrator")) return true;
-  return !a.ownerUserId || canTalkTo(a, userId, { talks: true, roleIds: membership.roleIds });
+  return !hasOwner(a) || canTalkTo(a, userId, { talks: true, roleIds: membership.roleIds });
 }
 
 /** "Editar qualquer agente" on this agent: `manage_agents` where it reaches (`keysReach`). */
@@ -275,7 +336,7 @@ export const managesAgent = (a: AudienceFields, userId: string, membership: View
  * owner, who manages it alone). ADR 0085, addendum of 2026-11-17.
  */
 export const ownsOrManagesAgent = (a: AudienceFields, userId: string, membership: Viewer) =>
-  !!membership && (a.ownerUserId === userId || managesAgent(a, userId, membership));
+  !!membership && (ownsAgent(a, userId, membership.roleIds) || managesAgent(a, userId, membership));
 
 /** Named in the agent's "Quem pode editar": picked, or holding one of its roles now. */
 export const namedEditor = (a: Pick<Agent, "editorUserIds" | "editorRoleIds">, userId: string, membership: Viewer) =>
@@ -288,7 +349,22 @@ export const namedEditor = (a: Pick<Agent, "editorUserIds" | "editorRoleIds">, u
  */
 export const editsAgent = (a: AgentAccessFields, userId: string, membership: Viewer) =>
   !!membership &&
-  (a.ownerUserId === userId || managesAgent(a, userId, membership) || namedEditor(a, userId, membership));
+  (ownsAgent(a, userId, membership.roleIds) ||
+    managesAgent(a, userId, membership) ||
+    namedEditor(a, userId, membership));
+
+/**
+ * Whether someone besides `userId` and who manages agents may have written the agent's instructions: another owner
+ * or a "Quem pode editar" entry. Such text read into a run is others' words, never a reason to act at once.
+ */
+export const othersEditAgent = (
+  a: Pick<Agent, "ownerUserId" | "ownerRoleId" | "editorUserIds" | "editorRoleIds">,
+  userId: string,
+) =>
+  (!!a.ownerUserId && a.ownerUserId !== userId) ||
+  !!a.ownerRoleId ||
+  a.editorUserIds.some((id) => id !== userId) ||
+  a.editorRoleIds.length > 0;
 
 /** Who sets up and changes the agent's routines: who edits it, and "Criar rotinas" where it reaches (`keysReach`). */
 export const managesRoutinesOf = (a: AgentAccessFields, userId: string, membership: Viewer) =>
@@ -337,7 +413,7 @@ export const findsAgent = (a: AgentAccessFields, person: string | null, speaker:
   canTalkTo(a, person, speaker) &&
   (!isPrivateAgent(a) ||
     (!!person &&
-      (a.ownerUserId === person ||
+      (ownsAgent(a, person, speaker.roleIds) ||
         speaker.admin === true ||
         a.editorUserIds.includes(person) ||
         a.editorRoleIds.some((id) => speaker.roleIds.includes(id)))));
@@ -396,7 +472,7 @@ export function audienceSql(alias: string, userId: SQL, options: { channelId?: S
   const talks = options.channelId
     ? channelMaySql(sql`${a}.org_id`, options.channelId, userId, "talk_to_agents")
     : maySql(sql`${a}.org_id`, userId, "talk_to_agents");
-  return sql`coalesce((${userId} is not null and ${a}.owner_user_id = ${userId})
+  return sql`coalesce((${userId} is not null and ${ownsAgentSql(alias, userId)})
     or ((${a}.audience_mode = 'everyone'
         or (${userId} is not null and ${a}.audience_mode = 'people' and (${userId} = any(${a}.audience_user_ids)
           or exists (select 1 from organization_member_roles amr where amr.org_id = ${a}.org_id
@@ -411,7 +487,8 @@ export function audienceSql(alias: string, userId: SQL, options: { channelId?: S
 export function keysReachSql(alias: string, userId: SQL): SQL<boolean> {
   const a = sql.raw(alias);
   return sql<boolean>`(${maySql(sql`${a}.org_id`, userId, "administrator")}
-    or ${a}.owner_user_id is null or ${a}.owner_user_id = ${userId} or ${a}.audience_mode = 'everyone'
+    or (${a}.owner_user_id is null and ${a}.owner_role_id is null) or ${ownsAgentSql(alias, userId)}
+    or ${a}.audience_mode = 'everyone'
     or (${a}.audience_mode = 'people' and (${userId} = any(${a}.audience_user_ids)
       or exists (select 1 from organization_member_roles kr where kr.org_id = ${a}.org_id
         and kr.user_id = ${userId} and kr.role_id = any(${a}.audience_role_ids)))))`;
@@ -426,7 +503,7 @@ export function editsAgentSql(alias: string, userId: SQL): SQL<boolean> {
   const a = sql.raw(alias);
   return sql<boolean>`(${managesAgentSql(alias, userId)}
     or (exists (select 1 from organization_members em where em.org_id = ${a}.org_id and em.user_id = ${userId})
-      and (${a}.owner_user_id = ${userId} or ${userId} = any(${a}.editor_user_ids)
+      and (${ownsAgentSql(alias, userId)} or ${userId} = any(${a}.editor_user_ids)
         or exists (select 1 from organization_member_roles er where er.org_id = ${a}.org_id
           and er.user_id = ${userId} and er.role_id = any(${a}.editor_role_ids)))))`;
 }
@@ -479,11 +556,14 @@ export async function agentEditorIds(db: Executor, orgId: string, agentId: strin
   return rows.map((r) => r.userId);
 }
 
-/** Whom it answers by name: its roles first, then its owner and the people of its audience (only what still exists). */
+/**
+ * Whom it answers by name: its roles first (its owner role leading), then its owner and the people of its audience
+ * (only what still exists).
+ */
 async function answered(db: Database, a: Agent) {
   const { mode, userIds, roleIds } = audienceOf(a);
   const ids = [...new Set([...(a.ownerUserId ? [a.ownerUserId] : []), ...(mode === "people" ? userIds : [])])];
-  const picked = mode === "people" ? roleIds : [];
+  const picked = [...new Set([...(a.ownerRoleId ? [a.ownerRoleId] : []), ...(mode === "people" ? roleIds : [])])];
   const [people, roles] = await Promise.all([
     ids.length ? db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, ids)) : [],
     picked.length
@@ -695,7 +775,7 @@ export async function setAgentAudience(
         throw new ValidationError("Every role must be one of the workspace's");
       roleIds = roleIds.filter((id) => known.has(id));
     }
-    if (audience.mode === "people" && userIds.length === 0 && roleIds.length === 0 && !agent.ownerUserId) {
+    if (audience.mode === "people" && userIds.length === 0 && roleIds.length === 0 && !hasOwner(agent)) {
       throw new ValidationError("Pick at least one person or role");
     }
     // Under "owner" the lists are who a plan kept out (ADR 0059 §5), back once it is let out: staying "owner" keeps them.
@@ -764,7 +844,8 @@ export async function setAgentEditors(
     throw new ForbiddenError("The team's right hand can't be edited this way", "agent.right_hand_permanent");
   const requested = [...new Set(editors.userIds)].filter((id) => id !== agent.ownerUserId);
   if (requested.length > 500) throw new ValidationError("At most 500 people");
-  const requestedRoles = [...new Set(editors.roleIds)];
+  // Whoever holds its owner role edits it already (`editsAgent`).
+  const requestedRoles = [...new Set(editors.roleIds)].filter((id) => id !== agent.ownerRoleId);
   if (requestedRoles.length > 100) throw new ValidationError("At most 100 roles");
   // FOR SHARE on the member rows read, as the audience's save: a removeMember either waits for it or is seen by it.
   const updated = await db.transaction(async (tx) => {

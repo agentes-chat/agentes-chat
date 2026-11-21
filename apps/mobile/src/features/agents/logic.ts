@@ -15,6 +15,7 @@ import type {
 } from "@agenteschat/client";
 import { asksAt, levelOf, resourcesOf } from "@agenteschat/client/lib/access-levels";
 import { agentSections } from "@agenteschat/client/lib/agent-groups";
+import { ownsAgentAs } from "@agenteschat/client/lib/agent-owner";
 import { planLabel, planOfAccount } from "@agenteschat/client/lib/no-ai";
 import { can } from "@agenteschat/client/lib/permissions";
 import { isOutOfOffice } from "@agenteschat/client/lib/presence";
@@ -262,14 +263,21 @@ export function statusCardShown(
   return !now.working;
 }
 
-/** Only the agent's owner or who reviews memory may correct or forget its memories (the server checks it again). */
+/**
+ * Only who answers for the agent (its owner, or who holds the role that does: ADR 0085, addendum of 2026-11-21) or who
+ * reviews memory may correct or forget its memories (the server checks it again). `roleIds`: the viewer's roles.
+ */
 export function canEditMemories(
-  agent: Pick<Agent, "ownerUserId"> | undefined,
-  viewer: { id: string | null; org: Pick<OrgSummary, "permissions"> | null | undefined },
+  agent: Pick<Agent, "ownerUserId" | "ownerRoleId"> | undefined,
+  viewer: {
+    id: string | null;
+    org: Pick<OrgSummary, "permissions"> | null | undefined;
+    roleIds?: readonly string[];
+  },
 ): boolean {
   if (!viewer.id) return false;
   if (can(viewer.org, "review_memory")) return true;
-  return Boolean(agent?.ownerUserId && agent.ownerUserId === viewer.id);
+  return Boolean(agent && ownsAgentAs(agent, viewer.id, viewer.roleIds ?? []));
 }
 
 /** Where a memory came from, said from the viewer's side. */

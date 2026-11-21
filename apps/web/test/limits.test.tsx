@@ -86,7 +86,7 @@ describe("a workspace's limits (ADR 0079)", () => {
     await click(within(invite()).getByRole("button", { name: "Abrir plano e cobrança" }));
     await settle(4);
     expect(billingLinks()).toEqual(["invite_full"]);
-    expect(left).toEqual([`${BILLING}/link?t=invite_full`]);
+    expect(left).toEqual([`${BILLING}/link?t=invite_full&theme=light`]);
     cleanup();
 
     await go("settings/members", { members: { used: 1, limit: 1 } }, false);

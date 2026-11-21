@@ -8,6 +8,15 @@ export const cutText = (text: string, max: number) => text.slice(0, max).replace
 /** `cutText` for text people read: a cut ends in "…", never passing for the whole. */
 export const cutMarked = (text: string, max: number) => (text.length > max ? `${cutText(text, max - 1)}…` : text);
 
+/** A sentence's words as they compare: lower case, no accents, no punctuation or emoji, single spaces. */
+export const plainWords = (s: string) =>
+  s
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+
 /** "Ana's", for the English the agents read. */
 export const possessive = (name: string) => `${name}'s`;
 
@@ -108,6 +117,15 @@ export function textOfBytes(bytes: Uint8Array): string | null {
     // ponytail: control-byte share as the binary test; magic bytes would catch a NUL-free binary that passes it.
     return control > bytes.length / 20 ? null : new TextDecoder("windows-1252").decode(bytes);
   }
+}
+
+/** A moment as m:ss (h:mm:ss past an hour). */
+export function clockOf(seconds: number): string {
+  const s = Math.floor(seconds);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = String(s % 60).padStart(2, "0");
+  return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`;
 }
 
 /** `2.3 MB`, `12 KB`, `512 bytes`, `50.0 GB`: sizes in the English agents read. */

@@ -32,6 +32,7 @@ import { getChannelCached } from "./context";
 import { consolidateOrg } from "./context/consolidate";
 import { applyReactionFeedback } from "./context/feedback";
 import { LEARN_JOB, learnRun } from "./context/learn";
+import { MOVE_LEARNED_JOB, moveLearnedSections } from "./context/learned-sections";
 import { REFLECT_DEFAULTS, reflectThread } from "./context/reflect";
 import { judgeOf, summaryModelReady } from "./context/summaries";
 import { reportDroppedMentions, tellWakeSkipped } from "./continuation";
@@ -77,10 +78,12 @@ import { FILE_JOIN_REQUEST_JOB, fileJoinRequest } from "./invite-requests";
 import { announceTaskConversation } from "./issues";
 import type { JevKey, JevKeySource } from "./jev-key";
 import { DEEP_MENTION_THRESHOLD, DEEP_WAKE_HOP, MENTION_WAKE_THRESHOLD, mentionNeedsNothing } from "./judge";
-import { platformCapReached } from "./limits";
+import { platformCapReached, platformCapRouter } from "./limits";
 import type { LiveDocs } from "./live/docs";
 import { liveImageJobHandlers } from "./live/images";
 import { liveJobHandlers } from "./live/jobs";
+import { runLiveActivityJob } from "./live-activity";
+import { LIVE_ACTIVITY_JOB } from "./live-activity-queue";
 import { wakeForAccessDecision } from "./machine-access";
 import type { MachineCaller } from "./machine-hub";
 import {
@@ -269,23 +272,27 @@ export function messageRouter(deps: JobDeps): RouterDeps | null {
   const steps = [
     ...(jev
       ? [
-          createJevRouterStrategy({
-            key: jev.key,
-            timeoutMs: jev.timeoutMs,
-            fetch: jev.fetch,
-            baseURL: jev.baseURL,
-            recordUsage: async (u) => {
-              await deps.gateway.recordExternalUsage({
-                orgId: u.orgId,
-                kind: "router",
-                provider: "typesafe",
-                model: u.model,
-                inputTokens: u.inputTokens,
-                outputTokens: u.outputTokens,
-                costNanoUsd: u.costNanoUsd,
-              });
-            },
-          }),
+          platformCapRouter(
+            deps.db,
+            createJevRouterStrategy({
+              key: jev.key,
+              timeoutMs: jev.timeoutMs,
+              fetch: jev.fetch,
+              baseURL: jev.baseURL,
+              recordUsage: async (u) => {
+                await deps.gateway.recordExternalUsage({
+                  orgId: u.orgId,
+                  kind: "router",
+                  provider: "typesafe",
+                  model: u.model,
+                  requestedModel: "route",
+                  inputTokens: u.inputTokens,
+                  outputTokens: u.outputTokens,
+                  costNanoUsd: u.costNanoUsd,
+                });
+              },
+            }),
+          ),
         ]
       : []),
     router.strategy ?? createLlmRouterStrategy({ gateway: deps.gateway, resolveModel: smallModel }),
@@ -305,7 +312,8 @@ export function messageRouter(deps: JobDeps): RouterDeps | null {
     quietMs: router.quietMs,
     quietByTyping: router.quietByTyping,
     pubsub: deps.pubsub,
-    // Jev bills the platform: past the workspace's platform AI for the month, only @mentions start agents.
+    // Jev bills the platform: past the workspace's platform AI for the month, its own small model picks, else only
+    // @mentions start agents.
     ...(jev ? { platformCapReached: (orgId: string) => platformCapReached(deps.db, orgId) } : {}),
   };
 }
@@ -1236,6 +1244,10 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
         { held: job.payload.held === true },
       );
     },
+    // The Live Activity of a person's agents at work, on their iPhones (ADR 0210): sent when what it shows changed.
+    [LIVE_ACTIVITY_JOB]: async (job) => {
+      await runLiveActivityJob({ db: deps.db, push: deps.push }, job);
+    },
     // A workspace's skills that update by themselves from their links, once a day.
     [SKILL_UPDATES_JOB]: async (job) => {
       if (!deps.skills) return;
@@ -1252,6 +1264,11 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
     [VAULT_SYNC_JOB]: async (job) => {
       if (!deps.vault) return;
       await runVaultSync(deps.vault, orgOf(job), String(job.payload.connectionId));
+    },
+    // Queued once by migration 0310: the agents' "## Learned" sections become memory; a no-op once moved.
+    [MOVE_LEARNED_JOB]: async (job) => {
+      if ((await moveLearnedSections(deps.db, orgOf(job))) > 0)
+        await publishListChanged(deps.pubsub, orgOf(job), "memory");
     },
     "context.consolidate": async (job) => {
       if (!deps.context) return;

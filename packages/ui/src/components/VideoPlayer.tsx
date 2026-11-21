@@ -39,6 +39,12 @@ export interface VideoPlayerProps {
   /** Over the picture's top left (the viewer's own buttons). */
   children?: ReactNode;
   className?: string;
+  /** Where it is now and how long it is, as it plays, seeks and stops (a file's comments follow it, ADR 0208). */
+  onTime?: (seconds: number, duration: number) => void;
+  /** The video element, to seek or pause from outside and take a frame of it. */
+  onVideo?: (video: HTMLVideoElement | null) => void;
+  /** Over the timeline (a file's comments as marks, ADR 0208): placed by the caller, in fractions of its length. */
+  marks?: ReactNode;
 }
 
 const SPEEDS = [1, 1.5, 2];
@@ -167,6 +173,9 @@ export function VideoPlayer({
   onFailed,
   children,
   className,
+  onTime,
+  onVideo,
+  marks,
 }: VideoPlayerProps) {
   const root = useRef<HTMLDivElement>(null);
   const video = useRef<HTMLVideoElement>(null);
@@ -185,6 +194,18 @@ export function VideoPlayer({
   const [full, setFull] = useState(false);
 
   const pause = useCallback(() => video.current?.pause(), []);
+  const placeVideo = useCallback(
+    (el: HTMLVideoElement | null) => {
+      video.current = el;
+      onVideo?.(el);
+    },
+    [onVideo],
+  );
+  // Whoever follows it hears where it is (the comments' marks, a frame to take). A block body: whatever the callback
+  // returns must never reach React as the effect's clean-up.
+  useEffect(() => {
+    onTime?.(time, duration);
+  }, [onTime, time, duration]);
   useEffect(
     () => () => {
       cancelAnimationFrame(frame.current);
@@ -304,7 +325,7 @@ export function VideoPlayer({
     >
       {/* biome-ignore lint/a11y/useMediaCaption: people's own uploads carry no captions track */}
       <video
-        ref={video}
+        ref={placeVideo}
         className="ac-video__media"
         // `#t`: the first frame shows before it plays (Safari shows nothing otherwise).
         src={`${src}${src.includes("#") ? "" : "#t=0.001"}`}
@@ -410,18 +431,37 @@ export function VideoPlayer({
         >
           <Icon name={phase === "ended" ? "replay" : phase === "playing" ? "pause" : "play"} size={18} />
         </button>
-        <Rail
-          className="ac-video__seek"
-          value={progress}
-          buffered={buffered}
-          label={labels.seek}
-          valueText={clock(time)}
-          max={duration}
-          now={time}
-          onChange={(v) => seekTo(v * duration)}
-          onStep={(d) => seekTo(time + d * STEP_S)}
-          tip={(at) => clock(at * duration)}
-        />
+        {marks ? (
+          // A file's comments over the timeline (ADR 0208): beside the slider, never inside it.
+          <span className="ac-video__seekbox">
+            <Rail
+              className="ac-video__seek"
+              value={progress}
+              buffered={buffered}
+              label={labels.seek}
+              valueText={clock(time)}
+              max={duration}
+              now={time}
+              onChange={(v) => seekTo(v * duration)}
+              onStep={(d) => seekTo(time + d * STEP_S)}
+              tip={(at) => clock(at * duration)}
+            />
+            <span className="ac-video__marks">{marks}</span>
+          </span>
+        ) : (
+          <Rail
+            className="ac-video__seek"
+            value={progress}
+            buffered={buffered}
+            label={labels.seek}
+            valueText={clock(time)}
+            max={duration}
+            now={time}
+            onChange={(v) => seekTo(v * duration)}
+            onStep={(d) => seekTo(time + d * STEP_S)}
+            tip={(at) => clock(at * duration)}
+          />
+        )}
         <span className="ac-video__time tabular">
           {clock(time)}
           <span className="ac-video__total"> / {clock(duration)}</span>

@@ -50,14 +50,11 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
-  createContext,
   type KeyboardEvent,
   lazy,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
   Suspense,
-  useCallback,
-  useContext,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -70,9 +67,9 @@ import { useApi } from "@/api/context";
 import { useConnectedById } from "@/components/AccessLevels";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { LookPicker } from "@/components/AgentFields";
-import { useConnectAi } from "@/components/ConnectAi";
 import { ConnectFlow, type FlowState } from "@/components/ConnectFlow";
-import { ConnectorIcon } from "@/components/ConnectorCatalog";
+import { ConnectorIcon } from "@/components/ConnectorIcon";
+import { useConnectAi } from "@/components/connect-ai-context";
 import { MailIcon } from "@/components/MailConnect";
 import { useMediaQuery } from "@/components/NavDrawer";
 import { useOrg } from "@/components/org-context";
@@ -98,17 +95,21 @@ import { proposedRoutineWhen } from "@/lib/recurrence";
 import { useScrollEdges } from "@/lib/scroll-edges";
 import { useToast } from "@/lib/toast";
 import { AppsPickerDialog } from "./AppsPicker";
-import {
-  ChannelDialog,
-  type ProposalChange,
-  type ProposalLater,
-  type ProposalReview,
-  ProposalSide,
-  RoutineDialog,
-} from "./ProposalReview";
+import { ChannelDialog, type ProposalChange, type ProposalLater, ProposalSide, RoutineDialog } from "./ProposalReview";
 import { useNewAgentBrain } from "./useNewAgentBrain";
 import "../team-plan.css";
 import "./new-agent-card.css";
+import { type Flight, forgetReturn, type NewAgentRequest, RESUME_PARAM, saveForReturn } from "./new-agent-context";
+
+export { NEW_AGENT_EVENT } from "./events";
+export {
+  CreateAgentButton,
+  CreateAgentLink,
+  type Flight,
+  NewAgentProvider,
+  type NewAgentRequest,
+  useNewAgent,
+} from "./new-agent-context";
 
 /** "Trazer agentes de outro app", loaded when it opens: every app's reader stays out of the app's first load. */
 const ImportAgentsDialog = lazy(() => import("./ImportAgentsDialog").then((m) => ({ default: m.ImportAgentsDialog })));
@@ -126,9 +127,9 @@ type Look = Required<AgentAppearance>;
 type LookPatch = Partial<Look>;
 type TeamRole = Exclude<RoleId, "custom">;
 /** A starting point: from scratch, a personal starter or a team's ready-made role; or an agent's proposal, reviewed. */
-type Pick = "zero" | "proposal" | PersonalStarter["id"] | TeamRole;
+export type Pick = "zero" | "proposal" | PersonalStarter["id"] | TeamRole;
 
-interface Draft {
+export interface Draft {
   name: string;
   /** What it does, in its own voice: its bubble on the card, its first message, its setup's `hello`. */
   what: string;
@@ -145,176 +146,12 @@ interface Draft {
   routine?: boolean;
 }
 
-export interface NewAgentRequest {
-  /** A channel's "Criar agente": it starts in that channel too. */
-  channelId?: string | null;
-  /** Back from connecting an app elsewhere (OAuth): the card as it was, and the app that just connected. */
-  resume?: { sel: Pick; drafts: Partial<Record<Pick, Draft>>; connected: string | null };
-  /** A plan account of the person's own just connected ("Criar um agente com este plano"): it thinks with that one. */
-  accountId?: string;
-  /** "Edit first" on an agent's proposal (ADR 0081): its card filled in with the draft, the proposal beside it. */
-  proposal?: ProposalReview;
-}
-
-/**
- * Connecting an app from the card may sign in on the provider's page, which reloads the app: the card waits here for
- * the way back (`?newAgent=resume`, plus the server's `?connected=`), for an hour, in this tab only.
- */
-const RESUME_KEY = "agentes:new-agent";
-const RESUME_PARAM = "newAgent";
-const RESUME_TTL = 60 * 60 * 1000;
-interface Saved {
-  org: string;
-  at: number;
-  channelId: string | null;
-  sel: Pick;
-  drafts: Partial<Record<Pick, Draft>>;
-  /** The app being connected (catalog id). */
-  pending: string;
-  /** The proposal being reviewed, if it was one. */
-  proposal?: ProposalReview | null;
-}
-
-function saveForReturn(saved: Omit<Saved, "at">) {
-  try {
-    sessionStorage.setItem(RESUME_KEY, JSON.stringify({ ...saved, at: Date.now() }));
-  } catch {
-    // No storage (a private window): back from the provider the card starts over.
-  }
-}
-
-function forgetReturn() {
-  try {
-    sessionStorage.removeItem(RESUME_KEY);
-  } catch {
-    // Nothing kept.
-  }
-}
-
-/** The card to reopen when this page is the way back from connecting one of its apps; takes its parameters out. */
-function takeResume(orgId: string): NewAgentRequest | null {
-  if (typeof window === "undefined") return null;
-  const url = new URL(window.location.href);
-  if (url.searchParams.get(RESUME_PARAM) !== "resume") return null;
-  const connected = url.searchParams.get("connected");
-  for (const param of [RESUME_PARAM, "connected", "outcome"]) url.searchParams.delete(param);
-  window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
-  let saved: Saved | null = null;
-  try {
-    saved = JSON.parse(sessionStorage.getItem(RESUME_KEY) ?? "null") as Saved | null;
-  } catch {
-    saved = null;
-  }
-  forgetReturn();
-  if (!saved || saved.org !== orgId || Date.now() - saved.at > RESUME_TTL) return null;
-  return {
-    channelId: saved.channelId,
-    resume: { sel: saved.sel, drafts: saved.drafts, connected: connected === saved.pending ? connected : null },
-    ...(saved.proposal ? { proposal: saved.proposal } : {}),
-  };
-}
-
 /** The level an app comes onto the card at: write for a person's own agent, a team's at its role's (else read). */
 function cardLevelFor(personal: boolean, role: RoleId | null, appId: string): CardLevel | null {
   if (personal) return "write";
   const level = (ROLE_DEFAULTS[role ?? "custom"].levels as Record<string, Level>)[appId];
   return level === "none" ? null : level === "write" ? "write" : "read";
 }
-
-interface Flight {
-  agentId: string;
-  look: Look;
-  from: DOMRect;
-}
-
-const NewAgentContext = createContext<{ open: (request?: NewAgentRequest) => void } | null>(null);
-
-/** Opens the new agent's dialog. Null outside the workspace shell (an isolated page in a test). */
-export const useNewAgent = () => useContext(NewAgentContext);
-
-/** The dialog for the whole workspace (the sidebar, the pages and the menus open it), and the new agent's flight. */
-export function NewAgentProvider({ children }: { children: ReactNode }) {
-  const { org } = useOrg();
-  const navigate = useNavigate();
-  const [request, setRequest] = useState<(NewAgentRequest & { n: number }) | null>(null);
-  const [flight, setFlight] = useState<Flight | null>(null);
-  const open = useCallback(
-    (next?: NewAgentRequest) => {
-      // Who may not create agents gets the page's own words about it.
-      if (!can(org, "create_agents")) {
-        void navigate({ to: "/org/$orgId/agents/new", params: { orgId: org.id } });
-        return;
-      }
-      setRequest((current) => ({ ...(next ?? {}), n: (current?.n ?? 0) + 1 }));
-    },
-    [org, navigate],
-  );
-  const value = useMemo(() => ({ open }), [open]);
-  useEffect(() => {
-    const onAsk = (e: Event) => open((e as CustomEvent<NewAgentRequest | null>).detail ?? undefined);
-    window.addEventListener(NEW_AGENT_EVENT, onAsk);
-    return () => window.removeEventListener(NEW_AGENT_EVENT, onAsk);
-  }, [open]);
-  // Back from connecting one of the card's apps on the provider's page: the card as it was.
-  useEffect(() => {
-    const back = takeResume(org.id);
-    if (back) setRequest({ ...back, n: 1 });
-  }, [org.id]);
-  return (
-    <NewAgentContext.Provider value={value}>
-      {children}
-      {request && (
-        <NewAgentDialog
-          key={request.n}
-          request={request}
-          onClose={() => setRequest(null)}
-          onCreated={(f) => {
-            setRequest(null);
-            if (f) setFlight(f);
-          }}
-        />
-      )}
-      {flight && <AgentFlight flight={flight} onDone={() => setFlight(null)} />}
-    </NewAgentContext.Provider>
-  );
-}
-
-/** Opens the new agent's dialog; outside the shell (a test's page), the full form. */
-function useOpenNewAgent() {
-  const { org } = useOrg();
-  const navigate = useNavigate();
-  const dialog = useNewAgent();
-  return (request?: NewAgentRequest) =>
-    dialog ? dialog.open(request) : void navigate({ to: "/org/$orgId/agents/new", params: { orgId: org.id } });
-}
-
-/** "Criar agente" on a page (Equipe, the agents' access): the new agent's dialog (ADR 0164). */
-export function CreateAgentButton() {
-  const { t } = useTranslation();
-  const open = useOpenNewAgent();
-  return (
-    <Button variant="primary" icon="plus" onClick={() => open()}>
-      {t("shell.createAgent")}
-    </Button>
-  );
-}
-
-/** "Criar agente" as a link beside a heading (Membros). */
-export function CreateAgentLink() {
-  const { t } = useTranslation();
-  const open = useOpenNewAgent();
-  return (
-    <button type="button" className="ac-link" onClick={() => open()}>
-      {t("shell.createAgent")}
-    </button>
-  );
-}
-
-/**
- * Who sits outside the dialog's provider asks through this event: the Mac menu bar's New agent (`MenuBarActions`), and
- * Connect AI's "Criar um agente com este plano" (a `CustomEvent` whose `detail` is the request).
- */
-export const NEW_AGENT_EVENT = "agentes:new-agent";
 
 /** The ready-made words of a starting point: a personal starter's (`teamTemplates.agents`) or a role's. */
 const isStarter = (pick: Pick): pick is PersonalStarter["id"] => PERSONAL_STARTERS.some((s) => s.id === pick);
@@ -378,7 +215,7 @@ const stems = (text: string) =>
       .map((w) => w.slice(0, 5)),
   );
 
-function NewAgentDialog({
+export function NewAgentDialog({
   request,
   onClose,
   onCreated,
@@ -712,10 +549,12 @@ function NewAgentDialog({
     ).finished.then(react, () => {});
   }, [sel, step]);
   // From scratch, the words come first (on a narrow screen, once its card is shown).
-  // biome-ignore lint/correctness/useExhaustiveDependencies: again when the card comes into view
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only when entering or selecting the card, not while editing
   useEffect(() => {
-    if (sel === "zero" && !drafts.zero?.what) whatInput.current?.focus();
-  }, [sel, drafts.zero?.what, step]);
+    if (sel === "zero" && !drafts.zero?.what && document.activeElement !== nameInput.current) {
+      whatInput.current?.focus();
+    }
+  }, [sel, step]);
 
   const setLook = (patch: LookPatch) => {
     update({ look: { ...draft.look, ...patch } });
@@ -1880,7 +1719,7 @@ function AppLevelDialog({
  * The new agent's flight (ADR 0164): from its card to its row in the sidebar, once that row is drawn, with a burst
  * where it lands. Its row's own face hides while it flies. Never with reduced motion (it isn't started then).
  */
-function AgentFlight({ flight, onDone }: { flight: Flight; onDone: () => void }) {
+export function AgentFlight({ flight, onDone }: { flight: Flight; onDone: () => void }) {
   const el = useRef<HTMLDivElement>(null);
   const done = useRef(onDone);
   done.current = onDone;

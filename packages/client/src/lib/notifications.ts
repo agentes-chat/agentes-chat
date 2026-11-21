@@ -36,6 +36,7 @@ const WAITING_ORDER: NotificationKind[] = [
   "approval",
   "join_request",
   "team_watch",
+  "budget_paused",
 ];
 
 export const isSnoozed = (n: Pick<AppNotification, "snoozedUntil">, now = Date.now()) =>
@@ -452,6 +453,9 @@ export function openTarget(n: AppNotification): OpenTarget | null {
   if (n.kind === "approval_cover") return { to: "/org/$orgId/settings/$section", params: { section: "approvals" } };
   // What the right hand does without asking is on its own page, which its old settings address opens.
   if (n.kind === "right_hand_paused") return { to: "/org/$orgId/settings/$section", params: { section: "right_hand" } };
+  // An agent paused on its budget opens its page, where its budget is raised.
+  if (n.kind === "budget_paused" && s.agentId)
+    return { to: "/org/$orgId/agents/$agentId", params: { agentId: s.agentId } };
   // What the right hand found (ADR 0177 §1) opens where it is fixed: the plans, the connections, the agent whose
   // budget it is, the computer.
   const found = teamWatchOf(n);
@@ -692,7 +696,8 @@ export function waitingCardOf(n: Pick<AppNotification, "kind" | "count" | "lates
   // A person at their limit asks for more (ADR 0141): raised or refused on the card itself.
   if (n.kind === "usage_limit") return { kind: "limit", title: "", expiresAt: null, action: "review" };
   // What the right hand found has nobody to answer: it opens where it is fixed.
-  if (n.kind === "team_watch") return { kind: "question", title: l.text ?? "", expiresAt: null, action: "open" };
+  if (n.kind === "team_watch" || n.kind === "budget_paused")
+    return { kind: "question", title: l.text ?? "", expiresAt: null, action: "open" };
   return { kind: "question", title: l.text ?? l.title ?? "", expiresAt: null, action: "answer" };
 }
 

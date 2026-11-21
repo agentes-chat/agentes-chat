@@ -25,6 +25,7 @@ import {
   sql,
 } from "@agenteschat/db";
 import {
+  agentOutputTokens,
   type ContentBlock,
   ensureOpenRouterModels,
   isAutoModel,
@@ -61,6 +62,7 @@ import {
   chooseAutoModel,
   fallbackChoice,
   inMission,
+  keptAutoChoice,
   needsAutoChoice,
   orgAutoModels,
   withAuto,
@@ -70,7 +72,7 @@ import { ASK_CHOICES_TOOL, SHOW_BLOCK_TOOL, someoneAnswers } from "./blocks";
 import { brainOf } from "./brain-settings";
 import { brainSessionId, missingTurnFolder, recordPlanUsage } from "./brains/claude-code";
 import { codexModelRefused } from "./brains/codex";
-import { ModelBrain } from "./brains/model";
+import { ModelBrain, turnEffort } from "./brains/model";
 import type { ComputerTurn } from "./brains/prompt";
 import {
   type BrainPlan,
@@ -107,6 +109,8 @@ import {
 import { agentBrowserProfiles } from "./browser/profiles";
 import { browsersPrompt } from "./browser/tools";
 import { BROWSER_SCOPE } from "./browser/types";
+import { tellBudgetPause } from "./budget-pause";
+import { resolveEarlierBudgetPaused } from "./budget-paused-rows";
 import { typingLogFor, waitForBurst } from "./burst";
 import {
   isShutdown,
@@ -182,7 +186,14 @@ import { rulesForRun } from "./context/rules";
 import { memoryArmOf } from "./context/scorecard";
 import { type ContextDeps, ensureThreadSummary } from "./context/summaries";
 import { EXPAND_TOOL, itemLabel, retrieveForRun } from "./context/tools";
-import { compactToolResults, cutOldToolSteps, cutResultIds, dropOldImages, fitContextWindow } from "./context-budget";
+import {
+  compactToolResults,
+  cutOldToolSteps,
+  cutResultIds,
+  dropOldImages,
+  fitContextWindow,
+  sentToolSteps,
+} from "./context-budget";
 import {
   advance as advanceContinuation,
   type ContinuationState,
@@ -237,7 +248,7 @@ import { agentRepositoryList, repositoriesPrompt } from "./git/repos";
 import { askVerdict, handOffHolds, repeatedAsk, saysNeedsNothing } from "./hand-off";
 import { UPDATE_ISSUE_TOOL } from "./issue-tools";
 import { linkRunToIssue, mirrorReplyToIssue } from "./issues";
-import { type Judge, judgeCallOf, TURN_END_CHECK_BUDGET_MS, withJudgeBudget } from "./judge";
+import { type Judge, JudgeGroup, judgeCallOf, TURN_END_CHECK_BUDGET_MS, withJudgeBudget } from "./judge";
 import {
   KEY_LINE_PERSON_MINUTES,
   type KeyLinePlace,
@@ -246,7 +257,9 @@ import {
   kickKeyLine,
   rateLimited,
 } from "./key-line";
+import { isMediaConversation } from "./live/comment-tools";
 import { carriesLiveFile } from "./live/tools";
+import { queueLiveActivityRun } from "./live-activity-queue";
 import { answerNoTurn, deliverLive, listenLiveSteering, renderSteered } from "./live-steer";
 import {
   accountEverWorked,
@@ -375,6 +388,7 @@ import { secretResult } from "./secrets";
 import { enabledSkills } from "./skills";
 import {
   type AccountMove,
+  type AccountSwitch,
   movedAccountPlan,
   type NextAccount,
   nextAccountPlan,
@@ -389,7 +403,14 @@ import { isStuck, noteStep, STUCK_END_NOTE, STUCK_END_REPLY_NOTE, STUCK_NOTE, ty
 import { archivedAgentsPrompt, FIND_AGENT_TOOL, renamedAgentsPrompt, teammateMeans } from "./team";
 import { linkRunChecks, runChecksForReply } from "./team-actions";
 import { carriesCredential, cliErrorWords, maskCredentials, maskCredentialsExcept, scrubSignIns } from "./tool-detail";
-import { chooseToolGroups, keptToolGroups, recentForJudge, type ToolGroupChoice } from "./tool-loading";
+import {
+  chooseToolGroups,
+  keptToolGroups,
+  type PreviousRun,
+  previousRunHere,
+  recentForJudge,
+  type ToolGroupChoice,
+} from "./tool-loading";
 import {
   EVERY_TOOL,
   isCore,
@@ -506,7 +527,8 @@ export interface EngineDeps {
   blockSpec?: BlockSpecReader;
   gateway: ModelGateway;
   pubsub: PubSub;
-  maxOutputTokens: number;
+  /** The output cap of an agent's model call (`AGENT_MAX_OUTPUT_TOKENS`); absent: the model's own (`agentOutputTokens`). */
+  maxOutputTokens?: number;
   /** Overrides the model's context window from the catalog (tests). */
   contextWindowTokens?: number;
   contextMessages: number;
@@ -823,8 +845,11 @@ export interface Transcript {
    * and its first prompt says what the run already did (`movedSessionNote`).
    */
   freshSession?: string;
-  /** The conversation heard that this run went on with another account: once per run, whatever moved it since. */
-  accountMoveSaid?: true;
+  /**
+   * It went on with another account than its agent's own (`moveToNextAccount`): the first account it left and the last
+   * one it moved to, as its run's details and Atividade show it. Never a line in the chat: the reply goes on.
+   */
+  accountSwitch?: AccountSwitch;
   /** Caught up after a long wait on its plan or budget (`catch-up.ts`): since when it paused; whether it may pass. */
   catchUp?: { since: number; mayPass?: true };
   /** The check before that catch-up (`catch-up-triage.ts`): its last verdict, reused while nothing new came in. */
@@ -1501,7 +1526,11 @@ async function executeRunInner(
   // back, its plan reset) passes here: the agent's status stops saying it waits now, not at the apps' next refetch,
   // and the conversations that asked a consulted one (ADR 0034) stop showing it held.
   if (backFromWait) await announceAgentStatus(deps.pubsub, run.orgId, run.agentId).catch(() => {});
+  // At work now (its start, or back from a wait): the phone of the person behind it shows it (ADR 0210).
+  if (fresh || backFromWait) await queueLiveActivityRun(db, run).catch(() => {});
   if (waitedOn && USAGE_WAIT_CODES.has(waitedOn)) await usageWaitNoteEnded(deps, run, true).catch(() => {});
+  if (waitedOn === "budget" || waitedOn === "usage_pause")
+    await resolveEarlierBudgetPaused(deps, run.orgId, run.agentId).catch(() => {});
   if (backFromWait && channelRow && answersHandOffs(channelRow)) {
     await announceConsultationChange({ db, pubsub: deps.pubsub }, run).catch(() => {});
   }
@@ -1585,6 +1614,8 @@ async function executeRunInner(
     }
     // Its line ends with the run (checked on read); the apps refresh now (ADR 0084 §11).
     await announceAgentStatus(deps.pubsub, run.orgId, run.agentId).catch(() => {});
+    // Ended or waiting: so does the Live Activity of the person behind it (ADR 0210).
+    await queueLiveActivityRun(db, run).catch(() => {});
     // Back from its plan or budget and over: the turns its note took in still wait, so the note speaks on for them.
     if (waitedOn && USAGE_WAIT_CODES.has(waitedOn) && status !== "waiting_input" && status !== "waiting_approval") {
       await usageNoteHandOn(deps, run).catch(() => {});
@@ -1687,6 +1718,7 @@ async function executeRunInner(
     });
     await publishChannelEvent(deps.pubsub, event("running"));
     await announceAgentStatus(deps.pubsub, run.orgId, run.agentId).catch(() => {});
+    await queueLiveActivityRun(db, run).catch(() => {});
     await publishQueueChanged(deps.pubsub, run.orgId, machineId);
     await kickParkedWakes(db, run.orgId, run.agentId).catch(() => {});
     // A widget says it waits for room once that wait is `COMPUTER_QUEUE_NOTE_MS` old: it hears the turn started.
@@ -1962,6 +1994,17 @@ async function executeRunInner(
     const ai = await agentAiState({ db, gateway: deps.gateway, machines: deps.machines }, agent, run);
     if (ai.state === "no_ai") return failNoAi(ai.reason ?? "no_key", ai.own, undefined, undefined, ai);
     prof.part("ai_state");
+    // Somebody waits on a conversation's run: its CLI starts while the turn is built. Not for a routine's or
+    // background work, which nobody waits on.
+    if (
+      fresh &&
+      !run.background &&
+      !isRightHand(agent) &&
+      brainOf(agent.brain) === "claude_code" &&
+      !runMessageMeta(run, trigger).viaRoutine
+    ) {
+      void warmAtClaim(deps, agent, run, replyThreadId ?? run.channelId).catch(() => {});
+    }
   }
   if (!askingForRoom) await publishChannelEvent(deps.pubsub, event("running"));
   // Tools on demand (ADR 0043): a new run lists the core tools and the groups the judge expects it to need.
@@ -1976,43 +2019,76 @@ async function executeRunInner(
     recentRead ??= recentForJudge(db, run).catch(() => [] as string[]);
     return recentRead;
   };
+  /** The agent's previous run in this conversation, read once for the start judgments that fall back to it. */
+  let previousRead: Promise<PreviousRun | null> | null = null;
+  const previousHere = () => {
+    previousRead ??= previousRunHere(db, run).catch(() => null);
+    return previousRead;
+  };
+  const autoEarly = needsContext && autoWanted(agent);
+  const groupsJudged = needsContext && deps.toolsOnDemand && judge && granted.length > 0 && !every;
+  // The run's start judgments (Automático, its tool groups, its line) go to Jev as one request.
+  const startGroup =
+    needsContext && judge
+      ? new JudgeGroup([...(autoEarly ? ["auto_model"] : []), ...(groupsJudged ? ["tool_groups"] : []), "agent_status"])
+      : undefined;
+  /** The routine whose prompt the run works on: the same work every firing, so Automático's choice is kept for it. */
+  const routineCalled = (trigger?.meta?.routine as { id?: unknown } | undefined)?.id;
   // "Automático": the judge picks the run's model tier and effort while the context is built; the
   // choice is applied once the brain is known, before the first model call. Never blocks: no answer in time
   // is medium/medium.
   const askAuto = (): Promise<AutoChoice> => {
     if (!judge) return Promise.resolve(fallbackChoice("none"));
+    const message = trigger?.body ?? topTrigger?.body ?? "";
+    const computer = brainOf(agent.brain) !== "model";
+    const hasTools = granted.length > 0;
+    const who = isRightHand(agent)
+      ? { name: agent.name, role: RIGHT_HAND_AUTO.role, instructions: RIGHT_HAND_AUTO.instructions }
+      : { name: agent.name, role: agent.role, instructions: agent.instructions };
     return Promise.all([recentMessages(), inMission(db, run).catch(() => false)])
       .then(([recent, mission]) =>
         chooseAutoModel(judge, {
           orgId: run.orgId,
           agentId: agent.id,
           runId: run.id,
-          agent: isRightHand(agent)
-            ? { name: agent.name, role: RIGHT_HAND_AUTO.role, instructions: RIGHT_HAND_AUTO.instructions }
-            : { name: agent.name, role: agent.role, instructions: agent.instructions },
-          message: trigger?.body ?? topTrigger?.body ?? "",
+          agent: who,
+          message,
           recent,
           routine: run.background || Boolean(trigger?.meta?.routine),
           mission,
-          computer: brainOf(agent.brain) !== "model",
-          tools: granted.length > 0,
+          computer,
+          tools: hasTools,
+          group: startGroup,
+          ...(typeof routineCalled === "string"
+            ? {
+                cacheKey: `${run.orgId}:${agent.id}:${routineCalled}:${sha256(JSON.stringify([who, message, mission, computer, hasTools]))}`,
+              }
+            : {}),
         }),
       )
-      .catch(() => fallbackChoice("error"));
+      .catch(() => fallbackChoice("error"))
+      .then(async (choice) => keptAutoChoice(choice, await previousHere()));
   };
-  const autoAsked = needsContext && autoWanted(agent) ? askAuto() : null;
+  const autoAsked = autoEarly ? askAuto() : null;
   // The judge's answer is awaited where the tools are needed: the context is read meanwhile (`CONTEXT_TOOLS`).
   const judging: Promise<void> | null =
-    needsContext && deps.toolsOnDemand && judge && granted.length > 0 && !every
+    groupsJudged && judge
       ? (async () => {
-          const [recent, kept, live] = await Promise.all([
+          const [recent, live, previous] = await Promise.all([
             recentMessages(),
-            keptToolGroups(db, run, granted).catch(() => [] as string[]),
             // Asked from inside a live file, one attached, or in a file's own conversation: its own tools come with
             // it (ADR 0196 §6, ADR 0199).
             carriesLiveFile(db, run.orgId, trigger?.meta, run.channelId).catch(() => false),
+            previousHere(),
           ]);
-          const keep = live ? [...kept, LIVE_FILES_GROUP] : kept;
+          const kept = keptToolGroups(previous, granted);
+          // A picture's, a video's or a PDF's conversation sees the file with the Drive's tools too (ADR 0208).
+          const media = live && (await isMediaConversation(db, run.orgId, run.channelId).catch(() => false));
+          const keep = [
+            ...kept.used,
+            ...kept.listed,
+            ...(live ? [LIVE_FILES_GROUP, ...(media ? [toolGroupKey({ scope: "drive:read" })] : [])] : []),
+          ];
           const choice = await chooseToolGroups(judge, {
             orgId: run.orgId,
             agentId: agent.id,
@@ -2023,11 +2099,16 @@ async function executeRunInner(
             tools: granted,
             // The message's words may not mention its file (it may have none), and the agent has to open it.
             keep: Array.isArray(trigger?.meta.artifacts) ? [...keep, toolGroupKey({ scope: "drive:read" })] : keep,
+            previous: previous?.toolGroups,
+            group: startGroup,
+            lean: Boolean(channelRow && isAgentOnlyDm(channelRow)),
           });
           toolChoice = choice;
           ctx.loadedGroups = choice.groups;
           tools = presentTools(granted, isSensitive, ctx.loadedGroups);
-          if (choice.groups.includes(toolGroupKey({ scope: BROWSER_SCOPE }))) {
+          // Listed only to keep the prompt cache: nothing says this message needs the browser.
+          const browser = toolGroupKey({ scope: BROWSER_SCOPE });
+          if (choice.groups.includes(browser) && !kept.listed.includes(browser)) {
             deps.warmBrowser?.({ orgId: run.orgId, agentId: agent.id, threadRootId: run.threadRootId });
           }
         })()
@@ -2039,18 +2120,26 @@ async function executeRunInner(
   if (needsContext) {
     void queryTrace
       .run({ count: 0 }, async () => {
-        const lines = await statusCandidates(db, run, granted);
-        const pick = judge
-          ? await askRunStatus(judge, {
-              orgId: run.orgId,
-              agentId: agent.id,
-              runId: run.id,
-              agent: { name: agent.name, role: agent.role, instructions: agent.instructions },
-              message: trigger?.body ?? topTrigger?.body ?? "",
-              recent: await recentMessages(),
-              candidates: lines,
-            }).catch(() => null)
-          : null;
+        const lines = await statusCandidates(db, run, granted).catch((error: unknown) => {
+          startGroup?.skip("agent_status");
+          throw error;
+        });
+        // A routine's run shows its routine's line (`STICKY`): nothing to pick.
+        const routineLine = lines.some((c) => c.kind === "routine");
+        if (routineLine) startGroup?.skip("agent_status");
+        const pick =
+          judge && !routineLine
+            ? await askRunStatus(judge, {
+                orgId: run.orgId,
+                agentId: agent.id,
+                runId: run.id,
+                agent: { name: agent.name, role: agent.role, instructions: agent.instructions },
+                message: trigger?.body ?? topTrigger?.body ?? "",
+                recent: await recentMessages(),
+                candidates: lines,
+                group: startGroup,
+              }).catch(() => null)
+            : null;
         await startRunStatus({ db, pubsub: deps.pubsub }, run, lines, pick);
       })
       .catch(() => {});
@@ -2389,13 +2478,13 @@ async function executeRunInner(
   const repeatsLastPost = (text: string) => text.trim() !== "" && text.trim() === transcript?.lastPosted;
   /**
    * What a message of the run says when it held a reply back (`held`): `words` alone when they stand on their own, the
-   * held reply with them, or the held reply alone when they add nothing ("nothing to add", "see above", no words).
-   * A judge error keeps both: nothing it wrote is lost.
+   * held reply with them, or the held reply alone when they add nothing ("nothing to add", "see above", no words, the
+   * same words again). A judge error keeps both: nothing it wrote is lost.
    */
   const heldWords = async (words: string): Promise<string> => {
     const held = transcript?.held;
     if (!held) return words;
-    if (!words) return held;
+    if (!words || words.trim() === held.trim()) return held;
     const read = judge
       ? await heldReplyRead(judge, { orgId: run.orgId, agentId: run.agentId, runId: run.id, held, reply: words }).catch(
           () => "both" as const,
@@ -2539,7 +2628,7 @@ async function executeRunInner(
     prof.part("build");
     if (judging) {
       await judging;
-      prof.part("judging");
+      prof.part(toolChoice?.source === "timeout" ? "judging_timeout" : "judging");
     }
     // Its thread turned confidential after the claim read the message that asked: it is a run of that thread now.
     if (context.confidential && !ctx.confidential) {
@@ -3295,6 +3384,8 @@ async function executeRunInner(
         source: choice.source,
       };
       later(() => addRunStep(db, run, "context", { autoModel: chosen }));
+      if (choice.source === "judge" && choice.tier === "small" && choice.effort === "low" && !run.background)
+        t.system = [...t.system, { turn: true, found: true, text: QUICK_TURN_NOTE } as ContextBlock];
       later(() => saveTranscript(db, t));
     }
   }
@@ -3715,10 +3806,12 @@ async function executeRunInner(
   const triedThisClaim = new Set<string>();
   /**
    * At its plan's limit the run goes on with the next account of the workspace's order (ADR 0041 §6), in a fresh
-   * session there with the conversation so far, and says so once per run. Never a turn the plan cut after it worked
-   * (`turnStaysOnItsComputer`: a fresh session can't see what it did there), nor a spilled run. `room`: long work also
-   * needs the next account under the pause line. `cause`: what moved it, as its line says (the plan's limit, the pause
-   * line or the paid extra usage it would go into). What `nextAccountPlan` found; null where no move is looked for.
+   * session there with the conversation so far, quietly: the reply goes on, so no line in the chat, which would also
+   * end the run's working row in the apps (a message of the run reads as its reply). The run's details and Atividade
+   * show it (`Transcript.accountSwitch`). Never a turn the plan cut after it worked (`turnStaysOnItsComputer`: a fresh
+   * session can't see what it did there), nor a spilled run. `room`: long work also needs the next account under the
+   * pause line. `cause`: what moved it (the plan's limit, the pause line or the paid extra usage it would go into).
+   * What `nextAccountPlan` found; null where no move is looked for.
    */
   const moveToNextAccount = async (
     cause: "limit" | "line" | "extra",
@@ -3756,42 +3849,28 @@ async function executeRunInner(
     await noteMoved();
     later(() => addRunStep(db, run, "context", { accountMove: t.accountMove }));
     await deferred;
-    // One line per run, never a routine's (Rotinas says what it thinks with), nor a move back to its own account.
     // Someone else's account is named with its owner, either side: two people's accounts often share a label.
-    const say = !t.accountMoveSaid && to.id !== own && !run.background && viaRoutine === null;
-    let note: Message | null = null;
-    if (say) {
-      t.accountMoveSaid = true;
-      const ownerId = (await planAgent()).ownerUserId;
-      const [from] = await db
-        .select({ createdBy: machineAccounts.createdBy, name: users.name })
-        .from(machineAccounts)
-        .leftJoin(users, eq(users.id, machineAccounts.createdBy))
-        .where(and(eq(machineAccounts.id, home.id), eq(machineAccounts.orgId, run.orgId)));
-      const fromName = from?.name && from.createdBy !== ownerId ? `${home.label} (${from.name})` : home.label;
-      const toName = next.lenderName ? `${to.label} (${next.lenderName})` : to.label;
-      const [code, why] =
-        cause === "line"
-          ? (["plan_account_moved_line", "is near its limit"] as const)
-          : cause === "extra"
-            ? (["plan_account_moved_extra", "would go into paid extra usage"] as const)
-            : (["plan_account_moved", "hit its limit"] as const);
-      note = await db.transaction((tx) =>
-        post(
-          tx,
-          replyThreadId,
-          `The ${fromName} account ${why}. I'm going on with the ${toName} account.`,
-          bodyCode(code, { from: fromName, to: toName }),
-          undefined,
-          true,
-        ),
-      );
+    if (to.id !== own) {
+      let from = t.accountSwitch?.from;
+      if (!from) {
+        const ownerId = (await planAgent()).ownerUserId;
+        const [row] = await db
+          .select({ createdBy: machineAccounts.createdBy, name: users.name })
+          .from(machineAccounts)
+          .leftJoin(users, eq(users.id, machineAccounts.createdBy))
+          .where(and(eq(machineAccounts.id, home.id), eq(machineAccounts.orgId, run.orgId)));
+        from = {
+          id: home.id,
+          name: row?.name && row.createdBy !== ownerId ? `${home.label} (${row.name})` : home.label,
+        };
+      }
+      t.accountSwitch = {
+        from,
+        to: { id: to.id, name: next.lenderName ? `${to.label} (${next.lenderName})` : to.label },
+        cause,
+      };
     }
     await saveTranscript(db, t);
-    if (note) {
-      const [view] = await withWikiLinks(db, run.orgId, [messageView(note)]);
-      if (view) await publishMessageCreated(deps.pubsub, view);
-    }
     return next;
   };
   /** The run is no longer moved: its next claim starts on its agent's own account, in a fresh session. */
@@ -4658,6 +4737,10 @@ async function executeRunInner(
       if (view) await publishMessageCreated(deps.pubsub, view);
     }
     if (joined) await publishMessageCreated(deps.pubsub, messageView(joined));
+    if (budget && !u.soon)
+      await tellBudgetPause(deps, run, agent, u.pause?.used ?? 100, !(run.background || viaRoutine !== null)).catch(
+        () => {},
+      );
     // A routine's run says nothing in the conversation: its people hear it once per outage instead, and a widget's
     // refresh says on its widget what it waits for.
     if (firstPark && !budget) await routineRunWaitingForPlan({ db, pubsub: deps.pubsub }, run).catch(() => {});
@@ -5176,7 +5259,7 @@ async function executeRunInner(
           transcript.messages = pictured;
           await saveTranscript(db, transcript);
         }
-        const view = cutOldToolSteps(transcript.messages, turnTools);
+        const view = sentToolSteps(transcript.messages, turnTools, thinker.model);
         const fitted = await fitContextWindow(judge, {
           orgId: run.orgId,
           agentId: agent.id,
@@ -5184,7 +5267,8 @@ async function executeRunInner(
           model: thinker.model,
           windowTokens: deps.contextWindowTokens,
           limitTokens: agent.contextTokens,
-          maxOutputTokens: deps.maxOutputTokens,
+          maxOutputTokens:
+            deps.maxOutputTokens ?? agentOutputTokens(thinker.model, turnEffort(thinker.model, turnPlan.effort)),
           system: transcript.system,
           // Measured as the model reads it: results the view already cuts stay reachable by `expand`.
           messages: view,
@@ -5702,7 +5786,8 @@ async function executeRunInner(
         transcript.harnessTried = [
           ...(transcript.harnessTried ?? []),
           ...own.map((c) => callLine(c.name, c.input, c.result)),
-        ].slice(-20);
+          // More than the judge reads (`triedCalls`), so it can tell it how many earlier ones it doesn't see.
+        ].slice(-60);
       // Independent writes in parallel (different rows).
       const [counted] = await Promise.all([
         db
@@ -6006,8 +6091,9 @@ async function executeRunInner(
             continuation: recorded,
             ...(decision.outcome === "continue"
               ? {
-                  nudged:
-                    decision.rule === "untried" || decision.rule === "unbacked" || decision.rule === "widget"
+                  nudged: decision.judgeError
+                    ? "unchecked"
+                    : decision.rule === "untried" || decision.rule === "unbacked" || decision.rule === "widget"
                       ? decision.rule
                       : "promise",
                 }
@@ -6286,7 +6372,9 @@ async function executeRunInner(
       later(() =>
         addRunStep(db, run, "context", {
           continuation: recorded,
-          ...(decision.outcome === "continue" ? { nudged: nudgedAs ?? (plan.missionId ? "mission_ask" : "ask") } : {}),
+          ...(decision.outcome === "continue"
+            ? { nudged: decision.judgeError ? "unchecked" : (nudgedAs ?? (plan.missionId ? "mission_ask" : "ask")) }
+            : {}),
         }),
       );
       if (decision.outcome === "done") learnLater(decision);
@@ -6296,7 +6384,8 @@ async function executeRunInner(
         // A give-up judged untried is held back, not dropped (`held`): it reads as unseen, and goes out if nothing
         // better comes.
         if (decision.rule === "untried") t.held = text;
-        const nudge = decision.rule === "untried" ? heldNudge(decision.nudge) : decision.nudge;
+        // A check that couldn't run says so in its own nudge (`uncheckedNudge`).
+        const nudge = decision.rule === "untried" && !decision.judgeError ? heldNudge(decision.nudge) : decision.nudge;
         appendUserText(t, nudge);
         if (plan.kind !== "model") nextPrompt = nudge;
         // Nothing to post first: it simply goes on. A give-up judged untried isn't posted either: it would send people
@@ -6463,6 +6552,42 @@ async function executeRunInner(
   }
 }
 
+/**
+ * A conversation's run that will think with Claude Code: its computer starts the session's CLI now, while the
+ * context, the judges and the computer's line run (`Brain.warm`). The plan is the one the run will most likely get:
+ * its session picked without the prompt key (nothing kept on the run), "Automático" at the medium tier it falls back
+ * to. A different launch at the turn only costs that start.
+ */
+async function warmAtClaim(deps: EngineDeps, agent: Agent, run: AgentRun, conversation: string) {
+  const factory = deps.brains?.claude_code;
+  if (!factory) return;
+  let plan = await resolveBrain(deps, agent, run, conversation, { peek: true });
+  if (plan.kind !== "claude_code" || plan.unavailable || !plan.session) return;
+  if (needsAutoChoice(agent, plan)) {
+    // As the turn does: a pinned model stays, only "Automático" gives way to a held plan model's stand-in.
+    const autoBrain = isAutoModel(plan.model);
+    plan = withAuto(agent, plan, autoApplied(agent, plan, fallbackChoice("none"), "anthropic")).plan;
+    const model = autoBrain ? autoPlanModel(plan.account?.provider, plan.model, plan.usage) : undefined;
+    if (model) plan = { ...plan, model };
+  }
+  await factory(agent, run, { mcpToken: () => "" }).warm?.({
+    runId: run.id,
+    orgId: run.orgId,
+    agentId: run.agentId,
+    channelId: run.channelId,
+    threadRootId: run.threadRootId,
+    system: "",
+    messages: [],
+    tools: [],
+    trigger: "",
+    session: plan.session,
+    ...(plan.model ? { model: plan.model } : {}),
+    ...(plan.account ? { account: plan.account } : {}),
+    ...(plan.effort ? { effort: plan.effort } : {}),
+    ...(agent.contextTokens ? { contextTokens: agent.contextTokens } : {}),
+  });
+}
+
 /** Builds the brain of this kind (`resolveBrain` picks it): a registered factory, else the built-in model brain. */
 function createBrain(
   deps: EngineDeps,
@@ -6495,6 +6620,14 @@ function createBrain(
     session: brainSessionId(agent.id, replyThreadOf(run) ?? run.channelId, "model"),
   });
 }
+
+/**
+ * What a run reads on its first turn when the judge heard a quick turn (small tier, low effort): each tool call is
+ * one more model call, seconds the person waits, so it answers from what it has. Never fewer tools: the message may
+ * still ask for one, and the rules on checking a state before claiming it stand.
+ */
+export const QUICK_TURN_NOTE =
+  "# A quick turn\nThis message reads as a quick one (a greeting, thanks, a short question or answer). Answer it in this reply from what you already have here: don't search, look up tools or check anything first just in case. When the message asks you to do something or whether something is done, use the tools for it as usual.";
 
 /** For computer brains: a reaction through the bridge is the whole answer. */
 export const COMPUTER_REACT_NOTE =
@@ -6632,7 +6765,14 @@ interface BrainStep {
   costNanoUsd?: number;
   usage?: Partial<
     Record<
-      "inputTokens" | "outputTokens" | "cacheReadTokens" | "cacheWriteTokens" | "calls" | "maxUncached" | "maxContext",
+      | "inputTokens"
+      | "outputTokens"
+      | "cacheReadTokens"
+      | "cacheWriteTokens"
+      | "calls"
+      | "maxUncached"
+      | "maxContext"
+      | "lastContext",
       number
     >
   >;
@@ -6827,6 +6967,7 @@ async function thinkOnce(
           ...(usage.calls ? { calls: usage.calls } : {}),
           ...(usage.maxUncached ? { maxUncached: usage.maxUncached } : {}),
           ...(usage.maxContext ? { maxContext: usage.maxContext } : {}),
+          ...(usage.lastContext ? { lastContext: usage.lastContext } : {}),
         }
       : undefined,
   };

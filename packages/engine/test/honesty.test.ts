@@ -2,7 +2,8 @@ import { afterEach, expect, test } from "bun:test";
 import { schema } from "@agenteschat/db";
 import { type ModelRequest, textOf } from "@agenteschat/providers";
 import { cancelRun, drainOutbox, postPersonMessage } from "../src";
-import { decideTurnEnd, UNBACKED_NUDGE } from "../src/continuation";
+import { continuationVerdict, decideTurnEnd, shownTried, UNBACKED_NUDGE } from "../src/continuation";
+import type { Judge, JudgeRequest } from "../src/judge";
 import { type Fixture, setup } from "./fixtures";
 
 /**
@@ -116,4 +117,32 @@ test("a held reply is never shown in what a stopped run wrote", async () => {
   expect(stopped).toBeDefined();
   expect(stopped?.body).not.toContain("Pronto!");
   expect(JSON.stringify(stopped?.meta.canceled)).not.toContain("Pronto!");
+});
+
+test("an unsure unbacked verdict lets the reply stand; a long run's judge is told of the calls it doesn't see", async () => {
+  const asked: JudgeRequest[] = [];
+  const judgeSaying = (probabilities: Record<string, number>): Judge => ({
+    name: "fake",
+    ask: async (request) => {
+      asked.push(request);
+      return { verdict: { choice: "unbacked", probabilities } };
+    },
+  });
+  const tried = Array.from({ length: 30 }, (_, i) => `run_code(step ${i}) → ok`);
+  const input = {
+    orgId: "o",
+    agentId: "a",
+    runId: "r",
+    request: "Render the intro video.",
+    reply: "Done: the intro video is in the Drive.",
+    means: [],
+    tried,
+    runKind: "conversation" as const,
+  };
+  expect(await continuationVerdict(judgeSaying({ unbacked: 0.55, done: 0.45 }), input)).toBe("done");
+  expect(await continuationVerdict(judgeSaying({ unbacked: 0.8, done: 0.2 }), input)).toBe("unbacked");
+  expect(asked[0]?.state.tried).toEqual(shownTried(tried));
+  expect(shownTried(tried)).toHaveLength(21);
+  expect(shownTried(tried)[0]).toBe("(10 earlier calls of this run not shown)");
+  expect(shownTried(tried.slice(0, 3))).toEqual(tried.slice(0, 3));
 });

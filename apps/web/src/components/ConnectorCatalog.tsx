@@ -1,6 +1,5 @@
 import type { ConnectorCategory, ConnectorDef } from "@agenteschat/client";
 import { composioOffText, hiddenWithoutComposio } from "@agenteschat/client/lib/composio";
-import { CONNECTOR_MARK, OWN_MARK, SERVER_ICON } from "@agenteschat/client/lib/connected";
 import type { MailChoice } from "@agenteschat/client/lib/mail";
 import { can } from "@agenteschat/client/lib/permissions";
 import { connectorDescription, connectorName, scopeText } from "@agenteschat/client/lib/scopes";
@@ -15,12 +14,15 @@ import {
   GroupHeading,
   Icon,
   type IconName,
-  initialsOf,
   SearchField,
   Segmented,
 } from "@agenteschat/ui";
 import type { TFunction } from "i18next";
-import { type CSSProperties, type ReactNode, useState } from "react";
+import { type ReactNode, useState } from "react";
+import { ConnectorIcon } from "./ConnectorIcon";
+
+export { ConnectorIcon };
+
 import { useTranslation } from "react-i18next";
 import { DatabaseIcon } from "@/components/DatabaseConnect";
 import { LoadingCards } from "@/components/Loading";
@@ -52,53 +54,6 @@ export function authKind(d: ConnectorDef): "oneClick" | "oauthOrKey" | "key" | "
   if (d.via === "composio") return "composio";
   if (d.kind === "remote_mcp") return "oneClick";
   return d.oauthConfigured && d.auth.includes("oauth") ? "oauthOrKey" : "key";
-}
-
-/**
- * The service's one-color brand icon drawn as a mask in its brand color (the
- * ink for near-black brands); else a mark in its own colors, ours or the
- * icon a server connected by address gave (`image`); else a monogram.
- */
-export function ConnectorIcon({
-  def,
-  label,
-  size = "md",
-  image,
-}: {
-  def: Pick<ConnectorDef, "iconUrl" | "brandColor"> | null;
-  label: string;
-  size?: "md" | "lg";
-  image?: string | null;
-}) {
-  const [failed, setFailed] = useState<string | null>(null);
-  const cls = `connector-icon${size === "lg" ? " connector-icon--lg" : ""}`;
-  // Only a file of ours goes into the CSS `url()`.
-  if (def?.iconUrl && CONNECTOR_MARK.test(def.iconUrl)) {
-    const style = {
-      "--connector-icon": `url("${def.iconUrl}")`,
-      ...(def.brandColor && /^#[0-9a-fA-F]{6}$/.test(def.brandColor) ? { "--connector-color": def.brandColor } : {}),
-    } as CSSProperties;
-    return (
-      <span className={`${cls} connector-icon--brand`} aria-hidden="true">
-        <span className="connector-icon__mark" style={style} />
-      </span>
-    );
-  }
-  const own =
-    def?.iconUrl && OWN_MARK.test(def.iconUrl) ? def.iconUrl : image && SERVER_ICON.test(image) ? image : null;
-  // A saved call keeps the icon its server had then, and a newer icon deletes that file: the monogram instead.
-  if (own && own !== failed) {
-    return (
-      <span className={`${cls} connector-icon--brand`} aria-hidden="true">
-        <img className="connector-icon__img" src={own} alt="" onError={() => setFailed(own)} />
-      </span>
-    );
-  }
-  return (
-    <span className={`${cls} connector-icon--mono connector-icon--initial`} aria-hidden="true">
-      {initialsOf(label)}
-    </span>
-  );
 }
 
 /** How a service connects, for the detail pane. */

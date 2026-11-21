@@ -35,12 +35,13 @@ describe("a form whose action is on its way", () => {
     expect(photo).toContain("if (!busy) void choose(");
   });
 
-  test("the island's reply and a mission's join role lock with their send", async () => {
+  test("the island's reply locks with its send; a mission's join answer takes its row away at once, with no lock", async () => {
     const read = (path: string) => Bun.file(new URL(path, import.meta.url).pathname).text();
     const island = await read("../src/components/NoticeIsland.tsx");
     expect(island).toMatch(/<Locked when=\{reply\.isPending\}>\s*<input/);
     const mission = await read("../src/components/missions/MissionDialogs.tsx");
-    expect(mission).toMatch(/<Locked when=\{decide\.isPending\}>\s*<Select/);
+    expect(mission).not.toMatch(/<Locked when=\{decide\.isPending\}>/);
+    expect(mission).toMatch(/decide\.mutateAsync\(/);
   });
 
   const card = (locked: boolean) => (

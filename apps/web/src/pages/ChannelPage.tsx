@@ -9,6 +9,7 @@ import type {
   ArtifactRef,
   Channel,
   HeldPlace,
+  LiveSelection,
   Member,
   MemoryUpdate,
   MessageMedia,
@@ -274,9 +275,9 @@ import { AgentPanelContext, AgentPanelShownContext, useOpenAgentPanel } from "@/
 import { AgentSidebar } from "@/components/agents/AgentSidebar";
 import { ModelStandInLine } from "@/components/ai/ModelPicker";
 import { ArtifactCard } from "@/components/artifacts/ArtifactCard";
-import { ImageSet } from "@/components/artifacts/ArtifactViewer";
 import { objectUrls } from "@/components/artifacts/FileView";
 import { ImageMaking } from "@/components/artifacts/ImageMaking";
+import { ImageSet } from "@/components/artifacts/viewer-context";
 import { HandedWorkLine, MessageWorkLine } from "@/components/BackgroundWork";
 import { HeldBrowserCard, RunBrowserCard, useHeldTakeover } from "@/components/browser/BrowserCard";
 import { BrowserHandoffCard } from "@/components/browser/BrowserHandoffCard";
@@ -330,6 +331,8 @@ import { useLeaveChannelWithUndo } from "@/components/LeaveChannelDialog";
 import { useUploadFailed } from "@/components/Limits";
 import { LiveCodeToggle } from "@/components/LiveCode";
 import { ErrorState, LoadingConversation } from "@/components/Loading";
+import { ResolveButton, ResolvedLine } from "@/components/live/media/ResolveBits";
+import { ChatCommentsLine } from "@/components/live/media/ViewerBits";
 import { LiveQuoteBar, LiveRefLine } from "@/components/live/TalkBits";
 import { useFileTalk } from "@/components/live/talk";
 import { AwayPill, WaitingCard } from "@/components/MachineOutages";
@@ -362,7 +365,7 @@ import { NavToggle } from "@/components/NavDrawer";
 import { CHANNEL_NAME, ChannelAccessChoice, toChannelName } from "@/components/NewChannelDialog";
 import { FailedRunFix, KeyGuardDialog, NoAiBanner, NoAiCard, useNoAiAutoOpen } from "@/components/NoAi";
 import { useNotificationOpener } from "@/components/NotificationOpen";
-import { useNewAgent } from "@/components/new-agent/NewAgentDialog";
+import { useNewAgent } from "@/components/new-agent/new-agent-context";
 import { OpensAgent } from "@/components/OpensAgent";
 import { useOrg } from "@/components/org-context";
 import { AuthorStatus } from "@/components/Presence";
@@ -388,6 +391,7 @@ import { isStoppable, StopButton, useContinueRun, useStopRun, useWasContinued } 
 import { SearchResultsPanel } from "@/components/search/SearchResultsPanel";
 import { TeamChecks } from "@/components/TeamChecks";
 import { ReplyChips } from "@/components/TeamPlan";
+import { TeamStalledBanner } from "@/components/TeamStalled";
 import { ToLatest } from "@/components/ToLatest";
 import { LiveTools, SavedTools } from "@/components/ToolCalls";
 import { AgentTasksPanel } from "@/components/tasks/AgentTasksPanel";
@@ -409,6 +413,7 @@ import { BarAlsoTyping, BarPhrase, BarStep, ConsultClock, TypingMark, WorkingSta
 import { useChannelSearch } from "@/hooks/useChannelSearch";
 import { useComposerDraft } from "@/hooks/useComposerDraft";
 import { useDirectory } from "@/hooks/useDirectory";
+import { useFileDrop } from "@/hooks/useFileDrop";
 import { useDmSidebar, useMembersColumn } from "@/hooks/useMembersColumn";
 import { useMentionSearch } from "@/hooks/useMentionSearch";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
@@ -418,7 +423,7 @@ import { useHeaderSearch } from "@/hooks/useWorkspaceSearch";
 import { TYPED_VALUES } from "@/i18n";
 import { onAgentPanel, takeAgentPanel } from "@/lib/agent-panel-ask";
 import { onChannelDetails, takeChannelDetails } from "@/lib/channel-details";
-import { selectingIn } from "@/lib/context-menu";
+import { inTextField, selectingIn } from "@/lib/context-menu";
 import { desktopPlatform, thisMac, useDocumentTitle } from "@/lib/desktop";
 import { holdOnScreen } from "@/lib/island";
 import { composes, typingInField } from "@/lib/keys";
@@ -1136,6 +1141,7 @@ function ChannelView({
     <LiveQuoteBar
       kind={fileHere.kind}
       selection={fileHere.about}
+      thumb={fileHere.aboutThumb}
       onDrop={() => {
         fileHere.dropAbout();
         composer.current?.focus();
@@ -1266,17 +1272,6 @@ function ChannelView({
     document.addEventListener("visibilitychange", mark);
     return () => document.removeEventListener("visibilitychange", mark);
   }, [markThreadRead, threadId, isMember, lastReplyId]);
-
-  // The skeleton was on screen: the real messages fade in (once).
-  const hadSkeleton = useRef(messages.isLoading);
-  const [fresh, setFresh] = useState(false);
-  useEffect(() => {
-    if (!serverRead || !hadSkeleton.current) return;
-    hadSkeleton.current = false;
-    setFresh(true);
-    const timer = setTimeout(() => setFresh(false), 400);
-    return () => clearTimeout(timer);
-  }, [serverRead]);
 
   // Person messages loaded over HTTP start their receipts.
   useEffect(() => {
@@ -1816,6 +1811,11 @@ function ChannelView({
   const rowDrawn = useCallback(() => setRowsDrawn((n) => n + 1), []);
   const inView = useBlocksInView(scroller, `${slots.map((x) => x.runId).join(" ")} ${rowsDrawn}`);
   const outOfView = useMemo(() => (runId: string) => !inView.has(runId), [inView]);
+  // Hand-offs whose line under the reply that handed them is on screen (`HandedWorkLine`): the bar leaves those out.
+  const handoffsKey = timeline
+    .flatMap((i) => (i.kind === "message" ? (i.message.handedWorks ?? []).map((w) => w.id) : []))
+    .join(" ");
+  const handoffsInView = useBlocksInView(scroller, `${handoffsKey} ${rowsDrawn}`, "data-handoff");
   // Requests waiting for you that scrolled out of view: the same line says so first (waiting beats working).
   // Their cards register with this view's scroller (`RowsProvider` around it, not around the panels).
   const [askRegistry] = useState(createAskRegistry);
@@ -2169,6 +2169,33 @@ function ChannelView({
     }
     composer.current?.focus();
   };
+  const canAttach =
+    isMember &&
+    !adjustThreadId &&
+    !org.deletion &&
+    !chrome?.composerReplacement &&
+    !chrome?.locked &&
+    channel.can?.post !== false;
+  const fileDrop = useFileDrop(addFiles, canAttach);
+  const column = useRef<HTMLDivElement>(null);
+  const addFilesNow = useRef(addFiles);
+  addFilesNow.current = addFiles;
+  // A picture pasted after a click in the history (focus on the page, not the box) still joins the draft. The
+  // composer's own paste runs first and takes its files.
+  useEffect(() => {
+    if (!canAttach) return;
+    const paste = (e: globalThis.ClipboardEvent) => {
+      const target = e.target;
+      if (e.defaultPrevented || !(target instanceof Element) || inTextField(target)) return;
+      if (target !== document.body && !column.current?.contains(target)) return;
+      const pasted = Array.from(e.clipboardData?.files ?? []);
+      if (pasted.length === 0) return;
+      e.preventDefault();
+      addFilesNow.current(pasted);
+    };
+    document.addEventListener("paste", paste);
+    return () => document.removeEventListener("paste", paste);
+  }, [canAttach]);
   // A draft past the length limit goes as a text file instead, which agents open like any other.
   const draftAsFile = () => {
     addFiles([new File([draft], t("channel.tooLong.fileName"), { type: "text/plain" })]);
@@ -2207,20 +2234,23 @@ function ChannelView({
     setDraft("");
     const meta = localMeta(quote, quote ? dir.authorName(quote.author) : "", attached);
     setQuote(null);
-    // About what is selected in the file beside it (ADR 0199): the message carries it, then the quote goes.
-    if (fileHere?.about) {
-      meta.liveRef = {
-        artifactId: fileHere.artifactId,
-        kind: fileHere.kind,
-        title: fileHere.title,
-        selection: fileHere.about,
-      };
-      fileHere.dropAbout();
-    }
-    // From the thread panel or page: the reply makes it a "Responder" thread (out of the channel's timeline).
-    if (thread && chrome?.openThread) meta[OPEN_THREAD] = true;
-    // "Parar e mandar" (⌘↵): the agent drops the step it is on and reads this now.
-    send(text, thread ? thread.id : null, meta, opts?.interrupt ? { steer: "now" } : undefined);
+    // About what is selected in the file beside it (ADR 0199): the message carries it, then the quote goes. A comment
+    // on a picture, a video or a PDF uploads its pictures of the place first (ADR 0208), so only a sent one keeps them.
+    const file = fileHere?.about ? fileHere : null;
+    const about = file?.about ?? null;
+    const prepared = about && file?.prepareAbout ? file.prepareAbout(about) : null;
+    file?.dropAbout();
+    const go = (selection: LiveSelection | null) => {
+      if (file && selection) {
+        meta.liveRef = { artifactId: file.artifactId, kind: file.kind, title: file.title, selection };
+      }
+      // From the thread panel or page: the reply makes it a "Responder" thread (out of the channel's timeline).
+      if (thread && chrome?.openThread) meta[OPEN_THREAD] = true;
+      // "Parar e mandar" (⌘↵): the agent drops the step it is on and reads this now.
+      send(text, thread ? thread.id : null, meta, opts?.interrupt ? { steer: "now" } : undefined);
+    };
+    if (prepared) void prepared.then(go, () => go(about));
+    else go(about);
     dropFiles(() => false);
   };
   // A GIF or a sticker from the picker (ADR 0091): one click sends it here, as a message of its own (no text), shown
@@ -2621,7 +2651,24 @@ function ChannelView({
                 )}
                 {/* Under the header: the conversation, and the members beside it (the header spans both, as Discord's). */}
                 <div className="channel__body">
-                  <div className="channel__col" data-wallpaper={wallpaper?.wallpaper.kind} style={wallpaper?.vars}>
+                  <div
+                    ref={column}
+                    className="channel__col"
+                    data-wallpaper={wallpaper?.wallpaper.kind}
+                    style={wallpaper?.vars}
+                    {...fileDrop.props}
+                  >
+                    {fileDrop.over && (
+                      <div className="channel__file-drop" role="status">
+                        <div className="channel__file-drop-card">
+                          <span className="channel__file-drop-icon" aria-hidden="true">
+                            <Icon name="upload" size={20} />
+                          </span>
+                          <strong>{t("channel.dropFileTitle")}</strong>
+                          <span>{t("channel.dropFileNote")}</span>
+                        </div>
+                      </div>
+                    )}
                     {wallpaper && <ChatWallpaper wallpaper={wallpaper.wallpaper} strength={wallpaper.strength} />}
                     {isMember && (
                       <ChannelPinnedBar
@@ -2688,7 +2735,6 @@ function ChannelView({
                             data-look={look.style}
                             data-faces={look.faces ? undefined : "false"}
                             data-wallpaper={wallpaper?.wallpaper.kind}
-                            data-fresh={fresh || undefined}
                             aria-label={t("channel.messages")}
                             aria-live="polite"
                             aria-relevant="additions"
@@ -2875,6 +2921,9 @@ function ChannelView({
                           {!chrome?.intro && !org.deletion && (
                             <NoAiBanner agentIds={channelAgents.map((a) => a.id)} dmAgentId={chrome?.dmAgentId} />
                           )}
+                          {channel.name === "general" && !thread && !chrome?.dmAgentId && !org.deletion && (
+                            <TeamStalledBanner />
+                          )}
                           <ActivityBar
                             channelId={channel.id}
                             threadId={thread?.id ?? null}
@@ -2887,6 +2936,7 @@ function ChannelView({
                             waiting={waitingHere}
                             onSeeWaiting={seeWaiting}
                             consultBlocks={consultGroups.nearEnd}
+                            handoffsInView={handoffsInView}
                             member={isMember}
                           />
                           {adjustThreadId ? (
@@ -2968,7 +3018,7 @@ function ChannelView({
                                       ))
                                     : undefined
                                 }
-                                onFiles={chrome?.locked ? undefined : addFiles}
+                                onFiles={canAttach ? addFiles : undefined}
                                 canSendEmpty={attached.length > 0}
                                 sendBlocked={uploading || tooLongToSend(draft)}
                                 notice={
@@ -3987,21 +4037,22 @@ function ConnectionBanner({ status }: { status: ConnectionStatus }) {
 const sameSet = (a: Set<string>, b: Set<string>) => a.size === b.size && [...a].every((x) => b.has(x));
 
 /**
- * The live blocks (`data-run-id`) at least partly inside the scroller: measured once when they come
- * (no frame of the line above the composer for a block in plain sight), then by an IntersectionObserver.
+ * The live blocks (`data-run-id`, or another `data-*` attribute's values) at least partly inside the scroller: measured
+ * once when they come (no frame of the line above the composer for a block in plain sight), then by an
+ * IntersectionObserver.
  */
-function useBlocksInView(scroller: { current: HTMLElement | null }, key: string) {
+function useBlocksInView(scroller: { current: HTMLElement | null }, key: string, attr = "data-run-id") {
   const [inView, setInView] = useState<Set<string>>(() => new Set());
   // biome-ignore lint/correctness/useExhaustiveDependencies: `key` changes when blocks come or go
   useLayoutEffect(() => {
     const root = scroller.current;
     if (!root) return;
-    const rows = Array.from(root.querySelectorAll<HTMLElement>("[data-run-id]"));
+    const rows = Array.from(root.querySelectorAll<HTMLElement>(`[${attr}]`));
     const box = root.getBoundingClientRect();
     const now = new Set<string>();
     for (const row of rows) {
       const r = row.getBoundingClientRect();
-      if (r.height > 0 && r.bottom > box.top && r.top < box.bottom) now.add(row.dataset.runId ?? "");
+      if (r.height > 0 && r.bottom > box.top && r.top < box.bottom) now.add(row.getAttribute(attr) ?? "");
     }
     setInView((prev) => (sameSet(prev, now) ? prev : now));
     if (typeof IntersectionObserver === "undefined" || rows.length === 0) return;
@@ -4010,7 +4061,7 @@ function useBlocksInView(scroller: { current: HTMLElement | null }, key: string)
         setInView((prev) => {
           const next = new Set(prev);
           for (const e of entries) {
-            const id = (e.target as HTMLElement).dataset.runId ?? "";
+            const id = (e.target as HTMLElement).getAttribute(attr) ?? "";
             if (e.isIntersecting) next.add(id);
             else next.delete(id);
           }
@@ -4107,6 +4158,7 @@ function ActivityBar({
   waiting,
   onSeeWaiting,
   consultBlocks,
+  handoffsInView,
   member,
 }: {
   channelId: string;
@@ -4130,6 +4182,8 @@ function ActivityBar({
   onSeeWaiting: (item: WaitingItem) => void;
   /** Runs whose questions a block near the end shows (`ConsultGroup`): the line doesn't say them again. */
   consultBlocks: ReadonlySet<string>;
+  /** Hand-offs whose line under the reply that handed them is on screen: it says them, with its own Ver. */
+  handoffsInView: ReadonlySet<string>;
   /** The reader is in this conversation (may answer here). */
   member: boolean;
 }) {
@@ -4150,7 +4204,9 @@ function ActivityBar({
     sameList,
   );
   // A reply near the end shows its questions with where each is and its clock: the asker's own work stays here. Work
-  // handed off (ADR 0095 addendum) stays for as long as it is out, wherever its divider is: the bar never toggles.
+  // handed off (ADR 0095 addendum) stays for as long as it is out, wherever its divider is, unless its line under the
+  // reply that handed it is on screen: that line says the same with its own Ver. One whose card waits on the reader
+  // stays, since its Ver goes to that card.
   const consultList = useConsultations(org.id, channelId).data;
   const agentLines = useAgentLines();
   const consults = [
@@ -4159,15 +4215,17 @@ function ActivityBar({
       consultBlocks,
     ),
     ...heard.filter((c) => c.kind === "note"),
-  ].map((c) => ({
-    ...c,
-    ...consultDetails(
-      c,
-      consultList ?? [],
-      (id, run) => askOf(pendingAsks, id, run)?.on ?? null,
-      (id) => lineStep(t, agentLines.get(id)),
-    ),
-  }));
+  ]
+    .map((c) => ({
+      ...c,
+      ...consultDetails(
+        c,
+        consultList ?? [],
+        (id, run) => askOf(pendingAsks, id, run)?.on ?? null,
+        (id) => lineStep(t, agentLines.get(id)),
+      ),
+    }))
+    .filter((c) => !(c.kind === "note" && !c.yours && c.id && handoffsInView.has(c.id)));
   asking.current = consults.length > 0;
   const ids = typingIn({ [channelId]: typing ?? {} }, channelId, now, me.user.id, threadId);
   // At work, its row shows only what it has to show meanwhile (its browser card): the bar says what it does, for how
@@ -4629,7 +4687,7 @@ export const TimelineMessage = memo(function TimelineMessage({
     readOnly,
     agentName: agent?.name ?? t("channel.unknownAgent"),
   });
-  // A row with a bar has the same actions in a menu that a tap opens on touch (an agent's sticker gets a person's).
+  // A row with a bar has the same actions in a menu a long press opens on touch (an agent's sticker gets a person's).
   const personBar = (m.author.type === "person" || mediaAfter) && !m.local;
   const barred = !readOnly && (feedback || personBar);
   // Watched live here: the steps it took stay in the block, folded ("3 passos"), instead of the summary.
@@ -4984,6 +5042,10 @@ export const TimelineMessage = memo(function TimelineMessage({
                 </div>
               </ImageSet>
             )}
+            {/* A picture, a video or a PDF with comments (ADR 0208): its line, to its page. */}
+            {artifacts.map((r) =>
+              r.deleted ? null : <ChatCommentsLine key={`talk:${r.id}`} artifactId={r.id} version={r.version} />,
+            )}
             {/* Its tools after its words and what it changed: the same place live, kept and saved. */}
             {keptSteps?.length && seenLive ? (
               <LiveTools work={keptSteps} agentName={name} color={colorOf(agent)} done stopped={stopped.canceled} />
@@ -5050,13 +5112,20 @@ export const TimelineMessage = memo(function TimelineMessage({
             ))}
             {/* A "Responder" thread went on from here: its line (opens the panel). */}
             {threadLine && <ThreadReplyLine thread={threadLine.thread} count={threadLine.count} />}
+            {/* A comment on a picture, a video or a PDF that was resolved (ADR 0208): by whom, when. */}
+            {liveRef && <ResolvedLine message={m} />}
             {feedback && (
               <MessageFeedback
                 messageId={m.id}
                 agentName={agent?.name ?? t("channel.unknownAgent")}
                 active={active}
                 initial={m.reactions}
-                quick={<ReplyButton message={m} />}
+                quick={
+                  <>
+                    <ReplyButton message={m} />
+                    <ResolveButton message={m} />
+                  </>
+                }
                 more={<MessageMoreMenu entries={menu.more} />}
               />
             )}
@@ -5312,7 +5381,8 @@ function ChannelDetails({
     handle: m.handle ?? "",
     email: m.type === "person" ? (dir.memberById.get(m.id)?.email ?? "") : "",
     autoReply: Boolean(m.autoReply),
-    setsReply: m.type === "agent" && setsAutoReply(channel, dir.agentById.get(m.id), me.user.id, org),
+    setsReply:
+      m.type === "agent" && setsAutoReply(channel, dir.agentById.get(m.id), me.user.id, org, dir.rolesOf(me.user.id)),
   }));
   const shown = all.filter((r) => !needle || `${r.name} ${r.handle} ${r.email}`.toLowerCase().includes(needle));
   const agents = shown.filter((r) => r.kind === "agent");

@@ -38,6 +38,7 @@ import {
   createChatToolSource,
   createClaudeCodeBrain,
   createCoAuthorToolSource,
+  createCommentToolSource,
   createConnectorToolSource,
   createContextToolSource,
   createDashboardToolSource,
@@ -489,6 +490,8 @@ export function buildEngine(o: EngineOptions) {
       // Spreadsheets, presentations and canvases agents edit with people, and images onto a canvas (ADR 0196, 0197);
       // pictures from the web are downloaded through the public-address guard (ADR 0196 §8).
       createLiveFileToolSource({ artifacts, live, images, web: { resolveHost: o.resolveHost } }),
+      // Comments on a picture, a video or a PDF, seen, made and resolved by the agent there (ADR 0208).
+      createCommentToolSource({ artifacts, pubsub: adapters.pubsub, judge: context.judge }),
       // Live blocks and votes in the agent's own conversation (ADR 0113).
       createBlockToolSource(artifacts),
       createChatToolSource({ pubsub: adapters.pubsub, artifacts, gif: createAgentGifPoster(adapters.gifs) }),

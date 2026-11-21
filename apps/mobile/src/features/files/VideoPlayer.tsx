@@ -15,6 +15,9 @@ import { videoClock, videoHeight } from "./logic";
  */
 const SURFACE = "textureView";
 
+/** How often the viewer hears the moment a video is at while it listens (`onMoment`), in seconds. */
+const MOMENT_EVERY = 0.25;
+
 /** Only one video plays at a time: starting one pauses the one before. */
 let current: Player | null = null;
 function claim(player: Player) {
@@ -120,22 +123,56 @@ function InlineVideo({
 /**
  * A video in the picture viewer (`ImageViewer`), among the pictures: the system's player with the platform's controls
  * (the timeline, full screen and back out of it, AirPlay), playing while its page is the one in sight and paused when
- * the person swipes on. `onFailed`: this phone can't play it.
+ * the person swipes on. `onFailed`: this phone can't play it. `startAt`: the moment it starts from (a comment's, ADR
+ * 0208); `onPlayer`: its player, for the viewer to read the moment it is at (null once it goes); `onMoment`: the moment
+ * as it moves (the person moving it with the controls while the conversation's sheet is up), a few times a second.
  */
 export function ViewerVideo({
   source,
   name,
   active,
   onFailed,
+  startAt,
+  onPlayer,
+  onMoment,
 }: {
   source: VideoPlayerProps["source"];
   name: string;
   active: boolean;
   onFailed: () => void;
+  startAt?: number | undefined;
+  onPlayer?: ((player: Player | null) => void) | undefined;
+  onMoment?: ((time: number) => void) | undefined;
 }) {
   const player = useVideoPlayer(source, (p) => {
     p.loop = false;
   });
+  // The moment's events only while someone listens (they cost a bridge call each).
+  const listens = onMoment !== undefined;
+  useEffect(() => {
+    try {
+      player.timeUpdateEventInterval = listens ? MOMENT_EVERY : 0;
+    } catch {
+      // Released with its page.
+    }
+  }, [player, listens]);
+  useEventListener(player, "timeUpdate", ({ currentTime }) => onMoment?.(currentTime));
+  useEffect(() => {
+    onPlayer?.(player);
+    return () => onPlayer?.(null);
+  }, [player, onPlayer]);
+  // At a comment's moment: once it is loaded, and if the moment comes after it loaded.
+  useEventListener(player, "sourceLoad", () => {
+    if (startAt !== undefined) player.currentTime = startAt;
+  });
+  useEffect(() => {
+    if (startAt === undefined) return;
+    try {
+      player.currentTime = startAt;
+    } catch {
+      // Released with its page.
+    }
+  }, [player, startAt]);
   useEffect(() => {
     try {
       if (active) player.play();

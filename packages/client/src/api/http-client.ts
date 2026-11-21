@@ -667,6 +667,9 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         (await nullOn(404, () => request<{ publicKey: string }>("/api/app/push/web")))?.publicKey ?? null,
       register: (input) => request<void>("/api/app/push/devices", { json: input }),
       unregister: (token) => request<void>("/api/app/push/devices/forget", { json: { token } }),
+      liveActivity: (input) => request<void>("/api/app/push/live-activity", { json: input }),
+      liveActivityOff: (installId) =>
+        request<void>("/api/app/push/live-activity", { method: "DELETE", json: { installId } }),
       stale: async (ids) => (await request<{ stale: string[] }>("/api/app/push/stale", { json: { ids } })).stale,
     },
     orgs: {
@@ -700,6 +703,9 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         request<{ url: string; expiresAt: string }>(`${org(orgId)}/billing-link`, {
           json: { from, returnTo, ...(plan ? { plan } : {}) },
         }),
+      movePlan: async (orgId, to) => {
+        await request(`${org(orgId)}/plan-move`, { json: { to } });
+      },
       limits: (orgId) => request<WorkspaceLimits>(`${org(orgId)}/limits`),
       updateMe: (orgId, input) => request<Person>(`${org(orgId)}/me`, { method: "PATCH", json: input }),
       setStatus: (orgId, input) => request<Person>(`${org(orgId)}/me/status`, { method: "PUT", json: input }),
@@ -1630,8 +1636,8 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       create: (orgId, input) => request<ArtifactDetail>(`${org(orgId)}/artifacts`, { json: input }),
       update: (orgId, id, input) =>
         request<ArtifactDetail>(`${org(orgId)}/artifacts/${enc(id)}/versions`, { json: input }),
-      setSharing: (orgId, id, sharing) =>
-        request<Artifact>(`${org(orgId)}/artifacts/${enc(id)}/sharing`, { method: "PUT", json: sharing }),
+      setAccess: (orgId, id, access) =>
+        request<Artifact>(`${org(orgId)}/artifacts/${enc(id)}/access`, { method: "PUT", json: access }),
       remove: (orgId, id) => request<void>(`${org(orgId)}/artifacts/${enc(id)}`, { method: "DELETE" }),
       rename: (orgId, id, title) =>
         request<Artifact>(`${org(orgId)}/artifacts/${enc(id)}`, { method: "PATCH", json: { title } }),

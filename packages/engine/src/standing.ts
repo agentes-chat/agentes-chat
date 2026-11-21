@@ -21,6 +21,7 @@ const {
   users,
   sessions,
   pushDevices,
+  liveActivityDevices,
   organizationMembers,
   machineProvisioning,
   rightHandSeats,
@@ -579,6 +580,7 @@ export async function setUserBlocked(
     if (!change.blocked) return { ...row, sessionsRevoked: 0, orgIds: [] };
     const revoked = await tx.delete(sessions).where(eq(sessions.userId, userId)).returning({ id: sessions.id });
     await tx.delete(pushDevices).where(eq(pushDevices.userId, userId));
+    await tx.delete(liveActivityDevices).where(eq(liveActivityDevices.userId, userId));
     await unlinkAllFor(tx, userId);
     const orgs = await tx
       .select({ orgId: organizationMembers.orgId })

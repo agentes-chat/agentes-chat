@@ -33,8 +33,9 @@ import {
 import { ExpiryLine } from "../chat/asks";
 import { AgentFace } from "../shared/Face";
 import { LoadFailed } from "../shared/FirstUse";
-import { useDirectory, useNow, useOrgId } from "../shared/hooks";
+import { useDirectory, useNow, useOrgId, useOwnerRoles } from "../shared/hooks";
 import { genderOf } from "../shared/logic";
+import { approvalOwnerOf, ownerNameIn } from "../shared/owner";
 import { successHaptic } from "../shared/parts";
 import { TextArea } from "../shared/TextArea";
 import {
@@ -87,6 +88,7 @@ export function ApprovalSheet({
   const orgId = useOrgId();
   const { org } = useOrg();
   const dir = useDirectory();
+  const roles = useOwnerRoles();
   const now = useNow();
   const toast = useToast();
   const approval = useApproval(orgId, id);
@@ -162,7 +164,12 @@ export function ApprovalSheet({
   } else {
     const pending = a.status === "pending" && new Date(a.expiresAt).getTime() > now;
     const high = approvalRisk(a) === "high";
-    const owner = approvalWaitsFor(a, a.ownerUserId ? dir.memberById.get(a.ownerUserId)?.name : undefined);
+    // The owner it was asked under, else its agent's: a person, or a role (ADR 0085, addendum of 2026-11-21), which
+    // decides as whoever holds it, unless the request names its own deciders.
+    const ownerOf = approvalOwnerOf(a, agent);
+    const ownerName = ownerNameIn(ownerOf, dir.memberById, roles);
+    const owner = approvalWaitsFor(a, ownerName);
+    const holders = !a.approvers?.label && ownerOf.ownerRoleId ? ownerName : undefined;
     const requester = requesterDecidesLine(t, a);
     const said = approvalSaid(a);
     const where = [name, channel ? `#${channel.name}` : null, origin].filter(Boolean).join(" · ");
@@ -327,7 +334,11 @@ export function ApprovalSheet({
             </View>
           ) : (
             <Text variant="small" tone="muted" style={styles.note}>
-              {owner ? t("mobile.approval.onlyOwner", { name: owner }) : t("mobile.approval.onlyAdmins")}
+              {holders
+                ? t("mobile.approval.onlyOwnerRole", { role: holders })
+                : owner
+                  ? t("mobile.approval.onlyOwner", { name: owner })
+                  : t("mobile.approval.onlyAdmins")}
             </Text>
           )
         ) : aheadPhase(a) === "scheduled" && runAt ? (

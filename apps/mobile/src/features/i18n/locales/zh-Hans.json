@@ -153,6 +153,7 @@
     "forwards": "转发“{{subject}}”",
     "forwardsFrom": "转发“{{subject}}”，来自 {{from}}",
     "onlyOwner": "只有 {{name}} 或管理员可以决定。",
+    "onlyOwnerRole": "只有拥有 {{role}} 角色的人或管理员可以决定。",
     "onlyAdmins": "只有管理员可以决定。",
     "notFound": "此请求已不存在，或你无权查看。",
     "trait": {
@@ -183,6 +184,7 @@
     "pinned": "已置顶",
     "recent": "最近",
     "seeAll": "查看所有聊天",
+    "splitEmpty": "你的聊天会在这里打开。",
     "wait": {
       "verb": {
         "approval": "需要你确认",
@@ -267,8 +269,8 @@
     "to": "发给：",
     "people": "成员",
     "search": "成员或智能体",
-    "create": "创建",
     "agentHint": "名称和职责",
+    "create": "创建",
     "chatShort": "对话",
     "chatHint": "一位成员或一个智能体",
     "taskHint": "附负责人和截止日期",
@@ -736,10 +738,12 @@
     "section": {
       "missions": "专项任务",
       "threads": "话题"
-    }
+    },
+    "splitEmpty": "你的话题会在这里打开。"
   },
   "agents": {
     "title": "智能体",
+    "splitEmpty": "你的智能体页面会在这里打开。",
     "subtitle_other": "团队中 {{count}} 个 · {{working}} 个工作中",
     "free": "空闲",
     "workingLabel": "{{name}}，工作中",
@@ -1020,6 +1024,8 @@
     "notificationsOnHint": "如果浏览器和桌面应用中开启了通知，也会在那里收到。",
     "notificationsOffHint": "开启后即可在这里收到通知。以下类型适用于你的所有设备。",
     "notificationsKindsHint": "“动态”会保留所有内容。此设置适用于此工作区，在你的所有设备上生效。",
+    "liveActivity": "灵动岛中的智能体",
+    "liveActivityHint": "智能体处理你交代的事情时,会显示在屏幕顶部(任何 App 中)和锁定屏幕上。App 关闭时需要 iOS 17.2 或更高版本。",
     "version": "agentes.chat · 版本 {{version}}",
     "edit": "编辑",
     "status": "状态",
@@ -1151,6 +1157,16 @@
       "fullscreen": "全屏",
       "open": "打开",
       "cantPlay": "此视频无法在这部手机上播放。"
+    },
+    "talk": {
+      "hint": {
+        "image": "点按要评论的位置",
+        "video": "点按视频，评论这一刻",
+        "pdf": "点按页面以标记一个点"
+      },
+      "markVideo": "评论视频的这一刻",
+      "pdfPage": "第 {{page}} 页，共 {{count}} 页",
+      "pdfFailed": "无法显示此 PDF。"
     }
   },
   "issues": {
@@ -1444,6 +1460,7 @@
       "ruleBody": "{{name}} 将不再遵循这条规则。定下这条规则的人可以再次定下同样的规则。",
       "ruleRemove": "移除",
       "footOwner": "只有 {{name}} 或管理员可以更正这些内容。",
+      "footOwnerRole": "只有拥有 {{role}} 角色的人或管理员可以更正。",
       "footAdmins": "只有管理员可以更正这些内容。",
       "emptyF": "{{name}} 还没有保存关于你的任何内容。",
       "emptyM": "{{name}} 还没有保存关于你的任何内容。",
@@ -1493,6 +1510,7 @@
       },
       "asksYou": "合并和发布会请你审批，除非智能体设为“从不询问”。",
       "asksOwner": "合并和发布会请 {{name}} 审批，除非智能体设为“从不询问”。",
+      "asksOwnerRole": "合并和发布需要拥有 {{role}} 角色的人审批，除非该智能体从不询问。",
       "asksAdmins": "合并和发布会请管理员审批，除非智能体设为“从不询问”。",
       "empty": "目前只能对话。"
     }

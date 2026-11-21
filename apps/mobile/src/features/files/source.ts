@@ -147,6 +147,20 @@ export async function localCopy(
   return { uri: done.uri, source };
 }
 
+/**
+ * A PDF's copy in the cache for the system's renderer, which reads a file, never a link (`PdfPages`): one per version,
+ * kept while the cache keeps it, so the PDF opens again without downloading it.
+ */
+export async function pdfCopy(api: ApiClient, orgId: string, a: ArtifactDetail): Promise<string> {
+  const dir = new Directory(Paths.cache, "pdf");
+  dir.create({ intermediates: true, idempotent: true });
+  const file = new File(dir, `${safeFileName(a.id)}-${a.shownVersion}.pdf`);
+  if (file.exists && (file.size ?? 0) > 0) return file.uri;
+  const r = await remote(api, orgId, a.id, a.shownVersion);
+  const done = await File.downloadFileAsync(r.uri, file, { headers: r.headers, idempotent: true });
+  return done.uri;
+}
+
 /** The system share sheet with the real file (Salvar imagem, Salvar em Arquivos, other apps). */
 export async function shareFile(api: ApiClient, orgId: string, a: ArtifactDetail): Promise<void> {
   if (!(await Sharing.isAvailableAsync())) throw new Error("sharing unavailable");

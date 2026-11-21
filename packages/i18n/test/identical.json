@@ -925,6 +925,7 @@
       "wiki.ask.agent",
       "wiki.audienceAgentDetail",
       "wiki.audienceAgents",
+      "share.groupAgents",
       "wiki.editor.code",
       "wiki.editor.codeSample",
       "wiki.editor.linkText",
@@ -1122,7 +1123,10 @@
       "live.slides.shapes.triangle",
       "live.slides.themes.graphite",
       "live.slides.tools.image",
-      "settings.kinds.image"
+      "settings.kinds.image",
+      "files.comments.page",
+      "live.conversation.what.point",
+      "live.conversation.what.page"
     ],
     "de": [
       "live.sheet.args.k",
@@ -2458,6 +2462,7 @@
       "wiki.ask.agent",
       "wiki.audienceAgentDetail",
       "wiki.audienceAgents",
+      "share.groupAgents",
       "wiki.editor.code",
       "wiki.editor.codeSample",
       "wiki.editor.link",

@@ -269,7 +269,6 @@ function MemoryView({ agent, item }: { agent: Agent; item?: string }) {
                   <Button
                     variant="link"
                     title={t("memory.confirmTitle")}
-                    disabled={action.isPending}
                     onClick={() => action.mutate({ type: "confirm", id: m.id })}
                   >
                     {t("memory.confirm")}

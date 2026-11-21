@@ -1,7 +1,7 @@
 import type { PubSub } from "@agenteschat/adapters";
 import { and, type Database, desc, eq, gt, gte, inArray, ne, schema, sql } from "@agenteschat/db";
 import { planCheckedAt } from "@agenteschat/ui/plan-state";
-import { managesAgent, REACH_COLUMNS } from "./audience";
+import { managesAgent, ownsAgent, REACH_COLUMNS } from "./audience";
 import { cancelRun, mayStopRun, runRequester } from "./cancel";
 import { writtenSince } from "./catch-up";
 import { ANSWER_ANYWAY_MS, type ClosedNote } from "./catch-up-triage";
@@ -205,6 +205,7 @@ export async function usageQueue(db: Database, viewerId: string, orgId: string, 
           run: r.run,
           requester: r.requester,
           ownerUserId: agent.ownerUserId,
+          ownerRoleId: agent.ownerRoleId,
         })),
     });
   }
@@ -226,7 +227,7 @@ export async function usageQueue(db: Database, viewerId: string, orgId: string, 
   const budget = head?.code === "budget" || head?.source === "budget";
   const read = !budget && head?.waitKey ? await planKeyRead(db, orgId, head.waitKey) : null;
   // Its owner and who manages it (`managesAgent`, ADR 0085 addendum of 2026-11-17) stop all of it.
-  const mayAll = agent.ownerUserId === viewerId || managesAgent(agent, viewerId, membership);
+  const mayAll = ownsAgent(agent, viewerId, membership.roleIds) || managesAgent(agent, viewerId, membership);
   return {
     agentId,
     reason: head ? (budget ? "budget" : "plan") : null,

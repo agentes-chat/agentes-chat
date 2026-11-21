@@ -17,6 +17,7 @@ import {
   useReducedMotion,
   useTheme,
 } from "@/ui";
+import { usePane } from "@/ui/pane";
 import { useColors, useDirectory } from "../../shared/hooks";
 import { useVoiceComposer } from "../../voice/useVoiceComposer";
 import type { VoiceTarget } from "../../voice/useVoiceTake";
@@ -26,6 +27,7 @@ import { readMark } from "../logic";
 import type { Unseen } from "../scroll";
 import { withOpacity } from "../turn";
 import { useValueOf, type ValueStore } from "./hooks";
+import { useChatSheet } from "./sheet-mode";
 
 /** A dropped connection shows only past this long (a quick reconnect says nothing). */
 const OFFLINE_AFTER_MS = 1200;
@@ -39,12 +41,14 @@ const useDockHeight = (dock: DockHeight) => useSyncExternalStore(dock.subscribe,
  * The keyboard's gesture area around the conversation and its dock, its offset the dock's room above the keys: on
  * Android the keyboard starts following a drag there. No `textInputNativeID`: with it the composer could stay down while
  * the keyboard was up (iOS 26); without it iOS takes no offset (the keyboard follows the finger from its own top edge).
- * The offset is whole points: a fractional one made the overscroll glitch.
+ * The offset is whole points: a fractional one made the overscroll glitch. In a pane whose foot stands above the
+ * window's (ADR 0212), `lift` holds that distance too, which is no part of the dock.
  */
 export function DockGestureArea({ dock, lift, children }: { dock: DockHeight; lift: number; children: ReactNode }) {
   const height = useDockHeight(dock);
+  const below = usePane()?.below ?? 0;
   return (
-    <KeyboardGestureArea style={styles.grow} interpolator="ios" offset={Math.round(Math.max(0, height - lift))}>
+    <KeyboardGestureArea style={styles.grow} interpolator="ios" offset={Math.round(Math.max(0, height - lift + below))}>
       {children}
     </KeyboardGestureArea>
   );
@@ -142,7 +146,9 @@ export const ChatComposer = memo(function ChatComposer({
     afterSend: onVoiceSent,
     onRecording,
   });
-  return <Composer {...composer} voice={voice} />;
+  // In a file's sheet (ADR 0208) the field raises the sheet to its full height while the person types.
+  const sheet = useChatSheet();
+  return <Composer {...composer} voice={voice} onFocusChange={sheet?.onFieldFocus} />;
 });
 
 /**

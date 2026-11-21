@@ -525,6 +525,9 @@ test("the promise: a nudge when no update came, then exactly one update of the s
     new Date(later.getTime() + 61_000),
   );
   expect(agentUpdate.ok).toBe(true);
+  // The update answers the nudge it hadn't read yet: it no longer waits for the run's next step.
+  const [read] = await f.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.id, run.id));
+  expect(read?.pendingMessageIds).not.toContain(nudge?.id as string);
   expect(
     await checkInWork(
       deps(),
@@ -544,7 +547,7 @@ test("updates: 5 minutes apart unless important (then a minute), the promise cla
   expect(first.ok && first.work.nextUpdateAt?.getTime()).toBe(t0.getTime() + 20 * 60_000);
   const soon = await postWorkUpdate(deps(), run.id, { text: "Mais um." }, new Date(t0.getTime() + 2 * 60_000));
   expect(soon.ok).toBe(false);
-  expect(!soon.ok && soon.reason).toStartWith("Too soon; your last update was 2 min ago.");
+  expect(!soon.ok && soon.quiet && soon.reason).toStartWith("Not posted: your last update went out 2 min ago");
   const important = await postWorkUpdate(
     deps(),
     run.id,

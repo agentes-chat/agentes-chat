@@ -237,6 +237,15 @@ export const agentDmKey = (a: string, b: string) => keyOf([`a:${a}`, `a:${b}`]);
 export const isAgentOnlyDm = (channel: { kind: string; dmKey: string | null }) =>
   channel.kind === "dm" && channel.dmKey !== null && !channel.dmKey.includes("u:");
 
+/** The run's conversation is a DM between agents only (`isAgentOnlyDm`). */
+export async function inAgentOnlyDm(ctx: { db: Executor; orgId: string; channelId: string }) {
+  const [channel] = await ctx.db
+    .select({ kind: schema.channels.kind, dmKey: schema.channels.dmKey })
+    .from(schema.channels)
+    .where(and(eq(schema.channels.orgId, ctx.orgId), eq(schema.channels.id, ctx.channelId)));
+  return Boolean(channel && isAgentOnlyDm(channel));
+}
+
 /**
  * Opens the private conversation between two agents (creates it the first
  * time): a `dm` channel with both agents as its only members. Where one

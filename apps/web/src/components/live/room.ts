@@ -1,6 +1,6 @@
 import { useMatchMedia } from "@agenteschat/ui";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { askSidebarRoom, onSidebarChange, sidebarHandToggles } from "@/components/Sidebar";
+import { askSidebarRoom, onSidebarChange, sidebarHandToggles } from "@/components/sidebar-state";
 
 /*
  * The room a live file's page has (ADR 0196 §9, ADR 0199), measured on the page itself, since the window alone doesn't

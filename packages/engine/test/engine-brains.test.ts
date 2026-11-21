@@ -88,6 +88,7 @@ import {
   transitionRun,
 } from "../src";
 import { computerPrompt } from "../src/brains/prompt";
+import { SYSTEM_REFUSED } from "../src/brains/types";
 import { afterSteered } from "../src/steering";
 import { addMember, type Fixture, setup } from "./fixtures";
 import { pairMachine } from "./machine-fixtures";
@@ -459,6 +460,53 @@ test("computer sessions: the conversation's session goes on while recent and sma
   const plan = await resolveBrain({ db: f.db }, agent, routineRun, question.id, { fresh: true });
   expect(plan.session).toMatchObject({ resume: false, machineId });
   expect(plan.session?.id).not.toBe(seen[6]?.session?.id);
+});
+
+test("computer sessions: the cap reads the session's real context, not the turn's calls added up", async () => {
+  f = await setup();
+  await computerAgent(f);
+  // A turn of four calls whose usage row adds up to past the cap.
+  const input = SESSION_MAX_INPUT_TOKENS * 3;
+  let sizes: { lastContext?: number; maxContext?: number } = {
+    lastContext: 45_000,
+    maxContext: SESSION_MAX_INPUT_TOKENS + 1,
+  };
+  const { brain, seen } = scriptedComputerBrain(() => [
+    { type: "usage", input, output: 5, source: "plan", model: "claude-sonnet-5-5", calls: 4, ...sizes },
+    { type: "done", text: "ok" },
+  ]);
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  const question = await post(f, "@dev oi");
+  await drainOutbox(f.db, handlers);
+  const turn = async (body: string) => {
+    await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, {
+      body,
+      threadId: question.id,
+    });
+    await drainOutbox(f.db, handlers);
+    return seen.at(-1)?.session;
+  };
+  const resumed = async (body: string) => {
+    const before = seen.at(-1)?.session?.id;
+    const session = await turn(body);
+    return session?.resume === true && session.id === before;
+  };
+
+  // Its last call held 45k (a bigger one before it was compacted away): the session goes on.
+  expect(await resumed("@dev e agora?")).toBe(true);
+  // An older runner says only its biggest call, and an older one still only its calls: each under the cap goes on.
+  sizes = { maxContext: 50_000 };
+  expect(await resumed("@dev mais uma")).toBe(true);
+  sizes = {};
+  expect(await resumed("@dev e essa?")).toBe(true);
+  // Its last call read past the cap: a fresh session.
+  sizes = { lastContext: SESSION_MAX_INPUT_TOKENS, maxContext: SESSION_MAX_INPUT_TOKENS };
+  expect(await resumed("@dev grande")).toBe(true);
+  expect(await resumed("@dev depois")).toBe(false);
 });
 
 test("edited instructions or org context reach a kept-alive session's next turn: a fresh session with the conversation", async () => {
@@ -3334,6 +3382,27 @@ test("a CLI whose sandbox can't start fails the run at once with that cause, whe
   }
 });
 
+test("a brain refused for its computer's system fails the run at once, worded as that", async () => {
+  f = await setup();
+  await computerAgent(f);
+  const { brain, seen } = scriptedComputerBrain(() => [
+    { type: "error", code: SYSTEM_REFUSED, message: "Claude Code doesn't run on this computer's system yet." },
+  ]);
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  await post(f, "@dev roda os testes");
+  await drainOutbox(f.db, handlers);
+  await runJobsDue(f);
+  await drainOutbox(f.db, handlers);
+
+  expect(seen.length).toBe(1);
+  const [run] = await f.db.select().from(schema.agentRuns);
+  expect([run?.status, run?.error]).toEqual(["failed", "cli_system: Claude Code"]);
+});
+
 test("a sign-in that never answered fails at once on its CLI's own error, noted on it; one that answered before waits it out", async () => {
   const said = "Grok Build exited with code 1: error: unexpected response from the model endpoint";
   for (const worked of [false, true]) {
@@ -5251,4 +5320,31 @@ test("a refusal of the computer's own waits for that computer: never the provide
   const after = await runById(f, reads.run.id);
   expect(after?.status).toBe("done");
   expect(after?.waitingMachineId).toBeNull();
+});
+
+test("a conversation's run warms its Claude Code at claim with the session and model its turn gets", async () => {
+  f = await setup();
+  const machineId = await computerAgent(f);
+  const { brain: scripted, seen } = scriptedComputerBrain(() => [
+    { type: "usage", input: 40, output: 5, source: "plan", model: "claude-sonnet-5-5" },
+    { type: "done", text: "ok" },
+  ]);
+  const warmed: BrainTurn[] = [];
+  const brain: Brain = { ...scripted, warm: async (turn) => void warmed.push(turn) };
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  const question = await post(f, "@dev oi");
+  await drainOutbox(f.db, handlers);
+  await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, {
+    body: "@dev e agora?",
+    threadId: question.id,
+  });
+  await drainOutbox(f.db, handlers);
+  expect(seen).toHaveLength(2);
+  expect(warmed.map((t) => [t.session, t.model])).toEqual(seen.map((t) => [t.session, t.model]));
+  expect(warmed[1]?.session).toMatchObject({ machineId, resume: true });
+  expect(warmed.every((t) => t.system === "" && t.messages.length === 0)).toBe(true);
 });

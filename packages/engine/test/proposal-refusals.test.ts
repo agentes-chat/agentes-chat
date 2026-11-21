@@ -229,7 +229,7 @@ describe("what waits on a person", () => {
     await decideProposal(f.db, f.owner.id, f.org.id, first?.id ?? "", "accept", { finalText: "Texto novo." });
     await decideProposal(f.db, f.owner.id, f.org.id, second?.id ?? "", "accept");
     const [agent] = await f.db.select().from(schema.agents).where(eq(schema.agents.id, ada.id));
-    expect(agent?.instructions).toBe("Texto novo.\n\n## Learned\n- Segunda regra.");
+    expect(agent?.instructions).toBe("Texto novo.\n\n- Segunda regra.");
   });
 
   test("a swap of existing words can't be carried: it reads as stale once the text moved", async () => {

@@ -37,6 +37,7 @@ import {
   requireLiveFile,
   restoreArtifact,
   setBlockState,
+  setFileAccess,
   setFileSharing,
   updateArtifact,
   updateFolder,
@@ -220,6 +221,31 @@ const Sharing = z
       "Who sees it on top of its conversation (ADR 0157): nobody more, the people and roles listed (and administrators), or the whole workspace. A file of the Drive itself lives with its maker: `conversation` is its maker alone (and administrators).",
   });
 
+const Level = z.enum(["none", "view", "edit"]);
+const AccessRow = z.object({ id: z.string(), level: z.enum(["view", "edit"]) });
+const AccessShape = {
+  place: z.enum(["view", "edit"]).openapi({
+    description:
+      "Who reads it where it lives: a conversation's readers. A file of the Drive itself has its maker there, who always edits.",
+  }),
+  workspace: Level.openapi({ description: "Everyone in the workspace." }),
+  users: z.array(AccessRow).max(200),
+  roles: z.array(AccessRow).max(200),
+  agents: Level.openapi({
+    description: "Every agent (a file of the Drive) or the agents where it lives (a file in a conversation).",
+  }),
+  agentRows: z.array(AccessRow).max(200),
+};
+const Access = z
+  .object({
+    ...AccessShape,
+    limited: z.boolean().openapi({ description: "Someone who sees it only reads it." }),
+  })
+  .openapi("ArtifactAccess", {
+    description:
+      "Who sees and who edits a file (ADR 0202), row by row as Compartilhar shows it. Administrators always see and edit; the agent that made a file always edits it.",
+  });
+
 /** Where a live file's conversation lives (ADR 0199): the chat's routes read and post to this thread. */
 const FileConversationRef = z
   .object({
@@ -256,6 +282,10 @@ export const Artifact = z
     canDelete: z.boolean().openapi({ description: "I may move it to the trash (and restore it)." }),
     audience: Audience,
     sharing: Sharing,
+    access: Access,
+    myAccess: z.enum(["view", "edit"]).openapi({
+      description: "What its access lets me do: `view` is read only (with Pedir para editar).",
+    }),
     canShare: z.boolean().openapi({
       description:
         "I may change its sharing: it lives in a conversation not everyone reads, and I read it there; or it is a file of the Drive itself, and I made it or I'm an administrator.",
@@ -759,6 +789,25 @@ export function artifactRoutes(deps: AppDeps) {
       const { orgId, artifactId } = c.req.valid("param");
       const userId = c.get("user").id;
       const saved = await setFileSharing(artifacts(), userId, orgId, artifactId, c.req.valid("json"));
+      return c.json(await withFacts(userId, orgId, saved), 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "put",
+      path: "/organizations/{orgId}/artifacts/{artifactId}/access",
+      tags,
+      security,
+      summary:
+        "Who sees and who edits a file, people, roles and agents (Compartilhar with levels); whoever may share it and edits it may change it",
+      request: { params: ArtifactParams, body: body(z.object(AccessShape)) },
+      responses: { 200: json(Artifact), ...errors },
+    }),
+    async (c) => {
+      const { orgId, artifactId } = c.req.valid("param");
+      const userId = c.get("user").id;
+      const saved = await setFileAccess(artifacts(), userId, orgId, artifactId, c.req.valid("json"));
       return c.json(await withFacts(userId, orgId, saved), 200);
     },
   );

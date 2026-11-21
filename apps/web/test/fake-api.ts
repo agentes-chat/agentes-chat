@@ -1771,6 +1771,12 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
       unregister: async (token) => {
         log("push.unregister", token);
       },
+      liveActivity: async (input) => {
+        log("push.liveActivity", input);
+      },
+      liveActivityOff: async (installId) => {
+        log("push.liveActivityOff", installId);
+      },
       stale: async (ids) => {
         log("push.stale", ids);
         return ids.filter((id) => state.stalePushIds?.includes(id));
@@ -2090,6 +2096,9 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         log("orgs.billingLink", orgId, from, ...(plan ? [plan] : []));
         if (state.billingLinkError) throw state.billingLinkError;
         return { url: `https://billing.example.com/link?t=${from}`, expiresAt: NOW.toISOString() };
+      },
+      movePlan: async (orgId, to) => {
+        log("orgs.movePlan", orgId, to);
       },
       limits: async () =>
         state.limits ?? {

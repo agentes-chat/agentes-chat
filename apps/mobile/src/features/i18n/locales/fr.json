@@ -165,6 +165,7 @@
     "forwards": "Transfère « {{subject}} »",
     "forwardsFrom": "Transfère « {{subject}} », de {{from}}",
     "onlyOwner": "Seul {{name}} ou un admin peut décider.",
+    "onlyOwnerRole": "Seules les personnes ayant le rôle {{role}} ou un admin peuvent décider.",
     "onlyAdmins": "Seul un admin peut décider.",
     "notFound": "Cette demande n'existe plus ou vous n'y avez pas accès.",
     "trait": {
@@ -195,6 +196,7 @@
     "pinned": "Épinglés",
     "recent": "Récents",
     "seeAll": "Voir toutes les discussions",
+    "splitEmpty": "Vos discussions s'ouvrent ici.",
     "wait": {
       "verb": {
         "approval": "a besoin de votre accord",
@@ -285,8 +287,8 @@
     "to": "À :",
     "people": "Personnes",
     "search": "Personne ou agent",
-    "create": "Créer",
     "agentHint": "Un nom et ce qu'il fait",
+    "create": "Créer",
     "chatShort": "Conversation",
     "chatHint": "Une personne ou un agent",
     "taskHint": "Avec un responsable et une échéance",
@@ -782,10 +784,12 @@
     "section": {
       "missions": "Missions",
       "threads": "Fils"
-    }
+    },
+    "splitEmpty": "Vos fils s'ouvrent ici."
   },
   "agents": {
     "title": "Agents",
+    "splitEmpty": "Les pages de vos agents s'ouvrent ici.",
     "subtitle_one": "{{count}} dans l'équipe · {{working}} au travail",
     "subtitle_many": "{{count}} dans l'équipe · {{working}} au travail",
     "subtitle_other": "{{count}} dans l'équipe · {{working}} au travail",
@@ -1172,6 +1176,8 @@
     "notificationsOnHint": "Elles arrivent aussi dans le navigateur et l'app de bureau, si elles y sont activées.",
     "notificationsOffHint": "Activez-les pour recevoir les notifications ici. Les types ci-dessous s'appliquent à tous vos appareils.",
     "notificationsKindsHint": "L'activité garde tout. Ceci s'applique à cet espace de travail, sur tous vos appareils.",
+    "liveActivity": "Agents dans la Dynamic Island",
+    "liveActivityHint": "Quand un agent travaille sur ce que vous avez demandé, il apparaît en haut de l'écran, dans n'importe quelle app, et sur l'écran verrouillé. App fermée, il faut iOS 17.2 ou plus récent.",
     "version": "agentes.chat · version {{version}}",
     "edit": "Modifier",
     "status": "Statut",
@@ -1306,6 +1312,16 @@
       "fullscreen": "Plein écran",
       "open": "Ouvrir",
       "cantPlay": "Cette vidéo ne peut pas être lue sur ce téléphone."
+    },
+    "talk": {
+      "hint": {
+        "image": "Touchez l'endroit à commenter",
+        "video": "Touchez la vidéo pour commenter ce moment",
+        "pdf": "Touchez la page pour marquer un point"
+      },
+      "markVideo": "Commenter ce moment de la vidéo",
+      "pdfPage": "Page {{page}} sur {{count}}",
+      "pdfFailed": "Impossible d'afficher ce PDF."
     }
   },
   "issues": {
@@ -1619,6 +1635,7 @@
       "ruleBody": "{{name}} cesse de suivre cette règle. Qui l'a donnée peut la redonner.",
       "ruleRemove": "Retirer",
       "footOwner": "Seul {{name}} ou un admin peut les corriger.",
+      "footOwnerRole": "Seules les personnes ayant le rôle {{role}} ou un admin peuvent corriger cela.",
       "footAdmins": "Seul un admin peut les corriger.",
       "emptyF": "{{name}} n'a encore rien enregistré sur vous.",
       "emptyM": "{{name}} n'a encore rien enregistré sur vous.",
@@ -1668,6 +1685,7 @@
       },
       "asksYou": "Fusionner et publier demandent votre approbation, sauf si l'agent ne demande jamais.",
       "asksOwner": "Fusionner et publier demandent l'approbation de {{name}}, sauf si l'agent ne demande jamais.",
+      "asksOwnerRole": "Fusionner et publier demandent l'approbation d'une personne ayant le rôle {{role}}, sauf si l'agent ne demande jamais.",
       "asksAdmins": "Fusionner et publier demandent l'approbation d'un admin, sauf si l'agent ne demande jamais.",
       "empty": "Pour l'instant, seulement la conversation."
     }

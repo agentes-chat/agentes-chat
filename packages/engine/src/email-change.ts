@@ -6,7 +6,7 @@ import { emailLocale, queueEmail } from "./email";
 import { ConflictError, NotFoundError } from "./errors";
 import { dropPasswordLinks } from "./password-link";
 
-const { users, sessions, verifications, accounts, pushDevices } = schema;
+const { users, sessions, verifications, accounts, pushDevices, liveActivityDevices } = schema;
 
 /**
  * A new address for an account (ADR 0088 §2, addendum 2026-11-13). Better Auth's link to the new address makes the
@@ -232,6 +232,7 @@ export async function undoEmailChange(db: Database, token: string, now = new Dat
     await clearPassword(tx, undo.userId, now);
     await dropPasswordLinks(tx, undo.userId);
     await tx.delete(pushDevices).where(eq(pushDevices.userId, undo.userId));
+    await tx.delete(liveActivityDevices).where(eq(liveActivityDevices.userId, undo.userId));
     await revokeUserApps(tx, undo.userId, "email_change_undone");
     // Stamped when written, just before the commit, not with `now`: a sign-in that began while this ran read the
     // account as it was, and `undoneSince` must find the mark no older than that start.

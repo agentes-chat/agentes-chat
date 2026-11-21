@@ -1,4 +1,13 @@
-import { type Agent, type TeamAgent, useAgentGroups, useChannels, useMembers, useTeam } from "@agenteschat/client";
+import {
+  type Agent,
+  type OrgRole,
+  type TeamAgent,
+  useAgentGroups,
+  useChannels,
+  useMembers,
+  useRoles,
+  useTeam,
+} from "@agenteschat/client";
 import { can } from "@agenteschat/client/lib/permissions";
 import { rightHandOf } from "@agenteschat/client/lib/right-hand";
 import {
@@ -18,6 +27,7 @@ import {
   Icon,
   ListRow,
   PressScale,
+  RoleMark,
   RowPressable,
   SCREEN_X,
   SectionHeader,
@@ -33,7 +43,7 @@ import { useColors, useDirectory, useOrgId, usePullRefresh } from "../shared/hoo
 import { agentLook } from "../shared/logic";
 import { PushedLargeTitle } from "../shared/PushedLargeTitle";
 import { Tile, useSurface } from "../shared/parts";
-import { chartRows, teamSections } from "./logic";
+import { type ChartColumn, chartRows, rolesFirst, teamSections } from "./logic";
 
 /** The org chart's faces: the right hand and the people at 40, their agents at 28; a thin stem joins them. */
 const LEAD = 40;
@@ -63,13 +73,15 @@ export function TeamScreen() {
   const groups = useAgentGroups(orgId);
   const channels = useChannels(orgId);
   const members = useMembers(orgId);
+  const roles = useRoles(orgId);
   const pull = usePullRefresh(() =>
-    Promise.allSettled([team.refetch(), groups.refetch(), channels.refetch(), members.refetch()]),
+    Promise.allSettled([team.refetch(), groups.refetch(), channels.refetch(), members.refetch(), roles.refetch()]),
   );
   const lodi = rightHandOf(dir.agents);
   const agents = (team.data?.agents ?? []).filter((a) => a.id !== lodi?.id);
   const people = new Set((members.data ?? []).map((m) => m.userId));
-  const chart = chartByPerson(agents, groups.data ?? [], people);
+  // A role that answers for agents heads a column of its own, before the people's (ADR 0085, addendum of 2026-11-21).
+  const chart = rolesFirst(chartByPerson(agents, groups.data ?? [], people));
   const places = mapColumns(
     agents,
     (channels.data ?? []).map((c) => c.id),
@@ -123,6 +135,7 @@ export function TeamScreen() {
           sectors={sectors}
           groups={groups}
           noSectors={noSectors}
+          roles={roles.data?.roles}
         />
       )}
     </PushedLargeTitle>
@@ -141,10 +154,11 @@ function TeamBody({
   sectors,
   groups,
   noSectors,
+  roles,
 }: {
   lodi: Agent | undefined;
   summary: string;
-  chart: ReturnType<typeof chartByPerson>;
+  chart: ChartColumn[];
   rooms: ReturnType<typeof mapColumns>;
   outside: TeamAgent[];
   agents: TeamAgent[];
@@ -152,6 +166,7 @@ function TeamBody({
   sectors: ReturnType<typeof teamSections>;
   groups: ReturnType<typeof useAgentGroups>;
   noSectors: ReturnType<typeof noSectorsCopy>;
+  roles: OrgRole[] | undefined;
 }) {
   const { t } = useTranslation();
   return (
@@ -161,7 +176,7 @@ function TeamBody({
       </Text>
 
       <SectionHeader title={t("team.view.chart")} />
-      <OrgChart lodi={lodi ? { id: lodi.id, name: lodi.name } : null} columns={chart} />
+      <OrgChart lodi={lodi ? { id: lodi.id, name: lodi.name } : null} columns={chart} roles={roles} />
 
       {rooms.length > 0 || outside.length > 0 ? (
         <>
@@ -244,20 +259,22 @@ function TeamBody({
 
 /**
  * The org chart as faces and thin stems, no boxes: the right hand on its own row (it opens its profile), a stem, then
- * a column per person (face, first name, how many agents) with a stem down to the agents that report to them, each a
- * 44-point row with a hairline between them and a chevron (it opens the profile); a supervisor's reports sit one
- * step in. More than two people scroll sideways.
+ * a column per role that answers for agents (its mark, its name, how many people hold it: ADR 0085, addendum of
+ * 2026-11-21) and per person (face, first name, how many agents) with a stem down to the agents that report to them,
+ * each a 44-point row with a hairline between them and a chevron (it opens the profile); a supervisor's reports sit
+ * one step in. More than two columns scroll sideways.
  */
 function OrgChart({
   lodi,
   columns,
+  roles,
 }: {
   lodi: { id: string; name: string } | null;
-  columns: { personId: string | null; agents: TeamAgent[]; nodes: ChartNode[] }[];
+  columns: { personId: string | null; roleId: string | null; agents: TeamAgent[]; nodes: ChartNode[] }[];
+  roles: readonly OrgRole[] | undefined;
 }) {
   const { t } = useTranslation();
   const c = useColors();
-  const dir = useDirectory();
   const { width } = useWindowDimensions();
   const wide = columns.length > 2;
   const column = wide ? SCROLL_COLUMN : Math.floor((width - SCREEN_X * 2 - COLUMN_GAP) / 2);
@@ -295,20 +312,11 @@ function OrgChart({
         contentContainerStyle={styles.columns}
       >
         {columns.map((col) => (
-          <View key={col.personId ?? "none"} style={[styles.column, { width: column }]}>
-            <View style={styles.person}>
-              {col.personId ? (
-                <Face who={{ type: "person", id: col.personId }} size={LEAD} />
-              ) : (
-                <Tile icon="person" size={LEAD} />
-              )}
-              <Text variant="footnote" tone="ink" style={styles.semibold} numberOfLines={1}>
-                {col.personId ? firstName(dir.nameOf({ type: "person", id: col.personId })) : t("team.noOwner")}
-              </Text>
-              <Text variant="footnote" tone="faint" numberOfLines={1}>
-                {t("team.agents", { count: col.agents.length })}
-              </Text>
-            </View>
+          <View
+            key={col.roleId ? `role:${col.roleId}` : (col.personId ?? "none")}
+            style={[styles.column, { width: column }]}
+          >
+            <ColumnHead col={col} role={col.roleId ? roles?.find((r) => r.id === col.roleId) : undefined} />
             <View style={[styles.stem, stem, styles.personStem]} />
             <View>
               {chartRows(col.nodes).map(({ agent: a, depth }, i) => (
@@ -339,6 +347,48 @@ function OrgChart({
           </View>
         ))}
       </ScrollView>
+    </View>
+  );
+}
+
+/**
+ * A column's head: a role that answers for agents as its mark, its name and how many people hold it (ADR 0085,
+ * addendum of 2026-11-21); a person as their face, first name and how many agents; nobody as "Sem responsável".
+ */
+function ColumnHead({
+  col,
+  role,
+}: {
+  col: Pick<ChartColumn, "personId" | "roleId" | "agents">;
+  role: OrgRole | undefined;
+}) {
+  const { t } = useTranslation();
+  const dir = useDirectory();
+  if (col.roleId)
+    return (
+      <View style={styles.person}>
+        {role ? <RoleMark color={role.color} icon={role.icon} size={LEAD} /> : <Tile icon="members" size={LEAD} />}
+        <Text variant="footnote" tone="ink" style={styles.semibold} numberOfLines={1}>
+          {role?.name ?? ""}
+        </Text>
+        <Text variant="footnote" tone="faint" numberOfLines={1}>
+          {role ? t("rolesPage.people", { count: role.people }) : ""}
+        </Text>
+      </View>
+    );
+  return (
+    <View style={styles.person}>
+      {col.personId ? (
+        <Face who={{ type: "person", id: col.personId }} size={LEAD} />
+      ) : (
+        <Tile icon="person" size={LEAD} />
+      )}
+      <Text variant="footnote" tone="ink" style={styles.semibold} numberOfLines={1}>
+        {col.personId ? firstName(dir.nameOf({ type: "person", id: col.personId })) : t("team.noOwner")}
+      </Text>
+      <Text variant="footnote" tone="faint" numberOfLines={1}>
+        {t("team.agents", { count: col.agents.length })}
+      </Text>
     </View>
   );
 }

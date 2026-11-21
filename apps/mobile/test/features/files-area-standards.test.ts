@@ -174,7 +174,9 @@ describe("a file's screen and its share sheet", () => {
   test("a page, a PDF or a text loads in a page's shape, never a spinner", () => {
     const viewer = src("features/files/DocumentViewer.tsx");
     expect(viewer).not.toContain("ActivityIndicator");
-    expect(viewer.match(/renderLoading=\{\(\) => <PageBones cover \/>\}/g)?.length).toBe(2);
+    expect(viewer.match(/renderLoading=\{\(\) => <PageBones cover \/>\}/g)?.length).toBe(1);
+    // A PDF's pages come in its own shape too, while its copy loads (ADR 0208).
+    expect(src("features/files/PdfPages.tsx")).toContain("if (!copy.data) return <PageBones />;");
     expect(src("features/files/PageBones.tsx")).toContain("const pulse = usePulse();");
   });
 

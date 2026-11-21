@@ -50,6 +50,7 @@ import {
   cacheMessageWork,
   cachePinned,
   cacheReceipts,
+  cacheResolved,
   cacheTask,
   cacheTeamCard,
   catchUpChannel,
@@ -857,6 +858,10 @@ export function useChannelRealtime(orgId: string, channelId: string, enabled: bo
       if (event.type === "message.pinned" || event.type === "message.unpinned") {
         cachePinned(qc, orgId, channelId, event.messageId, event.type === "message.pinned");
         void qc.invalidateQueries({ queryKey: keys.pins(orgId, channelId) });
+      }
+      // A comment on a picture, a video or a PDF was resolved or opened again (ADR 0208): its pin and line follow.
+      if (event.type === "message.resolved") {
+        cacheResolved(qc, orgId, event.channelId, event.messageId, event.resolved);
       }
       // Act with undo: an agent message's receipts changed (made, undone, redone): replace the list.
       // A long work moved, updated or ended (ADR 0121): its anchor's line redraws; its card on the board too.

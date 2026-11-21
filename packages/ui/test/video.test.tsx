@@ -87,6 +87,52 @@ describe("VideoPlayer", () => {
   });
 });
 
+describe("a file's comments on the player (ADR 0208)", () => {
+  test("onVideo hands over the element; onTime hears where it is and how long it is", () => {
+    const heard: [number, number][] = [];
+    let element: HTMLVideoElement | null = null;
+    player({ variant: "viewer", onTime: (at, length) => heard.push([at, length]), onVideo: (v) => (element = v) });
+    const video = document.querySelector("video") as HTMLVideoElement;
+    expect(element === video).toBe(true);
+    expect(heard.at(-1)).toEqual([0, 0]);
+    Object.defineProperty(video, "duration", { configurable: true, value: 161 });
+    fireEvent.loadedMetadata(video);
+    expect(heard.at(-1)).toEqual([0, 161]);
+    Object.defineProperty(video, "currentTime", { configurable: true, value: 42 });
+    fireEvent.seeked(video);
+    expect(heard.at(-1)).toEqual([42, 161]);
+    // Only when something changed.
+    const before = heard.length;
+    fireEvent.seeked(video);
+    expect(heard.length).toBe(before);
+  });
+
+  test("marks sit beside the timeline, never inside its slider", () => {
+    player({
+      variant: "viewer",
+      marks: (
+        <button type="button" className="mark" style={{ left: "25%" }}>
+          1
+        </button>
+      ),
+    });
+    const box = document.querySelector(".ac-video__seekbox") as HTMLElement;
+    const slider = screen.getByRole("slider", { name: "Posição no vídeo", hidden: true });
+    expect(box.contains(slider)).toBe(true);
+    const marks = box.querySelector(".ac-video__marks") as HTMLElement;
+    expect(marks.querySelector("button.mark")?.textContent).toBe("1");
+    expect(slider.contains(marks)).toBe(false);
+    expect(marks.contains(slider)).toBe(false);
+  });
+
+  test("with no marks, the timeline is as it was", () => {
+    player({ variant: "viewer" });
+    expect(document.querySelector(".ac-video__seekbox")).toBeNull();
+    expect(document.querySelector(".ac-video__marks")).toBeNull();
+    expect(screen.getByRole("slider", { name: "Posição no vídeo", hidden: true })).toBeTruthy();
+  });
+});
+
 describe("one thing plays at a time", () => {
   test("claiming stops the one before; releasing forgets it", () => {
     const stopped: string[] = [];

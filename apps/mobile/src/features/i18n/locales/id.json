@@ -153,6 +153,7 @@
     "forwards": "Meneruskan “{{subject}}”",
     "forwardsFrom": "Meneruskan “{{subject}}”, dari {{from}}",
     "onlyOwner": "Hanya {{name}} atau admin yang bisa memutuskan.",
+    "onlyOwnerRole": "Hanya yang punya peran {{role}} atau admin yang bisa memutuskan.",
     "onlyAdmins": "Hanya admin yang bisa memutuskan.",
     "notFound": "Permintaan ini sudah tidak ada atau tidak bisa kamu lihat.",
     "trait": {
@@ -183,6 +184,7 @@
     "pinned": "Disematkan",
     "recent": "Terbaru",
     "seeAll": "Lihat semua obrolan",
+    "splitEmpty": "Obrolanmu terbuka di sini.",
     "wait": {
       "verb": {
         "approval": "butuh persetujuanmu",
@@ -267,8 +269,8 @@
     "to": "Kepada:",
     "people": "Orang",
     "search": "Orang atau agen",
-    "create": "Buat",
     "agentHint": "Nama dan tugasnya",
+    "create": "Buat",
     "chatShort": "Percakapan",
     "chatHint": "Seseorang atau agen",
     "taskHint": "Dengan penanggung jawab dan tenggat",
@@ -736,10 +738,12 @@
     "section": {
       "missions": "Misi",
       "threads": "Utas"
-    }
+    },
+    "splitEmpty": "Utasmu terbuka di sini."
   },
   "agents": {
     "title": "Agen",
+    "splitEmpty": "Halaman agenmu terbuka di sini.",
     "subtitle_other": "{{count}} di tim · {{working}} sedang bekerja",
     "free": "Senggang",
     "workingLabel": "{{name}}, sedang bekerja",
@@ -1020,6 +1024,8 @@
     "notificationsOnHint": "Notifikasi juga masuk ke browser dan aplikasi desktop, jika diaktifkan di sana.",
     "notificationsOffHint": "Aktifkan untuk menerima notifikasi di sini. Jenis di bawah berlaku untuk semua perangkatmu.",
     "notificationsKindsHint": "Aktivitas menyimpan semuanya. Ini berlaku untuk ruang kerja ini, di semua perangkatmu.",
+    "liveActivity": "Agen di Dynamic Island",
+    "liveActivityHint": "Saat agen mengerjakan sesuatu yang kamu minta, ia muncul di atas layar, di aplikasi apa pun, dan di Layar Terkunci. Saat aplikasi tertutup, perlu iOS 17.2 atau lebih baru.",
     "version": "agentes.chat · versi {{version}}",
     "edit": "Ubah",
     "status": "Status",
@@ -1151,6 +1157,16 @@
       "fullscreen": "Layar penuh",
       "open": "Buka",
       "cantPlay": "Video ini tidak bisa diputar di ponsel ini."
+    },
+    "talk": {
+      "hint": {
+        "image": "Ketuk tempat yang ingin kamu komentari",
+        "video": "Ketuk video untuk mengomentari momen ini",
+        "pdf": "Ketuk halaman untuk menandai satu titik"
+      },
+      "markVideo": "Komentari momen video ini",
+      "pdfPage": "Halaman {{page}} dari {{count}}",
+      "pdfFailed": "PDF ini tidak bisa ditampilkan."
     }
   },
   "issues": {
@@ -1444,6 +1460,7 @@
       "ruleBody": "{{name}} berhenti mengikuti aturan ini. Orang yang memberi aturan itu bisa memberikannya lagi.",
       "ruleRemove": "Hapus",
       "footOwner": "Hanya {{name}} atau admin yang bisa mengoreksinya.",
+      "footOwnerRole": "Hanya yang punya peran {{role}} atau admin yang bisa memperbaikinya.",
       "footAdmins": "Hanya admin yang bisa mengoreksinya.",
       "emptyF": "{{name}} belum menyimpan apa pun tentangmu.",
       "emptyM": "{{name}} belum menyimpan apa pun tentangmu.",
@@ -1493,6 +1510,7 @@
       },
       "asksYou": "Merge dan publikasi meminta persetujuanmu, kecuali agen diatur untuk tidak pernah bertanya.",
       "asksOwner": "Merge dan publikasi meminta persetujuan {{name}}, kecuali agen diatur untuk tidak pernah bertanya.",
+      "asksOwnerRole": "Merge dan publikasi meminta persetujuan dari yang punya peran {{role}}, kecuali agen tidak pernah bertanya.",
       "asksAdmins": "Merge dan publikasi meminta persetujuan admin, kecuali agen diatur untuk tidak pernah bertanya.",
       "empty": "Untuk sekarang, hanya percakapan."
     }

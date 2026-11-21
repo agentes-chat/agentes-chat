@@ -1,7 +1,7 @@
 import { AGENT_FOLDERS_PROTOCOL, type PubSub, type SandboxProvider } from "@agenteschat/adapters";
 import { type Database, eq, schema } from "@agenteschat/db";
 import { getAgent, getAgentCached } from "./agents";
-import { managesAgent } from "./audience";
+import { managesAgent, ownsAgent } from "./audience";
 import { recordAudit } from "./audit";
 import type { WorkspaceComputer } from "./context";
 import { checkDeviceUse, noteDeviceInUse, pickDevice, seenAgo, waitHint, workspaceDevices } from "./device-resolve";
@@ -357,7 +357,7 @@ export async function requireComputerManager(db: Database, actorId: string, orgI
   const membership = await requirePermission(db, actorId, orgId, "read");
   const agent = await getAgent(db, orgId, agentId);
   if (!agent || agent.archivedAt) throw new NotFoundError("Agent not found");
-  if (!managesAgent(agent, actorId, membership) && agent.ownerUserId !== actorId) {
+  if (!managesAgent(agent, actorId, membership) && !ownsAgent(agent, actorId, membership.roleIds)) {
     throw new ForbiddenError("Only an admin or the agent's owner can manage its computer");
   }
 }

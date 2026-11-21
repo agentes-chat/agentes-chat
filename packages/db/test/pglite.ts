@@ -87,6 +87,29 @@ export async function runMigration(db: Database, name: string) {
   for (const statement of statements) await db.execute(sql.raw(statement));
 }
 
+/** The statements `read` sent to the database, each on one line. */
+export async function issuedBy(read: () => Promise<unknown>) {
+  const issued: string[] = [];
+  const logged = tracingLogger.logQuery;
+  tracingLogger.logQuery = (query?: string) => {
+    issued.push((query ?? "").replace(/\s+/g, " ").trim());
+    logged();
+  };
+  try {
+    await read();
+  } finally {
+    tracingLogger.logQuery = logged;
+  }
+  return issued;
+}
+
+/**
+ * A partial index's condition as the database prints it and a statement as it was sent, brought down to the same
+ * words: no casts, brackets or spaces, nor the alias `s` of the indexed rows. The planner reads rows through a partial
+ * index only when the statement holds the index's condition, so a test compares the two.
+ */
+export const conditionWords = (text: string) => text.replace(/::\w+|[()\s]|\bs\./g, "").toLowerCase();
+
 async function createOnServer(serverUrl: string) {
   const name = `agenteschat_test_${crypto.randomUUID().replaceAll("-", "")}`;
   const admin = postgres(serverUrl, { max: 1, onnotice: () => {} });

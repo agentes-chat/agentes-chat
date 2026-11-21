@@ -191,6 +191,9 @@ describe("a tall message in the conversation", () => {
   test("the stylesheet's heights are the shared rule's", async () => {
     const css = (await Bun.file(`${ROOT}apps/web/src/layout.css`).text()).replace(/\s+/g, " ");
     expect(css).toContain(`.msg-clip--cut { max-height: ${LONG_MESSAGE.shows}px; overflow-y: clip;`);
+    // Ver mais sits on the fade's clear end, so the words show continuing right above it.
+    expect(css).toContain("mask-image: linear-gradient(#000 calc(100% - 128px), transparent calc(100% - 20px));");
+    expect(css).toContain(".msg-clip--cut + .msg-clip__foot { position: relative; margin-top: -20px; }");
   });
 
   test("a Live or Spec block taller than its card: Ver mais opens it whole, and nothing folds it back", async () => {

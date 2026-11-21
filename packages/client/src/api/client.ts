@@ -80,11 +80,11 @@ import type {
   AppsList,
   ArchivedChannel,
   Artifact,
+  ArtifactAccess,
   ArtifactContent,
   ArtifactDetail,
   ArtifactFilters,
   ArtifactPage,
-  ArtifactSharing,
   ArtifactVersion,
   AskToJoinResult,
   AuditPage,
@@ -200,6 +200,7 @@ import type {
   JoinClaim,
   JoinRequest,
   LearnedSkill,
+  LiveActivityInput,
   Machine,
   MachineAccess,
   MachineAccessReduce,
@@ -552,6 +553,10 @@ export interface ApiClient {
      * body, not the path: an endpoint's encoded slashes don't survive every proxy.
      */
     unregister(token: string): Promise<void>;
+    /** Registers where the agents' Live Activity goes on this iPhone (ADR 0210); refreshed as tokens change. */
+    liveActivity(input: LiveActivityInput): Promise<void>;
+    /** Stops the agents' Live Activity on this install (its switch turned off, or signing out). */
+    liveActivityOff(installId: string): Promise<void>;
     /**
      * Of these notification ids (at most 100), the ones no longer open and unread for me (read, done, snoozed or
      * gone): a browser closes the notifications it still shows for them (clear on read, ADR 0071).
@@ -659,6 +664,11 @@ export interface ApiClient {
       returnTo?: string,
       plan?: string,
     ): Promise<{ url: string; expiresAt: string }>;
+    /**
+     * Its payer moves the workspace's plan to `to`, another workspace where they manage billing that has no plan in
+     * force (ADR 0079): the billing service moves it within a minute. `billing.off` 404 on a server without billing.
+     */
+    movePlan(orgId: string, to: string): Promise<void>;
     /** People, files and today's uploads against the workspace's limits (any member; ADR 0079). */
     limits(orgId: string): Promise<WorkspaceLimits>;
     members(orgId: string): Promise<Member[]>;
@@ -1934,12 +1944,11 @@ export interface ApiClient {
       id: string,
       input: { content: ArtifactContent; note?: string | null; baseVersion: number; title?: string },
     ): Promise<ArtifactDetail>;
-    /** Who sees it on top of its conversation (ADR 0157); 403 `artifact.sharing_forbidden` for who got it shared. */
-    setSharing(
-      orgId: string,
-      id: string,
-      sharing: { mode: ArtifactSharing["mode"]; userIds?: string[]; roleIds?: string[] },
-    ): Promise<Artifact>;
+    /**
+     * Who sees and who edits it, people, roles and agents (ADR 0202); 403 `artifact.sharing_forbidden` for who may not
+     * change it.
+     */
+    setAccess(orgId: string, id: string, access: Omit<ArtifactAccess, "limited">): Promise<Artifact>;
     /** To the trash for 30 days (403 `artifact.delete_forbidden`). */
     remove(orgId: string, id: string): Promise<void>;
     /** A Drive file's new name (no new version). */

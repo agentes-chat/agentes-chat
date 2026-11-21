@@ -20,6 +20,7 @@ import { deepMerge } from "@agenteschat/i18n/tree";
 import { nanoUsdToUsd } from "@agenteschat/providers";
 import { z } from "zod";
 import { notifiedIds } from "./approvals";
+import { agentOwnerIds } from "./audience";
 import { isComputerBrain, planName } from "./brains/types";
 import { confidentialRoots } from "./confidential";
 import { invitationMailProof } from "./crypto";
@@ -417,7 +418,8 @@ export async function emailArtFor(
   resolve: ResolveHost = resolveHostDns,
 ): Promise<EmailArt & { attached?: "attach" | "blocked" | "unreachable" }> {
   const art = emailArtAt(publicUrl);
-  const host = mode === "auto" ? await publicHostAddress(new URL(publicUrl).hostname, resolve) : null;
+  const host =
+    mode === "auto" ? await publicHostAddress(new URL(publicUrl).hostname, resolve, { internet: true }) : null;
   if (host?.ok) return art;
   const files = webDir ? await readPictures(join(webDir, "email")) : null;
   return files ? { ...art, base: null, files, attached: host?.reason ?? "attach" } : art;
@@ -1347,14 +1349,18 @@ export async function queueBudgetEmail(
   db: Database,
   publicUrl: string,
   e: {
-    agent: { id: string; orgId: string; name: string; ownerUserId: string | null };
+    agent: { id: string; orgId: string; name: string; ownerUserId: string | null; ownerRoleId?: string | null };
     level: "warning" | "exhausted";
     spentNanoUsd: number;
     budgetNanoUsd: number;
   },
 ) {
-  // The owner, or the org's admins when the agent has none.
-  const recipientIds = e.agent.ownerUserId ? [e.agent.ownerUserId] : await adminIds(db, e.agent.orgId);
+  // The owner (or whoever holds its owner role), or the org's admins when the agent has neither.
+  const owners = await agentOwnerIds(db, e.agent.orgId, {
+    ownerUserId: e.agent.ownerUserId,
+    ownerRoleId: e.agent.ownerRoleId ?? null,
+  });
+  const recipientIds = owners.length > 0 ? owners : await adminIds(db, e.agent.orgId);
   if (recipientIds.length === 0) return;
   const recipients = await db
     .select({ email: users.email, locale: users.locale })

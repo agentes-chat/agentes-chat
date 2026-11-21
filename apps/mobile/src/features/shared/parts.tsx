@@ -33,6 +33,8 @@ import {
   useTheme,
 } from "@/ui";
 import { withAlpha } from "@/ui/palette";
+import { usePane, usePaneHeader } from "@/ui/pane";
+import { usePaneBack } from "@/ui/pane-back";
 import { useFontScale } from "@/ui/text-scale";
 import { leadBox } from "@/ui/type-scale";
 import { useBubblePart } from "./bubble-part";
@@ -191,32 +193,7 @@ const IOS = Platform.OS === "ios";
 /** iOS 26's Liquid Glass bar (a saving word there is a prominent button). */
 const liquidGlass = IOS && !needsHeaderBlur(Platform.OS, Platform.Version);
 
-/**
- * The bar of a pushed screen, as the native header (react-native-screens): the system back chevron with
- * the edge swipe, a title (the system's own when it is words: centred and shortened by it) with its line under it,
- * an action on the right. Renders nothing itself; it sets the screen's header options, so screens keep calling it
- * where the bar used to be.
- * The bar is opaque by default (`solid`, content lays out below it); `solid={false}` makes content scroll
- * under it (glass on iOS 26, blur before; the screen's scroll view needs
- * `contentInsetAdjustmentBehavior="automatic"`); `plate` puts a clear bar over a full-bleed cover. On Android
- * the right actions float in a `HeaderCapsule` and the back button is a round plate (`usePushedOptions`);
- * its opaque bar takes the screen's color (`grouped`), so no band shows above a grouped gray screen.
- * `action` is a word on the right that saves (Conta's "OK"): the system's bar button on iOS (prominent on
- * iOS 26), our small primary button on Android.
- */
-export function PushedHeader({
-  title,
-  right,
-  action,
-  plate = false,
-  solid = true,
-  grouped = false,
-  largeTitle = false,
-  actions,
-  lead,
-  subtitle,
-  subtitleColor,
-}: {
+export interface PushedHeaderProps {
   title?: ReactNode;
   /**
    * A line under the title (the step, the board, who sent a file), drawn with it in a view of our own: on iOS kept
@@ -248,7 +225,80 @@ export function PushedHeader({
    * into the bar as the list scrolls, and the bar takes the system's material over what passes under it.
    */
   largeTitle?: boolean;
-}) {
+}
+
+/**
+ * The bar of a pushed screen, as the native header (react-native-screens): the system back chevron with
+ * the edge swipe, a title (the system's own when it is words: centred and shortened by it) with its line under it,
+ * an action on the right. Renders nothing itself; it sets the screen's header options, so screens keep calling it
+ * where the bar used to be.
+ * The bar is opaque by default (`solid`, content lays out below it); `solid={false}` makes content scroll
+ * under it (glass on iOS 26, blur before; the screen's scroll view needs
+ * `contentInsetAdjustmentBehavior="automatic"`); `plate` puts a clear bar over a full-bleed cover. On Android
+ * the right actions float in a `HeaderCapsule` and the back button is a round plate (`usePushedOptions`);
+ * its opaque bar takes the screen's color (`grouped`), so no band shows above a grouped gray screen.
+ * `action` is a word on the right that saves (Conta's "OK"): the system's bar button on iOS (prominent on
+ * iOS 26), our small primary button on Android.
+ * Inside a pane of a two-pane layout (ADR 0212: the iPhone Duo's inner display) the same title, line and buttons are
+ * the pane's own bar (`PaneHeader`), and the navigator's options are left alone.
+ */
+export function PushedHeader(props: PushedHeaderProps) {
+  return usePane() ? <PaneHeader {...props} /> : <NativeHeader {...props} />;
+}
+
+/**
+ * `PushedHeader` in a pane (ADR 0212): its title, line and buttons in the pane's bar, our own views (`usePaneHeader`),
+ * with no back button in a detail pane: the list it was opened from stands beside it. A pushed screen's list (You, the
+ * workspace's settings) has the way back its hidden bar had (`usePaneBack`). Nothing of its own in the screen either. A
+ * clear bar (`plate`: a cover, a conversation) floats over the screen, which keeps its room under it as under the
+ * navigator's (`useHeaderHeight` is the pane bar's height); any other stands above the screen in its color, so content
+ * that left its top room to the system's insets lays out below it.
+ */
+function PaneHeader({
+  title,
+  right,
+  action,
+  plate = false,
+  grouped = false,
+  actions,
+  lead,
+  subtitle,
+  subtitleColor,
+}: PushedHeaderProps) {
+  const { colors } = useTheme();
+  const back = usePaneBack();
+  const leftActions: HeaderAction[] | undefined = back
+    ? [{ icon: "back", sf: "chevron.left", label: back.label, onPress: back.onPress }]
+    : undefined;
+  usePaneHeader({
+    title,
+    subtitle,
+    subtitleColor,
+    right,
+    lead,
+    actions,
+    word: action,
+    leftActions,
+    over: plate,
+    tone: grouped ? colors.grouped : colors.bg,
+  });
+  return null;
+}
+
+/** `PushedHeader` as the navigator's bar: the screen's header options. */
+function NativeHeader({
+  title,
+  right,
+  action,
+  plate = false,
+  solid = true,
+  grouped = false,
+  largeTitle = false,
+  actions,
+  lead,
+  subtitle,
+  subtitleColor,
+}: PushedHeaderProps) {
   const { colors } = useTheme();
   const scrollUnder = useScrollUnderPushedOptions();
   const barTone = grouped && Platform.OS === "android" ? colors.grouped : null;

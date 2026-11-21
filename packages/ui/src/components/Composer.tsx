@@ -413,7 +413,7 @@ function FormatBar({
                 onFocus={() => setFocus(i)}
                 onClick={() => onFormat(kind)}
               >
-                <Icon name={FORMAT_ICON[kind]} size={16} />
+                <Icon name={FORMAT_ICON[kind]} size={14} />
               </button>
             </span>
           );

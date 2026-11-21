@@ -130,7 +130,8 @@ export function createWorkToolSource(deps: { pubsub?: PubSub }): ToolSource {
       type: "object",
       properties: {
         text: { type: "string", minLength: 1, maxLength: WORK_LIMITS.updateMax },
-        next_update_minutes: { type: "integer", minimum: WORK_LIMITS.nextMin, maximum: WORK_LIMITS.nextMax },
+        // Clamped to 5–20 by `postWorkUpdate`, never refused: an agent's "30" means "later", not a wrong call.
+        next_update_minutes: { type: "number" },
         plan: planSchema,
         important: { type: "boolean" },
       },
@@ -147,7 +148,7 @@ export function createWorkToolSource(deps: { pubsub?: PubSub }): ToolSource {
         plan: cleanPlan(input.plan),
         important: input.important === true,
       });
-      if (!out.ok) return refused(out.reason);
+      if (!out.ok) return out.quiet ? { content: out.reason } : refused(out.reason);
       const due = out.work.nextUpdateAt?.toISOString().slice(11, 16);
       return { content: `Posted.${due ? ` Your next update is due at ${due} UTC.` : ""} Keep working.` };
     },

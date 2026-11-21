@@ -153,6 +153,7 @@
     "forwards": "“{{subject}}” 전달",
     "forwardsFrom": "{{from}}의 “{{subject}}” 전달",
     "onlyOwner": "{{name}} 또는 관리자만 결정할 수 있어요.",
+    "onlyOwnerRole": "{{role}} 역할이 있는 사람이나 관리자만 결정할 수 있어요.",
     "onlyAdmins": "관리자만 결정할 수 있어요.",
     "notFound": "이 요청은 더 이상 없거나 볼 수 없어요.",
     "trait": {
@@ -183,6 +184,7 @@
     "pinned": "고정됨",
     "recent": "최근",
     "seeAll": "모든 채팅 보기",
+    "splitEmpty": "채팅이 여기에 열려요.",
     "wait": {
       "verb": {
         "approval": "승인을 기다려요",
@@ -267,8 +269,8 @@
     "to": "받는 사람:",
     "people": "사람",
     "search": "사람 또는 에이전트",
-    "create": "만들기",
     "agentHint": "이름과 하는 일",
+    "create": "만들기",
     "chatShort": "대화",
     "chatHint": "사람 또는 에이전트",
     "taskHint": "담당자와 마감일 포함",
@@ -736,10 +738,12 @@
     "section": {
       "missions": "미션",
       "threads": "스레드"
-    }
+    },
+    "splitEmpty": "스레드가 여기에 열려요."
   },
   "agents": {
     "title": "에이전트",
+    "splitEmpty": "에이전트 페이지가 여기에 열려요.",
     "subtitle_other": "팀에 {{count}}명 · {{working}}명 작업 중",
     "free": "대기 중",
     "workingLabel": "{{name}}, 작업 중",
@@ -1020,6 +1024,8 @@
     "notificationsOnHint": "브라우저와 데스크톱 앱에서 알림을 켜 두었다면 그곳에도 도착해요.",
     "notificationsOffHint": "여기서 알림을 받으려면 켜 주세요. 아래 종류는 모든 기기에 적용돼요.",
     "notificationsKindsHint": "활동에는 모든 게 남아요. 이 설정은 이 워크스페이스의 모든 기기에 적용돼요.",
+    "liveActivity": "Dynamic Island의 에이전트",
+    "liveActivityHint": "요청한 일을 에이전트가 하는 동안 어떤 앱에서든 화면 위쪽과 잠금 화면에 표시됩니다. 앱이 닫혀 있을 때는 iOS 17.2 이상이 필요합니다.",
     "version": "agentes.chat · 버전 {{version}}",
     "edit": "편집",
     "status": "상태",
@@ -1151,6 +1157,16 @@
       "fullscreen": "전체 화면",
       "open": "열기",
       "cantPlay": "이 동영상은 이 휴대폰에서 재생할 수 없습니다."
+    },
+    "talk": {
+      "hint": {
+        "image": "댓글을 달 곳을 탭하세요",
+        "video": "동영상을 탭해 이 순간에 댓글을 다세요",
+        "pdf": "페이지를 탭해 지점을 표시하세요"
+      },
+      "markVideo": "동영상의 이 순간에 댓글 달기",
+      "pdfPage": "{{page}}/{{count}}페이지",
+      "pdfFailed": "이 PDF를 표시할 수 없어요."
     }
   },
   "issues": {
@@ -1444,6 +1460,7 @@
       "ruleBody": "{{name}}이(가) 이 규칙을 더 이상 따르지 않아요. 규칙을 준 사람은 같은 규칙을 다시 줄 수 있어요.",
       "ruleRemove": "삭제",
       "footOwner": "{{name}} 또는 관리자만 수정할 수 있어요.",
+      "footOwnerRole": "{{role}} 역할이 있는 사람이나 관리자만 수정할 수 있어요.",
       "footAdmins": "관리자만 수정할 수 있어요.",
       "emptyF": "{{name}}이(가) 아직 나에 대해 저장한 게 없어요.",
       "emptyM": "{{name}}이(가) 아직 나에 대해 저장한 게 없어요.",
@@ -1493,6 +1510,7 @@
       },
       "asksYou": "머지와 게시는 에이전트가 묻지 않기로 설정되어 있지 않다면 내 승인을 받아요.",
       "asksOwner": "머지와 게시는 에이전트가 묻지 않기로 설정되어 있지 않다면 {{name}}의 승인을 받아요.",
+      "asksOwnerRole": "에이전트가 묻지 않도록 설정하지 않았다면, 병합과 게시에는 {{role}} 역할이 있는 사람의 승인이 필요해요.",
       "asksAdmins": "머지와 게시는 에이전트가 묻지 않기로 설정되어 있지 않다면 관리자의 승인을 받아요.",
       "empty": "지금은 대화만 할 수 있어요."
     }

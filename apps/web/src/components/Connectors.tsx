@@ -64,7 +64,8 @@ import { Trans, useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { ConnectedRow } from "@/components/ConnectedRow";
 import { ConnectFlow, type FlowState, HeaderNames } from "@/components/ConnectFlow";
-import { ConnectorCatalogDialog, ConnectorIcon } from "@/components/ConnectorCatalog";
+import { ConnectorCatalogDialog } from "@/components/ConnectorCatalog";
+import { ConnectorIcon } from "@/components/ConnectorIcon";
 import {
   DatabaseConnectFlow,
   DatabaseDisconnectDialog,

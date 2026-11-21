@@ -165,6 +165,7 @@
     "forwards": "Reenvía “{{subject}}”",
     "forwardsFrom": "Reenvía “{{subject}}”, de {{from}}",
     "onlyOwner": "Solo {{name}} o un admin puede decidir.",
+    "onlyOwnerRole": "Solo quien tenga el rol {{role}} o un admin puede decidir.",
     "onlyAdmins": "Solo un admin puede decidir.",
     "notFound": "Esta solicitud ya no existe o no puedes verla.",
     "trait": {
@@ -195,6 +196,7 @@
     "pinned": "Fijados",
     "recent": "Recientes",
     "seeAll": "Ver todos los chats",
+    "splitEmpty": "Tus chats se abren aquí.",
     "wait": {
       "verb": {
         "approval": "necesita tu aprobación",
@@ -285,8 +287,8 @@
     "to": "Para:",
     "people": "Personas",
     "search": "Persona o agente",
-    "create": "Crear",
     "agentHint": "Un nombre y lo que hace",
+    "create": "Crear",
     "chatShort": "Conversación",
     "chatHint": "Una persona o un agente",
     "taskHint": "Con responsable y fecha límite",
@@ -782,10 +784,12 @@
     "section": {
       "missions": "Misiones",
       "threads": "Hilos"
-    }
+    },
+    "splitEmpty": "Tus hilos se abren aquí."
   },
   "agents": {
     "title": "Agentes",
+    "splitEmpty": "Las páginas de tus agentes se abren aquí.",
     "subtitle_one": "{{count}} en el equipo · {{working}} trabajando",
     "subtitle_many": "{{count}} en el equipo · {{working}} trabajando",
     "subtitle_other": "{{count}} en el equipo · {{working}} trabajando",
@@ -1172,6 +1176,8 @@
     "notificationsOnHint": "También llegan al navegador y a la app de escritorio, si están activadas ahí.",
     "notificationsOffHint": "Actívalas para recibir notificaciones aquí. Los tipos de abajo se aplican a todos tus dispositivos.",
     "notificationsKindsHint": "Actividad lo guarda todo. Esto se aplica a este espacio de trabajo, en todos tus dispositivos.",
+    "liveActivity": "Agentes en la Dynamic Island",
+    "liveActivityHint": "Cuando un agente trabaja en algo que pediste, aparece en la parte superior de la pantalla, en cualquier app, y en la pantalla de bloqueo. Con la app cerrada, necesita iOS 17.2 o posterior.",
     "version": "agentes.chat · versión {{version}}",
     "edit": "Editar",
     "status": "Estado",
@@ -1306,6 +1312,16 @@
       "fullscreen": "Pantalla completa",
       "open": "Abrir",
       "cantPlay": "Este video no se puede reproducir en este teléfono."
+    },
+    "talk": {
+      "hint": {
+        "image": "Toca donde quieras comentar",
+        "video": "Toca el video para comentar este momento",
+        "pdf": "Toca la página para marcar un punto"
+      },
+      "markVideo": "Comentar este momento del video",
+      "pdfPage": "Página {{page}} de {{count}}",
+      "pdfFailed": "No se pudo mostrar este PDF."
     }
   },
   "issues": {
@@ -1619,6 +1635,7 @@
       "ruleBody": "{{name}} deja de seguir esta regla. Quien la dio puede volver a darla.",
       "ruleRemove": "Quitar",
       "footOwner": "Solo {{name}} o un admin puede corregir esto.",
+      "footOwnerRole": "Solo quien tenga el rol {{role}} o un admin puede corregir esto.",
       "footAdmins": "Solo un admin puede corregir esto.",
       "emptyF": "{{name}} todavía no guardó nada sobre ti.",
       "emptyM": "{{name}} todavía no guardó nada sobre ti.",
@@ -1668,6 +1685,7 @@
       },
       "asksYou": "Hacer merge y publicar piden tu aprobación, salvo que el agente no pregunte nunca.",
       "asksOwner": "Hacer merge y publicar piden la aprobación de {{name}}, salvo que el agente no pregunte nunca.",
+      "asksOwnerRole": "Hacer merge y publicar piden la aprobación de quien tenga el rol {{role}}, salvo que el agente no pregunte nunca.",
       "asksAdmins": "Hacer merge y publicar piden la aprobación de un admin, salvo que el agente no pregunte nunca.",
       "empty": "Por ahora, solo conversación."
     }

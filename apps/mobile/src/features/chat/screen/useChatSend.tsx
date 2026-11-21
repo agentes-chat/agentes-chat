@@ -44,7 +44,9 @@ import { LiveQuoteBar } from "../../live-files/talk/AboutLine";
 import { dropTalkAbout, useTalkAbout } from "../../live-files/talk/store";
 import { RemindSheet } from "../../reminders/RemindSheet";
 import { takeShareHandoff, useShareHandoff } from "../../share/handoff";
+import { suggestAgent } from "../../share/suggestions";
 import type { useDirectory } from "../../shared/hooks";
+import { agentLook } from "../../shared/logic";
 import type { useSheet } from "../../shared/SheetHost";
 import { vaultHref } from "../../vault/logic";
 import { retryVoice, type VoiceRefusal } from "../../voice/outbox";
@@ -150,6 +152,9 @@ export function useChatSend({
     // guess stays until the run resumes and takes its place: dropped now, the line went and came back a moment later.
     onSent: (message, local) => {
       live.retarget(local.id, message.id);
+      // A message to an agent: it comes up among the share sheet's suggestions (ADR 0213).
+      const agent = dmAgentId ? dir.agents.find((a) => a.id === dmAgentId) : undefined;
+      if (agent) suggestAgent(orgId, { id: agent.id, name: agent.name, look: agentLook(agent) });
       const steered = Array.isArray(message.meta?.steeredRunIds) ? (message.meta.steeredRunIds as string[]) : [];
       if (live.runs.some((r) => !r.provisional && steered.includes(r.runId))) live.forget(message.id, false);
     },

@@ -49,6 +49,7 @@ import {
 import {
   APP_JOB_KINDS,
   adoptRestoredOperatorEvents,
+  allowOutbound,
   allowPrivateOutbound,
   allowsPrivateEndpoints,
   backfillMemoryTrust,
@@ -71,6 +72,7 @@ import {
   memoryBudget,
   meterComposio,
   moveIssueComments,
+  publicHostAddress,
   publicHttpsFetch,
   queueEmbeddingBackfill,
   relayCredentials,
@@ -80,6 +82,7 @@ import {
   SURFACE_PREFIX,
   setMessageLinkBase,
   setRestrictionNotices,
+  setScreenJudgments,
   setSurface,
   setWorkspaceComputers,
   shareCacheInvalidations,
@@ -136,7 +139,7 @@ export interface StartOptions {
  * The engine's process-wide switches this config sets, every one of them here: `startServer` sets them at boot, and a
  * test that boots like a given setup (the Cloud) sets them the same way.
  */
-export function applyBootSwitches(config: Config) {
+export function applyBootSwitches(config: Config, log?: Logger) {
   // On agentes.chat Cloud a restriction names its kind and how to contest it, elsewhere it reads as before.
   setRestrictionNotices(config.PUBLIC_URL);
   // The links to messages that agents write and their tools return.
@@ -146,6 +149,7 @@ export function applyBootSwitches(config: Config) {
   setSurface(surfaceFromConfig(config));
   // Where each workspace gets its own computer, the computers people bring are targets, never agents' homes.
   setWorkspaceComputers(config.MACHINE_PROVISIONING === "external");
+  setScreenJudgments(config.SCREEN_JUDGMENTS, config.SCREEN_JUDGMENTS_ORGS, log);
 }
 
 /**
@@ -258,8 +262,21 @@ async function boot(
   let gifKey: GifKey | null = null;
   const defaults: Adapters = {
     search: createPostgresSearchResolver(database.db),
-    // PGlite (native mode) is one process: nothing to tell other replicas.
-    pubsub: database.client ? await createPostgresPubSub(postgresJsNotifier(database.client)) : createMemoryPubSub(),
+    // PGlite (native mode) is one process: nothing to tell other replicas. A break in delivery stops every app's live
+    // updates, so it is reported as an error (ADR 0104), and its end says how long it lasted (ADR 0010).
+    pubsub: database.client
+      ? await createPostgresPubSub(postgresJsNotifier(database.client, database.listenClient), {
+          onTrouble: (kind, detail) => {
+            if (kind === "resumed") log.warn("realtime events reach their subscribers again", { kind, ...detail });
+            else
+              log.error("realtime events stopped reaching their subscribers", {
+                kind,
+                ...detail,
+                error: detail.error ?? kind,
+              });
+          },
+        })
+      : createMemoryPubSub(),
     presence: createMemoryPresence(),
     rateLimiter: createMemoryRateLimiter(),
     keyWrapper: localKeyWrapper,
@@ -381,13 +398,19 @@ async function boot(
   // Addresses a workspace names (custom MCP servers, its own bucket, pages agents read) are pinned to public ones at
   // every request, except where the operator lets workspaces reach this server's network.
   allowPrivateOutbound(allowsPrivateEndpoints(config));
+  // The private hosts and ranges the operator named pass every guard for typed addresses (ADR 0210). agentes.chat
+  // Cloud never lets a workspace reach a private network, whatever is set.
+  const outboundLists = { hosts: config.OUTBOUND_ALLOW_HOSTS, cidrs: config.OUTBOUND_ALLOW_CIDRS };
+  if (!isAgentesCloud(config.PUBLIC_URL)) allowOutbound(outboundLists);
+  else if (outboundLists.hosts.length || outboundLists.cidrs.length)
+    log.warn("OUTBOUND_ALLOW_HOSTS and OUTBOUND_ALLOW_CIDRS are ignored on agentes.chat Cloud");
   // Per-process caches for agent/org/channel config, scopes, connections, credential rows (30 s TTL).
   enableCaches();
   // A write in any process (the app, a worker) clears what every process cached of it.
   shareCacheInvalidations(adapters.pubsub);
   // OpenRouter's public model list (ADR 0087): read only while a workspace has an OpenRouter key.
   enableOpenRouterModels(fetch);
-  applyBootSwitches(config);
+  applyBootSwitches(config, log);
   enableAccountContacts(config.PUBLIC_URL, adapters.email);
   if (config.OPERATOR_API_TOKEN) {
     // Before the API serves a page: a caller restarting after a restore must find these rows first.
@@ -683,6 +706,7 @@ async function boot(
     workers.stop();
     // The switch is the process's: a server started after this one sets its own.
     allowPrivateOutbound(false);
+    allowOutbound();
     // `/api/health` answers 503 from now on: the proxy's health check takes this instance out before it stops
     // listening, and holds new requests for the next one instead of failing them.
     if (config.SHUTDOWN_DELAY_MS > 0) await Bun.sleep(config.SHUTDOWN_DELAY_MS);
@@ -871,10 +895,11 @@ function mailAdapters(
         beforeToolCall,
       })
     : null;
-  // A mail server named by a person never resolves to our network (private, loopback, metadata).
+  // A mail server named by a person never resolves to our network (private, loopback, metadata), unless the
+  // operator allowed that host or range (ADR 0210): the same check as when the account was saved.
   const checkHost = async (host: string) => {
-    const addresses = await resolveHostDns(host);
-    if (addresses.length === 0 || addresses.some(isBlockedAddress)) throw new Error("blocked host");
+    const checked = await publicHostAddress(host);
+    if (!checked.ok) throw new Error(checked.reason === "blocked" ? "blocked host" : `no address for ${host}`);
   };
   const imapOptions = { checkHost };
   return {

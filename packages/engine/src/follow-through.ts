@@ -15,7 +15,7 @@ import {
 } from "@agenteschat/db";
 import { announceAgentStatus } from "./agent-status";
 import { agentsOnlyIn } from "./agent-work";
-import { managesAgent, managesAgentSql, REACH_COLUMNS } from "./audience";
+import { managesAgent, managesAgentSql, ownsAgent, ownsAgentSql, REACH_COLUMNS } from "./audience";
 import { runAuthority } from "./authority";
 import { askStillOpen, unrequested } from "./brakes";
 import { requireChannelAccess } from "./channels";
@@ -309,21 +309,22 @@ const publishLine = async (pubsub: PubSub | undefined, line: Message) => {
 };
 
 /**
- * The run a tool call belongs to: a conversation's run, never a routine's background work or a mission task.
+ * The run a tool call belongs to: a conversation's run or a routine's background work (the run policy lets a
+ * routine set its own resume, which wakes it where it reports: `deliverNoticeToRun`), never a mission task.
  * `confidential`: its lines live where it answers, under its thread's root (`replyThreadOf`, ADR 0190).
  */
 async function conversationRun(ctx: ToolContext) {
-  if (!ctx.runId || ctx.background || ctx.bridge?.taskId) return null;
+  if (!ctx.runId || ctx.bridge?.taskId) return null;
   const [run] = await ctx.db
     .select()
     .from(agentRuns)
     .where(and(eq(agentRuns.id, ctx.runId), eq(agentRuns.orgId, ctx.orgId), eq(agentRuns.agentId, ctx.agentId)));
-  return run && !run.background ? { ...run, confidential: ctx.confidential === true } : null;
+  return run ? { ...run, confidential: ctx.confidential === true } : null;
 }
 
 /**
- * `follow_up` and `cancel_follow_up`, for every agent (no scope; routines' background runs are refused by
- * the run policy: they run again on their own schedule). Setting one posts its line in the run's
+ * `follow_up` and `cancel_follow_up`, for every agent (no scope; a routine's background run may set one to come
+ * back to work it is blocked on, besides firing again on its own schedule). Setting one posts its line in the run's
  * conversation (a `follow_up` notice that wakes nobody, `refs.state` `pending`) and queues the job that
  * wakes the agent there at its time (`wakeFollowUp`).
  */
@@ -350,7 +351,8 @@ export function createFollowUpToolSource(deps: { pubsub?: PubSub }): ToolSource 
         const run = await conversationRun(ctx);
         if (!run) return refused("Only a conversation's run can come back to it.");
         const channel = await getChannelCached(ctx.db, run.orgId, run.channelId);
-        if (channel && isAgentOnlyDm(channel))
+        // A routine's room is no agents' DM: its resume wakes it where it reports.
+        if (channel && isAgentOnlyDm(channel) && !run.background)
           return refused("Answer the agent that asked now: no person reads this conversation to come back to.");
         // Its wake is one more run this agent starts on its own (ADR 0089): past the stretch's limits it would be held.
         const atLimit = await refusedAtLimit(ctx.db, run, run.agentId);
@@ -530,13 +532,14 @@ async function stillHere(tx: Executor, run: AgentRun) {
 
 /**
  * Who may cancel a return (ADR 0037, amended 2026-11-13): the person it is for (who is behind the run that set it), the
- * agent's owner, and admins (who manage agents). Everyone else who reads the conversation sees it without the control.
+ * agent's owner (`owns`: or who holds its owner role, ADR 0085, addendum of 2026-11-21), and admins (who manage
+ * agents). Everyone else who reads the conversation sees it without the control.
  */
 export const mayCancelReturn = (
-  line: { personId: string | null; ownerUserId: string | null },
+  line: { personId: string | null; owns: boolean },
   userId: string,
   managesAgents: boolean,
-) => managesAgents || line.personId === userId || line.ownerUserId === userId;
+) => managesAgents || line.personId === userId || line.owns;
 
 /** A person cancels a follow-up (the bar's list, the task manager): who may (`mayCancelReturn`), reading its conversation. */
 export async function cancelFollowUp(
@@ -552,7 +555,8 @@ export async function cancelFollowUp(
   const [agent] = line.authorAgentId
     ? await deps.db.select(REACH_COLUMNS).from(agents).where(eq(agents.id, line.authorAgentId))
     : [];
-  const who = { personId: refsOf(line).personId ?? null, ownerUserId: agent?.ownerUserId ?? null };
+  const owns = !!agent && ownsAgent(agent, userId, workspace.roleIds);
+  const who = { personId: refsOf(line).personId ?? null, owns };
   // An admin's override is who manages that agent (ADR 0085 addendum of 2026-11-17), not any holder of the key.
   const manages = agent ? managesAgent(agent, userId, workspace) : can(workspace, "manage_agents");
   if (!mayCancelReturn(who, userId, manages))
@@ -622,7 +626,8 @@ type ReturnRow = {
   channel_name: string | null;
   thread_id: string | null;
   refs: Record<string, string> | string | null;
-  owner_user_id: string | null;
+  /** Whether the viewer answers for its agent (`ownsAgentSql`); only `pendingReturns` reads it. */
+  owns: boolean | null;
   reply_message_id: string | null;
   canceler_name: string | null;
   /** Whether the viewer manages its agent (`managesAgentSql`); only `pendingReturns` reads it. */
@@ -656,8 +661,9 @@ export async function pendingReturns(
   const now = Date.now();
   const rows = rowsOf<ReturnRow>(
     await db.execute(sql`select m.id, m.author_agent_id as agent_id, m.channel_id, c.kind as channel_kind,
-        c.name as channel_name, m.thread_id, m.meta->'notice'->'refs' as refs, g.owner_user_id, rr.reply_message_id,
-        null as canceler_name, ${managesAgentSql("g", sql`${viewerId}::text`)} as manages
+        c.name as channel_name, m.thread_id, m.meta->'notice'->'refs' as refs,
+        ${ownsAgentSql("g", sql`${viewerId}::text`)} as owns, rr.reply_message_id, null as canceler_name,
+        ${managesAgentSql("g", sql`${viewerId}::text`)} as manages
       from ${messages} m
       join ${channels} c on c.id = m.channel_id and c.org_id = m.org_id and c.archived_at is null
       join ${agents} g on g.id = m.author_agent_id
@@ -683,7 +689,7 @@ export async function pendingReturns(
         replyMessageId: r.reply_message_id,
         held: refs.held === "1",
         canCancel: mayCancelReturn(
-          { personId: refs.personId ?? null, ownerUserId: r.owner_user_id },
+          { personId: refs.personId ?? null, owns: r.owns === true },
           viewerId,
           r.manages === true,
         ),
@@ -705,7 +711,7 @@ export async function canceledReturns(
 ): Promise<CanceledReturn[]> {
   const rows = rowsOf<ReturnRow>(
     await db.execute(sql`select m.id, m.author_agent_id as agent_id, m.channel_id, c.kind as channel_kind,
-        c.name as channel_name, m.thread_id, m.meta->'notice'->'refs' as refs, null as owner_user_id,
+        c.name as channel_name, m.thread_id, m.meta->'notice'->'refs' as refs, null as owns,
         null as reply_message_id, u.name as canceler_name
       from ${channels} c
       join ${messages} m on m.channel_id = c.id and m.org_id = c.org_id

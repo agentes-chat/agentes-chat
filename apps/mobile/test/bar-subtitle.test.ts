@@ -15,10 +15,16 @@ test("PushedHeader puts nothing in the screen, only its options", () => {
   // to glass as the list scrolls under it): a view of the header placed there hid the list from it, and large titles
   // stayed open over the lists.
   const parts = read("src/features/shared/parts.tsx");
-  const header = parts.slice(parts.indexOf("export function PushedHeader({"), parts.indexOf("const titleSide ="));
+  const header = parts.slice(parts.indexOf("function NativeHeader({"), parts.indexOf("const titleSide ="));
   expect(header).toContain("  return <Stack.Screen options={options} />;\n}");
   expect(header.match(/return /g)?.length).toBe(1);
   expect(existsSync(join(APP, "modules/nav-subtitle"))).toBe(false);
+  // In a pane (ADR 0212) the bar is the pane's own, set the same way: still nothing in the screen.
+  expect(parts).toContain("return usePane() ? <PaneHeader {...props} /> : <NativeHeader {...props} />;");
+  const pane = parts.slice(parts.indexOf("function PaneHeader({"), parts.indexOf("function NativeHeader({"));
+  expect(pane).toContain("usePaneHeader({");
+  expect(pane).toContain("  return null;\n}");
+  expect(pane).not.toContain("Stack.Screen");
 });
 
 test("a title's line is drawn with it, kept clear of the wider side so the bar centres both", () => {

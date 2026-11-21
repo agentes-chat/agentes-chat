@@ -1071,6 +1071,7 @@
     },
     "back": "뒤로",
     "leave": "{{name}}(으)로 돌아가기",
+    "leaveLater": "{{name}}(으)로 돌아가고 나중에 마치기",
     "actions": {
       "continue": "계속",
       "create_other": "에이전트 {{count}}개 만들기",
@@ -1080,15 +1081,18 @@
     "yourCompany": "내 회사",
     "purpose": {
       "title": "agentes.chat을 어디에 쓸 건가요?",
-      "lead": "나중에 바꿀 수 있어요. 잃는 건 없어요.",
+      "lead": "워크스페이스 모드는 설정에서 언제든 바꿀 수 있어요. 잃는 건 없어요.",
+      "pick": "agentes.chat을 어떻게 볼지 골라 주세요.",
+      "switchTitle": "언제든 바꿀 수 있어요.",
+      "switchText": "워크스페이스 모드는 설정에서 바꿀 수 있고, 잃는 건 없어요.",
       "personal": "나를 위해",
       "personalText": "당신의 하루를 챙기는 에이전트.",
       "team": "내 팀을 위해",
       "teamText": "사람과 에이전트가 채널, 역할, 승인으로 함께 일해요.",
       "personalExamples": "아침 7시의 하루 · 청구서 · 운동",
       "teamExamples": "고객 지원 · 재무 · 보고서",
-      "personalLine": "당신의 하루를 챙기는 에이전트.",
-      "teamLine": "사람과 에이전트가 한곳에.",
+      "personalLine": "더 단순한 화면, 모든 기능은 그대로.",
+      "teamLine": "채널과 사람까지 보이는 전체 화면.",
       "activities": {
         "agenda": "오늘 일정",
         "home": "집안일",
@@ -2530,6 +2534,7 @@
     "working_other": "에이전트 {{count}}명 작업 중"
   },
   "channel": {
+    "teamStalled": "팀 작업 중단",
     "settingsNav": {
       "label": "채널 설정",
       "overview": "개요",
@@ -2612,6 +2617,8 @@
     "uploading": "업로드 중…",
     "uploadFailed": "업로드되지 않았어요",
     "removeFile": "{{name}} 삭제",
+    "dropFileTitle": "놓아서 첨부",
+    "dropFileNote": "보내기 전까지 파일은 이 대화의 임시 저장 메시지에 남아 있어요.",
     "tooManyFiles": "메시지당 파일은 최대 {{max}}개예요.",
     "reminder": "리마인더",
     "reactions": "반응",
@@ -2986,6 +2993,7 @@
       "anAgent": "에이전트",
       "none": "없음",
       "budgetDefault": "워크스페이스 기본값",
+      "pausesNow": "바로 일시 중지돼요",
       "anAccount": "AI 계정 하나",
       "everyone": "모두",
       "ownerOnly": "담당자만",
@@ -3236,6 +3244,14 @@
       "antigravity": "이 컴퓨터에서 Gemini에 로그인되어 있지 않아요. {{name}}의 페이지에서 Gemini 계정을 연결하세요.",
       "opencode": "이 컴퓨터에서 OpenCode가 생각할 수 없어요. {{name}}의 페이지에서 OpenCode 키를 연결하세요."
     },
+    "notSignedInOn": {
+      "claude_code": "{{computer}}에서 Claude Code에 로그인되어 있지 않아요. {{name}}의 페이지에서 Claude 계정을 연결하세요.",
+      "codex": "{{computer}}에서 Codex에 로그인되어 있지 않아요. {{name}}의 페이지에서 ChatGPT 계정을 연결하세요.",
+      "cursor": "{{computer}}에서 Cursor에 로그인되어 있지 않아요. {{name}}의 페이지에서 Cursor 계정을 연결하세요.",
+      "grok": "{{computer}}에서 Grok에 로그인되어 있지 않아요. {{name}}의 페이지에서 Grok 계정을 연결하세요.",
+      "antigravity": "{{computer}}에서 Gemini에 로그인되어 있지 않아요. {{name}}의 페이지에서 Gemini 계정을 연결하세요.",
+      "opencode": "{{computer}}에서 OpenCode가 생각할 수 없어요. {{name}}의 페이지에서 OpenCode 키를 연결하세요."
+    },
     "card": {
       "connected": "이제 {{name}}에게 AI가 있어요.",
       "answerNow": "지금 답하기",
@@ -3323,6 +3339,7 @@
     "chat": {
       "mine": "내 계정",
       "yours": "내 계정",
+      "free": "무료",
       "keys": "워크스페이스 키",
       "apiKeys": "API 키",
       "best": "지금 여유가 가장 많은 계정",
@@ -4272,6 +4289,19 @@
   "adminAsk": {
     "ask": "관리자에게 요청",
     "sent": "할 수 있는 사람에게 보냈어요."
+  },
+  "accountRef": {
+    "label": "{{name}} 계정",
+    "card": "{{name}} 계정 정보",
+    "mine": "내 계정",
+    "of": "{{name}} 님의 계정",
+    "on": "{{computer}}에서",
+    "gone": "이 계정은 더 이상 워크스페이스에 없어요."
+  },
+  "accountSwitch": {
+    "limit": "<from/> 계정이 한도에 도달해서 <to/> 계정으로 이어서 했어요",
+    "line": "<from/> 계정이 한도에 가까워서 <to/> 계정으로 이어서 했어요",
+    "extra": "<from/> 계정이 유료 추가 사용량으로 넘어가게 되어 <to/> 계정으로 이어서 했어요"
   },
   "channelRefs": {
     "list": "채널",
@@ -5436,6 +5466,7 @@
       "undo": "되돌리기",
       "deadline": "남은 시간",
       "decides": "결정하는 사람",
+      "decidesRole": "{{role}} 역할이 있는 누구나",
       "state": "상태",
       "why": "{{name}}이(가) 요청하는 이유",
       "email": "이메일",
@@ -6134,6 +6165,7 @@
         "cli_stopped": "오류로 {{brain}} 프로그램이 멈췄어요.",
         "cli_closed": "갑자기 {{brain}} 프로그램이 종료됐어요.",
         "cli_sandbox": "{{brain}} 프로그램이 이 컴퓨터에서 샌드박스를 시작할 수 없어요. 에이전트 설정에서 다른 AI를 고르세요.",
+        "cli_system": "{{brain}} 프로그램은 아직 이 컴퓨터의 시스템에서 실행되지 않아요. 에이전트 설정에서 다른 AI를 고르세요.",
         "account_missing": "이 에이전트에 고른 계정이 더 이상 컴퓨터에 없어요. 에이전트 설정에서 다른 계정을 고르거나 다시 추가하세요.",
         "windows_sandbox": "이 Windows 컴퓨터에서는 Codex의 명령을 격리할 수 없어요. Windows 11 24H2 이상이 필요해요. Windows를 업데이트하거나, 이 에이전트에 Claude나 API 키를 선택하거나, Linux 컴퓨터로 옮기세요.",
         "our_error": "저희 쪽에서 문제가 생겨 작업이 멈췄어요. 잠시 후 다시 요청해 주세요.",
@@ -6851,6 +6883,8 @@
     "noOwnerShort": "관리자가 알림을 받고 승인해요",
     "noOwnerHelp": "소유자가 없으면 관리자가 알림을 받고 민감한 작업을 승인해요.",
     "ownerHelp": "예산 알림을 받고 민감한 작업을 승인해요.",
+    "ownerRoleHelp": "{{role}} 역할이 있는 사람이 승인 요청과 알림을 받아요. 그중 누구나 결정할 수 있고, 나중에 역할을 받는 사람도 포함돼요.",
+    "ownerRoleHelp_female": "{{role}} 역할이 있는 사람이 승인 요청과 알림을 받아요. 그중 누구나 결정할 수 있고, 나중에 역할을 받는 사람도 포함돼요.",
     "ownerYours": "에이전트를 만든 사람이 소유자예요. 나중에 관리자가 다른 사람에게 넘길 수 있어요.",
     "accessAdmins": "에이전트에게 앱과 메일함 접근 권한은 관리자만 줄 수 있어요. 만든 뒤에 관리자에게 요청하세요.",
     "accessAdminsKeeper": "에이전트에게 앱과 메일함 접근 권한은 {{keeper}}님만 줄 수 있어요. 만든 뒤에 {{keeper}}님에게 요청하세요.",
@@ -9941,6 +9975,13 @@
     "noResults": "“{{q}}”와 일치하는 스킬이 없어요.",
     "version": "v{{version}}",
     "usedBy_other": "에이전트 {{count}}명이 사용 중",
+    "agents": {
+      "title": "이 스킬을 가진 에이전트",
+      "none": "아직 에이전트가 없어요.",
+      "choose": "에이전트 선택",
+      "dialogTitle": "{{name}}을(를) 가진 에이전트",
+      "dialogText": "켜진 에이전트는 작업에 필요할 때마다 사용해요."
+    },
     "updated": "{{when}} 업데이트됨",
     "source": {
       "github": "GitHub",
@@ -10381,6 +10422,7 @@
       "everyone": "워크스페이스의 모든 사람",
       "people": "일부 사람 또는 역할만",
       "owner": "소유자만",
+      "ownerRole": "{{role}} 역할이 있는 사람만",
       "everyonePersonal": "여기 있는 모든 사람",
       "peoplePersonal": "일부 사람만"
     },
@@ -10389,6 +10431,8 @@
       "people": "{{name}}과(와) 대화할 수 있는 사람과 역할을 고르세요.",
       "owner": "{{owner}}님만 {{name}}과(와) 대화해요. 목록에서는 {{owner}}님, 관리자, 편집할 수 있는 사람만 {{name}}을(를) 볼 수 있어요.",
       "noOwner": "이 옵션을 쓰려면 소유자를 지정하세요.",
+      "ownerRole": "{{role}} 역할이 있는 사람만 {{name}}과(와) 대화해요. 목록에서 {{name}}은(는) {{role}} 역할이 있는 사람, 관리자, 편집할 수 있는 사람에게만 보여요.",
+      "ownerRole_female": "{{role}} 역할이 있는 사람만 {{name}}과(와) 대화해요. 목록에서 {{name}}은(는) {{role}} 역할이 있는 사람, 관리자, 편집할 수 있는 사람에게만 보여요.",
       "everyonePersonal": "여기 있는 누구나 {{name}}을(를) 부를 수 있어요.",
       "peoplePersonal": "{{name}}과(와) 대화할 수 있는 사람을 고르세요."
     },
@@ -10398,8 +10442,11 @@
     "roleMembers_other": "{{count}}명",
     "picked": "선택됨",
     "ownerAlways": "{{name}}님은 소유자라서 항상 대화할 수 있어요.",
+    "ownerRoleAlways": "{{role}} 역할이 있는 사람은 소유자라서 항상 대화할 수 있어요.",
+    "whoHolds": "{{role}} 역할이 있는 사람",
     "onlyYouForNow": "지금은 나만",
     "onlyOwnerForNow": "지금은 {{name}}님만",
+    "onlyOwnerRoleForNow": "지금은 {{role}} 역할이 있는 사람만",
     "search": "역할과 사람 검색",
     "searchPeople": "사람 검색",
     "noMatch": "그 이름의 역할이나 사람이 없어요.",
@@ -10414,6 +10461,7 @@
       "everyone": "워크스페이스의 모든 사람",
       "everyonePersonal": "여기 있는 모든 사람",
       "owner": "{{name}}님만",
+      "ownerRole": "{{role}} 역할이 있는 사람만",
       "nobody": "지금은 아무도 없음",
       "someone": "일부 사람",
       "people": "{{names}}",
@@ -10436,6 +10484,8 @@
     "modeText": {
       "owner": "{{owner}}님(소유자), 관리자, 그리고 에이전트를 편집할 수 있고 {{name}}과(와) 대화할 수 있는 사람이 편집해요.",
       "noOwner": "관리자, 그리고 에이전트를 편집할 수 있고 {{name}}과(와) 대화할 수 있는 사람이 편집해요.",
+      "ownerRole": "{{role}} 역할이 있는 사람(소유자 역할), 관리자, 그리고 에이전트를 편집할 수 있고 {{name}}과(와) 대화할 수 있는 사람이 편집해요.",
+      "ownerRole_female": "{{role}} 역할이 있는 사람(소유자 역할), 관리자, 그리고 에이전트를 편집할 수 있고 {{name}}과(와) 대화할 수 있는 사람이 편집해요.",
       "people": "{{name}}의 작동 방식을 바꿀 수 있는 사람을 더 고르세요."
     },
     "rolesHint": "이 역할이 있는 사람은 누구나 편집할 수 있어요. 나중에 역할을 받는 사람도 포함돼요.",
@@ -11567,6 +11617,11 @@
     "recommended": "추천",
     "free": "무료",
     "opencodeFreeHint": "다른 무료 모델은 에이전트 컴퓨터의 OpenCode에서 실행돼요.",
+    "missingModel": {
+      "app_old": "{{model}}을(를) 쓰려면 에이전트 컴퓨터의 agentes.chat 앱을 업데이트하세요.",
+      "cli_old": "{{model}}을(를) 쓰려면 에이전트 컴퓨터의 Antigravity CLI를 더 새 버전으로 올려야 합니다. 그 컴퓨터에서 agy update를 실행하세요.",
+      "plan": "{{model}}은(는) Google AI Pro와 Ultra에 포함되어 있습니다. 에이전트 컴퓨터의 Gemini 계정 중 이 요금제가 있는 계정이 없습니다."
+    },
     "modelHelp": "큰 모델일수록 더 많이 생각하고 요금제를 더 빨리 소진해요.",
     "hidden": "생각하는 AI는 {{owner}}님이나 관리자가 골라요.",
     "hiddenAdmins": "생각하는 AI는 관리자만 고를 수 있어요.",
@@ -13718,6 +13773,7 @@
       "ask_agent": "다른 에이전트에게 질문",
       "tell_agent": "다른 에이전트에게 알림",
       "find_agent": "에이전트 찾기",
+      "read_agent": "에이전트 설정 읽기",
       "ask_user": "질문하기",
       "ask_choices": "선택지 제시",
       "request_approval": "승인 요청",
@@ -14527,6 +14583,37 @@
       "exitFullscreen": "전체 화면 종료",
       "open": "열기"
     },
+    "comments": {
+      "title": "댓글",
+      "resolve": "해결",
+      "reopen": "다시 열기",
+      "resolvedBy": "{{name}}이(가) 해결 · {{time}}",
+      "resolvedCount_other": "해결됨 {{count}}개",
+      "showResolved": "해결된 댓글 보기",
+      "hideResolved": "해결된 댓글 숨기기",
+      "fromVersion": "버전 {{version}}에서",
+      "peekOpen": "클릭해서 대화에서 열기",
+      "markAt": "{{name}}의 댓글 {{n}}, {{time}}",
+      "page": "{{page}}페이지",
+      "pageOf": "{{page}} / {{count}}",
+      "pdfFailed": "이 PDF는 여기서 볼 수 없어요. 다운로드해서 여세요.",
+      "loadFailed": "이 이미지는 여기서 볼 수 없어요.",
+      "hint": {
+        "image": "클릭해서 지점을 표시하거나 드래그해서 영역을 표시하세요",
+        "video": "동영상을 클릭해서 이 장면에 댓글을 달거나 드래그해서 영역을 표시하세요",
+        "pdf": "페이지를 클릭해서 지점을 표시하거나 드래그해서 영역을 표시하세요"
+      },
+      "line": {
+        "image_other": "이미지 댓글 {{count}}개",
+        "video_other": "동영상 댓글 {{count}}개",
+        "pdf_other": "PDF 댓글 {{count}}개"
+      },
+      "write": {
+        "image": "이미지에 대해 쓰기…",
+        "video": "동영상에 대해 쓰기…",
+        "pdf": "PDF에 대해 쓰기…"
+      }
+    },
     "zoom": {
       "toolbar": "확대/축소",
       "in": "확대",
@@ -14546,6 +14633,12 @@
     }
   },
   "errors": {
+    "planMove": {
+      "notPayer": "요금제를 결제하는 사람만 옮길 수 있어요.",
+      "same": "요금제를 옮길 다른 워크스페이스를 골라 주세요.",
+      "targetHasPlan": "그 워크스페이스에는 이미 요금제가 있어요. 새로고침해서 지금 상태를 확인하세요.",
+      "targetDeleting": "그 워크스페이스는 삭제 중이에요. 먼저 복원하거나 다른 곳을 고르세요."
+    },
     "surface": {
       "off": "채팅 앱 연결이 꺼졌어요. 새로고침해서 지금 설정을 확인하세요.",
       "notAllowed": "채팅 앱 연결은 아직 내 계정에 열리지 않았어요. 열릴 때까지 여기 앱을 계속 사용하세요.",
@@ -14582,6 +14675,7 @@
       "tooMany": "여기에 들어갈 수 있는 것보다 많아요. 일부를 빼고 다시 시도해 주세요.",
       "fillIn": "빠진 내용을 채우고 다시 시도해 주세요.",
       "checkAddress": "주소를 확인하고 다시 시도해 주세요.",
+      "privateNetwork": "이 주소는 사설 네트워크에 있어요. 공개 주소를 쓰거나, 직접 호스팅하는 서버라면 `OUTBOUND_ALLOW_CIDRS`로 허용해 주세요.",
       "tooLong": "너무 길어요. 줄이고 다시 시도해 주세요.",
       "updateComputerApp": "컴퓨터의 앱이 너무 오래됐어요. 업데이트하고 다시 시도해 주세요.",
       "computerUpdatesItself": "워크스페이스 컴퓨터가 이를 위해 스스로 업데이트돼요. 잠시 후 다시 시도하세요.",
@@ -14840,7 +14934,9 @@
       "sharingForbidden": "볼 수 있는 사람은 파일이 있는 대화의 사람만 바꿀 수 있어요.",
       "sharingEmpty": "볼 수 있는 사람을 선택하세요.",
       "sharingTooMany": "사람은 최대 {{max}}명, 역할은 최대 {{max}}개까지 선택할 수 있어요.",
-      "notInDrive": "이것은 대화 안에만 있어서 공유할 수 없어요."
+      "notInDrive": "이것은 대화 안에만 있어서 공유할 수 없어요.",
+      "viewOnly": "이 파일을 볼 수는 있지만 바꿀 수는 없어요. 파일을 만든 사람에게 편집 권한을 요청하세요.",
+      "accessInvalid": "이 접근 설정을 저장하지 못했어요. 누가 보고 누가 편집하는지 확인하고 다시 시도하세요."
     },
     "drive": {
       "folderIntoItself": "폴더를 자기 자신이나 그 안의 폴더로 옮길 수 없어요."
@@ -14872,6 +14968,7 @@
       "notLinkMaker": "링크를 만든 사람만 이 컴퓨터를 참여시킬 수 있어요.",
       "widenForbidden": "관리자는 다른 사람의 개인 기기를 쓸 수 있는 사람을 줄이는 것만 할 수 있어요.",
       "spillOwnerOnly": "이 컴퓨터에서 답장이 생각하도록 허용할 수 있는 사람은 컴퓨터를 연결한 사람뿐입니다. 끄는 것은 할 수 있어요.",
+      "tasksOwnerOnly": "이 컴퓨터가 동시에 실행하는 작업 수는 컴퓨터를 연결한 사람만 바꿀 수 있어요.",
       "notHome": "에이전트는 워크스페이스 컴퓨터에 있고, 이름을 부를 때 이 컴퓨터를 써요."
     },
     "machine": {
@@ -14934,7 +15031,9 @@
       "ownerOrAdmin": "에이전트 소유자나 관리자만 할 수 있어요.",
       "detailsHidden": "{{agentName}}에게 말할 수 있는 사람만 작동 방식을 볼 수 있어요.",
       "undoForbidden": "에이전트가 도와준 사람, 에이전트 소유자 또는 관리자만 되돌릴 수 있어요.",
-      "undoSkillsAdmins": "스킬 변경은 에이전트를 편집할 수 있는 사람만 되돌리거나 다시 할 수 있어요."
+      "undoSkillsAdmins": "스킬 변경은 에이전트를 편집할 수 있는 사람만 되돌리거나 다시 할 수 있어요.",
+      "ownerBoth": "소유자는 사람이나 역할 중 하나만 될 수 있어요. 하나를 선택하세요.",
+      "ownerRoleUnknown": "이 워크스페이스에 그 역할이 더 이상 없어요. 다른 소유자를 선택하세요."
     },
     "account": {
       "notRestorable": "이 계정은 더 이상 복원할 수 없어요.",
@@ -15356,6 +15455,9 @@
     "line": {
       "ready": "에이전트가 지금 사용할 수 있어요.",
       "busy_other": "작업 {{max}}개 중 {{count}}개 실행 중",
+      "tasksChange": "여기 동시 작업 수: {{max}}. 아래에서 바꿀 수 있어요.",
+      "tasksOwner": "여기 동시 작업 수: {{max}}. 연결한 사람이 바꿀 수 있어요.",
+      "tasksUpdate": "여기 동시 작업 수: {{max}}. 여기서 바꾸려면 그 컴퓨터의 앱을 업데이트하세요.",
       "offline": "에이전트는 다시 연결될 때까지 기다려요.",
       "offlineSeen": "마지막 확인 {{time}}. 에이전트는 다시 연결될 때까지 기다려요.",
       "offlineWithHost": "{{host}}이(가) 오프라인이에요. 에이전트는 다시 연결될 때까지 기다려요.",
@@ -15875,6 +15977,8 @@
       "none": "컴퓨터를 바꾼 에이전트가 없어요.",
       "resumed_other": "작업 {{count}}개를 다시 시작했어요",
       "stillWaiting_other": "{{count}}개가 아직 {{name}}을(를) 기다려요",
+      "planDropped": "{{name}}의 {{plan}} 플랜은 {{from}}에 로그인되어 있어요. {{to}}에서도 로그인하거나 {{from}}을 계속 사용하세요.",
+      "signIn": "{{name}}에서 로그인",
       "skipped": "{{name}}은(는) 그대로예요: {{reason}}",
       "skip": {
         "other": "지금은 바꿀 수 없어요",
@@ -16129,14 +16233,14 @@
       "write": "에이전트에게 작업 읽기 및 보내기",
       "writeHelp": "나를 대신해 메시지를 보내고 답장을 읽어요.",
       "manage": "에이전트, 루틴, 스킬 만들기 및 편집",
-      "manageHelp": "내 권한으로 에이전트, 루틴, 스킬, 메모리도 만들어요.",
+      "manageHelp": "내 권한으로 에이전트, 루틴, 스킬, 메모리를 만들고 Wiki 페이지도 작성해요.",
       "read": "읽기 전용",
-      "readHelp": "아무것도 보내지 않고 에이전트, 채널, 답장을 확인해요.",
+      "readHelp": "아무것도 보내지 않고 에이전트, 채널, Wiki 페이지, 답장을 확인해요.",
       "can": "할 수 있는 일",
-      "canSee": "내가 볼 수 있는 에이전트와 채널 보기.",
+      "canSee": "내가 볼 수 있는 에이전트, 채널, Wiki 페이지 보기.",
       "canSend": "{{app}} 경유 표시와 함께 나를 대신해 메시지 보내기.",
       "canRead": "답장과 에이전트가 하는 일 읽기.",
-      "canManage": "나를 대신해 에이전트, 루틴, 스킬 만들기 및 편집. 무엇을 만들었는지 알림을 받아요.",
+      "canManage": "나를 대신해 에이전트, 루틴, 스킬 만들기 및 편집. 무엇을 만들었는지 알림을 받아요. 나를 대신해 Wiki 페이지를 작성하고 휴지통으로 이동.",
       "never": "할 수 없는 일",
       "neverApprove": "에이전트의 작업 승인. 승인은 agentes.chat에서 사람이 해요.",
       "neverSettings": "설정, 멤버, 권한 변경.",
@@ -18693,6 +18797,13 @@
     "submit": "계정 삭제",
     "deleted": "계정은 {{date}}에 영구적으로 사라져요. 그 전에 로그인하면 복원할 수 있어요."
   },
+  "planMove": {
+    "warning": "요금제는 이 워크스페이스에 남고 더 이상 갱신되지 않아요. 먼저 다른 워크스페이스로 옮길까요?",
+    "deleting": "요금제가 함께 더 이상 갱신되지 않아요. 다른 워크스페이스로 옮길 수 있어요.",
+    "how": "같은 카드와 이미 결제한 기간이 그대로 옮겨가요. 다시 청구되지 않고 환불도 없어요.",
+    "button": "내 요금제를 {{name}}(으)로 옮기기",
+    "moving": "요금제를 {{name}}(으)로 옮기는 중이에요. 1분 정도 걸려요."
+  },
   "billing": {
     "open": "요금제 및 결제 열기",
     "opening": "여는 중…",
@@ -19831,23 +19942,15 @@
   "share": {
     "button": "공유",
     "title": "{{name}} 공유",
-    "conversation": "대화만",
-    "people": "선택한 사람과 역할",
-    "peoplePersonal": "선택한 사람",
     "everyone": "워크스페이스 전체",
     "everyonePersonal": "여기 있는 모든 사람",
     "whereDm": "{{name}}와(과)의 다이렉트 메시지",
     "whereDmGone": "다이렉트 메시지",
     "whereDmBetween": "{{names}} 사이의 다이렉트 메시지",
     "whereChannel": "#{{name}} 멤버",
-    "add": "사람 또는 역할 추가",
-    "addPersonal": "사람 추가",
-    "addSearch": "사람과 역할 검색",
-    "addSearchPersonal": "사람 검색",
     "noResults": "그 이름을 가진 사람이 없어요",
     "groupPeople": "사람",
     "groupRoles": "역할",
-    "access": "접근할 수 있는 사람",
     "you": "{{name}} (나)",
     "agent": "에이전트",
     "role": "역할",
@@ -19856,28 +19959,36 @@
     "adminsPersonal": "여기를 관리하는 사람도 볼 수 있어요.",
     "copyLink": "링크 복사",
     "copied": "링크를 복사했어요.",
-    "done": "완료",
     "onlyHere": "이 대화에 없는 사람은 링크를 열 수 없어요.",
-    "choosePeople": "사람 선택",
     "readOnly": "볼 수 있는 사람은 대화에 있는 사람만 바꿀 수 있어요.",
-    "open": "워크스페이스 전체가 이 파일을 볼 수 있어요.",
-    "openPersonal": "여기 있는 모든 사람이 이 파일을 볼 수 있어요.",
-    "savedEveryone": "이제 워크스페이스 전체가 파일을 볼 수 있어요.",
-    "savedEveryonePersonal": "이제 여기 있는 모든 사람이 파일을 볼 수 있어요.",
-    "savedPeople": "이제 선택한 사람들이 파일을 볼 수 있어요.",
-    "savedConversation": "이제 대화에 있는 사람만 파일을 볼 수 있어요.",
-    "onlyYou": "나만",
-    "onlyMaker": "{{name}}만",
     "onlyYouLink": "이 링크는 나만 열 수 있어요.",
     "onlyMakerLink": "이 링크는 {{name}}만 열 수 있어요.",
     "readOnlyDrive": "볼 수 있는 사람은 파일을 만든 사람과 관리자만 바꿀 수 있어요.",
-    "savedOnlyYou": "이제 나만 파일을 볼 수 있어요.",
-    "savedOnlyMaker": "이제 {{name}}만 파일을 볼 수 있어요.",
-    "undo": "실행 취소",
     "fileRef": "파일 {{title}}",
     "fileRefNone": "접근할 수 없는 파일",
     "also": "{{text}}. {{who}}와(과)도 공유했어요.",
-    "someOnlyHere": "이 링크 중 일부는 이미 파일을 볼 수 있는 사람만 열 수 있어요."
+    "someOnlyHere": "이 링크 중 일부는 이미 파일을 볼 수 있는 사람만 열 수 있어요.",
+    "level": {
+      "none": "접근 안 함",
+      "view": "보기",
+      "edit": "편집"
+    },
+    "levelOf": "{{name}}이(가) 할 수 있는 일",
+    "madeIt": "파일을 만듦",
+    "placeText": "파일이 있는 곳",
+    "everyoneText": "이 워크스페이스의 누구나",
+    "everyoneTextPersonal": "여기 있는 누구나",
+    "agentsAll": "모든 에이전트",
+    "agentsAllText": "워크스페이스의 어떤 에이전트든",
+    "agentsHere": "이 대화의 에이전트",
+    "agentsHereText": "파일이 있는 곳의 에이전트",
+    "addAll": "사람, 역할 또는 에이전트 추가",
+    "addAllPersonal": "사람 또는 에이전트 추가",
+    "addAllSearch": "사람, 역할, 에이전트 검색",
+    "addAllSearchPersonal": "사람과 에이전트 검색",
+    "groupAgents": "에이전트",
+    "addRow": "추가",
+    "saved": "접근 권한을 저장했어요."
   },
   "linkErrors": {
     "signIn": {
@@ -20187,7 +20298,7 @@
     "mark": "Beta",
     "open": "피드백 보내기",
     "ask": "무엇이 부족했거나, 고장 났거나, 불편했나요?",
-    "goesCloud": "작성한 내용은 이메일로 agentes.chat 팀에 전달돼요.",
+    "goesCloud": "작성한 내용은 이메일로 agentes.chat 팀에 전달되며, 팀이 내용을 살펴볼 때 AI 어시스턴트를 사용할 수 있어요.",
     "goesServer": "작성한 내용은 이메일로 이 서버를 운영하는 사람에게 전달돼요.",
     "placeholder": "편하게 적어 주세요",
     "report": "여기서 문제 신고",
@@ -20625,6 +20736,9 @@
         "inTrash": "휴지통에 있어요. 바꾸려면 복원하세요.",
         "closing": "워크스페이스가 삭제되고 있어요. 파일은 읽기만 할 수 있어요."
       },
+      "requestEdit": "편집 요청",
+      "requestEditText": "이 파일을 편집할 수 있게 권한을 주실 수 있나요?",
+      "requestEditAnyone": "이 파일을 편집할 수 있게 권한을 주실 분 있나요?",
       "present": "발표",
       "download": "다운로드",
       "formats": {
@@ -20762,25 +20876,36 @@
         "spreadsheet": "스프레드시트 대화",
         "slides": "프레젠테이션 대화",
         "document": "문서 대화",
-        "file": "파일 대화"
+        "file": "파일 대화",
+        "image": "이미지 대화",
+        "video": "동영상 대화",
+        "pdf": "PDF 대화"
       },
       "placeholder": {
         "canvas": "이 캔버스에 대해 써 보세요 · @로 에이전트 부르기",
         "spreadsheet": "이 스프레드시트에 대해 써 보세요 · @로 에이전트 부르기",
         "slides": "이 프레젠테이션에 대해 써 보세요 · @로 에이전트 부르기",
         "document": "이 문서에 대해 써 보세요 · @로 에이전트 부르기",
-        "file": "이 파일에 대해 써 보세요 · @로 에이전트 부르기"
+        "file": "이 파일에 대해 써 보세요 · @로 에이전트 부르기",
+        "image": "이 이미지에 대해 써 보세요 · @로 에이전트 부르기",
+        "video": "이 동영상에 대해 써 보세요 · @로 에이전트 부르기",
+        "pdf": "이 PDF에 대해 써 보세요 · @로 에이전트 부르기"
       },
       "this": {
         "canvas": "이 캔버스",
         "spreadsheet": "이 스프레드시트",
         "slides": "이 프레젠테이션",
-        "document": "이 문서"
+        "document": "이 문서",
+        "image": "이 이미지",
+        "video": "이 동영상",
+        "pdf": "이 PDF"
       },
       "origin": {
         "from": "<0>{{name}}</0>이(가) <1>{{place}}</1>에서 {{what}}을(를) 만들었어요",
         "made": "<0>{{name}}</0>이(가) {{what}}을(를) 만들었어요",
-        "imported": "{{name}}이(가) <1>{{file}}</1>에서 가져왔어요"
+        "imported": "{{name}}이(가) <1>{{file}}</1>에서 가져왔어요",
+        "sentIn": "<0>{{name}}</0>이(가) <1>{{place}}</1>에서 {{what}}을(를) 보냈어요",
+        "sent": "<0>{{name}}</0>이(가) {{what}}을(를) 보냈어요"
       },
       "about": {
         "range": "{{sheet}}의 {{range}}에 대해",
@@ -20788,7 +20913,26 @@
         "canvas": "캔버스의 {{label}}에 대해",
         "text": "선택한 텍스트에 대해",
         "point": "캔버스의 한 지점에 대해",
-        "other": "{{label}}에 대해"
+        "other": "{{label}}에 대해",
+        "imageArea": "이미지의 영역 {{n}}에 대해",
+        "imagePoint": "이미지의 지점 {{n}}에 대해",
+        "videoAt": "동영상의 {{time}} 장면에 대해",
+        "pdfPage": "PDF {{page}}페이지에 대해",
+        "image": "이미지에 대해",
+        "video": "동영상에 대해",
+        "pdf": "PDF에 대해"
+      },
+      "what": {
+        "area": "영역 {{n}}",
+        "point": "지점 {{n}}",
+        "anArea": "한 영역",
+        "aPoint": "한 지점",
+        "page": "{{page}}페이지"
+      },
+      "where": {
+        "image": "이미지에서",
+        "video": "동영상에서",
+        "pdf": "PDF에서"
       },
       "drop": "선택 영역 보내지 않기",
       "aboutLine": "파일에서 {{what}}({{where}}) 보기",

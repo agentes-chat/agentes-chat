@@ -169,6 +169,7 @@ export const featureKeysEn = {
     forwards: "Forwards “{{subject}}”",
     forwardsFrom: "Forwards “{{subject}}”, from {{from}}",
     onlyOwner: "Only {{name}} or an admin can decide.",
+    onlyOwnerRole: "Only whoever holds {{role}} or an admin can decide.",
     onlyAdmins: "Only an admin can decide.",
     notFound: "This request no longer exists or you can't see it.",
     trait: {
@@ -202,6 +203,8 @@ export const featureKeysEn = {
     recent: "Recent",
     /** Under Recentes' first rows: the whole list. */
     seeAll: "See all chats",
+    /** On a large screen (the iPhone Duo open), where the open chat stands beside the list while there is none yet. */
+    splitEmpty: "Your chats open here.",
     wait: {
       verb: {
         approval: "needs your ok",
@@ -801,9 +804,13 @@ export const featureKeysEn = {
       missions: "Missions",
       threads: "Threads",
     },
+    /** On a large screen (the iPhone Duo open), where the open thread stands beside the list while there is none yet. */
+    splitEmpty: "Your threads open here.",
   },
   agents: {
     title: "Agents",
+    /** On a large screen (the iPhone Duo open), where an agent's page stands beside the list while the team has none. */
+    splitEmpty: "Your agents' pages open here.",
     subtitle_one: "{{count}} on the team · {{working}} working",
     subtitle_other: "{{count}} on the team · {{working}} working",
     free: "Free",
@@ -1167,6 +1174,10 @@ export const featureKeysEn = {
     notificationsOnHint: "They also arrive in the browser and the desktop app, if they're on there.",
     notificationsOffHint: "Turn them on to get notifications here. The kinds below apply to all your devices.",
     notificationsKindsHint: "Activity keeps everything. This applies to this workspace, on all your devices.",
+    /** The switch for the agents' Live Activity (the iPhone's Dynamic Island and Lock Screen, ADR 0210). */
+    liveActivity: "Agents in the Dynamic Island",
+    liveActivityHint:
+      "When an agent works on something you asked for, it shows at the top of the screen, in any app, and on the Lock Screen. With the app closed, it needs iOS 17.2 or later.",
     version: "agentes.chat · version {{version}}",
     /** The bar's word on Você: it opens Conta. */
     edit: "Edit",
@@ -1322,6 +1333,20 @@ export const featureKeysEn = {
       open: "Open",
       /** A video this phone can't play, in the viewer: it can still be sent, shared or opened in the Drive. */
       cantPlay: "This video can't play on this phone.",
+    },
+    /**
+     * A file's conversation in the sheet over it (ADR 0208): what a tap on the file does while the sheet is up, the
+     * video's tap target, a PDF's page, and a PDF that couldn't be drawn.
+     */
+    talk: {
+      hint: {
+        image: "Tap where you want to comment",
+        video: "Tap the video to comment on this moment",
+        pdf: "Tap the page to mark a point",
+      },
+      markVideo: "Comment on this moment of the video",
+      pdfPage: "Page {{page}} of {{count}}",
+      pdfFailed: "Couldn't show this PDF.",
     },
   },
   issues: {
@@ -1643,6 +1668,7 @@ export const featureKeysEn = {
       ruleBody_female: "{{name}} stops following this rule. Whoever gave the rule can give the same one again.",
       ruleRemove: "Remove",
       footOwner: "Only {{name}} or an admin can correct these.",
+      footOwnerRole: "Only whoever holds {{role}} or an admin can correct these.",
       footAdmins: "Only an admin can correct these.",
       emptyF: "{{name}} hasn't saved anything about you yet.",
       emptyM: "{{name}} hasn't saved anything about you yet.",
@@ -1685,6 +1711,8 @@ export const featureKeysEn = {
       },
       asksYou: "Merging and publishing ask for your approval, unless the agent never asks.",
       asksOwner: "Merging and publishing ask for {{name}}'s approval, unless the agent never asks.",
+      asksOwnerRole:
+        "Merging and publishing ask for approval from whoever holds {{role}}, unless the agent never asks.",
       asksAdmins: "Merging and publishing ask for an admin's approval, unless the agent never asks.",
       empty: "For now, only conversation.",
     },

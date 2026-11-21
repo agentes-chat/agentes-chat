@@ -28,9 +28,9 @@ import {
 } from "@agenteschat/db";
 import { appLocale } from "@agenteschat/i18n/locale";
 import { getAgent, workspaceHomeId } from "./agents";
-import { listsAgentSql, managesAgent, managesAgentSql, REACH_COLUMNS } from "./audience";
+import { agentOwnerIds, listsAgentSql, managesAgent, managesAgentSql, ownsAgent, REACH_COLUMNS } from "./audience";
 import { type AuditEntry, recordAudit } from "./audit";
-import { isSandboxedBrain } from "./brains/types";
+import { isComputerBrain, isSandboxedBrain } from "./brains/types";
 import { caches } from "./cache";
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { publishOrgEvent } from "./events";
@@ -447,7 +447,7 @@ export async function computerDriving(db: Database, userId: string, orgId: strin
     userId,
     admin: can(membership, "control_computers"),
     own: can(membership, "own_computers"),
-    owner: agent.ownerUserId === userId,
+    owner: ownsAgent(agent, userId, membership.roleIds),
     manages: managesAgent(agent, userId, membership),
     browsers: can(membership, "control_browsers"),
   };
@@ -472,7 +472,8 @@ export async function computerDrivers(db: Database, orgId: string, agentId: stri
   const [agent] = await db
     .select({
       machineId: agents.machineId,
-      owner: agents.ownerUserId,
+      ownerUserId: agents.ownerUserId,
+      ownerRoleId: agents.ownerRoleId,
       brain: agents.brain,
       account: agents.brainAccountId,
       builtin: agents.builtin,
@@ -484,7 +485,9 @@ export async function computerDrivers(db: Database, orgId: string, agentId: stri
   const machine = machineId ? await getMachine(db, orgId, machineId) : null;
   if (!agent || !machine) return [];
   const signIn = !home && lentAccount(agent) !== null;
-  const named = [agent.owner, machine.pairedByUserId].filter((id): id is string => !!id);
+  // Its owner, or whoever holds its owner role now (ADR 0085, addendum of 2026-11-21), as `computerDriving` reads it.
+  const owners = await agentOwnerIds(db, orgId, agent);
+  const named = [...owners, machine.pairedByUserId].filter((id): id is string => !!id);
   // Who may drive it (`control_computers`, `own_computers`, ADR 0085), read once per member, and the people named above;
   // `manages`: who manages this agent (`managesAgentSql`, ADR 0085 addendum of 2026-11-17).
   const everyone = await db
@@ -500,9 +503,10 @@ export async function computerDrivers(db: Database, orgId: string, agentId: stri
     .orderBy(organizationMembers.createdAt);
   const members = everyone.filter((m) => m.admin || named.includes(m.userId));
   const drivers = members
-    .filter((m) => drivesComputer(machine, { ...m, owner: m.userId === agent.owner }, signIn))
+    .filter((m) => drivesComputer(machine, { ...m, owner: owners.includes(m.userId) }, signIn))
     .map((m) => m.userId);
-  return agent.owner && drivers.includes(agent.owner) ? [agent.owner] : drivers;
+  const ownersDriving = drivers.filter((id) => owners.includes(id));
+  return ownersDriving.length > 0 ? ownersDriving : drivers;
 }
 
 /**
@@ -673,7 +677,12 @@ export async function machineView(db: Database, actorId: string, orgId: string, 
   return view;
 }
 
+/** Its size as stored, with a new task limit (`TASK_LIMIT_PROTOCOL`); a row with no size yet keeps none. */
+export const withTaskLimit = (maxTasks: number) =>
+  sql`jsonb_set(${machines.size}, '{maxTasks}', to_jsonb(${maxTasks}::int))`;
+
 /** `machine.updated` to every member: what changed (no access details: those are for admins and the pairer). */
+
 export async function publishMachineUpdated(
   pubsub: PubSub | undefined,
   orgId: string,
@@ -1037,7 +1046,7 @@ export async function setAgentComputerTarget(
   machineId: string | null,
   /** false: the caller moves its waiting runs itself (`moveAgentsFromMachine`), or `setAgentBrain` follows. */
   options: { wakeWaits?: boolean } = {},
-): Promise<ComputerTarget> {
+): Promise<ComputerTarget & { planDropped?: PlanDropped }> {
   const membership = await requirePermission(deps.db, actorId, orgId, "read");
   const agent = await getAgent(deps.db, orgId, agentId);
   if (!agent || agent.archivedAt) throw new NotFoundError("Agent not found");
@@ -1052,7 +1061,7 @@ export async function setAgentComputerTarget(
     );
   }
   if (!admin) {
-    if (agent.ownerUserId !== actorId) {
+    if (!ownsAgent(agent, actorId, membership.roleIds)) {
       throw new ForbiddenError("Only an admin or the agent's owner can choose its computer", "machine.forbidden");
     }
     // The workspace's own computers (managed, host) are nobody's: any agent of the workspace may use them.
@@ -1064,12 +1073,14 @@ export async function setAgentComputerTarget(
     }
   }
   const moved = (machine?.id ?? null) !== agent.machineId;
+  // An account is a folder on one computer (ADR 0041): on another computer the agent takes the same person's sign-in
+  // of the same plan there, else none, and the move says the plan stayed behind.
+  const plan = moved && agent.brainAccountId ? await planOnComputer(deps.db, orgId, agent, machine?.id ?? null) : null;
   await deps.db
     .update(agents)
     .set({
       machineId: machine?.id ?? null,
-      // An account is a folder on one computer (ADR 0041): another computer starts on its own sign-in.
-      ...(moved ? { brainAccountId: null } : {}),
+      ...(moved ? { brainAccountId: plan?.accountId ?? null } : {}),
       updatedAt: new Date(),
     })
     .where(and(eq(agents.orgId, orgId), eq(agents.id, agentId)));
@@ -1097,5 +1108,56 @@ export async function setAgentComputerTarget(
     const { wakeAgentsBrainWaits } = await import("./usage-pause");
     await wakeAgentsBrainWaits(deps, orgId, [agentId], { delayMs: TARGET_WAKE_DELAY_MS });
   }
-  return target;
+  return plan?.dropped && isComputerBrain(agent.brain) ? { ...target, planDropped: plan.dropped } : target;
+}
+
+/** An agent's plan that stayed on the computer it left: its kind, and a coding plan's provider. */
+export interface PlanDropped {
+  kind: string;
+  provider: string | null;
+}
+
+/**
+ * The account an agent moving to `machineId` keeps thinking with: one on that computer of the same kind and provider,
+ * signed in by the same person, active, and free for it (shared, or no other agent's). None: `dropped` says which.
+ */
+async function planOnComputer(
+  db: Database,
+  orgId: string,
+  agent: { id: string; brainAccountId: string | null },
+  machineId: string | null,
+): Promise<{ accountId: string | null; dropped?: PlanDropped }> {
+  const ma = schema.machineAccounts;
+  const [old] = agent.brainAccountId
+    ? await db
+        .select({ kind: ma.kind, provider: ma.provider, createdBy: ma.createdBy })
+        .from(ma)
+        .where(and(eq(ma.orgId, orgId), eq(ma.id, agent.brainAccountId)))
+    : [];
+  if (!old) return { accountId: null };
+  const [same] =
+    machineId && old.createdBy
+      ? await db
+          .select({ id: ma.id })
+          .from(ma)
+          .where(
+            and(
+              eq(ma.orgId, orgId),
+              eq(ma.machineId, machineId),
+              eq(ma.kind, old.kind),
+              sql`${ma.provider} is not distinct from ${old.provider}`,
+              eq(ma.createdBy, old.createdBy),
+              eq(ma.status, "active"),
+              or(
+                eq(ma.shared, true),
+                sql`not exists (select 1 from ${agents} a where a.org_id = ${ma.orgId} and a.brain_account_id = ${ma.id}
+                      and a.archived_at is null and a.id <> ${agent.id})`,
+              ),
+            ),
+          )
+          .orderBy(sql`${ma.lastUsedAt} desc nulls last`)
+          .limit(1)
+      : [];
+  if (same) return { accountId: same.id };
+  return { accountId: null, ...(machineId ? { dropped: { kind: old.kind, provider: old.provider } } : {}) };
 }

@@ -1097,11 +1097,87 @@ html:not([data-pointer]) .sidebar__user:focus-visible {
   display: flex;
 }
 .channel__col {
+  position: relative;
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
 }
+.channel__file-drop {
+  position: absolute;
+  z-index: 5;
+  inset: var(--space-2);
+  display: grid;
+  place-items: center;
+  padding: var(--space-6);
+  border: 1px dashed var(--info);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--bg) 81%, transparent);
+  color: var(--ink);
+  pointer-events: none;
+}
+.channel__file-drop-card {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  width: min(100%, 320px);
+  padding: var(--space-6);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--raised);
+  box-shadow: var(--e3), var(--top);
+  text-align: center;
+}
+.channel__file-drop-card strong {
+  font-family: var(--font-display);
+  font-weight: var(--font-display-weight, 500);
+  font-size: 23px;
+  letter-spacing: -0.025em;
+}
+.channel__file-drop-card > span:last-child {
+  max-width: 28ch;
+  color: var(--ink-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.channel__file-drop-icon {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  margin-bottom: var(--space-1);
+  border-radius: 17px;
+  background: color-mix(in srgb, var(--info) 15%, var(--raised));
+  color: var(--info);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .channel__file-drop {
+    animation: chat-drop-veil 160ms ease-out both;
+  }
+  .channel__file-drop-card {
+    animation: chat-drop-card 240ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  }
+  .channel__file-drop-icon .ac-icon {
+    animation: chat-drop-arrow 1.35s ease-in-out 160ms infinite;
+  }
+}
+@keyframes chat-drop-veil {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes chat-drop-card {
+  from {
+    opacity: 0;
+    transform: translateY(9px) scale(0.96);
+  }
+}
+@keyframes chat-drop-arrow {
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
 .channel__messages {
   flex: 1;
   min-height: 0;
@@ -1925,7 +2001,7 @@ html:not([data-pointer]) .artifact-tile__open:focus-visible {
   overflow: hidden;
   color: var(--ink2);
   -webkit-mask-image: linear-gradient(#000 60%, transparent);
-  mask-image: linear-gradient(#000 60%, transparent);
+  mask-image: linear-gradient(#000 40%, transparent calc(100% - 1.25em));
 }
 .artifact-tile__code {
   font-family: var(--font-mono);
@@ -1984,6 +2060,33 @@ html:not([data-pointer]) .artifact-tile__open:focus-visible {
 .artifact-tile__cover .artifact-diagram--compact img {
   max-width: 100%;
   max-height: calc(var(--tile-cover) - 16px);
+}
+/* A PDF's first page (`PdfCover`): the type's cover until it is drawn, then on a tile the page's top across it, on
+   its own white. */
+.pdf-cover {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+.pdf-cover canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  width: 100%;
+  height: auto;
+  opacity: 0;
+}
+.pdf-cover[data-drawn] canvas {
+  opacity: 1;
+}
+.artifact-tile__cover .pdf-cover[data-drawn] {
+  background: #fff;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .pdf-cover[data-drawn] canvas {
+    transition: opacity 200ms var(--out);
+  }
 }
 /* A picture fills its cover. */
 .artifact-tile__picture {
@@ -2957,6 +3060,18 @@ html:not([data-pointer]) .artifact-table__sort:focus-visible {
     0 10px 24px -14px rgba(0, 0, 0, 0.25);
   color: var(--ink2);
 }
+/* A PDF's first page drawn where its sheet stands. */
+.drive-pv .pdf-cover canvas {
+  top: 10%;
+  left: 16%;
+  width: 68%;
+  border-radius: 2.6cqw 2.6cqw 0 0;
+  background: #fff;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    0 0 0 1px var(--line),
+    0 10px 24px -14px rgba(0, 0, 0, 0.25);
+}
 .drive-pv__paper {
   left: 16%;
   right: 16%;
@@ -3586,12 +3701,17 @@ html:not([data-pointer]) .channel-ref:focus-visible {
   overflow-wrap: break-word;
 }
 .id-ref > .ac-icon,
-.file-ref > .ac-icon {
+.file-ref > .ac-icon,
+.account-ref > .ac-brand {
   position: absolute;
   top: 0.27em;
   left: 3px;
   width: 1em;
   height: 1em;
+}
+.account-ref > .ac-brand svg {
+  width: 100%;
+  height: 100%;
 }
 /* A known service's address (LinkPill): the #channel pill, led by the service's logo. Its words wrap like the ones around
    it, so a long repository or title never pushes past a narrow bubble; `break-word`, not `anywhere`, which would let a
@@ -3636,15 +3756,26 @@ html:not([data-pointer]) .channel-ref:focus-visible {
   overflow: hidden;
 }
 .folded-body__text[data-cut] {
-  mask-image: linear-gradient(#000 60%, transparent);
+  mask-image: linear-gradient(#000 40%, transparent calc(100% - 1.25em));
 }
 .folded-body__more {
   margin-top: 2px;
   font-size: 13px;
+  text-decoration-color: transparent;
+}
+.msg-clip__more > .ac-icon,
+.folded-body__more > .ac-icon {
+  margin-inline-start: 2px;
+}
+.folded-body__text[data-cut] + .folded-body__more {
+  position: relative;
+  margin-top: -1.25em;
 }
 /*
  * A tall message in a conversation (ClippedBody): whole up to `LONG_MESSAGE.over`, past it only its first
- * `LONG_MESSAGE.shows`, fading out, with "Ver mais" under it, which opens it in place. The limits sit on the words'
+ * `LONG_MESSAGE.shows`, fading out, with "Ver mais" over the fade's last line, which opens it in place. A mask, not a
+ * gradient painted over the words: it fades into whatever is behind them (either theme, a row's hover or highlight, a
+ * DM's tinted bubble). The limits sit on the words'
  * own root, so the bubble still reads them as its direct child. `clip`, not `hidden`: the browser's find must not
  * scroll the words inside their box. Only a cut message is clipped: one that shows whole keeps whatever reaches past
  * its lines.
@@ -3652,14 +3783,23 @@ html:not([data-pointer]) .channel-ref:focus-visible {
 .msg-clip--cut {
   max-height: 360px;
   overflow-y: clip;
-  -webkit-mask-image: linear-gradient(#000 calc(100% - 96px), transparent);
-  mask-image: linear-gradient(#000 calc(100% - 96px), transparent);
+  -webkit-mask-image: linear-gradient(#000 calc(100% - 128px), transparent calc(100% - 20px));
+  mask-image: linear-gradient(#000 calc(100% - 128px), transparent calc(100% - 20px));
 }
 .msg-clip__more {
   display: inline-block;
   margin-top: var(--space-1);
   font-size: var(--text-sm);
   color: inherit;
+  text-decoration-color: transparent;
+}
+/* Over the fade's clear end: the words show continuing right above it. */
+.msg-clip--cut + .msg-clip__foot {
+  position: relative;
+  margin-top: -20px;
+}
+.msg-clip--cut + .msg-clip__foot .msg-clip__more {
+  margin-top: 0;
 }
 .channel-card__head {
   display: flex;
@@ -3679,6 +3819,12 @@ html:not([data-pointer]) .channel-ref:focus-visible {
 }
 .channel-card__facts {
   margin: 0;
+  overflow-wrap: anywhere;
+}
+/* An account's name can be one long run (a hyphenated team name): it breaks at its hyphens and syllables, not mid-letter. */
+.account-card .profile-card__name {
+  overflow-wrap: anywhere;
+  hyphens: auto;
 }
 
 /* "Ada não está no canal" after an @ pick */
@@ -6148,16 +6294,16 @@ html:not([data-pointer]) .tr-ok:focus-visible {
 .channel__composer-skeleton-line {
   display: block;
   flex: 1;
-  min-height: var(--control-h-sm);
-  padding: calc((var(--control-h-sm) - 22px) / 2) var(--space-2);
-  line-height: 22px;
+  min-height: var(--composer-row);
+  padding: calc((var(--composer-row) - var(--composer-line)) / 2) var(--space-2);
+  line-height: var(--composer-line);
 }
 .channel__composer-skeleton-line::before {
   content: "\a0";
 }
 .channel__composer-skeleton-send.ac-skeleton {
-  width: var(--control-h-sm);
-  height: var(--control-h-sm);
+  width: var(--composer-row);
+  height: var(--composer-row);
   margin-left: auto;
   border-radius: var(--control-r-sm);
 }
@@ -6172,20 +6318,6 @@ html:not([data-pointer]) .tr-ok:focus-visible {
 }
 .channel__skeleton-meta {
   height: 18px;
-}
-@media (prefers-reduced-motion: no-preference) {
-  .channel__messages[data-fresh] .ac-msg,
-  .channel__messages[data-fresh] .ac-divider {
-    animation: content-in 240ms ease-out both;
-  }
-}
-@keyframes content-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
 }
 .sidebar__item--skeleton {
   pointer-events: none;
@@ -6207,24 +6339,14 @@ html:not([data-pointer]) .tr-ok:focus-visible {
 }
 
 /*
- * Route transitions: only the main column moves (opacity + 4 px), 160 ms, as each page's main mounts.
- * No View Transitions: the browser freezes the whole page while the new one renders, so the
- * sidebar's sliding pill stopped halfway and jumped. Nothing moves with prefers-reduced-motion.
+ * Route changes and data landing after a skeleton show the page at once, with no fade: a fade on every navigation
+ * reads as the app being slow. No View Transitions either: the browser freezes the whole page while the next one renders.
+ * The page stays the containing block and stacking context its old entrance (a filled transform animation) made it,
+ * which overlays and bars inside pages were laid out against.
  */
 @media (prefers-reduced-motion: no-preference) {
-  /* A thread opening in the side panel has its own entrance; a view taking over from its own skeleton is already in. */
   .shell__main:not(.thread-panel__chat, [data-continues]) {
-    animation: page-in 160ms ease-out both;
-  }
-}
-@keyframes page-in {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
+    will-change: transform;
   }
 }
 /* "Carregando mensagens anteriores…": floats over the top, takes no space (no jump). */
@@ -8335,6 +8457,10 @@ html:not([data-pointer]) .izoom__stage:focus-visible {
   .izoom__actual {
     display: none;
   }
+  /* More on the bar (a file's resolved comments, ADR 0208): Ajustar goes too, a tap fits the picture back. */
+  .izoom[data-tools] .izoom__fit {
+    display: none;
+  }
 }
 /* "Loading…" only when a picture takes a moment: moving to one already here shows no flash of it (with reduced
    motion it shows at once). The zoom bar comes with the picture (no "100%" while its bytes are on the way). */
@@ -8402,6 +8528,12 @@ html:not([data-pointer]) .izoom__stage:focus-visible {
   border: 0;
   border-radius: var(--radius-sm);
   background: var(--surface-raised);
+}
+/* A Markdown file, drawn as a document at a reading width. */
+.file-view__doc {
+  max-width: 72ch;
+  margin: 0 auto;
+  overflow-wrap: anywhere;
 }
 .file-view__text {
   max-height: 60vh;
@@ -9595,6 +9727,12 @@ html:not([data-pointer]) .onb__step:focus-visible {
   width: var(--option-face);
   height: var(--option-face);
 }
+/* A role picked as "Owner" (ADR 0085, addendum of 2026-11-21): its 20px mark in the trigger keeps its own
+   icon size, not the 16px the trigger gives a bare icon. */
+.ac-select__lead > .ac-rolemark .ac-icon {
+  width: 12px;
+  height: 12px;
+}
 /* The role step: "Do zero" first (its Função field right under it, one card's gap apart), then the groups of presets
    under small headings. */
 .newag__role-groups {
@@ -9939,8 +10077,10 @@ html:not([data-pointer]) .newag__addrow:focus-visible {
   text-align: start;
   text-decoration: none;
   cursor: pointer;
-  /* Where its words and where it goes don't fit one line, the second goes under, whole. */
+  /* Where its words and where it goes don't fit one line, the second goes under, whole. Its icon leads its words by
+     the kit's icon gap. */
   flex-wrap: wrap;
+  column-gap: var(--icon-gap);
   row-gap: var(--space-1);
   transition:
     background-color var(--dur-base) var(--out),
@@ -10466,6 +10606,16 @@ html:not([data-pointer]) .agp-cell:focus-visible {
 .agp-cell__key:has(> .ac-brand) {
   background: none;
   box-shadow: none;
+}
+/* A role that answers for the agent (ADR 0085, addendum of 2026-11-21) brings its own circle: its 18px mark, icon 11px,
+   where a person's face goes. */
+.agp-cell__key:has(> .ac-rolemark) {
+  background: none;
+  box-shadow: none;
+}
+.agp-cell__key > .ac-rolemark .ac-icon {
+  width: 11px;
+  height: 11px;
 }
 .agp-cell__key .ac-brand--sm {
   border-radius: inherit;

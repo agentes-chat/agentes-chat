@@ -61,6 +61,7 @@ import {
 import { ConnectorIcon, IconTile } from "../connectors/ConnectorIcon";
 import { useColors, useOrgId } from "../shared/hooks";
 import { MONO, tapHaptic } from "../shared/parts";
+import { AccountSwitchLine } from "./AccountRef";
 import { CodeCard } from "./CodeCard";
 import { keepOpen, keptOpen } from "./kept-sizes";
 import { useMessageCardCorners } from "./look";
@@ -751,7 +752,12 @@ export function SavedTools({
       )
     : null;
   const items = work ? toolItemsSaved(work) : [];
-  const blockItems = blockItemsOf(items, t, i18n.language, logo);
+  const switched = run.data?.run?.accountSwitch;
+  // It went on with another account: said here, never in the chat.
+  const blockItems: BlockItem[] = [
+    ...(switched ? [{ kind: "note" as const, key: "account", node: <AccountSwitchLine move={switched} /> }] : []),
+    ...blockItemsOf(items, t, i18n.language, logo),
+  ];
   // Nothing more to show than the message does: no tools (lookups and reactions aren't counted), or only the ones
   // its own cards show (where it browsed).
   const shown = compact ? workSteps(compact, onCard) : 0;

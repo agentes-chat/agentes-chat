@@ -38,6 +38,12 @@ export interface DatabaseHandle {
   /** The postgres.js client, for LISTEN/NOTIFY (see `@agenteschat/adapters`); null on PGlite (one process). */
   client: postgres.Sql | null;
   /**
+   * A new postgres.js client for the pub/sub's LISTEN alone; null on PGlite. postgres.js keeps one LISTEN connection per
+   * client for good, and one that died without closing (a dropped network path) hangs every LISTEN and UNLISTEN sent on
+   * it until the OS gives up, minutes later. A client of its own can be ended and made again (`postgresJsNotifier`).
+   */
+  listenClient: (() => postgres.Sql) | null;
+  /**
    * Applies pending migrations, after checking that the applied ones are
    * exactly this build's (`assertMigrationsMatch`). Processes booting
    * together (the app and its workers) take turns on an advisory lock
@@ -98,6 +104,9 @@ export function createDatabase(options: DatabaseOptions): DatabaseHandle {
   return {
     db: db as unknown as Database,
     client,
+    // Its LISTEN connection is never closed for its age or idleness (postgres.js spares it): only the pub/sub ends it,
+    // when its own heartbeat stops coming back.
+    listenClient: () => postgres(options.url, { max: 1, max_lifetime: null, onnotice: () => {} }),
     migrate: async () => {
       // On a connection of its own: with a pool of one, the migrations need that one. Never closed for its age, as
       // postgres.js closes an idle connection after 30 to 60 minutes: the lock is its session's, and a migration that
@@ -144,6 +153,7 @@ function createPgliteDatabase(folder: string): DatabaseHandle {
   return {
     db: db as unknown as Database,
     client: null,
+    listenClient: null,
     migrate: async () => {
       await ready;
       await assertMigrationsMatch(db as unknown as Database, migrationsFolder);

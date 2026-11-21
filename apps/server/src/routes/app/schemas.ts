@@ -28,7 +28,8 @@ export const AudienceChoice = z
 
 /**
  * What a person had selected in a live file (ADR 0196 §6, ADR 0199): a sheet's range, a slide, canvas shapes, a
- * canvas comment's pin (world units), a document's quoted words and block.
+ * canvas comment's pin (world units), a document's quoted words and block; on a picture, a video or a PDF (ADR 0208)
+ * the comment's mark, moment, page, the version it was made on and the app's two pictures of it.
  */
 export const LiveSelection = z
   .object({
@@ -47,6 +48,23 @@ export const LiveSelection = z
       .optional()
       .openapi({ description: "A document's quoted words (kept to 200 characters)." }),
     block: z.string().max(64).optional().openapi({ description: "A document's block id." }),
+    mark: z
+      .object({
+        x: z.number().min(0).max(1),
+        y: z.number().min(0).max(1),
+        w: z.number().min(0).max(1).optional(),
+        h: z.number().min(0).max(1).optional(),
+      })
+      .optional()
+      .openapi({ description: "A point (no `w`, `h`) or an area of the picture, frame or page, in fractions." }),
+    time: z.number().min(0).max(86_400).optional().openapi({ description: "A video's moment, in seconds." }),
+    page: z.number().int().min(1).optional().openapi({ description: "A PDF's page, from 1." }),
+    version: z.number().int().min(1).optional().openapi({ description: "The file's version the mark was made on." }),
+    crop: z.uuid().optional().openapi({ description: "The app's picture of what was marked (`…/marks`)." }),
+    frame: z
+      .uuid()
+      .optional()
+      .openapi({ description: "The app's picture of the whole picture, frame or page with the mark drawn." }),
   })
   .openapi("LiveSelection");
 
@@ -54,7 +72,10 @@ export const LiveSelection = z
 export const LiveRef = z
   .object({
     artifactId: z.string(),
-    kind: z.string().openapi({ description: "The live file's kind: `spreadsheet`, `slides`, `canvas`, `document`." }),
+    kind: z.string().openapi({
+      description:
+        "What the file is: a live file's kind (`spreadsheet`, `slides`, `canvas`, `document`) or an uploaded `image`, `video` or `pdf` (ADR 0208).",
+    }),
     title: z.string(),
     selection: LiveSelection.optional(),
   })
@@ -273,6 +294,10 @@ export const Organization = z
       }),
     start: StartChoice.optional().openapi({
       description: "In `GET /me`: what opens when the app starts here (`PUT …/me/start`). Absent elsewhere.",
+    }),
+    paysPlan: z.literal(true).optional().openapi({
+      description:
+        "In `GET /me`: you pay for the workspace's plan, as the billing service said, and may move it to another workspace (`POST …/plan-move`). Absent otherwise.",
     }),
     showActivity: z.boolean().optional().openapi({
       description:
@@ -570,6 +595,9 @@ export const Agent = z
     instructions: z.string(),
     model: z.string(),
     ownerUserId: z.string().nullable(),
+    ownerRoleId: z.uuid().nullable().openapi({
+      description: "A role that answers for it instead of a person (ADR 0085, addendum of 2026-11-21).",
+    }),
     hasCredential: z.boolean(),
     monthlyBudgetUsd: z
       .number()
@@ -1104,6 +1132,17 @@ export const BrainOption = z
       }),
     ),
     defaultModel: z.string().nullable(),
+    missing: z
+      .object({
+        modelId: z.string(),
+        label: z.string(),
+        why: z.enum(["app_old", "cli_old", "plan"]),
+      })
+      .optional()
+      .openapi({
+        description:
+          "Antigravity: the newest Gemini isn't among its models because the computer's agentes.chat is too old to bring a CLI that runs it (`app_old`), its CLI predates it where the computer's setup installs it (`cli_old`), or no account there has a plan with it (`plan`).",
+      }),
   })
   .openapi("BrainOption");
 

@@ -13,6 +13,7 @@ import { type MemoryUpdate, publishChannelEvent, publishMessageCreated, takeStep
 import { type PendingFeedbackOffer, pendingFeedbackOfferOf } from "./feedback-offers";
 import { pgSafeStringify } from "./format";
 import type { Judge } from "./judge";
+import { queueLiveActivityRun } from "./live-activity-queue";
 import { insertMessage, type Message, messageView } from "./messages";
 import { notifyMissionApproval } from "./mission-tools";
 import { notifyQuestion } from "./notification-producers";
@@ -1167,6 +1168,7 @@ export async function suspendRunForTool(
     // It parked mid-turn: its face and lists say so now, and so does the conversation that handed it the work (its
     // own events reach only the agents' DM, which nobody has open). The turn's end says it again.
     await announceAgentStatus(deps.pubsub, run.orgId, run.agentId).catch(() => {});
+    await queueLiveActivityRun(deps.db, run).catch(() => {});
     await announceConsultationChange(deps, run).catch(() => {});
   }
 

@@ -29,6 +29,7 @@ export interface WidgetRunWait extends WidgetWaitView {
   agentId: string;
   triggerMessageId: string;
   ownerUserId: string | null;
+  ownerRoleId: string | null;
   routineId: string;
   routineCreatorId: string | null;
 }
@@ -54,6 +55,7 @@ export async function widgetRunWaits(db: Executor, routineIds: readonly string[]
       agentId: agentRuns.agentId,
       triggerMessageId: agentRuns.triggerMessageId,
       ownerUserId: agents.ownerUserId,
+      ownerRoleId: agents.ownerRoleId,
       status: agentRuns.status,
       machineId: agentRuns.waitingMachineId,
       code: wait("code"),
@@ -110,6 +112,7 @@ export async function widgetRunWaits(db: Executor, routineIds: readonly string[]
         agentId: r.agentId,
         triggerMessageId: r.triggerMessageId,
         ownerUserId: r.ownerUserId,
+        ownerRoleId: r.ownerRoleId,
         routineId: r.routineId,
         routineCreatorId: r.routineCreatorId,
       });
@@ -124,6 +127,7 @@ export const mayContinueWidgetWait = (db: Executor, userId: string, membership: 
     // A routine's run is asked by its brief, its creator's: `mayStopRun` reads that message itself.
     requester: null,
     ownerUserId: wait.ownerUserId,
+    ownerRoleId: wait.ownerRoleId,
     routineId: wait.routineId,
     routineCreatorId: wait.routineCreatorId,
   });

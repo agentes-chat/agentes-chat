@@ -39,6 +39,7 @@ import { useSetupSteps } from "../../agents/setup/SetupCard";
 import { usePlanHold } from "../../ai/parts";
 import type { Directory } from "../../shared/hooks";
 import { agentLook } from "../../shared/logic";
+import { ownsIn } from "../../shared/owner";
 import { browsingRuns } from "../LiveRows";
 import { useChatLive } from "../live";
 import { mayStopRun, mergeTimeline, pinnedAsListed, quietInset, sameItems, stoppableInLine } from "../logic";
@@ -197,9 +198,11 @@ export function useChatData({
         meId,
         manageAgents: managesAgent(dir.agentById.get(r.agentId)),
         agentOwnerId: dir.agentById.get(r.agentId)?.ownerUserId,
+        // Holding the role that answers for it counts as its owner (ADR 0085, addendum of 2026-11-21).
+        owns: ownsIn(dir.memberById, meId, dir.agentById.get(r.agentId)),
         messages: list,
       }),
-    [meId, dir.agentById, list],
+    [meId, dir.agentById, dir.memberById, list],
   );
   const { stop } = live;
   const stopRun = useCallback(

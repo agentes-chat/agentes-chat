@@ -1095,6 +1095,7 @@
     },
     "back": "Geri",
     "leave": "{{name}} sayfasına dön",
+    "leaveLater": "{{name}} sayfasına dön, sonra bitir",
     "actions": {
       "continue": "Devam",
       "create_one": "{{count}} ajan oluştur",
@@ -1106,15 +1107,18 @@
     "yourCompany": "şirketiniz",
     "purpose": {
       "title": "agentes.chat'i ne için kullanacaksınız?",
-      "lead": "Bunu sonra değiştirebilirsiniz, hiçbir şey kaybolmaz.",
+      "lead": "Çalışma alanı modunu Ayarlar'dan istediğiniz zaman değiştirebilirsiniz, hiçbir şey kaybolmaz.",
+      "pick": "agentes.chat'i nasıl görmek istediğinizi seçin.",
+      "switchTitle": "İstediğiniz zaman değiştirin.",
+      "switchText": "Çalışma alanı modu Ayarlar'dan değişir ve hiçbir şey kaybolmaz.",
       "personal": "Kendim için",
       "personalText": "Gününü düzenleyen ajanlar.",
       "team": "Ekibim için",
       "teamText": "Kişiler ve ajanlar kanallar, roller ve onaylarla birlikte çalışır.",
       "personalExamples": "Saat 7'de günün · Faturalar · Antrenman",
       "teamExamples": "Müşteri desteği · Finans · Raporlar",
-      "personalLine": "Gününüzle ilgilenen ajanlar.",
-      "teamLine": "İnsanlar ve ajanlar aynı yerde.",
+      "personalLine": "Tüm özellikleriyle daha sade bir görünüm.",
+      "teamLine": "Kanallar ve kişilerle tam görünüm.",
       "activities": {
         "agenda": "Günün ajandası",
         "home": "Ev",
@@ -2626,6 +2630,7 @@
     "working_other": "{{count}} ajan çalışıyor"
   },
   "channel": {
+    "teamStalled": "Ekip durdu",
     "settingsNav": {
       "label": "Kanal ayarları",
       "overview": "Genel bakış",
@@ -2710,6 +2715,8 @@
     "uploading": "yükleniyor…",
     "uploadFailed": "yüklenmedi",
     "removeFile": "{{name}} kaldır",
+    "dropFileTitle": "Eklemek için bırakın",
+    "dropFileNote": "Dosyalar siz gönderene kadar bu konuşmanın taslağında kalır.",
     "tooManyFiles": "Mesaj başına en fazla {{max}} dosya.",
     "reminder": "Hatırlatıcı",
     "reactions": "Tepkiler",
@@ -3098,6 +3105,7 @@
       "anAgent": "Bir ajan",
       "none": "Yok",
       "budgetDefault": "Çalışma alanı varsayılanı",
+      "pausesNow": "hemen duraklar",
       "anAccount": "Bir yapay zekâ hesabı",
       "everyone": "Herkes",
       "ownerOnly": "Yalnızca sorumlusu",
@@ -3374,6 +3382,14 @@
       "antigravity": "Gemini bu bilgisayarda giriş yapmamış. {{name}} sayfasından bir Gemini hesabı bağlayın.",
       "opencode": "OpenCode bu bilgisayarda düşünemiyor. {{name}} sayfasından bir OpenCode anahtarı bağlayın."
     },
+    "notSignedInOn": {
+      "claude_code": "Claude Code {{computer}} bilgisayarında giriş yapmamış. {{name}} sayfasından bir Claude hesabı bağlayın.",
+      "codex": "Codex {{computer}} bilgisayarında giriş yapmamış. {{name}} sayfasından bir ChatGPT hesabı bağlayın.",
+      "cursor": "Cursor {{computer}} bilgisayarında giriş yapmamış. {{name}} sayfasından bir Cursor hesabı bağlayın.",
+      "grok": "Grok {{computer}} bilgisayarında giriş yapmamış. {{name}} sayfasından bir Grok hesabı bağlayın.",
+      "antigravity": "Gemini {{computer}} bilgisayarında giriş yapmamış. {{name}} sayfasından bir Gemini hesabı bağlayın.",
+      "opencode": "OpenCode {{computer}} bilgisayarında düşünemiyor. {{name}} sayfasından bir OpenCode anahtarı bağlayın."
+    },
     "card": {
       "connected": "{{name}} artık bir yapay zekaya sahip.",
       "answerNow": "Şimdi yanıtla",
@@ -3463,6 +3479,7 @@
     "chat": {
       "mine": "Sizinkiler",
       "yours": "Sizin",
+      "free": "Ücretsiz",
       "keys": "Çalışma alanı anahtarı",
       "apiKeys": "API anahtarları",
       "best": "Şu an en müsait olan",
@@ -4426,6 +4443,19 @@
   "adminAsk": {
     "ask": "Bir admine sor",
     "sent": "Bunu yapabilecek kişilere gönderildi."
+  },
+  "accountRef": {
+    "label": "{{name}} hesabı",
+    "card": "{{name}} hesabı hakkında",
+    "mine": "Senin hesabın",
+    "of": "{{name}} kişisinin hesabı",
+    "on": "{{computer}} üzerinde",
+    "gone": "Bu hesap artık çalışma alanında değil."
+  },
+  "accountSwitch": {
+    "limit": "<from/> hesabı sınırına ulaştığı için <to/> hesabıyla devam etti",
+    "line": "<from/> hesabı sınırına yaklaştığı için <to/> hesabıyla devam etti",
+    "extra": "<from/> hesabı ücretli ek kullanıma geçeceği için <to/> hesabıyla devam etti"
   },
   "channelRefs": {
     "list": "Kanallar",
@@ -5644,6 +5674,7 @@
       "undo": "Geri alma",
       "deadline": "Kalan süre",
       "decides": "Kim karar verir",
+      "decidesRole": "{{role}} rolüne sahip herkes",
       "state": "Durum",
       "why": "{{name}} neden istiyor",
       "email": "E-posta",
@@ -6367,6 +6398,7 @@
         "cli_stopped": "Bir hata {{brain}} programını durdurdu.",
         "cli_closed": "Beklenmedik şekilde {{brain}} programı kapandı.",
         "cli_sandbox": "{{brain}} programı bu bilgisayarda sandbox'ını başlatamıyor. Ajanın ayarlarından başka bir yapay zekâ seçin.",
+        "cli_system": "{{brain}} programı henüz bu bilgisayarın sisteminde çalışmıyor. Ajanın ayarlarından başka bir yapay zekâ seçin.",
         "account_missing": "Bu ajan için seçilen hesap artık bilgisayarında değil. Ajanın ayarlarından başka bir hesap seçin ya da yeniden ekleyin.",
         "windows_sandbox": "Bu Windows bilgisayar Codex'in komutlarını yalıtamıyor: Windows 11 24H2 veya daha yenisi gerekiyor. Windows'u güncelleyin, bu ajan için Claude'u ya da bir API anahtarını seçin veya onu bir Linux bilgisayara taşıyın.",
         "our_error": "Bizim tarafımızda bir şeyler ters gitti ve görev durdu. Birazdan yeniden isteyin.",
@@ -7092,6 +7124,8 @@
     "noOwnerShort": "Uyarıları yöneticiler alır ve onaylar",
     "noOwnerHelp": "Sahip olmadan uyarıları yöneticiler alır ve hassas işlemleri onaylar.",
     "ownerHelp": "Bütçe uyarılarını alır ve hassas işlemleri onaylar.",
+    "ownerRoleHelp": "{{role}} rolüne sahip olanlar onay isteklerini ve bildirimleri alır. İçlerinden herkes karar verebilir, rolü sonradan alanlar da dahil.",
+    "ownerRoleHelp_female": "{{role}} rolüne sahip olanlar onay isteklerini ve bildirimleri alır. İçlerinden herkes karar verebilir, rolü sonradan alanlar da dahil.",
     "ownerYours": "Ajanı oluşturan kişi onun sahibidir. Bir yönetici daha sonra başka birine devredebilir.",
     "accessAdmins": "Ajanlara uygulama ve posta kutusu erişimini yalnızca yöneticiler verir. Oluşturulduktan sonra bir yöneticiye sorun.",
     "accessAdminsKeeper": "Ajanlara uygulama ve posta kutusu erişimini yalnızca {{keeper}} verir. Oluşturulduktan sonra {{keeper}} ile konuşun.",
@@ -10318,6 +10352,13 @@
     "version": "v{{version}}",
     "usedBy_one": "{{count}} ajan kullanıyor",
     "usedBy_other": "{{count}} ajan kullanıyor",
+    "agents": {
+      "title": "Bu beceriye sahip ajanlar",
+      "none": "Henüz ajan yok.",
+      "choose": "Ajanları seç",
+      "dialogTitle": "{{name}} olan ajanlar",
+      "dialogText": "Açık olan her ajan, bir görev gerektirdiğinde onu kullanır."
+    },
     "updated": "{{when}} güncellendi",
     "source": {
       "github": "GitHub",
@@ -10774,6 +10815,7 @@
       "everyone": "Çalışma alanındaki herkes",
       "people": "Yalnızca bazı kişiler veya roller",
       "owner": "Yalnızca sahibi",
+      "ownerRole": "Yalnızca {{role}} rolüne sahip olanlar",
       "everyonePersonal": "Buradaki herkes",
       "peoplePersonal": "Yalnızca bazı kişiler"
     },
@@ -10782,6 +10824,8 @@
       "people": "{{name}} ile konuşabilecek kişileri ve rolleri seçin.",
       "owner": "{{name}} ile yalnızca {{owner}} konuşur. Listelerde {{name}} ajanını yalnızca {{owner}}, yöneticiler ve düzenleyebilenler görür.",
       "noOwner": "Bu seçeneği kullanmak için bir sahip belirleyin.",
+      "ownerRole": "{{name}} ile yalnızca {{role}} rolüne sahip olanlar konuşur. Listelerde {{name}} yalnızca {{role}} rolüne sahip olanlara, yöneticilere ve düzenleyebilenlere görünür.",
+      "ownerRole_female": "{{name}} ile yalnızca {{role}} rolüne sahip olanlar konuşur. Listelerde {{name}} yalnızca {{role}} rolüne sahip olanlara, yöneticilere ve düzenleyebilenlere görünür.",
       "everyonePersonal": "Buradaki herkes {{name}} ajanına seslenebilir.",
       "peoplePersonal": "{{name}} ile konuşabilecek kişileri seçin."
     },
@@ -10792,8 +10836,11 @@
     "roleMembers_other": "{{count}} kişi",
     "picked": "Seçilenler",
     "ownerAlways": "{{name}}, sahibi olarak her zaman konuşabilir.",
+    "ownerRoleAlways": "{{role}} rolüne sahip olanlar, sahip olarak her zaman konuşabilir.",
+    "whoHolds": "{{role}} rolüne sahip olanlar",
     "onlyYouForNow": "Şimdilik yalnızca siz",
     "onlyOwnerForNow": "Şimdilik yalnızca {{name}}",
+    "onlyOwnerRoleForNow": "Şimdilik yalnızca {{role}} rolüne sahip olanlar",
     "search": "Rol ve kişi ara",
     "searchPeople": "Kişi ara",
     "noMatch": "Bu adda bir rol veya kişi yok.",
@@ -10808,6 +10855,7 @@
       "everyone": "Çalışma alanındaki herkes",
       "everyonePersonal": "Buradaki herkes",
       "owner": "Yalnızca {{name}}",
+      "ownerRole": "Yalnızca {{role}} rolüne sahip olanlar",
       "nobody": "Şimdilik kimse",
       "someone": "Bazı kişiler",
       "people": "{{names}}",
@@ -10831,6 +10879,8 @@
     "modeText": {
       "owner": "{{owner}} (sahip), yöneticiler ve ajanları düzenleyip {{name}} ile konuşabilen herkes.",
       "noOwner": "Yöneticiler ve ajanları düzenleyip {{name}} ile konuşabilen herkes.",
+      "ownerRole": "{{role}} rolüne sahip olanlar (sahip rolü), yöneticiler ve ajanları düzenleyip {{name}} ile konuşabilen herkes.",
+      "ownerRole_female": "{{role}} rolüne sahip olanlar (sahip rolü), yöneticiler ve ajanları düzenleyip {{name}} ile konuşabilen herkes.",
       "people": "{{name}} ajanının çalışma şeklini başka kimlerin değiştirebileceğini seçin."
     },
     "rolesHint": "Bu role sahip herkes düzenleyebilir, rolü sonradan alanlar da dahil.",
@@ -12008,6 +12058,11 @@
     "recommended": "Önerilen",
     "free": "Ücretsiz",
     "opencodeFreeHint": "Diğer ücretsiz modeller ajanın bilgisayarındaki OpenCode ile çalışır.",
+    "missingModel": {
+      "app_old": "{{model}} kullanmak için ajanın bilgisayarındaki agentes.chat uygulamasını güncelleyin.",
+      "cli_old": "{{model}} için ajanın bilgisayarında daha yeni bir Antigravity CLI sürümü gerekir. Orada agy update çalıştırın.",
+      "plan": "{{model}}, Google AI Pro ve Ultra ile gelir. Ajanın bilgisayarındaki hiçbir Gemini hesabında bu plan yok."
+    },
     "modelHelp": "Büyük modeller daha çok düşünür ve planı daha hızlı tüketir.",
     "hidden": "Düşünen yapay zekayı {{owner}} veya bir yönetici seçer.",
     "hiddenAdmins": "Düşünen yapay zekayı yalnızca yöneticiler seçer.",
@@ -14197,6 +14252,7 @@
       "ask_agent": "Başka bir ajana sor",
       "tell_agent": "Başka bir ajana bildir",
       "find_agent": "Ajanı bul",
+      "read_agent": "Ajan ayarlarını oku",
       "ask_user": "Soru sor",
       "ask_choices": "Seçenek sun",
       "request_approval": "Onay iste",
@@ -15040,6 +15096,41 @@
       "exitFullscreen": "Tam ekrandan çık",
       "open": "Aç"
     },
+    "comments": {
+      "title": "Yorumlar",
+      "resolve": "Çöz",
+      "reopen": "Yeniden aç",
+      "resolvedBy": "{{name}} çözdü · {{time}}",
+      "resolvedCount_one": "{{count}} çözüldü",
+      "resolvedCount_other": "{{count}} çözüldü",
+      "showResolved": "Çözülenleri göster",
+      "hideResolved": "Çözülenleri gizle",
+      "fromVersion": "{{version}} sürümünden",
+      "peekOpen": "Sohbette açmak için tıklayın",
+      "markAt": "Yorum {{n}}, {{time}} anında, {{name}}",
+      "page": "Sayfa {{page}}",
+      "pageOf": "{{page}} / {{count}}",
+      "pdfFailed": "Bu PDF burada gösterilemiyor. Açmak için indirin.",
+      "loadFailed": "Bu görsel burada gösterilemiyor.",
+      "hint": {
+        "image": "Bir nokta işaretlemek için tıklayın veya bir alan işaretlemek için sürükleyin",
+        "video": "Bu ana yorum yapmak için videoya tıklayın veya bir alan işaretlemek için sürükleyin",
+        "pdf": "Bir nokta işaretlemek için sayfaya tıklayın veya bir alan işaretlemek için sürükleyin"
+      },
+      "line": {
+        "image_one": "Görselde {{count}} yorum",
+        "image_other": "Görselde {{count}} yorum",
+        "video_one": "Videoda {{count}} yorum",
+        "video_other": "Videoda {{count}} yorum",
+        "pdf_one": "PDF'te {{count}} yorum",
+        "pdf_other": "PDF'te {{count}} yorum"
+      },
+      "write": {
+        "image": "Görsel hakkında yazın…",
+        "video": "Video hakkında yazın…",
+        "pdf": "PDF hakkında yazın…"
+      }
+    },
     "zoom": {
       "toolbar": "Yakınlaştırma",
       "in": "Yakınlaştır",
@@ -15059,6 +15150,12 @@
     }
   },
   "errors": {
+    "planMove": {
+      "notPayer": "Planı yalnızca planın ödemesini yapan kişi taşıyabilir.",
+      "same": "Planı taşımak için başka bir çalışma alanı seç.",
+      "targetHasPlan": "O çalışma alanının zaten bir planı var. Çalışma alanlarını şimdiki hâliyle görmek için yenile.",
+      "targetDeleting": "O çalışma alanı siliniyor. Önce geri yükle ya da başka birini seç."
+    },
     "surface": {
       "off": "Sohbet uygulamalarını bağlama kapatıldı. Ayarlarınızın şu anki halini görmek için sayfayı yenileyin.",
       "notAllowed": "Sohbet uygulaması bağlama hesabınıza henüz açık değil. Açılana kadar buradaki uygulamayı kullanmaya devam edin.",
@@ -15095,6 +15192,7 @@
       "tooMany": "Buraya sığandan fazla. Birkaçını kaldırıp tekrar deneyin.",
       "fillIn": "Eksikleri doldurup tekrar deneyin.",
       "checkAddress": "Adresi kontrol edip tekrar deneyin.",
+      "privateNetwork": "Bu adres özel bir ağda. Herkese açık bir adres kullanın ya da kendi barındırdığınız sunucuda `OUTBOUND_ALLOW_CIDRS` ile izin verin.",
       "tooLong": "Bu çok uzun. Kısaltıp tekrar deneyin.",
       "updateComputerApp": "Bilgisayardaki uygulama bunun için çok eski. Güncelleyip tekrar deneyin.",
       "computerUpdatesItself": "Çalışma alanının bilgisayarı bunun için kendini güncelliyor. Birazdan tekrar deneyin.",
@@ -15353,7 +15451,9 @@
       "sharingForbidden": "Kimin göreceğini yalnızca dosyanın sohbetindekiler değiştirebilir.",
       "sharingEmpty": "Kimin göreceğini seçin.",
       "sharingTooMany": "En fazla {{max}} kişi ve {{max}} rol seçin.",
-      "notInDrive": "Bu yalnızca kendi sohbetinde yaşıyor, bu yüzden paylaşılamaz."
+      "notInDrive": "Bu yalnızca kendi sohbetinde yaşıyor, bu yüzden paylaşılamaz.",
+      "viewOnly": "Bu dosyayı görebilirsin ama değiştiremezsin. Düzenleme erişimini dosyayı oluşturan kişiden iste.",
+      "accessInvalid": "Bu erişim kaydedilemedi. Kimin gördüğünü ve kimin düzenlediğini kontrol edip tekrar dene."
     },
     "drive": {
       "folderIntoItself": "Bir klasör kendi içine ya da içindeki bir klasöre taşınamaz."
@@ -15385,6 +15485,7 @@
       "notLinkMaker": "Bu bilgisayarı yalnızca bağlantıyı oluşturan kişi katılmaya izin verebilir.",
       "widenForbidden": "Yöneticiler birinin kendi cihazını kimin kullanabileceğini yalnızca daraltabilir.",
       "spillOwnerOnly": "Yanıtların bu bilgisayarda düşünmesine yalnızca onu bağlayan kişi izin verebilir. Kapatmak senin elinde.",
+      "tasksOwnerOnly": "Bu bilgisayarın aynı anda kaç görev çalıştıracağını yalnızca onu bağlayan kişi değiştirebilir.",
       "notHome": "Ajanlar workspace bilgisayarında yaşar ve adını söylediklerinde bunu kullanır."
     },
     "machine": {
@@ -15448,7 +15549,9 @@
       "ownerOrAdmin": "Bunu yalnızca ajanın sahibi veya bir yönetici yapabilir.",
       "detailsHidden": "Nasıl çalıştığını yalnızca {{agentName}} ile konuşanlar görür.",
       "undoForbidden": "Bunu yalnızca ajanın çalıştığı kişi, sahibi veya bir yönetici geri alabilir.",
-      "undoSkillsAdmins": "Becerilerindeki bir değişikliği yalnızca ajanı düzenleyebilenler geri alabilir veya yineleyebilir."
+      "undoSkillsAdmins": "Becerilerindeki bir değişikliği yalnızca ajanı düzenleyebilenler geri alabilir veya yineleyebilir.",
+      "ownerBoth": "Sahip bir kişi ya da bir roldür, ikisi birden olamaz. Birini seçin.",
+      "ownerRoleUnknown": "Bu rol artık bu çalışma alanında yok. Başka bir sahip seçin."
     },
     "account": {
       "notRestorable": "Bu hesap artık geri yüklenemez.",
@@ -15874,6 +15977,9 @@
       "ready": "Ajanlar onu şimdi kullanabilir.",
       "busy_one": "{{max}} görevden {{count}} tanesi çalışıyor",
       "busy_other": "{{max}} görevden {{count}} tanesi çalışıyor",
+      "tasksChange": "Burada aynı anda görev: {{max}}. Aşağıdan değiştir.",
+      "tasksOwner": "Burada aynı anda görev: {{max}}. Onu bağlayan kişi bunu değiştirebilir.",
+      "tasksUpdate": "Burada aynı anda görev: {{max}}. Buradan değiştirmek için uygulamasını güncelle.",
       "offline": "Ajanlar geri gelmesini bekliyor.",
       "offlineSeen": "Son görülme: {{time}}. Ajanlar geri gelmesini bekliyor.",
       "offlineWithHost": "{{host}} çevrimdışı. Ajanlar geri gelmesini bekliyor.",
@@ -16404,6 +16510,8 @@
       "resumed_other": "{{count}} görev yeniden başladı",
       "stillWaiting_one": "{{count}} tanesi hâlâ {{name}} bilgisayarını bekliyor",
       "stillWaiting_other": "{{count}} tanesi hâlâ {{name}} bilgisayarını bekliyor",
+      "planDropped": "{{name}} adlı ajanın {{plan}} planı {{from}} üzerinde oturum açmış. {{to}} üzerinde de oturum açın ya da {{from}} ile devam edin.",
+      "signIn": "{{name}} üzerinde oturum aç",
       "skipped": "{{name}} kaldı: {{reason}}",
       "skip": {
         "other": "şu anda geçiş yapılamadı",
@@ -16663,14 +16771,14 @@
       "write": "Ajanlara görev gönderme ve okuma",
       "writeHelp": "Sizin adınıza mesaj gönderir ve yanıtları okur.",
       "manage": "Ajan, rutin ve beceri oluşturma ve düzenleme",
-      "manageHelp": "Ayrıca sizin izinlerinizle sizin için ajanlar, rutinler, beceriler ve bellek kayıtları oluşturur.",
+      "manageHelp": "Ayrıca sizin izinlerinizle sizin için ajanlar, rutinler, beceriler ve bellek kayıtları oluşturur ve wiki sayfaları yazar.",
       "read": "Yalnızca okuma",
-      "readHelp": "Hiçbir şey göndermeden ajanları, kanalları ve yanıtları görür.",
+      "readHelp": "Hiçbir şey göndermeden ajanları, kanalları, wiki sayfalarını ve yanıtları görür.",
       "can": "Yapabilecekleri",
-      "canSee": "Sizin gördüğünüz ajanları ve kanalları görme.",
+      "canSee": "Sizin gördüğünüz ajanları, kanalları ve wiki sayfalarını görme.",
       "canSend": "{{app}} üzerinden gönderildiği belirtilerek sizin adınıza mesaj gönderme.",
       "canRead": "Yanıtları ve ajanların ne yaptığını okuma.",
-      "canManage": "Sizin adınıza ajan, rutin ve beceri oluşturma ve düzenleme. Oluşturduğu her şey için bildirim alırsınız.",
+      "canManage": "Sizin adınıza ajan, rutin ve beceri oluşturma ve düzenleme, oluşturduğu her şey için bir bildirimle. Sizin adınıza wiki sayfaları yazma ve onları çöp kutusuna taşıma.",
       "never": "Asla",
       "neverApprove": "Ajanların işlemlerini onaylamaz. Onaylar agentes.chat içinde kişilerde kalır.",
       "neverSettings": "Ayarları, üyeleri veya izinleri değiştirmez.",
@@ -19253,6 +19361,13 @@
     "submit": "Hesabı sil",
     "deleted": "Hesabınız {{date}} tarihinde kalıcı olarak kaybolur. Geri yüklemek için bundan önce giriş yapın."
   },
+  "planMove": {
+    "warning": "Planın bu çalışma alanında kalır ve yenilenmez. Önce başka bir çalışma alanına taşımak ister misin?",
+    "deleting": "Planın bununla birlikte yenilenmez. Planını başka bir çalışma alanına taşıyabilirsin.",
+    "how": "Aynı kart ve ödenmiş dönem planla birlikte gider. Tekrar ücret alınmaz ve iade yapılmaz.",
+    "button": "Planımı {{name}} alanına taşı",
+    "moving": "Planın {{name}} alanına taşınıyor. Yaklaşık bir dakika içinde orada olur."
+  },
   "billing": {
     "open": "Plan ve faturalandırmayı aç",
     "opening": "Açılıyor…",
@@ -20421,23 +20536,15 @@
   "share": {
     "button": "Paylaş",
     "title": "{{name}} paylaş",
-    "conversation": "Yalnızca sohbet",
-    "people": "Seçtiğiniz kişiler ve roller",
-    "peoplePersonal": "Seçtiğiniz kişiler",
     "everyone": "Tüm çalışma alanı",
     "everyonePersonal": "Buradaki herkes",
     "whereDm": "{{name}} ile doğrudan mesaj",
     "whereDmGone": "Bir doğrudan mesaj",
     "whereDmBetween": "{{names}} arasındaki doğrudan mesaj",
     "whereChannel": "#{{name}} üyeleri",
-    "add": "Kişi veya rol ekle",
-    "addPersonal": "Kişi ekle",
-    "addSearch": "Kişi ve rol ara",
-    "addSearchPersonal": "Kişi ara",
     "noResults": "Bu adda kimse yok",
     "groupPeople": "Kişiler",
     "groupRoles": "Roller",
-    "access": "Kimlerin erişimi var",
     "you": "{{name}} (siz)",
     "agent": "Ajan",
     "role": "Rol",
@@ -20446,28 +20553,36 @@
     "adminsPersonal": "Burayı yöneten kişiler de görür.",
     "copyLink": "Bağlantıyı kopyala",
     "copied": "Bağlantı kopyalandı.",
-    "done": "Bitti",
     "onlyHere": "Bu sohbette olmayanlar bağlantıyı açamaz.",
-    "choosePeople": "Kişi seç",
     "readOnly": "Kimin göreceğini yalnızca sohbettekiler değiştirebilir.",
-    "open": "Tüm çalışma alanı bu dosyayı görüyor.",
-    "openPersonal": "Buradaki herkes bu dosyayı görüyor.",
-    "savedEveryone": "Artık tüm çalışma alanı dosyayı görüyor.",
-    "savedEveryonePersonal": "Artık buradaki herkes dosyayı görüyor.",
-    "savedPeople": "Artık seçtiğiniz kişiler dosyayı görüyor.",
-    "savedConversation": "Artık dosyayı yalnızca sohbet görüyor.",
-    "onlyYou": "Yalnızca siz",
-    "onlyMaker": "Yalnızca {{name}}",
     "onlyYouLink": "Bu bağlantıyı yalnızca siz açabilirsiniz.",
     "onlyMakerLink": "Bu bağlantıyı yalnızca {{name}} açabilir.",
     "readOnlyDrive": "Dosyayı kimin göreceğini yalnızca onu oluşturan kişi ve yöneticiler değiştirebilir.",
-    "savedOnlyYou": "Dosyayı artık yalnızca siz görüyorsunuz.",
-    "savedOnlyMaker": "Dosyayı artık yalnızca {{name}} görüyor.",
-    "undo": "Geri al",
     "fileRef": "Dosya {{title}}",
     "fileRefNone": "Erişim olmayan dosya",
     "also": "{{text}}. {{who}} ile de paylaşıldı.",
-    "someOnlyHere": "Bu bağlantılardan bazılarını yalnızca dosyayı zaten görenler açabilir."
+    "someOnlyHere": "Bu bağlantılardan bazılarını yalnızca dosyayı zaten görenler açabilir.",
+    "level": {
+      "none": "Erişim yok",
+      "view": "Görüntüleme",
+      "edit": "Düzenleme"
+    },
+    "levelOf": "{{name}} neler yapabilir",
+    "madeIt": "Dosyayı oluşturdu",
+    "placeText": "Dosyanın bulunduğu yer",
+    "everyoneText": "Bu çalışma alanındaki herkes",
+    "everyoneTextPersonal": "Buradaki herkes",
+    "agentsAll": "Tüm ajanlar",
+    "agentsAllText": "Çalışma alanındaki herhangi bir ajan",
+    "agentsHere": "Bu konuşmadaki ajanlar",
+    "agentsHereText": "Dosyanın bulunduğu yerdeki ajanlar",
+    "addAll": "Kişi, rol ya da ajan ekle",
+    "addAllPersonal": "Kişi ya da ajan ekle",
+    "addAllSearch": "Kişi, rol ve ajan ara",
+    "addAllSearchPersonal": "Kişi ve ajan ara",
+    "groupAgents": "Ajanlar",
+    "addRow": "Ekle",
+    "saved": "Erişim kaydedildi."
   },
   "linkErrors": {
     "signIn": {
@@ -20777,7 +20892,7 @@
     "mark": "Beta",
     "open": "Geri bildirim gönder",
     "ask": "Ne eksikti, ne bozuldu ya da ne rahatsız etti?",
-    "goesCloud": "Yazdıklarınız e-postayla agentes.chat ekibine gider.",
+    "goesCloud": "Yazdıklarınız e-postayla agentes.chat ekibine gider. Ekip, incelemek için bir yapay zeka asistanı kullanabilir.",
     "goesServer": "Yazdıklarınız e-postayla bu sunucuyu yöneten kişiye gider.",
     "placeholder": "İçinizden geldiği gibi yazın",
     "report": "Burada bir sorun bildir",
@@ -21220,6 +21335,9 @@
         "inTrash": "Çöp kutusunda. Değiştirmek için geri yükleyin.",
         "closing": "Çalışma alanı siliniyor. Dosyaları yalnızca okunabilir."
       },
+      "requestEdit": "Düzenleme iste",
+      "requestEditText": "bu dosyayı düzenlemem için bana erişim verebilir misin?",
+      "requestEditAnyone": "Biri bu dosyayı düzenlemem için bana erişim verebilir mi?",
       "present": "Sun",
       "download": "İndir",
       "formats": {
@@ -21358,25 +21476,36 @@
         "spreadsheet": "E-tablo sohbeti",
         "slides": "Sunum sohbeti",
         "document": "Belge sohbeti",
-        "file": "Dosya sohbeti"
+        "file": "Dosya sohbeti",
+        "image": "Görsel sohbeti",
+        "video": "Video sohbeti",
+        "pdf": "PDF sohbeti"
       },
       "placeholder": {
         "canvas": "Bu tuval hakkında yazın · bir ajanı çağırmak için @ kullanın",
         "spreadsheet": "Bu e-tablo hakkında yazın · bir ajanı çağırmak için @ kullanın",
         "slides": "Bu sunum hakkında yazın · bir ajanı çağırmak için @ kullanın",
         "document": "Bu belge hakkında yazın · bir ajanı çağırmak için @ kullanın",
-        "file": "Bu dosya hakkında yazın · bir ajanı çağırmak için @ kullanın"
+        "file": "Bu dosya hakkında yazın · bir ajanı çağırmak için @ kullanın",
+        "image": "Bu görsel hakkında yazın · bir ajanı çağırmak için @ kullanın",
+        "video": "Bu video hakkında yazın · bir ajanı çağırmak için @ kullanın",
+        "pdf": "Bu PDF hakkında yazın · bir ajanı çağırmak için @ kullanın"
       },
       "this": {
         "canvas": "bu tuvali",
         "spreadsheet": "bu e-tabloyu",
         "slides": "bu sunumu",
-        "document": "bu belgeyi"
+        "document": "bu belgeyi",
+        "image": "bu görseli",
+        "video": "bu videoyu",
+        "pdf": "bu PDF'i"
       },
       "origin": {
         "from": "<0>{{name}}</0>, {{what}} <1>{{place}}</1> sırasında oluşturdu",
         "made": "<0>{{name}}</0>, {{what}} oluşturdu",
-        "imported": "<1>{{file}}</1> dosyasından içe aktarıldı, aktaran: {{name}}"
+        "imported": "<1>{{file}}</1> dosyasından içe aktarıldı, aktaran: {{name}}",
+        "sentIn": "<0>{{name}}</0>, {{what}} <1>{{place}}</1> sırasında gönderdi",
+        "sent": "<0>{{name}}</0>, {{what}} gönderdi"
       },
       "about": {
         "range": "{{sheet}} içindeki {{range}} hakkında",
@@ -21384,7 +21513,26 @@
         "canvas": "Tuvaldeki {{label}} hakkında",
         "text": "Seçili metin hakkında",
         "point": "Tuvaldeki bir nokta hakkında",
-        "other": "{{label}} hakkında"
+        "other": "{{label}} hakkında",
+        "imageArea": "Görseldeki {{n}}. alan hakkında",
+        "imagePoint": "Görseldeki {{n}}. nokta hakkında",
+        "videoAt": "Videonun {{time}} anı hakkında",
+        "pdfPage": "PDF'in {{page}}. sayfası hakkında",
+        "image": "Görsel hakkında",
+        "video": "Video hakkında",
+        "pdf": "PDF hakkında"
+      },
+      "what": {
+        "area": "Alan {{n}}",
+        "point": "Nokta {{n}}",
+        "anArea": "Bir alan",
+        "aPoint": "Bir nokta",
+        "page": "Sayfa {{page}}"
+      },
+      "where": {
+        "image": "görselde",
+        "video": "videoda",
+        "pdf": "PDF'te"
       },
       "drop": "Seçimi gönderme",
       "aboutLine": "Dosyada göster: {{what}} ({{where}})",

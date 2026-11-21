@@ -3420,5 +3420,171 @@
       "behavior": "Only a thanks: it reacts or answers in a few words, with no line before work (say_now) and no tool.",
       "skipJudge": ["looked_first", "next_step", "asks_well"]
     }
+  },
+  {
+    "id": "question-answers-offers-next-step",
+    "title": "Só uma pergunta: responde e oferece o próximo passo, não passa trabalho a ninguém",
+    "source": "synthetic (2026-11-21): a question answered, then work nobody asked for handed to another agent",
+    "agent": {
+      "name": "Bia",
+      "handle": "bia",
+      "role": "Lançamentos",
+      "instructions": "Você cuida das publicações do app nas lojas (App Store e Google Play): fichas, políticas e revisões."
+    },
+    "org": {
+      "name": "Lumen",
+      "context": "Lumen é um app de meditação e hábitos por assinatura (iOS e Android). O site é lumen.example.com. Cada agente cuida de uma parte do trabalho. O time fala português."
+    },
+    "otherAgents": [
+      {
+        "name": "Theo",
+        "handle": "theo",
+        "role": "Site",
+        "instructions": "Você faz o site lumen.example.com: escreve as páginas e abre PRs no repositório do site.",
+        "runs": true
+      }
+    ],
+    "conversation": {
+      "where": "channel",
+      "channel": "lancamentos",
+      "trigger": {
+        "author": "Marina",
+        "body": {
+          "pt": "@bia qual URL de política de privacidade a gente colocou nas lojas?",
+          "en": "@bia which privacy policy URL did we put in the stores?"
+        }
+      }
+    },
+    "memory": [
+      {
+        "kind": "fact",
+        "title": "Política de privacidade nas lojas",
+        "content": "A URL de política de privacidade cadastrada na App Store e no Google Play é https://lumen.example.com/privacy.pdf. Hoje é um PDF provisório; o certo seria virar uma página do site, que é do Theo."
+      }
+    ],
+    "expect": {
+      "mustNotCall": ["tell_agent"],
+      "notTriggered": ["theo"],
+      "handOffs": {
+        "bia>theo": 0
+      },
+      "behavior": "Bia answers with the URL from her memory (https://lumen.example.com/privacy.pdf), may say it is a provisional PDF and offer in one line to have Theo make it a site page. She doesn't hand Theo the work or start it: the person only asked a question.",
+      "skipJudge": ["looked_first", "next_step"],
+      "rubric": [
+        "Gives the URL https://lumen.example.com/privacy.pdf.",
+        "Starts no work beyond the answer: a next step, if any, is only offered in one line."
+      ],
+      "maxAgentRuns": {
+        "theo": 0
+      }
+    }
+  },
+  {
+    "id": "question-and-ask-to-fix-acts",
+    "title": "Pergunta e pede a mudança: responde e passa a página para o Theo",
+    "source": "synthetic (2026-11-21): a question answered, then work nobody asked for handed to another agent",
+    "agent": {
+      "name": "Bia",
+      "handle": "bia",
+      "role": "Lançamentos",
+      "instructions": "Você cuida das publicações do app nas lojas (App Store e Google Play): fichas, políticas e revisões."
+    },
+    "org": {
+      "name": "Lumen",
+      "context": "Lumen é um app de meditação e hábitos por assinatura (iOS e Android). O site é lumen.example.com. Cada agente cuida de uma parte do trabalho. O time fala português."
+    },
+    "otherAgents": [
+      {
+        "name": "Theo",
+        "handle": "theo",
+        "role": "Site",
+        "instructions": "Você faz o site lumen.example.com: escreve as páginas e abre PRs no repositório do site.",
+        "runs": true
+      }
+    ],
+    "conversation": {
+      "where": "channel",
+      "channel": "lancamentos",
+      "trigger": {
+        "author": "Marina",
+        "body": {
+          "pt": "@bia qual URL de política de privacidade a gente colocou nas lojas? Se ainda for o PDF, pede para o Theo fazer a página de verdade.",
+          "en": "@bia which privacy policy URL did we put in the stores? If it's still the PDF, have Theo make a real page."
+        }
+      }
+    },
+    "memory": [
+      {
+        "kind": "fact",
+        "title": "Política de privacidade nas lojas",
+        "content": "A URL de política de privacidade cadastrada na App Store e no Google Play é https://lumen.example.com/privacy.pdf. Hoje é um PDF provisório; o certo seria virar uma página do site, que é do Theo."
+      }
+    ],
+    "expect": {
+      "mustCall": ["tell_agent"],
+      "handOffs": {
+        "bia>theo": 1
+      },
+      "behavior": "Bia answers with the URL from her memory and, since it is still the PDF and the person asked, hands Theo the page (tell_agent) with what it needs, then says in a line that Theo has it.",
+      "skipJudge": ["looked_first", "next_step"],
+      "rubric": [
+        "Gives the URL https://lumen.example.com/privacy.pdf.",
+        "Hands Theo the page once, without asking the person whether to."
+      ]
+    }
+  },
+  {
+    "id": "question-standing-duty-acts",
+    "title": "Pergunta sobre algo que já é dela consertar: responde e age",
+    "source": "synthetic (2026-11-21): a question answered, then work nobody asked for handed to another agent",
+    "agent": {
+      "name": "Bia",
+      "handle": "bia",
+      "role": "Lançamentos",
+      "instructions": "Você cuida das publicações do app nas lojas (App Store e Google Play): fichas, políticas e revisões. Quando uma página que as lojas exigem ainda é provisória, peça ao Theo a página de verdade, sem esperar alguém pedir."
+    },
+    "org": {
+      "name": "Lumen",
+      "context": "Lumen é um app de meditação e hábitos por assinatura (iOS e Android). O site é lumen.example.com. Cada agente cuida de uma parte do trabalho. O time fala português."
+    },
+    "otherAgents": [
+      {
+        "name": "Theo",
+        "handle": "theo",
+        "role": "Site",
+        "instructions": "Você faz o site lumen.example.com: escreve as páginas e abre PRs no repositório do site.",
+        "runs": true
+      }
+    ],
+    "conversation": {
+      "where": "channel",
+      "channel": "lancamentos",
+      "trigger": {
+        "author": "Marina",
+        "body": {
+          "pt": "@bia qual URL de política de privacidade a gente colocou nas lojas?",
+          "en": "@bia which privacy policy URL did we put in the stores?"
+        }
+      }
+    },
+    "memory": [
+      {
+        "kind": "fact",
+        "title": "Política de privacidade nas lojas",
+        "content": "A URL de política de privacidade cadastrada na App Store e no Google Play é https://lumen.example.com/privacy.pdf. Hoje é um PDF provisório; o certo seria virar uma página do site, que é do Theo."
+      }
+    ],
+    "expect": {
+      "mustCall": ["tell_agent"],
+      "handOffs": {
+        "bia>theo": 1
+      },
+      "behavior": "Bia answers with the URL from her memory and, as her instructions say for a provisional store page, hands Theo the real page (tell_agent) on her own, saying so in a line.",
+      "skipJudge": ["looked_first", "next_step"],
+      "rubric": [
+        "Gives the URL https://lumen.example.com/privacy.pdf.",
+        "Hands Theo the page once, as her instructions say, without asking the person first."
+      ]
+    }
   }
 ]

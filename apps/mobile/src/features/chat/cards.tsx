@@ -92,13 +92,14 @@ import { chatHref } from "../links/logic";
 import { Face } from "../shared/Face";
 import { useColors, useNow, useOrgId, useWhen } from "../shared/hooks";
 import { agentLook, genderOf } from "../shared/logic";
+import { approvalOwnerOf, ownerNameIn } from "../shared/owner";
 import { PromptForm } from "../shared/PromptForm";
 import { successHaptic, tapHaptic, useSurface } from "../shared/parts";
 import { useSheet } from "../shared/SheetHost";
 import { type AskAnswer, AskCard, AskFoot, ExpiryLine, useAskStore } from "./asks";
 import { markName, parseInline, threadFaces } from "./logic";
 import { Spans } from "./MessageSpans";
-import { useRowDirectory, useRowMeId } from "./row-data";
+import { useRowDirectory, useRowMeId, useRowRoles } from "./row-data";
 import { WaitMark } from "./WaitMark";
 
 /**
@@ -195,6 +196,7 @@ function ApprovalGroupAsk({ items }: { items: Approval[] }) {
   const { t } = useTranslation();
   const orgId = useOrgId();
   const dir = useRowDirectory();
+  const roles = useRowRoles();
   const c = useColors();
   const toast = useToast();
   const asks = useAskStore();
@@ -208,8 +210,9 @@ function ApprovalGroupAsk({ items }: { items: Approval[] }) {
   const g = genderOf(name);
   const waiting = items.filter((a) => a.status === "pending");
   const { ids, waiting: count, blocked } = approveAllScope(items);
-  const ownerId = first.ownerUserId ?? dir.agentById.get(first.agentId)?.ownerUserId ?? null;
-  const owner = approvalGroupWaitsFor(items, ownerId ? dir.memberById.get(ownerId)?.name : undefined);
+  // The owner it was asked under, else its agent's: a person, or a role by its name (ADR 0085, addendum of 2026-11-21).
+  const ownerOf = approvalOwnerOf(first, dir.agentById.get(first.agentId));
+  const owner = approvalGroupWaitsFor(items, ownerNameIn(ownerOf, dir.memberById, roles));
   const deadline = cardDeadline(items);
   const leadItem = waiting[0] ?? first;
   const decider = waiting.find((a) => a.canDecide);
@@ -628,11 +631,15 @@ function ApprovalGroupItem({
 function ApprovalAsk({ approval: a }: { approval: Approval }) {
   const { t, i18n } = useTranslation();
   const dir = useRowDirectory();
+  const roles = useRowRoles();
   const asks = useAskStore();
   const origin = useOriginShort(a);
   const { org } = useOrg();
-  const ownerId = a.ownerUserId ?? dir.agentById.get(a.agentId)?.ownerUserId ?? null;
-  const owner = approvalWaitsFor(a, ownerId ? dir.memberById.get(ownerId)?.name : undefined);
+  // The owner it was asked under, else its agent's: a person, or a role by its name (ADR 0085, addendum of 2026-11-21).
+  const owner = approvalWaitsFor(
+    a,
+    ownerNameIn(approvalOwnerOf(a, dir.agentById.get(a.agentId)), dir.memberById, roles),
+  );
   const requester = requesterDecidesLine(t, a);
   // The same approving as Atividade's card: the haptic, the toast saying what follows; refusing asks once, in the
   // system's alert, with the reason optional.

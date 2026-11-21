@@ -90,13 +90,14 @@ import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { AgentAvatar } from "@/components/AgentAvatar";
-import { ConnectorIcon } from "@/components/ConnectorCatalog";
+import { ConnectorIcon } from "@/components/ConnectorIcon";
 import { FlowTitle } from "@/components/FlowTitle";
 import { LoadingList, useStepText } from "@/components/Loading";
 import { ForWhom, type OwnerTab } from "@/components/OwnerScope";
 import { useOrg } from "@/components/org-context";
 import { useAgentsAccess } from "@/hooks/useAgentsAccess";
 import { useDirectory } from "@/hooks/useDirectory";
+import { useMyRoleIds } from "@/hooks/useMyRoleIds";
 import { oauthReturnPath } from "@/lib/desktop";
 import { forgetGithubOrgs, keepGithubOrgs, readGithubOrgs } from "@/lib/github-orgs";
 import { navigateAway } from "@/lib/navigate";
@@ -1111,6 +1112,7 @@ function ToolsStep({
 function WhoStep({ item, onBack, onClose }: { item: ConnectedItem; onBack: () => void; onClose: () => void }) {
   const { t } = useTranslation();
   const { org, me } = useOrg();
+  const myRoleIds = useMyRoleIds();
   const api = useApi();
   const qc = useQueryClient();
   const toast = useToast();
@@ -1118,7 +1120,7 @@ function WhoStep({ item, onBack, onClose }: { item: ConnectedItem; onBack: () =>
   // A personal connection goes on for the agents its person may change (their own, and the ones they manage); a team
   // one for the agents the person manages (ADR 0085 addendum of 2026-11-17): the server refuses the rest.
   const list = (agents.data ?? []).filter((a) =>
-    item.ownerUserId ? canEditAudience(org, a, me.user.id) : managesAgent(a),
+    item.ownerUserId ? canEditAudience(org, a, me.user.id, myRoleIds) : managesAgent(a),
   );
   const access = useAgentsAccess(list);
   const resourceId = `connector:${item.id}`;

@@ -1,6 +1,7 @@
 import { NEXT_ACCOUNT_KINDS } from "@agenteschat/providers/plans";
 import type { TFunction } from "i18next";
 import type {
+  AccountOrderGroup,
   Agent,
   AgentBrain,
   AiAccounts,
@@ -687,3 +688,28 @@ export function orderDrop(
   const at = others.findIndex((b) => b.some((a) => a.id === onto));
   return at < 0 ? null : at + (where === "after" ? 1 : 0);
 }
+
+/**
+ * An account a run thought with (`RunAccount`), as the order of use (any member reads it) has it now: the account and
+ * its computer, for its pill's card. Null once it left the workspace: the pill keeps the name it went by.
+ */
+export function accountInOrder(groups: readonly AccountOrderGroup[] | undefined, id: string) {
+  for (const g of groups ?? []) {
+    const account = g.accounts.find((a) => a.id === id);
+    if (account) return { account, computer: g.computer };
+  }
+  return null;
+}
+
+/** An account's card under its title: whose it is ("Sua conta", "Conta de Ada") and on which computer. */
+export function accountCardFacts(
+  t: TFunction,
+  a: Pick<MachineAccount, "mine" | "ownerName">,
+  computer: string,
+): string[] {
+  const whose = a.mine ? t("accountRef.mine") : a.ownerName ? t("accountRef.of", { name: a.ownerName }) : null;
+  return [whose, t("accountRef.on", { computer })].filter((x): x is string => Boolean(x));
+}
+
+/** An account's mark: a key account's coding plan, else its CLI's maker. */
+export const accountMark = (a: Pick<MachineAccount, "kind" | "provider">) => a.provider ?? a.kind;

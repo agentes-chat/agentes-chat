@@ -7,11 +7,11 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useActors } from "@/components/actors";
 import { useArtifactDownload } from "@/components/artifacts/ArtifactActions";
-import { useArtifactViewer } from "@/components/artifacts/ArtifactViewer";
+import { useArtifactViewer } from "@/components/artifacts/viewer-context";
 import { DrivePreview } from "@/components/drive/DrivePreview";
-import { useFileDrop } from "@/components/drive/DriveUploads";
 import { useOrg } from "@/components/org-context";
 import { type PendingFile, useComposerFiles } from "@/hooks/useComposerFiles";
+import { useFileDrop } from "@/hooks/useFileDrop";
 
 /** A file of the task and where it came from ("Na criação · ontem às 17:40", "Comentário de Ana · …"). */
 export interface IssueFileEntry {

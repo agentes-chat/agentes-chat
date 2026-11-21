@@ -29,7 +29,7 @@ export function OverviewTab() {
   const locale = i18n.language;
   const { org } = useOrg();
   const dir = useDirectory(org.id);
-  const { agent, g, viewer, goTo, can, ownerFirst } = useAgentEdit();
+  const { agent, g, viewer, goTo, can, ownerLabel } = useAgentEdit();
   const detail = useAgentDetail(org.id, agent.id);
   const proposals = useProposals(org.id);
   const runs = useRuns(org.id, agent.id, ownsOrManages(viewer));
@@ -137,7 +137,7 @@ export function OverviewTab() {
           />
           {!decides ? (
             <p className="small muted">
-              {t("agentPage.activity.hidden", { owner: ownerFirst ?? t("roles.adminLower") })}
+              {t("agentPage.activity.hidden", { owner: ownerLabel ?? t("roles.adminLower") })}
             </p>
           ) : recent.length === 0 ? (
             <p className="small muted">{t("agent.runsNone")}</p>

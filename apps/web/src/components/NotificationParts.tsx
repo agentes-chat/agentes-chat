@@ -256,6 +256,8 @@ export function Headline({
   }
   // What the right hand found (ADR 0177 §1): the problem itself. Who found it is the row's face and its top line.
   if (n.kind === "team_watch") return <>{teamWatchLine(t, n)}</>;
+  if (n.kind === "budget_paused")
+    return t("chat.body.usage_paused_budget", { agent: name, percent: n.latest.percent ?? 0 });
   switch (n.kind) {
     case "mention":
       if (n.source.issueId) return k("mentionComment", { name });

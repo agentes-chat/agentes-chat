@@ -1,7 +1,7 @@
 import type { PubSub } from "@agenteschat/adapters";
 import { and, type Database, eq, inArray, isNull, schema, sql } from "@agenteschat/db";
 import { getAgent } from "./agents";
-import { managesAgent, REACH_COLUMNS } from "./audience";
+import { managesAgent, ownsAgent, REACH_COLUMNS } from "./audience";
 import { recordAudit } from "./audit";
 import { brainOf, brainOptions } from "./brain-settings";
 import type { ComputerBrainKind } from "./brains/types";
@@ -10,7 +10,15 @@ import { publishQueueChanged } from "./computer-queue";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { publishOrgEvent } from "./events";
 import { TASK_OFFLINE_GRACE_MS } from "./machine-tasks";
-import { getMachine, type MachineRow, machinePause, mayBeHome, setAgentComputerTarget, shownOnline } from "./machines";
+import {
+  getMachine,
+  type MachineRow,
+  machinePause,
+  mayBeHome,
+  type PlanDropped,
+  setAgentComputerTarget,
+  shownOnline,
+} from "./machines";
 import { missionTurnFor } from "./missions-engine";
 import { requirePermission } from "./organizations";
 import { enqueue } from "./outbox";
@@ -165,7 +173,7 @@ export async function listMachineOutages(
     : [];
   const byId = new Map([...onMachines, ...extra].map((a) => [a.id, a]));
   const mayMove = (a: Parameters<typeof managesAgent>[0]) =>
-    a.ownerUserId === actorId || managesAgent(a, actorId, membership);
+    ownsAgent(a, actorId, membership.roleIds) || managesAgent(a, actorId, membership);
 
   const outages: MachineOutage[] = [];
   for (const m of offline) {
@@ -241,6 +249,8 @@ export interface MoveAgentsResult {
   resumed: number;
   /** Waiting runs that stay with the old computer (a cut-off turn that already ran tools there, or a mission's). */
   stillWaiting: number;
+  /** Moved agents whose plan is signed in only on the old computer: they think again once it is signed in here too. */
+  planDropped: ({ agentId: string } & PlanDropped)[];
 }
 
 /**
@@ -282,6 +292,7 @@ export async function moveAgentsFromMachine(
   const waiting = await waitingRunsFor(db, orgId, [from.id], agentIds);
   const moved: string[] = [];
   const skipped: MoveAgentsResult["skipped"] = [];
+  const planDropped: MoveAgentsResult["planDropped"] = [];
   for (const agentId of agentIds) {
     const agent = await getAgent(db, orgId, agentId);
     const related = agent?.machineId === from.id || waiting.some((r) => r.agentId === agentId);
@@ -289,7 +300,7 @@ export async function moveAgentsFromMachine(
       skipped.push({ agentId, reason: "not_found" });
       continue;
     }
-    if (agent.ownerUserId !== actorId && !managesAgent(agent, actorId, membership)) {
+    if (!ownsAgent(agent, actorId, membership.roleIds) && !managesAgent(agent, actorId, membership)) {
       skipped.push({ agentId, reason: "forbidden" });
       continue;
     }
@@ -299,8 +310,9 @@ export async function moveAgentsFromMachine(
       continue;
     }
     try {
-      await setAgentComputerTarget(deps, actorId, orgId, agentId, to.id, { wakeWaits: false });
+      const set = await setAgentComputerTarget(deps, actorId, orgId, agentId, to.id, { wakeWaits: false });
       moved.push(agentId);
+      if (set.planDropped) planDropped.push({ agentId, ...set.planDropped });
     } catch (error) {
       if (error instanceof ForbiddenError) skipped.push({ agentId, reason: "forbidden" });
       else if (error instanceof NotFoundError) skipped.push({ agentId, reason: "not_found" });
@@ -340,6 +352,7 @@ export async function moveAgentsFromMachine(
       skipped,
       resumed,
       stillWaiting,
+      planDropped,
     },
   });
   if (resumed > 0) await publishQueueChanged(deps.pubsub, orgId, from.id);
@@ -355,7 +368,7 @@ export async function moveAgentsFromMachine(
       },
     });
   }
-  return { moved, skipped, resumed, stillWaiting };
+  return { moved, skipped, resumed, stillWaiting, planDropped };
 }
 
 /**

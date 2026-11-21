@@ -21,6 +21,27 @@ const click = async (el: Element) => {
 
 async function openPicker(state = seedState()) {
   const api = createFakeApi(state);
+  // On the MacBook, whose own Claude Code and Codex sign-ins it reported: the plans' tiles offer them.
+  const brain = api.agents.brain;
+  api.agents.brain = async (...args: Parameters<typeof brain>) => ({
+    ...(await brain(...args)),
+    computer: { machineId: "machine_1", name: "MacBook", online: true },
+  });
+  fakeMachinesOf.get(api)?.setAiAccounts({
+    accounts: [],
+    computers: [
+      {
+        machineId: "machine_1",
+        name: "MacBook",
+        online: true,
+        mine: true,
+        canAdd: true,
+        keys: true,
+        brains: { claude_code: true, codex: true },
+        own: { claude_code: {}, codex: {} },
+      },
+    ],
+  });
   await renderApp(`/org/${ORG_ID}/dm/agent/${ADA_ID}`, { api });
   await settle(8);
   const header = document.querySelector(".channel__header") as HTMLElement;

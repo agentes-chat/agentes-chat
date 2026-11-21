@@ -1,6 +1,7 @@
 import {
   ACCOUNTS_PROTOCOL,
   type AccountKind,
+  AGY_COPY_PROTOCOL,
   ANTIGRAVITY_MAC_PROTOCOL,
   ANTIGRAVITY_PROTOCOL,
   BRAIN_PROTOCOL,
@@ -44,9 +45,14 @@ import {
 } from "@agenteschat/providers";
 import {
   ANTIGRAVITY_MODELS,
+  ANTIGRAVITY_NEON_CLI,
+  ANTIGRAVITY_NEW_MODEL,
+  ANTIGRAVITY_PAID_MODEL,
   antigravityBaseModel,
   claudeCodeModel,
+  cliVersionAtLeast,
   GROK_BUILD_MODELS,
+  isAntigravityGemini,
   isPlanModelId,
   OPENCODE_FREE_MODELS,
   planModel,
@@ -63,6 +69,7 @@ import {
   dropMailIfWidened,
   managesAgent,
   OWNER_ONLY,
+  ownsAgent,
   planOpened,
 } from "./audience";
 import { recordAudit } from "./audit";
@@ -206,15 +213,61 @@ export const grokModels = (listed: readonly { id: string; label?: string }[] = [
     ...(catalogModelOf(m.id) ? { modelId: m.id } : {}),
   }));
 
+/** The newest Gemini the plan offers: the picker says why when it isn't among an Antigravity computer's models. */
+const ANTIGRAVITY_NEON = "gemini-4-neon";
+
 /**
- * The Antigravity CLI's models (ADR 0143): what it listed on the agent's computer (`agy models`), else
- * `ANTIGRAVITY_MODELS`. A slug is a model at one thinking level (`gemini-4-argon-high`): its catalog model is the base.
+ * The Antigravity CLI's Gemini models (ADR 0143): what it listed on the agent's computer (`agy models`), its other
+ * makers' models left out, else `ANTIGRAVITY_MODELS`. A listing an older CLI took (a folder lent to an agent is never
+ * looked at again) shows a paid plan by its Argon and has no Neon or Hydrogen: with a CLI that runs them now
+ * (`version`, its `--version` line) they come first. A CLI known to predate them gets no reserve row it can't run. A
+ * slug is a model at one thinking level (`gemini-4-argon-high`): its catalog model is the base.
  */
-export const antigravityModels = (listed: readonly { id: string; label?: string }[] = []): BrainModelOption[] =>
-  (listed.length ? listed : ANTIGRAVITY_MODELS).map((m) => {
+export function antigravityModels(
+  listed: readonly { id: string; label?: string }[] = [],
+  version?: string | null,
+): BrainModelOption[] {
+  const knowsNew = cliVersionAtLeast(version, ANTIGRAVITY_NEON_CLI) !== false;
+  const reserve = ANTIGRAVITY_MODELS.filter((m) => knowsNew || !ANTIGRAVITY_NEW_MODEL.test(m.id));
+  const gemini = listed.filter((m) => isAntigravityGemini(m.id));
+  const olderListing =
+    knowsNew &&
+    gemini.some((m) => ANTIGRAVITY_PAID_MODEL.test(m.id)) &&
+    !gemini.some((m) => ANTIGRAVITY_NEW_MODEL.test(m.id));
+  const list = !gemini.length
+    ? reserve
+    : olderListing
+      ? [...reserve.filter((r) => ANTIGRAVITY_NEW_MODEL.test(r.id)), ...gemini]
+      : gemini;
+  return list.map((m) => {
     const base = antigravityBaseModel(m.id);
     return { value: m.id, label: m.label || m.id, ...(catalogModelOf(base) ? { modelId: base } : {}) };
   });
+}
+
+/**
+ * Why the newest Gemini isn't among an Antigravity computer's models (`BrainOption.missing`): its CLI predates it
+ * (where the app brings its own from `AGY_COPY_PROTOCOL` on, an older app is the reason; the workspace's own computer
+ * gets it with its image, so nothing is said there), or what the accounts there listed has no paid Gemini 4 model.
+ * None while nothing was listed (the reserve shows).
+ */
+function antigravityMissing(
+  models: readonly BrainModelOption[],
+  machine: { kind?: string; protocol: number; executors?: schema.MachineExecutors | null } | null,
+): BrainOption["missing"] {
+  const cli = machine?.executors?.antigravity;
+  if (!machine || !cli || models.some((m) => m.modelId === ANTIGRAVITY_NEON)) return undefined;
+  const label = MODEL_CATALOG[ANTIGRAVITY_NEON]?.label ?? ANTIGRAVITY_NEON;
+  if (cliVersionAtLeast(cli.version, ANTIGRAVITY_NEON_CLI) === false) {
+    if (machine.kind === "managed") return undefined;
+    const system = machine.executors?.mode === "system";
+    const why = !system && machine.protocol < AGY_COPY_PROTOCOL ? "app_old" : "cli_old";
+    return { modelId: ANTIGRAVITY_NEON, label, why };
+  }
+  return cli.models?.some((m) => isAntigravityGemini(m.id))
+    ? { modelId: ANTIGRAVITY_NEON, label, why: "plan" }
+    : undefined;
+}
 
 /**
  * Claude Code's aliases (`--model fable|opus|sonnet|haiku`), mapped to today's ids in the catalog. Each is named by
@@ -255,7 +308,8 @@ function modelChoices(kind: BrainKind, machine?: { executors?: schema.MachineExe
   if (kind === "cursor") return cursorModels(machine?.executors?.cursor?.models);
   if (kind === "opencode") return opencodeModels(machine?.executors?.opencode?.models);
   if (kind === "grok") return grokModels(machine?.executors?.grok?.models);
-  if (kind === "antigravity") return antigravityModels(machine?.executors?.antigravity?.models);
+  if (kind === "antigravity")
+    return antigravityModels(machine?.executors?.antigravity?.models, machine?.executors?.antigravity?.version);
   return [];
 }
 
@@ -331,11 +385,19 @@ export interface BrainOption {
   reason?: BrainUnavailable;
   models: BrainModelOption[];
   defaultModel: string | null;
+  /**
+   * Antigravity: the newest Gemini (`ANTIGRAVITY_NEON`) isn't among its models, and why: the computer's agentes.chat
+   * is too old to bring a CLI that runs it (`app_old`), its CLI predates it where the computer's setup installs it
+   * (`cli_old`, system mode), or no account signed in there has a plan that includes it (`plan`).
+   */
+  missing?: { modelId: string; label: string; why: "app_old" | "cli_old" | "plan" };
 }
 
 type MachineLike = Parameters<typeof machineExecutors>[0] & {
   id: string;
   name: string;
+  /** `managed`: the workspace's own computer, whose CLIs come with its image. */
+  kind?: string;
   /** Its system (`hello.os`): a Windows runner before `CODEX_WINDOWS_PROTOCOL` can't think with Codex. */
   os?: string;
   /** Protocol 10: what the machine allows (the app's Ferramentas); absent on older runners. */
@@ -426,16 +488,31 @@ function cliOption(machine: MachineLike | null, kind: "cursor" | "opencode" | "g
   else if (kind === "antigravity" && machine.os === "darwin" && machine.protocol < ANTIGRAVITY_MAC_PROTOCOL)
     reason = "runner_old";
   else if (!brainRunsOn(kind, machine.os)) reason = "system";
-  else if (!machine.executors?.[kind]) reason = missingCli(machine, kind);
+  else if (!machine.executors?.[kind] && !(kind === "antigravity" && bringsAgy(machine)))
+    reason = missingCli(machine, kind);
   else if (tools && (tools[kind] ?? tools.codex) !== true) reason = "tool_off";
+  const models = brainModelOptions(kind, machine);
+  const missing = kind === "antigravity" ? antigravityMissing(models, machine) : undefined;
   return {
     kind,
     available: !reason,
     ...(reason ? { reason } : {}),
-    models: brainModelOptions(kind, machine),
+    models,
     defaultModel: null,
+    ...(missing ? { missing } : {}),
   };
 }
+
+/**
+ * A computer whose runner brings its own Antigravity CLI (`AGY_COPY_PROTOCOL`, ADR 0143): outside system mode, on macOS
+ * and Linux, never the workspace's own (its image brings it). There Gemini can be connected with no CLI installed: the
+ * runner downloads it as the first sign-in starts.
+ */
+const bringsAgy = (machine: MachineLike) =>
+  machine.protocol >= AGY_COPY_PROTOCOL &&
+  machine.kind !== "managed" &&
+  machine.executors?.mode !== "system" &&
+  (machine.os === "darwin" || machine.os === "linux");
 
 /** "Usar um computador": the agent's machine as the brain section shows it. */
 export interface BrainComputer {
@@ -584,7 +661,7 @@ async function agentBrainAccess(db: Database, userId: string, orgId: string, age
   if (!agent || agent.archivedAt) throw new NotFoundError("Agent not found");
   const admin = managesAgent(agent, userId, membership);
   const which: BrainScope | undefined = isRightHand(agent) ? (scope === "mine" ? "mine" : "workspace") : undefined;
-  if (which !== "mine" && !admin && agent.ownerUserId !== userId) {
+  if (which !== "mine" && !admin && !ownsAgent(agent, userId, membership.roleIds)) {
     throw new ForbiddenError("Only an admin or the agent's owner can see who thinks for it", "agent.not_owner");
   }
   return { agent, admin, membership, scope: which };
@@ -1897,6 +1974,8 @@ export async function agentBrainSummaries(
     brainModel: string | null;
     machineId: string | null;
     ownerUserId: string | null;
+    /** Its owner role (ADR 0085, addendum of 2026-11-21); absent reads as none. */
+    ownerRoleId?: string | null;
     brainAccountId?: string | null;
     brainSpeed?: string;
     builtin?: string | null;
@@ -1940,11 +2019,13 @@ export async function agentBrainSummaries(
   const live = new Map(machines.filter((m) => !m.deletedAt).map((m) => [m.id, m]));
   const accountById = new Map(accounts.map((r) => [r.id, r]));
   const reads = membership !== null && !readRefusal(membership.standing);
-  for (const a of agents) {
+  for (const given of agents) {
+    const a = { ...given, ownerRoleId: given.ownerRoleId ?? null };
     const kind = brainOf(a.brain);
     const machine = a.machineId ? live.get(a.machineId) : undefined;
     const manages = reads && managesAgent(a, viewerId, membership);
-    const computer = machine && (manages || a.ownerUserId === viewerId) ? machine.name : undefined;
+    const computer =
+      machine && (manages || ownsAgent(a, viewerId, membership?.roleIds ?? [])) ? machine.name : undefined;
     const row = kind !== "model" && a.brainAccountId ? accountById.get(a.brainAccountId) : undefined;
     const provider = kind === "claude_code" ? (row?.provider ?? undefined) : undefined;
     const ownPlan = kind === "claude_code" ? machine?.executors?.claude?.plan : undefined;

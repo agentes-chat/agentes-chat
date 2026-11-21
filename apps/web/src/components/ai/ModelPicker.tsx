@@ -22,7 +22,7 @@ import {
 } from "@agenteschat/client/lib/brain-picker";
 import { can } from "@agenteschat/client/lib/permissions";
 import { modelStandInKey, planMeterText } from "@agenteschat/client/lib/plan-usage";
-import { planOf } from "@agenteschat/client/lib/plans";
+import { brainMissingHint, planOf } from "@agenteschat/client/lib/plans";
 import { modelChoices } from "@agenteschat/client/lib/providers";
 import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import {
@@ -43,7 +43,7 @@ import { type CSSProperties, type ReactElement, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useOpenAgentPanel } from "@/components/agent-panel-context";
 import { TeamScene } from "@/components/arrival/TeamScene";
-import { useConnectAi } from "@/components/ConnectAi";
+import { useConnectAi } from "@/components/connect-ai-context";
 import { useOrg } from "@/components/org-context";
 import { useAgentThinks } from "@/hooks/useAgentThinks";
 import { fullLook, lookOf } from "@/lib/look";
@@ -198,12 +198,23 @@ function PickerBody({ agent, view, onClose }: { agent: Agent; view: AgentBrain; 
   const platform = usePlatformKey(org.id);
   const all = models.data?.models ?? [];
   const choices = modelChoices(all, credentials.data ?? view.keys ?? [], platform.data ?? false);
-  const tiles = modelPickerTiles(t, view, agent.ownerUserId, choices, agent.model, all);
+  // The computer's own sign-ins as its runner reported them: a plan's tile offers one only where it is signed in.
+  const aiAccounts = useAiAccounts(org.id);
+  const computerRow = aiAccounts.data?.computers.find((c) => c.machineId === view.computer?.machineId);
+  const tiles = modelPickerTiles(t, view, agent.ownerUserId, choices, agent.model, all, computerRow);
   const [tileKey, setTileKey] = useState(() => (tiles.find((x) => x.current) ?? tiles[0])?.key);
   const tile = tiles.find((x) => x.key === tileKey) ?? tiles[0];
   const [accountId, setAccountId] = useState<string | null | undefined>(undefined);
   const account = tile?.accounts.find((a) => a.id === accountId) ?? tile?.accounts[0];
   const rows = tile ? modelPickerModels(t, i18n.language, view, tile, account, choices, agent.model) : [];
+  // Gemini's newest model missing from the computer's list: why, under the list.
+  const missing =
+    tile && tile.kind !== "model" && !planOf(account?.provider)
+      ? brainMissingHint(
+          t,
+          view.options.find((o) => o.kind === tile.kind),
+        )
+      : undefined;
   const [q, setQ] = useState("");
   const shown = q.trim() ? rows.filter((r) => r.label.toLowerCase().includes(q.trim().toLowerCase())) : rows;
   const [busy, setBusy] = useState(false);
@@ -378,6 +389,7 @@ function PickerBody({ agent, view, onClose }: { agent: Agent; view: AgentBrain; 
           </button>
         ))}
       </div>
+      {missing && <p className="mp__missing">{missing}</p>}
       {effortOn && tile && (
         <div className="mp__effort">
           <EffortPixels

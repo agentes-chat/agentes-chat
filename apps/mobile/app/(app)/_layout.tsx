@@ -7,6 +7,8 @@ import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import { NoticeIsland } from "@/features/island/NoticeIsland";
 import { noteWorkspaceOnScreen } from "@/features/links/on-screen";
+import { LiveActivityWork } from "@/features/live-activity/LiveActivityWork";
+import { TALK_SHEET_DETENTS, TALK_SHEET_DIMMED } from "@/features/live-files/talk/logic";
 import { ShareInbox } from "@/features/share/ShareInbox";
 import { useConnection, useRememberAgentLooks } from "@/features/shared/hooks";
 import { useAppIconBadge } from "@/features/shared/queries";
@@ -42,6 +44,8 @@ export default function AppLayout() {
     <>
       <AppSheets />
       <AppWork />
+      {/* The agents at work in the iPhone's Dynamic Island and on its Lock Screen (ADR 0210). */}
+      <LiveActivityWork />
       {/* What reaches me while the app is open, out of the camera's island (ADR 0071 §9). */}
       <NoticeIsland />
       {/* What other apps share through the system's share sheet opens "Compartilhar com…". */}
@@ -96,6 +100,8 @@ function AppSheets() {
       wikiNew: sheet([0.55, 1]),
       newChannel: sheet([0.45, 1]),
       fileShare: sheet([0.7, 1]),
+      // A file's conversation (ADR 0208): half the screen, the file behind undimmed and in reach; dimmed only when full.
+      fileTalk: { ...sheet(TALK_SHEET_DETENTS), dimmedDetentIndex: TALK_SHEET_DIMMED },
     }),
     [sheet],
   );
@@ -121,6 +127,8 @@ function AppSheets() {
       <Sheet.Screen name="new-channel" options={o.newChannel} />
       <Sheet.Screen name="new-chat" options={full} />
       <Sheet.Screen name="file-share" options={o.fileShare} />
+      {/* A file's conversation over the file, the same for every kind of file (ADR 0208). */}
+      <Sheet.Screen name="file-talk/[channelId]" options={o.fileTalk} />
       <Sheet.Screen name="code" options={full} />
       <Sheet.Screen name="chart" options={full} />
     </Sheet>

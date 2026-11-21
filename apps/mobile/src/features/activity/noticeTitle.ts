@@ -52,11 +52,17 @@ export function useNoticeTitle(n: AppNotification) {
   const orgName = useOrg().org?.name ?? "";
   // What the right hand found (ADR 0177 §1): the problem itself, in the reader's language. Who found it is the face.
   const problem = teamWatchLine(t, n);
+  // An agent's work paused on its monthly budget: its pause line, the agent's name bold.
+  const said =
+    problem ??
+    (n.kind === "budget_paused"
+      ? t("chat.body.usage_paused_budget", { agent: NAMES, percent: n.latest.percent ?? 0 })
+      : null);
   // A widget's alert or failure, an agent asking to publish a dashboard (ADR 0135): the dashboards' own words.
   const template = held
     ? t("standing.notification.agentHold", { name: NAMES })
-    : problem !== null
-      ? problem
+    : said !== null
+      ? said
       : device
         ? deviceNoticeTitle(t, device, NAMES, person, orgName)
         : n.kind === "app_created"

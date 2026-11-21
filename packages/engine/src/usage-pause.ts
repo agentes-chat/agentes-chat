@@ -1,7 +1,7 @@
 import type { PlanUsage, PubSub } from "@agenteschat/adapters";
 import { and, type Database, desc, type Executor, eq, inArray, type SQL, schema, sql } from "@agenteschat/db";
 import { extraUsageLeft, PLAN_PAUSE, planBinding, planState } from "@agenteschat/ui/plan-state";
-import { ACCESS_COLUMNS, type AgentAccessFields, managesRoutinesOf, REACH_COLUMNS } from "./audience";
+import { ACCESS_COLUMNS, type AgentAccessFields, managesRoutinesOf, OWNER_COLUMNS, REACH_COLUMNS } from "./audience";
 import { recordAudit } from "./audit";
 import { UUID } from "./authority";
 import { forgetPlanLimit, storedPlanUsage } from "./brains/select";
@@ -977,6 +977,7 @@ export async function continuePausedRuns(
       // What `mayContinuePause` reads of each run's agent, read with the runs.
       agent: ACCESS_COLUMNS,
       ownerUserId: agents.ownerUserId,
+      ownerRoleId: agents.ownerRoleId,
       requester: runRequester,
       routineId: routines.id,
       routineCreatorId: routines.createdByUserId,
@@ -1051,7 +1052,7 @@ export async function grantUsageOverride(
   const { agentRuns, agents, messages } = schema;
   const membership = await requireActiveMembership(db, userId, orgId);
   const [row] = await db
-    .select({ run: agentRuns, ownerUserId: agents.ownerUserId, requester: runRequester })
+    .select({ run: agentRuns, ...OWNER_COLUMNS, requester: runRequester })
     .from(agentRuns)
     .innerJoin(agents, eq(agents.id, agentRuns.agentId))
     .leftJoin(messages, and(eq(messages.id, agentRuns.triggerMessageId), eq(messages.orgId, agentRuns.orgId)))
@@ -1113,7 +1114,7 @@ export async function continueUsagePause(
   const { db } = deps;
   const { agentRuns, agents, messages } = schema;
   const [row] = await db
-    .select({ run: agentRuns, agent: REACH_COLUMNS, ownerUserId: agents.ownerUserId, requester: runRequester })
+    .select({ run: agentRuns, agent: REACH_COLUMNS, ...OWNER_COLUMNS, requester: runRequester })
     .from(agentRuns)
     .innerJoin(agents, eq(agents.id, agentRuns.agentId))
     .leftJoin(messages, and(eq(messages.id, agentRuns.triggerMessageId), eq(messages.orgId, agentRuns.orgId)))

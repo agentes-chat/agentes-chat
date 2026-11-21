@@ -15,7 +15,7 @@ import {
   sql,
 } from "@agenteschat/db";
 import { resolveChannelAgentAsks } from "./admin-asks";
-import { managesAgent, REACH_COLUMNS } from "./audience";
+import { managesAgent, OWNER_COLUMNS, ownsAgent, REACH_COLUMNS } from "./audience";
 import { caches } from "./cache";
 import { endOfCategory, requireCategoryInOrg } from "./channel-categories";
 import { wordsOf } from "./confidential";
@@ -782,7 +782,7 @@ async function requirePlacesAgent(
     .from(agents)
     .where(and(eq(agents.id, agentId), eq(agents.orgId, channel.orgId), isNull(agents.archivedAt)));
   if (!agent) throw new ValidationError("That agent does not exist in this organization");
-  if (agent.ownerUserId !== actorId && !managesAgent(agent, actorId, membership)) {
+  if (!ownsAgent(agent, actorId, membership.roleIds) && !managesAgent(agent, actorId, membership)) {
     throw new ForbiddenError("Only an admin or the agent's owner can change where it works");
   }
   if (!placesAgentsIn(membership, actorId, channel, await isChannelMember(db, channel.orgId, channel.id, actorId))) {
@@ -884,7 +884,7 @@ export async function setChannelAgentAutoReply(
 ) {
   const membership = await requireActiveMembership(db, actorId, orgId);
   const [row] = await db
-    .select({ createdBy: channels.createdByUserId, ownerUserId: agents.ownerUserId })
+    .select({ createdBy: channels.createdByUserId, ...OWNER_COLUMNS })
     .from(channelMembers)
     .innerJoin(channels, eq(channels.id, channelMembers.channelId))
     .innerJoin(agents, eq(agents.id, channelMembers.agentId))
@@ -897,7 +897,7 @@ export async function setChannelAgentAutoReply(
     );
   if (!row) throw new NotFoundError("That agent is not in this channel");
   if (
-    row.ownerUserId !== actorId &&
+    !ownsAgent(row, actorId, membership.roleIds) &&
     !(await managesChannel(db, membership, actorId, { id: channelId, orgId, createdByUserId: row.createdBy }))
   ) {
     throw new ForbiddenError("Only the channel's creator, an admin or the agent's owner can change this");

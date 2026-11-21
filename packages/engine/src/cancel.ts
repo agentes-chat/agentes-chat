@@ -2,13 +2,14 @@ import { type AgentScope, DESKTOP_PROTOCOL, type PubSub } from "@agenteschat/ada
 import { and, type Database, type Executor, eq, gte, inArray, schema, sql } from "@agenteschat/db";
 import { announceAgentStatus } from "./agent-status";
 import { publishApproval } from "./approvals";
-import { managesAgent, REACH_COLUMNS } from "./audience";
+import { managesAgent, ownsAgent, REACH_COLUMNS } from "./audience";
 import { recordAudit } from "./audit";
 import { personOfMessage } from "./authority";
 import { lineMachineOf, publishQueueChanged } from "./computer-queue";
 import { INBOX_JOB } from "./dispatch";
 import { ConflictError, ForbiddenError, NotFoundError } from "./errors";
 import { publishChannelEvent, publishMessageCreated } from "./events";
+import { queueLiveActivityRun } from "./live-activity-queue";
 import type { MachineHub } from "./machine-hub";
 import { cancelOrgTasks, type TaskCall } from "./machine-tasks";
 import { insertMessage, type Message, messageView } from "./messages";
@@ -193,8 +194,14 @@ interface StoppableRun {
   run: { orgId: string; agentId: string; triggerMessageId: string };
   requester: string | null;
   ownerUserId: string | null;
+  /** Its agent's owner role (ADR 0085, addendum of 2026-11-21): whoever holds it may as its owner. */
+  ownerRoleId?: string | null;
   agent?: RunAgent;
 }
+
+/** Whether the person answers for the run's agent (`ownsAgent`): its owner, or holding its owner role. */
+const ownsRunAgent = (row: Pick<StoppableRun, "ownerUserId" | "ownerRoleId">, userId: string, membership: Membership) =>
+  ownsAgent({ ownerUserId: row.ownerUserId, ownerRoleId: row.ownerRoleId ?? null }, userId, membership.roleIds);
 
 /**
  * Who may stop a run, continue it, or start it again ("Responder agora"): who asked for it (`runRequester`), the
@@ -202,7 +209,7 @@ interface StoppableRun {
  * the agent (`managesRunAgent`). A caller checking many runs passes each one's `agent`: nothing is read for it then.
  */
 export async function mayStopRun(db: Executor, userId: string, membership: Membership, row: StoppableRun) {
-  if (row.requester === userId || row.ownerUserId === userId) return true;
+  if (row.requester === userId || ownsRunAgent(row, userId, membership)) return true;
   if (await managesRunAgent(db, userId, membership, row)) return true;
   return (await personOfMessage(db, row.run.orgId, row.run.triggerMessageId)) === userId;
 }
@@ -266,6 +273,7 @@ export async function cancelRun(
       run: agentRuns,
       agent: REACH_COLUMNS,
       ownerUserId: agents.ownerUserId,
+      ownerRoleId: agents.ownerRoleId,
       requester: runRequester,
       channelKind: channels.kind,
     })
@@ -289,7 +297,7 @@ export async function cancelRun(
     return { id: row.run.id, status: row.run.status, previousStatus: row.run.status };
   }
   // The agent's owner or who manages it decides for the whole conversation; who asked, only for what they sent.
-  const forAll = row.ownerUserId === userId || (await managesRunAgent(db, userId, membership, row));
+  const forAll = ownsRunAgent(row, userId, membership) || (await managesRunAgent(db, userId, membership, row));
   const stopped = await stopRun(
     deps,
     orgId,
@@ -540,8 +548,9 @@ export async function stopRun(
       ...(actor.agentId ? { byAgentId: actor.agentId } : {}),
     });
   await publishChannelEvent(deps.pubsub, { type: "agent.run", ...where, ...bg, status: "canceled" });
-  // Its line ends with the run (ADR 0084 §11).
+  // Its line ends with the run (ADR 0084 §11), and so does its place in its person's Live Activity (ADR 0210).
   await announceAgentStatus(deps.pubsub, run.orgId, run.agentId).catch(() => {});
+  await queueLiveActivityRun(db, run).catch(() => {});
   if (line) await publishQueueChanged(deps.pubsub, run.orgId, line);
   if (previous !== "running" && run.background) {
     await publishChannelEvent(deps.pubsub, { type: "agent.idle", ...where, ...bg });

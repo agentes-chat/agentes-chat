@@ -8,6 +8,7 @@ import { useServer } from "@/lib/server";
 import { createSocketFactory } from "@/lib/socket";
 import { useAppActive } from "@/lib/useAppActive";
 import { useMeId, useOrgId } from "../../shared/hooks";
+import { useTalkSheet } from "../talk/store";
 import { keptChangesFor } from "./kept";
 
 /**
@@ -131,7 +132,10 @@ export function useLiveDoc(fileId: string, options: { kind?: LiveKind | null; aw
   });
   const room = view.room;
 
-  const focused = useIsFocused();
+  // On screen: on top, or under its own conversation's sheet, in sight and in reach above it (ADR 0208).
+  const onTop = useIsFocused();
+  const underSheet = useTalkSheet(fileId) !== null;
+  const focused = onTop || underSheet;
   const active = useAppActive();
   const who = useRef(Symbol("live-screen")).current;
   const awayMs = options.awayMs ?? LIVE_AWAY_MS;

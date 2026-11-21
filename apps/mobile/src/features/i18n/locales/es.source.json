@@ -392,6 +392,9 @@
   "approval.onlyOwner": {
     "value": "Only {{name}} or an admin can decide."
   },
+  "approval.onlyOwnerRole": {
+    "value": "Only whoever holds {{role}} or an admin can decide."
+  },
   "approval.onlyAdmins": {
     "value": "Only an admin can decide."
   },
@@ -457,6 +460,9 @@
   },
   "chats.seeAll": {
     "value": "See all chats"
+  },
+  "chats.splitEmpty": {
+    "value": "Your chats open here."
   },
   "chats.wait.verb.approval": {
     "value": "needs your ok"
@@ -653,11 +659,11 @@
   "new.search": {
     "value": "Person or agent"
   },
-  "new.create": {
-    "value": "Create"
-  },
   "new.agentHint": {
     "value": "A name and what it does"
+  },
+  "new.create": {
+    "value": "Create"
   },
   "new.chatShort": {
     "value": "Conversation"
@@ -1805,8 +1811,14 @@
   "threads.section.threads": {
     "value": "Threads"
   },
+  "threads.splitEmpty": {
+    "value": "Your threads open here."
+  },
   "agents.title": {
     "value": "Agents"
+  },
+  "agents.splitEmpty": {
+    "value": "Your agents' pages open here."
   },
   "agents.subtitle": {
     "value": {
@@ -2685,6 +2697,12 @@
   "me.notificationsKindsHint": {
     "value": "Activity keeps everything. This applies to this workspace, on all your devices."
   },
+  "me.liveActivity": {
+    "value": "Agents in the Dynamic Island"
+  },
+  "me.liveActivityHint": {
+    "value": "When an agent works on something you asked for, it shows at the top of the screen, in any app, and on the Lock Screen. With the app closed, it needs iOS 17.2 or later."
+  },
   "me.version": {
     "value": "agentes.chat · version {{version}}"
   },
@@ -3047,6 +3065,24 @@
   },
   "files.video.cantPlay": {
     "value": "This video can't play on this phone."
+  },
+  "files.talk.hint.image": {
+    "value": "Tap where you want to comment"
+  },
+  "files.talk.hint.video": {
+    "value": "Tap the video to comment on this moment"
+  },
+  "files.talk.hint.pdf": {
+    "value": "Tap the page to mark a point"
+  },
+  "files.talk.markVideo": {
+    "value": "Comment on this moment of the video"
+  },
+  "files.talk.pdfPage": {
+    "value": "Page {{page}} of {{count}}"
+  },
+  "files.talk.pdfFailed": {
+    "value": "Couldn't show this PDF."
   },
   "issues.title": {
     "value": "Tasks"
@@ -3779,6 +3815,9 @@
   "intentAgents.knows.footOwner": {
     "value": "Only {{name}} or an admin can correct these."
   },
+  "intentAgents.knows.footOwnerRole": {
+    "value": "Only whoever holds {{role}} or an admin can correct these."
+  },
   "intentAgents.knows.footAdmins": {
     "value": "Only an admin can correct these."
   },
@@ -3893,6 +3932,9 @@
   },
   "intentAgents.uses.asksOwner": {
     "value": "Merging and publishing ask for {{name}}'s approval, unless the agent never asks."
+  },
+  "intentAgents.uses.asksOwnerRole": {
+    "value": "Merging and publishing ask for approval from whoever holds {{role}}, unless the agent never asks."
   },
   "intentAgents.uses.asksAdmins": {
     "value": "Merging and publishing ask for an admin's approval, unless the agent never asks."

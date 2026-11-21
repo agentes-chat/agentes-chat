@@ -50,6 +50,10 @@ export const STORED = {
   pushAsked: "push-asked",
   /** The person turned notifications off in the app (no silent re-registration). */
   pushOff: "push-off",
+  /** "0": the agents' Live Activity is off on this phone (Você › Notificações, ADR 0210); on by default. */
+  liveActivityOff: "live-activity-off",
+  /** This install's id for the Live Activity's registration (`POST /api/app/push/live-activity`). */
+  liveActivityInstall: "live-activity-install",
   /** How many times our notifications sheet opened by itself (@agenteschat/client/lib/push-offer). */
   pushOffers: "push-offers",
   /** The wiki pages last opened on this phone, per workspace (JSON: org id → slugs, newest first). */

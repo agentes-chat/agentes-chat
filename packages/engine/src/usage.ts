@@ -4,7 +4,7 @@ import { can, getMembership, requirePermission } from "./organizations";
 import { readRefusal } from "./standing";
 import { WEB_USAGE_PROVIDER } from "./web-tools";
 
-const { usageRecords, agents, organizationSettings } = schema;
+const { agentBudgetPeriods, usageRecords, agents, organizationSettings } = schema;
 
 /** What an agent's budget pays for: its own model calls and the pictures it makes (ADR 0197). */
 export const BUDGET_KINDS: ("agent" | "image")[] = ["agent", "image"];
@@ -100,6 +100,9 @@ export async function workspaceBudgetPercent(db: Database, orgId: string, now = 
 /** Start of the calendar month (UTC) containing `now`: budgets reset then. */
 export const monthStartUtc = (now: Date) => new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 
+/** A budget's month, as `agent_budget_periods.period_start` holds it (`2026-11-01`). */
+export const budgetPeriodOf = (now: Date) => monthStartUtc(now).toISOString().slice(0, 10);
+
 /** What an agent's own calls spent this month, in nano-USD: what its budget pays (`agentBudgetsThisMonth`). */
 export async function agentSpendThisMonth(db: Database, orgId: string, agentId: string, now = new Date()) {
   const [row] = await db
@@ -163,4 +166,19 @@ export async function resyncBudgetCounter(db: Database, orgId: string, agentId: 
       target: [schema.agentBudgetPeriods.agentId, schema.agentBudgetPeriods.periodStart],
       set: { spentNanoUsd: spent, updatedAt: now },
     });
+}
+
+/** Reserved and spent amounts of an agent this month (from the gateway's counter). */
+export async function agentBudgetState(db: Database, orgId: string, agentId: string, at = new Date()) {
+  const [row] = await db
+    .select()
+    .from(agentBudgetPeriods)
+    .where(
+      and(
+        eq(agentBudgetPeriods.orgId, orgId),
+        eq(agentBudgetPeriods.agentId, agentId),
+        gte(agentBudgetPeriods.periodStart, budgetPeriodOf(at)),
+      ),
+    );
+  return { spentNanoUsd: row?.spentNanoUsd ?? 0, reservedNanoUsd: row?.reservedNanoUsd ?? 0 };
 }

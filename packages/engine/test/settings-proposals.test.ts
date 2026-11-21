@@ -40,6 +40,7 @@ import {
   undoMessageActions,
   updateAgent,
 } from "../src";
+import { monthStartUtc } from "../src/usage";
 import { addMember, type Fixture, setup } from "./fixtures";
 import { pairMachine } from "./machine-fixtures";
 
@@ -857,5 +858,82 @@ describe("an agent asks for its own settings on the same card (request_settings_
     const unknown = await ask(f, ctx, { add_skills: ["planilhas"], reason: "pediu" });
     expect(unknown.content).toContain("skill-19, +5 more.");
     expect(unknown.content).not.toContain("skill-20");
+  });
+
+  /** What @dev spent this month, as the gateway counts it. */
+  const spent = (fx: Fixture, usd: number) =>
+    fx.db
+      .insert(schema.agentBudgetPeriods)
+      .values({
+        orgId: fx.org.id,
+        agentId: fx.agent.id,
+        periodStart: monthStartUtc(new Date()).toISOString().slice(0, 10),
+        spentNanoUsd: usd * USD,
+      })
+      .onConflictDoUpdate({
+        target: [schema.agentBudgetPeriods.agentId, schema.agentBudgetPeriods.periodStart],
+        set: { spentNanoUsd: usd * USD },
+      });
+
+  test("a budget of 0 or at or below the month's spend is refused, unless it is a cut the card says pauses at once", async () => {
+    f = await setup({ rightHand: true });
+    await spent(f, 10);
+    const ctx = await devRun(f, f.owner.id, "ajusta seu orçamento");
+    for (const budget_usd of [0, 5, 10]) {
+      const out = await ask(f, ctx, { budget_usd, reason: "pediu" });
+      expect(out).toMatchObject({ isError: true });
+      expect(out.content).toContain("so it would stop at once");
+      expect(out.content).toContain("budget_cut: true");
+    }
+    expect((await getAgent(f.db, f.org.id, f.agent.id))?.monthlyBudgetNanoUsd).toBeNull();
+    await ask(f, ctx, { budget_usd: 5, budget_cut: true, reason: "pediu para parar" });
+    expect((await cardRows(f, f.owner.id)).rows[0]?.settings).toEqual([
+      { field: "budget", from: null, to: 5 * USD, pausesNow: true },
+    ]);
+    await ask(f, ctx, { budget_usd: 30, budget_cut: true, reason: "mais folga" });
+    expect((await cardRows(f, f.owner.id)).rows[0]?.settings).toEqual([{ field: "budget", from: null, to: 30 * USD }]);
+  });
+
+  test("a card goes stale once its budget would stop the agent or its value changed, and never applies", async () => {
+    f = await setup({ rightHand: true });
+    await spent(f, 10);
+    const ctx = await devRun(f, f.owner.id, "ajusta seu orçamento");
+    await ask(f, ctx, { budget_usd: 20, reason: "mais folga" });
+    const first = (await cardRows(f, f.owner.id)).rows[0];
+    expect(first).toMatchObject({ status: "pending", canDecide: true });
+    // The month's spend went past it while the card waited.
+    await spent(f, 25);
+    expect((await cardRows(f, f.owner.id)).rows[0]).toMatchObject({ status: "stale", canDecide: false });
+    await expect(
+      decideProposal(f.db, f.owner.id, f.org.id, first?.id ?? "", "accept", { pubsub: f.pubsub }),
+    ).rejects.toThrow(/changed since/);
+    expect((await getAgent(f.db, f.org.id, f.agent.id))?.monthlyBudgetNanoUsd).toBeNull();
+    await ask(f, ctx, { budget_usd: 60, reason: "mais folga" });
+    const second = (await cardRows(f, f.owner.id)).rows[0];
+    // Someone set it on its page meanwhile: the card's "from" is no longer what it has.
+    await updateAgent(f.db, f.owner.id, f.org.id, f.agent.id, { monthlyBudgetNanoUsd: 80 * USD });
+    expect((await cardRows(f, f.owner.id)).rows[0]).toMatchObject({ status: "stale" });
+    await expect(
+      decideProposal(f.db, f.owner.id, f.org.id, second?.id ?? "", "accept", { pubsub: f.pubsub }),
+    ).rejects.toThrow(/changed since/);
+    expect((await getAgent(f.db, f.org.id, f.agent.id))?.monthlyBudgetNanoUsd).toBe(80 * USD);
+  });
+
+  test("a reason that names another agent is refused and points to propose_settings_change", async () => {
+    f = await setup({ rightHand: true });
+    const lodi = await lodiOf(f);
+    const ctx = await devRun(f, f.owner.id, "sobe o orçamento");
+    for (const reason of [`${lodi.name} ficou sem orçamento`, `@${lodi.handle} precisa de mais`]) {
+      const out = await ask(f, ctx, { budget_usd: 90, reason });
+      expect(out).toMatchObject({ isError: true });
+      expect(out.content).toContain(PROPOSE_SETTINGS_TOOL);
+    }
+    // Its own name beside the other's: it is about its own settings.
+    const own = await ask(f, ctx, {
+      budget_usd: 90,
+      reason: `Dev precisa de mais para revisar o que ${lodi.name} pede`,
+    });
+    expect(own.isError).toBeFalsy();
+    expect((await cardRows(f, f.owner.id)).rows[0]?.settings).toEqual([{ field: "budget", from: null, to: 90 * USD }]);
   });
 });

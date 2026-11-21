@@ -21,6 +21,7 @@ import { openComputer } from "../computer/AgentComputerRow";
 import { IconTile } from "../connectors/ConnectorIcon";
 import { useColors, useDirectory, useMeId, useOrgId, useWhen } from "../shared/hooks";
 import { agentLook, genderOf } from "../shared/logic";
+import { ownsIn } from "../shared/owner";
 import { PromptForm } from "../shared/PromptForm";
 import { useSurface } from "../shared/parts";
 import { useSheet } from "../shared/SheetHost";
@@ -187,7 +188,9 @@ function HandoffAsk({
   const name = agent?.name ?? "";
   // Whose it is goes by ids (the same rule as the line above the composer); a name only says who, once it loads.
   // Someone else's: who it waits for in the header when known, no buttons here.
-  const mine = meId !== null && handoffIsMine(h, meId, agent?.ownerUserId, org);
+  // One who holds the role that answers for it helps as its owner (ADR 0085, addendum of 2026-11-21).
+  const owner = ownsIn(dir.memberById, meId, agent) ? meId : agent?.ownerUserId;
+  const mine = meId !== null && handoffIsMine(h, meId, owner, org);
   const asked = h.requestedForUserId ? dir.memberById.get(h.requestedForUserId)?.name : undefined;
   // It ended meanwhile: the card settles on its own (`useBrowserHandoffMutations`), with nothing to tell.
   const failed = (err: unknown) => {

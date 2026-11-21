@@ -77,7 +77,7 @@ describe("a conversation opening", () => {
 describe("the conversation's pieces", () => {
   test("the routes still open `ChatScreen` from its file, with the same props", () => {
     expect(chatFile).toMatch(
-      /export function ChatScreen\(\{\s*channelId,\s*threadId,\s*handoffId,\s*focusId,\s*\}: \{\s*channelId: string;\s*threadId\?: string \| null;\s*handoffId\?: string \| null;/,
+      /export function ChatScreen\(\{\s*channelId,\s*threadId,\s*handoffId,\s*focusId,\s*sheet,\s*\}: \{\s*channelId: string;\s*threadId\?: string \| null;\s*handoffId\?: string \| null;/,
     );
   });
 

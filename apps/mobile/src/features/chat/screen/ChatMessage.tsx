@@ -2,7 +2,6 @@ import type { Message, MessageReceipt, ReplyRef, ThreadInfo } from "@agenteschat
 import { runPosition } from "@agenteschat/client/lib/chat";
 import { memo, useCallback, useMemo } from "react";
 import Animated, { LayoutAnimationConfig } from "react-native-reanimated";
-import { chatHref } from "../../links/logic";
 import { PushOfferLine } from "../../push/PushOfferLine";
 import { FanStrip } from "../../queue/parts";
 import { useColors } from "../../shared/hooks";
@@ -128,13 +127,7 @@ export const ChatMessage = memo(function ChatMessage({
           around it either way, so it isn't drawn again when it turns sent. The menu brings the plain view it lifts (the
           row can be a fragment: a pair row, a quote). */}
       <SwipeReply enabled={canReply && !m.local} onReply={reply}>
-        {NATIVE_MENU ? (
-          <MessageMenuFor context={menu} href={chatHref(m.channelId, m.threadId, m.id)}>
-            {row}
-          </MessageMenuFor>
-        ) : (
-          row
-        )}
+        {NATIVE_MENU ? <MessageMenuFor context={menu}>{row}</MessageMenuFor> : row}
       </SwipeReply>
       <LayoutAnimationConfig skipEntering>
         {m.author.type === "agent" && m.mentionedAgentIds.length > 1 ? (

@@ -171,6 +171,7 @@
     "forwards": "Przekazuje dalej „{{subject}}”",
     "forwardsFrom": "Przekazuje dalej „{{subject}}”, od {{from}}",
     "onlyOwner": "Decyzję może podjąć tylko {{name}} albo administrator.",
+    "onlyOwnerRole": "Decydować mogą tylko osoby z rolą {{role}} albo administrator.",
     "onlyAdmins": "Decyzję może podjąć tylko administrator.",
     "notFound": "Ta prośba już nie istnieje albo nie masz do niej dostępu.",
     "trait": {
@@ -201,6 +202,7 @@
     "pinned": "Przypięte",
     "recent": "Ostatnie",
     "seeAll": "Zobacz wszystkie czaty",
+    "splitEmpty": "Tutaj otwierają się Twoje czaty.",
     "wait": {
       "verb": {
         "approval": "potrzebuje twojej zgody",
@@ -294,8 +296,8 @@
     "to": "Do:",
     "people": "Osoby",
     "search": "Osoba lub agent",
-    "create": "Utwórz",
     "agentHint": "Nazwa i czym się zajmuje",
+    "create": "Utwórz",
     "chatShort": "Rozmowa",
     "chatHint": "Osoba lub agent",
     "taskHint": "Z osobą odpowiedzialną i terminem",
@@ -805,10 +807,12 @@
     "section": {
       "missions": "Misje",
       "threads": "Wątki"
-    }
+    },
+    "splitEmpty": "Tutaj otwierają się Twoje wątki."
   },
   "agents": {
     "title": "Agenci",
+    "splitEmpty": "Tutaj otwierają się strony Twoich agentów.",
     "subtitle_one": "{{count}} w zespole · pracuje: {{working}}",
     "subtitle_few": "{{count}} w zespole · pracuje: {{working}}",
     "subtitle_many": "{{count}} w zespole · pracuje: {{working}}",
@@ -1248,6 +1252,8 @@
     "notificationsOnHint": "Przychodzą też w przeglądarce i aplikacji na komputer, jeśli są tam włączone.",
     "notificationsOffHint": "Włącz je, żeby dostawać tu powiadomienia. Rodzaje poniżej dotyczą wszystkich twoich urządzeń.",
     "notificationsKindsHint": "Aktywność zachowuje wszystko. To ustawienie dotyczy tej przestrzeni roboczej na wszystkich twoich urządzeniach.",
+    "liveActivity": "Agenci w Dynamic Island",
+    "liveActivityHint": "Gdy agent pracuje nad tym, o co prosisz, pojawia się u góry ekranu, w każdej aplikacji, i na ekranie blokady. Przy zamkniętej aplikacji potrzebny jest iOS 17.2 lub nowszy.",
     "version": "agentes.chat · wersja {{version}}",
     "edit": "Edytuj",
     "status": "Status",
@@ -1388,6 +1394,16 @@
       "fullscreen": "Pełny ekran",
       "open": "Otwórz",
       "cantPlay": "Tego filmu nie można odtworzyć na tym telefonie."
+    },
+    "talk": {
+      "hint": {
+        "image": "Stuknij tam, gdzie chcesz dodać komentarz",
+        "video": "Stuknij film, aby skomentować ten moment",
+        "pdf": "Stuknij stronę, aby zaznaczyć punkt"
+      },
+      "markVideo": "Skomentuj ten moment filmu",
+      "pdfPage": "Strona {{page}} z {{count}}",
+      "pdfFailed": "Nie udało się wyświetlić tego pliku PDF."
     }
   },
   "issues": {
@@ -1714,6 +1730,7 @@
       "ruleBody": "{{name}} przestaje stosować tę regułę. Kto ją ustalił, może ustalić ją ponownie.",
       "ruleRemove": "Usuń",
       "footOwner": "Poprawiać to może tylko {{name}} albo administrator.",
+      "footOwnerRole": "Poprawić to mogą tylko osoby z rolą {{role}} albo administrator.",
       "footAdmins": "Poprawiać to może tylko administrator.",
       "emptyF": "{{name}} nie zapisała jeszcze nic o tobie.",
       "emptyM": "{{name}} nie zapisał jeszcze nic o tobie.",
@@ -1763,6 +1780,7 @@
       },
       "asksYou": "Merge i publikacja wymagają twojego zatwierdzenia, chyba że agent nigdy nie pyta.",
       "asksOwner": "Merge i publikacja wymagają zatwierdzenia, które daje {{name}}, chyba że agent nigdy nie pyta.",
+      "asksOwnerRole": "Merge i publikacja wymagają zatwierdzenia przez osobę z rolą {{role}}, chyba że agent nigdy nie pyta.",
       "asksAdmins": "Merge i publikacja wymagają zatwierdzenia przez administratora, chyba że agent nigdy nie pyta.",
       "empty": "Na razie tylko rozmowa."
     }

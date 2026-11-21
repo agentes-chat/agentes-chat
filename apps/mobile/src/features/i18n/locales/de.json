@@ -159,6 +159,7 @@
     "forwards": "Leitet „{{subject}}“ weiter",
     "forwardsFrom": "Leitet „{{subject}}“ weiter, von {{from}}",
     "onlyOwner": "Nur {{name}} oder ein Admin kann entscheiden.",
+    "onlyOwnerRole": "Nur Personen mit der Rolle {{role}} oder ein Admin können entscheiden.",
     "onlyAdmins": "Nur ein Admin kann entscheiden.",
     "notFound": "Diese Anfrage gibt es nicht mehr oder du kannst sie nicht sehen.",
     "trait": {
@@ -189,6 +190,7 @@
     "pinned": "Angepinnt",
     "recent": "Zuletzt",
     "seeAll": "Alle Chats ansehen",
+    "splitEmpty": "Deine Chats öffnen sich hier.",
     "wait": {
       "verb": {
         "approval": "braucht dein Okay",
@@ -276,8 +278,8 @@
     "to": "An:",
     "people": "Personen",
     "search": "Person oder Agent",
-    "create": "Erstellen",
     "agentHint": "Ein Name und was er tut",
+    "create": "Erstellen",
     "chatShort": "Unterhaltung",
     "chatHint": "Eine Person oder ein Agent",
     "taskHint": "Mit verantwortlicher Person und Frist",
@@ -759,10 +761,12 @@
     "section": {
       "missions": "Missionen",
       "threads": "Threads"
-    }
+    },
+    "splitEmpty": "Deine Threads öffnen sich hier."
   },
   "agents": {
     "title": "Agenten",
+    "splitEmpty": "Die Seiten deiner Agenten öffnen sich hier.",
     "subtitle_one": "{{count}} im Team · {{working}} arbeiten",
     "subtitle_other": "{{count}} im Team · {{working}} arbeiten",
     "free": "Frei",
@@ -1096,6 +1100,8 @@
     "notificationsOnHint": "Sie kommen auch im Browser und in der Desktop-App an, wenn sie dort eingeschaltet sind.",
     "notificationsOffHint": "Schalte sie ein, um hier Benachrichtigungen zu bekommen. Die Arten unten gelten für alle deine Geräte.",
     "notificationsKindsHint": "In der Aktivität bleibt alles. Das gilt für diesen Workspace, auf all deinen Geräten.",
+    "liveActivity": "Agenten in der Dynamic Island",
+    "liveActivityHint": "Wenn ein Agent an etwas arbeitet, worum du gebeten hast, erscheint er oben auf dem Bildschirm, in jeder App, und auf dem Sperrbildschirm. Bei geschlossener App braucht es iOS 17.2 oder neuer.",
     "version": "agentes.chat · Version {{version}}",
     "edit": "Bearbeiten",
     "status": "Status",
@@ -1230,6 +1236,16 @@
       "fullscreen": "Vollbild",
       "open": "Öffnen",
       "cantPlay": "Dieses Video kann auf diesem Handy nicht abgespielt werden."
+    },
+    "talk": {
+      "hint": {
+        "image": "Tippe dort, wo du kommentieren willst",
+        "video": "Tippe auf das Video, um diesen Moment zu kommentieren",
+        "pdf": "Tippe auf die Seite, um einen Punkt zu markieren"
+      },
+      "markVideo": "Diesen Moment des Videos kommentieren",
+      "pdfPage": "Seite {{page}} von {{count}}",
+      "pdfFailed": "Dieses PDF lässt sich nicht anzeigen."
     }
   },
   "issues": {
@@ -1534,6 +1550,7 @@
       "ruleBody": "{{name}} folgt dieser Regel nicht mehr. Wer sie festgelegt hat, kann sie noch einmal festlegen.",
       "ruleRemove": "Entfernen",
       "footOwner": "Nur {{name}} oder ein Admin kann das korrigieren.",
+      "footOwnerRole": "Nur Personen mit der Rolle {{role}} oder ein Admin können das korrigieren.",
       "footAdmins": "Nur ein Admin kann das korrigieren.",
       "emptyF": "{{name}} hat noch nichts über dich gespeichert.",
       "emptyM": "{{name}} hat noch nichts über dich gespeichert.",
@@ -1583,6 +1600,7 @@
       },
       "asksYou": "Mergen und Veröffentlichen fragen nach deiner Freigabe, außer der Agent fragt nie.",
       "asksOwner": "Mergen und Veröffentlichen fragen nach der Freigabe von {{name}}, außer der Agent fragt nie.",
+      "asksOwnerRole": "Mergen und Veröffentlichen brauchen die Freigabe einer Person mit der Rolle {{role}}, außer der Agent fragt nie.",
       "asksAdmins": "Mergen und Veröffentlichen fragen nach der Freigabe eines Admins, außer der Agent fragt nie.",
       "empty": "Vorerst nur Unterhaltung."
     }

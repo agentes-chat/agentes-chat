@@ -31,6 +31,7 @@ import { publishChannelEvent, publishMessageCreated } from "./events";
 import type { Transcript } from "./executor";
 import { cutText, fromNow, pgSafeJson, stringsOf } from "./format";
 import type { Judge } from "./judge";
+import { queueLiveActivityRun } from "./live-activity-queue";
 import { getMessage, insertMessage, type Message, messageView } from "./messages";
 import { notifyCatchUpClosed, notifyCatchUpClosedAsker } from "./notification-producers";
 import { openRequestsOf } from "./open-requests";
@@ -306,6 +307,7 @@ async function closeParked(deps: ParkedDeps, run: AgentRun, r: Release): Promise
       passed: true,
     });
   await announceAgentStatus(deps.pubsub, run.orgId, run.agentId).catch(() => {});
+  await queueLiveActivityRun(db, run).catch(() => {});
   const line = lineMachineOf(run);
   if (line) await publishQueueChanged(deps.pubsub, run.orgId, line);
   // A note that also speaks for later turns waiting here is theirs now; this run's says why it didn't answer.

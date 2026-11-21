@@ -452,23 +452,22 @@ describe("the tool", () => {
     });
   });
 
-  test("elsewhere it says why and posts nothing; a routine's run doesn't list it at all", async () => {
+  test("elsewhere it says why and posts nothing; a routine's run and one between agents don't list it at all", async () => {
     f = await setup({ sayNow: true });
     const at = await places();
     const listed = async (run: AgentRun) => (await tools().list(ctxOf(run))).some((t) => t.name === SAY_NOW_TOOL);
-    // Listed in every run with an id, so the list stays the same from run to run; never in a background one.
+    // Listed in every run with an id, so the list stays the same from run to run; never in a background one, nor
+    // in a conversation between agents (a lean wake: nobody reads it).
     expect(await listed(at.dm)).toBe(true);
-    expect(await listed(at.agentsDm)).toBe(true);
+    expect(await listed(at.agentsDm)).toBe(false);
     expect(await listed(at.work)).toBe(true);
     expect(await listed(at.routine)).toBe(false);
     // Nor for a mission task's call through the bridge, which has no run of its own.
     expect(await createSayNowToolSource({}).tools({ ...ctxOf(at.dm), runId: "" })).toEqual([]);
-    for (const run of [at.agentsDm, at.mission]) {
-      expect(await sayNow(run, LINE)).toMatchObject({
-        isError: true,
-        content: expect.stringContaining("Nobody reads this conversation as it goes"),
-      });
-    }
+    expect(await sayNow(at.mission, LINE)).toMatchObject({
+      isError: true,
+      content: expect.stringContaining("Nobody reads this conversation as it goes"),
+    });
     expect(await sayNow(at.work, LINE)).toMatchObject({
       isError: true,
       content: expect.stringContaining("post_update"),

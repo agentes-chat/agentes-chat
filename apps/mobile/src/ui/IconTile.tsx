@@ -1,16 +1,20 @@
 import { Platform, StyleSheet, View } from "react-native";
 import { Icon, type IconName } from "./Icon";
+import { MATERIAL_NAMES } from "./icons.material.names";
 import { TILE_TINTS } from "./icons.sf";
 import { MarkIcon } from "./MarkIcon";
 import { useTheme } from "./theme";
 
 const IOS = Platform.OS === "ios";
 const ON_TILE = "#ffffff";
+/** How much of the tile the symbol takes: Apple's and Google's filled symbols, or our line icon. */
+const glyphShare = (icon: IconName) => (IOS ? 0.73 : MATERIAL_NAMES[icon] ? 0.66 : 0.6);
 
 /**
  * An icon's tile, the system Settings' own: the subject's color (`TILE_TINTS`, the system's gray where it has none,
  * red for a destructive row), a continuous corner of 23% (7 on the 30-point tile of a list row) and the symbol in white,
- * filled on iOS (16 points on a 30 tile), our line icon a size smaller on Android.
+ * filled: Apple's on iOS (22 points on a 30 tile), Google's on Android (20), our line icon a size smaller (18) where
+ * Google has none.
  */
 export function IconTile({
   icon,
@@ -38,9 +42,9 @@ export function IconTile({
       ]}
     >
       {mark ? (
-        <MarkIcon uri={mark} fallback={icon} size={Math.round(size * (IOS ? 0.73 : 0.6))} color={ON_TILE} />
+        <MarkIcon uri={mark} fallback={icon} size={Math.round(size * glyphShare(icon))} color={ON_TILE} />
       ) : (
-        <Icon name={icon} size={Math.round(size * (IOS ? 0.73 : 0.6))} color={ON_TILE} filled />
+        <Icon name={icon} size={Math.round(size * glyphShare(icon))} color={ON_TILE} filled />
       )}
     </View>
   );

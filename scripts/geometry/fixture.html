@@ -9,6 +9,8 @@
   .float > .thread-panel__scrim.bad-floating { left: 300px; }
   .float > .thread-panel.good-floating { top: 10px; right: 10px; bottom: 10px; }
   .float > .thread-panel__scrim.good-floating { left: 0; }
+  .bad-btngap--plateclick > .ac-btn::before { pointer-events: auto !important; }
+  @media (pointer: coarse) { .bad-btngap--plateclick { column-gap: 32px; } }
 </style>
 <div class="box bad-edge inline" style="height: 40px; justify-content: space-between"><span>Row</span><span class="ac-btn" style="height: 36px">Abrir</span></div>
 <div class="box good-edge inline" style="height: 60px; padding: 0 12px; justify-content: space-between"><span>Row</span><span class="ac-btn" style="height: 36px">Abrir</span></div>
@@ -214,6 +216,9 @@
 <div class="good-btngap" style="display: flex; gap: 8px"><button type="button" class="ac-btn ac-btn--sm">Aprovar</button><button type="button" class="ac-btn ac-btn--sm">Recusar</button></div>
 <div class="good-btngap--ghost" style="display: flex; gap: 16px"><button type="button" class="ac-btn ac-btn--ghost ac-btn--sm">Ver pedidos</button><button type="button" class="ac-btn ac-btn--ghost ac-btn--sm">Revisar</button></div>
 <div class="ac-acts good-btngap--acts"><button type="button" class="ac-btn ac-btn--primary ac-btn--sm">Salvar</button><button type="button" class="ac-btn ac-btn--sm">Testar</button><button type="button" class="ac-btn ac-btn--ghost ac-btn--sm">Cancelar</button></div>
+<div class="ac-acts bad-btngap--acticons" style="column-gap: 32px"><button type="button" class="ac-btn ac-btn--ghost ac-btn--sm ac-btn--icon" aria-label="Lembrar depois"><svg width="16" height="16"><path d="M0 0h16v16H0z"/></svg></button><button type="button" class="ac-btn ac-btn--ghost ac-btn--sm ac-btn--icon" aria-label="Feito"><svg width="16" height="16"><path d="M0 0h16v16H0z"/></svg></button></div>
+<div class="ac-acts bad-btngap--acthit"><button type="button" class="ac-btn ac-btn--ghost ac-btn--sm ac-btn--icon" style="width: 32px; padding: 0; justify-content: center; margin-inline-end: -16px" aria-label="Lembrar depois"><svg width="16" height="16"><path d="M0 0h16v16H0z"/></svg></button><button type="button" class="ac-btn ac-btn--ghost ac-btn--sm ac-btn--icon" style="width: 32px; padding: 0; justify-content: center; margin-inline-start: -8px" aria-label="Feito"><svg width="16" height="16"><path d="M0 0h16v16H0z"/></svg></button></div>
+<div class="ac-acts bad-btngap--plateclick"><button type="button" class="ac-btn ac-btn--ghost ac-btn--sm ac-btn--icon" aria-label="Lembrar depois"><svg width="16" height="16"><path d="M0 0h16v16H0z"/></svg></button><button type="button" class="ac-btn ac-btn--ghost ac-btn--sm ac-btn--icon" aria-label="Feito"><svg width="16" height="16"><path d="M0 0h16v16H0z"/></svg></button></div>
 <div class="ac-acts good-btngap--acticons"><button type="button" class="ac-btn ac-btn--ghost ac-btn--sm ac-btn--icon" aria-label="Mais ações"><svg width="16" height="16"><path d="M0 0h16v16H0z"/></svg></button><button type="button" class="ac-btn ac-btn--ghost ac-btn--sm ac-btn--icon ac-btn--glyph" style="--glyph-air: 4px" aria-label="Fechar"><svg width="16" height="16"><path d="M0 0h16v16H0z"/></svg></button></div>
 <div class="wiki-bar good-btngap--format" role="toolbar" style="display: flex; gap: 2px"><button type="button" class="ac-btn ac-btn--ghost ac-btn--sm ac-btn--icon" aria-label="Negrito"><svg width="16" height="16"><path d="M0 0h16v16H0z"/></svg></button><button type="button" class="ac-btn ac-btn--ghost ac-btn--sm ac-btn--icon" aria-label="Itálico"><svg width="16" height="16"><path d="M0 0h16v16H0z"/></svg></button></div>
 

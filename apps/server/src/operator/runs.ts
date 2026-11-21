@@ -384,8 +384,24 @@ const Trace = z
             .array(
               z.object({
                 warm: z.boolean().openapi({ description: "On a process already open." }),
+                cold: z.string().nullable().openapi({
+                  description:
+                    "Not warm: why it started a new process (`coldStarts.cause` of the run timings); null when warm or an older runner didn't say.",
+                }),
                 initMs: Count.nullable().openapi({ description: "A new process until it said it was ready." }),
                 firstEventMs: Count.nullable().openapi({ description: "Turn start to its first event." }),
+                firstTokenMs: Count.nullable().openapi({
+                  description: "Turn start to the model API's first streamed message (time to first token).",
+                }),
+                firstAssistantMs: Count.nullable().openapi({
+                  description: "Turn start to the answer's first whole block (a thinking block, text or a tool call).",
+                }),
+                retries: Count.nullable().openapi({ description: "API retries the CLI made in the turn." }),
+                retryDelayMs: Count.nullable().openapi({ description: "The waits those retries announced, summed." }),
+                thinkingBlocks: Count.nullable().openapi({ description: "Thinking blocks of the answer." }),
+                thinkingChars: Count.nullable().openapi({
+                  description: "Characters of their text: 0 with blocks means the API left the text out.",
+                }),
               }),
             )
             .openapi({

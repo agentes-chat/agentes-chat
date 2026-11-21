@@ -58,6 +58,7 @@ import { useBubbleHead, useBubblePart } from "../shared/bubble-part";
 import { AgentFace } from "../shared/Face";
 import { useColors, useDirectory, useMeId, useNow, useOrgId } from "../shared/hooks";
 import { agentLook, fuseRemaining } from "../shared/logic";
+import { ownsIn } from "../shared/owner";
 import { tapHaptic, useSurface } from "../shared/parts";
 import {
   type AskKind,
@@ -244,8 +245,11 @@ function HandoffProbe({
   const dir = useDirectory();
   const h = useBrowserHandoff(orgId, id).data ?? fallback;
   const expired = useExpired(h.expiresAt);
-  // The same rule as its card (`HandoffCard`): by ids, never by a name that may not have loaded.
-  const mine = meId !== null && handoffIsMine(h, meId, dir.agentById.get(h.agentId)?.ownerUserId, org);
+  // The same rule as its card (`HandoffCard`): by ids, never by a name that may not have loaded. One who holds the
+  // role that answers for it helps as its owner (ADR 0085, addendum of 2026-11-21).
+  const agent = dir.agentById.get(h.agentId);
+  const owner = ownsIn(dir.memberById, meId, agent) ? meId : agent?.ownerUserId;
+  const mine = meId !== null && handoffIsMine(h, meId, owner, org);
   const ask =
     h.status === "pending" && h.kind === "ask" && !expired && mine
       ? {

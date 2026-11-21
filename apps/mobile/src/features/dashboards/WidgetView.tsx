@@ -212,15 +212,24 @@ function Kpi({
   );
   return (
     <View>
-      <Text
-        variant="display"
-        numberOfLines={1}
-        style={[styles.num, big ? styles.numBig : compact ? styles.numCompact : null, { color: c.ink }]}
-      >
-        {spec.prefix ? <Text style={[styles.affix, { color: c.muted }]}>{`${spec.prefix} `}</Text> : null}
-        {formatWidgetNumber(spec.value, i18n.language)}
-        {spec.suffix ? <Text style={[styles.affix, { color: c.muted }]}>{` ${spec.suffix}`}</Text> : null}
-      </Text>
+      {/* What comes before the number ("US$") is a text of its own on the number's baseline: as the first, smaller
+          part of the number's text, Android set the line's height by it and cut the top off the digits. */}
+      <View style={styles.figure}>
+        {spec.prefix ? <Text style={[styles.affix, { color: c.muted }]}>{spec.prefix}</Text> : null}
+        <Text
+          variant="display"
+          numberOfLines={1}
+          style={[
+            styles.num,
+            big ? styles.numBig : compact ? styles.numCompact : null,
+            styles.shrink,
+            { color: c.ink },
+          ]}
+        >
+          {formatWidgetNumber(spec.value, i18n.language)}
+          {spec.suffix ? <Text style={[styles.affix, { color: c.muted }]}>{` ${spec.suffix}`}</Text> : null}
+        </Text>
+      </View>
       {spec.delta || spec.note ? (
         <Text variant="footnote" tone="ink2" numberOfLines={compact ? 1 : 2}>
           {/* On the strip the change is a quiet word (one accent per screen: the waiting strip's); on a board, its color. */}
@@ -894,6 +903,10 @@ const styles = StyleSheet.create({
   num: { fontSize: 30, lineHeight: 34, fontWeight: "700", letterSpacing: -0.9, fontVariant: ["tabular-nums"] },
   numBig: { fontSize: 40, lineHeight: 44, letterSpacing: -1.2 },
   affix: { fontSize: 15, fontWeight: "600", letterSpacing: 0 },
+  // The prefix and the number on one baseline, a space's width apart.
+  figure: { flexDirection: "row", alignItems: "baseline", gap: 4 },
+  // A long number gives way (and ends in "…"), never the prefix beside it.
+  shrink: { flexShrink: 1, minWidth: 0 },
   strong: { fontWeight: "600" },
   spark: { marginTop: 6 },
   track: {

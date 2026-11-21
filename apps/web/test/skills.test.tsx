@@ -9,7 +9,7 @@ import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { createI18n } from "@/i18n";
 import { setNavigateAway } from "@/lib/navigate";
 import { declarations, topLevel } from "./built-css";
-import { ADA_ID, createFakeApi, ORG_ID, seedState } from "./fake-api";
+import { ADA_ID, ATLAS_ID, createFakeApi, ORG_ID, seedState } from "./fake-api";
 import { proceed, startAs } from "./new-agent-flow";
 import { renderApp, screen, settle } from "./render";
 
@@ -122,6 +122,32 @@ describe("Configurações → Skills", () => {
     await settle(4);
     expect(state.calls.some((c) => c.method === "skills.remove")).toBe(true);
     expect(screen().getByText("Revisão de PR removida.")).toBeTruthy();
+  });
+
+  test("detail: which agents have it, and Escolher agentes gives it or takes it away, one call per agent changed", async () => {
+    const { state, section } = await settings();
+    // The library's row already shows who has it, face by face.
+    const row = within(section()).getByRole("button", { name: "Revisão de PR" }).closest(".skill-row") as HTMLElement;
+    expect(within(row).getByRole("img", { name: "Ada" })).toBeTruthy();
+    await click(within(section()).getByRole("button", { name: "Revisão de PR" }));
+    await settle(4);
+    const sheet = screen().getByRole("dialog", { name: "Revisão de PR" });
+    const holders = within(sheet).getByRole("region", { name: "Agentes com esta skill" });
+    expect(holders.textContent).toContain("Ada");
+    await click(within(holders).getByRole("button", { name: "Escolher agentes" }));
+    const pick = screen().getByRole("dialog", { name: "Agentes com Revisão de PR" });
+    await click(within(pick).getByRole("switch", { name: "Ada" }));
+    await click(within(pick).getByRole("switch", { name: "Atlas" }));
+    await click(within(pick).getByRole("button", { name: "Salvar" }));
+    await settle(6);
+    const sent = state.calls.filter((c) => c.method === "skills.setForAgent").map((c) => [c.args[1], c.args[2]]);
+    const skillId = (sent[0]?.[1] as { skillId: string }[] | undefined)?.[0]?.skillId;
+    expect(sent).toEqual([
+      [ADA_ID, [{ skillId, enabled: false }]],
+      [ATLAS_ID, [{ skillId, enabled: true }]],
+    ]);
+    expect(screen().queryByRole("dialog", { name: "Agentes com Revisão de PR" })).toBeNull();
+    expect(within(holders).getByText("Atlas")).toBeTruthy();
   });
 
   test("Agentes melhoram as skills sozinhos: the workspace's switch, a skill's own, and Desfazer for an agent's change", async () => {

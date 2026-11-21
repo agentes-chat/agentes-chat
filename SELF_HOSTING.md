@@ -836,6 +836,25 @@ tools. A model without prices costs nothing in budgets (its tokens are still cou
 `http://` are allowed on a self-hosted server, unless `ALLOW_SIGNUP=true` lets anyone in; set
 `MODEL_ENDPOINTS_PRIVATE` to choose (`false` allows only public https ones, what agentes.chat Cloud does).
 
+**Servers on your private network.** Other addresses a workspace types (a custom MCP server and its sign-in,
+its own bucket, a database, a mail server, a password manager, the pages its agents read) must be public,
+whatever the switch above says, until you name the private ones they may reach. For a custom MCP server
+on a Tailscale tailnet or a LAN:
+
+```bash
+# Tailscale's ranges, or your LAN's (192.168.1.0/24)
+OUTBOUND_ALLOW_CIDRS=100.64.0.0/10,fd7a:115c:a1e0::/48
+# Optional: names allowed whatever they resolve to, such as your tailnet's (needed for *.local and *.internal names)
+OUTBOUND_ALLOW_HOSTS=*.tail1234.ts.net
+```
+
+Restart the server after changing them. Name the narrowest range and suffix you can: anyone who can make a name
+under an allowed suffix can point it at your network. Every request is checked again when it connects, so a name
+that changes after it was saved can't move it onto an address you didn't allow. Loopback (`127.0.0.1`, `::1`,
+`localhost`), link-local and cloud metadata addresses (`169.254.169.254`, `fd00:ec2::254`, `100.100.100.200`) stay
+refused whatever you set. An address refused for this shows in the server's log as
+`outbound address refused: private network`, with its host. agentes.chat Cloud ignores both settings.
+
 **Sign-up.** The first account is allowed unless an owner link or the desktop app's owner key holds
 it (below). After it, with `ALLOW_SIGNUP=false` (the default), only invited people get in: invited by
 email from **Settings → Members and invitations**. A workspace's invitation link lets nobody in by
@@ -1060,7 +1079,16 @@ at one you name: one of the server's four sentences (`template`) or your own wor
 replies a request and 60 a day, and is recorded in the events feed and in that workspace's audit log
 (that you answered, whose request, and whether an AI assistant wrote the answer), never with its
 words, which the server forgets once the email is sent or given up. Write in a reply only what that
-member could read in the app. Setting the token makes you a reader of your workspaces' content: tell
+member could read in the app. To investigate a problem in a workspace, the same token also reads more
+than one field at a time, each call with a reason in one line and, if you like, your own case id
+(`caseRef`): `POST /reveal/orgs/{orgId}/conversations/{channelId}/messages` (a window of up to 48
+hours, 200 messages a page), `POST /reveal/orgs/{orgId}/runs/{runId}/transcript` (what the agent's
+model wrote, each tool call's input and result, 200 steps a page) and
+`POST /reveal/orgs/{orgId}/agents/{agentId}/settings` (an agent's instructions and settings). Each
+read is recorded first, in the events feed with your reason and in the workspace's audit log without
+it, and counts toward the door's limits. Credentials are masked, each message or step is cut at
+4,000 characters, and what a confidential thread holds or two people said to each other in a direct
+conversation is never returned. Setting the token makes you a reader of your workspaces' content: tell
 them before the first read what you may read it for, and say whether an AI assistant reads with you
 (`assistedByAi`). It also
 makes the server keep what members write in the feedback form, and what the thing they reported
@@ -1549,6 +1577,15 @@ leaves as one of those ids: a firewall of yours that keys on the agents' uid ran
 up the same way. Containers stop when the computer restarts and come back, those with `restart: always`, with the
 agent's next request. Agents on Codex, Cursor, Grok or Antigravity get none: their CLI's own sandbox is what holds
 them, and the containers service runs outside it. [ADR 0169](docs/adr/0169-agents-containers.md) has the rest.
+
+**Docker and KVM (`--system`).** With Docker's rootless install there too (Docker's apt repository: `docker-ce
+docker-ce-cli containerd.io docker-ce-rootless-extras docker-buildx-plugin docker-compose-plugin`, in place of
+`podman-docker` and `docker-compose`), each agent gets Docker's own daemon, rootless under its user, started by its
+first `docker` command (ADR 0209): `docker`, `docker compose` and `docker buildx` are Docker's, `podman` stays Podman.
+The package starts a root daemon of its own, which no agent reaches (nobody joins `docker`); stop it if you don't use
+it: `systemctl disable --now docker.service docker.socket containerd.service`. Where the computer has `/dev/kvm` (bare
+metal, or a VM with nested virtualization), each agent joins its group, so Android's emulator and QEMU run with KVM as
+the agent; every agent's VMs are its own. Restart the runner after either.
 
 **The shared folder.** Every computer has one folder all of its agents read and write, so what one of
 them downloads, clones or installs, the others use instead of fetching it again. With `--system` it is

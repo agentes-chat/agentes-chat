@@ -35,8 +35,11 @@ test("the phone says the problem itself, once, and its card's button names the w
   expect(title).toContain("const problem = teamWatchLine(t, n);");
   // Nothing under the title says it again, in the list or on the island.
   const screen = read("activity/ActivityScreen.tsx");
-  expect(screen).toMatch(/n\.kind === "team_watch"\s+\? ""/);
-  expect(read("island/NoticeIsland.tsx")).toContain('n.kind === "team_watch" ? "" : noticeLine(');
+  // An agent paused on its budget says its line in the title too.
+  expect(screen).toMatch(/n\.kind === "team_watch" \|\| n\.kind === "budget_paused"\s+\? ""/);
+  expect(read("island/NoticeIsland.tsx")).toContain(
+    'n.kind === "team_watch" || n.kind === "budget_paused" ? "" : noticeLine(',
+  );
   // The waiting card's one button is the cause's own ("Entrar de novo", "Reconectar"), "Abrir" only without one.
   expect(screen).toContain("const button = found?.act");
   expect(screen).toContain('card.kind === "limit" || found');

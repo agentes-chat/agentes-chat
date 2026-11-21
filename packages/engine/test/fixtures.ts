@@ -178,6 +178,8 @@ export async function setup(
   options: {
     reply?: Parameters<typeof createFakeProvider>[0];
     budgetNanoUsd?: number | null;
+    /** The server's output cap of an agent's call (`AGENT_MAX_OUTPUT_TOKENS`); null: unset. Default 1000. */
+    maxOutputTokens?: number | null;
     platform?: PlatformCredentials;
     /** Tool sources for the Tool Gateway (none = agents only chat). */
     toolSources?: ToolSource[];
@@ -422,7 +424,7 @@ export async function setup(
     db,
     gateway,
     pubsub,
-    maxOutputTokens: 1000,
+    ...(options.maxOutputTokens === null ? {} : { maxOutputTokens: options.maxOutputTokens ?? 1000 }),
     contextMessages: 30,
     workspaceComputer: options.workspaceComputer,
     maxHops: 100,

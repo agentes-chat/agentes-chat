@@ -117,9 +117,13 @@ const size = (r: ModelRequest) =>
  * code goes to a mailbox the agent reads being its own work adds 360; the live files' group (ADR 0196 §6) named with
  * the others, in the prompt and in `find_tools`, adds about 170 (48,834 on the Cloud), and `ignore_usage_limit`, for a person telling the agent to go past
  * its usage pause, adds 356 (49,190), and `say_now`, one short line before slow work (ADR 0207), its definition and
- * its line in "# How you work" add about 765 (about 49,955); the ceiling leaves a little room above them.
+ * its line in "# How you work" add about 765 (about 49,955), and a question getting its answer instead of unasked work
+ * (its line in "# How you work" and `tell_agent`) adds 572 (50,720), and the reply rule following the person, not the
+ * message, adds 46, and history sent as it was on Claude's own API with lean wakes adds about 150 (50,918 on the Cloud),
+ * and the memory guard taking an admin's own words with the plainer nudges adds about 140; the ceiling leaves a little
+ * room above them.
  */
-const OI_CEILING_CHARS = 50_200;
+const OI_CEILING_CHARS = 51_300;
 
 test("a DM 'oi' stays under the size ceiling", async () => {
   const [request] = await play(TURNS.find((t) => t.id === "greet-dm") as ScriptedTurn);

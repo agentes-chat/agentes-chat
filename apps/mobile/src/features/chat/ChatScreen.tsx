@@ -1,10 +1,10 @@
-import { MESSAGES_PAGE, useAiStatus, useApi } from "@agenteschat/client";
+import { isMediaKind, MESSAGES_PAGE, useAiStatus, useApi } from "@agenteschat/client";
 import { workIsOver } from "@agenteschat/client/lib/long-work";
 import { pinsIn } from "@agenteschat/client/lib/pins";
 import type { LegendListRef } from "@legendapp/list/react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { useHeaderHeight } from "expo-router/react-navigation";
-import { type ComponentRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { HeaderHeightContext } from "expo-router/react-navigation";
+import { type ComponentRef, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { type LayoutChangeEvent, ScrollView, StyleSheet, View } from "react-native";
 import { useReanimatedKeyboardAnimation } from "react-native-keyboard-controller";
@@ -15,6 +15,7 @@ import { usePush } from "@/providers/push";
 import { useRealtime } from "@/providers/realtime";
 import { useToast } from "@/ui";
 import { createComposerFloat } from "@/ui/Composer";
+import { usePane } from "@/ui/pane";
 import { AgentSetupIntro } from "../agents/setup/SetupCard";
 import { OpenHandoffProvider } from "../browser/open";
 import { MissionCardView } from "../missions/cards";
@@ -34,15 +35,17 @@ import { openingDockHeight, rememberDockHeight } from "./dock-height";
 import { FirstDay } from "./FirstDay";
 import { useListEnd } from "./list-end";
 import { endsOnNoAiCard, noAiBanner } from "./no-ai-banner";
+import { placeKey, placeMessage, takeHandedPlace, useReadingPlace } from "./reading-place";
 import { ConversationRowData } from "./row-data";
 import { ChatDock } from "./screen/ChatDock";
 import { ChatHeader, useChatTitle } from "./screen/ChatHeader";
 import { ChatList, useListPlacement } from "./screen/ChatList";
 import type { RowHands } from "./screen/ChatMessage";
 import { DOCK_SIDE } from "./screen/constants";
-import { useLatest } from "./screen/hooks";
+import { useLatest, useTurnEndTap } from "./screen/hooks";
 import { useSettled } from "./screen/opening";
 import { ChannelGreeting, DockGestureArea, DockRoom, ReadMark } from "./screen/parts";
+import { ChatSheetBar, ChatSheetContext, type ChatSheetMode } from "./screen/sheet-mode";
 import { useChatData } from "./screen/useChatData";
 import { useChatRows, useRowReceipts } from "./screen/useChatRows";
 import { useChatSend } from "./screen/useChatSend";
@@ -70,27 +73,42 @@ const OFFER_DONE = "done";
 
 /**
  * A conversation: a channel, a DM, a thread or a mission's thread (`threadId`). `handoffId`: a request
- * for help a push or the inbox opened it for (its card opens in place, in control).
+ * for help a push or the inbox opened it for (its card opens in place, in control). `sheet`: a file's conversation in
+ * the sheet over its file (ADR 0208): the sheet's bar in place of the pushed screen's, and the composer raising the
+ * sheet while the person types.
  */
 export function ChatScreen({
   channelId,
   threadId,
   handoffId,
   focusId,
+  sheet,
 }: {
   channelId: string;
   threadId?: string | null;
   handoffId?: string | null;
   /** Open at this message: paged in, scrolled to and lit for a moment (a pin). */
   focusId?: string | null;
+  sheet?: ChatSheetMode;
 }) {
+  // Where the same conversation was being read on the other display (ADR 0212: an iPhone Duo opened or closed), taken
+  // once as it opens, when no message was asked for: it opens there, as a pin opens at its message, without the light.
+  const [handed] = useState(() => (focusId ? null : takeHandedPlace(placeKey(channelId, threadId ?? null))));
   // Its rows read the agents' questions once for the conversation (`ConversationRowData`), its sheets included.
   return (
     <ConversationRowData channelId={channelId}>
       <SheetHostProvider>
         <FocusLive>
           <OpenHandoffProvider handoffId={handoffId ?? null}>
-            <Chat channelId={channelId} threadId={threadId ?? null} focusId={focusId ?? null} />
+            <ChatSheetContext.Provider value={sheet ?? null}>
+              <Chat
+                channelId={channelId}
+                threadId={threadId ?? null}
+                focusId={focusId ?? handed}
+                quietFocus={!focusId && handed !== null}
+                sheet={sheet ?? null}
+              />
+            </ChatSheetContext.Provider>
           </OpenHandoffProvider>
         </FocusLive>
       </SheetHostProvider>
@@ -102,10 +120,15 @@ function Chat({
   channelId,
   threadId,
   focusId,
+  quietFocus,
+  sheet: inSheet,
 }: {
   channelId: string;
   threadId: string | null;
   focusId: string | null;
+  /** `focusId` is a place handed from the other display (ADR 0212): gone to without the light. */
+  quietFocus: boolean;
+  sheet: ChatSheetMode | null;
 }) {
   const { t, i18n } = useTranslation();
   const orgId = useOrgId();
@@ -226,7 +249,7 @@ function Chat({
     waitingHere,
     markTouched,
   } = follow;
-  const { freeze, leavePlace, stickers } = useKeepPlace({ sheet, follow });
+  const { freeze, leavePlace, placeNow, stickers } = useKeepPlace({ sheet, follow });
   const {
     afterVoice,
     canAttach,
@@ -299,6 +322,7 @@ function Chat({
     channelId,
     threadId,
     focusId,
+    quietFocus,
     orgId,
     api,
     t,
@@ -321,13 +345,21 @@ function Chat({
       ? // One line on the phone: the tip after "·" in the web's placeholder doesn't fit.
         t("issues.comment")
       : rootFile
-        ? t(`mobile.live.talk.placeholder.${rootFile.kind}`)
+        ? // A picture's, a video's or a PDF's (ADR 0208): the shared words, one line as the live files' are.
+          t(
+            isMediaKind(rootFile.kind)
+              ? `files.comments.write.${rootFile.kind}`
+              : `mobile.live.talk.placeholder.${rootFile.kind}`,
+          )
         : t("mobile.chat.reply")
     : dm
       ? // One line on the phone: the right hand's "nada muda sem você" doesn't fit beside its name.
         t("mobile.chat.messageTo", { name: dm.with.name })
       : t("mobile.chat.messageIn", { channel: channel ? `#${channel.name}` : "" });
   rowsRef.current = rows;
+  // Where the person reads, for this conversation opened on the other display (ADR 0212); in a pane, kept as it leaves.
+  const pane = usePane();
+  useReadingPlace(placeKey(channelId, threadId), () => placeMessage(placeNow(), rowsRef.current), pane !== null);
   const pinned = mission && isOpenMission(mission) ? mission : null;
   const hasPins = useMemo(() => pinsIn(pinsData ?? [], threadId).length > 0, [pinsData, threadId]);
 
@@ -412,6 +444,9 @@ function Chat({
   // Read while laying out the box: at the conversation's end and following it (not held where the person reads).
   const followingEnd = useRef(true);
   followingEnd.current = atEnd && !readHold;
+  // An agent's turn ending in front of the person, at the end: one light tap.
+  const followingNow = useCallback(() => followingEnd.current, []);
+  useTurnEndTap(runs, list, focused && !peeking, followingNow);
   // Whether the conversation follows its end right now. The screen's `atEnd` is false while the list is still on its
   // way down to a message just sent; the list's own follow (`maintainScrollAtEnd`) is on then, and is what counts.
   const followsEnd = () => {
@@ -448,13 +483,17 @@ function Chat({
   const bottomPad = Math.max(insets.bottom, 10);
   // The header floats over the conversation (glass on iOS 26, a blur before; round plates on Android), which
   // fades under it.
-  // Peeked at from the list (iOS's long press): no bar over it and no composer, so no room for either.
-  const barHeight = useHeaderHeight();
-  const headerHeight = peeking ? 0 : barHeight;
+  // Peeked at from the list (iOS's long press): no bar over it and no composer, so no room for either. In a file's
+  // sheet the sheet's bar sits above the conversation, not over it (no stack's header there to measure: read without
+  // `useHeaderHeight`, which throws where there is none).
+  const barHeight = useContext(HeaderHeightContext) ?? 0;
+  const headerHeight = peeking || inSheet ? 0 : barHeight;
   // How far down the fade under the header stays solid: through the status bar and the bar (a message scrolled up
   // showed through the bar's pill and between its buttons), fading out in the 28 points under it.
   const topFadeSolid = headerHeight > 0 ? Math.min(1, headerHeight / (headerHeight + 28)) : 0;
-  const lift = Math.max(0, bottomPad - KEYBOARD_GAP);
+  // In a pane whose foot stands above the window's (ADR 0212; Android's tabs end above their bar) the keyboard, rising
+  // from the window's edge, covers that much less of the conversation.
+  const lift = Math.max(0, bottomPad - KEYBOARD_GAP) + (pane?.below ?? 0);
   // The list ends where the composer starts: the dock's height plus whatever part of the keyboard the composer rides
   // over that the list's own keyboard room missed (a height iOS changed with no notification).
   const {
@@ -547,6 +586,12 @@ function Chat({
     });
   const openPinsHere = useLatest(openPins);
   const goToPinHere = useLatest(goToPin);
+  // A pin tapped on the file behind the sheet: its message, paged in, scrolled to and lit, as `?m=` does.
+  const seekAt = inSheet?.seek;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: each ask once, by its `at`
+  useEffect(() => {
+    if (seekAt) setSeek(seekAt.messageId);
+  }, [seekAt?.at]);
 
   return (
     <AskStoreProvider store={asks}>
@@ -575,33 +620,37 @@ function Chat({
             style={styles.wallpaper}
           />
         ) : null}
-        <ChatHeader
-          channelId={channelId}
-          threadId={threadId}
-          title={title}
-          subtitle={subtitle}
-          info={info}
-          isThread={isThread}
-          dm={dm}
-          dmAgent={dmAgent}
-          dmAgentId={dmAgentId}
-          channel={channel}
-          roster={roster}
-          member={member}
-          runs={runs}
-          lineBase={lineBase}
-          consultData={consultData}
-          far={far}
-          unseen={unseen}
-          focused={focused}
-          peeking={peeking}
-          searchPlace={searchPlace}
-          openOptions={openOptions}
-          openMembers={openMembers}
-          openSearch={openSearch}
-          onHoldPill={onHoldPill}
-          leavePlace={leavePlace}
-        />
+        {inSheet ? (
+          <ChatSheetBar title={title} onClose={inSheet.onClose} />
+        ) : (
+          <ChatHeader
+            channelId={channelId}
+            threadId={threadId}
+            title={title}
+            subtitle={subtitle}
+            info={info}
+            isThread={isThread}
+            dm={dm}
+            dmAgent={dmAgent}
+            dmAgentId={dmAgentId}
+            channel={channel}
+            roster={roster}
+            member={member}
+            runs={runs}
+            lineBase={lineBase}
+            consultData={consultData}
+            far={far}
+            unseen={unseen}
+            focused={focused}
+            peeking={peeking}
+            searchPlace={searchPlace}
+            openOptions={openOptions}
+            openMembers={openMembers}
+            openSearch={openSearch}
+            onHoldPill={onHoldPill}
+            leavePlace={leavePlace}
+          />
+        )}
         {hasPin ? (
           // The bar is see-through (the conversation runs under it): an open mission's card starts below it. Pinned
           // messages have no bar here: they wait above the first message, revealed by pulling down (`PinnedLines`).

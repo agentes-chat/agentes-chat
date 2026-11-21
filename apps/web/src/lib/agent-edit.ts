@@ -39,7 +39,7 @@ export interface Saved {
   key?: string;
   /** Its own budget (US$); null = the workspace default (admins only). */
   budget?: number | null;
-  /** A user id or `NO_OWNER`. */
+  /** A user id, a role's `role:<id>` (ADR 0085, addendum of 2026-11-21) or `NO_OWNER`. */
   owner: string;
   audience: AgentAudience;
   /** "Quem pode editar" (ADR 0085 addendum of 2026-11-17): who else edits how it works. Absent, nothing to compare. */

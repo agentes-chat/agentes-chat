@@ -1071,6 +1071,7 @@
     },
     "back": "返回",
     "leave": "返回 {{name}}",
+    "leaveLater": "返回 {{name}}，稍后再完成",
     "actions": {
       "continue": "继续",
       "create_other": "创建 {{count}} 个智能体",
@@ -1080,15 +1081,18 @@
     "yourCompany": "你的公司",
     "purpose": {
       "title": "你打算用 agentes.chat 做什么？",
-      "lead": "之后可以更改，不会丢失任何内容。",
+      "lead": "你可以随时在设置中切换工作区模式，不会丢失任何内容。",
+      "pick": "选择你想如何查看 agentes.chat。",
+      "switchTitle": "随时都能切换。",
+      "switchText": "工作区模式可在设置中更改，不会丢失任何内容。",
       "personal": "给我自己用",
       "personalText": "照顾你一天的智能体。",
       "team": "给我的团队用",
       "teamText": "人和智能体一起工作，有频道、角色和审批。",
       "personalExamples": "早上7点的一天 · 账单 · 训练",
       "teamExamples": "客户支持 · 财务 · 报告",
-      "personalLine": "照看你一天的智能体。",
-      "teamLine": "人和智能体在同一个地方。",
+      "personalLine": "更简洁的视图，功能一个不少。",
+      "teamLine": "完整视图，包含频道和成员。",
       "activities": {
         "agenda": "今日日程",
         "home": "家务",
@@ -2530,6 +2534,7 @@
     "working_other": "{{count}} 个智能体正在工作"
   },
   "channel": {
+    "teamStalled": "团队停滞",
     "settingsNav": {
       "label": "频道设置",
       "overview": "概览",
@@ -2612,6 +2617,8 @@
     "uploading": "上传中…",
     "uploadFailed": "未上传",
     "removeFile": "移除 {{name}}",
+    "dropFileTitle": "松开即可添加附件",
+    "dropFileNote": "文件会留在此对话的草稿中，直到你发送。",
     "tooManyFiles": "每条消息最多 {{max}} 个文件。",
     "reminder": "提醒",
     "reactions": "回应",
@@ -2985,6 +2992,7 @@
       "anAgent": "一个智能体",
       "none": "无",
       "budgetDefault": "工作区默认",
+      "pausesNow": "会立即暂停",
       "anAccount": "一个 AI 账户",
       "everyone": "所有人",
       "ownerOnly": "只有负责人",
@@ -3237,6 +3245,14 @@
       "antigravity": "这台电脑上的 Gemini 未登录。请在 {{name}} 的页面上连接 Gemini 账号。",
       "opencode": "OpenCode 无法在这台电脑上思考。请在 {{name}} 的页面连接一个 OpenCode 密钥。"
     },
+    "notSignedInOn": {
+      "claude_code": "{{computer}}上的 Claude Code 未登录。请在 {{name}} 的页面上连接 Claude 账号。",
+      "codex": "{{computer}}上的 Codex 未登录。请在 {{name}} 的页面上连接 ChatGPT 账号。",
+      "cursor": "{{computer}}上的 Cursor 未登录。请在 {{name}} 的页面上连接 Cursor 账号。",
+      "grok": "{{computer}}上的 Grok 未登录。请在 {{name}} 的页面上连接 Grok 账号。",
+      "antigravity": "{{computer}}上的 Gemini 未登录。请在 {{name}} 的页面上连接 Gemini 账号。",
+      "opencode": "OpenCode 无法在{{computer}}上思考。请在 {{name}} 的页面连接一个 OpenCode 密钥。"
+    },
     "card": {
       "connected": "{{name}} 现在有 AI 了。",
       "answerNow": "立即回复",
@@ -3325,6 +3341,7 @@
     "chat": {
       "mine": "你的账号",
       "yours": "你的",
+      "free": "免费",
       "keys": "工作区密钥",
       "apiKeys": "API 密钥",
       "best": "当前余量最多",
@@ -4274,6 +4291,19 @@
   "adminAsk": {
     "ask": "请管理员处理",
     "sent": "已发送给能处理的人。"
+  },
+  "accountRef": {
+    "label": "{{name}} 账号",
+    "card": "关于 {{name}} 账号",
+    "mine": "你的账号",
+    "of": "{{name}} 的账号",
+    "on": "在 {{computer}} 上",
+    "gone": "此账号已不在工作区中。"
+  },
+  "accountSwitch": {
+    "limit": "因 <from/> 账号已达上限，改用 <to/> 账号继续",
+    "line": "因 <from/> 账号接近上限，改用 <to/> 账号继续",
+    "extra": "因 <from/> 账号将进入付费额外用量，改用 <to/> 账号继续"
   },
   "channelRefs": {
     "list": "频道",
@@ -5444,6 +5474,7 @@
       "undo": "撤销",
       "deadline": "剩余时间",
       "decides": "由谁决定",
+      "decidesRole": "拥有 {{role}} 角色的任何人",
       "state": "状态",
       "why": "{{name}}为什么请求",
       "email": "邮件",
@@ -6169,6 +6200,7 @@
         "cli_stopped": "因为出错，{{brain}} 程序已停止。",
         "cli_closed": "程序 {{brain}} 意外关闭。",
         "cli_sandbox": "程序 {{brain}} 无法在这台电脑上启动它的沙盒。请在智能体设置中选择其他 AI。",
+        "cli_system": "程序 {{brain}} 暂时还不能在这台电脑的系统上运行。请在智能体设置中选择其他 AI。",
         "account_missing": "为这个智能体选择的账号已不在它的电脑上。请在智能体设置中选择另一个账号，或重新添加。",
         "windows_sandbox": "这台 Windows 电脑无法隔离 Codex 的命令：需要 Windows 11 24H2 或更高版本。请更新 Windows，为这个智能体选择 Claude 或 API 密钥，或把它移到一台 Linux 电脑上。",
         "our_error": "我们这边出了点问题，任务已停止。请稍后再提一次。",
@@ -6890,6 +6922,8 @@
     "noOwnerShort": "由管理员接收提醒并审批",
     "noOwnerHelp": "没有负责人时，由管理员接收提醒并审批敏感操作。",
     "ownerHelp": "接收预算提醒并审批敏感操作。",
+    "ownerRoleHelp": "拥有 {{role}} 角色的人会收到它的审批请求和提醒。其中任何人都可以决定，包括之后获得该角色的人。",
+    "ownerRoleHelp_female": "拥有 {{role}} 角色的人会收到它的审批请求和提醒。其中任何人都可以决定，包括之后获得该角色的人。",
     "ownerYours": "创建智能体的人就是它的负责人。之后管理员可以把它转交给别人。",
     "accessAdmins": "只有管理员可以授予智能体访问应用和邮箱的权限。创建后请联系管理员。",
     "accessAdminsKeeper": "只有 {{keeper}} 可以授予智能体访问应用和邮箱的权限。创建后请联系 {{keeper}}。",
@@ -9990,6 +10024,13 @@
     "noResults": "没有与“{{q}}”匹配的技能。",
     "version": "v{{version}}",
     "usedBy_other": "{{count}} 个智能体在使用",
+    "agents": {
+      "title": "拥有此技能的智能体",
+      "none": "还没有智能体。",
+      "choose": "选择智能体",
+      "dialogTitle": "拥有 {{name}} 的智能体",
+      "dialogText": "每个开启的智能体都会在任务需要时使用它。"
+    },
     "updated": "{{when}}更新",
     "source": {
       "github": "GitHub",
@@ -10441,6 +10482,7 @@
       "everyone": "工作区所有人",
       "people": "仅部分成员或角色",
       "owner": "仅所有者",
+      "ownerRole": "仅拥有 {{role}} 角色的人",
       "everyonePersonal": "这里的所有人",
       "peoplePersonal": "仅部分成员"
     },
@@ -10452,6 +10494,8 @@
       "owner": "只有 {{owner}} 可以和 {{name}} 对话。在列表中，只有 {{owner}}、管理员和可编辑的人能看到 {{name}}。",
       "owner_female": "只有 {{owner}} 可以和 {{name}} 对话。在列表中，只有 {{owner}}、管理员和可编辑的人能看到 {{name}}。",
       "noOwner": "设置所有者后才能使用此选项。",
+      "ownerRole": "只有拥有 {{role}} 角色的人能和 {{name}} 对话。在列表中，{{name}} 只对拥有 {{role}} 角色的人、管理员和可以编辑的人显示。",
+      "ownerRole_female": "只有拥有 {{role}} 角色的人能和 {{name}} 对话。在列表中，{{name}} 只对拥有 {{role}} 角色的人、管理员和可以编辑的人显示。",
       "everyonePersonal": "这里的任何人都可以呼叫 {{name}}。",
       "everyonePersonal_female": "这里的任何人都可以呼叫 {{name}}。",
       "peoplePersonal": "选择可以和 {{name}} 对话的成员。",
@@ -10463,8 +10507,11 @@
     "roleMembers_other": "{{count}} 位成员",
     "picked": "已选择",
     "ownerAlways": "{{name}} 作为所有者，始终可以对话。",
+    "ownerRoleAlways": "拥有 {{role}} 角色的人作为所有者，始终可以对话。",
+    "whoHolds": "拥有 {{role}} 角色的人",
     "onlyYouForNow": "暂时只有你",
     "onlyOwnerForNow": "暂时只有 {{name}}",
+    "onlyOwnerRoleForNow": "暂时只有拥有 {{role}} 角色的人",
     "search": "搜索角色和成员",
     "searchPeople": "搜索成员",
     "noMatch": "没有这个名称的角色或成员。",
@@ -10479,6 +10526,7 @@
       "everyone": "工作区所有人",
       "everyonePersonal": "这里的所有人",
       "owner": "仅 {{name}}",
+      "ownerRole": "仅拥有 {{role}} 角色的人",
       "nobody": "暂时没有人",
       "someone": "部分成员",
       "people": "{{names}}",
@@ -10508,6 +10556,8 @@
       "owner_female": "{{owner}}（所有者）、管理员，以及能编辑智能体且能和 {{name}} 对话的人可以编辑。",
       "noOwner": "管理员，以及能编辑智能体且能和 {{name}} 对话的人可以编辑。",
       "noOwner_female": "管理员，以及能编辑智能体且能和 {{name}} 对话的人可以编辑。",
+      "ownerRole": "拥有 {{role}} 角色的人（所有者角色）、管理员，以及能编辑智能体且能和 {{name}} 对话的人可以编辑。",
+      "ownerRole_female": "拥有 {{role}} 角色的人（所有者角色）、管理员，以及能编辑智能体且能和 {{name}} 对话的人可以编辑。",
       "people": "选择还有谁可以更改 {{name}} 的工作方式。",
       "people_female": "选择还有谁可以更改 {{name}} 的工作方式。"
     },
@@ -11645,6 +11695,11 @@
     "recommended": "推荐",
     "free": "免费",
     "opencodeFreeHint": "其他免费模型通过智能体电脑上的 OpenCode 运行。",
+    "missingModel": {
+      "app_old": "请更新代理电脑上的 agentes.chat 应用，以使用 {{model}}。",
+      "cli_old": "{{model}} 需要在代理的电脑上使用更新版本的 Antigravity CLI。请在那台电脑上运行 agy update。",
+      "plan": "{{model}} 包含在 Google AI Pro 和 Ultra 中。代理电脑上的 Gemini 账号都没有这个方案。"
+    },
     "modelHelp": "模型越大，思考越多，套餐额度消耗也越快。",
     "hidden": "由 {{owner}} 或管理员选择思考方式。",
     "hiddenAdmins": "只有管理员可以选择思考方式。",
@@ -13793,6 +13848,7 @@
       "ask_agent": "询问其他智能体",
       "tell_agent": "通知其他智能体",
       "find_agent": "查找智能体",
+      "read_agent": "读取智能体设置",
       "ask_user": "提出问题",
       "ask_choices": "提供选项",
       "request_approval": "请求审批",
@@ -14602,6 +14658,37 @@
       "exitFullscreen": "退出全屏",
       "open": "打开"
     },
+    "comments": {
+      "title": "评论",
+      "resolve": "解决",
+      "reopen": "重新打开",
+      "resolvedBy": "{{name}} 已解决 · {{time}}",
+      "resolvedCount_other": "已解决 {{count}} 条",
+      "showResolved": "显示已解决",
+      "hideResolved": "隐藏已解决",
+      "fromVersion": "来自版本 {{version}}",
+      "peekOpen": "点击在对话中打开",
+      "markAt": "{{name}} 在 {{time}} 的第 {{n}} 条评论",
+      "page": "第 {{page}} 页",
+      "pageOf": "{{page}}/{{count}}",
+      "pdfFailed": "这个 PDF 无法在这里显示。请下载后打开。",
+      "loadFailed": "这张图片无法在这里显示。",
+      "hint": {
+        "image": "点击标记一个位置，或拖动框选一个区域",
+        "video": "点击视频评论此刻，或拖动框选一个区域",
+        "pdf": "点击页面标记一个位置，或拖动框选一个区域"
+      },
+      "line": {
+        "image_other": "图片上有 {{count}} 条评论",
+        "video_other": "视频中有 {{count}} 条评论",
+        "pdf_other": "PDF 中有 {{count}} 条评论"
+      },
+      "write": {
+        "image": "聊聊这张图片…",
+        "video": "聊聊这个视频…",
+        "pdf": "聊聊这份 PDF…"
+      }
+    },
     "zoom": {
       "toolbar": "缩放",
       "in": "放大",
@@ -14621,6 +14708,12 @@
     }
   },
   "errors": {
+    "planMove": {
+      "notPayer": "只有支付套餐的人可以移动它。",
+      "same": "请选择另一个工作区来接收套餐。",
+      "targetHasPlan": "那个工作区已经有套餐了。刷新页面查看工作区的最新状态。",
+      "targetDeleting": "那个工作区正在删除。请先恢复它，或选择另一个。"
+    },
     "surface": {
       "off": "聊天应用关联已关闭。刷新页面即可查看当前设置。",
       "notAllowed": "你的账号暂时还不能关联聊天应用。在开放之前，请继续在这里使用应用。",
@@ -14657,6 +14750,7 @@
       "tooMany": "超出了这里的容量。请移除一些后重试。",
       "fillIn": "请补全缺少的内容后重试。",
       "checkAddress": "请检查地址后重试。",
+      "privateNetwork": "此地址位于私有网络。请使用公网地址，或在自托管服务器上通过 `OUTBOUND_ALLOW_CIDRS` 允许它。",
       "tooLong": "内容太长。请缩短后重试。",
       "updateComputerApp": "电脑上的应用版本太旧。请更新后重试。",
       "computerUpdatesItself": "工作区的电脑会为此自动更新。请稍后再试。",
@@ -14915,7 +15009,9 @@
       "sharingForbidden": "只有文件所在对话里的人能更改谁能看到。",
       "sharingEmpty": "请选择谁能看到。",
       "sharingTooMany": "最多选择 {{max}} 个人和 {{max}} 个角色。",
-      "notInDrive": "它只存在于自己的对话中，所以无法共享。"
+      "notInDrive": "它只存在于自己的对话中，所以无法共享。",
+      "viewOnly": "你可以查看此文件，但不能修改。请向创建它的人申请编辑权限。",
+      "accessInvalid": "无法保存此访问设置。请检查谁可以查看、谁可以编辑，然后重试。"
     },
     "drive": {
       "folderIntoItself": "文件夹不能移入自身或其中的文件夹。"
@@ -14947,6 +15043,7 @@
       "notLinkMaker": "只有创建链接的人才能让这台电脑加入。",
       "widenForbidden": "管理员只能缩小可以使用他人个人设备的人员范围。",
       "spillOwnerOnly": "只有连接这台电脑的人才能让回复在这里思考。你可以把它关掉。",
+      "tasksOwnerOnly": "只有连接这台电脑的人才能更改它同时运行的任务数。",
       "notHome": "智能体住在工作区的电脑上，点名时才使用这台电脑。"
     },
     "machine": {
@@ -15009,7 +15106,9 @@
       "ownerOrAdmin": "只有智能体负责人或管理员可以执行此操作。",
       "detailsHidden": "只有与 {{agentName}} 对话的人可以看到它的工作方式。",
       "undoForbidden": "只有智能体为其工作的人、智能体负责人或管理员可以撤销此操作。",
-      "undoSkillsAdmins": "只有能编辑该智能体的人能撤销或重做对其技能的更改。"
+      "undoSkillsAdmins": "只有能编辑该智能体的人能撤销或重做对其技能的更改。",
+      "ownerBoth": "所有者只能是一个人或一个角色，不能两者都是。请选择其一。",
+      "ownerRoleUnknown": "该角色已不在此工作区中。请选择其他所有者。"
     },
     "account": {
       "notRestorable": "这个账号已无法恢复。",
@@ -15433,6 +15532,9 @@
     "line": {
       "ready": "智能体现在就可以使用它。",
       "busy_other": "{{max}} 个任务中有 {{count}} 个正在运行",
+      "tasksChange": "这里同时运行的任务数：{{max}}。在下方更改。",
+      "tasksOwner": "这里同时运行的任务数：{{max}}。连接它的人可以更改。",
+      "tasksUpdate": "这里同时运行的任务数：{{max}}。更新它的应用后即可在这里更改。",
       "offline": "智能体会等它回来。",
       "offlineSeen": "上次在线 {{time}}。智能体会等它回来。",
       "offlineWithHost": "{{host}} 已离线。智能体会等它回来。",
@@ -15952,6 +16054,8 @@
       "none": "没有人更换电脑。",
       "resumed_other": "{{count}} 个任务已重新开始",
       "stillWaiting_other": "{{count}} 个仍在等待 {{name}}",
+      "planDropped": "{{name}} 的 {{plan}} 套餐登录在 {{from}} 上。请也在 {{to}} 上登录，或继续使用 {{from}}。",
+      "signIn": "在 {{name}} 上登录",
       "skipped": "{{name}} 未更换：{{reason}}",
       "skip": {
         "other": "目前无法更换",
@@ -16206,14 +16310,14 @@
       "write": "查看任务并发送给智能体",
       "writeHelp": "以你的身份发送消息并读取回复。",
       "manage": "创建和编辑智能体、例行工作和技能",
-      "manageHelp": "还会以你的权限为你创建智能体、例行工作、技能和记忆。",
+      "manageHelp": "还会以你的权限为你创建智能体、例行工作、技能和记忆，并编写 Wiki 页面。",
       "read": "只读",
-      "readHelp": "查看智能体、频道和回复，不发送任何内容。",
+      "readHelp": "查看智能体、频道、Wiki 页面和回复，不发送任何内容。",
       "can": "可以",
-      "canSee": "查看你能看到的智能体和频道。",
+      "canSee": "查看你能看到的智能体、频道和 Wiki 页面。",
       "canSend": "以你的身份发送消息，并标注“通过 {{app}}”。",
       "canRead": "读取回复以及智能体正在做的事。",
-      "canManage": "以你的身份创建和编辑智能体、例行工作和技能。它创建的内容会通知你。",
+      "canManage": "以你的身份创建和编辑智能体、例行工作和技能，它创建的内容会通知你。以你的身份编写 Wiki 页面并将其移到废纸篓。",
       "never": "绝不",
       "neverApprove": "批准智能体的操作。审批始终由 agentes.chat 中的成员负责。",
       "neverSettings": "更改设置、成员或权限。",
@@ -18823,6 +18927,13 @@
     "submit": "删除账号",
     "deleted": "你的账号将于 {{date}} 永久消失。在此之前登录即可恢复。"
   },
+  "planMove": {
+    "warning": "你的套餐会留在这个工作区并停止续费。要先把它移到你的另一个工作区吗？",
+    "deleting": "你的套餐会随它停止续费。你可以把它移到另一个工作区。",
+    "how": "同一张卡和已付的周期一起移过去。不会再次扣费，也不退款。",
+    "button": "把我的套餐移到 {{name}}",
+    "moving": "你的套餐正在移到 {{name}}，大约一分钟后生效。"
+  },
   "billing": {
     "open": "打开套餐和账单",
     "opening": "正在打开…",
@@ -20023,23 +20134,15 @@
   "share": {
     "button": "共享",
     "title": "共享 {{name}}",
-    "conversation": "仅限对话",
-    "people": "你选择的人和角色",
-    "peoplePersonal": "你选择的人",
     "everyone": "整个工作区",
     "everyonePersonal": "这里的所有人",
     "whereDm": "与 {{name}} 的私信",
     "whereDmGone": "一条私信",
     "whereDmBetween": "{{names}} 之间的私信",
     "whereChannel": "#{{name}} 的成员",
-    "add": "添加人或角色",
-    "addPersonal": "添加成员",
-    "addSearch": "搜索人和角色",
-    "addSearchPersonal": "搜索成员",
     "noResults": "没有这个名字的人",
     "groupPeople": "人",
     "groupRoles": "角色",
-    "access": "谁有访问权限",
     "you": "{{name}}（你）",
     "agent": "智能体",
     "role": "角色",
@@ -20048,28 +20151,36 @@
     "adminsPersonal": "管理这里的人也能看到。",
     "copyLink": "复制链接",
     "copied": "链接已复制。",
-    "done": "完成",
     "onlyHere": "不在这个对话里的人打不开这个链接。",
-    "choosePeople": "选择人",
     "readOnly": "只有对话里的人能更改谁能看到。",
-    "open": "整个工作区都能看到这个文件。",
-    "openPersonal": "这里的所有人都能看到这个文件。",
-    "savedEveryone": "现在整个工作区都能看到这个文件。",
-    "savedEveryonePersonal": "现在这里的所有人都能看到这个文件。",
-    "savedPeople": "现在你选择的人能看到这个文件。",
-    "savedConversation": "现在只有对话里的人能看到这个文件。",
-    "onlyYou": "只有你",
-    "onlyMaker": "只有 {{name}}",
     "onlyYouLink": "只有你能打开这个链接。",
     "onlyMakerLink": "只有 {{name}} 能打开这个链接。",
     "readOnlyDrive": "只有文件的创建者和管理员能更改谁可以查看。",
-    "savedOnlyYou": "现在只有你能看到这个文件。",
-    "savedOnlyMaker": "现在只有 {{name}} 能看到这个文件。",
-    "undo": "撤销",
     "fileRef": "文件 {{title}}",
     "fileRefNone": "无权访问的文件",
     "also": "{{text}}。也已与 {{who}} 共享。",
-    "someOnlyHere": "其中一些链接只有已经能看到文件的人才能打开。"
+    "someOnlyHere": "其中一些链接只有已经能看到文件的人才能打开。",
+    "level": {
+      "none": "无访问权限",
+      "view": "查看",
+      "edit": "编辑"
+    },
+    "levelOf": "{{name}} 可以做什么",
+    "madeIt": "创建了此文件",
+    "placeText": "文件所在的位置",
+    "everyoneText": "此工作区中的任何人",
+    "everyoneTextPersonal": "这里的任何人",
+    "agentsAll": "所有智能体",
+    "agentsAllText": "工作区中的任何智能体",
+    "agentsHere": "此对话中的智能体",
+    "agentsHereText": "文件所在位置的智能体",
+    "addAll": "添加成员、角色或智能体",
+    "addAllPersonal": "添加成员或智能体",
+    "addAllSearch": "搜索成员、角色和智能体",
+    "addAllSearchPersonal": "搜索成员和智能体",
+    "groupAgents": "智能体",
+    "addRow": "添加",
+    "saved": "访问设置已保存。"
   },
   "linkErrors": {
     "signIn": {
@@ -20379,7 +20490,7 @@
     "mark": "Beta",
     "open": "发送反馈",
     "ask": "缺了什么、哪里坏了，或者哪里让你不顺手？",
-    "goesCloud": "你写的内容会通过邮件发给 agentes.chat 团队。",
+    "goesCloud": "你写的内容会通过邮件发给 agentes.chat 团队，团队可能会使用 AI 助手来查看。",
     "goesServer": "你写的内容会通过邮件发给管理这台服务器的人。",
     "placeholder": "随意写就好",
     "report": "在这里报告问题",
@@ -20817,6 +20928,9 @@
         "inTrash": "在回收站中。恢复后才能更改。",
         "closing": "这个工作区正在被删除，其中的文件只能查看。"
       },
+      "requestEdit": "申请编辑",
+      "requestEditText": "能给我这个文件的编辑权限吗？",
+      "requestEditAnyone": "有人能给我这个文件的编辑权限吗？",
       "present": "演示",
       "download": "下载",
       "formats": {
@@ -20954,25 +21068,36 @@
         "spreadsheet": "电子表格对话",
         "slides": "演示文稿对话",
         "document": "文档对话",
-        "file": "文件对话"
+        "file": "文件对话",
+        "image": "图片对话",
+        "video": "视频对话",
+        "pdf": "PDF 对话"
       },
       "placeholder": {
         "canvas": "聊聊这块白板 · 用 @ 呼叫智能体",
         "spreadsheet": "聊聊这个电子表格 · 用 @ 呼叫智能体",
         "slides": "聊聊这份演示文稿 · 用 @ 呼叫智能体",
         "document": "聊聊这份文档 · 用 @ 呼叫智能体",
-        "file": "聊聊这个文件 · 用 @ 呼叫智能体"
+        "file": "聊聊这个文件 · 用 @ 呼叫智能体",
+        "image": "聊聊这张图片 · 用 @ 呼叫智能体",
+        "video": "聊聊这个视频 · 用 @ 呼叫智能体",
+        "pdf": "聊聊这份 PDF · 用 @ 呼叫智能体"
       },
       "this": {
         "canvas": "这块白板",
         "spreadsheet": "这个电子表格",
         "slides": "这份演示文稿",
-        "document": "这份文档"
+        "document": "这份文档",
+        "image": "这张图片",
+        "video": "这个视频",
+        "pdf": "这份 PDF"
       },
       "origin": {
         "from": "<0>{{name}}</0> 从<1>{{place}}</1>创建了{{what}}",
         "made": "<0>{{name}}</0> 创建了{{what}}",
-        "imported": "由 {{name}} 从 <1>{{file}}</1> 导入"
+        "imported": "由 {{name}} 从 <1>{{file}}</1> 导入",
+        "sentIn": "<0>{{name}}</0> 在<1>{{place}}</1>发送了{{what}}",
+        "sent": "<0>{{name}}</0> 发送了{{what}}"
       },
       "about": {
         "range": "关于 {{sheet}} 中的 {{range}}",
@@ -20980,7 +21105,26 @@
         "canvas": "关于白板上的{{label}}",
         "text": "关于选中的文字",
         "point": "关于白板上的一个位置",
-        "other": "关于{{label}}"
+        "other": "关于{{label}}",
+        "imageArea": "关于图片上的区域 {{n}}",
+        "imagePoint": "关于图片上的位置 {{n}}",
+        "videoAt": "关于视频的 {{time}} 处",
+        "pdfPage": "关于 PDF 第 {{page}} 页",
+        "image": "关于图片",
+        "video": "关于视频",
+        "pdf": "关于 PDF"
+      },
+      "what": {
+        "area": "区域 {{n}}",
+        "point": "位置 {{n}}",
+        "anArea": "一个区域",
+        "aPoint": "一个位置",
+        "page": "第 {{page}} 页"
+      },
+      "where": {
+        "image": "图片上",
+        "video": "视频中",
+        "pdf": "PDF 中"
       },
       "drop": "不发送选中的内容",
       "aboutLine": "在文件中显示{{what}}（{{where}}）",

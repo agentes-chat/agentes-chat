@@ -20,7 +20,13 @@ import { namesText, rosterText } from "@agenteschat/client/lib/format";
 import { brainTool, installableCli } from "@agenteschat/client/lib/machines";
 import { type AiChoice, planMark } from "@agenteschat/client/lib/no-ai";
 import { usageWhen } from "@agenteschat/client/lib/plan-usage";
-import { geminiPersonal, isPlanId, planFreeHint, signInProviderOf } from "@agenteschat/client/lib/plans";
+import {
+  brainMissingHint,
+  geminiPersonal,
+  isPlanId,
+  planFreeHint,
+  signInProviderOf,
+} from "@agenteschat/client/lib/plans";
 import { AUTO, isAuto, modelOnKey, providerLabel } from "@agenteschat/client/lib/providers";
 import { sceneTeam } from "@agenteschat/client/lib/right-hand";
 import {
@@ -46,12 +52,12 @@ import { NO_COMPUTER } from "@/components/AgentComputer";
 import { DEFAULT_KEY } from "@/components/AgentFields";
 import { AddAccount, OpenPage } from "@/components/ai/AddAccountFlow";
 import { CliMissing } from "@/components/ai/CliMissing";
-import { PlanHold } from "@/components/ai/ConnectAiSteps";
 import { PlanReplies } from "@/components/ai/PlanReplies";
+import { PlanHold } from "@/components/ai/plan-hold";
 import { AudienceCard } from "@/components/arrival/AudienceCard";
 import { HaveList, HaveRow, sortHave } from "@/components/arrival/ConnectHave";
 import { TeamScene, useDawn } from "@/components/arrival/TeamScene";
-import { useConnectAi } from "@/components/ConnectAi";
+import { useConnectAi } from "@/components/connect-ai-context";
 import { ToolOffWayOut } from "@/components/devices/ToolOneClick";
 import { useOrg } from "@/components/org-context";
 import { useWidenAsk } from "@/components/ReachLines";
@@ -922,6 +928,9 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
             </SettingNote>
           )}
           {planFreeHint(t, s.plan) && <SettingNote icon="info">{planFreeHint(t, s.plan)}</SettingNote>}
+          {!s.plan && brainMissingHint(t, s.option) && (
+            <SettingNote icon="info">{brainMissingHint(t, s.option)}</SettingNote>
+          )}
         </>
       );
     if (screen === "more") {

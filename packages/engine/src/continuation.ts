@@ -13,6 +13,7 @@ import { isAgentOnlyDm } from "./dms";
 import { decisionNudge, FOLLOW_THROUGH_NUDGE, FOLLOW_THROUGH_NUDGE_DM, MISSION_ASK_NUDGE } from "./follow-through";
 import { cutText, cutTextEnd } from "./format";
 import { type Judge, JudgeBudgetError } from "./judge";
+import { PLATFORM_CAP } from "./limits";
 import type { NoticeKind } from "./notices";
 import { notifyRunFailed } from "./notification-producers";
 import { ANSWER_NUDGE } from "./reply-policy";
@@ -54,6 +55,8 @@ export interface ContinuationState {
   secretNudged?: boolean;
   /** It was told once to write a reply that named its tools again (`toolNamesNudge`): the next one is posted. */
   toolsNudged?: boolean;
+  /** Its turn-end check failed once and it was told to check itself (`uncheckedNudge`): later failures end as done. */
+  uncheckedNudged?: boolean;
 }
 
 export type ContinuationVerdict = "done" | "continue" | "ask" | "untried" | "secret" | "unbacked";
@@ -65,6 +68,17 @@ export type ContinuationVerdict = "done" | "continue" | "ask" | "untried" | "sec
 export function untriedNudge(means: string[], tried: string[]) {
   const have = means.length > 0 ? means.join("; ") : "your tools and find_tools";
   return `You ended saying you couldn't, but you still have ways to try. Your means: ${have}. Already tried:\n${triedBlock(tried)}\nUse the ones that fit; when a search or a page gives nothing or is blocked, change the words, the source or the tool. Missing an access or a login? Look in the workspace first (your memory, search_context for who signed in or holds it) and ask the teammate who has it. ${SAFETY_FINAL} ${HAND_OVER_STEP} If no way is left at all, say what you tried and the one step a person must do.`;
+}
+
+/**
+ * What a run reads, once, when its turn-end check was refused past the workspace's platform AI for the month, with no
+ * small model of its own to check in its place: it checks its own reply, so an agent that stopped at an
+ * obstacle doesn't stay stopped. `held`: a conversation's reply is held meanwhile (`Transcript.held`) and goes out as
+ * it is when nothing is added; with no judge to merge them, what it adds goes out below it.
+ */
+export function uncheckedNudge(means: string[], tried: string[], held: boolean) {
+  const have = means.length > 0 ? means.join("; ") : "your tools and find_tools";
+  return `${held ? "Not posted yet: nobody has seen your reply above. " : ""}Your turn's check couldn't run, so check it yourself. If your reply gives what was asked, end your turn now without any text${held ? ": it is posted as it is" : ""}. If you stopped short (blocked, refused, a tool or an access missing), you still have ways to try. Your means: ${have}. Already tried:\n${triedBlock(tried)}\nUse the ones that fit; when something gives nothing or is blocked, change the words, the source or the tool. ${SAFETY_FINAL} ${HAND_OVER_STEP} If no way is left at all, say what you tried and the one step a person must do.${held ? " Write only what you add to your reply above: it is posted below it." : ""}`;
 }
 
 /**
@@ -330,6 +344,12 @@ export const verdictRecord = (v: ContinuationVerdict) =>
   v === "continue" || v === "untried" || v === "unbacked" ? "unkept" : v === "ask" || v === "secret" ? "waiting" : v;
 
 /**
+ * Above the other verdicts' 0.45: a false "unbacked" holds back a true reply and costs a turn, and agents learn to pad
+ * every reply against it.
+ */
+const UNBACKED_SURE = 0.65;
+
+/**
  * One judge call on a turn's end (kind `follow_through`, recorded on the agent's and the workspace's usage like
  * every judgment, not billed to the agent's budget). `continue` at p ≥ 0.45 and at least p(ask); `untried` at
  * p ≥ 0.45, above p(done) and at least p(continue) and p(ask); `ask` at p ≥ 0.45; otherwise done. A missed
@@ -380,7 +400,7 @@ export async function continuationVerdict(
         request: cutText(input.request, 2000),
         reply: cutTextEnd(input.reply, 3000),
         means: input.means,
-        tried: input.tried.slice(-20).map(neutralizeUntrusted),
+        tried: shownTried(input.tried),
         runKind: input.runKind,
         ...(input.unreached ? { unreached: input.unreached } : {}),
         ...(input.backgroundWork?.length
@@ -402,7 +422,7 @@ export async function continuationVerdict(
             secret:
               "It asks a person to type or paste a secret into the chat (a password, an API key, a token, a private key), or the work `request` asked it to do can't go on without one only a person has and it hasn't asked for it through a secure request (`tried` has no request_secret call). Not when it only names the key a step it offers would need.",
             unbacked:
-              "Its reply says it made, sent, created, posted, saved or did something (an image, a file, a message or an email sent, a task opened, a change made, 'done', 'here it is') that no call in `tried` did. Not when the reply only plans, offers or asks, says plainly it couldn't, or reports what someone did before and says so.",
+              "Its reply says it made, sent, created, posted, saved or did something (an image, a file, a message or an email sent, a task opened, a change made, 'done', 'here it is') that plainly no call in `tried` did. A command, script or code run in `tried` that would produce it (a render, a conversion, a file written, an upload) did it. Not when `tried` starts with earlier calls not shown (one of those may have done it), nor when the reply only plans, offers or asks, says plainly it couldn't, or reports what a teammate, an earlier turn or `request` says was done.",
           },
         },
         ...(learn ? { learn: input.personal ? LEARN_QUESTION_PERSONAL : LEARN_QUESTION } : {}),
@@ -429,7 +449,7 @@ export async function continuationVerdict(
   const verdict: ContinuationVerdict =
     p("secret") >= 0.45 && (["untried", "continue", "ask", "unbacked"] as const).every((k) => p("secret") >= p(k))
       ? "secret"
-      : p("unbacked") >= 0.45 && (["untried", "continue", "ask"] as const).every((k) => p("unbacked") >= p(k))
+      : p("unbacked") >= UNBACKED_SURE && (["untried", "continue", "ask"] as const).every((k) => p("unbacked") >= p(k))
         ? "unbacked"
         : p("untried") >= 0.45 && p("untried") > p("done") && p("untried") >= p("continue") && p("untried") >= p("ask")
           ? "untried"
@@ -440,7 +460,7 @@ export async function continuationVerdict(
               : "done";
   // What failed was only refused for safety: no way is left to try for that data. Work it said it will still do
   // (`continue`) goes on.
-  return verdict === "untried" && onlySafetyRefusals(input.tried) ? "done" : verdict;
+  return verdict === "untried" && onlySafetyRefusals(input.tried.slice(-TRIED_SHOWN)) ? "done" : verdict;
 }
 
 /** What a finished turn taught, as the turn-end judgment reads it (ADR 0120): `none` starts no learning. */
@@ -501,7 +521,16 @@ export async function triedCalls(db: Database, run: { id: string; orgId: string 
   return [
     ...calls.map((c) => tag(callLine(c.name, c.input, c.result), c.safety)),
     ...harness.map((l) => tag(l, !l.startsWith(SAFETY_TAG) && HARNESS_SAFETY.test(l))),
-  ].slice(-20);
+  ];
+}
+
+const TRIED_SHOWN = 20;
+
+/** The tried lines a judge reads: the newest 20, told how many came before (a long run's render may be one of those). */
+export function shownTried(tried: string[]): string[] {
+  const earlier = tried.length - TRIED_SHOWN;
+  const shown = tried.slice(-TRIED_SHOWN).map(neutralizeUntrusted);
+  return earlier > 0 ? [`(${earlier} earlier calls of this run not shown)`, ...shown] : shown;
 }
 
 /** A run's tool calls through the gateway, oldest first, each with its result once it came. */
@@ -691,7 +720,17 @@ async function answerTurnEnd(t: TurnEnd): Promise<TurnEndDecision> {
   let verdict: ContinuationVerdict;
   try {
     verdict = await t.verdict();
-  } catch {
+  } catch (error) {
+    // Refused past the platform AI for the month, the check would end every turn as done: once per run, the agent
+    // checks itself instead. Any other failure (no Jev on this server, a judge down or slow) ends as done, or every
+    // reply there would wait one more turn.
+    if (canNudge && !t.state.uncheckedNudged && error instanceof Error && error.message === PLATFORM_CAP)
+      return {
+        outcome: "continue",
+        rule: "untried",
+        judgeError: true,
+        nudge: uncheckedNudge(t.evidence?.means ?? [], t.evidence?.tried ?? [], t.kind !== "routine"),
+      };
     return { outcome: "done", rule: "judge_error", judgeError: true };
   }
   // No person reads a routine's run or an agents' DM: what it lacks goes out in its report or its answer, and
@@ -760,7 +799,12 @@ export function advance(state: ContinuationState, d: TurnEndDecision, executed: 
   // A reply held for its wording answers no ask: one it was told to ask still becomes the question card.
   if (d.rule === "local_paths") return { ...state, pathsNudged: true };
   if (d.rule === "tool_names") return { ...state, toolsNudged: true };
-  return { ...rest, count: state.count + 1, executedAtNudge: executed };
+  return {
+    ...rest,
+    count: state.count + 1,
+    executedAtNudge: executed,
+    ...(d.judgeError ? { uncheckedNudged: true } : {}),
+  };
 }
 
 /** Run errors the person already sees explained elsewhere, or that no one can act on. */

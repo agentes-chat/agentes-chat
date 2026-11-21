@@ -23,6 +23,7 @@ import {
   cacheMessageWork,
   cachePinned,
   cacheReceipts,
+  cacheResolved,
   cacheTeamCard,
   catchUpChannel,
   consultSeeds,
@@ -313,6 +314,10 @@ function applyToCache(qc: QueryClient, orgId: string, channelId: string, event: 
     case "message.unpinned":
       cachePinned(qc, orgId, channelId, event.messageId, event.type === "message.pinned");
       void qc.invalidateQueries({ queryKey: keys.pins(orgId, channelId) });
+      break;
+    // A comment on a picture, a video or a PDF was resolved or opened again (ADR 0208): its line and its pin follow.
+    case "message.resolved":
+      cacheResolved(qc, orgId, event.channelId, event.messageId, event.resolved);
       break;
     case "agent.run":
     case "run.finished":
