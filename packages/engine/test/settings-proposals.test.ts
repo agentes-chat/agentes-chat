@@ -12,6 +12,7 @@ import {
   createSetupToolSource,
   createToolGateway,
   decideProposal,
+  deleteAgentGroup,
   deleteSkill,
   describeCapabilities,
   enabledSkills,
@@ -363,6 +364,21 @@ describe("a change of department", () => {
     const groups = await agentGroupViews(f.db, f.org.id);
     expect(groups.map((g) => g.name)).toEqual(["Arquimedium"]);
     expect(groups[0]?.agentIds.sort()).toEqual([f.agent.id, ops.id].sort());
+
+    // Undo finds the department ops's card named in another case, and takes each agent out of it.
+    const { card } = await cardRows(f, f.owner.id);
+    const receipts = (await actionsFor(f.db, f.org.id, [card.id])).get(card.id) ?? [];
+    const receiptOf = (agentId: string) => receipts.find((r) => r.target.id === agentId)?.id ?? "";
+    await undoAgentAction(deps, f.owner.id, f.org.id, receiptOf(ops.id));
+    await undoAgentAction(deps, f.owner.id, f.org.id, receiptOf(f.agent.id));
+    expect((await agentGroupViews(f.db, f.org.id)).map((g) => [g.name, g.agentIds.length])).toEqual([
+      ["Arquimedium", 0],
+    ]);
+    // Redo after the department was deleted makes it again, with the agent in it.
+    await deleteAgentGroup(deps, f.owner.id, f.org.id, groups[0]?.id ?? "");
+    await redoAgentAction(deps, f.owner.id, f.org.id, receiptOf(f.agent.id));
+    const again = await agentGroupViews(f.db, f.org.id);
+    expect(again.map((g) => [g.name, g.agentIds])).toEqual([["Arquimedium", [f.agent.id]]]);
   });
 
   test("who no longer manages agents when they click creates nothing", async () => {

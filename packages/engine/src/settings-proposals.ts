@@ -1,4 +1,4 @@
-import type { PubSub } from "@agenteschat/adapters";
+import { holdEvents, type PubSub } from "@agenteschat/adapters";
 import { and, type Database, type Executor, eq, isNull, schema } from "@agenteschat/db";
 import { accessInputOf, replaceableGrants, setAgentAccess } from "./access";
 import { agentGroupsNamed, createAgentGroup, lockAgentGroupNames, moveAgentToGroup } from "./agent-groups";
@@ -101,6 +101,15 @@ const ORDER: SettingField[] = [
 ];
 
 const same = (a: unknown, b: unknown) => canonicalJson(a ?? null) === canonicalJson(b ?? null);
+
+/**
+ * A setting's two values the same: a department's name in any case, as `agentGroupsNamed` reads it, so a card that
+ * named a new department "arquimedium" after another card made "Arquimedium" still finds it on Undo.
+ */
+const sameValue = (field: ReceiptLine["field"], a: unknown, b: unknown) =>
+  field === "group" && typeof a === "string" && typeof b === "string"
+    ? a.toLowerCase() === b.toLowerCase()
+    : same(a, b);
 
 /** What `from` and `to` hold for an AI account: the brain it thinks with and the account (null: the API). */
 interface AccountValue {
@@ -245,15 +254,25 @@ async function setValue(
       if (!name) return void (await moveAgentToGroup(deps, actorId, orgId, agentId, { groupId: null }));
       // Only a line that said so creates it, and only going to it (apply, Redo): Undo never makes a department.
       const creates = line.newGroup === true && value === line.to;
-      if (creates) await lockAgentGroupNames(db, orgId);
-      const named = await agentGroupsNamed(db, orgId, name);
-      if (named.length > 1)
-        throw new ValidationError(`Two departments are called ${name}`, "agent_group.ambiguous", { name });
-      const [group] = named;
-      if (group) return void (await moveAgentToGroup(deps, actorId, orgId, agentId, { groupId: group.id }));
-      if (!creates) throw new NotFoundError("That department is gone", "agent_group.not_found");
-      // Created with the agent in it: `createAgentGroup` checks `manage_agents` and that the clicker manages the agent.
-      return void (await createAgentGroup(deps, actorId, orgId, { name, agentIds: [agentId] }));
+      const place = async (on: { db: Database; pubsub?: PubSub }) => {
+        const named = await agentGroupsNamed(on.db, orgId, name);
+        if (named.length > 1)
+          throw new ValidationError(`Two departments are called ${name}`, "agent_group.ambiguous", { name });
+        const [group] = named;
+        if (group) return void (await moveAgentToGroup(on, actorId, orgId, agentId, { groupId: group.id }));
+        if (!creates) throw new NotFoundError("That department is gone", "agent_group.not_found");
+        // Created with the agent in it: `createAgentGroup` checks `manage_agents` and that the clicker manages it.
+        return void (await createAgentGroup(on, actorId, orgId, { name, agentIds: [agentId] }));
+      };
+      if (!creates) return place(deps);
+      // Under the workspace's lock, in a transaction of its own (a savepoint inside a decision's), so the lock holds
+      // until the department is committed on Redo too, which runs outside one; its events go out after.
+      const events = holdEvents(pubsub);
+      await db.transaction(async (tx) => {
+        await lockAgentGroupNames(tx, orgId);
+        await place({ db: tx as unknown as Database, pubsub: events.pubsub });
+      });
+      return events.flush();
     }
     case "model": {
       const agent = await getAgent(db, orgId, agentId);
@@ -443,7 +462,7 @@ export async function settingLines(
         : w.field === "model" && isComputerBrain(agent.brain)
           ? normalizeBrainModel(agent.brain, w.to, agent.brainModel)
           : w.to;
-    if (same(from, to)) {
+    if (sameValue(w.field, from, to)) {
       skipped.push(
         w.field === "skill"
           ? `${who} ${to ? "already has" : "doesn't have"} the skill ${w.label?.to ?? ""}.`
@@ -678,7 +697,8 @@ export async function revertSettings(
   const agent = await getAgent(deps.db, a.orgId, a.targetId);
   if (!agent) throw new NotFoundError("The agent is gone", "action.target_gone");
   for (const l of steps)
-    if (!same(await valueNow(deps.db, agent, l), direction === "undo" ? l.to : l.from)) throw changedSince();
+    if (!sameValue(l.field, await valueNow(deps.db, agent, l), direction === "undo" ? l.to : l.from))
+      throw changedSince();
   for (const l of steps) await setValue(deps, userId, a.orgId, agent.id, l, direction === "undo" ? l.from : l.to);
   // Who it answers and its AI have no event of their own.
   await publishAgentsChanged(deps.pubsub, a.orgId);
