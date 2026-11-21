@@ -24,6 +24,7 @@ import { cardEdge, type Scheme } from "@/ui/palette";
 import { useContentWidth } from "@/ui/pane";
 import { type Corners, RADIUS } from "@/ui/radius";
 import { BUBBLE_PART_CORNERS, MESSAGE_CARD_CORNERS, useBubblePart } from "../shared/bubble-part";
+import { BUBBLE_PAD_V } from "./bubble-cap";
 import { keepSize, keptSize } from "./kept-sizes";
 import {
   BUBBLES_EDGE,
@@ -195,7 +196,7 @@ export const lookRows = StyleSheet.create({
   bubble: {
     alignSelf: "flex-start",
     maxWidth: "100%",
-    paddingVertical: 8,
+    paddingVertical: BUBBLE_PAD_V,
     paddingHorizontal: 14,
     borderRadius: RADIUS.xl,
   },
