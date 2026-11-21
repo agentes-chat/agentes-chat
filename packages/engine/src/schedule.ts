@@ -81,6 +81,7 @@ function momentReading(
   local: string,
   timezone: string,
   now: Date,
+  withinMinuteMs = 0,
 ): { ok: true; at: Date } | { ok: false; error: string; code: string } {
   const parts = splitLocalDateTime(local);
   if (!parts) {
@@ -92,6 +93,7 @@ function momentReading(
   }
   const at = zonedTime(parts.year, parts.month, parts.day, parts.hour, parts.minute, timezone);
   if (!at) return { ok: false, error: "That time doesn't exist in this time zone.", code: "when.nonexistent" };
+  at.setTime(at.getTime() + withinMinuteMs);
   if (at.getTime() <= now.getTime()) return { ok: false, error: "That time has already passed.", code: "when.past" };
   return { ok: true, at };
 }
@@ -187,7 +189,7 @@ export function describeWhen(at: Date, timezone: string, now = new Date()) {
   return `${day}, ${date}, at ${hhmm([p.hour, p.minute])} (${timezoneName(timezone)})`;
 }
 
-const ISO = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?$/;
+const ISO = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d+))?)?(Z|[+-]\d{2}:?\d{2})?$/;
 
 /**
  * A one-off time in `timezone`: ISO 8601 as it is (with an offset or Z:
@@ -207,7 +209,10 @@ export async function parseWhen(
       : moment;
   const iso = ISO.exec(raw);
   if (iso) {
-    if (iso[6]) {
+    const seconds = Number(iso[6] ?? 0);
+    if (seconds > 59 || (iso[8] && !splitLocalDateTime(`${iso[1]}-${iso[2]}-${iso[3]}T00:00`)))
+      return { ok: false, error: "That time doesn't exist in this time zone.", code: "when.nonexistent" };
+    if (iso[8]) {
       const at = new Date(raw);
       if (Number.isNaN(at.getTime()))
         return { ok: false, error: "That time doesn't exist in this time zone.", code: "when.nonexistent" };
@@ -215,7 +220,10 @@ export async function parseWhen(
         return { ok: false, error: "That time has already passed.", code: "when.past" };
       return done({ ok: true, at });
     }
-    return done(momentReading(`${iso[1]}-${iso[2]}-${iso[3]}T${iso[4]}:${iso[5]}`, input.timezone, now));
+    const withinMinuteMs = seconds * 1000 + Number((iso[7] ?? "").slice(0, 3).padEnd(3, "0"));
+    return done(
+      momentReading(`${iso[1]}-${iso[2]}-${iso[3]}T${iso[4]}:${iso[5]}`, input.timezone, now, withinMinuteMs),
+    );
   }
   const reading = reader
     ? await reader
