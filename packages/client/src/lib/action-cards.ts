@@ -24,8 +24,9 @@ import { type AppPage, isAppPage } from "./app-pages";
 import type { ConnectedItem } from "./connected";
 import { isHttpsUrl, serverCovers } from "./custom-tools";
 import { formatUsd, joinNames } from "./format";
-import { aiStateOf, PLAN_BRAIN } from "./no-ai";
+import { PLAN_BRAIN } from "./no-ai";
 import type { Permission } from "./permissions";
+import { isRightHand } from "./right-hand";
 import { COMPUTER_KEYS, COMPUTERS_ROW } from "./roles";
 import { type TeamWeekCard, teamWeekCardOf } from "./team-week";
 import { type UsagePauseCard, usagePauseCardOf } from "./usage-pause";
@@ -545,18 +546,25 @@ export function actionCardOf(meta: Record<string, unknown> | null | undefined): 
 
 /**
  * Done once every agent the card names can think, and for a plan's card thinks with that plan. A card that
- * names no agent (an organization's key) stays a button: nothing live says which key it was for.
+ * names no agent (an organization's key) stays a button: nothing live says which key it was for. A plan's agent
+ * that is ready only through the model brain standing in for its computer brain (its plan not signed in) isn't
+ * done: its `background` state, which never falls back (ADR 0053 §6.4), says so. The right hand never falls back,
+ * and its `background` is the workspace's AI, not its plan's, so its `state` alone counts.
  */
 export function connectAiDone(
   card: ConnectAiCard,
   status: AiStatus | undefined,
-  agentById: ReadonlyMap<string, Pick<Agent, "brain">>,
+  agentById: ReadonlyMap<string, Pick<Agent, "brain" | "builtin">>,
 ) {
   if (!status || card.agentIds.length === 0) return false;
   const brain = card.what === "claude" || card.what === "chatgpt" ? PLAN_BRAIN[card.what] : null;
-  return card.agentIds.every(
-    (id) => aiStateOf(status, id) === "ready" && (!brain || agentById.get(id)?.brain?.kind === brain),
-  );
+  return card.agentIds.every((id) => {
+    const agent = agentById.get(id);
+    const ai = status.agents.find((a) => a.agentId === id);
+    if (ai?.state !== "ready") return false;
+    if (!brain) return true;
+    return agent?.brain?.kind === brain && (isRightHand(agent) || (ai.background ?? ai.state) === "ready");
+  });
 }
 
 /**
