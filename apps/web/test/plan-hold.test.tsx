@@ -162,8 +162,17 @@ describe("a plan with no agentes.chat plan in force", () => {
       const panel = await planPanel(dialog, choice);
       expect(shownText(panel)).not.toContain(WHY);
       expect(buttonNamed(panel, PAY)).toBeNull();
-      expect(panel.querySelector(".agp-addacct")).not.toBeNull();
-      expect(disabledButtons(panel).filter((b) => !b.textContent?.includes("Enviar"))).toEqual([]);
+      if (choice === "zen") {
+        // The free tier is a choice on that computer (ADR 0132 §6), so the panel opens on it — the free models first,
+        // another account beside them — instead of opening on the form.
+        const cards = Array.from(panel.querySelectorAll(".grid-options > .ac-option"));
+        expect(cards).toHaveLength(2);
+        expect(cards[0]?.textContent).toContain("Modelos grátis do OpenCode");
+        await click(cards[1] as Element);
+      }
+      const form = within(dialog).getAllByRole("region", { name: planTitle(i18next.t, choice) })[0] as HTMLElement;
+      expect(form.querySelector(".agp-addacct")).not.toBeNull();
+      expect(disabledButtons(form).filter((b) => !b.textContent?.includes("Enviar"))).toEqual([]);
     }
   });
 
