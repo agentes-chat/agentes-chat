@@ -1,4 +1,4 @@
-import { timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { and, type Database, eq, gte, isNull, schema, sql } from "@agenteschat/db";
 import { type ArtifactDeps, fileBytesOf } from "../../artifacts";
 import { UUID } from "../../authority";
@@ -12,6 +12,7 @@ import {
   type ConnectorConnection,
   type ConnectorDeps,
   connectionSecret,
+  dropVendorAccount,
   markToReconnect,
   openConnectionSecret,
   toolPrefixOfConnection,
@@ -47,9 +48,10 @@ export async function nativeFailure(
 export function createNativeConnectorToolSource(
   deps: ConnectorDeps & {
     artifacts?: ArtifactDeps;
-    mediaLink?: NativeCall["mediaLink"];
     /** Calls a workspace may make per month (UTC) by connector, where the vendor bills this server per call (X). */
     monthlyCaps?: Record<string, number>;
+    /** Links a vendor fetches a Drive file from (`connectorMediaLinks`); none: no file goes by link. */
+    media?: (orgId: string, artifactId: string) => Promise<string | null>;
   },
 ): ToolSource {
   const http = deps.http ?? fetch;
@@ -65,7 +67,8 @@ export function createNativeConnectorToolSource(
         const def = CONNECTOR_CATALOG[connection.connector];
         const service = NATIVE_SERVICES[connection.connector];
         if (!def || !service) return [];
-        const prefix = toolPrefixOfConnection(connection);
+        // `meta-ads_…` would read as two words to the model: tool names take underscores only.
+        const prefix = toolPrefixOfConnection(connection).replace(/-/g, "_");
         const named = auditLabel(connection);
         return Object.entries(service.tools).flatMap(([verb, tool]) => {
           const mapped = def.tools[verb];
@@ -140,7 +143,10 @@ export function createNativeConnectorToolSource(
           if (!deps.artifacts) throw new NativeError("connector.failed", "The Drive isn't available on this server.");
           return fileBytesOf({ ...deps.artifacts, db: ctx.db }, actor, ctx.orgId, id);
         },
-        ...(deps.mediaLink ? { mediaLink: deps.mediaLink } : {}),
+        mediaLink: async (id) => {
+          await call.file(id);
+          return deps.media ? deps.media(ctx.orgId, id) : null;
+        },
       };
       const out = await tool.run(input, call);
       return { ...out, data: { connector: connection.connector, tool: verb, ...out.data } };
@@ -252,4 +258,43 @@ export async function pollTelegramBots(deps: ConnectorDeps): Promise<number> {
     }
   }
   return fired;
+}
+
+// ── Meta's callbacks (ADR 0170 §8) ──────────────────────────────────────────
+
+/** Meta's `signed_request`: `<signature>.<payload>`, the signature an HMAC-SHA256 of the payload with an app's secret. */
+export function metaSignedRequest(raw: string, appSecrets: string[]): { user_id?: string } | null {
+  const [signature = "", payload = ""] = raw.split(".");
+  const given = Buffer.from(signature, "base64url");
+  const ok = appSecrets.some((secret) => {
+    const expected = createHmac("sha256", secret).update(payload).digest();
+    return expected.length === given.length && timingSafeEqual(expected, given);
+  });
+  if (!ok) return null;
+  try {
+    return JSON.parse(Buffer.from(payload, "base64url").toString()) as { user_id?: string };
+  } catch {
+    return null;
+  }
+}
+
+const META_CONNECTORS = ["threads", "meta-ads"];
+
+/**
+ * `POST /api/webhooks/meta/deauthorize` and `/data-deletion`: a person removed this server's Threads or Meta Ads app
+ * on Meta's side. Their connections go (nothing of theirs is kept but the audit's names); the data deletion answer
+ * carries a confirmation code Meta shows them. `NotFoundError` for a request no app of ours signed.
+ */
+export async function handleMetaCallback(deps: Pick<ConnectorDeps, "db" | "oauthApps">, signedRequest: string) {
+  const secrets = META_CONNECTORS.flatMap((c) => {
+    const app = deps.oauthApps?.[c];
+    return app ? [app.clientSecret] : [];
+  });
+  const claims = metaSignedRequest(signedRequest, secrets);
+  if (!claims?.user_id) throw new NotFoundError("Not a request from this server's Meta apps");
+  const removed = await dropVendorAccount(deps.db, META_CONNECTORS, String(claims.user_id));
+  return {
+    removed,
+    confirmationCode: createHash("sha256").update(`${claims.user_id}:${Date.now()}`).digest("hex").slice(0, 16),
+  };
 }

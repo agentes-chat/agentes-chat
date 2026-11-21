@@ -8533,6 +8533,32 @@ export const ptBR = {
       label: "Postar",
       description: "Postar na conta, com fotos ou um vídeo do Drive. Apagar um post pede aprovação.",
     },
+    threads_posts_read: {
+      label: "Ler posts",
+      description: "Ler os posts da conta, as respostas, menções e resultados.",
+    },
+    threads_posts_write: {
+      label: "Postar e responder",
+      description: "Postar com fotos ou vídeos do Drive, responder e ocultar respostas. Apagar um post pede aprovação.",
+    },
+    meta_ads_ads_read: {
+      label: "Ler anúncios",
+      description: "Listar contas de anúncio, campanhas, conjuntos de anúncios e anúncios, e ler os resultados.",
+    },
+    meta_ads_ads_write: {
+      label: "Gerenciar anúncios",
+      description:
+        "Criar campanhas, conjuntos de anúncios e anúncios (sempre pausados), editar e pausar. Ativar e mudar um orçamento sempre pedem aprovação. Arquivar e apagar pedem.",
+    },
+    tiktok_videos_read: {
+      label: "Ler vídeos",
+      description: "Ler o perfil, os vídeos públicos e o que o criador pode postar.",
+    },
+    tiktok_videos_write: {
+      label: "Enviar vídeos aos rascunhos",
+      description:
+        "Enviar um vídeo do Drive aos rascunhos do TikTok do criador, que termina o post lá. Cada envio pede aprovação.",
+    },
   },
   issues: {
     handedBy: "passada por <0/>{{name}}",
@@ -13625,7 +13651,11 @@ export const ptBR = {
       mixpanel: { "1": "Consultar eventos, relatórios e funis" },
       amplitude: { "1": "Ver gráficos e dashboards", "2": "Criar gráficos" },
       himetrica: { "1": "Ver visitas, funis e receita", "2": "Criar e editar funis" },
-      meta_ads: { "1": "Ver campanhas e resultados", "2": "Criar e ajustar campanhas" },
+      meta_ads: {
+        "1": "Ver campanhas e resultados",
+        "2": "Criar e ajustar campanhas",
+        ask: "Ativar anúncios e mudar orçamentos sempre pedem sua aprovação",
+      },
       google_docs: { "1": "Buscar e ler documentos", "2": "Criar e editar documentos" },
       google_sheets: { "1": "Ler planilhas", "2": "Adicionar linhas e atualizar células" },
       google_calendar: {
@@ -13701,6 +13731,16 @@ export const ptBR = {
         "1": "Ler os posts e as menções da conta",
         "2": "Postar com fotos ou um vídeo",
         ask: "Apagar posts sempre pede sua aprovação",
+      },
+      threads: {
+        "1": "Ver posts, respostas e resultados",
+        "2": "Postar com fotos ou vídeos e responder",
+        ask: "Apagar posts sempre pede sua aprovação",
+      },
+      tiktok: {
+        "1": "Ver o perfil e os vídeos",
+        "2": "Enviar vídeos aos seus rascunhos para terminar no TikTok",
+        ask: "Cada envio sempre pede sua aprovação",
       },
     },
     connectedList: "Conectados",
@@ -13854,6 +13894,8 @@ export const ptBR = {
       whatsapp: "Mensagens e modelos do WhatsApp Business.",
       telegram: "Um bot seu do Telegram: suas conversas, grupos e canais.",
       x: "Posts na sua conta do X: escrever, ler menções e buscar.",
+      threads: "Posts e respostas na sua conta do Threads.",
+      tiktok: "Seu perfil e vídeos do TikTok, e vídeos enviados aos seus rascunhos.",
     },
     needsApp:
       "Este servidor ainda não tem um app do {{name}}: quem o administra registra um no {{name}} e define as variáveis (docs/social-apps-checklist.md).",
@@ -14698,6 +14740,27 @@ export const ptBR = {
       get_my_posts: "Ver meus posts",
       get_mentions: "Ver menções",
       search_recent: "Buscar posts recentes",
+      get_replies: "Ver respostas",
+      get_insights: "Ver resultados",
+      reply: "Responder",
+      hide_reply: "Ocultar resposta",
+      list_ad_accounts: "Listar contas de anúncio",
+      list_campaigns: "Listar campanhas",
+      list_ad_sets: "Listar conjuntos de anúncios",
+      list_ads: "Listar anúncios",
+      create_campaign: "Criar campanha",
+      create_ad_set: "Criar conjunto de anúncios",
+      create_ad: "Criar anúncio",
+      update: "Atualizar",
+      pause: "Pausar",
+      activate: "Ativar",
+      set_budget: "Definir orçamento",
+      archive: "Arquivar",
+      delete: "Apagar",
+      list_videos: "Listar vídeos",
+      get_creator_info: "Ver opções de postagem",
+      get_post_status: "Ver status do envio",
+      upload_draft: "Enviar aos rascunhos",
     },
   },
   toolReview: {

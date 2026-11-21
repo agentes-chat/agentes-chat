@@ -55058,5 +55058,131 @@
   },
   "connectors.needsApp": {
     "value": "This server has no {{name}} app yet: whoever runs it registers one with {{name}} and sets its variables (docs/social-apps-checklist.md)."
+  },
+  "scopes.threads_posts_read.label": {
+    "value": "Read posts"
+  },
+  "scopes.threads_posts_read.description": {
+    "value": "Read the account's posts, their replies, mentions and results."
+  },
+  "scopes.threads_posts_write.label": {
+    "value": "Post and reply"
+  },
+  "scopes.threads_posts_write.description": {
+    "value": "Post with pictures or videos from the Drive, reply and hide replies. Deleting a post asks for approval."
+  },
+  "scopes.meta_ads_ads_read.label": {
+    "value": "Read ads"
+  },
+  "scopes.meta_ads_ads_read.description": {
+    "value": "List ad accounts, campaigns, ad sets and ads, and read their results."
+  },
+  "scopes.meta_ads_ads_write.label": {
+    "value": "Manage ads"
+  },
+  "scopes.meta_ads_ads_write.description": {
+    "value": "Create campaigns, ad sets and ads (always paused), edit and pause them. Turning one on and changing a budget always ask. Archiving and deleting ask."
+  },
+  "scopes.tiktok_videos_read.label": {
+    "value": "Read videos"
+  },
+  "scopes.tiktok_videos_read.description": {
+    "value": "Read the creator's profile, public videos and what they may post."
+  },
+  "scopes.tiktok_videos_write.label": {
+    "value": "Send videos to drafts"
+  },
+  "scopes.tiktok_videos_write.description": {
+    "value": "Send a Drive video to the creator's TikTok drafts, where they finish the post. Each upload asks for approval."
+  },
+  "connectors.descriptions.threads": {
+    "value": "Posts and replies on your Threads account."
+  },
+  "connectors.descriptions.tiktok": {
+    "value": "Your TikTok profile and videos, and videos sent to your drafts."
+  },
+  "connectors.can.threads.1": {
+    "value": "See posts, replies and results"
+  },
+  "connectors.can.threads.2": {
+    "value": "Post with pictures or videos and reply"
+  },
+  "connectors.can.threads.ask": {
+    "value": "Deleting posts always asks for your approval"
+  },
+  "connectors.can.tiktok.1": {
+    "value": "See the profile and videos"
+  },
+  "connectors.can.tiktok.2": {
+    "value": "Send videos to your drafts to finish in TikTok"
+  },
+  "connectors.can.tiktok.ask": {
+    "value": "Each upload always asks for your approval"
+  },
+  "toolNames.label.get_replies": {
+    "value": "See replies"
+  },
+  "toolNames.label.get_insights": {
+    "value": "See results"
+  },
+  "toolNames.label.reply": {
+    "value": "Reply"
+  },
+  "toolNames.label.hide_reply": {
+    "value": "Hide reply"
+  },
+  "toolNames.label.list_ad_accounts": {
+    "value": "List ad accounts"
+  },
+  "toolNames.label.list_campaigns": {
+    "value": "List campaigns"
+  },
+  "toolNames.label.list_ad_sets": {
+    "value": "List ad sets"
+  },
+  "toolNames.label.list_ads": {
+    "value": "List ads"
+  },
+  "toolNames.label.create_campaign": {
+    "value": "Create campaign"
+  },
+  "toolNames.label.create_ad_set": {
+    "value": "Create ad set"
+  },
+  "toolNames.label.create_ad": {
+    "value": "Create ad"
+  },
+  "toolNames.label.update": {
+    "value": "Update"
+  },
+  "toolNames.label.pause": {
+    "value": "Pause"
+  },
+  "toolNames.label.activate": {
+    "value": "Turn on"
+  },
+  "toolNames.label.set_budget": {
+    "value": "Set budget"
+  },
+  "toolNames.label.archive": {
+    "value": "Archive"
+  },
+  "toolNames.label.delete": {
+    "value": "Delete"
+  },
+  "toolNames.label.list_videos": {
+    "value": "List videos"
+  },
+  "toolNames.label.get_creator_info": {
+    "value": "See posting options"
+  },
+  "toolNames.label.get_post_status": {
+    "value": "See upload status"
+  },
+  "toolNames.label.upload_draft": {
+    "value": "Send to drafts"
+  },
+  "connectors.can.meta_ads.ask": {
+    "value": "Turning ads on and changing budgets always ask for your approval"
   }
 }

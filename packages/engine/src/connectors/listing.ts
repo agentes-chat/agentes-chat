@@ -96,6 +96,9 @@ export const CONNECTOR_BRANDS: Record<string, { file: string; color: string | nu
   whatsapp: { file: "whatsapp", color: "#25D366" },
   telegram: { file: "telegram", color: "#26A5E4" },
   x: { file: "x", color: null },
+  threads: { file: "threads", color: null },
+  tiktok: { file: "tiktok", color: null },
+  "meta-ads": { file: "meta", color: "#0467DF" },
 };
 
 export interface ConnectorListingEntry {

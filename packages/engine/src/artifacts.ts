@@ -1877,6 +1877,23 @@ export async function fileBytesOf(deps: ArtifactDeps, actor: ArtifactActor, orgI
 }
 
 /**
+ * An uploaded file's bytes by its id alone, with no reader: only for a link this server signed for a file an agent
+ * could read when it made it (`openConnectorMedia`). Null when it is gone.
+ */
+export async function fileBytesById(deps: ArtifactDeps, orgId: string, artifactId: string) {
+  if (!UUID.test(artifactId) || !UUID.test(orgId)) return null;
+  const [a] = await deps.db
+    .select()
+    .from(artifacts)
+    .where(and(eq(artifacts.orgId, orgId), eq(artifacts.id, artifactId), isNull(artifacts.deletedAt)));
+  if (!a || a.kind !== "file") return null;
+  const v = await versionRow(deps.db, a);
+  const { body } = await readVersion(deps, a, v);
+  const name = v.fileName ?? "file";
+  return { name, contentType: fileContentType(name, v.contentType), bytes: body };
+}
+
+/**
  * A picture, a video or a PDF the actor reads (ADR 0208), with what it is: not in the trash, its current version's
  * type one the apps show (`mediaOfType`). Null for anything else, a refusal included (it reads as not found).
  */

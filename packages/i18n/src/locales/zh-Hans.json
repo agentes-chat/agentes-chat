@@ -7823,6 +7823,30 @@
     "x_posts_write": {
       "label": "发帖",
       "description": "在账号上发帖，可附 Drive 中的图片或视频。删除帖子需要审批。"
+    },
+    "threads_posts_read": {
+      "label": "读取帖子",
+      "description": "读取账号的帖子、回复、提及和数据。"
+    },
+    "threads_posts_write": {
+      "label": "发帖和回复",
+      "description": "发帖可附 Drive 中的图片或视频，回复和隐藏回复。删除帖子需要审批。"
+    },
+    "meta_ads_ads_read": {
+      "label": "读取广告",
+      "description": "列出广告账户、广告系列、广告组和广告，并读取数据。"
+    },
+    "meta_ads_ads_write": {
+      "label": "管理广告",
+      "description": "创建广告系列、广告组和广告（始终为暂停状态），编辑和暂停。开启和修改预算始终需要审批。归档和删除也需要审批。"
+    },
+    "tiktok_videos_read": {
+      "label": "读取视频",
+      "description": "读取创作者的资料、公开视频和可发布的内容。"
+    },
+    "tiktok_videos_write": {
+      "label": "把视频发到草稿",
+      "description": "把 Drive 中的视频发到创作者的 TikTok 草稿，由其在那里完成发布。每次上传都需要审批。"
     }
   },
   "issues": {
@@ -12815,7 +12839,8 @@
       },
       "meta_ads": {
         "1": "查看广告系列和效果",
-        "2": "创建和调整广告系列"
+        "2": "创建和调整广告系列",
+        "ask": "开启广告和修改预算始终需要你的审批"
       },
       "google_docs": {
         "1": "搜索和读取文档",
@@ -12957,6 +12982,16 @@
         "1": "读取账号的帖子和提及",
         "2": "附图片或视频发帖",
         "ask": "删除帖子始终需要你的审批"
+      },
+      "threads": {
+        "1": "查看帖子、回复和数据",
+        "2": "附图片或视频发帖并回复",
+        "ask": "删除帖子始终需要你的审批"
+      },
+      "tiktok": {
+        "1": "查看资料和视频",
+        "2": "把视频发到草稿，在 TikTok 中完成",
+        "ask": "每次上传始终需要你的审批"
       }
     },
     "connectedList": "已连接",
@@ -13101,7 +13136,9 @@
       "reddit": "Reddit 的帖子、评论和社区。",
       "whatsapp": "WhatsApp Business 消息和模板。",
       "telegram": "你自己的 Telegram 机器人：它的聊天、群组和频道。",
-      "x": "你的 X 账号上的帖子：发帖、查看提及和搜索。"
+      "x": "你的 X 账号上的帖子：发帖、查看提及和搜索。",
+      "threads": "你的 Threads 账号上的帖子和回复。",
+      "tiktok": "你的 TikTok 资料和视频，以及发到草稿的视频。"
     },
     "needsApp": "此服务器还没有 {{name}} 应用：运维者需在 {{name}} 注册一个应用并设置其变量（docs/social-apps-checklist.md）。"
   },
@@ -13944,7 +13981,28 @@
       "create_invite_link": "创建邀请链接",
       "get_my_posts": "查看我的帖子",
       "get_mentions": "查看提及",
-      "search_recent": "搜索最近的帖子"
+      "search_recent": "搜索最近的帖子",
+      "get_replies": "查看回复",
+      "get_insights": "查看数据",
+      "reply": "回复",
+      "hide_reply": "隐藏回复",
+      "list_ad_accounts": "列出广告账户",
+      "list_campaigns": "列出广告系列",
+      "list_ad_sets": "列出广告组",
+      "list_ads": "列出广告",
+      "create_campaign": "创建广告系列",
+      "create_ad_set": "创建广告组",
+      "create_ad": "创建广告",
+      "update": "更新",
+      "pause": "暂停",
+      "activate": "开启",
+      "set_budget": "设置预算",
+      "archive": "归档",
+      "delete": "删除",
+      "list_videos": "列出视频",
+      "get_creator_info": "查看发布选项",
+      "get_post_status": "查看上传状态",
+      "upload_draft": "发到草稿"
     }
   },
   "toolReview": {

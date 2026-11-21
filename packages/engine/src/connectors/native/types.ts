@@ -66,6 +66,12 @@ export interface NativeTool {
   run(input: Record<string, unknown>, call: NativeCall): Promise<ToolOutput>;
 }
 
+export interface NativeToken {
+  accessToken: string;
+  /** Seconds; none: it doesn't end (Meta's system-user tokens). */
+  expiresIn?: number;
+}
+
 /** The OAuth app the server registered with the vendor, when the service signs in with one. */
 export interface NativeApp {
   clientId: string;
@@ -76,6 +82,11 @@ export interface NativeService {
   tools: Record<string, NativeTool>;
   /** The account a sign-in or a pasted key reaches (`@handle` and the vendor's id), once after it. */
   account?(secret: ConnectionSecret, http: typeof fetch): Promise<{ label: string; id: string }>;
+  /** Right after the code: a longer-lived token for the short one (Threads' 60 days). */
+  exchange?(token: NativeToken, app: NativeApp, http: typeof fetch): Promise<NativeToken>;
+  /** A token renewed by a call of its own rather than OAuth's refresh grant (Threads), `refreshBefore` ms ahead. */
+  refresh?(secret: ConnectionSecret, app: NativeApp | undefined, http: typeof fetch): Promise<NativeToken>;
+  refreshBefore?: number;
   /** Tells the vendor the connection is gone, best effort. */
   revoke?(secret: ConnectionSecret, http: typeof fetch, app?: NativeApp): Promise<void>;
   /**

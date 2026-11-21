@@ -8131,6 +8131,30 @@
     "x_posts_write": {
       "label": "Posten",
       "description": "Op het account posten, met afbeeldingen of een video uit de Drive. Een post verwijderen vraagt om goedkeuring."
+    },
+    "threads_posts_read": {
+      "label": "Posts lezen",
+      "description": "De posts van het account lezen, met reacties, vermeldingen en resultaten."
+    },
+    "threads_posts_write": {
+      "label": "Posten en reageren",
+      "description": "Posten met afbeeldingen of video's uit de Drive, reageren en reacties verbergen. Een post verwijderen vraagt om goedkeuring."
+    },
+    "meta_ads_ads_read": {
+      "label": "Advertenties lezen",
+      "description": "Advertentieaccounts, campagnes, advertentiesets en advertenties tonen en hun resultaten lezen."
+    },
+    "meta_ads_ads_write": {
+      "label": "Advertenties beheren",
+      "description": "Campagnes, advertentiesets en advertenties maken (altijd gepauzeerd), bewerken en pauzeren. Aanzetten en een budget wijzigen vragen altijd. Archiveren en verwijderen vragen."
+    },
+    "tiktok_videos_read": {
+      "label": "Video's lezen",
+      "description": "Het profiel, de openbare video's en wat de maker mag posten lezen."
+    },
+    "tiktok_videos_write": {
+      "label": "Video's naar concepten sturen",
+      "description": "Een video uit de Drive naar de TikTok-concepten van de maker sturen, die de post daar afmaakt. Elke upload vraagt om goedkeuring."
     }
   },
   "issues": {
@@ -13347,7 +13371,8 @@
       },
       "meta_ads": {
         "1": "Campagnes en resultaten bekijken",
-        "2": "Campagnes maken en bijsturen"
+        "2": "Campagnes maken en bijsturen",
+        "ask": "Advertenties aanzetten en budgetten wijzigen vraagt altijd om je goedkeuring"
       },
       "google_docs": {
         "1": "Documenten zoeken en lezen",
@@ -13489,6 +13514,16 @@
         "1": "Posts en vermeldingen van het account lezen",
         "2": "Posten met afbeeldingen of een video",
         "ask": "Posts verwijderen vraagt altijd om je goedkeuring"
+      },
+      "threads": {
+        "1": "Posts, reacties en resultaten bekijken",
+        "2": "Posten met afbeeldingen of video's en reageren",
+        "ask": "Posts verwijderen vraagt altijd om je goedkeuring"
+      },
+      "tiktok": {
+        "1": "Profiel en video's bekijken",
+        "2": "Video's naar je concepten sturen om in TikTok af te maken",
+        "ask": "Elke upload vraagt altijd om je goedkeuring"
       }
     },
     "connectedList": "Gekoppeld",
@@ -13638,7 +13673,9 @@
       "reddit": "Posts, reacties en community's op Reddit.",
       "whatsapp": "Berichten en sjablonen van WhatsApp Business.",
       "telegram": "Een eigen Telegram-bot: zijn chats, groepen en kanalen.",
-      "x": "Posts op je X-account: schrijven, vermeldingen lezen en zoeken."
+      "x": "Posts op je X-account: schrijven, vermeldingen lezen en zoeken.",
+      "threads": "Posts en reacties op je Threads-account.",
+      "tiktok": "Je TikTok-profiel en video's, en video's naar je concepten."
     },
     "needsApp": "Deze server heeft nog geen {{name}}-app: wie hem beheert registreert er een bij {{name}} en zet de variabelen (docs/social-apps-checklist.md)."
   },
@@ -14481,7 +14518,28 @@
       "create_invite_link": "Uitnodigingslink maken",
       "get_my_posts": "Mijn posts bekijken",
       "get_mentions": "Vermeldingen bekijken",
-      "search_recent": "Recente posts zoeken"
+      "search_recent": "Recente posts zoeken",
+      "get_replies": "Reacties bekijken",
+      "get_insights": "Resultaten bekijken",
+      "reply": "Reageren",
+      "hide_reply": "Reactie verbergen",
+      "list_ad_accounts": "Advertentieaccounts tonen",
+      "list_campaigns": "Campagnes tonen",
+      "list_ad_sets": "Advertentiesets tonen",
+      "list_ads": "Advertenties tonen",
+      "create_campaign": "Campagne maken",
+      "create_ad_set": "Advertentieset maken",
+      "create_ad": "Advertentie maken",
+      "update": "Bijwerken",
+      "pause": "Pauzeren",
+      "activate": "Aanzetten",
+      "set_budget": "Budget instellen",
+      "archive": "Archiveren",
+      "delete": "Verwijderen",
+      "list_videos": "Video's tonen",
+      "get_creator_info": "Postopties bekijken",
+      "get_post_status": "Uploadstatus bekijken",
+      "upload_draft": "Naar concepten sturen"
     }
   },
   "toolReview": {

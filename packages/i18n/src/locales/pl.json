@@ -8673,6 +8673,30 @@
     "x_posts_write": {
       "label": "Publikowanie",
       "description": "Publikowanie na koncie, ze zdjęciami lub filmem z Drive. Usunięcie posta wymaga zatwierdzenia."
+    },
+    "threads_posts_read": {
+      "label": "Czytanie postów",
+      "description": "Czytanie postów konta, odpowiedzi, wzmianek i wyników."
+    },
+    "threads_posts_write": {
+      "label": "Publikowanie i odpowiedzi",
+      "description": "Publikowanie ze zdjęciami lub filmami z Drive, odpowiadanie i ukrywanie odpowiedzi. Usunięcie posta wymaga zatwierdzenia."
+    },
+    "meta_ads_ads_read": {
+      "label": "Czytanie reklam",
+      "description": "Lista kont reklamowych, kampanii, zestawów reklam i reklam oraz ich wyniki."
+    },
+    "meta_ads_ads_write": {
+      "label": "Zarządzanie reklamami",
+      "description": "Tworzenie kampanii, zestawów reklam i reklam (zawsze wstrzymanych), edycja i wstrzymywanie. Włączenie i zmiana budżetu zawsze pytają. Archiwizacja i usuwanie pytają."
+    },
+    "tiktok_videos_read": {
+      "label": "Czytanie filmów",
+      "description": "Czytanie profilu, publicznych filmów i tego, co twórca może publikować."
+    },
+    "tiktok_videos_write": {
+      "label": "Wysyłanie filmów do wersji roboczych",
+      "description": "Wysyłanie filmu z Drive do wersji roboczych TikToka twórcy, który tam kończy post. Każde przesłanie wymaga zatwierdzenia."
     }
   },
   "issues": {
@@ -14288,7 +14312,8 @@
       },
       "meta_ads": {
         "1": "Podgląd kampanii i wyników",
-        "2": "Tworzenie i dostosowywanie kampanii"
+        "2": "Tworzenie i dostosowywanie kampanii",
+        "ask": "Włączanie reklam i zmiana budżetów zawsze prosi o Twoje zatwierdzenie"
       },
       "google_docs": {
         "1": "Wyszukiwanie i czytanie dokumentów",
@@ -14430,6 +14455,16 @@
         "1": "Czytanie postów i wzmianek konta",
         "2": "Publikowanie ze zdjęciami lub filmem",
         "ask": "Usuwanie postów zawsze prosi o Twoje zatwierdzenie"
+      },
+      "threads": {
+        "1": "Przeglądanie postów, odpowiedzi i wyników",
+        "2": "Publikowanie ze zdjęciami lub filmami i odpowiadanie",
+        "ask": "Usuwanie postów zawsze prosi o Twoje zatwierdzenie"
+      },
+      "tiktok": {
+        "1": "Przeglądanie profilu i filmów",
+        "2": "Wysyłanie filmów do wersji roboczych do dokończenia w TikToku",
+        "ask": "Każde przesłanie zawsze prosi o Twoje zatwierdzenie"
       }
     },
     "connectedList": "Połączone",
@@ -14589,7 +14624,9 @@
       "reddit": "Posty, komentarze i społeczności na Reddicie.",
       "whatsapp": "Wiadomości i szablony WhatsApp Business.",
       "telegram": "Twój bot w Telegramie: jego czaty, grupy i kanały.",
-      "x": "Posty na Twoim koncie X: pisanie, czytanie wzmianek i wyszukiwanie."
+      "x": "Posty na Twoim koncie X: pisanie, czytanie wzmianek i wyszukiwanie.",
+      "threads": "Posty i odpowiedzi na Twoim koncie Threads.",
+      "tiktok": "Twój profil i filmy w TikToku oraz filmy wysłane do wersji roboczych."
     },
     "needsApp": "Ten serwer nie ma jeszcze aplikacji {{name}}: osoba, która nim zarządza, rejestruje ją w {{name}} i ustawia zmienne (docs/social-apps-checklist.md)."
   },
@@ -15432,7 +15469,28 @@
       "create_invite_link": "Utwórz link zaproszenia",
       "get_my_posts": "Pokaż moje posty",
       "get_mentions": "Pokaż wzmianki",
-      "search_recent": "Szukaj najnowszych postów"
+      "search_recent": "Szukaj najnowszych postów",
+      "get_replies": "Pokaż odpowiedzi",
+      "get_insights": "Pokaż wyniki",
+      "reply": "Odpowiedz",
+      "hide_reply": "Ukryj odpowiedź",
+      "list_ad_accounts": "Lista kont reklamowych",
+      "list_campaigns": "Lista kampanii",
+      "list_ad_sets": "Lista zestawów reklam",
+      "list_ads": "Lista reklam",
+      "create_campaign": "Utwórz kampanię",
+      "create_ad_set": "Utwórz zestaw reklam",
+      "create_ad": "Utwórz reklamę",
+      "update": "Aktualizuj",
+      "pause": "Wstrzymaj",
+      "activate": "Włącz",
+      "set_budget": "Ustaw budżet",
+      "archive": "Archiwizuj",
+      "delete": "Usuń",
+      "list_videos": "Lista filmów",
+      "get_creator_info": "Pokaż opcje publikacji",
+      "get_post_status": "Pokaż stan przesyłania",
+      "upload_draft": "Wyślij do wersji roboczych"
     }
   },
   "toolReview": {

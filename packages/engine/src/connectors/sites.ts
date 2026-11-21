@@ -81,6 +81,8 @@ export const CONNECTOR_SITES: Record<string, readonly string[]> = {
   whatsapp: ["web.whatsapp.com"],
   telegram: ["web.telegram.org"],
   x: ["x.com", "twitter.com"],
+  threads: ["threads.com", "threads.net"],
+  tiktok: ["tiktok.com"],
 };
 
 function matches(site: string, host: string, path: string) {

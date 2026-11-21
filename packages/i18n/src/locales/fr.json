@@ -8389,6 +8389,30 @@
     "x_posts_write": {
       "label": "Publier",
       "description": "Publier sur le compte, avec des images ou une vidéo du Drive. Supprimer un post demande une approbation."
+    },
+    "threads_posts_read": {
+      "label": "Lire les posts",
+      "description": "Lire les posts du compte, leurs réponses, les mentions et les résultats."
+    },
+    "threads_posts_write": {
+      "label": "Publier et répondre",
+      "description": "Publier avec des images ou des vidéos du Drive, répondre et masquer des réponses. Supprimer un post demande une approbation."
+    },
+    "meta_ads_ads_read": {
+      "label": "Lire les publicités",
+      "description": "Lister les comptes publicitaires, campagnes, ensembles de publicités et publicités, et lire leurs résultats."
+    },
+    "meta_ads_ads_write": {
+      "label": "Gérer les publicités",
+      "description": "Créer des campagnes, ensembles de publicités et publicités (toujours en pause), les modifier et les mettre en pause. Activer et changer un budget demandent toujours. Archiver et supprimer demandent."
+    },
+    "tiktok_videos_read": {
+      "label": "Lire les vidéos",
+      "description": "Lire le profil, les vidéos publiques et ce que le créateur peut publier."
+    },
+    "tiktok_videos_write": {
+      "label": "Envoyer des vidéos aux brouillons",
+      "description": "Envoyer une vidéo du Drive dans les brouillons TikTok du créateur, qui termine le post là-bas. Chaque envoi demande une approbation."
     }
   },
   "issues": {
@@ -13782,7 +13806,8 @@
       },
       "meta_ads": {
         "1": "Voir les campagnes et les résultats",
-        "2": "Créer et ajuster des campagnes"
+        "2": "Créer et ajuster des campagnes",
+        "ask": "Activer des publicités et changer des budgets demande toujours votre approbation"
       },
       "google_docs": {
         "1": "Rechercher et lire des documents",
@@ -13924,6 +13949,16 @@
         "1": "Lire les posts et mentions du compte",
         "2": "Publier avec des images ou une vidéo",
         "ask": "Supprimer des posts demande toujours votre approbation"
+      },
+      "threads": {
+        "1": "Voir les posts, réponses et résultats",
+        "2": "Publier avec des images ou vidéos et répondre",
+        "ask": "Supprimer des posts demande toujours votre approbation"
+      },
+      "tiktok": {
+        "1": "Voir le profil et les vidéos",
+        "2": "Envoyer des vidéos à vos brouillons, à finir dans TikTok",
+        "ask": "Chaque envoi demande toujours votre approbation"
       }
     },
     "connectedList": "Connectés",
@@ -14078,7 +14113,9 @@
       "reddit": "Publications, commentaires et communautés Reddit.",
       "whatsapp": "Messages et modèles WhatsApp Business.",
       "telegram": "Un bot Telegram à vous : ses discussions, groupes et canaux.",
-      "x": "Les posts de votre compte X : écrire, lire les mentions et chercher."
+      "x": "Les posts de votre compte X : écrire, lire les mentions et chercher.",
+      "threads": "Les posts et réponses de votre compte Threads.",
+      "tiktok": "Votre profil et vos vidéos TikTok, et des vidéos envoyées à vos brouillons."
     },
     "needsApp": "Ce serveur n'a pas encore d'app {{name}} : la personne qui l'administre en enregistre une chez {{name}} et définit ses variables (docs/social-apps-checklist.md)."
   },
@@ -14921,7 +14958,28 @@
       "create_invite_link": "Créer un lien d'invitation",
       "get_my_posts": "Voir mes posts",
       "get_mentions": "Voir les mentions",
-      "search_recent": "Chercher des posts récents"
+      "search_recent": "Chercher des posts récents",
+      "get_replies": "Voir les réponses",
+      "get_insights": "Voir les résultats",
+      "reply": "Répondre",
+      "hide_reply": "Masquer la réponse",
+      "list_ad_accounts": "Lister les comptes publicitaires",
+      "list_campaigns": "Lister les campagnes",
+      "list_ad_sets": "Lister les ensembles de publicités",
+      "list_ads": "Lister les publicités",
+      "create_campaign": "Créer une campagne",
+      "create_ad_set": "Créer un ensemble de publicités",
+      "create_ad": "Créer une publicité",
+      "update": "Mettre à jour",
+      "pause": "Mettre en pause",
+      "activate": "Activer",
+      "set_budget": "Définir le budget",
+      "archive": "Archiver",
+      "delete": "Supprimer",
+      "list_videos": "Lister les vidéos",
+      "get_creator_info": "Voir les options de publication",
+      "get_post_status": "Voir l'état de l'envoi",
+      "upload_draft": "Envoyer aux brouillons"
     }
   },
   "toolReview": {

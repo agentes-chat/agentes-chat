@@ -23,6 +23,7 @@ import {
   CursorBrain,
   composioConnectorsOf,
   connectOverHttp,
+  connectorMediaLinks,
   createAgentGifPoster,
   createAgentStyleToolSource,
   createApprovalRequestToolSource,
@@ -536,6 +537,11 @@ export function buildEngine(o: EngineOptions) {
         ...connectorDeps,
         artifacts,
         monthlyCaps: { x: config.CONNECTOR_X_CALLS_PER_MONTH },
+        media: connectorMediaLinks({
+          secret: config.AGENTES_SECRET,
+          publicUrl: config.PUBLIC_URL,
+          resolveHost: o.resolveHost,
+        }),
       }),
       // People's mailboxes (ADR 0038): only when the server has a mail path (Composio, IMAP).
       createMailToolSource({

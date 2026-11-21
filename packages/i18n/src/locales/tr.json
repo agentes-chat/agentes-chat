@@ -8052,6 +8052,30 @@
     "x_posts_write": {
       "label": "Paylaşma",
       "description": "Drive'dan görseller veya bir videoyla hesapta paylaşır. Gönderi silmek onay ister."
+    },
+    "threads_posts_read": {
+      "label": "Gönderileri okuma",
+      "description": "Hesabın gönderilerini, yanıtlarını, bahsetmelerini ve sonuçlarını okur."
+    },
+    "threads_posts_write": {
+      "label": "Paylaşma ve yanıtlama",
+      "description": "Drive'dan görsel veya videolarla paylaşır, yanıtlar ve yanıtları gizler. Gönderi silmek onay ister."
+    },
+    "meta_ads_ads_read": {
+      "label": "Reklamları okuma",
+      "description": "Reklam hesaplarını, kampanyaları, reklam setlerini ve reklamları listeler, sonuçlarını okur."
+    },
+    "meta_ads_ads_write": {
+      "label": "Reklamları yönetme",
+      "description": "Kampanya, reklam seti ve reklam oluşturur (her zaman duraklatılmış), düzenler ve duraklatır. Etkinleştirmek ve bütçe değiştirmek her zaman onay ister. Arşivleme ve silme de ister."
+    },
+    "tiktok_videos_read": {
+      "label": "Videoları okuma",
+      "description": "Üreticinin profilini, herkese açık videolarını ve neleri paylaşabileceğini okur."
+    },
+    "tiktok_videos_write": {
+      "label": "Videoları taslaklara gönderme",
+      "description": "Drive'daki bir videoyu üreticinin TikTok taslaklarına gönderir, paylaşımı orada tamamlar. Her yükleme onay ister."
     }
   },
   "issues": {
@@ -13214,7 +13238,8 @@
       },
       "meta_ads": {
         "1": "Kampanyaları ve sonuçları görür",
-        "2": "Kampanya oluşturur ve ayarlar"
+        "2": "Kampanya oluşturur ve ayarlar",
+        "ask": "Reklamları etkinleştirmek ve bütçe değiştirmek her zaman onayınızı ister"
       },
       "google_docs": {
         "1": "Belgeleri arar ve okur",
@@ -13356,6 +13381,16 @@
         "1": "Hesabın gönderilerini ve bahsetmelerini okuma",
         "2": "Görsel veya videoyla paylaşma",
         "ask": "Gönderi silmek her zaman onayınızı ister"
+      },
+      "threads": {
+        "1": "Gönderileri, yanıtları ve sonuçları görme",
+        "2": "Görsel veya videoyla paylaşma ve yanıtlama",
+        "ask": "Gönderi silmek her zaman onayınızı ister"
+      },
+      "tiktok": {
+        "1": "Profili ve videoları görme",
+        "2": "Videoları TikTok'ta tamamlamak için taslaklara gönderme",
+        "ask": "Her yükleme her zaman onayınızı ister"
       }
     },
     "connectedList": "Bağlı",
@@ -13505,7 +13540,9 @@
       "reddit": "Reddit gönderileri, yorumları ve toplulukları.",
       "whatsapp": "WhatsApp Business mesajları ve şablonları.",
       "telegram": "Size ait bir Telegram botu: sohbetleri, grupları ve kanalları.",
-      "x": "X hesabınızdaki gönderiler: yazma, bahsetmeleri okuma ve arama."
+      "x": "X hesabınızdaki gönderiler: yazma, bahsetmeleri okuma ve arama.",
+      "threads": "Threads hesabınızdaki gönderiler ve yanıtlar.",
+      "tiktok": "TikTok profiliniz ve videolarınız, taslaklarınıza gönderilen videolar."
     },
     "needsApp": "Bu sunucunun henüz bir {{name}} uygulaması yok: sunucuyu yöneten kişi {{name}}'de bir uygulama kaydeder ve değişkenlerini ayarlar (docs/social-apps-checklist.md)."
   },
@@ -14348,7 +14385,28 @@
       "create_invite_link": "Davet bağlantısı oluştur",
       "get_my_posts": "Gönderilerimi gör",
       "get_mentions": "Bahsetmeleri gör",
-      "search_recent": "Son gönderileri ara"
+      "search_recent": "Son gönderileri ara",
+      "get_replies": "Yanıtları gör",
+      "get_insights": "Sonuçları gör",
+      "reply": "Yanıtla",
+      "hide_reply": "Yanıtı gizle",
+      "list_ad_accounts": "Reklam hesaplarını listele",
+      "list_campaigns": "Kampanyaları listele",
+      "list_ad_sets": "Reklam setlerini listele",
+      "list_ads": "Reklamları listele",
+      "create_campaign": "Kampanya oluştur",
+      "create_ad_set": "Reklam seti oluştur",
+      "create_ad": "Reklam oluştur",
+      "update": "Güncelle",
+      "pause": "Duraklat",
+      "activate": "Etkinleştir",
+      "set_budget": "Bütçe belirle",
+      "archive": "Arşivle",
+      "delete": "Sil",
+      "list_videos": "Videoları listele",
+      "get_creator_info": "Paylaşım seçeneklerini gör",
+      "get_post_status": "Yükleme durumunu gör",
+      "upload_draft": "Taslaklara gönder"
     }
   },
   "toolReview": {

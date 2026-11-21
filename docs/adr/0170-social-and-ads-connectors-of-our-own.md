@@ -1,6 +1,7 @@
 # 0170. Social and ads connectors of our own: X, TikTok, Threads, Meta Ads and Telegram
 
-- Status: Accepted (Telegram and X built)
+- Status: Accepted (built: Telegram, X, Threads, Meta Ads, and TikTok's reads and drafts; TikTok's Direct Post and its
+  card wait for TikTok's audit)
 - Date: 2026-11-10
 - Extends: ADR 0016 (connectors: the workspace connects once, our scope catalog, agent grants), ADR 0107 (Composio only
   on its own OAuth app), ADR 0156 (tools of ours beside a catalog connector), ADR 0015 (Tool Gateway and approvals),

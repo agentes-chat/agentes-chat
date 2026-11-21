@@ -759,6 +759,9 @@ internet instead, and need it public:
   accounts that expired.
 - A Telegram bot's messages arrive at `/api/webhooks/telegram/…` when the internet reaches the instance; otherwise the
   server asks Telegram for them every 30 seconds, which works on a private network too.
+- Threads' pictures and videos: Meta fetches them from a link of this server (`/api/connector-media/…`, good for an
+  hour). On a private network Threads posts text only. Meta's deauthorize and data deletion callbacks
+  (`/api/webhooks/meta/…`) need it too.
 - AI apps that call from their own servers (Apps de IA, below): claude.ai, the Claude apps and ChatGPT reach
   `/mcp` from the internet. Claude Code, Cursor and VS Code on a computer that reaches the server don't need it.
 

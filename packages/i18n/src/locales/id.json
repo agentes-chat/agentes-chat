@@ -7813,6 +7813,30 @@
     "x_posts_write": {
       "label": "Posting",
       "description": "Posting di akun, dengan gambar atau video dari Drive. Menghapus postingan meminta persetujuan."
+    },
+    "threads_posts_read": {
+      "label": "Baca postingan",
+      "description": "Baca postingan akun, balasannya, sebutan, dan hasilnya."
+    },
+    "threads_posts_write": {
+      "label": "Posting dan balas",
+      "description": "Posting dengan gambar atau video dari Drive, membalas, dan menyembunyikan balasan. Menghapus postingan meminta persetujuan."
+    },
+    "meta_ads_ads_read": {
+      "label": "Baca iklan",
+      "description": "Daftar akun iklan, kampanye, set iklan, dan iklan, serta baca hasilnya."
+    },
+    "meta_ads_ads_write": {
+      "label": "Kelola iklan",
+      "description": "Buat kampanye, set iklan, dan iklan (selalu dijeda), ubah dan jeda. Mengaktifkan dan mengubah anggaran selalu meminta persetujuan. Mengarsipkan dan menghapus meminta."
+    },
+    "tiktok_videos_read": {
+      "label": "Baca video",
+      "description": "Baca profil, video publik, dan apa yang boleh diposting kreator."
+    },
+    "tiktok_videos_write": {
+      "label": "Kirim video ke draf",
+      "description": "Kirim video Drive ke draf TikTok kreator, yang menyelesaikan postingannya di sana. Setiap unggahan meminta persetujuan."
     }
   },
   "issues": {
@@ -12799,7 +12823,8 @@
       },
       "meta_ads": {
         "1": "Melihat kampanye dan hasilnya",
-        "2": "Membuat dan menyesuaikan kampanye"
+        "2": "Membuat dan menyesuaikan kampanye",
+        "ask": "Mengaktifkan iklan dan mengubah anggaran selalu meminta persetujuan Anda"
       },
       "google_docs": {
         "1": "Mencari dan membaca dokumen",
@@ -12941,6 +12966,16 @@
         "1": "Baca postingan dan sebutan akun",
         "2": "Posting dengan gambar atau video",
         "ask": "Menghapus postingan selalu meminta persetujuan Anda"
+      },
+      "threads": {
+        "1": "Lihat postingan, balasan, dan hasil",
+        "2": "Posting dengan gambar atau video dan membalas",
+        "ask": "Menghapus postingan selalu meminta persetujuan Anda"
+      },
+      "tiktok": {
+        "1": "Lihat profil dan video",
+        "2": "Kirim video ke draf untuk diselesaikan di TikTok",
+        "ask": "Setiap unggahan selalu meminta persetujuan Anda"
       }
     },
     "connectedList": "Terhubung",
@@ -13085,7 +13120,9 @@
       "reddit": "Postingan, komentar, dan komunitas Reddit.",
       "whatsapp": "Pesan dan template WhatsApp Business.",
       "telegram": "Bot Telegram milik Anda: obrolan, grup, dan kanalnya.",
-      "x": "Postingan di akun X Anda: menulis, membaca sebutan, dan mencari."
+      "x": "Postingan di akun X Anda: menulis, membaca sebutan, dan mencari.",
+      "threads": "Postingan dan balasan di akun Threads Anda.",
+      "tiktok": "Profil dan video TikTok Anda, serta video yang dikirim ke draf Anda."
     },
     "needsApp": "Server ini belum punya aplikasi {{name}}: pengelolanya mendaftarkan satu di {{name}} dan mengatur variabelnya (docs/social-apps-checklist.md)."
   },
@@ -13928,7 +13965,28 @@
       "create_invite_link": "Buat tautan undangan",
       "get_my_posts": "Lihat postingan saya",
       "get_mentions": "Lihat sebutan",
-      "search_recent": "Cari postingan terbaru"
+      "search_recent": "Cari postingan terbaru",
+      "get_replies": "Lihat balasan",
+      "get_insights": "Lihat hasil",
+      "reply": "Balas",
+      "hide_reply": "Sembunyikan balasan",
+      "list_ad_accounts": "Daftar akun iklan",
+      "list_campaigns": "Daftar kampanye",
+      "list_ad_sets": "Daftar set iklan",
+      "list_ads": "Daftar iklan",
+      "create_campaign": "Buat kampanye",
+      "create_ad_set": "Buat set iklan",
+      "create_ad": "Buat iklan",
+      "update": "Perbarui",
+      "pause": "Jeda",
+      "activate": "Aktifkan",
+      "set_budget": "Atur anggaran",
+      "archive": "Arsipkan",
+      "delete": "Hapus",
+      "list_videos": "Daftar video",
+      "get_creator_info": "Lihat opsi posting",
+      "get_post_status": "Lihat status unggahan",
+      "upload_draft": "Kirim ke draf"
     }
   },
   "toolReview": {

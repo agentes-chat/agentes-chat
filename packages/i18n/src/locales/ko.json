@@ -7783,6 +7783,30 @@
     "x_posts_write": {
       "label": "게시하기",
       "description": "Drive의 사진이나 동영상과 함께 계정에 게시합니다. 게시물 삭제는 승인을 요청합니다."
+    },
+    "threads_posts_read": {
+      "label": "게시물 읽기",
+      "description": "계정의 게시물, 답글, 멘션과 성과를 읽습니다."
+    },
+    "threads_posts_write": {
+      "label": "게시와 답글",
+      "description": "Drive의 사진이나 동영상과 함께 게시하고, 답글을 달고 숨깁니다. 게시물 삭제는 승인을 요청합니다."
+    },
+    "meta_ads_ads_read": {
+      "label": "광고 읽기",
+      "description": "광고 계정, 캠페인, 광고 세트, 광고를 나열하고 성과를 읽습니다."
+    },
+    "meta_ads_ads_write": {
+      "label": "광고 관리",
+      "description": "캠페인, 광고 세트, 광고를 만들고(항상 일시 중지 상태) 수정하고 일시 중지합니다. 활성화와 예산 변경은 항상 승인을 요청합니다. 보관과 삭제도 승인을 요청합니다."
+    },
+    "tiktok_videos_read": {
+      "label": "동영상 읽기",
+      "description": "크리에이터의 프로필, 공개 동영상, 게시 가능한 항목을 읽습니다."
+    },
+    "tiktok_videos_write": {
+      "label": "동영상을 임시 보관함에 보내기",
+      "description": "Drive 동영상을 크리에이터의 TikTok 임시 보관함에 보내 그곳에서 게시를 마칩니다. 업로드할 때마다 승인을 요청합니다."
     }
   },
   "issues": {
@@ -12740,7 +12764,8 @@
       },
       "meta_ads": {
         "1": "캠페인과 성과 보기",
-        "2": "캠페인 만들기와 조정"
+        "2": "캠페인 만들기와 조정",
+        "ask": "광고 활성화와 예산 변경은 항상 승인을 요청합니다"
       },
       "google_docs": {
         "1": "문서 검색과 읽기",
@@ -12882,6 +12907,16 @@
         "1": "계정의 게시물과 멘션 읽기",
         "2": "사진이나 동영상과 함께 게시",
         "ask": "게시물 삭제는 항상 승인을 요청합니다"
+      },
+      "threads": {
+        "1": "게시물, 답글, 성과 보기",
+        "2": "사진이나 동영상과 함께 게시하고 답글 달기",
+        "ask": "게시물 삭제는 항상 승인을 요청합니다"
+      },
+      "tiktok": {
+        "1": "프로필과 동영상 보기",
+        "2": "동영상을 임시 보관함에 보내 TikTok에서 마무리",
+        "ask": "업로드할 때마다 항상 승인을 요청합니다"
       }
     },
     "connectedList": "연결됨",
@@ -13026,7 +13061,9 @@
       "reddit": "Reddit 게시물, 댓글, 커뮤니티.",
       "whatsapp": "WhatsApp Business 메시지와 템플릿.",
       "telegram": "내 텔레그램 봇: 채팅, 그룹, 채널.",
-      "x": "내 X 계정의 게시물: 작성, 멘션 읽기, 검색."
+      "x": "내 X 계정의 게시물: 작성, 멘션 읽기, 검색.",
+      "threads": "내 Threads 계정의 게시물과 답글.",
+      "tiktok": "내 TikTok 프로필과 동영상, 임시 보관함에 보낸 동영상."
     },
     "needsApp": "이 서버에는 아직 {{name}} 앱이 없습니다. 서버 운영자가 {{name}}에 앱을 등록하고 변수를 설정해야 합니다(docs/social-apps-checklist.md)."
   },
@@ -13869,7 +13906,28 @@
       "create_invite_link": "초대 링크 만들기",
       "get_my_posts": "내 게시물 보기",
       "get_mentions": "멘션 보기",
-      "search_recent": "최근 게시물 검색"
+      "search_recent": "최근 게시물 검색",
+      "get_replies": "답글 보기",
+      "get_insights": "성과 보기",
+      "reply": "답글 달기",
+      "hide_reply": "답글 숨기기",
+      "list_ad_accounts": "광고 계정 목록",
+      "list_campaigns": "캠페인 목록",
+      "list_ad_sets": "광고 세트 목록",
+      "list_ads": "광고 목록",
+      "create_campaign": "캠페인 만들기",
+      "create_ad_set": "광고 세트 만들기",
+      "create_ad": "광고 만들기",
+      "update": "업데이트",
+      "pause": "일시 중지",
+      "activate": "활성화",
+      "set_budget": "예산 설정",
+      "archive": "보관",
+      "delete": "삭제",
+      "list_videos": "동영상 목록",
+      "get_creator_info": "게시 옵션 보기",
+      "get_post_status": "업로드 상태 보기",
+      "upload_draft": "임시 보관함에 보내기"
     }
   },
   "toolReview": {

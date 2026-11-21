@@ -62,6 +62,7 @@ import {
   reconcileComposioConnectors,
   reconcileWorks,
   recoverStaleRuns,
+  refreshNativeTokens,
   refreshPlanModels,
   releaseJobs,
   sweepEndedInboxes,
@@ -196,6 +197,8 @@ export const WORKER_INTERVALS_MS = {
   mailPoll: 30_000,
   /** Telegram bots on a server the internet doesn't reach: `getUpdates` (ADR 0170 §5). */
   telegramPoll: 30_000,
+  /** Long-lived tokens of our own connectors renewed before they end (Threads). */
+  connectorTokens: 12 * 3600_000,
   /** What Telegram bots heard past 30 days. */
   telegramPurge: 6 * 3600_000,
   /** Composio accounts' state: mailboxes (expired → "Reconnect") and connectors marked to reconnect (working again → active). */
@@ -436,6 +439,13 @@ export function startWorkers(deps: WorkerDeps) {
     every("telegramPoll", WORKER_INTERVALS_MS.telegramPoll, async () => {
       const fired = await pollTelegramBots(connectors);
       if (fired > 0) void ticks.get("outbox")?.();
+    });
+  }
+  if (connectors) {
+    // Threads' 60-day tokens no call renewed in time (ADR 0170 §3).
+    every("connectorTokens", WORKER_INTERVALS_MS.connectorTokens, async () => {
+      const renewed = await refreshNativeTokens(connectors);
+      if (renewed > 0) log.info("connector tokens renewed", { renewed });
     });
   }
   every("telegramPurge", WORKER_INTERVALS_MS.telegramPurge, () => purgeTelegramUpdates(db));

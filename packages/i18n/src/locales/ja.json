@@ -7786,6 +7786,30 @@
     "x_posts_write": {
       "label": "ポストする",
       "description": "Driveの画像や動画を付けてアカウントにポストします。ポストの削除は承認が必要です。"
+    },
+    "threads_posts_read": {
+      "label": "投稿を読む",
+      "description": "アカウントの投稿、返信、メンション、結果を読みます。"
+    },
+    "threads_posts_write": {
+      "label": "投稿と返信",
+      "description": "Driveの画像や動画付きで投稿し、返信し、返信を非表示にします。投稿の削除は承認が必要です。"
+    },
+    "meta_ads_ads_read": {
+      "label": "広告を読む",
+      "description": "広告アカウント、キャンペーン、広告セット、広告を一覧し、結果を読みます。"
+    },
+    "meta_ads_ads_write": {
+      "label": "広告を管理",
+      "description": "キャンペーン、広告セット、広告を作成（常に停止状態）、編集、停止します。有効化と予算の変更は必ず承認が必要です。アーカイブと削除も承認が必要です。"
+    },
+    "tiktok_videos_read": {
+      "label": "動画を読む",
+      "description": "クリエイターのプロフィール、公開動画、投稿できる内容を読みます。"
+    },
+    "tiktok_videos_write": {
+      "label": "動画を下書きに送る",
+      "description": "Driveの動画をクリエイターのTikTok下書きに送り、そこで投稿を仕上げてもらいます。アップロードごとに承認が必要です。"
     }
   },
   "issues": {
@@ -12746,7 +12770,8 @@
       },
       "meta_ads": {
         "1": "キャンペーンと成果を見る",
-        "2": "キャンペーンを作成・調整する"
+        "2": "キャンペーンを作成・調整する",
+        "ask": "広告の有効化と予算の変更は必ずあなたの承認を求めます"
       },
       "google_docs": {
         "1": "ドキュメントを検索して読む",
@@ -12888,6 +12913,16 @@
         "1": "アカウントのポストとメンションを読む",
         "2": "画像や動画付きでポストする",
         "ask": "ポストの削除は必ずあなたの承認を求めます"
+      },
+      "threads": {
+        "1": "投稿、返信、結果を見る",
+        "2": "画像や動画付きで投稿し返信する",
+        "ask": "投稿の削除は必ずあなたの承認を求めます"
+      },
+      "tiktok": {
+        "1": "プロフィールと動画を見る",
+        "2": "動画を下書きに送り、TikTokで仕上げる",
+        "ask": "アップロードごとに必ずあなたの承認を求めます"
       }
     },
     "connectedList": "接続済み",
@@ -13032,7 +13067,9 @@
       "reddit": "Redditの投稿、コメント、コミュニティ。",
       "whatsapp": "WhatsApp Businessのメッセージとテンプレート。",
       "telegram": "あなたのTelegramボット：そのチャット、グループ、チャンネル。",
-      "x": "Xアカウントのポスト：投稿、メンションの確認、検索。"
+      "x": "Xアカウントのポスト：投稿、メンションの確認、検索。",
+      "threads": "Threadsアカウントの投稿と返信。",
+      "tiktok": "TikTokのプロフィールと動画、下書きに送られた動画。"
     },
     "needsApp": "このサーバーにはまだ{{name}}のアプリがありません。運用者が{{name}}でアプリを登録し、変数を設定します（docs/social-apps-checklist.md）。"
   },
@@ -13875,7 +13912,28 @@
       "create_invite_link": "招待リンクを作成",
       "get_my_posts": "自分のポストを見る",
       "get_mentions": "メンションを見る",
-      "search_recent": "最近のポストを検索"
+      "search_recent": "最近のポストを検索",
+      "get_replies": "返信を見る",
+      "get_insights": "結果を見る",
+      "reply": "返信する",
+      "hide_reply": "返信を非表示",
+      "list_ad_accounts": "広告アカウントを一覧",
+      "list_campaigns": "キャンペーンを一覧",
+      "list_ad_sets": "広告セットを一覧",
+      "list_ads": "広告を一覧",
+      "create_campaign": "キャンペーンを作成",
+      "create_ad_set": "広告セットを作成",
+      "create_ad": "広告を作成",
+      "update": "更新",
+      "pause": "停止",
+      "activate": "有効にする",
+      "set_budget": "予算を設定",
+      "archive": "アーカイブ",
+      "delete": "削除",
+      "list_videos": "動画を一覧",
+      "get_creator_info": "投稿オプションを見る",
+      "get_post_status": "アップロード状況を見る",
+      "upload_draft": "下書きに送る"
     }
   },
   "toolReview": {

@@ -8093,6 +8093,30 @@
     "x_posts_write": {
       "label": "Posten",
       "description": "Auf dem Konto posten, mit Bildern oder einem Video aus dem Drive. Einen Beitrag löschen fragt nach Freigabe."
+    },
+    "threads_posts_read": {
+      "label": "Beiträge lesen",
+      "description": "Die Beiträge des Kontos, ihre Antworten, Erwähnungen und Ergebnisse lesen."
+    },
+    "threads_posts_write": {
+      "label": "Posten und antworten",
+      "description": "Mit Bildern oder Videos aus dem Drive posten, antworten und Antworten ausblenden. Einen Beitrag löschen fragt nach Freigabe."
+    },
+    "meta_ads_ads_read": {
+      "label": "Anzeigen lesen",
+      "description": "Werbekonten, Kampagnen, Anzeigengruppen und Anzeigen auflisten und ihre Ergebnisse lesen."
+    },
+    "meta_ads_ads_write": {
+      "label": "Anzeigen verwalten",
+      "description": "Kampagnen, Anzeigengruppen und Anzeigen anlegen (immer pausiert), bearbeiten und pausieren. Einschalten und Budget ändern fragen immer. Archivieren und Löschen fragen."
+    },
+    "tiktok_videos_read": {
+      "label": "Videos lesen",
+      "description": "Das Profil, die öffentlichen Videos und die Post-Optionen der Person lesen."
+    },
+    "tiktok_videos_write": {
+      "label": "Videos in die Entwürfe senden",
+      "description": "Ein Video aus dem Drive in die TikTok-Entwürfe senden, wo die Person den Post fertigstellt. Jeder Upload fragt nach Freigabe."
     }
   },
   "issues": {
@@ -13279,7 +13303,8 @@
       },
       "meta_ads": {
         "1": "Kampagnen und Ergebnisse ansehen",
-        "2": "Kampagnen erstellen und anpassen"
+        "2": "Kampagnen erstellen und anpassen",
+        "ask": "Anzeigen einschalten und Budgets ändern fragt immer nach deiner Freigabe"
       },
       "google_docs": {
         "1": "Dokumente suchen und lesen",
@@ -13421,6 +13446,16 @@
         "1": "Beiträge und Erwähnungen des Kontos lesen",
         "2": "Mit Bildern oder einem Video posten",
         "ask": "Beiträge löschen fragt immer nach deiner Freigabe"
+      },
+      "threads": {
+        "1": "Beiträge, Antworten und Ergebnisse ansehen",
+        "2": "Mit Bildern oder Videos posten und antworten",
+        "ask": "Beiträge löschen fragt immer nach deiner Freigabe"
+      },
+      "tiktok": {
+        "1": "Profil und Videos ansehen",
+        "2": "Videos in deine Entwürfe senden, fertig in TikTok",
+        "ask": "Jeder Upload fragt immer nach deiner Freigabe"
       }
     },
     "connectedList": "Verbunden",
@@ -13570,7 +13605,9 @@
       "reddit": "Beiträge, Kommentare und Communitys auf Reddit.",
       "whatsapp": "Nachrichten und Vorlagen von WhatsApp Business.",
       "telegram": "Ein eigener Telegram-Bot: seine Chats, Gruppen und Kanäle.",
-      "x": "Beiträge auf deinem X-Konto: schreiben, Erwähnungen lesen und suchen."
+      "x": "Beiträge auf deinem X-Konto: schreiben, Erwähnungen lesen und suchen.",
+      "threads": "Beiträge und Antworten auf deinem Threads-Konto.",
+      "tiktok": "Dein TikTok-Profil und deine Videos, und Videos in deinen Entwürfen."
     },
     "needsApp": "Dieser Server hat noch keine {{name}}-App: Wer ihn betreibt, registriert eine bei {{name}} und setzt ihre Variablen (docs/social-apps-checklist.md)."
   },
@@ -14413,7 +14450,28 @@
       "create_invite_link": "Einladungslink erstellen",
       "get_my_posts": "Meine Beiträge ansehen",
       "get_mentions": "Erwähnungen ansehen",
-      "search_recent": "Neue Beiträge suchen"
+      "search_recent": "Neue Beiträge suchen",
+      "get_replies": "Antworten ansehen",
+      "get_insights": "Ergebnisse ansehen",
+      "reply": "Antworten",
+      "hide_reply": "Antwort ausblenden",
+      "list_ad_accounts": "Werbekonten auflisten",
+      "list_campaigns": "Kampagnen auflisten",
+      "list_ad_sets": "Anzeigengruppen auflisten",
+      "list_ads": "Anzeigen auflisten",
+      "create_campaign": "Kampagne anlegen",
+      "create_ad_set": "Anzeigengruppe anlegen",
+      "create_ad": "Anzeige anlegen",
+      "update": "Aktualisieren",
+      "pause": "Pausieren",
+      "activate": "Einschalten",
+      "set_budget": "Budget festlegen",
+      "archive": "Archivieren",
+      "delete": "Löschen",
+      "list_videos": "Videos auflisten",
+      "get_creator_info": "Post-Optionen ansehen",
+      "get_post_status": "Upload-Status ansehen",
+      "upload_draft": "In die Entwürfe senden"
     }
   },
   "toolReview": {

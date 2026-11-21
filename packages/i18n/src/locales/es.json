@@ -8339,6 +8339,30 @@
     "x_posts_write": {
       "label": "Publicar",
       "description": "Publicar en la cuenta, con fotos o un video del Drive. Borrar una publicación pide aprobación."
+    },
+    "threads_posts_read": {
+      "label": "Leer publicaciones",
+      "description": "Leer las publicaciones de la cuenta, sus respuestas, menciones y resultados."
+    },
+    "threads_posts_write": {
+      "label": "Publicar y responder",
+      "description": "Publicar con fotos o videos del Drive, responder y ocultar respuestas. Borrar una publicación pide aprobación."
+    },
+    "meta_ads_ads_read": {
+      "label": "Leer anuncios",
+      "description": "Listar cuentas publicitarias, campañas, conjuntos de anuncios y anuncios, y leer sus resultados."
+    },
+    "meta_ads_ads_write": {
+      "label": "Gestionar anuncios",
+      "description": "Crear campañas, conjuntos de anuncios y anuncios (siempre en pausa), editarlos y pausarlos. Activar y cambiar un presupuesto siempre piden aprobación. Archivar y borrar piden."
+    },
+    "tiktok_videos_read": {
+      "label": "Leer videos",
+      "description": "Leer el perfil, los videos públicos y lo que el creador puede publicar."
+    },
+    "tiktok_videos_write": {
+      "label": "Enviar videos a borradores",
+      "description": "Enviar un video del Drive a los borradores de TikTok del creador, que termina la publicación allí. Cada subida pide aprobación."
     }
   },
   "issues": {
@@ -13707,7 +13731,8 @@
       },
       "meta_ads": {
         "1": "Ver campañas y resultados",
-        "2": "Crear y ajustar campañas"
+        "2": "Crear y ajustar campañas",
+        "ask": "Activar anuncios y cambiar presupuestos siempre pide tu aprobación"
       },
       "google_docs": {
         "1": "Buscar y leer documentos",
@@ -13849,6 +13874,16 @@
         "1": "Leer las publicaciones y menciones de la cuenta",
         "2": "Publicar con fotos o un video",
         "ask": "Borrar publicaciones siempre pide tu aprobación"
+      },
+      "threads": {
+        "1": "Ver publicaciones, respuestas y resultados",
+        "2": "Publicar con fotos o videos y responder",
+        "ask": "Borrar publicaciones siempre pide tu aprobación"
+      },
+      "tiktok": {
+        "1": "Ver el perfil y los videos",
+        "2": "Enviar videos a tus borradores para terminar en TikTok",
+        "ask": "Cada subida siempre pide tu aprobación"
       }
     },
     "connectedList": "Conectados",
@@ -14003,7 +14038,9 @@
       "reddit": "Publicaciones, comentarios y comunidades de Reddit.",
       "whatsapp": "Mensajes y plantillas de WhatsApp Business.",
       "telegram": "Un bot tuyo de Telegram: sus chats, grupos y canales.",
-      "x": "Publicaciones en tu cuenta de X: escribir, leer menciones y buscar."
+      "x": "Publicaciones en tu cuenta de X: escribir, leer menciones y buscar.",
+      "threads": "Publicaciones y respuestas en tu cuenta de Threads.",
+      "tiktok": "Tu perfil y videos de TikTok, y videos enviados a tus borradores."
     },
     "needsApp": "Este servidor aún no tiene una app de {{name}}: quien lo administra registra una en {{name}} y define sus variables (docs/social-apps-checklist.md)."
   },
@@ -14846,7 +14883,28 @@
       "create_invite_link": "Crear enlace de invitación",
       "get_my_posts": "Ver mis publicaciones",
       "get_mentions": "Ver menciones",
-      "search_recent": "Buscar publicaciones recientes"
+      "search_recent": "Buscar publicaciones recientes",
+      "get_replies": "Ver respuestas",
+      "get_insights": "Ver resultados",
+      "reply": "Responder",
+      "hide_reply": "Ocultar respuesta",
+      "list_ad_accounts": "Listar cuentas publicitarias",
+      "list_campaigns": "Listar campañas",
+      "list_ad_sets": "Listar conjuntos de anuncios",
+      "list_ads": "Listar anuncios",
+      "create_campaign": "Crear campaña",
+      "create_ad_set": "Crear conjunto de anuncios",
+      "create_ad": "Crear anuncio",
+      "update": "Actualizar",
+      "pause": "Pausar",
+      "activate": "Activar",
+      "set_budget": "Fijar presupuesto",
+      "archive": "Archivar",
+      "delete": "Borrar",
+      "list_videos": "Listar videos",
+      "get_creator_info": "Ver opciones de publicación",
+      "get_post_status": "Ver estado de la subida",
+      "upload_draft": "Enviar a borradores"
     }
   },
   "toolReview": {

@@ -8400,6 +8400,30 @@
     "x_posts_write": {
       "label": "Pubblicare",
       "description": "Pubblicare sull'account, con immagini o un video dal Drive. Eliminare un post chiede l'approvazione."
+    },
+    "threads_posts_read": {
+      "label": "Leggere i post",
+      "description": "Leggere i post dell'account, le risposte, le menzioni e i risultati."
+    },
+    "threads_posts_write": {
+      "label": "Pubblicare e rispondere",
+      "description": "Pubblicare con immagini o video dal Drive, rispondere e nascondere risposte. Eliminare un post chiede l'approvazione."
+    },
+    "meta_ads_ads_read": {
+      "label": "Leggere gli annunci",
+      "description": "Elencare account pubblicitari, campagne, gruppi di inserzioni e inserzioni, e leggerne i risultati."
+    },
+    "meta_ads_ads_write": {
+      "label": "Gestire gli annunci",
+      "description": "Creare campagne, gruppi di inserzioni e inserzioni (sempre in pausa), modificarli e metterli in pausa. Attivare e cambiare un budget chiedono sempre. Archiviare ed eliminare chiedono."
+    },
+    "tiktok_videos_read": {
+      "label": "Leggere i video",
+      "description": "Leggere il profilo, i video pubblici e cosa può pubblicare il creator."
+    },
+    "tiktok_videos_write": {
+      "label": "Inviare video alle bozze",
+      "description": "Inviare un video del Drive alle bozze TikTok del creator, che completa il post lì. Ogni caricamento chiede l'approvazione."
     }
   },
   "issues": {
@@ -13798,7 +13822,8 @@
       },
       "meta_ads": {
         "1": "Vedere campagne e risultati",
-        "2": "Creare e regolare campagne"
+        "2": "Creare e regolare campagne",
+        "ask": "Attivare inserzioni e cambiare budget chiede sempre la tua approvazione"
       },
       "google_docs": {
         "1": "Cercare e leggere documenti",
@@ -13940,6 +13965,16 @@
         "1": "Leggere i post e le menzioni dell'account",
         "2": "Pubblicare con immagini o un video",
         "ask": "Eliminare i post chiede sempre la tua approvazione"
+      },
+      "threads": {
+        "1": "Vedere post, risposte e risultati",
+        "2": "Pubblicare con immagini o video e rispondere",
+        "ask": "Eliminare i post chiede sempre la tua approvazione"
+      },
+      "tiktok": {
+        "1": "Vedere il profilo e i video",
+        "2": "Inviare video alle bozze da completare in TikTok",
+        "ask": "Ogni caricamento chiede sempre la tua approvazione"
       }
     },
     "connectedList": "Collegati",
@@ -14094,7 +14129,9 @@
       "reddit": "Post, commenti e community di Reddit.",
       "whatsapp": "Messaggi e modelli di WhatsApp Business.",
       "telegram": "Un tuo bot di Telegram: le sue chat, i gruppi e i canali.",
-      "x": "I post del tuo account X: scrivere, leggere le menzioni e cercare."
+      "x": "I post del tuo account X: scrivere, leggere le menzioni e cercare.",
+      "threads": "Post e risposte sul tuo account Threads.",
+      "tiktok": "Il tuo profilo e i tuoi video TikTok, e video inviati alle bozze."
     },
     "needsApp": "Questo server non ha ancora un'app {{name}}: chi lo gestisce ne registra una su {{name}} e imposta le sue variabili (docs/social-apps-checklist.md)."
   },
@@ -14937,7 +14974,28 @@
       "create_invite_link": "Creare un link di invito",
       "get_my_posts": "Vedere i miei post",
       "get_mentions": "Vedere le menzioni",
-      "search_recent": "Cercare post recenti"
+      "search_recent": "Cercare post recenti",
+      "get_replies": "Vedere le risposte",
+      "get_insights": "Vedere i risultati",
+      "reply": "Rispondere",
+      "hide_reply": "Nascondere la risposta",
+      "list_ad_accounts": "Elencare gli account pubblicitari",
+      "list_campaigns": "Elencare le campagne",
+      "list_ad_sets": "Elencare i gruppi di inserzioni",
+      "list_ads": "Elencare le inserzioni",
+      "create_campaign": "Creare una campagna",
+      "create_ad_set": "Creare un gruppo di inserzioni",
+      "create_ad": "Creare un'inserzione",
+      "update": "Aggiornare",
+      "pause": "Mettere in pausa",
+      "activate": "Attivare",
+      "set_budget": "Impostare il budget",
+      "archive": "Archiviare",
+      "delete": "Eliminare",
+      "list_videos": "Elencare i video",
+      "get_creator_info": "Vedere le opzioni di pubblicazione",
+      "get_post_status": "Vedere lo stato del caricamento",
+      "upload_draft": "Inviare alle bozze"
     }
   },
   "toolReview": {
