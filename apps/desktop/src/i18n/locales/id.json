@@ -585,7 +585,9 @@
       "compatTryCard": "Coba kartu grafis lagi",
       "compatOwn": "Saat ini WEBKIT_DISABLE_DMABUF_RENDERER yang menentukan. Untuk memilih di sini, keluar dari aplikasi lalu buka lagi tanpa variabel itu.",
       "reopenTitle": "Buka ulang agentes.chat?",
-      "reopenBody": "Agen tidak bisa memakai komputer ini sampai aplikasi terbuka lagi. Yang sudah berjalan selesai lebih dulu."
+      "reopenBody": "Agen tidak bisa memakai komputer ini sampai aplikasi terbuka lagi. Yang sudah berjalan selesai lebih dulu.",
+      "lightModeTitle": "Mode ringan",
+      "lightModeDesc": "Mengurangi gerakan dekoratif agar penggunaan CPU lebih rendah. Berlaku saat aplikasi dibuka kembali."
     },
     "thisMac": {
       "agents": "Agen",

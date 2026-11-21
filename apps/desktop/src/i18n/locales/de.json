@@ -590,7 +590,9 @@
       "compatTryCard": "Grafikkarte erneut versuchen",
       "compatOwn": "WEBKIT_DISABLE_DMABUF_RENDERER entscheidet das gerade. Um hier zu wählen, beende die App und öffne sie ohne diese Variable.",
       "reopenTitle": "agentes.chat neu öffnen?",
-      "reopenBody": "Agenten können diesen Computer nicht nutzen, bis die App wieder offen ist. Was schon läuft, wird vorher fertig."
+      "reopenBody": "Agenten können diesen Computer nicht nutzen, bis die App wieder offen ist. Was schon läuft, wird vorher fertig.",
+      "lightModeTitle": "Ressourcensparender Modus",
+      "lightModeDesc": "Reduziert dekorative Animationen, um die CPU weniger zu belasten. Wird beim erneuten Öffnen der App wirksam."
     },
     "thisMac": {
       "agents": "Agenten",

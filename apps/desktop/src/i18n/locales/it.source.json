@@ -2515,5 +2515,11 @@
   },
   "menu.downloaded": {
     "value": "Download complete"
+  },
+  "prefs.general.lightModeTitle": {
+    "value": "Lightweight mode"
+  },
+  "prefs.general.lightModeDesc": {
+    "value": "Reduce decorative motion to use less CPU. Takes effect when the app reopens."
   }
 }

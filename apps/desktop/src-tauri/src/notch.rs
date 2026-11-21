@@ -41,7 +41,7 @@ pub fn set_enabled(app: &AppHandle, on: bool) -> Result<(), String> {
     if existing.is_some() {
         return Ok(());
     }
-    let window = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::App("index.html".into()))
+    let builder = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::App("index.html".into()))
         .title("agentes.chat")
         .inner_size(400.0, 40.0)
         .visible(false)
@@ -55,8 +55,14 @@ pub fn set_enabled(app: &AppHandle, on: bool) -> Result<(), String> {
         .skip_taskbar(true)
         .focused(false)
         .accept_first_mouse(true)
-        .visible_on_all_workspaces(true)
-        .build()
+        .visible_on_all_workspaces(true);
+    #[cfg(target_os = "windows")]
+    let builder = if crate::light_mode::active() {
+        builder.additional_browser_args(crate::light_mode::ARG)
+    } else {
+        builder
+    };
+    let window = builder.build()
         .map_err(|e| e.to_string())?;
     on_main(app, move |_| {
         #[cfg(target_os = "macos")]

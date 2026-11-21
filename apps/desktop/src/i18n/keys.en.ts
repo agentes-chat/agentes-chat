@@ -653,6 +653,8 @@ export const desktopEn = {
       notchTitle: "Show the agents in the notch",
       notchDesc: "On MacBooks with a notch: who is working shows around the camera.",
       /** Linux: draw the window without the graphics card. */
+      lightModeTitle: "Lightweight mode",
+      lightModeDesc: "Reduce decorative motion to use less CPU. Takes effect when the app reopens.",
       compatTitle: "Compatibility mode",
       compatDesc:
         "Draws the window without the graphics card. It's slower but works on any computer. Use it if the window goes black, gets cut off or freezes.",

@@ -600,7 +600,9 @@
       "compatTryCard": "Spróbuj ponownie z kartą graficzną",
       "compatOwn": "Teraz decyduje o tym WEBKIT_DISABLE_DMABUF_RENDERER. Aby wybrać tutaj, zamknij aplikację i otwórz ją bez tej zmiennej.",
       "reopenTitle": "Otworzyć ponownie agentes.chat?",
-      "reopenBody": "Agenci nie mogą korzystać z tego komputera, dopóki aplikacja znów się nie otworzy. To, co już działa, najpierw się skończy."
+      "reopenBody": "Agenci nie mogą korzystać z tego komputera, dopóki aplikacja znów się nie otworzy. To, co już działa, najpierw się skończy.",
+      "lightModeTitle": "Tryb lekki",
+      "lightModeDesc": "Ogranicza ozdobne animacje, aby zmniejszyć użycie procesora. Działa po ponownym otwarciu aplikacji."
     },
     "thisMac": {
       "agents": "Agenci",
