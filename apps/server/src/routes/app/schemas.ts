@@ -295,6 +295,10 @@ export const Organization = z
     start: StartChoice.optional().openapi({
       description: "In `GET /me`: what opens when the app starts here (`PUT …/me/start`). Absent elsewhere.",
     }),
+    paysPlan: z.literal(true).optional().openapi({
+      description:
+        "In `GET /me`: you pay for the workspace's plan, as the billing service said, and may move it to another workspace (`POST …/plan-move`). Absent otherwise.",
+    }),
     showActivity: z.boolean().optional().openapi({
       description:
         "In `GET /me`: whether you see what agents did under each reply (`PUT …/me/activity`), off by default. Absent elsewhere.",

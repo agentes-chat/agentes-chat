@@ -10,8 +10,8 @@ import { fileIcon, formatBytes, MAX_UPLOAD_BYTES, previewKind } from "@agentesch
 import { taskNoticeOf } from "@agenteschat/client/lib/missions";
 import { QueryClient } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
-import { fileSaver } from "@/components/artifacts/ArtifactViewer";
 import { objectUrls } from "@/components/artifacts/FileView";
+import { fileSaver } from "@/components/artifacts/fileSaver";
 import { createI18n } from "@/i18n";
 import { ADA_ID, createFakeApi, ENG_ID, fakeMachinesOf, ORG_ID, seedState } from "./fake-api";
 import { hintOf, shownText } from "./hint";

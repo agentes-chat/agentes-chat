@@ -22,7 +22,7 @@ export const Route = createFileRoute("/onboarding")({
   // workspace set up meanwhile (another tab) opens as it is, on its arrival when it was paid for.
   loader: async ({ context, deps: { resume, paid } }) => {
     if (!resume) return;
-    const me = await context.queryClient.fetchQuery(meQuery(context.api)).catch(() => null);
+    const me = await context.queryClient.fetchQuery({ ...meQuery(context.api), staleTime: 0 }).catch(() => null);
     const org = me?.organizations.find((o) => o.id === resume);
     if (!org || settingUp(org)) return;
     if (paid)

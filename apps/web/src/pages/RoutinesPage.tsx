@@ -3064,7 +3064,6 @@ function OwnActions({
                 iconOnly
                 icon="close"
                 aria-label={t("routines.ownActions.remove", { action: ownActionName(t, name) })}
-                disabled={action.isPending}
                 onClick={() =>
                   action.mutate({
                     type: "update",
@@ -3103,7 +3102,6 @@ function VaultKeys({ routine }: { routine: Routine }) {
                 iconOnly
                 icon="close"
                 aria-label={t("routines.vaultKeys.remove", { key })}
-                disabled={action.isPending}
                 onClick={() =>
                   action.mutate({
                     type: "update",

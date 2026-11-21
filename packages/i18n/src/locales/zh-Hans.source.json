@@ -2720,6 +2720,9 @@
   "onboarding.leave": {
     "value": "Back to {{name}}"
   },
+  "onboarding.leaveLater": {
+    "value": "Back to {{name}}, finish later"
+  },
   "onboarding.actions.continue": {
     "value": "Continue"
   },
@@ -2745,7 +2748,16 @@
     "value": "What will you use agentes.chat for?"
   },
   "onboarding.purpose.lead": {
-    "value": "You can change this later, nothing is lost."
+    "value": "You can switch the workspace mode anytime in Settings, without losing anything."
+  },
+  "onboarding.purpose.pick": {
+    "value": "Choose how you want to see agentes.chat."
+  },
+  "onboarding.purpose.switchTitle": {
+    "value": "Switch anytime."
+  },
+  "onboarding.purpose.switchText": {
+    "value": "The workspace mode changes in Settings, and nothing is lost."
   },
   "onboarding.purpose.personal": {
     "value": "For me"
@@ -2766,10 +2778,10 @@
     "value": "Customer support · Finance · Reports"
   },
   "onboarding.purpose.personalLine": {
-    "value": "Agents that look after your day."
+    "value": "A simpler view, with every feature."
   },
   "onboarding.purpose.teamLine": {
-    "value": "People and agents in one place."
+    "value": "The full view, with channels and people."
   },
   "onboarding.purpose.activities.agenda": {
     "value": "Daily agenda"
@@ -8383,6 +8395,24 @@
   "noAi.notSignedIn.opencode": {
     "value": "OpenCode can't think on this computer. Connect an OpenCode key on {{name}}'s page."
   },
+  "noAi.notSignedInOn.claude_code": {
+    "value": "Claude Code isn't signed in on {{computer}}. Connect a Claude account on {{name}}'s page."
+  },
+  "noAi.notSignedInOn.codex": {
+    "value": "Codex isn't signed in on {{computer}}. Connect a ChatGPT account on {{name}}'s page."
+  },
+  "noAi.notSignedInOn.cursor": {
+    "value": "Cursor isn't signed in on {{computer}}. Connect a Cursor account on {{name}}'s page."
+  },
+  "noAi.notSignedInOn.grok": {
+    "value": "Grok isn't signed in on {{computer}}. Connect a Grok account on {{name}}'s page."
+  },
+  "noAi.notSignedInOn.antigravity": {
+    "value": "Gemini isn't signed in on {{computer}}. Connect a Gemini account on {{name}}'s page."
+  },
+  "noAi.notSignedInOn.opencode": {
+    "value": "OpenCode can't think on {{computer}}. Connect an OpenCode key on {{name}}'s page."
+  },
   "noAi.card.connected": {
     "value": "{{name}} has an AI now."
   },
@@ -8592,6 +8622,9 @@
   },
   "connectAi.chat.yours": {
     "value": "Yours"
+  },
+  "connectAi.chat.free": {
+    "value": "Free"
   },
   "connectAi.chat.keys": {
     "value": "Workspace key"
@@ -37335,6 +37368,18 @@
   "files.nav.place": {
     "value": "{{index}} of {{count}}"
   },
+  "errors.planMove.notPayer": {
+    "value": "Only the person who pays for the plan can move it."
+  },
+  "errors.planMove.same": {
+    "value": "Pick another workspace to move the plan to."
+  },
+  "errors.planMove.targetHasPlan": {
+    "value": "That workspace has a plan already. Reload to see your workspaces as they are now."
+  },
+  "errors.planMove.targetDeleting": {
+    "value": "That workspace is being deleted. Restore it first, or pick another one."
+  },
   "errors.surface.off": {
     "value": "Linking chat apps was turned off. Reload to see your settings as they are now."
   },
@@ -40730,6 +40775,12 @@
       "other": "{{count}} still wait for {{name}}"
     }
   },
+  "outage.done.planDropped": {
+    "value": "{{name}}'s {{plan}} plan is signed in on {{from}}. Sign in on {{to}} too, or keep {{from}}."
+  },
+  "outage.done.signIn": {
+    "value": "Sign in on {{name}}"
+  },
   "outage.done.skipped": {
     "value": "{{name}} stayed: {{reason}}"
   },
@@ -41352,19 +41403,19 @@
     "value": "Create and edit agents, routines and skills"
   },
   "apps.consent.manageHelp": {
-    "value": "Also creates agents, routines, skills and memories for you, with your permissions."
+    "value": "Also creates agents, routines, skills and memories and writes wiki pages for you, with your permissions."
   },
   "apps.consent.read": {
     "value": "Read only"
   },
   "apps.consent.readHelp": {
-    "value": "Sees agents, channels and replies, without sending anything."
+    "value": "Sees agents, channels, wiki pages and replies, without sending anything."
   },
   "apps.consent.can": {
     "value": "Can"
   },
   "apps.consent.canSee": {
-    "value": "See the agents and channels you see."
+    "value": "See the agents, channels and wiki pages you see."
   },
   "apps.consent.canSend": {
     "value": "Send messages as you, marked via {{app}}."
@@ -41373,7 +41424,7 @@
     "value": "Read the replies and what agents are doing."
   },
   "apps.consent.canManage": {
-    "value": "Create and edit agents, routines and skills as you. You get a notice of what it creates."
+    "value": "Create and edit agents, routines and skills as you, with a notice of what it creates. Write wiki pages and move them to the trash as you."
   },
   "apps.consent.never": {
     "value": "Never"
@@ -47596,6 +47647,21 @@
   },
   "deleteAccount.deleted": {
     "value": "Your account goes for good on {{date}}. Sign in before then to restore it."
+  },
+  "planMove.warning": {
+    "value": "Your plan stays with this workspace and stops renewing. Move it to another one of yours first?"
+  },
+  "planMove.deleting": {
+    "value": "Your plan stops renewing with it. You can move it to another workspace."
+  },
+  "planMove.how": {
+    "value": "The same card and paid period go with it. Nothing is charged again and nothing is refunded."
+  },
+  "planMove.button": {
+    "value": "Move my plan to {{name}}"
+  },
+  "planMove.moving": {
+    "value": "Your plan is moving to {{name}}. It's there in about a minute."
   },
   "billing.open": {
     "value": "Open plan and billing"

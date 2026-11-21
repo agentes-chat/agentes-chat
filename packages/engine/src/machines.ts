@@ -30,7 +30,7 @@ import { appLocale } from "@agenteschat/i18n/locale";
 import { getAgent, workspaceHomeId } from "./agents";
 import { listsAgentSql, managesAgent, managesAgentSql, REACH_COLUMNS } from "./audience";
 import { type AuditEntry, recordAudit } from "./audit";
-import { isSandboxedBrain } from "./brains/types";
+import { isComputerBrain, isSandboxedBrain } from "./brains/types";
 import { caches } from "./cache";
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { publishOrgEvent } from "./events";
@@ -1042,7 +1042,7 @@ export async function setAgentComputerTarget(
   machineId: string | null,
   /** false: the caller moves its waiting runs itself (`moveAgentsFromMachine`), or `setAgentBrain` follows. */
   options: { wakeWaits?: boolean } = {},
-): Promise<ComputerTarget> {
+): Promise<ComputerTarget & { planDropped?: PlanDropped }> {
   const membership = await requirePermission(deps.db, actorId, orgId, "read");
   const agent = await getAgent(deps.db, orgId, agentId);
   if (!agent || agent.archivedAt) throw new NotFoundError("Agent not found");
@@ -1069,12 +1069,14 @@ export async function setAgentComputerTarget(
     }
   }
   const moved = (machine?.id ?? null) !== agent.machineId;
+  // An account is a folder on one computer (ADR 0041): on another computer the agent takes the same person's sign-in
+  // of the same plan there, else none, and the move says the plan stayed behind.
+  const plan = moved && agent.brainAccountId ? await planOnComputer(deps.db, orgId, agent, machine?.id ?? null) : null;
   await deps.db
     .update(agents)
     .set({
       machineId: machine?.id ?? null,
-      // An account is a folder on one computer (ADR 0041): another computer starts on its own sign-in.
-      ...(moved ? { brainAccountId: null } : {}),
+      ...(moved ? { brainAccountId: plan?.accountId ?? null } : {}),
       updatedAt: new Date(),
     })
     .where(and(eq(agents.orgId, orgId), eq(agents.id, agentId)));
@@ -1102,5 +1104,56 @@ export async function setAgentComputerTarget(
     const { wakeAgentsBrainWaits } = await import("./usage-pause");
     await wakeAgentsBrainWaits(deps, orgId, [agentId], { delayMs: TARGET_WAKE_DELAY_MS });
   }
-  return target;
+  return plan?.dropped && isComputerBrain(agent.brain) ? { ...target, planDropped: plan.dropped } : target;
+}
+
+/** An agent's plan that stayed on the computer it left: its kind, and a coding plan's provider. */
+export interface PlanDropped {
+  kind: string;
+  provider: string | null;
+}
+
+/**
+ * The account an agent moving to `machineId` keeps thinking with: one on that computer of the same kind and provider,
+ * signed in by the same person, active, and free for it (shared, or no other agent's). None: `dropped` says which.
+ */
+async function planOnComputer(
+  db: Database,
+  orgId: string,
+  agent: { id: string; brainAccountId: string | null },
+  machineId: string | null,
+): Promise<{ accountId: string | null; dropped?: PlanDropped }> {
+  const ma = schema.machineAccounts;
+  const [old] = agent.brainAccountId
+    ? await db
+        .select({ kind: ma.kind, provider: ma.provider, createdBy: ma.createdBy })
+        .from(ma)
+        .where(and(eq(ma.orgId, orgId), eq(ma.id, agent.brainAccountId)))
+    : [];
+  if (!old) return { accountId: null };
+  const [same] =
+    machineId && old.createdBy
+      ? await db
+          .select({ id: ma.id })
+          .from(ma)
+          .where(
+            and(
+              eq(ma.orgId, orgId),
+              eq(ma.machineId, machineId),
+              eq(ma.kind, old.kind),
+              sql`${ma.provider} is not distinct from ${old.provider}`,
+              eq(ma.createdBy, old.createdBy),
+              eq(ma.status, "active"),
+              or(
+                eq(ma.shared, true),
+                sql`not exists (select 1 from ${agents} a where a.org_id = ${ma.orgId} and a.brain_account_id = ${ma.id}
+                      and a.archived_at is null and a.id <> ${agent.id})`,
+              ),
+            ),
+          )
+          .orderBy(sql`${ma.lastUsedAt} desc nulls last`)
+          .limit(1)
+      : [];
+  if (same) return { accountId: same.id };
+  return { accountId: null, ...(machineId ? { dropped: { kind: old.kind, provider: old.provider } } : {}) };
 }

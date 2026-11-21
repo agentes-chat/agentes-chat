@@ -388,6 +388,10 @@ export function Composer({
   const mediaButton = media && !has ? media : null;
   // Files waiting don't take it away: a take started then goes with them.
   const mic = voice && !typed ? voice.mic : null;
+  // The mic that comes back for the send button (the words sent or erased) comes in as the button does; the one the
+  // field opens with is just there.
+  const micReturns = useRef(false);
+  if (typed) micReturns.current = true;
   // A take too short to send: the field shakes once, as a refused entry does (with the haptic and the line saying so).
   const shakeStyle = useShake(voice?.nope ?? 0, reducedMotion);
 
@@ -691,7 +695,14 @@ export function Composer({
             />
           ) : null}
           {voice?.overlay ?? null}
-          {mic ? <View style={styles.micBox}>{mic}</View> : null}
+          {mic ? (
+            <Animated.View
+              entering={micReturns.current ? (reducedMotion ? SEND_FADE_IN : SEND_IN) : undefined}
+              style={styles.micBox}
+            >
+              {mic}
+            </Animated.View>
+          ) : null}
         </Animated.View>
       </View>
     </View>

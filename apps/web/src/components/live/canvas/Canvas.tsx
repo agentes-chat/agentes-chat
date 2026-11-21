@@ -46,9 +46,9 @@ import {
   useSyncExternalStore,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { useMaybeArtifactViewer } from "@/components/artifacts/ArtifactViewer";
 import { fileSaver } from "@/components/artifacts/fileSaver";
 import { ImageZoom } from "@/components/artifacts/ImageZoom";
+import { useMaybeArtifactViewer } from "@/components/artifacts/viewer-context";
 import { useOrg } from "@/components/org-context";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { type MenuEntry, openContextMenu } from "@/lib/context-menu";

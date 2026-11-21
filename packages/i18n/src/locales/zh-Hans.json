@@ -1071,6 +1071,7 @@
     },
     "back": "返回",
     "leave": "返回 {{name}}",
+    "leaveLater": "返回 {{name}}，稍后再完成",
     "actions": {
       "continue": "继续",
       "create_other": "创建 {{count}} 个智能体",
@@ -1080,15 +1081,18 @@
     "yourCompany": "你的公司",
     "purpose": {
       "title": "你打算用 agentes.chat 做什么？",
-      "lead": "之后可以更改，不会丢失任何内容。",
+      "lead": "你可以随时在设置中切换工作区模式，不会丢失任何内容。",
+      "pick": "选择你想如何查看 agentes.chat。",
+      "switchTitle": "随时都能切换。",
+      "switchText": "工作区模式可在设置中更改，不会丢失任何内容。",
       "personal": "给我自己用",
       "personalText": "照顾你一天的智能体。",
       "team": "给我的团队用",
       "teamText": "人和智能体一起工作，有频道、角色和审批。",
       "personalExamples": "早上7点的一天 · 账单 · 训练",
       "teamExamples": "客户支持 · 财务 · 报告",
-      "personalLine": "照看你一天的智能体。",
-      "teamLine": "人和智能体在同一个地方。",
+      "personalLine": "更简洁的视图，功能一个不少。",
+      "teamLine": "完整视图，包含频道和成员。",
       "activities": {
         "agenda": "今日日程",
         "home": "家务",
@@ -3239,6 +3243,14 @@
       "antigravity": "这台电脑上的 Gemini 未登录。请在 {{name}} 的页面上连接 Gemini 账号。",
       "opencode": "OpenCode 无法在这台电脑上思考。请在 {{name}} 的页面连接一个 OpenCode 密钥。"
     },
+    "notSignedInOn": {
+      "claude_code": "{{computer}}上的 Claude Code 未登录。请在 {{name}} 的页面上连接 Claude 账号。",
+      "codex": "{{computer}}上的 Codex 未登录。请在 {{name}} 的页面上连接 ChatGPT 账号。",
+      "cursor": "{{computer}}上的 Cursor 未登录。请在 {{name}} 的页面上连接 Cursor 账号。",
+      "grok": "{{computer}}上的 Grok 未登录。请在 {{name}} 的页面上连接 Grok 账号。",
+      "antigravity": "{{computer}}上的 Gemini 未登录。请在 {{name}} 的页面上连接 Gemini 账号。",
+      "opencode": "OpenCode 无法在{{computer}}上思考。请在 {{name}} 的页面连接一个 OpenCode 密钥。"
+    },
     "card": {
       "connected": "{{name}} 现在有 AI 了。",
       "answerNow": "立即回复",
@@ -3327,6 +3339,7 @@
     "chat": {
       "mine": "你的账号",
       "yours": "你的",
+      "free": "免费",
       "keys": "工作区密钥",
       "apiKeys": "API 密钥",
       "best": "当前余量最多",
@@ -14676,6 +14689,12 @@
     }
   },
   "errors": {
+    "planMove": {
+      "notPayer": "只有支付套餐的人可以移动它。",
+      "same": "请选择另一个工作区来接收套餐。",
+      "targetHasPlan": "那个工作区已经有套餐了。刷新页面查看工作区的最新状态。",
+      "targetDeleting": "那个工作区正在删除。请先恢复它，或选择另一个。"
+    },
     "surface": {
       "off": "聊天应用关联已关闭。刷新页面即可查看当前设置。",
       "notAllowed": "你的账号暂时还不能关联聊天应用。在开放之前，请继续在这里使用应用。",
@@ -16012,6 +16031,8 @@
       "none": "没有人更换电脑。",
       "resumed_other": "{{count}} 个任务已重新开始",
       "stillWaiting_other": "{{count}} 个仍在等待 {{name}}",
+      "planDropped": "{{name}} 的 {{plan}} 套餐登录在 {{from}} 上。请也在 {{to}} 上登录，或继续使用 {{from}}。",
+      "signIn": "在 {{name}} 上登录",
       "skipped": "{{name}} 未更换：{{reason}}",
       "skip": {
         "other": "目前无法更换",
@@ -16266,14 +16287,14 @@
       "write": "查看任务并发送给智能体",
       "writeHelp": "以你的身份发送消息并读取回复。",
       "manage": "创建和编辑智能体、例行工作和技能",
-      "manageHelp": "还会以你的权限为你创建智能体、例行工作、技能和记忆。",
+      "manageHelp": "还会以你的权限为你创建智能体、例行工作、技能和记忆，并编写 Wiki 页面。",
       "read": "只读",
-      "readHelp": "查看智能体、频道和回复，不发送任何内容。",
+      "readHelp": "查看智能体、频道、Wiki 页面和回复，不发送任何内容。",
       "can": "可以",
-      "canSee": "查看你能看到的智能体和频道。",
+      "canSee": "查看你能看到的智能体、频道和 Wiki 页面。",
       "canSend": "以你的身份发送消息，并标注“通过 {{app}}”。",
       "canRead": "读取回复以及智能体正在做的事。",
-      "canManage": "以你的身份创建和编辑智能体、例行工作和技能。它创建的内容会通知你。",
+      "canManage": "以你的身份创建和编辑智能体、例行工作和技能，它创建的内容会通知你。以你的身份编写 Wiki 页面并将其移到废纸篓。",
       "never": "绝不",
       "neverApprove": "批准智能体的操作。审批始终由 agentes.chat 中的成员负责。",
       "neverSettings": "更改设置、成员或权限。",
@@ -18882,6 +18903,13 @@
     "deleteOrg": "删除 {{name}}",
     "submit": "删除账号",
     "deleted": "你的账号将于 {{date}} 永久消失。在此之前登录即可恢复。"
+  },
+  "planMove": {
+    "warning": "你的套餐会留在这个工作区并停止续费。要先把它移到你的另一个工作区吗？",
+    "deleting": "你的套餐会随它停止续费。你可以把它移到另一个工作区。",
+    "how": "同一张卡和已付的周期一起移过去。不会再次扣费，也不退款。",
+    "button": "把我的套餐移到 {{name}}",
+    "moving": "你的套餐正在移到 {{name}}，大约一分钟后生效。"
   },
   "billing": {
     "open": "打开套餐和账单",

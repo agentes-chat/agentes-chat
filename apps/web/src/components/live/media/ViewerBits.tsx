@@ -4,7 +4,7 @@ import { mediaKindOfArtifact } from "@agenteschat/client/lib/files";
 import { badgeCount } from "@agenteschat/client/lib/unread";
 import { Button, CountBadge, CountChip } from "@agenteschat/ui";
 import { useTranslation } from "react-i18next";
-import { useMaybeArtifactViewer } from "@/components/artifacts/ArtifactViewer";
+import { useMaybeArtifactViewer } from "@/components/artifacts/viewer-context";
 import { useOrg } from "@/components/org-context";
 import { ThreadLineBody } from "@/components/threads/ThreadLines";
 

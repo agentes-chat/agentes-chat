@@ -1121,6 +1121,7 @@
     },
     "back": "Retour",
     "leave": "Retour à {{name}}",
+    "leaveLater": "Retour à {{name}}, terminer plus tard",
     "actions": {
       "continue": "Continuer",
       "create_one": "Créer {{count}} agent",
@@ -1134,15 +1135,18 @@
     "yourCompany": "votre entreprise",
     "purpose": {
       "title": "À quoi allez-vous utiliser agentes.chat ?",
-      "lead": "Vous pourrez le changer plus tard, rien n'est perdu.",
+      "lead": "Vous pouvez changer le mode de l'espace de travail à tout moment dans les Paramètres, sans rien perdre.",
+      "pick": "Choisissez comment vous voulez voir agentes.chat.",
+      "switchTitle": "Changez quand vous voulez.",
+      "switchText": "Le mode de l'espace de travail se change dans les Paramètres, et rien n'est perdu.",
       "personal": "Pour moi",
       "personalText": "Des agents pour votre agenda, vos factures, votre entraînement et tout ce que vous leur demandez.",
       "team": "Pour mon équipe",
       "teamText": "Personnes et agents travaillent ensemble, avec des canaux, des rôles et des approbations.",
       "personalExamples": "Ta journée à 7 h · Factures · Sport",
       "teamExamples": "Support client · Finances · Rapports",
-      "personalLine": "Des agents qui s'occupent de votre journée.",
-      "teamLine": "Des personnes et des agents au même endroit.",
+      "personalLine": "Une vue plus simple, avec toutes les fonctionnalités.",
+      "teamLine": "La vue complète, avec les canaux et les personnes.",
       "activities": {
         "agenda": "Agenda du jour",
         "home": "Maison",
@@ -3525,6 +3529,14 @@
       "antigravity": "Gemini n'est pas connecté sur cet ordinateur. Connectez un compte Gemini sur la page de {{name}}.",
       "opencode": "OpenCode ne peut pas réfléchir sur cet ordinateur. Connectez une clé OpenCode sur la page de {{name}}."
     },
+    "notSignedInOn": {
+      "claude_code": "Claude Code n'est pas connecté sur {{computer}}. Connectez un compte Claude sur la page de {{name}}.",
+      "codex": "Codex n'est pas connecté sur {{computer}}. Connectez un compte ChatGPT sur la page de {{name}}.",
+      "cursor": "Cursor n'est pas connecté sur {{computer}}. Connectez un compte Cursor sur la page de {{name}}.",
+      "grok": "Grok n'est pas connecté sur {{computer}}. Connectez un compte Grok sur la page de {{name}}.",
+      "antigravity": "Gemini n'est pas connecté sur {{computer}}. Connectez un compte Gemini sur la page de {{name}}.",
+      "opencode": "OpenCode ne peut pas réfléchir sur {{computer}}. Connectez une clé OpenCode sur la page de {{name}}."
+    },
     "card": {
       "connected": "{{name}} a maintenant une IA.",
       "answerNow": "Répondre maintenant",
@@ -3617,6 +3629,7 @@
     "chat": {
       "mine": "Les vôtres",
       "yours": "Le vôtre",
+      "free": "Gratuit",
       "keys": "Clé de l'espace de travail",
       "apiKeys": "Clés API",
       "best": "Le plus de marge en ce moment",
@@ -15727,6 +15740,12 @@
     }
   },
   "errors": {
+    "planMove": {
+      "notPayer": "Seule la personne qui paie l'abonnement peut le déplacer.",
+      "same": "Choisis un autre espace de travail où déplacer l'abonnement.",
+      "targetHasPlan": "Cet espace de travail a déjà un abonnement. Recharge pour voir tes espaces de travail tels qu'ils sont.",
+      "targetDeleting": "Cet espace de travail est en cours de suppression. Restaure-le d'abord, ou choisis-en un autre."
+    },
     "surface": {
       "off": "La liaison des apps de chat a été désactivée. Rechargez pour voir vos paramètres tels qu'ils sont maintenant.",
       "notAllowed": "Relier une app de chat n'est pas encore ouvert à votre compte. Continuez à utiliser l'app ici en attendant.",
@@ -17091,6 +17110,8 @@
       "stillWaiting_one": "{{count}} attend toujours {{name}}",
       "stillWaiting_many": "{{count}} attendent toujours {{name}}",
       "stillWaiting_other": "{{count}} attendent toujours {{name}}",
+      "planDropped": "Le forfait {{plan}} de {{name}} est connecté sur {{from}}. Connectez-vous aussi sur {{to}}, ou gardez {{from}}.",
+      "signIn": "Se connecter sur {{name}}",
       "skipped": "{{name}} n'a pas changé : {{reason}}",
       "skip": {
         "other": "impossible de changer pour l'instant",
@@ -17355,14 +17376,14 @@
       "write": "Lire et envoyer des tâches aux agents",
       "writeHelp": "Envoie des messages en votre nom et lit les réponses.",
       "manage": "Créer et modifier des agents, routines et compétences",
-      "manageHelp": "Crée aussi des agents, routines, compétences et souvenirs pour vous, avec vos permissions.",
+      "manageHelp": "Crée aussi des agents, routines, compétences et souvenirs et écrit des pages du wiki pour vous, avec vos permissions.",
       "read": "Lecture seule",
-      "readHelp": "Voit les agents, les canaux et les réponses, sans rien envoyer.",
+      "readHelp": "Voit les agents, les canaux, les pages du wiki et les réponses, sans rien envoyer.",
       "can": "Peut",
-      "canSee": "Voir les agents et canaux que vous voyez.",
+      "canSee": "Voir les agents, canaux et pages du wiki que vous voyez.",
       "canSend": "Envoyer des messages en votre nom, marqués via {{app}}.",
       "canRead": "Lire les réponses et ce que font les agents.",
-      "canManage": "Créer et modifier des agents, routines et compétences en votre nom. Vous êtes averti de ce qu'elle crée.",
+      "canManage": "Créer et modifier des agents, routines et compétences en votre nom, avec un avis de ce qu'elle crée. Écrire des pages du wiki et les placer dans la corbeille en votre nom.",
       "never": "Jamais",
       "neverApprove": "Approuver les actions des agents. Les approbations restent aux personnes dans agentes.chat.",
       "neverSettings": "Modifier les paramètres, les membres ou les permissions.",
@@ -20041,6 +20062,13 @@
     "deleteOrg": "Supprimer {{name}}",
     "submit": "Supprimer le compte",
     "deleted": "Votre compte disparaît définitivement le {{date}}. Connectez-vous avant pour le restaurer."
+  },
+  "planMove": {
+    "warning": "Ton abonnement reste avec cet espace de travail et n'est plus renouvelé. Le déplacer d'abord vers un autre de tes espaces ?",
+    "deleting": "Ton abonnement n'est plus renouvelé avec lui. Tu peux le déplacer vers un autre espace de travail.",
+    "how": "La même carte et la période déjà payée le suivent. Rien n'est facturé à nouveau et rien n'est remboursé.",
+    "button": "Déplacer mon abonnement vers {{name}}",
+    "moving": "Ton abonnement est en route vers {{name}}. Il y sera dans une minute environ."
   },
   "billing": {
     "open": "Ouvrir l'abonnement et la facturation",

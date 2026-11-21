@@ -1095,6 +1095,7 @@
     },
     "back": "Terug",
     "leave": "Terug naar {{name}}",
+    "leaveLater": "Terug naar {{name}}, later afmaken",
     "actions": {
       "continue": "Doorgaan",
       "create_one": "{{count}} agent maken",
@@ -1106,15 +1107,18 @@
     "yourCompany": "je bedrijf",
     "purpose": {
       "title": "Waarvoor ga je agentes.chat gebruiken?",
-      "lead": "Je kunt dit later wijzigen, er gaat niets verloren.",
+      "lead": "Je kunt de modus van de werkruimte altijd wijzigen in Instellingen, zonder iets te verliezen.",
+      "pick": "Kies hoe je agentes.chat wilt zien.",
+      "switchTitle": "Wissel wanneer je wilt.",
+      "switchText": "De modus van de werkruimte wijzig je in Instellingen, en er gaat niets verloren.",
       "personal": "Voor mezelf",
       "personalText": "Agents voor je agenda, rekeningen, training en alles wat je vraagt.",
       "team": "Voor mijn team",
       "teamText": "Mensen en agents werken samen, met kanalen, rollen en goedkeuringen.",
       "personalExamples": "Je dag om 7 uur · Rekeningen · Training",
       "teamExamples": "Klantenservice · Financiën · Rapporten",
-      "personalLine": "Agents die voor je dag zorgen.",
-      "teamLine": "Mensen en agents op één plek.",
+      "personalLine": "Een eenvoudigere weergave, met alle functies.",
+      "teamLine": "De volledige weergave, met kanalen en mensen.",
       "activities": {
         "agenda": "Dagplanning",
         "home": "Thuis",
@@ -3385,6 +3389,20 @@
       "opencode": "OpenCode kan niet denken op deze computer. Koppel een OpenCode-sleutel op de pagina van {{name}}.",
       "opencode_female": "OpenCode kan niet denken op deze computer. Koppel een OpenCode-sleutel op de pagina van {{name}}."
     },
+    "notSignedInOn": {
+      "claude_code": "Claude Code is niet ingelogd op {{computer}}. Koppel een Claude-account op de pagina van {{name}}.",
+      "claude_code_female": "Claude Code is niet ingelogd op {{computer}}. Koppel een Claude-account op de pagina van {{name}}.",
+      "codex": "Codex is niet ingelogd op {{computer}}. Koppel een ChatGPT-account op de pagina van {{name}}.",
+      "codex_female": "Codex is niet ingelogd op {{computer}}. Koppel een ChatGPT-account op de pagina van {{name}}.",
+      "cursor": "Cursor is niet ingelogd op {{computer}}. Koppel een Cursor-account op de pagina van {{name}}.",
+      "cursor_female": "Cursor is niet ingelogd op {{computer}}. Koppel een Cursor-account op de pagina van {{name}}.",
+      "grok": "Grok is niet ingelogd op {{computer}}. Koppel een Grok-account op de pagina van {{name}}.",
+      "grok_female": "Grok is niet ingelogd op {{computer}}. Koppel een Grok-account op de pagina van {{name}}.",
+      "antigravity": "Gemini is niet ingelogd op {{computer}}. Koppel een Gemini-account op de pagina van {{name}}.",
+      "antigravity_female": "Gemini is niet ingelogd op {{computer}}. Koppel een Gemini-account op de pagina van {{name}}.",
+      "opencode": "OpenCode kan niet denken op {{computer}}. Koppel een OpenCode-sleutel op de pagina van {{name}}.",
+      "opencode_female": "OpenCode kan niet denken op {{computer}}. Koppel een OpenCode-sleutel op de pagina van {{name}}."
+    },
     "card": {
       "connected": "{{name}} heeft nu een AI.",
       "answerNow": "Nu antwoorden",
@@ -3475,6 +3493,7 @@
     "chat": {
       "mine": "Van jou",
       "yours": "Van jou",
+      "free": "Gratis",
       "keys": "Werkruimtesleutel",
       "apiKeys": "API-sleutels",
       "best": "Nu met de meeste ruimte",
@@ -15251,6 +15270,12 @@
     }
   },
   "errors": {
+    "planMove": {
+      "notPayer": "Alleen wie het abonnement betaalt, kan het verplaatsen.",
+      "same": "Kies een andere werkruimte om het abonnement naartoe te verplaatsen.",
+      "targetHasPlan": "Die werkruimte heeft al een abonnement. Herlaad om je werkruimtes te zien zoals ze nu zijn.",
+      "targetDeleting": "Die werkruimte wordt verwijderd. Zet hem eerst terug of kies een andere."
+    },
     "surface": {
       "off": "Het koppelen van chat-apps is uitgezet. Laad opnieuw om je instellingen te zien zoals ze nu zijn.",
       "notAllowed": "Een chat-app koppelen is nog niet open voor je account. Gebruik de app hier tot het opengaat.",
@@ -16601,6 +16626,8 @@
       "resumed_other": "{{count}} taken weer gestart",
       "stillWaiting_one": "{{count}} wacht nog op {{name}}",
       "stillWaiting_other": "{{count}} wachten nog op {{name}}",
+      "planDropped": "Het {{plan}}-abonnement van {{name}} is ingelogd op {{from}}. Log ook in op {{to}}, of houd {{from}}.",
+      "signIn": "Inloggen op {{name}}",
       "skipped": "{{name}} bleef: {{reason}}",
       "skip": {
         "other": "kon nu niet overstappen",
@@ -16860,14 +16887,14 @@
       "write": "Taken lezen en naar agents sturen",
       "writeHelp": "Stuurt berichten namens jou en leest de antwoorden.",
       "manage": "Agents, routines en skills maken en bewerken",
-      "manageHelp": "Maakt ook agents, routines, skills en herinneringen voor je, met jouw rechten.",
+      "manageHelp": "Maakt ook agents, routines, skills en herinneringen en schrijft wikipagina's voor je, met jouw rechten.",
       "read": "Alleen lezen",
-      "readHelp": "Ziet agents, kanalen en antwoorden, zonder iets te versturen.",
+      "readHelp": "Ziet agents, kanalen, wikipagina's en antwoorden, zonder iets te versturen.",
       "can": "Mag",
-      "canSee": "De agents en kanalen zien die jij ziet.",
+      "canSee": "De agents, kanalen en wikipagina's zien die jij ziet.",
       "canSend": "Berichten namens jou sturen, gemarkeerd met via {{app}}.",
       "canRead": "De antwoorden lezen en zien wat agents doen.",
-      "canManage": "Agents, routines en skills maken en bewerken namens jou. Je krijgt een melding van wat het maakt.",
+      "canManage": "Agents, routines en skills maken en bewerken namens jou, met een melding van wat het maakt. Wikipagina's schrijven en naar de prullenmand verplaatsen namens jou.",
       "never": "Nooit",
       "neverApprove": "Acties van agents goedkeuren. Goedkeuringen blijven bij mensen in agentes.chat.",
       "neverSettings": "Instellingen, leden of rechten wijzigen.",
@@ -19508,6 +19535,13 @@
     "deleteOrg": "{{name}} verwijderen",
     "submit": "Account verwijderen",
     "deleted": "Je account verdwijnt op {{date}} definitief. Log daarvoor in om het te herstellen."
+  },
+  "planMove": {
+    "warning": "Je abonnement blijft bij deze werkruimte en wordt niet meer verlengd. Eerst naar een andere werkruimte van je verplaatsen?",
+    "deleting": "Je abonnement wordt hiermee niet meer verlengd. Je kunt het naar een andere werkruimte verplaatsen.",
+    "how": "Dezelfde kaart en de al betaalde periode gaan mee. Er wordt niets opnieuw in rekening gebracht en niets terugbetaald.",
+    "button": "Mijn abonnement naar {{name}} verplaatsen",
+    "moving": "Je abonnement gaat naar {{name}}. Het is er over ongeveer een minuut."
   },
   "billing": {
     "open": "Abonnement en facturatie openen",

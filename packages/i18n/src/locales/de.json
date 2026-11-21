@@ -1095,6 +1095,7 @@
     },
     "back": "Zurück",
     "leave": "Zurück zu {{name}}",
+    "leaveLater": "Zurück zu {{name}}, später weitermachen",
     "actions": {
       "continue": "Weiter",
       "create_one": "{{count}} Agent erstellen",
@@ -1106,15 +1107,18 @@
     "yourCompany": "deine Firma",
     "purpose": {
       "title": "Wofür wirst du agentes.chat nutzen?",
-      "lead": "Du kannst das später ändern, nichts geht verloren.",
+      "lead": "Du kannst den Workspace-Modus jederzeit in den Einstellungen ändern, ohne etwas zu verlieren.",
+      "pick": "Wähle, wie du agentes.chat sehen möchtest.",
+      "switchTitle": "Wechsle jederzeit.",
+      "switchText": "Der Workspace-Modus lässt sich in den Einstellungen ändern, und nichts geht verloren.",
       "personal": "Für mich",
       "personalText": "Agenten für deinen Kalender, deine Rechnungen, dein Training und alles, worum du sonst bittest.",
       "team": "Für mein Team",
       "teamText": "Personen und Agenten arbeiten zusammen, mit Kanälen, Rollen und Freigaben.",
       "personalExamples": "Dein Tag um 7 · Rechnungen · Training",
       "teamExamples": "Kundensupport · Finanzen · Berichte",
-      "personalLine": "Agenten, die sich um deinen Tag kümmern.",
-      "teamLine": "Menschen und Agenten an einem Ort.",
+      "personalLine": "Eine einfachere Ansicht, mit allen Funktionen.",
+      "teamLine": "Die volle Ansicht, mit Kanälen und Menschen.",
       "activities": {
         "agenda": "Tagesplan",
         "home": "Zuhause",
@@ -3386,6 +3390,20 @@
       "opencode": "OpenCode kann auf diesem Computer nicht denken. Verbinde einen OpenCode-Schlüssel auf der Seite von {{name}}.",
       "opencode_female": "OpenCode kann auf diesem Computer nicht denken. Verbinde einen OpenCode-Schlüssel auf der Seite von {{name}}."
     },
+    "notSignedInOn": {
+      "claude_code": "Claude Code ist auf {{computer}} nicht angemeldet. Verbinde ein Claude-Konto auf der Seite von {{name}}.",
+      "claude_code_female": "Claude Code ist auf {{computer}} nicht angemeldet. Verbinde ein Claude-Konto auf der Seite von {{name}}.",
+      "codex": "Codex ist auf {{computer}} nicht angemeldet. Verbinde ein ChatGPT-Konto auf der Seite von {{name}}.",
+      "codex_female": "Codex ist auf {{computer}} nicht angemeldet. Verbinde ein ChatGPT-Konto auf der Seite von {{name}}.",
+      "cursor": "Cursor ist auf {{computer}} nicht angemeldet. Verbinde ein Cursor-Konto auf der Seite von {{name}}.",
+      "cursor_female": "Cursor ist auf {{computer}} nicht angemeldet. Verbinde ein Cursor-Konto auf der Seite von {{name}}.",
+      "grok": "Grok ist auf {{computer}} nicht angemeldet. Verbinde ein Grok-Konto auf der Seite von {{name}}.",
+      "grok_female": "Grok ist auf {{computer}} nicht angemeldet. Verbinde ein Grok-Konto auf der Seite von {{name}}.",
+      "antigravity": "Gemini ist auf {{computer}} nicht angemeldet. Verbinde ein Gemini-Konto auf der Seite von {{name}}.",
+      "antigravity_female": "Gemini ist auf {{computer}} nicht angemeldet. Verbinde ein Gemini-Konto auf der Seite von {{name}}.",
+      "opencode": "OpenCode kann auf {{computer}} nicht denken. Verbinde einen OpenCode-Schlüssel auf der Seite von {{name}}.",
+      "opencode_female": "OpenCode kann auf {{computer}} nicht denken. Verbinde einen OpenCode-Schlüssel auf der Seite von {{name}}."
+    },
     "card": {
       "connected": "{{name}} hat jetzt eine KI.",
       "answerNow": "Jetzt antworten",
@@ -3475,6 +3493,7 @@
     "chat": {
       "mine": "Deine",
       "yours": "Deins",
+      "free": "Kostenlos",
       "keys": "Workspace-Schlüssel",
       "apiKeys": "API-Schlüssel",
       "best": "Gerade mit dem meisten Spielraum",
@@ -15183,6 +15202,12 @@
     }
   },
   "errors": {
+    "planMove": {
+      "notPayer": "Nur die Person, die den Tarif bezahlt, kann ihn verschieben.",
+      "same": "Wähle einen anderen Workspace, in den der Tarif soll.",
+      "targetHasPlan": "Dieser Workspace hat schon einen Tarif. Lade neu, um deine Workspaces aktuell zu sehen.",
+      "targetDeleting": "Dieser Workspace wird gerade gelöscht. Stell ihn zuerst wieder her oder wähle einen anderen."
+    },
     "surface": {
       "off": "Das Verknüpfen von Chat-Apps wurde ausgeschaltet. Lade neu, um deine Einstellungen im aktuellen Stand zu sehen.",
       "notAllowed": "Das Verknüpfen einer Chat-App ist für dein Konto noch nicht freigegeben. Nutze bis dahin die App hier.",
@@ -16533,6 +16558,8 @@
       "resumed_other": "{{count}} Aufgaben laufen wieder",
       "stillWaiting_one": "{{count}} wartet noch auf {{name}}",
       "stillWaiting_other": "{{count}} warten noch auf {{name}}",
+      "planDropped": "Der {{plan}}-Plan von {{name}} ist auf {{from}} angemeldet. Melde dich auch auf {{to}} an oder behalte {{from}}.",
+      "signIn": "Auf {{name}} anmelden",
       "skipped": "{{name}} ist geblieben: {{reason}}",
       "skip": {
         "other": "konnte gerade nicht wechseln",
@@ -16792,14 +16819,14 @@
       "write": "Lesen und Agenten Aufgaben schicken",
       "writeHelp": "Sendet Nachrichten in deinem Namen und liest die Antworten.",
       "manage": "Agenten, Routinen und Skills erstellen und bearbeiten",
-      "manageHelp": "Erstellt auch Agenten, Routinen, Skills und Erinnerungen für dich, mit deinen Berechtigungen.",
+      "manageHelp": "Erstellt auch Agenten, Routinen, Skills und Erinnerungen und schreibt Wiki-Seiten für dich, mit deinen Berechtigungen.",
       "read": "Nur lesen",
-      "readHelp": "Sieht Agenten, Kanäle und Antworten, ohne etwas zu senden.",
+      "readHelp": "Sieht Agenten, Kanäle, Wiki-Seiten und Antworten, ohne etwas zu senden.",
       "can": "Darf",
-      "canSee": "Die Agenten und Kanäle sehen, die du siehst.",
+      "canSee": "Die Agenten, Kanäle und Wiki-Seiten sehen, die du siehst.",
       "canSend": "Nachrichten in deinem Namen senden, markiert mit „via {{app}}“.",
       "canRead": "Die Antworten lesen und sehen, was Agenten tun.",
-      "canManage": "Agenten, Routinen und Skills in deinem Namen erstellen und bearbeiten. Du bekommst einen Hinweis, was erstellt wurde.",
+      "canManage": "Agenten, Routinen und Skills in deinem Namen erstellen und bearbeiten, mit einem Hinweis, was erstellt wurde. Wiki-Seiten in deinem Namen schreiben und in den Papierkorb legen.",
       "never": "Niemals",
       "neverApprove": "Aktionen von Agenten freigeben. Freigaben bleiben bei Personen in agentes.chat.",
       "neverSettings": "Einstellungen, Mitglieder oder Berechtigungen ändern.",
@@ -19387,6 +19414,13 @@
     "deleteOrg": "{{name}} löschen",
     "submit": "Konto löschen",
     "deleted": "Dein Konto verschwindet am {{date}} endgültig. Melde dich vorher an, um es wiederherzustellen."
+  },
+  "planMove": {
+    "warning": "Dein Tarif bleibt bei diesem Workspace und verlängert sich nicht mehr. Willst du ihn vorher in einen anderen Workspace verschieben?",
+    "deleting": "Dein Tarif verlängert sich damit nicht mehr. Du kannst ihn in einen anderen Workspace verschieben.",
+    "how": "Dieselbe Karte und der bezahlte Zeitraum gehen mit. Nichts wird erneut berechnet und nichts erstattet.",
+    "button": "Meinen Tarif nach {{name}} verschieben",
+    "moving": "Dein Tarif wird nach {{name}} verschoben. In etwa einer Minute ist er da."
   },
   "billing": {
     "open": "Tarif und Abrechnung öffnen",

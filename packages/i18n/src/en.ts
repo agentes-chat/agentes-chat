@@ -1217,6 +1217,8 @@ export const en = {
     },
     back: "Back",
     leave: "Back to {{name}}",
+    /** The onboarding rail's back arrow, for someone with another workspace: this one stays, to finish later. */
+    leaveLater: "Back to {{name}}, finish later",
     actions: {
       continue: "Continue",
       create_one: "Create {{count}} agent",
@@ -1229,7 +1231,11 @@ export const en = {
     /** The first question (ADR 0159): who the workspace is for. "For me" makes a personal one at once. */
     purpose: {
       title: "What will you use agentes.chat for?",
-      lead: "You can change this later, nothing is lost.",
+      lead: "You can switch the workspace mode anytime in Settings, without losing anything.",
+      /** The web's lead, short: the note under the answers says the choice can change (`switchTitle`, `switchText`). */
+      pick: "Choose how you want to see agentes.chat.",
+      switchTitle: "Switch anytime.",
+      switchText: "The workspace mode changes in Settings, and nothing is lost.",
       personal: "For me",
       personalText: "Agents that look after your day.",
       team: "For my team",
@@ -1237,9 +1243,9 @@ export const en = {
       /** A quiet line of what it does, under each answer. */
       personalExamples: "Your day at 7 · Bills · Training",
       teamExamples: "Customer support · Finance · Reports",
-      /** The web's cards (ADR 0162): one line under the title, then a pill per agent of the drawing. */
-      personalLine: "Agents that look after your day.",
-      teamLine: "People and agents in one place.",
+      /** The web's answers (ADR 0162): what each view is, under its title (the simpler keeps every feature). */
+      personalLine: "A simpler view, with every feature.",
+      teamLine: "The full view, with channels and people.",
       /** What each agent of a card's drawing does, on its pill: a few words. */
       activities: {
         agenda: "Daily agenda",
@@ -3658,6 +3664,15 @@ export const en = {
       antigravity: "Gemini isn't signed in on this computer. Connect a Gemini account on {{name}}'s\u00a0page.",
       opencode: "OpenCode can't think on this computer. Connect an OpenCode key on {{name}}'s\u00a0page.",
     },
+    /** The same, naming the computer it isn't signed in on (`NoAiCard.computer`). */
+    notSignedInOn: {
+      claude_code: "Claude Code isn't signed in on {{computer}}. Connect a Claude account on {{name}}'s\u00a0page.",
+      codex: "Codex isn't signed in on {{computer}}. Connect a ChatGPT account on {{name}}'s\u00a0page.",
+      cursor: "Cursor isn't signed in on {{computer}}. Connect a Cursor account on {{name}}'s\u00a0page.",
+      grok: "Grok isn't signed in on {{computer}}. Connect a Grok account on {{name}}'s\u00a0page.",
+      antigravity: "Gemini isn't signed in on {{computer}}. Connect a Gemini account on {{name}}'s\u00a0page.",
+      opencode: "OpenCode can't think on {{computer}}. Connect an OpenCode key on {{name}}'s\u00a0page.",
+    },
     card: {
       connected: "{{name}} has an AI now.",
       answerNow: "Answer now",
@@ -3780,6 +3795,8 @@ export const en = {
     chat: {
       mine: "Yours",
       yours: "Yours",
+      /** A free tier nobody owns (OpenCode's free models), where a plan says whose it is. */
+      free: "Free",
       keys: "Workspace key",
       /** A group of the switch screen's accounts by AI: the workspace's API keys. */
       apiKeys: "API keys",
@@ -15453,6 +15470,13 @@ export const en = {
     },
   },
   errors: {
+    /** Moving a plan to another workspace (ADR 0079). */
+    planMove: {
+      notPayer: "Only the person who pays for the plan can move it.",
+      same: "Pick another workspace to move the plan to.",
+      targetHasPlan: "That workspace has a plan already. Reload to see your workspaces as they are now.",
+      targetDeleting: "That workspace is being deleted. Restore it first, or pick another one.",
+    },
     /** Linking an outside chat app (ADR 0187). The server's refusals carry no app name, so none is said. */
     surface: {
       off: "Linking chat apps was turned off. Reload to see your settings as they are now.",
@@ -16937,6 +16961,9 @@ export const en = {
       resumed_other: "{{count}} tasks started again",
       stillWaiting_one: "{{count}} still waits for {{name}}",
       stillWaiting_other: "{{count}} still wait for {{name}}",
+      /** An agent moved without its plan: a sign-in is a folder on one computer (ADR 0041). */
+      planDropped: "{{name}}'s {{plan}} plan is signed in on {{from}}. Sign in on {{to}} too, or keep {{from}}.",
+      signIn: "Sign in on {{name}}",
       skipped: "{{name}} stayed: {{reason}}",
       skip: {
         other: "couldn't switch right now",
@@ -17211,14 +17238,16 @@ export const en = {
       write: "Read and send tasks to agents",
       writeHelp: "Sends messages as you and reads the replies.",
       manage: "Create and edit agents, routines and skills",
-      manageHelp: "Also creates agents, routines, skills and memories for you, with your permissions.",
+      manageHelp:
+        "Also creates agents, routines, skills and memories and writes wiki pages for you, with your permissions.",
       read: "Read only",
-      readHelp: "Sees agents, channels and replies, without sending anything.",
+      readHelp: "Sees agents, channels, wiki pages and replies, without sending anything.",
       can: "Can",
-      canSee: "See the agents and channels you see.",
+      canSee: "See the agents, channels and wiki pages you see.",
       canSend: "Send messages as you, marked via {{app}}.",
       canRead: "Read the replies and what agents are doing.",
-      canManage: "Create and edit agents, routines and skills as you. You get a notice of what it creates.",
+      canManage:
+        "Create and edit agents, routines and skills as you, with a notice of what it creates. Write wiki pages and move them to the trash as you.",
       never: "Never",
       neverApprove: "Approve agents' actions. Approvals stay with people in agentes.chat.",
       neverSettings: "Change settings, members or permissions.",
@@ -20017,6 +20046,20 @@ export const en = {
     deleteOrg: "Delete {{name}}",
     submit: "Delete account",
     deleted: "Your account goes for good on {{date}}. Sign in before then to restore it.",
+  },
+  /**
+   * Moving a plan to another workspace (ADR 0079), offered to its payer where it would be lost: deleting the workspace,
+   * and the line of one being deleted. `{{name}}`: the workspace it goes to.
+   */
+  planMove: {
+    /** In the dialog that deletes the workspace. */
+    warning: "Your plan stays with this workspace and stops renewing. Move it to another one of yours first?",
+    /** On the line of a workspace being deleted. */
+    deleting: "Your plan stops renewing with it. You can move it to another workspace.",
+    /** Behind the ⓘ beside either line. */
+    how: "The same card and paid period go with it. Nothing is charged again and nothing is refunded.",
+    button: "Move my plan to {{name}}",
+    moving: "Your plan is moving to {{name}}. It's there in about a minute.",
   },
   /** The billing service (ADR 0079): this server shows no plan, price or currency, only the way there. */
   billing: {

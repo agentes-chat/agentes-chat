@@ -30,21 +30,24 @@ import { modeKey } from "@agenteschat/client/lib/workspace-mode";
 import { Button, Chip, Dialog, DialogFooter, EventPill, EventPillAction, Icon, InfoHint } from "@agenteschat/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { usePlanHold } from "@/components/ai/ConnectAiSteps";
+import { usePlanHold } from "@/components/ai/plan-hold";
 import { useOpenBilling } from "@/components/BillingLinkButton";
-import { type ConnectAiRequest, useConnectAi } from "@/components/ConnectAi";
+import { type ConnectAiRequest, useConnectAi } from "@/components/connect-ai-context";
 import { useOrg } from "@/components/org-context";
 import { RequestDone, RequestNote, RequestOpen } from "@/components/RequestCard";
 import { TeamTemplatesDialog } from "@/components/TeamPlan";
-import { VaultNewDialog } from "@/components/vault/VaultNewDialog";
 import { useDirectory } from "@/hooks/useDirectory";
 import { usePaidReturn } from "@/lib/paid-return";
 import { STORAGE_KEYS, sessionStore } from "@/lib/storage";
 import { useToast } from "@/lib/toast";
 import { useChannelEvents } from "@/realtime/context";
 import "./no-ai.css";
+import { lazyDialog } from "@/lib/lazy-dialog";
+
+// The vault's form comes when a key is kept there: this card shows under messages, on the Home's first steps too.
+const VaultNewDialog = lazyDialog(() => import("@/components/vault/VaultNewDialog").then((m) => m.VaultNewDialog));
 
 /*
  * No AI connected (ADR 0061), wherever it shows: above the composer, the agent's card in the
@@ -157,7 +160,7 @@ export function NoAiCard({ message }: { message: Message }) {
       ? t("noAi.card.connected", { name })
       : answer === "still_missing"
         ? t("noAi.card.stillMissing", { name })
-        : t(noAiLineKey(card), agentGrammar(name));
+        : t(noAiLineKey(card), { ...agentGrammar(name), computer: card.computer });
   // Its agent has an AI now (or is answering): a decided request, one pill with "Answer now" in it.
   if (ready || answering || answer === "pending")
     return (
@@ -549,21 +552,23 @@ export function KeyGuardDialog({
         </DialogFooter>
       </Dialog>
       {vault && (
-        <VaultNewDialog
-          canManageTeam={can(org, "manage_credentials")}
-          scope="personal"
-          initial={{ keyName: vault.name, secret: vault.key }}
-          onClose={() => setVault(null)}
-          onCreated={(item) => {
-            setVault(null);
-            toast.show(
-              t("vault.new.saved"),
-              "success",
-              undefined,
-              t("keyGuard.saved", { name: item.keyName ?? item.title }),
-            );
-          }}
-        />
+        <Suspense fallback={null}>
+          <VaultNewDialog
+            canManageTeam={can(org, "manage_credentials")}
+            scope="personal"
+            initial={{ keyName: vault.name, secret: vault.key }}
+            onClose={() => setVault(null)}
+            onCreated={(item) => {
+              setVault(null);
+              toast.show(
+                t("vault.new.saved"),
+                "success",
+                undefined,
+                t("keyGuard.saved", { name: item.keyName ?? item.title }),
+              );
+            }}
+          />
+        </Suspense>
       )}
     </>
   );

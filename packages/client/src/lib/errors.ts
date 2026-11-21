@@ -20,6 +20,11 @@ export const REAUTH_PASSWORD = "reauth.password";
  * takes `untranslatedText`; a guard test (`error-words.test.ts`) fails on a new code that isn't here or on its list.
  */
 const KNOWN = {
+  // Moving a plan to another workspace (ADR 0079).
+  "plan_move.not_payer": "errors.planMove.notPayer",
+  "plan_move.same": "errors.planMove.same",
+  "plan_move.target_has_plan": "errors.planMove.targetHasPlan",
+  "plan_move.target_deleting": "errors.planMove.targetDeleting",
   // Linking an outside chat surface (ADR 0187). The lines name no surface: the server's errors carry no name.
   "surface.off": "errors.surface.off",
   "surface.not_allowed": "errors.surface.notAllowed",

@@ -380,13 +380,13 @@ export {
   CardHeader,
   EmptyState,
   type EmptyStateProps,
-  LIST_STAGGER_MS,
   List,
   ListRow,
   type ListRowProps,
   Meter,
   OptionCard,
   Steps,
+  settleOnNextFrame,
 } from "./components/Surfaces";
 export { type TabItem, TabPanel, Tabs } from "./components/Tabs";
 export { normalizeTime, TimeSelect, type TimeSelectProps, timeOptions } from "./components/TimeSelect";

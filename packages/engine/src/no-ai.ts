@@ -31,8 +31,8 @@ const { agentRunSteps, agentRuns, agents, messages, routingDecisions } = schema;
  */
 export const NO_AI_TEXT = "I can't answer yet: I have no AI connected.";
 const NO_AI_SIGNED_OUT_TEXT = "I can't answer yet: my AI is signed out.";
-const noAiNotSignedInText = (own: NonNullable<AgentAi["own"]>) =>
-  `I can't answer yet: ${BRAIN_NAMES[own]} isn't signed in on my computer.`;
+const noAiNotSignedInText = (own: NonNullable<AgentAi["own"]>, computer?: string) =>
+  `I can't answer yet: ${BRAIN_NAMES[own]} isn't signed in on ${computer ?? "my computer"}.`;
 /**
  * Why it can't think, when that's more than no AI: its computer has no such CLI or no computer at all, and for the
  * team's right hand on a plan (`rightHandNoAiReason`), why that plan can't think for this message.
@@ -81,6 +81,8 @@ export interface NoAiCard extends ConnectIntent {
   reason: NoAiCardReason;
   /** With `not_signed_in`: the computer's own sign-in of this CLI isn't there, not an account's (`AgentAi.own`). */
   own?: AgentAi["own"];
+  /** With `own`: the name of the computer it isn't signed in on. */
+  computer?: string;
   /** With `model_limit`, `model_region` and `model_off`: the model's name the line says ("Kimi K2"). */
   model?: string;
   /** With `cli_failed`: what the plan's CLI said (`cliWords`), the cause the line names. */
@@ -96,6 +98,16 @@ export const noAiCardOf = (m: Pick<Message, "authorType" | "meta">): NoAiCard | 
   const card = m.meta.noAi as Partial<NoAiCard> | undefined;
   return m.authorType === "agent" && card && typeof card.agentId === "string" ? (card as NoAiCard) : null;
 };
+
+async function agentComputerName(db: Executor, run: Pick<AgentRun, "orgId" | "agentId">) {
+  const { agents, machines } = schema;
+  const [row] = await db
+    .select({ name: machines.name })
+    .from(agents)
+    .innerJoin(machines, and(eq(machines.orgId, agents.orgId), eq(machines.id, agents.machineId)))
+    .where(and(eq(agents.orgId, run.orgId), eq(agents.id, run.agentId)));
+  return row?.name;
+}
 
 /** Agents with a card (`code`: of that kind) in this conversation within `NO_AI_CARD_EVERY_MS`. */
 async function cardsPosted(
@@ -154,11 +166,13 @@ export async function postNoAiCard(
     // The agents of one message fail together: they take turns here, so the organization gets one card.
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`no-ai-card:${run.channelId}:${threadId ?? ""}`}))`);
     if (repeated(await cardsPosted(tx, run, threadId))) return null;
+    const computer = own ? await agentComputerName(tx, run) : undefined;
     const noAi: NoAiCard = {
       agentId: run.agentId,
       forUserId,
       reason,
       ...(own ? { own } : {}),
+      ...(computer ? { computer } : {}),
       ...(model ? { model } : {}),
       ...(why && reason === "cli_failed" ? { why } : {}),
       ...(reason === "plans_not_yours" && notYours?.owner ? { owner: notYours.owner, plan: notYours.plan } : {}),
@@ -171,7 +185,7 @@ export async function postNoAiCard(
       threadId,
       author: { type: "agent", agentId: run.agentId, runId: run.id, hop: run.hop },
       body: own
-        ? noAiNotSignedInText(own)
+        ? noAiNotSignedInText(own, computer)
         : noAi.why
           ? cliFailedText(noAi.why)
           : (REASON_TEXT[reason] ?? (reason === "not_signed_in" ? NO_AI_SIGNED_OUT_TEXT : NO_AI_TEXT)),

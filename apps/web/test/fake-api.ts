@@ -2097,6 +2097,9 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         if (state.billingLinkError) throw state.billingLinkError;
         return { url: `https://billing.example.com/link?t=${from}`, expiresAt: NOW.toISOString() };
       },
+      movePlan: async (orgId, to) => {
+        log("orgs.movePlan", orgId, to);
+      },
       limits: async () =>
         state.limits ?? {
           members: { used: state.members.length, limit: null },

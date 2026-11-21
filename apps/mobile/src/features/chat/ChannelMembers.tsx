@@ -384,16 +384,16 @@ function ChannelOwnActions({ channel }: { channel: Channel }) {
   const leave = useLeaveChannel(orgId);
   const roster = useRoster(orgId, channel.id);
   const failed = (e: unknown) => toast({ title: errorText(t, e, i18n.language), icon: "x" });
-  const go = () =>
-    leave.mutate(channel.id, {
-      onSuccess: () => {
-        successHaptic();
-        toast({ title: t("channel.left", { channel: channel.name }), icon: "check" });
-        // This screen and the conversation under it.
-        router.dismiss(2);
-      },
-      onError: failed,
-    });
+  // The channel leaves my lists before the server answers: this screen and the conversation under it go at once, and
+  // the answer arrives as a toast (a refusal puts the lists back). The promise, not per-call callbacks: they don't run
+  // once this screen is gone.
+  const go = () => {
+    successHaptic();
+    router.dismiss(2);
+    leave
+      .mutateAsync(channel.id)
+      .then(() => toast({ title: t("channel.left", { channel: channel.name }), icon: "check" }), failed);
+  };
   const ask = () => {
     if (channel.visibility !== "private") return go();
     const alone = (roster.data ?? []).filter((m) => m.type !== "agent").length === 1;

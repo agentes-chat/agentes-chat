@@ -1146,6 +1146,7 @@ export const ptBR = {
     },
     back: "Voltar",
     leave: "Voltar para {{name}}",
+    leaveLater: "Voltar para {{name}} e terminar depois",
     actions: {
       continue: "Continuar",
       create_one: "Criar {{count}} agente",
@@ -1157,15 +1158,18 @@ export const ptBR = {
     yourCompany: "sua empresa",
     purpose: {
       title: "Para que você vai usar o agentes.chat?",
-      lead: "Dá para mudar depois, nada se perde.",
+      lead: "Você pode trocar o modo do workspace a qualquer hora nas Configurações, sem perder nada.",
+      pick: "Escolha como você quer ver o agentes.chat.",
+      switchTitle: "Troque quando quiser.",
+      switchText: "O modo do workspace muda nas Configurações, e nada se perde.",
       personal: "Para mim",
       personalText: "Agentes que cuidam do seu dia.",
       team: "Para meu time",
       teamText: "Pessoas e agentes trabalham juntos, com canais, cargos e aprovações.",
       personalExamples: "O seu dia às 7h · Contas · Treino",
       teamExamples: "Atendimento · Financeiro · Relatórios",
-      personalLine: "Agentes que cuidam do seu dia.",
-      teamLine: "Pessoas e agentes no mesmo lugar.",
+      personalLine: "Uma visão mais simples, com todos os recursos.",
+      teamLine: "A visão completa, com canais e pessoas.",
       activities: {
         agenda: "Agenda do dia",
         home: "Casa",
@@ -3538,6 +3542,26 @@ export const ptBR = {
       opencode_female:
         "O OpenCode não consegue pensar neste computador. Conecte uma chave do OpenCode na página da\u00a0{{name}}.",
     },
+    /** The same, naming the computer it isn't signed in on (`NoAiCard.computer`). */
+    notSignedInOn: {
+      claude_code:
+        "O Claude Code está sem login no {{computer}}. Conecte uma conta do Claude na página do\u00a0{{name}}.",
+      claude_code_female:
+        "O Claude Code está sem login no {{computer}}. Conecte uma conta do Claude na página da\u00a0{{name}}.",
+      codex: "O Codex está sem login no {{computer}}. Conecte uma conta do ChatGPT na página do\u00a0{{name}}.",
+      codex_female: "O Codex está sem login no {{computer}}. Conecte uma conta do ChatGPT na página da\u00a0{{name}}.",
+      cursor: "O Cursor está sem login no {{computer}}. Conecte uma conta do Cursor na página do\u00a0{{name}}.",
+      cursor_female: "O Cursor está sem login no {{computer}}. Conecte uma conta do Cursor na página da\u00a0{{name}}.",
+      grok: "O Grok está sem login no {{computer}}. Conecte uma conta do Grok na página do\u00a0{{name}}.",
+      grok_female: "O Grok está sem login no {{computer}}. Conecte uma conta do Grok na página da\u00a0{{name}}.",
+      antigravity: "O Gemini está sem login no {{computer}}. Conecte uma conta do Gemini na página do\u00a0{{name}}.",
+      antigravity_female:
+        "O Gemini está sem login no {{computer}}. Conecte uma conta do Gemini na página da\u00a0{{name}}.",
+      opencode:
+        "O OpenCode não consegue pensar no {{computer}}. Conecte uma chave do OpenCode na página do\u00a0{{name}}.",
+      opencode_female:
+        "O OpenCode não consegue pensar no {{computer}}. Conecte uma chave do OpenCode na página da\u00a0{{name}}.",
+    },
     card: {
       connected: "{{name}} já tem uma IA.",
       answerNow: "Responder agora",
@@ -3657,6 +3681,7 @@ export const ptBR = {
     chat: {
       mine: "Suas",
       yours: "Sua",
+      free: "Grátis",
       keys: "Chave do workspace",
       /** A group of the switch screen's accounts by AI: the workspace's API keys. */
       apiKeys: "Chaves de API",
@@ -15396,6 +15421,13 @@ export const ptBR = {
     },
   },
   errors: {
+    /** Moving a plan to another workspace (ADR 0079). */
+    planMove: {
+      notPayer: "Só quem paga o plano pode mover.",
+      same: "Escolha outro workspace para onde mover o plano.",
+      targetHasPlan: "Esse workspace já tem um plano. Recarregue para ver seus workspaces como estão agora.",
+      targetDeleting: "Esse workspace está sendo apagado. Restaure antes, ou escolha outro.",
+    },
     surface: {
       off: "A vinculação de apps de chat foi desligada. Recarregue para ver suas configurações como estão agora.",
       notAllowed: "Vincular um app de chat ainda não está aberto para sua conta. Continue usando o app aqui até abrir.",
@@ -16814,6 +16846,9 @@ export const ptBR = {
       resumed_other: "{{count}} tarefas recomeçaram",
       stillWaiting_one: "{{count}} ainda espera o {{name}}",
       stillWaiting_other: "{{count}} ainda esperam o {{name}}",
+      planDropped:
+        "O plano do {{plan}} de {{name}} está conectado no {{from}}. Entre também no {{to}}, ou mantenha o {{from}}.",
+      signIn: "Entrar no {{name}}",
       skipped: "{{name}} ficou: {{reason}}",
       skip: {
         other: "não deu para trocar agora",
@@ -17080,14 +17115,16 @@ export const ptBR = {
       write: "Ler e mandar tarefas aos agentes",
       writeHelp: "Manda mensagens em seu nome e lê as respostas.",
       manage: "Criar e editar agentes, rotinas e skills",
-      manageHelp: "Também cria agentes, rotinas, skills e memórias em seu nome, com as suas permissões.",
+      manageHelp:
+        "Também cria agentes, rotinas, skills e memórias e escreve páginas da wiki em seu nome, com as suas permissões.",
       read: "Só ler",
-      readHelp: "Vê agentes, canais e respostas, sem mandar nada.",
+      readHelp: "Vê agentes, canais, páginas da wiki e respostas, sem mandar nada.",
       can: "Pode",
-      canSee: "Ver os agentes e os canais que você vê.",
+      canSee: "Ver os agentes, os canais e as páginas da wiki que você vê.",
       canSend: "Mandar mensagens como você, marcadas com via {{app}}.",
       canRead: "Ler as respostas e o que os agentes estão fazendo.",
-      canManage: "Criar e editar agentes, rotinas e skills como você. Você recebe um aviso do que ele criar.",
+      canManage:
+        "Criar e editar agentes, rotinas e skills como você, com um aviso do que ele criar. Escrever páginas da wiki e mandá-las para a lixeira como você.",
       never: "Nunca",
       neverApprove: "Aprovar ações dos agentes. Aprovações ficam com pessoas no agentes.chat.",
       neverSettings: "Mudar configurações, membros ou permissões.",
@@ -19891,6 +19928,20 @@ export const ptBR = {
     deleteOrg: "Apagar {{name}}",
     submit: "Apagar conta",
     deleted: "Sua conta some de vez em {{date}}. Entre antes disso para restaurar.",
+  },
+  /**
+   * Moving a plan to another workspace (ADR 0079), offered to its payer where it would be lost: deleting the workspace,
+   * and the line of one being deleted. `{{name}}`: the workspace it goes to.
+   */
+  planMove: {
+    /** In the dialog that deletes the workspace. */
+    warning: "Seu plano fica com este workspace e para de renovar. Quer mover para outro seu antes?",
+    /** On the line of a workspace being deleted. */
+    deleting: "Seu plano para de renovar com ele. Você pode mover para outro workspace.",
+    /** Behind the ⓘ beside either line. */
+    how: "O mesmo cartão e o período já pago vão junto. Nada é cobrado de novo e nada é reembolsado.",
+    button: "Mover meu plano para {{name}}",
+    moving: "Seu plano está indo para {{name}}. Chega em cerca de um minuto.",
   },
   /** The billing service (ADR 0079): this server shows no plan, price or currency, only the way there. */
   billing: {

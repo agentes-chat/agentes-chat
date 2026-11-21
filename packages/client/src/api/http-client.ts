@@ -703,6 +703,9 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         request<{ url: string; expiresAt: string }>(`${org(orgId)}/billing-link`, {
           json: { from, returnTo, ...(plan ? { plan } : {}) },
         }),
+      movePlan: async (orgId, to) => {
+        await request(`${org(orgId)}/plan-move`, { json: { to } });
+      },
       limits: (orgId) => request<WorkspaceLimits>(`${org(orgId)}/limits`),
       updateMe: (orgId, input) => request<Person>(`${org(orgId)}/me`, { method: "PATCH", json: input }),
       setStatus: (orgId, input) => request<Person>(`${org(orgId)}/me/status`, { method: "PUT", json: input }),

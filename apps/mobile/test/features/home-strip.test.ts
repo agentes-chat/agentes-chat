@@ -148,7 +148,7 @@ describe("Conversas with the strip and one list", () => {
   });
 
   test("loading stands as the one section it will be; nothing yet invites the first conversation", () => {
-    const loading = home.slice(home.indexOf(") : list.loading ? ("), home.indexOf("<HomeWidgets"));
+    const loading = home.slice(home.indexOf("<SkeletonOver"), home.indexOf("<HomeWidgets"));
     expect(loading).toContain('title={t("mobile.chats.recent")}');
     expect(loading).toContain("<SkeletonList rows={6} />");
     expect(loading).not.toContain("count=");

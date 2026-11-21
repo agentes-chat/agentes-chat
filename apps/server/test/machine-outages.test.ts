@@ -116,7 +116,7 @@ test("outages and move-agents over HTTP: the contract the apps read", async () =
     json: { agentIds: [agentId], target: { kind: "machine", machineId: pro } },
   });
   expect(res.status).toBe(200);
-  expect(await res.json()).toEqual({ moved: [agentId], skipped: [], resumed: 1, stillWaiting: 0 });
+  expect(await res.json()).toEqual({ moved: [agentId], skipped: [], resumed: 1, stillWaiting: 0, planDropped: [] });
   const [moved] = await t.db
     .select()
     .from(schema.agentRuns)

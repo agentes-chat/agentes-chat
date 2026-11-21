@@ -1071,6 +1071,7 @@
     },
     "back": "Kembali",
     "leave": "Kembali ke {{name}}",
+    "leaveLater": "Kembali ke {{name}}, lanjutkan nanti",
     "actions": {
       "continue": "Lanjut",
       "create_other": "Buat {{count}} agen",
@@ -1080,15 +1081,18 @@
     "yourCompany": "perusahaanmu",
     "purpose": {
       "title": "Untuk apa kamu akan memakai agentes.chat?",
-      "lead": "Bisa diubah nanti, tidak ada yang hilang.",
+      "lead": "Kamu bisa mengganti mode ruang kerja kapan saja di Pengaturan, tanpa kehilangan apa pun.",
+      "pick": "Pilih cara kamu ingin melihat agentes.chat.",
+      "switchTitle": "Ganti kapan saja.",
+      "switchText": "Mode ruang kerja diubah di Pengaturan, dan tidak ada yang hilang.",
       "personal": "Untukku",
       "personalText": "Agen yang mengurus harimu.",
       "team": "Untuk timku",
       "teamText": "Orang dan agen bekerja bersama, dengan kanal, peran, dan persetujuan.",
       "personalExamples": "Harimu jam 7 · Tagihan · Latihan",
       "teamExamples": "Layanan pelanggan · Keuangan · Laporan",
-      "personalLine": "Agen yang mengurus harimu.",
-      "teamLine": "Orang dan agen di satu tempat.",
+      "personalLine": "Tampilan yang lebih sederhana, dengan semua fitur.",
+      "teamLine": "Tampilan lengkap, dengan kanal dan orang.",
       "activities": {
         "agenda": "Agenda harian",
         "home": "Rumah",
@@ -3246,6 +3250,20 @@
       "opencode": "OpenCode tidak bisa berpikir di komputer ini. Hubungkan kunci OpenCode di halaman {{name}}.",
       "opencode_female": "OpenCode tidak bisa berpikir di komputer ini. Hubungkan kunci OpenCode di halaman {{name}}."
     },
+    "notSignedInOn": {
+      "claude_code": "Claude Code belum masuk di {{computer}}. Hubungkan akun Claude di halaman {{name}}.",
+      "claude_code_female": "Claude Code belum masuk di {{computer}}. Hubungkan akun Claude di halaman {{name}}.",
+      "codex": "Codex belum masuk di {{computer}}. Hubungkan akun ChatGPT di halaman {{name}}.",
+      "codex_female": "Codex belum masuk di {{computer}}. Hubungkan akun ChatGPT di halaman {{name}}.",
+      "cursor": "Cursor belum masuk di {{computer}}. Hubungkan akun Cursor di halaman {{name}}.",
+      "cursor_female": "Cursor belum masuk di {{computer}}. Hubungkan akun Cursor di halaman {{name}}.",
+      "grok": "Grok belum masuk di {{computer}}. Hubungkan akun Grok di halaman {{name}}.",
+      "grok_female": "Grok belum masuk di {{computer}}. Hubungkan akun Grok di halaman {{name}}.",
+      "antigravity": "Gemini belum masuk di {{computer}}. Hubungkan akun Gemini di halaman {{name}}.",
+      "antigravity_female": "Gemini belum masuk di {{computer}}. Hubungkan akun Gemini di halaman {{name}}.",
+      "opencode": "OpenCode tidak bisa berpikir di {{computer}}. Hubungkan kunci OpenCode di halaman {{name}}.",
+      "opencode_female": "OpenCode tidak bisa berpikir di {{computer}}. Hubungkan kunci OpenCode di halaman {{name}}."
+    },
     "card": {
       "connected": "{{name}} sekarang punya AI.",
       "answerNow": "Jawab sekarang",
@@ -3334,6 +3352,7 @@
     "chat": {
       "mine": "Milikmu",
       "yours": "Milikmu",
+      "free": "Gratis",
       "keys": "Kunci ruang kerja",
       "apiKeys": "Kunci API",
       "best": "Paling longgar saat ini",
@@ -14660,6 +14679,12 @@
     }
   },
   "errors": {
+    "planMove": {
+      "notPayer": "Hanya orang yang membayar paket yang bisa memindahkannya.",
+      "same": "Pilih ruang kerja lain untuk tujuan paket.",
+      "targetHasPlan": "Ruang kerja itu sudah punya paket. Muat ulang untuk melihat ruang kerjamu yang terbaru.",
+      "targetDeleting": "Ruang kerja itu sedang dihapus. Pulihkan dulu, atau pilih yang lain."
+    },
     "surface": {
       "off": "Penautan aplikasi chat sudah dimatikan. Muat ulang untuk melihat pengaturanmu yang sekarang.",
       "notAllowed": "Menautkan aplikasi chat belum dibuka untuk akunmu. Tetap pakai aplikasi di sini sampai dibuka.",
@@ -15996,6 +16021,8 @@
       "none": "Tidak ada yang pindah komputer.",
       "resumed_other": "{{count}} tugas berjalan lagi",
       "stillWaiting_other": "{{count}} masih menunggu {{name}}",
+      "planDropped": "Paket {{plan}} milik {{name}} masuk di {{from}}. Masuk juga di {{to}}, atau tetap pakai {{from}}.",
+      "signIn": "Masuk di {{name}}",
       "skipped": "{{name}} tetap: {{reason}}",
       "skip": {
         "other": "tidak bisa pindah sekarang",
@@ -16250,14 +16277,14 @@
       "write": "Membaca dan mengirim tugas ke agen",
       "writeHelp": "Mengirim pesan atas namamu dan membaca balasannya.",
       "manage": "Membuat dan mengedit agen, rutinitas, dan skill",
-      "manageHelp": "Juga membuat agen, rutinitas, skill, dan memori untukmu, dengan izinmu.",
+      "manageHelp": "Juga membuat agen, rutinitas, skill, dan memori serta menulis halaman wiki untukmu, dengan izinmu.",
       "read": "Hanya baca",
-      "readHelp": "Melihat agen, kanal, dan balasan, tanpa mengirim apa pun.",
+      "readHelp": "Melihat agen, kanal, halaman wiki, dan balasan, tanpa mengirim apa pun.",
       "can": "Bisa",
-      "canSee": "Melihat agen dan kanal yang kamu lihat.",
+      "canSee": "Melihat agen, kanal, dan halaman wiki yang kamu lihat.",
       "canSend": "Mengirim pesan atas namamu, ditandai via {{app}}.",
       "canRead": "Membaca balasan dan apa yang sedang dikerjakan agen.",
-      "canManage": "Membuat dan mengedit agen, rutinitas, dan skill atas namamu. Kamu mendapat pemberitahuan tentang apa yang dibuatnya.",
+      "canManage": "Membuat dan mengedit agen, rutinitas, dan skill atas namamu, dengan pemberitahuan tentang apa yang dibuatnya. Menulis halaman wiki dan memindahkannya ke tempat sampah atas namamu.",
       "never": "Tidak pernah",
       "neverApprove": "Menyetujui tindakan agen. Persetujuan tetap di tangan orang di agentes.chat.",
       "neverSettings": "Mengubah pengaturan, anggota, atau izin.",
@@ -18813,6 +18840,13 @@
     "deleteOrg": "Hapus {{name}}",
     "submit": "Hapus akun",
     "deleted": "Akunmu hilang selamanya pada {{date}}. Masuk sebelum itu untuk memulihkannya."
+  },
+  "planMove": {
+    "warning": "Paketmu tetap di ruang kerja ini dan berhenti diperpanjang. Pindahkan dulu ke ruang kerjamu yang lain?",
+    "deleting": "Paketmu berhenti diperpanjang bersamanya. Kamu bisa memindahkannya ke ruang kerja lain.",
+    "how": "Kartu yang sama dan periode yang sudah dibayar ikut pindah. Tidak ada tagihan ulang dan tidak ada pengembalian dana.",
+    "button": "Pindahkan paketku ke {{name}}",
+    "moving": "Paketmu sedang dipindahkan ke {{name}}. Sampai dalam sekitar satu menit."
   },
   "billing": {
     "open": "Buka paket dan tagihan",

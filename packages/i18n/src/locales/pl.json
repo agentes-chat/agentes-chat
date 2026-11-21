@@ -1146,6 +1146,7 @@
     },
     "back": "Wstecz",
     "leave": "Wróć do {{name}}",
+    "leaveLater": "Wróć do {{name}} i dokończ później",
     "actions": {
       "continue": "Dalej",
       "create_one": "Utwórz {{count}} agenta",
@@ -1161,15 +1162,18 @@
     "yourCompany": "twoja firma",
     "purpose": {
       "title": "Do czego będziesz używać agentes.chat?",
-      "lead": "Możesz to później zmienić, nic nie przepadnie.",
+      "lead": "Tryb przestrzeni roboczej możesz zmienić w każdej chwili w Ustawieniach, nic nie tracąc.",
+      "pick": "Wybierz, jak chcesz widzieć agentes.chat.",
+      "switchTitle": "Zmień, kiedy chcesz.",
+      "switchText": "Tryb przestrzeni roboczej zmienisz w Ustawieniach i nic nie przepadnie.",
       "personal": "Dla mnie",
       "personalText": "Agenci, którzy dbają o twój dzień.",
       "team": "Dla mojego zespołu",
       "teamText": "Ludzie i agenci pracują razem, z kanałami, rolami i zatwierdzeniami.",
       "personalExamples": "Twój dzień o 7 · Rachunki · Trening",
       "teamExamples": "Obsługa klienta · Finanse · Raporty",
-      "personalLine": "Agenci, którzy dbają o Twój dzień.",
-      "teamLine": "Ludzie i agenci w jednym miejscu.",
+      "personalLine": "Prostszy widok, ze wszystkimi funkcjami.",
+      "teamLine": "Pełny widok, z kanałami i ludźmi.",
       "activities": {
         "agenda": "Plan dnia",
         "home": "Dom",
@@ -3664,6 +3668,14 @@
       "antigravity": "Gemini nie jest zalogowany na tym komputerze. Podłącz konto Gemini na stronie agenta {{name}}.",
       "opencode": "OpenCode nie może myśleć na tym komputerze. Połącz klucz OpenCode na stronie agenta {{name}}."
     },
+    "notSignedInOn": {
+      "claude_code": "Claude Code nie jest zalogowany na komputerze {{computer}}. Podłącz konto Claude na stronie agenta {{name}}.",
+      "codex": "Codex nie jest zalogowany na komputerze {{computer}}. Podłącz konto ChatGPT na stronie agenta {{name}}.",
+      "cursor": "Cursor nie jest zalogowany na komputerze {{computer}}. Podłącz konto Cursor na stronie agenta {{name}}.",
+      "grok": "Grok nie jest zalogowany na komputerze {{computer}}. Podłącz konto Grok na stronie agenta {{name}}.",
+      "antigravity": "Gemini nie jest zalogowany na komputerze {{computer}}. Podłącz konto Gemini na stronie agenta {{name}}.",
+      "opencode": "OpenCode nie może myśleć na komputerze {{computer}}. Połącz klucz OpenCode na stronie agenta {{name}}."
+    },
     "card": {
       "connected": "{{name}} ma teraz AI.",
       "answerNow": "Odpowiedz teraz",
@@ -3757,6 +3769,7 @@
     "chat": {
       "mine": "Twoje",
       "yours": "Twoje",
+      "free": "Darmowe",
       "keys": "Klucz przestrzeni roboczej",
       "apiKeys": "Klucze API",
       "best": "Teraz z największym zapasem",
@@ -16278,6 +16291,12 @@
     }
   },
   "errors": {
+    "planMove": {
+      "notPayer": "Tylko osoba, która płaci za plan, może go przenieść.",
+      "same": "Wybierz inną przestrzeń roboczą, do której przeniesiesz plan.",
+      "targetHasPlan": "Ta przestrzeń robocza ma już plan. Odśwież, aby zobaczyć aktualny stan swoich przestrzeni.",
+      "targetDeleting": "Ta przestrzeń robocza jest usuwana. Najpierw ją przywróć albo wybierz inną."
+    },
     "surface": {
       "off": "Łączenie aplikacji czatu zostało wyłączone. Odśwież stronę, aby zobaczyć aktualne ustawienia.",
       "notAllowed": "Łączenie aplikacji czatu nie jest jeszcze dostępne dla twojego konta. Do tego czasu korzystaj z aplikacji tutaj.",
@@ -17656,6 +17675,8 @@
       "stillWaiting_few": "{{count}} wciąż czekają na {{name}}",
       "stillWaiting_many": "{{count}} wciąż czeka na {{name}}",
       "stillWaiting_other": "{{count}} wciąż czekają na {{name}}",
+      "planDropped": "Plan {{plan}} agenta {{name}} jest zalogowany na komputerze {{from}}. Zaloguj się też na {{to}} albo zostaw {{from}}.",
+      "signIn": "Zaloguj się na {{name}}",
       "skipped": "{{name}} zostaje: {{reason}}",
       "skip": {
         "other": "nie można teraz przenieść",
@@ -17926,14 +17947,14 @@
       "write": "Czytanie i zlecanie zadań agentom",
       "writeHelp": "Wysyła wiadomości w twoim imieniu i czyta odpowiedzi.",
       "manage": "Tworzenie i edycja agentów, rutyn i umiejętności",
-      "manageHelp": "Tworzy też dla ciebie agentów, rutyny, umiejętności i wspomnienia, z twoimi uprawnieniami.",
+      "manageHelp": "Tworzy też dla ciebie agentów, rutyny, umiejętności i wspomnienia oraz pisze strony wiki, z twoimi uprawnieniami.",
       "read": "Tylko odczyt",
-      "readHelp": "Widzi agentów, kanały i odpowiedzi, nic nie wysyłając.",
+      "readHelp": "Widzi agentów, kanały, strony wiki i odpowiedzi, nic nie wysyłając.",
       "can": "Może",
-      "canSee": "Widzieć agentów i kanały, które ty widzisz.",
+      "canSee": "Widzieć agentów, kanały i strony wiki, które ty widzisz.",
       "canSend": "Wysyłać wiadomości w twoim imieniu, oznaczone jako wysłane przez {{app}}.",
       "canRead": "Czytać odpowiedzi i to, co robią agenci.",
-      "canManage": "Tworzyć i edytować agentów, rutyny i umiejętności w twoim imieniu. Dostaniesz powiadomienie o tym, co utworzy.",
+      "canManage": "Tworzyć i edytować agentów, rutyny i umiejętności w twoim imieniu, z powiadomieniem o tym, co utworzy. Pisać strony wiki i przenosić je do kosza w twoim imieniu.",
       "never": "Nigdy",
       "neverApprove": "Zatwierdzać akcji agentów. Zatwierdzenia zostają w rękach ludzi w agentes.chat.",
       "neverSettings": "Zmieniać ustawień, członków ani uprawnień.",
@@ -20637,6 +20658,13 @@
     "deleteOrg": "Usuń {{name}}",
     "submit": "Usuń konto",
     "deleted": "Twoje konto zniknie na dobre {{date}}. Zaloguj się wcześniej, aby je przywrócić."
+  },
+  "planMove": {
+    "warning": "Twój plan zostaje przy tej przestrzeni roboczej i nie będzie odnawiany. Przenieść go najpierw do innej Twojej przestrzeni?",
+    "deleting": "Twój plan nie będzie odnawiany razem z nią. Możesz przenieść go do innej przestrzeni roboczej.",
+    "how": "Ta sama karta i opłacony okres przechodzą razem z nim. Nic nie zostanie pobrane ponownie ani zwrócone.",
+    "button": "Przenieś mój plan do {{name}}",
+    "moving": "Twój plan jest przenoszony do {{name}}. Będzie tam za około minutę."
   },
   "billing": {
     "open": "Otwórz plan i płatności",

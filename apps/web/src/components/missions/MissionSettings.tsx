@@ -232,12 +232,11 @@ function SettingsBody({
                       icon="close"
                       aria-label={t("missions.settings.rules.remove", { command })}
                       title={t("missions.settings.rules.remove", { command })}
-                      disabled={removeRule.isPending}
+                      // Gone at once; each removal says how it went, even with another one still on its way.
                       onClick={() =>
-                        removeRule.mutate(r.id, {
-                          onSuccess: () => saved(t("missions.settings.rules.removed", { command })),
-                          onError: fail,
-                        })
+                        void removeRule
+                          .mutateAsync(r.id)
+                          .then(() => saved(t("missions.settings.rules.removed", { command })), fail)
                       }
                     />
                   )}
@@ -336,7 +335,7 @@ function SettingsBody({
             >
               <Select
                 value={brainView.effectiveModel ?? undefined}
-                disabled={!brainView.canSetModel || setBrain.isPending}
+                disabled={!brainView.canSetModel}
                 onValueChange={(model) =>
                   setBrain.mutate(
                     { model },
@@ -398,7 +397,7 @@ function SettingsBody({
             <Switch
               id={resumeId}
               checked={m.resumeTasks}
-              disabled={!m.canAct || setResume.isPending}
+              disabled={!m.canAct}
               onCheckedChange={(on) =>
                 setResume.mutate(on, {
                   onSuccess: () => saved(on ? t("missions.settings.recovery.on") : t("missions.settings.recovery.off")),

@@ -43,7 +43,7 @@ import { type CSSProperties, type ReactElement, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useOpenAgentPanel } from "@/components/agent-panel-context";
 import { TeamScene } from "@/components/arrival/TeamScene";
-import { useConnectAi } from "@/components/ConnectAi";
+import { useConnectAi } from "@/components/connect-ai-context";
 import { useOrg } from "@/components/org-context";
 import { useAgentThinks } from "@/hooks/useAgentThinks";
 import { fullLook, lookOf } from "@/lib/look";

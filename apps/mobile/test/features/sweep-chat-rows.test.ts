@@ -80,6 +80,13 @@ describe("buttons in the rows show what they do", () => {
     expect(line).toContain('blocked: { fontWeight: "600" },');
   });
 
+  test("a hand-off still out has Ver on its line under the reply, opening the two agents' talk as the working line's", () => {
+    const line = src("features/chat/WorkLine.tsx");
+    const handed = between(line, "export function HandedWorkLines(", "export function IssueWorkLine(");
+    expect(handed).toContain("talk && !workIsOver(w) ? () => router.push(consultationHref(talk, message.channelId))");
+    expect(line).toContain('if (onSee) all.push({ key: "see", rank: 1, label: t("run.strip.see"), onPress: onSee });');
+  });
+
   test("letting someone talk to an agent can't be tapped twice while it saves", () => {
     const reach = src("features/chat/ReachLines.tsx");
     const allow = between(reach, "export function AllowTalkAction(", "export function LetMeTalkButton(");

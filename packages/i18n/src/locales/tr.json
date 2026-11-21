@@ -1095,6 +1095,7 @@
     },
     "back": "Geri",
     "leave": "{{name}} sayfasına dön",
+    "leaveLater": "{{name}} sayfasına dön, sonra bitir",
     "actions": {
       "continue": "Devam",
       "create_one": "{{count}} ajan oluştur",
@@ -1106,15 +1107,18 @@
     "yourCompany": "şirketiniz",
     "purpose": {
       "title": "agentes.chat'i ne için kullanacaksınız?",
-      "lead": "Bunu sonra değiştirebilirsiniz, hiçbir şey kaybolmaz.",
+      "lead": "Çalışma alanı modunu Ayarlar'dan istediğiniz zaman değiştirebilirsiniz, hiçbir şey kaybolmaz.",
+      "pick": "agentes.chat'i nasıl görmek istediğinizi seçin.",
+      "switchTitle": "İstediğiniz zaman değiştirin.",
+      "switchText": "Çalışma alanı modu Ayarlar'dan değişir ve hiçbir şey kaybolmaz.",
       "personal": "Kendim için",
       "personalText": "Gününü düzenleyen ajanlar.",
       "team": "Ekibim için",
       "teamText": "Kişiler ve ajanlar kanallar, roller ve onaylarla birlikte çalışır.",
       "personalExamples": "Saat 7'de günün · Faturalar · Antrenman",
       "teamExamples": "Müşteri desteği · Finans · Raporlar",
-      "personalLine": "Gününüzle ilgilenen ajanlar.",
-      "teamLine": "İnsanlar ve ajanlar aynı yerde.",
+      "personalLine": "Tüm özellikleriyle daha sade bir görünüm.",
+      "teamLine": "Kanallar ve kişilerle tam görünüm.",
       "activities": {
         "agenda": "Günün ajandası",
         "home": "Ev",
@@ -3376,6 +3380,14 @@
       "antigravity": "Gemini bu bilgisayarda giriş yapmamış. {{name}} sayfasından bir Gemini hesabı bağlayın.",
       "opencode": "OpenCode bu bilgisayarda düşünemiyor. {{name}} sayfasından bir OpenCode anahtarı bağlayın."
     },
+    "notSignedInOn": {
+      "claude_code": "Claude Code {{computer}} bilgisayarında giriş yapmamış. {{name}} sayfasından bir Claude hesabı bağlayın.",
+      "codex": "Codex {{computer}} bilgisayarında giriş yapmamış. {{name}} sayfasından bir ChatGPT hesabı bağlayın.",
+      "cursor": "Cursor {{computer}} bilgisayarında giriş yapmamış. {{name}} sayfasından bir Cursor hesabı bağlayın.",
+      "grok": "Grok {{computer}} bilgisayarında giriş yapmamış. {{name}} sayfasından bir Grok hesabı bağlayın.",
+      "antigravity": "Gemini {{computer}} bilgisayarında giriş yapmamış. {{name}} sayfasından bir Gemini hesabı bağlayın.",
+      "opencode": "OpenCode {{computer}} bilgisayarında düşünemiyor. {{name}} sayfasından bir OpenCode anahtarı bağlayın."
+    },
     "card": {
       "connected": "{{name}} artık bir yapay zekaya sahip.",
       "answerNow": "Şimdi yanıtla",
@@ -3465,6 +3477,7 @@
     "chat": {
       "mine": "Sizinkiler",
       "yours": "Sizin",
+      "free": "Ücretsiz",
       "keys": "Çalışma alanı anahtarı",
       "apiKeys": "API anahtarları",
       "best": "Şu an en müsait olan",
@@ -15118,6 +15131,12 @@
     }
   },
   "errors": {
+    "planMove": {
+      "notPayer": "Planı yalnızca planın ödemesini yapan kişi taşıyabilir.",
+      "same": "Planı taşımak için başka bir çalışma alanı seç.",
+      "targetHasPlan": "O çalışma alanının zaten bir planı var. Çalışma alanlarını şimdiki hâliyle görmek için yenile.",
+      "targetDeleting": "O çalışma alanı siliniyor. Önce geri yükle ya da başka birini seç."
+    },
     "surface": {
       "off": "Sohbet uygulamalarını bağlama kapatıldı. Ayarlarınızın şu anki halini görmek için sayfayı yenileyin.",
       "notAllowed": "Sohbet uygulaması bağlama hesabınıza henüz açık değil. Açılana kadar buradaki uygulamayı kullanmaya devam edin.",
@@ -16468,6 +16487,8 @@
       "resumed_other": "{{count}} görev yeniden başladı",
       "stillWaiting_one": "{{count}} tanesi hâlâ {{name}} bilgisayarını bekliyor",
       "stillWaiting_other": "{{count}} tanesi hâlâ {{name}} bilgisayarını bekliyor",
+      "planDropped": "{{name}} adlı ajanın {{plan}} planı {{from}} üzerinde oturum açmış. {{to}} üzerinde de oturum açın ya da {{from}} ile devam edin.",
+      "signIn": "{{name}} üzerinde oturum aç",
       "skipped": "{{name}} kaldı: {{reason}}",
       "skip": {
         "other": "şu anda geçiş yapılamadı",
@@ -16727,14 +16748,14 @@
       "write": "Ajanlara görev gönderme ve okuma",
       "writeHelp": "Sizin adınıza mesaj gönderir ve yanıtları okur.",
       "manage": "Ajan, rutin ve beceri oluşturma ve düzenleme",
-      "manageHelp": "Ayrıca sizin izinlerinizle sizin için ajanlar, rutinler, beceriler ve bellek kayıtları oluşturur.",
+      "manageHelp": "Ayrıca sizin izinlerinizle sizin için ajanlar, rutinler, beceriler ve bellek kayıtları oluşturur ve wiki sayfaları yazar.",
       "read": "Yalnızca okuma",
-      "readHelp": "Hiçbir şey göndermeden ajanları, kanalları ve yanıtları görür.",
+      "readHelp": "Hiçbir şey göndermeden ajanları, kanalları, wiki sayfalarını ve yanıtları görür.",
       "can": "Yapabilecekleri",
-      "canSee": "Sizin gördüğünüz ajanları ve kanalları görme.",
+      "canSee": "Sizin gördüğünüz ajanları, kanalları ve wiki sayfalarını görme.",
       "canSend": "{{app}} üzerinden gönderildiği belirtilerek sizin adınıza mesaj gönderme.",
       "canRead": "Yanıtları ve ajanların ne yaptığını okuma.",
-      "canManage": "Sizin adınıza ajan, rutin ve beceri oluşturma ve düzenleme. Oluşturduğu her şey için bildirim alırsınız.",
+      "canManage": "Sizin adınıza ajan, rutin ve beceri oluşturma ve düzenleme, oluşturduğu her şey için bir bildirimle. Sizin adınıza wiki sayfaları yazma ve onları çöp kutusuna taşıma.",
       "never": "Asla",
       "neverApprove": "Ajanların işlemlerini onaylamaz. Onaylar agentes.chat içinde kişilerde kalır.",
       "neverSettings": "Ayarları, üyeleri veya izinleri değiştirmez.",
@@ -19316,6 +19337,13 @@
     "deleteOrg": "Sil: {{name}}",
     "submit": "Hesabı sil",
     "deleted": "Hesabınız {{date}} tarihinde kalıcı olarak kaybolur. Geri yüklemek için bundan önce giriş yapın."
+  },
+  "planMove": {
+    "warning": "Planın bu çalışma alanında kalır ve yenilenmez. Önce başka bir çalışma alanına taşımak ister misin?",
+    "deleting": "Planın bununla birlikte yenilenmez. Planını başka bir çalışma alanına taşıyabilirsin.",
+    "how": "Aynı kart ve ödenmiş dönem planla birlikte gider. Tekrar ücret alınmaz ve iade yapılmaz.",
+    "button": "Planımı {{name}} alanına taşı",
+    "moving": "Planın {{name}} alanına taşınıyor. Yaklaşık bir dakika içinde orada olur."
   },
   "billing": {
     "open": "Plan ve faturalandırmayı aç",

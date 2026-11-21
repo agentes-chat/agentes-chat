@@ -479,7 +479,7 @@ describe("the agent's AI", () => {
     ]);
     // One row per account (the web's choice), and "Também usada por" signs this agent in on Connect an AI.
     expect(screen).toContain("const choices = view ? accountChoices(accounts, [view.account]) : [];");
-    expect(screen).toContain("{choices.map((c) => (");
+    expect(screen).toContain("{choicesAfter.map(({ c }) => choiceRow(c))}");
     expect(screen).toContain("row={accountRow(t, c, name, i18n.language)}");
     expect(screen).toContain("onPress={() => (c.also ? connect(c.login, true) : choose(c.login))}");
     // That account's email goes along as Claude's hint, on Claude's page only, whatever the agent's own login is.
@@ -595,7 +595,7 @@ describe("the agent's AI", () => {
   test("a card whose plan's sign-in ended: the agent says so, and Entrar de novo opens on its own plan", async () => {
     const read = (file: string) => Bun.file(new URL(`../../src/features/ai/${file}`, import.meta.url).pathname).text();
     const [card, sheet] = await Promise.all([read("NoAiCard.tsx"), read("ConnectAi.tsx")]);
-    expect(card).toContain("t(noAiLineKey(card), agentGrammar(name))");
+    expect(card).toContain("t(noAiLineKey(card), { ...agentGrammar(name), computer: card.computer })");
     // The plan the client tests pin (`signInAgainPlan`): ChatGPT for a Codex agent, never Claude's page.
     expect(card).toContain("const again = signInAgainPlan(card, agent);");
     expect(card).toContain('t(again ? "agentPage.work.brain.signInAgain" : "noAi.action")');
@@ -622,7 +622,7 @@ describe("the agent's AI", () => {
     // A plan's page waits for the computer's row for ChatGPT too, not only Claude (`ownSignInFor`).
     expect(connect).toContain("brain: view && (ai.data || !(isPlanId(choice) || view.ownSignIn)) ? view : undefined,");
     // Its card: what isn't signed in and where to connect, and Conectar on that CLI's plan.
-    expect(card).toContain("t(noAiLineKey(card), agentGrammar(name))");
+    expect(card).toContain("t(noAiLineKey(card), { ...agentGrammar(name), computer: card.computer })");
     expect(card).toContain("const plan = card.own ? planOfKind(card.own) : again;");
     const pt = await translator("pt-BR");
     expect(pt("noAi.notSignedIn.codex", { context: "female", name: "Ada" })).toBe(

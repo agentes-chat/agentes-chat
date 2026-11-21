@@ -98,7 +98,7 @@ import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { AgentSwitches } from "@/components/AgentSwitches";
 import { ConnectFlow, type FlowState } from "@/components/ConnectFlow";
-import { ConnectorIcon } from "@/components/ConnectorCatalog";
+import { ConnectorIcon } from "@/components/ConnectorIcon";
 import { LoadingLine, LoadingList, useStepText } from "@/components/Loading";
 import { ForWhom, type OwnerTab, OwnerTabs } from "@/components/OwnerScope";
 import { useOrg } from "@/components/org-context";
@@ -294,7 +294,6 @@ export function SkillsSection({
           <Switch
             id="skills-agents-improve"
             checked={settings.data.agentsImprove}
-            disabled={action.isPending}
             onCheckedChange={(on) => action.mutate({ type: "settings", settings: { agentsImprove: on } })}
           />
           <span className="ac-hintline">
@@ -1302,7 +1301,6 @@ function SourceUpdate({ skill: s }: { skill: SkillDetail }) {
         <Switch
           id={`skill-auto-${s.id}`}
           checked={s.autoUpdate ?? false}
-          disabled={action.isPending}
           onCheckedChange={(on) => action.mutate({ type: "update", id: s.id, patch: { autoUpdate: on } })}
         />
         <span className="ac-hintline">
@@ -1396,7 +1394,6 @@ function AgentImprove({ skill: s }: { skill: SkillDetail }) {
         <Switch
           id={`skill-improve-${s.id}`}
           checked={s.agentsImprove ?? settings.data?.agentsImprove ?? true}
-          disabled={action.isPending}
           onCheckedChange={(on) => action.mutate({ type: "update", id: s.id, patch: { agentsImprove: on } })}
         />
         <label htmlFor={`skill-improve-${s.id}`}>{t("skills.agentsImproveThis")}</label>

@@ -5,6 +5,7 @@ import { heldBack } from "@agenteschat/client/lib/issues";
 import {
   blockedText,
   handedLine,
+  workIsOver,
   workLine,
   workPlanProgress,
   workWaitsOnPerson,
@@ -19,7 +20,7 @@ import { useOrg } from "@/providers/org";
 import { Button, haptics, LineIcon, PixelOrbit, Text, textLineOf, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
 import { useFontScale } from "@/ui/text-scale";
-import { chatHref } from "../links/logic";
+import { chatHref, consultationHref } from "../links/logic";
 import { useBubblePart } from "../shared/bubble-part";
 import { useColors, useNow, useOrgId } from "../shared/hooks";
 import { tapHaptic, useSurface } from "../shared/parts";
@@ -84,12 +85,15 @@ const MAX_ACTIONS = 3;
 function Line({
   work,
   onThread,
+  onSee,
   below,
   inUpdatesThread,
   handed: asHanded,
 }: {
   work: WorkView;
   onThread?: () => void;
+  /** "Ver" on a hand-off still out: the two agents' talk, as the working line's. */
+  onSee?: () => void;
   below?: ReactNode;
   inUpdatesThread?: boolean;
   /** Under the reply that handed it: "Handed to Atlas · working on it · step 3 of 5 · 2 min", Stop or the result. */
@@ -123,6 +127,7 @@ function Line({
   // Priority when more than MAX_ACTIONS apply: stopping, then the result, the task, the thread; shown in reading order.
   const all: (WorkAction & { rank: number })[] = [];
   if (onThread && view.threadId) all.push({ key: "thread", rank: 3, label: t("work.openThread"), onPress: onThread });
+  if (onSee) all.push({ key: "see", rank: 1, label: t("run.strip.see"), onPress: onSee });
   if (view.task) {
     const number = view.task.number;
     all.push({ key: "task", rank: 2, label: view.task.label, onPress: () => router.push(`/issues/${number}`) });
@@ -327,9 +332,11 @@ export function HandedWorkLines({ message }: { message: Message }) {
   if (works.length === 0) return null;
   return (
     <>
-      {works.map((w) => (
-        <Line key={w.id} work={w} handed />
-      ))}
+      {works.map((w) => {
+        const talk = w.handedBy?.consultationId;
+        const onSee = talk && !workIsOver(w) ? () => router.push(consultationHref(talk, message.channelId)) : undefined;
+        return <Line key={w.id} work={w} handed onSee={onSee} />;
+      })}
     </>
   );
 }

@@ -2048,16 +2048,18 @@ async function executeRunInner(
       ? (async () => {
           const [recent, kept, live] = await Promise.all([
             recentMessages(),
-            keptToolGroups(db, run, granted).catch(() => [] as string[]),
+            keptToolGroups(db, run, granted).catch(() => ({ used: [] as string[], listed: [] as string[] })),
             // Asked from inside a live file, one attached, or in a file's own conversation: its own tools come with
             // it (ADR 0196 §6, ADR 0199).
             carriesLiveFile(db, run.orgId, trigger?.meta, run.channelId).catch(() => false),
           ]);
           // A picture's, a video's or a PDF's conversation sees the file with the Drive's tools too (ADR 0208).
           const media = live && (await isMediaConversation(db, run.orgId, run.channelId).catch(() => false));
-          const keep = live
-            ? [...kept, LIVE_FILES_GROUP, ...(media ? [toolGroupKey({ scope: "drive:read" })] : [])]
-            : kept;
+          const keep = [
+            ...kept.used,
+            ...kept.listed,
+            ...(live ? [LIVE_FILES_GROUP, ...(media ? [toolGroupKey({ scope: "drive:read" })] : [])] : []),
+          ];
           const choice = await chooseToolGroups(judge, {
             orgId: run.orgId,
             agentId: agent.id,
@@ -2073,7 +2075,9 @@ async function executeRunInner(
           toolChoice = choice;
           ctx.loadedGroups = choice.groups;
           tools = presentTools(granted, isSensitive, ctx.loadedGroups);
-          if (choice.groups.includes(toolGroupKey({ scope: BROWSER_SCOPE }))) {
+          // Listed only to keep the prompt cache: nothing says this message needs the browser.
+          const browser = toolGroupKey({ scope: BROWSER_SCOPE });
+          if (choice.groups.includes(browser) && !kept.listed.includes(browser)) {
             deps.warmBrowser?.({ orgId: run.orgId, agentId: agent.id, threadRootId: run.threadRootId });
           }
         })()

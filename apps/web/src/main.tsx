@@ -3,7 +3,16 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nextProvider } from "react-i18next";
 import "./styles.css";
-import { authConfigQuery, createApiClient, createSnapshot, keys, type Me, meQuery, outbox } from "@agenteschat/client";
+import {
+  authConfigQuery,
+  createApiClient,
+  createSnapshot,
+  instanceQuery,
+  keys,
+  type Me,
+  meQuery,
+  outbox,
+} from "@agenteschat/client";
 import { ErrorBoundary } from "@agenteschat/client/lib/error-boundary";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { holdSkies, installTitleTips, trackInput } from "@agenteschat/ui";
@@ -62,6 +71,14 @@ catchEarlyErrors();
 tolerateForeignDomEdits();
 const api = createApiClient();
 const authConfig = api.account.authConfig();
+// The session and the server's facts are asked now, beside the language's file, instead of after it, the snapshot
+// and the first route: each answer is a round trip the opening no longer waits for in turn. Not while the desktop app
+// moves this window to the account its address names (below): `me` is asked once that move is done.
+const earlyMe = accountInLink(window.location.search) && inDesktopApp() ? null : api.account.me();
+const earlyInstance = api.system.instance();
+// Handled here too: a failure before the cache takes them (offline) is the queries' to show, not an unhandled error.
+earlyMe?.catch(() => undefined);
+earlyInstance.catch(() => undefined);
 void authConfig.then(
   (config) => startErrorReports(config.errorReports ?? null),
   () => startErrorReports(null),
@@ -115,6 +132,8 @@ const queryClient = createQueryClient({
 
 // The answer above is the cache's: the sign-in guards don't ask again.
 void queryClient.prefetchQuery({ ...authConfigQuery(api), queryFn: () => authConfig });
+void queryClient.prefetchQuery({ ...instanceQuery(api), queryFn: () => earlyInstance });
+if (earlyMe) void queryClient.prefetchQuery({ ...meQuery(api), queryFn: () => earlyMe });
 
 // The last lists and chats saved on this device show at once; everything revalidates as usual.
 const snapshot = createSnapshot(queryClient, snapshotStore);
@@ -240,8 +259,8 @@ const restored = arrived
     // The saved `me` let the app open without asking: ask now (no session: sign-in, and the snapshot goes).
     if (!found) return;
     outbox.show(queryClient);
-    void queryClient
-      .fetchQuery({ ...meQuery(api), staleTime: 0 })
+    // The read started with the page answers it, when there was one.
+    void (earlyMe ?? queryClient.fetchQuery({ ...meQuery(api), staleTime: 0 }))
       .then((me) => {
         if (!me) onUnauthorized();
       })

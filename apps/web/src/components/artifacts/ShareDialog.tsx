@@ -24,12 +24,12 @@ import { type ReactNode, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { ActorAvatar } from "@/components/AgentAvatar";
+import { artifactLink, useAuthorName } from "@/components/artifacts/viewer-context";
 import { useOrg } from "@/components/org-context";
 import { useDirectory } from "@/hooks/useDirectory";
 import { usePersonalView } from "@/hooks/usePersonalView";
 import { copyText } from "@/lib/context-menu";
 import { useToast } from "@/lib/toast";
-import { artifactLink, useAuthorName } from "./ArtifactViewer";
 import "../who-sees.css";
 
 type Mode = ArtifactSharing["mode"];

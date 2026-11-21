@@ -14,7 +14,7 @@ import type { ToolDefinition } from "./tools/types";
  * wrong guess costs a search, never a capability. The choice is made once per
  * run and kept on the transcript (`toolGroups`), so the tool list, and with
  * it the prompt cache, stays the same for the whole run. Some groups go
- * without asking (`keptToolGroups`): those the previous run here used.
+ * without asking (`keptToolGroups`): those the previous run here used, or listed within the hour.
  */
 
 /** A group is loaded up front at this probability or more (a miss costs a search; a load costs every call). */
@@ -182,9 +182,12 @@ export async function recentForJudge(
 
 /**
  * The groups a run keeps without asking the judge (ADR 0043, token-trim B1): those of the tools the agent's previous
- * run in this conversation called (the thread; in a channel's or DM's main timeline, its previous run there). Only
- * what that one run used, so a group comes along for the next message and drops once a run goes without it: a
- * greeting after computer work no longer carries the computer's tools. A miss costs one `find_tools` search.
+ * run in this conversation called (the thread; in a channel's or DM's main timeline, its previous run there), and,
+ * while that run is within `KEEP_LOADED_MS`, every group it listed. The tools come before the system prompt and the
+ * history in the provider's prompt cache, so a group that drops between two runs makes the next one write all of it
+ * again; one kept is read from the cache for a tenth of that. Past the hour the cache is cold anyway: only what was
+ * used stays, and a greeting after computer work no longer carries the computer's tools. A miss costs one
+ * `find_tools` search.
  */
 export async function keptToolGroups(
   db: Database,
@@ -197,12 +200,12 @@ export async function keptToolGroups(
     triggerMessageId: string;
   },
   tools: ToolDefinition[],
-): Promise<string[]> {
+): Promise<{ used: string[]; listed: string[] }> {
   const r = schema.agentRuns;
   const st = schema.agentRunSteps;
   const flat = run.threadRootId === run.triggerMessageId;
   const [previous] = await db
-    .select({ id: r.id })
+    .select({ id: r.id, updatedAt: r.updatedAt, listed: sql<unknown>`${r.transcript}->'toolGroups'` })
     .from(r)
     .where(
       and(
@@ -215,12 +218,21 @@ export async function keptToolGroups(
     )
     .orderBy(desc(r.createdAt))
     .limit(1);
-  if (!previous) return [];
-  const used = await db
+  if (!previous) return { used: [], listed: [] };
+  const calls = await db
     .selectDistinct({ name: sql<string>`${st.data}->>'name'` })
     .from(st)
     .where(and(eq(st.runId, previous.id), eq(st.kind, "tool_call")))
     .limit(200);
-  const names = new Set(used.map((u) => u.name));
-  return [...new Set(tools.filter((t) => names.has(t.name)).map(toolGroupKey))];
+  const names = new Set(calls.map((u) => u.name));
+  const warm = Date.now() - previous.updatedAt.getTime() < KEEP_LOADED_MS && Array.isArray(previous.listed);
+  const listed = new Set(warm ? (previous.listed as unknown[]) : []);
+  const used = new Set(tools.filter((t) => names.has(t.name)).map(toolGroupKey));
+  return {
+    used: [...used],
+    listed: [...new Set(tools.map(toolGroupKey).filter((g) => listed.has(g) && !used.has(g)))],
+  };
 }
+
+/** How long a run keeps every group the previous run listed: the prompt cache's longest life (`cacheTtl` 1h). */
+export const KEEP_LOADED_MS = 60 * 60_000;

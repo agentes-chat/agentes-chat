@@ -10,6 +10,7 @@ import {
   grantScopes,
   JevOffError,
   type Judge,
+  KEEP_LOADED_MS,
   noteConfidentialRun,
   PLATFORM_CAP,
   postPersonMessage,
@@ -296,8 +297,21 @@ test("a run lists what the judge expects it to need, keeps it for the whole run,
     kept: ["issues"],
   });
 
-  // That run used no issue tool: the one after it goes without them (a greeting doesn't carry what was used before).
+  // That run used no issue tool, but listed them a moment ago: the next one lists them too, so the tools, the system
+  // prompt and the history before it read from the prompt cache instead of being written again.
   await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, { body: "@dev valeu" });
+  await drainOutbox(f.db, f.handlers);
+  const thanks = f.provider.calls.at(-1)?.request.tools ?? [];
+  expect(thanks.map((t) => t.name)).toContain("list_issues");
+  expect(JSON.stringify(thanks)).toBe(JSON.stringify(f.provider.calls.at(-2)?.request.tools));
+
+  // An hour later the cache is cold: a run that only listed them doesn't pass them on (a greeting doesn't carry
+  // what was used before).
+  await f.db
+    .update(schema.agentRuns)
+    .set({ updatedAt: new Date(Date.now() - KEEP_LOADED_MS - 60_000) })
+    .where(eq(schema.agentRuns.agentId, f.agent.id));
+  await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, { body: "@dev bom dia" });
   await drainOutbox(f.db, f.handlers);
   expect((f.provider.calls.at(-1)?.request.tools ?? []).map((t) => t.name)).not.toContain("list_issues");
 });

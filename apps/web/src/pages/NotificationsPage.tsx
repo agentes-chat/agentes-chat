@@ -87,7 +87,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { AdminAskActions } from "@/components/AdminAsk";
 import { ApprovalAsk, ApprovalGroupAsk } from "@/components/ApprovalAsk";
-import { useConnectAi } from "@/components/ConnectAi";
+import { useConnectAi } from "@/components/connect-ai-context";
 import { DeviceNoticeActions, deviceNoticeLine } from "@/components/devices/DeviceNotice";
 import { ErrorState, LoadingCards } from "@/components/Loading";
 import { useNotificationHref, useNotificationOpener } from "@/components/NotificationOpen";

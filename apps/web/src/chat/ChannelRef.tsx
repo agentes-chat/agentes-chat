@@ -145,8 +145,11 @@ function ChannelCardBody({ channelId, onDone }: { channelId: string; onDone: () 
             <Button
               size="sm"
               variant="primary"
-              loading={join.isPending}
-              onClick={() => join.mutate(undefined, { onSuccess: openIt })}
+              onClick={() => {
+                // The lists take the join at once, so the channel opens now, as its member.
+                join.mutate();
+                openIt();
+              }}
             >
               {t("channelRefs.join")}
             </Button>

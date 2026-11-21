@@ -676,15 +676,18 @@ html:not([data-pointer]) .ap-link:focus-visible {
 .ap-li:hover {
   background: color-mix(in srgb, var(--ink) 4%, transparent);
 }
-/* A request coming in while the list is on screen rises in (the kit's `.ac-list` rows do the same). */
+/*
+ * A request coming in while the list is on screen rises in (the kit's `.ac-list` rows do the same); the rows the page
+ * opens with show at once (`data-settled` comes a frame after the list is drawn).
+ */
 @media (prefers-reduced-motion: no-preference) {
-  .ap-li {
+  .ap-list[data-settled] .ap-li {
     transition:
       opacity var(--dur-base) var(--out),
       transform var(--dur-base) var(--out);
   }
   @starting-style {
-    .ap-li {
+    .ap-list[data-settled] .ap-li {
       opacity: 0;
       transform: translateY(4px);
     }

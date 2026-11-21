@@ -275,9 +275,9 @@ import { AgentPanelContext, AgentPanelShownContext, useOpenAgentPanel } from "@/
 import { AgentSidebar } from "@/components/agents/AgentSidebar";
 import { ModelStandInLine } from "@/components/ai/ModelPicker";
 import { ArtifactCard } from "@/components/artifacts/ArtifactCard";
-import { ImageSet } from "@/components/artifacts/ArtifactViewer";
 import { objectUrls } from "@/components/artifacts/FileView";
 import { ImageMaking } from "@/components/artifacts/ImageMaking";
+import { ImageSet } from "@/components/artifacts/viewer-context";
 import { HandedWorkLine, MessageWorkLine } from "@/components/BackgroundWork";
 import { HeldBrowserCard, RunBrowserCard, useHeldTakeover } from "@/components/browser/BrowserCard";
 import { BrowserHandoffCard } from "@/components/browser/BrowserHandoffCard";
@@ -365,7 +365,7 @@ import { NavToggle } from "@/components/NavDrawer";
 import { CHANNEL_NAME, ChannelAccessChoice, toChannelName } from "@/components/NewChannelDialog";
 import { FailedRunFix, KeyGuardDialog, NoAiBanner, NoAiCard, useNoAiAutoOpen } from "@/components/NoAi";
 import { useNotificationOpener } from "@/components/NotificationOpen";
-import { useNewAgent } from "@/components/new-agent/NewAgentDialog";
+import { useNewAgent } from "@/components/new-agent/new-agent-context";
 import { OpensAgent } from "@/components/OpensAgent";
 import { useOrg } from "@/components/org-context";
 import { AuthorStatus } from "@/components/Presence";
@@ -1272,17 +1272,6 @@ function ChannelView({
     return () => document.removeEventListener("visibilitychange", mark);
   }, [markThreadRead, threadId, isMember, lastReplyId]);
 
-  // The skeleton was on screen: the real messages fade in (once).
-  const hadSkeleton = useRef(messages.isLoading);
-  const [fresh, setFresh] = useState(false);
-  useEffect(() => {
-    if (!serverRead || !hadSkeleton.current) return;
-    hadSkeleton.current = false;
-    setFresh(true);
-    const timer = setTimeout(() => setFresh(false), 400);
-    return () => clearTimeout(timer);
-  }, [serverRead]);
-
   // Person messages loaded over HTTP start their receipts.
   useEffect(() => {
     if (messages.data) live.seed(messages.data);
@@ -1821,6 +1810,11 @@ function ChannelView({
   const rowDrawn = useCallback(() => setRowsDrawn((n) => n + 1), []);
   const inView = useBlocksInView(scroller, `${slots.map((x) => x.runId).join(" ")} ${rowsDrawn}`);
   const outOfView = useMemo(() => (runId: string) => !inView.has(runId), [inView]);
+  // Hand-offs whose line under the reply that handed them is on screen (`HandedWorkLine`): the bar leaves those out.
+  const handoffsKey = timeline
+    .flatMap((i) => (i.kind === "message" ? (i.message.handedWorks ?? []).map((w) => w.id) : []))
+    .join(" ");
+  const handoffsInView = useBlocksInView(scroller, `${handoffsKey} ${rowsDrawn}`, "data-handoff");
   // Requests waiting for you that scrolled out of view: the same line says so first (waiting beats working).
   // Their cards register with this view's scroller (`RowsProvider` around it, not around the panels).
   const [askRegistry] = useState(createAskRegistry);
@@ -2740,7 +2734,6 @@ function ChannelView({
                             data-look={look.style}
                             data-faces={look.faces ? undefined : "false"}
                             data-wallpaper={wallpaper?.wallpaper.kind}
-                            data-fresh={fresh || undefined}
                             aria-label={t("channel.messages")}
                             aria-live="polite"
                             aria-relevant="additions"
@@ -2939,6 +2932,7 @@ function ChannelView({
                             waiting={waitingHere}
                             onSeeWaiting={seeWaiting}
                             consultBlocks={consultGroups.nearEnd}
+                            handoffsInView={handoffsInView}
                             member={isMember}
                           />
                           {adjustThreadId ? (
@@ -4039,21 +4033,22 @@ function ConnectionBanner({ status }: { status: ConnectionStatus }) {
 const sameSet = (a: Set<string>, b: Set<string>) => a.size === b.size && [...a].every((x) => b.has(x));
 
 /**
- * The live blocks (`data-run-id`) at least partly inside the scroller: measured once when they come
- * (no frame of the line above the composer for a block in plain sight), then by an IntersectionObserver.
+ * The live blocks (`data-run-id`, or another `data-*` attribute's values) at least partly inside the scroller: measured
+ * once when they come (no frame of the line above the composer for a block in plain sight), then by an
+ * IntersectionObserver.
  */
-function useBlocksInView(scroller: { current: HTMLElement | null }, key: string) {
+function useBlocksInView(scroller: { current: HTMLElement | null }, key: string, attr = "data-run-id") {
   const [inView, setInView] = useState<Set<string>>(() => new Set());
   // biome-ignore lint/correctness/useExhaustiveDependencies: `key` changes when blocks come or go
   useLayoutEffect(() => {
     const root = scroller.current;
     if (!root) return;
-    const rows = Array.from(root.querySelectorAll<HTMLElement>("[data-run-id]"));
+    const rows = Array.from(root.querySelectorAll<HTMLElement>(`[${attr}]`));
     const box = root.getBoundingClientRect();
     const now = new Set<string>();
     for (const row of rows) {
       const r = row.getBoundingClientRect();
-      if (r.height > 0 && r.bottom > box.top && r.top < box.bottom) now.add(row.dataset.runId ?? "");
+      if (r.height > 0 && r.bottom > box.top && r.top < box.bottom) now.add(row.getAttribute(attr) ?? "");
     }
     setInView((prev) => (sameSet(prev, now) ? prev : now));
     if (typeof IntersectionObserver === "undefined" || rows.length === 0) return;
@@ -4062,7 +4057,7 @@ function useBlocksInView(scroller: { current: HTMLElement | null }, key: string)
         setInView((prev) => {
           const next = new Set(prev);
           for (const e of entries) {
-            const id = (e.target as HTMLElement).dataset.runId ?? "";
+            const id = (e.target as HTMLElement).getAttribute(attr) ?? "";
             if (e.isIntersecting) next.add(id);
             else next.delete(id);
           }
@@ -4159,6 +4154,7 @@ function ActivityBar({
   waiting,
   onSeeWaiting,
   consultBlocks,
+  handoffsInView,
   member,
 }: {
   channelId: string;
@@ -4182,6 +4178,8 @@ function ActivityBar({
   onSeeWaiting: (item: WaitingItem) => void;
   /** Runs whose questions a block near the end shows (`ConsultGroup`): the line doesn't say them again. */
   consultBlocks: ReadonlySet<string>;
+  /** Hand-offs whose line under the reply that handed them is on screen: it says them, with its own Ver. */
+  handoffsInView: ReadonlySet<string>;
   /** The reader is in this conversation (may answer here). */
   member: boolean;
 }) {
@@ -4202,7 +4200,9 @@ function ActivityBar({
     sameList,
   );
   // A reply near the end shows its questions with where each is and its clock: the asker's own work stays here. Work
-  // handed off (ADR 0095 addendum) stays for as long as it is out, wherever its divider is: the bar never toggles.
+  // handed off (ADR 0095 addendum) stays for as long as it is out, wherever its divider is, unless its line under the
+  // reply that handed it is on screen: that line says the same with its own Ver. One whose card waits on the reader
+  // stays, since its Ver goes to that card.
   const consultList = useConsultations(org.id, channelId).data;
   const agentLines = useAgentLines();
   const consults = [
@@ -4211,15 +4211,17 @@ function ActivityBar({
       consultBlocks,
     ),
     ...heard.filter((c) => c.kind === "note"),
-  ].map((c) => ({
-    ...c,
-    ...consultDetails(
-      c,
-      consultList ?? [],
-      (id, run) => askOf(pendingAsks, id, run)?.on ?? null,
-      (id) => lineStep(t, agentLines.get(id)),
-    ),
-  }));
+  ]
+    .map((c) => ({
+      ...c,
+      ...consultDetails(
+        c,
+        consultList ?? [],
+        (id, run) => askOf(pendingAsks, id, run)?.on ?? null,
+        (id) => lineStep(t, agentLines.get(id)),
+      ),
+    }))
+    .filter((c) => !(c.kind === "note" && !c.yours && c.id && handoffsInView.has(c.id)));
   asking.current = consults.length > 0;
   const ids = typingIn({ [channelId]: typing ?? {} }, channelId, now, me.user.id, threadId);
   // At work, its row shows only what it has to show meanwhile (its browser card): the bar says what it does, for how

@@ -48,7 +48,7 @@ import type { TFunction } from "i18next";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AccountSwitchLine } from "@/chat/AccountRef";
-import { ConnectorIcon } from "@/components/ConnectorCatalog";
+import { ConnectorIcon } from "@/components/ConnectorIcon";
 import { CodePanel, formatBytes, OutputView } from "@/components/LiveCode";
 import { useOrg } from "@/components/org-context";
 

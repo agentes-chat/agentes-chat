@@ -33,11 +33,11 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { PlanHold, usePlanHold } from "@/components/ai/plan-hold";
 import { useOrg } from "@/components/org-context";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useToast } from "@/lib/toast";
 import { AddAccount } from "./AddAccountFlow";
-import { PlanHold, usePlanHold } from "./ConnectAiSteps";
 import { UseKeyForAll } from "./UseKeyForAll";
 
 /*

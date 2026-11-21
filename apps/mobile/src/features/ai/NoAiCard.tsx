@@ -137,7 +137,7 @@ export function NoAiCard({ message: m }: { message: Message }) {
         ? t("noAi.card.connected", { name })
         : answer === "still_missing"
           ? t("noAi.card.stillMissing", { name })
-          : t(noAiLineKey(card), agentGrammar(name));
+          : t(noAiLineKey(card), { ...agentGrammar(name), computer: card.computer });
   const answerNow = async () => {
     setAnswer("pending");
     try {

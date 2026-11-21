@@ -1121,6 +1121,7 @@
     },
     "back": "Indietro",
     "leave": "Torna a {{name}}",
+    "leaveLater": "Torna a {{name}} e finisci dopo",
     "actions": {
       "continue": "Continua",
       "create_one": "Crea {{count}} agente",
@@ -1134,15 +1135,18 @@
     "yourCompany": "la tua azienda",
     "purpose": {
       "title": "Per cosa userai agentes.chat?",
-      "lead": "Puoi cambiarlo dopo, non si perde nulla.",
+      "lead": "Puoi cambiare la modalità dello spazio di lavoro in qualsiasi momento nelle Impostazioni, senza perdere nulla.",
+      "pick": "Scegli come vuoi vedere agentes.chat.",
+      "switchTitle": "Cambia quando vuoi.",
+      "switchText": "La modalità dello spazio di lavoro si cambia nelle Impostazioni, e non si perde nulla.",
       "personal": "Per me",
       "personalText": "Agenti che si prendono cura della tua giornata.",
       "team": "Per il mio team",
       "teamText": "Persone e agenti lavorano insieme, con canali, ruoli e approvazioni.",
       "personalExamples": "La tua giornata alle 7 · Bollette · Allenamento",
       "teamExamples": "Assistenza clienti · Finanze · Report",
-      "personalLine": "Agenti che si occupano della tua giornata.",
-      "teamLine": "Persone e agenti nello stesso posto.",
+      "personalLine": "Una vista più semplice, con tutte le funzioni.",
+      "teamLine": "La vista completa, con canali e persone.",
       "activities": {
         "agenda": "Agenda del giorno",
         "home": "Casa",
@@ -3526,6 +3530,20 @@
       "opencode": "OpenCode non può pensare su questo computer. Collega una chiave OpenCode nella pagina di {{name}}.",
       "opencode_female": "OpenCode non può pensare su questo computer. Collega una chiave OpenCode nella pagina di {{name}}."
     },
+    "notSignedInOn": {
+      "claude_code": "Claude Code non ha effettuato l'accesso su {{computer}}. Collega un account Claude nella pagina di {{name}}.",
+      "claude_code_female": "Claude Code non ha effettuato l'accesso su {{computer}}. Collega un account Claude nella pagina di {{name}}.",
+      "codex": "Codex non ha effettuato l'accesso su {{computer}}. Collega un account ChatGPT nella pagina di {{name}}.",
+      "codex_female": "Codex non ha effettuato l'accesso su {{computer}}. Collega un account ChatGPT nella pagina di {{name}}.",
+      "cursor": "Cursor non ha effettuato l'accesso su {{computer}}. Collega un account Cursor nella pagina di {{name}}.",
+      "cursor_female": "Cursor non ha effettuato l'accesso su {{computer}}. Collega un account Cursor nella pagina di {{name}}.",
+      "grok": "Grok non ha effettuato l'accesso su {{computer}}. Collega un account Grok nella pagina di {{name}}.",
+      "grok_female": "Grok non ha effettuato l'accesso su {{computer}}. Collega un account Grok nella pagina di {{name}}.",
+      "antigravity": "Gemini non ha effettuato l'accesso su {{computer}}. Collega un account Gemini nella pagina di {{name}}.",
+      "antigravity_female": "Gemini non ha effettuato l'accesso su {{computer}}. Collega un account Gemini nella pagina di {{name}}.",
+      "opencode": "OpenCode non può pensare su {{computer}}. Collega una chiave OpenCode nella pagina di {{name}}.",
+      "opencode_female": "OpenCode non può pensare su {{computer}}. Collega una chiave OpenCode nella pagina di {{name}}."
+    },
     "card": {
       "connected": "Ora {{name}} ha un'IA.",
       "answerNow": "Rispondi ora",
@@ -3618,6 +3636,7 @@
     "chat": {
       "mine": "I tuoi",
       "yours": "Il tuo",
+      "free": "Gratis",
       "keys": "Chiave dello spazio di lavoro",
       "apiKeys": "Chiavi API",
       "best": "Con più margine ora",
@@ -15743,6 +15762,12 @@
     }
   },
   "errors": {
+    "planMove": {
+      "notPayer": "Solo chi paga il piano può spostarlo.",
+      "same": "Scegli un altro spazio di lavoro in cui spostare il piano.",
+      "targetHasPlan": "Quello spazio di lavoro ha già un piano. Ricarica per vedere i tuoi spazi di lavoro come sono ora.",
+      "targetDeleting": "Quello spazio di lavoro è in fase di eliminazione. Ripristinalo prima, o scegline un altro."
+    },
     "surface": {
       "off": "Il collegamento delle app di chat è stato disattivato. Ricarica per vedere le impostazioni come sono ora.",
       "notAllowed": "Collegare un'app di chat non è ancora disponibile per il tuo account. Continua a usare l'app qui finché non si apre.",
@@ -17107,6 +17132,8 @@
       "stillWaiting_one": "{{count}} aspetta ancora {{name}}",
       "stillWaiting_many": "{{count}} aspettano ancora {{name}}",
       "stillWaiting_other": "{{count}} aspettano ancora {{name}}",
+      "planDropped": "Il piano {{plan}} di {{name}} ha l'accesso su {{from}}. Accedi anche su {{to}}, oppure tieni {{from}}.",
+      "signIn": "Accedi su {{name}}",
       "skipped": "{{name}} è rimasto: {{reason}}",
       "skip": {
         "other": "non è stato possibile cambiare ora",
@@ -17371,14 +17398,14 @@
       "write": "Leggere e inviare attività agli agenti",
       "writeHelp": "Invia messaggi a tuo nome e legge le risposte.",
       "manage": "Creare e modificare agenti, routine e skill",
-      "manageHelp": "Crea anche agenti, routine, skill e ricordi per te, con i tuoi permessi.",
+      "manageHelp": "Crea anche agenti, routine, skill e ricordi e scrive pagine della wiki per te, con i tuoi permessi.",
       "read": "Sola lettura",
-      "readHelp": "Vede agenti, canali e risposte, senza inviare nulla.",
+      "readHelp": "Vede agenti, canali, pagine della wiki e risposte, senza inviare nulla.",
       "can": "Può",
-      "canSee": "Vedere gli agenti e i canali che vedi tu.",
+      "canSee": "Vedere gli agenti, i canali e le pagine della wiki che vedi tu.",
       "canSend": "Inviare messaggi a tuo nome, con l'indicazione tramite {{app}}.",
       "canRead": "Leggere le risposte e cosa stanno facendo gli agenti.",
-      "canManage": "Creare e modificare agenti, routine e skill a tuo nome. Ricevi un avviso di ciò che crea.",
+      "canManage": "Creare e modificare agenti, routine e skill a tuo nome, con un avviso di ciò che crea. Scrivere pagine della wiki e spostarle nel cestino a tuo nome.",
       "never": "Mai",
       "neverApprove": "Approvare le azioni degli agenti. Le approvazioni restano alle persone in agentes.chat.",
       "neverSettings": "Cambiare impostazioni, membri o permessi.",
@@ -20051,6 +20078,13 @@
     "deleteOrg": "Elimina {{name}}",
     "submit": "Elimina account",
     "deleted": "Il tuo account sparisce per sempre il {{date}}. Accedi prima di allora per ripristinarlo."
+  },
+  "planMove": {
+    "warning": "Il tuo piano resta con questo spazio di lavoro e non si rinnova più. Vuoi spostarlo prima in un altro dei tuoi?",
+    "deleting": "Il tuo piano non si rinnova più con lui. Puoi spostarlo in un altro spazio di lavoro.",
+    "how": "La stessa carta e il periodo già pagato vanno con lui. Niente viene addebitato di nuovo e niente viene rimborsato.",
+    "button": "Sposta il mio piano in {{name}}",
+    "moving": "Il tuo piano si sta spostando in {{name}}. Arriva in circa un minuto."
   },
   "billing": {
     "open": "Apri piano e fatturazione",

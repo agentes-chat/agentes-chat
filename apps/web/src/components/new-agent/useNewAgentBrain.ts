@@ -20,7 +20,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import type { PlanChoice } from "@/components/AgentFields";
-import { usePlanHold } from "@/components/ai/ConnectAiSteps";
+import { usePlanHold } from "@/components/ai/plan-hold";
 import { useOrg } from "@/components/org-context";
 
 /**

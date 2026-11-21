@@ -200,18 +200,17 @@ function JoinRow({ request: r, onLetJoin }: { request: DeviceJoinRequest; onLetJ
       <span className="dv-row__acts ac-acts">
         <Button
           size="sm"
-          loading={deny.isPending}
-          disabled={deny.isPending}
+          // The row leaves at once (and this button with it): the call's own promise says how it went.
           onClick={() =>
-            deny.mutate(r.id, {
-              onSuccess: () => toast.show(t("devices.request.denied", { name: r.name })),
-              onError: (err) => toast.show(errorText(t, err), "error"),
-            })
+            void deny.mutateAsync(r.id).then(
+              () => toast.show(t("devices.request.denied", { name: r.name })),
+              (err: unknown) => toast.show(errorText(t, err), "error"),
+            )
           }
         >
           {t("devices.request.deny")}
         </Button>
-        <Button size="sm" variant="primary" disabled={deny.isPending} onClick={onLetJoin}>
+        <Button size="sm" variant="primary" onClick={onLetJoin}>
           {t("devices.request.letJoin")}
         </Button>
       </span>
@@ -460,20 +459,18 @@ export function DeviceRemoveDialog({
       onRemove={() => {
         if (!target) return;
         const name = target.device.name;
-        const done = {
-          onSuccess: () => {
-            toast.show(
-              target.kind === "computer" && target.device.machineKind === "host"
-                ? t("machines.host.stopped")
-                : t(wifi ? "devices.iphone.wifi.stopped" : phone ? "devices.forgotten" : "devices.removed", { name }),
-            );
-            onClose();
-            onRemoved?.();
-          },
-          onError: (err: unknown) => toast.show(errorText(t, err), "error"),
-        };
-        if (phone) forget.mutate(target.device.id, done);
-        else remove.mutate(target.device.id, done);
+        const said =
+          target.kind === "computer" && target.device.machineKind === "host"
+            ? t("machines.host.stopped")
+            : t(wifi ? "devices.iphone.wifi.stopped" : phone ? "devices.forgotten" : "devices.removed", { name });
+        // Out of the list at once and the dialog closes; a refusal puts it back and says why.
+        const gone = phone ? forget.mutateAsync(target.device.id) : remove.mutateAsync(target.device.id);
+        void gone.then(
+          () => toast.show(said),
+          (err: unknown) => toast.show(errorText(t, err), "error"),
+        );
+        onClose();
+        onRemoved?.();
       }}
     />
   );

@@ -22,7 +22,7 @@ import {
 } from "@agenteschat/client/lib/drive";
 import { PAGE_CSP } from "@agenteschat/client/lib/isolated-page";
 import { act, cleanup, fireEvent, render, within } from "@testing-library/react";
-import { fileSaver } from "@/components/artifacts/ArtifactViewer";
+import { fileSaver } from "@/components/artifacts/fileSaver";
 import { HTML_SANDBOX, HtmlFrame, withShim } from "@/components/artifacts/HtmlFrame";
 import { setMermaidRenderer } from "@/components/artifacts/Mermaid";
 import { Markdown, parseMarkdown } from "@/lib/markdown";

@@ -16,7 +16,7 @@ import {
   toolLabel,
   useConnectedById,
 } from "@/components/AccessLevels";
-import { ConnectorIcon } from "@/components/ConnectorCatalog";
+import { ConnectorIcon } from "@/components/ConnectorIcon";
 import { LoadingLine } from "@/components/Loading";
 import { PersonalOf } from "@/components/OwnerScope";
 import { useOrg } from "@/components/org-context";

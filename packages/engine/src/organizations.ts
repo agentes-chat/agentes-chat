@@ -126,6 +126,8 @@ export interface Membership {
   standing?: WorkspaceStanding;
   /** What opens when the app starts here (listMemberships). */
   start?: StartChoice;
+  /** The person pays for the workspace's plan, as the billing service said (listMemberships, ADR 0079). */
+  paysPlan?: boolean;
   /** Whether the person sees what agents did under each reply (listMemberships, `setShowActivity`). */
   showActivity?: boolean;
   /** How agents talk to the person here (listMemberships, `setAgentStyle`); null until they pick (ADR 0147). */
@@ -192,6 +194,7 @@ export async function listMemberships(db: Database, userId: string): Promise<Mem
       agentStyle: organizationMembers.agentStyle,
       chatPrefs: organizationMembers.chatPrefs,
       mode: schema.organizationSettings.mode,
+      payer: organizations.payerUserId,
       ...ROLE_COLUMNS,
     })
     .from(organizationMembers)
@@ -200,8 +203,9 @@ export async function listMemberships(db: Database, userId: string): Promise<Mem
     .leftJoin(schema.organizationSettings, eq(schema.organizationSettings.orgId, organizations.id))
     .where(and(eq(organizationMembers.userId, userId), accountInUse))
     .orderBy(asc(organizations.createdAt));
-  return rows.map(({ startPage, startChannelId, chatPrefs, mode, ...row }) => ({
+  return rows.map(({ startPage, startChannelId, chatPrefs, mode, payer, ...row }) => ({
     ...withPermissions(row),
+    paysPlan: payer === userId,
     chatPrefs: chatPrefsOf(chatPrefs),
     mode: isWorkspaceMode(mode) ? mode : "team",
     start: { page: startPage, channelId: startPage === "channel" ? startChannelId : null },

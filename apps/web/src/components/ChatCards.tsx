@@ -505,27 +505,51 @@ export function QuestionCard({ question, asker }: { question: AgentQuestion; ask
   const reopen = useRef<HTMLButtonElement>(null);
   // Refused because it ended (someone answered, its run stopped): the card closes here, even if no event came.
   const [ended, setEnded] = useState(false);
-  const refused = (err: unknown, fallback: "question.failed" | "question.skipFailed") => {
+  // `base`: the question as it was before this answer showed.
+  const refused = (
+    err: unknown,
+    fallback: "question.failed" | "question.skipFailed",
+    base: AgentQuestion = current,
+  ) => {
     if ((err as { status?: number }).status !== 409) return setError(t(fallback));
     setText("");
     setEnded(true);
-    live.answered({ ...current, status: "answered", answer: null, answeredByUserId: null });
+    live.answered({ ...base, status: "answered", answer: null, answeredByUserId: null });
+  };
+  // The card shows the answer (or the skip) at once; a refusal opens the question again, said on the card.
+  const settle = (patch: Pick<AgentQuestion, "answer"> & Partial<AgentQuestion>) => {
+    setError(null);
+    const before = current;
+    live.answered({
+      ...current,
+      ...patch,
+      status: "answered",
+      answeredByUserId: me.user.id,
+      answeredAt: new Date().toISOString(),
+    });
+    return { before };
   };
   const answer = useMutation({
     mutationFn: (input: { choice: string } | { text: string }) => api.questions.answer(org.id, question.id, input),
     // Errors are explained on the card.
     meta: { silent: true },
-    onMutate: () => setError(null),
+    onMutate: (input) => settle({ answer: "choice" in input ? input.choice : input.text }),
     onSuccess: (res, input) =>
       live.answered({ ...res, answer: res.answer ?? ("choice" in input ? input.choice : input.text) }),
-    onError: (err) => refused(err, "question.failed"),
+    onError: (err, _input, context) => {
+      if (context) live.answered(context.before);
+      refused(err, "question.failed", context?.before);
+    },
   });
   const skip = useMutation({
     mutationFn: () => api.questions.dismiss(org.id, question.id),
     meta: { silent: true },
-    onMutate: () => setError(null),
+    onMutate: () => settle({ answer: null, dismissed: true }),
     onSuccess: (res) => live.answered(res),
-    onError: (err) => refused(err, "question.skipFailed"),
+    onError: (err, _input, context) => {
+      if (context) live.answered(context.before);
+      refused(err, "question.skipFailed", context?.before);
+    },
   });
   const busy = answer.isPending || skip.isPending;
   const agent = dir.anyAgent(question.agentId);
