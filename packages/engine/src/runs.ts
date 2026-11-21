@@ -104,6 +104,22 @@ export function replyThreadOf(
 }
 
 /**
+ * Where a run's background work reported once it ended (ADR 0121): home, the conversation it was asked in. The run
+ * itself still points at the work's own thread (the anchor's), where its updates went and nobody looks after the
+ * report. Undefined: the run has no work, its work kept the thread it was asked in, or it is still on.
+ */
+export async function workHome(tx: Executor, run: Pick<AgentRun, "id" | "orgId">) {
+  const { agentWorks } = schema;
+  const [work] = await tx
+    .select({ channelId: agentWorks.channelId, threadId: agentWorks.homeThreadId, status: agentWorks.status })
+    .from(agentRuns)
+    .innerJoin(agentWorks, and(eq(agentWorks.id, agentRuns.workId), eq(agentWorks.orgId, agentRuns.orgId)))
+    .where(and(eq(agentRuns.orgId, run.orgId), eq(agentRuns.id, run.id), eq(agentWorks.ownThread, true)));
+  if (!work || work.status === "live" || work.status === "queued") return undefined;
+  return { channelId: work.channelId, threadId: work.threadId };
+}
+
+/**
  * Allowed transitions of `agent_runs.status` (docs/adr/0008-agent-runs.md):
  * `queued → running → ((waiting_approval | waiting_input) → running)* → done | failed`,
  * and any non-final state → `canceled` (a person stopped it). The last three are terminal. Suspending for an approval is a status

@@ -44,7 +44,7 @@ import { seatLive } from "./right-hand-seats";
 import { routineBriefOf } from "./routine-brief";
 import { issueRunToolToken } from "./run-tool-tokens";
 import { runnerUpdateWay } from "./runner-update";
-import { replyThreadOf } from "./runs";
+import { replyThreadOf, workHome } from "./runs";
 import { hopLimitReached, runStretchOf } from "./stretch";
 import type { ToolContext } from "./tools/types";
 
@@ -1352,6 +1352,8 @@ export async function wakeConversationForTask(deps: TaskDeps, taskId: string, op
           stretchId: agentRuns.stretchId,
           triggerMessageId: agentRuns.triggerMessageId,
           background: agentRuns.background,
+          channelId: agentRuns.channelId,
+          threadRootId: agentRuns.threadRootId,
         })
         .from(agentRuns)
         .where(eq(agentRuns.id, row.runId))
@@ -1366,7 +1368,17 @@ export async function wakeConversationForTask(deps: TaskDeps, taskId: string, op
     ? routineBriefOf((await getMessage(deps.db, row.orgId, origin.triggerMessageId))?.meta)
     : null;
   const blocked = brief ? await routineDeliveryBlock(deps.db, brief) : null;
-  const report = brief && !blocked ? brief.deliverTo : undefined;
+  // Otherwise where its run answers now, as a late answer is (`deliverNoticeToRun`, ADR 0121): where its background
+  // work reported once that ended (its own thread is where nobody looks after the report), or where `moveRun` took
+  // the run since the task started.
+  const home =
+    brief || !origin || !row.runId
+      ? undefined
+      : ((await workHome(deps.db, { id: row.runId, orgId: row.orgId })) ?? {
+          channelId: origin.channelId,
+          threadId: replyThreadOf(origin),
+        });
+  const report = brief && !blocked ? brief.deliverTo : home;
   const channelId = report?.channelId ?? row.channelId;
   const eligible = await eligibleChannelAgents(
     deps.db,
