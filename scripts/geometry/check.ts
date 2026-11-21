@@ -519,7 +519,20 @@ async function main() {
     process.exitCode = fresh.length ? 1 : 0;
   } finally {
     for (const b of browsers) b.close();
-    rmSync(out, { recursive: true, force: true });
+    // Windows keeps a killed Chrome's files locked for a moment: retry, and never let the cleanup's error replace the
+    // run's own (an EBUSY here once hid why a run stopped, and its report was never written).
+    for (let attempt = 0; ; attempt++) {
+      try {
+        rmSync(out, { recursive: true, force: true });
+        break;
+      } catch (error) {
+        if (attempt >= 10) {
+          console.warn(`geometry: could not remove ${out}: ${(error as Error).message}`);
+          break;
+        }
+        await Bun.sleep(300);
+      }
+    }
   }
 }
 
