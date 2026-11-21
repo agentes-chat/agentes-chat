@@ -8241,7 +8241,7 @@ export interface AgentPlanUsage {
 
 /**
  * What a connected app or a personal token may do: `read` only reads, `write` also sends tasks, `manage` also creates
- * and edits agents, routines and skills.
+ * and edits agents, routines and skills and writes wiki pages.
  */
 export type AppAccess = "read" | "write" | "manage";
 

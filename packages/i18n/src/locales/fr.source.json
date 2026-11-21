@@ -41352,19 +41352,19 @@
     "value": "Create and edit agents, routines and skills"
   },
   "apps.consent.manageHelp": {
-    "value": "Also creates agents, routines, skills and memories for you, with your permissions."
+    "value": "Also creates agents, routines, skills and memories and writes wiki pages for you, with your permissions."
   },
   "apps.consent.read": {
     "value": "Read only"
   },
   "apps.consent.readHelp": {
-    "value": "Sees agents, channels and replies, without sending anything."
+    "value": "Sees agents, channels, wiki pages and replies, without sending anything."
   },
   "apps.consent.can": {
     "value": "Can"
   },
   "apps.consent.canSee": {
-    "value": "See the agents and channels you see."
+    "value": "See the agents, channels and wiki pages you see."
   },
   "apps.consent.canSend": {
     "value": "Send messages as you, marked via {{app}}."
@@ -41373,7 +41373,7 @@
     "value": "Read the replies and what agents are doing."
   },
   "apps.consent.canManage": {
-    "value": "Create and edit agents, routines and skills as you. You get a notice of what it creates."
+    "value": "Create and edit agents, routines and skills as you, with a notice of what it creates. Write wiki pages and move them to the trash as you."
   },
   "apps.consent.never": {
     "value": "Never"

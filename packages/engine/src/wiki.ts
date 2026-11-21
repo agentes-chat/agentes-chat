@@ -1320,6 +1320,11 @@ async function defaultNote(db: Executor, actor: WikiActor, what: string) {
   return `by ${agent?.name ?? "agent"}${person ? `, at ${person.name}'s request` : ""}: ${what}`;
 }
 
+/** "through Claude Code: edited": a person's save that came through an AI app (ADR 0119 addendum of 2026-11-16). */
+export function noteThroughApp(app: string, what: string) {
+  return `through ${app.replace(/:/g, "").trim() || "an app"}: ${what}`;
+}
+
 /** The notes `defaultNote` and the server write, by code (the author is shown apart, so only the action). */
 const NOTE_PATTERNS: [RegExp, string, string[]][] = [
   [/^created the page$/, "created", []],
@@ -1337,7 +1342,7 @@ const NOTE_PATTERNS: [RegExp, string, string[]][] = [
 
 /** `noteCode`/`noteParams` of a version note the server wrote; nothing for a person's own note. */
 export function wikiNoteDetail(note: string): { noteCode: string; noteParams: Record<string, string> } | null {
-  const action = note.replace(/^by [^:]+: /, "");
+  const action = note.replace(/^(by|through) [^:]+: /, "");
   for (const [pattern, code, names] of NOTE_PATTERNS) {
     const m = pattern.exec(action);
     if (m) return { noteCode: code, noteParams: Object.fromEntries(names.map((n, i) => [n, m[i + 1] ?? ""])) };
@@ -2367,12 +2372,23 @@ export async function getWikiPage(db: Database, actor: WikiActor, orgId: string,
   return detail(db, actor, await findPage(db, actor, orgId, ref));
 }
 
-/** Pages (no bodies): all of them, or by folder (and its subfolders), tag or title words; most recent first. */
+/**
+ * Pages (no bodies): all of them, or by folder (and its subfolders), tag, title words or a change since a time; most
+ * recent first, and by id among pages saved at the same instant (an import's batch), so `offset` pages hold still.
+ */
 export async function listWikiPages(
   db: Database,
   actor: WikiActor,
   orgId: string,
-  filters: { folder?: string; tag?: string; q?: string; deleted?: boolean; limit?: number } = {},
+  filters: {
+    folder?: string;
+    tag?: string;
+    q?: string;
+    deleted?: boolean;
+    updatedSince?: Date;
+    offset?: number;
+    limit?: number;
+  } = {},
 ): Promise<WikiPageSummary[]> {
   await requireReader(db, actor, orgId);
   const folder = filters.folder !== undefined ? cleanFolder(filters.folder) : undefined;
@@ -2389,11 +2405,13 @@ export async function listWikiPages(
           : undefined,
         filters.tag ? sql`${filters.tag.trim().replace(/^#/, "").toLowerCase()} = any(${wikiPages.tags})` : undefined,
         q ? sql`${wikiPages.title} ilike ${`%${q.replace(/[%_\\]/g, "\\$&")}%`}` : undefined,
+        filters.updatedSince ? gte(wikiPages.updatedAt, filters.updatedSince) : undefined,
         visibleTo(actor),
       ),
     )
-    .orderBy(filters.deleted ? desc(wikiPages.deletedAt) : desc(wikiPages.updatedAt))
-    .limit(Math.min(filters.limit ?? 2000, 5000));
+    .orderBy(filters.deleted ? desc(wikiPages.deletedAt) : desc(wikiPages.updatedAt), desc(wikiPages.id))
+    .limit(Math.min(filters.limit ?? 2000, 5000))
+    .offset(filters.offset ?? 0);
   return summaries(db, rows);
 }
 
