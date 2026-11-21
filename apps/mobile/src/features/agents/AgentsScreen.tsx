@@ -47,8 +47,10 @@ import {
   PixelOrbit,
   SectionHeader,
   SkeletonList,
+  SkeletonOver,
   SwipeRow,
   Text,
+  useFirstLoad,
   useReducedMotion,
   useToast,
   useWide,
@@ -57,7 +59,7 @@ import {
 import { router } from "@/ui/navigation";
 import { withAlpha } from "@/ui/palette";
 import { usePlanHold } from "../ai/parts";
-import { CollapsibleSection, useCollapsedSections } from "../chats/HomeSection";
+import { CollapsibleSection, LandRow, useCollapsedSections } from "../chats/HomeSection";
 import { usePins } from "../chats/pins";
 import { mayCreate } from "../new/logic";
 import { useMachineOutages } from "../outages/queries";
@@ -94,6 +96,8 @@ const TASKS_POLL_MS = 15_000;
  * something seen many times a day (animate-expo's gate).
  */
 const STATE_IN = FadeIn.duration(140);
+/** On the first load the two fixed rows on top arrive first, then the agents in the order they show. */
+const LEAD_ROWS = 2;
 /** Back from a routine: the body comes back into its sky's frame. */
 const FACE_IN = FadeIn.duration(280).easing(Easing.bezier(0.23, 1, 0.32, 1));
 
@@ -239,6 +243,8 @@ function AgentsList() {
     ]),
   );
   const total = agents.length;
+  // The team's first load: its rows arrive over the stand-ins (a refetch plays nothing).
+  const load = useFirstLoad(dir.loading);
   // Archived agents have no profile: who manages each one brings it back, or deletes it for good (ADR 0082), from here;
   // the server's `canManage` on it (ADR 0085 addendum of 2026-11-17), so someone's private agent stays out of reach.
   const archived = (useFormerAgents(orgId).data ?? []).filter((a) => a.canManage === true && !a.deleted);
@@ -277,10 +283,14 @@ function AgentsList() {
     : header.actions;
   return (
     <LargeTitleScreen title={t("mobile.agents.title")} left={header.left} actions={actions} pull={pull}>
-      {/* The rows' shape while the team loads; a team that didn't load is not an empty one. */}
-      {dir.loading ? (
-        <SkeletonList rows={4} />
-      ) : directory.isError && !directory.data ? (
+      {/* The rows' shape while the team loads, fading away over the rows as they come in one after the other; a team
+          that didn't load is not an empty one. */}
+      {load.skeleton ? (
+        <SkeletonOver leaving={load.landing}>
+          <SkeletonList rows={4} />
+        </SkeletonOver>
+      ) : null}
+      {dir.loading ? null : directory.isError && !directory.data ? (
         <LoadFailed onRetry={() => void directory.refetch()} />
       ) : dir.agents.length === 0 ? (
         <FirstUse
@@ -293,17 +303,25 @@ function AgentsList() {
         <FirstUse place="agentsForYou" acts={false} />
       ) : null}
       {showsManager ? (
-        <ManagerRow working={working.length} waiting={waiting.length} onPress={() => router.push("/task-manager")} />
+        <LandRow land={load.landing}>
+          <ManagerRow working={working.length} waiting={waiting.length} onPress={() => router.push("/task-manager")} />
+        </LandRow>
       ) : null}
       {/* Equipe's org chart and channels (ADR 0148). A personal workspace (ADR 0159) keeps it as the last row of You ›
           Work: one person's agents rarely need an org chart in sight. */}
-      {total > 0 && !isPersonal(org) ? <TeamEntry divider={showsManager} /> : null}
+      {total > 0 && !isPersonal(org) ? (
+        <LandRow land={load.landing} index={1}>
+          <TeamEntry divider={showsManager} />
+        </LandRow>
+      ) : null}
       <LayoutAnimationConfig skipEntering>
         {waiting.length > 0 ? (
           <>
             <SectionHeader title={t("mobile.intentAgents.waitingSection")} count={waiting.length} />
             {waiting.map((l, i) => (
-              <AgentRow key={l.agent.id} {...rowOf(l)} divider={i > 0} live={i < LIVE_ROWS} gaze={gazeOf(l.agent.id)} />
+              <LandRow key={l.agent.id} land={load.landing} index={LEAD_ROWS + i}>
+                <AgentRow {...rowOf(l)} divider={i > 0} live={i < LIVE_ROWS} gaze={gazeOf(l.agent.id)} />
+              </LandRow>
             ))}
           </>
         ) : null}
@@ -311,13 +329,14 @@ function AgentsList() {
           <>
             <SectionHeader title={t("mobile.agents.workingSection")} count={working.length} />
             {working.map((l, i) => (
-              <AgentRow
-                key={l.agent.id}
-                {...rowOf(l)}
-                divider={i > 0}
-                live={waiting.length + i < LIVE_ROWS}
-                gaze={gazeOf(l.agent.id)}
-              />
+              <LandRow key={l.agent.id} land={load.landing} index={LEAD_ROWS + waiting.length + i}>
+                <AgentRow
+                  {...rowOf(l)}
+                  divider={i > 0}
+                  live={waiting.length + i < LIVE_ROWS}
+                  gaze={gazeOf(l.agent.id)}
+                />
+              </LandRow>
             ))}
           </>
         ) : null}
@@ -330,10 +349,13 @@ function AgentsList() {
             greeting={greeting}
             gazeOf={gazeOf}
             rowOf={rowOf}
+            land={load.landing}
+            landFrom={LEAD_ROWS}
           />
         ) : null}
         {archived.length > 0 ? (
-          <>
+          // Under the departments: it travels with them when one closes or opens.
+          <LandRow moves>
             <SectionHeader title={t("team.archived")} count={archived.length} />
             {archived.map((a, i) => (
               <SwipeRow
@@ -366,7 +388,7 @@ function AgentsList() {
                 </View>
               </SwipeRow>
             ))}
-          </>
+          </LandRow>
         ) : null}
       </LayoutAnimationConfig>
     </LargeTitleScreen>
@@ -418,6 +440,8 @@ function FreeSections({
   greeting,
   gazeOf,
   rowOf,
+  land,
+  landFrom,
 }: {
   free: TeamLine[];
   groups: AgentGroup[];
@@ -428,6 +452,9 @@ function FreeSections({
   gazeOf: (id: string) => Gaze | undefined;
   /** A row's props from its line, as the screen reads them for every row. */
   rowOf: (l: TeamLine) => RowProps;
+  /** The list's first load: the rows arrive (`LandRow`), counted from `landFrom` plus the rows before them. */
+  land: boolean;
+  landFrom: number;
 }) {
   const { t } = useTranslation();
   // A personal workspace's free agents are its person's, not a team (ADR 0159).
@@ -442,16 +469,17 @@ function FreeSections({
         const first = shown;
         shown += lines.length;
         const rows = lines.map((l, i) => (
-          <AgentRow
-            key={l.agent.id}
-            {...rowOf(l)}
-            divider={i > 0}
-            // The newcomer and the ones looking at it move while it arrives, wherever they sit in the list.
-            live={first + i < LIVE_ROWS || greeting !== null}
-            pinned={i < pinnedCount}
-            arriving={greeting === l.agent.id}
-            gaze={gazeOf(l.agent.id)}
-          />
+          <LandRow key={l.agent.id} land={land} index={landFrom + first + i}>
+            <AgentRow
+              {...rowOf(l)}
+              divider={i > 0}
+              // The newcomer and the ones looking at it move while it arrives, wherever they sit in the list.
+              live={first + i < LIVE_ROWS || greeting !== null}
+              pinned={i < pinnedCount}
+              arriving={greeting === l.agent.id}
+              gaze={gazeOf(l.agent.id)}
+            />
+          </LandRow>
         ));
         return group ? (
           <CollapsibleSection

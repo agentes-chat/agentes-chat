@@ -42,7 +42,7 @@ import { ChatHeader, useChatTitle } from "./screen/ChatHeader";
 import { ChatList, useListPlacement } from "./screen/ChatList";
 import type { RowHands } from "./screen/ChatMessage";
 import { DOCK_SIDE } from "./screen/constants";
-import { useLatest } from "./screen/hooks";
+import { useLatest, useTurnEndTap } from "./screen/hooks";
 import { useSettled } from "./screen/opening";
 import { ChannelGreeting, DockGestureArea, DockRoom, ReadMark } from "./screen/parts";
 import { ChatSheetBar, ChatSheetContext, type ChatSheetMode } from "./screen/sheet-mode";
@@ -444,6 +444,9 @@ function Chat({
   // Read while laying out the box: at the conversation's end and following it (not held where the person reads).
   const followingEnd = useRef(true);
   followingEnd.current = atEnd && !readHold;
+  // An agent's turn ending in front of the person, at the end: one light tap.
+  const followingNow = useCallback(() => followingEnd.current, []);
+  useTurnEndTap(runs, list, focused && !peeking, followingNow);
   // Whether the conversation follows its end right now. The screen's `atEnd` is false while the list is still on its
   // way down to a message just sent; the list's own follow (`maintainScrollAtEnd`) is on then, and is what counts.
   const followsEnd = () => {
