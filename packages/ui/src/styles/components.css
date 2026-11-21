@@ -12459,6 +12459,21 @@ html:not([data-pointer]) .ac-carousel__arrow:focus-visible {
 .ac-facts__item--done .ac-facts__icon {
   --fact-frame: color-mix(in srgb, var(--success) 45%, transparent);
 }
+/* In columns (`columns`): equal columns, so the hairlines and icons of every line line up; the hairline trick above
+   still hides the one at each line's start. A `wide` fact takes the whole line. A column is never narrower than
+   `--fact-min`: a strip too narrow for its columns (a phone) takes fewer, down to one fact per line, so a value never
+   wraps inside a squeezed column. */
+.ac-facts--columns {
+  --fact-min: 15rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(max(var(--fact-min), calc(100% / var(--fact-columns, 2))), 1fr));
+}
+.ac-facts--columns > .ac-facts__item {
+  max-width: none;
+}
+.ac-facts__item--wide {
+  grid-column: 1 / -1;
+}
 
 /*
  * ── Fact line: one quiet line of facts under a title (FactLine), each an icon and its words, no plates ──

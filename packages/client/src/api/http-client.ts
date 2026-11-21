@@ -268,6 +268,10 @@ import type {
   WikiImportResult,
   WikiPage,
   WikiPageSummary,
+  WikiRepository,
+  WikiRepositoryCheck,
+  WikiRepositoryInput,
+  WikiRepositoryWriting,
   WikiTopRead,
   WikiVersion,
   WorkingRun,
@@ -1936,6 +1940,27 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       reads: (orgId) => request<WikiTopRead[]>(`${org(orgId)}/wiki/reads`),
       import: (orgId, input) => request<WikiImportResult>(`${org(orgId)}/wiki/import`, { json: input }),
       githubNotes: (orgId, url) => files.blob(`${org(orgId)}/wiki/import/github?url=${enc(url)}`),
+      repository: async (orgId) =>
+        (await request<{ repository: WikiRepository | null }>(`${org(orgId)}/wiki/repository`)).repository,
+      checkRepository: (orgId, input) =>
+        request<WikiRepositoryCheck>(`${org(orgId)}/wiki/repository/check`, { json: input }),
+      connectRepository: (orgId, input: WikiRepositoryInput) =>
+        request<WikiRepository>(`${org(orgId)}/wiki/repository`, { method: "PUT", json: input }),
+      setRepositoryWriting: async (orgId, input: WikiRepositoryWriting) =>
+        (
+          await request<{ repository: WikiRepository | null }>(`${org(orgId)}/wiki/repository`, {
+            method: "PATCH",
+            json: input,
+          })
+        ).repository,
+      syncRepository: async (orgId, input) =>
+        (
+          await request<{ repository: WikiRepository | null }>(`${org(orgId)}/wiki/repository/sync`, {
+            method: "POST",
+            json: input ?? {},
+          })
+        ).repository,
+      disconnectRepository: (orgId) => request<void>(`${org(orgId)}/wiki/repository`, { method: "DELETE" }),
       append: (orgId, slug, input) =>
         request<WikiPage>(`${org(orgId)}/wiki/pages/${enc(slug)}/append`, { json: input }),
     },

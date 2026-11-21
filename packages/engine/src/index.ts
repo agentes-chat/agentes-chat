@@ -380,6 +380,7 @@ export * from "./wiki";
 export * from "./wiki-dm";
 export * from "./wiki-github";
 export * from "./wiki-links";
+export * from "./wiki-repository";
 export * from "./wiki-tools";
 export * from "./withdraw-request-tool";
 export * from "./work-analytics";

@@ -2,6 +2,7 @@ import type { AiStatus, AppNotification, NotificationKind, NotificationSource } 
 import { openTarget, ROUTINE_TROUBLE, targetPath } from "@agenteschat/client/lib/notifications";
 import { deviceHref, deviceNoticeOf } from "../devices/logic";
 import { isSafeId } from "../shared/logic";
+import { isWikiSlug } from "../wiki/logic";
 
 /**
  * Where things open in the app (Expo Router paths). Deep links
@@ -52,7 +53,9 @@ export type AppHref =
   | "/dashboards"
   | "/ai-accounts"
   | `/board/${string}`
-  | `/widget/${string}`;
+  | `/widget/${string}`
+  | "/wiki"
+  | `/wiki/${string}`;
 
 /**
  * A live file, opened on its own screen (the file screen sends it on to its kind's); with `messageId`, its
@@ -300,6 +303,8 @@ export function notificationHref(
   if (n.kind === "right_hand_paused") return "/settings/right-hand";
   // An update of a skill from its link: the skill's page, where what waits is applied.
   if (n.kind === "skill_update") return isSafeId(s.skillId) ? `/settings/skills/${s.skillId}` : "/settings/skills";
+  // GitHub's version of a wiki page replaced an edit made here (ADR 0215): the page, whose history keeps that edit.
+  if (n.kind === "wiki_conflict") return isWikiSlug(s.slug) ? `/wiki/${encodeURIComponent(s.slug)}` : "/wiki";
   if (n.kind === "machine_connected")
     return isSafeId(s.machineId) ? `/settings/devices/${s.machineId}` : "/settings/devices";
   // A device's notice (someone's agent on it, asking for it, waiting for it, a computer asking to join): the device.

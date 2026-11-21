@@ -28805,6 +28805,423 @@
   "wiki.ask.message": {
     "value": "About the page [[{{title}}]]:"
   },
+  "wiki.repo.stopped": {
+    "value": "Stopped updating with GitHub"
+  },
+  "wiki.repo.conflictNotice": {
+    "value": "GitHub's version of {{name}} replaced an edit made here (both changed the same lines). Your edit is version {{version}} in the page's history."
+  },
+  "wiki.repo.state.upToDate": {
+    "value": "{{repo}} · up to date {{when}}"
+  },
+  "wiki.repo.state.syncing": {
+    "value": "{{repo}} · updating…"
+  },
+  "wiki.repo.state.retrying": {
+    "value": "{{repo}} · GitHub didn't answer, trying again"
+  },
+  "wiki.repo.state.stopped": {
+    "value": "Stopped updating with {{repo}}"
+  },
+  "wiki.repo.state.readOnly": {
+    "value": "{{repo}} · read only · up to date {{when}}"
+  },
+  "wiki.repo.connect.title": {
+    "value": "Keep the wiki on GitHub"
+  },
+  "wiki.repo.connect.description": {
+    "value": "The pages become Markdown notes in a GitHub repository, and GitHub becomes their source."
+  },
+  "wiki.repo.connect.repository": {
+    "value": "Repository"
+  },
+  "wiki.repo.connect.repositoryPlaceholder": {
+    "value": "Choose a repository"
+  },
+  "wiki.repo.connect.repositoryHelp": {
+    "value": "The repositories the GitHub app reaches, or the address of any public one."
+  },
+  "wiki.repo.connect.byAddress": {
+    "value": "Paste another repository's address"
+  },
+  "wiki.repo.connect.address": {
+    "value": "Repository address"
+  },
+  "wiki.repo.connect.addressPlaceholder": {
+    "value": "https://github.com/owner/name"
+  },
+  "wiki.repo.connect.addressHelp": {
+    "value": "A repository's address on GitHub, or a folder's in it."
+  },
+  "wiki.repo.connect.checking": {
+    "value": "Checking the repository…"
+  },
+  "wiki.repo.connect.canWrite": {
+    "value": "{{repo}}, {{branch}} branch: the GitHub app reads and writes there."
+  },
+  "wiki.repo.connect.readOnly": {
+    "value": "{{repo}}, {{branch}} branch: public, so the wiki follows it without writing there."
+  },
+  "wiki.repo.connect.readOnlyPrivate": {
+    "value": "{{repo}}, {{branch}} branch: the GitHub app may only read it, so the wiki follows it without writing there."
+  },
+  "wiki.repo.connect.installForWrite": {
+    "value": "To write there too, install the GitHub app on this repository."
+  },
+  "wiki.repo.connect.installForWritePrivate": {
+    "value": "To write there too, give the GitHub app permission to write on this repository."
+  },
+  "wiki.repo.connect.privateNeedsApp": {
+    "value": "A private repository needs the GitHub app installed on it. A public one works as it is."
+  },
+  "wiki.repo.connect.reach.not_installed": {
+    "value": "Install the GitHub app on this repository, then come back to connect it."
+  },
+  "wiki.repo.connect.reach.no_app": {
+    "value": "No GitHub app is set up yet, so only public repositories can be followed."
+  },
+  "wiki.repo.connect.reach.refused": {
+    "value": "The GitHub app is on this repository but may not read it. Accept its permissions on GitHub, then come back to connect it."
+  },
+  "wiki.repo.connect.useAddress": {
+    "value": "Use {{repo}}"
+  },
+  "wiki.repo.connect.replaces": {
+    "value": "Connecting replaces what the wiki follows now. The pages stay here, and the notes on GitHub stay as they are."
+  },
+  "wiki.repo.connect.openConnectors": {
+    "value": "Open Connectors"
+  },
+  "wiki.repo.connect.more": {
+    "value": "Folder and branch"
+  },
+  "wiki.repo.connect.search": {
+    "value": "Search repositories"
+  },
+  "wiki.repo.connect.noResults": {
+    "value": "No repository with that name."
+  },
+  "wiki.repo.connect.folder": {
+    "value": "Folder"
+  },
+  "wiki.repo.connect.folderPlaceholder": {
+    "value": "The whole repository"
+  },
+  "wiki.repo.connect.folderHelp": {
+    "value": "Optional. Only the notes in this folder become pages."
+  },
+  "wiki.repo.connect.branch": {
+    "value": "Branch"
+  },
+  "wiki.repo.connect.branchPlaceholder": {
+    "value": "The default branch"
+  },
+  "wiki.repo.connect.branchHelp": {
+    "value": "Optional. The notes are read from and written to this branch."
+  },
+  "wiki.repo.connect.noteConflict": {
+    "value": "If a note changed on both sides, the two edits are joined. Where both changed the same lines, GitHub's stays, the one from here goes to the page's history, and whoever wrote it is told."
+  },
+  "wiki.repo.connect.publicWrite": {
+    "value": "{{repo}} is public: anyone can read what the wiki writes there, agents' edits included."
+  },
+  "wiki.repo.connect.noteRestricted": {
+    "value": "Pages limited to some people never leave here."
+  },
+  "wiki.repo.connect.submit": {
+    "value": "Connect"
+  },
+  "wiki.repo.manage.title": {
+    "value": "Wiki on GitHub"
+  },
+  "wiki.repo.manage.notes": {
+    "value": "Notes"
+  },
+  "wiki.repo.manage.updated": {
+    "value": "Updated"
+  },
+  "wiki.repo.manage.cadence": {
+    "value": "Updates"
+  },
+  "wiki.repo.manage.updating": {
+    "value": "updating…"
+  },
+  "wiki.repo.manage.never": {
+    "value": "not yet"
+  },
+  "wiki.repo.manage.pending": {
+    "value": {
+      "one": "{{count}} page is still to go to GitHub.",
+      "other": "{{count}} pages are still to go to GitHub."
+    }
+  },
+  "wiki.repo.manage.held": {
+    "value": {
+      "one": "{{count}} note didn't become a page",
+      "other": "{{count}} notes didn't become pages"
+    }
+  },
+  "wiki.repo.manage.retrying": {
+    "value": "GitHub didn't answer the last time. The wiki tries again by itself."
+  },
+  "wiki.repo.manage.prOpen": {
+    "value": "Pull request #{{number}} open on GitHub"
+  },
+  "wiki.repo.manage.prDeclined": {
+    "value": "Pull request #{{number}} was closed without merging: those changes wait here until they change again."
+  },
+  "wiki.repo.manage.readOnly": {
+    "value": "The GitHub app isn't installed on {{repo}}, or may only read it: the wiki follows it, and what changes here stays here. Install the app on it, allowed to write, to send the changes from here too."
+  },
+  "wiki.repo.manage.readOnlyPrivate": {
+    "value": "The GitHub app may only read {{repo}}: the wiki follows it, and what changes here stays here. Give the app permission to write there to send the changes from here too."
+  },
+  "wiki.repo.manage.noteDisconnect": {
+    "value": "Disconnecting leaves the pages here and the notes there, as they are."
+  },
+  "wiki.repo.manage.noteStopped": {
+    "value": "Meanwhile, what is written here stays here and goes to the repository once it is back."
+  },
+  "wiki.repo.manage.allowRemovals": {
+    "value": "Send those pages to the trash"
+  },
+  "wiki.repo.manage.change": {
+    "value": "Change repository, branch or folder"
+  },
+  "wiki.repo.manage.disconnect": {
+    "value": "Disconnect"
+  },
+  "wiki.repo.manage.disconnectText": {
+    "value": "The wiki stops following {{repo}}. The pages stay here and the notes stay on GitHub, as they are."
+  },
+  "wiki.repo.manage.disconnectTextPr": {
+    "value": "The wiki stops following {{repo}} and closes its pull request #{{number}} there. The pages stay here and the notes stay on GitHub, as they are."
+  },
+  "wiki.repo.manage.open": {
+    "value": "Open on GitHub"
+  },
+  "wiki.repo.manage.syncNow": {
+    "value": "Update now"
+  },
+  "wiki.repo.manage.retry": {
+    "value": "Try again"
+  },
+  "wiki.repo.writing.label": {
+    "value": "How the wiki writes there"
+  },
+  "wiki.repo.writing.direct": {
+    "value": "Straight to the branch"
+  },
+  "wiki.repo.writing.directDesc": {
+    "value": "Each change here is a commit on {{branch}}."
+  },
+  "wiki.repo.writing.directDescAny": {
+    "value": "Each change here is a commit on the branch the wiki follows."
+  },
+  "wiki.repo.writing.pullRequest": {
+    "value": "Through a pull request"
+  },
+  "wiki.repo.writing.pullRequestDesc": {
+    "value": "Changes here go in a pull request into {{branch}}, for someone to accept on GitHub."
+  },
+  "wiki.repo.writing.pullRequestDescAny": {
+    "value": "Changes here go in a pull request, for someone to accept on GitHub."
+  },
+  "wiki.repo.writing.none": {
+    "value": "Just follow"
+  },
+  "wiki.repo.writing.noneDesc": {
+    "value": "The wiki gets what changes on GitHub, and what changes here stays here."
+  },
+  "wiki.repo.writing.branch": {
+    "value": "The pull request's branch"
+  },
+  "wiki.repo.writing.branchHelp": {
+    "value": "The wiki rebuilds it at every change: edit the wiki, not this branch."
+  },
+  "wiki.repo.writing.branchTaken": {
+    "value": "This branch already exists on GitHub and isn't the wiki's. Choose another name."
+  },
+  "wiki.repo.writing.now.direct": {
+    "value": "The wiki commits straight on {{branch}}."
+  },
+  "wiki.repo.writing.now.pull_request": {
+    "value": "The wiki proposes its changes in a pull request into {{branch}}."
+  },
+  "wiki.repo.writing.now.none": {
+    "value": "The wiki only follows the repository: what changes here stays here."
+  },
+  "wiki.repo.cadence.notified": {
+    "value": "What changes on GitHub arrives at once: GitHub tells the wiki of each push."
+  },
+  "wiki.repo.cadence.app": {
+    "value": "What changes on GitHub arrives when GitHub tells of a push, or at the next check, every 5 minutes."
+  },
+  "wiki.repo.cadence.public": {
+    "value": "The wiki checks GitHub every minute for what changed there."
+  },
+  "wiki.repo.cadence.short.notified": {
+    "value": "at once"
+  },
+  "wiki.repo.cadence.short.app": {
+    "value": "every 5 min"
+  },
+  "wiki.repo.cadence.short.public": {
+    "value": "every minute"
+  },
+  "wiki.repo.held.tooLong": {
+    "value": "Longer than a page can be"
+  },
+  "wiki.repo.held.title": {
+    "value": "Its name can't be a title"
+  },
+  "wiki.repo.held.depth": {
+    "value": "Too many folders inside one another"
+  },
+  "wiki.repo.held.other": {
+    "value": "It couldn't become a page"
+  },
+  "wiki.repo.why.not_installed": {
+    "value": "The GitHub app no longer reaches {{repo}}, and it isn't public. Add the repository to the app on GitHub, from Connectors, then press Try again."
+  },
+  "wiki.repo.why.refused": {
+    "value": "The GitHub app may not read {{repo}}. Accept the app's permissions on GitHub, from Connectors, then press Try again."
+  },
+  "wiki.repo.why.branch_missing": {
+    "value": "The branch the wiki was kept on, {{branch}}, is gone from {{repo}}. Choose another branch, or bring it back on GitHub and press Try again."
+  },
+  "wiki.repo.why.empty": {
+    "value": "{{repo}} has no file yet. Add a first file to it, then press Try again."
+  },
+  "wiki.repo.why.missing": {
+    "value": "{{repo}} is gone, or can no longer be read. If it moved or was renamed, choose it again."
+  },
+  "wiki.repo.why.too_large": {
+    "value": "{{repo}} holds too many notes to follow. Choose one of its folders instead."
+  },
+  "wiki.repo.why.owner_gone": {
+    "value": "Whoever connected {{repo}} is no longer an admin here. Press Try again to keep it going in your name."
+  },
+  "wiki.repo.why.folder_missing": {
+    "value": "The wiki's folder is gone from {{repo}}, or is empty. Nothing was deleted here. Choose the right folder, or bring the notes back on GitHub and press Try again."
+  },
+  "wiki.repo.why.no_app": {
+    "value": "{{repo}} isn't public, and no GitHub app is set up to reach it. Set one up in Connectors, then press Try again."
+  },
+  "wiki.repo.why.protected": {
+    "value": "{{repo}} takes no commits straight on that branch (it is protected). Choose “Through a pull request” below and save, or let the GitHub app push to it and press Try again."
+  },
+  "wiki.repo.why.mass_removal": {
+    "value": "Many notes were removed from {{repo}} at once ({{count}}), so the wiki stopped before sending their pages to the trash. If it was on purpose, send them to the trash. If not, put the notes back on GitHub and press Try again."
+  },
+  "wiki.repo.why.pr_branch_taken": {
+    "value": "The pull request's branch, {{prBranch}}, already exists in {{repo}} and isn't the wiki's. Choose another name for it below, or delete that branch on GitHub and press Try again."
+  },
+  "wiki.repo.why.write_refused": {
+    "value": "GitHub refused the wiki's last change to {{repo}}, for instance a page and a folder with the same name. Rename what clashes, here or on GitHub, then press Try again."
+  },
+  "wiki.repo.why.unreadable": {
+    "value": "GitHub's copy of {{repo}} couldn't be read. Press Try again in a while. If it keeps stopping, install the GitHub app on the repository."
+  },
+  "wiki.repo.why.other": {
+    "value": "The wiki stopped following {{repo}}. Press Try again."
+  },
+  "wiki.repo.whyMember.not_installed": {
+    "value": "The GitHub app no longer reaches {{repo}}, and it isn't public. An admin can add the repository to the app on GitHub and start it again."
+  },
+  "wiki.repo.whyMember.refused": {
+    "value": "The GitHub app may not read {{repo}}. An admin can accept the app's permissions on GitHub and start it again."
+  },
+  "wiki.repo.whyMember.branch_missing": {
+    "value": "The branch the wiki was kept on, {{branch}}, is gone from {{repo}}. An admin can choose another branch and start it again."
+  },
+  "wiki.repo.whyMember.empty": {
+    "value": "{{repo}} has no file yet. Once it has one, an admin can start it again."
+  },
+  "wiki.repo.whyMember.missing": {
+    "value": "{{repo}} is gone, or can no longer be read. If it moved, an admin can choose it again."
+  },
+  "wiki.repo.whyMember.too_large": {
+    "value": "{{repo}} holds too many notes to follow. An admin can choose one of its folders instead."
+  },
+  "wiki.repo.whyMember.owner_gone": {
+    "value": "Whoever connected {{repo}} is no longer an admin here. An admin can start it again."
+  },
+  "wiki.repo.whyMember.folder_missing": {
+    "value": "The wiki's folder is gone from {{repo}}, or is empty. Nothing was deleted here. An admin can choose the right folder and start it again."
+  },
+  "wiki.repo.whyMember.no_app": {
+    "value": "{{repo}} isn't public, and no GitHub app is set up to reach it. An admin can set one up in Connectors and start it again."
+  },
+  "wiki.repo.whyMember.protected": {
+    "value": "{{repo}} takes no commits straight on that branch (it is protected). An admin can have the wiki write through a pull request and start it again."
+  },
+  "wiki.repo.whyMember.mass_removal": {
+    "value": "Many notes were removed from {{repo}} at once ({{count}}), so the wiki stopped before sending their pages to the trash. An admin decides whether they go, and starts it again."
+  },
+  "wiki.repo.whyMember.pr_branch_taken": {
+    "value": "The pull request's branch, {{prBranch}}, already exists in {{repo}} and isn't the wiki's. An admin can choose another name for it and start it again."
+  },
+  "wiki.repo.whyMember.write_refused": {
+    "value": "GitHub refused the wiki's last change to {{repo}}, for instance a page and a folder with the same name. An admin needs to look at it and start it again."
+  },
+  "wiki.repo.whyMember.unreadable": {
+    "value": "GitHub's copy of {{repo}} couldn't be read. An admin can start it again."
+  },
+  "wiki.repo.whyMember.other": {
+    "value": "The wiki stopped following {{repo}}. An admin can start it again."
+  },
+  "wiki.repo.page.synced": {
+    "value": "On GitHub"
+  },
+  "wiki.repo.page.syncedHint": {
+    "value": "Open this page's note on GitHub"
+  },
+  "wiki.repo.page.sending": {
+    "value": "Going to GitHub…"
+  },
+  "wiki.repo.page.sendingHint": {
+    "value": "This version goes to the repository in a moment."
+  },
+  "wiki.repo.page.notSent": {
+    "value": "Not on GitHub yet"
+  },
+  "wiki.repo.page.notSentHint": {
+    "value": "The wiki stopped updating with GitHub. This version goes there once it starts again."
+  },
+  "wiki.repo.page.local": {
+    "value": "Only here"
+  },
+  "wiki.repo.page.localHint": {
+    "value": "Pages limited to some people never go to GitHub."
+  },
+  "wiki.repo.page.readOnlyHint": {
+    "value": "The repository is followed read only: this version stays here. A change to its note there comes in too, and replaces this one where both changed the same lines."
+  },
+  "wiki.repo.page.replaced": {
+    "value": "Replaced by GitHub"
+  },
+  "wiki.repo.page.replacedHint": {
+    "value": "Both sides changed the same lines. GitHub's version stayed, and the one from here is version {{version}} in the history."
+  },
+  "wiki.repo.page.held": {
+    "value": "Not updated on GitHub"
+  },
+  "wiki.repo.page.heldHint": {
+    "value": "Its note on GitHub couldn't be read here, so this page isn't written over it."
+  },
+  "wiki.repo.page.review": {
+    "value": "In the pull request"
+  },
+  "wiki.repo.page.reviewHint": {
+    "value": "This version waits in the wiki's pull request, until someone accepts it on GitHub."
+  },
+  "wiki.repo.page.declined": {
+    "value": "Declined on GitHub"
+  },
+  "wiki.repo.page.declinedHint": {
+    "value": "The pull request with this version was closed without merging: it stays here until it changes again."
+  },
   "wiki.import.cta": {
     "value": "Import"
   },
@@ -28864,6 +29281,21 @@
   },
   "wiki.import.github.error.notGithub": {
     "value": "Paste a github.com link."
+  },
+  "wiki.import.github.mode.label": {
+    "value": "How the notes come"
+  },
+  "wiki.import.github.mode.sync": {
+    "value": "Keep in sync"
+  },
+  "wiki.import.github.mode.once": {
+    "value": "Import once"
+  },
+  "wiki.import.github.kept": {
+    "value": "The wiki already keeps {{repo}} in sync: its notes come in by themselves, and importing them once makes copies. To bring in what changed there now, press “Update now” in “Keep in sync”."
+  },
+  "wiki.import.github.keptMember": {
+    "value": "The wiki already keeps {{repo}} in sync: its notes come in by themselves, and importing them once makes copies."
   },
   "wiki.import.anotherLink": {
     "value": "Change link"
@@ -29197,6 +29629,15 @@
   },
   "wiki.note.imported": {
     "value": "imported from \"{{source}}\""
+  },
+  "wiki.note.repository": {
+    "value": "came from the repository ({{commit}})"
+  },
+  "wiki.note.repository_over": {
+    "value": "came from the repository ({{commit}}) over version {{version}}"
+  },
+  "wiki.note.repository_merged": {
+    "value": "joined version {{version}} with the repository's changes"
   },
   "run.steeredStep": {
     "value": "New message from {{name}}"
@@ -37688,6 +38129,36 @@
   },
   "errors.wiki.githubTooLarge": {
     "value": "Too many notes to read from a link. Download the repository as a .zip and import it in Files."
+  },
+  "errors.wiki.repoInvalid": {
+    "value": "Name the repository as owner/name."
+  },
+  "errors.wiki.repoNoApp": {
+    "value": "That repository is private or doesn't exist, and no GitHub app is set up to reach it."
+  },
+  "errors.wiki.repoNotInstalled": {
+    "value": "The GitHub app isn't installed on that repository, and it isn't public."
+  },
+  "errors.wiki.repoRefused": {
+    "value": "The GitHub app may not read that repository."
+  },
+  "errors.wiki.repoMissing": {
+    "value": "That repository is gone, or can no longer be read."
+  },
+  "errors.wiki.repoBranchInvalid": {
+    "value": "That can't be the pull request's branch: use letters, numbers, - and /, and not the branch the wiki follows."
+  },
+  "errors.wiki.repoBranchMissing": {
+    "value": "That branch doesn't exist in the repository."
+  },
+  "errors.wiki.repoBranchName": {
+    "value": "That isn't a branch name GitHub takes."
+  },
+  "errors.wiki.repoEmpty": {
+    "value": "That repository has no file yet. Add a first file to it and try again."
+  },
+  "errors.wiki.repoPathInvalid": {
+    "value": "That folder can't hold the wiki."
   },
   "errors.wiki.noAccess": {
     "value": "You don't have access to this page."

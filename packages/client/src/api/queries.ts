@@ -250,6 +250,9 @@ import type {
   WikiPage,
   WikiPageInput,
   WikiPageSummary,
+  WikiRepository,
+  WikiRepositoryInput,
+  WikiRepositoryWriting,
   WikiUpdateInput,
   WorkspaceActionCard,
   WorkspaceActionCardView,
@@ -6966,6 +6969,72 @@ export function useWikiAction(orgId: string) {
       void qc.invalidateQueries({ queryKey: keys.wiki(orgId) });
     },
   });
+}
+
+/**
+ * The repository the wiki is kept in (null: none, ADR 0215). Read again every few seconds while a sync runs, and with
+ * the wiki's own events (its key is under the wiki's).
+ */
+export const useWikiRepository = (orgId: string, enabled = true) => {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.wikiRepository(orgId),
+    queryFn: () => api.wiki.repository(orgId),
+    enabled,
+    refetchInterval: (query) => (query.state.data?.syncing ? 4000 : false),
+  });
+};
+
+/**
+ * What connecting a repository would do (its branch, whether the wiki may write there), asked once the name stops
+ * changing; a refusal is the query's error. Off while `repository` is empty. While only the branch is asked again, the
+ * last answer stays until the new one comes (`isPlaceholderData`), so what it decides on screen doesn't blink away.
+ */
+export const useWikiRepositoryCheck = (orgId: string, repository: string, branch: string) => {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.wikiRepositoryCheck(orgId, repository, branch),
+    queryFn: () => api.wiki.checkRepository(orgId, { repository, ...(branch ? { branch } : {}) }),
+    enabled: repository.length > 0,
+    retry: false,
+    staleTime: 60_000,
+    placeholderData: (previous, query) =>
+      query?.queryKey[1] === orgId && query.queryKey[3] === repository ? previous : undefined,
+  });
+};
+
+/** Connect, sync now (or start again) and disconnect the wiki's repository; the wiki is read again after. */
+export function useWikiRepositoryActions(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  const done = (repository: WikiRepository | null) => {
+    qc.setQueryData(keys.wikiRepository(orgId), repository);
+    void qc.invalidateQueries({
+      predicate: ({ queryKey: k }) => k[0] === "org" && k[1] === orgId && k[2] === "wiki" && k[3] !== "repository",
+    });
+  };
+  return {
+    connect: useMutation({
+      meta: { silent: true },
+      mutationFn: (input: WikiRepositoryInput) => api.wiki.connectRepository(orgId, input),
+      onSuccess: done,
+    }),
+    sync: useMutation({
+      meta: { silent: true },
+      mutationFn: (input: { allowRemovals?: boolean }) => api.wiki.syncRepository(orgId, input),
+      onSuccess: done,
+    }),
+    writing: useMutation({
+      meta: { silent: true },
+      mutationFn: (input: WikiRepositoryWriting) => api.wiki.setRepositoryWriting(orgId, input),
+      onSuccess: done,
+    }),
+    disconnect: useMutation({
+      meta: { silent: true },
+      mutationFn: () => api.wiki.disconnectRepository(orgId),
+      onSuccess: () => done(null),
+    }),
+  };
 }
 
 /** The wiki's Lixeira: pages deleted in the last 30 days. */

@@ -48,6 +48,7 @@ import { noAgentText } from "../team";
 import type { ToolContext, ToolDefinition, ToolSource } from "../tools/types";
 import { neutralizeUntrusted, untrustedBlock } from "../untrusted";
 import { wikiHitsForAgent } from "../wiki";
+import { outsideWikiPages } from "../wiki-repository/state";
 import { inWorkspaceWords } from "../workspace-mode";
 import { recordContextUse } from "./feedback";
 import {
@@ -294,6 +295,12 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
           ).map((m) => [m.id, m]),
         );
         const speakers = await speakersOf(ctx.db, [...items.values()]);
+        // Wiki pages that follow a public repository the workspace doesn't write to are outside text (ADR 0215).
+        const outsidePages = await outsideWikiPages(
+          ctx.db,
+          ctx.orgId,
+          hits.filter((h) => h.kind === "wiki").map((h) => h.sourceId),
+        );
         const shown = hits
           // Rules come whole in "# Rules people gave you", and only those that hold for this run's person.
           .filter((h) => items.get(h.sourceId)?.kind !== "rule")
@@ -309,7 +316,11 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
             const text = `${label} id=${h.sourceId} (${h.createdAt.toISOString().slice(0, 10)})${by} ${snippet}`;
             // Only what came from outside stays in the envelope (ADR 0167): the team's trusted memory, its messages
             // that relay nothing from outside and the wiki read as the team's.
-            const inside = item ? item.trust === "low" : m ? m.meta?.readOutside === true : h.kind !== "wiki";
+            const inside = item
+              ? item.trust === "low"
+              : m
+                ? m.meta?.readOutside === true
+                : h.kind !== "wiki" || outsidePages.has(h.sourceId);
             return { text, inside };
           });
         if (shown.length === 0 && steps.length === 0) return { content: "No results." };

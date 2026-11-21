@@ -1,13 +1,17 @@
 import { connectorOAuthApps } from "@agenteschat/config";
 import {
   appendSourceToWiki,
+  checkWikiRepository,
+  connectWikiRepository,
   createPageFromSource,
   createWikiPage,
   deleteWikiPage,
   deleteWikiPages,
   diffWikiVersions,
+  disconnectWikiRepository,
   getWikiFolderAudience,
   getWikiPage,
+  getWikiRepository,
   getWikiVersion,
   importWikiPages,
   listWikiPages,
@@ -21,12 +25,14 @@ import {
   resolveWikiTargets,
   restoreWikiPage,
   restoreWikiPages,
+  resumeWikiRepository,
   setWikiFolderAudience,
   setWikiPageAgentContext,
   setWikiPageAudience,
   setWikiPageLock,
   setWikiPagePinned,
   setWikiPagesAgents,
+  setWikiRepositoryWriting,
   suggestWikiPages,
   topWikiReads,
   updateWikiPage,
@@ -36,12 +42,13 @@ import {
   WIKI_TRASH_DAYS,
   type WikiActor,
   type WikiDeps,
+  type WikiRepositoryDeps,
   wikiGraph,
   wikiTree,
 } from "@agenteschat/engine";
 import { createRoute, z } from "@hono/zod-openapi";
 import { errorResponse } from "../../http/errors";
-import { githubAppOf } from "../github-app";
+import { githubAccess, githubAppOf } from "../github-app";
 import {
   type AppDeps,
   body,
@@ -169,6 +176,24 @@ const Page = Summary.extend({
       })
       .nullable(),
   }).openapi({ description: "Agents that used the page in the last 7 days (in their context or opened)." }),
+  repository: z
+    .object({
+      state: z.enum(["synced", "pending", "review", "declined", "local", "held"]).openapi({
+        description:
+          "`synced`: the note holds this version; `pending`: still to be written there; `review`: in the wiki's pull request (`url`); `declined`: that pull request was closed without merging; `local`: stays here (limited to some people, or the repository is followed read-only); `held`: the note couldn't be read here, so the page isn't written over it.",
+      }),
+      stopped: z.boolean().openapi({ description: "The sync stopped until someone starts it again." }),
+      readOnly: z.boolean().openapi({
+        description: "The repository is followed read-only: what changes here stays here (`local`).",
+      }),
+      url: z.string().nullable().openapi({ description: "The note's address, once it has one." }),
+      replaced: z.number().nullable().openapi({
+        description:
+          "The version made here that the repository's text replaced (both changed the same lines), while the page is still at the repository's version; it is in the history.",
+      }),
+    })
+    .nullable()
+    .openapi({ description: "Its note in the repository the wiki is kept in (ADR 0215); null when there is none." }),
 }).openapi("WikiPage");
 const Version = z
   .object({
@@ -938,6 +963,234 @@ export function wikiRoutes(deps: AppDeps) {
       const { orgId, slug } = c.req.valid("param");
       const { from, to } = c.req.valid("query");
       return c.json(await diffWikiVersions(db, person(c.get("user").id), orgId, slug, from, to), 200);
+    },
+  );
+
+  // The repository the wiki is kept in (ADR 0215): the notes of one branch's folder are the pages, each side following
+  // the other and the repository the source (a save here is a commit there, a push there a new version here).
+  // Reached through the GitHub App's installation on it for this workspace; an administrator connects it.
+  const repository = (): WikiRepositoryDeps => ({
+    db,
+    pubsub: adapters.pubsub,
+    github: { app: () => githubAppOf(deps), http: githubAccess(deps).http },
+    fetch: deps.extras?.http,
+    resolveHost: deps.extras?.resolveHost,
+  });
+  const Repository = z
+    .object({
+      provider: z.string().openapi({ description: "Where it is hosted: `github`." }),
+      owner: z.string(),
+      repo: z.string(),
+      branch: z.string(),
+      path: z.string().openapi({ description: "The folder the notes are under; empty = the repository's root." }),
+      url: z.string(),
+      writable: z.boolean().openapi({
+        description:
+          "The wiki may write there. False: a public repository the GitHub App doesn't reach, followed read-only.",
+      }),
+      public: z.boolean().openapi({
+        description: "Anyone may read it: what the wiki writes there is public, and its commits name nobody.",
+      }),
+      commitMode: z.enum(["direct", "pull_request", "none"]).openapi({
+        description: "How the wiki writes there: straight on the branch, through a pull request, or never.",
+      }),
+      prBranch: z.string().openapi({ description: "The wiki's own branch for its pull request." }),
+      pullRequest: z
+        .object({ number: z.number(), url: z.string(), state: z.enum(["open", "declined"]) })
+        .nullable()
+        .openapi({ description: "The wiki's pull request; `declined`: closed without merging." }),
+      status: z.enum(["active", "error"]),
+      errorCode: z.string().nullable().openapi({
+        description:
+          "Why it stopped (`error`), or, while `active`, a trouble the sync gets past by itself (`wiki.repo_unreachable`).",
+      }),
+      syncing: z.boolean(),
+      syncedAt: z.string().nullable(),
+      notifiedAt: z.string().nullable().openapi({
+        description: "The last push GitHub told of: when set, changes there arrive at once; else at the next look.",
+      }),
+      notes: z.number().openapi({ description: "Notes that are pages." }),
+      pending: z.number().openapi({ description: "Pages whose last version is still to be written there." }),
+      held: z.array(z.object({ path: z.string(), code: z.string() })).openapi({
+        description: "Notes that couldn't become pages, with why (`wiki.body_too_long`…); administrators only.",
+      }),
+      removalsWaiting: z.number().nullable().openapi({
+        description:
+          "Stopped with `wiki.repo_mass_removal`: how many notes were removed there at once. Their pages stay until an administrator syncs with `allowRemovals`.",
+      }),
+    })
+    .openapi("WikiRepository");
+  const RepositoryState = z.object({ repository: Repository.nullable() }).openapi("WikiRepositoryState");
+
+  app.openapi(
+    createRoute({
+      method: "get",
+      path: "/organizations/{orgId}/wiki/repository",
+      tags,
+      security,
+      summary: "The repository the wiki is kept in, and how its sync is going (null: none)",
+      request: { params: OrgParams },
+      responses: { 200: json(RepositoryState), ...errors },
+    }),
+    async (c) => c.json({ repository: await getWikiRepository(db, c.get("user").id, c.req.valid("param").orgId) }, 200),
+  );
+
+  app.openapi(
+    createRoute({
+      method: "put",
+      path: "/organizations/{orgId}/wiki/repository",
+      tags,
+      security,
+      summary: "Keep the wiki in a GitHub repository (replaces the one before; the pages stay)",
+      description:
+        "Administrators. Through the GitHub App installed on it; a public one it doesn't reach is followed read-only. `wiki.repo_invalid`, `wiki.repo_no_app`, `wiki.repo_not_installed`, `wiki.repo_refused`, `wiki.repo_missing`, `wiki.repo_branch_missing`, `wiki.repo_branch_name`, `wiki.repo_empty`, `wiki.repo_path_invalid`, `github.unreachable`.",
+      request: {
+        params: OrgParams,
+        body: body(
+          z.object({
+            repository: z.string().min(1).max(300).openapi({ description: "`owner/name`, or its address on GitHub." }),
+            branch: z.string().max(250).optional().openapi({ description: "Left out: the default branch." }),
+            path: z.string().max(300).optional().openapi({ description: "The folder; left out: the root." }),
+            commitMode: z.enum(["direct", "pull_request", "none"]).optional(),
+            prBranch: z.string().max(200).optional(),
+          }),
+        ),
+      },
+      responses: { 200: json(Repository), ...errors },
+    }),
+    async (c) => {
+      const view = await connectWikiRepository(
+        repository(),
+        c.get("user").id,
+        c.req.valid("param").orgId,
+        c.req.valid("json"),
+      );
+      deps.wakeWorkers?.();
+      return c.json(view, 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/wiki/repository/check",
+      tags,
+      security,
+      summary: "What connecting a repository would do: its branch, and whether the wiki may write there",
+      description: "Administrators. The refusals of connecting.",
+      request: {
+        params: OrgParams,
+        body: body(
+          z.object({
+            repository: z.string().min(1).max(300),
+            branch: z.string().max(250).optional(),
+            path: z.string().max(300).optional(),
+          }),
+        ),
+      },
+      responses: {
+        200: json(
+          z
+            .object({
+              owner: z.string(),
+              repo: z.string(),
+              branch: z.string(),
+              defaultBranch: z.string().nullable(),
+              path: z.string(),
+              writable: z.boolean(),
+              public: z
+                .boolean()
+                .openapi({ description: "Anyone may read it: what the wiki would write there is public." }),
+              url: z.string(),
+            })
+            .openapi("WikiRepositoryCheck"),
+        ),
+        ...errors,
+      },
+    }),
+    async (c) =>
+      c.json(
+        await checkWikiRepository(repository(), c.get("user").id, c.req.valid("param").orgId, c.req.valid("json")),
+        200,
+      ),
+  );
+
+  app.openapi(
+    createRoute({
+      method: "patch",
+      path: "/organizations/{orgId}/wiki/repository",
+      tags,
+      security,
+      summary: "How the wiki writes in its repository: straight on the branch, through a pull request, or never",
+      description: "Administrators. `wiki.repo_branch_invalid` for a pull request's branch git can't take.",
+      request: {
+        params: OrgParams,
+        body: body(
+          z.object({
+            commitMode: z.enum(["direct", "pull_request", "none"]).optional(),
+            prBranch: z.string().max(200).optional(),
+          }),
+        ),
+      },
+      responses: { 200: json(RepositoryState), ...errors },
+    }),
+    async (c) => {
+      const view = await setWikiRepositoryWriting(
+        repository(),
+        c.get("user").id,
+        c.req.valid("param").orgId,
+        c.req.valid("json"),
+      );
+      deps.wakeWorkers?.();
+      return c.json({ repository: view }, 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/wiki/repository/sync",
+      tags,
+      security,
+      summary: "Sync with the repository now, and start a stopped sync again (administrators)",
+      request: {
+        params: OrgParams,
+        body: {
+          ...body(
+            z.object({
+              allowRemovals: z.boolean().optional().openapi({
+                description:
+                  "Stopped with `wiki.repo_mass_removal`: the pages of the notes removed there may go to the trash, once.",
+              }),
+            }),
+          ),
+          required: false,
+        },
+      },
+      responses: { 200: json(RepositoryState), ...errors },
+    }),
+    async (c) => {
+      const view = await resumeWikiRepository(repository(), c.get("user").id, c.req.valid("param").orgId, {
+        allowRemovals: c.req.valid("json")?.allowRemovals === true,
+      });
+      deps.wakeWorkers?.();
+      return c.json({ repository: view }, 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "delete",
+      path: "/organizations/{orgId}/wiki/repository",
+      tags,
+      security,
+      summary: "Stop keeping the wiki in its repository; pages and notes stay as they are (administrators)",
+      request: { params: OrgParams },
+      responses: { 204: noContent[204], ...errors },
+    }),
+    async (c) => {
+      await disconnectWikiRepository(repository(), c.get("user").id, c.req.valid("param").orgId);
+      return c.body(null, 204);
     },
   );
 

@@ -372,6 +372,10 @@ import type {
   WikiPage,
   WikiPageInput,
   WikiPageSummary,
+  WikiRepository,
+  WikiRepositoryCheck,
+  WikiRepositoryInput,
+  WikiRepositoryWriting,
   WikiTopRead,
   WikiUpdateInput,
   WikiVersion,
@@ -1819,6 +1823,24 @@ export interface ApiClient {
     import(orgId: string, input: WikiImportInput): Promise<WikiImportResult>;
     /** The Markdown notes behind a GitHub link and the files they may embed, as a zip (nothing is saved). */
     githubNotes(orgId: string, url: string): Promise<Blob>;
+    /** The repository the wiki is kept in (null: none). */
+    repository(orgId: string): Promise<WikiRepository | null>;
+    /** What connecting that repository would do: its branch, and whether the wiki may write there (administrators). */
+    checkRepository(
+      orgId: string,
+      input: Pick<WikiRepositoryInput, "repository" | "branch" | "path">,
+    ): Promise<WikiRepositoryCheck>;
+    /** Keeps the wiki in that GitHub repository (administrators); replaces the one before. */
+    connectRepository(orgId: string, input: WikiRepositoryInput): Promise<WikiRepository>;
+    /** How the wiki writes there: straight on the branch, through a pull request, or never (administrators). */
+    setRepositoryWriting(orgId: string, input: WikiRepositoryWriting): Promise<WikiRepository | null>;
+    /**
+     * Syncs now, and starts a stopped sync again (administrators); `allowRemovals`, stopped because many notes were
+     * removed there at once: their pages may go to the trash.
+     */
+    syncRepository(orgId: string, input?: { allowRemovals?: boolean }): Promise<WikiRepository | null>;
+    /** Stops keeping the wiki in its repository: pages and notes stay as they are. */
+    disconnectRepository(orgId: string): Promise<void>;
     /** Appends a block (e.g. a chat message) with a link back to where it came from. */
     append(
       orgId: string,

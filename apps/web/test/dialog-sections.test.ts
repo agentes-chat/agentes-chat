@@ -44,6 +44,7 @@ const SECTION_COMPONENTS = new Set([
   "IphoneFlow",
   "FlowFooter",
   "JoinRequestForm",
+  "WikiRepositoryPanel",
 ]);
 
 // biome-ignore lint/suspicious/noExplicitAny: Babel's AST, walked by node type

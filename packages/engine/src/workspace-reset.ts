@@ -226,6 +226,9 @@ export const RESET_ERASES = [
   "wiki_page_reads",
   "wiki_page_versions",
   "wiki_pages",
+  // The wiki's repository goes with its pages: what the repository holds stays there, never sent a removal.
+  "wiki_repositories",
+  "wiki_repository_files",
 ] as const;
 
 /**

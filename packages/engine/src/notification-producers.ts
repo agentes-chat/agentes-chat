@@ -1616,6 +1616,28 @@ export async function notifySkillUpdate(
 export const resolveSkillWaiting = (deps: NotificationDeps, orgId: string, skillId: string) =>
   resolveNotifications(deps, orgId, { groupKeyPrefix: skillWaitingGroup(skillId) });
 
+// ── The wiki kept in a git repository (ADR 0215) ──────────────────────────────
+
+/**
+ * A page was edited here and its note on GitHub in the same lines before the sync: GitHub's version stays, and the
+ * edit made here is version `replaced` in the page's history. Who wrote that edit (or whom an agent wrote it for)
+ * hears it, in one row per page that gathers while unread, with no actor: nobody here did it. Inbox only: it waits on
+ * no one and is in no category of what reaches devices (`NOTICE_KINDS`).
+ */
+export async function notifyWikiConflict(
+  deps: NotificationDeps,
+  input: { orgId: string; page: { id: string; slug: string; title: string }; replaced: number; userIds: string[] },
+): Promise<void> {
+  await notify(deps, {
+    orgId: input.orgId,
+    userIds: input.userIds,
+    kind: "wiki_conflict",
+    groupKey: `wiki_conflict:${input.page.id}`,
+    source: { wikiPageId: input.page.id, slug: input.page.slug, label: input.page.title },
+    latest: { version: input.replaced },
+  });
+}
+
 // ── Workspace standing (ADR 0056 §8) ──────────────────────────────────────────
 
 /**

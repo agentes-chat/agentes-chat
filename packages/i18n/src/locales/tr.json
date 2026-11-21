@@ -11724,6 +11724,171 @@
       "sent": "İstek {{name}} ile konuşmanda gönderildi.",
       "message": "[[{{title}}]] sayfası hakkında:"
     },
+    "repo": {
+      "stopped": "GitHub ile güncellemeyi bıraktı",
+      "conflictNotice": "{{name}} sayfasının GitHub sürümü burada yapılan bir düzenlemenin yerine geçti (ikisi de aynı satırları değiştirdi). Düzenlemeniz sayfanın geçmişinde {{version}}. sürüm olarak duruyor.",
+      "state": {
+        "upToDate": "{{repo}} · güncel {{when}}",
+        "syncing": "{{repo}} · güncelleniyor…",
+        "retrying": "{{repo}} · GitHub yanıt vermedi, yeniden deneniyor",
+        "stopped": "{{repo}} ile güncellemeyi bıraktı",
+        "readOnly": "{{repo}} · salt okunur · güncel {{when}}"
+      },
+      "connect": {
+        "title": "Wiki'yi GitHub'da tutun",
+        "description": "Sayfalar bir GitHub deposunda Markdown notlarına dönüşür ve kaynakları GitHub olur.",
+        "repository": "Depo",
+        "repositoryPlaceholder": "Bir depo seçin",
+        "repositoryHelp": "GitHub uygulamasının ulaştığı depolar ya da herhangi bir herkese açık deponun adresi.",
+        "byAddress": "Başka bir deponun adresini yapıştır",
+        "address": "Depo adresi",
+        "addressPlaceholder": "https://github.com/sahip/ad",
+        "addressHelp": "GitHub'daki bir deponun ya da içindeki bir klasörün adresi.",
+        "checking": "Depo kontrol ediliyor…",
+        "canWrite": "{{repo}}, {{branch}} dalı: GitHub uygulaması orada okur ve yazar.",
+        "readOnly": "{{repo}}, {{branch}} dalı: herkese açık, bu yüzden wiki oraya yazmadan onu takip eder.",
+        "readOnlyPrivate": "{{repo}}, {{branch}} dalı: GitHub uygulaması yalnızca okuyabiliyor, bu yüzden wiki oraya yazmadan onu takip eder.",
+        "installForWrite": "Oraya da yazmak için GitHub uygulamasını bu depoya yükleyin.",
+        "installForWritePrivate": "Oraya da yazmak için GitHub uygulamasına bu depoya yazma izni verin.",
+        "privateNeedsApp": "Özel bir depoda GitHub uygulamasının yüklü olması gerekir. Herkese açık bir depo olduğu gibi çalışır.",
+        "reach": {
+          "not_installed": "GitHub uygulamasını bu depoya yükleyin, sonra bağlamak için geri gelin.",
+          "no_app": "Henüz bir GitHub uygulaması kurulmadı, bu yüzden yalnızca herkese açık depolar takip edilebilir.",
+          "refused": "GitHub uygulaması bu depoda ama depoyu okuyamıyor. GitHub'da uygulamanın izinlerini kabul edin, sonra bağlamak için geri gelin."
+        },
+        "useAddress": "{{repo}} deposunu kullan",
+        "replaces": "Bağlamak, wiki'nin şu anda takip ettiği şeyin yerini alır. Sayfalar burada kalır, GitHub'daki notlar da olduğu gibi kalır.",
+        "openConnectors": "Bağlayıcıları aç",
+        "more": "Klasör ve dal",
+        "search": "Depolarda ara",
+        "noResults": "Bu adda depo yok.",
+        "folder": "Klasör",
+        "folderPlaceholder": "Deponun tamamı",
+        "folderHelp": "İsteğe bağlı. Yalnızca bu klasördeki notlar sayfa olur.",
+        "branch": "Dal",
+        "branchPlaceholder": "Varsayılan dal",
+        "branchHelp": "İsteğe bağlı. Notlar bu daldan okunur ve bu dala yazılır.",
+        "noteConflict": "Bir not iki tarafta da değiştiyse iki düzenleme birleştirilir. İkisinin de aynı satırları değiştirdiği yerde GitHub'daki kalır, buradaki sayfanın geçmişine gider ve onu yazan kişiye haber verilir.",
+        "publicWrite": "{{repo}} herkese açık: wiki'nin oraya yazdıklarını, ajanların yazdıkları da dahil, herkes okuyabilir.",
+        "noteRestricted": "Bazı kişilerle sınırlı sayfalar buradan hiç çıkmaz.",
+        "submit": "Bağla"
+      },
+      "manage": {
+        "title": "GitHub'da Wiki",
+        "notes": "Notlar",
+        "updated": "Güncellendi",
+        "cadence": "Güncelleme",
+        "updating": "güncelleniyor…",
+        "never": "henüz değil",
+        "pending_one": "{{count}} sayfa henüz GitHub'a gidecek.",
+        "pending_other": "{{count}} sayfa henüz GitHub'a gidecek.",
+        "held_one": "{{count}} not sayfa olmadı",
+        "held_other": "{{count}} not sayfa olmadı",
+        "retrying": "GitHub son seferde yanıt vermedi. Wiki kendiliğinden yeniden deniyor.",
+        "prOpen": "Pull request #{{number}} GitHub'da açık",
+        "prDeclined": "Pull request #{{number}} kabul edilmeden kapatıldı: bu değişiklikler yeniden değişene kadar burada bekler.",
+        "readOnly": "GitHub uygulaması {{repo}} deposunda yüklü değil ya da yalnızca okuyabiliyor: wiki onu takip eder, burada değişen burada kalır. Buradaki değişiklikleri de göndermek için uygulamayı yazma izniyle oraya yükleyin.",
+        "readOnlyPrivate": "GitHub uygulaması {{repo}} deposunu yalnızca okuyabiliyor: wiki onu takip eder, burada değişen burada kalır. Buradaki değişiklikleri de göndermek için uygulamaya oraya yazma izni verin.",
+        "noteDisconnect": "Bağlantıyı kesmek sayfaları burada, notları orada olduğu gibi bırakır.",
+        "noteStopped": "Bu arada burada yazılanlar burada kalır ve depo geri geldiğinde oraya gider.",
+        "allowRemovals": "Bu sayfaları çöp kutusuna gönder",
+        "change": "Depoyu, dalı veya klasörü değiştir",
+        "disconnect": "Bağlantıyı kes",
+        "disconnectText": "Wiki {{repo}} deposunu takip etmeyi bırakır. Sayfalar burada, notlar GitHub'da olduğu gibi kalır.",
+        "disconnectTextPr": "Wiki {{repo}} deposunu takip etmeyi bırakır ve oradaki #{{number}} pull request'ini kapatır. Sayfalar burada, notlar GitHub'da olduğu gibi kalır.",
+        "open": "GitHub'da aç",
+        "syncNow": "Şimdi güncelle",
+        "retry": "Yeniden dene"
+      },
+      "writing": {
+        "label": "Wiki oraya nasıl yazar",
+        "direct": "Doğrudan dala",
+        "directDesc": "Buradaki her değişiklik {{branch}} dalında bir commit olur.",
+        "directDescAny": "Buradaki her değişiklik, wiki'nin takip ettiği dalda bir commit olur.",
+        "pullRequest": "Pull request ile",
+        "pullRequestDesc": "Buradaki değişiklikler, birinin GitHub'da kabul edeceği bir pull request ile {{branch}} dalına gider.",
+        "pullRequestDescAny": "Buradaki değişiklikler, birinin GitHub'da kabul edeceği bir pull request ile gider.",
+        "none": "Sadece takip et",
+        "noneDesc": "Wiki GitHub'da değişeni alır, burada değişen ise burada kalır.",
+        "branch": "Pull request'in dalı",
+        "branchHelp": "Wiki bu dalı her değişiklikte yeniden kurar: bu dalı değil, wiki'yi düzenleyin.",
+        "branchTaken": "Bu dal GitHub'da zaten var ve wiki'ye ait değil. Başka bir ad seçin.",
+        "now": {
+          "direct": "Wiki doğrudan {{branch}} dalına commit yapar.",
+          "pull_request": "Wiki değişikliklerini {{branch}} dalına giden bir pull request'te önerir.",
+          "none": "Wiki yalnızca depoyu takip eder: burada değişen burada kalır."
+        }
+      },
+      "cadence": {
+        "notified": "GitHub'da değişen hemen gelir: GitHub her push'u wiki'ye bildirir.",
+        "app": "GitHub'da değişen, GitHub bir push bildirdiğinde ya da 5 dakikada bir yapılan bir sonraki kontrolde gelir.",
+        "public": "Wiki, orada değişeni getirmek için GitHub'ı her dakika kontrol eder.",
+        "short": {
+          "notified": "hemen",
+          "app": "5 dakikada bir",
+          "public": "her dakika"
+        }
+      },
+      "held": {
+        "tooLong": "Bir sayfanın olabileceğinden uzun",
+        "title": "Adı başlık olamıyor",
+        "depth": "İç içe çok fazla klasör",
+        "other": "Sayfa olamadı"
+      },
+      "why": {
+        "not_installed": "GitHub uygulaması artık {{repo}} deposuna ulaşmıyor ve depo herkese açık değil. Bağlayıcılar üzerinden depoyu GitHub'da uygulamaya ekleyin, sonra Yeniden dene düğmesine tıklayın.",
+        "refused": "GitHub uygulaması {{repo}} deposunu okuyamıyor. Bağlayıcılar üzerinden GitHub'da uygulamanın izinlerini kabul edin, sonra Yeniden dene düğmesine tıklayın.",
+        "branch_missing": "Wiki'nin tutulduğu dal, {{branch}}, {{repo}} deposunda artık yok. Başka bir dal seçin ya da dalı GitHub'da geri getirip Yeniden dene düğmesine tıklayın.",
+        "empty": "{{repo}} deposunda henüz hiç dosya yok. İlk dosyayı ekleyin, sonra Yeniden dene düğmesine tıklayın.",
+        "missing": "{{repo}} artık yok ya da artık okunamıyor. Taşındıysa ya da adı değiştiyse onu yeniden seçin.",
+        "too_large": "{{repo}} takip edilemeyecek kadar çok not içeriyor. Bunun yerine klasörlerinden birini seçin.",
+        "owner_gone": "{{repo}} deposunu bağlayan kişi artık burada yönetici değil. Eşitlemenin sizin adınıza sürmesi için Yeniden dene düğmesine tıklayın.",
+        "folder_missing": "Wiki'nin klasörü {{repo}} deposunda yok ya da boş. Burada hiçbir şey silinmedi. Doğru klasörü seçin ya da notları GitHub'a geri koyup Yeniden dene düğmesine tıklayın.",
+        "no_app": "{{repo}} herkese açık değil ve ona ulaşacak bir GitHub uygulaması kurulmadı. Bağlayıcılar'da bir tane kurun, sonra Yeniden dene düğmesine tıklayın.",
+        "protected": "{{repo}} bu dala doğrudan commit kabul etmiyor (dal korumalı). Aşağıda “Pull request ile” seçeneğini seçip kaydedin ya da GitHub uygulamasının bu dala push etmesine izin verip Yeniden dene düğmesine tıklayın.",
+        "mass_removal": "{{repo}} deposundan bir seferde çok sayıda not kaldırıldı ({{count}}), bu yüzden wiki sayfalarını çöp kutusuna göndermeden önce durdu. Bilerek yapıldıysa onları çöp kutusuna gönderin. Değilse notları GitHub'a geri koyup Yeniden dene düğmesine tıklayın.",
+        "pr_branch_taken": "Pull request'in dalı, {{prBranch}}, {{repo}} deposunda zaten var ve wiki'ye ait değil. Aşağıdan onun için başka bir ad seçin ya da o dalı GitHub'da silip Yeniden dene düğmesine tıklayın.",
+        "write_refused": "GitHub, wiki'nin {{repo}} deposundaki son değişikliğini reddetti, örneğin aynı ada sahip bir sayfa ve bir klasör. Çakışanı burada ya da GitHub'da yeniden adlandırın, sonra Yeniden dene düğmesine tıklayın.",
+        "unreadable": "{{repo}} deposunun GitHub'daki kopyası okunamadı. Biraz sonra Yeniden dene düğmesine tıklayın. Eşitleme durmaya devam ederse GitHub uygulamasını depoya yükleyin.",
+        "other": "Wiki {{repo}} deposunu takip etmeyi bıraktı. Yeniden dene düğmesine tıklayın."
+      },
+      "whyMember": {
+        "not_installed": "GitHub uygulaması artık {{repo}} deposuna ulaşmıyor ve depo herkese açık değil. Bir yönetici depoyu GitHub'da uygulamaya ekleyip eşitlemeyi yeniden başlatabilir.",
+        "refused": "GitHub uygulaması {{repo}} deposunu okuyamıyor. Bir yönetici GitHub'da uygulamanın izinlerini kabul edip eşitlemeyi yeniden başlatabilir.",
+        "branch_missing": "Wiki'nin tutulduğu dal, {{branch}}, {{repo}} deposunda artık yok. Bir yönetici başka bir dal seçip eşitlemeyi yeniden başlatabilir.",
+        "empty": "{{repo}} deposunda henüz hiç dosya yok. Bir dosya eklendiğinde bir yönetici eşitlemeyi yeniden başlatabilir.",
+        "missing": "{{repo}} artık yok ya da artık okunamıyor. Taşındıysa bir yönetici onu yeniden seçebilir.",
+        "too_large": "{{repo}} takip edilemeyecek kadar çok not içeriyor. Bir yönetici bunun yerine klasörlerinden birini seçebilir.",
+        "owner_gone": "{{repo}} deposunu bağlayan kişi artık burada yönetici değil. Bir yönetici eşitlemeyi yeniden başlatabilir.",
+        "folder_missing": "Wiki'nin klasörü {{repo}} deposunda yok ya da boş. Burada hiçbir şey silinmedi. Bir yönetici doğru klasörü seçip eşitlemeyi yeniden başlatabilir.",
+        "no_app": "{{repo}} herkese açık değil ve ona ulaşacak bir GitHub uygulaması kurulmadı. Bir yönetici Bağlayıcılar'da bir tane kurup eşitlemeyi yeniden başlatabilir.",
+        "protected": "{{repo}} bu dala doğrudan commit kabul etmiyor (dal korumalı). Bir yönetici wiki'nin pull request ile yazmasını sağlayıp eşitlemeyi yeniden başlatabilir.",
+        "mass_removal": "{{repo}} deposundan bir seferde çok sayıda not kaldırıldı ({{count}}), bu yüzden wiki sayfalarını çöp kutusuna göndermeden önce durdu. Sayfaların çöp kutusuna gidip gitmeyeceğine bir yönetici karar verir ve eşitlemeyi yeniden başlatır.",
+        "pr_branch_taken": "Pull request'in dalı, {{prBranch}}, {{repo}} deposunda zaten var ve wiki'ye ait değil. Bir yönetici onun için başka bir ad seçip eşitlemeyi yeniden başlatabilir.",
+        "write_refused": "GitHub, wiki'nin {{repo}} deposundaki son değişikliğini reddetti, örneğin aynı ada sahip bir sayfa ve bir klasör. Bir yöneticinin buna bakıp eşitlemeyi yeniden başlatması gerekiyor.",
+        "unreadable": "{{repo}} deposunun GitHub'daki kopyası okunamadı. Bir yönetici eşitlemeyi yeniden başlatabilir.",
+        "other": "Wiki {{repo}} deposunu takip etmeyi bıraktı. Bir yönetici eşitlemeyi yeniden başlatabilir."
+      },
+      "page": {
+        "synced": "GitHub'da",
+        "syncedHint": "Bu sayfanın notunu GitHub'da açın",
+        "sending": "GitHub'a gidiyor…",
+        "sendingHint": "Bu sürüm birazdan depoya gider.",
+        "notSent": "Henüz GitHub'da değil",
+        "notSentHint": "Wiki GitHub ile güncellemeyi bıraktı. Bu sürüm, yeniden başladığında oraya gider.",
+        "local": "Yalnızca burada",
+        "localHint": "Bazı kişilerle sınırlı sayfalar asla GitHub'a gitmez.",
+        "readOnlyHint": "Depo salt okunur takip ediliyor: bu sürüm burada kalır. Notun oradaki değişikliği de gelir ve ikisinin de aynı satırları değiştirdiği yerde bunun yerine geçer.",
+        "replaced": "GitHub'daki sürümle değiştirildi",
+        "replacedHint": "İki taraf da aynı satırları değiştirdi. GitHub'daki sürüm kaldı, buradaki ise geçmişte {{version}}. sürüm olarak duruyor.",
+        "held": "GitHub'da güncellenmedi",
+        "heldHint": "GitHub'daki notu burada okunamadı, bu yüzden bu sayfa onun üzerine yazılmaz.",
+        "review": "Pull request'te",
+        "reviewHint": "Bu sürüm, biri GitHub'da kabul edene kadar wiki'nin pull request'inde bekler.",
+        "declined": "GitHub'da reddedildi",
+        "declinedHint": "Bu sürümü içeren pull request kabul edilmeden kapatıldı: yeniden değişene kadar burada kalır."
+      }
+    },
     "import": {
       "cta": "İçe aktar",
       "short": "İçe aktar",
@@ -11755,7 +11920,14 @@
         "read": "Notları oku",
         "error": {
           "notGithub": "Bir github.com bağlantısı yapıştırın."
-        }
+        },
+        "mode": {
+          "label": "Notlar nasıl gelir",
+          "sync": "Eşitlenmiş tut",
+          "once": "Bir kez içe aktar"
+        },
+        "kept": "Wiki {{repo}} deposunu zaten eşitlenmiş tutuyor: notları kendiliğinden gelir, onları bir kez içe aktarmak ise kopya oluşturur. Oradaki değişiklikleri şimdi almak için “Eşitlenmiş tut” bölümündeki “Şimdi güncelle” düğmesine tıklayın.",
+        "keptMember": "Wiki {{repo}} deposunu zaten eşitlenmiş tutuyor: notları kendiliğinden gelir, onları bir kez içe aktarmak ise kopya oluşturur."
       },
       "anotherLink": "Bağlantıyı değiştir",
       "dropTitle": "Kasanın .zip dosyasını buraya bırakın",
@@ -11877,7 +12049,10 @@
       "moved_root": "köke taşıdı",
       "saved_message": "bir mesajı kaydetti",
       "created_from_message": "bir mesajdan oluşturuldu",
-      "imported": "\"{{source}}\" kaynağından içe aktardı"
+      "imported": "\"{{source}}\" kaynağından içe aktardı",
+      "repository": "depodan geldi ({{commit}})",
+      "repository_over": "depodan geldi ({{commit}}), {{version}}. sürümün yerine",
+      "repository_merged": "{{version}}. sürümü depodaki değişikliklerle birleştirdi"
     }
   },
   "run": {
@@ -15259,6 +15434,16 @@
     "wiki": {
       "githubNoNotes": "Bu bağlantıda Markdown notu yok.",
       "githubTooLarge": "Bağlantıdan okunamayacak kadar çok not var. Depoyu .zip olarak indirip Dosyalar'dan içe aktarın.",
+      "repoInvalid": "Depoyu sahip/ad biçiminde yazın.",
+      "repoNoApp": "Bu depo özel ya da yok ve ona ulaşacak bir GitHub uygulaması kurulmadı.",
+      "repoNotInstalled": "GitHub uygulaması bu depoda yüklü değil ve depo herkese açık değil.",
+      "repoRefused": "GitHub uygulaması bu depoyu okuyamıyor.",
+      "repoMissing": "Bu depo artık yok ya da artık okunamıyor.",
+      "repoBranchInvalid": "Bu ad pull request'in dalı olamaz: harf, rakam, - ve / kullanın ve wiki'nin takip ettiği dalı seçmeyin.",
+      "repoBranchMissing": "Bu dal depoda yok.",
+      "repoBranchName": "Bu, GitHub'ın kabul ettiği bir dal adı değil.",
+      "repoEmpty": "Bu depoda henüz hiç dosya yok. İlk dosyayı ekleyip yeniden deneyin.",
+      "repoPathInvalid": "Bu klasör wiki'yi tutamaz.",
       "noAccess": "Bu sayfaya erişiminiz yok.",
       "audienceForbidden": "Bir sayfayı kimin göreceğini yalnızca wiki'yi düzenleyen ve rolleri yöneten kişiler seçer.",
       "audienceExcludesYou": "Sayfayı görmeye devam etmek için kendinizi de ekleyin (rollerinizden biri ya da adınız).",

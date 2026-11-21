@@ -187,6 +187,7 @@ function sourceOf(t: TFunction, n: AppNotification, channelName: (id: string) =>
   else if (n.kind === "invitation_accepted") [icon, label] = ["members", t("notifications.source.members")];
   else if (n.kind === "composio_limit") [icon, label] = ["wallet", t("notifications.source.usage")];
   else if (n.kind === "skill_update") [icon, label] = ["book", t("skills.title")];
+  else if (n.kind === "wiki_conflict") [icon, label] = ["book", t("wiki.title")];
   else if (
     n.kind === "machine_connected" ||
     n.kind === "computer_ready" ||
@@ -679,7 +680,11 @@ function Row({
   const joiner = n.kind === "invitation_accepted" ? joinerOf(t, dir, n) : undefined;
   const name = joiner ?? nameOf(t, dir, first);
   const own = workspaceHeadline(n);
-  const label = own ? t(own, { name: n.source.label }) : n.kind === "app_created" ? appCreatedLine(t, n) : name;
+  const label = own
+    ? t(own, { name: n.source.label, version: n.latest.version })
+    : n.kind === "app_created"
+      ? appCreatedLine(t, n)
+      : name;
   const reaction = n.kind === "reaction";
   const group = n.actors.length > 1;
   const other = n.actors.find((a, i) => i > 0 && (a.id !== first?.id || a.type !== first?.type));

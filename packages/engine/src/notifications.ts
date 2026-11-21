@@ -298,6 +298,14 @@ export const NOTIFICATION_KINDS = [
    * nothing of that cause is wrong.
    */
   "team_watch",
+  /**
+   * A wiki page and its note on GitHub changed the same lines before the sync (ADR 0215): GitHub's version stays, and
+   * the edit made here is a version in the page's history. Who wrote that edit (or whom an agent wrote it for) hears
+   * it, one row per page gathering while unread (`wiki_conflict:<pageId>`), with no actor: nobody here did it.
+   * `source.wikiPageId` and `source.slug` the page, its title in `source.label`, the replaced edit's version in
+   * `latest.version`. Inbox only.
+   */
+  "wiki_conflict",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -342,6 +350,10 @@ export interface NotificationSource {
   widgetId?: string;
   /** A skill of the library (`skill_update`). */
   skillId?: string;
+  /** A wiki page (`wiki_conflict`), its title in `label`. */
+  wikiPageId?: string;
+  /** `wiki_conflict`: the wiki page's slug, the address its link opens. */
+  slug?: string;
   /** A plan's account (`plan_lent`). */
   accountId?: string;
   /**
@@ -433,6 +445,8 @@ export interface NotificationLatest {
   share?: number;
   /** A reminder of what was left unread (`remindUnread`): how many things still wait on the person, this one included. */
   still?: number;
+  /** `wiki_conflict`: the version of the page's history that keeps the edit GitHub's version replaced. */
+  version?: number;
 }
 
 /** A run that failed, as its `run_failed` row lists it: `key` its agent and conversation, the rest its source. */
@@ -497,6 +511,9 @@ const MERGING: ReadonlySet<NotificationKind> = new Set([
   "right_hand_decided",
   // One per person, read or not, until nothing waits on them.
   "proposal_waiting",
+  // A page's edits GitHub's version replaced gather in one row while unread (`notifyWikiConflict`), the newest one's
+  // version kept.
+  "wiki_conflict",
 ]);
 /**
  * Group key prefix of what the right hand wrote in a DM by itself (`notifyMessage`): reading the conversation

@@ -20,6 +20,7 @@ import {
   enqueueVaultSyncs,
   enqueueWaitingResets,
   enqueueWaitlistContacts,
+  enqueueWikiRepositorySyncs,
   expireAgentProposalAsks,
   expireApprovals,
   expireBrowserHandoffs,
@@ -206,6 +207,11 @@ export const WORKER_INTERVALS_MS = {
   /** Vault connections last read over 10 minutes ago, queued once per 10-minute window (ADR 0144). */
   vaultSyncs: 5 * 60_000,
   /**
+   * Wikis kept in a repository (ADR 0215): each queued once per 5-minute window for the pushes no webhook told of, one
+   * followed read-only once a minute.
+   */
+  wikiRepositories: 60_000,
+  /**
    * What the right hand does by itself: the day's and the week's cards of whoever's slot just passed (ADR 0137 §9; one
    * per person and day or week: its dedupe key), then each of its lanes' sweeps.
    */
@@ -325,6 +331,10 @@ export function startWorkers(deps: WorkerDeps) {
   });
   every("vaultSyncs", WORKER_INTERVALS_MS.vaultSyncs, async () => {
     if ((await enqueueVaultSyncs(db)) > 0) void ticks.get("outbox")?.();
+  });
+  // A wiki kept in a repository looks at it now and then, for the push a webhook never told of.
+  every("wikiRepositories", WORKER_INTERVALS_MS.wikiRepositories, async () => {
+    if ((await enqueueWikiRepositorySyncs(db)) > 0) void ticks.get("outbox")?.();
   });
   every("partitions", WORKER_INTERVALS_MS.partitions, async () => {
     const created = await ensureMessagePartitions(db);

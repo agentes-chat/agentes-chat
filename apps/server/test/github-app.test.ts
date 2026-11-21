@@ -209,6 +209,7 @@ test("what happens on the items is queued once per delivery; the owner is told w
       "pull_request_review_thread",
       "discussion",
       "discussion_comment",
+      "push",
     ],
     url: "https://github.com/organizations/acme/settings/apps/agentes-chat/permissions",
   });
@@ -242,6 +243,31 @@ test("what happens on the items is queued once per delivery; the owner is told w
   expect(await (await hook("star", "delivery-2")).json()).toEqual({ ok: true, result: "ignored" });
   const jobs = await t.db.select().from(schema.outbox).where(eq(schema.outbox.kind, "github_app.event"));
   expect(jobs).toHaveLength(1);
+
+  // A push to the branch a workspace keeps its wiki in queues that wiki's sync (ADR 0215); any other push is let go.
+  await t.db.insert(schema.wikiRepositories).values({ orgId, owner: "acme", repo: "app", branch: "main" });
+  const push = (ref: string) => {
+    const payload = JSON.stringify({
+      ref,
+      after: "abc",
+      repository: { full_name: "acme/app" },
+      installation: { id: 7 },
+    });
+    return t.app.request("/api/github-app/webhook", {
+      method: "POST",
+      headers: {
+        "x-github-event": "push",
+        "x-github-delivery": `push-${ref}`,
+        "content-type": "application/json",
+        "x-hub-signature-256": signHook(payload, "hook-secret"),
+      },
+      body: payload,
+    });
+  };
+  expect(await (await push("refs/heads/dev")).json()).toEqual({ ok: true, result: "ignored" });
+  expect(await (await push("refs/heads/main")).json()).toEqual({ ok: true, result: "queued" });
+  const syncs = await t.db.select().from(schema.outbox).where(eq(schema.outbox.kind, "wiki.repository.sync"));
+  expect(syncs).toHaveLength(1);
 });
 
 test("GitHub's return without a session in this browser: the sign-in page first, then it finishes", async () => {

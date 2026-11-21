@@ -65,6 +65,8 @@ export const NotificationSource = z.object({
     .string()
     .optional()
     .openapi({ description: "`plan_lent`: the plan's account (`POST …/ai-accounts/{id}/take-back`)." }),
+  wikiPageId: z.string().optional().openapi({ description: "`wiki_conflict`: the wiki page (its title in `label`)." }),
+  slug: z.string().optional().openapi({ description: "`wiki_conflict`: the wiki page's slug, which opens it." }),
   label: z.string().optional(),
 });
 
@@ -143,6 +145,11 @@ const Notification = z
         description:
           "A reminder of what the person left unread in the waiting inbox: how many things still wait, this one included.",
       }),
+      version: z
+        .number()
+        .int()
+        .optional()
+        .openapi({ description: "`wiki_conflict`: the version in the page's history that keeps the replaced edit." }),
     }),
     readAt: z.string().nullable(),
     doneAt: z.string().nullable(),

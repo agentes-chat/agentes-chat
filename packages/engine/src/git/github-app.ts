@@ -89,9 +89,25 @@ export function boundInstallations(db: Database, orgId: string) {
     .orderBy(githubAppInstallations.createdAt);
 }
 
+/** A secondary rate limit, or the abuse detection it was called before: a 403 may say so in its message alone. */
+const WAIT_MESSAGE = /secondary rate limit|abuse detection/i;
+
+/**
+ * GitHub asking to wait, which says nothing of what the app may do: a server error, 429, or a 403 over a rate limit,
+ * primary or secondary, said in its headers (none remaining, `retry-after`) or only in its message. Reads a 403's body.
+ */
+async function askedToWait(res: Response) {
+  if (res.status >= 500 || res.status === 429) return true;
+  if (res.status !== 403) return false;
+  if (res.headers.get("x-ratelimit-remaining") === "0" || res.headers.has("retry-after")) return true;
+  const body = (await res.json().catch(() => null)) as { message?: unknown } | null;
+  return typeof body?.message === "string" && WAIT_MESSAGE.test(body.message);
+}
+
 /**
  * A token of one installation, the first of `permissions` GitHub grants (an installation that lacks one, such as
- * `workflows`, answers 422 and the next set is asked). Null when none was granted or GitHub didn't answer.
+ * `workflows`, answers 422 and the next set is asked). Null when none was granted. Throws when GitHub didn't answer
+ * or asked to wait (`askedToWait`): that refuses no set, and the next one would fare no better.
  */
 async function mint(
   app: GitHubAppConfig,
@@ -106,7 +122,10 @@ async function mint(
       headers: { ...appHeaders(app), "content-type": "application/json" },
       body: JSON.stringify({ ...(repositories ? { repositories } : {}), permissions: set }),
     });
-    if (!res.ok) continue;
+    if (!res.ok) {
+      if (await askedToWait(res)) throw new Error(`GitHub answered ${res.status} for an installation token`);
+      continue;
+    }
     const body = (await res.json()) as { token?: string; expires_at?: string };
     if (!body.token) continue;
     return { token: body.token, expiresAt: body.expires_at ? Date.parse(body.expires_at) : Date.now() + 3600_000 };
@@ -117,7 +136,10 @@ async function mint(
 const list = (permissions: AppPermissions | AppPermissions[]) =>
   Array.isArray(permissions) ? permissions : [permissions];
 
-/** Why the app has no token for a repository here: not installed there for this workspace, GitHub refused every permission set asked, or GitHub didn't answer. */
+/**
+ * Why the app has no token for a repository here: not installed there for this workspace, GitHub refused every
+ * permission set asked, or GitHub didn't answer or asked to wait (a server error, a rate limit).
+ */
 export type AppTokenMiss = "not_installed" | "refused" | "unreachable";
 
 /**
@@ -147,9 +169,10 @@ export async function appRepoToken(
     const path = `${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
     const inst = await http.fetch(`${http.apiUrl}/repos/${path}/installation`, { headers: appHeaders(app) });
     if (inst.status === 404) return { miss: "not_installed" };
-    if (!inst.ok) return { miss: inst.status >= 500 || inst.status === 429 ? "unreachable" : "refused" };
+    if (!inst.ok) return { miss: (await askedToWait(inst)) ? "unreachable" : "refused" };
     const { id } = (await inst.json()) as { id?: number };
     if (!id || !(await boundToOrg(tenant.db, tenant.orgId, id))) return { miss: "not_installed" };
+    // GitHub asking to wait throws, which is `unreachable` below: a refusal would stop what asked for good.
     const minted = await mint(app, http, id, list(permissions), [repo]);
     if (!minted) return { miss: "refused" };
     tokens.set(key, { ...minted, installationId: id });

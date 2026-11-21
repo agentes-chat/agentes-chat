@@ -3,7 +3,7 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 
 setupDom();
 
-import { ApiError, type WikiGraph } from "@agenteschat/client";
+import { ApiError, type WikiGraph, type WikiRepository, type WikiRepositoryCheck } from "@agenteschat/client";
 import {
   outlineOf,
   prefixLines,
@@ -32,7 +32,8 @@ import {
   vaultBatches,
   vaultInputs,
 } from "@/lib/obsidian";
-import { ADA_ID, ADMIN_ROLE_ID, createFakeApi, ENG_ID, ORG_ID, seedState } from "./fake-api";
+import { ADA_ID, ADMIN_ROLE_ID, createFakeApi, ENG_ID, meWithRole, ORG_ID, seedState } from "./fake-api";
+import { keepWikiRepository } from "./fakes/wiki";
 import { renderApp, screen, settle } from "./render";
 
 afterEach(() => cleanup());
@@ -149,6 +150,577 @@ describe("wiki rules", () => {
     expect(graphWidth(400, 560)).toBe(560);
     expect(graphWidth(9000, 420)).toBe(2240);
     expect(graphWidth(0, 0)).toBe(960);
+  });
+});
+
+/** Waits out the dialog's pause before it checks what was typed, and the check's answer. */
+const waitCheck = async () => {
+  await act(() => new Promise((r) => setTimeout(r, 650)));
+  await settle(4);
+};
+
+/** The wiki already kept in a repository (`fields` over an up-to-date `acme/notas`) as the page opens. */
+const goKept = async (path: string, fields: Partial<WikiRepository> = {}, state = seedState()) => {
+  const api = createFakeApi(state, { seed: true });
+  keepWikiRepository(api.wiki, ORG_ID, fields);
+  const r = await renderApp(`/org/${ORG_ID}/${path}`, { api });
+  await settle(8);
+  return { ...r, state, api };
+};
+
+/**
+ * The wiki's "More" menu (Radix: opened with the keyboard) → "Import": where the notes come from. The menu has no
+ * GitHub item of its own.
+ */
+const openImport = async () => {
+  const more = screen().getByRole("button", { name: "Mais ações: Wiki" });
+  more.focus();
+  await act(async () => {
+    fireEvent.keyDown(more, { key: "Enter" });
+    fireEvent.keyUp(more, { key: "Enter" });
+  });
+  await settle(2);
+  const menu = screen().getByRole("menu");
+  expect(within(menu).queryByRole("menuitem", { name: /GitHub/ })).toBeNull();
+  await click(within(menu).getByRole("menuitem", { name: "Importar" }));
+  await settle(2);
+  return screen().getByRole("dialog", { name: "Importar para a wiki" });
+};
+
+/**
+ * Import › GitHub, kept in sync (an administrator's first choice, and everyone's once a repository is kept): the
+ * connect form, or how the kept repository is going (`name`: "Wiki no GitHub").
+ */
+const openKeepOnGitHub = async (name = "Manter a wiki no GitHub") => {
+  const imports = await openImport();
+  await click(within(imports).getByRole("button", { name: /^GitHub/ }));
+  await settle(2);
+  const d = screen().getByRole("dialog", { name });
+  expect(within(d).getByRole("radio", { name: "Manter sincronizado" }).getAttribute("aria-checked")).toBe("true");
+  return d;
+};
+
+/** The line at the column's foot, once the sync stopped: the repository's dialog. */
+const openStopped = async () => {
+  await click(screen().getByRole("button", { name: "Parou de atualizar com o GitHub" }));
+  await settle(2);
+  return screen().getByRole("dialog", { name: "Wiki no GitHub" });
+};
+
+/** The one primary button of its area. */
+const isPrimary = (button: HTMLElement) => button.classList.contains("ac-btn--primary");
+
+/** What a field says around its control: its label, and its example or its error. */
+const fieldText = (control: HTMLElement) => (control.closest(".ac-field") as HTMLElement).textContent ?? "";
+
+/** What the check answers: `acme/notas` on the branch asked, else `main`, the app writing there unless told. */
+const checked = (input: { branch?: string }, fields: Partial<WikiRepositoryCheck> = {}): WikiRepositoryCheck => ({
+  owner: "acme",
+  repo: "notas",
+  branch: input.branch ?? "main",
+  defaultBranch: "main",
+  path: "",
+  writable: true,
+  public: false,
+  url: "https://github.com/acme/notas",
+  ...fields,
+});
+
+describe("the wiki kept on GitHub", () => {
+  test("a repository the app writes to: checked as it is typed, straight commits by default, a pull request on its branch", async () => {
+    const { state } = await go("wiki/onboarding");
+    const d = await openKeepOnGitHub();
+    const connect = within(d).getByRole("button", { name: "Conectar" });
+    // Nothing named yet: nothing to connect.
+    expect(connect.hasAttribute("disabled")).toBe(true);
+    await type(within(d).getByLabelText("Repositório"), "https://github.com/acme/notas/tree/main/wiki");
+    await waitCheck();
+    expect(d.textContent).toContain("acme/notas, branch main: o app do GitHub lê e escreve lá.");
+    expect(state.calls.find((c) => c.method === "wiki.checkRepository")?.args[1]).toMatchObject({
+      repository: "https://github.com/acme/notas/tree/main/wiki",
+    });
+    const direct = within(d).getByRole("radio", { name: /Direto na branch/ });
+    expect(direct.getAttribute("aria-checked")).toBe("true");
+    expect(direct.textContent).toContain("Cada mudança daqui vira um commit em main.");
+    // Through a pull request: its branch is with the folder and the branch, tucked away.
+    await click(within(d).getByRole("radio", { name: /Por pull request/ }));
+    await click(within(d).getByText("Pasta e branch"));
+    expect((within(d).getByLabelText("Branch do pull request") as HTMLInputElement).value).toBe("agentes/wiki");
+    expect(d.textContent).toContain("O que muda no GitHub chega quando o GitHub avisa de um push");
+    await click(connect);
+    expect(state.calls.find((c) => c.method === "wiki.connectRepository")?.args[1]).toMatchObject({
+      repository: "https://github.com/acme/notas/tree/main/wiki",
+      commitMode: "pull_request",
+      prBranch: "agentes/wiki",
+    });
+  });
+
+  test("a public repository the app doesn't reach: the wiki only follows it, and the dialog says how to write there too", async () => {
+    const { state, api } = await go("wiki/onboarding");
+    api.wiki.checkRepository = async (_orgId, input) => {
+      state.calls.push({ method: "wiki.checkRepository", args: [ORG_ID, input] });
+      return checked(input, { writable: false, public: true });
+    };
+    const d = await openKeepOnGitHub();
+    await type(within(d).getByLabelText("Repositório"), "acme/notas");
+    await waitCheck();
+    expect(d.textContent).toContain("acme/notas, branch main: público, então a wiki acompanha sem escrever lá.");
+    expect(d.textContent).toContain("Para escrever lá também, instale o app do GitHub nesse repositório.");
+    expect(within(d).getByRole("link", { name: "Abrir Conectores" }).getAttribute("href")).toBe(
+      `/org/${ORG_ID}/settings/connectors`,
+    );
+    const direct = within(d).getByRole("radio", { name: /Direto na branch/ });
+    expect(direct.hasAttribute("disabled") || direct.getAttribute("data-disabled") !== null).toBe(true);
+    expect(
+      within(d)
+        .getByRole("radio", { name: /Só acompanhar/ })
+        .getAttribute("aria-checked"),
+    ).toBe("true");
+    expect(d.textContent).toContain("A wiki confere o GitHub a cada minuto");
+    await click(within(d).getByRole("button", { name: "Conectar" }));
+    // What it should do once the app may write there, as the note promises: a public one, through a pull request.
+    expect(state.calls.find((c) => c.method === "wiki.connectRepository")?.args[1]).toMatchObject({
+      repository: "acme/notas",
+      commitMode: "pull_request",
+      prBranch: "agentes/wiki",
+    });
+  });
+
+  test("a private repository the GitHub app may only read: said as such, with the way to let it write", async () => {
+    const { state, api } = await go("wiki/onboarding");
+    api.wiki.checkRepository = async (_orgId, input) => {
+      state.calls.push({ method: "wiki.checkRepository", args: [ORG_ID, input] });
+      return checked(input, { repo: "interno", writable: false, url: "https://github.com/acme/interno" });
+    };
+    const d = await openKeepOnGitHub();
+    await type(within(d).getByLabelText("Repositório"), "acme/interno");
+    await waitCheck();
+    expect(d.textContent).toContain(
+      "acme/interno, branch main: o app do GitHub só pode ler, então a wiki acompanha sem escrever lá.",
+    );
+    expect(d.textContent).toContain(
+      "Para escrever lá também, dê ao app do GitHub permissão para escrever nesse repositório.",
+    );
+    expect(d.textContent).not.toContain("público, então");
+    expect(within(d).getByRole("link", { name: "Abrir Conectores" })).toBeTruthy();
+    await click(within(d).getByRole("button", { name: "Conectar" }));
+    expect(state.calls.find((c) => c.method === "wiki.connectRepository")?.args[1]).toMatchObject({
+      repository: "acme/interno",
+      commitMode: "direct",
+    });
+  });
+
+  test("a public repository the app writes to: a pull request first, and the dialog says anyone reads what the wiki writes there", async () => {
+    const { state, api } = await go("wiki/onboarding");
+    api.wiki.checkRepository = async (_orgId, input) => {
+      state.calls.push({ method: "wiki.checkRepository", args: [ORG_ID, input] });
+      return {
+        owner: "acme",
+        repo: "aberto",
+        branch: "main",
+        defaultBranch: "main",
+        path: "",
+        writable: true,
+        public: true,
+        url: "https://github.com/acme/aberto",
+      };
+    };
+    const d = await openKeepOnGitHub();
+    await type(within(d).getByLabelText("Repositório"), "acme/aberto");
+    await waitCheck();
+    expect(
+      within(d)
+        .getByRole("radio", { name: /Por pull request/ })
+        .getAttribute("aria-checked"),
+    ).toBe("true");
+    expect(d.textContent).toContain(
+      "acme/aberto é público: qualquer pessoa pode ler o que a wiki escreve lá, inclusive o que os agentes escrevem.",
+    );
+    // Only following it: nothing is written there, so nothing to say.
+    await click(within(d).getByRole("radio", { name: /Só acompanhar/ }));
+    expect(d.textContent).not.toContain("qualquer pessoa pode ler");
+    await click(within(d).getByRole("radio", { name: /Por pull request/ }));
+    await click(within(d).getByRole("button", { name: "Conectar" }));
+    expect(state.calls.find((c) => c.method === "wiki.connectRepository")?.args[1]).toMatchObject({
+      repository: "acme/aberto",
+      commitMode: "pull_request",
+    });
+  });
+
+  test("stopped because many notes left GitHub at once: the line at the column's foot, why, and a way to let their pages go to the trash", async () => {
+    // Stopped before the page opens: the line at the column's foot reads it as the wiki loads.
+    const { state } = await goKept("wiki/onboarding", {
+      status: "error",
+      errorCode: "wiki.repo_mass_removal",
+      syncedAt: null,
+      notes: 40,
+      removalsWaiting: 30,
+    });
+    const d = await openStopped();
+    expect(d.textContent).toContain("Muitas notas foram removidas de acme/notas de uma vez (30)");
+    await click(within(d).getByRole("button", { name: "Mandar essas páginas para a lixeira" }));
+    expect(state.calls.find((c) => c.method === "wiki.syncRepository")?.args[1]).toEqual({ allowRemovals: true });
+  });
+
+  test("Import › GitHub: importing once is the other choice, the link read as before; what was typed stays across the switch; back goes to the sources", async () => {
+    await go("wiki/onboarding");
+    const d = await openKeepOnGitHub();
+    await type(within(d).getByLabelText("Repositório"), "acme/notas");
+    const choice = within(d).getByRole("radio", { name: "Importar uma vez" });
+    await click(choice);
+    // The same dialog, its choice the same control above the body it swapped.
+    const once = screen().getByRole("dialog", { name: "Importar do GitHub" });
+    expect(once).toBe(d);
+    expect(within(once).getByRole("radio", { name: "Importar uma vez" })).toBe(choice);
+    expect(within(once).getByLabelText("Link do GitHub")).toBeTruthy();
+    expect(within(once).getByRole("button", { name: "Ler as notas" })).toBeTruthy();
+    await click(within(once).getByRole("radio", { name: "Manter sincronizado" }));
+    expect((within(d).getByLabelText("Repositório") as HTMLInputElement).value).toBe("acme/notas");
+    await click(within(d).getByRole("radio", { name: "Importar uma vez" }));
+    await click(within(d).getByRole("button", { name: "Voltar" }));
+    expect(screen().getByRole("dialog", { name: "Importar para a wiki" })).toBe(d);
+  });
+
+  test("a repository GitHub hides: why, under its name, the way out through Connectors, and nothing to connect", async () => {
+    const { api } = await go("wiki/onboarding");
+    api.wiki.checkRepository = async () => {
+      throw new ApiError(400, "wiki.repo_not_installed", "not installed");
+    };
+    const d = await openKeepOnGitHub();
+    await settle(2);
+    // GitHub isn't connected in this workspace: said before anything is typed.
+    expect(d.textContent).toContain("Um repositório privado precisa do app do GitHub instalado nele.");
+    await type(within(d).getByLabelText("Repositório"), "acme/secreto");
+    await waitCheck();
+    expect(d.textContent).toContain("O app do GitHub não está instalado nesse repositório, e ele não é público.");
+    expect(d.textContent).toContain("Instale o app do GitHub nesse repositório e volte para conectá-lo.");
+    expect(d.textContent).not.toContain("Um repositório privado precisa");
+    expect(within(d).getByRole("link", { name: "Abrir Conectores" }).getAttribute("href")).toBe(
+      `/org/${ORG_ID}/settings/connectors`,
+    );
+    expect(within(d).getByRole("button", { name: "Conectar" }).hasAttribute("disabled")).toBe(true);
+  });
+
+  test("the repository list: searching keeps the way to name another one, and a name typed there becomes its address", async () => {
+    const state = seedState();
+    state.githubRepos = {
+      connected: true,
+      accounts: [
+        {
+          login: "acme",
+          type: "Organization",
+          repositories: [{ fullName: "acme/notas", owner: "acme", name: "notas", private: true, updatedAt: null }],
+        },
+      ],
+      truncated: false,
+    };
+    await go("wiki/onboarding", state);
+    const d = await openKeepOnGitHub();
+    const picker = within(d).getByRole("combobox", { name: "Repositório" });
+    picker.focus();
+    await act(async () => {
+      fireEvent.keyDown(picker, { key: "Enter" });
+      fireEvent.keyUp(picker, { key: "Enter" });
+    });
+    await settle(2);
+    const search = screen().getByRole("combobox", { name: "Buscar repositórios" });
+    const list = screen().getByRole("listbox", { name: "Repositório" });
+    await type(search, "planilhas");
+    expect(within(list).queryByRole("option", { name: "acme/notas" })).toBeNull();
+    expect(within(list).getByRole("option", { name: "Colar o endereço de outro repositório" })).toBeTruthy();
+    await type(search, "acme/outro");
+    await click(within(list).getByRole("option", { name: "Usar acme/outro" }));
+    await settle(2);
+    expect((within(d).getByLabelText("Endereço do repositório") as HTMLInputElement).value).toBe("acme/outro");
+    await waitCheck();
+    expect(state.calls.filter((c) => c.method === "wiki.checkRepository").at(-1)?.args[1]).toMatchObject({
+      repository: "acme/outro",
+    });
+  });
+
+  test("a branch the repository doesn't have: said at the Branch field when typed there, else beside the address", async () => {
+    const { api } = await go("wiki/onboarding");
+    api.wiki.checkRepository = async (_orgId, input) => {
+      if (input.branch === "velha" || input.repository.includes("/tree/velha"))
+        throw new ApiError(400, "wiki.repo_branch_missing", "missing");
+      return checked(input);
+    };
+    const d = await openKeepOnGitHub();
+    const address = within(d).getByLabelText("Repositório");
+    await type(address, "acme/notas");
+    await waitCheck();
+    const branch = within(d).getByLabelText("Branch");
+    // Left empty, it shows the branch the wiki will follow.
+    expect(branch.getAttribute("placeholder")).toBe("main");
+    await type(branch, "velha");
+    await waitCheck();
+    expect(fieldText(branch)).toContain("Essa branch não existe no repositório.");
+    expect(fieldText(address)).not.toContain("Essa branch não existe");
+    await type(branch, "");
+    await type(address, "https://github.com/acme/notas/tree/velha");
+    await waitCheck();
+    expect(fieldText(address)).toContain("Essa branch não existe no repositório.");
+    expect(fieldText(branch)).not.toContain("Essa branch não existe");
+  });
+
+  test("stopped: an admin reads what to do next, and Try again starts it again", async () => {
+    const { state } = await goKept("wiki/onboarding", { status: "error", errorCode: "wiki.repo_owner_gone" });
+    const d = await openStopped();
+    expect(d.textContent).toContain(
+      "Quem conectou acme/notas não é mais admin aqui. Clique em Tentar de novo para seguir em seu nome.",
+    );
+    const retry = within(d).getByRole("button", { name: "Tentar de novo" });
+    expect(isPrimary(retry)).toBe(true);
+    await click(retry);
+    await settle(4);
+    expect(state.calls.find((c) => c.method === "wiki.syncRepository")?.args[1]).toEqual({});
+    expect(d.textContent).not.toContain("não é mais admin");
+    expect(within(d).getByRole("button", { name: "Atualizar agora" })).toBeTruthy();
+    // Closed, the line at the column's foot went with the stop.
+    await click(within(d).getByRole("button", { name: "Fechar" }));
+    await settle(2);
+    expect(screen().queryByRole("button", { name: "Parou de atualizar com o GitHub" })).toBeNull();
+  });
+
+  test("stopped on a branch that's gone: changing the repository, branch or folder leads, filled in with what the wiki follows", async () => {
+    const { state, api } = await goKept("wiki/onboarding", {
+      status: "error",
+      errorCode: "wiki.repo_branch_missing",
+      branch: "velha",
+      path: "wiki",
+      commitMode: "pull_request",
+      prBranch: "agentes/notas",
+    });
+    api.wiki.checkRepository = async (_orgId, input) => {
+      state.calls.push({ method: "wiki.checkRepository", args: [ORG_ID, input] });
+      if (input.branch === "velha") throw new ApiError(400, "wiki.repo_branch_missing", "missing");
+      return checked(input);
+    };
+    const d = await openStopped();
+    expect(d.textContent).toContain("A branch em que a wiki ficava, velha, sumiu de acme/notas. Escolha outra branch");
+    const change = within(d).getByRole("button", { name: "Trocar repositório, branch ou pasta" });
+    expect(isPrimary(change)).toBe(true);
+    expect(isPrimary(within(d).getByRole("button", { name: "Tentar de novo" }))).toBe(false);
+    await click(change);
+    await settle(2);
+    expect(screen().getByRole("dialog", { name: "Trocar repositório, branch ou pasta" })).toBe(d);
+    expect((within(d).getByLabelText("Repositório") as HTMLInputElement).value).toBe("acme/notas");
+    expect((within(d).getByLabelText("Pasta") as HTMLInputElement).value).toBe("wiki");
+    expect((within(d).getByLabelText("Branch") as HTMLInputElement).value).toBe("velha");
+    expect(
+      within(d)
+        .getByRole("radio", { name: /Por pull request/ })
+        .getAttribute("aria-checked"),
+    ).toBe("true");
+    expect((within(d).getByLabelText("Branch do pull request") as HTMLInputElement).value).toBe("agentes/notas");
+    expect(d.textContent).toContain("Conectar substitui o que a wiki acompanha agora.");
+    await waitCheck();
+    expect(fieldText(within(d).getByLabelText("Branch"))).toContain("Essa branch não existe no repositório.");
+    await type(within(d).getByLabelText("Branch"), "principal");
+    await waitCheck();
+    await click(within(d).getByRole("button", { name: "Conectar" }));
+    await settle(4);
+    expect(state.calls.find((c) => c.method === "wiki.connectRepository")?.args[1]).toEqual({
+      repository: "acme/notas",
+      path: "wiki",
+      branch: "principal",
+      commitMode: "pull_request",
+      prBranch: "agentes/notas",
+    });
+    // Back to how it is going, on the new branch.
+    expect(screen().getByRole("dialog", { name: "Wiki no GitHub" })).toBe(d);
+    expect(d.textContent).toContain("acme/notas · principal");
+  });
+
+  test("stopped on a pull request branch that isn't the wiki's: its field says so, and saving another name starts it again", async () => {
+    const { state } = await goKept("wiki/onboarding", {
+      status: "error",
+      errorCode: "wiki.repo_pr_branch_taken",
+      commitMode: "pull_request",
+    });
+    const d = await openStopped();
+    expect(d.textContent).toContain("A branch do pull request, agentes/wiki, já existe em acme/notas e não é da wiki.");
+    const field = within(d).getByLabelText("Branch do pull request");
+    expect(fieldText(field)).toContain("Essa branch já existe no GitHub e não é da wiki. Escolha outro nome.");
+    expect(isPrimary(within(d).getByRole("button", { name: "Tentar de novo" }))).toBe(false);
+    await type(field, "agentes/wiki-notas");
+    expect(fieldText(field)).not.toContain("Essa branch já existe");
+    const save = within(d).getByRole("button", { name: "Salvar" });
+    expect(isPrimary(save)).toBe(true);
+    await click(save);
+    await settle(4);
+    expect(state.calls.find((c) => c.method === "wiki.setRepositoryWriting")?.args[1]).toEqual({
+      commitMode: "pull_request",
+      prBranch: "agentes/wiki-notas",
+    });
+    expect(document.body.textContent).toContain("Salvo");
+    expect(d.textContent).not.toContain("já existe em acme/notas");
+  });
+
+  test("someone who isn't an admin: why it stopped, that an admin starts it again, and none of an admin's buttons", async () => {
+    const state = seedState();
+    meWithRole(state, []);
+    await goKept("wiki/onboarding", { status: "error", errorCode: "wiki.repo_not_installed" }, state);
+    const d = await openStopped();
+    expect(d.textContent).toContain(
+      "O app do GitHub não alcança mais acme/notas, e ele não é público. Um admin pode adicionar o repositório ao app no GitHub e retomar.",
+    );
+    expect(d.textContent).not.toContain("Tentar de novo");
+    for (const name of ["Tentar de novo", "Desconectar", "Trocar repositório, branch ou pasta", "Salvar"])
+      expect(within(d).queryByRole("button", { name })).toBeNull();
+    expect(within(d).getByRole("button", { name: "Abrir no GitHub" })).toBeTruthy();
+  });
+
+  test("a private repository the wiki may only read: why, and only following it to choose", async () => {
+    await goKept("wiki/onboarding", { writable: false });
+    const d = await openKeepOnGitHub("Wiki no GitHub");
+    expect(d.textContent).toContain(
+      "O app do GitHub só pode ler acme/notas: a wiki acompanha o repositório, e o que muda aqui fica aqui.",
+    );
+    expect(
+      within(d)
+        .getByRole("radio", { name: /Só acompanhar/ })
+        .getAttribute("aria-checked"),
+    ).toBe("true");
+    const direct = within(d).getByRole("radio", { name: /Direto na branch/ });
+    expect(direct.hasAttribute("disabled") || direct.getAttribute("data-disabled") !== null).toBe(true);
+  });
+
+  test("how it is going: the pull request open on GitHub, pages still to go there, notes that didn't become pages", async () => {
+    await goKept("wiki/onboarding", {
+      commitMode: "pull_request",
+      pullRequest: { number: 12, url: "https://github.com/acme/notas/pull/12", state: "open" },
+      pending: 3,
+      held: [{ path: "notas/Enorme.md", code: "wiki.body_too_long" }],
+    });
+    const d = await openKeepOnGitHub("Wiki no GitHub");
+    expect(within(d).getByRole("link", { name: "Pull request #12 aberto no GitHub" }).getAttribute("href")).toBe(
+      "https://github.com/acme/notas/pull/12",
+    );
+    expect(d.textContent).toContain("3 páginas ainda vão para o GitHub.");
+    expect(d.textContent).toContain("1 nota não virou página");
+    expect(d.textContent).toContain("notas/Enorme.md");
+    expect(d.textContent).toContain("Maior do que uma página pode ser");
+  });
+
+  test("a pull request closed without merging: said, with its link", async () => {
+    await goKept("wiki/onboarding", {
+      commitMode: "pull_request",
+      pullRequest: { number: 12, url: "https://github.com/acme/notas/pull/12", state: "declined" },
+    });
+    const d = await openKeepOnGitHub("Wiki no GitHub");
+    expect(
+      within(d)
+        .getByRole("link", { name: /O pull request #12 foi fechado sem ser aceito/ })
+        .getAttribute("href"),
+    ).toBe("https://github.com/acme/notas/pull/12");
+  });
+
+  test("an admin updates now, and changes how the wiki writes there", async () => {
+    const { state } = await goKept("wiki/onboarding");
+    const d = await openKeepOnGitHub("Wiki no GitHub");
+    const update = within(d).getByRole("button", { name: "Atualizar agora" });
+    expect(isPrimary(update)).toBe(true);
+    await click(update);
+    await settle(4);
+    expect(state.calls.find((c) => c.method === "wiki.syncRepository")?.args[1]).toEqual({});
+    // Updating: not again until it is done.
+    expect(update.hasAttribute("disabled")).toBe(true);
+    expect(within(d).queryByRole("button", { name: "Salvar" })).toBeNull();
+    await click(within(d).getByRole("radio", { name: /Por pull request/ }));
+    expect((within(d).getByLabelText("Branch do pull request") as HTMLInputElement).value).toBe("agentes/wiki");
+    await click(within(d).getByRole("button", { name: "Salvar" }));
+    await settle(4);
+    expect(state.calls.find((c) => c.method === "wiki.setRepositoryWriting")?.args[1]).toEqual({
+      commitMode: "pull_request",
+      prBranch: "agentes/wiki",
+    });
+    expect(document.body.textContent).toContain("Salvo");
+  });
+
+  test("disconnecting asks first, says it is done, and leaves Import on connecting one", async () => {
+    const { state } = await goKept("wiki/onboarding", {
+      commitMode: "pull_request",
+      pullRequest: { number: 12, url: "https://github.com/acme/notas/pull/12", state: "open" },
+    });
+    const d = await openKeepOnGitHub("Wiki no GitHub");
+    await click(within(d).getByRole("button", { name: "Desconectar" }));
+    await settle(2);
+    const confirm = screen().getByRole("dialog", { name: "Desconectar acme/notas?" });
+    expect(confirm.textContent).toContain("A wiki deixa de acompanhar acme/notas e fecha o pull request #12 dela lá.");
+    expect(state.calls.some((c) => c.method === "wiki.disconnectRepository")).toBe(false);
+    await click(within(confirm).getByRole("button", { name: "Desconectar" }));
+    await settle(4);
+    expect(state.calls.some((c) => c.method === "wiki.disconnectRepository")).toBe(true);
+    expect(document.body.textContent).toContain("acme/notas desconectado.");
+    // Still Import › GitHub, now to connect one.
+    expect(screen().getByRole("dialog", { name: "Manter a wiki no GitHub" })).toBe(d);
+    expect(within(d).getByRole("button", { name: "Conectar" })).toBeTruthy();
+  });
+
+  test("Import's GitHub card says how the kept repository is going", async () => {
+    await goKept("wiki/onboarding", { status: "error", errorCode: "wiki.repo_empty" });
+    const imports = await openImport();
+    const card = within(imports).getByRole("button", { name: /^GitHub/ });
+    expect(card.textContent).toContain("Parou de atualizar com acme/notas");
+  });
+
+  test("importing once the repository the wiki keeps in sync: said, and notes named like a page are skipped", async () => {
+    const { api } = await goKept("wiki/onboarding");
+    api.wiki.githubNotes = async () => storedZip({ "notas/Deploy.md": "# Deploy\n\nOutra versão." });
+    const d = await openKeepOnGitHub("Wiki no GitHub");
+    await click(within(d).getByRole("radio", { name: "Importar uma vez" }));
+    await type(within(d).getByLabelText("Link do GitHub"), "https://github.com/acme/notas");
+    expect(d.textContent).toContain(
+      "A wiki já mantém acme/notas sincronizado: as notas dele chegam sozinhas, e importá-las uma vez cria cópias.",
+    );
+    expect(d.textContent).toContain("clique em “Atualizar agora” em “Manter sincronizado”");
+    await click(within(d).getByRole("button", { name: "Ler as notas" }));
+    await settle(10);
+    await act(() => new Promise((r) => setTimeout(r, 700)));
+    await settle(4);
+    const review = screen().getByRole("dialog");
+    expect(review.textContent).toContain("1 nota tem o nome de uma página que já existe");
+    expect(within(review).getByRole("radio", { name: "Pular" }).getAttribute("aria-checked")).toBe("true");
+  });
+
+  test("a page GitHub's version replaced says so, and opens its history", async () => {
+    const api = createFakeApi(seedState(), { seed: true });
+    keepWikiRepository(api.wiki, ORG_ID);
+    const get = api.wiki.get;
+    api.wiki.get = async (orgId, slug) => ({
+      ...(await get(orgId, slug)),
+      repository: {
+        state: "synced",
+        stopped: false,
+        readOnly: false,
+        url: "https://github.com/acme/notas/blob/main/Deploy.md",
+        replaced: 1,
+      },
+    });
+    await renderApp(`/org/${ORG_ID}/wiki/deploy`, { api });
+    await settle(8);
+    await click(screen().getByRole("button", { name: "Substituída pelo GitHub" }));
+    await settle(4);
+    expect(screen().getByRole("dialog", { name: "Histórico de Deploy" })).toBeTruthy();
+  });
+
+  test("a page not on GitHub because the sync stopped: its mark opens why", async () => {
+    const api = createFakeApi(seedState(), { seed: true });
+    keepWikiRepository(api.wiki, ORG_ID, { status: "error", errorCode: "wiki.repo_empty" });
+    const get = api.wiki.get;
+    api.wiki.get = async (orgId, slug) => ({
+      ...(await get(orgId, slug)),
+      repository: { state: "pending", stopped: true, readOnly: false, url: null, replaced: null },
+    });
+    await renderApp(`/org/${ORG_ID}/wiki/deploy`, { api });
+    await settle(8);
+    await click(screen().getByRole("button", { name: "Ainda não está no GitHub" }));
+    await settle(2);
+    const d = screen().getByRole("dialog", { name: "Wiki no GitHub" });
+    expect(d.textContent).toContain(
+      "acme/notas ainda não tem nenhum arquivo. Adicione um primeiro arquivo e clique em Tentar de novo.",
+    );
   });
 });
 

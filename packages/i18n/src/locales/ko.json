@@ -11306,6 +11306,169 @@
       "sent": "{{name}}님과의 대화로 요청을 보냈습니다.",
       "message": "[[{{title}}]] 페이지에 대해:"
     },
+    "repo": {
+      "stopped": "GitHub와 업데이트가 멈췄어요",
+      "conflictNotice": "{{name}}의 GitHub 버전이 여기서 한 수정을 대체했어요(양쪽이 같은 줄을 바꿨어요). 내 수정은 페이지 기록의 버전 {{version}}이에요.",
+      "state": {
+        "upToDate": "{{repo}} · 최신 ({{when}})",
+        "syncing": "{{repo}} · 업데이트 중…",
+        "retrying": "{{repo}} · GitHub가 응답하지 않아 다시 시도하는 중",
+        "stopped": "{{repo}}와 업데이트가 멈췄어요",
+        "readOnly": "{{repo}} · 읽기 전용 · 최신 ({{when}})"
+      },
+      "connect": {
+        "title": "위키를 GitHub에 보관",
+        "description": "페이지가 GitHub 저장소의 Markdown 노트가 되고, GitHub가 원본이 돼요.",
+        "repository": "저장소",
+        "repositoryPlaceholder": "저장소 선택",
+        "repositoryHelp": "GitHub 앱이 닿는 저장소, 또는 공개 저장소의 주소.",
+        "byAddress": "다른 저장소 주소 붙여넣기",
+        "address": "저장소 주소",
+        "addressPlaceholder": "https://github.com/소유자/이름",
+        "addressHelp": "GitHub에 있는 저장소나 그 안의 폴더 주소.",
+        "checking": "저장소를 확인하는 중…",
+        "canWrite": "{{repo}}, {{branch}} 브랜치: GitHub 앱이 읽고 써요.",
+        "readOnly": "{{repo}}, {{branch}} 브랜치: 공개 저장소라 위키가 쓰지 않고 따라가요.",
+        "readOnlyPrivate": "{{repo}}, {{branch}} 브랜치: GitHub 앱이 읽기만 할 수 있어서 위키가 쓰지 않고 따라가요.",
+        "installForWrite": "거기에도 쓰려면 이 저장소에 GitHub 앱을 설치하세요.",
+        "installForWritePrivate": "거기에도 쓰려면 GitHub 앱에 이 저장소의 쓰기 권한을 주세요.",
+        "privateNeedsApp": "비공개 저장소에는 GitHub 앱이 설치되어 있어야 해요. 공개 저장소는 그대로 쓸 수 있어요.",
+        "reach": {
+          "not_installed": "이 저장소에 GitHub 앱을 설치한 뒤 돌아와서 연결하세요.",
+          "no_app": "아직 설정된 GitHub 앱이 없어서 공개 저장소만 따라갈 수 있어요.",
+          "refused": "GitHub 앱이 이 저장소에 있지만 읽을 수 없어요. GitHub에서 앱의 권한을 수락한 뒤 돌아와서 연결하세요."
+        },
+        "useAddress": "{{repo}} 사용",
+        "replaces": "연결하면 위키가 지금 따라가는 대상이 바뀌어요. 페이지는 여기에 남고, GitHub의 노트도 그대로 남아요.",
+        "openConnectors": "커넥터 열기",
+        "more": "폴더와 브랜치",
+        "search": "저장소 검색",
+        "noResults": "그 이름의 저장소가 없어요.",
+        "folder": "폴더",
+        "folderPlaceholder": "저장소 전체",
+        "folderHelp": "선택 사항이에요. 이 폴더의 노트만 페이지가 돼요.",
+        "branch": "브랜치",
+        "branchPlaceholder": "기본 브랜치",
+        "branchHelp": "선택 사항이에요. 노트를 이 브랜치에서 읽고 이 브랜치에 써요.",
+        "noteConflict": "노트가 양쪽에서 바뀌면 두 수정이 합쳐져요. 양쪽이 같은 줄을 바꾼 곳은 GitHub의 것이 남고, 여기의 것은 페이지 기록으로 가며, 쓴 사람에게 알려요.",
+        "publicWrite": "{{repo}}는 공개 저장소예요. 위키가 거기에 쓰는 내용은 에이전트가 쓴 것까지 누구나 읽을 수 있어요.",
+        "noteRestricted": "일부 사람에게만 공개된 페이지는 여기를 떠나지 않아요.",
+        "submit": "연결"
+      },
+      "manage": {
+        "title": "GitHub의 Wiki",
+        "notes": "노트",
+        "updated": "업데이트",
+        "cadence": "업데이트",
+        "updating": "업데이트 중…",
+        "never": "아직 안 됨",
+        "pending_other": "{{count}}개 페이지가 아직 GitHub로 가야 해요.",
+        "held_other": "{{count}}개 노트가 페이지가 되지 않았어요",
+        "retrying": "지난번에 GitHub가 응답하지 않았어요. 위키가 알아서 다시 시도해요.",
+        "prOpen": "GitHub에 풀 리퀘스트 #{{number}} 열림",
+        "prDeclined": "풀 리퀘스트 #{{number}}이 병합되지 않고 닫혔어요. 이 변경 사항은 다시 바뀔 때까지 여기서 기다려요.",
+        "readOnly": "{{repo}}에 GitHub 앱이 설치되어 있지 않거나 읽기만 할 수 있어요. 위키가 저장소를 따라가고, 여기서 바뀐 내용은 여기에 남아요. 여기서 바뀐 내용도 보내려면 쓰기 권한으로 앱을 설치하세요.",
+        "readOnlyPrivate": "GitHub 앱이 {{repo}}를 읽기만 할 수 있어요. 위키가 저장소를 따라가고, 여기서 바뀐 내용은 여기에 남아요. 여기서 바뀐 내용도 보내려면 앱에 거기 쓰기 권한을 주세요.",
+        "noteDisconnect": "연결을 끊어도 페이지는 여기에, 노트는 거기에 그대로 남아요.",
+        "noteStopped": "그동안 여기서 쓴 내용은 여기에 남고, 저장소가 돌아오면 거기로 가요.",
+        "allowRemovals": "이 페이지들을 휴지통으로 보내기",
+        "change": "저장소, 브랜치 또는 폴더 바꾸기",
+        "disconnect": "연결 끊기",
+        "disconnectText": "위키가 더 이상 {{repo}}를 따라가지 않아요. 페이지는 여기에, 노트는 GitHub에 그대로 남아요.",
+        "disconnectTextPr": "위키가 더 이상 {{repo}}를 따라가지 않고, 거기 있는 위키의 풀 리퀘스트 #{{number}}를 닫아요. 페이지는 여기에, 노트는 GitHub에 그대로 남아요.",
+        "open": "GitHub에서 열기",
+        "syncNow": "지금 업데이트",
+        "retry": "다시 시도"
+      },
+      "writing": {
+        "label": "위키가 거기에 쓰는 방법",
+        "direct": "브랜치에 바로",
+        "directDesc": "여기서 바뀔 때마다 {{branch}}에 커밋해요.",
+        "directDescAny": "여기서 바뀔 때마다 위키가 따라가는 브랜치에 커밋해요.",
+        "pullRequest": "풀 리퀘스트로",
+        "pullRequestDesc": "여기서 바뀐 내용은 {{branch}}로 가는 풀 리퀘스트에 담기고, 누군가 GitHub에서 수락해요.",
+        "pullRequestDescAny": "여기서 바뀐 내용은 풀 리퀘스트에 담기고, 누군가 GitHub에서 수락해요.",
+        "none": "따라가기만",
+        "noneDesc": "위키는 GitHub에서 바뀐 내용을 받고, 여기서 바뀐 내용은 여기에 남아요.",
+        "branch": "풀 리퀘스트 브랜치",
+        "branchHelp": "위키가 바뀔 때마다 이 브랜치를 다시 만들어요. 이 브랜치가 아니라 위키를 편집하세요.",
+        "branchTaken": "이 브랜치는 GitHub에 이미 있고 위키의 것이 아니에요. 다른 이름을 고르세요.",
+        "now": {
+          "direct": "위키가 {{branch}}에 바로 커밋해요.",
+          "pull_request": "위키가 {{branch}}로 가는 풀 리퀘스트로 변경 사항을 제안해요.",
+          "none": "위키는 저장소를 따라가기만 해요. 여기서 바뀐 내용은 여기에 남아요."
+        }
+      },
+      "cadence": {
+        "notified": "GitHub에서 바뀐 내용이 바로 와요. GitHub가 푸시할 때마다 위키에 알려요.",
+        "app": "GitHub에서 바뀐 내용은 GitHub가 푸시를 알릴 때, 또는 5분마다 하는 다음 확인 때 와요.",
+        "public": "위키가 1분마다 GitHub를 확인해서 바뀐 내용을 가져와요.",
+        "short": {
+          "notified": "바로",
+          "app": "5분마다",
+          "public": "1분마다"
+        }
+      },
+      "held": {
+        "tooLong": "페이지가 될 수 있는 길이보다 길어요",
+        "title": "이름을 제목으로 쓸 수 없어요",
+        "depth": "폴더가 너무 깊게 중첩돼 있어요",
+        "other": "페이지가 될 수 없었어요"
+      },
+      "why": {
+        "not_installed": "GitHub 앱이 더 이상 {{repo}}에 닿지 않고, 공개 저장소도 아니에요. 커넥터에서 GitHub로 가서 저장소를 앱에 추가한 뒤 “다시 시도”를 누르세요.",
+        "refused": "GitHub 앱이 {{repo}}를 읽을 수 없어요. 커넥터에서 GitHub로 가서 앱의 권한을 수락한 뒤 “다시 시도”를 누르세요.",
+        "branch_missing": "위키가 있던 브랜치 {{branch}}가 {{repo}}에서 사라졌어요. 다른 브랜치를 고르거나, GitHub에서 브랜치를 되돌린 뒤 “다시 시도”를 누르세요.",
+        "empty": "{{repo}}에 아직 파일이 없어요. 첫 파일을 추가한 뒤 “다시 시도”를 누르세요.",
+        "missing": "{{repo}}가 사라졌거나 더 이상 읽을 수 없어요. 저장소가 옮겨졌거나 이름이 바뀌었다면 다시 고르세요.",
+        "too_large": "{{repo}}에 노트가 너무 많아 따라갈 수 없어요. 대신 폴더 하나를 고르세요.",
+        "owner_gone": "{{repo}}를 연결한 사람이 더 이상 여기 관리자가 아니에요. “다시 시도”를 누르면 내 이름으로 계속 동기화해요.",
+        "folder_missing": "위키 폴더가 {{repo}}에서 사라졌거나 비어 있어요. 여기서는 아무것도 지워지지 않았어요. 올바른 폴더를 고르거나, GitHub에서 노트를 되돌린 뒤 “다시 시도”를 누르세요.",
+        "no_app": "{{repo}}는 공개되지 않았고, 닿을 GitHub 앱도 설정되지 않았어요. 커넥터에서 앱을 설정한 뒤 “다시 시도”를 누르세요.",
+        "protected": "{{repo}}는 그 브랜치에 직접 커밋을 받지 않아요(보호된 브랜치예요). 아래에서 “풀 리퀘스트로”를 선택하고 저장하거나, GitHub 앱이 푸시할 수 있게 한 뒤 “다시 시도”를 누르세요.",
+        "mass_removal": "{{repo}}에서 한 번에 많은 노트가 삭제되어({{count}}개) 위키가 페이지를 휴지통으로 보내기 전에 멈췄어요. 일부러 한 거라면 휴지통으로 보내세요. 아니라면 GitHub에서 노트를 되돌린 뒤 “다시 시도”를 누르세요.",
+        "pr_branch_taken": "풀 리퀘스트 브랜치 {{prBranch}}가 {{repo}}에 이미 있고 위키의 것이 아니에요. 아래에서 다른 이름을 고르거나, GitHub에서 그 브랜치를 지운 뒤 “다시 시도”를 누르세요.",
+        "write_refused": "GitHub가 {{repo}}에 대한 위키의 마지막 변경을 거부했어요(예: 이름이 같은 페이지와 폴더). 여기나 GitHub에서 겹치는 이름을 바꾼 뒤 “다시 시도”를 누르세요.",
+        "unreadable": "GitHub에 있는 {{repo}}의 사본을 읽을 수 없었어요. 잠시 후 “다시 시도”를 누르세요. 동기화가 계속 멈추면 저장소에 GitHub 앱을 설치하세요.",
+        "other": "위키가 {{repo}}를 따라가는 것을 멈췄어요. “다시 시도”를 누르세요."
+      },
+      "whyMember": {
+        "not_installed": "GitHub 앱이 더 이상 {{repo}}에 닿지 않고, 공개 저장소도 아니에요. 관리자가 GitHub에서 저장소를 앱에 추가하고 동기화를 다시 시작할 수 있어요.",
+        "refused": "GitHub 앱이 {{repo}}를 읽을 수 없어요. 관리자가 GitHub에서 앱의 권한을 수락하고 동기화를 다시 시작할 수 있어요.",
+        "branch_missing": "위키가 있던 브랜치 {{branch}}가 {{repo}}에서 사라졌어요. 관리자가 다른 브랜치를 고르고 동기화를 다시 시작할 수 있어요.",
+        "empty": "{{repo}}에 아직 파일이 없어요. 파일이 생기면 관리자가 동기화를 다시 시작할 수 있어요.",
+        "missing": "{{repo}}가 사라졌거나 더 이상 읽을 수 없어요. 저장소가 옮겨졌다면 관리자가 다시 고를 수 있어요.",
+        "too_large": "{{repo}}에 노트가 너무 많아 따라갈 수 없어요. 관리자가 대신 폴더 하나를 고를 수 있어요.",
+        "owner_gone": "{{repo}}를 연결한 사람이 더 이상 여기 관리자가 아니에요. 관리자가 동기화를 다시 시작할 수 있어요.",
+        "folder_missing": "위키 폴더가 {{repo}}에서 사라졌거나 비어 있어요. 여기서는 아무것도 지워지지 않았어요. 관리자가 올바른 폴더를 고르고 동기화를 다시 시작할 수 있어요.",
+        "no_app": "{{repo}}는 공개되지 않았고, 닿을 GitHub 앱도 설정되지 않았어요. 관리자가 커넥터에서 앱을 설정하고 동기화를 다시 시작할 수 있어요.",
+        "protected": "{{repo}}는 그 브랜치에 직접 커밋을 받지 않아요(보호된 브랜치예요). 관리자가 위키를 풀 리퀘스트로 쓰도록 바꾸고 동기화를 다시 시작할 수 있어요.",
+        "mass_removal": "{{repo}}에서 한 번에 많은 노트가 삭제되어({{count}}개) 위키가 페이지를 휴지통으로 보내기 전에 멈췄어요. 휴지통으로 보낼지는 관리자가 정하고, 동기화를 다시 시작해요.",
+        "pr_branch_taken": "풀 리퀘스트 브랜치 {{prBranch}}가 {{repo}}에 이미 있고 위키의 것이 아니에요. 관리자가 다른 이름을 고르고 동기화를 다시 시작할 수 있어요.",
+        "write_refused": "GitHub가 {{repo}}에 대한 위키의 마지막 변경을 거부했어요(예: 이름이 같은 페이지와 폴더). 관리자가 확인하고 동기화를 다시 시작해야 해요.",
+        "unreadable": "GitHub에 있는 {{repo}}의 사본을 읽을 수 없었어요. 관리자가 동기화를 다시 시작할 수 있어요.",
+        "other": "위키가 {{repo}}를 따라가는 것을 멈췄어요. 관리자가 동기화를 다시 시작할 수 있어요."
+      },
+      "page": {
+        "synced": "GitHub에 있음",
+        "syncedHint": "이 페이지의 노트를 GitHub에서 열기",
+        "sending": "GitHub로 가는 중…",
+        "sendingHint": "이 버전은 곧 저장소로 가요.",
+        "notSent": "아직 GitHub에 없음",
+        "notSentHint": "위키가 GitHub와 업데이트를 멈췄어요. 다시 시작되면 이 버전이 거기로 가요.",
+        "local": "여기만",
+        "localHint": "일부 사람에게만 공개된 페이지는 GitHub로 가지 않아요.",
+        "readOnlyHint": "저장소를 읽기 전용으로 따라가고 있어요. 이 버전은 여기에 남아요. 거기서 노트가 바뀌면 그 변경도 들어오고, 양쪽이 같은 줄을 바꾼 곳에서는 이 버전을 대체해요.",
+        "replaced": "GitHub 버전으로 대체됨",
+        "replacedHint": "양쪽이 같은 줄을 바꿨어요. GitHub 버전이 남았고, 여기의 버전은 기록의 버전 {{version}}이에요.",
+        "held": "GitHub에서 업데이트 안 됨",
+        "heldHint": "GitHub의 노트를 여기서 읽을 수 없어서 이 페이지로 덮어쓰지 않아요.",
+        "review": "풀 리퀘스트에 있음",
+        "reviewHint": "이 버전은 누군가 GitHub에서 수락할 때까지 위키의 풀 리퀘스트에서 기다려요.",
+        "declined": "GitHub에서 거절됨",
+        "declinedHint": "이 버전이 담긴 풀 리퀘스트가 병합되지 않고 닫혔어요. 다시 바뀔 때까지 여기에 남아요."
+      }
+    },
     "import": {
       "cta": "가져오기",
       "short": "가져오기",
@@ -11337,7 +11500,14 @@
         "read": "노트 읽기",
         "error": {
           "notGithub": "github.com 링크를 붙여 넣으세요."
-        }
+        },
+        "mode": {
+          "label": "노트를 가져오는 방식",
+          "sync": "계속 동기화",
+          "once": "한 번만 가져오기"
+        },
+        "kept": "위키가 이미 {{repo}}를 계속 동기화하고 있어요. 노트는 알아서 들어오고, 한 번만 가져오면 사본이 만들어져요. 거기서 바뀐 내용을 지금 가져오려면 “계속 동기화”에서 “지금 업데이트”를 누르세요.",
+        "keptMember": "위키가 이미 {{repo}}를 계속 동기화하고 있어요. 노트는 알아서 들어오고, 한 번만 가져오면 사본이 만들어져요."
       },
       "anotherLink": "링크 변경",
       "dropTitle": "보관함 .zip을 여기에 놓으세요",
@@ -11435,7 +11605,10 @@
       "moved_root": "최상위로 옮겼어요",
       "saved_message": "메시지를 저장했어요",
       "created_from_message": "메시지에서 만들었어요",
-      "imported": "\"{{source}}\"에서 가져왔어요"
+      "imported": "\"{{source}}\"에서 가져왔어요",
+      "repository": "저장소에서 옴 ({{commit}})",
+      "repository_over": "저장소에서 옴 ({{commit}}), 버전 {{version}}을 대체",
+      "repository_merged": "버전 {{version}}을 저장소의 변경과 합침"
     }
   },
   "run": {
@@ -14742,6 +14915,16 @@
     "wiki": {
       "githubNoNotes": "이 링크에는 Markdown 노트가 없어요.",
       "githubTooLarge": "링크로 읽기에는 노트가 너무 많아요. 저장소를 .zip으로 내려받아 파일에서 가져오세요.",
+      "repoInvalid": "저장소를 소유자/이름 형식으로 쓰세요.",
+      "repoNoApp": "그 저장소는 비공개이거나 없고, 닿을 GitHub 앱도 설정되지 않았어요.",
+      "repoNotInstalled": "그 저장소에는 GitHub 앱이 설치되어 있지 않고, 공개 저장소도 아니에요.",
+      "repoRefused": "GitHub 앱이 그 저장소를 읽을 수 없어요.",
+      "repoMissing": "그 저장소가 사라졌거나 더 이상 읽을 수 없어요.",
+      "repoBranchInvalid": "그 이름은 풀 리퀘스트 브랜치로 쓸 수 없어요. 글자, 숫자, -, /를 쓰고, 위키가 따라가는 브랜치는 피하세요.",
+      "repoBranchMissing": "그 브랜치는 저장소에 없어요.",
+      "repoBranchName": "GitHub가 받는 브랜치 이름이 아니에요.",
+      "repoEmpty": "그 저장소에는 아직 파일이 없어요. 첫 파일을 추가하고 다시 시도하세요.",
+      "repoPathInvalid": "그 폴더에는 위키를 둘 수 없어요.",
       "noAccess": "이 페이지에 접근할 수 없어요.",
       "audienceForbidden": "Wiki를 편집하고 역할을 관리하는 사람만 페이지를 볼 수 있는 대상을 정할 수 있어요.",
       "audienceExcludesYou": "계속 이 페이지를 보려면 나 자신(내 역할 중 하나나 내 이름)을 포함하세요.",
