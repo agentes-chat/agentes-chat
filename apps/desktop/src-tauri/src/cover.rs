@@ -145,9 +145,15 @@ pub fn hide(app: &AppHandle) {
                 return; // shown again meanwhile
             }
             shown.since = None;
+            let Some(cover) = &cover else { return };
+            // Under the lock, so a `show` that comes now is queued after these and is never undone by them (both
+            // only queue their changes on the event loop).
+            let _ = cover.hide();
+            // Hidden, it still sits over the site, and macOS hands a drag to the view on top, hidden or not: files
+            // dragged into a conversation (from Finder, a screenshot's thumbnail) went to the cover and were lost.
+            // With no size it is under nothing; `show` gives it the window's size again.
+            let _ = cover.set_size(LogicalSize::new(0.0, 0.0));
         }
-        let Some(cover) = cover else { return };
-        let _ = cover.hide();
         // Hiding a web view lays the window out anew, the buttons back at the title bar's top.
         main_window::keep_lights(&app);
         if window_is_key(&app) {
