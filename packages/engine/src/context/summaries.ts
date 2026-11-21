@@ -49,7 +49,11 @@ export function judgeOf(deps: ContextDeps): Judge {
 export function schedulesOf(deps: ContextDeps): ScheduleReader {
   return (
     deps.schedules ??
-    createLlmScheduleReader({ gateway: deps.gateway, resolveModel: (orgId) => resolveSummaryModel(deps, orgId) })
+    createLlmScheduleReader({
+      gateway: deps.gateway,
+      resolveModel: (orgId) => resolveSummaryModel(deps, orgId),
+      errors: deps.errors,
+    })
   );
 }
 

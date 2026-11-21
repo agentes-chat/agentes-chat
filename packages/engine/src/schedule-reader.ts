@@ -1,3 +1,4 @@
+import type { ErrorReporter } from "@agenteschat/adapters";
 import { zonedParts } from "./cron";
 import type { ModelGateway } from "./gateway";
 import type { Freq, ScheduleRule, Weekday } from "./rrule";
@@ -238,23 +239,44 @@ const parseJson = (text: string) => {
   }
 };
 
+/** Reports why the model couldn't answer; never fails the reading (the caller already answers "unreadable"). */
+function reportReaderFailure(errors: ErrorReporter | undefined, orgId: string, error: unknown) {
+  if (!errors) return;
+  try {
+    errors.capture(error, { org_id: orgId, cause: "schedule_read" });
+  } catch {
+    // A report that can't be made never fails a reading.
+  }
+}
+
 /** The org's cheap model through the Model Gateway (usage kind `summary`), with structured output. */
 export function createLlmScheduleReader(deps: {
   gateway: Pick<ModelGateway, "complete">;
   resolveModel(orgId: string): Promise<string>;
+  /** Where a failed model call or an answer that isn't JSON is reported; the reader still answers null. */
+  errors?: ErrorReporter;
 }): ScheduleReader {
   const ask = async (orgId: string, schema: Record<string, unknown>, content: Record<string, unknown>) => {
-    const result = await deps.gateway.complete({
-      orgId,
-      kind: "summary",
-      model: await deps.resolveModel(orgId),
-      system: SYSTEM,
-      messages: [{ role: "user", content: JSON.stringify(content) }],
-      maxTokens: 400,
-      effort: "low",
-      outputSchema: schema,
-    });
-    return parseJson(result.text);
+    let result: Awaited<ReturnType<ModelGateway["complete"]>>;
+    try {
+      result = await deps.gateway.complete({
+        orgId,
+        kind: "summary",
+        model: await deps.resolveModel(orgId),
+        system: SYSTEM,
+        messages: [{ role: "user", content: JSON.stringify(content) }],
+        maxTokens: 400,
+        effort: "low",
+        outputSchema: schema,
+      });
+    } catch (error) {
+      // The caller turns this into "couldn't read the schedule"; the cause (key, quota, timeout) goes to the reporter.
+      reportReaderFailure(deps.errors, orgId, error);
+      throw error;
+    }
+    const fields = parseJson(result.text);
+    if (!fields) reportReaderFailure(deps.errors, orgId, new Error("schedule reader answer is not JSON"));
+    return fields;
   };
   return {
     name: "llm",
