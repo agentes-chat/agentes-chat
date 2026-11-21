@@ -38,6 +38,8 @@ export function useBubbleCap() {
   const box = useRef(0);
   const content = useRef(0);
   const pending = useRef(false);
+  // Test build only: the last measures, drawn in the bubble when it still runs over its words.
+  const [seen, setSeen] = useState<{ box: number; end: number; cap: number | null } | null>(null);
   const check = useCallback(() => {
     if (pending.current) return;
     pending.current = true;
@@ -45,6 +47,7 @@ export function useBubbleCap() {
       pending.current = false;
       // Where the words end counts the bubble's padding over them already: only the padding under them is added.
       const next = bubbleCapAfter(capNow.current, box.current, content.current, BUBBLE_PAD_V);
+      setSeen({ box: box.current, end: content.current, cap: next });
       if (next === capNow.current) return;
       capNow.current = next;
       setCap(next);
@@ -64,5 +67,5 @@ export function useBubbleCap() {
     },
     [check],
   );
-  return { cap, capStyle: cap === null ? null : { maxHeight: cap }, onBubble, onEnd };
+  return { cap, seen, capStyle: cap === null ? null : { maxHeight: cap }, onBubble, onEnd };
 }

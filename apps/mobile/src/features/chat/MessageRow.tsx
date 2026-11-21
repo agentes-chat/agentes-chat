@@ -998,6 +998,21 @@ function RowBody({
                       {quote ? <QuotePlate reply={quote} onJump={onQuote} /> : null}
                       {opener}
                       {words}
+                      {bubbleCap.seen && bubbleCap.seen.box > bubbleCap.seen.end + 32 ? (
+                        <Text
+                          style={{
+                            position: "absolute",
+                            left: 14,
+                            right: 14,
+                            top: bubbleCap.seen.end + 4,
+                            fontSize: 11,
+                            lineHeight: 14,
+                            color: "#dc2626",
+                          }}
+                        >
+                          {`teste: balão ${Math.round(bubbleCap.seen.box)} · fim do texto ${Math.round(bubbleCap.seen.end)} · trava ${bubbleCap.seen.cap ?? "nenhuma"}`}
+                        </Text>
+                      ) : null}
                     </View>
                   </>
                 ) : compact && !grouped ? (
