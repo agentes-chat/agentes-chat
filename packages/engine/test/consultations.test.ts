@@ -170,6 +170,34 @@ describe("ask_agent", () => {
     );
   });
 
+  test("the consulted run and the asker's relay are told the person's language, though agents asked in English", async () => {
+    const prompts: { dm: boolean; system: string; last: string }[] = [];
+    const reply = consultReply(() => answer("Staging deploys with deploy.sh"));
+    f = await setup({
+      askAgent: true,
+      reply: (req) => {
+        prompts.push({ dm: inAgentDm(req), system: systemText(req.system), last: lastText(req) });
+        return reply(req);
+      },
+    });
+    await addInfra();
+    await f.db.update(schema.users).set({ locale: "pt-BR" }).where(eq(schema.users.id, f.owner.id));
+    await post("@dev como fazemos o deploy para staging?");
+    await drainOutbox(f.db, f.handlers);
+
+    const line = (p: { system: string }) =>
+      p.system.split("\n").find((l) => l.startsWith("Another agent or a notice started this turn"));
+    const consulted = prompts.find((p) => p.dm);
+    expect(line(consulted ?? { system: "" })).toBe(
+      'Another agent or a notice started this turn, not the person you work for. Their latest message: "@dev como fazemos o deploy para staging?". Write all that people read (your reply, the text of an approval or a question) in their language, whatever language other agents use.',
+    );
+    const relay = prompts.find((p) => !p.dm && /your question to @infra/.test(p.last));
+    expect(line(relay ?? { system: "" })).toContain("como fazemos o deploy");
+    // The person's own turn reads their message itself: no line about another agent.
+    const own = prompts.find((p) => !p.dm && p.last.includes("como fazemos"));
+    expect(own && line(own)).toBeUndefined();
+  });
+
   test("a consulted agent's approval shows where the person asked, not in the agents' DM", async () => {
     const github = fakeGithub();
     f = await setup({
