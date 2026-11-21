@@ -233,6 +233,7 @@ export * from "./notifications";
 export * from "./office";
 export * from "./open-requests";
 export * from "./operator";
+export * from "./operator-content-reads";
 export * from "./operator-events";
 export {
   OPERATOR_JOB_COUNTS,

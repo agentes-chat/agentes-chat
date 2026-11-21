@@ -1079,7 +1079,16 @@ at one you name: one of the server's four sentences (`template`) or your own wor
 replies a request and 60 a day, and is recorded in the events feed and in that workspace's audit log
 (that you answered, whose request, and whether an AI assistant wrote the answer), never with its
 words, which the server forgets once the email is sent or given up. Write in a reply only what that
-member could read in the app. Setting the token makes you a reader of your workspaces' content: tell
+member could read in the app. To investigate a problem in a workspace, the same token also reads more
+than one field at a time, each call with a reason in one line and, if you like, your own case id
+(`caseRef`): `POST /reveal/orgs/{orgId}/conversations/{channelId}/messages` (a window of up to 48
+hours, 200 messages a page), `POST /reveal/orgs/{orgId}/runs/{runId}/transcript` (what the agent's
+model wrote, each tool call's input and result, 200 steps a page) and
+`POST /reveal/orgs/{orgId}/agents/{agentId}/settings` (an agent's instructions and settings). Each
+read is recorded first, in the events feed with your reason and in the workspace's audit log without
+it, and counts toward the door's limits. Credentials are masked, each message or step is cut at
+4,000 characters, and what a confidential thread holds or two people said to each other in a direct
+conversation is never returned. Setting the token makes you a reader of your workspaces' content: tell
 them before the first read what you may read it for, and say whether an AI assistant reads with you
 (`assistedByAi`). It also
 makes the server keep what members write in the feedback form, and what the thing they reported
