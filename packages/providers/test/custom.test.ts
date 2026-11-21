@@ -156,6 +156,50 @@ describe("calls", () => {
     expect(req?.headers.get("user-agent")).not.toStartWith("agentes.chat/");
   });
 
+  test("Chat Completions: words that arrive inside a parts array, beside the thinking, are kept", async () => {
+    // Mistral sends the start of an answer glued to the reasoning that leads it (seen 2026-11-19), so a chunk's
+    // `content` is an array there. Reading only strings dropped the first words of every reply.
+    const { fetcher } = scripted(
+      chat([
+        {
+          choices: [
+            {
+              index: 0,
+              delta: { content: [{ type: "thinking", thinking: [{ type: "text", text: "We" }], closed: true }] },
+            },
+          ],
+        },
+        {
+          choices: [
+            {
+              index: 0,
+              delta: {
+                content: [
+                  { type: "thinking", thinking: [{ type: "text", text: ". Say it" }], closed: true },
+                  { type: "text", text: "Peguei" },
+                ],
+              },
+            },
+          ],
+        },
+        { choices: [{ index: 0, delta: { content: " os números." }, finish_reason: "stop" }] },
+        { choices: [], usage: { prompt_tokens: 10, completion_tokens: 4 } },
+      ]),
+    );
+    const deltas: string[] = [];
+    const result = await createCustomProvider({ fetch: fetcher, maxRetries: 0 }).stream(
+      { model: id, system: "s", messages: [{ role: "user", content: "hi" }], maxTokens: 100 },
+      {
+        apiKey: "k-123456789",
+        endpoint: { style: "openai", baseURL: "https://gw.example/v1" },
+        onDelta: (text) => deltas.push(text),
+      },
+    );
+    expect(result.text).toBe("Peguei os números.");
+    // The reasoning it came with is not part of the answer, and the live deltas say the same.
+    expect(deltas).toEqual(["Peguei", " os números."]);
+  });
+
   test("Chat Completions: no effort, or none, sends no reasoning_effort", async () => {
     for (const effort of [undefined, "none"] as const) {
       const { fetcher, requests } = scripted(
