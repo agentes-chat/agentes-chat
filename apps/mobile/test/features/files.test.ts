@@ -20,6 +20,7 @@ import {
   singleImageBox,
   singleImageHeight,
   utf8Bytes,
+  videoBoxes,
   videoClock,
   videoHeight,
   whereKnown,
@@ -729,5 +730,22 @@ describe("a document's head", () => {
     const line = screen.slice(screen.indexOf('<Text variant="footnote"'), screen.indexOf("<BrowserCard"));
     expect(line).toContain("browser.profiles.controlSubOn");
     expect(line).not.toContain("numberOfLines");
+  });
+});
+
+describe("a message's videos in their own shapes", () => {
+  const upright = pictureRatio({ width: 716, height: 1284 });
+  const wide = pictureRatio({ width: 1920, height: 1080 });
+  test("alone: upright as a lone picture (440 high at most), wide across the row, unknown 16:9", () => {
+    expect(videoBoxes(300, [upright], 8)).toEqual([singleImageBox(300, upright)]);
+    expect(videoBoxes(300, [wide], 8)).toEqual([{ width: 300, height: 169 }]);
+    expect(videoBoxes(300, [undefined], 8)).toEqual([{ width: 300, height: 169 }]);
+  });
+  test("beside others: upright ones half the row side by side, at most 300 high; a wide one keeps the row", () => {
+    const [a, b, c] = videoBoxes(300, [upright, upright, wide], 8);
+    expect(a).toEqual(b);
+    expect((a?.width ?? 0) * 2 + 8).toBeLessThanOrEqual(300);
+    expect(a?.height).toBeLessThanOrEqual(300);
+    expect(c).toEqual({ width: 300, height: 169 });
   });
 });
