@@ -11668,6 +11668,11 @@
     "recommended": "推荐",
     "free": "免费",
     "opencodeFreeHint": "其他免费模型通过智能体电脑上的 OpenCode 运行。",
+    "missingModel": {
+      "app_old": "请更新代理电脑上的 agentes.chat 应用，以使用 {{model}}。",
+      "cli_old": "{{model}} 需要在代理的电脑上使用更新版本的 Antigravity CLI。请在那台电脑上运行 agy update。",
+      "plan": "{{model}} 包含在 Google AI Pro 和 Ultra 中。代理电脑上的 Gemini 账号都没有这个方案。"
+    },
     "modelHelp": "模型越大，思考越多，套餐额度消耗也越快。",
     "hidden": "由 {{owner}} 或管理员选择思考方式。",
     "hiddenAdmins": "只有管理员可以选择思考方式。",

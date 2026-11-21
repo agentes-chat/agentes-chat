@@ -68,15 +68,46 @@ export function resolveCommand(
   sharedBin = process.env[SHARED_BIN_ENV],
 ): string {
   if (process.platform === "win32" || command.includes("/")) return command;
-  const picked = command === "codex" ? pickedCodex() : undefined;
+  const picked = command === "codex" ? pickedCodex() : command === "agy" ? pickedAgy() : undefined;
   if (picked) return picked;
   const dirs = pathList.split(delimiter).filter((dir) => dir && dir !== sharedBin);
-  for (const dir of dirs) {
-    const full = join(dir, command);
-    if (isExecutable(full)) return full;
-  }
+  const found = onPath(command, dirs);
+  if (found) return found;
   // A bare name would be looked up on the PATH again, shared `bin/` included: a path that isn't there fails the same.
   return sharedBin && dirs[0] ? join(dirs[0], command) : command;
+}
+
+const onPath = (command: string, dirs: readonly string[]) =>
+  dirs.map((dir) => join(dir, command)).find((full) => isExecutable(full));
+
+/** `command` on the PATH as the person has it, never a copy the runner picked in its place; null: not there. */
+export function ownCommand(
+  command: string,
+  pathList = process.env.PATH ?? "",
+  sharedBin = process.env[SHARED_BIN_ENV],
+): string | null {
+  if (process.platform === "win32") return null;
+  return (
+    onPath(
+      command,
+      pathList.split(delimiter).filter((dir) => dir && dir !== sharedBin),
+    ) ?? null
+  );
+}
+
+/**
+ * The Antigravity CLI the runner brought (`AgyCopy`, ADR 0143), where the person's own is older or missing:
+ * `resolveCommand` starts this one for every `agy`, so its looks, sign-ins and turns all run the version reported.
+ */
+let agyPick: string | undefined;
+
+export function setAgyPick(file: string | undefined) {
+  agyPick = file;
+}
+
+/** The runner's own `agy`, while it is the one to run and still there. */
+export function pickedAgy(): string | undefined {
+  return agyPick && isExecutable(agyPick) ? agyPick : undefined;
 }
 
 /**

@@ -638,6 +638,46 @@ export const ANTIGRAVITY_MODELS: readonly { id: string; label: string }[] = [
 ];
 
 /**
+ * The Antigravity CLI's own catalog decides which models it lists and runs: 1.5.0 has Gemini 4 Argon and 3.8 Flash
+ * only, Gemini 4 Neon and Hydrogen came with 1.5.12 (on a Gemini API key) and 1.5.13 (Google AI Pro and Ultra, with
+ * the app's 2.34.0; changelog read 2026-11-21). An older CLI never lists them, whatever the account's plan.
+ */
+export const ANTIGRAVITY_NEON_CLI = "1.5.13";
+
+/** The reserve's models an older CLI (before `ANTIGRAVITY_NEON_CLI`) doesn't know. */
+export const ANTIGRAVITY_NEW_MODEL = /^gemini-4-(?:neon|hydrogen)-/;
+
+/**
+ * Gemini 4 Argon comes with exactly the plans that have Neon and Hydrogen (paid Google AI Pro, Ultra and Enterprise;
+ * antigravity.google/docs/models): a listing with Argon and neither of them was taken by an older CLI.
+ */
+export const ANTIGRAVITY_PAID_MODEL = /^gemini-4-argon-/;
+
+/** The Antigravity CLI also lists other makers' models (Claude, GPT-OSS): the Gemini plan offers Gemini only. */
+export const isAntigravityGemini = (id: string) => id.startsWith("gemini-");
+
+/** An Antigravity model's name from the reserve (`gemini-4-argon-high` → "Gemini 4 Argon (High)"); else the slug. */
+export const antigravityLabel = (id: string) => ANTIGRAVITY_MODELS.find((m) => m.id === id)?.label ?? id;
+
+/**
+ * A CLI's version as numbers, read anywhere in its `--version` line (`agy 1.5.0`, `1.5.14`); null without one. Each
+ * part at most nine digits: the line comes from the computer, and an unbounded run of digits would be slow to search.
+ */
+export function cliVersionOf(line: string | null | undefined): [number, number, number] | null {
+  const m = /(\d{1,9})\.(\d{1,9})\.(\d{1,9})/.exec(line ?? "");
+  return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null;
+}
+
+/** Whether a `--version` line is at least `min` (`1.5.13`); null when the line has no version. */
+export function cliVersionAtLeast(line: string | null | undefined, min: string): boolean | null {
+  const have = cliVersionOf(line);
+  const want = cliVersionOf(min);
+  if (!have || !want) return null;
+  for (let i = 0; i < 3; i++) if (have[i] !== want[i]) return (have[i] ?? 0) > (want[i] ?? 0);
+  return true;
+}
+
+/**
  * An Antigravity CLI account's `provider` when it signs in to Gemini Enterprise (`oauth-business`, ADR 0143); none:
  * a personal Google account (Google AI Pro or Ultra).
  */

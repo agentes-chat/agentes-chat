@@ -11596,6 +11596,11 @@
     "recommended": "おすすめ",
     "free": "無料",
     "opencodeFreeHint": "ほかの無料モデルは、エージェントのコンピューターの OpenCode で動きます。",
+    "missingModel": {
+      "app_old": "{{model}} を使うには、エージェントのコンピューターの agentes.chat アプリを更新してください。",
+      "cli_old": "{{model}} を使うには、エージェントのコンピューターの Antigravity CLI を新しいバージョンにする必要があります。そこで agy update を実行してください。",
+      "plan": "{{model}} は Google AI Pro と Ultra に含まれています。エージェントのコンピューターにある Gemini アカウントには、このプランがありません。"
+    },
     "modelHelp": "大きいモデルほど深く考え、プランの消費が早くなります。",
     "hidden": "考えるAIを選ぶのは{{owner}}または管理者です。",
     "hiddenAdmins": "考えるAIを選べるのは管理者だけです。",

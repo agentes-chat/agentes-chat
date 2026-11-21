@@ -12510,6 +12510,12 @@ export const en = {
     free: "Free",
     /** Under OpenCode Go's models: OpenCode's free tier answers only its own CLI (ADR 0132 §7). */
     opencodeFreeHint: "Other free models run through OpenCode on the agent's computer.",
+    /** Under the Gemini plan's models: why its newest model isn't there (`BrainOption.missing`). */
+    missingModel: {
+      app_old: "Update the agentes.chat app on the agent's computer to use {{model}}.",
+      cli_old: "{{model}} needs a newer Antigravity CLI on the agent's computer. Run agy update there.",
+      plan: "{{model}} comes with Google AI Pro and Ultra. No Gemini account on the agent's computer has that plan.",
+    },
     modelHelp: "Bigger models think more and use up the plan faster.",
     hidden: "{{owner}} or an admin chooses who thinks.",
     hiddenAdmins: "Only admins choose who thinks.",

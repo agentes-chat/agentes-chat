@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 75;
+export const MACHINE_PROTOCOL_VERSION = 76;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -2378,6 +2378,13 @@ export const BRAIN_WARM_PROTOCOL = 74;
  * default, unless its config says otherwise.
  */
 export const TASK_LIMIT_PROTOCOL = 75;
+
+/**
+ * Protocol 76 (ADR 0143): outside system mode the runner brings its own Antigravity CLI (`AGY_PIN`, at least that
+ * version) where the person's is older or missing and Gemini thinks there, so a computer's Gemini models follow the
+ * app's version. An older runner runs whatever `agy` the person installed.
+ */
+export const AGY_COPY_PROTOCOL = 76;
 /** The tasks a computer may run at once (`maxConcurrentTasks` in the runner's config). */
 export const TASK_LIMIT_BOUNDS = [1, 20] as const;
 

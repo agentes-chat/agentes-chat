@@ -86,6 +86,7 @@ import {
   systemLauncher,
   trustedNetworkLauncher,
 } from "./agent-users";
+import { AgyCopy, type AgyCopyOptions } from "./agy-copy";
 import { BrainManager, readyRoom } from "./brain";
 import { CodexAppServers } from "./brain-codex-app";
 import { BrowserManager } from "./browser";
@@ -433,6 +434,11 @@ export interface DaemonOptions {
   xcodeFix?: Partial<XcodeFixOptions>;
   /** Tests: how `cli.install` installs. */
   cliInstall?: Partial<CliInstallerOptions>;
+  /**
+   * The runner brings its own Antigravity CLI where the person's is older than `AGY_PIN` (`AgyCopy`, ADR 0143): on for
+   * the runner people run (`main.ts`), off in tests unless they ask.
+   */
+  agyCopy?: boolean | Partial<AgyCopyOptions>;
 }
 
 /** What a task is in its activity words: a shell task's command, or the CLI that works it (the app names it). */
@@ -539,6 +545,8 @@ export class RunnerDaemon implements RequestObserver {
   private fixer: XcodeFixer | null = null;
   /** An install of a coding CLI (`cli.install`), made on its first request. */
   private installer: CliInstaller | null = null;
+  /** The Antigravity CLI the runner brings, outside system mode on macOS and Linux; null elsewhere. */
+  private readonly agy: AgyCopy | null;
   /**
    * The PATH read again (app mode's `refreshPath`). On Windows before every look too: an app keeps the PATH it started
    * with, so a CLI installed since is found only through the registry.
@@ -591,10 +599,27 @@ export class RunnerDaemon implements RequestObserver {
           authEgress: () => authEgressPrefix(),
         })
       : null;
+    // Outside system mode, where the person's own CLI runs: the root's are the computer's setup's (the Cloud's image).
+    this.agy =
+      opts.agyCopy && !system && (process.platform === "darwin" || process.platform === "linux")
+        ? new AgyCopy({
+            home: opts.home,
+            log: opts.log,
+            inUse: () => this.accounts.snapshot()?.some((a) => a.kind === "antigravity") ?? false,
+            onChange: () => {
+              void this.clisLook().then(() => this.accounts.refresh(true).catch(() => undefined));
+            },
+            ...(typeof opts.agyCopy === "object" ? opts.agyCopy : {}),
+          })
+        : null;
     const accountUsers = system ? (opts.accountUsers ?? new AccountUsers({ home: opts.home, log: opts.log })) : null;
     this.accountUsers = accountUsers;
     this.accounts = new AccountManager({
       root: lent?.root ?? path.join(opts.home, "accounts"),
+      // A Gemini sign-in on a computer with no Antigravity CLI new enough: the runner brings its own first.
+      prepare: async (kind) => {
+        if (kind === "antigravity") await this.agy?.ensure();
+      },
       ...(lent ? { lending: { chown: lent.chown } } : {}),
       ...(lent?.grokRoot ? { grokRoot: lent.grokRoot } : {}),
       ...(lent && !opts.systemAccounts && process.platform === "linux"
@@ -818,8 +843,13 @@ export class RunnerDaemon implements RequestObserver {
     const browsers = setInterval(() => this.browsersChanged(), BROWSER_STATE_POLL_MS);
     browsers.unref?.();
     this.timers.push(browsers);
-    // A CLI installed while the runner stays up: with no app asking for the status, nothing else looks again.
-    const clis = setInterval(() => this.executors(), EXECUTORS_TTL_MS);
+    // A CLI installed while the runner stays up: with no app asking for the status, nothing else looks again. The
+    // runner's own Antigravity CLI is checked as often (a download is due only when Gemini thinks here).
+    void this.agy?.check();
+    const clis = setInterval(() => {
+      this.executors();
+      void this.agy?.check();
+    }, EXECUTORS_TTL_MS);
     clis.unref?.();
     this.timers.push(clis);
     const sample = () => {

@@ -29570,6 +29570,15 @@
   "brain.opencodeFreeHint": {
     "value": "Other free models run through OpenCode on the agent's computer."
   },
+  "brain.missingModel.app_old": {
+    "value": "Update the agentes.chat app on the agent's computer to use {{model}}."
+  },
+  "brain.missingModel.cli_old": {
+    "value": "{{model}} needs a newer Antigravity CLI on the agent's computer. Run agy update there."
+  },
+  "brain.missingModel.plan": {
+    "value": "{{model}} comes with Google AI Pro and Ultra. No Gemini account on the agent's computer has that plan."
+  },
   "brain.modelHelp": {
     "value": "Bigger models think more and use up the plan faster."
   },

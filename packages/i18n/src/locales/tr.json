@@ -12031,6 +12031,11 @@
     "recommended": "Önerilen",
     "free": "Ücretsiz",
     "opencodeFreeHint": "Diğer ücretsiz modeller ajanın bilgisayarındaki OpenCode ile çalışır.",
+    "missingModel": {
+      "app_old": "{{model}} kullanmak için ajanın bilgisayarındaki agentes.chat uygulamasını güncelleyin.",
+      "cli_old": "{{model}} için ajanın bilgisayarında daha yeni bir Antigravity CLI sürümü gerekir. Orada agy update çalıştırın.",
+      "plan": "{{model}}, Google AI Pro ve Ultra ile gelir. Ajanın bilgisayarındaki hiçbir Gemini hesabında bu plan yok."
+    },
     "modelHelp": "Büyük modeller daha çok düşünür ve planı daha hızlı tüketir.",
     "hidden": "Düşünen yapay zekayı {{owner}} veya bir yönetici seçer.",
     "hiddenAdmins": "Düşünen yapay zekayı yalnızca yöneticiler seçer.",

@@ -1125,6 +1125,17 @@ export const BrainOption = z
       }),
     ),
     defaultModel: z.string().nullable(),
+    missing: z
+      .object({
+        modelId: z.string(),
+        label: z.string(),
+        why: z.enum(["app_old", "cli_old", "plan"]),
+      })
+      .optional()
+      .openapi({
+        description:
+          "Antigravity: the newest Gemini isn't among its models because the computer's agentes.chat is too old to bring a CLI that runs it (`app_old`), its CLI predates it where the computer's setup installs it (`cli_old`), or no account there has a plan with it (`plan`).",
+      }),
   })
   .openapi("BrainOption");
 

@@ -12583,6 +12583,11 @@
     "recommended": "Consigliato",
     "free": "Gratis",
     "opencodeFreeHint": "Gli altri modelli gratuiti funzionano con OpenCode sul computer dell'agente.",
+    "missingModel": {
+      "app_old": "Aggiorna l'app agentes.chat sul computer dell'agente per usare {{model}}.",
+      "cli_old": "{{model}} richiede una versione più recente di Antigravity CLI sul computer dell'agente. Esegui agy update lì.",
+      "plan": "{{model}} è incluso in Google AI Pro e Ultra. Nessun account Gemini sul computer dell'agente ha quel piano."
+    },
     "modelHelp": "I modelli più grandi ragionano di più e consumano il piano più in fretta.",
     "hidden": "{{owner}} o un admin sceglie chi pensa.",
     "hiddenAdmins": "Solo gli admin scelgono chi pensa.",

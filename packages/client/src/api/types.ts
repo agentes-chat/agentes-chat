@@ -6253,6 +6253,12 @@ export interface BrainOption {
   reason?: BrainUnavailable;
   models: BrainModelOption[];
   defaultModel: string | null;
+  /**
+   * Antigravity: the newest Gemini isn't among its models, and why: the computer's agentes.chat is too old to bring a
+   * CLI that runs it (`app_old`), its CLI predates it where the computer's setup installs it (`cli_old`), or no
+   * account there has a plan that includes it (`plan`).
+   */
+  missing?: { modelId: string; label: string; why: "app_old" | "cli_old" | "plan" };
 }
 
 /** A computer the caller may give an agent, with what it offers. */

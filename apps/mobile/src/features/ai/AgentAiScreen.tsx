@@ -14,7 +14,14 @@ import { computerNameOf } from "@agenteschat/client/lib/computer";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { aiChoiceOf, planOfKind } from "@agenteschat/client/lib/no-ai";
 import { modelLimitText } from "@agenteschat/client/lib/plan-usage";
-import { brainPlan, geminiPersonal, isPlanId, planFreeHint, planOf } from "@agenteschat/client/lib/plans";
+import {
+  brainMissingHint,
+  brainPlan,
+  geminiPersonal,
+  isPlanId,
+  planFreeHint,
+  planOf,
+} from "@agenteschat/client/lib/plans";
 import { apiProviderOf, isAuto, providerLabel } from "@agenteschat/client/lib/providers";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { limitOffers, planState } from "@agenteschat/ui/plan-state";
@@ -440,7 +447,12 @@ export function AgentModelScreen({ agentId, scope }: { agentId: string; scope?: 
   const view = brain.data;
   const plan = view ? brainPlan(view) : undefined;
   const rows = view ? modelRows(t, view, plan) : [];
-  const freeHint = planFreeHint(t, plan);
+  const freeHint =
+    planFreeHint(t, plan) ??
+    brainMissingHint(
+      t,
+      view?.options.find((o) => o.kind === view.brain && !plan),
+    );
   // A model without a maker of its own wears its plan's mark, else its brain's.
   const mark = (plan && view?.accounts.find((a) => a.id === view.account)?.provider) || (view?.brain ?? "");
   const hasModels = view !== undefined && view.brain !== "model";

@@ -20,7 +20,13 @@ import { namesText, rosterText } from "@agenteschat/client/lib/format";
 import { brainTool, installableCli } from "@agenteschat/client/lib/machines";
 import { type AiChoice, planMark } from "@agenteschat/client/lib/no-ai";
 import { usageWhen } from "@agenteschat/client/lib/plan-usage";
-import { geminiPersonal, isPlanId, planFreeHint, signInProviderOf } from "@agenteschat/client/lib/plans";
+import {
+  brainMissingHint,
+  geminiPersonal,
+  isPlanId,
+  planFreeHint,
+  signInProviderOf,
+} from "@agenteschat/client/lib/plans";
 import { AUTO, isAuto, modelOnKey, providerLabel } from "@agenteschat/client/lib/providers";
 import { sceneTeam } from "@agenteschat/client/lib/right-hand";
 import {
@@ -922,6 +928,9 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
             </SettingNote>
           )}
           {planFreeHint(t, s.plan) && <SettingNote icon="info">{planFreeHint(t, s.plan)}</SettingNote>}
+          {!s.plan && brainMissingHint(t, s.option) && (
+            <SettingNote icon="info">{brainMissingHint(t, s.option)}</SettingNote>
+          )}
         </>
       );
     if (screen === "more") {

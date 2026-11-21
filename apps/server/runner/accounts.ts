@@ -1383,6 +1383,11 @@ function runCli(command: string[], args: string[], env: NodeJS.ProcessEnv, timeo
 export interface AccountManagerOptions {
   /** `<runner home>/accounts`. */
   root: string;
+  /**
+   * Before a CLI's sign-in starts: the runner's own Antigravity CLI made ready where the computer has none new enough
+   * (`AgyCopy.ensure`, ADR 0143); its failure is the sign-in's.
+   */
+  prepare?: (kind: AccountKind) => Promise<void>;
   /** Tests: the clock. */
   now?: () => number;
   /** The organization this machine is paired with (a sealed code's AAD names it); unknown before pairing. */
@@ -1824,6 +1829,8 @@ export class AccountManager {
         throw new RunnerError("bad_request", "This computer already has too many accounts. Remove one first.");
       }
     }
+    // The CLI it signs in with, before anything is written: the runner may bring the Antigravity CLI itself.
+    if (kind === "antigravity") await this.opts.prepare?.(kind);
     // Claude Code and the Antigravity CLI: the key the browser seals the pasted code (or a plan's key) to; the private
     // half stays in memory.
     const pair = kind === "claude_code" || kind === "antigravity" || cliKey ? await generateSecretKeyPair() : undefined;

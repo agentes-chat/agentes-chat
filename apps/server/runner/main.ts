@@ -466,7 +466,7 @@ async function start(): Promise<number> {
     console.error(lockedMessage(home, lock.holder));
     return serviceSafe(4);
   }
-  const daemon = new RunnerDaemon({ home, mode: "start", log, print: (line) => console.log(line) });
+  const daemon = new RunnerDaemon({ home, mode: "start", log, print: (line) => console.log(line), agyCopy: true });
   const stop = () => void daemon.stop();
   process.once("SIGINT", stop);
   process.once("SIGTERM", stop);
