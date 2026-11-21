@@ -4,7 +4,16 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 setupDom();
 
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
-import { ADA_ID, createFakeApi, ENG_ID, fakeMachinesOf, meWithRole, ORG_ID, seedState } from "./fake-api";
+import {
+  ADA_ID,
+  createFakeApi,
+  ENG_ID,
+  fakeAgentBrain,
+  fakeMachinesOf,
+  meWithRole,
+  ORG_ID,
+  seedState,
+} from "./fake-api";
 import { renderApp, screen, settle } from "./render";
 
 /*
@@ -131,10 +140,125 @@ test("a reply Automático gave with another model: 'Usar o X em todos' opens the
 
 test("on an API key with a fixed model the picker's ramp has the three levels the API takes, none chosen yet", async () => {
   const { state, panel } = await openPicker();
+  expect(within(panel).queryByRole("radiogroup", { name: "Velocidade" })).toBeNull();
   const ramp = within(panel).getByRole("slider", { name: "Esforço" });
   expect(ramp.getAttribute("aria-valuemax")).toBe("3");
   expect(ramp.getAttribute("aria-valuetext")).toBe("Padrão do modelo");
   await act(async () => fireEvent.keyDown(ramp, { key: "ArrowRight" }));
   await settle(6);
   expect(state.calls.find((c) => c.method === "agents.setBrain")?.args[2]).toEqual({ brain: "model", effort: "low" });
+});
+
+async function openPickerWithBrain(patch: Parameters<typeof fakeAgentBrain>[1]) {
+  const state = seedState();
+  const api = createFakeApi(state);
+  const current = fakeAgentBrain(ADA_ID, patch);
+  const origSet = api.agents.setBrain.bind(api.agents);
+  let brain = current;
+  api.agents.brain = async () => brain;
+  api.agents.setBrain = async (orgId, agentId, input) => {
+    await origSet(orgId, agentId, input);
+    brain = {
+      ...brain,
+      ...(input.brain ? { brain: input.brain } : {}),
+      ...(input.effort !== undefined ? { effort: input.effort } : {}),
+      ...(input.speed !== undefined ? { speed: input.speed } : {}),
+    };
+    return brain;
+  };
+  await renderApp(`/org/${ORG_ID}/dm/agent/${ADA_ID}`, { api });
+  await settle(8);
+  const header = document.querySelector(".channel__header") as HTMLElement;
+  await click(within(header).getByRole("button", { name: "Mudar o modelo de Ada" }));
+  const panel = document.querySelector(".mp") as HTMLElement;
+  return { state, panel };
+}
+
+test("ChatGPT/Codex picker shows Speed separately from Effort and persists fast/standard", async () => {
+  const { state, panel } = await openPickerWithBrain({
+    brain: "codex",
+    model: "gpt-6.2-sol",
+    effectiveModel: "gpt-6.2-sol",
+    effort: "medium",
+    speed: "standard",
+  });
+  expect(within(panel).getByRole("slider", { name: "Esforço" })).toBeTruthy();
+  const speedGroup = within(panel).getByRole("radiogroup", { name: "Velocidade" });
+  const [standard, fast] = within(speedGroup).getAllByRole("radio");
+  expect(standard?.textContent).toBe("Padrão");
+  expect(standard?.getAttribute("aria-checked")).toBe("true");
+  expect(fast?.textContent).toBe("Rápida");
+  expect(fast?.getAttribute("aria-checked")).toBe("false");
+
+  await click(fast as HTMLElement);
+  const calls = () => state.calls.filter((c) => c.method === "agents.setBrain").map((c) => c.args[2]);
+  expect(calls()).toEqual([{ brain: "codex", speed: "fast" }]);
+  expect(within(speedGroup).getByRole("radio", { name: "Rápida" }).getAttribute("aria-checked")).toBe("true");
+
+  await click(standard as HTMLElement);
+  expect(calls()).toEqual([
+    { brain: "codex", speed: "fast" },
+    { brain: "codex", speed: "standard" },
+  ]);
+  expect(within(speedGroup).getByRole("radio", { name: "Padrão" }).getAttribute("aria-checked")).toBe("true");
+
+  // Switching to another AI's tile hides Speed until that AI is picked.
+  await click(within(panel).getByRole("button", { name: "Claude" }));
+  expect(within(panel).queryByRole("radiogroup", { name: "Velocidade" })).toBeNull();
+});
+
+test("ChatGPT/Codex on Automático hides Effort but still shows Speed", async () => {
+  const { panel } = await openPickerWithBrain({
+    brain: "codex",
+    model: "auto",
+    effectiveModel: "auto",
+    effort: "auto",
+    speed: "fast",
+  });
+  expect(within(panel).queryByRole("slider", { name: "Esforço" })).toBeNull();
+  const speedGroup = within(panel).getByRole("radiogroup", { name: "Velocidade" });
+  expect(within(speedGroup).getByRole("radio", { name: "Rápida" }).getAttribute("aria-checked")).toBe("true");
+});
+
+test("Speed stays hidden for unsupported models, other providers, and coding-plan keys", async () => {
+  const unsupported = await openPickerWithBrain({
+    brain: "codex",
+    model: "gpt-5.5",
+    effectiveModel: "gpt-5.5",
+  });
+  expect(within(unsupported.panel).queryByRole("radiogroup", { name: "Velocidade" })).toBeNull();
+  cleanup();
+
+  const claude = await openPickerWithBrain({
+    brain: "claude_code",
+    model: "sonnet",
+    effectiveModel: "sonnet",
+  });
+  expect(within(claude.panel).queryByRole("radiogroup", { name: "Velocidade" })).toBeNull();
+  cleanup();
+
+  const codingPlan = await openPickerWithBrain({
+    brain: "codex",
+    model: "gpt-6-sol",
+    effectiveModel: "gpt-6-sol",
+    account: "acct_zai",
+    accounts: [
+      {
+        id: "acct_zai",
+        kind: "codex",
+        label: "Z.ai",
+        email: null,
+        plan: null,
+        status: "active",
+        ownerId: "u-walter",
+        ownerName: "Walter",
+        mine: true,
+        usedBy: ["Ada"],
+        usage: null,
+        provider: "zai",
+        keyHint: "1234",
+      },
+    ],
+  });
+  expect(within(codingPlan.panel).queryByRole("radiogroup", { name: "Velocidade" })).toBeNull();
 });

@@ -1,4 +1,4 @@
-import type { Agent, AgentBrain, Message } from "@agenteschat/client";
+import type { Agent, AgentBrain, BrainSpeed, Message } from "@agenteschat/client";
 import {
   keys,
   useAgentBrain,
@@ -10,7 +10,14 @@ import {
   useUpdateAgent,
 } from "@agenteschat/client";
 import { managesAgent } from "@agenteschat/client/lib/audience";
-import { type EffortLevel, effortLevelsOf, effortOf, effortTextOf } from "@agenteschat/client/lib/brain-advanced";
+import {
+  type EffortLevel,
+  effortLevelsOf,
+  effortOf,
+  effortTextOf,
+  SPEEDS,
+  viewSpeedFits,
+} from "@agenteschat/client/lib/brain-advanced";
 import {
   mayPickModel,
   modelPickerModels,
@@ -37,6 +44,7 @@ import {
   Popover,
   ProviderLogo,
   planLine,
+  Segmented,
 } from "@agenteschat/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { type CSSProperties, type ReactElement, useState } from "react";
@@ -210,6 +218,8 @@ function PickerBody({ agent, view, onClose }: { agent: Agent; view: AgentBrain; 
   const checked = rows.find((r) => r.checked);
   const effortOn = tile?.current && checked && !checked.auto;
   const effort = effortOf(view.brain, view.effort);
+  const speedOn = Boolean(tile?.current && checked && viewSpeedFits(view));
+  const speed: BrainSpeed = view.speed ?? "standard";
 
   const refresh = () => {
     for (const key of [keys.agentBrain(org.id, agent.id), keys.agents(org.id), keys.aiStatus(org.id)])
@@ -260,6 +270,18 @@ function PickerBody({ agent, view, onClose }: { agent: Agent; view: AgentBrain; 
     } catch {
       toast.show(t("agentPage.work.failed"), "error");
     } finally {
+      refresh();
+    }
+  };
+  const setSpeed = async (next: BrainSpeed) => {
+    if (!tile || busy || next === speed) return;
+    setBusy(true);
+    try {
+      await apply({ brain: tile.kind, speed: next });
+    } catch {
+      toast.show(t("agentPage.work.failed"), "error");
+    } finally {
+      setBusy(false);
       refresh();
     }
   };
@@ -385,10 +407,27 @@ function PickerBody({ agent, view, onClose }: { agent: Agent; view: AgentBrain; 
             value={effort}
             onValueChange={(e) => void setEffort(e)}
             color={fullLook(lookOf(agent)).color}
+            animationRate={speedOn && speed === "fast" ? 2 : 1}
             steps={effortLevelsOf(tile.kind).map((e) => ({ value: e, label: t(`agentPage.work.brain.efforts.${e}`) }))}
             hint={(e) => t(`agentPage.work.brain.effortText.${effortTextOf(tile.kind, e)}`)}
             unset={t("agentPage.work.brain.efforts.none")}
           />
+        </div>
+      )}
+      {speedOn && (
+        <div className="mp__speed">
+          <div className="mp__speed-row">
+            <span className="mp__speed-label">{t("agentPage.work.brain.speed")}</span>
+            <Segmented
+              size="sm"
+              label={t("agentPage.work.brain.speed")}
+              value={speed}
+              disabled={busy}
+              onValueChange={(v) => void setSpeed(v)}
+              options={SPEEDS.map((s) => ({ value: s, label: t(`agentPage.work.brain.speeds.${s}`) }))}
+            />
+          </div>
+          <small className="mp__speed-hint">{t("agentPage.work.brain.speedText")}</small>
         </div>
       )}
       <div className="mp__foot">
