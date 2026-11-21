@@ -15743,6 +15743,12 @@
     }
   },
   "errors": {
+    "planMove": {
+      "notPayer": "Solo chi paga il piano può spostarlo.",
+      "same": "Scegli un altro spazio di lavoro in cui spostare il piano.",
+      "targetHasPlan": "Quello spazio di lavoro ha già un piano. Ricarica per vedere i tuoi spazi di lavoro come sono ora.",
+      "targetDeleting": "Quello spazio di lavoro è in fase di eliminazione. Ripristinalo prima, o scegline un altro."
+    },
     "surface": {
       "off": "Il collegamento delle app di chat è stato disattivato. Ricarica per vedere le impostazioni come sono ora.",
       "notAllowed": "Collegare un'app di chat non è ancora disponibile per il tuo account. Continua a usare l'app qui finché non si apre.",
@@ -20051,6 +20057,13 @@
     "deleteOrg": "Elimina {{name}}",
     "submit": "Elimina account",
     "deleted": "Il tuo account sparisce per sempre il {{date}}. Accedi prima di allora per ripristinarlo."
+  },
+  "planMove": {
+    "warning": "Il tuo piano resta con questo spazio di lavoro e non si rinnova più. Vuoi spostarlo prima in un altro dei tuoi?",
+    "deleting": "Il tuo piano non si rinnova più con lui. Puoi spostarlo in un altro spazio di lavoro.",
+    "how": "La stessa carta e il periodo già pagato vanno con lui. Niente viene addebitato di nuovo e niente viene rimborsato.",
+    "button": "Sposta il mio piano in {{name}}",
+    "moving": "Il tuo piano si sta spostando in {{name}}. Arriva in circa un minuto."
   },
   "billing": {
     "open": "Apri piano e fatturazione",

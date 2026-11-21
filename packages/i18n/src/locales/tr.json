@@ -15118,6 +15118,12 @@
     }
   },
   "errors": {
+    "planMove": {
+      "notPayer": "Planı yalnızca planın ödemesini yapan kişi taşıyabilir.",
+      "same": "Planı taşımak için başka bir çalışma alanı seç.",
+      "targetHasPlan": "O çalışma alanının zaten bir planı var. Çalışma alanlarını şimdiki hâliyle görmek için yenile.",
+      "targetDeleting": "O çalışma alanı siliniyor. Önce geri yükle ya da başka birini seç."
+    },
     "surface": {
       "off": "Sohbet uygulamalarını bağlama kapatıldı. Ayarlarınızın şu anki halini görmek için sayfayı yenileyin.",
       "notAllowed": "Sohbet uygulaması bağlama hesabınıza henüz açık değil. Açılana kadar buradaki uygulamayı kullanmaya devam edin.",
@@ -19316,6 +19322,13 @@
     "deleteOrg": "Sil: {{name}}",
     "submit": "Hesabı sil",
     "deleted": "Hesabınız {{date}} tarihinde kalıcı olarak kaybolur. Geri yüklemek için bundan önce giriş yapın."
+  },
+  "planMove": {
+    "warning": "Planın bu çalışma alanında kalır ve yenilenmez. Önce başka bir çalışma alanına taşımak ister misin?",
+    "deleting": "Planın bununla birlikte yenilenmez. Planını başka bir çalışma alanına taşıyabilirsin.",
+    "how": "Aynı kart ve ödenmiş dönem planla birlikte gider. Tekrar ücret alınmaz ve iade yapılmaz.",
+    "button": "Planımı {{name}} alanına taşı",
+    "moving": "Planın {{name}} alanına taşınıyor. Yaklaşık bir dakika içinde orada olur."
   },
   "billing": {
     "open": "Plan ve faturalandırmayı aç",

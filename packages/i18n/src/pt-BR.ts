@@ -15396,6 +15396,13 @@ export const ptBR = {
     },
   },
   errors: {
+    /** Moving a plan to another workspace (ADR 0079). */
+    planMove: {
+      notPayer: "Só quem paga o plano pode mover.",
+      same: "Escolha outro workspace para onde mover o plano.",
+      targetHasPlan: "Esse workspace já tem um plano. Recarregue para ver seus workspaces como estão agora.",
+      targetDeleting: "Esse workspace está sendo apagado. Restaure antes, ou escolha outro.",
+    },
     surface: {
       off: "A vinculação de apps de chat foi desligada. Recarregue para ver suas configurações como estão agora.",
       notAllowed: "Vincular um app de chat ainda não está aberto para sua conta. Continue usando o app aqui até abrir.",
@@ -19891,6 +19898,20 @@ export const ptBR = {
     deleteOrg: "Apagar {{name}}",
     submit: "Apagar conta",
     deleted: "Sua conta some de vez em {{date}}. Entre antes disso para restaurar.",
+  },
+  /**
+   * Moving a plan to another workspace (ADR 0079), offered to its payer where it would be lost: deleting the workspace,
+   * and the line of one being deleted. `{{name}}`: the workspace it goes to.
+   */
+  planMove: {
+    /** In the dialog that deletes the workspace. */
+    warning: "Seu plano fica com este workspace e para de renovar. Quer mover para outro seu antes?",
+    /** On the line of a workspace being deleted. */
+    deleting: "Seu plano para de renovar com ele. Você pode mover para outro workspace.",
+    /** Behind the ⓘ beside either line. */
+    how: "O mesmo cartão e o período já pago vão junto. Nada é cobrado de novo e nada é reembolsado.",
+    button: "Mover meu plano para {{name}}",
+    moving: "Seu plano está indo para {{name}}. Chega em cerca de um minuto.",
   },
   /** The billing service (ADR 0079): this server shows no plan, price or currency, only the way there. */
   billing: {

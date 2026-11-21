@@ -15251,6 +15251,12 @@
     }
   },
   "errors": {
+    "planMove": {
+      "notPayer": "Alleen wie het abonnement betaalt, kan het verplaatsen.",
+      "same": "Kies een andere werkruimte om het abonnement naartoe te verplaatsen.",
+      "targetHasPlan": "Die werkruimte heeft al een abonnement. Herlaad om je werkruimtes te zien zoals ze nu zijn.",
+      "targetDeleting": "Die werkruimte wordt verwijderd. Zet hem eerst terug of kies een andere."
+    },
     "surface": {
       "off": "Het koppelen van chat-apps is uitgezet. Laad opnieuw om je instellingen te zien zoals ze nu zijn.",
       "notAllowed": "Een chat-app koppelen is nog niet open voor je account. Gebruik de app hier tot het opengaat.",
@@ -19508,6 +19514,13 @@
     "deleteOrg": "{{name}} verwijderen",
     "submit": "Account verwijderen",
     "deleted": "Je account verdwijnt op {{date}} definitief. Log daarvoor in om het te herstellen."
+  },
+  "planMove": {
+    "warning": "Je abonnement blijft bij deze werkruimte en wordt niet meer verlengd. Eerst naar een andere werkruimte van je verplaatsen?",
+    "deleting": "Je abonnement wordt hiermee niet meer verlengd. Je kunt het naar een andere werkruimte verplaatsen.",
+    "how": "Dezelfde kaart en de al betaalde periode gaan mee. Er wordt niets opnieuw in rekening gebracht en niets terugbetaald.",
+    "button": "Mijn abonnement naar {{name}} verplaatsen",
+    "moving": "Je abonnement gaat naar {{name}}. Het is er over ongeveer een minuut."
   },
   "billing": {
     "open": "Abonnement en facturatie openen",

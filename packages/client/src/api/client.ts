@@ -664,6 +664,11 @@ export interface ApiClient {
       returnTo?: string,
       plan?: string,
     ): Promise<{ url: string; expiresAt: string }>;
+    /**
+     * Its payer moves the workspace's plan to `to`, another workspace where they manage billing that has no plan in
+     * force (ADR 0079): the billing service moves it within a minute. `billing.off` 404 on a server without billing.
+     */
+    movePlan(orgId: string, to: string): Promise<void>;
     /** People, files and today's uploads against the workspace's limits (any member; ADR 0079). */
     limits(orgId: string): Promise<WorkspaceLimits>;
     members(orgId: string): Promise<Member[]>;

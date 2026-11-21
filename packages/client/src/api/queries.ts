@@ -18,6 +18,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState, useSyncE
 import { moveInGroups } from "../lib/agent-groups";
 import { type LevelsBefore, levelsBefore } from "../lib/approvals-level";
 import { artifactRefs } from "../lib/artifacts";
+import { planMoveTargets } from "../lib/billing";
 import { newerBlockState, stateChanges, stateForPage } from "../lib/blocks";
 import type { ChatPrefs } from "../lib/chat-look";
 import type { ChoiceAnswer } from "../lib/choices";
@@ -164,6 +165,7 @@ import type {
   NotificationFilter,
   OrgRoles,
   OrgSettings,
+  OrgSummary,
   PendingReturn,
   Person,
   PersonalTokenInput,
@@ -612,6 +614,24 @@ export function useRestoreWorkspace(orgId: string) {
     },
   });
 }
+
+/**
+ * Its payer's move of the workspace's plan to another workspace of theirs (ADR 0079): where it can go
+ * (`planMoveTargets`, none for anyone else), `start` for one of them (`onError` where no toast says a refusal by
+ * itself), and once asked, the name of the workspace it is on its way to. The billing service moves it within a minute.
+ */
+export function usePlanMove(orgId: string) {
+  const api = useApi();
+  const orgs = useMe().data?.organizations ?? [];
+  const from = orgs.find((o) => o.id === orgId);
+  const targets = from ? planMoveTargets(orgs, from) : [];
+  const move = useMutation({ mutationFn: (to: string) => api.orgs.movePlan(orgId, to) });
+  const [movedTo, setMovedTo] = useState<string | null>(null);
+  const start = (to: Pick<OrgSummary, "id" | "name">, onError?: (error: Error) => void) =>
+    move.mutate(to.id, { onSuccess: () => setMovedTo(to.name), onError });
+  return { targets, move, movedTo, start };
+}
+export type PlanMove = ReturnType<typeof usePlanMove>;
 
 export function useUpdateOrganization(orgId: string) {
   const api = useApi();

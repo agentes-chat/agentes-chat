@@ -278,6 +278,7 @@ export function accountRoutes(deps: AppDeps) {
           accent: m.orgAccent ?? null,
           ...(m.orgCreatedAt ? { createdAt: m.orgCreatedAt.toISOString() } : {}),
           ...(m.start ? { start: m.start } : {}),
+          ...(m.paysPlan ? { paysPlan: true as const } : {}),
           showActivity: m.showActivity ?? false,
           agentStyle: m.agentStyle ?? null,
           chatPrefs: m.chatPrefs ?? {},

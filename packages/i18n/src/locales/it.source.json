@@ -37335,6 +37335,18 @@
   "files.nav.place": {
     "value": "{{index}} of {{count}}"
   },
+  "errors.planMove.notPayer": {
+    "value": "Only the person who pays for the plan can move it."
+  },
+  "errors.planMove.same": {
+    "value": "Pick another workspace to move the plan to."
+  },
+  "errors.planMove.targetHasPlan": {
+    "value": "That workspace has a plan already. Reload to see your workspaces as they are now."
+  },
+  "errors.planMove.targetDeleting": {
+    "value": "That workspace is being deleted. Restore it first, or pick another one."
+  },
   "errors.surface.off": {
     "value": "Linking chat apps was turned off. Reload to see your settings as they are now."
   },
@@ -47596,6 +47608,21 @@
   },
   "deleteAccount.deleted": {
     "value": "Your account goes for good on {{date}}. Sign in before then to restore it."
+  },
+  "planMove.warning": {
+    "value": "Your plan stays with this workspace and stops renewing. Move it to another one of yours first?"
+  },
+  "planMove.deleting": {
+    "value": "Your plan stops renewing with it. You can move it to another workspace."
+  },
+  "planMove.how": {
+    "value": "The same card and paid period go with it. Nothing is charged again and nothing is refunded."
+  },
+  "planMove.button": {
+    "value": "Move my plan to {{name}}"
+  },
+  "planMove.moving": {
+    "value": "Your plan is moving to {{name}}. It's there in about a minute."
   },
   "billing.open": {
     "value": "Open plan and billing"

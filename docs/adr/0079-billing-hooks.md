@@ -115,3 +115,19 @@ Now:
   an unrouted message stays as it was (mention an agent with @). The operator's feed still hears 50% and 100%.
 - **A routine's resume.** A routine's background run may set `follow_up` for work it is blocked on; at its time the
   agent wakes where the routine reports, in a run that keeps the routine's bounds.
+
+## Amendment (2026-11-21): moving a plan to another workspace (§3, §6)
+
+A plan belongs to one workspace, and deleting that workspace stops it renewing. Someone who pays for a workspace's plan
+and also manages billing in another workspace with no plan in force can move it there instead of losing it:
+
+- The billing service names the payer in the limits it sets (`payerUserId`, only while the plan pays). `GET /me` marks
+  the workspaces whose plan the person pays for (`paysPlan`).
+- `POST /api/app/organizations/{orgId}/plan-move` (`requestPlanMove`) takes the workspace it goes to. This server checks
+  that the person is the payer, manages billing in both workspaces, and that the other workspace is on a billing hold
+  and isn't being deleted. It then records `organization.plan_move_requested` on the feed (`data.to`). It is allowed
+  while the workspace it leaves is being deleted. The billing service moves the same subscription (same card, same paid
+  period: nothing is charged again and nothing is refunded) and sets both workspaces' holds and limits, all within a
+  minute. 404 `billing.off` without a billing service, so a self-hosted server never offers it.
+- The apps offer the move where a plan would be lost: in the dialog that deletes the workspace, and on the line of a
+  workspace being deleted, to its payer, for each other workspace they manage billing in that has a billing hold.

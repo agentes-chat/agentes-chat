@@ -63,6 +63,7 @@ The reads live in `packages/engine/src/operator.ts` and pick every field by name
 | `organization.created` | a workspace is created | `name`, `mode` (`team` or `personal`, ADR 0159) |
 | `organization.deletion_requested` | an owner deletes a workspace, or its only member deletes their account, and it is read-only for 7 days (ADR 0088); `userId` is who asked | `dueAt`, `via` (`owner` or `account`) |
 | `organization.deletion_canceled` | an owner restores a workspace being deleted; `userId` is that owner; `via: "account"` when it came back with its member's account | `via` when so |
+| `organization.plan_move_requested` | the payer of a workspace's plan moves it to another workspace they manage billing in, one on a billing hold and not being deleted (ADR 0079); `orgId` is the workspace it leaves, `userId` the payer | `to`: the workspace it goes to |
 | `organization.deleted` | a workspace's data is deleted, at the end of its deletion's 7 days (ADR 0088); `userId` is who asked, null once their account is gone | `requestedAt`, `via` |
 | `invitation.created` | an invitation is sent or resent, or an invite link is made | `emailDomain`, `role`, `resent: true` when resent; `link: true` for a link |
 | `agent.created` | an agent is created | `agentId` |

@@ -14660,6 +14660,12 @@
     }
   },
   "errors": {
+    "planMove": {
+      "notPayer": "Hanya orang yang membayar paket yang bisa memindahkannya.",
+      "same": "Pilih ruang kerja lain untuk tujuan paket.",
+      "targetHasPlan": "Ruang kerja itu sudah punya paket. Muat ulang untuk melihat ruang kerjamu yang terbaru.",
+      "targetDeleting": "Ruang kerja itu sedang dihapus. Pulihkan dulu, atau pilih yang lain."
+    },
     "surface": {
       "off": "Penautan aplikasi chat sudah dimatikan. Muat ulang untuk melihat pengaturanmu yang sekarang.",
       "notAllowed": "Menautkan aplikasi chat belum dibuka untuk akunmu. Tetap pakai aplikasi di sini sampai dibuka.",
@@ -18813,6 +18819,13 @@
     "deleteOrg": "Hapus {{name}}",
     "submit": "Hapus akun",
     "deleted": "Akunmu hilang selamanya pada {{date}}. Masuk sebelum itu untuk memulihkannya."
+  },
+  "planMove": {
+    "warning": "Paketmu tetap di ruang kerja ini dan berhenti diperpanjang. Pindahkan dulu ke ruang kerjamu yang lain?",
+    "deleting": "Paketmu berhenti diperpanjang bersamanya. Kamu bisa memindahkannya ke ruang kerja lain.",
+    "how": "Kartu yang sama dan periode yang sudah dibayar ikut pindah. Tidak ada tagihan ulang dan tidak ada pengembalian dana.",
+    "button": "Pindahkan paketku ke {{name}}",
+    "moving": "Paketmu sedang dipindahkan ke {{name}}. Sampai dalam sekitar satu menit."
   },
   "billing": {
     "open": "Buka paket dan tagihan",

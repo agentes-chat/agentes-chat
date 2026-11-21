@@ -15183,6 +15183,12 @@
     }
   },
   "errors": {
+    "planMove": {
+      "notPayer": "Nur die Person, die den Tarif bezahlt, kann ihn verschieben.",
+      "same": "Wähle einen anderen Workspace, in den der Tarif soll.",
+      "targetHasPlan": "Dieser Workspace hat schon einen Tarif. Lade neu, um deine Workspaces aktuell zu sehen.",
+      "targetDeleting": "Dieser Workspace wird gerade gelöscht. Stell ihn zuerst wieder her oder wähle einen anderen."
+    },
     "surface": {
       "off": "Das Verknüpfen von Chat-Apps wurde ausgeschaltet. Lade neu, um deine Einstellungen im aktuellen Stand zu sehen.",
       "notAllowed": "Das Verknüpfen einer Chat-App ist für dein Konto noch nicht freigegeben. Nutze bis dahin die App hier.",
@@ -19387,6 +19393,13 @@
     "deleteOrg": "{{name}} löschen",
     "submit": "Konto löschen",
     "deleted": "Dein Konto verschwindet am {{date}} endgültig. Melde dich vorher an, um es wiederherzustellen."
+  },
+  "planMove": {
+    "warning": "Dein Tarif bleibt bei diesem Workspace und verlängert sich nicht mehr. Willst du ihn vorher in einen anderen Workspace verschieben?",
+    "deleting": "Dein Tarif verlängert sich damit nicht mehr. Du kannst ihn in einen anderen Workspace verschieben.",
+    "how": "Dieselbe Karte und der bezahlte Zeitraum gehen mit. Nichts wird erneut berechnet und nichts erstattet.",
+    "button": "Meinen Tarif nach {{name}} verschieben",
+    "moving": "Dein Tarif wird nach {{name}} verschoben. In etwa einer Minute ist er da."
   },
   "billing": {
     "open": "Tarif und Abrechnung öffnen",

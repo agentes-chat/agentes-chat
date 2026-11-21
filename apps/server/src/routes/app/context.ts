@@ -210,11 +210,11 @@ export function agentDetailsGate(deps: Pick<AppDeps, "auth" | "db">) {
 
 /**
  * What a workspace being deleted still takes (ADR 0088 §7): restoring or deleting it, the person's own settings there,
- * their inbox and what they read, opening a DM it already has (`openDm` starts none then) and the payer's way to its
- * invoices and card (`billing-link`).
+ * their inbox and what they read, opening a DM it already has (`openDm` starts none then), the payer's way to its
+ * invoices and card (`billing-link`) and their move of its plan to another workspace (`plan-move`).
  */
 const OPEN_WHILE_DELETING =
-  /\/organizations\/[^/]+\/(?:deletion(?:\/code)?|me(?:\/.*)?|notification-prefs|notifications\/.+|(?:channels|threads)\/[^/]+\/read|dms|billing-link)$/;
+  /\/organizations\/[^/]+\/(?:deletion(?:\/code)?|me(?:\/.*)?|notification-prefs|notifications\/.+|(?:channels|threads)\/[^/]+\/read|dms|billing-link|plan-move)$/;
 
 /**
  * Before every route under a workspace: one being deleted reads as ever but changes nothing, so any write but leaving it
