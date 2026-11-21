@@ -185,12 +185,17 @@ describe("a step that needs the person is never a blocker", () => {
       runKind: "conversation",
     });
     const criteria = asked[0]?.questions.verdict?.criteria ?? {};
-    expect(criteria.done).toContain("is not done while `means` can hand that step to them: that is untried");
+    expect(criteria.done).toContain(
+      "Not done (untried): it can't, stops or only offers in passing because a step needs the person",
+    );
+    expect(criteria.done).toContain("while `means` can hand that step over");
     expect(criteria.untried).toContain("a step that needs the person is never a blocker");
     // Asking first stays right when the way is open, and someone else's account is no consent.
     expect(criteria.done).toContain("one direct question offering to start a way it names");
-    expect(criteria.done).toContain("someone else's, not the asking person's own, is done");
-    expect(criteria.ask).toContain("A way to do the request itself, even worded 'only if you want'");
+    expect(criteria.done).toContain(
+      "a refusal because the account or data is someone else's, not the asking person's own",
+    );
+    expect(criteria.ask).toContain("A way to do the request itself, even 'only if you want', is never optional");
     // "Nobody has access, someone please…" without looking in the workspace first is untried.
     expect(criteria.done).toContain("without having looked in the workspace");
     expect(criteria.untried).toContain("without first looking in the workspace");
@@ -218,8 +223,10 @@ describe("a step that needs the person is never a blocker", () => {
     expect(beside?.state.background_work).toEqual(["Relatório de custos do trimestre"]);
     expect(alone?.state).not.toHaveProperty("background_work");
     const criteria = beside?.questions.verdict?.criteria ?? {};
-    expect(criteria.continue).toContain("A promise about what its `background_work` will bring is kept by that work");
-    expect(criteria.done).toContain("that work posts it here by itself: done");
+    expect(criteria.continue).toContain("Not a promise its `background_work` keeps");
+    expect(criteria.done).toContain(
+      "a later result its `background_work` brings, which that work posts here by itself",
+    );
   });
 
   test("the question check: a way to do the request, however it is worded, is no optional offer", async () => {
