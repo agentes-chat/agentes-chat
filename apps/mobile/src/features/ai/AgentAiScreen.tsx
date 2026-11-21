@@ -17,7 +17,7 @@ import { modelLimitText } from "@agenteschat/client/lib/plan-usage";
 import { brainPlan, geminiPersonal, isPlanId, planFreeHint, planOf } from "@agenteschat/client/lib/plans";
 import { apiProviderOf, isAuto, providerLabel } from "@agenteschat/client/lib/providers";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
-import { limitOffers, planState } from "@agenteschat/ui/plan-state";
+import { aroundOwnSignIn, limitOffers, planState } from "@agenteschat/ui/plan-state";
 import { Fragment, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
@@ -177,6 +177,21 @@ export function AgentAiScreen({ agentId }: { agentId: string }) {
             : null;
   const ownRow = view !== undefined && kind !== null && ownSignInListed(view, row, kind);
   const choices = view ? accountChoices(accounts, [view.account]) : [];
+  const [choicesBefore, choicesAfter] = aroundOwnSignIn(
+    kind ?? "",
+    choices.map((c) => ({ c, usage: c.login.usage })),
+  );
+  const choiceRow = (c: (typeof choices)[number]) => (
+    <AiRow
+      key={c.login.id}
+      row={accountRow(t, c, name, i18n.language)}
+      checked={c.login.id === account}
+      onPress={() => (c.also ? connect(c.login, true) : choose(c.login))}
+      {...(c.login.mine && view?.computer
+        ? { onRename: () => view.computer && openRenameAiAccount(view.computer.machineId, c.login.id) }
+        : {})}
+    />
+  );
   const adds = view?.canUsePlans === true && view.canManageAccounts;
   // On someone else's computer only whoever connected it adds a sign-in: with nothing of the owner's there, why, in
   // place of the list.
@@ -215,6 +230,7 @@ export function AgentAiScreen({ agentId }: { agentId: string }) {
               <>
                 <GroupedHeader>{t("agentPage.work.brain.account")}</GroupedHeader>
                 <GroupedList>
+                  {choicesBefore.map(({ c }) => choiceRow(c))}
                   {ownRow ? (
                     <GroupedRow
                       leading={<ProviderLogo id={kind} size="sm" />}
@@ -223,17 +239,7 @@ export function AgentAiScreen({ agentId }: { agentId: string }) {
                       onPress={() => choose(null)}
                     />
                   ) : null}
-                  {choices.map((c) => (
-                    <AiRow
-                      key={c.login.id}
-                      row={accountRow(t, c, name, i18n.language)}
-                      checked={c.login.id === account}
-                      onPress={() => (c.also ? connect(c.login, true) : choose(c.login))}
-                      {...(c.login.mine && view.computer
-                        ? { onRename: () => view.computer && openRenameAiAccount(view.computer.machineId, c.login.id) }
-                        : {})}
-                    />
-                  ))}
+                  {choicesAfter.map(({ c }) => choiceRow(c))}
                   {adds ? (
                     <GroupedRow
                       icon="plus"

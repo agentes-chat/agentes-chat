@@ -3475,6 +3475,7 @@
     "chat": {
       "mine": "Deine",
       "yours": "Deins",
+      "free": "Kostenlos",
       "keys": "Workspace-Schlüssel",
       "apiKeys": "API-Schlüssel",
       "best": "Gerade mit dem meisten Spielraum",

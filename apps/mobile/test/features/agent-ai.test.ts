@@ -479,7 +479,7 @@ describe("the agent's AI", () => {
     ]);
     // One row per account (the web's choice), and "Também usada por" signs this agent in on Connect an AI.
     expect(screen).toContain("const choices = view ? accountChoices(accounts, [view.account]) : [];");
-    expect(screen).toContain("{choices.map((c) => (");
+    expect(screen).toContain("{choicesAfter.map(({ c }) => choiceRow(c))}");
     expect(screen).toContain("row={accountRow(t, c, name, i18n.language)}");
     expect(screen).toContain("onPress={() => (c.also ? connect(c.login, true) : choose(c.login))}");
     // That account's email goes along as Claude's hint, on Claude's page only, whatever the agent's own login is.

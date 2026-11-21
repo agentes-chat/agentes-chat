@@ -3327,6 +3327,7 @@
     "chat": {
       "mine": "你的账号",
       "yours": "你的",
+      "free": "免费",
       "keys": "工作区密钥",
       "apiKeys": "API 密钥",
       "best": "当前余量最多",

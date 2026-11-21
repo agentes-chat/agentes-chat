@@ -3757,6 +3757,7 @@
     "chat": {
       "mine": "Twoje",
       "yours": "Twoje",
+      "free": "Darmowe",
       "keys": "Klucz przestrzeni roboczej",
       "apiKeys": "Klucze API",
       "best": "Teraz z największym zapasem",

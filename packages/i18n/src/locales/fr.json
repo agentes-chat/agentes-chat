@@ -3617,6 +3617,7 @@
     "chat": {
       "mine": "Les vôtres",
       "yours": "Le vôtre",
+      "free": "Gratuit",
       "keys": "Clé de l'espace de travail",
       "apiKeys": "Clés API",
       "best": "Le plus de marge en ce moment",

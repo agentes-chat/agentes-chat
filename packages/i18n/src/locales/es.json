@@ -3612,6 +3612,7 @@
     "chat": {
       "mine": "Tuyas",
       "yours": "Tuya",
+      "free": "Gratis",
       "keys": "Clave del espacio de trabajo",
       "apiKeys": "Claves de API",
       "best": "Con más margen ahora",

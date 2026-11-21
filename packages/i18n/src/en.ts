@@ -3780,6 +3780,8 @@ export const en = {
     chat: {
       mine: "Yours",
       yours: "Yours",
+      /** A free tier nobody owns (OpenCode's free models), where a plan says whose it is. */
+      free: "Free",
       keys: "Workspace key",
       /** A group of the switch screen's accounts by AI: the workspace's API keys. */
       apiKeys: "API keys",
