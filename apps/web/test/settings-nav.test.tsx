@@ -26,6 +26,20 @@ const go = async (path: string, state = seedState()) => {
 };
 
 describe("finding the settings", () => {
+  test("a search result opens its section from the settings landing page", async () => {
+    const { router } = await go("settings");
+    const nav = within(screen().getByRole("navigation", { name: "Seções das configurações" }));
+    await type(nav.getByPlaceholderText("Buscar nas configurações"), "Notificações");
+    const result = nav
+      .getAllByRole("link")
+      .find((link) => link.getAttribute("href")?.endsWith("/settings/notifications"));
+    if (!result) throw new Error("missing notifications search result");
+    await click(result);
+    await settle(6);
+    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/settings/notifications`);
+    expect(router.state.location.state).toMatchObject({ settingsMatch: "Notificações" });
+  });
+
   test("the workspace header opens its full-screen menu: invite, members, settings sections", async () => {
     const { router } = await go("issues");
     const menu = await openMenu(screen().getByRole("button", { name: "Menu do workspace Acme" }));
@@ -253,10 +267,7 @@ describe("finding the settings", () => {
 
 describe("the current section in the nav", () => {
   test("is the agent page's current tab, a raised key with its edge, so light shows it as dark does", async () => {
-    const css = (await Bun.file(new URL("../src/layout.css", import.meta.url).pathname).text()).replace(
-      /\/\*[\s\S]*?\*\//g,
-      "",
-    );
+    const css = (await Bun.file(new URL("../src/layout.css", import.meta.url)).text()).replace(/\/\*[\s\S]*?\*\//g, "");
     const body = (selector: string) => css.split(`\n${selector} {`)[1]?.split("}")[0] ?? "";
     const of = (selector: string, prop: string) => new RegExp(`\\s${prop}: ([^;]+);`).exec(body(selector))?.[1];
     const current = '.settings__link[aria-current="page"]';

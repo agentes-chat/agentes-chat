@@ -65,13 +65,14 @@ import {
   overLimit,
   PageHeader,
   ProviderLogo,
+  SearchField,
   SettingNote,
   Switch,
   TabPanel,
   Tabs,
   Textarea,
 } from "@agenteschat/ui";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { type ComponentProps, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AboutSection } from "@/components/AboutSettings";
@@ -121,6 +122,7 @@ import { useOpenParam } from "@/lib/open-param";
 import { useToast } from "@/lib/toast";
 import { InvitesPage } from "./InvitesPage";
 import { MembersPage } from "./MembersPage";
+import { markSettingsText, searchSettings } from "./settings-search";
 import {
   isSettingsSection,
   SETTINGS_SECTIONS,
@@ -182,10 +184,12 @@ function Settings({
   /** Cargos, with Criar cargo open (⌘K's "Criar cargo"). */
   create?: boolean;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { org } = useOrg();
   const server = useAuthConfig().data;
   const visible = SETTINGS_SECTIONS.filter((s) => s.allowed(org, server));
+  const [query, setQuery] = useState("");
+  const bodyRef = useRef<HTMLDivElement>(null);
   // A section a link names that this person can't open: their first one, their account, saying why. Opening the
   // settings with no section named has nothing to explain. Billing where no billing service runs, or Sobre and Voz on
   // agentes.chat Cloud, isn't about their role.
@@ -231,6 +235,18 @@ function Settings({
           ? t("access.kind.connectors")
           : sectionName(id);
   const navigate = useNavigate();
+  // The search box: what was typed, as typed, in every section this person may open (`searchSettings`).
+  const hits = searchSettings(
+    query,
+    visible.map((s) => ({ id: s.id, name: entryName(s.id) })),
+    (key) => i18n.getResource(i18n.language, "translation", key),
+    { fallbackResource: i18n.language === "en" ? undefined : (key) => i18n.getResource("en", "translation", key) },
+  );
+  const navigationState = useRouterState({ select: (state) => state.location.state });
+  useEffect(() => {
+    const match = "settingsMatch" in navigationState && navigationState.settingsMatch;
+    if (typeof match === "string") return markSettingsText(bodyRef.current, match);
+  }, [navigationState]);
   const link = (s: (typeof visible)[number]) => (
     <li key={s.id}>
       <Link
@@ -325,31 +341,66 @@ function Settings({
             </span>
           )}
         </div>
-        <div className="settings__groups" ref={strip}>
-          <div className="settings__group">
-            <ul>{nav.main.map(link)}</ul>
-          </div>
-          {nav.advanced.length > 0 && (
-            <div className="settings__group">
-              <ul>
-                <li>
-                  <button
-                    type="button"
-                    className="settings__link"
-                    aria-expanded={advanced}
-                    onClick={() => setOpened(!advanced)}
-                  >
-                    <Icon name={advanced ? "chevronDown" : "chevronRight"} size={18} />
-                    {t("settings.advanced")}
-                  </button>
-                </li>
-                {advanced && nav.advanced.map(link)}
+        <SearchField
+          size="sm"
+          className="settings__search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onClear={() => setQuery("")}
+          clearLabel={t("settings.searchClear")}
+          placeholder={t("settings.search")}
+          aria-label={t("settings.search")}
+        />
+        {query.trim() ? (
+          <div className="settings__groups settings__groups--results">
+            {hits.length === 0 ? (
+              <p className="settings__searchNone">{t("settings.searchNone", { query: query.trim() })}</p>
+            ) : (
+              <ul aria-label={t("settings.searchResults")}>
+                {hits.map((h) => (
+                  <li key={`${h.section}:${h.text}`}>
+                    <Link
+                      to="/org/$orgId/settings/$section"
+                      params={{ orgId: org.id, section: h.section }}
+                      className="settings__link settings__hit"
+                      aria-current={h.section === current ? "page" : undefined}
+                      state={(state) => ({ ...state, settingsMatch: query.trim() })}
+                    >
+                      <span className="settings__hitSection">{entryName(h.section)}</span>
+                      <span className="settings__hitText">{h.text}</span>
+                    </Link>
+                  </li>
+                ))}
               </ul>
+            )}
+          </div>
+        ) : (
+          <div className="settings__groups" ref={strip}>
+            <div className="settings__group">
+              <ul>{nav.main.map(link)}</ul>
             </div>
-          )}
-        </div>
+            {nav.advanced.length > 0 && (
+              <div className="settings__group">
+                <ul>
+                  <li>
+                    <button
+                      type="button"
+                      className="settings__link"
+                      aria-expanded={advanced}
+                      onClick={() => setOpened(!advanced)}
+                    >
+                      <Icon name={advanced ? "chevronDown" : "chevronRight"} size={18} />
+                      {t("settings.advanced")}
+                    </button>
+                  </li>
+                  {advanced && nav.advanced.map(link)}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
       </nav>
-      <div className="settings__body" data-scroll-restoration-id="settings-section">
+      <div className="settings__body" ref={bodyRef} data-scroll-restoration-id="settings-section">
         {refused && <Alert tone="neutral">{t("settings.notOpen", { section: sectionName(refused) })}</Alert>}
         {tabs.length > 0 ? (
           <Tabs
