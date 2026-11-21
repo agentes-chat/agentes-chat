@@ -2168,6 +2168,7 @@
       "team": "Kim kimdir: kişiler, ajanlar ve grupları",
       "dashboards": "Ajanların güncel tuttuğu sayılar ve grafikler",
       "taskManager": "Her ajanın şu an ne yaptığı ve gerekeni durdurma",
+      "code": "Ajanlarla kodlama, her istek kendi worktree'sinde",
       "approvalsPersonal": "Ajanlarınızın sizden izin istedikleri",
       "proposalsPersonal": "Ajanlarınızın değiştirmeyi önerdikleri",
       "threadsPersonal": "Yan sohbetler ve misyonlar",
@@ -2177,6 +2178,7 @@
       "teamPersonal": "Ajanlarınız ve burada başka kimler var",
       "dashboardsPersonal": "Ajanlarınızın güncel tuttuğu sayılar ve grafikler",
       "taskManagerPersonal": "Ajanlarınızın şu an ne yaptığı ve gerekeni durdurma",
+      "codePersonal": "Ajanlarınızla kodlama",
       "homePersonal": "Günün: seni bekleyenler ve ajanlarının şu an yaptıkları"
     },
     "customizeSidebar": "Kenar çubuğunu özelleştir",
@@ -2284,6 +2286,7 @@
     "team": "Ekip",
     "dashboards": "Panolar",
     "taskManager": "Görev yöneticisi",
+    "code": "Kod",
     "calendar": "Takvim",
     "drive": "Drive",
     "members": "Üyeler",
@@ -4973,7 +4976,8 @@
       "proposal": "Bir değişiklik öneriyor",
       "agent": "Yeni bir ajan öneriyor",
       "team": "Bir ekip öneriyor",
-      "firstTask": "İlk görev"
+      "firstTask": "İlk görev",
+      "code": "Bir kod oturumu öneriyor"
     },
     "waitingYou": "sizi bekliyor",
     "waitingFor": "{{name}} bekleniyor",
@@ -4990,6 +4994,7 @@
       "agent": "<b>{{name}}</b> yeni bir ajan öneriyor · {{what}}",
       "team": "<b>{{name}}</b> bir ekip öneriyor · {{what}}",
       "firstTask": "<b>{{name}}</b> ilk görevi öneriyor · {{what}}",
+      "code": "<b>{{name}}</b> bir kod oturumu öneriyor · {{what}}",
       "more": "+{{count}}",
       "here_one": "Burada sizi bekleyen {{count}} şey var",
       "here_other": "Burada sizi bekleyen {{count}} şey var",
@@ -11094,6 +11099,161 @@
     "createKeywords": "oluştur yeni ekle create new",
     "empty": "“{{q}}” için sonuç yok."
   },
+  "codeSessions": {
+    "title": "Kod",
+    "state": {
+      "waiting": "sizi bekliyor",
+      "working": "çalışıyor",
+      "preparing": "worktree hazırlanıyor",
+      "failed": "hazırlanamadı",
+      "pr": "PR #{{number}}",
+      "idle": "hazır"
+    },
+    "list": {
+      "label": "Kodlama oturumları",
+      "new": "Yeni oturum",
+      "newRow": "Yeni oturum",
+      "resize": "Liste genişliği",
+      "local": "bilgisayarda",
+      "empty": "Açtığınız ya da çağrıldığınız oturumlar burada görünür."
+    },
+    "home": {
+      "mode": "Vibecoding mode",
+      "title": "{{repo}} üzerinde ne yapalım?",
+      "aRepo": "Bir proje",
+      "noAgents": "Henüz hiçbir ajan bir bilgisayarda düşünmüyor. Bir ajanın ayarlarından ona bir bilgisayarda Claude Code veya Codex verin.",
+      "placeholder": "Değişikliği, hatayı veya soruyu anlatın",
+      "label": "Ne yapılacak",
+      "agent": "Ajan",
+      "repo": "Nerede çalışılacak",
+      "repoPlaceholder": "Depo veya proje",
+      "repoSearch": "Arayın ya da sahip/ad veya yeni bir ad yazın",
+      "newLocal": "Bilgisayarda yeni proje: {{name}}",
+      "useRepo": "{{repo}} kullan",
+      "repoNote": "Sahibi olmayan bir ad, ajanın bilgisayarında GitHub dışında bir proje başlatır.",
+      "hint": "@ birini oturuma çağırır",
+      "start": "Başlat",
+      "agent_waiting": "sizi bekliyor",
+      "agent_working": "çalışıyor",
+      "agent_free": "boşta"
+    },
+    "view": {
+      "gone": "Bu oturum artık yok ya da onu görme izniniz yok.",
+      "resize": "Konuşma genişliği",
+      "composer": "Yanıtla · @ birini çağırır · / komutlar",
+      "more": "Daha fazla",
+      "openPr": "PR #{{number}} aç",
+      "close": "Oturumu kapat",
+      "closeHint": "Listeden kalkar: worktree silinir, dal kalır",
+      "failed": "Worktree hazırlanamadı.",
+      "retry": "Tekrar dene",
+      "githubAccess": "Bu çalışma alanının bu depo için GitHub erişimi yok. GitHub'ı Ayarlar › Bağlayıcılar bölümünden bağlayın ya da bilgisayardaki bir projede oturum başlatın (yalnızca bir ad)."
+    },
+    "panel": {
+      "label": "Oturum paneli",
+      "screen": "Ekran",
+      "terminal": "Terminal",
+      "terminalHeight": "Terminal yüksekliği",
+      "notReady": "Worktree hâlâ hazırlanıyor.",
+      "agent_preparing": "worktree'yi hazırlıyor",
+      "agent_failed": "worktree'yi hazırlayamadı",
+      "agent_working": "çalışıyor",
+      "agent_waiting": "sizi bekliyor",
+      "agent_idle": "boşta"
+    },
+    "gitTab": {
+      "label": "Git",
+      "from": "temel: {{base}}",
+      "ahead_one": "{{count}}{{more}} commit önde",
+      "ahead_other": "{{count}}{{more}} commit önde",
+      "refresh": "Yeniden oku",
+      "reading": "Git bilgileri bilgisayardan okunuyor…",
+      "all": "{{base}} dalından bu yana her şey",
+      "uncommitted": "Commit edilmemiş",
+      "clean": "Her şey commit edildi.",
+      "changesMore": "Daha fazla değişiklik var: ilk bini burada.",
+      "commits": "Commit'ler",
+      "noCommits": "{{base}} dalından bu yana henüz commit yok.",
+      "more": "Ve daha eski commit'ler.",
+      "back": "Geri",
+      "split": "Yan yana",
+      "none": "Burada hiçbir şey değişmedi.",
+      "tooLarge": "Burada gösterilemeyecek kadar büyük. Değişen dosyalar listelendi.",
+      "status": {
+        "modified": "Değiştirildi",
+        "added": "Eklendi",
+        "deleted": "Silindi",
+        "renamed": "Adı değişti",
+        "untracked": "Yeni, henüz git'te değil"
+      }
+    },
+    "files": {
+      "label": "Dosyalar",
+      "search": "Dosyalarda ara",
+      "searchPlaceholder": "Ada veya klasöre göre dosya bul",
+      "changedGroup": "Değişenler",
+      "count_one": "{{formatted}} dosya",
+      "count_other": "{{formatted}} dosya",
+      "refresh": "Yeniden oku",
+      "reading": "Bilgisayardaki dosyalar okunuyor…",
+      "empty": "Henüz dosya yok.",
+      "noMatch": "“{{query}}” ile eşleşen dosya yok.",
+      "truncated_one": "İlk {{formatted}} dosya gösteriliyor.",
+      "truncated_other": "İlk {{formatted}} dosya gösteriliyor.",
+      "hasChanges": "Değişiklik var",
+      "back": "Dosyalara dön",
+      "opening": "Dosya açılıyor…",
+      "cut": "Burada yalnızca ilk {{size}} gösteriliyor.",
+      "state": {
+        "binary": "İkili bir dosya: burada gösterilecek bir şey yok.",
+        "missing": "Bu dosya artık yok.",
+        "ignored": "Git bu dosyayı yok sayıyor, bu yüzden burada görünmüyor.",
+        "secret": ".env dosyaları burada görünmez: genellikle gizli bilgiler içerirler.",
+        "outside": "Bu dosya, worktree dışına giden bir bağlantı."
+      }
+    },
+    "screen": {
+      "computer": "{{name}} bilgisayarı",
+      "computer_female": "{{name}} bilgisayarı",
+      "menu": "{{name}} ajanının kullandığı ekranlar",
+      "menu_female": "{{name}} ajanının kullandığı ekranlar",
+      "computerHint": "Worktree'nin bulunduğu yer",
+      "onHost": "{{host}} üzerinde",
+      "exitFull": "Tam ekrandan çık"
+    },
+    "who": {
+      "label": "Bu oturumda",
+      "open_one": "Bu oturumda {{count}} katılımcı",
+      "open_other": "Bu oturumda {{count}} katılımcı",
+      "agent": "worktree'de çalışıyor",
+      "opener": "oturumu açtı",
+      "leave": "Ayrıl",
+      "remove": "{{name}} kişisini oturumdan çıkar",
+      "invite": "Birini çağırmak için konuşmaya @ ve adını yazın."
+    },
+    "screenLine": {
+      "show": "Ekranda gör",
+      "held": "Ekranın kontrolü bir kişide"
+    },
+    "suggestion": {
+      "label": "Kod oturumu önerisi",
+      "detail": "{{repo}} · {{name}} adlı ajanın bilgisayarında",
+      "more": "İsteği gör",
+      "open": "Oturumu aç",
+      "here": "Burada yap",
+      "opening": "Oturum açılıyor…",
+      "opened": "Oturumu açtınız",
+      "openedBy": "{{name}} oturumu açtı",
+      "keptHere": "Burada yapmayı seçtiniz",
+      "keptHereBy": "{{name}} burada yapmayı seçti",
+      "see": "Oturumu gör"
+    },
+    "from": {
+      "dm": "{{name}} ile konuşmanızdan açıldı",
+      "channel": "#{{name}} kanalından açıldı",
+      "see": "Konuşmayı gör"
+    }
+  },
   "code": {
     "ranSummary_one": "{{count}} satır {{language}} çalıştırıldı · çıktı {{size}}",
     "ranSummary_other": "{{count}} satır {{language}} çalıştırıldı · çıktı {{size}}",
@@ -11923,6 +12083,9 @@
       "textOnly": "Yalnızca metin okur",
       "search": "Model ara",
       "account": "Hesap",
+      "accountOf": "Hesap: {{account}}",
+      "connectAccount": "Başka bir hesap bağla",
+      "ais": "Yapay zekâ",
       "connect": "Bir yapay zekâ bağla",
       "applies": "Bir sonraki yanıttan itibaren geçerli.",
       "more": "Diğer seçenekler",
@@ -15195,6 +15358,15 @@
       "conflict": "Bu şu anda yapılamıyor. Yenileyip tekrar deneyin.",
       "computer": "Bilgisayar bunu şu anda yapamadı. Açık olduğunu kontrol edip tekrar deneyin."
     },
+    "codeSession": {
+      "noComputer": "Bu ajanın henüz bir bilgisayarı yok. Onunla kod yazmak için ayarlarından ona bir bilgisayar verin.",
+      "noComputerBrain": "Bu ajan bir bilgisayarda düşünmüyor. Bilgisayarda düşünen bir ajan seçin ya da ayarlarından ona Claude Code veya Codex verin.",
+      "repoNotAllowed": "Bu ajan o depoda çalışamaz. Başka bir depo seçin ya da ajanın ayarlarından bu depoyu ekleyin.",
+      "notYours": "Oturumu yalnızca açan kişi veya bir yönetici kapatabilir.",
+      "notReady": "Oturumun worktree'si henüz hazır değil. Birazdan tekrar deneyin.",
+      "suggestionGone": "Bu öneri zaten yanıtlandı.",
+      "suggestionNotYours": "Oturumun açılıp açılmayacağına yalnızca isteyen kişi karar verir."
+    },
     "webhook": {
       "githubNoAccess": "Bu çalışma alanının GitHub'ı {{repo}} içinde webhook oluşturamıyor. Elle oluşturmak için aşağıdaki adımları izle.",
       "githubFailed": "GitHub, {{repo}} içinde webhook'u oluşturmadı ({{status}}). Elle oluşturmak için aşağıdaki adımları izle.",
@@ -17915,6 +18087,8 @@
         "merged": "{{who}}, GitHub'da bir PR'ı birleştirdi: #{{number}} ({{repo}})",
         "closed": "{{who}}, GitHub'da bir PR'ı kapattı: #{{number}} ({{repo}})",
         "closedIssue": "{{who}}, GitHub'da bir sorun kaydını kapattı: #{{number}} ({{repo}})",
+        "checkFailed": "GitHub'da «{{check}}» kontrolü geçmedi: PR #{{number}} ({{repo}})",
+        "checkFailedCommit": "GitHub'da «{{check}}» kontrolü geçmedi: commit {{commit}} ({{repo}})",
         "ask": "Yanıt iste",
         "asked": "{{asker}}, {{name}} ajanından GitHub'da {{who}} adlı kişiye yanıt vermesini istedi"
       },
@@ -18010,6 +18184,7 @@
         "runningSkillScriptAny": "Bir beceri betiği çalıştırdı",
         "fetchingFile": "Bir dosya getirdi",
         "proposingMission": "Bir misyon önerdi",
+        "suggestingCodeSession": "Bir kod oturumu önerdi",
         "messagingMission": "Misyona bir not gönderdi",
         "updatingPlan": "Planı güncelledi",
         "reportingProgress": "İlerlemeyi bildirdi",
@@ -18130,6 +18305,7 @@
       "runningSkillScriptAny": "beceri betiği çalıştırıyor",
       "fetchingFile": "dosya getiriyor",
       "proposingMission": "misyon öneriyor",
+      "suggestingCodeSession": "kod oturumu öneriyor",
       "messagingMission": "misyona not gönderiyor",
       "updatingPlan": "planı güncelliyor",
       "reportingProgress": "ilerlemeyi bildiriyor",
@@ -19596,6 +19772,52 @@
     "screenOff": "Ekran kapalı",
     "screenOffHelp": "Biri izleyince açılır."
   },
+  "cliTools": {
+    "read": "Okudu",
+    "search": "Aradı",
+    "edit": "Düzenledi",
+    "write": "Yazdı",
+    "run": "Çalıştırdı",
+    "fetch": "Açtı",
+    "delegate": "Bir alt ajandan istedi",
+    "skill": "Beceriyi kullandı",
+    "workflow": "Bir iş akışı çalıştırdı",
+    "other": "Kullandı",
+    "running": {
+      "read": "Okuyor",
+      "search": "Arıyor",
+      "edit": "Düzenliyor",
+      "write": "Yazıyor",
+      "run": "Çalıştırıyor",
+      "fetch": "Açıyor",
+      "delegate": "Bir alt ajandan istiyor",
+      "skill": "Beceriyi kullanıyor",
+      "workflow": "Bir iş akışı çalıştırıyor",
+      "other": "Kullanıyor"
+    },
+    "lines": "+{{added}} −{{removed}}",
+    "added": "+{{added}}",
+    "found_one": "{{count}} sonuç",
+    "found_other": "{{count}} sonuç",
+    "files_one": "{{count}} dosya",
+    "files_other": "{{count}} dosya",
+    "passed_one": "{{count}} geçti",
+    "passed_other": "{{count}} geçti",
+    "failedTests_one": "{{count}} başarısız",
+    "failedTests_other": "{{count}} başarısız",
+    "exit": "çıkış kodu {{code}}",
+    "progress": {
+      "block": "{{name}} ajanının alt ajanları",
+      "block_female": "{{name}} ajanının alt ajanları",
+      "subagent": "Alt ajan",
+      "agents_one": "{{count}} alt ajan",
+      "agents_other": "{{count}} alt ajan",
+      "done": "{{done}}/{{total}} tamamlandı",
+      "asking_one": "Bir alt ajandan istiyor",
+      "asking_other": "{{count}} alt ajandan istiyor",
+      "workflowShort": "iş akışı {{done}}/{{total}}"
+    }
+  },
   "agentComputer": {
     "title": "{{name}} ajanının bilgisayarı",
     "open": "Aç",
@@ -19688,6 +19910,23 @@
       "upright": "Dik çevirin",
       "message": "{{name}} ajanına mesaj gönder"
     }
+  },
+  "codeTerminal": {
+    "label": "Terminal",
+    "opening": "Terminal açılıyor…",
+    "openAgain": "Yeniden aç",
+    "ended": "Kabuk kapandı",
+    "dropped": "Terminal bağlantısı koptu",
+    "screening": "Terminaller burada kapalı",
+    "forbidden": "Terminali yalnızca bu bilgisayarı kullanabilen kişi açar",
+    "offline": "Bilgisayar çevrimdışı",
+    "outdated": "Terminali oturumun klasöründe açmak için bilgisayarı güncelleyin",
+    "unavailable": "Bu ajanın bilgisayarı terminal açmıyor",
+    "off": "{{computer}} üzerinde terminal kapalı",
+    "busy": "Bu bilgisayarda açılabilecek en fazla terminal zaten açık. Birini kapatıp yeniden açın.",
+    "paused": "Bilgisayar duraklatıldı",
+    "failed": "Terminal açılamadı",
+    "agentFolder": "Terminal ajanın klasöründe açıldı. Oturumun klasöründe açılması için bilgisayarı güncelleyin."
   },
   "agora": {
     "label": "Şimdi",

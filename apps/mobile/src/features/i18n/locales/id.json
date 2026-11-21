@@ -1350,6 +1350,19 @@
       "lastDay": "Hari terakhir"
     }
   },
+  "coding": {
+    "pill": "{{who}}. Lihat kodenya",
+    "seeChanges": "Lihat perubahannya",
+    "project": "Proyek",
+    "whereSearch": "Cari atau ketik nama",
+    "listed": "Milik agen",
+    "commit": "Commit {{short}}",
+    "waiting": "Menunggumu",
+    "next": {
+      "pr": "Branch sudah dikirim, belum ada pull request",
+      "mergeLocal": "Siap di-merge ke {{base}}"
+    }
+  },
   "taskManager": {
     "loadFailed": "Tidak bisa memuat tugas.",
     "gone": "Tugas ini sudah tidak ada di sini.",
@@ -2641,6 +2654,10 @@
       "titlePersonal": "Serahkan tugasmu ke agenmu",
       "textPersonal": "Buat tugas untuk agen dan ikuti sampai selesai.",
       "viewerTitlePersonal": "Ikuti pekerjaan agenmu"
+    },
+    "coding": {
+      "title": "Coding bersama agenmu",
+      "text": "Setiap sesi adalah percakapan dengan agen yang bekerja di branch-nya sendiri, di komputernya."
     },
     "routines": {
       "title": "Serahkan pekerjaan berulang ke agenmu",

@@ -1542,6 +1542,28 @@ export const featureKeysEn = {
       lastDay: "Last day",
     },
   },
+  // Código (ADR 0214; the rest of its words are the web's, `codeSessions.*`).
+  coding: {
+    /** A session's pill in its conversation, which opens its code. */
+    pill: "{{who}}. See the code",
+    /** The step line's words over the composer ("3 files changed"), which open the session's Git view. */
+    seeChanges: "See the changes",
+    /** A new session's field for where it works (a repository, or a project only on the computer). */
+    project: "Project",
+    /** Where to work's search field, one line on a phone (the note under the list says what a name does). */
+    whereSearch: "Search or type a name",
+    /** Over the agent's repositories and projects when a typed name is offered as a new one above them. */
+    listed: "The agent's",
+    /** A commit's diff, by its short hash. */
+    commit: "Commit {{short}}",
+    /** The list's first group: the sessions whose agent waits on me. */
+    waiting: "Waiting on you",
+    /** Where the branch stands before its next git step (the line over the composer, the Git view's button). */
+    next: {
+      pr: "Branch sent, no pull request yet",
+      mergeLocal: "Ready to merge into {{base}}",
+    },
+  },
   // The task manager (ADR 0128; the rest of its words are shared, `taskManager.*`).
   taskManager: {
     loadFailed: "Couldn't load the tasks.",
@@ -2956,6 +2978,10 @@ export const featureKeysEn = {
       titlePersonal: "Hand your to-dos to your agents",
       textPersonal: "Create a task for an agent and follow it to the end.",
       viewerTitlePersonal: "Follow your agents' work",
+    },
+    coding: {
+      title: "Code with your agents",
+      text: "Each session is a conversation with an agent working on its own branch, on its computer.",
     },
     routines: {
       title: "Leave repeated work to your agents",

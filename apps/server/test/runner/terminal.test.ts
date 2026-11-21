@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdirSync, realpathSync } from "node:fs";
+import { mkdirSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import type { AgentScope } from "@agenteschat/adapters/machine-protocol";
@@ -84,7 +84,7 @@ const USER: TerminalUser = {
 
 function setup(
   limits: Partial<TerminalLimits> = {},
-  user: (agent: AgentScope) => Promise<TerminalUser> = async () => USER,
+  user: (agent: AgentScope, cwd?: string) => Promise<TerminalUser> = async () => USER,
 ) {
   const fake = fakeShells();
   const logs: string[] = [];
@@ -180,7 +180,7 @@ test("the agent's login shell in its folder, through its launcher, with TERM and
   expect(shell.argv).toEqual([...prefix, "/bin/sh", "-l"]);
 });
 
-test("system mode's terminal: root starts it in the agent's home, the agent's own user moves to its folder", () => {
+test("system mode's terminal: root starts it in the agent's home, the agent's own user moves to its folder", async () => {
   const home = tempDir("term-home-");
   dirs.push(home);
   const launcher = {
@@ -196,12 +196,62 @@ test("system mode's terminal: root starts it in the agent's home, the agent's ow
   expect(user.env).toEqual(launcher.env);
   expect(user.prefix.slice(0, launcher.prefix.length)).toEqual(launcher.prefix);
   // What runs after the launcher, here as this test's user: in the folder once made, else in the home.
-  const pwd = (agent: AgentScope) => {
-    const rest = systemTerminalUser(launcher, agent).prefix.slice(launcher.prefix.length);
+  const pwd = (agent: AgentScope, cwd?: string) => {
+    const rest = systemTerminalUser(launcher, agent, cwd).prefix.slice(launcher.prefix.length);
     return Bun.spawnSync([...rest, "/bin/sh", "-c", "pwd -P"], { cwd: home, env: launcher.env }).stdout.toString();
   };
   expect(pwd(dev).trim()).toBe(realpathSync(folder));
   expect(pwd(ops).trim()).toBe(realpathSync(home));
+
+  // A code session's worktree (ADR 0214): the agent's own user changes into it after its folder.
+  const worktree = path.join(folder, ".worktrees", "c-1a2b3c4d");
+  mkdirSync(worktree, { recursive: true });
+  expect(pwd(dev, ".worktrees/c-1a2b3c4d").trim()).toBe(realpathSync(worktree));
+  // Not there: the agent's folder. A name like one of `cd`'s options is still a folder's name.
+  expect(pwd(dev, ".worktrees/c-gone").trim()).toBe(realpathSync(folder));
+  mkdirSync(path.join(folder, "-P"));
+  expect(pwd(dev, "-P").trim()).toBe(realpathSync(path.join(folder, "-P")));
+  // No folder for the agent yet: its home, whatever was asked.
+  expect(pwd(ops, ".worktrees/c-1a2b3c4d").trim()).toBe(realpathSync(home));
+  // Words that leave the folder are refused before anything runs.
+  expect(await errorCode(() => systemTerminalUser(launcher, dev, "../ops-9f00aa11"))).toBe("outside_workspace");
+  expect(await errorCode(() => systemTerminalUser(launcher, dev, "/etc"))).toBe("outside_workspace");
+});
+
+test("a code session's terminal starts in its worktree inside the agent's folder; one gone in the folder; never outside it", async () => {
+  const folder = tempDir("term-cwd-");
+  const outside = tempDir("term-out-");
+  dirs.push(folder, outside);
+  const worktree = path.join(folder, ".worktrees", "c-1a2b3c4d");
+  mkdirSync(worktree, { recursive: true });
+  writeFileSync(path.join(folder, "notes.txt"), "x");
+  symlinkSync(outside, path.join(folder, "away"));
+  const at = async (cwd?: string) => (await runnerTerminalUser(folder, cwd)).cwd;
+  expect(await at()).toBe(folder);
+  expect(await at(".worktrees/c-1a2b3c4d")).toBe(worktree);
+  // Gone (the session was closed), or not a folder: the agent's folder.
+  expect(await at(".worktrees/c-gone")).toBe(folder);
+  expect(await at("notes.txt")).toBe(folder);
+  // Never outside it, by its words or through a link.
+  expect(await errorCode(() => at("../"))).toBe("outside_workspace");
+  expect(await errorCode(() => at("/etc"))).toBe("outside_workspace");
+  expect(await errorCode(() => at("away"))).toBe("outside_workspace");
+
+  // The folder asked reaches who says where the shell runs, and the log says where it opened.
+  const asked: (string | undefined)[] = [];
+  const t = setup({}, async (_agent, cwd) => {
+    asked.push(cwd);
+    return runnerTerminalUser(folder, cwd);
+  });
+  await t.terminals.open(dev, SIZE, async () => memoryDataSocket().socket, ".worktrees/c-1a2b3c4d");
+  expect(asked).toEqual([".worktrees/c-1a2b3c4d"]);
+  expect(t.fake.shells.at(-1)?.opts.cwd).toBe(worktree);
+  expect(t.logs[0]).toBe("a terminal as dev opened in .worktrees/c-1a2b3c4d (80×24)");
+  // Refused before any shell starts.
+  const refused = () => t.terminals.open(dev, SIZE, async () => memoryDataSocket().socket, "../../etc");
+  expect(await errorCode(refused)).toBe("outside_workspace");
+  expect(t.fake.shells).toHaveLength(1);
+  expect(t.terminals.count()).toBe(1);
 });
 
 test("what the shell prints before the data socket is ready waits for it; keys and a resize reach the shell", async () => {

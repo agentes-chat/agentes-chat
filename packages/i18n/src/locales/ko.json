@@ -2096,6 +2096,7 @@
       "team": "누가 누구인지: 사람, 에이전트, 그룹",
       "dashboards": "에이전트가 최신 상태로 유지하는 숫자와 차트",
       "taskManager": "에이전트마다 지금 하는 일과, 필요한 작업 중지",
+      "code": "에이전트와 함께하는 프로그래밍, 요청마다 별도의 워크트리에서",
       "approvalsPersonal": "내 에이전트가 허락을 구하는 일",
       "proposalsPersonal": "내 에이전트가 변경을 제안한 내용",
       "threadsPersonal": "따로 이어지는 대화와 미션",
@@ -2105,6 +2106,7 @@
       "teamPersonal": "내 에이전트와 여기 있는 다른 사람",
       "dashboardsPersonal": "내 에이전트가 최신 상태로 유지하는 숫자와 차트",
       "taskManagerPersonal": "내 에이전트가 지금 하는 일과, 필요한 작업 중지",
+      "codePersonal": "내 에이전트와 함께하는 프로그래밍",
       "homePersonal": "오늘 하루: 나를 기다리는 일과 에이전트가 하고 있는 일"
     },
     "customizeSidebar": "사이드바 맞춤 설정",
@@ -2210,6 +2212,7 @@
     "team": "팀",
     "dashboards": "대시보드",
     "taskManager": "작업 관리자",
+    "code": "코드",
     "calendar": "캘린더",
     "drive": "Drive",
     "members": "멤버",
@@ -4800,7 +4803,8 @@
       "proposal": "변경을 제안해요",
       "agent": "새 에이전트를 제안해요",
       "team": "팀을 제안해요",
-      "firstTask": "첫 작업"
+      "firstTask": "첫 작업",
+      "code": "코드 세션을 제안해요"
     },
     "waitingYou": "내 확인 대기",
     "waitingFor": "{{name}}님 대기 중",
@@ -4817,6 +4821,7 @@
       "agent": "<b>{{name}}</b>이(가) 새 에이전트를 제안해요 · {{what}}",
       "team": "<b>{{name}}</b>가 팀을 제안해요 · {{what}}",
       "firstTask": "<b>{{name}}</b>가 첫 작업을 제안해요 · {{what}}",
+      "code": "<b>{{name}}</b>가 코드 세션을 제안해요 · {{what}}",
       "more": "+{{count}}",
       "here_other": "여기서 내 확인을 기다리는 항목 {{count}}개",
       "see": "보기"
@@ -10698,6 +10703,157 @@
     "createKeywords": "만들기 새로 추가 create new",
     "empty": "“{{q}}”에 대한 결과가 없어요."
   },
+  "codeSessions": {
+    "title": "코드",
+    "state": {
+      "waiting": "내 확인 대기",
+      "working": "작업 중",
+      "preparing": "워크트리 준비 중",
+      "failed": "준비 실패",
+      "pr": "PR #{{number}}",
+      "idle": "준비됨"
+    },
+    "list": {
+      "label": "코드 세션",
+      "new": "새 세션",
+      "newRow": "새 세션",
+      "resize": "목록 너비",
+      "local": "컴퓨터에 있음",
+      "empty": "내가 열었거나 초대받은 세션이 여기에 표시돼요."
+    },
+    "home": {
+      "mode": "Vibecoding mode",
+      "title": "{{repo}}에서 무엇을 할까요?",
+      "aRepo": "프로젝트",
+      "noAgents": "아직 컴퓨터에서 생각하는 에이전트가 없어요. 에이전트 설정에서 컴퓨터의 Claude Code나 Codex를 지정하세요.",
+      "placeholder": "변경 사항, 버그, 질문을 설명해 주세요",
+      "label": "할 일",
+      "agent": "에이전트",
+      "repo": "작업할 곳",
+      "repoPlaceholder": "저장소 또는 프로젝트",
+      "repoSearch": "검색하거나 owner/name 또는 새 이름을 입력하세요",
+      "newLocal": "컴퓨터의 새 프로젝트: {{name}}",
+      "useRepo": "{{repo}} 사용",
+      "repoNote": "owner 없이 이름만 쓰면 GitHub 밖, 에이전트의 컴퓨터에 프로젝트를 만들어요.",
+      "hint": "@로 다른 사람을 세션에 부를 수 있어요",
+      "start": "시작",
+      "agent_waiting": "내 확인 대기",
+      "agent_working": "작업 중",
+      "agent_free": "사용 가능"
+    },
+    "view": {
+      "gone": "이 세션은 없어졌거나 볼 수 없는 세션이에요.",
+      "resize": "대화 너비",
+      "composer": "답장 · @로 사람 부르기 · / 명령어",
+      "more": "더 보기",
+      "openPr": "PR #{{number}} 열기",
+      "close": "세션 닫기",
+      "closeHint": "목록에서 빠지고, 워크트리는 삭제되며 브랜치는 남아요",
+      "failed": "워크트리를 준비하지 못했어요.",
+      "retry": "다시 시도",
+      "githubAccess": "이 워크스페이스에는 이 저장소에 대한 GitHub 접근 권한이 없어요. 설정 › 커넥터에서 GitHub를 연결하거나, 컴퓨터의 프로젝트로 세션을 시작하세요(이름만 입력)."
+    },
+    "panel": {
+      "label": "세션 패널",
+      "screen": "화면",
+      "terminal": "터미널",
+      "terminalHeight": "터미널 높이",
+      "notReady": "워크트리를 아직 준비하는 중이에요.",
+      "agent_preparing": "워크트리 준비 중",
+      "agent_failed": "워크트리를 준비하지 못했어요",
+      "agent_working": "작업 중",
+      "agent_waiting": "나를 기다리는 중",
+      "agent_idle": "사용 가능"
+    },
+    "gitTab": {
+      "label": "Git",
+      "from": "{{base}}에서 분기",
+      "ahead_other": "커밋 {{count}}{{more}}개 앞섬",
+      "refresh": "다시 읽기",
+      "reading": "컴퓨터에서 git을 읽는 중…",
+      "all": "{{base}} 이후 전체",
+      "uncommitted": "커밋 전",
+      "clean": "모두 커밋됐어요.",
+      "changesMore": "변경 사항이 더 있어요. 여기에는 처음 1,000개만 있어요.",
+      "commits": "커밋",
+      "noCommits": "{{base}} 이후 커밋이 아직 없어요.",
+      "more": "더 오래된 커밋도 있어요.",
+      "back": "뒤로",
+      "split": "나란히 보기",
+      "none": "여기에는 바뀐 게 없어요.",
+      "tooLarge": "너무 커서 여기에 표시할 수 없어요. 바뀐 파일 목록만 보여 드려요.",
+      "status": {
+        "modified": "수정됨",
+        "added": "추가됨",
+        "deleted": "삭제됨",
+        "renamed": "이름 변경됨",
+        "untracked": "새 파일, 아직 git에 없음"
+      }
+    },
+    "files": {
+      "label": "파일",
+      "search": "파일 검색",
+      "searchPlaceholder": "이름이나 폴더로 파일 찾기",
+      "changedGroup": "변경됨",
+      "count_other": "파일 {{formatted}}개",
+      "refresh": "다시 읽기",
+      "reading": "컴퓨터에서 파일을 읽는 중…",
+      "empty": "아직 파일이 없어요.",
+      "noMatch": "“{{query}}”에 해당하는 파일이 없어요.",
+      "truncated_other": "처음 {{formatted}}개 파일을 표시하고 있어요.",
+      "hasChanges": "변경 사항 있음",
+      "back": "파일 목록으로 돌아가기",
+      "opening": "파일을 여는 중…",
+      "cut": "여기에는 처음 {{size}}만 표시돼요.",
+      "state": {
+        "binary": "바이너리 파일이라 여기에 표시할 내용이 없어요.",
+        "missing": "이 파일은 더 이상 없어요.",
+        "ignored": "git이 이 파일을 무시해서 여기에 표시되지 않아요.",
+        "secret": ".env 파일은 여기에 표시되지 않아요. 보통 비밀 정보가 들어 있어요.",
+        "outside": "이 파일은 워크트리 밖을 가리키는 링크예요."
+      }
+    },
+    "screen": {
+      "computer": "{{name}}의 컴퓨터",
+      "computer_female": "{{name}}의 컴퓨터",
+      "menu": "{{name}}이(가) 쓰는 화면",
+      "menu_female": "{{name}}이(가) 쓰는 화면",
+      "computerHint": "워크트리가 있는 곳",
+      "onHost": "{{host}}에서",
+      "exitFull": "전체 화면 종료"
+    },
+    "who": {
+      "label": "이 세션 참여자",
+      "open_other": "이 세션에 {{count}}명",
+      "agent": "워크트리에서 작업",
+      "opener": "세션을 연 사람",
+      "leave": "나가기",
+      "remove": "{{name}}을(를) 세션에서 내보내기",
+      "invite": "누군가를 부르려면 대화에서 @와 이름을 입력하세요."
+    },
+    "screenLine": {
+      "show": "화면에서 보기",
+      "held": "사람이 화면을 제어 중이에요"
+    },
+    "suggestion": {
+      "label": "코드 세션 제안",
+      "detail": "{{repo}} · {{name}}의 컴퓨터",
+      "more": "요청 보기",
+      "open": "세션 열기",
+      "here": "여기서 하기",
+      "opening": "세션을 여는 중…",
+      "opened": "세션을 열었어요",
+      "openedBy": "{{name}}님이 세션을 열었어요",
+      "keptHere": "여기서 하기로 했어요",
+      "keptHereBy": "{{name}}님이 여기서 하기로 했어요",
+      "see": "세션 보기"
+    },
+    "from": {
+      "dm": "{{name}}와의 대화에서 열었어요",
+      "channel": "#{{name}}에서 열었어요",
+      "see": "대화 보기"
+    }
+  },
   "code": {
     "ranSummary_other": "{{language}} 코드 {{count}}줄 실행 · 출력 {{size}}",
     "show": "{{name}}의 코드 보기",
@@ -11482,6 +11638,9 @@
       "textOnly": "텍스트만 읽어요",
       "search": "모델 검색",
       "account": "계정",
+      "accountOf": "계정: {{account}}",
+      "connectAccount": "다른 계정 연결",
+      "ais": "AI",
       "connect": "AI 연결",
       "applies": "다음 답변부터 적용돼요.",
       "more": "옵션 더 보기",
@@ -14678,6 +14837,15 @@
       "conflict": "지금은 할 수 없어요. 새로고침하고 다시 시도해 주세요.",
       "computer": "컴퓨터가 지금은 이 일을 하지 못했어요. 켜져 있는지 확인하고 다시 시도해 주세요."
     },
+    "codeSession": {
+      "noComputer": "이 에이전트는 아직 컴퓨터가 없어요. 함께 코딩하려면 에이전트 설정에서 컴퓨터를 지정하세요.",
+      "noComputerBrain": "이 에이전트는 컴퓨터에서 생각하지 않아요. 컴퓨터에서 생각하는 에이전트를 고르거나, 에이전트 설정에서 Claude Code나 Codex를 지정하세요.",
+      "repoNotAllowed": "이 에이전트는 그 저장소에서 작업할 수 없어요. 다른 저장소를 고르거나, 에이전트 설정에서 추가하세요.",
+      "notYours": "세션은 연 사람이나 관리자만 닫을 수 있어요.",
+      "notReady": "세션의 워크트리가 아직 준비되지 않았어요. 잠시 후 다시 시도하세요.",
+      "suggestionGone": "이 제안에는 이미 답했어요.",
+      "suggestionNotYours": "세션을 열지는 요청한 사람만 정할 수 있어요."
+    },
     "webhook": {
       "githubNoAccess": "이 워크스페이스의 GitHub은 {{repo}}에 웹훅을 만들 수 없어요. 아래 단계를 따라 직접 만들어 주세요.",
       "githubFailed": "GitHub이 {{repo}}에 웹훅을 만들지 않았어요({{status}}). 아래 단계를 따라 직접 만들어 주세요.",
@@ -17364,6 +17532,8 @@
         "merged": "{{who}}이(가) GitHub에서 PR #{{number}}({{repo}})을(를) 병합했어요",
         "closed": "{{who}}이(가) GitHub에서 PR #{{number}}({{repo}})을(를) 닫았어요",
         "closedIssue": "{{who}}이(가) GitHub에서 이슈 #{{number}}({{repo}})을(를) 닫았어요",
+        "checkFailed": "GitHub의 PR #{{number}}({{repo}})에서 «{{check}}» 검사를 통과하지 못했어요",
+        "checkFailedCommit": "GitHub의 커밋 {{commit}}({{repo}})에서 «{{check}}» 검사를 통과하지 못했어요",
         "ask": "답변 요청",
         "asked": "{{asker}}이(가) {{name}}에게 GitHub에서 {{who}}에게 답하도록 요청했어요"
       },
@@ -17457,6 +17627,7 @@
         "runningSkillScriptAny": "스킬 스크립트를 실행했어요",
         "fetchingFile": "파일을 가져왔어요",
         "proposingMission": "미션을 제안했어요",
+        "suggestingCodeSession": "코드 세션을 제안했어요",
         "messagingMission": "미션에 메모를 보냈어요",
         "updatingPlan": "계획을 업데이트했어요",
         "reportingProgress": "진행 상황을 보고했어요",
@@ -17577,6 +17748,7 @@
       "runningSkillScriptAny": "스킬 스크립트를 실행하는 중",
       "fetchingFile": "파일을 가져오는 중",
       "proposingMission": "미션을 제안하는 중",
+      "suggestingCodeSession": "코드 세션을 제안하는 중",
       "messagingMission": "미션에 메모를 보내는 중",
       "updatingPlan": "계획을 업데이트하는 중",
       "reportingProgress": "진행 상황을 보고하는 중",
@@ -19030,6 +19202,46 @@
     "screenOff": "화면이 꺼져 있습니다",
     "screenOffHelp": "누군가 보면 화면이 켜집니다."
   },
+  "cliTools": {
+    "read": "읽기",
+    "search": "검색",
+    "edit": "편집",
+    "write": "작성",
+    "run": "실행",
+    "fetch": "가져오기",
+    "delegate": "하위 에이전트에게 요청",
+    "skill": "스킬 사용",
+    "workflow": "워크플로 실행",
+    "other": "사용",
+    "running": {
+      "read": "읽는 중",
+      "search": "검색 중",
+      "edit": "편집 중",
+      "write": "작성 중",
+      "run": "실행 중",
+      "fetch": "가져오는 중",
+      "delegate": "하위 에이전트에게 요청 중",
+      "skill": "스킬 사용 중",
+      "workflow": "워크플로 실행 중",
+      "other": "사용 중"
+    },
+    "lines": "+{{added}} −{{removed}}",
+    "added": "+{{added}}",
+    "found_other": "{{count}}곳",
+    "files_other": "파일 {{count}}개",
+    "passed_other": "{{count}}개 통과",
+    "failedTests_other": "{{count}}개 실패",
+    "exit": "종료 코드 {{code}}",
+    "progress": {
+      "block": "{{name}}의 하위 에이전트",
+      "block_female": "{{name}}의 하위 에이전트",
+      "subagent": "하위 에이전트",
+      "agents_other": "하위 에이전트 {{count}}개",
+      "done": "{{done}}/{{total}} 완료",
+      "asking_other": "하위 에이전트 {{count}}개에 요청 중",
+      "workflowShort": "워크플로 {{done}}/{{total}}"
+    }
+  },
   "agentComputer": {
     "title": "{{name}}의 컴퓨터",
     "open": "열기",
@@ -19121,6 +19333,23 @@
       "upright": "세로로 돌리기",
       "message": "{{name}}에게 메시지 보내기"
     }
+  },
+  "codeTerminal": {
+    "label": "터미널",
+    "opening": "터미널을 여는 중…",
+    "openAgain": "다시 열기",
+    "ended": "셸이 종료됐어요",
+    "dropped": "터미널 연결이 끊겼어요",
+    "screening": "여기서는 터미널이 꺼져 있습니다",
+    "forbidden": "이 컴퓨터를 쓸 수 있는 사람만 터미널을 열 수 있어요",
+    "offline": "컴퓨터가 오프라인이에요",
+    "outdated": "세션 폴더에서 터미널을 열려면 컴퓨터를 업데이트하세요",
+    "unavailable": "이 에이전트의 컴퓨터는 터미널을 열지 않아요",
+    "off": "{{computer}}에서 터미널이 꺼져 있어요",
+    "busy": "이 컴퓨터에서 열 수 있는 터미널이 가득 찼어요. 하나를 닫고 다시 여세요.",
+    "paused": "컴퓨터가 일시 중지됐어요",
+    "failed": "터미널을 열지 못했어요",
+    "agentFolder": "터미널이 에이전트 폴더에서 열렸어요. 세션 폴더에서 열려면 컴퓨터를 업데이트하세요."
   },
   "agora": {
     "label": "지금",

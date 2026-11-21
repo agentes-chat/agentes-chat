@@ -54,6 +54,18 @@ const NEW_AGENT_ROUTES = [
   "new-agent/import-preview",
 ];
 
+/** Código's screens on the grouped gray (ADR 0214): the list, a new session and where it works, a session's Git and
+ * Files, a folder, a diff and who is in it. */
+const CODING_GROUPED_ROUTES = [
+  "coding/index",
+  "coding/new",
+  "coding/where",
+  "coding/[sessionId]/index",
+  "coding/[sessionId]/files",
+  "coding/[sessionId]/diff",
+  "coding/[sessionId]/people",
+];
+
 export default function MainStack() {
   const { colors } = useTheme();
   const pushed = usePushedOptions();
@@ -105,6 +117,8 @@ export default function MainStack() {
       "connect-ai/makers": connectAi,
       // Create an agent: one pushed screen per step, on the grouped gray its steps draw on (no white flash in a push).
       ...Object.fromEntries(NEW_AGENT_ROUTES.map((name) => [name, connectAi])),
+      // Código: its grouped screens on the gray they draw on, as the steps above (no white flash in a push).
+      ...Object.fromEntries(CODING_GROUPED_ROUTES.map((name) => [name, connectAi])),
       images: {
         ...base,
         presentation: "transparentModal",

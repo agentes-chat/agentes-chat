@@ -163,6 +163,8 @@ const HERE = new Set([
   "ask_choices",
   // One short line before slow work, in this conversation (ADR 0207).
   "say_now",
+  // A code session suggested to the person here, on the reply (ADR 0214 §11).
+  "suggest_code_session",
   "share_artifact",
   "propose_mission",
   "browser_ask_person",

@@ -13,6 +13,7 @@ export const SIDEBAR_ITEMS: readonly SidebarItem[] = [
   "calendar",
   "team",
   "dashboards",
+  "code",
   "taskManager",
 ];
 
@@ -30,6 +31,8 @@ export const SIDEBAR_DEFAULTS: Record<SidebarItem, SidebarPlace> = {
   team: "always",
   dashboards: "more",
   taskManager: "more",
+  // Code sessions (ADR 0214): in More, and only where it has anything (`offersCode`).
+  code: "more",
 };
 
 /**
@@ -50,6 +53,8 @@ export const PERSONAL_SIDEBAR_DEFAULTS: Record<SidebarItem, SidebarPlace> = {
   team: "more",
   dashboards: "more",
   taskManager: "more",
+  // Code sessions (ADR 0214): in More, and only where it has anything (`offersCode`).
+  code: "more",
 };
 
 /** Where each tool goes by default in a workspace of this mode (`personal`: ADR 0159). */
@@ -71,11 +76,23 @@ export const PERSONAL_SIDEBAR_ITEMS: readonly SidebarItem[] = [
   "team",
   "wiki",
   "dashboards",
+  "code",
   "taskManager",
 ];
 
 /** The tools' default order in a workspace of this mode: the list's and More's. */
 export const sidebarItemOrder = (personal = false) => (personal ? PERSONAL_SIDEBAR_ITEMS : SIDEBAR_ITEMS);
+
+/**
+ * Whether the apps offer Code (ADR 0214 §12): where it has anything for the person (`OrgOverview.code`: an agent that
+ * programs on a computer, or an open session of theirs), or where they put it in the sidebar's list themselves.
+ */
+export const offersCode = (code: boolean | undefined, saved?: SidebarItems) =>
+  code === true || saved?.code === "always";
+
+/** `order` without the tools this workspace doesn't offer the person (Code, `offersCode`). */
+export const offeredTools = (order: readonly SidebarItem[], code: boolean | undefined, saved?: SidebarItems) =>
+  offersCode(code, saved) ? [...order] : order.filter((id) => id !== "code");
 
 /** The tools with a count in the sidebar: only these can wait in More until there is something (`auto`). */
 export const SIDEBAR_COUNTED: readonly SidebarItem[] = ["waiting", "approvals", "proposals", "threads"];

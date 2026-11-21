@@ -24,6 +24,7 @@ import {
 } from "@agenteschat/providers/plans";
 import { planFull, planState } from "@agenteschat/ui/plan-state";
 import type { Agent } from "../agents";
+import { codeSessionCwd } from "../code-sessions";
 import type { ModelGateway } from "../gateway";
 import type { MachineStatus } from "../machine-hub";
 import { pausedMessage } from "../machines";
@@ -898,6 +899,10 @@ export async function resolveBrain(
           .limit(1)
           .then(([last]) => Boolean(last && last.key !== options.promptKey))
       : false;
+  // A code session's conversation works in the session's worktree (ADR 0214); any other chat turn starts in the
+  // agent's folder.
+  const codeCwd =
+    !mission?.session && machineId ? await codeSessionCwd(deps.db, run.channelId, agent.id).catch(() => null) : null;
   const session: BrainSession | undefined =
     mission?.session ??
     (machineId
@@ -914,7 +919,8 @@ export async function resolveBrain(
             options.now ?? new Date(),
           )),
           machineId,
-          cwd: "",
+          cwd: codeCwd ?? "",
+          ...(codeCwd ? { codeSession: true } : {}),
         }
       : undefined);
   return {

@@ -6,6 +6,8 @@ import { openApprovalCard, publishApproval, supersedeApprovals } from "./approva
 import { runAuthorityById } from "./authority";
 import type { BrainTool, ToolResult } from "./brains/types";
 import { readableChannelIds } from "./channels";
+import { CODE_SESSION_HIDDEN_TOOLS, codeSessionOfChannel } from "./code-sessions";
+import { type CodeSuggestion, codeSuggestionOf } from "./code-suggestions";
 import { isConfidential, threadIsConfidential } from "./confidential";
 import { announceConsultationChange, consultationCardThread, consultationOrigin } from "./consultations";
 import { NotFoundError } from "./errors";
@@ -114,6 +116,8 @@ export interface ToolSideEffects {
   artifacts?: ArtifactLink[];
   /** A mission proposed with its home elsewhere: its link card (`meta.missionLink`). */
   missionLink?: { missionId: string; threadId: string } | null;
+  /** A code session it suggested (`suggest_code_session`, ADR 0214 §11): the person's card on its reply. */
+  codeSuggestion?: CodeSuggestion | null;
   /** The agent reacted (`react`) instead of replying. */
   reacted?: boolean;
   /** It sent a GIF or its sticker (`send_gif`, `send_sticker`, ADR 0091): an empty final reply posts nothing. */
@@ -246,6 +250,9 @@ export function absorbToolData(t: ToolSideEffects, data: Record<string, unknown>
   if (several.length > 0) t.artifacts = withArtifacts(t.artifacts, several);
   const link = data.missionLink as { missionId: string; threadId: string } | undefined;
   if (link?.missionId && link.threadId) t.missionLink = link;
+  // A code session it suggested (ADR 0214 §11): the newest one rides on the reply.
+  const suggestion = codeSuggestionOf({ codeSuggestion: data.codeSuggestion });
+  if (suggestion) t.codeSuggestion = suggestion;
   if (data.reacted) t.reacted = true;
   if (data.mediaSent) t.mediaSent = true;
   if (data.reported) t.reported = true;
@@ -302,6 +309,7 @@ export function mergeToolEffects(t: ToolSideEffects, e: ToolSideEffects | null |
   if (e.artifacts?.length) t.artifacts = withArtifacts(t.artifacts, e.artifacts);
   if (e.memoryUpdates?.length) t.memoryUpdates = [...(t.memoryUpdates ?? []), ...e.memoryUpdates];
   if (e.missionLink) t.missionLink = e.missionLink;
+  if (e.codeSuggestion) t.codeSuggestion = e.codeSuggestion;
   if (e.reacted) t.reacted = true;
   if (e.mediaSent) t.mediaSent = true;
   if (e.reported) t.reported = true;
@@ -321,6 +329,7 @@ const hasEffects = (e: ToolSideEffects) =>
     e.artifacts?.length ||
       e.memoryUpdates?.length ||
       e.missionLink ||
+      e.codeSuggestion ||
       e.reacted ||
       e.mediaSent ||
       e.reported ||
@@ -674,7 +683,10 @@ const loadedGroupsOf = (transcript: unknown): string[] | null => {
 export async function bridgeToolsFor(deps: RunToolsDeps, id: BridgeIdentity): Promise<BrainTool[]> {
   if (!deps.tools) return [];
   const { ctx, run } = await locate(deps.db, id);
-  const tools = await deps.tools.list(ctx);
+  // A code session (ADR 0214): the person sees the worktree's files and the agent's screen in its panel, so no file
+  // goes to the Drive or onto a reply from there.
+  const inCode = run ? await codeSessionOfChannel(deps.db, run.channelId) : null;
+  const tools = (await deps.tools.list(ctx)).filter((t) => !(inCode && CODE_SESSION_HIDDEN_TOOLS.has(t.name)));
   // Our own tools before the connectors': a cap on the list (`MCP_TOOLS_MAX`) only ever drops connector tools.
   const ordered = [...tools.filter((t) => !t.connectionId), ...tools.filter((t) => t.connectionId)];
   const authority = run ? await runAuthorityById(deps.db, run.orgId, run.id) : null;

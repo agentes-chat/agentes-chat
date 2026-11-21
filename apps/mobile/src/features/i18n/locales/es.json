@@ -1518,6 +1518,19 @@
       "lastDay": "Último día"
     }
   },
+  "coding": {
+    "pill": "{{who}}. Ver el código",
+    "seeChanges": "Ver los cambios",
+    "project": "Proyecto",
+    "whereSearch": "Busca o escribe un nombre",
+    "listed": "Del agente",
+    "commit": "Commit {{short}}",
+    "waiting": "Esperándote",
+    "next": {
+      "pr": "Rama enviada, aún sin pull request",
+      "mergeLocal": "Lista para hacer merge en {{base}}"
+    }
+  },
   "taskManager": {
     "loadFailed": "No se pudieron cargar las tareas.",
     "gone": "Esta tarea ya no está aquí.",
@@ -2870,6 +2883,10 @@
       "titlePersonal": "Pasa tus pendientes a tus agentes",
       "textPersonal": "Crea una tarea para un agente y síguela hasta el final.",
       "viewerTitlePersonal": "Sigue el trabajo de tus agentes"
+    },
+    "coding": {
+      "title": "Programa con tus agentes",
+      "text": "Cada sesión es una conversación con un agente que trabaja en su propia rama, en su computadora."
     },
     "routines": {
       "title": "Deja el trabajo repetitivo a tus agentes",

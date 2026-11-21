@@ -1608,6 +1608,19 @@
       "lastDay": "Ostatni dzień"
     }
   },
+  "coding": {
+    "pill": "{{who}}. Zobacz kod",
+    "seeChanges": "Zobacz zmiany",
+    "project": "Projekt",
+    "whereSearch": "Szukaj lub wpisz nazwę",
+    "listed": "U agenta",
+    "commit": "Commit {{short}}",
+    "waiting": "Czeka na ciebie",
+    "next": {
+      "pr": "Gałąź wypchnięta, jeszcze bez pull requesta",
+      "mergeLocal": "Gotowa do scalenia z {{base}}"
+    }
+  },
   "taskManager": {
     "loadFailed": "Nie udało się wczytać zadań.",
     "gone": "Tego zadania już tu nie ma.",
@@ -3004,6 +3017,10 @@
       "titlePersonal": "Przekaż swoje sprawy agentom",
       "textPersonal": "Utwórz zadanie dla agenta i śledź je do końca.",
       "viewerTitlePersonal": "Śledź pracę swoich agentów"
+    },
+    "coding": {
+      "title": "Programuj ze swoimi agentami",
+      "text": "Każda sesja to rozmowa z agentem, który pracuje na własnej gałęzi, na swoim komputerze."
     },
     "routines": {
       "title": "Zostaw powtarzalną pracę agentom",

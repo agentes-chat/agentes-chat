@@ -3552,6 +3552,33 @@
   "routines.when.lastDay": {
     "value": "Last day"
   },
+  "coding.pill": {
+    "value": "{{who}}. See the code"
+  },
+  "coding.seeChanges": {
+    "value": "See the changes"
+  },
+  "coding.project": {
+    "value": "Project"
+  },
+  "coding.whereSearch": {
+    "value": "Search or type a name"
+  },
+  "coding.listed": {
+    "value": "The agent's"
+  },
+  "coding.commit": {
+    "value": "Commit {{short}}"
+  },
+  "coding.waiting": {
+    "value": "Waiting on you"
+  },
+  "coding.next.pr": {
+    "value": "Branch sent, no pull request yet"
+  },
+  "coding.next.mergeLocal": {
+    "value": "Ready to merge into {{base}}"
+  },
   "taskManager.loadFailed": {
     "value": "Couldn't load the tasks."
   },
@@ -6756,6 +6783,12 @@
   },
   "empty.tasks.viewerTitlePersonal": {
     "value": "Follow your agents' work"
+  },
+  "empty.coding.title": {
+    "value": "Code with your agents"
+  },
+  "empty.coding.text": {
+    "value": "Each session is a conversation with an agent working on its own branch, on its computer."
   },
   "empty.routines.title": {
     "value": "Leave repeated work to your agents"

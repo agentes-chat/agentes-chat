@@ -1518,6 +1518,19 @@
       "lastDay": "Ultimo giorno"
     }
   },
+  "coding": {
+    "pill": "{{who}}. Vedi il codice",
+    "seeChanges": "Vedi le modifiche",
+    "project": "Progetto",
+    "whereSearch": "Cerca o scrivi un nome",
+    "listed": "Dell'agente",
+    "commit": "Commit {{short}}",
+    "waiting": "Ti aspetta",
+    "next": {
+      "pr": "Branch inviato, ancora senza pull request",
+      "mergeLocal": "Pronto per il merge in {{base}}"
+    }
+  },
   "taskManager": {
     "loadFailed": "Impossibile caricare le attività.",
     "gone": "Questa attività non c'è più.",
@@ -2870,6 +2883,10 @@
       "titlePersonal": "Affida le tue cose da fare ai tuoi agenti",
       "textPersonal": "Crea un'attività per un agente e seguila fino alla fine.",
       "viewerTitlePersonal": "Segui il lavoro dei tuoi agenti"
+    },
+    "coding": {
+      "title": "Programma con i tuoi agenti",
+      "text": "Ogni sessione è una conversazione con un agente che lavora sul proprio branch, sul suo computer."
     },
     "routines": {
       "title": "Lascia il lavoro ripetitivo ai tuoi agenti",

@@ -484,6 +484,7 @@ export function createClaudeCodeBrain(deps: ClaudeCodeBrainDeps): Brain {
           mcp: { token: deps.mcpToken?.(turn) ?? randomBytes(24).toString("base64url") },
           keepAlive: deps.keepAlive !== false,
           personalMcp: personalMcp && !chat,
+          ...(session.codeSession && !chat ? { codeSession: true } : {}),
           ...(permissions ? { permissions } : {}),
           ...accountFields(status?.protocol, turn),
           ...contextFields(status?.protocol, turn, "claude_code"),

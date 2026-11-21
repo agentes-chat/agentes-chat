@@ -2168,6 +2168,7 @@
       "team": "Wie is wie: mensen, agents en hun groepen",
       "dashboards": "Getallen en grafieken die de agents actueel houden",
       "taskManager": "Wat elke agent nu doet, en stoppen wat nodig is",
+      "code": "Programmeren met de agents, elk verzoek in een eigen worktree",
       "approvalsPersonal": "Wat je agents je vragen toe te staan",
       "proposalsPersonal": "Wat je agents willen veranderen",
       "threadsPersonal": "Zijgesprekken, en missies",
@@ -2177,6 +2178,7 @@
       "teamPersonal": "Je agents, en wie er verder is",
       "dashboardsPersonal": "Getallen en grafieken die je agents actueel houden",
       "taskManagerPersonal": "Wat je agents nu doen, en stoppen wat nodig is",
+      "codePersonal": "Programmeren met je agents",
       "homePersonal": "Je dag: wat op je wacht en wat je agents nu doen"
     },
     "customizeSidebar": "Zijbalk aanpassen",
@@ -2284,6 +2286,7 @@
     "team": "Team",
     "dashboards": "Dashboards",
     "taskManager": "Taakbeheer",
+    "code": "Code",
     "calendar": "Agenda",
     "drive": "Drive",
     "members": "Leden",
@@ -4988,7 +4991,8 @@
       "proposal": "Stelt een wijziging voor",
       "agent": "Stelt een nieuwe agent voor",
       "team": "Stelt een team voor",
-      "firstTask": "Eerste taak"
+      "firstTask": "Eerste taak",
+      "code": "Stelt een codesessie voor"
     },
     "waitingYou": "wacht op jou",
     "waitingFor": "wacht op {{name}}",
@@ -5005,6 +5009,7 @@
       "agent": "<b>{{name}}</b> stelt een nieuwe agent voor · {{what}}",
       "team": "<b>{{name}}</b> stelt een team voor · {{what}}",
       "firstTask": "<b>{{name}}</b> stelt een eerste taak voor · {{what}}",
+      "code": "<b>{{name}}</b> stelt een codesessie voor · {{what}}",
       "more": "+{{count}}",
       "here_one": "{{count}} wacht hier op jou",
       "here_other": "{{count}} wachten hier op jou",
@@ -11223,6 +11228,161 @@
     "createKeywords": "maken nieuw toevoegen create new",
     "empty": "Niets voor “{{q}}”."
   },
+  "codeSessions": {
+    "title": "Code",
+    "state": {
+      "waiting": "wacht op jou",
+      "working": "bezig",
+      "preparing": "worktree wordt voorbereid",
+      "failed": "voorbereiden mislukt",
+      "pr": "PR #{{number}}",
+      "idle": "klaar"
+    },
+    "list": {
+      "label": "Codesessies",
+      "new": "Nieuwe sessie",
+      "newRow": "Nieuwe sessie",
+      "resize": "Breedte van de lijst",
+      "local": "op de computer",
+      "empty": "De sessies die je opent, of waar je bij wordt geroepen, verschijnen hier."
+    },
+    "home": {
+      "mode": "Vibecoding mode",
+      "title": "Wat doen we in {{repo}}?",
+      "aRepo": "een project",
+      "noAgents": "Nog geen agent denkt op een computer. Geef er een Claude Code of Codex op een computer, in de instellingen van de agent.",
+      "placeholder": "Beschrijf de wijziging, de bug of de vraag",
+      "label": "Wat er moet gebeuren",
+      "agent": "Agent",
+      "repo": "Waar te werken",
+      "repoPlaceholder": "Repository of project",
+      "repoSearch": "Zoek, of typ eigenaar/naam of een nieuwe naam",
+      "newLocal": "Nieuw project op de computer: {{name}}",
+      "useRepo": "{{repo}} gebruiken",
+      "repoNote": "Een naam zonder eigenaar start een project op de computer van de agent, buiten GitHub.",
+      "hint": "@ haalt iemand bij de sessie",
+      "start": "Starten",
+      "agent_waiting": "wacht op jou",
+      "agent_working": "bezig",
+      "agent_free": "vrij"
+    },
+    "view": {
+      "gone": "Deze sessie bestaat niet meer, of je mag die niet zien.",
+      "resize": "Breedte van het gesprek",
+      "composer": "Antwoorden · @ roept iemand · / opdrachten",
+      "more": "Meer",
+      "openPr": "PR #{{number}} openen",
+      "close": "Sessie sluiten",
+      "closeHint": "Verdwijnt uit de lijst: de worktree gaat weg, de branch blijft",
+      "failed": "De worktree kon niet worden voorbereid.",
+      "retry": "Opnieuw proberen",
+      "githubAccess": "Deze werkruimte heeft geen toegang tot deze repository op GitHub. Koppel GitHub in Instellingen › Connectors, of start een sessie in een project op de computer (alleen een naam)."
+    },
+    "panel": {
+      "label": "Sessiepaneel",
+      "screen": "Scherm",
+      "terminal": "Terminal",
+      "terminalHeight": "Hoogte van de terminal",
+      "notReady": "De worktree wordt nog voorbereid.",
+      "agent_preparing": "bereidt de worktree voor",
+      "agent_failed": "kon de worktree niet voorbereiden",
+      "agent_working": "is bezig",
+      "agent_waiting": "wacht op jou",
+      "agent_idle": "is vrij"
+    },
+    "gitTab": {
+      "label": "Git",
+      "from": "vanaf {{base}}",
+      "ahead_one": "{{count}}{{more}} commit voor",
+      "ahead_other": "{{count}}{{more}} commits voor",
+      "refresh": "Opnieuw lezen",
+      "reading": "Git lezen op de computer…",
+      "all": "Alles sinds {{base}}",
+      "uncommitted": "Niet gecommit",
+      "clean": "Alles is gecommit.",
+      "changesMore": "En meer wijzigingen: de eerste duizend staan hier.",
+      "commits": "Commits",
+      "noCommits": "Nog geen commits sinds {{base}}.",
+      "more": "En oudere commits.",
+      "back": "Terug",
+      "split": "Naast elkaar",
+      "none": "Hier is niets veranderd.",
+      "tooLarge": "Te groot om hier te tonen. De gewijzigde bestanden staan in de lijst.",
+      "status": {
+        "modified": "Gewijzigd",
+        "added": "Toegevoegd",
+        "deleted": "Verwijderd",
+        "renamed": "Hernoemd",
+        "untracked": "Nieuw, nog niet in git"
+      }
+    },
+    "files": {
+      "label": "Bestanden",
+      "search": "Bestanden zoeken",
+      "searchPlaceholder": "Zoek een bestand op naam of map",
+      "changedGroup": "Gewijzigd",
+      "count_one": "{{formatted}} bestand",
+      "count_other": "{{formatted}} bestanden",
+      "refresh": "Opnieuw lezen",
+      "reading": "De bestanden op de computer lezen…",
+      "empty": "Nog geen bestanden.",
+      "noMatch": "Geen bestand gevonden voor “{{query}}”.",
+      "truncated_one": "Het eerste {{formatted}} bestand wordt getoond.",
+      "truncated_other": "De eerste {{formatted}} bestanden worden getoond.",
+      "hasChanges": "Heeft wijzigingen",
+      "back": "Terug naar de bestanden",
+      "opening": "Het bestand openen…",
+      "cut": "Alleen de eerste {{size}} worden hier getoond.",
+      "state": {
+        "binary": "Een binair bestand: hier valt niets te tonen.",
+        "missing": "Dit bestand is er niet meer.",
+        "ignored": "Git negeert dit bestand, dus het staat hier niet.",
+        "secret": ".env-bestanden worden hier niet getoond: ze bevatten meestal geheimen.",
+        "outside": "Dit bestand is een link naar buiten de worktree."
+      }
+    },
+    "screen": {
+      "computer": "Computer van {{name}}",
+      "computer_female": "Computer van {{name}}",
+      "menu": "Schermen die {{name}} gebruikt",
+      "menu_female": "Schermen die {{name}} gebruikt",
+      "computerHint": "Waar de worktree staat",
+      "onHost": "op {{host}}",
+      "exitFull": "Volledig scherm sluiten"
+    },
+    "who": {
+      "label": "In deze sessie",
+      "open_one": "{{count}} in deze sessie",
+      "open_other": "{{count}} in deze sessie",
+      "agent": "werkt in de worktree",
+      "opener": "opende de sessie",
+      "leave": "Verlaten",
+      "remove": "{{name}} uit de sessie verwijderen",
+      "invite": "Typ @ en de naam in het gesprek om iemand erbij te halen."
+    },
+    "screenLine": {
+      "show": "Bekijk op Scherm",
+      "held": "Een mens bedient het scherm"
+    },
+    "suggestion": {
+      "label": "Voorstel voor een codesessie",
+      "detail": "{{repo}} · op de computer van {{name}}",
+      "more": "Verzoek bekijken",
+      "open": "Sessie openen",
+      "here": "Hier doen",
+      "opening": "Sessie wordt geopend…",
+      "opened": "Je hebt de sessie geopend",
+      "openedBy": "{{name}} heeft de sessie geopend",
+      "keptHere": "Je koos ervoor het hier te doen",
+      "keptHereBy": "{{name}} koos ervoor het hier te doen",
+      "see": "Sessie bekijken"
+    },
+    "from": {
+      "dm": "Geopend vanuit je gesprek met {{name}}",
+      "channel": "Geopend vanuit #{{name}}",
+      "see": "Gesprek bekijken"
+    }
+  },
   "code": {
     "ranSummary_one": "{{count}} regel {{language}} uitgevoerd · uitvoer {{size}}",
     "ranSummary_other": "{{count}} regels {{language}} uitgevoerd · uitvoer {{size}}",
@@ -12053,6 +12213,9 @@
       "textOnly": "Leest alleen tekst",
       "search": "Modellen zoeken",
       "account": "Gebruikersaccount",
+      "accountOf": "Account: {{account}}",
+      "connectAccount": "Ander account koppelen",
+      "ais": "AI",
       "connect": "Een AI koppelen",
       "applies": "Geldt vanaf het volgende antwoord.",
       "more": "Meer opties",
@@ -15328,6 +15491,15 @@
       "conflict": "Dat kan nu niet. Vernieuw en probeer het opnieuw.",
       "computer": "De computer kon dit nu niet doen. Controleer of hij aanstaat en probeer het opnieuw."
     },
+    "codeSession": {
+      "noComputer": "Deze agent heeft nog geen computer. Geef er een in de instellingen van de agent om ermee te programmeren.",
+      "noComputerBrain": "Deze agent denkt niet op een computer. Kies er een die dat wel doet, of geef de agent Claude Code of Codex in de instellingen.",
+      "repoNotAllowed": "Deze agent kan niet in die repository werken. Kies een andere, of voeg hem toe in de instellingen van de agent.",
+      "notYours": "Alleen wie de sessie heeft geopend, of een admin, kan hem sluiten.",
+      "notReady": "De worktree van de sessie is nog niet klaar. Probeer het zo opnieuw.",
+      "suggestionGone": "Dit voorstel is al beantwoord.",
+      "suggestionNotYours": "Alleen wie het vroeg, beslist of de sessie opent."
+    },
     "webhook": {
       "githubNoAccess": "De GitHub van deze workspace kan geen webhooks maken in {{repo}}. Volg de stappen hieronder om hem met de hand te maken.",
       "githubFailed": "GitHub heeft de webhook in {{repo}} niet gemaakt ({{status}}). Volg de stappen hieronder om hem met de hand te maken.",
@@ -18059,6 +18231,8 @@
         "merged": "{{who}} heeft PR #{{number}} ({{repo}}) gemerged op GitHub",
         "closed": "{{who}} sloot PR #{{number}} ({{repo}}) op GitHub",
         "closedIssue": "{{who}} sloot issue #{{number}} ({{repo}}) op GitHub",
+        "checkFailed": "De controle «{{check}}» is niet geslaagd bij PR #{{number}} ({{repo}}) op GitHub",
+        "checkFailedCommit": "De controle «{{check}}» is niet geslaagd bij commit {{commit}} ({{repo}}) op GitHub",
         "ask": "Vraag om antwoord",
         "asked": "{{asker}} vroeg {{name}} om {{who}} op GitHub te antwoorden"
       },
@@ -18154,6 +18328,7 @@
         "runningSkillScriptAny": "Een skillscript uitgevoerd",
         "fetchingFile": "Een bestand opgehaald",
         "proposingMission": "Een missie voorgesteld",
+        "suggestingCodeSession": "Een codesessie voorgesteld",
         "messagingMission": "Een notitie naar de missie gestuurd",
         "updatingPlan": "Het plan bijgewerkt",
         "reportingProgress": "Voortgang gemeld",
@@ -18274,6 +18449,7 @@
       "runningSkillScriptAny": "een skillscript aan het uitvoeren",
       "fetchingFile": "een bestand aan het ophalen",
       "proposingMission": "een missie aan het voorstellen",
+      "suggestingCodeSession": "een codesessie aan het voorstellen",
       "messagingMission": "een notitie naar de missie aan het sturen",
       "updatingPlan": "het plan aan het bijwerken",
       "reportingProgress": "voortgang aan het melden",
@@ -19836,6 +20012,52 @@
     "screenOff": "Het scherm staat uit",
     "screenOffHelp": "Het gaat aan zodra iemand kijkt."
   },
+  "cliTools": {
+    "read": "Las",
+    "search": "Zocht",
+    "edit": "Bewerkte",
+    "write": "Schreef",
+    "run": "Draaide",
+    "fetch": "Opende",
+    "delegate": "Vroeg een subagent",
+    "skill": "Gebruikte de skill",
+    "workflow": "Draaide een workflow",
+    "other": "Gebruikte",
+    "running": {
+      "read": "Leest",
+      "search": "Zoekt",
+      "edit": "Bewerkt",
+      "write": "Schrijft",
+      "run": "Draait",
+      "fetch": "Opent",
+      "delegate": "Vraagt een subagent",
+      "skill": "Gebruikt de skill",
+      "workflow": "Draait een workflow",
+      "other": "Gebruikt"
+    },
+    "lines": "+{{added}} −{{removed}}",
+    "added": "+{{added}}",
+    "found_one": "{{count}} treffer",
+    "found_other": "{{count}} treffers",
+    "files_one": "{{count}} bestand",
+    "files_other": "{{count}} bestanden",
+    "passed_one": "{{count}} geslaagd",
+    "passed_other": "{{count}} geslaagd",
+    "failedTests_one": "{{count}} mislukt",
+    "failedTests_other": "{{count}} mislukt",
+    "exit": "exitcode {{code}}",
+    "progress": {
+      "block": "Subagents van {{name}}",
+      "block_female": "Subagents van {{name}}",
+      "subagent": "Subagent",
+      "agents_one": "{{count}} subagent",
+      "agents_other": "{{count}} subagents",
+      "done": "{{done}} van {{total}} klaar",
+      "asking_one": "Vraagt een subagent",
+      "asking_other": "Vraagt {{count}} subagents",
+      "workflowShort": "workflow {{done}} van {{total}}"
+    }
+  },
   "agentComputer": {
     "title": "Computer van {{name}}",
     "title_female": "Computer van {{name}}",
@@ -19942,6 +20164,23 @@
       "upright": "Draai rechtop",
       "message": "Bericht aan {{name}}"
     }
+  },
+  "codeTerminal": {
+    "label": "Terminal",
+    "opening": "De terminal openen…",
+    "openAgain": "Opnieuw openen",
+    "ended": "De shell is gestopt",
+    "dropped": "De verbinding met de terminal is verbroken",
+    "screening": "Terminals staan hier uit",
+    "forbidden": "Alleen wie deze computer mag gebruiken, opent een terminal",
+    "offline": "De computer is offline",
+    "outdated": "Werk de computer bij om de terminal in de map van de sessie te openen",
+    "unavailable": "De computer van deze agent opent geen terminals",
+    "off": "De terminal staat uit op {{computer}}",
+    "busy": "Op deze computer staan al zoveel terminals open als hij aankan. Sluit er een en probeer het opnieuw.",
+    "paused": "De computer is gepauzeerd",
+    "failed": "Kon de terminal niet openen",
+    "agentFolder": "De terminal is geopend in de map van de agent. Werk de computer bij om hem in de map van de sessie te openen."
   },
   "agora": {
     "label": "Nu",

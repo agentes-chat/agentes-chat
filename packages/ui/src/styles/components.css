@@ -9282,6 +9282,17 @@ html:not([data-pointer]) button.ac-tools__row:focus-visible {
 .ac-tools__label b {
   font-weight: 500;
 }
+/* What a computer's CLI worked on (a file, a pattern, a command): mono, one line, cut at its end; the whole of it on
+   hover. */
+.ac-tools__target {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 12px / 20px var(--font-mono, ui-monospace, monospace);
+  color: var(--muted);
+}
 /* The grey words after it (a tool's name, the start of another agent's answer) never grow the line: two lines at
    most, as on the phone; the whole answer reads where the line opens. */
 .ac-tools__label small {

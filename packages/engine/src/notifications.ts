@@ -355,6 +355,8 @@ export interface NotificationSource {
   runId?: string;
   /** A message in a live file's conversation (ADR 0199): the file, which the apps open with it at `messageId`. */
   artifactId?: string;
+  /** A code session's conversation (ADR 0214): the apps open the session on the Code page. */
+  codeSessionId?: string;
   /** Channel name, thread title, issue title, topic title, mission or routine name, widget or board title. */
   label?: string;
 }

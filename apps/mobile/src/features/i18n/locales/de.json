@@ -1436,6 +1436,19 @@
       "lastDay": "Letzter Tag"
     }
   },
+  "coding": {
+    "pill": "{{who}}. Code ansehen",
+    "seeChanges": "Änderungen ansehen",
+    "project": "Projekt",
+    "whereSearch": "Suche oder gib einen Namen ein",
+    "listed": "Vom Agenten",
+    "commit": "Commit {{short}}",
+    "waiting": "Wartet auf dich",
+    "next": {
+      "pr": "Branch gepusht, noch kein Pull Request",
+      "mergeLocal": "Bereit zum Mergen in {{base}}"
+    }
+  },
   "taskManager": {
     "loadFailed": "Die Aufgaben konnten nicht geladen werden.",
     "gone": "Diese Aufgabe ist nicht mehr da.",
@@ -2762,6 +2775,10 @@
       "titlePersonal": "Gib deine Aufgaben an deine Agenten ab",
       "textPersonal": "Erstelle eine Aufgabe für einen Agenten und verfolge sie bis zum Ende.",
       "viewerTitlePersonal": "Verfolge die Arbeit deiner Agenten"
+    },
+    "coding": {
+      "title": "Programmiere mit deinen Agenten",
+      "text": "Jede Sitzung ist eine Unterhaltung mit einem Agenten, der auf seinem eigenen Branch arbeitet, auf seinem Computer."
     },
     "routines": {
       "title": "Überlass wiederkehrende Arbeit deinen Agenten",

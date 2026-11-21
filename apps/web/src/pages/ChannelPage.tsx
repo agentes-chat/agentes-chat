@@ -26,6 +26,7 @@ import {
   browserHandoffOf,
   browserTrailOf,
   type ConnectionStatus,
+  codeSuggestionOf,
   consultsIn,
   desktopTrailOf,
   fileConversationOf,
@@ -283,6 +284,7 @@ import { HeldBrowserCard, RunBrowserCard, useHeldTakeover } from "@/components/b
 import { BrowserHandoffCard } from "@/components/browser/BrowserHandoffCard";
 import { BrowserTrailCard } from "@/components/browser/BrowserTrailCard";
 import { requestBrowserCard } from "@/components/browser/open";
+import { ScreenPanelContext } from "@/components/browser/screen-panel";
 import { CategorySelect } from "@/components/ChannelCategoryDialogs";
 import { ChannelHeader } from "@/components/ChannelHeader";
 import { ChannelPermissions } from "@/components/ChannelPermissions";
@@ -316,6 +318,7 @@ import {
 } from "@/components/ConsultGroup";
 import { CorrectionAsk } from "@/components/CorrectionAsk";
 import { type ChannelActions, ChannelActionsContext, useChannelActions } from "@/components/channel-actions";
+import { CodeSuggestionCard } from "@/components/code/CodeSuggestionCard";
 import { DatePill, type DatePillHandle } from "@/components/DatePill";
 import { DeleteChannelDialog } from "@/components/DeleteChannelDialog";
 import { MenuEntries } from "@/components/DesktopMenus";
@@ -392,7 +395,7 @@ import { SearchResultsPanel } from "@/components/search/SearchResultsPanel";
 import { TeamChecks } from "@/components/TeamChecks";
 import { ReplyChips } from "@/components/TeamPlan";
 import { ToLatest } from "@/components/ToLatest";
-import { LiveTools, SavedTools } from "@/components/ToolCalls";
+import { LiveSubagents, LiveTools, SavedTools } from "@/components/ToolCalls";
 import { AgentTasksPanel } from "@/components/tasks/AgentTasksPanel";
 import { AgentTasksContext } from "@/components/tasks/agent-tasks-context";
 import { RangeBar, RangeRows, useRangeAdjust } from "@/components/threads/RangeSelect";
@@ -515,6 +518,8 @@ export interface ChannelChrome {
   composerReplacement?: ReactNode;
   /** Under the composer (a mission someone only reads: "para pedir algo, peça para participar"). */
   composerNote?: ReactNode;
+  /** Behind the composer and what sits on it, from the conversation's floor (a code session's light sky). */
+  composerSky?: ReactNode;
   /** A thread in the panel beside its channel: a section, not the page's main. */
   panel?: boolean;
   /** A thread view where a person's reply makes it a "Responder" thread (`openThread` on the post). */
@@ -1403,12 +1408,14 @@ function ChannelView({
       // The thread's conversation. One made from a range: not its root (the channel's marker) nor the
       // moved messages (written before the root; the context block lists them).
       const mine = (channelMessages.data ?? []).filter((m) => m.local && m.threadId === thread.id);
-      // A task's conversation: not its root, which stands for the task beside it (ADR 0145); a live file's the same
-      // (ADR 0199).
+      // A task's conversation: not its root, which stands for the task beside it (ADR 0145); a live file's and a code
+      // session's the same (ADR 0199, 0214).
       const list = mergeTimeline(threadMessages.data ?? [], [mine]).filter(
         (m) =>
           !taskConversationOf(m.meta) &&
           !fileConversationOf(m.meta) &&
+          // A code session's root stands for the session, whose page is around it (ADR 0214).
+          !(m.meta && "codeSession" in m.meta) &&
           (!thread.context || m.local || (m.id !== thread.id && m.createdAt > thread.createdAt)),
       );
       const passed = supersededBrainNotices(list);
@@ -2923,6 +2930,7 @@ function ChannelView({
                           </div>
                         )}
                         <div className="channel__composer">
+                          {chrome?.composerSky}
                           <ConnectionBanner status={status} />
                           {!chrome?.intro && !org.deletion && (
                             <NoAiBanner agentIds={channelAgents.map((a) => a.id)} dmAgentId={chrome?.dmAgentId} />
@@ -4579,7 +4587,9 @@ export const TimelineMessage = memo(function TimelineMessage({
   // Where it browsed (`meta.browser`) and what it did on its desktop (`meta.desktop`): each card stays
   // after the run, and its steps leave the work list.
   // Step summaries, no picture: activity, so the person's setting hides them like the tool block.
-  const trailsShown = m.author.type === "agent" && showsActivity(org);
+  // A code session's screen line (ADR 0214) is its way to the panel's screen: shown whatever that setting says.
+  const screenPanel = useContext(ScreenPanelContext);
+  const trailsShown = m.author.type === "agent" && (showsActivity(org) || screenPanel !== null);
   const browserTrail = useMemo(() => (trailsShown ? browserTrailOf(m.meta) : []), [trailsShown, m.meta]);
   const desktopTrail = useMemo(() => (trailsShown ? desktopTrailOf(m.meta) : []), [trailsShown, m.meta]);
   const onCards = useMemo(
@@ -4615,6 +4625,8 @@ export const TimelineMessage = memo(function TimelineMessage({
   const missionSuggestion = m.author.type === "person" ? missionSuggestionOf(meta) : null;
   // A mission proposed from here whose thread lives elsewhere: its link card under the reply.
   const missionLink = m.author.type === "agent" ? missionLinkOf(meta) : null;
+  // A code session it suggested for a change asked here (ADR 0214 §11): the person's card under the reply.
+  const codeSuggestion = m.author.type === "agent" && !m.local ? codeSuggestionOf(meta) : null;
   // Preparing the mission's copy of the project failed (ADR 0044): the card with "Tentar de novo".
   const missionSetup = missionSetupOf(meta);
   const missionCard = Boolean(
@@ -4879,6 +4891,8 @@ export const TimelineMessage = memo(function TimelineMessage({
           <Parts resetKey={m}>
             <LiveRunStatus run={live} />
             {makingImage(live) && <ImageMaking color={colorOf(agent)} />}
+            {/* Its subagents and workflows at work, in a code session (ADR 0214). */}
+            <LiveSubagents work={live.work ?? []} agentName={name} color={colorOf(agent)} />
             <RunBrowserCard run={live} name={name} />
             <span className="ac-visually-hidden">{t("channel.writing")}</span>
           </Parts>
@@ -5024,6 +5038,7 @@ export const TimelineMessage = memo(function TimelineMessage({
             {missionReport && <MissionReportExtras report={missionReport} message={m} />}
             {missionStart && <MissionStartLink message={m} />}
             {missionLink && <MissionLinkCard link={missionLink} />}
+            {codeSuggestion && <CodeSuggestionCard message={m} suggestion={codeSuggestion} />}
             {issueWork && (
               <IssueWorkCard work={issueWork} authorId={m.author.type === "person" ? (m.author.id ?? null) : null} />
             )}
@@ -5055,6 +5070,7 @@ export const TimelineMessage = memo(function TimelineMessage({
               !m.meta?.workUpdate && (
                 <SavedTools
                   runId={replyRun}
+                  messageId={m.id}
                   meta={m.meta}
                   agentName={agent?.name ?? name}
                   color={colorOf(agent)}

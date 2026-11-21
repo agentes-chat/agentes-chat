@@ -294,7 +294,13 @@ function Chat({
     data,
   });
   const realtime = useRealtime().status;
-  const { info, personDm, rootFile, rootTask, subtitle, title } = useChatTitle({ threadId, orgId, t, dir, data });
+  const { codeId, info, personDm, rootFile, rootTask, subtitle, title } = useChatTitle({
+    threadId,
+    orgId,
+    t,
+    dir,
+    data,
+  });
   const {
     canMission,
     canReply,
@@ -625,6 +631,7 @@ function Chat({
             threadId={threadId}
             title={title}
             subtitle={subtitle}
+            codeId={codeId}
             info={info}
             isThread={isThread}
             dm={dm}

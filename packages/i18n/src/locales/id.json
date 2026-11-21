@@ -2096,6 +2096,7 @@
       "team": "Siapa siapa: orang, agen, dan grupnya",
       "dashboards": "Angka dan grafik yang dijaga tetap terbaru oleh agen",
       "taskManager": "Apa yang dikerjakan tiap agen sekarang, dan hentikan yang perlu",
+      "code": "Memprogram bersama agen, tiap permintaan di worktree-nya sendiri",
       "approvalsPersonal": "Yang diminta agenmu untuk kamu izinkan",
       "proposalsPersonal": "Yang diusulkan agenmu untuk diubah",
       "threadsPersonal": "Percakapan sampingan, dan misi",
@@ -2105,6 +2106,7 @@
       "teamPersonal": "Agenmu, dan siapa lagi yang ada di sini",
       "dashboardsPersonal": "Angka dan grafik yang dijaga tetap terbaru oleh agenmu",
       "taskManagerPersonal": "Apa yang dikerjakan agenmu sekarang, dan hentikan yang perlu",
+      "codePersonal": "Memprogram bersama agenmu",
       "homePersonal": "Harimu: apa yang menunggumu dan apa yang sedang dikerjakan agenmu"
     },
     "customizeSidebar": "Sesuaikan sidebar",
@@ -2210,6 +2212,7 @@
     "team": "Tim",
     "dashboards": "Dasbor",
     "taskManager": "Pengelola tugas",
+    "code": "Kode",
     "calendar": "Kalender",
     "drive": "Drive",
     "members": "Anggota",
@@ -4812,7 +4815,8 @@
       "proposal": "Mengusulkan perubahan",
       "agent": "Mengusulkan agen baru",
       "team": "Mengusulkan tim",
-      "firstTask": "Tugas pertama"
+      "firstTask": "Tugas pertama",
+      "code": "Menyarankan sesi kode"
     },
     "waitingYou": "menunggumu",
     "waitingFor": "menunggu {{name}}",
@@ -4829,6 +4833,7 @@
       "agent": "<b>{{name}}</b> mengusulkan agen baru · {{what}}",
       "team": "<b>{{name}}</b> mengusulkan tim · {{what}}",
       "firstTask": "<b>{{name}}</b> menyarankan tugas pertama · {{what}}",
+      "code": "<b>{{name}}</b> menyarankan sesi kode · {{what}}",
       "more": "+{{count}}",
       "here_other": "{{count}} menunggumu di sini",
       "see": "Lihat"
@@ -10755,6 +10760,157 @@
     "createKeywords": "buat baru tambah create new",
     "empty": "Tidak ada hasil untuk “{{q}}”."
   },
+  "codeSessions": {
+    "title": "Kode",
+    "state": {
+      "waiting": "menunggumu",
+      "working": "sedang bekerja",
+      "preparing": "menyiapkan worktree",
+      "failed": "gagal disiapkan",
+      "pr": "PR #{{number}}",
+      "idle": "siap"
+    },
+    "list": {
+      "label": "Sesi kode",
+      "new": "Sesi baru",
+      "newRow": "Sesi baru",
+      "resize": "Lebar daftar",
+      "local": "di komputer",
+      "empty": "Sesi yang kamu buka, atau tempat kamu dipanggil, muncul di sini."
+    },
+    "home": {
+      "mode": "Vibecoding mode",
+      "title": "Apa yang dikerjakan di {{repo}}?",
+      "aRepo": "sebuah proyek",
+      "noAgents": "Belum ada agen yang berpikir di komputer. Beri salah satunya Claude Code atau Codex di komputer, lewat pengaturannya.",
+      "placeholder": "Jelaskan perubahan, bug, atau pertanyaannya",
+      "label": "Yang dikerjakan",
+      "agent": "Agen",
+      "repo": "Di mana bekerja",
+      "repoPlaceholder": "Repositori atau proyek",
+      "repoSearch": "Cari, atau ketik owner/name atau nama baru",
+      "newLocal": "Proyek baru di komputer: {{name}}",
+      "useRepo": "Pakai {{repo}}",
+      "repoNote": "Nama tanpa owner membuat proyek di komputer agen, di luar GitHub.",
+      "hint": "@ memanggil seseorang ke sesi",
+      "start": "Mulai",
+      "agent_waiting": "menunggumu",
+      "agent_working": "sedang bekerja",
+      "agent_free": "tersedia"
+    },
+    "view": {
+      "gone": "Sesi ini sudah tidak ada, atau bukan untuk kamu lihat.",
+      "resize": "Lebar percakapan",
+      "composer": "Balas · @ memanggil seseorang · / perintah",
+      "more": "Lainnya",
+      "openPr": "Buka PR #{{number}}",
+      "close": "Tutup sesi",
+      "closeHint": "Sesi keluar dari daftar: worktree dihapus, branch tetap ada",
+      "failed": "Worktree tidak bisa disiapkan.",
+      "retry": "Coba lagi",
+      "githubAccess": "Ruang kerja ini tidak punya akses GitHub untuk repositori ini. Hubungkan GitHub di Pengaturan › Konektor, atau mulai sesi di proyek di komputer (cukup sebuah nama)."
+    },
+    "panel": {
+      "label": "Panel sesi",
+      "screen": "Layar",
+      "terminal": "Terminal",
+      "terminalHeight": "Tinggi terminal",
+      "notReady": "Worktree masih disiapkan.",
+      "agent_preparing": "sedang menyiapkan worktree",
+      "agent_failed": "tidak bisa menyiapkan worktree",
+      "agent_working": "sedang bekerja",
+      "agent_waiting": "menunggumu",
+      "agent_idle": "tersedia"
+    },
+    "gitTab": {
+      "label": "Git",
+      "from": "dari {{base}}",
+      "ahead_other": "{{count}}{{more}} commit di depan",
+      "refresh": "Baca lagi",
+      "reading": "Membaca git di komputer…",
+      "all": "Semua sejak {{base}}",
+      "uncommitted": "Belum di-commit",
+      "clean": "Semua sudah di-commit.",
+      "changesMore": "Masih ada perubahan lain: seribu yang pertama ada di sini.",
+      "commits": "Commit",
+      "noCommits": "Belum ada commit sejak {{base}}.",
+      "more": "Dan commit yang lebih lama.",
+      "back": "Kembali",
+      "split": "Berdampingan",
+      "none": "Tidak ada yang berubah di sini.",
+      "tooLarge": "Terlalu besar untuk ditampilkan di sini. File yang berubah ada di daftar.",
+      "status": {
+        "modified": "Diubah",
+        "added": "Ditambahkan",
+        "deleted": "Dihapus",
+        "renamed": "Diganti nama",
+        "untracked": "Baru, belum masuk git"
+      }
+    },
+    "files": {
+      "label": "File",
+      "search": "Cari file",
+      "searchPlaceholder": "Cari file menurut nama atau folder",
+      "changedGroup": "Diubah",
+      "count_other": "{{formatted}} file",
+      "refresh": "Baca lagi",
+      "reading": "Membaca file di komputer…",
+      "empty": "Belum ada file.",
+      "noMatch": "Tidak ada file yang cocok dengan “{{query}}”.",
+      "truncated_other": "Menampilkan {{formatted}} file pertama.",
+      "hasChanges": "Ada perubahan",
+      "back": "Kembali ke file",
+      "opening": "Membuka file…",
+      "cut": "Hanya {{size}} pertama yang tampil di sini.",
+      "state": {
+        "binary": "File biner: tidak ada yang bisa ditampilkan di sini.",
+        "missing": "File ini sudah tidak ada.",
+        "ignored": "Git mengabaikan file ini, jadi tidak tampil di sini.",
+        "secret": "File .env tidak tampil di sini: biasanya berisi rahasia.",
+        "outside": "File ini adalah tautan ke luar worktree."
+      }
+    },
+    "screen": {
+      "computer": "Komputer {{name}}",
+      "computer_female": "Komputer {{name}}",
+      "menu": "Layar yang dipakai {{name}}",
+      "menu_female": "Layar yang dipakai {{name}}",
+      "computerHint": "Tempat worktree berada",
+      "onHost": "di {{host}}",
+      "exitFull": "Keluar dari layar penuh"
+    },
+    "who": {
+      "label": "Di sesi ini",
+      "open_other": "{{count}} di sesi ini",
+      "agent": "bekerja di worktree",
+      "opener": "membuka sesi",
+      "leave": "Keluar",
+      "remove": "Keluarkan {{name}} dari sesi",
+      "invite": "Untuk mengajak seseorang, ketik @ dan namanya di percakapan."
+    },
+    "screenLine": {
+      "show": "Lihat di Layar",
+      "held": "Seseorang sedang mengendalikan layar"
+    },
+    "suggestion": {
+      "label": "Saran sesi kode",
+      "detail": "{{repo}} · di komputer {{name}}",
+      "more": "Lihat permintaan",
+      "open": "Buka sesi",
+      "here": "Kerjakan di sini",
+      "opening": "Membuka sesi…",
+      "opened": "Kamu membuka sesi",
+      "openedBy": "{{name}} membuka sesi",
+      "keptHere": "Kamu memilih mengerjakannya di sini",
+      "keptHereBy": "{{name}} memilih mengerjakannya di sini",
+      "see": "Lihat sesi"
+    },
+    "from": {
+      "dm": "Dibuka dari percakapanmu dengan {{name}}",
+      "channel": "Dibuka dari #{{name}}",
+      "see": "Lihat percakapan"
+    }
+  },
   "code": {
     "ranSummary_other": "Menjalankan {{count}} baris {{language}} · output {{size}}",
     "show": "Lihat kode {{name}}",
@@ -11540,6 +11696,9 @@
       "textOnly": "Hanya membaca teks",
       "search": "Cari model",
       "account": "Akun",
+      "accountOf": "Akun: {{account}}",
+      "connectAccount": "Hubungkan akun lain",
+      "ais": "AI",
       "connect": "Hubungkan AI",
       "applies": "Berlaku mulai jawaban berikutnya.",
       "more": "Opsi lainnya",
@@ -14737,6 +14896,15 @@
       "conflict": "Itu tidak bisa dilakukan sekarang. Muat ulang dan coba lagi.",
       "computer": "Komputer tidak bisa melakukan ini sekarang. Pastikan komputer menyala dan coba lagi."
     },
+    "codeSession": {
+      "noComputer": "Agen ini belum punya komputer. Beri satu lewat pengaturannya untuk menulis kode bersamanya.",
+      "noComputerBrain": "Agen ini tidak berpikir di komputer. Pilih agen yang berpikir di komputer, atau beri Claude Code atau Codex lewat pengaturannya.",
+      "repoNotAllowed": "Agen ini tidak bisa bekerja di repositori itu. Pilih yang lain, atau tambahkan di pengaturan agen.",
+      "notYours": "Hanya pembuka sesi atau administrator yang bisa menutupnya.",
+      "notReady": "Worktree sesi belum siap. Coba lagi sebentar lagi.",
+      "suggestionGone": "Saran ini sudah dijawab.",
+      "suggestionNotYours": "Hanya yang meminta yang memutuskan apakah sesi dibuka."
+    },
     "webhook": {
       "githubNoAccess": "GitHub workspace ini tidak bisa membuat webhook di {{repo}}. Ikuti langkah di bawah untuk membuatnya manual.",
       "githubFailed": "GitHub tidak membuat webhook di {{repo}} ({{status}}). Ikuti langkah di bawah untuk membuatnya manual.",
@@ -17425,6 +17593,8 @@
         "merged": "{{who}} menggabungkan PR #{{number}} ({{repo}}) di GitHub",
         "closed": "{{who}} menutup PR #{{number}} ({{repo}}) di GitHub",
         "closedIssue": "{{who}} menutup issue #{{number}} ({{repo}}) di GitHub",
+        "checkFailed": "Pemeriksaan «{{check}}» tidak lolos di PR #{{number}} ({{repo}}) di GitHub",
+        "checkFailedCommit": "Pemeriksaan «{{check}}» tidak lolos di commit {{commit}} ({{repo}}) di GitHub",
         "ask": "Minta balasan",
         "asked": "{{asker}} meminta {{name}} membalas {{who}} di GitHub"
       },
@@ -17518,6 +17688,7 @@
         "runningSkillScriptAny": "Menjalankan skrip skill",
         "fetchingFile": "Mengambil file",
         "proposingMission": "Mengusulkan misi",
+        "suggestingCodeSession": "Menyarankan sesi kode",
         "messagingMission": "Mengirim catatan ke misi",
         "updatingPlan": "Memperbarui rencana",
         "reportingProgress": "Melaporkan kemajuan",
@@ -17638,6 +17809,7 @@
       "runningSkillScriptAny": "menjalankan skrip skill",
       "fetchingFile": "mengambil file",
       "proposingMission": "mengusulkan misi",
+      "suggestingCodeSession": "menyarankan sesi kode",
       "messagingMission": "mengirim catatan ke misi",
       "updatingPlan": "memperbarui rencana",
       "reportingProgress": "melaporkan kemajuan",
@@ -19139,6 +19311,46 @@
     "screenOff": "Layar mati",
     "screenOffHelp": "Layar menyala saat ada yang menonton."
   },
+  "cliTools": {
+    "read": "Membaca",
+    "search": "Mencari",
+    "edit": "Mengedit",
+    "write": "Menulis",
+    "run": "Menjalankan",
+    "fetch": "Mengambil",
+    "delegate": "Meminta subagen",
+    "skill": "Memakai skill",
+    "workflow": "Menjalankan workflow",
+    "other": "Memakai",
+    "running": {
+      "read": "Membaca",
+      "search": "Mencari",
+      "edit": "Mengedit",
+      "write": "Menulis",
+      "run": "Menjalankan",
+      "fetch": "Mengambil",
+      "delegate": "Meminta subagen",
+      "skill": "Memakai skill",
+      "workflow": "Menjalankan workflow",
+      "other": "Memakai"
+    },
+    "lines": "+{{added}} −{{removed}}",
+    "added": "+{{added}}",
+    "found_other": "{{count}} tempat",
+    "files_other": "{{count}} file",
+    "passed_other": "{{count}} lolos",
+    "failedTests_other": "{{count}} gagal",
+    "exit": "kode keluar {{code}}",
+    "progress": {
+      "block": "Subagen {{name}}",
+      "block_female": "Subagen {{name}}",
+      "subagent": "Subagen",
+      "agents_other": "{{count}} subagen",
+      "done": "{{done}} dari {{total}} selesai",
+      "asking_other": "Meminta {{count}} subagen",
+      "workflowShort": "workflow {{done}} dari {{total}}"
+    }
+  },
   "agentComputer": {
     "title": "Komputer {{name}}",
     "open": "Buka",
@@ -19230,6 +19442,23 @@
       "upright": "Putar tegak",
       "message": "Kirim pesan ke {{name}}"
     }
+  },
+  "codeTerminal": {
+    "label": "Terminal",
+    "opening": "Membuka terminal…",
+    "openAgain": "Buka lagi",
+    "ended": "Shell berakhir",
+    "dropped": "Koneksi ke terminal terputus",
+    "screening": "Terminal dimatikan di sini",
+    "forbidden": "Hanya orang yang boleh memakai komputer ini yang bisa membuka terminal",
+    "offline": "Komputer sedang offline",
+    "outdated": "Perbarui komputer untuk membuka terminal di folder sesi",
+    "unavailable": "Komputer agen ini tidak membuka terminal",
+    "off": "Terminal dimatikan di {{computer}}",
+    "busy": "Komputer ini sudah membuka terminal sebanyak yang ia bisa. Tutup satu lalu buka lagi.",
+    "paused": "Komputer sedang dijeda",
+    "failed": "Tidak bisa membuka terminal",
+    "agentFolder": "Terminal terbuka di folder agen. Perbarui komputer agar terbuka di folder sesi."
   },
   "agora": {
     "label": "Sekarang",

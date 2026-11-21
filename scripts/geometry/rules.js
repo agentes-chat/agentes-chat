@@ -278,9 +278,11 @@
    */
   const rowOf = (el) => {
     for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+      // The part of one control (a field's affix, a segmented control's, a split control's, a token's) is no action on
+      // a row's edge: the control is drawn as one.
       if (
         p.matches(
-          "main,[role=dialog],[role=alertdialog],.ac-dialog__foot,.ac-dialog__head,.ac-details,.ac-input-affix,.ac-seg,.ac-composer,.ac-token",
+          "main,[role=dialog],[role=alertdialog],.ac-dialog__foot,.ac-dialog__head,.ac-details,.ac-input-affix,.ac-seg,.ac-split,.ac-composer,.ac-token",
         )
       )
         return null;
@@ -932,7 +934,8 @@
     /**
      * Two things side by side in a row, words next to a field, an icon, a pill or a button: at least the kit's smallest
      * gap between them. A box that shows a plate under the pointer (an in-place title, a link button) counts as its
-     * whole box, the plate's, even at rest. A field's own affixes and a segmented control are drawn as one.
+     * whole box, the plate's, even at rest. A field's own affixes, a segmented control and a split control (its words
+     * and the button beside them in one frame, a hairline between) are drawn as one.
      */
     touch(out) {
       const control = (el) => {
@@ -944,7 +947,7 @@
         return ["pointer", "text"].includes(s.cursor) && (!parent || style(parent).cursor !== s.cursor);
       };
       for (const row of document.body.querySelectorAll("*")) {
-        if (!seen(row) || row.closest("svg,.ac-input-affix,.ac-seg")) continue;
+        if (!seen(row) || row.closest("svg,.ac-input-affix,.ac-seg,.ac-split")) continue;
         const s = style(row);
         if (!s.display.includes("flex") || s.flexDirection.startsWith("column")) continue;
         const kids = flow(row);

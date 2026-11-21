@@ -73,10 +73,11 @@ export const EventLine = memo(function EventLine({
       />
     );
   if (!line) return null;
+  const kind = noticeOf(message.meta)?.kind;
   return (
     <View style={[styles.line, { paddingLeft: inset, marginTop: gap }]}>
       <EventPill
-        mark={noticeOf(message.meta)?.kind === "github_event" ? <ProviderLogo id="github" size="xs" /> : line.icon}
+        mark={kind === "github_event" || kind === "github_check" ? <ProviderLogo id="github" size="xs" /> : line.icon}
         time={when.time(message.createdAt)}
         actions={[
           line.answer ? <AnswerGitHub key="answer" messageId={message.id} /> : null,

@@ -10,6 +10,7 @@ import {
   oneCall,
   quietLine,
   quietWork,
+  replySteps,
   savedOneLine,
   showsActivity,
   type ToolItem,
@@ -123,6 +124,7 @@ const KIND_ICON: Partial<Record<ActivityKind, IconName>> = {
   checkingUsage: "chart",
   findingAgent: "agent",
   proposingMission: "flag",
+  suggestingCodeSession: "code",
   messagingMission: "flag",
   updatingPlan: "flag",
   reportingProgress: "flag",
@@ -722,6 +724,7 @@ export function TurnTools({
  */
 export function SavedTools({
   runId,
+  messageId,
   meta,
   agentName,
   color,
@@ -729,6 +732,8 @@ export function SavedTools({
   keep,
 }: {
   runId: string;
+  /** The reply it is under: its own part of the run's steps (`replySteps`; none: the whole run). */
+  messageId?: string;
   meta: Record<string, unknown> | undefined;
   agentName: string;
   color: AgentColorName;
@@ -745,12 +750,15 @@ export function SavedTools({
   const logo = useCallLogo();
   const compact = workMeta(meta);
   const onCard = (name: unknown) => skipScreens.some((screen) => isScreenTool(String(name ?? ""), screen));
-  const work = run.data
-    ? workFromSteps(
-        run.data.steps.filter((s) => !(s.kind === "tool_call" && onCard(s.data.name))),
-        run.data.run,
-      )
-    : null;
+  const mine = run.data ? replySteps(run.data.steps, messageId) : null;
+  const work =
+    run.data && mine
+      ? workFromSteps(
+          mine.steps.filter((s) => !(s.kind === "tool_call" && onCard(s.data.name))),
+          mine.whole ? run.data.run : undefined,
+          { quietChecks: mine.cli },
+        )
+      : null;
   const items = work ? toolItemsSaved(work) : [];
   const switched = run.data?.run?.accountSwitch;
   // It went on with another account: said here, never in the chat.

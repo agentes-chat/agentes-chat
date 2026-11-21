@@ -67,7 +67,7 @@ import {
 import { recentDms } from "@agenteschat/client/lib/recent";
 import { isRightHand, rightHandSeenKey } from "@agenteschat/client/lib/right-hand";
 import { SERVER_PLACE_ICON } from "@agenteschat/client/lib/server";
-import { inSidebarList, sidebarItemOrder, sidebarPlace } from "@agenteschat/client/lib/sidebar-items";
+import { inSidebarList, offeredTools, sidebarItemOrder, sidebarPlace } from "@agenteschat/client/lib/sidebar-items";
 import { AGENT_SORTS, sortAgents, splitPinned } from "@agenteschat/client/lib/sidebar-view";
 import { badgeCount, looksUnread } from "@agenteschat/client/lib/unread";
 import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
@@ -351,7 +351,8 @@ export function Sidebar() {
     threads: missionsWaiting + unreadThreads,
   };
   // The mode's defaults and order (ADR 0159): in a personal workspace, Routines and Drive in sight, the rest in More.
-  const toolOrder = sidebarItemOrder(personal);
+  // Code only where it has anything for me (ADR 0214 §12).
+  const toolOrder = offeredTools(sidebarItemOrder(personal), overview.data?.code, sidebarItems);
   const listed = toolOrder.filter((id) => inSidebarList(sidebarPlace(sidebarItems, id, personal), counts[id] ?? 0));
   const inMore = toolOrder.filter((id) => !listed.includes(id));
   const countOf = (id: SidebarItem) =>

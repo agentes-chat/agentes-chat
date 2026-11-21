@@ -640,6 +640,8 @@ const TALK_TOOLS = [
   "ask_user",
   "ask_choices",
   "say_now",
+  // A suggested code session (ADR 0214 §11) waits for the person: the run hasn't started the change.
+  "suggest_code_session",
   "post_update",
   "steer_work",
   "stop_work",

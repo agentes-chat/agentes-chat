@@ -1277,9 +1277,9 @@ There are two ways to set the app up:
     installation** on.
   - Webhook URL `{PUBLIC_URL}/api/github-app/webhook`, optional: without it, agents don't hear what happens on
     GitHub, and the GitHub panel checks the installations with GitHub when it opens. Subscribe it to Issues, Issue
-    comment, Pull request, Pull request review, Pull request review comment, Pull request review thread, Discussion
-    and Discussion comment (an app made from Settings has them; one made before shows its owner which to tick, with
-    its page on GitHub).
+    comment, Pull request, Pull request review, Pull request review comment, Pull request review thread, Discussion,
+    Discussion comment and Check run (an app made from Settings has them; one made before shows its owner which to
+    tick, with its page on GitHub).
   - Repository permissions, read and write: Actions, Administration, Attestations, Checks, Code scanning alerts, Commit
     statuses, Contents, Custom properties, Dependabot alerts, Dependabot secrets, Deployments, Discussions,
     Environments, Issues, Merge queues, Packages, Pages, Projects (classic), Pull requests, Repository security

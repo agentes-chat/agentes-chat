@@ -1436,6 +1436,19 @@
       "lastDay": "Ayın son günü"
     }
   },
+  "coding": {
+    "pill": "{{who}}. Kodu gör",
+    "seeChanges": "Değişiklikleri gör",
+    "project": "Proje",
+    "whereSearch": "Arayın veya bir ad yazın",
+    "listed": "Ajanınkiler",
+    "commit": "Commit {{short}}",
+    "waiting": "Sizi bekleyenler",
+    "next": {
+      "pr": "Dal gönderildi, henüz pull request yok",
+      "mergeLocal": "{{base}} dalına birleştirmeye hazır"
+    }
+  },
   "taskManager": {
     "loadFailed": "Görevler yüklenemedi.",
     "gone": "Bu görev artık burada değil.",
@@ -2762,6 +2775,10 @@
       "titlePersonal": "Yapılacaklarınızı ajanlarınıza bırakın",
       "textPersonal": "Bir ajan için görev oluşturun ve sonuna kadar takip edin.",
       "viewerTitlePersonal": "Ajanlarınızın işini takip edin"
+    },
+    "coding": {
+      "title": "Ajanlarınızla kod yazın",
+      "text": "Her oturum, kendi dalında ve kendi bilgisayarında çalışan bir ajanla yapılan bir konuşmadır."
     },
     "routines": {
       "title": "Tekrarlayan işleri ajanlarınıza bırakın",

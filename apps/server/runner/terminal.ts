@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -12,13 +13,15 @@ import type { Launcher } from "./agent-users";
 import { type DesktopSystem, NOT_AS_ROOT, runnerEnv } from "./desktop-session";
 import { RunnerError } from "./errors";
 import { hasBunTerminal, runtimeName } from "./launch";
-import { agentFolderName } from "./paths";
+import { agentFolderName, normalizeRequestPath, resolveInWorkspace } from "./paths";
+import { withSharedBin } from "./shared-folder";
 import type { DataSocket } from "./streams";
 
 /**
  * Terminals people open on an agent's computer (ADR 0058 §6): the login
  * shell of the agent's OS user in a PTY (`Bun.Terminal`), in the agent's
- * folder, with none of the agent's secrets in its environment. Its bytes go
+ * folder (or a folder inside it: a code session's worktree, ADR 0214), with
+ * none of the agent's secrets in its environment. Its bytes go
  * both ways over the stream's data socket; a resize comes as a control frame,
  * and how the shell ended goes back as `exit` before the socket closes.
  *
@@ -47,23 +50,61 @@ export interface TerminalUser {
   cwd: string;
 }
 
-/** Single-user mode: the runner's own user, HOME as the agent's commands have it, in the agent's folder. */
-export const runnerTerminalUser = (agentFolder: string): TerminalUser => ({
-  prefix: [],
-  env: { ...runnerEnv(os.homedir()), LANG: process.env.LANG || "C.UTF-8" },
-  cwd: agentFolder,
-});
+/**
+ * Where a terminal asked to start in `cwd` (`TERMINAL_CWD_PROTOCOL`, relative to `agentFolder`, a real path) starts:
+ * there, through its links, when it is a folder; the agent's folder when it isn't there. One that leaves the agent's
+ * folder is refused (`outside_workspace`), as any request path is.
+ */
+export async function terminalFolder(agentFolder: string, cwd: string): Promise<string> {
+  const found = await resolveInWorkspace(agentFolder, cwd);
+  if (!found.exists) return agentFolder;
+  const st = await stat(found.abs).catch(() => null);
+  return st?.isDirectory() ? found.abs : agentFolder;
+}
+
+/**
+ * Single-user mode: the runner's own user, HOME as the agent's commands have it, in the agent's folder, or in `cwd`
+ * inside it (`terminalFolder`); the shared folder's tools by name, as the agent's own commands find them
+ * (`withSharedBin`).
+ */
+export const runnerTerminalUser = async (
+  agentFolder: string,
+  cwd?: string,
+  shared?: string | null,
+): Promise<TerminalUser> => {
+  const env: Record<string, string> = { ...runnerEnv(os.homedir()), LANG: process.env.LANG || "C.UTF-8" };
+  const PATH = withSharedBin(env.PATH, shared);
+  return {
+    prefix: [],
+    env: PATH ? { ...env, PATH } : env,
+    cwd: cwd ? await terminalFolder(agentFolder, cwd) : agentFolder,
+  };
+};
 
 /**
  * System mode: the agent's own OS user through its launcher, in the agent's folder in its home once its
  * worker made it, else in its home. Root changes only into the home, which root made where the agent can't
  * replace it; the agent can swap its folder for a link at any moment, even between a check and the spawn,
  * so the agent's own user changes into it. Root never makes that folder (it would be root's).
+ *
+ * `cwd` (`TERMINAL_CWD_PROTOCOL`), inside the folder, is checked as words only (no `..`, nothing absolute): root
+ * follows none of the agent's links, the agent's own user changes into it after its folder, so a link there reaches
+ * no further than that user does anyway. Not there: the shell stays in the agent's folder. `./` in front: a name
+ * that starts with `-` is never one of `cd`'s options.
  */
-export function systemTerminalUser(launcher: Launcher, agent: AgentScope): TerminalUser {
+export function systemTerminalUser(launcher: Launcher, agent: AgentScope, cwd?: string): TerminalUser {
   const folder = path.join(launcher.home, agentFolderName(agent).name);
+  const inside = cwd ? normalizeRequestPath(cwd) : "";
   return {
-    prefix: [...launcher.prefix, "/bin/sh", "-c", 'cd "$1" 2>/dev/null; shift; exec "$@"', "sh", folder],
+    prefix: [
+      ...launcher.prefix,
+      "/bin/sh",
+      "-c",
+      'cd "$1" 2>/dev/null && cd "$2" 2>/dev/null; shift 2; exec "$@"',
+      "sh",
+      folder,
+      inside ? `./${inside}` : ".",
+    ],
     env: launcher.env,
     cwd: launcher.home,
   };
@@ -145,8 +186,11 @@ export interface TerminalLimits {
 }
 
 export interface TerminalsOptions {
-  /** As whom and where the agent's terminal runs (single-user mode: `runnerTerminalUser`). */
-  user(agent: AgentScope): Promise<TerminalUser>;
+  /**
+   * As whom and where the agent's terminal runs (single-user mode: `runnerTerminalUser`); `cwd`: the folder inside the
+   * agent's own it was asked to start in (`TERMINAL_CWD_PROTOCOL`).
+   */
+  user(agent: AgentScope, cwd?: string): Promise<TerminalUser>;
   /** System mode: `user` runs each agent as its own OS user (its launcher), so a runner running as root may serve. */
   agentUsers?: boolean;
   log(line: string): void;
@@ -230,9 +274,10 @@ export class Terminals {
    * `stream.open` of a terminal: the shell as the agent in a PTY of that
    * size, then its data socket (`dial`); resolves once both are up, and the
    * bytes go on flowing until either ends. What the shell prints before the
-   * socket is ready waits for it.
+   * socket is ready waits for it. `cwd` (`TERMINAL_CWD_PROTOCOL`): a folder
+   * inside the agent's own to start in (a code session's worktree, ADR 0214).
    */
-  async open(agent: AgentScope, size: { cols: number; rows: number }, dial: () => Promise<DataSocket>) {
+  async open(agent: AgentScope, size: { cols: number; rows: number }, dial: () => Promise<DataSocket>, cwd?: string) {
     const info = this.info();
     if (!info.available) throw new RunnerError("terminal_unavailable", info.reason ?? "No terminal here");
     const limits = this.limits;
@@ -250,7 +295,7 @@ export class Terminals {
     this.live.add(live);
     let pty: Pty | null = null;
     try {
-      const user = await this.opts.user(agent);
+      const user = await this.opts.user(agent, cwd);
       if (this.system.uid === 0 && user.prefix.length === 0) throw new RunnerError("terminal_unavailable", NOT_AS_ROOT);
       let socket: DataSocket | null = null;
       let socketOpen = false;
@@ -330,7 +375,7 @@ export class Terminals {
           end("the person closed it");
         },
       });
-      this.opts.log(`a terminal as ${agent.handle} opened (${size.cols}×${size.rows})`);
+      this.opts.log(`a terminal as ${agent.handle} opened${cwd ? ` in ${cwd}` : ""} (${size.cols}×${size.rows})`);
       if (endWhenUp !== null) end(endWhenUp);
       const openedAt = Date.now();
       void shellPty.exited.then((code) => {

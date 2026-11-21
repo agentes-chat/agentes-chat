@@ -22,7 +22,6 @@ import {
   GroupedRow,
   Icon,
   PersonAvatar,
-  PixelOrbit,
   PressScale,
   SCREEN_X,
   Text,
@@ -42,6 +41,7 @@ import { pickOne } from "../shared/PickerSheet";
 import { FocusLive, goBack, MentionCount, PushedHeader } from "../shared/parts";
 import { usePersonPhoto } from "../shared/photo";
 import { useTasksUnreadMarks, useUnreadThreads } from "../shared/queries";
+import { RowWorkingLine } from "../shared/RowWorkingLine";
 import { PageSplitScreen, type SplitPages, useLitPage, useOpenPage } from "../shared/SplitPanes";
 import { useMyPerson, usePresenceOf } from "../status/hooks";
 import { personLine } from "../status/logic";
@@ -72,6 +72,7 @@ type WorkRow =
   | "issues"
   | "proposals"
   | "routines"
+  | "code"
   | "wiki"
   | "drive"
   | "dashboards"
@@ -83,7 +84,17 @@ type WorkRow =
  * A team's workspace: Threads is a tab and Team a row of Agents. Archived channels last, only while there are some (no
  * longer a link at the end of Conversas).
  */
-const TEAM_WORK: WorkRow[] = ["issues", "proposals", "routines", "wiki", "drive", "dashboards", "memory", "archived"];
+const TEAM_WORK: WorkRow[] = [
+  "issues",
+  "proposals",
+  "routines",
+  "code",
+  "wiki",
+  "drive",
+  "dashboards",
+  "memory",
+  "archived",
+];
 /**
  * A personal workspace (ADR 0159): what its sidebar keeps in sight first, then the rest of its More; Threads (no tab
  * there) and Team (no row in Agents) live here, Team last.
@@ -92,6 +103,7 @@ const PERSONAL_WORK: WorkRow[] = [
   "routines",
   "drive",
   "issues",
+  "code",
   "threads",
   "proposals",
   "wiki",
@@ -205,7 +217,8 @@ function MePage() {
   // `PULL_ROOM` higher, out of sight, so a pull down shows more sky (it clips its foot, where the photo hangs).
   const band = insets.top + 62 + PHOTO_OVERLAP;
   const issues = useIssues(org.orgId);
-  const proposals = useOverview(org.orgId).data?.proposalsWaitingForMe ?? 0;
+  const overview = useOverview(org.orgId).data;
+  const proposals = overview?.proposalsWaitingForMe ?? 0;
   const archived = useArchivedChannels(org.orgId).data?.length ?? 0;
   const push = usePushSwitch().on;
   const server = useAuthConfig().data;
@@ -274,6 +287,11 @@ function MePage() {
     routines: (
       <GroupedRow key="routines" icon="clock" label={t("routines.title")} chevron onPress={() => open("/routines")} />
     ),
+    // Code (ADR 0214): the sessions where agents program, as the web's sidebar tool; only where it has anything for me
+    // (§12: an agent that programs on a computer, or an open session of mine).
+    code: overview?.code ? (
+      <GroupedRow key="code" icon="code" label={t("shell.code")} chevron onPress={() => open("/coding")} />
+    ) : null,
     wiki: <GroupedRow key="wiki" icon="file" label={t("wiki.title")} chevron onPress={() => open("/wiki")} />,
     drive: <GroupedRow key="drive" icon="drive" label={t("mobile.me.drive")} chevron onPress={() => open("/drive")} />,
     dashboards: (
@@ -680,22 +698,10 @@ function AgentRow({ agentId, name, role }: { agentId: string; name: string; role
     <GroupedRow
       leading={<AgentFace agentId={agentId} size={36} />}
       label={name}
-      {...(working ? { below: <WorkingLine color={look.color} text={working} /> } : role ? { sub: role } : {})}
+      {...(working ? { below: <RowWorkingLine color={look.color} text={working} /> } : role ? { sub: role } : {})}
       chevron
       onPress={() => pushScreen(`/agent/${agentId}`)}
     />
-  );
-}
-
-/** What a working agent does, in words with its orbit, never a label. */
-function WorkingLine({ color, text }: { color: Parameters<typeof PixelOrbit>[0]["color"]; text: string }) {
-  return (
-    <View style={styles.working}>
-      <PixelOrbit color={color} size={11} />
-      <Text variant="footnote" tone="ink2" numberOfLines={1} style={styles.shrink}>
-        {text}
-      </Text>
-    </View>
   );
 }
 
@@ -735,6 +741,4 @@ const styles = StyleSheet.create({
   center: { textAlign: "center" },
   groups: { paddingHorizontal: SCREEN_X, paddingTop: 4 },
   gapBig: { height: 24 },
-  working: { flexDirection: "row", alignItems: "center", gap: 4 },
-  shrink: { flexShrink: 1, minWidth: 0 },
 });

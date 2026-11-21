@@ -1,6 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import type { SidebarItem } from "../src/api/types";
-import { knownToolOrder, moveSection, moveShownTool, placeTool, SIDEBAR_ITEMS } from "../src/lib/sidebar-items";
+import {
+  knownToolOrder,
+  moveSection,
+  moveShownTool,
+  offeredTools,
+  offersCode,
+  placeTool,
+  SIDEBAR_ITEMS,
+} from "../src/lib/sidebar-items";
 
 const order: SidebarItem[] = [...SIDEBAR_ITEMS];
 
@@ -40,5 +48,22 @@ describe("the tools' order", () => {
   test("the setup dialog moves a tool one place in the whole order", () => {
     expect(moveSection(order, "issues", -1).slice(1, 5)).toEqual(["approvals", "proposals", "issues", "threads"]);
     expect(moveSection(order, "taskManager", 1)).toEqual(order);
+  });
+});
+
+describe("Code, only where it has anything (ADR 0214 §12)", () => {
+  test("offered with an agent that programs or a session of mine, or where I put it in the list myself", () => {
+    expect(offersCode(true)).toBe(true);
+    expect(offersCode(false)).toBe(false);
+    // A server without Code says nothing: not offered.
+    expect(offersCode(undefined)).toBe(false);
+    expect(offersCode(false, { code: "always" })).toBe(true);
+    expect(offersCode(false, { code: "more" })).toBe(false);
+  });
+
+  test("the tools without it where it isn't offered, the rest in their order", () => {
+    expect(offeredTools(order, false)).toEqual(order.filter((id) => id !== "code"));
+    expect(offeredTools(order, true)).toEqual(order);
+    expect(offeredTools(order, undefined, { code: "always" })).toEqual(order);
   });
 });

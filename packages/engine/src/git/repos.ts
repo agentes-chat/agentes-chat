@@ -49,7 +49,9 @@ export function parseRepo(input: string) {
     .replace(/^git@github\.com:/, "")
     .replace(/\/$/, "");
   const m = REPO.exec(s);
-  return m ? { owner: m[1] as string, repo: m[2] as string } : null;
+  // "." and ".." name no GitHub owner or repository, and would climb out of the checkouts' folder (`gitCheckoutDir`).
+  if (!m || [m[1], m[2]].some((part) => part === "." || part === "..")) return null;
+  return { owner: m[1] as string, repo: m[2] as string };
 }
 
 /** Whether `owner/repo` is in the list (an empty list allows everything). Case-insensitive, like GitHub. */

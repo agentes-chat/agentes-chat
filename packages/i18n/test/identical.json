@@ -334,7 +334,13 @@
       "live.shell.formats.md",
       "live.doc.link.title",
       "live.doc.keys.link",
-      "audit.operatorReview.items"
+      "audit.operatorReview.items",
+      "codeSessions.state.pr",
+      "codeSessions.home.mode",
+      "codeSessions.panel.terminal",
+      "codeSessions.gitTab.label",
+      "codeSessions.gitTab.commits",
+      "codeTerminal.label"
     ],
     "es": [
       "devices.iphone.path.general",
@@ -615,7 +621,13 @@
       "live.shell.formats.pdf",
       "live.shell.formats.pptx",
       "live.shell.formats.xlsx",
-      "live.shell.shortcuts.general"
+      "live.shell.shortcuts.general",
+      "codeSessions.state.pr",
+      "codeSessions.home.mode",
+      "codeSessions.panel.terminal",
+      "codeSessions.gitTab.label",
+      "codeSessions.gitTab.commits",
+      "codeTerminal.label"
     ],
     "fr": [
       "usage.kinds.routines",
@@ -1125,7 +1137,16 @@
       "settings.kinds.image",
       "files.comments.page",
       "live.conversation.what.point",
-      "live.conversation.what.page"
+      "live.conversation.what.page",
+      "shell.code",
+      "codeSessions.title",
+      "codeSessions.state.pr",
+      "codeSessions.home.mode",
+      "codeSessions.home.agent",
+      "codeSessions.panel.terminal",
+      "codeSessions.gitTab.label",
+      "codeSessions.gitTab.commits",
+      "codeTerminal.label"
     ],
     "de": [
       "live.sheet.args.k",
@@ -1610,7 +1631,17 @@
       "newAgentCard.proposal.routine.label",
       "newAgentCard.proposal.routine.lead",
       "orgAccent.sampleMention",
-      "teamWeek.budget.item"
+      "teamWeek.budget.item",
+      "shell.code",
+      "codeSessions.title",
+      "codeSessions.state.pr",
+      "codeSessions.home.mode",
+      "codeSessions.home.agent",
+      "codeSessions.panel.terminal",
+      "codeSessions.gitTab.label",
+      "codeSessions.gitTab.commits",
+      "cliTools.progress.subagent",
+      "codeTerminal.label"
     ],
     "it": [
       "live.sheet.args.a1",
@@ -2004,7 +2035,13 @@
       "onboarding.import.choose.step.video",
       "newAgentCard.proposal.routine.label",
       "newAgentCard.proposal.routine.lead",
-      "teamWeek.budget.item"
+      "teamWeek.budget.item",
+      "brain.picker.accountOf",
+      "codeSessions.state.pr",
+      "codeSessions.home.mode",
+      "codeSessions.gitTab.label",
+      "codeSessions.files.count",
+      "cliTools.files"
     ],
     "nl": [
       "usage.kinds.routines",
@@ -2665,7 +2702,20 @@
       "live.sheet.args.k",
       "live.sheet.args.x",
       "audit.operatorReview.items",
-      "teamWeek.budget.item"
+      "teamWeek.budget.item",
+      "shell.code",
+      "brain.picker.accountOf",
+      "brain.picker.ais",
+      "codeSessions.title",
+      "codeSessions.state.pr",
+      "codeSessions.home.mode",
+      "codeSessions.home.agent",
+      "codeSessions.panel.terminal",
+      "codeSessions.gitTab.label",
+      "codeSessions.gitTab.commits",
+      "cliTools.progress.subagent",
+      "cliTools.progress.agents",
+      "codeTerminal.label"
     ],
     "ja": [
       "live.sheet.args.k",
@@ -2841,7 +2891,11 @@
       "onboarding.import.sheet.os.windows",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
-      "storage.connect.provider.b2"
+      "storage.connect.provider.b2",
+      "brain.picker.ais",
+      "codeSessions.state.pr",
+      "codeSessions.home.mode",
+      "codeSessions.gitTab.label"
     ],
     "ko": [
       "live.sheet.args.k",
@@ -3011,7 +3065,11 @@
       "onboarding.import.sheet.os.windows",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
-      "storage.connect.provider.b2"
+      "storage.connect.provider.b2",
+      "brain.picker.ais",
+      "codeSessions.state.pr",
+      "codeSessions.home.mode",
+      "codeSessions.gitTab.label"
     ],
     "zh-Hans": [
       "channel.tooLong.fileName",
@@ -3169,7 +3227,11 @@
       "onboarding.import.sheet.os.windows",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
-      "storage.connect.provider.b2"
+      "storage.connect.provider.b2",
+      "brain.picker.ais",
+      "codeSessions.state.pr",
+      "codeSessions.home.mode",
+      "codeSessions.gitTab.label"
     ],
     "id": [
       "drive.folder",
@@ -3498,7 +3560,13 @@
       "storage.connect.provider.b2",
       "storage.connect.awsRegion.il-central-1",
       "onboarding.import.choose.skill",
-      "onboarding.import.choose.step.video"
+      "onboarding.import.choose.step.video",
+      "brain.picker.ais",
+      "codeSessions.state.pr",
+      "codeSessions.home.mode",
+      "codeSessions.panel.terminal",
+      "codeSessions.gitTab.label",
+      "codeTerminal.label"
     ],
     "tr": [
       "live.canvas.inspector.model",
@@ -3708,7 +3776,12 @@
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
       "storage.connect.provider.b2",
-      "onboarding.import.choose.step.video"
+      "onboarding.import.choose.step.video",
+      "codeSessions.state.pr",
+      "codeSessions.home.mode",
+      "codeSessions.panel.terminal",
+      "codeSessions.gitTab.label",
+      "codeTerminal.label"
     ],
     "pl": [
       "drive.folder",
@@ -4034,7 +4107,16 @@
       "live.canvas.inspector.model",
       "live.sheet.args.a1",
       "live.sheet.args.k",
-      "live.sheet.args.x"
+      "live.sheet.args.x",
+      "brain.picker.ais",
+      "codeSessions.state.pr",
+      "codeSessions.home.mode",
+      "codeSessions.home.agent",
+      "codeSessions.panel.terminal",
+      "codeSessions.gitTab.label",
+      "cliTools.progress.subagent",
+      "cliTools.progress.agents",
+      "codeTerminal.label"
     ],
     "ru": [
       "live.canvas.sizes.short.s",
@@ -4208,7 +4290,10 @@
       "onboarding.import.sheet.os.windows",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
-      "storage.connect.provider.b2"
+      "storage.connect.provider.b2",
+      "codeSessions.state.pr",
+      "codeSessions.home.mode",
+      "codeSessions.gitTab.label"
     ]
   },
   "mobile-base": {
@@ -4233,6 +4318,7 @@
       "chart.item",
       "chat.thread",
       "chats.thread",
+      "coding.commit",
       "connectors.mcps",
       "drive.kind.diff",
       "drive.type.diffs",
@@ -4301,7 +4387,8 @@
       "vault.field.keyNamePlaceholder",
       "vault.field.websitePlaceholder",
       "vault.scope.personal",
-      "vault.tab.personal"
+      "vault.tab.personal",
+      "coding.commit"
     ],
     "fr": [
       "devices.os.android",
@@ -4385,7 +4472,8 @@
       "live.doc.styles.code",
       "live.slides.part.note",
       "live.slides.tools.photo",
-      "live.text.noteTitle"
+      "live.text.noteTitle",
+      "coding.commit"
     ],
     "de": [
       "live.doc.styles.code",
@@ -4463,7 +4551,8 @@
       "invite.ask.step.code",
       "settings.group.org",
       "threads.title",
-      "roles.icons.person"
+      "roles.icons.person",
+      "coding.commit"
     ],
     "it": [
       "devices.status.offline",
@@ -4517,7 +4606,8 @@
       "agents.teamSection",
       "find.filterWord.in",
       "connectors.accountTitle",
-      "roles.icons.mail"
+      "roles.icons.mail",
+      "coding.commit"
     ],
     "nl": [
       "devices.status.offline",
@@ -4605,7 +4695,9 @@
       "drive.type.spreadsheets",
       "drive.kind.spreadsheet",
       "live.canvas.tools.pen",
-      "live.doc.styles.code"
+      "live.doc.styles.code",
+      "coding.project",
+      "coding.commit"
     ],
     "ja": [
       "devices.os.android",
@@ -4680,7 +4772,8 @@
       "vault.kind.login",
       "files.type.video",
       "me.status",
-      "roles.icons.mail"
+      "roles.icons.mail",
+      "coding.commit"
     ],
     "tr": [
       "devices.os.android",
@@ -4698,7 +4791,8 @@
       "onb.logo",
       "vault.field.keyNamePlaceholder",
       "vault.field.websitePlaceholder",
-      "files.type.video"
+      "files.type.video",
+      "coding.commit"
     ],
     "pl": [
       "devices.status.offline",
@@ -4731,7 +4825,8 @@
       "time.short.minutes",
       "time.short.days",
       "me.status",
-      "roles.reach.agents"
+      "roles.reach.agents",
+      "coding.commit"
     ],
     "ru": [
       "devices.os.android",

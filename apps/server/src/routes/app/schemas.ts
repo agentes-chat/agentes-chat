@@ -89,7 +89,7 @@ const ReturnPlace = {
   messageId: z.uuid().openapi({ description: "The return's line (`meta.notice.kind` `follow_up`)." }),
   agentId: z.uuid(),
   channelId: z.uuid(),
-  channelKind: z.enum(["channel", "dm", "task", "file"]),
+  channelKind: z.enum(["channel", "dm", "task", "file", "code"]),
   channelName: z.string().nullable().openapi({ description: "A channel's name; null for a DM or a task's." }),
   threadId: z.uuid().nullable().openapi({ description: "Null: the conversation's main timeline." }),
   at: z.string().openapi({ description: "When it comes (ISO)." }),

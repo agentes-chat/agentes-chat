@@ -1518,6 +1518,19 @@
       "lastDay": "Dernier jour"
     }
   },
+  "coding": {
+    "pill": "{{who}}. Voir le code",
+    "seeChanges": "Voir les modifications",
+    "project": "Projet",
+    "whereSearch": "Cherchez ou tapez un nom",
+    "listed": "De l'agent",
+    "commit": "Commit {{short}}",
+    "waiting": "Vous attend",
+    "next": {
+      "pr": "Branche poussée, pas encore de pull request",
+      "mergeLocal": "Prête à fusionner dans {{base}}"
+    }
+  },
   "taskManager": {
     "loadFailed": "Impossible de charger les tâches.",
     "gone": "Cette tâche n'est plus là.",
@@ -2870,6 +2883,10 @@
       "titlePersonal": "Confiez vos tâches à vos agents",
       "textPersonal": "Créez une tâche pour un agent et suivez-la jusqu'au bout.",
       "viewerTitlePersonal": "Suivez le travail de vos agents"
+    },
+    "coding": {
+      "title": "Codez avec vos agents",
+      "text": "Chaque session est une conversation avec un agent qui travaille sur sa propre branche, sur son ordinateur."
     },
     "routines": {
       "title": "Laissez le travail répétitif à vos agents",

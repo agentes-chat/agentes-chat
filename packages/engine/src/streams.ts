@@ -8,6 +8,7 @@ import {
   parseStreamHello,
   STREAM_CLOSE,
   STREAM_LIMITS,
+  type StreamControl,
   type StreamHello,
   type StreamRequest,
 } from "@agenteschat/adapters";
@@ -57,6 +58,8 @@ export type StreamTarget =
       phone?: PhoneTarget;
       /** The right hand's seat for this person isn't made yet (a screen's state was asked, nothing opened). */
       unmade?: boolean;
+      /** A terminal: the computer starts it in the folder the request asks for (`TERMINAL_CWD_PROTOCOL`, ADR 0214). */
+      takesCwd?: boolean;
     }
   | { refused: number; reason: string };
 
@@ -143,6 +146,8 @@ interface OpenStream extends Stream {
   queued: number;
   /** Bytes the person sent in the current second. */
   second: { start: number; bytes: number };
+  /** A terminal's folder its computer is too old for (`takesCwd`): the person hears so once it is ready. */
+  cwdIgnored?: boolean;
   timer?: ReturnType<typeof setTimeout>;
   pinger?: ReturnType<typeof setInterval>;
   checker?: ReturnType<typeof setInterval>;
@@ -291,10 +296,16 @@ export function createStreamBroker(deps: StreamBrokerDeps) {
     const held = target.held === true;
     // A card's view never starts a stopped screen: only someone opening it does.
     const starts = s.request.kind === "desktop" && !held && !s.preview ? { start: true } : {};
+    // A code session's terminal starts in its worktree (ADR 0214) on a computer that takes a folder; an older one
+    // opens it in the agent's folder, and the person hears so once it is ready.
+    const asked = s.request;
+    s.cwdIgnored = asked.kind === "terminal" && asked.cwd !== undefined && target.takesCwd !== true;
+    const sent: StreamRequest =
+      asked.kind === "terminal" && s.cwdIgnored ? { kind: "terminal", cols: asked.cols, rows: asked.rows } : asked;
     const request = {
       op: "stream.open",
       streamId: s.id,
-      ...s.request,
+      ...sent,
       ...(agent ? { agent } : {}),
       ...(target.phone ? { phone: target.phone } : {}),
       ...starts,
@@ -395,6 +406,8 @@ export function createStreamBroker(deps: StreamBrokerDeps) {
     if (s.switches && request.kind === "desktop") {
       quietly(() => s.viewer.send(JSON.stringify({ type: "mode", mode: request.mode })));
     }
+    // A terminal its computer opened in the agent's folder, too old for the one asked (ADR 0214).
+    if (s.cwdIgnored) quietly(() => s.viewer.send(JSON.stringify({ type: "cwd_ignored" } satisfies StreamControl)));
     const queue = s.queue;
     s.queue = [];
     s.queued = 0;

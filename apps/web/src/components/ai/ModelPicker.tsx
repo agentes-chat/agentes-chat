@@ -34,12 +34,17 @@ import {
   EventPillAction,
   Icon,
   Input,
+  Menu,
+  MenuItem,
+  MenuRadioGroup,
+  MenuSeparator,
   Popover,
   ProviderLogo,
   planLine,
+  Segmented,
 } from "@agenteschat/ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { type CSSProperties, type ReactElement, useState } from "react";
+import { type CSSProperties, type ReactElement, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useOpenAgentPanel } from "@/components/agent-panel-context";
 import { TeamScene } from "@/components/arrival/TeamScene";
@@ -57,16 +62,20 @@ const SEARCH_FROM = 8;
 /**
  * The agent's AI and model, changed in place (a DM's header, its profile card, its side panel): a button saying what
  * it thinks with, opening the picker under the agent's sky. Whoever can't change it (not an admin, not its owner)
- * reads the same words, with nothing to press.
+ * reads the same words, with nothing to press. `status`: a code session's status line under its composer (ADR 0214),
+ * quiet words with `after` (its plan's limits) in them, a plate only under the pointer.
  */
 export function ModelPickerButton({
   agent,
   size = "sm",
   className,
+  after,
 }: {
   agent: Agent;
-  size?: "sm" | "row";
+  size?: "sm" | "row" | "status";
   className?: string;
+  /** In it after the model, on a `status` line. */
+  after?: ReactNode;
 }) {
   const { t } = useTranslation();
   const { me } = useOrg();
@@ -83,6 +92,7 @@ export function ModelPickerButton({
       >
         {mark}
         <span className="mp-label__text">{thinks.text}</span>
+        {size === "status" && after}
       </span>
     );
   return (
@@ -98,6 +108,7 @@ export function ModelPickerButton({
         >
           {mark}
           <span className="mp-label__text">{thinks.text}</span>
+          {size === "status" && after}
           <Icon name="chevronDown" size={14} className="mp-trigger__chevron" />
         </button>
       )}
@@ -282,58 +293,86 @@ function PickerBody({ agent, view, onClose }: { agent: Agent; view: AgentBrain; 
           </>
         )}
       </TeamScene>
+      {/* The AIs as the kit's segmented control, each by its maker's bare mark (its name is the line under it), and
+          connecting another beside it. */}
       <div className="mp__tiles">
-        {tiles.map((x) => (
-          <button
-            key={x.key}
-            type="button"
-            className="mp__tile"
-            aria-pressed={x.key === tile?.key}
-            aria-label={x.name}
-            title={x.name}
-            onClick={() => {
-              setTileKey(x.key);
+        {tile && (
+          <Segmented
+            size="sm"
+            className="mp__ais"
+            label={t("brain.picker.ais")}
+            value={tile.key}
+            onValueChange={(key) => {
+              setTileKey(key);
               setAccountId(undefined);
               setQ("");
             }}
-          >
-            <ProviderLogo id={x.mark} size="sm" />
-          </button>
-        ))}
+            options={tiles.map((x) => ({
+              value: x.key,
+              label: <ProviderLogo id={x.mark} size="xs" label={x.name} />,
+              title: x.name,
+            }))}
+          />
+        )}
         {connect && (
-          <button
-            type="button"
-            className="mp__tile mp__tile--add"
+          <Button
+            size="sm"
+            variant="ghost"
+            icon="plus"
+            iconOnly
             aria-label={t("brain.picker.connect")}
             title={t("brain.picker.connect")}
             onClick={() => {
               onClose();
               connect.open({ agentId: agent.id, chat: true });
             }}
-          >
-            <Icon name="plus" size={16} />
-          </button>
+          />
         )}
       </div>
       {tile && (
         <div className="mp__head">
-          <div className="mp__who">
-            <b>{tile.name}</b>
-            {tile.accounts.length > 1 ? (
-              <select
-                className="mp__account"
-                aria-label={t("brain.picker.account")}
-                value={account?.id ?? ""}
-                onChange={(e) => setAccountId(e.target.value || null)}
+          {/* The AI and the account it thinks on as one control, the kit's split (as the git button): its name, then
+              its account, which opens the others and connecting one more. */}
+          <div className="ac-split mp__who">
+            <span className="mp__ai">
+              <ProviderLogo id={tile.mark} size="xs" />
+              {tile.name}
+            </span>
+            {account && (
+              <Menu
+                label={t("brain.picker.account")}
+                trigger={
+                  <Button
+                    size="sm"
+                    className="mp__account"
+                    aria-label={t("brain.picker.accountOf", { account: account.label })}
+                  >
+                    <span className="mp__account-name">{account.label}</span>
+                    <Icon name="chevronDown" size={14} />
+                  </Button>
+                }
               >
-                {tile.accounts.map((a) => (
-                  <option key={a.id ?? "own"} value={a.id ?? ""}>
-                    {a.label}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              account && <span className="mp__plan">{account.label}</span>
+                <MenuRadioGroup
+                  label={t("brain.picker.account")}
+                  value={account.id ?? ""}
+                  onValueChange={(v) => setAccountId(v || null)}
+                  options={tile.accounts.map((a) => ({ value: a.id ?? "", label: a.label }))}
+                />
+                {connect && (
+                  <>
+                    <MenuSeparator />
+                    <MenuItem
+                      icon="plus"
+                      onSelect={() => {
+                        onClose();
+                        connect.open({ agentId: agent.id, chat: true });
+                      }}
+                    >
+                      {t("brain.picker.connectAccount")}
+                    </MenuItem>
+                  </>
+                )}
+              </Menu>
             )}
           </div>
           {meter?.line && (

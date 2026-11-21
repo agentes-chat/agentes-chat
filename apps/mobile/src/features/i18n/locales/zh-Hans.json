@@ -1350,6 +1350,19 @@
       "lastDay": "最后一天"
     }
   },
+  "coding": {
+    "pill": "{{who}}。查看代码",
+    "seeChanges": "查看改动",
+    "project": "项目",
+    "whereSearch": "搜索或输入名称",
+    "listed": "智能体已有的",
+    "commit": "提交 {{short}}",
+    "waiting": "等你处理",
+    "next": {
+      "pr": "分支已推送，还没有拉取请求",
+      "mergeLocal": "可以合并到 {{base}} 了"
+    }
+  },
   "taskManager": {
     "loadFailed": "无法加载任务。",
     "gone": "这个任务已经不在这里了。",
@@ -2641,6 +2654,10 @@
       "titlePersonal": "把待办交给你的智能体",
       "textPersonal": "为智能体创建任务，一直跟进到完成。",
       "viewerTitlePersonal": "跟进你的智能体的工作"
+    },
+    "coding": {
+      "title": "和你的智能体一起写代码",
+      "text": "每个会话都是和一个智能体的对话，它在自己的电脑上、自己的分支里工作。"
     },
     "routines": {
       "title": "把重复的工作交给智能体",

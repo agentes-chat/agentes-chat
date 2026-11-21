@@ -1350,6 +1350,19 @@
       "lastDay": "마지막 날"
     }
   },
+  "coding": {
+    "pill": "{{who}}. 코드 보기",
+    "seeChanges": "변경 사항 보기",
+    "project": "프로젝트",
+    "whereSearch": "검색하거나 이름 입력",
+    "listed": "에이전트의 목록",
+    "commit": "커밋 {{short}}",
+    "waiting": "내 확인 대기",
+    "next": {
+      "pr": "브랜치 푸시됨, 아직 풀 리퀘스트 없음",
+      "mergeLocal": "{{base}}에 머지할 준비가 됐어요"
+    }
+  },
   "taskManager": {
     "loadFailed": "작업을 불러오지 못했어요.",
     "gone": "이 작업은 더 이상 없어요.",
@@ -2641,6 +2654,10 @@
       "titlePersonal": "할 일을 에이전트에게 맡기세요",
       "textPersonal": "에이전트에게 작업을 만들어 주고 끝까지 지켜보세요.",
       "viewerTitlePersonal": "에이전트의 일을 지켜보세요"
+    },
+    "coding": {
+      "title": "에이전트와 함께 코딩해 보세요",
+      "text": "각 세션은 자기 컴퓨터에서 자기 브랜치로 작업하는 에이전트와의 대화예요."
     },
     "routines": {
       "title": "반복되는 일은 에이전트에게 맡기세요",

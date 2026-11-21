@@ -1,6 +1,7 @@
 import {
   browserHandoffOf,
   browserTrailOf,
+  codeSuggestionOf,
   desktopTrailOf,
   isPinnedSelection,
   keys,
@@ -103,6 +104,7 @@ import { StretchCard } from "../ai/StretchCard";
 import { UsagePauseCard, UsageWaitCancel } from "../ai/UsagePauseCard";
 import { HandoffCard } from "../browser/HandoffCard";
 import { TrailCard } from "../browser/TrailCard";
+import { CodeSuggestionCard } from "../coding/SuggestionCard";
 import { iconUri } from "../connectors/logic";
 import { DeviceWait } from "../devices/DeviceWait";
 import { deviceWaitOf } from "../devices/logic";
@@ -439,6 +441,8 @@ function RowBody({
   // Preparing the mission's copy of the project failed (ADR 0044): the card with "Tentar de novo".
   const setup = missionSetupOf(meta);
   const link = missionLinkOf(meta);
+  // A code session it suggested for a change asked here (ADR 0214 §11): the person's card under the reply.
+  const suggestion = m.author.type === "agent" && !m.local ? codeSuggestionOf(meta) : null;
   const files = artifactsOf(meta);
   // Mine, just sent: drawn from the phone while they upload.
   const localFiles = localFilesOf(meta);
@@ -528,6 +532,7 @@ function RowBody({
       ) : null}
       {meta?.missionStart ? <MissionCard threadId={m.id} /> : null}
       {link ? <MissionCard missionId={link.missionId} /> : null}
+      {suggestion ? <CodeSuggestionCard message={m} suggestion={suggestion} /> : null}
       {plan ? <PlanCard missionId={plan.missionId} goal={plan.goal} /> : null}
       {review ? <ReviewCard missionId={review.missionId} reviewId={review.id} /> : null}
       {setup ? (
@@ -1064,6 +1069,7 @@ function RowBody({
             ) : steps && m.agentRunId && !meta?.workUpdate ? (
               <SavedTools
                 runId={m.agentRunId}
+                messageId={m.id}
                 meta={meta}
                 agentName={agent?.name ?? name}
                 color={color}

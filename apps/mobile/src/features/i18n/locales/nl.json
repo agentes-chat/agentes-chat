@@ -1436,6 +1436,19 @@
       "lastDay": "Laatste dag"
     }
   },
+  "coding": {
+    "pill": "{{who}}. Bekijk de code",
+    "seeChanges": "Bekijk de wijzigingen",
+    "project": "Project",
+    "whereSearch": "Zoek of typ een naam",
+    "listed": "Van de agent",
+    "commit": "Commit {{short}}",
+    "waiting": "Wacht op jou",
+    "next": {
+      "pr": "Branch gepusht, nog geen pull request",
+      "mergeLocal": "Klaar om in {{base}} te mergen"
+    }
+  },
   "taskManager": {
     "loadFailed": "Kon de taken niet laden.",
     "gone": "Deze taak is er niet meer.",
@@ -2762,6 +2775,10 @@
       "titlePersonal": "Geef je to-do's aan je agents",
       "textPersonal": "Maak een taak voor een agent en volg die tot het einde.",
       "viewerTitlePersonal": "Volg het werk van je agents"
+    },
+    "coding": {
+      "title": "Programmeer met je agents",
+      "text": "Elke sessie is een gesprek met een agent die op een eigen branch werkt, op zijn computer."
     },
     "routines": {
       "title": "Laat herhalend werk over aan je agents",

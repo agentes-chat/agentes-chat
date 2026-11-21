@@ -54,6 +54,19 @@ export function wordCount(text: string) {
 }
 
 /** `cutText` from the end: the last `max` units, never half of a pair at the start. */
+/**
+ * `text` without the characters `strip` takes at its ends (`"end"`: only at its end), read by index. Not by a pattern
+ * like `/^-+|-+$/g`: titles, names and paths come from people and programs, and such a pattern reads each run that
+ * doesn't reach the end again from each of its characters, quadratic in the run's length.
+ */
+export function trimEdges(text: string, strip: (c: string) => boolean, edges: "both" | "end" = "both"): string {
+  let start = 0;
+  let end = text.length;
+  if (edges === "both") while (start < end && strip(text.charAt(start))) start++;
+  while (end > start && strip(text.charAt(end - 1))) end--;
+  return text.slice(start, end);
+}
+
 export const cutTextEnd = (text: string, max: number) =>
   text.slice(Math.max(0, text.length - max)).replace(/^[\uDC00-\uDFFF]/, "");
 

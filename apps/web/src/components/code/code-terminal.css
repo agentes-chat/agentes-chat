@@ -1,0 +1,80 @@
+/*
+ * A code session's terminal (ADR 0214, `TerminalPane`): xterm.js on the agent's screen's dark ground, the same in both
+ * themes. The terminal reads its colors from these properties once it opens; its face is the app's mono.
+ */
+.code-term {
+  --code-term-bg: var(--screen-bg);
+  --code-term-ink: var(--on-dark-soft);
+  --code-term-cursor: var(--on-dark);
+  --code-term-selection: var(--on-dark-plate-strong);
+  position: relative;
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--code-term-bg);
+}
+.code-term__screen {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  /* xterm.js measures its cells in its own face: the app's size adjustment and font features would skew them. */
+  font-size-adjust: none;
+  font-feature-settings: normal;
+}
+/* The room around the text is xterm's own padding: its fit counts it, and never the pane's. */
+.code-term__screen[hidden] {
+  display: none;
+}
+/* Off on its computer: no dark screen, only why and the way to turn it on, on the panel's own ground. */
+.code-term:has(> .code-term__screen[hidden]) {
+  background: none;
+}
+.code-term__screen .xterm {
+  padding: 8px 4px 8px 12px;
+}
+/* The kit's scrollbar, in the plate's light ink: the screen is dark in both themes. */
+.code-term__screen .xterm-viewport {
+  --scroll-thumb: var(--on-dark-plate);
+  --scroll-thumb-hover: var(--on-dark-plate-strong);
+}
+.code-term__opening {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin: 0;
+  padding: 8px 12px;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--on-dark-faint);
+  pointer-events: none;
+}
+/* What the pane says around the shell is the page's own text, on the page's ground. */
+/* Its words on the button's middle: a button's baseline is its icon's foot, so a baseline line sat the words low. */
+.code-term__note,
+.code-term__end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 0;
+  padding: 10px 16px;
+  background: var(--pane);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.code-term__note {
+  box-shadow: inset 0 -1px 0 var(--line);
+  color: var(--warn);
+}
+.code-term__end {
+  box-shadow: inset 0 1px 0 var(--line);
+  color: var(--ink);
+}
+.code-term__end p {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}

@@ -228,6 +228,38 @@ describe("the tools on top", () => {
     expect(dialog.querySelector(".ac-dialog__foot-note")).toBeNull();
   });
 
+  test("Código only where it has anything for me (an agent that programs, or a session of mine), or where I put it", async () => {
+    const setupNames = (dialog: HTMLElement) =>
+      [...dialog.querySelectorAll(".sidebar-setup__name")].map((n) => n.textContent);
+    await go(noneWaiting());
+    expect(inMore(await openMore())).not.toContain("Código");
+    cleanup();
+    await go(noneWaiting());
+    expect(setupNames(await openSetup())).not.toContain("Código");
+    cleanup();
+
+    const coding = noneWaiting();
+    coding.codeWork = true;
+    await go(coding);
+    const more = await openMore();
+    expect(inMore(more)).toContain("Código");
+    expect(
+      within(more)
+        .getByRole("link", { name: /Código/ })
+        .getAttribute("href"),
+    ).toBe(`/org/${ORG_ID}/code`);
+    cleanup();
+    await go(coding);
+    expect(setupNames(await openSetup())).toContain("Código");
+    cleanup();
+
+    // Put in the list by the person: it stays there, whatever the workspace has.
+    const pinned = noneWaiting();
+    pinned.sidebarItems = { code: "always" };
+    await go(pinned);
+    expect(listed()).toContain("Código");
+  });
+
   test("the choices couldn't be read: a choice here moves only its tool, and the server's answer shows the rest", async () => {
     const state = noneWaiting();
     state.sidebarItems = { wiki: "always", routines: "always" };
@@ -363,6 +395,7 @@ describe("the tools on top", () => {
           "calendar",
           "team",
           "dashboards",
+          "code",
           "taskManager",
         ],
       ]);
@@ -407,6 +440,7 @@ describe("the tools on top", () => {
         "calendar",
         "team",
         "dashboards",
+        "code",
         "taskManager",
       ]);
     });

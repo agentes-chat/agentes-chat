@@ -22,6 +22,7 @@ import { StickerStageContext } from "@/agent/StickerCanvas";
 import { Text } from "@/ui";
 import { AgentSetupIntro } from "../../agents/setup/SetupCard";
 import { BrowserCard, BrowserRunCard } from "../../browser/BrowserCard";
+import { CodeOrigin } from "../../coding/Origin";
 import { ImageMaking } from "../../files/ImageMaking";
 import { FileOrigin } from "../../live-files/talk/AboutLine";
 import { QueueWaitRow } from "../../queue/parts";
@@ -690,6 +691,8 @@ export function ChatList({
           return dayLine(item.text);
         case "origin":
           return <FileOrigin artifactId={item.artifactId} kind={item.fileKind} />;
+        case "codeOrigin":
+          return <CodeOrigin sessionId={item.sessionId} />;
         case "wait":
           return <QueueWaitRow channelId={channelId} wait={item.wait} />;
         case "unseen":

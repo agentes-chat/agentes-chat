@@ -410,6 +410,7 @@ export const ASK_ICON: Record<AskKind, IconName> = {
   agent: "agent",
   team: "members",
   firstTask: "target",
+  code: "code",
 };
 
 /** How a request ended, where its decision was: the card keeps its box, its words and what it is about. */
