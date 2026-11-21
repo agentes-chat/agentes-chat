@@ -291,7 +291,9 @@ export function createMissionRunToolSource(deps: Omit<MissionDeps, "db">): ToolS
             const granted = await grantedScopeKeys(c.db, c.orgId, c.agentId).catch(() => new Set<string>());
             const asksFirst = (await approvalsLevelOf(c.db, c.orgId, c.agentId)) === "always";
             const canRun = granted.has(grantKey(null, SANDBOX_SCOPE));
-            return { content: runPermissionPrompt(input, { canRun, asksFirst }) };
+            // The bridge's computer decides whether sudo runs there (ADR 0053 §3, addendum 2026-11-19).
+            const privileged = deps.privilegedComputers?.has(machineId) ?? false;
+            return { content: runPermissionPrompt(input, { canRun, asksFirst, privileged }) };
           }
           if (!live) return refused("mission.not_allowed", "This conversation has no open mission.");
           // Like its other tools: only a run its owner or a decider is behind, or one it woke, makes the mission act.

@@ -55,6 +55,8 @@ export interface SandboxDeps {
   publicUrl?: string;
   /** Each workspace gets its own computer here: an agent with none waits for it (`computerPreparing`). */
   workspaceComputer?: WorkspaceComputer;
+  /** Computers (machine ids) whose agents may use sudo and change the system outside a mission (ADR 0053 §3, addendum 2026-11-19). */
+  privilegedComputers?: ReadonlySet<string>;
   /** Tells a device's owner when someone else's agent uses it (`device.in_use`). */
   pubsub?: PubSub;
 }

@@ -816,6 +816,27 @@ describe("commands the computer holds for a person (ADR 0053 §3)", () => {
     await f.tools?.executeApproved(ctx, { ...asked.approval, status: "approved" });
     expect(execs()).toHaveLength(2);
   });
+
+  test("on a privileged computer sudo runs; elsewhere it is still refused (ADR 0053 §3, addendum 2026-11-19)", async () => {
+    const privileged = new Set<string>();
+    f = await setup({ machines: true, privilegedComputers: privileged, reply: () => ({ chunks: ["ok"] }) });
+    const { paired, runner } = await connectedComputer(f, { exec: () => ({ exitCode: 0, stdout: "ok", stderr: "" }) });
+    const execs = () => runner.sent.filter((s) => s.type === "request" && s.op === "exec");
+    const ctx = await runCtx();
+    const install = { language: "bash", code: "sudo -A apt-get install -y ffmpeg" };
+    // Listed computers are read when the command runs: this one isn't listed yet.
+    expect(await call(ctx, "run_code", install)).toMatchObject({ isError: true, data: { refusal: "privilege" } });
+    expect(execs()).toEqual([]);
+    privileged.add(paired.machineId);
+    expect(await call(ctx, "run_code", install)).toMatchObject({ isError: false });
+    expect(execs()).toHaveLength(1);
+    // The command under sudo still meets the rest of the rule, before the computer hears of it.
+    const wipe = await call(ctx, "run_code", { language: "bash", code: "sudo rm -rf /" });
+    expect(wipe).toMatchObject({ isError: true, data: { refusal: "destroy" } });
+    const off = await call(ctx, "run_code", { language: "python", code: 'import os\nos.system("sudo reboot")' });
+    expect(off).toMatchObject({ isError: true, data: { refusal: "system" } });
+    expect(execs()).toHaveLength(1);
+  });
 });
 
 describe("the agent's computer API", () => {

@@ -597,6 +597,13 @@ const slug = (s: string) =>
     .replace(/^-|-$/g, "")
     .slice(0, 60) || "file";
 
+/** A command that runs only on a privileged computer (ADR 0053 §3, addendum 2026-11-19), sent to another one. */
+class PrivilegedOnly extends Error {
+  constructor(readonly reason: string) {
+    super(reason);
+  }
+}
+
 /**
  * Computer tools through the Tool Gateway (scope `sandbox:run`, on by default and not part of "all tools"):
  * `run_code`, `write_file`, `read_file`, `list_files`, `export_file` (text to a native Drive kind), `upload_file`
@@ -909,7 +916,15 @@ export function createSandboxToolSource(
           const names = runKeysOf(input.keys);
           if (typeof names === "string") return { content: names, isError: true };
           // The same obvious harm a brain's own command is refused for (ADR 0053 §3), unless a person approved this call.
-          const bad = ctx.approved ? null : badActorCode(str(input.code), lang);
+          const strict = ctx.approved ? null : badActorCode(str(input.code), lang);
+          // On a privileged computer (ADR 0053 §3, addendum 2026-11-19) sudo and system changes run, and the rest
+          // of the rule holds there too. Which computer it is, `run` knows: checked there.
+          const privileged = deps.privilegedComputers;
+          const bad =
+            strict && privileged && privileged.size > 0
+              ? badActorCode(str(input.code), lang, { privileged: true })
+              : strict;
+          const privilegedOnly = strict && !bad ? strict : null;
           if (bad) {
             const refusal = badActorRefusal(bad);
             return { content: `Not run: ${refusal.message}`, isError: true, data: { refusal: refusal.code } };
@@ -919,6 +934,7 @@ export function createSandboxToolSource(
           const result = await run(
             ctx,
             async (computer) => {
+              if (privilegedOnly && !privileged?.has(computer.machineId)) throw new PrivilegedOnly(privilegedOnly);
               await computer.provider.writeFile(computer.id, file, new TextEncoder().encode(str(input.code)));
               if (names.length > 0 && !(await secretsMayGo(ctx, computer.machineId)))
                 throw new VaultRefusal(
@@ -952,6 +968,10 @@ export function createSandboxToolSource(
           );
           return execOutput(`run_code ${lang}`, result, Math.round((Date.now() - started) / 1000), timeout);
         } catch (error) {
+          if (error instanceof PrivilegedOnly) {
+            const refusal = badActorRefusal(error.reason);
+            return { content: `Not run: ${refusal.message}`, isError: true, data: { refusal: refusal.code } };
+          }
           return vaultRefusalOutput(error) ?? heldForApproval(error, "Not run") ?? failed(error);
         }
       },

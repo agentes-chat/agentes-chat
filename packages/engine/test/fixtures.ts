@@ -233,6 +233,8 @@ export async function setup(
     wikiTools?: boolean;
     /** Add the sandbox tools with connected machines (a machine hub on this db). */
     machines?: boolean;
+    /** With `machines`: computers whose agents may use sudo (ADR 0053 §3, addendum 2026-11-19); add ids later. */
+    privilegedComputers?: ReadonlySet<string>;
     /** With `machines`: the mission tools (propose_mission and, in a mission thread, its tools). The hub's mission hooks are always set. */
     missionTools?: boolean;
     /**
@@ -345,7 +347,12 @@ export async function setup(
   const artifactDeps: ArtifactDeps = { db, blobs: createBlobStoreResolver(storage), pubsub };
   const machineHub = options.machines ? createMachineHub({ db, pubsub, replicaId: "replica-a" }) : null;
   const sandboxDeps: SandboxDeps | null = machineHub
-    ? { db, machines: { hub: machineHub }, publicUrl: "http://localhost:3000" }
+    ? {
+        db,
+        machines: { hub: machineHub },
+        publicUrl: "http://localhost:3000",
+        ...(options.privilegedComputers ? { privilegedComputers: options.privilegedComputers } : {}),
+      }
     : null;
   const missionDeps = {
     pubsub,
