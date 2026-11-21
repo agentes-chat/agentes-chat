@@ -1,5 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
-import { and, type Database, eq, isNull, schema } from "@agenteschat/db";
+import { and, type Database, eq, gte, isNull, schema, sql } from "@agenteschat/db";
 import { type ArtifactDeps, fileBytesOf } from "../../artifacts";
 import { UUID } from "../../authority";
 import { NotFoundError } from "../../errors";
@@ -45,7 +45,12 @@ export async function nativeFailure(
  * approval title. "Aprovar sempre" is offered on a sensitive tool unless its catalog entry says `askAlways`.
  */
 export function createNativeConnectorToolSource(
-  deps: ConnectorDeps & { artifacts?: ArtifactDeps; mediaLink?: NativeCall["mediaLink"] },
+  deps: ConnectorDeps & {
+    artifacts?: ArtifactDeps;
+    mediaLink?: NativeCall["mediaLink"];
+    /** Calls a workspace may make per month (UTC) by connector, where the vendor bills this server per call (X). */
+    monthlyCaps?: Record<string, number>;
+  },
 ): ToolSource {
   const http = deps.http ?? fetch;
   return {
@@ -108,6 +113,13 @@ export function createNativeConnectorToolSource(
     const tool = NATIVE_SERVICES[connection.connector]?.tools[verb];
     if (!tool) return { content: `Unknown tool ${verb}`, isError: true };
     try {
+      const cap = deps.monthlyCaps?.[connection.connector] ?? 0;
+      if (cap > 0 && (await callsThisMonth(ctx.db, connection)) >= cap) {
+        throw new NativeError(
+          "connector.capped",
+          `This workspace used its ${cap.toLocaleString("en")} ${connection.label} calls for this month (whoever runs this server set that cap). They come back on the 1st (UTC). Nothing was done.`,
+        );
+      }
       const secret = await connectionSecret({ ...deps, db: ctx.db }, connection);
       if (!secret)
         throw new NativeError("connector.needs_reconnect", `${connection.label} has no sign-in: reconnect it.`);
@@ -136,6 +148,17 @@ export function createNativeConnectorToolSource(
       return nativeFailure({ db: ctx.db }, connection, error);
     }
   }
+}
+
+/** The workspace's calls of a connector this month, as the gateway counts them (`connector_usage_days`). */
+async function callsThisMonth(db: Database, connection: ConnectorConnection) {
+  const u = schema.connectorUsageDays;
+  const month = new Date().toISOString().slice(0, 7);
+  const [row] = await db
+    .select({ calls: sql<number>`coalesce(sum(${u.calls}), 0)::int` })
+    .from(u)
+    .where(and(eq(u.orgId, connection.orgId), eq(u.connector, connection.connector), gte(u.day, `${month}-01`)));
+  return row?.calls ?? 0;
 }
 
 // ── Telegram's updates (ADR 0170 §5) ─────────────────────────────────────────

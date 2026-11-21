@@ -2400,6 +2400,8 @@ export interface ConnectorDef {
   available: boolean;
   /** The vendor hasn't approved agentes.chat yet: greyed out with a lock, nothing to open. Older servers leave it out. */
   soon?: boolean;
+  /** A connector of ours that needs a developer app this self-hosted server hasn't registered (ADR 0170). */
+  needsApp?: boolean;
   /** Connects through Composio (ADR 0107): its page signs in. Unavailable on a server without Composio. */
   via?: "composio";
   /** Where it connects, by the way this server picked (a `remote_mcp` entry's address). */

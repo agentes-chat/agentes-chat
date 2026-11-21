@@ -272,6 +272,38 @@ export const CONNECTOR_CATALOG: Record<string, ConnectorDefinition> = {
       create_comment: { scope: "issues.write" },
     },
   },
+  x: {
+    id: "x",
+    category: "social",
+    label: "X",
+    description: "Posts on your X account: write, read mentions and search.",
+    serverUrl: "https://api.x.com",
+    auth: ["oauth"],
+    native: true,
+    oauth: {
+      authorizeUrl: "https://x.com/i/oauth2/authorize",
+      tokenUrl: "https://api.x.com/2/oauth2/token",
+      scopes: ["tweet.read", "tweet.write", "users.read", "media.write", "offline.access"],
+      scopeSeparator: " ",
+      clientAuth: "basic",
+    },
+    scopes: {
+      "posts.read": s("Read posts", "Read the account's posts and mentions, posts by id and recent posts by search."),
+      "posts.write": s(
+        "Post",
+        "Post on the account, with pictures or a video from the Drive. Deleting a post asks for approval.",
+      ),
+    },
+    tools: {
+      get_my_posts: { scope: "posts.read", ours: true },
+      get_mentions: { scope: "posts.read", ours: true },
+      get_post: { scope: "posts.read", ours: true },
+      search_recent: { scope: "posts.read", ours: true },
+      get_user: { scope: "posts.read", ours: true },
+      create_post: { scope: "posts.write", ours: true },
+      delete_post: { scope: "posts.write", ours: true, sensitive: true, title: "Delete X post {id}" },
+    },
+  },
   telegram: {
     id: "telegram",
     category: "social",

@@ -9,6 +9,7 @@ export function connectorOAuthApps(
     github: pair(config.CONNECTOR_GITHUB_CLIENT_ID, config.CONNECTOR_GITHUB_CLIENT_SECRET),
     sentry: pair(config.CONNECTOR_SENTRY_CLIENT_ID, config.CONNECTOR_SENTRY_CLIENT_SECRET),
     linear: pair(config.CONNECTOR_LINEAR_CLIENT_ID, config.CONNECTOR_LINEAR_CLIENT_SECRET),
+    x: pair(config.CONNECTOR_X_CLIENT_ID, config.CONNECTOR_X_CLIENT_SECRET),
   };
 }
 

@@ -8381,6 +8381,14 @@
     "telegram_messages_write": {
       "label": "Envoyer des messages",
       "description": "Envoyer, modifier et épingler des messages et des fichiers en tant que bot. Supprimer des messages, bannir des personnes et les liens d'invitation demandent une approbation."
+    },
+    "x_posts_read": {
+      "label": "Lire les posts",
+      "description": "Lire les posts et mentions du compte, des posts par identifiant et les posts récents par recherche."
+    },
+    "x_posts_write": {
+      "label": "Publier",
+      "description": "Publier sur le compte, avec des images ou une vidéo du Drive. Supprimer un post demande une approbation."
     }
   },
   "issues": {
@@ -13911,6 +13919,11 @@
         "1": "Lire ce qu'on écrit au bot",
         "2": "Envoyer des messages et des fichiers en tant que bot",
         "ask": "Supprimer, bannir et les liens d'invitation demandent toujours votre approbation"
+      },
+      "x": {
+        "1": "Lire les posts et mentions du compte",
+        "2": "Publier avec des images ou une vidéo",
+        "ask": "Supprimer des posts demande toujours votre approbation"
       }
     },
     "connectedList": "Connectés",
@@ -14064,8 +14077,10 @@
       "pinterest": "Épingles, tableaux et statistiques Pinterest.",
       "reddit": "Publications, commentaires et communautés Reddit.",
       "whatsapp": "Messages et modèles WhatsApp Business.",
-      "telegram": "Un bot Telegram à vous : ses discussions, groupes et canaux."
-    }
+      "telegram": "Un bot Telegram à vous : ses discussions, groupes et canaux.",
+      "x": "Les posts de votre compte X : écrire, lire les mentions et chercher."
+    },
+    "needsApp": "Ce serveur n'a pas encore d'app {{name}} : la personne qui l'administre en enregistre une chez {{name}} et définit ses variables (docs/social-apps-checklist.md)."
   },
   "toolNames": {
     "order": "head-first",
@@ -14903,7 +14918,10 @@
       "edit_message": "Modifier le message",
       "pin_message": "Épingler le message",
       "ban_member": "Bannir un membre",
-      "create_invite_link": "Créer un lien d'invitation"
+      "create_invite_link": "Créer un lien d'invitation",
+      "get_my_posts": "Voir mes posts",
+      "get_mentions": "Voir les mentions",
+      "search_recent": "Chercher des posts récents"
     }
   },
   "toolReview": {
@@ -15128,6 +15146,9 @@
     "telegram": {
       "token": "Jeton du bot",
       "steps": "Dans Telegram, ouvrez @BotFather, envoyez /newbot, choisissez un nom et un identifiant qui finit par « bot », puis collez ici le jeton qu'il vous donne. Pour lire un groupe, ajoutez-y le bot. Pour publier dans un canal, faites-en un admin."
+    },
+    "x": {
+      "consent": "Les agents qui ont accès à X publient seuls sur ce compte. Supprimer un post demande d'abord, et la page de chaque agent limite ce qu'il peut faire. Un compte X fonctionne dans un seul workspace à la fois."
     }
   },
   "database": {

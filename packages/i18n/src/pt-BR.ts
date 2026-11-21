@@ -8525,6 +8525,14 @@ export const ptBR = {
       description:
         "Enviar, editar e fixar mensagens e arquivos como o bot. Apagar mensagens, banir pessoas e links de convite pedem aprovação.",
     },
+    x_posts_read: {
+      label: "Ler posts",
+      description: "Ler os posts e as menções da conta, posts pelo id e posts recentes por busca.",
+    },
+    x_posts_write: {
+      label: "Postar",
+      description: "Postar na conta, com fotos ou um vídeo do Drive. Apagar um post pede aprovação.",
+    },
   },
   issues: {
     handedBy: "passada por <0/>{{name}}",
@@ -13689,6 +13697,11 @@ export const ptBR = {
         "2": "Enviar mensagens e arquivos como o bot",
         ask: "Apagar, banir e links de convite sempre pedem sua aprovação",
       },
+      x: {
+        "1": "Ler os posts e as menções da conta",
+        "2": "Postar com fotos ou um vídeo",
+        ask: "Apagar posts sempre pede sua aprovação",
+      },
     },
     connectedList: "Conectados",
     connected: "Conectado",
@@ -13840,7 +13853,10 @@ export const ptBR = {
       reddit: "Posts, comentários e comunidades do Reddit.",
       whatsapp: "Mensagens e modelos do WhatsApp Business.",
       telegram: "Um bot seu do Telegram: suas conversas, grupos e canais.",
+      x: "Posts na sua conta do X: escrever, ler menções e buscar.",
     },
+    needsApp:
+      "Este servidor ainda não tem um app do {{name}}: quem o administra registra um no {{name}} e define as variáveis (docs/social-apps-checklist.md).",
   },
   toolNames: {
     order: "head-first",
@@ -14679,6 +14695,9 @@ export const ptBR = {
       pin_message: "Fixar mensagem",
       ban_member: "Banir membro",
       create_invite_link: "Criar link de convite",
+      get_my_posts: "Ver meus posts",
+      get_mentions: "Ver menções",
+      search_recent: "Buscar posts recentes",
     },
   },
   toolReview: {
@@ -14873,6 +14892,10 @@ export const ptBR = {
       token: "Token do bot",
       steps:
         "No Telegram, abra o @BotFather, envie /newbot, escolha um nome e um usuário que termine em “bot” e cole aqui o token que ele der. Para ler um grupo, adicione o bot a ele. Para postar num canal, torne-o admin lá.",
+    },
+    x: {
+      consent:
+        "Os agentes com acesso ao X postam nesta conta por conta própria. Apagar um post pede antes, e a página de cada agente limita o que ele pode fazer. Uma conta do X funciona em um workspace por vez.",
     },
   },
   database: {

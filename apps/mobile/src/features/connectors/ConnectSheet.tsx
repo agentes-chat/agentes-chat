@@ -948,6 +948,11 @@ function ConnectStep({
         <Text variant="small" tone="muted">
           {t("connectFlow.github.accountText")}
         </Text>
+      ) : def?.id === "x" ? (
+        // X wants the account owner's express consent before agents post for them: connecting after this is it.
+        <Text variant="small" tone="muted">
+          {t("connectFlow.x.consent")}
+        </Text>
       ) : null}
       {askUrl ? (
         // The address it will enter, typed on the step before (a flick down goes back to change it).

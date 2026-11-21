@@ -95,6 +95,7 @@ export const CONNECTOR_BRANDS: Record<string, { file: string; color: string | nu
   reddit: { file: "reddit", color: "#FF4500" },
   whatsapp: { file: "whatsapp", color: "#25D366" },
   telegram: { file: "telegram", color: "#26A5E4" },
+  x: { file: "x", color: null },
 };
 
 export interface ConnectorListingEntry {
@@ -115,6 +116,11 @@ export interface ConnectorListingEntry {
   available: boolean;
   /** A one-click server whose vendor hasn't approved agentes.chat yet, which Composio doesn't serve here ("Em breve"). */
   soon: boolean;
+  /**
+   * A connector of ours that signs in only through a developer app, on a self-hosted server that hasn't registered it:
+   * the apps say so instead of "Em breve" (on the Cloud it stays "Em breve" until the vendor approves the app).
+   */
+  needsApp?: boolean;
   /** Connects through Composio (its page, its OAuth app): available only with `COMPOSIO_API_KEY` (ADR 0107). */
   via?: "composio";
   /** Where it connects, by the way this server picked (a `remote_mcp` entry's address). */
@@ -188,6 +194,7 @@ export function connectorListing(server: ServerCatalog): ConnectorListingEntry[]
       oauthConfigured,
       available: oauthConfigured || d.auth.includes("api_key"),
       soon: false,
+      ...(d.native && !oauthConfigured && !d.auth.includes("api_key") && !server.cloud ? { needsApp: true } : {}),
       serverUrl: d.serverUrl,
       ...brand(d.id),
       scopes: Object.entries(d.scopes).map(([id, s]) => ({

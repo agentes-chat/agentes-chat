@@ -7815,6 +7815,14 @@
     "telegram_messages_write": {
       "label": "发送消息",
       "description": "以机器人身份发送、编辑和置顶消息与文件。删除消息、封禁成员和邀请链接需要审批。"
+    },
+    "x_posts_read": {
+      "label": "读取帖子",
+      "description": "读取账号的帖子和提及、按 id 查看帖子，以及搜索最近的帖子。"
+    },
+    "x_posts_write": {
+      "label": "发帖",
+      "description": "在账号上发帖，可附 Drive 中的图片或视频。删除帖子需要审批。"
     }
   },
   "issues": {
@@ -12944,6 +12952,11 @@
         "1": "读取别人发给机器人的内容",
         "2": "以机器人身份发送消息和文件",
         "ask": "删除、封禁和邀请链接始终需要你的审批"
+      },
+      "x": {
+        "1": "读取账号的帖子和提及",
+        "2": "附图片或视频发帖",
+        "ask": "删除帖子始终需要你的审批"
       }
     },
     "connectedList": "已连接",
@@ -13087,8 +13100,10 @@
       "pinterest": "Pinterest 的 Pin 图、图板和数据分析。",
       "reddit": "Reddit 的帖子、评论和社区。",
       "whatsapp": "WhatsApp Business 消息和模板。",
-      "telegram": "你自己的 Telegram 机器人：它的聊天、群组和频道。"
-    }
+      "telegram": "你自己的 Telegram 机器人：它的聊天、群组和频道。",
+      "x": "你的 X 账号上的帖子：发帖、查看提及和搜索。"
+    },
+    "needsApp": "此服务器还没有 {{name}} 应用：运维者需在 {{name}} 注册一个应用并设置其变量（docs/social-apps-checklist.md）。"
   },
   "toolNames": {
     "order": "modifiers-first",
@@ -13926,7 +13941,10 @@
       "edit_message": "编辑消息",
       "pin_message": "置顶消息",
       "ban_member": "封禁成员",
-      "create_invite_link": "创建邀请链接"
+      "create_invite_link": "创建邀请链接",
+      "get_my_posts": "查看我的帖子",
+      "get_mentions": "查看提及",
+      "search_recent": "搜索最近的帖子"
     }
   },
   "toolReview": {
@@ -14111,6 +14129,9 @@
     "telegram": {
       "token": "机器人令牌",
       "steps": "在 Telegram 中打开 @BotFather，发送 /newbot，取一个名字和以“bot”结尾的用户名，然后把它给你的令牌粘贴到这里。要读取群组，把机器人加进去。要在频道发帖，把它设为那里的管理员。"
+    },
+    "x": {
+      "consent": "获得 X 权限的智能体会自行在此账号发帖。删除帖子前会先询问，每个智能体的页面可以限制它能做的事。一个 X 账号同一时间只能在一个工作区使用。"
     }
   },
   "database": {

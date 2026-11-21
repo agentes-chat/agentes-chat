@@ -487,6 +487,8 @@ function ConnectStep({
           ) : def ? (
             <p className="muted cflow__text">
               {connectorDescription(t, def)} {canOAuth && t("connectFlow.oauthHelp", { name: connectorBrand(def) })}
+              {/* X wants the account owner's express consent before agents post for them: connecting after this is it. */}
+              {def.id === "x" && <span className="cflow__said">{t("connectFlow.x.consent")}</span>}
             </p>
           ) : viaComposio ? (
             <p className="muted cflow__text">{t("connectors.composio.via")}</p>

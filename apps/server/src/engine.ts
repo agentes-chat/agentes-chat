@@ -532,7 +532,11 @@ export function buildEngine(o: EngineOptions) {
         callerIdentity: mcpCallerIdentity(config),
       }),
       // Connectors of our own (ADR 0170): no MCP server, every tool served here.
-      createNativeConnectorToolSource({ ...connectorDeps, artifacts }),
+      createNativeConnectorToolSource({
+        ...connectorDeps,
+        artifacts,
+        monthlyCaps: { x: config.CONNECTOR_X_CALLS_PER_MONTH },
+      }),
       // People's mailboxes (ADR 0038): only when the server has a mail path (Composio, IMAP).
       createMailToolSource({
         keyWrappers,

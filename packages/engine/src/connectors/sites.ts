@@ -16,6 +16,7 @@ export const CONNECTOR_NAMES: Record<string, readonly string[]> = {
     "Business Manager",
   ],
   facebook: ["Facebook Pages"],
+  x: ["Twitter"],
   "microsoft-teams": ["Teams"],
   youtube: ["YouTube Studio"],
   whatsapp: ["WhatsApp Business"],
@@ -79,6 +80,7 @@ export const CONNECTOR_SITES: Record<string, readonly string[]> = {
   reddit: ["reddit.com"],
   whatsapp: ["web.whatsapp.com"],
   telegram: ["web.telegram.org"],
+  x: ["x.com", "twitter.com"],
 };
 
 function matches(site: string, host: string, path: string) {

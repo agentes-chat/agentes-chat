@@ -119,7 +119,7 @@ interface Entry {
   how: HowKind;
   /** What agents could do there; `asks` = it always asks a person first. */
   can: { text: string; asks: boolean }[];
-  /** What connecting does to who can use it. */
+  /** What connecting does to who can use it, or why this server can't connect it yet. */
   after: string;
   /** Connected already, the button adds another account (mailboxes, databases, MCP servers) or signs in again. */
   again: "add" | "reconnect";
@@ -253,11 +253,14 @@ export function ConnectorCatalogDialog({
           // As the server does: a first connection is every agent's; then an MCP server takes another account
           // (no agent yet) and a catalog connector a new sign-in (who uses it stays).
           after: t(
-            !connected.has(d.id)
-              ? "connectors.detail.allText"
-              : d.kind === "remote_mcp"
-                ? "connectors.detail.accountsText"
-                : "connectors.detail.replaceText",
+            d.needsApp && !connected.has(d.id)
+              ? "connectors.needsApp"
+              : !connected.has(d.id)
+                ? "connectors.detail.allText"
+                : d.kind === "remote_mcp"
+                  ? "connectors.detail.accountsText"
+                  : "connectors.detail.replaceText",
+            { name: connectorName(t, d) },
           ),
           again: d.kind === "remote_mcp" ? "add" : "reconnect",
           pick: () => onPick(d),

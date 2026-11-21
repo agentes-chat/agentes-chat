@@ -8044,6 +8044,14 @@
     "telegram_messages_write": {
       "label": "Mesaj gönderme",
       "description": "Bot olarak mesaj ve dosya gönderir, düzenler ve sabitler. Mesaj silme, kişi yasaklama ve davet bağlantıları onay ister."
+    },
+    "x_posts_read": {
+      "label": "Gönderileri okuma",
+      "description": "Hesabın gönderilerini ve bahsetmelerini, kimliğe göre gönderileri ve aramayla son gönderileri okur."
+    },
+    "x_posts_write": {
+      "label": "Paylaşma",
+      "description": "Drive'dan görseller veya bir videoyla hesapta paylaşır. Gönderi silmek onay ister."
     }
   },
   "issues": {
@@ -13343,6 +13351,11 @@
         "1": "İnsanların bota yazdıklarını okuma",
         "2": "Bot olarak mesaj ve dosya gönderme",
         "ask": "Silme, yasaklama ve davet bağlantıları her zaman onayınızı ister"
+      },
+      "x": {
+        "1": "Hesabın gönderilerini ve bahsetmelerini okuma",
+        "2": "Görsel veya videoyla paylaşma",
+        "ask": "Gönderi silmek her zaman onayınızı ister"
       }
     },
     "connectedList": "Bağlı",
@@ -13491,8 +13504,10 @@
       "pinterest": "Pinterest pinleri, panoları ve analizleri.",
       "reddit": "Reddit gönderileri, yorumları ve toplulukları.",
       "whatsapp": "WhatsApp Business mesajları ve şablonları.",
-      "telegram": "Size ait bir Telegram botu: sohbetleri, grupları ve kanalları."
-    }
+      "telegram": "Size ait bir Telegram botu: sohbetleri, grupları ve kanalları.",
+      "x": "X hesabınızdaki gönderiler: yazma, bahsetmeleri okuma ve arama."
+    },
+    "needsApp": "Bu sunucunun henüz bir {{name}} uygulaması yok: sunucuyu yöneten kişi {{name}}'de bir uygulama kaydeder ve değişkenlerini ayarlar (docs/social-apps-checklist.md)."
   },
   "toolNames": {
     "order": "modifiers-first",
@@ -14330,7 +14345,10 @@
       "edit_message": "Mesajı düzenle",
       "pin_message": "Mesajı sabitle",
       "ban_member": "Üyeyi yasakla",
-      "create_invite_link": "Davet bağlantısı oluştur"
+      "create_invite_link": "Davet bağlantısı oluştur",
+      "get_my_posts": "Gönderilerimi gör",
+      "get_mentions": "Bahsetmeleri gör",
+      "search_recent": "Son gönderileri ara"
     }
   },
   "toolReview": {
@@ -14536,6 +14554,9 @@
     "telegram": {
       "token": "Bot token'ı",
       "steps": "Telegram'da @BotFather'ı açın, /newbot gönderin, bir ad ve “bot” ile biten bir kullanıcı adı seçin, sonra verdiği token'ı buraya yapıştırın. Bir grubu okumak için botu gruba ekleyin. Bir kanalda paylaşmak için orada yönetici yapın."
+    },
+    "x": {
+      "consent": "X verilen ajanlar bu hesapta kendi başına paylaşım yapar. Gönderi silmek önce sorar ve her ajanın sayfası neler yapabileceğini daraltır. Bir X hesabı aynı anda tek bir çalışma alanında çalışır."
     }
   },
   "database": {

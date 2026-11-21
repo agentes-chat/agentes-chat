@@ -8331,6 +8331,14 @@
     "telegram_messages_write": {
       "label": "Enviar mensajes",
       "description": "Enviar, editar y fijar mensajes y archivos como el bot. Borrar mensajes, expulsar personas y los enlaces de invitación piden aprobación."
+    },
+    "x_posts_read": {
+      "label": "Leer publicaciones",
+      "description": "Leer las publicaciones y menciones de la cuenta, publicaciones por id y recientes por búsqueda."
+    },
+    "x_posts_write": {
+      "label": "Publicar",
+      "description": "Publicar en la cuenta, con fotos o un video del Drive. Borrar una publicación pide aprobación."
     }
   },
   "issues": {
@@ -13836,6 +13844,11 @@
         "1": "Leer lo que la gente le escribe al bot",
         "2": "Enviar mensajes y archivos como el bot",
         "ask": "Borrar, expulsar y los enlaces de invitación siempre piden tu aprobación"
+      },
+      "x": {
+        "1": "Leer las publicaciones y menciones de la cuenta",
+        "2": "Publicar con fotos o un video",
+        "ask": "Borrar publicaciones siempre pide tu aprobación"
       }
     },
     "connectedList": "Conectados",
@@ -13989,8 +14002,10 @@
       "pinterest": "Pines, tableros y estadísticas de Pinterest.",
       "reddit": "Publicaciones, comentarios y comunidades de Reddit.",
       "whatsapp": "Mensajes y plantillas de WhatsApp Business.",
-      "telegram": "Un bot tuyo de Telegram: sus chats, grupos y canales."
-    }
+      "telegram": "Un bot tuyo de Telegram: sus chats, grupos y canales.",
+      "x": "Publicaciones en tu cuenta de X: escribir, leer menciones y buscar."
+    },
+    "needsApp": "Este servidor aún no tiene una app de {{name}}: quien lo administra registra una en {{name}} y define sus variables (docs/social-apps-checklist.md)."
   },
   "toolNames": {
     "order": "head-first",
@@ -14828,7 +14843,10 @@
       "edit_message": "Editar mensaje",
       "pin_message": "Fijar mensaje",
       "ban_member": "Expulsar miembro",
-      "create_invite_link": "Crear enlace de invitación"
+      "create_invite_link": "Crear enlace de invitación",
+      "get_my_posts": "Ver mis publicaciones",
+      "get_mentions": "Ver menciones",
+      "search_recent": "Buscar publicaciones recientes"
     }
   },
   "toolReview": {
@@ -15053,6 +15071,9 @@
     "telegram": {
       "token": "Token del bot",
       "steps": "En Telegram, abre @BotFather, envía /newbot, elige un nombre y un usuario que termine en «bot» y pega aquí el token que te dé. Para leer un grupo, añade el bot. Para publicar en un canal, hazlo admin allí."
+    },
+    "x": {
+      "consent": "Los agentes con acceso a X publican en esta cuenta por su cuenta. Borrar una publicación pregunta antes, y la página de cada agente limita lo que puede hacer. Una cuenta de X funciona en un workspace a la vez."
     }
   },
   "database": {

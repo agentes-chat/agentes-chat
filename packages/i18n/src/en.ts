@@ -8580,6 +8580,14 @@ export const en = {
       description:
         "Send, edit and pin messages and files as the bot. Deleting messages, banning people and invite links ask for approval.",
     },
+    x_posts_read: {
+      label: "Read posts",
+      description: "Read the account's posts and mentions, posts by id and recent posts by search.",
+    },
+    x_posts_write: {
+      label: "Post",
+      description: "Post on the account, with pictures or a video from the Drive. Deleting a post asks for approval.",
+    },
   },
   issues: {
     /** A task another agent handed over: on its card and after its title in the list. */
@@ -13701,6 +13709,11 @@ export const en = {
         "2": "Send messages and files as the bot",
         ask: "Deleting, banning and invite links always ask for your approval",
       },
+      x: {
+        "1": "Read the account's posts and mentions",
+        "2": "Post with pictures or a video",
+        ask: "Deleting posts always asks for your approval",
+      },
     },
     connectedList: "Connected",
     connected: "Connected",
@@ -13856,7 +13869,10 @@ export const en = {
       reddit: "Reddit posts, comments and communities.",
       whatsapp: "WhatsApp Business messages and templates.",
       telegram: "A Telegram bot of yours: its chats, groups and channels.",
+      x: "Posts on your X account: write, read mentions and search.",
     },
+    needsApp:
+      "This server has no {{name}} app yet: whoever runs it registers one with {{name}} and sets its variables (docs/social-apps-checklist.md).",
   },
   toolNames: {
     /**
@@ -14725,6 +14741,9 @@ export const en = {
       pin_message: "Pin message",
       ban_member: "Ban member",
       create_invite_link: "Create invite link",
+      get_my_posts: "See my posts",
+      get_mentions: "See mentions",
+      search_recent: "Search recent posts",
     },
   },
   toolReview: {
@@ -14927,6 +14946,10 @@ export const en = {
       token: "Bot token",
       steps:
         "In Telegram, open @BotFather, send /newbot, pick a name and a username that ends in “bot”, then paste the token it gives you here. To read a group, add the bot to it. To post in a channel, make it an admin there.",
+    },
+    x: {
+      consent:
+        "Agents you give X post on this account by themselves. Deleting a post asks first, and each agent's page narrows what it may do. An X account works in one workspace at a time.",
     },
   },
   database: {

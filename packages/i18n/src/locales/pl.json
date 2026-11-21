@@ -8665,6 +8665,14 @@
     "telegram_messages_write": {
       "label": "Wysyłanie wiadomości",
       "description": "Wysyłanie, edytowanie i przypinanie wiadomości i plików jako bot. Usuwanie wiadomości, banowanie osób i linki zaproszeń wymagają zatwierdzenia."
+    },
+    "x_posts_read": {
+      "label": "Czytanie postów",
+      "description": "Czytanie postów i wzmianek konta, postów po id i najnowszych postów z wyszukiwania."
+    },
+    "x_posts_write": {
+      "label": "Publikowanie",
+      "description": "Publikowanie na koncie, ze zdjęciami lub filmem z Drive. Usunięcie posta wymaga zatwierdzenia."
     }
   },
   "issues": {
@@ -14417,6 +14425,11 @@
         "1": "Czytanie tego, co ludzie piszą do bota",
         "2": "Wysyłanie wiadomości i plików jako bot",
         "ask": "Usuwanie, banowanie i linki zaproszeń zawsze proszą o Twoje zatwierdzenie"
+      },
+      "x": {
+        "1": "Czytanie postów i wzmianek konta",
+        "2": "Publikowanie ze zdjęciami lub filmem",
+        "ask": "Usuwanie postów zawsze prosi o Twoje zatwierdzenie"
       }
     },
     "connectedList": "Połączone",
@@ -14575,8 +14588,10 @@
       "pinterest": "Piny, tablice i statystyki na Pintereście.",
       "reddit": "Posty, komentarze i społeczności na Reddicie.",
       "whatsapp": "Wiadomości i szablony WhatsApp Business.",
-      "telegram": "Twój bot w Telegramie: jego czaty, grupy i kanały."
-    }
+      "telegram": "Twój bot w Telegramie: jego czaty, grupy i kanały.",
+      "x": "Posty na Twoim koncie X: pisanie, czytanie wzmianek i wyszukiwanie."
+    },
+    "needsApp": "Ten serwer nie ma jeszcze aplikacji {{name}}: osoba, która nim zarządza, rejestruje ją w {{name}} i ustawia zmienne (docs/social-apps-checklist.md)."
   },
   "toolNames": {
     "order": "head-first",
@@ -15414,7 +15429,10 @@
       "edit_message": "Edytuj wiadomość",
       "pin_message": "Przypnij wiadomość",
       "ban_member": "Zbanuj członka",
-      "create_invite_link": "Utwórz link zaproszenia"
+      "create_invite_link": "Utwórz link zaproszenia",
+      "get_my_posts": "Pokaż moje posty",
+      "get_mentions": "Pokaż wzmianki",
+      "search_recent": "Szukaj najnowszych postów"
     }
   },
   "toolReview": {
@@ -15662,6 +15680,9 @@
     "telegram": {
       "token": "Token bota",
       "steps": "W Telegramie otwórz @BotFather, wyślij /newbot, wybierz nazwę i nazwę użytkownika kończącą się na „bot”, a potem wklej tu otrzymany token. Aby czytać grupę, dodaj do niej bota. Aby publikować na kanale, zrób go tam administratorem."
+    },
+    "x": {
+      "consent": "Agenci z dostępem do X publikują na tym koncie samodzielnie. Usunięcie posta najpierw pyta, a strona każdego agenta ogranicza, co może robić. Konto X działa naraz tylko w jednym workspace."
     }
   },
   "database": {

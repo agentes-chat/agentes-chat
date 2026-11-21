@@ -7805,6 +7805,14 @@
     "telegram_messages_write": {
       "label": "Kirim pesan",
       "description": "Kirim, ubah, dan sematkan pesan dan file sebagai bot. Menghapus pesan, memblokir orang, dan tautan undangan meminta persetujuan."
+    },
+    "x_posts_read": {
+      "label": "Baca postingan",
+      "description": "Baca postingan dan sebutan akun, postingan menurut id, dan postingan terbaru lewat pencarian."
+    },
+    "x_posts_write": {
+      "label": "Posting",
+      "description": "Posting di akun, dengan gambar atau video dari Drive. Menghapus postingan meminta persetujuan."
     }
   },
   "issues": {
@@ -12928,6 +12936,11 @@
         "1": "Baca apa yang orang tulis ke bot",
         "2": "Kirim pesan dan file sebagai bot",
         "ask": "Menghapus, memblokir, dan tautan undangan selalu meminta persetujuan Anda"
+      },
+      "x": {
+        "1": "Baca postingan dan sebutan akun",
+        "2": "Posting dengan gambar atau video",
+        "ask": "Menghapus postingan selalu meminta persetujuan Anda"
       }
     },
     "connectedList": "Terhubung",
@@ -13071,8 +13084,10 @@
       "pinterest": "Pin, papan, dan analitik Pinterest.",
       "reddit": "Postingan, komentar, dan komunitas Reddit.",
       "whatsapp": "Pesan dan template WhatsApp Business.",
-      "telegram": "Bot Telegram milik Anda: obrolan, grup, dan kanalnya."
-    }
+      "telegram": "Bot Telegram milik Anda: obrolan, grup, dan kanalnya.",
+      "x": "Postingan di akun X Anda: menulis, membaca sebutan, dan mencari."
+    },
+    "needsApp": "Server ini belum punya aplikasi {{name}}: pengelolanya mendaftarkan satu di {{name}} dan mengatur variabelnya (docs/social-apps-checklist.md)."
   },
   "toolNames": {
     "order": "head-first",
@@ -13910,7 +13925,10 @@
       "edit_message": "Ubah pesan",
       "pin_message": "Sematkan pesan",
       "ban_member": "Blokir anggota",
-      "create_invite_link": "Buat tautan undangan"
+      "create_invite_link": "Buat tautan undangan",
+      "get_my_posts": "Lihat postingan saya",
+      "get_mentions": "Lihat sebutan",
+      "search_recent": "Cari postingan terbaru"
     }
   },
   "toolReview": {
@@ -14095,6 +14113,9 @@
     "telegram": {
       "token": "Token bot",
       "steps": "Di Telegram, buka @BotFather, kirim /newbot, pilih nama dan username yang berakhiran “bot”, lalu tempel token yang diberikannya di sini. Untuk membaca grup, tambahkan bot ke grup itu. Untuk memposting di kanal, jadikan admin di sana."
+    },
+    "x": {
+      "consent": "Agen yang diberi X memposting di akun ini sendiri. Menghapus postingan bertanya dulu, dan halaman tiap agen membatasi apa yang boleh dilakukannya. Satu akun X berfungsi di satu workspace dalam satu waktu."
     }
   },
   "database": {

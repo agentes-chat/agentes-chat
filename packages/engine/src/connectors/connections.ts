@@ -182,7 +182,16 @@ export async function grantToEveryAgent(
 }
 
 /** OAuth app credentials per connector (from env; real apps are configured per deployment). */
-export type OAuthApps = Record<string, { clientId: string; clientSecret: string } | undefined>;
+export type OAuthApps = Record<
+  string,
+  | {
+      clientId: string;
+      clientSecret: string;
+      /** Meta's Login for Business configuration: the authorize URL names it instead of scopes. */
+      configId?: string;
+    }
+  | undefined
+>;
 
 /** What's stored (encrypted) for a connection. Never returned by any API. */
 export interface ConnectionSecret {
@@ -869,13 +878,18 @@ export async function startOAuth(
     expiresAt: new Date((deps.now?.() ?? new Date()).getTime() + OAUTH_STATE_TTL_MS),
   });
   const url = new URL(def.oauth.authorizeUrl);
-  url.searchParams.set("client_id", app.clientId);
+  url.searchParams.set(def.oauth.clientIdParam ?? "client_id", app.clientId);
   url.searchParams.set("redirect_uri", oauthRedirectUri(deps.publicUrl));
   url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope", def.oauth.scopes.join(def.oauth.scopeSeparator ?? " "));
+  if (app.configId) {
+    url.searchParams.set("config_id", app.configId);
+    url.searchParams.set("override_default_response_type", "true");
+  } else url.searchParams.set("scope", def.oauth.scopes.join(def.oauth.scopeSeparator ?? " "));
   url.searchParams.set("state", state);
-  url.searchParams.set("code_challenge", challenge);
-  url.searchParams.set("code_challenge_method", "S256");
+  if (def.oauth.pkce !== false) {
+    url.searchParams.set("code_challenge", challenge);
+    url.searchParams.set("code_challenge_method", "S256");
+  }
   return { authorizeUrl: url.toString(), state };
 }
 
@@ -936,6 +950,24 @@ async function tokenRequest(
     throw res.status < 500 && res.status !== 429 ? new TokenRefused(said) : new ValidationError(said);
   }
   return body;
+}
+
+/**
+ * How this server's own OAuth app shows itself at a vendor's token endpoint: in the form (`client_id`, or the vendor's
+ * name for it, and `client_secret`), or in HTTP Basic where the vendor takes it only there (X).
+ */
+function ownClient(
+  def: ConnectorDefinition,
+  app: { clientId: string; clientSecret: string },
+): { form: Record<string, string>; headers: Record<string, string> } {
+  if (def.oauth?.clientAuth === "basic") {
+    const basic = Buffer.from(`${encodeURIComponent(app.clientId)}:${encodeURIComponent(app.clientSecret)}`);
+    return { form: {}, headers: { authorization: `Basic ${basic.toString("base64")}` } };
+  }
+  return {
+    form: { [def.oauth?.clientIdParam ?? "client_id"]: app.clientId, client_secret: app.clientSecret },
+    headers: {},
+  };
 }
 
 /** The provider answered a token request with no: the sign-in it was made with no longer works. */
@@ -1033,6 +1065,7 @@ export async function completeOAuth(
   const app = deps.oauthApps?.[row.connector];
   if (!def.oauth || !app) throw new ValidationError(`OAuth for ${def.label} is not configured on this server`);
   const verifier = await stateVerifier(deps, row);
+  const client = ownClient(def, app);
   const token = await tokenRequest(
     deps,
     def.oauth.tokenUrl,
@@ -1040,20 +1073,22 @@ export async function completeOAuth(
       grant_type: "authorization_code",
       code: input.code,
       redirect_uri: oauthRedirectUri(deps.publicUrl),
-      client_id: app.clientId,
-      client_secret: app.clientSecret,
-      code_verifier: verifier,
+      ...client.form,
+      ...(def.oauth.pkce === false ? {} : { code_verifier: verifier }),
     },
-    {},
+    client.headers,
     def,
   );
+  const signedIn: ConnectionSecret = { accessToken: token.access_token, refreshToken: token.refresh_token };
+  const account = await nativeAccount(deps, row.connector, signedIn);
   const stored = await storeConnection(deps, {
     orgId: row.orgId,
     actorId: user.id,
     connector: row.connector,
     authType: "oauth",
     serverUrl: checkServerUrl(row.serverUrl ?? def.serverUrl),
-    secret: { accessToken: token.access_token, refreshToken: token.refresh_token },
+    secret: signedIn,
+    ...(account ? { accountLabel: account.label, accountId: account.id } : {}),
     tokenExpiresAt: token.expires_in ? new Date(at.getTime() + token.expires_in * 1000) : null,
     // An empty `scope` (a GitHub App's client, which has no scopes) is unknown, never "none granted".
     oauthScopes:
@@ -1171,11 +1206,8 @@ async function refreshTokens(
     const def = c.connector.startsWith("custom:") ? null : connectorDefinition(c.connector);
     const app = deps.oauthApps?.[c.connector];
     if (!def?.oauth || !app) return null;
-    token = await tokenRequest(deps, def.oauth.tokenUrl, {
-      ...refresh,
-      client_id: app.clientId,
-      client_secret: app.clientSecret,
-    });
+    const own = ownClient(def, app);
+    token = await tokenRequest(deps, def.oauth.tokenUrl, { ...refresh, ...own.form }, own.headers);
   }
   const next: ConnectionSecret = {
     ...secret,

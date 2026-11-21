@@ -8085,6 +8085,14 @@
     "telegram_messages_write": {
       "label": "Nachrichten senden",
       "description": "Nachrichten und Dateien als Bot senden, bearbeiten und anheften. Nachrichten löschen, Leute sperren und Einladungslinks fragen nach Freigabe."
+    },
+    "x_posts_read": {
+      "label": "Beiträge lesen",
+      "description": "Die Beiträge und Erwähnungen des Kontos lesen, Beiträge per ID und neue Beiträge per Suche."
+    },
+    "x_posts_write": {
+      "label": "Posten",
+      "description": "Auf dem Konto posten, mit Bildern oder einem Video aus dem Drive. Einen Beitrag löschen fragt nach Freigabe."
     }
   },
   "issues": {
@@ -13408,6 +13416,11 @@
         "1": "Lesen, was Leute dem Bot schreiben",
         "2": "Nachrichten und Dateien als Bot senden",
         "ask": "Löschen, Sperren und Einladungslinks fragen immer nach deiner Freigabe"
+      },
+      "x": {
+        "1": "Beiträge und Erwähnungen des Kontos lesen",
+        "2": "Mit Bildern oder einem Video posten",
+        "ask": "Beiträge löschen fragt immer nach deiner Freigabe"
       }
     },
     "connectedList": "Verbunden",
@@ -13556,8 +13569,10 @@
       "pinterest": "Pins, Pinnwände und Statistiken auf Pinterest.",
       "reddit": "Beiträge, Kommentare und Communitys auf Reddit.",
       "whatsapp": "Nachrichten und Vorlagen von WhatsApp Business.",
-      "telegram": "Ein eigener Telegram-Bot: seine Chats, Gruppen und Kanäle."
-    }
+      "telegram": "Ein eigener Telegram-Bot: seine Chats, Gruppen und Kanäle.",
+      "x": "Beiträge auf deinem X-Konto: schreiben, Erwähnungen lesen und suchen."
+    },
+    "needsApp": "Dieser Server hat noch keine {{name}}-App: Wer ihn betreibt, registriert eine bei {{name}} und setzt ihre Variablen (docs/social-apps-checklist.md)."
   },
   "toolNames": {
     "order": "head-first",
@@ -14395,7 +14410,10 @@
       "edit_message": "Nachricht bearbeiten",
       "pin_message": "Nachricht anheften",
       "ban_member": "Mitglied sperren",
-      "create_invite_link": "Einladungslink erstellen"
+      "create_invite_link": "Einladungslink erstellen",
+      "get_my_posts": "Meine Beiträge ansehen",
+      "get_mentions": "Erwähnungen ansehen",
+      "search_recent": "Neue Beiträge suchen"
     }
   },
   "toolReview": {
@@ -14601,6 +14619,9 @@
     "telegram": {
       "token": "Bot-Token",
       "steps": "Öffne in Telegram @BotFather, sende /newbot, wähle einen Namen und einen Benutzernamen, der auf „bot“ endet, und füge hier das Token ein, das er dir gibt. Um eine Gruppe zu lesen, füge den Bot hinzu. Um in einem Kanal zu posten, mach ihn dort zum Admin."
+    },
+    "x": {
+      "consent": "Agenten mit Zugriff auf X posten selbstständig auf diesem Konto. Einen Beitrag löschen fragt vorher, und die Seite jedes Agenten schränkt ein, was er darf. Ein X-Konto funktioniert in jeweils einem Workspace."
     }
   },
   "database": {

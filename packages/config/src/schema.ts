@@ -840,6 +840,24 @@ export const envVars = {
     section: "Connectors",
     secret: true,
   },
+  CONNECTOR_X_CLIENT_ID: {
+    schema: z.string().optional(),
+    description:
+      "OAuth 2.0 client id of this server's X app (console.x.com, type Web App, Automated App or Bot; Read and write), for the X connector (ADR 0170). Set together with `CONNECTOR_X_CLIENT_SECRET`. Callback URL: `{PUBLIC_URL}/api/app/connectors/oauth/callback`. Without it, X isn't offered. Steps: docs/social-apps-checklist.md.",
+    section: "Connectors",
+  },
+  CONNECTOR_X_CLIENT_SECRET: {
+    schema: z.string().optional(),
+    description: "OAuth 2.0 client secret of this server's X app (not its API key).",
+    section: "Connectors",
+    secret: true,
+  },
+  CONNECTOR_X_CALLS_PER_MONTH: {
+    schema: z.coerce.number().int().min(0).default(0),
+    description:
+      "X calls a workspace may make per calendar month (UTC): X bills this server's app per post written and read. At the cap its X tools stop until the next month. 0: no cap.",
+    section: "Connectors",
+  },
   MCP_CALLER_IDENTITY: {
     schema: z
       .string()

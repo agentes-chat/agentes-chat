@@ -55019,5 +55019,44 @@
   },
   "connectFlow.telegram.steps": {
     "value": "In Telegram, open @BotFather, send /newbot, pick a name and a username that ends in “bot”, then paste the token it gives you here. To read a group, add the bot to it. To post in a channel, make it an admin there."
+  },
+  "scopes.x_posts_read.label": {
+    "value": "Read posts"
+  },
+  "scopes.x_posts_read.description": {
+    "value": "Read the account's posts and mentions, posts by id and recent posts by search."
+  },
+  "scopes.x_posts_write.label": {
+    "value": "Post"
+  },
+  "scopes.x_posts_write.description": {
+    "value": "Post on the account, with pictures or a video from the Drive. Deleting a post asks for approval."
+  },
+  "connectors.descriptions.x": {
+    "value": "Posts on your X account: write, read mentions and search."
+  },
+  "connectors.can.x.1": {
+    "value": "Read the account's posts and mentions"
+  },
+  "connectors.can.x.2": {
+    "value": "Post with pictures or a video"
+  },
+  "connectors.can.x.ask": {
+    "value": "Deleting posts always asks for your approval"
+  },
+  "toolNames.label.get_my_posts": {
+    "value": "See my posts"
+  },
+  "toolNames.label.get_mentions": {
+    "value": "See mentions"
+  },
+  "toolNames.label.search_recent": {
+    "value": "Search recent posts"
+  },
+  "connectFlow.x.consent": {
+    "value": "Agents you give X post on this account by themselves. Deleting a post asks first, and each agent's page narrows what it may do. An X account works in one workspace at a time."
+  },
+  "connectors.needsApp": {
+    "value": "This server has no {{name}} app yet: whoever runs it registers one with {{name}} and sets its variables (docs/social-apps-checklist.md)."
   }
 }

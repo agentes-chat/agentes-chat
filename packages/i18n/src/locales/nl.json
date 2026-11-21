@@ -8123,6 +8123,14 @@
     "telegram_messages_write": {
       "label": "Berichten sturen",
       "description": "Berichten en bestanden als de bot sturen, bewerken en vastzetten. Berichten verwijderen, mensen verbannen en uitnodigingslinks vragen om goedkeuring."
+    },
+    "x_posts_read": {
+      "label": "Posts lezen",
+      "description": "De posts en vermeldingen van het account lezen, posts op id en recente posts via zoeken."
+    },
+    "x_posts_write": {
+      "label": "Posten",
+      "description": "Op het account posten, met afbeeldingen of een video uit de Drive. Een post verwijderen vraagt om goedkeuring."
     }
   },
   "issues": {
@@ -13476,6 +13484,11 @@
         "1": "Lezen wat mensen de bot schrijven",
         "2": "Berichten en bestanden als de bot sturen",
         "ask": "Verwijderen, verbannen en uitnodigingslinks vragen altijd om je goedkeuring"
+      },
+      "x": {
+        "1": "Posts en vermeldingen van het account lezen",
+        "2": "Posten met afbeeldingen of een video",
+        "ask": "Posts verwijderen vraagt altijd om je goedkeuring"
       }
     },
     "connectedList": "Gekoppeld",
@@ -13624,8 +13637,10 @@
       "pinterest": "Pins, borden en statistieken op Pinterest.",
       "reddit": "Posts, reacties en community's op Reddit.",
       "whatsapp": "Berichten en sjablonen van WhatsApp Business.",
-      "telegram": "Een eigen Telegram-bot: zijn chats, groepen en kanalen."
-    }
+      "telegram": "Een eigen Telegram-bot: zijn chats, groepen en kanalen.",
+      "x": "Posts op je X-account: schrijven, vermeldingen lezen en zoeken."
+    },
+    "needsApp": "Deze server heeft nog geen {{name}}-app: wie hem beheert registreert er een bij {{name}} en zet de variabelen (docs/social-apps-checklist.md)."
   },
   "toolNames": {
     "order": "modifiers-first",
@@ -14463,7 +14478,10 @@
       "edit_message": "Bericht bewerken",
       "pin_message": "Bericht vastzetten",
       "ban_member": "Lid verbannen",
-      "create_invite_link": "Uitnodigingslink maken"
+      "create_invite_link": "Uitnodigingslink maken",
+      "get_my_posts": "Mijn posts bekijken",
+      "get_mentions": "Vermeldingen bekijken",
+      "search_recent": "Recente posts zoeken"
     }
   },
   "toolReview": {
@@ -14669,6 +14687,9 @@
     "telegram": {
       "token": "Bottoken",
       "steps": "Open in Telegram @BotFather, stuur /newbot, kies een naam en een gebruikersnaam die op “bot” eindigt en plak hier de token die je krijgt. Om een groep te lezen, voeg je de bot toe. Om in een kanaal te posten, maak je hem daar admin."
+    },
+    "x": {
+      "consent": "Agents met toegang tot X posten zelf op dit account. Een post verwijderen vraagt eerst, en de pagina van elke agent beperkt wat hij mag. Een X-account werkt in één workspace tegelijk."
     }
   },
   "database": {
