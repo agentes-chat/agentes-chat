@@ -2,7 +2,7 @@ import type { MissionCommandDecision, MissionCommandMeta } from "@agenteschat/cl
 import { ApiError, useMission, useMissionAct, useMissionCommands } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { formatTime } from "@agenteschat/client/lib/format";
-import { executorName } from "@agenteschat/client/lib/missions";
+import { blockedGroups, blockedText, executorName, ruleText } from "@agenteschat/client/lib/missions";
 import { Button, Checkbox, Chip, DetailsDialog, DetailsSection, Icon, Skeleton, Tip } from "@agenteschat/ui";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -115,23 +115,7 @@ export function MissionCommandCard({ command: meta }: { command: MissionCommandM
   );
 }
 
-/** `Bash(swift build *)` → `swift build …` (what people read). */
-export const ruleText = (rule: string) => {
-  const m = /^Bash\((.*)\)$/.exec(rule);
-  if (m) return (m[1] ?? "").replace(/ \*$/, " …");
-  const d = /^WebFetch\(domain:(.+)\)$/.exec(rule);
-  return d ? (d[1] ?? rule) : rule;
-};
-
-/** What a refused command reads as: the shell line, or the tool and its target ("Read …/notes.md"). */
-const blockedText = (d: { tool: string; command: string }) =>
-  d.tool === "Bash" || !d.tool ? d.command : `${d.tool} ${d.command}`;
-
-/** "python3", "zsh", "cd", "Read": the group a refused command goes in. */
-export function blockedGroup(d: { tool: string; command: string }) {
-  if (d.tool && d.tool !== "Bash") return d.tool;
-  return d.command.trim().split(/\s+/)[0]?.split("/").pop() || d.command.slice(0, 16);
-}
+export { ruleText };
 
 /** Released here, per task: the line keeps saying so while the session resumes (no stale "Ver"). */
 const releasedTasks = new Map<string, { count: number; delivered: boolean }>();
@@ -178,11 +162,7 @@ export function BlockedCommands({
         : closed
           ? t("missions.command.releaseClosed")
           : null;
-  const groups = new Map<string, number[]>();
-  blocked.forEach((d, i) => {
-    const key = blockedGroup(d);
-    groups.set(key, [...(groups.get(key) ?? []), i]);
-  });
+  const groups = blockedGroups(blocked);
   const release = () => {
     const commands = [...picked].sort((a, b) => a - b).flatMap((i) => (blocked[i] ? [blocked[i].command] : []));
     if (commands.length === 0) return;
@@ -250,7 +230,7 @@ export function BlockedCommands({
             </>
           }
         >
-          {[...groups.entries()].map(([key, indexes]) => (
+          {groups.map(([key, indexes]) => (
             <DetailsSection
               key={key}
               title={<code className="mi-mono">{key}</code>}

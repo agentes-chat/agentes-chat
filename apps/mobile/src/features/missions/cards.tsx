@@ -415,7 +415,12 @@ export function DecisionCardView({ decision: d, mission }: { decision: MissionDe
       <View style={styles.row}>
         <Icon name="flag" size={15} color={c.muted} />
         <Text variant="caption" tone="muted" style={styles.bold}>
-          {taken ? t("mobile.mission.decision.decided") : t("mobile.mission.decision.title")}
+          {taken
+            ? t("mobile.mission.decision.decided")
+            : d.status === "provisional"
+              ? // It went on with an option: tapping it again approves it, another one changes it.
+                t("missions.decision.provisional", { option: d.chosen ?? "" })
+              : t("mobile.mission.decision.title")}
         </Text>
       </View>
       <Text variant="body" style={[styles.bold, styles.title]}>

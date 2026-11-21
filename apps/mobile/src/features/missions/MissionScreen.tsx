@@ -1,11 +1,16 @@
 import {
   ApiError,
+  useApi,
   useMission,
+  useMissionAct,
+  useMissionCommands,
   useMissionDecisions,
+  useMissionDeliveries,
   useMissionReviews,
   useThreadInfo,
   useThreadTasks,
 } from "@agenteschat/client";
+import { errorText } from "@agenteschat/client/lib/errors";
 import { useTranslation } from "react-i18next";
 import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import Animated, { FadeIn, FadeOut, LayoutAnimationConfig, LinearTransition } from "react-native-reanimated";
@@ -27,6 +32,7 @@ import {
   SkeletonList,
   Text,
   useReducedMotion,
+  useToast,
 } from "@/ui";
 import { router } from "@/ui/navigation";
 import { ThreadOptions } from "../chat/sheets";
@@ -47,8 +53,11 @@ import { agentLook } from "../shared/logic";
 import { MONO, PushedHeader, Tile } from "../shared/parts";
 import { SheetHostProvider, useSheet } from "../shared/SheetHost";
 import { DecisionCardView, ReviewCardView, SetupFailedCard } from "./cards";
+import { CommandCardView } from "./commands";
+import { DeliveryCardView } from "./delivery";
 import {
   hoursSince,
+  isOpenMission,
   liveSessions,
   missionComputerText,
   missionTrack,
@@ -88,8 +97,21 @@ function Mission({ id }: { id: string }) {
   const tasks = useThreadTasks(orgId, m?.threadId);
   const reviews = useMissionReviews(orgId, id);
   const decisions = useMissionDecisions(orgId, id);
+  const deliveries = useMissionDeliveries(orgId, id);
+  const commands = useMissionCommands(orgId, id);
+  const api = useApi();
+  const toast = useToast();
+  const approveAll = useMissionAct(orgId, id, () => api.missions.approveProvisional(orgId, id));
   const pull = usePullRefresh(() =>
-    Promise.all([mission.refetch(), thread.refetch(), tasks.refetch(), reviews.refetch(), decisions.refetch()]),
+    Promise.all([
+      mission.refetch(),
+      thread.refetch(),
+      tasks.refetch(),
+      reviews.refetch(),
+      decisions.refetch(),
+      deliveries.refetch(),
+      commands.refetch(),
+    ]),
   );
   const computer = useComputerKind(orgId, m?.machine?.id);
   const cloud = useEdition() === "cloud";
@@ -124,8 +146,12 @@ function Mission({ id }: { id: string }) {
   const { done, total } = planProgress(m);
   const hours = hoursSince(m.startedAt, now);
   const sessions = liveSessions(tasks.data, m.id);
-  const waiting = m.canAct ? waitingCards(reviews.data, decisions.data) : { reviews: [], decisions: [] };
-  const waitingN = waiting.reviews.length + waiting.decisions.length;
+  const waiting = m.canAct
+    ? waitingCards(reviews.data, decisions.data, deliveries.data, commands.data?.commands)
+    : waitingCards([], []);
+  const waitingN =
+    waiting.deliveries.length + waiting.commands.length + waiting.reviews.length + waiting.decisions.length;
+  const provisional = waiting.decisions.filter((d) => d.status === "provisional").length;
   const rows = planRows(m.plan.items);
   const taken = takenDecisions(decisions.data);
   const channelName = thread.data?.channelName ?? "";
@@ -251,6 +277,16 @@ function Mission({ id }: { id: string }) {
             <Animated.View {...fade} layout={layout}>
               <Section title={t("mobile.home.waiting")} count={waitingN}>
                 <View style={styles.stack}>
+                  {waiting.deliveries.map((d) => (
+                    <Animated.View key={d.id} {...fade} layout={layout}>
+                      <DeliveryCardView delivery={d} mission={m} />
+                    </Animated.View>
+                  ))}
+                  {waiting.commands.map((cmd) => (
+                    <Animated.View key={cmd.id} {...fade} layout={layout}>
+                      <CommandCardView command={cmd} mission={m} />
+                    </Animated.View>
+                  ))}
                   {waiting.reviews.map((r) => (
                     <Animated.View key={r.id} {...fade} layout={layout}>
                       <ReviewCardView review={r} mission={m} />
@@ -261,6 +297,23 @@ function Mission({ id }: { id: string }) {
                       <DecisionCardView decision={d} mission={m} />
                     </Animated.View>
                   ))}
+                  {/* Every decision it went on with, approved at once (the web's header button). */}
+                  {isOpenMission(m) && provisional > 0 ? (
+                    <Button
+                      variant="secondary"
+                      wide
+                      icon="checks"
+                      label={t("missions.decision.approveAll", { count: provisional })}
+                      disabled={approveAll.isPending}
+                      onPress={() =>
+                        approveAll.mutate(undefined, {
+                          onSuccess: (out) =>
+                            toast({ title: t("missions.decision.approvedAll", { count: out.length }), icon: "check" }),
+                          onError: (error) => toast({ title: errorText(t, error), icon: "x" }),
+                        })
+                      }
+                    />
+                  ) : null}
                 </View>
               </Section>
             </Animated.View>

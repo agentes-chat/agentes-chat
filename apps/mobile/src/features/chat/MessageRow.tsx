@@ -46,7 +46,7 @@ import { brainUnavailableOf, messageToolOff } from "@agenteschat/client/lib/mach
 import { isMediaAfterReply, messageMediaOf } from "@agenteschat/client/lib/media";
 import { memberRoleColor } from "@agenteschat/client/lib/member-groups";
 import { serverBody } from "@agenteschat/client/lib/message-body";
-import { missionSetupOf } from "@agenteschat/client/lib/missions";
+import { machineTaskOf, missionCommandOf, missionSetupOf } from "@agenteschat/client/lib/missions";
 import { isStandInLine, noAiCardOf } from "@agenteschat/client/lib/no-ai";
 import { isTalkerReply, routineReportText, talkerWaited } from "@agenteschat/client/lib/notices";
 import { modelStandInText } from "@agenteschat/client/lib/plan-usage";
@@ -113,6 +113,8 @@ import { consultationHref, routineHref } from "../links/logic";
 import { MessageAbout, ResolvedLine } from "../live-files/talk/AboutLine";
 import { surfaceTagText } from "../me/surface";
 import { DecisionCard, MissionCard, PlanCard, ReviewCard, SetupFailedCard } from "../missions/cards";
+import { BlockedCommands, CommandCard } from "../missions/commands";
+import { DeliveryCard } from "../missions/delivery";
 import { AwayPill, BrainWait } from "../outages/WaitCard";
 import { SettingsProposals } from "../right-hand/SettingsCard";
 import { ReplyChips, TeamCard } from "../right-hand/TeamCard";
@@ -435,6 +437,11 @@ function RowBody({
   const opened = kept ? turnOpener(kept.items, body) : null;
   const review = missionCardRef(meta, "missionReview");
   const decision = missionCardRef(meta, "missionDecision");
+  // The mission's end (Concluir missão / Pedir ajustes) and a command the executor asks to run, from its agent only.
+  const delivery = isAgent ? missionCardRef(meta, "missionDelivery") : null;
+  const command = isAgent ? missionCommandOf(meta) : null;
+  // A task's end notice with the commands it was refused: one line, the list in a sheet.
+  const task = machineTaskOf(meta);
   const plan = missionPlanOf(meta);
   // Preparing the mission's copy of the project failed (ADR 0044): the card with "Tentar de novo".
   const setup = missionSetupOf(meta);
@@ -530,6 +537,11 @@ function RowBody({
       {link ? <MissionCard missionId={link.missionId} /> : null}
       {plan ? <PlanCard missionId={plan.missionId} goal={plan.goal} /> : null}
       {review ? <ReviewCard missionId={review.missionId} reviewId={review.id} /> : null}
+      {delivery ? <DeliveryCard missionId={delivery.missionId} deliveryId={delivery.id} /> : null}
+      {command ? <CommandCard missionId={command.missionId} commandId={command.id} /> : null}
+      {task?.missionId && task.blocked && task.blocked.length > 0 ? (
+        <BlockedCommands missionId={task.missionId} taskId={task.id} blocked={task.blocked} />
+      ) : null}
       {setup ? (
         <SetupFailedCard
           {...(setup.missionId ? { missionId: setup.missionId } : {})}

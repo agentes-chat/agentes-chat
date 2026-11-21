@@ -1,4 +1,12 @@
-import type { MachineTask, Mission, MissionDecision, MissionReview, PlanItem } from "@agenteschat/client";
+import type {
+  MachineTask,
+  Mission,
+  MissionCommand,
+  MissionDecision,
+  MissionDelivery,
+  MissionReview,
+  PlanItem,
+} from "@agenteschat/client";
 import type { TFunction } from "i18next";
 
 /**
@@ -57,13 +65,63 @@ export function waitingCount(m: Pick<Mission, "pending" | "canAct">) {
   );
 }
 
-/** The cards "Esperando você" shows on the mission: pending reviews, then pending decisions. */
-export function waitingCards(reviews: MissionReview[] | undefined, decisions: MissionDecision[] | undefined) {
+/**
+ * The cards "Esperando você" shows on the mission: the delivery to conclude, the commands asked, pending reviews and
+ * decisions (provisional ones included: approving them is the person's).
+ */
+export function waitingCards(
+  reviews: MissionReview[] | undefined,
+  decisions: MissionDecision[] | undefined,
+  deliveries?: MissionDelivery[] | undefined,
+  commands?: MissionCommand[] | undefined,
+) {
   return {
+    deliveries: (deliveries ?? []).filter((d) => d.status === "pending"),
+    commands: (commands ?? []).filter((c) => c.state === "pending"),
     reviews: (reviews ?? []).filter((r) => r.status === "pending"),
     decisions: (decisions ?? []).filter((d) => d.status === "pending" || d.status === "provisional"),
   };
 }
+
+/** "O que conferir · 2 de 3": the items this person checked (each one checks for themselves, as on the web). */
+export function deliveryChecked(d: Pick<MissionDelivery, "checklist">, meId: string | null) {
+  return {
+    done: meId ? d.checklist.filter((c) => c.checkedBy.includes(meId)).length : 0,
+    total: d.checklist.length,
+  };
+}
+
+/**
+ * Whether an item shows checked by me: the tap's own value until the delivery the server sends back says the same
+ * (the refetch lands after the request ends), then the server's.
+ */
+export function tickOf(tick: boolean | undefined, checkedBy: string[], meId: string | null) {
+  const server = Boolean(meId && checkedBy.includes(meId));
+  return tick ?? server;
+}
+
+/** The taps still ahead of the server: those the delivery doesn't carry yet (the same object when none settled). */
+export function settledTicks(
+  ticks: Record<string, boolean>,
+  checklist: { id: string; checkedBy: string[] }[],
+  meId: string | null,
+) {
+  const left = Object.fromEntries(
+    Object.entries(ticks).filter(([id, tick]) => {
+      const item = checklist.find((x) => x.id === id);
+      return item ? tick !== Boolean(meId && item.checkedBy.includes(meId)) : false;
+    }),
+  );
+  return Object.keys(left).length === Object.keys(ticks).length ? ticks : left;
+}
+
+/** Who else checked an item: their faces beside it. */
+export const othersWhoChecked = (item: { checkedBy: string[] }, meId: string | null) =>
+  item.checkedBy.filter((u) => u !== meId);
+
+/** A delivery's files as the conversation's file refs (the same thumbnails, opening in the Drive). */
+export const deliveryFiles = (d: Pick<MissionDelivery, "artifactIds">) =>
+  d.artifactIds.map((id) => ({ id, title: "", deleted: false }));
 
 /** Decisions already taken, newest first. */
 export function takenDecisions(decisions: MissionDecision[] | undefined) {
@@ -113,4 +171,13 @@ export function missionComputerText(
   if (names) return t(missionComputerKey(machine.online, cloud), { name: machine.name });
   if (machine.online) return null;
   return t(cloud ? "mobile.mission.computerNotAnsweringPlain" : "mobile.mission.computerOffPlain");
+}
+
+/** "Compartilhar": the workspace's people who aren't in the mission yet (its owner and participants left out), by name. */
+export function addablePeople<P extends { userId: string; name: string }>(
+  members: readonly P[],
+  people: { owner: { userId: string } | null; participants: { userId: string }[] } | undefined,
+) {
+  const taken = new Set([people?.owner?.userId, ...(people?.participants ?? []).map((p) => p.userId)]);
+  return members.filter((m) => !taken.has(m.userId)).sort((a, b) => a.name.localeCompare(b.name));
 }

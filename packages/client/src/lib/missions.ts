@@ -509,3 +509,31 @@ export function findingRefUrl(ref: string, repo: string | null): string | null {
   }
   return `https://github.com/${repo}/blob/HEAD/${path}${m[2] ? `#L${m[2]}` : ""}`;
 }
+
+/** A mission's allowed rule as people read it: `Bash(swift build *)` → `swift build …`, `WebFetch(domain:x.dev)` → `x.dev`. */
+export const ruleText = (rule: string) => {
+  const m = /^Bash\((.*)\)$/.exec(rule);
+  if (m) return (m[1] ?? "").replace(/ \*$/, " …");
+  const d = /^WebFetch\(domain:(.+)\)$/.exec(rule);
+  return d ? (d[1] ?? rule) : rule;
+};
+
+/** What a refused command reads as: the shell line, or the tool and its target ("Read …/notes.md"). */
+export const blockedText = (d: { tool: string; command: string }) =>
+  d.tool === "Bash" || !d.tool ? d.command : `${d.tool} ${d.command}`;
+
+/** "python3", "zsh", "cd", "Read": the group a refused command goes in. */
+export function blockedGroup(d: { tool: string; command: string }) {
+  if (d.tool && d.tool !== "Bash") return d.tool;
+  return d.command.trim().split(/\s+/)[0]?.split("/").pop() || d.command.slice(0, 16);
+}
+
+/** A task's refused commands by group, in their first order: `[group, indexes]` (the list behind "Ver"). */
+export function blockedGroups(blocked: { tool: string; command: string }[]): [string, number[]][] {
+  const groups = new Map<string, number[]>();
+  blocked.forEach((d, i) => {
+    const key = blockedGroup(d);
+    groups.set(key, [...(groups.get(key) ?? []), i]);
+  });
+  return [...groups.entries()];
+}
