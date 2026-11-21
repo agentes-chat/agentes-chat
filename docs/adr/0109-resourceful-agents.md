@@ -43,3 +43,12 @@ A second production case: asked to pull its owner's spend on one product from an
 ## Addendum (2026-11-03): no stop on a person-only step
 
 §4's blocker line ("a real blocker is only something a person must give: a code, a sign-in…") is replaced: a step only a person can do is handed to them with its request, then the agent goes on, and `untried` covers a stop on it while the means can hand it over. See ADR 0097, addendum 2026-11-03.
+
+## Addendum (2026-11-21): `web_fetch` through Firecrawl when one is set
+
+`web_fetch`'s GET reads only what the server sends: a page that builds its text in JavaScript comes back empty or as a shell, and the agent needs a browser on a computer to read it.
+
+1. **An optional Firecrawl server** (`FIRECRAWL_URL`, `FIRECRAWL_API_KEY` when it needs one): Firecrawl Local (one binary, no database or queue, the v2 API on port 3002), a self-hosted one or Firecrawl Cloud. When set, `web_fetch` asks its `/v2/scrape` for the page's Markdown first (main content, 30 s) and falls back to the GET on anything else: Firecrawl down, an error, an empty page, a status of 400 or more, a block. A block is then said in the GET's words, with the alternatives.
+2. **The guard stays this server's.** Only a URL that passes the public-URL guard is sent, and a page whose final URL (`metadata.url`) doesn't pass it is dropped for the GET, since Firecrawl follows redirects itself and may sit on this server's network. The call to Firecrawl itself goes to the operator's address, like SearXNG.
+3. **Usage:** the row's model is `firecrawl` instead of `fetch`; same provider `web`, cost 0.
+4. No npm dependency (Firecrawl is AGPL; its HTTP API is called directly), no change for a server without it.
