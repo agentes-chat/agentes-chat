@@ -14293,6 +14293,7 @@
     "icloudHint": "请使用你的 iCloud 邮件地址，比如 name@icloud.com，即使你的 Apple 账户使用的是 {{name}}。",
     "password": "应用专用密码",
     "passwordHelp": "在服务器上加密存储。之后谁也看不到。",
+    "gmailAppPasswordNote": "应用专用密码需要在您的 Google 账号中开启两步验证。",
     "passwordInvalid": "请粘贴应用专用密码。",
     "whatIs": "什么是应用专用密码？",
     "whatIsText": "专供智能体使用的密码。你在邮箱服务商的网站上创建，随时可以删除，不会影响你自己的密码。",

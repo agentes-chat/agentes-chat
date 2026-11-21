@@ -15101,6 +15101,7 @@ export const en = {
     icloudHint: "Use your iCloud Mail address, like name@icloud.com, even if your Apple Account uses {{name}}.",
     password: "App password",
     passwordHelp: "Stored encrypted on the server. Nobody sees it again.",
+    gmailAppPasswordNote: "An app password needs 2-Step Verification turned on in your Google Account.",
     passwordInvalid: "Paste the app password.",
     whatIs: "What is an app password?",
     whatIsText:

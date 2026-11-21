@@ -21,6 +21,17 @@ export interface FakeMail {
   suggested: string[];
 }
 
+export const GMAIL_PRESET = {
+  id: "gmail",
+  label: "Gmail",
+  imapHost: "imap.gmail.com",
+  imapPort: 993,
+  smtpHost: "smtp.gmail.com",
+  smtpPort: 587,
+  username: "address" as const,
+  appPasswordUrl: "https://myaccount.google.com/apppasswords",
+};
+
 export const MAIL_PROVIDERS: MailProviders = {
   composio: true,
   imap: true,

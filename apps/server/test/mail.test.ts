@@ -27,13 +27,29 @@ const ICLOUD = {
   appPasswordUrl: "https://account.apple.com",
 };
 
-function fakeMail() {
+const GMAIL = {
+  id: "gmail",
+  label: "Gmail",
+  imapHost: "imap.gmail.com",
+  imapPort: 993,
+  smtpHost: "smtp.gmail.com",
+  smtpPort: 587,
+  username: "address" as const,
+  appPasswordUrl: "https://myaccount.google.com/apppasswords",
+};
+
+function fakeMail(options: { composio?: boolean } = {}) {
   const box = createFakeMailConnector();
   const tester = createFakeMailTester();
   const composio = createFakeComposioClient();
   const mail: MailAdapters = {
-    composio: { client: composio.client, connector: box.connector },
-    imap: { connector: box.connector, poller: createFakeMailPoller().poller, tester: tester.tester, presets: [ICLOUD] },
+    composio: options.composio === false ? null : { client: composio.client, connector: box.connector },
+    imap: {
+      connector: box.connector,
+      poller: createFakeMailPoller().poller,
+      tester: tester.tester,
+      presets: [ICLOUD, GMAIL],
+    },
   };
   return { mail, box, tester, composio };
 }
@@ -444,4 +460,33 @@ test("email routines through the routines API, woken by a signed Composio webhoo
   expect(listed.routines.find((r) => r.id === routine.id)?.trigger.type).toBe("email");
   expect((await api(`/routines/${routine.id}`, { method: "DELETE" })).status).toBe(204);
   expect(fake.composio.state.triggers.size).toBe(0);
+});
+
+test("mail API: Gmail connects with an app password on a server without Composio", async () => {
+  const fake = fakeMail({ composio: false });
+  t = await createTestServer({ mail: fake.mail });
+  const owner = browser(t);
+  await signUp(owner, "owner@example.com");
+  const { orgId } = await seedOrg(owner);
+  const api = (path: string, init?: Parameters<typeof owner>[1]) =>
+    owner(`/api/app/organizations/${orgId}${path}`, init);
+
+  expect(await (await api("/mail/providers")).json()).toEqual({
+    composio: false,
+    imap: true,
+    presets: [ICLOUD, GMAIL],
+  });
+
+  fake.tester.state.result = { ok: true, sentFolder: "Sent Messages" };
+  const created = await api("/mail/accounts/imap", {
+    json: { preset: "gmail", address: "ana@gmail.com", password: "abcd efgh ijkl mnop" },
+  });
+  expect(created.status).toBe(201);
+  const body = (await created.json()) as { account: { provider: string; preset: string | null; status: string } };
+  expect(body.account).toMatchObject({ provider: "imap", preset: "gmail", status: "active" });
+  expect(fake.tester.state.calls.at(-1)?.imap).toMatchObject({
+    host: "imap.gmail.com",
+    smtpHost: "smtp.gmail.com",
+    username: "ana@gmail.com",
+  });
 });

@@ -135,7 +135,8 @@ export function mailRoutes(deps: AppDeps, log: Logger) {
       path: "/organizations/{orgId}/mail/providers",
       tags,
       security,
-      summary: "Which mailboxes this server can connect (Gmail/Outlook through Composio, IMAP presets)",
+      summary:
+        "Which mailboxes this server can connect (Gmail/Outlook through Composio, IMAP presets; Gmail by app password only without Composio)",
       request: { params: OrgParams },
       responses: {
         200: json(

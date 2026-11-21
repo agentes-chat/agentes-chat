@@ -15,6 +15,7 @@ import {
   NotFoundError,
   OrgDeletingError,
   openMailProvider,
+  mailProviders,
   revokeMailAccount,
   setAgentScopes,
   startComposioConnect,
@@ -90,6 +91,42 @@ test("an IMAP mailbox is tested before it's saved; the password is sealed and ne
     password: "abcd-efgh-ijkl-mnop",
   });
   expect(theirs).toMatchObject({ ok: true, account: { ownerUserId: member.id } });
+});
+
+test("Gmail with an app password uses the IMAP preset on a server without Composio", async () => {
+  m = await mailSetup({ composio: false });
+  const { f, deps, tester } = m;
+  tester.state.result = { ok: true, sentFolder: "Sent Messages" };
+  const r = await createImapAccount(deps, f.owner.id, f.org.id, {
+    preset: "gmail",
+    address: "ana@gmail.com",
+    password: "abcd efgh ijkl mnop",
+  });
+  if (!r.ok) throw new Error("expected ok");
+  expect(r.account).toMatchObject({ provider: "imap", via: "imap", preset: "gmail" });
+  expect(tester.state.calls.at(-1)?.imap).toMatchObject({
+    host: "imap.gmail.com",
+    smtpHost: "smtp.gmail.com",
+    username: "ana@gmail.com",
+    password: "abcd efgh ijkl mnop",
+  });
+});
+
+test("the Gmail IMAP preset is offered only when this server has no Composio", async () => {
+  const selfHosted = await mailSetup({ composio: false });
+  try {
+    expect(selfHosted.mail.composio).toBeNull();
+    expect(mailProviders(selfHosted.mail).presets.map((preset) => preset.id)).toEqual(["icloud", "gmail"]);
+  } finally {
+    await selfHosted.f.close();
+  }
+  const withComposio = await mailSetup();
+  try {
+    expect(mailProviders(withComposio.mail).presets.map((preset) => preset.id)).toEqual(["icloud"]);
+  } finally {
+    await withComposio.f.close();
+  }
+  expect(mailProviders(null)).toEqual({ composio: false, imap: false, presets: [] });
 });
 
 test("custom hosts can't point inside our network", async () => {

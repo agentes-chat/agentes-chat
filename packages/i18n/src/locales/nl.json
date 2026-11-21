@@ -14857,6 +14857,7 @@
     "icloudHint": "Gebruik je iCloud Mail-adres, zoals naam@icloud.com, ook als je Apple-account {{name}} gebruikt.",
     "password": "App-wachtwoord",
     "passwordHelp": "Versleuteld opgeslagen op de server. Niemand ziet het nog.",
+    "gmailAppPasswordNote": "Een app-wachtwoord vereist dat tweestapsverificatie is ingeschakeld voor je Google-account.",
     "passwordInvalid": "Plak het app-wachtwoord.",
     "whatIs": "Wat is een app-wachtwoord?",
     "whatIsText": "Een wachtwoord alleen voor de agents. Je maakt het aan op de site van je mail en kunt het altijd verwijderen, zonder je eigen wachtwoord te wijzigen.",

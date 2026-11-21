@@ -15338,6 +15338,7 @@
     "icloudHint": "Usa il tuo indirizzo di iCloud Mail, come nome@icloud.com, anche se il tuo Account Apple usa {{name}}.",
     "password": "Password per app",
     "passwordHelp": "Salvata cifrata sul server. Nessuno la vedrà più.",
+    "gmailAppPasswordNote": "Una password per app richiede la verifica in due passaggi attivata nel tuo account Google.",
     "passwordInvalid": "Incolla la password per app.",
     "whatIs": "Cos'è una password per app?",
     "whatIsText": "Una password solo per gli agenti. La crei sul sito della tua email e puoi eliminarla quando vuoi, senza cambiare la tua password.",

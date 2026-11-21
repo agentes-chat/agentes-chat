@@ -14789,6 +14789,7 @@
     "icloudHint": "Nutze deine iCloud-Mail-Adresse, etwa name@icloud.com, auch wenn dein Apple Account {{name}} verwendet.",
     "password": "App-Passwort",
     "passwordHelp": "Verschlüsselt auf dem Server gespeichert. Niemand sieht es wieder.",
+    "gmailAppPasswordNote": "Ein App-Passwort setzt voraus, dass die Zwei-Faktor-Bestätigung in deinem Google-Konto aktiviert ist.",
     "passwordInvalid": "Füge das App-Passwort ein.",
     "whatIs": "Was ist ein App-Passwort?",
     "whatIsText": "Ein Passwort nur für die Agenten. Du erstellst es auf der Website deines E-Mail-Anbieters und kannst es jederzeit löschen, ohne dein eigenes Passwort zu ändern.",
