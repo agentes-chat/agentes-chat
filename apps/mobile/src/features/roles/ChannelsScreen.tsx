@@ -217,7 +217,8 @@ export function RoleChannelsScreen({ roleId }: { roleId: string }) {
 
 /**
  * Quem vê #canal, pushed with Salvar: Todos, only some cargos (which), or only who is added, as the channel's own
- * details say it. The line under it says who leaves, who stops seeing it, or that its history opens.
+ * details say it. The line under it says who leaves, who stops seeing it, or that its history opens. From a cargo's
+ * Canais (`roleId`) a public channel starts on the other cargos; from the channel's own settings, as it is.
  */
 export function ChannelWhoScreen({ roleId, channelId }: { roleId: string; channelId: string }) {
   const { t, i18n } = useTranslation();
@@ -234,8 +235,8 @@ export function ChannelWhoScreen({ roleId, channelId }: { roleId: string; channe
     return (
       <Waiting title={title} failed={failed || channels.isError} error={loadError ?? channels.error} retry={retry} />
     );
-  const from = data.roles.find((r) => r.id === roleId);
-  if (!from || !channel) return <Gone title={title} />;
+  const from = roleId ? data.roles.find((r) => r.id === roleId) : undefined;
+  if ((roleId && !from) || !channel) return <Gone title={title} />;
   const start = whoSeesStart(data.roles, channel, from);
   const who: WhoSees = { ...start, ...edit };
   const input = whoSeesInput(who);

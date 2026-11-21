@@ -402,9 +402,11 @@ export interface WhoSees {
  * Where "Quem vê" opens when a public channel is unticked: "Só alguns cargos", every other cargo ticked (every cargo
  * from Todos). A channel that isn't public opens as it is.
  */
-export function whoSeesStart(roles: readonly OrgRole[], channel: Channel, from: OrgRole): WhoSees {
+export function whoSeesStart(roles: readonly OrgRole[], channel: Channel, from?: OrgRole): WhoSees {
   const a = accessOf(channel);
   if (a.mode !== "public") return { mode: a.mode, roleIds: new Set(a.roleIds) };
+  // Opened from the channel itself, not from a cargo: it starts as it is.
+  if (!from) return { mode: "public", roleIds: new Set() };
   return {
     mode: "roles",
     roleIds: new Set(
