@@ -162,14 +162,14 @@ const go = async (view?: "Dia" | "Mês" | "Agenda") => {
           number: 4521,
           title: "Ninguém pegou esta tarefa ainda",
           date: toYmd(monday),
-          assignees: [],
+          assignee: null,
         },
         {
           issueId: "iss-person",
           number: 10942,
           title: "Revisar o contrato de 2027",
           date: toYmd(addDays(monday, 1)),
-          assignees: [{ type: "person", id: "u-ale" }],
+          assignee: { type: "person", id: "u-ale" },
         },
       ],
     };
@@ -272,6 +272,38 @@ describe("Calendário at its worst", () => {
     } finally {
       if (was) Object.defineProperty(HTMLElement.prototype, "offsetHeight", was);
       else delete (HTMLElement.prototype as { offsetHeight?: number }).offsetHeight;
+    }
+  });
+
+  test("a layout that never answers the same height twice does not loop: the week still draws", async () => {
+    // A browser whose measured heights come back a little different on every measuring pass (a wrap that alternates
+    // at this width/zoom): the measured height feeds `layoutDay`/`runStacks`, which change the columns and so the
+    // wraps again, and the next pass measures something new. Without a stop, React cuts in with #185 ("Maximum update
+    // depth exceeded") and the page shows "Algo deu errado" instead of the calendar.
+    const wasHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "offsetHeight");
+    const wasAll = Element.prototype.querySelectorAll;
+    let pass = 0;
+    Element.prototype.querySelectorAll = function (this: Element, selectors: string) {
+      if (selectors === "[data-measure]") pass += 1;
+      return wasAll.call(this, selectors);
+    } as typeof Element.prototype.querySelectorAll;
+    Object.defineProperty(HTMLElement.prototype, "offsetHeight", {
+      configurable: true,
+      get(this: HTMLElement) {
+        // Whole pixels that differ on each pass: never the same answer twice.
+        return this.dataset.measure ? 40 + (pass % 2) : 0;
+      },
+    });
+    try {
+      await go();
+      // The calendar is on screen, not the crash screen, and the measuring stopped instead of running forever.
+      expect(document.querySelector(".cal-week__col")).not.toBeNull();
+      expect(document.body.textContent).not.toContain("Algo deu errado");
+      expect(pass).toBeLessThan(60);
+    } finally {
+      if (wasHeight) Object.defineProperty(HTMLElement.prototype, "offsetHeight", wasHeight);
+      else delete (HTMLElement.prototype as { offsetHeight?: number }).offsetHeight;
+      Element.prototype.querySelectorAll = wasAll;
     }
   });
 

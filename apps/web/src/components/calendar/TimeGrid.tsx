@@ -36,6 +36,9 @@ const HOURS = Array.from({ length: 24 }, (_, h) => h);
 /** Movement before a press on a chip becomes a drag (px). */
 const DRAG_SLOP = 4;
 
+/** How many measuring passes in a row may change the heights before the grid keeps what it has (see below). */
+const MEASURE_PASSES = 3;
+
 interface Gesture {
   kind: "create" | "move" | "resize";
   dayIndex: number;
@@ -95,6 +98,9 @@ export function TimeGrid({
   const gestureRef = useRef<Gesture | null>(null);
   gestureRef.current = gesture;
   const suppressClick = useRef(false);
+  /** Measuring passes spent on these heights in a row (see the measuring effect), and the blocks they are of. */
+  const passes = useRef(0);
+  const measuredKeys = useRef("");
   // Routines that run often get their own band under the all-day bars.
   const bars = layoutBars(
     items.filter((it) => !it.runs),
@@ -124,12 +130,37 @@ export function TimeGrid({
   const [heights, setHeights] = useState<ReadonlyMap<string, number>>(() => new Map());
   useLayoutEffect(() => {
     const drawn = new Map<string, number>();
+    // Whole pixels: a fractional height (zoom, font, sub-pixel rounding) can differ from itself on every pass and
+    // never settle.
     for (const el of scroller.current?.querySelectorAll<HTMLElement>("[data-measure]") ?? [])
-      if (el.offsetHeight > 0) drawn.set(el.dataset.measure ?? "", el.offsetHeight);
-    const moved =
-      drawn.size !== heights.size || [...drawn].some(([key, h]) => Math.abs((heights.get(key) ?? 0) - h) > 0.5);
-    if (moved) setHeights(drawn);
+      if (el.offsetHeight > 0) drawn.set(el.dataset.measure ?? "", Math.round(el.offsetHeight));
+    // Other items or other days: a new layout, with its own passes.
+    const keys = [...drawn.keys()].sort().join(",");
+    if (keys !== measuredKeys.current) {
+      measuredKeys.current = keys;
+      passes.current = 0;
+    }
+    const moved = drawn.size !== heights.size || [...drawn].some(([key, h]) => heights.get(key) !== h);
+    if (!moved) {
+      // It settled: the next change may measure again from zero.
+      passes.current = 0;
+      return;
+    }
+    // A layout that answers a different height on every pass (a wrap that alternates at this width) would render for
+    // ever: React cuts it with "Maximum update depth exceeded" (#185) and the page shows "Algo deu errado" instead of
+    // the calendar. After a few passes it keeps the heights it has.
+    if (passes.current >= MEASURE_PASSES) return;
+    passes.current += 1;
+    setHeights(drawn);
   });
+  // A resize or a zoom (a phone turned, a window narrowed) is a new layout: it measures again from zero.
+  useEffect(() => {
+    const again = () => {
+      passes.current = 0;
+    };
+    window.addEventListener("resize", again);
+    return () => window.removeEventListener("resize", again);
+  }, []);
 
   const colAt = (clientX: number, clientY: number) => {
     const hit = typeof document.elementFromPoint === "function" ? document.elementFromPoint(clientX, clientY) : null;
