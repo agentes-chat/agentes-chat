@@ -178,6 +178,7 @@ export function parse(files: ImportFile[], d: Draft) {
       prompt: str(r.prompt),
       channel: str(r.channel) || null,
       trigger: trigger(obj(r.trigger)),
+      paused: r.paused === true,
     });
   }
   for (const n of list(b.notes).map(obj)) {

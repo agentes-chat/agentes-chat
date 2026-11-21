@@ -1293,6 +1293,28 @@ describe("agentes.chat bundle", () => {
     expect(b.notes.map((n) => [n.key, n.agent])).toEqual([["n1", "a-1"]]);
   });
 
+  test("routines marked paused in a bundle arrive paused; active or unmarked ones stay active", () => {
+    const b = parseImport([
+      {
+        name: "agentes-chat-export.json",
+        text: JSON.stringify({
+          ...ourBundle,
+          source: { app: "agenteschat", ref: "org-1", name: "Acme", files: [] },
+          routines: [
+            { ...ourBundle.routines[0], key: "r-paused", paused: true },
+            { ...ourBundle.routines[0], key: "r-active", paused: false },
+            { ...ourBundle.routines[0], key: "r-default" },
+          ],
+        }),
+      },
+    ]);
+    expect(b.routines.map((r) => [r.key, r.paused])).toEqual([
+      ["r-paused", true],
+      ["r-active", undefined],
+      ["r-default", undefined],
+    ]);
+  });
+
   test("the export prompt asks for every agent, not only the one in the chat", () => {
     expect(EXPORT_PROMPT).toContain("Export all of my agents in this one file, not only the one I'm talking to now");
     expect(EXPORT_PROMPT).toContain('"agents" has one entry for every agent I have');
