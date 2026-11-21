@@ -1880,7 +1880,8 @@ export async function getMessage(db: Executor, orgId: string, messageId: string)
  * Lists messages the user may read. Without `threadId`: top-level channel
  * messages, newest page first (returned oldest → newest); `after` pages
  * forward instead, and `around` is the page with that message in its middle,
- * so a link opens at any distance. With `threadId`: the thread root and its replies.
+ * so a link opens at any distance. With `threadId`: the page is of that thread's replies;
+ * the newest and `before` pages also include the root.
  */
 export async function listMessages(
   db: Database,
@@ -1899,29 +1900,14 @@ export async function listMessages(
   await requireChannelAccess(db, userId, orgId, channelId);
   const limit = Math.min(options.limit ?? 50, 200);
   const scope = and(eq(messages.orgId, orgId), eq(messages.channelId, channelId), isNull(messages.deletedAt));
-  if (options.threadId) {
-    const root = await getMessage(db, orgId, options.threadId);
-    if (!root || root.channelId !== channelId) throw new NotFoundError("Thread not found");
-    // The latest ones, as the channel's list: past the limit, a reply just said must not be the one left out.
-    const replies = await db
-      .select()
-      .from(messages)
-      .where(
-        and(
-          scope,
-          eq(messages.threadId, options.threadId),
-          options.before ? lt(messages.createdAt, options.before) : undefined,
-        ),
-      )
-      .orderBy(desc(messages.createdAt), desc(messages.id))
-      .limit(limit);
-    return withReceipts(db, orgId, [root, ...replies.reverse()]);
-  }
-  const top = and(scope, isNull(messages.threadId));
+  const threadId = options.threadId ?? null;
+  const root = threadId ? await getMessage(db, orgId, threadId) : null;
+  if (threadId && (!root || root.channelId !== channelId)) throw new NotFoundError("Thread not found");
+  const conversation = and(scope, threadId ? eq(messages.threadId, threadId) : isNull(messages.threadId));
   let rows: Message[];
   if (options.around) {
     const target = await getMessage(db, orgId, options.around);
-    if (!target || target.channelId !== channelId || target.threadId || target.deletedAt)
+    if (!target || target.channelId !== channelId || target.threadId !== threadId || target.deletedAt)
       throw new NotFoundError("Message not found");
     const at = target.createdAt;
     const half = Math.floor(limit / 2);
@@ -1929,13 +1915,23 @@ export async function listMessages(
       db
         .select()
         .from(messages)
-        .where(and(top, or(lt(messages.createdAt, at), and(eq(messages.createdAt, at), lt(messages.id, target.id)))))
+        .where(
+          and(
+            conversation,
+            or(lt(messages.createdAt, at), and(eq(messages.createdAt, at), lt(messages.id, target.id))),
+          ),
+        )
         .orderBy(desc(messages.createdAt), desc(messages.id))
         .limit(half),
       db
         .select()
         .from(messages)
-        .where(and(top, or(gt(messages.createdAt, at), and(eq(messages.createdAt, at), gt(messages.id, target.id)))))
+        .where(
+          and(
+            conversation,
+            or(gt(messages.createdAt, at), and(eq(messages.createdAt, at), gt(messages.id, target.id))),
+          ),
+        )
         .orderBy(asc(messages.createdAt), asc(messages.id))
         .limit(Math.max(0, limit - half - 1)),
     ]);
@@ -1944,7 +1940,7 @@ export async function listMessages(
     rows = await db
       .select()
       .from(messages)
-      .where(and(top, gt(messages.createdAt, options.after)))
+      .where(and(conversation, gt(messages.createdAt, options.after)))
       .orderBy(asc(messages.createdAt), asc(messages.id))
       .limit(limit);
   } else {
@@ -1952,13 +1948,14 @@ export async function listMessages(
       await db
         .select()
         .from(messages)
-        .where(and(top, options.before ? lt(messages.createdAt, options.before) : undefined))
+        .where(and(conversation, options.before ? lt(messages.createdAt, options.before) : undefined))
         .orderBy(desc(messages.createdAt), desc(messages.id))
         .limit(limit)
     ).reverse();
+    if (root) rows.unshift(root);
   }
   const views = await withReceipts(db, orgId, rows);
-  return options.includeReplies ? withReplies(db, orgId, views) : views;
+  return options.includeReplies && !threadId ? withReplies(db, orgId, views) : views;
 }
 
 /** How many replies each thread has, when the last came, and the last three (with usage). */
