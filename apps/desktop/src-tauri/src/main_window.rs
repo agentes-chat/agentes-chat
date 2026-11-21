@@ -302,6 +302,8 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
         (Some(x), Some(y)) => builder.position(x, y),
         _ => builder.center(),
     };
+    #[cfg(target_os = "windows")]
+    let builder = builder.zoom_hotkeys_enabled(true);
     #[cfg(target_os = "macos")]
     let builder = builder
         .title_bar_style(tauri::TitleBarStyle::Overlay)
