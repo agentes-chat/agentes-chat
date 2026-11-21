@@ -2655,6 +2655,8 @@
     "noTopic": "説明なし",
     "nameLabel": "名前",
     "nameHelp": "全員に対して変更されます。古いリンクも引き続き使えます。",
+    "replyInThreads": "エージェントはスレッドで返信",
+    "replyInThreadsHelp": "チャンネルで呼ばれたエージェントは、そのメッセージの下のスレッドで答え、チャンネルにはそのスレッドが1行で表示されます。進行中の作業はそのままです。",
     "nameTaken": "#{{name}}はすでにあります。",
     "generalName": "#generalの名前は変更できません。",
     "archive": "チャンネルをアーカイブ",
@@ -9554,6 +9556,7 @@
       "openShort": "開く",
       "reply": "返信",
       "replies_other": "{{count}}件の返信",
+      "replying_other": "{{names}}がスレッドで返信中",
       "closed_other": "スレッドを閉じました · {{title}} · {{count}}件のメッセージ",
       "archived_other": "アーカイブした{{count}}件のスレッドはここに表示されません",
       "see": "見る"

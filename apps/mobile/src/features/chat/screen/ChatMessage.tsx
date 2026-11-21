@@ -43,6 +43,7 @@ export const ChatMessage = memo(function ChatMessage({
   canReply,
   canMission,
   thread,
+  replying,
   menuThread,
   aboveThread,
   markReceipt,
@@ -65,6 +66,8 @@ export const ChatMessage = memo(function ChatMessage({
   canMission: boolean;
   /** The thread it starts, a link under it in the conversation. */
   thread: ThreadInfo | undefined;
+  /** The agents replying in the thread under it before it has a link, comma-joined (`replyingUnder`). */
+  replying: string | undefined;
   /** The thread its menu works with: the one it starts or the one it is in. */
   menuThread: ThreadInfo | undefined;
   aboveThread: boolean;
@@ -108,6 +111,7 @@ export const ChatMessage = memo(function ChatMessage({
       aboveThread={aboveThread}
       meId={meId}
       thread={thread}
+      replying={replying}
       inThread={isThread}
       {...(hands.onLongPress ? { onLongPress: hands.onLongPress } : {})}
       onRetry={hands.onRetry}

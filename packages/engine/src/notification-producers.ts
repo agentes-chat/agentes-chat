@@ -28,6 +28,7 @@ import {
   unaskedGroup,
 } from "./notifications";
 import { maySql, type RolePermission } from "./permissions";
+import { replyThreadOf } from "./runs";
 import { secretLabelOf } from "./secrets";
 import { stretchCardOf } from "./stretch";
 import { adminChannelSql, fileConversationReaderSql, taskReadersAmong } from "./task-access";
@@ -1173,7 +1174,14 @@ const runFailedGroup = (run: { agentId: string; channelId: string; threadRootId:
  */
 export async function notifyRunFailed(
   deps: NotificationDeps,
-  run: { orgId: string; agentId: string; channelId: string; threadRootId: string; triggerMessageId: string },
+  run: {
+    orgId: string;
+    agentId: string;
+    channelId: string;
+    threadRootId: string;
+    triggerMessageId: string;
+    replyInThread: boolean;
+  },
   userId: string | null,
   reason: string,
   cause?: { code?: string; plan?: string },
@@ -1184,7 +1192,7 @@ export async function notifyRunFailed(
   const groupKey = runFailedGroup(run);
   const source = {
     channelId: run.channelId,
-    ...(run.threadRootId !== run.triggerMessageId ? { threadId: run.threadRootId } : {}),
+    ...(replyThreadOf(run) ? { threadId: run.threadRootId } : {}),
     messageId: run.triggerMessageId,
     agentId: run.agentId,
     ...(channel?.name ? { label: channel.name } : {}),

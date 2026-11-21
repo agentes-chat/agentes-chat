@@ -14,7 +14,8 @@ import { requireActiveMembership } from "./organizations";
 import { enqueue } from "./outbox";
 import { personCanPost } from "./routine-state";
 import { ACTIVE_RUN_STATUSES, takeInbox } from "./run-inbox";
-import { continuableEnd } from "./runs";
+import { placeAfter } from "./run-scope";
+import { continuableEnd, replyThreadOf } from "./runs";
 import { announceWork, reopenWork, updatesThreadOf } from "./works";
 
 const { agentRuns, agents, messages, channels, users } = schema;
@@ -89,10 +90,9 @@ export async function continueRun(
 
   // The new run answers where the stopped reply is: its thread, or (flat: a DM) the reply itself. Long work (ADR 0121)
   // goes on in its own thread, as the same work; a handed one where it was handed the work, not where it reports.
+  const place = placeAfter(stopped, reply);
   const threadRootId =
-    work?.how === "handed"
-      ? stopped.threadRootId
-      : ((work ? updatesThreadOf(work) : null) ?? reply.threadId ?? reply.id);
+    work?.how === "handed" ? stopped.threadRootId : ((work ? updatesThreadOf(work) : null) ?? place.threadRootId);
   const roots = [...new Set([stopped.threadRootId, threadRootId])];
   // A DM is one conversation; a channel's are its threads.
   const inConversation = row.channelKind === "dm" ? undefined : inArray(agentRuns.threadRootId, roots);
@@ -149,6 +149,7 @@ export async function continueRun(
         channelId: stopped.channelId,
         threadRootId,
         triggerMessageId: reply.id,
+        replyInThread: place.replyInThread,
         // Nobody brings it in this time: a person asked for it, so it starts a stretch of its own (ADR 0089).
         trigger: stopped.trigger === "router" ? "mention" : stopped.trigger,
         hop: 1,
@@ -319,6 +320,8 @@ export async function restartAfterStopAndSend(
   if (!said) return null;
   const [person] = await db.select({ name: users.name }).from(users).where(eq(users.id, by));
   const line = `[${person?.name ?? "A person"} stopped you to say this:]\n\n${said.body}`;
+  // It goes on where the stopped run answers, wherever the message that stopped it is (ADR 0214).
+  const place = placeAfter(stopped, said);
   const newRunId = Bun.randomUUIDv7();
   const created = await db
     .transaction(async (tx) => {
@@ -330,7 +333,7 @@ export async function restartAfterStopAndSend(
           orgId: stopped.orgId,
           agentId: stopped.agentId,
           channelId: stopped.channelId,
-          threadRootId: said.threadId ?? said.id,
+          ...place,
           triggerMessageId: said.id,
           trigger: stopped.trigger === "router" ? "mention" : stopped.trigger,
           // The person's message is its stretch (ADR 0089).
@@ -389,6 +392,7 @@ export async function restartAfterStopAndSend(
     runId: stopped.id,
     messageIds: [said.id],
   });
-  await publishChannelEvent(deps.pubsub, { type: "agent.thinking", ...where, runId: newRunId });
+  const threadId = replyThreadOf({ ...place, triggerMessageId: said.id });
+  await publishChannelEvent(deps.pubsub, { type: "agent.thinking", ...where, threadId, runId: newRunId });
   return newRunId;
 }

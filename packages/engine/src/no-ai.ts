@@ -16,6 +16,7 @@ import { getMessage, insertMessage, type Message, messageView } from "./messages
 import { can, type Membership, requireActiveMembership } from "./organizations";
 import { type RightHandStandIn, type StandInWhy, standInWhy } from "./right-hand";
 import { type RouterDeps, routeMessage } from "./router";
+import { inChannelRun } from "./run-scope";
 import { bodyCode } from "./run-tools";
 import { type AgentRun, NO_AI, replyThreadOf } from "./runs";
 import { assertCanWork, billingHold } from "./standing";
@@ -284,9 +285,7 @@ async function answeringRuns(db: Database, message: Message, card: NoAiCard | nu
         eq(agentRuns.channelId, message.channelId),
         eq(agentRuns.background, false),
         // Where the card is: its thread, or the main timeline (a run asked there has its trigger as its root).
-        message.threadId
-          ? eq(agentRuns.threadRootId, message.threadId)
-          : sql`${agentRuns.threadRootId} = ${agentRuns.triggerMessageId}`,
+        message.threadId ? eq(agentRuns.threadRootId, message.threadId) : inChannelRun(sql`${agentRuns}`),
       ),
     )
     .orderBy(desc(agentRuns.createdAt))
@@ -336,14 +335,12 @@ async function restartFailedRun(deps: AnswerNowDeps, userId: string, failed: Age
       .where(and(eq(agentRuns.id, failed.id), eq(agentRuns.status, "failed")))
       .returning({ id: agentRuns.id });
     if (!gone) return null;
-    // A person's click: an agent's message it answers starts a stretch of its own (ADR 0089).
-    const next = await startOrJoinRun(
-      tx,
-      trigger,
-      failed.agentId,
-      failed.trigger,
-      trigger.hop >= 1 ? { granted: Bun.randomUUIDv7() } : {},
-    );
+    // A person's click: an agent's message it answers starts a stretch of its own (ADR 0089). It answers where the
+    // failed run did (ADR 0214).
+    const next = await startOrJoinRun(tx, trigger, failed.agentId, failed.trigger, {
+      after: failed,
+      ...(trigger.hop >= 1 ? { granted: Bun.randomUUIDv7() } : {}),
+    });
     if (!next) return null;
     const runId = "created" in next ? next.created.id : next.joined;
     await recordAudit(tx, {
@@ -375,6 +372,7 @@ async function restartFailedRun(deps: AnswerNowDeps, userId: string, failed: Age
         channelId: agentRuns.channelId,
         threadRootId: agentRuns.threadRootId,
         triggerMessageId: agentRuns.triggerMessageId,
+        replyInThread: agentRuns.replyInThread,
       })
       .from(agentRuns)
       .where(and(eq(agentRuns.orgId, failed.orgId), eq(agentRuns.id, started.runId)));

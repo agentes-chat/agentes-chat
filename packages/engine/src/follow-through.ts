@@ -151,7 +151,7 @@ const isFollowUpLine = (m: Pick<Message, "meta">) =>
  */
 async function pendingFollowUps(
   db: Executor,
-  run: Pick<AgentRun, "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId"> & {
+  run: Pick<AgentRun, "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId" | "replyInThread"> & {
     confidential?: boolean;
   },
   personId: string | null,
@@ -240,7 +240,10 @@ export async function comesBackHere(db: Executor, run: AgentRun) {
  */
 export async function wakesLater(
   db: Executor,
-  run: Pick<AgentRun, "id" | "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId" | "createdAt">,
+  run: Pick<
+    AgentRun,
+    "id" | "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId" | "replyInThread" | "createdAt"
+  >,
   detachedWaits: { waitId: string }[] = [],
 ) {
   const channel = await getChannelCached(db, run.orgId, run.channelId);

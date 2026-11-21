@@ -21,7 +21,7 @@ import { type CanceledReturn, canceledReturns, type PendingReturn, pendingReturn
 import { replyExcerpt } from "./messages";
 import { requireActiveMembership } from "./organizations";
 import { pendingIds } from "./recovery";
-import { canceledBySql, personStopOf, shownStatusSql } from "./runs";
+import { canceledBySql, personStopOf, replyThreadOf, shownStatusSql } from "./runs";
 import { channelReaderSql } from "./task-access";
 import { mayContinuePause } from "./usage-pause";
 
@@ -247,6 +247,14 @@ export interface TaskManagerView {
   doneToday?: number;
 }
 
+/** Where a run of a raw row answers (`replyThreadOf`). */
+const threadOfRow = (r: { thread_root_id: string; trigger_message_id: string; reply_in_thread: boolean | string }) =>
+  replyThreadOf({
+    threadRootId: r.thread_root_id,
+    triggerMessageId: r.trigger_message_id,
+    replyInThread: r.reply_in_thread === true || r.reply_in_thread === "t",
+  });
+
 type Row = {
   id: string;
   agent_id: string;
@@ -254,6 +262,7 @@ type Row = {
   status: string;
   thread_root_id: string;
   trigger_message_id: string;
+  reply_in_thread: boolean | string;
   started_at: string | Date | null;
   created_at: string | Date;
   finished_at: string | Date | null;
@@ -370,6 +379,7 @@ async function visibleRuns(
   const limit = which.active ? TASK_MANAGER_MAX : TASK_MANAGER_ENDED_MAX;
   return rowsOf<Row>(
     await db.execute(sql`select r.id, r.agent_id, r.channel_id, ${shownStatusSql} as status, r.thread_root_id, r.trigger_message_id,
+        r.reply_in_thread,
         r.started_at, r.created_at, r.finished_at, r.error, c.kind, c.name, c.dm_key, t.title,
         array_to_json(r.pending_message_ids || r.after_message_ids) as pending, r.background, r.brain,
         a.owner_user_id, a.machine_id, mc.name as machine_name,
@@ -515,11 +525,13 @@ async function handedFrom(db: Database, userId: string, orgId: string, runIds: s
     name: string;
     thread_root_id: string;
     trigger_message_id: string;
+    reply_in_thread: boolean | string;
     reply_message_id: string | null;
     title: string | null;
   }>(
     await db.execute(sql`with ${anchorsSql(orgId, runIds)}
-      select an.run_id, c.id as channel_id, c.kind, c.name, a.thread_root_id, a.trigger_message_id, a.reply_message_id,
+      select an.run_id, c.id as channel_id, c.kind, c.name, a.thread_root_id, a.trigger_message_id, a.reply_in_thread,
+        a.reply_message_id,
         t.title
       from anchors an
       join ${agentRuns} a on a.id = an.anchor_id
@@ -535,7 +547,7 @@ async function handedFrom(db: Database, userId: string, orgId: string, runIds: s
         channelId: r.channel_id,
         channelKind: r.kind,
         channelName: r.kind === "channel" ? r.name : null,
-        threadId: r.thread_root_id === r.trigger_message_id ? null : r.thread_root_id,
+        threadId: threadOfRow(r),
         messageId: r.reply_message_id,
         label: replyExcerpt(r.title?.trim() ?? "", 80) || null,
       },
@@ -690,7 +702,7 @@ export async function taskManager(
     channelKind: r.kind,
     channelName: r.kind === "dm" ? null : r.name,
     betweenAgents: betweenAgents(r),
-    threadId: r.thread_root_id === r.trigger_message_id ? null : r.thread_root_id,
+    threadId: threadOfRow(r),
   });
   const routineOf = (r: Row) => (r.routine_id ? { id: r.routine_id, name: r.routine_name ?? "" } : null);
   const tasks: ManagedTask[] = active.map((r) => ({

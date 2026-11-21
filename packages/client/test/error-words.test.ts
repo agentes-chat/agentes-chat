@@ -402,6 +402,8 @@ const PLAIN_LINE = new Set([
   "channel.file_conversation",
   "channel.task_conversation",
   "message.live_ref",
+  // The apps offer "Agents reply in threads" only in a regular channel's details (ADR 0214).
+  "channel.reply_in_threads",
   // The apps offer Resolve only on a comment with a pin on a picture, a video or a PDF (ADR 0208).
   "message.not_comment",
   // Only an agent writes an SVG picture (ADR 0196 §8): the refusal goes back to its tool call, never to a person.

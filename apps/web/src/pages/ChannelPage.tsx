@@ -221,6 +221,7 @@ import {
   SkeletonConversationRows,
   SkeletonGroup,
   Spinner,
+  Switch,
   skeletonOnScreen,
   type VoiceNotice,
 } from "@agenteschat/ui";
@@ -364,6 +365,7 @@ import { NewMissionDialog } from "@/components/missions/MissionDialogs";
 import { NavToggle } from "@/components/NavDrawer";
 import { CHANNEL_NAME, ChannelAccessChoice, toChannelName } from "@/components/NewChannelDialog";
 import { FailedRunFix, KeyGuardDialog, NoAiBanner, NoAiCard, useNoAiAutoOpen } from "@/components/NoAi";
+import { PrefRow } from "@/components/NoticePrefs";
 import { useNotificationOpener } from "@/components/NotificationOpen";
 import { useNewAgent } from "@/components/new-agent/NewAgentDialog";
 import { OpensAgent } from "@/components/OpensAgent";
@@ -401,6 +403,7 @@ import {
   ChannelThreadsContext,
   type ChannelThreadsView,
   ClosedThreadLine,
+  ThreadReplyingLine,
   ThreadReplyLine,
   ThreadStartLine,
   useChannelThreadsView,
@@ -5106,6 +5109,10 @@ export const TimelineMessage = memo(function TimelineMessage({
             ))}
             {/* A "Responder" thread went on from here: its line (opens the panel). */}
             {threadLine && <ThreadReplyLine thread={threadLine.thread} count={threadLine.count} />}
+            {/* Its agents answer in its thread (ADR 0214) and no reply is there yet: who is replying. */}
+            {threadsView && !threadLine && !m.threadId && !m.local && !threadsView.byId.has(m.id) && (
+              <ThreadReplyingLine messageId={m.id} channelId={m.channelId} />
+            )}
             {/* A comment on a picture, a video or a PDF that was resolved (ADR 0208): by whom, when. */}
             {liveRef && <ResolvedLine message={m} />}
             {feedback && (
@@ -5637,6 +5644,27 @@ function ChannelDetails({
                   <Field label={t("channelCategories.category")} id="channel-edit-category">
                     <CategorySelect value={channel.categoryId ?? null} onChange={moveTo} canCreate={editable} />
                   </Field>
+                  <PrefRow
+                    id="channel-edit-threads"
+                    icon="thread"
+                    label={t("channel.replyInThreads")}
+                    hint={t("channel.replyInThreadsHelp")}
+                    control={
+                      <Switch
+                        checked={Boolean(channel.replyInThreads)}
+                        onCheckedChange={(on) =>
+                          update.mutate(
+                            { replyInThreads: on },
+                            {
+                              onSuccess: () => setSaved(true),
+                              onError: (e) => toast.show(errorText(t, e), "error"),
+                            },
+                          )
+                        }
+                        disabled={!editable || update.isPending}
+                      />
+                    }
+                  />
                 </DialogBody>
               )}
               {section === "permissions" && (

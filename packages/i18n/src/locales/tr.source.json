@@ -6836,6 +6836,12 @@
   "channel.nameHelp": {
     "value": "Changes for everyone. Old links keep working."
   },
+  "channel.replyInThreads": {
+    "value": "Agents reply in threads"
+  },
+  "channel.replyInThreadsHelp": {
+    "value": "An agent called in the channel answers in the thread under that message, and the channel shows one line for it. Work already going stays where it is."
+  },
   "channel.nameTaken": {
     "value": "There is already #{{name}}."
   },
@@ -24224,6 +24230,12 @@
     "value": {
       "one": "{{count}} reply",
       "other": "{{count}} replies"
+    }
+  },
+  "threads.line.replying": {
+    "value": {
+      "one": "{{names}} is replying in the thread",
+      "other": "{{names}} are replying in the thread"
     }
   },
   "threads.line.closed": {

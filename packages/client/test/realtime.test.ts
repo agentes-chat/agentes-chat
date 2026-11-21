@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { ChannelEvent, Message } from "../src/index";
+import type { ChannelEvent, LiveRun, Message } from "../src/index";
 import {
   agentStateIn,
   agentStateOfRun,
@@ -11,6 +11,7 @@ import {
   parseServerFrame,
   RealtimeConnection,
   realtimeUrl,
+  replyingUnder,
   retargetProvisional,
   runningAgents,
   runsInChannel,
@@ -1002,5 +1003,30 @@ describe("user events and resumed runs", () => {
     s = applyChannelEvent(s, { type: "agent.run", ...base, status: "running" });
     s = applyChannelEvent(s, { type: "agent.typing", ...base } as ChannelEvent);
     expect(runsInChannel(s, "c1")[0]?.status).toBe("running");
+  });
+});
+
+describe("agents replying in a thread under the message that asked them (ADR 0214)", () => {
+  const run = (over: Partial<LiveRun>): LiveRun => ({
+    runId: "r1",
+    agentId: "ada",
+    channelId: "c1",
+    threadId: "m1",
+    status: "running",
+    ...over,
+  });
+
+  test("under a message of the main timeline whose thread has no link yet, each agent once", () => {
+    const runs = [run({}), run({ runId: "r2", agentId: "ben" }), run({ runId: "r3" })];
+    expect(replyingUnder(runs, new Set(["m1"]), new Set())).toEqual(new Map([["m1", ["ada", "ben"]]]));
+  });
+
+  test("nothing once the thread has its link, for a run that answers in the main timeline, a guess or a failure", () => {
+    const top = new Set(["m1"]);
+    expect(replyingUnder([run({})], top, new Set(["m1"])).size).toBe(0);
+    expect(replyingUnder([run({ replyInThread: false })], top, new Set()).size).toBe(0);
+    expect(replyingUnder([run({ provisional: true })], top, new Set()).size).toBe(0);
+    expect(replyingUnder([run({ status: "failed" })], top, new Set()).size).toBe(0);
+    expect(replyingUnder([run({ threadId: "reply-in-a-thread" })], top, new Set()).size).toBe(0);
   });
 });

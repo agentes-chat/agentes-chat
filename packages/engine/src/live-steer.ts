@@ -178,7 +178,7 @@ export async function renderSteered(
 /** The run fields `releaseInbox` needs. */
 type InboxRun = Pick<
   AgentRun,
-  "id" | "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId" | "trigger"
+  "id" | "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId" | "replyInThread" | "trigger"
 >;
 
 /**

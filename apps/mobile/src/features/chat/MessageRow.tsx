@@ -128,7 +128,7 @@ import { secretRequestOf } from "./ask-store";
 import { ChatMedia } from "./ChatMedia";
 import { ClippedMessage, OpenedMessagesContext } from "./ClippedMessage";
 import { ConsultPairRow, useRunConsults } from "./ConsultGroup";
-import { ApprovalInline, QuestionCard, ThreadLink } from "./cards";
+import { ApprovalInline, QuestionCard, ThreadLink, ThreadReplyingLink } from "./cards";
 import { FeedbackOfferRow } from "./FeedbackOffer";
 import { HandedTaskChips, IssueWorkCard } from "./issue-work";
 import { keepOpen, keptOpen } from "./kept-sizes";
@@ -223,6 +223,8 @@ interface RowProps {
   meId: string | null;
   /** Its thread, when it is the root of one the conversation shows as a link. */
   thread?: ThreadInfo;
+  /** With no `thread` yet: the agents replying in the thread under it, comma-joined (ADR 0214). */
+  replying?: string | undefined;
   /** Absent where it is read only. */
   onLongPress?: (m: Message) => void;
   onRetry?: (m: Message) => void;
@@ -244,6 +246,7 @@ function RowBody({
   newTurn,
   meId,
   thread,
+  replying,
   onLongPress,
   onRetry,
   onQuote,
@@ -456,7 +459,7 @@ function RowBody({
   const run = runAround(
     runAt,
     above ? hangsUnder(above, aboveThread, aboveReactions, meId) : false,
-    hangsUnder(m, Boolean(thread), cachedReactions.data, meId),
+    hangsUnder(m, Boolean(thread || replying), cachedReactions.data, meId),
   );
   // A card in a row of its own under the same author's words stands as far off them as in the same row.
   const cardRow = !body && !media && postedCard;
@@ -549,6 +552,10 @@ function RowBody({
       {thread && !meta?.missionStart ? (
         <View style={onRight ? styles.meEnd : undefined}>
           <ThreadLink thread={thread} />
+        </View>
+      ) : replying ? (
+        <View style={onRight ? styles.meEnd : undefined}>
+          <ThreadReplyingLink channelId={m.channelId} threadId={m.id} agentIds={replying.split(",")} />
         </View>
       ) : null}
       {readOnly ? null : (

@@ -43,7 +43,7 @@ import {
   decisionOutcome,
   requesterDecidesLine,
 } from "@agenteschat/client/lib/approval-words";
-import { nextLabel, whenAt } from "@agenteschat/client/lib/format";
+import { joinNames, nextLabel, whenAt } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { MAX_MESSAGE_LENGTH } from "@agenteschat/client/lib/message-length";
 import { modeKey } from "@agenteschat/client/lib/workspace-mode";
@@ -981,6 +981,55 @@ export function ThreadLink({ thread }: { thread: ThreadInfo }) {
               ? ` · ${held}`
               : ""
             : ` · ${when.short(thread.lastActivityAt)}`}
+      </Text>
+      <Disclosure />
+    </PressScale>
+  );
+}
+
+/**
+ * Under a message of a channel whose agents reply in threads (ADR 0214), before its thread has a reply: "Ada is
+ * replying in the thread", opening it. The thread's own link takes its place with the first reply.
+ */
+export function ThreadReplyingLink({
+  channelId,
+  threadId,
+  agentIds,
+}: {
+  channelId: string;
+  threadId: string;
+  agentIds: string[];
+}) {
+  const { t } = useTranslation();
+  const dir = useRowDirectory();
+  const surface = useSurface();
+  const label = t("threads.line.replying", {
+    count: agentIds.length,
+    names: joinNames(
+      agentIds.map((id) => dir.agentById.get(id)?.name ?? ""),
+      t,
+    ),
+  });
+  return (
+    <PressScale
+      onPress={() => router.push(chatHref(channelId, threadId))}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      hitSlop={{ top: (TOUCH - THREAD_LINK) / 2, bottom: (TOUCH - THREAD_LINK) / 2 }}
+      fill={false}
+      style={[styles.tlinkBox, surface]}
+      contentStyle={styles.tlink}
+    >
+      <View style={styles.faces}>
+        {agentIds.slice(0, 2).map((id, i) => (
+          <View key={id} style={i > 0 ? styles.overlap : undefined}>
+            <Face who={{ type: "agent", id }} size={20} live={false} />
+          </View>
+        ))}
+      </View>
+      <PixelOrbit color={agentLook(dir.agentById.get(agentIds[0] ?? "")).color} size={14} />
+      <Text variant="small" tone="ink2" numberOfLines={1} style={[styles.bold, styles.shrink]}>
+        {label}
       </Text>
       <Disclosure />
     </PressScale>

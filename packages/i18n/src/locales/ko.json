@@ -2655,6 +2655,8 @@
     "noTopic": "설명 없음",
     "nameLabel": "이름",
     "nameHelp": "모두에게 바뀌어요. 예전 링크도 계속 작동해요.",
+    "replyInThreads": "에이전트가 스레드에서 답장",
+    "replyInThreadsHelp": "채널에서 부른 에이전트는 그 메시지 아래 스레드에서 답하고, 채널에는 그 스레드가 한 줄로 보여요. 이미 진행 중인 작업은 그대로예요.",
     "nameTaken": "#{{name}}이(가) 이미 있어요.",
     "generalName": "#general은 이름을 바꿀 수 없어요.",
     "archive": "채널 보관",
@@ -9548,6 +9550,7 @@
       "openShort": "열기",
       "reply": "답장",
       "replies_other": "답장 {{count}}개",
+      "replying_other": "스레드에서 답장 중: {{names}}",
       "closed_other": "스레드 닫힘 · {{title}} · 메시지 {{count}}개",
       "archived_other": "보관된 스레드 {{count}}개는 여기에 표시되지 않아요",
       "see": "보기"

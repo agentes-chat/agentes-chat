@@ -1,5 +1,6 @@
 import { type Executor, rowsOf, type SQL, schema, sql } from "@agenteschat/db";
 import { decidableBySql } from "./approvals";
+import { replyThreadOf } from "./runs";
 import { MAX_HANDOFF_LINKS } from "./stretch";
 import { channelReaderSql } from "./task-access";
 
@@ -142,6 +143,7 @@ type Row = {
   channel_name: string;
   thread_root_id: string;
   trigger_message_id: string;
+  reply_in_thread: boolean | string;
   reply_message_id: string | null;
   readable: boolean | string;
   you: boolean | string;
@@ -206,7 +208,7 @@ export async function agentWorkFor(
         ${outageIn("r")} as outage, r.transcript->'waitingForBrain'->>'code' as wait_code,
         coalesce(t.handed_at, r.started_at, r.created_at) as work_since, ${waitSinceIn("r")} as wait_since,
         t.for_agent, a.id <> r.id as anchored, a.background as anchor_background,
-        c.id as channel_id, c.kind as channel_kind, c.name as channel_name, a.thread_root_id, a.trigger_message_id,
+        c.id as channel_id, c.kind as channel_kind, c.name as channel_name, a.thread_root_id, a.trigger_message_id, a.reply_in_thread,
         a.reply_message_id,
         (c.archived_at is null and not ${agentsOnlyIn("c")} and ${channelReaderSql(sql`c.id`, viewer)}) as readable,
         ${waitsOnViewerIn("r", viewerId)} as you,
@@ -241,7 +243,13 @@ export async function agentWorkFor(
       channelId: placed ? r.channel_id : null,
       channelKind: placed ? r.channel_kind : null,
       channelName: placed && r.channel_kind === "channel" ? r.channel_name : null,
-      threadId: placed && r.thread_root_id !== r.trigger_message_id ? r.thread_root_id : null,
+      threadId: placed
+        ? replyThreadOf({
+            threadRootId: r.thread_root_id,
+            triggerMessageId: r.trigger_message_id,
+            replyInThread: truthy(r.reply_in_thread),
+          })
+        : null,
       messageId: placed && truthy(r.anchored) ? r.reply_message_id : null,
       forAgentId: placed && truthy(r.anchored) ? r.for_agent : null,
       routine,

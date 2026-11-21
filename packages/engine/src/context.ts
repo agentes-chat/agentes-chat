@@ -79,6 +79,7 @@ import { seatState } from "./right-hand-seats";
 import { isRoutineRoomKey, type RoutineBrief, routineAccessOf, routineBriefOf, routineReportOf } from "./routine-brief";
 import { WEBHOOK_EVENT, webhookEventText } from "./routine-hooks";
 import { heldHere } from "./run-inbox";
+import { inChannelRun } from "./run-scope";
 import { type AgentRun, replyThreadOf } from "./runs";
 import { SITE_SECRET_TTL_TEXT, secretStillHeld } from "./secrets";
 import { stretchCardOf } from "./stretch";
@@ -753,8 +754,8 @@ export async function buildRunContext(
   // was posted after it.
   const upToTrigger = postedBySql(messages, trigger);
   const rootIsTrigger = run.threadRootId === trigger.id;
-  // Asked in the main timeline: the run answers there, not in a thread.
-  const flat = rootIsTrigger;
+  // Asked in the main timeline: the run answers there, not in a thread, unless its channel replies in threads (ADR 0214).
+  const flat = rootIsTrigger && !run.replyInThread;
   const heldElsewhere = run.background ? null : heldHere(db, run).catch(() => null);
   const surface = surfaceOn();
   const surfaceTurn =
@@ -938,9 +939,7 @@ export async function buildRunContext(
   const quoted = (trigger.meta?.replyTo as { messageId?: unknown } | undefined)?.messageId;
   const quotedId = typeof quoted === "string" ? quoted : null;
   // A channel's conversations: its main timeline (runs asked there answer there) and each thread.
-  const sameConversation = flat
-    ? sql`r.thread_root_id = r.trigger_message_id`
-    : sql`r.thread_root_id = ${run.threadRootId}::uuid`;
+  const sameConversation = flat ? inChannelRun(sql`r`) : sql`r.thread_root_id = ${run.threadRootId}::uuid`;
   const actionRows = rowsOf<ActionRow>(
     await db.execute(sql`with here_readers as materialized ${channelReadersSql(sql`${run.orgId}::uuid`, sql`${run.channelId}::uuid`)}
       (select s.data, s.created_at, a.handle, false as elsewhere, c.kind, c.name, r.id as run_id,

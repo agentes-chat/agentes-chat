@@ -1433,6 +1433,8 @@ export interface Channel {
   categoryId?: string | null;
   /** Order inside its category, from 0. */
   position?: number;
+  /** Agents asked in its main timeline answer in the thread under that message (ADR 0214). Regular channels only. */
+  replyInThreads?: boolean;
   /**
    * Channel list only (`chat.channels`): messages since you last read it
    * (since you joined, if never), not yours; a thread reply counts only in a
@@ -1471,6 +1473,8 @@ export interface ChannelInput {
   visibility?: "public" | "private";
   /** Private only: limits it to people holding one of these roles (ADR 0125); empty: invite only. */
   audienceRoleIds?: string[];
+  /** Agents asked in its main timeline answer in the thread under that message (ADR 0214). */
+  replyInThreads?: boolean;
 }
 
 /** A `#channel` link's card (`chat.card`): what the channel is and who is in it. */
@@ -1823,6 +1827,11 @@ export interface ActiveRun {
   pendingMessageIds?: string[];
   /** A routine's run working in the background: it holds no conversation and shows no "trabalhando". */
   background?: boolean;
+  /**
+   * Asked in the main timeline, it answers in the thread under that message (ADR 0214), as its channel said when it was
+   * asked. `threadId` is its conversation's root either way. Absent on a server from before it.
+   */
+  replyInThread?: boolean;
 }
 
 /** Real-time channel events (packages/engine/src/events.ts, docs/adr/0010-realtime.md). */

@@ -2937,6 +2937,9 @@ export const en = {
     noTopic: "No description",
     nameLabel: "Name",
     nameHelp: "Changes for everyone. Old links keep working.",
+    replyInThreads: "Agents reply in threads",
+    replyInThreadsHelp:
+      "An agent called in the channel answers in the thread under that message, and the channel shows one line for it. Work already going stays where it is.",
     nameTaken: "There is already #{{name}}.",
     generalName: "#general keeps its name.",
     archive: "Archive channel",
@@ -10408,6 +10411,8 @@ export const en = {
       reply: "Reply",
       replies_one: "{{count}} reply",
       replies_other: "{{count}} replies",
+      replying_one: "{{names}} is replying in the thread",
+      replying_other: "{{names}} are replying in the thread",
       closed_one: "Thread closed · {{title}} · {{count}} message",
       closed_other: "Thread closed · {{title}} · {{count}} messages",
       archived_one: "{{count}} archived thread isn't shown here",

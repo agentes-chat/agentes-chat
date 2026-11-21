@@ -27,6 +27,11 @@ export interface ToolContext {
   channelId: string;
   threadRootId: string;
   triggerMessageId: string;
+  /**
+   * Set by whoever runs the run, never from a call's input: its `reply_in_thread` (ADR 0214), so what it posts goes
+   * under the message that asked it (`replyThreadOf`).
+   */
+  replyInThread?: boolean;
   /** The model's id of this tool call (set by the gateway): live output events refer to it. */
   toolUseId?: string;
   /** Aborted when a person cancels the run: long tools (running code) stop early. */

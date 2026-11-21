@@ -2655,6 +2655,8 @@
     "noTopic": "无描述",
     "nameLabel": "名称",
     "nameHelp": "对所有人生效。旧链接仍然有效。",
+    "replyInThreads": "智能体在话题中回复",
+    "replyInThreadsHelp": "在频道中被叫到的智能体会在该消息下的话题中回答，频道只为它显示一行。已在进行的工作保持原处。",
     "nameTaken": "已存在 #{{name}}。",
     "generalName": "#general 的名称不能更改。",
     "archive": "归档频道",
@@ -9597,6 +9599,7 @@
       "openShort": "打开",
       "reply": "回复",
       "replies_other": "{{count}} 条回复",
+      "replying_other": "{{names}} 正在话题中回复",
       "closed_other": "话题已关闭 · {{title}} · {{count}} 条消息",
       "archived_other": "这里没有显示 {{count}} 个已归档的话题",
       "see": "查看"

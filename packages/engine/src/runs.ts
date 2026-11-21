@@ -7,6 +7,7 @@ import { cutText, pgSafeJson } from "./format";
 import { recordRunFinished } from "./operator-events";
 import { standingErrorDetail } from "./standing";
 import { cliErrorWords, redactCredentials } from "./tool-detail";
+import type { ToolContext } from "./tools/types";
 
 /** How often a running run's worker says it is alive; after `RUN_STALE_MS` without it, the run is recovered. */
 export const RUN_HEARTBEAT_MS = 20_000;
@@ -94,13 +95,17 @@ export function usageWaitOf(run: Pick<AgentRun, "status" | "waitingMachineId" | 
  * that thread. The run keeps `threadRootId` (its trigger, when top-level) as
  * the conversation it belongs to. The one rule for the engine, its tools and
  * the bridge: cards and events of a run always land where its replies do.
- * `confidential`: its thread holds a confidential result (ADR 0190), so it answers under the message that asked it
- * even when that message is in the main timeline.
+ * It answers under the message that asked it even when that message is in the main timeline when `replyInThread`
+ * (its channel replies in threads, ADR 0214) or `confidential` (its thread holds a confidential result, ADR 0190).
+ * `inChannelRun` (run-scope.ts) is the same rule in SQL. A run's shape must carry `replyInThread`; a tool call's
+ * context carries it when its run's does.
  */
 export function replyThreadOf(
-  run: Pick<AgentRun, "threadRootId" | "triggerMessageId"> & { confidential?: boolean },
+  run: (Pick<AgentRun, "threadRootId" | "triggerMessageId" | "replyInThread"> | ToolContext) & {
+    confidential?: boolean;
+  },
 ): string | null {
-  return run.threadRootId === run.triggerMessageId && !run.confidential ? null : run.threadRootId;
+  return run.threadRootId === run.triggerMessageId && !run.replyInThread && !run.confidential ? null : run.threadRootId;
 }
 
 /**

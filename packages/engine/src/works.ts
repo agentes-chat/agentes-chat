@@ -401,6 +401,7 @@ type RunLike = Pick<
   | "channelId"
   | "threadRootId"
   | "triggerMessageId"
+  | "replyInThread"
   | "background"
   | "workId"
   | "status"
@@ -706,7 +707,7 @@ export async function moveRun(
   deps: { db: Database; pubsub?: PubSub },
   run: Pick<
     AgentRun,
-    "id" | "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId" | "hop" | "workId"
+    "id" | "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId" | "replyInThread" | "hop" | "workId"
   >,
   to: Message,
 ) {

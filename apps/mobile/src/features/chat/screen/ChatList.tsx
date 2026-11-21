@@ -498,6 +498,7 @@ export function ChatList({
   isFresh,
   isThread,
   linkThreads,
+  replying,
   quiet,
   rhythm,
   seenBy,
@@ -558,6 +559,7 @@ export function ChatList({
   ChatData,
   | "isThread"
   | "linkThreads"
+  | "replying"
   | "quiet"
   | "rhythm"
   | "seenBy"
@@ -733,8 +735,11 @@ export function ChatList({
               canReply={canReply}
               canMission={canMission}
               thread={isThread ? undefined : linkThreads.get(item.message.id)}
+              replying={replying.get(item.message.id)?.join(",")}
               menuThread={linkThreads.get(item.message.threadId ?? item.message.id)}
-              aboveThread={item.above && !isThread ? linkThreads.has(item.above.id) : false}
+              aboveThread={
+                item.above && !isThread ? linkThreads.has(item.above.id) || replying.has(item.above.id) : false
+              }
               markReceipt={item.message.id === markAt ? receipt : undefined}
               seenBy={item.message.id === seenId ? seenBy : undefined}
               fanReceipt={receipts[item.message.id]}
@@ -768,6 +773,7 @@ export function ChatList({
       canReply,
       canMission,
       linkThreads,
+      replying,
       offerAt,
       hands,
       dir,

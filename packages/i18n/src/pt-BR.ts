@@ -2812,6 +2812,9 @@ export const ptBR = {
     noTopic: "Sem descrição",
     nameLabel: "Nome",
     nameHelp: "Muda para todo mundo. Os links antigos continuam funcionando.",
+    replyInThreads: "Agentes respondem em threads",
+    replyInThreadsHelp:
+      "O agente chamado no canal responde na thread abaixo da mensagem, e o canal mostra uma linha para ela. O que já está em andamento fica onde está.",
     nameTaken: "Já existe #{{name}}.",
     generalName: "O #general mantém o nome.",
     archive: "Arquivar canal",
@@ -10371,6 +10374,8 @@ export const ptBR = {
       reply: "Responder",
       replies_one: "{{count}} resposta",
       replies_other: "{{count}} respostas",
+      replying_one: "{{names}} está respondendo na thread",
+      replying_other: "{{names}} estão respondendo na thread",
       closed_one: "Thread fechada · {{title}} · {{count}} mensagem",
       closed_other: "Thread fechada · {{title}} · {{count}} mensagens",
       archived_one: "{{count}} thread arquivada não aparece aqui",

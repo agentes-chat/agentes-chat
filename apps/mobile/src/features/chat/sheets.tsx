@@ -25,13 +25,14 @@ import {
   useThreadMutation,
   useToggleReaction,
 } from "@agenteschat/client";
+import { errorText } from "@agenteschat/client/lib/errors";
 import { textOrMedia } from "@agenteschat/client/lib/media";
 import { messagePath } from "@agenteschat/client/lib/message-links";
 import { summaryParts } from "@agenteschat/client/lib/missions";
 import { listedText } from "@agenteschat/client/lib/voice";
 import { conversationWallpaperOf } from "@agenteschat/client/lib/wallpaper";
 import { chartBlocksOf } from "@agenteschat/ui/widgets/spec";
-import { type QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
+import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { type ReactNode, useCallback } from "react";
 import { useTranslation } from "react-i18next";
@@ -656,7 +657,7 @@ export function ChannelOptions({
   /** A DM: searching it (its header keeps the room for the name and the agent's own buttons). */
   onSearch?: (() => void) | undefined;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const orgId = useOrgId();
   const sheet = useSheet();
   const pins = usePins(orgId, channelId);
@@ -671,6 +672,22 @@ export function ChannelOptions({
   );
   const isDm = useCallback((all: DirectMessage[]) => all.some((d) => d.channelId === channelId), [channelId]);
   const categoryId = useQuery({ ...channelsQuery(api, orgId), select: categoryOf }).data;
+  // "Agents reply in threads" (ADR 0214), for whoever may change the channel: undefined where it isn't a channel.
+  const threadsOf = useCallback(
+    (all: Channel[]) => {
+      const c = all.find((x) => x.id === channelId);
+      return c ? c.replyInThreads === true : undefined;
+    },
+    [channelId],
+  );
+  const replyInThreads = useQuery({ ...channelsQuery(api, orgId), select: threadsOf }).data;
+  const qc = useQueryClient();
+  const toast = useToast();
+  const setThreads = useMutation({
+    mutationFn: (on: boolean) => api.chat.update(orgId, channelId, { replyInThreads: on }),
+    onSettled: () => qc.invalidateQueries({ queryKey: keys.channels(orgId) }),
+    onError: (e) => toast({ title: errorText(t, e, i18n.language), icon: "x" }),
+  });
   const categories = useChannelCategories(orgId);
   const categoryName = categoryId ? categories.data?.find((c) => c.id === categoryId)?.name : undefined;
   // This conversation's own background, mine alone; none of its own: it follows the others.
@@ -709,6 +726,18 @@ export function ChannelOptions({
                     sheet.close();
                     router.push(categoryHrefs.pick(channelId));
                   },
+                },
+              ]
+            : []),
+          ...(onMembers && moves && replyInThreads !== undefined
+            ? [
+                {
+                  key: "threads",
+                  icon: "reply" as const,
+                  label: t("channel.replyInThreads"),
+                  checked: replyInThreads,
+                  disabled: setThreads.isPending,
+                  onPress: () => setThreads.mutate(!replyInThreads),
                 },
               ]
             : []),

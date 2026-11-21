@@ -561,14 +561,21 @@ export async function setAgentChannels(
 /**
  * Renames a channel or changes its topic or who may join (creator or admin). `audienceRoleIds` limits a private
  * channel to departments or roles (ADR 0125; empty: invite only); dropping a role takes out the people who were
- * there through it alone.
+ * there through it alone. `replyInThreads`: agents asked in its main timeline answer in the thread under that
+ * message (ADR 0214); runs already going stay where they are.
  */
 export async function updateChannel(
   db: Database,
   actorId: string,
   orgId: string,
   channelId: string,
-  input: { name?: string; topic?: string; visibility?: "public" | "private"; audienceRoleIds?: string[] },
+  input: {
+    name?: string;
+    topic?: string;
+    visibility?: "public" | "private";
+    audienceRoleIds?: string[];
+    replyInThreads?: boolean;
+  },
   options: { pubsub?: PubSub } = {},
 ) {
   const membership = await requireActiveMembership(db, actorId, orgId);
@@ -586,6 +593,8 @@ export async function updateChannel(
   if (channel.name === "general" && name !== undefined && name !== "general")
     throw new ValidationError("#general can't be renamed");
   if (channel.kind === "dm") throw new ValidationError("A direct conversation keeps its participants");
+  if (input.replyInThreads !== undefined && channel.kind !== "channel")
+    throw new ValidationError("Only a channel can reply in threads", "channel.reply_in_threads");
   const accessChanges = input.visibility !== undefined || input.audienceRoleIds !== undefined;
   const visibility = input.visibility ?? channel.visibility;
   const asked =
@@ -615,6 +624,7 @@ export async function updateChannel(
         .set({
           ...(name !== undefined ? { name } : {}),
           ...(input.topic !== undefined ? { topic: input.topic } : {}),
+          ...(input.replyInThreads !== undefined ? { replyInThreads: input.replyInThreads } : {}),
           ...access,
         })
         .where(eq(channels.id, channelId))

@@ -107,6 +107,11 @@ export const agentRuns = pgTable(
     /** Thread the agent answers in (the trigger's thread, or the trigger itself when it is top-level). */
     threadRootId: uuid().notNull(),
     triggerMessageId: uuid().notNull(),
+    /**
+     * Asked in a channel's main timeline, it answers in the thread under its trigger (`replyThreadOf`): the channel's
+     * `reply_in_threads` when the run was created, so turning it off or on never moves a run (ADR 0214).
+     */
+    replyInThread: boolean().notNull().default(false),
     trigger: agentRunTriggerEnum().notNull(),
     /** Hop of the reply this run will post (trigger hop + 1). */
     hop: integer().notNull(),

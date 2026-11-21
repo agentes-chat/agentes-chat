@@ -2655,6 +2655,8 @@
     "noTopic": "Tanpa deskripsi",
     "nameLabel": "Nama",
     "nameHelp": "Berubah untuk semua orang. Tautan lama tetap berfungsi.",
+    "replyInThreads": "Agen membalas di utas",
+    "replyInThreadsHelp": "Agen yang dipanggil di kanal menjawab di utas di bawah pesan itu, dan kanal menampilkan satu baris untuk utas itu. Pekerjaan yang sudah berjalan tetap di tempatnya.",
     "nameTaken": "Sudah ada #{{name}}.",
     "generalName": "#general tetap dengan namanya.",
     "archive": "Arsipkan kanal",
@@ -9602,6 +9604,7 @@
       "openShort": "Buka",
       "reply": "Balas",
       "replies_other": "{{count}} balasan",
+      "replying_other": "{{names}} sedang membalas di utas",
       "closed_other": "Utas ditutup · {{title}} · {{count}} pesan",
       "archived_other": "{{count}} utas yang diarsipkan tidak ditampilkan di sini",
       "see": "Lihat"

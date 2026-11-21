@@ -75,7 +75,7 @@ export interface RunWhere {
 
 /** Where a run's events and cards go (`replyThreadOf`). */
 export function runWhere(
-  run: Pick<AgentRun, "id" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId">,
+  run: Pick<AgentRun, "id" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId" | "replyInThread">,
 ): RunWhere {
   return { channelId: run.channelId, threadId: replyThreadOf(run), agentId: run.agentId, runId: run.id };
 }
@@ -649,6 +649,7 @@ async function locate(db: Database, id: BridgeIdentity): Promise<Located> {
       channelId: run.channelId,
       threadRootId: run.threadRootId,
       triggerMessageId: run.triggerMessageId,
+      replyInThread: run.replyInThread,
       ...(id.machineId ? { bridge: { machineId: id.machineId } } : {}),
       ...(run.brain ? { thinksWith: run.brain } : {}),
       // Tools on demand (ADR 0043): the same list the run's turns see.

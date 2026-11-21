@@ -896,7 +896,7 @@ export type { AgentRun };
  */
 export async function askStillOpen(
   db: Executor,
-  run: Pick<AgentRun, "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId">,
+  run: Pick<AgentRun, "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId" | "replyInThread">,
 ) {
   const thread = replyThreadOf(run);
   const [last] = await db

@@ -40,6 +40,7 @@ import { actingRoutineOfCall, personBehindCall, routineCreatorOf } from "./reque
 import { isRoutineRoomKey } from "./routine-brief";
 import { stoppedToSend } from "./run-inbox";
 import { deliverNoticeToRun, resumeRunWithResult } from "./run-resume";
+import { inChannelRun } from "./run-scope";
 import { tellAgentStopped } from "./run-stopped";
 import { type AgentRun, isTerminal, outageParkedSql, type RunStatus, replyThreadOf } from "./runs";
 import { MAX_HANDOFF_LINKS, refusedAtLimit } from "./stretch";
@@ -955,13 +956,10 @@ const HAND_OFFS_LISTED = 8;
  */
 export async function handOffsFrom(
   db: Executor,
-  run: Pick<AgentRun, "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId">,
+  run: Pick<AgentRun, "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId" | "replyInThread">,
   options: { openOnly?: boolean } = {},
 ): Promise<HandOff[]> {
-  const conversation =
-    run.threadRootId === run.triggerMessageId
-      ? sql`r.thread_root_id = r.trigger_message_id`
-      : sql`r.thread_root_id = ${run.threadRootId}::uuid`;
+  const conversation = replyThreadOf(run) ? sql`r.thread_root_id = ${run.threadRootId}::uuid` : inChannelRun(sql`r`);
   const rows = rowsOf<{
     id: string;
     kind: HandOff["kind"];
@@ -1548,6 +1546,7 @@ export async function openConsultationsIn(
       kind: agentConsultations.kind,
       threadRootId: agentRuns.threadRootId,
       triggerMessageId: agentRuns.triggerMessageId,
+      replyInThread: agentRuns.replyInThread,
     })
     .from(agentConsultations)
     .innerJoin(agentRuns, eq(agentRuns.id, agentConsultations.askerRunId))
@@ -1968,6 +1967,7 @@ export async function announceConsultationChange(
       channelId: agentRuns.channelId,
       threadRootId: agentRuns.threadRootId,
       triggerMessageId: agentRuns.triggerMessageId,
+      replyInThread: agentRuns.replyInThread,
     })
     .from(agentConsultations)
     .innerJoin(agentRuns, eq(agentRuns.id, agentConsultations.askerRunId))
@@ -2247,6 +2247,7 @@ export async function consultationOrigin(
         channelId: agentRuns.channelId,
         threadRootId: agentRuns.threadRootId,
         triggerMessageId: agentRuns.triggerMessageId,
+        replyInThread: agentRuns.replyInThread,
         background: agentRuns.background,
       })
       .from(agentRuns)
@@ -2364,13 +2365,16 @@ export const NO_PERSON_READS =
  * `postPauseCards` places questions). Null when no person would see it there.
  */
 export async function cardPlace(
-  ctx: Pick<ToolContext, "orgId" | "channelId" | "runId" | "threadRootId" | "triggerMessageId"> & { db: Executor },
+  ctx: Pick<ToolContext, "orgId" | "channelId" | "runId" | "threadRootId" | "triggerMessageId" | "replyInThread"> & {
+    db: Executor;
+  },
 ): Promise<{ channelId: string; threadId: string | null } | null> {
   const [here] = await ctx.db
     .select({ kind: channels.kind, dmKey: channels.dmKey })
     .from(channels)
     .where(and(eq(channels.orgId, ctx.orgId), eq(channels.id, ctx.channelId)));
-  if (!here || !isAgentOnlyDm(here)) return { channelId: ctx.channelId, threadId: replyThreadOf(ctx) };
+  if (!here || !isAgentOnlyDm(here))
+    return { channelId: ctx.channelId, threadId: replyThreadOf({ ...ctx, replyInThread: ctx.replyInThread === true }) };
   const origin = ctx.runId ? await consultationOrigin(ctx.db, ctx.orgId, ctx.runId) : null;
   return origin ? { channelId: origin.channelId, threadId: origin.threadId } : null;
 }
