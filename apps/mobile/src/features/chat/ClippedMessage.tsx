@@ -143,43 +143,43 @@ export function ClippedMessage({
             onLayout={(e) => {
               noteFrame(id, "words", e);
               const next = keptHeightAfter(height, e.nativeEvent.layout.height, folded);
-            if (next === null) return;
-            keepSize(sizeKey, next);
-            // Under the fold before and after, the words look the same at either height (the first frame's cap stands
-            // past the rule, so it cuts nothing): no second render for them, which is most messages.
-            if (cut === null && clippedHeight(next) === null) return;
-            setHeight(next);
-          }}
-        >
-          {open || lead == null ? children : lead}
+              if (next === null) return;
+              keepSize(sizeKey, next);
+              // Under the fold before and after, the words look the same at either height (the first frame's cap stands
+              // past the rule, so it cuts nothing): no second render for them, which is most messages.
+              if (cut === null && clippedHeight(next) === null) return;
+              setHeight(next);
+            }}
+          >
+            {open || lead == null ? children : lead}
+          </View>
+          {(shows === null ? [] : behind).map((color, i) => (
+            <LinearGradient
+              // biome-ignore lint/suspicious/noArrayIndexKey: the layers behind one text, in order
+              key={i}
+              pointerEvents="none"
+              colors={[withOpacity(color, 0), color]}
+              style={styles.fade}
+            />
+          ))}
         </View>
-        {(shows === null ? [] : behind).map((color, i) => (
-          <LinearGradient
-            // biome-ignore lint/suspicious/noArrayIndexKey: the layers behind one text, in order
-            key={i}
-            pointerEvents="none"
-            colors={[withOpacity(color, 0), color]}
-            style={styles.fade}
-          />
-        ))}
-      </View>
-      {foldable && !open ? (
-        // A 20-point line: 12 of slop around it gives the 44-point target.
-        <Pressable
-          accessibilityRole="button"
-          hitSlop={12}
-          onPress={() => {
-            focusOnOpen = id;
-            setTapped(true);
-            screen?.open(id);
-          }}
-          style={({ pressed }) => [styles.more, pressed && styles.pressed]}
-        >
-          <Text variant="subhead" style={[styles.moreText, ink ? { color: ink } : undefined]}>
-            {t("channel.long.more")}
-          </Text>
-        </Pressable>
-      ) : null}
+        {foldable && !open ? (
+          // A 20-point line: 12 of slop around it gives the 44-point target.
+          <Pressable
+            accessibilityRole="button"
+            hitSlop={12}
+            onPress={() => {
+              focusOnOpen = id;
+              setTapped(true);
+              screen?.open(id);
+            }}
+            style={({ pressed }) => [styles.more, pressed && styles.pressed]}
+          >
+            <Text variant="subhead" style={[styles.moreText, ink ? { color: ink } : undefined]}>
+              {t("channel.long.more")}
+            </Text>
+          </Pressable>
+        ) : null}
         {open ? <ProbeLabel id={id} /> : null}
       </View>
     </ProbeContext.Provider>

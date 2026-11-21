@@ -19,8 +19,8 @@ import { ChannelRefText } from "./ChannelRefText";
 import { FileRefText } from "./FileRefText";
 import { IdRefText } from "./IdRefText";
 import { keepColumns, keptColumns } from "./kept-sizes";
-import { noteValue, ProbeContext } from "./layout-probe";
 import { LinkPillText } from "./LinkPillText";
+import { noteValue, ProbeContext } from "./layout-probe";
 import {
   type Block,
   CHAT_TEXT_MAX_SCALE,

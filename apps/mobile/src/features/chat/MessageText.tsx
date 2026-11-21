@@ -64,9 +64,7 @@ export const MessageText = memo(function MessageText({
       onLayout={probe ? (e) => noteFrame(probe, "wrap", e) : undefined}
     >
       {blocks.map((b, i) => {
-        const at = probe
-          ? { onLayout: (e: LayoutChangeEvent) => noteFrame(probe, `b${i}:${b.kind}`, e) }
-          : {};
+        const at = probe ? { onLayout: (e: LayoutChangeEvent) => noteFrame(probe, `b${i}:${b.kind}`, e) } : {};
         const edge = probe ? PROBE_EDGES.block : undefined;
         const lines = probe ? { onTextLayout: (e: TextLayoutEvent) => noteLines(probe, i, e) } : {};
         switch (b.kind) {
@@ -88,7 +86,15 @@ export const MessageText = memo(function MessageText({
           case "heading":
             return (
               // biome-ignore lint/suspicious/noArrayIndexKey: the blocks of one text, in order
-              <Text key={i} variant={variant} tone="ink" style={[line, styles.heading, inked, edge]} {...fit} {...at} {...lines}>
+              <Text
+                key={i}
+                variant={variant}
+                tone="ink"
+                style={[line, styles.heading, inked, edge]}
+                {...fit}
+                {...at}
+                {...lines}
+              >
                 {spans(b.inline)}
               </Text>
             );
@@ -195,12 +201,12 @@ function Details({
       </Pressable>
       {open ? (
         <ProbeContext.Provider value={null}>
-        <MessageText
-          body={body}
-          muted={muted}
-          {...(accent ? { accent } : {})}
-          {...(channelRefs ? { channelRefs } : {})}
-        />
+          <MessageText
+            body={body}
+            muted={muted}
+            {...(accent ? { accent } : {})}
+            {...(channelRefs ? { channelRefs } : {})}
+          />
         </ProbeContext.Provider>
       ) : null}
     </View>
