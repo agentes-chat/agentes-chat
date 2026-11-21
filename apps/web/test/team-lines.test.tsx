@@ -91,14 +91,47 @@ describe("Responde a, by clicking (ADR 0148 addendum)", () => {
     expect(document.querySelector(".team-reports")?.textContent).toContain("Ada");
   });
 
-  test("Organograma: the line indented under its supervisor, counted, and Lodi out of it", async () => {
+  test("Organograma: the reports side by side in one row under their supervisor, counted, and Lodi out of it", async () => {
     await team(lined(), "chart");
     const line = document.querySelector(".team-line__reports") as HTMLElement;
     expect(line.textContent).toContain("Ada");
     expect(line.textContent).toContain("1 agente");
+    // The reports share one row container: the chip is beside it, not among them.
+    const row = line.querySelector(":scope > .team-line__row") as HTMLElement;
+    expect([...row.children].map((c) => c.textContent)).toEqual([expect.stringContaining("Ada")]);
+    expect(row.contains(line.querySelector(".team-line__count"))).toBe(false);
+    // The row is a labelled group naming its supervisor.
+    expect(row.getAttribute("role")).toBe("group");
+    expect(row.getAttribute("aria-label")).toBe("Supervisor: Atlas");
+    // The person's card is a direct child of the column, so `.team-tree__col > .team-node` holds it to a card's width.
+    expect(document.querySelector(".team-tree__col > .team-node--person")).not.toBeNull();
     const chip = document.querySelector(".team-lodi-chip") as HTMLElement;
     expect(chip.textContent).toContain("Lodi");
     expect(chip.textContent).toContain("acompanha tudo com você");
+  });
+
+  test("Organograma: four direct reports share a row, and a report that supervises has its own row", async () => {
+    const state = lined();
+    const ada = state.agents.find((a) => a.id === ADA_ID) as Agent;
+    const more = ["Bia", "Caio", "Duda", "Eli"].map((name, i) => ({
+      ...ada,
+      id: `00000000-0000-4000-8000-0000000000c${i}`,
+      name,
+      handle: name.toLowerCase(),
+      reportsToAgentId: ATLAS_ID,
+    }));
+    state.agents.push(...more);
+    // Duda supervises Eli: the row nests.
+    const eli = state.agents.find((a) => a.name === "Eli");
+    if (eli) eli.reportsToAgentId = more[2]?.id ?? null;
+    await team(state, "chart");
+    const atlas = document
+      .querySelector(`.team-tree [data-agent-row="${ATLAS_ID}"]`)
+      ?.closest(".team-line") as HTMLElement;
+    const row = atlas.querySelector(":scope > .team-line__reports > .team-line__row") as HTMLElement;
+    expect([...row.children].every((c) => c.classList.contains("team-line"))).toBe(true);
+    expect(row.children).toHaveLength(4);
+    expect(row.querySelectorAll(":scope > .team-line > .team-line__reports > .team-line__row")).toHaveLength(1);
   });
 
   test("Organograma: dragging an agent onto another makes it report there, onto a person clears it", async () => {

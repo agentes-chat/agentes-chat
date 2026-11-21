@@ -194,21 +194,31 @@ function useLineDrag(team: readonly TeamAgent[], groups: readonly AgentGroup[], 
   return { agent, target, sector, setsSector, dragging: dragging !== null };
 }
 
-/** A supervisor and its reports under it, joined by a line, with how many report to it; agents with none alone. */
+/**
+ * A supervisor and its reports side by side under it, joined by a bar and a drop to each (below 720 px, stacked and
+ * indented), with how many report to it; agents with none alone.
+ */
 function ChartLine({ node, line }: { node: ChartNode; line?: ReturnType<typeof useLineDrag> }) {
   const { t } = useTranslation();
   const size = lineSize(node);
   return (
-    <div className="team-line">
+    <div className={size > 0 ? "team-line team-line--sup" : "team-line"}>
       <AgentNode agent={node.agent} line={line?.agent(node.agent.id)} />
       {size > 0 && (
         <div className="team-line__reports">
           <CountChip size="sm" className="team-line__count">
             {t("team.agents", { count: size })}
           </CountChip>
-          {node.reports.map((r) => (
-            <ChartLine key={r.agent.id} node={r} line={line} />
-          ))}
+          {/* biome-ignore lint/a11y/useSemanticElements: a labelled row of an agent's reports, not a form's fieldset */}
+          <div
+            className="team-line__row"
+            role="group"
+            aria-label={t("team.chart.supervisor", { name: node.agent.name })}
+          >
+            {node.reports.map((r) => (
+              <ChartLine key={r.agent.id} node={r} line={line} />
+            ))}
+          </div>
         </div>
       )}
     </div>

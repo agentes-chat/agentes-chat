@@ -175,6 +175,11 @@
 /* A scroller out over the page's side room: a chart wider than the page slides under the page's edges as it scrolls,
    and the room above it keeps the top node's ring and shadow inside it, where they'd be cut at its edge. */
 .team-tree {
+  display: grid;
+  /* One column as wide as the widest row and at least the scroller: the workspace above and the people's row share
+     it, so a chart that fits is centred and one that doesn't scrolls to both ends (centring it by justify-content
+     would push its left half out of the scrollable area), with the workspace's drop on the same axis. */
+  grid-template-columns: minmax(max-content, 1fr);
   overflow-x: auto;
   margin: -4px calc(-1 * var(--page-x)) 0;
   padding: 4px var(--page-x) 8px;
@@ -228,23 +233,84 @@
 .team-lodi-chip:hover {
   background: var(--raised-2);
 }
-/* A supervisor's reports, indented under it and joined by a line. */
+/* A supervisor's reports side by side under it, centred, joined by a bar across them and a drop to each: the same
+   strokes as the people's row above (`.team-tree__col`), so one that supervises nests the same way. */
 .team-line {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 8px;
   min-width: 0;
 }
+/* A card is 180 px at least (a person's column minimum, so a name and its role don't break in a full row), 240 at most. */
+.team-line .team-node,
+.team-tree__col > .team-node {
+  min-width: 180px;
+  max-width: 240px;
+}
+.team-line > .team-node {
+  align-self: stretch;
+}
+.team-line--sup > .team-node {
+  align-self: center;
+}
 .team-line__reports {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-left: 14px;
-  padding-left: 12px;
+  align-items: center;
+}
+/* The supervisor's drop to its count, and the count's to the bar. */
+.team-line__reports::before,
+.team-line__row::before {
+  content: "";
+  position: absolute;
+  left: 50%;
   border-left: 1.5px solid var(--line-strong);
 }
-.team-line__count {
-  align-self: flex-start;
+.team-line__reports::before {
+  top: calc(-1 * var(--space-2));
+  height: var(--space-2);
+}
+.team-line__row {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+}
+.team-line__row::before {
+  top: 0;
+  height: var(--space-3);
+}
+.team-line__row > .team-line {
+  position: relative;
+  padding-top: var(--space-4);
+}
+.team-line__row > .team-line::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: calc(-1 * var(--space-3) / 2);
+  right: calc(-1 * var(--space-3) / 2);
+  border-top: 1.5px solid var(--line-strong);
+}
+.team-line__row > .team-line:first-child::before {
+  left: 50%;
+}
+.team-line__row > .team-line:last-child::before {
+  right: 50%;
+}
+.team-line__row > .team-line:only-child::before {
+  display: none;
+}
+.team-line__row > .team-line::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: var(--space-4);
+  border-left: 1.5px solid var(--line-strong);
 }
 .team-node[data-line-drop] {
   border-color: var(--agent);
@@ -299,8 +365,12 @@
   flex: none;
   flex-direction: column;
   gap: 8px;
-  width: 180px;
+  min-width: 180px;
   padding-top: 20px;
+}
+/* The person's card keeps a card's width over the column, whatever the row of reports beneath is. */
+.team-tree__col > .team-node {
+  align-self: center;
 }
 /* The bar across the columns, and each column's drop to its person. */
 .team-tree__col::before {
@@ -331,10 +401,63 @@
 .team-tree__agents {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 8px;
-  margin-left: 12px;
-  padding-left: 12px;
-  border-left: 1px solid var(--line);
+}
+@media (max-width: 720px) {
+  /* The reports stack again, indented under their supervisor. Every card keeps 180 px, so the column grows with the
+     indent of its depth instead of squeezing the cards; the people row scrolls sideways when that is wider. These
+     follow the base rules above, so they win the ties by coming after them. */
+  .team-tree__col {
+    width: min-content;
+  }
+  /* The person's card fills the stacked column again, and its agents indent under it with a line. */
+  .team-tree__col > .team-node {
+    align-self: stretch;
+    min-width: 0;
+    max-width: none;
+  }
+  .team-tree__agents {
+    align-items: stretch;
+    margin-left: var(--space-3);
+    padding-left: var(--space-3);
+    border-left: 1.5px solid var(--line-strong);
+  }
+  .team-line {
+    align-items: stretch;
+  }
+  .team-line .team-node {
+    min-width: 180px;
+    max-width: none;
+  }
+  .team-line--sup > .team-node {
+    align-self: stretch;
+  }
+  .team-line__reports {
+    align-items: stretch;
+    gap: var(--space-2);
+    margin-left: 14px;
+    padding-left: var(--space-3);
+    border-left: 1.5px solid var(--line-strong);
+  }
+  .team-line__count {
+    align-self: flex-start;
+  }
+  .team-line__row {
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: var(--space-2);
+    padding-top: 0;
+  }
+  .team-line__reports::before,
+  .team-line__row::before,
+  .team-line__row > .team-line::before,
+  .team-line__row > .team-line::after {
+    display: none;
+  }
+  .team-line__row > .team-line {
+    padding-top: 0;
+  }
 }
 
 /* Organograma › Por setor: one frame per setor in its color. */
