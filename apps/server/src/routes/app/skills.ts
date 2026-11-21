@@ -29,7 +29,7 @@ import {
   updateSkillFromSource,
   ValidationError,
 } from "@agenteschat/engine";
-import { SKILL_ZIP_BASE64_CHARS } from "@agenteschat/tokens/skills";
+import { SKILL_MARKDOWN_BYTES, SKILL_ZIP_BASE64_CHARS } from "@agenteschat/tokens/skills";
 import { createRoute, z } from "@hono/zod-openapi";
 import { apiError, errorResponse } from "../../http/errors";
 import { githubAppOf } from "../github-app";
@@ -298,12 +298,13 @@ export function skillRoutes(deps: AppDeps) {
               description: z.string().max(1024),
               body: z.string().max(200_000),
               defaultForNewAgents: z.boolean().optional(),
+              createOnly: z.boolean().optional().openapi({ description: "Return 409 if the name is already in use." }),
               personal: Personal,
             }),
           ]),
         ),
       },
-      responses: { 201: json(SkillDetail, "Created"), ...errors },
+      responses: { 201: json(SkillDetail, "Created"), ...errors, 409: errorResponse("Name already in use") },
     }),
     async (c) => {
       const input = c.req.valid("json");
@@ -314,6 +315,7 @@ export function skillRoutes(deps: AppDeps) {
       const saved = await saveSkill(skills(), c.get("user").id, c.req.valid("param").orgId, {
         ...parsed,
         source: "manual",
+        createOnly: "createOnly" in input ? input.createOnly : undefined,
         defaultForNewAgents: input.defaultForNewAgents,
         owner: input.personal ? c.get("user").id : null,
       });
@@ -327,8 +329,7 @@ export function skillRoutes(deps: AppDeps) {
       path: "/organizations/{orgId}/skills/import",
       tags,
       security,
-      summary:
-        "Import a skill: a GitHub link (a skill's folder or a file in it, or a folder holding several to pick from) or a zip of the folder (base64)",
+      summary: "Import a skill from a GitHub link, a zip of the folder (base64), or standalone Markdown",
       description:
         "A private repository (github.com answers 404) is read through the workspace's GitHub: the GitHub App's token for it, else the GitHub connection's, never sent to the app. `github.repo_missing` says in `connection` how the GitHub connection fared (`none`; `refused`: GitHub no longer takes its token; `ok`: it works and can't see the repository) and in `app` whether the GitHub App is installed on some account for the workspace. `github.unreachable`: GitHub didn't answer, try again.",
       request: {
@@ -350,6 +351,14 @@ export function skillRoutes(deps: AppDeps) {
                 description:
                   "The agent whose card (`offer_install_skill`) opened the install: what installs goes on for it when the installer may change its skills, else the install stands alone.",
               }),
+              personal: Personal,
+            }),
+            z.object({
+              markdown: z
+                .string()
+                .max(SKILL_MARKDOWN_BYTES)
+                .refine((text) => Buffer.byteLength(text) <= SKILL_MARKDOWN_BYTES)
+                .openapi({ description: "A SKILL.md file, including its name and description in YAML frontmatter." }),
               personal: Personal,
             }),
             z.object({
@@ -401,6 +410,14 @@ export function skillRoutes(deps: AppDeps) {
           personal,
         });
         return "choices" in result ? c.json(result, 200) : c.json(result, 201);
+      }
+      if ("markdown" in input) {
+        const saved = await saveSkill(skills(), actor, orgId, {
+          ...parseSkillMarkdown(input.markdown),
+          source: "upload",
+          owner: input.personal ? actor : null,
+        });
+        return c.json(saved, 201);
       }
       let zip: Uint8Array;
       try {

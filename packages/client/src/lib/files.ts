@@ -6,6 +6,7 @@ export const MAX_UPLOAD_MB = MAX_UPLOAD_BYTES / 1024 / 1024;
 /** The text and scripts, and the images and other files, a skill keeps, in MB. */
 export const SKILL_TEXT_MB = SKILL_TEXT_BYTES / 1024 / 1024;
 export const SKILL_ASSET_MB = SKILL_ASSET_BYTES / 1024 / 1024;
+export { SKILL_MARKDOWN_BYTES } from "@agenteschat/tokens/skills";
 export { SKILL_ZIP_BYTES };
 /** The largest skill .zip the server takes, in whole MB: what the apps say, a little under what they let through. */
 export const SKILL_ZIP_MB = Math.floor(SKILL_ZIP_BYTES / 1024 / 1024);

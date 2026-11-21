@@ -51,7 +51,8 @@ export function listZip(buffer: Uint8Array): ZipListing[] {
     }
     const nameLength = view.getUint16(offset + 28, true);
     const path = decoder.decode(buffer.subarray(offset + 46, offset + 46 + nameLength));
-    if (!path.endsWith("/")) {
+    // Windows PowerShell's Compress-Archive can end directory names with a backslash.
+    if (!path.endsWith("/") && !path.endsWith("\\")) {
       files.push({
         path,
         size: view.getUint32(offset + 24, true),

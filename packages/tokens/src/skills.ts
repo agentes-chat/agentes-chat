@@ -7,6 +7,9 @@ const MIB = 1024 * 1024;
 export const SKILL_TEXT_BYTES = 16 * MIB;
 export const SKILL_ASSET_BYTES = 40 * MIB;
 
+/** A standalone Markdown file, in UTF-8 bytes. */
+export const SKILL_MARKDOWN_BYTES = 250_000;
+
 /**
  * The longest base64 .zip a skill install takes: everything a skill keeps, stored uncompressed, with room for the
  * zip's own headers. The import's schema refuses past it, and its body limit sits just above.

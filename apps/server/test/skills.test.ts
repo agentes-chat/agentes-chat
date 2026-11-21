@@ -10,6 +10,67 @@ afterEach(async () => {
 
 const skill = (name: string) => `---\nname: ${name}\ndescription: Use for ${name}.\n---\n# ${name}`;
 
+test("creating a skill without overwriting leaves an existing skill and version intact", async () => {
+  t = await createTestServer();
+  const b = browser(t);
+  await signUp(b, "owner@example.com");
+  const { orgId } = await seedOrg(b);
+  const path = `/api/app/organizations/${orgId}/skills`;
+  const input = { name: "weekly-report", description: "Write a report.", body: "# Original" };
+  const first = await b(path, { json: input });
+  expect(first.status).toBe(201);
+  const { id } = (await first.json()) as { id: string };
+
+  const collision = await b(path, { json: { ...input, body: "# Different skill", createOnly: true } });
+  expect(collision.status).toBe(409);
+  expect(await collision.json()).toMatchObject({ error: { code: "skill.name_taken", params: { name: input.name } } });
+  expect(await (await b(`${path}/${id}`)).json()).toMatchObject({ body: "# Original", version: 1 });
+
+  const createOnce = { ...input, name: "monthly-report", createOnly: true };
+  const results = await Promise.all([b(path, { json: createOnce }), b(path, { json: createOnce })]);
+  expect(results.map((res) => res.status).sort()).toEqual([201, 409]);
+
+  const update = await b(path, { json: { ...input, body: "# Updated intentionally" } });
+  expect(update.status).toBe(201);
+  expect(await update.json()).toMatchObject({ id, body: "# Updated intentionally", version: 2 });
+});
+
+test("imports a standalone skill Markdown file", async () => {
+  t = await createTestServer();
+  const b = browser(t);
+  await signUp(b, "owner@example.com");
+  const { orgId } = await seedOrg(b);
+  const path = `/api/app/organizations/${orgId}/skills/import`;
+  const response = await b(path, { json: { markdown: skill("weekly-report") } });
+  expect(response.status).toBe(201);
+  expect(await response.json()).toMatchObject({ name: "weekly-report", body: "# weekly-report", source: "upload" });
+
+  const invalid = await b(path, { json: { markdown: "# Missing frontmatter" } });
+  expect(invalid.status).toBe(400);
+  expect(await invalid.json()).toMatchObject({ error: { code: "skill.no_frontmatter" } });
+});
+
+test("imports a ZIP with a Windows PowerShell-style empty directory entry", async () => {
+  t = await createTestServer();
+  const b = browser(t);
+  await signUp(b, "owner@example.com");
+  const { orgId } = await seedOrg(b);
+  const archive = zip([
+    ["weekly-report\\empty\\", ""],
+    ["weekly-report\\SKILL.md", skill("weekly-report")],
+    ["weekly-report\\templates\\report.md", "# Template"],
+  ]);
+  const response = await b(`/api/app/organizations/${orgId}/skills/import`, {
+    json: { zipBase64: Buffer.from(archive).toString("base64") },
+  });
+  expect(response.status).toBe(201);
+  expect(await response.json()).toMatchObject({
+    name: "weekly-report",
+    source: "upload",
+    files: [{ path: "templates/report.md", status: "stored" }],
+  });
+});
+
 /**
  * Fake GitHub: acme/skills' archive (two skills, deflated as codeload sends them) through codeload's redirect.
  * `limited`: every answer is GitHub limiting us.

@@ -6,7 +6,14 @@ import { editsAgent } from "./audience";
 import { recordAudit } from "./audit";
 import { mapInBatches } from "./batches";
 import { activeConnections, type ConnectorDeps } from "./connectors/connections";
-import { type ErrorParams, ForbiddenError, NotFoundError, TooManyError, ValidationError } from "./errors";
+import {
+  ConflictError,
+  type ErrorParams,
+  ForbiddenError,
+  NotFoundError,
+  TooManyError,
+  ValidationError,
+} from "./errors";
 import { publishAgentsChanged } from "./events";
 import { formatBytes } from "./format";
 import { connectionToken } from "./git/branches";
@@ -599,6 +606,8 @@ export async function saveSkill(
     sourceHash?: string;
     files?: SkillFileInput[];
     defaultForNewAgents?: boolean;
+    /** Reserve an unused name for a new skill. */
+    createOnly?: boolean;
     /** A personal skill's person (only that person saves it); null or absent: the team's. */
     owner?: string | null;
   },
@@ -608,10 +617,12 @@ export async function saveSkill(
   await requirePermission(deps.db, actorId, orgId, owner ? "read" : "manage_agents");
   validateSkill(input);
   const files = await planFiles(deps, orgId, input.files ?? []);
-  const [existing] = await deps.db
-    .select()
-    .from(skills)
-    .where(and(eq(skills.orgId, orgId), eq(skills.slug, input.name), skillsOf(owner)));
+  const [existing] = input.createOnly
+    ? []
+    : await deps.db
+        .select()
+        .from(skills)
+        .where(and(eq(skills.orgId, orgId), eq(skills.slug, input.name), skillsOf(owner)));
   let row: SkillRow;
   if (existing) {
     // Same name: a new version of that skill. A deleted one comes back with its agents' assignments, except from a link
@@ -645,26 +656,28 @@ export async function saveSkill(
     if (existing.deletedAt && input.source === "url")
       await deps.db.update(agentSkills).set({ enabled: false }).where(eq(agentSkills.skillId, existing.id));
   } else {
-    const [created] = await deps.db
-      .insert(skills)
-      .values({
-        orgId,
-        slug: input.name,
-        name: input.name,
-        description: input.description,
-        body: input.body,
-        metadata: input.metadata,
-        source: input.source,
-        sourceUrl: input.sourceUrl ?? null,
-        sourceVia: input.sourceVia ?? null,
-        sourceByFolder: input.sourceByFolder ?? false,
-        sourceHash: input.sourceHash ?? null,
-        defaultForNewAgents: owner ? false : (input.defaultForNewAgents ?? false),
-        createdByUserId: actorId,
-        ownerUserId: owner,
-      })
-      .returning();
-    if (!created) throw new Error("skill insert returned nothing");
+    const insert = deps.db.insert(skills).values({
+      orgId,
+      slug: input.name,
+      name: input.name,
+      description: input.description,
+      body: input.body,
+      metadata: input.metadata,
+      source: input.source,
+      sourceUrl: input.sourceUrl ?? null,
+      sourceVia: input.sourceVia ?? null,
+      sourceByFolder: input.sourceByFolder ?? false,
+      sourceHash: input.sourceHash ?? null,
+      defaultForNewAgents: owner ? false : (input.defaultForNewAgents ?? false),
+      createdByUserId: actorId,
+      ownerUserId: owner,
+    });
+    const [created] = await (input.createOnly ? insert.onConflictDoNothing() : insert).returning();
+    if (!created) {
+      if (input.createOnly)
+        throw new ConflictError("This skill name is already in use", "skill.name_taken", { name: input.name });
+      throw new Error("skill insert returned nothing");
+    }
     row = created;
     if (owner) {
       const own = await deps.db
