@@ -54,6 +54,8 @@ function runner(hub: MachineHub) {
   const state = {
     ensure: [] as EnsurePlan[],
     noSlot: false,
+    /** The link holds `MAX_IN_FLIGHT` requests: the runner refuses before reading (`internal` / `busy`). */
+    linkBusy: false,
     baseBehind: undefined as number | undefined,
   };
   const reply = (frame: unknown) => hub.message(conn, JSON.stringify(frame));
@@ -84,6 +86,7 @@ function runner(hub: MachineHub) {
         }
         if (frame.op === "task.start") {
           if (state.noSlot) return fail("no_slot", "all 3 task slots are busy");
+          if (state.linkBusy) return fail("internal", "busy");
           started.push(frame);
           return ok({
             taskId: frame.taskId,
@@ -352,6 +355,33 @@ describe("one worktree per mission (ADR 0044)", () => {
     expect((await taskRow(waiting))?.startRequest).not.toBeNull();
     r.state.noSlot = false;
     await r.done(busyId);
+    await drainOutbox(f.db, f.handlers);
+    expect(r.started.at(-1)?.taskId).toBe(waiting);
+    expect((await taskRow(waiting))?.status).toBe("running");
+  });
+
+  test("a full link puts the item back and its queue is walked again with no task ending", async () => {
+    const { r } = await started();
+    const busy = await startTask({ title: "Lint", prompt: "Run the linter", mode: "read" });
+    const busyId = (r.started.at(-1) as TaskStart).taskId;
+    expect(busy.content).toContain("Started task");
+    r.state.noSlot = true;
+    const waiting = taskIdOf((await startTask({ title: "Tests", prompt: "Run the tests", mode: "read" })).content);
+    r.state.noSlot = false;
+    r.state.linkBusy = true;
+    await r.done(busyId);
+    await drainOutbox(f.db, f.handlers);
+    // Put back, not failed, with what to send kept.
+    expect(await taskRow(waiting)).toMatchObject({ status: "queued", endedAt: null });
+    expect((await taskRow(waiting))?.startRequest).not.toBeNull();
+    const retries = await f.db.select().from(schema.outbox).where(eq(schema.outbox.kind, "machine.queue_retry"));
+    expect(retries).toHaveLength(1);
+    // The link frees with nothing ending: the retry starts it.
+    r.state.linkBusy = false;
+    await f.db
+      .update(schema.outbox)
+      .set({ nextAttemptAt: new Date(0) })
+      .where(eq(schema.outbox.kind, "machine.queue_retry"));
     await drainOutbox(f.db, f.handlers);
     expect(r.started.at(-1)?.taskId).toBe(waiting);
     expect((await taskRow(waiting))?.status).toBe("running");
