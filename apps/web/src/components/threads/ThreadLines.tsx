@@ -11,7 +11,7 @@ import {
 } from "@agenteschat/client/lib/agent-work";
 import { formatTime, relativeTime } from "@agenteschat/client/lib/format";
 import { threadMessageCount, threadTitle } from "@agenteschat/client/lib/threads";
-import { AvatarStack, Button, CountBadge, Icon, Popover } from "@agenteschat/ui";
+import { AvatarStack, Button, Icon, Popover } from "@agenteschat/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { createContext, type ReactNode, useContext, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -23,6 +23,7 @@ import { useOrg } from "@/components/org-context";
 import { WaitMark } from "@/components/RequestCard";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useStreams } from "@/realtime/context";
+import { NewThreadInline } from "./NewThread";
 import { ThreadStatusChip } from "./ThreadBits";
 import "./threads.css";
 
@@ -306,13 +307,17 @@ export function ArchivedThreadsNote({ channelId, count }: { channelId: string; c
   );
 }
 
-/** The channel header's "Threads (N)": a popover with this channel's threads and their state. */
+/**
+ * The channel header's "Threads N": the word and the count, so the way into a channel's side conversations reads as
+ * one, and a popover with them and "Nova thread", which posts the subject and opens its thread in the panel.
+ */
 export function ChannelThreadsButton({ channelId, channelName }: { channelId: string; channelName: string }) {
   const { t, i18n } = useTranslation();
   const { org } = useOrg();
   const navigate = useNavigate();
   const actions = useChannelActions();
   const [open, setOpen] = useState(false);
+  const [starting, setStarting] = useState(false);
   const list = useChannelThreads(org.id, channelId, "all");
   const archived = useChannelThreads(org.id, channelId, "archived");
   const threads = list.data?.threads ?? [];
@@ -327,7 +332,10 @@ export function ChannelThreadsButton({ channelId, channelName }: { channelId: st
   return (
     <Popover
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setStarting(false);
+      }}
       side="bottom"
       align="end"
       className="thread-pop"
@@ -335,24 +343,45 @@ export function ChannelThreadsButton({ channelId, channelName }: { channelId: st
       trigger={
         <button
           type="button"
-          className="ac-btn ac-btn--ghost ac-btn--icon channel__icon channel__threads"
+          className="ac-btn ac-btn--ghost ac-btn--sm channel__threads"
           aria-label={t("threads.popover.button", { count: threads.length })}
-          title={t("threads.popover.title")}
         >
-          <Icon name="thread" />
-          {threads.length > 0 && <CountBadge className="channel__icon-count">{count}</CountBadge>}
+          <Icon name="thread" size={16} />
+          <span>{t("threads.popover.title")}</span>
+          {threads.length > 0 && <span className="channel__threads-count">{count}</span>}
         </button>
       }
     >
       <div className="thread-pop__head">
         <b>{t("threads.popover.in", { channel: channelName })}</b>
-        <small>
-          {archivedCount > 0
-            ? t("threads.popover.countArchived", { count: threads.length, archived: archivedCount })
-            : threads.length}
-        </small>
+        {/* No "0": the empty line under it says so (a zero beside its own empty state is noise). */}
+        {(threads.length > 0 || archivedCount > 0) && (
+          <small>
+            {archivedCount > 0
+              ? t("threads.popover.countArchived", { count: threads.length, archived: archivedCount })
+              : threads.length}
+          </small>
+        )}
       </div>
-      {threads.length === 0 && <p className="thread-pop__empty">{t("threads.popover.empty")}</p>}
+      {actions?.reply &&
+        (starting ? (
+          <NewThreadInline
+            channelId={channelId}
+            onCancel={() => setStarting(false)}
+            onStarted={(message) => {
+              setStarting(false);
+              setOpen(false);
+              actions.reply?.(message);
+            }}
+          />
+        ) : (
+          <div className="thread-pop__new">
+            <Button size="sm" icon="plus" onClick={() => setStarting(true)}>
+              {t("threads.new.open")}
+            </Button>
+          </div>
+        ))}
+      {threads.length === 0 && !starting && <p className="thread-pop__empty">{t("threads.popover.empty")}</p>}
       <div className="thread-pop__list">
         {threads.map((thread) => (
           <button key={thread.id} type="button" className="thread-pop__row ac-mediarow" onClick={() => go(thread.id)}>

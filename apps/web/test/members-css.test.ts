@@ -41,10 +41,10 @@ test("the members column: 264px on the work's sheet, group titles in normal case
   expect(last(shipped, ".members-side__row.profile-trigger:hover", "background")).toBe("var(--side-hover)");
   // Every role mark (the group headers' too) is a full circle.
   expect(last(shipped, ".ac-rolemark", "border-radius")).toBe("50%");
-  // A phone: no column, the members in a sheet, and the threads button moves into it.
+  // A phone: no column, the members in a sheet; the threads button stays in the header with its word.
   expect(last(phone, ".members-side", "display")).toBe("none");
   expect(last(shipped, ".members-sheet", "width")).toBe("86%");
-  expect(last(phone, ".channel__acts>.channel__threads", "display")).toBe("none");
+  expect(last(phone, ".channel__acts>.channel__threads", "display")).toBeUndefined();
 });
 
 test("the column's add row: a 24px plus tile and 13px text, so it fits one line in the 264px column", async () => {
@@ -85,4 +85,24 @@ test("a DM's floating sidebar: 360px over the chat, and where panels take the wh
     declarations(sheet, ".thread-panel.dm-side--float").find(([p]) => p === "width")?.[1];
   expect(width(topLevel(css))).toBeUndefined();
   expect(width(atRule(css, "@media (min-width: 861px)"))).toBe("min(360px,100vw - 20px)");
+});
+
+test("a member's name wraps, never cut with an ellipsis, and a face leading a line rises to the name's capitals", async () => {
+  const shipped = topLevel(await builtCss("src/styles.css", "src/components/members/members.css"));
+  const last = (selector: string, property: string) =>
+    declarations(shipped, selector)
+      .filter(([p]) => p === property)
+      .at(-1)?.[1];
+  expect(last(".members-side__label", "text-overflow")).toBeUndefined();
+  expect(last(".members-side__label", "white-space")).toBeUndefined();
+  expect(last(".members-side__label", "overflow-wrap")).toBe("anywhere");
+  expect(last(".members-side__inner:has(.members-side__line)", "align-items")).toBe("flex-start");
+});
+
+test("the composer's notice strip sits 8px (the spacing token) above the composer", async () => {
+  const shipped = topLevel(await builtCss("src/styles.css", "src/components/no-ai.css"));
+  const margin = declarations(shipped, ".noai-banner")
+    .filter(([p]) => p === "margin")
+    .at(-1)?.[1];
+  expect(margin).toBe("0 4px var(--space-2)");
 });

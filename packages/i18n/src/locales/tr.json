@@ -9919,6 +9919,16 @@
       "empty": "Bu kanalda ileti dizisi yok.",
       "seeAll": "Tümünü İleti dizileri'nde gör"
     },
+    "new": {
+      "open": "Yeni ileti dizisi",
+      "title": "Yeni ileti dizisi",
+      "text": "İlk mesaj kanala gider, sohbet onun ileti dizisinde devam eder.",
+      "channel": "Kanal",
+      "subject": "Konu",
+      "placeholder": "Bu sohbet ne hakkında?",
+      "start": "İleti dizisini başlat",
+      "failed": "İleti dizisi başlatılamadı. Tekrar deneyin."
+    },
     "side": {
       "label": "İleti dizisi",
       "expand": "Tam ekran aç",

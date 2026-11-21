@@ -66,8 +66,9 @@ export function ChannelHeader({
           )}
         </div>
         <div className="channel__acts">
-          <QueueButton machineId={queueMachine} />
+          {/* Threads lead the header with their word: the way into the channel's side conversations (ADR 0029 §11). */}
           {isMember && <ChannelThreadsButton channelId={channel.id} channelName={channel.name} />}
+          <QueueButton machineId={queueMachine} />
           {isMember && <ChannelPinsButton channelId={channel.id} channelName={channel.name} />}
           <button
             type="button"

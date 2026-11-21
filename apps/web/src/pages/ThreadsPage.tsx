@@ -36,6 +36,7 @@ import { MissionsTab } from "@/components/missions/MissionList";
 import { useOrg } from "@/components/org-context";
 import { SelectionBar } from "@/components/SelectionBar";
 import { SidePanel } from "@/components/SidePanel";
+import { NewThreadDialog } from "@/components/threads/NewThread";
 import { ThreadStatusChip, useThreadControls } from "@/components/threads/ThreadBits";
 import { useRightHandLook } from "@/hooks/useRightHandLook";
 import { useOpenParam } from "@/lib/open-param";
@@ -73,6 +74,7 @@ export function ThreadsPage({ initialTab, initialChannel }: { initialTab?: Threa
   const [openId, setOpenId] = useOpenParam();
   const [picked, setPicked] = useState<Set<string>>(() => new Set());
   const [newMission, setNewMission] = useState(false);
+  const [newThread, setNewThread] = useState(false);
   // Channel groups folded by the person (this visit only).
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
   const toggleGroup = (key: string) =>
@@ -148,16 +150,23 @@ export function ThreadsPage({ initialTab, initialChannel }: { initialTab?: Threa
           title={missions ? t("missions.title") : t("threads.title")}
           meta={missions ? t("missions.subtitle") : t("threads.subtitle")}
           actions={
-            opensMissions &&
-            !noMissions && (
-              <Button
-                variant={missions ? "primary" : "default"}
-                icon={missions ? "plus" : "flag"}
-                onClick={() => setNewMission(true)}
-              >
-                {t("missions.new.open")}
-              </Button>
-            )
+            // A new thread is this page's first action (a mission is one kind of thread); on Missões, the mission's.
+            <>
+              {opensMissions && !noMissions && (
+                <Button
+                  variant={missions ? "primary" : "default"}
+                  icon={missions ? "plus" : "flag"}
+                  onClick={() => setNewMission(true)}
+                >
+                  {t("missions.new.open")}
+                </Button>
+              )}
+              {!missions && (
+                <Button variant="primary" icon="plus" onClick={() => setNewThread(true)}>
+                  {t("threads.new.open")}
+                </Button>
+              )}
+            </>
           }
         />
         <div className="threads-tabs">
@@ -378,6 +387,14 @@ export function ThreadsPage({ initialTab, initialChannel }: { initialTab?: Threa
         </SidePanel>
       )}
       {controls.dialog}
+      {newThread && (
+        <NewThreadDialog
+          open={newThread}
+          onOpenChange={setNewThread}
+          initialChannelId={channel[0]}
+          onStarted={(message) => setOpenId(message.id)}
+        />
+      )}
       {newMission && (
         <NewMissionDialog
           open={newMission}

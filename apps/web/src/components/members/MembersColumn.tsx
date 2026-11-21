@@ -1,9 +1,10 @@
 import type { Agent, Channel, Member } from "@agenteschat/client";
-import { agentStateIn, useChannels, useRoles } from "@agenteschat/client";
+import { agentStateIn, useAiStatus, useChannels, useRoles } from "@agenteschat/client";
 import { WORK_TICK_MS, workLine, workLineText } from "@agenteschat/client/lib/agent-work";
 import { ErrorBoundary } from "@agenteschat/client/lib/error-boundary";
 import { relativeTime } from "@agenteschat/client/lib/format";
 import { memberGroups } from "@agenteschat/client/lib/member-groups";
+import { aiStateOf } from "@agenteschat/client/lib/no-ai";
 import {
   agentFaceWord,
   agentMemberLine,
@@ -23,7 +24,6 @@ import { StatusLine } from "@/components/Presence";
 import { ProfileTrigger } from "@/components/ProfileCard";
 import { unshownRow } from "@/components/Sidebar";
 import { AgentTrail, colorOf } from "@/components/Sky";
-import { ChannelThreadsButton } from "@/components/threads/ThreadLines";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useModalSheet } from "@/hooks/useModalSheet";
 import {
@@ -124,7 +124,6 @@ export function MembersSheet({
               <span>{channel.name}</span>
             </span>
             <span className="members-sheet__acts">
-              {isMember && <ChannelThreadsButton channelId={channel.id} channelName={channel.name} />}
               {isMember && <ChannelPinsButton channelId={channel.id} channelName={channel.name} />}
               <button
                 type="button"
@@ -180,6 +179,10 @@ function MembersList({ channelId, people, agents, onAdd }: Lists) {
   const heard = new Set(busyKey.split(" "));
   const busy = new Set([...heard, ...atWork]);
   const off = useAgentOff();
+  // "Sem IA conectada" under every agent distinguishes none of them: when all of them lack an AI, the composer's strip
+  // says it once; the rows keep the caption only when some agents differ.
+  const ai = useAiStatus(org.id).data;
+  const allNoAi = !!ai && agents.length > 0 && agents.every((a) => aiStateOf(ai, a.id) === "no_ai");
   const groups = memberGroups({
     people,
     agents,
@@ -232,7 +235,7 @@ function MembersList({ channelId, people, agents, onAdd }: Lists) {
                 </ErrorBoundary>
               ) : (
                 <ErrorBoundary key={r.agent.id} resetKey={r.agent} fallback={unshownRow}>
-                  <AgentRow agent={r.agent} channelId={channelId} busy={busy.has(r.agent.id)} />
+                  <AgentRow agent={r.agent} channelId={channelId} busy={busy.has(r.agent.id)} quietNoAi={allNoAi} />
                 </ErrorBoundary>
               ),
             )}
@@ -284,7 +287,7 @@ function PersonRow({ member: m, you }: { member: Member; you: boolean }) {
       >
         <Avatar size="sm" name={m.name} imageUrl={m.avatarUrl ?? m.image} presence={presence} presenceLabel={word} />
         <span className="members-side__text">
-          <span className="members-side__name">
+          <span className="members-side__name ac-captop">
             <span className="members-side__label">{m.name}</span>
             {m.role === "owner" && (
               <span className="members-side__crown" role="img" aria-label={owner} title={owner}>
@@ -310,7 +313,18 @@ function PersonRow({ member: m, you }: { member: Member; you: boolean }) {
  * An agent: its face, what it is doing (its work first: for whom or where, "aqui" for this conversation, what it waits
  * on, how long; then its line, its role, its presence), the orbit and the trail while it works, anywhere.
  */
-function AgentRow({ agent, channelId, busy }: { agent: Agent; channelId: string; busy: boolean }) {
+function AgentRow({
+  agent,
+  channelId,
+  busy,
+  quietNoAi,
+}: {
+  agent: Agent;
+  channelId: string;
+  busy: boolean;
+  /** Every listed agent lacks an AI: the composer's strip says it, so no row repeats it. */
+  quietNoAi: boolean;
+}) {
   const { t, i18n } = useTranslation();
   const { org } = useOrg();
   const dir = useDirectory(org.id);
@@ -334,7 +348,10 @@ function AgentRow({ agent, channelId, busy }: { agent: Agent; channelId: string;
   // One short line here; the whole one in the row's title and on its profile card.
   const line = shown?.line ? agentStatusShort(t, shown.line, i18n.language) : null;
   const full = agentLine(t, shown?.line ?? null, i18n.language)?.text;
-  const under = agentMemberLine(now, line, shown ? agentWhyKey(shown.presence, shown.noAi) : null);
+  const why = shown ? agentWhyKey(shown.presence, shown.noAi) : null;
+  // The caption left because it repeated the strip's: the row is the name alone, not its role put in its place.
+  const quiet = quietNoAi && why === "noAi";
+  const under = agentMemberLine(now, line, quiet ? null : why);
   // What it does here now (a run this tab hears), else its work's words: the orbit's label and the row's title.
   const doing =
     state !== "idle"
@@ -373,7 +390,7 @@ function AgentRow({ agent, channelId, busy }: { agent: Agent; channelId: string;
           asleep={isOutOfOffice(shown?.line)}
         />
         <span className="members-side__text">
-          <span className="members-side__name">
+          <span className="members-side__name ac-captop">
             <span className="members-side__label">{agent.name}</span>
             {doing && <PixelSpinner size={14} color={colorOf(agent)} label={doing} className="members-side__spin" />}
           </span>
@@ -383,10 +400,10 @@ function AgentRow({ agent, channelId, busy }: { agent: Agent; channelId: string;
             <StatusLine {...under.line} className="members-side__line" />
           ) : under?.why ? (
             <span className="members-side__line">{t(`presence.agentWhy.${under.why}`)}</span>
-          ) : agent.role ? (
+          ) : agent.role && !quiet ? (
             <span className="members-side__line ac-tag">{agent.role}</span>
           ) : (
-            word && <span className="members-side__line">{word}</span>
+            !quiet && word && <span className="members-side__line">{word}</span>
           )}
         </span>
       </span>
