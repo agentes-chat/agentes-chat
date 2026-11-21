@@ -23,6 +23,7 @@ import { findMember } from "./chat-tools";
 import { CONNECTOR_CATALOG } from "./connectors/catalog";
 import { connectorListing, type ServerCatalog } from "./connectors/listing";
 import { MCP_PRESETS, presetForServer } from "./connectors/presets";
+import { CONNECTOR_NAMES } from "./connectors/sites";
 import { cardPlace, NO_PERSON_READS } from "./consultations";
 import { ownWords } from "./context/learn";
 import { decideProposal, proposeSettings, type SettingsProposalCard } from "./context/proposals";
@@ -253,7 +254,10 @@ export function catalogConnector(
   const all = server
     ? connectorListing(server)
     : [...Object.values(CONNECTOR_CATALOG), ...MCP_PRESETS].map((c) => ({ ...c, available: true, soon: false }));
-  const hit = all.find((c) => slug(c.id) === key) ?? all.find((c) => slug(c.label) === key);
+  const hit =
+    all.find((c) => slug(c.id) === key) ??
+    all.find((c) => slug(c.label) === key) ??
+    all.find((c) => CONNECTOR_NAMES[c.id]?.some((n) => slug(n) === key));
   return hit ? { id: hit.id, label: hit.label, available: hit.available, soon: hit.soon } : null;
 }
 

@@ -81,7 +81,7 @@ import {
   confidentialLockAllows,
   confidentialRefusal,
 } from "./confidential-lock";
-import { connectorFirst } from "./connector-first";
+import { BROWSER_CONNECTOR_FIRST, browserFirst, browserOpens, connectorFirst } from "./connector-first";
 import { type BlockedTool, compactSchema, presentTools, resolveCall } from "./directory";
 import { canonicalJson, validateJson } from "./json-schema";
 import { missingPermissions, REQUEST_PERMISSION_TOOL } from "./permission";
@@ -1540,6 +1540,18 @@ export function createToolGateway(deps: {
           const tools = { usable: await grantedFor(ctx, authority, all), all: [...all.values()] };
           const way = await connectorFirst(ctx, deps.catalog, asked, String(said ?? ""), tools).catch(() => null);
           if (way) return finish({ content: way, data: { code: "secret.connector_first" } });
+        }
+      }
+      // A page of a service we connect natively: the connector is suggested first, once per conversation.
+      const opens = tool.connectionId || !deps.catalog ? [] : browserOpens(tool.name, call.input);
+      if (deps.catalog && opens.length > 0) {
+        const tools = { usable: await grantedFor(ctx, authority, all), all: [...all.values()] };
+        const first = await browserFirst(ctx, deps.catalog, opens, tools).catch(() => null);
+        if (first) {
+          return finish({
+            content: first.content,
+            data: { code: BROWSER_CONNECTOR_FIRST, connectors: first.connectors },
+          });
         }
       }
       const problems = validateJson(tool.inputSchema, call.input);

@@ -7,6 +7,7 @@ import type { ComposioConnectors } from "./composio";
 import { activeConnections } from "./connections";
 import { isCustom } from "./custom";
 import { composioToolkitUrl, MCP_PRESETS, type McpPreset, presetForServer } from "./presets";
+import { CONNECTOR_NAMES } from "./sites";
 
 /**
  * Brand icons the web app serves, keyed by icon name. One color, from
@@ -225,7 +226,7 @@ export function connectorListing(server: ServerCatalog): ConnectorListingEntry[]
 export interface MissingConnector {
   label: string;
   description: string;
-  /** What names it in a search: its label and its ids (`drive`). */
+  /** What names it in a search: its label, its ids (`drive`) and its other names (`CONNECTOR_NAMES`). */
   names: string[];
   /**
    * `unavailable`: this server can't connect it; `soon`: its vendor hasn't approved agentes.chat yet (a `soon`
@@ -334,6 +335,7 @@ export async function connectorStates(
   for (const entry of connectorListing(catalog)) {
     const s = service(entry.label, entry.description);
     s.names.add(entry.id);
+    for (const name of CONNECTOR_NAMES[entry.id] ?? []) s.names.add(name);
     s.offered ||= entry.available;
     s.soon ||= entry.soon;
   }
