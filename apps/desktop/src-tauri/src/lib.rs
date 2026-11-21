@@ -334,11 +334,69 @@ fn leave(app: AppHandle, again: bool) {
     std::thread::spawn(move || {
         stop_children(&app);
         if again {
-            app.restart();
+            relaunch(&app);
         } else {
             app.exit(0);
         }
     });
+}
+
+/// Opens the app anew. On macOS, Tauri's `restart` runs `open -n` while this instance still lives, so the new one
+/// gets a Dock icon of its own beside the one kept in the Dock, and the single-instance check may hand it back to
+/// the one quitting. Here a detached shell waits for this process to end, then opens the bundle without `-n`:
+/// LaunchServices starts it in the icon already there. Not in a bundle (a dev build): Tauri's own restart.
+fn relaunch(app: &AppHandle) {
+    #[cfg(target_os = "macos")]
+    if let Some(bundle) = std::env::current_exe().ok().as_deref().and_then(bundle_of) {
+        use std::os::unix::process::CommandExt;
+        let reopened = std::env::var_os(REOPENED_VAR).is_some();
+        let spawned = Command::new("/bin/sh")
+            .arg("-c")
+            .arg(RELAUNCH_SCRIPT)
+            .arg(bundle)
+            .arg(std::process::id().to_string())
+            .args(relaunch_args(std::env::args(), reopened))
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .process_group(0)
+            .spawn();
+        if spawned.is_ok() {
+            app.exit(0);
+            return;
+        }
+    }
+    app.restart();
+}
+
+/// `$0` the bundle, `$1` the pid to wait for (at most 30 s), the rest the app's arguments.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+const RELAUNCH_SCRIPT: &str = concat!(
+    r#"pid=$1; shift; i=0; "#,
+    r#"while kill -0 "$pid" 2>/dev/null && [ $i -lt 300 ]; do sleep 0.1; i=$((i+1)); done; "#,
+    r#"exec /usr/bin/open "$0" --args "$@""#,
+);
+
+/// The `.app` a binary at `…/X.app/Contents/MacOS/x` belongs to.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn bundle_of(exe: &Path) -> Option<std::path::PathBuf> {
+    let macos = exe.parent()?;
+    let contents = macos.parent()?;
+    let bundle = contents.parent()?;
+    let named = |p: &Path, name: &str| p.file_name().is_some_and(|n| n == name);
+    (named(macos, "MacOS") && named(contents, "Contents") && bundle.extension().is_some_and(|e| e == "app"))
+        .then(|| bundle.to_path_buf())
+}
+
+/// The arguments the reopened app gets: its own (the program left out), `REOPENED_ARG` only for a person's Reopen.
+/// `open` hands the new app no environment of ours, so on macOS a Reopen is said with an argument.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn relaunch_args(args: impl Iterator<Item = String>, reopened: bool) -> Vec<String> {
+    let mut kept: Vec<String> = args.skip(1).filter(|a| a != REOPENED_ARG).collect();
+    if reopened {
+        kept.push(REOPENED_ARG.into());
+    }
+    kept
 }
 
 #[tauri::command]
@@ -534,6 +592,8 @@ async fn update_install(app: AppHandle) -> Result<bool, String> {
 /// Set by a person's Reopen: the reopened app keeps the arguments it started with, `AUTOSTART_ARG` too, and opens its
 /// windows all the same.
 const REOPENED_VAR: &str = "AGENTES_DESKTOP_REOPENED";
+/// The same, as the argument macOS's relaunch passes (`relaunch_args`): `open` doesn't carry the variable.
+const REOPENED_ARG: &str = "--reopened";
 
 /// A person's Reopen: the runners and the server here finish their work first, as when quitting; then the app opens
 /// again, its windows shown.
@@ -595,7 +655,7 @@ pub fn run() {
     // Before any thread starts: WebKitGTK reads how to draw once.
     graphics::choose();
     // Taken once: a later reopen for an update keeps a start at login in the background.
-    let reopened = std::env::var_os(REOPENED_VAR).is_some();
+    let reopened = std::env::var_os(REOPENED_VAR).is_some() || std::env::args().any(|a| a == REOPENED_ARG);
     std::env::remove_var(REOPENED_VAR);
     let builder = tauri::Builder::default()
         // First: a second launch brings the running app's window back; one carrying a link (Windows,
@@ -879,6 +939,26 @@ mod tests {
         assert!(!started_at_login(args(&["agentes-chat", AUTOSTART_ARG]), true));
         assert!(!started_at_login(args(&["agentes-chat"]), false));
         assert!(!started_at_login(args(&["agentes-chat"]), true));
+    }
+
+    #[test]
+    fn a_relaunch_opens_the_bundle_it_runs_from() {
+        assert_eq!(
+            bundle_of(Path::new("/Applications/agentes.chat.app/Contents/MacOS/agentes-chat")),
+            Some(std::path::PathBuf::from("/Applications/agentes.chat.app"))
+        );
+        assert_eq!(bundle_of(Path::new("/Users/x/target/debug/agentes-chat")), None);
+        assert_eq!(bundle_of(Path::new("/Applications/x/Contents/MacOS/agentes-chat")), None);
+    }
+
+    #[test]
+    fn a_relaunch_keeps_the_arguments_and_says_a_reopen_once() {
+        let args = |list: &[&str]| list.iter().map(|a| a.to_string()).collect::<Vec<_>>().into_iter();
+        assert_eq!(relaunch_args(args(&["agentes-chat", AUTOSTART_ARG]), false), vec![AUTOSTART_ARG]);
+        assert_eq!(relaunch_args(args(&["agentes-chat", AUTOSTART_ARG]), true), vec![AUTOSTART_ARG, REOPENED_ARG]);
+        // An update after a Reopen is no Reopen: the argument isn't carried on.
+        assert_eq!(relaunch_args(args(&["agentes-chat", REOPENED_ARG]), false), Vec::<String>::new());
+        assert_eq!(relaunch_args(args(&["agentes-chat", REOPENED_ARG]), true), vec![REOPENED_ARG]);
     }
 
     #[test]
