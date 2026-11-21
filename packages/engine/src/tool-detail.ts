@@ -225,19 +225,25 @@ export function carriesCredential(value: unknown): boolean {
 
 /**
  * A private key's block (PGP's too), from its first line to its last or the text's end, its first line's words also
- * wrapped over lines; and the end of one whose start was in an earlier text (a message, a page of a file), from the
- * text's start.
+ * wrapped over lines.
  */
 const PRIVATE_KEY_BLOCK =
-  /-----BEGIN[A-Z0-9\s]*?\sPRIVATE\s+KEY(?:\s+BLOCK)?-----[\s\S]*?(?:-----END[A-Z0-9\s]*?\sPRIVATE\s+KEY(?:\s+BLOCK)?-----|$)|^(?:(?!-----BEGIN)[\s\S])*?-----END[A-Z0-9\s]*?\sPRIVATE\s+KEY(?:\s+BLOCK)?-----/g;
+  /-----BEGIN[A-Z0-9\s]*?\sPRIVATE\s+KEY(?:\s+BLOCK)?-----[\s\S]*?(?:-----END[A-Z0-9\s]*?\sPRIVATE\s+KEY(?:\s+BLOCK)?-----|$)/g;
+/** Once the blocks are replaced, the end of one whose start was in an earlier text (a message, a page of a file). */
+const KEY_END_ALONE = /^[\s\S]*?-----END[A-Z0-9\s]*?\sPRIVATE\s+KEY(?:\s+BLOCK)?-----/;
+/** `text` with each private key, whole or its end alone, replaced by `by`. The end is looked for only where there is one. */
+function replaceKeys(text: string, by: (found: string) => string) {
+  const blocks = text.replace(PRIVATE_KEY_BLOCK, by);
+  return blocks.includes("-----END") ? blocks.replace(KEY_END_ALONE, by) : blocks;
+}
 
 /** `maskSecrets`, private keys too (from their first line on): text people read that must hold none. */
-export const maskCredentials = (text: string) => maskSecrets(text).replace(PRIVATE_KEY_BLOCK, "••••");
+export const maskCredentials = (text: string) => replaceKeys(maskSecrets(text), () => "••••");
 
 /** `maskCredentials`, except a credential that appears word for word in `pasted` (what people wrote themselves). */
 export const maskCredentialsExcept = (text: string, pasted: string) => {
   const keep = (found: string) => (pasted.includes(found) ? found : "••••");
-  return text.replace(SECRET, keep).replace(PRIVATE_KEY_BLOCK, keep);
+  return replaceKeys(text.replace(SECRET, keep), keep);
 };
 
 /**
@@ -260,13 +266,15 @@ export function scrubSignIns(text: string, note: string): { text: string; found:
     found++;
     return note;
   };
-  const out = text
-    // A value already scrubbed stays as it is, so scrubbing twice changes nothing: only when what matched is the
-    // note's own start and nothing more (the note in front of a real value hides nothing).
-    .replace(SIGN_IN_FIELD, (match, field: string, value: string, at: number, all: string) =>
-      note.startsWith(value) && all.startsWith(note, at + field.length) ? match : `${field}${hit()}`,
-    )
-    .replace(PRIVATE_KEY_BLOCK, hit)
+  const out = replaceKeys(
+    text
+      // A value already scrubbed stays as it is, so scrubbing twice changes nothing: only when what matched is the
+      // note's own start and nothing more (the note in front of a real value hides nothing).
+      .replace(SIGN_IN_FIELD, (match, field: string, value: string, at: number, all: string) =>
+        note.startsWith(value) && all.startsWith(note, at + field.length) ? match : `${field}${hit()}`,
+      ),
+    hit,
+  )
     .replace(SECRET, hit)
     .replace(SIGN_IN_SHAPES, hit);
   return { text: out, found };
@@ -275,9 +283,9 @@ export function scrubSignIns(text: string, note: string): { text: string; found:
 /**
  * An address's user and a password that holds `/` or `@` (`postgres://app:pa/ss@host`): up to the first `@` with no
  * other in the host after it. Looked for before `USERINFO`, which would stop at the password's first such character.
- * The password is 256 characters at most, so each `://` costs that much, never the rest of a long word.
+ * The password is 256 characters at most and holds no `:` (the next address's `://`), so each `://` costs little.
  */
-const USERINFO_PASSWORD = /:\/\/(?<=\b[a-z][a-z0-9+.-]*:\/\/)[^\s/?#@'":]+:[^\s'"]{0,256}?@(?![^\s'"/?#]*@)/gi;
+const USERINFO_PASSWORD = /:\/\/(?<=\b[a-z][a-z0-9+.-]*:\/\/)[^\s/?#@'":]+:[^\s'":]{0,256}?@(?![^\s'"/?#]*@)/gi;
 /**
  * An address's user and password (`postgres://user:pass@host`), found from its `://` with its scheme checked behind
  * it. Looked for from each letter a scheme could start at, one long word of dots or dashes costs the square of its
