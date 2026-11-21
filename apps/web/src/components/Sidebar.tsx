@@ -2398,9 +2398,10 @@ function useWorkspaceLook() {
  * workspace when the person may make one. In the desktop app (ADR 0154) by server, then Add workspace; New workspace
  * (it makes one here) sits under this server's workspaces only on a server of one's own, since on agentes.chat Add
  * workspace makes one (`offersNewWorkspace`). Mounted only while the menu is open: the counts load then. No role beside
- * each: one person's own workspaces.
+ * each: one person's own workspaces. `withActions={false}` keeps only the list (the workspace header's quick menu; the
+ * full menu's own items make a workspace and add an account).
  */
-function MenuWorkspaces() {
+function MenuWorkspaces({ withActions = true }: { withActions?: boolean }) {
   const { t, i18n } = useTranslation();
   const { org, me } = useOrg();
   const look = useWorkspaceLook();
@@ -2409,12 +2410,12 @@ function MenuWorkspaces() {
   const api = useApi();
   const navigate = useNavigate();
   const go = (orgId: string) => void navigate({ to: "/org/$orgId", params: { orgId } });
-  const newWorkspace = offersNewWorkspace(me.user.canCreateWorkspace, groups) && (
+  const newWorkspace = withActions && offersNewWorkspace(me.user.canCreateWorkspace, groups) && (
     <MenuItem icon="plus" onSelect={() => void navigate({ to: "/onboarding" })}>
       {t("shell.newWorkspace")}
     </MenuItem>
   );
-  const addAccount = (
+  const addAccount = withActions && (
     <MenuItem
       icon="plus"
       description={t("shell.addAccountHint")}
@@ -2461,7 +2462,7 @@ function MenuWorkspaces() {
             {g.here && newWorkspace}
           </Fragment>
         ))}
-        {groups.some((g) => g.desktop) && (
+        {withActions && groups.some((g) => g.desktop) && (
           <MenuItem
             icon="plus"
             description={t("shell.addWorkspaceHint")}
@@ -2559,39 +2560,56 @@ function PlanNearLimitItem() {
  */
 function WorkspaceMenu({ summary }: { summary: string | null }) {
   const { t } = useTranslation();
-  const { org } = useOrg();
+  const { org, me } = useOrg();
   const dir = useDirectory(org.id);
   const place = useServerPlace();
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
+  // With more than one workspace (every account and server the big menu lists) the header opens a quick switcher
+  // first; the big menu is its "Configurações do workspace" item. With one, the header opens the big menu directly.
+  const groups = useWorkspaceGroups({ orgs: me.organizations, currentOrgId: org.id });
+  const several = (groups ? groups.reduce((n, g) => n + g.rows.length, 0) : me.organizations.length) > 1;
+  const header = (
+    <button
+      ref={trigger}
+      type="button"
+      className="sidebar__org-button"
+      aria-haspopup={several ? "menu" : "dialog"}
+      aria-label={t("shell.workspaceMenuOf", { name: org.name })}
+      onClick={several ? undefined : () => setOpen(true)}
+    >
+      <OrgMark logo={org.logo} className="sidebar__org-mark" />
+      <span className="sidebar__org-text">
+        <span className="sidebar__org-name">{org.name}</span>
+        {(place || summary) && (
+          <span className="sidebar__org-line">
+            {/* Where it lives, before its counts: the Cloud, this computer or one's own server. */}
+            {place && (
+              <span className="sidebar__org-where">
+                <Icon name={SERVER_PLACE_ICON[place]} size={14} />
+                {t(`hosting.badge.${place}`)}
+              </span>
+            )}
+            {summary && <span className="sidebar__org-meta">{summary}</span>}
+          </span>
+        )}
+      </span>
+      <Icon name="chevronDown" size={16} />
+    </button>
+  );
   return (
     <>
-      <button
-        ref={trigger}
-        type="button"
-        className="sidebar__org-button"
-        aria-haspopup="dialog"
-        aria-label={t("shell.workspaceMenuOf", { name: org.name })}
-        onClick={() => setOpen(true)}
-      >
-        <OrgMark logo={org.logo} className="sidebar__org-mark" />
-        <span className="sidebar__org-text">
-          <span className="sidebar__org-name">{org.name}</span>
-          {(place || summary) && (
-            <span className="sidebar__org-line">
-              {/* Where it lives, before its counts: the Cloud, this computer or one's own server. */}
-              {place && (
-                <span className="sidebar__org-where">
-                  <Icon name={SERVER_PLACE_ICON[place]} size={14} />
-                  {t(`hosting.badge.${place}`)}
-                </span>
-              )}
-              {summary && <span className="sidebar__org-meta">{summary}</span>}
-            </span>
-          )}
-        </span>
-        <Icon name="chevronDown" size={16} />
-      </button>
+      {several ? (
+        <Menu label={t("shell.yourWorkspaces")} trigger={header}>
+          <MenuWorkspaces withActions={false} />
+          <MenuSeparator />
+          <MenuItem icon="settings" onSelect={() => setOpen(true)}>
+            {t("shell.workspaceSettings")}
+          </MenuItem>
+        </Menu>
+      ) : (
+        header
+      )}
       <MenuOverlay
         open={open}
         onOpenChange={setOpen}
