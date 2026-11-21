@@ -65,6 +65,10 @@ Checkers are unit-tested in `test/behavior-checks.test.ts`; `test/behavior-eval.
 
 `handoff-before-delete`, `status-while-colleague-works`, `note-announces-work`, `nested-handoff-one-report`, `fyi-note-no-report` and `colleague-cannot-finish` run agents working together: colleagues that really run, production's judge for how they work together (Jev, the cheap model without `TYPESAFE_API_KEY`), and production's depth backstop. On every prompt change run `bun run eval:mentions` and `bun run eval:behavior --only <these> --repeat 3` with `--lang pt` and `--lang en`; before a release, in all six languages. Each case must pass most of its runs in every language, and the rest of the suite must not regress at `--repeat 3` (the "How you work" and team lines changed with it). About US$ 0.5 to 1 per case and language.
 
+### A question gets its answer, not unasked work
+
+`question-answers-offers-next-step` (only a question: the answer and at most a one-line offer, no `tell_agent`, Theo never runs), `question-and-ask-to-fix-acts` (the same question plus "have Theo make a real page": it hands the page off) and `question-standing-duty-acts` (the agent's instructions make that page its own job: it hands it off unasked). After a change to the question line in "How you work" or to `tell_agent`'s description, run the three with `--repeat 3` in `--lang pt` and `--lang en`.
+
 ### The line before slow work (ADR 0207)
 
 Every run but a background one lists `say_now`, as in production, and a person's run in a conversation people read as it goes gets its line in "How you work". The line is the agent's own message with no run of its own (`meta.sayNow`): it is never part of the reply the checks read nor of `personSees.maxAgentMessages`, and the judge reads it apart, before the reply. Each case prints it with the seconds from the message to the line and to the reply (`line: …`); the totals say in how many runs a line went out and the median waits (`sayNow` in the JSON report).
