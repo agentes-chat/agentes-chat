@@ -153,6 +153,7 @@ import type {
   FeedbackInput,
   FeedbackOffer,
   FileConversationRef,
+  FolderAccessRequest,
   ForeignMailbox,
   FormerAgent,
   GifKey,
@@ -1257,6 +1258,7 @@ export interface ApiClient {
   /** Connected computers (ADR 0025): machines running `agentes-runner`. */
   machines: {
     list(orgId: string): Promise<Machine[]>;
+    folderRequests(orgId: string, machineId: string, requestId?: string): Promise<FolderAccessRequest[]>;
     rename(orgId: string, machineId: string, name: string): Promise<{ id: string; name: string }>;
     /** Revokes its token and disconnects the runner at once; agents on it are left with no computer. */
     remove(orgId: string, machineId: string): Promise<void>;

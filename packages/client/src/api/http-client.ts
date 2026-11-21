@@ -113,6 +113,7 @@ import type {
   FeedbackFile,
   FeedbackOffer,
   FileConversationRef,
+  FolderAccessRequest,
   ForeignMailbox,
   FormerAgent,
   GifKey,
@@ -1367,6 +1368,12 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
     },
     machines: {
       list: async (orgId) => (await request<{ machines: Machine[] }>(`${org(orgId)}/machines`)).machines,
+      folderRequests: async (orgId, machineId, requestId) =>
+        (
+          await request<{ requests: FolderAccessRequest[] }>(
+            `${org(orgId)}/machines/${enc(machineId)}/access/requests${requestId ? `?requestId=${enc(requestId)}` : ""}`,
+          )
+        ).requests,
       rename: (orgId, machineId, name) =>
         request<{ id: string; name: string }>(`${org(orgId)}/machines/${enc(machineId)}`, {
           method: "PATCH",

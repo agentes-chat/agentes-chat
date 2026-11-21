@@ -28,6 +28,7 @@ import {
   useThreadTasks,
 } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
+import { folderRequestOf } from "@agenteschat/client/lib/folder-access";
 import { formatTime } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { folderName } from "@agenteschat/client/lib/machines";
@@ -73,6 +74,7 @@ import { FoldedBody } from "@/chat/FoldedBody";
 import { ActorAvatar, AgentAvatar, AgentSpinner } from "@/components/AgentAvatar";
 import { ArtifactCard } from "@/components/artifacts/ArtifactCard";
 import { useChannelActions } from "@/components/channel-actions";
+import { FolderRequestNotice } from "@/components/FolderAccessRequests";
 import { CommandBlock, MachineIcon } from "@/components/machine-bits";
 import { useOrg } from "@/components/org-context";
 import { ShowRequestsButton, useIsThisMac } from "@/components/ThisMac";
@@ -1179,6 +1181,14 @@ export function TaskNoticeLine({ message }: { message: Message }) {
   // Commands it was refused: one line, the list in a dialog.
   const task = machineTaskOf(message.meta);
   const blocked = task?.blocked ?? [];
+  const access = folderRequestOf(message.meta);
+  if (access && !managed) {
+    return (
+      <div data-message-id={message.id}>
+        <FolderRequestNotice {...access} />
+      </div>
+    );
+  }
   const key = `missions.notice.${notice.code}`;
   return (
     <EventPill

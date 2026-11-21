@@ -112,6 +112,9 @@ export function applyMachineEvent(qc: QueryClient, orgId: string, event: { type:
   };
   if (typeof e.machineId !== "string") return true;
   const machineId = e.machineId;
+  if (e.type === "machine.updated" || e.type === "machine.access" || e.type === "machine.deleted") {
+    void qc.invalidateQueries({ queryKey: ["org", orgId, "folder-requests", machineId] });
+  }
   if (e.type === "computer.queue") {
     void qc.invalidateQueries({ queryKey: keys.machineQueue(orgId, machineId) });
     return true;

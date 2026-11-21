@@ -1,0 +1,35 @@
+.folder-request-list,
+.folder-request,
+.folder-request__instructions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.folder-request-list {
+  gap: var(--space-6);
+}
+.folder-request__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.folder-request__heading > strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.folder-request p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.folder-request__path {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.folder-request__help summary {
+  cursor: pointer;
+}
+.folder-request__instructions {
+  margin-top: var(--space-3);
+}

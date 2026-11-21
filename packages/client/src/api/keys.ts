@@ -136,6 +136,8 @@ export const keys = {
   computers: (orgId: string) => ["org", orgId, "sandbox", "computer"] as const,
   agentSecrets: (orgId: string, agentId: string) => ["org", orgId, "agent-secrets", agentId] as const,
   machines: (orgId: string) => ["org", orgId, "machines"] as const,
+  folderRequests: (orgId: string, machineId: string, requestId?: string) =>
+    ["org", orgId, "folder-requests", machineId, requestId ?? "all"] as const,
   /** Devices (under `machines`: every computer event refetches them too). */
   devices: (orgId: string) => ["org", orgId, "machines", "devices"] as const,
   /** Under `devices`: a phone picked over Wi-Fi leaves the offer when the list refetches. */

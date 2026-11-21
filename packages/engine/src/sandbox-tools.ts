@@ -1724,7 +1724,7 @@ export function createSandboxToolSource(
           };
         }
         return {
-          content: `Asked the owner of ${info.name} for ${result.path}; they decide on that computer. You will be woken in this conversation when they answer: tell the people you asked (and why) and end your turn.`,
+          content: `The folder request for ${result.path} on ${info.name} is pending, not approved. Its owner decides locally: in the desktop app's folder requests, or with the local terminal command shown on the request card when the runner has no desktop app. The web Computers page shows requests but cannot grant folders. This grant is not read-only: saying "read only" in the reason does not enforce it. You will be woken in this conversation when they answer: tell the people you asked (and why) and end your turn. Don't retry the request or invent a web approval button.`,
           data: { requestId: result.requestId, status: "pending" },
         };
       } catch (error) {
