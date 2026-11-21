@@ -3239,6 +3239,7 @@ export const ptBR = {
       mentionOnly: "Só quando mencionado",
       skillOn: "Ligada",
       skillOff: "Desligada",
+      newGroup: "{{name}} (novo setor)",
     },
     remove: {
       archiveTitle_one: "Arquivar {{count}} agente?",

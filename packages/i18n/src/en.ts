@@ -3359,6 +3359,8 @@ export const en = {
       mentionOnly: "Only when mentioned",
       skillOn: "On",
       skillOff: "Off",
+      /** A department no one has made yet: applying the card creates it (ADR 0083 amendment of 2026-11-21). */
+      newGroup: "{{name}} (new department)",
     },
     /** One card that archives or deletes several agents (`propose_remove_agents`), each with its switch. */
     remove: {

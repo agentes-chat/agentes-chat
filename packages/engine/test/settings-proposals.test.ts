@@ -3,7 +3,9 @@ import { and, eq, schema } from "@agenteschat/db";
 import {
   actionsFor,
   addChannelMember,
+  agentGroupViews,
   askProposal,
+  createAgent,
   createAgentGroup,
   createChannel,
   createRole,
@@ -19,6 +21,7 @@ import {
   listProposals,
   MAX_CARDS_PER_RUN,
   MAX_CARDS_PER_RUN_RIGHT_HAND,
+  NEW_AGENT_DEFAULTS,
   openPersonAgentDm,
   ownWords,
   PROPOSE_SETTINGS_TOOL,
@@ -235,21 +238,108 @@ describe("a change of department", () => {
     expect((await getAgent(f.db, f.org.id, f.agent.id))?.groupId).toBe(idOf("Operações"));
   });
 
-  test('a department that isn\'t there is refused, and "none" takes the agent out of every department', async () => {
+  test("a name no department has: the card says it creates it, applying creates it with the agent in it, Undo leaves it", async () => {
     f = await setup({ rightHand: true });
-    const [vendas] = await createAgentGroup({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, {
+    const deps = { db: f.db, pubsub: f.pubsub };
+    const [vendas] = await createAgentGroup(deps, f.owner.id, f.org.id, { name: "Vendas", agentIds: [f.agent.id] });
+    const bia = await addMember(f.db, f.org.id, "member", "Bia Rocha");
+    const ctx = await lodiRun(f, bia.id, "cria o setor Arquimedium e coloca o dev nele");
+    const out = await call(f, ctx, { changes: [{ agent: "@dev", group: "Arquimedium" }], reason: "pediu" });
+    expect(out.isError).toBeFalsy();
+    const [row] = (await cardRows(f, bia.id)).rows;
+    expect(row?.settings).toEqual([{ field: "group", from: "Vendas", to: "Arquimedium", newGroup: true }]);
+    // Proposing it made nothing: only the click does.
+    expect((await agentGroupViews(f.db, f.org.id)).map((g) => g.name)).toEqual(["Vendas"]);
+    await expect(decideProposal(f.db, bia.id, f.org.id, row?.id ?? "", "accept", deps)).rejects.toThrow();
+    expect((await agentGroupViews(f.db, f.org.id)).map((g) => g.name)).toEqual(["Vendas"]);
+
+    await askProposal(deps, bia.id, f.org.id, row?.id ?? "");
+    await decideProposal(f.db, f.owner.id, f.org.id, row?.id ?? "", "accept", deps);
+    const made = (await agentGroupViews(f.db, f.org.id)).find((g) => g.name === "Arquimedium");
+    expect(made?.agentIds).toEqual([f.agent.id]);
+    expect((await getAgent(f.db, f.org.id, f.agent.id))?.groupId).toBe(made?.id);
+
+    // Undo moves the agent back and leaves the department it made, empty; Redo moves it in again, making none.
+    const { card } = await cardRows(f, f.owner.id);
+    const [receipt] = (await actionsFor(f.db, f.org.id, [card.id])).get(card.id) ?? [];
+    await undoAgentAction(deps, f.owner.id, f.org.id, receipt?.id ?? "");
+    expect((await getAgent(f.db, f.org.id, f.agent.id))?.groupId).toBe(vendas?.id);
+    expect((await agentGroupViews(f.db, f.org.id)).map((g) => [g.name, g.agentIds.length])).toEqual([
+      ["Vendas", 1],
+      ["Arquimedium", 0],
+    ]);
+    await redoAgentAction(deps, f.owner.id, f.org.id, receipt?.id ?? "");
+    expect((await getAgent(f.db, f.org.id, f.agent.id))?.groupId).toBe(made?.id);
+    expect(await agentGroupViews(f.db, f.org.id)).toHaveLength(2);
+  });
+
+  test("a name a department has, in any case, only moves the agent", async () => {
+    f = await setup({ rightHand: true });
+    const deps = { db: f.db, pubsub: f.pubsub };
+    const [vendas] = await createAgentGroup(deps, f.owner.id, f.org.id, { name: "Vendas" });
+    const ctx = await lodiRun(f, f.owner.id, "coloca o dev em vendas", true);
+    const out = await call(f, ctx, { changes: [{ agent: "@dev", group: "VENDAS" }], reason: "pediu" });
+    expect(out.content).toContain("applied at once");
+    expect((await cardRows(f, f.owner.id)).rows[0]?.settings).toEqual([{ field: "group", from: null, to: "Vendas" }]);
+    expect((await getAgent(f.db, f.org.id, f.agent.id))?.groupId).toBe(vendas?.id);
+    expect((await agentGroupViews(f.db, f.org.id)).map((g) => g.name)).toEqual(["Vendas"]);
+  });
+
+  test('"none" takes the agent out of every department', async () => {
+    f = await setup({ rightHand: true });
+    await createAgentGroup({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, {
       name: "Vendas",
       agentIds: [f.agent.id],
     });
-    const ctx = await lodiRun(f, f.owner.id, "coloca o dev em Marketing", true);
-    const refused = await call(f, ctx, { changes: [{ agent: "@dev", group: "Marketing" }], reason: "pediu" });
-    expect(refused).toMatchObject({ isError: true });
-    expect(refused.content).toContain('no department called "Marketing" here');
-    expect((await getAgent(f.db, f.org.id, f.agent.id))?.groupId).toBe(vendas?.id);
-
+    const ctx = await lodiRun(f, f.owner.id, "tira o dev do setor", true);
     const out = await call(f, ctx, { changes: [{ agent: "@dev", group: "none" }], reason: "pediu" });
     expect(out.content).toContain("applied at once");
     expect((await getAgent(f.db, f.org.id, f.agent.id))?.groupId).toBeNull();
+    expect(await agentGroupViews(f.db, f.org.id)).toHaveLength(1);
+  });
+
+  test("two cards naming one new department make one, whatever the case each typed", async () => {
+    f = await setup({ rightHand: true });
+    const deps = { db: f.db, pubsub: f.pubsub };
+    const ops = await createAgent(f.db, f.owner.id, f.org.id, { name: "Ops", handle: "ops" }, NEW_AGENT_DEFAULTS);
+    const bia = await addMember(f.db, f.org.id, "member", "Bia Rocha");
+    const ctx = await lodiRun(f, bia.id, "coloca o dev e o ops no setor Arquimedium");
+    await call(f, ctx, {
+      changes: [
+        { agent: "@dev", group: "Arquimedium" },
+        { agent: "@ops", group: "arquimedium" },
+      ],
+      reason: "pediu",
+    });
+    // The first applied names it: dev's card ("Arquimedium"), then ops's ("arquimedium") finds it.
+    const rows = (await cardRows(f, bia.id)).rows.sort(
+      (a, b) => Number(b.agentId === f.agent.id) - Number(a.agentId === f.agent.id),
+    );
+    expect(rows.map((r) => r.settings?.[0]?.newGroup)).toEqual([true, true]);
+    for (const row of rows) {
+      await askProposal(deps, bia.id, f.org.id, row.id);
+      await decideProposal(f.db, f.owner.id, f.org.id, row.id, "accept", deps);
+    }
+    const groups = await agentGroupViews(f.db, f.org.id);
+    expect(groups.map((g) => g.name)).toEqual(["Arquimedium"]);
+    expect(groups[0]?.agentIds.sort()).toEqual([f.agent.id, ops.id].sort());
+  });
+
+  test("who no longer manages agents when they click creates nothing", async () => {
+    f = await setup({ rightHand: true });
+    const deps = { db: f.db, pubsub: f.pubsub };
+    const [vendas] = await createAgentGroup(deps, f.owner.id, f.org.id, { name: "Vendas", agentIds: [f.agent.id] });
+    const carla = await addMember(f.db, f.org.id, "admin", "Carla Dias");
+    const bia = await addMember(f.db, f.org.id, "member", "Bia Rocha");
+    const ctx = await lodiRun(f, bia.id, "cria o setor Arquimedium e coloca o dev nele");
+    await call(f, ctx, { changes: [{ agent: "@dev", group: "Arquimedium" }], reason: "pediu" });
+    const [row] = (await cardRows(f, bia.id)).rows;
+    await askProposal(deps, bia.id, f.org.id, row?.id ?? "");
+    // Carla managed agents when the card was sent to her; she doesn't by the time she clicks.
+    await f.db.delete(schema.organizationMemberRoles).where(eq(schema.organizationMemberRoles.userId, carla.id));
+    await expect(decideProposal(f.db, carla.id, f.org.id, row?.id ?? "", "accept", deps)).rejects.toThrow();
+    expect((await agentGroupViews(f.db, f.org.id)).map((g) => g.name)).toEqual(["Vendas"]);
+    expect((await getAgent(f.db, f.org.id, f.agent.id))?.groupId).toBe(vendas?.id);
   });
 
   test("a name two departments share is refused, on the card and when it is accepted, never moved to one of them", async () => {
