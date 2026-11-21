@@ -2720,12 +2720,13 @@ export type ProposalSettingField =
   | "delete";
 
 /**
- * One line of a settings card: `model` a model id; `effort` an effort as stored or null (its default); `ai_account` `{ brain, accountId }`; `budget` nano-USD a month or
- * null (the workspace's default); `owner` a user id; `audience` `{ mode, userIds, roleIds }`; `channel_add` /
- * `channel_remove` / `reply_mode` its seat in `channelId` (null: not in it, else whether it answers without a
- * mention); `skill` whether it has the skill in `skillId` on (its name in `label.to`); `name` its name; `look`
- * `{ color, eyes, accessory }`; `reports_to` an agent id or null (Responde a); `group` its department's name or
- * null; `archive` true. `label`: the server's names for ids.
+ * One line of a settings card: `model` a model id; `effort` an effort as stored or null (its default); `ai_account`
+ * `{ brain, accountId }`; `budget` nano-USD a month or null (the workspace's default); `owner` a user id; `audience`
+ * `{ mode, userIds, roleIds }`; `channel_add` / `channel_remove` / `reply_mode` its seat in `channelId` (null: not in
+ * it, else whether it answers without a mention); `skill` whether it has the skill in `skillId` on (its name in
+ * `label.to`); `name` its name; `look` `{ color, eyes, accessory }`; `reports_to` an agent id or null (Responde a);
+ * `group` its department's name or null (`newGroup`: no department has that name, applying the card creates it);
+ * `archive` true. `label`: the server's names for ids.
  */
 export interface ProposalSettingLine {
   field: ProposalSettingField;
@@ -2736,6 +2737,7 @@ export interface ProposalSettingLine {
   label?: { from?: string; to?: string };
   /** `budget`: at or below the agent's spend this month, so applying it stops the agent at once. */
   pausesNow?: boolean;
+  newGroup?: boolean;
 }
 
 export interface Proposal {

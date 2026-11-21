@@ -199,8 +199,9 @@ export interface ProposedAccessLine {
  * One setting of an agent the team's right hand proposes to change (ADR 0137): its value then (`from`) and the one
  * proposed (`to`). `channel_add` / `channel_remove` / `reply_mode` name their channel in `channelId`, `skill` (on or
  * off) its skill in `skillId`; `label` is what the card shows for a value that is an id (a model's, an account's, a
- * person's or a channel's name, the skill's). `group` holds its department's name, or null for none. `effort` holds how
- * hard it thinks as `agents.brain_effort` stores it (null: its default).
+ * person's or a channel's name, the skill's). `effort` holds how hard it thinks as `agents.brain_effort` stores it
+ * (null: its default). `group` holds its department's name, or null for none; `newGroup`: no department had that name
+ * when it was proposed, so applying it creates one (ADR 0083 amendment of 2026-11-21).
  */
 export interface ProposedSettingLine {
   field:
@@ -227,6 +228,7 @@ export interface ProposedSettingLine {
   label?: { from?: string; to?: string };
   /** `budget`: at or below what the agent spent this month, so applying it stops the agent at once. */
   pausesNow?: boolean;
+  newGroup?: boolean;
 }
 
 /**
