@@ -6,6 +6,7 @@ import {
   accountUnchecked,
   appConnector,
   connectedItems,
+  firstConnectedByCatalogId,
   fromConnection,
   isMcpItem,
   itemName,
@@ -217,5 +218,29 @@ describe("what Reconectar adds", () => {
       'connectors.reconnectAdds {"name":"GitHub","what":"usar o GitHub Projects"}',
     );
     expect(reconnectAddsText(words, fromConnection(connection("GitHub", null), [GITHUB]))).toBeNull();
+  });
+});
+
+describe("firstConnectedByCatalogId", () => {
+  const SUPABASE = remote("supabase", "Supabase", "https://mcp.supabase.com/mcp");
+  const EXPO = remote("expo", "Expo", "https://mcp.expo.dev/mcp");
+
+  test("a one-click server counts as its catalog app, as a catalog connector does; one by its own address doesn't", () => {
+    const supabase = server("Supabase", null, "https://mcp.supabase.com/mcp");
+    const expo = server("Expo", null, "https://mcp.expo.dev/mcp");
+    const own = server("Mine", null, "https://mcp.example.com/mcp");
+    const items = connectedItems([connection("GitHub", "acme")], [supabase, expo, own], [GITHUB, SUPABASE, EXPO]);
+    expect(Object.fromEntries(firstConnectedByCatalogId(items))).toEqual({
+      github: "c-gh",
+      supabase: supabase.id,
+      expo: expo.id,
+    });
+  });
+
+  test("two accounts of one app: the first one connected", () => {
+    const first = server("Supabase", null, "https://mcp.supabase.com/mcp");
+    const second = server("Supabase 2", null, "https://mcp.supabase.com/mcp");
+    const items = connectedItems([], [first, second], [SUPABASE]);
+    expect(firstConnectedByCatalogId(items).get("supabase")).toBe(first.id);
   });
 });

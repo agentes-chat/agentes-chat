@@ -14,7 +14,7 @@ import {
   useSkills,
 } from "@agenteschat/client";
 import { type Level, saveLevels } from "@agenteschat/client/lib/access-levels";
-import { personalAllowed } from "@agenteschat/client/lib/connected";
+import { firstConnectedByCatalogId, personalAllowed } from "@agenteschat/client/lib/connected";
 import { setDraftFor } from "@agenteschat/client/lib/drafts";
 import { errorText as failureText } from "@agenteschat/client/lib/errors";
 import { FIELD_LIMITS } from "@agenteschat/client/lib/field-limits";
@@ -473,11 +473,7 @@ function NewAgentDialog({
   // The catalog's apps by id, and the ones connected here (what a new agent may use at once).
   const defs = useMemo(() => new Map((catalog.data?.connectors ?? []).map((d) => [d.id, d])), [catalog.data]);
   const items = useMemo(() => [...connected.values()], [connected]);
-  const connectedApps = useMemo(() => {
-    const out = new Map<string, string>();
-    for (const item of items) if (item.def && !item.custom && !out.has(item.def.id)) out.set(item.def.id, item.id);
-    return out;
-  }, [items]);
+  const connectedApps = useMemo(() => firstConnectedByCatalogId(items), [items]);
 
   /**
    * A starting point's card as it opens: its name, its voice, its look, its instructions and the apps it gets at once:
@@ -492,7 +488,7 @@ function NewAgentDialog({
       if (managesAgents)
         for (const line of proposed.access) {
           const item = connected.get(line.connectionId);
-          if (item?.def && !item.custom && !given[item.def.id]) given[item.def.id] = line.level;
+          if (item?.def && !given[item.def.id]) given[item.def.id] = line.level;
         }
       return {
         name: proposed.name,
@@ -811,7 +807,7 @@ function NewAgentDialog({
       if (managesAgents) {
         const chosen: Record<string, Level> = {};
         for (const item of items) {
-          if (!item.def || item.custom) continue;
+          if (!item.def) continue;
           chosen[`connector:${item.id}`] = draft.apps[item.def.id] ?? "none";
         }
         if (Object.keys(chosen).length > 0) await savePart(failures, () => saveLevels(api, org.id, agent.id, chosen));
