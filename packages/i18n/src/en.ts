@@ -15794,6 +15794,8 @@ export const en = {
       sharingEmpty: "Choose who sees it.",
       sharingTooMany: "Choose at most {{max}} people and {{max}} roles.",
       notInDrive: "This lives only in its conversation, so it can't be shared.",
+      viewOnly: "You can view this file but not change it. Ask whoever made it for edit access.",
+      accessInvalid: "This access couldn't be saved. Check who sees and who edits it and try again.",
     },
     drive: {
       folderIntoItself: "A folder can't go inside itself or a folder inside it.",
@@ -21243,13 +21245,7 @@ export const en = {
   share: {
     button: "Share",
     title: "Share {{name}}",
-    conversation: "Only the conversation",
-    people: "People and roles you choose",
-    /**
-     * `<key>Personal`: a personal workspace's words (ADR 0159); its people choice and its Add, while there is no role
-     * worth picking, name people only.
-     */
-    peoplePersonal: "People you choose",
+    /** `<key>Personal`: a personal workspace's words (ADR 0159). */
     everyone: "Everyone in the workspace",
     everyonePersonal: "Everyone here",
     whereDm: "The DM with {{name}}",
@@ -21257,14 +21253,9 @@ export const en = {
     /** For someone who isn't in the DM and got the file through Compartilhar. */
     whereDmBetween: "The DM between {{names}}",
     whereChannel: "Members of #{{name}}",
-    add: "Add a person or a role",
-    addPersonal: "Add a person",
-    addSearch: "Search people and roles",
-    addSearchPersonal: "Search people",
     noResults: "Nobody with that name",
     groupPeople: "People",
     groupRoles: "Roles",
-    access: "Who has access",
     you: "{{name}} (you)",
     agent: "Agent",
     role: "Role",
@@ -21273,35 +21264,48 @@ export const en = {
     adminsPersonal: "The people who run this space see it too.",
     copyLink: "Copy link",
     copied: "Link copied.",
-    done: "Done",
     /** Beside Copiar link while only a private conversation sees the file. */
     onlyHere: "People outside this conversation won't open the link.",
-    choosePeople: "Choose people",
     readOnly: "Only who's in the conversation changes who sees it.",
-    open: "Everyone in the workspace sees this file.",
-    openPersonal: "Everyone here sees this file.",
-    savedEveryone: "Everyone in the workspace sees the file now.",
-    savedEveryonePersonal: "Everyone here sees the file now.",
-    savedPeople: "The people you chose see the file now.",
-    savedConversation: "Only the conversation sees the file now.",
     /**
-     * A file of the Drive itself lives with its maker (ADR 0157): its first choice, who has access, the link's warning,
-     * who may change it and the saved toast. `Maker`: someone else opens it (an administrator), `name` is its maker.
+     * A file of the Drive itself lives with its maker (ADR 0157): the link's warning and who may change who sees it.
+     * `Maker`: someone else opens it (an administrator), `name` is its maker.
      */
-    onlyYou: "Only you",
-    onlyMaker: "Only {{name}}",
     onlyYouLink: "Only you can open this link.",
     onlyMakerLink: "Only {{name}} can open this link.",
     readOnlyDrive: "Only who made the file and administrators change who sees it.",
-    savedOnlyYou: "Only you see the file now.",
-    savedOnlyMaker: "Only {{name}} sees the file now.",
-    undo: "Undo",
     fileRef: "File {{title}}",
     fileRefNone: "File without access",
     /** Who sees the file (`text`, no full stop) and who Compartilhar added. */
     also: "{{text}}. Also shared with {{who}}.",
     /** Copiar links of several files, some only their conversation opens: the toast, with Compartilhar. */
     someOnlyHere: "Some of these links open only for who already sees the file.",
+    /**
+     * Compartilhar with levels (ADR 0202): what someone may do with the file, the rows always there (who reads it where
+     * it lives, everyone, the agents) and their words, adding someone, and the saved toast.
+     */
+    level: {
+      none: "No access",
+      view: "View",
+      edit: "Edit",
+    },
+    levelOf: "What {{name}} can do",
+    madeIt: "Made the file",
+    placeText: "Where the file lives",
+    everyoneText: "Anyone in this workspace",
+    everyoneTextPersonal: "Anyone here",
+    agentsAll: "All agents",
+    agentsAllText: "Any agent in the workspace",
+    agentsHere: "Agents in this conversation",
+    agentsHereText: "The agents where the file lives",
+    addAll: "Add a person, role or agent",
+    addAllPersonal: "Add a person or agent",
+    addAllSearch: "Search people, roles and agents",
+    addAllSearchPersonal: "Search people and agents",
+    groupAgents: "Agents",
+    /** On the phone, beside a row while everyone edits: a tap adds them (and limits it). */
+    addRow: "Add",
+    saved: "Access saved.",
   },
   /**
    * A link a person opens in a browser that the server refuses (ADR 0157): each cause's title and words, the button
@@ -22112,6 +22116,13 @@ export const en = {
         inTrash: "In the trash. Restore it to change it.",
         closing: "The workspace is being deleted. Its files can only be read.",
       },
+      /**
+       * Beside Read-only when the file's access lets me only view it (ADR 0202): the file's conversation opens with these
+       * words for who made it (`name`'s @), or for anyone there when no person made it.
+       */
+      requestEdit: "Ask to edit",
+      requestEditText: "can you give me edit access to this file?",
+      requestEditAnyone: "Can someone give me edit access to this file?",
       present: "Present",
       download: "Download",
       /** What a live file downloads as (ADR 0198). */

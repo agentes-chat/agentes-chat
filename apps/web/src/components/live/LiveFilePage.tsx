@@ -296,6 +296,15 @@ export function LiveFilePage({
     [dir.agentById, fileAgent, column],
   );
 
+  /** Pedir para editar (ADR 0202): the conversation opens with the words for who made the file, mine to send. */
+  const requestEdit = useCallback(() => {
+    const maker = artifact?.createdBy;
+    const handle = maker?.type === "person" ? dir.memberById.get(maker.id)?.handle : undefined;
+    const text = handle ? `@${handle} ${t("live.shell.requestEditText")}` : t("live.shell.requestEditAnyone");
+    setPrefill({ text, key: Date.now() });
+    if (!column.open) column.toggle();
+  }, [artifact, dir.memberById, column, t]);
+
   const talk = useMemo<FileTalk | null>(
     () =>
       artifact && kind
@@ -404,6 +413,7 @@ export function LiveFilePage({
                 onSave={openSave}
                 onShortcuts={() => setKeysOpen(true)}
                 onDelete={() => artifact && remover.ask(artifact)}
+                onRequestEdit={artifact?.myAccess === "view" ? requestEdit : undefined}
               />
             )}
             <div className="lf-body">

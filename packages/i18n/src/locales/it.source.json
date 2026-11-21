@@ -50346,15 +50346,6 @@
   "share.title": {
     "value": "Share {{name}}"
   },
-  "share.conversation": {
-    "value": "Only the conversation"
-  },
-  "share.people": {
-    "value": "People and roles you choose"
-  },
-  "share.peoplePersonal": {
-    "value": "People you choose"
-  },
   "share.everyone": {
     "value": "Everyone in the workspace"
   },
@@ -50373,18 +50364,6 @@
   "share.whereChannel": {
     "value": "Members of #{{name}}"
   },
-  "share.add": {
-    "value": "Add a person or a role"
-  },
-  "share.addPersonal": {
-    "value": "Add a person"
-  },
-  "share.addSearch": {
-    "value": "Search people and roles"
-  },
-  "share.addSearchPersonal": {
-    "value": "Search people"
-  },
   "share.noResults": {
     "value": "Nobody with that name"
   },
@@ -50393,9 +50372,6 @@
   },
   "share.groupRoles": {
     "value": "Roles"
-  },
-  "share.access": {
-    "value": "Who has access"
   },
   "share.you": {
     "value": "{{name}} (you)"
@@ -50421,41 +50397,11 @@
   "share.copied": {
     "value": "Link copied."
   },
-  "share.done": {
-    "value": "Done"
-  },
   "share.onlyHere": {
     "value": "People outside this conversation won't open the link."
   },
-  "share.choosePeople": {
-    "value": "Choose people"
-  },
   "share.readOnly": {
     "value": "Only who's in the conversation changes who sees it."
-  },
-  "share.open": {
-    "value": "Everyone in the workspace sees this file."
-  },
-  "share.openPersonal": {
-    "value": "Everyone here sees this file."
-  },
-  "share.savedEveryone": {
-    "value": "Everyone in the workspace sees the file now."
-  },
-  "share.savedEveryonePersonal": {
-    "value": "Everyone here sees the file now."
-  },
-  "share.savedPeople": {
-    "value": "The people you chose see the file now."
-  },
-  "share.savedConversation": {
-    "value": "Only the conversation sees the file now."
-  },
-  "share.onlyYou": {
-    "value": "Only you"
-  },
-  "share.onlyMaker": {
-    "value": "Only {{name}}"
   },
   "share.onlyYouLink": {
     "value": "Only you can open this link."
@@ -50465,15 +50411,6 @@
   },
   "share.readOnlyDrive": {
     "value": "Only who made the file and administrators change who sees it."
-  },
-  "share.savedOnlyYou": {
-    "value": "Only you see the file now."
-  },
-  "share.savedOnlyMaker": {
-    "value": "Only {{name}} sees the file now."
-  },
-  "share.undo": {
-    "value": "Undo"
   },
   "share.fileRef": {
     "value": "File {{title}}"
@@ -54962,5 +54899,77 @@
   },
   "live.sheet.fn.YEARFRAC": {
     "value": "The share of a year between two dates"
+  },
+  "errors.artifact.viewOnly": {
+    "value": "You can view this file but not change it. Ask whoever made it for edit access."
+  },
+  "errors.artifact.accessInvalid": {
+    "value": "This access couldn't be saved. Check who sees and who edits it and try again."
+  },
+  "share.level.none": {
+    "value": "No access"
+  },
+  "share.level.view": {
+    "value": "View"
+  },
+  "share.level.edit": {
+    "value": "Edit"
+  },
+  "share.levelOf": {
+    "value": "What {{name}} can do"
+  },
+  "share.madeIt": {
+    "value": "Made the file"
+  },
+  "share.placeText": {
+    "value": "Where the file lives"
+  },
+  "share.everyoneText": {
+    "value": "Anyone in this workspace"
+  },
+  "share.everyoneTextPersonal": {
+    "value": "Anyone here"
+  },
+  "share.agentsAll": {
+    "value": "All agents"
+  },
+  "share.agentsAllText": {
+    "value": "Any agent in the workspace"
+  },
+  "share.agentsHere": {
+    "value": "Agents in this conversation"
+  },
+  "share.agentsHereText": {
+    "value": "The agents where the file lives"
+  },
+  "share.addAll": {
+    "value": "Add a person, role or agent"
+  },
+  "share.addAllPersonal": {
+    "value": "Add a person or agent"
+  },
+  "share.addAllSearch": {
+    "value": "Search people, roles and agents"
+  },
+  "share.addAllSearchPersonal": {
+    "value": "Search people and agents"
+  },
+  "share.groupAgents": {
+    "value": "Agents"
+  },
+  "share.addRow": {
+    "value": "Add"
+  },
+  "share.saved": {
+    "value": "Access saved."
+  },
+  "live.shell.requestEdit": {
+    "value": "Ask to edit"
+  },
+  "live.shell.requestEditText": {
+    "value": "can you give me edit access to this file?"
+  },
+  "live.shell.requestEditAnyone": {
+    "value": "Can someone give me edit access to this file?"
   }
 }

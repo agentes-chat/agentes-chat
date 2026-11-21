@@ -154,7 +154,14 @@ describe("a live file's conversation (ADR 0199)", () => {
       { type: "agent", id: f.agent.id },
     ]);
     const [withFacts] = await withPersonFacts(f.db, f.owner.id, f.org.id, [
-      { id: canvas.id, channelId: canvas.channelId, createdBy: canvas.createdBy, inDrive: true },
+      {
+        id: canvas.id,
+        channelId: canvas.channelId,
+        createdBy: canvas.createdBy,
+        inDrive: true,
+        access: canvas.access,
+        canEdit: canvas.canEdit,
+      },
     ]);
     expect(withFacts?.conversation).toMatchObject({ count: 2, channelId: at.channelId });
   });

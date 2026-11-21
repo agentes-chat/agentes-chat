@@ -1633,8 +1633,8 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       create: (orgId, input) => request<ArtifactDetail>(`${org(orgId)}/artifacts`, { json: input }),
       update: (orgId, id, input) =>
         request<ArtifactDetail>(`${org(orgId)}/artifacts/${enc(id)}/versions`, { json: input }),
-      setSharing: (orgId, id, sharing) =>
-        request<Artifact>(`${org(orgId)}/artifacts/${enc(id)}/sharing`, { method: "PUT", json: sharing }),
+      setAccess: (orgId, id, access) =>
+        request<Artifact>(`${org(orgId)}/artifacts/${enc(id)}/access`, { method: "PUT", json: access }),
       remove: (orgId, id) => request<void>(`${org(orgId)}/artifacts/${enc(id)}`, { method: "DELETE" }),
       rename: (orgId, id, title) =>
         request<Artifact>(`${org(orgId)}/artifacts/${enc(id)}`, { method: "PATCH", json: { title } }),

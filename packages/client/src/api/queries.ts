@@ -4855,13 +4855,13 @@ export function useSaveArtifact(orgId: string, id: string) {
   });
 }
 
-/** "Compartilhar" (ADR 0157): who sees a file on top of its conversation. The dialog says a failure itself. */
-export function useSetArtifactSharing(orgId: string) {
+/** Compartilhar with levels (ADR 0202): who sees and who edits a file. The dialog says a failure itself. */
+export function useSetArtifactAccess(orgId: string) {
   const api = useApi();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { id: string; sharing: Parameters<typeof api.artifacts.setSharing>[2] }) =>
-      api.artifacts.setSharing(orgId, input.id, input.sharing),
+    mutationFn: (input: { id: string; access: Parameters<typeof api.artifacts.setAccess>[2] }) =>
+      api.artifacts.setAccess(orgId, input.id, input.access),
     meta: { silent: true },
     onSettled: () => qc.invalidateQueries({ queryKey: keys.artifacts(orgId) }),
   });

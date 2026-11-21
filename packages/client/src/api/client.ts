@@ -80,11 +80,11 @@ import type {
   AppsList,
   ArchivedChannel,
   Artifact,
+  ArtifactAccess,
   ArtifactContent,
   ArtifactDetail,
   ArtifactFilters,
   ArtifactPage,
-  ArtifactSharing,
   ArtifactVersion,
   AskToJoinResult,
   AuditPage,
@@ -1939,12 +1939,11 @@ export interface ApiClient {
       id: string,
       input: { content: ArtifactContent; note?: string | null; baseVersion: number; title?: string },
     ): Promise<ArtifactDetail>;
-    /** Who sees it on top of its conversation (ADR 0157); 403 `artifact.sharing_forbidden` for who got it shared. */
-    setSharing(
-      orgId: string,
-      id: string,
-      sharing: { mode: ArtifactSharing["mode"]; userIds?: string[]; roleIds?: string[] },
-    ): Promise<Artifact>;
+    /**
+     * Who sees and who edits it, people, roles and agents (ADR 0202); 403 `artifact.sharing_forbidden` for who may not
+     * change it.
+     */
+    setAccess(orgId: string, id: string, access: Omit<ArtifactAccess, "limited">): Promise<Artifact>;
     /** To the trash for 30 days (403 `artifact.delete_forbidden`). */
     remove(orgId: string, id: string): Promise<void>;
     /** A Drive file's new name (no new version). */

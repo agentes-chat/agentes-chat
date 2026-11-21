@@ -3990,6 +3990,10 @@ export interface Artifact {
   audience: ArtifactAudience;
   /** Who sees it on top of that conversation (ADR 0157); absent from an older server. */
   sharing?: ArtifactSharing;
+  /** Who sees and who edits it, people, roles and agents (ADR 0202); absent from an older server. */
+  access?: ArtifactAccess;
+  /** What its access lets me do (ADR 0202): `view` is read only; absent from an older server (edit). */
+  myAccess?: "view" | "edit";
   /**
    * I may change `sharing`: it lives in a conversation not everyone reads, and I read it there; or it is a file of the
    * Drive itself (ADR 0157, amendment 2026-11-17), and I made it or I'm an administrator.
@@ -4044,6 +4048,31 @@ export interface ArtifactSharing {
   mode: "conversation" | "people" | "everyone";
   userIds: string[];
   roleIds: string[];
+}
+
+/** What someone may do with a file (ADR 0202). */
+export type AccessLevel = "none" | "view" | "edit";
+
+/** Someone named on a file's access: a person, a role or an agent by id. */
+export interface ArtifactAccessRow {
+  id: string;
+  level: "view" | "edit";
+}
+
+/**
+ * Who sees and who edits a file (ADR 0202), row by row as Compartilhar shows it: who reads it where it lives (`place`:
+ * a conversation's readers; a file of the Drive itself has its maker, who always edits), the whole workspace, people,
+ * roles, every agent (a file of the Drive) or the agents where it lives, and agents by name. Administrators always see
+ * and edit. `limited`: someone who sees it only reads it.
+ */
+export interface ArtifactAccess {
+  place: "view" | "edit";
+  workspace: AccessLevel;
+  users: ArtifactAccessRow[];
+  roles: ArtifactAccessRow[];
+  agents: AccessLevel;
+  agentRows: ArtifactAccessRow[];
+  limited: boolean;
 }
 
 export type ArtifactAudience =
