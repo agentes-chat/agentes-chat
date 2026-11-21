@@ -204,7 +204,10 @@ export function createS3BlobStore(
     },
     async delete(key) {
       const res = await send("DELETE", key);
-      if (!res.ok && res.status !== 404) throw await fail(res);
+      if (!res.ok) {
+        const error = await fail(res);
+        if (error.code !== "not_found") throw error;
+      }
     },
     async list(prefix, limit = 1000) {
       const res = await send("GET", "", {
