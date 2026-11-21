@@ -2467,6 +2467,11 @@ export interface GitHubAppSetup {
   /** No app yet: the manifest flow makes one. */
   canCreate: boolean;
   /**
+   * GitHub can reach this server at its address. False: GitHub refuses to make the app (a local address), so it isn't
+   * offered. Absent from an older server.
+   */
+  reachable?: boolean;
+  /**
    * The events agents hear that the app isn't subscribed to on GitHub (by GitHub's names), and its page there where
    * they're ticked. Absent when it has them all, or GitHub didn't answer.
    */

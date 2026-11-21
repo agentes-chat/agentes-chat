@@ -89,7 +89,7 @@ test("install from the app: state, callback binding, list, and the webhook unbin
   expect(info).toEqual({
     installable: true,
     installations: [],
-    setup: { source: "env", slug: "agentes-chat", htmlUrl: null, state: "ok", canCreate: false },
+    setup: { source: "env", slug: "agentes-chat", htmlUrl: null, state: "ok", canCreate: false, reachable: false },
     ownerCreates: false,
   } as unknown as Info);
 
@@ -161,7 +161,8 @@ test("without the app configured: not installable, webhook not mounted, the owne
   const { orgId } = await seedOrg(owner);
   const info = (await (await owner(`/api/app/organizations/${orgId}/github-app`)).json()) as Info;
   expect(info.installable).toBe(false);
-  expect(info.setup).toMatchObject({ source: null, canCreate: true });
+  // The test server is at localhost: GitHub couldn't reach it, so the apps don't offer creating the app.
+  expect(info.setup).toMatchObject({ source: null, canCreate: true, reachable: false });
   // Another admin isn't told the server's app, only that its owner can make one.
   const admin = await joinByInvitation(t, owner, orgId, "admin@example.com", { role: "admin" });
   expect((await (await admin(`/api/app/organizations/${orgId}/github-app`)).json()) as Info).toMatchObject({

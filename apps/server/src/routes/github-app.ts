@@ -15,6 +15,7 @@ import {
   githubAppInstallationView,
   githubAppManifest,
   githubOrgAccess,
+  githubReachable,
   handleGitHubAppWebhook,
   isAgentesCloud,
   isAppReturn,
@@ -84,6 +85,10 @@ const Setup = z
       description: "`invalid`: a saved app that doesn't open on this server (another `AGENTES_SECRET`).",
     }),
     canCreate: z.boolean().openapi({ description: "No app yet: `POST /github-app/manifest` makes one." }),
+    reachable: z.boolean().openapi({
+      description:
+        "GitHub can reach this server at its `PUBLIC_URL`. False (localhost, a private address or a local-only name): GitHub refuses to make the app, so the apps don't offer it and point to a token connection instead.",
+    }),
     events: z
       .object({ missing: z.array(z.string()), url: z.string() })
       .optional()
@@ -159,7 +164,12 @@ export function githubAppRoutes(deps: AppDeps) {
     const view = await holder.view();
     const app = view.state === "ok" ? holder.current() : null;
     const events = app ? await missingGitHubAppEvents(app, githubAccess(deps).http) : null;
-    return { ...view, canCreate: view.source === null, ...(events ? { events } : {}) };
+    return {
+      ...view,
+      canCreate: view.source === null,
+      reachable: await githubReachable(deps.config.PUBLIC_URL),
+      ...(events ? { events } : {}),
+    };
   };
 
   app.openapi(

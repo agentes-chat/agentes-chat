@@ -142,7 +142,7 @@ export function GitHubAppGroup({ onConnectAccount }: { onConnectAccount: () => v
     ? null
     : (missingEventsText(t, setup) ??
       (setup.canCreate
-        ? t("githubApp.server.without")
+        ? t(setup.reachable === false ? "githubApp.server.local" : "githubApp.server.without")
         : setup.source === "env"
           ? t("githubApp.server.line.env")
           : setup.state === "invalid"
@@ -200,7 +200,7 @@ export function GitHubAppGroup({ onConnectAccount }: { onConnectAccount: () => v
               chevron={Boolean(setup.htmlUrl)}
               onPress={setup.htmlUrl ? () => openPage(setup.htmlUrl ?? "") : undefined}
             />
-            {setup.canCreate ? (
+            {setup.canCreate && setup.reachable !== false ? (
               <GroupedRow
                 icon="globe"
                 label={t("mobile.connectors.githubApp.createInBrowser")}

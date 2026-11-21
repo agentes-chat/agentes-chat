@@ -256,6 +256,14 @@ describe("Conectores › App do GitHub deste servidor (its owner, off agentes.ch
     expect(left).toEqual(["https://chat.example.com/api/app/github-app/manifest/start?state=s"]);
   });
 
+  test("at an address GitHub can't reach: no Criar o app no GitHub, the token connection instead", async () => {
+    await go(
+      seedState({ githubApp: { installable: false, installations: [], setup: { ...NO_APP, reachable: false } } }),
+    );
+    expect(card().textContent).toContain("o endereço deste não é público");
+    expect(within(card()).queryByRole("button", { name: "Criar o app no GitHub" })).toBeNull();
+  });
+
   test("made here: its name and page, and Remover o app after asking", async () => {
     const setup: GitHubAppSetup = {
       source: "settings",

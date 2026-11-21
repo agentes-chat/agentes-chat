@@ -12932,6 +12932,7 @@
       "lead": "Hiermee verschijnen agents op GitHub als de app, niet als het account van iemand.",
       "without": "GitHub maakt de app in je account met alles ingevuld en komt daarna hier terug. Wil je hem onder een organisatie, draag hem daarna over op GitHub.",
       "create": "De app maken op GitHub",
+      "local": "GitHub maakt de app alleen voor een server die het via internet bereikt, en het adres van deze is niet openbaar. Verbind GitHub in plaats daarvan in Connectors met een persoonlijk toegangstoken: de agents krijgen dezelfde tools.",
       "state": {
         "off": "Uit",
         "on": "Aan",

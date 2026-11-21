@@ -12384,6 +12384,7 @@
       "lead": "Dengan aplikasi ini, agen muncul di GitHub sebagai aplikasi, bukan sebagai akun seseorang.",
       "without": "GitHub membuat aplikasi di akunmu dengan semuanya sudah terisi, lalu kembali ke sini. Agar dimiliki organisasi, pindahkan nanti di GitHub.",
       "create": "Buat aplikasi di GitHub",
+      "local": "GitHub hanya membuat aplikasi untuk server yang bisa dijangkaunya lewat internet, dan alamat server ini tidak publik. Sebagai gantinya, hubungkan GitHub di Konektor dengan token akses pribadi: agen mendapat alat yang sama.",
       "state": {
         "off": "Mati",
         "on": "Aktif",

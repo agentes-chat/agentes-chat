@@ -12860,6 +12860,7 @@
       "lead": "Damit erscheinen Agenten auf GitHub als die App, nicht als das Konto einer Person.",
       "without": "GitHub erstellt die App in deinem Konto mit allem ausgefüllt und kommt dann hierher zurück. Soll sie einer Organisation gehören, übertrag sie danach auf GitHub.",
       "create": "App auf GitHub erstellen",
+      "local": "GitHub erstellt die App nur für einen Server, den es über das Internet erreicht, und die Adresse dieses Servers ist nicht öffentlich. Verbinde GitHub stattdessen unter Konnektoren mit einem persönlichen Zugriffstoken: Die Agenten haben dieselben Werkzeuge.",
       "state": {
         "off": "Aus",
         "on": "An",

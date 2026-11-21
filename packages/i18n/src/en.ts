@@ -13329,6 +13329,9 @@ export const en = {
       without:
         "GitHub creates the app under your account with everything filled in, then comes back here. To keep it under an organization, transfer it on GitHub afterwards.",
       create: "Create the app on GitHub",
+      /** In place of `without` and the button: the server's address isn't on the public internet, so GitHub refuses the app. */
+      local:
+        "GitHub only creates the app for a server it can reach on the internet, and this one's address isn't public. Connect GitHub in Connectors with a personal access token instead: agents get the same tools.",
       state: { off: "Off", on: "On", invalid: "Invalid" },
       line: {
         env: "Set in this server's settings (`GITHUB_APP_ID`).",

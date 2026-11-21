@@ -31523,6 +31523,9 @@
   "githubApp.server.create": {
     "value": "Create the app on GitHub"
   },
+  "githubApp.server.local": {
+    "value": "GitHub only creates the app for a server it can reach on the internet, and this one's address isn't public. Connect GitHub in Connectors with a personal access token instead: agents get the same tools."
+  },
   "githubApp.server.state.off": {
     "value": "Off"
   },
