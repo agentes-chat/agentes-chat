@@ -10306,6 +10306,16 @@
       "empty": "No hay hilos en este canal.",
       "seeAll": "Ver todos en Hilos"
     },
+    "new": {
+      "open": "Nuevo hilo",
+      "title": "Nuevo hilo",
+      "text": "El primer mensaje va al canal y la conversación sigue en su hilo.",
+      "channel": "Canal",
+      "subject": "Asunto",
+      "placeholder": "¿De qué trata esta conversación?",
+      "start": "Abrir hilo",
+      "failed": "No se pudo abrir el hilo. Inténtalo de nuevo."
+    },
     "side": {
       "label": "Hilo",
       "expand": "Abrir en pantalla completa",
