@@ -20874,6 +20874,7 @@ export const en = {
     stopOnHome: "Remove from Home",
     onHome: "On Home",
     onHomeDone: "Home now shows this dashboard",
+    updateAll: "Update all",
     groups: {
       workspace: "Workspace",
       workspaceHint: "everyone sees",

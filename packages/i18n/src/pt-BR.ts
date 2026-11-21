@@ -20790,6 +20790,7 @@ export const ptBR = {
     stopOnHome: "Tirar do Início",
     onHome: "No Início",
     onHomeDone: "O Início agora mostra este painel",
+    updateAll: "Atualizar todos",
     groups: {
       workspace: "Do workspace",
       workspaceHint: "todo mundo vê",

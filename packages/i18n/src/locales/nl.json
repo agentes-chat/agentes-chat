@@ -20392,6 +20392,7 @@
     "stopOnHome": "Van Start halen",
     "onHome": "Op Start",
     "onHomeDone": "Start toont nu dit dashboard",
+    "updateAll": "Alles bijwerken",
     "groups": {
       "workspace": "Werkruimte",
       "workspaceHint": "iedereen ziet het",
