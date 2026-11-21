@@ -5802,6 +5802,105 @@ export interface WikiPage extends WikiPageSummary {
   reads?: WikiAgentReads & {
     last: { agentId: string; channelId: string | null; channelName: string | null; at: string } | null;
   };
+  /** Its note in the repository the wiki is kept in (ADR 0214); null or absent when there is none. */
+  repository?: WikiPageRepository | null;
+}
+
+/** A page's note in the wiki's repository. */
+export interface WikiPageRepository {
+  /**
+   * `synced`: the note holds this version. `pending`: this version is still to be written there. `review`: it waits in
+   * the wiki's pull request (`url`). `declined`: that pull request was closed without merging. `local`: it stays here
+   * (limited to some people, or the repository is followed read-only). `held`: the note couldn't be read here, so the
+   * page isn't written over it.
+   */
+  state: "synced" | "pending" | "review" | "declined" | "local" | "held";
+  /** The sync stopped until someone starts it again. */
+  stopped: boolean;
+  /** The repository is followed read-only: what changes here stays here (`local`). */
+  readOnly: boolean;
+  /** The note's address, once it has one; for `review` and `declined`, the pull request's. */
+  url: string | null;
+  /**
+   * The version made here that GitHub's text replaced (both changed the same lines), while the page is still at
+   * GitHub's version: it is in the page's history.
+   */
+  replaced: number | null;
+}
+
+/** How the wiki writes in its repository: straight on the branch, through a pull request, or never. */
+export type WikiCommitMode = "direct" | "pull_request" | "none";
+
+/**
+ * The repository a workspace keeps its wiki in (ADR 0214): the notes under `path` of `branch` are the pages, each side
+ * following the other and the repository the source.
+ */
+export interface WikiRepository {
+  /** Where it is hosted: `github`. */
+  provider: string;
+  owner: string;
+  repo: string;
+  branch: string;
+  /** The folder the notes are under; empty = the whole repository. */
+  path: string;
+  /** The repository's page. */
+  url: string;
+  /** The wiki may write there. False: a public repository the GitHub App doesn't reach, followed read-only. */
+  writable: boolean;
+  /** Anyone may read it: what the wiki writes there is public. */
+  public: boolean;
+  commitMode: WikiCommitMode;
+  /** The wiki's own branch for its pull request. */
+  prBranch: string;
+  /** The wiki's pull request; `declined`: closed without merging (those changes wait here). */
+  pullRequest: { number: number; url: string; state: "open" | "declined" } | null;
+  /** `error`: it stopped, with why in `errorCode`. While `active`, an `errorCode` is a trouble it gets past by itself. */
+  status: "active" | "error";
+  errorCode: string | null;
+  /** A sync is running or about to. */
+  syncing: boolean;
+  syncedAt: string | null;
+  /** The last push GitHub told of: when set, changes there arrive at once; else at the next look. */
+  notifiedAt: string | null;
+  /** Notes that are pages. */
+  notes: number;
+  /** Pages whose last version is still to be written there. */
+  pending: number;
+  /** Notes that couldn't become pages, with why (`wiki.body_too_long`…); administrators only. */
+  held: { path: string; code: string }[];
+  /** Stopped with `wiki.repo_mass_removal`: how many notes were removed there at once. */
+  removalsWaiting: number | null;
+}
+
+/** What connecting a repository would do, before it is connected. */
+export interface WikiRepositoryCheck {
+  owner: string;
+  repo: string;
+  /** The branch the wiki would follow, and the repository's default one. */
+  branch: string;
+  defaultBranch: string | null;
+  /** The folder, from the address when it names one. */
+  path: string;
+  /** The wiki may write there; false: a public repository followed read-only. */
+  writable: boolean;
+  /** Anyone may read it: what the wiki would write there is public. */
+  public: boolean;
+  url: string;
+}
+
+export interface WikiRepositoryWriting {
+  commitMode?: WikiCommitMode;
+  /** The pull request's branch. */
+  prBranch?: string;
+}
+
+export interface WikiRepositoryInput extends WikiRepositoryWriting {
+  /** `owner/name`, or an address on GitHub (a repository's, or a folder's in it). */
+  repository: string;
+  /** The folder; left out: the whole repository. */
+  path?: string;
+  /** Left out: the repository's default branch. */
+  branch?: string;
 }
 
 export interface WikiVersion {
@@ -7104,7 +7203,13 @@ export type NotificationKind =
    * `latest.names` the first things it is about and `count` how many, `latest.text` the whole sentence in the
    * person's language. `source.agentId`, `machineId` or `accountId` when it is about one. Done once fixed.
    */
-  | "team_watch";
+  | "team_watch"
+  /**
+   * ADR 0214: GitHub's version of a wiki page replaced an edit made here (both changed the same lines). Who wrote that
+   * edit, one row per page while unread, no actor. `source.wikiPageId` and `source.slug` the page, its title in
+   * `source.label`, the edit's version in the page's history in `latest.version`. Inbox only. Opens the page.
+   */
+  | "wiki_conflict";
 
 /** "O Gerente aprova por você" (ADR 0139 §2): what the person let the workspace's right hand approve. */
 export interface RightHandApprovals {
@@ -7191,6 +7296,10 @@ export interface NotificationSource {
   routineId?: string;
   /** `skill_update`: the skill. */
   skillId?: string;
+  /** `wiki_conflict`: the wiki page, its title in `label`. */
+  wikiPageId?: string;
+  /** `wiki_conflict`: the wiki page's slug, the address it opens at. */
+  slug?: string;
   /** `plan_lent`: the plan's account. */
   accountId?: string;
   /** `machine_connected`: the computer. */
@@ -7284,6 +7393,8 @@ export interface NotificationLatest {
   share?: number;
   /** A reminder of what was left unread: how many things still wait on the person, this one included. */
   still?: number;
+  /** `wiki_conflict`: the version in the page's history that keeps the edit GitHub's version replaced. */
+  version?: number;
 }
 
 /** A run a `run_failed` row lists: its agent and where it failed (`key` names both). */

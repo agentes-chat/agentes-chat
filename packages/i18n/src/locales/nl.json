@@ -11841,6 +11841,171 @@
       "sent": "Verzoek gestuurd in je gesprek met {{name}}.",
       "message": "Over de pagina [[{{title}}]]:"
     },
+    "repo": {
+      "stopped": "Werkt niet meer bij met GitHub",
+      "conflictNotice": "De GitHub-versie van {{name}} heeft een wijziging van hier vervangen (beide veranderden dezelfde regels). Jouw wijziging is versie {{version}} in de geschiedenis van de pagina.",
+      "state": {
+        "upToDate": "{{repo}} · bijgewerkt {{when}}",
+        "syncing": "{{repo}} · bijwerken…",
+        "retrying": "{{repo}} · GitHub antwoordde niet, opnieuw proberen",
+        "stopped": "Werkt niet meer bij met {{repo}}",
+        "readOnly": "{{repo}} · alleen lezen · bijgewerkt {{when}}"
+      },
+      "connect": {
+        "title": "De wiki op GitHub bijhouden",
+        "description": "De pagina's worden Markdown-notities in een GitHub-repository, en GitHub wordt hun bron.",
+        "repository": "Repository",
+        "repositoryPlaceholder": "Kies een repository",
+        "repositoryHelp": "De repository's die de GitHub-app bereikt, of het adres van een openbare repository.",
+        "byAddress": "Adres van een andere repository plakken",
+        "address": "Adres van de repository",
+        "addressPlaceholder": "https://github.com/eigenaar/naam",
+        "addressHelp": "Het adres van een repository op GitHub, of van een map erin.",
+        "checking": "Repository controleren…",
+        "canWrite": "{{repo}}, branch {{branch}}: de GitHub-app leest en schrijft daar.",
+        "readOnly": "{{repo}}, branch {{branch}}: openbaar, dus de wiki volgt hem zonder daar te schrijven.",
+        "readOnlyPrivate": "{{repo}}, branch {{branch}}: de GitHub-app mag hem alleen lezen, dus de wiki volgt hem zonder daar te schrijven.",
+        "installForWrite": "Installeer de GitHub-app op deze repository om daar ook te schrijven.",
+        "installForWritePrivate": "Geef de GitHub-app schrijfrechten op deze repository om daar ook te schrijven.",
+        "privateNeedsApp": "Op een privérepository moet de GitHub-app geïnstalleerd zijn. Een openbare werkt zoals hij is.",
+        "reach": {
+          "not_installed": "Installeer de GitHub-app op deze repository en kom dan terug om hem te verbinden.",
+          "no_app": "Er is nog geen GitHub-app ingesteld, dus alleen openbare repository's kunnen worden gevolgd.",
+          "refused": "De GitHub-app staat op deze repository maar mag hem niet lezen. Accepteer de rechten van de app op GitHub en kom dan terug om hem te verbinden."
+        },
+        "useAddress": "{{repo}} gebruiken",
+        "replaces": "Verbinden vervangt wat de wiki nu volgt. De pagina's blijven hier, en de notities op GitHub blijven zoals ze zijn.",
+        "openConnectors": "Connectors openen",
+        "more": "Map en branch",
+        "search": "Repository's zoeken",
+        "noResults": "Geen repository met die naam.",
+        "folder": "Map",
+        "folderPlaceholder": "De hele repository",
+        "folderHelp": "Optioneel. Alleen de notities in deze map worden pagina's.",
+        "branch": "Branch",
+        "branchPlaceholder": "De standaardbranch",
+        "branchHelp": "Optioneel. De notities worden uit deze branch gelezen en erin geschreven.",
+        "noteConflict": "Als een notitie aan beide kanten is veranderd, worden de twee wijzigingen samengevoegd. Waar beide dezelfde regels veranderden, blijft die van GitHub, gaat die van hier naar de geschiedenis van de pagina en krijgt wie hem schreef een melding.",
+        "publicWrite": "{{repo}} is openbaar: iedereen kan lezen wat de wiki daar schrijft, ook wat de agenten schrijven.",
+        "noteRestricted": "Pagina's die beperkt zijn tot een paar mensen, gaan hier nooit weg.",
+        "submit": "Verbinden"
+      },
+      "manage": {
+        "title": "Wiki op GitHub",
+        "notes": "Notities",
+        "updated": "Bijgewerkt",
+        "cadence": "Bijwerken",
+        "updating": "bijwerken…",
+        "never": "nog niet",
+        "pending_one": "{{count}} pagina moet nog naar GitHub.",
+        "pending_other": "{{count}} pagina's moeten nog naar GitHub.",
+        "held_one": "{{count}} notitie werd geen pagina",
+        "held_other": "{{count}} notities werden geen pagina's",
+        "retrying": "GitHub antwoordde de vorige keer niet. De wiki probeert het vanzelf opnieuw.",
+        "prOpen": "Pull request #{{number}} open op GitHub",
+        "prDeclined": "Pull request #{{number}} is gesloten zonder te mergen: die wijzigingen wachten hier tot ze weer veranderen.",
+        "readOnly": "De GitHub-app is niet geïnstalleerd op {{repo}}, of mag hem alleen lezen: de wiki volgt hem, en wat hier verandert, blijft hier. Installeer de app erop, met schrijfrechten, om ook de wijzigingen van hier te sturen.",
+        "readOnlyPrivate": "De GitHub-app mag {{repo}} alleen lezen: de wiki volgt hem, en wat hier verandert, blijft hier. Geef de app daar schrijfrechten om ook de wijzigingen van hier te sturen.",
+        "noteDisconnect": "Ontkoppelen laat de pagina's hier en de notities daar zoals ze zijn.",
+        "noteStopped": "Intussen blijft wat hier wordt geschreven hier, en gaat het naar de repository zodra die terug is.",
+        "allowRemovals": "Deze pagina's naar de prullenbak sturen",
+        "change": "Repository, branch of map wijzigen",
+        "disconnect": "Ontkoppelen",
+        "disconnectText": "De wiki volgt {{repo}} niet meer. De pagina's blijven hier en de notities blijven op GitHub, zoals ze zijn.",
+        "disconnectTextPr": "De wiki volgt {{repo}} niet meer en sluit daar zijn pull request #{{number}}. De pagina's blijven hier en de notities blijven op GitHub, zoals ze zijn.",
+        "open": "Openen op GitHub",
+        "syncNow": "Nu bijwerken",
+        "retry": "Opnieuw proberen"
+      },
+      "writing": {
+        "label": "Hoe de wiki daar schrijft",
+        "direct": "Direct op de branch",
+        "directDesc": "Elke wijziging hier is een commit op {{branch}}.",
+        "directDescAny": "Elke wijziging hier is een commit op de branch die de wiki volgt.",
+        "pullRequest": "Via een pull request",
+        "pullRequestDesc": "Wijzigingen van hier gaan in een pull request naar {{branch}}, dat iemand op GitHub accepteert.",
+        "pullRequestDescAny": "Wijzigingen van hier gaan in een pull request, dat iemand op GitHub accepteert.",
+        "none": "Alleen volgen",
+        "noneDesc": "De wiki krijgt wat er op GitHub verandert, en wat hier verandert, blijft hier.",
+        "branch": "Branch van het pull request",
+        "branchHelp": "De wiki bouwt hem bij elke wijziging opnieuw op: bewerk de wiki, niet deze branch.",
+        "branchTaken": "Deze branch bestaat al op GitHub en is niet van de wiki. Kies een andere naam.",
+        "now": {
+          "direct": "De wiki commit direct op {{branch}}.",
+          "pull_request": "De wiki stelt zijn wijzigingen voor in een pull request naar {{branch}}.",
+          "none": "De wiki volgt de repository alleen: wat hier verandert, blijft hier."
+        }
+      },
+      "cadence": {
+        "notified": "Wat op GitHub verandert, komt meteen binnen: GitHub meldt elke push aan de wiki.",
+        "app": "Wat op GitHub verandert, komt binnen als GitHub een push meldt, of bij de volgende controle, elke 5 minuten.",
+        "public": "De wiki controleert GitHub elke minuut op wat daar veranderde.",
+        "short": {
+          "notified": "meteen",
+          "app": "elke 5 min",
+          "public": "elke minuut"
+        }
+      },
+      "held": {
+        "tooLong": "Langer dan een pagina kan zijn",
+        "title": "De naam kan geen titel zijn",
+        "depth": "Te veel mappen in elkaar",
+        "other": "Kon geen pagina worden"
+      },
+      "why": {
+        "not_installed": "De GitHub-app bereikt {{repo}} niet meer, en hij is niet openbaar. Voeg de repository op GitHub toe aan de app, via Connectors, en klik dan op Opnieuw proberen.",
+        "refused": "De GitHub-app mag {{repo}} niet lezen. Accepteer de rechten van de app op GitHub, via Connectors, en klik dan op Opnieuw proberen.",
+        "branch_missing": "De branch waarin de wiki stond, {{branch}}, is uit {{repo}} verdwenen. Kies een andere branch, of zet hem terug op GitHub en klik op Opnieuw proberen.",
+        "empty": "{{repo}} heeft nog geen bestand. Voeg er een eerste bestand aan toe en klik dan op Opnieuw proberen.",
+        "missing": "{{repo}} is weg, of kan niet meer worden gelezen. Als hij is verplaatst of hernoemd, kies hem dan opnieuw.",
+        "too_large": "{{repo}} heeft te veel notities om te volgen. Kies in plaats daarvan een van de mappen.",
+        "owner_gone": "Wie {{repo}} verbond, is hier geen beheerder meer. Klik op Opnieuw proberen om het op jouw naam voort te zetten.",
+        "folder_missing": "De map van de wiki is uit {{repo}} verdwenen, of is leeg. Hier is niets verwijderd. Kies de juiste map, of zet de notities terug op GitHub en klik op Opnieuw proberen.",
+        "no_app": "{{repo}} is niet openbaar, en er is geen GitHub-app ingesteld om hem te bereiken. Stel er een in bij Connectors en klik dan op Opnieuw proberen.",
+        "protected": "{{repo}} neemt geen directe commits aan op die branch (hij is beschermd). Kies hieronder “Via een pull request” en sla op, of laat de GitHub-app ernaar pushen en klik op Opnieuw proberen.",
+        "mass_removal": "Er zijn veel notities tegelijk uit {{repo}} verwijderd ({{count}}), dus de wiki stopte voordat hun pagina's naar de prullenbak gingen. Was dat de bedoeling, stuur ze dan naar de prullenbak. Zo niet, zet de notities terug op GitHub en klik op Opnieuw proberen.",
+        "pr_branch_taken": "De branch van het pull request, {{prBranch}}, bestaat al in {{repo}} en is niet van de wiki. Kies hieronder een andere naam ervoor, of verwijder die branch op GitHub en klik op Opnieuw proberen.",
+        "write_refused": "GitHub heeft de laatste wijziging van de wiki in {{repo}} geweigerd, bijvoorbeeld een pagina en een map met dezelfde naam. Hernoem wat botst, hier of op GitHub, en klik dan op Opnieuw proberen.",
+        "unreadable": "De kopie van {{repo}} op GitHub kon niet worden gelezen. Klik over een tijdje op Opnieuw proberen. Blijft de synchronisatie stoppen, installeer dan de GitHub-app op de repository.",
+        "other": "De wiki volgt {{repo}} niet meer. Klik op Opnieuw proberen."
+      },
+      "whyMember": {
+        "not_installed": "De GitHub-app bereikt {{repo}} niet meer, en hij is niet openbaar. Een beheerder kan de repository op GitHub aan de app toevoegen en de synchronisatie opnieuw starten.",
+        "refused": "De GitHub-app mag {{repo}} niet lezen. Een beheerder kan de rechten van de app op GitHub accepteren en de synchronisatie opnieuw starten.",
+        "branch_missing": "De branch waarin de wiki stond, {{branch}}, is uit {{repo}} verdwenen. Een beheerder kan een andere branch kiezen en de synchronisatie opnieuw starten.",
+        "empty": "{{repo}} heeft nog geen bestand. Zodra er een is, kan een beheerder de synchronisatie opnieuw starten.",
+        "missing": "{{repo}} is weg, of kan niet meer worden gelezen. Als hij is verplaatst, kan een beheerder hem opnieuw kiezen.",
+        "too_large": "{{repo}} heeft te veel notities om te volgen. Een beheerder kan in plaats daarvan een van de mappen kiezen.",
+        "owner_gone": "Wie {{repo}} verbond, is hier geen beheerder meer. Een beheerder kan de synchronisatie opnieuw starten.",
+        "folder_missing": "De map van de wiki is uit {{repo}} verdwenen, of is leeg. Hier is niets verwijderd. Een beheerder kan de juiste map kiezen en de synchronisatie opnieuw starten.",
+        "no_app": "{{repo}} is niet openbaar, en er is geen GitHub-app ingesteld om hem te bereiken. Een beheerder kan er een instellen bij Connectors en de synchronisatie opnieuw starten.",
+        "protected": "{{repo}} neemt geen directe commits aan op die branch (hij is beschermd). Een beheerder kan de wiki via een pull request laten schrijven en de synchronisatie opnieuw starten.",
+        "mass_removal": "Er zijn veel notities tegelijk uit {{repo}} verwijderd ({{count}}), dus de wiki stopte voordat hun pagina's naar de prullenbak gingen. Een beheerder beslist of ze naar de prullenbak gaan en start de synchronisatie opnieuw.",
+        "pr_branch_taken": "De branch van het pull request, {{prBranch}}, bestaat al in {{repo}} en is niet van de wiki. Een beheerder kan er een andere naam voor kiezen en de synchronisatie opnieuw starten.",
+        "write_refused": "GitHub heeft de laatste wijziging van de wiki in {{repo}} geweigerd, bijvoorbeeld een pagina en een map met dezelfde naam. Een beheerder moet ernaar kijken en de synchronisatie opnieuw starten.",
+        "unreadable": "De kopie van {{repo}} op GitHub kon niet worden gelezen. Een beheerder kan de synchronisatie opnieuw starten.",
+        "other": "De wiki volgt {{repo}} niet meer. Een beheerder kan de synchronisatie opnieuw starten."
+      },
+      "page": {
+        "synced": "Op GitHub",
+        "syncedHint": "De notitie van deze pagina op GitHub openen",
+        "sending": "Naar GitHub…",
+        "sendingHint": "Deze versie gaat zo naar de repository.",
+        "notSent": "Nog niet op GitHub",
+        "notSentHint": "De wiki werkt niet meer bij met GitHub. Deze versie gaat erheen zodra hij weer loopt.",
+        "local": "Alleen hier",
+        "localHint": "Pagina's die beperkt zijn tot een paar mensen, gaan nooit naar GitHub.",
+        "readOnlyHint": "De repository wordt alleen-lezen gevolgd: deze versie blijft hier. Een wijziging van de notitie daar komt ook binnen, en vervangt deze waar beide dezelfde regels veranderden.",
+        "replaced": "Vervangen door GitHub",
+        "replacedHint": "Beide kanten veranderden dezelfde regels. De versie van GitHub bleef, en die van hier is versie {{version}} in de geschiedenis.",
+        "held": "Niet bijgewerkt op GitHub",
+        "heldHint": "De notitie op GitHub kon hier niet worden gelezen, dus deze pagina wordt er niet overheen geschreven.",
+        "review": "In het pull request",
+        "reviewHint": "Deze versie wacht in het pull request van de wiki, tot iemand hem op GitHub accepteert.",
+        "declined": "Geweigerd op GitHub",
+        "declinedHint": "Het pull request met deze versie is gesloten zonder te mergen: hij blijft hier tot hij weer verandert."
+      }
+    },
     "import": {
       "cta": "Importeren",
       "short": "Importeren",
@@ -11872,7 +12037,14 @@
         "read": "Notities lezen",
         "error": {
           "notGithub": "Plak een link van github.com."
-        }
+        },
+        "mode": {
+          "label": "Hoe de notities binnenkomen",
+          "sync": "Gesynchroniseerd houden",
+          "once": "Eén keer importeren"
+        },
+        "kept": "De wiki houdt {{repo}} al gesynchroniseerd: de notities komen vanzelf binnen, en ze één keer importeren maakt kopieën. Om nu binnen te halen wat daar is veranderd, klik je in “Gesynchroniseerd houden” op “Nu bijwerken”.",
+        "keptMember": "De wiki houdt {{repo}} al gesynchroniseerd: de notities komen vanzelf binnen, en ze één keer importeren maakt kopieën."
       },
       "anotherLink": "Andere link",
       "dropTitle": "Zet de .zip van de vault hier neer",
@@ -11994,7 +12166,10 @@
       "moved_root": "verplaatst naar het hoofdniveau",
       "saved_message": "sloeg een bericht op",
       "created_from_message": "gemaakt uit een bericht",
-      "imported": "geïmporteerd uit \"{{source}}\""
+      "imported": "geïmporteerd uit \"{{source}}\"",
+      "repository": "kwam uit de repository ({{commit}})",
+      "repository_over": "kwam uit de repository ({{commit}}) over versie {{version}}",
+      "repository_merged": "voegde versie {{version}} samen met de wijzigingen van de repository"
     }
   },
   "run": {
@@ -15368,6 +15543,16 @@
     "wiki": {
       "githubNoNotes": "Geen Markdown-notities in deze link.",
       "githubTooLarge": "Te veel notities om via een link te lezen. Download de repository als .zip en importeer die bij Bestanden.",
+      "repoInvalid": "Schrijf de repository als eigenaar/naam.",
+      "repoNoApp": "Die repository is privé of bestaat niet, en er is geen GitHub-app ingesteld om hem te bereiken.",
+      "repoNotInstalled": "De GitHub-app is niet geïnstalleerd op die repository, en hij is niet openbaar.",
+      "repoRefused": "De GitHub-app mag die repository niet lezen.",
+      "repoMissing": "Die repository is weg, of kan niet meer worden gelezen.",
+      "repoBranchInvalid": "Die naam kan niet de branch van het pull request zijn: gebruik letters, cijfers, - en /, en niet de branch die de wiki volgt.",
+      "repoBranchMissing": "Die branch bestaat niet in de repository.",
+      "repoBranchName": "Dat is geen branchnaam die GitHub accepteert.",
+      "repoEmpty": "Die repository heeft nog geen bestand. Voeg er een eerste bestand aan toe en probeer het opnieuw.",
+      "repoPathInvalid": "Die map kan de wiki niet bevatten.",
       "noAccess": "Je hebt geen toegang tot deze pagina.",
       "audienceForbidden": "Alleen mensen die de wiki bewerken en rollen beheren, kiezen wie een pagina ziet.",
       "audienceExcludesYou": "Neem jezelf op (een van je rollen, of je naam) om de pagina te blijven zien.",

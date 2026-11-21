@@ -26,6 +26,8 @@ export interface SearchSelectProps<V extends string = string, O extends SelectOp
   groupLabel?: (group: string) => string;
   /** Whether an option is among what was typed; default: every word in its label, value or group. */
   matches?: (option: O, query: string) => boolean;
+  /** What is typed in the search as it changes, empty while the list is closed (an option can offer to take it). */
+  onQueryChange?: (query: string) => void;
   /** A row before its check; default: its leading mark, label and description, as `Select` draws them. */
   renderOption?: (option: O) => ReactNode;
   /** What the trigger shows; default: the chosen option's face or logo and its label, as `Select`'s, else `placeholder`. */
@@ -77,6 +79,7 @@ export function SearchSelect<V extends string = string, O extends SelectOption<V
   labels,
   groupLabel = (group) => group,
   matches = defaultMatches,
+  onQueryChange,
   renderOption,
   renderValue,
   placeholder,
@@ -99,10 +102,13 @@ export function SearchSelect<V extends string = string, O extends SelectOption<V
   const optionId = (i: number) => `${listId}-o${i}`;
   const chosen = Array.isArray(options) ? options.find((o) => o.value === value) : undefined;
 
-  // Opening starts on the chosen option; typing goes back to the first match.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: only when it opens
+  // Opening starts on the chosen option; typing goes back to the first match. Closed, nothing is typed.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only when it opens or closes
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      onQueryChange?.("");
+      return;
+    }
     setQuery("");
     setActive(
       Math.max(
@@ -186,6 +192,7 @@ export function SearchSelect<V extends string = string, O extends SelectOption<V
                 value={query}
                 onChange={(e) => {
                   setQuery(e.target.value);
+                  onQueryChange?.(e.target.value);
                   setActive(0);
                 }}
                 onKeyDown={onKey}

@@ -36,6 +36,14 @@ const APP: GitHubAppConfig = {
 const API = "https://api.github.test";
 const WEB = "https://github.test";
 
+/** An answer the fake gives every request to an address `at` matches, while it is set. */
+interface FakeFailure {
+  at: RegExp;
+  status: number;
+  headers?: Record<string, string>;
+  message?: string;
+}
+
 /**
  * Fake GitHub: `repos` maps "owner/repo" → installation id; `visible` maps a user token → installation ids that user
  * can see; codes → user tokens. `lacks` lists permissions an installation wasn't granted (asking for one is a 422);
@@ -44,6 +52,7 @@ const WEB = "https://github.test";
  * is when GitHub made an installation (else the moment it's asked); `moved` the account id the app sees it on, when
  * not the one people see. `roles` maps a user token → what GitHub says of it in any organization: a role (an owner's
  * `admin` when unset), `pending` (an owner who hasn't accepted yet), `none` (not a member: 404) or `refused` (the app lacks Members: read: 403).
+ * `fail` answers in GitHub's place (busy, or saying no) at the addresses it names.
  */
 function fakeGitHub(state: {
   repos: Record<string, number>;
@@ -58,6 +67,7 @@ function fakeGitHub(state: {
   made?: Record<number, string>;
   moved?: Record<number, number>;
   roles?: Record<string, string>;
+  fail?: FakeFailure | null;
 }) {
   const calls: string[] = [];
   const bodies: { url: string; body: Record<string, unknown> }[] = [];
@@ -69,6 +79,10 @@ function fakeGitHub(state: {
     const url = String(input);
     const method = init?.method ?? "GET";
     calls.push(`${method} ${url}`);
+    if (state.fail?.at.test(url)) {
+      const { status, headers, message } = state.fail;
+      return Response.json({ message: message ?? "unavailable" }, { status, headers });
+    }
     if (url === `${WEB}/login/oauth/access_token`) {
       const code = new URLSearchParams(String(init?.body)).get("code") ?? "";
       return code.startsWith("code-")
@@ -171,6 +185,7 @@ async function world() {
     made: {} as Record<number, string>,
     moved: {} as Record<number, number>,
     roles: {} as Record<string, string>,
+    fail: null as FakeFailure | null,
   };
   const fake = fakeGitHub(gh);
   let clock = Date.now();
@@ -597,6 +612,42 @@ describe("installation tokens (ADR 0156)", () => {
     expect(await appRepoToken(APP, http(w), tenant, "z", "none", { contents: "read" })).toEqual({
       miss: "not_installed",
     });
+  });
+
+  test("GitHub asking to wait, about the installation or its token, is unreachable; a plain 403 refuses", async () => {
+    const w = await world();
+    await w.install(w.ana, w.orgA.id, 1);
+    const tenant = { db: w.db, orgId: w.orgA.id };
+    const token = () => appRepoToken(APP, http(w), tenant, "a", "app", { contents: "read" });
+    const waits: Omit<FakeFailure, "at">[] = [
+      { status: 502 },
+      { status: 429 },
+      { status: 403, headers: { "x-ratelimit-remaining": "0" } },
+      { status: 403, headers: { "retry-after": "60" } },
+      // A secondary limit may say so only in its message.
+      { status: 403, message: "You have exceeded a secondary rate limit. Please wait a few minutes." },
+    ];
+    for (const at of [/\/repos\/a\/app\/installation$/, /\/access_tokens$/]) {
+      for (const wait of waits) {
+        w.gh.fail = { at, ...wait };
+        expect(await token()).toEqual({ miss: "unreachable" });
+      }
+      w.gh.fail = { at, status: 403, message: "Resource not accessible by integration" };
+      expect(await token()).toEqual({ miss: "refused" });
+    }
+
+    // Asked to wait on the first permission set, the next one isn't asked: it would fare no better.
+    w.gh.fail = { at: /\/access_tokens$/, status: 503 };
+    const asked = w.fake.calls.length;
+    const sets = [{ contents: "write", workflows: "write" }, { contents: "write" }] as const;
+    expect(await appRepoToken(APP, http(w), tenant, "a", "app", [...sets])).toEqual({ miss: "unreachable" });
+    expect(w.fake.calls.slice(asked).filter((c) => c.includes("/access_tokens"))).toHaveLength(1);
+    // A whole installation's token still comes back as none.
+    expect(await installationToken(APP, http(w), tenant, 1, { issues: "write" })).toBeNull();
+
+    // Nothing was kept from any of those: GitHub answering again, the token comes.
+    w.gh.fail = null;
+    expect(await token()).toMatchObject({ token: expect.any(String) });
   });
 
   test("a whole installation's token, only for the organization it is bound to", async () => {

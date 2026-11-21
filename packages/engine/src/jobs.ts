@@ -143,6 +143,7 @@ import { assessThread } from "./thread-assess";
 import { runVaultSync, VAULT_SYNC_JOB, type VaultDeps } from "./vault";
 import { transcribeVoiceClip, VOICE_JOB, type VoiceDeps } from "./voice";
 import { saveWaitlistContact } from "./waitlist";
+import { syncWikiRepository, WIKI_REPOSITORY_SYNC_JOB } from "./wiki-repository";
 import { checkInWork, followUpWork, WORK_CHECK_IN_JOB, WORK_FOLLOW_UP_JOB } from "./works";
 import {
   ACCOUNT_DELETE_JOB,
@@ -1286,6 +1287,15 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
     // Yesterday's stall-and-noise report, to the people who run the server (`OPS_REPORT_EMAIL`).
     [AUTONOMY_REPORT_JOB]: async (job) => {
       await queueAutonomyEmail(deps.db, job.payload, { router: deps.router?.enabled ?? false });
+    },
+    // The wiki and the repository it is kept in follow each other (ADR 0214): a save here, a push there, or the
+    // periodic look.
+    [WIKI_REPOSITORY_SYNC_JOB]: async (job) => {
+      await syncWikiRepository(
+        { db: deps.db, pubsub: deps.pubsub, github: deps.githubApp },
+        orgOf(job),
+        String(job.payload.repositoryId),
+      );
     },
     // What happened on GitHub to an item an agent worked on, or naming the app (ADR 0156).
     [GITHUB_EVENT_JOB]: async (job) => {

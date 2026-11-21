@@ -209,10 +209,13 @@ export const askersOf = (n: Pick<AppNotification, "count" | "latest">) => ({
 
 /**
  * What the workspace itself tells, with nobody behind it (its computer is ready, its standing changed, one of its
- * agents was held): its headline's key, the held agent's name as `name` (`source.label`); null for what someone did.
+ * agents was held, GitHub's version of a wiki page replaced an edit made here): its headline's key, said with
+ * `source.label` as `name` (the held agent's, the skill's, the page's) and `latest.version` as `version` (the replaced
+ * edit's, in the page's history); null for what someone did.
  */
 export function workspaceHeadline(n: Pick<AppNotification, "kind" | "latest">) {
   if (n.kind === "computer_ready") return "computerSetup.notification.ready" as const;
+  if (n.kind === "wiki_conflict") return "wiki.repo.conflictNotice" as const;
   if (n.kind === "composio_limit") return "connectors.composio.limitNotice" as const;
   if (n.kind === "computer_disk_full") return "machines.shared.diskFullNotice" as const;
   if (n.kind === "computer_no_chrome") return "machines.chromeMissingNotice" as const;
@@ -416,7 +419,9 @@ export type OpenTarget =
   | { to: "/org/$orgId/home"; search?: { widget: string } }
   | { to: "/org/$orgId/dashboards" }
   | { to: "/org/$orgId/dashboards/$dashboardId"; params: { dashboardId: string }; search?: { widget: string } }
-  | { to: "/org/$orgId/settings/$section"; params: { section: "skills" }; search?: { skill: string } };
+  | { to: "/org/$orgId/settings/$section"; params: { section: "skills" }; search?: { skill: string } }
+  | { to: "/org/$orgId/wiki" }
+  | { to: "/org/$orgId/wiki/$slug"; params: { slug: string } };
 
 /** A routine's trouble (ADR 0053): it opens in Rotinas, where its state says what happened and how to fix it. */
 export const ROUTINE_TROUBLE: ReadonlySet<NotificationKind> = new Set<NotificationKind>([
@@ -525,6 +530,9 @@ export function openTarget(n: AppNotification): OpenTarget | null {
       params: { section: "skills" },
       ...(s.skillId ? { search: { skill: s.skillId } } : {}),
     };
+  // GitHub's version of a wiki page replaced an edit made here (ADR 0214): the page, whose history keeps that edit.
+  if (n.kind === "wiki_conflict")
+    return s.slug ? { to: "/org/$orgId/wiki/$slug", params: { slug: s.slug } } : { to: "/org/$orgId/wiki" };
   if (
     n.kind === "machine_connected" ||
     n.kind === "computer_ready" ||

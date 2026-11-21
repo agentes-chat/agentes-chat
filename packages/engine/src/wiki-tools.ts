@@ -1,12 +1,14 @@
 import { type ActionRecord, actWithUndo } from "./agent-actions";
 import { getAgentCached } from "./agents";
 import { agentRoom } from "./artifacts";
+import { ConflictError } from "./errors";
 import { cutText } from "./format";
 import { can, getMembership } from "./organizations";
 import { chosenAudience, personBehindCall, routineCreatorOfCall, visibleToField, wikiActorOfCall } from "./requester";
 import { isRightHand } from "./right-hand";
 import { audienceOfConversation } from "./task-access";
 import type { ToolContext, ToolDefinition, ToolOutput, ToolSource } from "./tools/types";
+import { untrustedBlock } from "./untrusted";
 import {
   appendToWikiPage,
   createWikiPage,
@@ -19,6 +21,7 @@ import {
   wikiPageHeld,
 } from "./wiki";
 import { RESTRICTED_HERE, sendHeldToDm } from "./wiki-dm";
+import { outsideWikiPages, outsideWikiSlugs, wikiPublishesPublicly } from "./wiki-repository/state";
 import { inWorkspaceWords } from "./workspace-mode";
 
 /** `search_wiki` as a personal workspace's agents read it (ADR 0159). */
@@ -36,6 +39,25 @@ const failed = (error: unknown): ToolOutput => ({
 /** Shown when an agent tries to write with nobody who could have asked. */
 export const WIKI_WRITE_REFUSAL =
   "Not allowed: nobody asked for this, or the person who asked can't edit the wiki. An agent writes to the wiki when a person who may asks for it, or a routine a person set up says so. Offer to save it instead.";
+
+/**
+ * Shown when a run no person is behind (a routine's, an unattended one) writes to a wiki kept in a public repository:
+ * what it saves there is published for anyone to read (ADR 0214).
+ */
+export const WIKI_PUBLIC_WRITE_REFUSAL =
+  "Not allowed: this workspace's wiki is kept in a public repository, so what you write to it is published for anyone to read, and no person asked for it. An agent writes there only when a person asks. Offer to say it in the conversation instead.";
+
+/** The envelope's name for a page, or pages, that follow a public repository the workspace doesn't write to. */
+const OUTSIDE_PAGE = "wiki page from a public repository";
+const OUTSIDE_PAGES = "wiki pages from a public repository";
+
+/**
+ * A tool's answer that names a page: `[[Title]]` in it; for a page whose text came from a public repository the
+ * workspace doesn't write to, "the page below" and its title after it, as outside text (ADR 0214): a title there is a
+ * file name whoever keeps that repository chose.
+ */
+const naming = (title: string, outside: boolean, said: (name: string) => string) =>
+  outside ? `${said("the page below")}\n${untrustedBlock(OUTSIDE_PAGE, `[[${title}]]`)}` : said(`[[${title}]]`);
 
 /**
  * The receipt of a wiki edit (none when the text came out the same). Everyone in the channel sees it, so a restricted
@@ -76,16 +98,23 @@ export function createWikiToolSource(deps: Omit<WikiDeps, "db">): ToolSource {
   const wiki = (ctx: ToolContext): WikiDeps => ({ ...deps, db: ctx.db });
   const pageRef = { type: "string", minLength: 1, maxLength: 200, description: "Page title or slug" };
 
-  async function writer(ctx: ToolContext): Promise<WikiActor | null> {
+  /** Who a write is saved for, or the words that refuse it. Every write tool asks this first. */
+  async function writer(ctx: ToolContext): Promise<WikiActor | string> {
     // A routine's instructions are its creator's request, in a room no person reads: a run its report woke sits in a
     // conversation, whose private text is no routine's to publish. An agent's own message is nobody's.
     const inRoom = await agentRoom(ctx.db, ctx.orgId, ctx.channelId);
-    const userId = (await personBehindCall(ctx)) ?? (inRoom ? await routineCreatorOfCall(ctx) : null);
+    const person = await personBehindCall(ctx);
+    const userId = person ?? (inRoom ? await routineCreatorOfCall(ctx) : null);
     // A run stays its person's for good: someone who left asks for nothing.
     const membership = userId ? await getMembership(ctx.db, userId, ctx.orgId) : null;
-    if (!userId || !membership) return null;
+    if (!userId || !membership) return WIKI_WRITE_REFUSAL;
     // The right hand writes as its person could (ADR 0137 amendment of 2026-11-07): never past their `edit_wiki`.
-    if (!can(membership, "edit_wiki") && isRightHand(await getAgentCached(ctx.db, ctx.orgId, ctx.agentId))) return null;
+    if (!can(membership, "edit_wiki") && isRightHand(await getAgentCached(ctx.db, ctx.orgId, ctx.agentId))) {
+      return WIKI_WRITE_REFUSAL;
+    }
+    // A wiki kept in a public repository publishes what it saves: only a person asking may make an agent do that, not
+    // a routine's standing instructions nor a run nobody is behind (ADR 0214).
+    if (!person && (await wikiPublishesPublicly(ctx.db, ctx.orgId))) return WIKI_PUBLIC_WRITE_REFUSAL;
     return { type: "agent", agentId: ctx.agentId, requestedByUserId: userId, channelId: ctx.channelId };
   }
 
@@ -108,13 +137,20 @@ export function createWikiToolSource(deps: Omit<WikiDeps, "db">): ToolSource {
           const note =
             held && (await sendHeldToDm({ db: ctx.db, pubsub: deps.pubsub }, heldRun(ctx))) ? RESTRICTED_HERE : "";
           if (pages.length === 0) return { content: note || "No wiki pages match." };
+          const line = (p: (typeof pages)[number]) =>
+            `- [[${p.title}]] (${p.folder ? `${p.folder}/` : ""}${p.slug}, v${p.version}): ${cutText(p.body.replace(/\s+/g, " "), 200)}`;
+          // Pages that follow a public repository the workspace doesn't write to: outside text (ADR 0214).
+          const outside = await outsideWikiPages(
+            ctx.db,
+            ctx.orgId,
+            pages.map((p) => p.id),
+          );
+          const theirs = pages.filter((p) => outside.has(p.id)).map(line);
           return {
             content: [
               note,
-              ...pages.map(
-                (p) =>
-                  `- [[${p.title}]] (${p.folder ? `${p.folder}/` : ""}${p.slug}, v${p.version}): ${cutText(p.body.replace(/\s+/g, " "), 200)}`,
-              ),
+              ...pages.filter((p) => !outside.has(p.id)).map(line),
+              theirs.length ? untrustedBlock(OUTSIDE_PAGES, theirs.join("\n"), 16_000) : "",
             ]
               .filter(Boolean)
               .join("\n"),
@@ -152,13 +188,32 @@ export function createWikiToolSource(deps: Omit<WikiDeps, "db">): ToolSource {
             pageIds: [p.id],
             kind: "opened",
           });
-          const backlinks = p.backlinks.filter((b) => b.kind === "page").map((b) => `[[${b.title}]]`);
+          const linking = p.backlinks.filter((b) => b.kind === "page");
+          const page = [
+            `# ${p.title} (slug ${p.slug}, version ${p.version}${p.folder ? `, folder ${p.folder}` : ""}${p.locked ? ", locked" : ""}${p.canEdit ? "" : ", read-only for you"})`,
+            p.tags.length ? `Tags: ${p.tags.join(", ")}` : "",
+            cutText(p.body, 40_000),
+          ]
+            .filter(Boolean)
+            .join("\n\n");
+          // A page that follows a public repository the workspace doesn't write to: outside text (ADR 0214). So are the
+          // titles of such pages among those that link here.
+          const outside = (await outsideWikiPages(ctx.db, ctx.orgId, [p.id])).has(p.id);
+          const outsideSlugs = await outsideWikiSlugs(
+            ctx.db,
+            ctx.orgId,
+            linking.map((b) => b.slug),
+          );
+          const ours = linking.filter((b) => !outsideSlugs.has(b.slug)).map((b) => `[[${b.title}]]`);
+          const theirs = linking.filter((b) => outsideSlugs.has(b.slug)).map((b) => `[[${b.title}]]`);
+          const lead = ours.length ? "Also linked from" : "Linked from";
           return {
             content: [
-              `# ${p.title} (slug ${p.slug}, version ${p.version}${p.folder ? `, folder ${p.folder}` : ""}${p.locked ? ", locked" : ""}${p.canEdit ? "" : ", read-only for you"})`,
-              p.tags.length ? `Tags: ${p.tags.join(", ")}` : "",
-              cutText(p.body, 40_000),
-              backlinks.length ? `Linked from: ${backlinks.join(", ")}` : "",
+              outside ? untrustedBlock(OUTSIDE_PAGE, page, 42_000) : page,
+              ours.length ? `Linked from: ${ours.join(", ")}` : "",
+              theirs.length
+                ? `${lead} pages of a public repository:\n${untrustedBlock(OUTSIDE_PAGES, theirs.join(", "))}`
+                : "",
             ]
               .filter(Boolean)
               .join("\n\n"),
@@ -188,7 +243,7 @@ export function createWikiToolSource(deps: Omit<WikiDeps, "db">): ToolSource {
       },
       async execute(input, ctx) {
         const actor = await writer(ctx);
-        if (!actor) return { content: WIKI_WRITE_REFUSAL, isError: true };
+        if (typeof actor === "string") return { content: actor, isError: true };
         try {
           const audience =
             (await chosenAudience(ctx, input.visible_to)) ?? (await audienceOfConversation(ctx.db, ctx.channelId));
@@ -215,6 +270,15 @@ export function createWikiToolSource(deps: Omit<WikiDeps, "db">): ToolSource {
             data: { wikiPageId: p.id, slug: p.slug },
           };
         } catch (error) {
+          // The page that has this name follows a public repository: its title is outside text, so it isn't repeated
+          // here (the slug is the one this title makes).
+          const slug = error instanceof ConflictError && error.code === "slug_taken" ? error.params?.slug : null;
+          if (typeof slug === "string" && (await outsideWikiSlugs(ctx.db, ctx.orgId, [slug])).has(slug)) {
+            return {
+              content: `Failed: a page from a public repository already uses this name (slug ${slug}). Read it with read_wiki_page, or pick another title.`,
+              isError: true,
+            };
+          }
           return failed(error);
         }
       },
@@ -239,7 +303,7 @@ export function createWikiToolSource(deps: Omit<WikiDeps, "db">): ToolSource {
       },
       async execute(input, ctx) {
         const actor = await writer(ctx);
-        if (!actor) return { content: WIKI_WRITE_REFUSAL, isError: true };
+        if (typeof actor === "string") return { content: actor, isError: true };
         try {
           const mode = str(input.mode);
           const page = str(input.page);
@@ -270,8 +334,9 @@ export function createWikiToolSource(deps: Omit<WikiDeps, "db">): ToolSource {
             },
             (saved) => wikiEdit(saved, before),
           );
+          const outside = (await outsideWikiPages(ctx.db, ctx.orgId, [p.id])).has(p.id);
           return {
-            content: `Saved [[${p.title}]] as version ${p.version}.`,
+            content: naming(p.title, outside, (name) => `Saved ${name} as version ${p.version}.`),
             data: { wikiPageId: p.id, slug: p.slug, version: p.version },
           };
         } catch (error) {
@@ -296,7 +361,7 @@ export function createWikiToolSource(deps: Omit<WikiDeps, "db">): ToolSource {
       },
       async execute(input, ctx) {
         const actor = await writer(ctx);
-        if (!actor) return { content: WIKI_WRITE_REFUSAL, isError: true };
+        if (typeof actor === "string") return { content: actor, isError: true };
         try {
           const targets = (input.to as string[]).map((t) => t.replace(/[[\]]/g, "").trim()).filter(Boolean);
           let before = 0;
@@ -311,8 +376,10 @@ export function createWikiToolSource(deps: Omit<WikiDeps, "db">): ToolSource {
             },
             (saved) => wikiEdit(saved, before),
           );
+          const outside = (await outsideWikiPages(ctx.db, ctx.orgId, [p.id])).has(p.id);
+          const links = targets.map((t) => `[[${t}]]`).join(", ");
           return {
-            content: `Linked [[${p.title}]] to ${targets.map((t) => `[[${t}]]`).join(", ")}.`,
+            content: naming(p.title, outside, (name) => `Linked ${name} to ${links}.`),
             data: { wikiPageId: p.id },
           };
         } catch (error) {

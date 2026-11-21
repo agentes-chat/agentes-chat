@@ -45,6 +45,11 @@ export const wikiPages = pgTable(
     audienceUserIds: text().array().notNull().default(sql`'{}'::text[]`),
     /** Limited to some agents: only `audienceAgentIds` read it. Independent of `restricted`. */
     agentsLimited: boolean().notNull().default(false),
+    /**
+     * Its text came from a repository the workspace doesn't write to (a public one it only follows, ADR 0214): agents
+     * read it as outside text, even after the repository is disconnected. Cleared when the workspace writes there.
+     */
+    outside: boolean().notNull().default(false),
     audienceAgentIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
     /** Only these people edit it, among those who see it and hold `edit_wiki`. Administrators always do. */
     editorsLimited: boolean().notNull().default(false),
@@ -188,4 +193,120 @@ export const wikiPageReads = pgTable(
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index().on(t.orgId, t.createdAt), index().on(t.pageId, t.createdAt)],
+);
+
+/**
+ * The git repository a workspace keeps its wiki in (ADR 0214): the Markdown notes under `path` of one branch are the
+ * wiki's pages, and the repository is the source. A save here is committed there and a push there is saved here; when
+ * both changed a note, the repository's text stays and ours is a version in the page's history. One per workspace.
+ */
+export const wikiRepositories = pgTable(
+  "wiki_repositories",
+  {
+    id: uuid()
+      .primaryKey()
+      .$defaultFn(() => Bun.randomUUIDv7()),
+    orgId: uuid()
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    /** Where the repository is hosted: `github` (reached through the server's GitHub App). */
+    provider: text().notNull().default("github"),
+    owner: text().notNull(),
+    repo: text().notNull(),
+    branch: text().notNull(),
+    /** The folder the notes are under (`notes/wiki`); empty = the repository's root. */
+    path: text().notNull().default(""),
+    /** The commit both sides agreed on last; null before the first sync. */
+    headSha: text(),
+    /**
+     * The wiki writes there too: the GitHub App, installed on it, may write its contents. False: a public repository
+     * the app doesn't reach, which the wiki follows read-only.
+     */
+    writable: boolean().notNull().default(true),
+    /**
+     * Anyone may read it on GitHub: what the wiki writes there is public, so commits name nobody; followed read-only,
+     * its text is outside text for the agents (ADR 0214).
+     */
+    public: boolean().notNull().default(false),
+    /**
+     * How the wiki writes there: `direct`, commits on `branch`; `pull_request`, one pull request into `branch` from
+     * `prBranch`, rebuilt on `branch` at every change; `none`, never (it only follows the repository).
+     */
+    commitMode: text().notNull().default("direct"),
+    /** The wiki's own branch for its pull request. */
+    prBranch: text().notNull().default("agentes/wiki"),
+    /**
+     * The wiki's pull request: `open`, or `declined` (closed without merging: the same changes aren't proposed again),
+     * and what it holds (an unchanged one isn't sent again).
+     */
+    prNumber: integer(),
+    prUrl: text(),
+    prState: text(),
+    prSignature: text(),
+    /**
+     * The commit the wiki last put on `prBranch`: the branch is moved, or removed, only while it is still there (or
+     * missing), so a branch someone else made or pushed to is never overwritten.
+     */
+    prHead: text(),
+    /**
+     * The notes the pull request writes, by path (relative to `path`), and the page each comes from at which version,
+     * name and blob: merged, each note goes back to its page, never a new one.
+     */
+    prFiles:
+      jsonb().$type<Record<string, { pageId: string; version: number; sha: string; title: string; folder: string }>>(),
+    /** `active`, or `error` with `errorCode` saying why it stopped (the app left the repository, the branch is gone). */
+    status: text().notNull().default("active"),
+    errorCode: text(),
+    /** Something changed since the last sync began: one more is queued when this turns true. */
+    dirty: boolean().notNull().default(false),
+    /** A sync holds it until then, so two never write at once. */
+    syncingUntil: timestamp({ withTimezone: true }),
+    syncedAt: timestamp({ withTimezone: true }),
+    /** The last push GitHub told of (its webhook reaches this server): changes there then arrive at once. */
+    notifiedAt: timestamp({ withTimezone: true }),
+    /**
+     * Notes removed there at once, more than the sync takes without asking (`wiki.repo_mass_removal`): their pages
+     * stay out of the trash until an administrator lets the next sync remove that many (`removalsAllowed`, used once;
+     * more than that asks again).
+     */
+    removalsWaiting: integer(),
+    removalsAllowed: integer(),
+    /** Who connected it, or started it again: what comes from the repository is saved with their rights. */
+    createdByUserId: text().references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex().on(t.orgId), index().on(t.provider, t.owner, t.repo)],
+);
+
+/**
+ * One note of the repository and the page it is: what both sides held when they last agreed (the file's git blob, the
+ * page's version, its title and folder), which is how a later change on either side is told apart.
+ */
+export const wikiRepositoryFiles = pgTable(
+  "wiki_repository_files",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    orgId: uuid().notNull(),
+    repositoryId: uuid()
+      .notNull()
+      .references(() => wikiRepositories.id, { onDelete: "cascade" }),
+    /** Relative to the repository's `path`: `Processos/Guia de Deploy.md`. */
+    path: text().notNull(),
+    /** Null: the note couldn't become a page (`issue`), or its page is gone for good. */
+    pageId: uuid().references(() => wikiPages.id, { onDelete: "set null" }),
+    blobSha: text().notNull(),
+    /** The page's version at that blob. */
+    pageVersion: integer().notNull().default(0),
+    title: text().notNull().default(""),
+    folder: text().notNull().default(""),
+    /** The file up to its text (the frontmatter and the blank lines after it), kept as written. */
+    head: text().notNull().default(""),
+    /** Left as it is on both sides: its page is limited to some people here. */
+    detached: boolean().notNull().default(false),
+    /** Why the note isn't a page (`wiki.body_too_long`…), until its file changes. */
+    issue: text(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex().on(t.repositoryId, t.path), index().on(t.pageId), index().on(t.orgId)],
 );

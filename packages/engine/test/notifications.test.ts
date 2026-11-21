@@ -27,6 +27,7 @@ import {
   notificationSnippet,
   notify,
   notifyMessage,
+  notifyWikiConflict,
   openDm,
   postPersonMessage,
   resolveNotifications,
@@ -466,6 +467,32 @@ test("a merged request-to-join notice keeps the first two names, each once, and 
     });
   const [row] = (await inbox(f.owner.id)).items;
   expect([row?.count, row?.latest]).toEqual([4, { title: "Carla Dias", names: ["Ana Souza", "Bruno Lima"] }]);
+});
+
+test("a wiki edit GitHub's version replaced: one row per page while unread, no actor, never on devices", async () => {
+  f = await setup();
+  const { bia } = await people();
+  const events = hear(bia.id);
+  const page = { id: crypto.randomUUID(), slug: "guides/onboarding", title: "Onboarding" };
+  await notifyWikiConflict(deps(), { orgId: f.org.id, page, replaced: 3, userIds: [bia.id] });
+  await notifyWikiConflict(deps(), { orgId: f.org.id, page, replaced: 5, userIds: [bia.id] });
+  const list = (await inbox(bia.id)).items;
+  expect(list).toHaveLength(1);
+  // Nobody here did it: no actor, and it waits on no one. The newest replaced edit's version is the one it names.
+  expect(list[0]).toMatchObject({
+    kind: "wiki_conflict",
+    waiting: false,
+    actors: [],
+    count: 2,
+    source: { wikiPageId: page.id, slug: "guides/onboarding", label: "Onboarding" },
+    latest: { version: 5 },
+  });
+  expect(events.filter((e) => e.type === "notification.upserted").map((e) => e.alert)).toEqual([false, false]);
+
+  // Read, the page's next conflict is a row of its own.
+  await markNotificationRead(deps(), bia.id, f.org.id, list[0]?.id ?? "", true);
+  await notifyWikiConflict(deps(), { orgId: f.org.id, page, replaced: 8, userIds: [bia.id] });
+  expect((await inbox(bia.id, "unread")).items.map((n) => [n.count, n.latest.version])).toEqual([[1, 8]]);
 });
 
 test("snoozed notifications leave the inbox and come back on top when their time comes", async () => {

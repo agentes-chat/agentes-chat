@@ -161,6 +161,20 @@ describe("inbox items", () => {
     );
   });
 
+  test("an edit GitHub's version of a wiki page replaced opens the page, else the wiki (ADR 0214)", () => {
+    const n = notification({
+      id: "n",
+      kind: "wiki_conflict",
+      actors: [],
+      source: { wikiPageId: "p1", slug: "guides/onboarding", label: "Onboarding" },
+      latest: { version: 4 },
+    });
+    expect(notificationHref(n)).toBe("/wiki/guides%2Fonboarding");
+    expect(notificationHref({ ...n, source: { wikiPageId: "p1", label: "Onboarding" } })).toBe("/wiki");
+    // What can't be a slug opens the wiki too.
+    expect(notificationHref({ ...n, source: { slug: "<script>" } })).toBe("/wiki");
+  });
+
   test("a message opens at the message itself", () => {
     const n = notification({ id: "n", kind: "mention", source: { channelId: "c1", messageId: "m1" } });
     expect(notificationHref(n)).toBe("/chat/c1?m=m1");

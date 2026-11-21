@@ -202,6 +202,7 @@ describe("GitHub's manifest flow", () => {
       "pull_request_review_thread",
       "discussion",
       "discussion_comment",
+      "push",
     ]);
     // GitHub can't deliver to plain http; a long host keeps the name within GitHub's 34 characters.
     expect(githubAppManifest("http://192.168.0.10:3000").hook_attributes.active).toBe(false);

@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import type { AppNotification } from "../src/api/types";
+import { openTarget, workspaceHeadline } from "../src/lib/notifications";
 import {
   OPEN_WIKI_ACCESS,
   type WikiAccess,
@@ -92,5 +94,17 @@ describe("an import's pages", () => {
       pages: [{ title: "D" }],
     });
     expect(wikiImportOf(pages, pages[4] as (typeof pages)[number])).toBeNull();
+  });
+});
+
+describe("an edit made here that GitHub's version replaced (ADR 0214)", () => {
+  const notice = (source: AppNotification["source"]) =>
+    ({ kind: "wiki_conflict", source, latest: { version: 4 } }) as AppNotification;
+
+  test("the workspace's own headline, and the page it opens, else the wiki", () => {
+    const n = notice({ wikiPageId: "p1", slug: "guides/onboarding", label: "Onboarding" });
+    expect(workspaceHeadline(n)).toBe("wiki.repo.conflictNotice");
+    expect(openTarget(n)).toEqual({ to: "/org/$orgId/wiki/$slug", params: { slug: "guides/onboarding" } });
+    expect(openTarget(notice({ wikiPageId: "p1", label: "Onboarding" }))).toEqual({ to: "/org/$orgId/wiki" });
   });
 });

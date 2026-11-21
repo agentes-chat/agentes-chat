@@ -101,7 +101,8 @@ export function SystemFace({ n, className = "nt-av24" }: { n: AppNotification; c
         <Icon name="plug" size={16} />
       </span>
     );
-  if (n.kind === "skill_update")
+  // Skills and the wiki share the book they have in the sidebar.
+  if (n.kind === "skill_update" || n.kind === "wiki_conflict")
     return (
       <span className={cx("nt-sys", className)} aria-hidden="true">
         <Icon name="book" size={16} />
@@ -237,7 +238,7 @@ export function Headline({
   );
   const own = workspaceHeadline(n);
   if (own === "computerSetup.notification.ready" && personal) return t("computerSetup.notification.readyPersonal");
-  if (own) return t(own, { name: n.source.label });
+  if (own) return t(own, { name: n.source.label, version: n.latest.version });
   if (n.kind === "app_created") return appCreatedLine(t, n);
   if (deviceNoticeOf(n)) return <DeviceHeadline n={n} dir={dir} />;
   // A board's notice (ADR 0135): the agent who looks after the widget or asks to publish the board.

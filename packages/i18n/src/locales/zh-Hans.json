@@ -11371,6 +11371,169 @@
       "sent": "已在与{{name}}的对话中发送请求。",
       "message": "关于页面 [[{{title}}]]："
     },
+    "repo": {
+      "stopped": "已停止与 GitHub 同步更新",
+      "conflictNotice": "{{name}} 在 GitHub 上的版本替换了这里的一次修改（两边改了同样的行）。你的修改是页面历史中的第 {{version}} 版。",
+      "state": {
+        "upToDate": "{{repo}} · 已更新（{{when}}）",
+        "syncing": "{{repo}} · 正在更新…",
+        "retrying": "{{repo}} · GitHub 没有响应，正在重试",
+        "stopped": "已停止与 {{repo}} 同步更新",
+        "readOnly": "{{repo}} · 只读 · 已更新（{{when}}）"
+      },
+      "connect": {
+        "title": "把 Wiki 保存在 GitHub",
+        "description": "页面会成为 GitHub 仓库中的 Markdown 笔记，GitHub 成为它们的源头。",
+        "repository": "仓库",
+        "repositoryPlaceholder": "选择仓库",
+        "repositoryHelp": "GitHub 应用能访问的仓库，或任意公开仓库的地址。",
+        "byAddress": "粘贴其他仓库的地址",
+        "address": "仓库地址",
+        "addressPlaceholder": "https://github.com/所有者/名称",
+        "addressHelp": "GitHub 上某个仓库或其中某个文件夹的地址。",
+        "checking": "正在检查仓库…",
+        "canWrite": "{{repo}}，分支 {{branch}}：GitHub 应用可以读写那里。",
+        "readOnly": "{{repo}}，分支 {{branch}}：公开仓库，所以 Wiki 只跟随，不会写入。",
+        "readOnlyPrivate": "{{repo}}，分支 {{branch}}：GitHub 应用只能读取它，所以 Wiki 只跟随，不会写入。",
+        "installForWrite": "如果也要写回那边，请在这个仓库上安装 GitHub 应用。",
+        "installForWritePrivate": "如果也要写回那边，请给 GitHub 应用这个仓库的写入权限。",
+        "privateNeedsApp": "私有仓库需要安装 GitHub 应用。公开仓库直接就能用。",
+        "reach": {
+          "not_installed": "请在这个仓库上安装 GitHub 应用，然后回来连接它。",
+          "no_app": "还没有设置 GitHub 应用，所以只能跟随公开仓库。",
+          "refused": "GitHub 应用已在这个仓库上，但无权读取它。请在 GitHub 上接受应用的权限，然后回来连接它。"
+        },
+        "useAddress": "使用 {{repo}}",
+        "replaces": "连接后会替换 Wiki 现在跟随的内容。页面留在这里，GitHub 上的笔记保持原样。",
+        "openConnectors": "打开连接器",
+        "more": "文件夹和分支",
+        "search": "搜索仓库",
+        "noResults": "没有这个名称的仓库。",
+        "folder": "文件夹",
+        "folderPlaceholder": "整个仓库",
+        "folderHelp": "可选。只有这个文件夹里的笔记会成为页面。",
+        "branch": "分支",
+        "branchPlaceholder": "默认分支",
+        "branchHelp": "可选。笔记从这个分支读取并写入这个分支。",
+        "noteConflict": "如果一条笔记两边都改了，两处修改会合并。两边改了同样的行时，保留 GitHub 的版本，这里的版本进入页面历史，并通知写它的人。",
+        "publicWrite": "{{repo}} 是公开仓库：Wiki 在那里写的内容，包括智能体写的，任何人都能读到。",
+        "noteRestricted": "仅部分人可见的页面永远不会离开这里。",
+        "submit": "连接"
+      },
+      "manage": {
+        "title": "GitHub 上的 Wiki",
+        "notes": "笔记",
+        "updated": "更新时间",
+        "cadence": "更新",
+        "updating": "正在更新…",
+        "never": "尚未",
+        "pending_other": "还有 {{count}} 个页面要同步到 GitHub。",
+        "held_other": "{{count}} 条笔记没有成为页面",
+        "retrying": "上次 GitHub 没有响应。Wiki 会自动重试。",
+        "prOpen": "GitHub 上的拉取请求 #{{number}} 已打开",
+        "prDeclined": "拉取请求 #{{number}} 未合并就被关闭了：这些改动会留在这里，直到它们再次改变。",
+        "readOnly": "{{repo}} 没有安装 GitHub 应用，或者应用只能读取它：Wiki 会跟随它，这里的改动会留在这里。在该仓库上安装有写入权限的应用，这里的改动也会同步过去。",
+        "readOnlyPrivate": "GitHub 应用只能读取 {{repo}}：Wiki 会跟随它，这里的改动会留在这里。给应用那边的写入权限后，这里的改动也会同步过去。",
+        "noteDisconnect": "断开连接后，页面留在这里，笔记留在那边，保持原样。",
+        "noteStopped": "在此期间，这里写的内容会留在这里，仓库恢复后再同步过去。",
+        "allowRemovals": "把这些页面移到回收站",
+        "change": "更换仓库、分支或文件夹",
+        "disconnect": "断开连接",
+        "disconnectText": "Wiki 将不再跟随 {{repo}}。页面留在这里，笔记留在 GitHub 上，保持原样。",
+        "disconnectTextPr": "Wiki 将不再跟随 {{repo}}，并关闭它在那边的拉取请求 #{{number}}。页面留在这里，笔记留在 GitHub 上，保持原样。",
+        "open": "在 GitHub 上打开",
+        "syncNow": "立即更新",
+        "retry": "重试"
+      },
+      "writing": {
+        "label": "Wiki 如何写入那边",
+        "direct": "直接写入分支",
+        "directDesc": "这里的每次改动都是 {{branch}} 上的一个提交。",
+        "directDescAny": "这里的每次改动都是 Wiki 所跟随分支上的一个提交。",
+        "pullRequest": "通过拉取请求",
+        "pullRequestDesc": "这里的改动会进入合并到 {{branch}} 的拉取请求，由有人在 GitHub 上接受。",
+        "pullRequestDescAny": "这里的改动会进入一个拉取请求，由有人在 GitHub 上接受。",
+        "none": "仅跟随",
+        "noneDesc": "Wiki 会收到 GitHub 上的改动，而这里的改动会留在这里。",
+        "branch": "拉取请求的分支",
+        "branchHelp": "Wiki 每次改动都会重建这个分支：请编辑 Wiki，不要编辑这个分支。",
+        "branchTaken": "这个分支已存在于 GitHub 上，而且不属于 Wiki。请换一个名称。",
+        "now": {
+          "direct": "Wiki 直接提交到 {{branch}}。",
+          "pull_request": "Wiki 通过一个合并到 {{branch}} 的拉取请求提出改动。",
+          "none": "Wiki 只跟随仓库：这里的改动会留在这里。"
+        }
+      },
+      "cadence": {
+        "notified": "GitHub 上的改动会立即同步：每次推送 GitHub 都会通知 Wiki。",
+        "app": "GitHub 上的改动会在 GitHub 通知推送时同步，或在每 5 分钟一次的下次检查时同步。",
+        "public": "Wiki 每分钟检查一次 GitHub，取回那边的改动。",
+        "short": {
+          "notified": "立即",
+          "app": "每 5 分钟",
+          "public": "每分钟"
+        }
+      },
+      "held": {
+        "tooLong": "超过了页面的长度上限",
+        "title": "它的名称不能用作标题",
+        "depth": "文件夹嵌套太多",
+        "other": "无法成为页面"
+      },
+      "why": {
+        "not_installed": "GitHub 应用已无法访问 {{repo}}，而且它不是公开的。请从连接器进入 GitHub，把这个仓库添加到应用，然后点击“重试”。",
+        "refused": "GitHub 应用无权读取 {{repo}}。请从连接器进入 GitHub，接受应用的权限，然后点击“重试”。",
+        "branch_missing": "存放 Wiki 的分支 {{branch}} 已从 {{repo}} 中消失。请选择另一个分支，或在 GitHub 上恢复它，然后点击“重试”。",
+        "empty": "{{repo}} 还没有任何文件。请添加第一个文件，然后点击“重试”。",
+        "missing": "{{repo}} 已不存在，或者已无法读取。如果它被移动或改名了，请重新选择它。",
+        "too_large": "{{repo}} 的笔记太多，无法同步。请改为选择它的某个文件夹。",
+        "owner_gone": "连接 {{repo}} 的人已不再是这里的管理员。点击“重试”，以你的名义继续同步。",
+        "folder_missing": "Wiki 的文件夹已从 {{repo}} 中消失，或者是空的。这里没有删除任何内容。请选择正确的文件夹，或在 GitHub 上恢复这些笔记，然后点击“重试”。",
+        "no_app": "{{repo}} 不是公开的，也没有设置可以访问它的 GitHub 应用。请在连接器中设置一个，然后点击“重试”。",
+        "protected": "{{repo}} 不接受直接提交到这个分支（它受保护）。请在下方选择“通过拉取请求”并保存，或允许 GitHub 应用推送到该分支，然后点击“重试”。",
+        "mass_removal": "{{repo}} 一次删除了很多笔记（{{count}} 条），所以 Wiki 在把这些页面移到回收站之前停了下来。如果是有意的，就把它们移到回收站。如果不是，请在 GitHub 上恢复这些笔记，然后点击“重试”。",
+        "pr_branch_taken": "拉取请求的分支 {{prBranch}} 已存在于 {{repo}} 中，而且不属于 Wiki。请在下方为它换一个名称，或在 GitHub 上删除那个分支，然后点击“重试”。",
+        "write_refused": "GitHub 拒绝了 Wiki 对 {{repo}} 的最近一次改动，比如页面和文件夹同名。请在这里或 GitHub 上重命名冲突的内容，然后点击“重试”。",
+        "unreadable": "无法读取 {{repo}} 在 GitHub 上的副本。请稍后点击“重试”。如果同步一直停下来，请在这个仓库上安装 GitHub 应用。",
+        "other": "Wiki 已停止同步 {{repo}}。请点击“重试”。"
+      },
+      "whyMember": {
+        "not_installed": "GitHub 应用已无法访问 {{repo}}，而且它不是公开的。管理员可以在 GitHub 上把这个仓库添加到应用，然后恢复同步。",
+        "refused": "GitHub 应用无权读取 {{repo}}。管理员可以在 GitHub 上接受应用的权限，然后恢复同步。",
+        "branch_missing": "存放 Wiki 的分支 {{branch}} 已从 {{repo}} 中消失。管理员可以选择另一个分支，然后恢复同步。",
+        "empty": "{{repo}} 还没有任何文件。有了文件后，管理员可以恢复同步。",
+        "missing": "{{repo}} 已不存在，或者已无法读取。如果它被移动了，管理员可以重新选择它。",
+        "too_large": "{{repo}} 的笔记太多，无法同步。管理员可以改为选择它的某个文件夹。",
+        "owner_gone": "连接 {{repo}} 的人已不再是这里的管理员。管理员可以恢复同步。",
+        "folder_missing": "Wiki 的文件夹已从 {{repo}} 中消失，或者是空的。这里没有删除任何内容。管理员可以选择正确的文件夹，然后恢复同步。",
+        "no_app": "{{repo}} 不是公开的，也没有设置可以访问它的 GitHub 应用。管理员可以在连接器中设置一个，然后恢复同步。",
+        "protected": "{{repo}} 不接受直接提交到这个分支（它受保护）。管理员可以让 Wiki 通过拉取请求写入，然后恢复同步。",
+        "mass_removal": "{{repo}} 一次删除了很多笔记（{{count}} 条），所以 Wiki 在把这些页面移到回收站之前停了下来。由管理员决定是否把它们移到回收站，然后恢复同步。",
+        "pr_branch_taken": "拉取请求的分支 {{prBranch}} 已存在于 {{repo}} 中，而且不属于 Wiki。管理员可以为它换一个名称，然后恢复同步。",
+        "write_refused": "GitHub 拒绝了 Wiki 对 {{repo}} 的最近一次改动，比如页面和文件夹同名。需要管理员查看并恢复同步。",
+        "unreadable": "无法读取 {{repo}} 在 GitHub 上的副本。管理员可以恢复同步。",
+        "other": "Wiki 已停止同步 {{repo}}。管理员可以恢复同步。"
+      },
+      "page": {
+        "synced": "已在 GitHub",
+        "syncedHint": "在 GitHub 上打开这个页面的笔记",
+        "sending": "正在同步到 GitHub…",
+        "sendingHint": "这个版本马上会进入仓库。",
+        "notSent": "尚未同步到 GitHub",
+        "notSentHint": "Wiki 已停止与 GitHub 同步更新。恢复后这个版本会同步过去。",
+        "local": "仅在这里",
+        "localHint": "仅部分人可见的页面永远不会同步到 GitHub。",
+        "readOnlyHint": "这个仓库以只读方式跟随：这个版本留在这里。那边笔记的改动也会同步过来，并在两边改了同样的行时替换这个版本。",
+        "replaced": "已被 GitHub 的版本替换",
+        "replacedHint": "两边改了同样的行。保留了 GitHub 的版本，这里的版本是历史中的第 {{version}} 版。",
+        "held": "GitHub 上未更新",
+        "heldHint": "无法在这里读取它在 GitHub 上的笔记，所以这个页面不会覆盖它。",
+        "review": "在拉取请求中",
+        "reviewHint": "这个版本在 Wiki 的拉取请求中等待，直到有人在 GitHub 上接受它。",
+        "declined": "已在 GitHub 上被拒绝",
+        "declinedHint": "包含这个版本的拉取请求未合并就被关闭了：它会留在这里，直到再次改变。"
+      }
+    },
     "import": {
       "cta": "导入",
       "short": "导入",
@@ -11402,7 +11565,14 @@
         "read": "读取笔记",
         "error": {
           "notGithub": "请粘贴 github.com 的链接。"
-        }
+        },
+        "mode": {
+          "label": "笔记如何进来",
+          "sync": "保持同步",
+          "once": "导入一次"
+        },
+        "kept": "Wiki 已经在与 {{repo}} 保持同步：它的笔记会自动进来，而导入一次会生成副本。要立即获取那边的改动，请在“保持同步”中点击“立即更新”。",
+        "keptMember": "Wiki 已经在与 {{repo}} 保持同步：它的笔记会自动进来，而导入一次会生成副本。"
       },
       "anotherLink": "更换链接",
       "dropTitle": "将仓库 .zip 拖到这里",
@@ -11500,7 +11670,10 @@
       "moved_root": "移到了根目录",
       "saved_message": "保存了一条消息",
       "created_from_message": "从一条消息创建",
-      "imported": "从“{{source}}”导入"
+      "imported": "从“{{source}}”导入",
+      "repository": "来自仓库（{{commit}}）",
+      "repository_over": "来自仓库（{{commit}}），替换了第 {{version}} 版",
+      "repository_merged": "将第 {{version}} 版与仓库的改动合并"
     }
   },
   "run": {
@@ -14793,6 +14966,16 @@
     "wiki": {
       "githubNoNotes": "此链接中没有 Markdown 笔记。",
       "githubTooLarge": "笔记太多，无法通过链接读取。请将代码库下载为 .zip，然后在“文件”中导入。",
+      "repoInvalid": "请按 所有者/名称 的格式填写仓库。",
+      "repoNoApp": "这个仓库是私有的或不存在，也没有设置可以访问它的 GitHub 应用。",
+      "repoNotInstalled": "这个仓库没有安装 GitHub 应用，而且它不是公开的。",
+      "repoRefused": "GitHub 应用无权读取这个仓库。",
+      "repoMissing": "这个仓库已不存在，或者已无法读取。",
+      "repoBranchInvalid": "这个名称不能用作拉取请求的分支：请使用字母、数字、- 和 /，并且不要使用 Wiki 所跟随的分支。",
+      "repoBranchMissing": "仓库中没有这个分支。",
+      "repoBranchName": "GitHub 不接受这个分支名。",
+      "repoEmpty": "这个仓库还没有任何文件。添加第一个文件后再试一次。",
+      "repoPathInvalid": "这个文件夹不能存放 Wiki。",
       "noAccess": "你无权访问此页面。",
       "audienceForbidden": "只有能编辑 Wiki 并管理角色的成员才能选择谁可以看到页面。",
       "audienceExcludesYou": "请把你自己（你的某个角色或你的名字）包括在内，才能继续看到此页面。",

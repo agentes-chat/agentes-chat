@@ -277,3 +277,42 @@ test("wiki API: a bad note doesn't sink its batch; delete an import, the trash, 
   const on = await api(`/wiki/pages/${trash.pages[1]?.id}/context`, { json: { on: true } });
   expect(((await on.json()) as { agentContext: boolean }).agentContext).toBe(true);
 });
+
+test("wiki API: the repository the wiki is kept in (ADR 0214): none yet, administrators only, private ones refused", async () => {
+  // No GitHub App on this server, and github.com hides every repository (private, or missing).
+  await t.close();
+  const hidden = (async () => new Response("", { status: 401 })) as unknown as typeof fetch;
+  t = await createTestServer({
+    http: hidden,
+    resolveHost: async () => ["140.82.112.3"],
+    env: { ALLOW_SIGNUP: "true" },
+  });
+  const owner = browser(t);
+  await signUp(owner, "owner@example.com");
+  const { orgId } = await seedOrg(owner);
+  const api = (path: string, init?: Parameters<typeof owner>[1]) =>
+    owner(`/api/app/organizations/${orgId}${path}`, init);
+  const code = async (res: Response) => ((await res.json()) as { error: { code: string } }).error.code;
+
+  expect(await (await api("/wiki/repository")).json()).toEqual({ repository: null });
+  // A name that isn't one, and a repository that isn't public with no GitHub App to reach it.
+  const invalid = await api("/wiki/repository", { method: "PUT", json: { repository: "not a repository" } });
+  expect(invalid.status).toBe(400);
+  expect(await code(invalid)).toBe("wiki.repo_invalid");
+  const noApp = await api("/wiki/repository", { method: "PUT", json: { repository: "acme/notes" } });
+  expect(noApp.status).toBe(400);
+  expect(await code(noApp)).toBe("wiki.repo_no_app");
+  // Nothing connected: syncing finds none, disconnecting is a no-op, and a page is kept in no repository.
+  expect(await (await api("/wiki/repository/sync", { json: {} })).json()).toEqual({ repository: null });
+  expect((await api("/wiki/repository", { method: "DELETE" })).status).toBe(204);
+  await api("/wiki/pages", { json: { title: "Guia", body: "x" } });
+  expect(((await (await api("/wiki/pages/guia")).json()) as { repository: unknown }).repository).toBeNull();
+
+  // A member who isn't an administrator sees the state but never connects, syncs or disconnects.
+  const bia = await joinByInvitation(t, owner, orgId, "bia@example.com");
+  const asBia = (path: string, init?: Parameters<typeof bia>[1]) => bia(`/api/app/organizations/${orgId}${path}`, init);
+  expect(await (await asBia("/wiki/repository")).json()).toEqual({ repository: null });
+  expect((await asBia("/wiki/repository", { method: "PUT", json: { repository: "acme/notes" } })).status).toBe(403);
+  expect((await asBia("/wiki/repository/sync", { json: {} })).status).toBe(403);
+  expect((await asBia("/wiki/repository", { method: "DELETE" })).status).toBe(403);
+});

@@ -63,8 +63,11 @@ export function useNoticeTitle(n: AppNotification) {
           ? appCreatedLine(t, n)
           : isDashboardNotice(n.kind)
             ? t(`mobile.dashboards.notice.${n.kind}`, { names: NAMES, count: who.total, defaultValue: NAMES })
-            : n.kind === "skill_update"
-              ? t(workspaceHeadline(n) ?? "skills.notice.updated", { name: n.source.label ?? "" })
+            : n.kind === "skill_update" || n.kind === "wiki_conflict"
+              ? t(workspaceHeadline(n) ?? "skills.notice.updated", {
+                  name: n.source.label ?? "",
+                  version: n.latest.version,
+                })
               : t(`mobile.activity.kind.${kind}`, {
                   names: NAMES,
                   // `catch_up_closed`: the conversations it skipped.

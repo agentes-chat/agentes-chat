@@ -150,19 +150,25 @@ html:not([data-pointer]) .vault-drop__area:focus-visible {
 }
 .vault-row {
   display: flex;
-  align-items: center;
   gap: 10px;
   padding: 9px 14px;
   border-top: 1px solid var(--line);
   font-size: 13.5px;
 }
+/* A row led by an icon on its words' first line (`.ac-iconline`) keeps the kit's placement. */
+.vault-row:not(.ac-iconline) {
+  align-items: center;
+}
 .vault-block > header + .vault-row {
   border-top: 0;
 }
-.vault-row--wrap {
-  flex-wrap: wrap;
+/* Words and their choice in an `.ac-actline` after the icon: the line takes the rest of the row. */
+.vault-row--lead > .ac-actline {
+  flex: 1 1 0%;
 }
-.vault-row__name {
+/* Right in the row only: in an `.ac-actline` the line sizes the words (the kit sits in a cascade layer, so any rule
+   here would win over it). */
+.vault-row > .vault-row__name {
   flex: 1;
   min-width: 0;
 }
@@ -205,13 +211,6 @@ html:not([data-pointer]) .vault-drop__area:focus-visible {
   display: block;
   color: var(--faint);
   font-size: 12px;
-}
-/* The hint at the footer's start, its buttons at the end; wrapped under it, they start at its edge. */
-.vault-foot-hint {
-  margin-right: auto;
-}
-.ac-dialog__foot:has(> .vault-foot-hint) {
-  justify-content: flex-start;
 }
 .vault-done {
   position: relative;

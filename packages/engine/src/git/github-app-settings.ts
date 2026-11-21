@@ -211,7 +211,8 @@ const APP_PERMISSIONS = {
 
 /**
  * What happens on GitHub that agents hear (`github-events.ts`), by GitHub's event names: comments, reviews and new
- * items that name the app, and items being merged or closed. agentes.chat's own app subscribes to the same.
+ * items that name the app, and items being merged or closed; and `push`, which tells a wiki kept in a repository that
+ * the repository changed (`wiki-repository`, ADR 0214). agentes.chat's own app subscribes to the same.
  */
 export const GITHUB_APP_EVENTS = [
   "issues",
@@ -222,6 +223,7 @@ export const GITHUB_APP_EVENTS = [
   "pull_request_review_thread",
   "discussion",
   "discussion_comment",
+  "push",
 ] as const;
 
 /**

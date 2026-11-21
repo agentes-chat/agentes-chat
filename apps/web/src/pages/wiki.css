@@ -1733,3 +1733,110 @@ html:not([data-pointer]) .wiki-graph__node:focus-visible {
     transition: none;
   }
 }
+
+/* The wiki's repository (ADR 0214): while the two stopped following each other, a line held at the column's foot,
+   over the tree as it scrolls. It reaches over the column's padding to its edges, as the selection bar does. */
+.wiki-repo-stopped {
+  position: sticky;
+  bottom: -18px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: auto -16px -18px;
+  padding: 12px 24px 16px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+  font: inherit;
+  font-size: 13px;
+  text-align: start;
+  cursor: pointer;
+}
+/* Import › GitHub's choice between keeping in sync and importing once, above whichever body it swaps in: as far from
+   that body's first field as its fields are from each other. */
+.wiki-repo-choice {
+  padding-bottom: 14px;
+}
+.wiki-repo-warn {
+  color: var(--warn);
+}
+/* GitHub's mark leads its two-line menu item on the first line, as the kit's icons do (its rule names `.ac-icon`). */
+.ac-menu__item:has(> .ac-menu__label > .ac-menu__desc) > .ac-menu__leading:has(> .gh-mark) {
+  align-self: flex-start;
+  translate: 0 calc(10px - var(--cap-mid) - 50%);
+}
+@supports (top: 1lh) {
+  .ac-menu__item:has(> .ac-menu__label > .ac-menu__desc) > .ac-menu__leading:has(> .gh-mark) {
+    translate: 0 calc(0.5lh - var(--cap-mid) - 50%);
+  }
+}
+/* Where a page's note stands on GitHub, in the page's line of facts: words in the line's colour, a link once there. */
+.wiki-repo-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: var(--control-fs-sm);
+  text-decoration: none;
+}
+button.wiki-repo-mark {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+a.wiki-repo-mark:hover,
+button.wiki-repo-mark:hover {
+  color: var(--ink);
+}
+.wiki-repo-mark[data-warn] {
+  color: var(--warn);
+}
+.wiki-repo-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+/* A note among the fields takes the stack's gap as the room above it, as in the kit's stacks (`.ac-form`). */
+.wiki-repo-form > .ac-setnote {
+  margin: 0;
+}
+.wiki-repo-sub {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.wiki-repo-held {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wiki-repo-held li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+}
+.wiki-repo-held li span:first-child {
+  overflow-wrap: anywhere;
+}
+.wiki-repo-held li span:last-child {
+  color: var(--muted);
+}
+/* How the wiki writes there, with its Save under the choice once it changed. */
+.wiki-repo-writing {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+.wiki-repo-writing > .ac-field {
+  align-self: stretch;
+}

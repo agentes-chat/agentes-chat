@@ -12244,6 +12244,173 @@
       "sent": "Richiesta inviata nella tua conversazione con {{name}}.",
       "message": "Sulla pagina [[{{title}}]]:"
     },
+    "repo": {
+      "stopped": "Non si aggiorna più con GitHub",
+      "conflictNotice": "La versione di GitHub di {{name}} ha sostituito una modifica fatta qui (entrambe hanno cambiato le stesse righe). La tua modifica è la versione {{version}} nella cronologia della pagina.",
+      "state": {
+        "upToDate": "{{repo}} · aggiornato {{when}}",
+        "syncing": "{{repo}} · aggiornamento…",
+        "retrying": "{{repo}} · GitHub non ha risposto, nuovo tentativo",
+        "stopped": "Non si aggiorna più con {{repo}}",
+        "readOnly": "{{repo}} · solo lettura · aggiornato {{when}}"
+      },
+      "connect": {
+        "title": "Tieni la wiki su GitHub",
+        "description": "Le pagine diventano note Markdown in un repository GitHub, e GitHub diventa la loro fonte.",
+        "repository": "Repository",
+        "repositoryPlaceholder": "Scegli un repository",
+        "repositoryHelp": "I repository che l'app di GitHub raggiunge, o l'indirizzo di qualsiasi repository pubblico.",
+        "byAddress": "Incolla l'indirizzo di un altro repository",
+        "address": "Indirizzo del repository",
+        "addressPlaceholder": "https://github.com/proprietario/nome",
+        "addressHelp": "L'indirizzo di un repository su GitHub, o di una sua cartella.",
+        "checking": "Controllo del repository…",
+        "canWrite": "{{repo}}, branch {{branch}}: l'app di GitHub legge e scrive lì.",
+        "readOnly": "{{repo}}, branch {{branch}}: pubblico, quindi la wiki lo segue senza scriverci.",
+        "readOnlyPrivate": "{{repo}}, branch {{branch}}: l'app di GitHub può solo leggerlo, quindi la wiki lo segue senza scriverci.",
+        "installForWrite": "Per scrivere anche lì, installa l'app di GitHub in questo repository.",
+        "installForWritePrivate": "Per scrivere anche lì, dai all'app di GitHub il permesso di scrivere in questo repository.",
+        "privateNeedsApp": "Un repository privato ha bisogno dell'app di GitHub installata. Uno pubblico funziona così com'è.",
+        "reach": {
+          "not_installed": "Installa l'app di GitHub in questo repository, poi torna qui per collegarlo.",
+          "no_app": "Non è ancora configurata nessuna app di GitHub, quindi si possono seguire solo repository pubblici.",
+          "refused": "L'app di GitHub è in questo repository ma non può leggerlo. Accetta i suoi permessi su GitHub, poi torna qui per collegarlo."
+        },
+        "useAddress": "Usa {{repo}}",
+        "replaces": "Collegare sostituisce quello che la wiki segue ora. Le pagine restano qui, e le note su GitHub restano come sono.",
+        "openConnectors": "Apri Connettori",
+        "more": "Cartella e branch",
+        "search": "Cerca repository",
+        "noResults": "Nessun repository con questo nome.",
+        "folder": "Cartella",
+        "folderPlaceholder": "Tutto il repository",
+        "folderHelp": "Facoltativo. Solo le note di questa cartella diventano pagine.",
+        "branch": "Branch",
+        "branchPlaceholder": "Il branch predefinito",
+        "branchHelp": "Facoltativo. Le note vengono lette e scritte su questo branch.",
+        "noteConflict": "Se una nota è cambiata da entrambe le parti, le due modifiche vengono unite. Dove entrambe hanno cambiato le stesse righe, resta quella di GitHub, quella di qui va nella cronologia della pagina e chi l'ha scritta viene avvisato.",
+        "publicWrite": "{{repo}} è pubblico: chiunque può leggere ciò che la wiki scrive lì, comprese le modifiche degli agenti.",
+        "noteRestricted": "Le pagine limitate ad alcune persone non escono mai da qui.",
+        "submit": "Collega"
+      },
+      "manage": {
+        "title": "Wiki su GitHub",
+        "notes": "Note",
+        "updated": "Aggiornata",
+        "cadence": "Aggiornamento",
+        "updating": "aggiornamento…",
+        "never": "non ancora",
+        "pending_one": "{{count}} pagina deve ancora andare su GitHub.",
+        "pending_many": "{{count}} pagine devono ancora andare su GitHub.",
+        "pending_other": "{{count}} pagine devono ancora andare su GitHub.",
+        "held_one": "{{count}} nota non è diventata una pagina",
+        "held_many": "{{count}} note non sono diventate pagine",
+        "held_other": "{{count}} note non sono diventate pagine",
+        "retrying": "GitHub non ha risposto l'ultima volta. La wiki riprova da sola.",
+        "prOpen": "Pull request #{{number}} aperta su GitHub",
+        "prDeclined": "La pull request #{{number}} è stata chiusa senza essere accettata: quelle modifiche aspettano qui finché non cambiano di nuovo.",
+        "readOnly": "L'app di GitHub non è installata in {{repo}}, oppure può solo leggerlo: la wiki lo segue, e quello che cambia qui resta qui. Installa l'app lì, con il permesso di scrivere, per inviare anche le modifiche da qui.",
+        "readOnlyPrivate": "L'app di GitHub può solo leggere {{repo}}: la wiki lo segue, e quello che cambia qui resta qui. Dai all'app il permesso di scrivere lì per inviare anche le modifiche da qui.",
+        "noteDisconnect": "Scollegare lascia le pagine qui e le note lì, così come sono.",
+        "noteStopped": "Nel frattempo, quello che scrivi qui resta qui e va nel repository quando torna.",
+        "allowRemovals": "Sposta queste pagine nel cestino",
+        "change": "Cambia repository, branch o cartella",
+        "disconnect": "Scollega",
+        "disconnectText": "La wiki smette di seguire {{repo}}. Le pagine restano qui e le note restano su GitHub, così come sono.",
+        "disconnectTextPr": "La wiki smette di seguire {{repo}} e chiude lì la sua pull request #{{number}}. Le pagine restano qui e le note restano su GitHub, così come sono.",
+        "open": "Apri su GitHub",
+        "syncNow": "Aggiorna ora",
+        "retry": "Riprova"
+      },
+      "writing": {
+        "label": "Come scrive la wiki lì",
+        "direct": "Direttamente sul branch",
+        "directDesc": "Ogni modifica qui è un commit su {{branch}}.",
+        "directDescAny": "Ogni modifica qui è un commit sul branch che la wiki segue.",
+        "pullRequest": "Con una pull request",
+        "pullRequestDesc": "Le modifiche da qui vanno in una pull request verso {{branch}}, che qualcuno accetta su GitHub.",
+        "pullRequestDescAny": "Le modifiche da qui vanno in una pull request, che qualcuno accetta su GitHub.",
+        "none": "Solo seguire",
+        "noneDesc": "La wiki riceve quello che cambia su GitHub, e quello che cambia qui resta qui.",
+        "branch": "Branch della pull request",
+        "branchHelp": "La wiki lo ricostruisce a ogni modifica: modifica la wiki, non questo branch.",
+        "branchTaken": "Questo branch esiste già su GitHub e non è della wiki. Scegli un altro nome.",
+        "now": {
+          "direct": "La wiki fa commit direttamente su {{branch}}.",
+          "pull_request": "La wiki propone le sue modifiche in una pull request verso {{branch}}.",
+          "none": "La wiki segue solo il repository: quello che cambia qui resta qui."
+        }
+      },
+      "cadence": {
+        "notified": "Quello che cambia su GitHub arriva subito: GitHub avvisa la wiki a ogni push.",
+        "app": "Quello che cambia su GitHub arriva quando GitHub avvisa di un push, o al prossimo controllo, ogni 5 minuti.",
+        "public": "La wiki controlla GitHub ogni minuto per portare quello che è cambiato lì.",
+        "short": {
+          "notified": "subito",
+          "app": "ogni 5 min",
+          "public": "ogni minuto"
+        }
+      },
+      "held": {
+        "tooLong": "Più lunga di quanto possa essere una pagina",
+        "title": "Il suo nome non può fare da titolo",
+        "depth": "Troppe cartelle una dentro l'altra",
+        "other": "Non è potuta diventare una pagina"
+      },
+      "why": {
+        "not_installed": "L'app di GitHub non raggiunge più {{repo}}, e non è pubblico. Aggiungi il repository all'app su GitHub, da Connettori, poi clicca su Riprova.",
+        "refused": "L'app di GitHub non può leggere {{repo}}. Accetta i permessi dell'app su GitHub, da Connettori, poi clicca su Riprova.",
+        "branch_missing": "Il branch in cui stava la wiki, {{branch}}, non c'è più in {{repo}}. Scegli un altro branch, oppure ripristinalo su GitHub e clicca su Riprova.",
+        "empty": "{{repo}} non ha ancora nessun file. Aggiungi un primo file, poi clicca su Riprova.",
+        "missing": "{{repo}} non c'è più, oppure non si può più leggere. Se è stato spostato o rinominato, sceglilo di nuovo.",
+        "too_large": "{{repo}} ha troppe note da seguire. Scegli invece una delle sue cartelle.",
+        "owner_gone": "Chi ha collegato {{repo}} non è più admin qui. Clicca su Riprova per continuare a tuo nome.",
+        "folder_missing": "La cartella della wiki non c'è più in {{repo}}, oppure è vuota. Qui non è stato cancellato nulla. Scegli la cartella giusta, oppure rimetti le note su GitHub e clicca su Riprova.",
+        "no_app": "{{repo}} non è pubblico, e nessuna app di GitHub è configurata per raggiungerlo. Configurane una in Connettori, poi clicca su Riprova.",
+        "protected": "{{repo}} non accetta commit diretti su quel branch (è protetto). Scegli “Con una pull request” qui sotto e salva, oppure consenti all'app di GitHub di fare push lì e clicca su Riprova.",
+        "mass_removal": "Da {{repo}} sono state rimosse molte note in una volta ({{count}}), quindi la wiki si è fermata prima di spostare le loro pagine nel cestino. Se era voluto, spostale nel cestino. Altrimenti, rimetti le note su GitHub e clicca su Riprova.",
+        "pr_branch_taken": "Il branch della pull request, {{prBranch}}, esiste già in {{repo}} e non è della wiki. Scegli un altro nome qui sotto, oppure elimina quel branch su GitHub e clicca su Riprova.",
+        "write_refused": "GitHub ha rifiutato l'ultima modifica della wiki in {{repo}}, per esempio una pagina e una cartella con lo stesso nome. Rinomina ciò che va in conflitto, qui o su GitHub, poi clicca su Riprova.",
+        "unreadable": "Non è stato possibile leggere la copia di {{repo}} su GitHub. Clicca su Riprova tra un po'. Se la sincronizzazione continua a fermarsi, installa l'app di GitHub nel repository.",
+        "other": "La wiki ha smesso di seguire {{repo}}. Clicca su Riprova."
+      },
+      "whyMember": {
+        "not_installed": "L'app di GitHub non raggiunge più {{repo}}, e non è pubblico. Un admin può aggiungere il repository all'app su GitHub e riavviare la sincronizzazione.",
+        "refused": "L'app di GitHub non può leggere {{repo}}. Un admin può accettare i permessi dell'app su GitHub e riavviare la sincronizzazione.",
+        "branch_missing": "Il branch in cui stava la wiki, {{branch}}, non c'è più in {{repo}}. Un admin può scegliere un altro branch e riavviare la sincronizzazione.",
+        "empty": "{{repo}} non ha ancora nessun file. Quando ne avrà uno, un admin potrà riavviare la sincronizzazione.",
+        "missing": "{{repo}} non c'è più, oppure non si può più leggere. Se è stato spostato, un admin può sceglierlo di nuovo.",
+        "too_large": "{{repo}} ha troppe note da seguire. Un admin può scegliere invece una delle sue cartelle.",
+        "owner_gone": "Chi ha collegato {{repo}} non è più admin qui. Un admin può riavviare la sincronizzazione.",
+        "folder_missing": "La cartella della wiki non c'è più in {{repo}}, oppure è vuota. Qui non è stato cancellato nulla. Un admin può scegliere la cartella giusta e riavviare la sincronizzazione.",
+        "no_app": "{{repo}} non è pubblico, e nessuna app di GitHub è configurata per raggiungerlo. Un admin può configurarne una in Connettori e riavviare la sincronizzazione.",
+        "protected": "{{repo}} non accetta commit diretti su quel branch (è protetto). Un admin può far scrivere la wiki con una pull request e riavviare la sincronizzazione.",
+        "mass_removal": "Da {{repo}} sono state rimosse molte note in una volta ({{count}}), quindi la wiki si è fermata prima di spostare le loro pagine nel cestino. Un admin decide se spostarle nel cestino e riavvia la sincronizzazione.",
+        "pr_branch_taken": "Il branch della pull request, {{prBranch}}, esiste già in {{repo}} e non è della wiki. Un admin può scegliere un altro nome e riavviare la sincronizzazione.",
+        "write_refused": "GitHub ha rifiutato l'ultima modifica della wiki in {{repo}}, per esempio una pagina e una cartella con lo stesso nome. Un admin deve controllare e riavviare la sincronizzazione.",
+        "unreadable": "Non è stato possibile leggere la copia di {{repo}} su GitHub. Un admin può riavviare la sincronizzazione.",
+        "other": "La wiki ha smesso di seguire {{repo}}. Un admin può riavviare la sincronizzazione."
+      },
+      "page": {
+        "synced": "Su GitHub",
+        "syncedHint": "Apri la nota di questa pagina su GitHub",
+        "sending": "In invio a GitHub…",
+        "sendingHint": "Questa versione va nel repository tra un attimo.",
+        "notSent": "Non ancora su GitHub",
+        "notSentHint": "La wiki non si aggiorna più con GitHub. Questa versione ci va quando riparte.",
+        "local": "Solo qui",
+        "localHint": "Le pagine limitate ad alcune persone non vanno mai su GitHub.",
+        "readOnlyHint": "Il repository è seguito in sola lettura: questa versione resta qui. Anche una modifica della sua nota lì arriva, e sostituisce questa dove entrambe hanno cambiato le stesse righe.",
+        "replaced": "Sostituita da GitHub",
+        "replacedHint": "Entrambe le parti hanno cambiato le stesse righe. È rimasta la versione di GitHub, e quella di qui è la versione {{version}} nella cronologia.",
+        "held": "Non aggiornata su GitHub",
+        "heldHint": "La sua nota su GitHub non si è potuta leggere qui, quindi questa pagina non la sovrascrive.",
+        "review": "Nella pull request",
+        "reviewHint": "Questa versione aspetta nella pull request della wiki, finché qualcuno non la accetta su GitHub.",
+        "declined": "Rifiutata su GitHub",
+        "declinedHint": "La pull request con questa versione è stata chiusa senza essere accettata: resta qui finché non cambia di nuovo."
+      }
+    },
     "import": {
       "cta": "Importa",
       "short": "Importa",
@@ -12275,7 +12442,14 @@
         "read": "Leggi le note",
         "error": {
           "notGithub": "Incolla un link di github.com."
-        }
+        },
+        "mode": {
+          "label": "Come arrivano le note",
+          "sync": "Tieni sincronizzato",
+          "once": "Importa una volta"
+        },
+        "kept": "La wiki tiene già sincronizzato {{repo}}: le sue note arrivano da sole, e importarle una volta crea delle copie. Per portare qui ora quello che è cambiato lì, clicca su “Aggiorna ora” in “Tieni sincronizzato”.",
+        "keptMember": "La wiki tiene già sincronizzato {{repo}}: le sue note arrivano da sole, e importarle una volta crea delle copie."
       },
       "anotherLink": "Cambia link",
       "dropTitle": "Trascina qui il .zip del vault",
@@ -12413,7 +12587,10 @@
       "moved_root": "ha spostato nella radice",
       "saved_message": "ha salvato un messaggio",
       "created_from_message": "creata da un messaggio",
-      "imported": "importata da “{{source}}”"
+      "imported": "importata da “{{source}}”",
+      "repository": "arrivata dal repository ({{commit}})",
+      "repository_over": "arrivata dal repository ({{commit}}) sopra la versione {{version}}",
+      "repository_merged": "ha unito la versione {{version}} con le modifiche del repository"
     }
   },
   "run": {
@@ -15860,6 +16037,16 @@
     "wiki": {
       "githubNoNotes": "Nessuna nota Markdown in questo link.",
       "githubTooLarge": "Troppe note per leggerle da un link. Scarica il repository in .zip e importalo in File.",
+      "repoInvalid": "Scrivi il repository come proprietario/nome.",
+      "repoNoApp": "Quel repository è privato o non esiste, e nessuna app di GitHub è configurata per raggiungerlo.",
+      "repoNotInstalled": "L'app di GitHub non è installata in quel repository, e non è pubblico.",
+      "repoRefused": "L'app di GitHub non può leggere quel repository.",
+      "repoMissing": "Quel repository non c'è più, oppure non si può più leggere.",
+      "repoBranchInvalid": "Quel nome non va bene per il branch della pull request: usa lettere, numeri, - e /, e non il branch che la wiki segue.",
+      "repoBranchMissing": "Quel branch non esiste nel repository.",
+      "repoBranchName": "Questo non è un nome di branch che GitHub accetta.",
+      "repoEmpty": "Quel repository non ha ancora nessun file. Aggiungi un primo file e riprova.",
+      "repoPathInvalid": "Quella cartella non può contenere la wiki.",
       "noAccess": "Non hai accesso a questa pagina.",
       "audienceForbidden": "Solo chi modifica il wiki e gestisce i ruoli sceglie chi vede una pagina.",
       "audienceExcludesYou": "Includi te stesso (uno dei tuoi ruoli, o il tuo nome) per continuare a vedere la pagina.",
