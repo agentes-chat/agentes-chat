@@ -597,6 +597,20 @@ on_arm_linux() {
   return 1
 }
 
+# Google's own RPM, for Linux on x86_64 with dnf or yum (Fedora, RHEL, AlmaLinux, Rocky), where there is no apt:
+# printed as the command that installs it, never run (#689).
+CHROME_RPM='https://dl.google.com/linux/direct/google-chrome-stable_current_x86_64.rpm'
+chrome_rpm_hint() {
+  [ "$(uname -s)" = Linux ] || return 0
+  [ "$(uname -m)" = x86_64 ] || return 0
+  for PM in dnf yum; do
+    if command -v "$PM" >/dev/null 2>&1; then
+      t_warn "On this computer, as root: $PM install $CHROME_RPM"
+      return 0
+    fi
+  done
+}
+
 # Debian's chromium (the arm64 build Debian keeps patched), upgraded by the same timer as Chrome. The package may make
 # itself the default web browser: the computer's own choice is put back. Ubuntu has no chromium package of its own
 # (apt's only installs the snap): there the snap, which refreshes itself (CHROMIUM_FROM=snap).
@@ -666,6 +680,7 @@ get_chrome() {
     t_step "Google Chrome\${V:+ $V}, updated by this computer's own updates"
   elif ! command -v apt-get >/dev/null 2>&1; then
     t_warn "The agents' browser needs Google Chrome: install it (google.com/chrome) with this computer's package manager"
+    chrome_rpm_hint
     return 0
   else
     BAD_KEY=0
@@ -695,6 +710,7 @@ chrome_or_warn() {
   done
   if ! on_arm_linux; then
     t_warn "$CHROME_NEEDED"
+    chrome_rpm_hint
     return 0
   fi
   for EXE in ${CHROMIUM_LINUX.map(shQuote).join(" ")}; do
@@ -1064,7 +1080,7 @@ main() {
     [ -z "$ENROLL_FILE" ] || die "--link and --enroll-file each connect this computer: use one"
     [ "$NO_PAIR" -eq 0 ] || die "--link connects this computer, so it doesn't go with --no-pair"
     [ -z "$HOST_TOKEN_FILE" ] || die "--link doesn't go with --host-token-file: this server's own computer connects with its token"
-    [ -z "$REQUIREMENTS" ] || die "--requirements goes alone: it only installs what the agents need"
+    [ -z "$REQUIREMENTS" ] || die "--requirements goes alone: it only installs what the agents need. Run it by itself first (as root), then this installer again without it"
     # As root on Linux, where systemd can keep agents apart, the computer is a server: the runner for all of it.
     if [ "$SYSTEM" -eq 0 ] && [ -z "$DIR" ] && [ "$(uname -s)" = Linux ] && [ "$(id -u)" -eq 0 ] &&
       systemctl --version 2>/dev/null | grep -q '+BPF_FRAMEWORK'; then
@@ -1076,7 +1092,7 @@ main() {
     die "--enroll-file doesn't go with --host-token-file: this server's own computer connects with its token"
   if [ -n "$REQUIREMENTS" ]; then
     if [ "$SYSTEM" -eq 1 ] || [ -n "$HOST_TOKEN_FILE" ] || [ -n "$ENROLL_FILE" ]; then
-      die "--requirements goes alone: it only installs what the agents need"
+      die "--requirements goes alone: it only installs what the agents need. Run it by itself first (as root), then this installer again without it"
     fi
     install_requirements
     return 0

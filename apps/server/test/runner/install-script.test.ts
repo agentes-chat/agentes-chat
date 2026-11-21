@@ -725,6 +725,13 @@ test.skipIf(process.platform === "win32")(
     const r3 = noApt.run();
     expect(r3.status).toBe(0);
     expect(r3.out).toContain("The agents' browser needs Google Chrome: install it (google.com/chrome)");
+    // With dnf instead (AlmaLinux, Fedora): told the command that installs Google's RPM (#689).
+    writeFileSync(path.join(noApt.fake, "dnf"), '#!/bin/sh\necho "dnf $*" >> "$LOG"\n', { mode: 0o755 });
+    const r4 = noApt.run();
+    expect(r4.status).toBe(0);
+    // Said, never run.
+    expect(r4.log).not.toContain("dnf");
+    expect(r4.out).toContain("dnf install https://dl.google.com/linux/direct/google-chrome-stable_current_x86_64.rpm");
   },
   30_000,
 );
@@ -1025,6 +1032,7 @@ test.skipIf(process.platform === "win32")("--requirements goes alone, as root, w
   const withSystem = root.install(root.script, ["--requirements", "claude", "--system"]);
   expect(withSystem.status).toBe(1);
   expect(withSystem.out).toContain("--requirements goes alone");
+  expect(withSystem.out).toContain("Run it by itself first (as root), then this installer again without it");
   const user = fakeComputer({ bun: fakeBun(RUNNER_BUN_VERSION, true) });
   writeFileSync(path.join(user.fake, "id"), "#!/bin/sh\necho 1001\n", { mode: 0o755 });
   const notRoot = user.install(installScript("https://agentes.test"), ["--requirements", "claude"]);

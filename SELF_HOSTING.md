@@ -1700,6 +1700,20 @@ curl -fsSL http://127.0.0.1:3000/api/machines/install.sh | sh -s -- --system --d
   --server http://127.0.0.1:3000 --host-token-file /root/host-computer-token
 ```
 
+`--system` and `--desktop` install packages with apt. On a Linux without it (Fedora, RHEL, AlmaLinux,
+Rocky), run the computer as a user of its own instead, its agents sharing that user (no desktops or
+terminal for them: those packages have Debian names), with the token in a file that user reads:
+
+```sh
+useradd -m agentes && loginctl enable-linger agentes
+until [ -S /run/user/$(id -u agentes)/bus ]; do sleep 1; done  # its user manager, started by linger
+install -o agentes -m 600 /root/host-computer-token /home/agentes/host-computer-token
+dnf install https://dl.google.com/linux/direct/google-chrome-stable_current_x86_64.rpm  # the agents' browser
+sudo -iu agentes XDG_RUNTIME_DIR=/run/user/$(id -u agentes) sh -c 'curl -fsSL \
+  http://127.0.0.1:3000/api/machines/install.sh | sh -s -- \
+  --server http://127.0.0.1:3000 --host-token-file ~/host-computer-token'
+```
+
 Within a minute it shows as "This server's computer" in each of those organizations, and agents
 without a computer start using it; admins stop it per organization there. `HOST_COMPUTER_TOKEN` can't
 be set with `ALLOW_SIGNUP=true`, and a new token retires the old one's connections when the server
