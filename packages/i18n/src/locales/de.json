@@ -2565,6 +2565,7 @@
       "backupOf": "Vertretung in {{name}}",
       "supervisor": "Supervisor",
       "supervisorOf": "Supervisor von {{name}}",
+      "supervisorNoAgents": "Ein Supervisor gilt, sobald die Abteilung Agenten hat.",
       "unsupervised_one": "{{count}} Agent ohne Supervisor",
       "unsupervised_other": "{{count}} Agenten ohne Supervisor",
       "apply": "Anwenden",

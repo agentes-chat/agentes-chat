@@ -2565,6 +2565,7 @@
       "backupOf": "Vervanger bij {{name}}",
       "supervisor": "Supervisor",
       "supervisorOf": "Supervisor van {{name}}",
+      "supervisorNoAgents": "Een supervisor geldt zodra de afdeling agenten heeft.",
       "unsupervised_one": "{{count}} agent zonder supervisor",
       "unsupervised_other": "{{count}} agenten zonder supervisor",
       "apply": "Toepassen",

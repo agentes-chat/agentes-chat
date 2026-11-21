@@ -182,6 +182,24 @@ describe("Responde a, by clicking (ADR 0148 addendum)", () => {
     expect(calls(off, "agents.setLines")).toEqual([[[{ agentId: BIA, reportsToAgentId: ATLAS_ID }]]]);
   });
 
+  test("Setores: a setor with no agents has its Supervisor picker disabled, and says when one applies", async () => {
+    const state = withRightHand(seedState());
+    state.agentGroups = [
+      { id: "g-int", name: "Integrations", agentIds: [ADA_ID, ATLAS_ID] },
+      { id: "g-new", name: "Produto", agentIds: [] },
+    ];
+    await team(state, "sectors");
+    const empty = screen().getByRole("combobox", { name: "Supervisor de Produto" });
+    expect(empty.hasAttribute("disabled")).toBe(true);
+    const line = document.getElementById(empty.getAttribute("aria-describedby") ?? "");
+    expect(line?.textContent).toBe("O supervisor vale quando o setor tiver agentes.");
+    expect(screen().getByRole("combobox", { name: "Supervisor de Integrations" }).hasAttribute("disabled")).toBe(false);
+    expect(document.body.textContent?.split("O supervisor vale quando").length).toBe(2);
+    // The setor with agents still sets its supervisor.
+    await pick("Supervisor de Integrations", "Atlas");
+    expect(calls(state, "agents.setLines")).toEqual([[[{ agentId: ADA_ID, reportsToAgentId: ATLAS_ID }]]]);
+  });
+
   test("Lista: the row's menu has Responde a, the way without a mouse", async () => {
     const state = await team(withRightHand(seedState()), "list");
     const button = screen().getByRole("button", { name: "Opções de Ada" });

@@ -2476,6 +2476,7 @@
       "backupOf": "{{name}} の代理",
       "supervisor": "監督",
       "supervisorOf": "{{name}} の監督",
+      "supervisorNoAgents": "監督は、部署にエージェントが入ってから設定できます。",
       "unsupervised_other": "監督のいないエージェント {{count}} 件",
       "apply": "適用",
       "supervisorDone_other": "{{sector}} のエージェント {{count}} 件が {{name}} に報告するようになりました",

@@ -2476,6 +2476,7 @@
       "backupOf": "{{name}} 的替补",
       "supervisor": "主管",
       "supervisorOf": "{{name}} 的主管",
+      "supervisorNoAgents": "部门有了智能体后，主管才会生效。",
       "unsupervised_other": "{{count}} 个智能体没有主管",
       "apply": "应用",
       "supervisorDone_other": "{{sector}} 的 {{count}} 个智能体现在向 {{name}} 汇报",
