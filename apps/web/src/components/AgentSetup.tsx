@@ -90,12 +90,12 @@ import {
 } from "@/components/AccessLevels";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { ModelSelect, modelOptions, NO_OWNER, OwnerSelect } from "@/components/AgentFields";
-import { usePlanHold } from "@/components/ai/ConnectAiSteps";
 import { PlanReplies } from "@/components/ai/PlanReplies";
-import { useConnectAi } from "@/components/ConnectAi";
+import { usePlanHold } from "@/components/ai/plan-hold";
 import { ConnectFlow, type FlowState } from "@/components/ConnectFlow";
-import { ConnectorIcon } from "@/components/ConnectorCatalog";
+import { ConnectorIcon } from "@/components/ConnectorIcon";
 import { useChannelActions } from "@/components/channel-actions";
+import { useConnectAi } from "@/components/connect-ai-context";
 import { SetupBand } from "@/components/new-agent/SetupBand";
 import { PersonalChip } from "@/components/OwnerScope";
 import { useOrg } from "@/components/org-context";

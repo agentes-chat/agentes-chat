@@ -354,7 +354,6 @@ function LearnedSkillRow({ s }: { s: LearnedSkill }) {
             )}
             <Button
               variant="link"
-              disabled={act.isPending}
               onClick={() => act.mutate({ type: "update", id: s.id, patch: { locked: !s.locked } })}
             >
               {s.locked ? t("agentPage.memory.unlock") : t("agentPage.memory.lock")}
@@ -409,7 +408,6 @@ function RulesCard({ rules }: { rules: Memory[] }) {
               {m.removable && (
                 <Button
                   variant="link"
-                  disabled={act.isPending}
                   onClick={() =>
                     act.mutate(
                       { type: "archive", id: m.id, archived: true },

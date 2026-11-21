@@ -100,10 +100,10 @@ import {
   type PlanChoice,
   usd,
 } from "@/components/AgentFields";
-import { usePlanHold } from "@/components/ai/ConnectAiSteps";
-import { useConnectAi } from "@/components/ConnectAi";
+import { usePlanHold } from "@/components/ai/plan-hold";
 import { ConnectFlow, type FlowState } from "@/components/ConnectFlow";
-import { ConnectorIcon } from "@/components/ConnectorCatalog";
+import { ConnectorIcon } from "@/components/ConnectorIcon";
+import { useConnectAi } from "@/components/connect-ai-context";
 import { ImportFlow, useImportFlow } from "@/components/ImportFlow";
 import { MailIcon } from "@/components/MailConnect";
 import { useMediaQuery } from "@/components/NavDrawer";

@@ -3,6 +3,7 @@ import { channelMembersQuery, keys, useApi, useSetRowHolders, useWidenAudience }
 import { audienceAdmits, audienceOf, audiencePatch } from "@agenteschat/client/lib/audience";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
+import { edit, optimistic, patchIn } from "@agenteschat/client/lib/optimistic";
 import type { RolePermission } from "@agenteschat/client/lib/permissions";
 import {
   COMPUTERS_ROW,
@@ -362,11 +363,14 @@ function WhoSees({
     meta: { silent: true },
     mutationFn: (input: { visibility: "public" | "private"; audienceRoleIds: string[] }) =>
       api.chat.update(org.id, c.id, input),
-    onSettled: () =>
-      Promise.all([
-        qc.invalidateQueries({ queryKey: keys.channels(org.id) }),
-        qc.invalidateQueries({ queryKey: keys.roles(org.id) }),
-      ]),
+    // The list behind shows it at once; the dialog closes on the server's answer (a refusal is said in it).
+    ...optimistic(qc, (input: { visibility: "public" | "private"; audienceRoleIds: string[] }) => [
+      edit<Channel[]>(keys.channels(org.id), patchIn<Channel>(c.id, input)),
+    ]),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: keys.channels(org.id) });
+      void qc.invalidateQueries({ queryKey: keys.roles(org.id) });
+    },
   });
   const members = useQuery(channelMembersQuery(api, org.id, c.id));
   const memberIds = (members.data ?? []).filter((m) => m.type === "person").map((m) => m.id);

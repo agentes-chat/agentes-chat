@@ -275,9 +275,9 @@ import { AgentPanelContext, AgentPanelShownContext, useOpenAgentPanel } from "@/
 import { AgentSidebar } from "@/components/agents/AgentSidebar";
 import { ModelStandInLine } from "@/components/ai/ModelPicker";
 import { ArtifactCard } from "@/components/artifacts/ArtifactCard";
-import { ImageSet } from "@/components/artifacts/ArtifactViewer";
 import { objectUrls } from "@/components/artifacts/FileView";
 import { ImageMaking } from "@/components/artifacts/ImageMaking";
+import { ImageSet } from "@/components/artifacts/viewer-context";
 import { HandedWorkLine, MessageWorkLine } from "@/components/BackgroundWork";
 import { HeldBrowserCard, RunBrowserCard, useHeldTakeover } from "@/components/browser/BrowserCard";
 import { BrowserHandoffCard } from "@/components/browser/BrowserHandoffCard";
@@ -365,7 +365,7 @@ import { NavToggle } from "@/components/NavDrawer";
 import { CHANNEL_NAME, ChannelAccessChoice, toChannelName } from "@/components/NewChannelDialog";
 import { FailedRunFix, KeyGuardDialog, NoAiBanner, NoAiCard, useNoAiAutoOpen } from "@/components/NoAi";
 import { useNotificationOpener } from "@/components/NotificationOpen";
-import { useNewAgent } from "@/components/new-agent/NewAgentDialog";
+import { useNewAgent } from "@/components/new-agent/new-agent-context";
 import { OpensAgent } from "@/components/OpensAgent";
 import { useOrg } from "@/components/org-context";
 import { AuthorStatus } from "@/components/Presence";
@@ -1271,17 +1271,6 @@ function ChannelView({
     document.addEventListener("visibilitychange", mark);
     return () => document.removeEventListener("visibilitychange", mark);
   }, [markThreadRead, threadId, isMember, lastReplyId]);
-
-  // The skeleton was on screen: the real messages fade in (once).
-  const hadSkeleton = useRef(messages.isLoading);
-  const [fresh, setFresh] = useState(false);
-  useEffect(() => {
-    if (!serverRead || !hadSkeleton.current) return;
-    hadSkeleton.current = false;
-    setFresh(true);
-    const timer = setTimeout(() => setFresh(false), 400);
-    return () => clearTimeout(timer);
-  }, [serverRead]);
 
   // Person messages loaded over HTTP start their receipts.
   useEffect(() => {
@@ -2740,7 +2729,6 @@ function ChannelView({
                             data-look={look.style}
                             data-faces={look.faces ? undefined : "false"}
                             data-wallpaper={wallpaper?.wallpaper.kind}
-                            data-fresh={fresh || undefined}
                             aria-label={t("channel.messages")}
                             aria-live="polite"
                             aria-relevant="additions"

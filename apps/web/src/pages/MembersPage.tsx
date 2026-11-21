@@ -57,7 +57,7 @@ import { useFilterCopy } from "@/components/filters";
 import { useCopied } from "@/components/invite/copied";
 import { State, Who, whenWords } from "@/components/invite/InviteRows";
 import { LoadingList } from "@/components/Loading";
-import { CreateAgentLink } from "@/components/new-agent/NewAgentDialog";
+import { CreateAgentLink } from "@/components/new-agent/new-agent-context";
 import { useOrg } from "@/components/org-context";
 import { ProfileTrigger } from "@/components/ProfileCard";
 import { MailLoss, mailTitle } from "@/components/roles/RolePeople";

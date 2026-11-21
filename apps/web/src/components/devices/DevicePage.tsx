@@ -424,7 +424,6 @@ function ComputerPage({ machineId }: { machineId: string }) {
             ownerUserId={d.ownerUserId}
             editable={d.mayManage}
             narrowOnly={!owner}
-            saving={update.isPending}
             hint={t("devices.who.computerHint")}
             onChange={(audience: DeviceAudience) => save({ id: d.id, audience })}
           />
@@ -441,7 +440,7 @@ function ComputerPage({ machineId }: { machineId: string }) {
                   align="end"
                   aria-label={t("devices.maxTasks")}
                   // The computer applies it: offline, nothing would.
-                  disabled={!tasksEditable || status.kind === "offline" || update.isPending}
+                  disabled={!tasksEditable || status.kind === "offline"}
                   value={String(d.maxTasks)}
                   onValueChange={(v) => save({ id: d.id, maxTasks: Number(v) })}
                   // The value it has stays a choice even when it isn't one of ours, so the select never shows empty.
@@ -465,7 +464,7 @@ function ComputerPage({ machineId }: { machineId: string }) {
                   <Switch
                     id={`dv-pc-spill-${key}-switch`}
                     checked={d.spill[key]}
-                    disabled={update.isPending || (!owner && !d.spill[key])}
+                    disabled={!owner && !d.spill[key]}
                     onCheckedChange={(on) => save({ id: d.id, spill: { [key]: on } })}
                   />
                 }
@@ -482,7 +481,6 @@ function ComputerPage({ machineId }: { machineId: string }) {
                 <Switch
                   id="dv-pc-belongs-switch"
                   checked={d.belongsToWorkspace}
-                  disabled={update.isPending}
                   onCheckedChange={(on) => save({ id: d.id, belongsToWorkspace: on })}
                 />
               }
@@ -666,7 +664,6 @@ function PhonePage({ phoneId }: { phoneId: string }) {
               ownerUserId={p.ownerUserId}
               editable={p.mayManage}
               narrowOnly={!owner}
-              saving={update.isPending}
               hint={t("devices.who.phoneHint", { host: host.name })}
               onChange={(audience) =>
                 update.mutate({ id: p.id, audience }, { onError: (err) => toast.show(errorText(t, err), "error") })

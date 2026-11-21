@@ -90,7 +90,7 @@ import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { AgentAvatar } from "@/components/AgentAvatar";
-import { ConnectorIcon } from "@/components/ConnectorCatalog";
+import { ConnectorIcon } from "@/components/ConnectorIcon";
 import { FlowTitle } from "@/components/FlowTitle";
 import { LoadingList, useStepText } from "@/components/Loading";
 import { ForWhom, type OwnerTab } from "@/components/OwnerScope";

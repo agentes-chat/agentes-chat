@@ -589,7 +589,7 @@ export function TaskManagerPage({
       )}
 
       {/* Hung from the shell, like a thread's panel beside its channel: inside the page it would scroll away with the
-          list (the page's entrance animation keeps the page a containing block). */}
+          list (the page is a containing block, layout.css `.shell__main`). */}
       {panel &&
         createPortal(
           <TaskPanel

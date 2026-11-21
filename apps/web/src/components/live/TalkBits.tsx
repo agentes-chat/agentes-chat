@@ -17,7 +17,7 @@ import { Icon } from "@agenteschat/ui";
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { useMaybeArtifactViewer } from "@/components/artifacts/ArtifactViewer";
+import { useMaybeArtifactViewer } from "@/components/artifacts/viewer-context";
 import { useOrg } from "@/components/org-context";
 import { useDirectory } from "@/hooks/useDirectory";
 import { TYPED_VALUES } from "@/i18n";

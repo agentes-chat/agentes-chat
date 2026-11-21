@@ -45,9 +45,9 @@ import { type MouseEvent, useDeferredValue, useEffect, useMemo, useRef, useState
 import { useTranslation } from "react-i18next";
 import { ActorAvatar } from "@/components/AgentAvatar";
 import { useArtifactDownload, useDeleteArtifact } from "@/components/artifacts/ArtifactActions";
-import { artifactLink, useArtifactViewer, useAuthorName } from "@/components/artifacts/ArtifactViewer";
 import { useFileShare } from "@/components/artifacts/ShareDialog";
 import { UploadButton, useDriveUpload, useFilePicker } from "@/components/artifacts/Upload";
+import { artifactLink, useArtifactViewer, useAuthorName } from "@/components/artifacts/viewer-context";
 import {
   DriveCrumbs,
   FolderCard,

@@ -14,19 +14,13 @@ import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { useInviteDialog } from "@/components/invite/InviteDialog";
 import { NewChannelDialog } from "@/components/NewChannelDialog";
-import { useNewAgent } from "@/components/new-agent/NewAgentDialog";
+import { useNewAgent } from "@/components/new-agent/new-agent-context";
 import { useOrg } from "@/components/org-context";
 import { MyFace } from "@/components/ProfilePhoto";
 import { useDirectory } from "@/hooks/useDirectory";
 import { type ThemePreference, useTheme } from "@/lib/theme";
 import { SETTINGS_SECTIONS } from "@/pages/settings-sections";
-
-/** ⌘K / Ctrl+K anywhere in the workspace (also when typing): opens the palette. */
-export const isPaletteShortcut = (e: Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey" | "altKey" | "shiftKey">) =>
-  (e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "k";
-
-/** Opens the palette from elsewhere (a button). */
-export const openPalette = () => window.dispatchEvent(new Event("agentes:palette"));
+import { isPaletteShortcut } from "./palette";
 
 /**
  * The ⌘K palette: go to any channel, agent, person, page or settings section,

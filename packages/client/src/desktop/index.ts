@@ -3,8 +3,9 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 import { useApi } from "../api/context";
 import { ApiError } from "../api/http";
 import { keys } from "../api/keys";
-import type { BrowserHandoff, DesktopPictureView, DesktopStatus } from "../api/types";
+import type { AgentHolds, BrowserHandoff, DesktopPictureView, DesktopStatus } from "../api/types";
 import { handoffScreen } from "../browser";
+import { edit, optimistic } from "../lib/optimistic";
 import { type Seat, screenId } from "../lib/seat";
 import { useSeat } from "../lib/seat-context";
 import { type SocketBase, socketUrl } from "../realtime/connection";
@@ -256,14 +257,23 @@ export const useAgentHolds = (orgId: string, agentId: string, options: { enabled
   });
 };
 
-/** A person's Stop on one of them: the list is read again however it went. Its caller says a failure. */
+/**
+ * A person's Stop on one of them: it leaves the list at once (a refusal puts it back), and the list is read again
+ * however it went. Its caller says a failure.
+ */
 export function useStopHold(orgId: string, agentId: string) {
   const api = useApi();
   const qc = useQueryClient();
   return useMutation({
     meta: { silent: true },
     mutationFn: (holdId: string) => api.desktop.stopHold(orgId, agentId, holdId),
-    onSettled: () => qc.invalidateQueries({ queryKey: keys.agentHolds(orgId, agentId) }),
+    ...optimistic(qc, (holdId: string) => [
+      edit<AgentHolds>(keys.agentHolds(orgId, agentId), (view) => ({
+        ...view,
+        holds: view.holds.filter((h) => h.id !== holdId),
+      })),
+    ]),
+    onSettled: () => void qc.invalidateQueries({ queryKey: keys.agentHolds(orgId, agentId) }),
   });
 }
 

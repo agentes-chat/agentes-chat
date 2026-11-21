@@ -5398,21 +5398,20 @@ html:not([data-pointer]) .ac-switch:focus-visible {
     transform: translateY(4px);
     transition-duration: var(--dur-fast);
   }
-  /* Rows a list gains after it first appeared (an approval, a task coming in) rise in alone. */
-  .ac-list > * {
+  /*
+   * Rows a list gains after it was first drawn (an approval, a task coming in) rise in alone; the rows it opens with
+   * are simply there (`ac-list--settled` comes a frame after the list mounts). A tab's content shows at once too.
+   */
+  .ac-list--settled > * {
     transition:
       opacity var(--dur-base) var(--out),
       transform var(--dur-base) var(--out);
   }
   @starting-style {
-    .ac-list > * {
+    .ac-list--settled > * {
       opacity: 0;
       transform: translateY(4px);
     }
-  }
-  /* A tab's content fades in (no slide: arrow keys switch tabs too). */
-  .ac-tabpanel[data-state="active"] {
-    animation: ac-fade-in var(--dur-fast) ease-out;
   }
   /* Chips, cards and pills changing state change color, never jump. */
   .ac-chip {
@@ -5460,25 +5459,6 @@ html:not([data-pointer]) .ac-switch:focus-visible {
   .ac-menu[data-state="open"][data-side="right"],
   .ac-hint__bubble[data-state="open"][data-side="right"] {
     animation-name: ac-pop-right;
-  }
-  /* Lists: rows rise in, staggered, the first time the list appears. */
-  .ac-list--stagger > * {
-    animation: ac-rise 180ms ease-out both;
-  }
-  .ac-list--stagger > :nth-child(2) {
-    animation-delay: 20ms;
-  }
-  .ac-list--stagger > :nth-child(3) {
-    animation-delay: 40ms;
-  }
-  .ac-list--stagger > :nth-child(4) {
-    animation-delay: 60ms;
-  }
-  .ac-list--stagger > :nth-child(5) {
-    animation-delay: 80ms;
-  }
-  .ac-list--stagger > :nth-child(n + 6) {
-    animation-delay: 100ms;
   }
 }
 @keyframes ac-dialog-out {

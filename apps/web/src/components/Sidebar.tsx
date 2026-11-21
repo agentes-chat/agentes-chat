@@ -114,16 +114,18 @@ import {
   Fragment,
   type HTMLAttributes,
   type ReactNode,
+  Suspense,
   useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
   useState,
-  useSyncExternalStore,
 } from "react";
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
+import { useNewAgent } from "@/components/new-agent/new-agent-context";
 import { useDirectory } from "@/hooks/useDirectory";
+import { useEverTrue } from "@/hooks/useEverTrue";
 import { agentLine, availabilityOf, personLine, useAgentPresence, usePersonPresence } from "@/hooks/usePresence";
 import { useServerPlace } from "@/hooks/useServerPlace";
 import { useSidebarPins } from "@/hooks/useSidebarPins";
@@ -136,6 +138,7 @@ import { requestChannelDetails } from "@/lib/channel-details";
 import type { MenuEntry } from "@/lib/context-menu";
 import { onPhoneAsk, takePhoneAsk, thisMac } from "@/lib/desktop";
 import { entityMenu } from "@/lib/entity-menu";
+import { lazyDialog } from "@/lib/lazy-dialog";
 import { navigateAway } from "@/lib/navigate";
 import { useOpenParam } from "@/lib/open-param";
 import { markOpen } from "@/lib/perf";
@@ -146,8 +149,6 @@ import { useToast } from "@/lib/toast";
 import { offersNewWorkspace, type WorkspaceGroup } from "@/lib/workspaces";
 import type { SettingsSection } from "@/pages/settings-sections";
 import { useStreams } from "@/realtime/context";
-import { EmailDialog, ProfileDialog } from "./AccountSettings";
-import { AddPasswordDialog } from "./AddPassword";
 import { AgentAvatar } from "./AgentAvatar";
 import {
   DeleteGroupDialog,
@@ -161,26 +162,32 @@ import {
 import { AgentWorkLine } from "./AgentWorkLine";
 import { AgoraButton } from "./Agora";
 import { ArchivedChannelsDialog } from "./ArchivedChannelsDialog";
-import { ChangeAvatarDialog } from "./AvatarBuilder";
 import { FeedbackMark } from "./arrival/FeedbackDialog";
 import { MoveChannelDialog, NewCategoryDialog, RenameCategoryDialog } from "./ChannelCategoryDialogs";
-import { openPalette } from "./CommandMenu";
-import { DeleteAccountDialog } from "./DeleteAccount";
 import { MenuEntries } from "./DesktopMenus";
 import { useAgentMenu, useChannelMenu, usePersonMenu } from "./entity-menus";
 import { useInviteDialog } from "./invite/InviteDialog";
 import { useNow } from "./missions/MissionBits";
 import { COMPACT_QUERY, useMediaQuery, useNavDrawer } from "./NavDrawer";
 import { NewChannelDialog } from "./NewChannelDialog";
-import { useNewAgent } from "./new-agent/NewAgentDialog";
-import { OpenOnPhoneDialog } from "./OpenOnPhone";
 import { useOrg } from "./org-context";
 import { StatusLine } from "./Presence";
 import { MyFace, OrgMark } from "./ProfilePhoto";
+import { openPalette } from "./palette";
 import { sectionName, useSectionOrder } from "./SidebarOrder";
 import { SIDEBAR_TOOLS, SidebarSetupDialog, ToolList } from "./SidebarSetup";
 import { AgentGlow, AgentTrail, colorOf, MenuHorizon, SidebarHorizon, WorkspaceSky } from "./Sky";
 import { SetStatusDialog, useSaveStatus } from "./StatusDialog";
+import { closeTabletSidebar, NEW_CHANNEL_EVENT, TABLET_QUERY, useSidebarCollapsed } from "./sidebar-state";
+
+// The account's dialogs come when one first opens: every workspace page holds the sidebar, and these bring the profile
+// and avatar editors, the look of the chat and the sign-in pages.
+const ProfileDialog = lazyDialog(() => import("./AccountSettings").then((m) => m.ProfileDialog));
+const EmailDialog = lazyDialog(() => import("./AccountSettings").then((m) => m.EmailDialog));
+const AddPasswordDialog = lazyDialog(() => import("./AddPassword").then((m) => m.AddPasswordDialog));
+const ChangeAvatarDialog = lazyDialog(() => import("./AvatarBuilder").then((m) => m.ChangeAvatarDialog));
+const DeleteAccountDialog = lazyDialog(() => import("./DeleteAccount").then((m) => m.DeleteAccountDialog));
+const OpenOnPhoneDialog = lazyDialog(() => import("./OpenOnPhone").then((m) => m.OpenOnPhoneDialog));
 
 /** An agent's sky for its busy chip (`.sidebar__busy`): both themes, the CSS picks one. */
 const selectionSky = (color: AgentColor) =>
@@ -212,69 +219,6 @@ function UnshownRow() {
   );
 }
 export const unshownRow = () => <UnshownRow />;
-
-/** Tablet widths: the sidebar starts as an icon rail (NavDrawer.tsx has the other breakpoints). */
-export const TABLET_QUERY = "(min-width: 761px) and (max-width: 1199px)";
-
-/**
- * The sidebar shrunk to its icon rail, shared with the Mac app's title bar, which carries the toggle there
- * (DesktopTitleBar.tsx). Desktop widths remember the person's choice (in memory too, for when storage is blocked).
- * Tablet widths start as the rail every time: their toggle opens the whole sidebar over the page until a link, Esc,
- * a click outside or the toggle closes it, since the page's tablet layout has no room for it beside.
- */
-const SIDEBAR_EVENT = "agentes:sidebar";
-let sidebarCollapsed = storage.get(STORAGE_KEYS.sidebarCollapsed) === "1";
-let tabletOpen = false;
-/**
- * A page that runs out of room asked for the rail (a live file with its conversation beside it, ADR 0199): shown as
- * the rail on desktop widths, never stored, so the person's own choice comes back when the page lets go.
- */
-let roomAsked = false;
-/** How many times the person used the toggle (any page): a page that asked for the room stops at their hand. */
-let handToggles = 0;
-export const onSidebarChange = (cb: () => void) => {
-  window.addEventListener(SIDEBAR_EVENT, cb);
-  return () => window.removeEventListener(SIDEBAR_EVENT, cb);
-};
-const isTablet = () => typeof window.matchMedia === "function" && window.matchMedia(TABLET_QUERY).matches;
-export const toggleSidebar = () => {
-  handToggles += 1;
-  if (isTablet()) tabletOpen = !tabletOpen;
-  // Shrunk for a page's room: the toggle gives the person their sidebar back (their stored choice, open).
-  else if (roomAsked) roomAsked = false;
-  else {
-    sidebarCollapsed = !sidebarCollapsed;
-    storage.set(STORAGE_KEYS.sidebarCollapsed, sidebarCollapsed ? "1" : "0");
-  }
-  window.dispatchEvent(new Event(SIDEBAR_EVENT));
-};
-/** A page asks for the sidebar's room (its rail) or lets it go; the person's stored choice is untouched. */
-export const askSidebarRoom = (asked: boolean) => {
-  if (roomAsked === asked) return;
-  roomAsked = asked;
-  window.dispatchEvent(new Event(SIDEBAR_EVENT));
-};
-/** The toggle's count so far: a page compares it to tell the person's hand from its own ask. */
-export const sidebarHandToggles = () => handToggles;
-/** A tablet's open sidebar back to its rail. */
-export const closeTabletSidebar = () => {
-  if (!tabletOpen) return;
-  tabletOpen = false;
-  window.dispatchEvent(new Event(SIDEBAR_EVENT));
-};
-/** Whether the sidebar is its icon rail at this width (a phone's drawer never reads it), and its toggle. */
-export function useSidebarCollapsed(): [boolean, () => void] {
-  const tablet = useMediaQuery(TABLET_QUERY);
-  const collapsed = useSyncExternalStore(
-    onSidebarChange,
-    () => (tablet ? !tabletOpen : sidebarCollapsed || roomAsked),
-    () => false,
-  );
-  return [collapsed, toggleSidebar];
-}
-
-/** File → Novo canal in the desktop app's menu bar (DesktopMenus.tsx): the sidebar opens its dialog. */
-export const NEW_CHANNEL_EVENT = "agentes:new-channel";
 
 /**
  * On the icon rail every channel would be the same "#": its initials instead ("eng-backend" → "Eb",
@@ -2177,6 +2121,14 @@ function AccountMenu({ personal = false }: { personal?: boolean }) {
   const [phone, setPhone] = useState(false);
   const [account, setAccount] = useOpenParam("account");
   const [statusOpen, setStatusOpen] = useState(false);
+  const mounted = {
+    profile: useEverTrue(profile),
+    photo: useEverTrue(photo),
+    phone: useEverTrue(phone),
+    email: useEverTrue(account === "email"),
+    password: useEverTrue(account === "password"),
+    delete: useEverTrue(account === "delete"),
+  };
   // The app's "Show QR code" for this server (Preferences › Servers).
   useEffect(() => {
     if (takePhoneAsk()) setPhone(true);
@@ -2348,13 +2300,15 @@ function AccountMenu({ personal = false }: { personal?: boolean }) {
           {t("auth.signOut")}
         </MenuItem>
       </Menu>
-      <ProfileDialog focus={profile ? "name" : null} onClose={() => setProfile(false)} />
-      <ChangeAvatarDialog open={photo} onClose={() => setPhoto(false)} />
       <SetStatusDialog open={statusOpen} onClose={() => setStatusOpen(false)} />
-      <OpenOnPhoneDialog open={phone} onClose={() => setPhone(false)} />
-      <EmailDialog open={account === "email"} onClose={() => setAccount(null)} />
-      <AddPasswordDialog open={account === "password"} onClose={() => setAccount(null)} />
-      <DeleteAccountDialog open={account === "delete"} onClose={() => setAccount(null)} />
+      <Suspense fallback={null}>
+        {mounted.profile && <ProfileDialog focus={profile ? "name" : null} onClose={() => setProfile(false)} />}
+        {mounted.photo && <ChangeAvatarDialog open={photo} onClose={() => setPhoto(false)} />}
+        {mounted.phone && <OpenOnPhoneDialog open={phone} onClose={() => setPhone(false)} />}
+        {mounted.email && <EmailDialog open={account === "email"} onClose={() => setAccount(null)} />}
+        {mounted.password && <AddPasswordDialog open={account === "password"} onClose={() => setAccount(null)} />}
+        {mounted.delete && <DeleteAccountDialog open={account === "delete"} onClose={() => setAccount(null)} />}
+      </Suspense>
     </>
   );
 }

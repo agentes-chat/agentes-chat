@@ -31,6 +31,7 @@ import { FIELD_LIMITS } from "@agenteschat/client/lib/field-limits";
 import { joinNames } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { overLimitText, tooLongToSend } from "@agenteschat/client/lib/message-length";
+import { edit, optimistic, without } from "@agenteschat/client/lib/optimistic";
 import { can } from "@agenteschat/client/lib/permissions";
 import { pendingOnAgent } from "@agenteschat/client/lib/proposals";
 import { isAuto } from "@agenteschat/client/lib/providers";
@@ -701,10 +702,12 @@ function AgentProfile({
     dirtyRef.current = false;
     void navigate({ to: "/org/$orgId", params: { orgId: org.id } });
   };
+  // Out of the team's lists at once and the page closes (`leave` on the button); a refusal brings it back to the lists
+  // with the app's toast saying why.
   const archive = useMutation({
     mutationFn: () => api.agents.archive(org.id, agent.id),
+    ...optimistic<void>(qc, () => [edit<Agent[]>(keys.agents(org.id), without<Agent>(agent.id))]),
     onSuccess: () => {
-      setArchiving(false);
       // Desfazer runs after this page closed: the call's own promise, never a mutation's callbacks.
       toast.show(t("agentPage.archive.done", g), "success", {
         label: t("agentPage.undo"),
@@ -718,7 +721,6 @@ function AgentProfile({
             .catch((e: unknown) => toast.show(errorText(t, e), "error")),
       });
       void qc.invalidateQueries({ queryKey: keys.agents(org.id) });
-      leave();
     },
   });
 
@@ -976,7 +978,15 @@ function AgentProfile({
       >
         <DialogFooter>
           <Button onClick={() => setArchiving(false)}>{t("common.cancel")}</Button>
-          <Button variant="danger" icon="archive" loading={archive.isPending} onClick={() => archive.mutate()}>
+          <Button
+            variant="danger"
+            icon="archive"
+            onClick={() => {
+              archive.mutate();
+              setArchiving(false);
+              leave();
+            }}
+          >
             {t("agentPage.archive.button")}
           </Button>
         </DialogFooter>

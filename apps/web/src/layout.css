@@ -6299,20 +6299,6 @@ html:not([data-pointer]) .tr-ok:focus-visible {
 .channel__skeleton-meta {
   height: 18px;
 }
-@media (prefers-reduced-motion: no-preference) {
-  .channel__messages[data-fresh] .ac-msg,
-  .channel__messages[data-fresh] .ac-divider {
-    animation: content-in 240ms ease-out both;
-  }
-}
-@keyframes content-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
 .sidebar__item--skeleton {
   pointer-events: none;
 }
@@ -6333,24 +6319,14 @@ html:not([data-pointer]) .tr-ok:focus-visible {
 }
 
 /*
- * Route transitions: only the main column moves (opacity + 4 px), 160 ms, as each page's main mounts.
- * No View Transitions: the browser freezes the whole page while the new one renders, so the
- * sidebar's sliding pill stopped halfway and jumped. Nothing moves with prefers-reduced-motion.
+ * Route changes and data landing after a skeleton show the page at once, with no fade: a fade on every navigation
+ * reads as the app being slow. No View Transitions either: the browser freezes the whole page while the next one renders.
+ * The page stays the containing block and stacking context its old entrance (a filled transform animation) made it,
+ * which overlays and bars inside pages were laid out against.
  */
 @media (prefers-reduced-motion: no-preference) {
-  /* A thread opening in the side panel has its own entrance; a view taking over from its own skeleton is already in. */
   .shell__main:not(.thread-panel__chat, [data-continues]) {
-    animation: page-in 160ms ease-out both;
-  }
-}
-@keyframes page-in {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
+    will-change: transform;
   }
 }
 /* "Carregando mensagens anteriores…": floats over the top, takes no space (no jump). */
