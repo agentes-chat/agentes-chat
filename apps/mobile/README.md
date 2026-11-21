@@ -143,7 +143,9 @@ token whose audience is the bundle id `chat.agentes.app` (the server's Apple pro
   `usePins`, live via `message.pinned`/`message.unpinned`), "Lembrar" (`useReminderAction`, time with the device's
   offset and time zone) and "Copiar" (`expo-clipboard`).
 - `src/agent`: agents drawn by the single engine (`@agenteschat/ui/agent/engine`) through a recorder + Skia
-  replay (`recorder.ts`, `skia-ctx.ts`); one shared ~25 fps clock.
+  replay (`recorder.ts`, `skia-ctx.ts`); one shared ~25 fps clock. A face that doesn't move (`live={false}`, reduced
+  motion) is drawn once into a PNG at the screen's pixel ratio (`still-image.ts`) and shown as an image, shared by
+  identical faces (`kept.ts`); only moving faces get a canvas of their own.
 - `src/sky`: sky, fuse, spend bar and plan track as Skia shaders; `math.ts` mirrors the shader and is tested
   against the web's math (`@agenteschat/ui/sky/math`).
 
