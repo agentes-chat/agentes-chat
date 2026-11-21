@@ -884,6 +884,8 @@ export const desktopPtBR = {
     tailnetOff: "Conecte o Tailscale neste {{device}} para abrir o agentes.chat.",
     tailnetUp: "No terminal: sudo tailscale up",
     tailnetTray: "Abra pelo ícone perto do relógio.",
+    tailnetDns:
+      "O Tailscale está conectado, mas este {{device}} não chega a {{host}}. O mais provável é que o nome não resolva aqui: ligue Use Tailscale DNS no Tailscale.",
     onlyHere: "Usar só neste {{device}}",
     start: "Iniciar",
     copy: "Copiar os detalhes",

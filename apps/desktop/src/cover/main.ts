@@ -314,7 +314,11 @@ function showHere(
   } else {
     const onlyHere: [string, () => void] = [fill(words.onlyHere), useOnlyHere];
     const next = coverTailnet(platform, tailnet);
-    if (next === "openTailscale") {
+    if (next === "tailnetDns") {
+      // Connected, yet its address doesn't answer here: not "connect Tailscale" (it is), but its name.
+      say(fillIn(words.tailnetDns, { device, host: serverHost(status.publicUrl ?? "") }));
+      buttons([onlyHere]);
+    } else if (next === "openTailscale") {
       say(fill(words.tailnetOff));
       buttons([[words.openTailscale, () => void invoke("tailscale_open", { page: "app" }).catch(() => {})], onlyHere]);
     } else {

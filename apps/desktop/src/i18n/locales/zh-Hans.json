@@ -823,6 +823,7 @@
     "tailnetOff": "请在这台 {{device}} 上连接 Tailscale 以打开 agentes.chat。",
     "tailnetUp": "在终端中运行：sudo tailscale up",
     "tailnetTray": "通过时钟旁的图标打开它。",
+    "tailnetDns": "Tailscale 已连接，但这台 {{device}} 无法访问 {{host}}。很可能是这里解析不了它的名称：在 Tailscale 中打开 Use Tailscale DNS。",
     "onlyHere": "仅在这台 {{device}} 上使用",
     "start": "启动",
     "copy": "复制详细信息",

@@ -823,6 +823,7 @@
     "tailnetOff": "Hubungkan Tailscale di {{device}} ini untuk membuka agentes.chat.",
     "tailnetUp": "Di terminal: sudo tailscale up",
     "tailnetTray": "Buka dari ikonnya di dekat jam.",
+    "tailnetDns": "Tailscale tersambung, tetapi {{device}} ini tidak bisa menjangkau {{host}}. Kemungkinan besar namanya tidak bisa di-resolve di sini: nyalakan Use Tailscale DNS di Tailscale.",
     "onlyHere": "Pakai hanya di {{device}} ini",
     "start": "Jalankan",
     "copy": "Salin detail",

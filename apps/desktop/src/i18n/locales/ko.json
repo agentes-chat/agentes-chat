@@ -823,6 +823,7 @@
     "tailnetOff": "agentes.chat을 열려면 이 {{device}}에서 Tailscale을 연결하세요.",
     "tailnetUp": "터미널에서: sudo tailscale up",
     "tailnetTray": "시계 옆 아이콘에서 여세요.",
+    "tailnetDns": "Tailscale은 연결되어 있지만 이 {{device}}에서 {{host}}에 닿지 않아요. 이름이 여기서 확인되지 않는 것 같아요. Tailscale에서 Use Tailscale DNS를 켜 주세요.",
     "onlyHere": "이 {{device}}에서만 사용",
     "start": "시작",
     "copy": "세부 정보 복사",
