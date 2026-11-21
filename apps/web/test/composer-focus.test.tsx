@@ -203,3 +203,58 @@ test("a thread opened with its channel takes the cursor, and so does one opened 
   await key(row, { key: "s" });
   expect(document.activeElement).toBe(threadBox());
 });
+
+test("a letter typed on the sidebar's row of the conversation goes into the box; other sidebar links keep theirs", async () => {
+  const state = seedState();
+  seedDm(state, { type: "agent", id: ADA_ID });
+  await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api: createFakeApi(state) });
+  await settle(8);
+  const link = (href: string) => document.querySelector(`.sidebar a[href$="${href}"]`) as HTMLAnchorElement;
+  await act(async () => fireEvent.click(link(`/dm/agent/${ADA_ID}`)));
+  await settle(8);
+  const el = box("Mensagem para Ada");
+  // A browser can leave the focus on the row that was clicked (this DOM moves it to the box at once).
+  const row = link(`/dm/agent/${ADA_ID}`);
+  row.focus();
+  await key(row, { key: "o" });
+  expect(document.activeElement).toBe(el);
+  // Another conversation's row, or any other sidebar control, keeps its keys.
+  for (const other of [link(`/c/${GENERAL_ID}`), document.querySelector(".sidebar button") as HTMLElement]) {
+    other.focus();
+    await key(other, { key: "o" });
+    expect(document.activeElement).toBe(other);
+  }
+});
+
+// The box refuses the focus while `refusing()` says so, as one not there yet or still off would.
+const refuseFocus = (refusing: () => boolean) => {
+  const real = HTMLTextAreaElement.prototype.focus;
+  const focus = spyOn(HTMLTextAreaElement.prototype, "focus").mockImplementation(function (
+    this: HTMLTextAreaElement,
+    opts?: FocusOptions,
+  ) {
+    if (!refusing()) real.call(this, opts);
+  });
+  undo = () => focus.mockRestore();
+};
+const frames = () => act(() => new Promise((r) => setTimeout(r, 200)));
+
+test("a box that can't take the cursor as the conversation opens takes it once it can", async () => {
+  let refused = 3;
+  refuseFocus(() => refused-- > 0);
+  await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api: createFakeApi(seedState()) });
+  await settle(8);
+  await frames();
+  expect(document.activeElement).toBe(box("Mensagem para #eng"));
+});
+
+test("a click before the box can take the cursor: it stays where the person put it", async () => {
+  let refusing = true;
+  refuseFocus(() => refusing);
+  await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api: createFakeApi(seedState()) });
+  await settle(8);
+  await act(async () => fireEvent.pointerDown(screen().getByRole("main")));
+  refusing = false;
+  await frames();
+  expect(document.activeElement).not.toBe(box("Mensagem para #eng"));
+});
