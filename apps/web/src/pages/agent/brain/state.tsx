@@ -59,7 +59,7 @@ import { useOrg } from "@/components/org-context";
 import { useComputerEdition } from "@/components/WorkspaceComputer";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useRenameAccount } from "@/hooks/useRenameAccount";
-import { limitOffers } from "@/lib/plan-usage";
+import { switchOffers } from "@/lib/plan-usage";
 import { useAgentEdit } from "../context";
 import { type BrainMachine, homeFor, useWork } from "./work";
 
@@ -397,12 +397,13 @@ export function useBrainState(view: AgentBrain, opts: { added: readonly MachineA
         });
   const moves = chain.length > 1;
   // At its limit it waits only with no other account of its chain that has room: then the way out is by hand.
-  const waitsAtLimit =
-    limitedNow && !chainHasRoom(chain, (a) => (a.usage ? planState(a.usage).state === "limited" : false));
-  // At its limit, its owner's free accounts of the same plan with room, never another agent's (`limitOffers`).
+  const movesOn = chainHasRoom(chain, (a) => (a.usage ? planState(a.usage).state === "limited" : false));
+  const waitsAtLimit = limitedNow && !movesOn;
+  // From 90% and at its limit, its owner's free accounts of the same plan with room, never another agent's
+  // (`switchOffers`): at the limit on the limit screen, before it under the usage.
   const offers =
-    waitsAtLimit && kind !== "model"
-      ? limitOffers(listed, kind, view.account).flatMap(({ account }) => {
+    kind !== "model"
+      ? switchOffers(listed, kind, view.account, usage, movesOn).flatMap(({ account }) => {
           const r = accountRow({ login: account, usedBy: account.usedBy, also: false });
           return r && !r.off && (r.act === "use" || r.act === "move") ? [r] : [];
         })

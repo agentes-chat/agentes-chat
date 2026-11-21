@@ -348,6 +348,44 @@ describe("Quem pensa: the account on the computer and the effort (ADR 0041)", ()
     expect(brainScreen(await brainDialog(/no limite$/))).toBe("A conta da Ada está no limite");
   });
 
+  test("from 90%, its owner's account with most room in one press; none under 90% or while its runs move on", async () => {
+    const some = (usedPercent: number): PlanUsage => ({
+      windows: [{ kind: "five_hour", usedPercent }],
+      source: "probe",
+      at: new Date().toISOString(),
+    });
+    const roomy: MachineAccount = {
+      ...work,
+      id: "acct_roomy",
+      label: "Claude Team 2",
+      email: "walt@reserva.com",
+      usage: some(12),
+    };
+    const near = { ...work, usedBy: ["Ada"], usage: some(93) };
+    const { state } = await onMac({ account: "acct_work", accounts: [near, roomy], accountPinned: true });
+    const d = await brainDialog();
+    expect(brainScreen(d)).toBe("Quem pensa pela Ada");
+    expect(d.textContent).toContain("Quase no limite");
+    await click(within(d).getByRole("button", { name: "Usar walt@reserva.com (12%)" }));
+    await settle(6);
+    expect(brainCalls(state).at(-1)).toEqual({ brain: "claude_code", account: "acct_roomy" });
+    expect(brainScreen(d)).toBe("Pronto");
+    // Under 90%: nothing new.
+    cleanup();
+    await onMac({ account: "acct_work", accounts: [{ ...near, usage: some(89) }, roomy], accountPinned: true });
+    expect(within(await brainDialog()).queryByRole("button", { name: /^Usar walt/ })).toBeNull();
+    // Its order goes on with another account that has room: no offer.
+    cleanup();
+    await onMac({
+      account: "acct_work",
+      accounts: [
+        { ...near, shared: true },
+        { ...roomy, shared: true },
+      ],
+    });
+    expect(within(await brainDialog()).queryByRole("button", { name: /^Usar walt/ })).toBeNull();
+  });
+
   test("Só esta conta, under Mais opções with a second account: its ⓘ, saved with Concluir, named on the row", async () => {
     const next: MachineAccount = { ...work, id: "acct_next", label: "Pessoal", shared: true };
     const { state } = await onMac({ account: "acct_work", accounts: [{ ...work, shared: true }, next] });

@@ -28,8 +28,8 @@ export {
   usageSourcePart,
   workspaceUsesApi,
 } from "@agenteschat/client/lib/plan-usage";
-// At the limit, the owner's other accounts that could think instead: shared with the phone.
-export { limitOffers } from "@agenteschat/ui";
+// Near or at the limit, the owner's other accounts that could think instead: shared with the phone.
+export { switchOffers } from "@agenteschat/ui";
 
 /** The plan's state in a few words, for a line that has no room for the meter; null when it is fine. */
 export const planWord = (t: TFunction, locale: string, usage: PlanUsage | null | undefined, now = new Date()) =>

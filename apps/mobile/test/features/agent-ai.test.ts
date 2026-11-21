@@ -1360,13 +1360,17 @@ describe("the order of use at a limit (ADR 0041 §6)", () => {
   });
 
   test("it moves on while another account of its order has room, and waits only when none has or it is pinned", () => {
-    expect(agentChain(view(), "ag_ada", "u1")).toEqual({ moves: true, waits: false });
+    expect(agentChain(view(), "ag_ada", "u1")).toEqual({ moves: true, room: true, waits: false });
     const full = view({
       accounts: [account("own", { usage: limited, shared: true }), account("next", { usage: limited, shared: true })],
     });
-    expect(agentChain(full, "ag_ada", "u1")).toEqual({ moves: true, waits: true });
-    expect(agentChain(view({ accountPinned: true }), "ag_ada", "u1")).toEqual({ moves: false, waits: true });
-    expect(agentChain(view({ account: null }), "ag_ada", "u1")).toEqual({ moves: false, waits: false });
+    expect(agentChain(full, "ag_ada", "u1")).toEqual({ moves: true, room: false, waits: true });
+    expect(agentChain(view({ accountPinned: true }), "ag_ada", "u1")).toEqual({
+      moves: false,
+      room: false,
+      waits: true,
+    });
+    expect(agentChain(view({ account: null }), "ag_ada", "u1")).toEqual({ moves: false, room: false, waits: false });
   });
 
   test("the right hand: its person's own AI goes on with that person's accounts only, the workspace's waits", () => {
@@ -1377,9 +1381,9 @@ describe("the order of use at a limit (ADR 0041 §6)", () => {
         account("next", { usage: usage(20), shared: true, mine: false, ownerId: "u2" }),
       ],
     });
-    expect(agentChain(theirs, "lodi", "u1")).toEqual({ moves: false, waits: true });
-    expect(agentChain(view({ scope: "mine" }), "lodi", "u1")).toEqual({ moves: true, waits: false });
-    expect(agentChain(view({ scope: "workspace" }), "lodi", "u1")).toEqual({ moves: false, waits: true });
+    expect(agentChain(theirs, "lodi", "u1")).toEqual({ moves: false, room: false, waits: true });
+    expect(agentChain(view({ scope: "mine" }), "lodi", "u1")).toEqual({ moves: true, room: true, waits: false });
+    expect(agentChain(view({ scope: "workspace" }), "lodi", "u1")).toEqual({ moves: false, room: false, waits: true });
   });
 
   test("Move up and Move down: none up for the first, none down for the last, nothing for who may not move it", () => {
@@ -1487,7 +1491,7 @@ describe("the order of use at a limit (ADR 0041 §6)", () => {
     // Someone else's account in an order reads its newest usage, as the viewer's own rows do.
     expect(accounts).toContain("const usage = newestUsage(block);");
     expect(accounts).toContain("disabled={g !== undefined && move.isPending}");
-    expect(ai).toContain("const offers = waits && kind && view ?");
+    expect(ai).toContain("switchOffers(accounts, kind, view.account, usage, limited ? !waits : chain.room)");
     expect(ai).toContain('chain.moves && !waits ? t("agentPage.work.brain.movesOn") : null');
     expect(advanced).toContain("toggle={shown.accountPinned}");
     expect(advanced).toContain("accountPinned: pending.accountPinned ?? now.accountPinned");

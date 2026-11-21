@@ -214,6 +214,9 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
   const selected = s.rows.find((r) => r.id === picked) ?? (picked === s.currentRow?.id ? s.currentRow : undefined);
   const switchSel = picked !== undefined ? selected : sortHave(selectable)[0];
   const limitSel = s.offers.find((r) => r.id === picked) ?? s.offers[0];
+  // Near its limit (90%), the account with most room in one press, for whoever may change who thinks.
+  const nearOffer = !s.waitsAtLimit && can("brain") ? s.offers[0] : undefined;
+  const nearUsed = nearOffer?.usage ? planState(nearOffer.usage).used : null;
   // Picking a full account is allowed: the agent then waits for its plan to renew, said under the list.
   const switchFull = switchSel?.usage != null && !switchSel.current && planState(switchSel.usage).state === "limited";
 
@@ -724,6 +727,21 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
               notShared && <p className="plan-models__none">{notShared}</p>
             )}
           </div>
+          {nearOffer && (
+            <SettingNote
+              icon="alert"
+              live
+              action={
+                <Button disabled={busy} loading={busy} onClick={() => confirm(nearOffer)}>
+                  {nearUsed === null
+                    ? t("aiAccounts.usage.offer.useUnknown", { label: rowSaid(nearOffer) })
+                    : t("aiAccounts.usage.offer.use", { label: rowSaid(nearOffer), pct: nearUsed })}
+                </Button>
+              }
+            >
+              {t("aiAccounts.usage.almost")}
+            </SettingNote>
+          )}
           {arrived && (
             <SettingNote icon="check" live>
               {t("agentPage.work.brain.add.done", { account: accountInLine(t, arrived), computer: s.computerName })}

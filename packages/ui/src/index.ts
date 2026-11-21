@@ -306,6 +306,7 @@ export {
   planLine,
   planState,
   planWindows,
+  switchOffers,
   windowAmount,
 } from "./components/PlanMeter";
 export { Popover } from "./components/Popover";

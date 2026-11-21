@@ -16,6 +16,7 @@ import {
   planLine,
   planState,
   planWindows,
+  switchOffers,
 } from "../src";
 import { planBinding } from "../src/plan-state";
 
@@ -383,6 +384,60 @@ test("at the limit, the owner's other free accounts of the same kind and maker, 
     account("m2", { usage: usage(30), sameAs: "m1" }),
   ];
   expect(limitOffers(team, "claude_code", "t1", NOW).map((o) => o.account.id)).toEqual(["m1"]);
+});
+
+test("from 90% the offers come by hand, only accounts known to be under 90%; none while its runs move on by themselves", () => {
+  const usage = (used: number, limited = false): PlanMeterUsage => ({
+    windows: [{ kind: "five_hour", usedPercent: used, resetsAt: at(HOUR) }],
+    ...(limited ? { limited } : {}),
+    at: at(0),
+  });
+  const account = (id: string, over: Partial<OfferAccount> = {}): OfferAccount => ({
+    id,
+    kind: "claude_code",
+    provider: null,
+    mine: true,
+    status: "active",
+    usedBy: [],
+    usage: null,
+    ...over,
+  });
+  const accounts = [
+    account("now", { usedBy: ["Dev"] }),
+    account("busy", { usage: usage(40) }),
+    account("calm", { usage: usage(12) }),
+    account("near", { usage: usage(95) }),
+    account("unknown"),
+  ];
+  const ids = (u: PlanMeterUsage | null, movesOn = false) =>
+    switchOffers(accounts, "claude_code", "now", u, movesOn, NOW).map((o) => [o.account.id, o.used]);
+  // Under 90%: nothing new.
+  expect(ids(usage(89))).toEqual([]);
+  expect(ids(null)).toEqual([]);
+  // From 90%: most room first, never one near its own limit or of unknown room.
+  expect(ids(usage(90))).toEqual([
+    ["calm", 12],
+    ["busy", 40],
+  ]);
+  // At the limit: what `limitOffers` gives, unknown room last.
+  expect(ids(usage(100, true))).toEqual(
+    limitOffers(accounts, "claude_code", "now", NOW).map((o) => [o.account.id, o.used]),
+  );
+  expect(ids(usage(100, true)).at(-1)).toEqual(["unknown", null]);
+  // Its runs go on with another account of their order that has room: no offer, near or at the limit.
+  expect(ids(usage(95), true)).toEqual([]);
+  expect(ids(usage(100, true), true)).toEqual([]);
+  // Nobody else with room: nothing.
+  expect(
+    switchOffers(
+      [accounts[0] as OfferAccount, account("full", { usage: usage(97) })],
+      "claude_code",
+      "now",
+      usage(92),
+      false,
+      NOW,
+    ),
+  ).toEqual([]);
 });
 
 test("a model group's own quota (Antigravity's Claude and GPT week at 0%) binds only its models, never the account", () => {

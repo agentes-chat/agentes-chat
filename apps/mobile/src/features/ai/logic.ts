@@ -144,7 +144,8 @@ export function agentChain(
   });
   const limited = (a: MachineAccount) => (a.usage ? planState(a.usage).state === "limited" : false);
   const own = chain[0];
-  return { moves: chain.length > 1, waits: own !== undefined && limited(own) && !chainHasRoom(chain, limited) };
+  const room = chainHasRoom(chain, limited);
+  return { moves: chain.length > 1, room, waits: own !== undefined && limited(own) && !room };
 }
 
 /** The plan usage of what it thinks with: its account's, or the computer's own sign-in's where that thinks for it. */

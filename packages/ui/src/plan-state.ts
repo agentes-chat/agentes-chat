@@ -348,6 +348,27 @@ export function limitOffers<A extends OfferAccount>(
     .filter((o, i, all) => all.findIndex((x) => accountOf(x.account) === accountOf(o.account)) === i);
 }
 
+/**
+ * The accounts to offer by hand instead of the one in use (`usage`): from `PLAN_CRITICAL` to the limit, and only
+ * while its runs wouldn't go on with another account of their order that has room (`movesOn`). Before the limit only
+ * an account known to be under `PLAN_CRITICAL` is offered; at it, `limitOffers` as they are. Nothing switches by
+ * itself: the apps show these as choices.
+ */
+export function switchOffers<A extends OfferAccount>(
+  accounts: readonly A[],
+  kind: string,
+  current: string | null,
+  usage: PlanMeterUsage | null | undefined,
+  movesOn: boolean,
+  now = Date.now(),
+): { account: A; used: number | null }[] {
+  if (!usage || movesOn) return [];
+  const { state, used } = planState(usage, now);
+  if (state !== "limited" && used < PLAN_CRITICAL) return [];
+  const offers = limitOffers(accounts, kind, current, now);
+  return state === "limited" ? offers : offers.filter((o) => o.used !== null && o.used < PLAN_CRITICAL);
+}
+
 /** From here long work pauses until the window resets (ADR 0118); replies to people go on until the limit. */
 export const PLAN_PAUSE = 99;
 /** From here an agent is told where its plan stands, so it can say a long task may pause. */

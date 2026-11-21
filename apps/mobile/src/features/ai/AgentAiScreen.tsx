@@ -17,7 +17,7 @@ import { modelLimitText } from "@agenteschat/client/lib/plan-usage";
 import { brainPlan, geminiPersonal, isPlanId, planFreeHint, planOf } from "@agenteschat/client/lib/plans";
 import { apiProviderOf, isAuto, providerLabel } from "@agenteschat/client/lib/providers";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
-import { limitOffers, planState } from "@agenteschat/ui/plan-state";
+import { planState, switchOffers } from "@agenteschat/ui/plan-state";
 import { Fragment, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
@@ -154,10 +154,12 @@ export function AgentAiScreen({ agentId }: { agentId: string }) {
   const usage = view && kind ? thinkingUsage(view, kind) : undefined;
   const limited = usage ? planState(usage).state === "limited" : false;
   const modelLimit = modelLimitText(t, i18n.language, usage, current?.provider, model?.value);
-  const chain = view ? agentChain(view, agentId, agent?.ownerUserId) : { moves: false, waits: false };
+  const chain = view ? agentChain(view, agentId, agent?.ownerUserId) : { moves: false, room: false, waits: false };
   // At its limit with another account of its order that has room, its runs go on there: no way out by hand.
   const waits = limited && (chain.waits || !chain.moves);
-  const offers = waits && kind && view ? limitOffers(accounts, kind, view.account).slice(0, 2) : [];
+  // From 90% and at its limit, the owner's other accounts with room, one tap each (`switchOffers`).
+  const offers =
+    kind && view ? switchOffers(accounts, kind, view.account, usage, limited ? !waits : chain.room).slice(0, 2) : [];
   const signedOut = current != null && signInOf(current) === "signed_out" && current.mine;
   const signInAgain = current != null && offersSignInAgain(current) && current.mine;
   // A coding plan's key that its endpoint refused: a new key, on that plan's page.
