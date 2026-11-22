@@ -13674,6 +13674,9 @@ export const ptBR = {
       without:
         "O GitHub cria o app na sua conta com tudo preenchido e volta para cá. Para ele ficar numa organização, transfira depois no GitHub.",
       create: "Criar o app no GitHub",
+      /** No lugar de `without` e do botão: o endereço do servidor não está na internet, e o GitHub recusa o app. */
+      local:
+        "O GitHub só cria o app para um servidor que ele alcança pela internet, e o endereço deste não é público. Conecte o GitHub em Conectores com um token de acesso pessoal: os agentes têm as mesmas ferramentas.",
       state: { off: "Desligado", on: "Ligado", invalid: "Inválido" },
       line: {
         env: "Definido nas configurações deste servidor (`GITHUB_APP_ID`).",

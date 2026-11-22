@@ -13094,6 +13094,7 @@
       "lead": "Bununla ajanlar GitHub'da birinin hesabı olarak değil, uygulama olarak görünür.",
       "without": "GitHub, her şeyi doldurulmuş uygulamayı hesabınızda oluşturur ve buraya geri döner. Bir kuruluşa ait olması için daha sonra GitHub'da aktarın.",
       "create": "Uygulamayı GitHub'da oluştur",
+      "local": "GitHub uygulamayı yalnızca internetten ulaşabildiği bir sunucu için oluşturur ve bu sunucunun adresi herkese açık değil. Bunun yerine GitHub'ı Bağlayıcılar'da kişisel erişim belirteciyle bağlayın: ajanlar aynı araçlara sahip olur.",
       "state": {
         "off": "Kapalı",
         "on": "Açık",

@@ -232,7 +232,11 @@ export function GitHubAppServerCard() {
         }
       />
       <List>
-        {setup.canCreate ? (
+        {setup.canCreate && setup.reachable === false ? (
+          <div className="ac-list__row jev__body">
+            <SettingNote icon="info">{t("githubApp.server.local")}</SettingNote>
+          </div>
+        ) : setup.canCreate ? (
           <div className="ac-list__row jev__body">
             <span className="small muted">{t("githubApp.server.without")}</span>
             <Button
