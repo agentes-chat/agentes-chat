@@ -101,7 +101,10 @@ export async function recoverStaleRuns(
     // One run that can't be recovered never holds back the others: the next sweep tries it again.
     try {
       const steps = await db
-        .select({ kind: agentRunSteps.kind, data: agentRunSteps.data })
+        .select({
+          kind: agentRunSteps.kind,
+          data: sql<Record<string, unknown>>`${agentRunSteps.data} - 'modelContent'`,
+        })
         .from(agentRunSteps)
         .where(eq(agentRunSteps.runId, run.id))
         .orderBy(desc(agentRunSteps.seq))

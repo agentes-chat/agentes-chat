@@ -18,6 +18,7 @@ import {
   callLine,
   continuationVerdict,
   decideTurnEnd,
+  HARNESS_META_TOOLS,
   type TurnEnd,
 } from "../src/continuation";
 
@@ -312,6 +313,89 @@ describe("the controller's untried verdict", () => {
     expect(
       callLine("use_tool", { tool: "crm_find", arguments: { name: "Acme" } }, { content: "x", isError: true }),
     ).toBe("crm_find(Acme) → failed: x");
+    // Envelope tags around run_code output must not consume the 90-char summary budget before stdout appears.
+    expect(
+      callLine(
+        "run_code",
+        { code: "uname -r", language: "bash" },
+        {
+          content:
+            'run_code bash: exit code 0 (0 s)\n<external_data source="run_code output">\nstdout:\n6.8.0-51-generic\n\n</external_data>',
+          isError: false,
+        },
+      ),
+    ).toBe("run_code(uname -r) → run_code bash: exit code 0 (0 s) stdout: 6.8.0-51-generic");
+    // Antigravity native tool arguments (`CommandLine`, `Path`) stay visible to the judge.
+    expect(
+      callLine(
+        "run_command",
+        { CommandLine: "uname -r" },
+        { content: "denied: headless mode cannot prompt for approval (Bash)", isError: true },
+      ),
+    ).toBe("run_command(uname -r) → failed: denied: headless mode cannot prompt for approval (Bash)");
+    expect(callLine("read_file", { Path: "/tmp/note.txt" }, { content: "hello" })).toBe(
+      "read_file(/tmp/note.txt) → hello",
+    );
+    // run_skill_script keeps skill, path, and args visible, and long data outputs keep head + tail + total length.
+    const preamble =
+      "Running a single filtered search with the requested tool and returning only matching posts from today:";
+    const posts = [
+      "1. **@alpha_news** — 14:04:33 GMT — https://example.com/alpha_news/status/1001",
+      "2. **@market_watch** — 14:01:18 GMT — https://example.com/market_watch/status/1002",
+      "3. **@crypto_desk** — 14:00:58 GMT — https://example.com/crypto_desk/status/1003",
+    ].join("\n");
+    const longPosts = [
+      "run_skill_script social-search/scripts/fetch.py: exit code 0 (10 s)",
+      '<external_data source="run_skill_script social-search/scripts/fetch.py output">',
+      "stdout:",
+      preamble,
+      "Extra padding line before results ".repeat(10),
+      posts,
+      "</external_data>",
+    ].join("\n");
+    const skillLine = callLine(
+      "run_skill_script",
+      { skill: "social-search", path: "scripts/fetch.py", args: ["--today", "--limit", "3"] },
+      { content: longPosts, isError: false },
+    );
+    expect(skillLine).toStartWith("run_skill_script(social-search/scripts/fetch.py --today --limit 3) → ");
+    expect(skillLine).toContain("exit code 0");
+    expect(skillLine).toContain("@crypto_desk");
+    expect(skillLine).toContain("https://example.com/crypto_desk/status/1003");
+    expect(skillLine).toMatch(/ \(\d+ chars\)$/);
+    expect(HARNESS_META_TOOLS.has("ToolSearch")).toBe(true);
+  });
+
+  test("unbacked requires p(unbacked) > p(done) and clarifies truncated read/script summaries", async () => {
+    const asked: JudgeRequest[] = [];
+    const judgeSaying = (probabilities: Record<string, number>): Judge => ({
+      name: "fake",
+      ask: async (request) => {
+        asked.push(request);
+        return { verdict: { choice: "done", probabilities } };
+      },
+    });
+    const input = {
+      orgId: "o",
+      agentId: "a",
+      runId: "r",
+      request: "Traga 3 posts recentes usando a skill social-search",
+      reply: "Aqui estão os 3 posts de hoje: 1. @alpha_dev ... 2. @beta_ops ... 3. @gamma_ai ...",
+      means: ["your computer's own tools: shell and files"],
+      tried: [
+        "load_skill(social-search) → instructions...",
+        "run_skill_script(social-search/scripts/fetch.py --today --limit 3) → run_skill_script social-search/scripts/fetch.py: exit code 0 (10 s) stdout: 1. @alpha_dev… (512 chars)",
+      ],
+      runKind: "conversation" as const,
+    };
+    // Borderline probabilities where done >= unbacked must not falsely hold back a grounded reply.
+    expect(await continuationVerdict(judgeSaying({ done: 0.54, unbacked: 0.46 }), input)).toBe("done");
+    expect(await continuationVerdict(judgeSaying({ done: 0.5, unbacked: 0.5 }), input)).toBe("done");
+    // True unbacked claim (p(unbacked) > p(done)) is still caught and held back.
+    expect(await continuationVerdict(judgeSaying({ done: 0.2, unbacked: 0.8 }), input)).toBe("unbacked");
+    const verdict = asked[0]?.questions.verdict as { criteria: Record<string, string> } | undefined;
+    expect(verdict?.criteria.unbacked).toContain("truncated summaries");
+    expect(verdict?.criteria.unbacked).toContain("reporting or summarizing data");
   });
 });
 

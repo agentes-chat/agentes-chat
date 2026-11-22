@@ -341,7 +341,10 @@ const findStep: Find = async (db, orgId, { id, seq, field }) => {
     ofRun: (run) => id === run.id,
     text: async () => {
       const [step] = await db
-        .select({ kind: agentRunSteps.kind, data: agentRunSteps.data })
+        .select({
+          kind: agentRunSteps.kind,
+          data: sql<Record<string, unknown>>`${agentRunSteps.data} - 'modelContent'`,
+        })
         .from(agentRunSteps)
         .where(and(eq(agentRunSteps.runId, id), eq(agentRunSteps.seq, seq ?? 0)));
       return step ? stepText(step.kind, step.data, field) : null;

@@ -839,7 +839,7 @@ export async function getRun(db: Database, actorId: string, orgId: string, runId
     .select({
       seq: agentRunSteps.seq,
       kind: agentRunSteps.kind,
-      data: agentRunSteps.data,
+      data: sql<Record<string, unknown>>`${agentRunSteps.data} - 'modelContent'`,
       createdAt: agentRunSteps.createdAt,
     })
     .from(agentRunSteps)

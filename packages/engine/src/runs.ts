@@ -607,6 +607,19 @@ export async function transitionRun(
   if (row && from === "running" && ask?.machineId && ask.signIn)
     await kickSignInLine(db, ask.machineId, ask.signIn).catch(() => {});
   if (row && isTerminal(to)) {
+    // `modelContent` is only needed while the run is live (including across suspensions/resumes) for the
+    // continuation judge's `triedCalls`; drop it once the run ends so `agent_run_steps` never accumulates 50 KB blobs.
+    await db
+      .update(agentRunSteps)
+      .set({ data: sql`${agentRunSteps.data} - 'modelContent'` })
+      .where(
+        and(
+          eq(agentRunSteps.orgId, row.orgId),
+          eq(agentRunSteps.runId, row.id),
+          eq(agentRunSteps.kind, "tool_result"),
+          sql`${agentRunSteps.data} ? 'modelContent'`,
+        ),
+      );
     await recordRunFinished(
       db,
       row,

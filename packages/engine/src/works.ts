@@ -1534,7 +1534,11 @@ export async function workBrief(db: Executor, run: Pick<AgentRun, "orgId" | "age
           .orderBy(desc(messages.createdAt))
           .limit(BRIEF_UPDATES),
         db
-          .select({ kind: agentRunSteps.kind, data: agentRunSteps.data, createdAt: agentRunSteps.createdAt })
+          .select({
+            kind: agentRunSteps.kind,
+            data: sql<Record<string, unknown>>`${agentRunSteps.data} - 'modelContent'`,
+            createdAt: agentRunSteps.createdAt,
+          })
           .from(agentRunSteps)
           .innerJoin(agentRuns, eq(agentRuns.id, agentRunSteps.runId))
           .where(
