@@ -2804,6 +2804,7 @@
     "copyLink": "Copiar enlace",
     "linkCopied": "Enlace copiado.",
     "reply": "Responder",
+    "quote": "Citar",
     "quoteOf": "Respuesta a {{name}}: {{excerpt}}. Ver el mensaje",
     "quoteGone": "Mensaje original eliminado",
     "quoteNoWords": "Mensaje sin texto",

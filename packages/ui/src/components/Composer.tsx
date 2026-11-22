@@ -1,6 +1,8 @@
 import { Popover as RPopover } from "radix-ui";
 import {
+  type ClipboardEvent,
   type DragEvent,
+  Fragment,
   type KeyboardEvent,
   type ReactNode,
   type RefObject,
@@ -12,6 +14,14 @@ import {
   useState,
 } from "react";
 import { channelQuery, insertChannelRef } from "../channel-refs";
+import {
+  type ComposerQuotes,
+  expandInlineQuotes,
+  inlineQuoteRanges,
+  inlineQuoteSelection,
+  protectInlineQuoteEdit,
+  quotePreview,
+} from "../composer-quotes";
 import { cx } from "../cx";
 import { composes, onScreenKeyboard } from "../device";
 import { EDGE_ROOM, placeOverSelection } from "../floating";
@@ -177,6 +187,8 @@ export interface ComposerProps {
   className?: string;
   /** Lets the parent focus the box or insert text (e.g. "Chamar um agente"). */
   textareaRef?: React.Ref<HTMLTextAreaElement>;
+  /** Full Markdown for each inline quote in the editable value. */
+  inlineQuotes?: ComposerQuotes;
   /** Esc in the box means something here (stopping an agent): a panel beside it doesn't close on it. */
   keepsEsc?: boolean;
   /** "@" autocomplete (combobox pattern on the text box). */
@@ -305,6 +317,76 @@ export function ComposerFile({
       </span>
       {remove}
     </span>
+  );
+}
+
+const QUOTE_LINE_RE = /^(\s*)(>\s)(.*)$/;
+
+/**
+ * Renders a 1:1 mirror behind the composer `<textarea>` when the draft contains Markdown blockquote lines (`> ...`),
+ * drawing each quoted line as a compact rounded pill with a quote icon positioned directly over the transparent `> `
+ * prefix so caret placement, selection, undo, paste, IME, and auto-grow stay 100% native.
+ */
+function QuoteBackdrop({
+  value,
+  quotes,
+  backdropRef,
+}: {
+  value: string;
+  quotes: ComposerQuotes;
+  backdropRef: RefObject<HTMLDivElement | null>;
+}) {
+  const lines = value.split("\n");
+  return (
+    <div ref={backdropRef} className="ac-composer__backdrop" aria-hidden="true">
+      {lines.map((line, i) => {
+        const quoted = QUOTE_LINE_RE.exec(line);
+        const br = i < lines.length - 1 ? "\n" : value.endsWith("\n") ? "\u200B" : "";
+        const inline = inlineQuoteRanges(line, quotes);
+        if (inline.length) {
+          let end = 0;
+          const parts = inline.map((quote) => {
+            const before = line.slice(end, quote.start);
+            end = quote.end;
+            return (
+              <Fragment key={quote.start}>
+                {before}
+                <span className="ac-composer__quote-slot">
+                  {quote.token}
+                  <span className="ac-composer__quote-pill ac-composer__quote-pill--inline">
+                    <Icon name="quote" size={14} />
+                    <span>{quotePreview(quote.markdown)}</span>
+                  </span>
+                </span>
+              </Fragment>
+            );
+          });
+          return (
+            // biome-ignore lint/suspicious/noArrayIndexKey: mirror line index matches the textarea
+            <Fragment key={i}>
+              {parts}
+              {line.slice(end)}
+              {br}
+            </Fragment>
+          );
+        }
+        if (!quoted) return `${line}${br}`;
+        return (
+          // biome-ignore lint/suspicious/noArrayIndexKey: mirror line index matches textarea line order 1:1
+          <span key={i}>
+            {quoted[1]}
+            <span className="ac-composer__quote-pill">
+              <span className="ac-composer__quote-prefix">
+                <span className="ac-composer__quote-glyph">{quoted[2]}</span>
+                <Icon name="quote" size={14} className="ac-composer__quote-icon" />
+              </span>
+              {quoted[3]}
+            </span>
+            {br}
+          </span>
+        );
+      })}
+    </div>
   );
 }
 
@@ -448,9 +530,9 @@ export function linkQuery(text: string, caret: number): { start: number; query: 
   return { start: at, query };
 }
 
-/** "@que" right before the caret (start of text or after a space or bracket). */
+/** "@que" right before the caret (start of text or after a space, bracket, or inline quote pill). */
 export function mentionQuery(text: string, caret: number): { start: number; query: string } | null {
-  const m = text.slice(0, caret).match(/(^|[\s(])@([\p{L}\p{N}_-]{0,32})$/u);
+  const m = text.slice(0, caret).match(/(^|[\s(\u200B])@([\p{L}\p{N}_-]{0,32})$/u);
   if (!m) return null;
   const query = m[2] ?? "";
   return { start: caret - query.length - 1, query };
@@ -508,6 +590,7 @@ export function Composer({
   id,
   className,
   textareaRef,
+  inlineQuotes = {},
   keepsEsc,
   mentions,
   commands,
@@ -567,9 +650,24 @@ export function Composer({
   const caretAfter = useRef<number | null>(null);
   // A selection to restore after the text changes (formatting, an emoji).
   const selectAfter = useRef<[number, number] | null>(null);
+  const backdrop = useRef<HTMLDivElement>(null);
+  const [composing, setComposing] = useState(false);
+  const inline = inlineQuoteRanges(value, inlineQuotes);
+  const hasQuoteLines = inline.length > 0 || /^[ \t]*>[ \t]/m.test(value);
+  const showQuoteBackdrop = hasQuoteLines && !disabled;
+  const syncBackdrop = () => {
+    const ta = ref.current;
+    const bd = backdrop.current;
+    if (!ta || !bd) return;
+    if (ta.clientWidth > 0) bd.style.width = `${ta.clientWidth}px`;
+    bd.scrollTop = ta.scrollTop;
+    bd.scrollLeft = ta.scrollLeft;
+  };
 
   useAutoGrow(ref, value);
-  // Once the text is in: the caret after an inserted mention, or a selection put back.
+  // Once the text is in: the caret after an inserted mention, or a selection put back, then sync the quote mirror
+  // after `useAutoGrow` and `setSelectionRange` have settled `height` and `scrollTop`.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: syncBackdrop reads refs after value/auto-grow settle
   useLayoutEffect(() => {
     // The box emptied without a keystroke (the message went out, a draft was cleared): no list stays open over it.
     if (!value) {
@@ -588,7 +686,17 @@ export function Composer({
       el.setSelectionRange(...selectAfter.current);
       selectAfter.current = null;
     }
-  }, [value]);
+    syncBackdrop();
+  }, [value, showQuoteBackdrop]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: syncBackdrop reads refs on textarea resize
+  useLayoutEffect(() => {
+    const ta = ref.current;
+    if (!showQuoteBackdrop || !ta || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(syncBackdrop);
+    ro.observe(ta);
+    return () => ro.disconnect();
+  }, [showQuoteBackdrop]);
 
   /** Replaces the text and selection (formatting, emoji), keeping the focus in the box. */
   const edit = (next: TextEdit) => {
@@ -606,8 +714,21 @@ export function Composer({
     const el = ref.current;
     return { start: el?.selectionStart ?? value.length, end: el?.selectionEnd ?? value.length };
   };
+  const overlapsQuote = (start: number, end: number) => inline.some((quote) => start < quote.end && end > quote.start);
+  const lineHasQuote = (start: number, end: number) => {
+    const from = start > 0 ? value.lastIndexOf("\n", start - 1) + 1 : 0;
+    const nl = value.indexOf("\n", end > start && value[end - 1] === "\n" ? end - 1 : end);
+    const to = nl < 0 ? value.length : nl;
+    return overlapsQuote(from, to);
+  };
   const applyKind = (kind: FormatKind) => {
     const { start, end } = selection();
+    if (
+      overlapsQuote(start, end) ||
+      ((kind === "quote" || kind === "bulletList" || kind === "numberedList") && lineHasQuote(start, end))
+    ) {
+      return;
+    }
     edit(applyFormat(value, start, end, kind, { link: format?.linkText }));
   };
   const insertEmoji = (e: string) => {
@@ -650,6 +771,7 @@ export function Composer({
   const current = Math.min(active, Math.max(0, items.length - 1));
 
   const track = (text: string, caret: number) => {
+    if (text.includes("\u200B")) text = text.replaceAll("\u200B", " ");
     if (links) {
       const nextLink = linkQuery(text, caret);
       if (nextLink?.start !== linkToken?.start || nextLink?.query !== linkToken?.query) {
@@ -755,6 +877,31 @@ export function Composer({
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     // Choosing and confirming a word in an input method takes Enter, Tab, Esc and the arrows: none is the box's.
     if (composes(e.nativeEvent)) return;
+    const box = e.currentTarget;
+    if (inline.length) {
+      const { selectionStart: start, selectionEnd: end, selectionDirection: direction } = box;
+      const deletion = e.key === "Backspace" || e.key === "Delete";
+      const arrow = e.key === "ArrowLeft" || e.key === "ArrowRight";
+      if ((deletion && start === end) || (arrow && (e.shiftKey || start === end))) {
+        const backward = e.key === "Backspace" || e.key === "ArrowLeft";
+        const activeEdge = direction === "backward" ? start : end;
+        const quote = inline.find((q) => activeEdge === (backward ? q.end : q.start));
+        if (quote) {
+          if (deletion) box.setSelectionRange(quote.start, quote.end);
+          else {
+            e.preventDefault();
+            const edge = backward ? quote.start : quote.end;
+            const anchor = e.shiftKey ? (direction === "backward" ? end : start) : edge;
+            box.setSelectionRange(
+              Math.min(anchor, edge),
+              Math.max(anchor, edge),
+              anchor > edge ? "backward" : "forward",
+            );
+          }
+          return;
+        }
+      }
+    }
     // A layer above already closed on this Esc: the suggestions, or a card that opened under the pointer and left the
     // focus here. It is spent: it stops no agent, and the page's own Esc (an inbox reply closes on it) never sees it.
     if (e.key === "Escape" && e.defaultPrevented) {
@@ -930,6 +1077,26 @@ export function Composer({
       </div>
     );
 
+  const copyQuoteText = (e: ClipboardEvent<HTMLTextAreaElement>, cut: boolean) => {
+    const box = e.currentTarget;
+    if (!inline.length || box.selectionStart === box.selectionEnd) return;
+    const { start, end } = inlineQuoteSelection(box.value, inlineQuotes, box.selectionStart, box.selectionEnd);
+    const selected = box.value.slice(start, end);
+    const expanded = expandInlineQuotes(selected, inlineQuotes);
+    if (expanded === selected) return;
+    e.preventDefault();
+    e.clipboardData.setData("text/plain", expanded);
+    if (!cut || box.disabled) return;
+    box.setSelectionRange(start, end);
+    const previous = box.value;
+    const next = previous.slice(0, start) + previous.slice(end);
+    if (!document.execCommand?.("delete") || box.value !== next) {
+      if (box.value !== previous) box.value = previous;
+      box.setRangeText("", start, end, "end");
+      onChange(next);
+    }
+  };
+
   const optionId = (i: number) => `${listId}-${i}`;
   const textarea = (
     <textarea
@@ -941,16 +1108,32 @@ export function Composer({
       placeholder={shownPlaceholder}
       value={value}
       disabled={disabled}
+      onCompositionStart={() => setComposing(true)}
+      onCompositionEnd={() => setComposing(false)}
+      onScroll={syncBackdrop}
       onChange={(e) => {
-        if (dismissed === -1 && !e.target.value.startsWith("/")) setDismissed(null);
-        onChange(e.target.value);
-        track(e.target.value, e.target.selectionStart ?? e.target.value.length);
-        notePicked(e.target.selectionStart ?? 0, e.target.selectionEnd ?? 0);
+        const repair = protectInlineQuoteEdit(value, e.target.value, inline);
+        const next = repair?.value ?? e.target.value;
+        const caret = repair?.caret ?? e.target.selectionStart;
+        if (repair) caretAfter.current = caret;
+        if (dismissed === -1 && !next.startsWith("/")) setDismissed(null);
+        onChange(next);
+        track(next, caret);
+        notePicked(caret, repair ? caret : e.target.selectionEnd);
       }}
       onSelect={(e) => {
+        const box = e.currentTarget;
+        if (inline.length && !composing) {
+          const { start, end } = inlineQuoteSelection(box.value, inlineQuotes, box.selectionStart, box.selectionEnd);
+          if (start !== box.selectionStart || end !== box.selectionEnd) {
+            box.setSelectionRange(start, end, box.selectionDirection ?? undefined);
+          }
+        }
+        syncBackdrop();
         track(e.currentTarget.value, e.currentTarget.selectionStart ?? 0);
         notePicked(e.currentTarget.selectionStart ?? 0, e.currentTarget.selectionEnd ?? 0);
       }}
+      onKeyUp={syncBackdrop}
       onFocus={(e) => {
         setInField(true);
         notePicked(e.currentTarget.selectionStart ?? 0, e.currentTarget.selectionEnd ?? 0);
@@ -961,6 +1144,8 @@ export function Composer({
         if (!(e.relatedTarget instanceof Node && bar.current?.contains(e.relatedTarget))) setSelected(null);
       }}
       onKeyDown={onKeyDown}
+      onCopy={(e) => copyQuoteText(e, false)}
+      onCut={(e) => copyQuoteText(e, true)}
       onPaste={(e) => {
         const pasted = files(e.clipboardData?.files);
         if (!onFiles || pasted.length === 0) return;
@@ -1095,13 +1280,14 @@ export function Composer({
                 />
               )}
             </div>
-            <div className="ac-composer__text">
+            <div className="ac-composer__text" data-quote-pills={showQuoteBackdrop && !composing ? "true" : undefined}>
+              {showQuoteBackdrop && <QuoteBackdrop value={value} quotes={inlineQuotes} backdropRef={backdrop} />}
               {textarea}
               {format && !disabled && (
                 <FormatBar
                   labels={format}
                   onFormat={applyKind}
-                  range={open ? null : selected}
+                  range={open || (selected && overlapsQuote(...selected)) ? null : selected}
                   value={value}
                   field={ref}
                   card={box}

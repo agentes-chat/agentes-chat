@@ -2763,6 +2763,7 @@ export const ptBR = {
     copyLink: "Copiar link",
     linkCopied: "Link copiado.",
     reply: "Responder",
+    quote: "Citar",
     quoteOf: "Resposta a {{name}}: {{excerpt}}. Ver a mensagem",
     quoteGone: "Mensagem original apagada",
     quoteNoWords: "Mensagem sem texto",

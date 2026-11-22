@@ -2892,6 +2892,7 @@ export const en = {
     copyLink: "Copy link",
     linkCopied: "Link copied.",
     reply: "Reply",
+    quote: "Quote",
     quoteOf: "Reply to {{name}}: {{excerpt}}. See the message",
     quoteGone: "Original message deleted",
     quoteNoWords: "Message with no text",

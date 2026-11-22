@@ -196,6 +196,7 @@
   gap: 2px var(--space-2);
   font-size: calc(var(--msg-text) - 1px);
   line-height: calc(var(--msg-line-tight) - 2px);
+  -webkit-user-select: none;
   user-select: none;
 }
 /* A step toward the ink: amber, teal and lighter colors of an agent's own are under AA on the bubble. */
@@ -237,7 +238,12 @@
   color: var(--stamp-ink, var(--muted));
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  -webkit-user-select: none;
   user-select: none;
+}
+.ac-msg__stamp::selection,
+.ac-msg__stamp *::selection {
+  background: transparent;
 }
 .ac-msg__stamp .ac-msg__time {
   font-size: inherit;
@@ -268,6 +274,9 @@
   letter-spacing: normal;
   white-space: nowrap;
   visibility: hidden;
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 /*
  * A time on a line of its own (after a table or code, with no words, while a reply streams, with what the row is

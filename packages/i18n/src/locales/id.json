@@ -2607,6 +2607,7 @@
     "copyLink": "Salin tautan",
     "linkCopied": "Tautan disalin.",
     "reply": "Balas",
+    "quote": "Kutip",
     "quoteOf": "Balasan untuk {{name}}: {{excerpt}}. Lihat pesannya",
     "quoteGone": "Pesan asli dihapus",
     "quoteNoWords": "Pesan tanpa teks",

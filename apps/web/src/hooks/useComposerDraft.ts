@@ -1,4 +1,5 @@
 import { type ComposerDraft, readDraftBook, withDraft } from "@agenteschat/client/lib/composer-drafts";
+import { type ComposerQuotes, inlineQuoteRanges } from "@agenteschat/ui";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AuthClient } from "@/auth/client";
 import { STORAGE_KEYS, storage } from "@/lib/storage";
@@ -14,9 +15,9 @@ export function readComposerDraft(userId: string, key: string): ComposerDraft | 
 }
 
 /** Writes (or, blank, removes) one entry of this person's book of unsent texts. */
-export function writeComposerDraft(userId: string, key: string, text: string) {
+export function writeComposerDraft(userId: string, key: string, text: string, inlineQuotes?: ComposerQuotes) {
   const name = bookKey(userId);
-  const next = withDraft(readDraftBook(storage.get(name), Date.now()), key, text, Date.now());
+  const next = withDraft(readDraftBook(storage.get(name), Date.now()), key, text, Date.now(), inlineQuotes);
   if (Object.keys(next).length === 0) storage.remove(name);
   else storage.set(name, JSON.stringify(next));
 }
@@ -49,25 +50,34 @@ export function withComposerDraftsSignOut(auth: AuthClient): AuthClient {
  * same way, with the text set to "".
  */
 export function useComposerDraft(userId: string, key: string, handed?: string) {
-  const [text, setText] = useState(() => handed ?? readComposerDraft(userId, key)?.text ?? "");
-  const pending = useRef<string | null>(handed ?? null);
+  const [draft, setDraft] = useState(() => {
+    const saved = handed === undefined ? readComposerDraft(userId, key) : undefined;
+    return { text: handed ?? saved?.text ?? "", quotes: saved?.inlineQuotes ?? {} };
+  });
+  const latest = useRef(draft);
+  const pending = useRef<typeof draft | null>(handed === undefined ? null : { text: handed, quotes: {} });
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const flush = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = null;
     if (pending.current === null) return;
-    writeComposerDraft(userId, key, pending.current);
+    const { text, quotes } = pending.current;
+    // Keep removed quotes in memory for native undo, but only save quotes in the current draft.
+    const active = Object.fromEntries(inlineQuoteRanges(text, quotes).map(({ token, markdown }) => [token, markdown]));
+    writeComposerDraft(userId, key, text, Object.keys(active).length ? active : undefined);
     pending.current = null;
   }, [userId, key]);
 
   const set = useCallback(
-    (next: string | ((old: string) => string)) => {
-      setText((old) => {
-        const value = typeof next === "function" ? next(old) : next;
-        pending.current = value;
-        return value;
-      });
+    (next: string | ((old: string) => string), quote?: { token: string; markdown: string }) => {
+      const old = latest.current;
+      const text = typeof next === "function" ? next(old.text) : next;
+      const quotes = quote ? { ...old.quotes, [quote.token]: quote.markdown } : old.quotes;
+      const value = { text, quotes };
+      pending.current = value;
+      latest.current = value;
+      setDraft(value);
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(flush, SAVE_DELAY_MS);
     },
@@ -87,5 +97,5 @@ export function useComposerDraft(userId: string, key: string, handed?: string) {
     };
   }, [flush]);
 
-  return [text, set] as const;
+  return [draft.text, set, draft.quotes] as const;
 }

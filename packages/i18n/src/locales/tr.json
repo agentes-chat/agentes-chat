@@ -2705,6 +2705,7 @@
     "copyLink": "Bağlantıyı kopyala",
     "linkCopied": "Bağlantı kopyalandı.",
     "reply": "Yanıtla",
+    "quote": "Alıntıla",
     "quoteOf": "{{name}} kişisine yanıt: {{excerpt}}. Mesajı gör",
     "quoteGone": "Orijinal mesaj silindi",
     "quoteNoWords": "Metinsiz mesaj",
