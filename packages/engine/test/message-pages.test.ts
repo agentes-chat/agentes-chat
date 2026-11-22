@@ -76,3 +76,29 @@ test("around a message of a channel the person can't read: refused like any read
   const secret = await createChannel(f.db, f.owner.id, f.org.id, { name: "secreto", visibility: "private" });
   await expect(listMessages(f.db, outsider.id, f.org.id, secret.id, { around: ids[0] as string })).rejects.toThrow();
 });
+
+test("around and after in a thread: only its own replies, even when the target is older than the latest page", async () => {
+  const ids = await said(3);
+  const threadId = ids[0] as string;
+  const replies: string[] = [];
+  for (let index = 0; index < 8; index++) {
+    const msg = await insertMessage(f.db, {
+      orgId: f.org.id,
+      channelId: f.general.id,
+      author: { type: "person", userId: f.owner.id },
+      threadId,
+      body: `reply${index}`,
+      createdAt: new Date(start + 10_000 + index * 1000),
+    });
+    replies.push(msg.id);
+  }
+  expect(await read({ threadId, limit: 2 })).toEqual(["m0", "reply6", "reply7"]);
+  expect(await read({ threadId, around: replies[2], limit: 4 })).toEqual(["reply0", "reply1", "reply2", "reply3"]);
+  expect(await read({ threadId, after: new Date(start + 13_000), limit: 2 })).toEqual(["reply4", "reply5"]);
+  await expect(read({ threadId: ids[1], around: replies[2] })).rejects.toThrow("Message not found");
+  await f.db
+    .update(schema.messages)
+    .set({ deletedAt: new Date() })
+    .where(eq(schema.messages.id, replies[2] as string));
+  await expect(read({ threadId, around: replies[2] })).rejects.toThrow("Message not found");
+});
