@@ -10046,6 +10046,20 @@
       "dialogTitle": "{{name}}을(를) 가진 에이전트",
       "dialogText": "켜진 에이전트는 작업에 필요할 때마다 사용해요."
     },
+    "bulk": {
+      "open": "여러 에이전트에 주기",
+      "title": "여러 에이전트에 스킬 주기",
+      "text": "스킬과 에이전트를 고르세요. 켜기와 끄기는 고른 에이전트마다 각 스킬에 적용돼요.",
+      "skills": "스킬 ({{count}}개 중 {{picked}}개)",
+      "agents": "에이전트 ({{count}}개 중 {{picked}}개)",
+      "shown": "목록의 {{count}}개 모두",
+      "on": "켜기",
+      "off": "끄기",
+      "doneOn": "스킬을 켰어요. 스킬: {{skills}}, 에이전트: {{agents}}.",
+      "doneOff": "스킬을 껐어요. 스킬: {{skills}}, 에이전트: {{agents}}.",
+      "checkAll": "모두 선택",
+      "uncheckAll": "모두 해제"
+    },
     "updated": "{{when}} 업데이트됨",
     "source": {
       "github": "GitHub",
@@ -10568,6 +10582,7 @@
     "pc": "/pc",
     "pcText": "{{name}}의 PC에서 실행",
     "pcInsert": "PC에서 실행: ",
+    "skillInsert": "{{name}} 스킬을 사용해 줘: ",
     "format": {
       "toolbar": "서식",
       "bold": "굵게",
@@ -11802,6 +11817,10 @@
     "levelOf": "{{name}}의 수준",
     "cell": "{{resource}}의 {{agent}}: {{level}}",
     "cellAsks": "{{resource}}의 {{agent}}: {{level}}, 민감한 작업은 승인을 요청해요",
+    "allAgents": "모든 에이전트",
+    "allMixed": "혼합",
+    "allCell": "{{resource}}의 모든 에이전트: {{level}}. 열어서 모두에게 적용할 수준을 고르세요.",
+    "allDone": "{{resource}}: 목록의 모든 에이전트를 {{level}}(으)로 바꿨어요.",
     "asksList": "승인 요청: {{tools}}",
     "asksMore_other": "외 {{count}}개",
     "asksLegend": "승인 요청",

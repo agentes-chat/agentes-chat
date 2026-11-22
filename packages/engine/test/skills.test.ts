@@ -184,8 +184,17 @@ describe("SKILL.md", () => {
     });
     expect(s.body.startsWith("# Relatório semanal")).toBe(true);
     expect(() => parseSkillMarkdown("# no frontmatter")).toThrow(ValidationError);
-    expect(() => parseSkillMarkdown("---\nname: Relatorio Semanal\ndescription: x\n---\nbody")).toThrow("kebab-case");
-    expect(() => parseSkillMarkdown(`---\nname: ok\ndescription: ${"x".repeat(1025)}\n---\nbody`)).toThrow("1024");
+    // A name written for another agent is made kebab-case, not refused: capitals, accents, underscores, a prefix.
+    const named = (name: string) => parseSkillMarkdown(`---\nname: ${name}\ndescription: x\n---\nbody`).name;
+    expect(named("Relatório Semanal")).toBe("relatorio-semanal");
+    expect(named("video-obra_ia")).toBe("video-obra-ia");
+    expect(named("kit:brand")).toBe("kit-brand");
+    expect(() => named("___")).toThrow("kebab-case");
+    // A description past the format's 1024 is kept up to 2048.
+    expect(parseSkillMarkdown(`---\nname: ok\ndescription: ${"x".repeat(1084)}\n---\nbody`).description).toHaveLength(
+      1084,
+    );
+    expect(() => parseSkillMarkdown(`---\nname: ok\ndescription: ${"x".repeat(2049)}\n---\nbody`)).toThrow("2048");
     expect(() => parseSkillMarkdown(`---\nname: ${"a".repeat(65)}\ndescription: x\n---\nb`)).toThrow("64");
   });
 
@@ -449,7 +458,7 @@ describe("import", () => {
       "skills-main/logo/SKILL.md": md("logo", "Desenha com o logo da marca."),
       "skills-main/logo/brand.svg": "x".repeat(SKILL_LIMITS.maxBytes),
       "skills-main/good/SKILL.md": md("good", "Funciona."),
-      "skills-main/long/SKILL.md": md("long", "x".repeat(1100)),
+      "skills-main/long/SKILL.md": md("long", "x".repeat(2100)),
     });
     const deps = { ...skillDeps(), fetch: fakeGithub({ archive }).fetch };
     const url = "https://github.com/acme/skills";
@@ -465,8 +474,8 @@ describe("import", () => {
         {
           path: "long",
           code: "skill.invalid_description",
-          message: "description: 1 to 1024 characters",
-          params: { max: 1024 },
+          message: "description: 1 to 2048 characters",
+          params: { max: 2048 },
         },
       ],
     });
@@ -474,6 +483,21 @@ describe("import", () => {
       "long: description",
     );
     expect(await listSkills(f.db, f.owner.id, f.org.id)).toEqual([]);
+  });
+
+  test("a team's library of 133 skills in one folder lists them all and installs the picked ones at once", async () => {
+    f = await setup();
+    const files: Record<string, string> = {};
+    for (let i = 0; i < 133; i++)
+      files[`skills-main/.claude/skills/s${i}/SKILL.md`] = `---\nname: s${i}\ndescription: skill ${i}\n---\nBody ${i}`;
+    const deps = { ...skillDeps(), fetch: fakeGithub({ archive: zip(files) }).fetch };
+    const url = "https://github.com/acme/skills/tree/main/.claude/skills";
+    const listed = await importSkillFromUrl(deps, f.owner.id, f.org.id, url);
+    const paths = "choices" in listed ? listed.choices.map((c) => c.path) : [];
+    expect(paths).toHaveLength(133);
+    const installed = await importPickedSkills(deps, f.owner.id, f.org.id, url, paths);
+    expect(installed).toHaveLength(133);
+    expect(await listSkills(f.db, f.owner.id, f.org.id)).toHaveLength(133);
   });
 
   test("a repository of 40,000 one-file skill folders is refused for holding too many in a moment", async () => {

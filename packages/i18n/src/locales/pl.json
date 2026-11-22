@@ -11268,6 +11268,20 @@
       "dialogTitle": "Agenci z {{name}}",
       "dialogText": "Każdy włączony agent używa jej, gdy tylko zadanie tego wymaga."
     },
+    "bulk": {
+      "open": "Daj wielu",
+      "title": "Daj umiejętności wielu agentom",
+      "text": "Wybierz umiejętności i agentów. Włączenie lub wyłączenie dotyczy każdej umiejętności u każdego wybranego agenta.",
+      "skills": "Umiejętności ({{picked}} z {{count}})",
+      "agents": "Agenci ({{picked}} z {{count}})",
+      "shown": "Wszystkie {{count}} z listy",
+      "on": "Włącz",
+      "off": "Wyłącz",
+      "doneOn": "Umiejętności włączone. Umiejętności: {{skills}}, agenci: {{agents}}.",
+      "doneOff": "Umiejętności wyłączone. Umiejętności: {{skills}}, agenci: {{agents}}.",
+      "checkAll": "Zaznacz wszystkie",
+      "uncheckAll": "Odznacz wszystkie"
+    },
     "updated": "zaktualizowano {{when}}",
     "source": {
       "github": "GitHub",
@@ -11870,6 +11884,7 @@
     "pc": "/pc",
     "pcText": "uruchom na PC agenta {{name}}",
     "pcInsert": "uruchom to na swoim PC: ",
+    "skillInsert": "użyj umiejętności {{name}}: ",
     "format": {
       "toolbar": "Formatowanie",
       "bold": "Pogrubienie",
@@ -13279,6 +13294,10 @@
     "levelOf": "Poziom w {{name}}",
     "cell": "{{agent}} w {{resource}}: {{level}}",
     "cellAsks": "{{agent}} w {{resource}}: {{level}}, wrażliwe akcje proszą o zatwierdzenie",
+    "allAgents": "Wszyscy agenci",
+    "allMixed": "Różne",
+    "allCell": "Wszyscy agenci w {{resource}}: {{level}}. Otwórz, aby wybrać jeden poziom dla wszystkich.",
+    "allDone": "{{resource}}: {{level}} dla wszystkich agentów z listy.",
     "asksList": "Prosi o zatwierdzenie: {{tools}}",
     "asksMore_one": "i jeszcze {{count}}",
     "asksMore_few": "i jeszcze {{count}}",

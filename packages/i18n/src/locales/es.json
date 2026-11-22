@@ -10834,6 +10834,20 @@
       "dialogTitle": "Agentes con {{name}}",
       "dialogText": "Cada agente activado la usa siempre que una tarea lo pida."
     },
+    "bulk": {
+      "open": "Dar a varios",
+      "title": "Dar habilidades a varios agentes",
+      "text": "Elige las habilidades y los agentes. Activar o desactivar vale para cada habilidad en cada agente elegido.",
+      "skills": "Habilidades ({{picked}} de {{count}})",
+      "agents": "Agentes ({{picked}} de {{count}})",
+      "shown": "Las {{count}} de la lista",
+      "on": "Activar",
+      "off": "Desactivar",
+      "doneOn": "Habilidades activadas. Habilidades: {{skills}}, agentes: {{agents}}.",
+      "doneOff": "Habilidades desactivadas. Habilidades: {{skills}}, agentes: {{agents}}.",
+      "checkAll": "Marcar todas",
+      "uncheckAll": "Desmarcar todas"
+    },
     "updated": "actualizada {{when}}",
     "source": {
       "github": "GitHub",
@@ -11395,6 +11409,7 @@
     "pcText": "ejecutar en la PC de {{name}}",
     "pcText_female": "ejecutar en la PC de {{name}}",
     "pcInsert": "ejecuta esto en tu PC: ",
+    "skillInsert": "usa la habilidad {{name}}: ",
     "format": {
       "toolbar": "Formato",
       "bold": "Negrita",
@@ -12719,6 +12734,10 @@
     "levelOf": "Nivel en {{name}}",
     "cell": "{{agent}} en {{resource}}: {{level}}",
     "cellAsks": "{{agent}} en {{resource}}: {{level}}, las acciones sensibles piden aprobación",
+    "allAgents": "Todos los agentes",
+    "allMixed": "Varios",
+    "allCell": "Todos los agentes en {{resource}}: {{level}}. Abre para elegir un nivel para todos.",
+    "allDone": "{{resource}}: {{level}} para todos los agentes de la lista.",
     "asksList": "Pide aprobación: {{tools}}",
     "asksMore_one": "y {{count}} más",
     "asksMore_many": "y {{count}} más",

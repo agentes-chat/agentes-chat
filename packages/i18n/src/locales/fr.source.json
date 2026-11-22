@@ -19699,6 +19699,66 @@
   "scopes.custom_write.description": {
     "value": "Use the write tools. Those marked sensitive always ask for approval."
   },
+  "scopes.telegram_messages_read.label": {
+    "value": "Read messages"
+  },
+  "scopes.telegram_messages_read.description": {
+    "value": "List the bot's chats and read what people wrote to it or where it is."
+  },
+  "scopes.telegram_messages_write.label": {
+    "value": "Send messages"
+  },
+  "scopes.telegram_messages_write.description": {
+    "value": "Send, edit and pin messages and files as the bot. Deleting messages, banning people and invite links ask for approval."
+  },
+  "scopes.x_posts_read.label": {
+    "value": "Read posts"
+  },
+  "scopes.x_posts_read.description": {
+    "value": "Read the account's posts and mentions, posts by id and recent posts by search."
+  },
+  "scopes.x_posts_write.label": {
+    "value": "Post"
+  },
+  "scopes.x_posts_write.description": {
+    "value": "Post on the account, with pictures or a video from the Drive. Deleting a post asks for approval."
+  },
+  "scopes.threads_posts_read.label": {
+    "value": "Read posts"
+  },
+  "scopes.threads_posts_read.description": {
+    "value": "Read the account's posts, their replies, mentions and results."
+  },
+  "scopes.threads_posts_write.label": {
+    "value": "Post and reply"
+  },
+  "scopes.threads_posts_write.description": {
+    "value": "Post with pictures or videos from the Drive, reply and hide replies. Deleting a post asks for approval."
+  },
+  "scopes.meta_ads_ads_read.label": {
+    "value": "Read ads"
+  },
+  "scopes.meta_ads_ads_read.description": {
+    "value": "List ad accounts, campaigns, ad sets and ads, and read their results."
+  },
+  "scopes.meta_ads_ads_write.label": {
+    "value": "Manage ads"
+  },
+  "scopes.meta_ads_ads_write.description": {
+    "value": "Create campaigns, ad sets and ads (always paused), edit and pause them. Turning one on and changing a budget always ask. Archiving and deleting ask."
+  },
+  "scopes.tiktok_videos_read.label": {
+    "value": "Read videos"
+  },
+  "scopes.tiktok_videos_read.description": {
+    "value": "Read the creator's profile, public videos and what they may post."
+  },
+  "scopes.tiktok_videos_write.label": {
+    "value": "Send videos to drafts"
+  },
+  "scopes.tiktok_videos_write.description": {
+    "value": "Send a Drive video to the creator's TikTok drafts, where they finish the post. Each upload asks for approval."
+  },
   "issues.handedBy": {
     "value": "handed by <0/>{{name}}"
   },
@@ -21806,6 +21866,9 @@
   },
   "routines.event.deploy.succeeded": {
     "value": "Deploy finished"
+  },
+  "routines.event.telegram.message": {
+    "value": "Message to the Telegram bot"
   },
   "routines.when.event": {
     "value": "When: {{event}}"
@@ -25421,6 +25484,42 @@
   "skills.agents.dialogText": {
     "value": "Each agent turned on uses it whenever a task calls for it."
   },
+  "skills.bulk.open": {
+    "value": "Give to several"
+  },
+  "skills.bulk.title": {
+    "value": "Give skills to several agents"
+  },
+  "skills.bulk.text": {
+    "value": "Pick the skills and the agents. On or off applies to each skill for each agent picked."
+  },
+  "skills.bulk.skills": {
+    "value": "Skills ({{picked}} of {{count}})"
+  },
+  "skills.bulk.agents": {
+    "value": "Agents ({{picked}} of {{count}})"
+  },
+  "skills.bulk.shown": {
+    "value": "All {{count}} listed"
+  },
+  "skills.bulk.on": {
+    "value": "Turn on"
+  },
+  "skills.bulk.off": {
+    "value": "Turn off"
+  },
+  "skills.bulk.doneOn": {
+    "value": "Skills turned on. Skills: {{skills}}, agents: {{agents}}."
+  },
+  "skills.bulk.doneOff": {
+    "value": "Skills turned off. Skills: {{skills}}, agents: {{agents}}."
+  },
+  "skills.bulk.checkAll": {
+    "value": "Select all"
+  },
+  "skills.bulk.uncheckAll": {
+    "value": "Clear all"
+  },
   "skills.updated": {
     "value": "updated {{when}}"
   },
@@ -26731,6 +26830,9 @@
   },
   "composer.pcInsert": {
     "value": "run this on your PC: "
+  },
+  "composer.skillInsert": {
+    "value": "use the {{name}} skill: "
   },
   "composer.format.toolbar": {
     "value": "Formatting"
@@ -29996,6 +30098,18 @@
   "access.cellAsks": {
     "value": "{{agent}} in {{resource}}: {{level}}, sensitive actions ask for approval"
   },
+  "access.allAgents": {
+    "value": "All agents"
+  },
+  "access.allMixed": {
+    "value": "Mixed"
+  },
+  "access.allCell": {
+    "value": "All agents in {{resource}}: {{level}}. Open to choose one level for all."
+  },
+  "access.allDone": {
+    "value": "{{resource}}: {{level}} for every agent listed."
+  },
   "access.asksList": {
     "value": "Asks for approval: {{tools}}"
   },
@@ -32457,6 +32571,9 @@
   "connectors.can.meta_ads.2": {
     "value": "Create and adjust campaigns"
   },
+  "connectors.can.meta_ads.ask": {
+    "value": "Turning ads on and changing budgets always ask for your approval"
+  },
   "connectors.can.google_docs.1": {
     "value": "Search and read documents"
   },
@@ -32663,6 +32780,42 @@
   },
   "connectors.can.database.3": {
     "value": "Never changes anything"
+  },
+  "connectors.can.telegram.1": {
+    "value": "Read what people write to the bot"
+  },
+  "connectors.can.telegram.2": {
+    "value": "Send messages and files as the bot"
+  },
+  "connectors.can.telegram.ask": {
+    "value": "Deleting, banning and invite links always ask for your approval"
+  },
+  "connectors.can.x.1": {
+    "value": "Read the account's posts and mentions"
+  },
+  "connectors.can.x.2": {
+    "value": "Post with pictures or a video"
+  },
+  "connectors.can.x.ask": {
+    "value": "Deleting posts always asks for your approval"
+  },
+  "connectors.can.threads.1": {
+    "value": "See posts, replies and results"
+  },
+  "connectors.can.threads.2": {
+    "value": "Post with pictures or videos and reply"
+  },
+  "connectors.can.threads.ask": {
+    "value": "Deleting posts always asks for your approval"
+  },
+  "connectors.can.tiktok.1": {
+    "value": "See the profile and videos"
+  },
+  "connectors.can.tiktok.2": {
+    "value": "Send videos to your drafts to finish in TikTok"
+  },
+  "connectors.can.tiktok.ask": {
+    "value": "Each upload always asks for your approval"
   },
   "connectors.connectedList": {
     "value": "Connected"
@@ -33074,6 +33227,21 @@
   },
   "connectors.descriptions.whatsapp": {
     "value": "WhatsApp Business messages and templates."
+  },
+  "connectors.descriptions.telegram": {
+    "value": "A Telegram bot of yours: its chats, groups and channels."
+  },
+  "connectors.descriptions.x": {
+    "value": "Posts on your X account: write, read mentions and search."
+  },
+  "connectors.descriptions.threads": {
+    "value": "Posts and replies on your Threads account."
+  },
+  "connectors.descriptions.tiktok": {
+    "value": "Your TikTok profile and videos, and videos sent to your drafts."
+  },
+  "connectors.needsApp": {
+    "value": "This server has no {{name}} app yet: whoever runs it registers one with {{name}} and sets its variables (docs/social-apps-checklist.md)."
   },
   "toolNames.order": {
     "value": "modifiers-first"
@@ -35544,6 +35712,102 @@
   "toolNames.label.offer_feedback": {
     "value": "Offer to report a problem"
   },
+  "toolNames.label.list_chats": {
+    "value": "List chats"
+  },
+  "toolNames.label.read_messages": {
+    "value": "Read messages"
+  },
+  "toolNames.label.get_chat": {
+    "value": "See chat"
+  },
+  "toolNames.label.send_file": {
+    "value": "Send file"
+  },
+  "toolNames.label.edit_message": {
+    "value": "Edit message"
+  },
+  "toolNames.label.pin_message": {
+    "value": "Pin message"
+  },
+  "toolNames.label.ban_member": {
+    "value": "Ban member"
+  },
+  "toolNames.label.create_invite_link": {
+    "value": "Create invite link"
+  },
+  "toolNames.label.get_my_posts": {
+    "value": "See my posts"
+  },
+  "toolNames.label.get_mentions": {
+    "value": "See mentions"
+  },
+  "toolNames.label.search_recent": {
+    "value": "Search recent posts"
+  },
+  "toolNames.label.get_replies": {
+    "value": "See replies"
+  },
+  "toolNames.label.get_insights": {
+    "value": "See results"
+  },
+  "toolNames.label.reply": {
+    "value": "Reply"
+  },
+  "toolNames.label.hide_reply": {
+    "value": "Hide reply"
+  },
+  "toolNames.label.list_ad_accounts": {
+    "value": "List ad accounts"
+  },
+  "toolNames.label.list_campaigns": {
+    "value": "List campaigns"
+  },
+  "toolNames.label.list_ad_sets": {
+    "value": "List ad sets"
+  },
+  "toolNames.label.list_ads": {
+    "value": "List ads"
+  },
+  "toolNames.label.create_campaign": {
+    "value": "Create campaign"
+  },
+  "toolNames.label.create_ad_set": {
+    "value": "Create ad set"
+  },
+  "toolNames.label.create_ad": {
+    "value": "Create ad"
+  },
+  "toolNames.label.update": {
+    "value": "Update"
+  },
+  "toolNames.label.pause": {
+    "value": "Pause"
+  },
+  "toolNames.label.activate": {
+    "value": "Turn on"
+  },
+  "toolNames.label.set_budget": {
+    "value": "Set budget"
+  },
+  "toolNames.label.archive": {
+    "value": "Archive"
+  },
+  "toolNames.label.delete": {
+    "value": "Delete"
+  },
+  "toolNames.label.list_videos": {
+    "value": "List videos"
+  },
+  "toolNames.label.get_creator_info": {
+    "value": "See posting options"
+  },
+  "toolNames.label.get_post_status": {
+    "value": "See upload status"
+  },
+  "toolNames.label.upload_draft": {
+    "value": "Send to drafts"
+  },
   "toolReview.title": {
     "value": "Review what the agent can do on its own"
   },
@@ -36062,6 +36326,15 @@
   },
   "connectFlow.done.ok": {
     "value": "Done"
+  },
+  "connectFlow.telegram.token": {
+    "value": "Bot token"
+  },
+  "connectFlow.telegram.steps": {
+    "value": "In Telegram, open @BotFather, send /newbot, pick a name and a username that ends in “bot”, then paste the token it gives you here. To read a group, add the bot to it. To post in a channel, make it an admin there."
+  },
+  "connectFlow.x.consent": {
+    "value": "Agents you give X post on this account by themselves. Deleting a post asks first, and each agent's page narrows what it may do. An X account works in one workspace at a time."
   },
   "database.name": {
     "value": "Database"
@@ -38225,6 +38498,12 @@
   },
   "errors.artifact.notInDrive": {
     "value": "This lives only in its conversation, so it can't be shared."
+  },
+  "errors.artifact.viewOnly": {
+    "value": "You can view this file but not change it. Ask whoever made it for edit access."
+  },
+  "errors.artifact.accessInvalid": {
+    "value": "This access couldn't be saved. Check who sees and who edits it and try again."
   },
   "errors.drive.folderIntoItself": {
     "value": "A folder can't go inside itself or a folder inside it."
@@ -47816,6 +48095,12 @@
   "billing.ownBucket": {
     "value": "On your own bucket, with no limit from us"
   },
+  "billing.connectors": {
+    "value": "X this month"
+  },
+  "billing.shareUsed": {
+    "value": "{{share}} used"
+  },
   "referrals.open": {
     "value": "Refer and earn"
   },
@@ -50607,6 +50892,63 @@
   "share.someOnlyHere": {
     "value": "Some of these links open only for who already sees the file."
   },
+  "share.level.none": {
+    "value": "No access"
+  },
+  "share.level.view": {
+    "value": "View"
+  },
+  "share.level.edit": {
+    "value": "Edit"
+  },
+  "share.levelOf": {
+    "value": "What {{name}} can do"
+  },
+  "share.madeIt": {
+    "value": "Made the file"
+  },
+  "share.placeText": {
+    "value": "Where the file lives"
+  },
+  "share.everyoneText": {
+    "value": "Anyone in this workspace"
+  },
+  "share.everyoneTextPersonal": {
+    "value": "Anyone here"
+  },
+  "share.agentsAll": {
+    "value": "All agents"
+  },
+  "share.agentsAllText": {
+    "value": "Any agent in the workspace"
+  },
+  "share.agentsHere": {
+    "value": "Agents in this conversation"
+  },
+  "share.agentsHereText": {
+    "value": "The agents where the file lives"
+  },
+  "share.addAll": {
+    "value": "Add a person, role or agent"
+  },
+  "share.addAllPersonal": {
+    "value": "Add a person or agent"
+  },
+  "share.addAllSearch": {
+    "value": "Search people, roles and agents"
+  },
+  "share.addAllSearchPersonal": {
+    "value": "Search people and agents"
+  },
+  "share.groupAgents": {
+    "value": "Agents"
+  },
+  "share.addRow": {
+    "value": "Add"
+  },
+  "share.saved": {
+    "value": "Access saved."
+  },
   "linkErrors.signIn.title": {
     "value": "Sign in to open this link"
   },
@@ -52253,6 +52595,15 @@
   },
   "live.shell.status.closing": {
     "value": "The workspace is being deleted. Its files can only be read."
+  },
+  "live.shell.requestEdit": {
+    "value": "Ask to edit"
+  },
+  "live.shell.requestEditText": {
+    "value": "can you give me edit access to this file?"
+  },
+  "live.shell.requestEditAnyone": {
+    "value": "Can someone give me edit access to this file?"
   },
   "live.shell.present": {
     "value": "Present"
@@ -55082,305 +55433,5 @@
   },
   "live.sheet.fn.YEARFRAC": {
     "value": "The share of a year between two dates"
-  },
-  "errors.artifact.viewOnly": {
-    "value": "You can view this file but not change it. Ask whoever made it for edit access."
-  },
-  "errors.artifact.accessInvalid": {
-    "value": "This access couldn't be saved. Check who sees and who edits it and try again."
-  },
-  "share.level.none": {
-    "value": "No access"
-  },
-  "share.level.view": {
-    "value": "View"
-  },
-  "share.level.edit": {
-    "value": "Edit"
-  },
-  "share.levelOf": {
-    "value": "What {{name}} can do"
-  },
-  "share.madeIt": {
-    "value": "Made the file"
-  },
-  "share.placeText": {
-    "value": "Where the file lives"
-  },
-  "share.everyoneText": {
-    "value": "Anyone in this workspace"
-  },
-  "share.everyoneTextPersonal": {
-    "value": "Anyone here"
-  },
-  "share.agentsAll": {
-    "value": "All agents"
-  },
-  "share.agentsAllText": {
-    "value": "Any agent in the workspace"
-  },
-  "share.agentsHere": {
-    "value": "Agents in this conversation"
-  },
-  "share.agentsHereText": {
-    "value": "The agents where the file lives"
-  },
-  "share.addAll": {
-    "value": "Add a person, role or agent"
-  },
-  "share.addAllPersonal": {
-    "value": "Add a person or agent"
-  },
-  "share.addAllSearch": {
-    "value": "Search people, roles and agents"
-  },
-  "share.addAllSearchPersonal": {
-    "value": "Search people and agents"
-  },
-  "share.groupAgents": {
-    "value": "Agents"
-  },
-  "share.addRow": {
-    "value": "Add"
-  },
-  "share.saved": {
-    "value": "Access saved."
-  },
-  "live.shell.requestEdit": {
-    "value": "Ask to edit"
-  },
-  "live.shell.requestEditText": {
-    "value": "can you give me edit access to this file?"
-  },
-  "live.shell.requestEditAnyone": {
-    "value": "Can someone give me edit access to this file?"
-  },
-  "scopes.telegram_messages_read.label": {
-    "value": "Read messages"
-  },
-  "scopes.telegram_messages_read.description": {
-    "value": "List the bot's chats and read what people wrote to it or where it is."
-  },
-  "scopes.telegram_messages_write.label": {
-    "value": "Send messages"
-  },
-  "scopes.telegram_messages_write.description": {
-    "value": "Send, edit and pin messages and files as the bot. Deleting messages, banning people and invite links ask for approval."
-  },
-  "connectors.descriptions.telegram": {
-    "value": "A Telegram bot of yours: its chats, groups and channels."
-  },
-  "connectors.can.telegram.1": {
-    "value": "Read what people write to the bot"
-  },
-  "connectors.can.telegram.2": {
-    "value": "Send messages and files as the bot"
-  },
-  "connectors.can.telegram.ask": {
-    "value": "Deleting, banning and invite links always ask for your approval"
-  },
-  "toolNames.label.list_chats": {
-    "value": "List chats"
-  },
-  "toolNames.label.read_messages": {
-    "value": "Read messages"
-  },
-  "toolNames.label.get_chat": {
-    "value": "See chat"
-  },
-  "toolNames.label.send_file": {
-    "value": "Send file"
-  },
-  "toolNames.label.edit_message": {
-    "value": "Edit message"
-  },
-  "toolNames.label.pin_message": {
-    "value": "Pin message"
-  },
-  "toolNames.label.ban_member": {
-    "value": "Ban member"
-  },
-  "toolNames.label.create_invite_link": {
-    "value": "Create invite link"
-  },
-  "routines.event.telegram.message": {
-    "value": "Message to the Telegram bot"
-  },
-  "connectFlow.telegram.token": {
-    "value": "Bot token"
-  },
-  "connectFlow.telegram.steps": {
-    "value": "In Telegram, open @BotFather, send /newbot, pick a name and a username that ends in “bot”, then paste the token it gives you here. To read a group, add the bot to it. To post in a channel, make it an admin there."
-  },
-  "scopes.x_posts_read.label": {
-    "value": "Read posts"
-  },
-  "scopes.x_posts_read.description": {
-    "value": "Read the account's posts and mentions, posts by id and recent posts by search."
-  },
-  "scopes.x_posts_write.label": {
-    "value": "Post"
-  },
-  "scopes.x_posts_write.description": {
-    "value": "Post on the account, with pictures or a video from the Drive. Deleting a post asks for approval."
-  },
-  "connectors.descriptions.x": {
-    "value": "Posts on your X account: write, read mentions and search."
-  },
-  "connectors.can.x.1": {
-    "value": "Read the account's posts and mentions"
-  },
-  "connectors.can.x.2": {
-    "value": "Post with pictures or a video"
-  },
-  "connectors.can.x.ask": {
-    "value": "Deleting posts always asks for your approval"
-  },
-  "toolNames.label.get_my_posts": {
-    "value": "See my posts"
-  },
-  "toolNames.label.get_mentions": {
-    "value": "See mentions"
-  },
-  "toolNames.label.search_recent": {
-    "value": "Search recent posts"
-  },
-  "connectFlow.x.consent": {
-    "value": "Agents you give X post on this account by themselves. Deleting a post asks first, and each agent's page narrows what it may do. An X account works in one workspace at a time."
-  },
-  "connectors.needsApp": {
-    "value": "This server has no {{name}} app yet: whoever runs it registers one with {{name}} and sets its variables (docs/social-apps-checklist.md)."
-  },
-  "scopes.threads_posts_read.label": {
-    "value": "Read posts"
-  },
-  "scopes.threads_posts_read.description": {
-    "value": "Read the account's posts, their replies, mentions and results."
-  },
-  "scopes.threads_posts_write.label": {
-    "value": "Post and reply"
-  },
-  "scopes.threads_posts_write.description": {
-    "value": "Post with pictures or videos from the Drive, reply and hide replies. Deleting a post asks for approval."
-  },
-  "scopes.meta_ads_ads_read.label": {
-    "value": "Read ads"
-  },
-  "scopes.meta_ads_ads_read.description": {
-    "value": "List ad accounts, campaigns, ad sets and ads, and read their results."
-  },
-  "scopes.meta_ads_ads_write.label": {
-    "value": "Manage ads"
-  },
-  "scopes.meta_ads_ads_write.description": {
-    "value": "Create campaigns, ad sets and ads (always paused), edit and pause them. Turning one on and changing a budget always ask. Archiving and deleting ask."
-  },
-  "scopes.tiktok_videos_read.label": {
-    "value": "Read videos"
-  },
-  "scopes.tiktok_videos_read.description": {
-    "value": "Read the creator's profile, public videos and what they may post."
-  },
-  "scopes.tiktok_videos_write.label": {
-    "value": "Send videos to drafts"
-  },
-  "scopes.tiktok_videos_write.description": {
-    "value": "Send a Drive video to the creator's TikTok drafts, where they finish the post. Each upload asks for approval."
-  },
-  "connectors.descriptions.threads": {
-    "value": "Posts and replies on your Threads account."
-  },
-  "connectors.descriptions.tiktok": {
-    "value": "Your TikTok profile and videos, and videos sent to your drafts."
-  },
-  "connectors.can.threads.1": {
-    "value": "See posts, replies and results"
-  },
-  "connectors.can.threads.2": {
-    "value": "Post with pictures or videos and reply"
-  },
-  "connectors.can.threads.ask": {
-    "value": "Deleting posts always asks for your approval"
-  },
-  "connectors.can.tiktok.1": {
-    "value": "See the profile and videos"
-  },
-  "connectors.can.tiktok.2": {
-    "value": "Send videos to your drafts to finish in TikTok"
-  },
-  "connectors.can.tiktok.ask": {
-    "value": "Each upload always asks for your approval"
-  },
-  "toolNames.label.get_replies": {
-    "value": "See replies"
-  },
-  "toolNames.label.get_insights": {
-    "value": "See results"
-  },
-  "toolNames.label.reply": {
-    "value": "Reply"
-  },
-  "toolNames.label.hide_reply": {
-    "value": "Hide reply"
-  },
-  "toolNames.label.list_ad_accounts": {
-    "value": "List ad accounts"
-  },
-  "toolNames.label.list_campaigns": {
-    "value": "List campaigns"
-  },
-  "toolNames.label.list_ad_sets": {
-    "value": "List ad sets"
-  },
-  "toolNames.label.list_ads": {
-    "value": "List ads"
-  },
-  "toolNames.label.create_campaign": {
-    "value": "Create campaign"
-  },
-  "toolNames.label.create_ad_set": {
-    "value": "Create ad set"
-  },
-  "toolNames.label.create_ad": {
-    "value": "Create ad"
-  },
-  "toolNames.label.update": {
-    "value": "Update"
-  },
-  "toolNames.label.pause": {
-    "value": "Pause"
-  },
-  "toolNames.label.activate": {
-    "value": "Turn on"
-  },
-  "toolNames.label.set_budget": {
-    "value": "Set budget"
-  },
-  "toolNames.label.archive": {
-    "value": "Archive"
-  },
-  "toolNames.label.delete": {
-    "value": "Delete"
-  },
-  "toolNames.label.list_videos": {
-    "value": "List videos"
-  },
-  "toolNames.label.get_creator_info": {
-    "value": "See posting options"
-  },
-  "toolNames.label.get_post_status": {
-    "value": "See upload status"
-  },
-  "toolNames.label.upload_draft": {
-    "value": "Send to drafts"
-  },
-  "connectors.can.meta_ads.ask": {
-    "value": "Turning ads on and changing budgets always ask for your approval"
-  },
-  "billing.connectors": {
-    "value": "X this month"
-  },
-  "billing.shareUsed": {
-    "value": "{{share}} used"
   }
 }

@@ -10900,6 +10900,22 @@ export const en = {
       dialogTitle: "Agents with {{name}}",
       dialogText: "Each agent turned on uses it whenever a task calls for it.",
     },
+    /** Skills › "Give to several": many skills turned on or off for many agents in one go. */
+    bulk: {
+      open: "Give to several",
+      title: "Give skills to several agents",
+      text: "Pick the skills and the agents. On or off applies to each skill for each agent picked.",
+      skills: "Skills ({{picked}} of {{count}})",
+      agents: "Agents ({{picked}} of {{count}})",
+      shown: "All {{count}} listed",
+      on: "Turn on",
+      off: "Turn off",
+      doneOn: "Skills turned on. Skills: {{skills}}, agents: {{agents}}.",
+      doneOff: "Skills turned off. Skills: {{skills}}, agents: {{agents}}.",
+      /** An agent's skills: every skill shown checked, or none. */
+      checkAll: "Select all",
+      uncheckAll: "Clear all",
+    },
     updated: "updated {{when}}",
     source: { github: "GitHub", url: "Link", upload: "Uploaded", manual: "Made here" },
     defaultChip: "On for new agents",
@@ -11478,6 +11494,8 @@ export const en = {
     pc: "/pc",
     pcText: "run on {{name}}'s PC",
     pcInsert: "run this on your PC: ",
+    /** Written in the box when a skill is picked from the "/" commands; {{name}} is the skill's kebab-case name. */
+    skillInsert: "use the {{name}} skill: ",
     format: {
       toolbar: "Formatting",
       bold: "Bold",
@@ -12761,6 +12779,12 @@ export const en = {
     levelOf: "Level in {{name}}",
     cell: "{{agent}} in {{resource}}: {{level}}",
     cellAsks: "{{agent}} in {{resource}}: {{level}}, sensitive actions ask for approval",
+    /** The matrix's first row: one column's level for every agent listed. */
+    allAgents: "All agents",
+    /** The agents hold different levels of this column. */
+    allMixed: "Mixed",
+    allCell: "All agents in {{resource}}: {{level}}. Open to choose one level for all.",
+    allDone: "{{resource}}: {{level}} for every agent listed.",
     /** What asks at this level, in one line: the actions, comma-separated. */
     asksList: "Asks for approval: {{tools}}",
     asksMore_one: "and {{count}} more",

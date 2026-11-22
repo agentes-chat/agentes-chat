@@ -10487,6 +10487,20 @@
       "dialogTitle": "Agenten mit {{name}}",
       "dialogText": "Jeder eingeschaltete Agent nutzt ihn, wann immer eine Aufgabe ihn braucht."
     },
+    "bulk": {
+      "open": "An mehrere geben",
+      "title": "Skills an mehrere Agenten geben",
+      "text": "Wähle die Skills und die Agenten. Ein oder aus gilt für jeden Skill bei jedem gewählten Agenten.",
+      "skills": "Skills ({{picked}} von {{count}})",
+      "agents": "Agenten ({{picked}} von {{count}})",
+      "shown": "Alle {{count}} der Liste",
+      "on": "Einschalten",
+      "off": "Ausschalten",
+      "doneOn": "Skills eingeschaltet. Skills: {{skills}}, Agenten: {{agents}}.",
+      "doneOff": "Skills ausgeschaltet. Skills: {{skills}}, Agenten: {{agents}}.",
+      "checkAll": "Alle auswählen",
+      "uncheckAll": "Alle abwählen"
+    },
     "updated": "aktualisiert {{when}}",
     "source": {
       "github": "GitHub",
@@ -11029,6 +11043,7 @@
     "pc": "/pc",
     "pcText": "auf dem PC von {{name}} ausführen",
     "pcInsert": "führ das auf deinem PC aus: ",
+    "skillInsert": "nutze den Skill {{name}}: ",
     "format": {
       "toolbar": "Formatierung",
       "bold": "Fett",
@@ -12322,6 +12337,10 @@
     "levelOf": "Stufe in {{name}}",
     "cell": "{{agent}} in {{resource}}: {{level}}",
     "cellAsks": "{{agent}} in {{resource}}: {{level}}, sensible Aktionen fragen nach einer Freigabe",
+    "allAgents": "Alle Agenten",
+    "allMixed": "Gemischt",
+    "allCell": "Alle Agenten in {{resource}}: {{level}}. Öffnen, um eine Stufe für alle zu wählen.",
+    "allDone": "{{resource}}: {{level}} für alle Agenten der Liste.",
     "asksList": "Fragt nach einer Freigabe: {{tools}}",
     "asksMore_one": "und {{count}} weiteres",
     "asksMore_other": "und {{count}} weitere",

@@ -10095,6 +10095,20 @@
       "dialogTitle": "拥有 {{name}} 的智能体",
       "dialogText": "每个开启的智能体都会在任务需要时使用它。"
     },
+    "bulk": {
+      "open": "批量分配",
+      "title": "把技能分配给多个智能体",
+      "text": "选择技能和智能体。开启或关闭会应用到所选每个智能体的每个技能。",
+      "skills": "技能（已选 {{picked}} / {{count}}）",
+      "agents": "智能体（已选 {{picked}} / {{count}}）",
+      "shown": "列表中的全部 {{count}} 个",
+      "on": "开启",
+      "off": "关闭",
+      "doneOn": "技能已开启。技能：{{skills}}，智能体：{{agents}}。",
+      "doneOff": "技能已关闭。技能：{{skills}}，智能体：{{agents}}。",
+      "checkAll": "全选",
+      "uncheckAll": "全部取消"
+    },
     "updated": "{{when}}更新",
     "source": {
       "github": "GitHub",
@@ -10645,6 +10659,7 @@
     "pcText": "在 {{name}} 的电脑上运行",
     "pcText_female": "在 {{name}} 的电脑上运行",
     "pcInsert": "在你的电脑上运行：",
+    "skillInsert": "使用 {{name}} 技能：",
     "format": {
       "toolbar": "格式",
       "bold": "粗体",
@@ -11881,6 +11896,10 @@
     "levelOf": "在 {{name}} 中的级别",
     "cell": "{{agent}} 在 {{resource}}：{{level}}",
     "cellAsks": "{{agent}} 在 {{resource}}：{{level}}，敏感操作需要审批",
+    "allAgents": "所有智能体",
+    "allMixed": "不一致",
+    "allCell": "{{resource}} 中的所有智能体：{{level}}。打开可为全部选择同一级别。",
+    "allDone": "{{resource}}：列表中的所有智能体均为{{level}}。",
     "asksList": "需要审批：{{tools}}",
     "asksMore_other": "等另外 {{count}} 项",
     "asksLegend": "需要审批",

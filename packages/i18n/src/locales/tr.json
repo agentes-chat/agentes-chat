@@ -10425,6 +10425,20 @@
       "dialogTitle": "{{name}} olan ajanlar",
       "dialogText": "Açık olan her ajan, bir görev gerektirdiğinde onu kullanır."
     },
+    "bulk": {
+      "open": "Birkaçına ver",
+      "title": "Becerileri birkaç ajana ver",
+      "text": "Becerileri ve ajanları seçin. Açmak veya kapatmak, seçilen her ajandaki her beceri için geçerlidir.",
+      "skills": "Beceriler ({{picked}} / {{count}})",
+      "agents": "Ajanlar ({{picked}} / {{count}})",
+      "shown": "Listedeki {{count}} becerinin tümü",
+      "on": "Aç",
+      "off": "Kapat",
+      "doneOn": "Beceriler açıldı. Beceriler: {{skills}}, ajanlar: {{agents}}.",
+      "doneOff": "Beceriler kapatıldı. Beceriler: {{skills}}, ajanlar: {{agents}}.",
+      "checkAll": "Tümünü seç",
+      "uncheckAll": "Tümünü kaldır"
+    },
     "updated": "{{when}} güncellendi",
     "source": {
       "github": "GitHub",
@@ -10965,6 +10979,7 @@
     "pc": "/pc",
     "pcText": "{{name}} bilgisayarında çalıştır",
     "pcInsert": "bunu bilgisayarında çalıştır: ",
+    "skillInsert": "{{name}} becerisini kullan: ",
     "format": {
       "toolbar": "Biçimlendirme",
       "bold": "Kalın",
@@ -12255,6 +12270,10 @@
     "levelOf": "{{name}} içindeki düzey",
     "cell": "{{agent}}, {{resource}} içinde: {{level}}",
     "cellAsks": "{{agent}}, {{resource}} içinde: {{level}}, hassas işlemler onay ister",
+    "allAgents": "Tüm ajanlar",
+    "allMixed": "Karışık",
+    "allCell": "{{resource}} içinde tüm ajanlar: {{level}}. Herkes için tek bir düzey seçmek üzere açın.",
+    "allDone": "{{resource}}: listedeki tüm ajanlar için {{level}}.",
     "asksList": "Onay ister: {{tools}}",
     "asksMore_one": "ve {{count}} tane daha",
     "asksMore_other": "ve {{count}} tane daha",

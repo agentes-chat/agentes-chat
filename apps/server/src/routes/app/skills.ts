@@ -16,7 +16,9 @@ import {
   reopenSkillUpdate,
   restoreSkill,
   revertSkillChange,
+  SKILL_DESCRIPTION_MAX,
   SKILL_LIMITS,
+  SKILL_SEARCH,
   type SkillDeps,
   saveSkill,
   setAgentSkills,
@@ -295,7 +297,7 @@ export function skillRoutes(deps: AppDeps) {
             }),
             z.object({
               name: z.string().max(64),
-              description: z.string().max(1024),
+              description: z.string().max(SKILL_DESCRIPTION_MAX),
               body: z.string().max(200_000),
               defaultForNewAgents: z.boolean().optional(),
               personal: Personal,
@@ -340,7 +342,7 @@ export function skillRoutes(deps: AppDeps) {
               paths: z
                 .array(z.string().max(500))
                 .min(1)
-                .max(100)
+                .max(SKILL_SEARCH.max)
                 .optional()
                 .openapi({ description: "The skills picked among the link's `choices` (their `path`)." }),
               list: z.boolean().optional().openapi({
@@ -470,7 +472,7 @@ export function skillRoutes(deps: AppDeps) {
         params: SkillParams,
         body: body(
           z.object({
-            description: z.string().max(1024).optional(),
+            description: z.string().max(SKILL_DESCRIPTION_MAX).optional(),
             body: z.string().max(200_000).optional(),
             defaultForNewAgents: z.boolean().optional(),
             locked: z.boolean().optional().openapi({ description: "Freeze it: agents can't change it." }),

@@ -150,6 +150,42 @@ describe("Configurações → Skills", () => {
     expect(within(holders).getByText("Atlas")).toBeTruthy();
   });
 
+  test("Liberar em lote: several skills for several agents at once, one call per agent with every skill picked", async () => {
+    const { state, section } = await settings();
+    await click(within(section()).getByRole("button", { name: "Liberar em lote" }));
+    const bulk = screen().getByRole("dialog", { name: "Liberar skills em lote" });
+    // Nothing picked yet: neither button sends.
+    expect((within(bulk).getByRole("button", { name: "Ligar" }) as HTMLButtonElement).disabled).toBe(true);
+    await click(within(bulk).getByRole("checkbox", { name: "Todas as 3 da lista" }));
+    expect(bulk.textContent).toContain("Skills (3 de 3)");
+    await click(within(bulk).getByRole("switch", { name: "Ada" }));
+    await click(within(bulk).getByRole("switch", { name: "Atlas" }));
+    await click(within(bulk).getByRole("button", { name: "Ligar" }));
+    await settle(8);
+    const sent = state.calls
+      .filter((c) => c.method === "skills.setForAgent")
+      .map((c) => [c.args[1], (c.args[2] as { enabled: boolean }[]).map((x) => x.enabled)]);
+    expect(sent).toEqual([
+      [ADA_ID, [true, true, true]],
+      [ATLAS_ID, [true, true, true]],
+    ]);
+    expect(screen().queryByRole("dialog", { name: "Liberar skills em lote" })).toBeNull();
+    expect(screen().getByText("Skills ligadas. Skills: 3, agentes: 2.")).toBeTruthy();
+  });
+
+  test("Liberar em lote: Desligar takes the picked skills away from the picked agents", async () => {
+    const { state, section } = await settings();
+    await click(within(section()).getByRole("button", { name: "Liberar em lote" }));
+    const bulk = screen().getByRole("dialog", { name: "Liberar skills em lote" });
+    await click(within(bulk).getByRole("checkbox", { name: /Revisão de PR/ }));
+    await click(within(bulk).getByRole("switch", { name: "Ada" }));
+    await click(within(bulk).getByRole("button", { name: "Desligar" }));
+    await settle(8);
+    const sent = state.calls.filter((c) => c.method === "skills.setForAgent").map((c) => [c.args[1], c.args[2]]);
+    expect(sent).toEqual([[ADA_ID, [{ skillId: expect.any(String), enabled: false }]]]);
+    expect(screen().getByText("Skills desligadas. Skills: 1, agentes: 1.")).toBeTruthy();
+  });
+
   test("Agentes melhoram as skills sozinhos: the workspace's switch, a skill's own, and Desfazer for an agent's change", async () => {
     const { state, section } = await settings();
     const all = within(section()).getByRole("switch", { name: "Agentes melhoram as skills sozinhos" });
@@ -739,6 +775,32 @@ describe("agent skills", () => {
         .getByRole("checkbox", { name: /Atendimento/ })
         .getAttribute("aria-checked"),
     ).toBe("true");
+  });
+
+  test("Ferramentas e acesso: Marcar todas and Desmarcar todas turn the whole library on or off for Salvar", async () => {
+    const state = seedState();
+    await renderApp(`/org/${ORG_ID}/agents/${ADA_ID}?tab=access`, { api: createFakeApi(state) });
+    await settle(8);
+    const section = () => screen().getByRole("region", { name: "Skills" });
+    await click(within(section()).getByRole("button", { name: "Marcar todas" }));
+    expect(
+      within(section())
+        .getAllByRole("checkbox")
+        .map((c) => c.getAttribute("aria-checked")),
+    ).toEqual(["true", "true", "true"]);
+    expect((within(section()).getByRole("button", { name: "Marcar todas" }) as HTMLButtonElement).disabled).toBe(true);
+    await click(
+      within(screen().getByRole("region", { name: "Alterações não salvas" })).getByRole("button", { name: /^Salvar/ }),
+    );
+    await settle(6);
+    const sent = state.calls.find((c) => c.method === "skills.setForAgent")?.args[2] as { enabled: boolean }[];
+    expect(sent.map((x) => x.enabled)).toEqual([true, true, true]);
+    await click(within(section()).getByRole("button", { name: "Desmarcar todas" }));
+    expect(
+      within(section())
+        .getAllByRole("checkbox")
+        .map((c) => c.getAttribute("aria-checked")),
+    ).toEqual(["false", "false", "false"]);
   });
 
   test("Ferramentas e acesso: past 6 skills a search that only hides pills; a skill switched on stays on", async () => {

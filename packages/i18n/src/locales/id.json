@@ -10106,6 +10106,20 @@
       "dialogTitle": "Agen dengan {{name}}",
       "dialogText": "Setiap agen yang diaktifkan memakainya setiap kali tugas membutuhkannya."
     },
+    "bulk": {
+      "open": "Beri ke beberapa",
+      "title": "Beri skill ke beberapa agen",
+      "text": "Pilih skill dan agennya. Nyalakan atau matikan berlaku untuk setiap skill di setiap agen yang dipilih.",
+      "skills": "Skill ({{picked}} dari {{count}})",
+      "agents": "Agen ({{picked}} dari {{count}})",
+      "shown": "Semua {{count}} di daftar",
+      "on": "Nyalakan",
+      "off": "Matikan",
+      "doneOn": "Skill dinyalakan. Skill: {{skills}}, agen: {{agents}}.",
+      "doneOff": "Skill dimatikan. Skill: {{skills}}, agen: {{agents}}.",
+      "checkAll": "Pilih semua",
+      "uncheckAll": "Hapus semua"
+    },
     "updated": "diperbarui {{when}}",
     "source": {
       "github": "GitHub",
@@ -10630,6 +10644,7 @@
     "pcText": "jalankan di PC {{name}}",
     "pcText_female": "jalankan di PC {{name}}",
     "pcInsert": "jalankan ini di PC-mu: ",
+    "skillInsert": "gunakan skill {{name}}: ",
     "format": {
       "toolbar": "Format",
       "bold": "Tebal",
@@ -11867,6 +11882,10 @@
     "levelOf": "Level di {{name}}",
     "cell": "{{agent}} di {{resource}}: {{level}}",
     "cellAsks": "{{agent}} di {{resource}}: {{level}}, tindakan sensitif meminta persetujuan",
+    "allAgents": "Semua agen",
+    "allMixed": "Campuran",
+    "allCell": "Semua agen di {{resource}}: {{level}}. Buka untuk memilih satu tingkat bagi semuanya.",
+    "allDone": "{{resource}}: {{level}} untuk semua agen di daftar.",
     "asksList": "Meminta persetujuan: {{tools}}",
     "asksMore_other": "dan {{count}} lainnya",
     "asksLegend": "meminta persetujuan",

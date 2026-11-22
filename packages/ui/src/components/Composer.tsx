@@ -92,6 +92,8 @@ export interface ComposerCommand {
   leading?: ReactNode;
   /** Text that replaces the box (e.g. "/relatório "). Defaults to `${label} `. */
   insert?: string;
+  /** Consecutive commands with the same group get a heading ("Skills"). */
+  group?: string;
   onPick?: () => void;
 }
 
@@ -634,6 +636,7 @@ export function Composer({
             label: c.label,
             description: c.description,
             leading: c.leading,
+            group: c.group,
           })) ?? [])
       : [];
   const mentionItems = mentions && token && token.start !== dismissed ? mentions.search(token.query) : [];

@@ -37,6 +37,27 @@ export const SKILL_LIMITS = {
   fileReadChars: 40_000,
 };
 export const SKILL_NAME = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+/**
+ * The longest description a skill keeps. The Agent Skills format says 1024, and skills written for Claude Code run a
+ * little past it (a library of 133 had five between 1028 and 1084): a link's skill is taken with what it says, up to
+ * twice the format's limit, where it was refused whole. An agent writing one (`create_skill`) keeps to 1024.
+ */
+export const SKILL_DESCRIPTION_MAX = 2048;
+
+/**
+ * A `SKILL.md`'s name as the library keeps it: skills written for other agents name themselves with what kebab-case
+ * leaves out (`video-obra_ia`, `kit:brand`, capitals, accents), and each was refused for it. Letters lose their
+ * accents and case, and every run of anything else becomes one hyphen. What is left is checked as before, so a name
+ * with nothing to keep, or past 64, is still refused.
+ */
+export function skillNameFrom(written: string) {
+  return written
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
 
 /** Files the model reads as text. */
 const SHOWABLE: Record<string, string> = {
@@ -118,7 +139,7 @@ function lineFields(yaml: string): Record<string, unknown> {
 
 /**
  * Parses a `SKILL.md`: YAML frontmatter and the Markdown body. `name` and
- * `description` are required (kebab-case ≤ 64; ≤ 1024 characters); other
+ * `description` are required (the name made kebab-case, `skillNameFrom`, ≤ 64; ≤ 2048 characters); other
  * fields are kept as metadata, nested ones included.
  */
 export function parseSkillMarkdown(text: string): ParsedSkill {
@@ -134,7 +155,7 @@ export function parseSkillMarkdown(text: string): ParsedSkill {
   const written = (value: unknown, key: "name" | "description") =>
     (typeof value === "string" ? value : typeof lines[key] === "string" ? (lines[key] as string) : "").trim();
   const parsed = {
-    name: written(name, "name"),
+    name: skillNameFrom(written(name, "name")),
     description: written(description, "description"),
     body: (m[2] ?? "").trim(),
     metadata,
@@ -151,8 +172,10 @@ export function validateSkill(s: { name: string; description: string; body: stri
       { max: 64 },
     );
   }
-  if (!s.description || s.description.length > 1024)
-    throw new ValidationError("description: 1 to 1024 characters", "skill.invalid_description", { max: 1024 });
+  if (!s.description || s.description.length > SKILL_DESCRIPTION_MAX)
+    throw new ValidationError(`description: 1 to ${SKILL_DESCRIPTION_MAX} characters`, "skill.invalid_description", {
+      max: SKILL_DESCRIPTION_MAX,
+    });
   if (s.body.length > SKILL_LIMITS.bodyChars) {
     throw new ValidationError("The skill body is too long", "skill.body_too_long", { max: SKILL_LIMITS.bodyChars });
   }
@@ -892,8 +915,12 @@ const ARCHIVE: GithubFetchOptions = {
   timeoutMs: 60_000,
 };
 
-/** How deep below a link a SKILL.md is looked for, and how many skills one link may hold. */
-const SKILL_SEARCH = { depth: 6, max: 100 };
+/**
+ * How deep below a link a SKILL.md is looked for, and how many skills one link may hold. 500: a team's own library
+ * (a `.claude/skills` folder kept for Claude Code) holds well past a hundred, and each was installed one folder at a
+ * time. The listing reads only each `SKILL.md`, and picks are still inflated one skill at a time.
+ */
+export const SKILL_SEARCH = { depth: 6, max: 500 };
 
 /** A path for a URL: each segment percent-encoded, the slashes kept. */
 export const encodePath = (path: string) => path.split("/").map(encodeURIComponent).join("/");
@@ -1558,7 +1585,7 @@ export async function importPickedSkills(
   };
   const dirs = [...new Set(paths)];
   // Every pick's limits and text are checked before any is saved, by the SKILL.md alone: its files are inflated one
-  // skill at a time, since a small archive can declare the most a skill keeps for each of the 100 it may hold.
+  // skill at a time, since a small archive can declare the most a skill keeps for each of the 500 it may hold.
   const names: string[] = [];
   for (const dir of dirs) {
     if (!link.found.has(dir)) throw new ValidationError(`That link holds no skill at ${dir}`);

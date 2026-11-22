@@ -10052,6 +10052,20 @@
       "dialogTitle": "{{name}} を持つエージェント",
       "dialogText": "オンにしたエージェントは、タスクで必要なときにいつでも使います。"
     },
+    "bulk": {
+      "open": "まとめて付与",
+      "title": "複数のエージェントにスキルを付与",
+      "text": "スキルとエージェントを選んでください。オンとオフは、選んだエージェントそれぞれの各スキルに適用されます。",
+      "skills": "スキル（{{count}}件中{{picked}}件）",
+      "agents": "エージェント（{{count}}件中{{picked}}件）",
+      "shown": "一覧の{{count}}件すべて",
+      "on": "オンにする",
+      "off": "オフにする",
+      "doneOn": "スキルをオンにしました。スキル: {{skills}}、エージェント: {{agents}}。",
+      "doneOff": "スキルをオフにしました。スキル: {{skills}}、エージェント: {{agents}}。",
+      "checkAll": "すべて選択",
+      "uncheckAll": "すべて解除"
+    },
     "updated": "{{when}}に更新",
     "source": {
       "github": "GitHub",
@@ -10574,6 +10588,7 @@
     "pc": "/pc",
     "pcText": "{{name}}のPCで実行",
     "pcInsert": "これをあなたのPCで実行して:",
+    "skillInsert": "{{name}} スキルを使って: ",
     "format": {
       "toolbar": "書式",
       "bold": "太字",
@@ -11808,6 +11823,10 @@
     "levelOf": "{{name}}でのレベル",
     "cell": "{{resource}}での{{agent}}: {{level}}",
     "cellAsks": "{{resource}}での{{agent}}: {{level}}、重要な操作は承認が必要",
+    "allAgents": "すべてのエージェント",
+    "allMixed": "混在",
+    "allCell": "{{resource}} のすべてのエージェント: {{level}}。開いて全員のレベルを選びます。",
+    "allDone": "{{resource}}: 一覧のすべてのエージェントを{{level}}にしました。",
     "asksList": "承認が必要: {{tools}}",
     "asksMore_other": "ほか{{count}}件",
     "asksLegend": "承認が必要",

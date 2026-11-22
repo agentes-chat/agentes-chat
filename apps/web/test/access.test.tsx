@@ -173,9 +173,11 @@ describe("Configurações → Agentes e acesso: the matrix", () => {
     const section = await goAccess(state);
     expect(section.getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Agente", "GitHub"]);
     const rows = section.getAllByRole("rowheader").map((h) => h.textContent ?? "");
-    expect(rows).toHaveLength(2);
-    expect(rows[0]).toContain("Ada · Dev");
-    expect(rows[1]).toContain("Atlas · Ops");
+    // The first row sets a column for every agent listed.
+    expect(rows).toHaveLength(3);
+    expect(rows[0]).toBe("Todos os agentes");
+    expect(rows[1]).toContain("Ada · Dev");
+    expect(rows[2]).toContain("Atlas · Ops");
     await click(section.getByRole("button", { name: "Ada em GitHub: Sem acesso" }));
     await settle(6);
     const puts = () => state.calls.filter((c) => c.method === "access.set");
@@ -201,6 +203,38 @@ describe("Configurações → Agentes e acesso: the matrix", () => {
     expect(section.getByRole("button", { name: "Atlas em GitHub: Sem acesso" })).toBeTruthy();
   });
 
+  test("Todos os agentes: its cell opens the column's levels, and the one picked is saved for every agent, one call each", async () => {
+    const state = seedState();
+    const section = await goAccess(state);
+    // One agent moved first: the row's cell says the agents differ.
+    await click(section.getByRole("button", { name: "Ada em GitHub: Sem acesso" }));
+    await settle(6);
+    const all = section.getByRole("button", { name: /^Todos os agentes em GitHub: Vários/ });
+    expect(all.textContent).toBe("Vários");
+    all.focus();
+    await act(async () => {
+      fireEvent.keyDown(all, { key: "Enter" });
+      fireEvent.keyUp(all, { key: "Enter" });
+    });
+    await settle(2);
+    const menu = screen().getByRole("menu");
+    expect(
+      within(menu)
+        .getAllByRole("menuitem")
+        .map((m) => m.textContent),
+    ).toEqual(["Sem acesso", "Ler", "Ler e escrever"]);
+    const before = state.calls.filter((c) => c.method === "access.set").length;
+    await click(within(menu).getByRole("menuitem", { name: "Ler e escrever" }));
+    await settle(10);
+    const sent = state.calls.filter((c) => c.method === "access.set").slice(before);
+    expect(sent.map((c) => c.args[1])).toEqual([ADA_ID, ATLAS_ID]);
+    expect(sent.map((c) => (c.args[2] as AccessInput).connectors["conn-gh"])).toEqual([true, true]);
+    expect(section.getByRole("button", { name: /^Todos os agentes em GitHub: Ler e escrever/ }).textContent).toBe(
+      "Ler e escrever",
+    );
+    expect(screen().getByText("GitHub: Ler e escrever para todos os agentes da lista.")).toBeTruthy();
+  });
+
   test("an agent's long name and role wrap beside its face, so its levels stay in the table", async () => {
     const state = seedState();
     const atlas = state.agents.find((a) => a.name === "Atlas");
@@ -209,7 +243,7 @@ describe("Configurações → Agentes e acesso: the matrix", () => {
       atlas.role = "Operações de infraestrutura, implantações e plantão de fim de semana";
     }
     const section = await goAccess(state);
-    const head = section.getAllByRole("rowheader")[1]?.querySelector(".level-matrix__agent") as HTMLElement;
+    const head = section.getAllByRole("rowheader")[2]?.querySelector(".level-matrix__agent") as HTMLElement;
     expect(head.classList.contains("ac-iconline")).toBe(true);
     expect(head.textContent).toContain("Atlas Monteiro de Albuquerque Figueiredo · Operações de infraestrutura");
     expect(section.getByRole("button", { name: /^Atlas Monteiro de Albuquerque Figueiredo em GitHub/ })).toBeTruthy();
