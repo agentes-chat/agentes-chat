@@ -158,6 +158,41 @@ describe("web_fetch", () => {
     expect(out.content).toContain("your browser");
   });
 
+  test("with Firecrawl set, its Markdown first; a private address or a private end never reaches the agent", async () => {
+    const scrape =
+      (url: string, markdown: string, statusCode = 200) =>
+      () =>
+        Response.json({ success: true, data: { markdown, metadata: { url, statusCode } } });
+    const routes: Record<string, () => Response> = {};
+    const w = web(routes, { firecrawlUrl: "http://firecrawl.internal.example:3002/" });
+    routes["http://firecrawl.internal.example:3002/v2/scrape"] = scrape(
+      "https://app.example.com/",
+      "# Painel\nFeito em JS",
+    );
+    const ok = await w.run("web_fetch", { url: "https://app.example.com/" });
+    expect(ok.content).toBe("Page: https://app.example.com/\n# Painel\nFeito em JS");
+    expect(ok.data).toMatchObject({ url: "https://app.example.com/" });
+    expect(await w.run("web_fetch", { url: "https://127.0.0.1/" })).toMatchObject({ isError: true });
+    expect(w.asked.filter((u) => u.includes("firecrawl"))).toHaveLength(1);
+    routes["http://firecrawl.internal.example:3002/v2/scrape"] = scrape("https://x.internal.example/", "segredo");
+    routes["https://app.example.com/"] = () =>
+      new Response("<p>Casca</p>", { headers: { "content-type": "text/html" } });
+    expect((await w.run("web_fetch", { url: "https://app.example.com/" })).content).not.toContain("segredo");
+  });
+
+  test("Firecrawl down or blocked: the GET answers", async () => {
+    const w = web(
+      {
+        "http://fc.example/v2/scrape": () => new Response("busy", { status: 503 }),
+        "https://site.example.com/": () => new Response("<p>Texto</p>", { headers: { "content-type": "text/html" } }),
+      },
+      { firecrawlUrl: "http://fc.example" },
+    );
+    expect((await w.run("web_fetch", { url: "https://site.example.com/" })).content).toBe(
+      "Page: https://site.example.com/\nTexto",
+    );
+  });
+
   test("every run may read the web, a routine's included", () => {
     const routine = { kind: "routine", personId: null, brief: null } as const;
     for (const name of ["web_search", "web_fetch"])

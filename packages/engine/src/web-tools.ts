@@ -19,6 +19,8 @@ export const WEB_USAGE_PROVIDER = "web";
  *
  * Search providers, first that answers: Brave (`BRAVE_SEARCH_API_KEY`), SearXNG (`SEARXNG_URL`), the agent's own
  * browser when it may use one (Google, then Bing or DuckDuckGo on a captcha or a block), DuckDuckGo's HTML page.
+ * Fetch asks the operator's Firecrawl first when one is set (`FIRECRAWL_URL`, ADR 0109 addendum of 2026-11-21), so a
+ * page that builds its text in JavaScript reads too, and falls back to the GET.
  */
 export const WEB_SEARCH_TOOL = "web_search";
 export const WEB_FETCH_TOOL = "web_fetch";
@@ -60,6 +62,9 @@ export type BrowserPageReader = (ctx: ToolContext, url: string) => Promise<{ tex
 export interface WebToolDeps {
   braveKey?: string | null;
   searxngUrl?: string | null;
+  /** A Firecrawl server's base URL (Firecrawl Local, self-hosted or Cloud), its `/v2/scrape` read before the GET. */
+  firecrawlUrl?: string | null;
+  firecrawlKey?: string | null;
   browser?: BrowserPageReader | null;
   fetch?: (url: string, init?: RequestInit) => Promise<Response>;
   resolveHost?: ResolveHost;
@@ -79,6 +84,8 @@ export interface WebToolDeps {
 }
 
 const FETCH_TIMEOUT_MS = 10_000;
+/** Firecrawl renders the page, so it gets longer than a GET; the time it is told leaves room for its answer. */
+const FIRECRAWL_TIMEOUT_MS = 30_000;
 const MAX_BYTES = 2 * 1024 * 1024;
 const MAX_PAGE_CHARS = 20_000;
 const MAX_REDIRECTS = 5;
@@ -329,12 +336,61 @@ export function createWebToolSource(deps: WebToolDeps = {}): ToolSource {
         .replace(/^http:\/\//i, "https://");
       const refused = await outboundRefusal(ctx, asked);
       if (refused) return refused;
-      const page = await getPage(asked, ctx);
-      await record(ctx, "fetch");
+      const scraped = deps.firecrawlUrl ? await scrape(asked, ctx) : null;
+      const page = scraped ?? (await getPage(asked, ctx));
+      await record(ctx, scraped ? "firecrawl" : "fetch");
       if (!page.ok) return { content: page.text, isError: true, data: { url: asked } };
       return { content: page.text, data: { url: page.url, status: page.status } };
     },
   };
+
+  /**
+   * The page as Firecrawl renders it, in Markdown. Only a public address is sent and only a page that ended on one
+   * comes back: Firecrawl follows redirects itself and may sit on this server's network. Null whenever it can't help
+   * (down, an error, an empty page, a block): the GET then answers, with its own words for a block.
+   */
+  async function scrape(
+    raw: string,
+    ctx: Pick<ToolContext, "signal">,
+  ): Promise<{ ok: true; text: string; url: string; status: number } | null> {
+    try {
+      const at = await assertPublicHttpsUrl(raw, deps.resolveHost);
+      const res = await http(`${withoutTrailingSlashes(deps.firecrawlUrl ?? "")}/v2/scrape`, {
+        method: "POST",
+        headers: {
+          accept: "application/json",
+          "content-type": "application/json",
+          ...(deps.firecrawlKey ? { authorization: `Bearer ${deps.firecrawlKey}` } : {}),
+        },
+        body: JSON.stringify({
+          url: at.toString(),
+          formats: ["markdown"],
+          onlyMainContent: true,
+          timeout: FIRECRAWL_TIMEOUT_MS - 5_000,
+        }),
+        signal: timeout(ctx.signal, FIRECRAWL_TIMEOUT_MS),
+      });
+      if (!res.ok) {
+        await res.body?.cancel();
+        return null;
+      }
+      const body = JSON.parse(await readCapped(res)) as {
+        success?: unknown;
+        data?: { markdown?: unknown; metadata?: { url?: unknown; statusCode?: unknown } };
+      };
+      const markdown = typeof body.data?.markdown === "string" ? body.data.markdown.trim() : "";
+      const meta = body.data?.metadata ?? {};
+      const status = typeof meta.statusCode === "number" ? meta.statusCode : 200;
+      if (body.success !== true || !markdown || status >= 400 || blockedPage(markdown)) return null;
+      const url =
+        typeof meta.url === "string"
+          ? (await assertPublicHttpsUrl(meta.url, deps.resolveHost)).toString()
+          : at.toString();
+      return { ok: true, status, url, text: `Page: ${url}\n${cutText(markdown, MAX_PAGE_CHARS)}` };
+    } catch {
+      return null;
+    }
+  }
 
   /**
    * One GET through the public-URL guard on every hop, at most `MAX_BYTES`, as text. A redirect's target needs no
@@ -666,8 +722,8 @@ const result = (title: unknown, url: unknown, snippet: unknown): SearchResult =>
   snippet: typeof snippet === "string" ? htmlToText(snippet) : "",
 });
 
-const timeout = (signal?: AbortSignal) =>
-  signal ? AbortSignal.any([signal, AbortSignal.timeout(FETCH_TIMEOUT_MS)]) : AbortSignal.timeout(FETCH_TIMEOUT_MS);
+const timeout = (signal?: AbortSignal, ms = FETCH_TIMEOUT_MS) =>
+  signal ? AbortSignal.any([signal, AbortSignal.timeout(ms)]) : AbortSignal.timeout(ms);
 
 const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
 

@@ -591,6 +591,8 @@ export function buildEngine(o: EngineOptions) {
       createWebToolSource({
         braveKey: config.BRAVE_SEARCH_API_KEY,
         searxngUrl: config.SEARXNG_URL,
+        firecrawlUrl: config.FIRECRAWL_URL,
+        firecrawlKey: config.FIRECRAWL_API_KEY,
         browser: browserTools.readPage,
         resolveHost: o.resolveHost,
         usage: gateway,

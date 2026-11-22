@@ -657,6 +657,19 @@ export const envVars = {
       "Base URL of a SearXNG instance with the JSON format turned on (`search.formats: [html, json]`), optional. Agents' `web_search` uses it when `BRAVE_SEARCH_API_KEY` isn't set. It may be on your own network: only this server calls it.",
     section: "Search",
   },
+  FIRECRAWL_URL: {
+    schema: z.url().optional(),
+    description:
+      "Base URL of a Firecrawl server (https://github.com/firecrawl/firecrawl), optional: Firecrawl Local (`firecrawl-local serve`, http://localhost:3002), a self-hosted one or Firecrawl Cloud (https://api.firecrawl.dev, with `FIRECRAWL_API_KEY`). Agents' `web_fetch` asks it first, so pages that build their text in JavaScript read too, and falls back to its own GET when it fails. It may be on your own network: only public addresses are sent to it. Firecrawl Local hands a page it can't load to Firecrawl Cloud unless that is turned off.",
+    section: "Search",
+  },
+  FIRECRAWL_API_KEY: {
+    schema: z.string().optional(),
+    description:
+      "Key for `FIRECRAWL_URL`, sent as a bearer token, optional: Firecrawl Cloud needs one, Firecrawl Local doesn't.",
+    section: "Search",
+    secret: true,
+  },
   GIPHY_API_KEY: {
     schema: z.string().optional(),
     description:
