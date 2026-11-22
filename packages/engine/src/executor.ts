@@ -201,6 +201,7 @@ import {
   computerWork,
   continuationVerdict,
   decideTurnEnd,
+  HARNESS_META_TOOLS,
   heldNudge,
   heldReplyRead,
   type LearnSignal,
@@ -3460,9 +3461,10 @@ async function executeRunInner(
   let plan: BrainPlan = brainPlan;
   /**
    * What the turn-end judge reads (ADR 0109), filled only when it runs: the run's general means (`turnMeans`, its
-   * computer's own tools on a computer brain) and every call it tried (`triedCalls`). An `untried` nudge names them.
+   * computer's own tools on a computer brain) and every call it tried (`triedCalls`, with fact-anchored middle
+   * snippets when `reply` cites concrete facts from long gateway outputs). An `untried` nudge names them.
    */
-  const evidenceFor = (t: Transcript) => {
+  const evidenceFor = (t: Transcript, reply?: string) => {
     const evidence = { means: [] as string[], tried: [] as string[] };
     let gathering: Promise<typeof evidence> | null = null;
     const read = async () => {
@@ -3480,8 +3482,11 @@ async function executeRunInner(
             .catch(() => [])
         : [];
       evidence.means = [...turnMeans(names, teammates, await isPersonalWorkspace(db, run.orgId)), ...own];
-      // No call executed in this run: no tool step to read.
-      evidence.tried = t.executedCalls ? await triedCalls(db, run, t.harnessTried) : (t.harnessTried ?? []);
+      // Computer brains also record MCP bridge calls in run steps before `takeBridgeResult` updates `executedCalls`.
+      evidence.tried =
+        t.executedCalls || plan.kind !== "model"
+          ? await triedCalls(db, run, t.harnessTried, reply)
+          : (t.harnessTried ?? []);
       return evidence;
     };
     /** Read once: started early beside the turn end's other reads (`prepare`), awaited by the judgment. */
@@ -3535,7 +3540,7 @@ async function executeRunInner(
         runId: run.id,
         request,
         reply: said,
-        ...(await evidenceFor(t).gather()),
+        ...(await evidenceFor(t, said).gather()),
         runKind: "conversation",
         personal: await isPersonalWorkspace(db, run.orgId),
         backgroundWork: await backgroundWorkHere(),
@@ -5825,10 +5830,11 @@ async function executeRunInner(
       // Claude Code's lookups of our deferred tools have no step of their own: ADR 0043's uncached-input query
       // splits turns by them.
       const toolSearches = own.filter((c) => c.name === "ToolSearch").length;
-      if (own.length > 0)
+      const triedOwn = own.filter((c) => !HARNESS_META_TOOLS.has(c.name));
+      if (triedOwn.length > 0)
         transcript.harnessTried = [
           ...(transcript.harnessTried ?? []),
-          ...own.map((c) => callLine(c.name, c.input, c.result)),
+          ...triedOwn.map((c) => callLine(c.name, c.input, c.result)),
           // More than the judge reads (`triedCalls`), so it can tell it how many earlier ones it doesn't see.
         ].slice(-60);
       // Independent writes in parallel (different rows).
@@ -6084,7 +6090,7 @@ async function executeRunInner(
               .from(routineRuns)
               .where(and(eq(routineRuns.id, routineRunId), eq(routineRuns.orgId, run.orgId)))
           : [];
-        const judging = evidenceFor(transcript);
+        const judging = evidenceFor(transcript, record);
         const work = await workDone(transcript);
         const checker = turnEndJudge();
         const decision = await decideTurnEnd({
@@ -6262,7 +6268,7 @@ async function executeRunInner(
             unseen,
           )
         : "";
-      const judging = evidenceFor(t);
+      const judging = evidenceFor(t, text);
       // Help it asked for in this run and stopped waiting on (a person wrote meanwhile): only then a lookup.
       const detachedIds = ((t as { detachedWaits?: { waitId: string }[] }).detachedWaits ?? []).map((d) => d.waitId);
       const openRequest =

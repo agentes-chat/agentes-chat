@@ -952,7 +952,7 @@ export async function buildRunContext(
   const sameConversation = flat ? inChannelRun(sql`r`) : sql`r.thread_root_id = ${run.threadRootId}::uuid`;
   const actionRows = rowsOf<ActionRow>(
     await db.execute(sql`with here_readers as materialized ${channelReadersSql(sql`${run.orgId}::uuid`, sql`${run.channelId}::uuid`)}
-      (select s.data, s.created_at, a.handle, false as elsewhere, c.kind, c.name, r.id as run_id,
+      (select s.data - 'modelContent' as data, s.created_at, a.handle, false as elsewhere, c.kind, c.name, r.id as run_id,
           ${confidentialThreadSql(sql`r.org_id`, sql`r.thread_root_id`)} as confidential
         from agent_run_steps s
         join agent_runs r on r.id = s.run_id
@@ -970,7 +970,7 @@ export async function buildRunContext(
           and r.id <> ${run.id}::uuid and s.kind = 'tool_result'
         order by s.created_at desc limit 40)
       union all
-      (select s.data, s.created_at, null as handle, true as elsewhere, c.kind, c.name, r.id as run_id,
+      (select s.data - 'modelContent' as data, s.created_at, null as handle, true as elsewhere, c.kind, c.name, r.id as run_id,
           ${confidentialThreadSql(sql`r.org_id`, sql`r.thread_root_id`)} as confidential
         from agent_run_steps s
         join agent_runs r on r.id = s.run_id

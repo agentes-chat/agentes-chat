@@ -22,7 +22,7 @@ import type { AgentRun } from "./runs";
 import { isSayNow } from "./say-now";
 import { runStretchOf } from "./stretch";
 import { HAND_OVER_STEP } from "./tools/directory";
-import { neutralizeUntrusted, untrustedBlock } from "./untrusted";
+import { neutralizeUntrusted, stripEnvelopeMarkers, untrustedBlock } from "./untrusted";
 
 /**
  * The continuation controller (ADR 0097): every turn of every run kind that reaches its final answer ends in exactly
@@ -430,7 +430,7 @@ export async function continuationVerdict(
             secret:
               "It asks a person to type or paste a secret into the chat (a password, an API key, a token, a private key), or the work `request` asked it to do can't go on without one only a person has and it hasn't asked for it through a secure request (`tried` has no request_secret call). Not when it only names the key a step it offers would need.",
             unbacked:
-              "Its reply says it made, sent, created, posted, saved or did something (an image, a file, a message or an email sent, a task opened, a change made, 'done', 'here it is') that plainly no call in `tried` did. A command, script or code run in `tried` that would produce it (a render, a conversion, a file written, an upload) did it. Not when `tried` starts with earlier calls not shown (one of those may have done it), nor when the reply only plans, offers or asks, says plainly it couldn't, or reports what a teammate, an earlier turn or `request` says was done.",
+              "Its reply says it made, sent, created, posted, saved or did something (an image, a file, a message or an email sent, a task opened, a change made, 'done', 'here it is') that plainly no call in `tried` did. A command, script or code run in `tried` that would produce it (a render, a conversion, a file written, an upload) did it. Outcomes in `tried` are truncated summaries: reporting or summarizing data returned by a succeeded read, search, query or script call in `tried` is `done`, not `unbacked`. Not when `tried` starts with earlier calls not shown (one of those may have done it), nor when the reply only plans, offers or asks, says plainly it couldn't, or reports what a teammate, an earlier turn or `request` says was done.",
           },
         },
         ...(learn ? { learn: input.personal ? LEARN_QUESTION_PERSONAL : LEARN_QUESTION } : {}),
@@ -502,34 +502,453 @@ const LEARN_QUESTION_PERSONAL = {
   },
 };
 
-/** One tool call as the judge reads it: `name(argument) → outcome`, short. */
-export function callLine(name: string, input: unknown, result?: { content: string; isError?: boolean } | null) {
+/**
+ * Harness tool-discovery meta-calls (e.g. Claude Code's `ToolSearch`, Grok's `search_tool`): they only load tool
+ * schemas and emit empty text results, so listing them in `tried` looks like a failed/empty attempt to the judge.
+ */
+export const HARNESS_META_TOOLS: ReadonlySet<string> = new Set(["ToolSearch", "search_tool"]);
+
+const HARNESS_META_LINE = /^(?:ToolSearch|search_tool)\b/;
+const CALL_ARG_MAX = 120;
+const CALL_OUTCOME_HEAD = 140;
+const CALL_OUTCOME_TAIL = 220;
+const CALL_ANCHORED_HEAD = 100;
+const CALL_ANCHORED_TAIL = 120;
+const CALL_ANCHOR_RADIUS = 100;
+const CALL_ANCHOR_MAX_WINDOWS = 4;
+const CALL_ANCHOR_MAX_WINDOWS_LATEST = 6;
+const CALL_LINE_MAX = 700;
+const CALL_LINE_MAX_LATEST = 1_200;
+const TRIED_MAX_CALLS = 20;
+const TRIED_MAX_TOTAL_CHARS = 8_000;
+const TRIED_OLD_LINE_FLOOR = 240;
+
+/** Formats the primary argument(s) of a tool call for `callLine`, keeping `skill` + `path` + `args` together. */
+function callArg(i: Record<string, unknown>): string | undefined {
+  const argsText = Array.isArray(i.args)
+    ? i.args
+        .filter((a): a is string | number => typeof a === "string" || typeof a === "number")
+        .map((a) => String(a).trim())
+        .filter(Boolean)
+        .join(" ")
+    : "";
+  if (typeof i.skill === "string" && i.skill.trim() !== "") {
+    const target = [i.skill.trim(), typeof i.path === "string" && i.path.trim() !== "" ? i.path.trim() : ""]
+      .filter(Boolean)
+      .join("/");
+    return argsText ? `${target} ${argsText}` : target;
+  }
+  const arg = [
+    "query",
+    "url",
+    "command",
+    "CommandLine",
+    "code",
+    "q",
+    "prompt",
+    "question",
+    "message",
+    "text",
+    "path",
+    "Path",
+    "name",
+  ]
+    .map((k) => i[k])
+    .find((v): v is string => typeof v === "string" && v.trim() !== "");
+  if (arg && argsText && (arg === i.path || arg === i.Path)) return `${arg} ${argsText}`;
+  return arg || argsText || undefined;
+}
+
+/** A verifiable concrete fact extracted from an agent reply to anchor middle-of-output snippets in `tried`. */
+export interface VerifiableFact {
+  kind: "url" | "email" | "handle" | "path" | "number";
+  value: string;
+}
+
+const URL_RE = /https?:\/\/(?:[^\s<>()[\]"'`]|\([^\s<>()[\]"'`]*\))+/gi;
+const EMAIL_RE = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g;
+const HANDLE_RE = /(?<![\p{L}\p{N}_./-])@[\p{L}\p{N}_]{2,32}(?![\p{L}\p{N}_])/gu;
+const PATH_RE =
+  /(?:^|[\s(`"'[])((?:\/|~\/|\.\/|[A-Za-z0-9_.-]+\/)[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)+|[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\.[A-Za-z0-9]{1,8})(?=$|[\s)`"',.;:!?\]])/g;
+const NUMBER_RE = /\b\d[\d.,]*\d\b/g;
+const BARE_YEAR_RE = /^(?:19|20)\d{2}$/;
+const THOUSANDS_RE = /^\d{1,3}(?:[.,]\d{3})+$/;
+
+const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** Removes lone UTF-16 surrogate halves left when slicing a string across an emoji or astral character. */
+const trimLoneSurrogates = (text: string) => text.replace(/^[\uDC00-\uDFFF]+/, "").replace(/[\uD800-\uDBFF]+$/, "");
+
+/** Strips trailing sentence punctuation from a URL while preserving balanced parentheses like `Python_(programming_language)`. */
+function cleanMatchedUrl(raw: string): string {
+  let out = raw.replace(/[.,;:!?\]}]+$/, "");
+  while (out.endsWith(")")) {
+    const opens = (out.match(/\(/g) ?? []).length;
+    const closes = (out.match(/\)/g) ?? []).length;
+    if (closes > opens) out = out.slice(0, -1).replace(/[.,;:!?\]}]+$/, "");
+    else break;
+  }
+  return out.replace(/\/+$/, "");
+}
+
+/** Tail window of `reply` scanned for verifiable anchors — matches the 3,000-char reply budget sent to the judge. */
+const VERIFIABLE_REPLY_WINDOW = 3_000;
+/** Hard cap on extracted verifiable anchors per reply to keep matching strictly bounded. */
+const MAX_VERIFIABLE_FACTS = 48;
+
+/**
+ * Extracts concrete verifiable facts from the tail of `reply` (matching the judge's 3,000-char reply window, capped at
+ * `MAX_VERIFIABLE_FACTS`): URLs, emails, `@handles`, file paths, and 3+-digit numbers (excluding bare 4-digit calendar
+ * years and substrings of already-extracted identifiers).
+ */
+export function extractVerifiableFacts(reply: string): VerifiableFact[] {
+  const sample = cutTextEnd(reply, VERIFIABLE_REPLY_WINDOW);
+  const facts: VerifiableFact[] = [];
+  const seen = new Set<string>();
+  const covered: string[] = [];
+
+  const add = (kind: VerifiableFact["kind"], raw: string, trackCoverage = false) => {
+    if (facts.length >= MAX_VERIFIABLE_FACTS) return;
+    const value = raw.trim();
+    if (!value) return;
+    const key = value.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    facts.push({ kind, value });
+    if (trackCoverage) covered.push(key);
+  };
+
+  for (const m of sample.matchAll(URL_RE)) {
+    if (facts.length >= MAX_VERIFIABLE_FACTS) break;
+    const cleaned = cleanMatchedUrl(m[0]);
+    if (cleaned.length > "https://".length) add("url", cleaned, true);
+  }
+  for (const m of sample.matchAll(EMAIL_RE)) {
+    if (facts.length >= MAX_VERIFIABLE_FACTS) break;
+    const lower = m[0].toLowerCase();
+    if (!covered.some((c) => c.includes(lower))) add("email", m[0], true);
+  }
+  for (const m of sample.matchAll(HANDLE_RE)) {
+    if (facts.length >= MAX_VERIFIABLE_FACTS) break;
+    const lower = m[0].toLowerCase();
+    if (!covered.some((c) => c.includes(lower))) add("handle", m[0], true);
+  }
+  for (const m of sample.matchAll(PATH_RE)) {
+    if (facts.length >= MAX_VERIFIABLE_FACTS) break;
+    const p = (m[1] ?? "").replace(/\.+$/, "");
+    const lower = p.toLowerCase();
+    if (p.length >= 4 && !covered.some((c) => c.includes(lower))) add("path", p, true);
+  }
+  for (const m of sample.matchAll(NUMBER_RE)) {
+    if (facts.length >= MAX_VERIFIABLE_FACTS) break;
+    const token = m[0];
+    const digits = token.replace(/\D/g, "");
+    if (digits.length < 3 || BARE_YEAR_RE.test(token)) continue;
+    const lower = token.toLowerCase();
+    if (!covered.some((c) => c.includes(lower))) add("number", token);
+  }
+  return facts;
+}
+
+/** Strict-boundary literal matcher for an extracted fact against single-line tool output text. */
+function findFactSpan(fact: VerifiableFact, text: string): { start: number; end: number } | null {
+  const esc = escapeRegex(fact.value);
+  const patterns: RegExp[] = [];
+  switch (fact.kind) {
+    case "url":
+      // Exact URL (optional single trailing slash), never matching deeper subpaths, queries, hashes, or extensions.
+      patterns.push(new RegExp(`(?<![\\w/:.-])${esc}\\/?(?=$|[\\s<>()[\\]"'\`]|[.,;:!?](?=$|[\\s<>()[\\]"'\`]))`, "i"));
+      break;
+    case "email":
+      // Accepts a sentence-ending period (`.` not followed by `[\w-]`), rejects longer domain suffixes like `.com.br`.
+      patterns.push(new RegExp(`(?<![\\w.+-])${esc}(?![\\w-]|\\.[\\w-])`, "i"));
+      break;
+    case "handle":
+      // Unicode letter/digit boundary: `@ia` never matches `@ia_diaria`, and `@jos` never matches `@josé`.
+      patterns.push(new RegExp(`(?<![\\p{L}\\p{N}_./-])${esc}(?![\\p{L}\\p{N}_])`, "iu"));
+      break;
+    case "path":
+      // Accepts a sentence-ending period (`.` not followed by `[\w/-]`), rejects longer extensions or subpaths.
+      patterns.push(new RegExp(`(?<![\\w/.-])${esc}(?![\\w/-]|\\.[\\w/-])`, "i"));
+      break;
+    case "number":
+      // Never matches inside larger numbers, decimals (`200.50`), or thousands-grouped numbers (`1,500`).
+      patterns.push(new RegExp(`(?<!\\d)(?<!\\d[.,])${esc}(?!\\d)(?![.,]\\d)`, "i"));
+      if (THOUSANDS_RE.test(fact.value)) {
+        const plain = escapeRegex(fact.value.replace(/[.,]/g, ""));
+        patterns.push(new RegExp(`(?<!\\d)(?<!\\d[.,])${plain}(?!\\d)(?![.,]\\d)`, "i"));
+      }
+      break;
+  }
+  for (const re of patterns) {
+    const m = re.exec(text);
+    if (m && m.index !== undefined) return { start: m.index, end: m.index + m[0].length };
+  }
+  return null;
+}
+
+/**
+ * Builds up to `maxWindows` short middle snippets around literal matches of `anchors` that were hidden between the
+ * default head and tail cuts, fitting strictly inside `maxMiddleChars` without splitting UTF-16 surrogate pairs.
+ * Runs `findFactSpan(fact, clean)` at most once per `(call, fact)`.
+ */
+function anchoredMiddle(
+  clean: string,
+  anchors: readonly VerifiableFact[],
+  maxMiddleChars: number,
+  maxWindows = CALL_ANCHOR_MAX_WINDOWS,
+): string | null {
+  const defaultTailStart = clean.length - CALL_OUTCOME_TAIL;
+  const defaultTail = clean.slice(defaultTailStart);
+  const minBound = CALL_ANCHORED_HEAD;
+  const maxBound = clean.length - CALL_ANCHORED_TAIL;
+  const matches: { start: number; end: number }[] = [];
+  let hasHidden = false;
+  for (const fact of anchors) {
+    const span = findFactSpan(fact, clean);
+    if (!span) continue;
+    if (
+      !hasHidden &&
+      span.end > CALL_OUTCOME_HEAD &&
+      span.start < defaultTailStart &&
+      !findFactSpan(fact, defaultTail)
+    ) {
+      hasHidden = true;
+    }
+    // Skip matches already completely visible in the anchored head or anchored tail.
+    if (span.end <= minBound || span.start >= maxBound) continue;
+    matches.push(span);
+  }
+  if (!hasHidden || matches.length === 0) return null;
+
+  matches.sort((a, b) => a.start - b.start);
+  type Cluster = { coreStart: number; coreEnd: number; winStart: number; winEnd: number };
+  const clusters: Cluster[] = [];
+  for (const m of matches) {
+    const winStart = Math.max(Math.min(minBound, m.start), m.start - CALL_ANCHOR_RADIUS);
+    const winEnd = Math.min(Math.max(maxBound, m.end), m.end + CALL_ANCHOR_RADIUS);
+    const prev = clusters.at(-1);
+    if (prev && winStart <= prev.winEnd + 12) {
+      prev.coreEnd = Math.max(prev.coreEnd, m.end);
+      prev.winEnd = Math.max(prev.winEnd, winEnd);
+    } else if (clusters.length < maxWindows) {
+      clusters.push({ coreStart: m.start, coreEnd: m.end, winStart, winEnd });
+    }
+  }
+  if (clusters.length === 0) return null;
+
+  const sep = " … ";
+  const sepChars = sep.length * (clusters.length - 1);
+  const rawTotal = clusters.reduce((sum, c) => sum + (c.winEnd - c.winStart), 0) + sepChars;
+  let windows: { start: number; end: number }[];
+
+  if (rawTotal <= maxMiddleChars) {
+    windows = clusters.map((c) => ({ start: c.winStart, end: c.winEnd }));
+  } else {
+    const coreTotal = clusters.reduce((sum, c) => sum + (c.coreEnd - c.coreStart), 0) + sepChars;
+    if (coreTotal <= maxMiddleChars) {
+      const pad = Math.min(CALL_ANCHOR_RADIUS, Math.floor((maxMiddleChars - coreTotal) / (2 * clusters.length)));
+      windows = clusters.map((c, idx) => {
+        const prev = clusters[idx - 1];
+        const next = clusters[idx + 1];
+        const prevEnd = prev ? prev.coreEnd : minBound;
+        const nextStart = next ? next.coreStart : maxBound;
+        return {
+          start: Math.max(Math.min(prevEnd, c.coreStart), c.coreStart - pad),
+          end: Math.min(Math.max(nextStart, c.coreEnd), c.coreEnd + pad),
+        };
+      });
+    } else {
+      // Even cores exceed the budget: greedily keep as many matched cores as fit within `maxMiddleChars`.
+      windows = [];
+      let used = 0;
+      for (const c of clusters) {
+        const needSep = windows.length > 0 ? sep.length : 0;
+        const remaining = maxMiddleChars - used - needSep;
+        if (remaining < 16) break;
+        const len = c.coreEnd - c.coreStart;
+        if (len <= remaining) {
+          windows.push({ start: c.coreStart, end: c.coreEnd });
+          used += needSep + len;
+        } else if (windows.length === 0) {
+          windows.push({ start: c.coreStart, end: c.coreStart + remaining });
+          break;
+        } else {
+          break;
+        }
+      }
+    }
+  }
+
+  const parts = windows.map((w) => trimLoneSurrogates(clean.slice(w.start, w.end)).trim()).filter(Boolean);
+  if (parts.length === 0) return null;
+  const joined = parts.join(sep);
+  return joined.length <= maxMiddleChars ? joined : cutText(joined, maxMiddleChars);
+}
+
+/**
+ * A tool outcome on one line: whole while short, else start + end + length, inserting short fact-anchored snippets
+ * from the middle when `anchors` match hidden facts, bounded strictly by `maxOutcomeChars`.
+ */
+function oneLineOutcome(text: string, anchors?: readonly VerifiableFact[], maxOutcomeChars = CALL_LINE_MAX): string {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (!clean) return "(empty)";
+  if (clean.length <= CALL_OUTCOME_HEAD + CALL_OUTCOME_TAIL + 3) {
+    return clean.length <= maxOutcomeChars ? clean : cutText(clean, maxOutcomeChars);
+  }
+  const suffix = ` (${clean.length} chars)`;
+  if (anchors?.length) {
+    const head = cutText(clean, CALL_ANCHORED_HEAD).trimEnd();
+    const tail = cutTextEnd(clean, CALL_ANCHORED_TAIL).trimStart();
+    const middleBudget = maxOutcomeChars - head.length - tail.length - suffix.length - 6;
+    if (middleBudget >= 40) {
+      const maxWindows = maxOutcomeChars >= 900 ? CALL_ANCHOR_MAX_WINDOWS_LATEST : CALL_ANCHOR_MAX_WINDOWS;
+      const middle = anchoredMiddle(clean, anchors, middleBudget, maxWindows);
+      if (middle) {
+        const anchored = `${head} … ${middle} … ${tail}${suffix}`;
+        if (anchored.length <= maxOutcomeChars) return anchored;
+      }
+    }
+  }
+  const defaultLine = `${cutText(clean, CALL_OUTCOME_HEAD).trimEnd()} … ${cutTextEnd(clean, CALL_OUTCOME_TAIL).trimStart()}${suffix}`;
+  return defaultLine.length <= maxOutcomeChars ? defaultLine : cutText(defaultLine, maxOutcomeChars);
+}
+
+/** One tool call as the judge reads it: `name(argument) → outcome`, bounded and neutralized. */
+export function callLine(
+  name: string,
+  input: unknown,
+  result?: { content: string; isError?: boolean } | null,
+  anchorsOrReply?: readonly VerifiableFact[] | string,
+  maxLine = CALL_LINE_MAX,
+): string {
   const i = (input && typeof input === "object" ? input : {}) as Record<string, unknown>;
   // `use_tool` runs another tool: the judge reads that one.
   if (typeof i.tool === "string" && i.arguments && typeof i.arguments === "object")
-    return callLine(i.tool, i.arguments, result);
-  const arg = ["query", "url", "command", "q", "prompt", "question", "message", "text", "path", "name"]
-    .map((k) => i[k])
-    .find((v): v is string => typeof v === "string" && v.trim() !== "");
-  const outcome = !result ? "" : ` → ${result.isError ? "failed: " : ""}${oneLineCut(result.content, 90) || "(empty)"}`;
-  return `${name}${arg ? `(${oneLineCut(arg, 80)})` : ""}${outcome}`;
+    return callLine(i.tool, i.arguments, result, anchorsOrReply, maxLine);
+  const arg = callArg(i);
+  const prefix = `${name}${arg ? `(${oneLineCut(arg, CALL_ARG_MAX)})` : ""}`;
+  if (!result) {
+    const safe = neutralizeUntrusted(prefix).replace(/\s+/g, " ").trim();
+    return safe.length <= maxLine ? safe : cutText(safe, maxLine);
+  }
+  const outcomePrefix = ` → ${result.isError ? "failed: " : ""}`;
+  const maxOutcome = Math.max(24, maxLine - prefix.length - outcomePrefix.length);
+  const anchors = typeof anchorsOrReply === "string" ? extractVerifiableFacts(anchorsOrReply) : anchorsOrReply;
+  const rawLine = `${prefix}${outcomePrefix}${oneLineOutcome(stripEnvelopeMarkers(result.content), anchors, maxOutcome)}`;
+  const safeLine = neutralizeUntrusted(rawLine).replace(/\s+/g, " ").trim();
+  return safeLine.length <= maxLine ? safeLine : cutText(safeLine, maxLine);
 }
 
 const oneLineCut = (text: string, max: number) => cutText(text.replace(/\s+/g, " ").trim(), max);
+
+function triedCallsFrom(calls: RunCall[], harness: string[] = [], reply?: string): string[] {
+  const tag = (line: string, safety: boolean | undefined) => (safety ? `${SAFETY_TAG} ${line}` : line);
+  const entries = [
+    ...calls.map((call) => ({ kind: "call" as const, call })),
+    ...harness.filter((l) => !HARNESS_META_LINE.test(l)).map((line) => ({ kind: "harness" as const, line })),
+  ].slice(-TRIED_MAX_CALLS);
+
+  const longThreshold = CALL_OUTCOME_HEAD + CALL_OUTCOME_TAIL + 3;
+  let latestLongIdx = -1;
+  for (let idx = entries.length - 1; idx >= 0; idx--) {
+    const e = entries[idx];
+    if (e?.kind === "call" && e.call.result && e.call.result.content.length > longThreshold) {
+      latestLongIdx = idx;
+      break;
+    }
+  }
+  const anchors = reply && latestLongIdx >= 0 ? extractVerifiableFacts(reply) : [];
+
+  const lines = entries.map((e) => {
+    if (e.kind === "call") {
+      const reserve = e.call.safety ? SAFETY_TAG.length + 1 : 0;
+      return tag(callLine(e.call.name, e.call.input, e.call.result, undefined, CALL_LINE_MAX - reserve), e.call.safety);
+    }
+    const safety = !e.line.startsWith(SAFETY_TAG) && HARNESS_SAFETY.test(e.line);
+    const tagged = tag(e.line, safety);
+    return tagged.length <= CALL_LINE_MAX ? tagged : cutText(tagged, CALL_LINE_MAX);
+  });
+
+  let total = lines.reduce((sum, l) => sum + l.length, 0);
+  // Lazily expand long gateway calls with fact-anchored middle snippets, newest first.
+  // When many older lines already fill `TRIED_MAX_TOTAL_CHARS`, shrink older lines down to `TRIED_OLD_LINE_FLOOR`
+  // first so the newest call always keeps budget for its anchored snippets.
+  if (anchors.length > 0) {
+    for (let idx = entries.length - 1; idx >= 0; idx--) {
+      const e = entries[idx];
+      const baseLine = lines[idx];
+      if (!e || baseLine === undefined || e.kind !== "call" || !e.call.result) continue;
+      if (e.call.result.content.length <= longThreshold) continue;
+      const baseLen = baseLine.length;
+      const lineCap = idx === latestLongIdx ? CALL_LINE_MAX_LATEST : CALL_LINE_MAX;
+      const reserve = e.call.safety ? SAFETY_TAG.length + 1 : 0;
+      const expanded = tag(
+        callLine(e.call.name, e.call.input, e.call.result, anchors, lineCap - reserve),
+        e.call.safety,
+      );
+      const needed = expanded.length - baseLen;
+      if (needed <= 0) {
+        lines[idx] = expanded;
+        total += needed;
+        continue;
+      }
+      // Reclaim room from strictly older lines down to `TRIED_OLD_LINE_FLOOR` if needed.
+      if (total + needed > TRIED_MAX_TOTAL_CHARS) {
+        for (let oldIdx = 0; oldIdx < idx && total + needed > TRIED_MAX_TOTAL_CHARS; oldIdx++) {
+          const oldLine = lines[oldIdx];
+          if (!oldLine || oldLine.length <= TRIED_OLD_LINE_FLOOR) continue;
+          const excess = total + needed - TRIED_MAX_TOTAL_CHARS;
+          const target = Math.max(TRIED_OLD_LINE_FLOOR, oldLine.length - excess);
+          const trimmed = cutText(oldLine, target);
+          lines[oldIdx] = trimmed;
+          total -= oldLine.length - trimmed.length;
+        }
+      }
+      const available = TRIED_MAX_TOTAL_CHARS - total;
+      if (available >= needed) {
+        lines[idx] = expanded;
+        total += needed;
+      } else if (available > 20) {
+        const fitted = tag(
+          callLine(e.call.name, e.call.input, e.call.result, anchors, Math.min(lineCap, baseLen + available) - reserve),
+          e.call.safety,
+        );
+        lines[idx] = fitted;
+        total += fitted.length - baseLen;
+      }
+    }
+  }
+
+  // Enforce the total char budget across all lines (trimming oldest first when 20 lines would exceed it).
+  if (total > TRIED_MAX_TOTAL_CHARS && lines.length > 0) {
+    const floorPerLine = Math.max(120, Math.floor(TRIED_MAX_TOTAL_CHARS / lines.length));
+    for (let idx = 0; idx < lines.length && total > TRIED_MAX_TOTAL_CHARS; idx++) {
+      const current = lines[idx];
+      if (!current || current.length <= floorPerLine) continue;
+      const target = Math.max(floorPerLine, current.length - (total - TRIED_MAX_TOTAL_CHARS));
+      const trimmed = cutText(current, target);
+      lines[idx] = trimmed;
+      total -= current.length - trimmed.length;
+    }
+  }
+  return lines;
+}
 
 /**
  * Every tool call of a run, oldest first (the last 20), as the judge reads them (`tried`): the gateway's run steps
  * (every brain's calls to our tools, a computer brain's through the MCP bridge) and then `harness`, a computer
  * brain's own tools (Claude Code's Bash, WebSearch…, Codex's commands), which the runner forwards as `brain.event`
- * `tool_call` events with `executed` and the run keeps in `transcript.harnessTried`.
+ * `tool_call` events with `executed` and the run keeps in `transcript.harnessTried`. When `reply` is given, long
+ * gateway tool outputs include short fact-anchored snippets around literal occurrences of verifiable facts from `reply`.
  */
-export async function triedCalls(db: Database, run: { id: string; orgId: string }, harness: string[] = []) {
-  const calls = await runCalls(db, run);
-  const tag = (line: string, safety: boolean | undefined) => (safety ? `${SAFETY_TAG} ${line}` : line);
-  return [
-    ...calls.map((c) => tag(callLine(c.name, c.input, c.result), c.safety)),
-    ...harness.map((l) => tag(l, !l.startsWith(SAFETY_TAG) && HARNESS_SAFETY.test(l))),
-  ];
+export async function triedCalls(
+  db: Database,
+  run: { id: string; orgId: string },
+  harness: string[] = [],
+  reply?: string,
+) {
+  return triedCallsFrom(await runCalls(db, run), harness, reply);
 }
 
 const TRIED_SHOWN = 20;
@@ -566,9 +985,10 @@ export async function runCalls(db: Database, run: { id: string; orgId: string })
     else {
       const call = calls.get(id) ?? { name, input: undefined };
       const read = data.data as { outside?: unknown; confidential?: unknown; code?: unknown } | undefined;
+      const full = typeof data.modelContent === "string" ? data.modelContent : String(data.content ?? "");
       call.result = {
         // A confidential result's words (ADR 0190) go to the run's own model and to no other reader of its calls.
-        content: read?.confidential === true ? CONFIDENTIAL_NOT_SHOWN : String(data.content ?? ""),
+        content: read?.confidential === true ? CONFIDENTIAL_NOT_SHOWN : full,
         isError: data.isError === true,
         // `data.data.outside`: the gateway's mark for any outside read, which survives `shown` dropping the envelope.
         external: data.external === true || read?.outside === true,

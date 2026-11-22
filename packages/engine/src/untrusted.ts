@@ -18,6 +18,9 @@ export { cleanOutside };
 const MARKERS =
   /<\s*(?:\/\s*)?(?:external_data|email_content|database_rows|untrusted_data|page_content|thread)\b[^>]*>/gi;
 
+/** Removes envelope wrapper tags so short summaries (`callLine`) keep the content instead of markup. */
+export const stripEnvelopeMarkers = (text: string) => text.replace(MARKERS, " ");
+
 /** Said once when outside text carried characters that hide or reorder it (bidi overrides, tag characters). */
 export const HIDDEN_CHARS_NOTE = "[hidden characters removed]";
 

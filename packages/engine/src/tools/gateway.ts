@@ -353,9 +353,18 @@ const ownTool = (tool: Pick<ToolDefinition, "name" | "scope" | "connectionId">) 
  * early. The result is already capped (`MAX_RESULT_CHARS`), so the envelope doesn't cut it again.
  */
 export const wrapExternal = (source: string, text: string) => untrustedBlock(source, text, MAX_RESULT_CHARS + 100);
+const stripOuterEnvelope = (text: string) =>
+  text.replace(/^<external_data source="[^"]*">\n([\s\S]*)\n<\/external_data>$/, "$1");
 /** What run steps and approvals keep: the text people see, without the model's envelope. */
-const shown = (text: string) =>
-  cutText(text.replace(/^<external_data source="[^"]*">\n([\s\S]*)\n<\/external_data>$/, "$1"), 4000);
+const shown = (text: string) => cutText(stripOuterEnvelope(text), 4000);
+/**
+ * What the model got (up to `MAX_RESULT_CHARS`, plus a built-in tool's header line when its body carries the
+ * envelope), without an outer envelope, kept only when `shown` cut it so `triedCalls` sees the same text.
+ */
+const modelShown = (text: string, kept: string) => {
+  const full = cutText(stripOuterEnvelope(text), MAX_RESULT_CHARS + 200);
+  return full.length > kept.length ? full : undefined;
+};
 
 /**
  * An approved action already claimed (it runs at most once): what it returned, or, with nothing recorded
@@ -1233,12 +1242,15 @@ export function createToolGateway(deps: {
       .where(sql`${approvals.id} = ${approval.id}`);
     recordRead(ctx.runId, approval.tool, output.content, output.data, approval.params);
     const confidential = marks !== undefined;
+    const content = shown(output.content);
+    const modelContent = confidential || ctx.confidential === true ? undefined : modelShown(output.content, content);
     const step = {
       toolUseId,
       name: approval.tool,
       approvalId: approval.id,
       isError: output.isError === true,
-      content: shown(output.content),
+      content,
+      ...(modelContent ? { modelContent } : {}),
       ...(tool?.external ? { external: true } : {}),
       ...(output.data || outside || confidential
         ? { data: { ...output.data, ...(outside ? { outside: true } : {}), ...(confidential ? { confidential } : {}) } }
@@ -1412,11 +1424,15 @@ export function createToolGateway(deps: {
             ? { ...output.data, ...outside, ...(confidential ? { confidential } : {}) }
             : null;
         recordRead(ctx.runId, call.name, output.content, output.data, call.input);
+        const content = shown(output.content);
+        const modelContent =
+          confidential || ctx.confidential === true ? undefined : modelShown(output.content, content);
         const result = {
           toolUseId: call.toolUseId,
           name: call.name,
           isError: output.isError === true,
-          content: shown(output.content),
+          content,
+          ...(modelContent ? { modelContent } : {}),
           // `shown` drops the outside-content envelope; learning still needs to know the text came from outside.
           ...(tool?.external ? { external: true } : {}),
           ...(data ? { data } : {}),

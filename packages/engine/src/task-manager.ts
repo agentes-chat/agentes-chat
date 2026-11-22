@@ -923,7 +923,7 @@ export async function taskSteps(
     created_at: string | Date;
   };
   const rows = rowsOf<StepRow>(
-    await db.execute(sql`select s.seq, s.kind, s.data, s.created_at from ${agentRunSteps} s
+    await db.execute(sql`select s.seq, s.kind, s.data - 'modelContent' as data, s.created_at from ${agentRunSteps} s
       where s.run_id = ${runId}::uuid and s.kind in ('tool_call', 'tool_result', 'model_call')
       order by s.seq limit ${TASK_STEPS_MAX}`),
   );
