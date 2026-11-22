@@ -82,6 +82,7 @@ import {
   SURFACE_PREFIX,
   setMessageLinkBase,
   setRestrictionNotices,
+  setRightHandSimpleComputer,
   setScreenJudgments,
   setSurface,
   setWorkspaceComputers,
@@ -150,6 +151,7 @@ export function applyBootSwitches(config: Config, log?: Logger) {
   // Where each workspace gets its own computer, the computers people bring are targets, never agents' homes.
   setWorkspaceComputers(config.MACHINE_PROVISIONING === "external");
   setScreenJudgments(config.SCREEN_JUDGMENTS, config.SCREEN_JUDGMENTS_ORGS, log);
+  setRightHandSimpleComputer(config.RIGHT_HAND_SIMPLE_COMPUTER);
 }
 
 /**

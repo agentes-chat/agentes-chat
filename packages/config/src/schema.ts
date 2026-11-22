@@ -1145,6 +1145,12 @@ export const envVars = {
     example: "<output of openssl rand -base64 48>",
     secret: true,
   },
+  RIGHT_HAND_SIMPLE_COMPUTER: {
+    schema: z.stringbool().default(false),
+    description:
+      "Lets the workspace's right-hand agent use seats on this server's own computer when its runner runs in simple mode (single OS user, as on Ubuntu without systemd `BPF_FRAMEWORK`). Each person and the shared seat still get separate folders and browser profiles, but isolation is by folder only, not by OS user: only enable this when all invited workspace members trust each other on the same OS user (driving terminal/desktop in simple mode requires `control_computers`, and autonomous `desktopUse` stays off). Can't be set with `ALLOW_SIGNUP=true` or `MACHINE_PROVISIONING=external`. Default: `false`.",
+    section: "Sandbox",
+  },
   DESKTOP_RELEASES_TOKEN: {
     schema: z.string().optional(),
     description:

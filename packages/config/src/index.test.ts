@@ -160,6 +160,22 @@ describe("loadConfig", () => {
     expect(loadConfig({ ...valid, HOST_COMPUTER_TOKEN: "h".repeat(32) }).HOST_COMPUTER_TOKEN).toBe("h".repeat(32));
   });
 
+  test("RIGHT_HAND_SIMPLE_COMPUTER defaults off and rejects open sign-up or external provisioning", () => {
+    expect(loadConfig(valid).RIGHT_HAND_SIMPLE_COMPUTER).toBe(false);
+    expect(loadConfig({ ...valid, RIGHT_HAND_SIMPLE_COMPUTER: "true" }).RIGHT_HAND_SIMPLE_COMPUTER).toBe(true);
+    expect(() => loadConfig({ ...valid, RIGHT_HAND_SIMPLE_COMPUTER: "true", ALLOW_SIGNUP: "true" })).toThrow(
+      /RIGHT_HAND_SIMPLE_COMPUTER/,
+    );
+    expect(() =>
+      loadConfig({
+        ...valid,
+        RIGHT_HAND_SIMPLE_COMPUTER: "true",
+        MACHINE_PROVISIONING: "external",
+        OPERATOR_API_TOKEN: "t".repeat(32),
+      }),
+    ).toThrow(/RIGHT_HAND_SIMPLE_COMPUTER/);
+  });
+
   test("the operator API's read-only token: optional, long, secret, only with the full token and never equal to it", () => {
     const full = "o".repeat(32);
     const read = "r".repeat(32);

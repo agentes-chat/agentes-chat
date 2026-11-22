@@ -1498,7 +1498,15 @@ clones the repository itself), or put it in the shared folder (`~/shared`, below
 server's own, set up with `--system`), where each person gets a place of their own: a separate user with its
 own files, browser, desktop and sign-ins, which only that person can watch or take control of, from Lodi's
 page. A computer that runs every agent as one user (the simple mode, a Mac, a computer a person connected)
-can't keep people's places apart, so Lodi has no computer there, and its page says so. Turn its commands,
+can't keep people's places apart, so Lodi has no computer there by default, and its page says so. On a trusted
+self-hosted server whose host computer runs in simple mode (such as Ubuntu without systemd `BPF_FRAMEWORK`), you can
+explicitly opt in by setting `RIGHT_HAND_SIMPLE_COMPUTER=true` in `.env` (requires `ALLOW_SIGNUP=false` and
+`MACHINE_PROVISIONING=off`): each person and the shared seat still get their own folder (`<handle>-<seatId8>`) and
+browser profile on the host computer for commands (`run_code`), files, git, background tasks, terminal, and browser,
+while accepting that isolation between seats is by folder only (all under the single runner user `agentes`), that this
+opt-in is only safe when all invited workspace members trust each other on the same OS user (and driving a personal
+seat's terminal or desktop requires `control_computers`), and that autonomous desktop use (`desktopUse`) remains off
+(it requires `--system`). Turn its commands,
 browser or desktop off for everyone on its page, under what it can use. The computer's shared folder is
 still shared: every agent and every person's Lodi reads and writes it. Lodi's browser needs that setup
 (This server as the agents' computer, below): without it, Lodi has no browser, and its page links here.

@@ -37,7 +37,14 @@ import { publishOrgEvent } from "./events";
 import { can, requireActiveMembership, requirePermission } from "./organizations";
 import { maySql } from "./permissions";
 import { isRightHand, RIGHT_HAND, rightHandPermanent } from "./right-hand";
-import { liveSeats, removedSeatIds, removeSeat, SHARED_SEAT, seatName } from "./right-hand-seats";
+import {
+  liveSeats,
+  removedSeatIds,
+  removeSeat,
+  rightHandSeatsAllowed,
+  SHARED_SEAT,
+  seatName,
+} from "./right-hand-seats";
 
 const { machines, agents, users, organizationMembers } = schema;
 
@@ -440,7 +447,13 @@ export async function computerDriving(db: Database, userId: string, orgId: strin
   const machine = machineId ? await getMachine(db, orgId, machineId) : null;
   if (!machine) throw new NotFoundError("This agent has no computer");
   if (home && !shared) {
-    const keyed = can(membership, "own_computers") || can(membership, "control_computers");
+    // In system mode each seat is its own OS user, so `own_computers` suffices for a person's own seat.
+    // Outside system mode (single runner OS user), terminal/desktop driving reaches every seat and the runner home,
+    // so only computer admins (`control_computers`) may drive it.
+    const keyed =
+      machine.executors?.mode === "system"
+        ? can(membership, "own_computers") || can(membership, "control_computers")
+        : can(membership, "control_computers");
     return { machine, refusal: keyed ? null : ("role" as const) };
   }
   const person = {
@@ -451,8 +464,18 @@ export async function computerDriving(db: Database, userId: string, orgId: strin
     manages: managesAgent(agent, userId, membership),
     browsers: can(membership, "control_browsers"),
   };
-  // The shared seat is driven like any agent's computer, by the rule above. Its OS user never holds a plan's sign-in:
-  // the right hand thinks as another user (ADR 0137 §4).
+  // On a simple-mode host computer opted in via `RIGHT_HAND_SIMPLE_COMPUTER`, every seat shares one OS user and there
+  // is no pairer (`pairedByUserId` is null), so driving the shared seat requires `control_computers` (matching the
+  // personal seat above). System-mode hosts follow the standard `driveRefusal` path below.
+  if (
+    home &&
+    shared &&
+    machine.kind === "host" &&
+    machine.executors?.mode !== "system" &&
+    rightHandSeatsAllowed(machine)
+  ) {
+    return { machine, refusal: person.admin ? null : ("role" as const) };
+  }
   return { machine, refusal: driveRefusal(machine, person, !home && lentAccount(agent) !== null) };
 }
 
@@ -502,8 +525,13 @@ export async function computerDrivers(db: Database, orgId: string, agentId: stri
     .where(eq(organizationMembers.orgId, orgId))
     .orderBy(organizationMembers.createdAt);
   const members = everyone.filter((m) => m.admin || named.includes(m.userId));
+  const simpleHostRightHand = Boolean(
+    home && machine.kind === "host" && machine.executors?.mode !== "system" && rightHandSeatsAllowed(machine),
+  );
   const drivers = members
-    .filter((m) => drivesComputer(machine, { ...m, owner: owners.includes(m.userId) }, signIn))
+    .filter((m) =>
+      simpleHostRightHand ? m.admin : drivesComputer(machine, { ...m, owner: owners.includes(m.userId) }, signIn),
+    )
     .map((m) => m.userId);
   const ownersDriving = drivers.filter((id) => owners.includes(id));
   return ownersDriving.length > 0 ? ownersDriving : drivers;
@@ -546,13 +574,12 @@ async function machineViews(db: Database, actorId: string, orgId: string, only?:
   // listed on it where seats can be kept apart, so the apps show whoever looks their own.
   const home = await workspaceHomeId(db, orgId);
   const homeRow = rows.find((r) => r.machine.id === home)?.machine;
-  const [rightHand] =
-    homeRow?.executors?.mode === "system"
-      ? await db
-          .select({ id: agents.id, name: agents.name, handle: agents.handle, owner: agents.ownerUserId })
-          .from(agents)
-          .where(and(eq(agents.orgId, orgId), eq(agents.builtin, RIGHT_HAND), isNull(agents.archivedAt)))
-      : [];
+  const [rightHand] = rightHandSeatsAllowed(homeRow)
+    ? await db
+        .select({ id: agents.id, name: agents.name, handle: agents.handle, owner: agents.ownerUserId })
+        .from(agents)
+        .where(and(eq(agents.orgId, orgId), eq(agents.builtin, RIGHT_HAND), isNull(agents.archivedAt)))
+    : [];
   if (rightHand && homeRow) using.push({ ...rightHand, machineId: homeRow.id, listed: true });
   // Its shared seat there is opened like any agent's computer, by the admins of computers and its owner
   // (`computerDriving` with `shared`): only they are shown it.

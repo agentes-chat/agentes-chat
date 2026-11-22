@@ -50,6 +50,16 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       "HOST_COMPUTER_TOKEN can't be set with ALLOW_SIGNUP=true: this server's computer runs agents on the machine itself, so people join only by invitation",
     ]);
   }
+  if (config.RIGHT_HAND_SIMPLE_COMPUTER && config.ALLOW_SIGNUP) {
+    throw new ConfigError([
+      "RIGHT_HAND_SIMPLE_COMPUTER can't be set with ALLOW_SIGNUP=true: simple mode separates seats by folder only, so people join only by invitation",
+    ]);
+  }
+  if (config.RIGHT_HAND_SIMPLE_COMPUTER && config.MACHINE_PROVISIONING === "external") {
+    throw new ConfigError([
+      "RIGHT_HAND_SIMPLE_COMPUTER can't be set with MACHINE_PROVISIONING=external: managed computers already isolate each seat as its own user",
+    ]);
+  }
   // Its requests are read only through the operator API: without it every workspace would wait forever.
   if (config.MACHINE_PROVISIONING === "external" && !config.OPERATOR_API_TOKEN) {
     throw new ConfigError(["MACHINE_PROVISIONING=external needs OPERATOR_API_TOKEN"]);

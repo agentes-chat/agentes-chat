@@ -65,9 +65,25 @@ export const NO_HOME_MESSAGE =
 export const notHomeMessage = (computer: string) =>
   `You have no place of your own on ${computer}: your computer is the workspace's own. Do it there, or hand this to an agent that uses ${computer} (ask_agent, tell_agent, or create_issue assigned to it).`;
 
+let simpleModeRightHand = false;
+
+/**
+ * Self-host opt-in (`RIGHT_HAND_SIMPLE_COMPUTER`): lets the right hand use seats (separate folders and browser
+ * profiles per person plus the shared seat) on the workspace's own computer even when its runner runs in simple mode
+ * (single OS user, e.g. Ubuntu without systemd `BPF_FRAMEWORK`). Off by default.
+ */
+export function setRightHandSimpleComputer(on: boolean) {
+  simpleModeRightHand = on;
+}
+
+/** Whether `machine` may host right-hand seats: always in system mode, or in simple mode when explicitly opted in. */
+export const rightHandSeatsAllowed = (
+  machine: { system?: boolean; executors?: { mode?: string } | null } | null | undefined,
+) => Boolean(machine && (machine.system === true || machine.executors?.mode === "system" || simpleModeRightHand));
+
 /** A computer where every agent works as the same OS user can't keep people's seats apart. */
 export const notSystemMessage = (computer: string) =>
-  `You have no computer on ${computer}: it runs every agent as one user, so it can't keep each person's files and sign-ins apart. Hand this to an agent that has a computer (ask_agent, tell_agent, or create_issue assigned to it), and never ask the person to try again.`;
+  `You have no computer on ${computer}: it runs every agent as one user, so it can't keep each person's files and sign-ins apart (a self-host admin can opt in to folder-only seats with RIGHT_HAND_SIMPLE_COMPUTER=true). Hand this to an agent that has a computer (ask_agent, tell_agent, or create_issue assigned to it), and never ask the person to try again.`;
 
 /**
  * A new seat's id. The computer names an OS user from an id's first 8 letters and digits and never frees one, so the
@@ -256,7 +272,8 @@ async function seatOn(
     return { ok: false, reason: "no_home", message: NO_HOME_MESSAGE };
   }
   if (machine.id !== home) return { ok: false, reason: "not_home", message: notHomeMessage(machine.name) };
-  if (!machine.system) return { ok: false, reason: "not_system", message: notSystemMessage(machine.name) };
+  if (!rightHandSeatsAllowed(machine))
+    return { ok: false, reason: "not_system", message: notSystemMessage(machine.name) };
   const seat = await seatOf(db, agent.orgId, userId, make);
   if (!seat) return make ? { ok: false, reason: "no_seat", message: NO_SEAT_MESSAGE } : { ok: true, scope: null };
   if (seat.made) await told?.(agent.orgId);
@@ -327,7 +344,7 @@ export async function seatState(
 ): Promise<SeatState> {
   const home = await workspaceHomeId(db, run.orgId);
   const machine = home ? await (await machines()).getMachine(db, run.orgId, home) : null;
-  if (machine?.executors?.mode !== "system") return "none";
+  if (!rightHandSeatsAllowed(machine)) return "none";
   const keys = await grantedScopeKeys(db, run.orgId, run.agentId);
   const has = (scope: string) => keys.has(grantKey(null, scope));
   const commands = has(SANDBOX_SCOPE) && (await (await sandbox()).getSandboxSettings(db, run.orgId)).enabled;

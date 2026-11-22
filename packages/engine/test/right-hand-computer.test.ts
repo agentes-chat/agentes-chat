@@ -17,10 +17,12 @@ import {
   SHARED_SEAT,
   seatOf,
   seatState,
+  setRightHandSimpleComputer,
   type ToolContext,
   UNASKED_SEAT_MESSAGE,
   viewerScope,
 } from "../src";
+import { computerDrivers, computerDriving } from "../src/machines";
 import { addMember, type Fixture, setup } from "./fixtures";
 import { fakeRunner, pairMachine } from "./machine-fixtures";
 
@@ -31,6 +33,7 @@ import { fakeRunner, pairMachine } from "./machine-fixtures";
 
 let f: Fixture;
 afterEach(async () => {
+  setRightHandSimpleComputer(false);
   await f?.close();
 });
 
@@ -242,6 +245,137 @@ test("a computer that runs every agent as one user gives it no seat: refused, no
   expect(await seatState(f.db, { ...ctx, id: ctx.runId })).toBe("none");
   const [server] = await listMachines(f.db, f.owner.id, f.org.id);
   expect(server?.agents.map((a) => a.id)).not.toContain(lodi.id);
+});
+
+test("RIGHT_HAND_SIMPLE_COMPUTER opt-in lets the right hand use seats on a simple-mode host computer", async () => {
+  setRightHandSimpleComputer(true);
+  const { hub, lodi, machineId, ran } = await home(false);
+  // Real `HOST_COMPUTER_TOKEN` host computers have no pairer (`pairedByUserId: null`).
+  await f.db.update(schema.machines).set({ pairedByUserId: null }).where(eq(schema.machines.id, machineId));
+  const bia = await addMember(f.db, f.org.id, "member", "Bia");
+
+  // Desktop status and terminal streams resolve for both personal and shared seats on the simple-mode host.
+  const status = await desktopStatus({ db: f.db, hub }, f.owner.id, f.org.id, lodi.id);
+  expect(status).toMatchObject({ available: true, reason: null, canControl: true });
+  const sharedStatus = await desktopStatus({ db: f.db, hub }, f.owner.id, f.org.id, lodi.id, true);
+  expect(sharedStatus).toMatchObject({ available: true, reason: null, canControl: true });
+  const term = await authorizeStream(
+    { db: f.db, hub },
+    {
+      userId: f.owner.id,
+      orgId: f.org.id,
+      agentId: lodi.id,
+      request: { kind: "terminal", cols: 80, rows: 24 },
+      shared: true,
+    },
+  );
+  expect(term).toHaveProperty("machineId");
+
+  // Personal DM runs get separate seat ids per person (never the right hand's own agent id).
+  const mine = await lodiRun(lodi.id, f.owner.id);
+  const hers = await lodiRun(lodi.id, bia.id);
+  expect((await runCode(mine)).isError).toBeFalsy();
+  expect((await runCode(hers)).isError).toBeFalsy();
+  expect(await seatState(f.db, { ...mine, id: mine.runId })).toBe("seat");
+  expect(ran.map((r) => r.agent)).toEqual([await seatId(f.owner.id), await seatId(bia.id)]);
+  expect(ran.some((r) => r.agent === lodi.id)).toBe(false);
+
+  // Channel runs use the workspace shared seat.
+  const channel = await lodiRun(lodi.id, f.owner.id, { channelId: f.general.id });
+  expect((await runCode(channel)).isError).toBeFalsy();
+  expect(await seatState(f.db, { ...channel, id: channel.runId })).toBe("shared");
+  expect(ran.at(-1)?.agent).toBe(await seatId(SHARED_SEAT));
+
+  // Machines list exposes the right hand on the host computer so the right-hand computer dialog finds it.
+  const [server] = await listMachines(f.db, f.owner.id, f.org.id);
+  expect(server?.agents.map((a) => a.id)).toContain(lodi.id);
+  expect(server?.sharedSeatOf).toBe(lodi.id);
+});
+
+test("simple-mode host personal seat requires control_computers to drive terminal; system mode allows own_computers", async () => {
+  setRightHandSimpleComputer(true);
+  const simple = await home(false);
+  await f.db.update(schema.machines).set({ pairedByUserId: null }).where(eq(schema.machines.id, simple.machineId));
+  const bia = await addMember(f.db, f.org.id, "member", "Bia");
+
+  const denied = await authorizeStream(
+    { db: f.db, hub: simple.hub },
+    {
+      userId: bia.id,
+      orgId: f.org.id,
+      agentId: simple.lodi.id,
+      request: { kind: "terminal", cols: 80, rows: 24 },
+      shared: false,
+    },
+  );
+  expect(denied).toMatchObject({ reason: "forbidden" });
+  expect(denied).not.toHaveProperty("machineId");
+
+  const adminAllowed = await authorizeStream(
+    { db: f.db, hub: simple.hub },
+    {
+      userId: f.owner.id,
+      orgId: f.org.id,
+      agentId: simple.lodi.id,
+      request: { kind: "terminal", cols: 80, rows: 24 },
+      shared: false,
+    },
+  );
+  expect(adminAllowed).toHaveProperty("machineId");
+  await f.close();
+
+  // In system mode each seat is its own OS user, so a non-admin member with own_computers may drive their own seat.
+  const sys = await home(true);
+  const carla = await addMember(f.db, f.org.id, "member", "Carla");
+  const sysAllowed = await authorizeStream(
+    { db: f.db, hub: sys.hub },
+    {
+      userId: carla.id,
+      orgId: f.org.id,
+      agentId: sys.lodi.id,
+      request: { kind: "terminal", cols: 80, rows: 24 },
+      shared: false,
+    },
+  );
+  expect(sysAllowed).toHaveProperty("machineId");
+});
+
+test("computerDrivers finds shared-seat drivers on a simple-mode host computer with pairedByUserId: null", async () => {
+  setRightHandSimpleComputer(true);
+  const { hub, lodi, machineId } = await home(false);
+  await f.db.update(schema.machines).set({ pairedByUserId: null }).where(eq(schema.machines.id, machineId));
+  const bia = await addMember(f.db, f.org.id, "member", "Bia");
+
+  expect(await computerDrivers(f.db, f.org.id, lodi.id)).toEqual([f.owner.id]);
+
+  // Even if a non-admin member (with own_computers only) owns the right hand, simple-mode shared seat still requires
+  // control_computers — matching the personal seat — and excludes that non-admin owner from computerDrivers.
+  await f.db.update(schema.agents).set({ ownerUserId: bia.id }).where(eq(schema.agents.id, lodi.id));
+  expect((await computerDriving(f.db, bia.id, f.org.id, lodi.id, true)).refusal).toBe("role");
+  const deniedShared = await authorizeStream(
+    { db: f.db, hub },
+    {
+      userId: bia.id,
+      orgId: f.org.id,
+      agentId: lodi.id,
+      request: { kind: "terminal", cols: 80, rows: 24 },
+      shared: true,
+    },
+  );
+  expect(deniedShared).toMatchObject({ reason: "forbidden" });
+  expect(deniedShared).not.toHaveProperty("machineId");
+  expect(await computerDrivers(f.db, f.org.id, lodi.id)).toEqual([f.owner.id]);
+
+  // With the opt-in off, simple-mode host has no shared-seat drivers.
+  setRightHandSimpleComputer(false);
+  expect(await computerDrivers(f.db, f.org.id, lodi.id)).toEqual([]);
+  await f.close();
+
+  // In system mode, shared-seat driving on a host computer follows standard driveRefusal ("not_allowed" for a
+  // non-admin non-owner member, never hijacked by the simple-mode "role" branch).
+  const sys = await home(true);
+  const carla = await addMember(f.db, f.org.id, "member", "Carla");
+  expect((await computerDriving(f.db, carla.id, f.org.id, sys.lodi.id, true)).refusal).toBe("not_allowed");
 });
 
 test("the hub refuses the agent's own id for anything but its locked chat turn", async () => {
