@@ -285,7 +285,7 @@ function accountView(
     id: row.id,
     kind: kindOf(row),
     label: row.label,
-    named: !isDefaultAccountLabel(kindOf(row), row.label, row.provider),
+    named: row.named || !isDefaultAccountLabel(kindOf(row), row.label, row.provider),
     email: mine ? row.email : null,
     plan: row.plan,
     status: statusOf(row.status),
@@ -840,12 +840,14 @@ async function settleAccount(
   const usage = info.usage ? { usage: accountReading(row.provider, row.usage, info.usage) } : {};
   if (signingIn) {
     // A login of an account its owner already has here (one per agent) takes that account's name.
+    const same = await sameAccount(db, row, identity);
     const label =
-      (await sameAccount(db, row, identity))?.label ??
+      same?.label ??
       defaultAccountLabel(kindOf(row), await takenLabels(db, orgId, row.createdBy, row.id), row.provider);
+    const named = same ? same.named || !isDefaultAccountLabel(kindOf(same), same.label, same.provider) : false;
     const [done] = await db
       .update(machineAccounts)
-      .set({ email, plan, keyHint, ...state, label, shared, ...usage, updatedAt: now })
+      .set({ email, plan, keyHint, ...state, label, named, shared, ...usage, updatedAt: now })
       .where(
         and(eq(machineAccounts.orgId, orgId), eq(machineAccounts.id, row.id), eq(machineAccounts.status, "signing_in")),
       )
@@ -993,11 +995,14 @@ export async function syncMachineAccounts(
           remove.push({ kind: a.kind, id: a.id });
           continue;
         }
+        const label = same?.label ?? defaultAccountLabel(a.kind, await takenLabels(tx, orgId, owner, a.id), provider);
+        const named = same ? same.named || !isDefaultAccountLabel(a.kind, same.label, provider) : false;
         const inserted = await tx
           .insert(machineAccounts)
           .values({
             ...candidate,
-            label: same?.label ?? defaultAccountLabel(a.kind, await takenLabels(tx, orgId, owner, a.id), provider),
+            label,
+            named,
             email: a.email ?? null,
             plan: a.plan ?? null,
             keyHint: a.keyHint ?? null,
@@ -1857,11 +1862,11 @@ export async function renameMachineAccount(
     throw new ForbiddenError("Only the account's owner can rename it", "account.not_owner");
   }
   const logins = await sameLogins(deps.db, account);
-  const renamed = logins.filter((r) => r.label !== label);
+  const renamed = logins.filter((r) => r.label !== label || !r.named);
   if (renamed.length === 0) return accountViewOf(deps.db, orgId, account, userId);
   await deps.db
     .update(machineAccounts)
-    .set({ label, updatedAt: new Date() })
+    .set({ label, named: true, updatedAt: new Date() })
     .where(
       and(
         eq(machineAccounts.orgId, orgId),
@@ -1881,7 +1886,7 @@ export async function renameMachineAccount(
     });
   }
   await publishAccountsChanged(deps.pubsub, orgId, machine.id);
-  return accountViewOf(deps.db, orgId, { ...account, label }, userId);
+  return accountViewOf(deps.db, orgId, { ...account, label, named: true }, userId);
 }
 
 /**

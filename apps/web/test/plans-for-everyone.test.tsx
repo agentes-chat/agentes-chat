@@ -72,9 +72,10 @@ describe("IA e uso: who uses each plan", () => {
     await settle(6);
     const plans = screen().getByRole("region", { name: "Contas" });
     const rows = [...plans.querySelectorAll(".plan-row")] as HTMLElement[];
-    // The viewer's own, with the automatic name and no email: unnamed. Someone else's keeps its name.
-    const mine = rows.find((r) => r.textContent?.includes("Conta sem nome")) as HTMLElement;
+    // The viewer's own, with the automatic name and no email: its maker ("Claude"). Someone else's keeps its name.
+    const mine = rows.find((r) => r.textContent?.includes("Todos usam")) as HTMLElement;
     const joao = rows.find((r) => r.textContent?.includes("Claude 2")) as HTMLElement;
+    expect(mine.querySelector(".plan-row__title")?.textContent?.trim()).toBe("Claude");
     expect(mine.querySelector(".plan-acct__name")?.textContent).toContain("de Walter · Todos usam");
     expect(joao.querySelector(".plan-acct__name")?.textContent).toContain("de João · Só João usa");
     // Opened, the plan's owner chooses; on someone else's there is nothing to choose.

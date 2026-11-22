@@ -256,6 +256,47 @@ describe("IA e uso: the viewer's own accounts", () => {
       "MiniMax do Walt",
     ]);
   });
+
+  test("an unnamed account with no email shows its provider name, and renaming an account to its provider name replaces its email", async () => {
+    const claudeAuto: AiAccounts["accounts"][number] = {
+      ...base,
+      id: "acct_claude",
+      kind: "claude_code",
+      label: "Claude",
+      email: "walt@acme.com",
+      plan: "ultra",
+      shared: true,
+      serves: "everyone",
+      usedBy: [],
+    };
+    const geminiAuto: AiAccounts["accounts"][number] = {
+      ...base,
+      id: "acct_gemini",
+      kind: "antigravity",
+      label: "Gemini",
+      email: null,
+      shared: true,
+      serves: "everyone",
+      usedBy: [],
+    };
+    const { state } = await page([claudeAuto, geminiAuto]);
+    expect(rows()[0]?.querySelector(".plan-row__title")?.textContent?.trim()).toBe("walt@acme.com");
+    expect(rows()[1]?.querySelector(".plan-row__title")?.textContent?.trim()).toBe("Gemini");
+    expect(document.body.textContent).not.toContain("Conta sem nome");
+
+    await click(within(await opened(rows()[0])).getByRole("button", { name: "Renomear" }));
+    const rename = screen().getByRole("dialog", { name: "Renomear walt@acme.com" });
+    await act(async () => fireEvent.change(within(rename).getByLabelText("Nome"), { target: { value: "Claude" } }));
+    await click(within(rename).getByRole("button", { name: "Salvar" }));
+    await settle(4);
+    expect(state.calls.find((c) => c.method === "machines.renameAccount")?.args).toEqual([
+      ORG_ID,
+      "machine_1",
+      "acct_claude",
+      "Claude",
+    ]);
+    expect(rows()[0]?.querySelector(".plan-row__title")?.textContent?.trim()).toBe("Claude");
+  });
 });
 
 describe("IA e uso: the same account signed in again and again", () => {

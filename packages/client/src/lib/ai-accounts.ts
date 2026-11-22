@@ -258,25 +258,26 @@ export const labelTitle = (a: Pick<MachineAccount, "label" | "plan">) =>
     ? `${a.label} · ${planName(a.plan)}`
     : a.label;
 
-type TitledAccount = Pick<MachineAccount, "label" | "plan" | "email" | "mine" | "named" | "keyHint" | "provider">;
+type TitledAccount = Pick<MachineAccount, "label" | "plan" | "email" | "mine" | "named" | "keyHint" | "provider"> &
+  Partial<Pick<MachineAccount, "kind">>;
 
 /** Read by its name (`labelTitle`), not its email: someone else's (whose email the viewer never gets), or a key account (its key's end tells it apart). */
 const byLabel = (a: Pick<TitledAccount, "mine" | "keyHint" | "provider">) =>
   !a.mine || a.keyHint != null || isPlanId(a.provider);
 
 /**
- * An account as every app titles it (web, desktop, phone): the name its owner gave it, else its email, else "Unnamed
- * account" where its sign-in says no email (Claude's token for all agents, ADR 0059 §2), never the automatic
- * "Claude 2". Someone else's account and a key account keep their name with the plan (`labelTitle`).
+ * An account as every app titles it (web, desktop, phone): the name its owner gave it, else its email, else its maker
+ * ("Gemini", "Claude") where its sign-in says no email, never the automatic "Claude 2". Someone else's account and a
+ * key account keep their name with the plan (`labelTitle`).
  */
 export function accountTitle(t: TFunction, a: TitledAccount): string {
   if (byLabel(a)) return labelTitle(a);
   if (a.named === true) return a.label;
-  return a.email ?? t("aiAccounts.unnamed");
+  return a.email ?? (a.kind ? t(`aiAccounts.connect.${a.kind}`) : t("aiAccounts.unnamed"));
 }
 
-/** Whether the title is "Unnamed account": the viewer's own account with no name of theirs and no email. */
-export const unnamedAccount = (a: TitledAccount) => !byLabel(a) && a.named !== true && !a.email;
+/** Whether the title falls back to "Unnamed account": the viewer's own account with no name, no email, and no known maker. */
+export const unnamedAccount = (a: TitledAccount) => !byLabel(a) && a.named !== true && !a.email && !a.kind;
 
 /**
  * An account inside a sentence ("Ada agora pensa com …", "Você já tem … aqui"): its title, or for an unnamed one its

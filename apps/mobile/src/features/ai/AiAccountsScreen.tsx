@@ -733,7 +733,12 @@ export function RenameAiAccountScreen({ machineId, accountId }: { machineId: str
       successHaptic();
       toast({ title: t("aiAccounts.page.renamed", { label: name }), icon: "check" });
       // Every list that shows it reads it again: the accounts, each agent's AI (`keys.agentBrain`'s prefix), usage.
-      for (const key of [keys.aiAccounts(orgId), keys.planUsage(orgId), ["org", orgId, "agent"]])
+      for (const key of [
+        keys.aiAccounts(orgId),
+        keys.planUsage(orgId),
+        keys.accountOrder(orgId),
+        ["org", orgId, "agent"],
+      ])
         void qc.invalidateQueries({ queryKey: key });
       goBack();
     } catch {

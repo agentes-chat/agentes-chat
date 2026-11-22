@@ -70,7 +70,13 @@ export function AccountActions({ machineId, accountId }: { machineId: string; ac
   const { logins } = account;
   const names = (list: string[]) => joinNames(list, t);
   const refetch = () => {
-    for (const key of [keys.aiAccounts(org.id), keys.planUsage(org.id)]) void qc.invalidateQueries({ queryKey: key });
+    for (const key of [
+      keys.aiAccounts(org.id),
+      keys.planUsage(org.id),
+      keys.accountOrder(org.id),
+      ["org", org.id, "agent"],
+    ])
+      void qc.invalidateQueries({ queryKey: key });
   };
   const machine = machines.data?.find((m) => m.id === a.machineId);
   const computer = computerNameOf(t, org.name, a.computer, isPersonal(org));

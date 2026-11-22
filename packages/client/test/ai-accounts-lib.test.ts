@@ -477,9 +477,10 @@ describe("the computers' own sign-ins", () => {
     expect(labelTitle({ label: "Maxwell", plan: "max" })).toBe("Maxwell · Max");
   });
 
-  test("the viewer's own account reads by the name they gave it, else its email, else as unnamed", () => {
+  test("the viewer's own account reads by the name they gave it, else its email, else its maker", () => {
     const t = ((key: string) => key) as unknown as TFunction;
     const own = {
+      kind: "claude_code" as const,
       label: "Claude 2",
       plan: "team",
       email: "ana@acme.com",
@@ -492,13 +493,18 @@ describe("the computers' own sign-ins", () => {
     expect(accountTitle(t, own)).toBe("ana@acme.com");
     expect(accountSub(own)).toBe("Team");
     expect(withSub(own, "Também usada por Infra")).toBe("Team · Também usada por Infra");
-    // A name its owner gave it stands above its email.
+    // A name its owner gave it stands above its email, even when equal to the provider's name.
     const named = { ...own, label: "Trabalho", named: true };
     expect(accountTitle(t, named)).toBe("Trabalho");
     expect(accountSub(named)).toBe("ana@acme.com · Team");
-    // A sign-in that says no email (Claude's token for all agents) and no name of theirs: unnamed.
-    expect(accountTitle(t, { ...own, email: null })).toBe("aiAccounts.unnamed");
-    expect(unnamedAccount({ ...own, email: null })).toBe(true);
+    expect(accountTitle(t, { ...own, label: "Claude", named: true })).toBe("Claude");
+    // A sign-in that says no email (Gemini CLI, Claude's token for all agents) and no name of theirs: its maker.
+    expect(accountTitle(t, { ...own, kind: "antigravity", label: "Gemini", email: null })).toBe(
+      "aiAccounts.connect.antigravity",
+    );
+    expect(accountTitle(t, { ...own, email: null })).toBe("aiAccounts.connect.claude_code");
+    expect(unnamedAccount({ ...own, email: null })).toBe(false);
+    expect(unnamedAccount({ ...own, kind: undefined, email: null })).toBe(true);
     expect(unnamedAccount(own)).toBe(false);
     // An older server that doesn't say: the automatic name, read as such.
     expect(accountTitle(t, { ...own, named: undefined })).toBe("ana@acme.com");

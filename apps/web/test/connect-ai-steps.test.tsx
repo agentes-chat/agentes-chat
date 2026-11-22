@@ -1786,7 +1786,7 @@ describe("All agents: one plan for the team, a login per agent", () => {
     const shared = { ...claudeMax, shared: true, usedBy: ["Atlas"] };
     const { state, dialog } = await connect({ brain: { accounts: [shared] }, computers: [SHARING] });
     const panel = within(dialog).getByRole("region", { name: "Seu plano do Claude" });
-    const use = within(panel).getByRole("button", { name: /^Usar Conta sem nome/ });
+    const use = within(panel).getByRole("button", { name: /^Usar Claude/ });
     expect(use.querySelector(".ac-option__desc")?.textContent).toBe("Também usada por Atlas");
     // The sign-in waits behind Another account.
     expect(within(panel).queryByRole("button", { name: "Entrar com Claude" })).toBeNull();
