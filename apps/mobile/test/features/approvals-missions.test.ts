@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { MachineTask } from "@agenteschat/client";
+import type { MachineTask, MissionCommand, MissionDelivery } from "@agenteschat/client";
 import {
   approvalCardItems,
   approvalCards,
@@ -17,6 +17,7 @@ import {
 } from "@agenteschat/client/lib/approval-card";
 import { approvalEffects } from "@agenteschat/client/lib/approval-review";
 import { approvalRuleWords, approvalTitle } from "@agenteschat/client/lib/approval-words";
+import { blockedGroups, blockedText, ruleText } from "@agenteschat/client/lib/missions";
 import {
   approvalAction,
   approvalRisk,
@@ -30,13 +31,19 @@ import {
   waitingApprovals,
 } from "../../src/features/approvals/logic";
 import {
+  addablePeople,
+  deliveryChecked,
+  deliveryFiles,
   hoursSince,
   liveSessions,
   missionTrack,
+  othersWhoChecked,
   planProgress,
   planRows,
   recommendedOption,
+  settledTicks,
   takenDecisions,
+  tickOf,
   trackCells,
   waitingCards,
   waitingCount,
@@ -320,6 +327,81 @@ describe("missions", () => {
     expect(takenDecisions(list).map((d) => d.id)).toEqual(["t2", "t1"]);
     expect(recommendedOption(decision({ id: "x" }))).toBe("Início");
     expect(recommendedOption(decision({ id: "x", recommendation: "Outra" }))).toBeNull();
+  });
+
+  test("what waits on you also holds the delivery to conclude and the commands asked", () => {
+    const delivery = (id: string, status: MissionDelivery["status"]) => ({ id, status }) as MissionDelivery;
+    const command = (id: string, state: MissionCommand["state"]) => ({ id, state }) as MissionCommand;
+    const w = waitingCards(
+      [],
+      [],
+      [delivery("d1", "pending"), delivery("d0", "superseded"), delivery("d2", "accepted")],
+      [command("c1", "pending"), command("c2", "expired"), command("c3", "allowed")],
+    );
+    expect(w.deliveries.map((d) => d.id)).toEqual(["d1"]);
+    expect(w.commands.map((c) => c.id)).toEqual(["c1"]);
+    expect(waitingCards(undefined, undefined)).toEqual({ deliveries: [], commands: [], reviews: [], decisions: [] });
+  });
+
+  test("a delivery's checklist counts only my own checks; the others show beside the item", () => {
+    const d = {
+      artifactIds: ["f1", "f2"],
+      checklist: [
+        { id: "1", text: "Login", checkedBy: ["me", "ana"] },
+        { id: "2", text: "Push", checkedBy: ["ana"] },
+        { id: "3", text: "Ícone", checkedBy: [] },
+      ],
+    };
+    expect(deliveryChecked(d, "me")).toEqual({ done: 1, total: 3 });
+    expect(deliveryChecked(d, null)).toEqual({ done: 0, total: 3 });
+    expect(othersWhoChecked({ checkedBy: ["me", "ana"] }, "me")).toEqual(["ana"]);
+    expect(deliveryFiles(d)).toEqual([
+      { id: "f1", title: "", deleted: false },
+      { id: "f2", title: "", deleted: false },
+    ]);
+  });
+
+  test("a checklist tap shows at once and stays until the delivery carries it; then the server's again", () => {
+    const list = [
+      { id: "1", checkedBy: ["ana"] },
+      { id: "2", checkedBy: ["me"] },
+    ];
+    expect(tickOf(true, ["ana"], "me")).toBe(true);
+    expect(tickOf(undefined, ["me"], "me")).toBe(true);
+    // Item 1 tapped on, not back yet: kept. Item 2 tapped on, the server has it: dropped. A gone item: dropped.
+    expect(settledTicks({ "1": true, "2": true, "9": false }, list, "me")).toEqual({ "1": true });
+    const same = { "1": true };
+    expect(settledTicks(same, list, "me")).toBe(same);
+  });
+
+  test("refused commands: what they read as, grouped by their first word in first order; rules as people read them", () => {
+    const blocked = [
+      { tool: "Bash", command: "python3 a.py" },
+      { tool: "Read", command: "/x/notes.md" },
+      { tool: "Bash", command: "/usr/bin/python3 b.py" },
+      { tool: "", command: "zsh -c ls" },
+    ];
+    expect(blockedGroups(blocked)).toEqual([
+      ["python3", [0, 2]],
+      ["Read", [1]],
+      ["zsh", [3]],
+    ]);
+    expect(blockedText(blocked[1] ?? { tool: "", command: "" })).toBe("Read /x/notes.md");
+    expect(blockedText(blocked[0] ?? { tool: "", command: "" })).toBe("python3 a.py");
+    expect(ruleText("Bash(swift build *)")).toBe("swift build …");
+    expect(ruleText("WebFetch(domain:x.dev)")).toBe("x.dev");
+  });
+
+  test("people to add to a mission: not its owner nor who already takes part, by name", () => {
+    const members = [
+      { userId: "u3", name: "Caio" },
+      { userId: "u1", name: "Ana" },
+      { userId: "u2", name: "Bia" },
+      { userId: "u4", name: "Davi" },
+    ];
+    const people = { owner: { userId: "u1" }, participants: [{ userId: "u4" }] };
+    expect(addablePeople(members, people).map((p) => p.userId)).toEqual(["u2", "u3"]);
+    expect(addablePeople(members, undefined).map((p) => p.name)).toEqual(["Ana", "Bia", "Caio", "Davi"]);
   });
 
   test("sessions on the computer now, and hours of work", () => {
