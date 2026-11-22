@@ -19,6 +19,13 @@ const configDir = (home: string) => path.join(home, ".gemini", "config");
 /** The agent Lodi's turns run as (`--agent`): no built-in tool, our server's alone. */
 export const AGY_CHAT_AGENT = "agenteschat-chat";
 
+/**
+ * Work-mode agent used when Linux AppArmor disables `agy`'s terminal sandbox (`apparmor_restrict_unprivileged_userns = 1`)
+ * and the turn has our MCP `run_code` tool: keeps built-in file/search tools and MCP, disables native shell commands so
+ * headless mode skips the doomed `run_command` denial and goes straight to `run_code`.
+ */
+export const AGY_WORK_NO_CMD_AGENT = "agenteschat-work-no-cmd";
+
 /** How the account signs in (`auth.type`): a personal Google account, or Gemini Enterprise. */
 export type AgyAuth = "oauth-personal" | "oauth-business";
 
@@ -48,7 +55,7 @@ function writeIfChanged(file: string, text: string) {
     // not there yet
   }
   mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
-  const tmp = `${file}.${process.pid}.tmp`;
+  const tmp = `${file}.${process.pid}.${Math.random().toString(36).slice(2, 8)}.tmp`;
   writeFileSync(tmp, text, { mode: 0o600 });
   renameSync(tmp, file);
 }
@@ -244,13 +251,56 @@ export const agyChatAgent = (): string =>
     "",
   ].join("\n");
 
+/** Work agent without native shell commands (keeps file/search tools + MCP `run_code`). */
+export const agyWorkNoCmdAgent = (): string =>
+  [
+    "---",
+    `name: ${AGY_WORK_NO_CMD_AGENT}`,
+    "description: Works in the workspace using built-in file tools and the agentes MCP tools when native terminal sandboxing is unavailable.",
+    "tools: [view_file, write_to_file, replace_file_content, multi_replace_file_content, list_dir, find_by_name, grep_search, search_web, read_url_content]",
+    "mainAgent: true",
+    "commandExecutionPolicy: off",
+    "---",
+    "Native terminal commands are disabled on this host because the terminal sandbox is unavailable.",
+    "Use the agentes MCP tool `run_code` to run shell commands or scripts, and use your built-in file tools to read and edit files.",
+    "",
+  ].join("\n");
+
+const MANAGED_AGY_AGENTS = new Set([AGY_CHAT_AGENT, AGY_WORK_NO_CMD_AGENT]);
+
 /**
- * Before a turn: what an earlier turn planted dropped, then our settings, our server alone and Lodi's agent written
- * (each only when it differs).
+ * Before a turn: what an earlier turn planted dropped, then our settings, our server alone and our agents written
+ * (each only when it differs). Managed agent folders are cleaned in place (never wiping the whole `agents/` folder)
+ * so concurrent turns on the same account cannot delete each other's `agent.md` during startup.
  */
 export function prepareAgyHome(home: string, command: string[] | undefined) {
-  for (const rel of AGY_PLANTED) rmSync(path.join(home, rel), { recursive: true, force: true });
+  for (const rel of AGY_PLANTED) {
+    if (rel === ".gemini/config/agents") continue;
+    rmSync(path.join(home, rel), { recursive: true, force: true });
+  }
+  const agentsDir = path.join(configDir(home), "agents");
+  if (existsSync(agentsDir)) {
+    try {
+      for (const entry of readdirSync(agentsDir)) {
+        const entryPath = path.join(agentsDir, entry);
+        if (!MANAGED_AGY_AGENTS.has(entry)) {
+          rmSync(entryPath, { recursive: true, force: true });
+          continue;
+        }
+        try {
+          for (const child of readdirSync(entryPath)) {
+            if (child !== "agent.md") rmSync(path.join(entryPath, child), { recursive: true, force: true });
+          }
+        } catch {
+          rmSync(entryPath, { recursive: true, force: true });
+        }
+      }
+    } catch {
+      rmSync(agentsDir, { recursive: true, force: true });
+    }
+  }
   writeAgySettings(home);
   writeIfChanged(path.join(configDir(home), "mcp_config.json"), agyMcpConfig(command));
   writeIfChanged(path.join(configDir(home), "agents", AGY_CHAT_AGENT, "agent.md"), agyChatAgent());
+  writeIfChanged(path.join(configDir(home), "agents", AGY_WORK_NO_CMD_AGENT, "agent.md"), agyWorkNoCmdAgent());
 }

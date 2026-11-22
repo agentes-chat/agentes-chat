@@ -7,9 +7,9 @@ const { agentRuns, agentRunSteps, messages } = schema;
 
 /**
  * A computer brain's own calls that read from outside (`transcript.harnessTried` lines, `callLine`): Claude Code's
- * WebFetch and WebSearch, and a command that starts with curl, wget or gh.
+ * WebFetch and WebSearch, Antigravity's search_web and read_url_content, and a command that starts with curl, wget or gh.
  */
-const HARNESS_OUTSIDE = /^(?:WebFetch|WebSearch)\b|^\w+\(\s*(?:curl|wget|gh)\s/;
+const HARNESS_OUTSIDE = /^(?:WebFetch|WebSearch|search_web|read_url_content)\b|^\w+\(\s*(?:curl|wget|gh)\s/;
 
 export type OutsideRun = AuthorityRun;
 

@@ -1,6 +1,6 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import type { EventEmitter } from "node:events";
-import { mkdirSync, rmSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import { createInterface } from "node:readline";
 import type { CommandProfile } from "@agenteschat/adapters/command-policy";
@@ -17,7 +17,7 @@ import {
   withoutContainers,
   withoutSignIns,
 } from "./accounts";
-import { AGY_CHAT_AGENT, prepareAgyHome } from "./agy-home";
+import { AGY_CHAT_AGENT, AGY_WORK_NO_CMD_AGENT, prepareAgyHome } from "./agy-home";
 import { LIMIT_TEXT } from "./brain";
 import { type CodexBrainEvent, CodexThreads, chatFolder, codexProfileOf, codexThreadKey } from "./brain-codex";
 import { cursorPrompt } from "./brain-cursor";
@@ -100,6 +100,33 @@ export const isOurAgyTool = (name: unknown) => typeof name === "string" && OURS.
 const agyEffort = (effort?: BrainEffort, model?: string) =>
   model && ANTIGRAVITY_LEVEL.test(model) ? undefined : effort === "xhigh" || effort === "max" ? "high" : effort;
 
+const APPARMOR_USERNS_SYSCTL = "/proc/sys/kernel/apparmor_restrict_unprivileged_userns";
+
+function readAppArmorUsernsSysctl(): string | null {
+  try {
+    return readFileSync(APPARMOR_USERNS_SYSCTL, "utf8").trim();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * On Linux with `kernel.apparmor_restrict_unprivileged_userns = 1` (e.g. Ubuntu 24.04), Antigravity CLI 1.5.x
+ * disables its terminal sandbox and headless mode auto-denies native `run_command` calls.
+ */
+export function agyTerminalSandboxUnavailable(
+  platform: NodeJS.Platform = process.platform,
+  readSysctl: () => string | null = readAppArmorUsernsSysctl,
+): boolean {
+  return platform === "linux" && readSysctl() === "1";
+}
+
+/** Whether `tools` (space-separated MCP tool names from the engine) includes `name`. */
+export function hasMcpTool(tools: string | undefined, name: string): boolean {
+  if (!tools) return false;
+  return tools.split(/\s+/).includes(name);
+}
+
 /** The `agy` arguments for one turn. */
 export function antigravityTurnArgs(input: {
   prompt: string;
@@ -109,6 +136,8 @@ export function antigravityTurnArgs(input: {
   profile?: CommandProfile;
   /** The team's right hand: our server's tools alone. */
   locked?: boolean;
+  /** Work mode on Linux when `agy`'s terminal sandbox is unavailable and our MCP `run_code` is available. */
+  workNoCmd?: boolean;
 }): string[] {
   const effort = agyEffort(input.effort, input.model);
   return [
@@ -118,7 +147,11 @@ export function antigravityTurnArgs(input: {
     "stream-json",
     "--sandbox",
     "--disable-slash-commands",
-    ...(input.locked ? ["--agent", AGY_CHAT_AGENT] : input.profile === "plan" ? [] : ["--mode", "accept-edits"]),
+    ...(input.locked
+      ? ["--agent", AGY_CHAT_AGENT]
+      : input.profile === "plan"
+        ? []
+        : ["--mode", "accept-edits", ...(input.workNoCmd ? ["--agent", AGY_WORK_NO_CMD_AGENT] : [])]),
     ...(input.model ? ["--model", input.model] : []),
     ...(effort ? ["--effort", effort] : []),
     ...(input.chat ? ["--conversation", input.chat] : []),
@@ -215,7 +248,7 @@ export interface AntigravityTurnInput {
   effort?: BrainEffort;
   system: string;
   prompt: string;
-  mcp: { token: string };
+  mcp: { token: string; tools?: string };
   /** The account: its folder is the CLI's `HOME`, its chats are its own. */
   account: { id: string; home: string };
   profile?: CommandProfile;
@@ -238,6 +271,8 @@ export interface AntigravityTurnOptions {
   bin?: string;
   spawn?: Spawn;
   platform?: NodeJS.Platform;
+  /** Tests: override detection of Linux AppArmor blocking `agy`'s terminal sandbox. */
+  terminalSandboxUnavailable?: boolean;
   now?: () => number;
 }
 
@@ -276,6 +311,13 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
   const clean = (text: string) => (opts.redact ? opts.redact(text) : text);
   const hold = opts.redact ? (opts.redactHold ?? 0) : 0;
 
+  const platform = opts.platform ?? process.platform;
+  const profile = input.profile ?? "work";
+  const workNoCmd =
+    !input.chat &&
+    profile !== "plan" &&
+    hasMcpTool(input.mcp.tools, "run_code") &&
+    (opts.terminalSandboxUnavailable ?? agyTerminalSandboxUnavailable(platform));
   // One retry, as a new chat, when the CLI doesn't have the conversation it was to resume.
   for (let attempt = 0; ; attempt++) {
     const chat = opts.chats.get(chatKey);
@@ -284,8 +326,9 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
       ...(chat ? { chat } : {}),
       ...(input.model ? { model: input.model } : {}),
       ...(input.effort ? { effort: input.effort } : {}),
-      profile: input.profile ?? "work",
+      profile,
       ...(input.chat ? { locked: true } : {}),
+      ...(workNoCmd ? { workNoCmd: true } : {}),
     });
     let child: ChildProcess;
     try {
@@ -480,6 +523,8 @@ export interface AntigravityBrainContext {
   grant?: AccountGrant;
   spawn?: Spawn;
   platform?: NodeJS.Platform;
+  /** Tests: override detection of Linux AppArmor blocking `agy`'s terminal sandbox. */
+  terminalSandboxUnavailable?: boolean;
 }
 
 const chatStores = new Map<string, CodexThreads>();
@@ -560,7 +605,7 @@ export async function handleAntigravityBrainTurn(
         ...(req.effort ? { effort: req.effort } : {}),
         system: typeof req.system === "string" ? req.system : "",
         prompt: typeof req.prompt === "string" ? req.prompt : "",
-        mcp: { token: req.mcp.token },
+        mcp: { token: req.mcp.token, ...(typeof req.mcp.tools === "string" ? { tools: req.mcp.tools } : {}) },
         account: { id: accountId, home: signIn.home },
         profile: codexProfileOf(req),
         ...(chat ? { chat } : {}),
@@ -575,6 +620,9 @@ export async function handleAntigravityBrainTurn(
         ...(ctx.bin ? { bin: ctx.bin } : {}),
         ...(ctx.spawn ? { spawn: ctx.spawn } : {}),
         ...(ctx.platform ? { platform: ctx.platform } : {}),
+        ...(ctx.terminalSandboxUnavailable !== undefined
+          ? { terminalSandboxUnavailable: ctx.terminalSandboxUnavailable }
+          : {}),
       },
     );
   } finally {
