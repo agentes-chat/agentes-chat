@@ -14377,6 +14377,7 @@
     "icloudHint": "Apple Accountが{{name}}を使っていても、name@icloud.comのようなiCloudメールのアドレスを使ってください。",
     "password": "アプリパスワード",
     "passwordHelp": "サーバーに暗号化して保存されます。二度と誰にも表示されません。",
+    "gmailAppPasswordNote": "アプリ パスワードには、Google アカウントで 2 段階認証プロセスを有効にする必要があります。",
     "passwordInvalid": "アプリパスワードを貼り付けてください。",
     "whatIs": "アプリパスワードとは？",
     "whatIsText": "エージェント専用のパスワードです。メールのサイトで作成し、ご自身のパスワードを変えずにいつでも削除できます。",

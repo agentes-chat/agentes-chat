@@ -252,7 +252,7 @@ function MailForWhom() {
 }
 
 /** "O que é uma senha de app?": what it is, three steps and the provider's page. */
-export function AppPasswordHelp({ url, name }: { url: string | null; name: string }) {
+export function AppPasswordHelp({ url, name, presetId }: { url: string | null; name: string; presetId?: string }) {
   const { t } = useTranslation();
   return (
     <div className="mail-howto">
@@ -269,6 +269,7 @@ export function AppPasswordHelp({ url, name }: { url: string | null; name: strin
           {t("mail.openPage", { name })}
         </a>
       )}
+      {presetId === "gmail" && <span className="small muted">{t("mail.gmailAppPasswordNote")}</span>}
     </div>
   );
 }
@@ -417,7 +418,11 @@ export function ImapStep({
               }}
             />
           </Field>
-          <AppPasswordHelp url={current?.appPasswordUrl ?? null} name={current?.label ?? mailChoiceName(t, choice)} />
+          <AppPasswordHelp
+            url={current?.appPasswordUrl ?? null}
+            name={current?.label ?? mailChoiceName(t, choice)}
+            presetId={current?.id}
+          />
           <p className="small muted mail-hint">
             <Icon name="info" size={14} />
             <span>{t("mail.dedicated")}</span>
@@ -1111,6 +1116,7 @@ export function MailReconnectDialog({ account, onClose }: { account: MailAccount
             <AppPasswordHelp
               url={preset?.appPasswordUrl ?? null}
               name={preset?.label ?? (account ? mailChoiceName(t, choiceOf(account)) : "")}
+              presetId={preset?.id}
             />
             {error ? <Alert>{t(`mail.error.${mailErrorOf(error)}`)}</Alert> : null}
           </DialogBody>

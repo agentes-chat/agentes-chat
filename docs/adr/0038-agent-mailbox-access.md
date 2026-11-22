@@ -120,7 +120,7 @@ KMS is not a prerequisite for email. Gmail and Outlook through Composio store no
 - Mail grants are changed only by the mail API: replacing an agent's scopes keeps them, and "all tools" never includes `mail:` scopes.
 - A run started by inbound mail, and later runs in that thread, always ask before sending, even when the policy allows sending without asking.
 - IMAP host names are resolved and refused when they point to private, loopback or metadata addresses. They are checked once before connecting, not pinned against DNS rebinding.
-- Presets: iCloud, Yahoo, Zoho (and Zoho custom domains), Fastmail, Locaweb, Hostinger, GoDaddy, Titan and IONOS. KingHost and UOL Host are left out because no official settings page was found; those mailboxes use "Outro servidor".
+- Presets: iCloud, Yahoo, Zoho (and Zoho custom domains), Fastmail, Locaweb, Hostinger, GoDaddy, Titan and IONOS, plus Gmail on a server without Composio (addendum of 2026-11-20). KingHost and UOL Host are left out because no official settings page was found; those mailboxes use "Outro servidor".
 - Outlook has no brand icon (Simple Icons removed it at Microsoft's request); the card shows a letter tile.
 - A MillionSend inbox was a fourth path (`via = millionsend`), ADR 0102, withdrawn on 2026-11-02.
 
@@ -143,3 +143,12 @@ Product decision: a mailbox is personal to whoever connected it, so only that pe
 - `request_permission` and teammate change cards (ADR 0092) never name mailboxes, and `setAgentScopes` and `setAgentAccess` keep mail grants as they are, so `setAgentMail` is the only way a mail grant is made.
 - Grants made before this stay as they are. No data is rewritten.
 - If the owner's account is deleted (`created_by_user_id` becomes null), nobody can give access to that mailbox. It has to be connected again by someone.
+
+## Addendum (2026-11-20): Gmail by app password on a server without Composio
+
+Self-hosted installations that don't set `COMPOSIO_API_KEY` have no way to connect the mailbox almost everyone has. The IMAP/SMTP path already works with Gmail's hosts, and Gmail keeps its own copy of sent mail (`imap.ts`), so the missing piece is only a preset: `imap.gmail.com:993`, `smtp.gmail.com:587`, login = full address, and a link to the Google app-password page with a note that a password there requires 2-Step Verification.
+
+- **Decision:** add the `gmail` preset to `MAIL_PRESETS`, offered in "Outro email" only when the server has no Composio adapter. `mailProviders()` leaves it out when Composio is set, so Cloud and installations with their own Composio project keep the OAuth path of the decision above and never show two ways into the same mailbox. The connector still accepts `preset: "gmail"` from any server that has IMAP: hiding the choice is a matter of what we offer, not a new restriction on a connection.
+- **No new Google app of ours:** this uses an app password, not OAuth, so the restricted Gmail scopes, Google's verification and CASA stay Composio's problem (or stay untouched for someone who never signs in with Google here). No Composio call is billed.
+- **The usual IMAP rules apply unchanged:** the password is sealed like other connection secrets, reads use `EXAMINE`/`BODY.PEEK`, the host goes through the address guard, sending asks by default, and the screen still suggests a dedicated mailbox. An app password can't be scoped at Google, so it is a reason to prefer a mailbox just for agents, as already written in Consequences.
+- An account connected this way is `provider: "imap"`, `preset: "gmail"`; it lands in the "Outro email" card, keeps the Gmail label from the preset, and its tool names and analytics key come from the IMAP path (`via = native`), not from Composio's Gmail toolkit.

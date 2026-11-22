@@ -2,14 +2,29 @@ import type { MailPreset } from "./mail";
 
 /**
  * Known IMAP/SMTP providers (ADR 0038): the person picks one and pastes an
- * app password. Gmail and Outlook are not here: they go through Composio.
- * Every host and port was checked against the provider's own help page
- * (2026-10). SMTP port 465 = implicit TLS; 587 = STARTTLS (required).
+ * app password. Outlook is not here: it goes through Composio. Gmail is here
+ * for a server without Composio, as an app password on the "Outro email" path
+ * (ADR 0038 addendum of 2026-11-20); the apps hide the preset when Composio
+ * is set, so Cloud keeps the OAuth path. Every host and port was checked
+ * against the provider's own help page (2026-10). SMTP port 465 = implicit
+ * TLS; 587 = STARTTLS (required).
  *
  * Left out because no official page confirmed the hosts: KingHost, UOL Host,
  * Zoho's regional data centers (EU, IN, AU…; those people pick `custom`).
  */
 export const MAIL_PRESETS: MailPreset[] = [
+  {
+    // support.google.com/mail/answer/7126229 and support.google.com/accounts/answer/185833:
+    // IMAP must be on in Gmail's settings and the password needs 2-Step Verification.
+    id: "gmail",
+    label: "Gmail",
+    imapHost: "imap.gmail.com",
+    imapPort: 993,
+    smtpHost: "smtp.gmail.com",
+    smtpPort: 587,
+    username: "address",
+    appPasswordUrl: "https://myaccount.google.com/apppasswords",
+  },
   {
     // support.apple.com/102525. Custom iCloud+ domains log in with the Apple ID address.
     id: "icloud",

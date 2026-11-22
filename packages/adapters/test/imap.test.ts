@@ -696,7 +696,7 @@ describe("poll state", () => {
 });
 
 describe("presets", () => {
-  test("well-formed, unique ids, no Gmail/Outlook, custom last", () => {
+  test("well-formed, unique ids, no Outlook, custom last", () => {
     const ids = MAIL_PRESETS.map((p) => p.id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toContain("icloud");
@@ -708,7 +708,7 @@ describe("presets", () => {
       if (preset.id !== "custom") {
         expect(preset.imapHost).toMatch(/^[a-z0-9.-]+\.[a-z]{2,}$/);
         expect(preset.smtpHost).toMatch(/^[a-z0-9.-]+\.[a-z]{2,}$/);
-        expect(preset.imapHost).not.toMatch(/gmail|outlook|office365/);
+        expect(preset.imapHost).not.toMatch(/outlook|office365/);
       }
       if (preset.appPasswordUrl) expect(preset.appPasswordUrl.startsWith("https://")).toBe(true);
     }
@@ -717,6 +717,15 @@ describe("presets", () => {
       imapPort: 993,
       smtpHost: "smtp.mail.me.com",
       smtpPort: 587,
+    });
+    expect(MAIL_PRESETS.find((p) => p.id === "gmail")).toMatchObject({
+      label: "Gmail",
+      imapHost: "imap.gmail.com",
+      imapPort: 993,
+      smtpHost: "smtp.gmail.com",
+      smtpPort: 587,
+      username: "address",
+      appPasswordUrl: "https://myaccount.google.com/apppasswords",
     });
   });
 });

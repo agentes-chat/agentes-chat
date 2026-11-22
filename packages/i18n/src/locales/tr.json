@@ -14879,6 +14879,7 @@
     "icloudHint": "Apple Hesabınız {{name}} kullansa bile iCloud Mail adresinizi kullanın, örneğin ad@icloud.com.",
     "password": "Uygulama şifresi",
     "passwordHelp": "Sunucuda şifreli saklanır. Kimse bir daha görmez.",
+    "gmailAppPasswordNote": "Uygulama şifresi için Google Hesabınızda 2 Adımlı Doğrulama’nın açık olması gerekir.",
     "passwordInvalid": "Uygulama şifresini yapıştırın.",
     "whatIs": "Uygulama şifresi nedir?",
     "whatIsText": "Yalnızca ajanlar için bir şifre. E-postanızın sitesinde oluşturursunuz ve kendi şifrenizi değiştirmeden istediğiniz zaman silebilirsiniz.",

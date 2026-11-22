@@ -16021,6 +16021,7 @@
     "icloudHint": "Użyj adresu iCloud Mail, na przykład imie@icloud.com, nawet jeśli twoje Konto Apple używa {{name}}.",
     "password": "Hasło aplikacji",
     "passwordHelp": "Przechowywane w postaci zaszyfrowanej na serwerze. Nikt go już nie zobaczy.",
+    "gmailAppPasswordNote": "Hasło aplikacji wymaga włączenia weryfikacji dwuetapowej na Twoim koncie Google.",
     "passwordInvalid": "Wklej hasło aplikacji.",
     "whatIs": "Co to jest hasło aplikacji?",
     "whatIsText": "Hasło tylko dla agentów. Tworzysz je na stronie swojej poczty i możesz je usunąć w dowolnej chwili, bez zmiany własnego hasła.",

@@ -15479,6 +15479,7 @@
     "icloudHint": "Utilisez votre adresse iCloud Mail, comme nom@icloud.com, même si votre compte Apple utilise {{name}}.",
     "password": "Mot de passe d'app",
     "passwordHelp": "Stocké chiffré sur le serveur. Personne ne le revoit.",
+    "gmailAppPasswordNote": "Un mot de passe d’application nécessite la vérification en deux étapes activée sur votre compte Google.",
     "passwordInvalid": "Collez le mot de passe d'app.",
     "whatIs": "Qu'est-ce qu'un mot de passe d'app ?",
     "whatIsText": "Un mot de passe rien que pour les agents. Vous le créez sur le site de votre messagerie et pouvez le supprimer à tout moment, sans changer votre propre mot de passe.",

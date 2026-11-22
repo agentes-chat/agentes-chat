@@ -15240,6 +15240,7 @@ export const ptBR = {
     icloudHint: "Use o endereço do Mail do iCloud, como nome@icloud.com, mesmo que a sua Conta Apple use o {{name}}.",
     password: "Senha de app",
     passwordHelp: "Fica cifrada no servidor. Ninguém vê depois.",
+    gmailAppPasswordNote: "A senha de app exige a verificação em duas etapas ligada na sua Conta Google.",
     passwordInvalid: "Cole a senha de app.",
     whatIs: "O que é uma senha de app?",
     whatIsText:
