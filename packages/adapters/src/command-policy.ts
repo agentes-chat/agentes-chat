@@ -437,7 +437,7 @@ const SYSTEM_SECRETS = [
  * and the like, which hold none), the runner's own home.
  */
 const SECRET_PATH = new RegExp(
-  `(^|/)(${SECRET_DIRS.map(escapeRe).join("|")})(/|$)|^~/(${HOME_SECRET_DIRS.map(escapeRe).join("|")})(/|$)|(^|/)(${SECRET_FILES.map(escapeRe).join("|")}|\\.env(\\.(?!(example|sample|template|dist|defaults)$)[\\w.-]+)?|id_[a-z0-9]+(\\.pub)?|.*\\.pem|.*\\.key)$|(^|/)(${SECRET_SIGN_IN_FILES.map((f) => escapeRe(f).replaceAll("\\*", "[^/]+")).join("|")})$|${SYSTEM_SECRETS.join("|")}`,
+  `(^|/)(${SECRET_DIRS.map(escapeRe).join("|")})(/|$)|^~/(${HOME_SECRET_DIRS.map(escapeRe).join("|")})(/|$)|(^|/)(${SECRET_FILES.map(escapeRe).join("|")}|\\.env(\\.(?!(example|sample|template|dist|defaults)$)[\\w.-]+)?|id_[a-z0-9]+(\\.pub)?|[^/]*\\.pem|[^/]*\\.key)$|(^|/)(${SECRET_SIGN_IN_FILES.map((f) => escapeRe(f).replaceAll("\\*", "[^/]+")).join("|")})$|${SYSTEM_SECRETS.join("|")}`,
   "i",
 );
 
@@ -463,9 +463,23 @@ const SECRET_VARIABLE =
 /** A word of a line that can't be parsed plainly, without the quotes and substitution marks around it (`$(cat`, `x)`). */
 /** The closing marks are trimmed by hand: a `+$` over a long run of quotes backtracks quadratically. */
 const bareWord = (w: string) => {
+  const firstOpen = w.indexOf("{");
+  const lastClose = w.lastIndexOf("}");
   let end = w.length;
-  while (end > 0 && ")'\"`};".includes(w[end - 1] ?? "")) end--;
-  return w.slice(0, end).replace(/^[$('"`{]+/, "");
+  while (end > 0) {
+    const ch = w[end - 1] ?? "";
+    if (!")'\"`};".includes(ch)) break;
+    if (ch === "}" && firstOpen !== -1 && firstOpen < end - 1) break;
+    end--;
+  }
+  let start = 0;
+  while (start < end) {
+    const ch = w[start] ?? "";
+    if (!"$('\"`{".includes(ch)) break;
+    if (ch === "{" && lastClose > start && lastClose < end) break;
+    start++;
+  }
+  return w.slice(start, end);
 };
 
 /**
@@ -490,37 +504,261 @@ const SECRET_NAMES = [
   ]),
 ];
 
-/** A path segment's wildcards as a pattern; like the shell, `*` and `?` don't match a leading dot. */
-const globPattern = (seg: string) =>
-  new RegExp(
-    `^${seg.startsWith(".") ? "" : "(?!\\.)"}${seg.replace(/\[(!?)([^\][]*)\]|[*?]|[^*?[]+|\[/g, (m, not, set) =>
-      m === "*"
-        ? "[^/]*"
-        : m === "?"
-          ? "[^/]"
-          : set !== undefined
-            ? `[${not ? "^" : ""}${set.replace(/[\\\]^]/g, "\\$&")}]`
-            : escapeRe(m),
-    )}$`,
-  );
+const MAX_SECRET_NAME_LEN = Math.max(...SECRET_NAMES.map((n) => n.length));
+
+const escClassChar = (ch: string) => (/[-\\\]^]/.test(ch) ? `\\${ch}` : ch);
+const isSurrogate = (code: number) => code >= 0xd800 && code <= 0xdfff;
+
+/** POSIX bracket character classes (`[:alpha:]`, etc.) mapped to safe JS character-class fragments. */
+const POSIX_CLASSES: Record<string, string> = {
+  alnum: "A-Za-z0-9",
+  alpha: "A-Za-z",
+  ascii: "\\x00-\\x7f",
+  blank: " \\t",
+  cntrl: "\\x00-\\x1f\\x7f",
+  digit: "0-9",
+  graph: "\\x21-\\x7e",
+  lower: "a-z",
+  print: "\\x20-\\x7e",
+  punct: "!-/:-@\\[-`{-~",
+  space: "\\s",
+  upper: "A-Z",
+  word: "A-Za-z0-9_",
+  xdigit: "0-9A-Fa-f",
+};
+
+type PosixLastClose = { ":": number; ".": number; "=": number };
 
 /**
- * The paths a word may name, for the secret checks: as written, with Windows' backslashes as slashes, and with each
- * wildcard segment replaced by the secret names it matches with at least half of their letters its own (`.s?h`,
- * `id_*`, `.env*`; `*`, `.*` and `*.json` stay ordinary globs).
+ * Parses a shell `[...]` bracket expression starting at `seg[start] === "["`, handling POSIX leading `]`
+ * (`[]abc]`, `[!]abc]`), negation (`[!...]` / `[^...]`), POSIX classes (`[[:alpha:]]`), and reversed/incomplete
+ * `-` ranges safely in strict O(N) time using precomputed `lastPosix` positions. Returns `null` if `[` has no
+ * closing `]`.
+ */
+function parseGlobBracket(
+  seg: string,
+  start: number,
+  lastPosix: PosixLastClose,
+): { next: number; source: string } | null {
+  let j = start + 1;
+  if (j >= seg.length) return null;
+  const negated = seg[j] === "!" || seg[j] === "^";
+  if (negated) j++;
+  if (j >= seg.length) return null;
+
+  const tokens: ({ kind: "char"; ch: string } | { kind: "class"; fragment: string } | { kind: "unknown" })[] = [];
+  const firstPos = j;
+  let closed = false;
+  let oversized = false;
+  while (j < seg.length) {
+    const ch = seg[j] as string;
+    if (ch === "]" && j > firstPos) {
+      closed = true;
+      j++;
+      break;
+    }
+    const nextCh = seg[j + 1];
+    if (ch === "[" && (nextCh === ":" || nextCh === "." || nextCh === "=")) {
+      const closeIdx = lastPosix[nextCh] >= j + 2 ? seg.indexOf(`${nextCh}]`, j + 2) : -1;
+      if (closeIdx !== -1) {
+        if (!oversized) {
+          if (nextCh === ":") {
+            const name = seg.slice(j + 2, closeIdx);
+            const mapped = Object.hasOwn(POSIX_CLASSES, name) ? POSIX_CLASSES[name] : undefined;
+            tokens.push(mapped ? { kind: "class", fragment: mapped } : { kind: "unknown" });
+          } else {
+            tokens.push({ kind: "unknown" });
+          }
+          if (tokens.length > 512) oversized = true;
+        }
+        j = closeIdx + 2;
+        continue;
+      }
+    }
+    if (!oversized) {
+      tokens.push({ kind: "char", ch });
+      if (tokens.length > 512) oversized = true;
+    }
+    j++;
+  }
+  if (!closed || tokens.length === 0) return null;
+  // Unknown POSIX syntax (`[:unknown:]`, `[.ch.]`, `[=a=]`) or oversized bracket classes fail closed as any non-slash
+  // char so they neither bypass secret matching nor allocate giant regexes.
+  if (oversized || tokens.some((t) => t.kind === "unknown")) return { next: j, source: "[^/]" };
+
+  let body = "";
+  for (let i = 0; i < tokens.length; i++) {
+    const cur = tokens[i];
+    if (!cur) continue;
+    if (cur.kind === "class") {
+      body += cur.fragment;
+      continue;
+    }
+    if (cur.kind !== "char") continue;
+    const mid = tokens[i + 1];
+    const end = tokens[i + 2];
+    if (mid?.kind === "char" && mid.ch === "-" && end?.kind === "char") {
+      const a = cur.ch.charCodeAt(0);
+      const b = end.ch.charCodeAt(0);
+      if (!isSurrogate(a) && !isSurrogate(b) && a <= b) {
+        body += `${escClassChar(cur.ch)}-${escClassChar(end.ch)}`;
+        i += 2;
+        continue;
+      }
+    }
+    body += escClassChar(cur.ch);
+  }
+  return { next: j, source: `[${negated ? "^" : ""}${body}]` };
+}
+
+/**
+ * Parses a path segment's shell wildcards (`*`, `?`, `[...]`) in strict O(N) time into a compiled RegExp and counts
+ * its literal (non-wildcard) characters (`own`). Returns `null` when `own < 2` or the segment's minimum match length
+ * exceeds `MAX_SECRET_NAME_LEN` (mathematically unable to match any entry in `SECRET_NAMES`). Like the shell, `*` and
+ * `?` don't match a leading dot. If compilation ever fails unexpectedly, fails closed with a catch-all pattern rather
+ * than silently dropping the segment from secret checks.
+ */
+function parseGlobSegment(seg: string): { pattern: RegExp; own: number } | null {
+  const lastClose = seg.lastIndexOf("]");
+  const lastPosix: PosixLastClose = {
+    ":": lastClose >= 2 ? seg.lastIndexOf(":]") : -1,
+    ".": lastClose >= 2 ? seg.lastIndexOf(".]") : -1,
+    "=": lastClose >= 2 ? seg.lastIndexOf("=]") : -1,
+  };
+  let own = 0;
+  let minLen = 0;
+  let noMoreBrackets = lastClose < 2;
+  let source = `^${seg.startsWith(".") ? "" : "(?!\\.)"}`;
+  for (let i = 0; i < seg.length; ) {
+    const ch = seg[i] as string;
+    if (ch === "*") {
+      while (seg[i] === "*") i++;
+      source += "[^/]*";
+      continue;
+    }
+    if (ch === "?") {
+      minLen++;
+      source += "[^/]";
+      i++;
+      continue;
+    }
+    if (ch === "[" && !noMoreBrackets && lastClose > i + 1) {
+      const parsed = parseGlobBracket(seg, i, lastPosix);
+      if (parsed) {
+        minLen++;
+        source += parsed.source;
+        i = parsed.next;
+        continue;
+      }
+      noMoreBrackets = true;
+    }
+    own++;
+    minLen++;
+    if (minLen <= MAX_SECRET_NAME_LEN) source += escapeRe(ch);
+    i++;
+  }
+  if (own < 2 || minLen > MAX_SECRET_NAME_LEN) return null;
+  source += "$";
+  try {
+    return { pattern: new RegExp(source), own };
+  } catch {
+    return { pattern: /.*/, own };
+  }
+}
+
+/** Expands simple shell brace alternations (`~/.s{s,x}h`, `.env{,.local}`) bounded to 64 forms; skips JS/JSON objects. */
+const SIMPLE_BRACE = /\{([^{},\s"'=;:]*,[^{}\s"'=;:]*)\}/;
+function expandSimpleBraces(word: string): string[] {
+  if (!word.includes("{") || !word.includes("}") || !word.includes(",")) return [word];
+  let out = [word];
+  for (let round = 0; round < 4; round++) {
+    let changed = false;
+    const next: string[] = [];
+    for (const item of out) {
+      const m = SIMPLE_BRACE.exec(item);
+      if (!m || m.index === undefined) {
+        next.push(item);
+        continue;
+      }
+      changed = true;
+      const prefix = item.slice(0, m.index);
+      const suffix = item.slice(m.index + m[0].length);
+      for (const alt of (m[1] ?? "").split(",")) {
+        next.push(`${prefix}${alt}${suffix}`);
+        if (next.length >= 64) break;
+      }
+      if (next.length >= 64) break;
+    }
+    out = next;
+    if (!changed || out.length >= 64) break;
+  }
+  return out;
+}
+
+/**
+ * The paths a word may name, for the secret checks: as written, with Windows' backslashes as slashes, with simple
+ * shell brace alternations expanded, and with each wildcard segment replaced by the secret names it matches with at
+ * least half of their letters its own (`.s?h`, `id_*`, `.env*`; `*`, `.*` and `*.json` stay ordinary globs).
  */
 function pathsOf(word: string): string[] {
-  const forms = word.includes("\\") ? [word, word.replaceAll("\\", "/")] : [word];
+  const baseForms = word.includes("\\") ? [word, word.replaceAll("\\", "/")] : [word];
+  const forms = baseForms.flatMap(expandSimpleBraces).slice(0, 64);
+  const segCache = new Map<string, string[]>();
+  const resolveSeg = (seg: string): string[] => {
+    const hit = segCache.get(seg);
+    if (hit) return hit;
+    const hasWild = /[*?[]/.test(seg);
+    const parsed = hasWild ? parseGlobSegment(seg) : null;
+    const names =
+      parsed && parsed.own >= 2 ? SECRET_NAMES.filter((n) => parsed.own * 2 >= n.length && parsed.pattern.test(n)) : [];
+    segCache.set(seg, names);
+    return names;
+  };
   return forms.flatMap((w) => {
     if (!/[*?[]/.test(w)) return [w];
-    let out = [""];
-    for (const [i, seg] of w.split("/").entries()) {
-      const own = /[*?[]/.test(seg) ? seg.replace(/\[[^\][]*\]|[*?]/g, "").length : 0;
-      const names = own >= 2 ? SECRET_NAMES.filter((n) => own * 2 >= n.length && globPattern(seg).test(n)) : [];
-      const parts = names.length ? names : [seg];
-      out = out.flatMap((o) => parts.map((part) => (i === 0 ? part : `${o}/${part}`))).slice(0, 64);
+    const segs = w.split("/");
+    let matched = false;
+    const perSeg: string[][] = [];
+    for (const seg of segs) {
+      const names = resolveSeg(seg);
+      if (names.length > 0) {
+        matched = true;
+        perSeg.push(names);
+      } else {
+        perSeg.push([seg]);
+      }
     }
-    return [w, ...out];
+    if (!matched) return [w];
+    const base = perSeg.map((parts) => parts[0] ?? "");
+    const branchAt: { idx: number; parts: string[] }[] = [];
+    for (let i = 0; i < perSeg.length; i++) {
+      const parts = perSeg[i];
+      if (parts && parts.length > 1) branchAt.push({ idx: i, parts });
+    }
+    const tailBranch: { idx: number; parts: string[] }[] = [];
+    let prod = 1;
+    for (let i = branchAt.length - 1; i >= 0 && prod < 64; i--) {
+      const entry = branchAt[i];
+      if (!entry) continue;
+      tailBranch.unshift(entry);
+      prod *= entry.parts.length;
+    }
+    let picks: string[][] = [[]];
+    for (const { parts } of tailBranch) {
+      picks = picks.flatMap((c) => parts.map((part) => [...c, part])).slice(0, 64);
+    }
+    return [
+      w,
+      ...picks.map((p) => {
+        const row = base.slice();
+        for (let i = 0; i < tailBranch.length; i++) {
+          const entry = tailBranch[i];
+          const val = p[i];
+          if (entry && val !== undefined) row[entry.idx] = val;
+        }
+        return row.join("/");
+      }),
+    ];
   });
 }
 

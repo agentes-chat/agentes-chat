@@ -987,12 +987,17 @@ type McpContext = PromptContext & { delegated?: DelegatedSurface };
  * every `pollMs` (short calls; no request stays open) until someone answers
  * or `waitMs` passes: then it is denied.
  */
+/** Hard ceiling on local command/git inspection before the bridge pauses the turn's silence timer. */
+export const PERMISSION_LOCAL_TIMEOUT_MS = 20_000;
+
 export async function permissionPrompt(
   args: Record<string, unknown>,
   call: ToolCaller,
   opts: PromptContext & {
     waitMs?: number;
     pollMs?: number;
+    localTimeoutMs?: number;
+    approveCommand?: typeof commandApproval;
     sleep?: (ms: number) => Promise<void>;
     now?: () => number;
     /** Where the task runs: plain reads are allowed here without asking. */
@@ -1008,62 +1013,97 @@ export async function permissionPrompt(
       : {};
   if (!toolName) return { behavior: "deny", message: "Unknown tool." };
   const how = opts.task ? ASK_AFTER_TASK : ASK_IN_CHAT;
-  const verdict = localVerdict(toolName, input, opts.scope, opts.profile ?? "work", how);
-  // A background task's executor has no run_code to be pointed to: it keeps "stop and say so".
-  const said = (message: string) => (opts.asks === "never" && !opts.task ? unaskedMessage(message) : message);
-  const asked = {
-    tool_name: toolName.slice(0, 64),
-    input,
-    ...(typeof args.tool_use_id === "string" ? { tool_use_id: args.tool_use_id.slice(0, 128) } : {}),
-    ...(opts.scope ? { scope: opts.scope } : {}),
-  };
-  if (verdict?.behavior === "deny") {
-    const message = said(verdict.message);
-    reportRefusal(call, asked, { code: verdict.code, message });
-    return { behavior: "deny", message };
-  }
-  if (verdict?.behavior === "allow") return { behavior: "allow", updatedInput: input };
-  if (toolName === "Bash" && typeof input.command === "string") {
-    const own = opts.branches ?? [];
-    const cwd = opts.scope?.cwd ?? null;
-    const held = await commandApproval(input.command, { cwd, own, how, script: true });
-    if (held) return { behavior: "deny", message: held.never ? held.message : said(held.message) };
-    // A push alone to its own branches, or through our git proxy (which decides someone else's branch with a
-    // person's grant, so no card here asks first). An agent that always asks is asked for these too.
-    const push = lonePush(input.command);
-    const alone = opts.local || opts.asks !== "always";
-    if (push && alone && (opts.local || pushesOwnBranches(push, own) || (await pushThroughProxy(push, cwd)))) {
-      return { behavior: "allow", updatedInput: input };
+  try {
+    const verdict = localVerdict(toolName, input, opts.scope, opts.profile ?? "work", how);
+    // A background task's executor has no run_code to be pointed to: it keeps "stop and say so".
+    const said = (message: string) => (opts.asks === "never" && !opts.task ? unaskedMessage(message) : message);
+    const asked = {
+      tool_name: toolName.slice(0, 64),
+      input,
+      ...(typeof args.tool_use_id === "string" ? { tool_use_id: args.tool_use_id.slice(0, 128) } : {}),
+      ...(opts.scope ? { scope: opts.scope } : {}),
+    };
+    if (verdict?.behavior === "deny") {
+      const message = said(verdict.message);
+      reportRefusal(call, asked, { code: verdict.code, message });
+      return { behavior: "deny", message };
     }
-  }
-  const now = opts.now ?? Date.now;
-  const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
-  const deadline = now() + (opts.waitMs ?? PERMISSION_WAIT_MS);
-  const ask = async (a: Record<string, unknown>) => {
-    let reply = await call(PERMISSION_TOOL, a);
-    // The runner restarting or reconnecting: keep asking (within the wait), never a silent deny.
-    while (!reply.ok && reply.transient && now() < deadline) {
+    if (verdict?.behavior === "allow") return { behavior: "allow", updatedInput: input };
+    if (toolName === "Bash" && typeof input.command === "string") {
+      const command = input.command;
+      const own = opts.branches ?? [];
+      const cwd = opts.scope?.cwd ?? null;
+      const approve = opts.approveCommand ?? commandApproval;
+      const checkLocalGit = async (): Promise<PermissionAnswer | null> => {
+        const held = await approve(command, { cwd, own, how, script: true });
+        if (held) return { behavior: "deny", message: held.never ? held.message : said(held.message) };
+        // A push alone to its own branches, or through our git proxy (which decides someone else's branch with a
+        // person's grant, so no card here asks first). An agent that always asks is asked for these too.
+        const push = lonePush(command);
+        const alone = opts.local || opts.asks !== "always";
+        if (push && alone && (opts.local || pushesOwnBranches(push, own) || (await pushThroughProxy(push, cwd)))) {
+          return { behavior: "allow", updatedInput: input };
+        }
+        return null;
+      };
+      const localMs = opts.localTimeoutMs ?? PERMISSION_LOCAL_TIMEOUT_MS;
+      let timedOut = false;
+      const localCheck = checkLocalGit().catch((err) => {
+        if (timedOut) return null;
+        throw err;
+      });
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const localDecision = await Promise.race([
+        localCheck,
+        new Promise<"timeout">((resolve) => {
+          timer = setTimeout(() => {
+            timedOut = true;
+            resolve("timeout");
+          }, localMs);
+          timer.unref?.();
+        }),
+      ]).finally(() => clearTimeout(timer));
+      if (localDecision === "timeout") {
+        const secs = Math.max(1, Math.round(localMs / 1000));
+        return {
+          behavior: "deny",
+          message: `Permission check timed out after ${secs}s while inspecting the command locally.`,
+        };
+      }
+      if (localDecision) return localDecision;
+    }
+    const now = opts.now ?? Date.now;
+    const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+    const deadline = now() + (opts.waitMs ?? PERMISSION_WAIT_MS);
+    const ask = async (a: Record<string, unknown>) => {
+      let reply = await call(PERMISSION_TOOL, a);
+      // The runner restarting or reconnecting: keep asking (within the wait), never a silent deny.
+      while (!reply.ok && reply.transient && now() < deadline) {
+        await sleep(opts.pollMs ?? PERMISSION_POLL_MS);
+        reply = await call(PERMISSION_TOOL, a);
+      }
+      if (!reply.ok) return { error: reply.error };
+      try {
+        return JSON.parse(reply.text) as { behavior?: string; message?: string; status?: string; request_id?: string };
+      } catch {
+        return { error: "agentes.chat answered something unexpected." };
+      }
+    };
+    let out = await ask(asked);
+    const requestId = "request_id" in out && typeof out.request_id === "string" ? out.request_id : "";
+    for (;;) {
+      if ("error" in out && out.error) return { behavior: "deny", message: `Not allowed: ${out.error}` };
+      if ("behavior" in out && out.behavior === "allow") return { behavior: "allow", updatedInput: input };
+      if ("behavior" in out && out.behavior === "deny") {
+        return { behavior: "deny", message: String(out.message ?? "A person said no.").slice(0, 500) };
+      }
+      if (!requestId || now() >= deadline) return { behavior: "deny", message: PERMISSION_TIMEOUT_MESSAGE };
       await sleep(opts.pollMs ?? PERMISSION_POLL_MS);
-      reply = await call(PERMISSION_TOOL, a);
+      out = await ask({ request_id: requestId });
     }
-    if (!reply.ok) return { error: reply.error };
-    try {
-      return JSON.parse(reply.text) as { behavior?: string; message?: string; status?: string; request_id?: string };
-    } catch {
-      return { error: "agentes.chat answered something unexpected." };
-    }
-  };
-  let out = await ask(asked);
-  const requestId = "request_id" in out && typeof out.request_id === "string" ? out.request_id : "";
-  for (;;) {
-    if ("error" in out && out.error) return { behavior: "deny", message: `Not allowed: ${out.error}` };
-    if ("behavior" in out && out.behavior === "allow") return { behavior: "allow", updatedInput: input };
-    if ("behavior" in out && out.behavior === "deny") {
-      return { behavior: "deny", message: String(out.message ?? "A person said no.").slice(0, 500) };
-    }
-    if (!requestId || now() >= deadline) return { behavior: "deny", message: PERMISSION_TIMEOUT_MESSAGE };
-    await sleep(opts.pollMs ?? PERMISSION_POLL_MS);
-    out = await ask({ request_id: requestId });
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    return { behavior: "deny", message: `Permission check failed: ${detail.slice(0, 300)}` };
   }
 }
 
@@ -1163,7 +1203,15 @@ export async function runMcpServer(options: {
       .then((res) => {
         if (res) write(res);
       })
-      .catch(() => undefined)
+      .catch((err: unknown) => {
+        if (typeof message === "object" && message !== null && !Array.isArray(message)) {
+          const id = (message as { id?: unknown }).id;
+          if (typeof id === "string" || typeof id === "number") {
+            const detail = err instanceof Error ? err.message : "Internal error";
+            write(rpcError(id, -32603, detail.slice(0, 500)));
+          }
+        }
+      })
       .finally(() => inflight.delete(p));
     inflight.add(p);
   }

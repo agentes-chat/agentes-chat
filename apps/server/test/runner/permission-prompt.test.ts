@@ -578,3 +578,125 @@ test("the agent's browser profile (its logins) is refused at once from its own f
   expect(deny.some((r) => ruleMatches(r, "Bash", { command: "cat .agentes/browser/Default/Cookies" }))).toBe(true);
   expect(deny.some((r) => ruleMatches(r, "Bash", { command: "cat .agentes/notes.md" }))).toBe(false);
 });
+
+test("permission_prompt over stdio MCP: bracketed date literals and heredoc scripts answer fast and never hang stdin/stdout", async () => {
+  const { PassThrough } = await import("node:stream");
+  const { runMcpServer } = await import("../../runner/mcp");
+  const scope = { cwd: "/home/ada/work", folders: ["/home/ada/work"], home: "/home/ada" };
+  const inlineNodeCmd = [
+    "cd /home/ada/work/r7; node -e '",
+    'const d=require("./parsed.json");',
+    'for(const f of ["2026-11-12","2026-11-15"]){console.log(f, Object.entries(d).sort((a,b)=>b[1]-a[1]))}',
+    'console.log("https://example.com/"+d.user+"/status/"+d.id);',
+    "'",
+  ].join("\n");
+  const heredocNodeCmd = [
+    "cd /home/ada/work; ls r7; cat > sum.js <<'EOF'",
+    'for(const f of ["2026-11-12","2026-11-15"]){console.log(f, "https://example.com/u/status/1")}',
+    "EOF",
+    "timeout 30 node sum.js < /dev/null",
+  ].join("\n");
+
+  const t0 = performance.now();
+  for (const command of [inlineNodeCmd, heredocNodeCmd]) {
+    const s = server([{ behavior: "allow" }]);
+    const out = await permissionPrompt(bash(command), s.call, { ...instant, scope });
+    expect(out).toEqual({ behavior: "allow", updatedInput: { command } });
+    expect(s.calls).toHaveLength(1);
+  }
+  expect(performance.now() - t0).toBeLessThan(100);
+
+  // Local inspection timeout fails fast with `deny` (and ignores a late rejection without unhandledRejection).
+  let rejectLate!: (err: Error) => void;
+  const stalledLocal = await permissionPrompt(bash("node script.js"), server([]).call, {
+    ...instant,
+    scope,
+    localTimeoutMs: 15,
+    approveCommand: () =>
+      new Promise((_resolve, reject) => {
+        rejectLate = reject;
+      }),
+  });
+  expect(stalledLocal).toEqual({
+    behavior: "deny",
+    message: "Permission check timed out after 1s while inspecting the command locally.",
+  });
+  rejectLate(new Error("late git error"));
+  await new Promise((r) => setTimeout(r, 5));
+
+  // Local inspection ceiling never cuts short the server's human-approval polling loop.
+  const humanWait = server([{ status: "pending", request_id: "req-1" }, { behavior: "allow" }]);
+  const approvedAfterLocalCeiling = await permissionPrompt(bash("node script.js"), humanWait.call, {
+    scope,
+    localTimeoutMs: 15,
+    pollMs: 35,
+    waitMs: 500,
+    approveCommand: async () => null,
+  });
+  expect(approvedAfterLocalCeiling).toEqual({
+    behavior: "allow",
+    updatedInput: { command: "node script.js" },
+  });
+  expect(humanWait.calls).toHaveLength(2);
+
+  const thrownLocal = await permissionPrompt(bash("node script.js"), server([]).call, {
+    ...instant,
+    scope,
+    approveCommand: async () => {
+      throw new Error("unexpected git failure");
+    },
+  });
+  expect(thrownLocal).toEqual({
+    behavior: "deny",
+    message: "Permission check failed: unexpected git failure",
+  });
+
+  // Even if an IPC handler throws unexpectedly, `runMcpServer` always answers the JSON-RPC request instead of hanging.
+  const input = new PassThrough();
+  const output = new PassThrough();
+  let raw = "";
+  output.setEncoding("utf8");
+  output.on("data", (chunk: string) => {
+    raw += chunk;
+  });
+  const done = runMcpServer({
+    taskId: TASK,
+    socketPath: "/nonexistent.sock",
+    token: "tok",
+    input,
+    output,
+    scope,
+    ipc: async (req) => {
+      if (req.tool === "boom_tool") throw new Error("boom in ipc");
+      if (req.kind === "list") return { ok: true, text: "", tools: [] };
+      return { ok: true, text: JSON.stringify({ behavior: "allow" }) };
+    },
+  });
+  input.write(
+    `${JSON.stringify({ jsonrpc: "2.0", id: 41, method: "tools/call", params: { name: "boom_tool", arguments: {} } })}\n`,
+  );
+  input.write(
+    `${JSON.stringify({ jsonrpc: "2.0", id: 42, method: "tools/call", params: { name: "permission_prompt", arguments: bash(inlineNodeCmd) } })}\n`,
+  );
+  input.write(
+    `${JSON.stringify({ jsonrpc: "2.0", id: 43, method: "tools/call", params: { name: "permission_prompt", arguments: bash(heredocNodeCmd) } })}\n`,
+  );
+  input.end();
+  await done;
+  const replies = raw
+    .trim()
+    .split("\n")
+    .filter(Boolean)
+    .map(
+      (line) => JSON.parse(line) as { id: number; result?: { content: { text: string }[] }; error?: { code: number } },
+    );
+  expect(replies.find((r) => r.id === 41)?.error?.code).toBe(-32603);
+  expect(JSON.parse(replies.find((r) => r.id === 42)?.result?.content[0]?.text ?? "{}")).toEqual({
+    behavior: "allow",
+    updatedInput: { command: inlineNodeCmd },
+  });
+  expect(JSON.parse(replies.find((r) => r.id === 43)?.result?.content[0]?.text ?? "{}")).toEqual({
+    behavior: "allow",
+    updatedInput: { command: heredocNodeCmd },
+  });
+});
