@@ -6252,6 +6252,7 @@ async function executeRunInner(
           state,
           kind: "routine",
           executed: work,
+          truncated: result.stopReason === "max_tokens",
           bound: run.turns + 1 >= maxTurns ? "turn_cap" : routineRun?.status === "reported" ? "reported" : null,
           // A good update made the run `reported`; one with `failed` left its code (ADR 0135 §5).
           widgetOwed:
@@ -6495,6 +6496,7 @@ async function executeRunInner(
         state,
         kind: betweenAgents ? "agents_dm" : "conversation",
         openRequest,
+        truncated: result.stopReason === "max_tokens",
         namedTools,
         localPaths,
         executed: work,
