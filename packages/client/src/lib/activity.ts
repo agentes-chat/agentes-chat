@@ -202,6 +202,7 @@ const BUILTIN: Record<string, ActivityKind> = {
   upload_file: "exportingFile",
   import_file: "importingFile",
   share_artifact: "fetchingFile",
+  send_file_to_url: "exportingFile",
   // Scheduling from the chat.
   schedule_reminder: "schedulingReminder",
   create_routine: "creatingRoutine",

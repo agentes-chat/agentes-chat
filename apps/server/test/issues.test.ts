@@ -285,3 +285,30 @@ test("issues API: a file taken off a task leaves its attachments, stays in the D
     400,
   );
 });
+
+test('issues API: "Depois de" sets and takes off the order, and the next task starts when the first is done', async () => {
+  const owner = browser(t);
+  await signUp(owner, "owner@example.com");
+  const { orgId, agentId } = await seedOrg(owner);
+  const api = (path: string, init?: Parameters<typeof owner>[1]) =>
+    owner(`/api/app/organizations/${orgId}${path}`, init);
+  const first = (await (await api("/issues", { json: { title: "Part 1" } })).json()) as { id: string; number: number };
+  const second = (await (
+    await api("/issues", { json: { title: "Part 2", assignees: [{ type: "agent", id: agentId }] } })
+  ).json()) as { id: string };
+
+  const set = await api(`/issues/${second.id}`, { method: "PATCH", json: { afterIssueId: first.id } });
+  expect(await set.json()).toMatchObject({
+    after: { id: first.id, number: first.number, title: "Part 1", status: "todo" },
+  });
+  const self = await api(`/issues/${second.id}`, { method: "PATCH", json: { afterIssueId: second.id } });
+  expect(self.status).toBe(400);
+
+  await api(`/issues/${first.id}`, { method: "PATCH", json: { status: "done" } });
+  await t.drain();
+  const started = (await (await api(`/issues/${second.id}`)).json()) as { status: string; after: { status: string } };
+  expect(started).toMatchObject({ status: "in_progress", after: { status: "done" } });
+
+  const cleared = await api(`/issues/${second.id}`, { method: "PATCH", json: { afterIssueId: null } });
+  expect(await cleared.json()).toMatchObject({ after: null });
+});

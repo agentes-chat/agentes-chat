@@ -139,9 +139,24 @@ async function describeIssue(deps: IssueDeps, ctx: ToolContext, i: IssueView) {
     criteria ? `Acceptance criteria:\n${criteria}` : "",
     i.pullRequests.length ? `PRs: ${i.pullRequests.map((p) => p.url).join(", ")}` : "",
     i.githubUrl ? `GitHub: ${i.githubUrl}` : "",
+    i.after
+      ? `Comes after #${i.after.number} (${i.after.status}): its agent starts on its own when that one is done.`
+      : "",
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+/** `after` as given: the task to wait on, "" for no order (on a change), undefined when left out. */
+async function afterFrom(deps: IssueDeps, ctx: ToolContext, input: Record<string, unknown>) {
+  if (typeof input.after !== "string") return undefined;
+  return input.after.trim() ? (await find(deps, ctx, input.after)).id : null;
+}
+
+/** What a task waiting on another (`after`) tells the agent that made or changed it: who starts, and when. */
+function waitsLine(i: IssueView) {
+  if (!i.after || i.after.status === "done") return "";
+  return `\nIt waits on #${i.after.number}: its first agent starts on it by itself when #${i.after.number} is done or its PR merges. Say so in a line; don't hand it over now.`;
 }
 
 /** Resolves `issue` as an id or a number (`131`, `#131`). */
@@ -516,6 +531,11 @@ export function createIssueToolSource(deps: ArtifactDeps): ToolSource {
           assignees: assigneesField,
           due_date: { type: "string", maxLength: 10, description: "Due date as YYYY-MM-DD" },
           github_url: GITHUB_URL_FIELD,
+          after: {
+            ...issueRef,
+            description:
+              "The task this one comes after (#130): its agents start on it by themselves when that one is done or its PR merges. Set it when you split work into steps that go in order.",
+          },
           visible_to: visibleToField,
           files: filesField(
             "File ids to attach; in text, name files, never ids. Left out: the files on the message you answer go too; [] for none.",
@@ -536,6 +556,7 @@ export function createIssueToolSource(deps: ArtifactDeps): ToolSource {
           }
           const audience = await chosenAudience(ctx, input.visible_to);
           const projectId = await chosenProject(deps, ctx, input);
+          const afterIssueId = await afterFrom(deps, ctx, input);
           // Into this conversation, whose readers a task made here has. One whose audience was chosen (the people
           // assigned see it too) or made where no person reads (the workspace's) takes only files all its readers
           // open already, never a copy.
@@ -567,6 +588,7 @@ export function createIssueToolSource(deps: ArtifactDeps): ToolSource {
                 ...(str(input.due_date) ? { dueDate: str(input.due_date) } : {}),
                 ...(str(input.github_url) ? { githubUrl: str(input.github_url) } : {}),
                 ...(audience ? { audience } : {}),
+                ...(afterIssueId ? { afterIssueId } : {}),
                 linkFileIds: files.brought,
               }),
             async (created, db) => {
@@ -586,19 +608,22 @@ export function createIssueToolSource(deps: ArtifactDeps): ToolSource {
             },
           );
           const nameable = await nameableIn(deps.db, ctx.channelId, i);
-          // The task stands either way: a start that fails is said, never a second task.
-          const handed = reader
-            ? await handTask(deps, ctx, reader, i).catch((e: unknown) =>
-                e instanceof Error ? e : new Error(String(e)),
-              )
-            : null;
+          // The task stands either way: a start that fails is said, never a second task. One that waits on another
+          // starts when that one is done.
+          const waits = waitsLine(i);
+          const handed =
+            reader && !waits
+              ? await handTask(deps, ctx, reader, i).catch((e: unknown) =>
+                  e instanceof Error ? e : new Error(String(e)),
+                )
+              : null;
           return {
             content: `Created ${await lineOf(deps, ctx, i)}\n${whoSees(i, nameable)}${filesNote(i, files)}${
               handed instanceof Error
                 ? `\nIts agent couldn't start on it: ${handed.message} Don't make it again: tell them why; they can start it from the task.`
                 : handed
                   ? "\nIts agent started on it in the task's own conversation, where the person follows it from the task's chip on your reply. What comes of it reaches you here by itself: tell them in a line who has it, without promising a time, and don't check on it."
-                  : await handOverLine(deps, ctx, i, i.assignees)
+                  : waits || (await handOverLine(deps, ctx, i, i.assignees))
             }`,
             data: {
               issue: { id: i.id, number: i.number },
@@ -638,6 +663,12 @@ export function createIssueToolSource(deps: ArtifactDeps): ToolSource {
             description: 'Due date as YYYY-MM-DD; "" removes it',
           },
           github_url: GITHUB_URL_FIELD,
+          after: {
+            type: "string",
+            maxLength: 64,
+            description:
+              'The task this one comes after (#130): its agents start on it by themselves when that one is done or its PR merges. "" takes the order off.',
+          },
           pull_request_url: { type: "string", maxLength: 500 },
           pull_request_number: { type: "integer", minimum: 1 },
           done_criteria: {
@@ -676,6 +707,7 @@ export function createIssueToolSource(deps: ArtifactDeps): ToolSource {
           }
           const due = typeof input.due_date === "string" ? input.due_date.trim() : undefined;
           const projectId = await chosenProject(deps, ctx, input);
+          const afterIssueId = await afterFrom(deps, ctx, input);
           let before: Record<string, unknown> = {};
           const asked = givenFiles(input) ?? [];
           const files = asked.length
@@ -698,6 +730,7 @@ export function createIssueToolSource(deps: ArtifactDeps): ToolSource {
                 ...(projectId !== undefined ? { projectId } : {}),
                 ...(due !== undefined ? { dueDate: due || null } : {}),
                 ...(typeof input.github_url === "string" ? { githubUrl: input.github_url } : {}),
+                ...(afterIssueId !== undefined ? { afterIssueId } : {}),
                 ...(url && prNumber ? { addPullRequest: { number: prNumber, url } } : {}),
               });
               const done = Array.isArray(input.done_criteria) ? input.done_criteria.map(Number) : [];
@@ -712,7 +745,7 @@ export function createIssueToolSource(deps: ArtifactDeps): ToolSource {
           );
           const added = newAssignees(latest.assignees, snapshotAssignees(before));
           return {
-            content: `Updated ${await lineOf(deps, ctx, latest)}${filesNote(latest, files)}${await handOverLine(deps, ctx, latest, added)}`,
+            content: `Updated ${await lineOf(deps, ctx, latest)}${filesNote(latest, files)}${(afterIssueId && waitsLine(latest)) || (await handOverLine(deps, ctx, latest, added))}`,
             data: { issue: { id: latest.id, number: latest.number } },
           };
         } catch (error) {

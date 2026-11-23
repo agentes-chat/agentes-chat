@@ -3934,6 +3934,7 @@
       "project": "项目",
       "dueDate": "截止日期",
       "githubUrl": "GitHub 链接",
+      "after": "顺序",
       "criteria": "验收标准",
       "files": "附件"
     },
@@ -8212,6 +8213,16 @@
     },
     "askTitle": "请 {{name}} 完成这个任务",
     "askTitle_female": "请 {{name}} 完成这个任务",
+    "after": {
+      "label": "在某个任务之后",
+      "value": "在 #{{number}} 之后",
+      "placeholder": "在某个任务之后",
+      "search": "搜索任务",
+      "noResults": "没有包含这些词的未完成任务",
+      "clear": "取消顺序",
+      "waits": "#{{number}} 完成后，{{name}} 会开始",
+      "startNow": "现在开始"
+    },
     "askText": "{{name}} 会阅读所需内容，在这里评论计划并完成它。任何敏感操作（比如发布）都会先请你审批。",
     "askText_female": "{{name}} 会阅读所需内容，在这里评论计划并完成它。任何敏感操作（比如发布）都会先请你审批。",
     "askFirst": "帮我创建团队的第一批任务。",
@@ -8301,6 +8312,8 @@
       "pr_linked": "关联了 PR #{{number}}",
       "github_linked": "已关联到 GitHub",
       "github_unlinked": "已移除 GitHub 链接",
+      "after_set": "把它排在了 #{{number}} 之后",
+      "after_cleared": "取消了顺序",
       "project_set": "移到了项目「{{project}}」",
       "project_removed": "移出了项目",
       "artifact_linked": "附加了一个文件",
@@ -12775,7 +12788,6 @@
     "added": "保存后，{{repo}} 会加入列表。"
   },
   "connectors": {
-    "title": "连接器",
     "store": {
       "featured": "精选",
       "suggested": "推荐",
@@ -12814,6 +12826,7 @@
       "addressPassword": "地址和密码",
       "composio": "通过 Composio"
     },
+    "title": "连接器",
     "add": "添加连接器",
     "personal": {
       "note": "只有你能打开这些连接。你的智能体只在你要求时使用它们。",
@@ -14173,6 +14186,7 @@
       "read_artifact": "读取 Drive 中的文件",
       "list_artifacts": "列出 Drive 文件",
       "share_artifact": "分享文件",
+      "send_file_to_url": "把文件发送到应用",
       "read_spreadsheet": "读取电子表格",
       "edit_spreadsheet": "编辑电子表格",
       "create_presentation": "创建演示文稿",
@@ -18422,6 +18436,10 @@
     "share_artifact": {
       "label": "分享文件",
       "description": "把它在另一个对话（例如私信）中创建的文件带到当前对话中，前提是提出请求的人有访问权限。"
+    },
+    "send_file_to_url": {
+      "label": "把文件发送到应用",
+      "description": "把 Drive 文件发送到这里连接的应用给出的上传地址，或某人写下的地址。"
     },
     "create_artifact": {
       "label": "创建文件",

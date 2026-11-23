@@ -4101,6 +4101,7 @@
       "project": "het project",
       "dueDate": "de deadline",
       "githubUrl": "de GitHub-link",
+      "after": "de volgorde",
       "criteria": "de criteria",
       "files": "de bijlagen"
     },
@@ -8537,6 +8538,16 @@
     },
     "askTitle": "Vraag {{name}} om deze taak te doen",
     "askTitle_female": "Vraag {{name}} om deze taak te doen",
+    "after": {
+      "label": "Na een taak",
+      "value": "Na #{{number}}",
+      "placeholder": "Na een taak",
+      "search": "Taak zoeken",
+      "noResults": "Geen open taak met deze woorden",
+      "clear": "Volgorde weghalen",
+      "waits": "{{name}} begint als #{{number}} klaar is",
+      "startNow": "Nu beginnen"
+    },
     "askText": "{{name}} leest wat hij nodig heeft, zet het plan hier in een reactie en voert het uit. Alles wat gevoelig is, zoals publiceren, vraagt om jouw goedkeuring.",
     "askText_female": "{{name}} leest wat zij nodig heeft, zet het plan hier in een reactie en voert het uit. Alles wat gevoelig is, zoals publiceren, vraagt om jouw goedkeuring.",
     "askFirst": "Help me de eerste taken van het team te maken.",
@@ -8629,6 +8640,8 @@
       "pr_linked": "heeft PR #{{number}} gekoppeld",
       "github_linked": "heeft het aan GitHub gekoppeld",
       "github_unlinked": "heeft de GitHub-link verwijderd",
+      "after_set": "heeft hem na #{{number}} gezet",
+      "after_cleared": "heeft de volgorde weggehaald",
       "project_set": "heeft de taak naar het project {{project}} verplaatst",
       "project_removed": "heeft de taak uit het project gehaald",
       "artifact_linked": "heeft een bestand toegevoegd",
@@ -13319,7 +13332,6 @@
     "added": "{{repo}} komt in de lijst als je opslaat."
   },
   "connectors": {
-    "title": "Connectors",
     "store": {
       "featured": "Uitgelicht",
       "suggested": "Voorgesteld",
@@ -13362,6 +13374,7 @@
       "addressPassword": "Adres en wachtwoord",
       "composio": "Via Composio"
     },
+    "title": "Connectors",
     "add": "Connector toevoegen",
     "personal": {
       "note": "Alleen jij opent deze verbindingen. Je agenten gebruiken ze alleen als je erom vraagt.",
@@ -14726,6 +14739,7 @@
       "read_artifact": "Bestand in Drive lezen",
       "list_artifacts": "Drive-bestanden weergeven",
       "share_artifact": "Bestand delen",
+      "send_file_to_url": "Bestand naar een app sturen",
       "read_spreadsheet": "Spreadsheet lezen",
       "edit_spreadsheet": "Spreadsheet bewerken",
       "create_presentation": "Presentatie maken",
@@ -19057,6 +19071,10 @@
     "share_artifact": {
       "label": "Bestand delen",
       "description": "Haalt een bestand dat in een ander gesprek is gemaakt (zoals een DM) naar dit gesprek, als de vrager er toegang toe heeft."
+    },
+    "send_file_to_url": {
+      "label": "Bestand naar een app sturen",
+      "description": "Stuurt een Drive-bestand naar een uploadadres dat een hier gekoppelde app gaf, of dat iemand schreef."
     },
     "create_artifact": {
       "label": "Bestand maken",

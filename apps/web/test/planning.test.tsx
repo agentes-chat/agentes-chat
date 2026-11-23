@@ -521,7 +521,7 @@ describe("Issue detail", () => {
     );
   });
 
-  test("at every width the fields are one strip under who made it, in the order Projeto, Coluna, Responsável, Prioridade, Prazo, Quem vê", async () => {
+  test("at every width the fields are one strip under who made it, in the order Projeto, Coluna, Responsável, Prioridade, Prazo, Depois de, Quem vê", async () => {
     await go("issues/131");
     // No side column, however wide the window.
     expect(screen().queryByRole("complementary", { name: "Detalhes da tarefa" })).toBeNull();
@@ -537,6 +537,7 @@ describe("Issue detail", () => {
       "Responsável",
       "Prioridade",
       "Prazo",
+      "Depois de uma tarefa",
       "Quem vê",
     ]);
     // A face in Responsável, the stage's mark in Coluna, the priority's in Prioridade.

@@ -166,6 +166,7 @@ function IssueView({ number, focusId }: { number: number; focusId: string | null
           contentContainerStyle={styles.scroll}
         >
           <Head issue={i} />
+          <WaitingCard issue={i} />
           <WorkCard issue={i} />
           <IssueWorkLine issue={i} style={styles.section} />
           <ConversationRow issue={i} onOpen={() => openConversation(i)} />
@@ -351,6 +352,14 @@ function Head({ issue: i }: { issue: Issue }) {
           icon={audience.mode === "people" ? "lock" : "globe"}
           onPress={pickers.pickWhoSees}
         />
+        {i.after ? (
+          <PropChip
+            label={t("issues.after.label")}
+            value={t("issues.after.value", { number: i.after.number })}
+            icon={STAGE_ICON[i.after.status]}
+            onPress={() => router.push(`/issues/${i.after?.number}`)}
+          />
+        ) : null}
         {i.githubUrl ? (
           <Pressable
             accessibilityRole="link"
@@ -572,6 +581,58 @@ function WorkCard({ issue: i }: { issue: Issue }) {
           {t("issues.work.starting")}
         </Text>
       ) : null}
+    </View>
+  );
+}
+
+/**
+ * A task waiting on another ("Depois de") that nobody started yet: its first agent starts when that one is done, with
+ * Começar agora and Tirar a ordem, as on the web.
+ */
+function WaitingCard({ issue: i }: { issue: Issue }) {
+  const { t } = useTranslation();
+  const dir = useDirectory();
+  const surface = useSurface();
+  const orgId = useOrgId();
+  const action = useIssueAction(orgId);
+  const toast = useToast();
+  const after = i.after;
+  const agent = i.assignees.find((a) => a.type === "agent");
+  if (!after || after.status === "done" || !agent || i.status !== "todo" || i.work || i.backgroundWork) return null;
+  const name = dir.nameOf(agent);
+  const failed = (error: unknown) => toast({ title: errorText(t, error), icon: "x" });
+  return (
+    <View style={[styles.work, surface]}>
+      <View style={styles.workHead}>
+        <Face who={agent} size={24} mode="idle" />
+        <Text variant="body" style={[styles.bold, styles.grow]}>
+          {t("issues.after.waits", { ...agentGrammar(name), number: after.number })}
+        </Text>
+      </View>
+      <Pressable accessibilityRole="link" onPress={() => router.push(`/issues/${after.number}`)}>
+        <Text variant="small" tone="muted">
+          {`#${after.number}${after.title ? ` ${after.title}` : ""} · ${t(`issues.statusLower.${after.status}`)}`}
+        </Text>
+      </Pressable>
+      <View style={styles.waitActs}>
+        <Button
+          variant="primary"
+          size="sm"
+          icon="right"
+          label={t("issues.after.startNow")}
+          disabled={action.isPending}
+          onPress={() => action.mutate({ type: "ask", id: i.id, agentId: agent.id }, { onError: failed })}
+        />
+        <Button
+          variant="ghost"
+          size="sm"
+          label={t("issues.after.clear")}
+          disabled={action.isPending}
+          onPress={() =>
+            action.mutate({ type: "update", id: i.id, patch: { afterIssueId: null } }, { onError: failed })
+          }
+        />
+      </View>
     </View>
   );
 }
@@ -1144,6 +1205,7 @@ const styles = StyleSheet.create({
   },
   section: { marginHorizontal: 16, marginTop: 12 },
   workHead: { flexDirection: "row", alignItems: "center", gap: 8 },
+  waitActs: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   steps: { gap: 6 },
   stepRow: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
   bold: { fontWeight: "600" },

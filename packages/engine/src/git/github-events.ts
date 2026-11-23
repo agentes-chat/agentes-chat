@@ -11,6 +11,7 @@ import { eligibleChannelAgents } from "../dispatch";
 import { isAgentOnlyDm, openPersonAgentDm } from "../dms";
 import { ConflictError, NotFoundError } from "../errors";
 import { cutText } from "../format";
+import { queueAfterMerged } from "../issues";
 import { inMillisecondOf } from "../message-place";
 import { getMessage } from "../messages";
 import type { Notice } from "../notices";
@@ -448,6 +449,8 @@ export async function handleGitHubAppEvent(
   const opening = e.action === "pr_opened" || e.action === "opened" || e.action === "merged";
   if (opening && e.item === "pull_request" && e.branch && isAgentBranch(e.branch))
     await recordCodeSessionPr(deps, orgId, e.repo, e.branch, { number: e.number, url: e.url || null });
+  // A merge counts as its tasks done for the ones waiting on them ("Depois de"), whoever opened it.
+  if (e.action === "merged" && e.item === "pull_request") await queueAfterMerged(db, orgId, e.url);
   if (e.action === "pr_opened") return "recorded";
   const [item] = await db
     .select()

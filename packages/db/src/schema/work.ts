@@ -128,6 +128,12 @@ export const issues = pgTable(
     audienceUserIds: text().array().notNull().default(sql`'{}'::text[]`),
     /** A sub-issue of this one (a step of a plan). */
     parentIssueId: uuid().references((): AnyPgColumn => issues.id, { onDelete: "set null" }),
+    /**
+     * "Depois de": this task waits on that one. When it is done, or its PR merges, this task's first agent starts on
+     * it, asked in the name of `afterBy` (the person who set the order, or the one an agent set it for).
+     */
+    afterIssueId: uuid().references((): AnyPgColumn => issues.id, { onDelete: "set null" }),
+    afterBy: text(),
     /** `[{ number, url, openedBy }]`. */
     pullRequests: jsonb().$type<Record<string, unknown>[]>().notNull().default([]),
     /** The GitHub issue or pull request this task is about: a link and nothing more, no sync. */
@@ -152,6 +158,7 @@ export const issues = pgTable(
     index().on(t.orgId, t.dueDate),
     index().on(t.orgId, t.projectId),
     index().on(t.parentIssueId),
+    index().on(t.afterIssueId),
     uniqueIndex().on(t.conversationChannelId),
     // Of the two columns nothing reads any more; dropped with them.
     index().on(t.orgId, t.assigneeType, t.assigneeId, t.updatedAt),

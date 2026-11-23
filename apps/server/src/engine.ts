@@ -79,6 +79,7 @@ import {
   createSandboxToolSource,
   createSayNowToolSource,
   createScheduleToolSource,
+  createSendFileToolSource,
   createSessionScreening,
   createSetStatusToolSource,
   createSetupToolSource,
@@ -119,6 +120,7 @@ import {
   notifyOwnerOnBudget,
   OpencodeBrain,
   officeLiveExporter,
+  outboundFetch,
   platformCapJudge,
   prepareAgentCode,
   publishUserEvent,
@@ -501,6 +503,8 @@ export function buildEngine(o: EngineOptions) {
       // Runs nobody called by name may stay quiet (reply-policy.ts): listed only for them.
       createPassToolSource(),
       createArtifactToolSource(artifacts),
+      // A Drive file to an upload address an app handed out, from the server, for every brain.
+      createSendFileToolSource({ ...artifacts, fetch: outboundFetch({ resolveHost: o.resolveHost }) }),
       // Spreadsheets, presentations and canvases agents edit with people, and images onto a canvas (ADR 0196, 0197);
       // pictures from the web are downloaded through the public-address guard (ADR 0196 §8).
       createLiveFileToolSource({ artifacts, live, images, web: { resolveHost: o.resolveHost } }),

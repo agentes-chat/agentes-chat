@@ -62,6 +62,7 @@ export function issueSnapshot(i: IssueView): Record<string, unknown> {
     project: i.project?.id ?? null,
     dueDate: i.dueDate,
     githubUrl: i.githubUrl,
+    after: i.after?.id ?? null,
     criteria: i.criteria.map((c) => ({ id: c.id, done: c.done })),
     files: i.artifacts.map((f) => f.id),
   };
@@ -103,6 +104,7 @@ async function applyIssueFields(
   if ("project" in values) patch.projectId = (values.project as string | null) ?? null;
   if ("dueDate" in values) patch.dueDate = (values.dueDate as string | null) ?? null;
   if ("githubUrl" in values) patch.githubUrl = (values.githubUrl as string | null) ?? null;
+  if ("after" in values) patch.afterIssueId = (values.after as string | null) ?? null;
   if (Array.isArray(values.files)) {
     const want = values.files as string[];
     const have = (await getIssue(deps.db, actor, orgId, { id: issueId })).artifacts.map((f) => f.id);

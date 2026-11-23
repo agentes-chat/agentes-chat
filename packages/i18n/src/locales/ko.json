@@ -3932,6 +3932,7 @@
       "project": "프로젝트",
       "dueDate": "마감일",
       "githubUrl": "GitHub 링크",
+      "after": "순서",
       "criteria": "기준",
       "files": "첨부 파일"
     },
@@ -8165,6 +8166,16 @@
       "hint": "칸을 벗어나거나 Esc를 누르면 저장돼요."
     },
     "askTitle": "{{name}}에게 이 작업 맡기기",
+    "after": {
+      "label": "다른 작업 다음에",
+      "value": "#{{number}} 다음",
+      "placeholder": "다른 작업 다음에",
+      "search": "작업 검색",
+      "noResults": "이 단어가 들어간 열린 작업이 없어요",
+      "clear": "순서 빼기",
+      "waits": "#{{number}}이(가) 완료되면 {{name}}이(가) 시작해요",
+      "startNow": "지금 시작"
+    },
     "askText": "{{name}}이(가) 필요한 내용을 읽고, 여기에 계획을 댓글로 남긴 뒤 진행해요. 게시처럼 민감한 작업은 승인을 요청해요.",
     "askText_female": "{{name}}이(가) 필요한 내용을 읽고, 여기에 계획을 댓글로 남긴 뒤 진행해요. 게시처럼 민감한 작업은 승인을 요청해요.",
     "askFirst": "팀의 첫 작업을 만드는 걸 도와주세요.",
@@ -8252,6 +8263,8 @@
       "pr_linked": "PR #{{number}}을(를) 연결했어요",
       "github_linked": "GitHub에 연결했습니다",
       "github_unlinked": "GitHub 링크를 삭제했습니다",
+      "after_set": "#{{number}} 다음으로 정했어요",
+      "after_cleared": "순서를 뺐어요",
       "project_set": "{{project}} 프로젝트로 옮겼어요",
       "project_removed": "프로젝트에서 뺐어요",
       "artifact_linked": "파일을 첨부했어요",
@@ -12700,7 +12713,6 @@
     "added": "저장하면 {{repo}}이(가) 목록에 추가돼요."
   },
   "connectors": {
-    "title": "커넥터",
     "store": {
       "featured": "추천",
       "suggested": "제안",
@@ -12739,6 +12751,7 @@
       "addressPassword": "주소와 비밀번호",
       "composio": "Composio를 통해"
     },
+    "title": "커넥터",
     "add": "커넥터 추가",
     "personal": {
       "note": "이 연결은 나만 열 수 있어요. 내가 부탁할 때만 에이전트가 사용해요.",
@@ -14098,6 +14111,7 @@
       "read_artifact": "Drive 파일 읽기",
       "list_artifacts": "Drive 파일 목록 조회",
       "share_artifact": "파일 공유",
+      "send_file_to_url": "앱에 파일 보내기",
       "read_spreadsheet": "스프레드시트 읽기",
       "edit_spreadsheet": "스프레드시트 편집",
       "create_presentation": "프레젠테이션 생성",
@@ -18339,6 +18353,10 @@
     "share_artifact": {
       "label": "파일 공유",
       "description": "요청한 사람에게 접근 권한이 있다면, 다른 대화(DM 등)에서 만든 파일을 이 대화로 가져와요."
+    },
+    "send_file_to_url": {
+      "label": "앱에 파일 보내기",
+      "description": "여기 연결된 앱이 준 업로드 주소나 사람이 적은 주소로 Drive 파일을 보내요."
     },
     "create_artifact": {
       "label": "파일 만들기",

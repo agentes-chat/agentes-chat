@@ -160,6 +160,9 @@ export function toolDetail(name: string, input: Record<string, unknown> | undefi
     case "browser_open":
     case "browser_tabs":
       return siteOf(i.url);
+    // Where a file went: the host alone, since an upload address carries its signature.
+    case "send_file_to_url":
+      return siteOf(i.url)?.split("/")[0];
     case PERMISSION_TOOL:
       return promptLabel(i);
     default:

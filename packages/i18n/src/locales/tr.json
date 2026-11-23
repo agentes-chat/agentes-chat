@@ -4081,6 +4081,7 @@
       "project": "projeyi",
       "dueDate": "bitiş tarihini",
       "githubUrl": "GitHub bağlantısını",
+      "after": "sırayı",
       "criteria": "kriterleri",
       "files": "ekleri"
     },
@@ -8445,6 +8446,16 @@
       "hint": "Alandan çıktığınızda veya Esc'ye bastığınızda kaydedilir."
     },
     "askTitle": "Bu görevi {{name}} ajanından isteyin",
+    "after": {
+      "label": "Başka bir görevden sonra",
+      "value": "#{{number}} sonrası",
+      "placeholder": "Başka bir görevden sonra",
+      "search": "Görev ara",
+      "noResults": "Bu kelimelerle açık görev yok",
+      "clear": "Sırayı kaldır",
+      "waits": "{{name}}, #{{number}} tamamlanınca başlar",
+      "startNow": "Şimdi başla"
+    },
     "askText": "{{name}} ihtiyaç duyduğu şeyleri okur, planı buraya yorum olarak yazar ve uygular. Yayınlamak gibi hassas her şey onayınızı ister.",
     "askText_female": "{{name}} ihtiyaç duyduğu şeyleri okur, planı buraya yorum olarak yazar ve uygular. Yayınlamak gibi hassas her şey onayınızı ister.",
     "askFirst": "Ekibin ilk görevlerini oluşturmama yardım edin.",
@@ -8535,6 +8546,8 @@
       "pr_linked": "PR #{{number}} bağladı",
       "github_linked": "GitHub'a bağladı",
       "github_unlinked": "GitHub bağlantısını kaldırdı",
+      "after_set": "#{{number}} sonrasına koydu",
+      "after_cleared": "sırayı kaldırdı",
       "project_set": "{{project}} projesine taşıdı",
       "project_removed": "projeden çıkardı",
       "artifact_linked": "bir dosya ekledi",
@@ -13180,7 +13193,6 @@
     "added": "{{repo}} kaydettiğinizde listeye eklenir."
   },
   "connectors": {
-    "title": "Bağlayıcılar",
     "store": {
       "featured": "Öne çıkanlar",
       "suggested": "Önerilen",
@@ -13223,6 +13235,7 @@
       "addressPassword": "Adres ve şifre",
       "composio": "Composio üzerinden"
     },
+    "title": "Bağlayıcılar",
     "add": "Bağlayıcı ekle",
     "personal": {
       "note": "Bu bağlantıları yalnızca sen açarsın. Ajanların bunları yalnızca sen istediğinde kullanır.",
@@ -14587,6 +14600,7 @@
       "read_artifact": "Drive'daki dosyayı oku",
       "list_artifacts": "Drive dosyalarını listele",
       "share_artifact": "Dosyayı paylaş",
+      "send_file_to_url": "Uygulamaya dosya gönder",
       "read_spreadsheet": "E-tabloyu oku",
       "edit_spreadsheet": "E-tabloyu düzenle",
       "create_presentation": "Sunum oluştur",
@@ -18906,6 +18920,10 @@
     "share_artifact": {
       "label": "Dosya paylaş",
       "description": "Başka bir sohbette (örneğin doğrudan mesajda) oluşturduğu bir dosyayı, isteyen kişinin erişimi varsa bu sohbete getirir."
+    },
+    "send_file_to_url": {
+      "label": "Uygulamaya dosya gönder",
+      "description": "Bir Drive dosyasını, burada bağlı bir uygulamanın verdiği ya da bir kişinin yazdığı yükleme adresine gönderir."
     },
     "create_artifact": {
       "label": "Dosya oluştur",

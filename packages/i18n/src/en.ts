@@ -4466,6 +4466,7 @@ export const en = {
       project: "the project",
       dueDate: "the due date",
       githubUrl: "the GitHub link",
+      after: "the order",
       criteria: "the criteria",
       files: "the attachments",
     },
@@ -8986,6 +8987,17 @@ export const en = {
       hint: "Saves when you leave the field or press Esc.",
     },
     askTitle: "Ask {{name}} to do this task",
+    /** "Depois de": the task this one waits on; its first agent starts on its own when that one is done. */
+    after: {
+      label: "After a task",
+      value: "After #{{number}}",
+      placeholder: "After a task",
+      search: "Find a task",
+      noResults: "No open task with these words",
+      clear: "Remove the order",
+      waits: "{{name}} starts when #{{number}} is done",
+      startNow: "Start now",
+    },
     askText:
       "{{name}} reads what he needs, comments the plan here and does it. Anything sensitive, like publishing, asks for your approval.",
     askText_female:
@@ -9076,6 +9088,8 @@ export const en = {
       pr_linked: "linked PR #{{number}}",
       github_linked: "linked it to GitHub",
       github_unlinked: "removed the GitHub link",
+      after_set: "set it to start after #{{number}}",
+      after_cleared: "removed the order",
       project_set: "moved it to the project {{project}}",
       project_removed: "took it out of its project",
       artifact_linked: "attached a file",
@@ -15035,6 +15049,7 @@ export const en = {
       read_artifact: "Read file in Drive",
       list_artifacts: "List Drive files",
       share_artifact: "Share file",
+      send_file_to_url: "Send a file to an app",
       read_spreadsheet: "Read spreadsheet",
       edit_spreadsheet: "Edit spreadsheet",
       create_presentation: "Create presentation",
@@ -19620,6 +19635,10 @@ export const en = {
       label: "Share file",
       description:
         "Brings into the conversation a file it made in another one (such as a DM), if the person asking has access.",
+    },
+    send_file_to_url: {
+      label: "Send a file to an app",
+      description: "Sends a Drive file to an upload address an app connected here gave it, or a person wrote.",
     },
     create_artifact: {
       label: "Create file",

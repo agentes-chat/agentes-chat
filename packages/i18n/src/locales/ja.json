@@ -3934,6 +3934,7 @@
       "project": "プロジェクト",
       "dueDate": "期日",
       "githubUrl": "GitHub リンク",
+      "after": "順番",
       "criteria": "完了条件",
       "files": "添付ファイル"
     },
@@ -8168,6 +8169,16 @@
       "hint": "フィールドを離れるか Esc を押すと保存されます。"
     },
     "askTitle": "このタスクを{{name}}に頼む",
+    "after": {
+      "label": "別のタスクの後",
+      "value": "#{{number}} の後",
+      "placeholder": "別のタスクの後",
+      "search": "タスクを検索",
+      "noResults": "この言葉に合う未完了のタスクはありません",
+      "clear": "順番を外す",
+      "waits": "#{{number}} が完了したら {{name}} が始めます",
+      "startNow": "今すぐ始める"
+    },
     "askText": "{{name}}は必要な情報を読み、ここに計画をコメントしてから実行します。公開など重要な操作は、あなたの承認を求めます。",
     "askText_female": "{{name}}は必要な情報を読み、ここに計画をコメントしてから実行します。公開など重要な操作は、あなたの承認を求めます。",
     "askFirst": "チームの最初のタスクを作るのを手伝ってください。",
@@ -8255,6 +8266,8 @@
       "pr_linked": "PR #{{number}}をリンクしました",
       "github_linked": "GitHub にリンクしました",
       "github_unlinked": "GitHub リンクを削除しました",
+      "after_set": "#{{number}} の後に設定しました",
+      "after_cleared": "順番を外しました",
       "project_set": "プロジェクト「{{project}}」に移動しました",
       "project_removed": "プロジェクトから外しました",
       "artifact_linked": "ファイルを添付しました",
@@ -12706,7 +12719,6 @@
     "added": "保存すると{{repo}}がリストに追加されます。"
   },
   "connectors": {
-    "title": "コネクタ",
     "store": {
       "featured": "注目",
       "suggested": "おすすめ",
@@ -12745,6 +12757,7 @@
       "addressPassword": "アドレスとパスワード",
       "composio": "Composio経由"
     },
+    "title": "コネクタ",
     "add": "コネクタを追加",
     "personal": {
       "note": "これらの接続を開けるのはあなただけです。エージェントは、あなたが頼んだときだけ使います。",
@@ -14104,6 +14117,7 @@
       "read_artifact": "Driveのファイルを読み取り",
       "list_artifacts": "Driveのファイルを一覧表示",
       "share_artifact": "ファイルを共有",
+      "send_file_to_url": "アプリにファイルを送信",
       "read_spreadsheet": "スプレッドシートを読み取り",
       "edit_spreadsheet": "スプレッドシートを編集",
       "create_presentation": "プレゼンテーションを作成",
@@ -18347,6 +18361,10 @@
     "share_artifact": {
       "label": "ファイルを共有",
       "description": "別の会話（ダイレクトメッセージなど）で作成したファイルを、依頼した人にアクセス権があれば、この会話に持ってきます。"
+    },
+    "send_file_to_url": {
+      "label": "アプリにファイルを送信",
+      "description": "ここで接続したアプリから渡された、または人が書いたアップロード先アドレスに Drive のファイルを送ります。"
     },
     "create_artifact": {
       "label": "ファイルを作成",

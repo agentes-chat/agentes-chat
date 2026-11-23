@@ -4396,6 +4396,7 @@
       "project": "projekt",
       "dueDate": "termin",
       "githubUrl": "link do GitHub",
+      "after": "kolejność",
       "criteria": "kryteria",
       "files": "załączniki"
     },
@@ -9089,6 +9090,16 @@
       "hint": "Zapisuje się, gdy opuścisz pole albo naciśniesz Esc."
     },
     "askTitle": "Poproś o wykonanie tego zadania: {{name}}",
+    "after": {
+      "label": "Po innym zadaniu",
+      "value": "Po #{{number}}",
+      "placeholder": "Po innym zadaniu",
+      "search": "Szukaj zadania",
+      "noResults": "Brak otwartego zadania z tymi słowami",
+      "clear": "Usuń kolejność",
+      "waits": "{{name}} zacznie, gdy #{{number}} będzie gotowe",
+      "startNow": "Zacznij teraz"
+    },
     "askText": "{{name}} przeczyta, co potrzebne, opisze tu plan w komentarzu i go wykona. Wszystko, co wrażliwe, np. publikacja, poprosi o twoje zatwierdzenie.",
     "askText_female": "{{name}} przeczyta, co potrzebne, opisze tu plan w komentarzu i go wykona. Wszystko, co wrażliwe, np. publikacja, poprosi o twoje zatwierdzenie.",
     "askFirst": "Pomóż mi utworzyć pierwsze zadania zespołu.",
@@ -9186,6 +9197,8 @@
       "pr_linked": "powiązał(a) PR #{{number}}",
       "github_linked": "połączono z GitHub",
       "github_unlinked": "usunięto link do GitHub",
+      "after_set": "ustawił(a) je po #{{number}}",
+      "after_cleared": "usunął(-ęła) kolejność",
       "project_set": "przeniósł(osła) do projektu {{project}}",
       "project_removed": "usunął(ęła) z projektu",
       "artifact_linked": "załączył(a) plik",
@@ -14266,7 +14279,6 @@
     "added": "{{repo}} trafi na listę po zapisaniu."
   },
   "connectors": {
-    "title": "Konektory",
     "store": {
       "featured": "Wyróżnione",
       "suggested": "Sugerowane",
@@ -14317,6 +14329,7 @@
       "addressPassword": "Adres i hasło",
       "composio": "Przez Composio"
     },
+    "title": "Konektory",
     "add": "Dodaj konektor",
     "personal": {
       "note": "Te połączenia otwierasz tylko ty. Twoi agenci używają ich tylko wtedy, gdy o to poprosisz.",
@@ -15691,6 +15704,7 @@
       "read_artifact": "Przeczytaj plik w Drive",
       "list_artifacts": "Wyświetl pliki w Drive",
       "share_artifact": "Udostępnij plik",
+      "send_file_to_url": "Wyślij plik do aplikacji",
       "read_spreadsheet": "Przeczytaj arkusz",
       "edit_spreadsheet": "Edytuj arkusz",
       "create_presentation": "Utwórz prezentację",
@@ -20187,6 +20201,10 @@
     "share_artifact": {
       "label": "Udostępnij plik",
       "description": "Przenosi do rozmowy plik utworzony w innej (np. w wiadomości bezpośredniej), jeśli osoba pytająca ma do niego dostęp."
+    },
+    "send_file_to_url": {
+      "label": "Wyślij plik do aplikacji",
+      "description": "Wysyła plik z Drive na adres przesyłania podany przez połączoną tu aplikację albo wpisany przez osobę."
     },
     "create_artifact": {
       "label": "Utwórz plik",

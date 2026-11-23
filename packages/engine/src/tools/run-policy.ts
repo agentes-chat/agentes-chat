@@ -278,6 +278,8 @@ const INTERNAL_BY_NAME: Readonly<Record<string, InternalArea>> = {
   create_dashboard: "dashboards",
   create_widget: "dashboards",
   share_dashboard: "dashboards",
+  // Its scope only says the agent may read the file: this sends it to an app.
+  send_file_to_url: "drive",
 };
 
 /** Built-in scopes of internal changes (`issues:write` → issues…). */

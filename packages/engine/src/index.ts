@@ -324,6 +324,7 @@ export * from "./schedule-tools";
 export * from "./screen";
 export * from "./search";
 export * from "./secrets";
+export * from "./send-file-tools";
 export * from "./session-screening";
 export * from "./settings-proposals";
 export * from "./setup-checklist";

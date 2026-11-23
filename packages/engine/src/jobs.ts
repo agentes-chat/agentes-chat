@@ -75,7 +75,7 @@ import { cutText } from "./format";
 import type { GitHubAppAccess } from "./git/github-call";
 import { GITHUB_EVENT_JOB, type GitHubAppEvent, handleGitHubAppEvent } from "./git/github-events";
 import { FILE_JOIN_REQUEST_JOB, fileJoinRequest } from "./invite-requests";
-import { announceTaskConversation } from "./issues";
+import { announceTaskConversation, startWaitingTasks, TASK_AFTER_JOB } from "./issues";
 import type { JevKey, JevKeySource } from "./jev-key";
 import { DEEP_MENTION_THRESHOLD, DEEP_WAKE_HOP, MENTION_WAKE_THRESHOLD, mentionNeedsNothing } from "./judge";
 import { platformCapReached, platformCapRouter } from "./limits";
@@ -1291,6 +1291,10 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
     // Yesterday's stall-and-noise report, to the people who run the server (`OPS_REPORT_EMAIL`).
     [AUTONOMY_REPORT_JOB]: async (job) => {
       await queueAutonomyEmail(deps.db, job.payload, { router: deps.router?.enabled ?? false });
+    },
+    // A task done or its pull request merged: the tasks waiting on it start ("Depois de").
+    [TASK_AFTER_JOB]: async (job) => {
+      await startWaitingTasks({ db: deps.db, pubsub: deps.pubsub }, orgOf(job), String(job.payload.issueId));
     },
     // What happened on GitHub to an item an agent worked on, or naming the app (ADR 0156).
     [GITHUB_EVENT_JOB]: async (job) => {

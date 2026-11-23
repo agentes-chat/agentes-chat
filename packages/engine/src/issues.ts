@@ -18,7 +18,7 @@ import { plainLine, plainLines } from "@agenteschat/ui/markdown";
 import { getAgent } from "./agents";
 import { audienceError, canTalkTo, speakerFor } from "./audience";
 import { recordAudit } from "./audit";
-import { runAuthorityById, runPerson } from "./authority";
+import { runAuthorityById, runPerson, UUID } from "./authority";
 import { requireChannelAccess } from "./channels";
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import {
@@ -47,6 +47,7 @@ import { fileIdsOf, getMessage, insertMessage, type MessageView, messageView, po
 import { enqueueRunJob } from "./mission-runs";
 import { notifyIssueChanged } from "./notification-producers";
 import { can, getMembership, requireActiveMembership } from "./organizations";
+import { enqueue } from "./outbox";
 import { runReadOutsideById } from "./outside";
 import { membersWhoMaySql } from "./permissions";
 import { queueTaskCheck, queueTaskEnd, tellTaskEnd } from "./right-hand-follow";
@@ -118,6 +119,11 @@ export interface IssueView {
   audience: IssueAudience;
   /** The issue this one is a sub-issue of. */
   parentIssueId: string | null;
+  /**
+   * "Depois de": the task this one waits on; its agent starts on its own when that one is done. `title` only where
+   * whoever sees this task sees that one too.
+   */
+  after: { id: string; number: number; title: string | null; status: IssueStatus } | null;
   pullRequests: { number: number; url: string; openedBy: WorkActor | null }[];
   /** The GitHub issue or pull request it is about: only a link, nothing syncs. */
   githubUrl: string | null;
@@ -217,6 +223,8 @@ export type IssuePatch = Partial<{
   projectId: string | null;
   /** Null removes it. */
   githubUrl: string | null;
+  /** "Depois de": the task this one waits on; null takes the order off. */
+  afterIssueId: string | null;
   /**
    * The whole list of acceptance criteria, in order: an `id` keeps that criterion (and whether it is checked), one
    * without is new, and a criterion left out is removed.
@@ -638,14 +646,17 @@ async function views(db: Database, rows: IssueRow[], reader?: string): Promise<I
     : [];
   const byId = new Map(files.map((f) => [f.id, f]));
   const orgId = rows[0]?.orgId;
-  const [columns, tied, projects] = await Promise.all([
+  const afterIds = [...new Set(rows.flatMap((r) => (r.afterIssueId ? [r.afterIssueId] : [])))];
+  const [columns, tied, projects, waitedOn] = await Promise.all([
     orgId ? boardColumns(db, orgId) : [],
     tiedPeople(db, rows),
     projectsById(
       db,
       rows.map((r) => r.projectId),
     ),
+    afterIds.length ? db.select().from(issues).where(inArray(issues.id, afterIds)) : [],
   ]);
+  const afterById = new Map(waitedOn.map((a) => [a.id, a]));
   return rows.map((r) => ({
     id: r.id,
     number: r.number,
@@ -665,6 +676,7 @@ async function views(db: Database, rows: IssueRow[], reader?: string): Promise<I
     channelId: r.channelId,
     audience: taskAudienceOf(r, tied),
     parentIssueId: r.parentIssueId,
+    after: afterOf(r, afterById.get(r.afterIssueId ?? "")),
     pullRequests: r.pullRequests as unknown as IssueView["pullRequests"],
     githubUrl: r.githubUrl,
     artifacts: r.artifactIds.flatMap((id) => {
@@ -678,6 +690,16 @@ async function views(db: Database, rows: IssueRow[], reader?: string): Promise<I
     createdAt: r.createdAt.toISOString(),
     updatedAt: r.updatedAt.toISOString(),
   }));
+}
+
+/**
+ * The task `r` waits on, as `r`'s readers see it: its title only when it reaches at least as far (the workspace's, or the
+ * same conversation's), so a private task's title never shows on a wider one.
+ */
+function afterOf(r: IssueRow, a: IssueRow | undefined): IssueView["after"] {
+  if (!a) return null;
+  const reaches = !a.restricted && (a.channelId === null || (!r.restricted && a.channelId === r.channelId));
+  return { id: a.id, number: a.number, title: reaches ? a.title : null, status: a.status };
 }
 
 /** The people of the private conversations these tasks are tied to, by channel. */
@@ -837,6 +859,10 @@ function eventDetail(event: string | null, data: Record<string, unknown>) {
       return s(data.number) ? out(event, { number: s(data.number) as string }) : {};
     case "github_link":
       return out(s(data.url) ? "github_linked" : "github_unlinked");
+    case "after_set":
+      return s(data.number) ? out(event, { number: s(data.number) as string }) : {};
+    case "after_cleared":
+      return out(event);
     case "project_changed":
       return s(data.project) ? out("project_set", { project: s(data.project) as string }) : out("project_removed");
     case "criterion_checked":
@@ -914,6 +940,8 @@ export async function createIssue(
     linkFileIds?: string[];
     /** Who sees it (ADR 0151); left out, where it's made decides. A step always follows its parent. */
     audience?: Audience;
+    /** "Depois de": the task it waits on (`waitedOn`). */
+    afterIssueId?: string | null;
   },
 ): Promise<IssueView> {
   const { db } = deps;
@@ -938,6 +966,7 @@ export async function createIssue(
   if (input.parentIssueId && (!parent || !(await canSee(db, actor, orgId, parent)))) {
     throw new ValidationError("The parent issue does not exist");
   }
+  const after = input.afterIssueId ? await waitedOn(db, actor, orgId, null, input.afterIssueId) : null;
   // A task never reaches further than where it was made, unless someone chose: an agent's, its run's conversation. A
   // step, its parent's.
   const madeIn = input.channelId ?? (actor.type === "agent" ? actor.channelId : null);
@@ -980,6 +1009,7 @@ export async function createIssue(
         restricted: scope.restricted,
         audienceUserIds: scope.audienceUserIds,
         parentIssueId: input.parentIssueId ?? null,
+        ...(after ? { afterIssueId: after.id, afterBy: await orderedFor(db, actor, orgId) } : {}),
         ...(files.length ? { artifactIds: files.map((f) => f.id) } : {}),
         createdByType: author.type,
         createdById: author.id,
@@ -1263,6 +1293,16 @@ export async function updateIssue(
       });
     }
   }
+  if (patch.afterIssueId !== undefined && patch.afterIssueId !== current.afterIssueId) {
+    const after = patch.afterIssueId ? await waitedOn(db, actor, orgId, current.id, patch.afterIssueId) : null;
+    set.afterIssueId = after?.id ?? null;
+    set.afterBy = after ? await orderedFor(db, actor, orgId) : null;
+    events.push(
+      after
+        ? { text: `set it to start after #${after.number}`, event: "after_set", data: { number: after.number } }
+        : { text: "took off the order", event: "after_cleared" },
+    );
+  }
   if (patch.criteria !== undefined) {
     const criteria = editedCriteria(current.criteria, patch.criteria);
     const same =
@@ -1337,6 +1377,7 @@ export async function updateIssue(
       updated.status !== current.status
         ? await queueTaskEnd(tx, updated, { ...author, ...(actor.type === "agent" ? { runId: actor.runId } : {}) })
         : null;
+    if (updated.status !== current.status) await queueAfterDone(tx, updated);
     return { row: updated, ended };
   });
   await linkRun(deps, actor, row);
@@ -1702,6 +1743,95 @@ export async function issueFromMessage(
  * issue (`issueWorkBrief`). Criteria, PR and status stay on the issue. An issue made from a channel message gets one
  * discreet line there (`meta.issueTaken`); nothing else is posted in channels.
  */
+/**
+ * The task `issueId` (null: one being made) may wait on: one the actor sees, never itself nor one that waits on it,
+ * however far back (a chain of waits always ends).
+ */
+async function waitedOn(db: Database, actor: IssueActor, orgId: string, issueId: string | null, afterId: string) {
+  const after = UUID.test(afterId) ? await findVisible(db, actor, orgId, { id: afterId }).catch(() => null) : null;
+  if (!after) throw new ValidationError("The task to wait on does not exist");
+  for (let id: string | null = after.id, hop = 0; id && hop < 200; hop++) {
+    if (id === issueId) throw new ValidationError("A task can't wait on itself or on a task that waits on it");
+    const [next] = await db
+      .select({ after: issues.afterIssueId })
+      .from(issues)
+      .where(and(eq(issues.orgId, orgId), eq(issues.id, id)));
+    id = next?.after ?? null;
+  }
+  return after;
+}
+
+/** Whose name a waiting task's start goes in: the person who set the order, or the person behind the agent's run. */
+async function orderedFor(db: Database, actor: IssueActor, orgId: string) {
+  if (actor.type === "person") return actor.userId;
+  return actor.runId ? ((await runAuthorityById(db, orgId, actor.runId).catch(() => null))?.personId ?? null) : null;
+}
+
+/** The job that starts the tasks waiting on one that is done or whose pull request merged. */
+export const TASK_AFTER_JOB = "issue.after_done";
+
+/** A task just done: the ones waiting on it start, from a job (its own transaction, retried). */
+export async function queueAfterDone(tx: Executor, issue: Pick<IssueRow, "id" | "orgId" | "status">) {
+  if (issue.status !== "done") return;
+  await enqueue(tx, {
+    orgId: issue.orgId,
+    kind: TASK_AFTER_JOB,
+    payload: { issueId: issue.id },
+    dedupeKey: `${TASK_AFTER_JOB}:${issue.id}:${Date.now()}`,
+  });
+}
+
+/** A pull request merged: the tasks it is linked to count as done for the ones waiting on them. */
+export async function queueAfterMerged(tx: Executor, orgId: string, url: string) {
+  if (!url) return;
+  const linked = await tx
+    .select({ id: issues.id })
+    .from(issues)
+    .where(and(eq(issues.orgId, orgId), sql`${issues.pullRequests} @> ${JSON.stringify([{ url }])}::jsonb`));
+  for (const l of linked) {
+    await enqueue(tx, {
+      orgId,
+      kind: TASK_AFTER_JOB,
+      payload: { issueId: l.id },
+      dedupeKey: `${TASK_AFTER_JOB}:${l.id}:${url}`,
+    });
+  }
+}
+
+/**
+ * The tasks waiting on `doneId` that nobody started yet ("Depois de"): each one's first agent starts on it in its own
+ * conversation, as "Pedir à Ada" does, asked in the name of whoever set the order. One with no agent, nobody to ask
+ * for, or an agent that person may no longer talk to stays as it is: its card still offers Começar agora.
+ */
+export async function startWaitingTasks(deps: IssueDeps, orgId: string, doneId: string) {
+  const waiting = await deps.db
+    .select()
+    .from(issues)
+    .where(and(eq(issues.orgId, orgId), eq(issues.afterIssueId, doneId), eq(issues.status, "todo")));
+  let started = 0;
+  for (const w of waiting) {
+    const agent = (await assigneesOfIssue(deps.db, w.id)).find((a) => a.type === "agent");
+    const by = w.afterBy ?? (w.createdByType === "person" ? w.createdById : null);
+    if (!agent || !by || (await wasAsked(deps.db, w.id))) continue;
+    const ok = await askAgentToImplement(deps, by, orgId, w.id, agent.id, undefined, true).then(
+      () => true,
+      () => false,
+    );
+    if (ok) started++;
+  }
+  return started;
+}
+
+/** Someone already asked an agent to do this task (Pedir, Começar agora, a hand-over). */
+async function wasAsked(db: Database, issueId: string) {
+  const [asked] = await db
+    .select({ id: issueActivity.id })
+    .from(issueActivity)
+    .where(and(eq(issueActivity.issueId, issueId), eq(issueActivity.event, "agent_asked")))
+    .limit(1);
+  return Boolean(asked);
+}
+
 export async function askAgentToImplement(
   deps: IssueDeps,
   userId: string,
@@ -1713,6 +1843,8 @@ export async function askAgentToImplement(
    * person's name, and is a `note` row of that run, so what comes of it goes back to their DM (`reportHandOffs`).
    */
   by?: { agentId: string; runId: string; hop: number },
+  /** Started on its own: the task it waited on is done ("Depois de"); its history marks it automatic. */
+  auto = false,
 ): Promise<IssueView> {
   const { db } = deps;
   if (!deps.pubsub) throw new Error("askAgentToImplement needs pub/sub");
@@ -1799,6 +1931,7 @@ export async function askAgentToImplement(
         messageId: start.id,
         threadId: conversation.rootId,
         inConversation: true,
+        ...(auto ? { auto: true } : {}),
       },
     });
     await recordAudit(tx, {
@@ -2091,6 +2224,7 @@ export async function setWorkIssueState(
         data: { from: current.status, to: status, auto: true },
       });
       await queueTaskEnd(tx, updated, author);
+      await queueAfterDone(tx, updated);
     }
     if (input.update) {
       await addActivity(tx, updated, {

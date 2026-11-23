@@ -181,6 +181,14 @@ describe("the policy, by level", () => {
     for (const authority of [fed, routine]) expect(action(authority, UNKNOWN, "always")).toBe("refuse");
   });
 
+  test("sending a Drive file to an app's address asks no one by default, and asks when the agent always asks", () => {
+    const send = ours("send_file_to_url", "drive:read");
+    for (const authority of [person, own, routine]) {
+      expect(action(authority, send, "risky")).toBe("allow");
+      expect(action(authority, send, "always")).toBe("approve");
+    }
+  });
+
   test("always: a click or typing in the browser asks, looking at a page doesn't", () => {
     const browser = (name: string) => ours(name, "browser:use");
     const acts = ["browser_do", "browser_click", "browser_fill", "browser_press", "browser_upload"];

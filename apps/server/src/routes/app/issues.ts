@@ -115,6 +115,13 @@ const Issue = z
       })
       .openapi({ description: "Who sees it besides administrators (ADR 0151)." }),
     parentIssueId: z.uuid().nullable().openapi({ description: "The issue this one is a sub-issue of." }),
+    after: z
+      .object({ id: z.uuid(), number: z.number(), title: z.string().nullable(), status: Status })
+      .nullable()
+      .openapi({
+        description:
+          'The task this one waits on ("Depois de"): its first agent starts on its own when that one is done or its PR merges. `title` is null when that task reaches fewer people than this one.',
+      }),
     pullRequests: z.array(z.object({ number: z.number(), url: z.string(), openedBy: Actor.nullable() })),
     githubUrl: z.string().nullable(),
     artifacts: z.array(z.object({ id: z.uuid(), title: z.string(), createdBy: Actor })),
@@ -341,6 +348,10 @@ export function issueRoutes(deps: AppDeps) {
             labels: z.array(z.string().max(40)).max(20).optional(),
             projectId: ProjectId.optional(),
             githubUrl: GithubUrl.optional(),
+            afterIssueId: z.uuid().nullable().optional().openapi({
+              description:
+                "The task this one waits on: its first agent starts on its own when that one is done or its PR merges. Null takes the order off.",
+            }),
             criteria: z
               .array(z.object({ id: z.string().optional(), text: z.string().max(500) }))
               .max(50)

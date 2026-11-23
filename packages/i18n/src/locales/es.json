@@ -4243,6 +4243,7 @@
       "project": "el proyecto",
       "dueDate": "la fecha de entrega",
       "githubUrl": "el enlace de GitHub",
+      "after": "el orden",
       "criteria": "los criterios",
       "files": "los adjuntos"
     },
@@ -8750,6 +8751,16 @@
     },
     "askTitle": "Pídele a {{name}} que haga esta tarea",
     "askTitle_female": "Pídele a {{name}} que haga esta tarea",
+    "after": {
+      "label": "Después de una tarea",
+      "value": "Después de #{{number}}",
+      "placeholder": "Después de una tarea",
+      "search": "Buscar tarea",
+      "noResults": "Ninguna tarea abierta con esas palabras",
+      "clear": "Quitar el orden",
+      "waits": "{{name}} empieza cuando #{{number}} esté hecha",
+      "startNow": "Empezar ahora"
+    },
     "askText": "{{name}} lee lo que necesita, comenta el plan aquí y lo hace. Todo lo sensible, como publicar, pide tu aprobación.",
     "askText_female": "{{name}} lee lo que necesita, comenta el plan aquí y lo hace. Todo lo sensible, como publicar, pide tu aprobación.",
     "askFirst": "Ayúdame a crear las primeras tareas del equipo.",
@@ -8845,6 +8856,8 @@
       "pr_linked": "vinculó el PR #{{number}}",
       "github_linked": "lo enlazó a GitHub",
       "github_unlinked": "quitó el enlace de GitHub",
+      "after_set": "la puso para después de #{{number}}",
+      "after_cleared": "quitó el orden",
       "project_set": "la movió al proyecto {{project}}",
       "project_removed": "la quitó del proyecto",
       "artifact_linked": "adjuntó un archivo",
@@ -13679,7 +13692,6 @@
     "added": "{{repo}} entra en la lista cuando guardes."
   },
   "connectors": {
-    "title": "Conectores",
     "store": {
       "featured": "Destacados",
       "suggested": "Sugerido",
@@ -13726,6 +13738,7 @@
       "addressPassword": "Dirección y contraseña",
       "composio": "A través de Composio"
     },
+    "title": "Conectores",
     "add": "Agregar conector",
     "personal": {
       "note": "Solo tú abres estas conexiones. Tus agentes las usan solo cuando se lo pides.",
@@ -15095,6 +15108,7 @@
       "read_artifact": "Leer archivo en Drive",
       "list_artifacts": "Listar archivos de Drive",
       "share_artifact": "Compartir archivo",
+      "send_file_to_url": "Enviar un archivo a una app",
       "read_spreadsheet": "Leer hoja de cálculo",
       "edit_spreadsheet": "Editar hoja de cálculo",
       "create_presentation": "Crear presentación",
@@ -19500,6 +19514,10 @@
     "share_artifact": {
       "label": "Compartir archivo",
       "description": "Trae a la conversación un archivo que creó en otra (como un mensaje directo), si quien pregunta tiene acceso."
+    },
+    "send_file_to_url": {
+      "label": "Enviar un archivo a una app",
+      "description": "Envía un archivo del Drive a una dirección de subida que le dio una app conectada aquí, o que escribió una persona."
     },
     "create_artifact": {
       "label": "Crear archivo",

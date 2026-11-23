@@ -4248,6 +4248,7 @@
       "project": "le projet",
       "dueDate": "l'échéance",
       "githubUrl": "le lien GitHub",
+      "after": "l'ordre",
       "criteria": "les critères",
       "files": "les pièces jointes"
     },
@@ -8800,6 +8801,16 @@
     },
     "askTitle": "Demander à {{name}} de faire cette tâche",
     "askTitle_female": "Demander à {{name}} de faire cette tâche",
+    "after": {
+      "label": "Après une tâche",
+      "value": "Après #{{number}}",
+      "placeholder": "Après une tâche",
+      "search": "Chercher une tâche",
+      "noResults": "Aucune tâche ouverte avec ces mots",
+      "clear": "Retirer l'ordre",
+      "waits": "{{name}} commence quand #{{number}} est terminée",
+      "startNow": "Commencer maintenant"
+    },
     "askText": "{{name}} lit ce dont il a besoin, commente le plan ici et s'en charge. Tout ce qui est sensible, comme publier, demande votre approbation.",
     "askText_female": "{{name}} lit ce dont elle a besoin, commente le plan ici et s'en charge. Tout ce qui est sensible, comme publier, demande votre approbation.",
     "askFirst": "Aide-moi à créer les premières tâches de l'équipe.",
@@ -8895,6 +8906,8 @@
       "pr_linked": "a lié la PR #{{number}}",
       "github_linked": "l'a lié à GitHub",
       "github_unlinked": "a retiré le lien GitHub",
+      "after_set": "l'a placée après #{{number}}",
+      "after_cleared": "a retiré l'ordre",
       "project_set": "l'a déplacée dans le projet {{project}}",
       "project_removed": "l'a retirée du projet",
       "artifact_linked": "a joint un fichier",
@@ -13754,7 +13767,6 @@
     "added": "{{repo}} rejoindra la liste à l'enregistrement."
   },
   "connectors": {
-    "title": "Connecteurs",
     "store": {
       "featured": "À la une",
       "suggested": "Suggéré",
@@ -13801,6 +13813,7 @@
       "addressPassword": "Adresse et mot de passe",
       "composio": "Via Composio"
     },
+    "title": "Connecteurs",
     "add": "Ajouter un connecteur",
     "personal": {
       "note": "Vous seul ouvrez ces connexions. Vos agents les utilisent seulement quand vous le demandez.",
@@ -15170,6 +15183,7 @@
       "read_artifact": "Lire un fichier dans Drive",
       "list_artifacts": "Lister les fichiers Drive",
       "share_artifact": "Partager un fichier",
+      "send_file_to_url": "Envoyer un fichier à une app",
       "read_spreadsheet": "Lire une feuille de calcul",
       "edit_spreadsheet": "Modifier une feuille de calcul",
       "create_presentation": "Créer une présentation",
@@ -19587,6 +19601,10 @@
     "share_artifact": {
       "label": "Partager un fichier",
       "description": "Apporte dans la conversation un fichier qu'il a créé dans une autre (comme un message direct), si la personne qui demande y a accès."
+    },
+    "send_file_to_url": {
+      "label": "Envoyer un fichier à une app",
+      "description": "Envoie un fichier du Drive à une adresse d'envoi qu'une app connectée ici lui a donnée, ou qu'une personne a écrite."
     },
     "create_artifact": {
       "label": "Créer un fichier",

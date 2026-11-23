@@ -8,6 +8,7 @@ import {
   useIssueAction,
   useIssueActivity,
   useIssueColumns,
+  useIssues,
 } from "@agenteschat/client";
 import { canTalk } from "@agenteschat/client/lib/audience";
 import { FIELD_LIMITS } from "@agenteschat/client/lib/field-limits";
@@ -42,6 +43,7 @@ import {
   overLimit,
   Popover,
   SavedNote,
+  SearchSelect,
   Select,
   TabPanel,
   Tabs,
@@ -370,6 +372,7 @@ export function IssueDetails({
           {/* Handed work: the box above follows it step by step, asks and ends; the line would say it twice. */}
           {i.backgroundWork?.how !== "handed" && <IssueWorkBlock issue={i} />}
           {!i.assignees.some((a) => a.type === "agent") && isOpen(i) && <AskAgent issue={i} />}
+          <WaitingBox issue={i} />
           <DetailsSection title={t("issues.description")}>
             <IssueDescription issue={i} hasFiles={createdFiles.length > 0} onSaved={flashSaved} />
             {createdFiles.length > 0 && (
@@ -896,6 +899,109 @@ function AskAgent({ issue }: { issue: Issue }) {
   );
 }
 
+/**
+ * A task waiting on another ("Depois de") that nobody started yet: its first agent starts when that one is done, said
+ * with Começar agora and Tirar a ordem.
+ */
+function WaitingBox({ issue: i }: { issue: Issue }) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const actors = useActors();
+  const action = useIssueAction(org.id);
+  const after = i.after;
+  const agent = i.assignees.find((a) => a.type === "agent");
+  if (!after || after.status === "done" || !agent || i.status !== "todo" || i.work || i.backgroundWork) return null;
+  const name = actors.name(agent);
+  const g = agentGrammar(name);
+  return (
+    <section aria-label={t("issues.after.label")} className="issue-ask">
+      <div className="issue-ask__row ac-mediarow ac-mediarow--row">
+        <span className="ac-mediarow__face">{actors.avatar(agent, "sm")}</span>
+        <span className="ac-mediarow__head">
+          <b>{t("issues.after.waits", { context: g.context, name, number: after.number })}</b>
+        </span>
+        <span className="ac-mediarow__body small muted">
+          <span>
+            <Link
+              to="/org/$orgId/issues/$number"
+              params={{ orgId: org.id, number: String(after.number) }}
+              className="ac-link"
+            >
+              #{after.number}
+              {after.title ? ` ${after.title}` : ""}
+            </Link>{" "}
+            · {t(`issues.statusLower.${after.status}`)}
+          </span>
+        </span>
+      </div>
+      <div className="issue-ask__actions">
+        <Locked when={action.isPending}>
+          <Button
+            variant="agent"
+            icon="agent"
+            size="sm"
+            loading={action.isPending}
+            onClick={() => action.mutate({ type: "ask", id: i.id, agentId: agent.id })}
+          >
+            {t("issues.after.startNow")}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => action.mutate({ type: "update", id: i.id, patch: { afterIssueId: null } })}
+          >
+            {t("issues.after.clear")}
+          </Button>
+        </Locked>
+      </div>
+    </section>
+  );
+}
+
+/** "Depois de" in the props line: the task this one waits on, picked from the open ones, or none. */
+function AfterField({ issue: i }: { issue: Issue }) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const action = useIssueAction(org.id);
+  const list = useIssues(org.id).data ?? [];
+  const label = t("issues.after.label");
+  const option = (x: { id: string; number: number; title: string | null; status: Issue["status"] }) => ({
+    value: x.id,
+    label: x.title ? `#${x.number} ${x.title}` : `#${x.number}`,
+    leading: <Icon name={STATUS_ICON[x.status]} size={16} />,
+  });
+  const options = () => [
+    ...(i.after ? [{ value: "", label: t("issues.after.clear"), leading: <Icon name="close" size={16} /> }] : []),
+    ...(i.after && !list.some((x) => x.id === i.after?.id) ? [option(i.after)] : []),
+    ...list.filter((x) => x.id !== i.id && (isOpen(x) || x.id === i.after?.id)).map(option),
+  ];
+  return (
+    <SearchSelect
+      className="ac-select--sm"
+      aria-label={label}
+      value={i.after?.id ?? ""}
+      onValueChange={(v) => action.mutate({ type: "update", id: i.id, patch: { afterIssueId: v || null } })}
+      options={options}
+      renderValue={() => (
+        <span>
+          <span className="ac-select__lead" aria-hidden="true">
+            <Icon name="waiting" size={16} />
+          </span>
+          <span className="ac-select__text">
+            {i.after ? t("issues.after.value", { number: i.after.number }) : t("issues.after.placeholder")}
+          </span>
+        </span>
+      )}
+      labels={{
+        search: t("issues.after.search"),
+        searchPlaceholder: t("issues.after.search"),
+        noResults: t("issues.after.noResults"),
+        list: label,
+      }}
+    />
+  );
+}
+
 /** "Histórico": what happened to the task, oldest first: its events and a line for each comment. */
 function History({ activity, loaded }: { activity: IssueActivity[]; loaded: boolean }) {
   const { t, i18n } = useTranslation();
@@ -1093,6 +1199,7 @@ function PropsLine({ issue: i }: { issue: Issue }) {
           }
         />,
       )}
+      {isOpen(i) || i.after ? prop(t("issues.after.label"), <AfterField issue={i} />) : null}
       {whoSees &&
         prop(
           t("whoSees.label"),

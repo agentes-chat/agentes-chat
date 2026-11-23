@@ -4101,6 +4101,7 @@
       "project": "das Projekt",
       "dueDate": "das Fälligkeitsdatum",
       "githubUrl": "den GitHub-Link",
+      "after": "die Reihenfolge",
       "criteria": "die Kriterien",
       "files": "die Anhänge"
     },
@@ -8492,6 +8493,16 @@
       "hint": "Wird gespeichert, wenn du das Feld verlässt oder Esc drückst."
     },
     "askTitle": "{{name}} bitten, diese Aufgabe zu erledigen",
+    "after": {
+      "label": "Nach einer Aufgabe",
+      "value": "Nach #{{number}}",
+      "placeholder": "Nach einer Aufgabe",
+      "search": "Aufgabe suchen",
+      "noResults": "Keine offene Aufgabe mit diesen Wörtern",
+      "clear": "Reihenfolge entfernen",
+      "waits": "{{name}} beginnt, wenn #{{number}} erledigt ist",
+      "startNow": "Jetzt beginnen"
+    },
     "askText": "{{name}} liest, was er braucht, kommentiert hier den Plan und setzt ihn um. Alles Sensible, etwa Veröffentlichen, fragt nach deiner Freigabe.",
     "askText_female": "{{name}} liest, was sie braucht, kommentiert hier den Plan und setzt ihn um. Alles Sensible, etwa Veröffentlichen, fragt nach deiner Freigabe.",
     "askFirst": "Hilf mir, die ersten Aufgaben des Teams zu erstellen.",
@@ -8582,6 +8593,8 @@
       "pr_linked": "hat PR #{{number}} verknüpft",
       "github_linked": "hat es mit GitHub verknüpft",
       "github_unlinked": "hat den GitHub-Link entfernt",
+      "after_set": "hat sie nach #{{number}} eingeplant",
+      "after_cleared": "hat die Reihenfolge entfernt",
       "project_set": "hat sie in das Projekt {{project}} verschoben",
       "project_removed": "hat sie aus dem Projekt genommen",
       "artifact_linked": "hat eine Datei angehängt",
@@ -13251,7 +13264,6 @@
     "added": "{{repo}} kommt beim Speichern auf die Liste."
   },
   "connectors": {
-    "title": "Konnektoren",
     "store": {
       "featured": "Empfohlen",
       "suggested": "Vorgeschlagen",
@@ -13294,6 +13306,7 @@
       "addressPassword": "Adresse und Passwort",
       "composio": "Über Composio"
     },
+    "title": "Konnektoren",
     "add": "Konnektor hinzufügen",
     "personal": {
       "note": "Nur du öffnest diese Verbindungen. Deine Agenten verwenden sie nur, wenn du sie darum bittest.",
@@ -14658,6 +14671,7 @@
       "read_artifact": "Datei in Drive lesen",
       "list_artifacts": "Dateien in Drive auflisten",
       "share_artifact": "Datei teilen",
+      "send_file_to_url": "Datei an eine App senden",
       "read_spreadsheet": "Tabelle lesen",
       "edit_spreadsheet": "Tabelle bearbeiten",
       "create_presentation": "Präsentation erstellen",
@@ -18983,6 +18997,10 @@
     "share_artifact": {
       "label": "Datei teilen",
       "description": "Holt eine Datei, die er in einer anderen Unterhaltung (etwa einer Direktnachricht) erstellt hat, in diese Unterhaltung, wenn die anfragende Person Zugriff hat."
+    },
+    "send_file_to_url": {
+      "label": "Datei an eine App senden",
+      "description": "Sendet eine Drive-Datei an eine Upload-Adresse, die ihm eine hier verbundene App gegeben oder eine Person geschrieben hat."
     },
     "create_artifact": {
       "label": "Datei erstellen",

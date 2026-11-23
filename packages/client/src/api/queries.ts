@@ -5651,7 +5651,7 @@ function issueEdits(orgId: string, id: string, patch: (issue: Issue) => Issue | 
  * project its name and colour. New criteria wait for the answer (their ids are the server's).
  */
 function issuePatched(qc: QueryClient, orgId: string, patch: IssuePatch) {
-  const { criteria: _criteria, columnId, projectId, removeFiles, ...same } = patch;
+  const { criteria: _criteria, columnId, projectId, removeFiles, afterIssueId, ...same } = patch;
   const columns = qc.getQueryData<IssueColumn[]>(keys.issueColumns(orgId)) ?? [];
   const projects = qc.getQueryData<IssueProjects>(keys.issueProjects(orgId))?.projects ?? [];
   return (issue: Issue): Issue => {
@@ -5666,6 +5666,8 @@ function issuePatched(qc: QueryClient, orgId: string, patch: IssuePatch) {
     if (projectId === null) next.project = null;
     else if (projectId !== undefined) next.project = projects.find((p) => p.id === projectId) ?? issue.project;
     if (removeFiles?.length) next.artifacts = issue.artifacts.filter((f) => !removeFiles.includes(f.id));
+    // Taking the order off shows at once; a new one waits for the server, which names the task it waits on.
+    if (afterIssueId === null) next.after = null;
     return next;
   };
 }

@@ -10037,6 +10037,9 @@
   "agentActions.issueFields.githubUrl": {
     "value": "the GitHub link"
   },
+  "agentActions.issueFields.after": {
+    "value": "the order"
+  },
   "agentActions.issueFields.criteria": {
     "value": "the criteria"
   },
@@ -20621,6 +20624,30 @@
   "issues.askTitle": {
     "value": "Ask {{name}} to do this task"
   },
+  "issues.after.label": {
+    "value": "After a task"
+  },
+  "issues.after.value": {
+    "value": "After #{{number}}"
+  },
+  "issues.after.placeholder": {
+    "value": "After a task"
+  },
+  "issues.after.search": {
+    "value": "Find a task"
+  },
+  "issues.after.noResults": {
+    "value": "No open task with these words"
+  },
+  "issues.after.clear": {
+    "value": "Remove the order"
+  },
+  "issues.after.waits": {
+    "value": "{{name}} starts when #{{number}} is done"
+  },
+  "issues.after.startNow": {
+    "value": "Start now"
+  },
   "issues.askText": {
     "value": "{{name}} reads what he needs, comments the plan here and does it. Anything sensitive, like publishing, asks for your approval.",
     "female": "{{name}} reads what she needs, comments the plan here and does it. Anything sensitive, like publishing, asks for your approval."
@@ -20855,6 +20882,12 @@
   },
   "issues.event.github_unlinked": {
     "value": "removed the GitHub link"
+  },
+  "issues.event.after_set": {
+    "value": "set it to start after #{{number}}"
+  },
+  "issues.event.after_cleared": {
+    "value": "removed the order"
   },
   "issues.event.project_set": {
     "value": "moved it to the project {{project}}"
@@ -32414,9 +32447,6 @@
   "repos.added": {
     "value": "{{repo}} joins the list when you save."
   },
-  "connectors.title": {
-    "value": "Connectors"
-  },
   "connectors.store.featured": {
     "value": "Featured"
   },
@@ -32530,6 +32560,9 @@
   },
   "connectors.howShort.composio": {
     "value": "Through Composio"
+  },
+  "connectors.title": {
+    "value": "Connectors"
   },
   "connectors.add": {
     "value": "Add connector"
@@ -36001,6 +36034,9 @@
   },
   "toolNames.label.share_artifact": {
     "value": "Share file"
+  },
+  "toolNames.label.send_file_to_url": {
+    "value": "Send a file to an app"
   },
   "toolNames.label.read_spreadsheet": {
     "value": "Read spreadsheet"
@@ -46808,6 +46844,12 @@
   },
   "builtinTools.share_artifact.description": {
     "value": "Brings into the conversation a file it made in another one (such as a DM), if the person asking has access."
+  },
+  "builtinTools.send_file_to_url.label": {
+    "value": "Send a file to an app"
+  },
+  "builtinTools.send_file_to_url.description": {
+    "value": "Sends a Drive file to an upload address an app connected here gave it, or a person wrote."
   },
   "builtinTools.create_artifact.label": {
     "value": "Create file"

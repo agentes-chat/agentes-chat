@@ -4255,6 +4255,7 @@
       "project": "il progetto",
       "dueDate": "la scadenza",
       "githubUrl": "il link GitHub",
+      "after": "l'ordine",
       "criteria": "i criteri",
       "files": "gli allegati"
     },
@@ -8817,6 +8818,16 @@
     },
     "askTitle": "Chiedi a {{name}} di fare questa attività",
     "askTitle_female": "Chiedi a {{name}} di fare questa attività",
+    "after": {
+      "label": "Dopo un'attività",
+      "value": "Dopo #{{number}}",
+      "placeholder": "Dopo un'attività",
+      "search": "Cerca attività",
+      "noResults": "Nessuna attività aperta con queste parole",
+      "clear": "Togli l'ordine",
+      "waits": "{{name}} inizia quando #{{number}} è fatta",
+      "startNow": "Inizia ora"
+    },
     "askText": "{{name}} legge ciò che gli serve, commenta qui il piano e lo esegue. Tutto ciò che è sensibile, come pubblicare, chiede la tua approvazione.",
     "askText_female": "{{name}} legge ciò che le serve, commenta qui il piano e lo esegue. Tutto ciò che è sensibile, come pubblicare, chiede la tua approvazione.",
     "askFirst": "Aiutami a creare le prime attività del team.",
@@ -8912,6 +8923,8 @@
       "pr_linked": "ha collegato la PR #{{number}}",
       "github_linked": "l'ha collegata a GitHub",
       "github_unlinked": "ha rimosso il link GitHub",
+      "after_set": "l'ha messa dopo #{{number}}",
+      "after_cleared": "ha tolto l'ordine",
       "project_set": "l'ha spostata nel progetto {{project}}",
       "project_removed": "l'ha tolta dal progetto",
       "artifact_linked": "ha allegato un file",
@@ -13776,7 +13789,6 @@
     "added": "{{repo}} entra nell'elenco quando salvi."
   },
   "connectors": {
-    "title": "Connettori",
     "store": {
       "featured": "In evidenza",
       "suggested": "Suggerito",
@@ -13823,6 +13835,7 @@
       "addressPassword": "Indirizzo e password",
       "composio": "Tramite Composio"
     },
+    "title": "Connettori",
     "add": "Aggiungi connettore",
     "personal": {
       "note": "Solo tu apri queste connessioni. I tuoi agenti le usano solo quando glielo chiedi.",
@@ -15192,6 +15205,7 @@
       "read_artifact": "Leggi file in Drive",
       "list_artifacts": "Elenca file di Drive",
       "share_artifact": "Condividi file",
+      "send_file_to_url": "Invia un file a un'app",
       "read_spreadsheet": "Leggi foglio di calcolo",
       "edit_spreadsheet": "Modifica foglio di calcolo",
       "create_presentation": "Crea presentazione",
@@ -19603,6 +19617,10 @@
     "share_artifact": {
       "label": "Condividi file",
       "description": "Porta nella conversazione un file creato in un'altra (come un messaggio diretto), se chi chiede ha accesso."
+    },
+    "send_file_to_url": {
+      "label": "Invia un file a un'app",
+      "description": "Invia un file del Drive a un indirizzo di caricamento che gli ha dato un'app collegata qui, o che ha scritto una persona."
     },
     "create_artifact": {
       "label": "Crea file",

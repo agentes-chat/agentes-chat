@@ -574,9 +574,14 @@ export function createMockPlanning(
         const i = await findIssue(orgId, id);
         const author = await me();
         const s = await columnsOf(orgId);
-        const { columnId, criteria, projectId, removeFiles, ...rest } = patch;
-        let change: Omit<IssuePatch, "columnId" | "criteria" | "projectId" | "removeFiles"> = rest;
+        const { columnId, criteria, projectId, removeFiles, afterIssueId, ...rest } = patch;
+        let change: Omit<IssuePatch, "columnId" | "criteria" | "projectId" | "removeFiles" | "afterIssueId"> = rest;
         if (projectId !== undefined) i.project = (await store(orgId)).projects.find((p) => p.id === projectId) ?? null;
+        // "Depois de": the server names the task it waits on.
+        if (afterIssueId !== undefined) {
+          const a = afterIssueId ? (await store(orgId)).issues.find((x) => x.id === afterIssueId) : undefined;
+          i.after = a ? { id: a.id, number: a.number, title: a.title, status: a.status } : null;
+        }
         // As the server does: off the task's attachments, still in the Drive.
         const taken = i.artifacts.filter((f) => removeFiles?.includes(f.id));
         if (taken.length) {

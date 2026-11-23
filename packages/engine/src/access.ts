@@ -60,6 +60,7 @@ export const BUILTIN_TOOLS: Record<string, string[]> = {
     "read_artifact",
     "list_artifacts",
     "share_artifact",
+    "send_file_to_url",
     "read_spreadsheet",
     "read_presentation",
     "read_canvas",
@@ -208,6 +209,10 @@ export const BUILTIN_TOOL_INFO: Record<string, { label: string; description: str
     label: "Share file",
     description:
       "Brings into the conversation a file it made in another one (such as a DM), if the person asking has access.",
+  },
+  send_file_to_url: {
+    label: "Send a file to an app",
+    description: "Sends a Drive file to an upload address an app connected here gave it, or a person wrote.",
   },
   create_artifact: { label: "Create file", description: "Creates a document, table, diff, diagram or page." },
   update_artifact: { label: "Update file", description: "Saves a new version of a file." },

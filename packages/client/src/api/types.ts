@@ -4298,6 +4298,11 @@ export interface Issue {
   conversation?: IssueConversation | null;
   /** The issue this one is a sub-issue of. */
   parentIssueId?: string | null;
+  /**
+   * "Depois de": the task this one waits on; its first agent starts on its own when that one is done. `title` is null
+   * when that task reaches fewer people. Absent on an older server.
+   */
+  after?: { id: string; number: number; title: string | null; status: IssueStatus } | null;
   /** On the detail: its sub-issues. */
   subIssues?: { id: string; number: number; title: string; status: IssueStatus; assignees: Actor[] }[];
   createdAt: string;
@@ -4372,6 +4377,8 @@ export type IssuePatch = Partial<
   criteria?: { id?: string; text: string }[];
   /** Files to take off the task ("Anexos" ×): they stay in the Drive. */
   removeFiles?: string[];
+  /** "Depois de": the task this one waits on; null takes the order off. */
+  afterIssueId?: string | null;
 };
 
 /** A task's project as its card shows it: a name and one of the roles' colors. Archived: offered to no new task. */

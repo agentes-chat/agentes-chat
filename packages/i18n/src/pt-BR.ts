@@ -4334,6 +4334,7 @@ export const ptBR = {
       project: "o projeto",
       dueDate: "o prazo",
       githubUrl: "o link do GitHub",
+      after: "a ordem",
       criteria: "os critérios",
       files: "os anexos",
     },
@@ -8941,6 +8942,18 @@ export const ptBR = {
       hint: "Salva quando você sai do campo ou aperta Esc.",
     },
     askTitle: "Pedir ao {{name}} para fazer esta tarefa",
+    /** "Depois de": the task this one waits on; its first agent starts on its own when that one is done. */
+    after: {
+      label: "Depois de uma tarefa",
+      value: "Depois da #{{number}}",
+      placeholder: "Depois de uma tarefa",
+      search: "Buscar tarefa",
+      noResults: "Nenhuma tarefa aberta com essas palavras",
+      clear: "Tirar a ordem",
+      waits: "O {{name}} começa quando a #{{number}} estiver feita",
+      waits_female: "A {{name}} começa quando a #{{number}} estiver feita",
+      startNow: "Começar agora",
+    },
     askTitle_female: "Pedir à {{name}} para fazer esta tarefa",
     askText:
       "O {{name}} lê o que precisa, comenta o plano aqui e faz. O que for sensível, como publicar, pede sua aprovação.",
@@ -9029,6 +9042,8 @@ export const ptBR = {
       due_date_removed: "removeu o prazo",
       pr_linked: "ligou o PR #{{number}}",
       github_linked: "ligou ao GitHub",
+      after_set: "pôs a tarefa para depois da #{{number}}",
+      after_cleared: "tirou a ordem",
       github_unlinked: "removeu o link do GitHub",
       project_set: "moveu para o projeto {{project}}",
       project_removed: "tirou do projeto",
@@ -15006,6 +15021,7 @@ export const ptBR = {
       read_artifact: "Ler arquivo do Drive",
       list_artifacts: "Listar arquivos do Drive",
       share_artifact: "Compartilhar arquivo",
+      send_file_to_url: "Enviar arquivo para um app",
       read_spreadsheet: "Ler planilha",
       edit_spreadsheet: "Editar planilha",
       create_presentation: "Criar apresentação",
@@ -19464,6 +19480,11 @@ export const ptBR = {
     share_artifact: {
       label: "Compartilhar arquivo",
       description: "Traz para a conversa um arquivo que fez em outra (como uma DM), se quem pediu tem acesso.",
+    },
+    send_file_to_url: {
+      label: "Enviar arquivo para um app",
+      description:
+        "Envia um arquivo do Drive para um endereço de envio que um app conectado deu, ou que uma pessoa escreveu.",
     },
     create_artifact: {
       label: "Criar arquivo",

@@ -3950,6 +3950,7 @@
       "project": "proyek",
       "dueDate": "tenggat",
       "githubUrl": "tautan GitHub",
+      "after": "urutannya",
       "criteria": "kriteria",
       "files": "lampiran"
     },
@@ -8208,6 +8209,16 @@
     },
     "askTitle": "Minta {{name}} mengerjakan tugas ini",
     "askTitle_female": "Minta {{name}} mengerjakan tugas ini",
+    "after": {
+      "label": "Setelah tugas lain",
+      "value": "Setelah #{{number}}",
+      "placeholder": "Setelah tugas lain",
+      "search": "Cari tugas",
+      "noResults": "Tidak ada tugas terbuka dengan kata-kata ini",
+      "clear": "Hapus urutan",
+      "waits": "{{name}} mulai saat #{{number}} selesai",
+      "startNow": "Mulai sekarang"
+    },
     "askText": "{{name}} membaca apa yang dibutuhkannya, menulis rencananya di sini, lalu mengerjakannya. Apa pun yang sensitif, seperti publikasi, akan meminta persetujuanmu.",
     "askText_female": "{{name}} membaca apa yang dibutuhkannya, menulis rencananya di sini, lalu mengerjakannya. Apa pun yang sensitif, seperti publikasi, akan meminta persetujuanmu.",
     "askFirst": "Bantu aku membuat tugas pertama tim.",
@@ -8297,6 +8308,8 @@
       "pr_linked": "menautkan PR #{{number}}",
       "github_linked": "menautkannya ke GitHub",
       "github_unlinked": "menghapus tautan GitHub",
+      "after_set": "menjadwalkannya setelah #{{number}}",
+      "after_cleared": "menghapus urutan",
       "project_set": "memindahkannya ke proyek {{project}}",
       "project_removed": "mengeluarkannya dari proyek",
       "artifact_linked": "melampirkan file",
@@ -12765,7 +12778,6 @@
     "added": "{{repo}} masuk ke daftar saat kamu menyimpan."
   },
   "connectors": {
-    "title": "Konektor",
     "store": {
       "featured": "Unggulan",
       "suggested": "Disarankan",
@@ -12804,6 +12816,7 @@
       "addressPassword": "Alamat dan kata sandi",
       "composio": "Lewat Composio"
     },
+    "title": "Konektor",
     "add": "Tambah konektor",
     "personal": {
       "note": "Hanya kamu yang membuka koneksi ini. Agenmu hanya menggunakannya saat kamu minta.",
@@ -14163,6 +14176,7 @@
       "read_artifact": "Baca file di Drive",
       "list_artifacts": "Daftar file Drive",
       "share_artifact": "Bagikan file",
+      "send_file_to_url": "Kirim file ke aplikasi",
       "read_spreadsheet": "Baca spreadsheet",
       "edit_spreadsheet": "Ubah spreadsheet",
       "create_presentation": "Buat presentasi",
@@ -18406,6 +18420,10 @@
     "share_artifact": {
       "label": "Bagikan file",
       "description": "Membawa ke percakapan ini file yang dibuatnya di percakapan lain (misalnya pesan langsung), jika orang yang meminta punya akses."
+    },
+    "send_file_to_url": {
+      "label": "Kirim file ke aplikasi",
+      "description": "Mengirim file Drive ke alamat unggah yang diberikan aplikasi yang terhubung di sini, atau yang ditulis seseorang."
     },
     "create_artifact": {
       "label": "Buat file",
