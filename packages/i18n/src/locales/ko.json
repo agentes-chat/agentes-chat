@@ -17703,6 +17703,9 @@
       "text": "ChatGPT가 이 계정이나 모델에서 빠른 속도를 거부해서 이 답변은 표준 속도로 왔어요.",
       "action": "에이전트 열기"
     },
+    "mcpOff": {
+      "text": "Gemini가 agentes.chat의 도구 없이 답했습니다. Antigravity CLI가 도구를 불러오지 않았습니다. Gemini Enterprise 라이선스에서는 관리자가 MCP 서버를 켜야 합니다(Google Cloud 콘솔 → Gemini Enterprise → 설정 → AI 개발자 도구)."
+    },
     "standIn": {
       "needsComputer": "{{via}}(으)로 답했어요: {{plan}}에는 컴퓨터가 필요해요.",
       "away": "{{via}}(으)로 답했어요: {{plan}}의 컴퓨터가 자리를 비웠어요.",

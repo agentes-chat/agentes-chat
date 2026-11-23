@@ -14,8 +14,9 @@
 // quotas ($FAKE_AGY_REFRESH_MS: it refreshes its sign-in in place first, the file empty for that long), `-p /logout`
 // signs out. `-p <prompt> --output-format stream-json` prints one turn: init (the conversation:
 // `--conversation`'s, or a new one when it doesn't know that one; its tools: our server's alone with `--agent`, else
-// the CLI's own and ours, or $FAKE_AGY_TOOLS), a text delta, a shell step (none with "BRIDGE_ONLY"), a call to our
-// server (a tool of the CLI's own with "OWN_TOOL"), the last delta with usage and the result. "LIMIT": an AGY_ERROR
+// the CLI's own and ours, or $FAKE_AGY_TOOLS; $FAKE_AGY_MCP_OFF: none of ours, as 1.5.15 does on a Gemini Enterprise
+// seat with MCP servers off), a text delta, a shell step (none with "BRIDGE_ONLY"), a call to our server (a tool of the
+// CLI's own with "OWN_TOOL"; none with MCP off), the last delta with usage and the result. "LIMIT": an AGY_ERROR
 // quota line on stderr and exit 3. "ENV": the shell step's output is the env.
 // With no arguments: the CLI's own screens, as 1.5.15 draws Gemini Enterprise's sign-in (seen on Linux, 2026-11-23):
 // the login method, Google Cloud's sign-in method, Google's link (its text wrapped, whole only in its "Click here"
@@ -299,11 +300,14 @@ if (args[0] === "-p") {
     conversation = `c3b60000-0000-4000-8000-${String(conversations.length + 1).padStart(12, "0")}`;
     writeFileSync(known, JSON.stringify([...conversations, conversation]));
   }
-  const tools = env.FAKE_AGY_TOOLS
-    ? env.FAKE_AGY_TOOLS.split(",")
-    : flag("--agent")
-      ? ["agenteschat_agentes/post_message"]
-      : ["ask_permission", "run_command", "write_to_file", "agenteschat_agentes/post_message"];
+  const mcpOff = Boolean(env.FAKE_AGY_MCP_OFF);
+  const tools = (
+    env.FAKE_AGY_TOOLS
+      ? env.FAKE_AGY_TOOLS.split(",")
+      : flag("--agent")
+        ? ["agenteschat_agentes/post_message"]
+        : ["ask_permission", "run_command", "write_to_file", "agenteschat_agentes/post_message"]
+  ).filter((t) => !mcpOff || !t.startsWith("agenteschat_agentes"));
   const step = (o) => out({ event: "step_update", step_update: { conversation_id: conversation, ...o } });
   out({
     event: "init",
@@ -337,14 +341,16 @@ if (args[0] === "-p") {
       },
     });
   }
-  const call = prompt.includes("OWN_TOOL") ? "view_file" : "agenteschat_agentes/post_message";
-  step({
-    step_index: 3,
-    state: "DONE",
-    step_type: "tool",
-    tool_name: call,
-    tool_info: { name: call, parameters: {}, output: "ok" },
-  });
+  const call = prompt.includes("OWN_TOOL") ? "view_file" : mcpOff ? null : "agenteschat_agentes/post_message";
+  if (call) {
+    step({
+      step_index: 3,
+      state: "DONE",
+      step_type: "tool",
+      tool_name: call,
+      tool_info: { name: call, parameters: {}, output: "ok" },
+    });
+  }
   step({
     step_index: 4,
     state: "DONE",

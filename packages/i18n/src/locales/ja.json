@@ -17711,6 +17711,9 @@
       "text": "ChatGPTがこのアカウントまたはモデルでの高速を拒否したため、この返信は標準の速度で届きました。",
       "action": "エージェントを開く"
     },
+    "mcpOff": {
+      "text": "Geminiはagentes.chatのツールなしで返信しました。Antigravity CLIがツールを読み込みませんでした。Gemini Enterpriseのライセンスでは、管理者がMCPサーバーを有効にする必要があります（Google Cloud コンソール → Gemini Enterprise → 設定 → AI デベロッパー ツール）。"
+    },
     "standIn": {
       "needsComputer": "{{via}}で回答しました: {{plan}}にはコンピューターが必要です。",
       "away": "{{via}}で回答しました: {{plan}}のコンピューターは離席中です。",

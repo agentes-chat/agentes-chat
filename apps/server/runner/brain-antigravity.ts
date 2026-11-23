@@ -52,6 +52,9 @@ import { agentSecrets } from "./secrets";
  *   subagent), in an empty folder with none of the agent's secrets. `antigravityChatBreach` kills the turn on an
  *   `init` listing any tool but our server's, on anything before `init`, on a tool step that isn't ours and on a
  *   subagent.
+ * - An `init` that lists no tool of our server's (`agyMcpOff`; an empty list too, which the chat guard lets by): a
+ *   Gemini Enterprise seat whose admin turned MCP servers off, where the CLI drops ours without a word. The turn goes
+ *   on without agentes.chat's tools, with an `mcp_off` event first (protocol 79), so the apps can say why.
  * - Our server's calls are not repeated as `tool_call`: the engine ran them. The CLI's own tools are, as what the turn
  *   tried. Usage is the plan's (`source: "plan"`): the turn's `agent_response` steps summed (`result.usage` counts
  *   the whole conversation).
@@ -92,6 +95,10 @@ export const AGY_RUN_ENV = "AGENTES_MCP_RUN";
  */
 const OURS = new RegExp(`^(?:mcp[_.:/-]{1,2})?${CODEX_MCP_SERVER}(?:__|[_.:/-])[\\w.-]+$`);
 export const isOurAgyTool = (name: unknown) => typeof name === "string" && OURS.test(name);
+
+/** What `mcp_off` says: the CLI started without our server, as with MCP servers off on a Gemini Enterprise seat. */
+export const AGY_MCP_OFF_MESSAGE =
+  "The Antigravity CLI started without agentes.chat's tools: on a Gemini Enterprise seat, its admin has to turn MCP servers on.";
 
 /**
  * `--effort`: low, medium or high (`xhigh` and `max` as high: not every model has the extra level); a slug that names
@@ -150,6 +157,15 @@ export function antigravityChatBreach(ev: Record<string, unknown>, sawInit: bool
     return stop(`The Antigravity CLI used a tool of its own (${String(name ?? "unknown").slice(0, 64)})`);
   }
   return null;
+}
+
+/**
+ * An `init` whose tool list has none of our server's (an empty one too): the CLI dropped ours, as with MCP servers off
+ * on a Gemini Enterprise seat (CLI 1.5.15 says nothing of it). False when there is no list to read.
+ */
+export function agyMcpOff(ev: Record<string, unknown>): boolean {
+  if (ev.event !== "init" || !isRecord(ev.init) || !Array.isArray(ev.init.tools)) return false;
+  return !ev.init.tools.some(isOurAgyTool);
 }
 
 /** `AGY_ERROR: {…}` on stderr (CLI 1.2.x): what it says, and whether it is a limit or a refused sign-in. */
@@ -276,6 +292,8 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
   const clean = (text: string) => (opts.redact ? opts.redact(text) : text);
   const hold = opts.redact ? (opts.redactHold ?? 0) : 0;
 
+  // Said once a turn, even when it starts again as a new chat.
+  let mcpOffSaid = false;
   // One retry, as a new chat, when the CLI doesn't have the conversation it was to resume.
   for (let attempt = 0; ; attempt++) {
     const chat = opts.chats.get(chatKey);
@@ -348,6 +366,11 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
           return;
         }
         if (id) opts.chats.set(chatKey, id);
+        // MCP servers off on the seat: the turn goes on without our tools, and the apps say why.
+        if (!mcpOffSaid && agyMcpOff(ev)) {
+          mcpOffSaid = true;
+          opts.emit({ type: "mcp_off", message: AGY_MCP_OFF_MESSAGE });
+        }
         return;
       }
       if (ev.event === "result") {

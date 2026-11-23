@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 78;
+export const MACHINE_PROTOCOL_VERSION = 79;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -2242,6 +2242,11 @@ export type WireBrainEvent =
   /** Protocol 46: Fast failed (`message`: the provider's words) and this turn answered at standard speed. */
   | { type: "speed_fallback"; message: string }
   /**
+   * Protocol 79 (`AGY_MCP_OFF_PROTOCOL`): the Antigravity CLI started without our server's tools (MCP servers off on a
+   * Gemini Enterprise seat); the turn goes on without them. An older server drops it.
+   */
+  | { type: "mcp_off"; message: string }
+  /**
    * A call the brain starts on its own (Claude Code's Read, Bash, Task): its `tool_call` follows once it ended.
    * `input`: what it was given, masked (a code session shows the call's line while it runs, ADR 0215); an older runner
    * sends none, an older server drops it.
@@ -2495,6 +2500,12 @@ export const AGY_COPY_PROTOCOL = 76;
  * subscription itself; the server sends `choose` to no older runner, which does the same.
  */
 export const AGY_CHOICE_PROTOCOL = 78;
+/**
+ * Protocol 79 (ADR 0143): an Antigravity turn whose `init` lists no tool of our server's (MCP servers off on a Gemini
+ * Enterprise seat: the CLI drops ours without a word) goes on without them, with an `mcp_off` event first, and the
+ * apps say under the reply what the seat's admin must turn on. An older server drops the event.
+ */
+export const AGY_MCP_OFF_PROTOCOL = 79;
 /**
  * What a sign-in may ask the person (`AGY_CHOICE_PROTOCOL`): how it's billed, then which subscription; paid as you go,
  * which Google Cloud project (typed: no options, `isGcpProjectId`) and which region.
@@ -3992,6 +4003,8 @@ export function parseBrainEvent(v: unknown): WireBrainEvent | null {
         : null;
     case "speed_fallback":
       return { type: "speed_fallback", message: (isString(v.message) ? v.message : "").slice(0, BRAIN_LIMITS.message) };
+    case "mcp_off":
+      return { type: "mcp_off", message: (isString(v.message) ? v.message : "").slice(0, BRAIN_LIMITS.message) };
     case "tool_started":
       return isString(v.id) && isString(v.name)
         ? {

@@ -18262,6 +18262,9 @@
       "text": "ChatGPT bu hesap veya model için Hızlı hızı reddetti, bu yüzden bu yanıt standart hızda geldi.",
       "action": "Ajanı aç"
     },
+    "mcpOff": {
+      "text": "Gemini, agentes.chat'in araçları olmadan yanıt verdi: Antigravity CLI bunları yüklemedi. Gemini Enterprise lisansında yöneticinin MCP sunucularını açması gerekir (Google Cloud konsolu → Gemini Enterprise → Ayarlar → Yapay zeka geliştirici araçları)."
+    },
     "standIn": {
       "needsComputer": "{{via}} ile yanıtladım: {{plan}} bir bilgisayara ihtiyaç duyuyor.",
       "away": "{{via}} ile yanıtladım: {{plan}} bilgisayarı şu an uzakta.",

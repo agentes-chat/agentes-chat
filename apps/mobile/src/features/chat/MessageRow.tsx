@@ -178,7 +178,7 @@ import {
   useRowRoles,
 } from "./row-data";
 import { SecretCard } from "./SecretCard";
-import { ModelStandInLine, SpeedFallbackLine, StopPill } from "./StoppedLine";
+import { McpOffLine, ModelStandInLine, SpeedFallbackLine, StopPill } from "./StoppedLine";
 import { useStopMovedOn, useStoppedRun } from "./stopped-runs";
 import { SwipeSlide, SwipeTime, useGiveWay, useSwipeSlide } from "./swipe-time";
 import { TeamChecks } from "./TeamChecks";
@@ -1075,6 +1075,7 @@ function RowBody({
             {media ? <ChatMedia media={media} liveId={m.id} /> : null}
             {voiceOf(meta) ? <VoiceMessage message={m} /> : null}
             {isAgent && meta?.speedFallback === true ? <SpeedFallbackLine message={m} /> : null}
+            {isAgent && meta?.mcpOff === true ? <McpOffLine /> : null}
             {isAgent && standIn ? <ModelStandInLine message={m} text={standIn} /> : null}
             {(stopped || atLimit || providerCut) && m.agentRunId ? (
               <StoppedLine

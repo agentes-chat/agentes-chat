@@ -2,7 +2,13 @@ import { afterEach, expect, test } from "bun:test";
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { accountCodeAad, CLI_HOME_ONLY } from "@agenteschat/adapters/machine-protocol";
+import {
+  AGY_MCP_OFF_PROTOCOL,
+  accountCodeAad,
+  CLI_HOME_ONLY,
+  MACHINE_PROTOCOL_VERSION,
+  parseBrainEvent,
+} from "@agenteschat/adapters/machine-protocol";
 import { cutAtWord } from "@agenteschat/adapters/redact";
 import { sealSecret } from "@agenteschat/adapters/secret-box";
 import {
@@ -37,8 +43,10 @@ import {
   writeAgySettings,
 } from "../../runner/agy-home";
 import {
+  AGY_MCP_OFF_MESSAGE,
   type AntigravityBrainContext,
   type AntigravityBrainTurnRequest,
+  agyMcpOff,
   antigravityChatBreach,
   antigravityChatsFile,
   antigravityProblem,
@@ -61,6 +69,7 @@ afterEach(async () => {
   for (const m of managers.splice(0)) await m.close();
   delete process.env.FAKE_AGY_LOG;
   delete process.env.FAKE_AGY_TOOLS;
+  delete process.env.FAKE_AGY_MCP_OFF;
   delete process.env.FAKE_AGY_BOUND;
   delete process.env.FAKE_AGY_KEYRING;
   delete process.env.FAKE_AGY_REFRESH_MS;
@@ -194,6 +203,24 @@ test("a chat turn's guard: init with our server's tools alone; a tool of its own
   const sub = { event: "step_update", step_update: { step_type: "agent_response", subagent_info: { subagents: [] } } };
   expect(antigravityChatBreach(sub, true)).toContain("another agent");
   expect(isOurAgyTool(`evil_${CODEX_MCP_SERVER}/x`)).toBe(false);
+});
+
+test("MCP off: an init that lists none of our server's tools, an empty list too; no list to read says nothing", () => {
+  const init = (tools: unknown) => ({ event: "init", conversation_id: FIRST, init: { tools } });
+  expect(agyMcpOff(init(["ask_permission", "run_command"]))).toBe(true);
+  // Lodi's agent has no tool of its own: with MCP off its list is empty, which the chat guard lets by.
+  expect(agyMcpOff(init([]))).toBe(true);
+  expect(antigravityChatBreach(init([]), false)).toBeNull();
+  expect(agyMcpOff(init(["run_command", `${CODEX_MCP_SERVER}/post_message`]))).toBe(false);
+  expect(agyMcpOff(init([`mcp_${CODEX_MCP_SERVER}_read_artifact`]))).toBe(false);
+  expect(agyMcpOff({ event: "init", init: {} })).toBe(false);
+  expect(agyMcpOff({ event: "step_update", step_update: {} })).toBe(false);
+  // On the wire from protocol 79: the server reads it as it was sent.
+  expect(MACHINE_PROTOCOL_VERSION).toBeGreaterThanOrEqual(AGY_MCP_OFF_PROTOCOL);
+  expect(parseBrainEvent({ type: "mcp_off", message: AGY_MCP_OFF_MESSAGE })).toEqual({
+    type: "mcp_off",
+    message: AGY_MCP_OFF_MESSAGE,
+  });
 });
 
 test("a turn that went wrong: AGY_ERROR's quota is a plan limit with its reset, a refused sign-in, anything else", () => {
@@ -538,6 +565,34 @@ test.skipIf(!posix)(
     process.env.FAKE_AGY_TOOLS = `${CODEX_MCP_SERVER}/post_message,run_command`;
     const listed = await run(ctx, turn({ ...chat, runId: RUN.replace(/1$/, "8"), prompt: "BRIDGE_ONLY" }));
     expect(listed.at(-1)).toMatchObject({ code: "tools_not_locked", message: expect.stringContaining("run_command") });
+  },
+  20_000,
+);
+
+test.skipIf(!posix)(
+  "MCP servers off on the seat: work and chat turns go on without our tools, mcp_off said once before the answer",
+  async () => {
+    const root = tempDir("brain-agy-");
+    dirs.push(root);
+    const { ctx, accountDir } = turnContext(root);
+    signIn(accountDir);
+    // A turn with our tools says nothing.
+    const fine = await run(ctx, turn());
+    expect(fine.some((e) => e.type === "mcp_off")).toBe(false);
+
+    process.env.FAKE_AGY_MCP_OFF = "1";
+    const work = await run(ctx, turn({ runId: RUN.replace(/1$/, "9"), prompt: "read the doc" }));
+    expect(work.filter((e) => e.type === "mcp_off")).toEqual([{ type: "mcp_off", message: AGY_MCP_OFF_MESSAGE }]);
+    expect(work.findIndex((e) => e.type === "mcp_off")).toBeLessThan(work.findIndex((e) => e.type === "text_delta"));
+    expect(work.at(-1)).toEqual({ type: "done", text: "Let me check. All good.", session: { id: SESSION } });
+
+    // Lodi's turn: its tool list is empty, which the guard lets by; it answers, and says why it had no tools.
+    const chat = await run(
+      ctx,
+      turn({ runId: RUN.replace(/1$/, "a"), prompt: "BRIDGE_ONLY hi", permissions: { mode: "chat" } }),
+    );
+    expect(chat.filter((e) => e.type === "mcp_off")).toHaveLength(1);
+    expect(chat.at(-1)).toMatchObject({ type: "done" });
   },
   20_000,
 );

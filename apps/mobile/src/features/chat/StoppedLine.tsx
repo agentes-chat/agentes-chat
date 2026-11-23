@@ -163,6 +163,15 @@ export function SpeedFallbackLine({ message }: { message: Message }) {
 }
 
 /**
+ * Under a reply Gemini gave without agentes.chat's tools (`meta.mcpOff`, ADR 0143): the Antigravity CLI dropped our
+ * MCP server, as with MCP servers off on a Gemini Enterprise seat, and where its admin turns them on.
+ */
+export function McpOffLine() {
+  const { t } = useTranslation();
+  return <EventPill mark="info">{t("chat.mcpOff.text")}</EventPill>;
+}
+
+/**
  * Under a reply "Automático" gave with another model because the plan refused the one it maps to
  * (`meta.modelStandIn`). Whoever may change the agent gets "Usar o <modelo> em todos" (the key's screen, on that
  * model) when the key is theirs to share, and "Escolher modelo" (the agent's AI page).

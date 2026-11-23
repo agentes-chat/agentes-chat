@@ -17770,6 +17770,9 @@
       "text": "ChatGPT menolak kecepatan Cepat untuk akun atau model ini, jadi jawaban ini memakai kecepatan standar.",
       "action": "Buka agen"
     },
+    "mcpOff": {
+      "text": "Gemini menjawab tanpa alat agentes.chat: Antigravity CLI tidak memuatnya. Pada lisensi Gemini Enterprise, admin perlu mengaktifkan server MCP (Google Cloud console → Gemini Enterprise → Setelan → Alat developer AI)."
+    },
     "standIn": {
       "needsComputer": "Dijawab dengan {{via}}: {{plan}} perlu komputer.",
       "away": "Dijawab dengan {{via}}: komputer {{plan}} sedang tidak aktif.",

@@ -18866,6 +18866,9 @@ export const en = {
       text: "ChatGPT refused Fast speed on this account or model, so this reply came at standard speed.",
       action: "Open agent",
     },
+    mcpOff: {
+      text: "Gemini answered without agentes.chat's tools: the Antigravity CLI didn't load them. On a Gemini Enterprise seat, its admin has to turn on MCP servers (Google Cloud console → Gemini Enterprise → Settings → AI developer tools).",
+    },
     /**
      * Under the right hand's reply when another AI answered for its plan (`meta.noAi.standIn`): `via` is what answered
      * (a key's or a plan's name, "Acme OpenAI"), `plan` the plan that couldn't ("Claude Max"). "Change" opens its page.

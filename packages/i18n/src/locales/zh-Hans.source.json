@@ -45094,6 +45094,9 @@
   "chat.speedFallback.action": {
     "value": "Open agent"
   },
+  "chat.mcpOff.text": {
+    "value": "Gemini answered without agentes.chat's tools: the Antigravity CLI didn't load them. On a Gemini Enterprise seat, its admin has to turn on MCP servers (Google Cloud console → Gemini Enterprise → Settings → AI developer tools)."
+  },
   "chat.standIn.needsComputer": {
     "value": "Answered with {{via}}: {{plan}} needs a computer."
   },

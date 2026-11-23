@@ -18339,6 +18339,9 @@
       "text": "ChatGPT hat die schnelle Geschwindigkeit für dieses Konto oder Modell abgelehnt. Diese Antwort kam deshalb in Standardgeschwindigkeit.",
       "action": "Agent öffnen"
     },
+    "mcpOff": {
+      "text": "Gemini hat ohne die Tools von agentes.chat geantwortet: Die Antigravity CLI hat sie nicht geladen. Bei einer Gemini-Enterprise-Lizenz muss der Admin die MCP-Server aktivieren (Google Cloud Console → Gemini Enterprise → Einstellungen → KI-Entwicklertools)."
+    },
     "standIn": {
       "needsComputer": "Mit {{via}} geantwortet: {{plan}} braucht einen Computer.",
       "away": "Mit {{via}} geantwortet: Der Computer von {{plan}} ist nicht erreichbar.",

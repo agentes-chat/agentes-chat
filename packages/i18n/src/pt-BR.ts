@@ -18713,6 +18713,13 @@ export const ptBR = {
       text: "O ChatGPT recusou a velocidade Rápida nesta conta ou neste modelo, então esta resposta veio no padrão.",
       action: "Abrir agente",
     },
+    /**
+     * Under a reply Gemini gave without our tools (`meta.mcpOff`, ADR 0143): the Antigravity CLI dropped our MCP server,
+     * as with MCP servers off on a Gemini Enterprise seat. The console path is Google's, in its Portuguese words.
+     */
+    mcpOff: {
+      text: "O Gemini respondeu sem as ferramentas do agentes.chat: o Antigravity CLI não as carregou. Numa conta Gemini Enterprise, o admin precisa ativar os servidores MCP (Google Cloud console → Gemini Enterprise → Configurações → Ferramentas para desenvolvedores de IA).",
+    },
     standIn: {
       needsComputer: "Respondi com {{via}}: {{plan}} precisa de um computador.",
       away: "Respondi com {{via}}: o computador do {{plan}} está ausente.",

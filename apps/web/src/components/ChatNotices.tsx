@@ -192,6 +192,19 @@ export function SpeedFallbackLine({ agent }: { agent: Agent | undefined }) {
   );
 }
 
+/**
+ * Under a reply Gemini gave without agentes.chat's tools (`meta.mcpOff`, ADR 0143): the Antigravity CLI dropped our
+ * MCP server, as with MCP servers off on a Gemini Enterprise seat, and where its admin turns them on.
+ */
+export function McpOffLine() {
+  const { t } = useTranslation();
+  return (
+    <EventPill className="cn-pill cn-pill--part" mark={<Icon name="info" size={14} />}>
+      {t("chat.mcpOff.text")}
+    </EventPill>
+  );
+}
+
 /** Who stopped a task, as its pill says it: the notice when there is one, else what the stopped reply knows. */
 export interface StopWho {
   /** The notice the agent got (ADR 0128): who, their name, the reason, and "Dizer o motivo" for who stopped it. */
