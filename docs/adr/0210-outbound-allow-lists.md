@@ -51,6 +51,10 @@ it. A server open to sign-up had no way to allow one network without opening all
 6. **The refusal says why.** `url.internal` carries the host. The server logs it as a warning with the route and the
    two settings, and the apps say the address is on a private network: use a public one, or on a self-hosted server allow it with
    `OUTBOUND_ALLOW_CIDRS`.
+7. **Plain fetches follow redirects, checked hop by hop** (amendment 2026-11-22). Without a list, with the switch on,
+   `outboundFetch` asks each hop with `redirect: "manual"` and follows it as `fetch` would (307 and 308 send the
+   request again, 301, 302 and 303 ask for a GET), refusing any hop on the addresses §4 names: a redirect is no way
+   around the guard. A 307 keeps the connector's headers and body, so they land only on a host that check passed.
 
 ## Consequences
 
@@ -61,4 +65,7 @@ it. A server open to sign-up had no way to allow one network without opening all
 - `assertPublicHttpsUrl` also guards the pages agents read and the skills they fetch, so what the lists allow, an
   agent may open too. The lists are the operator's to keep narrow.
 - The switch's plain `fetch` stays where no list is set, so a self-hosted server that reached public addresses
-  through a proxy the plain `fetch` honours keeps doing so.
+  through a proxy the plain `fetch` honours keeps doing so — behind the guard's one check per hop (§7), which means a
+  redirect is followed by us, not by the runtime.
+- NAT64 (`64:ff9b::/96`, RFC 6052) and 6to4 (`2002::/16`) carry an IPv4 address the gateway or relay connects to, and
+  are judged by the address inside, as IPv4-mapped and IPv4-compatible ones already were.

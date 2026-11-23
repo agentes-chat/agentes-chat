@@ -40,8 +40,16 @@ test("blocks internal addresses in every IPv6 spelling", () => {
     "::7f00:1", // IPv4-compatible 127.0.0.1
     "::a9fe:a9fe", // IPv4-compatible 169.254.169.254
     "[::ffff:a9fe:a9fe]", // bracketed literal
+    // NAT64 (RFC 6052) and 6to4 carry the IPv4 address the gateway or relay connects to (ADR 0210 §4).
+    "64:ff9b::a00:5", // 10.0.0.5
+    "64:ff9b::a9fe:a9fe", // 169.254.169.254
+    "64:ff9b::6446:4c8", // 100.100.100.200
+    "2002:a00:5::", // 10.0.0.5
+    "2002:a9fe:a9fe::1", // 169.254.169.254
   ];
   for (const ip of blocked) expect(isBlockedAddress(ip)).toBe(true);
+  // A NAT64 address of a public host stays public.
+  expect(isBlockedAddress("64:ff9b::5db8:d822")).toBe(false);
 });
 
 test("still allows public addresses", () => {
@@ -224,15 +232,69 @@ test("outboundFetch with ownRedirects follows a 307 or 308 on the same origin on
   expect(https.sent.some((s) => s.options.hostname === "other.acme.example")).toBe(false);
 });
 
-test("outboundFetch is the plain fetch where the operator lets workspaces reach this server's network", () => {
+test("with the private switch on, outboundFetch is the runtime fetch — but never for an address no setting lets through", async () => {
   allowPrivateOutbound(false);
   try {
     allowPrivateOutbound();
-    expect(outboundFetch()).toBe(fetch);
+    // The runtime's `fetch`, with one check in front of it instead of the pinned client: a LAN or tailnet address
+    // passes (that is the switch's point), while loopback, link-local and the metadata addresses never do.
+    const seen: string[] = [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      seen.push(String(input));
+      return new Response("ok", { status: 200 });
+    }) as unknown as typeof fetch;
+    try {
+      const open = outboundFetch({ resolveHost: async () => ["10.0.0.5"] });
+      expect(await (await open("https://nas.home.example/x")).text()).toBe("ok");
+      expect(await (await open("https://printer.home.example/x")).text()).toBe("ok");
+      for (const at of ["https://169.254.169.254/latest/meta-data/", "https://127.0.0.1/", "https://[::1]/"])
+        expect(await refusal(open(at))).toBeInstanceOf(OutboundAddressError);
+      // A name on this machine by its own name, and one resolving to an address that never passes.
+      expect(await refusal(open("http://localhost:3000/"))).toBeInstanceOf(OutboundAddressError);
+      const metadata = outboundFetch({ resolveHost: async () => ["93.184.216.34", "169.254.169.254"] });
+      expect(await refusal(metadata("https://name.home.example/x"))).toBeInstanceOf(OutboundAddressError);
+      expect(seen).toEqual(["https://nas.home.example/x", "https://printer.home.example/x"]);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
   } finally {
     allowPrivateOutbound(false);
   }
   expect(outboundFetch()).not.toBe(fetch);
+});
+
+test("with the private switch on, a redirect is followed as fetch would, every hop checked", async () => {
+  allowPrivateOutbound(false);
+  const realFetch = globalThis.fetch;
+  try {
+    allowPrivateOutbound();
+    const asked: [string, string][] = [];
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      asked.push([String(input), init?.method ?? "GET"]);
+      if (String(input) === "https://nas.home.example/mcp")
+        return new Response(null, { status: 307, headers: { location: "/mcp/" } });
+      if (String(input) === "https://nas.home.example/mcp/")
+        return new Response(null, { status: 302, headers: { location: "https://10.0.0.9/mcp" } });
+      if (String(input) === "https://nas.home.example/to-metadata")
+        return new Response(null, { status: 302, headers: { location: "http://169.254.169.254/" } });
+      return new Response("{}", { status: 200 });
+    }) as unknown as typeof fetch;
+    const open = outboundFetch({ resolveHost: async () => ["10.0.0.5"], ownRedirects: true });
+    const init = { method: "POST", headers: { "x-api-key": "k" }, body: "{}" };
+    // 307 keeps the request whole; 302 asks for a GET, as `fetch` does.
+    expect(await (await open("https://nas.home.example/mcp", init)).text()).toBe("{}");
+    expect(asked).toEqual([
+      ["https://nas.home.example/mcp", "POST"],
+      ["https://nas.home.example/mcp/", "POST"],
+      ["https://10.0.0.9/mcp", "GET"],
+    ]);
+    // A hop that lands on the metadata address is refused, whatever the first host allowed.
+    expect(await refusal(open("https://nas.home.example/to-metadata", init))).toBeInstanceOf(OutboundAddressError);
+  } finally {
+    globalThis.fetch = realFetch;
+    allowPrivateOutbound(false);
+  }
 });
 
 /**
@@ -296,7 +358,8 @@ test("the private switch alone lets no private address through the check", async
     allowPrivateOutbound();
     await expect(assertPublicHttpsUrl("https://executor.tail1234.ts.net/mcp", tailnet)).rejects.toThrow();
     await expect(assertPublicHttpsUrl("https://mcp.corp.internal/mcp", async () => ["10.0.0.5"])).rejects.toThrow();
-    expect(outboundFetch()).toBe(fetch);
+    // Unpinned, but no longer the bare `fetch`: the one address each hop may never be (ADR 0210 §4).
+    expect(outboundFetch()).not.toBe(fetch);
     // An allow-list makes every request pinned and checked again at connect time, even with the switch on.
     allowOutbound({ cidrs: ["100.64.0.0/10"] });
     expect(outboundFetch()).not.toBe(fetch);

@@ -52,6 +52,12 @@ export function isBlockedAddress(address: string): boolean {
     if (g[0] === 0 && g[1] === 0 && g[2] === 0 && g[3] === 0 && g[4] === 0 && (g[5] === 0 || g[5] === 0xffff)) {
       return isBlockedAddress(`${g[6] >> 8}.${g[6] & 0xff}.${g[7] >> 8}.${g[7] & 0xff}`);
     }
+    // NAT64 (64:ff9b::/96, RFC 6052) and 6to4 (2002::/16) carry an IPv4 address the gateway or relay connects to:
+    // judged as that address, so `64:ff9b::a00:5` is 10.0.0.5 and `2002:a9fe:a9fe::` is the metadata address.
+    if (g[0] === 0x64 && g[1] === 0xff9b && g[2] === 0 && g[3] === 0 && g[4] === 0 && g[5] === 0) {
+      return isBlockedAddress(`${g[6] >> 8}.${g[6] & 0xff}.${g[7] >> 8}.${g[7] & 0xff}`);
+    }
+    if (g[0] === 0x2002) return isBlockedAddress(`${g[1] >> 8}.${g[1] & 0xff}.${g[2] >> 8}.${g[2] & 0xff}`);
     if ((g[0] & 0xfe00) === 0xfc00) return true; // unique local fc00::/7 (incl. fd00:ec2::254)
     if ((g[0] & 0xffc0) === 0xfe80) return true; // link-local fe80::/10
     if ((g[0] & 0xff00) === 0xff00) return true; // multicast ff00::/8
@@ -89,15 +95,23 @@ function alwaysBlocked(address: string): boolean {
   return g[0] === 0xfd00 && g[1] === 0xec2 && g.slice(2, 7).every((n) => n === 0) && g[7] === 0x254;
 }
 
-/** An address as the socket sees it: no brackets, lowercase, and an IPv4 address carried in IPv6 as IPv4. */
+/**
+ * An address as the socket sees it: no brackets, lowercase, and an IPv4 address carried in IPv6 as IPv4 — mapped,
+ * compatible, NAT64 and 6to4, the same forms `isBlockedAddress` judges by the address inside.
+ */
 function plainAddress(address: string): string {
   let ip = address.toLowerCase();
   if (ip.startsWith("[") && ip.endsWith("]")) ip = ip.slice(1, -1);
   if (isIP(ip) !== 6) return ip;
   const g = ipv6Groups(ip);
-  if (g?.slice(0, 5).every((n) => n === 0) && (g[5] === 0 || g[5] === 0xffff)) {
+  if (!g) return ip;
+  if (g.slice(0, 5).every((n) => n === 0) && (g[5] === 0 || g[5] === 0xffff)) {
     return `${g[6] >> 8}.${g[6] & 0xff}.${g[7] >> 8}.${g[7] & 0xff}`;
   }
+  if (g[0] === 0x64 && g[1] === 0xff9b && g.slice(2, 6).every((n) => n === 0)) {
+    return `${g[6] >> 8}.${g[6] & 0xff}.${g[7] >> 8}.${g[7] & 0xff}`;
+  }
+  if (g[0] === 0x2002) return `${g[1] >> 8}.${g[1] & 0xff}.${g[2] >> 8}.${g[2] & 0xff}`;
   return ip;
 }
 
@@ -503,37 +517,79 @@ const MAX_OWN_REDIRECTS = 3;
 
 /**
  * The `fetch` for an address a workspace's people, agents or connected servers named (a custom MCP server and its
- * token endpoint, the workspace's own bucket, a page an agent reads), never for one the operator set by env:
- * `publicHttpsFetch`, so the address is checked and pinned at every request, not only when it was saved, unless
- * `allowPrivateOutbound` is on and `allowOutbound` named nothing. `ownRedirects` follows a 307 or 308 that stays on
- * the same origin (a trailing slash, a moved path), each hop checked and pinned again: what the request carries never
- * leaves the host it was meant for.
+ * token endpoint, the workspace's own bucket, a page an agent reads), never for one the operator set by env. With an
+ * allow-list set (or the private switch off) it is `publicHttpsFetch`: every request checked and pinned, DNS
+ * rebinding included. With the private switch on and nothing listed (ADR 0210 §3) it is the plain `fetch`, so a LAN
+ * or tailnet address stays reachable — but no hop of it may land on an address no setting lets through (loopback,
+ * link-local and the metadata addresses, ADR 0210 §4): the target and each redirect it follows are checked for those.
+ * `ownRedirects` follows a 307 or 308 that stays on the same origin when pinned (a trailing slash, a moved path),
+ * each hop checked and pinned again, so what the request carries never leaves the host it was meant for; unpinned, it
+ * follows a redirect as `fetch` would, every hop still checked for the addresses that never pass.
  */
 export function outboundFetch(
   options: { resolveHost?: ResolveHost; ownRedirects?: boolean; request?: typeof httpsRequest } = {},
 ): typeof fetch {
-  // With an allow-list set, the private addresses it lets through are only safe pinned and checked at connect time
-  // (DNS rebinding onto a metadata address), so the plain fetch is never used then.
-  if (privateOutbound && !allowedHosts.length && !allowedRanges) return fetch;
   const { resolveHost } = options;
-  const pinned = publicHttpsFetch({
-    request: options.request,
-    ...(resolveHost
-      ? { resolve: async (host) => (await resolveHost(host)).map((address) => ({ address, family: isIP(address) })) }
-      : {}),
-  });
-  if (!options.ownRedirects) return pinned;
+  // Without a list the private addresses the switch lets through are not pinned: nothing is checked again at
+  // connect time. With one, they are only safe pinned and checked then (DNS rebinding onto a metadata address), so
+  // the plain fetch is never used.
+  const plain = privateOutbound && !allowedHosts.length && !allowedRanges;
+  const pinned = plain
+    ? undefined
+    : publicHttpsFetch({
+        request: options.request,
+        ...(resolveHost
+          ? {
+              resolve: async (host) => (await resolveHost(host)).map((address) => ({ address, family: isIP(address) })),
+            }
+          : {}),
+      });
+  /** The hop's address: in the plain branch, none of the ones no setting lets through (ADR 0210 §4). */
+  const passable = async (at: URL) => {
+    if (pinned) return; // it checks and pins every hop itself
+    const host = at.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+    if (isIP(host)) {
+      if (alwaysBlocked(host)) throw new OutboundAddressError();
+      return;
+    }
+    if (loopbackName(host)) throw new OutboundAddressError();
+    // Best effort: a name that doesn't resolve fails at the request itself anyway.
+    const addresses = await (resolveHost ?? resolveHostDns)(host).catch(() => null);
+    if (addresses?.some(alwaysBlocked)) throw new OutboundAddressError();
+  };
+  /** Where a request goes, whether it came as an address or as a `Request` (whose own method, headers and body stay). */
+  const whereOf = (input: string | URL | Request) =>
+    new URL(typeof input === "string" || input instanceof URL ? String(input) : input.url);
   const following = async (input: string | URL | Request, init: RequestInit = {}): Promise<Response> => {
-    let at = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
+    let at = whereOf(input);
+    let ask: string | URL | Request = input;
     for (let hop = 0; ; hop++) {
-      const res = await pinned(at, { ...init, redirect: "manual" });
+      await passable(at);
+      const res = await (pinned
+        ? pinned(at, { ...init, redirect: "manual" })
+        : fetch(ask, { ...init, redirect: "manual" }));
       const location = res.headers.get("location");
-      if ((res.status !== 307 && res.status !== 308) || !location || hop >= MAX_OWN_REDIRECTS) return res;
+      // Pinned: only the redirects that keep the request whole on the same origin. Unpinned: as `fetch` follows them.
+      const followed = pinned ? res.status === 307 || res.status === 308 : res.status >= 300 && res.status < 400;
+      if (!followed || !location || hop >= MAX_OWN_REDIRECTS) return res;
       const next = new URL(location, at);
-      if (next.origin !== at.origin) return res;
+      if (pinned && next.origin !== at.origin) return res;
       await res.body?.cancel();
+      // What `fetch` does with the method: 307 and 308 send the request again; 301, 302 and 303 ask for a GET.
+      if (res.status !== 307 && res.status !== 308) {
+        const headers = new Headers(init.headers);
+        headers.delete("content-length");
+        init = { ...init, method: "GET", body: undefined, headers };
+      }
       at = next;
+      ask = next.toString();
     }
   };
-  return following as typeof fetch;
+  if (options.ownRedirects) return following as typeof fetch;
+  if (pinned) return pinned;
+  const once = async (input: string | URL | Request, init: RequestInit = {}): Promise<Response> => {
+    await passable(whereOf(input));
+    return fetch(input, init);
+  };
+  return once as typeof fetch;
 }
