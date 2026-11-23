@@ -3243,6 +3243,8 @@
       "grok_female": "Grok belum masuk di komputer ini. Hubungkan akun Grok di halaman {{name}}.",
       "antigravity": "Gemini belum masuk di komputer ini. Hubungkan akun Gemini di halaman {{name}}.",
       "antigravity_female": "Gemini belum masuk di komputer ini. Hubungkan akun Gemini di halaman {{name}}.",
+      "devin": "Devin belum masuk di komputer ini. Hubungkan akun Devin di halaman {{name}}.",
+      "devin_female": "Devin belum masuk di komputer ini. Hubungkan akun Devin di halaman {{name}}.",
       "opencode": "OpenCode tidak bisa berpikir di komputer ini. Hubungkan kunci OpenCode di halaman {{name}}.",
       "opencode_female": "OpenCode tidak bisa berpikir di komputer ini. Hubungkan kunci OpenCode di halaman {{name}}."
     },
@@ -3257,6 +3259,8 @@
       "grok_female": "Grok belum masuk di {{computer}}. Hubungkan akun Grok di halaman {{name}}.",
       "antigravity": "Gemini belum masuk di {{computer}}. Hubungkan akun Gemini di halaman {{name}}.",
       "antigravity_female": "Gemini belum masuk di {{computer}}. Hubungkan akun Gemini di halaman {{name}}.",
+      "devin": "Devin belum masuk di {{computer}}. Hubungkan akun Devin di halaman {{name}}.",
+      "devin_female": "Devin belum masuk di {{computer}}. Hubungkan akun Devin di halaman {{name}}.",
       "opencode": "OpenCode tidak bisa berpikir di {{computer}}. Hubungkan kunci OpenCode di halaman {{name}}.",
       "opencode_female": "OpenCode tidak bisa berpikir di {{computer}}. Hubungkan kunci OpenCode di halaman {{name}}."
     },
@@ -3316,6 +3320,7 @@
       "cursor": "Hubungkan paket Cursor-mu",
       "grok": "Hubungkan paket Grok-mu",
       "gemini": "Hubungkan paket Gemini-mu",
+      "devin": "Hubungkan paket Devin-mu",
       "zen": "Hubungkan OpenCode",
       "api_key": "Tambahkan kunci API"
     },
@@ -3441,6 +3446,10 @@
         "tiers": "Google AI Pro, Google AI Ultra, atau Gemini Enterprise",
         "warning": "Google menyatakan bahwa memakai paket Gemini pribadi di dalam aplikasi lain bisa membuat akun ditangguhkan. Untuk menghindari risiko itu, pakai kunci API Gemini atau Gemini Enterprise."
       },
+      "devin": {
+        "title": "Paket Devin-mu",
+        "tiers": "Free, Pro, Max, atau Teams"
+      },
       "zen": {
         "title": "OpenCode",
         "tiers": "Model gratis, atau kunci OpenCode-mu"
@@ -3548,6 +3557,7 @@
       "cursor": "Cursor masuk sebagai {{email}}, bukan {{account}}. Keluar di halaman Cursor lalu coba lagi.",
       "grok": "Grok masuk sebagai {{email}}, bukan {{account}}. Keluar di halaman Grok lalu coba lagi.",
       "antigravity": "Gemini masuk sebagai {{email}}, bukan {{account}}. Keluar di halaman Google lalu coba lagi.",
+      "devin": "Devin masuk sebagai {{email}}, bukan {{account}}. Keluar di halaman Devin lalu coba lagi.",
       "opencode": "OpenCode masuk sebagai {{email}}, bukan {{account}}. Coba lagi dengan kunci yang benar."
     },
     "useAnyway": "Pakai {{email}}",
@@ -5742,6 +5752,7 @@
             "cursor": "Tambah akun Cursor",
             "grok": "Tambah akun Grok",
             "antigravity": "Tambah akun Gemini",
+            "devin": "Tambah akun Devin",
             "opencode": "Tambah kunci OpenCode"
           },
           "stepOne": {
@@ -5749,6 +5760,7 @@
             "codex": "Akun dengan paketmu",
             "cursor": "Akun dengan paketmu",
             "grok": "Akun dengan paketmu",
+            "devin": "Akun dengan paketmu",
             "antigravity": "Akun Google dengan paketmu",
             "antigravityEnterprise": "Akun Gemini Enterprise-mu"
           },
@@ -5758,7 +5770,8 @@
             "codex": "Masuk dengan ChatGPT",
             "cursor": "Masuk dengan Cursor",
             "grok": "Masuk dengan Grok",
-            "antigravity": "Masuk dengan Google"
+            "antigravity": "Masuk dengan Google",
+            "devin": "Masuk dengan Devin"
           },
           "opencodeFree": "Model gratis OpenCode tidak perlu kunci. Kunci dari konsol OpenCode menambahkan model berbayarnya.",
           "cursorFinish": "Masuk di halaman Cursor, dan proses masuk selesai sendiri di {{computer}}.",
@@ -5773,6 +5786,9 @@
           "notCode": "Itu sepertinya bukan kode Claude.",
           "stepTwoGoogle": "Tempel kode yang ditampilkan Google",
           "codeLabelGoogle": "Kode Google",
+          "stepTwoDevin": "Tempel kode yang ditampilkan Devin",
+          "codeHintDevin": "Tempel kode yang ditampilkan halaman Devin, bukan alamat halamannya.",
+          "codeLabelDevin": "Kode Devin",
           "codeHintGoogle": "Tempel kode yang ditampilkan halaman Google, bukan alamat halamannya.",
           "notCodeGoogle": "Itu alamat tanpa kode. Tempel kode yang ditampilkan halaman Google.",
           "send": "Kirim ke {{computer}}",
@@ -5806,6 +5822,7 @@
             "cursor": "Cursor masuk sebagai {{account}}, akun yang sudah kamu hubungkan. Untuk memakai akun lain, keluar di halaman Cursor lalu coba lagi.",
             "grok": "Grok masuk sebagai {{account}}, akun yang sudah kamu hubungkan. Untuk memakai akun lain, keluar di halaman Grok lalu coba lagi.",
             "antigravity": "Gemini masuk sebagai {{account}}, akun yang sudah kamu hubungkan. Untuk memakai akun lain, keluar di halaman Google lalu coba lagi.",
+            "devin": "Devin masuk sebagai {{account}}, akun yang sudah kamu hubungkan. Untuk memakai akun lain, keluar di halaman Devin lalu coba lagi.",
             "opencode": "Kunci OpenCode itu sudah terhubung sebagai {{account}}."
           },
           "startFailed": "Tidak ada jawaban dari {{computer}}. Coba lagi sebentar lagi.",
@@ -10442,6 +10459,7 @@
       "cursor": "Cursor",
       "grok": "Grok",
       "antigravity": "Gemini",
+      "devin": "Devin",
       "opencode": "OpenCode",
       "needs": {
         "keys": "Perbarui agentes di komputer untuk memakai kunci paket"
@@ -11869,6 +11887,7 @@
       "cursor": "{{model}} dengan paket Cursor",
       "grok": "{{model}} dengan paket Grok",
       "gemini": "{{model}} dengan paket Gemini",
+      "devin": "{{model}} dengan paket Devin",
       "zen": "{{model}} lewat OpenCode",
       "coding": "{{model}} dengan {{plan}}",
       "claudeOf": "{{model}} dengan paket Claude milik {{owner}}",
@@ -11876,6 +11895,7 @@
       "cursorOf": "{{model}} dengan paket Cursor milik {{owner}}",
       "grokOf": "{{model}} dengan paket Grok milik {{owner}}",
       "geminiOf": "{{model}} dengan paket Gemini milik {{owner}}",
+      "devinOf": "{{model}} dengan paket Devin milik {{owner}}",
       "zenOf": "{{model}} lewat OpenCode milik {{owner}}",
       "codingOf": "{{model}} dengan {{plan}} milik {{owner}}",
       "claudeAuto": "Paket Claude",
@@ -11883,6 +11903,7 @@
       "cursorAuto": "Paket Cursor",
       "grokAuto": "Paket Grok",
       "geminiAuto": "Paket Gemini",
+      "devinAuto": "Paket Devin",
       "zenAuto": "OpenCode",
       "codingAuto": "{{plan}}",
       "claudeAutoOf": "Paket Claude milik {{owner}}",
@@ -11890,6 +11911,7 @@
       "cursorAutoOf": "Paket Cursor milik {{owner}}",
       "grokAutoOf": "Paket Grok milik {{owner}}",
       "geminiAutoOf": "Paket Gemini milik {{owner}}",
+      "devinAutoOf": "Paket Devin milik {{owner}}",
       "zenAutoOf": "OpenCode milik {{owner}}",
       "codingAutoOf": "{{plan}} milik {{owner}}",
       "on": "{{line}} di {{computer}}"
@@ -11903,7 +11925,8 @@
       "cursor": "Cursor",
       "opencode": "OpenCode",
       "grok": "Grok Build",
-      "antigravity": "Antigravity CLI"
+      "antigravity": "Antigravity CLI",
+      "devin": "Devin CLI"
     },
     "foot": {
       "api": "Lewat API",
@@ -11916,6 +11939,7 @@
     "cursorText": "Memakai paket Cursor milik orang yang menghubungkan komputer.",
     "grokText": "Memakai paket Grok milik orang yang menghubungkan komputer.",
     "antigravityText": "Memakai paket Gemini milik orang yang menghubungkan komputer.",
+    "devinText": "Memakai paket Devin milik orang yang menghubungkan komputer.",
     "opencodeText": "Model gratis OpenCode, atau kunci OpenCode milik orang yang menghubungkan komputer.",
     "cursorModel": {
       "inPlan": "Termasuk dalam paket Cursor-mu",
@@ -11974,6 +11998,7 @@
       "cursor": "Cursor · {{model}}",
       "grok": "Grok Build · {{model}}",
       "antigravity": "Antigravity CLI · {{model}}",
+      "devin": "Devin CLI · {{model}}",
       "opencode": "OpenCode · {{model}}"
     },
     "mission": {
@@ -15616,6 +15641,7 @@
         "opencode": "OpenCode",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "devin": "Devin CLI",
         "commands": "perintah",
         "browser": "browser",
         "desktop": "layar",
@@ -15773,6 +15799,7 @@
         "cursor": "Cursor",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "devin": "Devin CLI",
         "opencode": "OpenCode",
         "commands": "Perintah",
         "browser": "Browser"
@@ -15783,6 +15810,7 @@
         "cursor": "Seperti Claude Code, dengan akun Cursor. Hanya di folder yang diizinkan.",
         "grok": "Seperti Claude Code, dengan akun Grok. Hanya di folder yang diizinkan.",
         "antigravity": "Seperti Claude Code, dengan akun Gemini. Hanya di folder yang diizinkan.",
+        "devin": "Seperti Claude Code, dengan akun Devin. Hanya di folder yang diizinkan.",
         "opencode": "Seperti Claude Code, dengan model gratis OpenCode atau kunci OpenCode. Hanya di folder yang diizinkan.",
         "commands": "Menjalankan perintah Terminal, seperti tes dan build."
       },

@@ -68,6 +68,7 @@ import {
   placeAgySignIn,
   writeAgySettings,
 } from "./agy-home";
+import { prepareDevinHome } from "./devin-home";
 import { errnoCode, RunnerError } from "./errors";
 import { killTree } from "./exec";
 import {
@@ -77,10 +78,12 @@ import {
   claudePlan,
   claudeTier,
   cliSpawn,
+  DEVIN_BIN,
   GROK_BIN,
   isExecutable,
   OPENCODE_BIN,
   parseAgyModels,
+  parseDevinModels,
   parseGrokModels,
   resolveCommand,
 } from "./executors";
@@ -177,6 +180,7 @@ const LABEL: Record<AccountKind, string> = {
   opencode: "OpenCode",
   grok: "Grok Build",
   antigravity: "The Antigravity CLI",
+  devin: "The Devin CLI",
 };
 /** Cursor's CLI keeps its config in `CURSOR_CONFIG_DIR` (cursor.com/docs/cli/reference/configuration). */
 const ENV_VAR: Record<AccountKind, string> = {
@@ -189,6 +193,9 @@ const ENV_VAR: Record<AccountKind, string> = {
   grok: "GROK_HOME",
   // `agy` documents no config folder of its own (ADR 0143): the account's folder is its whole home.
   antigravity: "HOME",
+  // The account's folder is the Devin CLI's whole home too (ADR 0220): its sign-in, settings and sessions all live
+  // under the XDG folders `accountEnv` puts in it.
+  devin: "HOME",
 };
 const LOGIN_ARGS: Record<AccountKind, string[]> = {
   claude_code: ["auth", "login"],
@@ -200,6 +207,8 @@ const LOGIN_ARGS: Record<AccountKind, string[]> = {
   grok: ["login", "--device-auth"],
   // Google's sign-in by a pasted code, then it exits (antigravity.google/docs/ide/extensions/acp).
   antigravity: ["acp", "--login"],
+  // Devin's sign-in by a pasted code (it reads it only from a terminal), the agent in this process alone.
+  devin: ["auth", "login", "--force-manual-token-flow", "--process-model", "in-process"],
 };
 const STATUS_ARGS: Record<AccountKind, string[]> = {
   claude_code: ["auth", "status", "--json"],
@@ -210,6 +219,8 @@ const STATUS_ARGS: Record<AccountKind, string[]> = {
   grok: ["models"],
   // No status command either: `agy models` lists the account's models once it is signed in.
   antigravity: ["models"],
+  // Its models answer for its sign-in: "Not logged in." and exit 1 when signed out, the families as JSON when signed in.
+  devin: ["models", "list", "--format", "json", "--process-model", "in-process"],
 };
 const LOGOUT_ARGS: Record<AccountKind, string[]> = {
   claude_code: ["auth", "logout"],
@@ -219,6 +230,7 @@ const LOGOUT_ARGS: Record<AccountKind, string[]> = {
   grok: ["logout"],
   // `/logout`, answered by the CLI itself in print mode; deleting the folder ends the sign-in anyway.
   antigravity: ["-p", "/logout"],
+  devin: ["auth", "logout", "--process-model", "in-process"],
 };
 /** Each CLI's executable (Cursor's was `cursor-agent` before it was renamed). */
 const COMMAND: Record<AccountKind, string> = {
@@ -228,6 +240,7 @@ const COMMAND: Record<AccountKind, string> = {
   opencode: OPENCODE_BIN,
   grok: GROK_BIN,
   antigravity: AGY_BIN,
+  devin: DEVIN_BIN,
 };
 
 /** What a brain turn says when its account folder is gone (people read it). */
@@ -243,16 +256,19 @@ export const ACCOUNT_MISSING_MESSAGE: Record<AccountKind, string> = {
   grok: "The Grok account chosen for this agent isn't on this computer anymore. Choose another account in the agent's settings, or add it again.",
   antigravity:
     "The Gemini account chosen for this agent isn't on this computer anymore. Choose another account in the agent's settings, or add it again.",
+  devin:
+    "The Devin account chosen for this agent isn't on this computer anymore. Choose another account in the agent's settings, or add it again.",
 };
 
 /**
  * What would make a CLI think with anything but its folder's sign-in: a key, a token, another endpoint or cloud. Every
  * `GROK_` switch too (folder trust, memory, managed config, sandbox…): Grok Build gets only `GROK_QUIET_ENV`'s. And a
  * Gemini or Google AI key, another Gemini endpoint, the Antigravity CLI's enterprise gateway (`AGY_LLM_GATEWAY_*`) and
- * every other `AGY_` switch (it gets only `AGY_QUIET_ENV`'s).
+ * every other `AGY_` switch (it gets only `AGY_QUIET_ENV`'s). Every `DEVIN_` and `WINDSURF_` setting too: a Devin
+ * token, another API server, a model or a sandbox the runner didn't choose (ADR 0220).
  */
 const STRAY_SIGN_IN =
-  /^(ANTHROPIC_(API_KEY|AUTH_TOKEN|BASE_URL)|CLAUDE_CODE_(OAUTH_TOKEN|USE_\w+|\w+_FILE_DESCRIPTOR)|OPENAI_API_KEY|CODEX_API_KEY|CURSOR_API_KEY|OPENCODE_API_KEY|OPENCODE_AUTH_CONTENT|XAI_API_KEY|GROK_\w+|GEMINI_API_KEY|GOOGLE_API_KEY|GOOGLE_GEMINI_BASE_URL|GOOGLE_GENAI_\w+|AGY_\w+)$/;
+  /^(ANTHROPIC_(API_KEY|AUTH_TOKEN|BASE_URL)|CLAUDE_CODE_(OAUTH_TOKEN|USE_\w+|\w+_FILE_DESCRIPTOR)|OPENAI_API_KEY|CODEX_API_KEY|CURSOR_API_KEY|OPENCODE_API_KEY|OPENCODE_AUTH_CONTENT|XAI_API_KEY|GROK_\w+|GEMINI_API_KEY|GOOGLE_API_KEY|GOOGLE_GEMINI_BASE_URL|GOOGLE_GENAI_\w+|AGY_\w+|DEVIN_\w+|WINDSURF_\w+)$/;
 /**
  * Google Cloud's own sign-ins (Application Default Credentials, gcloud's config, Vertex's project): kept out of the
  * Antigravity CLI only, since an agent on another CLI may deploy to Google Cloud with them.
@@ -309,6 +325,16 @@ export function accountEnv(kind: AccountKind, dir: string, base: NodeJS.ProcessE
     delete env.SSH_AUTH_SOCK;
     Object.assign(env, AGY_QUIET_ENV);
     if (process.platform === "darwin") agyKeychain(dir);
+  }
+  if (kind === "devin") {
+    // Its sign-in (`credentials.toml`), settings, sessions and caches: all in the account's folder (ADR 0220).
+    env.XDG_CONFIG_HOME = path.join(dir, ".config");
+    env.XDG_CACHE_HOME = path.join(dir, ".cache");
+    env.XDG_DATA_HOME = path.join(dir, ".local", "share");
+    env.XDG_STATE_HOME = path.join(dir, ".local", "state");
+    // With a display to reach, its sign-in waits on it and never prints its link (CLI 3000.14.30821, 2026-11-23).
+    delete env.DISPLAY;
+    delete env.WAYLAND_DISPLAY;
   }
   return env;
 }
@@ -560,18 +586,24 @@ export function watchCodexAuth(home: string, granted: string, send: (auth: strin
  * The CLIs whose models are what an account signed in here lists (`AccountManager.listedModels`): the computer's own
  * `grok models` and `agy models` are signed out, so its look finds none.
  */
-export type ListingKind = "grok" | "antigravity";
+export type ListingKind = "grok" | "antigravity" | "devin";
 
 /** Beside the account folders: what each account signed in here listed, by its id (`AccountManager.listedModels`). */
-const LISTED_MODELS_FILE: Record<ListingKind, string> = { grok: "grok-models.json", antigravity: "agy-models.json" };
+const LISTED_MODELS_FILE: Record<ListingKind, string> = {
+  grok: "grok-models.json",
+  antigravity: "agy-models.json",
+  devin: "devin-models.json",
+};
 
 /** A status look's output read as the models the CLI lists to that account. */
 const LISTED_BY: Record<ListingKind, (stdout: string) => CursorModelInfo[]> = {
   grok: parseGrokModels,
   antigravity: parseAgyModels,
+  devin: parseDevinModels,
 };
 
-const isListingKind = (kind: AccountKind): kind is ListingKind => kind === "grok" || kind === "antigravity";
+const isListingKind = (kind: AccountKind): kind is ListingKind =>
+  kind === "grok" || kind === "antigravity" || kind === "devin";
 
 /** Only what reads as models: anything else a file holds is skipped. */
 const modelsIn = (v: unknown): CursorModelInfo[] =>
@@ -1288,6 +1320,33 @@ export function parseAgyStatus(
   };
 }
 
+/** The Devin CLI's sign-in (`devin auth login --force-manual-token-flow`): its link on app.devin.ai, then a pasted code. */
+export function parseDevinLoginUrl(output: string, final = false): string | null {
+  return urlsIn(stripAnsi(output), (h) => hostIs(h, "app.devin.ai"), final)[0]?.url ?? null;
+}
+
+/** `devin auth status`: what names a Devin account (its email and its plan). */
+const DEVIN_WHO_ARGS = ["auth", "status", "--process-model", "in-process"];
+
+/**
+ * `devin auth status` (CLI 3000.14): its `Email:` line, and its `Plan:` line as a word (`Pro` → `pro`, `Max`, `Teams`,
+ * `Free`); nothing it doesn't say.
+ */
+export function parseDevinWho(output: string): { email?: string; plan?: string } {
+  const text = stripAnsi(output);
+  const email = /^\s*Email:\s*(\S+@\S+\.\S+)\s*$/im.exec(text)?.[1];
+  const plan = /^\s*Plan:\s*([A-Za-z][\w .+-]{0,30}?)\s*$/im.exec(text)?.[1]?.trim().toLowerCase().replace(/\s+/g, "_");
+  return {
+    ...(email && email.length <= 254 ? { email } : {}),
+    ...(plan && /^[\w.-]{1,40}$/.test(plan) ? { plan } : {}),
+  };
+}
+
+/** `devin models list --format json`: signed in when it exits 0 and lists model families. */
+export function parseDevinStatus(status: number | null, output: string): Omit<RunnerAccountInfo, "id" | "kind"> {
+  return { loggedIn: status === 0 && parseDevinModels(output).length > 0 };
+}
+
 /** Cursor's sign-in link (`agent login` with `NO_OPEN_BROWSER`): the first complete https URL on cursor.com. */
 export function parseCursorLoginUrl(output: string, final = false): string | null {
   return urlsIn(stripAnsi(output), (h) => hostIs(h, "cursor.com") || hostIs(h, "cursor.sh"), final)[0]?.url ?? null;
@@ -1339,7 +1398,16 @@ interface CliResult {
 }
 
 /** Runs a CLI to the end (killed after `timeoutMs`); never throws. */
-function runCli(command: string[], args: string[], env: NodeJS.ProcessEnv, timeoutMs: number): Promise<CliResult> {
+/** How much of `devin models list --format json` a look keeps: the whole listing (hundreds of KB on a paid plan). */
+const DEVIN_LISTING_KEEP = 4 * 1024 * 1024;
+
+function runCli(
+  command: string[],
+  args: string[],
+  env: NodeJS.ProcessEnv,
+  timeoutMs: number,
+  keep = OUTPUT_KEEP,
+): Promise<CliResult> {
   return new Promise((resolve) => {
     const run = cliSpawn(command, args, env.PATH);
     let child: ChildProcess;
@@ -1359,7 +1427,7 @@ function runCli(command: string[], args: string[], env: NodeJS.ProcessEnv, timeo
     child.stdout?.setEncoding("utf8");
     child.stderr?.setEncoding("utf8");
     child.stdout?.on("data", (c: string) => {
-      stdout = (stdout + c).slice(-OUTPUT_KEEP);
+      stdout = (stdout + c).slice(-keep);
     });
     child.stderr?.on("data", (c: string) => {
       stderr = (stderr + c).slice(-OUTPUT_KEEP);
@@ -1797,6 +1865,10 @@ export class AccountManager {
     if (kind === "antigravity" && (this.opts.platform ?? process.platform) === "win32") {
       throw new RunnerError("bad_request", "Gemini accounts don't sign in on Windows computers yet.");
     }
+    // ADR 0220: an account's folder as the CLI's home is read on Linux and macOS only.
+    if (kind === "devin" && (this.opts.platform ?? process.platform) === "win32") {
+      throw new RunnerError("bad_request", "Devin accounts don't sign in on Windows computers yet.");
+    }
     if (this.logins.get(loginId)?.state === "waiting") {
       throw new RunnerError("bad_request", "This sign-in already exists");
     }
@@ -1841,7 +1913,10 @@ export class AccountManager {
     if (kind === "antigravity") await this.opts.prepare?.(kind);
     // Claude Code and the Antigravity CLI: the key the browser seals the pasted code (or a plan's key) to; the private
     // half stays in memory.
-    const pair = kind === "claude_code" || kind === "antigravity" || cliKey ? await generateSecretKeyPair() : undefined;
+    const pair =
+      kind === "claude_code" || kind === "antigravity" || kind === "devin" || cliKey
+        ? await generateSecretKeyPair()
+        : undefined;
     if (!again) {
       for (const [d, mode] of this.parents(kind)) {
         await mkdir(d, { recursive: true, mode });
@@ -1870,6 +1945,8 @@ export class AccountManager {
       return this.beginKey(kind, loginId, dir, provider as PlanId, pair, again, forAll);
     // Which Google sign-in the CLI asks for: a personal account's, or Gemini Enterprise's.
     if (kind === "antigravity") writeAgySettings(dir, enterprise ? "oauth-business" : "oauth-personal");
+    // No shell setup, no daemon, no updates of its own, from the sign-in on.
+    if (kind === "devin") prepareDevinHome(dir);
 
     const login: Login = {
       id: loginId,
@@ -1893,6 +1970,7 @@ export class AccountManager {
     try {
       if (forAll && kind === "claude_code" && !cliShared) this.spawnInTerminal(login, ["setup-token"]);
       else if (kind === "antigravity") this.spawnInTerminal(login, LOGIN_ARGS.antigravity);
+      else if (kind === "devin") this.spawnInTerminal(login, LOGIN_ARGS.devin);
       else this.spawnLogin(login, email);
     } catch (err) {
       if (!again) await this.discard(kind, loginId);
@@ -1916,9 +1994,11 @@ export class AccountManager {
             ? parseGrokLogin(login.output, final)
             : kind === "antigravity"
               ? toUrl(parseAgyLoginUrl(login.output, final))
-              : kind === "cursor"
-                ? toUrl(parseCursorLoginUrl(login.output, final))
-                : toUrl(parseClaudeLoginUrl(this.shown(login), final));
+              : kind === "devin"
+                ? toUrl(parseDevinLoginUrl(login.output, final))
+                : kind === "cursor"
+                  ? toUrl(parseCursorLoginUrl(login.output, final))
+                  : toUrl(parseClaudeLoginUrl(this.shown(login), final));
       let done = false;
       const finish = (v: { url: string; userCode?: string } | null) => {
         if (done) return;
@@ -2114,7 +2194,10 @@ export class AccountManager {
   async code(loginId: string, aad: string, box: WireSecretBox): Promise<void> {
     const login = this.waiting(loginId);
     const cliKey = login.provider === CURSOR_KEY_PROVIDER || login.provider === OPENCODE_KEY_PROVIDER;
-    if ((login.kind !== "claude_code" && login.kind !== "antigravity" && !cliKey) || !login.privateKey) {
+    if (
+      (login.kind !== "claude_code" && login.kind !== "antigravity" && login.kind !== "devin" && !cliKey) ||
+      !login.privateKey
+    ) {
       throw new RunnerError("bad_request", "This sign-in doesn't take a code");
     }
     const org = this.opts.orgId?.();
@@ -2564,7 +2647,14 @@ export class AccountManager {
         const { command, env } = cliShared
           ? this.sharedCli(id)
           : { command: this.command(kind), env: this.env(kind, dir) };
-        return runCli(command, STATUS_ARGS[kind], env, this.opts.statusTimeoutMs ?? STATUS_TIMEOUT_MS);
+        if (kind === "devin") prepareDevinHome(dir);
+        return runCli(
+          command,
+          STATUS_ARGS[kind],
+          env,
+          this.opts.statusTimeoutMs ?? STATUS_TIMEOUT_MS,
+          kind === "devin" ? DEVIN_LISTING_KEEP : OUTPUT_KEEP,
+        );
       },
       this.cliOps,
     ).catch((err: unknown): CliResult => ({ status: null, stdout: "", stderr: String(err) }));
@@ -2579,11 +2669,32 @@ export class AccountManager {
             ? parseGrokStatus(r.status, `${r.stdout}\n${r.stderr}`, existsSync(path.join(dir, "auth.json")))
             : kind === "antigravity"
               ? parseAgyStatus(r.status, `${r.stdout}\n${r.stderr}`, agyAuthOf(dir))
-              : parseCodexStatus(r.status, `${r.stdout}\n${r.stderr}`);
+              : kind === "devin"
+                ? parseDevinStatus(r.status, r.stdout)
+                : parseCodexStatus(r.status, `${r.stdout}\n${r.stderr}`);
     if (isListingKind(kind) && status.loggedIn) this.keepListed(kind, id, LISTED_BY[kind](r.stdout));
+    // Devin's models say nothing of whose they are: its status names the account and its plan.
+    const who =
+      kind === "devin" && status.loggedIn
+        ? parseDevinWho(
+            (
+              await this.serial(
+                id,
+                () =>
+                  runCli(
+                    this.command(kind),
+                    DEVIN_WHO_ARGS,
+                    this.env(kind, dir),
+                    this.opts.statusTimeoutMs ?? STATUS_TIMEOUT_MS,
+                  ),
+                this.cliOps,
+              ).catch((): CliResult => ({ status: null, stdout: "", stderr: "" }))
+            ).stdout,
+          )
+        : {};
     // Timed out, or didn't start.
     const unknown = r.status === null ? { statusUnknown: true as const } : {};
-    return { id, kind, ...status, ...unknown, ...shared };
+    return { id, kind, ...status, ...who, ...unknown, ...shared };
   }
 
   /** Per CLI, what each account signed in here last listed, by its id (`""`: an older runner's single list). */
@@ -2592,7 +2703,7 @@ export class AccountManager {
   private listedBy(kind: ListingKind): Map<string, CursorModelInfo[]> {
     let by = this.listed[kind];
     if (!by) {
-      const kept = readSmallJson(path.join(this.opts.root, LISTED_MODELS_FILE[kind]), 64 * 1024);
+      const kept = readSmallJson(path.join(this.opts.root, LISTED_MODELS_FILE[kind]), 1024 * 1024);
       const entries: [string, unknown][] = Array.isArray(kept)
         ? [["", kept]]
         : kept && typeof kept === "object"

@@ -15,7 +15,7 @@ import { planLabel, planOfAccount } from "./no-ai";
  */
 
 /** The brains a computer runs. */
-export type ComputerBrain = "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+export type ComputerBrain = "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "devin";
 
 export interface OutageAgentLike {
   agentId: string;
@@ -269,7 +269,8 @@ export function brainUnavailableOf(meta: Record<string, unknown> | null | undefi
       x.brain === "cursor" ||
       x.brain === "opencode" ||
       x.brain === "grok" ||
-      x.brain === "antigravity"
+      x.brain === "antigravity" ||
+      x.brain === "devin"
         ? x.brain
         : "claude_code",
     code: str(x.code) ?? "",
@@ -299,6 +300,7 @@ const SWITCHES: readonly string[] = [
   "opencode",
   "grok",
   "antigravity",
+  "devin",
   "commands",
   "browser",
   "desktop",

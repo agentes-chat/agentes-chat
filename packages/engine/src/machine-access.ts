@@ -90,9 +90,9 @@ export async function storeMachineAccess(deps: AccessDeps, machineId: string, ac
 /** What `machines.executors` keeps of the coding CLIs: each one found, those that can't start, and when they were looked up. */
 export function storedExecutors(stored: schema.MachineExecutors | null | undefined): schema.MachineExecutors {
   if (!stored) return {};
-  const { claude, codex, cursor, opencode, grok, antigravity, broken, detectedAt } = stored;
+  const { claude, codex, cursor, opencode, grok, antigravity, devin, broken, detectedAt } = stored;
   return Object.fromEntries(
-    Object.entries({ claude, codex, cursor, opencode, grok, antigravity, broken, detectedAt }).filter(
+    Object.entries({ claude, codex, cursor, opencode, grok, antigravity, devin, broken, detectedAt }).filter(
       ([, v]) => v !== undefined,
     ),
   );
@@ -111,7 +111,7 @@ export async function storeMachineExecutors(
   const [row] = await deps.db
     .update(machines)
     .set({
-      executors: sql`(coalesce(${machines.executors}, '{}'::jsonb) - 'claude' - 'codex' - 'cursor' - 'opencode' - 'grok' - 'antigravity' - 'broken') || ${next}::jsonb`,
+      executors: sql`(coalesce(${machines.executors}, '{}'::jsonb) - 'claude' - 'codex' - 'cursor' - 'opencode' - 'grok' - 'antigravity' - 'devin' - 'broken') || ${next}::jsonb`,
       updatedAt: new Date(),
     })
     .where(eq(machines.id, machineId))

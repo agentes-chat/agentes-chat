@@ -3379,6 +3379,8 @@
       "grok_female": "Grok is niet ingelogd op deze computer. Koppel een Grok-account op de pagina van {{name}}.",
       "antigravity": "Gemini is niet ingelogd op deze computer. Koppel een Gemini-account op de pagina van {{name}}.",
       "antigravity_female": "Gemini is niet ingelogd op deze computer. Koppel een Gemini-account op de pagina van {{name}}.",
+      "devin": "Devin is niet ingelogd op deze computer. Koppel een Devin-account op de pagina van {{name}}.",
+      "devin_female": "Devin is niet ingelogd op deze computer. Koppel een Devin-account op de pagina van {{name}}.",
       "opencode": "OpenCode kan niet denken op deze computer. Koppel een OpenCode-sleutel op de pagina van {{name}}.",
       "opencode_female": "OpenCode kan niet denken op deze computer. Koppel een OpenCode-sleutel op de pagina van {{name}}."
     },
@@ -3393,6 +3395,8 @@
       "grok_female": "Grok is niet ingelogd op {{computer}}. Koppel een Grok-account op de pagina van {{name}}.",
       "antigravity": "Gemini is niet ingelogd op {{computer}}. Koppel een Gemini-account op de pagina van {{name}}.",
       "antigravity_female": "Gemini is niet ingelogd op {{computer}}. Koppel een Gemini-account op de pagina van {{name}}.",
+      "devin": "Devin is niet ingelogd op {{computer}}. Koppel een Devin-account op de pagina van {{name}}.",
+      "devin_female": "Devin is niet ingelogd op {{computer}}. Koppel een Devin-account op de pagina van {{name}}.",
       "opencode": "OpenCode kan niet denken op {{computer}}. Koppel een OpenCode-sleutel op de pagina van {{name}}.",
       "opencode_female": "OpenCode kan niet denken op {{computer}}. Koppel een OpenCode-sleutel op de pagina van {{name}}."
     },
@@ -3452,6 +3456,7 @@
       "cursor": "Koppel je Cursor-abonnement",
       "grok": "Koppel je Grok-abonnement",
       "gemini": "Koppel je Gemini-abonnement",
+      "devin": "Koppel je Devin-abonnement",
       "zen": "Koppel OpenCode",
       "api_key": "Een API-sleutel toevoegen"
     },
@@ -3583,6 +3588,10 @@
         "tiers": "Google AI Pro, Google AI Ultra of Gemini Enterprise",
         "warning": "Volgens Google kan het gebruik van een persoonlijk Gemini-abonnement in andere apps ertoe leiden dat het account wordt geschorst. Gebruik een Gemini-API-sleutel of Gemini Enterprise om dat risico te vermijden."
       },
+      "devin": {
+        "title": "Je Devin-abonnement",
+        "tiers": "Free, Pro, Max of Teams"
+      },
       "zen": {
         "title": "OpenCode",
         "tiers": "Gratis modellen, of je OpenCode-sleutel"
@@ -3690,6 +3699,7 @@
       "cursor": "Cursor is ingelogd als {{email}}, niet als {{account}}. Log uit op de pagina van Cursor en probeer het opnieuw.",
       "grok": "Grok is ingelogd als {{email}}, niet als {{account}}. Log uit op de pagina van Grok en probeer het opnieuw.",
       "antigravity": "Gemini is ingelogd als {{email}}, niet als {{account}}. Log uit op de pagina van Google en probeer het opnieuw.",
+      "devin": "Devin is ingelogd als {{email}}, niet als {{account}}. Log uit op de pagina van Devin en probeer het opnieuw.",
       "opencode": "OpenCode is ingelogd als {{email}}, niet als {{account}}. Probeer het opnieuw met de juiste sleutel."
     },
     "useAnyway": "{{email}} gebruiken",
@@ -5979,6 +5989,7 @@
             "cursor": "Cursor-account toevoegen",
             "grok": "Grok-account toevoegen",
             "antigravity": "Gemini-account toevoegen",
+            "devin": "Devin-account toevoegen",
             "opencode": "Een OpenCode-sleutel toevoegen"
           },
           "stepOne": {
@@ -5986,6 +5997,7 @@
             "codex": "Het account met je abonnement",
             "cursor": "Het account met je abonnement",
             "grok": "Het account met je abonnement",
+            "devin": "Het account met je abonnement",
             "antigravity": "Het Google-account met je abonnement",
             "antigravityEnterprise": "Je Gemini Enterprise-account"
           },
@@ -5995,7 +6007,8 @@
             "codex": "Inloggen met ChatGPT",
             "cursor": "Inloggen met Cursor",
             "grok": "Inloggen met Grok",
-            "antigravity": "Inloggen met Google"
+            "antigravity": "Inloggen met Google",
+            "devin": "Inloggen met Devin"
           },
           "opencodeFree": "De gratis modellen van OpenCode hebben geen sleutel nodig. Een sleutel uit de OpenCode-console voegt de betaalde toe.",
           "cursorFinish": "Log in op de pagina van Cursor, dan rondt {{computer}} het inloggen vanzelf af.",
@@ -6010,6 +6023,9 @@
           "notCode": "Dat lijkt geen code van Claude.",
           "stepTwoGoogle": "Plak de code die Google laat zien",
           "codeLabelGoogle": "Code van Google",
+          "stepTwoDevin": "Plak de code die Devin laat zien",
+          "codeHintDevin": "Plak de code die de pagina van Devin laat zien, niet het adres van de pagina.",
+          "codeLabelDevin": "Code van Devin",
           "codeHintGoogle": "Plak de code die de pagina van Google laat zien, niet het adres van de pagina.",
           "notCodeGoogle": "Dat is een adres zonder code. Plak de code die de pagina van Google laat zien.",
           "send": "Naar {{computer}} sturen",
@@ -6043,6 +6059,7 @@
             "cursor": "Cursor is ingelogd als {{account}}, een account dat je al hebt gekoppeld. Wil je een ander gebruiken? Log uit op de pagina van Cursor en probeer het opnieuw.",
             "grok": "Grok is ingelogd als {{account}}, een account dat je al hebt gekoppeld. Wil je een ander gebruiken? Log uit op de pagina van Grok en probeer het opnieuw.",
             "antigravity": "Gemini is ingelogd als {{account}}, een account dat je al hebt gekoppeld. Wil je een ander gebruiken? Log uit op de pagina van Google en probeer het opnieuw.",
+            "devin": "Devin is ingelogd als {{account}}, een account dat je al hebt gekoppeld. Wil je een ander gebruiken? Log uit op de pagina van Devin en probeer het opnieuw.",
             "opencode": "Die OpenCode-sleutel is al gekoppeld als {{account}}."
           },
           "startFailed": "Geen antwoord van {{computer}}. Probeer het zo opnieuw.",
@@ -10872,6 +10889,7 @@
       "cursor": "Cursor",
       "grok": "Grok",
       "antigravity": "Gemini",
+      "devin": "Devin",
       "opencode": "OpenCode",
       "needs": {
         "keys": "Werk agentes bij op de computer om de sleutel van een abonnement te gebruiken"
@@ -12380,6 +12398,7 @@
       "cursor": "{{model}} op het Cursor-abonnement",
       "grok": "{{model}} op het Grok-abonnement",
       "gemini": "{{model}} op het Gemini-abonnement",
+      "devin": "{{model}} op het Devin-abonnement",
       "zen": "{{model}} via OpenCode",
       "coding": "{{model}} op {{plan}}",
       "claudeOf": "{{model}} op het Claude-abonnement van {{owner}}",
@@ -12387,6 +12406,7 @@
       "cursorOf": "{{model}} op het Cursor-abonnement van {{owner}}",
       "grokOf": "{{model}} op het Grok-abonnement van {{owner}}",
       "geminiOf": "{{model}} op het Gemini-abonnement van {{owner}}",
+      "devinOf": "{{model}} op het Devin-abonnement van {{owner}}",
       "zenOf": "{{model}} via de OpenCode van {{owner}}",
       "codingOf": "{{model}} op {{plan}} van {{owner}}",
       "claudeAuto": "Claude-abonnement",
@@ -12394,6 +12414,7 @@
       "cursorAuto": "Cursor-abonnement",
       "grokAuto": "Grok-abonnement",
       "geminiAuto": "Gemini-abonnement",
+      "devinAuto": "Devin-abonnement",
       "zenAuto": "OpenCode",
       "codingAuto": "{{plan}}",
       "claudeAutoOf": "Claude-abonnement van {{owner}}",
@@ -12401,6 +12422,7 @@
       "cursorAutoOf": "Cursor-abonnement van {{owner}}",
       "grokAutoOf": "Grok-abonnement van {{owner}}",
       "geminiAutoOf": "Gemini-abonnement van {{owner}}",
+      "devinAutoOf": "Devin-abonnement van {{owner}}",
       "zenAutoOf": "OpenCode van {{owner}}",
       "codingAutoOf": "{{plan}} van {{owner}}",
       "on": "{{line}} op {{computer}}"
@@ -12415,7 +12437,8 @@
       "cursor": "Cursor",
       "opencode": "OpenCode",
       "grok": "Grok Build",
-      "antigravity": "Antigravity CLI"
+      "antigravity": "Antigravity CLI",
+      "devin": "Devin CLI"
     },
     "foot": {
       "api": "Via de API",
@@ -12428,6 +12451,7 @@
     "cursorText": "Gebruikt het Cursor-abonnement van wie de computer koppelde.",
     "grokText": "Gebruikt het Grok-abonnement van wie de computer koppelde.",
     "antigravityText": "Gebruikt het Gemini-abonnement van wie de computer koppelde.",
+    "devinText": "Gebruikt het Devin-abonnement van wie de computer koppelde.",
     "opencodeText": "De gratis modellen van OpenCode, of de OpenCode-sleutel van wie de computer koppelde.",
     "cursorModel": {
       "inPlan": "In je Cursor-abonnement",
@@ -12486,6 +12510,7 @@
       "cursor": "Cursor · {{model}}",
       "grok": "Grok Build · {{model}}",
       "antigravity": "Antigravity CLI · {{model}}",
+      "devin": "Devin CLI · {{model}}",
       "opencode": "OpenCode · {{model}}"
     },
     "mission": {
@@ -16209,6 +16234,7 @@
         "opencode": "OpenCode",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "devin": "Devin CLI",
         "commands": "de commando's",
         "browser": "de browser",
         "desktop": "het scherm",
@@ -16366,6 +16392,7 @@
         "cursor": "Cursor",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "devin": "Devin CLI",
         "opencode": "OpenCode",
         "commands": "Opdrachten",
         "browser": "Browser"
@@ -16376,6 +16403,7 @@
         "cursor": "Zoals Claude Code, met een Cursor-account. Alleen in de toegestane mappen.",
         "grok": "Zoals Claude Code, met een Grok-account. Alleen in de toegestane mappen.",
         "antigravity": "Zoals Claude Code, met een Gemini-account. Alleen in de toegestane mappen.",
+        "devin": "Zoals Claude Code, met een Devin-account. Alleen in de toegestane mappen.",
         "opencode": "Zoals Claude Code, met de gratis modellen van OpenCode of een OpenCode-sleutel. Alleen in de toegestane mappen.",
         "commands": "Voert Terminal-opdrachten uit, zoals tests en builds."
       },

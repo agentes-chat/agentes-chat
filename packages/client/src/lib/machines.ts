@@ -130,6 +130,7 @@ const CLI_INSTALLERS = {
   },
   grok: { script: "curl -fsSL https://x.ai/cli/install.sh | bash", bin: "grok", opt: "/opt/grok", flags: "" },
   cursor: { script: "curl https://cursor.com/install -fsS | bash", bin: "agent", opt: "/opt/cursor", flags: "" },
+  devin: { script: "curl -fsSL https://cli.devin.ai/install.sh | bash", bin: "devin", opt: "/opt/devin", flags: "" },
 } as const;
 
 /**
@@ -294,6 +295,7 @@ export const MACHINE_TOOLS: MachineToolName[] = [
   "opencode",
   "grok",
   "antigravity",
+  "devin",
   "commands",
 ];
 

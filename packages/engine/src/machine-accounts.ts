@@ -14,6 +14,7 @@ import {
   CURSOR_KEY_PROVIDER,
   CURSOR_PROTOCOL,
   claudeLoginMethodsOf,
+  DEVIN_PROTOCOL,
   GROK_PROTOCOL,
   isAccountId,
   isAccountKind,
@@ -1301,11 +1302,12 @@ const sharedSignInProtocol = (kind: string) =>
  */
 export function sharesSignIns(
   machine: Pick<MachineRow, "protocol" | "executors">,
-  which: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "key",
+  which: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "devin" | "key",
 ): boolean {
   if (machine.protocol < SHARED_ACCOUNTS_PROTOCOL) return false;
   if (machine.executors?.mode !== "system") return true;
-  if (which === "cursor" || which === "opencode") return false;
+  // Devin's (ADR 0220): one login per agent there, as Cursor's and OpenCode's.
+  if (which === "cursor" || which === "opencode" || which === "devin") return false;
   return machine.protocol >= sharedSignInProtocol(which) && SHARED_SIGN_INS[which];
 }
 
@@ -1528,7 +1530,7 @@ export async function beginAccountLogin(
 ): Promise<AccountLoginView> {
   if (!isAccountKind(kind)) {
     throw new ValidationError(
-      "Choose claude_code, codex, cursor, opencode, grok or antigravity",
+      "Choose claude_code, codex, cursor, opencode, grok, antigravity or devin",
       "account.invalid_kind",
     );
   }
@@ -1572,11 +1574,13 @@ export async function beginAccountLogin(
           : ANTIGRAVITY_PROTOCOL
         : kind === "grok"
           ? GROK_PROTOCOL
-          : kind === "opencode"
-            ? OPENCODE_PROTOCOL
-            : plan
-              ? PLAN_KEYS_PROTOCOL
-              : ACCOUNTS_PROTOCOL,
+          : kind === "devin"
+            ? DEVIN_PROTOCOL
+            : kind === "opencode"
+              ? OPENCODE_PROTOCOL
+              : plan
+                ? PLAN_KEYS_PROTOCOL
+                : ACCOUNTS_PROTOCOL,
   );
   // Once for every agent of its owner there, where the runner can (protocol 29; ChatGPT's 38, Gemini's 58).
   const shared = protocol >= sharedSignInProtocol(kind) && sharedSignIn(kind, provider);

@@ -79,6 +79,7 @@ const MachineTool = z.enum([
   "opencode",
   "grok",
   "antigravity",
+  "devin",
   "commands",
   "browser",
   "desktop",
@@ -112,6 +113,10 @@ export const MachineAccess = z
         .boolean()
         .optional()
         .openapi({ description: "Google's Antigravity CLI (protocol 44, ADR 0143); absent = follows `codex`." }),
+      devin: z
+        .boolean()
+        .optional()
+        .openapi({ description: "Cognition's Devin CLI (protocol 78, ADR 0220); absent = follows `codex`." }),
       commands: z.boolean(),
       browser: z
         .boolean()
@@ -345,7 +350,7 @@ const DeviceCode = z
 
 const AgentParams = OrgParams.extend({ agentId: z.uuid() });
 
-const ComputerBrain = z.enum(["claude_code", "codex", "cursor", "opencode", "grok", "antigravity"]);
+const ComputerBrain = z.enum(["claude_code", "codex", "cursor", "opencode", "grok", "antigravity", "devin"]);
 const Platform = z.string().openapi({
   description: "`mac`, `windows`, `linux`, `other` (the workspace's own computer), or the runner's `os` as reported.",
 });

@@ -58,8 +58,23 @@ export interface MachineExecutors {
   grok?: { version: string; models?: { id: string; label?: string }[] };
   /** Google's Antigravity CLI (protocol 44, ADR 0143), and the models it lists. */
   antigravity?: { version: string; models?: { id: string; label?: string }[] };
+  /**
+   * Cognition's Devin CLI (protocol 78, ADR 0220), and the model families its accounts list: each one's levels, whether
+   * it has a faster variant, its window, and whether the plan serves it at no cost.
+   */
+  devin?: {
+    version: string;
+    models?: {
+      id: string;
+      label?: string;
+      free?: boolean;
+      efforts?: string[];
+      fast?: boolean;
+      contextWindow?: number;
+    }[];
+  };
   /** A CLI that is there and can't start (`--version` keeps failing), with its own error line; `git_missing`: see `CLI_GIT_MISSING`. */
-  broken?: Partial<Record<"claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity", string>>;
+  broken?: Partial<Record<"claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "devin", string>>;
   /** `hello.browser` (ADR 0040): whether the agent browser can run there; absent = not reported. */
   browser?: {
     available: boolean;
@@ -94,6 +109,7 @@ export interface MachineExecutors {
     opencode?: MachinePlanUsage;
     grok?: MachinePlanUsage;
     antigravity?: MachinePlanUsage;
+    devin?: MachinePlanUsage;
   };
   detectedAt?: string;
 }
@@ -148,6 +164,7 @@ export interface MachineAccess {
     opencode?: boolean;
     grok?: boolean;
     antigravity?: boolean;
+    devin?: boolean;
     commands: boolean;
     browser?: boolean;
     desktop?: boolean;

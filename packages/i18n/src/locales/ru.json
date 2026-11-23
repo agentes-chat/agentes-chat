@@ -3649,6 +3649,7 @@
       "cursor": "На этом компьютере не выполнен вход в Cursor. Подключите аккаунт Cursor на странице {{name}}.",
       "grok": "На этом компьютере не выполнен вход в Grok. Подключите аккаунт Grok на странице {{name}}.",
       "antigravity": "На этом компьютере не выполнен вход в Gemini. Подключите аккаунт Gemini на странице {{name}}.",
+      "devin": "На этом компьютере не выполнен вход в Devin. Подключите аккаунт Devin на странице {{name}}.",
       "opencode": "OpenCode не может думать на этом компьютере. Подключите ключ OpenCode на странице {{name}}."
     },
     "notSignedInOn": {
@@ -3657,6 +3658,7 @@
       "cursor": "На компьютере {{computer}} не выполнен вход в Cursor. Подключите аккаунт Cursor на странице {{name}}.",
       "grok": "На компьютере {{computer}} не выполнен вход в Grok. Подключите аккаунт Grok на странице {{name}}.",
       "antigravity": "На компьютере {{computer}} не выполнен вход в Gemini. Подключите аккаунт Gemini на странице {{name}}.",
+      "devin": "На компьютере {{computer}} не выполнен вход в Devin. Подключите аккаунт Devin на странице {{name}}.",
       "opencode": "OpenCode не может думать на компьютере {{computer}}. Подключите ключ OpenCode на странице {{name}}."
     },
     "card": {
@@ -3715,6 +3717,7 @@
       "cursor": "Подключите тариф Cursor",
       "grok": "Подключите тариф Grok",
       "gemini": "Подключите тариф Gemini",
+      "devin": "Подключите тариф Devin",
       "zen": "Подключите OpenCode",
       "api_key": "Добавить API-ключ"
     },
@@ -3856,6 +3859,10 @@
         "tiers": "Google AI Pro, Google AI Ultra или Gemini Enterprise",
         "warning": "Google предупреждает, что использование личного тарифа Gemini внутри других приложений может привести к блокировке аккаунта. Чтобы избежать этого риска, используйте API-ключ Gemini или Gemini Enterprise."
       },
+      "devin": {
+        "title": "Ваш тариф Devin",
+        "tiers": "Free, Pro, Max или Teams"
+      },
       "zen": {
         "title": "OpenCode",
         "tiers": "Бесплатные модели или ваш ключ OpenCode"
@@ -3963,6 +3970,7 @@
       "cursor": "В Cursor выполнен вход как {{email}}, а не {{account}}. Выйдите на странице Cursor и попробуйте ещё раз.",
       "grok": "В Grok выполнен вход как {{email}}, а не {{account}}. Выйдите на странице Grok и попробуйте ещё раз.",
       "antigravity": "В Gemini выполнен вход как {{email}}, а не {{account}}. Выйдите на странице Google и попробуйте ещё раз.",
+      "devin": "В Devin выполнен вход как {{email}}, а не {{account}}. Выйдите на странице Devin и попробуйте ещё раз.",
       "opencode": "OpenCode вошёл как {{email}}, а не {{account}}. Попробуйте ещё раз с правильным ключом."
     },
     "useAnyway": "Использовать {{email}}",
@@ -6383,6 +6391,7 @@
             "cursor": "Добавить аккаунт Cursor",
             "grok": "Добавить аккаунт Grok",
             "antigravity": "Добавить аккаунт Gemini",
+            "devin": "Добавить аккаунт Devin",
             "opencode": "Добавить ключ OpenCode"
           },
           "stepOne": {
@@ -6390,6 +6399,7 @@
             "codex": "Аккаунт с вашим тарифом",
             "cursor": "Аккаунт с вашим тарифом",
             "grok": "Аккаунт с вашим тарифом",
+            "devin": "Аккаунт с вашим тарифом",
             "antigravity": "Аккаунт Google с вашим тарифом",
             "antigravityEnterprise": "Ваш аккаунт Gemini Enterprise"
           },
@@ -6399,7 +6409,8 @@
             "codex": "Войти через ChatGPT",
             "cursor": "Войти через Cursor",
             "grok": "Войти через Grok",
-            "antigravity": "Войти через Google"
+            "antigravity": "Войти через Google",
+            "devin": "Войти через Devin"
           },
           "opencodeFree": "Бесплатным моделям OpenCode ключ не нужен. Ключ из консоли OpenCode добавляет платные.",
           "cursorFinish": "Войдите на странице Cursor, и вход завершится на {{computer}} сам.",
@@ -6414,6 +6425,9 @@
           "notCode": "Это не похоже на код Claude.",
           "stepTwoGoogle": "Вставьте код, который показывает Google",
           "codeLabelGoogle": "Код Google",
+          "stepTwoDevin": "Вставьте код, который показывает Devin",
+          "codeHintDevin": "Вставьте код, который показывает страница Devin, а не адрес страницы.",
+          "codeLabelDevin": "Код Devin",
           "codeHintGoogle": "Вставьте код, который показывает страница Google, а не адрес страницы.",
           "notCodeGoogle": "Это адрес без кода. Вставьте код, который показывает страница Google.",
           "send": "Отправить на {{computer}}",
@@ -6447,6 +6461,7 @@
             "cursor": "Cursor вошёл как {{account}}, а этот аккаунт у вас уже подключён. Чтобы использовать другой, выйдите на странице Cursor и попробуйте снова.",
             "grok": "Grok вошёл как {{account}}, а этот аккаунт у вас уже подключён. Чтобы использовать другой, выйдите на странице Grok и попробуйте снова.",
             "antigravity": "Gemini вошёл как {{account}}, а этот аккаунт у вас уже подключён. Чтобы использовать другой, выйдите на странице Google и попробуйте снова.",
+            "devin": "Devin вошёл как {{account}}, а этот аккаунт у вас уже подключён. Чтобы использовать другой, выйдите на странице Devin и попробуйте снова.",
             "opencode": "Этот ключ OpenCode уже подключён как {{account}}."
           },
           "startFailed": "{{computer}} не отвечает. Попробуйте чуть позже.",
@@ -11564,6 +11579,7 @@
       "cursor": "Cursor",
       "grok": "Grok",
       "antigravity": "Gemini",
+      "devin": "Devin",
       "opencode": "OpenCode",
       "needs": {
         "keys": "Обновите agentes на компьютере, чтобы использовать ключ тарифа"
@@ -13181,6 +13197,7 @@
       "cursor": "{{model}} по тарифу Cursor",
       "grok": "{{model}} по тарифу Grok",
       "gemini": "{{model}} по тарифу Gemini",
+      "devin": "{{model}} по тарифу Devin",
       "zen": "{{model}} через OpenCode",
       "coding": "{{model}} по тарифу {{plan}}",
       "claudeOf": "{{model}} по тарифу Claude пользователя {{owner}}",
@@ -13188,6 +13205,7 @@
       "cursorOf": "{{model}} по тарифу Cursor пользователя {{owner}}",
       "grokOf": "{{model}} по тарифу Grok пользователя {{owner}}",
       "geminiOf": "{{model}} по тарифу Gemini пользователя {{owner}}",
+      "devinOf": "{{model}} по тарифу Devin пользователя {{owner}}",
       "zenOf": "{{model}} через OpenCode пользователя {{owner}}",
       "codingOf": "{{model}} по тарифу {{plan}} пользователя {{owner}}",
       "claudeAuto": "Тариф Claude",
@@ -13195,6 +13213,7 @@
       "cursorAuto": "Тариф Cursor",
       "grokAuto": "Тариф Grok",
       "geminiAuto": "Тариф Gemini",
+      "devinAuto": "Тариф Devin",
       "zenAuto": "OpenCode",
       "codingAuto": "{{plan}}",
       "claudeAutoOf": "Тариф Claude пользователя {{owner}}",
@@ -13202,6 +13221,7 @@
       "cursorAutoOf": "Тариф Cursor пользователя {{owner}}",
       "grokAutoOf": "Тариф Grok пользователя {{owner}}",
       "geminiAutoOf": "Тариф Gemini пользователя {{owner}}",
+      "devinAutoOf": "Тариф Devin пользователя {{owner}}",
       "zenAutoOf": "OpenCode пользователя {{owner}}",
       "codingAutoOf": "{{plan}} пользователя {{owner}}",
       "on": "{{line}} на {{computer}}"
@@ -13215,7 +13235,8 @@
       "cursor": "Cursor",
       "opencode": "OpenCode",
       "grok": "Grok Build",
-      "antigravity": "Antigravity CLI"
+      "antigravity": "Antigravity CLI",
+      "devin": "Devin CLI"
     },
     "foot": {
       "api": "Через API",
@@ -13228,6 +13249,7 @@
     "cursorText": "Использует тариф Cursor того, кто подключил компьютер.",
     "grokText": "Использует тариф Grok того, кто подключил компьютер.",
     "antigravityText": "Использует тариф Gemini того, кто подключил компьютер.",
+    "devinText": "Использует тариф Devin того, кто подключил компьютер.",
     "opencodeText": "Бесплатные модели OpenCode или ключ OpenCode того, кто подключил компьютер.",
     "cursorModel": {
       "inPlan": "Входит в ваш тариф Cursor",
@@ -13286,6 +13308,7 @@
       "cursor": "Cursor · {{model}}",
       "grok": "Grok Build · {{model}}",
       "antigravity": "Antigravity CLI · {{model}}",
+      "devin": "Devin CLI · {{model}}",
       "opencode": "OpenCode · {{model}}"
     },
     "mission": {
@@ -17179,6 +17202,7 @@
         "opencode": "OpenCode",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "devin": "Devin CLI",
         "commands": "команды",
         "browser": "браузер",
         "desktop": "экран",
@@ -17336,6 +17360,7 @@
         "cursor": "Cursor",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "devin": "Devin CLI",
         "opencode": "OpenCode",
         "commands": "Команды",
         "browser": "Браузер"
@@ -17346,6 +17371,7 @@
         "cursor": "Как Claude Code, но с аккаунтом Cursor. Только в разрешённых папках.",
         "grok": "Как Claude Code, но с аккаунтом Grok. Только в разрешённых папках.",
         "antigravity": "Как Claude Code, но с аккаунтом Gemini. Только в разрешённых папках.",
+        "devin": "Как Claude Code, но с аккаунтом Devin. Только в разрешённых папках.",
         "opencode": "Как Claude Code, но с бесплатными моделями OpenCode или ключом OpenCode. Только в разрешённых папках.",
         "commands": "Выполняет команды в Терминале, например тесты и сборки."
       },

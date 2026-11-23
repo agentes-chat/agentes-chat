@@ -8371,6 +8371,9 @@
   "noAi.notSignedIn.antigravity": {
     "value": "Gemini isn't signed in on this computer. Connect a Gemini account on {{name}}'s page."
   },
+  "noAi.notSignedIn.devin": {
+    "value": "Devin isn't signed in on this computer. Connect a Devin account on {{name}}'s page."
+  },
   "noAi.notSignedIn.opencode": {
     "value": "OpenCode can't think on this computer. Connect an OpenCode key on {{name}}'s page."
   },
@@ -8388,6 +8391,9 @@
   },
   "noAi.notSignedInOn.antigravity": {
     "value": "Gemini isn't signed in on {{computer}}. Connect a Gemini account on {{name}}'s page."
+  },
+  "noAi.notSignedInOn.devin": {
+    "value": "Devin isn't signed in on {{computer}}. Connect a Devin account on {{name}}'s page."
   },
   "noAi.notSignedInOn.opencode": {
     "value": "OpenCode can't think on {{computer}}. Connect an OpenCode key on {{name}}'s page."
@@ -8520,6 +8526,9 @@
   },
   "connectAi.title.gemini": {
     "value": "Connect your Gemini plan"
+  },
+  "connectAi.title.devin": {
+    "value": "Connect your Devin plan"
   },
   "connectAi.title.zen": {
     "value": "Connect OpenCode"
@@ -8824,6 +8833,12 @@
   "connectAi.plan.gemini.warning": {
     "value": "Google says using a personal Gemini plan inside other apps can get the account suspended. To avoid that risk, use a Gemini API key or Gemini Enterprise."
   },
+  "connectAi.plan.devin.title": {
+    "value": "Your Devin plan"
+  },
+  "connectAi.plan.devin.tiers": {
+    "value": "Free, Pro, Max or Teams"
+  },
   "connectAi.plan.zen.title": {
     "value": "OpenCode"
   },
@@ -9046,6 +9061,9 @@
   },
   "connectAi.otherAccount.antigravity": {
     "value": "Gemini signed in as {{email}}, not {{account}}. Sign out on Google's page and try again."
+  },
+  "connectAi.otherAccount.devin": {
+    "value": "Devin signed in as {{email}}, not {{account}}. Sign out on Devin's page and try again."
   },
   "connectAi.otherAccount.opencode": {
     "value": "OpenCode signed in as {{email}}, not {{account}}. Try again with the right key."
@@ -14647,6 +14665,9 @@
   "agentPage.work.brain.add.title.antigravity": {
     "value": "Add a Gemini account"
   },
+  "agentPage.work.brain.add.title.devin": {
+    "value": "Add a Devin account"
+  },
   "agentPage.work.brain.add.title.opencode": {
     "value": "Add an OpenCode key"
   },
@@ -14660,6 +14681,9 @@
     "value": "The account with your plan"
   },
   "agentPage.work.brain.add.stepOne.grok": {
+    "value": "The account with your plan"
+  },
+  "agentPage.work.brain.add.stepOne.devin": {
     "value": "The account with your plan"
   },
   "agentPage.work.brain.add.stepOne.antigravity": {
@@ -14685,6 +14709,9 @@
   },
   "agentPage.work.brain.add.open.antigravity": {
     "value": "Sign in with Google"
+  },
+  "agentPage.work.brain.add.open.devin": {
+    "value": "Sign in with Devin"
   },
   "agentPage.work.brain.add.opencodeFree": {
     "value": "No key needed for OpenCode's free models. A key from OpenCode's console adds its paid ones."
@@ -14724,6 +14751,15 @@
   },
   "agentPage.work.brain.add.codeLabelGoogle": {
     "value": "Google's code"
+  },
+  "agentPage.work.brain.add.stepTwoDevin": {
+    "value": "Paste the code Devin shows"
+  },
+  "agentPage.work.brain.add.codeHintDevin": {
+    "value": "Paste the code Devin's page shows, not the page's address."
+  },
+  "agentPage.work.brain.add.codeLabelDevin": {
+    "value": "Devin's code"
   },
   "agentPage.work.brain.add.codeHintGoogle": {
     "value": "Paste the code Google's page shows, not the page's address."
@@ -14814,6 +14850,9 @@
   },
   "agentPage.work.brain.add.duplicate.antigravity": {
     "value": "Gemini signed in as {{account}}, an account you already connected. To use another, sign out on Google's page and try again."
+  },
+  "agentPage.work.brain.add.duplicate.devin": {
+    "value": "Devin signed in as {{account}}, an account you already connected. To use another, sign out on Devin's page and try again."
   },
   "agentPage.work.brain.add.duplicate.opencode": {
     "value": "That OpenCode key is already connected as {{account}}."
@@ -26268,6 +26307,9 @@
   "aiAccounts.connect.antigravity": {
     "value": "Gemini"
   },
+  "aiAccounts.connect.devin": {
+    "value": "Devin"
+  },
   "aiAccounts.connect.opencode": {
     "value": "OpenCode"
   },
@@ -30009,6 +30051,9 @@
   "brain.line.gemini": {
     "value": "{{model}} on the Gemini plan"
   },
+  "brain.line.devin": {
+    "value": "{{model}} on the Devin plan"
+  },
   "brain.line.zen": {
     "value": "{{model}} on OpenCode"
   },
@@ -30029,6 +30074,9 @@
   },
   "brain.line.geminiOf": {
     "value": "{{model}} on {{owner}}'s Gemini plan"
+  },
+  "brain.line.devinOf": {
+    "value": "{{model}} on {{owner}}'s Devin plan"
   },
   "brain.line.zenOf": {
     "value": "{{model}} on {{owner}}'s OpenCode"
@@ -30051,6 +30099,9 @@
   "brain.line.geminiAuto": {
     "value": "Gemini plan"
   },
+  "brain.line.devinAuto": {
+    "value": "Devin plan"
+  },
   "brain.line.zenAuto": {
     "value": "OpenCode"
   },
@@ -30071,6 +30122,9 @@
   },
   "brain.line.geminiAutoOf": {
     "value": "{{owner}}'s Gemini plan"
+  },
+  "brain.line.devinAutoOf": {
+    "value": "{{owner}}'s Devin plan"
   },
   "brain.line.zenAutoOf": {
     "value": "{{owner}}'s OpenCode"
@@ -30108,6 +30162,9 @@
   "brain.card.antigravity": {
     "value": "Antigravity CLI"
   },
+  "brain.card.devin": {
+    "value": "Devin CLI"
+  },
   "brain.foot.api": {
     "value": "Through the API"
   },
@@ -30134,6 +30191,9 @@
   },
   "brain.antigravityText": {
     "value": "Uses the Gemini plan of whoever connected the computer."
+  },
+  "brain.devinText": {
+    "value": "Uses the Devin plan of whoever connected the computer."
   },
   "brain.opencodeText": {
     "value": "OpenCode's free models, or the OpenCode key of whoever connected the computer."
@@ -30269,6 +30329,9 @@
   },
   "brain.summary.antigravity": {
     "value": "Antigravity CLI · {{model}}"
+  },
+  "brain.summary.devin": {
+    "value": "Devin CLI · {{model}}"
   },
   "brain.summary.opencode": {
     "value": "OpenCode · {{model}}"
@@ -39583,6 +39646,9 @@
   "machines.oneClick.tools.antigravity": {
     "value": "Antigravity CLI"
   },
+  "machines.oneClick.tools.devin": {
+    "value": "Devin CLI"
+  },
   "machines.oneClick.tools.commands": {
     "value": "commands"
   },
@@ -39990,6 +40056,9 @@
   "machines.access.tool.antigravity": {
     "value": "Antigravity CLI"
   },
+  "machines.access.tool.devin": {
+    "value": "Devin CLI"
+  },
   "machines.access.tool.opencode": {
     "value": "OpenCode"
   },
@@ -40013,6 +40082,9 @@
   },
   "machines.access.toolText.antigravity": {
     "value": "Like Claude Code, with a Gemini account. Only in the allowed folders."
+  },
+  "machines.access.toolText.devin": {
+    "value": "Like Claude Code, with a Devin account. Only in the allowed folders."
   },
   "machines.access.toolText.opencode": {
     "value": "Like Claude Code, with OpenCode's free models or an OpenCode key. Only in the allowed folders."

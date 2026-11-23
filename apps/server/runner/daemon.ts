@@ -588,14 +588,17 @@ export class RunnerDaemon implements RequestObserver {
             ? { homeOnly: (bin: string) => inHomeDirs(bin) !== null }
             : { before: () => addUsualDirs() }),
       });
-    // Grok Build's and Antigravity's models as the accounts signed in here list them: the computer's own
-    // `grok models` and `agy models` are signed out.
+    // Grok Build's, Antigravity's and Devin's models as the accounts signed in here list them: the computer's own
+    // `grok models` and `agy models` are signed out, and the computer's own Devin thinks for no agent.
     this.executors = () => {
       const found: NonNullable<RunnerInfo["executors"]> = { ...exec() };
       const grok = this.accounts?.listedModels("grok");
       if (found.grok && grok) found.grok = { ...found.grok, models: grok };
       const agy = this.accounts?.listedModels("antigravity");
       if (found.antigravity && agy) found.antigravity = { ...found.antigravity, models: agy };
+      // Each family's variants stay here: the turns pick one (`devinTurnModel`).
+      const devin = this.accounts?.listedModels("devin")?.map(({ variants: _v, ...m }) => m);
+      if (found.devin && devin) found.devin = { ...found.devin, models: devin };
       return found;
     };
     this.executorsKnown = () => !("known" in exec) || exec.known === true;
@@ -1186,6 +1189,7 @@ export class RunnerDaemon implements RequestObserver {
       opencode: "OpenCode",
       grok: "Grok Build",
       antigravity: "Antigravity CLI",
+      devin: "Devin CLI",
       commands: "commands",
       browser: "the browser",
       desktop: "the agents' desktops",

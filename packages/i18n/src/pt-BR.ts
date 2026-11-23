@@ -3532,6 +3532,8 @@ export const ptBR = {
       antigravity: "O Gemini está sem login neste computador. Conecte uma conta do Gemini na página do\u00a0{{name}}.",
       antigravity_female:
         "O Gemini está sem login neste computador. Conecte uma conta do Gemini na página da\u00a0{{name}}.",
+      devin: "O Devin está sem login neste computador. Conecte uma conta do Devin na página do\u00a0{{name}}.",
+      devin_female: "O Devin está sem login neste computador. Conecte uma conta do Devin na página da\u00a0{{name}}.",
       opencode:
         "O OpenCode não consegue pensar neste computador. Conecte uma chave do OpenCode na página do\u00a0{{name}}.",
       opencode_female:
@@ -3552,6 +3554,8 @@ export const ptBR = {
       antigravity: "O Gemini está sem login no {{computer}}. Conecte uma conta do Gemini na página do\u00a0{{name}}.",
       antigravity_female:
         "O Gemini está sem login no {{computer}}. Conecte uma conta do Gemini na página da\u00a0{{name}}.",
+      devin: "O Devin está sem login no {{computer}}. Conecte uma conta do Devin na página do\u00a0{{name}}.",
+      devin_female: "O Devin está sem login no {{computer}}. Conecte uma conta do Devin na página da\u00a0{{name}}.",
       opencode:
         "O OpenCode não consegue pensar no {{computer}}. Conecte uma chave do OpenCode na página do\u00a0{{name}}.",
       opencode_female:
@@ -3629,6 +3633,7 @@ export const ptBR = {
       cursor: "Conectar o seu plano do Cursor",
       grok: "Conectar o seu plano do Grok",
       gemini: "Conectar o seu plano do Gemini",
+      devin: "Conectar o seu plano do Devin",
       zen: "Conectar o OpenCode",
       api_key: "Adicionar uma chave de API",
     },
@@ -3789,6 +3794,7 @@ export const ptBR = {
         warning:
           "O Google diz que usar um plano pessoal do Gemini dentro de outros apps pode suspender a conta. Para não correr esse risco, use uma chave de API do Gemini ou o Gemini Enterprise.",
       },
+      devin: { title: "Seu plano do Devin", tiers: "Free, Pro, Max ou Teams" },
       zen: { title: "OpenCode", tiers: "Modelos grátis, ou a sua chave do OpenCode" },
       zai: { tiers: "Lite, Pro ou Max" },
       kimi: { tiers: "Plus, Pro, Max ou Ultra" },
@@ -3891,6 +3897,7 @@ export const ptBR = {
       cursor: "O Cursor entrou como {{email}}, não como {{account}}. Saia na página do Cursor e tente de novo.",
       grok: "O Grok entrou como {{email}}, não como {{account}}. Saia na página do Grok e tente de novo.",
       antigravity: "O Gemini entrou como {{email}}, não como {{account}}. Saia na página do Google e tente de novo.",
+      devin: "O Devin entrou como {{email}}, não como {{account}}. Saia na página do Devin e tente de novo.",
       opencode: "O OpenCode entrou como {{email}}, não como {{account}}. Tente de novo com a chave certa.",
     },
     useAnyway: "Usar {{email}}",
@@ -6290,6 +6297,7 @@ export const ptBR = {
             cursor: "Adicionar conta do Cursor",
             grok: "Adicionar conta do Grok",
             antigravity: "Adicionar conta do Gemini",
+            devin: "Adicionar conta do Devin",
             opencode: "Adicionar chave do OpenCode",
           },
           stepOne: {
@@ -6297,6 +6305,7 @@ export const ptBR = {
             codex: "A conta com o seu plano",
             cursor: "A conta com o seu plano",
             grok: "A conta com o seu plano",
+            devin: "A conta com o seu plano",
             antigravity: "A conta do Google com o seu plano",
             antigravityEnterprise: "A sua conta do Gemini Enterprise",
           },
@@ -6309,6 +6318,7 @@ export const ptBR = {
             cursor: "Entrar com Cursor",
             grok: "Entrar com Grok",
             antigravity: "Entrar com Google",
+            devin: "Entrar com Devin",
           },
           opencodeFree:
             "Os modelos grátis do OpenCode não pedem chave. Uma chave do console do OpenCode libera os pagos.",
@@ -6328,6 +6338,9 @@ export const ptBR = {
           /** The Gemini sign-in's second step: Google's page shows a code and takes it out of its own address. */
           stepTwoGoogle: "Cole o código que o Google mostrar",
           codeLabelGoogle: "Código do Google",
+          stepTwoDevin: "Cole o código que o Devin mostrar",
+          codeHintDevin: "Cole o código que a página do Devin mostra, não o endereço da página.",
+          codeLabelDevin: "Código do Devin",
           /** That step's ⓘ. */
           codeHintGoogle: "Cole o código que a página do Google mostra, não o endereço da página.",
           /** Under the field while it holds an address with no code in it (never sent). */
@@ -6375,6 +6388,8 @@ export const ptBR = {
             grok: "O Grok entrou como {{account}}, uma conta que você já conectou. Para usar outra, saia na página do Grok e tente de novo.",
             antigravity:
               "O Gemini entrou como {{account}}, uma conta que você já conectou. Para usar outra, saia na página do Google e tente de novo.",
+            devin:
+              "O Devin entrou como {{account}}, uma conta que você já conectou. Para usar outra, saia na página do Devin e tente de novo.",
             opencode: "Essa chave do OpenCode já está conectada como {{account}}.",
           },
           startFailed: "O {{computer}} não respondeu. Tente de novo em instantes.",
@@ -11240,6 +11255,7 @@ export const ptBR = {
       cursor: "Cursor",
       grok: "Grok",
       antigravity: "Gemini",
+      devin: "Devin",
       opencode: "OpenCode",
       needs: {
         keys: "Atualize o agentes no computador para usar a chave de um plano",
@@ -12783,6 +12799,7 @@ export const ptBR = {
       cursor: "{{model}} pelo plano do Cursor",
       grok: "{{model}} pelo plano do Grok",
       gemini: "{{model}} pelo plano do Gemini",
+      devin: "{{model}} pelo plano do Devin",
       zen: "{{model}} pelo OpenCode",
       coding: "{{model}} pelo {{plan}}",
       claudeOf: "{{model}} pelo plano do Claude de {{owner}}",
@@ -12790,6 +12807,7 @@ export const ptBR = {
       cursorOf: "{{model}} pelo plano do Cursor de {{owner}}",
       grokOf: "{{model}} pelo plano do Grok de {{owner}}",
       geminiOf: "{{model}} pelo plano do Gemini de {{owner}}",
+      devinOf: "{{model}} pelo plano do Devin de {{owner}}",
       zenOf: "{{model}} pelo OpenCode de {{owner}}",
       codingOf: "{{model}} pelo {{plan}} de {{owner}}",
       claudeAuto: "Plano do Claude",
@@ -12797,6 +12815,7 @@ export const ptBR = {
       cursorAuto: "Plano do Cursor",
       grokAuto: "Plano do Grok",
       geminiAuto: "Plano do Gemini",
+      devinAuto: "Plano do Devin",
       zenAuto: "OpenCode",
       codingAuto: "{{plan}}",
       claudeAutoOf: "Plano do Claude de {{owner}}",
@@ -12804,6 +12823,7 @@ export const ptBR = {
       cursorAutoOf: "Plano do Cursor de {{owner}}",
       grokAutoOf: "Plano do Grok de {{owner}}",
       geminiAutoOf: "Plano do Gemini de {{owner}}",
+      devinAutoOf: "Plano do Devin de {{owner}}",
       zenAutoOf: "OpenCode de {{owner}}",
       codingAutoOf: "{{plan}} de {{owner}}",
       on: "{{line}} no {{computer}}",
@@ -12819,6 +12839,7 @@ export const ptBR = {
       opencode: "OpenCode",
       grok: "Grok Build",
       antigravity: "Antigravity CLI",
+      devin: "Devin CLI",
     },
     foot: {
       api: "Pela API",
@@ -12831,6 +12852,7 @@ export const ptBR = {
     cursorText: "Usa o plano do Cursor de quem conectou o computador.",
     grokText: "Usa o plano do Grok de quem conectou o computador.",
     antigravityText: "Usa o plano do Gemini de quem conectou o computador.",
+    devinText: "Usa o plano do Devin de quem conectou o computador.",
     opencodeText: "Os modelos grátis do OpenCode, ou a chave do OpenCode de quem conectou o computador.",
     /** Cursor's models (ADR 0114), where its CLI said which the plan includes. */
     cursorModel: { inPlan: "No seu plano do Cursor", apiPrice: "O Cursor cobra pelo preço da API" },
@@ -12899,6 +12921,7 @@ export const ptBR = {
       cursor: "Cursor · {{model}}",
       grok: "Grok Build · {{model}}",
       antigravity: "Antigravity CLI · {{model}}",
+      devin: "Devin CLI · {{model}}",
       opencode: "OpenCode · {{model}}",
     },
     mission: {
@@ -16486,6 +16509,7 @@ export const ptBR = {
         opencode: "o OpenCode",
         grok: "o Grok Build",
         antigravity: "o Antigravity CLI",
+        devin: "o Devin CLI",
         commands: "os comandos",
         browser: "o navegador",
         desktop: "a tela",
@@ -16637,6 +16661,7 @@ export const ptBR = {
         cursor: "Cursor",
         grok: "Grok Build",
         antigravity: "Antigravity CLI",
+        devin: "Devin CLI",
         opencode: "OpenCode",
         commands: "Comandos",
         browser: "Navegador",
@@ -16648,6 +16673,7 @@ export const ptBR = {
         cursor: "Como o Claude Code, com uma conta do Cursor. Só nas pastas liberadas.",
         grok: "Como o Claude Code, com uma conta do Grok. Só nas pastas liberadas.",
         antigravity: "Como o Claude Code, com uma conta do Gemini. Só nas pastas liberadas.",
+        devin: "Como o Claude Code, com uma conta do Devin. Só nas pastas liberadas.",
         opencode: "Como o Claude Code, com os modelos grátis do OpenCode ou uma chave dele. Só nas pastas liberadas.",
         commands: "Roda comandos do Terminal, como testes e builds.",
       },

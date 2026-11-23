@@ -3238,6 +3238,7 @@
       "cursor": "このコンピューターでCursorにログインしていません。{{name}}のページでCursorアカウントを接続してください。",
       "grok": "このコンピューターでGrokにログインしていません。{{name}}のページでGrokアカウントを接続してください。",
       "antigravity": "このコンピューターでGeminiにログインしていません。{{name}}のページでGeminiアカウントを接続してください。",
+      "devin": "このコンピューターでDevinにログインしていません。{{name}}のページでDevinアカウントを接続してください。",
       "opencode": "このコンピューターではOpenCodeが動きません。{{name}}のページでOpenCodeのキーを接続してください。"
     },
     "notSignedInOn": {
@@ -3246,6 +3247,7 @@
       "cursor": "{{computer}}でCursorにログインしていません。{{name}}のページでCursorアカウントを接続してください。",
       "grok": "{{computer}}でGrokにログインしていません。{{name}}のページでGrokアカウントを接続してください。",
       "antigravity": "{{computer}}でGeminiにログインしていません。{{name}}のページでGeminiアカウントを接続してください。",
+      "devin": "{{computer}}でDevinにログインしていません。{{name}}のページでDevinアカウントを接続してください。",
       "opencode": "{{computer}}ではOpenCodeが動きません。{{name}}のページでOpenCodeのキーを接続してください。"
     },
     "card": {
@@ -3304,6 +3306,7 @@
       "cursor": "Cursorのプランを接続",
       "grok": "Grokのプランを接続",
       "gemini": "Geminiのプランを接続",
+      "devin": "Devinのプランを接続",
       "zen": "OpenCodeを接続",
       "api_key": "APIキーを追加"
     },
@@ -3428,6 +3431,10 @@
         "tiers": "Google AI Pro、Google AI Ultra、またはGemini Enterprise",
         "warning": "Googleによると、個人のGeminiプランを他のアプリ内で使うと、アカウントが停止されることがあります。このリスクを避けるには、Gemini APIキーまたはGemini Enterpriseを使ってください。"
       },
+      "devin": {
+        "title": "あなたのDevinプラン",
+        "tiers": "Free、Pro、Max、Teams"
+      },
       "zen": {
         "title": "OpenCode",
         "tiers": "無料モデル、またはあなたのOpenCodeキー"
@@ -3533,6 +3540,7 @@
       "cursor": "Cursorは{{account}}ではなく{{email}}でログインしています。Cursorのページでログアウトして、もう一度お試しください。",
       "grok": "Grokは{{account}}ではなく{{email}}でログインしています。Grokのページでログアウトして、もう一度お試しください。",
       "antigravity": "Geminiは{{account}}ではなく{{email}}でログインしています。Googleのページでログアウトして、もう一度お試しください。",
+      "devin": "Devinは{{account}}ではなく{{email}}でログインしています。Devinのページでログアウトして、もう一度お試しください。",
       "opencode": "OpenCodeは{{account}}ではなく{{email}}でログインしました。正しいキーでもう一度お試しください。"
     },
     "useAnyway": "{{email}}を使う",
@@ -5722,6 +5730,7 @@
             "cursor": "Cursorアカウントを追加",
             "grok": "Grokアカウントを追加",
             "antigravity": "Geminiアカウントを追加",
+            "devin": "Devinアカウントを追加",
             "opencode": "OpenCodeのキーを追加"
           },
           "stepOne": {
@@ -5729,6 +5738,7 @@
             "codex": "プランを契約しているアカウント",
             "cursor": "プランを契約しているアカウント",
             "grok": "プランを契約しているアカウント",
+            "devin": "プランを契約しているアカウント",
             "antigravity": "プランを契約しているGoogleアカウント",
             "antigravityEnterprise": "あなたのGemini Enterpriseアカウント"
           },
@@ -5738,7 +5748,8 @@
             "codex": "ChatGPTでログイン",
             "cursor": "Cursorでログイン",
             "grok": "Grokでログイン",
-            "antigravity": "Googleでログイン"
+            "antigravity": "Googleでログイン",
+            "devin": "Devinでログイン"
           },
           "opencodeFree": "OpenCodeの無料モデルにキーは不要です。OpenCodeのコンソールのキーで有料モデルも使えます。",
           "cursorFinish": "Cursorのページでログインすると、{{computer}}でのログインは自動で完了します。",
@@ -5753,6 +5764,9 @@
           "notCode": "Claudeのコードではないようです。",
           "stepTwoGoogle": "Google に表示されたコードを貼り付けてください",
           "codeLabelGoogle": "Googleのコード",
+          "stepTwoDevin": "Devin に表示されたコードを貼り付けてください",
+          "codeHintDevin": "ページのアドレスではなく、Devinのページに表示されたコードを貼り付けてください。",
+          "codeLabelDevin": "Devinのコード",
           "codeHintGoogle": "ページのアドレスではなく、Googleのページに表示されたコードを貼り付けてください。",
           "notCodeGoogle": "これはコードを含まないアドレスです。Googleのページに表示されたコードを貼り付けてください。",
           "send": "{{computer}}に送信",
@@ -5786,6 +5800,7 @@
             "cursor": "Cursorは{{account}}でログインしましたが、このアカウントはすでに接続済みです。別のアカウントを使うには、Cursorのページでログアウトしてからもう一度お試しください。",
             "grok": "Grokは{{account}}でログインしましたが、このアカウントはすでに接続済みです。別のアカウントを使うには、Grokのページでログアウトしてからもう一度お試しください。",
             "antigravity": "Geminiは{{account}}でログインしましたが、このアカウントはすでに接続済みです。別のアカウントを使うには、Googleのページでログアウトしてからもう一度お試しください。",
+            "devin": "Devinは{{account}}でログインしましたが、このアカウントはすでに接続済みです。別のアカウントを使うには、Devinのページでログアウトしてからもう一度お試しください。",
             "opencode": "そのOpenCodeキーは{{account}}としてすでに接続されています。"
           },
           "startFailed": "{{computer}}から応答がありません。少し待ってからもう一度お試しください。",
@@ -10388,6 +10403,7 @@
       "cursor": "Cursor",
       "grok": "Grok",
       "antigravity": "Gemini",
+      "devin": "Devin",
       "opencode": "OpenCode",
       "needs": {
         "keys": "プランのキーを使うには、コンピューターのagentesをアップデートしてください"
@@ -11811,6 +11827,7 @@
       "cursor": "Cursorプランの{{model}}",
       "grok": "Grokプランの{{model}}",
       "gemini": "Geminiプランの{{model}}",
+      "devin": "Devinプランの{{model}}",
       "zen": "OpenCodeの{{model}}",
       "coding": "{{plan}}の{{model}}",
       "claudeOf": "{{owner}}のClaudeプランの{{model}}",
@@ -11818,6 +11835,7 @@
       "cursorOf": "{{owner}}のCursorプランの{{model}}",
       "grokOf": "{{owner}}のGrokプランの{{model}}",
       "geminiOf": "{{owner}}のGeminiプランの{{model}}",
+      "devinOf": "{{owner}}のDevinプランの{{model}}",
       "zenOf": "{{owner}}のOpenCodeの{{model}}",
       "codingOf": "{{owner}}の{{plan}}の{{model}}",
       "claudeAuto": "Claudeプラン",
@@ -11825,6 +11843,7 @@
       "cursorAuto": "Cursorプラン",
       "grokAuto": "Grokプラン",
       "geminiAuto": "Geminiプラン",
+      "devinAuto": "Devinプラン",
       "zenAuto": "OpenCode",
       "codingAuto": "{{plan}}",
       "claudeAutoOf": "{{owner}}のClaudeプラン",
@@ -11832,6 +11851,7 @@
       "cursorAutoOf": "{{owner}}のCursorプラン",
       "grokAutoOf": "{{owner}}のGrokプラン",
       "geminiAutoOf": "{{owner}}のGeminiプラン",
+      "devinAutoOf": "{{owner}}のDevinプラン",
       "zenAutoOf": "{{owner}}のOpenCode",
       "codingAutoOf": "{{owner}}の{{plan}}",
       "on": "{{computer}}上の{{line}}"
@@ -11845,7 +11865,8 @@
       "cursor": "Cursor",
       "opencode": "OpenCode",
       "grok": "Grok Build",
-      "antigravity": "Antigravity CLI"
+      "antigravity": "Antigravity CLI",
+      "devin": "Devin CLI"
     },
     "foot": {
       "api": "API経由",
@@ -11858,6 +11879,7 @@
     "cursorText": "コンピューターを接続した人のCursorプランを使います。",
     "grokText": "コンピューターを接続した人のGrokプランを使います。",
     "antigravityText": "コンピューターを接続した人のGeminiプランを使います。",
+    "devinText": "コンピューターを接続した人のDevinプランを使います。",
     "opencodeText": "OpenCodeの無料モデル、またはコンピューターを接続した人のOpenCodeキーを使います。",
     "cursorModel": {
       "inPlan": "Cursorプランに含まれます",
@@ -11916,6 +11938,7 @@
       "cursor": "Cursor · {{model}}",
       "grok": "Grok Build · {{model}}",
       "antigravity": "Antigravity CLI · {{model}}",
+      "devin": "Devin CLI · {{model}}",
       "opencode": "OpenCode · {{model}}"
     },
     "mission": {
@@ -15557,6 +15580,7 @@
         "opencode": "OpenCode",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "devin": "Devin CLI",
         "commands": "コマンド",
         "browser": "ブラウザ",
         "desktop": "画面",
@@ -15714,6 +15738,7 @@
         "cursor": "Cursor",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "devin": "Devin CLI",
         "opencode": "OpenCode",
         "commands": "コマンド",
         "browser": "ブラウザ"
@@ -15724,6 +15749,7 @@
         "cursor": "Claude Codeと同様で、Cursorアカウントを使います。許可されたフォルダ内のみです。",
         "grok": "Claude Codeと同様で、Grokアカウントを使います。許可されたフォルダ内のみです。",
         "antigravity": "Claude Codeと同様で、Geminiアカウントを使います。許可されたフォルダ内のみです。",
+        "devin": "Claude Codeと同様で、Devinアカウントを使います。許可されたフォルダ内のみです。",
         "opencode": "Claude Codeと同様で、OpenCodeの無料モデルかOpenCodeキーを使います。許可されたフォルダ内のみです。",
         "commands": "テストやビルドなど、ターミナルのコマンドを実行します。"
       },

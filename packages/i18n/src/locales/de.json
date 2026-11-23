@@ -3380,6 +3380,8 @@
       "grok_female": "Grok ist auf diesem Computer nicht angemeldet. Verbinde ein Grok-Konto auf der Seite von {{name}}.",
       "antigravity": "Gemini ist auf diesem Computer nicht angemeldet. Verbinde ein Gemini-Konto auf der Seite von {{name}}.",
       "antigravity_female": "Gemini ist auf diesem Computer nicht angemeldet. Verbinde ein Gemini-Konto auf der Seite von {{name}}.",
+      "devin": "Devin ist auf diesem Computer nicht angemeldet. Verbinde ein Devin-Konto auf der Seite von {{name}}.",
+      "devin_female": "Devin ist auf diesem Computer nicht angemeldet. Verbinde ein Devin-Konto auf der Seite von {{name}}.",
       "opencode": "OpenCode kann auf diesem Computer nicht denken. Verbinde einen OpenCode-Schlüssel auf der Seite von {{name}}.",
       "opencode_female": "OpenCode kann auf diesem Computer nicht denken. Verbinde einen OpenCode-Schlüssel auf der Seite von {{name}}."
     },
@@ -3394,6 +3396,8 @@
       "grok_female": "Grok ist auf {{computer}} nicht angemeldet. Verbinde ein Grok-Konto auf der Seite von {{name}}.",
       "antigravity": "Gemini ist auf {{computer}} nicht angemeldet. Verbinde ein Gemini-Konto auf der Seite von {{name}}.",
       "antigravity_female": "Gemini ist auf {{computer}} nicht angemeldet. Verbinde ein Gemini-Konto auf der Seite von {{name}}.",
+      "devin": "Devin ist auf {{computer}} nicht angemeldet. Verbinde ein Devin-Konto auf der Seite von {{name}}.",
+      "devin_female": "Devin ist auf {{computer}} nicht angemeldet. Verbinde ein Devin-Konto auf der Seite von {{name}}.",
       "opencode": "OpenCode kann auf {{computer}} nicht denken. Verbinde einen OpenCode-Schlüssel auf der Seite von {{name}}.",
       "opencode_female": "OpenCode kann auf {{computer}} nicht denken. Verbinde einen OpenCode-Schlüssel auf der Seite von {{name}}."
     },
@@ -3453,6 +3457,7 @@
       "cursor": "Dein Cursor-Abo verbinden",
       "grok": "Dein Grok-Abo verbinden",
       "gemini": "Dein Gemini-Abo verbinden",
+      "devin": "Dein Devin-Abo verbinden",
       "zen": "OpenCode verbinden",
       "api_key": "API-Schlüssel hinzufügen"
     },
@@ -3583,6 +3588,10 @@
         "tiers": "Google AI Pro, Google AI Ultra oder Gemini Enterprise",
         "warning": "Google sagt, dass die Nutzung eines privaten Gemini-Abos in anderen Apps zur Sperrung des Kontos führen kann. Um dieses Risiko zu vermeiden, nutze einen Gemini-API-Schlüssel oder Gemini Enterprise."
       },
+      "devin": {
+        "title": "Dein Devin-Abo",
+        "tiers": "Free, Pro, Max oder Teams"
+      },
       "zen": {
         "title": "OpenCode",
         "tiers": "Kostenlose Modelle oder dein OpenCode-Schlüssel"
@@ -3688,6 +3697,7 @@
       "cursor": "Cursor ist als {{email}} angemeldet, nicht als {{account}}. Melde dich auf der Seite von Cursor ab und versuch es noch einmal.",
       "grok": "Grok ist als {{email}} angemeldet, nicht als {{account}}. Melde dich auf der Seite von Grok ab und versuch es noch einmal.",
       "antigravity": "Gemini ist als {{email}} angemeldet, nicht als {{account}}. Melde dich auf der Seite von Google ab und versuch es noch einmal.",
+      "devin": "Devin ist als {{email}} angemeldet, nicht als {{account}}. Melde dich auf der Seite von Devin ab und versuch es noch einmal.",
       "opencode": "OpenCode ist als {{email}} angemeldet, nicht als {{account}}. Versuch es mit dem richtigen Schlüssel noch einmal."
     },
     "useAnyway": "{{email}} nutzen",
@@ -5958,6 +5968,7 @@
             "cursor": "Cursor-Konto hinzufügen",
             "grok": "Grok-Konto hinzufügen",
             "antigravity": "Gemini-Konto hinzufügen",
+            "devin": "Devin-Konto hinzufügen",
             "opencode": "OpenCode-Schlüssel hinzufügen"
           },
           "stepOne": {
@@ -5965,6 +5976,7 @@
             "codex": "Das Konto mit deinem Abo",
             "cursor": "Das Konto mit deinem Abo",
             "grok": "Das Konto mit deinem Abo",
+            "devin": "Das Konto mit deinem Abo",
             "antigravity": "Das Google-Konto mit deinem Abo",
             "antigravityEnterprise": "Dein Gemini-Enterprise-Konto"
           },
@@ -5974,7 +5986,8 @@
             "codex": "Mit ChatGPT anmelden",
             "cursor": "Mit Cursor anmelden",
             "grok": "Mit Grok anmelden",
-            "antigravity": "Mit Google anmelden"
+            "antigravity": "Mit Google anmelden",
+            "devin": "Mit Devin anmelden"
           },
           "opencodeFree": "Die kostenlosen Modelle von OpenCode brauchen keinen Schlüssel. Ein Schlüssel aus der OpenCode-Konsole fügt die kostenpflichtigen hinzu.",
           "cursorFinish": "Melde dich auf der Seite von Cursor an, dann schließt sich die Anmeldung auf {{computer}} von selbst ab.",
@@ -5989,6 +6002,9 @@
           "notCode": "Das sieht nicht nach einem Code von Claude aus.",
           "stepTwoGoogle": "Füge den Code ein, den Google anzeigt",
           "codeLabelGoogle": "Code von Google",
+          "stepTwoDevin": "Füge den Code ein, den Devin anzeigt",
+          "codeHintDevin": "Füge den Code ein, den die Devin-Seite anzeigt, nicht die Adresse der Seite.",
+          "codeLabelDevin": "Code von Devin",
           "codeHintGoogle": "Füge den Code ein, den die Google-Seite anzeigt, nicht die Adresse der Seite.",
           "notCodeGoogle": "Das ist eine Adresse ohne Code. Füge den Code ein, den die Google-Seite anzeigt.",
           "send": "An {{computer}} senden",
@@ -6022,6 +6038,7 @@
             "cursor": "Cursor hat sich als {{account}} angemeldet, ein Konto, das du schon verbunden hast. Für ein anderes meldest du dich auf der Seite von Cursor ab und versuchst es noch einmal.",
             "grok": "Grok hat sich als {{account}} angemeldet, ein Konto, das du schon verbunden hast. Für ein anderes meldest du dich auf der Seite von Grok ab und versuchst es noch einmal.",
             "antigravity": "Gemini hat sich als {{account}} angemeldet, ein Konto, das du schon verbunden hast. Für ein anderes meldest du dich auf der Seite von Google ab und versuchst es noch einmal.",
+            "devin": "Devin hat sich als {{account}} angemeldet, ein Konto, das du schon verbunden hast. Für ein anderes meldest du dich auf der Seite von Devin ab und versuchst es noch einmal.",
             "opencode": "Dieser OpenCode-Schlüssel ist schon als {{account}} verbunden."
           },
           "startFailed": "Keine Antwort von {{computer}}. Versuch es gleich noch einmal.",
@@ -10821,6 +10838,7 @@
       "cursor": "Cursor",
       "grok": "Grok",
       "antigravity": "Gemini",
+      "devin": "Devin",
       "opencode": "OpenCode",
       "needs": {
         "keys": "Aktualisiere agentes auf dem Computer, um den Schlüssel eines Abos zu nutzen"
@@ -12310,6 +12328,7 @@
       "cursor": "{{model}} über das Cursor-Abo",
       "grok": "{{model}} über das Grok-Abo",
       "gemini": "{{model}} über das Gemini-Abo",
+      "devin": "{{model}} über das Devin-Abo",
       "zen": "{{model}} über OpenCode",
       "coding": "{{model}} über {{plan}}",
       "claudeOf": "{{model}} über das Claude-Abo von {{owner}}",
@@ -12317,6 +12336,7 @@
       "cursorOf": "{{model}} über das Cursor-Abo von {{owner}}",
       "grokOf": "{{model}} über das Grok-Abo von {{owner}}",
       "geminiOf": "{{model}} über das Gemini-Abo von {{owner}}",
+      "devinOf": "{{model}} über das Devin-Abo von {{owner}}",
       "zenOf": "{{model}} über das OpenCode von {{owner}}",
       "codingOf": "{{model}} über {{plan}} von {{owner}}",
       "claudeAuto": "Claude-Abo",
@@ -12324,6 +12344,7 @@
       "cursorAuto": "Cursor-Abo",
       "grokAuto": "Grok-Abo",
       "geminiAuto": "Gemini-Abo",
+      "devinAuto": "Devin-Abo",
       "zenAuto": "OpenCode",
       "codingAuto": "{{plan}}",
       "claudeAutoOf": "Claude-Abo von {{owner}}",
@@ -12331,6 +12352,7 @@
       "cursorAutoOf": "Cursor-Abo von {{owner}}",
       "grokAutoOf": "Grok-Abo von {{owner}}",
       "geminiAutoOf": "Gemini-Abo von {{owner}}",
+      "devinAutoOf": "Devin-Abo von {{owner}}",
       "zenAutoOf": "OpenCode von {{owner}}",
       "codingAutoOf": "{{plan}} von {{owner}}",
       "on": "{{line}} auf {{computer}}"
@@ -12344,7 +12366,8 @@
       "cursor": "Cursor",
       "opencode": "OpenCode",
       "grok": "Grok Build",
-      "antigravity": "Antigravity CLI"
+      "antigravity": "Antigravity CLI",
+      "devin": "Devin CLI"
     },
     "foot": {
       "api": "Über die API",
@@ -12357,6 +12380,7 @@
     "cursorText": "Nutzt das Cursor-Abo der Person, die den Computer verbunden hat.",
     "grokText": "Nutzt das Grok-Abo der Person, die den Computer verbunden hat.",
     "antigravityText": "Nutzt das Gemini-Abo der Person, die den Computer verbunden hat.",
+    "devinText": "Nutzt das Devin-Abo der Person, die den Computer verbunden hat.",
     "opencodeText": "Die kostenlosen Modelle von OpenCode oder der OpenCode-Schlüssel der Person, die den Computer verbunden hat.",
     "cursorModel": {
       "inPlan": "In deinem Cursor-Abo",
@@ -12415,6 +12439,7 @@
       "cursor": "Cursor · {{model}}",
       "grok": "Grok Build · {{model}}",
       "antigravity": "Antigravity CLI · {{model}}",
+      "devin": "Devin CLI · {{model}}",
       "opencode": "OpenCode · {{model}}"
     },
     "mission": {
@@ -16141,6 +16166,7 @@
         "opencode": "OpenCode",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "devin": "Devin CLI",
         "commands": "die Befehle",
         "browser": "den Browser",
         "desktop": "den Bildschirm",
@@ -16298,6 +16324,7 @@
         "cursor": "Cursor",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "devin": "Devin CLI",
         "opencode": "OpenCode",
         "commands": "Befehle",
         "browser": "Browser"
@@ -16308,6 +16335,7 @@
         "cursor": "Wie Claude Code, mit einem Cursor-Konto. Nur in den erlaubten Ordnern.",
         "grok": "Wie Claude Code, mit einem Grok-Konto. Nur in den erlaubten Ordnern.",
         "antigravity": "Wie Claude Code, mit einem Gemini-Konto. Nur in den erlaubten Ordnern.",
+        "devin": "Wie Claude Code, mit einem Devin-Konto. Nur in den erlaubten Ordnern.",
         "opencode": "Wie Claude Code, mit den kostenlosen Modellen von OpenCode oder einem OpenCode-Schlüssel. Nur in den erlaubten Ordnern.",
         "commands": "Führt Terminal-Befehle aus, etwa Tests und Builds."
       },

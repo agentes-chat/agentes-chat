@@ -506,6 +506,8 @@
     "grokDesc": "Пишет и меняет код в разрешённых папках, с вашим аккаунтом Grok.",
     "antigravityName": "Antigravity CLI",
     "antigravityDesc": "Пишет и меняет код в разрешённых папках, с вашим аккаунтом Gemini.",
+    "devinName": "Devin CLI",
+    "devinDesc": "Пишет и меняет код в разрешённых папках, с вашим аккаунтом Devin.",
     "found": "Найден",
     "notFound": "Не найден",
     "loggedOut": "Вход не выполнен",
