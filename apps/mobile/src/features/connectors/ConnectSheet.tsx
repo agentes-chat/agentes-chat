@@ -145,7 +145,8 @@ function StepHead({
  * connecting: `add`, another account of the service, or `reconnect`, a new sign-in for `item` (a toast says it, and
  * the sheet closes). `account`: GitHub's sign-in alone, without the agentes.chat app first (GitHub through the app
  * alone connecting an account). `personal`: opened from Pessoal, so a connection already there is the person's own and
- * a new one starts as theirs (who may not add the team's connects their own whatever this says).
+ * a new one starts as theirs (who may not add the team's connects their own whatever this says). `fromPage`: opened by
+ * the service's own page, which already said what agents do there: a new one goes straight to connecting.
  */
 export function ConnectSheet({
   def,
@@ -154,6 +155,7 @@ export function ConnectSheet({
   mode,
   account = false,
   personal = false,
+  fromPage = false,
 }: {
   def: ConnectorDef;
   item?: ConnectedItem;
@@ -161,6 +163,7 @@ export function ConnectSheet({
   mode?: "add" | "reconnect";
   account?: boolean;
   personal?: boolean;
+  fromPage?: boolean;
 }) {
   const { t } = useTranslation();
   const { org } = useOrg();
@@ -180,7 +183,9 @@ export function ConnectSheet({
   const mayConnect = existing ? connectionActs(existing, me, admin).change : admin || personalAllowed(def.id);
   const connecting = Boolean(mode) || account;
   // Where it opens, decided once: the steps after it are sheets over it.
-  const [first] = useState<Step>(() => (connecting ? "connect" : firstStep(existing, mayConnect, start)));
+  const [first] = useState<Step>(() =>
+    connecting || (fromPage && !existing && mayConnect) ? "connect" : firstStep(existing, mayConnect, start),
+  );
   const service = connectorName(t, def);
   const head: FlowHead = {
     def,

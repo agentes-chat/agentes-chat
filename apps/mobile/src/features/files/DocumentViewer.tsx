@@ -39,8 +39,8 @@ import { fileText } from "./source";
  * spreadsheet's grid, a deck's slides, a Word document's page) and an old table in the same grid, anything else says
  * it opens in another app. Pictures and videos open straight in the picture viewer (`openFile`), live files on their
  * own screens (ADR 0196); one reached here anyway (a file's link that didn't say what it was) goes on there, and a link
- * to a message of a picture's or a video's conversation opens the viewer with that conversation's sheet at it (ADR
- * 0208). A PDF has its conversation's line under it, its sheet coming up over the pages.
+ * to a message of a picture's or a video's conversation opens the viewer, its conversation pushed over it at the
+ * message (ADR 0208). A PDF has its conversation's line under it, which pushes the conversation over the pages.
  */
 export function DocumentViewer({
   id,
@@ -76,7 +76,7 @@ export function DocumentViewer({
   useEffect(() => {
     if (!media || !detail) return;
     if (isLiveFileKind(detail.kind)) router.replace(liveRoute(detail.kind, detail.id, focusId));
-    // A picture's or a video's: the viewer, its conversation's sheet coming up over it at the message (ADR 0208).
+    // A picture's or a video's: the viewer, its conversation pushed over it at the message (ADR 0208).
     else if (focusId && mediaKindOfArtifact(detail)) {
       const route = fileRoute({ id: detail.id, detail });
       router.replace({ ...route, params: { ...route.params, m: focusId } });
@@ -183,8 +183,7 @@ export function DocumentViewer({
           }
         />
       )}
-      {/* Under the sheet it keeps its place, unseen: the pages never lay out again as the sheet comes and goes. */}
-      {pdfTalk ? <FileTalkLine file={pdfTalk} keepPlace /> : null}
+      {pdfTalk ? <FileTalkLine file={pdfTalk} /> : null}
     </>
   );
 }

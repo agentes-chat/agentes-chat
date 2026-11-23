@@ -33,6 +33,7 @@ import {
   UUID,
 } from "../authority";
 import { type CostKind, costlyGate, costlyKind, LONG_STEPS, unrequested } from "../brakes";
+import { CODE_SESSION_HIDDEN_TOOLS } from "../code-session-tools";
 import {
   CONFIDENTIAL_STUB,
   markThreadConfidential,
@@ -624,6 +625,9 @@ export function createToolGateway(deps: {
       for (const tool of list) {
         if (!TOOL_NAME.test(tool.name)) continue;
         if (rightHand && RIGHT_HAND_NOT_OFFERED.has(tool.name)) continue;
+        // A code session's conversation (ADR 0215) has no place for these, whatever thinks for the run: neither
+        // listed nor called.
+        if (ctx.codeSession && CODE_SESSION_HIDDEN_TOOLS.has(tool.name)) continue;
         const current = byName.get(tool.name);
         // A connected MCP server must not shadow one of our own tools just
         // because its source appears earlier in the list.

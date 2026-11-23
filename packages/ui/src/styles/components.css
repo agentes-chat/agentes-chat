@@ -3267,6 +3267,8 @@ html:not([data-pointer]) .ac-tab:focus-visible {
 .ac-dialog__foot > .ac-btn--ghost:not(.ac-btn--icon):last-child,
 .ac-dialog__foot-acts > .ac-btn--ghost:not(.ac-btn--icon):last-child {
   margin-inline-end: calc(-1 * var(--ghost-plate));
+  /* Its plate reaches past the buttons' group, which is that much narrower than it: never cut for the plate. */
+  max-width: calc(100% + var(--ghost-plate));
 }
 /* Its group is as wide as its words less that reach: the cap gives the reach back, or "Agora não" ends in an ellipsis. */
 .ac-dialog__foot-acts > .ac-btn--ghost:not(.ac-btn--icon):last-child {
@@ -4271,6 +4273,10 @@ html:not([data-pointer]) .ac-receipt__action:focus-visible {
 }
 .ac-popover:focus {
   outline: none;
+}
+/* What an anchored popover is placed by: its trigger's own box, no line of text around it. */
+.ac-popover__anchor {
+  display: inline-flex;
 }
 /* Rows of a menu (Mais): a menu's 2 between them, so its separator has a menu's room too. */
 .ac-popover:has(> .ac-menu__item) {
@@ -9205,6 +9211,17 @@ html:not([data-pointer]) button.ac-tools__row:focus-visible {
 }
 .ac-tools__label b {
   font-weight: 500;
+}
+/* What a computer's CLI worked on (a file, a pattern, a command): mono, one line, cut at its end; the whole of it on
+   hover. */
+.ac-tools__target {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 12px / 20px var(--font-mono, ui-monospace, monospace);
+  color: var(--muted);
 }
 /* The grey words after it (a tool's name, the start of another agent's answer) never grow the line: two lines at
    most, as on the phone; the whole answer reads where the line opens. */

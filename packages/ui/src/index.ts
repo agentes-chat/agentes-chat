@@ -399,6 +399,7 @@ export {
   type ToolBlockItem,
   type ToolBlockLine,
   type ToolBlockState,
+  ToolLink,
 } from "./components/ToolBlock";
 export {
   FilterToggle,

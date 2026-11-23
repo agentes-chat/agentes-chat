@@ -91,7 +91,7 @@
     "chats": "チャット",
     "threads": "スレッド",
     "agents": "エージェント",
-    "activity": "アクティビティ",
+    "activity": "受信トレイ",
     "search": "検索",
     "withCount": "{{label}}、{{count}}"
   },
@@ -183,6 +183,12 @@
     },
     "pinned": "ピン留め",
     "recent": "最近",
+    "view": {
+      "title": "会話の表示",
+      "sectors": "部署",
+      "dms": "ダイレクトメッセージ",
+      "channels": "チャンネル"
+    },
     "seeAll": "すべてのチャットを表示",
     "splitEmpty": "チャットはここに表示されます。",
     "wait": {
@@ -316,6 +322,9 @@
   },
   "chat": {
     "someone": "誰か",
+    "handedTo": "{{name}}に引き継ぎ",
+    "handedTo_female": "{{name}}に引き継ぎ",
+    "pairAsked": "{{from}}が質問",
     "messageTo": "{{name}}にメッセージ",
     "messageIn": "{{channel}}にメッセージ",
     "reply": "返信",
@@ -836,7 +845,7 @@
     }
   },
   "activity": {
-    "title": "アクティビティ",
+    "title": "受信トレイ",
     "chooseModel": "別のモデルを選ぶ",
     "filter": {
       "all": "すべて",
@@ -962,6 +971,46 @@
     "add": "追加",
     "addA11y": "{{name}}をチャンネルに追加",
     "added": "{{name}}がチャンネルに参加しました"
+  },
+  "settingsSearch": {
+    "open": "設定を検索",
+    "title": "検索",
+    "placeholder": "あなたと設定を検索",
+    "workspace": "ワークスペースの設定",
+    "words": {
+      "status": "不在, 取り込み中, 在席, オンライン",
+      "account": "名前, 写真, メール, タイムゾーン, パスワード, ハンドル",
+      "deleteAccount": "削除, 消去, アカウントを閉じる",
+      "workspaces": "切り替え, サーバー, アカウント",
+      "notifications": "通知, プッシュ, バッジ",
+      "approvals": "承認, 委任",
+      "start": "開く, ホーム, 最初の画面",
+      "activity": "ツール, エージェントがしたこと",
+      "chatLook": "吹き出し, メッセージ, 会話",
+      "wallpaper": "背景, 壁紙, 写真",
+      "agentStyle": "技術的, シンプル, 口調",
+      "sounds": "サウンド, 消音, マナー",
+      "appearance": "テーマ, ダーク, ライト, モード",
+      "appIcon": "アイコン",
+      "language": "言語, 日本語, 英語",
+      "about": "バージョン, ライセンス",
+      "aiAccounts": "キー, API, プロバイダ, プラン, モデル",
+      "general": "名前, ロゴ, タイムゾーン, コンテキスト",
+      "media": "GIF, ステッカー",
+      "members": "メンバー, チーム",
+      "invites": "招待, 招待状, リンク",
+      "roles": "権限, ロール",
+      "usage": "費用, 支出, プラン, トークン, 予算",
+      "connectors": "連携, MCP, サービス",
+      "skills": "スキル",
+      "vault": "パスワード, キー, ログイン, シークレット",
+      "access": "権限, エージェントのアクセス",
+      "apps": "AIアプリ, MCP",
+      "computers": "デバイス, マシン, コンピュータ, スマホ",
+      "storage": "ファイル, S3, ストレージ",
+      "import": "エクスポート, インポート, 移行",
+      "audit": "ログ, 履歴"
+    }
   },
   "me": {
     "title": "あなた",
@@ -1158,11 +1207,8 @@
     },
     "talk": {
       "hint": {
-        "image": "コメントしたい場所をタップします",
-        "video": "動画をタップすると、この場面にコメントできます",
-        "pdf": "ページをタップして位置を指定します"
+        "pdf": "ページを長押しして位置を指定します"
       },
-      "markVideo": "動画のこの場面にコメント",
       "pdfPage": "{{page}} / {{count}} ページ",
       "pdfFailed": "このPDFを表示できませんでした。"
     }
@@ -1347,6 +1393,19 @@
       "day": "日",
       "monthDay": "{{day}}日",
       "lastDay": "末日"
+    }
+  },
+  "coding": {
+    "pill": "{{who}}。コードを見る",
+    "seeChanges": "変更を見る",
+    "project": "プロジェクト",
+    "whereSearch": "検索するか名前を入力",
+    "listed": "エージェントのもの",
+    "commit": "コミット {{short}}",
+    "waiting": "あなたの対応待ち",
+    "next": {
+      "pr": "ブランチはプッシュ済み、プルリクエストはまだ",
+      "mergeLocal": "{{base}}にマージする準備ができています"
     }
   },
   "taskManager": {
@@ -1938,18 +1997,14 @@
     "mcps": "MCP",
     "mcpsNone": "アドレスで接続したMCPサーバーがここに表示されます。",
     "addMcp": "MCPを追加",
-    "add": "追加",
-    "allServices": "すべてのサービス",
     "waitLine_other": "{{count}}個のツールがあなたの対応待ち",
     "toolsWait_other": "{{count}}個があなたの対応待ち",
     "connectedState": "接続済み",
     "connected": "接続済み",
-    "suggested": "{{org}}へのおすすめ",
-    "all": "すべて",
+    "seeAll": "すべて表示",
     "noResults": "その名前のサービスはありません。アドレスで試してください。",
     "soon": "近日公開",
     "loadFailed": "コネクタを読み込めませんでした。",
-    "connectedCheck": "{{name}}、接続済み",
     "adminsOnly": "サービスを接続できるのは{{org}}の管理者だけです。管理者に頼んでください。",
     "adminsOnlyPersonal": "アプリを接続できるのは、このワークスペースを管理している人だけです。その人に頼んでください。",
     "canTitle": "エージェントができるようになること",
@@ -1993,6 +2048,31 @@
     "disconnect": "接続を解除",
     "disconnected": "{{name}}の接続を解除しました。",
     "usedBy_other": "{{names}}が使用中",
+    "page": {
+      "missing": "このサービスはカタログにありません。",
+      "connected": "接続済み",
+      "open": "接続を開く",
+      "category": "カテゴリ",
+      "tools": "ツール",
+      "toolsAsk_other": "{{count}}件は承認が必要",
+      "toolsAskNone": "承認が必要なものはありません",
+      "toolsLater": "接続後に表示",
+      "who": "接続できる人",
+      "whoAdmins": "{{org}}の管理者",
+      "whoRuns": "ワークスペースの管理者",
+      "whoYou": "あなた自身",
+      "signIn": "サインイン方法",
+      "how": {
+        "signIn": "あなたのアカウント",
+        "key": "キー",
+        "either": "アカウントまたはキー"
+      },
+      "canTitle": "エージェントができること",
+      "address": "アドレス",
+      "addressNote": "エージェントは接続したアカウントでこのアドレスを使います。各エージェントが使えるのは、あなたが許可した範囲だけです。",
+      "host": "接続先",
+      "more": "{{category}}のその他"
+    },
     "fromAgent": "サービスを接続",
     "githubApp": {
       "useApp": "agentes.chat アプリを使う",
@@ -2642,6 +2722,10 @@
       "titlePersonal": "やることをエージェントに任せましょう",
       "textPersonal": "エージェントにタスクを作成し、最後まで見届けましょう。",
       "viewerTitlePersonal": "エージェントの仕事を見守る"
+    },
+    "coding": {
+      "title": "エージェントとコードを書きましょう",
+      "text": "各セッションは、自分のコンピューター上の専用ブランチで作業するエージェントとの会話です。"
     },
     "routines": {
       "title": "繰り返しの仕事はエージェントに任せましょう",

@@ -103,7 +103,7 @@ export interface TaskDelegation {
    */
   from: {
     channelId: string;
-    channelKind: "channel" | "dm" | "task" | "file";
+    channelKind: "channel" | "dm" | "task" | "file" | "code";
     channelName: string | null;
     threadId: string | null;
     messageId: string | null;
@@ -528,7 +528,7 @@ async function handedFrom(db: Database, userId: string, orgId: string, runIds: s
   const rows = rowsOf<{
     run_id: string;
     channel_id: string;
-    kind: "channel" | "dm" | "task" | "file";
+    kind: "channel" | "dm" | "task" | "file" | "code";
     name: string;
     thread_root_id: string;
     trigger_message_id: string;

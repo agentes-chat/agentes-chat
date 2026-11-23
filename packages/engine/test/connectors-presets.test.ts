@@ -46,6 +46,7 @@ describe("one-click MCP connectors", () => {
         .sort(),
     ).toEqual([
       "asana",
+      "canva",
       "dropbox",
       "figma",
       "gamma",

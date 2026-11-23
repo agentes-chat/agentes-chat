@@ -29,7 +29,7 @@ export interface AgentWork {
   runId: string;
   /** Where it shows, when the viewer reads that conversation; null otherwise (and for a routine's work). */
   channelId: string | null;
-  channelKind: "channel" | "dm" | "task" | "file" | null;
+  channelKind: "channel" | "dm" | "task" | "file" | "code" | null;
   /** A channel's name; null for a DM or a task's conversation. */
   channelName: string | null;
   /** Null: the conversation's main timeline. */
@@ -139,7 +139,7 @@ type Row = {
   anchored: boolean | string;
   anchor_background: boolean | string;
   channel_id: string;
-  channel_kind: "channel" | "dm" | "task" | "file";
+  channel_kind: "channel" | "dm" | "task" | "file" | "code";
   channel_name: string;
   thread_root_id: string;
   trigger_message_id: string;

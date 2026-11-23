@@ -1290,6 +1290,10 @@ export class TaskManager {
     }
     // A coding plan serves only its own models: Claude Code asks for one by the alias the plan maps (as a turn).
     if (planModel) extra.push("--model", planModel);
+    const taskDirs = [
+      ...(executor === "codex" && cwd !== folder ? [folder] : []),
+      ...(allowed?.grants ?? []).filter((g) => !isInside(g, cwd)),
+    ];
     const command = hosted
       ? "claude"
       : executorCommand(executor, {
@@ -1299,7 +1303,9 @@ export class TaskManager {
           session,
           resume,
           extra,
-          ...(allowed?.grants?.length ? { addDirs: allowed.grants.filter((g) => !isInside(g, cwd)) } : {}),
+          // Codex starting in a subfolder of the agent's own (a checkout, a code session's worktree, ADR 0215) keeps
+          // the whole folder writable, as its turns do (`brain-codex.ts`): a worktree's git data is in its checkout.
+          ...(taskDirs.length ? { addDirs: taskDirs } : {}),
           ...(executor === "codex"
             ? {
                 codex: {

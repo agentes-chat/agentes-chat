@@ -47,6 +47,7 @@ export type ActivityKind =
   | "creatingRoutine"
   | "updatingRoutine"
   | "proposingMission"
+  | "suggestingCodeSession"
   | "messagingMission"
   | "updatingPlan"
   | "reportingProgress"
@@ -209,6 +210,8 @@ const BUILTIN: Record<string, ActivityKind> = {
   update_skill: "consultingSkill",
   // Missions (the agent's tools and the executor's MCP tools).
   propose_mission: "proposingMission",
+  // A code session suggested for a change asked in the chat (ADR 0215 §11).
+  suggest_code_session: "suggestingCodeSession",
   send_to_mission: "messagingMission",
   update_plan: "updatingPlan",
   report: "reportingProgress",
@@ -265,6 +268,8 @@ const BUILTIN: Record<string, ActivityKind> = {
   web_search: "searchingWeb",
   web_fetch: "readingWeb",
   image_search: "searchingWeb",
+  // A picture from the web brought onto the reply (ADR 0217).
+  show_image: "fetchingFile",
   read_conversation: "readingConversation",
   // A card of ours in the conversation: the card itself says what it holds.
   show_block: "preparingCard",

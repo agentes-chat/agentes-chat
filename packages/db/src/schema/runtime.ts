@@ -196,6 +196,12 @@ export const agentRuns = pgTable(
      */
     brain: text(),
     /**
+     * The coding CLI a computer brain thought with and its version, as its computer last reported it when the run took
+     * that brain (`claude 2.1.308 (Claude Code)`): the operator's failures by CLI version (`GET /cli-runs`), which the
+     * Cloud's rollouts of a CLI's new build read. Null for the model brain, a computer that didn't say, and older runs.
+     */
+    cli: text(),
+    /**
      * Long work (ADR 0121): this run stepped out of its conversation into the background. Its replies land in the
      * work's thread and its end goes home; the newest run with this id is the work's current one.
      */

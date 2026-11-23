@@ -2257,6 +2257,7 @@
       "team": "Chi è chi: persone, agenti e i loro gruppi",
       "dashboards": "Numeri e grafici che gli agenti tengono aggiornati",
       "taskManager": "Cosa fa ogni agente ora, e fermare ciò che serve",
+      "code": "Programmare con gli agenti, ogni richiesta nel suo worktree",
       "approvalsPersonal": "Cosa ti chiedono di consentire i tuoi agenti",
       "proposalsPersonal": "Cosa propongono di cambiare i tuoi agenti",
       "threadsPersonal": "Conversazioni a parte, e missioni",
@@ -2266,6 +2267,7 @@
       "teamPersonal": "I tuoi agenti, e chi altro c'è",
       "dashboardsPersonal": "Numeri e grafici che i tuoi agenti tengono aggiornati",
       "taskManagerPersonal": "Cosa fanno ora i tuoi agenti, e fermare ciò che serve",
+      "codePersonal": "Programmare con i tuoi agenti",
       "homePersonal": "La tua giornata: cosa ti aspetta e cosa fanno i tuoi agenti"
     },
     "customizeSidebar": "Personalizza la barra laterale",
@@ -2363,7 +2365,7 @@
     "summary_one": "{{people}} membro · {{agents}} agenti",
     "summary_many": "{{people}} membri · {{agents}} agenti",
     "summary_other": "{{people}} membri · {{agents}} agenti",
-    "waiting": "Ti aspetta",
+    "waiting": "Posta in arrivo",
     "approvals": "Approvazioni",
     "proposals": "Proposte di miglioramento",
     "issues": "Attività",
@@ -2375,6 +2377,7 @@
     "team": "Team",
     "dashboards": "Dashboard",
     "taskManager": "Gestione attività",
+    "code": "Codice",
     "calendar": "Calendario",
     "drive": "Drive",
     "members": "Membri",
@@ -5186,7 +5189,8 @@
       "proposal": "Propone una modifica",
       "agent": "Propone un nuovo agente",
       "team": "Propone un team",
-      "firstTask": "Primo compito"
+      "firstTask": "Primo compito",
+      "code": "Suggerisce una sessione di codice"
     },
     "waitingYou": "ti aspetta",
     "waitingFor": "aspetta {{name}}",
@@ -5203,6 +5207,7 @@
       "agent": "<b>{{name}}</b> propone un nuovo agente · {{what}}",
       "team": "<b>{{name}}</b> propone un team · {{what}}",
       "firstTask": "<b>{{name}}</b> suggerisce un primo compito · {{what}}",
+      "code": "<b>{{name}}</b> suggerisce una sessione di codice · {{what}}",
       "more": "+{{count}}",
       "here_one": "{{count}} ti aspetta qui",
       "here_many": "{{count}} ti aspettano qui",
@@ -5446,7 +5451,7 @@
     "firstRun": "Riprendi da dove eri · {{done}} di {{total}}"
   },
   "notifications": {
-    "title": "Notifiche",
+    "title": "Posta in arrivo",
     "planLent": {
       "takeBack": "Riprendi",
       "takeBackAll": "Riprendi da tutti gli agenti",
@@ -5488,7 +5493,7 @@
         "computer": "Cambia computer"
       }
     },
-    "docTitleUnread": "({{count}}) Notifiche",
+    "docTitleUnread": "({{count}}) Posta in arrivo",
     "summaryWaiting_one": "{{count}} cosa ti aspetta",
     "summaryWaiting_many": "{{count}} cose ti aspettano",
     "summaryWaiting_other": "{{count}} cose ti aspettano",
@@ -5506,6 +5511,7 @@
       "waiting": "Ti aspetta",
       "unread": "Da leggere",
       "reactions": "Reazioni",
+      "requests": "Richieste decise",
       "done": "Completate"
     },
     "keys": {
@@ -5758,6 +5764,8 @@
     "noneUnread": "Tutto letto.",
     "noneHere": "Per ora niente qui.",
     "noneDone": "Niente segnato come completato negli ultimi 30 giorni.",
+    "noneRequests": "Nessuna richiesta decisa per ora.",
+    "proposes": "propone un miglioramento",
     "more": "Mostra altro"
   },
   "approvals": {
@@ -6662,6 +6670,7 @@
         "empty_reply": "Il modello non ha restituito nulla.",
         "model_refused": "Il modello si è rifiutato di rispondere.",
         "agent_archived": "L'agente è stato archiviato.",
+        "code_session_unavailable": "Il worktree della sessione non è disponibile sul computer.",
         "provider_error": "Il provider del modello ha restituito un errore: {{detail}}",
         "provider_account": "Il provider ha rifiutato la chiave: potrebbe non essere valida, senza credito o oltre la quota.",
         "provider_unavailable": "Il provider del modello non ha risposto: {{detail}}",
@@ -11724,6 +11733,192 @@
     "createKeywords": "crea nuovo aggiungi create new",
     "empty": "Nessun risultato per “{{q}}”."
   },
+  "codeSessions": {
+    "beta": {
+      "title": "Coding mode è in beta",
+      "text": "Funziona davvero e cambia ogni settimana. A volte si blocca. Quando succede, il problema è nostro.",
+      "go": "Inizia",
+      "added": {
+        "worktree": "Ogni richiesta nel suo worktree, con Git, File, Schermo e Terminale",
+        "anyAi": "Qualsiasi IA: Claude Code, Codex, OpenCode o un modello tramite chiave",
+        "beside": "Modifica i file e apri un terminale accanto alla conversazione"
+      },
+      "removed": {
+        "paste": "Copiare e incollare codice tra la chat e l'editor",
+        "watch": "Fissare il terminale finché l'agente non ha finito"
+      }
+    },
+    "title": "Codice",
+    "state": {
+      "waiting": "ti aspetta",
+      "working": "al lavoro",
+      "preparing": "preparazione del worktree",
+      "failed": "preparazione non riuscita",
+      "pr": "PR #{{number}}",
+      "idle": "pronta"
+    },
+    "list": {
+      "label": "Sessioni di codice",
+      "new": "Nuova sessione",
+      "newRow": "Nuova sessione",
+      "resize": "Larghezza dell'elenco",
+      "local": "sul computer",
+      "empty": "Qui compaiono le sessioni che apri o in cui ti chiamano."
+    },
+    "home": {
+      "mode": "Coding mode",
+      "was": "Chat mode",
+      "beta": "Beta",
+      "noAgents": "Nessun agente programma ancora su un computer. Nelle impostazioni di un agente, dagli un computer e un'app di programmazione, oppure lascialo eseguire codice lì.",
+      "placeholder": "Descrivi la modifica, il bug o il dubbio",
+      "label": "Cosa fare",
+      "agent": "Agente",
+      "repo": "Dove lavorare",
+      "repoPlaceholder": "Repository o progetto",
+      "repoSearch": "Cerca, o scrivi owner/name o un nome nuovo",
+      "newLocal": "Nuovo progetto sul computer: {{name}}",
+      "useRepo": "Usa {{repo}}",
+      "repoNote": "Un nome senza owner crea un progetto sul computer dell'agente, fuori da GitHub.",
+      "hint": "@ chiama qualcuno nella sessione",
+      "start": "Avvia"
+    },
+    "view": {
+      "gone": "Questa sessione non esiste più, o non puoi vederla.",
+      "resize": "Larghezza della conversazione",
+      "composer": "Rispondi · @ chiama qualcuno · / comandi",
+      "more": "Altro",
+      "openPr": "Apri la PR #{{number}}",
+      "close": "Chiudi la sessione",
+      "closeHint": "Esce dall'elenco: il worktree se ne va, il branch resta",
+      "failed": "Non è stato possibile preparare il worktree.",
+      "retry": "Riprova",
+      "githubAccess": "Questo spazio di lavoro non ha accesso GitHub a questo repository. Collega GitHub in Impostazioni › Connettori, o avvia una sessione su un progetto del computer (basta un nome)."
+    },
+    "panel": {
+      "label": "Pannello della sessione",
+      "screen": "Schermo",
+      "terminal": "Terminale",
+      "terminalHeight": "Altezza del terminale",
+      "notReady": "Il worktree è ancora in preparazione.",
+      "agent_preparing": "sta preparando il worktree",
+      "agent_failed": "non ha potuto preparare il worktree",
+      "agent_working": "sta lavorando",
+      "agent_waiting": "ti aspetta",
+      "agent_idle": "è disponibile"
+    },
+    "gitTab": {
+      "openFile": "Apri il file",
+      "label": "Git",
+      "from": "da {{base}}",
+      "ahead_one": "{{count}}{{more}} commit avanti",
+      "ahead_many": "{{count}}{{more}} commit avanti",
+      "ahead_other": "{{count}}{{more}} commit avanti",
+      "refresh": "Leggi di nuovo",
+      "reading": "Lettura di git sul computer…",
+      "all": "Tutto da {{base}}",
+      "uncommitted": "Senza commit",
+      "clean": "Non c'è niente senza commit.",
+      "changesMore": "E altre modifiche: qui ci sono le prime mille.",
+      "commits": "Commit",
+      "noCommits": "Ancora nessun commit da {{base}}.",
+      "more": "E commit più vecchi.",
+      "back": "Indietro",
+      "split": "Affiancata",
+      "none": "Qui non è cambiato nulla.",
+      "tooLarge": "Troppo grande per mostrarlo qui. I file modificati sono elencati.",
+      "status": {
+        "modified": "Modificato",
+        "added": "Aggiunto",
+        "deleted": "Eliminato",
+        "renamed": "Rinominato",
+        "untracked": "Nuovo, non ancora in git"
+      }
+    },
+    "files": {
+      "label": "File",
+      "search": "Cerca file",
+      "searchPlaceholder": "Trova un file per nome o cartella",
+      "changedGroup": "Modificati",
+      "count_one": "{{formatted}} file",
+      "count_many": "{{formatted}} file",
+      "count_other": "{{formatted}} file",
+      "refresh": "Leggi di nuovo",
+      "reading": "Lettura dei file sul computer…",
+      "empty": "Ancora nessun file.",
+      "noMatch": "Nessun file corrisponde a “{{query}}”.",
+      "truncated_one": "Viene mostrato il primo {{formatted}} file.",
+      "truncated_many": "Vengono mostrati i primi {{formatted}} file.",
+      "truncated_other": "Vengono mostrati i primi {{formatted}} file.",
+      "hasChanges": "Contiene modifiche",
+      "opening": "Apertura del file…",
+      "cut": "Qui si vedono solo i primi {{size}}.",
+      "save": "Salva",
+      "unsaved": "Non salvato",
+      "tooLong": "Troppo lungo per modificarlo qui",
+      "moved": "Questo file è cambiato sul computer dopo che l'hai aperto.",
+      "reload": "Carica quello",
+      "overwrite": "Salva il mio sopra",
+      "unsavedAsk": "Questo file ha modifiche che non hai salvato.",
+      "keepEditing": "Continua a modificare",
+      "discard": "Scarta",
+      "state": {
+        "binary": "Un file binario: niente da mostrare qui.",
+        "missing": "Questo file non c'è più.",
+        "ignored": "Git ignora questo file, quindi non compare qui.",
+        "secret": "I file .env non compaiono qui: di solito contengono segreti.",
+        "outside": "Questo file è un collegamento fuori dal worktree."
+      }
+    },
+    "tabs": {
+      "label": "Schede della sessione",
+      "talk": "Conversazione",
+      "terminalN": "Terminale {{n}}",
+      "close": "Chiudi {{name}}",
+      "add": "Nuova scheda"
+    },
+    "screen": {
+      "computer": "Il computer di {{name}}",
+      "computer_female": "Il computer di {{name}}",
+      "menu": "Schermi che usa {{name}}",
+      "menu_female": "Schermi che usa {{name}}",
+      "computerHint": "Dove si trova il worktree",
+      "onHost": "su {{host}}",
+      "exitFull": "Esci da schermo intero"
+    },
+    "who": {
+      "label": "In questa sessione",
+      "open_one": "{{count}} in questa sessione",
+      "open_many": "{{count}} in questa sessione",
+      "open_other": "{{count}} in questa sessione",
+      "agent": "lavora nel worktree",
+      "opener": "ha aperto la sessione",
+      "leave": "Esci",
+      "remove": "Rimuovi {{name}} dalla sessione",
+      "invite": "Per far entrare qualcuno, scrivi @ e il suo nome nella conversazione."
+    },
+    "screenLine": {
+      "show": "Vedi sullo Schermo",
+      "held": "Una persona ha il controllo dello schermo"
+    },
+    "suggestion": {
+      "label": "Suggerimento di sessione di codice",
+      "detail": "{{repo}} · sul computer di {{name}}",
+      "more": "Vedi la richiesta",
+      "open": "Apri sessione",
+      "here": "Fallo qui",
+      "opening": "Apertura della sessione…",
+      "opened": "Hai aperto la sessione",
+      "openedBy": "{{name}} ha aperto la sessione",
+      "keptHere": "Hai scelto di farlo qui",
+      "keptHereBy": "{{name}} ha scelto di farlo qui",
+      "see": "Vedi sessione"
+    },
+    "from": {
+      "dm": "Aperta dalla tua conversazione con {{name}}",
+      "channel": "Aperta da #{{name}}",
+      "see": "Vedi conversazione"
+    }
+  },
   "code": {
     "ranSummary_one": "Eseguita {{count}} riga di {{language}} · output {{size}}",
     "ranSummary_many": "Eseguite {{count}} righe di {{language}} · output {{size}}",
@@ -12579,6 +12774,9 @@
       "textOnly": "Legge solo testo",
       "search": "Cerca modelli",
       "account": "Account di accesso",
+      "accountOf": "Account: {{account}}",
+      "connectAccount": "Collega un altro account",
+      "ais": "IA",
       "connect": "Collega un'IA",
       "applies": "Vale dalla prossima risposta.",
       "more": "Altre opzioni",
@@ -14984,6 +15182,7 @@
       "web_search": "Cerca sul web",
       "web_fetch": "Leggi pagina web",
       "image_search": "Cerca immagini",
+      "show_image": "Mostrare immagini dal web",
       "create_routine": "Crea routine",
       "update_routine": "Modifica routine",
       "delete_routine": "Elimina routine",
@@ -15900,6 +16099,9 @@
       "pageOf": "{{page}} di {{count}}",
       "pdfFailed": "Questo PDF non si può mostrare qui. Scaricalo per aprirlo.",
       "loadFailed": "Questa immagine non si può mostrare qui.",
+      "mark": "Segna",
+      "markOff": "Smetti di segnare: il clic torna a spostare il file",
+      "markOn": "Segna: il clic commenta un punto o un'area",
       "hint": {
         "image": "Fai clic per segnare un punto o trascina per segnare una zona",
         "video": "Fai clic sul video per commentare questo momento, o trascina per segnare una zona",
@@ -16023,6 +16225,17 @@
       "input": "Non è andata. Controlla ciò che hai compilato e riprova.",
       "conflict": "Ora non si può fare. Aggiorna e riprova.",
       "computer": "Il computer ora non è riuscito a farlo. Controlla che sia acceso e riprova."
+    },
+    "codeSession": {
+      "noComputer": "Questo agente non ha ancora un computer. Dagliene uno nelle sue impostazioni per programmare con lui.",
+      "cannotCode": "Questo agente non può programmare sul suo computer. Dagli un'app di programmazione nelle sue impostazioni, oppure lascialo eseguire codice lì.",
+      "repoNotAllowed": "Questo agente non può lavorare in quel repository. Scegline un altro, oppure aggiungilo nelle impostazioni dell'agente.",
+      "notYours": "Solo chi ha aperto la sessione o un admin può chiuderla.",
+      "notReady": "Il worktree della sessione non è ancora pronto. Riprova tra un momento.",
+      "fileChanged": "Questo file è cambiato sul computer dopo che l'hai aperto.",
+      "fileLocked": "Questo file non può essere modificato qui.",
+      "suggestionGone": "Questo suggerimento ha già una risposta.",
+      "suggestionNotYours": "Solo chi l'ha chiesto decide se aprire la sessione."
     },
     "webhook": {
       "githubNoAccess": "Il GitHub di questo workspace non può creare webhook in {{repo}}. Segui i passaggi qui sotto per crearlo a mano.",
@@ -18800,6 +19013,8 @@
         "merged": "{{who}} ha fatto il merge della PR #{{number}} ({{repo}}) su GitHub",
         "closed": "{{who}} ha chiuso la PR #{{number}} ({{repo}}) su GitHub",
         "closedIssue": "{{who}} ha chiuso la issue #{{number}} ({{repo}}) su GitHub",
+        "checkFailed": "Il controllo «{{check}}» non è passato sulla PR #{{number}} ({{repo}}) su GitHub",
+        "checkFailedCommit": "Il controllo «{{check}}» non è passato sul commit {{commit}} ({{repo}}) su GitHub",
         "ask": "Chiedi una risposta",
         "asked": "{{asker}} ha chiesto a {{name}} di rispondere a {{who}} su GitHub"
       },
@@ -18897,6 +19112,7 @@
         "runningSkillScriptAny": "Ha eseguito uno script di una skill",
         "fetchingFile": "Ha recuperato un file",
         "proposingMission": "Ha proposto una missione",
+        "suggestingCodeSession": "Ha suggerito una sessione di codice",
         "messagingMission": "Ha inviato una nota alla missione",
         "updatingPlan": "Ha aggiornato il piano",
         "reportingProgress": "Ha comunicato i progressi",
@@ -19017,6 +19233,7 @@
       "runningSkillScriptAny": "eseguendo uno script di una skill",
       "fetchingFile": "recuperando un file",
       "proposingMission": "proponendo una missione",
+      "suggestingCodeSession": "suggerendo una sessione di codice",
       "messagingMission": "inviando una nota alla missione",
       "updatingPlan": "aggiornando il piano",
       "reportingProgress": "comunicando i progressi",
@@ -20601,6 +20818,58 @@
     "screenOff": "Lo schermo è spento",
     "screenOffHelp": "Si accende quando qualcuno guarda."
   },
+  "cliTools": {
+    "read": "Ha letto",
+    "search": "Ha cercato",
+    "edit": "Ha modificato",
+    "write": "Ha scritto",
+    "run": "Ha eseguito",
+    "fetch": "Ha aperto",
+    "delegate": "Ha chiesto a un subagente",
+    "skill": "Ha usato la skill",
+    "workflow": "Ha eseguito un workflow",
+    "other": "Ha usato",
+    "running": {
+      "read": "Legge",
+      "search": "Cerca",
+      "edit": "Modifica",
+      "write": "Scrive",
+      "run": "Esegue",
+      "fetch": "Apre",
+      "delegate": "Chiede a un subagente",
+      "skill": "Usa la skill",
+      "workflow": "Esegue un workflow",
+      "other": "Usa"
+    },
+    "lines": "+{{added}} −{{removed}}",
+    "added": "+{{added}}",
+    "found_one": "{{count}} risultato",
+    "found_many": "{{count}} risultati",
+    "found_other": "{{count}} risultati",
+    "files_one": "{{count}} file",
+    "files_many": "{{count}} file",
+    "files_other": "{{count}} file",
+    "passed_one": "{{count}} superato",
+    "passed_many": "{{count}} superati",
+    "passed_other": "{{count}} superati",
+    "failedTests_one": "{{count}} fallito",
+    "failedTests_many": "{{count}} falliti",
+    "failedTests_other": "{{count}} falliti",
+    "exit": "uscito con {{code}}",
+    "progress": {
+      "block": "Subagenti di {{name}}",
+      "block_female": "Subagenti di {{name}}",
+      "subagent": "Subagente",
+      "agents_one": "{{count}} subagente",
+      "agents_many": "{{count}} subagenti",
+      "agents_other": "{{count}} subagenti",
+      "done": "{{done}} di {{total}} completati",
+      "asking_one": "Chiede a un subagente",
+      "asking_many": "Chiede a {{count}} subagenti",
+      "asking_other": "Chiede a {{count}} subagenti",
+      "workflowShort": "workflow {{done}} di {{total}}"
+    }
+  },
   "agentComputer": {
     "title": "Il computer di {{name}}",
     "title_female": "Il computer di {{name}}",
@@ -20708,6 +20977,24 @@
       "upright": "Ruota in verticale",
       "message": "Scrivi a {{name}}"
     }
+  },
+  "codeTerminal": {
+    "label": "Terminale",
+    "opening": "Apertura del terminale…",
+    "openAgain": "Riapri",
+    "ended": "La shell è terminata",
+    "dropped": "La connessione al terminale è caduta",
+    "moved": "Questo terminale è aperto in un'altra finestra",
+    "screening": "Il terminale è disattivato qui",
+    "forbidden": "Solo chi può usare questo computer apre un terminale",
+    "offline": "Il computer è offline",
+    "outdated": "Aggiorna il computer per aprire il terminale nella cartella della sessione",
+    "unavailable": "Il computer di questo agente non apre terminali",
+    "off": "Il terminale è disattivato su {{computer}}",
+    "busy": "Questo computer ha già aperti tutti i terminali che può gestire. Chiudine uno e riprova.",
+    "paused": "Il computer è in pausa",
+    "failed": "Impossibile aprire il terminale",
+    "agentFolder": "Il terminale si è aperto nella cartella dell'agente. Aggiorna il computer per aprirlo nella cartella della sessione."
   },
   "agora": {
     "label": "Ora",
@@ -20840,7 +21127,8 @@
       "stopAll": "Ferma tutte",
       "stopAllOf": "Ferma tutto di {{name}}",
       "open": "Apri nella conversazione",
-      "openManager": "Apri in Gestione attività"
+      "openManager": "Apri in Gestione attività",
+      "more": "Altre azioni"
     },
     "confirm": {
       "chainTitle_one": "Fermare {{name}} e {{count}} aiutante?",

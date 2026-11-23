@@ -19,7 +19,7 @@ import {
   supervisorOf,
 } from "@agenteschat/client/lib/team-views";
 import { useTranslation } from "react-i18next";
-import { RefreshControl, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
+import { RefreshControl, StyleSheet, useWindowDimensions, View } from "react-native";
 import { useOrg } from "@/providers/org";
 import {
   Disclosure,
@@ -31,6 +31,7 @@ import {
   RowPressable,
   SCREEN_X,
   SectionHeader,
+  SideScroll,
   SkeletonList,
   Text,
   weights,
@@ -305,12 +306,7 @@ function OrgChart({
           <View style={[styles.stem, stem, { marginLeft: LEAD / 2 }]} />
         </View>
       ) : null}
-      <ScrollView
-        horizontal
-        scrollEnabled={wide}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.columns}
-      >
+      <SideScroll scrollEnabled={wide} contentContainerStyle={styles.columns}>
         {columns.map((col) => (
           <View
             key={col.roleId ? `role:${col.roleId}` : (col.personId ?? "none")}
@@ -346,7 +342,7 @@ function OrgChart({
             </View>
           </View>
         ))}
-      </ScrollView>
+      </SideScroll>
     </View>
   );
 }

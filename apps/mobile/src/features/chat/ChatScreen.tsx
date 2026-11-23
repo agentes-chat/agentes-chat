@@ -1,6 +1,7 @@
 import { isMediaKind, MESSAGES_PAGE, useAiStatus, useApi } from "@agenteschat/client";
 import { workIsOver } from "@agenteschat/client/lib/long-work";
 import { pinsIn } from "@agenteschat/client/lib/pins";
+import { CodeConversation } from "@agenteschat/client/lib/work-context";
 import type { LegendListRef } from "@legendapp/list/react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { HeaderHeightContext } from "expo-router/react-navigation";
@@ -44,7 +45,6 @@ import { DOCK_SIDE } from "./screen/constants";
 import { useLatest, useTurnEndTap } from "./screen/hooks";
 import { useSettled } from "./screen/opening";
 import { ChannelGreeting, DockGestureArea, DockRoom, ReadMark } from "./screen/parts";
-import { ChatSheetBar, ChatSheetContext, type ChatSheetMode } from "./screen/sheet-mode";
 import { useChatData } from "./screen/useChatData";
 import { useChatRows, useRowReceipts } from "./screen/useChatRows";
 import { useChatSend } from "./screen/useChatSend";
@@ -72,23 +72,20 @@ const OFFER_DONE = "done";
 
 /**
  * A conversation: a channel, a DM, a thread or a mission's thread (`threadId`). `handoffId`: a request
- * for help a push or the inbox opened it for (its card opens in place, in control). `sheet`: a file's conversation in
- * the sheet over its file (ADR 0208): the sheet's bar in place of the pushed screen's, and the composer raising the
- * sheet while the person types.
+ * for help a push or the inbox opened it for (its card opens in place, in control). A file's conversation (ADR 0208)
+ * is one of these, pushed over the file at its root.
  */
 export function ChatScreen({
   channelId,
   threadId,
   handoffId,
   focusId,
-  sheet,
 }: {
   channelId: string;
   threadId?: string | null;
   handoffId?: string | null;
   /** Open at this message: paged in, scrolled to and lit for a moment (a pin). */
   focusId?: string | null;
-  sheet?: ChatSheetMode;
 }) {
   // Where the same conversation was being read on the other display (ADR 0212: an iPhone Duo opened or closed), taken
   // once as it opens, when no message was asked for: it opens there, as a pin opens at its message, without the light.
@@ -99,15 +96,12 @@ export function ChatScreen({
       <SheetHostProvider>
         <FocusLive>
           <OpenHandoffProvider handoffId={handoffId ?? null}>
-            <ChatSheetContext.Provider value={sheet ?? null}>
-              <Chat
-                channelId={channelId}
-                threadId={threadId ?? null}
-                focusId={focusId ?? handed}
-                quietFocus={!focusId && handed !== null}
-                sheet={sheet ?? null}
-              />
-            </ChatSheetContext.Provider>
+            <Chat
+              channelId={channelId}
+              threadId={threadId ?? null}
+              focusId={focusId ?? handed}
+              quietFocus={!focusId && handed !== null}
+            />
           </OpenHandoffProvider>
         </FocusLive>
       </SheetHostProvider>
@@ -120,14 +114,12 @@ function Chat({
   threadId,
   focusId,
   quietFocus,
-  sheet: inSheet,
 }: {
   channelId: string;
   threadId: string | null;
   focusId: string | null;
   /** `focusId` is a place handed from the other display (ADR 0212): gone to without the light. */
   quietFocus: boolean;
-  sheet: ChatSheetMode | null;
 }) {
   const { t, i18n } = useTranslation();
   const orgId = useOrgId();
@@ -293,7 +285,13 @@ function Chat({
     leavePlace,
     data,
   });
-  const { info, personDm, rootFile, rootTask, subtitle, title } = useChatTitle({ threadId, orgId, t, dir, data });
+  const { codeId, info, personDm, rootFile, rootTask, subtitle, title } = useChatTitle({
+    threadId,
+    orgId,
+    t,
+    dir,
+    data,
+  });
   const {
     canMission,
     canReply,
@@ -482,11 +480,10 @@ function Chat({
   const bottomPad = Math.max(insets.bottom, 10);
   // The header floats over the conversation (glass on iOS 26, a blur before; round plates on Android), which
   // fades under it.
-  // Peeked at from the list (iOS's long press): no bar over it and no composer, so no room for either. In a file's
-  // sheet the sheet's bar sits above the conversation, not over it (no stack's header there to measure: read without
-  // `useHeaderHeight`, which throws where there is none).
+  // Peeked at from the list (iOS's long press): no bar over it and no composer, so no room for either (no stack's
+  // header there to measure: read without `useHeaderHeight`, which throws where there is none).
   const barHeight = useContext(HeaderHeightContext) ?? 0;
-  const headerHeight = peeking || inSheet ? 0 : barHeight;
+  const headerHeight = peeking ? 0 : barHeight;
   // How far down the fade under the header stays solid: through the status bar and the bar (a message scrolled up
   // showed through the bar's pill and between its buttons), fading out in the 28 points under it.
   const topFadeSolid = headerHeight > 0 ? Math.min(1, headerHeight / (headerHeight + 28)) : 0;
@@ -585,46 +582,39 @@ function Chat({
     });
   const openPinsHere = useLatest(openPins);
   const goToPinHere = useLatest(goToPin);
-  // A pin tapped on the file behind the sheet: its message, paged in, scrolled to and lit, as `?m=` does.
-  const seekAt = inSheet?.seek;
-  // biome-ignore lint/correctness/useExhaustiveDependencies: each ask once, by its `at`
-  useEffect(() => {
-    if (seekAt) setSeek(seekAt.messageId);
-  }, [seekAt?.at]);
 
   return (
-    <AskStoreProvider store={asks}>
-      <AskProbes messages={shownMessages} />
-      {/* Seen up to the message posted last (`ReadMark`, drawn with the screen). Peeked at from the list (iOS's long
+    <CodeConversation.Provider value={codeId !== null}>
+      <AskStoreProvider store={asks}>
+        <AskProbes messages={shownMessages} />
+        {/* Seen up to the message posted last (`ReadMark`, drawn with the screen). Peeked at from the list (iOS's long
           press preview, `peeking`): nothing is read until it is opened. Mounted after the push (`settled`): marking
           read rewrites the conversation lists, which redraws this screen and the one under it mid-slide. */}
-      {settled ? (
-        <ReadMark
-          orgId={orgId}
-          channelId={channelId}
-          threadId={threadId}
-          member={member}
-          postedNow={postedNow}
-          peeking={peeking}
-          focused={focused}
-        />
-      ) : null}
-      <View style={[styles.screen, { backgroundColor: c.bg }]} onTouchStart={markTouched} onLayout={onScreenLayout}>
-        {walled && wallSize ? (
-          <ChatWallpaper
-            wallpaper={backdrop.wallpaper}
-            strength={backdrop.strength}
-            width={wallSize.width}
-            height={wallSize.height}
-            style={styles.wallpaper}
+        {settled ? (
+          <ReadMark
+            orgId={orgId}
+            channelId={channelId}
+            threadId={threadId}
+            member={member}
+            postedNow={postedNow}
+            peeking={peeking}
+            focused={focused}
           />
         ) : null}
-        {inSheet ? (
-          <ChatSheetBar title={title} onClose={inSheet.onClose} />
-        ) : (
+        <View style={[styles.screen, { backgroundColor: c.bg }]} onTouchStart={markTouched} onLayout={onScreenLayout}>
+          {walled && wallSize ? (
+            <ChatWallpaper
+              wallpaper={backdrop.wallpaper}
+              strength={backdrop.strength}
+              width={wallSize.width}
+              height={wallSize.height}
+              style={styles.wallpaper}
+            />
+          ) : null}
           <ChatHeader
             channelId={channelId}
             threadId={threadId}
+            codeId={codeId}
             title={title}
             subtitle={subtitle}
             info={info}
@@ -649,279 +639,278 @@ function Chat({
             onHoldPill={onHoldPill}
             leavePlace={leavePlace}
           />
-        )}
-        {hasPin ? (
-          // The bar is see-through (the conversation runs under it): an open mission's card starts below it. Pinned
-          // messages have no bar here: they wait above the first message, revealed by pulling down (`PinnedLines`).
-          <View style={{ backgroundColor: walled ? "transparent" : c.bg, paddingTop: headerHeight }}>
-            {pinned ? (
-              <View style={styles.pin}>
-                <MissionCardView mission={pinned} pinned />
-              </View>
-            ) : null}
-          </View>
-        ) : null}
-        <DockGestureArea dock={dock} lift={lift}>
-          {loading ? null : (
-            <>
-              {/* Mounted before the first message too: a list that appears while the keyboard is already up never
+          {hasPin ? (
+            // The bar is see-through (the conversation runs under it): an open mission's card starts below it. Pinned
+            // messages have no bar here: they wait above the first message, revealed by pulling down (`PinnedLines`).
+            <View style={{ backgroundColor: walled ? "transparent" : c.bg, paddingTop: headerHeight }}>
+              {pinned ? (
+                <View style={styles.pin}>
+                  <MissionCardView mission={pinned} pinned />
+                </View>
+              ) : null}
+            </View>
+          ) : null}
+          <DockGestureArea dock={dock} lift={lift}>
+            {loading ? null : (
+              <>
+                {/* Mounted before the first message too: a list that appears while the keyboard is already up never
                   hears it open, and its first message landed under it. */}
-              <ChatList
-                when={when}
-                dir={dir}
-                meId={meId}
-                canMission={canMission}
-                canReply={canReply}
-                flashId={flashId}
+                <ChatList
+                  when={when}
+                  dir={dir}
+                  meId={meId}
+                  canMission={canMission}
+                  canReply={canReply}
+                  flashId={flashId}
+                  channelId={channelId}
+                  threadId={threadId}
+                  orgId={orgId}
+                  connectInline={connectInline}
+                  hands={hands}
+                  offerAt={offerAt}
+                  consultFolds={consultFolds}
+                  isFresh={isFresh}
+                  isThread={isThread}
+                  linkThreads={linkThreads}
+                  replying={replying}
+                  quiet={quiet}
+                  rhythm={rhythm}
+                  seenBy={seenBy}
+                  seenId={seenId}
+                  walled={walled}
+                  markAt={markAt}
+                  receipt={receipt}
+                  receiptId={receiptId}
+                  receipts={receipts}
+                  atStart={atStart}
+                  headerHeight={headerHeight}
+                  keyboardDragSettled={keyboardDragSettled}
+                  keyboardDragStarted={keyboardDragStarted}
+                  dmAgent={dmAgent}
+                  fetchOlder={fetchOlder}
+                  loadingOlder={loadingOlder}
+                  olderFailed={olderFailed}
+                  rightHand={rightHand}
+                  setupIntro={setupIntro}
+                  waveFrom={waveFrom}
+                  dragging={dragging}
+                  releaseAtEnd={releaseAtEnd}
+                  openPinsHere={openPinsHere}
+                  goToPinHere={goToPinHere}
+                  hasPins={hasPins}
+                  stickers={stickers}
+                  placed={placed}
+                  settled={settled}
+                  listFade={listFade}
+                  listFrame={listFrame}
+                  watchList={watchList}
+                  rightHandId={rightHandId}
+                  dm={dm}
+                  thread={thread}
+                  jumpToMessage={jumpToMessage}
+                  rowLook={rowLook}
+                  stoppedRuns={stoppedRuns}
+                  stopsMoved={stopsMoved}
+                  openedMessages={openedMessages}
+                  workLine={workLine}
+                  timePull={timePull}
+                  timePan={timePan}
+                  attachList={attachList}
+                  listScroll={listScroll}
+                  shownRows={shownRows}
+                  readHold={readHold}
+                  gap={gap}
+                  freeze={freeze}
+                  onListReady={onListReady}
+                  loadOlder={loadOlder}
+                  loadNewer={loadNewer}
+                  onListScroll={onListScroll}
+                  lift={lift}
+                  listEnd={listEnd}
+                  listPad={listPad}
+                  hasPin={hasPin}
+                />
+                {showList ? null : (
+                  // A conversation with nothing yet: the agent's first day or a quiet line, over the empty list, above
+                  // the dock (its height read here alone).
+                  <DockRoom dock={dock}>
+                    {(dockHeight) => {
+                      // A DM's intro before its first message (the right hand's greeting, a new agent's checklist): below
+                      // the bar, above the box, its buttons answering the first tap while the keyboard is up, the
+                      // keyboard going with a drag and its last rows reachable above it.
+                      const introScroll = {
+                        contentContainerStyle: { paddingTop: headerHeight, paddingBottom: dockHeight },
+                        scrollIndicatorInsets: { top: headerHeight, bottom: dockHeight },
+                        keyboardShouldPersistTaps: "handled" as const,
+                        keyboardDismissMode: "interactive" as const,
+                        automaticallyAdjustKeyboardInsets: true,
+                      };
+                      return (
+                        <View style={StyleSheet.absoluteFill}>
+                          {dmAgent && rightHand ? (
+                            <ScrollView {...introScroll}>
+                              <RightHandIntro agent={dmAgent} channelId={channelId} waveFrom={waveFrom} />
+                            </ScrollView>
+                          ) : dmAgent && setupIntro ? (
+                            <ScrollView {...introScroll}>
+                              <AgentSetupIntro agent={dmAgent} channelId={channelId} />
+                            </ScrollView>
+                          ) : dmAgent && !isThread ? (
+                            <FirstDay
+                              agent={dmAgent}
+                              topInset={headerHeight}
+                              bottomInset={dockHeight}
+                              keyboardLift={lift}
+                              onAsk={onSend}
+                              channelId={channelId}
+                            />
+                          ) : channel && helloAgent && !dm && !isThread ? (
+                            <ChannelHello
+                              channelId={channelId}
+                              channel={channel.name}
+                              topic={channel.topic}
+                              agents={[helloAgent, ...talkable.filter((a) => a.id !== helloAgent.id)]}
+                              members={roster.data ?? []}
+                              topInset={headerHeight}
+                              bottomInset={dockHeight}
+                              keyboardLift={lift}
+                              onAsk={onSend}
+                            />
+                          ) : (
+                            <View style={[styles.center, { paddingBottom: dockHeight }]}>
+                              {/* No button: the composer under it is the next step. */}
+                              <FirstUse place="chat" size="panel" acts={member && channel?.can?.post !== false} />
+                            </View>
+                          )}
+                        </View>
+                      );
+                    }}
+                  </DockRoom>
+                )}
+              </>
+            )}
+            {/* The messages on their way, or the list still placing itself at its end: their shape, never a blank screen. */}
+            {loading || (showList && !placed) ? (
+              <DockRoom dock={dock}>
+                {(dockHeight) => <ChatSkeleton look={rowLook} top={hasPin ? 0 : headerHeight} bottom={dockHeight} />}
+              </DockRoom>
+            ) : null}
+            {!hasPin ? (
+              // The conversation fades under the floating header, as it does under the box. Not under a pinned bar
+              // or card: the list already starts below them, and a header-tall fade there was a dark band over the
+              // first messages (the pinned bar's own hairline is the edge). Solid behind the status bar: a message
+              // passing there showed through the clock and the indicators, its words cut by them. Over a background
+              // it fades into the background itself, never into a band of the page's color.
+              walled && wallSize ? (
+                <WallpaperBand
+                  wallpaper={backdrop.wallpaper}
+                  strength={backdrop.strength}
+                  width={wallSize.width}
+                  height={wallSize.height}
+                  band={headerHeight + 28}
+                  solid={topFadeSolid}
+                />
+              ) : (
+                <LinearGradient
+                  pointerEvents="none"
+                  colors={[c.bg, c.bg, withOpacity(c.bg, 0)]}
+                  locations={[0, topFadeSolid, 1]}
+                  style={[styles.topFade, { height: headerHeight + 28 }]}
+                />
+              )
+            ) : null}
+            {channel && !dm && !isThread && member && showList && settled ? (
+              // The channel greets you under the bar, as the web's: a newcomer's #general, or the first channel of a day.
+              // It drops in, over the list, after the push.
+              <ChannelGreeting
                 channelId={channelId}
-                threadId={threadId}
-                orgId={orgId}
-                connectInline={connectInline}
-                hands={hands}
-                offerAt={offerAt}
-                consultFolds={consultFolds}
-                isFresh={isFresh}
-                isThread={isThread}
-                linkThreads={linkThreads}
-                replying={replying}
-                quiet={quiet}
-                rhythm={rhythm}
-                seenBy={seenBy}
-                seenId={seenId}
-                walled={walled}
-                markAt={markAt}
-                receipt={receipt}
-                receiptId={receiptId}
-                receipts={receipts}
-                atStart={atStart}
-                headerHeight={headerHeight}
-                keyboardDragSettled={keyboardDragSettled}
-                keyboardDragStarted={keyboardDragStarted}
-                dmAgent={dmAgent}
-                fetchOlder={fetchOlder}
-                loadingOlder={loadingOlder}
-                olderFailed={olderFailed}
-                rightHand={rightHand}
-                setupIntro={setupIntro}
-                waveFrom={waveFrom}
-                dragging={dragging}
-                releaseAtEnd={releaseAtEnd}
-                openPinsHere={openPinsHere}
-                goToPinHere={goToPinHere}
-                hasPins={hasPins}
-                stickers={stickers}
-                placed={placed}
-                settled={settled}
-                listFade={listFade}
-                listFrame={listFrame}
-                watchList={watchList}
-                rightHandId={rightHandId}
-                dm={dm}
-                thread={thread}
-                jumpToMessage={jumpToMessage}
-                rowLook={rowLook}
-                stoppedRuns={stoppedRuns}
-                stopsMoved={stopsMoved}
-                openedMessages={openedMessages}
-                workLine={workLine}
-                timePull={timePull}
-                timePan={timePan}
-                attachList={attachList}
-                listScroll={listScroll}
-                shownRows={shownRows}
-                readHold={readHold}
-                gap={gap}
-                freeze={freeze}
-                onListReady={onListReady}
-                loadOlder={loadOlder}
-                loadNewer={loadNewer}
-                onListScroll={onListScroll}
+                channelName={channel.name}
+                messages={top.data}
+                agentIds={channelAgents}
+                top={headerHeight + 8}
+                touched={touched}
+              />
+            ) : null}
+            {peeking ? null : (
+              <ChatDock
                 lift={lift}
-                listEnd={listEnd}
-                listPad={listPad}
-                hasPin={hasPin}
+                peekAgentId={peekAgentId}
+                showList={showList}
+                settled={settled}
+                pull={pull}
+                boxHeight={boxHeight}
+                far={far}
+                atEnd={atEnd}
+                gap={gap}
+                readHold={readHold}
+                unseen={unseen}
+                jumpRest={jumpRest}
+                toEnd={toEnd}
+                floatRest={floatRest}
+                composerFloat={composerFloat}
+                composerRef={composerRef}
+                onComposerBoxLayout={onComposerBoxLayout}
+                bottomPad={bottomPad}
+                walled={walled}
+                wallSize={wallSize}
+                backdrop={backdrop}
+                keyboardAt={keyboardAt}
+                banner={banner}
+                org={org}
+                notices={notices}
+                member={member}
+                awayAsk={awayAsk}
+                seeAsk={seeAsk}
+                runs={runs}
+                lineBase={lineBase}
+                consultData={consultData}
+                canStop={canStop}
+                stopRun={stopRun}
+                waitingFirst={waitingFirst}
+                waitingHere={waitingHere}
+                seeWaiting={seeWaiting}
+                live={live}
+                meId={meId}
+                threadId={threadId}
+                seeConsult={seeConsult}
+                openBrowserLine={openBrowserLine}
+                lineStop={lineStop}
+                returnLine={returnLine}
+                dmAgent={dmAgent}
+                channel={channel}
+                capsuleRest={capsuleRest}
+                placeholder={placeholder}
+                sendFromField={sendFromField}
+                working={working}
+                plusFromField={plusFromField}
+                composerMedia={composerMedia}
+                channelId={channelId}
+                prefill={prefill}
+                captionBack={captionBack}
+                replyAt={replyAt}
+                composerBanner={composerBanner}
+                composerAttachments={composerAttachments}
+                pending={pending}
+                canAttach={canAttach}
+                longFromField={longFromField}
+                mentionCard={mentionCard}
+                onType={onType}
+                orgId={orgId}
+                dmAgentId={dmAgentId}
+                quote={quote}
+                voiceOn={voiceOn}
+                afterVoice={afterVoice}
+                voiceFromField={voiceFromField}
+                voiceTakeBack={voiceTakeBack}
+                onRecording={onRecording}
+                admin={admin}
+                join={join}
               />
-              {showList ? null : (
-                // A conversation with nothing yet: the agent's first day or a quiet line, over the empty list, above
-                // the dock (its height read here alone).
-                <DockRoom dock={dock}>
-                  {(dockHeight) => {
-                    // A DM's intro before its first message (the right hand's greeting, a new agent's checklist): below
-                    // the bar, above the box, its buttons answering the first tap while the keyboard is up, the
-                    // keyboard going with a drag and its last rows reachable above it.
-                    const introScroll = {
-                      contentContainerStyle: { paddingTop: headerHeight, paddingBottom: dockHeight },
-                      scrollIndicatorInsets: { top: headerHeight, bottom: dockHeight },
-                      keyboardShouldPersistTaps: "handled" as const,
-                      keyboardDismissMode: "interactive" as const,
-                      automaticallyAdjustKeyboardInsets: true,
-                    };
-                    return (
-                      <View style={StyleSheet.absoluteFill}>
-                        {dmAgent && rightHand ? (
-                          <ScrollView {...introScroll}>
-                            <RightHandIntro agent={dmAgent} channelId={channelId} waveFrom={waveFrom} />
-                          </ScrollView>
-                        ) : dmAgent && setupIntro ? (
-                          <ScrollView {...introScroll}>
-                            <AgentSetupIntro agent={dmAgent} channelId={channelId} />
-                          </ScrollView>
-                        ) : dmAgent && !isThread ? (
-                          <FirstDay
-                            agent={dmAgent}
-                            topInset={headerHeight}
-                            bottomInset={dockHeight}
-                            keyboardLift={lift}
-                            onAsk={onSend}
-                            channelId={channelId}
-                          />
-                        ) : channel && helloAgent && !dm && !isThread ? (
-                          <ChannelHello
-                            channelId={channelId}
-                            channel={channel.name}
-                            topic={channel.topic}
-                            agents={[helloAgent, ...talkable.filter((a) => a.id !== helloAgent.id)]}
-                            members={roster.data ?? []}
-                            topInset={headerHeight}
-                            bottomInset={dockHeight}
-                            keyboardLift={lift}
-                            onAsk={onSend}
-                          />
-                        ) : (
-                          <View style={[styles.center, { paddingBottom: dockHeight }]}>
-                            {/* No button: the composer under it is the next step. */}
-                            <FirstUse place="chat" size="panel" acts={member && channel?.can?.post !== false} />
-                          </View>
-                        )}
-                      </View>
-                    );
-                  }}
-                </DockRoom>
-              )}
-            </>
-          )}
-          {/* The messages on their way, or the list still placing itself at its end: their shape, never a blank screen.
-              In a file's sheet only while they are on their way: the ones in memory show as they are placed. */}
-          {loading || (showList && !placed && !inSheet) ? (
-            <DockRoom dock={dock}>
-              {(dockHeight) => <ChatSkeleton look={rowLook} top={hasPin ? 0 : headerHeight} bottom={dockHeight} />}
-            </DockRoom>
-          ) : null}
-          {!hasPin ? (
-            // The conversation fades under the floating header, as it does under the box. Not under a pinned bar
-            // or card: the list already starts below them, and a header-tall fade there was a dark band over the
-            // first messages (the pinned bar's own hairline is the edge). Solid behind the status bar: a message
-            // passing there showed through the clock and the indicators, its words cut by them. Over a background
-            // it fades into the background itself, never into a band of the page's color.
-            walled && wallSize ? (
-              <WallpaperBand
-                wallpaper={backdrop.wallpaper}
-                strength={backdrop.strength}
-                width={wallSize.width}
-                height={wallSize.height}
-                band={headerHeight + 28}
-                solid={topFadeSolid}
-              />
-            ) : (
-              <LinearGradient
-                pointerEvents="none"
-                colors={[c.bg, c.bg, withOpacity(c.bg, 0)]}
-                locations={[0, topFadeSolid, 1]}
-                style={[styles.topFade, { height: headerHeight + 28 }]}
-              />
-            )
-          ) : null}
-          {channel && !dm && !isThread && member && showList && settled ? (
-            // The channel greets you under the bar, as the web's: a newcomer's #general, or the first channel of a day.
-            // It drops in, over the list, after the push.
-            <ChannelGreeting
-              channelId={channelId}
-              channelName={channel.name}
-              messages={top.data}
-              agentIds={channelAgents}
-              top={headerHeight + 8}
-              touched={touched}
-            />
-          ) : null}
-          {peeking ? null : (
-            <ChatDock
-              lift={lift}
-              peekAgentId={peekAgentId}
-              showList={showList}
-              settled={settled}
-              pull={pull}
-              boxHeight={boxHeight}
-              far={far}
-              atEnd={atEnd}
-              gap={gap}
-              readHold={readHold}
-              unseen={unseen}
-              jumpRest={jumpRest}
-              toEnd={toEnd}
-              floatRest={floatRest}
-              composerFloat={composerFloat}
-              composerRef={composerRef}
-              onComposerBoxLayout={onComposerBoxLayout}
-              bottomPad={bottomPad}
-              walled={walled}
-              wallSize={wallSize}
-              backdrop={backdrop}
-              keyboardAt={keyboardAt}
-              banner={banner}
-              org={org}
-              notices={notices}
-              member={member}
-              awayAsk={awayAsk}
-              seeAsk={seeAsk}
-              runs={runs}
-              lineBase={lineBase}
-              consultData={consultData}
-              canStop={canStop}
-              stopRun={stopRun}
-              waitingFirst={waitingFirst}
-              waitingHere={waitingHere}
-              seeWaiting={seeWaiting}
-              live={live}
-              meId={meId}
-              threadId={threadId}
-              seeConsult={seeConsult}
-              openBrowserLine={openBrowserLine}
-              lineStop={lineStop}
-              returnLine={returnLine}
-              dmAgent={dmAgent}
-              channel={channel}
-              capsuleRest={capsuleRest}
-              placeholder={placeholder}
-              sendFromField={sendFromField}
-              working={working}
-              plusFromField={plusFromField}
-              composerMedia={composerMedia}
-              channelId={channelId}
-              prefill={prefill}
-              captionBack={captionBack}
-              replyAt={replyAt}
-              composerBanner={composerBanner}
-              composerAttachments={composerAttachments}
-              pending={pending}
-              canAttach={canAttach}
-              longFromField={longFromField}
-              mentionCard={mentionCard}
-              onType={onType}
-              orgId={orgId}
-              dmAgentId={dmAgentId}
-              quote={quote}
-              voiceOn={voiceOn}
-              afterVoice={afterVoice}
-              voiceFromField={voiceFromField}
-              voiceTakeBack={voiceTakeBack}
-              onRecording={onRecording}
-              admin={admin}
-              join={join}
-            />
-          )}
-        </DockGestureArea>
-      </View>
-    </AskStoreProvider>
+            )}
+          </DockGestureArea>
+        </View>
+      </AskStoreProvider>
+    </CodeConversation.Provider>
   );
 }
 

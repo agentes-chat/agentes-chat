@@ -1,5 +1,6 @@
 import type { Database, schema } from "@agenteschat/db";
 import type { ToolImage } from "@agenteschat/providers";
+import type { CodeSessionContext } from "../code-sessions";
 import type { OutcomeKind } from "../context/outcomes";
 import type { JsonSchema } from "./json-schema";
 
@@ -74,6 +75,13 @@ export interface ToolContext {
    * (ADR 0190), so what it posts goes under the message that asked it (`replyThreadOf`).
    */
   confidential?: boolean;
+  /**
+   * Set by whoever runs it (the executor, the bridge), never from a call's input: the run is in a code session's
+   * conversation (ADR 0215, `codeSessionContext`). Its `place` (the session's computer and worktree, for the session's
+   * own agent) is where the engine's computer tools work, as the agent's CLI does; the session hides the tools that
+   * make no sense there.
+   */
+  codeSession?: CodeSessionContext | null;
 }
 
 export interface ToolOutput {

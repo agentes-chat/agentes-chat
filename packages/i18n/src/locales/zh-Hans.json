@@ -2111,6 +2111,7 @@
       "team": "谁是谁：成员、智能体及其分组",
       "dashboards": "智能体保持更新的数字和图表",
       "taskManager": "每个智能体现在在做什么，并停止需要停止的任务",
+      "code": "和智能体一起编程，每个请求都在自己的工作树中",
       "approvalsPersonal": "你的智能体请求你允许的事",
       "proposalsPersonal": "你的智能体提议更改的内容",
       "threadsPersonal": "另开的对话和专项任务",
@@ -2120,6 +2121,7 @@
       "teamPersonal": "你的智能体，以及这里的其他人",
       "dashboardsPersonal": "你的智能体保持更新的数字和图表",
       "taskManagerPersonal": "你的智能体现在在做什么，并停止需要停止的任务",
+      "codePersonal": "和你的智能体一起编程",
       "homePersonal": "你的一天：等着你的事和你的智能体正在做的事"
     },
     "customizeSidebar": "自定义侧边栏",
@@ -2215,7 +2217,7 @@
     "expandNav": "展开侧边栏",
     "searchWorkspace": "搜索工作区",
     "summary_other": "{{people}} 位成员 · {{agents}} 个智能体",
-    "waiting": "等你处理",
+    "waiting": "收件箱",
     "approvals": "审批",
     "proposals": "改进建议",
     "issues": "任务",
@@ -2225,6 +2227,7 @@
     "team": "团队",
     "dashboards": "仪表盘",
     "taskManager": "任务管理器",
+    "code": "代码",
     "calendar": "日历",
     "drive": "Drive",
     "members": "成员",
@@ -4832,7 +4835,8 @@
       "proposal": "提议一项更改",
       "agent": "提议创建新智能体",
       "team": "提议一个团队",
-      "firstTask": "第一个任务"
+      "firstTask": "第一个任务",
+      "code": "建议开一个代码会话"
     },
     "waitingYou": "等你处理",
     "waitingFor": "等待 {{name}}",
@@ -4849,6 +4853,7 @@
       "agent": "<b>{{name}}</b> 提议创建新智能体 · {{what}}",
       "team": "<b>{{name}}</b> 提议了一个团队 · {{what}}",
       "firstTask": "<b>{{name}}</b> 建议了第一个任务 · {{what}}",
+      "code": "<b>{{name}}</b> 建议开一个代码会话 · {{what}}",
       "more": "+{{count}}",
       "here_other": "这里有 {{count}} 件事等你处理",
       "see": "查看"
@@ -5078,7 +5083,7 @@
     "firstRun": "从上次的地方继续 · {{done}}/{{total}}"
   },
   "notifications": {
-    "title": "通知",
+    "title": "收件箱",
     "planLent": {
       "takeBack": "收回",
       "takeBackAll": "从所有智能体收回",
@@ -5106,7 +5111,7 @@
         "computer": "更换电脑"
       }
     },
-    "docTitleUnread": "({{count}}) 通知",
+    "docTitleUnread": "({{count}}) 收件箱",
     "summaryWaiting_other": "{{count}} 件事等你处理",
     "summaryUnread_other": "{{count}} 条未读",
     "summaryAllRead": "全部已读",
@@ -5120,6 +5125,7 @@
       "waiting": "等你处理",
       "unread": "未读",
       "reactions": "表情回应",
+      "requests": "已决定的请求",
       "done": "已完成"
     },
     "keys": {
@@ -5338,6 +5344,8 @@
     "noneUnread": "全部已读。",
     "noneHere": "这里暂时没有内容。",
     "noneDone": "过去 30 天内没有标记为完成的内容。",
+    "noneRequests": "还没有已决定的请求。",
+    "proposes": "提出了一项改进",
     "more": "显示更多"
   },
   "approvals": {
@@ -6184,6 +6192,7 @@
         "empty_reply": "模型没有返回任何内容。",
         "model_refused": "模型拒绝回答。",
         "agent_archived": "该智能体已归档。",
+        "code_session_unavailable": "会话的 worktree 在电脑上不可用。",
         "provider_error": "模型服务商返回了错误：{{detail}}",
         "provider_account": "服务商拒绝了这个密钥：它可能无效、没有余额或超出配额。",
         "provider_unavailable": "模型服务商没有响应：{{detail}}",
@@ -10871,6 +10880,184 @@
     "createKeywords": "创建 新建 添加 create new",
     "empty": "没有找到“{{q}}”相关内容。"
   },
+  "codeSessions": {
+    "beta": {
+      "title": "Coding mode 处于测试阶段",
+      "text": "它真的能用，而且每周都在变。有时会卡住。卡住时，问题在我们这边。",
+      "go": "开始",
+      "added": {
+        "worktree": "每个请求都有自己的 worktree，带 Git、文件、屏幕和终端",
+        "anyAi": "任何 AI：Claude Code、Codex、OpenCode，或用密钥的模型",
+        "beside": "在对话旁边编辑文件、打开终端"
+      },
+      "removed": {
+        "paste": "在聊天和编辑器之间复制粘贴代码",
+        "watch": "盯着终端等智能体做完"
+      }
+    },
+    "title": "代码",
+    "state": {
+      "waiting": "等你处理",
+      "working": "工作中",
+      "preparing": "正在准备工作树",
+      "failed": "准备失败",
+      "pr": "PR #{{number}}",
+      "idle": "就绪"
+    },
+    "list": {
+      "label": "代码会话",
+      "new": "新会话",
+      "newRow": "新会话",
+      "resize": "列表宽度",
+      "local": "在电脑上",
+      "empty": "你打开的会话和被叫去参与的会话会显示在这里。"
+    },
+    "home": {
+      "mode": "Coding mode",
+      "was": "Chat mode",
+      "beta": "Beta",
+      "noAgents": "还没有能在电脑上编程的智能体。在智能体的设置里给它一台电脑和一个编程应用，或者允许它在那里运行代码。",
+      "placeholder": "描述要做的改动、bug 或问题",
+      "label": "要做什么",
+      "agent": "智能体",
+      "repo": "在哪里工作",
+      "repoPlaceholder": "仓库或项目",
+      "repoSearch": "搜索，或输入 owner/name 或新名称",
+      "newLocal": "电脑上的新项目：{{name}}",
+      "useRepo": "使用 {{repo}}",
+      "repoNote": "不带 owner 的名称会在智能体的电脑上新建项目，不放在 GitHub 上。",
+      "hint": "用 @ 呼叫他人加入会话",
+      "start": "开始"
+    },
+    "view": {
+      "gone": "这个会话已不存在，或者你无权查看。",
+      "resize": "对话宽度",
+      "composer": "回复 · 用 @ 呼叫他人 · / 命令",
+      "more": "更多",
+      "openPr": "打开 PR #{{number}}",
+      "close": "关闭会话",
+      "closeHint": "会从列表中移除：工作树会被删除，分支会保留",
+      "failed": "无法准备工作树。",
+      "retry": "重试",
+      "githubAccess": "此工作区没有这个仓库的 GitHub 访问权限。请在“设置 › 连接器”中连接 GitHub，或在电脑上的项目中开始会话（只需输入名称）。"
+    },
+    "panel": {
+      "label": "会话面板",
+      "screen": "屏幕",
+      "terminal": "终端",
+      "terminalHeight": "终端高度",
+      "notReady": "工作树仍在准备中。",
+      "agent_preparing": "正在准备工作树",
+      "agent_failed": "未能准备好工作树",
+      "agent_working": "正在工作",
+      "agent_waiting": "在等你",
+      "agent_idle": "现在有空"
+    },
+    "gitTab": {
+      "openFile": "打开文件",
+      "label": "Git",
+      "from": "基于 {{base}}",
+      "ahead_other": "领先 {{count}}{{more}} 个提交",
+      "refresh": "重新读取",
+      "reading": "正在读取电脑上的 git…",
+      "all": "{{base}} 以来的全部改动",
+      "uncommitted": "未提交",
+      "clean": "所有改动都已提交。",
+      "changesMore": "还有更多改动：这里显示前 1000 个。",
+      "commits": "提交",
+      "noCommits": "自 {{base}} 以来还没有提交。",
+      "more": "还有更早的提交。",
+      "back": "返回",
+      "split": "并排",
+      "none": "这里没有改动。",
+      "tooLarge": "内容太大，无法在这里显示。已列出改动的文件。",
+      "status": {
+        "modified": "已修改",
+        "added": "新增",
+        "deleted": "已删除",
+        "renamed": "已重命名",
+        "untracked": "新文件，尚未加入 git"
+      }
+    },
+    "files": {
+      "label": "文件",
+      "search": "搜索文件",
+      "searchPlaceholder": "按名称或文件夹查找文件",
+      "changedGroup": "已更改",
+      "count_other": "{{formatted}} 个文件",
+      "refresh": "重新读取",
+      "reading": "正在读取电脑上的文件…",
+      "empty": "还没有文件。",
+      "noMatch": "没有与“{{query}}”匹配的文件。",
+      "truncated_other": "显示前 {{formatted}} 个文件。",
+      "hasChanges": "有改动",
+      "opening": "正在打开文件…",
+      "cut": "这里只显示前 {{size}}。",
+      "save": "保存",
+      "unsaved": "未保存",
+      "tooLong": "太长，无法在这里编辑",
+      "moved": "这个文件在你打开之后在电脑上被改动了。",
+      "reload": "载入电脑上的",
+      "overwrite": "用我的覆盖",
+      "unsavedAsk": "这个文件有你没保存的改动。",
+      "keepEditing": "继续编辑",
+      "discard": "放弃",
+      "state": {
+        "binary": "二进制文件：这里无法显示。",
+        "missing": "这个文件已经不在了。",
+        "ignored": "git 忽略了这个文件，所以这里不显示。",
+        "secret": ".env 文件不会在这里显示：它们通常包含机密信息。",
+        "outside": "这个文件是指向工作树之外的链接。"
+      }
+    },
+    "tabs": {
+      "label": "会话的标签页",
+      "talk": "对话",
+      "terminalN": "终端 {{n}}",
+      "close": "关闭 {{name}}",
+      "add": "新建标签页"
+    },
+    "screen": {
+      "computer": "{{name}} 的电脑",
+      "computer_female": "{{name}} 的电脑",
+      "menu": "{{name}} 使用的屏幕",
+      "menu_female": "{{name}} 使用的屏幕",
+      "computerHint": "工作树所在位置",
+      "onHost": "在 {{host}} 上",
+      "exitFull": "退出全屏"
+    },
+    "who": {
+      "label": "会话参与者",
+      "open_other": "会话中有 {{count}} 位参与者",
+      "agent": "在工作树中工作",
+      "opener": "会话发起人",
+      "leave": "退出",
+      "remove": "将 {{name}} 移出会话",
+      "invite": "要叫人加入，在对话中输入 @ 和对方的名字。"
+    },
+    "screenLine": {
+      "show": "在“屏幕”中查看",
+      "held": "有人正在控制屏幕"
+    },
+    "suggestion": {
+      "label": "代码会话建议",
+      "detail": "{{repo}} · {{name}} 的电脑",
+      "more": "查看请求",
+      "open": "打开会话",
+      "here": "在这里做",
+      "opening": "正在打开会话…",
+      "opened": "你打开了会话",
+      "openedBy": "{{name}}打开了会话",
+      "keptHere": "你选择在这里做",
+      "keptHereBy": "{{name}}选择在这里做",
+      "see": "查看会话"
+    },
+    "from": {
+      "dm": "从你和 {{name}} 的对话中打开",
+      "channel": "从 #{{name}} 打开",
+      "see": "查看对话"
+    }
+  },
   "code": {
     "ranSummary_other": "运行了 {{count}} 行 {{language}} 代码 · 输出 {{size}}",
     "show": "查看 {{name}} 的代码",
@@ -11654,6 +11841,9 @@
       "textOnly": "仅读取文本",
       "search": "搜索模型",
       "account": "账号",
+      "accountOf": "账号：{{account}}",
+      "connectAccount": "连接其他账号",
+      "ais": "AI",
       "connect": "连接一个 AI",
       "applies": "从下一次回复起生效。",
       "more": "更多选项",
@@ -13981,6 +14171,7 @@
       "web_search": "搜索网页",
       "web_fetch": "读取网页",
       "image_search": "搜索图片",
+      "show_image": "显示网络图片",
       "create_routine": "创建例行工作",
       "update_routine": "更新例行工作",
       "delete_routine": "删除例行工作",
@@ -14829,6 +15020,9 @@
       "pageOf": "{{page}}/{{count}}",
       "pdfFailed": "这个 PDF 无法在这里显示。请下载后打开。",
       "loadFailed": "这张图片无法在这里显示。",
+      "mark": "标记",
+      "markOff": "停止标记：点击重新用于移动文件",
+      "markOn": "标记：点击即可评论某个点或某个区域",
       "hint": {
         "image": "点击标记一个位置，或拖动框选一个区域",
         "video": "点击视频评论此刻，或拖动框选一个区域",
@@ -14946,6 +15140,17 @@
       "input": "没有成功。请检查填写的内容后重试。",
       "conflict": "现在无法这样做。请刷新后重试。",
       "computer": "电脑现在无法完成这项操作。请确认电脑已开机后重试。"
+    },
+    "codeSession": {
+      "noComputer": "这个智能体还没有电脑。在它的设置里给它配一台，就能和它一起写代码。",
+      "cannotCode": "这个智能体不能在它的电脑上编程。在它的设置里给它一个编程应用，或者允许它在那里运行代码。",
+      "repoNotAllowed": "这个智能体不能在那个仓库里工作。换一个仓库，或者在智能体的设置里添加它。",
+      "notYours": "只有打开这个会话的人或管理员可以关闭它。",
+      "notReady": "会话的工作树还没准备好。请稍后再试。",
+      "fileChanged": "这个文件在你打开之后在电脑上被改动了。",
+      "fileLocked": "这个文件不能在这里编辑。",
+      "suggestionGone": "这条建议已经有人回应了。",
+      "suggestionNotYours": "只有提出请求的人能决定是否打开会话。"
     },
     "webhook": {
       "githubNoAccess": "这个工作区的 GitHub 无法在 {{repo}} 中创建 Webhook。请按下面的步骤手动创建。",
@@ -17647,6 +17852,8 @@
         "merged": "{{who}} 在 GitHub 上合并了 PR #{{number}}（{{repo}}）",
         "closed": "{{who}} 在 GitHub 上关闭了 PR #{{number}}（{{repo}}）",
         "closedIssue": "{{who}} 在 GitHub 上关闭了 issue #{{number}}（{{repo}}）",
+        "checkFailed": "GitHub 上 PR #{{number}}（{{repo}}）的检查“{{check}}”未通过",
+        "checkFailedCommit": "GitHub 上提交 {{commit}}（{{repo}}）的检查“{{check}}”未通过",
         "ask": "请求回复",
         "asked": "{{asker}} 请 {{name}} 在 GitHub 上回复 {{who}}"
       },
@@ -17740,6 +17947,7 @@
         "runningSkillScriptAny": "运行了技能脚本",
         "fetchingFile": "获取了文件",
         "proposingMission": "提议了专项任务",
+        "suggestingCodeSession": "建议了代码会话",
         "messagingMission": "给专项任务发送了备注",
         "updatingPlan": "更新了计划",
         "reportingProgress": "汇报了进展",
@@ -17860,6 +18068,7 @@
       "runningSkillScriptAny": "运行技能脚本",
       "fetchingFile": "获取文件",
       "proposingMission": "提议专项任务",
+      "suggestingCodeSession": "建议代码会话",
       "messagingMission": "给专项任务发送备注",
       "updatingPlan": "更新计划",
       "reportingProgress": "汇报进展",
@@ -19418,6 +19627,46 @@
     "screenOff": "屏幕已关闭",
     "screenOffHelp": "有人观看时屏幕会打开。"
   },
+  "cliTools": {
+    "read": "读取了",
+    "search": "搜索了",
+    "edit": "编辑了",
+    "write": "写入了",
+    "run": "运行了",
+    "fetch": "获取了",
+    "delegate": "委托了子智能体",
+    "skill": "使用了技能",
+    "workflow": "运行了工作流",
+    "other": "使用了",
+    "running": {
+      "read": "正在读取",
+      "search": "正在搜索",
+      "edit": "正在编辑",
+      "write": "正在写入",
+      "run": "正在运行",
+      "fetch": "正在获取",
+      "delegate": "正在委托子智能体",
+      "skill": "正在使用技能",
+      "workflow": "正在运行工作流",
+      "other": "正在使用"
+    },
+    "lines": "+{{added}} −{{removed}}",
+    "added": "+{{added}}",
+    "found_other": "{{count}} 处",
+    "files_other": "{{count}} 个文件",
+    "passed_other": "{{count}} 个通过",
+    "failedTests_other": "{{count}} 个失败",
+    "exit": "退出码 {{code}}",
+    "progress": {
+      "block": "{{name}} 的子智能体",
+      "block_female": "{{name}} 的子智能体",
+      "subagent": "子智能体",
+      "agents_other": "{{count}} 个子智能体",
+      "done": "已完成 {{done}}/{{total}}",
+      "asking_other": "正在委托 {{count}} 个子智能体",
+      "workflowShort": "工作流 {{done}}/{{total}}"
+    }
+  },
   "agentComputer": {
     "title": "{{name}} 的电脑",
     "title_female": "{{name}} 的电脑",
@@ -19523,6 +19772,24 @@
       "upright": "竖屏",
       "message": "给 {{name}} 发消息"
     }
+  },
+  "codeTerminal": {
+    "label": "终端",
+    "opening": "正在打开终端…",
+    "openAgain": "重新打开",
+    "ended": "shell 已结束",
+    "dropped": "与终端的连接已断开",
+    "moved": "这个终端已在另一个窗口打开",
+    "screening": "此处已关闭终端",
+    "forbidden": "只有能使用这台电脑的人才能打开终端",
+    "offline": "电脑处于离线状态",
+    "outdated": "更新电脑后，才能在会话的文件夹中打开终端",
+    "unavailable": "这个智能体的电脑无法打开终端",
+    "off": "{{computer}} 上的终端已关闭",
+    "busy": "这台电脑打开的终端已达上限。请关闭一个，再重新打开。",
+    "paused": "电脑已暂停",
+    "failed": "无法打开终端",
+    "agentFolder": "终端已在智能体的文件夹中打开。更新电脑后，才能在会话的文件夹中打开。"
   },
   "agora": {
     "label": "现在",
@@ -19635,7 +19902,8 @@
       "stopAll": "全部停止",
       "stopAllOf": "停止 {{name}} 的全部任务",
       "open": "在对话中打开",
-      "openManager": "在任务管理器中打开"
+      "openManager": "在任务管理器中打开",
+      "more": "更多操作"
     },
     "confirm": {
       "chainTitle_other": "停止 {{name}} 和 {{count}} 个协助者？",

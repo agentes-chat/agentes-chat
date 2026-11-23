@@ -230,7 +230,9 @@ test("what still waits on the person is a row with the agent's face and a chevro
   expect(waits.querySelector(".tw__chev")).toBeTruthy();
   expect(waits.hasAttribute("aria-expanded")).toBe(false);
   await click(waits);
-  expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/waiting`);
+  // The inbox, on what waits (ADR 0218).
+  expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/notifications`);
+  expect(router.state.location.search).toEqual({ filter: "waiting" });
 });
 
 test("approvals are a row that opens them under it, as the conversation draws them, and closes them again", async () => {

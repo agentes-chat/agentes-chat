@@ -17,7 +17,7 @@ import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import type { AgentColorName } from "@agenteschat/ui/agent/engine";
 import { wallpaperStrength } from "@agenteschat/ui/sky/wallpaper";
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
-import { type LayoutChangeEvent, StyleSheet, useWindowDimensions, type ViewStyle } from "react-native";
+import { type LayoutChangeEvent, type StyleProp, StyleSheet, useWindowDimensions, type ViewStyle } from "react-native";
 import { useOrg } from "@/providers/org";
 import { useTheme } from "@/ui";
 import { cardEdge, type Scheme } from "@/ui/palette";
@@ -36,6 +36,7 @@ import {
   COMPACT_GAP,
   MSG_INSET,
   quietInset,
+  rowBodyInset,
 } from "./logic";
 import { wallpaperKey } from "./wallpaper-logic";
 
@@ -163,6 +164,43 @@ export function useMessageCardCorners(): Corners | null {
   const part = useBubblePart();
   const inBody = useContext(RowPartContext) !== null;
   return part ? BUBBLE_PART_CORNERS : inBody ? MESSAGE_CARD_CORNERS : null;
+}
+
+/**
+ * The one frame of a card that shows in a message, spread last over the card's own: under someone else's words in a
+ * conversation of bubbles it is a bubble of that message (its fill, its light edge over a background, no outline); in
+ * a message of the other looks the raised surface with a hairline; outside a message (a mission's screen, the inbox)
+ * the app's raised card with its shadow, at the card's own corners. `fill`: the color behind its content, for what
+ * fades into it or rings a face on it; `bubble`: whether it is a bubble part.
+ */
+export function useMessageCardFrame(): { style: StyleProp<ViewStyle>; fill: string; bubble: boolean } {
+  const { colors, shadows } = useTheme();
+  const part = useBubblePart();
+  const inBody = useContext(RowPartContext) !== null;
+  const cardCorners = useMessageCardCorners();
+  return useMemo(() => {
+    if (part)
+      return {
+        style: [{ backgroundColor: part.fill, borderWidth: 0 }, cardCorners, part.edge],
+        fill: part.fill,
+        bubble: true,
+      };
+    const style = inBody
+      ? { backgroundColor: colors.raised, borderColor: colors.line2, borderWidth: StyleSheet.hairlineWidth }
+      : { backgroundColor: colors.raised, boxShadow: `${shadows.e1}, ${shadows.top}` };
+    return { style: [style, cardCorners], fill: colors.raised, bubble: false };
+  }, [part, inBody, cardCorners, colors.raised, colors.line2, shadows]);
+}
+
+/**
+ * Where a plate standing on its own among the rows starts and ends (the agents' talk quoted with no reply here): in a
+ * conversation of bubbles on the bubbles' own column, as wide as one, so it never stands a step in from them and past
+ * their end; in the other looks at `start` (the words' column), with the room a bubble leaves at the end.
+ */
+export function plateInset(look: RowLook, start: number): { paddingLeft: number; paddingRight: number } {
+  if (look.style !== "bubbles") return { paddingLeft: start, paddingRight: 48 };
+  const body = rowBodyInset(look);
+  return { paddingLeft: body.left, paddingRight: body.right };
 }
 
 /** `quietInset` in this conversation's look. */

@@ -5369,6 +5369,9 @@
   "shell.moreWhat.taskManager": {
     "value": "What each agent does now, and stop what you need"
   },
+  "shell.moreWhat.code": {
+    "value": "Program with the agents, each request in its own worktree"
+  },
   "shell.moreWhat.approvalsPersonal": {
     "value": "What your agents ask you to allow"
   },
@@ -5395,6 +5398,9 @@
   },
   "shell.moreWhat.taskManagerPersonal": {
     "value": "What your agents do now, and stop what you need"
+  },
+  "shell.moreWhat.codePersonal": {
+    "value": "Program with your agents"
   },
   "shell.moreWhat.homePersonal": {
     "value": "Your day: what waits for you and what your agents are doing"
@@ -5664,7 +5670,7 @@
     }
   },
   "shell.waiting": {
-    "value": "Waiting on you"
+    "value": "Inbox"
   },
   "shell.approvals": {
     "value": "Approvals"
@@ -5695,6 +5701,9 @@
   },
   "shell.taskManager": {
     "value": "Task manager"
+  },
+  "shell.code": {
+    "value": "Code"
   },
   "shell.calendar": {
     "value": "Calendar"
@@ -12313,6 +12322,9 @@
   "ask.kind.firstTask": {
     "value": "First task"
   },
+  "ask.kind.code": {
+    "value": "Suggests a code session"
+  },
   "ask.waitingYou": {
     "value": "waiting for you"
   },
@@ -12354,6 +12366,9 @@
   },
   "ask.bar.firstTask": {
     "value": "<b>{{name}}</b> suggests a first task · {{what}}"
+  },
+  "ask.bar.code": {
+    "value": "<b>{{name}}</b> suggests a code session · {{what}}"
   },
   "ask.bar.more": {
     "value": "+{{count}}"
@@ -12890,7 +12905,7 @@
     "value": "Pick up where you left off · {{done}} of {{total}}"
   },
   "notifications.title": {
-    "value": "Notifications"
+    "value": "Inbox"
   },
   "notifications.planLent.takeBack": {
     "value": "Take it back"
@@ -12965,7 +12980,7 @@
     "value": "Switch computer"
   },
   "notifications.docTitleUnread": {
-    "value": "({{count}}) Notifications"
+    "value": "({{count}}) Inbox"
   },
   "notifications.summaryWaiting": {
     "value": {
@@ -13008,6 +13023,9 @@
   },
   "notifications.filter.reactions": {
     "value": "Reactions"
+  },
+  "notifications.filter.requests": {
+    "value": "Decided requests"
   },
   "notifications.filter.done": {
     "value": "Done"
@@ -13641,6 +13659,12 @@
   },
   "notifications.noneDone": {
     "value": "Nothing marked done in the last 30 days."
+  },
+  "notifications.noneRequests": {
+    "value": "No request decided yet."
+  },
+  "notifications.proposes": {
+    "value": "proposes an improvement"
   },
   "notifications.more": {
     "value": "Show more"
@@ -15804,6 +15828,9 @@
   },
   "agentPage.activity.errors.agent_archived": {
     "value": "The agent was archived."
+  },
+  "agentPage.activity.errors.code_session_unavailable": {
+    "value": "The session's worktree isn't available on its computer."
   },
   "agentPage.activity.errors.provider_error": {
     "value": "The model provider returned an error: {{detail}}"
@@ -27377,6 +27404,434 @@
   "palette.empty": {
     "value": "Nothing for “{{q}}”."
   },
+  "codeSessions.beta.title": {
+    "value": "Coding mode is in beta"
+  },
+  "codeSessions.beta.text": {
+    "value": "It works for real and changes every week. Sometimes it gets stuck. When it does, the problem is ours."
+  },
+  "codeSessions.beta.go": {
+    "value": "Get started"
+  },
+  "codeSessions.beta.added.worktree": {
+    "value": "Each request in its own worktree, with Git, Files, Screen and Terminal"
+  },
+  "codeSessions.beta.added.anyAi": {
+    "value": "Any AI: Claude Code, Codex, OpenCode, or a model by its key"
+  },
+  "codeSessions.beta.added.beside": {
+    "value": "Edit the files and open a terminal beside the conversation"
+  },
+  "codeSessions.beta.removed.paste": {
+    "value": "Copying and pasting code between the chat and the editor"
+  },
+  "codeSessions.beta.removed.watch": {
+    "value": "Watching the terminal until the agent is done"
+  },
+  "codeSessions.title": {
+    "value": "Code"
+  },
+  "codeSessions.state.waiting": {
+    "value": "waiting for you"
+  },
+  "codeSessions.state.working": {
+    "value": "working"
+  },
+  "codeSessions.state.preparing": {
+    "value": "preparing the worktree"
+  },
+  "codeSessions.state.failed": {
+    "value": "couldn't prepare"
+  },
+  "codeSessions.state.pr": {
+    "value": "PR #{{number}}"
+  },
+  "codeSessions.state.idle": {
+    "value": "ready"
+  },
+  "codeSessions.list.label": {
+    "value": "Code sessions"
+  },
+  "codeSessions.list.new": {
+    "value": "New session"
+  },
+  "codeSessions.list.newRow": {
+    "value": "New session"
+  },
+  "codeSessions.list.resize": {
+    "value": "List width"
+  },
+  "codeSessions.list.local": {
+    "value": "on the computer"
+  },
+  "codeSessions.list.empty": {
+    "value": "The sessions you open, or are called into, show here."
+  },
+  "codeSessions.home.mode": {
+    "value": "Coding mode"
+  },
+  "codeSessions.home.was": {
+    "value": "Chat mode"
+  },
+  "codeSessions.home.beta": {
+    "value": "Beta"
+  },
+  "codeSessions.home.noAgents": {
+    "value": "No agent codes on a computer yet. In an agent's settings, give it a computer and a coding app, or let it run code there."
+  },
+  "codeSessions.home.placeholder": {
+    "value": "Describe the change, the bug or the question"
+  },
+  "codeSessions.home.label": {
+    "value": "What to do"
+  },
+  "codeSessions.home.agent": {
+    "value": "Agent"
+  },
+  "codeSessions.home.repo": {
+    "value": "Where to work"
+  },
+  "codeSessions.home.repoPlaceholder": {
+    "value": "Repository or project"
+  },
+  "codeSessions.home.repoSearch": {
+    "value": "Search, or type owner/name or a new name"
+  },
+  "codeSessions.home.newLocal": {
+    "value": "New project on the computer: {{name}}"
+  },
+  "codeSessions.home.useRepo": {
+    "value": "Use {{repo}}"
+  },
+  "codeSessions.home.repoNote": {
+    "value": "A name with no owner starts a project on the agent's computer, outside GitHub."
+  },
+  "codeSessions.home.hint": {
+    "value": "@ calls someone into the session"
+  },
+  "codeSessions.home.start": {
+    "value": "Start"
+  },
+  "codeSessions.view.gone": {
+    "value": "This session is gone, or isn't yours to see."
+  },
+  "codeSessions.view.resize": {
+    "value": "Conversation width"
+  },
+  "codeSessions.view.composer": {
+    "value": "Reply · @ calls someone · / commands"
+  },
+  "codeSessions.view.more": {
+    "value": "More"
+  },
+  "codeSessions.view.openPr": {
+    "value": "Open PR #{{number}}"
+  },
+  "codeSessions.view.close": {
+    "value": "Close the session"
+  },
+  "codeSessions.view.closeHint": {
+    "value": "It leaves the list: the worktree goes, the branch stays"
+  },
+  "codeSessions.view.failed": {
+    "value": "The worktree couldn't be prepared."
+  },
+  "codeSessions.view.retry": {
+    "value": "Try again"
+  },
+  "codeSessions.view.githubAccess": {
+    "value": "This workspace has no GitHub access for this repository. Connect GitHub in Settings › Connectors, or start a session on a project on the computer (just a name)."
+  },
+  "codeSessions.panel.label": {
+    "value": "Session panel"
+  },
+  "codeSessions.panel.screen": {
+    "value": "Screen"
+  },
+  "codeSessions.panel.terminal": {
+    "value": "Terminal"
+  },
+  "codeSessions.panel.terminalHeight": {
+    "value": "Terminal height"
+  },
+  "codeSessions.panel.notReady": {
+    "value": "The worktree is still being prepared."
+  },
+  "codeSessions.panel.agent_preparing": {
+    "value": "is preparing the worktree"
+  },
+  "codeSessions.panel.agent_failed": {
+    "value": "couldn't prepare the worktree"
+  },
+  "codeSessions.panel.agent_working": {
+    "value": "is working"
+  },
+  "codeSessions.panel.agent_waiting": {
+    "value": "is waiting for you"
+  },
+  "codeSessions.panel.agent_idle": {
+    "value": "is free"
+  },
+  "codeSessions.gitTab.openFile": {
+    "value": "Open the file"
+  },
+  "codeSessions.gitTab.label": {
+    "value": "Git"
+  },
+  "codeSessions.gitTab.from": {
+    "value": "from {{base}}"
+  },
+  "codeSessions.gitTab.ahead": {
+    "value": {
+      "one": "{{count}}{{more}} commit ahead",
+      "other": "{{count}}{{more}} commits ahead"
+    }
+  },
+  "codeSessions.gitTab.refresh": {
+    "value": "Read again"
+  },
+  "codeSessions.gitTab.reading": {
+    "value": "Reading git on the computer…"
+  },
+  "codeSessions.gitTab.all": {
+    "value": "Everything since {{base}}"
+  },
+  "codeSessions.gitTab.uncommitted": {
+    "value": "Not committed"
+  },
+  "codeSessions.gitTab.clean": {
+    "value": "Everything is committed."
+  },
+  "codeSessions.gitTab.changesMore": {
+    "value": "And more changes: the first thousand are here."
+  },
+  "codeSessions.gitTab.commits": {
+    "value": "Commits"
+  },
+  "codeSessions.gitTab.noCommits": {
+    "value": "No commits since {{base}} yet."
+  },
+  "codeSessions.gitTab.more": {
+    "value": "And older commits."
+  },
+  "codeSessions.gitTab.back": {
+    "value": "Back"
+  },
+  "codeSessions.gitTab.split": {
+    "value": "Side by side"
+  },
+  "codeSessions.gitTab.none": {
+    "value": "Nothing changed here."
+  },
+  "codeSessions.gitTab.tooLarge": {
+    "value": "Too large to show here. The files that changed are listed."
+  },
+  "codeSessions.gitTab.status.modified": {
+    "value": "Modified"
+  },
+  "codeSessions.gitTab.status.added": {
+    "value": "Added"
+  },
+  "codeSessions.gitTab.status.deleted": {
+    "value": "Deleted"
+  },
+  "codeSessions.gitTab.status.renamed": {
+    "value": "Renamed"
+  },
+  "codeSessions.gitTab.status.untracked": {
+    "value": "New, not in git yet"
+  },
+  "codeSessions.files.label": {
+    "value": "Files"
+  },
+  "codeSessions.files.search": {
+    "value": "Search files"
+  },
+  "codeSessions.files.searchPlaceholder": {
+    "value": "Find a file by name or folder"
+  },
+  "codeSessions.files.changedGroup": {
+    "value": "Changed"
+  },
+  "codeSessions.files.count": {
+    "value": {
+      "one": "{{formatted}} file",
+      "other": "{{formatted}} files"
+    }
+  },
+  "codeSessions.files.refresh": {
+    "value": "Read again"
+  },
+  "codeSessions.files.reading": {
+    "value": "Reading the files on the computer…"
+  },
+  "codeSessions.files.empty": {
+    "value": "No files yet."
+  },
+  "codeSessions.files.noMatch": {
+    "value": "No file matches “{{query}}”."
+  },
+  "codeSessions.files.truncated": {
+    "value": {
+      "one": "Showing the first {{formatted}} file.",
+      "other": "Showing the first {{formatted}} files."
+    }
+  },
+  "codeSessions.files.hasChanges": {
+    "value": "Has changes"
+  },
+  "codeSessions.files.opening": {
+    "value": "Opening the file…"
+  },
+  "codeSessions.files.cut": {
+    "value": "Only the first {{size}} show here."
+  },
+  "codeSessions.files.save": {
+    "value": "Save"
+  },
+  "codeSessions.files.unsaved": {
+    "value": "Not saved"
+  },
+  "codeSessions.files.tooLong": {
+    "value": "Too long to edit here"
+  },
+  "codeSessions.files.moved": {
+    "value": "This file changed on the computer after you opened it."
+  },
+  "codeSessions.files.reload": {
+    "value": "Load that one"
+  },
+  "codeSessions.files.overwrite": {
+    "value": "Save mine over it"
+  },
+  "codeSessions.files.unsavedAsk": {
+    "value": "This file has changes you didn't save."
+  },
+  "codeSessions.files.keepEditing": {
+    "value": "Keep editing"
+  },
+  "codeSessions.files.discard": {
+    "value": "Discard"
+  },
+  "codeSessions.files.state.binary": {
+    "value": "A binary file: nothing to show here."
+  },
+  "codeSessions.files.state.missing": {
+    "value": "This file isn't there anymore."
+  },
+  "codeSessions.files.state.ignored": {
+    "value": "Git ignores this file, so it doesn't show here."
+  },
+  "codeSessions.files.state.secret": {
+    "value": ".env files don't show here: they usually hold secrets."
+  },
+  "codeSessions.files.state.outside": {
+    "value": "This file is a link out of the worktree."
+  },
+  "codeSessions.tabs.label": {
+    "value": "The session's tabs"
+  },
+  "codeSessions.tabs.talk": {
+    "value": "Conversation"
+  },
+  "codeSessions.tabs.terminalN": {
+    "value": "Terminal {{n}}"
+  },
+  "codeSessions.tabs.close": {
+    "value": "Close {{name}}"
+  },
+  "codeSessions.tabs.add": {
+    "value": "New tab"
+  },
+  "codeSessions.screen.computer": {
+    "value": "{{name}}'s computer",
+    "female": "{{name}}'s computer"
+  },
+  "codeSessions.screen.menu": {
+    "value": "Screens {{name}} uses",
+    "female": "Screens {{name}} uses"
+  },
+  "codeSessions.screen.computerHint": {
+    "value": "Where the worktree is"
+  },
+  "codeSessions.screen.onHost": {
+    "value": "on {{host}}"
+  },
+  "codeSessions.screen.exitFull": {
+    "value": "Exit full screen"
+  },
+  "codeSessions.who.label": {
+    "value": "In this session"
+  },
+  "codeSessions.who.open": {
+    "value": {
+      "one": "{{count}} in this session",
+      "other": "{{count}} in this session"
+    }
+  },
+  "codeSessions.who.agent": {
+    "value": "works in the worktree"
+  },
+  "codeSessions.who.opener": {
+    "value": "opened the session"
+  },
+  "codeSessions.who.leave": {
+    "value": "Leave"
+  },
+  "codeSessions.who.remove": {
+    "value": "Remove {{name}} from the session"
+  },
+  "codeSessions.who.invite": {
+    "value": "To bring someone in, type @ and their name in the conversation."
+  },
+  "codeSessions.screenLine.show": {
+    "value": "See on Screen"
+  },
+  "codeSessions.screenLine.held": {
+    "value": "A person has the screen"
+  },
+  "codeSessions.suggestion.label": {
+    "value": "Code session suggestion"
+  },
+  "codeSessions.suggestion.detail": {
+    "value": "{{repo}} · on {{name}}'s computer"
+  },
+  "codeSessions.suggestion.more": {
+    "value": "See the request"
+  },
+  "codeSessions.suggestion.open": {
+    "value": "Open session"
+  },
+  "codeSessions.suggestion.here": {
+    "value": "Do it here"
+  },
+  "codeSessions.suggestion.opening": {
+    "value": "Opening the session…"
+  },
+  "codeSessions.suggestion.opened": {
+    "value": "You opened the session"
+  },
+  "codeSessions.suggestion.openedBy": {
+    "value": "{{name}} opened the session"
+  },
+  "codeSessions.suggestion.keptHere": {
+    "value": "You chose to do it here"
+  },
+  "codeSessions.suggestion.keptHereBy": {
+    "value": "{{name}} chose to do it here"
+  },
+  "codeSessions.suggestion.see": {
+    "value": "See session"
+  },
+  "codeSessions.from.dm": {
+    "value": "Opened from your conversation with {{name}}"
+  },
+  "codeSessions.from.channel": {
+    "value": "Opened from #{{name}}"
+  },
+  "codeSessions.from.see": {
+    "value": "See conversation"
+  },
   "code.ranSummary": {
     "value": {
       "one": "Ran {{count}} line of {{language}} · output {{size}}",
@@ -29509,6 +29964,15 @@
   },
   "brain.picker.account": {
     "value": "Account"
+  },
+  "brain.picker.accountOf": {
+    "value": "Account: {{account}}"
+  },
+  "brain.picker.connectAccount": {
+    "value": "Connect another account"
+  },
+  "brain.picker.ais": {
+    "value": "AI"
   },
   "brain.picker.connect": {
     "value": "Connect an AI"
@@ -35532,6 +35996,9 @@
   "toolNames.label.image_search": {
     "value": "Search for pictures"
   },
+  "toolNames.label.show_image": {
+    "value": "Show pictures from the web"
+  },
   "toolNames.label.create_routine": {
     "value": "Create routine"
   },
@@ -37689,6 +38156,15 @@
   "files.comments.loadFailed": {
     "value": "This image can't be shown here."
   },
+  "files.comments.mark": {
+    "value": "Mark"
+  },
+  "files.comments.markOff": {
+    "value": "Stop marking: a click moves the file again"
+  },
+  "files.comments.markOn": {
+    "value": "Mark: a click comments on a point or an area"
+  },
   "files.comments.hint.image": {
     "value": "Click to mark a point or drag to mark an area"
   },
@@ -37982,6 +38458,33 @@
   },
   "errors.said.computer": {
     "value": "The computer couldn't do this now. Check that it's on and try again."
+  },
+  "errors.codeSession.noComputer": {
+    "value": "This agent has no computer yet. Give it one in its settings to code with it."
+  },
+  "errors.codeSession.cannotCode": {
+    "value": "This agent can't code on its computer. Give it a coding app in its settings, or let it run code there."
+  },
+  "errors.codeSession.repoNotAllowed": {
+    "value": "This agent can't work in that repository. Pick another one, or add it in the agent's settings."
+  },
+  "errors.codeSession.notYours": {
+    "value": "Only who opened the session, or an admin, closes it."
+  },
+  "errors.codeSession.notReady": {
+    "value": "The session's worktree isn't ready yet. Try again in a moment."
+  },
+  "errors.codeSession.fileChanged": {
+    "value": "This file changed on the computer after you opened it."
+  },
+  "errors.codeSession.fileLocked": {
+    "value": "This file can't be edited here."
+  },
+  "errors.codeSession.suggestionGone": {
+    "value": "This suggestion was answered already."
+  },
+  "errors.codeSession.suggestionNotYours": {
+    "value": "Only who asked decides whether to open the session."
   },
   "errors.webhook.githubNoAccess": {
     "value": "This workspace's GitHub can't add webhooks to {{repo}}. Follow the steps below to add it by hand."
@@ -44750,6 +45253,12 @@
   "chat.notice.github.closedIssue": {
     "value": "{{who}} closed issue #{{number}} ({{repo}}) on GitHub"
   },
+  "chat.notice.github.checkFailed": {
+    "value": "Check «{{check}}» didn't pass on PR #{{number}} ({{repo}}) on GitHub"
+  },
+  "chat.notice.github.checkFailedCommit": {
+    "value": "Check «{{check}}» didn't pass on commit {{commit}} ({{repo}}) on GitHub"
+  },
   "chat.notice.github.ask": {
     "value": "Ask for a reply"
   },
@@ -45006,6 +45515,9 @@
   },
   "chat.work.step.proposingMission": {
     "value": "Proposed a mission"
+  },
+  "chat.work.step.suggestingCodeSession": {
+    "value": "Suggested a code session"
   },
   "chat.work.step.messagingMission": {
     "value": "Sent a note to the mission"
@@ -45357,6 +45869,9 @@
   },
   "chat.activity.proposingMission": {
     "value": "proposing a mission"
+  },
+  "chat.activity.suggestingCodeSession": {
+    "value": "suggesting a code session"
   },
   "chat.activity.messagingMission": {
     "value": "sending a note to the mission"
@@ -48663,6 +49178,123 @@
   "agentSide.screenOffHelp": {
     "value": "It turns on when someone watches."
   },
+  "cliTools.read": {
+    "value": "Read"
+  },
+  "cliTools.search": {
+    "value": "Searched"
+  },
+  "cliTools.edit": {
+    "value": "Edited"
+  },
+  "cliTools.write": {
+    "value": "Wrote"
+  },
+  "cliTools.run": {
+    "value": "Ran"
+  },
+  "cliTools.fetch": {
+    "value": "Fetched"
+  },
+  "cliTools.delegate": {
+    "value": "Asked a subagent"
+  },
+  "cliTools.skill": {
+    "value": "Used the skill"
+  },
+  "cliTools.workflow": {
+    "value": "Ran a workflow"
+  },
+  "cliTools.other": {
+    "value": "Used"
+  },
+  "cliTools.running.read": {
+    "value": "Reading"
+  },
+  "cliTools.running.search": {
+    "value": "Searching"
+  },
+  "cliTools.running.edit": {
+    "value": "Editing"
+  },
+  "cliTools.running.write": {
+    "value": "Writing"
+  },
+  "cliTools.running.run": {
+    "value": "Running"
+  },
+  "cliTools.running.fetch": {
+    "value": "Fetching"
+  },
+  "cliTools.running.delegate": {
+    "value": "Asking a subagent"
+  },
+  "cliTools.running.skill": {
+    "value": "Using the skill"
+  },
+  "cliTools.running.workflow": {
+    "value": "Running a workflow"
+  },
+  "cliTools.running.other": {
+    "value": "Using"
+  },
+  "cliTools.lines": {
+    "value": "+{{added}} −{{removed}}"
+  },
+  "cliTools.added": {
+    "value": "+{{added}}"
+  },
+  "cliTools.found": {
+    "value": {
+      "one": "{{count}} place",
+      "other": "{{count}} places"
+    }
+  },
+  "cliTools.files": {
+    "value": {
+      "one": "{{count}} file",
+      "other": "{{count}} files"
+    }
+  },
+  "cliTools.passed": {
+    "value": {
+      "one": "{{count}} passed",
+      "other": "{{count}} passed"
+    }
+  },
+  "cliTools.failedTests": {
+    "value": {
+      "one": "{{count}} failed",
+      "other": "{{count}} failed"
+    }
+  },
+  "cliTools.exit": {
+    "value": "exit {{code}}"
+  },
+  "cliTools.progress.block": {
+    "value": "{{name}}'s subagents"
+  },
+  "cliTools.progress.subagent": {
+    "value": "Subagent"
+  },
+  "cliTools.progress.agents": {
+    "value": {
+      "one": "{{count}} subagent",
+      "other": "{{count}} subagents"
+    }
+  },
+  "cliTools.progress.done": {
+    "value": "{{done}} of {{total}} done"
+  },
+  "cliTools.progress.asking": {
+    "value": {
+      "one": "Asking a subagent",
+      "other": "Asking {{count}} subagents"
+    }
+  },
+  "cliTools.progress.workflowShort": {
+    "value": "workflow {{done}} of {{total}}"
+  },
   "agentComputer.title": {
     "value": "{{name}}'s computer"
   },
@@ -48899,6 +49531,54 @@
   },
   "agentComputer.phone.message": {
     "value": "Message {{name}}"
+  },
+  "codeTerminal.label": {
+    "value": "Terminal"
+  },
+  "codeTerminal.opening": {
+    "value": "Opening the terminal…"
+  },
+  "codeTerminal.openAgain": {
+    "value": "Open again"
+  },
+  "codeTerminal.ended": {
+    "value": "The shell ended"
+  },
+  "codeTerminal.dropped": {
+    "value": "The connection to the terminal dropped"
+  },
+  "codeTerminal.moved": {
+    "value": "This terminal is open in another window"
+  },
+  "codeTerminal.screening": {
+    "value": "Terminals are off here"
+  },
+  "codeTerminal.forbidden": {
+    "value": "Only whoever may use this computer opens a terminal"
+  },
+  "codeTerminal.offline": {
+    "value": "The computer is offline"
+  },
+  "codeTerminal.outdated": {
+    "value": "Update the computer to open the terminal in the session's folder"
+  },
+  "codeTerminal.unavailable": {
+    "value": "This agent's computer doesn't open terminals"
+  },
+  "codeTerminal.off": {
+    "value": "The terminal is off on {{computer}}"
+  },
+  "codeTerminal.busy": {
+    "value": "This computer has as many terminals open as it takes. Close one and open again."
+  },
+  "codeTerminal.paused": {
+    "value": "The computer is paused"
+  },
+  "codeTerminal.failed": {
+    "value": "Couldn't open the terminal"
+  },
+  "codeTerminal.agentFolder": {
+    "value": "The terminal opened in the agent's folder. Update the computer to open it in the session's folder."
   },
   "agora.label": {
     "value": "Now"
@@ -49199,6 +49879,9 @@
   },
   "taskManager.actions.openManager": {
     "value": "Open in the task manager"
+  },
+  "taskManager.actions.more": {
+    "value": "More actions"
   },
   "taskManager.confirm.chainTitle": {
     "value": {

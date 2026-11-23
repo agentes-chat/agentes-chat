@@ -396,6 +396,14 @@ test("a provider refused this server's own OAuth app: what's wrong and who fixes
  * hit goes in `KNOWN` instead.
  */
 const PLAIN_LINE = new Set([
+  // A code session (ADR 0215): the apps start one only with words in the field and rename one only to a name, build
+  // its git and file requests themselves, never offer removing who must stay, and retry only a failed worktree.
+  "code_session.empty",
+  "code_session.empty_title",
+  "code_session.commit_sha",
+  "code_session.file_path",
+  "code_session.member_stays",
+  "code_session.not_failed",
   // A file's conversation (ADR 0199): the apps start one only on a live file, never offer a task's or a file's
   // conversation to join, leave or rename, and build a message's `liveRef` from the selection themselves.
   "artifact.no_conversation",

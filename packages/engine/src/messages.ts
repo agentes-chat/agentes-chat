@@ -25,6 +25,7 @@ import { currentHandles } from "./agents";
 import { withDeletedArtifacts } from "./artifacts";
 import { audienceSql, notifyBlocked } from "./audience";
 import { postRefusal, requireChannelAccess } from "./channels";
+import { admitCodeMembers, codeAgentSql } from "./code-sessions";
 import { CONFIDENTIAL_STUB, confidentialThreadSql, threadIsConfidential, unsealed } from "./confidential";
 import { ConflictError, NotFoundError, ValidationError } from "./errors";
 import {
@@ -935,11 +936,14 @@ export async function insertMessageWithRuns(
         -- A task's conversation is a DM with the task's agent: what names nobody there is for it, an ok or a status
         -- line too ("feito", "pago"), never the router's to drop. Naming a person or quoting another agent goes to
         -- the router.
-        select t.agent_id from (select ${taskAgentSql(sql`${input.channelId}::uuid`)} as agent_id) t
+        -- A code session's conversation (ADR 0215) is the same with the session's agent, once its worktree is ready
+        -- (codeAgentSql); before that what names nobody waits for it (prepareCodeSession hands it over).
+        select t.agent_id from (select coalesce(${taskAgentSql(sql`${input.channelId}::uuid`)},
+          ${codeAgentSql(sql`${input.channelId}::uuid`)}) as agent_id) t
         where ${startRuns}::boolean and not exists (select 1 from mentioned)
           and not exists (select 1 from mentioned_people) and not exists (select 1 from task_readers_named)
           and (${quotedAgentId}::uuid is null or t.agent_id = ${quotedAgentId}::uuid)
-          and exists (select 1 from ${channels} tc where tc.id = ${input.channelId}::uuid and tc.kind = 'task')
+          and exists (select 1 from ${channels} tc where tc.id = ${input.channelId}::uuid and tc.kind in ('task', 'code'))
       ), addressed as (
         select a.id as agent_id,
           case when exists (select 1 from mentioned) or a.id in (select agent_id from work_thread) then 'mention'
@@ -1346,6 +1350,15 @@ export async function postPersonMessage(
       handles: await currentHandles(deps.db, orgId, parseMentionHandles(input.body)),
       taskAgent: true,
     });
+  }
+  // A code session's conversation (ADR 0215): who is named there (an agent, a person of the workspace) joins it.
+  if (channel.kind === "code") {
+    await admitCodeMembers(
+      deps.db,
+      orgId,
+      channelId,
+      await currentHandles(deps.db, orgId, parseMentionHandles(input.body)),
+    );
   }
   // A live file's conversation (ADR 0199): an agent mentioned there joins it when it may work on the file.
   if (channel.kind === "file") {

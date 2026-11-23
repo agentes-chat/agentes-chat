@@ -234,7 +234,7 @@
     "value": "Agents"
   },
   "tabs.activity": {
-    "value": "Activity"
+    "value": "Inbox"
   },
   "tabs.search": {
     "value": "Search"
@@ -457,6 +457,18 @@
   },
   "chats.recent": {
     "value": "Recent"
+  },
+  "chats.view.title": {
+    "value": "Show chats"
+  },
+  "chats.view.sectors": {
+    "value": "Sectors"
+  },
+  "chats.view.dms": {
+    "value": "Direct messages"
+  },
+  "chats.view.channels": {
+    "value": "Channels"
   },
   "chats.seeAll": {
     "value": "See all chats"
@@ -769,6 +781,13 @@
   },
   "chat.someone": {
     "value": "Someone"
+  },
+  "chat.handedTo": {
+    "value": "Handed to {{name}}",
+    "female": "Handed to {{name}}"
+  },
+  "chat.pairAsked": {
+    "value": "{{from}} asked"
   },
   "chat.messageTo": {
     "value": "Message {{name}}"
@@ -2057,7 +2076,7 @@
     "female": "{{name}} asks again before this kind of work."
   },
   "activity.title": {
-    "value": "Activity"
+    "value": "Inbox"
   },
   "activity.chooseModel": {
     "value": "Choose another model"
@@ -2519,6 +2538,114 @@
   },
   "mention.added": {
     "value": "{{name}} joined the channel"
+  },
+  "settingsSearch.open": {
+    "value": "Search settings"
+  },
+  "settingsSearch.title": {
+    "value": "Search"
+  },
+  "settingsSearch.placeholder": {
+    "value": "Search You and settings"
+  },
+  "settingsSearch.workspace": {
+    "value": "Workspace settings"
+  },
+  "settingsSearch.words.status": {
+    "value": "away, busy, presence, online"
+  },
+  "settingsSearch.words.account": {
+    "value": "name, photo, email, time zone, password, handle"
+  },
+  "settingsSearch.words.deleteAccount": {
+    "value": "delete, remove, close account"
+  },
+  "settingsSearch.words.workspaces": {
+    "value": "switch, servers, accounts"
+  },
+  "settingsSearch.words.notifications": {
+    "value": "alerts, push, badges"
+  },
+  "settingsSearch.words.approvals": {
+    "value": "approve, delegate"
+  },
+  "settingsSearch.words.start": {
+    "value": "open, home, first screen"
+  },
+  "settingsSearch.words.activity": {
+    "value": "tools, what agents did"
+  },
+  "settingsSearch.words.chatLook": {
+    "value": "bubbles, messages, conversation"
+  },
+  "settingsSearch.words.wallpaper": {
+    "value": "background, wallpaper, photo"
+  },
+  "settingsSearch.words.agentStyle": {
+    "value": "technical, simple, tone"
+  },
+  "settingsSearch.words.sounds": {
+    "value": "sound, quiet, silent"
+  },
+  "settingsSearch.words.appearance": {
+    "value": "theme, dark, light, mode"
+  },
+  "settingsSearch.words.appIcon": {
+    "value": "icon"
+  },
+  "settingsSearch.words.language": {
+    "value": "English, Portuguese, Spanish"
+  },
+  "settingsSearch.words.about": {
+    "value": "version, licenses"
+  },
+  "settingsSearch.words.aiAccounts": {
+    "value": "key, API, provider, plan, model"
+  },
+  "settingsSearch.words.general": {
+    "value": "name, logo, time zone, context"
+  },
+  "settingsSearch.words.media": {
+    "value": "GIFs, stickers"
+  },
+  "settingsSearch.words.members": {
+    "value": "people, team"
+  },
+  "settingsSearch.words.invites": {
+    "value": "invite, link"
+  },
+  "settingsSearch.words.roles": {
+    "value": "permissions"
+  },
+  "settingsSearch.words.usage": {
+    "value": "costs, spend, plan, tokens, budget"
+  },
+  "settingsSearch.words.connectors": {
+    "value": "integrations, MCP, services"
+  },
+  "settingsSearch.words.skills": {
+    "value": "abilities"
+  },
+  "settingsSearch.words.vault": {
+    "value": "passwords, keys, logins, secrets"
+  },
+  "settingsSearch.words.access": {
+    "value": "permissions, agents' access"
+  },
+  "settingsSearch.words.apps": {
+    "value": "AI apps, MCP"
+  },
+  "settingsSearch.words.computers": {
+    "value": "devices, machines, computer, phone"
+  },
+  "settingsSearch.words.storage": {
+    "value": "files, S3, storage"
+  },
+  "settingsSearch.words.import": {
+    "value": "export, import, migrate"
+  },
+  "settingsSearch.words.audit": {
+    "value": "log, history"
   },
   "me.title": {
     "value": "You"
@@ -3066,17 +3193,8 @@
   "files.video.cantPlay": {
     "value": "This video can't play on this phone."
   },
-  "files.talk.hint.image": {
-    "value": "Tap where you want to comment"
-  },
-  "files.talk.hint.video": {
-    "value": "Tap the video to comment on this moment"
-  },
   "files.talk.hint.pdf": {
-    "value": "Tap the page to mark a point"
-  },
-  "files.talk.markVideo": {
-    "value": "Comment on this moment of the video"
+    "value": "Touch and hold the page to mark a point"
   },
   "files.talk.pdfPage": {
     "value": "Page {{page}} of {{count}}"
@@ -3554,6 +3672,33 @@
   },
   "routines.when.lastDay": {
     "value": "Last day"
+  },
+  "coding.pill": {
+    "value": "{{who}}. See the code"
+  },
+  "coding.seeChanges": {
+    "value": "See the changes"
+  },
+  "coding.project": {
+    "value": "Project"
+  },
+  "coding.whereSearch": {
+    "value": "Search or type a name"
+  },
+  "coding.listed": {
+    "value": "The agent's"
+  },
+  "coding.commit": {
+    "value": "Commit {{short}}"
+  },
+  "coding.waiting": {
+    "value": "Waiting on you"
+  },
+  "coding.next.pr": {
+    "value": "Branch sent, no pull request yet"
+  },
+  "coding.next.mergeLocal": {
+    "value": "Ready to merge into {{base}}"
   },
   "taskManager.loadFailed": {
     "value": "Couldn't load the tasks."
@@ -5028,12 +5173,6 @@
   "connectors.addMcp": {
     "value": "Add MCP"
   },
-  "connectors.add": {
-    "value": "Add"
-  },
-  "connectors.allServices": {
-    "value": "All services"
-  },
   "connectors.waitLine": {
     "value": {
       "one": "{{count}} tool needs you",
@@ -5052,11 +5191,8 @@
   "connectors.connected": {
     "value": "Connected"
   },
-  "connectors.suggested": {
-    "value": "Suggested for {{org}}"
-  },
-  "connectors.all": {
-    "value": "All"
+  "connectors.seeAll": {
+    "value": "See all"
   },
   "connectors.noResults": {
     "value": "No service by that name. Try its address."
@@ -5066,9 +5202,6 @@
   },
   "connectors.loadFailed": {
     "value": "Couldn't load the connectors."
-  },
-  "connectors.connectedCheck": {
-    "value": "{{name}}, connected"
   },
   "connectors.adminsOnly": {
     "value": "Only an admin of {{org}} connects services. Ask one of them."
@@ -5196,6 +5329,72 @@
       "one": "{{names}} uses it",
       "other": "{{names}} use it"
     }
+  },
+  "connectors.page.missing": {
+    "value": "This service isn't in the catalog anymore."
+  },
+  "connectors.page.connected": {
+    "value": "Connected"
+  },
+  "connectors.page.open": {
+    "value": "Open the connection"
+  },
+  "connectors.page.category": {
+    "value": "Category"
+  },
+  "connectors.page.tools": {
+    "value": "Tools"
+  },
+  "connectors.page.toolsAsk": {
+    "value": {
+      "one": "{{count}} asks for approval",
+      "other": "{{count}} ask for approval"
+    }
+  },
+  "connectors.page.toolsAskNone": {
+    "value": "none asks for approval"
+  },
+  "connectors.page.toolsLater": {
+    "value": "once connected"
+  },
+  "connectors.page.who": {
+    "value": "Who connects"
+  },
+  "connectors.page.whoAdmins": {
+    "value": "{{org}} admins"
+  },
+  "connectors.page.whoRuns": {
+    "value": "Who runs the workspace"
+  },
+  "connectors.page.whoYou": {
+    "value": "You, for yourself"
+  },
+  "connectors.page.signIn": {
+    "value": "Signs in with"
+  },
+  "connectors.page.how.signIn": {
+    "value": "Your account"
+  },
+  "connectors.page.how.key": {
+    "value": "A key"
+  },
+  "connectors.page.how.either": {
+    "value": "Account or key"
+  },
+  "connectors.page.canTitle": {
+    "value": "What agents do with it"
+  },
+  "connectors.page.address": {
+    "value": "Address"
+  },
+  "connectors.page.addressNote": {
+    "value": "Agents use this address with the connected account. Each one gets only what you allow."
+  },
+  "connectors.page.host": {
+    "value": "Connects to"
+  },
+  "connectors.page.more": {
+    "value": "More in {{category}}"
   },
   "connectors.fromAgent": {
     "value": "Connect a service"
@@ -6765,6 +6964,12 @@
   },
   "empty.tasks.viewerTitlePersonal": {
     "value": "Follow your agents' work"
+  },
+  "empty.coding.title": {
+    "value": "Code with your agents"
+  },
+  "empty.coding.text": {
+    "value": "Each session is a conversation with an agent working on its own branch, on its computer."
   },
   "empty.routines.title": {
     "value": "Leave repeated work to your agents"

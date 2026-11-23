@@ -1,6 +1,7 @@
 import {
   browserHandoffOf,
   browserTrailOf,
+  codeSuggestionOf,
   desktopTrailOf,
   isPinnedSelection,
   keys,
@@ -57,7 +58,8 @@ import { replyChipsOf } from "@agenteschat/client/lib/team-plan";
 import { usagePauseCardOf, usageWaitOf } from "@agenteschat/client/lib/usage-pause";
 import { appVia } from "@agenteschat/client/lib/via";
 import { listedText, voiceOf } from "@agenteschat/client/lib/voice";
-import { type ReplyStop, showsActivity, splitCanceled } from "@agenteschat/client/lib/work";
+import { type ReplyStop, splitCanceled } from "@agenteschat/client/lib/work";
+import { useShowsWork } from "@agenteschat/client/lib/work-context";
 import { type AgentColorName, mixHex } from "@agenteschat/ui/agent/engine";
 import { WALLPAPER_LIFT } from "@agenteschat/ui/sky/wallpaper";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -104,6 +106,7 @@ import { StretchCard } from "../ai/StretchCard";
 import { UsagePauseCard, UsageWaitCancel } from "../ai/UsagePauseCard";
 import { HandoffCard } from "../browser/HandoffCard";
 import { TrailCard } from "../browser/TrailCard";
+import { CodeSuggestionCard } from "../coding/SuggestionCard";
 import { iconUri } from "../connectors/logic";
 import { DeviceWait } from "../devices/DeviceWait";
 import { deviceWaitOf } from "../devices/logic";
@@ -130,7 +133,7 @@ import { secretRequestOf } from "./ask-store";
 import { useBubbleCap } from "./bubble-cap";
 import { ChatMedia } from "./ChatMedia";
 import { ClippedMessage, OpenedMessagesContext } from "./ClippedMessage";
-import { ConsultPairRow, useRunConsults } from "./ConsultGroup";
+import { ConsultQuote, useRunConsults } from "./ConsultGroup";
 import { ApprovalInline, QuestionCard, ThreadLink, ThreadReplyingLink } from "./cards";
 import { FeedbackOfferRow } from "./FeedbackOffer";
 import { HandedTaskChips, IssueWorkCard } from "./issue-work";
@@ -161,13 +164,13 @@ import {
   rowFrame,
   workStepsOf,
 } from "./logic";
-import { liftedEdge, lookRows, RowPartContext, useRhythm, useRowLook } from "./look";
+import { liftedEdge, lookRows, plateInset, RowPartContext, useRhythm, useRowLook } from "./look";
 import { MessageText } from "./MessageText";
 import { aboveInset, QuoteAbove, QuotePlate } from "./QuoteLine";
 import { ReachLines } from "./ReachLines";
 import { Receipts } from "./Receipts";
 import {
-  useRowConsults,
+  useRowConsultsPart,
   useRowDirectory,
   useRowMeId,
   useRowMyHandle,
@@ -300,6 +303,7 @@ function RowBody({
   const qc = useQueryClient();
   const orgId = useOrgId();
   const { org } = useOrg();
+  const shows = useShowsWork(org);
   // Found again only when the cached lists it reads change, not on every draw of the row.
   const noticeId = routine?.noticeId;
   const listed = noticeId ? qc.getQueryData<Message[]>(keys.messages(orgId, m.channelId)) : undefined;
@@ -352,8 +356,10 @@ function RowBody({
   // The one an agent adds after its own reply carries the reply's run: the run's tools, questions and stop line
   // stay on the reply, never shown twice.
   const mediaAfter = isAgent && isMediaAfterReply(meta);
-  // It asked other agents first: one row right before it (its run's questions on the run's first message here, and
-  // the ones its `meta.consulted` names), so it shows its face and name again under that row.
+  // It asked other agents first (its run's questions on the run's first message here, and the ones its
+  // `meta.consulted` names): quoted at the top of its words, as a reply quotes a message. With no words to sit in (a
+  // reply that is only cards), the quote stands on its own right before it, and the reply shows its face and name
+  // again under it.
   const reached = useMemo(() => reachHandoffs(m.meta), [m.meta]);
   const rhythm = useRhythm();
   const consults = useRunConsults(
@@ -365,18 +371,22 @@ function RowBody({
   );
   // Work it handed over that reports here: its line under this reply says what the pair row would.
   const paired = consults.filter((c) => !m.handedWorks?.some((w) => w.handedBy?.consultationId === c.id));
-  const pair =
+  const consultQuote =
     isAgent && m.author.id && paired.length > 0 ? (
-      <ConsultPairRow askerId={m.author.id} channelId={m.channelId} items={paired} />
+      <ConsultQuote askerId={m.author.id} channelId={m.channelId} items={paired} />
     ) : null;
-  const grouped = groupedIn && !pair;
+  const quoteAlone = consultQuote !== null && (!body || Boolean(choiceReply));
+  const quoteInWords = quoteAlone ? null : consultQuote;
+  const grouped = groupedIn && !quoteAlone;
   // A question to another agent (in their DM) carries the asking run: its work shows on that run's reply.
   const ownWork = isAgent && Boolean(m.agentRunId) && !meta?.consultation && !mediaAfter;
   const steps = ownWork ? workStepsOf(meta) : null;
-  // Posted by a run answering another agent's question from here (its approval, question, secret): whom it helps.
-  const consultations = useRowConsults(m.channelId);
-  const helping =
-    isAgent && m.agentRunId && !readOnly && !mediaAfter ? consultations.byConsultedRun.get(m.agentRunId) : undefined;
+  // Posted by a run answering another agent's question from here (its approval, question, secret): whom it helps. Only
+  // that question: the row draws again when it changes, not on every reload of the conversation's questions.
+  const helpingRun = isAgent && m.agentRunId && !readOnly && !mediaAfter ? m.agentRunId : null;
+  const helping = useRowConsultsPart(m.channelId, (list) =>
+    helpingRun ? list.byConsultedRun.get(helpingRun) : undefined,
+  );
   // No `onLongPress` where the system's menu takes the hold (iOS): the row adds nothing of its own to it.
   const press =
     readOnly || !onLongPress
@@ -466,6 +476,8 @@ function RowBody({
   // Preparing the mission's copy of the project failed (ADR 0044): the card with "Tentar de novo".
   const setup = missionSetupOf(meta);
   const link = missionLinkOf(meta);
+  // A code session it suggested for a change asked here (ADR 0215 §11): the person's card under the reply.
+  const suggestion = m.author.type === "agent" && !m.local ? codeSuggestionOf(meta) : null;
   const files = artifactsOf(meta);
   // Mine, just sent: drawn from the phone while they upload.
   const localFiles = localFilesOf(meta);
@@ -495,7 +507,7 @@ function RowBody({
   // Where it browsed, or what it did on its desktop, after the run (as on the web): the steps' card.
   // Step summaries, no picture: activity, so the person's setting hides them like the tool block.
   const trails =
-    isAgent && m.author.id && !m.local && showsActivity(org)
+    isAgent && m.author.id && !m.local && shows
       ? {
           browser: browserTrailOf(meta),
           desktop: desktopTrailOf(meta),
@@ -555,6 +567,7 @@ function RowBody({
       ) : null}
       {meta?.missionStart ? <MissionCard threadId={m.id} /> : null}
       {link ? <MissionCard missionId={link.missionId} /> : null}
+      {suggestion ? <CodeSuggestionCard message={m} suggestion={suggestion} /> : null}
       {plan ? <PlanCard missionId={plan.missionId} goal={plan.goal} /> : null}
       {review ? <ReviewCard missionId={review.missionId} reviewId={review.id} /> : null}
       {setup ? (
@@ -811,14 +824,14 @@ function RowBody({
           hitSlop={NAME_LINE_SLOP}
           style={({ pressed }) => [styles.shrink, pressed && styles.pressedDim]}
         >
-          <Text variant="caption" tone="muted" numberOfLines={1} style={styles.medium}>
+          <Text variant="label" tone="muted" numberOfLines={1}>
             {reportOpen ? t("channel.routineReportHide") : t("channel.routineReport")}
           </Text>
         </Pressable>
       ) : null}
       {talker ? (
         <Text
-          variant="caption"
+          variant="footnote"
           tone="faint"
           numberOfLines={1}
           style={styles.shrink}
@@ -831,7 +844,7 @@ function RowBody({
       {/* The agent's role tells agents apart where several speak; in a DM (`look.names` off) the bar under its name
           already says it, and it isn't said again on every turn. */}
       {!reminder && !routine && !talker && !helping && agent?.role && look.names && !bubbled && !compact ? (
-        <Text variant="caption" tone="faint" numberOfLines={1} style={styles.shrink}>
+        <Text variant="footnote" tone="faint" numberOfLines={1} style={styles.shrink}>
           {agent.role}
         </Text>
       ) : null}
@@ -919,7 +932,8 @@ function RowBody({
       <View
         style={[
           styles.report,
-          { borderLeftColor: c.line },
+          // On a plate a step off what is around it, never a bar at its left edge.
+          { backgroundColor: c.plate },
           (inBubble || opener || words) && { marginBottom: rhythm.part },
         ]}
       >
@@ -950,7 +964,11 @@ function RowBody({
   const partTop = bubbled && (body || media) ? BUBBLE_JOIN - rhythm.part : cardTop;
   return (
     <>
-      {pair}
+      {quoteAlone && m.author.id ? (
+        <View style={[plateInset(look, aboveInset(look)), { marginTop: rhythm.turn }]}>
+          <ConsultQuote askerId={m.author.id} channelId={m.channelId} items={paired} alone />
+        </View>
+      ) : null}
       {liveRef ? (
         <View style={[styles.aboutAbove, { paddingLeft: aboveInset(look), marginTop: rowGap }]}>
           <MessageAbout liveRef={liveRef} messageId={m.id} />
@@ -1025,6 +1043,7 @@ function RowBody({
                       ]}
                     >
                       {!grouped && (look.names || tagged) ? who(true) : null}
+                      {quoteInWords}
                       {quote ? <QuotePlate reply={quote} onJump={onQuote} /> : null}
                       {opener}
                       {words}
@@ -1034,15 +1053,17 @@ function RowBody({
                   <>
                     <View style={styles.compactLine}>
                       {who(false)}
-                      {!reportOpened && !opener ? words : null}
+                      {!reportOpened && !opener && !quoteInWords ? words : null}
                     </View>
+                    {quoteInWords}
                     {reportOpened}
                     {openerPart}
-                    {reportOpened || opener ? words : null}
+                    {reportOpened || opener || quoteInWords ? words : null}
                   </>
                 ) : (
                   <>
                     {nameLine && !askAlone ? who(false) : null}
+                    {quoteInWords}
                     {pinLine}
                     {reportOpened}
                     {openerPart}
@@ -1112,6 +1133,7 @@ function RowBody({
             ) : steps && m.agentRunId && !meta?.workUpdate ? (
               <SavedTools
                 runId={m.agentRunId}
+                messageId={m.id}
                 meta={meta}
                 agentName={agent?.name ?? name}
                 color={color}
@@ -1430,7 +1452,7 @@ function HelpingTag({ consultation: c, channelId }: { consultation: RunConsultat
   const from = agentGrammar(dir.agentById.get(c.agentId)?.name ?? t("mobile.chat.someone"));
   return (
     <>
-      <Text variant="caption" tone="faint" numberOfLines={1} style={styles.shrink}>
+      <Text variant="footnote" tone="faint" numberOfLines={1} style={styles.shrink}>
         {withAgentFaces(
           t("chat.consultPanel.helping", { name: from.name, context: from.context }),
           [{ name: from.name, agentId: c.agentId }],
@@ -1443,7 +1465,7 @@ function HelpingTag({ consultation: c, channelId }: { consultation: RunConsultat
         hitSlop={NAME_LINE_SLOP}
         style={({ pressed }) => [styles.shrink, pressed && styles.pressedDim]}
       >
-        <Text variant="caption" tone="muted" numberOfLines={1} style={styles.medium}>
+        <Text variant="label" tone="muted" numberOfLines={1}>
           {t("chat.consultPanel.see")}
         </Text>
       </Pressable>
@@ -1635,6 +1657,7 @@ const styles = StyleSheet.create({
   // Bubbles only: the other looks' cards cast shadows past the row.
   ownBox: { overflow: "hidden" },
   aboutAbove: { paddingRight: 16 },
+  // A quote of the agents' talk with no words to sit in: on the words' column, as wide as a bubble's.
   avslot: { width: MSG_AVATAR, alignItems: "center", paddingTop: 2 },
   body: { flex: 1, minWidth: 0 },
   // A long pick wraps: the check stays on its first line.
@@ -1678,7 +1701,8 @@ const styles = StyleSheet.create({
   tagPress: { flexShrink: 1, maxWidth: "100%", alignSelf: "center" },
   pin: { alignSelf: "center" },
   // The routine report a message answers, unfolded under its name (like the notice line's text).
-  report: { marginTop: 2, paddingLeft: 10, borderLeftWidth: 2 },
+  // A plate in the words, as a quote's: the scale's item corner, the plates' room.
+  report: { marginTop: 2, paddingHorizontal: 12, paddingVertical: 10, borderRadius: RADIUS.md },
   tag: {
     flexDirection: "row",
     alignItems: "center",

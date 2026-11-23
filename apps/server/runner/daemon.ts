@@ -675,7 +675,7 @@ export class RunnerDaemon implements RequestObserver {
     });
     this.terminals = new Terminals({
       log: opts.log,
-      user: (agent) => this.terminalUser(agent),
+      user: (agent, cwd) => this.terminalUser(agent, cwd),
       get agentUsers() {
         return daemon.session?.agentUser != null;
       },
@@ -795,13 +795,26 @@ export class RunnerDaemon implements RequestObserver {
     return session.browser.show(agent, await this.agentFolder(agent), installing);
   }
 
-  /** As whom a terminal on the agent's computer runs, like its desktop. */
-  private async terminalUser(agent: AgentScope): Promise<TerminalUser> {
+  /**
+   * As whom a terminal on the agent's computer runs, like its desktop; `cwd`: a folder inside the agent's (ADR 0215).
+   * Its shell knows the sign-in the agent thinks with.
+   */
+  private async terminalUser(agent: AgentScope, cwd?: string): Promise<TerminalUser> {
     const agentUser = this.session?.agentUser;
-    if (!agentUser) return runnerTerminalUser(await this.agentFolder(agent));
-    const u = agentUser(agent);
-    this.startContainers(u);
-    return systemTerminalUser(systemLauncher(u), agent);
+    const u = agentUser?.(agent);
+    if (u) this.startContainers(u);
+    const user = u
+      ? systemTerminalUser(systemLauncher(u), agent, cwd)
+      : await runnerTerminalUser(await this.agentFolder(agent), cwd, this.shared);
+    // The agent's own sign-in, so its CLI typed there starts signed in (`AccountManager.terminalEnv`).
+    const account = this.agentAccount(String(agent.id));
+    const signIn = account
+      ? await this.accounts.terminalEnv(account, u?.uid).catch((err: unknown) => {
+          this.opts.log(`terminal: couldn't hand it its account (${err instanceof Error ? err.message : String(err)})`);
+          return {};
+        })
+      : {};
+    return { ...user, env: { ...user.env, ...signIn } };
   }
 
   /** The agent's folder in the connected workspace. */
@@ -1320,6 +1333,9 @@ export class RunnerDaemon implements RequestObserver {
       idleMs: (config.brainIdleMinutes ?? DEFAULT_LIMITS.brainIdleMinutes) * 60_000,
       maxProcesses: config.brainMaxProcesses ?? DEFAULT_LIMITS.brainMaxProcesses,
       accounts: this.accounts,
+      claudeVersion: () => this.executors().claude?.version ?? null,
+      // Single-user mode only: in system mode each agent is its own user, and the shared bin/ stays off every PATH.
+      sharedFolder: () => (this.session?.agentUser != null ? null : this.shared),
       readyRoom,
       log,
     });

@@ -18,6 +18,7 @@ import {
   placesAgentsIn,
   readableChannelIds,
 } from "./channels";
+import { hasCodeWork } from "./code-sessions";
 import { proposalsWaitingFor } from "./context/proposals";
 import { invalidateDefaults, modelInfoFor } from "./credentials";
 import { ConflictError, ForbiddenError, isUniqueViolation, NotFoundError, ValidationError } from "./errors";
@@ -312,7 +313,10 @@ function mergeAutoModels(
   return out;
 }
 
-/** Counts for the sidebar: people, agents, the workspace's budget use, approvals and proposals waiting for me. */
+/**
+ * Counts for the sidebar: people, agents, the workspace's budget use, approvals and proposals waiting for me; and
+ * whether Code has anything for me (ADR 0215 §12).
+ */
 export async function orgOverview(db: Database, actorId: string, orgId: string, now = new Date()) {
   const membership = await requirePermission(db, actorId, orgId, "read");
   const [people] = await db
@@ -344,6 +348,7 @@ export async function orgOverview(db: Database, actorId: string, orgId: string, 
     budgetUsedPercent: await workspaceBudgetPercent(db, orgId, now),
     approvalsWaitingForMe: pending?.n ?? 0,
     proposalsWaitingForMe: await proposalsWaitingFor(db, actorId, orgId),
+    code: await hasCodeWork(db, actorId, orgId),
   };
 }
 

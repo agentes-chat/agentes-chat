@@ -96,7 +96,7 @@
     "chats": "Gesprekken",
     "threads": "Threads",
     "agents": "Agents",
-    "activity": "Activiteit",
+    "activity": "Postvak IN",
     "search": "Zoeken",
     "withCount": "{{label}}, {{count}}"
   },
@@ -189,6 +189,12 @@
     },
     "pinned": "Vastgezet",
     "recent": "Recent",
+    "view": {
+      "title": "Gesprekken tonen",
+      "sectors": "Afdelingen",
+      "dms": "Directe berichten",
+      "channels": "Kanalen"
+    },
     "seeAll": "Alle gesprekken bekijken",
     "splitEmpty": "Je gesprekken openen hier.",
     "wait": {
@@ -325,6 +331,9 @@
   },
   "chat": {
     "someone": "Iemand",
+    "handedTo": "Doorgegeven aan {{name}}",
+    "handedTo_female": "Doorgegeven aan {{name}}",
+    "pairAsked": "{{from}} vroeg",
     "messageTo": "Bericht aan {{name}}",
     "messageIn": "Bericht in {{channel}}",
     "reply": "Beantwoorden",
@@ -861,7 +870,7 @@
     }
   },
   "activity": {
-    "title": "Activiteit",
+    "title": "Postvak IN",
     "chooseModel": "Ander model kiezen",
     "filter": {
       "all": "Alles",
@@ -1035,6 +1044,46 @@
     "add": "Toevoegen",
     "addA11y": "{{name}} aan het kanaal toevoegen",
     "added": "{{name}} is lid geworden van het kanaal"
+  },
+  "settingsSearch": {
+    "open": "Instellingen zoeken",
+    "title": "Zoeken",
+    "placeholder": "Zoeken in Jij en instellingen",
+    "workspace": "Workspace-instellingen",
+    "words": {
+      "status": "afwezig, bezet, aanwezigheid, online",
+      "account": "naam, foto, e-mail, tijdzone, wachtwoord, gebruikersnaam",
+      "deleteAccount": "verwijderen, wissen, account sluiten",
+      "workspaces": "wisselen, servers, accounts",
+      "notifications": "meldingen, push, badges",
+      "approvals": "goedkeuren, delegeren",
+      "start": "openen, start, eerste scherm",
+      "activity": "tools, wat agents deden",
+      "chatLook": "ballonnen, berichten, gesprek",
+      "wallpaper": "achtergrond, wallpaper, foto",
+      "agentStyle": "technisch, eenvoudig, toon",
+      "sounds": "geluid, stil, zacht",
+      "appearance": "thema, donker, licht, modus",
+      "appIcon": "pictogram",
+      "language": "taal, Nederlands, Engels",
+      "about": "versie, licenties",
+      "aiAccounts": "sleutel, API, aanbieder, abonnement, model",
+      "general": "naam, logo, tijdzone, context",
+      "media": "GIF's, stickers",
+      "members": "mensen, team",
+      "invites": "uitnodigen, uitnodiging, link",
+      "roles": "rechten, rollen",
+      "usage": "kosten, uitgaven, abonnement, tokens, budget",
+      "connectors": "integraties, MCP, diensten",
+      "skills": "vaardigheden",
+      "vault": "wachtwoorden, sleutels, logins, geheimen",
+      "access": "rechten, toegang van agents",
+      "apps": "AI-apps, MCP",
+      "computers": "apparaten, machines, computer, telefoon",
+      "storage": "bestanden, S3, opslag",
+      "import": "exporteren, importeren, migreren",
+      "audit": "logboek, geschiedenis"
+    }
   },
   "me": {
     "title": "Jij",
@@ -1237,11 +1286,8 @@
     },
     "talk": {
       "hint": {
-        "image": "Tik waar je een opmerking wilt plaatsen",
-        "video": "Tik op de video om bij dit moment een opmerking te plaatsen",
-        "pdf": "Tik op de pagina om een punt te markeren"
+        "pdf": "Houd de pagina ingedrukt om een punt te markeren"
       },
-      "markVideo": "Opmerking bij dit moment van de video",
       "pdfPage": "Pagina {{page}} van {{count}}",
       "pdfFailed": "Deze pdf kan niet worden weergegeven."
     }
@@ -1433,6 +1479,19 @@
       "day": "Dag",
       "monthDay": "Dag {{day}}",
       "lastDay": "Laatste dag"
+    }
+  },
+  "coding": {
+    "pill": "{{who}}. Bekijk de code",
+    "seeChanges": "Bekijk de wijzigingen",
+    "project": "Project",
+    "whereSearch": "Zoek of typ een naam",
+    "listed": "Van de agent",
+    "commit": "Commit {{short}}",
+    "waiting": "Wacht op jou",
+    "next": {
+      "pr": "Branch gepusht, nog geen pull request",
+      "mergeLocal": "Klaar om in {{base}} te mergen"
     }
   },
   "taskManager": {
@@ -2038,20 +2097,16 @@
     "mcps": "MCP's",
     "mcpsNone": "MCP-servers die je via hun adres koppelt, verschijnen hier.",
     "addMcp": "MCP toevoegen",
-    "add": "Toevoegen",
-    "allServices": "Alle diensten",
     "waitLine_one": "{{count}} tool heeft je nodig",
     "waitLine_other": "{{count}} tools hebben je nodig",
     "toolsWait_one": "{{count}} heeft je nodig",
     "toolsWait_other": "{{count}} hebben je nodig",
     "connectedState": "Gekoppeld",
     "connected": "Verbonden",
-    "suggested": "Voorgesteld voor {{org}}",
-    "all": "Alle",
+    "seeAll": "Alles bekijken",
     "noResults": "Geen dienst met die naam. Probeer het adres.",
     "soon": "Binnenkort",
     "loadFailed": "De connectors konden niet worden geladen.",
-    "connectedCheck": "{{name}}, gekoppeld",
     "adminsOnly": "Alleen een beheerder van {{org}} koppelt diensten. Vraag het een van hen.",
     "adminsOnlyPersonal": "Alleen wie deze werkruimte beheert, koppelt apps. Vraag het aan die persoon.",
     "canTitle": "Agents kunnen dan",
@@ -2096,6 +2151,32 @@
     "disconnected": "{{name}} losgekoppeld.",
     "usedBy_one": "{{names}} gebruikt het",
     "usedBy_other": "{{names}} gebruiken het",
+    "page": {
+      "missing": "Deze dienst staat niet meer in de catalogus.",
+      "connected": "Verbonden",
+      "open": "Verbinding openen",
+      "category": "Categorie",
+      "tools": "Hulpmiddelen",
+      "toolsAsk_one": "{{count}} vraagt om goedkeuring",
+      "toolsAsk_other": "{{count}} vragen om goedkeuring",
+      "toolsAskNone": "geen enkele vraagt om goedkeuring",
+      "toolsLater": "na het verbinden",
+      "who": "Wie verbindt",
+      "whoAdmins": "Beheerders van {{org}}",
+      "whoRuns": "Wie de workspace beheert",
+      "whoYou": "Jij, voor jezelf",
+      "signIn": "Inloggen met",
+      "how": {
+        "signIn": "Je account",
+        "key": "Een sleutel",
+        "either": "Account of sleutel"
+      },
+      "canTitle": "Wat agents ermee doen",
+      "address": "Adres",
+      "addressNote": "Agents gebruiken dit adres met het verbonden account. Elk krijgt alleen wat jij toestaat.",
+      "host": "Verbindt met",
+      "more": "Meer in {{category}}"
+    },
     "fromAgent": "Een dienst koppelen",
     "githubApp": {
       "useApp": "De agentes.chat-app gebruiken",
@@ -2763,6 +2844,10 @@
       "titlePersonal": "Geef je to-do's aan je agents",
       "textPersonal": "Maak een taak voor een agent en volg die tot het einde.",
       "viewerTitlePersonal": "Volg het werk van je agents"
+    },
+    "coding": {
+      "title": "Programmeer met je agents",
+      "text": "Elke sessie is een gesprek met een agent die op een eigen branch werkt, op zijn computer."
     },
     "routines": {
       "title": "Laat herhalend werk over aan je agents",

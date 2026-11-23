@@ -4,11 +4,11 @@ import { useTranslation } from "react-i18next";
 import { FlatList, Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
 import { type PageDim, PdfView } from "react-native-pdf-light";
 import { type SharedValue, useSharedValue } from "react-native-reanimated";
-import { SCREEN_X, Text } from "@/ui";
+import { haptics, SCREEN_X, Text } from "@/ui";
 import { useMediaPins, useOpenFileTalk, useRevealHere } from "../live-files/talk/hooks";
 import { commentSelection, draftPin, type MediaPin, pagePins, pinUnder, pointMark } from "../live-files/talk/logic";
 import { PicturePins } from "../live-files/talk/PicturePins";
-import { useTalkAbout, useTalkSheet } from "../live-files/talk/store";
+import { useTalkAbout } from "../live-files/talk/store";
 import { LoadFailed } from "../shared/FirstUse";
 import { useColors, useMeId } from "../shared/hooks";
 import { PageBones } from "./PageBones";
@@ -21,9 +21,10 @@ const GAP = 12;
  * A PDF on its screen (ADR 0208): its pages one under the other on the grouped gray, each a white page as wide as the
  * screen less its sides, drawn by the system's own PDF renderer (CGPDFDocument on iOS, PdfRenderer on Android, through
  * `react-native-pdf-light`) from a copy in the cache, read once per version. Each page's open comments are pinned on
- * it (a tap on one opens its message). With the conversation's sheet up over the PDF, a tap on a page marks that page
- * and that point ("About page 3 of the PDF" over the composer, the person's pin on it). A message's line about a page
- * scrolls to it. No pinch zoom: the pins stand on the page as laid out, and a zoom of the system's would draw over them.
+ * it (a tap on one opens its message). A touch held on a page marks that page and that point: the conversation is
+ * pushed over the PDF about it ("About page 3 of the PDF" over the composer), the person's pin left on the spot while
+ * the comment is unsent. A message's line about a page scrolls to it. No pinch zoom: the pins stand on the page as
+ * laid out, and a zoom of the system's would draw over them.
  */
 export function PdfPages({ detail }: { detail: ArtifactDetail }) {
   const { t } = useTranslation();
@@ -48,19 +49,20 @@ export function PdfPages({ detail }: { detail: ArtifactDetail }) {
   // ── Its conversation (ADR 0208) ──
   const pins = useMediaPins(detail);
   const openTalk = useOpenFileTalk(detail);
-  const sheet = useTalkSheet(detail.id);
   const meId = useMeId();
-  const about = useTalkAbout(sheet?.channelId ?? "");
+  // The comment being written about a point of it: its pin stays there while the comment is unsent.
+  const about = useTalkAbout(detail.conversation?.channelId ?? "");
   const draft = useMemo(
-    () => (sheet ? draftPin(about, detail.id, meId ? { type: "user", id: meId } : null) : null),
-    [sheet, about, detail.id, meId],
+    () => draftPin(about, detail.id, meId ? { type: "user", id: meId } : null),
+    [about, detail.id, meId],
   );
   const zoom = useSharedValue(1);
   const onPin = useCallback((messageId: string) => openTalk({ messageId, selection: null }), [openTalk]);
-  const marking = sheet !== null;
   const onMark = useCallback(
-    (page: number, mark: NonNullable<ReturnType<typeof pointMark>>) =>
-      openTalk({ selection: commentSelection(pins, { mark, page }, detail.shownVersion) }),
+    (page: number, mark: NonNullable<ReturnType<typeof pointMark>>) => {
+      haptics.medium();
+      openTalk({ selection: commentSelection(pins, { mark, page }, detail.shownVersion) });
+    },
     [openTalk, pins, detail.shownVersion],
   );
   // A message's line about a page: the list goes to it.
@@ -86,11 +88,8 @@ export function PdfPages({ detail }: { detail: ArtifactDetail }) {
         data={sizes}
         keyExtractor={(_, i) => String(i)}
         style={[styles.fill, { backgroundColor: c.grouped }]}
-        // The line under the screen keeps the bottom's room; while the sheet is up the pages run on past their end by
-        // the sheet's room, so the last one still scrolls above it. Only what is past the end grows: nothing in sight
-        // moves as the sheet comes up (the screen kept its size, `keepPlace` on its line).
+        // The line under the screen keeps the bottom's room.
         contentContainerStyle={styles.pages}
-        ListFooterComponent={sheet ? <View style={{ height: sheet.reserve }} /> : undefined}
         getItemLayout={(_, i) => ({ length: (heights[i] ?? 0) + GAP, offset: offsets[i] ?? 0, index: i })}
         initialNumToRender={2}
         windowSize={5}
@@ -105,28 +104,17 @@ export function PdfPages({ detail }: { detail: ArtifactDetail }) {
             pins={pins}
             draft={draft?.selection.page === index + 1 ? draft : null}
             zoom={zoom}
-            marking={marking}
             failedWords={t("mobile.files.talk.pdfFailed")}
             onPin={onPin}
             onMark={onMark}
           />
         )}
       />
-      {/* With the sheet up at its first height and nothing marked yet: what a tap does now, over the top. */}
-      {sheet && sheet.detent === 0 && !draft ? (
-        <View pointerEvents="none" style={styles.hintAt}>
-          <View style={styles.hint}>
-            <Text variant="footnote" style={styles.hintText} numberOfLines={2}>
-              {t("mobile.files.talk.hint.pdf")}
-            </Text>
-          </View>
-        </View>
-      ) : null}
     </View>
   );
 }
 
-/** One page: white, its comments' pins over it, a tap reading a pin or marking a point there. */
+/** One page: white, its comments' pins over it, a tap reading a pin, a held touch marking a point there. */
 const PdfPage = memo(function PdfPage({
   path,
   page,
@@ -136,7 +124,6 @@ const PdfPage = memo(function PdfPage({
   pins,
   draft,
   zoom,
-  marking,
   failedWords,
   onPin,
   onMark,
@@ -150,7 +137,6 @@ const PdfPage = memo(function PdfPage({
   pins: readonly MediaPin[];
   draft: MediaPin | null;
   zoom: SharedValue<number>;
-  marking: boolean;
   failedWords: string;
   onPin: (messageId: string) => void;
   onMark: (page: number, mark: NonNullable<ReturnType<typeof pointMark>>) => void;
@@ -158,22 +144,23 @@ const PdfPage = memo(function PdfPage({
   const { t } = useTranslation();
   const [failed, setFailed] = useState(false);
   const here = useMemo(() => pagePins(pins, page), [pins, page]);
+  const spot = (x: number, y: number) => ({ x: x / width, y: y / height, width, height });
   const tap = (x: number, y: number) => {
-    const at = { x: x / width, y: y / height, width, height };
-    const pin = pinUnder(here, at);
-    if (pin) {
-      onPin(pin.messageId);
-      return;
-    }
-    const mark = marking ? pointMark(at) : null;
+    const pin = pinUnder(here, spot(x, y));
+    if (pin) onPin(pin.messageId);
+  };
+  const hold = (x: number, y: number) => {
+    const mark = pointMark(spot(x, y));
     if (mark) onMark(page, mark);
   };
   return (
     <Pressable
       onPress={(e) => tap(e.nativeEvent.locationX, e.nativeEvent.locationY)}
-      disabled={!marking && here.length === 0}
+      onLongPress={(e) => hold(e.nativeEvent.locationX, e.nativeEvent.locationY)}
+      // The system's own press and hold; a finger that scrolls the pages instead cancels it.
+      delayLongPress={450}
       accessibilityLabel={t("mobile.files.talk.pdfPage", { page, count })}
-      {...(marking ? { accessibilityHint: t("mobile.files.talk.hint.pdf") } : {})}
+      accessibilityHint={t("mobile.files.talk.hint.pdf")}
       style={[styles.page, { width, height }]}
     >
       {failed ? (
@@ -204,8 +191,4 @@ const styles = StyleSheet.create({
   page: { alignSelf: "center", marginBottom: GAP, backgroundColor: "#fff" },
   center: { alignItems: "center", justifyContent: "center", padding: 24 },
   failed: { textAlign: "center", color: "#3c3c43" },
-  // The viewer's hint: white words on a dark plate, over whatever page passes under it.
-  hintAt: { position: "absolute", top: GAP, left: SCREEN_X, right: SCREEN_X, alignItems: "center" },
-  hint: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16, backgroundColor: "rgba(0,0,0,0.6)" },
-  hintText: { color: "#fff" },
 });

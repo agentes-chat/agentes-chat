@@ -650,7 +650,7 @@ export function GroupedField({ label, hint, children, onPress, stacked = false }
 }
 
 /**
- * A field whose label has an ⓘ. With `onPress` the row's button lies under the label and the value rather than
+ * A field whose label has an ⓘ, at the row's end (after the value, before the chevron). With `onPress` the row's button lies under the label and the value rather than
  * around them: inside another button the ⓘ would be part of it to VoiceOver, never a button of its own.
  */
 function HintedField({ label, hint, children, onPress }: GroupedFieldProps & { hint: { name: string; text: string } }) {
@@ -668,22 +668,22 @@ function HintedField({ label, hint, children, onPress }: GroupedFieldProps & { h
             style={StyleSheet.absoluteFill}
           />
         ) : null}
-        <View style={[styles.key, styles.keyLine]} pointerEvents="box-none">
-          <View
-            pointerEvents={passive}
-            style={styles.shrink}
-            accessibilityElementsHidden={Boolean(onPress)}
-            importantForAccessibility={onPress ? "no-hide-descendants" : "auto"}
-          >
-            <Text variant="callout" tone="muted">
-              {label}
-            </Text>
-          </View>
-          {info.button}
+        {/* The label has its whole column, as a field's with no ⓘ: sharing it with the ⓘ broke a two-word label in
+            two lines. The ⓘ goes after the value, before the chevron. */}
+        <View
+          pointerEvents={passive}
+          style={styles.key}
+          accessibilityElementsHidden={Boolean(onPress)}
+          importantForAccessibility={onPress ? "no-hide-descendants" : "auto"}
+        >
+          <Text variant="callout" tone="muted">
+            {label}
+          </Text>
         </View>
         <View style={styles.grow} pointerEvents={passive}>
           {children}
         </View>
+        {info.button}
         {onPress ? (
           <View pointerEvents="none">
             <Disclosure />

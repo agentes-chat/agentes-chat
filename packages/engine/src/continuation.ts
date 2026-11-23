@@ -352,7 +352,7 @@ export function localPathsNudge(paths: string[]) {
  * its reply is not posted, since it claims a result nobody gets.
  */
 export const UNBACKED_NUDGE =
-  "Not posted: your reply says something was made, sent or done, but no call of yours in this run did it. Do it now with your tools, or say plainly that you couldn't and why. Never say a result is done, attached or sent when no call produced it.";
+  "Not posted: your reply says something was made, sent or done, but no call of yours in this run did it. Do it now with your tools, or say plainly that you couldn't and why. Never say a result is done, attached or sent when no call produced it. Nobody saw that reply: write your answer whole, as the first one they read, never as a correction of an earlier one.";
 
 /**
  * What a widget's run reads, once, when it ended without `update_widget` taking its data (ADR 0135 §5): its words reach
@@ -452,7 +452,7 @@ export async function continuationVerdict(
             secret:
               "It asks a person to type or paste a secret into the chat (a password, an API key, a token, a private key), or the work `request` asked it to do can't go on without one only a person has and it hasn't asked for it through a secure request (`tried` has no request_secret call). Not when it only names the key a step it offers would need.",
             unbacked:
-              "Its reply says it made, sent, created, posted, saved or did something (an image, a file, a message or an email sent, a task opened, a change made, 'done', 'here it is') that plainly no call in `tried` did. A command, script or code run in `tried` that would produce it (a render, a conversion, a file written, an upload) did it. Not when `tried` starts with earlier calls not shown (one of those may have done it), nor when the reply only plans, offers or asks, says plainly it couldn't, or reports what a teammate, an earlier turn or `request` says was done.",
+              "Its reply says it made, sent, created, posted, saved or did something (an image, a file, a message or an email sent, a task opened, a change made, 'done', 'here it is') that plainly no call in `tried` did. A command, script or code run in `tried` that would produce it (a render, a conversion, a file written, an upload) did it. Not when `tried` starts with earlier calls not shown (one of those may have done it), nor when the reply only plans, offers or asks, says plainly it couldn't, or reports what a teammate, an earlier turn or `request` says was done. Work a subagent or a workflow of its own did (an Agent, Task or Workflow call in `tried`) is backed: their report is the call that did it.",
           },
         },
         ...(learn ? { learn: input.personal ? LEARN_QUESTION_PERSONAL : LEARN_QUESTION } : {}),

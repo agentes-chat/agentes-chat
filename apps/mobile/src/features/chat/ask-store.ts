@@ -6,7 +6,10 @@ import type { Message } from "@agenteschat/client";
  * request on an agent's screen is: `handoffIsMine` in `@agenteschat/client`, shared with the web.
  */
 
-/** What a request asks (`proposal`: a change to the context or to an agent's instructions; `agent`: a new agent). */
+/**
+ * What a request asks (`proposal`: a change to the context or to an agent's instructions; `agent`: a new agent;
+ * `code`: a code session for a change asked in the chat, ADR 0215 §11).
+ */
 export type AskKind =
   | "approval"
   | "secret"
@@ -16,7 +19,8 @@ export type AskKind =
   | "proposal"
   | "agent"
   | "team"
-  | "firstTask";
+  | "firstTask"
+  | "code";
 
 /** A request the person can answer now, in this conversation. `order`: where its message sits in the list. */
 export interface PendingAsk {

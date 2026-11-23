@@ -140,8 +140,16 @@ export const listenResumedTopic = "pubsub.resumed";
  */
 export const LISTEN_HEARTBEAT_MS = 15_000;
 
-/** How long one NOTIFY statement may take before the queue goes on without it, its events counted as missed. */
+/** How long one NOTIFY statement may take before the queue goes on without it (it may still go through, late). */
 export const NOTIFY_TIMEOUT_MS = 5_000;
+
+/**
+ * How long a NOTIFY statement may stay unanswered before its events count as missed. Far above `NOTIFY_TIMEOUT_MS`: a
+ * NOTIFY waiting for a free pool connection on a busy server (the minutes after a restart) still goes out, and calling
+ * it missed tells every replica's subscribers to read again: every browser socket closed and every app reading its
+ * whole workspace again, which keeps the database busy enough for the next NOTIFY to be slow too.
+ */
+export const NOTIFY_LOST_MS = 60_000;
 
 /** How long making the LISTEN again may take; past it, the next heartbeat tries again. */
 export const LISTEN_TIMEOUT_MS = 10_000;
@@ -201,9 +209,10 @@ function within<T>(work: Promise<T>, ms: number, what: string): Promise<T> {
  * payload. Works across replicas with no extra infrastructure. Payloads must
  * stay small (ids and short deltas), see `MAX_NOTIFY_BYTES`.
  *
- * Delivery never stops in silence (ADR 0010, amended 2026-11-16). One NOTIFY that fails or hangs (a connection that
- * died without closing) gets `notifyTimeoutMs` and holds nothing behind it; once NOTIFY works again a mark tells every
- * replica, whose subscribers learn events were missed (`listenResumedTopic`). The replica's heartbeat goes through the
+ * Delivery never stops in silence (ADR 0010, amended 2026-11-16). One NOTIFY that is slow or hangs (a connection that
+ * died without closing) gets `notifyTimeoutMs` and holds nothing behind it. Its events count as missed only once it
+ * fails or stays unanswered for `notifyLostMs`; then, once NOTIFY works again, a mark tells every replica, whose
+ * subscribers learn events were missed (`listenResumedTopic`). The replica's heartbeat goes through the
  * same queue, NOTIFY and LISTEN as every event: one that went out and isn't heard back within an interval means a deaf
  * LISTEN, made again on a new connection (`PgNotifier.restart`) without ever waiting on the old one. `onTrouble` says
  * when delivery breaks and when it is back, for the logs.
@@ -213,11 +222,13 @@ export async function createPostgresPubSub(
   {
     heartbeatMs = LISTEN_HEARTBEAT_MS,
     notifyTimeoutMs = NOTIFY_TIMEOUT_MS,
+    notifyLostMs = NOTIFY_LOST_MS,
     listenTimeoutMs = LISTEN_TIMEOUT_MS,
     onTrouble,
   }: {
     heartbeatMs?: number;
     notifyTimeoutMs?: number;
+    notifyLostMs?: number;
     listenTimeoutMs?: number;
     onTrouble?: (kind: PubSubTrouble, detail: Record<string, unknown>) => void;
   } = {},
@@ -306,6 +317,12 @@ export async function createPostgresPubSub(
     if (notifier.notifyMany && batch.length > 1) await notifier.notifyMany(PG_CHANNEL, batch);
     else for (const payload of batch) await notifier.notify(PG_CHANNEL, payload);
   };
+  /** Its events are lost to every replica: the mark goes with the next statement that works. */
+  const lost = (events: number, error: unknown) => {
+    missed = true;
+    failedStatements++;
+    broke(error instanceof TimedOut ? "notify_timeout" : "notify_failed", { events, error: String(error) });
+  };
   const pump = async () => {
     while (queue.length > 0 || pendingBeat !== null) {
       const batch = queue.splice(0, MAX_BATCH);
@@ -314,22 +331,18 @@ export async function createPostgresPubSub(
       if (beat !== null) batch.push(JSON.stringify({ t: HEARTBEAT_TOPIC, e: { type: "heartbeat", replica, n: beat } }));
       const marked = missed;
       if (marked) batch.push(missedMark);
+      const answered = within(statement(batch), notifyLostMs, "NOTIFY");
       try {
-        await within(statement(batch), notifyTimeoutMs, "NOTIFY");
+        await within(answered, notifyTimeoutMs, "NOTIFY");
         if (marked) missed = false;
         if (beat !== null) {
           beatOut = beat;
           beatOutAt = Date.now();
         }
       } catch (error) {
-        // Its events are lost to every replica (and it may still go through later, late): the mark goes with the
-        // next statement that works.
-        missed = true;
-        failedStatements++;
-        broke(error instanceof TimedOut ? "notify_timeout" : "notify_failed", {
-          events: batch.length,
-          error: String(error),
-        });
+        // Slow: the queue goes on, and its events are missed only if it fails or never answers.
+        if (error instanceof TimedOut) answered.catch((late: unknown) => lost(batch.length, late));
+        else lost(batch.length, error);
       }
     }
   };

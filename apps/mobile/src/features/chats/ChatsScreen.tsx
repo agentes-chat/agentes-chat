@@ -1,4 +1,4 @@
-import { keys, useChannels, useMuteChannel } from "@agenteschat/client";
+import { keys, useAgentGroups, useChannels, useMuteChannel } from "@agenteschat/client";
 import { canTalk, listsAgent } from "@agenteschat/client/lib/audience";
 import { waitingComputerByAgent } from "@agenteschat/client/lib/machine-outages";
 import { isRightHand, rightHandOf } from "@agenteschat/client/lib/right-hand";
@@ -6,11 +6,22 @@ import { WORKING_POLL_MS } from "@agenteschat/client/lib/working";
 import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
 import { useQueryClient } from "@tanstack/react-query";
 import { Stack, useIsFocused } from "expo-router";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform, View } from "react-native";
+import { readValueSync, STORED, writeValue } from "@/lib/storage";
 import { useOrg } from "@/providers/org";
-import { LargeTitleScreen, LIST_AVATAR, ListRow, SkeletonList, SkeletonOver, useFirstLoad, useWide } from "@/ui";
+import {
+  type HeaderAction,
+  LargeTitleScreen,
+  LIST_AVATAR,
+  ListRow,
+  RoleMark,
+  SkeletonList,
+  SkeletonOver,
+  useFirstLoad,
+  useWide,
+} from "@/ui";
 import { router } from "@/ui/navigation";
 import { workByAgent } from "../agents/logic";
 import { useRowMenus } from "../categories/menus";
@@ -23,6 +34,7 @@ import { useMachineOutages } from "../outages/queries";
 import { RightHandAsk } from "../right-hand/Pin";
 import { FirstUse } from "../shared/FirstUse";
 import { useDirectory, useMeId, useOrgId, usePullRefresh } from "../shared/hooks";
+import { pickOne } from "../shared/PickerSheet";
 import { Tile } from "../shared/parts";
 import { useActiveWork, useHiddenAgents, useWorkingNow } from "../shared/queries";
 import { SheetHostProvider } from "../shared/SheetHost";
@@ -41,11 +53,15 @@ import { HomeWidgets } from "./HomeWidgets";
 import {
   agentStarters,
   type ConversationRow,
+  type HomeSectorSection,
+  type HomeView,
+  homeViewOf,
   type ListKind,
   pinnedRows,
   RECENT_MAX,
   recentRows,
   rightHandPin,
+  sectorSections,
   withoutQuietGeneral,
 } from "./logic";
 import { type PinnedItem, PinnedStrip } from "./PinnedStrip";
@@ -66,6 +82,19 @@ const LIVE_ROWS = 6;
 const PEEK = Platform.OS === "ios";
 /** iOS 26 holds the work-along line in the tab bar's accessory, over the bar: the faces would rise behind it. */
 const ACCESSORY = alongInAccessory(Platform.OS, Platform.Version);
+
+/**
+ * How Conversas lists a team's conversations (`HomeView`), remembered on this phone: Recentes, or Setores, grouped
+ * as the web's sidebar groups the agents. A personal workspace has no sectors: always Recentes.
+ */
+function useHomeView(personal: boolean): [HomeView, (next: HomeView) => void] {
+  const [view, setView] = useState<HomeView>(() => homeViewOf(readValueSync(STORED.homeView)));
+  const choose = useCallback((next: HomeView) => {
+    setView(next);
+    void writeValue(STORED.homeView, next === "recent" ? null : next);
+  }, []);
+  return [personal ? "recent" : view, choose];
+}
 
 /** A section's "See all", pushed: Recentes in full. */
 export const openKindList = (kind: ListKind) => router.push(`/conversations/${kind}`);
@@ -135,8 +164,54 @@ function Home() {
   const focused = useIsFocused();
   // What the person chose to open when the app starts goes over Conversas, once (ADR 0108).
   useOpenStart(focused);
-  const header = useTabHeader();
+  const tabHeader = useTabHeader();
   const dir = useDirectory();
+  // A team's Conversas lists its conversations by latest activity or by sector: the choice is a glass button beside
+  // "+" that opens the system's menu (Android: the app's picker). Its icon stays the same whichever view is on (one
+  // that changed with the choice read as a different button each time); the menu's check says which.
+  const personal = isPersonal(org);
+  const [view, setView] = useHomeView(personal);
+  const viewTitle = t("mobile.chats.view.title");
+  const recentLabel = t("mobile.chats.recent");
+  const sectorsLabel = t("mobile.chats.view.sectors");
+  const header = useMemo(() => {
+    if (personal) return tabHeader;
+    const viewAction: HeaderAction = {
+      icon: "list",
+      sf: "line.3.horizontal.decrease",
+      label: viewTitle,
+      menuTitle: viewTitle,
+      onPress: () => {
+        void pickOne({
+          title: viewTitle,
+          value: view,
+          options: [
+            { key: "recent", label: recentLabel },
+            { key: "sectors", label: sectorsLabel },
+          ],
+        }).then((key) => {
+          if (key === "recent" || key === "sectors") setView(key);
+        });
+      },
+      menu: [
+        {
+          label: recentLabel,
+          icon: "clock",
+          sf: "clock",
+          checked: view === "recent",
+          onPress: () => setView("recent"),
+        },
+        {
+          label: sectorsLabel,
+          icon: "members",
+          sf: "person.2",
+          checked: view === "sectors",
+          onPress: () => setView("sectors"),
+        },
+      ],
+    };
+    return { ...tabHeader, actions: [viewAction, ...tabHeader.actions] };
+  }, [personal, tabHeader, view, viewTitle, recentLabel, sectorsLabel, setView]);
   // Each row kept while nothing in it changes, and what it says worked out here once for all of them: a row redraws
   // only when its own changed.
   const list = useConversationRows();
@@ -146,6 +221,9 @@ function Home() {
   const active = useActiveWork();
   const waiting = useWaitingItems();
   const { collapsed, toggle } = useCollapsedSections();
+  // Setores' sections collapse on their own (keyed by sector), remembered apart from the home's.
+  const sectorsFold = useCollapsedSections<string>(STORED.homeSectorsCollapsed, null);
+  const groups = useAgentGroups(orgId).data;
   // The widgets' section is memoized: its toggle stays one function.
   const toggleWidgets = useCallback(() => toggle("widgets"), [toggle]);
   // An administrator reads every channel (ADR 0151): the ones they aren't in wait at the end of the home.
@@ -203,6 +281,15 @@ function Home() {
   const pins = usePins();
   // Recentes: every conversation by its latest activity, the pinned ones in their place (the strip holds the pins).
   const recent = recentRows(withoutQuietGeneral(pinned.rows, hideGeneral));
+  // Setores: the same conversations by the agents' sectors, each sector's agents never talked to as well (the web's
+  // sidebar lists every agent of a sector).
+  const sectors = useMemo(
+    () =>
+      view === "sectors"
+        ? sectorSections([...withoutQuietGeneral(pinned.rows, hideGeneral), ...starters], groups ?? [])
+        : [],
+    [view, pinned.rows, hideGeneral, starters, groups],
+  );
   // In the split with nothing open yet, the most recent conversation opens beside the list (the right hand's after
   // every row of Recentes: it is never one of them).
   const first = opener ? firstChatOf(pinned.pin ? [...recent, pinned.pin] : recent) : null;
@@ -234,6 +321,19 @@ function Home() {
     ) : null;
 
   const holdLabel = t("sidebarPins.pin");
+  // A section of Setores: the sector's name, or the agents in none, the direct messages, the channels.
+  const sectionTitle = (section: HomeSectorSection) =>
+    section.group
+      ? section.group.name
+      : section.kind === "agents"
+        ? t(
+            sectors.some((s) => s.kind === "sector")
+              ? "mobile.agents.noGroupSection"
+              : modeKey(org, "mobile.agents.teamSection"),
+          )
+        : section.kind === "dms"
+          ? t("mobile.chats.view.dms")
+          : t("mobile.chats.view.channels");
   // The faces that move: the pinned ones at work first (the strip leads the list), then the first rows; none of a
   // closed section.
   let live = 0;
@@ -312,46 +412,82 @@ function Home() {
                   holdLabel={t("sidebarPins.unpin")}
                 />
               </LandRow>
-              <CollapsibleSection
-                title={t("mobile.chats.recent")}
-                count={recent.length}
-                collapsed={collapsed.includes("recent")}
-                onToggle={() => toggle("recent")}
-              >
-                {recent.length === 0 ? (
-                  // The team's agents are in Agentes and on the strip, never talked to yet: the first conversation.
-                  <FirstUse
-                    place="chats"
-                    size="panel"
-                    acts
-                    label={t("mobile.empty.chats.action")}
-                    icon="chat"
-                    onPress={() => router.push("/new-chat")}
-                  />
-                ) : (
-                  recent.slice(0, RECENT_MAX).map((r, i) => (
-                    // Swiped left: Fixar no topo (or Tirar do topo) and a channel's Silenciar; held: the menu
-                    // (`HomeRow`). The row's key is on the box that travels: a conversation that goes to the top with
-                    // a new message moves there, and the ones it passes move down.
-                    <LandRow key={r.key} land={load.landing} index={2 + i} moves>
-                      <HomeRow
-                        row={r}
-                        facts={factsOf(r, agentStates.get(r.key))}
-                        divider={i > 0}
-                        live={!collapsed.includes("recent") && live++ < LIVE_ROWS}
-                        pinLabel={menus.pinLabelOf(r)}
-                        onHold={menus.openRowMenu}
-                        holdLabel={holdLabel}
-                        holdActions={menus.rowActionsOf}
-                        onMute={muteRow}
-                      />
-                    </LandRow>
+              {view === "sectors"
+                ? sectors.map((section) => (
+                    <CollapsibleSection
+                      key={section.key}
+                      title={sectionTitle(section)}
+                      count={section.rows.length}
+                      {...(section.group
+                        ? {
+                            mark: (
+                              <RoleMark color={section.group.color ?? "graphite"} icon={section.group.icon} size={20} />
+                            ),
+                          }
+                        : {})}
+                      collapsed={sectorsFold.collapsed.includes(section.key)}
+                      onToggle={() => sectorsFold.toggle(section.key)}
+                    >
+                      {section.rows.map((r, i) => (
+                        <LandRow key={r.key} land={load.landing} index={2 + i} moves>
+                          <HomeRow
+                            row={r}
+                            facts={factsOf(r, agentStates.get(r.key))}
+                            divider={i > 0}
+                            live={!sectorsFold.collapsed.includes(section.key) && live++ < LIVE_ROWS}
+                            pinLabel={menus.pinLabelOf(r)}
+                            onHold={menus.openRowMenu}
+                            holdLabel={holdLabel}
+                            holdActions={menus.rowActionsOf}
+                            onMute={muteRow}
+                          />
+                        </LandRow>
+                      ))}
+                    </CollapsibleSection>
                   ))
-                )}
-                {recent.length > RECENT_MAX ? (
-                  <SeeAllRow label={t("mobile.chats.seeAll")} onPress={() => openKindList("recent")} />
-                ) : null}
-              </CollapsibleSection>
+                : null}
+              {view === "sectors" ? null : (
+                <CollapsibleSection
+                  title={t("mobile.chats.recent")}
+                  count={recent.length}
+                  collapsed={collapsed.includes("recent")}
+                  onToggle={() => toggle("recent")}
+                >
+                  {recent.length === 0 ? (
+                    // The team's agents are in Agentes and on the strip, never talked to yet: the first conversation.
+                    <FirstUse
+                      place="chats"
+                      size="panel"
+                      acts
+                      label={t("mobile.empty.chats.action")}
+                      icon="chat"
+                      onPress={() => router.push("/new-chat")}
+                    />
+                  ) : (
+                    recent.slice(0, RECENT_MAX).map((r, i) => (
+                      // Swiped left: Fixar no topo (or Tirar do topo) and a channel's Silenciar; held: the menu
+                      // (`HomeRow`). The row's key is on the box that travels: a conversation that goes to the top with
+                      // a new message moves there, and the ones it passes move down.
+                      <LandRow key={r.key} land={load.landing} index={2 + i} moves>
+                        <HomeRow
+                          row={r}
+                          facts={factsOf(r, agentStates.get(r.key))}
+                          divider={i > 0}
+                          live={!collapsed.includes("recent") && live++ < LIVE_ROWS}
+                          pinLabel={menus.pinLabelOf(r)}
+                          onHold={menus.openRowMenu}
+                          holdLabel={holdLabel}
+                          holdActions={menus.rowActionsOf}
+                          onMute={muteRow}
+                        />
+                      </LandRow>
+                    ))
+                  )}
+                  {recent.length > RECENT_MAX ? (
+                    <SeeAllRow label={t("mobile.chats.seeAll")} onPress={() => openKindList("recent")} />
+                  ) : null}
+                </CollapsibleSection>
+              )}
             </>
           )}
         </View>

@@ -2111,6 +2111,7 @@
       "team": "誰が誰か：メンバー、エージェント、そのグループ",
       "dashboards": "エージェントが最新に保つ数値やグラフ",
       "taskManager": "各エージェントが今していることと、必要なものの停止",
+      "code": "エージェントとプログラミング、依頼ごとに専用のワークツリーで",
       "approvalsPersonal": "あなたのエージェントからの許可のお願い",
       "proposalsPersonal": "あなたのエージェントが変更を提案している内容",
       "threadsPersonal": "別の流れの会話とミッション",
@@ -2120,6 +2121,7 @@
       "teamPersonal": "あなたのエージェントと、ここにいるほかの人",
       "dashboardsPersonal": "あなたのエージェントが最新に保つ数値やグラフ",
       "taskManagerPersonal": "あなたのエージェントが今していることと、必要なものの停止",
+      "codePersonal": "あなたのエージェントとプログラミング",
       "homePersonal": "あなたの一日：待っていることとエージェントが今していること"
     },
     "customizeSidebar": "サイドバーをカスタマイズ",
@@ -2215,7 +2217,7 @@
     "expandNav": "サイドバーを展開",
     "searchWorkspace": "ワークスペースを検索",
     "summary_other": "メンバー{{people}}人 · エージェント{{agents}}体",
-    "waiting": "あなたの対応待ち",
+    "waiting": "受信トレイ",
     "approvals": "承認",
     "proposals": "改善提案",
     "issues": "タスク",
@@ -2225,6 +2227,7 @@
     "team": "チーム",
     "dashboards": "ダッシュボード",
     "taskManager": "タスクマネージャー",
+    "code": "コード",
     "calendar": "カレンダー",
     "drive": "Drive",
     "members": "メンバー",
@@ -4833,7 +4836,8 @@
       "proposal": "変更を提案しています",
       "agent": "新しいエージェントを提案しています",
       "team": "チームを提案",
-      "firstTask": "最初のタスク"
+      "firstTask": "最初のタスク",
+      "code": "コードセッションを提案しています"
     },
     "waitingYou": "あなたの対応待ち",
     "waitingFor": "{{name}}の対応待ち",
@@ -4850,6 +4854,7 @@
       "agent": "<b>{{name}}</b>が新しいエージェントを提案しています · {{what}}",
       "team": "<b>{{name}}</b>がチームを提案しています · {{what}}",
       "firstTask": "<b>{{name}}</b>が最初のタスクを提案しています · {{what}}",
+      "code": "<b>{{name}}</b>がコードセッションを提案しています · {{what}}",
       "more": "+{{count}}",
       "here_other": "ここであなたの対応待ち{{count}}件",
       "see": "見る"
@@ -5076,7 +5081,7 @@
     "firstRun": "続きから再開 · {{total}}件中{{done}}件"
   },
   "notifications": {
-    "title": "通知",
+    "title": "受信トレイ",
     "planLent": {
       "takeBack": "取り戻す",
       "takeBackAll": "すべてのエージェントから取り戻す",
@@ -5104,7 +5109,7 @@
         "computer": "コンピューターを切り替える"
       }
     },
-    "docTitleUnread": "（{{count}}）通知",
+    "docTitleUnread": "({{count}}) 受信トレイ",
     "summaryWaiting_other": "あなたの対応待ち{{count}}件",
     "summaryUnread_other": "未読{{count}}件",
     "summaryAllRead": "すべて既読",
@@ -5118,6 +5123,7 @@
       "waiting": "あなたの対応待ち",
       "unread": "未読",
       "reactions": "リアクション",
+      "requests": "決定済みのリクエスト",
       "done": "完了"
     },
     "keys": {
@@ -5336,6 +5342,8 @@
     "noneUnread": "すべて既読です。",
     "noneHere": "今は何もありません。",
     "noneDone": "過去30日間に完了にしたものはありません。",
+    "noneRequests": "決定済みのリクエストはまだありません。",
+    "proposes": "が改善を提案しています",
     "more": "さらに表示"
   },
   "approvals": {
@@ -6151,6 +6159,7 @@
         "empty_reply": "モデルから何も返ってきませんでした。",
         "model_refused": "モデルが回答を拒否しました。",
         "agent_archived": "エージェントがアーカイブされました。",
+        "code_session_unavailable": "セッションのworktreeがコンピューター上で利用できません。",
         "provider_error": "モデルプロバイダーがエラーを返しました: {{detail}}",
         "provider_account": "プロバイダーがキーを拒否しました。無効か、クレジットや割り当てが足りない可能性があります。",
         "provider_unavailable": "モデルプロバイダーが応答しませんでした: {{detail}}",
@@ -10800,6 +10809,184 @@
     "createKeywords": "作成 新規 追加 create new",
     "empty": "「{{q}}」に一致するものはありません。"
   },
+  "codeSessions": {
+    "beta": {
+      "title": "Coding mode はベータ版です",
+      "text": "実際に使えて、毎週変わります。ときどき止まることがありますが、そのときの問題は私たちの側にあります。",
+      "go": "はじめる",
+      "added": {
+        "worktree": "依頼ごとに専用の worktree、Git・ファイル・画面・ターミナル付き",
+        "anyAi": "どの AI でも：Claude Code、Codex、OpenCode、またはキーで使うモデル",
+        "beside": "会話の横でファイルを編集し、ターミナルを開けます"
+      },
+      "removed": {
+        "paste": "チャットとエディタの間でコードをコピー＆ペースト",
+        "watch": "エージェントが終わるまでターミナルを見張ること"
+      }
+    },
+    "title": "コード",
+    "state": {
+      "waiting": "あなたの対応待ち",
+      "working": "作業中",
+      "preparing": "ワークツリーを準備中",
+      "failed": "準備に失敗",
+      "pr": "PR #{{number}}",
+      "idle": "準備完了"
+    },
+    "list": {
+      "label": "コードセッション",
+      "new": "新しいセッション",
+      "newRow": "新しいセッション",
+      "resize": "リストの幅",
+      "local": "コンピューター上",
+      "empty": "あなたが開いたセッションや、呼ばれたセッションがここに表示されます。"
+    },
+    "home": {
+      "mode": "Coding mode",
+      "was": "Chat mode",
+      "beta": "Beta",
+      "noAgents": "まだコンピューターでコードを書けるエージェントがいません。エージェントの設定でコンピューターとコーディングアプリを割り当てるか、そこでコードを実行できるようにしてください。",
+      "placeholder": "変更、バグ、質問の内容を書いてください",
+      "label": "やること",
+      "agent": "エージェント",
+      "repo": "作業場所",
+      "repoPlaceholder": "リポジトリまたはプロジェクト",
+      "repoSearch": "検索、または owner/name か新しい名前を入力",
+      "newLocal": "コンピューター上の新しいプロジェクト: {{name}}",
+      "useRepo": "{{repo}}を使う",
+      "repoNote": "ownerなしの名前にすると、GitHubの外で、エージェントのコンピューター上にプロジェクトを作ります。",
+      "hint": "@で誰かをセッションに呼べます",
+      "start": "開始"
+    },
+    "view": {
+      "gone": "このセッションはもうないか、閲覧する権限がありません。",
+      "resize": "会話の幅",
+      "composer": "返信 · @で人を呼ぶ · /でコマンド",
+      "more": "その他",
+      "openPr": "PR #{{number}}を開く",
+      "close": "セッションを閉じる",
+      "closeHint": "リストから消えます。ワークツリーは削除され、ブランチは残ります",
+      "failed": "ワークツリーを準備できませんでした。",
+      "retry": "もう一度試す",
+      "githubAccess": "このワークスペースには、このリポジトリへのGitHubアクセスがありません。「設定 › コネクタ」でGitHubを接続するか、コンピューター上のプロジェクトでセッションを始めてください（名前だけを入力）。"
+    },
+    "panel": {
+      "label": "セッションパネル",
+      "screen": "画面",
+      "terminal": "ターミナル",
+      "terminalHeight": "ターミナルの高さ",
+      "notReady": "ワークツリーはまだ準備中です。",
+      "agent_preparing": "がワークツリーを準備しています",
+      "agent_failed": "はワークツリーを準備できませんでした",
+      "agent_working": "が作業中です",
+      "agent_waiting": "があなたを待っています",
+      "agent_idle": "は対応可能です"
+    },
+    "gitTab": {
+      "openFile": "ファイルを開く",
+      "label": "Git",
+      "from": "{{base}}から分岐",
+      "ahead_other": "{{count}}{{more}}コミット先行",
+      "refresh": "再読み込み",
+      "reading": "コンピューターのgitを読み込んでいます…",
+      "all": "{{base}}以降のすべて",
+      "uncommitted": "未コミット",
+      "clean": "すべてコミット済みです。",
+      "changesMore": "ほかにも変更があります。ここには最初の1,000件を表示しています。",
+      "commits": "コミット",
+      "noCommits": "{{base}}以降のコミットはまだありません。",
+      "more": "さらに古いコミットもあります。",
+      "back": "戻る",
+      "split": "並べて表示",
+      "none": "ここには変更はありません。",
+      "tooLarge": "大きすぎてここには表示できません。変更されたファイルの一覧を表示しています。",
+      "status": {
+        "modified": "変更",
+        "added": "追加",
+        "deleted": "削除",
+        "renamed": "名前を変更",
+        "untracked": "新規（gitに未追加）"
+      }
+    },
+    "files": {
+      "label": "ファイル",
+      "search": "ファイルを検索",
+      "searchPlaceholder": "名前やフォルダでファイルを探す",
+      "changedGroup": "変更済み",
+      "count_other": "{{formatted}}個のファイル",
+      "refresh": "再読み込み",
+      "reading": "コンピューターのファイルを読み込んでいます…",
+      "empty": "まだファイルはありません。",
+      "noMatch": "「{{query}}」に一致するファイルはありません。",
+      "truncated_other": "最初の{{formatted}}個のファイルを表示しています。",
+      "hasChanges": "変更あり",
+      "opening": "ファイルを開いています…",
+      "cut": "ここには最初の{{size}}だけを表示しています。",
+      "save": "保存",
+      "unsaved": "未保存",
+      "tooLong": "長すぎてここでは編集できません",
+      "moved": "このファイルは、開いた後にコンピューター上で変更されました。",
+      "reload": "そちらを読み込む",
+      "overwrite": "自分の内容で上書き",
+      "unsavedAsk": "このファイルには保存していない変更があります。",
+      "keepEditing": "編集を続ける",
+      "discard": "破棄",
+      "state": {
+        "binary": "バイナリファイルのため、ここには表示できません。",
+        "missing": "このファイルはもうありません。",
+        "ignored": "gitがこのファイルを無視しているため、ここには表示されません。",
+        "secret": ".envファイルはここには表示されません。通常、シークレットが含まれているためです。",
+        "outside": "このファイルはワークツリーの外を指すリンクです。"
+      }
+    },
+    "tabs": {
+      "label": "セッションのタブ",
+      "talk": "会話",
+      "terminalN": "ターミナル {{n}}",
+      "close": "{{name}} を閉じる",
+      "add": "新しいタブ"
+    },
+    "screen": {
+      "computer": "{{name}}のコンピューター",
+      "computer_female": "{{name}}のコンピューター",
+      "menu": "{{name}}が使う画面",
+      "menu_female": "{{name}}が使う画面",
+      "computerHint": "ワークツリーがある場所",
+      "onHost": "{{host}}上",
+      "exitFull": "全画面表示を終了"
+    },
+    "who": {
+      "label": "このセッションの参加者",
+      "open_other": "このセッションに{{count}}人",
+      "agent": "ワークツリーで作業",
+      "opener": "セッションを開いた人",
+      "leave": "退出",
+      "remove": "{{name}}をセッションから外す",
+      "invite": "誰かを呼ぶには、会話で@と名前を入力してください。"
+    },
+    "screenLine": {
+      "show": "「画面」で見る",
+      "held": "人が画面を操作中です"
+    },
+    "suggestion": {
+      "label": "コードセッションの提案",
+      "detail": "{{repo}} · {{name}}のコンピューター",
+      "more": "依頼を見る",
+      "open": "セッションを開く",
+      "here": "ここでやる",
+      "opening": "セッションを開いています…",
+      "opened": "セッションを開きました",
+      "openedBy": "{{name}}がセッションを開きました",
+      "keptHere": "ここでやることにしました",
+      "keptHereBy": "{{name}}がここでやることにしました",
+      "see": "セッションを見る"
+    },
+    "from": {
+      "dm": "{{name}}との会話から開きました",
+      "channel": "#{{name}} から開きました",
+      "see": "会話を見る"
+    }
+  },
   "code": {
     "ranSummary_other": "{{language}}を{{count}}行実行 · 出力 {{size}}",
     "show": "{{name}}のコードを見る",
@@ -11584,6 +11771,9 @@
       "textOnly": "テキストのみ",
       "search": "モデルを検索",
       "account": "アカウント",
+      "accountOf": "アカウント: {{account}}",
+      "connectAccount": "別のアカウントを接続",
+      "ais": "AI",
       "connect": "AIを接続",
       "applies": "次の返信から適用されます。",
       "more": "その他のオプション",
@@ -13912,6 +14102,7 @@
       "web_search": "Webを検索",
       "web_fetch": "Webページを読み取り",
       "image_search": "画像を検索",
+      "show_image": "ウェブの画像を表示",
       "create_routine": "ルーティンを作成",
       "update_routine": "ルーティンを更新",
       "delete_routine": "ルーティンを削除",
@@ -14760,6 +14951,9 @@
       "pageOf": "{{page}}/{{count}}",
       "pdfFailed": "このPDFはここでは表示できません。ダウンロードして開いてください。",
       "loadFailed": "この画像はここでは表示できません。",
+      "mark": "マーク",
+      "markOff": "マークをやめる：クリックでまたファイルを動かせます",
+      "markOn": "マーク：クリックで点や範囲にコメントします",
       "hint": {
         "image": "クリックでポイントを付ける、またはドラッグで範囲を指定",
         "video": "動画をクリックしてこの場面にコメント、またはドラッグで範囲を指定",
@@ -14877,6 +15071,17 @@
       "input": "うまくいきませんでした。入力内容を確認して、もう一度お試しください。",
       "conflict": "今はできません。更新して、もう一度お試しください。",
       "computer": "コンピューターが今はこれを実行できませんでした。電源が入っているか確認して、もう一度お試しください。"
+    },
+    "codeSession": {
+      "noComputer": "このエージェントにはまだコンピューターがありません。一緒にコードを書くには、エージェントの設定でコンピューターを割り当ててください。",
+      "cannotCode": "このエージェントは自分のコンピューターでコードを書けません。設定でコーディングアプリを割り当てるか、そこでコードを実行できるようにしてください。",
+      "repoNotAllowed": "このエージェントはそのリポジトリで作業できません。別のリポジトリを選ぶか、エージェントの設定で追加してください。",
+      "notYours": "セッションを閉じられるのは、開いた人か管理者だけです。",
+      "notReady": "セッションのワークツリーはまだ準備できていません。少し待ってからもう一度お試しください。",
+      "fileChanged": "このファイルは、開いた後にコンピューター上で変更されました。",
+      "fileLocked": "このファイルはここでは編集できません。",
+      "suggestionGone": "この提案にはすでに回答があります。",
+      "suggestionNotYours": "セッションを開くかどうかは依頼した人だけが決められます。"
     },
     "webhook": {
       "githubNoAccess": "このワークスペースのGitHubは{{repo}}にWebhookを作成できません。下の手順で手動で作成してください。",
@@ -17573,6 +17778,8 @@
         "merged": "{{who}}がGitHubでPR #{{number}}（{{repo}}）をマージしました",
         "closed": "{{who}}がGitHubでPR #{{number}}（{{repo}}）をクローズしました",
         "closedIssue": "{{who}}がGitHubでIssue #{{number}}（{{repo}}）をクローズしました",
+        "checkFailed": "GitHubでPR #{{number}}（{{repo}}）のチェック「{{check}}」が通りませんでした",
+        "checkFailedCommit": "GitHubでコミット{{commit}}（{{repo}}）のチェック「{{check}}」が通りませんでした",
         "ask": "返信を頼む",
         "asked": "{{asker}}が{{name}}に、GitHubで{{who}}へ返信するよう頼みました"
       },
@@ -17666,6 +17873,7 @@
         "runningSkillScriptAny": "スキルのスクリプトを実行しました",
         "fetchingFile": "ファイルを取得しました",
         "proposingMission": "ミッションを提案しました",
+        "suggestingCodeSession": "コードセッションを提案しました",
         "messagingMission": "ミッションにメモを送りました",
         "updatingPlan": "計画を更新しました",
         "reportingProgress": "進捗を報告しました",
@@ -17786,6 +17994,7 @@
       "runningSkillScriptAny": "スキルのスクリプトを実行中",
       "fetchingFile": "ファイルを取得中",
       "proposingMission": "ミッションを提案中",
+      "suggestingCodeSession": "コードセッションを提案中",
       "messagingMission": "ミッションにメモを送信中",
       "updatingPlan": "計画を更新中",
       "reportingProgress": "進捗を報告中",
@@ -19248,6 +19457,46 @@
     "screenOff": "画面はオフです",
     "screenOffHelp": "誰かが見ると画面がオンになります。"
   },
+  "cliTools": {
+    "read": "読み取り",
+    "search": "検索",
+    "edit": "編集",
+    "write": "書き込み",
+    "run": "実行",
+    "fetch": "取得",
+    "delegate": "サブエージェントに依頼",
+    "skill": "スキルを使用",
+    "workflow": "ワークフローを実行",
+    "other": "使用",
+    "running": {
+      "read": "読み取り中",
+      "search": "検索中",
+      "edit": "編集中",
+      "write": "書き込み中",
+      "run": "実行中",
+      "fetch": "取得中",
+      "delegate": "サブエージェントに依頼中",
+      "skill": "スキルを使用中",
+      "workflow": "ワークフローを実行中",
+      "other": "使用中"
+    },
+    "lines": "+{{added}} −{{removed}}",
+    "added": "+{{added}}",
+    "found_other": "{{count}}か所",
+    "files_other": "{{count}}ファイル",
+    "passed_other": "{{count}}件成功",
+    "failedTests_other": "{{count}}件失敗",
+    "exit": "終了コード {{code}}",
+    "progress": {
+      "block": "{{name}}のサブエージェント",
+      "block_female": "{{name}}のサブエージェント",
+      "subagent": "サブエージェント",
+      "agents_other": "サブエージェント{{count}}体",
+      "done": "{{done}}/{{total}}件完了",
+      "asking_other": "サブエージェント{{count}}体に依頼中",
+      "workflowShort": "ワークフロー {{done}}/{{total}}"
+    }
+  },
   "agentComputer": {
     "title": "{{name}}のコンピューター",
     "open": "開く",
@@ -19339,6 +19588,24 @@
       "upright": "縦向きにする",
       "message": "{{name}}にメッセージ"
     }
+  },
+  "codeTerminal": {
+    "label": "ターミナル",
+    "opening": "ターミナルを開いています…",
+    "openAgain": "もう一度開く",
+    "ended": "シェルが終了しました",
+    "dropped": "ターミナルへの接続が切れました",
+    "moved": "このターミナルは別のウィンドウで開かれています",
+    "screening": "ここではターミナルはオフです",
+    "forbidden": "ターミナルを開けるのは、このコンピューターを使える人だけです",
+    "offline": "コンピューターがオフラインです",
+    "outdated": "セッションのフォルダでターミナルを開くには、コンピューターをアップデートしてください",
+    "unavailable": "このエージェントのコンピューターではターミナルを開けません",
+    "off": "{{computer}}ではターミナルがオフになっています",
+    "busy": "このコンピューターで開けるターミナルの数が上限に達しています。1つ閉じてから、もう一度開いてください。",
+    "paused": "コンピューターは一時停止中です",
+    "failed": "ターミナルを開けませんでした",
+    "agentFolder": "ターミナルはエージェントのフォルダで開きました。セッションのフォルダで開くには、コンピューターをアップデートしてください。"
   },
   "agora": {
     "label": "今",
@@ -19451,7 +19718,8 @@
       "stopAll": "すべて停止",
       "stopAllOf": "{{name}}のタスクをすべて停止",
       "open": "会話で開く",
-      "openManager": "タスクマネージャーで開く"
+      "openManager": "タスクマネージャーで開く",
+      "more": "その他の操作"
     },
     "confirm": {
       "chainTitle_other": "{{name}}と手伝い{{count}}件を止めますか？",

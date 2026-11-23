@@ -13631,6 +13631,10 @@ html:not([data-pointer]) .sidebar__bell:focus-visible {
   gap: 2px;
   overflow: visible;
 }
+/* Its two buttons stand 8 apart, as buttons side by side do. */
+.sidebar:not([data-rail="true"]) .sidebar__org--person .sidebar__agora + .sidebar__head-collapse {
+  margin-left: 6px;
+}
 .sidebar__org--person .sidebar__org-button > .ac-avatar {
   width: 28px;
   height: 28px;

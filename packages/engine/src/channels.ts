@@ -934,8 +934,10 @@ export async function listChannelMembers(db: Database, actorId: string, orgId: s
 /**
  * Removes a person or an agent from a channel. Allowed for yourself (leave),
  * the channel's creator, and admins; an agent also for whoever may put it
- * there (`requirePlacesAgent`). Publishes `membership.revoked` so open
- * WebSocket subscriptions of that person end immediately.
+ * there (`requirePlacesAgent`). A code session's conversation (ADR 0215) can be
+ * left too, and keeps its own agent and whoever opened it. Publishes
+ * `membership.revoked` so open WebSocket subscriptions of that person end
+ * immediately.
  */
 export async function removeChannelMember(
   db: Database,
@@ -952,7 +954,9 @@ export async function removeChannelMember(
     .where(and(eq(channels.id, channelId), eq(channels.orgId, orgId)));
   if (!channel) throw new NotFoundError("Channel not found");
   const self = "userId" in member && member.userId === actorId;
-  if (self && channel.kind !== "channel") throw new ValidationError("Only a channel can be left", "channel.leave_kind");
+  if (self && channel.kind !== "channel" && channel.kind !== "code")
+    throw new ValidationError("Only a channel can be left", "channel.leave_kind");
+  if (channel.kind === "code") await keepCodeSessionCore(db, channelId, member);
   // Every person joins #general with the workspace: it is how they all hear the same thing.
   if (self && channel.name === "general")
     throw new ValidationError("Everyone stays in #general", "channel.general_stays");
@@ -995,6 +999,18 @@ export async function removeChannelMember(
     member: { type: "agent", id: member.agentId },
   });
   await publishChannelsChanged(options.pubsub, orgId);
+}
+
+/** A code session (ADR 0215) keeps its own agent and whoever opened it: they are the session. */
+async function keepCodeSessionCore(db: Database, channelId: string, member: { userId: string } | { agentId: string }) {
+  const [session] = await db
+    .select({ agentId: schema.codeSessions.agentId, createdBy: schema.codeSessions.createdBy })
+    .from(schema.codeSessions)
+    .where(eq(schema.codeSessions.channelId, channelId))
+    .limit(1);
+  if (!session) return;
+  if ("agentId" in member ? member.agentId === session.agentId : member.userId === session.createdBy)
+    throw new ValidationError("A code session keeps its own agent and whoever opened it", "code_session.member_stays");
 }
 
 /** The channel, when `actorId` may archive it or bring it back: its creator or an admin. */

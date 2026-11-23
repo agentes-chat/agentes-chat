@@ -2321,6 +2321,7 @@ export const en = {
       team: "Who's who: people, agents and their groups",
       dashboards: "Numbers and charts the agents keep up to date",
       taskManager: "What each agent does now, and stop what you need",
+      code: "Program with the agents, each request in its own worktree",
       /** In a personal workspace (ADR 0159): one person (maybe a family) and their agents, no team. */
       approvalsPersonal: "What your agents ask you to allow",
       proposalsPersonal: "What your agents propose to change",
@@ -2331,6 +2332,7 @@ export const en = {
       teamPersonal: "Your agents, and who else is here",
       dashboardsPersonal: "Numbers and charts your agents keep up to date",
       taskManagerPersonal: "What your agents do now, and stop what you need",
+      codePersonal: "Program with your agents",
       /** In a personal workspace's More (ADR 0159), where Início lives. */
       homePersonal: "Your day: what waits for you and what your agents are doing",
     },
@@ -2437,7 +2439,8 @@ export const en = {
     searchWorkspace: "Search the workspace",
     summary_one: "{{people}} member · {{agents}} agents",
     summary_other: "{{people}} members · {{agents}} agents",
-    waiting: "Waiting on you",
+    /** The sidebar's one entry for everything that involves me: what waits on me, what is new, what I decided. */
+    waiting: "Inbox",
     approvals: "Approvals",
     proposals: "Improvement proposals",
     issues: "Tasks",
@@ -2448,6 +2451,7 @@ export const en = {
     team: "Team",
     dashboards: "Dashboards",
     taskManager: "Task manager",
+    code: "Code",
     calendar: "Calendar",
     drive: "Drive",
     members: "Members",
@@ -5451,6 +5455,7 @@ export const en = {
       agent: "Proposes a new agent",
       team: "Proposes a team",
       firstTask: "First task",
+      code: "Suggests a code session",
     },
     waitingYou: "waiting for you",
     waitingFor: "waiting for {{name}}",
@@ -5468,6 +5473,7 @@ export const en = {
       agent: "<b>{{name}}</b> proposes a new agent · {{what}}",
       team: "<b>{{name}}</b> proposes a team · {{what}}",
       firstTask: "<b>{{name}}</b> suggests a first task · {{what}}",
+      code: "<b>{{name}}</b> suggests a code session · {{what}}",
       more: "+{{count}}",
       /** What waits on me here with its card not loaded (older, or in a thread): "Ver" goes to the oldest. */
       here_one: "{{count}} waiting on you here",
@@ -5711,7 +5717,7 @@ export const en = {
     firstRun: "Pick up where you left off · {{done}} of {{total}}",
   },
   notifications: {
-    title: "Notifications",
+    title: "Inbox",
     /** "Tirar de volta" on `plan_lent`: the person's plan leaves the agent someone else gave it to, or all of them. */
     planLent: {
       takeBack: "Take it back",
@@ -5748,7 +5754,7 @@ export const en = {
         computer: "Switch computer",
       },
     },
-    docTitleUnread: "({{count}}) Notifications",
+    docTitleUnread: "({{count}}) Inbox",
     summaryWaiting_one: "{{count}} thing waiting on you",
     summaryWaiting_other: "{{count}} things waiting on you",
     summaryUnread_one: "{{count}} unread",
@@ -5765,6 +5771,8 @@ export const en = {
       waiting: "Waiting on you",
       unread: "Unread",
       reactions: "Reactions",
+      /** The requests already decided: approved, refused, expired. */
+      requests: "Decided requests",
       done: "Done",
     },
     keys: {
@@ -6006,6 +6014,9 @@ export const en = {
     noneUnread: "All read.",
     noneHere: "Nothing here for now.",
     noneDone: "Nothing marked done in the last 30 days.",
+    noneRequests: "No request decided yet.",
+    /** A proposal's row in the inbox, after the agent's name. */
+    proposes: "proposes an improvement",
     more: "Show more",
   },
   approvals: {
@@ -6905,6 +6916,7 @@ export const en = {
         empty_reply: "The model returned nothing.",
         model_refused: "The model refused to answer.",
         agent_archived: "The agent was archived.",
+        code_session_unavailable: "The session's worktree isn't available on its computer.",
         provider_error: "The model provider returned an error: {{detail}}",
         /** Its 401, 402, 403 or 429: the provider's own words (`detail`) show only on hover. */
         provider_account: "The provider refused the key: it may be invalid, out of credit or over its quota.",
@@ -11711,6 +11723,211 @@ export const en = {
     createKeywords: "create new add",
     empty: "Nothing for “{{q}}”.",
   },
+  /** Code (ADR 0215): sessions where a request is worked on in its own git worktree on an agent's computer. */
+  codeSessions: {
+    /** The beta notice, once, the first time the Code page opens: what the mode is, as a diff. */
+    beta: {
+      title: "Coding mode is in beta",
+      text: "It works for real and changes every week. Sometimes it gets stuck. When it does, the problem is ours.",
+      go: "Get started",
+      added: {
+        worktree: "Each request in its own worktree, with Git, Files, Screen and Terminal",
+        anyAi: "Any AI: Claude Code, Codex, OpenCode, or a model by its key",
+        beside: "Edit the files and open a terminal beside the conversation",
+      },
+      removed: {
+        paste: "Copying and pasting code between the chat and the editor",
+        watch: "Watching the terminal until the agent is done",
+      },
+    },
+    title: "Code",
+    state: {
+      waiting: "waiting for you",
+      working: "working",
+      preparing: "preparing the worktree",
+      failed: "couldn't prepare",
+      pr: "PR #{{number}}",
+      idle: "ready",
+    },
+    list: {
+      label: "Code sessions",
+      new: "New session",
+      newRow: "New session",
+      resize: "List width",
+      /** Beside a local project's name in the list. */
+      local: "on the computer",
+      empty: "The sessions you open, or are called into, show here.",
+    },
+    home: {
+      /** The home's title, under the agent in cubes (the mode's name, the same in every language). */
+      mode: "Coding mode",
+      /** What the title's block knocks off as the home opens (decoration, the same in every language). */
+      was: "Chat mode",
+      /** Beside the mode's name: the page is still a beta. */
+      beta: "Beta",
+      noAgents:
+        "No agent codes on a computer yet. In an agent's settings, give it a computer and a coding app, or let it run code there.",
+      placeholder: "Describe the change, the bug or the question",
+      label: "What to do",
+      agent: "Agent",
+      repo: "Where to work",
+      repoPlaceholder: "Repository or project",
+      repoSearch: "Search, or type owner/name or a new name",
+      /** A name with no owner: a new project only on the agent's computer, no remote. */
+      newLocal: "New project on the computer: {{name}}",
+      useRepo: "Use {{repo}}",
+      repoNote: "A name with no owner starts a project on the agent's computer, outside GitHub.",
+      hint: "@ calls someone into the session",
+      start: "Start",
+    },
+    view: {
+      gone: "This session is gone, or isn't yours to see.",
+      resize: "Conversation width",
+      composer: "Reply · @ calls someone · / commands",
+      more: "More",
+      openPr: "Open PR #{{number}}",
+      close: "Close the session",
+      closeHint: "It leaves the list: the worktree goes, the branch stays",
+      failed: "The worktree couldn't be prepared.",
+      retry: "Try again",
+      githubAccess:
+        "This workspace has no GitHub access for this repository. Connect GitHub in Settings\u00a0›\u00a0Connectors, or start a session on a project on the computer (just a name).",
+    },
+    panel: {
+      label: "Session panel",
+      screen: "Screen",
+      terminal: "Terminal",
+      terminalHeight: "Terminal height",
+      notReady: "The worktree is still being prepared.",
+      agent_preparing: "is preparing the worktree",
+      agent_failed: "couldn't prepare the worktree",
+      agent_working: "is working",
+      agent_waiting: "is waiting for you",
+      agent_idle: "is free",
+    },
+    /** The panel's Git tab: the branch, what isn't committed, its commits, each diff in place. */
+    gitTab: {
+      /** On a file's diff: opens the file itself, to edit it. */
+      openFile: "Open the file",
+      label: "Git",
+      /** After the branch's name in the tab's head. */
+      from: "from {{base}}",
+      ahead_one: "{{count}}{{more}} commit ahead",
+      ahead_other: "{{count}}{{more}} commits ahead",
+      refresh: "Read again",
+      reading: "Reading git on the computer…",
+      all: "Everything since {{base}}",
+      uncommitted: "Not committed",
+      clean: "Everything is committed.",
+      changesMore: "And more changes: the first thousand are here.",
+      commits: "Commits",
+      noCommits: "No commits since {{base}} yet.",
+      more: "And older commits.",
+      back: "Back",
+      split: "Side by side",
+      none: "Nothing changed here.",
+      tooLarge: "Too large to show here. The files that changed are listed.",
+      /** A change's letter, in words. */
+      status: {
+        modified: "Modified",
+        added: "Added",
+        deleted: "Deleted",
+        renamed: "Renamed",
+        untracked: "New, not in git yet",
+      },
+    },
+    /** The panel's Files tab: the worktree's tree, a search, a file read-only. */
+    files: {
+      label: "Files",
+      search: "Search files",
+      /** The search's field, in the app's palette (as ⌘K). */
+      searchPlaceholder: "Find a file by name or folder",
+      /** The palette's first group: the files the session changed. */
+      changedGroup: "Changed",
+      count_one: "{{formatted}} file",
+      count_other: "{{formatted}} files",
+      refresh: "Read again",
+      reading: "Reading the files on the computer…",
+      empty: "No files yet.",
+      noMatch: "No file matches “{{query}}”.",
+      truncated_one: "Showing the first {{formatted}} file.",
+      truncated_other: "Showing the first {{formatted}} files.",
+      hasChanges: "Has changes",
+      opening: "Opening the file…",
+      cut: "Only the first {{size}} show here.",
+      save: "Save",
+      unsaved: "Not saved",
+      tooLong: "Too long to edit here",
+      moved: "This file changed on the computer after you opened it.",
+      reload: "Load that one",
+      overwrite: "Save mine over it",
+      unsavedAsk: "This file has changes you didn't save.",
+      keepEditing: "Keep editing",
+      discard: "Discard",
+      /** Why a file isn't shown. */
+      state: {
+        binary: "A binary file: nothing to show here.",
+        missing: "This file isn't there anymore.",
+        ignored: "Git ignores this file, so it doesn't show here.",
+        secret: ".env files don't show here: they usually hold secrets.",
+        outside: "This file is a link out of the worktree.",
+      },
+    },
+    /** The session's tabs under its header: the conversation, open files, terminals. */
+    tabs: {
+      label: "The session's tabs",
+      talk: "Conversation",
+      terminalN: "Terminal {{n}}",
+      close: "Close {{name}}",
+      add: "New tab",
+    },
+    screen: {
+      computer: "{{name}}'s computer",
+      computer_female: "{{name}}'s computer",
+      menu: "Screens {{name}} uses",
+      menu_female: "Screens {{name}} uses",
+      computerHint: "Where the worktree is",
+      onHost: "on {{host}}",
+      exitFull: "Exit full screen",
+    },
+    /** Who is in the session: faces beside the git button, a list where they can be taken out. */
+    who: {
+      label: "In this session",
+      open_one: "{{count}} in this session",
+      open_other: "{{count}} in this session",
+      agent: "works in the worktree",
+      opener: "opened the session",
+      leave: "Leave",
+      remove: "Remove {{name}} from the session",
+      invite: "To bring someone in, type @ and their name in the conversation.",
+    },
+    /** A browser or desktop card in the conversation, as one line: the screen is the panel's. */
+    screenLine: {
+      show: "See on Screen",
+      held: "A person has the screen",
+    },
+    /** An agent suggests a session for a change asked in the chat (ADR 0215 §11): the card under its reply. */
+    suggestion: {
+      label: "Code session suggestion",
+      /** The project, and whose computer it works on. */
+      detail: "{{repo}} · on {{name}}'s computer",
+      more: "See the request",
+      open: "Open session",
+      here: "Do it here",
+      opening: "Opening the session…",
+      opened: "You opened the session",
+      openedBy: "{{name}} opened the session",
+      keptHere: "You chose to do it here",
+      keptHereBy: "{{name}} chose to do it here",
+      see: "See session",
+    },
+    /** At the top of a session opened from a suggestion: where it came from. */
+    from: {
+      dm: "Opened from your conversation with {{name}}",
+      channel: "Opened from #{{name}}",
+      see: "See conversation",
+    },
+  },
   code: {
     ranSummary_one: "Ran {{count}} line of {{language}} · output {{size}}",
     ranSummary_other: "Ran {{count}} lines of {{language}} · output {{size}}",
@@ -12510,6 +12727,11 @@ export const en = {
       textOnly: "Reads text only",
       search: "Search models",
       account: "Account",
+      /** The account part of the AI's control: what it says to a screen reader. */
+      accountOf: "Account: {{account}}",
+      connectAccount: "Connect another account",
+      /** The AIs it may think with, as a row of their marks. */
+      ais: "AI",
       connect: "Connect an AI",
       applies: "Applies from the next reply.",
       more: "More options",
@@ -14810,6 +15032,7 @@ export const en = {
       web_search: "Search the web",
       web_fetch: "Read web page",
       image_search: "Search for pictures",
+      show_image: "Show pictures from the web",
       create_routine: "Create routine",
       update_routine: "Change routine",
       delete_routine: "Delete routine",
@@ -15637,6 +15860,10 @@ export const en = {
       pageOf: "{{page}} of {{count}}",
       pdfFailed: "This PDF can't be shown here. Download it to open it.",
       loadFailed: "This image can't be shown here.",
+      /** On the file's bar with its comments open: whether a press marks the file. */
+      mark: "Mark",
+      markOff: "Stop marking: a click moves the file again",
+      markOn: "Mark: a click comments on a point or an area",
       hint: {
         image: "Click to mark a point or drag to mark an area",
         video: "Click the video to comment at this moment, or drag to mark an area",
@@ -15777,6 +16004,19 @@ export const en = {
       computer: "The computer couldn't do this now. Check that it's on and try again.",
     },
     /** Setting up a GitHub or Sentry routine's webhook: `repo` is owner/name, `status` GitHub's HTTP status. */
+    /** A code session (ADR 0215): what keeps one from starting, or its panel from reading the agent's computer. */
+    codeSession: {
+      noComputer: "This agent has no computer yet. Give it one in its settings to code with it.",
+      cannotCode:
+        "This agent can't code on its computer. Give it a coding app in its settings, or let it run code there.",
+      repoNotAllowed: "This agent can't work in that repository. Pick another one, or add it in the agent's settings.",
+      notYours: "Only who opened the session, or an admin, closes it.",
+      notReady: "The session's worktree isn't ready yet. Try again in a moment.",
+      fileChanged: "This file changed on the computer after you opened it.",
+      fileLocked: "This file can't be edited here.",
+      suggestionGone: "This suggestion was answered already.",
+      suggestionNotYours: "Only who asked decides whether to open the session.",
+    },
     webhook: {
       githubNoAccess:
         "This workspace's GitHub can't add webhooks to {{repo}}. Follow the steps below to add it by hand.",
@@ -18735,6 +18975,13 @@ export const en = {
         merged: "{{who}} merged PR #{{number}} ({{repo}}) on GitHub",
         closed: "{{who}} closed PR #{{number}} ({{repo}}) on GitHub",
         closedIssue: "{{who}} closed issue #{{number}} ({{repo}}) on GitHub",
+        /**
+         * In a code session: a check (an automatic test or build GitHub runs, named `check`) didn't pass on the
+         * session's pull request. "Show" opens what the check said and its page.
+         */
+        checkFailed: "Check «{{check}}» didn't pass on PR #{{number}} ({{repo}}) on GitHub",
+        /** The same before there is a pull request: on the commit (`commit`, its short id) the agent pushed. */
+        checkFailedCommit: "Check «{{check}}» didn't pass on commit {{commit}} ({{repo}}) on GitHub",
         /** On the line of someone the agent doesn't answer: a person here asks the agent to answer them there. */
         ask: "Ask for a reply",
         /** The line once someone asked (`asker`), in place of the button. */
@@ -18839,6 +19086,7 @@ export const en = {
         runningSkillScriptAny: "Ran a skill script",
         fetchingFile: "Brought a file",
         proposingMission: "Proposed a mission",
+        suggestingCodeSession: "Suggested a code session",
         messagingMission: "Sent a note to the mission",
         updatingPlan: "Updated the plan",
         reportingProgress: "Reported progress",
@@ -18960,6 +19208,7 @@ export const en = {
       runningSkillScriptAny: "running a skill script",
       fetchingFile: "bringing a file",
       proposingMission: "proposing a mission",
+      suggestingCodeSession: "suggesting a code session",
       messagingMission: "sending a note to the mission",
       updatingPlan: "updating the plan",
       reportingProgress: "reporting progress",
@@ -20594,6 +20843,66 @@ export const en = {
     screenOff: "The screen is off",
     screenOffHelp: "It turns on when someone watches.",
   },
+  /**
+   * A coding agent's own tool calls in a code session, one quiet line each as in a terminal: the verb, then what it
+   * worked on (a file, a search, a command) and what it came to on the right ("Read src/app.ts", "Ran bun test · 15
+   * passed").
+   */
+  cliTools: {
+    read: "Read",
+    search: "Searched",
+    edit: "Edited",
+    write: "Wrote",
+    run: "Ran",
+    fetch: "Fetched",
+    /** The CLI's own subagent (ADR 0215): "Asked a subagent · Review the HTML". */
+    delegate: "Asked a subagent",
+    skill: "Used the skill",
+    /** A workflow of the CLI's own subagents (ADR 0215): "Ran a workflow · Review every page". */
+    workflow: "Ran a workflow",
+    other: "Used",
+    /** While the call runs. */
+    running: {
+      read: "Reading",
+      search: "Searching",
+      edit: "Editing",
+      write: "Writing",
+      run: "Running",
+      fetch: "Fetching",
+      delegate: "Asking a subagent",
+      skill: "Using the skill",
+      workflow: "Running a workflow",
+      other: "Using",
+    },
+    /** Lines an edit added and removed. */
+    lines: "+{{added}} −{{removed}}",
+    added: "+{{added}}",
+    /** Places a search found. */
+    found_one: "{{count}} place",
+    found_other: "{{count}} places",
+    files_one: "{{count}} file",
+    files_other: "{{count}} files",
+    /** Tests a command ran. */
+    passed_one: "{{count}} passed",
+    passed_other: "{{count}} passed",
+    failedTests_one: "{{count}} failed",
+    failedTests_other: "{{count}} failed",
+    /** A failed command's exit code. */
+    exit: "exit {{code}}",
+    /** A code session's subagents and workflows while they work (ADR 0215), live in the agent's row. */
+    progress: {
+      block: "{{name}}'s subagents",
+      subagent: "Subagent",
+      agents_one: "{{count}} subagent",
+      agents_other: "{{count}} subagents",
+      done: "{{done}} of {{total}} done",
+      /** The bar above the composer while subagents work (the agent's name before it). */
+      asking_one: "Asking a subagent",
+      asking_other: "Asking {{count}} subagents",
+      /** After the agent's own step in the bar, and after "working" in the session list. */
+      workflowShort: "workflow {{done}} of {{total}}",
+    },
+  },
   agentComputer: {
     title: "{{name}}'s computer",
     open: "Open",
@@ -20693,6 +21002,29 @@ export const en = {
       upright: "Turn upright",
       message: "Message {{name}}",
     },
+  },
+  /**
+   * A code session's Terminal tab (ADR 0215): a shell on the agent's computer, in the session's folder. One line under
+   * it says why it closed; "Open again" opens a new shell.
+   */
+  codeTerminal: {
+    label: "Terminal",
+    opening: "Opening the terminal…",
+    openAgain: "Open again",
+    ended: "The shell ended",
+    dropped: "The connection to the terminal dropped",
+    moved: "This terminal is open in another window",
+    screening: "Terminals are off here",
+    forbidden: "Only whoever may use this computer opens a terminal",
+    offline: "The computer is offline",
+    outdated: "Update the computer to open the terminal in the session's folder",
+    unavailable: "This agent's computer doesn't open terminals",
+    off: "The terminal is off on {{computer}}",
+    busy: "This computer has as many terminals open as it takes. Close one and open again.",
+    paused: "The computer is paused",
+    failed: "Couldn't open the terminal",
+    /** Its computer's app is too old for the session's folder: the shell started in the agent's own. */
+    agentFolder: "The terminal opened in the agent's folder. Update the computer to open it in the session's folder.",
   },
   /** Agora (ADR 0128 addendum): the whole workspace's work in one place, a button beside "Go to…" and its list. */
   agora: {
@@ -20821,6 +21153,8 @@ export const en = {
       stopAllOf: "Stop everything of {{name}}",
       open: "Open in the conversation",
       openManager: "Open in the task manager",
+      /** A row's ⋯: its tooltip, and with the row's title for screen readers. */
+      more: "More actions",
     },
     confirm: {
       /** One task and the agents it asked, stopped together. */

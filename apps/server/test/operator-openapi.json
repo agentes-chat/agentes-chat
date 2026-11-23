@@ -2856,6 +2856,45 @@
           "waits"
         ]
       },
+      "OperatorCliRuns": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "clis": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "cli": {
+                  "type": "string",
+                  "description": "The coding CLI's name: `claude`, `codex`, `cursor`, `opencode`, `grok`, `antigravity`."
+                },
+                "version": {
+                  "type": "string",
+                  "description": "Its version, as its `--version` gave it on the run's computer.",
+                  "example": "2.1.308"
+                },
+                "runs": {
+                  "type": "integer",
+                  "description": "Runs that ended, done or failed."
+                },
+                "failed": {
+                  "type": "integer",
+                  "description": "Of them, those that failed, whatever the cause."
+                }
+              },
+              "required": ["cli", "version", "runs", "failed"]
+            },
+            "description": "Most runs first, at most 200. Runs on the model brain, or whose computer said no version, aren't counted."
+          }
+        },
+        "required": ["from", "to", "clis"]
+      },
       "OperatorReplyTimes": {
         "type": "object",
         "properties": {
@@ -10961,6 +11000,69 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/OperatorRunTimings"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request (`analytics.range`: the dates)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cli-runs": {
+      "get": {
+        "tags": ["Operator"],
+        "summary": "Runs that ended, by the coding CLI and version they thought with, and how many failed",
+        "description": "Of the runs created in the window, across workspaces: what a rollout of a CLI's new build compares with the build before. Counts and versions only.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "An ISO 8601 instant: runs created at or after it.",
+              "example": "2026-11-21T00:00:00Z"
+            },
+            "required": true,
+            "description": "An ISO 8601 instant: runs created at or after it.",
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "An ISO 8601 instant: runs created before it, after `from` and at most 7 days apart. Else 400 `analytics.range`.",
+              "example": "2026-11-22T00:00:00Z"
+            },
+            "required": true,
+            "description": "An ISO 8601 instant: runs created before it, after `from` and at most 7 days apart. Else 400 `analytics.range`.",
+            "name": "to",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperatorCliRuns"
                 }
               }
             }

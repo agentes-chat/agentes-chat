@@ -143,3 +143,15 @@ menu.
 - Phone comments carry no pictures and no areas; their agents read the file itself.
 - The phone gains `react-native-pdf-light` (MIT, native renderers, no web view) for PDFs; there is no pinch zoom on a
   PDF's pages, so its pins stand where the page is laid out.
+
+## Addendum (2026-11-22): the phone pushes the conversation
+
+The sheet over the file loaded heavily and moved as it came up, the keyboard and the file behind each moving with it.
+The phone now pushes a file's conversation as a screen of the stack, the conversation as every other one is (the
+thread at its root, the stack's bar and back), for every kind of file; the route sheet, its store and the chat's sheet
+mode are gone. The picture viewer is a screen of the stack too (faded in, black), not a modal: what is pushed from it
+shows over it, and its back comes back to the picture (a message's line about the picture, tapped in the
+conversation, goes back to the viewer on that page rather than opening a second one). With no sheet to tap through, a
+touch held on a picture or a PDF's page marks the point and pushes the conversation about it, the person's pin left on
+the spot while the comment is unsent; a video's frame stays the system player's, and a video that has played opens its
+conversation about the moment it is at. A video's frame no longer shows the pins made near its moment.

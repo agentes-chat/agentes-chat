@@ -1,6 +1,7 @@
 /** Types of the private web-app API (`/api/app/*`, apps/server/src/routes/app). */
 
 import type { CanvasPreview, DocumentPreview, SheetPreview, SlidesPreview } from "@agenteschat/live";
+import type { CodeSuggestion } from "../code/types";
 import type { ChatPrefs } from "../lib/chat-look";
 import type { RoleId } from "../lib/new-agent";
 import type { OnboardingStepId } from "../lib/onboarding";
@@ -1876,6 +1877,14 @@ export type ChannelEvent =
   | { type: "block.state"; channelId: string; block: BlockState }
   /** A choice card was answered (ADR 0124). */
   | { type: "choices.updated"; channelId: string; choices: Choices }
+  /** A suggested code session was opened, kept in the chat, or waits again (ADR 0215 §11): the reply's card. */
+  | {
+      type: "code.suggestion";
+      channelId: string;
+      threadId: string | null;
+      messageId: string;
+      suggestion: CodeSuggestion;
+    }
   /** A long work changed (ADR 0121): moved, updated, waiting, queued or ended. Its anchor's line redraws. */
   | {
       type: "agent.work";
@@ -2756,6 +2765,11 @@ export interface OrgOverview {
   approvalsWaitingForMe: number;
   /** Open proposals the viewer can see and decide. */
   proposalsWaitingForMe?: number;
+  /**
+   * Whether Code has anything for the viewer (ADR 0215 §12): an agent that programs on a computer, or an open session
+   * they take part in. Absent (a server without Code): no.
+   */
+  code?: boolean;
 }
 
 export interface Person {
@@ -2931,7 +2945,7 @@ export interface AgentWork {
   runId: string;
   /** Where it shows, when you read that conversation: null otherwise. */
   channelId: string | null;
-  channelKind: "channel" | "dm" | "task" | "file" | null;
+  channelKind: "channel" | "dm" | "task" | "file" | "code" | null;
   channelName: string | null;
   threadId: string | null;
   /** The reply that handed it off, once posted. */
@@ -2955,7 +2969,7 @@ export interface PendingReturn {
   messageId: string;
   agentId: string;
   channelId: string;
-  channelKind: "channel" | "dm" | "task" | "file";
+  channelKind: "channel" | "dm" | "task" | "file" | "code";
   channelName: string | null;
   /** Null: the conversation's main timeline. */
   threadId: string | null;
@@ -2976,7 +2990,7 @@ export interface CanceledReturn {
   messageId: string;
   agentId: string;
   channelId: string;
-  channelKind: "channel" | "dm" | "task" | "file";
+  channelKind: "channel" | "dm" | "task" | "file" | "code";
   channelName: string | null;
   threadId: string | null;
   at: string;
@@ -5989,7 +6003,7 @@ export interface ThreadInfo {
   id: string;
   channelId: string;
   channelName: string;
-  channelKind: "channel" | "dm" | "task" | "file";
+  channelKind: "channel" | "dm" | "task" | "file" | "code";
   /** Null: show `rootText`. */
   title: string | null;
   rootText: string;
@@ -7318,6 +7332,8 @@ export interface NotificationSource {
   widgetId?: string;
   /** A message in a live file's conversation (ADR 0199): the file, opened with it at `messageId`. */
   artifactId?: string;
+  /** A message in a code session's conversation (ADR 0215): the session, opened on the Code page. */
+  codeSessionId?: string;
   /** Channel name, thread title, issue title, topic title, mission or routine name (or the computer's name). */
   label?: string;
 }
@@ -7438,7 +7454,7 @@ export interface AuditRow {
   details: Record<string, unknown>;
   runId: string | null;
   channelId: string | null;
-  channel: { id: string; name: string; kind: "channel" | "dm" | "task" | "file" } | null;
+  channel: { id: string; name: string; kind: "channel" | "dm" | "task" | "file" | "code" } | null;
   onBehalfOf: { id: string; name: string | null } | null;
   outcome: AuditOutcome | null;
   /** The approval the call waited for or ran after, as it stands now. */
@@ -7521,7 +7537,6 @@ export interface NoticePrefs {
 /** A tool at the top of the sidebar (`SIDEBAR_ITEMS` in packages/engine/src/sidebar-items.ts). */
 export type SidebarItem =
   | "waiting"
-  | "approvals"
   | "proposals"
   | "threads"
   | "issues"
@@ -7531,7 +7546,8 @@ export type SidebarItem =
   | "calendar"
   | "team"
   | "dashboards"
-  | "taskManager";
+  | "taskManager"
+  | "code";
 /** `always` in the list, `more` only in the More menu, `auto` in the list while its count is above zero. */
 export type SidebarPlace = "always" | "more" | "auto";
 /** Where I put each tool I moved, in one workspace (`GET …/me/sidebar`); the others keep their default. */
@@ -7687,7 +7703,7 @@ export interface TaskDelegation {
   /** Where it was handed off, when you read that conversation. Older servers send none. */
   from?: {
     channelId: string;
-    channelKind: "channel" | "dm" | "task" | "file";
+    channelKind: "channel" | "dm" | "task" | "file" | "code";
     channelName: string | null;
     threadId: string | null;
     messageId: string | null;

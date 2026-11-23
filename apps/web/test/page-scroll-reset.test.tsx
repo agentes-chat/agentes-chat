@@ -150,7 +150,7 @@ describe("page column scroll", () => {
 // The router hands a scrolled element's place to whatever sits at the same spot in the next page's DOM, unless the
 // element names itself: every column of a split does, so its scroll stays on its own page.
 describe("a split's columns name their scroll", () => {
-  for (const path of ["approvals", "proposals", "settings/account"])
+  for (const path of ["proposals", "settings/account"])
     test(path, async () => {
       await renderApp(`/org/${ORG_ID}/${path}`, { api: createFakeApi(seedState()) });
       await settle(4);

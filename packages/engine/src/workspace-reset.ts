@@ -148,6 +148,7 @@ export const RESET_ERASES = [
   "channel_members",
   "channel_permission_overrides",
   "channel_reads",
+  "code_sessions",
   "messages",
   "channels",
   "choice_answers",

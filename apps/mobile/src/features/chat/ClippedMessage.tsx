@@ -182,10 +182,10 @@ export function ClippedMessage({
           }}
           style={({ pressed }) => [styles.more, shows !== null && styles.overFade, pressed && styles.pressed]}
         >
-          <Text variant="subhead" style={[styles.moreText, ink ? { color: ink } : undefined]}>
+          <Text variant="label" tone="ink2" style={ink ? { color: ink } : undefined}>
             {t("channel.long.more")}
           </Text>
-          <Icon name="chev" size={16} color={ink ?? colors.ink} />
+          <Icon name="chev" size={14} color={ink ?? colors.ink2} />
         </Pressable>
       ) : null}
     </View>
@@ -198,6 +198,5 @@ const styles = StyleSheet.create({
   fade: { position: "absolute", left: 0, right: 0, bottom: 0, height: FADE },
   more: { alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 },
   overFade: { marginTop: -CLEAR },
-  moreText: { fontWeight: "600" },
   pressed: { opacity: 0.6 },
 });

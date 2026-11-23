@@ -91,7 +91,7 @@
     "chats": "聊天",
     "threads": "话题",
     "agents": "智能体",
-    "activity": "动态",
+    "activity": "收件箱",
     "search": "搜索",
     "withCount": "{{label}}，{{count}}"
   },
@@ -183,6 +183,12 @@
     },
     "pinned": "已置顶",
     "recent": "最近",
+    "view": {
+      "title": "显示对话",
+      "sectors": "部门",
+      "dms": "私信",
+      "channels": "频道"
+    },
     "seeAll": "查看所有聊天",
     "splitEmpty": "你的聊天会在这里打开。",
     "wait": {
@@ -316,6 +322,9 @@
   },
   "chat": {
     "someone": "某人",
+    "handedTo": "已交给 {{name}}",
+    "handedTo_female": "已交给 {{name}}",
+    "pairAsked": "{{from}} 提问",
     "messageTo": "发消息给 {{name}}",
     "messageIn": "在 {{channel}} 发消息",
     "reply": "回复",
@@ -836,7 +845,7 @@
     }
   },
   "activity": {
-    "title": "动态",
+    "title": "收件箱",
     "chooseModel": "选择其他模型",
     "filter": {
       "all": "全部",
@@ -962,6 +971,46 @@
     "add": "添加",
     "addA11y": "将 {{name}} 添加到频道",
     "added": "{{name}} 加入了频道"
+  },
+  "settingsSearch": {
+    "open": "搜索设置",
+    "title": "搜索",
+    "placeholder": "在“你”和设置中搜索",
+    "workspace": "工作区设置",
+    "words": {
+      "status": "离开, 忙碌, 状态, 在线",
+      "account": "名字, 照片, 邮箱, 时区, 密码, 用户名",
+      "deleteAccount": "删除, 移除, 注销账户",
+      "workspaces": "切换, 服务器, 账户",
+      "notifications": "提醒, 推送, 角标",
+      "approvals": "批准, 委派",
+      "start": "打开, 首页, 首屏",
+      "activity": "工具, 智能体做了什么",
+      "chatLook": "气泡, 消息, 对话",
+      "wallpaper": "背景, 壁纸, 照片",
+      "agentStyle": "技术, 简单, 语气",
+      "sounds": "声音, 静音, 安静",
+      "appearance": "主题, 深色, 浅色, 模式",
+      "appIcon": "图标",
+      "language": "语言, 中文, 英语",
+      "about": "版本, 许可",
+      "aiAccounts": "密钥, API, 提供商, 套餐, 模型",
+      "general": "名称, 标志, 时区, 上下文",
+      "media": "GIF, 贴纸",
+      "members": "成员, 团队",
+      "invites": "邀请, 邀请函, 链接",
+      "roles": "权限, 角色",
+      "usage": "费用, 开销, 套餐, token, 预算",
+      "connectors": "集成, MCP, 服务",
+      "skills": "技能",
+      "vault": "密码, 密钥, 登录, 机密",
+      "access": "权限, 智能体访问",
+      "apps": "AI 应用, MCP",
+      "computers": "设备, 机器, 电脑, 手机",
+      "storage": "文件, S3, 存储",
+      "import": "导出, 导入, 迁移",
+      "audit": "日志, 历史"
+    }
   },
   "me": {
     "title": "我",
@@ -1158,11 +1207,8 @@
     },
     "talk": {
       "hint": {
-        "image": "点按要评论的位置",
-        "video": "点按视频，评论这一刻",
-        "pdf": "点按页面以标记一个点"
+        "pdf": "长按页面以标记一个位置"
       },
-      "markVideo": "评论视频的这一刻",
       "pdfPage": "第 {{page}} 页，共 {{count}} 页",
       "pdfFailed": "无法显示此 PDF。"
     }
@@ -1347,6 +1393,19 @@
       "day": "日",
       "monthDay": "{{day}} 日",
       "lastDay": "最后一天"
+    }
+  },
+  "coding": {
+    "pill": "{{who}}。查看代码",
+    "seeChanges": "查看改动",
+    "project": "项目",
+    "whereSearch": "搜索或输入名称",
+    "listed": "智能体已有的",
+    "commit": "提交 {{short}}",
+    "waiting": "等你处理",
+    "next": {
+      "pr": "分支已推送，还没有拉取请求",
+      "mergeLocal": "可以合并到 {{base}} 了"
     }
   },
   "taskManager": {
@@ -1938,18 +1997,14 @@
     "mcps": "MCP",
     "mcpsNone": "通过地址连接的 MCP 服务器会显示在这里。",
     "addMcp": "添加 MCP",
-    "add": "添加",
-    "allServices": "所有服务",
     "waitLine_other": "{{count}} 个工具需要你处理",
     "toolsWait_other": "{{count}} 个需要你处理",
     "connectedState": "已连接",
     "connected": "已连接",
-    "suggested": "为 {{org}} 推荐",
-    "all": "全部",
+    "seeAll": "查看全部",
     "noResults": "没有这个名称的服务。试试它的地址。",
     "soon": "即将推出",
     "loadFailed": "无法加载连接器。",
-    "connectedCheck": "{{name}}，已连接",
     "adminsOnly": "只有 {{org}} 的管理员可以连接服务。请联系其中一位。",
     "adminsOnlyPersonal": "只有管理这个工作区的人可以连接应用。请联系对方。",
     "canTitle": "智能体将能够",
@@ -1993,6 +2048,31 @@
     "disconnect": "断开连接",
     "disconnected": "{{name}} 已断开连接。",
     "usedBy_other": "{{names}} 在使用",
+    "page": {
+      "missing": "此服务已不在目录中。",
+      "connected": "已连接",
+      "open": "打开连接",
+      "category": "类别",
+      "tools": "工具",
+      "toolsAsk_other": "{{count}} 个需要批准",
+      "toolsAskNone": "没有需要批准的",
+      "toolsLater": "连接后显示",
+      "who": "谁可以连接",
+      "whoAdmins": "{{org}} 的管理员",
+      "whoRuns": "管理工作区的人",
+      "whoYou": "你自己",
+      "signIn": "登录方式",
+      "how": {
+        "signIn": "你的账户",
+        "key": "密钥",
+        "either": "账户或密钥"
+      },
+      "canTitle": "智能体能用它做什么",
+      "address": "地址",
+      "addressNote": "智能体会用已连接的账户访问这个地址。每个智能体只能获得你允许的内容。",
+      "host": "连接到",
+      "more": "{{category}} 中的更多"
+    },
     "fromAgent": "连接服务",
     "githubApp": {
       "useApp": "使用 agentes.chat 应用",
@@ -2642,6 +2722,10 @@
       "titlePersonal": "把待办交给你的智能体",
       "textPersonal": "为智能体创建任务，一直跟进到完成。",
       "viewerTitlePersonal": "跟进你的智能体的工作"
+    },
+    "coding": {
+      "title": "和你的智能体一起写代码",
+      "text": "每个会话都是和一个智能体的对话，它在自己的电脑上、自己的分支里工作。"
     },
     "routines": {
       "title": "把重复的工作交给智能体",

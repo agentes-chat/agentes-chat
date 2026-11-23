@@ -1,3 +1,4 @@
+import { createCodeApi } from "../code/api";
 import { createDashboardsApi } from "../dashboards/api";
 import type { ChatPrefs } from "../lib/chat-look";
 import { humanCheckHeaders } from "../lib/human-check";
@@ -1728,6 +1729,7 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
     },
     dashboards: createDashboardsApi(request),
     live: createLiveApi(request, { upload: files.upload, base }),
+    code: createCodeApi(request),
     missions: ((): HttpApi["missions"] => {
       const one = (orgId: string, missionId: string) => `${org(orgId)}/missions/${enc(missionId)}`;
       return {

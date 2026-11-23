@@ -22,6 +22,7 @@ import {
   BRAIN_LIMITS,
   type BrainColdCause,
   type BrainEffort,
+  type BrainProgressKind,
   type BrainSteerReply,
   type BrainSteerRequest,
   type BrainTurnRequest,
@@ -35,10 +36,12 @@ import {
   OWN_USAGE_ID,
   PERMISSION_PROMPT_TOOL,
   PERMISSION_WAIT_MS,
+  PROGRESS_LIMITS,
   type ProviderFailureCause,
   type ToolNotice,
   type TurnContext,
   type WireBrainEvent,
+  type WireWorkflowAgent,
 } from "@agenteschat/adapters/machine-protocol";
 import { errorLineOf } from "@agenteschat/adapters/redact";
 import {
@@ -100,7 +103,9 @@ import {
 } from "./mcp";
 import { isInside, resolveForAgent } from "./paths";
 import { resetIso } from "./plan-usage";
+import { claudeAtLeast, REPO_PLUGIN_MIN_CLAUDE, repoPlugin, repoPluginPrint } from "./repo-plugin";
 import type { Spawn } from "./scope-gate";
+import { withSharedBin } from "./shared-folder";
 import { claudeSessionExists, claudeSessionFile, type TaskSecrets, WRONG_SESSION_FLAG } from "./tasks";
 
 /**
@@ -251,6 +256,12 @@ export const STEER_FOLLOW_UP_MS = 30_000;
  */
 export const STEER_BACKGROUND_WAIT_MS = 10 * 60_000;
 /**
+ * A result came while a workflow or a subagent this request started still runs in the background (ADR 0215): how
+ * long the request waits for it and the turn the CLI then runs with its outcome, the run "working" meanwhile, its
+ * progress live (`tool_progress`), its commands still checked as this turn's. Past it, as above.
+ */
+export const AWAITED_WAIT_MS = 60 * 60_000;
+/**
  * A request found the process in a turn of its own (or one due): how long it
  * waits for that turn's `result` before killing the process and resuming fresh.
  */
@@ -385,17 +396,59 @@ export interface ParsedTask {
   started?: boolean;
   /** Runs in the background (started so, or moved there: `task_updated` `is_backgrounded`). */
   backgrounded?: boolean;
+  /**
+   * Its end is what the answer waits for (`AWAITED_TASKS`: a workflow, a subagent): a request it runs past the result
+   * of goes on until it ended and the CLI answered it, as for work moved aside (ADR 0215).
+   */
+  awaited?: boolean;
   /** Over (`task_notification`, or `task_updated` with a final status). */
   ended?: boolean;
 }
 
 const TASK_OVER = new Set(["completed", "failed", "killed", "stopped", "cancelled", "canceled", "error"]);
+/**
+ * Tasks whose end the agent's answer waits for: a workflow of subagents and a subagent (its own or remote). Never a
+ * shell: a dev server started in the background never ends.
+ */
+const AWAITED_TASKS = new Set(["local_workflow", "local_agent", "remote_agent"]);
+
+/** A workflow's agents from its progress (`workflow_progress`: an entry per agent, kept up to date, and log lines). */
+function workflowAgents(list: unknown[]): WireWorkflowAgent[] {
+  const agents: WireWorkflowAgent[] = [];
+  for (const e of list) {
+    if (!isObj(e) || e.type !== "workflow_agent") continue;
+    const label = str(e.label).trim();
+    if (!label) continue;
+    const phase = str(e.phaseTitle).trim();
+    const calls = Math.round(num(e.toolCalls));
+    agents.push({
+      label: label.slice(0, PROGRESS_LIMITS.label),
+      ...(phase ? { phase: phase.slice(0, PROGRESS_LIMITS.phase) } : {}),
+      state: e.state === "done" ? "done" : e.state === "error" || e.state === "failed" ? "failed" : "running",
+      ...(calls > 0 ? { calls } : {}),
+      ...(str(e.lastToolName) ? { tool: str(e.lastToolName).slice(0, BRAIN_LIMITS.toolName) } : {}),
+    });
+  }
+  return agents.slice(-PROGRESS_LIMITS.agents);
+}
+
+/** Tasks that run subagents the parser keeps the call of (`tool_progress`): more at once is a runaway. */
+const PROGRESS_TASKS_KEPT = 64;
 
 /** `system/task_started`, `task_updated`, `task_notification` → what changed for the task. */
 function taskOf(ev: Record<string, unknown>): ParsedTask | undefined {
   const id = str(ev.task_id);
   if (!id) return undefined;
-  if (ev.subtype === "task_started") return { id, started: true, backgrounded: ev.is_backgrounded === true };
+  if (ev.subtype === "task_started") {
+    const type = str(ev.task_type);
+    return {
+      id,
+      started: true,
+      // A workflow always runs in the background: its start doesn't say so.
+      backgrounded: ev.is_backgrounded === true || type === "local_workflow",
+      ...(AWAITED_TASKS.has(type) ? { awaited: true } : {}),
+    };
+  }
   if (ev.subtype === "task_notification") return { id, ended: true };
   if (ev.subtype === "task_updated") {
     const patch = isObj(ev.patch) ? ev.patch : {};
@@ -445,6 +498,13 @@ export class ClaudeStreamParser {
   openBlocks = 0;
 
   private tools = new Map<string, InFlightTool>();
+  /**
+   * Tasks that run subagents for a call of the main conversation (`task_started` of a workflow or a subagent): that
+   * call, for their progress. Kept across turns: a workflow outlives the turn that started it.
+   */
+  private progressTasks = new Map<string, { toolUseId: string; kind: BrainProgressKind }>();
+  /** Calls the subagent of a call in flight made so far, by that call (its lines in the CLI's output). */
+  private subCalls = new Map<string, number>();
   private sawDelta = false;
   /** The API message whose text streamed (`message_start`): Claude Code says it in one `assistant` per block. */
   private streamedMessage: string | null = null;
@@ -476,6 +536,7 @@ export class ClaudeStreamParser {
     this.uncached.clear();
     this.context.clear();
     this.tools.clear();
+    this.subCalls.clear();
     this.compacting = false;
     this.openBlocks = 0;
     this.sawDelta = false;
@@ -531,7 +592,12 @@ export class ClaudeStreamParser {
           this.stats.retryDelayMs += retryInMs;
         }
         const task = taskOf(ev);
-        return { events: [], ...(task ? { task } : {}), ...(retryInMs ? { retryInMs } : {}) };
+        const progress = this.taskProgress(ev);
+        return {
+          events: progress ? [progress] : [],
+          ...(task ? { task } : {}),
+          ...(retryInMs ? { retryInMs } : {}),
+        };
       }
       case "command_lifecycle":
         // The model picked one of our lines up (msg_lifecycle_v1): the moment it's read.
@@ -555,7 +621,7 @@ export class ClaudeStreamParser {
         return { events: [] };
       }
       case "assistant": {
-        if (!main) return { events: [] };
+        if (!main) return { events: this.subagentStep(ev) };
         // An answer from the model: the sign-in worked, whatever a retry before it said.
         this.authFailed = ev.error === "authentication_failed";
         if (ev.error === "rate_limit") this.limited = true;
@@ -593,12 +659,14 @@ export class ClaudeStreamParser {
           }
           if (block.type === "tool_use" && str(block.id) && str(block.name)) {
             this.tools.set(str(block.id), { name: str(block.name), input: block.input ?? {} });
-            // Ours run through the bridge, which tells the engine as they start.
+            // Ours run through the bridge, which tells the engine as they start. Its input goes too (masked on the
+            // way out): a code session shows the call's line while it runs (ADR 0215).
             if (!str(block.name).startsWith(OUR_TOOL_PREFIX))
               events.push({
                 type: "tool_started",
                 id: str(block.id),
                 name: str(block.name).slice(0, BRAIN_LIMITS.toolName),
+                input: cutInput(block.input ?? {}),
               });
           } else if (block.type === "text" && str(block.text) && !streamed) {
             // No partial messages (an older Claude Code): the whole text block at once.
@@ -620,6 +688,7 @@ export class ClaudeStreamParser {
           const call = this.tools.get(id);
           if (!call) continue;
           this.tools.delete(id);
+          this.subCalls.delete(id);
           const name = call.name.startsWith(OUR_TOOL_PREFIX) ? call.name.slice(OUR_TOOL_PREFIX.length) : call.name;
           events.push({
             type: "tool_call",
@@ -650,6 +719,82 @@ export class ClaudeStreamParser {
       default:
         return { events: [] };
     }
+  }
+
+  /**
+   * A task that runs subagents (`system/task_*` of a workflow or a subagent) as the progress of the main
+   * conversation's call that started it (ADR 0215): its start, its calls so far (a subagent's latest tool, a
+   * workflow's agents) and its end. A subagent's own subagents are its business: never a line here.
+   */
+  private taskProgress(ev: Record<string, unknown>): WireBrainEvent | undefined {
+    const taskId = str(ev.task_id);
+    if (!taskId) return undefined;
+    if (ev.subtype === "task_started") {
+      const type = str(ev.task_type);
+      const kind: BrainProgressKind | null =
+        type === "local_workflow" ? "workflow" : type === "local_agent" || type === "remote_agent" ? "agent" : null;
+      const toolUseId = str(ev.tool_use_id);
+      if (!kind || !toolUseId || ev.owned_by_subagent === true || str(ev.parent_task_id)) return undefined;
+      const oldest = this.progressTasks.keys().next().value;
+      if (this.progressTasks.size >= PROGRESS_TASKS_KEPT && oldest !== undefined) this.progressTasks.delete(oldest);
+      this.progressTasks.set(taskId, { toolUseId, kind });
+      return { type: "tool_progress", id: toolUseId, kind };
+    }
+    const known = this.progressTasks.get(taskId);
+    if (!known) return undefined;
+    const base = { type: "tool_progress" as const, id: known.toolUseId, kind: known.kind };
+    const agents =
+      known.kind === "workflow" && Array.isArray(ev.workflow_progress) ? workflowAgents(ev.workflow_progress) : null;
+    if (ev.subtype === "task_progress") {
+      const usage = isObj(ev.usage) ? ev.usage : {};
+      const calls = Math.round(num(usage.tool_uses));
+      // A subagent's latest tool by name only: one whose own lines the CLI prints says it whole (`subagentStep`).
+      const tool = known.kind === "agent" && !this.subCalls.has(known.toolUseId) ? str(ev.last_tool_name) : "";
+      return {
+        ...base,
+        ...(tool ? { step: { name: tool.slice(0, BRAIN_LIMITS.toolName) } } : {}),
+        ...(calls > 0 ? { calls } : {}),
+        ...(agents ? { agents } : {}),
+      };
+    }
+    const patch = isObj(ev.patch) ? ev.patch : {};
+    const status =
+      ev.subtype === "task_notification"
+        ? str(ev.status) || "completed"
+        : ev.subtype === "task_updated" && TASK_OVER.has(str(patch.status))
+          ? str(patch.status)
+          : "";
+    if (!status) return undefined;
+    this.progressTasks.delete(taskId);
+    return { ...base, ...(agents ? { agents } : {}), ended: status === "completed" ? {} : { failed: true } };
+  }
+
+  /**
+   * A subagent's message (its lines carry the main conversation's call it works for): that call's progress, with the
+   * subagent's latest call whole (its tool and input) and how many it made so far.
+   */
+  private subagentStep(ev: Record<string, unknown>): WireBrainEvent[] {
+    const parent = str(ev.parent_tool_use_id);
+    if (!this.tools.has(parent)) return [];
+    const content = isObj(ev.message) && Array.isArray(ev.message.content) ? ev.message.content : [];
+    const uses = content.filter(
+      (b): b is Record<string, unknown> => isObj(b) && b.type === "tool_use" && !!str(b.name),
+    );
+    const last = uses.at(-1);
+    if (!last) return [];
+    const calls = (this.subCalls.get(parent) ?? 0) + uses.length;
+    this.subCalls.set(parent, calls);
+    const name = str(last.name);
+    const shown = name.startsWith(OUR_TOOL_PREFIX) ? name.slice(OUR_TOOL_PREFIX.length) : name;
+    return [
+      {
+        type: "tool_progress",
+        id: parent,
+        kind: "agent",
+        step: { name: shown.slice(0, BRAIN_LIMITS.toolName), input: cutInput(last.input ?? {}) },
+        calls,
+      },
+    ];
   }
 
   private result(ev: Record<string, unknown>): ParsedBrainLine {
@@ -901,6 +1046,8 @@ export interface ClaudeLaunch {
   permissionMode: "acceptEdits" | "dontAsk" | "default";
   /** Protocol 10: folders allowed for the agent besides its own (`--add-dir` each). */
   addDirs?: string[];
+  /** A code session's turn (ADR 0215): the worktree's own agents, skills and commands as a plugin (`repoPlugin`). */
+  pluginDirs?: string[];
   /** Protocol 13: `--effort` (anything else is left out). */
   effort?: BrainEffort;
   /**
@@ -912,6 +1059,11 @@ export interface ClaudeLaunch {
   settingSources?: string;
   /** Claude Code's own tools the agent gets (`--tools`); the rest aren't described on every step. */
   builtinTools?: readonly string[];
+  /**
+   * Its own tools allowed without our prompt tool (`--allowedTools`, beside our MCP's): a code session's workflows,
+   * which the CLI would ask about though there is nothing in them for our rules to check (ADR 0215).
+   */
+  allowedTools?: readonly string[];
   /** Claude Code's own tools taken away (`--disallowedTools`), where `builtinTools` can't be set. */
   disallowedTools?: readonly string[];
   /** No `--fallback-model` (a plan's aliases may all be one model). */
@@ -931,6 +1083,14 @@ export interface ClaudeLaunch {
  * (`WEB_BUILTIN_TOOLS`). Names Claude Code doesn't know are ignored by it.
  */
 export const BRAIN_BUILTIN_TOOLS = ["Bash", "Read", "Edit", "Write", "Glob", "Grep", "ToolSearch"] as const;
+/**
+ * A code session's turn (ADR 0215) also starts Claude Code's own subagents (`Agent`, `Task` before 2.1.63), which get
+ * the turn's tools and permission mode, uses skills (`Skill`: the worktree's own, loaded as a plugin) and runs
+ * workflows of subagents (`Workflow`) where the account's plan has them.
+ */
+export const CODE_SESSION_TOOLS = ["Agent", "Task", "Skill", "Workflow"] as const;
+/** Of those, what the CLI would ask our prompt tool about: nothing in a workflow's call for our rules to check. */
+export const CODE_SESSION_ALLOWED = ["Workflow"] as const;
 /** A plan turn's own tools (ADR 0053 §3, 0109): reading, a shell our prompt tool keeps read-only, ToolSearch; no edits. */
 export const PLAN_BUILTIN_TOOLS = ["Bash", "Read", "Glob", "Grep", "ToolSearch"] as const;
 /** Claude Code's web tools, which ours replace on a brain turn. */
@@ -983,6 +1143,8 @@ export function brainProfileLaunch(
   personalMcp: boolean,
   delegated = false,
   asksFirst = false,
+  /** A code session's turn (ADR 0215): Claude Code's subagents and skills too. */
+  code = false,
 ): Pick<
   ClaudeLaunch,
   | "strictMcp"
@@ -990,6 +1152,7 @@ export function brainProfileLaunch(
   | "permissionMode"
   | "settingSources"
   | "builtinTools"
+  | "allowedTools"
   | "disallowedTools"
   | "noSlashCommands"
 > {
@@ -1030,7 +1193,11 @@ export function brainProfileLaunch(
     // With the owner's own MCP servers the owner's settings stay, and so does every tool of Claude Code but the web.
     ...(personalMcp
       ? { disallowedTools: WEB_BUILTIN_TOOLS }
-      : { settingSources: "", builtinTools: BRAIN_BUILTIN_TOOLS }),
+      : {
+          settingSources: "",
+          builtinTools: code ? [...BRAIN_BUILTIN_TOOLS, ...CODE_SESSION_TOOLS] : BRAIN_BUILTIN_TOOLS,
+          ...(code ? { allowedTools: CODE_SESSION_ALLOWED } : {}),
+        }),
   };
 }
 
@@ -1059,9 +1226,12 @@ export function claudeBrainArgs(l: ClaudeLaunch): string[] {
     ...(l.mcpConfigFile ? ["--mcp-config", l.mcpConfigFile] : []),
     ...(l.strictMcp ? ["--strict-mcp-config"] : []),
     ...(l.settingsFile ? ["--settings", l.settingsFile] : []),
-    ...(l.mcpConfigFile ? ["--allowedTools", "mcp__agentes"] : []),
+    ...(l.mcpConfigFile || l.allowedTools?.length
+      ? ["--allowedTools", [...(l.mcpConfigFile ? ["mcp__agentes"] : []), ...(l.allowedTools ?? [])].join(",")]
+      : []),
     ...(l.promptTool && l.mcpConfigFile ? ["--permission-prompt-tool", PERMISSION_PROMPT_TOOL] : []),
     ...(l.addDirs ?? []).flatMap((d) => ["--add-dir", d]),
+    ...(l.pluginDirs ?? []).flatMap((d) => ["--plugin-dir", d]),
     ...(l.settingSources !== undefined ? ["--setting-sources", l.settingSources] : []),
     ...(l.builtinTools ? ["--tools", l.builtinTools.join(",")] : []),
     ...(l.disallowedTools?.length ? ["--disallowedTools", l.disallowedTools.join(",")] : []),
@@ -1533,6 +1703,8 @@ export function runTurnOnProcess(
     followUpMs?: number;
     /** How long work moved to the background may run on after a result (`STEER_BACKGROUND_WAIT_MS`). */
     backgroundWaitMs?: number;
+    /** How long a workflow or subagent the answer waits for may run on after a result (`AWAITED_WAIT_MS`). */
+    awaitedWaitMs?: number;
     /**
      * The server posts each answer the request goes on from as it comes (`BrainTurnRequest.answers`): an `answer`
      * event, never joined into `done`.
@@ -1589,21 +1761,33 @@ export function runTurnOnProcess(
     let backgroundWait: ReturnType<typeof setTimeout> | null = null;
     /** This request's tasks in the foreground (one that moves to the background later was "moved"). */
     const foreground = new Set<string>();
-    /** Its tasks running in the background → moved there mid-turn (else started there by the model). */
-    const background = new Map<string, boolean>();
+    /**
+     * Its tasks running in the background, by why the request waits for them: moved there mid-turn, or a workflow or
+     * a subagent whose end the answer waits for (`awaited`, ADR 0215); one the model started there (a dev server) not.
+     */
+    const background = new Map<string, "moved" | "awaited" | "started">();
+    /** Its tasks the answer waits for (`ParsedTask.awaited`), from their start: also once moved to the background. */
+    const awaited = new Set<string>();
     /** Background tasks that ended since the model last looked (a tool boundary, a turn start): their notice starts a turn. */
     let unheard = 0;
     /** Past a result, nothing of the next turn seen yet. */
     let between = false;
-    const movedRunning = () => [...background.values()].some(Boolean);
+    const movedRunning = () => [...background.values()].some((why) => why !== "started");
+    const awaitedRunning = () => [...background.values()].some((why) => why === "awaited");
     const noteTask = (t: ParsedTask) => {
       if (t.ended) {
         foreground.delete(t.id);
+        awaited.delete(t.id);
         if (background.delete(t.id)) unheard++;
       } else if (t.backgrounded) {
+        if (t.awaited) awaited.add(t.id);
         // Moved (it ran in the foreground, or began before this request) or started there.
-        background.set(t.id, foreground.delete(t.id) || !t.started);
-      } else if (t.started) foreground.add(t.id);
+        const moved = foreground.delete(t.id) || !t.started;
+        background.set(t.id, awaited.has(t.id) ? "awaited" : moved ? "moved" : "started");
+      } else if (t.started) {
+        if (t.awaited) awaited.add(t.id);
+        foreground.add(t.id);
+      }
     };
     /** Past a result, the work moved aside is over: Claude Code answers it in a turn of its own, about to start. */
     const movedOver = () => {
@@ -1672,6 +1856,22 @@ export function runTurnOnProcess(
           input: redactDeep(e.input ?? {}, redact),
         };
       }
+      if (e.type === "tool_started" && e.input !== undefined) return { ...e, input: redactDeep(e.input, redact) };
+      if (e.type === "tool_progress") {
+        return {
+          ...e,
+          ...(e.step?.input !== undefined ? { step: { ...e.step, input: redactDeep(e.step.input, redact) } } : {}),
+          ...(e.agents
+            ? {
+                agents: e.agents.map((a) => ({
+                  ...a,
+                  label: redact(a.label),
+                  ...(a.phase ? { phase: redact(a.phase) } : {}),
+                })),
+              }
+            : {}),
+        };
+      }
       if (e.type === "done") return { ...e, text: redact(e.text) };
       if (e.type === "error") return { ...e, message: redact(e.message) };
       return e;
@@ -1716,8 +1916,8 @@ export function runTurnOnProcess(
         });
         return;
       }
-      // The next turn began: it reads the notices that came before it.
-      if (between && (parsed.turnStart || parsed.events.length > 0)) {
+      // The next turn began: it reads the notices that came before it. A subagent's progress meanwhile is no turn.
+      if (between && (parsed.turnStart || parsed.events.some((e) => e.type !== "tool_progress"))) {
         between = false;
         unheard = 0;
       }
@@ -1767,9 +1967,12 @@ export function runTurnOnProcess(
         proc.parser.beginTurn();
         if (work) {
           // Bounded: past it the request ends with what it has; the process drains (answers that work later, unheard).
+          // A workflow or a subagent the answer waits for has the longer bound (`AWAITED_WAIT_MS`).
           backgroundWait ??= setTimeout(
             () => finish({ final: heldEnd(final), draining: true }),
-            opts.backgroundWaitMs ?? STEER_BACKGROUND_WAIT_MS,
+            awaitedRunning()
+              ? (opts.awaitedWaitMs ?? AWAITED_WAIT_MS)
+              : (opts.backgroundWaitMs ?? STEER_BACKGROUND_WAIT_MS),
           );
         } else followUp = setTimeout(() => finish({ final: heldEnd(final) }), followUpMs);
         return;
@@ -1855,6 +2058,16 @@ export interface BrainManagerOptions {
   mcp?: { socketPath: string; command: string[] };
   /** The runner's home (its accounts among it): turns never read it. */
   runnerHome?: string;
+  /**
+   * The `--version` line of the Claude Code turns start (`executors`), when known: a code session's turn loads the
+   * worktree's plugin only on one that takes `--plugin-dir` (`REPO_PLUGIN_MIN_CLAUDE`).
+   */
+  claudeVersion?: () => string | null | undefined;
+  /**
+   * Single-user mode's shared folder (ADR 0115; null in system mode or without one): its `bin/` goes at the end of
+   * the CLI's PATH, so the agent's subagents find by name what the agent installed there (`withSharedBin`).
+   */
+  sharedFolder?: () => string | null | undefined;
   /** How Claude Code starts (a worker under systemd: in the agent's AI CLIs slice, `scope-gate.ts`). */
   spawn?: Spawn;
   /** How long a process may sit between turns, in time the computer was awake (`AwakeClock`). */
@@ -1889,6 +2102,11 @@ interface Live {
   account: string | null;
   /** Launch settings: a turn asking for others restarts the process (resumed). */
   sig: string;
+  /**
+   * A code session's: its worktree's agents, skills and commands when it started (`repoPluginPrint`), loaded as a
+   * plugin then. A turn that finds others starts a new process (resumed) unless this one holds the agent's work.
+   */
+  repoPrint?: string;
   /** The model and effort it runs on now: started with, or switched to since (`switchLive`). */
   model?: string;
   effort?: BrainEffort;
@@ -2501,6 +2719,8 @@ export class BrainManager {
       context: isContextTokens(req.contextTokens) ? req.contextTokens : null,
       // Its commits' lines are in its env (`co-authors.ts`): turned off or the agent renamed, a new one (resumed).
       coAuthors: coAuthorLines(ctx.agent),
+      // A code session's turn starts with its session's tools and the repository's plugin (ADR 0215 §6).
+      code: req.codeSession === true,
     });
   }
 
@@ -2569,7 +2789,11 @@ export class BrainManager {
     // A turn Claude Code runs by itself there (or one due): its output would read as this turn's. Wait for
     // its end (output discarded) and keep the process, with the agent's background jobs; kill only a stuck one.
     if (live && live.sig === sig && live.proc.onItsOwn) live = await this.awaitOwnTurn(live, session, ctx);
-    if (live && (live.proc.exited || live.sig !== sig || !(await this.switchLive(live, req, ctx)))) {
+    // A code session's agents, skills or commands changed since it started (one the agent wrote this session): a new
+    // process (resumed) loads them, unless this one holds the agent's work (a dev server), which a restart would kill.
+    const repoChanged =
+      live?.repoPrint !== undefined && !live.proc.holdsWork && repoPluginPrint(cwd) !== live.repoPrint;
+    if (live && (live.proc.exited || live.sig !== sig || repoChanged || !(await this.switchLive(live, req, ctx)))) {
       this.drop(live, live.proc.exited ? "exited" : "settings");
       live = undefined;
     }
@@ -2940,7 +3164,15 @@ export class BrainManager {
     const systemFile = path.join(dir, "system.txt");
     const mode = req.permissions?.mode === "plan" || req.permissions?.mode === "chat" ? req.permissions.mode : "work";
     const asks = mode === "work" ? turnAsks(req.permissions?.asks) : undefined;
-    const launch = brainProfileLaunch(mode, req.personalMcp === true, delegated !== undefined, asks === "always");
+    // A code session's turn (ADR 0215) on the agent's own Claude Code: its subagents and skills, and the worktree's.
+    const codeTurn = req.codeSession === true && mode === "work" && !delegated && req.personalMcp !== true;
+    const launch = brainProfileLaunch(
+      mode,
+      req.personalMcp === true,
+      delegated !== undefined,
+      asks === "always",
+      codeTurn,
+    );
     const system = typeof req.system === "string" ? req.system : "";
     const ranKey = ranKeyOf(req, session);
     // A `chat` turn reads nothing of the folder, its CLAUDE.md included.
@@ -2980,6 +3212,12 @@ export class BrainManager {
       : ctx.accountHome
         ? accountEnv("claude_code", ctx.accountHome, base)
         : base;
+    // The tools the agents installed in the shared folder, for every process of its own: its subagents never read
+    // where that folder is (single-user mode only, `withSharedBin`).
+    if (!launched) {
+      const withShared = withSharedBin(env.PATH, this.opts.sharedFolder?.());
+      if (withShared) env.PATH = withShared;
+    }
     const keyPlan = ctx.planKey ? planOf(ctx.planKey.provider) : undefined;
     const plan = keyPlan && planForTurn(keyPlan, req.model);
     if (plan && ctx.planKey) env[plan.claudeCode.tokenEnv] = ctx.planKey.key;
@@ -3079,6 +3317,8 @@ export class BrainManager {
               ...(asks === "always" ? { asksFirst: true } : {}),
             },
           ),
+          // A code session's workflows (ADR 0215): on wherever the account's plan has them (the CLI still gates them).
+          ...(codeTurn ? { enableWorkflows: true } : {}),
           // With the owner's own settings loaded (`personalMcp`), theirs decide the computer's own sign-in.
           ...(ctx.accountHome
             ? { env: accountSettingsEnv(plan, model) }
@@ -3092,6 +3332,9 @@ export class BrainManager {
       mode === "chat" || delegated
         ? []
         : [...(cwd !== ctx.folder ? [ctx.folder] : []), ...(ctx.grants ?? []).filter((g) => !isInside(g, cwd))];
+    const withPlugin = codeTurn && claudeAtLeast(this.opts.claudeVersion?.(), REPO_PLUGIN_MIN_CLAUDE);
+    const repoPrint = withPlugin ? repoPluginPrint(cwd) : undefined;
+    const plugin = withPlugin ? repoPlugin(cwd, path.join(dir, "repo"), fileMode) : null;
     const args = claudeBrainArgs({
       session,
       resume,
@@ -3102,6 +3345,7 @@ export class BrainManager {
       settingsFile,
       ...launch,
       ...(addDirs.length ? { addDirs } : {}),
+      ...(plugin ? { pluginDirs: [plugin] } : {}),
       ...(isBrainEffort(req.effort) ? { effort: req.effort } : {}),
     });
     // Claimed before it starts: a CLI that dies in its first turn still left a transcript that is this agent's.
@@ -3131,6 +3375,7 @@ export class BrainManager {
       proc,
       account: ctx.accountHome && typeof req.account === "string" ? req.account : null,
       sig,
+      ...(repoPrint !== undefined ? { repoPrint } : {}),
       model: turnModel(req),
       effort: isBrainEffort(req.effort) ? req.effort : undefined,
       ranKey,

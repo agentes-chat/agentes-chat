@@ -994,9 +994,9 @@ function Profile({ id }: { id: string }) {
         plate
         solid={false}
         {...(rightHand
-          ? { action: { label: t("rightHand.profile.configure"), onPress: openRightHandSettings } }
+          ? { action: { label: t("rightHand.profile.configure"), onPress: openRightHandSettings, opens: true } }
           : (decides || editsAgent(agent)) && agent
-            ? { action: { label: t("agent.edit"), onPress: () => openAgentEdit(id) } }
+            ? { action: { label: t("agent.edit"), onPress: () => openAgentEdit(id), opens: true } }
             : {})}
       />
     </View>

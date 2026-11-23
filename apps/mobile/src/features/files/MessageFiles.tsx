@@ -5,16 +5,15 @@ import { Image } from "expo-image";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Text as RNText, StyleSheet, View } from "react-native";
-import { Icon, PressScale, Text } from "@/ui";
+import { Icon, MESSAGE_CARD_X, PressScale, Text } from "@/ui";
 import { ChoicesCard } from "../blocks/ChoicesCard";
 import { LiveBlockCard } from "../blocks/LiveBlock";
 import { PollCard } from "../blocks/PollCard";
 import { FileCommentsLink } from "../chat/cards";
-import { useKeptWidth, useMessageCardCorners } from "../chat/look";
+import { useKeptWidth, useMessageCardCorners, useMessageCardFrame } from "../chat/look";
 import { LiveFileCard } from "../live-files/LiveFileCard";
 import { opensLive } from "../live-files/routes";
 import { useColors, useOrgId } from "../shared/hooks";
-import { useSurface } from "../shared/parts";
 import { AttachmentTile } from "./AttachmentTile";
 import { ImageStack, type StackImage } from "./ImageStack";
 import { isLocalMedia, type LocalFile, localRatio } from "./local-files";
@@ -441,12 +440,11 @@ function LocalMedia({
 }
 
 function LocalFileCard({ file, sending }: { file: LocalFile; sending: boolean }) {
-  const cardCorners = useMessageCardCorners();
   const { i18n } = useTranslation();
   const c = useColors();
-  const surface = useSurface();
+  const frame = useMessageCardFrame();
   return (
-    <View style={[styles.card, surface, cardCorners]} accessible accessibilityLabel={file.name}>
+    <View style={[styles.card, frame.style]} accessible accessibilityLabel={file.name}>
       {isLocalPdf(file) ? (
         // A PDF on its way shows its first page already, read from the phone's own file, as it did in the composer.
         <View style={styles.page}>
@@ -457,7 +455,7 @@ function LocalFileCard({ file, sending }: { file: LocalFile; sending: boolean })
         <FileTile ext={extLabel(extensionOf(file.name))} />
       )}
       <View style={styles.grow}>
-        <Text variant="body" style={styles.bold} numberOfLines={2}>
+        <Text variant="cardTitle" numberOfLines={2}>
           {file.name}
         </Text>
         {file.size !== undefined ? (
@@ -507,16 +505,15 @@ export function FileTile({ ext }: { ext: string }) {
 }
 
 function RemovedCard() {
-  const cardCorners = useMessageCardCorners();
   const { t } = useTranslation();
   const c = useColors();
-  const surface = useSurface();
+  const frame = useMessageCardFrame();
   return (
-    <View style={[styles.card, surface, cardCorners]}>
+    <View style={[styles.card, frame.style]}>
       <View style={[styles.tile, { backgroundColor: c.sunken }]}>
         <Icon name="file" size={20} color={c.faint} />
       </View>
-      <Text variant="body" tone="faint" style={styles.grow}>
+      <Text variant="small" tone="faint" style={styles.grow}>
         {t("mobile.chat.fileDeleted")}
       </Text>
     </View>
@@ -558,7 +555,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    paddingHorizontal: 12,
+    paddingHorizontal: MESSAGE_CARD_X,
     paddingVertical: 10,
     // As the pictures' beside it.
     borderRadius: 14,
@@ -578,5 +575,4 @@ const styles = StyleSheet.create({
   },
   ext: { fontSize: 10, fontWeight: "700", letterSpacing: 0.4 },
   grow: { flex: 1, minWidth: 0 },
-  bold: { fontWeight: "600" },
 });

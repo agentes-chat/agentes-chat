@@ -117,11 +117,15 @@ describe("no results: no agent, a line and the way out", () => {
 });
 
 describe("all clear: a calm win, nothing to do", () => {
-  test("Aprovações with nothing waiting", async () => {
+  test("the inbox with nothing waiting, where the requests' old address lands (ADR 0218)", async () => {
     const state = fresh();
+    // No request and no proposal to decide: both are rows of what waits on me.
     state.approvals = [];
-    await go(state, "approvals");
-    expect(title()).toBe("Tudo decidido");
+    state.proposals = [];
+    const { router } = await go(state, "approvals");
+    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/notifications`);
+    expect(document.querySelector(".ib-filter")?.textContent).toBe("Esperando você");
+    expect(empty().textContent).toBe("Ninguém está esperando você.");
     expect(empty().querySelector(".ac-empty__agent canvas")).not.toBeNull();
     expect(buttons()).toEqual([]);
   });

@@ -317,6 +317,24 @@ describe("a picture's comments in the viewer", () => {
     expect(dialog.querySelector(".izoom__hint")?.textContent).not.toContain("marcar");
   });
 
+  test("Marcar off: a click no longer marks with the comments open; on again, it does", async () => {
+    const { api, file } = await pictureWithTalk({ comments: THREE });
+    const { dialog } = await openViewer(api, file.id);
+    await openComments(dialog);
+    const mark = within(dialog).getByRole("button", { name: "Marcar" });
+    expect(mark.getAttribute("aria-pressed")).toBe("true");
+    await click(mark);
+    expect(within(dialog).getByRole("button", { name: "Marcar" }).getAttribute("aria-pressed")).toBe("false");
+    expect(dialog.querySelector(".izoom__hint")?.textContent).not.toContain("marcar");
+    await press(on(0.25, 0.25));
+    expect(document.querySelector(".mf-pin--draft")).toBeNull();
+    expect(document.querySelector(".lf-quote")).toBeNull();
+    expect(panel()).toBeTruthy();
+    await click(within(dialog).getByRole("button", { name: "Marcar" }));
+    await press(on(0.5, 0.5));
+    await waitFor(() => expect(document.querySelector(".mf-pin--draft")).toBeTruthy());
+  });
+
   test("the resolved ones come back faded with 1 resolvido, and go again", async () => {
     const { api, file } = await pictureWithTalk({ comments: THREE });
     const { dialog } = await openViewer(api, file.id);

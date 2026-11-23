@@ -109,11 +109,11 @@
   display: grid;
   /* Every row is one line. Estado gets the room its words need first (whole from 950px), then Tarefa and Usando agora
      share what's left; short of that each ends in "…" (the row's tip has them whole), and under the sum of the
-     minimums the row keeps its words, its time and its buttons (below). The buttons have a column of their own (three
-     32px squares, 8 apart and 8 from the time's shaded box and the edge), so they never cover the time. */
+     minimums the row keeps its words, its time and its ⋯ (below). The ⋯ has a column of its own (a 32px square, 8
+     from the time's shaded box and the edge), so it never covers the time. */
   grid-template-columns:
     minmax(200px, 3fr) minmax(136px, 256px) minmax(120px, 2fr) 84px
-    calc(3 * var(--control-h-sm) + 2 * var(--space-2) + 2 * var(--action-clear));
+    calc(var(--control-h-sm) + 2 * var(--action-clear));
   align-items: stretch;
   /* A 32px button, the kit's row air (`--row-py`) above and below it, and the hairline over it. */
   min-height: calc(var(--control-h-sm) + 2 * var(--row-py) + 1px);
@@ -188,8 +188,8 @@ html:not([data-pointer]) .tm-row:has(.tm-hit:focus-visible) {
 .tm-cell--state > .tm-mark {
   display: none;
 }
-/* Abrir na conversa, Ver passos and Parar, as squares (their words on hover and for screen readers), a button's clear
-   from the time's shaded box and from the edge. */
+/* The row's ⋯ (Abrir na conversa, Ver passos, Parar tarefa in its menu), a button's clear from the time's shaded box
+   and from the edge. */
 .tm-cell--act {
   justify-content: flex-end;
   gap: var(--space-2);
@@ -220,13 +220,13 @@ html:not([data-pointer]) .tm-row:has(.tm-hit:focus-visible) {
 .tm-row--agent:not([data-open]) .tm-twist > .ac-icon {
   transform: rotate(-90deg);
 }
-/* With a pointer, a task's buttons show on its row's hover, choice or focus (an agent's Parar always; a Parar already
-   stopping stays). */
+/* With a pointer, a task's ⋯ shows on its row's hover, choice or focus (an agent's always), and stays while its menu or
+   its stop's card is open. */
 .tm-cell--act {
   transition: opacity 0.12s;
 }
 @media (hover: hover) {
-  .tm-row:not(.tm-row--agent, :hover, [data-selected], :focus-within) .tm-cell--act:not(:has(> :disabled)) {
+  .tm-row:not(.tm-row--agent, :hover, [data-selected], :focus-within) .tm-cell--act:not(:has([data-state="open"])) {
     opacity: 0;
     pointer-events: none;
   }
@@ -321,9 +321,9 @@ html:not([data-pointer]) .tm-more:focus-visible {
 }
 
 /* No room for the columns (a phone, a small window beside the sidebar): no column names, and each row is still one
-   line: its words, its time and its stop. A task's mark says how it stands; an agent's row, one that ended and one its
-   agent's face leads (`flat`) show theirs as a mark after the words. Estado and Usando agora are in the row's tip, and
-   Ver passos in the toolbar for the row chosen, its panel with Abrir na conversa: the words keep the room. */
+   line: its words, its time and its ⋯. A task's mark says how it stands; an agent's row, one that ended and one its
+   agent's face leads (`flat`) show theirs as a mark after the words. Estado and Usando agora are in the row's tip, the
+   actions in its ⋯: the words keep the room. */
 @container tm (max-width: 760px) {
   .tm-row--head {
     display: none;
@@ -335,9 +335,6 @@ html:not([data-pointer]) .tm-more:focus-visible {
   .tm-row--agent,
   .tm-row[data-look="flat"] {
     grid-template-columns: minmax(0, 1fr) auto auto var(--tm-act);
-  }
-  .tm-cell--act > :is(.tm-open, .tm-steps) {
-    display: none;
   }
   .tm-row--ended {
     grid-template-columns: minmax(0, 1fr) auto auto;

@@ -17,7 +17,7 @@ import {
 function flakyPostgres({ restart = false } = {}) {
   type Connection = { dead: boolean; listeners: ((payload: string) => void)[] };
   const fresh = (): Connection => ({ dead: false, listeners: [] });
-  const state = { notify: "ok" as "ok" | "fail" | "hang", listens: 0, restarts: 0 };
+  const state = { notify: "ok" as "ok" | "fail" | "hang" | "slow", listens: 0, restarts: 0 };
   let connection = fresh();
   const all: Connection[] = [connection];
   const never = <T>() => new Promise<T>(() => {});
@@ -36,6 +36,7 @@ function flakyPostgres({ restart = false } = {}) {
     notify: async (_channel, payload) => {
       if (state.notify === "fail") throw new Error("Connection terminated unexpectedly");
       if (state.notify === "hang") return never();
+      if (state.notify === "slow") await new Promise((r) => setTimeout(r, 60));
       for (const c of all) if (!c.dead) for (const on of [...c.listeners]) on(payload);
     },
     ...(restart
@@ -82,6 +83,7 @@ test("a NOTIFY that hangs holds nothing behind it, and once NOTIFY works every s
   const pubsub = await createPostgresPubSub(notifier, {
     heartbeatMs: 10_000,
     notifyTimeoutMs: 20,
+    notifyLostMs: 40,
     onTrouble: (kind) => troubles.push(kind),
   });
   const { got, resumed } = watch(pubsub);
@@ -95,6 +97,28 @@ test("a NOTIFY that hangs holds nothing behind it, and once NOTIFY works every s
   expect(got).toEqual([2]);
   expect(resumed).toEqual([{ type: "pubsub.resumed" }]);
   expect(troubles).toEqual(["notify_timeout", "resumed"]);
+  await pubsub.close?.();
+});
+
+test("a NOTIFY that is only slow (a busy pool) holds nothing behind it and has no subscriber read again", async () => {
+  const { notifier, state } = flakyPostgres();
+  const troubles: PubSubTrouble[] = [];
+  state.notify = "slow";
+  const pubsub = await createPostgresPubSub(notifier, {
+    heartbeatMs: 10_000,
+    notifyTimeoutMs: 20,
+    notifyLostMs: 1_000,
+    onTrouble: (kind) => troubles.push(kind),
+  });
+  const { got, resumed } = watch(pubsub);
+  await pubsub.publish("t", { type: "x", n: 1 });
+  await new Promise((r) => setTimeout(r, 30));
+  await pubsub.publish("t", { type: "x", n: 2 });
+  await until(() => got.length === 2);
+  await new Promise((r) => setTimeout(r, 30));
+  expect(got).toEqual([1, 2]);
+  expect(resumed).toEqual([]);
+  expect(troubles).toEqual([]);
   await pubsub.close?.();
 });
 

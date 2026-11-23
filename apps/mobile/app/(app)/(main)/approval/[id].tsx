@@ -3,8 +3,8 @@ import { ApprovalSheet } from "@/features/approvals/ApprovalSheet";
 import { goBack } from "@/features/shared/parts";
 
 /**
- * A request to approve, as a native form sheet over whatever is on screen (presentation set in
- * `_layout`; deep link `agenteschat://approval/<id>`).
+ * A request to approve, on a screen of its own with the system's back (deep link `agenteschat://approval/<id>`): the
+ * inbox, a card in a conversation and a push all open it here.
  */
 export default function ApprovalRoute() {
   const { id, mode } = useLocalSearchParams<{ id: string; mode?: string }>();

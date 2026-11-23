@@ -22,6 +22,7 @@ const APPS: Record<string, string> = {
   gcal: "Google Calendar",
   gmail: "Gmail",
   figma: "Figma",
+  canva: "Canva",
   vercel: "Vercel",
   sentry: "Sentry",
   stripe: "Stripe",

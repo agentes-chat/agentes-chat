@@ -320,10 +320,20 @@ function NativeHeader({
   });
   const word = action?.label ?? null;
   const wordOff = action?.disabled ?? false;
-  // iOS: words with a wide right side (a word beside a button, several buttons) start by the back button, as the
-  // system lays out a title that can't be centred. Centred on the screen they sat against that side's buttons, far
-  // from the back button. Not a large title (the system draws it), not on Android (the bar's start already).
-  const leading = IOS && !custom && !largeTitle && text !== "" && titleSide(word, rightCount) > LEADING_FROM;
+  const wordOpens = action?.opens ?? false;
+  const { width } = useWindowDimensions();
+  const fontScale = useFontScale();
+  // iOS: words too long to centre between a wide right side (a word beside a button, several buttons) and the back
+  // button start by the back button, as the system lays out a title that can't be centred. Centred on the screen they
+  // sat against that side's buttons, far from the back button. A short one ("Você" beside "Editar") stays the system's
+  // own, centred. Not a large title (the system draws it), not on Android (the bar's start already).
+  const leading =
+    IOS &&
+    !custom &&
+    !largeTitle &&
+    text !== "" &&
+    titleSide(word, rightCount) > LEADING_FROM &&
+    !titleFitsCentred(text, titleSide(word, rightCount), width, fontScale);
   const actionOptions = useHeaderActionOptions({ right: actions, lead });
   const hasActions = (actions?.length ?? 0) > 0 || lead != null;
   // Stable options: `setOptions` runs when the title or the presence of actions change, not on
@@ -359,7 +369,7 @@ function NativeHeader({
                 type: "button" as const,
                 label: word,
                 accessibilityLabel: word,
-                variant: liquidGlass ? ("prominent" as const) : ("done" as const),
+                variant: wordVariant(wordOpens),
                 disabled: wordOff,
                 onPress: () => press.current?.(),
               },
@@ -383,11 +393,17 @@ function NativeHeader({
         : word !== null && !IOS
           ? () => (
               <View style={styles.headerRight}>
-                <Button size="sm" variant="primary" label={word} disabled={wordOff} onPress={() => press.current?.()} />
+                <Button
+                  size="sm"
+                  variant={wordOpens ? "secondary" : "primary"}
+                  label={word}
+                  disabled={wordOff}
+                  onPress={() => press.current?.()}
+                />
               </View>
             )
           : undefined,
-      ...(hasActions ? withWord(actionOptions, word, wordOff, () => press.current?.()) : null),
+      ...(hasActions ? withWord(actionOptions, word, wordOff, wordOpens, () => press.current?.()) : null),
     }),
     [
       hasActions,
@@ -409,6 +425,7 @@ function NativeHeader({
       rightNode,
       word,
       wordOff,
+      wordOpens,
     ],
   );
   // Nothing of its own in the screen, only its options: the navigator finds a screen's list through its first
@@ -426,6 +443,17 @@ const titleSide = (word: string | null, buttons: number) => {
   const right = (word ? 32 + word.length * 9 + (buttons > 0 ? 8 : 0) : 0) + 44 * buttons;
   return 16 + Math.max(44, right) + 8;
 };
+
+/**
+ * Whether the bar's title fits centred between its two sides (`side`, the wider one's), at the bar's 17 points
+ * (about 9 a letter) scaled with the person's text size.
+ */
+export const titleFitsCentred = (text: string, side: number, width: number, fontScale = 1) =>
+  text.length * 9 * fontScale <= width - 2 * side;
+
+/** The system's bar button for a word: plain when it opens a screen, filled (prominent on iOS 26) when it saves. */
+const wordVariant = (opens: boolean) =>
+  opens ? ("plain" as const) : liquidGlass ? ("prominent" as const) : ("done" as const);
 
 /** The back button's side (`titleSide` with nothing on the right). */
 const BACK_SIDE = titleSide(null, 0);
@@ -456,6 +484,7 @@ function withWord(
   opts: NativeStackNavigationOptions,
   word: string | null,
   disabled: boolean,
+  opens: boolean,
   onPress: () => void,
 ): NativeStackNavigationOptions {
   if (word === null) return opts;
@@ -468,7 +497,7 @@ function withWord(
           type: "button" as const,
           label: word,
           accessibilityLabel: word,
-          variant: liquidGlass ? ("prominent" as const) : ("done" as const),
+          variant: wordVariant(opens),
           disabled,
           onPress,
         },
@@ -482,7 +511,13 @@ function withWord(
     headerRight: (props) => (
       <View style={[styles.headerRight, styles.headerWithWord]}>
         {buttons?.(props)}
-        <Button size="sm" variant="primary" label={word} disabled={disabled} onPress={onPress} />
+        <Button
+          size="sm"
+          variant={opens ? "secondary" : "primary"}
+          label={word}
+          disabled={disabled}
+          onPress={onPress}
+        />
       </View>
     ),
   };
@@ -493,6 +528,11 @@ export interface HeaderWordAction {
   label: string;
   onPress: () => void;
   disabled?: boolean;
+  /**
+   * A word that opens another screen rather than saving this one (Você's "Editar", an agent's): the system's plain
+   * bar button, as the phone's own apps draw it, not the filled one that saves; our secondary button on Android.
+   */
+  opens?: boolean;
 }
 
 /**

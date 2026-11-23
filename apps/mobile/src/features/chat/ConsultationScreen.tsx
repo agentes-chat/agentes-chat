@@ -1,4 +1,4 @@
-import { useChannels, useConsultations, useExchangeConversation } from "@agenteschat/client";
+import { useConsultations, useExchangeConversation } from "@agenteschat/client";
 import {
   consultChoiceKey,
   consultChoiceOf,
@@ -42,7 +42,7 @@ import { ConversationRowData } from "./row-data";
 
 /**
  * A question an agent asked another from a conversation, in a sheet over it (the web opens it in a dialog, as a
- * long message): "Theo ⇄ Iris", where it was asked, the question as it went to the other agent, what that
+ * long message): "Theo ⇄ Iris", the question as it went to the other agent, what that
  * agent wrote and the cards it posted in the conversation (an approval, a question, a secret), drawn as the
  * conversation draws them. Read only: people don't write in the agents' DM; "Falar com o Theo" goes back to the
  * conversation with the agent that asked mentioned in its field. The DM sends the app no events: it reloads while
@@ -104,8 +104,6 @@ function Consultation({
   const nameOf = (id: string) => dir.agentById.get(id)?.name ?? t("mobile.chat.someone");
   // The whole exchange its row stands for: the other questions between the same two agents come in it too.
   const query = useExchangeConversation(orgId, channelId, consultationId && channelId ? consultationId : null);
-  // DMs aren't in the list: no channel name there.
-  const channelName = useChannels(orgId).data?.find((x) => x.id === channelId)?.name ?? null;
   const q = query.data?.consultation;
   const list = query.data?.messages ?? [];
   const asker = q ? dir.agentById.get(q.agentId) : undefined;
@@ -153,12 +151,6 @@ function Consultation({
                   })
                 : ""
             }
-            subtitle={[
-              channelName ? t("chat.consultPanel.where", { channel: channelName }) : t("chat.consultPanel.whereDm"),
-              ...(list.length > 0 ? [t("chat.consultPanel.messages", { count: list.length })] : []),
-            ]
-              .filter(Boolean)
-              .join(" · ")}
           />
         </View>
         {choices.length > 1 && picked ? (
@@ -263,8 +255,9 @@ function Consultation({
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  // Under the sheet's grabber at every sheet's top (`useSheetBody`), at every sheet's sides.
-  head: { paddingHorizontal: SHEET_X, paddingTop: 24, paddingBottom: 12 },
+  // At every sheet's sides; well clear of the grabber (every sheet's 24 put the title right under it, the list's
+  // first line pinned up there with it), the two agents' names alone (it opens over the conversation it was asked from).
+  head: { paddingHorizontal: SHEET_X, paddingTop: 40, paddingBottom: 12 },
   list: { gap: 2 },
   pad: { paddingHorizontal: SCREEN_X },
   // Room for a few turns of the skeleton, which sits at the bottom of what it is given (cut at its top).

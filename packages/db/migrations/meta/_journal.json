@@ -2213,6 +2213,20 @@
       "when": 1795376935126,
       "tag": "0320_brain_model_of_its_plan",
       "breakpoints": true
+    },
+    {
+      "idx": 318,
+      "version": "7",
+      "when": 1795379566183,
+      "tag": "0321_code_sessions",
+      "breakpoints": true
+    },
+    {
+      "idx": 319,
+      "version": "7",
+      "when": 1795383445167,
+      "tag": "0322_run_cli",
+      "breakpoints": true
     }
   ]
 }

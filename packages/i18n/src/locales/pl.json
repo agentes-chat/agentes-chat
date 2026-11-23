@@ -2330,6 +2330,7 @@
       "team": "Kto jest kim: ludzie, agenci i ich grupy",
       "dashboards": "Liczby i wykresy, które agenci utrzymują w aktualności",
       "taskManager": "Co teraz robi każdy agent i zatrzymywanie tego, co trzeba",
+      "code": "Programowanie z agentami, każda prośba we własnym worktree",
       "approvalsPersonal": "O co twoi agenci proszą cię o zgodę",
       "proposalsPersonal": "Co twoi agenci proponują zmienić",
       "threadsPersonal": "Rozmowy na boku i misje",
@@ -2339,6 +2340,7 @@
       "teamPersonal": "Twoi agenci i kto jeszcze tu jest",
       "dashboardsPersonal": "Liczby i wykresy, które twoi agenci utrzymują w aktualności",
       "taskManagerPersonal": "Co teraz robią twoi agenci i zatrzymywanie tego, co trzeba",
+      "codePersonal": "Programowanie z twoimi agentami",
       "homePersonal": "Twój dzień: co na ciebie czeka i co robią twoi agenci"
     },
     "customizeSidebar": "Dostosuj pasek boczny",
@@ -2437,7 +2439,7 @@
     "summary_few": "{{people}} członków · agenci: {{agents}}",
     "summary_many": "{{people}} członków · agenci: {{agents}}",
     "summary_other": "{{people}} członków · agenci: {{agents}}",
-    "waiting": "Czeka na ciebie",
+    "waiting": "Skrzynka odbiorcza",
     "approvals": "Zatwierdzenia",
     "proposals": "Propozycje ulepszeń",
     "issues": "Zadania",
@@ -2450,6 +2452,7 @@
     "team": "Zespół",
     "dashboards": "Dashboardy",
     "taskManager": "Menedżer zadań",
+    "code": "Kod",
     "calendar": "Kalendarz",
     "drive": "Drive",
     "members": "Członkowie",
@@ -5370,7 +5373,8 @@
       "proposal": "Proponuje zmianę",
       "agent": "Proponuje nowego agenta",
       "team": "Proponuje zespół",
-      "firstTask": "Pierwsze zadanie"
+      "firstTask": "Pierwsze zadanie",
+      "code": "Proponuje sesję kodu"
     },
     "waitingYou": "czeka na ciebie",
     "waitingFor": "czeka na: {{name}}",
@@ -5387,6 +5391,7 @@
       "agent": "<b>{{name}}</b> proponuje nowego agenta · {{what}}",
       "team": "<b>{{name}}</b> proponuje zespół · {{what}}",
       "firstTask": "<b>{{name}}</b> proponuje pierwsze zadanie · {{what}}",
+      "code": "<b>{{name}}</b> proponuje sesję kodu · {{what}}",
       "more": "+{{count}}",
       "here_one": "{{count}} czeka tu na ciebie",
       "here_few": "{{count}} czekają tu na ciebie",
@@ -5635,7 +5640,7 @@
     "firstRun": "Wróć tam, gdzie skończyłeś · {{done}} z {{total}}"
   },
   "notifications": {
-    "title": "Powiadomienia",
+    "title": "Skrzynka odbiorcza",
     "planLent": {
       "takeBack": "Odbierz",
       "takeBackAll": "Odbierz od wszystkich agentów",
@@ -5684,7 +5689,7 @@
         "computer": "Zmień komputer"
       }
     },
-    "docTitleUnread": "({{count}}) Powiadomienia",
+    "docTitleUnread": "({{count}}) Skrzynka odbiorcza",
     "summaryWaiting_one": "{{count}} rzecz czeka na ciebie",
     "summaryWaiting_few": "{{count}} rzeczy czekają na ciebie",
     "summaryWaiting_many": "{{count}} rzeczy czeka na ciebie",
@@ -5704,6 +5709,7 @@
       "waiting": "Czeka na ciebie",
       "unread": "Nieprzeczytane",
       "reactions": "Reakcje",
+      "requests": "Rozpatrzone prośby",
       "done": "Zakończone"
     },
     "keys": {
@@ -5970,6 +5976,8 @@
     "noneUnread": "Wszystko przeczytane.",
     "noneHere": "Na razie nic tu nie ma.",
     "noneDone": "Nic nie oznaczono jako zakończone w ciągu ostatnich 30 dni.",
+    "noneRequests": "Nie rozpatrzono jeszcze żadnej prośby.",
+    "proposes": "proponuje ulepszenie",
     "more": "Pokaż więcej"
   },
   "approvals": {
@@ -6902,6 +6910,7 @@
         "empty_reply": "Model nic nie zwrócił.",
         "model_refused": "Model odmówił odpowiedzi.",
         "agent_archived": "Agent został zarchiwizowany.",
+        "code_session_unavailable": "Worktree sesji nie jest dostępny na komputerze.",
         "provider_error": "Dostawca modelu zwrócił błąd: {{detail}}",
         "provider_account": "Dostawca odrzucił klucz: może być nieprawidłowy, bez środków albo ponad limit.",
         "provider_unavailable": "Dostawca modelu nie odpowiedział: {{detail}}",
@@ -12099,6 +12108,196 @@
     "createKeywords": "utwórz nowy dodaj create new",
     "empty": "Brak wyników dla „{{q}}”."
   },
+  "codeSessions": {
+    "beta": {
+      "title": "Coding mode jest w wersji beta",
+      "text": "Działa naprawdę i zmienia się co tydzień. Czasem się zacina. Wtedy problem leży po naszej stronie.",
+      "go": "Zaczynamy",
+      "added": {
+        "worktree": "Każda prośba we własnym worktree, z Gitem, Plikami, Ekranem i Terminalem",
+        "anyAi": "Dowolna AI: Claude Code, Codex, OpenCode lub model przez klucz",
+        "beside": "Edytuj pliki i otwórz terminal obok rozmowy"
+      },
+      "removed": {
+        "paste": "Kopiowanie i wklejanie kodu między czatem a edytorem",
+        "watch": "Wpatrywanie się w terminal, aż agent skończy"
+      }
+    },
+    "title": "Kod",
+    "state": {
+      "waiting": "czeka na ciebie",
+      "working": "pracuje",
+      "preparing": "worktree w przygotowaniu",
+      "failed": "nie udało się przygotować",
+      "pr": "PR #{{number}}",
+      "idle": "gotowa"
+    },
+    "list": {
+      "label": "Sesje kodowania",
+      "new": "Nowa sesja",
+      "newRow": "Nowa sesja",
+      "resize": "Szerokość listy",
+      "local": "na komputerze",
+      "empty": "Tu pojawiają się sesje, które otwierasz albo do których cię zawołano."
+    },
+    "home": {
+      "mode": "Coding mode",
+      "was": "Chat mode",
+      "beta": "Beta",
+      "noAgents": "Żaden agent nie programuje jeszcze na komputerze. W ustawieniach agenta daj mu komputer i aplikację do programowania albo pozwól mu tam uruchamiać kod.",
+      "placeholder": "Opisz zmianę, błąd albo pytanie",
+      "label": "Co zrobić",
+      "agent": "Agent",
+      "repo": "Gdzie pracować",
+      "repoPlaceholder": "Repozytorium lub projekt",
+      "repoSearch": "Szukaj lub wpisz właściciel/nazwa albo nową nazwę",
+      "newLocal": "Nowy projekt na komputerze: {{name}}",
+      "useRepo": "Użyj {{repo}}",
+      "repoNote": "Nazwa bez właściciela tworzy projekt na komputerze agenta, poza GitHubem.",
+      "hint": "@ zaprasza kogoś do sesji",
+      "start": "Rozpocznij"
+    },
+    "view": {
+      "gone": "Ta sesja już nie istnieje albo nie możesz jej zobaczyć.",
+      "resize": "Szerokość rozmowy",
+      "composer": "Odpowiedz · @ woła kogoś · / polecenia",
+      "more": "Więcej",
+      "openPr": "Otwórz PR #{{number}}",
+      "close": "Zamknij sesję",
+      "closeHint": "Znika z listy: worktree znika, gałąź zostaje",
+      "failed": "Nie udało się przygotować worktree.",
+      "retry": "Spróbuj ponownie",
+      "githubAccess": "Ta przestrzeń robocza nie ma dostępu do tego repozytorium w GitHub. Podłącz GitHub w Ustawienia › Konektory albo rozpocznij sesję w projekcie na komputerze (wystarczy nazwa)."
+    },
+    "panel": {
+      "label": "Panel sesji",
+      "screen": "Ekran",
+      "terminal": "Terminal",
+      "terminalHeight": "Wysokość terminala",
+      "notReady": "Worktree jest jeszcze w przygotowaniu.",
+      "agent_preparing": "przygotowuje worktree",
+      "agent_failed": "nie może przygotować worktree",
+      "agent_working": "pracuje",
+      "agent_waiting": "czeka na ciebie",
+      "agent_idle": "nie ma zadań"
+    },
+    "gitTab": {
+      "openFile": "Otwórz plik",
+      "label": "Git",
+      "from": "od {{base}}",
+      "ahead_one": "{{count}}{{more}} commit do przodu",
+      "ahead_few": "{{count}}{{more}} commity do przodu",
+      "ahead_many": "{{count}}{{more}} commitów do przodu",
+      "ahead_other": "{{count}}{{more}} commita do przodu",
+      "refresh": "Odczytaj ponownie",
+      "reading": "Odczytywanie gita na komputerze…",
+      "all": "Wszystko od {{base}}",
+      "uncommitted": "Bez commita",
+      "clean": "Wszystko jest w commitach.",
+      "changesMore": "I więcej zmian: tu jest pierwszy tysiąc.",
+      "commits": "Commity",
+      "noCommits": "Od {{base}} nie ma jeszcze commitów.",
+      "more": "I starsze commity.",
+      "back": "Wstecz",
+      "split": "Obok siebie",
+      "none": "Nic się tu nie zmieniło.",
+      "tooLarge": "Za dużo, by pokazać to tutaj. Zmienione pliki są na liście.",
+      "status": {
+        "modified": "Zmieniony",
+        "added": "Dodany",
+        "deleted": "Usunięty",
+        "renamed": "Przemianowany",
+        "untracked": "Nowy, jeszcze poza gitem"
+      }
+    },
+    "files": {
+      "label": "Pliki",
+      "search": "Szukaj plików",
+      "searchPlaceholder": "Znajdź plik po nazwie lub folderze",
+      "changedGroup": "Zmienione",
+      "count_one": "{{formatted}} plik",
+      "count_few": "{{formatted}} pliki",
+      "count_many": "{{formatted}} plików",
+      "count_other": "{{formatted}} pliku",
+      "refresh": "Odczytaj ponownie",
+      "reading": "Odczytywanie plików na komputerze…",
+      "empty": "Jeszcze nie ma plików.",
+      "noMatch": "Żaden plik nie pasuje do „{{query}}”.",
+      "truncated_one": "Pokazano pierwszy {{formatted}} plik.",
+      "truncated_few": "Pokazano pierwsze {{formatted}} pliki.",
+      "truncated_many": "Pokazano pierwszych {{formatted}} plików.",
+      "truncated_other": "Pokazano pierwsze {{formatted}} pliku.",
+      "hasChanges": "Ma zmiany",
+      "opening": "Otwieranie pliku…",
+      "cut": "Pokazujemy tu tylko pierwsze {{size}}.",
+      "save": "Zapisz",
+      "unsaved": "Niezapisane",
+      "tooLong": "Za długi, by edytować go tutaj",
+      "moved": "Ten plik zmienił się na komputerze po tym, jak go otwarto.",
+      "reload": "Wczytaj tamten",
+      "overwrite": "Zapisz mój na wierzch",
+      "unsavedAsk": "Ten plik ma zmiany, których nie zapisano.",
+      "keepEditing": "Edytuj dalej",
+      "discard": "Odrzuć",
+      "state": {
+        "binary": "Plik binarny: nie ma tu nic do pokazania.",
+        "missing": "Tego pliku już nie ma.",
+        "ignored": "Git ignoruje ten plik, więc go tu nie widać.",
+        "secret": "Pliki .env nie są tu pokazywane: zwykle zawierają sekrety.",
+        "outside": "Ten plik to link prowadzący poza worktree."
+      }
+    },
+    "tabs": {
+      "label": "Karty sesji",
+      "talk": "Rozmowa",
+      "terminalN": "Terminal {{n}}",
+      "close": "Zamknij {{name}}",
+      "add": "Nowa karta"
+    },
+    "screen": {
+      "computer": "Komputer agenta {{name}}",
+      "computer_female": "Komputer agentki {{name}}",
+      "menu": "Ekrany, których używa {{name}}",
+      "menu_female": "Ekrany, których używa {{name}}",
+      "computerHint": "Tam, gdzie jest worktree",
+      "onHost": "na {{host}}",
+      "exitFull": "Zamknij pełny ekran"
+    },
+    "who": {
+      "label": "W tej sesji",
+      "open_one": "{{count}} w tej sesji",
+      "open_few": "{{count}} w tej sesji",
+      "open_many": "{{count}} w tej sesji",
+      "open_other": "{{count}} w tej sesji",
+      "agent": "pracuje w worktree",
+      "opener": "otworzył(a) sesję",
+      "leave": "Opuść",
+      "remove": "Usuń {{name}} z sesji",
+      "invite": "Aby kogoś zaprosić, wpisz w rozmowie @ i imię tej osoby."
+    },
+    "screenLine": {
+      "show": "Zobacz na Ekranie",
+      "held": "Ekranem steruje osoba"
+    },
+    "suggestion": {
+      "label": "Propozycja sesji kodu",
+      "detail": "{{repo}} · na komputerze agenta {{name}}",
+      "more": "Zobacz prośbę",
+      "open": "Otwórz sesję",
+      "here": "Zrób to tutaj",
+      "opening": "Otwieranie sesji…",
+      "opened": "Otworzono sesję",
+      "openedBy": "Sesja otwarta przez: {{name}}",
+      "keptHere": "Wybrano pracę tutaj",
+      "keptHereBy": "Pracę tutaj wybrał(a): {{name}}",
+      "see": "Zobacz sesję"
+    },
+    "from": {
+      "dm": "Otwarta z rozmowy z agentem {{name}}",
+      "channel": "Otwarta z #{{name}}",
+      "see": "Zobacz rozmowę"
+    }
+  },
   "code": {
     "ranSummary_one": "Uruchomiono {{count}} linię kodu {{language}} · wynik {{size}}",
     "ranSummary_few": "Uruchomiono {{count}} linie kodu {{language}} · wynik {{size}}",
@@ -13023,6 +13222,9 @@
       "textOnly": "Czyta tylko tekst",
       "search": "Szukaj modeli",
       "account": "Konto",
+      "accountOf": "Konto: {{account}}",
+      "connectAccount": "Połącz inne konto",
+      "ais": "AI",
       "connect": "Połącz AI",
       "applies": "Obowiązuje od następnej odpowiedzi.",
       "more": "Więcej opcji",
@@ -15475,6 +15677,7 @@
       "web_search": "Wyszukaj w sieci",
       "web_fetch": "Przeczytaj stronę internetową",
       "image_search": "Szukaj obrazów",
+      "show_image": "Pokaż obrazy z sieci",
       "create_routine": "Utwórz rutynę",
       "update_routine": "Zaktualizuj rutynę",
       "delete_routine": "Usuń rutynę",
@@ -16428,6 +16631,9 @@
       "pageOf": "{{page}} z {{count}}",
       "pdfFailed": "Tego pliku PDF nie da się tu pokazać. Pobierz go, żeby otworzyć.",
       "loadFailed": "Tego obrazu nie da się tu pokazać.",
+      "mark": "Zaznacz",
+      "markOff": "Przestań zaznaczać: kliknięcie znów przesuwa plik",
+      "markOn": "Zaznacz: kliknięcie komentuje punkt lub obszar",
       "hint": {
         "image": "Kliknij, aby zaznaczyć punkt, albo przeciągnij, aby zaznaczyć obszar",
         "video": "Kliknij film, aby skomentować ten moment, albo przeciągnij, aby zaznaczyć obszar",
@@ -16554,6 +16760,17 @@
       "input": "Nie udało się. Sprawdź, co wpisano, i spróbuj ponownie.",
       "conflict": "Teraz nie można tego zrobić. Odśwież i spróbuj ponownie.",
       "computer": "Komputer nie mógł tego teraz zrobić. Sprawdź, czy jest włączony, i spróbuj ponownie."
+    },
+    "codeSession": {
+      "noComputer": "Ten agent nie ma jeszcze komputera. Daj mu go w jego ustawieniach, żeby z nim programować.",
+      "cannotCode": "Ten agent nie może programować na swoim komputerze. Daj mu aplikację do programowania w ustawieniach albo pozwól mu tam uruchamiać kod.",
+      "repoNotAllowed": "Ten agent nie może pracować w tym repozytorium. Wybierz inne albo dodaj je w ustawieniach agenta.",
+      "notYours": "Sesję może zamknąć tylko osoba, która ją otworzyła, lub administrator.",
+      "notReady": "Worktree sesji nie jest jeszcze gotowy. Spróbuj ponownie za chwilę.",
+      "fileChanged": "Ten plik zmienił się na komputerze po tym, jak go otwarto.",
+      "fileLocked": "Tego pliku nie można tutaj edytować.",
+      "suggestionGone": "Na tę propozycję już odpowiedziano.",
+      "suggestionNotYours": "Tylko osoba, która prosiła, decyduje, czy otworzyć sesję."
     },
     "webhook": {
       "githubNoAccess": "GitHub tego workspace’u nie może tworzyć webhooków w {{repo}}. Wykonaj kroki poniżej, żeby utworzyć go ręcznie.",
@@ -19370,6 +19587,8 @@
         "merged": "PR #{{number}} ({{repo}}) scalony w GitHub przez {{who}}",
         "closed": "PR #{{number}} ({{repo}}) zamknięty w GitHub przez {{who}}",
         "closedIssue": "Issue #{{number}} ({{repo}}) zamknięte w GitHub przez {{who}}",
+        "checkFailed": "Kontrola «{{check}}» nie przeszła dla PR #{{number}} ({{repo}}) w GitHub",
+        "checkFailedCommit": "Kontrola «{{check}}» nie przeszła dla commita {{commit}} ({{repo}}) w GitHub",
         "ask": "Poproś o odpowiedź",
         "asked": "{{asker}} poprosił(a) {{name}} o odpowiedź dla {{who}} w GitHub"
       },
@@ -19469,6 +19688,7 @@
         "runningSkillScriptAny": "Uruchomiono skrypt umiejętności",
         "fetchingFile": "Pobrano plik",
         "proposingMission": "Zaproponowano misję",
+        "suggestingCodeSession": "Zaproponowano sesję kodu",
         "messagingMission": "Wysłano notatkę do misji",
         "updatingPlan": "Zaktualizowano plan",
         "reportingProgress": "Zgłoszono postęp",
@@ -19589,6 +19809,7 @@
       "runningSkillScriptAny": "uruchamianie skryptu umiejętności",
       "fetchingFile": "pobieranie pliku",
       "proposingMission": "proponowanie misji",
+      "suggestingCodeSession": "proponowanie sesji kodu",
       "messagingMission": "wysyłanie notatki do misji",
       "updatingPlan": "aktualizacja planu",
       "reportingProgress": "zgłaszanie postępu",
@@ -21144,6 +21365,64 @@
     "screenOff": "Ekran jest wyłączony",
     "screenOffHelp": "Włącza się, gdy ktoś ogląda."
   },
+  "cliTools": {
+    "read": "Przeczytano",
+    "search": "Wyszukano",
+    "edit": "Edytowano",
+    "write": "Zapisano",
+    "run": "Uruchomiono",
+    "fetch": "Pobrano",
+    "delegate": "Poproszono subagenta",
+    "skill": "Użyto umiejętności",
+    "workflow": "Uruchomiono przepływ pracy",
+    "other": "Użyto",
+    "running": {
+      "read": "Czyta",
+      "search": "Szuka",
+      "edit": "Edytuje",
+      "write": "Zapisuje",
+      "run": "Uruchamia",
+      "fetch": "Pobiera",
+      "delegate": "Prosi subagenta",
+      "skill": "Używa umiejętności",
+      "workflow": "Uruchamia przepływ pracy",
+      "other": "Używa"
+    },
+    "lines": "+{{added}} −{{removed}}",
+    "added": "+{{added}}",
+    "found_one": "{{count}} wynik",
+    "found_few": "{{count}} wyniki",
+    "found_many": "{{count}} wyników",
+    "found_other": "{{count}} wyniku",
+    "files_one": "{{count}} plik",
+    "files_few": "{{count}} pliki",
+    "files_many": "{{count}} plików",
+    "files_other": "{{count}} pliku",
+    "passed_one": "{{count}} udany",
+    "passed_few": "{{count}} udane",
+    "passed_many": "{{count}} udanych",
+    "passed_other": "{{count}} udanego",
+    "failedTests_one": "{{count}} nieudany",
+    "failedTests_few": "{{count}} nieudane",
+    "failedTests_many": "{{count}} nieudanych",
+    "failedTests_other": "{{count}} nieudanego",
+    "exit": "kod wyjścia {{code}}",
+    "progress": {
+      "block": "Subagenci agenta {{name}}",
+      "block_female": "Subagenci agentki {{name}}",
+      "subagent": "Subagent",
+      "agents_one": "{{count}} subagent",
+      "agents_few": "{{count}} subagenci",
+      "agents_many": "{{count}} subagentów",
+      "agents_other": "{{count}} subagenta",
+      "done": "{{done}} z {{total}} gotowe",
+      "asking_one": "Prosi subagenta",
+      "asking_few": "Prosi {{count}} subagentów",
+      "asking_many": "Prosi {{count}} subagentów",
+      "asking_other": "Prosi {{count}} subagenta",
+      "workflowShort": "przepływ pracy {{done}} z {{total}}"
+    }
+  },
   "agentComputer": {
     "title": "Komputer agenta {{name}}",
     "title_female": "Komputer agenta {{name}}",
@@ -21252,6 +21531,24 @@
       "upright": "Obróć pionowo",
       "message": "Napisz do {{name}}"
     }
+  },
+  "codeTerminal": {
+    "label": "Terminal",
+    "opening": "Otwieranie terminala…",
+    "openAgain": "Otwórz ponownie",
+    "ended": "Powłoka się zakończyła",
+    "dropped": "Połączenie z terminalem zostało przerwane",
+    "moved": "Ten terminal jest otwarty w innym oknie",
+    "screening": "Terminale są tu wyłączone",
+    "forbidden": "Terminal otwiera tylko ten, kto może używać tego komputera",
+    "offline": "Komputer jest offline",
+    "outdated": "Zaktualizuj komputer, aby otwierać terminal w folderze sesji",
+    "unavailable": "Komputer tego agenta nie otwiera terminali",
+    "off": "Terminal jest wyłączony na {{computer}}",
+    "busy": "Na tym komputerze jest już otwartych tyle terminali, ile się da. Zamknij jeden i otwórz ponownie.",
+    "paused": "Komputer jest wstrzymany",
+    "failed": "Nie udało się otworzyć terminala",
+    "agentFolder": "Terminal otworzył się w folderze agenta. Zaktualizuj komputer, aby otwierał się w folderze sesji."
   },
   "agora": {
     "label": "Teraz",
@@ -21394,7 +21691,8 @@
       "stopAll": "Zatrzymaj wszystkie",
       "stopAllOf": "Zatrzymaj wszystkie zadania agenta {{name}}",
       "open": "Otwórz w rozmowie",
-      "openManager": "Otwórz w menedżerze zadań"
+      "openManager": "Otwórz w menedżerze zadań",
+      "more": "Więcej akcji"
     },
     "confirm": {
       "chainTitle_one": "Zatrzymać {{name}} i {{count}} pomocnika?",

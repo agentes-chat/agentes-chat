@@ -168,7 +168,6 @@ describe("the fold in the app (ADR 0212)", () => {
       ],
       ["src/features/chat/DatePill.tsx", ["room && { left: room.left, right: room.right }"]],
       ["src/features/chat/ChannelWelcome.tsx", ["room && insetPastFold(room, 16)"]],
-      ["src/features/files/ImageViewer.tsx", ["foldSide && insetPastFold(foldSide, SCREEN_X)"]],
       // A control centered on the screen: beside the fold.
       ["src/features/live-files/slides/Island.tsx", ["room && besideFold(room)"]],
       ["src/features/computer/EdgeDock.tsx", ["room && besideFold(room)"]],

@@ -31,7 +31,6 @@ import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
-import { ApprovalsTabs } from "@/components/ApprovalsTabs";
 import { isText, SettingChange } from "@/components/ChatCards";
 import { useOrg } from "@/components/org-context";
 import { ProseDiff } from "@/components/ProseDiff";
@@ -129,8 +128,11 @@ export function ProposalsPage({ agentId }: { agentId?: string }) {
             {t("memory.title", agentGrammar(backAgent.name))}
           </Link>
         )}
-        <PageHeader title={t("approvals.title")} meta={t(modeKey(org, "proposals.subtitle"), { org: org.name })} />
-        <ApprovalsTabs value="proposals" actions={<DecideAll proposals={list} />} />
+        <PageHeader
+          title={t("proposals.title")}
+          meta={t(modeKey(org, "proposals.subtitle"), { org: org.name })}
+          actions={<DecideAll proposals={list} />}
+        />
 
         {proposals.isSuccess && list.length === 0 && (
           <EmptyState size="page" agent={look} mood="deal" title={t("proposals.emptyTitle")}>

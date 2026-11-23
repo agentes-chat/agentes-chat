@@ -102,7 +102,7 @@ export const featureKeysEn = {
     chats: "Chats",
     threads: "Threads",
     agents: "Agents",
-    activity: "Activity",
+    activity: "Inbox",
     search: "Search",
     withCount: "{{label}}, {{count}}",
   },
@@ -201,6 +201,16 @@ export const featureKeysEn = {
     pinned: "Pinned",
     /** Conversas' one list: every chat by its latest activity, with no grouping. */
     recent: "Recent",
+    /**
+     * A team's Conversas lists its chats by latest activity or by the agents' sectors (as the web's sidebar): the bar
+     * button's menu title, the second choice, and the sections Setores ends with.
+     */
+    view: {
+      title: "Show chats",
+      sectors: "Sectors",
+      dms: "Direct messages",
+      channels: "Channels",
+    },
     /** Under Recentes' first rows: the whole list. */
     seeAll: "See all chats",
     /** On a large screen (the iPhone Duo open), where the open chat stands beside the list while there is none yet. */
@@ -351,6 +361,11 @@ export const featureKeysEn = {
   },
   chat: {
     someone: "Someone",
+    /** A handed work's bubble under the reply that handed it: the agent that took it. */
+    handedTo: "Handed to {{name}}",
+    handedTo_female: "Handed to {{name}}",
+    /** Two agents' talk quoted on its own (its reply not here): who asked, before the agent asked. */
+    pairAsked: "{{from}} asked",
     messageTo: "Message {{name}}",
     messageIn: "Message {{channel}}",
     reply: "Reply",
@@ -927,7 +942,7 @@ export const featureKeysEn = {
     },
   },
   activity: {
-    title: "Activity",
+    title: "Inbox",
     /** Under `plan_model_dropped`: opens the agent's model. */
     chooseModel: "Choose another model",
     /** The pills over Atividade: short, no counts (the section and the tab's badge count). */
@@ -1107,6 +1122,50 @@ export const featureKeysEn = {
     add: "Add",
     addA11y: "Add {{name}} to the channel",
     added: "{{name}} joined the channel",
+  },
+  /**
+   * Settings found by name: You's magnifier and its screen, the workspace's group of results, and the other words each
+   * setting answers to (comma-separated, never shown).
+   */
+  settingsSearch: {
+    open: "Search settings",
+    title: "Search",
+    placeholder: "Search You and settings",
+    workspace: "Workspace settings",
+    words: {
+      status: "away, busy, presence, online",
+      account: "name, photo, email, time zone, password, handle",
+      deleteAccount: "delete, remove, close account",
+      workspaces: "switch, servers, accounts",
+      notifications: "alerts, push, badges",
+      approvals: "approve, delegate",
+      start: "open, home, first screen",
+      activity: "tools, what agents did",
+      chatLook: "bubbles, messages, conversation",
+      wallpaper: "background, wallpaper, photo",
+      agentStyle: "technical, simple, tone",
+      sounds: "sound, quiet, silent",
+      appearance: "theme, dark, light, mode",
+      appIcon: "icon",
+      language: "English, Portuguese, Spanish",
+      about: "version, licenses",
+      aiAccounts: "key, API, provider, plan, model",
+      general: "name, logo, time zone, context",
+      media: "GIFs, stickers",
+      members: "people, team",
+      invites: "invite, link",
+      roles: "permissions",
+      usage: "costs, spend, plan, tokens, budget",
+      connectors: "integrations, MCP, services",
+      skills: "abilities",
+      vault: "passwords, keys, logins, secrets",
+      access: "permissions, agents' access",
+      apps: "AI apps, MCP",
+      computers: "devices, machines, computer, phone",
+      storage: "files, S3, storage",
+      import: "export, import, migrate",
+      audit: "log, history",
+    },
   },
   me: {
     title: "You",
@@ -1334,16 +1393,13 @@ export const featureKeysEn = {
       cantPlay: "This video can't play on this phone.",
     },
     /**
-     * A file's conversation in the sheet over it (ADR 0208): what a tap on the file does while the sheet is up, the
-     * video's tap target, a PDF's page, and a PDF that couldn't be drawn.
+     * A file's conversation (ADR 0208): what a touch held on a PDF's page does (the screen reader's hint), a PDF's
+     * page, and a PDF that couldn't be drawn.
      */
     talk: {
       hint: {
-        image: "Tap where you want to comment",
-        video: "Tap the video to comment on this moment",
-        pdf: "Tap the page to mark a point",
+        pdf: "Touch and hold the page to mark a point",
       },
-      markVideo: "Comment on this moment of the video",
       pdfPage: "Page {{page}} of {{count}}",
       pdfFailed: "Couldn't show this PDF.",
     },
@@ -1540,6 +1596,28 @@ export const featureKeysEn = {
       /** A month's day in the Dia list ("Day 5"). */
       monthDay: "Day {{day}}",
       lastDay: "Last day",
+    },
+  },
+  // Código (ADR 0215; the rest of its words are the web's, `codeSessions.*`).
+  coding: {
+    /** A session's pill in its conversation, which opens its code. */
+    pill: "{{who}}. See the code",
+    /** The step line's words over the composer ("3 files changed"), which open the session's Git view. */
+    seeChanges: "See the changes",
+    /** A new session's field for where it works (a repository, or a project only on the computer). */
+    project: "Project",
+    /** Where to work's search field, one line on a phone (the note under the list says what a name does). */
+    whereSearch: "Search or type a name",
+    /** Over the agent's repositories and projects when a typed name is offered as a new one above them. */
+    listed: "The agent's",
+    /** A commit's diff, by its short hash. */
+    commit: "Commit {{short}}",
+    /** The list's first group: the sessions whose agent waits on me. */
+    waiting: "Waiting on you",
+    /** Where the branch stands before its next git step (the line over the composer, the Git view's button). */
+    next: {
+      pr: "Branch sent, no pull request yet",
+      mergeLocal: "Ready to merge into {{base}}",
     },
   },
   // The task manager (ADR 0128; the rest of its words are shared, `taskManager.*`).
@@ -2177,10 +2255,6 @@ export const featureKeysEn = {
     mcps: "MCPs",
     mcpsNone: "MCP servers you connect by their address show up here.",
     addMcp: "Add MCP",
-    /** The dashed tile at the end of the connected row. */
-    add: "Add",
-    /** The catalog's header, with its count. */
-    allServices: "All services",
     /** The amber line under the connected row: a service's tools wait on the person ("· <service>" follows). */
     waitLine_one: "{{count}} tool needs you",
     waitLine_other: "{{count}} tools need you",
@@ -2190,12 +2264,11 @@ export const featureKeysEn = {
     /** Under the account's address on a connection's screen. */
     connectedState: "Connected",
     connected: "Connected",
-    suggested: "Suggested for {{org}}",
-    all: "All",
+    /** A category's shelf: its whole list, on a screen of its own. */
+    seeAll: "See all",
     noResults: "No service by that name. Try its address.",
     soon: "Soon",
     loadFailed: "Couldn't load the connectors.",
-    connectedCheck: "{{name}}, connected",
     adminsOnly: "Only an admin of {{org}} connects services. Ask one of them.",
     /** In a personal workspace (ADR 0159): its owner and whoever helps run it, never "an admin of Personal". */
     adminsOnlyPersonal: "Only whoever runs this workspace connects apps. Ask them.",
@@ -2242,6 +2315,38 @@ export const featureKeysEn = {
     usedBy_zero: "No agent uses it",
     usedBy_one: "{{names}} uses it",
     usedBy_other: "{{names}} use it",
+    /**
+     * A catalog service's own page: connected, the way to its connection; its facts (category, how many tools and
+     * how many ask for approval, or that they show once connected; who connects it; how one signs in), what agents do
+     * with it, the same facts as a list, and the others of its category.
+     */
+    page: {
+      missing: "This service isn't in the catalog anymore.",
+      connected: "Connected",
+      open: "Open the connection",
+      category: "Category",
+      tools: "Tools",
+      toolsAsk_one: "{{count}} asks for approval",
+      toolsAsk_other: "{{count}} ask for approval",
+      toolsAskNone: "none asks for approval",
+      toolsLater: "once connected",
+      who: "Who connects",
+      whoAdmins: "{{org}} admins",
+      whoRuns: "Who runs the workspace",
+      whoYou: "You, for yourself",
+      signIn: "Signs in with",
+      how: {
+        signIn: "Your account",
+        key: "A key",
+        either: "Account or key",
+      },
+      canTitle: "What agents do with it",
+      /** Where the service connects, the one fact the page's strip doesn't say, and the note under it. */
+      address: "Address",
+      addressNote: "Agents use this address with the connected account. Each one gets only what you allow.",
+      host: "Connects to",
+      more: "More in {{category}}",
+    },
     fromAgent: "Connect a service",
     /** GitHub with the agentes.chat app (ADR 0156): the app first, an account as the other way. */
     githubApp: {
@@ -2959,6 +3064,10 @@ export const featureKeysEn = {
       titlePersonal: "Hand your to-dos to your agents",
       textPersonal: "Create a task for an agent and follow it to the end.",
       viewerTitlePersonal: "Follow your agents' work",
+    },
+    coding: {
+      title: "Code with your agents",
+      text: "Each session is a conversation with an agent working on its own branch, on its computer.",
     },
     routines: {
       title: "Leave repeated work to your agents",

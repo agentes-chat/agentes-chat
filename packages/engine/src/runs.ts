@@ -352,6 +352,9 @@ export function runErrorDetail(error: string | null | undefined): {
     DISK_FULL,
     // A Codex turn on a Windows computer where MXC can't hold its commands (the runner's own words say what to do).
     "windows_sandbox",
+    // A code session's worktree isn't there for its agent's computer brain (ADR 0215): still being prepared, gone, or
+    // on a computer the agent no longer uses.
+    "code_session_unavailable",
   ];
   if (simple.includes(error)) return { errorCode: `run.${error}` };
   if (error === "timeout") return { errorCode: "run.computer_timeout", errorParams: { code: error } };
@@ -645,6 +648,8 @@ const TALK_TOOLS = [
   "ask_user",
   "ask_choices",
   "say_now",
+  // A suggested code session (ADR 0215 §11) waits for the person: the run hasn't started the change.
+  "suggest_code_session",
   "post_update",
   "steer_work",
   "stop_work",

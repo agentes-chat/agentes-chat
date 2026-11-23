@@ -82,6 +82,7 @@ const SIDEWAYS: Record<string, "strip" | "content"> = {
   ".sl-rail__list": "strip",
   ".code-card__code": "content",
   ".code-card__preview": "content",
+  ".code-tabs": "strip",
   ".level-matrix": "content",
   ".pu-table-card": "content",
   ".spec-block__table": "content",

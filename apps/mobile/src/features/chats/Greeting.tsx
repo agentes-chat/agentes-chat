@@ -1,5 +1,5 @@
 import { useMe } from "@agenteschat/client";
-import type { ReactNode } from "react";
+import { memo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, View } from "react-native";
 import { useOrg } from "@/providers/org";
@@ -47,15 +47,16 @@ const openAgents = () => router.navigate("/agents");
 
 /**
  * The workspace's sky behind Conversas' bar, large title and greeting: faint, so the title and the right hand's field
- * lead, and gone before the field.
+ * lead, and gone before the field. It takes nothing from the home: the home draws again at every message and step, and
+ * the sky (its theme and server are its own to follow) stays as it is.
  */
-export function GreetingSky() {
+export const GreetingSky = memo(function GreetingSky() {
   return (
     <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.sky]}>
       <WorkspaceSky fade={0.22} style={StyleSheet.absoluteFill} />
     </View>
   );
-}
+});
 
 /**
  * The greeting under Conversas' large title, scrolling away with the list: "Boa noite, Ana", then, only when there

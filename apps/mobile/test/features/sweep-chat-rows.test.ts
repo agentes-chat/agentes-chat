@@ -41,7 +41,9 @@ describe("two agents' conversation", () => {
     // At the sides every screen and sheet keeps.
     expect(screen).toContain("pad: { paddingHorizontal: SCREEN_X },");
     expect(screen).toMatch(/foot: \{[^}]*paddingHorizontal: SCREEN_X,/);
-    expect(screen).toMatch(/head: \{ paddingHorizontal: SHEET_X, paddingTop: 24,/);
+    // Well clear of the grabber, the two agents' names alone: no line under them.
+    expect(screen).toMatch(/head: \{ paddingHorizontal: SHEET_X, paddingTop: 40,/);
+    expect(screen).not.toContain("subtitle=");
   });
 });
 
