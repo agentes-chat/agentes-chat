@@ -112,6 +112,10 @@ describe("a block's page", () => {
     expect(BLOCK_KIT_CSS).toContain("ac-result + ac-actions,ac-actions[align=center]{justify-content:center}");
     expect(BLOCK_KIT_JS).toContain('d.style.setProperty("--s"+(i+1),c)');
   });
+  test("a slider's numbers go into its markup escaped, as its label does", () => {
+    // The values arrive from an agent's spec as attribute text: a quote in one would close the attribute it sits in.
+    for (const attr of ["min", "max", "step"]) expect(BLOCK_KIT_JS).toContain(`${attr}="'+esc(this.a("${attr}",`);
+  });
 
   test("a plain button stacked tight under something gets room, measured from the page", () => {
     expect(BLOCK_KIT_CSS).toContain(":where(button[data-air]:not([class])){margin-top:12px}");
