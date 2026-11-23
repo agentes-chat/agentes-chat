@@ -6206,6 +6206,28 @@
           "send": "Enviar a {{computer}}",
           "sending": "Enviando el código a {{computer}}…",
           "sent": "Código enviado. Terminando el inicio de sesión en {{computer}}.",
+          "choice": {
+            "billing": "¿Cómo se va a cobrar Gemini?",
+            "billingHint": "Google lo pregunta después del código. La suscripción usa la licencia de Gemini Enterprise que tu organización ya tiene.",
+            "subscription": "¿Qué suscripción de Gemini Enterprise?",
+            "subscriptionHint": "Las que tu administrador asignó a esta cuenta de Google.",
+            "subscriptionWhere": "Proyecto {{project}} · {{location}}",
+            "project": "¿Qué proyecto de Google Cloud?",
+            "projectHint": "El pago por uso se cobra a este proyecto. Asegúrate de que sea de confianza.",
+            "projectLabel": "ID del proyecto",
+            "projectShape": "Un ID de proyecto tiene de 6 a 30 letras minúsculas, números o guiones, y empieza con una letra.",
+            "region": "¿Qué región?",
+            "regionHint": "Dónde ejecuta Google Gemini para este proyecto.",
+            "billingModel": {
+              "subscriptions": "Suscripción de Gemini Enterprise",
+              "subscriptionsText": "Usa una licencia que tu organización ya tiene.",
+              "pay_as_you_go": "Pago por uso",
+              "pay_as_you_goText": "Se cobran los tokens que uses, a través de Google Cloud."
+            },
+            "continue": "Continuar",
+            "sending": "Enviando tu elección a {{computer}}…",
+            "failed": "No se pudo enviar tu elección a {{computer}}. Inténtalo de nuevo."
+          },
           "local": "¿Estás en {{computer}}? Si su navegador se abrió solo, autoriza allí.",
           "deviceCode": "Código para ChatGPT",
           "grokCode": "Código para Grok",

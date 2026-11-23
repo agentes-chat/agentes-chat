@@ -5778,6 +5778,28 @@
           "send": "{{computer}}(으)로 보내기",
           "sending": "{{computer}}(으)로 코드를 보내는 중…",
           "sent": "코드를 보냈어요. {{computer}}에서 로그인을 마무리하는 중이에요.",
+          "choice": {
+            "billing": "Gemini 요금은 어떻게 청구할까요?",
+            "billingHint": "코드 다음에 Google이 물어봐요. 구독은 조직이 이미 가진 Gemini Enterprise 라이선스를 사용해요.",
+            "subscription": "어떤 Gemini Enterprise 구독인가요?",
+            "subscriptionHint": "관리자가 이 Google 계정에 할당한 구독이에요.",
+            "subscriptionWhere": "프로젝트 {{project}} · {{location}}",
+            "project": "어떤 Google Cloud 프로젝트인가요?",
+            "projectHint": "사용한 만큼 지불은 이 프로젝트로 청구돼요. 믿을 수 있는 프로젝트인지 확인하세요.",
+            "projectLabel": "프로젝트 ID",
+            "projectShape": "프로젝트 ID는 소문자, 숫자, 하이픈 6~30자이고 문자로 시작해요.",
+            "region": "어떤 리전인가요?",
+            "regionHint": "Google이 이 프로젝트의 Gemini를 실행하는 곳이에요.",
+            "billingModel": {
+              "subscriptions": "Gemini Enterprise 구독",
+              "subscriptionsText": "조직이 이미 가진 라이선스를 사용해요.",
+              "pay_as_you_go": "사용한 만큼 지불",
+              "pay_as_you_goText": "사용한 토큰만큼 Google Cloud로 청구돼요."
+            },
+            "continue": "계속",
+            "sending": "{{computer}}(으)로 선택을 보내는 중…",
+            "failed": "{{computer}}(으)로 선택을 보내지 못했어요. 다시 시도하세요."
+          },
           "local": "{{computer}}에서 직접 하고 있나요? 브라우저가 저절로 열렸다면 거기서 승인만 하세요.",
           "deviceCode": "ChatGPT용 코드",
           "grokCode": "Grok용 코드",

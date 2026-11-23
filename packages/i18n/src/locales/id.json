@@ -5800,6 +5800,28 @@
           "send": "Kirim ke {{computer}}",
           "sending": "Mengirim kode ke {{computer}}…",
           "sent": "Kode terkirim. Menyelesaikan proses masuk di {{computer}}.",
+          "choice": {
+            "billing": "Bagaimana Gemini akan ditagih?",
+            "billingHint": "Google menanyakan ini setelah kode. Langganan memakai lisensi Gemini Enterprise yang sudah dimiliki organisasimu.",
+            "subscription": "Langganan Gemini Enterprise yang mana?",
+            "subscriptionHint": "Yang diberikan administratormu ke akun Google ini.",
+            "subscriptionWhere": "Proyek {{project}} · {{location}}",
+            "project": "Proyek Google Cloud yang mana?",
+            "projectHint": "Bayar sesuai pemakaian ditagihkan ke proyek ini. Pastikan kamu memercayainya.",
+            "projectLabel": "ID proyek",
+            "projectShape": "ID proyek berisi 6 sampai 30 huruf kecil, angka, atau tanda hubung, dan diawali huruf.",
+            "region": "Region yang mana?",
+            "regionHint": "Tempat Google menjalankan Gemini untuk proyek ini.",
+            "billingModel": {
+              "subscriptions": "Langganan Gemini Enterprise",
+              "subscriptionsText": "Memakai lisensi yang sudah dimiliki organisasimu.",
+              "pay_as_you_go": "Bayar sesuai pemakaian",
+              "pay_as_you_goText": "Ditagih sesuai token yang dipakai, lewat Google Cloud."
+            },
+            "continue": "Lanjutkan",
+            "sending": "Mengirim pilihanmu ke {{computer}}…",
+            "failed": "Tidak bisa mengirim pilihanmu ke {{computer}}. Coba lagi."
+          },
           "local": "Sedang di {{computer}} itu sendiri? Jika browsernya terbuka sendiri, cukup beri izin di sana.",
           "deviceCode": "Kode untuk ChatGPT",
           "grokCode": "Kode untuk Grok",

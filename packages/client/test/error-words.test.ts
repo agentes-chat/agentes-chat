@@ -448,6 +448,9 @@ const PLAIN_LINE = new Set([
   "device.follows_host",
   "machine.link_invalid",
   "account.invalid_code",
+  // A Gemini Enterprise sign-in's choice: the apps send only an option the computer listed, and a project only once
+  // its shape is right (ADR 0143 §4); a bad one is a client fault.
+  "account.invalid_choice",
   "account.invalid_kind",
   "account.invalid_label",
   "account.invalid_plan",

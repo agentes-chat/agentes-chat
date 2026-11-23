@@ -5780,6 +5780,28 @@
           "send": "{{computer}}に送信",
           "sending": "{{computer}}にコードを送信しています…",
           "sent": "コードを送信しました。{{computer}}でログインを完了しています。",
+          "choice": {
+            "billing": "Gemini の請求方法は？",
+            "billingHint": "コードの後に Google がたずねます。サブスクリプションでは、組織がすでに持っている Gemini Enterprise ライセンスを使います。",
+            "subscription": "どの Gemini Enterprise サブスクリプションですか？",
+            "subscriptionHint": "管理者がこの Google アカウントに割り当てたものです。",
+            "subscriptionWhere": "プロジェクト {{project}} · {{location}}",
+            "project": "どの Google Cloud プロジェクトですか？",
+            "projectHint": "従量課金はこのプロジェクトに請求されます。信頼できるプロジェクトか確認してください。",
+            "projectLabel": "プロジェクト ID",
+            "projectShape": "プロジェクト ID は 6〜30 文字の小文字、数字、ハイフンで、先頭は文字です。",
+            "region": "どのリージョンですか？",
+            "regionHint": "Google がこのプロジェクトの Gemini を実行する場所です。",
+            "billingModel": {
+              "subscriptions": "Gemini Enterprise サブスクリプション",
+              "subscriptionsText": "組織がすでに持っているライセンスを使います。",
+              "pay_as_you_go": "従量課金",
+              "pay_as_you_goText": "使ったトークン分を Google Cloud で請求します。"
+            },
+            "continue": "続ける",
+            "sending": "{{computer}}に選択を送信しています…",
+            "failed": "{{computer}}に選択を送信できませんでした。もう一度お試しください。"
+          },
           "local": "{{computer}}本体で操作していますか？ ブラウザが自動で開いた場合は、そこで承認するだけです。",
           "deviceCode": "ChatGPT用のコード",
           "grokCode": "Grok用のコード",

@@ -5801,6 +5801,28 @@
           "send": "发送到 {{computer}}",
           "sending": "正在把代码发送到 {{computer}}…",
           "sent": "代码已发送。正在 {{computer}} 上完成登录。",
+          "choice": {
+            "billing": "Gemini 怎么计费？",
+            "billingHint": "Google 会在代码之后问这个。订阅使用你的组织已有的 Gemini Enterprise 许可。",
+            "subscription": "哪个 Gemini Enterprise 订阅？",
+            "subscriptionHint": "管理员分配给这个 Google 账号的订阅。",
+            "subscriptionWhere": "项目 {{project}} · {{location}}",
+            "project": "哪个 Google Cloud 项目？",
+            "projectHint": "按用量付费会计入这个项目。请确认你信任它。",
+            "projectLabel": "项目 ID",
+            "projectShape": "项目 ID 由 6 到 30 个小写字母、数字或连字符组成，并以字母开头。",
+            "region": "哪个区域？",
+            "regionHint": "Google 为这个项目运行 Gemini 的地方。",
+            "billingModel": {
+              "subscriptions": "Gemini Enterprise 订阅",
+              "subscriptionsText": "使用你的组织已有的许可。",
+              "pay_as_you_go": "按用量付费",
+              "pay_as_you_goText": "按使用的 token 通过 Google Cloud 计费。"
+            },
+            "continue": "继续",
+            "sending": "正在把你的选择发送到 {{computer}}…",
+            "failed": "无法把你的选择发送到 {{computer}}，请重试。"
+          },
           "local": "就在 {{computer}} 本机上？如果它的浏览器自动打开了，直接在那里授权即可。",
           "deviceCode": "ChatGPT 验证码",
           "grokCode": "Grok 验证码",

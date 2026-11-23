@@ -573,7 +573,8 @@ describe("Conectar uma IA: one picker, plans first", () => {
       ORG_ID,
       "machine_1",
       "antigravity",
-      { provider: "enterprise" },
+      // The person answers what its CLI asks after the code.
+      { provider: "enterprise", choose: true },
     ]);
     // Its second step is Google's: the code its page shows, never that page's address. Claude is named nowhere.
     expect(shownText(panel)).toContain("Cole o código que o Google mostrar");
@@ -596,6 +597,72 @@ describe("Conectar uma IA: one picker, plans first", () => {
       expect(shownText(panel)).not.toContain(noCode);
       expect(send().disabled).toBe(false);
     }
+  });
+
+  test("Gemini Enterprise: after Google's code the person picks how it's billed and the subscription, or types the project and picks the region", async () => {
+    const base = fakeAgentBrain(ADA_ID);
+    const geminiOption = { kind: "antigravity" as const, available: true, models: [], defaultModel: null };
+    const { state, machines, dialog, choose, services } = await connect({
+      computers: [{ ...MAC, brains: { claude_code: true, codex: true, antigravity: true } }],
+      brain: { options: [...base.options, geminiOption] },
+    });
+    await choose("Gemini");
+    const panel = within(dialog).getByRole("region", { name: "Seu plano do Gemini" });
+    await click(within(panel).getByRole("button", { name: "Usar o Gemini Enterprise" }));
+    await withPopup(() => click(within(panel).getByRole("button", { name: "Entrar com Google" })));
+    await settle(6);
+    // The computer asks the next thing: read again now.
+    const asks = async (choice: { step: "billing" | "subscription" | "project" | "region"; options: string[] }) => {
+      machines?.endLogin("login_1", { state: "waiting", choice });
+      await act(() =>
+        services.queryClient.invalidateQueries({ queryKey: keys.accountLogin(ORG_ID, "machine_1", "login_1") }),
+      );
+    };
+    const chosen = () => calls(state, "machines.chooseAccountOption").map((c) => c.args.slice(3));
+    const proceed = () => click(within(panel).getByRole("button", { name: "Continuar" }));
+    // How it's billed, in the app's words, the subscription first.
+    await asks({ step: "billing", options: ["subscriptions", "pay_as_you_go"] });
+    await waitFor(() => expect(shownText(panel)).toContain("Como o Gemini vai ser cobrado?"), { timeout: 5000 });
+    const billing = within(panel).getByRole("radiogroup", { name: "Como o Gemini vai ser cobrado?" });
+    expect(
+      within(billing)
+        .getAllByRole("radio")
+        .map((r) => r.textContent),
+    ).toEqual([
+      "Assinatura do Gemini EnterpriseUsa uma licença que sua organização já tem.",
+      "Pagamento por usoCobrado pelos tokens usados, pelo Google Cloud.",
+    ]);
+    await proceed();
+    expect(chosen()).toEqual([["billing", "subscriptions"]]);
+    expect(shownText(panel)).toContain("Enviando sua escolha ao MacBook…");
+    // Its subscriptions by name, each one's project under it; the one picked is sent as the computer listed it.
+    await asks({
+      step: "subscription",
+      options: [
+        "Gemini Enterprise Plus (Project: p1, Location: global)",
+        "Gemini Enterprise Standard (Project: p2, Location: us)",
+      ],
+    });
+    await waitFor(() => expect(shownText(panel)).toContain("Qual assinatura do Gemini Enterprise?"), { timeout: 5000 });
+    expect(shownText(panel)).toContain("Projeto p2 · us");
+    await click(within(panel).getByRole("radio", { name: /Gemini Enterprise Standard/ }));
+    await proceed();
+    expect(chosen()[1]).toEqual(["subscription", "Gemini Enterprise Standard (Project: p2, Location: us)"]);
+    // Paid as you go: the project typed, only a project id goes.
+    await asks({ step: "project", options: [] });
+    await waitFor(() => expect(shownText(panel)).toContain("Qual projeto do Google Cloud?"), { timeout: 5000 });
+    const field = within(panel).getByRole("textbox", { name: "ID do projeto" });
+    await type(field, "Not a project");
+    expect(shownText(panel)).toContain("O ID do projeto tem de 6 a 30 letras minúsculas");
+    expect((within(panel).getByRole("button", { name: "Continuar" }) as HTMLButtonElement).disabled).toBe(true);
+    await type(field, "acme-dev-123");
+    await proceed();
+    expect(chosen()[2]).toEqual(["project", "acme-dev-123"]);
+    await asks({ step: "region", options: ["global", "us", "eu"] });
+    await waitFor(() => expect(shownText(panel)).toContain("Qual região?"), { timeout: 5000 });
+    await click(within(panel).getByRole("radio", { name: "eu" }));
+    await proceed();
+    expect(chosen()[3]).toEqual(["region", "eu"]);
   });
 
   test("Gemini: a sign-in the computer can't share with every agent says so and what to use instead, with no Tentar de novo", async () => {

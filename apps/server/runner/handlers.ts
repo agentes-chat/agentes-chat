@@ -8,6 +8,8 @@ import {
   browserSetupOf,
   type FileEntry,
   inRange,
+  isAccountChoiceStep,
+  isChoiceOption,
   isStreamId,
   isTerminalKeep,
   isTerminalSize,
@@ -1272,10 +1274,17 @@ async function handleAccount(
         req.provider === undefined ? undefined : requireString(req.provider, "provider"),
         req.shared === true,
         req.method === undefined ? undefined : requireString(req.method, "method"),
+        req.choose === true,
       );
     case "code":
       if (typeof req.box !== "object" || req.box === null) throw new RunnerError("bad_request", "box is required");
       await accounts.code(requireString(req.loginId, "loginId"), requireString(req.aad, "aad"), req.box);
+      return {};
+    case "choose":
+      if (!isAccountChoiceStep(req.step) || !isChoiceOption(req.option)) {
+        throw new RunnerError("bad_request", "step and option are required");
+      }
+      accounts.choose(requireString(req.loginId, "loginId"), req.step, req.option);
       return {};
     case "status":
       return accounts.status(requireString(req.loginId, "loginId"));

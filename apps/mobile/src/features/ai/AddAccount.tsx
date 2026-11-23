@@ -1,11 +1,13 @@
-import type { AccountLoginStart, MachineAccount, MachineAccountKind } from "@agenteschat/client";
+import type { AccountChoice, AccountLoginStart, MachineAccount, MachineAccountKind } from "@agenteschat/client";
 import { keys, useAccountLogin, useAiAccounts, useApi } from "@agenteschat/client";
 import { accountInLine, reusableAccount, signInOf } from "@agenteschat/client/lib/ai-accounts";
 import { knownErrorText } from "@agenteschat/client/lib/errors";
 import {
   beginLogin,
+  choiceOptionText,
   freeDuplicate,
   geminiNotShared,
+  isGcpProjectId,
   isSignInCode,
   isUrlWithoutCode,
   loginFailureLine,
@@ -20,7 +22,7 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AccessibilityInfo, Platform, StyleSheet, View } from "react-native";
 import { sealSecret } from "@/lib/secret-box";
-import { Button, fonts, InkOrbit, SkeletonList, Text, useTheme } from "@/ui";
+import { Button, fonts, InkOrbit, OptionTile, SkeletonList, Text, useTheme } from "@/ui";
 import { copyText, successHaptic } from "../shared/parts";
 import { useAiOrg } from "./org";
 import { Note, OpenPage, openPage, PasteField, Step, StepsCard, StepText, Waiting } from "./parts";
@@ -185,6 +187,32 @@ function AddAccountFlow({
   const status = useAccountLogin(orgId, machineId, login?.loginId ?? null);
   const result = status.data;
   const read = loginRead(status);
+  // Gemini Enterprise, once Google's code is in: what its CLI asks the person (how it's billed, which subscription),
+  // the option the person has on it, the question they answered last (until the computer moves on) and a failed send.
+  const choice = result?.state === "waiting" ? result.choice : undefined;
+  const [picked, setPicked] = useState<Partial<Record<AccountChoice["step"], string>>>({});
+  const [answered, setAnswered] = useState<AccountChoice["step"] | null>(null);
+  const [chooseFailed, setChooseFailed] = useState(false);
+  // Paid as you go: the Google Cloud project the person types.
+  const [project, setProject] = useState("");
+  useEffect(() => {
+    if (choice && choice.step !== answered) setAnswered(null);
+  }, [choice, answered]);
+
+  /** The person's answer to what the sign-in asks; the computer goes on with it (or asks the next thing). */
+  const choose = async (asked: AccountChoice, option: string) => {
+    if (!login || answered === asked.step) return;
+    setAnswered(asked.step);
+    setChooseFailed(false);
+    try {
+      await api.machines.chooseAccountOption(orgId, machineId, login.loginId, asked.step, option);
+      void qc.invalidateQueries({ queryKey: keys.accountLogin(orgId, machineId, login.loginId) });
+    } catch {
+      if (gone.current) return;
+      setAnswered(null);
+      setChooseFailed(true);
+    }
+  };
 
   const begin = async (): Promise<AccountLoginStart | null> => {
     setStarting(true);
@@ -524,7 +552,93 @@ function AddAccountFlow({
             </View>
           ) : null}
         </Step>
-        {login && opened ? (
+        {login && opened && choice ? (
+          <Step
+            n={2}
+            divider
+            title={t(`agentPage.work.brain.add.choice.${choice.step}`)}
+            hint={t(`agentPage.work.brain.add.choice.${choice.step}Hint`)}
+            side={read === "reconnecting" ? waiting : undefined}
+          >
+            {answered === choice.step ? (
+              <View style={styles.busy}>
+                <Note icon={<InkOrbit size={15} />} live>
+                  {t("agentPage.work.brain.add.choice.sending", { computer })}
+                </Note>
+              </View>
+            ) : choice.step === "project" ? (
+              <View style={styles.choices}>
+                <PasteField
+                  value={project}
+                  onChangeText={(v) => setProject(v.trim())}
+                  onPasted={(v) => setProject(v.trim())}
+                  label={t("agentPage.work.brain.add.choice.projectLabel")}
+                  placeholder="my-project-123"
+                  onSubmit={() => {
+                    if (isGcpProjectId(project)) void choose(choice, project);
+                  }}
+                />
+                {project && !isGcpProjectId(project) ? (
+                  <Note icon="x">{t("agentPage.work.brain.add.choice.projectShape")}</Note>
+                ) : null}
+                <View style={styles.send}>
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    disabled={!isGcpProjectId(project)}
+                    label={t("agentPage.work.brain.add.choice.continue")}
+                    onPress={() => void choose(choice, project)}
+                  />
+                </View>
+                {chooseFailed ? (
+                  <Note icon="x">{t("agentPage.work.brain.add.choice.failed", { computer })}</Note>
+                ) : null}
+              </View>
+            ) : (
+              <View style={styles.choices}>
+                {choice.options.map((option) => {
+                  const kept = picked[choice.step];
+                  const value = kept && choice.options.includes(kept) ? kept : choice.options[0];
+                  const words = choiceOptionText(t, choice.step, option);
+                  return (
+                    <OptionTile
+                      key={option}
+                      pressed={option === value}
+                      label={words.description ? `${words.title}. ${words.description}` : words.title}
+                      onPress={() => setPicked((p) => ({ ...p, [choice.step]: option }))}
+                    >
+                      <View style={styles.choiceWords}>
+                        <Text variant="subhead" tone="ink">
+                          {words.title}
+                        </Text>
+                        {words.description ? (
+                          <Text variant="small" tone="muted">
+                            {words.description}
+                          </Text>
+                        ) : null}
+                      </View>
+                    </OptionTile>
+                  );
+                })}
+                <View style={styles.send}>
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    label={t("agentPage.work.brain.add.choice.continue")}
+                    onPress={() => {
+                      const kept = picked[choice.step];
+                      const value = kept && choice.options.includes(kept) ? kept : choice.options[0];
+                      if (value) void choose(choice, value);
+                    }}
+                  />
+                </View>
+                {chooseFailed ? (
+                  <Note icon="x">{t("agentPage.work.brain.add.choice.failed", { computer })}</Note>
+                ) : null}
+              </View>
+            )}
+          </Step>
+        ) : login && opened ? (
           <Step
             n={2}
             divider
@@ -680,6 +794,9 @@ const styles = StyleSheet.create({
   flow: { gap: 10 },
   ended: { gap: 10, alignItems: "flex-start" },
   send: { marginTop: 10 },
+  choices: { gap: 8, marginTop: 6 },
+  // Clear of the chosen tile's check in its corner.
+  choiceWords: { gap: 2, paddingRight: 24 },
   // The field's place and height (`PasteField`), so the step keeps most of its size.
   busy: { minHeight: 46, marginTop: 6, justifyContent: "center" },
   code: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 10, marginVertical: 4 },

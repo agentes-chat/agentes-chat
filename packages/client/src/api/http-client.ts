@@ -1437,6 +1437,7 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
             ...(options.accountId ? { accountId: options.accountId } : {}),
             ...(options.email ? { email: options.email } : {}),
             ...(options.provider ? { provider: options.provider } : {}),
+            ...(options.choose ? { choose: true } : {}),
           },
         }),
       sendAccountCode: (orgId, machineId, loginId, box) =>
@@ -1445,6 +1446,10 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         }),
       accountLogin: (orgId, machineId, loginId) =>
         request<AccountLoginStatus>(`${org(orgId)}/machines/${enc(machineId)}/account-logins/${enc(loginId)}`),
+      chooseAccountOption: (orgId, machineId, loginId, step, option) =>
+        request<void>(`${org(orgId)}/machines/${enc(machineId)}/account-logins/${enc(loginId)}/choice`, {
+          json: { step, option },
+        }),
       cancelAccountLogin: (orgId, machineId, loginId) =>
         request<void>(`${org(orgId)}/machines/${enc(machineId)}/account-logins/${enc(loginId)}`, {
           method: "DELETE",

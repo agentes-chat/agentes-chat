@@ -5992,6 +5992,28 @@
           "send": "{{computer}} bilgisayarına gönder",
           "sending": "Kod {{computer}} bilgisayarına gönderiliyor…",
           "sent": "Kod gönderildi. Giriş {{computer}} üzerinde tamamlanıyor.",
+          "choice": {
+            "billing": "Gemini nasıl faturalandırılsın?",
+            "billingHint": "Google bunu koddan sonra sorar. Abonelik, kuruluşunuzun zaten sahip olduğu Gemini Enterprise lisansını kullanır.",
+            "subscription": "Hangi Gemini Enterprise aboneliği?",
+            "subscriptionHint": "Yöneticinizin bu Google hesabına atadıkları.",
+            "subscriptionWhere": "Proje {{project}} · {{location}}",
+            "project": "Hangi Google Cloud projesi?",
+            "projectHint": "Kullandıkça öde bu projeye faturalandırılır. Projeye güvendiğinizden emin olun.",
+            "projectLabel": "Proje kimliği",
+            "projectShape": "Proje kimliği 6 ila 30 küçük harf, rakam veya kısa çizgiden oluşur ve bir harfle başlar.",
+            "region": "Hangi bölge?",
+            "regionHint": "Google'ın bu proje için Gemini'yi çalıştırdığı yer.",
+            "billingModel": {
+              "subscriptions": "Gemini Enterprise aboneliği",
+              "subscriptionsText": "Kuruluşunuzun zaten sahip olduğu bir lisansı kullanır.",
+              "pay_as_you_go": "Kullandıkça öde",
+              "pay_as_you_goText": "Kullandığınız token kadar Google Cloud üzerinden faturalandırılır."
+            },
+            "continue": "Devam",
+            "sending": "Seçiminiz {{computer}} bilgisayarına gönderiliyor…",
+            "failed": "Seçiminiz {{computer}} bilgisayarına gönderilemedi. Tekrar deneyin."
+          },
           "local": "{{computer}} bilgisayarının başında mısınız? Tarayıcısı kendiliğinden açıldıysa orada yetki vermeniz yeterli.",
           "deviceCode": "ChatGPT kodu",
           "grokCode": "Grok kodu",

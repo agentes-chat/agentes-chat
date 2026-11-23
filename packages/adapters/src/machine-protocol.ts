@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 77;
+export const MACHINE_PROTOCOL_VERSION = 78;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -1348,7 +1348,8 @@ export type AccountRequest =
    * Protocol 29, `shared`: one sign-in for every agent of its owner there (`SHARED_ACCOUNTS_PROTOCOL`).
    * Protocol 50, `method` (a Claude subscription sign-in only): `setup_token` in system mode for all agents, or
    * `cli_login`; a runner that can't do it refuses (`unsupported`) and never signs in another way, and `again` on an
-   * account that signs in another way is refused too. Absent: as before.
+   * account that signs in another way is refused too. Absent: as before. Protocol 78, `choose` (a Gemini Enterprise
+   * sign-in only): the person answers what the CLI asks after the code (`AGY_CHOICE_PROTOCOL`).
    */
   | {
       action: "begin";
@@ -1359,8 +1360,11 @@ export type AccountRequest =
       provider?: string;
       shared?: boolean;
       method?: ClaudeLoginMethod;
+      choose?: boolean;
     }
   | { action: "code"; loginId: string; aad: string; box: WireSecretBox }
+  /** Protocol 78: the person's answer to the sign-in's `choice` (one of its `options`); refused once it moved on. */
+  | { action: "choose"; loginId: string; step: AccountChoiceStep; option: string }
   | { action: "status"; loginId: string }
   | { action: "cancel"; loginId: string }
   /**
@@ -2481,6 +2485,52 @@ export const TASK_LIMIT_PROTOCOL = 75;
  * app's version. An older runner runs whatever `agy` the person installed.
  */
 export const AGY_COPY_PROTOCOL = 76;
+
+/**
+ * Protocol 78 (ADR 0143): Gemini Enterprise's sign-in asks the person what the Antigravity CLI asks once Google's code
+ * is in (how it's billed, then which subscription; or, paid as you go, which Google Cloud project and region) instead
+ * of the runner choosing. `begin` with `choose`: the
+ * person's app answers. A waiting sign-in's `status` then carries `choice` while the CLI waits on one, and `choose`
+ * answers it with one of its `options`. Without `choose` (an older app) the runner takes Subscriptions and the one
+ * subscription itself; the server sends `choose` to no older runner, which does the same.
+ */
+export const AGY_CHOICE_PROTOCOL = 78;
+/**
+ * What a sign-in may ask the person (`AGY_CHOICE_PROTOCOL`): how it's billed, then which subscription; paid as you go,
+ * which Google Cloud project (typed: no options, `isGcpProjectId`) and which region.
+ */
+export const ACCOUNT_CHOICE_STEPS = ["billing", "subscription", "project", "region"] as const;
+export type AccountChoiceStep = (typeof ACCOUNT_CHOICE_STEPS)[number];
+export const isAccountChoiceStep = (v: unknown): v is AccountChoiceStep =>
+  (ACCOUNT_CHOICE_STEPS as readonly unknown[]).includes(v);
+/** Gemini Enterprise's billing models, as the apps name them (the CLI's own words are English). */
+export const AGY_BILLING_MODELS = ["subscriptions", "pay_as_you_go"] as const;
+/** At most this many options, each at most `MAX_CHOICE_OPTION` characters (a subscription: its name and project). */
+export const MAX_CHOICE_OPTIONS = 20;
+export const MAX_CHOICE_OPTION = 200;
+/** A Google Cloud project id: 6 to 30 lowercase letters, digits and hyphens, a letter first, never a hyphen last. */
+export const isGcpProjectId = (v: unknown): v is string =>
+  typeof v === "string" && /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(v);
+/**
+ * A question a sign-in waits on: its step and its options (`billing`: `AGY_BILLING_MODELS`; `project`: none, the person
+ * types it; else the CLI's rows).
+ */
+export interface AccountChoice {
+  step: AccountChoiceStep;
+  options: string[];
+}
+export const isChoiceOption = (v: unknown): v is string =>
+  typeof v === "string" && v.length > 0 && v.length <= MAX_CHOICE_OPTION && !/[\p{Cc}]/u.test(v);
+export const isAccountChoice = (v: unknown): v is AccountChoice => {
+  if (typeof v !== "object" || v === null) return false;
+  const c = v as Record<string, unknown>;
+  return (
+    isAccountChoiceStep(c.step) &&
+    Array.isArray(c.options) &&
+    c.options.length <= MAX_CHOICE_OPTIONS &&
+    c.options.every(isChoiceOption)
+  );
+};
 /** The tasks a computer may run at once (`maxConcurrentTasks` in the runner's config). */
 export const TASK_LIMIT_BOUNDS = [1, 20] as const;
 
@@ -3131,7 +3181,7 @@ export interface MachineReplies {
   secret: { publicKey?: string; sites?: boolean; size?: number; superseded?: boolean };
   /**
    * `begin`: what the person needs (`url`; Claude Code: `publicKey`; Codex: `userCode`);
-   * `status`: `state` and, when done, `account`; `list`: `accounts`; `code`, `cancel`, `remove`: `{}`.
+   * `status`: `state` and, when done, `account`; `list`: `accounts`; `code`, `choose`, `cancel`, `remove`: `{}`.
    */
   account: {
     url?: string;
@@ -3146,6 +3196,8 @@ export interface MachineReplies {
     code?: AccountLoginFailure;
     /** With `code`: what the CLI itself said, without tokens or the pasted code, cut at a word. */
     message?: string;
+    /** `waiting` (protocol 78, a sign-in begun with `choose`): what the CLI waits on the person to choose. */
+    choice?: AccountChoice;
   };
   /** `cwd`: where it runs, relative to the agent's folder (`.worktrees/<taskId>` with a branch). */
   "task.start": {

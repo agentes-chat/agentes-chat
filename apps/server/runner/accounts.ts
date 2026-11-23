@@ -19,9 +19,12 @@ import { AGENT_WORKER_HOMES, GROK_ACCOUNT_HOMES } from "@agenteschat/adapters/co
 import {
   ACCOUNT_KINDS,
   ACCOUNT_LOGIN_TTL_MS,
+  type AccountChoice,
+  type AccountChoiceStep,
   type AccountKind,
   type AccountLoginFailure,
   type AccountLoginState,
+  AGY_BILLING_MODELS,
   type AuthMethod,
   accountCodeAad,
   CURSOR_KEY_PROVIDER,
@@ -29,8 +32,11 @@ import {
   isAccountId,
   isAccountKind,
   isAuthMethod,
+  isChoiceOption,
   isClaudeLoginMethod,
+  isGcpProjectId,
   isLoginEmail,
+  MAX_CHOICE_OPTIONS,
   MAX_MACHINE_ACCOUNTS,
   type MachineReplies,
   OPENCODE_KEY_PROVIDER,
@@ -59,6 +65,7 @@ import { type Launcher, PROBE_AGENT_UID } from "./agent-users";
 import {
   AGY_SIGN_IN_FILE,
   type AgySignIn,
+  agyAuthMethodOf,
   agyAuthOf,
   agyKeychain,
   agyRuntimeDir,
@@ -429,6 +436,13 @@ const PASTE_MODE = new RegExp(`${String.fromCharCode(27)}\\[\\?2004([hl])`, "g")
 const PASTE_ENTER_MS = 300;
 /** After the CLI exits, how long its last output may still take to arrive. */
 const LAST_OUTPUT_MS = 500;
+/**
+ * Gemini Enterprise's sign-in (ADR 0143 §4): the CLI's own screens, started with no arguments. `acp --login` only
+ * exchanges Google's code, and leaves a personal sign-in whatever `auth.type` says.
+ */
+const AGY_ENTERPRISE_LOGIN_ARGS: readonly string[] = [];
+/** Once its subscription is picked, how often its saved sign-in is looked for, besides each redraw. */
+const AGY_SIGNED_IN_POLL_MS = 500;
 
 /**
  * What a turn of an agent thinking with an account root keeps (system mode, protocol 29) gets over its worker
@@ -1257,6 +1271,163 @@ export function parseAgyLoginUrl(output: string, final = false): string | null {
   return urlsIn(stripAnsi(output), (h) => hostIs(h, "accounts.google.com"), final)[0]?.url ?? null;
 }
 
+/** A hyperlink's target (OSC 8), once its end arrived. */
+const OSC8_LINK = new RegExp(`${ESC}\\]8;[^;${BEL}${ESC}]*;([^${BEL}${ESC}]+)(?:${BEL}|${ESC}\\\\)`, "g");
+
+/**
+ * The Google sign-in link on the Antigravity CLI's own sign-in screens (Gemini Enterprise's): the target of its
+ * "Click here" hyperlink. The link's text is wrapped over several lines, so only the hyperlink has it whole.
+ */
+export function parseAgyLinkedUrl(output: string): string | null {
+  for (const m of output.matchAll(OSC8_LINK)) {
+    const url = m[1] ?? "";
+    try {
+      const u = new URL(url);
+      if (u.protocol === "https:" && hostIs(u.hostname.toLowerCase(), "accounts.google.com")) return url;
+    } catch {
+      // not a URL
+    }
+  }
+  return null;
+}
+
+/**
+ * A menu on one of the CLI's screens: its rows under the last `heading` shown, and the row its cursor (`>`) is on.
+ * `numbered`: its rows are "1. …"; else each one is one word (the regions).
+ */
+export function agyMenu(screen: string, heading: string, numbered = true): { rows: string[]; at: number } | null {
+  const lines = screen.split("\n");
+  let start = lines.length - 1;
+  while (start >= 0 && !lines[start]?.includes(heading)) start--;
+  if (start < 0) return null;
+  const rows: string[] = [];
+  let at = -1;
+  for (const line of lines.slice(start + 1)) {
+    const m = numbered ? /^\s*(>)?\s*\d+\.\s+(\S.*?)\s*$/.exec(line) : /^\s*(>)?\s+([a-z0-9-]+)\s*$/.exec(line);
+    if (m) {
+      if (m[1]) at = rows.length;
+      rows.push(m[2] ?? "");
+    } else if (rows.length && !line.trim()) break;
+  }
+  return rows.length ? { rows, at } : null;
+}
+
+/**
+ * Gemini Enterprise's sign-in screens, in order (Antigravity CLI 1.5.15, 2026-11-23): a Google Cloud project, Google
+ * Cloud's own sign-in (not advanced SSO), then, after Google's code, the billing model, and the subscription; or, paid
+ * as you go, the project typed in its field and the region (its rows unnumbered). The first two always take the same
+ * row; the rest are the person's to choose (`ask`, `AGY_CHOICE_PROTOCOL`). Its last question (`last`) signs in.
+ */
+const AGY_ENTERPRISE_SCREENS: readonly {
+  heading: string;
+  pick?: RegExp;
+  ask?: AccountChoiceStep;
+  typed?: boolean;
+  numbered?: boolean;
+  last?: boolean;
+}[] = [
+  { heading: "Select login method", pick: /Use a Google Cloud project/ },
+  { heading: "Google Cloud sign-in method", pick: /Continue with Google Cloud/ },
+  { heading: "Select billing model", ask: "billing" },
+  { heading: "Provide Google Cloud project", ask: "project", typed: true },
+  { heading: "Choose region", ask: "region", numbered: false, last: true },
+  { heading: "Select available subscription", ask: "subscription", last: true },
+];
+/** The billing screen's rows, by the billing model each one is. */
+const AGY_BILLING_ROWS: Record<(typeof AGY_BILLING_MODELS)[number], RegExp> = {
+  subscriptions: /^Subscriptions\b/,
+  pay_as_you_go: /^Pay As You Go\b/,
+};
+/** The subscription screen's way out to typing a project, which is not a subscription. */
+const AGY_NO_SUBSCRIPTION_ROW = /Can't find your subscription/i;
+
+/** A question's options and the row each one stands for: billing models by their row, subscriptions as listed. */
+function agyOptions(step: AccountChoiceStep, rows: string[]): Map<string, number> {
+  const options = new Map<string, number>();
+  if (step === "billing") {
+    for (const model of AGY_BILLING_MODELS) {
+      const row = rows.findIndex((r) => AGY_BILLING_ROWS[model].test(r));
+      if (row >= 0) options.set(model, row);
+    }
+    return options;
+  }
+  rows.forEach((r, row) => {
+    if (!AGY_NO_SUBSCRIPTION_ROW.test(r) && isChoiceOption(r) && options.size < MAX_CHOICE_OPTIONS) options.set(r, row);
+  });
+  return options;
+}
+
+/**
+ * What to press on the screen shown (`picked`: the Enter that answers a question; `last`: the one that signs in), or
+ * the question it waits on.
+ */
+export type AgyEnterpriseStep =
+  | { screen: number; keys: string; picked?: AccountChoiceStep; last?: boolean }
+  | { screen: number; ask: AccountChoice };
+
+/**
+ * The step on the screen shown, from screen `from` on, with the person's answers so far (`picks`): a key towards the
+ * row to take, the question no answer covers yet, or null on a screen of none of them.
+ */
+export function agyEnterpriseStep(
+  text: string,
+  from = 0,
+  picks: Partial<Record<AccountChoiceStep, string>> = {},
+): AgyEnterpriseStep | null {
+  // The furthest screen shown: an earlier one may still be on the screen under it.
+  for (let screen = AGY_ENTERPRISE_SCREENS.length - 1; screen >= from; screen--) {
+    const { heading, pick, ask, typed, numbered = true, last } = AGY_ENTERPRISE_SCREENS[screen] ?? { heading: "" };
+    if (typed && ask) {
+      // A field, not a menu: the answer typed once, then Enter once the field shows it.
+      const field = agyField(text, heading);
+      if (field === null) continue;
+      const wanted = picks[ask];
+      if (wanted === undefined) return { screen, ask: { step: ask, options: [] } };
+      if (field === wanted) return { screen, keys: "\r", picked: ask };
+      // Empty: typed whole. On its way: nothing more. Something else in it: rubbed out first.
+      return { screen, keys: !field ? wanted : wanted.startsWith(field) ? "" : "\x7f".repeat(field.length) };
+    }
+    const menu = agyMenu(text, heading, numbered);
+    if (!menu) continue;
+    let target = pick ? menu.rows.findIndex((r) => pick.test(r)) : -1;
+    if (ask) {
+      const options = agyOptions(ask, menu.rows);
+      const wanted = picks[ask];
+      target = wanted === undefined ? -1 : (options.get(wanted) ?? -1);
+      if (target < 0) return { screen, ask: { step: ask, options: [...options.keys()] } };
+    }
+    if (target < 0 || menu.at < 0) return null;
+    if (menu.at !== target) return { screen, keys: `${ESC}[${menu.at < target ? "B" : "A"}` };
+    return { screen, keys: "\r", ...(ask ? { picked: ask } : {}), ...(last ? { last } : {}) };
+  }
+  return null;
+}
+
+/** The project's field placeholder, drawn in the field while it is empty. */
+const AGY_FIELD_PLACEHOLDER = "my-gcp-project";
+
+/**
+ * What a field on one of the CLI's screens holds: its line (" > …") under the last `heading` shown; "" while empty
+ * (its placeholder); null where no such screen is shown.
+ */
+export function agyField(screen: string, heading: string): string | null {
+  const lines = screen.split("\n");
+  let start = lines.length - 1;
+  while (start >= 0 && !lines[start]?.includes(heading)) start--;
+  if (start < 0) return null;
+  for (const line of lines.slice(start + 1)) {
+    const m = /^\s*>\s?(.*?)\s*$/.exec(line);
+    if (m) return m[1] === AGY_FIELD_PLACEHOLDER ? "" : (m[1] ?? "");
+  }
+  return null;
+}
+
+/** The CLI refusing Gemini Enterprise's sign-in on its screen: Google's code, the license, or the project. */
+const AGY_ENTERPRISE_REFUSED =
+  /couldn't log in[^\n]*|No Gemini Enterprise license[^\n]*|\[Auth Error\][^\n]*|Failed to select license[^\n]*/;
+/** A screen the CLI shows only once signed in: its first-run setup, or its banner with the project. */
+const AGY_SIGNED_IN_SCREEN = /Choose your color scheme|Terms of Service|Do you trust the contents|GCP Project:/;
+
 /** What the Antigravity CLI says when it has no sign-in to think with. */
 const AGY_SIGN_IN_WORDS = /auth(?:entication)? required|not (?:authenticated|logged in|signed in)|sign in/i;
 
@@ -1493,6 +1664,22 @@ interface Login {
   started?: boolean;
   /** `begin` waits on this for the printed URL. */
   watch?: () => void;
+  /**
+   * Gemini Enterprise's sign-in on the CLI's own screens (`agyEnterpriseStep`): the furthest screen it reached; whether
+   * the person answers its questions (`choose`), their answers (`picks`) and the question it waits on (`asking`); the
+   * screen it last pressed a key on (no key again until it changes), the subscription it picked, and once its sign-in
+   * is saved, `done` (the CLI is then stopped).
+   */
+  agy?: {
+    screen: number;
+    choose: boolean;
+    picks: Partial<Record<AccountChoiceStep, string>>;
+    asking?: AccountChoice;
+    acted?: string;
+    subscription?: string;
+    done?: boolean;
+    poll?: ReturnType<typeof setInterval>;
+  };
 }
 
 export class AccountManager {
@@ -1739,6 +1926,8 @@ export class AccountManager {
     provider?: string,
     shared = false,
     method?: string,
+    /** Gemini Enterprise: the person answers what the CLI asks after the code (`AGY_CHOICE_PROTOCOL`). */
+    choose = false,
   ): Promise<MachineReplies["account"]> {
     if (this.closed) throw new RunnerError("internal", "The runner is stopping");
     if (!isAccountKind(kind)) throw new RunnerError("bad_request", "Unknown account kind");
@@ -1862,6 +2051,8 @@ export class AccountManager {
       return this.beginKey(kind, loginId, dir, provider as PlanId, pair, again, forAll);
     // Which Google sign-in the CLI asks for: a personal account's, or Gemini Enterprise's.
     if (kind === "antigravity") writeAgySettings(dir, enterprise ? "oauth-business" : "oauth-personal");
+    // Signed in again: the sign-in it had says nothing of this one, and a valid one would skip the screens.
+    if (enterprise) await rm(path.join(dir, AGY_SIGN_IN_FILE), { force: true }).catch(() => undefined);
 
     const login: Login = {
       id: loginId,
@@ -1876,6 +2067,8 @@ export class AccountManager {
       startedAt: Date.now(),
       timer: null,
       again,
+      // Without the person (an older app): Subscriptions, and the one subscription listed.
+      ...(enterprise ? { agy: { screen: 0, choose, picks: choose ? {} : { billing: "subscriptions" } } } : {}),
     };
     // The runner began to stop while this was prepared: `close` ended the sign-ins it knew, and wouldn't end this one.
     if (this.closed) {
@@ -1884,8 +2077,9 @@ export class AccountManager {
     }
     try {
       if (forAll && kind === "claude_code" && !cliShared) this.spawnInTerminal(login, ["setup-token"]);
-      else if (kind === "antigravity") this.spawnInTerminal(login, LOGIN_ARGS.antigravity);
-      else this.spawnLogin(login, email);
+      else if (kind === "antigravity") {
+        this.spawnInTerminal(login, enterprise ? AGY_ENTERPRISE_LOGIN_ARGS : LOGIN_ARGS.antigravity);
+      } else this.spawnLogin(login, email);
     } catch (err) {
       if (!again) await this.discard(kind, loginId);
       const why = err instanceof Error ? err.message : String(err);
@@ -1907,7 +2101,7 @@ export class AccountManager {
           : kind === "grok"
             ? parseGrokLogin(login.output, final)
             : kind === "antigravity"
-              ? toUrl(parseAgyLoginUrl(login.output, final))
+              ? toUrl(login.agy ? parseAgyLinkedUrl(login.output) : parseAgyLoginUrl(login.output, final))
               : kind === "cursor"
                 ? toUrl(parseCursorLoginUrl(login.output, final))
                 : toUrl(parseClaudeLoginUrl(this.shown(login), final));
@@ -1993,7 +2187,9 @@ export class AccountManager {
    * that screen, the token taken as soon as it is whole, since the screen may be gone when the CLI ends: also before
    * each erase, as one piece read late can hold the token's last characters and the screen cleared after it. The
    * Antigravity CLI's `acp --login` reads the pasted code only from its terminal (with none it says "no controlling
-   * terminal; cannot complete interactive login", 1.5.3): what it prints is read as it comes.
+   * terminal; cannot complete interactive login", 1.5.3): what it prints is read as it comes. Its Gemini Enterprise
+   * sign-in is its own screens, read off a screen too and answered a key at a time (`driveAgy`); its link, off what it
+   * prints.
    */
   private spawnInTerminal(login: Login, args: readonly string[]) {
     const [file, ...pre] = this.command(login.kind);
@@ -2004,7 +2200,7 @@ export class AccountManager {
         login.token ??= parseSetupToken(screen.text()) ?? undefined;
       });
       login.screen = screen;
-    }
+    } else if (login.agy) login.screen = new Screen(LOGIN_TERMINAL.rows);
     const decoder = new TextDecoder();
     let eof: () => void = () => undefined;
     const lastOutput = new Promise<void>((resolve) => {
@@ -2014,7 +2210,7 @@ export class AccountManager {
       cwd: login.dir,
       env,
       terminal: {
-        ...(login.screen ? TOKEN_TERMINAL : LOGIN_TERMINAL),
+        ...(login.kind === "claude_code" ? TOKEN_TERMINAL : LOGIN_TERMINAL),
         data: (_t, bytes) => {
           if (login.state !== "waiting") return;
           const text = decoder.decode(bytes, { stream: true });
@@ -2023,8 +2219,10 @@ export class AccountManager {
           const screen = login.screen;
           if (screen) {
             screen.write(text);
-            login.token ??= parseSetupToken(screen.text()) ?? undefined;
-          } else login.output = (login.output + text).slice(-OUTPUT_KEEP);
+            if (login.kind === "claude_code") login.token ??= parseSetupToken(screen.text()) ?? undefined;
+          }
+          if (!screen || login.agy) login.output = (login.output + text).slice(-OUTPUT_KEEP);
+          if (login.agy) this.driveAgy(login);
           login.watch?.();
         },
         exit: () => eof(),
@@ -2049,10 +2247,99 @@ export class AccountManager {
         } catch {
           // closed already
         }
-        this.exited(login, proc.signalCode === null ? code : null);
+        // Gemini Enterprise's sign-in saved: stopped then, as its CLI goes on to its first-run setup.
+        this.exited(login, login.agy?.done ? 0 : proc.signalCode === null ? code : null);
       },
       () => this.exited(login, null),
     );
+  }
+
+  /**
+   * Gemini Enterprise's sign-in, a key at a time as its screens come (`agyEnterpriseStep`), waiting on the person where
+   * it asks something (`choose`); once its subscription is picked, its saved sign-in (or a screen it shows only once
+   * signed in) stops the CLI, as signed in. The CLI's refusal, or nothing to pick from, ends it.
+   */
+  private driveAgy(login: Login) {
+    const agy = login.agy;
+    if (!agy) return;
+    const text = login.screen?.text();
+    if (text === undefined || login.state !== "waiting" || login.exited || agy.done) {
+      if (agy.poll) clearInterval(agy.poll);
+      return;
+    }
+    const refused = AGY_ENTERPRISE_REFUSED.exec(text)?.[0]?.trim();
+    if (refused) {
+      this.failWith(
+        login,
+        "failed",
+        loginFailureOf(refused),
+        `${LABEL.antigravity} couldn't sign in to Gemini Enterprise: ${refused}`,
+        refused,
+      );
+      return void this.drop(login);
+    }
+    if (agy.subscription) {
+      if (agyAuthMethodOf(login.dir) !== "gcp" && !AGY_SIGNED_IN_SCREEN.test(text)) return;
+      agy.done = true;
+      if (agy.poll) clearInterval(agy.poll);
+      login.term?.kill("SIGTERM");
+      return;
+    }
+    if (text === agy.acted) return;
+    let step = agyEnterpriseStep(text, agy.screen, agy.picks);
+    // Nobody to ask: the one subscription listed.
+    if (step && "ask" in step && !agy.choose && step.ask.step === "subscription" && step.ask.options.length === 1) {
+      agy.picks.subscription = step.ask.options[0];
+      step = agyEnterpriseStep(text, agy.screen, agy.picks);
+    }
+    if (!step) return;
+    if ("ask" in step) {
+      const { step: question, options } = step.ask;
+      if ((!options.length && question !== "project") || !agy.choose) {
+        this.failWith(
+          login,
+          "failed",
+          "cli_exit",
+          question === "billing"
+            ? "The Antigravity CLI offered no billing model for Gemini Enterprise that this computer knows."
+            : question === "project" || question === "region"
+              ? "The Antigravity CLI asked for a Google Cloud project or region with nobody to answer it."
+              : options.length > 1
+                ? `This Google account has more than one Gemini Enterprise subscription (${options.join("; ")}). Update the app to pick one.`
+                : "This Google account has no Gemini Enterprise subscription. Ask your administrator to assign you a license, then sign in again.",
+        );
+        return void this.drop(login);
+      }
+      // The person's to answer (`choose`).
+      agy.screen = step.screen;
+      agy.asking = step.ask;
+      return;
+    }
+    agy.asking = undefined;
+    agy.screen = step.screen;
+    agy.acted = text;
+    if (step.keys) login.term?.write(step.keys);
+    if (step.last) {
+      agy.subscription =
+        step.picked === "subscription" ? agy.picks.subscription : `${agy.picks.project} (pay as you go)`;
+      agy.poll = setInterval(() => this.driveAgy(login), AGY_SIGNED_IN_POLL_MS);
+      agy.poll.unref?.();
+    }
+  }
+
+  /** The person's answer to the question a Gemini Enterprise sign-in waits on (`choice`); refused once it moved on. */
+  choose(loginId: string, step: string, option: string): void {
+    const login = this.logins.get(loginId);
+    if (!login) throw new RunnerError("not_found", "This sign-in is gone (it expired or was canceled)");
+    const agy = login.agy;
+    const asking = agy?.asking;
+    const fits = asking?.step === "project" ? isGcpProjectId(option) : asking?.options.includes(option);
+    if (!agy || login.state !== "waiting" || asking?.step !== step || !fits) {
+      throw new RunnerError("bad_request", "This sign-in isn't asking that now");
+    }
+    agy.picks[asking.step] = option;
+    agy.asking = undefined;
+    this.driveAgy(login);
   }
 
   /** A key account's sign-in: nothing runs; it waits for the plan's key, sealed to `pair`. */
@@ -2219,6 +2506,7 @@ export class AccountManager {
       ...(login.error ? { error: login.error } : {}),
       ...(login.failure ? { code: login.failure } : {}),
       ...(login.said ? { message: login.said } : {}),
+      ...(login.state === "waiting" && login.agy?.asking ? { choice: login.agy.asking } : {}),
     };
   }
 
@@ -2255,7 +2543,7 @@ export class AccountManager {
     login.watch?.();
     if (login.state !== "waiting") return;
     void (async () => {
-      if (login.screen) {
+      if (login.screen && login.kind === "claude_code") {
         const token = parseSetupToken(this.shown(login), true) ?? login.token;
         if (code === 0 && token && (await this.keepToken(login, token))) return;
         if (code === 0 && login.state === "waiting") {
@@ -2283,6 +2571,14 @@ export class AccountManager {
             "sandbox",
             `${LABEL.grok} signed in, but its sandbox can't start on this computer for an agent (${sandbox}).`,
             sandbox,
+          );
+        } else if (info.loggedIn && !info.statusUnknown && login.agy && agyAuthOf(login.dir) !== "oauth-business") {
+          // Gemini Enterprise, as Google signed it in (its sign-in's own word), never as the settings asked for it.
+          this.failWith(
+            login,
+            "failed",
+            "not_signed_in_after_login",
+            `${LABEL.antigravity} signed in with a personal Google account, not a Gemini Enterprise subscription. Sign in again and pick the subscription, or ask your administrator for a license.`,
           );
         } else if (info.loggedIn && !info.statusUnknown) {
           const unshared =
@@ -2462,6 +2758,8 @@ export class AccountManager {
   private settle(login: Login, state: AccountLoginState, error?: string) {
     login.state = state;
     if (error) login.error = error;
+    // Signed in (again): the reading was the old sign-in's (another plan's windows); it is read again.
+    if (state === "done") this.usage.delete(login.id);
     login.privateKey = undefined;
     login.code = undefined;
     login.token = undefined;

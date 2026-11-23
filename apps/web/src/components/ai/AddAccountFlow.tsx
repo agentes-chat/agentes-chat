@@ -1,11 +1,19 @@
-import type { AccountLoginStart, AccountLoginStatus, MachineAccount, MachineAccountKind } from "@agenteschat/client";
+import type {
+  AccountChoice,
+  AccountLoginStart,
+  AccountLoginStatus,
+  MachineAccount,
+  MachineAccountKind,
+} from "@agenteschat/client";
 import { keys, useAccountLogin, useAiAccounts, useApi } from "@agenteschat/client";
 import { accountInLine, accountTitle, reusableAccount, signInOf } from "@agenteschat/client/lib/ai-accounts";
 import { knownErrorText } from "@agenteschat/client/lib/errors";
 import {
   beginLogin,
+  choiceOptionText,
   freeDuplicate,
   geminiNotShared,
+  isGcpProjectId,
   isSignInCode,
   isUrlWithoutCode,
   type LoginRead,
@@ -16,7 +24,18 @@ import {
 } from "@agenteschat/client/lib/machines";
 import { GEMINI_ENTERPRISE_PROVIDER, planKeyFits, signInKey } from "@agenteschat/client/lib/plans";
 import { accountCodeAad, INSECURE_CONTEXT, sealSecret } from "@agenteschat/client/lib/secret-box";
-import { AffixInput, Button, cx, Icon, InfoHint, Locked, ProviderLogo, SettingNote, SwapLabel } from "@agenteschat/ui";
+import {
+  AffixInput,
+  Button,
+  cx,
+  Icon,
+  InfoHint,
+  Locked,
+  OptionList,
+  ProviderLogo,
+  SettingNote,
+  SwapLabel,
+} from "@agenteschat/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -304,6 +323,7 @@ function AddAccountFlow({
   const api = useApi();
   const qc = useQueryClient();
   const codeId = useId();
+  const projectId = useId();
   // Cursor: its sign-in, or (chosen under it) its API key, which goes like a coding plan's key.
   const [cursorKey, setCursorKey] = useState(false);
   const { plan, provider: keyProvider } = signInKey(provider, kind, cursorKey);
@@ -349,6 +369,17 @@ function AddAccountFlow({
   const status = useAccountLogin(org.id, machineId, login?.loginId ?? null);
   const result = status.data;
   const read = loginRead(status);
+  // Gemini Enterprise, once Google's code is in: what its CLI asks the person (how it's billed, which subscription),
+  // the option the person has on it, the question they answered last (until the computer moves on) and a failed send.
+  const choice = result?.state === "waiting" ? result.choice : undefined;
+  const [picked, setPicked] = useState<Partial<Record<AccountChoice["step"], string>>>({});
+  const [answered, setAnswered] = useState<AccountChoice["step"] | null>(null);
+  const [chooseFailed, setChooseFailed] = useState(false);
+  // Paid as you go: the Google Cloud project the person types.
+  const [project, setProject] = useState("");
+  useEffect(() => {
+    if (choice && choice.step !== answered) setAnswered(null);
+  }, [choice, answered]);
 
   const begin = async (popup?: Window | null): Promise<AccountLoginStart | null> => {
     setStarting(true);
@@ -459,6 +490,21 @@ function AddAccountFlow({
     const sealed = await sealSecret(l.publicKey, text, accountCodeAad(l.loginId, org.id));
     await api.machines.sendAccountCode(org.id, machineId, l.loginId, sealed);
     void qc.invalidateQueries({ queryKey: keys.accountLogin(org.id, machineId, l.loginId) });
+  };
+
+  /** The person's answer to what the sign-in asks; the computer goes on with it (or asks the next thing). */
+  const choose = async (asked: AccountChoice, option: string) => {
+    if (!login || answered === asked.step) return;
+    setAnswered(asked.step);
+    setChooseFailed(false);
+    try {
+      await api.machines.chooseAccountOption(org.id, machineId, login.loginId, asked.step, option);
+      void qc.invalidateQueries({ queryKey: keys.accountLogin(org.id, machineId, login.loginId) });
+    } catch {
+      if (gone.current) return;
+      setAnswered(null);
+      setChooseFailed(true);
+    }
   };
 
   /** The code (Claude) or the plan's key: to this sign-in, or to one login per `fanOut` target not sent yet. */
@@ -787,6 +833,68 @@ function AddAccountFlow({
       </Step>
     );
   const signInHint = t("agentPage.work.brain.add.stepOneHint", { computer, brand: t(`aiAccounts.connect.${kind}`) });
+  /** A question the sign-in asks (Gemini Enterprise): its options as rows, the first one taken until another is. */
+  const choiceStep = (asked: AccountChoice) => {
+    const kept = picked[asked.step];
+    const value = kept && asked.options.includes(kept) ? kept : (asked.options[0] ?? "");
+    // The project is typed, the rest picked.
+    const typed = asked.step === "project";
+    const answer = typed ? (isGcpProjectId(project) ? project : "") : value;
+    const title = t(`agentPage.work.brain.add.choice.${asked.step}`);
+    return (
+      <Step side={reads.includes("reconnecting") ? waiting : undefined}>
+        <StepTitle
+          title={title}
+          hint={t(`agentPage.work.brain.add.choice.${asked.step}Hint`)}
+          {...(typed ? { htmlFor: projectId } : {})}
+        />
+        {answered === asked.step ? (
+          <p tabIndex={-1} role="status" className="agp-addacct__busy ac-iconline">
+            <Icon name="spinner" size={14} />
+            <span>{t("agentPage.work.brain.add.choice.sending", { computer })}</span>
+          </p>
+        ) : (
+          <>
+            {typed ? (
+              <AffixInput
+                id={projectId}
+                value={project}
+                autoComplete="off"
+                spellCheck={false}
+                placeholder="my-project-123"
+                aria-label={t("agentPage.work.brain.add.choice.projectLabel")}
+                onChange={(e) => setProject(e.target.value.trim())}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && answer) {
+                    e.preventDefault();
+                    void choose(asked, answer);
+                  }
+                }}
+              />
+            ) : (
+              <OptionList
+                aria-label={title}
+                value={value}
+                onValueChange={(v) => setPicked((p) => ({ ...p, [asked.step]: v }))}
+                options={asked.options.map((o) => ({ value: o, ...choiceOptionText(t, asked.step, o) }))}
+              />
+            )}
+            {typed && project && !answer && (
+              <SettingNote icon="alert">{t("agentPage.work.brain.add.choice.projectShape")}</SettingNote>
+            )}
+            <span className="agp-addacct__acts">
+              <Button size="sm" variant="primary" disabled={!answer} onClick={() => void choose(asked, answer)}>
+                {t("agentPage.work.brain.add.choice.continue")}
+              </Button>
+            </span>
+            {chooseFailed && (
+              <SettingNote icon="alert">{t("agentPage.work.brain.add.choice.failed", { computer })}</SettingNote>
+            )}
+          </>
+        )}
+      </Step>
+    );
+  };
   // Under `quiet` the step that starts the sign-in shows no number of its own, so the steps after it count one less.
   const after = (n: number) => (quiet ? n - 1 : n);
   let steps: ReactNode;
@@ -872,7 +980,8 @@ function AddAccountFlow({
             hint={signInHint}
           />,
         )}
-        {login && opened && (
+        {login && opened && choice && choiceStep(choice)}
+        {login && opened && !choice && (
           <Step side={busy && !reads.includes("reconnecting") ? undefined : waiting}>
             <StepTitle
               title={t("agentPage.work.brain.add.stepTwoGoogle")}

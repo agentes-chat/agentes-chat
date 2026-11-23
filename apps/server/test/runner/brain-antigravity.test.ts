@@ -13,8 +13,12 @@ import {
   accountSignIn,
   agentAccountHome,
   agentAccountsDir,
+  agyEnterpriseStep,
+  agyField,
+  agyMenu,
   grantOf,
   loginFailureOf,
+  parseAgyLinkedUrl,
   parseAgyLoginUrl,
   parseAgyStatus,
 } from "../../runner/accounts";
@@ -23,6 +27,7 @@ import {
   AGY_KEYCHAIN,
   AGY_PLANTED,
   AGY_SIGN_IN_FILE,
+  agyAuthMethodOf,
   agyAuthOf,
   agyKeychain,
   agyRuntimeDir,
@@ -60,6 +65,8 @@ afterEach(async () => {
   delete process.env.FAKE_AGY_KEYRING;
   delete process.env.FAKE_AGY_REFRESH_MS;
   delete process.env.FAKE_AGY_CHECK;
+  delete process.env.FAKE_AGY_SUBSCRIPTIONS;
+  delete process.env.FAKE_AGY_GIVES;
   removeDirs(dirs);
 });
 
@@ -269,6 +276,23 @@ test("the CLI's real /usage: one tab-separated row per quota, each model group i
     { kind: "other", label: "Claude and GPT models · 7d", usedPercent: 100, resetsAt: "2026-11-17T04:21:04.000Z" },
     { kind: "other", label: "Gemini 4 Argon · 7d", usedPercent: 1, resetsAt: "2026-11-21T21:45:50.000Z" },
   ]);
+});
+
+test("a Gemini Enterprise seat's /usage: one row per model, none a plan window, is a reading with no windows", () => {
+  // `agy -p /usage` of Antigravity CLI 1.5.15 on an Enterprise seat, 2026-11-23: every model at 100%, reset at the epoch.
+  const report = [
+    "All Models\tGemini 4 Hydrogen (Medium)\t100%\t1970-01-01T00:00:00Z",
+    "All Models\tGemini 4 Argon (High)\t100%\t1970-01-01T00:00:00Z",
+    "All Models\tClaude Opus 5.5 (High)\t100%\t1970-01-01T00:00:00Z",
+    "",
+  ].join("\n");
+  // Not null: it replaces what a personal sign-in's report left.
+  expect(antigravityUsage(report, "probe", NOW)).toEqual({
+    windows: [],
+    source: "probe",
+    at: new Date(NOW).toISOString(),
+  });
+  expect(antigravityUsage("nothing to read here", "probe", NOW)).toBeNull();
 });
 
 test("an account's folder is the CLI's whole home: no keyring, no Gemini key or ADC from the runner, no updates", () => {
@@ -526,7 +550,7 @@ test.skipIf(!posix)("the CLI turned off on the computer refuses the turn", async
 });
 
 test.skipIf(!posix)(
-  "sign-in on the computer: Google's link, the pasted code sealed to the computer, then signed in; Enterprise says so",
+  "sign-in on the computer: Google's link, the pasted code sealed to the computer, then signed in",
   async () => {
     const home = tempDir("agy-accounts-");
     dirs.push(home);
@@ -537,19 +561,17 @@ test.skipIf(!posix)(
       commands: { antigravity: [process.execPath, FAKE] },
     });
     managers.push(m);
-    const id = "0193eeee-0000-7000-8000-0000000000d2";
-    const begun = await m.begin("antigravity", id, false, undefined, "enterprise");
+    const id = "0193eeee-0000-7000-8000-0000000000d1";
+    const begun = await m.begin("antigravity", id);
     expect(begun.url).toBe("https://accounts.google.com/o/oauth2/auth?client_id=agy&state=s1");
     expect(typeof begun.publicKey).toBe("string");
-    expect(agyAuthOf(path.join(home, "accounts", "antigravity", id))).toBe("oauth-business");
+    expect(agyAuthOf(path.join(home, "accounts", "antigravity", id))).toBe("oauth-personal");
     const aad = accountCodeAad(id, ORG);
     await m.code(id, aad, await sealSecret(begun.publicKey as string, "4/0AbCdEf-code", aad));
     await waitFor(() => m.status(id).state !== "waiting", 5000);
     // `agy models` lists its models split by a tab: signed in.
-    expect(m.status(id)).toMatchObject({
-      state: "done",
-      account: { kind: "antigravity", loggedIn: true, provider: "enterprise" },
-    });
+    expect(m.status(id)).toMatchObject({ state: "done", account: { kind: "antigravity", loggedIn: true } });
+    expect(m.status(id).account?.provider).toBeUndefined();
     // Windows keeps every sign-in in the user's one Credential Manager: refused.
     const win = new AccountManager({ root: path.join(home, "win"), orgId: () => ORG, platform: "win32" });
     managers.push(win);
@@ -559,6 +581,257 @@ test.skipIf(!posix)(
   },
   20_000,
 );
+
+/**
+ * Gemini Enterprise's sign-in on the fake CLI's own screens, its code pasted; the manager and the account's folder.
+ * `choose`: the person answers what the CLI asks after the code (the app's way); without it, an older app's.
+ */
+async function enterpriseSignIn(code = "4/0AbCdEf-code", choose = false) {
+  const home = tempDir("agy-accounts-");
+  dirs.push(home);
+  const m = new AccountManager({
+    root: path.join(home, "accounts"),
+    orgId: () => ORG,
+    platform: "linux",
+    commands: { antigravity: [process.execPath, FAKE] },
+  });
+  managers.push(m);
+  const id = "0193eeee-0000-7000-8000-0000000000d2";
+  const begun = await m.begin("antigravity", id, false, undefined, "enterprise", false, undefined, choose);
+  const aad = accountCodeAad(id, ORG);
+  await m.code(id, aad, await sealSecret(begun.publicKey as string, code, aad));
+  await waitFor(() => m.status(id).state !== "waiting" || m.status(id).choice !== undefined, 10_000);
+  return { m, id, begun, dir: path.join(home, "accounts", "antigravity", id) };
+}
+
+test.skipIf(!posix)(
+  "Gemini Enterprise: the CLI's own screens to a Google Cloud project, the link whole, then the person picks how it's billed and the subscription",
+  async () => {
+    process.env.FAKE_AGY_SUBSCRIPTIONS = "Gemini Enterprise Plus|p1|global;Gemini Enterprise Standard|p2|us";
+    const { m, id, begun, dir } = await enterpriseSignIn(undefined, true);
+    // The hyperlink's target, not its text wrapped over lines.
+    expect(begun.url).toStartWith("https://accounts.google.com/o/oauth2/auth?access_type=offline&client_id=agy-gcp");
+    expect(begun.url).toEndWith("&state=s2");
+    // After the code, nothing is picked for the person: how it's billed first.
+    expect(m.status(id)).toEqual({
+      state: "waiting",
+      choice: { step: "billing", options: ["subscriptions", "pay_as_you_go"] },
+    });
+    // Only what it asks now, and only one of its options.
+    expect(() => m.choose(id, "subscription", "Gemini Enterprise Plus (Project: p1, Location: global)")).toThrow();
+    expect(() => m.choose(id, "billing", "free")).toThrow();
+    m.choose(id, "billing", "subscriptions");
+    await waitFor(() => m.status(id).choice?.step === "subscription", 10_000);
+    // Its subscriptions as the CLI lists them, without its way out to typing a project.
+    expect(m.status(id).choice).toEqual({
+      step: "subscription",
+      options: [
+        "Gemini Enterprise Plus (Project: p1, Location: global)",
+        "Gemini Enterprise Standard (Project: p2, Location: us)",
+      ],
+    });
+    m.choose(id, "subscription", "Gemini Enterprise Standard (Project: p2, Location: us)");
+    await waitFor(() => m.status(id).state !== "waiting", 10_000);
+    expect(m.status(id)).toMatchObject({
+      state: "done",
+      account: { kind: "antigravity", loggedIn: true, provider: "enterprise" },
+    });
+    expect(m.status(id).choice).toBeUndefined();
+    // Signed in as Google says, with the subscription the person picked: its project in the sign-in each turn gets a
+    // copy of, and in the settings.
+    expect(agyAuthMethodOf(dir)).toBe("gcp");
+    expect(agySignInOf(dir)).toMatchObject({ type: "oauth-business", gcp: { project: "p2", location: "us" } });
+    writeAgySettings(dir);
+    expect(JSON.parse(readFileSync(path.join(dir, ".gemini/antigravity-cli/settings.json"), "utf8"))).toMatchObject({
+      auth: { type: "oauth-business" },
+      gcp: { project: "p2", location: "us" },
+    });
+    expect(() => m.choose(id, "billing", "subscriptions")).toThrow();
+  },
+  20_000,
+);
+
+test.skipIf(!posix)(
+  "Gemini Enterprise paid as you go: the person's Google Cloud project typed in the CLI's field, then its region",
+  async () => {
+    const { m, id, dir } = await enterpriseSignIn(undefined, true);
+    m.choose(id, "billing", "pay_as_you_go");
+    await waitFor(() => m.status(id).choice?.step === "project", 10_000);
+    // Typed, not picked: no options, and only a project id.
+    expect(m.status(id).choice).toEqual({ step: "project", options: [] });
+    expect(() => m.choose(id, "project", "Not a project!")).toThrow();
+    m.choose(id, "project", "acme-dev-123");
+    await waitFor(() => m.status(id).choice?.step === "region", 10_000);
+    expect(m.status(id).choice).toEqual({ step: "region", options: ["global", "us", "eu"] });
+    m.choose(id, "region", "eu");
+    await waitFor(() => m.status(id).state !== "waiting", 10_000);
+    expect(m.status(id)).toMatchObject({ state: "done", account: { provider: "enterprise" } });
+    expect(agyAuthMethodOf(dir)).toBe("gcp");
+    expect(agySignInOf(dir)).toMatchObject({
+      type: "oauth-business",
+      gcp: { project: "acme-dev-123", location: "eu" },
+    });
+  },
+  20_000,
+);
+
+test.skipIf(!posix)(
+  "Gemini Enterprise from an older app: Subscriptions and the one subscription listed, picked on the person's behalf",
+  async () => {
+    const { m, id, dir } = await enterpriseSignIn();
+    await waitFor(() => m.status(id).state !== "waiting", 10_000);
+    expect(m.status(id)).toMatchObject({ state: "done", account: { provider: "enterprise" } });
+    expect(agySignInOf(dir)).toMatchObject({ gcp: { project: "demo-project", location: "global" } });
+  },
+  20_000,
+);
+
+test.skipIf(!posix)(
+  "Gemini Enterprise: no subscription, several with nobody to ask, a personal sign-in, or a refused code end it, and say why",
+  async () => {
+    process.env.FAKE_AGY_SUBSCRIPTIONS = "";
+    const none = await enterpriseSignIn(undefined, true);
+    none.m.choose(none.id, "billing", "subscriptions");
+    await waitFor(() => none.m.status(none.id).state !== "waiting", 10_000);
+    expect(none.m.status(none.id)).toMatchObject({
+      state: "failed",
+      code: "cli_exit",
+      error: expect.stringContaining("no Gemini Enterprise subscription"),
+    });
+    process.env.FAKE_AGY_SUBSCRIPTIONS = "Gemini Enterprise Plus|p1|global;Gemini Enterprise Standard|p2|global";
+    const several = await enterpriseSignIn();
+    expect(several.m.status(several.id)).toMatchObject({
+      state: "failed",
+      error: expect.stringContaining("Gemini Enterprise Standard (Project: p2, Location: global)). Update the app"),
+    });
+    // Its folder goes once the CLI is stopped.
+    await waitFor(() => !existsSync(several.dir), 10_000);
+    delete process.env.FAKE_AGY_SUBSCRIPTIONS;
+    // Settings asked for Enterprise, Google gave a personal sign-in: never said to be Enterprise.
+    process.env.FAKE_AGY_GIVES = "consumer";
+    const personal = await enterpriseSignIn();
+    await waitFor(() => personal.m.status(personal.id).state !== "waiting", 10_000);
+    expect(personal.m.status(personal.id)).toMatchObject({
+      state: "failed",
+      code: "not_signed_in_after_login",
+      error: expect.stringContaining("personal Google account"),
+    });
+    delete process.env.FAKE_AGY_GIVES;
+    const bad = await enterpriseSignIn("4/bad-code");
+    expect(bad.m.status(bad.id)).toMatchObject({ state: "failed", code: "bad_code" });
+  },
+  60_000,
+);
+
+test("Gemini Enterprise's screens: the row to reach, a key at a time, the furthest screen first, the person's questions", () => {
+  const login = [
+    " Select login method:",
+    " > 1. Google OAuth",
+    "   2. Use a Google Cloud project",
+    "",
+    "   ↑/↓ Navigate · enter Select",
+  ].join("\n");
+  expect(agyMenu(login, "Select login method")).toEqual({
+    rows: ["Google OAuth", "Use a Google Cloud project"],
+    at: 0,
+  });
+  expect(agyEnterpriseStep(login)).toEqual({ screen: 0, keys: "\x1b[B" });
+  expect(agyEnterpriseStep(login.replace(" > 1.", "   1.").replace("   2.", " > 2."))).toEqual({
+    screen: 0,
+    keys: "\r",
+  });
+  // The login method still drawn under the next screen: the next one is answered.
+  const cloud = `${login}\n Google Cloud sign-in method:\n > 1. Continue with Google Cloud\n   2. Use advanced SSO config\n`;
+  expect(agyEnterpriseStep(cloud)).toEqual({ screen: 1, keys: "\r" });
+  expect(agyEnterpriseStep(login, 1)).toBeNull();
+  // How it's billed: the person's question, by the app's names for its rows, until they answered it.
+  const billing = [
+    " Select billing model:",
+    " > 1. Subscriptions – Use Antigravity through your Gemini subscription.",
+    "   2. Pay As You Go – Pay only for the tokens you use, billed through Gemini platform.",
+    "",
+  ].join("\n");
+  expect(agyEnterpriseStep(billing)).toEqual({
+    screen: 2,
+    ask: { step: "billing", options: ["subscriptions", "pay_as_you_go"] },
+  });
+  expect(agyEnterpriseStep(billing, 0, { billing: "pay_as_you_go" })).toEqual({ screen: 2, keys: "\x1b[B" });
+  expect(agyEnterpriseStep(billing, 0, { billing: "subscriptions" })).toEqual({
+    screen: 2,
+    keys: "\r",
+    picked: "billing",
+  });
+  const subscriptions = (rows: string[]) =>
+    [" Select available subscription:", " Verify that these licenses…", "", ...rows, ""].join("\n");
+  const two = subscriptions([
+    " > 1. Gemini Enterprise Plus (Project: p1, Location: global)",
+    "   2. Gemini Enterprise Standard (Project: p2, Location: us)",
+    "   3. Can't find your subscription? Enter a Google Cloud project",
+  ]);
+  expect(agyEnterpriseStep(two)).toEqual({
+    screen: 5,
+    ask: {
+      step: "subscription",
+      options: [
+        "Gemini Enterprise Plus (Project: p1, Location: global)",
+        "Gemini Enterprise Standard (Project: p2, Location: us)",
+      ],
+    },
+  });
+  expect(agyEnterpriseStep(two, 0, { subscription: "Gemini Enterprise Standard (Project: p2, Location: us)" })).toEqual(
+    { screen: 5, keys: "\x1b[B" },
+  );
+  // An answer it no longer lists: asked again.
+  expect(agyEnterpriseStep(two, 0, { subscription: "Gemini Enterprise Plus (Project: p9, Location: global)" })).toEqual(
+    agyEnterpriseStep(two),
+  );
+  expect(
+    agyEnterpriseStep(subscriptions([" > 1. Can't find your subscription? Enter a Google Cloud project"])),
+  ).toEqual({ screen: 5, ask: { step: "subscription", options: [] } });
+  // A screen it doesn't know: nothing pressed.
+  expect(agyEnterpriseStep(" Choose your color scheme:\n > terminal\n")).toBeNull();
+});
+
+test("paid as you go's screens: the project typed once, Enter once its field shows it; the regions unnumbered", () => {
+  const field = (v: string) =>
+    [
+      " Provide Google Cloud project:",
+      " Your Antigravity use will be associated with provided project.",
+      "",
+      ` > ${v}`,
+    ].join("\n");
+  // Its placeholder: empty.
+  expect(agyField(field("my-gcp-project"), "Provide Google Cloud project")).toBe("");
+  expect(agyField(" Choose region:\n > global", "Provide Google Cloud project")).toBeNull();
+  expect(agyEnterpriseStep(field("my-gcp-project"))).toEqual({ screen: 3, ask: { step: "project", options: [] } });
+  const project = { project: "acme-dev-123" };
+  expect(agyEnterpriseStep(field("my-gcp-project"), 0, project)).toEqual({ screen: 3, keys: "acme-dev-123" });
+  // On its way into the field: nothing more.
+  expect(agyEnterpriseStep(field("acme-dev"), 0, project)).toEqual({ screen: 3, keys: "" });
+  expect(agyEnterpriseStep(field("acme-dev-123"), 0, project)).toEqual({ screen: 3, keys: "\r", picked: "project" });
+  // Something else in it: rubbed out first.
+  expect(agyEnterpriseStep(field("oops"), 0, project)).toEqual({ screen: 3, keys: "\x7f\x7f\x7f\x7f" });
+  const region = " Choose region:\n > global\n   us\n   eu\n\n For a full list of available locations, see the docs.";
+  expect(agyMenu(region, "Choose region", false)).toEqual({ rows: ["global", "us", "eu"], at: 0 });
+  expect(agyEnterpriseStep(region)).toEqual({ screen: 4, ask: { step: "region", options: ["global", "us", "eu"] } });
+  expect(agyEnterpriseStep(region, 0, { region: "eu" })).toEqual({ screen: 4, keys: "\x1b[B" });
+  // Its last question: the Enter that signs in.
+  expect(agyEnterpriseStep(region, 0, { region: "global" })).toEqual({
+    screen: 4,
+    keys: "\r",
+    picked: "region",
+    last: true,
+  });
+});
+
+test("the Enterprise sign-in's link is its hyperlink's target, whole once its end arrived", () => {
+  const link = "https://accounts.google.com/o/oauth2/auth?client_id=agy-gcp&state=s2";
+  const shown = ` Your browser should open automatically. If not:\r\n https://accounts.google.com/o/oauth2/auth?cl\r\n ient_id=agy-gcp&state=s2\r\n`;
+  expect(parseAgyLinkedUrl(shown)).toBeNull();
+  expect(parseAgyLinkedUrl(`${shown} \x1b]8;;${link}\x07Click here\x1b]8;;\x07`)).toBe(link);
+  expect(parseAgyLinkedUrl(` \x1b]8;;${link}`)).toBeNull();
+  expect(parseAgyLinkedUrl(` \x1b]8;;https://evil.example/accounts.google.com\x07Click\x1b]8;;\x07`)).toBeNull();
+});
 
 test.skipIf(!posix)(
   "the computer's models are what its signed-in accounts list, every account's once, kept for a restart",

@@ -43,6 +43,8 @@ function fakeRunner() {
   const hub = t.engine.machineHub;
   const keys = new Map<string, string>();
   const codes = new Map<string, string>();
+  /** What a waiting sign-in asks the person (Gemini Enterprise's CLI after the code). */
+  const choices = new Map<string, unknown>();
   const requests: Extract<ServerFrame, { type: "request" }>[] = [];
   /** What the CLI says once a sign-in is done. */
   const signedIn = { email: "ana@example.com", plan: "max" };
@@ -67,7 +69,7 @@ function fakeRunner() {
         if (frame.action === "status") {
           return codes.has(frame.loginId)
             ? ok({ state: "done", account: { id: frame.loginId, kind: "claude_code", loggedIn: true, ...signedIn } })
-            : ok({ state: "waiting" });
+            : ok({ state: "waiting", ...(choices.has(frame.loginId) ? { choice: choices.get(frame.loginId) } : {}) });
         }
         return ok({});
       }, 1);
@@ -76,6 +78,7 @@ function fakeRunner() {
   });
   return {
     codes,
+    choices,
     requests,
     signedIn,
     accountRequests: (action: string) => requests.filter((r) => r.op === "account" && r.action === action),
@@ -359,6 +362,51 @@ test("the OpenAPI document lists the account routes", async () => {
   ]) {
     expect(Object.keys(doc.paths)).toContain(path);
   }
+});
+
+test("Gemini Enterprise: the app asks what the CLI asks after the code, and the person's answer goes to the computer", async () => {
+  const { api } = await workspace();
+  const mac = await pairComputer(t, api, { ...RUNNER, exec: true }, { name: "mac" });
+  const runner = fakeRunner();
+  await runner.hello(mac.token);
+  const base = `/machines/${mac.machineId}`;
+  const begun = await api(`${base}/account-logins`, {
+    json: { kind: "antigravity", provider: "enterprise", choose: true },
+  });
+  expect(begun.status).toBe(201);
+  const { loginId } = (await begun.json()) as { loginId: string };
+  expect(runner.accountRequests("begin")[0]).toMatchObject({
+    kind: "antigravity",
+    provider: "enterprise",
+    choose: true,
+  });
+  const billing = { step: "billing", options: ["subscriptions", "pay_as_you_go"] };
+  runner.choices.set(loginId, billing);
+  expect(await (await api(`${base}/account-logins/${loginId}`)).json()).toEqual({ state: "waiting", choice: billing });
+  // What isn't a question the app can answer is left out.
+  runner.choices.set(loginId, { step: "favorite_color", options: ["blue"] });
+  expect(await (await api(`${base}/account-logins/${loginId}`)).json()).toEqual({ state: "waiting" });
+  const chose = await api(`${base}/account-logins/${loginId}/choice`, {
+    json: { step: "billing", option: "subscriptions" },
+  });
+  expect(chose.status).toBe(204);
+  expect(runner.accountRequests("choose")).toEqual([
+    expect.objectContaining({ loginId, step: "billing", option: "subscriptions" }),
+  ]);
+  // Only a project id goes as a project.
+  const bad = await api(`${base}/account-logins/${loginId}/choice`, {
+    json: { step: "project", option: "Not a project" },
+  });
+  expect(bad.status).toBe(400);
+  expect(await code(bad)).toBe("account.invalid_choice");
+  expect(runner.accountRequests("choose")).toHaveLength(1);
+  // Without `choose` (an older app), the computer isn't told to ask.
+  await api(`${base}/account-logins`, { json: { kind: "antigravity", provider: "enterprise" } });
+  expect(runner.accountRequests("begin")[1]).not.toHaveProperty("choose");
+  const doc = (await (await t.app.request("/api/openapi.json")).json()) as { paths: Record<string, unknown> };
+  expect(Object.keys(doc.paths)).toContain(
+    "/app/organizations/{orgId}/machines/{machineId}/account-logins/{loginId}/choice",
+  );
 });
 
 test("refreshing plan usage: 202, the computer is asked to look the caller's accounts up again; the usage it reports shows", async () => {

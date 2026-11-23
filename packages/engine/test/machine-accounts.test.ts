@@ -987,6 +987,34 @@ test("Claude: an account another agent thinks with signs in again as a login of 
   expect((await agentRow()).brainAccountId).toBe(CLAUDE_ID);
 });
 
+test("signing in again drops the old sign-in's reading: its windows were another plan's, until the computer reads this one", async () => {
+  f = await setup();
+  const { machineId } = await ownedMachine();
+  // A personal Google plan's weekly window, read before the account signed in again as a Gemini Enterprise seat.
+  await addAccount(machineId, CLAUDE_ID, "claude_code", { status: "signed_out", plan: "max", usage: usage(11) });
+  const runner = signingRunner(machineId, () => ({ loggedIn: true, email: "ana@example.com", plan: "max" }));
+  const { deps } = runner;
+  const login = await beginAccountLogin(
+    deps,
+    f.owner.id,
+    f.org.id,
+    machineId,
+    "claude_code",
+    CLAUDE_ID,
+    "ana@example.com",
+  );
+  const box = await sealSecret(login.publicKey ?? "", "abc#123", accountCodeAad(login.loginId, f.org.id));
+  await sendAccountLoginCode(deps, f.owner.id, f.org.id, machineId, login.loginId, box);
+  const status = await accountLoginStatus(deps, f.owner.id, f.org.id, machineId, login.loginId);
+  expect(status).toMatchObject({ state: "done", account: { id: CLAUDE_ID, status: "active", usage: null } });
+  expect((await accountRow(CLAUDE_ID))?.usage).toBeNull();
+  // Its computer's next reading is the one kept.
+  await syncMachineAccounts({ db: f.db, pubsub: f.pubsub }, f.org.id, machineId, [
+    { id: CLAUDE_ID, kind: "claude_code", loggedIn: true, email: "ana@example.com", plan: "max", usage: usage(3) },
+  ]);
+  expect((await accountRow(CLAUDE_ID))?.usage?.windows[0]?.usedPercent).toBe(3);
+});
+
 test("signing in again as another account: it stays signed out with its agents, and the answer says who came back", async () => {
   f = await setup();
   const { machineId } = await ownedMachine();

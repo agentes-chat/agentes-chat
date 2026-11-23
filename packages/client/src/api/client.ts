@@ -31,6 +31,7 @@ import type {
 import type { UploadOptions } from "./http";
 import type {
   AccessInput,
+  AccountChoice,
   AccountDeletionPlan,
   AccountLoginStart,
   AccountLoginStatus,
@@ -1315,17 +1316,26 @@ export interface ApiClient {
     moveAgents(orgId: string, machineId: string, input: MoveAgentsInput): Promise<MoveAgentsResult>;
     /**
      * ADR 0041 §2: the computer starts the provider's own sign-in. `accountId`: sign in again to that account
-     * of the viewer's; `email` (Claude): which account, as the CLI's hint; `provider`: a coding plan's key.
+     * of the viewer's; `email` (Claude): which account, as the CLI's hint; `provider`: a coding plan's key; `choose`
+     * (Gemini Enterprise): the person answers what the CLI asks after the code (the status's `choice`).
      */
     beginAccountLogin(
       orgId: string,
       machineId: string,
       kind: MachineAccountKind,
-      options?: { accountId?: string; email?: string; provider?: string },
+      options?: { accountId?: string; email?: string; provider?: string; choose?: boolean },
     ): Promise<AccountLoginStart>;
     /** Claude Code: the code Claude showed (or a plan's key), sealed in the browser to the computer's key (`sealSecret`). */
     sendAccountCode(orgId: string, machineId: string, loginId: string, box: SecretBox): Promise<void>;
     accountLogin(orgId: string, machineId: string, loginId: string): Promise<AccountLoginStatus>;
+    /** The person's answer to what the waiting sign-in asks (its status's `choice`): one of its options. */
+    chooseAccountOption(
+      orgId: string,
+      machineId: string,
+      loginId: string,
+      step: AccountChoice["step"],
+      option: string,
+    ): Promise<void>;
     /** Gives up on a sign-in (Voltar, the dialog closed): the computer stops it. */
     cancelAccountLogin(orgId: string, machineId: string, loginId: string): Promise<void>;
     /** An accounts screen opened: the viewer's plans look their usage up again (it arrives as `machine.updated`). */
