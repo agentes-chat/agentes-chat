@@ -171,6 +171,24 @@ describe("no AI connected: above the composer", () => {
     expect(panel.textContent).toContain("A conta que os seus agentes dividem");
   });
 
+  for (const [providers, keyCard] of [
+    [["anthropic", "gemini"], []],
+    [["anthropic", "gemini", "api_keys"], ["Chave de API"]],
+  ] as const)
+    test(`a server that offers Claude and Gemini alone (\`MODEL_PROVIDERS=${providers.join(",")}\`): their plans, their keys in their cards, Chave de API only with api_keys`, async () => {
+      await open(
+        walters(seedState({ aiStatus: { ...aiStatus(false, ADA_ID, ATLAS_ID), providers: [...providers] } }), ADA_ID),
+      );
+      await click(within(banner() as HTMLElement).getByRole("button", { name: "Conectar uma IA" }), 6);
+      const first = dialog("Conectar uma IA para o time") as HTMLElement;
+      const cards = within(first)
+        .getAllByRole("button")
+        .map((b) => b.querySelector(".ac-option__title")?.textContent)
+        .filter(Boolean);
+      // Gemini, the one other plan, has its own card instead of "Outro plano".
+      expect(cards).toEqual(["Claude", "Gemini", ...keyCard]);
+    });
+
   test("a channel with one agent of the person's: Connect for the whole team all the same, its other agents too", async () => {
     const state = walters(seedState({ aiStatus: aiStatus(false, ADA_ID, ATLAS_ID) }), ADA_ID, ATLAS_ID);
     state.channelMembers[ENG_ID] = (state.channelMembers[ENG_ID] ?? []).filter((m) => m.id !== ATLAS_ID);

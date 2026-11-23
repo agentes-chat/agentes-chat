@@ -13776,7 +13776,6 @@
     "added": "{{repo}} entra nell'elenco quando salvi."
   },
   "connectors": {
-    "title": "Connettori",
     "store": {
       "featured": "In evidenza",
       "suggested": "Suggerito",
@@ -13823,6 +13822,7 @@
       "addressPassword": "Indirizzo e password",
       "composio": "Tramite Composio"
     },
+    "title": "Connettori",
     "add": "Aggiungi connettore",
     "personal": {
       "note": "Solo tu apri queste connessioni. I tuoi agenti le usano solo quando glielo chiedi.",
@@ -18365,6 +18365,7 @@
     "default": "Predefinita dello spazio di lavoro",
     "defaultFor": "Predefinita per {{provider}}",
     "removeDefaultBlocked": "Scegli un'altra chiave predefinita prima di eliminare questa.",
+    "providerOff": "Quel provider non è disponibile qui. Scegline un altro.",
     "provider": "Provider",
     "keysTitle": "Chiavi dei provider",
     "keysSubtitle": "Cifrate sul server e mai mostrate nel browser. Gli agenti usano la chiave che scegli.",

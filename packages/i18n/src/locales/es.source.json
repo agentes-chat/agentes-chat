@@ -32414,9 +32414,6 @@
   "repos.added": {
     "value": "{{repo}} joins the list when you save."
   },
-  "connectors.title": {
-    "value": "Connectors"
-  },
   "connectors.store.featured": {
     "value": "Featured"
   },
@@ -32530,6 +32527,9 @@
   },
   "connectors.howShort.composio": {
     "value": "Through Composio"
+  },
+  "connectors.title": {
+    "value": "Connectors"
   },
   "connectors.add": {
     "value": "Add connector"
@@ -43746,6 +43746,9 @@
   },
   "settings.removeDefaultBlocked": {
     "value": "Pick another default key before deleting this one."
+  },
+  "settings.providerOff": {
+    "value": "That provider isn't available here. Pick another one."
   },
   "settings.provider": {
     "value": "Provider"

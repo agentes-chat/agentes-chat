@@ -12706,7 +12706,6 @@
     "added": "保存すると{{repo}}がリストに追加されます。"
   },
   "connectors": {
-    "title": "コネクタ",
     "store": {
       "featured": "注目",
       "suggested": "おすすめ",
@@ -12745,6 +12744,7 @@
       "addressPassword": "アドレスとパスワード",
       "composio": "Composio経由"
     },
+    "title": "コネクタ",
     "add": "コネクタを追加",
     "personal": {
       "note": "これらの接続を開けるのはあなただけです。エージェントは、あなたが頼んだときだけ使います。",
@@ -17161,6 +17161,7 @@
     "default": "ワークスペースのデフォルト",
     "defaultFor": "{{provider}}のデフォルト",
     "removeDefaultBlocked": "このキーを削除する前に、別のキーをデフォルトにしてください。",
+    "providerOff": "そのプロバイダーはここでは使えません。別のプロバイダーを選んでください。",
     "provider": "プロバイダー",
     "keysTitle": "プロバイダーのキー",
     "keysSubtitle": "サーバー上で暗号化され、ブラウザには表示されません。エージェントは選んだキーを使います。",

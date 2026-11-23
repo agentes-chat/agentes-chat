@@ -2,6 +2,7 @@ import type { Credential, OrgSettings } from "@agenteschat/client";
 import {
   useAddCredential,
   useAiAccounts,
+  useAiStatus,
   useAuthConfig,
   useComposioUsage,
   useComputerSetup,
@@ -30,6 +31,7 @@ import { formatShortDate, formatUsd, relativeTime } from "@agenteschat/client/li
 import { can } from "@agenteschat/client/lib/permissions";
 import { settingsSectionNameKey, settingsSectionTextKey } from "@agenteschat/client/lib/personal-view";
 import {
+  firstOffered,
   keyCopiesLine,
   keyLooksValid,
   keyName,
@@ -38,6 +40,7 @@ import {
   providerGuess,
   providerLabel,
   providerOf,
+  providerOffered,
   shownKeys,
 } from "@agenteschat/client/lib/providers";
 import type { RoleTab } from "@agenteschat/client/lib/roles";
@@ -85,6 +88,7 @@ import { AuditSection } from "@/components/Audit";
 import { AutoModelsRow } from "@/components/AutoModels";
 import { EndpointForm } from "@/components/ai/EndpointForm";
 import { WhoPicksSection } from "@/components/ai/Jev";
+import { keysOffered, useOfferedAis } from "@/components/ai/offered";
 import { usePlanHold } from "@/components/ai/plan-hold";
 import { BillingLinkButton } from "@/components/BillingLinkButton";
 import { ConnectorsSection } from "@/components/Connectors";
@@ -856,13 +860,15 @@ function KeysSection() {
   const look = useRightHandLook();
   const hold = usePlanHold();
   const plans = useAiAccounts(org.id).data?.accounts.length ?? 0;
+  // API keys off on this server (`MODEL_PROVIDERS` without `api_keys`): none added, and the card only lists old ones.
+  const keysOn = keysOffered(useOfferedAis());
   if (!allowed) return null;
   const all = (credentials.data ?? []).filter((c) => !c.revokedAt);
   const live = shownKeys(credentials.data ?? []);
   const noKeys = credentials.isSuccess && live.length === 0;
   // On plans alone the screen is the accounts: the first key is added from "Conectar uma IA", and this card comes
   // with it.
-  if (live.length === 0 && plans > 0) return null;
+  if (live.length === 0 && (plans > 0 || !keysOn)) return null;
   return (
     <Card aria-labelledby="sec-keys">
       <CardHeader
@@ -871,6 +877,7 @@ function KeysSection() {
         title={t("settings.keysTitle")}
         hint={{ name: t("common.about", { label: t("settings.keysTitle") }), text: t("settings.keysSubtitle") }}
         action={
+          keysOn &&
           !noKeys &&
           !hold && (
             <Button size="sm" icon="plus" onClick={() => setDialog({ type: "add" })}>
@@ -1105,6 +1112,14 @@ export function KeyDialog({
     setTouched(false);
     setRefused(null);
   }, [mode, cred]);
+  // A provider the server leaves out (`MODEL_PROVIDERS`) gives way to the first it offers (after the reset above).
+  const allowed = useAiStatus(org.id).data?.providers;
+  useEffect(() => {
+    if (mode !== "add" || custom || providerOffered(allowed, provider)) return;
+    const first = firstOffered(allowed);
+    if (first) setProvider(first);
+    else setCustom(true);
+  }, [mode, custom, provider, allowed]);
   // An endpoint's key (ADR 0146) has no published format: the server's 8-character floor is the whole check.
   const endpointKey = cred?.provider === CUSTOM_PROVIDER;
   const valid = endpointKey ? apiKey.trim().length >= 8 : keyLooksValid(provider, apiKey);
@@ -1121,6 +1136,7 @@ export function KeyDialog({
     <Field label={t("settings.provider")} id="key-provider">
       <ProviderKeySelect
         value={custom ? CUSTOM_PROVIDER : provider}
+        allowed={allowed}
         disabled={pending}
         onChange={(v) => {
           setCustom(v === CUSTOM_PROVIDER);

@@ -81,6 +81,7 @@ import {
   retireMillionSendMailboxes,
   SURFACE_PREFIX,
   setMessageLinkBase,
+  setModelProviders,
   setRestrictionNotices,
   setScreenJudgments,
   setSurface,
@@ -150,6 +151,8 @@ export function applyBootSwitches(config: Config, log?: Logger) {
   // Where each workspace gets its own computer, the computers people bring are targets, never agents' homes.
   setWorkspaceComputers(config.MACHINE_PROVISIONING === "external");
   setScreenJudgments(config.SCREEN_JUDGMENTS, config.SCREEN_JUDGMENTS_ORGS, log);
+  // The model providers workspaces may use; the rest take no key and no call.
+  setModelProviders(config.MODEL_PROVIDERS);
 }
 
 /**

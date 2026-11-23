@@ -18152,6 +18152,7 @@ export const ptBR = {
     default: "Padrão do workspace",
     defaultFor: "Padrão para {{provider}}",
     removeDefaultBlocked: "Escolha outra chave padrão antes de apagar esta.",
+    providerOff: "Esse provedor não está disponível aqui. Escolha outro.",
     provider: "Provedor",
     keysTitle: "Chaves de provedor",
     keysSubtitle:

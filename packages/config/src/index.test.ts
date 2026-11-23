@@ -59,6 +59,17 @@ describe("loadConfig", () => {
       expect(() => loadConfig({ ...valid, OUTBOUND_ALLOW_CIDRS: cidrs })).toThrow(/OUTBOUND_ALLOW_CIDRS/);
   });
 
+  test("MODEL_PROVIDERS: ids, lower-cased, `api_keys` among them", () => {
+    // Unset: none listed, every AI (`setModelProviders` takes an empty list as no limit).
+    expect(loadConfig(valid).MODEL_PROVIDERS).toEqual([]);
+    expect(loadConfig({ ...valid, MODEL_PROVIDERS: "Anthropic, gemini,api_keys" }).MODEL_PROVIDERS).toEqual([
+      "anthropic",
+      "gemini",
+      "api_keys",
+    ]);
+    expect(() => loadConfig({ ...valid, MODEL_PROVIDERS: "anthropic,open-ai" })).toThrow(/MODEL_PROVIDERS/);
+  });
+
   test("FILES_DIR must be absolute; SMTP_URL must be smtp:// or smtps://", () => {
     expect(loadConfig({ ...valid, FILES_DIR: "/data/files" }).FILES_DIR).toBe("/data/files");
     expect(() => loadConfig({ ...valid, FILES_DIR: "data/files" })).toThrow(/FILES_DIR/);

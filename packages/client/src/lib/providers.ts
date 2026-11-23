@@ -178,6 +178,17 @@ export function savedKeyReach(
 export const keyNamedAfterProvider = (key: Pick<Credential, "label" | "provider">) =>
   key.label.trim().toLocaleLowerCase() === providerLabel(key.provider).toLocaleLowerCase();
 export const isProviderId = (id: string): id is ProviderId => PROVIDERS.some((p) => p.id === id);
+
+/**
+ * Whether the server takes API keys of the provider (`AiStatus.providers`, absent: every one): it is listed, or
+ * `api_keys` is, which opens the others' keys too.
+ */
+export const providerOffered = (allowed: readonly string[] | undefined, id: string) =>
+  !allowed || allowed.includes(id) || allowed.includes("api_keys");
+
+/** The first provider the server offers, most used first; undefined when it offers only "Outro provedor". */
+export const firstOffered = (allowed: readonly string[] | undefined): ProviderId | undefined =>
+  PROVIDERS.find((p) => providerOffered(allowed, p.id))?.id;
 export const keyLooksValid = (provider: ProviderId, key: string) =>
   (providerOf(provider)?.pattern ?? /.{8,}/).test(key.trim());
 

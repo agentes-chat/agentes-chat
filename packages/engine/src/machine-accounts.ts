@@ -91,6 +91,7 @@ import {
   type MachineRow,
   publishMachineUpdated,
 } from "./machines";
+import { planAiOf, providerAllowed } from "./model-providers";
 import { recordAccountFailure } from "./operator-events";
 import { can, requirePermission } from "./organizations";
 import { runnerUpdateWay } from "./runner-update";
@@ -1518,6 +1519,9 @@ export async function beginAccountLogin(
       "account.invalid_kind",
     );
   }
+  const ai = planAiOf(kind, provider);
+  if (ai && !providerAllowed(ai))
+    throw new ValidationError(`This server doesn't offer ${ai}`, "provider.off", { provider: ai });
   if (email !== undefined && (kind !== "claude_code" || provider !== undefined || !isLoginEmail(email))) {
     throw new ValidationError("Use a plain email address, like ana@example.com", "account.invalid_email");
   }

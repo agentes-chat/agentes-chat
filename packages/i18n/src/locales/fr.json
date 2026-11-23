@@ -13754,7 +13754,6 @@
     "added": "{{repo}} rejoindra la liste à l'enregistrement."
   },
   "connectors": {
-    "title": "Connecteurs",
     "store": {
       "featured": "À la une",
       "suggested": "Suggéré",
@@ -13801,6 +13800,7 @@
       "addressPassword": "Adresse et mot de passe",
       "composio": "Via Composio"
     },
+    "title": "Connecteurs",
     "add": "Ajouter un connecteur",
     "personal": {
       "note": "Vous seul ouvrez ces connexions. Vos agents les utilisent seulement quand vous le demandez.",
@@ -18343,6 +18343,7 @@
     "default": "Par défaut de l'espace de travail",
     "defaultFor": "Par défaut pour {{provider}}",
     "removeDefaultBlocked": "Choisissez une autre clé par défaut avant de supprimer celle-ci.",
+    "providerOff": "Ce fournisseur n'est pas disponible ici. Choisissez-en un autre.",
     "provider": "Fournisseur",
     "keysTitle": "Clés des fournisseurs",
     "keysSubtitle": "Chiffrées sur le serveur et jamais affichées dans le navigateur. Les agents utilisent la clé que vous choisissez.",

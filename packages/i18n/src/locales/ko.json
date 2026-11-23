@@ -12700,7 +12700,6 @@
     "added": "저장하면 {{repo}}이(가) 목록에 추가돼요."
   },
   "connectors": {
-    "title": "커넥터",
     "store": {
       "featured": "추천",
       "suggested": "제안",
@@ -12739,6 +12738,7 @@
       "addressPassword": "주소와 비밀번호",
       "composio": "Composio를 통해"
     },
+    "title": "커넥터",
     "add": "커넥터 추가",
     "personal": {
       "note": "이 연결은 나만 열 수 있어요. 내가 부탁할 때만 에이전트가 사용해요.",
@@ -17153,6 +17153,7 @@
     "default": "워크스페이스 기본값",
     "defaultFor": "{{provider}} 기본값",
     "removeDefaultBlocked": "이 키를 삭제하기 전에 다른 기본 키를 선택하세요.",
+    "providerOff": "그 제공업체는 여기서 쓸 수 없어요. 다른 제공업체를 고르세요.",
     "provider": "제공업체",
     "keysTitle": "제공업체 키",
     "keysSubtitle": "서버에서 암호화되고 브라우저에는 절대 표시되지 않아요. 에이전트는 선택한 키를 사용해요.",

@@ -13679,7 +13679,6 @@
     "added": "{{repo}} entra en la lista cuando guardes."
   },
   "connectors": {
-    "title": "Conectores",
     "store": {
       "featured": "Destacados",
       "suggested": "Sugerido",
@@ -13726,6 +13725,7 @@
       "addressPassword": "Dirección y contraseña",
       "composio": "A través de Composio"
     },
+    "title": "Conectores",
     "add": "Agregar conector",
     "personal": {
       "note": "Solo tú abres estas conexiones. Tus agentes las usan solo cuando se lo pides.",
@@ -18268,6 +18268,7 @@
     "default": "Predeterminada del espacio de trabajo",
     "defaultFor": "Predeterminada para {{provider}}",
     "removeDefaultBlocked": "Elige otra clave predeterminada antes de borrar esta.",
+    "providerOff": "Ese proveedor no está disponible aquí. Elige otro.",
     "provider": "Proveedor",
     "keysTitle": "Claves de proveedores",
     "keysSubtitle": "Cifradas en el servidor y nunca se muestran en el navegador. Los agentes usan la clave que elijas.",

@@ -1,8 +1,16 @@
 import { joinNames } from "@agenteschat/client/lib/format";
-import { type AiChoice, PLAN_CHOICES, type PlanChoice, planLabel, planMark } from "@agenteschat/client/lib/no-ai";
+import {
+  type AiChoice,
+  PLAN_CHOICES,
+  type PlanChoice,
+  planLabel,
+  planMark,
+  planOffered,
+} from "@agenteschat/client/lib/no-ai";
 import { Icon, ProviderLogo } from "@agenteschat/ui";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { otherKeysOffered, useOfferedAis } from "@/components/ai/offered";
 
 /** The two plans most people have, on top; OpenCode's free models last, as the way in without a plan. */
 const FIRST: readonly PlanChoice[] = ["claude", "chatgpt"];
@@ -30,7 +38,11 @@ export function ConnectChoices({
   perAgent?: (choice: PlanChoice) => boolean;
 }) {
   const { t } = useTranslation();
-  const [others, setOthers] = useState(false);
+  const [othersOpen, setOthersOpen] = useState(false);
+  // Only the AIs the server offers (`MODEL_PROVIDERS`): a single other plan shows as its own card.
+  const allowed = useOfferedAis();
+  const first = FIRST.filter((c) => planOffered(allowed, c));
+  const others = OTHERS.filter((c) => planOffered(allowed, c));
   const card = (choice: AiChoice, lead: ReactNode, title: string, text: string, end?: ReactNode) => (
     <button key={choice} type="button" className="ac-option" onClick={() => onPick(choice)}>
       {lead}
@@ -53,13 +65,13 @@ export function ConnectChoices({
     );
   return (
     <div className="arrival-opts">
-      {FIRST.map(plan)}
-      {others ? (
-        OTHERS.map(plan)
-      ) : (
-        <button type="button" className="ac-option" aria-expanded={false} onClick={() => setOthers(true)}>
+      {first.map(plan)}
+      {othersOpen || others.length === 1 ? (
+        others.map(plan)
+      ) : others.length > 0 ? (
+        <button type="button" className="ac-option" aria-expanded={false} onClick={() => setOthersOpen(true)}>
           <span className="arrival-opts__tile arrival-opts__tile--four" aria-hidden="true">
-            {OTHERS.slice(0, 4).map((c) => (
+            {others.slice(0, 4).map((c) => (
               <ProviderLogo key={c} id={planMark(c)} size="xs" />
             ))}
           </span>
@@ -67,15 +79,16 @@ export function ConnectChoices({
             <span className="ac-option__title">{t("arrival.connect.others")}</span>
             <span className="ac-option__desc">
               {joinNames(
-                OTHERS.map((c) => planLabel(t, c)),
+                others.map((c) => planLabel(t, c)),
                 t,
               )}
             </span>
           </span>
           <Icon name="chevronDown" className="arrival-opts__end" />
         </button>
-      )}
+      ) : null}
       {mayAddKey &&
+        otherKeysOffered(allowed) &&
         card(
           "key",
           <span className="arrival-opts__tile" aria-hidden="true">
@@ -84,13 +97,14 @@ export function ConnectChoices({
           t("connectAi.key.title"),
           t("connectAi.key.sub"),
         )}
-      {card(
-        FREE,
-        <ProviderLogo id={planMark(FREE)} size="tile" off={dims(FREE)} />,
-        t("arrival.connect.free"),
-        t("arrival.connect.freeText"),
-        <span className="arrival-opts__tag">{t("arrival.connect.noPlan")}</span>,
-      )}
+      {planOffered(allowed, FREE) &&
+        card(
+          FREE,
+          <ProviderLogo id={planMark(FREE)} size="tile" off={dims(FREE)} />,
+          t("arrival.connect.free"),
+          t("arrival.connect.freeText"),
+          <span className="arrival-opts__tag">{t("arrival.connect.noPlan")}</span>,
+        )}
     </div>
   );
 }

@@ -41,7 +41,13 @@ import {
 } from "@agenteschat/client/lib/no-ai";
 import { can, makesAgents } from "@agenteschat/client/lib/permissions";
 import { isPlanId, planOf } from "@agenteschat/client/lib/plans";
-import { keyThinks, providerGuess, providerLabel } from "@agenteschat/client/lib/providers";
+import {
+  firstOffered,
+  keyThinks,
+  providerGuess,
+  providerLabel,
+  providerOffered,
+} from "@agenteschat/client/lib/providers";
 import {
   isRightHand,
   rightHandOf,
@@ -519,6 +525,12 @@ export function ConnectAiDialog({
     provider: request.provider === CUSTOM_PROVIDER ? CUSTOM_PROVIDER : providerGuess(request.apiKey, request.provider),
     apiKey: request.apiKey ?? "",
   }));
+  // A provider the server leaves out (`MODEL_PROVIDERS`) gives way to the first it offers.
+  const allowed = status.data?.providers;
+  useEffect(() => {
+    if (!providerOffered(allowed, draft.provider))
+      setDraft((d) => ({ ...d, provider: firstOffered(allowed) ?? CUSTOM_PROVIDER }));
+  }, [allowed, draft.provider]);
   // Anything connected shows Done; only a saved key closes the key's field (after a plan, it's for the other agents).
   const [connected, setConnected] = useState(false);
   // The arrival's stage: never over a billing hold, whose notice is the whole dialog.
@@ -681,6 +693,7 @@ export function ConnectAiDialog({
   const keySelect = mayAddKey && !keySaved && (
     <ProviderKeySelect
       value={draft.provider}
+      allowed={allowed}
       disabled={add.isPending}
       onChange={(provider) => setDraft((d) => ({ ...d, provider }))}
     />

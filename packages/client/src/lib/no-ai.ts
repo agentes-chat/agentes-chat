@@ -348,6 +348,26 @@ export const PLAN_CHOICES: readonly PlanChoice[] = [
   "zen",
   ...PLAN_IDS,
 ];
+/**
+ * The id the server's `MODEL_PROVIDERS` names a plan by (`planAiOf`): its maker's API provider (Claude `anthropic`,
+ * ChatGPT `openai`, a coding plan its maker's), else the plan's own (Cursor, Grok, OpenCode's).
+ */
+const PLAN_AI: Readonly<Record<string, string>> = {
+  claude: "anthropic",
+  chatgpt: "openai",
+  gemini: "gemini",
+  grok: "grok",
+  cursor: "cursor",
+  zen: "opencode",
+  zai: "zai",
+  kimi: "moonshot",
+  minimax: "minimax",
+  opencode: "opencode",
+};
+export const planAi = (choice: PlanChoice): string => PLAN_AI[choice] ?? choice;
+/** Whether the server lets workspaces use the plan (`AiStatus.providers`, absent: every one). */
+export const planOffered = (allowed: readonly string[] | undefined, choice: PlanChoice) =>
+  !allowed || allowed.includes(planAi(choice));
 /** The plans whose marks stand on the scene over "Conectar uma IA": the three most used. */
 export const SCENE_PLANS = ["claude", "chatgpt", "gemini"] as const satisfies readonly PlanChoice[];
 /** The account a plan signs in as: ChatGPT's through Codex, Cursor's and OpenCode's through their CLIs; the rest through Claude Code. */

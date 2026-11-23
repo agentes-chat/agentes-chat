@@ -232,6 +232,7 @@ export * from "./mission-tools";
 export * from "./mission-worktree";
 export * from "./missions";
 export * from "./missions-engine";
+export * from "./model-providers";
 export * from "./net-guard";
 export * from "./no-ai";
 export * from "./notice-prefs";
