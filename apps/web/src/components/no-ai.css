@@ -3,7 +3,7 @@
    a button that doesn't fit beside the words goes under them, from their edge (past the icon). */
 .noai-banner {
   align-items: center;
-  margin: 0 4px 6px;
+  margin: 0 4px var(--space-2);
   padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
   /* Concentric with its button's corner, as the composer under it. */
   border-radius: calc(var(--control-r-sm) + var(--space-2));

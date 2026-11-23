@@ -9718,6 +9718,16 @@
       "empty": "Tidak ada utas di kanal ini.",
       "seeAll": "Lihat semua di Utas"
     },
+    "new": {
+      "open": "Utas baru",
+      "title": "Utas baru",
+      "text": "Pesan pertama masuk ke kanal dan percakapan berlanjut di utasnya.",
+      "channel": "Kanal",
+      "subject": "Topik",
+      "placeholder": "Percakapan ini tentang apa?",
+      "start": "Buka utas",
+      "failed": "Utas tidak bisa dibuka. Coba lagi."
+    },
     "side": {
       "label": "Utas",
       "expand": "Buka layar penuh",

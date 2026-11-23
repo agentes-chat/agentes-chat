@@ -327,6 +327,28 @@ describe("the members column", () => {
     expect(line("Atlas")).toBe("Sem limite agora · responde quando renovar");
   });
 
+  test('no row repeats "Sem IA conectada" when every listed agent lacks an AI: the composer\'s strip says it once', async () => {
+    widthIs(DESKTOP_QUERY);
+    const state = seedState({
+      aiStatus: {
+        any: false,
+        agents: [
+          { agentId: ADA_ID, state: "no_ai" },
+          { agentId: ATLAS_ID, state: "no_ai" },
+        ],
+      },
+    });
+    for (const a of state.agents) a.role = "Revisa pull requests e escreve as notas de cada versão";
+    await open(state);
+    await settle(4);
+    const side = column() as HTMLElement;
+    expect(side.textContent).not.toContain("Sem IA conectada");
+    expect(row(side, "Ada")).toBeTruthy();
+    // Nor does its role or its presence word take the caption's place (its group says the presence): the name alone.
+    expect(side.querySelector(".members-side__line.ac-tag")).toBeNull();
+    expect(row(side, "Ada")?.querySelector(".members-side__line")).toBeNull();
+  });
+
   test("a row opens the member's card", async () => {
     widthIs(DESKTOP_QUERY);
     await open();
@@ -342,7 +364,7 @@ describe("the members column", () => {
     expect(document.querySelector(".members-side")).toBeNull();
   });
 
-  test("on a phone: a sheet with the threads, pins and settings buttons, and a field that finds members", async () => {
+  test("on a phone: a sheet with the pins and settings buttons (Threads stay in the header), and a field that finds members", async () => {
     widthIs(COMPACT_QUERY);
     await open(withRightHand(seedState()));
     expect(column()).toBeNull();
@@ -353,7 +375,7 @@ describe("the members column", () => {
     expect(panel.getAttribute("aria-modal")).toBe("true");
     expect(within(panel).getByRole("button", { name: "Configurações do canal" })).toBeTruthy();
     expect(within(panel).getByRole("button", { name: "Mensagens fixadas" })).toBeTruthy();
-    expect(within(panel).getByRole("button", { name: /^Threads/ })).toBeTruthy();
+    expect(within(panel).queryByRole("button", { name: /^Threads/ })).toBeNull();
     expect(row(panel, "Lodi")).toBeNull();
     await act(async () =>
       fireEvent.change(within(panel).getByRole("searchbox", { name: "Buscar pessoas e agentes" }), {

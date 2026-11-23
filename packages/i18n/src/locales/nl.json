@@ -10123,6 +10123,16 @@
       "empty": "Geen threads in dit kanaal.",
       "seeAll": "Alles bekijken in Threads"
     },
+    "new": {
+      "open": "Nieuwe thread",
+      "title": "Nieuwe thread",
+      "text": "Het eerste bericht gaat naar het kanaal en het gesprek gaat verder in de thread ervan.",
+      "channel": "Kanaal",
+      "subject": "Onderwerp",
+      "placeholder": "Waar gaat dit gesprek over?",
+      "start": "Thread starten",
+      "failed": "De thread kon niet worden gestart. Probeer het opnieuw."
+    },
     "side": {
       "label": "Thread",
       "expand": "Volledig scherm openen",
