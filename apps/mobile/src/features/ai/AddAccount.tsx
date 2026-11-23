@@ -189,9 +189,17 @@ function AddAccountFlow({
   const read = loginRead(status);
   // Gemini Enterprise, once Google's code is in: what its CLI asks the person (how it's billed, which subscription),
   // the option the person has on it, the question they answered last (until the computer moves on) and a failed send.
-  const choice = result?.state === "waiting" ? result.choice : undefined;
+  const asks = result?.state === "waiting" ? result.choice : undefined;
   const [picked, setPicked] = useState<Partial<Record<AccountChoice["step"], string>>>({});
   const [answered, setAnswered] = useState<AccountChoice["step"] | null>(null);
+  // Answered, the question stays (its "sending" line) until the computer asks the next thing or the sign-in ends: in
+  // between, while its CLI moves to the next screen, it asks nothing, and the code's step would show again.
+  const [lastAsked, setLastAsked] = useState<AccountChoice | null>(null);
+  useEffect(() => {
+    if (asks) setLastAsked(asks);
+  }, [asks]);
+  const choice =
+    asks ?? (result?.state === "waiting" && answered && lastAsked?.step === answered ? lastAsked : undefined);
   const [chooseFailed, setChooseFailed] = useState(false);
   // Paid as you go: the Google Cloud project the person types.
   const [project, setProject] = useState("");

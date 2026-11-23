@@ -635,6 +635,15 @@ describe("Conectar uma IA: one picker, plans first", () => {
     await proceed();
     expect(chosen()).toEqual([["billing", "subscriptions"]]);
     expect(shownText(panel)).toContain("Enviando sua escolha ao MacBook…");
+    // While its CLI moves to the next screen the computer asks nothing: the answer is still on its way, never the code's
+    // step again.
+    machines?.endLogin("login_1", { state: "waiting" });
+    await act(() =>
+      services.queryClient.invalidateQueries({ queryKey: keys.accountLogin(ORG_ID, "machine_1", "login_1") }),
+    );
+    await settle(3);
+    expect(shownText(panel)).toContain("Enviando sua escolha ao MacBook…");
+    expect(shownText(panel)).not.toContain("Cole o código que o Google mostrar");
     // Its subscriptions by name, each one's project under it; the one picked is sent as the computer listed it.
     await asks({
       step: "subscription",
