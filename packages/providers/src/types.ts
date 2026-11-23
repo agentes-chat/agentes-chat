@@ -1,4 +1,5 @@
 import type { ImageCallOptions, ImageRequest, ImageResult } from "./images";
+import type { VideoCallOptions, VideoRequest, VideoResult } from "./videos";
 
 /**
  * Provider-neutral model interface. Only the Model Gateway
@@ -233,6 +234,8 @@ export interface ModelProvider {
    * own id. Optional: a provider without one makes none.
    */
   generateImage?(request: ImageRequest, options: ImageCallOptions): Promise<ImageResult>;
+  /** A video from a prompt (ADR 0219), where the provider has a video API; `model` is the provider's own id. */
+  generateVideo?(request: VideoRequest, options: VideoCallOptions): Promise<VideoResult>;
 }
 
 /** What the provider had already reported or sent when a stream failed. */

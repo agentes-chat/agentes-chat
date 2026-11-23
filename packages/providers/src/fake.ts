@@ -23,6 +23,7 @@ import {
   systemText,
   textOf,
 } from "./types";
+import type { VideoCallOptions, VideoRequest, VideoResult } from "./videos";
 
 export interface FakeReply {
   chunks: string[];
@@ -75,6 +76,19 @@ export interface FakeImageReply {
   hold?: Promise<unknown>;
 }
 
+/** A scripted answer to a video call (`createFakeProvider`'s `video`). */
+export interface FakeVideoReply {
+  costNanoUsd?: number;
+  model?: string;
+  /** Waits for this before answering. */
+  hold?: Promise<unknown>;
+}
+
+export interface FakeVideoCall {
+  request: Omit<VideoRequest, "signal">;
+  apiKey: string;
+}
+
 export interface FakeImageCall {
   request: Omit<ImageRequest, "signal">;
   apiKey: string;
@@ -92,22 +106,28 @@ export function createFakeProvider(
   options: {
     /** Scripted image answers (ADR 0197); default: every picture asked for, drawn by `fakeImagePng`. */
     image?: (request: ImageRequest, call: number) => FakeImageReply | Error;
+    /** Scripted video answers (ADR 0219); default: a video, `fakeVideoMp4`. */
+    video?: (request: VideoRequest, call: number) => FakeVideoReply | Error;
   } = {},
 ) {
   const calls: FakeCall[] = [];
   const countCalls: ModelRequest[] = [];
   const imageCalls: FakeImageCall[] = [];
+  const videoCalls: FakeVideoCall[] = [];
   let toolSeq = 0;
   const provider: ModelProvider & {
     calls: FakeCall[];
     countCalls: ModelRequest[];
     imageCalls: FakeImageCall[];
     generateImage(request: ImageRequest, options: ImageCallOptions): Promise<ImageResult>;
+    videoCalls: FakeVideoCall[];
+    generateVideo(request: VideoRequest, options: VideoCallOptions): Promise<VideoResult>;
   } = {
     id: "anthropic",
     calls,
     countCalls,
     imageCalls,
+    videoCalls,
     async stream(request, { apiKey, workspaceId, endpoint, session, onDelta }): Promise<ModelResult> {
       calls.push({
         request: structuredClone({ ...request, signal: undefined }),
@@ -197,6 +217,19 @@ export function createFakeProvider(
         ...(scripted?.usage ? { usage: scripted.usage } : {}),
         ...(scripted?.costNanoUsd !== undefined ? { costNanoUsd: scripted.costNanoUsd } : {}),
         ...(scripted?.error ? { error: scripted.error } : {}),
+      };
+    },
+    async generateVideo(request, { apiKey }): Promise<VideoResult> {
+      const { signal, ...rest } = request;
+      videoCalls.push({ request: structuredClone(rest), apiKey });
+      const scripted = options.video?.(request, videoCalls.length);
+      if (scripted instanceof Error) throw scripted;
+      if (scripted?.hold) await scripted.hold;
+      if (signal?.aborted) throw new ProviderError("request aborted", false);
+      return {
+        video: { mediaType: "video/mp4", bytes: fakeVideoMp4() },
+        ...(scripted?.model ? { model: scripted.model } : {}),
+        ...(scripted?.costNanoUsd !== undefined ? { costNanoUsd: scripted.costNanoUsd } : {}),
       };
     },
   };
@@ -308,3 +341,18 @@ export function fakeImagePng(prompt: string, aspect: ImageAspect = "1:1", index 
 }
 
 export type FakeProvider = ReturnType<typeof createFakeProvider>;
+
+/** The start of an MP4 (its `ftyp` box): enough for anything that reads a video's type from its bytes. */
+export const fakeVideoMp4 = () =>
+  new Uint8Array([
+    0,
+    0,
+    0,
+    24,
+    ...new TextEncoder().encode("ftypisom"),
+    0,
+    0,
+    2,
+    0,
+    ...new TextEncoder().encode("isomiso2"),
+  ]);

@@ -6,8 +6,8 @@ import { WEB_USAGE_PROVIDER } from "./web-tools";
 
 const { agentBudgetPeriods, usageRecords, agents, organizationSettings } = schema;
 
-/** What an agent's budget pays for: its own model calls and the pictures it makes (ADR 0197). */
-export const BUDGET_KINDS: ("agent" | "image")[] = ["agent", "image"];
+/** What an agent's budget pays for: its own model calls and the pictures (ADR 0197) and videos (ADR 0219) it makes. */
+export const BUDGET_KINDS: ("agent" | "image" | "video")[] = ["agent", "image", "video"];
 
 /** Budget of agents without their own, until an admin sets the organization's default (US$ 50). */
 export const DEFAULT_AGENT_BUDGET_NANO_USD = 50_000_000_000;

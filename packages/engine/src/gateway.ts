@@ -29,7 +29,9 @@ import {
   looksLikeImageModel,
   MAX_IMAGE_PROMPT_CHARS,
   MAX_IMAGE_REFERENCES,
+  MAX_VIDEO_PROMPT_CHARS,
   type MadeImage,
+  type MadeVideo,
   type ModelInfo,
   type ModelMessage,
   type ModelProvider,
@@ -38,6 +40,7 @@ import {
   type ModelUsage,
   maxCostNanoUsd,
   maxImageCostNanoUsd,
+  maxVideoCostNanoUsd,
   modelInfo,
   modelProvider,
   openRouterListed,
@@ -48,6 +51,12 @@ import {
   promptChars,
   type SystemPrompt,
   type ToolSpec,
+  VIDEO_ASPECTS,
+  VIDEO_CATALOG,
+  VIDEO_MODEL_IDS,
+  type VideoRequest,
+  videoCostNanoUsd,
+  videoModelInfo,
 } from "@agenteschat/providers";
 import { type Agent, getAgent } from "./agents";
 import { agentOwnerIds } from "./audience";
@@ -185,6 +194,25 @@ export interface ImageCall {
   /** `model` is an id of `IMAGE_CATALOG` or a workspace endpoint's `custom:` id; the provider gets its own. */
   request: Omit<ImageRequest, "signal">;
   signal?: AbortSignal;
+}
+
+/** A video asked for by an agent (ADR 0219): billed to its budget, with the person behind its run. */
+export interface VideoCall {
+  orgId: string;
+  agentId: string;
+  personId: string | null;
+  runId?: string | null;
+  /** `model` is an id of `VIDEO_CATALOG`; the provider gets its own. */
+  request: Omit<VideoRequest, "signal">;
+  signal?: AbortSignal;
+}
+
+export interface VideoGatewayResult {
+  video: MadeVideo;
+  /** The catalog's id it was made and recorded with. */
+  model: string;
+  usageRecordId: string;
+  costNanoUsd: number;
 }
 
 export interface ImageGatewayResult {
@@ -434,7 +462,7 @@ export function createModelGateway(deps: ModelGatewayDeps) {
     input: {
       orgId: string;
       agentId: string | null;
-      kind: "agent" | "router" | "summary" | "image";
+      kind: "agent" | "router" | "summary" | "image" | "video";
       runId?: string | null;
       personId?: string | null;
       credentialId: string | null;
@@ -539,7 +567,7 @@ export function createModelGateway(deps: ModelGatewayDeps) {
           // pictures (`agentSpendThisMonth`).
           spentNanoUsd: sql`(select coalesce(sum(${usageRecords.costNanoUsd}), 0) from ${usageRecords}
             where ${usageRecords.orgId} = ${agent.orgId} and ${usageRecords.agentId} = ${agent.id}
-            and ${usageRecords.kind} in ('agent', 'image')
+            and ${usageRecords.kind} in ('agent', 'image', 'video')
             and ${usageRecords.createdAt} >= ${monthStartUtc(at).toISOString()}::timestamptz)`,
         })
         .onConflictDoNothing();
@@ -655,8 +683,8 @@ export function createModelGateway(deps: ModelGatewayDeps) {
     model: string;
     usage: ModelUsage;
     reportedCost?: number;
-    /** `image`: pictures (ADR 0197), recorded at the image model asked for; absent: a model call (`agent`). */
-    kind?: "agent" | "image";
+    /** `image`/`video`: pictures (ADR 0197) or a video (ADR 0219), at the model asked for; absent: a model call. */
+    kind?: "agent" | "image" | "video";
     requestedModel?: string;
   }) {
     const { agent, usage } = input;
@@ -1076,6 +1104,93 @@ export function createModelGateway(deps: ModelGatewayDeps) {
         costNanoUsd: cost,
         ...(failed instanceof ProviderError ? { error: failed } : {}),
       };
+    },
+
+    /**
+     * A video (ADR 0219), as `generateImages` does pictures: the workspace's standing, the model checked against the
+     * video catalog, the key for its provider (`imageKey`: an agent's own credential only when it is of that
+     * provider), the person's limit, the agent's budget reserved at the request's worst case, the call, and one
+     * `usage_records` row of kind `video` at what the provider reported or the catalog's price. A failed call is
+     * settled at nothing, though a provider may still bill a job stopped by the wait or a cancel (ADR 0219).
+     */
+    async generateVideo(call: VideoCall): Promise<VideoGatewayResult> {
+      await assertCanWork(db, call.orgId, call.agentId);
+      const model = call.request.model;
+      const info = videoModelInfo(model);
+      if (!info) throw new ValidationError(`Video model ${model} is not in the catalog`, "videos.model_unavailable");
+      const prompt = call.request.prompt.trim();
+      if (!prompt) throw new ValidationError("Say what the video should show");
+      if (prompt.length > MAX_VIDEO_PROMPT_CHARS)
+        throw new ValidationError(`The prompt is over ${MAX_VIDEO_PROMPT_CHARS} characters`);
+      const { seconds, aspect } = call.request;
+      if (!Number.isInteger(seconds) || seconds < info.minSeconds || seconds > info.maxSeconds)
+        throw new ValidationError(`${info.label} makes videos of ${info.minSeconds} to ${info.maxSeconds} seconds`);
+      if (!VIDEO_ASPECTS.includes(aspect)) throw new ValidationError(`${info.label} doesn't make ${aspect} videos`);
+      if (call.request.startImage && !info.startImage)
+        throw new ValidationError(`${info.label} takes no picture to start from`, "videos.reference");
+      const provider = providerFor(info.provider);
+      if (!provider.generateVideo)
+        throw new ValidationError(`${label(info.provider)} makes no videos here`, "videos.model_unavailable");
+      const row = await getAgent(db, call.orgId, call.agentId);
+      if (!row || row.archivedAt) throw new NotFoundError("Agent not found");
+      const agent = await withEffectiveBudget(db, row);
+      const key = await imageKey(call.orgId, info.provider, model, agent);
+      if (call.personId) await assertPersonUnderLimit(db, call.orgId, call.personId, now());
+      const worst = maxVideoCostNanoUsd(model, seconds);
+      const { reservation } = await reserveBudget(
+        agent,
+        { amount: worst, fit: (left) => (left >= worst ? { amount: worst, maxTokens: 0 } : null) },
+        0,
+      ).catch(async (error: unknown) => {
+        if (error instanceof BudgetExceededError && !error.byReservations)
+          await budgetExhausted(agent, error.spentNanoUsd).catch(() => {});
+        throw error;
+      });
+      let result: Awaited<ReturnType<NonNullable<ModelProvider["generateVideo"]>>>;
+      try {
+        result = await provider.generateVideo(
+          { ...call.request, prompt, model: info.apiModel, ...(call.signal ? { signal: call.signal } : {}) },
+          { apiKey: key.apiKey },
+        );
+      } catch (error) {
+        await db.transaction((tx) => settle(tx, reservation, 0, agent));
+        throw masked(error, label(info.provider), key);
+      }
+      const cost = videoCostNanoUsd(model, seconds, result.costNanoUsd);
+      const { record, spent, personSpent } = await settleCall({
+        agent,
+        reservation,
+        runId: call.runId,
+        personId: call.personId,
+        credentialId: key.credentialId,
+        provider: info.provider,
+        model,
+        requestedModel: model,
+        usage: { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 },
+        reportedCost: cost,
+        kind: "video",
+      });
+      await checkThresholds(agent, spent, record.cost);
+      if (call.personId && personSpent !== null)
+        await personSpendAdded(
+          db,
+          { orgId: call.orgId, personId: call.personId, amountNanoUsd: record.cost, at: now() },
+          personSpent,
+        );
+      return { video: result.video, model, usageRecordId: record.id, costNanoUsd: record.cost };
+    },
+
+    /** The video models a workspace can use now (ADR 0219), in the catalog's order: a key for their provider. */
+    async availableVideoModels(orgId: string): Promise<string[]> {
+      const providers = new Map<string, boolean>();
+      const out: string[] = [];
+      for (const id of VIDEO_MODEL_IDS) {
+        const provider = VIDEO_CATALOG[id]?.provider;
+        if (!provider || !deps.providers[provider]?.generateVideo) continue;
+        if (!providers.has(provider)) providers.set(provider, await providerHasKey(orgId, provider));
+        if (providers.get(provider)) out.push(id);
+      }
+      return out;
     },
 
     /**

@@ -17772,7 +17772,8 @@
       "router": "Yönlendirici",
       "embedding": "Arama",
       "summary": "Özetler",
-      "image": "Görseller"
+      "image": "Görseller",
+      "video": "Videolar"
     },
     "usageCalls_one": "{{count}} çağrı",
     "usageCalls_other": "{{count}} çağrı",
@@ -18448,6 +18449,7 @@
         "browsing": "Tarayıcıyı kullandı",
         "pcFiles": "Bilgisayardaki dosyalarla çalıştı",
         "creatingImage": "Bir görsel oluşturdu",
+        "creatingVideo": "Bir video oluşturdu",
         "exportingFile": "Drive'a bir dosya kaydetti",
         "importingFile": "Drive'dan bir dosya getirdi",
         "runningSkillScript": "{{app}} becerisinin bir betiğini çalıştırdı",
@@ -18569,6 +18571,7 @@
       "browsing": "tarayıcıyı kullanıyor",
       "pcFiles": "bilgisayardaki dosyalarla çalışıyor",
       "creatingImage": "görsel oluşturuyor",
+      "creatingVideo": "video oluşturuyor",
       "exportingFile": "Drive'a dosya kaydediyor",
       "importingFile": "Drive'dan dosya getiriyor",
       "runningSkillScript": "{{app}} becerisinden bir betik çalıştırıyor",
@@ -18962,6 +18965,10 @@
     "generate_image": {
       "label": "Görsel oluştur",
       "description": "Çalışma alanının görsel yapay zekasıyla sohbette veya bir tuvalde görseller oluşturur. Ajanın bütçesinden ödenir."
+    },
+    "generate_video": {
+      "label": "Video oluştur",
+      "description": "Çalışma alanının video yapay zekasıyla sohbette sesli kısa videolar oluşturur. Ajanın bütçesinden ödenir."
     },
     "list_issues": {
       "label": "Görevleri gör",

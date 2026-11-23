@@ -396,6 +396,9 @@ test("a provider refused this server's own OAuth app: what's wrong and who fixes
  * hit goes in `KNOWN` instead.
  */
 const PLAIN_LINE = new Set([
+  // Videos (ADR 0219): only an agent's `generate_video` meets these, and reads the server's words.
+  "videos.model_unavailable",
+  "videos.reference",
   // A code session (ADR 0215): the apps start one only with words in the field and rename one only to a name, build
   // its git and file requests themselves, never offer removing who must stay, and retry only a failed worktree.
   "code_session.empty",

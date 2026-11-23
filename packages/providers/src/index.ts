@@ -19,6 +19,7 @@ export * from "./key-check";
 export * from "./openai";
 export * from "./openrouter";
 export * from "./types";
+export * from "./videos";
 
 /**
  * One adapter per entry of `PROVIDERS`, by the protocol it speaks: the server's defaults (modules may replace any).

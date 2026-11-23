@@ -17285,7 +17285,8 @@
       "router": "Router",
       "embedding": "Pencarian",
       "summary": "Ringkasan",
-      "image": "Gambar"
+      "image": "Gambar",
+      "video": "Video"
     },
     "usageCalls_other": "{{count}} panggilan",
     "usageHidden": "Hanya admin yang melihat pemakaian ruang kerja.",
@@ -17952,6 +17953,7 @@
         "browsing": "Memakai browser",
         "pcFiles": "Mengerjakan file di komputer",
         "creatingImage": "Membuat gambar",
+        "creatingVideo": "Membuat video",
         "exportingFile": "Menyimpan file ke Drive",
         "importingFile": "Mengambil file dari Drive",
         "runningSkillScript": "Menjalankan skrip dari skill {{app}}",
@@ -18073,6 +18075,7 @@
       "browsing": "memakai browser",
       "pcFiles": "mengerjakan file di komputer",
       "creatingImage": "membuat gambar",
+      "creatingVideo": "membuat video",
       "exportingFile": "menyimpan file ke Drive",
       "importingFile": "mengambil file dari Drive",
       "runningSkillScript": "menjalankan skrip dari skill {{app}}",
@@ -18462,6 +18465,10 @@
     "generate_image": {
       "label": "Buat gambar",
       "description": "Membuat gambar dengan AI gambar ruang kerja, di percakapan atau di kanvas. Dibayar dari anggaran agen."
+    },
+    "generate_video": {
+      "label": "Buat video",
+      "description": "Membuat video pendek bersuara dengan AI video ruang kerja, di percakapan. Dibayar dari anggaran agen."
     },
     "list_issues": {
       "label": "Lihat tugas",

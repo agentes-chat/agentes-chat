@@ -76,6 +76,7 @@ export const BUILTIN_TOOLS: Record<string, string[]> = {
     "edit_canvas",
     "edit_document",
     "generate_image",
+    "generate_video",
   ],
   "issues:read": ["list_issues"],
   "issues:write": ["create_issue", "update_issue", "comment_issue"],
@@ -237,6 +238,11 @@ export const BUILTIN_TOOL_INFO: Record<string, { label: string; description: str
     label: "Generate images",
     description:
       "Makes images with the workspace's image AI, in the conversation or on a canvas. Paid from its budget.",
+  },
+  generate_video: {
+    label: "Generate videos",
+    description:
+      "Makes short videos with sound with the workspace's video AI, in the conversation. Paid from its budget.",
   },
   list_issues: { label: "View issues", description: "Lists and opens issues." },
   create_issue: { label: "Create issue", description: "Creates an issue with acceptance criteria." },

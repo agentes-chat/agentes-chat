@@ -18377,7 +18377,14 @@ export const en = {
     defaultBudgetHelp:
       "Agents without a budget of their own use this one. Change an agent's own budget on its page. Admins see amounts, members see percentages.",
     usageTotal: "{{amount}} in total since {{since}}",
-    kinds: { agent: "Agents", router: "Router", embedding: "Search", summary: "Summaries", image: "Images" },
+    kinds: {
+      agent: "Agents",
+      router: "Router",
+      embedding: "Search",
+      summary: "Summaries",
+      image: "Images",
+      video: "Videos",
+    },
     usageCalls_one: "{{count}} call",
     usageCalls_other: "{{count}} calls",
     usageHidden: "Only admins see the workspace's usage.",
@@ -19107,6 +19114,7 @@ export const en = {
         browsing: "Used the browser",
         pcFiles: "Worked on the PC files",
         creatingImage: "Made an image",
+        creatingVideo: "Made a video",
         exportingFile: "Saved a file to the Drive",
         importingFile: "Brought a file from the Drive",
         runningSkillScript: "Ran a script of the skill {{app}}",
@@ -19229,6 +19237,7 @@ export const en = {
       browsing: "using the browser",
       pcFiles: "working with the PC's files",
       creatingImage: "making an image",
+      creatingVideo: "making a video",
       exportingFile: "saving a file to Drive",
       importingFile: "bringing a file from Drive",
       runningSkillScript: "running a script from the skill {{app}}",
@@ -19677,6 +19686,11 @@ export const en = {
       label: "Generate images",
       description:
         "Makes images with the workspace's image AI, in the conversation or on a canvas. Paid from its budget.",
+    },
+    generate_video: {
+      label: "Generate videos",
+      description:
+        "Makes short videos with sound with the workspace's video AI, in the conversation. Paid from its budget.",
     },
     list_issues: {
       label: "View tasks",

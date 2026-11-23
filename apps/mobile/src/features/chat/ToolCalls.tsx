@@ -87,6 +87,7 @@ const KIND_ICON: Partial<Record<ActivityKind, IconName>> = {
   fetchingFile: "file",
   pcFiles: "file",
   creatingImage: "image",
+  creatingVideo: "play",
   creatingIssue: "issue",
   updatingIssue: "issue",
   readingIssues: "issue",

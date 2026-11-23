@@ -17226,7 +17226,8 @@
       "router": "ルーター",
       "embedding": "検索",
       "summary": "要約",
-      "image": "画像"
+      "image": "画像",
+      "video": "動画"
     },
     "usageCalls_other": "{{count}}回の呼び出し",
     "usageHidden": "ワークスペースの使用量は管理者だけが閲覧できます。",
@@ -17893,6 +17894,7 @@
         "browsing": "ブラウザを使いました",
         "pcFiles": "PCのファイルで作業しました",
         "creatingImage": "画像を作成しました",
+        "creatingVideo": "動画を作成しました",
         "exportingFile": "Driveにファイルを保存しました",
         "importingFile": "Driveからファイルを取り込みました",
         "runningSkillScript": "スキル{{app}}のスクリプトを実行しました",
@@ -18014,6 +18016,7 @@
       "browsing": "ブラウザを使用中",
       "pcFiles": "PCのファイルで作業中",
       "creatingImage": "画像を作成中",
+      "creatingVideo": "動画を作成中",
       "exportingFile": "Driveにファイルを保存中",
       "importingFile": "Driveからファイルを取り込み中",
       "runningSkillScript": "スキル{{app}}のスクリプトを実行中",
@@ -18403,6 +18406,10 @@
     "generate_image": {
       "label": "画像を生成",
       "description": "ワークスペースの画像AIで、会話やキャンバスに画像を作成します。費用はその予算から支払われます。"
+    },
+    "generate_video": {
+      "label": "動画を生成",
+      "description": "ワークスペースの動画AIで、会話に音声付きの短い動画を作成します。費用はその予算から支払われます。"
     },
     "list_issues": {
       "label": "タスクを見る",

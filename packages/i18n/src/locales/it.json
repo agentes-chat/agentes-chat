@@ -18438,7 +18438,8 @@
       "router": "Smistamento",
       "embedding": "Ricerca",
       "summary": "Riepiloghi",
-      "image": "Immagini"
+      "image": "Immagini",
+      "video": "Video"
     },
     "usageCalls_one": "{{count}} chiamata",
     "usageCalls_many": "{{count}} chiamate",
@@ -19140,6 +19141,7 @@
         "browsing": "Ha usato il browser",
         "pcFiles": "Ha lavorato sui file del PC",
         "creatingImage": "Ha creato un’immagine",
+        "creatingVideo": "Ha creato un video",
         "exportingFile": "Ha salvato un file su Drive",
         "importingFile": "Ha preso un file da Drive",
         "runningSkillScript": "Ha eseguito uno script della skill {{app}}",
@@ -19261,6 +19263,7 @@
       "browsing": "usando il browser",
       "pcFiles": "lavorando sui file del PC",
       "creatingImage": "creando un’immagine",
+      "creatingVideo": "creando un video",
       "exportingFile": "salvando un file su Drive",
       "importingFile": "prendendo un file da Drive",
       "runningSkillScript": "eseguendo uno script della skill {{app}}",
@@ -19659,6 +19662,10 @@
     "generate_image": {
       "label": "Genera immagini",
       "description": "Crea immagini con l'IA per immagini dello spazio di lavoro, nella conversazione o su una lavagna. Si paga dal suo budget."
+    },
+    "generate_video": {
+      "label": "Genera video",
+      "description": "Crea brevi video con audio con l'IA per video dello spazio di lavoro, nella conversazione. Si paga dal suo budget."
     },
     "list_issues": {
       "label": "Vedi attività",

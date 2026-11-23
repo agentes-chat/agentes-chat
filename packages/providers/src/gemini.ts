@@ -28,6 +28,7 @@ import {
   stableToolsFirst,
   systemText,
 } from "./types";
+import { checkedVideo, type VideoRequest, type VideoResult, videoBlockedError } from "./videos";
 
 /** The most `max_output_tokens` a call that isn't in the background may ask for: above it Google answers 400. */
 const MAX_OUTPUT_TOKENS = 65_536;
@@ -236,6 +237,7 @@ export function createGeminiProvider(
       }
     },
     generateImage: (request, { apiKey }) => geminiImages(http, request, apiKey),
+    generateVideo: (request, { apiKey }) => geminiVideo(http, request, apiKey),
   };
 }
 
@@ -336,6 +338,103 @@ async function geminiImages(http: typeof fetch, request: ImageRequest, apiKey: s
     }
   }
   return { images: made, ...(model ? { model } : {}), usage };
+}
+
+const GEMINI_API = "https://generativelanguage.googleapis.com/v1beta";
+/** How often a video delivered as a file is asked whether it is ready. */
+const FILE_POLL_MS = 5000;
+
+/** A `fetch` to Google that fails in the other adapters' words: unreachable, stopped, or Google's error. */
+async function googleCall(http: typeof fetch, url: string, init: RequestInit, signal?: AbortSignal): Promise<Response> {
+  let res: Response;
+  try {
+    res = await http(url, { ...init, signal });
+  } catch {
+    throw signal?.aborted
+      ? new ProviderError("request aborted", false)
+      : new ProviderError("could not reach provider", true);
+  }
+  if (res.ok) return res;
+  const error = ((await res.json().catch(() => null)) as { error?: { code?: string; message?: string } } | null)?.error;
+  if (error?.code && BLOCKED.has(error.code)) throw videoBlockedError(error.message);
+  throw errorOf(res.status, error?.code, error?.message);
+}
+
+/**
+ * A video over the Interactions API (ADR 0219): a video `response_format` (shape, length, 720p), the picture to start
+ * from before the prompt, unstored and answered when done. 720p comes inline (base64); a video delivered as a Files
+ * API file (`uri`) is waited for until `ACTIVE` and downloaded. A prompt Google blocks, or an answer in words with no
+ * video, is `videoBlockedError`.
+ */
+async function geminiVideo(http: typeof fetch, request: VideoRequest, apiKey: string): Promise<VideoResult> {
+  const headers = { "content-type": "application/json", "x-goog-api-key": apiKey };
+  const res = await googleCall(
+    http,
+    `${GEMINI_API}/interactions`,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        model: request.model,
+        input: [
+          ...(request.startImage
+            ? [{ type: "image", mime_type: request.startImage.mediaType, data: request.startImage.data }]
+            : []),
+          { type: "text", text: request.prompt },
+        ],
+        response_format: {
+          type: "video",
+          aspect_ratio: request.aspect,
+          duration: `${request.seconds}s`,
+          resolution: "720p",
+        },
+        store: false,
+      }),
+    },
+    request.signal,
+  );
+  const answer = (await res.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!answer) throw new ProviderError("could not read the provider's answer", true);
+  const first = (Array.isArray(answer.errors) ? answer.errors[0] : undefined) as
+    | { code?: string; message?: string }
+    | undefined;
+  if (first?.code && BLOCKED.has(first.code)) throw videoBlockedError(first.message);
+  if (answer.status === "failed" || answer.status === "cancelled")
+    throw errorOf(undefined, first?.code ?? "api_error", first?.message);
+  let data: string | undefined;
+  let uri: string | undefined;
+  let text = "";
+  const steps = Array.isArray(answer.steps) ? (answer.steps as Step[]) : [];
+  for (const step of steps) {
+    if (step?.type !== "model_output") continue;
+    for (const item of Array.isArray(step.content) ? step.content : [step.content]) {
+      const o = (item ?? {}) as Record<string, unknown>;
+      if (o.type === "video" && typeof o.data === "string") data ??= o.data;
+      else if (o.type === "video" && typeof o.uri === "string") uri ??= o.uri;
+      else if (o.type === "text" && typeof o.text === "string") text += o.text;
+    }
+  }
+  const model = typeof answer.model === "string" ? answer.model : undefined;
+  if (data) return { video: checkedVideo(new Uint8Array(Buffer.from(data, "base64"))), ...(model ? { model } : {}) };
+  const file = uri?.match(/files\/([^/?#]+)/)?.[1];
+  if (!file) {
+    // An answer in words and no video is the model declining the prompt.
+    if (text.trim()) throw videoBlockedError(text.trim());
+    throw new ProviderError("the provider sent no video", true);
+  }
+  for (;;) {
+    const info = (await (
+      await googleCall(http, `${GEMINI_API}/files/${file}`, { headers }, request.signal)
+    )
+      .json()
+      .catch(() => ({}))) as { state?: string };
+    if (info.state === "ACTIVE") break;
+    if (info.state === "FAILED") throw new ProviderError("the provider failed to make the video", true);
+    await new Promise((resolve) => setTimeout(resolve, FILE_POLL_MS));
+    if (request.signal?.aborted) throw new ProviderError("request aborted", false);
+  }
+  const bytes = await googleCall(http, `${GEMINI_API}/files/${file}:download?alt=media`, { headers }, request.signal);
+  return { video: checkedVideo(new Uint8Array(await bytes.arrayBuffer())), ...(model ? { model } : {}) };
 }
 
 function toBody(request: ModelRequest) {

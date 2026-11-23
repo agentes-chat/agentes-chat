@@ -3131,7 +3131,7 @@ export interface UsageReport {
   defaultAgentBudgetUsd: number;
   totalUsd: number;
   byKind: {
-    kind: "agent" | "router" | "embedding" | "summary" | "image";
+    kind: "agent" | "router" | "embedding" | "summary" | "image" | "video";
     calls: number;
     partialCalls: number;
     inputTokens: number;

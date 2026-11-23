@@ -37,6 +37,7 @@ import {
   stableToolsFirst,
   withoutImages,
 } from "./types";
+import { checkedVideo, type VideoRequest, type VideoResult, videoBlockedError } from "./videos";
 
 /**
  * OpenRouter (ADR 0087): one key for many makers' models, over OpenAI's Chat Completions. Its models come from its
@@ -548,6 +549,8 @@ export function createOpenRouterProvider(
      * OpenRouter attribution, routing, reasoning or cache markers, usage asked for, and its reported cost ignored.
      */
     compatible?: { id: string; baseURL: string };
+    /** Tests only: how often a video job is polled. */
+    videoPollMs?: number;
   } = {},
 ): ModelProvider {
   const compatible = options.compatible;
@@ -674,6 +677,8 @@ export function createOpenRouterProvider(
       : {
           generateImage: (request: ImageRequest, { apiKey }: { apiKey: string }) =>
             openRouterImages(options.fetch ?? fetch, request, apiKey),
+          generateVideo: (request: VideoRequest, { apiKey }: { apiKey: string }) =>
+            openRouterVideo(options.fetch ?? fetch, request, apiKey, options.videoPollMs),
         }),
   };
 }
@@ -751,4 +756,82 @@ async function openRouterImages(http: typeof fetch, request: ImageRequest, apiKe
     }
   }
   return { images: made, ...(model ? { model } : {}), ...(cost !== undefined ? { costNanoUsd: cost } : {}) };
+}
+
+/** How often a video job is asked whether it is done. */
+const VIDEO_POLL_MS = 10_000;
+
+/**
+ * A video over OpenRouter's Video API (ADR 0219): `POST /api/v1/videos` with the length, the shape, 720p and
+ * the picture to start from as its first frame; the job is polled until `completed`, then its first output is
+ * downloaded with the key, priced at what it charged (`usage.cost`). A job that fails for its content policy is
+ * `videoBlockedError`.
+ */
+async function openRouterVideo(
+  http: typeof fetch,
+  request: VideoRequest,
+  apiKey: string,
+  pollMs = VIDEO_POLL_MS,
+): Promise<VideoResult> {
+  const headers = { "content-type": "application/json", authorization: `Bearer ${apiKey}`, ...ATTRIBUTION };
+  const call = async (url: string, init: RequestInit = {}): Promise<Response> => {
+    let res: Response;
+    try {
+      res = await http(url, { headers, ...init, signal: request.signal });
+    } catch {
+      throw request.signal?.aborted
+        ? new ProviderError("request aborted", false)
+        : new ProviderError("could not reach provider", true);
+    }
+    if (res.ok) return res;
+    const error = obj(((await res.json().catch(() => null)) as Raw | null)?.error);
+    const said = typeof error?.message === "string" ? shortSaid(error.message) : "";
+    if ((res.status === 400 || res.status === 403) && IMAGE_REFUSED.test(said)) throw videoBlockedError(said);
+    throw statusError(res.status, said);
+  };
+  const json = async (res: Response) => ((await res.json().catch(() => null)) as Raw | null) ?? {};
+  let job = await json(
+    await call(`${OPENROUTER_API}/videos`, {
+      method: "POST",
+      body: JSON.stringify({
+        model: request.model,
+        prompt: request.prompt,
+        duration: request.seconds,
+        aspect_ratio: request.aspect,
+        resolution: "720p",
+        // No `generate_audio`: OpenRouter turns sound on for models that make it, and Grok Imagine Video lists no
+        // such setting (`GET /api/v1/videos/models`, 2026-11-23), so asking for it there risks a refusal.
+        ...(request.startImage
+          ? {
+              frame_images: [
+                {
+                  type: "image_url",
+                  image_url: { url: `data:${request.startImage.mediaType};base64,${request.startImage.data}` },
+                  frame_type: "first_frame",
+                },
+              ],
+            }
+          : {}),
+      }),
+    }),
+  );
+  const id = typeof job.id === "string" ? job.id : "";
+  if (!id) throw new ProviderError("could not read the provider's answer", true);
+  while (job.status !== "completed") {
+    if (job.status === "failed" || job.status === "cancelled" || job.status === "expired") {
+      const said = typeof job.error === "string" ? shortSaid(job.error) : "";
+      if (IMAGE_REFUSED.test(said)) throw videoBlockedError(said);
+      throw new ProviderError(`the provider failed to make the video${said ? `: ${said}` : ""}`, true);
+    }
+    await new Promise((resolve) => setTimeout(resolve, pollMs));
+    if (request.signal?.aborted) throw new ProviderError("request aborted", false);
+    job = await json(await call(`${OPENROUTER_API}/videos/${encodeURIComponent(id)}`));
+  }
+  const res = await call(`${OPENROUTER_API}/videos/${encodeURIComponent(id)}/content?index=0`);
+  const cost = obj(job.usage) ? costOf(job.usage as Usage) : undefined;
+  return {
+    video: checkedVideo(new Uint8Array(await res.arrayBuffer())),
+    ...(typeof job.model === "string" ? { model: job.model } : {}),
+    ...(cost !== undefined ? { costNanoUsd: cost } : {}),
+  };
 }

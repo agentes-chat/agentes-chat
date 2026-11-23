@@ -17218,7 +17218,8 @@
       "router": "라우터",
       "embedding": "검색",
       "summary": "요약",
-      "image": "이미지"
+      "image": "이미지",
+      "video": "동영상"
     },
     "usageCalls_other": "호출 {{count}}회",
     "usageHidden": "관리자만 워크스페이스 사용량을 볼 수 있어요.",
@@ -17885,6 +17886,7 @@
         "browsing": "브라우저를 사용했어요",
         "pcFiles": "컴퓨터의 파일로 작업했어요",
         "creatingImage": "이미지를 만들었어요",
+        "creatingVideo": "동영상을 만들었어요",
         "exportingFile": "파일을 Drive에 저장했어요",
         "importingFile": "Drive에서 파일을 가져왔어요",
         "runningSkillScript": "스킬 {{app}}의 스크립트를 실행했어요",
@@ -18006,6 +18008,7 @@
       "browsing": "브라우저를 사용하는 중",
       "pcFiles": "컴퓨터의 파일로 작업하는 중",
       "creatingImage": "이미지를 만드는 중",
+      "creatingVideo": "동영상을 만드는 중",
       "exportingFile": "파일을 Drive에 저장하는 중",
       "importingFile": "Drive에서 파일을 가져오는 중",
       "runningSkillScript": "스킬 {{app}}의 스크립트를 실행하는 중",
@@ -18395,6 +18398,10 @@
     "generate_image": {
       "label": "이미지 생성",
       "description": "워크스페이스의 이미지 AI로 대화나 캔버스에 이미지를 만들어요. 비용은 그 예산에서 나가요."
+    },
+    "generate_video": {
+      "label": "동영상 생성",
+      "description": "워크스페이스의 동영상 AI로 대화에 소리가 있는 짧은 동영상을 만들어요. 비용은 그 예산에서 나가요."
     },
     "list_issues": {
       "label": "작업 보기",

@@ -17295,7 +17295,8 @@
       "router": "路由器",
       "embedding": "搜索",
       "summary": "摘要",
-      "image": "图片"
+      "image": "图片",
+      "video": "视频"
     },
     "usageCalls_other": "{{count}} 次调用",
     "usageHidden": "只有管理员能看到工作区的用量。",
@@ -17967,6 +17968,7 @@
         "browsing": "使用了浏览器",
         "pcFiles": "处理了电脑上的文件",
         "creatingImage": "生成了一张图片",
+        "creatingVideo": "生成了一段视频",
         "exportingFile": "把文件保存到了 Drive",
         "importingFile": "从 Drive 获取了文件",
         "runningSkillScript": "运行了技能 {{app}} 的脚本",
@@ -18088,6 +18090,7 @@
       "browsing": "使用浏览器",
       "pcFiles": "处理电脑上的文件",
       "creatingImage": "生成图片",
+      "creatingVideo": "生成视频",
       "exportingFile": "把文件保存到 Drive",
       "importingFile": "从 Drive 获取文件",
       "runningSkillScript": "运行技能 {{app}} 的脚本",
@@ -18478,6 +18481,10 @@
     "generate_image": {
       "label": "生成图片",
       "description": "用工作区的图片 AI 在对话中或白板上生成图片。费用计入智能体的预算。"
+    },
+    "generate_video": {
+      "label": "生成视频",
+      "description": "用工作区的视频 AI 在对话中生成带声音的短视频。费用计入智能体的预算。"
     },
     "list_issues": {
       "label": "查看任务",

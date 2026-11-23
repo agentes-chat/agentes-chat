@@ -18227,7 +18227,14 @@ export const ptBR = {
     defaultBudgetHelp:
       "Agentes sem orçamento próprio usam este. O de cada agente muda na página dele. Admins veem valores e membros veem porcentagens.",
     usageTotal: "{{amount}} no total desde {{since}}",
-    kinds: { agent: "Agentes", router: "Roteador", embedding: "Busca", summary: "Resumos", image: "Imagens" },
+    kinds: {
+      agent: "Agentes",
+      router: "Roteador",
+      embedding: "Busca",
+      summary: "Resumos",
+      image: "Imagens",
+      video: "Vídeos",
+    },
     usageCalls_one: "{{count}} chamada",
     usageCalls_other: "{{count}} chamadas",
     usageHidden: "Só admins veem o uso do workspace.",
@@ -18958,6 +18965,7 @@ export const ptBR = {
         browsing: "Usou o navegador",
         pcFiles: "Mexeu nos arquivos do PC",
         creatingImage: "Criou uma imagem",
+        creatingVideo: "Criou um vídeo",
         exportingFile: "Salvou um arquivo no Drive",
         importingFile: "Trouxe um arquivo do Drive",
         runningSkillScript: "Rodou um script da skill {{app}}",
@@ -19079,6 +19087,7 @@ export const ptBR = {
       browsing: "usando o navegador",
       pcFiles: "mexendo nos arquivos do PC",
       creatingImage: "criando uma imagem",
+      creatingVideo: "criando um vídeo",
       exportingFile: "salvando um arquivo no Drive",
       importingFile: "trazendo um arquivo do Drive",
       runningSkillScript: "rodando um script da skill {{app}}",
@@ -19521,6 +19530,11 @@ export const ptBR = {
       label: "Gerar imagens",
       description:
         "Cria imagens com a IA de imagens do workspace, na conversa ou num quadro. Sai do orçamento do agente.",
+    },
+    generate_video: {
+      label: "Gerar vídeos",
+      description:
+        "Cria vídeos curtos com som com a IA de vídeo do workspace, na conversa. Sai do orçamento do agente.",
     },
     list_issues: {
       label: "Ver tarefas",

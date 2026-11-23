@@ -38,6 +38,7 @@ export type ActivityKind =
   | "browsing"
   | "pcFiles"
   | "creatingImage"
+  | "creatingVideo"
   | "exportingFile"
   | "importingFile"
   | "runningSkillScript"
@@ -176,6 +177,8 @@ const BUILTIN: Record<string, ActivityKind> = {
   edit_document: "writingDrive",
   // Images onto a canvas through the workspace's image AI (ADR 0197).
   generate_image: "creatingImage",
+  // Videos through the workspace's video AI (ADR 0219).
+  generate_video: "creatingVideo",
   search_context: "searchingMemory",
   expand: "searchingMemory",
   get_summary: "searchingMemory",

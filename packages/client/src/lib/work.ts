@@ -983,8 +983,8 @@ const LONG_STEP_MS = 4000;
 export const quietLine = (
   l: Pick<ToolLine, "tool" | "service" | "kind" | "state" | "count" | "ms" | "code" | "output">,
 ) =>
-  // A picture it made is in its reply: the picture says it.
-  (l.count === 1 && l.kind === "creatingImage" && l.state === "done") ||
+  // A picture or a video it made is in its reply: it says so itself.
+  (l.count === 1 && (l.kind === "creatingImage" || l.kind === "creatingVideo") && l.state === "done") ||
   (l.count === 1 &&
     !l.service &&
     (!/^mcp__/i.test(l.tool) || /^mcp__agentes__/i.test(l.tool)) &&

@@ -784,7 +784,7 @@ export interface AgentImageInput {
 }
 
 /** The agent behind a context, as the Drive's rules see it, in its reply's conversation. */
-function agentActorOf(ctx: AgentImageContext): Extract<ArtifactActor, { type: "agent" }> {
+export function agentActorOf(ctx: AgentImageContext): Extract<ArtifactActor, { type: "agent" }> {
   return {
     type: "agent",
     agentId: ctx.agentId,

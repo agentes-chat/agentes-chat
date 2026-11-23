@@ -17843,7 +17843,8 @@
       "router": "Router",
       "embedding": "Suche",
       "summary": "Zusammenfassungen",
-      "image": "Bilder"
+      "image": "Bilder",
+      "video": "Videos"
     },
     "usageCalls_one": "{{count}} Aufruf",
     "usageCalls_other": "{{count}} Aufrufe",
@@ -18525,6 +18526,7 @@
         "browsing": "Den Browser genutzt",
         "pcFiles": "An den Dateien auf dem PC gearbeitet",
         "creatingImage": "Ein Bild erstellt",
+        "creatingVideo": "Ein Video erstellt",
         "exportingFile": "Eine Datei in Drive gespeichert",
         "importingFile": "Eine Datei aus Drive geholt",
         "runningSkillScript": "Ein Skript des Skills {{app}} ausgeführt",
@@ -18646,6 +18648,7 @@
       "browsing": "Nutzen des Browsers",
       "pcFiles": "Arbeiten mit den Dateien des PCs",
       "creatingImage": "Erstellen eines Bildes",
+      "creatingVideo": "Erstellen eines Videos",
       "exportingFile": "Speichern einer Datei in Drive",
       "importingFile": "Holen einer Datei aus Drive",
       "runningSkillScript": "Ausführen eines Skripts des Skills {{app}}",
@@ -19039,6 +19042,10 @@
     "generate_image": {
       "label": "Bilder erstellen",
       "description": "Erstellt Bilder mit der Bild-KI des Workspace, in der Unterhaltung oder auf einem Whiteboard. Wird aus seinem Budget bezahlt."
+    },
+    "generate_video": {
+      "label": "Videos erstellen",
+      "description": "Erstellt kurze Videos mit Ton mit der Video-KI des Workspace, in der Unterhaltung. Wird aus seinem Budget bezahlt."
     },
     "list_issues": {
       "label": "Aufgaben ansehen",

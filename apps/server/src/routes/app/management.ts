@@ -2006,7 +2006,7 @@ export function managementRoutes(deps: AppDeps) {
               .openapi({ description: "Calls the server pays for (Jev), not in the total." }),
             byKind: z.array(
               z.object({
-                kind: z.enum(["agent", "router", "embedding", "summary", "image"]),
+                kind: z.enum(["agent", "router", "embedding", "summary", "image", "video"]),
                 calls: z.number(),
                 partialCalls: z.number(),
                 inputTokens: z.number(),

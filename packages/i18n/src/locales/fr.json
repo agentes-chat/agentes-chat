@@ -18416,7 +18416,8 @@
       "router": "Routeur",
       "embedding": "Recherche",
       "summary": "Résumés",
-      "image": "Images"
+      "image": "Images",
+      "video": "Vidéos"
     },
     "usageCalls_one": "{{count}} appel",
     "usageCalls_many": "{{count}} appels",
@@ -19124,6 +19125,7 @@
         "browsing": "A utilisé le navigateur",
         "pcFiles": "A travaillé sur les fichiers de l'ordinateur",
         "creatingImage": "A créé une image",
+        "creatingVideo": "A créé une vidéo",
         "exportingFile": "A enregistré un fichier dans le Drive",
         "importingFile": "A récupéré un fichier du Drive",
         "runningSkillScript": "A exécuté un script de la compétence {{app}}",
@@ -19245,6 +19247,7 @@
       "browsing": "utilisation du navigateur",
       "pcFiles": "travail sur les fichiers de l'ordinateur",
       "creatingImage": "création d’une image",
+      "creatingVideo": "création d’une vidéo",
       "exportingFile": "enregistrement d'un fichier dans le Drive",
       "importingFile": "récupération d'un fichier du Drive",
       "runningSkillScript": "exécution d'un script de la compétence {{app}}",
@@ -19643,6 +19646,10 @@
     "generate_image": {
       "label": "Créer des images",
       "description": "Crée des images avec l'IA d'images de l'espace de travail, dans la conversation ou sur un tableau blanc. Payé sur le budget de l'agent."
+    },
+    "generate_video": {
+      "label": "Créer des vidéos",
+      "description": "Crée de courtes vidéos avec son avec l'IA vidéo de l'espace de travail, dans la conversation. Payé sur le budget de l'agent."
     },
     "list_issues": {
       "label": "Voir les tâches",

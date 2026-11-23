@@ -18341,7 +18341,8 @@
       "router": "Enrutador",
       "embedding": "Búsqueda",
       "summary": "Resúmenes",
-      "image": "Imágenes"
+      "image": "Imágenes",
+      "video": "Vídeos"
     },
     "usageCalls_one": "{{count}} llamada",
     "usageCalls_many": "{{count}} llamadas",
@@ -19038,6 +19039,7 @@
         "browsing": "Usó el navegador",
         "pcFiles": "Trabajó con los archivos de la computadora",
         "creatingImage": "Creó una imagen",
+        "creatingVideo": "Creó un vídeo",
         "exportingFile": "Guardó un archivo en el Drive",
         "importingFile": "Trajo un archivo del Drive",
         "runningSkillScript": "Ejecutó un script de la habilidad {{app}}",
@@ -19159,6 +19161,7 @@
       "browsing": "usando el navegador",
       "pcFiles": "trabajando con los archivos de la computadora",
       "creatingImage": "creando una imagen",
+      "creatingVideo": "creando un vídeo",
       "exportingFile": "guardando un archivo en el Drive",
       "importingFile": "trayendo un archivo del Drive",
       "runningSkillScript": "ejecutando un script de la habilidad {{app}}",
@@ -19556,6 +19559,10 @@
     "generate_image": {
       "label": "Crear imágenes",
       "description": "Crea imágenes con la IA de imágenes del espacio de trabajo, en la conversación o en una pizarra. Se paga con el presupuesto del agente."
+    },
+    "generate_video": {
+      "label": "Crear vídeos",
+      "description": "Crea vídeos cortos con sonido con la IA de vídeo del espacio de trabajo, en la conversación. Se paga con el presupuesto del agente."
     },
     "list_issues": {
       "label": "Ver tareas",
