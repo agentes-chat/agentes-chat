@@ -61,10 +61,6 @@ export interface ProvisioningDeps {
 /** Only the computer's first hello says `ready`, and only removing that computer undoes it. */
 const notReady = sql`${machineProvisioning.state} <> 'ready'`;
 
-/** There is no approval step: an older provisioner's `approval` (and a row it wrote) reads as `capacity`. */
-const currentReason = (reason: string | null | undefined): ProvisioningReason | null =>
-  reason == null ? null : reason === "approval" ? "capacity" : (reason as ProvisioningReason);
-
 /** How far a workspace's computer is; nothing reported yet reads as `preparing`. */
 export function provisioningStatus(row: ProvisioningRow | null, orgCreatedAt: Date) {
   return {
@@ -72,7 +68,7 @@ export function provisioningStatus(row: ProvisioningRow | null, orgCreatedAt: Da
     step: (row?.step ?? null) as ProvisioningStep | null,
     /** With `preparing`: what the computer is doing within its step, as the provisioner said it. */
     stage: row?.stage ?? null,
-    reason: currentReason(row?.reason),
+    reason: (row?.reason ?? null) as ProvisioningReason | null,
     /** When this state (and step or reason) began; null before anything was reported. */
     since: row?.since.toISOString() ?? null,
     /** When people started waiting: the computer's last removal, else the workspace's creation. */
@@ -231,12 +227,10 @@ export interface ProvisioningInput {
    * the apps read one they don't know as its step.
    */
   stage?: string | null;
-  /** Kept with `waiting` only; `approval` reads as `capacity`. */
-  reason?: ProvisioningReason | "approval" | null;
+  /** Kept with `waiting` only. */
+  reason?: ProvisioningReason | null;
   /** Kept with `preparing` only: when it should be ready, unless the wait was told an earlier time; none keeps it. */
   expectedReadyAt?: Date | null;
-  /** An older provisioner's countdown, read as that many seconds from now. */
-  etaSeconds?: number | null;
   /** Kept from before when not given. */
   specs?: MachineSpecs | null;
 }
@@ -261,7 +255,7 @@ export async function setProvisioning(
   const now = new Date();
   const step = input.state === "preparing" ? (input.step ?? null) : null;
   const stage = input.state === "preparing" ? (input.stage ?? null) : null;
-  const reason = input.state === "waiting" ? currentReason(input.reason) : null;
+  const reason = input.state === "waiting" ? (input.reason ?? null) : null;
   const done = await db.transaction(async (tx) => {
     // The standing as it is now, not the 5 s cache, under a lock its change waits for (`setOrgStanding` drops the
     // wait in the same transaction): a hold set first refuses this report, one set meanwhile drops it.
@@ -270,12 +264,8 @@ export async function setProvisioning(
     const refusal = workRefusal(org);
     if (refusal) throw refusal;
     const [before] = await tx.select().from(machineProvisioning).where(eq(machineProvisioning.orgId, orgId));
-    const same = before?.state === input.state && before.step === step && currentReason(before.reason) === reason;
-    const reported =
-      input.state !== "preparing"
-        ? null
-        : (input.expectedReadyAt ??
-          (input.etaSeconds == null ? null : new Date(now.getTime() + input.etaSeconds * 1000)));
+    const same = before?.state === input.state && before.step === step && before.reason === reason;
+    const reported = input.state === "preparing" ? (input.expectedReadyAt ?? null) : null;
     // A report without a time is still the same wait: it keeps the earliest time the wait was told.
     const kept = input.state === "preparing" && before?.state === "preparing" ? before.expectedReadyAt : null;
     const expectedReadyAt = !reported || (kept && kept.getTime() < reported.getTime()) ? kept : reported;

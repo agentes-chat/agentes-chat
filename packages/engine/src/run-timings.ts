@@ -434,7 +434,7 @@ export async function operatorReplyTimes(db: Database, query: ReplyTimesQuery, n
   ]);
 
   type Measures = Record<string, number | null>;
-  type Trigger = "all" | (typeof schema.agentRunTriggerEnum.enumValues)[number];
+  type Trigger = "all" | schema.RunTrigger;
   return {
     from,
     to,

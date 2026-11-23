@@ -549,7 +549,7 @@ const ReplyTimes = z
             description:
               "`model` (a provider's API), `claude_code`, `codex`, `other` (another CLI, or no turn yet). `all`: every brain.",
           }),
-          trigger: z.enum(["all", ...schema.agentRunTriggerEnum.enumValues]).openapi({
+          trigger: z.enum(["all", ...schema.RUN_TRIGGERS]).openapi({
             description: "`dm`, `mention` or `router` (nobody was named). `all`: every trigger.",
           }),
           ...ReplyMeasures,

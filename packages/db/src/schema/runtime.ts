@@ -94,6 +94,13 @@ export const agentRunStatusEnum = pgEnum("agent_run_status", [
 ]);
 /** `forum` is unused since the forum was removed (migration 0216); dropping it would rewrite `agent_runs`. */
 export const agentRunTriggerEnum = pgEnum("agent_run_trigger", ["mention", "router", "dm", "forum"]);
+/** The triggers a run has: no row is `forum` since migration 0216. */
+export const RUN_TRIGGERS = [
+  "mention",
+  "router",
+  "dm",
+] as const satisfies readonly (typeof agentRunTriggerEnum.enumValues)[number][];
+export type RunTrigger = (typeof RUN_TRIGGERS)[number];
 
 export const agentRuns = pgTable(
   "agent_runs",
@@ -112,7 +119,7 @@ export const agentRuns = pgTable(
      * `reply_in_threads` when the run was created, so turning it off or on never moves a run (ADR 0214).
      */
     replyInThread: boolean().notNull().default(false),
-    trigger: agentRunTriggerEnum().notNull(),
+    trigger: agentRunTriggerEnum().$type<RunTrigger>().notNull(),
     /** Hop of the reply this run will post (trigger hop + 1). */
     hop: integer().notNull(),
     /**

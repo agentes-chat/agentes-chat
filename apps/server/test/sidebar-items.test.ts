@@ -57,12 +57,14 @@ test("a stored tools' order is never trusted as is: unknown tools dropped, repea
 });
 
 test("a saved layout holding a removed tool and an unknown one reads as the tools this build knows", () => {
-  expect(sidebarItemsOf({ forum: "always", from_a_newer_server: "more", wiki: "always" })).toEqual({ wiki: "always" });
-  expect(sidebarToolOrderOf(["forum", "drive", "from_a_newer_server"])).toEqual([
+  expect(sidebarItemsOf({ approvals: "always", from_a_newer_server: "more", wiki: "always" })).toEqual({
+    wiki: "always",
+  });
+  expect(sidebarToolOrderOf(["approvals", "drive", "from_a_newer_server"])).toEqual([
     "drive",
     ...SIDEBAR_ITEMS.filter((i) => i !== "drive"),
   ]);
-  expect(sidebarOrderOf(["forum", "tools", "channels", "agents", "people"])).toEqual([...SIDEBAR_SECTIONS]);
+  expect(sidebarOrderOf(["approvals", "tools", "channels", "agents", "people"])).toEqual([...SIDEBAR_SECTIONS]);
 });
 
 test("a stored sidebar view is never trusted as is: known orders only, each pin once, five at most", () => {

@@ -67,7 +67,7 @@ const Run = z
     threadRootId: z.uuid().openapi({ description: "The thread it answers in: its trigger's, or the trigger itself." }),
     triggerMessageId: z.uuid(),
     replyMessageId: z.uuid().nullable(),
-    trigger: z.enum(schema.agentRunTriggerEnum.enumValues).openapi({
+    trigger: z.enum(schema.RUN_TRIGGERS).openapi({
       description: "`mention`, `dm` (a direct conversation) or `router` (nobody was named and the router picked it).",
     }),
     hop: z.number().int().openapi({ description: "Agents' replies in a row up to its own: 1 answers a person." }),

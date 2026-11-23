@@ -678,7 +678,6 @@ test("external provisioning: requests, progress, the workspace's computer and it
     { state: "ready" },
     { state: "preparing", step: "flying" },
     { state: "waiting", reason: "bored" },
-    { state: "problem", etaSeconds: -1 },
     { state: "preparing", specs: { cpus: 0, memoryGb: 8, diskGb: 75 } },
     { state: "preparing", expectedReadyAt: "in ten minutes" },
     { state: "preparing", expectedReadyAt: new Date(Date.now() + 8 * 86_400_000).toISOString() },
@@ -722,9 +721,6 @@ test("external provisioning: requests, progress, the workspace's computer and it
     expectedReadyAt: readyAt,
     specs,
   });
-  // An older client's words still go through.
-  expect((await put(`/orgs/${orgId}/provisioning`, { state: "waiting", reason: "approval" })).status).toBe(204);
-  expect((await put(`/orgs/${orgId}/provisioning`, { state: "preparing", etaSeconds: 600 })).status).toBe(204);
   expect((await put(`/orgs/${orgId}/provisioning`, { state: "preparing", step: "connecting", specs })).status).toBe(
     204,
   );

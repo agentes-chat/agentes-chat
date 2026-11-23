@@ -34,7 +34,7 @@ describe("the tools' order", () => {
 
   test("a tool this build has no page for (newer, or removed) is dropped, one the saved order lacks comes last", () => {
     // Approvals was a tool until the inbox took its place (ADR 0218): an order saved with it loses it.
-    const saved = ["drive", "from_a_newer_server", "forum", "approvals", "threads"] as SidebarItem[];
+    const saved = ["drive", "from_a_newer_server", "approvals", "threads"] as SidebarItem[];
     const known = knownToolOrder(saved);
     expect(known.slice(0, 2)).toEqual(["drive", "threads"]);
     expect([...known].sort()).toEqual([...SIDEBAR_ITEMS].sort());

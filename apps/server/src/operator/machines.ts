@@ -83,11 +83,9 @@ const ProvisioningInput = z.object({
       "With `preparing`: what the computer is doing within `step` (ordering, wiping, starting, booting, updating, restarting, network, firewall, apps, connecting); ignored otherwise. Any word is kept: the apps say one they have no words for as its step.",
   }),
   reason: z
-    .enum([...PROVISIONING_REASONS, "approval"])
+    .enum(PROVISIONING_REASONS)
     .optional()
-    .openapi({
-      description: "With `waiting`: capacity; ignored otherwise. `approval`, from an older client, reads as capacity.",
-    }),
+    .openapi({ description: "With `waiting`: capacity; ignored otherwise." }),
   expectedReadyAt: z.iso
     .datetime({ offset: true })
     .refine((at) => Date.parse(at) <= Date.now() + MAX_AHEAD_MS, "At most 7 days ahead")
@@ -95,15 +93,6 @@ const ProvisioningInput = z.object({
     .openapi({
       description:
         "With `preparing`: when the computer should be ready, at most 7 days ahead; ignored otherwise. A wait counts down to the earliest time it was told: a later one, or a report without one, leaves it as it is, so people see the wait run over.",
-    }),
-  etaSeconds: z
-    .number()
-    .int()
-    .min(0)
-    .max(MAX_AHEAD_MS / 1000)
-    .optional()
-    .openapi({
-      description: "From an older client, in place of `expectedReadyAt`: read as that many seconds from now.",
     }),
   specs: Specs.optional().openapi({ description: "Kept from before when absent." }),
 });

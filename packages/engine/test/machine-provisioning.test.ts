@@ -183,8 +183,7 @@ describe("external provisioning", () => {
     await setOrgStanding(deps(), held.organization.id, { state: "hold", reason: "Review", notice: "silent" });
     expect(await requested()).toEqual(["Acme", "Later"]);
 
-    // `approval`, from an older provisioner, reads as capacity: there is no approval step.
-    expect(await setProvisioning(deps(), later.organization.id, { state: "waiting", reason: "approval" })).toBe(true);
+    expect(await setProvisioning(deps(), later.organization.id, { state: "waiting", reason: "capacity" })).toBe(true);
     const one = await page("external", { limit: 1 });
     expect(one.requests.map((r) => r.orgName)).toEqual(["Acme"]);
     const two = await page("external", { limit: 1, cursor: one.next ?? "" });
@@ -392,16 +391,15 @@ describe("external provisioning", () => {
     expect((await status()).expectedReadyAt).toBe(at("16:29:00.000").toISOString());
   });
 
-  test("the ready time: the seconds left come from the server, a past one stays past, older words still read", async () => {
+  test("the ready time: the seconds left come from the server, a past one stays past", async () => {
     f = await setup();
     const events = heard("machine.provisioning");
     const status = () => computerSetup(f.db, "external", f.owner.id, f.org.id, true);
-    const report = (expectedReadyAt?: Date, etaSeconds?: number) =>
+    const report = (expectedReadyAt?: Date) =>
       setProvisioning({ ...deps(), emails: true }, f.org.id, {
         state: "preparing",
         step: "installing",
         expectedReadyAt,
-        etaSeconds,
       });
 
     const sixMinutes = new Date(Date.now() + 360_000);
@@ -443,23 +441,6 @@ describe("external provisioning", () => {
       expectedReadyAt: null,
       secondsLeft: null,
     });
-
-    // A row an older provisioner left says `approval`: it reads as capacity, and the same report keeps `since`.
-    await f.db
-      .update(schema.machineProvisioning)
-      .set({ reason: "approval" })
-      .where(eq(schema.machineProvisioning.orgId, f.org.id));
-    const since = (await status()).since;
-    expect((await status()).reason).toBe("capacity");
-    await setProvisioning(deps(), f.org.id, { state: "waiting", reason: "capacity" });
-    expect((await status()).since).toBe(since);
-
-    // An older provisioner's countdown is a time from now, here the new wait's first.
-    const sent = Date.now();
-    await report(undefined, 600);
-    const eta = Date.parse((await status()).expectedReadyAt ?? "");
-    expect(eta).toBeGreaterThanOrEqual(sent + 600_000);
-    expect(eta).toBeLessThanOrEqual(Date.now() + 600_000);
   });
 
   test("the ready email is promised by a ready time over a minute ahead, waiting or a problem, until it is ready", async () => {
