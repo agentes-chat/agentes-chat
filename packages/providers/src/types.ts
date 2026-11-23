@@ -60,9 +60,21 @@ export const hasToolImages = (messages: ModelMessage[]) =>
   );
 
 /**
- * The messages with tool results' pictures and PDFs left out, a note in their place: for endpoints that take text
- * only (another company's Anthropic-compatible API, OpenRouter), where one would fail the whole request. The note
- * names the AI (`model`) and the way out, so the agent tells the person the real cause.
+ * The note that takes pictures' and PDFs' place when the AI reads text only: it names the AI (`model`) and the way
+ * out, so the agent tells the person the real cause.
+ */
+export function textOnlyNote(images: readonly Pick<ToolImage, "mediaType">[], model?: string): string {
+  const pdf = images.some((i) => i.mediaType === PDF_MEDIA_TYPE);
+  const picture = images.some((i) => i.mediaType !== PDF_MEDIA_TYPE);
+  const what = pdf && picture ? "picture and the PDF" : pdf ? "PDF" : "picture";
+  const ai = model ? `this agent's AI (${model})` : "this agent's AI";
+  return `[The ${what} is not shown to you: ${ai} reads text only through this connection. Tell the person exactly that, and that an AI that reads ${pdf ? "pictures and PDFs" : "pictures"} (Claude, GPT or Gemini), picked in this agent's settings, would see it. Never say the file came empty.]`;
+}
+
+/**
+ * The messages with tool results' pictures and PDFs left out, a note in their place (`textOnlyNote`): for endpoints
+ * that take text only (another company's Anthropic-compatible API, OpenRouter), where one would fail the whole
+ * request.
  */
 export const withoutImages = (messages: ModelMessage[], model?: string): ModelMessage[] =>
   messages.map((m) =>
@@ -73,14 +85,7 @@ export const withoutImages = (messages: ModelMessage[], model?: string): ModelMe
           content: m.content.map((b) => {
             if (b.type !== "tool_result" || !b.images?.length) return b;
             const { images, ...rest } = b;
-            const pdf = images.some((i) => i.mediaType === PDF_MEDIA_TYPE);
-            const picture = images.some((i) => i.mediaType !== PDF_MEDIA_TYPE);
-            const what = pdf && picture ? "picture and the PDF" : pdf ? "PDF" : "picture";
-            const ai = model ? `this agent's AI (${model})` : "this agent's AI";
-            return {
-              ...rest,
-              content: `${b.content}\n[The ${what} is not shown to you: ${ai} reads text only through this connection. Tell the person exactly that, and that an AI that reads ${pdf ? "pictures and PDFs" : "pictures"} (Claude, GPT or Gemini), picked in this agent's settings, would see it. Never say the file came empty.]`,
-            };
+            return { ...rest, content: `${b.content}\n${textOnlyNote(images, model)}` };
           }),
         },
   );

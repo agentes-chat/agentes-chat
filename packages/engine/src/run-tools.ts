@@ -1,5 +1,6 @@
 import { PERMISSION_TOOL, type PubSub } from "@agenteschat/adapters";
 import { and, type Database, type Executor, eq, inArray, isNull, type SQL, schema, sql } from "@agenteschat/db";
+import { textOnlyNote } from "@agenteschat/providers";
 import { linkRunActions, publishMessageActions } from "./agent-actions";
 import { announceAgentStatus, followWork } from "./agent-status";
 import { openApprovalCard, publishApproval, supersedeApprovals } from "./approvals";
@@ -143,6 +144,8 @@ export interface ToolSideEffects {
   toolOff?: { machineId: string; tool: string };
   /** The line it told them on the way (`say_now`, ADR 0207): never its reply, which it still owes. */
   saidNow?: SaidNow[];
+  /** Its AI reads text only: a picture its tools returned was left out, for the "file not shown" note (`meta.filesTextOnly`). */
+  filesTextOnly?: true;
 }
 
 /** A task handed on, as a reply's chip reads it: the task, its agent and its conversation's root (the thread). */
@@ -323,6 +326,7 @@ export function mergeToolEffects(t: ToolSideEffects, e: ToolSideEffects | null |
   if (e.feedbackOffer) t.feedbackOffer = e.feedbackOffer;
   if (e.toolOff) t.toolOff = e.toolOff;
   if (e.saidNow?.length) t.saidNow = [...(t.saidNow ?? []), ...e.saidNow];
+  if (e.filesTextOnly) t.filesTextOnly = true;
 }
 
 const hasEffects = (e: ToolSideEffects) =>
@@ -342,7 +346,8 @@ const hasEffects = (e: ToolSideEffects) =>
       e.tasks?.length ||
       e.feedbackOffer ||
       e.toolOff ||
-      e.saidNow?.length,
+      e.saidNow?.length ||
+      e.filesTextOnly,
   );
 
 /** The transcript key where the bridge leaves a computer-brain turn's side effects for the engine. */
@@ -365,12 +370,15 @@ async function recordBridgeEffects(
   where: RunWhere,
   call: { id: string; name: string; input: unknown },
   outcome: InvokeResult,
+  /** The turn's AI reads text only: the pictures of this result were left out (`textOnlyNote` in their place). */
+  leftOutImages = false,
 ) {
   const effects: ToolSideEffects = {};
   absorbBrowserCall(effects, call, outcome.type === "result" && outcome.output.isError === true);
   const update = outcome.type === "result" ? absorbToolData(effects, outcome.output.data) : null;
   // Its line on the way (`say_now`, ADR 0207) is talk, never counted as work done.
   const executed = outcome.type === "result" && !isSayNow(call.name) ? 1 : 0;
+  if (leftOutImages) effects.filesTextOnly = true;
   if (!hasEffects(effects) && executed === 0) return;
   await deps.db.transaction(async (tx) => {
     const [row] = await tx
@@ -688,6 +696,12 @@ const loadedGroupsOf = (transcript: unknown): string[] | null => {
   return Array.isArray(groups) ? groups.filter((g): g is string => typeof g === "string") : null;
 };
 
+/** The model a run's turn reads text only with (`Transcript.turnTextOnly`): its tool results keep no pictures. */
+const turnTextOnlyOf = (run: AgentRun | null): string | null => {
+  const model = (run?.transcript as { turnTextOnly?: unknown } | null)?.turnTextOnly;
+  return typeof model === "string" && model ? model : null;
+};
+
 /**
  * The tools of a bridge identity, as `BrainTool[]`: a run's (the Tool Gateway
  * list with its scopes, mission tools when in a mission thread) or a mission
@@ -746,7 +760,11 @@ export async function invokeToolForRun(
   const outcome = where
     ? await invokeWithChip({ deps, tools, ctx, where, turnTools: null }, use)
     : await tools.invoke(ctx, { toolUseId: call.id, name: call.name, input });
-  if (run && where) await recordBridgeEffects(deps, run, where, use, outcome);
+  // A turn whose AI reads text only (`Transcript.turnTextOnly`, a plan model with `images: false`): a picture a tool
+  // returns is left out, `textOnlyNote` in its place, instead of the provider refusing the whole request (400).
+  const images = outcome.type === "result" ? (outcome.output.images ?? []) : [];
+  const textOnly = images.length > 0 ? turnTextOnlyOf(run) : null;
+  if (run && where) await recordBridgeEffects(deps, run, where, use, outcome, textOnly !== null);
   const wait = outcome.type === "result" && !outcome.output.isError ? waitOf(outcome.output.data) : null;
   const suspend = async (pause: RunPause, r: AgentRun): Promise<BridgeCallResult> => {
     const result = await suspendRunForTool(deps, r, { id: call.id, name: call.name }, pause);
@@ -762,9 +780,9 @@ export async function invokeToolForRun(
     const isError = outcome.output.isError === true;
     return {
       result: {
-        content: outcome.output.content,
+        content: textOnly ? `${outcome.output.content}\n${textOnlyNote(images, textOnly)}` : outcome.output.content,
         ...(isError ? { isError: true } : {}),
-        ...(outcome.output.images?.length ? { images: outcome.output.images } : {}),
+        ...(images.length && !textOnly ? { images } : {}),
       },
       ...(isError ? { code: codeOf(outcome.output.content, outcome.output.data) } : {}),
     };

@@ -38,7 +38,14 @@ import {
   type ToolImage,
   textOf,
 } from "@agenteschat/providers";
-import { autoPlanModel, droppedPlanModel, ownLimitsModel, planModel, planOf } from "@agenteschat/providers/plans";
+import {
+  autoPlanModel,
+  droppedPlanModel,
+  ownLimitsModel,
+  planModel,
+  planOf,
+  textOnlyPlanModel,
+} from "@agenteschat/providers/plans";
 import { PLAN_NOTICE, PLAN_PAUSE } from "@agenteschat/ui/plan-state";
 import { pendingConnectors } from "./access";
 import { linkRunActions, publishMessageActions } from "./agent-actions";
@@ -711,7 +718,7 @@ export interface Transcript {
   /** The agent reacted (`react`) instead of replying: an empty final answer posts nothing. */
   reacted?: boolean;
   /** A file it opened was left out by a text-only connection, not yet on a posted message (`meta.filesTextOnly`). */
-  filesTextOnly?: boolean;
+  filesTextOnly?: true;
   /** It sent a GIF or its sticker (`send_gif`, `send_sticker`, ADR 0091): an empty final answer posts nothing. */
   mediaSent?: boolean;
   /** A mission `report` card was posted this run: it is the answer, an empty final reply posts nothing. */
@@ -916,6 +923,12 @@ export interface Transcript {
   /** What the computer brain's turn under way was asked: a turn cut by a crash is sent again with it. */
   turnPrompt?: string;
   /**
+   * The model of this Claude Code turn when it reads text only (`images: false` on its plan): the bridge leaves a
+   * picture its tools return out of the result, a note in its place, instead of the provider refusing the request
+   * (`invokeToolForRun`). Written before the turn, cleared for one whose model reads pictures.
+   */
+  turnTextOnly?: string;
+  /**
    * The folder its computer session worked in wasn't on the computer anymore (`missingTurnFolder`): the run went
    * on in a fresh session in the agent's own folder, whose first turn is told so (`sessionLostNote`).
    */
@@ -980,6 +993,41 @@ export class BrainFailure extends Error {
 /** What a computer brain reads when its session's folder was gone and a fresh session took the turn. */
 export const sessionLostNote = (folder: string) =>
   `# Your session\nYour previous session on the computer was lost: the folder it worked in (${folder}) isn't there anymore. This is a fresh session in your own folder: it knows this conversation, not what you ran before. Look at what is on disk before you go on, and tell the person if work was lost.`;
+
+/** What a provider answers when it refuses the request itself (a picture the model can't read, a field it rejects). */
+const REQUEST_REFUSALS: ReadonlySet<number> = new Set([400, 413, 422]);
+
+/**
+ * The provider refused the request's content itself, not its moment: another turn in the same session sends the
+ * same history, so it would be refused the same way.
+ */
+const refusedRequest = (error: unknown) =>
+  error instanceof BrainFailure &&
+  !error.retryable &&
+  error.provider.httpStatus !== undefined &&
+  REQUEST_REFUSALS.has(error.provider.httpStatus);
+
+/**
+ * Drops a computer session the provider refuses every turn in: `sessionFor` picks a conversation's session up from
+ * any of its rows, so it is cleared from every row of the agent carrying it (a run still using it keeps the one it
+ * has) and from this run too, whose next one then starts a session of its own. Nothing is retried here: the failure
+ * stands as it is.
+ */
+async function discardRefusedSession(db: Executor, run: AgentRun, session: string): Promise<void> {
+  await db
+    .update(agentRuns)
+    .set({ brainSessionId: null })
+    .where(
+      and(
+        eq(agentRuns.orgId, run.orgId),
+        eq(agentRuns.agentId, run.agentId),
+        eq(agentRuns.brainSessionId, session),
+        ne(agentRuns.id, run.id),
+        sql`${agentRuns.status} not in ('queued', 'running', 'waiting_input', 'waiting_approval')`,
+      ),
+    );
+  await db.update(agentRuns).set({ brainSessionId: null }).where(eq(agentRuns.id, run.id));
+}
 
 /**
  * What a computer brain reads first in the fresh session of the account its run moved to (`Transcript.accountMove`):
@@ -5328,6 +5376,11 @@ async function executeRunInner(
         steerable: (steer) => live.steerable(steer),
       };
       const prompt = plan.kind === "model" ? triggerText : (nextPrompt ?? triggerText);
+      // A Claude Code turn whose plan model reads text only (a provider that answers a picture with 400): its tool
+      // results keep no pictures, a note in their place (`invokeToolForRun` reads this from the row).
+      const textOnlyModel = plan.kind === "claude_code" ? textOnlyPlanModel(plan.account?.provider, plan.model) : null;
+      if (textOnlyModel) transcript.turnTextOnly = textOnlyModel;
+      else delete transcript.turnTextOnly;
       // A computer brain's turn: the transcript is saved (the bridge's pauses join it), and the turn's
       // tool token goes in `brain.turn.mcp.token` so the runner bridge maps its calls to this run.
       if (plan.kind !== "model") {
@@ -5716,6 +5769,28 @@ async function executeRunInner(
           .set({ transcript: storedTranscript(transcript), updatedAt: new Date() })
           .where(and(eq(agentRuns.id, run.id), eq(agentRuns.status, "running")))
           .catch(() => {});
+        // A provider refused the request itself (400 invalid_request, say a picture its model can't read) in a
+        // session that keeps it in its history: every later turn there is refused the same way, and `sessionFor`
+        // would hand that session to the conversation's next run. It is dropped now, from every row that carries it,
+        // so the next run starts a session of its own; the step says why. Nothing is retried: this run still ends on
+        // the provider's own error. A mission's main session is the home thread's run and holds the mission's plan
+        // and what it found: it is not dropped here, a mission turn refused that way needs its own answer.
+        if (error instanceof BrainFailure && turnPlan.kind !== "model" && turnPlan.session && !turnPlan.missionId) {
+          if (refusedRequest(error)) {
+            const session = turnPlan.session.id;
+            await discardRefusedSession(db, run, session).catch(() => {});
+            later(() =>
+              addRunStep(db, run, "context", {
+                sessionDiscarded: {
+                  session,
+                  code: error.code,
+                  ...(error.provider.httpStatus ? { httpStatus: error.provider.httpStatus } : {}),
+                  message: error.message,
+                },
+              }),
+            );
+          }
+        }
         // Tools already ran in this computer turn (their side effects happened; they aren't in the
         // transcript): no retried job may redo the turn from scratch,
         // they would run them again. Post what the brain said and what it did instead, and end the run there.

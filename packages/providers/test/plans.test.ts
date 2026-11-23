@@ -23,6 +23,7 @@ import {
   planOf,
   readPlanModels,
   speedFits,
+  textOnlyPlanModel,
 } from "../src/plans";
 
 const models = (plan: PlanId): readonly PlanModel[] => CODING_PLANS[plan].claudeCode.models;
@@ -371,10 +372,12 @@ describe("a model OpenCode refused for the key, and what Automático runs instea
     expect(autoPlanModel("zai", "sonnet", usage, now)).toBe("sonnet");
   });
 
-  test("DeepSeek reads text only, from the table and from the live list", () => {
+  test("DeepSeek and GLM-5.3 read text only, from the table and from the live list", () => {
     const go = models("opencode");
     expect(go.find((m) => m.id === "deepseek-v4.1-flash")?.images).toBe(false);
-    expect(go.find((m) => m.id === "glm-5.3")?.images).toBeUndefined();
+    // Go answers a picture with 400 on it (a text-only turn there), unlike the plan's other models.
+    expect(go.find((m) => m.id === "glm-5.3")?.images).toBe(false);
+    expect(go.find((m) => m.id === "glm-5.3-flash")?.images).toBeUndefined();
     const read = readPlanModels(CODING_PLANS.opencode, {
       data: [
         { id: "deepseek-v5", name: "DeepSeek V5", type: "chat", canonical_id: "deepseek/deepseek-v5" },
@@ -383,6 +386,21 @@ describe("a model OpenCode refused for the key, and what Automático runs instea
     });
     expect(read.find((m) => m.id === "deepseek-v5")?.images).toBe(false);
     expect(read.find((m) => m.id === "glm-6")?.images).toBeUndefined();
+  });
+
+  test("the model that answers a turn, when it reads text only: the pair of plan and model, aliases included", () => {
+    // The model itself (`images: false` on its plan).
+    expect(textOnlyPlanModel("opencode", "glm-5.3")).toBe("glm-5.3");
+    expect(textOnlyPlanModel("opencode", "deepseek-v4-pro")).toBe("deepseek-v4-pro");
+    // One that reads pictures, the plan's alias (its model isn't flagged), a model of another plan, none.
+    expect(textOnlyPlanModel("opencode", "minimax-m3")).toBeNull();
+    expect(textOnlyPlanModel("opencode", "sonnet")).toBeNull();
+    expect(textOnlyPlanModel("zai", "glm-5.3")).toBeNull();
+    expect(textOnlyPlanModel(undefined, "glm-5.3")).toBeNull();
+    expect(textOnlyPlanModel("opencode", "auto")).toBeNull();
+    expect(textOnlyPlanModel("opencode", undefined)).toBeNull();
+    // A newer model of the live list isn't flagged until the table knows it.
+    expect(textOnlyPlanModel("opencode", "glm-6")).toBeNull();
   });
 });
 

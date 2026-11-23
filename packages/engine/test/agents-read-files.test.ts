@@ -26,6 +26,7 @@ import { renderSteered } from "../src/live-steer";
 import { addMember, type Fixture, setup } from "./fixtures";
 import { agentRunRow, channelRoutine, fire } from "./routine-fixtures";
 
+
 let f: Fixture;
 afterEach(async () => {
   const current = f;
@@ -740,4 +741,39 @@ describe("how a file's bytes become text", () => {
       { mediaType: "image/png", data: Buffer.from(png).toString("base64") },
     ]);
   });
+});
+
+describe("a picture a tool returns to an AI that reads text only", () => {
+  test("on the bridge it is left out, a note in its place: the turn is not sent with it", async () => {
+    f = await world();
+    const dm = await openDm(f.db, f.owner.id, f.org.id, { agentId: f.agent.id });
+    const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const shot = await createFileArtifact(f.artifactDeps, person(), f.org.id, {
+      title: "print.png",
+      name: "print.png",
+      bytes: png,
+      channelId: dm.id,
+    });
+    const run = await runOf(f.agent.id, dm.id, "lê o print");
+    // The same run whose AI reads pictures gets the picture itself, as before.
+    expect((await bridged(run, "read_artifact", { artifact_id: shot.id })).images).toEqual([
+      { mediaType: "image/png", data: Buffer.from(png).toString("base64") },
+    ]);
+    // This turn's AI reads text only (`Transcript.turnTextOnly`, written by the executor for glm-5.3): the picture
+    // stays out of the result and a note takes its place, so the provider never sees a picture block it refuses (400).
+    const [row] = await f.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.id, run.id));
+    await f.db
+      .update(schema.agentRuns)
+      .set({ transcript: { ...(row?.transcript as Record<string, unknown>), turnTextOnly: "glm-5.3" } })
+      .where(eq(schema.agentRuns.id, run.id));
+    const read = await bridged(run, "read_artifact", { artifact_id: shot.id });
+    expect(read.images).toBeUndefined();
+    expect(read.content).toContain("reads text only through this connection");
+    expect(read.content).toContain("glm-5.3");
+    expect(read.content).toContain("Never say the file came empty.");
+    // And the reply carries the "file not shown" note (`meta.filesTextOnly`), not a picture nobody saw.
+    const [after] = await f.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.id, run.id));
+    const effects = (after?.transcript as { bridgeEffects?: { filesTextOnly?: true } } | null)?.bridgeEffects;
+    expect(effects?.filesTextOnly).toBe(true);
+  }, 60_000);
 });

@@ -174,7 +174,8 @@ export const CODING_PLANS = {
         { id: "minimax-m3", label: "MiniMax M3", alias: "sonnet", maker: "minimax" },
         { id: "minimax-m3.1-flash", label: "MiniMax M3.1 Flash", maker: "minimax" },
         { id: "claude-haiku-5-5", label: "Claude Haiku 5.5", alias: "haiku", maker: "anthropic" },
-        { id: "glm-5.3", label: "GLM-5.3", tag: "smart", maker: "zai" },
+        // Go answers `400 invalid_request` to a GLM-5.3 turn that carries a picture (seen 2026-11-23): text only there.
+        { id: "glm-5.3", label: "GLM-5.3", tag: "smart", maker: "zai", images: false },
         { id: "glm-5.3-flash", label: "GLM-5.3 Flash", tag: "cheap", maker: "zai" },
         { id: "glm-5.2", label: "GLM-5.2", maker: "zai" },
         { id: "kimi-k3.1-pro", label: "Kimi K3.1 Pro", tag: "smart", maker: "moonshot" },
@@ -490,6 +491,20 @@ export function claudeCodeModel(plan: CodingPlan | undefined, value: unknown): s
   if (typeof value !== "string") return "sonnet";
   if (plan) return plan.claudeCode.models.some((m) => m.id === value) ? value : "sonnet";
   return /^claude-/.test(value) ? value : "sonnet";
+}
+
+/**
+ * The id of the plan's model that answers a Claude Code turn asked for `value` when that model reads text only
+ * (`images: false`), else null. An alias is the model the plan runs it for; a value the table doesn't know (a newer
+ * model of the plan's live list) counts as one that reads pictures: the table flags only what it knows, and a wrong
+ * "text only" would hide them from the agent.
+ */
+export function textOnlyPlanModel(provider: unknown, value: unknown): string | null {
+  const plan = planOf(provider);
+  if (!plan || typeof value !== "string") return null;
+  const models = plan.claudeCode.models;
+  const model = models.find((m) => m.alias === value) ?? models.find((m) => m.id === value);
+  return model?.images === false ? model.id : null;
 }
 
 /**

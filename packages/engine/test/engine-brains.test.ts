@@ -102,6 +102,7 @@ import { ALL_GITHUB_SCOPES, fakeGithub } from "./tool-fixtures";
  * limit, offline, busy) makes the run wait: the API never stands in.
  */
 
+
 let f: Fixture;
 afterEach(() => {
   clearPlanLimits();
@@ -5215,6 +5216,72 @@ test("computer sessions: a conversation run never takes a session an active run 
   await fx.db.insert(schema.agentRuns).values(again);
   expect((await resolveBrain({ db: fx.db }, agent, again, dm.id, {})).session?.id).not.toBe(first.brainSessionId);
 });
+
+test("a provider's 400 drops the session it refused: no later turn goes back there, the error still stands", async () => {
+  f = await setup();
+  const fx = f;
+  await computerAgent(fx);
+  const { brain, seen } = scriptedComputerBrain((n) =>
+    n === 1
+      ? [
+          {
+            type: "error",
+            code: "claude_failed",
+            message: "API Error: 400 Upstream request failed: [invalid_request]",
+            retryable: false,
+            cause: "unknown",
+            httpStatus: 400,
+          },
+        ]
+      : [{ type: "done", text: "ok" }],
+  );
+  const handlers = createJobHandlers({
+    ...fx.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  const runsOf = async (messageId: string) => {
+    const [run] = await fx.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.triggerMessageId, messageId));
+    if (!run) throw new Error("no run");
+    return run;
+  };
+  const question = await post(fx, "@dev oi");
+  await drainOutbox(fx.db, handlers);
+  const first = await runsOf(question.id);
+  const session = first.brainSessionId;
+  if (!session) throw new Error("no session");
+  const reply = async (body: string) => {
+    const sent = await postPersonMessage({ db: fx.db, pubsub: fx.pubsub }, fx.owner.id, fx.org.id, fx.general.id, {
+      body,
+      threadId: question.id,
+    });
+    await drainOutbox(fx.db, handlers);
+    return sent;
+  };
+
+  // The turn goes on in that session and the provider refuses it (the 400 a picture it can't read leaves behind).
+  const refused = await reply("@dev e agora?");
+  const second = await runsOf(refused.id);
+  expect(seen[1]?.session?.id).toBe(session);
+  expect(second.status).toBe("failed");
+  expect(second.error).toContain("400");
+  expect(second.error).toContain("invalid_request");
+
+  // The session is gone from every row that carried it, this run's included: the next one starts its own.
+  const [keptFirst] = await fx.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.id, first.id));
+  const [keptSecond] = await fx.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.id, second.id));
+  expect(keptFirst?.brainSessionId).toBeNull();
+  expect(keptSecond?.brainSessionId).toBeNull();
+  // And the run says it was dropped, and why, in a step of its own.
+  const steps = await fx.db.select().from(schema.agentRunSteps).where(eq(schema.agentRunSteps.runId, second.id));
+  const discarded = steps.find((s) => s.data.sessionDiscarded)?.data.sessionDiscarded;
+  expect(discarded).toMatchObject({ session, code: "claude_failed", httpStatus: 400 });
+
+  // The next turn there is a new session, not the refused one.
+  const next = await reply("@dev de novo");
+  expect(seen[2]?.session?.id).not.toBe(session);
+  expect((await runsOf(next.id)).status).toBe("done");
+}, 60_000);
 
 /** The run's job may try once: its next failure is its last attempt (`finalAttempt`), where a wait parks it. */
 const lastAttempt = (fx: Fixture) =>
