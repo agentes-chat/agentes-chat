@@ -370,8 +370,22 @@ describe("composer in a DM", () => {
       expect.stringContaining("/rotina"),
       expect.stringContaining("/pc"),
       expect.stringContaining("/mission"),
+      // The skill Ada has on, after the commands and under its own heading.
+      expect.stringContaining("/Revisão de PR"),
     ]);
+    expect(within(menu).getByText("Skills")).toBeTruthy();
     await act(async () => fireEvent.keyDown(composer, { key: "Enter" }));
     expect(composer.value).toBe("monte um relatório sobre ");
+  });
+
+  test("'/' lists the skills the agent has on, and picking one writes the request that loads it", async () => {
+    await renderApp(`/org/${ORG_ID}/dm/agent/${ADA_ID}`, { api: createFakeApi(seedState()) });
+    await settle(8);
+    const composer = screen().getByRole("combobox", { name: "Mensagem para Ada" }) as HTMLTextAreaElement;
+    await type(composer, "/revis");
+    const options = within(screen().getByRole("listbox", { name: "Comandos" })).getAllByRole("option");
+    expect(options.map((o) => o.textContent)).toEqual([expect.stringContaining("/Revisão de PR")]);
+    await act(async () => fireEvent.keyDown(composer, { key: "Enter" }));
+    expect(composer.value).toBe("use a skill Revisão de PR: ");
   });
 });

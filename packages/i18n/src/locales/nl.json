@@ -10545,6 +10545,20 @@
       "dialogTitle": "Agents met {{name}}",
       "dialogText": "Elke ingeschakelde agent gebruikt hem wanneer een taak erom vraagt."
     },
+    "bulk": {
+      "open": "Aan meerdere geven",
+      "title": "Skills aan meerdere agents geven",
+      "text": "Kies de skills en de agents. Aan of uit geldt voor elke skill bij elke gekozen agent.",
+      "skills": "Skills ({{picked}} van {{count}})",
+      "agents": "Agents ({{picked}} van {{count}})",
+      "shown": "Alle {{count}} uit de lijst",
+      "on": "Aanzetten",
+      "off": "Uitzetten",
+      "doneOn": "Skills aangezet. Skills: {{skills}}, agents: {{agents}}.",
+      "doneOff": "Skills uitgezet. Skills: {{skills}}, agents: {{agents}}.",
+      "checkAll": "Alles selecteren",
+      "uncheckAll": "Alles wissen"
+    },
     "updated": "bijgewerkt {{when}}",
     "source": {
       "github": "GitHub",
@@ -11113,6 +11127,7 @@
     "pcText": "uitvoeren op de pc van {{name}}",
     "pcText_female": "uitvoeren op de pc van {{name}}",
     "pcInsert": "voer dit uit op je pc:",
+    "skillInsert": "gebruik de skill {{name}}: ",
     "format": {
       "toolbar": "Opmaak",
       "bold": "Vet",
@@ -12594,6 +12609,10 @@
     "levelOf": "Niveau in {{name}}",
     "cell": "{{agent}} in {{resource}}: {{level}}",
     "cellAsks": "{{agent}} in {{resource}}: {{level}}, gevoelige acties vragen om goedkeuring",
+    "allAgents": "Alle agents",
+    "allMixed": "Gemengd",
+    "allCell": "Alle agents in {{resource}}: {{level}}. Open om één niveau voor allemaal te kiezen.",
+    "allDone": "{{resource}}: {{level}} voor alle agents in de lijst.",
     "asksList": "Vraagt om goedkeuring: {{tools}}",
     "asksMore_one": "en nog {{count}}",
     "asksMore_other": "en nog {{count}}",

@@ -44,6 +44,7 @@ import {
   sendHelpers,
   typingIn,
   useAddChannelMember,
+  useAgentSkills,
   useAiStatus,
   useApproval,
   useApprovals,
@@ -1977,6 +1978,22 @@ function ChannelView({
           ...(c.key === "stop" ? { insert: "/stop" } : { insert: "", onPick: run(`/${c.key}`) }),
         })),
     );
+  }
+  // The agent's own skills, each by its name after the other commands, under a heading of their own: picking one
+  // writes the request that makes the agent load it (ADR 0020: the prompt lists a skill by name, and `load_skill`
+  // takes that name).
+  const agentSkills = useAgentSkills(org.id, commandAgent?.id ?? "", Boolean(commandAgent));
+  for (const s of agentSkills.data ?? []) {
+    if (!s.enabled) continue;
+    commands.push({
+      key: `skill:${s.id}`,
+      label: `/${s.name}`,
+      // A skill's description runs to a thousand characters (it tells the model when to load it): one line here.
+      description: s.description.length > 90 ? `${s.description.slice(0, 89).trimEnd()}…` : s.description,
+      leading: <Icon name="book" size={16} />,
+      insert: `${commandPrefix}${t("composer.skillInsert", { name: s.name })}`,
+      group: t("skills.title"),
+    });
   }
   const createMission = useCreateMission(org.id);
   const missionControl = useMissionControl(org.id);

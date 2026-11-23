@@ -4179,6 +4179,14 @@ html:not([data-pointer]) .skill-file--open:focus-visible {
 .skill-pick__name {
   font-weight: 600;
 }
+/* "Liberar em lote": a library of a hundred skills scrolls in its own box, so the agents under it stay in reach. */
+.skill-bulk__list {
+  display: flex;
+  flex-direction: column;
+  max-height: 280px;
+  overflow-y: auto;
+  margin-top: var(--space-2);
+}
 .skill-pick__about {
   display: -webkit-box;
   -webkit-box-orient: vertical;

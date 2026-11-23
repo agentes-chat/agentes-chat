@@ -265,6 +265,9 @@ export function SkillsSection({
       {t("skills.install")}
     </Button>
   );
+  // Several skills for several agents at once: the team's skills, for who manages agents, once there is one of each.
+  const [bulk, setBulk] = useState(false);
+  const mayBulk = admin && scope === "team" && scopes.team.length > 0 && dir.agents.length > 0;
   return (
     <Card aria-labelledby="sec-skills">
       <CardHeader
@@ -322,11 +325,19 @@ export function SkillsSection({
           ))}
         </List>
       )}
-      {list.length > INLINE && (
-        <div className="row">
-          <Button variant="link" onClick={() => setAll(true)}>
-            {t("skills.seeAll", { count: list.length })}
-          </Button>
+      {(list.length > INLINE || mayBulk) && (
+        // Under the list, where a phone's card still has the room: the card's head holds its title and Install alone.
+        <div className="ac-acts">
+          {list.length > INLINE && (
+            <Button variant="link" onClick={() => setAll(true)}>
+              {t("skills.seeAll", { count: list.length })}
+            </Button>
+          )}
+          {mayBulk && (
+            <Button variant="link" onClick={() => setBulk(true)}>
+              {t("skills.bulk.open")}
+            </Button>
+          )}
         </div>
       )}
       {scope === "team" && scopes.others.length > 0 && <OthersPersonal skills={scopes.others} />}
@@ -364,6 +375,7 @@ export function SkillsSection({
         forAgentId={returned !== undefined ? returnedFor : undefined}
         scope={split ? (admin ? scope : "personal") : undefined}
       />
+      {mayBulk && <BulkAssignDialog skills={scopes.team} open={bulk} onOpenChange={setBulk} />}
       {open && <SkillSheet id={open} users={usage.get(open) ?? []} onClose={() => setOpen(null)} />}
     </Card>
   );
@@ -454,6 +466,151 @@ function OthersPersonal({ skills }: { skills: Skill[] }) {
   );
 }
 
+/** The most skills one `PUT …/agents/{id}/skills` takes. */
+const ASSIGN_MAX = 500;
+
+/**
+ * "Liberar em lote": several of the team's skills turned on or off for several agents in one go, where a skill's
+ * page gives one skill to agents and an agent's page one agent its skills. One request per agent, each as that
+ * agent's page sends it (who edits the agent), so a refusal for one agent stops there and says why.
+ */
+function BulkAssignDialog({
+  skills,
+  open,
+  onOpenChange,
+}: {
+  skills: Skill[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const dir = useDirectory(org.id);
+  const toast = useToast();
+  const action = useSkillAction(org.id);
+  const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
+  const [agentIds, setAgentIds] = useState<string[]>([]);
+  const [q, setQ] = useState("");
+  const [saving, setSaving] = useState<"on" | "off" | null>(null);
+  const shown = searchSkills(skills, q);
+  const shownIds = shown.map((s) => s.id);
+  const shownPicked = shownIds.filter((id) => picked.has(id)).length;
+  const close = (o: boolean) => {
+    if (saving) return;
+    onOpenChange(o);
+    if (!o) {
+      setPicked(new Set());
+      setAgentIds([]);
+      setQ("");
+    }
+  };
+  const save = async (enabled: boolean) => {
+    const ids = skills.filter((s) => picked.has(s.id)).map((s) => s.id);
+    setSaving(enabled ? "on" : "off");
+    try {
+      for (const agentId of agentIds)
+        for (let i = 0; i < ids.length; i += ASSIGN_MAX)
+          await action.mutateAsync({
+            type: "assign",
+            agentId,
+            skills: ids.slice(i, i + ASSIGN_MAX).map((skillId) => ({ skillId, enabled })),
+          });
+      toast.show(
+        t(enabled ? "skills.bulk.doneOn" : "skills.bulk.doneOff", { skills: ids.length, agents: agentIds.length }),
+        "success",
+      );
+      setSaving(null);
+      onOpenChange(false);
+      setPicked(new Set());
+      setAgentIds([]);
+      setQ("");
+    } catch {
+      // The app's error toast says why; the dialog stays open on what was picked.
+      setSaving(null);
+    }
+  };
+  const ready = picked.size > 0 && agentIds.length > 0;
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={close}
+      title={t("skills.bulk.title")}
+      description={t("skills.bulk.text")}
+      closeLabel={t("common.close")}
+      width={560}
+    >
+      <Locked when={saving !== null}>
+        <DialogBody>
+          <fieldset className="skill-picks">
+            <legend className="ac-eyebrow">
+              {t("skills.bulk.skills", { picked: picked.size, count: skills.length })}
+            </legend>
+            {skills.length > INLINE && (
+              <SearchField
+                size="sm"
+                aria-label={t("skills.search")}
+                placeholder={t("skills.search")}
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                onClear={() => setQ("")}
+                clearLabel={t("filters.clearSearch")}
+              />
+            )}
+            {shown.length > 1 && (
+              <label htmlFor="skill-bulk-all" className="scope-row">
+                <Checkbox
+                  id="skill-bulk-all"
+                  checked={shownPicked === 0 ? false : shownPicked === shown.length ? true : "indeterminate"}
+                  onCheckedChange={(on) => setPicked(pickSkills(picked, shownIds, on === true))}
+                />
+                <span className="scope-row__text">{t("skills.bulk.shown", { count: shown.length })}</span>
+              </label>
+            )}
+            <div className="skill-bulk__list">
+              {shown.map((s) => (
+                <label key={s.id} htmlFor={`skill-bulk-${s.id}`} className="scope-row">
+                  <Checkbox
+                    id={`skill-bulk-${s.id}`}
+                    checked={picked.has(s.id)}
+                    onCheckedChange={(on) => setPicked(pickSkills(picked, [s.id], on === true))}
+                  />
+                  <span className="scope-row__text">
+                    <span className="skill-pick__name">{s.name}</span>
+                    <span className="small muted skill-pick__about">{s.description}</span>
+                  </span>
+                </label>
+              ))}
+              {shown.length === 0 && <span className="small muted">{t("skills.noResults", { q })}</span>}
+            </div>
+          </fieldset>
+          <section aria-labelledby="skill-bulk-agents">
+            <h3 id="skill-bulk-agents" className="ac-eyebrow">
+              {t("skills.bulk.agents", { picked: agentIds.length, count: dir.agents.length })}
+            </h3>
+            <AgentSwitches value={agentIds} onChange={setAgentIds} />
+          </section>
+        </DialogBody>
+      </Locked>
+      <DialogFooter>
+        <Button disabled={saving !== null} onClick={() => close(false)}>
+          {t("common.cancel")}
+        </Button>
+        <Button loading={saving === "off"} disabled={!ready || saving !== null} onClick={() => void save(false)}>
+          {t("skills.bulk.off")}
+        </Button>
+        <Button
+          variant="primary"
+          loading={saving === "on"}
+          disabled={!ready || saving !== null}
+          onClick={() => void save(true)}
+        >
+          {t("skills.bulk.on")}
+        </Button>
+      </DialogFooter>
+    </Dialog>
+  );
+}
+
 /**
  * An agent's skills (its page, Criar agente): the library as pills, with a search past INLINE. The search matches
  * names only, since a pill shows nothing else, and only hides pills: a skill switched on stays on while hidden. A
@@ -483,8 +640,29 @@ export function SkillPicker({
     else next.delete(id);
     onChange(next);
   };
+  // Every skill shown at once (what the search left, so a search narrows it): someone else's personal skill is never
+  // turned on here, only its person does that, and turning all off takes it off like any other.
+  const mine = shown.filter((s) => !s.ownerUserId || s.ownerUserId === me.user.id);
+  const all = (on: boolean) =>
+    onChange(
+      pickSkills(
+        selected,
+        (on ? mine : shown).map((s) => s.id),
+        on,
+      ),
+    );
   return (
     <div className="skill-picker">
+      {shown.length > 1 && (
+        <span className="ac-acts">
+          <Button variant="link" disabled={mine.every((s) => selected.has(s.id))} onClick={() => all(true)}>
+            {t("skills.bulk.checkAll")}
+          </Button>
+          <Button variant="link" disabled={!shown.some((s) => selected.has(s.id))} onClick={() => all(false)}>
+            {t("skills.bulk.uncheckAll")}
+          </Button>
+        </span>
+      )}
       {searchable && (
         <SearchField
           size="sm"

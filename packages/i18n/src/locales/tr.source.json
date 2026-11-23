@@ -25526,6 +25526,42 @@
   "skills.agents.dialogText": {
     "value": "Each agent turned on uses it whenever a task calls for it."
   },
+  "skills.bulk.open": {
+    "value": "Give to several"
+  },
+  "skills.bulk.title": {
+    "value": "Give skills to several agents"
+  },
+  "skills.bulk.text": {
+    "value": "Pick the skills and the agents. On or off applies to each skill for each agent picked."
+  },
+  "skills.bulk.skills": {
+    "value": "Skills ({{picked}} of {{count}})"
+  },
+  "skills.bulk.agents": {
+    "value": "Agents ({{picked}} of {{count}})"
+  },
+  "skills.bulk.shown": {
+    "value": "All {{count}} listed"
+  },
+  "skills.bulk.on": {
+    "value": "Turn on"
+  },
+  "skills.bulk.off": {
+    "value": "Turn off"
+  },
+  "skills.bulk.doneOn": {
+    "value": "Skills turned on. Skills: {{skills}}, agents: {{agents}}."
+  },
+  "skills.bulk.doneOff": {
+    "value": "Skills turned off. Skills: {{skills}}, agents: {{agents}}."
+  },
+  "skills.bulk.checkAll": {
+    "value": "Select all"
+  },
+  "skills.bulk.uncheckAll": {
+    "value": "Clear all"
+  },
   "skills.updated": {
     "value": "updated {{when}}"
   },
@@ -26836,6 +26872,9 @@
   },
   "composer.pcInsert": {
     "value": "run this on your PC: "
+  },
+  "composer.skillInsert": {
+    "value": "use the {{name}} skill: "
   },
   "composer.format.toolbar": {
     "value": "Formatting"
@@ -30540,6 +30579,18 @@
   },
   "access.cellAsks": {
     "value": "{{agent}} in {{resource}}: {{level}}, sensitive actions ask for approval"
+  },
+  "access.allAgents": {
+    "value": "All agents"
+  },
+  "access.allMixed": {
+    "value": "Mixed"
+  },
+  "access.allCell": {
+    "value": "All agents in {{resource}}: {{level}}. Open to choose one level for all."
+  },
+  "access.allDone": {
+    "value": "{{resource}}: {{level}} for every agent listed."
   },
   "access.asksList": {
     "value": "Asks for approval: {{tools}}"

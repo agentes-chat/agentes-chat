@@ -9,6 +9,7 @@ import {
   nextLevel,
   resourcesOf,
   saveLevels,
+  sharedLevel,
   toolsAt,
 } from "@agenteschat/client/lib/access-levels";
 import { managesAgent } from "@agenteschat/client/lib/audience";
@@ -30,6 +31,8 @@ import {
   Icon,
   type IconName,
   InfoHint,
+  Menu,
+  MenuItem,
   Segmented,
 } from "@agenteschat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -46,6 +49,7 @@ import { useOrg } from "@/components/org-context";
 import { useAgentsAccess } from "@/hooks/useAgentsAccess";
 import { useRightHandLook } from "@/hooks/useRightHandLook";
 import { softBreaks } from "@/lib/soft-breaks";
+import { useToast } from "@/lib/toast";
 
 type TT = (key: string, options: Record<string, string>) => string;
 
@@ -309,7 +313,10 @@ export function RulesToggle({
 /**
  * Settings → "Agentes e acesso" (admins): agents × connectors (or the
  * built-in areas), each cell a level. A click cycles Sem acesso → Ler → Ler
- * e escrever and saves right away. Fine-tuning per tool is the connector's
+ * e escrever and saves right away. With more than one agent, a first row,
+ * "Todos os agentes", sets a column for every agent listed at once: its cell
+ * opens the column's levels to choose from, never a cycle, since one click
+ * there would write over each agent's own. Fine-tuning per tool is the connector's
  * "Ferramentas" (what the organization allows at all). Only the agents the
  * person manages (`managesAgent`, ADR 0085 addendum of 2026-11-17): someone's
  * private agent stays out of reach of who merely holds "Editar qualquer agente".
@@ -324,6 +331,7 @@ export function AccessMatrixSection() {
   const access = useAgentsAccess(list, admin);
   const items = useConnectedById();
   const set = useSetLevels();
+  const toast = useToast();
   const [kind, setKind] = useState<"connector" | "builtin">("connector");
   const [pending, setPending] = useState<Record<string, Level>>({});
   if (!admin) return null;
@@ -349,6 +357,36 @@ export function AccessMatrixSection() {
           }),
       },
     );
+  };
+
+  /** The agents that hold a column's resource, each with its own copy of it (its tools' states are the agent's). */
+  const holders = (col: AccessResource) =>
+    list.flatMap((a) => {
+      const tree = access.byAgent.get(a.id);
+      const r = tree ? resourcesOf(tree).find((x) => x.id === col.id) : undefined;
+      return r ? [{ agent: a, resource: r }] : [];
+    });
+  // One column for every agent: one save per agent, in turn, each cell busy until its own answers. A refusal stops
+  // there (the app's error toast says why) and the agents already saved keep the new level.
+  const setColumn = async (col: AccessResource, name: string, level: Level) => {
+    const rows = holders(col).filter((h) => !busyAgents.has(h.agent.id));
+    const cells = rows.map((h) => `${h.agent.id}|${col.id}`);
+    setPending((p) => ({ ...p, ...Object.fromEntries(cells.map((k) => [k, level])) }));
+    const done = (k: string) =>
+      setPending((p) => {
+        const next = { ...p };
+        delete next[k];
+        return next;
+      });
+    try {
+      for (const h of rows) {
+        await set.mutateAsync({ agentId: h.agent.id, changes: { [col.id]: level } });
+        done(`${h.agent.id}|${col.id}`);
+      }
+      toast.show(t("access.allDone", { resource: name, level: levelLabel(level) }), "success");
+    } catch {
+      for (const k of cells) done(k);
+    }
   };
 
   return (
@@ -420,6 +458,60 @@ export function AccessMatrixSection() {
               </tr>
             </thead>
             <tbody>
+              {list.length > 1 && (
+                <tr>
+                  <th scope="row">
+                    <span className="level-matrix__agent ac-iconline">
+                      <Icon name="members" size={16} />
+                      <span>{t("access.allAgents")}</span>
+                    </span>
+                  </th>
+                  {columns.map((col) => {
+                    const name = resourceName(t, col, items);
+                    const rows = holders(col);
+                    if (rows.length === 0) {
+                      return (
+                        <td key={col.id}>
+                          <span className="small muted">{t("access.level.none")}</span>
+                        </td>
+                      );
+                    }
+                    const shared = sharedLevel(
+                      rows.map((h) => pending[`${h.agent.id}|${col.id}`] ?? levelOf(h.resource)),
+                    );
+                    const busy = rows.some((h) => busyAgents.has(h.agent.id));
+                    const label = t("access.allCell", {
+                      resource: name,
+                      level: shared ? levelLabel(shared) : t("access.allMixed"),
+                    });
+                    return (
+                      <td key={col.id}>
+                        <Menu
+                          label={label}
+                          trigger={
+                            <button
+                              type="button"
+                              className="level-pill"
+                              data-level={shared ?? "custom"}
+                              aria-label={label}
+                              title={label}
+                              disabled={busy}
+                            >
+                              {shared ? levelLabel(shared) : t("access.allMixed")}
+                            </button>
+                          }
+                        >
+                          {col.levels.map((l) => (
+                            <MenuItem key={l} onSelect={() => void setColumn(col, name, l)}>
+                              {levelLabel(l)}
+                            </MenuItem>
+                          ))}
+                        </Menu>
+                      </td>
+                    );
+                  })}
+                </tr>
+              )}
               {list.map((a) => {
                 const tree = access.byAgent.get(a.id);
                 const mine = tree ? resourcesOf(tree) : [];
