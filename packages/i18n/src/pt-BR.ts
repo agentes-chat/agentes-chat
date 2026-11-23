@@ -1935,6 +1935,7 @@ export const ptBR = {
     lookOurs: "agentes.chat",
     lookSystem: "Do sistema",
     markRead: "Marcar como lida",
+    markUnread: "Marcar como não lida",
     muteChannel: "Silenciar canal",
     unmuteChannel: "Reativar canal",
     mention: "Mencionar",

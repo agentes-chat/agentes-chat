@@ -11,6 +11,7 @@ import {
   listDms,
   listMembers,
   markChannelRead,
+  markChannelUnread,
   markThreadRead,
   messageView,
   moveContextIntoThread,
@@ -265,5 +266,83 @@ describe("live", () => {
         mentionedUserIds: [],
       },
     ]);
+  });
+});
+
+describe("marking a conversation unread", () => {
+  test("from a message on: it and what follows are unread again, and my other devices hear it", async () => {
+    f = await setup();
+    const bia = await withBia();
+    await post(bia.id, f.general.id, "one");
+    await nextMillisecond();
+    const second = await post(bia.id, f.general.id, "two");
+    await nextMillisecond();
+    await post(bia.id, f.general.id, "three");
+    await nextMillisecond();
+    await markChannelRead(f.db, f.owner.id, f.org.id, f.general.id);
+    expect((await general(f.owner.id)).unreadCount).toBe(0);
+
+    const events = heard(f.owner.id);
+    await markChannelUnread(f.db, f.owner.id, f.org.id, f.general.id, second.id, f.pubsub);
+    expect((await general(f.owner.id)).unreadCount).toBe(2);
+    expect(events.map((e) => e.type)).toContain("channel.unread");
+
+    // Reading it again clears it.
+    await nextMillisecond();
+    await markChannelRead(f.db, f.owner.id, f.org.id, f.general.id);
+    expect((await general(f.owner.id)).unreadCount).toBe(0);
+  });
+
+  test("with no message named: the newest one someone else wrote", async () => {
+    f = await setup();
+    const bia = await withBia();
+    await post(bia.id, f.general.id, "from bia");
+    await nextMillisecond();
+    await post(f.owner.id, f.general.id, "mine, the newest");
+    await nextMillisecond();
+    await markChannelRead(f.db, f.owner.id, f.org.id, f.general.id);
+
+    await markChannelUnread(f.db, f.owner.id, f.org.id, f.general.id);
+    // Mine never counts: only bia's line comes back.
+    expect((await general(f.owner.id)).unreadCount).toBe(1);
+  });
+
+  test("the mark only moves back: a message already unread leaves the count as it was", async () => {
+    f = await setup();
+    const bia = await withBia();
+    const first = await post(bia.id, f.general.id, "one");
+    await nextMillisecond();
+    const second = await post(bia.id, f.general.id, "two");
+    expect((await general(f.owner.id)).unreadCount).toBe(2);
+    await markChannelUnread(f.db, f.owner.id, f.org.id, f.general.id, second.id);
+    expect((await general(f.owner.id)).unreadCount).toBe(2);
+    await markChannelUnread(f.db, f.owner.id, f.org.id, f.general.id, first.id);
+    expect((await general(f.owner.id)).unreadCount).toBe(2);
+  });
+
+  test("a thread's reply, a message of another conversation and a non-member are refused", async () => {
+    f = await setup();
+    const bia = await withBia();
+    const root = await post(bia.id, f.general.id, "root");
+    await nextMillisecond();
+    const reply = await post(bia.id, f.general.id, "a reply", root.id);
+    await expect(markChannelUnread(f.db, f.owner.id, f.org.id, f.general.id, reply.id)).rejects.toMatchObject({
+      code: "thread_reply_not_markable",
+    });
+    await expect(
+      markChannelUnread(f.db, f.owner.id, f.org.id, f.general.id, "00000000-0000-7000-8000-000000000000"),
+    ).rejects.toThrow("Message not found");
+    const stranger = await addMember(f.db, f.org.id, "member", "zed");
+    await expect(markChannelUnread(f.db, stranger.id, f.org.id, f.general.id, root.id)).rejects.toThrow(
+      "Channel not found",
+    );
+  });
+
+  test("a conversation where no one else has written has nothing to mark", async () => {
+    f = await setup();
+    await post(f.owner.id, f.general.id, "just me");
+    await expect(markChannelUnread(f.db, f.owner.id, f.org.id, f.general.id)).rejects.toMatchObject({
+      code: "nothing_to_mark_unread",
+    });
   });
 });

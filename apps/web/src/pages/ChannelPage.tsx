@@ -61,6 +61,7 @@ import {
   useHeldPlaces,
   useJoinChannel,
   useMarkChannelRead,
+  useMarkChannelUnread,
   useMarkThreadRead,
   useMessages,
   useMissionControl,
@@ -1251,6 +1252,19 @@ function ChannelView({
   // Reading the channel marks it read: the sidebar's badges (channel and DM) clear at once. Only while the tab is
   // in view: an answer arriving in a tab left in the background is unread, and its notification pushes (ADR 0071).
   const markChannelRead = useMarkChannelRead(org.id).mutate;
+  const markChannelUnread = useMarkChannelUnread(org.id).mutate;
+  // "Marcar como não lida" on a message of this open conversation: it stays unread (no read on a new message or on
+  // coming back to the tab) until the person reaches its end on purpose or leaves.
+  const readPaused = useRef(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a conversation of its own starts reading again
+  useEffect(() => {
+    readPaused.current = false;
+  }, [channel.id]);
+  const resumeRead = () => {
+    if (!readPaused.current) return;
+    readPaused.current = false;
+    markChannelRead(channel.id);
+  };
   // On screen, this conversation raises no notice on the island (ADR 0071 §9): its messages already show here.
   const screenThread = thread?.id ?? null;
   useEffect(() => holdOnScreen({ channelId: channel.id, threadId: screenThread }), [channel.id, screenThread]);
@@ -1261,7 +1275,7 @@ function ChannelView({
   useEffect(() => {
     if (!isMember || !lastId) return;
     const mark = () => {
-      if (document.visibilityState === "visible") markChannelRead(channel.id);
+      if (document.visibilityState === "visible" && !readPaused.current) markChannelRead(channel.id);
     };
     mark();
     document.addEventListener("visibilitychange", mark);
@@ -1759,6 +1773,7 @@ function ChannelView({
       setOlderState("idle");
     }
     markRead();
+    resumeRead();
     setFar(false);
     const el = scroller.current;
     if (el) {
@@ -2535,6 +2550,18 @@ function ChannelView({
           setSearchOpen(false);
           setPanel({ id: message.threadId ?? message.id, reply: true });
         },
+    markUnread: (message) => {
+      readPaused.current = true;
+      markChannelUnread(
+        { channelId: channel.id, messageId: message.id },
+        {
+          onError: (error) => {
+            readPaused.current = false;
+            toast.show(errorText(t, error), "error");
+          },
+        },
+      );
+    },
     openThread: (id, focus) => {
       if (profileKeeps()) return;
       setSearchOpen(false);
@@ -2575,6 +2602,8 @@ function ChannelView({
       letGo: () => now().letGo(),
       channelAgents,
       reply: replies ? (message) => now().reply(message) : undefined,
+      // A thread has no mark of its own to move back here: its replies are read with it.
+      markUnread: inThread || !isMember ? undefined : (message) => now().markUnread(message),
       // A thread view has no panel: its links go to the thread's page.
       openThread: inThread ? undefined : (id, focus) => now().openThread(id, focus),
       openConsultation: (id, group) => now().openConsultation(id, group),
@@ -2583,7 +2612,7 @@ function ChannelView({
       jumpTo: (messageId) => now().jumpTo(messageId),
       replyToMission: (missionId, label) => now().replyToMission(missionId, label),
     };
-  }, [channelAgents, inThread, replies]);
+  }, [channelAgents, inThread, isMember, replies]);
 
   // A DM with an agent (not one of its threads): its side column.
   const agentDm = Boolean(chrome?.dmAgentId) && !thread;
@@ -2795,6 +2824,7 @@ function ChannelView({
                               // The person reached the end by themselves: the answer was read, the hold is over.
                               if (near && byPerson) {
                                 markRead();
+                                resumeRead();
                                 if (holdingRef.current) setHold(false);
                               }
                             }}

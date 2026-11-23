@@ -7640,6 +7640,8 @@ export interface ThreadFollow {
 export type UnreadEvent =
   | { type: "channel.activity"; channelId: string; threadId: string | null; dm?: boolean }
   | { type: "channel.read"; channelId: string; userId: string; lastReadAt: string }
+  /** I marked a conversation unread (on another device): the lists read again, nothing clears. */
+  | { type: "channel.unread"; channelId: string; lastReadAt: string }
   | { type: "channel.muted"; channelId: string; muted: boolean }
   | { type: "thread.read"; threadId: string; channelId: string; lastReadAt: string }
   /** One of my outside chat surface links changed (ADR 0187): `surfaces.list` reads again. */

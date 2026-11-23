@@ -7936,11 +7936,28 @@ export function useMarkChannelRead(orgId: string) {
     retry: retryRead,
     mutationFn: (channelId: string) => api.dms.markRead(orgId, channelId),
     onMutate: (channelId) => clearUnread(qc, orgId, channelId),
-    onSettled: () => {
-      void qc.invalidateQueries({ queryKey: keys.channels(orgId) });
-      void qc.invalidateQueries({ queryKey: keys.dms(orgId) });
-      void qc.invalidateQueries({ queryKey: keys.unreadThreads(orgId) });
-    },
+    onSettled: () => refreshConversationLists(qc, orgId),
+  });
+}
+
+/** The channel and DM lists, and the Threads mark, read again (a read or an unread mark moved, here or elsewhere). */
+function refreshConversationLists(qc: QueryClient, orgId: string) {
+  void qc.invalidateQueries({ queryKey: keys.channels(orgId) });
+  void qc.invalidateQueries({ queryKey: keys.dms(orgId) });
+  void qc.invalidateQueries({ queryKey: keys.unreadThreads(orgId) });
+}
+
+/**
+ * Marks a channel or DM unread again, from one message on (`messageId`) or from the newest one someone else wrote
+ * (issue: "Mark as unread"). No optimistic count: the server knows how many that makes, so the lists read again.
+ */
+export function useMarkChannelUnread(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { channelId: string; messageId?: string }) =>
+      api.dms.markUnread(orgId, input.channelId, input.messageId),
+    onSettled: () => refreshConversationLists(qc, orgId),
   });
 }
 
@@ -8232,7 +8249,8 @@ export function applyUnreadEvent(qc: QueryClient, orgId: string, event: { type: 
       if (!activityTimers.has(`${orgId}:${list}`) || qc.isFetching({ queryKey }) > 0)
         void qc.invalidateQueries({ queryKey });
     void qc.invalidateQueries({ queryKey: keys.unreadThreads(orgId) });
-  } else if (e.type === "channel.muted") setMuted(qc, orgId, e.channelId, e.muted);
+  } else if (e.type === "channel.unread") refreshConversationLists(qc, orgId);
+  else if (e.type === "channel.muted") setMuted(qc, orgId, e.channelId, e.muted);
   else if (e.type === "chat.prefs") putChatPrefs(qc, orgId, e.chatPrefs);
   else if (e.type === "thread.read") {
     clearThreadUnread(qc, orgId, e.threadId);

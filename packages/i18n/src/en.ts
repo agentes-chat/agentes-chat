@@ -2017,6 +2017,7 @@ export const en = {
     lookOurs: "agentes.chat",
     lookSystem: "System",
     markRead: "Mark as read",
+    markUnread: "Mark as unread",
     muteChannel: "Mute channel",
     unmuteChannel: "Unmute channel",
     mention: "Mention",

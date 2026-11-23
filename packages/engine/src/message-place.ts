@@ -36,6 +36,13 @@ export const postedAtOf = (id: string) => Number.parseInt(id.slice(0, 8) + id.sl
 export const readMarkFor = (m: { id: string; createdAt: Date }) =>
   new Date(Math.max(m.createdAt.getTime(), postedAtOf(m.id)) + 1);
 
+/**
+ * The read mark that leaves message `m` and everything posted after it unread, for `landedAfterSql`: the millisecond
+ * before its place and before its post. The mirror of `readMarkFor`, which covers `m` instead.
+ */
+export const unreadMarkBefore = (m: { id: string; createdAt: Date }) =>
+  new Date(Math.min(m.createdAt.getTime(), postedAtOf(m.id)) - 1);
+
 /** SQL: `column` is in the millisecond of `at`, a time read back cut to milliseconds while Postgres keeps microseconds. */
 export const inMillisecondOf = (column: typeof schema.messages.createdAt, at: Date) =>
   and(gte(column, at), lt(column, new Date(at.getTime() + 1)));
