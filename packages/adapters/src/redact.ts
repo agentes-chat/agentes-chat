@@ -258,9 +258,10 @@ function writtenEnds(text: string): Ends {
 
 /**
  * Masks what looks like a credential in free text that leaves its place (the runner's diagnostics and
- * activity log, the operator API's review block): machine tokens, bearer headers, common API key shapes,
- * `password=`/`token:` values, and a field named for a credential as JSON writes it (`"password": "…"`), at any
- * depth of JSON inside a JSON string. The agent's own secrets are masked by their values (ADR 0027) before this.
+ * activity log, the operator API's review block, an audit row's input): machine tokens, bearer headers, the common
+ * API key shapes (Stripe, Google, GitLab, npm, Hugging Face, AWS), a JWT and a PEM private key, `password=`/`token:`
+ * values, and a field named for a credential as JSON writes it (`"password": "…"`), at any depth of JSON inside a
+ * JSON string. The agent's own secrets are masked by their values (ADR 0027) before this.
  */
 export function redactCommon(text: string): string {
   const shaped = text
@@ -268,9 +269,22 @@ export function redactCommon(text: string): string {
     // A `/` may be written `\/`, as a JSON writer may.
     .replace(/\b(Bearer|Basic)\s+(?:[A-Za-z0-9._~+/=-]|\\+\/){8,}/gi, "$1 ***")
     .replace(/\b(sk-(?:ant-)?[A-Za-z0-9_-]{12,})/g, "sk-***")
+    .replace(/\b((?:sk|rk|pk)_(?:live|test)_[A-Za-z0-9]{8,})/g, "sk_***")
+    .replace(/\b(whsec_[A-Za-z0-9+/=]{12,})/g, "whsec_***")
+    .replace(/\b(AIza[0-9A-Za-z_-]{20,})/g, "AIza***")
     .replace(/\b(gh[pousr]_[A-Za-z0-9._-]{20,}|github_pat_[A-Za-z0-9_]{20,})/g, "gh_***")
+    .replace(/\b(glpat-[A-Za-z0-9_-]{12,})/g, "glpat-***")
+    .replace(/\b(npm_[A-Za-z0-9]{20,})/g, "npm_***")
+    .replace(/\b(hf_[A-Za-z0-9]{20,})/g, "hf_***")
     .replace(/\b(xox[abposr]-[A-Za-z0-9-]{10,})/g, "xox-***")
-    .replace(/\b(AKIA[0-9A-Z]{16})\b/g, "AKIA***");
+    .replace(/\b(AKIA[0-9A-Z]{16})\b/g, "AKIA***")
+    // A JWT (a session, an OAuth token, a service account's assertion): three base64url parts, the first `eyJ`.
+    .replace(/\b(eyJ[A-Za-z0-9_-]{6,}\.[A-Za-z0-9_-]{6,}\.[A-Za-z0-9_-]*)/g, "eyJ***")
+    // A PEM private key, header to footer, as one value.
+    .replace(
+      /-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z0-9 ]*PRIVATE KEY-----/g,
+      "-----BEGIN PRIVATE KEY-----***-----END PRIVATE KEY-----",
+    );
   const fields = maskAfter(maskAfter(shaped, FIELD_NAMED, valueEnds()), WRITTEN_FIELD_NAMED, writtenEnds);
   return maskAfter(maskAfter(fields, RECORD_NAMED, valueEnds()), NAMED, valueEnds(true));
 }

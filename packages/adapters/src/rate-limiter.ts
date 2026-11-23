@@ -20,6 +20,15 @@ export interface RateLimiter {
 /** Seconds until a rate limit's window opens again, at least 1. */
 export const retryInSeconds = (resetAt: Date) => Math.max(1, Math.ceil((resetAt.getTime() - Date.now()) / 1000));
 
+/** The most windows the memory limiter keeps: an address per key, and no key named by a stranger is kept past this. */
+export const MEMORY_LIMIT_KEYS = 100_000;
+
+/**
+ * Fixed windows per process, in memory. Past `MEMORY_LIMIT_KEYS` the oldest windows go, whatever their time: a flood
+ * of keys from fabricated addresses (each `X-Forwarded-For` its own, with no trusted proxy) then costs a bounded map
+ * and never a sweep of it on every call. A key dropped early gets a fresh window, which only ever loosens a limit
+ * under a flood; the sweeping keeps maps small enough that an honest key is not the oldest.
+ */
 export function createMemoryRateLimiter(now: () => number = Date.now): RateLimiter {
   const windows = new Map<string, { count: number; resetAt: number }>();
   return {
@@ -31,8 +40,16 @@ export function createMemoryRateLimiter(now: () => number = Date.now): RateLimit
         windows.set(key, w);
       }
       w.count++;
-      if (windows.size > 50_000) {
-        for (const [k, v] of windows) if (v.resetAt <= t) windows.delete(k);
+      if (windows.size > MEMORY_LIMIT_KEYS) {
+        // Expired first (a Map keeps insertion order), then the oldest live ones, so the map never grows past the cap.
+        for (const [k, v] of windows) {
+          if (windows.size <= MEMORY_LIMIT_KEYS) break;
+          if (v.resetAt <= t) windows.delete(k);
+        }
+        for (const k of windows.keys()) {
+          if (windows.size <= MEMORY_LIMIT_KEYS) break;
+          windows.delete(k);
+        }
       }
       return {
         allowed: w.count <= rule.limit,

@@ -23,9 +23,11 @@ const { auditLog, agents, approvals, channels, issues, secretRequests, users } =
 
 export const TOOL_CALL = "tool.call";
 
-// `contact`: a Vault contact's fields are personal data, kept out of audit rows (ADR 0144).
+// `contact`: a Vault contact's fields are personal data, kept out of audit rows (ADR 0144). The rest are the names a
+// credential takes in a tool's arguments: a `key`, an `auth`, a `signing_key` and a connection string with its password
+// are as secret as a `token`, and a value in any of them that no shape matches is masked only by its name.
 const SECRET_KEY =
-  /pass(word|wd|phrase)?$|secret|token|api[_-]?key|authorization|cookie|credential|private[_-]?key|^contact$/i;
+  /pass(word|wd|phrase|code)?$|secret|token|api[_-]?key|authorization|cookie|credential|private[_-]?key|(^|[_-])(key|auth|dsn|session|signature|passphrase)$|^contact$/i;
 const MAX_STRING = 500;
 const MAX_ITEMS = 20;
 const MAX_DEPTH = 4;
