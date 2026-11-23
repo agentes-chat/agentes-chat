@@ -51,9 +51,7 @@ describe("workspace reset", () => {
         where c.table_schema = 'public' and c.column_name = 'org_id' and t.table_type = 'BASE TABLE'
           and c.table_name not like 'messages\\_%'`),
     ).map((r) => r.name);
-    // Empty since 0216 removed the forum; nothing reads them, so the next migration can drop them.
-    const dropped = ["forum_participants", "forum_topics", "forum_turns"];
-    const listed: string[] = [...RESET_KEEPS, ...RESET_TOMBSTONES, ...RESET_ERASES, ...dropped];
+    const listed: string[] = [...RESET_KEEPS, ...RESET_TOMBSTONES, ...RESET_ERASES];
     expect(new Set(listed).size).toBe(listed.length);
     expect([...listed].sort()).toEqual([...tables].sort());
   });
