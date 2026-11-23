@@ -17514,6 +17514,19 @@
       "activity": "Ajanların yaptıklarını her yanıtın altında göster",
       "activityHelp": "Kullandıkları araçlar ve ne kadar sürdüğü. Çalışırken ne yaptıklarını yine görürsünüz.",
       "activityFailed": "Kaydedilemedi. Yeniden deneyin.",
+      "signIn": {
+        "title": "Giriş yöntemleri",
+        "help": "Aynı e-postayı kullanan bir hesabı bağlayın, onunla da giriş yapın.",
+        "connected": "Bağlı",
+        "connect": "Bağla",
+        "connectLabel": "{{provider}} bağla",
+        "refused": {
+          "otherEmail": "Bu {{provider}} hesabı başka bir e-posta kullanıyor. {{email}} kullanan bir hesap bağlayın.",
+          "taken": "Bu {{provider}} hesabı burada zaten başka bir hesaba giriş yapıyor.",
+          "cancelled": "{{provider}} bağlantısı iptal edildi.",
+          "other": "{{provider}} bağlanamadı. Tekrar deneyin."
+        }
+      },
       "chat": {
         "title": "Sohbetler",
         "density": "Sohbet yoğunluğu",

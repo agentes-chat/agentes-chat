@@ -17956,6 +17956,21 @@ export const ptBR = {
       activityHelp:
         "As ferramentas que usaram e quanto tempo levou. Enquanto trabalham, você continua vendo o que estão fazendo.",
       activityFailed: "Não deu para salvar. Tente de novo.",
+      /** The providers this server offers: connected to the account, or a button that connects one with the same email. */
+      signIn: {
+        title: "Formas de entrar",
+        help: "Conecte uma conta que use o mesmo e-mail para entrar com ela também.",
+        connected: "Conectado",
+        connect: "Conectar",
+        connectLabel: "Conectar {{provider}}",
+        /** Back from the provider without a connection. */
+        refused: {
+          otherEmail: "Essa conta do {{provider}} usa outro e-mail. Conecte uma que use {{email}}.",
+          taken: "Essa conta do {{provider}} já entra em outra conta aqui.",
+          cancelled: "A conexão com o {{provider}} foi cancelada.",
+          other: "Não deu para conectar o {{provider}}. Tente de novo.",
+        },
+      },
       /** Yours in this workspace, for every agent (ADR 0147). */
       chat: {
         title: "Conversa",

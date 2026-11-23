@@ -17585,6 +17585,19 @@
       "activity": "Unter jeder Antwort zeigen, was Agenten getan haben",
       "activityHelp": "Die Tools, die sie genutzt haben, und wie lange es gedauert hat. Während sie arbeiten, siehst du weiterhin, was sie tun.",
       "activityFailed": "Das konnte nicht gespeichert werden. Versuch es noch einmal.",
+      "signIn": {
+        "title": "Anmeldemethoden",
+        "help": "Verbinde ein Konto mit derselben E-Mail-Adresse, um dich auch damit anzumelden.",
+        "connected": "Verbunden",
+        "connect": "Verbinden",
+        "connectLabel": "{{provider}} verbinden",
+        "refused": {
+          "otherEmail": "Dieses {{provider}}-Konto nutzt eine andere E-Mail-Adresse. Verbinde eines mit {{email}}.",
+          "taken": "Mit diesem {{provider}}-Konto meldet sich hier schon ein anderes Konto an.",
+          "cancelled": "Die Verbindung mit {{provider}} wurde abgebrochen.",
+          "other": "{{provider}} konnte nicht verbunden werden. Versuch es noch einmal."
+        }
+      },
       "chat": {
         "title": "Unterhaltungen",
         "density": "Dichte der Unterhaltung",

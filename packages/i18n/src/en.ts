@@ -18105,6 +18105,21 @@ export const en = {
       activity: "Show what agents did under each reply",
       activityHelp: "The tools they used and how long it took. While they work, you still see what they're doing.",
       activityFailed: "Couldn't save that. Try again.",
+      /** The providers this server offers: connected to the account, or a button that connects one with the same email. */
+      signIn: {
+        title: "Ways to sign in",
+        help: "Connect an account that uses the same email to sign in with it too.",
+        connected: "Connected",
+        connect: "Connect",
+        connectLabel: "Connect {{provider}}",
+        /** Back from the provider without a connection. */
+        refused: {
+          otherEmail: "That {{provider}} account uses another email. Connect one that uses {{email}}.",
+          taken: "That {{provider}} account already signs in to another account here.",
+          cancelled: "Connecting {{provider}} was cancelled.",
+          other: "Couldn't connect {{provider}}. Try again.",
+        },
+      },
       /** Yours in this workspace, for every agent (ADR 0147). */
       chat: {
         title: "Conversations",

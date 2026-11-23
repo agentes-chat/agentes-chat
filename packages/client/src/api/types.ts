@@ -373,6 +373,8 @@ export interface User {
   image: string | null;
   /** Signs in with a password (false: only Google or Apple, or the desktop app that runs the server). */
   hasPassword?: boolean;
+  /** The providers the account signs in with (absent from an older server: Sua conta lists none). */
+  providers?: SignInProvider[];
   /** Opened the link that confirms the email address. */
   emailVerified?: boolean;
   /**

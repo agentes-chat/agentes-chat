@@ -2,6 +2,7 @@ import {
   type AgentStyle,
   ApiError,
   keys,
+  type SignInProvider,
   useAiAccounts,
   useAuthConfig,
   useMe,
@@ -27,6 +28,7 @@ import {
   Card,
   CardHeader,
   Checkbox,
+  Chip,
   Dialog,
   DialogBody,
   DialogFooter,
@@ -43,7 +45,7 @@ import {
   useNow,
 } from "@agenteschat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { type ReactNode, useEffect, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
@@ -71,11 +73,12 @@ import { STORAGE_KEYS, sessionStore } from "@/lib/storage";
 import { type ThemePreference, useTheme } from "@/lib/theme";
 import { useToast } from "@/lib/toast";
 import { LanguageSelect } from "./LanguageSelect";
+import { PROVIDER_NAME, ProviderMark, useSocialProviders } from "./SocialButtons";
 
 /**
  * Configurações › Sua conta: your profile in this workspace, your time zone, whether agents' work shows under their replies,
  * how agents talk to you (ADR 0147), opening the phone app and a password
- * for an account without one, your plans' limits (ADR 0063 §5), how conversations look to you, then what this device keeps for itself (theme,
+ * for an account without one, the providers you sign in with, your plans' limits (ADR 0063 §5), how conversations look to you, then what this device keeps for itself (theme,
  * the app icon (ADR 0179), language, sounds, the desktop app's menus), and last, deleting the account.
  */
 export function AccountSection() {
@@ -192,6 +195,8 @@ export function AccountSection() {
           />
         </div>
       </Card>
+      {/* A server from before the list sends no `providers`. */}
+      {me.user.providers && <SignInMethods linked={me.user.providers} />}
       {plans.length > 0 && (
         <Card aria-labelledby="account-plans">
           <CardHeader id="account-plans" title={t("settings.account.plans")} />
@@ -360,6 +365,104 @@ export function AccountSection() {
       <ProfileDialog focus={profile} onClose={() => setProfile(null)} />
       <OpenOnPhoneDialog open={phone} onClose={() => setPhone(false)} />
     </>
+  );
+}
+
+/** Better Auth's codes for a connection refused on the way back (`?error=`), by what the person can do. */
+const LINK_REFUSALS: Record<string, "otherEmail" | "taken" | "cancelled"> = {
+  email_does_not_match: "otherEmail",
+  account_already_linked_to_different_user: "taken",
+  access_denied: "cancelled",
+};
+
+/**
+ * "Formas de entrar": each provider this server offers, connected to the account or a button that connects it, which
+ * takes the same email only (Better Auth's account linking). A refusal comes back here with `?connecting=` (the
+ * provider) and `?error=` (Better Auth's code), said above the rows until closed.
+ */
+function SignInMethods({ linked }: { linked: SignInProvider[] }) {
+  const { t } = useTranslation();
+  const { me } = useOrg();
+  const auth = useAuth();
+  const toast = useToast();
+  const navigate = useNavigate();
+  const offered = useSocialProviders();
+  const [pending, setPending] = useState<SignInProvider | null>(null);
+  const here = useRouterState({ select: (s) => s.location.pathname });
+  const search = useRouterState({ select: (s) => s.location.search as Record<string, unknown> });
+  const connecting = offered.find((p) => p === search.connecting);
+  const code = connecting && typeof search.error === "string" ? search.error : null;
+  if (offered.length === 0) return null;
+  const refusal = code ? (Object.hasOwn(LINK_REFUSALS, code) && LINK_REFUSALS[code]) || "other" : null;
+  const dismiss = () =>
+    void navigate({
+      to: ".",
+      replace: true,
+      search: ((prev: Record<string, unknown>) => {
+        const { connecting: _, error: __, ...rest } = prev;
+        return rest;
+      }) as never,
+    });
+  const connect = (provider: SignInProvider) => {
+    setPending(provider);
+    void auth.linkSocial(provider, here, `${here}?connecting=${provider}`).then((r) => {
+      // Accepted: the browser is on its way to the provider.
+      if (r.ok) return;
+      setPending(null);
+      toast.show(authErrorText(t, r));
+    });
+  };
+  return (
+    <Card aria-labelledby="account-sign-in">
+      <CardHeader
+        id="account-sign-in"
+        title={t("settings.account.signIn.title")}
+        hint={{
+          name: t("common.about", { label: t("settings.account.signIn.title") }),
+          text: t("settings.account.signIn.help"),
+        }}
+      />
+      {refusal && connecting && (
+        <div className="row" style={{ gap: 8, alignItems: "center" }}>
+          <Alert>
+            {t(`settings.account.signIn.refused.${refusal}`, {
+              provider: PROVIDER_NAME[connecting],
+              email: me.user.email,
+            })}
+          </Alert>
+          <Button size="sm" variant="ghost" onClick={dismiss}>
+            {t("common.close")}
+          </Button>
+        </div>
+      )}
+      <div className="settings-rows">
+        {offered.map((p) => (
+          <PrefRow
+            key={p}
+            id={`account-sign-in-${p}`}
+            lead={<ProviderMark provider={p} />}
+            label={PROVIDER_NAME[p]}
+            control={
+              linked.includes(p) ? (
+                <Chip tone="done" icon="check">
+                  {t("settings.account.signIn.connected")}
+                </Chip>
+              ) : (
+                <Button
+                  size="sm"
+                  disabled={pending !== null}
+                  loading={pending === p}
+                  aria-label={t("settings.account.signIn.connectLabel", { provider: PROVIDER_NAME[p] })}
+                  onClick={() => connect(p)}
+                >
+                  {t("settings.account.signIn.connect")}
+                </Button>
+              )
+            }
+          />
+        ))}
+      </div>
+    </Card>
   );
 }
 

@@ -649,6 +649,13 @@ export async function hasPassword(db: Database, userId: string): Promise<boolean
   return row !== undefined;
 }
 
+/** The providers the account signs in with (Google, GitHub, Apple), for Sua conta's ways to sign in. */
+export async function linkedProviders(db: Database, userId: string): Promise<SignInProvider[]> {
+  const rows = await db.select({ providerId: accounts.providerId }).from(accounts).where(eq(accounts.userId, userId));
+  const ids = new Set(rows.map((r) => r.providerId));
+  return [...SIGN_IN_PROVIDERS].filter((id) => ids.has(id)) as SignInProvider[];
+}
+
 /**
  * Runs after a user is created. The very first account of an installation
  * becomes owner of every organization that already exists, so a self-hoster

@@ -15258,3 +15258,8 @@ html:not([data-pointer]) .rh-set__face-edit:focus-visible {
 .ac-workline--waiting .handed-line__state {
   color: var(--warn);
 }
+/* Sua conta › Formas de entrar: a sign-in provider's own mark (SocialButtons), at the tile's glyph size. */
+.settings-row__icon > .auth-social__mark {
+  width: 16px;
+  height: 16px;
+}

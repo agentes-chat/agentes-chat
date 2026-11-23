@@ -18727,6 +18727,19 @@
       "activity": "Pokazuj, co zrobili agenci, pod każdą odpowiedzią",
       "activityHelp": "Narzędzia, z których skorzystali, i ile to trwało. W trakcie pracy dalej widzisz, co robią.",
       "activityFailed": "Nie udało się tego zapisać. Spróbuj ponownie.",
+      "signIn": {
+        "title": "Sposoby logowania",
+        "help": "Połącz konto z tym samym adresem e-mail, aby logować się także nim.",
+        "connected": "Połączono",
+        "connect": "Połącz",
+        "connectLabel": "Połącz {{provider}}",
+        "refused": {
+          "otherEmail": "To konto {{provider}} używa innego adresu e-mail. Połącz takie, które używa {{email}}.",
+          "taken": "To konto {{provider}} służy już do logowania na inne konto tutaj.",
+          "cancelled": "Łączenie z {{provider}} zostało anulowane.",
+          "other": "Nie udało się połączyć {{provider}}. Spróbuj ponownie."
+        }
+      },
       "chat": {
         "title": "Rozmowy",
         "density": "Gęstość rozmowy",

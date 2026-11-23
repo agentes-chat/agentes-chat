@@ -18171,6 +18171,19 @@
       "activity": "Mostra cosa hanno fatto gli agenti sotto ogni risposta",
       "activityHelp": "Gli strumenti che hanno usato e quanto tempo ci è voluto. Mentre lavorano, vedi comunque cosa stanno facendo.",
       "activityFailed": "Non è stato possibile salvare. Riprova.",
+      "signIn": {
+        "title": "Modi di accesso",
+        "help": "Collega un account con la stessa email per accedere anche con quello.",
+        "connected": "Collegato",
+        "connect": "Collega",
+        "connectLabel": "Collega {{provider}}",
+        "refused": {
+          "otherEmail": "Quell'account {{provider}} usa un'altra email. Collegane uno che usa {{email}}.",
+          "taken": "Quell'account {{provider}} accede già a un altro account qui.",
+          "cancelled": "Il collegamento con {{provider}} è stato annullato.",
+          "other": "Non è stato possibile collegare {{provider}}. Riprova."
+        }
+      },
       "chat": {
         "title": "Conversazioni",
         "density": "Densità della conversazione",

@@ -17036,6 +17036,19 @@
       "activity": "Tampilkan yang dilakukan agen di bawah tiap balasan",
       "activityHelp": "Alat yang mereka pakai dan berapa lama prosesnya. Saat mereka bekerja, kamu tetap melihat apa yang sedang mereka lakukan.",
       "activityFailed": "Tidak bisa menyimpan. Coba lagi.",
+      "signIn": {
+        "title": "Cara masuk",
+        "help": "Hubungkan akun dengan email yang sama agar kamu bisa masuk dengannya juga.",
+        "connected": "Terhubung",
+        "connect": "Hubungkan",
+        "connectLabel": "Hubungkan {{provider}}",
+        "refused": {
+          "otherEmail": "Akun {{provider}} itu memakai email lain. Hubungkan akun yang memakai {{email}}.",
+          "taken": "Akun {{provider}} itu sudah dipakai untuk masuk ke akun lain di sini.",
+          "cancelled": "Menghubungkan {{provider}} dibatalkan.",
+          "other": "Tidak bisa menghubungkan {{provider}}. Coba lagi."
+        }
+      },
       "chat": {
         "title": "Percakapan",
         "density": "Kepadatan percakapan",

@@ -43255,6 +43255,33 @@
   "settings.account.activityFailed": {
     "value": "Couldn't save that. Try again."
   },
+  "settings.account.signIn.title": {
+    "value": "Ways to sign in"
+  },
+  "settings.account.signIn.help": {
+    "value": "Connect an account that uses the same email to sign in with it too."
+  },
+  "settings.account.signIn.connected": {
+    "value": "Connected"
+  },
+  "settings.account.signIn.connect": {
+    "value": "Connect"
+  },
+  "settings.account.signIn.connectLabel": {
+    "value": "Connect {{provider}}"
+  },
+  "settings.account.signIn.refused.otherEmail": {
+    "value": "That {{provider}} account uses another email. Connect one that uses {{email}}."
+  },
+  "settings.account.signIn.refused.taken": {
+    "value": "That {{provider}} account already signs in to another account here."
+  },
+  "settings.account.signIn.refused.cancelled": {
+    "value": "Connecting {{provider}} was cancelled."
+  },
+  "settings.account.signIn.refused.other": {
+    "value": "Couldn't connect {{provider}}. Try again."
+  },
   "settings.account.chat.title": {
     "value": "Conversations"
   },

@@ -32,6 +32,7 @@ import {
   isEmailVerified,
   isValidTimeZone,
   joinStatus,
+  linkedProviders,
   listInvitations,
   listMembers,
   listMemberships,
@@ -170,6 +171,10 @@ const Me = z
         description:
           "Signs in with a password. False for social sign-ins only, and for the owner the desktop app signs in.",
       }),
+      providers: z.array(z.enum(["google", "github", "apple"])).openapi({
+        description:
+          "The providers the account signs in with. Sua conta connects the others the server offers (`/api/auth/link-social`).",
+      }),
       emailVerified: z.boolean().openapi({
         description: "The person opened the link that confirms their email address.",
       }),
@@ -232,9 +237,10 @@ export function accountRoutes(deps: AppDeps) {
   });
   /** `GET /me`'s body; null once the account is deleted. */
   const meBody = async (user: { id: string; name: string; email: string }): Promise<z.infer<typeof Me> | null> => {
-    const [memberships, password, verified, creates, unfinished, account, onThisMac] = await Promise.all([
+    const [memberships, password, providers, verified, creates, unfinished, account, onThisMac] = await Promise.all([
       listMemberships(db, user.id),
       hasPassword(db, user.id),
+      linkedProviders(db, user.id),
       isEmailVerified(db, user.id),
       canCreateWorkspace(db, user.id, workspacePolicy(config)),
       unfinishedWorkspaces(db, user.id),
@@ -255,6 +261,7 @@ export function accountRoutes(deps: AppDeps) {
         email: user.email,
         image: account.image,
         hasPassword: password,
+        providers,
         emailVerified: verified,
         emailConfirmation: emailConfirmation({
           emailDelivers: deps.adapters.email.delivers === true,

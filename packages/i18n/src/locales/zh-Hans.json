@@ -17046,6 +17046,19 @@
       "activity": "在每条回复下显示智能体做了什么",
       "activityHelp": "它们使用的工具和花费的时间。在它们工作时，你仍能看到它们在做什么。",
       "activityFailed": "无法保存，请重试。",
+      "signIn": {
+        "title": "登录方式",
+        "help": "关联一个使用相同邮箱的账号，之后也可以用它登录。",
+        "connected": "已关联",
+        "connect": "关联",
+        "connectLabel": "关联 {{provider}}",
+        "refused": {
+          "otherEmail": "该 {{provider}} 账号使用的是其他邮箱。请关联使用 {{email}} 的账号。",
+          "taken": "该 {{provider}} 账号已用于登录这里的另一个账号。",
+          "cancelled": "已取消关联 {{provider}}。",
+          "other": "无法关联 {{provider}}，请重试。"
+        }
+      },
       "chat": {
         "title": "对话",
         "density": "对话密度",

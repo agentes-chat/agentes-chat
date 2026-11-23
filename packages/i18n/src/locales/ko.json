@@ -16969,6 +16969,19 @@
       "activity": "각 답변 아래에 에이전트가 한 일 표시",
       "activityHelp": "사용한 도구와 걸린 시간이에요. 작업 중에는 지금 하는 일이 계속 보여요.",
       "activityFailed": "저장하지 못했어요. 다시 시도해 주세요.",
+      "signIn": {
+        "title": "로그인 방법",
+        "help": "같은 이메일을 쓰는 계정을 연결하면 그 계정으로도 로그인할 수 있어요.",
+        "connected": "연결됨",
+        "connect": "연결",
+        "connectLabel": "{{provider}} 연결",
+        "refused": {
+          "otherEmail": "그 {{provider}} 계정은 다른 이메일을 써요. {{email}}을(를) 쓰는 계정을 연결하세요.",
+          "taken": "그 {{provider}} 계정은 이미 여기서 다른 계정의 로그인에 쓰이고 있어요.",
+          "cancelled": "{{provider}} 연결을 취소했어요.",
+          "other": "{{provider}}을(를) 연결하지 못했어요. 다시 시도하세요."
+        }
+      },
       "chat": {
         "title": "대화",
         "density": "대화 밀도",

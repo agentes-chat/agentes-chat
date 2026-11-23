@@ -18074,6 +18074,19 @@
       "activity": "Mostrar lo que hicieron los agentes debajo de cada respuesta",
       "activityHelp": "Las herramientas que usaron y cuánto tardaron. Mientras trabajan, sigues viendo lo que están haciendo.",
       "activityFailed": "No se pudo guardar. Inténtalo de nuevo.",
+      "signIn": {
+        "title": "Formas de iniciar sesión",
+        "help": "Conecta una cuenta con el mismo correo para iniciar sesión también con ella.",
+        "connected": "Conectado",
+        "connect": "Conectar",
+        "connectLabel": "Conectar {{provider}}",
+        "refused": {
+          "otherEmail": "Esa cuenta de {{provider}} usa otro correo. Conecta una que use {{email}}.",
+          "taken": "Esa cuenta de {{provider}} ya inicia sesión en otra cuenta aquí.",
+          "cancelled": "Se canceló la conexión con {{provider}}.",
+          "other": "No se pudo conectar {{provider}}. Inténtalo de nuevo."
+        }
+      },
       "chat": {
         "title": "Conversaciones",
         "density": "Densidad de la conversación",

@@ -52,6 +52,15 @@ export interface AuthClient {
     earlyAccess?: string,
     errorCallbackURL?: string,
   ): Promise<AuthResult>;
+  /**
+   * Connects the provider to the signed-in account (same email only): redirects the browser to it, then back to
+   * `callbackURL`, or to `errorCallbackURL` with `?error=` when the provider or the server refuses.
+   */
+  linkSocial(
+    provider: "google" | "github" | "apple",
+    callbackURL: string,
+    errorCallbackURL: string,
+  ): Promise<AuthResult>;
   /** E-mails a link to `redirectTo?token=…` (only when the server can send e-mail: `passwordReset`). */
   requestPasswordReset(input: { email: string; redirectTo: string }, humanCheck?: string): Promise<AuthResult>;
   /** The new password for the link's token; signs out every other session. */

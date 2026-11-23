@@ -18149,6 +18149,19 @@
       "activity": "Montrer ce que les agents ont fait sous chaque réponse",
       "activityHelp": "Les outils utilisés et le temps que cela a pris. Pendant qu'ils travaillent, vous voyez toujours ce qu'ils font.",
       "activityFailed": "Impossible d'enregistrer. Réessayez.",
+      "signIn": {
+        "title": "Moyens de connexion",
+        "help": "Associez un compte qui utilise la même adresse e-mail pour vous connecter aussi avec lui.",
+        "connected": "Associé",
+        "connect": "Associer",
+        "connectLabel": "Associer {{provider}}",
+        "refused": {
+          "otherEmail": "Ce compte {{provider}} utilise une autre adresse e-mail. Associez-en un qui utilise {{email}}.",
+          "taken": "Ce compte {{provider}} sert déjà à se connecter à un autre compte ici.",
+          "cancelled": "L'association avec {{provider}} a été annulée.",
+          "other": "Impossible d'associer {{provider}}. Réessayez."
+        }
+      },
       "chat": {
         "title": "Discussions",
         "density": "Densité de la conversation",

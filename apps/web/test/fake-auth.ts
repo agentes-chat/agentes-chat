@@ -16,6 +16,7 @@ export function createFakeAuth(
     claim?: AuthResult;
     verification?: AuthResult;
     updateName?: AuthResult;
+    linkSocial?: AuthResult;
     onSignIn?: () => void;
     /** What signing out does to the fake server: ending its session, usually (`state.me = null`). */
     onSignOut?: () => void;
@@ -51,6 +52,10 @@ export function createFakeAuth(
             : [provider, callbackURL],
       });
       return { ok: true };
+    },
+    linkSocial: async (provider, callbackURL, errorCallbackURL) => {
+      calls.push({ method: "linkSocial", args: [provider, callbackURL, errorCallbackURL] });
+      return options.linkSocial ?? { ok: true };
     },
     requestPasswordReset: async (input, humanCheck) => {
       calls.push({ method: "requestPasswordReset", args: withToken(input, humanCheck) });

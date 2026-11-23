@@ -32,6 +32,12 @@ const BRAND: Record<SignInProvider, ReactNode> = {
   ),
 };
 
+/** A provider's mark alone, as on its button (Sua conta's ways to sign in). */
+export const ProviderMark = ({ provider }: { provider: SignInProvider }) => BRAND[provider];
+
+/** The provider's own name, never translated. */
+export const PROVIDER_NAME: Record<SignInProvider, string> = { google: "Google", github: "GitHub", apple: "Apple" };
+
 const ORDER: SignInProvider[] = ["google", "github", "apple"];
 
 /** How this browser signed in last (marked "Último usado"). */

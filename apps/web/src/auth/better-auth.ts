@@ -93,6 +93,8 @@ export function createBetterAuthClient(origin = window.location.origin, language
           ...earlyAccessState(earlyAccess),
         }),
       ),
+    linkSocial: (provider, callbackURL, errorCallbackURL) =>
+      toResult(client.linkSocial({ provider, callbackURL, errorCallbackURL })),
     requestPasswordReset: ({ email, redirectTo }, humanCheck) =>
       toResult(
         client.requestPasswordReset({ email, redirectTo, fetchOptions: { headers: humanCheckHeaders(humanCheck) } }),
