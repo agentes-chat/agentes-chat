@@ -171,6 +171,23 @@ describe("no AI connected: above the composer", () => {
     expect(panel.textContent).toContain("A conta que os seus agentes dividem");
   });
 
+  test("a server that offers Claude and Gemini alone (`MODEL_PROVIDERS`): their plans, no other, no API key", async () => {
+    await open(
+      walters(
+        seedState({ aiStatus: { ...aiStatus(false, ADA_ID, ATLAS_ID), providers: ["anthropic", "gemini"] } }),
+        ADA_ID,
+      ),
+    );
+    await click(within(banner() as HTMLElement).getByRole("button", { name: "Conectar uma IA" }), 6);
+    const first = dialog("Conectar uma IA para o time") as HTMLElement;
+    const cards = within(first)
+      .getAllByRole("button")
+      .map((b) => b.querySelector(".ac-option__title")?.textContent)
+      .filter(Boolean);
+    // Gemini, the one other plan, has its own card instead of "Outro plano".
+    expect(cards).toEqual(["Claude", "Gemini"]);
+  });
+
   test("a channel with one agent of the person's: Connect for the whole team all the same, its other agents too", async () => {
     const state = walters(seedState({ aiStatus: aiStatus(false, ADA_ID, ATLAS_ID) }), ADA_ID, ATLAS_ID);
     state.channelMembers[ENG_ID] = (state.channelMembers[ENG_ID] ?? []).filter((m) => m.id !== ATLAS_ID);

@@ -29,6 +29,7 @@ import type { ModelGateway } from "../gateway";
 import type { MachineStatus } from "../machine-hub";
 import { pausedMessage } from "../machines";
 import { missionTurnFor } from "../missions-engine";
+import { planAiOf, providerAllowed } from "../model-providers";
 import {
   isRightHand,
   type RightHandStandIn,
@@ -362,6 +363,13 @@ export function computerBrainUnavailable(
 ): BrainUnavailability | null {
   if (kind === "model") return null;
   const name = BRAIN_NAMES[kind];
+  // A plan the server turned off (`MODEL_PROVIDERS`): nothing thinks with it, signed in or not.
+  const ai = planAiOf(kind, account?.provider);
+  if (ai && !providerAllowed(ai))
+    return {
+      code: "not_logged_in",
+      message: `${name} with this plan is turned off on this server. Connect another AI.`,
+    };
   if (!machineId) return { code: "no_computer", message: `The agent has no computer for ${name}.` };
   // OpenCode's free tier on a computer nobody connected (ADR 0132): no sign-in, nobody's plan, any agent's.
   const freeTier = kind === "opencode" && !account && status?.pairedByUserId === null;

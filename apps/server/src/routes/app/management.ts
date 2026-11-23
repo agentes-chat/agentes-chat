@@ -36,6 +36,7 @@ import {
   ISSUES_VIEW_MAX_LABELS,
   ISSUES_VIEW_PRIORITIES,
   inviteMany,
+  keysAllowed,
   listAgentChannels,
   listInvitationsWithStatus,
   listMembers,
@@ -1587,7 +1588,9 @@ export function managementRoutes(deps: AppDeps) {
       // A provider the server leaves out (`MODEL_PROVIDERS`) isn't listed, nor are its models.
       const providerIds = Object.keys(PROVIDERS).filter(providerAllowed);
       const access = await availableProviders(db, orgId, adapters.platformCredentials, providerIds);
-      const usable = (p: string) => Boolean(access.get(p)?.own || access.get(p)?.platform);
+      // A key of the workspace's own counts only while API keys are on (`api_keys` in `MODEL_PROVIDERS`).
+      const own = (p: string) => keysAllowed() && (access.get(p)?.own ?? false);
+      const usable = (p: string) => Boolean(own(p) || access.get(p)?.platform);
       return c.json(
         {
           models: (await pickerModels(db, [orgId]))
@@ -1609,7 +1612,7 @@ export function managementRoutes(deps: AppDeps) {
           providers: providerIds.map((id) => ({
             id,
             label: (PROVIDERS as Record<string, { label: string }>)[id]?.label ?? id,
-            hasKey: access.get(id)?.own ?? false,
+            hasKey: own(id),
             platform: access.get(id)?.platform ?? false,
           })),
         },

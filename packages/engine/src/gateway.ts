@@ -56,7 +56,7 @@ import { decryptCredential, usableCredentialRow } from "./credentials";
 import { loadEndpointModels } from "./endpoints";
 import { BudgetExceededError, MissingCredentialError, NotFoundError, ValidationError } from "./errors";
 import { publishUserEvent } from "./events";
-import { providerAllowed } from "./model-providers";
+import { keysAllowed, providerAllowed } from "./model-providers";
 import { maySql, type RolePermission } from "./permissions";
 import { addPersonSpend, assertPersonUnderLimit, personSpendAdded } from "./person-usage";
 import { assertCanWork, standingRefusal } from "./standing";
@@ -314,6 +314,13 @@ export function createModelGateway(deps: ModelGatewayDeps) {
       throw new MissingCredentialError(
         `${label(provider)} is turned off on this server. Pick a model from another provider.`,
       );
+    // API keys turned off (`api_keys` not in `MODEL_PROVIDERS`): only the server's own key, else none.
+    if (!keysAllowed()) {
+      const platform = await deps.platformCredentials.resolve(orgId, provider);
+      if (!platform)
+        throw new MissingCredentialError("API keys are turned off on this server. Connect a plan instead.");
+      return { apiKey: platform.apiKey, workspaceId: platform.workspaceId, credentialId: null };
+    }
     if (agentCredentialId) {
       const credential = await decryptCredential(db, deps.keyWrappers, orgId, agentCredentialId);
       if (!credential) {
@@ -769,7 +776,7 @@ export function createModelGateway(deps: ModelGatewayDeps) {
   async function providerHasKey(orgId: string, provider: string): Promise<boolean> {
     if (!providerAllowed(provider)) return false;
     try {
-      const defaultId = await orgDefaultCredentialId(orgId, provider);
+      const defaultId = keysAllowed() ? await orgDefaultCredentialId(orgId, provider) : null;
       if (defaultId && (await usableCredentialRow(db, orgId, defaultId))?.provider === provider) return true;
       const platform = deps.platformCredentials;
       return platform.available
@@ -822,8 +829,8 @@ export function createModelGateway(deps: ModelGatewayDeps) {
       const usable = async (id: string) => (await usableCredentialRow(db, agent.orgId, id))?.provider === provider;
       try {
         const own = pinnedKey(agent.model) ?? agent.credentialId;
-        if (own) return await usable(own);
-        const defaultId = await orgDefaultCredentialId(agent.orgId, provider);
+        if (own) return keysAllowed() && (await usable(own));
+        const defaultId = keysAllowed() ? await orgDefaultCredentialId(agent.orgId, provider) : null;
         if (defaultId && (await usable(defaultId))) return true;
         const platform = deps.platformCredentials;
         return platform.available

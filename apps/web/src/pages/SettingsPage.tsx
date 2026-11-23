@@ -88,6 +88,7 @@ import { AuditSection } from "@/components/Audit";
 import { AutoModelsRow } from "@/components/AutoModels";
 import { EndpointForm } from "@/components/ai/EndpointForm";
 import { WhoPicksSection } from "@/components/ai/Jev";
+import { keysOffered, useOfferedAis } from "@/components/ai/offered";
 import { usePlanHold } from "@/components/ai/plan-hold";
 import { BillingLinkButton } from "@/components/BillingLinkButton";
 import { ConnectorsSection } from "@/components/Connectors";
@@ -859,13 +860,15 @@ function KeysSection() {
   const look = useRightHandLook();
   const hold = usePlanHold();
   const plans = useAiAccounts(org.id).data?.accounts.length ?? 0;
+  // API keys off on this server (`MODEL_PROVIDERS` without `api_keys`): none added, and the card only lists old ones.
+  const keysOn = keysOffered(useOfferedAis());
   if (!allowed) return null;
   const all = (credentials.data ?? []).filter((c) => !c.revokedAt);
   const live = shownKeys(credentials.data ?? []);
   const noKeys = credentials.isSuccess && live.length === 0;
   // On plans alone the screen is the accounts: the first key is added from "Conectar uma IA", and this card comes
   // with it.
-  if (live.length === 0 && plans > 0) return null;
+  if (live.length === 0 && (plans > 0 || !keysOn)) return null;
   return (
     <Card aria-labelledby="sec-keys">
       <CardHeader
@@ -874,6 +877,7 @@ function KeysSection() {
         title={t("settings.keysTitle")}
         hint={{ name: t("common.about", { label: t("settings.keysTitle") }), text: t("settings.keysSubtitle") }}
         action={
+          keysOn &&
           !noKeys &&
           !hold && (
             <Button size="sm" icon="plus" onClick={() => setDialog({ type: "add" })}>

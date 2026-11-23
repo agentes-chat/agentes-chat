@@ -54,6 +54,7 @@ import {
   planLabel,
   planMark,
   planOfAccount,
+  planOffered,
   planPickText,
   planTitle,
   signsInOnce,
@@ -114,6 +115,7 @@ import { useToast } from "@/lib/toast";
 import { AddAccount, OpenPage, Step, StepTitle } from "./AddAccountFlow";
 import { CliMissing } from "./CliMissing";
 import { EndpointForm } from "./EndpointForm";
+import { keysOffered, useOfferedAis } from "./offered";
 import { PlanReplies, usePlanRepliesShown } from "./PlanReplies";
 import { PlanHold, usePlanHold } from "./plan-hold";
 
@@ -221,6 +223,8 @@ export function AiPicker({
   busy?: boolean;
 }) {
   const { t } = useTranslation();
+  // Only the AIs the server offers (`MODEL_PROVIDERS`).
+  const allowed = useOfferedAis();
   // Back from the key, the plan it left.
   const lastPlan = useRef<PlanChoice>("claude");
   if (choice && choice !== "key") lastPlan.current = choice;
@@ -228,17 +232,20 @@ export function AiPicker({
     // biome-ignore lint/a11y/useSemanticElements: rows and selects, not a native fieldset
     <div className="ai-picker" role="group" aria-label={t("onboarding.keyStep.title")}>
       {have?.(choice === null && panel)}
-      <Segmented
-        block
-        label={t("connectAi.pay.label")}
-        disabled={busy}
-        value={choice === "key" ? "key" : "plan"}
-        onValueChange={(next) => onPick(next === "key" ? "key" : lastPlan.current)}
-        options={[
-          { value: "plan", label: t("connectAi.pay.plan") },
-          { value: "key", label: t("connectAi.pay.key") },
-        ]}
-      />
+      {/* Without API keys on the server (`MODEL_PROVIDERS`), plans alone: no plan-or-key choice. */}
+      {keysOffered(allowed) && (
+        <Segmented
+          block
+          label={t("connectAi.pay.label")}
+          disabled={busy}
+          value={choice === "key" ? "key" : "plan"}
+          onValueChange={(next) => onPick(next === "key" ? "key" : lastPlan.current)}
+          options={[
+            { value: "plan", label: t("connectAi.pay.plan") },
+            { value: "key", label: t("connectAi.pay.key") },
+          ]}
+        />
+      )}
       {choice === "key" ? (
         keySelect
       ) : (
@@ -248,7 +255,7 @@ export function AiPicker({
           value={choice ?? undefined}
           onValueChange={onPick}
           matches={(o, q) => matchesWords(planPickText(t, o.value), q)}
-          options={PLAN_CHOICES.map((c) => ({
+          options={PLAN_CHOICES.filter((c) => planOffered(allowed, c)).map((c) => ({
             value: c,
             label: planLabel(t, c),
             leading: <ProviderLogo id={planMark(c)} size="xs" off={dims?.(c)} />,
