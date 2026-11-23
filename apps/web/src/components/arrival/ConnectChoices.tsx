@@ -10,7 +10,7 @@ import {
 import { Icon, ProviderLogo } from "@agenteschat/ui";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { keysOffered, useOfferedAis } from "@/components/ai/offered";
+import { otherKeysOffered, useOfferedAis } from "@/components/ai/offered";
 
 /** The two plans most people have, on top; OpenCode's free models last, as the way in without a plan. */
 const FIRST: readonly PlanChoice[] = ["claude", "chatgpt"];
@@ -88,7 +88,7 @@ export function ConnectChoices({
         </button>
       ) : null}
       {mayAddKey &&
-        keysOffered(allowed) &&
+        otherKeysOffered(allowed) &&
         card(
           "key",
           <span className="arrival-opts__tile" aria-hidden="true">

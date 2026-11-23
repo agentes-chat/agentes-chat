@@ -37,7 +37,7 @@ import type { ModelGateway } from "./gateway";
 import { PLATFORM_CAP } from "./limits";
 import type { MachineCaller } from "./machine-hub";
 import { AGENT_CHIME_IN_MAX_HOP, getMessage, type Message, type ReplyRef } from "./messages";
-import { keysAllowed, providerAllowed } from "./model-providers";
+import { keyAllowed } from "./model-providers";
 import { ACTIVE_RUN_STATUSES } from "./run-inbox";
 import { type AgentRun, KEPT_ON_HOLD, NO_AI } from "./runs";
 import { billingHold, OrgDeletingError, standingRefusal } from "./standing";
@@ -599,12 +599,11 @@ export async function smallModelFor(
 
 /** Providers the organization has a key of (not revoked), among those the server allows (`MODEL_PROVIDERS`). */
 export async function orgKeyProviders(db: Executor, orgId: string): Promise<Set<string>> {
-  if (!keysAllowed()) return new Set();
   const rows = await db
     .selectDistinct({ provider: schema.providerCredentials.provider })
     .from(schema.providerCredentials)
     .where(and(eq(schema.providerCredentials.orgId, orgId), isNull(schema.providerCredentials.revokedAt)));
-  return new Set(rows.map((r) => r.provider).filter(providerAllowed));
+  return new Set(rows.map((r) => r.provider).filter(keyAllowed));
 }
 
 /**

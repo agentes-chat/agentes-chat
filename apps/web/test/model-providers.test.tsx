@@ -33,7 +33,7 @@ async function openAddKey(providers?: string[]) {
 
 describe("Chaves de IA on a server that limits the providers", () => {
   test("only the providers it offers, the first of them picked", async () => {
-    const { options, site } = await openAddKey(["openai", "gemini", "api_keys"]);
+    const { options, site } = await openAddKey(["openai", "gemini"]);
     expect(options).toEqual(["OpenAI", "Gemini"]);
     expect(site).toContain("platform.openai.com");
   });

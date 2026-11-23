@@ -232,7 +232,7 @@ export function AiPicker({
     // biome-ignore lint/a11y/useSemanticElements: rows and selects, not a native fieldset
     <div className="ai-picker" role="group" aria-label={t("onboarding.keyStep.title")}>
       {have?.(choice === null && panel)}
-      {/* Without API keys on the server (`MODEL_PROVIDERS`), plans alone: no plan-or-key choice. */}
+      {/* No provider whose key the server takes (`MODEL_PROVIDERS`): plans alone, no plan-or-key choice. */}
       {keysOffered(allowed) && (
         <Segmented
           block

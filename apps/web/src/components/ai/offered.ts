@@ -9,10 +9,12 @@ export function useOfferedAis(): readonly string[] | undefined {
   return useAiStatus(org.id).data?.providers;
 }
 
-/**
- * Whether API keys may be added: no list, or one with `api_keys` and a provider the server offers (or "Outro
- * provedor"). Without `api_keys` the workspace thinks with plans alone.
- */
+/** Whether any API key may be added: of a provider the server offers, or "Outro provedor". */
 export const keysOffered = (allowed: readonly string[] | undefined) =>
-  !allowed ||
-  (allowed.includes("api_keys") && (firstOffered(allowed) !== undefined || providerOffered(allowed, CUSTOM_PROVIDER)));
+  firstOffered(allowed) !== undefined || providerOffered(allowed, CUSTOM_PROVIDER);
+
+/**
+ * The "Chave de API" card of its own, for any provider's key: no list, or `api_keys` in it. Without it, a listed
+ * provider's key comes from its plan's card ("Usar uma chave de API agora").
+ */
+export const otherKeysOffered = (allowed: readonly string[] | undefined) => !allowed || allowed.includes("api_keys");

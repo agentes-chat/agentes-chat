@@ -3,7 +3,7 @@ import { isKnownProvider, PROVIDER_IDS } from "@agenteschat/providers";
 /** Plans on an agent's computer that no API provider of the catalog sells: their own ids in `MODEL_PROVIDERS`. */
 export const PLAN_ONLY_AIS = ["cursor", "grok", "opencode"] as const;
 
-/** In `MODEL_PROVIDERS`: workspaces may add API keys (of the providers listed). Without it, plans alone. */
+/** In `MODEL_PROVIDERS`: workspaces may also add API keys of the providers left out (the listed ones always may). */
 export const API_KEYS = "api_keys";
 
 /** Every id `MODEL_PROVIDERS` takes: the API providers', the plans' of their own, then `api_keys`. */
@@ -34,10 +34,11 @@ export function setModelProviders(ids: readonly string[] | null | undefined) {
 export const providerAllowed = (provider: string) => allowed === null || allowed.has(provider);
 
 /**
- * Whether workspaces may add and use API keys of their own (`api_keys` in `MODEL_PROVIDERS`, or no list). The
- * server's own keys (`PLATFORM_*`) are its operator's, so they still serve the providers listed.
+ * Whether an API provider's keys may be added and used (the workspace's or the server's): no list, the provider
+ * listed, or `api_keys` listed, which opens the others' keys too (not their plans).
  */
-export const keysAllowed = () => allowed === null || allowed.has(API_KEYS);
+export const keyAllowed = (provider: string) =>
+  allowed === null || allowed.has(provider) || (allowed.has(API_KEYS) && isKnownProvider(provider));
 
 /** The AIs workspaces may use, in `MODEL_AI_IDS` order; null when every one is. */
 export const allowedProviders = (): string[] | null =>

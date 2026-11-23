@@ -10,7 +10,7 @@ afterEach(async () => {
   await t.close();
 });
 
-test("with API keys on, a provider left out: not offered, no new key, its models gone, no call uses its key", async () => {
+test("a provider left out: not offered, no new key, its models gone, no call uses its key", async () => {
   t = await createTestServer();
   const owner = browser(t);
   await signUp(owner, "owner@example.com");
@@ -22,11 +22,11 @@ test("with API keys on, a provider left out: not offered, no new key, its models
       providers?: string[];
       agents: { agentId: string; state: string; reason?: string }[];
     };
-  setModelProviders(["openai", "custom", "api_keys"]);
+  setModelProviders(["openai", "custom"]);
 
   // `@dev` thinks with Claude (a fixed model) on a key saved before the limit: no call takes that key now.
   const before = await status();
-  expect(before.providers).toEqual(["openai", "custom", "api_keys"]);
+  expect(before.providers).toEqual(["openai", "custom"]);
   expect(before.agents.find((a) => a.agentId === agentId)).toMatchObject({ state: "no_ai", reason: "no_key" });
 
   const refused = await api("/credentials", {
@@ -54,28 +54,29 @@ test("with API keys on, a provider left out: not offered, no new key, its models
   });
 });
 
-test("without `api_keys`, plans alone: no key at all, no saved key used, and a plan left out can't sign in", async () => {
+test("a listed provider takes its keys and plan; `api_keys` opens the others' keys, not their plans", async () => {
   t = await createTestServer();
   const owner = browser(t);
   await signUp(owner, "owner@example.com");
   const { orgId, agentId } = await seedOrg(owner);
   const api = (path: string, init?: Parameters<typeof owner>[1]) =>
     owner(`/api/app/organizations/${orgId}${path}`, init);
+  const key = (provider: string, apiKey: string) =>
+    api("/credentials", { json: { provider, label: provider, apiKey } });
   setModelProviders(["anthropic", "gemini"]);
 
-  // Claude is listed, but not its API keys.
-  const key = await api("/credentials", {
-    json: { provider: "anthropic", label: "Claude", apiKey: "sk-ant-abcdefghijklmnopqrst" },
-  });
-  expect(key.status).toBe(400);
-  expect(await key.json()).toMatchObject({ error: { code: "provider.off" } });
+  // Claude is listed: its key is taken. OpenAI's isn't.
+  expect((await key("anthropic", "sk-ant-abcdefghijklmnopqrst")).status).toBe(201);
+  const openai = await key("openai", "sk-proj-abcdefgh");
+  expect(openai.status).toBe(400);
+  expect(await openai.json()).toMatchObject({ error: { code: "provider.off", params: { provider: "openai" } } });
   const status = (await (await api("/ai-status")).json()) as {
     providers?: string[];
     agents: { agentId: string; state: string }[];
   };
   expect(status.providers).toEqual(["anthropic", "gemini"]);
-  // `@dev` thought with the workspace's Claude key: no call takes it now.
-  expect(status.agents.find((a) => a.agentId === agentId)).toMatchObject({ state: "no_ai" });
+  // `@dev` thinks with Claude: a listed provider, so it keeps thinking.
+  expect(status.agents.find((a) => a.agentId === agentId)?.state).not.toBe("no_ai");
 
   // ChatGPT's plan (Codex) is left out: refused before any computer is asked.
   const login = (kind: string, provider?: string) =>
@@ -89,6 +90,11 @@ test("without `api_keys`, plans alone: no key at all, no saved key used, and a p
   expect(((await (await login("claude_code")).json()) as { error: { code: string } }).error.code).not.toBe(
     "provider.off",
   );
+
+  // `api_keys`: OpenAI's key is taken now, but ChatGPT's plan stays off.
+  setModelProviders(["anthropic", "gemini", "api_keys"]);
+  expect((await key("openai", "sk-proj-abcdefgh")).status).toBe(201);
+  expect(await (await login("codex")).json()).toMatchObject({ error: { code: "provider.off" } });
 });
 
 test("every provider when unset, and an unknown id stops the boot", async () => {
