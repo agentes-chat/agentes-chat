@@ -243,7 +243,9 @@ html:not([data-pointer]) .brw-site button:focus-visible {
   position: absolute;
   inset: 0;
   display: grid;
-  place-items: center;
+  /* Safe: a box taller than the picture (a narrow card) starts at the top and scrolls, never cut at both ends. */
+  place-items: safe center;
+  overflow-y: auto;
   padding: 12px;
   background: color-mix(in srgb, var(--bg) 55%, transparent);
   backdrop-filter: blur(2px);

@@ -8649,6 +8649,7 @@ export const ptBR = {
     fold: { open: "Abrir {{name}}", close: "Recolher {{name}}", column: "Recolher coluna" },
     title: "Tarefas",
     summary: "{{open}} em aberto · {{agents}} com agentes",
+    openCount: "{{open}} em aberto",
     search: "Buscar tarefas",
     view: "Visualização",
     board: "Quadro",

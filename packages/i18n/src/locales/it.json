@@ -8502,6 +8502,7 @@
     },
     "title": "Attività",
     "summary": "{{open}} aperte · {{agents}} con agenti",
+    "openCount": "{{open}} aperte",
     "search": "Cerca attività",
     "view": "Vista",
     "board": "Bacheca",

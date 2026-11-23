@@ -703,6 +703,15 @@ html:not([data-pointer]) .wiki-minigraph:focus-visible {
   overflow: hidden;
   white-space: nowrap;
 }
+/* A folder's name longer than the room ends in "…" (the bar is one line, cut at its edge otherwise); the first link keeps its words. */
+.wiki-top .wiki-crumbs > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wiki-top .wiki-crumbs > a {
+  flex: none;
+}
 .wiki-top__acts {
   flex: none;
   display: flex;
@@ -722,7 +731,8 @@ html:not([data-pointer]) .wiki-minigraph:focus-visible {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 6px;
+  /* 8: a link's hover plate pulls 4 back each side, so the separators stand 4 from its box. */
+  gap: 8px;
   margin-bottom: 12px;
   color: var(--faint);
   font-size: 13px;
@@ -1732,4 +1742,9 @@ html:not([data-pointer]) .wiki-graph__node:focus-visible {
   .wiki-nav {
     transition: none;
   }
+}
+
+/* No reads yet: a quiet line under the folders, not a box. */
+.wiki-home__quiet {
+  margin: 0;
 }

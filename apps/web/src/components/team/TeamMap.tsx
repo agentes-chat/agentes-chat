@@ -269,6 +269,7 @@ export function TeamMap({ team }: { team: Team }) {
       <EmptyState
         size="page"
         agent={lookOf(look.lodi) ?? true}
+        scene="team"
         title={t("team.map.emptyTitle")}
         actions={
           first && (

@@ -205,10 +205,14 @@ function Board({
           <div className="db-meta">
             <VisibilityChip board={board} />
             <OwnerLine owner={board.owner} mine={board.mine} />
-            <span className="db-dot" aria-hidden="true">
-              ·
-            </span>
-            <span>{t("dashboards.meta.widgets", { count })}</span>
+            {count > 0 && (
+              <>
+                <span className="db-dot" aria-hidden="true">
+                  ·
+                </span>
+                <span>{t("dashboards.meta.widgets", { count })}</span>
+              </>
+            )}
             <span className="db-dot" aria-hidden="true">
               ·
             </span>
@@ -223,6 +227,7 @@ function Board({
         <EmptyState
           size="page"
           agent={lookOf(artAgent) ?? true}
+          scene="board"
           title={t("dashboards.empty.title")}
           actions={
             board.canEdit && (

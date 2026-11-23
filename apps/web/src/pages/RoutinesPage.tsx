@@ -408,6 +408,7 @@ export function RoutinesPage() {
           <EmptyState
             size="page"
             agent={look}
+            scene="routine"
             title={t(mayCreate ? "routines.emptyTitle" : "routines.emptyViewerTitle")}
             actions={
               mayCreate && (

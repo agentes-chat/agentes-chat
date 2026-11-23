@@ -301,10 +301,10 @@ describe("agent faces in a line of text", () => {
     const css = await sheet("packages/ui/src/styles/components.css");
     expect(value(css, ".ac-who > .ac-avatar > :is(img, .ac-avatar__initials)", "position")).toBe("absolute");
     const letters = ".ac-who > .ac-avatar > .ac-avatar__initials";
-    // Centred in the tile, still trimmed to their capitals by the tile's own rule.
+    // Centred in the tile, in the tile's own line (taller than the type: nothing cuts a letter).
     expect(value(css, letters, "margin")).toBe("auto");
     expect(value(css, letters, "height")).toBe("fit-content");
-    expect(value(css, ".ac-avatar__initials", "text-box")).toBe("trim-both cap alphabetic");
+    expect(value(css, ".ac-avatar__initials", "line-height")).toBe("1.3");
     await renderPage(
       <p>
         <ActorWho actor={{ type: "person", id: "u-joao" }} name="João" /> e{" "}

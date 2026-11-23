@@ -420,6 +420,34 @@ describe("the wiki", () => {
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/wiki/visao-geral`);
   });
 
+  test("the home's graph box shows with 2+ linked pages, beside the reads the agents made", async () => {
+    await go("wiki");
+    // The seed's Onboarding links to Glossário: the preview is there.
+    expect(screen().queryByRole("button", { name: "Ver o grafo" })).not.toBeNull();
+    expect(screen().queryByRole("region", { name: "O que os agentes mais consultam" })).not.toBeNull();
+    expect(document.querySelector(".wiki-home__quiet")).toBeNull();
+  });
+
+  test("no reads yet: one quiet line, never the section's heading and a panel holding a sentence", async () => {
+    const api = createFakeApi(seedState());
+    api.wiki.reads = async () => [];
+    await renderApp(`/org/${ORG_ID}/wiki`, { api });
+    await settle(8);
+    expect(screen().queryByRole("region", { name: "O que os agentes mais consultam" })).toBeNull();
+    expect(document.querySelector(".wiki-home__quiet")?.textContent).toContain("páginas mais consultadas");
+    expect(document.querySelector(".wiki-home__two")).toBeNull();
+  });
+
+  test("the home's graph box stays out with fewer than 2 linked pages", async () => {
+    const api = createFakeApi(seedState());
+    const graph = api.wiki.graph;
+    api.wiki.graph = async (orgId) => ({ ...(await graph(orgId)), edges: [] });
+    await renderApp(`/org/${ORG_ID}/wiki`, { api });
+    await settle(8);
+    expect(document.querySelector(".wiki-home")).not.toBeNull();
+    expect(screen().queryByRole("button", { name: "Ver o grafo" })).toBeNull();
+  });
+
   test("Grafo: nodes are links; hover lights the neighbors", async () => {
     await go("wiki");
     await click(screen().getByRole("button", { name: /^Grafo/ }));

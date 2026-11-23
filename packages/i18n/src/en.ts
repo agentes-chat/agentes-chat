@@ -8701,6 +8701,7 @@ export const en = {
     fold: { open: "Open {{name}}", close: "Fold {{name}}", column: "Fold column" },
     title: "Tasks",
     summary: "{{open}} open · {{agents}} with agents",
+    openCount: "{{open}} open",
     search: "Search tasks",
     view: "View",
     board: "Board",
