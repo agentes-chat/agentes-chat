@@ -106,7 +106,7 @@ describe("brain settings", () => {
     expect(normalizeBrainModel("cursor", "claude-opus-5-5-high")).toBe("claude-opus-5-5-high");
     expect(normalizeBrainModel("opencode", "anthropic/claude-opus-5-5")).toBe("anthropic/claude-opus-5-5");
     // An alias the plan leaves out, or "Automático", is its main model; the value stays an alias.
-    expect(brainModelLabel("claude_code", "opus", "zai")).toBe("GLM-5.3");
+    expect(brainModelLabel("claude_code", "opus", "zai")).toBe("GLM-5.4");
     expect(brainModelLabel("claude_code", "auto", "minimax")).toBe("MiniMax M3.1 Flash");
     expect(brainModelLabel("claude_code", "opus")).toBe("Opus 5.5");
     expect(normalizeBrainModel("claude_code", "haiku")).toBe("haiku");

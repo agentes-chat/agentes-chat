@@ -185,7 +185,7 @@ describe("one decision, mapped per brain", () => {
     const tiers = (plan: keyof typeof CODING_PLANS) =>
       MODEL_TIERS.map((tier) => planModel(CODING_PLANS[plan], brainModelForTier("claude_code", tier)).label);
     // Small, medium, large.
-    expect(tiers("zai")).toEqual(["GLM-5.3 Flash", "GLM-5.3", "GLM-5.3"]);
+    expect(tiers("zai")).toEqual(["GLM-5.3 Flash", "GLM-5.4", "GLM-5.4"]);
     expect(tiers("kimi")).toEqual(["Kimi for Coding", "Kimi for Coding", "K3.1 Pro"]);
     expect(tiers("minimax")).toEqual(["MiniMax M3.1 Flash", "MiniMax M3.1 Flash", "MiniMax M3.1 Flash"]);
     expect(tiers("opencode")).toEqual(["Claude Haiku 5.5", "MiniMax M3", "MiniMax M3"]);

@@ -163,7 +163,7 @@ describe("pricing", () => {
       ["gemini-4-hydrogen"],
       ["deepseek-flash"],
       ["kimi-k3.1-pro"],
-      ["glm-5.3"],
+      ["glm-5.4"],
       ["MiniMax-M3"],
       // OpenRouter's come from its list.
       [],
@@ -180,6 +180,8 @@ describe("pricing", () => {
     expect(perMTok("kimi-k3.1-pro")).toEqual([2, 10, 0.2, 2]);
     expect(perMTok("kimi-k3")).toEqual([3, 15, 0.3, 3]);
     expect(perMTok("glm-5.3")).toEqual([1.4, 4.4, 0.26, 1.4]);
+    // GLM-5.4 rides GLM-5.3's rates until Z.ai publishes its own (see catalog).
+    expect(perMTok("glm-5.4")).toEqual([1.4, 4.4, 0.26, 1.4]);
     expect(perMTok("glm-5.3-flash")).toEqual([0.15, 0.5, 0.03, 0.15]);
     expect(perMTok("MiniMax-M3.1-Flash")).toEqual([0.15, 0.6, 0.015, 0.15]);
     // MiniMax M3: $0.30 / $1.20 / $0.06 up to 512K prompt tokens, double above.
@@ -204,7 +206,7 @@ describe("pricing", () => {
     expect(line("gemini")).toEqual(["gemini-3.5-flash-lite", "gemini-4-hydrogen", "gemini-4-argon"]);
     expect(line("deepseek")).toEqual(["deepseek-flash", "deepseek-flash", "deepseek-v4-pro"]);
     expect(line("moonshot")).toEqual(["kimi-k3.1-pro", "kimi-k3.1-pro", "kimi-k3.1-pro"]);
-    expect(line("zai")).toEqual(["glm-5.3-flash", "glm-5.3", "glm-5.3"]);
+    expect(line("zai")).toEqual(["glm-5.3-flash", "glm-5.4", "glm-5.4"]);
     expect(line("minimax")).toEqual(["MiniMax-M3.1-Flash", "MiniMax-M3", "MiniMax-M3"]);
     expect(line("commandcode")).toEqual([
       "commandcode:deepseek/deepseek-v4.1-flash",

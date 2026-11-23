@@ -107,12 +107,16 @@ export const CODING_PLANS = {
     claudeCode: {
       baseUrl: "https://api.z.ai/api/anthropic",
       tokenEnv: "ANTHROPIC_AUTH_TOKEN",
-      // Every tier has both; Flash spends about a third of GLM-5.3's credits per token.
+      // Every tier has all three. GLM-5.4 (announced 2026-11-23) replaces GLM-5.3 as the flagship: it reads
+      // pictures and carries 50% more weekly quota (Zixuan Li, Z.ai's head of global ecosystem, on X;
+      // docs.z.ai/devpack/latest-model lists GLM-5.4 and GLM-5.3-Flash live, read 2026-11-23). Flash spends
+      // about a third of GLM-5.3's credits per token.
       models: [
+        { id: "glm-5.4[1m]", label: "GLM-5.4", alias: "sonnet", tag: "smart" },
         // Z.ai's guide to switching models: "GLM-5.3 is a text-only model, so uncheck Support Images;
         // GLM-5.3-FLASH is a multimodal model, so Support Images can be checked" (docs.z.ai/devpack/latest-model,
         // read 2026-11-22).
-        { id: "glm-5.3[1m]", label: "GLM-5.3", alias: "sonnet", tag: "smart", images: false },
+        { id: "glm-5.3[1m]", label: "GLM-5.3", images: false },
         { id: "glm-5.3-flash[1m]", label: "GLM-5.3 Flash", alias: "haiku", tag: "cheap" },
       ],
       env: { API_TIMEOUT_MS: "3000000" },

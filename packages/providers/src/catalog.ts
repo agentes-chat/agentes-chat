@@ -447,14 +447,25 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     contextWindow: 1_048_576,
     serverSideFallback: false,
   },
+  // GLM-5.4 (2026-11-23) reads pictures and takes GLM-5.3's place as Z.ai's flagship; GLM-5.3 stays choosable,
+  // never picked by "Automático". Z.ai has published no GLM-5.4 API prices yet (the coding plan launched
+  // first), so GLM-5.3's stand in until it lists them: usage history is never repriced.
+  "glm-5.4": {
+    provider: "zai",
+    label: "GLM-5.4",
+    prices: { input: 1400, output: 4400, cacheRead: 260, cacheWrite: 1400 },
+    contextWindow: 1_000_000,
+    serverSideFallback: false,
+    images: true,
+    recommended: true,
+    tier: "medium",
+  },
   "glm-5.3": {
     provider: "zai",
     label: "GLM-5.3",
     prices: { input: 1400, output: 4400, cacheRead: 260, cacheWrite: 1400 },
     contextWindow: 1_000_000,
     serverSideFallback: false,
-    recommended: true,
-    tier: "medium",
   },
   // Always thinks (Z.ai: it "cannot be disabled"), still the line's fastest for routing.
   "glm-5.3-flash": {

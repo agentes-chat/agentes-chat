@@ -170,7 +170,7 @@ describe("Anthropic-compatible providers (scripted transport)", () => {
           },
         ],
       });
-    for (const model of ["glm-5.3-flash", "glm-5.3-flash[1m]"]) {
+    for (const model of ["glm-5.3-flash", "glm-5.3-flash[1m]", "glm-5.4[1m]"]) {
       const { provider, requests } = compat(
         "zai",
         sse([start(model), ...text(0, "um quadrado vermelho"), ...end("end_turn", { output_tokens: 3 })]),

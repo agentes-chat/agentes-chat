@@ -39,6 +39,8 @@ test("the row says whether a model reads pictures through a compatible endpoint,
   expect(modelReadsImages("glm-5.3-flash")).toBe(true);
   expect(modelReadsImages("glm-5.3-flash[1m]")).toBe(true);
   expect(modelReadsImages("glm-5.3-flash-20261101")).toBe(true);
+  expect(modelReadsImages("glm-5.4")).toBe(true);
+  expect(modelReadsImages("glm-5.4[1m]")).toBe(true);
   expect(modelReadsImages("glm-5.3")).toBe(false);
   expect(modelReadsImages("deepseek-flash")).toBe(false);
   expect(modelReadsImages("not-in-the-catalog")).toBe(false);
