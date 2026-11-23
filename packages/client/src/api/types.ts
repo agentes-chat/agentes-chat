@@ -1720,6 +1720,8 @@ export interface AiStatus {
    * the viewer sees (`widgetAiReady`). Absent from an older server.
    */
   widgetsReady?: string[];
+  /** The model providers this server lets workspaces use (`MODEL_PROVIDERS`), when it limits them; absent: every one. */
+  providers?: string[];
   agents: {
     agentId: string;
     /** `waiting`: its computer is away for now (not "no AI"). */

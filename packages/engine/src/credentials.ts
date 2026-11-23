@@ -33,6 +33,7 @@ import {
 } from "./endpoints";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import type { KeyCheck, ModelGateway } from "./gateway";
+import { providerAllowed } from "./model-providers";
 import { requirePermission } from "./organizations";
 import { orgModelProvider } from "./router";
 import { billingHold } from "./standing";
@@ -213,6 +214,10 @@ export async function createCredential(
   await requirePermission(db, actorId, orgId, "manage_credentials");
   await assertKeysOpen(db, orgId);
   if (!isKnownProvider(input.provider)) throw new ValidationError(`Unknown provider ${input.provider}`);
+  if (!providerAllowed(input.provider))
+    throw new ValidationError(`This server doesn't offer ${input.provider}`, "provider.off", {
+      provider: input.provider,
+    });
   const custom = input.provider === "custom";
   if (custom !== Boolean(input.endpoint))
     throw new ValidationError(custom ? "An endpoint needs its address and models" : "Only an endpoint has an address");

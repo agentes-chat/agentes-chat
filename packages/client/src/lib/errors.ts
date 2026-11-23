@@ -351,6 +351,8 @@ const KNOWN = {
   provider_key_management: "settings.keyManagement",
   "credential.in_use": "settings.keyInUse",
   "credential.default": "settings.removeDefaultBlocked",
+  // A provider the server's operator left out (`MODEL_PROVIDERS`).
+  "provider.off": "settings.providerOff",
   "github.repo_missing": "errors.github.repoMissing",
   "github.ref_missing": "errors.github.refMissing",
   // `count`: minutes until GitHub stops limiting the server.

@@ -7,6 +7,7 @@ import {
   agentRights,
   agentStatuses,
   agentView,
+  allowedProviders,
   allowsPrivateEndpoints,
   applyAgentSetup,
   archiveAgent,
@@ -780,6 +781,10 @@ export function agentRoutes(deps: AppDeps) {
               description:
                 "The right hand's widgets waiting for an AI, or stopped after failing in a row, whose build has one now, among those the viewer sees: whose AI its build thinks with is each widget's own people's (who made it, its routine's creator, else the workspace's).",
             }),
+            providers: z.array(ProviderId).optional().openapi({
+              description:
+                "The model providers this server lets workspaces use (`MODEL_PROVIDERS`), when it limits them: Settings offers keys of these alone. Absent: every provider.",
+            }),
           }),
         ),
         ...errors,
@@ -797,7 +802,8 @@ export function agentRoutes(deps: AppDeps) {
         context ? summaryModelReady(context, orgId) : false,
         rightHandWidgetsReady({ db, ai: status }, orgId, userId),
       ]);
-      return c.json({ ...ai, ...routing, reflection, widgetsReady }, 200);
+      const providers = allowedProviders();
+      return c.json({ ...ai, ...routing, reflection, widgetsReady, ...(providers ? { providers } : {}) }, 200);
     },
   );
 

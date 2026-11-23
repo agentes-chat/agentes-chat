@@ -51,6 +51,7 @@ import {
   orgOverview,
   pickerEndpoint,
   pickerModels,
+  providerAllowed,
   publishWorkspaceMode,
   queueInvitationEmail,
   requirePermission,
@@ -1583,25 +1584,28 @@ export function managementRoutes(deps: AppDeps) {
     async (c) => {
       const { orgId } = c.req.valid("param");
       await requirePermission(db, c.get("user").id, orgId, "read");
-      const providerIds = Object.keys(PROVIDERS);
+      // A provider the server leaves out (`MODEL_PROVIDERS`) isn't listed, nor are its models.
+      const providerIds = Object.keys(PROVIDERS).filter(providerAllowed);
       const access = await availableProviders(db, orgId, adapters.platformCredentials, providerIds);
       const usable = (p: string) => Boolean(access.get(p)?.own || access.get(p)?.platform);
       return c.json(
         {
-          models: (await pickerModels(db, [orgId])).map(([id, m]) => ({
-            id,
-            label: m.label,
-            provider: m.provider,
-            contextWindow: contextWindowOf(id),
-            available: usable(m.provider),
-            recommended: usable(m.provider) && m.recommended === true,
-            cheap: m.cheap === true,
-            inputUsdPerMTok: pricesAt(m).input / 1000,
-            outputUsdPerMTok: pricesAt(m).output / 1000,
-            ...(m.pick !== undefined ? { pick: m.pick } : {}),
-            ...(m.tier ? { tier: m.tier } : {}),
-            ...pickerEndpoint(id, m),
-          })),
+          models: (await pickerModels(db, [orgId]))
+            .filter(([, m]) => providerAllowed(m.provider))
+            .map(([id, m]) => ({
+              id,
+              label: m.label,
+              provider: m.provider,
+              contextWindow: contextWindowOf(id),
+              available: usable(m.provider),
+              recommended: usable(m.provider) && m.recommended === true,
+              cheap: m.cheap === true,
+              inputUsdPerMTok: pricesAt(m).input / 1000,
+              outputUsdPerMTok: pricesAt(m).output / 1000,
+              ...(m.pick !== undefined ? { pick: m.pick } : {}),
+              ...(m.tier ? { tier: m.tier } : {}),
+              ...pickerEndpoint(id, m),
+            })),
           providers: providerIds.map((id) => ({
             id,
             label: (PROVIDERS as Record<string, { label: string }>)[id]?.label ?? id,

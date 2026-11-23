@@ -13180,7 +13180,6 @@
     "added": "{{repo}} kaydettiğinizde listeye eklenir."
   },
   "connectors": {
-    "title": "Bağlayıcılar",
     "store": {
       "featured": "Öne çıkanlar",
       "suggested": "Önerilen",
@@ -13223,6 +13222,7 @@
       "addressPassword": "Adres ve şifre",
       "composio": "Composio üzerinden"
     },
+    "title": "Bağlayıcılar",
     "add": "Bağlayıcı ekle",
     "personal": {
       "note": "Bu bağlantıları yalnızca sen açarsın. Ajanların bunları yalnızca sen istediğinde kullanır.",
@@ -17703,6 +17703,7 @@
     "default": "Çalışma alanı varsayılanı",
     "defaultFor": "{{provider}} için varsayılan",
     "removeDefaultBlocked": "Bunu silmeden önce başka bir varsayılan anahtar seçin.",
+    "providerOff": "O sağlayıcı burada kullanılamıyor. Başka birini seçin.",
     "provider": "Sağlayıcı",
     "keysTitle": "Sağlayıcı anahtarları",
     "keysSubtitle": "Sunucuda şifrelenir ve tarayıcıda asla gösterilmez. Ajanlar seçtiğiniz anahtarı kullanır.",

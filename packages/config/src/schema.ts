@@ -528,6 +528,16 @@ export const envVars = {
     section: "Agents",
     secret: true,
   },
+  MODEL_PROVIDERS: {
+    schema: commaList(
+      (id) => /^[a-z]+$/.test(id),
+      "must be provider ids such as anthropic,openai, comma-separated",
+      (id) => id.toLowerCase(),
+    ),
+    description:
+      "Comma-separated model providers workspaces may use, by id: `anthropic`, `openai`, `gemini`, `deepseek`, `moonshot`, `zai`, `minimax`, `openrouter`, `commandcode`, and `custom` (Settings › AI keys › Other provider). The others aren't offered, take no new key, and no call uses a key of theirs saved before (it stays listed so it can be removed). An unknown id stops the server at boot. Unset: every provider.",
+    section: "Agents",
+  },
   MODEL_ENDPOINTS_PRIVATE: {
     schema: z.stringbool().optional(),
     description:

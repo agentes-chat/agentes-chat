@@ -56,6 +56,7 @@ import { decryptCredential, usableCredentialRow } from "./credentials";
 import { loadEndpointModels } from "./endpoints";
 import { BudgetExceededError, MissingCredentialError, NotFoundError, ValidationError } from "./errors";
 import { publishUserEvent } from "./events";
+import { providerAllowed } from "./model-providers";
 import { maySql, type RolePermission } from "./permissions";
 import { addPersonSpend, assertPersonUnderLimit, personSpendAdded } from "./person-usage";
 import { assertCanWork, standingRefusal } from "./standing";
@@ -308,6 +309,11 @@ export function createModelGateway(deps: ModelGatewayDeps) {
    * key for that provider, only if configured. Never a silent failure.
    */
   async function resolveKey(orgId: string, provider: string, agentCredentialId?: string | null): Promise<Key> {
+    // A provider the server turned off (`MODEL_PROVIDERS`): no key of it is used, the workspace's or the server's.
+    if (!providerAllowed(provider))
+      throw new MissingCredentialError(
+        `${label(provider)} is turned off on this server. Pick a model from another provider.`,
+      );
     if (agentCredentialId) {
       const credential = await decryptCredential(db, deps.keyWrappers, orgId, agentCredentialId);
       if (!credential) {
@@ -761,6 +767,7 @@ export function createModelGateway(deps: ModelGatewayDeps) {
 
   /** Whether a call to `provider` would find a key (the workspace's default, else the platform's), none decrypted. */
   async function providerHasKey(orgId: string, provider: string): Promise<boolean> {
+    if (!providerAllowed(provider)) return false;
     try {
       const defaultId = await orgDefaultCredentialId(orgId, provider);
       if (defaultId && (await usableCredentialRow(db, orgId, defaultId))?.provider === provider) return true;
@@ -811,7 +818,7 @@ export function createModelGateway(deps: ModelGatewayDeps) {
      */
     async hasModelCredential(agent: Pick<Agent, "orgId" | "model" | "credentialId">): Promise<boolean> {
       const provider = modelProvider(agent.model);
-      if (!provider || !deps.providers[provider]) return false;
+      if (!provider || !deps.providers[provider] || !providerAllowed(provider)) return false;
       const usable = async (id: string) => (await usableCredentialRow(db, agent.orgId, id))?.provider === provider;
       try {
         const own = pinnedKey(agent.model) ?? agent.credentialId;

@@ -2,6 +2,7 @@ import type { Credential, OrgSettings } from "@agenteschat/client";
 import {
   useAddCredential,
   useAiAccounts,
+  useAiStatus,
   useAuthConfig,
   useComposioUsage,
   useComputerSetup,
@@ -30,6 +31,7 @@ import { formatShortDate, formatUsd, relativeTime } from "@agenteschat/client/li
 import { can } from "@agenteschat/client/lib/permissions";
 import { settingsSectionNameKey, settingsSectionTextKey } from "@agenteschat/client/lib/personal-view";
 import {
+  firstOffered,
   keyCopiesLine,
   keyLooksValid,
   keyName,
@@ -38,6 +40,7 @@ import {
   providerGuess,
   providerLabel,
   providerOf,
+  providerOffered,
   shownKeys,
 } from "@agenteschat/client/lib/providers";
 import type { RoleTab } from "@agenteschat/client/lib/roles";
@@ -1105,6 +1108,14 @@ export function KeyDialog({
     setTouched(false);
     setRefused(null);
   }, [mode, cred]);
+  // A provider the server leaves out (`MODEL_PROVIDERS`) gives way to the first it offers (after the reset above).
+  const allowed = useAiStatus(org.id).data?.providers;
+  useEffect(() => {
+    if (mode !== "add" || custom || providerOffered(allowed, provider)) return;
+    const first = firstOffered(allowed);
+    if (first) setProvider(first);
+    else setCustom(true);
+  }, [mode, custom, provider, allowed]);
   // An endpoint's key (ADR 0146) has no published format: the server's 8-character floor is the whole check.
   const endpointKey = cred?.provider === CUSTOM_PROVIDER;
   const valid = endpointKey ? apiKey.trim().length >= 8 : keyLooksValid(provider, apiKey);
@@ -1121,6 +1132,7 @@ export function KeyDialog({
     <Field label={t("settings.provider")} id="key-provider">
       <ProviderKeySelect
         value={custom ? CUSTOM_PROVIDER : provider}
+        allowed={allowed}
         disabled={pending}
         onChange={(v) => {
           setCustom(v === CUSTOM_PROVIDER);

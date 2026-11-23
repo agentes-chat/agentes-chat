@@ -12765,7 +12765,6 @@
     "added": "{{repo}} masuk ke daftar saat kamu menyimpan."
   },
   "connectors": {
-    "title": "Konektor",
     "store": {
       "featured": "Unggulan",
       "suggested": "Disarankan",
@@ -12804,6 +12803,7 @@
       "addressPassword": "Alamat dan kata sandi",
       "composio": "Lewat Composio"
     },
+    "title": "Konektor",
     "add": "Tambah konektor",
     "personal": {
       "note": "Hanya kamu yang membuka koneksi ini. Agenmu hanya menggunakannya saat kamu minta.",
@@ -17220,6 +17220,7 @@
     "default": "Default ruang kerja",
     "defaultFor": "Default untuk {{provider}}",
     "removeDefaultBlocked": "Pilih kunci default lain sebelum menghapus yang ini.",
+    "providerOff": "Penyedia itu tidak tersedia di sini. Pilih yang lain.",
     "provider": "Penyedia",
     "keysTitle": "Kunci penyedia",
     "keysSubtitle": "Dienkripsi di server dan tidak pernah ditampilkan di browser. Agen memakai kunci yang kamu pilih.",

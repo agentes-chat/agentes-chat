@@ -18303,6 +18303,7 @@ export const en = {
     default: "Workspace default",
     defaultFor: "Default for {{provider}}",
     removeDefaultBlocked: "Pick another default key before deleting this one.",
+    providerOff: "That provider isn't available here. Pick another one.",
     provider: "Provider",
     keysTitle: "Provider keys",
     keysSubtitle: "Encrypted on the server and never shown in the browser. Agents use the key you choose.",

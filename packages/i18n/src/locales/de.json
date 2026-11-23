@@ -13251,7 +13251,6 @@
     "added": "{{repo}} kommt beim Speichern auf die Liste."
   },
   "connectors": {
-    "title": "Konnektoren",
     "store": {
       "featured": "Empfohlen",
       "suggested": "Vorgeschlagen",
@@ -13294,6 +13293,7 @@
       "addressPassword": "Adresse und Passwort",
       "composio": "Über Composio"
     },
+    "title": "Konnektoren",
     "add": "Konnektor hinzufügen",
     "personal": {
       "note": "Nur du öffnest diese Verbindungen. Deine Agenten verwenden sie nur, wenn du sie darum bittest.",
@@ -17774,6 +17774,7 @@
     "default": "Workspace-Standard",
     "defaultFor": "Standard für {{provider}}",
     "removeDefaultBlocked": "Wähle einen anderen Standardschlüssel, bevor du diesen löschst.",
+    "providerOff": "Dieser Anbieter ist hier nicht verfügbar. Wähle einen anderen.",
     "provider": "Anbieter",
     "keysTitle": "Anbieterschlüssel",
     "keysSubtitle": "Verschlüsselt auf dem Server und nie im Browser angezeigt. Agenten nutzen den Schlüssel, den du wählst.",

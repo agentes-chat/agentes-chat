@@ -1,6 +1,12 @@
 import { CUSTOM_PROVIDER } from "@agenteschat/client/lib/endpoints";
 import type { keyRefusal } from "@agenteschat/client/lib/errors";
-import { PROVIDERS, type ProviderId, providerOf, providersForKey } from "@agenteschat/client/lib/providers";
+import {
+  PROVIDERS,
+  type ProviderId,
+  providerOf,
+  providerOffered,
+  providersForKey,
+} from "@agenteschat/client/lib/providers";
 import { Button, ProviderLogo, SearchSelect, type SearchSelectProps, SettingNote } from "@agenteschat/ui";
 import { useTranslation } from "react-i18next";
 
@@ -30,17 +36,22 @@ export function ProviderSelect<V extends string>(props: Omit<SearchSelectProps<V
   );
 }
 
-/** Whose API key: the makers, the most used first, then "Outro provedor" (ADR 0146). */
+/**
+ * Whose API key: the makers, the most used first, then "Outro provedor" (ADR 0146). `allowed`: the providers the
+ * server offers (`AiStatus.providers`), when it limits them.
+ */
 export function ProviderKeySelect({
   value,
   onChange,
   id,
   disabled,
+  allowed,
 }: {
   value: ProviderId | typeof CUSTOM_PROVIDER;
   onChange: (provider: ProviderId | typeof CUSTOM_PROVIDER) => void;
   id?: string;
   disabled?: boolean;
+  allowed?: readonly string[] | undefined;
 }) {
   const { t } = useTranslation();
   return (
@@ -51,13 +62,21 @@ export function ProviderKeySelect({
       {...(id ? { id } : {})}
       {...(disabled ? { disabled } : {})}
       options={[
-        ...PROVIDERS.map((p) => ({ value: p.id, label: p.label, leading: <ProviderLogo id={p.id} size="xs" /> })),
-        {
-          value: CUSTOM_PROVIDER,
-          label: t("endpoint.option"),
-          description: t("endpoint.optionSub"),
-          leading: <ProviderLogo id={CUSTOM_PROVIDER} size="xs" />,
-        },
+        ...PROVIDERS.filter((p) => providerOffered(allowed, p.id)).map((p) => ({
+          value: p.id,
+          label: p.label,
+          leading: <ProviderLogo id={p.id} size="xs" />,
+        })),
+        ...(providerOffered(allowed, CUSTOM_PROVIDER)
+          ? [
+              {
+                value: CUSTOM_PROVIDER as typeof CUSTOM_PROVIDER,
+                label: t("endpoint.option"),
+                description: t("endpoint.optionSub"),
+                leading: <ProviderLogo id={CUSTOM_PROVIDER} size="xs" />,
+              },
+            ]
+          : []),
       ]}
     />
   );
