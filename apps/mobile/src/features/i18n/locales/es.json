@@ -101,7 +101,7 @@
     "chats": "Chats",
     "threads": "Hilos",
     "agents": "Agentes",
-    "activity": "Actividad",
+    "activity": "Bandeja",
     "search": "Buscar",
     "withCount": "{{label}}, {{count}}"
   },
@@ -195,6 +195,12 @@
     },
     "pinned": "Fijados",
     "recent": "Recientes",
+    "view": {
+      "title": "Ver las conversaciones",
+      "sectors": "Sectores",
+      "dms": "Mensajes directos",
+      "channels": "Canales"
+    },
     "seeAll": "Ver todos los chats",
     "splitEmpty": "Tus chats se abren aquí.",
     "wait": {
@@ -334,6 +340,9 @@
   },
   "chat": {
     "someone": "Alguien",
+    "handedTo": "Pasado a {{name}}",
+    "handedTo_female": "Pasado a {{name}}",
+    "pairAsked": "{{from}} preguntó",
     "messageTo": "Mensaje para {{name}}",
     "messageIn": "Mensaje en {{channel}}",
     "reply": "Responder",
@@ -414,10 +423,6 @@
       "working": "{{names}} escribiendo",
       "mentionsYou": "te mencionaron",
       "divider": "Nuevo"
-    },
-    "connection": {
-      "down": "Sin conexión. Lo que envíes sale solo cuando vuelva.",
-      "back": "Conectado de nuevo"
     },
     "longPressHint": "Mantén presionado para reaccionar y ver más acciones",
     "file": "Archivo",
@@ -578,6 +583,8 @@
     "camera": "Cámara",
     "photos": "Fotos",
     "file": "Archivo",
+    "paste": "Pegar",
+    "pasteGone": "No se pudo leer la imagen copiada. Cópiala de nuevo y toca Pegar.",
     "media": "GIFs",
     "noCamera": "Sin acceso a la cámara. Permítelo en la Configuración del teléfono.",
     "summary": "Resumir el chat",
@@ -888,7 +895,7 @@
     }
   },
   "activity": {
-    "title": "Actividad",
+    "title": "Bandeja de entrada",
     "chooseModel": "Elegir otro modelo",
     "filter": {
       "all": "Todo",
@@ -1111,6 +1118,46 @@
     "addA11y": "Agregar a {{name}} al canal",
     "added": "{{name}} se unió al canal"
   },
+  "settingsSearch": {
+    "open": "Buscar en los ajustes",
+    "title": "Buscar",
+    "placeholder": "Buscar en Tú y en los ajustes",
+    "workspace": "Ajustes del workspace",
+    "words": {
+      "status": "ausente, ocupado, presencia, en línea",
+      "account": "nombre, foto, correo, zona horaria, contraseña, usuario",
+      "deleteAccount": "eliminar, borrar, cerrar cuenta",
+      "workspaces": "cambiar, servidores, cuentas",
+      "notifications": "avisos, alertas, push",
+      "approvals": "aprobar, delegar",
+      "start": "abrir, inicio, primera pantalla",
+      "activity": "herramientas, lo que hicieron los agentes",
+      "chatLook": "burbujas, mensajes, conversación",
+      "wallpaper": "fondo, fondo de pantalla, foto",
+      "agentStyle": "técnico, sencillo, tono",
+      "sounds": "sonido, silencio, silencioso",
+      "appearance": "tema, oscuro, claro, modo",
+      "appIcon": "icono",
+      "language": "idioma, español, inglés",
+      "about": "versión, licencias",
+      "aiAccounts": "clave, API, proveedor, plan, modelo",
+      "general": "nombre, logo, zona horaria, contexto",
+      "media": "GIF, pegatinas, stickers",
+      "members": "personas, equipo",
+      "invites": "invitar, invitación, enlace",
+      "roles": "permisos, roles",
+      "usage": "costos, gastos, plan, tokens, presupuesto",
+      "connectors": "integraciones, MCP, servicios",
+      "skills": "habilidades",
+      "vault": "contraseñas, claves, inicios de sesión, secretos",
+      "access": "permisos, acceso de los agentes",
+      "apps": "apps de IA, MCP",
+      "computers": "dispositivos, máquinas, computadora, teléfono",
+      "storage": "archivos, S3, almacenamiento",
+      "import": "exportar, importar, migrar",
+      "audit": "registro, historial"
+    }
+  },
   "me": {
     "title": "Tú",
     "role": {
@@ -1315,11 +1362,8 @@
     },
     "talk": {
       "hint": {
-        "image": "Toca donde quieras comentar",
-        "video": "Toca el video para comentar este momento",
-        "pdf": "Toca la página para marcar un punto"
+        "pdf": "Mantén pulsada la página para marcar un punto"
       },
-      "markVideo": "Comentar este momento del video",
       "pdfPage": "Página {{page}} de {{count}}",
       "pdfFailed": "No se pudo mostrar este PDF."
     }
@@ -1374,6 +1418,7 @@
     "criteriaOf": "{{done}} de {{total}}",
     "linkMessage": "Mensaje en #{{channel}}",
     "linkMessagePlain": "El mensaje original",
+    "removeFileText": "El archivo sigue en el Drive.",
     "subIssues": "Subtareas",
     "talk": "Chatear",
     "finish": "Marcar como lista",
@@ -1517,6 +1562,19 @@
       "day": "Día",
       "monthDay": "Día {{day}}",
       "lastDay": "Último día"
+    }
+  },
+  "coding": {
+    "pill": "{{who}}. Ver el código",
+    "seeChanges": "Ver los cambios",
+    "project": "Proyecto",
+    "whereSearch": "Busca o escribe un nombre",
+    "listed": "Del agente",
+    "commit": "Commit {{short}}",
+    "waiting": "Esperándote",
+    "next": {
+      "pr": "Rama enviada, aún sin pull request",
+      "mergeLocal": "Lista para hacer merge en {{base}}"
     }
   },
   "taskManager": {
@@ -2135,20 +2193,16 @@
     "mcps": "MCP",
     "mcpsNone": "Aquí aparecen los servidores MCP que conectes por su dirección.",
     "addMcp": "Agregar MCP",
-    "add": "Agregar",
-    "allServices": "Todos los servicios",
     "waitLine_one": "{{count}} herramienta te necesita",
     "waitLine_other": "{{count}} herramientas te necesitan",
     "toolsWait_one": "{{count}} te necesita",
     "toolsWait_other": "{{count}} te necesitan",
     "connectedState": "Conectada",
     "connected": "Conectados",
-    "suggested": "Sugeridos para {{org}}",
-    "all": "Todos",
+    "seeAll": "Ver todos",
     "noResults": "No hay ningún servicio con ese nombre. Prueba con su dirección.",
     "soon": "Pronto",
     "loadFailed": "No se pudieron cargar los conectores.",
-    "connectedCheck": "{{name}}, conectado",
     "adminsOnly": "Solo un admin de {{org}} conecta servicios. Pídeselo a alguno.",
     "adminsOnlyPersonal": "Solo quien gestiona este espacio de trabajo conecta apps. Pídeselo.",
     "canTitle": "Los agentes podrán",
@@ -2194,6 +2248,33 @@
     "usedBy_one": "{{names}} lo usa",
     "usedBy_many": "{{names}} lo usan",
     "usedBy_other": "{{names}} lo usan",
+    "page": {
+      "missing": "Este servicio ya no está en el catálogo.",
+      "connected": "Conectado",
+      "open": "Abrir la conexión",
+      "category": "Categoría",
+      "tools": "Herramientas",
+      "toolsAsk_one": "{{count}} pide aprobación",
+      "toolsAsk_many": "{{count}} piden aprobación",
+      "toolsAsk_other": "{{count}} piden aprobación",
+      "toolsAskNone": "ninguna pide aprobación",
+      "toolsLater": "después de conectar",
+      "who": "Quién conecta",
+      "whoAdmins": "Admins de {{org}}",
+      "whoRuns": "Quien gestiona el workspace",
+      "whoYou": "Tú, para ti",
+      "signIn": "Entra con",
+      "how": {
+        "signIn": "Tu cuenta",
+        "key": "Una clave",
+        "either": "Cuenta o clave"
+      },
+      "canTitle": "Lo que los agentes hacen con él",
+      "address": "Dirección",
+      "addressNote": "Los agentes usan esta dirección con la cuenta conectada. Cada uno recibe solo lo que tú permitas.",
+      "host": "Se conecta a",
+      "more": "Más en {{category}}"
+    },
     "fromAgent": "Conectar un servicio",
     "githubApp": {
       "useApp": "Usar la app agentes.chat",
@@ -2873,6 +2954,10 @@
       "titlePersonal": "Pasa tus pendientes a tus agentes",
       "textPersonal": "Crea una tarea para un agente y síguela hasta el final.",
       "viewerTitlePersonal": "Sigue el trabajo de tus agentes"
+    },
+    "coding": {
+      "title": "Programa con tus agentes",
+      "text": "Cada sesión es una conversación con un agente que trabaja en su propia rama, en su computadora."
     },
     "routines": {
       "title": "Deja el trabajo repetitivo a tus agentes",

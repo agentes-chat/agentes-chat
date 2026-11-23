@@ -4,6 +4,8 @@ import { isConfidentialRun } from "./confidential";
 import { cutText } from "./format";
 import { JevOffError } from "./jev-key";
 import type { Judge, JudgeGroup } from "./judge";
+import { inChannelRun } from "./run-scope";
+import { replyThreadOf } from "./runs";
 import { deferrableGroups, type ToolGroup, toolGroupKey } from "./tools/directory";
 import type { ToolDefinition } from "./tools/types";
 
@@ -241,11 +243,11 @@ export async function previousRunHere(
     channelId: string;
     threadRootId: string;
     triggerMessageId: string;
+    replyInThread: boolean;
   },
 ): Promise<PreviousRun | null> {
   const r = schema.agentRuns;
   const st = schema.agentRunSteps;
-  const flat = run.threadRootId === run.triggerMessageId;
   const [row] = await db
     .select({
       id: r.id,
@@ -261,7 +263,7 @@ export async function previousRunHere(
         eq(r.orgId, run.orgId),
         eq(r.agentId, run.agentId),
         eq(r.channelId, run.channelId),
-        flat ? sql`${r.threadRootId} = ${r.triggerMessageId}` : eq(r.threadRootId, run.threadRootId),
+        replyThreadOf(run) ? eq(r.threadRootId, run.threadRootId) : inChannelRun(sql`${r}`),
         ne(r.id, run.id),
       ),
     )

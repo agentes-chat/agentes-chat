@@ -1,7 +1,16 @@
-import { type KeyboardEvent, type PointerEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import {
+  type KeyboardEvent,
+  type PointerEvent,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { cx } from "../cx";
 import { Icon } from "../icons/Icon";
-import { claimPlayback, releasePlayback } from "./media-playback";
+import { claimPlayback, type PlaybackState, releasePlayback, seatTile, takeOver } from "./media-playback";
 import { PixelSpinner } from "./PixelSpinner";
 
 export interface VideoPlayerLabels {
@@ -45,6 +54,12 @@ export interface VideoPlayerProps {
   onVideo?: (video: HTMLVideoElement | null) => void;
   /** Over the timeline (a file's comments as marks, ADR 0208): placed by the caller, in fractions of its length. */
   marks?: ReactNode;
+  /**
+   * The file it shows, to hand playback over: a viewer opened over a chat tile of the same file goes on from the
+   * tile's moment (playing if it played, same speed and sound) and gives its own moment back to the tile when it
+   * closes.
+   */
+  handoff?: string;
 }
 
 const SPEEDS = [1, 1.5, 2];
@@ -176,12 +191,14 @@ export function VideoPlayer({
   onTime,
   onVideo,
   marks,
+  handoff,
 }: VideoPlayerProps) {
   const root = useRef<HTMLDivElement>(null);
   const video = useRef<HTMLVideoElement>(null);
   const frame = useRef(0);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const lastTouch = useRef(false);
+  const playButton = useRef<HTMLButtonElement>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [waiting, setWaiting] = useState(false);
   const [hidden, setHidden] = useState(false);
@@ -215,6 +232,45 @@ export function VideoPlayer({
     },
     [pause],
   );
+  /**
+   * Goes on from another player's moment. Browsers may refuse to start it with sound outside a click: then it plays
+   * muted; refused even so, it waits at that moment with its play button focused.
+   */
+  const resume = useCallback((state: PlaybackState) => {
+    const v = video.current;
+    if (!v) return;
+    const go = () => {
+      v.currentTime = Math.min(state.time, Number.isFinite(v.duration) ? v.duration : state.time);
+      v.playbackRate = state.speed;
+      setSpeed(state.speed);
+      v.volume = state.volume;
+      v.muted = state.muted;
+      setTime(v.currentTime);
+      if (!state.playing) {
+        setPhase(v.ended ? "ended" : "paused");
+        return;
+      }
+      const refused = (e: unknown) => (e as Error | undefined)?.name === "NotAllowedError";
+      v.play().catch((e) => {
+        if (!refused(e)) return;
+        v.muted = true;
+        return v.play().catch((again) => {
+          if (!refused(again)) return;
+          v.muted = state.muted;
+          setPhase("paused");
+          requestAnimationFrame(() => playButton.current?.focus());
+        });
+      });
+    };
+    if (v.readyState >= 1) go();
+    else v.addEventListener("loadedmetadata", go, { once: true });
+  }, []);
+  // Before paint: the tile stops as the viewer shows up.
+  useLayoutEffect(() => {
+    const el = video.current;
+    if (!handoff || !el) return;
+    return variant === "tile" ? seatTile(handoff, { video: el, take: resume }) : takeOver(handoff, el, resume);
+  }, [handoff, variant, resume]);
   useEffect(() => {
     const changed = () => setFull(document.fullscreenElement === root.current);
     document.addEventListener("fullscreenchange", changed);
@@ -406,7 +462,8 @@ export function VideoPlayer({
               aria-label={labels.open}
               title={labels.open}
               onClick={() => {
-                video.current?.pause();
+                // A viewer of the same file takes the playback over from here.
+                if (!handoff) video.current?.pause();
                 onOpen();
               }}
             >
@@ -422,6 +479,7 @@ export function VideoPlayer({
       {/* `inert` while hidden: the keys stay on the player, the bar's buttons leave the tab order. */}
       <div className="ac-video__bar" inert={phase === "idle" || undefined}>
         <button
+          ref={playButton}
           type="button"
           className="ac-video__btn ac-video__play"
           data-ended={phase === "ended" || undefined}

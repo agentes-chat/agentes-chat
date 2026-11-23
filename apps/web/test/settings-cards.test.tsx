@@ -309,7 +309,10 @@ describe("a teammate's settings, on the right hand's card", () => {
     await go(state, "notifications");
     const row = document.querySelector('[data-n="n-ask"]') as HTMLElement;
     expect(row.querySelector(".nt-what")?.textContent).toBe("João pede uma mudança em Ada");
-    const c = within(row).getByRole("group", { name: "Mudar as configurações da Ada" });
+    // The card is in the open item, beside the list (ADR 0218).
+    await click(row);
+    const read = document.querySelector(".ib-read") as HTMLElement;
+    const c = within(read).getByRole("group", { name: "Mudar as configurações da Ada" });
     expect(within(c).getByRole("button", { name: "Aplicar" })).toBeTruthy();
     await click(within(c).getByRole("button", { name: "Recusar" }));
     expect(state.calls.some((x) => x.method === "proposals.refuse" && x.args[1] === "set-1")).toBe(true);

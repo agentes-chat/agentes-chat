@@ -151,7 +151,7 @@ const isFollowUpLine = (m: Pick<Message, "meta">) =>
  */
 async function pendingFollowUps(
   db: Executor,
-  run: Pick<AgentRun, "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId"> & {
+  run: Pick<AgentRun, "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId" | "replyInThread"> & {
     confidential?: boolean;
   },
   personId: string | null,
@@ -240,7 +240,10 @@ export async function comesBackHere(db: Executor, run: AgentRun) {
  */
 export async function wakesLater(
   db: Executor,
-  run: Pick<AgentRun, "id" | "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId" | "createdAt">,
+  run: Pick<
+    AgentRun,
+    "id" | "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId" | "replyInThread" | "createdAt"
+  >,
   detachedWaits: { waitId: string }[] = [],
 ) {
   const channel = await getChannelCached(db, run.orgId, run.channelId);
@@ -580,7 +583,7 @@ export interface PendingReturn {
   messageId: string;
   agentId: string;
   channelId: string;
-  channelKind: "channel" | "dm" | "task" | "file";
+  channelKind: "channel" | "dm" | "task" | "file" | "code";
   /** A channel's name; null for a DM or a task's conversation. */
   channelName: string | null;
   /** Null: the conversation's main timeline. */
@@ -605,7 +608,7 @@ export interface CanceledReturn {
   messageId: string;
   agentId: string;
   channelId: string;
-  channelKind: "channel" | "dm" | "task" | "file";
+  channelKind: "channel" | "dm" | "task" | "file" | "code";
   channelName: string | null;
   threadId: string | null;
   at: string;
@@ -622,7 +625,7 @@ type ReturnRow = {
   id: string;
   agent_id: string;
   channel_id: string;
-  channel_kind: "channel" | "dm" | "task" | "file";
+  channel_kind: "channel" | "dm" | "task" | "file" | "code";
   channel_name: string | null;
   thread_id: string | null;
   refs: Record<string, string> | string | null;

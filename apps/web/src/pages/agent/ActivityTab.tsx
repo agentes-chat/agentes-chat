@@ -220,7 +220,7 @@ export function ActivityTab() {
   const fix = fixRun ? fixOf(fixRun) : null;
   return (
     <>
-      {brainAt && <BrainDialog at={brainAt} onClose={() => setBrainAt(null)} />}
+      {brainAt && <BrainDialog at={brainAt} onClose={() => setBrainAt(null)} onReopen={() => setBrainAt(brainAt)} />}
       <MonthStrip
         color={colorOf(agent)}
         month={month}

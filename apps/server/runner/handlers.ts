@@ -9,6 +9,7 @@ import {
   type FileEntry,
   inRange,
   isStreamId,
+  isTerminalKeep,
   isTerminalSize,
   MAX_INLINE_FILE_BYTES,
   type MachineErrorCode,
@@ -1013,6 +1014,9 @@ function handleDesktopUse(
   }
 }
 
+/** The longest folder a terminal is asked to start in (`TERMINAL_CWD_PROTOCOL`): a worktree's is a few dozen. */
+const TERMINAL_CWD_MAX = 1024;
+
 /**
  * Protocol 18: one viewer of the agent's desktop or one terminal as the agent
  * (ADR 0058 §11), each behind its machine switch; answered once its data
@@ -1057,7 +1061,12 @@ async function handleStream(
     if (!ctx.terminals) throw new RunnerError("terminal_unavailable", "This runner opens no terminals");
     if (!isTerminalSize(req.cols, req.rows))
       throw new RunnerError("bad_request", "The terminal's size is out of bounds");
-    await ctx.terminals.open(agent, { cols: req.cols, rows: req.rows }, dial);
+    // A code session's terminal (ADR 0215): a folder inside the agent's own, checked where the shell starts.
+    if (req.cwd !== undefined && (typeof req.cwd !== "string" || req.cwd.length > TERMINAL_CWD_MAX))
+      throw new RunnerError("bad_request", "The terminal's folder must be a path inside the agent's folder");
+    if (req.keep !== undefined && !isTerminalKeep(req.keep))
+      throw new RunnerError("bad_request", "The terminal's name isn't one");
+    await ctx.terminals.open(agent, { cols: req.cols, rows: req.rows }, dial, req.cwd, req.keep);
   } else {
     throw new RunnerError("bad_request", "A stream shows a desktop, a terminal or a phone");
   }

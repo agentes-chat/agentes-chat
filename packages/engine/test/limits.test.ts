@@ -61,6 +61,7 @@ const NONE: OrgLimits = {
   storageBytes: null,
   uploadBytesPerDay: null,
   platformUsdPerMonth: null,
+  connectorUsdPerMonth: null,
 };
 const limit = (over: Partial<OrgLimits>) => setOrgLimits(f.db, f.org.id, { ...NONE, ...over });
 const owner = () => ({ type: "person" as const, userId: f.owner.id });
@@ -99,6 +100,7 @@ describe("limits", () => {
       storageBytes: 50 * 1024 ** 3,
       uploadBytesPerDay: 1024,
       platformUsdPerMonth: 3.5,
+      connectorUsdPerMonth: 1.25,
     });
     expect(set).toEqual({
       members: 10,
@@ -107,6 +109,7 @@ describe("limits", () => {
       storageBytes: 50 * 1024 ** 3,
       uploadBytesPerDay: 1024,
       platformUsdPerMonth: 3.5,
+      connectorUsdPerMonth: 1.25,
       updatedAt: expect.any(Date),
     });
     const [row] = await f.db
@@ -125,6 +128,7 @@ describe("limits", () => {
       storageBytes: 50 * 1024 ** 3,
       uploadBytesPerDay: 1024,
       platformUsdPerMonth: 3.5,
+      connectorUsdPerMonth: 1.25,
     });
     expect(again?.updatedAt).toEqual(new Date("2026-01-01T00:00:00Z"));
     const cleared = await limit({});
@@ -280,6 +284,7 @@ describe("storage", () => {
       uploadBytes24h: 170,
       ownStorage: true,
       platformUsdThisMonth: 0,
+      connectorUsdThisMonth: 0,
     });
   });
 

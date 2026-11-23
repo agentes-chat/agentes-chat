@@ -17,7 +17,7 @@ import { brainModelLine, brainPickText } from "@agenteschat/client/lib/brain-pic
 import { contextSize } from "@agenteschat/client/lib/context-limits";
 import { keyRefusal } from "@agenteschat/client/lib/errors";
 import { namesText, rosterText } from "@agenteschat/client/lib/format";
-import { brainTool, installableCli } from "@agenteschat/client/lib/machines";
+import { brainTool, cliCommandWayOut, installableCli } from "@agenteschat/client/lib/machines";
 import { type AiChoice, planMark } from "@agenteschat/client/lib/no-ai";
 import { usageWhen } from "@agenteschat/client/lib/plan-usage";
 import {
@@ -120,14 +120,33 @@ interface Switched {
  * `at`: a screen to open on, past the first one, which "back" leads to (a link's, e.g. the notification "Escolher
  * outro modelo" opens the model). One this person can't change opens the first screen.
  */
-export function BrainDialog({ onClose, at }: { onClose: () => void; at?: BrainScreen }) {
+export function BrainDialog({
+  onClose,
+  at,
+  onReopen,
+}: {
+  onClose: () => void;
+  at?: BrainScreen;
+  /** Opens it again: Connect, which it closes for, comes back to it by its Back. */
+  onReopen?: () => void;
+}) {
   const work = useWork();
   // Every screen starts from what is saved: the dialog mounts once it is loaded.
   if (!work.brain.data || !work.computer.data) return null;
-  return <BrainFlow view={work.brain.data} onClose={onClose} at={at} />;
+  return <BrainFlow view={work.brain.data} onClose={onClose} at={at} onReopen={onReopen} />;
 }
 
-function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => void; at?: BrainScreen }) {
+function BrainFlow({
+  view,
+  onClose,
+  at,
+  onReopen,
+}: {
+  view: AgentBrain;
+  onClose: () => void;
+  at?: BrainScreen;
+  onReopen?: (() => void) | undefined;
+}) {
   const { t, i18n } = useTranslation();
   const { org } = useOrg();
   const api = useApi();
@@ -413,7 +432,7 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
     view.canUsePlans && connect && !s.hold
       ? () => {
           onClose();
-          connect.open({ agentId: agent.id, chat: true });
+          connect.open({ agentId: agent.id, chat: true, ...(onReopen ? { onBack: onReopen } : {}) });
         }
       : null;
 
@@ -652,9 +671,9 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
   const missingCli =
     view.brain !== "model" &&
     (missingReason === "not_installed" || missingReason === "cant_start") &&
-    installableCli(view.brain) &&
     offOn &&
-    offOn.kind !== "managed"
+    offOn.kind !== "managed" &&
+    (installableCli(view.brain) || cliCommandWayOut(t, view.brain, offOn, missingReason, offOn.name))
       ? { kind: view.brain, reason: missingReason, machine: offOn }
       : null;
   const lendsAny = view.canUseOthersPlans === true && s.listed.some((a) => !a.mine && a.ownerId !== agent.ownerUserId);

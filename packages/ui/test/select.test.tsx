@@ -144,7 +144,7 @@ describe("Select", () => {
     const rows = rule(`${list} .ac-menu__item`);
     expect(rows).toContain("padding: calc((var(--option-h) - var(--option-face)) / 2) var(--menu-item-px);");
     expect(rows).toContain("min-height: var(--option-h);");
-    // Every row of that list leads with a face's width, so a glyph-led choice ("Sem responsável") lines up and matches.
+    // Every row of that list leads with a face's width, so a glyph-led choice ("Admins") lines up and matches.
     expect(rule(`${list} .ac-menu__item > .ac-menu__leading`)).toContain("min-width: var(--option-face);");
     expect(rule(`${list} .ac-menu__item > .ac-menu__leading`)).toContain("translate: none;");
     expect(rule(`${list} .ac-menu__label`)).toContain("flex-direction: row;");

@@ -115,14 +115,14 @@ import { DesktopManager } from "./desktop";
 import { DesktopSessions, type DesktopUser, runnerUser, systemDesktopUser } from "./desktop-session";
 import { EgressObservation, probeEgress } from "./egress";
 import { NetworkChangingError, RUNNER_VERSION, RunnerError } from "./errors";
-import { cachedExecutors, EXECUTORS_TTL_MS, type ExecutorRun } from "./executors";
+import { cachedExecutors, EXECUTORS_TTL_MS, type ExecutorRun, inHomeDirs } from "./executors";
 import { systemGitCache } from "./git";
 import { closeIdleUnderPressure, type HandlerContext, type RequestObserver, type RequestOutcome } from "./handlers";
 import { Holds } from "./holds";
 import { IphoneSetup, type IphoneSetupOptions } from "./iphone-setup";
 import { currentProcess, isCompiled, selfCommand } from "./launch";
 import { tailLines } from "./logfile";
-import { adoptLoginPath } from "./login-path";
+import { addUsualDirs, adoptLoginPath } from "./login-path";
 import { LoopbackGuard, loopbackEndpoints, runnerEndpoints } from "./loopback-guard";
 import { McpBridge, type McpTaskInfo, mcpSocketPath } from "./mcp";
 import {
@@ -198,14 +198,15 @@ import { XcodeFixer, type XcodeFixOptions } from "./xcode-fix";
 const MEMORY_READ = process.platform === "linux";
 
 /**
- * Background tasks at once, sized to the computer: one per 2 CPUs and per 2 GiB of memory left after 4 GiB for the
- * system and the person's own apps (a task is a coding CLI with its tools, about that much), at least 3 (the fixed
- * default before: it fits a small laptop) and at most the bound. A container's or slice's limit counts, not the host's.
+ * Background tasks at once, sized to the computer's memory: one per 1.5 GiB left after 4 GiB for the system and the
+ * person's own apps (a task is a coding CLI with its tools, 0.5 to 1 GB), at least 3 (the fixed default before: it
+ * fits a small laptop) and at most the bound. CPUs don't count: a task mostly waits on its model. A container's or
+ * slice's limit counts, not the host's.
  */
-export function sizedTaskLimit(size: Pick<MachineSize, "cpus" | "memoryGb" | "limit">): number {
-  const { cpus, memoryGb } = size.limit ?? size;
-  const fits = Math.min(Math.floor(cpus / 2), Math.floor((memoryGb - 4) / 2));
-  return Math.min(TASK_LIMIT_BOUNDS[1], Math.max(3, fits));
+export function sizedTaskLimit(size: Pick<MachineSize, "memoryGb" | "limit">): number {
+  const { memoryGb } = size.limit ?? size;
+  // memoryGb is in halves, so (memoryGb - 4) * 2 is whole and the division by 3 floors exactly.
+  return Math.min(TASK_LIMIT_BOUNDS[1], Math.max(3, Math.floor(((memoryGb - 4) * 2) / 3)));
 }
 
 export const DEFAULT_LIMITS = {
@@ -568,6 +569,13 @@ export class RunnerDaemon implements RequestObserver {
     const proc = currentProcess();
     this.self = opts.self ?? { command: selfCommand(proc), compiled: isCompiled(proc) };
     this.refreshPath = opts.refreshPath ?? (process.platform === "win32" ? () => adoptLoginPath() : undefined);
+    // System mode is set at install and kept through pairings: account folders are lent to agents' users.
+    let system = false;
+    try {
+      system = readStoredConfig(opts.home)?.mode === "system";
+    } catch {
+      // an unreadable config starts unpaired
+    }
     const exec =
       opts.executors ??
       cachedExecutors({
@@ -576,7 +584,9 @@ export class RunnerDaemon implements RequestObserver {
         onChange: () => this.executorsChanged(),
         ...(process.platform === "win32"
           ? { before: () => this.refreshPath?.(), gitMissing: () => gitBashPath() === null }
-          : {}),
+          : system
+            ? { homeOnly: (bin: string) => inHomeDirs(bin) !== null }
+            : { before: () => addUsualDirs() }),
       });
     // Grok Build's and Antigravity's models as the accounts signed in here list them: the computer's own
     // `grok models` and `agy models` are signed out.
@@ -590,13 +600,6 @@ export class RunnerDaemon implements RequestObserver {
     };
     this.executorsKnown = () => !("known" in exec) || exec.known === true;
     this.executorsFresh = (exec as { fresh?: () => Promise<unknown> }).fresh ?? (async () => this.executors());
-    // System mode is set at install and kept through pairings: account folders are lent to agents' users.
-    let system = false;
-    try {
-      system = readStoredConfig(opts.home)?.mode === "system";
-    } catch {
-      // an unreadable config starts unpaired
-    }
     const lent = system
       ? (opts.systemAccounts ?? {
           root: SYSTEM_ACCOUNTS_ROOT,
@@ -672,7 +675,7 @@ export class RunnerDaemon implements RequestObserver {
     });
     this.terminals = new Terminals({
       log: opts.log,
-      user: (agent) => this.terminalUser(agent),
+      user: (agent, cwd) => this.terminalUser(agent, cwd),
       get agentUsers() {
         return daemon.session?.agentUser != null;
       },
@@ -792,13 +795,26 @@ export class RunnerDaemon implements RequestObserver {
     return session.browser.show(agent, await this.agentFolder(agent), installing);
   }
 
-  /** As whom a terminal on the agent's computer runs, like its desktop. */
-  private async terminalUser(agent: AgentScope): Promise<TerminalUser> {
+  /**
+   * As whom a terminal on the agent's computer runs, like its desktop; `cwd`: a folder inside the agent's (ADR 0215).
+   * Its shell knows the sign-in the agent thinks with.
+   */
+  private async terminalUser(agent: AgentScope, cwd?: string): Promise<TerminalUser> {
     const agentUser = this.session?.agentUser;
-    if (!agentUser) return runnerTerminalUser(await this.agentFolder(agent));
-    const u = agentUser(agent);
-    this.startContainers(u);
-    return systemTerminalUser(systemLauncher(u), agent);
+    const u = agentUser?.(agent);
+    if (u) this.startContainers(u);
+    const user = u
+      ? systemTerminalUser(systemLauncher(u), agent, cwd)
+      : await runnerTerminalUser(await this.agentFolder(agent), cwd, this.shared);
+    // The agent's own sign-in, so its CLI typed there starts signed in (`AccountManager.terminalEnv`).
+    const account = this.agentAccount(String(agent.id));
+    const signIn = account
+      ? await this.accounts.terminalEnv(account, u?.uid).catch((err: unknown) => {
+          this.opts.log(`terminal: couldn't hand it its account (${err instanceof Error ? err.message : String(err)})`);
+          return {};
+        })
+      : {};
+    return { ...user, env: { ...user.env, ...signIn } };
   }
 
   /** The agent's folder in the connected workspace. */
@@ -1317,6 +1333,9 @@ export class RunnerDaemon implements RequestObserver {
       idleMs: (config.brainIdleMinutes ?? DEFAULT_LIMITS.brainIdleMinutes) * 60_000,
       maxProcesses: config.brainMaxProcesses ?? DEFAULT_LIMITS.brainMaxProcesses,
       accounts: this.accounts,
+      claudeVersion: () => this.executors().claude?.version ?? null,
+      // Single-user mode only: in system mode each agent is its own user, and the shared bin/ stays off every PATH.
+      sharedFolder: () => (this.session?.agentUser != null ? null : this.shared),
       readyRoom,
       log,
     });

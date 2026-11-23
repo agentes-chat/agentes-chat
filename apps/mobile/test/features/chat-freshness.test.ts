@@ -30,7 +30,9 @@ test("the phone's query client: fresh for 30 s, read again when the app comes ba
 test("back from the background, the socket opened again counts as a reconnect: every screen reads again", () => {
   const provider = src("providers/realtime.tsx").replace(/\s+/g, " ");
   expect(provider).toContain("if (opened.current === orgId) void queryClient.invalidateQueries();");
-  expect(provider).toContain("c.onReconnect(() => void queryClient.invalidateQueries())");
+  expect(provider).toContain(
+    '(full) => void (full ? queryClient.invalidateQueries() : queryClient.refetchQueries({ type: "active" }))',
+  );
 });
 
 test("a chat screen listens while open, and its closing marks the conversation stale", () => {

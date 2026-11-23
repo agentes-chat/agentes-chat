@@ -39,6 +39,7 @@ import {
   brainKey,
   brainProfileLaunch,
   ClaudeStreamParser,
+  CODE_SESSION_TOOLS,
   carryClaudeSession,
   claudeBrainArgs,
   claudeCapabilities,
@@ -215,7 +216,7 @@ test("parser: partial deltas, our tool calls with results, usage, and the final 
         },
       }),
     ).events,
-  ).toEqual([{ type: "tool_started", id: "t2", name: "Bash" }]);
+  ).toEqual([{ type: "tool_started", id: "t2", name: "Bash", input: { command: "ls" } }]);
   const results = p.push(
     line({
       type: "user",
@@ -330,7 +331,7 @@ test("parser: a streamed message said again in a later assistant event (with its
       { type: "tool_use", id: "t1", name: "Bash", input: { command: "ls" } },
     ]),
     // Its own call is told as it starts (the step line), ours through the bridge never.
-  ).toEqual([{ type: "tool_started", id: "t1", name: "Bash" }]);
+  ).toEqual([{ type: "tool_started", id: "t1", name: "Bash", input: { command: "ls" } }]);
   // The next API message, never streamed (no partials for it): its text comes whole.
   expect(
     p.push(
@@ -624,6 +625,18 @@ test("profiles (ADR 0053 §3): plan has our tools only, no settings files, no ed
   expect(asks).toContain("--permission-prompt-tool");
   expect(brainProfileLaunch("work", false, true, true).permissionMode).toBe("default");
   expect(brainProfileLaunch("work", false, true).permissionMode).toBe("acceptEdits");
+  // A code session's turn (ADR 0215): Claude Code's subagents and skills too, still no settings of the checkout.
+  const code = claudeBrainArgs({
+    ...base,
+    ...brainProfileLaunch("work", false, false, false, true),
+    pluginDirs: ["/b/repo"],
+  });
+  expect(at(code, "--tools")).toBe([...BRAIN_BUILTIN_TOOLS, ...CODE_SESSION_TOOLS].join(","));
+  expect(at(code, "--setting-sources")).toBe("");
+  expect(at(code, "--plugin-dir")).toBe("/b/repo");
+  // Nowhere else: a chat turn or a shared sign-in never get them.
+  expect(brainProfileLaunch("chat", false, false, false, true).builtinTools).toEqual([]);
+  expect(brainProfileLaunch("work", false, true, false, true).builtinTools).not.toContain("Agent");
 });
 
 test("protocol 41: a chat turn (the team's right hand on a plan) gets our MCP tools and nothing else", () => {
@@ -690,7 +703,9 @@ function setup(over: Partial<BrainManagerOptions> = {}) {
         .trim()
         .split("\n")
         .filter(Boolean)
-        .map((l) => JSON.parse(l) as { pid: number; args: string[]; system: string | null });
+        .map(
+          (l) => JSON.parse(l) as { pid: number; args: string[]; system: string | null; autoMemoryOff: string | null },
+        );
     } catch {
       return [];
     }
@@ -1351,6 +1366,8 @@ test.if(posix)(
     await turn(1, "do");
     const args = spawns()[0]?.args ?? [];
     expect(args[args.indexOf("--setting-sources") + 1]).toBe("");
+    // Claude Code's auto memory too: it lived in the sign-in's folder, which the agent's own tools can't list.
+    expect(spawns()[0]?.autoMemoryOff).toBe("1");
     expect(args.join(" ")).not.toContain("collect.example.net");
     const system = readFileSync(args[args.indexOf("--append-system-prompt-file") + 1] as string, "utf8");
     expect(system.startsWith("You are dev.")).toBe(true);
@@ -1362,6 +1379,7 @@ test.if(posix)(
     await own.turn(1, "do", { personalMcp: true });
     const oargs = own.spawns()[0]?.args ?? [];
     expect(oargs).not.toContain("--setting-sources");
+    expect(own.spawns()[0]?.autoMemoryOff).toBeNull();
     expect(readFileSync(oargs[oargs.indexOf("--append-system-prompt-file") + 1] as string, "utf8")).toBe(
       "You are dev.",
     );

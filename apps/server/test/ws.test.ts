@@ -678,6 +678,24 @@ test("the server's LISTEN back after a gap: every app socket closes as a restart
   expect(await Promise.race([closed, Bun.sleep(5000).then(() => -1)])).toBe(1012);
 });
 
+test("missed events within a minute of the last restart-close: the app socket stays open and is told to read again", async () => {
+  const owner = browser(t);
+  await signUp(owner, "owner@example.com");
+  const { orgId, channelId } = await seedOrg(owner);
+  const c = connect(wsUrl(orgId), { origin: ORIGIN, cookie: owner.cookie() });
+  await c.opened;
+  c.send({ type: "subscribe", channelId });
+  await c.next((f) => f.type === "subscribed" && f.channelId === channelId);
+  let closed = false;
+  c.ws.addEventListener("close", () => {
+    closed = true;
+  });
+  await t.adapters.pubsub.publish(listenResumedTopic, { type: "pubsub.resumed", full: false });
+  expect(await c.next((f) => f.type === "resync")).toEqual({ type: "resync" });
+  expect(closed).toBe(false);
+  c.ws.close();
+});
+
 test("an event Bun drops past its backpressure limit closes the socket, so the app reconnects and reads what it missed", async () => {
   const realtime = createRealtime({
     db: t.db,

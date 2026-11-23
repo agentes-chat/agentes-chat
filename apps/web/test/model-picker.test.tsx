@@ -8,8 +8,8 @@ import { ADA_ID, createFakeApi, ENG_ID, fakeMachinesOf, meWithRole, ORG_ID, seed
 import { renderApp, screen, settle } from "./render";
 
 /*
- * The model picker in a DM's header: one click opens the agent's AIs as tiles and the shown AI's models, a pick saves
- * at once (Desfazer in the toast), and another AI's tile only shows its models until one is picked.
+ * The model picker in a DM's header: one click opens the agent's AIs and the shown AI's models, a pick saves at once
+ * (Desfazer in the toast), and another AI only shows its models until one is picked.
  */
 
 afterEach(() => cleanup());
@@ -50,15 +50,16 @@ async function openPicker(state = seedState()) {
   return { state, panel };
 }
 
-test("the DM header's button opens the tiles and models; a model of another AI switches only when picked", async () => {
+test("the DM header's button opens the AIs and models; a model of another AI switches only when picked", async () => {
   const { state, panel } = await openPicker();
   expect(panel).toBeTruthy();
-  // The tiles: Claude's and ChatGPT's plans on its computer, then the workspace's keys, and connecting one more.
-  const tiles = [...panel.querySelectorAll(".mp__tile")].map((b) => b.getAttribute("aria-label"));
-  expect(tiles).toContain("Claude");
-  expect(tiles).toContain("Conectar uma IA");
+  // The AIs, one segment each by its maker's mark: Claude's and ChatGPT's plans on its computer, then the workspace's
+  // keys; connecting one more beside them.
+  const ais = within(panel).getByRole("radiogroup", { name: "IA" });
+  expect(within(ais).getByRole("radio", { name: "Claude" })).toBeTruthy();
+  expect(within(panel).getByRole("button", { name: "Conectar uma IA" })).toBeTruthy();
   // Showing Claude's models changes nothing yet.
-  await click(within(panel).getByRole("button", { name: "Claude" }));
+  await click(within(ais).getByRole("radio", { name: "Claude" }));
   expect(state.calls.some((c) => c.method === "agents.setBrain")).toBe(false);
   const models = [...panel.querySelectorAll(".mp__model-name")].map((n) => n.textContent);
   expect(models).toEqual(["Automático", "Opus 5.5", "Sonnet 5.5", "Haiku 5.5"]);
@@ -71,6 +72,23 @@ test("the DM header's button opens the tiles and models; a model of another AI s
   // Saved and closed, with a way back.
   expect(document.querySelector(".mp")).toBeNull();
   expect(screen().getByRole("button", { name: "Desfazer" })).toBeTruthy();
+});
+
+test("another account of the AI shown: its own sign-in steps, never the generic choice", async () => {
+  const { panel } = await openPicker();
+  const ais = within(panel).getByRole("radiogroup", { name: "IA" });
+  await click(within(ais).getByRole("radio", { name: "Claude" }));
+  // The account's menu (Radix opens it from the keyboard here), then its last item.
+  const account = within(panel).getByRole("button", { name: /^Conta:/ });
+  account.focus();
+  await act(async () => {
+    fireEvent.keyDown(account, { key: "Enter" });
+    fireEvent.keyUp(account, { key: "Enter" });
+  });
+  await settle(2);
+  await click(within(screen().getByRole("menu")).getByRole("menuitem", { name: "Conectar outra conta" }));
+  expect(screen().getByRole("dialog")).toBeTruthy();
+  expect(screen().getByText("Seu plano do Claude")).toBeTruthy();
 });
 
 test("who can't change it reads what it thinks with, with nothing to press", async () => {

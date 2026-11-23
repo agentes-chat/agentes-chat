@@ -24,6 +24,7 @@ import {
   unnamedAccount,
 } from "@agenteschat/client/lib/ai-accounts";
 import { audienceOf, audiencePatch } from "@agenteschat/client/lib/audience";
+import { effortOf } from "@agenteschat/client/lib/brain-advanced";
 import { modelInput, modelRows } from "@agenteschat/client/lib/brain-picker";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
@@ -32,7 +33,12 @@ import { rightHandUnusable } from "@agenteschat/client/lib/no-ai";
 import { can } from "@agenteschat/client/lib/permissions";
 import { brainPlan } from "@agenteschat/client/lib/plans";
 import { AUTO, modelChoices } from "@agenteschat/client/lib/providers";
-import { mineStatus, RIGHT_HAND_POWERS, rightHandNoComputer } from "@agenteschat/client/lib/right-hand";
+import {
+  mineStatus,
+  RIGHT_HAND_POWERS,
+  rightHandComputerLine,
+  rightHandNoComputer,
+} from "@agenteschat/client/lib/right-hand";
 import {
   type LodiPrefs,
   type LodiPrefsPatch,
@@ -52,6 +58,7 @@ import {
   DialogFooter,
   GroupHeading,
   Icon,
+  type IconName,
   Input,
   ProviderLogo,
   Switch,
@@ -74,7 +81,12 @@ import { HelpLink } from "@/components/HelpLink";
 import { LoadingLine } from "@/components/Loading";
 import { PrefRow } from "@/components/NoticePrefs";
 import { useOrg } from "@/components/org-context";
-import { RightHandBrainDialog, type RightHandLink, type RightHandModel } from "@/components/RightHandBrainDialog";
+import {
+  RightHandBrainDialog,
+  type RightHandEffort,
+  type RightHandLink,
+  type RightHandModel,
+} from "@/components/RightHandBrainDialog";
 import { TeamWeekSchedule } from "@/components/TeamWeekSchedule";
 import { useComputerEdition } from "@/components/WorkspaceComputer";
 import { useDirectory } from "@/hooks/useDirectory";
@@ -157,6 +169,13 @@ function planModelOf(t: TFunction, view: AgentBrain, onChange: (input: AgentBrai
   };
 }
 
+/** The effort line under the model: what the view thinks with and how hard, saved with `save`. */
+const effortOfView = (view: AgentBrain, save: (input: AgentBrainInput) => Promise<unknown>): RightHandEffort => ({
+  kind: view.brain,
+  value: effortOf(view.brain, view.effort),
+  onPick: (effort) => save({ effort }),
+});
+
 /** The model a plan's view runs, by its name (Automático included). */
 const usePlanModelLabel = (view: AgentBrain | undefined) => {
   const { t } = useTranslation();
@@ -191,7 +210,7 @@ export function RightHandMineRow({ agent }: { agent: Agent }) {
   if (!status) return null;
   const setMine = (input: AgentBrainInput, done?: () => void) => {
     setBusy(true);
-    void api.agents
+    return api.agents
       .setBrain(org.id, agent.id, { scope: "mine", ...input })
       .then(() =>
         Promise.all([
@@ -204,11 +223,11 @@ export function RightHandMineRow({ agent }: { agent: Agent }) {
       .finally(() => setBusy(false));
   };
   const back = () => setMine({ brain: "model" }, () => setOpen(false));
-  // Connecting is a dialog of its own: this one closes for it.
+  // Connecting is a dialog of its own: this one closes for it, and its Back opens this one again.
   const connectMine = connect
     ? () => {
         setOpen(false);
-        connect.open({ agentId: agent.id });
+        connect.open({ agentId: agent.id, onBack: () => setOpen(true) });
       }
     : null;
   let face: ReactNode = null;
@@ -264,7 +283,7 @@ export function RightHandMineRow({ agent }: { agent: Agent }) {
           mark: logoId ? (
             <ProviderLogo id={logoId} size="xs" />
           ) : (
-            <Icon name="key" size={16} className="arrival-have__mark" />
+            <Icon name="key" size={20} className="arrival-have__mark" />
           ),
           usage: own ? (account?.usage ?? null) : null,
         };
@@ -272,13 +291,13 @@ export function RightHandMineRow({ agent }: { agent: Agent }) {
   const links: RightHandLink[] = [];
   if (connectMine && !held)
     links.push({
-      icon: "plus",
+      opensDialog: true,
       label: own
         ? t("connectAi.chat.other")
         : t(status.kind === "nobody" ? "rightHand.settings.connectMine" : "rightHand.settings.useMine"),
       onClick: connectMine,
     });
-  if (own) links.push({ icon: "undo", label: t("rightHand.settings.useWorkspace"), onClick: back });
+  if (own) links.push({ label: t("rightHand.settings.useWorkspace"), onClick: back });
   // The AI's mark beside the right hand under the sky: its maker's, a key's, or none while nothing answers.
   let mineMark: ReactNode;
   if (logoId) mineMark = <ProviderLogo id={logoId} size="tile" />;
@@ -302,6 +321,7 @@ export function RightHandMineRow({ agent }: { agent: Agent }) {
         current={current}
         empty={t(held ? "agentSetup.firstRun.afterPlan" : "rightHand.settings.mineNobody")}
         model={own && view ? planModelOf(t, view, (input) => setMine(input)) : null}
+        effort={own && view ? effortOfView(view, setMine) : null}
         links={links}
         busy={busy}
       />
@@ -312,7 +332,7 @@ export function RightHandMineRow({ agent }: { agent: Agent }) {
 /**
  * "Computador": the row opens the computer every agent's page opens, which for the right hand is the viewer's own
  * seat on the workspace's computer and nobody else's. Where it has none for anyone (the workspace has no computer of
- * its own, or one that can't keep people apart) the row stays and says why, with nothing to open.
+ * its own) the row stays and says why, with nothing to open.
  */
 function RightHandComputerRow({ agent }: { agent: Agent }) {
   const { t } = useTranslation();
@@ -335,15 +355,15 @@ function RightHandComputerRow({ agent }: { agent: Agent }) {
       id="rh-computer"
       icon="computer"
       label={t("agentComputer.button")}
-      status={t("rightHand.computerYours")}
+      status={t(rightHandComputerLine(view.facts.machine))}
       onOpen={() => openComputer(agent.id)}
     />
   );
 }
 
 /**
- * Why the right hand has no computer for anyone (the workspace has none of its own, or one that can't keep people
- * apart), as a line and the way out: its row on its page and its DM's sidebar alike. Null while it has one.
+ * Why the right hand has no computer for anyone (the workspace has none of its own), as a line and the way out: its
+ * row on its page and its DM's sidebar alike. Null while it has one.
  */
 export function useRightHandNoComputer(reason: string | null | undefined) {
   const { t } = useTranslation();
@@ -445,7 +465,7 @@ function RightHandForm({ agent }: { agent: Agent }) {
     update.mutate(patch, { onSuccess, onError: (e) => toast.show(errorText(t, e), "error") });
   const setWorkspace = (input: AgentBrainInput) => {
     setBusy(true);
-    void api.agents
+    return api.agents
       .setBrain(org.id, agent.id, { scope: "workspace", ...input })
       .then(() =>
         Promise.all(
@@ -491,7 +511,7 @@ function RightHandForm({ agent }: { agent: Agent }) {
     mark: key ? (
       <ProviderLogo id={key.provider} size="xs" />
     ) : (
-      <Icon name="key" size={16} className="arrival-have__mark" />
+      <Icon name="key" size={20} className="arrival-have__mark" />
     ),
     usage: null,
     isKey: true,
@@ -561,14 +581,15 @@ function RightHandForm({ agent }: { agent: Agent }) {
   };
   // Another AI: the Connect dialog, with every provider to pick from, over this one. On a billing hold nothing connects
   // before the plan (ADR 0162).
-  const connectOther: RightHandLink | null =
+  const connectOther: (RightHandLink & { icon: IconName }) | null =
     connect && !hold
       ? {
           icon: "plus",
           label: t("connectAi.chat.other"),
+          opensDialog: true,
           onClick: () => {
             setChoosing(false);
-            connect.open({ agentId: agent.id });
+            connect.open({ agentId: agent.id, onBack: () => setChoosing(true) });
           },
         }
       : null;
@@ -720,6 +741,7 @@ function RightHandForm({ agent }: { agent: Agent }) {
         }
         current={current}
         model={model}
+        effort={view ? effortOfView(view, setWorkspace) : null}
         accounts={{
           items: others,
           onPick: pick,

@@ -38,6 +38,7 @@ import { browserProfileRoutes } from "./routes/app/browser-profiles";
 import { calendarRoutes } from "./routes/app/calendar";
 import { channelRoutes } from "./routes/app/channels";
 import { chatRoutes } from "./routes/app/chat";
+import { codeSessionRoutes } from "./routes/app/code-sessions";
 import { connectorRoutes } from "./routes/app/connectors";
 import { customConnectorRoutes } from "./routes/app/connectors-custom";
 import { type AppDeps, agentDetailsGate, readOnlyWhileDeleting } from "./routes/app/context";
@@ -230,6 +231,8 @@ export function createApp(options: AppOptions) {
     api.route("/app", issueRoutes(deps));
     api.route("/app", threadRoutes(deps));
     api.route("/app", missionRoutes(deps));
+    // Code sessions (ADR 0215): a request in its own worktree on the agent's computer, with its conversation.
+    api.route("/app", codeSessionRoutes(deps));
     api.route("/app", wikiRoutes(deps));
     api.route("/app", routineRoutes(deps));
     api.route("/app", calendarRoutes(deps));

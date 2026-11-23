@@ -3,6 +3,7 @@ import {
   BROWSER_VIEW,
   channelTopic,
   chatActivityTopic,
+  fullResync,
   listenResumedTopic,
   MAX_FRAME_BYTES,
   orgTopic,
@@ -348,9 +349,15 @@ export function createRealtime(deps: RealtimeDeps) {
       .catch(() => {});
   });
   // This replica's LISTEN came back after a gap: its sockets stayed open while what was said meanwhile never reached
-  // them. Closed as a service restart, their apps reconnect, which subscribes again and reads what they missed.
-  deps.pubsub.subscribe(listenResumedTopic, () => {
-    for (const ws of browsers) if (ws.readyState === 1) ws.close(1012, "events were missed");
+  // them. Closed as a service restart, their apps reconnect, which subscribes again and reads what they missed. Within
+  // a minute of that (`fullResync`), the sockets stay open and their apps only read again, spread over a few seconds.
+  deps.pubsub.subscribe(listenResumedTopic, (event) => {
+    const full = fullResync(event);
+    for (const ws of browsers) {
+      if (ws.readyState !== 1) continue;
+      if (full) ws.close(1012, "events were missed");
+      else send(ws, { type: "resync" });
+    }
   });
 
   async function liveSession(ws: BrowserSocket, force = false): Promise<boolean> {

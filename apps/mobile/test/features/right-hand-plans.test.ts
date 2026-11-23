@@ -70,7 +70,7 @@ test("Sua IA is one row that opens its choice: what answers me, by its logo and 
   // from the profile.
   expect(screen.slice(mine, workspace)).toContain("{managesAgent(agent) ? (");
   expect(profile).toContain(
-    '? { action: { label: t("rightHand.profile.configure"), onPress: openRightHandSettings } }',
+    '? { action: { label: t("rightHand.profile.configure"), onPress: openRightHandSettings, opens: true } }',
   );
   expect(profile).not.toContain(
     '? can(org, "manage_agents")\n              ? { action: { label: t("rightHand.profile.configure")',

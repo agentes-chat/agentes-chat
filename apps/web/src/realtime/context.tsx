@@ -18,6 +18,7 @@ import {
   ApiError,
   applyBrowserHandoff,
   applyChannelEvent,
+  applyCodeSessionEvent,
   applyComputerEvent,
   applyConsultEvent,
   applyConversationEvent,
@@ -43,6 +44,7 @@ import {
   cacheAgentProposal,
   cacheApproval,
   cacheCardDelegate,
+  cacheCodeSuggestion,
   cacheDmRead,
   cacheMessage,
   cacheMessageActions,
@@ -448,11 +450,21 @@ export function RealtimeProvider({
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: one socket per org; toast and language are read live
   useEffect(() => {
-    const conn = new RealtimeConnection({ url: realtimeUrl(window.location, orgId), createSocket });
-    // Catch up over HTTP after a reconnect: events sent while offline are gone.
-    const offReconnect = conn.onReconnect(() => {
-      // A reconnect is often a deploy: is this tab still on the app the server serves?
-      void checkAppVersion();
+    const conn = new RealtimeConnection({
+      url: realtimeUrl(window.location, orgId),
+      createSocket,
+      // Spread out in a browser; at once in React's act() environment (tests), like the frames.
+      catchUpSpreadMs: batchFrames() ? undefined : 0,
+    });
+    // A reconnect is often a deploy: is this tab still on the app the server serves?
+    const offReconnect = conn.onReconnect(() => void checkAppVersion());
+    // Catch up over HTTP after a reconnect or a server's resync: events sent meanwhile are gone.
+    const offCatchUp = conn.onCatchUp((full) => {
+      if (!full) {
+        void qc.refetchQueries({ queryKey: keys.org(orgId), type: "active" });
+        void qc.refetchQueries({ queryKey: keys.me, type: "active" });
+        return;
+      }
       // Reactions heard live may be stale now: the refetched message lists carry them again.
       qc.removeQueries({ queryKey: ["org", orgId, "reactions"] });
       // Nothing sent while the socket was down reached this tab, so everything the workspace holds may be old: what
@@ -485,6 +497,8 @@ export function RealtimeProvider({
       }
       // A proposal I may decide: the sidebar's count and Aprovações' tab.
       if (event.type === "proposal.created") void refreshProposals(qc, orgId);
+      // A code session I'm in changed (ADR 0215): its worktree, name or pull request.
+      applyCodeSessionEvent(qc, orgId, event);
       // Unread marks: a message where I am, and my reads and mutes from any device.
       applyUnreadEvent(qc, orgId, event);
       // My inbox: new or merged items, auto-resolved ones, and the badge's numbers.
@@ -585,6 +599,7 @@ export function RealtimeProvider({
       document.removeEventListener("visibilitychange", wake);
       window.removeEventListener("online", wake);
       offReconnect();
+      offCatchUp();
       offOpen();
       offUser();
       offError();
@@ -862,6 +877,10 @@ export function useChannelRealtime(orgId: string, channelId: string, enabled: bo
       // A comment on a picture, a video or a PDF was resolved or opened again (ADR 0208): its pin and line follow.
       if (event.type === "message.resolved") {
         cacheResolved(qc, orgId, event.channelId, event.messageId, event.resolved);
+      }
+      // A suggested code session was opened, kept here, or waits again (ADR 0215 §11): its card under the reply.
+      if (event.type === "code.suggestion") {
+        cacheCodeSuggestion(qc, orgId, event.channelId, event.messageId, event.suggestion);
       }
       // Act with undo: an agent message's receipts changed (made, undone, redone): replace the list.
       // A long work moved, updated or ended (ADR 0121): its anchor's line redraws; its card on the board too.

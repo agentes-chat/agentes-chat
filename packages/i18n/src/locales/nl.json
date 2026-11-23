@@ -613,6 +613,14 @@
     "emailLinkExpired": "Deze bevestigingslink is niet meer geldig. Je account werkt gewoon.",
     "sendNewLink": "Nieuwe link sturen",
     "newLinkSent": "We hebben een nieuwe link gestuurd naar {{email}}.",
+    "confirm": {
+      "title": "Kijk in je inbox",
+      "lead": "Open de link die we naar {{email}} hebben gestuurd om verder te gaan.",
+      "wrongAddress": "Verkeerd adres? Wijzig het",
+      "banner": "Bevestig je e-mail",
+      "bannerSub": "Open de link die we naar {{email}} hebben gestuurd.",
+      "change": "Adres wijzigen"
+    },
     "unconfirmed": "Dit e-mailadres heeft al een account met een wachtwoord dat nog niet is bevestigd. Log in met het wachtwoord of maak een nieuw wachtwoord via e-mail.",
     "unconfirmedReset": "Nieuw wachtwoord maken",
     "unconfirmedNoEmail": "Dit e-mailadres heeft al een account met een wachtwoord. Log in met het wachtwoord.",
@@ -1853,6 +1861,9 @@
     "open": "Openen",
     "openInBrowser": "Openen in browser",
     "download": "Downloaden",
+    "copyImage": "Afbeelding kopiëren",
+    "imageCopied": "Afbeelding gekopieerd.",
+    "copyImageFailed": "De afbeelding kon niet worden gekopieerd. Gebruik Downloaden.",
     "conversation": "Bericht",
     "agentPage": "Pagina bekijken",
     "back": "Terug",
@@ -2172,6 +2183,7 @@
       "team": "Wie is wie: mensen, agents en hun groepen",
       "dashboards": "Getallen en grafieken die de agents actueel houden",
       "taskManager": "Wat elke agent nu doet, en stoppen wat nodig is",
+      "code": "Programmeren met de agents, elk verzoek in een eigen worktree",
       "approvalsPersonal": "Wat je agents je vragen toe te staan",
       "proposalsPersonal": "Wat je agents willen veranderen",
       "threadsPersonal": "Zijgesprekken, en missies",
@@ -2181,6 +2193,7 @@
       "teamPersonal": "Je agents, en wie er verder is",
       "dashboardsPersonal": "Getallen en grafieken die je agents actueel houden",
       "taskManagerPersonal": "Wat je agents nu doen, en stoppen wat nodig is",
+      "codePersonal": "Programmeren met je agents",
       "homePersonal": "Je dag: wat op je wacht en wat je agents nu doen"
     },
     "customizeSidebar": "Zijbalk aanpassen",
@@ -2277,7 +2290,7 @@
     "searchWorkspace": "De werkruimte doorzoeken",
     "summary_one": "{{people}} lid · {{agents}} agents",
     "summary_other": "{{people}} leden · {{agents}} agents",
-    "waiting": "Wacht op jou",
+    "waiting": "Postvak IN",
     "approvals": "Goedkeuringen",
     "proposals": "Verbeteringsvoorstellen",
     "issues": "Taken",
@@ -2288,6 +2301,7 @@
     "team": "Team",
     "dashboards": "Dashboards",
     "taskManager": "Taakbeheer",
+    "code": "Code",
     "calendar": "Agenda",
     "drive": "Drive",
     "members": "Leden",
@@ -2400,7 +2414,7 @@
     "howTo": "Zo installeer je hem",
     "phone": "Telefoon",
     "phoneText": "Meldingen op zak, om overal te antwoorden.",
-    "appStore": "App Store",
+    "testFlight": "TestFlight",
     "googlePlay": "Google Play"
   },
   "openOnPhone": {
@@ -2484,7 +2498,7 @@
       "sectors": "Afdelingen",
       "usage": "Beheer en gebruik"
     },
-    "noOwner": "Niemand verantwoordelijk",
+    "noOwner": "Beheerders",
     "workingNow": "Nu aan het werk",
     "available": "Beschikbaar",
     "archived": "Gearchiveerd",
@@ -2504,7 +2518,7 @@
         "mine": "Mijn",
         "working": "Nu aan het werk",
         "waiting": "Wacht op jou",
-        "noOwner": "Niemand verantwoordelijk"
+        "noOwner": "Bij de beheerders"
       },
       "groupBy": "Groeperen op",
       "by": {
@@ -2758,6 +2772,8 @@
     "noTopic": "Geen beschrijving",
     "nameLabel": "Naam",
     "nameHelp": "Verandert voor iedereen. Oude links blijven werken.",
+    "replyInThreads": "Agents antwoorden in threads",
+    "replyInThreadsHelp": "Een agent die in het kanaal wordt aangeroepen, antwoordt in de thread onder dat bericht, en het kanaal toont er één regel voor. Werk dat al loopt, blijft waar het is.",
     "nameTaken": "Er is al een #{{name}}.",
     "generalName": "#general houdt zijn naam.",
     "archive": "Kanaal archiveren",
@@ -2829,8 +2845,6 @@
       "mentionsYou": "je bent vermeld"
     },
     "unreadDivider": "Nieuw",
-    "offline": "Geen verbinding. Wat je verstuurt, gaat vanzelf weg zodra de verbinding terug is.",
-    "backOnline": "Weer verbonden",
     "sendingOffline": "gaat weg zodra de verbinding terug is",
     "endOfReply": "Einde van het antwoord",
     "mentionSuggestions": "Suggesties voor vermeldingen"
@@ -3039,7 +3053,7 @@
     "computerNoHome": "Nog geen computer. Die komt er zodra deze workspace een eigen computer heeft.",
     "computerNoHomeServer": "Nog geen browser. Stel <guide>deze server in als computer van de agents</guide> om er een te krijgen.",
     "addComputer": "Computer toevoegen",
-    "computerOneUser": "Hier geen computer. De computer van de workspace draait alle agents als één gebruiker en kan de plek van elke persoon dus niet gescheiden houden. Een Linux-server die met de optie --system van het installatieprogramma is ingericht, kan dat wel.",
+    "computerOneUser": "Je eigen map en browser op de computer van de workspace. Die draait alle agents als één gebruiker: commando's van andere agents daar kunnen ze lezen, en alleen wie hem heeft gekoppeld neemt de besturing over. Een Linux-server die met --system is ingericht, houdt elke plek gescheiden.",
     "powers": {
       "title": "Bevoegdheden in de workspace",
       "help": "Alleen je rechterhand doet dit.",
@@ -3074,6 +3088,7 @@
       "onlyCreators": "Alleen admins maken agents",
       "only": {
         "model": "Alleen admins wijzigen het model van een agent",
+        "effort": "Alleen admins wijzigen de inspanning van een agent",
         "budget": "Alleen admins wijzigen het budget van een agent",
         "owner": "Alleen admins wijzigen wie verantwoordelijk is voor een agent",
         "archive": "Alleen admins archiveren een agent",
@@ -3091,6 +3106,7 @@
     },
     "field": {
       "model": "Model",
+      "effort": "Inspanning",
       "ai_account": "AI-account",
       "budget": "Maandbudget",
       "owner": "Verantwoordelijke",
@@ -3477,7 +3493,10 @@
       "getGit": "Git for Windows downloaden",
       "cantStart": "{{program}} staat op {{computer}}, maar start niet: {{message}}",
       "outdated": "Werk de agentes.chat-app op {{computer}} bij om hiervandaan te installeren.",
-      "asked": "Verzoek verstuurd. {{name}} krijgt een knop om het te installeren."
+      "asked": "Verzoek verstuurd. {{name}} krijgt een knop om het te installeren.",
+      "runThis": "Voer daar deze opdracht uit om het te installeren.",
+      "missingSystem": "{{program}} staat nog niet op {{computer}} voor de agents, die elk als eigen gebruiker werken. Voer daar deze opdracht uit om het voor allemaal te installeren.",
+      "homeOnly": "{{program}} is op {{computer}} alleen voor root geïnstalleerd. Elke agent werkt als eigen gebruiker en kan er niet bij. Voer daar deze opdracht uit om het voor allemaal te installeren."
     },
     "titleFor": "Een AI koppelen voor {{name}}",
     "titleFor_female": "Een AI koppelen voor {{name}}",
@@ -3922,7 +3941,7 @@
   },
   "dm": {
     "subtitle": "{{role}} · eigenaar {{owner}}",
-    "subtitleNoOwner": "{{role}} · geen eigenaar",
+    "subtitleNoOwner": "{{role}} · eigenaar: de beheerders",
     "emptyAgent": "Vraag hem iets te onthouden, te vergeten of anders te werken.",
     "emptyAgent_female": "Vraag haar iets te onthouden, te vergeten of anders te werken.",
     "opening": "Het gesprek openen…",
@@ -4303,7 +4322,7 @@
     "viewProfile": "Profiel bekijken",
     "agent": "Agent",
     "owner": "Eigenaar",
-    "noOwner": "geen eigenaar",
+    "noOwner": "Beheerders",
     "model": "Model",
     "can": "Kan",
     "budgetUsed": "{{percent}} van het budget gebruikt deze maand",
@@ -5009,7 +5028,8 @@
       "proposal": "Stelt een wijziging voor",
       "agent": "Stelt een nieuwe agent voor",
       "team": "Stelt een team voor",
-      "firstTask": "Eerste taak"
+      "firstTask": "Eerste taak",
+      "code": "Stelt een codesessie voor"
     },
     "waitingYou": "wacht op jou",
     "waitingFor": "wacht op {{name}}",
@@ -5026,6 +5046,7 @@
       "agent": "<b>{{name}}</b> stelt een nieuwe agent voor · {{what}}",
       "team": "<b>{{name}}</b> stelt een team voor · {{what}}",
       "firstTask": "<b>{{name}}</b> stelt een eerste taak voor · {{what}}",
+      "code": "<b>{{name}}</b> stelt een codesessie voor · {{what}}",
       "more": "+{{count}}",
       "here_one": "{{count}} wacht hier op jou",
       "here_other": "{{count}} wachten hier op jou",
@@ -5262,7 +5283,7 @@
     "firstRun": "Ga verder waar je was · {{done}} van {{total}}"
   },
   "notifications": {
-    "title": "Meldingen",
+    "title": "Postvak IN",
     "planLent": {
       "takeBack": "Terugnemen",
       "takeBackAll": "Van alle agents terugnemen",
@@ -5297,7 +5318,7 @@
         "computer": "Van computer wisselen"
       }
     },
-    "docTitleUnread": "({{count}}) Meldingen",
+    "docTitleUnread": "({{count}}) Postvak IN",
     "summaryWaiting_one": "{{count}} ding wacht op jou",
     "summaryWaiting_other": "{{count}} dingen wachten op jou",
     "summaryUnread_one": "{{count}} ongelezen",
@@ -5313,6 +5334,7 @@
       "waiting": "Wacht op jou",
       "unread": "Ongelezen",
       "reactions": "Reacties",
+      "requests": "Besliste verzoeken",
       "done": "Afgerond"
     },
     "keys": {
@@ -5549,6 +5571,8 @@
     "noneUnread": "Alles gelezen.",
     "noneHere": "Hier is voorlopig niets.",
     "noneDone": "Niets als afgerond gemarkeerd in de afgelopen 30 dagen.",
+    "noneRequests": "Nog geen verzoek beslist.",
+    "proposes": "stelt een verbetering voor",
     "more": "Meer tonen"
   },
   "approvals": {
@@ -6423,6 +6447,7 @@
         "empty_reply": "Het model gaf niets terug.",
         "model_refused": "Het model weigerde te antwoorden.",
         "agent_archived": "De agent is gearchiveerd.",
+        "code_session_unavailable": "De worktree van de sessie is niet beschikbaar op de computer.",
         "provider_error": "De modelaanbieder gaf een fout: {{detail}}",
         "provider_account": "De aanbieder heeft de sleutel geweigerd: die is misschien ongeldig, zonder tegoed of over het quotum.",
         "provider_unavailable": "De modelaanbieder reageerde niet: {{detail}}",
@@ -7201,9 +7226,9 @@
     "noChannels": "Je zit nog in geen enkel kanaal. Je kunt de agent later aan een kanaal toevoegen.",
     "owner": "Eigenaar",
     "you": "{{name}} (jij)",
-    "noOwnerOption": "Geen eigenaar",
-    "noOwnerShort": "Beheerders krijgen de meldingen en keuren goed",
-    "noOwnerHelp": "Zonder eigenaar krijgen beheerders de meldingen en keuren zij gevoelige acties goed.",
+    "noOwnerOption": "Beheerders",
+    "noOwnerShort": "Krijgen de meldingen en keuren goed",
+    "noOwnerHelp": "De beheerders krijgen de meldingen en keuren gevoelige acties goed.",
     "ownerHelp": "Krijgt de budgetmeldingen en keurt gevoelige acties goed.",
     "ownerRoleHelp": "Iedereen met de rol {{role}} krijgt de goedkeuringsverzoeken en meldingen. Ieder van hen beslist, ook wie de rol later krijgt.",
     "ownerRoleHelp_female": "Iedereen met de rol {{role}} krijgt de goedkeuringsverzoeken en meldingen. Ieder van hen beslist, ook wie de rol later krijgt.",
@@ -7261,7 +7286,6 @@
     "noTools": "Geen tools",
     "onlyContext": "Alleen de context van de werkruimte",
     "noChannelsReview": "Geen kanalen: roep hem aan met @ of een direct bericht",
-    "noOwnerAdmins": "Geen eigenaar (beheerders)",
     "editSection": "{{section}} bewerken",
     "hints": {
       "role": "Kies een startpunt",
@@ -7817,7 +7841,7 @@
       "none": "Geen actieve link."
     },
     "ownerLine": "Eigenaar: {{name}}",
-    "noOwner": "Geen eigenaar",
+    "noOwner": "Eigenaar: beheerders",
     "budgetLine": "{{percent}} van het budget van {{month}}",
     "noAgents": "Nog geen agents."
   },
@@ -8139,6 +8163,46 @@
     "custom_write": {
       "label": "Schrijftools",
       "description": "De schrijftools gebruiken. Tools die als gevoelig zijn gemarkeerd, vragen altijd om goedkeuring."
+    },
+    "telegram_messages_read": {
+      "label": "Berichten lezen",
+      "description": "De chats van de bot tonen en lezen wat mensen hem schreven of waar hij zit."
+    },
+    "telegram_messages_write": {
+      "label": "Berichten sturen",
+      "description": "Berichten en bestanden als de bot sturen, bewerken en vastzetten. Berichten verwijderen, mensen verbannen en uitnodigingslinks vragen om goedkeuring."
+    },
+    "x_posts_read": {
+      "label": "Posts lezen",
+      "description": "De posts en vermeldingen van het account lezen, posts op id en recente posts via zoeken."
+    },
+    "x_posts_write": {
+      "label": "Posten",
+      "description": "Op het account posten, met afbeeldingen of een video uit de Drive. Een post verwijderen vraagt om goedkeuring."
+    },
+    "threads_posts_read": {
+      "label": "Posts lezen",
+      "description": "De posts van het account lezen, met reacties, vermeldingen en resultaten."
+    },
+    "threads_posts_write": {
+      "label": "Posten en reageren",
+      "description": "Posten met afbeeldingen of video's uit de Drive, reageren en reacties verbergen. Een post verwijderen vraagt om goedkeuring."
+    },
+    "meta_ads_ads_read": {
+      "label": "Advertenties lezen",
+      "description": "Advertentieaccounts, campagnes, advertentiesets en advertenties tonen en hun resultaten lezen."
+    },
+    "meta_ads_ads_write": {
+      "label": "Advertenties beheren",
+      "description": "Campagnes, advertentiesets en advertenties maken (altijd gepauzeerd), bewerken en pauzeren. Aanzetten en een budget wijzigen vragen altijd. Archiveren en verwijderen vragen."
+    },
+    "tiktok_videos_read": {
+      "label": "Video's lezen",
+      "description": "Het profiel, de openbare video's en wat de maker mag posten lezen."
+    },
+    "tiktok_videos_write": {
+      "label": "Video's naar concepten sturen",
+      "description": "Een video uit de Drive naar de TikTok-concepten van de maker sturen, die de post daar afmaakt. Elke upload vraagt om goedkeuring."
     }
   },
   "issues": {
@@ -8532,7 +8596,13 @@
       "empty": "Sleep bestanden hierheen, plak een screenshot of stuur ze in het gesprek van de taak.",
       "fromCreation": "Bij het maken · {{when}}",
       "fromComment": "Reactie van {{name}} · {{when}}",
-      "linked": "Gekoppeld door {{name}}"
+      "linked": "Gekoppeld door {{name}}",
+      "remove": "{{name}} uit de taak halen",
+      "removeShort": "Uit de taak halen",
+      "removed": "{{name}} is uit de taak gehaald. Het bestand staat nog in de Drive.",
+      "added_one": "Bestand bij de bijlagen",
+      "added_other": "{{count}} bestanden bij de bijlagen",
+      "see": "Bijlagen bekijken"
     },
     "history": {
       "commented": "reageerde",
@@ -8598,6 +8668,11 @@
       "methods": "Toegestane methoden",
       "methodsHelp": "Het adres reageert alleen op de aangevinkte methoden. Bij GET zijn de queryparameters van de URL de gegevens van de aanroep.",
       "methodsLine": "Accepteert {{methods}}.",
+      "groupBy": "Aanroepen groeperen op",
+      "groupByHelp": "Een veld in de gegevens van elke aanroep, zoals conversation.id. Aanroepen met dezelfde waarde lopen een voor een, op volgorde. Verschillende waarden lopen tegelijk.",
+      "groupByOff": "Alle aanroepen wachten in één rij, op volgorde.",
+      "groupByOn": "Aanroepen met dezelfde {{path}} lopen op volgorde. De andere lopen tegelijk.",
+      "groupBySaved": "Groepering opgeslagen.",
       "address": "Adres",
       "addressHelp": "Iedereen met het adres kan de agent starten. Bewaar het als een wachtwoord en maak een nieuw als het uitlekt.",
       "copied": "Adres gekopieerd.",
@@ -9012,6 +9087,9 @@
       },
       "deploy": {
         "succeeded": "Deploy voltooid"
+      },
+      "telegram": {
+        "message": "Bericht aan de Telegram-bot"
       }
     },
     "when": {
@@ -10026,6 +10104,8 @@
       "reply": "Antwoorden",
       "replies_one": "{{count}} antwoord",
       "replies_other": "{{count}} antwoorden",
+      "replying_one": "{{names}} antwoordt in de thread",
+      "replying_other": "{{names}} antwoorden in de thread",
       "closed_one": "Thread gesloten · {{title}} · {{count}} bericht",
       "closed_other": "Thread gesloten · {{title}} · {{count}} berichten",
       "archived_one": "{{count}} gearchiveerde thread wordt hier niet getoond",
@@ -11256,6 +11336,188 @@
     "createKeywords": "maken nieuw toevoegen create new",
     "empty": "Niets voor “{{q}}”."
   },
+  "codeSessions": {
+    "beta": {
+      "title": "Coding mode is in bèta",
+      "text": "Het werkt echt en verandert elke week. Soms loopt het vast. Dan ligt het probleem bij ons.",
+      "go": "Aan de slag",
+      "added": {
+        "worktree": "Elk verzoek in een eigen worktree, met Git, Bestanden, Scherm en Terminal",
+        "anyAi": "Elke AI: Claude Code, Codex, OpenCode of een model via zijn sleutel",
+        "beside": "Bewerk de bestanden en open een terminal naast het gesprek"
+      },
+      "removed": {
+        "paste": "Code kopiëren en plakken tussen de chat en de editor",
+        "watch": "Naar de terminal staren tot de agent klaar is"
+      }
+    },
+    "title": "Code",
+    "state": {
+      "waiting": "wacht op jou",
+      "working": "bezig",
+      "preparing": "worktree wordt voorbereid",
+      "failed": "voorbereiden mislukt",
+      "pr": "PR #{{number}}",
+      "idle": "klaar"
+    },
+    "list": {
+      "label": "Codesessies",
+      "new": "Nieuwe sessie",
+      "newRow": "Nieuwe sessie",
+      "resize": "Breedte van de lijst",
+      "local": "op de computer",
+      "empty": "De sessies die je opent, of waar je bij wordt geroepen, verschijnen hier."
+    },
+    "home": {
+      "mode": "Coding mode",
+      "was": "Chat mode",
+      "beta": "Beta",
+      "noAgents": "Nog geen agent programmeert op een computer. Geef een agent in de instellingen een computer en een codeerapp, of laat hem daar code uitvoeren.",
+      "placeholder": "Beschrijf de wijziging, de bug of de vraag",
+      "label": "Wat er moet gebeuren",
+      "agent": "Agent",
+      "repo": "Waar te werken",
+      "repoPlaceholder": "Repository of project",
+      "repoSearch": "Zoek, of typ eigenaar/naam of een nieuwe naam",
+      "newLocal": "Nieuw project op de computer: {{name}}",
+      "useRepo": "{{repo}} gebruiken",
+      "repoNote": "Een naam zonder eigenaar start een project op de computer van de agent, buiten GitHub.",
+      "hint": "@ haalt iemand bij de sessie",
+      "start": "Starten"
+    },
+    "view": {
+      "gone": "Deze sessie bestaat niet meer, of je mag die niet zien.",
+      "resize": "Breedte van het gesprek",
+      "composer": "Antwoorden · @ roept iemand · / opdrachten",
+      "more": "Meer",
+      "openPr": "PR #{{number}} openen",
+      "close": "Sessie sluiten",
+      "closeHint": "Verdwijnt uit de lijst: de worktree gaat weg, de branch blijft",
+      "failed": "De worktree kon niet worden voorbereid.",
+      "retry": "Opnieuw proberen",
+      "githubAccess": "Deze werkruimte heeft geen toegang tot deze repository op GitHub. Koppel GitHub in Instellingen › Connectors, of start een sessie in een project op de computer (alleen een naam)."
+    },
+    "panel": {
+      "label": "Sessiepaneel",
+      "screen": "Scherm",
+      "terminal": "Terminal",
+      "terminalHeight": "Hoogte van de terminal",
+      "notReady": "De worktree wordt nog voorbereid.",
+      "agent_preparing": "bereidt de worktree voor",
+      "agent_failed": "kon de worktree niet voorbereiden",
+      "agent_working": "is bezig",
+      "agent_waiting": "wacht op jou",
+      "agent_idle": "is vrij"
+    },
+    "gitTab": {
+      "openFile": "Bestand openen",
+      "label": "Git",
+      "from": "vanaf {{base}}",
+      "ahead_one": "{{count}}{{more}} commit voor",
+      "ahead_other": "{{count}}{{more}} commits voor",
+      "refresh": "Opnieuw lezen",
+      "reading": "Git lezen op de computer…",
+      "all": "Alles sinds {{base}}",
+      "uncommitted": "Niet gecommit",
+      "clean": "Alles is gecommit.",
+      "changesMore": "En meer wijzigingen: de eerste duizend staan hier.",
+      "commits": "Commits",
+      "noCommits": "Nog geen commits sinds {{base}}.",
+      "more": "En oudere commits.",
+      "back": "Terug",
+      "split": "Naast elkaar",
+      "none": "Hier is niets veranderd.",
+      "tooLarge": "Te groot om hier te tonen. De gewijzigde bestanden staan in de lijst.",
+      "status": {
+        "modified": "Gewijzigd",
+        "added": "Toegevoegd",
+        "deleted": "Verwijderd",
+        "renamed": "Hernoemd",
+        "untracked": "Nieuw, nog niet in git"
+      }
+    },
+    "files": {
+      "label": "Bestanden",
+      "search": "Bestanden zoeken",
+      "searchPlaceholder": "Zoek een bestand op naam of map",
+      "changedGroup": "Gewijzigd",
+      "count_one": "{{formatted}} bestand",
+      "count_other": "{{formatted}} bestanden",
+      "refresh": "Opnieuw lezen",
+      "reading": "De bestanden op de computer lezen…",
+      "empty": "Nog geen bestanden.",
+      "noMatch": "Geen bestand gevonden voor “{{query}}”.",
+      "truncated_one": "Het eerste {{formatted}} bestand wordt getoond.",
+      "truncated_other": "De eerste {{formatted}} bestanden worden getoond.",
+      "hasChanges": "Heeft wijzigingen",
+      "opening": "Het bestand openen…",
+      "cut": "Alleen de eerste {{size}} worden hier getoond.",
+      "save": "Opslaan",
+      "unsaved": "Niet opgeslagen",
+      "tooLong": "Te lang om hier te bewerken",
+      "moved": "Dit bestand is op de computer gewijzigd nadat je het opende.",
+      "reload": "Die versie laden",
+      "overwrite": "Mijn versie eroverheen opslaan",
+      "unsavedAsk": "Dit bestand heeft wijzigingen die je niet hebt opgeslagen.",
+      "keepEditing": "Verder bewerken",
+      "discard": "Weggooien",
+      "state": {
+        "binary": "Een binair bestand: hier valt niets te tonen.",
+        "missing": "Dit bestand is er niet meer.",
+        "ignored": "Git negeert dit bestand, dus het staat hier niet.",
+        "secret": ".env-bestanden worden hier niet getoond: ze bevatten meestal geheimen.",
+        "outside": "Dit bestand is een link naar buiten de worktree."
+      }
+    },
+    "tabs": {
+      "label": "Tabbladen van de sessie",
+      "talk": "Gesprek",
+      "terminalN": "Terminal {{n}}",
+      "close": "{{name}} sluiten",
+      "add": "Nieuw tabblad"
+    },
+    "screen": {
+      "computer": "Computer van {{name}}",
+      "computer_female": "Computer van {{name}}",
+      "menu": "Schermen die {{name}} gebruikt",
+      "menu_female": "Schermen die {{name}} gebruikt",
+      "computerHint": "Waar de worktree staat",
+      "onHost": "op {{host}}",
+      "exitFull": "Volledig scherm sluiten"
+    },
+    "who": {
+      "label": "In deze sessie",
+      "open_one": "{{count}} in deze sessie",
+      "open_other": "{{count}} in deze sessie",
+      "agent": "werkt in de worktree",
+      "opener": "opende de sessie",
+      "leave": "Verlaten",
+      "remove": "{{name}} uit de sessie verwijderen",
+      "invite": "Typ @ en de naam in het gesprek om iemand erbij te halen."
+    },
+    "screenLine": {
+      "show": "Bekijk op Scherm",
+      "held": "Een mens bedient het scherm"
+    },
+    "suggestion": {
+      "label": "Voorstel voor een codesessie",
+      "detail": "{{repo}} · op de computer van {{name}}",
+      "more": "Verzoek bekijken",
+      "open": "Sessie openen",
+      "here": "Hier doen",
+      "opening": "Sessie wordt geopend…",
+      "opened": "Je hebt de sessie geopend",
+      "openedBy": "{{name}} heeft de sessie geopend",
+      "keptHere": "Je koos ervoor het hier te doen",
+      "keptHereBy": "{{name}} koos ervoor het hier te doen",
+      "see": "Sessie bekijken"
+    },
+    "from": {
+      "dm": "Geopend vanuit je gesprek met {{name}}",
+      "channel": "Geopend vanuit #{{name}}",
+      "see": "Gesprek bekijken"
+    }
+  },
   "code": {
     "ranSummary_one": "{{count}} regel {{language}} uitgevoerd · uitvoer {{size}}",
     "ranSummary_other": "{{count}} regels {{language}} uitgevoerd · uitvoer {{size}}",
@@ -12086,6 +12348,9 @@
       "textOnly": "Leest alleen tekst",
       "search": "Modellen zoeken",
       "account": "Gebruikersaccount",
+      "accountOf": "Account: {{account}}",
+      "connectAccount": "Ander account koppelen",
+      "ais": "AI",
       "connect": "Een AI koppelen",
       "applies": "Geldt vanaf het volgende antwoord.",
       "more": "Meer opties",
@@ -12166,6 +12431,7 @@
       "tool_offOne": "{{program}} staat uit op {{computer}}.",
       "not_installed": "{{program}} is niet geïnstalleerd op {{computer}}.",
       "cant_start": "{{program}} staat op {{computer}}, maar start niet.",
+      "home_only": "{{program}} is op {{computer}} alleen voor root geïnstalleerd, waar de agents niet bij kunnen.",
       "not_reported": "{{computer}} controleert nog welke programma's erop staan. Dit verandert vanzelf als het klaar is.",
       "system": "{{program}} werkt nog niet op het systeem van {{computer}}.",
       "no_computerCloud": "Klaar zodra {{computer}} klaar is."
@@ -13053,14 +13319,50 @@
     "added": "{{repo}} komt in de lijst als je opslaat."
   },
   "connectors": {
+    "store": {
+      "featured": "Uitgelicht",
+      "suggested": "Voorgesteld",
+      "seeAll": "Alles bekijken",
+      "more": "Meer bekijken",
+      "moreName": "Meer over {{name}}",
+      "connected": "Gekoppeld",
+      "browse": "Connectors bekijken",
+      "notListed": "Mist er een dienst in de store?",
+      "howLabel": "Zo koppel je",
+      "whoAll": "Alle agents",
+      "whoChoose": "Kies je later",
+      "asksLabel": "Goedkeuring",
+      "asksSensitive": "Gevoelige acties vragen het jou",
+      "afterTitle": "Na het koppelen",
+      "agents_one": "{{count}} agent",
+      "agents_other": "{{count}} agents",
+      "whoEvery_one": "Je agent gebruikt het.",
+      "whoEvery_other": "Alle {{count}} agents gebruiken het.",
+      "whoSome_one": "{{names}}. De andere agent gebruikt het niet.",
+      "whoSome_other": "{{names}}. De andere {{count}} agents gebruiken het niet.",
+      "change": "Wijzigen",
+      "see": "Bekijken",
+      "account": "Account",
+      "toolsText": "Wat agents ermee kunnen doen, en wat het jou vraagt.",
+      "addressesText": "Met wie agents via deze mailbox kunnen praten.",
+      "bandTitle_one": "{{count}} dienst om te koppelen",
+      "bandTitle_other": "{{count}} diensten om te koppelen",
+      "bandText": "{{names}} en meer.",
+      "appMissing": "De app van deze server is nog niet gemaakt",
+      "appEvents": "De app mist gebeurtenissen",
+      "appLine": "App van deze server",
+      "eventsLine": "Gebeurtenissen"
+    },
+    "howShort": {
+      "oneClick": "Eén klik",
+      "oauthOrKey": "Eén klik of een API-sleutel",
+      "key": "API-sleutel",
+      "appPassword": "App-wachtwoord",
+      "addressPassword": "Adres en wachtwoord",
+      "composio": "Via Composio"
+    },
     "title": "Connectors",
     "add": "Connector toevoegen",
-    "mcp": {
-      "title": "MCP's",
-      "add": "MCP toevoegen",
-      "list": "Gekoppelde MCP-servers",
-      "none": "MCP-servers die je via hun adres koppelt, verschijnen hier."
-    },
     "personal": {
       "note": "Alleen jij opent deze verbindingen. Je agenten gebruiken ze alleen als je erom vraagt.",
       "noteOne": "Alleen jij opent deze verbinding. Je agenten gebruiken ze alleen als je erom vraagt.",
@@ -13092,9 +13394,6 @@
       "moveText": "Iedereen in de workspace ziet het. Wie agenten beheert, kiest welke agenten het gebruiken, en de eigenaar van een agent kan het bij die van hem uitzetten. Een agent die alle gekoppelde apps gebruikt, krijgt het meteen.",
       "moved": "{{name}} is nu van het team."
     },
-    "addTitle": "Connector toevoegen",
-    "catalogText": "Koppel één keer voor {{org}}. Kies daarna wat elke agent mag gebruiken.",
-    "catalog": "Beschikbare connectors",
     "categories": "Categorieën",
     "category": {
       "all": "Alle",
@@ -13115,8 +13414,6 @@
     "connectName": "{{name}} koppelen",
     "reconnectName": "{{name}} opnieuw koppelen",
     "addAccountName": "Nog een {{name}}-account toevoegen",
-    "other": "Niet gevonden?",
-    "otherText": "Koppel elke dienst via zijn adres.",
     "search": "Connectors zoeken",
     "searchPlaceholder": "Zoek op naam of op wat het doet",
     "empty": "Geen connector gevonden voor “{{q}}”",
@@ -13130,8 +13427,6 @@
     "more": "Meer diensten",
     "tileConnected": "{{name}}, gekoppeld",
     "tileSoon": "{{name}}, binnenkort",
-    "otherTitle": "Een andere dienst",
-    "otherDetail": "Elke dienst die een koppeling voor agents biedt, via zijn adres (dat begint met https://).",
     "otherSteps": {
       "1": "Je plakt het adres en geeft toestemming op de pagina van de dienst",
       "2": "Wij zoeken uit wat elk van zijn tools doet",
@@ -13139,16 +13434,13 @@
     },
     "otherConnect": "Koppelen via adres",
     "detail": {
-      "close": "Details sluiten",
       "can": "Wat agents kunnen doen",
       "afterText": "Geen agent gebruikt het tot jij kiest.",
       "allText": "Na het koppelen kan elke agent het gebruiken. Dat kun je later aanpassen.",
       "addAccount": "Nog een account toevoegen",
       "accountsText": "Elk account heeft eigen agents en niveaus.",
       "reconnect": "Opnieuw koppelen",
-      "replaceText": "Vervangt de huidige login. Wie het gebruikt, blijft hetzelfde.",
-      "connected": "Al gekoppeld",
-      "how": "Zo werkt het"
+      "replaceText": "Vervangt de huidige login. Wie het gebruikt, blijft hetzelfde."
     },
     "how": {
       "oneClick": "Eén klik: je geeft toestemming op de pagina van de dienst",
@@ -13366,7 +13658,12 @@
       },
       "meta_ads": {
         "1": "Campagnes en resultaten bekijken",
-        "2": "Campagnes maken en bijsturen"
+        "2": "Campagnes maken en bijsturen",
+        "ask": "Advertenties aanzetten en budgetten wijzigen vraagt altijd om je goedkeuring"
+      },
+      "tiktok_ads": {
+        "1": "Campagnes, advertentiegroepen en resultaten bekijken",
+        "2": "Campagnes en advertenties maken en bijsturen"
       },
       "google_docs": {
         "1": "Documenten zoeken en lezen",
@@ -13494,13 +13791,38 @@
         "2": "Berichtsjablonen maken",
         "ask": "Berichten versturen vraagt altijd om jouw goedkeuring"
       },
+      "trypost": {
+        "1": "Berichten en wachtrijen van elk netwerk bekijken",
+        "2": "Statistieken van alle netwerken of van één bekijken",
+        "3": "Ideeën, labels en handtekeningen bewaren",
+        "ask": "Berichten maken, publiceren, wijzigen en verwijderen vraagt altijd om jouw goedkeuring"
+      },
       "database": {
         "1": "De tabellen bekijken",
         "2": "De data bevragen om te antwoorden",
         "3": "Wijzigt nooit iets"
+      },
+      "telegram": {
+        "1": "Lezen wat mensen de bot schrijven",
+        "2": "Berichten en bestanden als de bot sturen",
+        "ask": "Verwijderen, verbannen en uitnodigingslinks vragen altijd om je goedkeuring"
+      },
+      "x": {
+        "1": "Posts en vermeldingen van het account lezen",
+        "2": "Posten met afbeeldingen of een video",
+        "ask": "Posts verwijderen vraagt altijd om je goedkeuring"
+      },
+      "threads": {
+        "1": "Posts, reacties en resultaten bekijken",
+        "2": "Posten met afbeeldingen of video's en reageren",
+        "ask": "Posts verwijderen vraagt altijd om je goedkeuring"
+      },
+      "tiktok": {
+        "1": "Profiel en video's bekijken",
+        "2": "Video's naar je concepten sturen om in TikTok af te maken",
+        "ask": "Elke upload vraagt altijd om je goedkeuring"
       }
     },
-    "connectedList": "Gekoppeld",
     "connected": "Gekoppeld",
     "connectedAs": "Gekoppeld als {{account}}",
     "reconnectAdds": "Verbind {{name}} opnieuw zodat agents ook {{what}}.",
@@ -13625,6 +13947,7 @@
       "amplitude": "Grafieken, dashboards en experimenten.",
       "himetrica": "Bezoekers, funnels, omzet en zoekverkeer.",
       "meta_ads": "Advertentiecampagnes en resultaten op Facebook en Instagram.",
+      "tiktok_ads": "TikTok-advertentiecampagnes, advertentiegroepen, advertenties en hun resultaten.",
       "klaviyo": "Campagnes, flows, lijsten en profielen.",
       "millionsend": "E-mailcampagnes, lijsten en contacten.",
       "semrush": "Data over zoekwoorden, domeinen en backlinks.",
@@ -13645,8 +13968,14 @@
       "youtube": "Video's, reacties, afspeellijsten en statistieken van het YouTube-kanaal.",
       "pinterest": "Pins, borden en statistieken op Pinterest.",
       "reddit": "Posts, reacties en community's op Reddit.",
-      "whatsapp": "Berichten en sjablonen van WhatsApp Business."
-    }
+      "whatsapp": "Berichten en sjablonen van WhatsApp Business.",
+      "trypost": "Automatisering van berichten op sociale media.",
+      "telegram": "Een eigen Telegram-bot: zijn chats, groepen en kanalen.",
+      "x": "Posts op je X-account: schrijven, vermeldingen lezen en zoeken.",
+      "threads": "Posts en reacties op je Threads-account.",
+      "tiktok": "Je TikTok-profiel en video's, en video's naar je concepten."
+    },
+    "needsApp": "Deze server heeft nog geen {{name}}-app: wie hem beheert registreert er een bij {{name}} en zet de variabelen (docs/social-apps-checklist.md)."
   },
   "toolNames": {
     "order": "modifiers-first",
@@ -14428,6 +14757,7 @@
       "web_search": "Op het web zoeken",
       "web_fetch": "Webpagina lezen",
       "image_search": "Afbeeldingen zoeken",
+      "show_image": "Afbeeldingen van het web tonen",
       "create_routine": "Routine maken",
       "update_routine": "Routine bijwerken",
       "delete_routine": "Routine verwijderen",
@@ -14476,7 +14806,39 @@
       "get_my_usage": "Mijn gebruik bekijken",
       "ignore_usage_limit": "Gebruikslimiet negeren",
       "send_feedback": "Feedback sturen",
-      "offer_feedback": "Aanbieden om een probleem te melden"
+      "offer_feedback": "Aanbieden om een probleem te melden",
+      "list_chats": "Chats tonen",
+      "read_messages": "Berichten lezen",
+      "get_chat": "Chat bekijken",
+      "send_file": "Bestand sturen",
+      "edit_message": "Bericht bewerken",
+      "pin_message": "Bericht vastzetten",
+      "ban_member": "Lid verbannen",
+      "create_invite_link": "Uitnodigingslink maken",
+      "get_my_posts": "Mijn posts bekijken",
+      "get_mentions": "Vermeldingen bekijken",
+      "search_recent": "Recente posts zoeken",
+      "get_replies": "Reacties bekijken",
+      "get_insights": "Resultaten bekijken",
+      "reply": "Reageren",
+      "hide_reply": "Reactie verbergen",
+      "list_ad_accounts": "Advertentieaccounts tonen",
+      "list_campaigns": "Campagnes tonen",
+      "list_ad_sets": "Advertentiesets tonen",
+      "list_ads": "Advertenties tonen",
+      "create_campaign": "Campagne maken",
+      "create_ad_set": "Advertentieset maken",
+      "create_ad": "Advertentie maken",
+      "update": "Bijwerken",
+      "pause": "Pauzeren",
+      "activate": "Aanzetten",
+      "set_budget": "Budget instellen",
+      "archive": "Archiveren",
+      "delete": "Verwijderen",
+      "list_videos": "Video's tonen",
+      "get_creator_info": "Postopties bekijken",
+      "get_post_status": "Uploadstatus bekijken",
+      "upload_draft": "Naar concepten sturen"
     }
   },
   "toolReview": {
@@ -14570,6 +14932,7 @@
       "unknown": "de naam zegt het niet",
       "read_only_hint": "de dienst zelf zegt dat hij alleen kijkt",
       "destructive_hint": "de dienst zelf waarschuwt dat hij veel kan verwijderen of wijzigen",
+      "write_hint": "de dienst zelf zegt dat hij maakt of bewerkt zonder te verwijderen",
       "verb_read": "aan zijn naam te zien kijkt hij alleen",
       "verb_write": "aan zijn naam te zien maakt of bewerkt hij",
       "verb_sensitive": "aan zijn naam te zien verwijdert, verstuurt of besteedt hij",
@@ -14626,6 +14989,27 @@
     "needsKey": "Deze server ondersteunt geen OAuth. Koppel met een API-sleutel.",
     "notApproved": "{{name}} laat alleen goedgekeurde apps inloggen, en agentes.chat is nog niet goedgekeurd. Krijg je er een API-sleutel, dan kun je daarmee koppelen.",
     "serverSaid": "De server antwoordde: {{detail}}",
+    "ownClient": {
+      "title": "Je eigen OAuth-app gebruiken",
+      "notApproved": "{{name}} laat alleen apps toe die het heeft goedgekeurd, en agentes.chat hoort daar nog niet bij. Je kunt het verbinden met je eigen app daar.",
+      "askAdmin": "Een beheerder kan het verbinden met de eigen app van de workspace.",
+      "help": "Maak een app bij de aanbieder, registreer daar deze redirect-URI en plak de client-ID hier. Elke aanmelding daar vanuit de workspace gebruikt dan jouw app.",
+      "guide": {
+        "metaAds": "Maak in Meta for Developers een app met de use case Marketing API. Voeg deze redirect-URI toe aan de geldige OAuth-redirect-URI's en plak dan de app-ID, en het app-geheim als je app erom vraagt."
+      },
+      "redirectUri": "Redirect-URI",
+      "copied": "Redirect-URI gekopieerd.",
+      "clientId": "Client-ID",
+      "clientIdMissing": "Plak de client-ID van de app.",
+      "clientSecret": "Clientgeheim",
+      "clientSecretHelp": "Alleen als de app erom vraagt. Het wordt versleuteld bewaard en nooit meer getoond.",
+      "secretSaved": "Er is een geheim opgeslagen. Laat dit leeg om het te houden.",
+      "scopes": "Scopes",
+      "scopesHelp": "Wat elke aanmelding vraagt, gescheiden door spaties. Laat leeg voor wat de server opgeeft.",
+      "save": "Opslaan en doorgaan",
+      "remove": "Verwijderen",
+      "removed": "Je app is verwijderd."
+    },
     "headers": {
       "title": "Headers van het verzoek",
       "help": "Voor een sleutel die in een andere header hoort, of een gateway vóór de server. De meeste servers hebben er geen nodig.",
@@ -14678,6 +15062,13 @@
       "asks_other": "{{count}} acties vragen om goedkeuring in de chat.",
       "adjust": "Aanpassen",
       "ok": "Klaar"
+    },
+    "telegram": {
+      "token": "Bottoken",
+      "steps": "Open in Telegram @BotFather, stuur /newbot, kies een naam en een gebruikersnaam die op “bot” eindigt en plak hier de token die je krijgt. Om een groep te lezen, voeg je de bot toe. Om in een kanaal te posten, maak je hem daar admin."
+    },
+    "x": {
+      "consent": "Agents met toegang tot X posten zelf op dit account. Een post verwijderen vraagt eerst, en de pagina van elke agent beperkt wat hij mag. Een X-account werkt in één workspace tegelijk."
     }
   },
   "database": {
@@ -15251,6 +15642,9 @@
       "pageOf": "{{page}} van {{count}}",
       "pdfFailed": "Deze PDF kan hier niet worden getoond. Download hem om hem te openen.",
       "loadFailed": "Deze afbeelding kan hier niet worden getoond.",
+      "mark": "Markeren",
+      "markOff": "Stoppen met markeren: een klik verplaatst het bestand weer",
+      "markOn": "Markeren: een klik plaatst een opmerking bij een punt of een gebied",
       "hint": {
         "image": "Klik om een punt te markeren of sleep om een gebied te markeren",
         "video": "Klik op de video voor een opmerking bij dit moment, of sleep om een gebied te markeren",
@@ -15372,6 +15766,17 @@
       "conflict": "Dat kan nu niet. Vernieuw en probeer het opnieuw.",
       "computer": "De computer kon dit nu niet doen. Controleer of hij aanstaat en probeer het opnieuw."
     },
+    "codeSession": {
+      "noComputer": "Deze agent heeft nog geen computer. Geef er een in de instellingen van de agent om ermee te programmeren.",
+      "cannotCode": "Deze agent kan niet programmeren op zijn computer. Geef hem een codeerapp in de instellingen, of laat hem daar code uitvoeren.",
+      "repoNotAllowed": "Deze agent kan niet in die repository werken. Kies een andere, of voeg hem toe in de instellingen van de agent.",
+      "notYours": "Alleen wie de sessie heeft geopend, of een admin, kan hem sluiten.",
+      "notReady": "De worktree van de sessie is nog niet klaar. Probeer het zo opnieuw.",
+      "fileChanged": "Dit bestand is op de computer gewijzigd nadat je het opende.",
+      "fileLocked": "Dit bestand kan hier niet worden bewerkt.",
+      "suggestionGone": "Dit voorstel is al beantwoord.",
+      "suggestionNotYours": "Alleen wie het vroeg, beslist of de sessie opent."
+    },
     "webhook": {
       "githubNoAccess": "De GitHub van deze workspace kan geen webhooks maken in {{repo}}. Volg de stappen hieronder om hem met de hand te maken.",
       "githubFailed": "GitHub heeft de webhook in {{repo}} niet gemaakt ({{status}}). Volg de stappen hieronder om hem met de hand te maken.",
@@ -15407,7 +15812,10 @@
       "headerAndKey": "De API-sleutel wordt al als Authorization meegestuurd. Wis de sleutel, of verwijder deze header.",
       "headersTooMany": "Een server neemt hooguit {{max}} headers. Verwijder er één om een andere toe te voegen.",
       "headersWithSignIn": "Deze server vraagt om in te loggen, en een login kan nog geen headers meesturen. Verwijder de headers om in te loggen, of koppel met een API-sleutel.",
-      "headersUnreadable": "De opgeslagen headers konden niet worden gelezen. Vul ze opnieuw in of verwijder ze."
+      "headersUnreadable": "De opgeslagen headers konden niet worden gelezen. Vul ze opnieuw in of verwijder ze.",
+      "noOAuth": "De MCP-server meldt niet aan met OAuth en neemt dus geen eigen app aan. Verbind hem met een API-sleutel.",
+      "ownClientInUse": "Er melden nog accounts aan met de eerder opgeslagen app. Verbreek die eerst en wijzig hem dan.",
+      "ownClientId": "Controleer de client-ID: één woord, zoals de aanbieder hem toont."
     },
     "wiki": {
       "githubNoNotes": "Geen Markdown-notities in deze link.",
@@ -15488,6 +15896,7 @@
     },
     "org": {
       "createInviteOnly": "Nieuwe werkruimtes hebben voorlopig een uitnodiging nodig.",
+      "createUnconfirmed": "Open eerst de link die we naar je e-mail hebben gestuurd. Maak daarna de werkruimte.",
       "membersFull": "Alle plekken in deze werkruimte zijn nu bezet. Vraag wie je heeft uitgenodigd om een plek vrij te maken.",
       "deleting": "Deze werkruimte wordt verwijderd.",
       "notRestorable": "Deze werkruimte kan niet meer hersteld worden.",
@@ -15560,6 +15969,7 @@
       "takeOverNoAccess": "Ga in het gesprek van de routine zitten voordat je hem overneemt.",
       "agentNotInChannel": "Voeg de agent eerst toe aan het gesprek.",
       "webhookPaused": "Zet de routine aan om hem te testen.",
+      "groupByInvalid": "Typ een pad zoals conversation.id, met een veldnaam tussen elke punt.",
       "continueExtraOff": "Het venster van dit abonnement is op en het lange werk van deze agent gebruikt geen betaald extra gebruik van het abonnement. Hij gaat verder na de reset.",
       "continueExtraUsedUp": "Het venster van dit abonnement is op en het betaalde extra gebruik is ook op of niet beschikbaar. Hij gaat verder na de reset.",
       "actionsNeedApprover": "Alleen de eigenaar van de agent of wie zijn acties goedkeurt, kan een routine zelfstandig laten handelen.",
@@ -18068,10 +18478,6 @@
       "whereDm": "Tussen agents",
       "messages_one": "{{count}} bericht",
       "messages_other": "{{count}} berichten",
-      "origin": "{{from}} vroeg {{to}} iets in #{{channel}} · {{time}}",
-      "originDm": "{{from}} vroeg {{to}} iets · {{time}}",
-      "originNote": "{{from}} gaf {{to}} werk in #{{channel}} · {{time}}",
-      "originNoteDm": "{{from}} gaf {{to}} werk · {{time}}",
       "readOnly": "Alleen lezen.",
       "steer": "Wil je bijsturen? Praat dan met {{name}}.",
       "steer_female": "Wil je bijsturen? Praat dan met {{name}}.",
@@ -18109,6 +18515,8 @@
         "merged": "{{who}} heeft PR #{{number}} ({{repo}}) gemerged op GitHub",
         "closed": "{{who}} sloot PR #{{number}} ({{repo}}) op GitHub",
         "closedIssue": "{{who}} sloot issue #{{number}} ({{repo}}) op GitHub",
+        "checkFailed": "De controle «{{check}}» is niet geslaagd bij PR #{{number}} ({{repo}}) op GitHub",
+        "checkFailedCommit": "De controle «{{check}}» is niet geslaagd bij commit {{commit}} ({{repo}}) op GitHub",
         "ask": "Vraag om antwoord",
         "asked": "{{asker}} vroeg {{name}} om {{who}} op GitHub te antwoorden"
       },
@@ -18204,6 +18612,7 @@
         "runningSkillScriptAny": "Een skillscript uitgevoerd",
         "fetchingFile": "Een bestand opgehaald",
         "proposingMission": "Een missie voorgesteld",
+        "suggestingCodeSession": "Een codesessie voorgesteld",
         "messagingMission": "Een notitie naar de missie gestuurd",
         "updatingPlan": "Het plan bijgewerkt",
         "reportingProgress": "Voortgang gemeld",
@@ -18324,6 +18733,7 @@
       "runningSkillScriptAny": "een skillscript aan het uitvoeren",
       "fetchingFile": "een bestand aan het ophalen",
       "proposingMission": "een missie aan het voorstellen",
+      "suggestingCodeSession": "een codesessie aan het voorstellen",
       "messagingMission": "een notitie naar de missie aan het sturen",
       "updatingPlan": "het plan aan het bijwerken",
       "reportingProgress": "voortgang aan het melden",
@@ -19578,7 +19988,9 @@
     "seatsPaid_one": "{{count}} betaalde plek",
     "seatsPaid_other": "{{count}} betaalde plekken",
     "noLimit": "Geen limiet",
-    "ownBucket": "Op je eigen bucket, zonder limiet van ons"
+    "ownBucket": "Op je eigen bucket, zonder limiet van ons",
+    "connectors": "X deze maand",
+    "shareUsed": "{{share}} gebruikt"
   },
   "referrals": {
     "open": "Aanbevelen en verdienen",
@@ -19893,6 +20305,52 @@
     "screenOff": "Het scherm staat uit",
     "screenOffHelp": "Het gaat aan zodra iemand kijkt."
   },
+  "cliTools": {
+    "read": "Las",
+    "search": "Zocht",
+    "edit": "Bewerkte",
+    "write": "Schreef",
+    "run": "Draaide",
+    "fetch": "Opende",
+    "delegate": "Vroeg een subagent",
+    "skill": "Gebruikte de skill",
+    "workflow": "Draaide een workflow",
+    "other": "Gebruikte",
+    "running": {
+      "read": "Leest",
+      "search": "Zoekt",
+      "edit": "Bewerkt",
+      "write": "Schrijft",
+      "run": "Draait",
+      "fetch": "Opent",
+      "delegate": "Vraagt een subagent",
+      "skill": "Gebruikt de skill",
+      "workflow": "Draait een workflow",
+      "other": "Gebruikt"
+    },
+    "lines": "+{{added}} −{{removed}}",
+    "added": "+{{added}}",
+    "found_one": "{{count}} treffer",
+    "found_other": "{{count}} treffers",
+    "files_one": "{{count}} bestand",
+    "files_other": "{{count}} bestanden",
+    "passed_one": "{{count}} geslaagd",
+    "passed_other": "{{count}} geslaagd",
+    "failedTests_one": "{{count}} mislukt",
+    "failedTests_other": "{{count}} mislukt",
+    "exit": "exitcode {{code}}",
+    "progress": {
+      "block": "Subagents van {{name}}",
+      "block_female": "Subagents van {{name}}",
+      "subagent": "Subagent",
+      "agents_one": "{{count}} subagent",
+      "agents_other": "{{count}} subagents",
+      "done": "{{done}} van {{total}} klaar",
+      "asking_one": "Vraagt een subagent",
+      "asking_other": "Vraagt {{count}} subagents",
+      "workflowShort": "workflow {{done}} van {{total}}"
+    }
+  },
   "agentComputer": {
     "title": "Computer van {{name}}",
     "title_female": "Computer van {{name}}",
@@ -19999,6 +20457,24 @@
       "upright": "Draai rechtop",
       "message": "Bericht aan {{name}}"
     }
+  },
+  "codeTerminal": {
+    "label": "Terminal",
+    "opening": "De terminal openen…",
+    "openAgain": "Opnieuw openen",
+    "ended": "De shell is gestopt",
+    "dropped": "De verbinding met de terminal is verbroken",
+    "moved": "Deze terminal is in een ander venster geopend",
+    "screening": "Terminals staan hier uit",
+    "forbidden": "Alleen wie deze computer mag gebruiken, opent een terminal",
+    "offline": "De computer is offline",
+    "outdated": "Werk de computer bij om de terminal in de map van de sessie te openen",
+    "unavailable": "De computer van deze agent opent geen terminals",
+    "off": "De terminal staat uit op {{computer}}",
+    "busy": "Op deze computer staan al zoveel terminals open als hij aankan. Sluit er een en probeer het opnieuw.",
+    "paused": "De computer is gepauzeerd",
+    "failed": "Kon de terminal niet openen",
+    "agentFolder": "De terminal is geopend in de map van de agent. Werk de computer bij om hem in de map van de sessie te openen."
   },
   "agora": {
     "label": "Nu",
@@ -20121,7 +20597,8 @@
       "stopAll": "Alles stoppen",
       "stopAllOf": "Alles van {{name}} stoppen",
       "open": "Openen in het gesprek",
-      "openManager": "Openen in Taakbeheer"
+      "openManager": "Openen in Taakbeheer",
+      "more": "Meer acties"
     },
     "confirm": {
       "chainTitle_one": "{{name}} en {{count}} hulp stoppen?",

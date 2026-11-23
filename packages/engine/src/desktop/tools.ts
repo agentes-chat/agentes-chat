@@ -15,7 +15,7 @@ import type { Judge } from "../judge";
 import { callWhenBack, type MachineCaller, MachineRequestError } from "../machine-hub";
 import { MachineOfflineError, MachinePausedError } from "../machines";
 import { machineScope, screenKey } from "../right-hand-seats";
-import { getSandboxSettings, SANDBOX_SCOPE, SandboxUnavailableError } from "../sandbox";
+import { codeRunning, RUN_CODE_TOOL, SandboxUnavailableError } from "../sandbox";
 import {
   actsBeforeOpening,
   createLookMemory,
@@ -35,7 +35,7 @@ import {
   type TargetCache,
 } from "../screen";
 import type { JsonSchema } from "../tools/json-schema";
-import { accessWithNeeds, grantedScopeKeys, isAllowed, toolAccess } from "../tools/scopes";
+import { accessWithNeeds, grantedScopeKeys, isAllowed } from "../tools/scopes";
 import type { ToolContext, ToolDefinition, ToolOutput, ToolSource } from "../tools/types";
 import { untrustedBlock } from "../untrusted";
 import { SHARE_HINT, SHARE_INPUT, shareSavedFile } from "../uploads";
@@ -69,7 +69,7 @@ export interface DesktopToolDeps {
 }
 
 /** Driving a desktop runs commands (a terminal window, "Open Terminal Here"): only for agents that may run code. */
-const RUN_CODE = { name: "run_code", scope: SANDBOX_SCOPE };
+const RUN_CODE = RUN_CODE_TOOL;
 /** The longest one action may take: starting an app waits for its window, long text is typed key by key. */
 const ACT_MS = 240_000;
 const MAX_WAIT_SECONDS = MAX_WAIT_MS / 1000;
@@ -270,21 +270,14 @@ export function createDesktopToolSource(deps: DesktopToolDeps): ToolSource {
     ctx: ToolContext,
     granted?: Set<string>,
   ): Promise<{ refused: string } | { approvals: boolean }> {
-    const keys = granted ?? (await grantedScopeKeys(ctx.db, ctx.orgId, ctx.agentId));
-    if (!isAllowed(toolAccess(keys, RUN_CODE))) {
-      return {
-        refused:
-          "Using your desktop runs commands on your computer, and you may not run code. An admin or your owner can give you Run code; say so.",
-      };
-    }
-    const settings = await getSandboxSettings(ctx.db, ctx.orgId);
-    if (!settings.enabled) {
-      return {
-        refused:
-          "Using your desktop runs commands on your computer, and running code is turned off for this organization. Tell the people.",
-      };
-    }
-    return { approvals: settings.requireApproval };
+    const running = await codeRunning(ctx.db, ctx.orgId, ctx.agentId, granted);
+    if (running.refused === null) return { approvals: running.approvals };
+    return {
+      refused:
+        running.refused === "grant"
+          ? "Using your desktop runs commands on your computer, and you may not run code. An admin or your owner can give you Run code; say so."
+          : "Using your desktop runs commands on your computer, and running code is turned off for this organization. Tell the people.",
+    };
   }
 
   /** The agent's desktop for this call (its computer and agent bound), or why it can't be used. */

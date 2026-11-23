@@ -953,6 +953,7 @@ function AgentProfile({
           setWork(null);
           if (section === "brain") onNavigate(tab);
         }}
+        onReopen={() => setWork("brain")}
       />
 
       <Dialog

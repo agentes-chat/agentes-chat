@@ -5,6 +5,7 @@ setupDom();
 
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { ADA_ID, ATLAS_ID, createFakeApi, ENG_ID, ORG_ID, seedRoles, seedState } from "./fake-api";
+import { notification } from "./fakes/notifications";
 import { renderApp, screen, settle } from "./render";
 
 afterEach(() => cleanup());
@@ -24,108 +25,112 @@ const expectHelpLink = (link: HTMLElement, page: string) => {
   expect(link.className).toBe("ac-link ac-link--muted");
 };
 
-describe("Aprovações", () => {
-  const pills = () =>
-    within(screen().getByRole("radiogroup", { name: "Filtro" }))
-      .getAllByRole("radio")
-      .map((b) => b.textContent);
-  /** A request's row in the list. */
-  const row = (id: string) => document.querySelector(`.ap-li[data-id="${id}"]`) as HTMLElement;
-  /** The request open beside the list, by its title. */
-  const pane = (name: string) => {
-    const el = screen().getByRole("region", { name });
-    expect(el.classList.contains("ap-review")).toBe(true);
-    return el;
-  };
+describe("Requests in the inbox (ADR 0218)", () => {
+  /** A request waiting on me: its notification, the inbox's row. */
+  const asked = (approvalId: string, agentId: string) =>
+    notification({
+      id: `n-${approvalId}`,
+      kind: "approval",
+      waiting: true,
+      actors: [{ type: "agent", id: agentId }],
+      source: { approvalId, channelId: ENG_ID },
+      latest: { expiresAt: new Date(Date.now() + 20 * 3_600_000).toISOString() },
+    });
+  /** The seed, with its two waiting requests in my inbox and no proposal among them. */
+  const waiting = () =>
+    seedState({ notifications: [asked("ap-merge", ADA_ID), asked("ap-deploy", ATLAS_ID)], proposals: [] });
+  /** A request's row in the inbox's list. */
+  const row = (approvalId: string) => document.querySelector(`.ib-row[data-n="n-${approvalId}"]`) as HTMLElement;
+  /** The request open beside the list: the conversation's own card. */
+  const card = () => document.querySelector(".ib-read .rq") as HTMLElement;
   const refuse = async (open: HTMLElement) => {
-    await click(within(open).getByRole("button", { name: /^Recusar/ }));
+    await click(within(open).getByRole("button", { name: "Agora não" }));
     await click(within(open).getByRole("button", { name: "Falta teste" }));
     await click(within(open).getByRole("button", { name: /Recusar e avisar/ }));
     await settle(4);
   };
-
-  test("waiting rows, the first open beside them; refusing sends the reason and moves it to the history", async () => {
-    const { state } = await go("approvals");
-    // A zero count isn't shown.
-    expect(pills()).toEqual(["Esperando você2", "Aprovados1", "Recusados", "Expirados", "Todos3"]);
-    const merge = row("ap-merge");
-    expect(merge.textContent).toContain("Ada");
-    expect(merge.querySelector(".ap-li__left")?.textContent).toMatch(/^\d+ h$/);
-    // Deploy, closest to expiring, opens first. It is high risk: the button asks for a hold.
-    const deploy = pane("Fazer um deploy");
-    expect(within(deploy).getByRole("button", { name: "Aprovar deploy: segure para confirmar" })).toBeTruthy();
-    expect(deploy.querySelector(".ac-facts")?.textContent).toContain("Vai para produção");
-    // Whether it can be undone is a chip after the title, not a fact taking a column of the strip.
-    expect(deploy.querySelector(".ap-review__title + .ap-review__undo")?.textContent).toBe("Reversível");
-    expect([...deploy.querySelectorAll(".ac-facts__label")].map((l) => l.textContent)).not.toContain("Desfazer");
-
-    await click(merge);
+  /** A filter of the menu beside the inbox's title. */
+  const pickFilter = async (name: RegExp) => {
+    const trigger = document.querySelector(".ib-filter") as HTMLElement;
+    trigger.focus();
+    await act(async () => {
+      fireEvent.keyDown(trigger, { key: "Enter" });
+      fireEvent.keyUp(trigger, { key: "Enter" });
+    });
     await settle(2);
-    const open = pane("Fazer um merge");
-    expect(open.querySelector(".ap-review__by")?.textContent).toContain("#eng");
-    expect(within(open).getByRole("button", { name: "Aprovar merge" })).toBeTruthy();
-    await refuse(open);
+    await click(within(screen().getByRole("menu")).getByRole("menuitemradio", { name }));
+    await settle(4);
+  };
+
+  test("waiting rows, one open beside them; refusing sends the reason and moves it to the decided requests", async () => {
+    const { state } = await go("notifications", waiting());
+    const list = screen().getByRole("region", { name: "Esperando você" });
+    expect(list.contains(row("ap-merge"))).toBe(true);
+    expect(list.contains(row("ap-deploy"))).toBe(true);
+    expect(row("ap-merge").textContent).toContain("Ada");
+    // How long is left to decide, where anything else says when it came.
+    expect(row("ap-merge").querySelector(".ib-row__end")?.textContent).toMatch(/^\d+ h$/);
+    // The deploy is high risk: the button asks for a hold.
+    await click(row("ap-deploy"));
+    await settle(2);
+    expect(row("ap-deploy").getAttribute("aria-current")).toBe("true");
+    expect(card().getAttribute("data-ask-id")).toBe("ap-deploy");
+    expect(within(card()).getByRole("button", { name: "Aprovar deploy: segure para confirmar" })).toBeTruthy();
+
+    await click(row("ap-merge"));
+    await settle(2);
+    expect(row("ap-merge").getAttribute("aria-current")).toBe("true");
+    expect(row("ap-deploy").getAttribute("aria-current")).toBeNull();
+    expect(card().getAttribute("data-ask-id")).toBe("ap-merge");
+    expect(within(card()).getByRole("button", { name: "Aprovar merge" })).toBeTruthy();
+    // Beside the list, never over it.
+    expect(screen().queryByRole("dialog")).toBeNull();
+    await refuse(card());
     expect(state.calls.find((c) => c.method === "approvals.refuse")?.args).toEqual([ORG_ID, "ap-merge", "Falta teste"]);
-    expect(pills()).toEqual(["Esperando você1", "Aprovados1", "Recusados1", "Expirados", "Todos3"]);
-    // Under Recent now, refused.
-    expect(row("ap-merge").closest(".ap-list__section")?.querySelector("h2")?.textContent).toBe("Decididos há pouco");
-    expect(row("ap-merge").textContent).toContain("Recusado");
+    // Among the decided requests now, refused today.
+    await pickFilter(/Pedidos decididos/);
+    const decided = document.querySelector('.ap-li[data-id="ap-merge"]') as HTMLElement;
+    expect(decided.closest("section")?.getAttribute("aria-label")).toBe("Hoje");
+    expect(decided.textContent).toContain("Recusado");
+    expect(document.querySelector('.ap-li[data-id="ap-deploy"]')).toBeNull();
   });
 
-  test("nothing waiting: All decided and one link to how approvals work; the header says no more", async () => {
-    const state = seedState();
-    state.approvals = [];
-    await go("approvals", state);
-    const empty = document.querySelector(".ac-empty") as HTMLElement;
-    expect(empty.querySelector(".ac-empty__title")?.textContent).toBe("Tudo decidido");
-    const link = within(empty).getByRole("link", { name: "Como as aprovações funcionam" });
-    expectHelpLink(link, "approvals");
-    expect(empty.querySelector(".ac-empty__text")?.textContent).toBe("Como as aprovações funcionam");
-    expect(document.querySelector(".ac-pagehead")?.querySelectorAll("p")).toHaveLength(1);
-  });
-
-  test("refusing asks why, optional; approving covers this once, with these values", async () => {
-    await go("approvals?open=ap-merge");
-    const open = pane("Fazer um merge");
-    // The bar holds only its buttons: what approving covers is Aprovar's tip and description.
-    expect(open.querySelector(".ap-bar p")).toBeNull();
-    expect(open.querySelector("[data-approve]")?.getAttribute("aria-description")).toBe(
-      "Ada vai fazer um merge, só desta vez e com estes valores.",
-    );
-    await click(within(open).getByRole("button", { name: /^Recusar/ }));
+  test("refusing asks why, optional, and says the agent learns from it", async () => {
+    await go("approvals?open=ap-merge", waiting());
+    const open = card();
+    await click(within(open).getByRole("button", { name: "Agora não" }));
     await settle(2);
     const why = within(open).getByLabelText("Por que não?");
     expect(why.getAttribute("placeholder")).toBe("Opcional");
     expect(open.textContent).toContain("Vira uma lição na memória da Ada");
+    // Back out, and the decision is there again.
+    await click(within(open).getByRole("button", { name: "Voltar" }));
+    expect(within(open).queryByLabelText("Por que não?")).toBeNull();
+    expect(open.querySelector('[data-approve="ap-merge"]')).not.toBeNull();
   });
 
   test("a normal-risk approval goes with one click", async () => {
-    const { state } = await go("approvals?open=ap-merge");
-    await click(within(pane("Fazer um merge")).getByRole("button", { name: "Aprovar merge" }));
+    const { state } = await go("approvals?open=ap-merge", waiting());
+    await click(within(card()).getByRole("button", { name: "Aprovar merge" }));
     await settle(4);
     expect(state.calls.find((c) => c.method === "approvals.approve")?.args[1]).toBe("ap-merge");
   });
 
-  test("a row opens its request beside the list, kept in ?open=, with no dialog", async () => {
-    const { router } = await go("approvals");
-    await click(row("ap-merge"));
-    await settle(2);
-    expect(router.state.location.search).toMatchObject({ open: "ap-merge" });
-    const open = pane("Fazer um merge");
-    expect(open.textContent).toContain("O que vai fazer");
-    expect(open.textContent).toContain("Como chegou aqui");
-    expect(within(open).getByRole("button", { name: "Aprovar merge" })).toBeTruthy();
-    expect(screen().queryByRole("dialog")).toBeNull();
-  });
-
-  test("a link with ?open= opens that request; refusing works from its decision bar", async () => {
-    const { state } = await go("approvals?open=ap-merge");
-    await refuse(pane("Fazer um merge"));
-    expect(state.calls.find((c) => c.method === "approvals.refuse")?.args).toEqual([ORG_ID, "ap-merge", "Falta teste"]);
+  test("a link to a request's old address opens that request in the inbox; refusing works from its card", async () => {
+    for (const id of ["ap-merge", "ap-deploy"]) {
+      const { state, router } = await go(`approvals?open=${id}`, waiting());
+      expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/notifications`);
+      expect(router.state.location.search).toMatchObject({ approval: id });
+      expect(row(id).getAttribute("aria-current")).toBe("true");
+      expect(card().getAttribute("data-ask-id")).toBe(id);
+      await refuse(card());
+      expect(state.calls.find((c) => c.method === "approvals.refuse")?.args).toEqual([ORG_ID, id, "Falta teste"]);
+      cleanup();
+    }
   });
 
   test("a connector tool that runs another by name reads as that action, in words, with the tool behind Technical details", async () => {
-    const state = seedState();
+    const state = seedState({ notifications: [asked("ap-trace", ADA_ID)], proposals: [] });
     const merge = state.approvals[0];
     if (!merge) throw new Error("no approval");
     state.approvals = [
@@ -139,33 +144,31 @@ describe("Aprovações", () => {
         params: { name: "get_event_stacktrace", arguments: { issue: "ACME-177" } },
       },
     ];
-    await go("approvals", state);
-    const line = row("ap-trace");
-    expect(line.querySelector(".ap-li__line")?.textContent).toBe("Ada quer ver stack trace do evento");
-    expect(line.textContent).not.toContain("custom:");
-    expect(line.textContent).not.toContain("get_event_stacktrace");
-    const open = pane("Ver stack trace do evento");
-    const facts = open.querySelector(".ac-facts") as HTMLElement;
-    expect(facts.textContent).toContain("Só lê");
-    expect(facts.textContent).not.toContain("custom:");
-    const values = [...open.querySelectorAll(".ap-exact__rows > div")].map((d) => [
+    await go("notifications", state);
+    const open = card();
+    expect(open.querySelector(".rq__well b")?.textContent).toBe("Ver stack trace do evento");
+    expect(open.textContent).not.toContain("custom:");
+    expect(open.textContent).not.toContain("get_event_stacktrace");
+    await click(within(open).getByRole("button", { name: "Ver detalhes" }));
+    const details = open.querySelector(".rq__details") as HTMLElement;
+    expect(details.querySelector(".ap-exact__via")?.textContent).toContain("Só lê");
+    expect(details.querySelector(".ap-exact__via")?.textContent).not.toContain("custom:");
+    const values = [...details.querySelectorAll(".ap-exact__rows > div")].map((d) => [
       d.querySelector("dt")?.textContent,
       d.querySelector("dd")?.textContent,
     ]);
     expect(values).toContainEqual(["Issue", "ACME-177"]);
-    expect(open.querySelector(".ap-review__title")?.textContent).not.toContain("get_event_stacktrace");
-    expect(open.querySelector(".ap-exact__tech pre")?.textContent).toContain("get_event_stacktrace");
+    expect(details.querySelector(".ap-exact__tech pre")?.textContent).toContain("get_event_stacktrace");
   });
 
-  test("approvals you can't decide show who they wait for, without buttons", async () => {
-    const state = seedState();
+  test("a request you can't decide shows who it waits for, without buttons", async () => {
+    const state = waiting();
     for (const a of state.approvals) a.canDecide = false;
-    await go("approvals", state);
-    expect(row("ap-merge").querySelector(".ap-li__left")?.textContent).toBe("Aguardando João");
-    await click(row("ap-merge"));
-    await settle(2);
-    const open = pane("Fazer um merge");
-    expect(within(open).queryByRole("button", { name: /^Recusar/ })).toBeNull();
+    await go("approvals?open=ap-merge", state);
+    const open = card();
+    expect(open.getAttribute("data-ask-id")).toBe("ap-merge");
+    expect(open.querySelector(".rq__state--other")?.textContent).toBe("esperando João");
+    expect(within(open).queryByRole("button", { name: "Agora não" })).toBeNull();
     expect(open.querySelector("[data-approve]")).toBeNull();
   });
 });
@@ -212,8 +215,9 @@ describe("Memória e propostas", () => {
 
   test("proposals: the change drawn as Markdown, green and red, edit before accepting, accept", async () => {
     const r = await go(`proposals?agent=${ADA_ID}`);
-    expect(screen().getByRole("heading", { level: 1, name: "Aprovações" })).toBeTruthy();
-    expect(screen().getByRole("tab", { name: /Propostas de melhoria/, selected: true }).textContent).toContain("2");
+    // A page of its own, with no tabs: requests are decided in the inbox (ADR 0218).
+    expect(screen().getByRole("heading", { level: 1, name: "Propostas de melhoria" })).toBeTruthy();
+    expect(screen().queryByRole("tab")).toBeNull();
     expect(screen().getByRole("link", { name: "O que a Ada sabe" })).toBeTruthy();
     const detail = screen().getByRole("article");
     // Who proposes and what it changes, on the requests' head; that it waits on me, in its list row, as words.
@@ -278,20 +282,12 @@ describe("Memória e propostas (fase 5)", () => {
     expect(r.state.calls.some((c) => c.method === "proposals.accept")).toBe(true);
   });
 
-  test("proposals are a tab of Aprovações, and a reason the server wrote reads in the person's language", async () => {
+  test("a reason the server wrote reads in the person's language", async () => {
     const state = seedState();
     const [first] = state.proposals;
     if (first) Object.assign(first, { why: "Remover o sistema antigo.", whyCode: "corrected" });
-    const r = await go("approvals", state);
-    await act(async () =>
-      fireEvent.mouseDown(screen().getByRole("tab", { name: /Propostas de melhoria/ }), { button: 0 }),
-    );
-    await settle(6);
-    expect(r.router.state.location.pathname).toBe(`/org/${ORG_ID}/proposals`);
+    await go("proposals", state);
     expect(screen().getByRole("article").textContent).toContain("Uma pessoa corrigiu: Remover o sistema antigo.");
-    await act(async () => fireEvent.mouseDown(screen().getByRole("tab", { name: /Pedidos/ }), { button: 0 }));
-    await settle(6);
-    expect(r.router.state.location.pathname).toBe(`/org/${ORG_ID}/approvals`);
   });
 
   test("stale rows aren't listed, what waits on you comes first and says so, and an empty tab has no count", async () => {
@@ -325,15 +321,7 @@ describe("Memória e propostas (fase 5)", () => {
     expect(within(bar as HTMLElement).getByRole("button", { name: "Recusar" })).toBeTruthy();
   });
 
-  test("a tab with nothing waiting shows no count", async () => {
-    const state = seedState();
-    state.approvals = [];
-    for (const p of state.proposals) p.canDecide = false;
-    await go("proposals", state);
-    expect(screen().getByRole("tab", { name: /Pedidos/ }).textContent).toBe("Pedidos");
-  });
-
-  test("Aceitar todas at the tabs' right asks once, then decides every waiting proposal oldest first", async () => {
+  test("Aceitar todas among the header's actions asks once, then decides every waiting proposal oldest first", async () => {
     const state = seedState();
     const [newer, older] = state.proposals;
     if (!newer || !older) throw new Error("two proposals expected");
@@ -342,7 +330,7 @@ describe("Memória e propostas (fase 5)", () => {
     Object.assign(older, { createdAt: "2026-11-01T10:00:00.000Z" });
     const r = await go("proposals", state);
     const bar = screen().getByRole("group", { name: "Decidir todas as propostas" });
-    expect(bar.closest(".tabs-bar")).not.toBeNull();
+    expect(bar.closest(".ac-pagehead__actions")).not.toBeNull();
     await click(within(bar).getByRole("button", { name: "Aceitar todas" }));
     expect(bar.textContent).toContain("Aceitar as 2 propostas? Cada uma muda na hora.");
     expect(r.state.calls.some((c) => c.method === "proposals.accept")).toBe(false);

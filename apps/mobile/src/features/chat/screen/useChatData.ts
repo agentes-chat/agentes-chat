@@ -8,6 +8,7 @@ import {
   type LiveRun,
   MESSAGES_PAGE,
   type Message,
+  replyingUnder,
   useAgentsBrowserHandoffs,
   type useApi,
   useChannelThreads,
@@ -187,6 +188,12 @@ export function useChatData({
   const consults = useMemo(
     () => live.consults.filter((x) => (isThread ? x.threadId === threadId : inMainTimeline(x, topIds))),
     [live.consults, isThread, threadId, topIds],
+  );
+  // A channel whose agents reply in threads (ADR 0214): "Ada is replying in the thread" under the message that asked,
+  // until its thread has a link of its own.
+  const replying = useMemo(
+    () => (isThread ? new Map<string, string[]>() : replyingUnder(live.runs, topIds, linkThreads)),
+    [live.runs, isThread, topIds, linkThreads],
   );
 
   // "Parar" in the working line (as on the web): who manages the agent (the server's `canManage`), its owner, or who
@@ -391,6 +398,7 @@ export function useChatData({
     planHeld,
     quiet,
     readable,
+    replying,
     rhythm,
     rightHand,
     rightHandId,

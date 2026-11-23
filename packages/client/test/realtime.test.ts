@@ -1,16 +1,19 @@
 import { describe, expect, test } from "bun:test";
-import type { ChannelEvent, Message } from "../src/index";
+import type { ChannelEvent, LiveRun, Message } from "../src/index";
 import {
   agentStateIn,
   agentStateOfRun,
   applyChannelEvent,
+  BRIEF_GAP_MS,
   BROWSER_UNWATCH_DELAY_MS,
+  CATCH_UP_SPREAD_MS,
   emptyStreams,
   expectReply,
   MISSED_MESSAGE_GRACE_MS,
   parseServerFrame,
   RealtimeConnection,
   realtimeUrl,
+  replyingUnder,
   retargetProvisional,
   runningAgents,
   runsInChannel,
@@ -545,6 +548,80 @@ describe("RealtimeConnection", () => {
     expect(statuses).toEqual(["connecting", "open", "reconnecting", "open"]);
   });
 
+  test("catches up at a random point within a few seconds: everything after a long drop, what is shown after a brief one", () => {
+    const { factory, sockets } = fakeSockets();
+    const clock = manualTimers();
+    let now = 1_000_000;
+    let random = 0.5;
+    const conn = new RealtimeConnection({
+      url: "ws://x",
+      createSocket: factory,
+      timers: clock.timers,
+      pingMs: 0,
+      backoffMs: [100],
+      now: () => now,
+      random: () => random,
+    });
+    const caughtUp: boolean[] = [];
+    conn.onCatchUp((full) => caughtUp.push(full));
+    conn.start();
+    sockets[0]?.open();
+    const reconnect = (code: number | undefined, downMs: number) => {
+      sockets.at(-1)?.drop(code);
+      now += downMs;
+      clock.runNext();
+      sockets.at(-1)?.open();
+    };
+    // Back within a second from a network blip: only what is on screen, at half of the spread.
+    reconnect(undefined, 1000);
+    expect(clock.pending.map((p) => p.ms)).toEqual([CATCH_UP_SPREAD_MS / 2]);
+    clock.runNext();
+    expect(caughtUp).toEqual([false]);
+    // Down longer than a brief drop: everything.
+    random = 0.1;
+    reconnect(undefined, BRIEF_GAP_MS);
+    expect(clock.pending.map((p) => p.ms)).toEqual([CATCH_UP_SPREAD_MS / 10]);
+    clock.runNext();
+    expect(caughtUp).toEqual([false, true]);
+    // Closed by the server for missed events, however briefly: everything.
+    reconnect(1012, 500);
+    clock.runNext();
+    expect(caughtUp).toEqual([false, true, true]);
+    // The server says it missed events, socket open: one catch-up for several, everything.
+    sockets.at(-1)?.push({ type: "resync" });
+    sockets.at(-1)?.push({ type: "resync" });
+    expect(clock.pending).toHaveLength(1);
+    clock.runNext();
+    expect(caughtUp).toEqual([false, true, true, true]);
+  });
+
+  test("a socket that went silent (a sleep) counts as down since its answer was due, not since its close", () => {
+    const { factory, sockets } = fakeSockets();
+    const clock = manualTimers();
+    let now = 1_000_000;
+    const conn = new RealtimeConnection({
+      url: "ws://x",
+      createSocket: factory,
+      timers: clock.timers,
+      pingMs: 30_000,
+      pongTimeoutMs: 10_000,
+      backoffMs: [100],
+      now: () => now,
+      random: () => 0,
+    });
+    const caughtUp: boolean[] = [];
+    conn.onCatchUp((full) => caughtUp.push(full));
+    conn.start();
+    sockets[0]?.open();
+    // Two hours asleep; on waking the browser closes the socket and it reconnects at once.
+    now += 2 * 3600_000;
+    sockets[0]?.drop();
+    clock.runNext();
+    sockets[1]?.open();
+    clock.runNext();
+    expect(caughtUp).toEqual([true]);
+  });
+
   test("says when the server confirms a channel's subscription, again after a reconnect: its events start there", () => {
     const { factory, sockets } = fakeSockets();
     const clock = manualTimers();
@@ -1002,5 +1079,30 @@ describe("user events and resumed runs", () => {
     s = applyChannelEvent(s, { type: "agent.run", ...base, status: "running" });
     s = applyChannelEvent(s, { type: "agent.typing", ...base } as ChannelEvent);
     expect(runsInChannel(s, "c1")[0]?.status).toBe("running");
+  });
+});
+
+describe("agents replying in a thread under the message that asked them (ADR 0214)", () => {
+  const run = (over: Partial<LiveRun>): LiveRun => ({
+    runId: "r1",
+    agentId: "ada",
+    channelId: "c1",
+    threadId: "m1",
+    status: "running",
+    ...over,
+  });
+
+  test("under a message of the main timeline whose thread has no link yet, each agent once", () => {
+    const runs = [run({}), run({ runId: "r2", agentId: "ben" }), run({ runId: "r3" })];
+    expect(replyingUnder(runs, new Set(["m1"]), new Set())).toEqual(new Map([["m1", ["ada", "ben"]]]));
+  });
+
+  test("nothing once the thread has its link, for a run that answers in the main timeline, a guess or a failure", () => {
+    const top = new Set(["m1"]);
+    expect(replyingUnder([run({})], top, new Set(["m1"])).size).toBe(0);
+    expect(replyingUnder([run({ replyInThread: false })], top, new Set()).size).toBe(0);
+    expect(replyingUnder([run({ provisional: true })], top, new Set()).size).toBe(0);
+    expect(replyingUnder([run({ status: "failed" })], top, new Set()).size).toBe(0);
+    expect(replyingUnder([run({ threadId: "reply-in-a-thread" })], top, new Set()).size).toBe(0);
   });
 });

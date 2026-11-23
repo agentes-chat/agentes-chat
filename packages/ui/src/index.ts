@@ -399,6 +399,7 @@ export {
   type ToolBlockItem,
   type ToolBlockLine,
   type ToolBlockState,
+  ToolLink,
 } from "./components/ToolBlock";
 export {
   FilterToggle,
@@ -466,6 +467,7 @@ export {
   formatShortcutHint,
   insertText,
   linkSelection,
+  pasteLink,
   prefixLines,
   type TextEdit,
   wrapSelection,
@@ -583,6 +585,7 @@ export {
   zoneOptions,
 } from "./timezones";
 export { installTitleTips, TITLE_TIP_GRACE_MS, TITLE_TIP_ID, TITLE_TIP_OPEN_MS } from "./title-tips";
+export { dragsFiles, pastedFiles, transferFiles } from "./transfer";
 export { DitherLine, fillEnds, paintCells, paintLineArea, useElementWidth } from "./widgets/ChartPieces";
 export { formatWidgetNumber, formatWithUnit, useCountUp, widgetDigits } from "./widgets/format";
 export { ditherTile, WIDGET_CELL, widgetTileVars, widgetTones } from "./widgets/tiles";

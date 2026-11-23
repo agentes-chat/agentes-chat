@@ -392,6 +392,7 @@ export function createSkillToolSource(
               content:
                 "This turn read outside content (the web, mail or a connected app), so it can't make a skill: a skill loads as trusted instructions. Show the person the skill's text so they add it in Settings › Skills, or ask them to ask again in a new message.",
               isError: true,
+              data: { code: "skill.outside_content" },
             };
           }
           const skill = await createSkillAsAgent({ db: ctx.db, judge: deps.judge }, ctx, {

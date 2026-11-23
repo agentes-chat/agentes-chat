@@ -371,7 +371,8 @@ export function HaveList({
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const list = sortHave(items);
-  const many = items.length > HAVE_SHOWN;
+  // Without a way to see the rest, every row shows: a list never hides what can't be reached.
+  const many = items.length > HAVE_SHOWN && onAll !== undefined;
   const row = (i: HaveItem, whose: boolean) => (
     <HaveRow
       key={i.id}

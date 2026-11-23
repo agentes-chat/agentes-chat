@@ -1846,7 +1846,16 @@ export function pickDistinct(candidates: ContextItem[], known: string): ContextI
 }
 
 /** Tools whose calls say nothing about how a task was done. */
-const STEP_NOISE = ["search_context", "get_summary", "expand", "react", "ask_user", "say_now", "save_how_to"];
+const STEP_NOISE = [
+  "search_context",
+  "get_summary",
+  "expand",
+  "react",
+  "ask_user",
+  "say_now",
+  "save_how_to",
+  "suggest_code_session",
+];
 /** Words too common to tell one step from another (English and Portuguese). */
 const STEP_STOP_WORDS = new Set(
   "the and for from with that this you your what how com que para por uma dos das nos nas como sobre isso esse essa".split(

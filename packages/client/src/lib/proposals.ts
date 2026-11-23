@@ -12,8 +12,10 @@ import type {
   ProposalSettingLine,
 } from "../api/types";
 import { audienceAdmits } from "./audience";
+import { effortLevel } from "./brain-advanced";
 import { formatTime, formatUsd, joinNames } from "./format";
 import { agentGrammar } from "./grammar";
+import { isAuto } from "./providers";
 import { holdersOf } from "./roles";
 import { scopeText } from "./scopes";
 import { modeKey } from "./workspace-mode";
@@ -330,6 +332,10 @@ export function settingLineText(
     switch (line.field) {
       case "model":
         return typeof v === "string" && v ? names.model(v) : t("rightHand.value.none");
+      case "effort":
+        return t(
+          `agentPage.work.brain.efforts.${isAuto(v as string) ? "auto" : typeof v === "string" && v ? effortLevel(v) : "none"}`,
+        );
       case "budget":
         return typeof v === "number" ? formatUsd(locale, v / NANO_PER_USD) : t("rightHand.value.budgetDefault");
       case "owner":

@@ -403,6 +403,7 @@ export type OpenTarget =
   | { to: "/org/$orgId/dm/person/$userId"; params: { userId: string }; search?: { m: string } }
   | { to: "/org/$orgId/issues/$number"; params: { number: string }; search?: { m: string } }
   | { to: "/org/$orgId/drive/$fileId"; params: { fileId: string }; search?: { m: string } }
+  | { to: "/org/$orgId/code/$sessionId"; params: { sessionId: string } }
   | { to: "/org/$orgId/approvals"; search?: { open: string } }
   | { to: "/org/$orgId/proposals" }
   | { to: "/org/$orgId/routines"; search?: { open: string } }
@@ -553,6 +554,8 @@ export function openTarget(n: AppNotification): OpenTarget | null {
     return { to: "/org/$orgId/issues/$number", params: { number: String(s.issueNumber) }, ...at };
   // One in a live file's conversation (ADR 0199) opens the file with its conversation at that message.
   if (s.artifactId) return { to: "/org/$orgId/drive/$fileId", params: { fileId: s.artifactId }, ...at };
+  // One in a code session's conversation (ADR 0215) opens the session on the Code page.
+  if (s.codeSessionId) return { to: "/org/$orgId/code/$sessionId", params: { sessionId: s.codeSessionId } };
   // A routine that failed, paused or waits for its computer: the routine in Rotinas (its state and fix).
   // What a routine found opens the agent's message in its conversation (below); without one, the routine.
   if (ROUTINE_TROUBLE.has(n.kind) || (n.kind === "routine_finished" && !s.messageId && !s.threadId))

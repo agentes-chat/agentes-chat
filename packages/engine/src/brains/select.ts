@@ -24,6 +24,7 @@ import {
 } from "@agenteschat/providers/plans";
 import { planFull, planState } from "@agenteschat/ui/plan-state";
 import type { Agent } from "../agents";
+import type { CodeSessionContext } from "../code-sessions";
 import type { ModelGateway } from "../gateway";
 import type { MachineStatus } from "../machine-hub";
 import { pausedMessage } from "../machines";
@@ -74,9 +75,25 @@ export function brainFor(
 export const runBrainOf = (run: { brain?: string | null }, agent?: { brain?: string | null } | null): BrainKind =>
   kindOf(run.brain ?? agent?.brain);
 
-/** Stores the brain a run thinks with now (`agent_runs.brain`). */
-export async function recordRunBrain(db: Executor, runId: string, kind: BrainKind) {
-  await db.update(schema.agentRuns).set({ brain: kind }).where(eq(schema.agentRuns.id, runId));
+/**
+ * A version as a CLI's `--version` gives it, out of its line (`2.1.308 (Claude Code)`, `codex-cli 0.164.0`,
+ * `2026.10.22-27dcf5f`): the line itself is the computer's text, never stored whole.
+ */
+const CLI_VERSION_SQL = "[0-9]+(?:\\.[0-9]+)+(?:[-+][0-9A-Za-z.]+)?";
+
+/**
+ * Stores the brain a run thinks with now (`agent_runs.brain`), and for a computer brain on `machineId` its CLI and the
+ * version that computer last reported (`agent_runs.cli`, `<cli> <version>`, null when it said none): the failures by
+ * CLI version (`operatorCliRuns`).
+ */
+export async function recordRunBrain(db: Executor, runId: string, kind: BrainKind, machineId?: string) {
+  const name = kind === "model" ? null : kind === "claude_code" ? "claude" : kind;
+  const cli =
+    name && machineId
+      ? sql`(select ${name}::text || ' ' || substring(${schema.machines.executors} -> ${name}::text ->> 'version' from ${CLI_VERSION_SQL}::text)
+          from ${schema.machines} where ${schema.machines.id} = ${machineId})`
+      : null;
+  await db.update(schema.agentRuns).set({ brain: kind, cli }).where(eq(schema.agentRuns.id, runId));
 }
 
 /**
@@ -783,9 +800,17 @@ export async function resolveBrain(
   /**
    * `fresh`: a new computer session whatever the conversation had (routine runs). `promptKey`: the run's
    * (`Transcript.promptKey`); the conversation's session is picked up only when it started with the same. `peek`:
-   * nothing is kept on the run (the session it would most likely get, before its prompt key is known).
+   * nothing is kept on the run (the session it would most likely get, before its prompt key is known). `codeSession`:
+   * the run's code session, as its executor read it (`codeSessionContext`): none, a turn in the agent's own folder.
    */
-  options: { fresh?: boolean; now?: Date; promptKey?: string; thinker?: Agent; peek?: boolean } = {},
+  options: {
+    fresh?: boolean;
+    now?: Date;
+    promptKey?: string;
+    thinker?: Agent;
+    peek?: boolean;
+    codeSession?: CodeSessionContext | null;
+  } = {},
 ): Promise<BrainPlan> {
   const mission: MissionTurn | null = await missionTurnFor(deps.db, run).catch(() => null);
   // The right hand: the AI of the person whose DM this is, else the workspace's; on a plan, its computer and owner.
@@ -798,7 +823,10 @@ export async function resolveBrain(
     return { kind, ...base, ...(effort ? { effort } : {}) };
   }
   const model = brainModelFor(kind, agent, mission);
-  const machineId = mission?.session?.machineId ?? agent.machineId ?? null;
+  // A code session's conversation (ADR 0215) is pinned to the session's computer and worktree, like a mission's main
+  // session: its own agent's turn runs there (an agent called in, or a mission's thread, keeps its own).
+  const place = mission?.session ? null : (options.codeSession?.place ?? null);
+  const machineId = mission?.session?.machineId ?? place?.machineId ?? agent.machineId ?? null;
   const [status, account] = await Promise.all([
     machineId && deps.machines ? deps.machines.status(machineId).catch(() => null) : null,
     brainAccountFor(deps.db, agent, kind, machineId),
@@ -914,7 +942,9 @@ export async function resolveBrain(
             options.now ?? new Date(),
           )),
           machineId,
-          cwd: "",
+          // Any other chat turn starts in the agent's folder.
+          cwd: place?.cwd ?? "",
+          ...(place ? { codeSession: true } : {}),
         }
       : undefined);
   return {

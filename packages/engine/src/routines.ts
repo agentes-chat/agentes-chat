@@ -88,6 +88,7 @@ import {
   type HookMethod,
   liveHookUrl,
   type RoutineHookConfig,
+  releaseHookCalls,
   routineHookKeys,
   WEBHOOK_EVENT,
 } from "./routine-hooks";
@@ -160,6 +161,8 @@ export const ROUTINE_EVENTS = [
   "email.received",
   /** A call to the routine's own address (only through a `webhook` trigger: ADR 0106). */
   "webhook.received",
+  /** A message to the workspace's Telegram bot: a private chat with it, or one that mentions or answers it (ADR 0170). */
+  "telegram.message",
 ] as const;
 export type RoutineEvent = (typeof ROUTINE_EVENTS)[number];
 /**
@@ -229,7 +232,7 @@ export type RoutineTrigger =
    * A call to its own address (ADR 0106), stored as the event `webhook.received` plus a `routine_hooks` row. `url`
    * only for who may manage it (null for everyone else and for agents); `signed`: calls must carry a signature.
    */
-  | { type: "webhook"; url: string | null; signed: boolean; methods: HookMethod[] }
+  | { type: "webhook"; url: string | null; signed: boolean; methods: HookMethod[]; groupBy: string | null }
   /**
    * A connector's event (ADR 0130): stored as a webhook routine whose address the provider was given through the
    * connection (`routine_hooks.source`). `status` `error`: the provider refused it (`lastError`).
@@ -397,9 +400,10 @@ export type RoutineTriggerInput =
   | { type: "email"; accountId: string; folder?: string; filter?: MailFilter }
   /**
    * A call to an address of its own (made with it, kept while its trigger changes). `methods`: the HTTP methods it
-   * answers (default POST; left out on a change, what it had).
+   * answers (default POST; left out on a change, what it had). `groupBy`: a dot path into a call's data; calls with
+   * the same value run in order, different ones side by side (null: one line; left out on a change, what it had).
    */
-  | { type: "webhook"; methods?: string[] }
+  | { type: "webhook"; methods?: string[]; groupBy?: string | null }
   /** A connector's event (ADR 0130), from a connection the routine's agent may read. */
   | {
       type: "connector";
@@ -468,7 +472,13 @@ export function routineSlots(r: Pick<RoutineRow, "rule" | "cron" | "timezone">, 
 function triggerOf(
   r: RoutineRow,
   watch?: MailWatchRow,
-  hook?: { url: string | null; signed: boolean; methods: HookMethod[]; source?: ConnectorTriggerSource | null },
+  hook?: {
+    url: string | null;
+    signed: boolean;
+    methods: HookMethod[];
+    groupBy?: string | null;
+    source?: ConnectorTriggerSource | null;
+  },
 ): RoutineTrigger {
   if (r.triggerType === "event" && r.event === WEBHOOK_EVENT && hook?.source) {
     const s = hook.source;
@@ -488,6 +498,7 @@ function triggerOf(
       url: hook?.url ?? null,
       signed: hook?.signed ?? false,
       methods: hook?.methods ?? [...DEFAULT_HOOK_METHODS],
+      groupBy: hook?.groupBy ?? null,
     };
   }
   if (r.triggerType === "event" && r.event === "email.received" && watch) {
@@ -1093,6 +1104,7 @@ async function views(
           url: hidden ? null : (hookUrls.get(r.id) ?? null),
           signed: hookKey.signed,
           methods: hookKey.methods,
+          groupBy: hookKey.groupBy,
           // What its creator typed (filter, inbox) and the provider's refusal go, as its prompt does, to readers only.
           source: hidden
             ? null
@@ -1476,7 +1488,9 @@ export async function createRoutine(
       db,
       hooks,
       row,
-      input.trigger.type === "webhook" ? input.trigger.methods : DEFAULT_HOOK_METHODS,
+      input.trigger.type === "webhook"
+        ? { methods: input.trigger.methods, groupBy: input.trigger.groupBy }
+        : { methods: DEFAULT_HOOK_METHODS },
     );
   if (input.trigger.type === "connector") await syncConnector(deps, row, connectorSource(input.trigger));
   await recordAudit(db, {
@@ -1862,7 +1876,9 @@ export async function updateRoutine(
       db,
       hooks,
       row,
-      patch.trigger?.type === "webhook" ? patch.trigger.methods : DEFAULT_HOOK_METHODS,
+      patch.trigger?.type === "webhook"
+        ? { methods: patch.trigger.methods, groupBy: patch.trigger.groupBy }
+        : { methods: DEFAULT_HOOK_METHODS },
     );
   if (connectorTrigger || hadConnector) await syncConnector(deps, row, connectorTrigger);
   // Pausing also stops its work in progress (§6.7); resuming clears why it paused itself.
@@ -2315,8 +2331,9 @@ async function fireClaimedRun(deps: RoutineDeps, run: RunRow) {
   const { db } = deps;
   const skip = async (code: string) => {
     const skipped = await skipRoutineRun(db, run.id, code);
-    // The emails it carried wait for the next run (§6.8).
+    // The emails it carried wait for the next run (§6.8), its webhook calls for their group's next call.
     if (skipped && run.event?.type === "email.received") await releaseRoutineEmails(deps, run.id);
+    if (skipped && run.event?.type === WEBHOOK_EVENT) await releaseHookCalls(deps, run.id, skipped);
     return skipped;
   };
   const [routine] = await db.select().from(routines).where(eq(routines.id, run.routineId));

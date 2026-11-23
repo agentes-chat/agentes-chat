@@ -14,7 +14,9 @@
   `agent-media.ts` (`NOT_A_LIGHT_REPLY`), `autonomy-report.ts` (`ACTED`, `SPOKE`), `context/tools.ts`
   (`STEP_NOISE`); server `apps/server/src/engine.ts`; runner `apps/server/runner/mcp.ts` (`ALWAYS_LOADED`); client
   `packages/client/src/lib/work.ts` (the block and the step line leave the call out), `realtime/receipts.ts` (the
-  receipt doesn't take the line for the reply)
+  receipt doesn't take the line for the reply); the bar's first words (addendum of 2026-11-21): `intent-line.ts`,
+  `executor.ts` (`announceIntent` at the start), `realtime/streams.ts` (`agent.intent`, `LiveRun.intent`), `lib/work.ts`
+  (`barStep`)
 
 ## Context
 
@@ -180,3 +182,25 @@ for the answer: the reply does.
   request, with its own model call, its own rules and a race with the task's reply), and it can move the
   conversation: it may answer, promise or ask what the task then doesn't follow, and a message sent meanwhile would
   have two readers.
+
+## Addendum 2026-11-21: what it is about to do, on the bar, in a second or two
+
+A computer brain's first model turn can take 30 to 50 seconds before its first call, `say_now` included: a simple
+lookup measured 1 min 55 s over three turns (32 s, 50 s, 32 s), and the person read only "escrevendo… · 45 s" until the
+whole reply. `say_now` can't come sooner than that first turn ends.
+
+- **The bar's line.** When a run starts on a person's message (fresh, not background, not long work, not confidential,
+  not waiting in a computer's line), the server asks the workspace's small model (`smallModelFor`, usage kind `router`,
+  the same path as the judge's fallback) for one line: what the agent is about to do, verb first, in the message's
+  language, at most 60 characters, never a result (`intent-line.ts`: `createLlmIntentWriter`, `intentLine`,
+  `announceIntent`). An `agent.intent` event carries it; nothing is stored. A greeting, a thanks or an ok gets an empty
+  line, and so does any failure: no small model, no answer within `INTENT_TIMEOUT_MS`, words for code. One call per
+  message and agent (`caches.intents`), beside the run and never in its way.
+- **Where it shows.** The bar's step after the agent's name (`barStep`, web and phone alike): "Ada procurando o e-mail
+  do dono do workspace…" in place of "pensando…" or "escrevendo…". A call that runs says its own verb; the agent's own
+  words for a step still win; its line on the way (`say_now`) ends it, and a late `agent.intent` after that line says
+  nothing.
+- **Not the line rejected above.** It is no message and nothing in the agent's voice: it is the bar's description of
+  the work, like the automatic status lines (ADR 0084), and it goes once the agent's own words come.
+- **`say_now` first.** `SAY_NOW_LINE` now asks for `say_now` as the very first call before slow work (9 characters
+  more in the prompt).

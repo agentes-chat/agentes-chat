@@ -239,9 +239,10 @@ export function createAuth(deps: {
     }),
     user: {
       additionalFields: { locale: { type: "string", required: false, input: false } },
-      // The same account under a new address (Sua conta › Perfil), only through `changeAccountEmail`: a link to the new
-      // one confirms it, and a server that sends no e-mail can't, so the address changes at once there.
-      changeEmail: { enabled: true, updateEmailWithoutVerification: !emailEnabled },
+      // The same account under a new address (Sua conta › Perfil), only through `changeAccountEmail`: a confirmed one
+      // waits for the link to the new address. One never confirmed changes at once, and on a server that sends email
+      // that link goes to the new one to confirm it (a mistyped address at sign-up, ADR 0006).
+      changeEmail: { enabled: true, updateEmailWithoutVerification: true },
     },
     session: {
       additionalFields: { activeOrganizationId: { type: "string", required: false, input: false } },
@@ -892,10 +893,10 @@ const EMAIL_LINKS = [
  * just left (`email.held`). On a server that sends email, it takes the code emailed to the account's current address
  * (`code`, bound to `newEmail`) or a sign-in in the last 10 minutes: without either it emails that code and answers
  * `code`, or `reauth.sign_in` for an address the account never confirmed. Then Better Auth's link goes to the new
- * address, which changes once it is opened (`sent`), and the old one is told then (`finishEmailChange`) when the
- * account had confirmed it or typed its code. On a server that sends none, Better Auth changes it at once, as before
- * (`changed`): an unconfirmed address only (`email.no_mail` for a confirmed one), and `email.taken` when another account
- * has it.
+ * address, which changes once it is opened (`sent`), and the old one is told then (`finishEmailChange`). An address
+ * never confirmed changes at once instead (`changed`), and the confirmation link goes to the new one (ADR 0006,
+ * addendum 2026-11-22). On a server that sends none, Better Auth changes it at once, as before (`changed`): an
+ * unconfirmed address only (`email.no_mail` for a confirmed one). `email.taken` when another account has it.
  */
 export async function changeAccountEmail(
   auth: Auth,
@@ -935,14 +936,18 @@ export async function changeAccountEmail(
         throw new ValidationError("That's already your email", "email.same");
       throw error;
     });
-  if (!deps.emailDelivers) {
-    // Better Auth changes only an unconfirmed address at once: a confirmed one waits for a link that can't go.
-    if (account.verified) throw noMail();
+  // Better Auth changes only an unconfirmed address at once, and answers the same when the address is another
+  // account's: only the account says whether it changed.
+  const changeNow = async () => {
     await change();
-    // Better Auth answers the same when the address is another account's: only the account says whether it changed.
     if ((await current())?.email !== newEmail)
       throw new ConflictError("Another account has this address", "email.taken");
-    return { status: "changed", email: newEmail };
+    return { status: "changed" as const, email: newEmail };
+  };
+  if (!deps.emailDelivers) {
+    // A confirmed one waits for a link that can't go.
+    if (account.verified) throw noMail();
+    return changeNow();
   }
   if (input.code) await spendProofCode({ db }, userId, "email", input.code, newEmail);
   else if (!(await signedInLately(auth, headers, userId))) {
@@ -967,9 +972,9 @@ export async function changeAccountEmail(
       throw new TooManyError("Too many new addresses. Try again later.");
     }
   }
-  // A code typed just now proves the old mailbox (`spendProofCode` throws otherwise), a fresh sign-in doesn't: an
-  // address never confirmed gets no "This wasn't me", which would hand whoever holds it the account.
-  await askEmailChange(db, { userId, from, to: newEmail, proven: account.verified || Boolean(input.code) });
+  // Nothing was proven at the old address: the account moves at once, and the confirmation link goes to the new one.
+  if (!account.verified) return changeNow();
+  await askEmailChange(db, { userId, from, to: newEmail, proven: true });
   await change();
   return { status: "sent", email: newEmail };
 }

@@ -18,6 +18,7 @@ import {
   placesAgentsIn,
   readableChannelIds,
 } from "./channels";
+import { hasCodeWork } from "./code-sessions";
 import { proposalsWaitingFor } from "./context/proposals";
 import { invalidateDefaults, modelInfoFor } from "./credentials";
 import { ConflictError, ForbiddenError, isUniqueViolation, NotFoundError, ValidationError } from "./errors";
@@ -312,7 +313,10 @@ function mergeAutoModels(
   return out;
 }
 
-/** Counts for the sidebar: people, agents, the workspace's budget use, approvals and proposals waiting for me. */
+/**
+ * Counts for the sidebar: people, agents, the workspace's budget use, approvals and proposals waiting for me; and
+ * whether Code has anything for me (ADR 0215 §12).
+ */
 export async function orgOverview(db: Database, actorId: string, orgId: string, now = new Date()) {
   const membership = await requirePermission(db, actorId, orgId, "read");
   const [people] = await db
@@ -344,6 +348,7 @@ export async function orgOverview(db: Database, actorId: string, orgId: string, 
     budgetUsedPercent: await workspaceBudgetPercent(db, orgId, now),
     approvalsWaitingForMe: pending?.n ?? 0,
     proposalsWaitingForMe: await proposalsWaitingFor(db, actorId, orgId),
+    code: await hasCodeWork(db, actorId, orgId),
   };
 }
 
@@ -565,14 +570,21 @@ export async function setAgentChannels(
 /**
  * Renames a channel or changes its topic or who may join (creator or admin). `audienceRoleIds` limits a private
  * channel to departments or roles (ADR 0125; empty: invite only); dropping a role takes out the people who were
- * there through it alone.
+ * there through it alone. `replyInThreads`: agents asked in its main timeline answer in the thread under that
+ * message (ADR 0214); runs already going stay where they are.
  */
 export async function updateChannel(
   db: Database,
   actorId: string,
   orgId: string,
   channelId: string,
-  input: { name?: string; topic?: string; visibility?: "public" | "private"; audienceRoleIds?: string[] },
+  input: {
+    name?: string;
+    topic?: string;
+    visibility?: "public" | "private";
+    audienceRoleIds?: string[];
+    replyInThreads?: boolean;
+  },
   options: { pubsub?: PubSub } = {},
 ) {
   const membership = await requireActiveMembership(db, actorId, orgId);
@@ -590,6 +602,8 @@ export async function updateChannel(
   if (channel.name === "general" && name !== undefined && name !== "general")
     throw new ValidationError("#general can't be renamed");
   if (channel.kind === "dm") throw new ValidationError("A direct conversation keeps its participants");
+  if (input.replyInThreads !== undefined && channel.kind !== "channel")
+    throw new ValidationError("Only a channel can reply in threads", "channel.reply_in_threads");
   const accessChanges = input.visibility !== undefined || input.audienceRoleIds !== undefined;
   const visibility = input.visibility ?? channel.visibility;
   const asked =
@@ -619,6 +633,7 @@ export async function updateChannel(
         .set({
           ...(name !== undefined ? { name } : {}),
           ...(input.topic !== undefined ? { topic: input.topic } : {}),
+          ...(input.replyInThreads !== undefined ? { replyInThreads: input.replyInThreads } : {}),
           ...access,
         })
         .where(eq(channels.id, channelId))

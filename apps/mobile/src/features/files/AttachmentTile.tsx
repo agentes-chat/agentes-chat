@@ -13,8 +13,9 @@ import { MessageText } from "../chat/MessageText";
 import { LiveCover } from "../live-files/shared/LiveCover";
 import { useColors, useOrgId } from "../shared/hooks";
 import { MONO } from "../shared/parts";
-import { extensionOf, type FileRef, fileInfo, isCodeName } from "./logic";
+import { extensionOf, type FileInfo, type FileRef, fileInfo, isCodeName } from "./logic";
 import { openFile } from "./open";
+import { PdfCover } from "./pdf-preview";
 import { pictureDrawn, pictureFade, useRemoteFile } from "./source";
 
 /**
@@ -215,22 +216,28 @@ function Cover({
     case "file": {
       const info = fileInfo(detail);
       if (info.view === "image") return <PictureCover fileId={fileId} version={detail.shownVersion} />;
-      const ext = extensionOf(info.name);
-      const text = content.text;
-      if (text?.trim()) {
-        if (ext === "csv" || ext === "tsv") {
-          const [head = [], ...rows] = parseDelimited(text, ext === "tsv" ? "\t" : ",", COVER_ROWS + 1);
-          return <TableCover columns={head} rows={rows} />;
-        }
-        if (info.view === "markdown") return <TextCover markdown={documentStart(text, COVER_CHARS)} />;
-        return <LinesCover text={text} code={isCodeName(`x.${ext}`)} />;
-      }
-      return <TypeCover icon={fileIconOf(info.type)} label={ext.toUpperCase()} />;
+      // A PDF shows its first page (`PdfCover`), over what it showed before until the page is drawn.
+      if (info.view === "pdf") return <PdfCover detail={detail}>{fileCover(info, content.text)}</PdfCover>;
+      return fileCover(info, content.text);
     }
     default:
       // A diagram or a page draws only in the file screen (a web view): here its kind's icon.
       return <TypeCover icon={KIND_ICON[content.kind]} label="" />;
   }
+}
+
+/** A file's cover from what the server read of it: a table's first rows, a text's first lines, else its type. */
+function fileCover(info: FileInfo, text: string | undefined) {
+  const ext = extensionOf(info.name);
+  if (text?.trim()) {
+    if (ext === "csv" || ext === "tsv") {
+      const [head = [], ...rows] = parseDelimited(text, ext === "tsv" ? "\t" : ",", COVER_ROWS + 1);
+      return <TableCover columns={head} rows={rows} />;
+    }
+    if (info.view === "markdown") return <TextCover markdown={documentStart(text, COVER_CHARS)} />;
+    return <LinesCover text={text} code={isCodeName(`x.${ext}`)} />;
+  }
+  return <TypeCover icon={fileIconOf(info.type)} label={ext.toUpperCase()} />;
 }
 
 /** Fades a cover's text out at its foot. */

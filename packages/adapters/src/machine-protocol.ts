@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 76;
+export const MACHINE_PROTOCOL_VERSION = 77;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -689,6 +689,23 @@ export const ANTIGRAVITY_MAC_PROTOCOL = 68;
  * installed now, checks it on the phone). Older runners answer `bad_request`: the server asks none of them.
  */
 export const PHONE_REPAIR_PROTOCOL = 73;
+/**
+ * A code session's terminal (ADR 0215): `stream.open` of a terminal may carry `cwd`, a folder inside the agent's own
+ * (relative to it, the session's worktree), where the shell starts. One that isn't there starts it in the agent's
+ * folder; one that leaves the agent's folder is refused. The server sends `cwd` to no older runner, which opens the
+ * terminal in the agent's folder.
+ */
+export const TERMINAL_CWD_PROTOCOL = 76;
+/**
+ * A terminal that outlives its viewer (ADR 0215): `stream.open` of a terminal may carry `keep`, a name the person's
+ * app gave that terminal. Its shell stays on the computer when the viewer's socket drops (a page read again, a
+ * connection lost) and the next `stream.open` with the same name, for the same agent, comes back to it with what it
+ * printed last; nobody back within `STREAM_LIMITS.terminalKeptMs` ends it, and so does the viewer's `end` frame (the
+ * person closed it). The server sends `keep` to no older runner, where each open is a new shell.
+ */
+export const TERMINAL_KEEP_PROTOCOL = 77;
+/** A kept terminal's name: the server puts the person's id in front of the app's, so each person reaches only theirs. */
+export const isTerminalKeep = (v: unknown): v is string => typeof v === "string" && /^[A-Za-z0-9_.-]{8,128}$/.test(v);
 /**
  * From this protocol on, the runner sends `room.freed` once there is room again after it refused a turn (`no_slot`): a
  * turn ended there, or its memory came back over the agents' floor. The server asks its line again at once; an older
@@ -1606,6 +1623,10 @@ export const STREAM_LIMITS = {
   terminalsPerMachine: 10,
   terminalIdleMs: 30 * 60_000,
   terminalMaxMs: 12 * 3_600_000,
+  /** A kept terminal with nobody watching ends after this long (`TERMINAL_KEEP_PROTOCOL`). */
+  terminalKeptMs: 30 * 60_000,
+  /** The last output a kept terminal shows again to whoever comes back to it. */
+  terminalReplayMax: 256 << 10,
   /** Streams a person may open in a minute. */
   opensPerMinute: 30,
   /** The server checks this often that whoever has an open stream may still have it. */
@@ -1660,7 +1681,11 @@ export const STREAM_CLOSE = {
  */
 export type StreamRequest =
   | { kind: "desktop"; mode: DesktopMode }
-  | { kind: "terminal"; cols: number; rows: number }
+  /**
+   * `cwd` (`TERMINAL_CWD_PROTOCOL`): where the shell starts, a folder relative to the agent's own (ADR 0215). `keep`
+   * (`TERMINAL_KEEP_PROTOCOL`): the terminal's name, whose shell outlives the viewer.
+   */
+  | { kind: "terminal"; cols: number; rows: number; cwd?: string; keep?: string }
   /** A phone's screen (`PHONES_PROTOCOL`): `stream.open` carries the phone itself as `phone`, its holder the person. */
   | { kind: "phone"; mode: DesktopMode; phoneId: string };
 
@@ -1696,6 +1721,15 @@ export interface StreamHello {
 export type StreamControl =
   | { type: "resize"; cols: number; rows: number }
   | { type: "exit"; code: number | null }
+  /** Viewer → runner (`TERMINAL_KEEP_PROTOCOL`): the person closed a kept terminal, so its shell ends now. */
+  | { type: "end" }
+  /** Runner → viewer (`TERMINAL_KEEP_PROTOCOL`): another viewer took this kept terminal; its shell goes on there. */
+  | { type: "moved" }
+  /**
+   * Server → viewer, once a terminal is ready (ADR 0215): its computer is too old for the folder it was asked to start
+   * in (`TERMINAL_CWD_PROTOCOL`), so the shell started in the agent's folder.
+   */
+  | { type: "cwd_ignored" }
   | { type: "mode"; mode: DesktopMode }
   /** Protocol 49: a browser view's frame arrived (server → runner), or a phone's picture was drawn (viewer → runner). */
   | { type: "ack" }
@@ -2203,8 +2237,12 @@ export type WireBrainEvent =
   | { type: "answer"; text: string }
   /** Protocol 46: Fast failed (`message`: the provider's words) and this turn answered at standard speed. */
   | { type: "speed_fallback"; message: string }
-  /** A call the brain starts on its own (Claude Code's Read, Bash, Task): its `tool_call` follows once it ended. */
-  | { type: "tool_started"; id: string; name: string }
+  /**
+   * A call the brain starts on its own (Claude Code's Read, Bash, Task): its `tool_call` follows once it ended.
+   * `input`: what it was given, masked (a code session shows the call's line while it runs, ADR 0215); an older runner
+   * sends none, an older server drops it.
+   */
+  | { type: "tool_started"; id: string; name: string; input?: unknown }
   /**
    * A file a tool of the brain's own made (Codex's image generation), kept in the agent's folder (`path`, relative
    * to it): the server sends it to the Drive and its card goes with the reply. An older server drops the event.
@@ -2223,11 +2261,63 @@ export type WireBrainEvent =
       label?: string;
       silentMs: number;
       resumed: boolean;
+    }
+  /**
+   * How a call of the brain's own that runs subagents goes while they work (Claude Code's `Agent`, `Task` and
+   * `Workflow`, ADR 0215), by that call's id: its subagent's latest call (`step`: the tool, and its input cut as a
+   * `tool_call`'s when the CLI shows it), how many calls it made so far, a workflow's agents, and `ended` once it is
+   * over (a workflow ends after its own call did). An older server drops it.
+   */
+  | {
+      type: "tool_progress";
+      id: string;
+      kind: BrainProgressKind;
+      step?: { name: string; input?: unknown };
+      calls?: number;
+      agents?: WireWorkflowAgent[];
+      ended?: { failed?: boolean };
     };
 
 /** Where a stalled brain turn was (`stalled`). */
 export const BRAIN_STALL_PHASES = ["model", "compacting", "tool"] as const;
 export type BrainStallPhase = (typeof BRAIN_STALL_PHASES)[number];
+
+/** What a call that runs subagents started (`tool_progress`): one subagent, or a workflow of them. */
+export type BrainProgressKind = "agent" | "workflow";
+/** How a workflow's agent is doing. */
+export const WORKFLOW_AGENT_STATES = ["running", "done", "failed"] as const;
+export type WorkflowAgentState = (typeof WORKFLOW_AGENT_STATES)[number];
+
+/** A workflow's agent as its progress says it (`tool_progress`). */
+export interface WireWorkflowAgent {
+  /** What the workflow calls it (`reviewer:index.html`). */
+  label: string;
+  /** The title of the phase it belongs to. */
+  phase?: string;
+  state: WorkflowAgentState;
+  /** Calls it made so far. */
+  calls?: number;
+  /** The tool of its latest call (`Read`). */
+  tool?: string;
+}
+
+/** Most agents one `tool_progress` names (the latest), and the longest label and phase title. */
+export const PROGRESS_LIMITS = { agents: 24, label: 120, phase: 80 } as const;
+
+/** A workflow's agent from a `tool_progress`, checked and cut; null when it isn't one. */
+function parseWorkflowAgent(v: unknown): WireWorkflowAgent | null {
+  if (!isObject(v) || !isString(v.label) || !v.label.trim()) return null;
+  const state = WORKFLOW_AGENT_STATES.find((s) => s === v.state);
+  if (!state) return null;
+  const calls = finite(v.calls);
+  return {
+    label: v.label.trim().slice(0, PROGRESS_LIMITS.label),
+    ...(isString(v.phase) && v.phase.trim() ? { phase: v.phase.trim().slice(0, PROGRESS_LIMITS.phase) } : {}),
+    state,
+    ...(calls !== undefined && calls > 0 ? { calls: Math.round(calls) } : {}),
+    ...(isString(v.tool) && v.tool ? { tool: v.tool.slice(0, BRAIN_LIMITS.toolName) } : {}),
+  };
+}
 
 /**
  * `brain.steer` (protocol 15): messages for the turn of `runId` in progress.
@@ -2292,6 +2382,12 @@ export interface BrainTurnRequest {
   keepAlive?: boolean;
   /** Also load the machine owner's own MCP servers (default false: `--strict-mcp-config`; never in a `plan` turn). */
   personalMcp?: boolean;
+  /**
+   * A code session's turn (ADR 0215), Claude Code: its own subagents and skills too, and the worktree's `.claude`
+   * agents, skills and commands as a plugin, without their hooks, MCP servers or allowed tools. An older runner
+   * ignores it.
+   */
+  codeSession?: boolean;
   /**
    * The turn's permission profile (ADR 0053 §3): `work` (default) edits and asks a person (or the server's
    * rules) for the rest; `plan` reads only. Codex honours it from `BRAIN_PROFILES_PROTOCOL` on.
@@ -2388,10 +2484,22 @@ export const AGY_COPY_PROTOCOL = 76;
 /** The tasks a computer may run at once (`maxConcurrentTasks` in the runner's config). */
 export const TASK_LIMIT_BOUNDS = [1, 20] as const;
 
-/** What `brain.turn` would start its CLI with, without the turn's own words (no prompt, system text or run). */
+/**
+ * What `brain.turn` would start its CLI with, without the turn's own words (no prompt, system text or run); a code
+ * session's turn (`codeSession`, ADR 0215) starts with its session's tools, so its warm start does too.
+ */
 export type BrainWarmRequest = Pick<
   BrainTurnRequest,
-  "kind" | "session" | "cwd" | "model" | "personalMcp" | "permissions" | "account" | "effort" | "contextTokens"
+  | "kind"
+  | "session"
+  | "cwd"
+  | "model"
+  | "personalMcp"
+  | "permissions"
+  | "account"
+  | "effort"
+  | "contextTokens"
+  | "codeSession"
 >;
 
 /** `open`: the session has a CLI now; `started`: this request started it. */
@@ -3637,6 +3745,11 @@ export function parseExecutors(v: Record<string, unknown>): NonNullable<RunnerIn
 export const CLI_ERROR_MAX = 300;
 /** `executors.broken.claude` on Windows when Git for Windows, which Claude Code needs there, isn't on the computer. */
 export const CLI_GIT_MISSING = "git_missing";
+/**
+ * `executors.broken.<cli>` in system mode for Cursor's, Grok Build or the Antigravity CLI found only in root's own
+ * `~/.local/bin`, where its installer puts it and no agent's user can run it.
+ */
+export const CLI_HOME_ONLY = "home_only";
 
 /** `hello.accounts` (protocol 13): at most `MAX_MACHINE_ACCOUNTS`, ids and kinds checked, short words only. */
 export function parseAccounts(v: unknown[]): RunnerAccountInfo[] {
@@ -3829,10 +3942,40 @@ export function parseBrainEvent(v: unknown): WireBrainEvent | null {
       return { type: "speed_fallback", message: (isString(v.message) ? v.message : "").slice(0, BRAIN_LIMITS.message) };
     case "tool_started":
       return isString(v.id) && isString(v.name)
-        ? { type: "tool_started", id: v.id.slice(0, 128), name: v.name.slice(0, BRAIN_LIMITS.toolName) }
+        ? {
+            type: "tool_started",
+            id: v.id.slice(0, 128),
+            name: v.name.slice(0, BRAIN_LIMITS.toolName),
+            ...(v.input !== undefined ? { input: cutJson(v.input, BRAIN_LIMITS.toolText) } : {}),
+          }
         : null;
     case "file":
       return isString(v.path) && v.path.length > 0 && v.path.length <= 1024 ? { type: "file", path: v.path } : null;
+    case "tool_progress": {
+      if (!isString(v.id) || !v.id || (v.kind !== "agent" && v.kind !== "workflow")) return null;
+      const step =
+        isObject(v.step) && isString(v.step.name) && v.step.name
+          ? {
+              name: v.step.name.slice(0, BRAIN_LIMITS.toolName),
+              ...(v.step.input !== undefined ? { input: cutJson(v.step.input, BRAIN_LIMITS.toolText) } : {}),
+            }
+          : undefined;
+      const agents = Array.isArray(v.agents)
+        ? v.agents
+            .slice(-PROGRESS_LIMITS.agents)
+            .map(parseWorkflowAgent)
+            .filter((a): a is WireWorkflowAgent => a !== null)
+        : undefined;
+      return {
+        type: "tool_progress",
+        id: v.id.slice(0, 128),
+        kind: v.kind,
+        ...(step ? { step } : {}),
+        ...(num(v.calls) > 0 ? { calls: num(v.calls) } : {}),
+        ...(agents ? { agents } : {}),
+        ...(isObject(v.ended) ? { ended: v.ended.failed === true ? { failed: true } : {} } : {}),
+      };
+    }
     case "stalled": {
       const phase = BRAIN_STALL_PHASES.find((p) => p === v.phase);
       if (!phase) return null;
@@ -4729,6 +4872,8 @@ export function parseStreamControl(raw: string): StreamControl | null {
   if (f.type === "exit" && (f.code === null || Number.isInteger(f.code))) {
     return { type: "exit", code: f.code as number | null };
   }
+  if (f.type === "end") return { type: "end" };
+  if (f.type === "moved") return { type: "moved" };
   if (f.type === "mode" && (f.mode === "watch" || f.mode === "control")) return { type: "mode", mode: f.mode };
   if (f.type === "ack") return { type: "ack" };
   return null;

@@ -68,7 +68,7 @@ import {
 import { recentDms } from "@agenteschat/client/lib/recent";
 import { isRightHand, rightHandSeenKey } from "@agenteschat/client/lib/right-hand";
 import { SERVER_PLACE_ICON } from "@agenteschat/client/lib/server";
-import { inSidebarList, sidebarItemOrder, sidebarPlace } from "@agenteschat/client/lib/sidebar-items";
+import { inSidebarList, offeredTools, sidebarItemOrder, sidebarPlace } from "@agenteschat/client/lib/sidebar-items";
 import { AGENT_SORTS, sortAgents, splitPinned } from "@agenteschat/client/lib/sidebar-view";
 import { badgeCount, looksUnread } from "@agenteschat/client/lib/unread";
 import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
@@ -127,6 +127,7 @@ import { useApi } from "@/api/context";
 import { useNewAgent } from "@/components/new-agent/new-agent-context";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useEverTrue } from "@/hooks/useEverTrue";
+import { useInboxWaiting } from "@/hooks/useInboxWaiting";
 import { agentLine, availabilityOf, personLine, useAgentPresence, usePersonPresence } from "@/hooks/usePresence";
 import { useServerPlace } from "@/hooks/useServerPlace";
 import { useSidebarPins } from "@/hooks/useSidebarPins";
@@ -257,24 +258,17 @@ export function Sidebar() {
   const [showArchived, setShowArchived] = useState(false);
   const [customizing, setCustomizing] = useState(false);
   const navigate = useNavigate();
-  const onProposals = useRouterState({ select: (r) => r.location.pathname.endsWith("/proposals") });
   useEffect(() => {
     const open = () => setCreatingChannel(true);
     window.addEventListener(NEW_CHANNEL_EVENT, open);
     return () => window.removeEventListener(NEW_CHANNEL_EVENT, open);
   }, []);
   const proposalsWaiting = overview.data?.proposalsWaitingForMe ?? 0;
-  // The bell: unread notifications (live through `notification.counts`); the badge bumps when one arrives.
+  // The inbox's row: bold while something in it is unread (live through `notification.counts`).
   const notificationCount = useNotificationCount(orgId).data;
   const unreadNotifications = notificationCount?.unread ?? 0;
-  // "Esperando você": everything that waits on me, the same live count (ADR 0172).
-  const waitingOnMe = notificationCount?.waiting ?? 0;
-  const lastUnread = useRef(unreadNotifications);
-  const [bumps, setBumps] = useState(0);
-  useEffect(() => {
-    if (unreadNotifications > lastUnread.current) setBumps((b) => b + 1);
-    lastUnread.current = unreadNotifications;
-  }, [unreadNotifications]);
+  // The inbox's count: everything that waits on me, proposals I may decide among it (ADR 0218).
+  const waitingOnMe = useInboxWaiting(orgId);
   // Threads: how many open missions wait for me (the server counts: a decision, a review, a suggestion…).
   const missionList = useMissionList(orgId, MISSIONS_WAITING_COUNT);
   const missionsWaiting = missionList.data?.counts.waitingYou ?? 0;
@@ -285,18 +279,15 @@ export function Sidebar() {
   // The tools on top, each where I put it (the rest in More); one there "when there's something" while its count is.
   const sidebarItems = useSidebarItems(orgId).data;
   // An unread reply counts as "something" for a Threads set to show "when there's something": it comes into the list
-  // lit, and leaves once read, as Approvals does once nothing waits.
-  // Proposals are a tab of Aprovações and count there, unless the person gave them a row of their own.
-  const proposalsRow = inSidebarList(sidebarPlace(sidebarItems, "proposals", personal), proposalsWaiting);
-  const pending = (overview.data?.approvalsWaitingForMe ?? 0) + (proposalsRow ? 0 : proposalsWaiting);
+  // lit, and leaves once read, as Proposals does once nothing waits.
   const counts: Partial<Record<SidebarItem, number>> = {
     waiting: waitingOnMe,
-    approvals: pending,
     proposals: proposalsWaiting,
     threads: missionsWaiting + unreadThreads,
   };
   // The mode's defaults and order (ADR 0159): in a personal workspace, Routines and Drive in sight, the rest in More.
-  const toolOrder = sidebarItemOrder(personal);
+  // Code only where it has anything for me (ADR 0215 §12).
+  const toolOrder = offeredTools(sidebarItemOrder(personal), overview.data?.code, sidebarItems);
   const listed = toolOrder.filter((id) => inSidebarList(sidebarPlace(sidebarItems, id, personal), counts[id] ?? 0));
   const inMore = toolOrder.filter((id) => !listed.includes(id));
   const countOf = (id: SidebarItem) =>
@@ -304,8 +295,6 @@ export function Sidebar() {
       <CountBadge aria-label={t("notifications.summaryWaiting", { count: waitingOnMe })}>
         {badgeCount(waitingOnMe)}
       </CountBadge>
-    ) : id === "approvals" && pending > 0 ? (
-      <CountBadge aria-label={t("shell.pendingApprovals", { count: pending })}>{pending}</CountBadge>
     ) : id === "proposals" && proposalsWaiting > 0 ? (
       <CountBadge aria-label={t("shell.pendingProposals", { count: proposalsWaiting })}>{proposalsWaiting}</CountBadge>
     ) : id === "threads" && missionsWaiting > 0 ? (
@@ -329,8 +318,11 @@ export function Sidebar() {
       params={{ orgId }}
       className="sidebar__item"
       title={id === "threads" && unreadThreads > 0 ? t("shell.unreadThreads", { count: unreadThreads }) : railTip(id)}
-      data-unread={(id === "threads" && unreadThreads > 0) || (id === "issues" && unreadTasks > 0)}
-      inactiveProps={id === "approvals" && onProposals && !proposalsRow ? { "data-status": "active" } : undefined}
+      data-unread={
+        (id === "waiting" && unreadNotifications > 0) ||
+        (id === "threads" && unreadThreads > 0) ||
+        (id === "issues" && unreadTasks > 0)
+      }
     >
       <Icon name={SIDEBAR_TOOLS[id].icon} />
       <span className="sidebar__item-label">{t(`shell.${id}`)}</span>
@@ -866,27 +858,6 @@ export function Sidebar() {
     ),
   };
 
-  // The inbox: at the end of my row in the foot, or beside me on top in a personal workspace.
-  const bell = (
-    <Link
-      to="/org/$orgId/notifications"
-      params={{ orgId }}
-      className="sidebar__bell"
-      title={t("shell.notifications")}
-      aria-label={
-        unreadNotifications > 0
-          ? t("shell.unreadNotifications", { count: unreadNotifications })
-          : t("shell.notifications")
-      }
-    >
-      <Icon name="bell" />
-      {unreadNotifications > 0 && (
-        <CountBadge key={bumps} className={cx("sidebar__unread", bumps > 0 && "sidebar__bump")}>
-          {badgeCount(unreadNotifications)}
-        </CountBadge>
-      )}
-    </Link>
-  );
   // The sidebar's toggle, in one place at every width: beside ⌘K (beside the bell in a personal workspace), under them
   // in the rail. In a phone's drawer it closes the drawer.
   const collapseLabel = compact ? t("shell.closeNav") : collapsed ? t("shell.expandNav") : t("shell.collapseNav");
@@ -929,7 +900,6 @@ export function Sidebar() {
           <div className="sidebar__org sidebar__org--person">
             <AccountMenu personal />
             <AgoraButton below={compact} className="sidebar__agora" />
-            {bell}
             <Button {...collapseProps} size="sm" className="sidebar__head-collapse" />
           </div>
         ) : (
@@ -999,7 +969,6 @@ export function Sidebar() {
           {rail && createAgentItem.length > 0 && <CreateAgentTile onOpen={newAgent} />}
           <div className="sidebar__me">
             <AccountMenu />
-            {bell}
           </div>
         </div>
       )}
@@ -1757,8 +1726,7 @@ function MoreTools({
           <span className="ac-menu__label">{t("shell.customizeSidebar")}</span>
         </button>
       </Popover>
-      {/* Proposals in More are a tab of Aprovações: its row lights up for them. */}
-      <div className="sidebar__more-active">{items.filter((id) => id !== "proposals").map(row)}</div>
+      <div className="sidebar__more-active">{items.map(row)}</div>
     </>
   );
 }

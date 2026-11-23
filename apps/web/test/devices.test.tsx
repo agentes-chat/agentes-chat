@@ -1222,7 +1222,10 @@ describe("In the chat and the inbox", () => {
     const row = document.querySelector('[data-n="n-dev"]') as HTMLElement;
     expect(row.textContent).toContain("Lia (for Rui) asks to use Sam's iPhone 16");
     expect(row.textContent).toContain("Devices");
-    await click(within(row).getByRole("button", { name: "Allow once" }));
+    // The answer is in the open item, beside the list (ADR 0218).
+    await click(row);
+    const read = document.querySelector(".ib-read") as HTMLElement;
+    await click(within(read).getByRole("button", { name: "Allow once" }));
     expect(calls(state, "devices.decideAccess")[0]?.args).toEqual([ORG_ID, "ar-1", "once"]);
   });
 });

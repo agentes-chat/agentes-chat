@@ -1,4 +1,4 @@
-import { listenResumedTopic, type PubSub } from "@agenteschat/adapters";
+import { fullResync, listenResumedTopic, type PubSub } from "@agenteschat/adapters";
 
 /**
  * Per-process caches for data read on every run but rarely changed (agent
@@ -75,6 +75,12 @@ export class TtlCache<V> {
     else for (const k of this.entries.keys()) if (k.startsWith(key)) this.entries.delete(k);
   }
 
+  /** Every entry expires within `ms`, each at a random point: their reloads spread out instead of all coming at once. */
+  stale(ms: number) {
+    const now = Date.now();
+    for (const e of this.entries.values()) e.expires = Math.min(e.expires, now + Math.random() * ms);
+  }
+
   /**
    * Returns the cached value or loads, caches and returns it (`undefined`/null results are cached too, unless `keep`
    * refuses them). A load an invalidation overtook (here or from another process) is returned but not kept: its read
@@ -137,6 +143,8 @@ export const caches = {
    * moved, or a retry, asks again within minutes. Never an image's: a screen changes under the same words.
    */
   jevAnswers: new TtlCache<unknown>(15 * 60_000, 2000),
+  /** The working line's first words for a message and agent (`orgId:messageId:agentId`, `announceIntent`), none too. */
+  intents: new TtlCache<unknown>(3600_000, 5000),
   /** Automático's choice for a routine's prompt (`orgId:agentId:routineId:hash`): the same work every firing. */
   routineAutoModel: new TtlCache<unknown>(24 * 3600_000, 5000),
 };
@@ -155,6 +163,9 @@ export function clearCaches() {
 
 export type CacheOp = "delete" | "deletePrefix" | "clear";
 
+/** Over how long a gentle resync lets every cached entry expire. */
+export const STALE_SPREAD_MS = 10_000;
+
 /** Pub/sub topic that carries every process's cache invalidations to the others (Postgres LISTEN/NOTIFY). */
 export const CACHE_TOPIC = "system:cache-invalidate";
 
@@ -162,7 +173,8 @@ export const CACHE_TOPIC = "system:cache-invalidate";
  * Every process forgets what any process changed (ADR 0163): an invalidation of `caches` made here is published,
  * and one received is applied here without being published again. Without it, a worker would go on reading a revoked
  * scope, a removed member or a changed credential until its entry's TTL ran out. A process whose LISTEN came back after
- * a gap (`listenResumedTopic`) missed the invalidations sent meanwhile: it forgets everything. Returns the way to stop.
+ * a gap (`listenResumedTopic`) missed the invalidations sent meanwhile: it forgets everything, or, within a minute of
+ * that (`fullResync`), lets every entry expire over `STALE_SPREAD_MS`. Returns the way to stop.
  */
 export function shareCacheInvalidations(pubsub: Pick<PubSub, "publish" | "subscribe">) {
   const named: Record<string, TtlCache<unknown>> = caches;
@@ -175,8 +187,12 @@ export function shareCacheInvalidations(pubsub: Pick<PubSub, "publish" | "subscr
     if (target && typeof event.key === "string" && (op === "delete" || op === "deletePrefix" || op === "clear"))
       target.apply(op, event.key);
   });
-  const offResumed = pubsub.subscribe(listenResumedTopic, () => {
-    for (const c of Object.values(named)) c.apply("clear", "");
+  const offResumed = pubsub.subscribe(listenResumedTopic, (event) => {
+    const full = fullResync(event);
+    for (const c of Object.values(named)) {
+      if (full) c.apply("clear", "");
+      else c.stale(STALE_SPREAD_MS);
+    }
   });
   return () => {
     off();

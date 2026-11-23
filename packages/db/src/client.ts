@@ -98,6 +98,10 @@ export function createDatabase(options: DatabaseOptions): DatabaseHandle {
     max: options.poolMax,
     // Silence "relation already exists, skipping" notices from migrations.
     onnotice: () => {},
+    // Drizzle's `db.execute` sends unnamed statements, so each call is planned anew. The channel list's plan of a big
+    // workspace costs past `jit_above_cost` (and `jit_optimize_above_cost`): LLVM compiled ~550 functions on every
+    // call, CPU spent before an indexed read even starts. `?jit=on` in the URL still overrides it.
+    connection: { jit: "off" },
   });
   const db = drizzle(client, { schema, casing: "snake_case", logger: tracingLogger });
   serializeDates(client);

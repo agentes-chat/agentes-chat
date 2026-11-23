@@ -401,6 +401,7 @@ type RunLike = Pick<
   | "channelId"
   | "threadRootId"
   | "triggerMessageId"
+  | "replyInThread"
   | "background"
   | "workId"
   | "status"
@@ -706,7 +707,7 @@ export async function moveRun(
   deps: { db: Database; pubsub?: PubSub },
   run: Pick<
     AgentRun,
-    "id" | "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId" | "hop" | "workId"
+    "id" | "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId" | "replyInThread" | "hop" | "workId"
   >,
   to: Message,
 ) {
@@ -806,7 +807,7 @@ export async function workOfRun(db: Executor, runId: string): Promise<WorkRow | 
 /** `quiet`: nothing to post, and nothing wrong either (the agent reads it as a plain answer, not a refusal). */
 export type UpdateOutcome =
   | { ok: true; message: Message; work: WorkRow }
-  | { ok: false; reason: string; quiet?: boolean };
+  | { ok: false; reason: string; quiet?: boolean; planned?: WorkRow };
 
 /**
  * `post_update` (§3): one plain line in the work's thread, at least 5 min after the last unless `important` (then a
@@ -835,10 +836,19 @@ export async function postWorkUpdate(
     const gap = input.important ? WORK_LIMITS.importantGapMs : WORK_LIMITS.minGapMs;
     if (locked.updateSeq > 0 && since < gap) {
       const due = locked.nextUpdateAt ?? new Date(locked.lastUpdateAt.getTime() + WORK_LIMITS.minGapMs);
+      // Agents have no clock and update after each step: the plan they sent still moves the card.
+      const [planned] = input.plan
+        ? await tx
+            .update(agentWorks)
+            .set({ plan: input.plan, updatedAt: now })
+            .where(eq(agentWorks.id, locked.id))
+            .returning()
+        : [];
       return {
         ok: false as const,
         quiet: true,
-        reason: `Not posted: your last update went out ${Math.floor(since / 60_000)} min ago, which still covers it. Keep working; the next is due at ${due.toISOString().slice(11, 16)} UTC.`,
+        planned,
+        reason: `${planned ? "Plan saved; the line was not posted" : "Not posted"}: your last update went out ${Math.floor(since / 60_000)} min ago, which still covers it. Keep working; the next is due at ${due.toISOString().slice(11, 16)} UTC.${input.important ? "" : " A blocker or an early result can't wait: send it with important."}`,
       };
     }
     const [run] = await tx.select().from(agentRuns).where(eq(agentRuns.id, runId));
@@ -871,7 +881,13 @@ export async function postWorkUpdate(
     await dropWorkNotices(tx, runId, { checkInsOnly: true });
     return { ok: true as const, message, work: updated };
   });
-  if (!out.ok) return out;
+  if (!out.ok) {
+    if ("planned" in out && out.planned) {
+      if (out.planned.issueId) await setWorkIssueState(deps, out.planned, { plan: true }).catch(() => null);
+      await announceWork(deps.pubsub, deps.db, out.planned.orgId, out.planned.id);
+    }
+    return out;
+  }
   if (deps.pubsub) await publishMessageCreated(deps.pubsub, messageView(out.message));
   if (out.work.issueId)
     await setWorkIssueState(deps, out.work, { update: text, plan: Boolean(input.plan) }).catch(() => null);

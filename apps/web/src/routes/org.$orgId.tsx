@@ -10,6 +10,7 @@ import { Arrival } from "@/components/arrival/Arrival";
 import { FeedbackHost } from "@/components/arrival/FeedbackDialog";
 import { ArtifactViewerProvider } from "@/components/artifacts/viewer-context";
 import { CommandMenu } from "@/components/CommandMenu";
+import { ConfirmEmailBanner } from "@/components/ConfirmEmail";
 import { ComputerDialogProvider } from "@/components/computer/provider";
 import { ConnectAiProvider } from "@/components/connect-ai-context";
 import { DesktopDragStrip } from "@/components/DesktopDragStrip";
@@ -164,6 +165,7 @@ function OrgLayout() {
                           {membership.deletion && <DeletingBanner />}
                           {!focused && !membership.deletion && (
                             <>
+                              <ConfirmEmailBanner />
                               <HoldBanner />
                               <ComputerSetupNotice />
                               <OutageNotices />

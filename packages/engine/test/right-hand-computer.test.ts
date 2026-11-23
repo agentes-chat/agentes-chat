@@ -3,6 +3,7 @@ import type { MachineRequest, ServerFrame } from "@agenteschat/adapters";
 import { and, eq, schema } from "@agenteschat/db";
 import {
   authorizeStream,
+  computerDriving,
   deletedAgentIds,
   desktopStatus,
   ensureRightHand,
@@ -14,8 +15,10 @@ import {
   openPersonAgentDm,
   RIGHT_HAND,
   removeMember,
+  rightHandTools,
   SHARED_SEAT,
   seatOf,
+  seatPlace,
   seatState,
   type ToolContext,
   UNASKED_SEAT_MESSAGE,
@@ -230,18 +233,45 @@ test("a channel mention works in the shared seat, and a routine in its creator's
   expect(ran.some((r) => r.agent === lodi.id)).toBe(false);
 });
 
-test("a computer that runs every agent as one user gives it no seat: refused, nothing sent", async () => {
-  const { lodi, ran, requests } = await home(false);
-  const before = requests().length;
-  const ctx = await lodiRun(lodi.id, f.owner.id);
-  const said = await runCode(ctx);
-  expect(said.isError).toBe(true);
-  expect(said.content).toContain("it runs every agent as one user");
-  expect(ran).toEqual([]);
-  expect(requests().length).toBe(before);
-  expect(await seatState(f.db, { ...ctx, id: ctx.runId })).toBe("none");
+test("a computer that runs every agent as one user gives each person a place there, driven only by who connected it", async () => {
+  const { lodi, machineId, ran } = await home(false);
+  const bia = await addMember(f.db, f.org.id, "member", "Bia");
+
+  // Each person's own DM works in their own seat, a folder of its own there, never under the agent's id.
+  const mine = await lodiRun(lodi.id, f.owner.id);
+  const hers = await lodiRun(lodi.id, bia.id);
+  expect((await runCode(mine)).isError).toBeFalsy();
+  expect((await runCode(hers)).isError).toBeFalsy();
+  expect(ran.map((r) => r.agent)).toEqual([await seatId(f.owner.id), await seatId(bia.id)]);
+  // Its prompt is told the place is only a folder of the one user every agent shares.
+  expect(await seatPlace(f.db, { ...mine, id: mine.runId })).toEqual({ state: "seat", oneUser: true });
+  expect(rightHandTools("seat", true)).toContain("only a folder and a browser profile of that user");
+  expect(rightHandTools("none", true)).not.toContain("only a folder");
+
+  // A channel works in the shared seat, as on a computer that keeps users apart.
+  const channel = await lodiRun(lodi.id, f.owner.id, { channelId: f.general.id });
+  expect((await runCode(channel)).isError).toBeFalsy();
+  expect(ran.at(-1)?.agent).toBe(await seatId(SHARED_SEAT));
+  expect(ran.some((r) => r.agent === lodi.id)).toBe(false);
+
+  // The apps find it on that computer.
   const [server] = await listMachines(f.db, f.owner.id, f.org.id);
-  expect(server?.agents.map((a) => a.id)).not.toContain(lodi.id);
+  expect(server?.agents.map((a) => a.id)).toContain(lodi.id);
+
+  // Driving a seat there is driving the one user that reads every other: only who connected it, as for any agent
+  // there. Bia watches her own place, and gets no terminal and no control of it.
+  const stream = (userId: string, request: Parameters<typeof authorizeStream>[1]["request"]) =>
+    authorizeStream(
+      { db: f.db, hub: { isLocal: () => true }, pubsub: f.pubsub },
+      { userId, orgId: f.org.id, agentId: lodi.id, request },
+    );
+  const hersId = await seatId(bia.id);
+  expect(await stream(bia.id, { kind: "desktop", mode: "watch" })).toMatchObject({ machineId, agent: { id: hersId } });
+  const terminal = { kind: "terminal", cols: 80, rows: 24 } as const;
+  expect(await stream(bia.id, terminal)).not.toHaveProperty("machineId");
+  expect(await stream(f.owner.id, terminal)).toMatchObject({ machineId, agent: { id: await seatId(f.owner.id) } });
+  expect((await computerDriving(f.db, bia.id, f.org.id, lodi.id)).refusal).toBe("pairer");
+  expect((await computerDriving(f.db, f.owner.id, f.org.id, lodi.id)).refusal).toBeNull();
 });
 
 test("the hub refuses the agent's own id for anything but its locked chat turn", async () => {

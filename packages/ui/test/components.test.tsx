@@ -1264,6 +1264,11 @@ describe("Message aside and foot", () => {
     expect(css).not.toContain("ac-msg__aside--floating");
     expect(value(".ac-msg__gutter--aside", "justify-content")).toBe("flex-end");
     expect(value(".ac-msg__gutter--aside > .ac-msg__aside", "visibility")).toBeUndefined();
+    // It shows with the row's time, on hover or the row's focus (by opacity, so the keys still reach it).
+    const groupedCheck = ".ac-msg__gutter--aside > .ac-msg__aside";
+    expect(value(`.ac-msg--grouped:not([data-look="compact"]) ${groupedCheck}`, "opacity")).toBe("0");
+    expect(value(`.ac-msg--grouped:hover ${groupedCheck}`, "opacity")).toBe("1");
+    expect(value(`html:not([data-pointer]) .ac-msg--grouped:focus-within ${groupedCheck}`, "opacity")).toBe("1");
     expect(value(".ac-msg__gutter--aside > .ac-msg__gutter-time", "font-size")).toBe(
       "min(12px, max(11px, calc(var(--msg-text) - 3px)))",
     );

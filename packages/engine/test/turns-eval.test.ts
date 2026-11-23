@@ -120,7 +120,10 @@ const size = (r: ModelRequest) =>
  * its line in "# How you work" add about 765 (about 49,955), and a question getting its answer instead of unasked work
  * (its line in "# How you work" and `tell_agent`) adds 572 (50,720), and the reply rule following the person, not the
  * message, adds 46, and history sent as it was on Claude's own API with lean wakes adds about 150 (50,918 on the Cloud),
- * and the memory guard taking an admin's own words with the plainer nudges adds about 140; the ceiling leaves a little
+ * and the memory guard taking an admin's own words with the plainer nudges adds about 140, and `say_now` named the very
+ * first call before slow work (ADR 0207 addendum of 2026-11-21) adds 9, and the end-of-turn check (reread the reply: a
+ * promise, a running command, a rule to save), where a result no call of this turn made came from, no list of what's
+ * missing and the other ways in after a closed one add 165 (50,741; 51,188 on the Cloud); the ceiling leaves a little
  * room above them.
  */
 const OI_CEILING_CHARS = 51_300;

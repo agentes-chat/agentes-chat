@@ -1,7 +1,6 @@
 import { previewBody } from "@agenteschat/client/lib/message-body";
 import { useTranslation } from "react-i18next";
-import { Pressable, type StyleProp, StyleSheet, type ViewStyle } from "react-native";
-import Animated, { type AnimatedStyle } from "react-native-reanimated";
+import { Pressable, StyleSheet } from "react-native";
 import type { AgentMode } from "@/agent/poses";
 import { Text } from "@/ui";
 import { router } from "@/ui/navigation";
@@ -22,14 +21,11 @@ export function RightHandAsk({
   row,
   onStart,
   faceMode = "idle",
-  faceStyle,
 }: {
   row: ConversationRow;
   onStart: (agentId: string) => void;
   /** The face's mode: asleep under the splash, it wakes as Conversas arrives (`useWake`). */
   faceMode?: AgentMode;
-  /** The face's own motion (the hop as it wakes). */
-  faceStyle?: StyleProp<AnimatedStyle<ViewStyle>>;
 }) {
   const { t } = useTranslation();
   const surface = useSurface();
@@ -56,9 +52,7 @@ export function RightHandAsk({
       accessibilityHint={theirs ? invite : undefined}
       style={({ pressed }) => [styles.field, surface, pressed && styles.pressed]}
     >
-      <Animated.View style={faceStyle}>
-        <AgentFace agentId={row.with.id} size={FACE} mode={faceMode} />
-      </Animated.View>
+      <AgentFace agentId={row.with.id} size={FACE} mode={faceMode} />
       <Text variant="body" tone={theirs ? "ink" : "faint"} numberOfLines={1} style={styles.grow}>
         {words}
       </Text>

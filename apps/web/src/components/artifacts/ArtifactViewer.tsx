@@ -125,7 +125,16 @@ export function ArtifactViewer({
   // A picture, a video or a PDF has comments (ADR 0208): "Comentários" opens them as the right column, in place of
   // the versions while open. A PDF then takes the whole viewer too: its pages are drawn here, with their pins.
   const media = a ? mediaKindOfArtifact(a) : null;
-  const [talkOpen, setTalkOpen] = useState(Boolean(comments));
+  // One that already has comments opens with them beside it, as it stood when it opened (a comment arriving later
+  // never moves the file under whoever is looking at it); from then on it is the person's choice.
+  const [talkChoice, setTalkOpen] = useState<boolean | null>(comments ? true : null);
+  const openedWith = useRef<{ id: string; comments: boolean } | null>(null);
+  const commented = Boolean(media) && (a?.conversation?.count ?? 0) > 0;
+  // Settled once the file is read (a card's older copy of it may not count the last comments yet).
+  if (a && !query.isFetching && openedWith.current?.id !== a.id) {
+    openedWith.current = { id: a.id, comments: commented };
+  }
+  const talkOpen = talkChoice ?? (a && openedWith.current?.id === a.id ? openedWith.current.comments : commented);
   const filled = image || media === "pdf";
   const focusVersions = () =>
     requestAnimationFrame(() => document.querySelector<HTMLElement>(".artifact-viewer__versions button")?.focus());
@@ -179,7 +188,7 @@ export function ArtifactViewer({
           {place}
         </span>
       )}
-      {media && <ViewerCommentsButton artifact={a} open={talkOpen} onToggle={() => setTalkOpen((o) => !o)} />}
+      {media && <ViewerCommentsButton artifact={a} open={talkOpen} onToggle={() => setTalkOpen(!talkOpen)} />}
       {a.kind === "file" ? (
         <Button
           size="sm"

@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   ACCOUNTS_PROTOCOL,
   ANTIGRAVITY_MAC_PROTOCOL,
@@ -9,7 +11,7 @@ import {
   OPENCODE_ACP_PROTOCOL,
   SPEED_PROTOCOL,
 } from "@agenteschat/adapters";
-import { eq, schema } from "@agenteschat/db";
+import { eq, migrationsFolder, schema, sql } from "@agenteschat/db";
 import { MODEL_CATALOG } from "@agenteschat/providers";
 import { CODING_PLANS, learnPlanModels, planOf } from "@agenteschat/providers/plans";
 import {
@@ -30,6 +32,7 @@ import {
   updateAgent,
   ValidationError,
 } from "../src";
+import { recordAudit } from "../src/audit";
 import {
   brainModelId,
   brainModelLabel,
@@ -88,6 +91,20 @@ describe("brain settings", () => {
       contextWindow: 1_050_000,
     });
     expect(normalizeBrainModel("codex", "gpt-6-astra")).toBe("gpt-6-astra");
+    // A plan runs its maker's models alone: another maker's is refused, not stored for runs that can't use it.
+    for (const [kind, model] of [
+      ["codex", "claude-opus-5-5"],
+      ["codex", "opus"],
+      ["codex", "gemini-4-argon"],
+      ["antigravity", "gpt-6.1"],
+      ["antigravity", "claude-sonnet-5-5"],
+      ["grok", "gpt-6-luna"],
+    ] as const)
+      expect(() => normalizeBrainModel(kind, model)).toThrow("doesn't run on");
+    expect(normalizeBrainModel("antigravity", "gemini-4-argon-high")).toBe("gemini-4-argon-high");
+    expect(normalizeBrainModel("grok", "grok-4.7")).toBe("grok-4.7");
+    expect(normalizeBrainModel("cursor", "claude-opus-5-5-high")).toBe("claude-opus-5-5-high");
+    expect(normalizeBrainModel("opencode", "anthropic/claude-opus-5-5")).toBe("anthropic/claude-opus-5-5");
     // An alias the plan leaves out, or "Automático", is its main model; the value stays an alias.
     expect(brainModelLabel("claude_code", "opus", "zai")).toBe("GLM-5.3");
     expect(brainModelLabel("claude_code", "auto", "minimax")).toBe("MiniMax M3.1 Flash");
@@ -342,6 +359,41 @@ async function world() {
   };
   return { fx, deps: { db: fx.db }, machineId, bia, caio, account, row, audits, editor };
 }
+
+describe("a model its plan can't run, stored before the guard", () => {
+  test("goes back to the one it had before that change, else to its CLI's default", async () => {
+    const fx = await setup();
+    f = fx;
+    const migration = sql.raw(readFileSync(join(migrationsFolder, "0320_brain_model_of_its_plan.sql"), "utf8"));
+    const brainOf = async () => (await fx.db.select().from(schema.agents).where(eq(schema.agents.id, fx.agent.id)))[0];
+    await fx.db
+      .update(schema.agents)
+      .set({ brain: "codex", brainModel: "claude-opus-5-5" })
+      .where(eq(schema.agents.id, fx.agent.id));
+    await recordAudit(fx.db, {
+      orgId: fx.org.id,
+      actor: { type: "person", id: fx.owner.id },
+      action: "agent.brain",
+      target: { type: "agent", id: fx.agent.id },
+      details: { from: { brain: "codex", model: "gpt-6-luna" }, to: { brain: "codex", model: "claude-opus-5-5" } },
+    });
+    await fx.db.execute(migration);
+    expect((await brainOf())?.brainModel).toBe("gpt-6-luna");
+    await fx.db
+      .update(schema.agents)
+      .set({ brain: "antigravity", brainModel: "gpt-6.1" })
+      .where(eq(schema.agents.id, fx.agent.id));
+    await fx.db.execute(migration);
+    expect((await brainOf())?.brainModel).toBeNull();
+    // Cursor runs every maker's models: left as it is.
+    await fx.db
+      .update(schema.agents)
+      .set({ brain: "cursor", brainModel: "claude-opus-5-5-high" })
+      .where(eq(schema.agents.id, fx.agent.id));
+    await fx.db.execute(migration);
+    expect((await brainOf())?.brainModel).toBe("claude-opus-5-5-high");
+  });
+});
 
 describe("Criar agente: what a new agent could think with", () => {
   test("admins see every computer with what it offers; a member the server's own and theirs, never someone else's", async () => {

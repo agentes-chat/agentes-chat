@@ -429,12 +429,14 @@ jobs:
       # Bun first: the boundaries check below still runs when the scan fails.
       - *setup-bun
       # main and a release tag scan the whole history (about five minutes); a branch or a pull request scans the
-      # commits it adds to main, which main's own runs have already scanned up to there.
+      # commits it adds to main, which main's own runs have already scanned up to there. HEAD is named because
+      # gitleaks' default is every ref, and the full checkout fetches every branch: an unmerged branch's
+      # made-up test token would turn main red, while that branch's own run is where it belongs.
       - name: Secret scan
         env:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
-          range=()
+          range=(--log-opts=HEAD)
           if [ "$GITHUB_REF_TYPE" = branch ] && [ "$GITHUB_REF_NAME" != "$DEFAULT_BRANCH" ] &&
             git rev-parse --verify --quiet "origin/$DEFAULT_BRANCH" > /dev/null; then
             range=(--log-opts="origin/$DEFAULT_BRANCH..HEAD")

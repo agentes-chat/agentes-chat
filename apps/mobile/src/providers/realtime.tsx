@@ -65,7 +65,13 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           opened.current = orgId;
         }),
       );
-      offs.push(c.onReconnect(() => void queryClient.invalidateQueries()));
+      // Spread over a few seconds, and only what is on screen after a brief drop (`onCatchUp`): every phone of a
+      // restarted server back at once doesn't read everything at once.
+      offs.push(
+        c.onCatchUp(
+          (full) => void (full ? queryClient.invalidateQueries() : queryClient.refetchQueries({ type: "active" })),
+        ),
+      );
       // Taken out of the workspace: said plainly (not when it was their own doing, `membership_ended`), then `me` without it opens another one (or the first run).
       offs.push(
         c.onError((code) => {

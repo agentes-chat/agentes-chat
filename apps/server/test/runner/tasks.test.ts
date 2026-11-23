@@ -656,6 +656,7 @@ test.skipIf(!posix)(
       configDir: cli.folder("claude_code", FOLDER_ACCOUNT),
       oauthToken: null,
       settingsEnv: { ANTHROPIC_BASE_URL: "https://api.anthropic.com" },
+      autoMemoryOff: "1",
     });
 
     // One root keeps (protocol 29): the agent's own folder for it, and root's token on descriptor 3 only.
@@ -716,7 +717,11 @@ test.skipIf(!posix)(
     // CLI's "Please run /login".
     await tasks.start(AGENT, { taskId: id(43), executor: "claude", prompt: "Ship it" });
     await waitFor(() => Boolean(done(id(43))), 8000);
-    expect(cli.claudeRuns().at(-1)).toMatchObject({ configDir: path.join(cli.own, ".claude"), oauthToken: null });
+    expect(cli.claudeRuns().at(-1)).toMatchObject({
+      configDir: path.join(cli.own, ".claude"),
+      oauthToken: null,
+      autoMemoryOff: "1",
+    });
     const failed = done(id(43));
     expect(failed?.exitCode).toBe(1);
     expect(failed?.result).toStartWith(

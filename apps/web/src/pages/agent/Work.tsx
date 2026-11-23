@@ -492,14 +492,17 @@ export function WorkDialogs({
   open,
   brainAt,
   onClose,
+  onReopen,
 }: {
   open: WorkDialog | null;
   /** The screen "Quem pensa" opens on, from a link; its first one otherwise. */
   brainAt?: BrainScreen;
   onClose: () => void;
+  /** Opens "Quem pensa" again (Back from the Connect it closed for). */
+  onReopen?: () => void;
 }) {
   // Who thinks has its own dialog, under the sky like Connect's (ADR 0032 §5, addendum 2026-11-10).
-  if (open === "brain") return <BrainDialog onClose={onClose} at={brainAt} />;
+  if (open === "brain") return <BrainDialog onClose={onClose} at={brainAt} onReopen={onReopen} />;
   if (open === "computer") return <ComputerDialog onClose={onClose} />;
   if (open === "browser") return <BrowserDialog onClose={onClose} />;
   return null;

@@ -107,8 +107,9 @@ export function useStepText(active: boolean, steps: string[]) {
     const timer = setInterval(() => setNow(Date.now()), 500);
     return () => clearInterval(timer);
   }, [active]);
-  if (!active || since === null || steps.length === 0) return undefined;
-  return steps[stepAt(since, now, steps.length)];
+  if (!active || steps.length === 0) return undefined;
+  // The first step from the render that starts it (the timer starts after): a footer note never blinks out between.
+  return since === null ? steps[0] : steps[stepAt(since, now, steps.length)];
 }
 
 /**

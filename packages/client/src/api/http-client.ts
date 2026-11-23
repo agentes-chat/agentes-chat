@@ -1,3 +1,4 @@
+import { createCodeApi } from "../code/api";
 import { createDashboardsApi } from "../dashboards/api";
 import type { ChatPrefs } from "../lib/chat-look";
 import { humanCheckHeaders } from "../lib/human-check";
@@ -193,6 +194,7 @@ import type {
   OrgPlanUsage,
   OrgRoles,
   OrgSettings,
+  OwnOAuthClient,
   PageTarget,
   PendingReturn,
   PeopleUsage,
@@ -1616,14 +1618,14 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         const qs = params.toString();
         return `${base}${org(orgId)}/artifacts/${enc(id)}/file${qs ? `?${qs}` : ""}`;
       },
-      upload: (orgId, file, options = {}) => {
+      upload: (orgId, file, options = {}, upload) => {
         const form = new FormData();
         form.append("file", file, file.name);
         if (options.title) form.append("title", options.title);
         if (options.channelId) form.append("channelId", options.channelId);
         if (options.threadId) form.append("threadId", options.threadId);
         if (options.folderId) form.append("folderId", options.folderId);
-        return files.upload<ArtifactDetail>(`${org(orgId)}/artifacts/files`, form);
+        return files.upload<ArtifactDetail>(`${org(orgId)}/artifacts/files`, form, upload);
       },
       uploadVersion: (orgId, id, file, options = {}) => {
         const form = new FormData();
@@ -1727,6 +1729,7 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
     },
     dashboards: createDashboardsApi(request),
     live: createLiveApi(request, { upload: files.upload, base }),
+    code: createCodeApi(request),
     missions: ((): HttpApi["missions"] => {
       const one = (orgId: string, missionId: string) => `${org(orgId)}/missions/${enc(missionId)}`;
       return {
@@ -1994,6 +1997,12 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         }),
       disconnect: (orgId, serverId) =>
         request<void>(`${org(orgId)}/connectors/custom/${enc(serverId)}`, { method: "DELETE" }),
+      ownClient: (orgId, serverUrl) =>
+        request<OwnOAuthClient>(`${org(orgId)}/connector-oauth-clients?serverUrl=${enc(serverUrl)}`),
+      setOwnClient: (orgId, input) =>
+        request<OwnOAuthClient>(`${org(orgId)}/connector-oauth-clients`, { method: "PUT", json: input }),
+      removeOwnClient: (orgId, issuer) =>
+        request<void>(`${org(orgId)}/connector-oauth-clients?issuer=${enc(issuer)}`, { method: "DELETE" }),
     },
     questions: {
       answer: (orgId, questionId, input) =>

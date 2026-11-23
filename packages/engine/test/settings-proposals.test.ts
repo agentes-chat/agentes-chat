@@ -173,6 +173,46 @@ describe("a change the person asked for and may make (ADR 0092 §5)", () => {
     expect((await getAgent(f.db, f.org.id, f.agent.id))?.brainModel).toBeNull();
   });
 
+  test("another maker's model is refused on a plan that can't run it, and says to change its AI account first", async () => {
+    f = await setup({ rightHand: true });
+    const { machineId } = await pairMachine({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, {
+      name: "MacBook",
+      exec: true,
+    });
+    await f.db.update(schema.agents).set({ brain: "codex", machineId }).where(eq(schema.agents.id, f.agent.id));
+    const ctx = await lodiRun(f, f.owner.id, "coloca o dev no Opus", true);
+    for (const model of ["claude-opus-5-5", "opus"]) {
+      const out = await call(f, ctx, { changes: [{ agent: "@dev", model }], reason: "pediu" });
+      expect(out).toMatchObject({ isError: true });
+      expect(out.content).toContain("doesn't run on Codex: it needs an AI account of Claude first");
+    }
+    expect((await getAgent(f.db, f.org.id, f.agent.id))?.brainModel).toBeNull();
+  });
+
+  test("the effort is a row of its own, for any agent and the right hand, with Undo", async () => {
+    f = await setup({ rightHand: true });
+    const ctx = await lodiRun(f, f.owner.id, "faz o dev pensar mais, e você também", true);
+    const out = await call(f, ctx, {
+      changes: [
+        { agent: "@dev", effort: "high" },
+        { agent: "@lodi", effort: "low" },
+      ],
+      reason: "pediu",
+    });
+    expect(out.content).toContain("applied at once");
+    expect((await getAgent(f.db, f.org.id, f.agent.id))?.brainEffort).toBe("high");
+    // Its own row waits for a person's click, as any of its own settings.
+    const { card, rows } = await cardRows(f, f.owner.id);
+    const own = rows.find((r) => r.status === "pending");
+    await decideProposal(f.db, f.owner.id, f.org.id, own?.id ?? "", "accept", { pubsub: f.pubsub });
+    expect((await lodiOf(f)).brainEffort).toBe("low");
+    for (const r of (await actionsFor(f.db, f.org.id, [card.id])).get(card.id) ?? [])
+      await undoAgentAction({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, r.id);
+    expect((await getAgent(f.db, f.org.id, f.agent.id))?.brainEffort).toBeNull();
+    const back = await call(f, ctx, { changes: [{ agent: "@dev", effort: "default" }], reason: "pediu" });
+    expect(back.content).toContain("already has that effort");
+  });
+
   test("outside content in the conversation leaves it on the card", async () => {
     f = await setup({ rightHand: true });
     const outside = await lodiRun(f, f.owner.id, "coloca o dev no haiku");

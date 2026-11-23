@@ -497,6 +497,7 @@ export async function computerQueue(
     channelId: agentRuns.channelId,
     threadRootId: agentRuns.threadRootId,
     triggerMessageId: agentRuns.triggerMessageId,
+    replyInThread: agentRuns.replyInThread,
     workId: agentRuns.workId,
     background: agentRuns.background,
     authorType: messages.authorType,
@@ -551,6 +552,7 @@ export async function computerQueue(
     channelId: string;
     threadRootId: string;
     triggerMessageId: string;
+    replyInThread: boolean;
     sees: boolean;
     agentsOnly: boolean;
   }) => ({

@@ -598,6 +598,14 @@
     "emailLinkExpired": "Tautan konfirmasi ini sudah tidak berlaku. Akunmu tetap berfungsi seperti biasa.",
     "sendNewLink": "Kirim tautan baru",
     "newLinkSent": "Kami mengirim tautan baru ke {{email}}.",
+    "confirm": {
+      "title": "Periksa kotak masuk",
+      "lead": "Buka tautan yang kami kirim ke {{email}} untuk melanjutkan.",
+      "wrongAddress": "Alamat salah? Ubah",
+      "banner": "Konfirmasi email",
+      "bannerSub": "Buka tautan yang kami kirim ke {{email}}.",
+      "change": "Ubah alamat"
+    },
     "unconfirmed": "Email ini sudah punya akun dengan kata sandi yang belum dikonfirmasi. Masuk dengan kata sandi itu, atau buat yang baru lewat email.",
     "unconfirmedReset": "Buat kata sandi baru",
     "unconfirmedNoEmail": "Email ini sudah punya akun dengan kata sandi. Masuk dengan kata sandi itu.",
@@ -1781,6 +1789,9 @@
     "open": "Buka",
     "openInBrowser": "Buka di browser",
     "download": "Unduh",
+    "copyImage": "Salin gambar",
+    "imageCopied": "Gambar disalin.",
+    "copyImageFailed": "Gambar tidak bisa disalin. Gunakan Unduh.",
     "conversation": "Kirim pesan",
     "agentPage": "Lihat halaman",
     "back": "Kembali",
@@ -2100,6 +2111,7 @@
       "team": "Siapa siapa: orang, agen, dan grupnya",
       "dashboards": "Angka dan grafik yang dijaga tetap terbaru oleh agen",
       "taskManager": "Apa yang dikerjakan tiap agen sekarang, dan hentikan yang perlu",
+      "code": "Memprogram bersama agen, tiap permintaan di worktree-nya sendiri",
       "approvalsPersonal": "Yang diminta agenmu untuk kamu izinkan",
       "proposalsPersonal": "Yang diusulkan agenmu untuk diubah",
       "threadsPersonal": "Percakapan sampingan, dan misi",
@@ -2109,6 +2121,7 @@
       "teamPersonal": "Agenmu, dan siapa lagi yang ada di sini",
       "dashboardsPersonal": "Angka dan grafik yang dijaga tetap terbaru oleh agenmu",
       "taskManagerPersonal": "Apa yang dikerjakan agenmu sekarang, dan hentikan yang perlu",
+      "codePersonal": "Memprogram bersama agenmu",
       "homePersonal": "Harimu: apa yang menunggumu dan apa yang sedang dikerjakan agenmu"
     },
     "customizeSidebar": "Sesuaikan sidebar",
@@ -2204,7 +2217,7 @@
     "expandNav": "Bentangkan sidebar",
     "searchWorkspace": "Cari di ruang kerja",
     "summary_other": "{{people}} anggota · {{agents}} agen",
-    "waiting": "Menunggumu",
+    "waiting": "Kotak masuk",
     "approvals": "Persetujuan",
     "proposals": "Usulan perbaikan",
     "issues": "Tugas",
@@ -2214,6 +2227,7 @@
     "team": "Tim",
     "dashboards": "Dasbor",
     "taskManager": "Pengelola tugas",
+    "code": "Kode",
     "calendar": "Kalender",
     "drive": "Drive",
     "members": "Anggota",
@@ -2316,7 +2330,7 @@
     "howTo": "Cara memasang",
     "phone": "Ponsel",
     "phoneText": "Notifikasi di saku, untuk membalas dari mana saja.",
-    "appStore": "App Store",
+    "testFlight": "TestFlight",
     "googlePlay": "Google Play"
   },
   "openOnPhone": {
@@ -2397,7 +2411,7 @@
       "sectors": "Departemen",
       "usage": "Tata kelola dan penggunaan"
     },
-    "noOwner": "Tanpa penanggung jawab",
+    "noOwner": "Admin",
     "workingNow": "Sedang bekerja",
     "available": "Tersedia",
     "archived": "Diarsipkan",
@@ -2417,7 +2431,7 @@
         "mine": "Milikku",
         "working": "Sedang bekerja",
         "waiting": "Menunggumu",
-        "noOwner": "Tanpa penanggung jawab"
+        "noOwner": "Dipegang admin"
       },
       "groupBy": "Kelompokkan menurut",
       "by": {
@@ -2660,6 +2674,8 @@
     "noTopic": "Tanpa deskripsi",
     "nameLabel": "Nama",
     "nameHelp": "Berubah untuk semua orang. Tautan lama tetap berfungsi.",
+    "replyInThreads": "Agen membalas di utas",
+    "replyInThreadsHelp": "Agen yang dipanggil di kanal menjawab di utas di bawah pesan itu, dan kanal menampilkan satu baris untuk utas itu. Pekerjaan yang sudah berjalan tetap di tempatnya.",
     "nameTaken": "Sudah ada #{{name}}.",
     "generalName": "#general tetap dengan namanya.",
     "archive": "Arsipkan kanal",
@@ -2725,8 +2741,6 @@
       "mentionsYou": "kamu disebut"
     },
     "unreadDivider": "Baru",
-    "offline": "Tidak ada koneksi. Apa pun yang kamu kirim akan terkirim sendiri saat koneksi kembali.",
-    "backOnline": "Terhubung lagi",
     "sendingOffline": "terkirim saat koneksi kembali",
     "endOfReply": "Akhir balasan",
     "mentionSuggestions": "Saran sebutan"
@@ -2924,7 +2938,7 @@
     "computerNoHome": "Belum ada komputer. Komputer tersedia setelah workspace ini punya komputer sendiri.",
     "computerNoHomeServer": "Belum ada browser. Siapkan <guide>server ini sebagai komputer para agen</guide> agar ia punya satu.",
     "addComputer": "Tambahkan komputer",
-    "computerOneUser": "Tidak ada komputer di sini. Komputer workspace menjalankan semua agen sebagai satu pengguna, jadi tidak bisa memisahkan tempat tiap orang. Server Linux yang dipasang dengan opsi --system dari penginstal bisa.",
+    "computerOneUser": "Folder dan browser milikmu sendiri di komputer workspace. Komputer ini menjalankan semua agen sebagai satu pengguna: perintah agen lain di sana bisa membacanya, dan hanya orang yang menghubungkannya yang bisa mengambil kendali. Server Linux yang dipasang dengan --system memisahkan setiap tempat.",
     "powers": {
       "title": "Kemampuan di workspace",
       "help": "Hanya tangan kanan Anda yang melakukan ini.",
@@ -2959,6 +2973,7 @@
       "onlyCreators": "Hanya admin yang membuat agen",
       "only": {
         "model": "Hanya admin yang mengubah model agen",
+        "effort": "Hanya admin yang mengubah upaya agen",
         "budget": "Hanya admin yang mengubah anggaran agen",
         "owner": "Hanya admin yang mengubah penanggung jawab agen",
         "archive": "Hanya admin yang mengarsipkan agen",
@@ -2976,6 +2991,7 @@
     },
     "field": {
       "model": "Model",
+      "effort": "Upaya",
       "ai_account": "Akun AI",
       "budget": "Anggaran bulanan",
       "owner": "Penanggung jawab",
@@ -3338,7 +3354,10 @@
       "getGit": "Unduh Git for Windows",
       "cantStart": "{{program}} ada di {{computer}}, tetapi tidak mau berjalan: {{message}}",
       "outdated": "Perbarui aplikasi agentes.chat di {{computer}} untuk memasang dari sini.",
-      "asked": "Permintaan terkirim. {{name}} mendapat tombol untuk memasangnya."
+      "asked": "Permintaan terkirim. {{name}} mendapat tombol untuk memasangnya.",
+      "runThis": "Jalankan perintah ini di sana untuk memasangnya.",
+      "missingSystem": "{{program}} belum ada di {{computer}} untuk para agen, yang masing-masing bekerja sebagai pengguna sendiri. Jalankan perintah ini di sana untuk memasangnya bagi semuanya.",
+      "homeOnly": "{{program}} hanya terpasang untuk root di {{computer}}. Setiap agen bekerja sebagai pengguna sendiri dan tidak bisa menjangkaunya. Jalankan perintah ini di sana untuk memasangnya bagi semuanya."
     },
     "titleFor": "Hubungkan AI untuk {{name}}",
     "titleFor_female": "Hubungkan AI untuk {{name}}",
@@ -3769,7 +3788,7 @@
   },
   "dm": {
     "subtitle": "{{role}} · milik {{owner}}",
-    "subtitleNoOwner": "{{role}} · tanpa pemilik",
+    "subtitleNoOwner": "{{role}} · milik admin",
     "emptyAgent": "Minta dia mengingat, melupakan, atau bekerja dengan cara lain.",
     "emptyAgent_female": "Minta dia mengingat, melupakan, atau bekerja dengan cara lain.",
     "opening": "Membuka percakapan…",
@@ -4147,7 +4166,7 @@
     "viewProfile": "Lihat profil",
     "agent": "Agen",
     "owner": "Pemilik",
-    "noOwner": "tanpa pemilik",
+    "noOwner": "Admin",
     "model": "Model",
     "can": "Bisa",
     "budgetUsed": "{{percent}} anggaran terpakai bulan ini",
@@ -4833,7 +4852,8 @@
       "proposal": "Mengusulkan perubahan",
       "agent": "Mengusulkan agen baru",
       "team": "Mengusulkan tim",
-      "firstTask": "Tugas pertama"
+      "firstTask": "Tugas pertama",
+      "code": "Menyarankan sesi kode"
     },
     "waitingYou": "menunggumu",
     "waitingFor": "menunggu {{name}}",
@@ -4850,6 +4870,7 @@
       "agent": "<b>{{name}}</b> mengusulkan agen baru · {{what}}",
       "team": "<b>{{name}}</b> mengusulkan tim · {{what}}",
       "firstTask": "<b>{{name}}</b> menyarankan tugas pertama · {{what}}",
+      "code": "<b>{{name}}</b> menyarankan sesi kode · {{what}}",
       "more": "+{{count}}",
       "here_other": "{{count}} menunggumu di sini",
       "see": "Lihat"
@@ -5078,7 +5099,7 @@
     "firstRun": "Lanjutkan dari terakhir · {{done}} dari {{total}}"
   },
   "notifications": {
-    "title": "Notifikasi",
+    "title": "Kotak masuk",
     "planLent": {
       "takeBack": "Tarik kembali",
       "takeBackAll": "Tarik kembali dari semua agen",
@@ -5106,7 +5127,7 @@
         "computer": "Ganti komputer"
       }
     },
-    "docTitleUnread": "({{count}}) Notifikasi",
+    "docTitleUnread": "({{count}}) Kotak masuk",
     "summaryWaiting_other": "{{count}} hal menunggumu",
     "summaryUnread_other": "{{count}} belum dibaca",
     "summaryAllRead": "semua sudah dibaca",
@@ -5120,6 +5141,7 @@
       "waiting": "Menunggumu",
       "unread": "Belum dibaca",
       "reactions": "Reaksi",
+      "requests": "Permintaan yang sudah diputuskan",
       "done": "Selesai"
     },
     "keys": {
@@ -5340,6 +5362,8 @@
     "noneUnread": "Semua sudah dibaca.",
     "noneHere": "Belum ada apa-apa di sini.",
     "noneDone": "Tidak ada yang ditandai selesai dalam 30 hari terakhir.",
+    "noneRequests": "Belum ada permintaan yang diputuskan.",
+    "proposes": "mengusulkan perbaikan",
     "more": "Tampilkan lebih banyak"
   },
   "approvals": {
@@ -6155,6 +6179,7 @@
         "empty_reply": "Model tidak mengembalikan apa pun.",
         "model_refused": "Model menolak menjawab.",
         "agent_archived": "Agen sudah diarsipkan.",
+        "code_session_unavailable": "Worktree sesi tidak tersedia di komputer.",
         "provider_error": "Penyedia model mengembalikan error: {{detail}}",
         "provider_account": "Penyedia menolak kuncinya: mungkin tidak valid, kehabisan kredit, atau melewati kuota.",
         "provider_unavailable": "Penyedia model tidak menjawab: {{detail}}",
@@ -6911,9 +6936,9 @@
     "noChannels": "Kamu belum ada di kanal mana pun. Kamu bisa menambahkan agen ke kanal nanti.",
     "owner": "Pemilik",
     "you": "{{name}} (kamu)",
-    "noOwnerOption": "Tanpa pemilik",
-    "noOwnerShort": "Admin menerima peringatan dan menyetujui",
-    "noOwnerHelp": "Tanpa pemilik, admin menerima peringatan dan menyetujui tindakan sensitif.",
+    "noOwnerOption": "Admin",
+    "noOwnerShort": "Menerima peringatan dan menyetujui",
+    "noOwnerHelp": "Admin menerima peringatan dan menyetujui tindakan sensitif.",
     "ownerHelp": "Menerima peringatan anggaran dan menyetujui tindakan sensitif.",
     "ownerRoleHelp": "Siapa pun dengan peran {{role}} menerima permintaan persetujuan dan pemberitahuannya. Siapa pun dari mereka bisa memutuskan, termasuk yang mendapat peran itu nanti.",
     "ownerRoleHelp_female": "Siapa pun dengan peran {{role}} menerima permintaan persetujuan dan pemberitahuannya. Siapa pun dari mereka bisa memutuskan, termasuk yang mendapat peran itu nanti.",
@@ -6971,7 +6996,6 @@
     "noTools": "Tanpa alat",
     "onlyContext": "Hanya konteks ruang kerja",
     "noChannelsReview": "Tanpa kanal: panggil lewat @ atau pesan langsung",
-    "noOwnerAdmins": "Tanpa pemilik (admin)",
     "editSection": "Ubah {{section}}",
     "hints": {
       "role": "Pilih titik awal",
@@ -7507,7 +7531,7 @@
       "none": "Tidak ada tautan aktif."
     },
     "ownerLine": "Pemilik: {{name}}",
-    "noOwner": "Tanpa pemilik",
+    "noOwner": "Pemilik: admin",
     "budgetLine": "{{percent}} dari anggaran {{month}}",
     "noAgents": "Belum ada agen."
   },
@@ -7821,6 +7845,46 @@
     "custom_write": {
       "label": "Alat tulis",
       "description": "Pakai alat tulis. Yang ditandai sensitif selalu minta persetujuan."
+    },
+    "telegram_messages_read": {
+      "label": "Baca pesan",
+      "description": "Daftar obrolan bot dan baca apa yang orang tulis kepadanya atau di tempat ia berada."
+    },
+    "telegram_messages_write": {
+      "label": "Kirim pesan",
+      "description": "Kirim, ubah, dan sematkan pesan dan file sebagai bot. Menghapus pesan, memblokir orang, dan tautan undangan meminta persetujuan."
+    },
+    "x_posts_read": {
+      "label": "Baca postingan",
+      "description": "Baca postingan dan sebutan akun, postingan menurut id, dan postingan terbaru lewat pencarian."
+    },
+    "x_posts_write": {
+      "label": "Posting",
+      "description": "Posting di akun, dengan gambar atau video dari Drive. Menghapus postingan meminta persetujuan."
+    },
+    "threads_posts_read": {
+      "label": "Baca postingan",
+      "description": "Baca postingan akun, balasannya, sebutan, dan hasilnya."
+    },
+    "threads_posts_write": {
+      "label": "Posting dan balas",
+      "description": "Posting dengan gambar atau video dari Drive, membalas, dan menyembunyikan balasan. Menghapus postingan meminta persetujuan."
+    },
+    "meta_ads_ads_read": {
+      "label": "Baca iklan",
+      "description": "Daftar akun iklan, kampanye, set iklan, dan iklan, serta baca hasilnya."
+    },
+    "meta_ads_ads_write": {
+      "label": "Kelola iklan",
+      "description": "Buat kampanye, set iklan, dan iklan (selalu dijeda), ubah dan jeda. Mengaktifkan dan mengubah anggaran selalu meminta persetujuan. Mengarsipkan dan menghapus meminta."
+    },
+    "tiktok_videos_read": {
+      "label": "Baca video",
+      "description": "Baca profil, video publik, dan apa yang boleh diposting kreator."
+    },
+    "tiktok_videos_write": {
+      "label": "Kirim video ke draf",
+      "description": "Kirim video Drive ke draf TikTok kreator, yang menyelesaikan postingannya di sana. Setiap unggahan meminta persetujuan."
     }
   },
   "issues": {
@@ -8201,7 +8265,12 @@
       "empty": "Seret file ke sini, tempel tangkapan layar, atau kirim di percakapan tugas.",
       "fromCreation": "Saat dibuat · {{when}}",
       "fromComment": "Komentar {{name}} · {{when}}",
-      "linked": "Ditautkan oleh {{name}}"
+      "linked": "Ditautkan oleh {{name}}",
+      "remove": "Keluarkan {{name}} dari tugas",
+      "removeShort": "Keluarkan dari tugas",
+      "removed": "{{name}} dikeluarkan dari tugas. File masih ada di Drive.",
+      "added_other": "{{count}} file masuk ke lampiran",
+      "see": "Lihat lampiran"
     },
     "history": {
       "commented": "berkomentar",
@@ -8267,6 +8336,11 @@
       "methods": "Metode yang diterima",
       "methodsHelp": "Alamat ini hanya menjawab metode yang dicentang. Dengan GET, parameter kueri URL menjadi data panggilan.",
       "methodsLine": "Menerima {{methods}}.",
+      "groupBy": "Kelompokkan panggilan menurut",
+      "groupByHelp": "Sebuah kolom di data setiap panggilan, misalnya conversation.id. Panggilan dengan nilai yang sama berjalan satu per satu, sesuai urutan. Nilai yang berbeda berjalan bersamaan.",
+      "groupByOff": "Semua panggilan menunggu dalam satu antrean, sesuai urutan.",
+      "groupByOn": "Panggilan dengan {{path}} yang sama berjalan sesuai urutan. Yang lain berjalan bersamaan.",
+      "groupBySaved": "Pengelompokan disimpan.",
       "address": "Alamat",
       "addressHelp": "Siapa pun yang punya alamat ini bisa memulai agen. Jaga seperti kata sandi dan buat yang baru kalau bocor.",
       "copied": "Alamat disalin.",
@@ -8679,6 +8753,9 @@
       },
       "deploy": {
         "succeeded": "Deploy selesai"
+      },
+      "telegram": {
+        "message": "Pesan ke bot Telegram"
       }
     },
     "when": {
@@ -9626,6 +9703,7 @@
       "openShort": "Buka",
       "reply": "Balas",
       "replies_other": "{{count}} balasan",
+      "replying_other": "{{names}} sedang membalas di utas",
       "closed_other": "Utas ditutup · {{title}} · {{count}} pesan",
       "archived_other": "{{count}} utas yang diarsipkan tidak ditampilkan di sini",
       "see": "Lihat"
@@ -10788,6 +10866,184 @@
     "createKeywords": "buat baru tambah create new",
     "empty": "Tidak ada hasil untuk “{{q}}”."
   },
+  "codeSessions": {
+    "beta": {
+      "title": "Coding mode masih beta",
+      "text": "Ini benar-benar berfungsi dan berubah setiap minggu. Kadang macet. Kalau begitu, masalahnya ada pada kami.",
+      "go": "Mulai",
+      "added": {
+        "worktree": "Setiap permintaan di worktree-nya sendiri, dengan Git, File, Layar, dan Terminal",
+        "anyAi": "AI apa pun: Claude Code, Codex, OpenCode, atau model lewat kuncinya",
+        "beside": "Edit file dan buka terminal di samping percakapan"
+      },
+      "removed": {
+        "paste": "Salin-tempel kode antara chat dan editor",
+        "watch": "Menunggui terminal sampai agen selesai"
+      }
+    },
+    "title": "Kode",
+    "state": {
+      "waiting": "menunggumu",
+      "working": "sedang bekerja",
+      "preparing": "menyiapkan worktree",
+      "failed": "gagal disiapkan",
+      "pr": "PR #{{number}}",
+      "idle": "siap"
+    },
+    "list": {
+      "label": "Sesi kode",
+      "new": "Sesi baru",
+      "newRow": "Sesi baru",
+      "resize": "Lebar daftar",
+      "local": "di komputer",
+      "empty": "Sesi yang kamu buka, atau tempat kamu dipanggil, muncul di sini."
+    },
+    "home": {
+      "mode": "Coding mode",
+      "was": "Chat mode",
+      "beta": "Beta",
+      "noAgents": "Belum ada agen yang memprogram di komputer. Di pengaturan agen, beri dia komputer dan aplikasi coding, atau izinkan dia menjalankan kode di sana.",
+      "placeholder": "Jelaskan perubahan, bug, atau pertanyaannya",
+      "label": "Yang dikerjakan",
+      "agent": "Agen",
+      "repo": "Di mana bekerja",
+      "repoPlaceholder": "Repositori atau proyek",
+      "repoSearch": "Cari, atau ketik owner/name atau nama baru",
+      "newLocal": "Proyek baru di komputer: {{name}}",
+      "useRepo": "Pakai {{repo}}",
+      "repoNote": "Nama tanpa owner membuat proyek di komputer agen, di luar GitHub.",
+      "hint": "@ memanggil seseorang ke sesi",
+      "start": "Mulai"
+    },
+    "view": {
+      "gone": "Sesi ini sudah tidak ada, atau bukan untuk kamu lihat.",
+      "resize": "Lebar percakapan",
+      "composer": "Balas · @ memanggil seseorang · / perintah",
+      "more": "Lainnya",
+      "openPr": "Buka PR #{{number}}",
+      "close": "Tutup sesi",
+      "closeHint": "Sesi keluar dari daftar: worktree dihapus, branch tetap ada",
+      "failed": "Worktree tidak bisa disiapkan.",
+      "retry": "Coba lagi",
+      "githubAccess": "Ruang kerja ini tidak punya akses GitHub untuk repositori ini. Hubungkan GitHub di Pengaturan › Konektor, atau mulai sesi di proyek di komputer (cukup sebuah nama)."
+    },
+    "panel": {
+      "label": "Panel sesi",
+      "screen": "Layar",
+      "terminal": "Terminal",
+      "terminalHeight": "Tinggi terminal",
+      "notReady": "Worktree masih disiapkan.",
+      "agent_preparing": "sedang menyiapkan worktree",
+      "agent_failed": "tidak bisa menyiapkan worktree",
+      "agent_working": "sedang bekerja",
+      "agent_waiting": "menunggumu",
+      "agent_idle": "tersedia"
+    },
+    "gitTab": {
+      "openFile": "Buka file",
+      "label": "Git",
+      "from": "dari {{base}}",
+      "ahead_other": "{{count}}{{more}} commit di depan",
+      "refresh": "Baca lagi",
+      "reading": "Membaca git di komputer…",
+      "all": "Semua sejak {{base}}",
+      "uncommitted": "Belum di-commit",
+      "clean": "Semua sudah di-commit.",
+      "changesMore": "Masih ada perubahan lain: seribu yang pertama ada di sini.",
+      "commits": "Commit",
+      "noCommits": "Belum ada commit sejak {{base}}.",
+      "more": "Dan commit yang lebih lama.",
+      "back": "Kembali",
+      "split": "Berdampingan",
+      "none": "Tidak ada yang berubah di sini.",
+      "tooLarge": "Terlalu besar untuk ditampilkan di sini. File yang berubah ada di daftar.",
+      "status": {
+        "modified": "Diubah",
+        "added": "Ditambahkan",
+        "deleted": "Dihapus",
+        "renamed": "Diganti nama",
+        "untracked": "Baru, belum masuk git"
+      }
+    },
+    "files": {
+      "label": "File",
+      "search": "Cari file",
+      "searchPlaceholder": "Cari file menurut nama atau folder",
+      "changedGroup": "Diubah",
+      "count_other": "{{formatted}} file",
+      "refresh": "Baca lagi",
+      "reading": "Membaca file di komputer…",
+      "empty": "Belum ada file.",
+      "noMatch": "Tidak ada file yang cocok dengan “{{query}}”.",
+      "truncated_other": "Menampilkan {{formatted}} file pertama.",
+      "hasChanges": "Ada perubahan",
+      "opening": "Membuka file…",
+      "cut": "Hanya {{size}} pertama yang tampil di sini.",
+      "save": "Simpan",
+      "unsaved": "Belum disimpan",
+      "tooLong": "Terlalu panjang untuk diedit di sini",
+      "moved": "File ini berubah di komputer setelah Anda membukanya.",
+      "reload": "Muat yang di sana",
+      "overwrite": "Simpan milik saya di atasnya",
+      "unsavedAsk": "File ini punya perubahan yang belum Anda simpan.",
+      "keepEditing": "Lanjut mengedit",
+      "discard": "Buang",
+      "state": {
+        "binary": "File biner: tidak ada yang bisa ditampilkan di sini.",
+        "missing": "File ini sudah tidak ada.",
+        "ignored": "Git mengabaikan file ini, jadi tidak tampil di sini.",
+        "secret": "File .env tidak tampil di sini: biasanya berisi rahasia.",
+        "outside": "File ini adalah tautan ke luar worktree."
+      }
+    },
+    "tabs": {
+      "label": "Tab sesi",
+      "talk": "Percakapan",
+      "terminalN": "Terminal {{n}}",
+      "close": "Tutup {{name}}",
+      "add": "Tab baru"
+    },
+    "screen": {
+      "computer": "Komputer {{name}}",
+      "computer_female": "Komputer {{name}}",
+      "menu": "Layar yang dipakai {{name}}",
+      "menu_female": "Layar yang dipakai {{name}}",
+      "computerHint": "Tempat worktree berada",
+      "onHost": "di {{host}}",
+      "exitFull": "Keluar dari layar penuh"
+    },
+    "who": {
+      "label": "Di sesi ini",
+      "open_other": "{{count}} di sesi ini",
+      "agent": "bekerja di worktree",
+      "opener": "membuka sesi",
+      "leave": "Keluar",
+      "remove": "Keluarkan {{name}} dari sesi",
+      "invite": "Untuk mengajak seseorang, ketik @ dan namanya di percakapan."
+    },
+    "screenLine": {
+      "show": "Lihat di Layar",
+      "held": "Seseorang sedang mengendalikan layar"
+    },
+    "suggestion": {
+      "label": "Saran sesi kode",
+      "detail": "{{repo}} · di komputer {{name}}",
+      "more": "Lihat permintaan",
+      "open": "Buka sesi",
+      "here": "Kerjakan di sini",
+      "opening": "Membuka sesi…",
+      "opened": "Kamu membuka sesi",
+      "openedBy": "{{name}} membuka sesi",
+      "keptHere": "Kamu memilih mengerjakannya di sini",
+      "keptHereBy": "{{name}} memilih mengerjakannya di sini",
+      "see": "Lihat sesi"
+    },
+    "from": {
+      "dm": "Dibuka dari percakapanmu dengan {{name}}",
+      "channel": "Dibuka dari #{{name}}",
+      "see": "Lihat percakapan"
+    }
+  },
   "code": {
     "ranSummary_other": "Menjalankan {{count}} baris {{language}} · output {{size}}",
     "show": "Lihat kode {{name}}",
@@ -11573,6 +11829,9 @@
       "textOnly": "Hanya membaca teks",
       "search": "Cari model",
       "account": "Akun",
+      "accountOf": "Akun: {{account}}",
+      "connectAccount": "Hubungkan akun lain",
+      "ais": "AI",
       "connect": "Hubungkan AI",
       "applies": "Berlaku mulai jawaban berikutnya.",
       "more": "Opsi lainnya",
@@ -11651,6 +11910,7 @@
       "tool_offOne": "{{program}} mati di {{computer}}.",
       "not_installed": "{{program}} belum terpasang di {{computer}}.",
       "cant_start": "{{program}} ada di {{computer}}, tetapi tidak mau berjalan.",
+      "home_only": "{{program}} hanya terpasang untuk root di {{computer}}, yang tidak bisa dijangkau para agen.",
       "not_reported": "{{computer}} masih memeriksa program apa saja yang dimilikinya. Ini berubah sendiri setelah selesai.",
       "system": "{{program}} belum berjalan di sistem {{computer}}.",
       "no_computerCloud": "Siap begitu {{computer}} siap."
@@ -12505,14 +12765,46 @@
     "added": "{{repo}} masuk ke daftar saat kamu menyimpan."
   },
   "connectors": {
+    "store": {
+      "featured": "Unggulan",
+      "suggested": "Disarankan",
+      "seeAll": "Lihat semua",
+      "more": "Lihat selengkapnya",
+      "moreName": "Lihat selengkapnya tentang {{name}}",
+      "connected": "Terhubung",
+      "browse": "Jelajahi konektor",
+      "notListed": "Ada layanan yang tidak ada di toko?",
+      "howLabel": "Cara terhubung",
+      "whoAll": "Semua agen",
+      "whoChoose": "Kamu pilih nanti",
+      "asksLabel": "Persetujuan",
+      "asksSensitive": "Tindakan sensitif menanyakan kamu",
+      "afterTitle": "Setelah terhubung",
+      "agents_other": "{{count}} agen",
+      "whoEvery_other": "{{count}} agen memakainya.",
+      "whoSome_other": "{{names}}. {{count}} agen lainnya tidak memakainya.",
+      "change": "Ubah",
+      "see": "Lihat",
+      "account": "Akun",
+      "toolsText": "Apa yang bisa dilakukan agen dengannya, dan apa yang menanyakan kamu.",
+      "addressesText": "Dengan siapa agen bisa berbicara lewat kotak surat ini.",
+      "bandTitle_other": "{{count}} layanan untuk dihubungkan",
+      "bandText": "{{names}}, dan lainnya.",
+      "appMissing": "Aplikasi server ini belum dibuat",
+      "appEvents": "Aplikasi kekurangan event",
+      "appLine": "Aplikasi server ini",
+      "eventsLine": "Event"
+    },
+    "howShort": {
+      "oneClick": "Satu klik",
+      "oauthOrKey": "Satu klik atau kunci API",
+      "key": "Kunci API",
+      "appPassword": "Kata sandi aplikasi",
+      "addressPassword": "Alamat dan kata sandi",
+      "composio": "Lewat Composio"
+    },
     "title": "Konektor",
     "add": "Tambah konektor",
-    "mcp": {
-      "title": "MCP",
-      "add": "Tambah MCP",
-      "list": "Server MCP yang terhubung",
-      "none": "Server MCP yang kamu hubungkan lewat alamatnya muncul di sini."
-    },
     "personal": {
       "note": "Hanya kamu yang membuka koneksi ini. Agenmu hanya menggunakannya saat kamu minta.",
       "noteOne": "Hanya kamu yang membuka koneksi ini. Agenmu hanya menggunakannya saat kamu minta.",
@@ -12544,9 +12836,6 @@
       "moveText": "Semua orang di workspace melihatnya. Yang mengelola agen memilih agen mana yang memakainya, dan pemilik agen bisa mematikannya di agennya. Agen yang memakai semua aplikasi terhubung langsung mendapatkannya.",
       "moved": "{{name}} sekarang milik tim."
     },
-    "addTitle": "Tambah konektor",
-    "catalogText": "Hubungkan sekali untuk {{org}}. Lalu pilih apa yang bisa dipakai tiap agen.",
-    "catalog": "Konektor yang tersedia",
     "categories": "Kategori",
     "category": {
       "all": "Semua",
@@ -12567,8 +12856,6 @@
     "connectName": "Hubungkan {{name}}",
     "reconnectName": "Hubungkan ulang {{name}}",
     "addAccountName": "Tambah akun {{name}} lain",
-    "other": "Tidak menemukannya?",
-    "otherText": "Hubungkan layanan apa pun lewat alamatnya.",
     "search": "Cari konektor",
     "searchPlaceholder": "Cari berdasarkan nama atau fungsinya",
     "empty": "Tidak ada konektor yang cocok dengan “{{q}}”",
@@ -12582,8 +12869,6 @@
     "more": "Layanan lainnya",
     "tileConnected": "{{name}}, terhubung",
     "tileSoon": "{{name}}, segera",
-    "otherTitle": "Layanan lain",
-    "otherDetail": "Layanan apa pun yang menyediakan koneksi untuk agen, lewat alamatnya (diawali https://).",
     "otherSteps": {
       "1": "Kamu menempel alamatnya dan memberi izin di halaman layanan",
       "2": "Kami memilah fungsi tiap alatnya",
@@ -12591,16 +12876,13 @@
     },
     "otherConnect": "Hubungkan lewat alamat",
     "detail": {
-      "close": "Tutup detail",
       "can": "Apa yang bisa dilakukan agen",
       "afterText": "Tidak ada agen yang memakainya sampai kamu memilih.",
       "allText": "Setelah terhubung, semua agen bisa memakainya. Kamu bisa menyesuaikannya nanti.",
       "addAccount": "Tambah akun lain",
       "accountsText": "Tiap akun punya agen dan levelnya sendiri.",
       "reconnect": "Hubungkan ulang",
-      "replaceText": "Menggantikan sesi masuk saat ini. Siapa yang memakainya tetap sama.",
-      "connected": "Sudah terhubung",
-      "how": "Cara kerjanya"
+      "replaceText": "Menggantikan sesi masuk saat ini. Siapa yang memakainya tetap sama."
     },
     "how": {
       "oneClick": "Sekali klik: kamu memberi izin di halaman layanan",
@@ -12818,7 +13100,12 @@
       },
       "meta_ads": {
         "1": "Melihat kampanye dan hasilnya",
-        "2": "Membuat dan menyesuaikan kampanye"
+        "2": "Membuat dan menyesuaikan kampanye",
+        "ask": "Mengaktifkan iklan dan mengubah anggaran selalu meminta persetujuan Anda"
+      },
+      "tiktok_ads": {
+        "1": "Melihat kampanye, grup iklan, dan hasilnya",
+        "2": "Membuat dan menyesuaikan kampanye dan iklan"
       },
       "google_docs": {
         "1": "Mencari dan membaca dokumen",
@@ -12946,13 +13233,38 @@
         "2": "Membuat template pesan",
         "ask": "Mengirim pesan selalu meminta persetujuanmu"
       },
+      "trypost": {
+        "1": "Melihat postingan dan antrean di setiap jaringan",
+        "2": "Melihat analitik semua jaringan atau satu saja",
+        "3": "Menyimpan ide, label, dan tanda tangan",
+        "ask": "Membuat, menerbitkan, mengubah, dan menghapus postingan selalu meminta persetujuanmu"
+      },
       "database": {
         "1": "Melihat tabel",
         "2": "Menjalankan query ke data untuk menjawab",
         "3": "Tidak pernah mengubah apa pun"
+      },
+      "telegram": {
+        "1": "Baca apa yang orang tulis ke bot",
+        "2": "Kirim pesan dan file sebagai bot",
+        "ask": "Menghapus, memblokir, dan tautan undangan selalu meminta persetujuan Anda"
+      },
+      "x": {
+        "1": "Baca postingan dan sebutan akun",
+        "2": "Posting dengan gambar atau video",
+        "ask": "Menghapus postingan selalu meminta persetujuan Anda"
+      },
+      "threads": {
+        "1": "Lihat postingan, balasan, dan hasil",
+        "2": "Posting dengan gambar atau video dan membalas",
+        "ask": "Menghapus postingan selalu meminta persetujuan Anda"
+      },
+      "tiktok": {
+        "1": "Lihat profil dan video",
+        "2": "Kirim video ke draf untuk diselesaikan di TikTok",
+        "ask": "Setiap unggahan selalu meminta persetujuan Anda"
       }
     },
-    "connectedList": "Terhubung",
     "connected": "Terhubung",
     "connectedAs": "Terhubung sebagai {{account}}",
     "reconnectAdds": "Hubungkan ulang {{name}} agar agen juga bisa {{what}}.",
@@ -13072,6 +13384,7 @@
       "amplitude": "Grafik, dashboard, dan eksperimen.",
       "himetrica": "Pengunjung, funnel, pendapatan, dan trafik pencarian.",
       "meta_ads": "Kampanye iklan Facebook dan Instagram beserta hasilnya.",
+      "tiktok_ads": "Kampanye, grup iklan, dan iklan TikTok beserta hasilnya.",
       "klaviyo": "Kampanye, flow, daftar, dan profil.",
       "millionsend": "Kampanye email, daftar, dan kontak.",
       "semrush": "Data kata kunci, domain, dan backlink.",
@@ -13092,8 +13405,14 @@
       "youtube": "Video, komentar, playlist, dan analitik kanal YouTube.",
       "pinterest": "Pin, papan, dan analitik Pinterest.",
       "reddit": "Postingan, komentar, dan komunitas Reddit.",
-      "whatsapp": "Pesan dan template WhatsApp Business."
-    }
+      "whatsapp": "Pesan dan template WhatsApp Business.",
+      "trypost": "Otomatisasi postingan media sosial.",
+      "telegram": "Bot Telegram milik Anda: obrolan, grup, dan kanalnya.",
+      "x": "Postingan di akun X Anda: menulis, membaca sebutan, dan mencari.",
+      "threads": "Postingan dan balasan di akun Threads Anda.",
+      "tiktok": "Profil dan video TikTok Anda, serta video yang dikirim ke draf Anda."
+    },
+    "needsApp": "Server ini belum punya aplikasi {{name}}: pengelolanya mendaftarkan satu di {{name}} dan mengatur variabelnya (docs/social-apps-checklist.md)."
   },
   "toolNames": {
     "order": "head-first",
@@ -13875,6 +14194,7 @@
       "web_search": "Cari di web",
       "web_fetch": "Baca halaman web",
       "image_search": "Cari gambar",
+      "show_image": "Tampilkan gambar dari web",
       "create_routine": "Buat rutinitas",
       "update_routine": "Ubah rutinitas",
       "delete_routine": "Hapus rutinitas",
@@ -13923,7 +14243,39 @@
       "get_my_usage": "Lihat pemakaian saya",
       "ignore_usage_limit": "Abaikan batas penggunaan",
       "send_feedback": "Kirim masukan",
-      "offer_feedback": "Tawarkan laporan masalah"
+      "offer_feedback": "Tawarkan laporan masalah",
+      "list_chats": "Daftar obrolan",
+      "read_messages": "Baca pesan",
+      "get_chat": "Lihat obrolan",
+      "send_file": "Kirim file",
+      "edit_message": "Ubah pesan",
+      "pin_message": "Sematkan pesan",
+      "ban_member": "Blokir anggota",
+      "create_invite_link": "Buat tautan undangan",
+      "get_my_posts": "Lihat postingan saya",
+      "get_mentions": "Lihat sebutan",
+      "search_recent": "Cari postingan terbaru",
+      "get_replies": "Lihat balasan",
+      "get_insights": "Lihat hasil",
+      "reply": "Balas",
+      "hide_reply": "Sembunyikan balasan",
+      "list_ad_accounts": "Daftar akun iklan",
+      "list_campaigns": "Daftar kampanye",
+      "list_ad_sets": "Daftar set iklan",
+      "list_ads": "Daftar iklan",
+      "create_campaign": "Buat kampanye",
+      "create_ad_set": "Buat set iklan",
+      "create_ad": "Buat iklan",
+      "update": "Perbarui",
+      "pause": "Jeda",
+      "activate": "Aktifkan",
+      "set_budget": "Atur anggaran",
+      "archive": "Arsipkan",
+      "delete": "Hapus",
+      "list_videos": "Daftar video",
+      "get_creator_info": "Lihat opsi posting",
+      "get_post_status": "Lihat status unggahan",
+      "upload_draft": "Kirim ke draf"
     }
   },
   "toolReview": {
@@ -14003,6 +14355,7 @@
       "unknown": "namanya tidak menjelaskan",
       "read_only_hint": "layanannya sendiri bilang ini hanya melihat",
       "destructive_hint": "layanannya sendiri memperingatkan ini bisa menghapus atau mengubah banyak hal",
+      "write_hint": "layanannya sendiri bilang ini membuat atau mengedit tanpa menghapus",
       "verb_read": "dari namanya, ini hanya melihat",
       "verb_write": "dari namanya, ini membuat atau mengedit",
       "verb_sensitive": "dari namanya, ini menghapus, mengirim, atau mengeluarkan uang",
@@ -14058,6 +14411,27 @@
     "needsKey": "Server ini tidak mendukung OAuth. Hubungkan dengan kunci API.",
     "notApproved": "{{name}} hanya mengizinkan aplikasi yang sudah disetujuinya untuk masuk, dan agentes.chat belum disetujui. Kalau {{name}} memberimu kunci API, kamu bisa menghubungkan dengan kunci itu.",
     "serverSaid": "Jawaban server: {{detail}}",
+    "ownClient": {
+      "title": "Pakai aplikasi OAuth Anda sendiri",
+      "notApproved": "{{name}} hanya mengizinkan aplikasi yang sudah disetujuinya, dan agentes.chat belum termasuk. Anda bisa menghubungkannya dengan aplikasi Anda sendiri di sana.",
+      "askAdmin": "Admin bisa menghubungkannya dengan aplikasi milik workspace.",
+      "help": "Buat aplikasi di penyedia, daftarkan URI pengalihan ini di sana, lalu tempel client ID-nya. Setiap masuk ke sana dari workspace akan memakai aplikasi Anda.",
+      "guide": {
+        "metaAds": "Di Meta for Developers, buat aplikasi dengan kasus penggunaan Marketing API. Tambahkan URI pengalihan ini ke URI pengalihan OAuth yang valid, lalu tempel App ID, dan App Secret jika aplikasi Anda memintanya."
+      },
+      "redirectUri": "URI pengalihan",
+      "copied": "URI pengalihan disalin.",
+      "clientId": "Client ID",
+      "clientIdMissing": "Tempel client ID aplikasi.",
+      "clientSecret": "Client secret",
+      "clientSecretHelp": "Hanya jika aplikasi memintanya. Disimpan terenkripsi dan tidak pernah ditampilkan lagi.",
+      "secretSaved": "Secret sudah tersimpan. Biarkan kosong untuk tetap memakainya.",
+      "scopes": "Scope",
+      "scopesHelp": "Yang diminta setiap kali masuk, dipisahkan spasi. Biarkan kosong untuk memakai yang dicantumkan server.",
+      "save": "Simpan dan lanjutkan",
+      "remove": "Hapus",
+      "removed": "Aplikasi Anda sudah dihapus."
+    },
     "headers": {
       "title": "Header permintaan",
       "help": "Untuk kunci yang dikirim di header lain, atau gateway di depan server. Kebanyakan server tidak memerlukannya.",
@@ -14104,6 +14478,13 @@
       "asks_other": "{{count}} tindakan meminta persetujuan di chat.",
       "adjust": "Sesuaikan",
       "ok": "Selesai"
+    },
+    "telegram": {
+      "token": "Token bot",
+      "steps": "Di Telegram, buka @BotFather, kirim /newbot, pilih nama dan username yang berakhiran “bot”, lalu tempel token yang diberikannya di sini. Untuk membaca grup, tambahkan bot ke grup itu. Untuk memposting di kanal, jadikan admin di sana."
+    },
+    "x": {
+      "consent": "Agen yang diberi X memposting di akun ini sendiri. Menghapus postingan bertanya dulu, dan halaman tiap agen membatasi apa yang boleh dilakukannya. Satu akun X berfungsi di satu workspace dalam satu waktu."
     }
   },
   "database": {
@@ -14663,6 +15044,9 @@
       "pageOf": "{{page}} dari {{count}}",
       "pdfFailed": "PDF ini tidak bisa ditampilkan di sini. Unduh untuk membukanya.",
       "loadFailed": "Gambar ini tidak bisa ditampilkan di sini.",
+      "mark": "Tandai",
+      "markOff": "Berhenti menandai: klik kembali menggerakkan file",
+      "markOn": "Tandai: klik mengomentari satu titik atau satu area",
       "hint": {
         "image": "Klik untuk menandai titik atau seret untuk menandai bagian",
         "video": "Klik video untuk berkomentar di momen ini, atau seret untuk menandai bagian",
@@ -14781,6 +15165,17 @@
       "conflict": "Itu tidak bisa dilakukan sekarang. Muat ulang dan coba lagi.",
       "computer": "Komputer tidak bisa melakukan ini sekarang. Pastikan komputer menyala dan coba lagi."
     },
+    "codeSession": {
+      "noComputer": "Agen ini belum punya komputer. Beri satu lewat pengaturannya untuk menulis kode bersamanya.",
+      "cannotCode": "Agen ini tidak bisa memprogram di komputernya. Beri dia aplikasi coding di pengaturannya, atau izinkan dia menjalankan kode di sana.",
+      "repoNotAllowed": "Agen ini tidak bisa bekerja di repositori itu. Pilih yang lain, atau tambahkan di pengaturan agen.",
+      "notYours": "Hanya pembuka sesi atau administrator yang bisa menutupnya.",
+      "notReady": "Worktree sesi belum siap. Coba lagi sebentar lagi.",
+      "fileChanged": "File ini berubah di komputer setelah Anda membukanya.",
+      "fileLocked": "File ini tidak bisa diedit di sini.",
+      "suggestionGone": "Saran ini sudah dijawab.",
+      "suggestionNotYours": "Hanya yang meminta yang memutuskan apakah sesi dibuka."
+    },
     "webhook": {
       "githubNoAccess": "GitHub workspace ini tidak bisa membuat webhook di {{repo}}. Ikuti langkah di bawah untuk membuatnya manual.",
       "githubFailed": "GitHub tidak membuat webhook di {{repo}} ({{status}}). Ikuti langkah di bawah untuk membuatnya manual.",
@@ -14816,7 +15211,10 @@
       "headerAndKey": "Kunci API sudah dikirim sebagai Authorization. Kosongkan kuncinya, atau hapus header ini.",
       "headersTooMany": "Satu server menerima paling banyak {{max}} header. Hapus satu untuk menambah yang lain.",
       "headersWithSignIn": "Server ini meminta proses masuk, dan proses masuk belum bisa membawa header. Hapus header untuk masuk, atau hubungkan dengan kunci API.",
-      "headersUnreadable": "Header yang tersimpan tidak bisa dibaca. Ketik lagi, atau hapus."
+      "headersUnreadable": "Header yang tersimpan tidak bisa dibaca. Ketik lagi, atau hapus.",
+      "noOAuth": "Server MCP tersebut tidak masuk dengan OAuth, jadi tidak menerima aplikasi Anda. Hubungkan dengan kunci API.",
+      "ownClientInUse": "Masih ada akun yang masuk dengan aplikasi yang disimpan sebelumnya. Putuskan dulu, lalu ganti.",
+      "ownClientId": "Periksa client ID: satu kata, seperti yang ditampilkan penyedia."
     },
     "wiki": {
       "githubNoNotes": "Tidak ada catatan Markdown di tautan ini.",
@@ -14897,6 +15295,7 @@
     },
     "org": {
       "createInviteOnly": "Untuk saat ini, ruang kerja baru membutuhkan undangan.",
+      "createUnconfirmed": "Buka dulu tautan yang kami kirim ke email. Lalu buat ruang kerjanya.",
       "membersFull": "Semua kursi di ruang kerja ini sedang terisi. Minta orang yang mengundangmu untuk membuka kursi.",
       "deleting": "Ruang kerja ini sedang dihapus.",
       "notRestorable": "Ruang kerja ini sudah tidak bisa dipulihkan.",
@@ -14969,6 +15368,7 @@
       "takeOverNoAccess": "Bergabunglah ke percakapan rutinitas sebelum mengambil alihnya.",
       "agentNotInChannel": "Tambahkan agen ke percakapan dulu.",
       "webhookPaused": "Aktifkan rutinitas untuk mengujinya.",
+      "groupByInvalid": "Tulis jalur seperti conversation.id, dengan nama kolom di antara setiap titik.",
       "continueExtraOff": "Jatah periode paket ini sudah habis dan pekerjaan panjang agen ini tidak memakai pemakaian tambahan berbayar dari paket. Agen melanjutkan setelah reset.",
       "continueExtraUsedUp": "Jatah periode paket ini sudah habis dan pemakaian tambahan berbayarnya juga habis atau tidak tersedia. Agen melanjutkan setelah reset.",
       "actionsNeedApprover": "Hanya pemilik agen atau orang yang menyetujui tindakannya yang bisa membiarkan rutinitas bertindak sendiri.",
@@ -17437,10 +17837,6 @@
       "where": "#{{channel}} · antar-agen",
       "whereDm": "Antar-agen",
       "messages_other": "{{count}} pesan",
-      "origin": "{{from}} bertanya ke {{to}} di #{{channel}} · {{time}}",
-      "originDm": "{{from}} bertanya ke {{to}} · {{time}}",
-      "originNote": "{{from}} menyerahkan pekerjaan ke {{to}} di #{{channel}} · {{time}}",
-      "originNoteDm": "{{from}} menyerahkan pekerjaan ke {{to}} · {{time}}",
       "readOnly": "Hanya baca.",
       "steer": "Untuk mengubah arah, bicaralah dengan {{name}}.",
       "talk": "Bicara dengan {{name}}",
@@ -17475,6 +17871,8 @@
         "merged": "{{who}} menggabungkan PR #{{number}} ({{repo}}) di GitHub",
         "closed": "{{who}} menutup PR #{{number}} ({{repo}}) di GitHub",
         "closedIssue": "{{who}} menutup issue #{{number}} ({{repo}}) di GitHub",
+        "checkFailed": "Pemeriksaan «{{check}}» tidak lolos di PR #{{number}} ({{repo}}) di GitHub",
+        "checkFailedCommit": "Pemeriksaan «{{check}}» tidak lolos di commit {{commit}} ({{repo}}) di GitHub",
         "ask": "Minta balasan",
         "asked": "{{asker}} meminta {{name}} membalas {{who}} di GitHub"
       },
@@ -17568,6 +17966,7 @@
         "runningSkillScriptAny": "Menjalankan skrip skill",
         "fetchingFile": "Mengambil file",
         "proposingMission": "Mengusulkan misi",
+        "suggestingCodeSession": "Menyarankan sesi kode",
         "messagingMission": "Mengirim catatan ke misi",
         "updatingPlan": "Memperbarui rencana",
         "reportingProgress": "Melaporkan kemajuan",
@@ -17688,6 +18087,7 @@
       "runningSkillScriptAny": "menjalankan skrip skill",
       "fetchingFile": "mengambil file",
       "proposingMission": "mengusulkan misi",
+      "suggestingCodeSession": "menyarankan sesi kode",
       "messagingMission": "mengirim catatan ke misi",
       "updatingPlan": "memperbarui rencana",
       "reportingProgress": "melaporkan kemajuan",
@@ -18882,7 +19282,9 @@
     "usedOf": "{{used}} dari {{limit}}",
     "seatsPaid_other": "{{count}} kursi berbayar",
     "noLimit": "Tanpa batas",
-    "ownBucket": "Di bucket milikmu sendiri, tanpa batas dari kami"
+    "ownBucket": "Di bucket milikmu sendiri, tanpa batas dari kami",
+    "connectors": "X bulan ini",
+    "shareUsed": "{{share}} terpakai"
   },
   "referrals": {
     "open": "Ajak teman dan dapatkan hadiah",
@@ -19196,6 +19598,46 @@
     "screenOff": "Layar mati",
     "screenOffHelp": "Layar menyala saat ada yang menonton."
   },
+  "cliTools": {
+    "read": "Membaca",
+    "search": "Mencari",
+    "edit": "Mengedit",
+    "write": "Menulis",
+    "run": "Menjalankan",
+    "fetch": "Mengambil",
+    "delegate": "Meminta subagen",
+    "skill": "Memakai skill",
+    "workflow": "Menjalankan workflow",
+    "other": "Memakai",
+    "running": {
+      "read": "Membaca",
+      "search": "Mencari",
+      "edit": "Mengedit",
+      "write": "Menulis",
+      "run": "Menjalankan",
+      "fetch": "Mengambil",
+      "delegate": "Meminta subagen",
+      "skill": "Memakai skill",
+      "workflow": "Menjalankan workflow",
+      "other": "Memakai"
+    },
+    "lines": "+{{added}} −{{removed}}",
+    "added": "+{{added}}",
+    "found_other": "{{count}} tempat",
+    "files_other": "{{count}} file",
+    "passed_other": "{{count}} lolos",
+    "failedTests_other": "{{count}} gagal",
+    "exit": "kode keluar {{code}}",
+    "progress": {
+      "block": "Subagen {{name}}",
+      "block_female": "Subagen {{name}}",
+      "subagent": "Subagen",
+      "agents_other": "{{count}} subagen",
+      "done": "{{done}} dari {{total}} selesai",
+      "asking_other": "Meminta {{count}} subagen",
+      "workflowShort": "workflow {{done}} dari {{total}}"
+    }
+  },
   "agentComputer": {
     "title": "Komputer {{name}}",
     "open": "Buka",
@@ -19287,6 +19729,24 @@
       "upright": "Putar tegak",
       "message": "Kirim pesan ke {{name}}"
     }
+  },
+  "codeTerminal": {
+    "label": "Terminal",
+    "opening": "Membuka terminal…",
+    "openAgain": "Buka lagi",
+    "ended": "Shell berakhir",
+    "dropped": "Koneksi ke terminal terputus",
+    "moved": "Terminal ini terbuka di jendela lain",
+    "screening": "Terminal dimatikan di sini",
+    "forbidden": "Hanya orang yang boleh memakai komputer ini yang bisa membuka terminal",
+    "offline": "Komputer sedang offline",
+    "outdated": "Perbarui komputer untuk membuka terminal di folder sesi",
+    "unavailable": "Komputer agen ini tidak membuka terminal",
+    "off": "Terminal dimatikan di {{computer}}",
+    "busy": "Komputer ini sudah membuka terminal sebanyak yang ia bisa. Tutup satu lalu buka lagi.",
+    "paused": "Komputer sedang dijeda",
+    "failed": "Tidak bisa membuka terminal",
+    "agentFolder": "Terminal terbuka di folder agen. Perbarui komputer agar terbuka di folder sesi."
   },
   "agora": {
     "label": "Sekarang",
@@ -19399,7 +19859,8 @@
       "stopAll": "Hentikan semua",
       "stopAllOf": "Hentikan semua tugas {{name}}",
       "open": "Buka di percakapan",
-      "openManager": "Buka di pengelola tugas"
+      "openManager": "Buka di pengelola tugas",
+      "more": "Tindakan lain"
     },
     "confirm": {
       "chainTitle_other": "Hentikan {{name}} dan {{count}} pembantu?",

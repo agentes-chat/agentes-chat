@@ -2,7 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { accountCodeAad } from "@agenteschat/adapters/machine-protocol";
+import { accountCodeAad, CLI_HOME_ONLY } from "@agenteschat/adapters/machine-protocol";
 import { cutAtWord } from "@agenteschat/adapters/redact";
 import { sealSecret } from "@agenteschat/adapters/secret-box";
 import {
@@ -43,7 +43,8 @@ import {
   parseAgyError,
 } from "../../runner/brain-antigravity";
 import type { CodexBrainEvent } from "../../runner/brain-codex";
-import { detectExecutors, parseAgyModels } from "../../runner/executors";
+import { detectExecutors, inHomeDirs, parseAgyModels } from "../../runner/executors";
+import { addUsualDirs } from "../../runner/login-path";
 import { CODEX_MCP_SERVER } from "../../runner/mcp";
 import { antigravityUsage, resetFromWords } from "../../runner/plan-usage";
 import type { Spawn } from "../../runner/scope-gate";
@@ -317,6 +318,36 @@ test.skipIf(!posix)("detection: the CLI's version line and the models it lists",
     version: "agy 1.4.12",
     models: [{ id: "gemini-3.8-flash-medium", label: "Gemini 3.8 Flash (Medium)" }],
   });
+});
+
+test.skipIf(!posix)(
+  "detection: in system mode, an agy only in root's own folders is there but out of the agents' reach",
+  async () => {
+    const none = () => ({ status: 127, stdout: "" });
+    const rootOnly = (bin: string) => bin === "agy";
+    const { found } = await detectExecutors(none, {}, {}, undefined, () => [], rootOnly);
+    expect(found.antigravity).toBeUndefined();
+    expect(found.broken).toEqual({ antigravity: CLI_HOME_ONLY });
+    // One the agents run wins, and a CLI that is nowhere stays missing.
+    const run = (command: string, args: string[]) =>
+      command === "agy" && args[0] === "--version" ? { status: 0, stdout: "agy 1.5.14\n" } : none();
+    expect((await detectExecutors(run, {}, {}, undefined, () => [], rootOnly)).found.broken).toBeUndefined();
+    expect((await detectExecutors(none, {}, {}, undefined, () => [])).found.broken).toBeUndefined();
+  },
+);
+
+test("the install folders under a home: ~/.local/bin and the like, never the computer's own", () => {
+  const there = new Set(["/root/.local/bin/agy", "/usr/local/bin/grok"]);
+  expect(inHomeDirs("agy", "/root", (f) => there.has(f))).toBe("/root/.local/bin/agy");
+  expect(inHomeDirs("grok", "/root", (f) => there.has(f))).toBeNull();
+});
+
+test("a service's PATH gets the usual folders that exist, after its own", () => {
+  const env: NodeJS.ProcessEnv = { PATH: "/usr/bin:/bin" };
+  addUsualDirs(env, "/home/ana", (d) => d === "/home/ana/.local/bin" || d === "/usr/local/bin");
+  expect(env.PATH).toBe("/usr/bin:/bin:/home/ana/.local/bin:/usr/local/bin");
+  addUsualDirs(env, "/home/ana", () => true);
+  expect(env.PATH?.split(":").filter((d) => d === "/home/ana/.local/bin")).toHaveLength(1);
 });
 
 function turnContext(root: string) {

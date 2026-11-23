@@ -63,6 +63,7 @@ describe("You in a personal workspace", () => {
       "routines",
       "drive",
       "issues",
+      "code",
       "threads",
       "proposals",
       "wiki",
@@ -75,6 +76,7 @@ describe("You in a personal workspace", () => {
       "issues",
       "proposals",
       "routines",
+      "code",
       "wiki",
       "drive",
       "dashboards",
@@ -82,6 +84,8 @@ describe("You in a personal workspace", () => {
       "archived",
     ]);
     expect(me).toContain('onPress={() => open("/team")}');
+    // Código (ADR 0215): the sessions, pushed as their own screen.
+    expect(me).toContain('onPress={() => open("/coding")}');
   });
 
   test("Agents' Team row stays a team's: a personal workspace has it in You › Work", () => {

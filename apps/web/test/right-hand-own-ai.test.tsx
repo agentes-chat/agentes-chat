@@ -175,8 +175,16 @@ test("Sua IA on a plan of mine: the dialog goes back to the workspace's AI, and 
   expect(inUse?.textContent).toContain("Trabalho");
   expect(inUse?.textContent).toContain("seu plano");
   expect(within(dialog).queryAllByRole("radio")).toHaveLength(0);
-  expect(within(dialog).getByRole("button", { name: "Conectar outra IA" })).toBeTruthy();
-  await act(async () => fireEvent.click(within(dialog).getByRole("button", { name: "Usar a do workspace" })));
+  // Connecting another AI takes this dialog's place, and its Back brings this one again.
+  await act(async () => fireEvent.click(within(dialog).getByRole("button", { name: "Conectar outra IA" })));
+  await settle(6);
+  expect(screen().queryByRole("dialog", { name: "Quem pensa pelo Lodi para você" })).toBeNull();
+  const connect = screen().getByRole("dialog", { name: "Conectar uma IA para o Lodi" });
+  await act(async () => fireEvent.click(within(connect).getByRole("button", { name: "Voltar" })));
+  await settle(4);
+  expect(screen().queryByRole("dialog", { name: "Conectar uma IA para o Lodi" })).toBeNull();
+  const again = screen().getByRole("dialog", { name: "Quem pensa pelo Lodi para você" });
+  await act(async () => fireEvent.click(within(again).getByRole("button", { name: "Usar a do workspace" })));
   await settle(8);
   expect(sent).toEqual([{ scope: "mine", brain: "model" }]);
   expect(screen().queryByRole("dialog", { name: "Quem pensa pelo Lodi para você" })).toBeNull();
@@ -236,6 +244,96 @@ test("a plan's model is a line that opens its list, in Sua IA and in the workspa
     await settle(4);
     expect(row(name).querySelector(".settings-row__status")?.textContent).toBe(before.replace("Sonnet", "Opus"));
   }
+});
+
+test("the effort is a line under the model, in Sua IA and in the workspace's AI: its ramp saves the level", async () => {
+  const state = withRightHand(seedState(), { brain: { kind: "claude_code", model: "Opus" } });
+  const api = createFakeApi(state);
+  const effort: Record<string, string | null> = { mine: null, workspace: null };
+  api.agents.brain = async (_org, id, scope) =>
+    fakeAgentBrain(id, {
+      scope: scope ?? "mine",
+      brain: "claude_code",
+      account: "acc-ana",
+      model: "opus",
+      effectiveModel: "opus",
+      effort: (effort[scope ?? "mine"] ?? null) as never,
+      accounts: [planOf(state.me?.user.id)],
+      canUsePlans: true,
+      canEdit: true,
+    });
+  const sent: { scope?: string; effort?: unknown }[] = [];
+  api.agents.setBrain = async (_org, id, input) => {
+    sent.push(input);
+    effort[input.scope ?? "mine"] = (input.effort as string) ?? null;
+    return fakeAgentBrain(id);
+  };
+  await renderApp(`/org/${ORG_ID}/agents/${LODI_ID}`, { api });
+  await settle(8);
+  for (const [name, scope] of [
+    [/^Sua IA/, "mine"],
+    [/^IA de quem não tem plano próprio/, "workspace"],
+  ] as const) {
+    await act(async () => fireEvent.click(row(name)));
+    await settle(4);
+    const dialog = screen().getByRole("dialog");
+    const line = within(dialog).getByRole("button", { name: /^Esforço/ });
+    expect(line.closest(".bd-lines")).toBeTruthy();
+    expect(line.textContent).toContain("Médio");
+    await act(async () => fireEvent.click(line));
+    await settle(2);
+    await act(async () =>
+      fireEvent.keyDown(within(dialog).getByRole("slider", { name: "Esforço" }), { key: "ArrowRight" }),
+    );
+    await settle(8);
+    expect(sent.at(-1)).toEqual({ scope, effort: "high" });
+    expect(within(screen().getByRole("dialog")).getByRole("button", { name: /^Esforço/ }).textContent).toContain(
+      "Alto",
+    );
+    await act(async () =>
+      fireEvent.click(within(screen().getByRole("dialog")).getByRole("button", { name: "Fechar" })),
+    );
+    await settle(4);
+  }
+});
+
+test("the workspace's AI lists every plan: past three, Ver as contas opens them all", async () => {
+  const state = withRightHand(seedState(), { brain: { kind: "claude_code", model: "Sonnet" } });
+  const api = createFakeApi(state);
+  const plans = ["Trabalho", "Casa", "Pesquisa", "Codex da Acme", "Gemini da Acme"].map((label, i) => ({
+    ...(planOf(state.me?.user.id) as object),
+    id: `acc-${i}`,
+    label,
+    kind: i === 3 ? "codex" : i === 4 ? "antigravity" : "claude_code",
+    email: `conta${i}@example.com`,
+  }));
+  api.agents.brain = async (_org, id, scope) =>
+    fakeAgentBrain(id, {
+      scope: scope ?? "workspace",
+      brain: "claude_code",
+      account: "acc-0",
+      accounts: plans as never,
+      canUsePlans: true,
+      canEdit: true,
+    });
+  await renderApp(`/org/${ORG_ID}/agents/${LODI_ID}`, { api });
+  await settle(8);
+  await act(async () => fireEvent.click(row(/^IA de quem não tem plano próprio/)));
+  await settle(4);
+  await act(async () =>
+    fireEvent.click(within(screen().getByRole("dialog")).getByRole("button", { name: "Trocar de conta" })),
+  );
+  await settle(3);
+  await act(async () =>
+    fireEvent.click(within(screen().getByRole("dialog")).getByRole("button", { name: /^Ver as 5 contas/ })),
+  );
+  await settle(3);
+  const dialog = screen().getByRole("dialog");
+  for (const label of ["Casa", "Pesquisa", "Codex da Acme", "Gemini da Acme"])
+    expect(within(dialog).getAllByText(new RegExp(label)).length).toBeGreaterThan(0);
+  await act(async () => fireEvent.click(within(dialog).getByRole("button", { name: "Voltar" })));
+  await settle(2);
+  expect(within(screen().getByRole("dialog")).getByRole("button", { name: /^Ver as 5 contas/ })).toBeTruthy();
 });
 
 test("Poderes do workspace is one row for everyone that opens what only Lodi does", async () => {

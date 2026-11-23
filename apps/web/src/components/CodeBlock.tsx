@@ -113,8 +113,11 @@ export function CodeBlock({
   );
 }
 
-/** `hang`: a wrapped line goes on under its own indent (`--hang`, its leading spaces), not at the block's edge. */
-function CodeLines({
+/**
+ * The highlighted lines of a block (`highlightCode`), numbered or not. `hang`: a wrapped line goes on under its own
+ * indent (`--hang`, its leading spaces), not at the block's edge.
+ */
+export function CodeLines({
   lines,
   numbered = false,
   hang = false,

@@ -16,6 +16,7 @@ import {
   cacheAgentProposal,
   cacheApproval,
   cacheCardDelegate,
+  cacheCodeSuggestion,
   cacheDmRead,
   cacheMessage,
   cacheMessageActions,
@@ -314,6 +315,10 @@ function applyToCache(qc: QueryClient, orgId: string, channelId: string, event: 
     case "message.unpinned":
       cachePinned(qc, orgId, channelId, event.messageId, event.type === "message.pinned");
       void qc.invalidateQueries({ queryKey: keys.pins(orgId, channelId) });
+      break;
+    // A suggested code session was opened, kept here, or waits again (ADR 0215 §11): its card under the reply.
+    case "code.suggestion":
+      cacheCodeSuggestion(qc, orgId, event.channelId, event.messageId, event.suggestion);
       break;
     // A comment on a picture, a video or a PDF was resolved or opened again (ADR 0208): its line and its pin follow.
     case "message.resolved":

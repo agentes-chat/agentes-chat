@@ -126,7 +126,7 @@
   gap: 2px;
   padding: 2px 6px 2px 2px;
   border: 0;
-  border-radius: 14px 14px 14px 3px;
+  border-radius: 8px 8px 8px 3px;
   background: var(--raised);
   box-shadow:
     var(--e2),
@@ -138,6 +138,10 @@
   line-height: 1;
   cursor: pointer;
   pointer-events: auto;
+}
+/* Its corners follow the face's own (the face's radius plus the 2px around it); the face's corner at the tail is sharp. */
+.mf-mark .ac-avatar {
+  border-bottom-left-radius: 1px;
 }
 .mf-mark:hover,
 .mf-mark[data-on] {

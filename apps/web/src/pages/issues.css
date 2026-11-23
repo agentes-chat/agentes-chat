@@ -2058,6 +2058,9 @@ html:not([data-pointer]) .issue-ask__other:focus-visible {
 .issue-description__files {
   margin-top: 4px;
 }
+.issue-description__pending {
+  margin-top: 4px;
+}
 .issue-history {
   display: flex;
   flex-direction: column;
@@ -2101,15 +2104,30 @@ html:not([data-pointer]) .issue-ask__other:focus-visible {
   font: inherit;
   text-align: left;
 }
-button.issue-file {
-  cursor: pointer;
+/* A saved file: the whole card opens it (its inner button), × sits on top of it. */
+.issue-file--saved {
   transition: box-shadow 0.2s var(--out);
 }
-button.issue-file:hover {
+.issue-file--saved:hover {
   box-shadow: var(--e2), var(--top);
 }
-html:not([data-pointer]) button.issue-file:focus-visible {
+html:not([data-pointer]) .issue-file--saved:has(> .issue-file__main:focus-visible) {
   box-shadow: var(--focus-ring);
+}
+.issue-file__main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+/* The card draws the ring (above): none on the button inside it, whose corners the card clips. */
+html:not([data-pointer]) .issue-file__main:focus-visible {
   outline: none;
 }
 .issue-file[data-status="failed"] {
@@ -2226,7 +2244,7 @@ html:not([data-pointer]) .issue-files__add:focus-visible {
 }
 .issue-files__row {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.2fr) auto auto;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.2fr) auto auto auto;
   align-items: center;
   gap: 12px;
   padding: 8px 0;
@@ -2235,7 +2253,7 @@ html:not([data-pointer]) .issue-files__add:focus-visible {
 .issue-files__row:last-child {
   border-bottom: 0;
 }
-/* Download reaches out by its plate: its icon ends on the hairline's edge, as the name starts on it. */
+/* The last action (×) reaches out by its plate: its icon ends on the hairline's edge, as the name starts on it. */
 .issue-files__row > .ac-btn--ghost:last-child {
   margin-inline-end: calc(-1 * var(--ghost-plate));
 }
@@ -2275,7 +2293,7 @@ html:not([data-pointer]) .issue-files__open:focus-visible {
 }
 @media (max-width: 640px) {
   .issue-files__row {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto auto;
   }
   .issue-files__from,
   .issue-files__size {

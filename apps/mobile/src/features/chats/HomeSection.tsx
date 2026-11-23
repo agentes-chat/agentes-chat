@@ -54,19 +54,19 @@ export function useCollapsedSections<K extends string = HomeSection>(
 
 /**
  * What changes place in a list travels there (a conversation that goes to the top with a new message, the sections
- * under one that closes): the spring for things moving to a new place, which settles with no overshoot.
+ * under one that closes): a short glide on the ease for things that move on screen, done in `panel` time. A spring
+ * here (its long settle on every row and section a refresh resized) kept the whole home swaying.
  */
-export const LIST_MOVE = LinearTransition.springify().damping(motion.nav.damping).stiffness(motion.nav.stiffness);
+export const LIST_MOVE = LinearTransition.duration(motion.panel).easing(motion.easeInOut);
 
-/** A list's first rows arrive one after the other, this far apart; from the eighth on, together. */
-const LAND_GAP = 30;
-const LAND_ROWS = 8;
-const LAND_RISE = 8;
-const LAND_MS = 420;
+/** A list's first rows fade in one after the other, this far apart; from the sixth on, together. */
+const LAND_GAP = 20;
+const LAND_ROWS = 6;
+const LAND_MS = 240;
 
 /**
- * One row (or block) of a list. With `land` on its first render (the list's first load, `useFirstLoad`) it arrives:
- * clear and 8 points low, to its place, `index` rows after the first. It is a value we drive rather than an
+ * One row (or block) of a list. With `land` on its first render (the list's first load, `useFirstLoad`) it fades in
+ * where it stands, `index` rows after the first (rising into place too, a list of them read as a wave). It is a value we drive rather than an
  * `entering`, because the sections skip their rows' entering when the list mounts; a row that mounts later is just
  * there. With `moves` it travels to its new place when the list reorders or something above it changes size. Give it
  * the row's key. With reduced motion it is a plain box.
@@ -91,10 +91,7 @@ export function LandRow({
     if (!arrives) return;
     shown.set(withDelay(delay, withTiming(1, { duration: LAND_MS, easing: motion.easeOut })));
   }, [arrives, delay, shown]);
-  const look = useAnimatedStyle(() => ({
-    opacity: shown.get(),
-    transform: [{ translateY: (1 - shown.get()) * LAND_RISE }],
-  }));
+  const look = useAnimatedStyle(() => ({ opacity: shown.get() }));
   return (
     // Only a row that arrives carries a style; the rest stay plain views.
     <Animated.View layout={moves && !reduced ? LIST_MOVE : undefined} style={arrives ? look : undefined}>
@@ -114,10 +111,13 @@ export function CollapsibleSection({
   collapsed,
   onToggle,
   menu,
+  mark,
   children,
 }: {
   title: string;
   count?: number;
+  /** Before the title: a sector's mark (`RoleMark`), in Conversas' Setores. */
+  mark?: ReactNode;
   collapsed: boolean;
   onToggle: () => void;
   /**
@@ -154,6 +154,7 @@ export function CollapsibleSection({
         accessibilityState={{ expanded: !collapsed }}
         style={({ pressed }) => [styles.head, pressed && styles.pressed]}
       >
+        {mark}
         <Text variant="small" tone="ink" style={styles.title} accessibilityRole="header" numberOfLines={1}>
           {title}
         </Text>

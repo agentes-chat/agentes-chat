@@ -91,7 +91,7 @@
     "chats": "Obrolan",
     "threads": "Utas",
     "agents": "Agen",
-    "activity": "Aktivitas",
+    "activity": "Kotak masuk",
     "search": "Cari",
     "withCount": "{{label}}, {{count}}"
   },
@@ -183,6 +183,12 @@
     },
     "pinned": "Disematkan",
     "recent": "Terbaru",
+    "view": {
+      "title": "Tampilkan percakapan",
+      "sectors": "Sektor",
+      "dms": "Pesan langsung",
+      "channels": "Kanal"
+    },
     "seeAll": "Lihat semua obrolan",
     "splitEmpty": "Obrolanmu terbuka di sini.",
     "wait": {
@@ -316,6 +322,9 @@
   },
   "chat": {
     "someone": "Seseorang",
+    "handedTo": "Diserahkan ke {{name}}",
+    "handedTo_female": "Diserahkan ke {{name}}",
+    "pairAsked": "{{from}} bertanya",
     "messageTo": "Kirim pesan ke {{name}}",
     "messageIn": "Kirim pesan di {{channel}}",
     "reply": "Balas",
@@ -382,10 +391,6 @@
       "working": "{{names}} sedang menulis",
       "mentionsYou": "kamu disebut",
       "divider": "Baru"
-    },
-    "connection": {
-      "down": "Tidak ada koneksi. Yang kamu kirim akan terkirim sendiri begitu koneksi kembali.",
-      "back": "Terhubung lagi"
     },
     "longPressHint": "Tahan untuk memberi reaksi dan melihat tindakan lain",
     "file": "File",
@@ -546,6 +551,8 @@
     "camera": "Kamera",
     "photos": "Foto",
     "file": "File",
+    "paste": "Tempel",
+    "pasteGone": "Gambar yang disalin tidak bisa dibaca. Salin lagi, lalu ketuk Tempel.",
     "media": "GIF",
     "noCamera": "Tidak ada akses kamera. Izinkan di Pengaturan ponsel.",
     "summary": "Rangkum obrolan",
@@ -838,7 +845,7 @@
     }
   },
   "activity": {
-    "title": "Aktivitas",
+    "title": "Kotak masuk",
     "chooseModel": "Pilih model lain",
     "filter": {
       "all": "Semua",
@@ -964,6 +971,46 @@
     "add": "Tambah",
     "addA11y": "Tambahkan {{name}} ke kanal",
     "added": "{{name}} bergabung ke kanal"
+  },
+  "settingsSearch": {
+    "open": "Cari pengaturan",
+    "title": "Cari",
+    "placeholder": "Cari di Anda dan pengaturan",
+    "workspace": "Pengaturan workspace",
+    "words": {
+      "status": "tidak di tempat, sibuk, kehadiran, online",
+      "account": "nama, foto, email, zona waktu, kata sandi, nama pengguna",
+      "deleteAccount": "hapus, buang, tutup akun",
+      "workspaces": "ganti, server, akun",
+      "notifications": "peringatan, push, lencana",
+      "approvals": "setujui, delegasikan",
+      "start": "buka, beranda, layar pertama",
+      "activity": "alat, apa yang dikerjakan agen",
+      "chatLook": "gelembung, pesan, percakapan",
+      "wallpaper": "latar, wallpaper, foto",
+      "agentStyle": "teknis, sederhana, nada",
+      "sounds": "suara, senyap, hening",
+      "appearance": "tema, gelap, terang, mode",
+      "appIcon": "ikon",
+      "language": "bahasa, Indonesia, Inggris",
+      "about": "versi, lisensi",
+      "aiAccounts": "kunci, API, penyedia, paket, model",
+      "general": "nama, logo, zona waktu, konteks",
+      "media": "GIF, stiker",
+      "members": "orang, tim",
+      "invites": "undang, undangan, tautan",
+      "roles": "izin, peran",
+      "usage": "biaya, pengeluaran, paket, token, anggaran",
+      "connectors": "integrasi, MCP, layanan",
+      "skills": "keterampilan",
+      "vault": "kata sandi, kunci, login, rahasia",
+      "access": "izin, akses agen",
+      "apps": "aplikasi AI, MCP",
+      "computers": "perangkat, mesin, komputer, ponsel",
+      "storage": "file, S3, penyimpanan",
+      "import": "ekspor, impor, migrasi",
+      "audit": "log, riwayat"
+    }
   },
   "me": {
     "title": "Kamu",
@@ -1160,11 +1207,8 @@
     },
     "talk": {
       "hint": {
-        "image": "Ketuk tempat yang ingin kamu komentari",
-        "video": "Ketuk video untuk mengomentari momen ini",
-        "pdf": "Ketuk halaman untuk menandai satu titik"
+        "pdf": "Sentuh lama halaman untuk menandai satu titik"
       },
-      "markVideo": "Komentari momen video ini",
       "pdfPage": "Halaman {{page}} dari {{count}}",
       "pdfFailed": "PDF ini tidak bisa ditampilkan."
     }
@@ -1217,6 +1261,7 @@
     "criteriaOf": "{{done}} dari {{total}}",
     "linkMessage": "Pesan di #{{channel}}",
     "linkMessagePlain": "Pesan aslinya",
+    "removeFileText": "File tetap ada di Drive.",
     "subIssues": "Subtugas",
     "talk": "Obrolan",
     "finish": "Tandai selesai",
@@ -1349,6 +1394,19 @@
       "day": "Tanggal",
       "monthDay": "Tanggal {{day}}",
       "lastDay": "Hari terakhir"
+    }
+  },
+  "coding": {
+    "pill": "{{who}}. Lihat kodenya",
+    "seeChanges": "Lihat perubahannya",
+    "project": "Proyek",
+    "whereSearch": "Cari atau ketik nama",
+    "listed": "Milik agen",
+    "commit": "Commit {{short}}",
+    "waiting": "Menunggumu",
+    "next": {
+      "pr": "Branch sudah dikirim, belum ada pull request",
+      "mergeLocal": "Siap di-merge ke {{base}}"
     }
   },
   "taskManager": {
@@ -1940,18 +1998,14 @@
     "mcps": "MCP",
     "mcpsNone": "Server MCP yang kamu hubungkan lewat alamatnya muncul di sini.",
     "addMcp": "Tambah MCP",
-    "add": "Tambah",
-    "allServices": "Semua layanan",
     "waitLine_other": "{{count}} alat membutuhkanmu",
     "toolsWait_other": "{{count}} membutuhkanmu",
     "connectedState": "Terhubung",
     "connected": "Terhubung",
-    "suggested": "Disarankan untuk {{org}}",
-    "all": "Semua",
+    "seeAll": "Lihat semua",
     "noResults": "Tidak ada layanan dengan nama itu. Coba alamatnya.",
     "soon": "Segera",
     "loadFailed": "Tidak bisa memuat konektor.",
-    "connectedCheck": "{{name}}, terhubung",
     "adminsOnly": "Hanya admin {{org}} yang bisa menghubungkan layanan. Minta ke salah satunya.",
     "adminsOnlyPersonal": "Hanya yang mengelola ruang kerja ini yang bisa menghubungkan aplikasi. Minta ke orang itu.",
     "canTitle": "Agen akan bisa",
@@ -1995,6 +2049,31 @@
     "disconnect": "Putuskan",
     "disconnected": "{{name}} diputus.",
     "usedBy_other": "{{names}} memakainya",
+    "page": {
+      "missing": "Layanan ini sudah tidak ada di katalog.",
+      "connected": "Terhubung",
+      "open": "Buka koneksi",
+      "category": "Kategori",
+      "tools": "Alat",
+      "toolsAsk_other": "{{count}} perlu persetujuan",
+      "toolsAskNone": "tidak ada yang perlu persetujuan",
+      "toolsLater": "setelah terhubung",
+      "who": "Siapa yang menghubungkan",
+      "whoAdmins": "Admin {{org}}",
+      "whoRuns": "Pengelola workspace",
+      "whoYou": "Anda, untuk diri sendiri",
+      "signIn": "Masuk dengan",
+      "how": {
+        "signIn": "Akun Anda",
+        "key": "Sebuah kunci",
+        "either": "Akun atau kunci"
+      },
+      "canTitle": "Apa yang dilakukan agen dengannya",
+      "address": "Alamat",
+      "addressNote": "Agen memakai alamat ini dengan akun yang terhubung. Masing-masing hanya mendapat apa yang Anda izinkan.",
+      "host": "Terhubung ke",
+      "more": "Lainnya di {{category}}"
+    },
     "fromAgent": "Hubungkan layanan",
     "githubApp": {
       "useApp": "Pakai aplikasi agentes.chat",
@@ -2644,6 +2723,10 @@
       "titlePersonal": "Serahkan tugasmu ke agenmu",
       "textPersonal": "Buat tugas untuk agen dan ikuti sampai selesai.",
       "viewerTitlePersonal": "Ikuti pekerjaan agenmu"
+    },
+    "coding": {
+      "title": "Coding bersama agenmu",
+      "text": "Setiap sesi adalah percakapan dengan agen yang bekerja di branch-nya sendiri, di komputernya."
     },
     "routines": {
       "title": "Serahkan pekerjaan berulang ke agenmu",

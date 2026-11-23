@@ -32,6 +32,7 @@ export interface VideoHandle {
  */
 export function VideoStage({
   src,
+  handoff,
   name,
   marks,
   pad,
@@ -39,6 +40,8 @@ export function VideoStage({
   onHandle,
 }: {
   src: string;
+  /** The file, to go on from its chat tile's moment (`VideoPlayer`'s `handoff`). */
+  handoff?: string;
   name: string;
   marks: StageMarks;
   pad: StagePad;
@@ -180,6 +183,7 @@ export function VideoStage({
       >
         <VideoPlayer
           src={src}
+          handoff={handoff}
           name={name}
           variant="viewer"
           labels={labels}

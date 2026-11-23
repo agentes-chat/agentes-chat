@@ -112,8 +112,23 @@ const isOrgList = (key: readonly unknown[]) => key.length === 3 && key[0] === "o
 const WAITING_COUNT = JSON.stringify(MISSIONS_WAITING_COUNT);
 const isWaitingCount = (key: readonly unknown[]) =>
   key.length === 5 && key[0] === "org" && key[2] === "missions" && key[3] === "list" && key[4] === WAITING_COUNT;
+/**
+ * `["org", orgId, "threads", "list", <filters>]`: the threads and missions of the conversation list. Without them a
+ * launch drew the list from its channels and DMs alone, and the threads came in from the server a moment later,
+ * between them, moving every row under them (seen on a phone). Only their first page is written (`firstPage`).
+ */
+const isThreadList = (key: readonly unknown[]) =>
+  key.length === 5 && key[0] === "org" && key[2] === "threads" && key[3] === "list";
 /** Always kept (a chat's parts only for the most recent chats). */
-const isKept = (key: readonly unknown[]) => isMe(key) || isOrgList(key) || isWaitingCount(key);
+const isKept = (key: readonly unknown[]) => isMe(key) || isOrgList(key) || isWaitingCount(key) || isThreadList(key);
+
+/** A paged list's first page only: the newest, what a launch shows; the rest loads as the person scrolls. */
+export function firstPage(data: unknown): unknown {
+  if (!data || typeof data !== "object") return data;
+  const { pages, pageParams } = data as { pages?: unknown; pageParams?: unknown };
+  if (!Array.isArray(pages) || !Array.isArray(pageParams)) return data;
+  return { pages: pages.slice(0, 1), pageParams: pageParams.slice(0, 1) };
+}
 
 /** The queries worth keeping: the allow-list, loaded, and only the chats most recently updated. */
 export function pickSnapshotQueries(queries: Query[], chats = SNAPSHOT_CHATS): Query[] {
@@ -170,6 +185,8 @@ export function createSnapshot(qc: QueryClient, storage: SnapshotStorage, option
     for (const q of state.queries) {
       if (chatPart(q.queryKey)?.part === "messages" && Array.isArray(q.state.data)) {
         q.state = { ...q.state, data: trimMessages(q.state.data as Message[]) };
+      } else if (isThreadList(q.queryKey)) {
+        q.state = { ...q.state, data: firstPage(q.state.data) };
       }
     }
     const snapshot: Snapshot = { v: SNAPSHOT_VERSION, savedAt: Date.now(), owner: who, state };

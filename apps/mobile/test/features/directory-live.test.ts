@@ -17,7 +17,9 @@ test("the phone hears the team and the channels change, whatever screen is open"
 });
 
 test("a reconnect reads everything again, and coming back to the app reads what went stale", () => {
-  expect(src("providers/realtime.tsx")).toContain("c.onReconnect(() => void queryClient.invalidateQueries())");
+  expect(src("providers/realtime.tsx").replace(/\s+/g, " ")).toContain(
+    '(full) => void (full ? queryClient.invalidateQueries() : queryClient.refetchQueries({ type: "active" }))',
+  );
   const query = src("providers/query.ts");
   expect(query).toContain("refetchOnWindowFocus: true");
   expect(query).toContain('focusManager.setFocused(s === "active")');

@@ -31,7 +31,8 @@ import "./request-card.css";
 
 /**
  * What an agent can ask of a person in the conversation: each says so in the card's header and in the bar.
- * "proposal": a change to the workspace's context or an agent's instructions; "agent": a new agent.
+ * "proposal": a change to the workspace's context or an agent's instructions; "agent": a new agent; "code": a code
+ * session for a change asked in the chat (ADR 0215 §11).
  */
 export type RequestKind =
   | "approval"
@@ -42,7 +43,8 @@ export type RequestKind =
   | "proposal"
   | "agent"
   | "team"
-  | "firstTask";
+  | "firstTask"
+  | "code";
 
 /**
  * A request waiting for the viewer, as its card registers it: the bar above the composer says it. `runId`: the run that

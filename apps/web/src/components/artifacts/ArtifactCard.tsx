@@ -24,8 +24,9 @@ import { MenuEntries } from "@/components/DesktopMenus";
 import { LiveCover } from "@/components/live/LiveCover";
 import { openLivePage } from "@/components/live/open";
 import { useOrg } from "@/components/org-context";
-import { contextMenuHandler, type MenuEntry } from "@/lib/context-menu";
+import { canCopyImage, contextMenuHandler, copyImage, type MenuEntry } from "@/lib/context-menu";
 import { Markdown } from "@/lib/markdown";
+import { useToast } from "@/lib/toast";
 import { useArtifactDownload, useDeleteArtifact } from "./ArtifactActions";
 import { FileVideo, MAX_THUMB_BYTES, usePreviewUrl } from "./FileView";
 import { HtmlFrame } from "./HtmlFrame";
@@ -58,6 +59,7 @@ export function ArtifactCard({ artifact: ref }: { artifact: ArtifactRef }) {
   const download = useArtifactDownload();
   const share = useFileShare();
   const remove = useDeleteArtifact();
+  const toast = useToast();
   const query = useArtifact(org.id, ref.deleted ? null : ref.id, ref.version);
   const a = query.data;
   const navigate = useNavigate();
@@ -92,11 +94,23 @@ export function ArtifactCard({ artifact: ref }: { artifact: ArtifactRef }) {
   };
   // A live file downloads as it is now (its versions are checkpoints behind it, ADR 0196 §7).
   const save = () => void download.save(a, undefined, live ? undefined : a.shownVersion, a.content);
-  // Open, download, Compartilhar, its link (through the share dialog while only its conversation sees it), and the
+  const picture = a.content.kind === "file" && previewKind(a.content.contentType) === "image";
+  const copyPicture = () =>
+    copyImage(
+      api.artifacts.fileBlob(org.id, a.id, a.shownVersion),
+      () => toast.show(t("contextMenu.imageCopied")),
+      () => toast.show(t("contextMenu.copyImageFailed"), "error"),
+    );
+  // Open, download, Copiar imagem, Compartilhar, its link (through the share dialog while only its conversation sees it), and the
   // trash for who may delete it: the right click and the More menu.
   const actions = (): MenuEntry[] => [
     { kind: "item", id: "open", label: t("contextMenu.open"), icon: "eye", run: open },
     { kind: "item", id: "download", label: t("contextMenu.download"), icon: "download", run: save },
+    ...(picture && canCopyImage()
+      ? ([
+          { kind: "item", id: "copy-image", label: t("contextMenu.copyImage"), icon: "image", run: copyPicture },
+        ] as const)
+      : []),
     ...(a.inDrive !== false
       ? ([
           { kind: "item", id: "share", label: t("share.button"), icon: "personAdd", run: () => share.open(a) },

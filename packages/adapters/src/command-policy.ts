@@ -490,19 +490,27 @@ const SECRET_NAMES = [
   ]),
 ];
 
-/** A path segment's wildcards as a pattern; like the shell, `*` and `?` don't match a leading dot. */
-const globPattern = (seg: string) =>
-  new RegExp(
-    `^${seg.startsWith(".") ? "" : "(?!\\.)"}${seg.replace(/\[(!?)([^\][]*)\]|[*?]|[^*?[]+|\[/g, (m, not, set) =>
-      m === "*"
-        ? "[^/]*"
-        : m === "?"
-          ? "[^/]"
-          : set !== undefined
-            ? `[${not ? "^" : ""}${set.replace(/[\\\]^]/g, "\\$&")}]`
-            : escapeRe(m),
-    )}$`,
-  );
+/**
+ * A path segment's wildcards as a pattern; like the shell, `*` and `?` don't match a leading dot. A set with a
+ * reversed range (`[n-1]`, common in inline scripts) is no valid pattern: like the shell's, it matches nothing.
+ */
+const globPattern = (seg: string) => {
+  try {
+    return new RegExp(
+      `^${seg.startsWith(".") ? "" : "(?!\\.)"}${seg.replace(/\[(!?)([^\][]*)\]|[*?]|[^*?[]+|\[/g, (m, not, set) =>
+        m === "*"
+          ? "[^/]*"
+          : m === "?"
+            ? "[^/]"
+            : set !== undefined
+              ? `[${not ? "^" : ""}${set.replace(/[\\\]^]/g, "\\$&")}]`
+              : escapeRe(m),
+      )}$`,
+    );
+  } catch {
+    return /(?!)/;
+  }
+};
 
 /**
  * The paths a word may name, for the secret checks: as written, with Windows' backslashes as slashes, and with each

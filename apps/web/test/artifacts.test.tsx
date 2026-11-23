@@ -183,6 +183,54 @@ describe("a tile's actions", () => {
   });
 });
 
+describe("a picture's tile", () => {
+  test("More has Copiar imagem: the picture goes on the clipboard as a PNG, and a toast says so", async () => {
+    const written: Record<string, Blob | Promise<Blob>>[] = [];
+    const g = globalThis as { ClipboardItem?: unknown };
+    const had = g.ClipboardItem;
+    g.ClipboardItem = class {
+      constructor(items: Record<string, Blob | Promise<Blob>>) {
+        written.push(items);
+      }
+    };
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async (v: string) => void copied.push(v), write: async () => undefined },
+    });
+    try {
+      const state = seedState();
+      const api = createFakeApi(state);
+      const shot = await api.artifacts.upload(ORG_ID, new File(["png"], "tela.png", { type: "image/png" }), {
+        channelId: ENG_ID,
+      });
+      state.messages.push({
+        id: "m-pic",
+        channelId: ENG_ID,
+        threadId: null,
+        author: { type: "agent", id: ATLAS_ID },
+        body: "A tela.",
+        mentionedAgentIds: [],
+        agentRunId: "r-pic",
+        meta: { artifacts: [{ id: shot.id, version: 1 }] },
+        createdAt: new Date().toISOString(),
+      });
+      await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api });
+      await settle(8);
+      const acts = card("tela.png").querySelector(".artifact-tile__acts") as HTMLElement;
+      await pick(acts, "Mais ações: tela.png", "Copiar imagem");
+      await settle(4);
+      expect(Object.keys(written.at(-1) ?? {})).toEqual(["image/png"]);
+      expect(screen().getByText("Imagem copiada.")).toBeTruthy();
+    } finally {
+      g.ClipboardItem = had;
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: { writeText: async (v: string) => void copied.push(v) },
+      });
+    }
+  });
+});
+
 describe("a file card's right click (desktop app)", () => {
   test("who may delete it gets Mover para a lixeira, which asks first and sends it to the trash", async () => {
     const w = window as { __agentesDesktop?: unknown; __TAURI_INTERNALS__?: unknown };

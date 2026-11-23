@@ -715,6 +715,11 @@ describe("what the computer decides by itself (`localVerdict`)", () => {
     expect(localVerdict("Bash", { command: "ls" }, undefined, "work")).toBeNull();
     expect(localVerdict("Bash", { command: "ls" }, undefined, "plan")).toEqual(planned);
   });
+
+  test("an inline script with a reversed bracket range (`rows[n-1]`) is decided, not an error", () => {
+    expect(verdict(`python3 -c "rows=[1,2]; n=2; print(rows[n-1])"`)).toBeNull();
+    expect(verdict(`node -e 'console.log(arr[arr.length-1])'`)).toBeNull();
+  });
 });
 
 describe("addresses a call opens (ADR 0117)", () => {

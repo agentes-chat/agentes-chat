@@ -65,10 +65,6 @@ export const NO_HOME_MESSAGE =
 export const notHomeMessage = (computer: string) =>
   `You have no place of your own on ${computer}: your computer is the workspace's own. Do it there, or hand this to an agent that uses ${computer} (ask_agent, tell_agent, or create_issue assigned to it).`;
 
-/** A computer where every agent works as the same OS user can't keep people's seats apart. */
-export const notSystemMessage = (computer: string) =>
-  `You have no computer on ${computer}: it runs every agent as one user, so it can't keep each person's files and sign-ins apart. Hand this to an agent that has a computer (ask_agent, tell_agent, or create_issue assigned to it), and never ask the person to try again.`;
-
 /**
  * A new seat's id. The computer names an OS user from an id's first 8 letters and digits and never frees one, so the
  * id starts like no agent's and no seat's there has, gone ones included: a clash would leave the person with no seat.
@@ -228,17 +224,18 @@ export async function seatLive(db: Executor, seatId: string): Promise<boolean> {
 }
 
 /** A computer as a seat's rules read it. */
-type SeatMachine = { id: string; orgId: string; name: string; system: boolean };
+type SeatMachine = { id: string; orgId: string; name: string };
 
 /**
  * Why the right hand has no seat: the workspace has no computer of its own (`no_home`), this one isn't it
- * (`not_home`), it runs every agent as one user (`not_system`), or the person isn't a member (`no_seat`).
+ * (`not_home`), or the person isn't a member (`no_seat`).
  */
-export type SeatRefusal = "no_home" | "not_home" | "not_system" | "no_seat";
+export type SeatRefusal = "no_home" | "not_home" | "no_seat";
 
 /**
  * `userId`'s seat (or with `SHARED_SEAT` the shared one) on `machine` as a request's agent, or why there is none. The
- * one place a seat is given: only on the workspace's own computer, and only where each agent is its own OS user.
+ * one place a seat is given: only on the workspace's own computer. Where every agent there is the same OS user, a
+ * seat is a folder and a browser profile of that user, as any agent's there is (ADR 0175, amendment of 2026-11-22).
  * `told`: tells the workspace's computers of a seat just made, which they list like an agent (its containers, its
  * desktop kept), before its first request. `make` off (reading a screen's state): a seat that doesn't exist yet is
  * not made, and its scope is null.
@@ -256,7 +253,6 @@ async function seatOn(
     return { ok: false, reason: "no_home", message: NO_HOME_MESSAGE };
   }
   if (machine.id !== home) return { ok: false, reason: "not_home", message: notHomeMessage(machine.name) };
-  if (!machine.system) return { ok: false, reason: "not_system", message: notSystemMessage(machine.name) };
   const seat = await seatOf(db, agent.orgId, userId, make);
   if (!seat) return make ? { ok: false, reason: "no_seat", message: NO_SEAT_MESSAGE } : { ok: true, scope: null };
   if (seat.made) await told?.(agent.orgId);
@@ -317,24 +313,35 @@ export async function runSeatId(ctx: SeatRun): Promise<string | null> {
 export type SeatState = "seat" | "shared" | "none";
 
 /**
- * `SeatState` of a run, for what its prompt says. It makes no seat: the first request does. `none` too while every
- * tool of a computer is off for it (its grants, the workspace's switch for commands): a prompt never names a computer
- * the run can't use.
+ * A computer that runs every agent as one OS user, where a seat is only a folder of that user. A managed computer
+ * counts as one that keeps users apart even before its runner's first hello reports it.
  */
-export async function seatState(
-  db: Database,
-  run: { orgId: string; agentId: string; channelId: string; id: string; triggerMessageId: string },
-): Promise<SeatState> {
+export const oneUserComputer = (m: { kind: string; executors?: { mode?: string } | null }) =>
+  m.kind !== "managed" && m.executors?.mode !== "system";
+
+type SeatRunRow = { orgId: string; agentId: string; channelId: string; id: string; triggerMessageId: string };
+
+/**
+ * What a run of the right hand has of a computer, for what its prompt says: its `state`, and `oneUser` when the
+ * workspace's computer runs every agent as one OS user, so a seat there is a folder the other agents' commands can
+ * read. It makes no seat: the first request does. `none` too while every tool of a computer is off for it (its
+ * grants, the workspace's switch for commands): a prompt never names a computer the run can't use.
+ */
+export async function seatPlace(db: Database, run: SeatRunRow): Promise<{ state: SeatState; oneUser: boolean }> {
   const home = await workspaceHomeId(db, run.orgId);
   const machine = home ? await (await machines()).getMachine(db, run.orgId, home) : null;
-  if (machine?.executors?.mode !== "system") return "none";
+  if (!machine) return { state: "none", oneUser: false };
+  const oneUser = oneUserComputer(machine);
   const keys = await grantedScopeKeys(db, run.orgId, run.agentId);
   const has = (scope: string) => keys.has(grantKey(null, scope));
   const commands = has(SANDBOX_SCOPE) && (await (await sandbox()).getSandboxSettings(db, run.orgId)).enabled;
-  if (!commands && !has(BROWSER_SCOPE) && !has(DESKTOP_SCOPE)) return "none";
+  if (!commands && !has(BROWSER_SCOPE) && !has(DESKTOP_SCOPE)) return { state: "none", oneUser };
   const owner = await runSeat({ db, ...run, runId: run.id });
-  return owner === SHARED_SEAT ? "shared" : owner ? "seat" : "none";
+  return { state: owner === SHARED_SEAT ? "shared" : owner ? "seat" : "none", oneUser };
 }
+
+/** `seatPlace`'s state alone. */
+export const seatState = async (db: Database, run: SeatRunRow): Promise<SeatState> => (await seatPlace(db, run)).state;
 
 /**
  * Whose screen a run's tools act on: nobody's in particular for an agent (its screen is one), and for the right hand
@@ -377,8 +384,7 @@ export async function toolMachineId(
 /**
  * The agent a request to `machineId` is for, built from a tool call: the agent itself, or for the right hand the seat
  * its run works in (`runSeat`: a person's own, or the shared one). Throws what the agent reads when the right hand
- * has no seat there: a run with none, a call with no conversation, a computer that isn't the workspace's own or runs
- * every agent as one user.
+ * has no seat there: a run with none, a call with no conversation, a computer that isn't the workspace's own.
  */
 export async function machineScope(
   hub: Pick<MachineCaller, "status" | "agentsChanged">,
@@ -404,7 +410,7 @@ export async function machineScope(
     ctx.db,
     agent,
     owner,
-    status && { id: machineId, orgId: status.orgId, name: status.name, system: status.mode === "system" },
+    status && { id: machineId, orgId: status.orgId, name: status.name },
     async (orgId) => hub.agentsChanged?.(orgId),
   );
   if (!seat.ok) throw new (await sandbox()).SandboxUnavailableError(seat.message);
@@ -469,12 +475,7 @@ export async function viewerScope(
     db,
     agent,
     shared ? SHARED_SEAT : viewerId,
-    machine && {
-      id: machine.id,
-      orgId: machine.orgId,
-      name: machine.name,
-      system: machine.executors?.mode === "system",
-    },
+    machine && { id: machine.id, orgId: machine.orgId, name: machine.name },
     told,
     make,
   );

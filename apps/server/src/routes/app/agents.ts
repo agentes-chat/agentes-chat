@@ -888,7 +888,7 @@ export function agentRoutes(deps: AppDeps) {
                       description:
                         "Where it shows when you read it: its conversation, or for work another agent handed it, where that agent handed it off. Null otherwise.",
                     }),
-                    channelKind: z.enum(["channel", "dm", "task", "file"]).nullable(),
+                    channelKind: z.enum(["channel", "dm", "task", "file", "code"]).nullable(),
                     channelName: z.string().nullable(),
                     threadId: z.uuid().nullable(),
                     messageId: z

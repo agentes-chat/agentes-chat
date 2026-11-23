@@ -4760,6 +4760,36 @@ export function useCustomServerAction(orgId: string) {
   };
 }
 
+/**
+ * The workspace's own OAuth client for an MCP server (who manages connectors), read once the form that shows it
+ * opens: asking takes a request to the server.
+ */
+export function useOwnOAuthClient(orgId: string, serverUrl: string, enabled: boolean) {
+  const api = useApi();
+  const qc = useQueryClient();
+  const key = keys.ownOAuthClient(orgId, serverUrl);
+  return {
+    current: useQuery({
+      queryKey: key,
+      queryFn: () => api.customConnectors.ownClient(orgId, serverUrl),
+      enabled: enabled && serverUrl !== "",
+      retry: false,
+      staleTime: 60_000,
+      meta: { quiet: true },
+    }),
+    save: useMutation({
+      mutationFn: (input: { clientId: string; clientSecret?: string; scopes?: string }) =>
+        api.customConnectors.setOwnClient(orgId, { serverUrl, ...input }),
+      onSuccess: (saved) => qc.setQueryData(key, saved),
+      meta: { silent: true },
+    }),
+    remove: useMutation({
+      mutationFn: (issuer: string) => api.customConnectors.removeOwnClient(orgId, issuer),
+      onSuccess: () => qc.invalidateQueries({ queryKey: key }),
+    }),
+  };
+}
+
 // ── Memory and proposals (phase 5) ──────────────────────────────────────────
 
 export const useMemory = (orgId: string, agentId: string) => {
@@ -5621,7 +5651,7 @@ function issueEdits(orgId: string, id: string, patch: (issue: Issue) => Issue | 
  * project its name and colour. New criteria wait for the answer (their ids are the server's).
  */
 function issuePatched(qc: QueryClient, orgId: string, patch: IssuePatch) {
-  const { criteria: _criteria, columnId, projectId, ...same } = patch;
+  const { criteria: _criteria, columnId, projectId, removeFiles, ...same } = patch;
   const columns = qc.getQueryData<IssueColumn[]>(keys.issueColumns(orgId)) ?? [];
   const projects = qc.getQueryData<IssueProjects>(keys.issueProjects(orgId))?.projects ?? [];
   return (issue: Issue): Issue => {
@@ -5635,6 +5665,7 @@ function issuePatched(qc: QueryClient, orgId: string, patch: IssuePatch) {
     }
     if (projectId === null) next.project = null;
     else if (projectId !== undefined) next.project = projects.find((p) => p.id === projectId) ?? issue.project;
+    if (removeFiles?.length) next.artifacts = issue.artifacts.filter((f) => !removeFiles.includes(f.id));
     return next;
   };
 }

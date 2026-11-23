@@ -330,11 +330,29 @@ export function brainModelId(kind: BrainKind, model: string | null | undefined):
 
 const FREE_MODEL = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,79}$/;
 
+/** The one maker whose models a CLI runs (the catalog's `provider`); Cursor and OpenCode run many makers' models. */
+const ONE_MAKER: Partial<Record<BrainKind, string>> = { codex: "openai", antigravity: "gemini", grok: "xai" };
+/** The plan a maker's models think on, for the refusal's words. */
+const PLAN_OF_MAKER: Record<string, string> = { anthropic: "Claude", openai: "ChatGPT", gemini: "Gemini", xai: "Grok" };
+
+/** Each maker's model names, catalog or not ("gpt-6.1", a Claude Code alias). */
+const MAKER_NAMES: readonly (readonly [RegExp, string])[] = [
+  [/^(claude-|(fable|opus|sonnet|haiku)$)/i, "anthropic"],
+  [/^(gpt-|o\d)/i, "openai"],
+  [/^gemini-/i, "gemini"],
+  [/^grok-/i, "xai"],
+];
+
+/** Whose model a name is, by its family or the catalog; null for a name neither knows. */
+const makerOfModel = (v: string): string | null =>
+  MAKER_NAMES.find(([names]) => names.test(v))?.[1] ?? MODEL_CATALOG[catalogModelOf(v) ?? ""]?.provider ?? null;
+
 /**
  * A model for a brain, as stored: null = the brain's default. Claude Code
  * takes its aliases, a full Claude id or a coding plan's model; Codex any
- * model name (a new one may come out before our catalog knows it); the model
- * brain none.
+ * model name (a new one may come out before our catalog knows it) but another
+ * maker's (Codex, Antigravity and Grok Build run their maker's alone); the
+ * model brain none.
  */
 export function normalizeBrainModel(kind: BrainKind, value: unknown, stored?: string | null): string | null {
   if (value === null || value === undefined || value === "") return null;
@@ -356,6 +374,16 @@ export function normalizeBrainModel(kind: BrainKind, value: unknown, stored?: st
     });
   }
   if (!FREE_MODEL.test(v)) throw new ValidationError("That isn't a model name", "brain.invalid_model", { brain: kind });
+  const maker = makerOfModel(v);
+  const runs = ONE_MAKER[kind];
+  if (runs && maker && maker !== runs) {
+    const label = MODEL_CATALOG[catalogModelOf(v) ?? ""]?.label ?? v;
+    throw new ValidationError(
+      `${label} doesn't run on ${BRAIN_NAMES[kind as ComputerBrainKind]}: it needs an AI account of ${PLAN_OF_MAKER[maker] ?? maker} first`,
+      "brain.invalid_model",
+      { brain: kind, model: v, maker },
+    );
+  }
   // OpenCode runs `--model provider/model` (its runner refuses anything else).
   if (kind === "opencode" && !/^[\w.-]{1,40}\/[\w.:-]{1,79}$/.test(v)) {
     throw new ValidationError("OpenCode's models are provider/model, like opencode/big-pickle", "brain.invalid_model", {

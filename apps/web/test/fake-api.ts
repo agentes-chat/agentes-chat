@@ -108,7 +108,7 @@ import type {
   UsageQueue,
   WorkspaceLimits,
 } from "@agenteschat/client";
-import { ApiError } from "@agenteschat/client";
+import { ApiError, codeSuggestionOf } from "@agenteschat/client";
 import { moveInGroups } from "@agenteschat/client/lib/agent-groups";
 import { answersOthers, audienceOf, listsAllAgents } from "@agenteschat/client/lib/audience";
 import type { ChatPrefs } from "@agenteschat/client/lib/chat-look";
@@ -502,6 +502,8 @@ export interface FakeState {
   idRefs?: Record<string, IdRef>;
   /** The sidebar's tools in my order (`orgs.sidebarToolOrder`); unset = the default. */
   sidebarToolOrder?: SidebarItem[];
+  /** Whether Code has anything for me (`OrgOverview.code`, ADR 0215 §12); unset = no. */
+  codeWork?: boolean;
   /** How my sidebar shows the agents and what I pinned (`orgs.sidebarView`); unset = never changed. */
   sidebarView?: SidebarView;
   /**
@@ -1298,7 +1300,8 @@ type FakedParts =
   | "databases"
   | "browser"
   | "desktop"
-  | "live";
+  | "live"
+  | "code";
 
 /** The core of the fake backend, over `FakeState`. Records every call in `state.calls`. */
 /** A member as the signed-in person sees them: hidden reads as offline to everyone else (ADR 0084). */
@@ -2251,6 +2254,7 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         budgetUsedPercent: workspacePercent(),
         approvalsWaitingForMe: state.approvals.filter((a) => a.status === "pending" && a.canDecide).length,
         proposalsWaitingForMe: state.proposals.filter((p) => p.status === "pending" && !p.stale && p.canDecide).length,
+        code: state.codeWork ?? false,
       }),
       people: async () =>
         state.members.map((m) => ({
@@ -4596,6 +4600,92 @@ export function createFakeApi(state: FakeState = seedState(), options: { seed?: 
     databases: databases.client,
     dashboards: dashboards.client,
     live: live.client,
+    // Code sessions (ADR 0215): none in these tests.
+    code: {
+      list: async () => [],
+      start: async () => ({ agents: [] }),
+      create: async () => {
+        throw new Error("code sessions aren't faked");
+      },
+      get: async () => {
+        throw new Error("code sessions aren't faked");
+      },
+      rename: async () => {
+        throw new Error("code sessions aren't faked");
+      },
+      retry: async () => {
+        throw new Error("code sessions aren't faked");
+      },
+      close: async () => {},
+      diff: async () => ({
+        scope: "base" as const,
+        base: { branch: null, sha: null },
+        files: [],
+        added: 0,
+        removed: 0,
+        truncated: false,
+      }),
+      git: async () => ({ uncommitted: 0, ahead: 0, upstream: false, local: false, pr: null, next: null }),
+      gitLog: async () => ({
+        branch: null,
+        base: { branch: null, sha: null },
+        changes: [],
+        changesMore: false,
+        commits: [],
+        more: false,
+      }),
+      files: async () => ({ paths: [], truncated: false, changes: [] }),
+      file: async (_orgId: string, _sessionId: string, path: string) => ({
+        path,
+        state: "missing" as const,
+        content: "",
+        size: 0,
+        truncated: false,
+        rev: "",
+      }),
+      saveFile: async (_orgId: string, _sessionId: string, input: { path: string; content: string }) => ({
+        path: input.path,
+        state: "ok" as const,
+        content: input.content,
+        size: input.content.length,
+        truncated: false,
+        rev: "saved",
+      }),
+      // A session an agent suggested in the chat (ADR 0215 §11): opened (just started, preparing) or kept here.
+      openSuggestion: async (orgId: string, messageId: string) => {
+        state.calls.push({ method: "code.openSuggestion", args: [orgId, messageId] });
+        const s = codeSuggestionOf(state.messages.find((m) => m.id === messageId)?.meta);
+        if (s?.status !== "pending") throw new ApiError(409, "code_session.suggestion_gone", "Answered already");
+        const now = new Date().toISOString();
+        return {
+          id: "0193f1a2-7b3c-7d4e-8f90-1a2b3c4d5e6f",
+          channelId: "ch-code-1",
+          rootId: "m-code-root-1",
+          title: s.title,
+          repo: s.repo,
+          branch: null,
+          baseBranch: null,
+          agentId: s.agentId,
+          machineId: null,
+          worktree: { state: "preparing" as const, error: null, errorCode: null },
+          local: !s.repo.includes("/"),
+          pr: null,
+          stat: { files: 0, added: 0, removed: 0, at: null },
+          work: "preparing" as const,
+          createdBy: state.me?.user.id ?? null,
+          createdAt: now,
+          lastAt: now,
+        };
+      },
+      keepHere: async (orgId: string, messageId: string) => {
+        state.calls.push({ method: "code.keepHere", args: [orgId, messageId] });
+        const s = codeSuggestionOf(state.messages.find((m) => m.id === messageId)?.meta);
+        if (s?.status !== "pending") throw new ApiError(409, "code_session.suggestion_gone", "Answered already");
+        return {
+          suggestion: { ...s, status: "here" as const, by: state.me?.user.id ?? "", at: new Date().toISOString() },
+        };
+      },
+    },
     browser: browser.client,
     desktop: browser.desktop,
     // "Trabalhando agora" and the task manager only for a test that gives the task manager (`state.taskManager`).

@@ -1,5 +1,6 @@
 import type { AppLocale } from "@agenteschat/i18n/locale";
 import type { PlanModel } from "@agenteschat/providers/plans";
+import type { CodeApi } from "../code/api";
 import type { DashboardsApi } from "../dashboards/api";
 import type { ChatPrefs } from "../lib/chat-look";
 import type { OnboardingStepId } from "../lib/onboarding";
@@ -258,6 +259,7 @@ import type {
   OrgPlanUsage,
   OrgRoles,
   OrgSettings,
+  OwnOAuthClient,
   PageTarget,
   PendingReturn,
   PeopleUsage,
@@ -1485,6 +1487,21 @@ export interface ApiClient {
       input: { label: string; tools: { name: string; access: ToolDecision; label: string; confirmed?: boolean }[] },
     ): Promise<CustomServer>;
     disconnect(orgId: string, serverId: string): Promise<void>;
+    /**
+     * The workspace's own OAuth client for the server at this address, and the redirect URI to register (who manages
+     * connectors). A 400 `connector.no_oauth` when the server doesn't sign in with OAuth.
+     */
+    ownClient(orgId: string, serverUrl: string): Promise<OwnOAuthClient>;
+    /**
+     * Saves it: every sign-in at that authorization server uses it. The same `clientId` keeps the saved secret unless
+     * one is sent; another one while accounts sign in with it is a 409 `connector.oauth_client_in_use`.
+     */
+    setOwnClient(
+      orgId: string,
+      input: { serverUrl: string; clientId: string; clientSecret?: string; scopes?: string },
+    ): Promise<OwnOAuthClient>;
+    /** Removes it; a 409 `connector.oauth_client_in_use` while accounts sign in with it. */
+    removeOwnClient(orgId: string, issuer: string): Promise<void>;
   };
   dms: {
     /** My direct conversations, with unread counts. */
@@ -1582,6 +1599,8 @@ export interface ApiClient {
   dashboards: DashboardsApi;
   /** Spreadsheets, presentations and canvases edited together (ADR 0196), their pictures and Office previews. */
   live: LiveApi;
+  /** Code sessions (ADR 0215): a request in its own worktree on an agent's computer, with its conversation. */
+  code: CodeApi;
   /** Missions (ADR 0029): long work by the agent's executor on a connected computer, in one thread. */
   missions: {
     /** Missions you can see (the Missões tab), most recently changed first, with the counts for the tabs. */
@@ -1928,11 +1947,12 @@ export interface ApiClient {
       orgId: string,
       input: { title: string; channelId?: string | null; folderId?: string | null; content: ArtifactContent },
     ): Promise<ArtifactDetail>;
-    /** Uploads a file as is (multipart, ≤ 50 MB) to the Drive or to a channel. */
+    /** Uploads a file as is (multipart, ≤ 50 MB) to the Drive or to a channel; `upload` reports the share sent. */
     upload(
       orgId: string,
       file: File,
       options?: { title?: string; channelId?: string | null; threadId?: string | null; folderId?: string | null },
+      upload?: UploadOptions,
     ): Promise<ArtifactDetail>;
     /** A new version of an uploaded file (multipart, ≤ 50 MB). */
     uploadVersion(orgId: string, id: string, file: File, options?: { note?: string }): Promise<ArtifactDetail>;

@@ -716,7 +716,7 @@ describe("agent page: inline editing and the save bar", () => {
     const { router } = await go("?tab=instructions");
     await type(screen().getByRole("textbox", { name: "Instruções" }), "Outra coisa.");
     await act(async () => {
-      router.history.push(`/org/${ORG_ID}/approvals`);
+      router.history.push(`/org/${ORG_ID}/notifications`);
     });
     await settle(4);
     const ask = screen().getByRole("dialog", { name: "Sair sem salvar?" });
@@ -725,7 +725,7 @@ describe("agent page: inline editing and the save bar", () => {
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/agents/${ADA_ID}`);
     expect(screen().getByRole("textbox", { name: "Instruções" })).toBeTruthy();
     await act(async () => {
-      router.history.push(`/org/${ORG_ID}/approvals`);
+      router.history.push(`/org/${ORG_ID}/notifications`);
     });
     await settle(4);
     await click(
@@ -734,7 +734,7 @@ describe("agent page: inline editing and the save bar", () => {
       }),
     );
     await settle(4);
-    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/approvals`);
+    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/notifications`);
   });
 });
 

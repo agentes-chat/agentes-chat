@@ -107,6 +107,15 @@ Four ways out stayed open after ADR 0109:
    instructions (from the checkout; data about this codebase)", for every turn without settings files (plan turns
    gain it). The `personalMcp` turn (the owner's own computer and settings) is unchanged. Agents may still edit
    `.claude/` and CLAUDE.md when that is the job: those files just don't configure our turns.
+   There is no switch to load `project` settings for an agent: a checkout's hooks, `env`, `apiKeyHelper` and allow
+   rules would run around our prompt tool and command rules (approvals, secret reads), on a sign-in that may be lent to
+   other agents, from a repository anyone could have written. A repository's own setup belongs in its CLAUDE.md or
+   AGENTS.md (read as above) or in the agent's skills.
+   Claude Code's auto memory is off too (`CLAUDE_CODE_DISABLE_AUTO_MEMORY=1`) on every turn and task but the
+   `personalMcp` turn: the workspace's memory is the agent's memory. Claude Code's lived in the sign-in's folder, which
+   the agent's own tools can't list (ADR 0057), and never left that computer. Measured on 2.1.329 (`--setting-sources
+   ""`, no tools, haiku): about 780 fewer prompt tokens a request, and a session in a new folder reads 2,627 tokens
+   from the cache and writes 416, where with auto memory on it read 649 and wrote 3,138.
 
 ## Consequences (egress)
 

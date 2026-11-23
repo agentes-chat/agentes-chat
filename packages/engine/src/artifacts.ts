@@ -2015,6 +2015,34 @@ export async function storedFileOfArtifact(
   };
 }
 
+/** An uploaded file's bytes as the actor reads it, for a connector that posts it elsewhere (ADR 0170). */
+export async function fileBytesOf(deps: ArtifactDeps, actor: ArtifactActor, orgId: string, artifactId: string) {
+  if (!UUID.test(artifactId)) throw new ValidationError(`${artifactId} isn't a Drive file's id`);
+  const a = await readable(deps, actor, orgId, artifactId);
+  if (a.kind !== "file") throw new ValidationError(`this artifact is a ${a.kind}, not an uploaded file`);
+  const v = await versionRow(deps.db, a);
+  const { body } = await readVersion(deps, a, v);
+  const name = v.fileName ?? "file";
+  return { name, contentType: fileContentType(name, v.contentType), bytes: body };
+}
+
+/**
+ * An uploaded file's bytes by its id alone, with no reader: only for a link this server signed for a file an agent
+ * could read when it made it (`openConnectorMedia`). Null when it is gone.
+ */
+export async function fileBytesById(deps: ArtifactDeps, orgId: string, artifactId: string) {
+  if (!UUID.test(artifactId) || !UUID.test(orgId)) return null;
+  const [a] = await deps.db
+    .select()
+    .from(artifacts)
+    .where(and(eq(artifacts.orgId, orgId), eq(artifacts.id, artifactId), isNull(artifacts.deletedAt)));
+  if (!a || a.kind !== "file") return null;
+  const v = await versionRow(deps.db, a);
+  const { body } = await readVersion(deps, a, v);
+  const name = v.fileName ?? "file";
+  return { name, contentType: fileContentType(name, v.contentType), bytes: body };
+}
+
 /**
  * A picture, a video or a PDF the actor reads (ADR 0208), with what it is: not in the trash, its current version's
  * type one the apps show (`mediaOfType`). Null for anything else, a refusal included (it reads as not found).
@@ -4053,6 +4081,39 @@ export async function touchLiveArtifact(
  */
 export async function announceLivePreview(deps: ArtifactDeps, orgId: string, fileId: string) {
   const row = await loadArtifact(deps.db, orgId, fileId);
+  if (!row?.channelId) return;
+  await publishChannelEvent(deps.pubsub, {
+    type: "artifact.updated",
+    channelId: row.channelId,
+    artifact: view(row, editableKind(row.kind)),
+  });
+}
+
+/**
+ * After a message in a file's conversation (ADR 0199, 0208): the conversation the file was posted in hears
+ * `artifact.updated`, so its card there reads the file again and the line under it ("2 comments on the image") counts
+ * the new one, for everyone looking at that conversation.
+ */
+export async function announceFileConversation(
+  deps: Pick<ArtifactDeps, "db" | "pubsub">,
+  orgId: string,
+  messageId: string,
+) {
+  const [message] = await deps.db
+    .select({ channelId: schema.messages.channelId })
+    .from(schema.messages)
+    .where(and(eq(schema.messages.orgId, orgId), eq(schema.messages.id, messageId)));
+  if (!message) return;
+  const [row] = await deps.db
+    .select()
+    .from(artifacts)
+    .where(
+      and(
+        eq(artifacts.orgId, orgId),
+        eq(artifacts.conversationChannelId, message.channelId),
+        isNull(artifacts.deletedAt),
+      ),
+    );
   if (!row?.channelId) return;
   await publishChannelEvent(deps.pubsub, {
     type: "artifact.updated",

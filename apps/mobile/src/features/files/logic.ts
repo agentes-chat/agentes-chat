@@ -464,3 +464,39 @@ function lineParts(line: string, size: number): string[] {
   parts.push(line.slice(at));
   return parts;
 }
+
+// ── A PDF's first page on its cards (`pdf-preview.tsx`) ──────────────────────────────────────────────────────────
+
+/**
+ * The most a PDF may weigh for a card to draw its first page: the phone's renderer reads the whole file, and past this
+ * a card would download a large file only to show the top of a page. Heavier ones keep their type's tile.
+ */
+export const PDF_PREVIEW_MAX_BYTES = 15 * 1024 * 1024;
+
+/** The query a PDF's copy in the cache and its pages' sizes are read under: its screen and its previews share it. */
+export const pdfCopyKey = (orgId: string, id: string, version: number) =>
+  ["org", orgId, "artifacts", "pdf", id, version] as const;
+
+/** A PDF whose first page a card draws: a file read as a PDF, of a known size up to `PDF_PREVIEW_MAX_BYTES`. */
+export function pdfPreviewable(detail: Pick<ArtifactDetail, "kind" | "title" | "content"> | undefined): boolean {
+  if (detail?.content.kind !== "file") return false;
+  const info = fileInfo(detail);
+  return info.view === "pdf" && info.size !== null && info.size > 0 && info.size <= PDF_PREVIEW_MAX_BYTES;
+}
+
+/** A file picked on the phone that is a PDF (by its type, else by its name). */
+export const isLocalPdf = (f: { type: string; name: string }) =>
+  f.type === "application/pdf" || extensionOf(f.name) === "pdf";
+
+/**
+ * The path the renderer reads for a file on the phone: it takes a path, not a link, and only drops `file://` from one
+ * (a picked file's name keeps its spaces and accents escaped in the link, which the path must not have).
+ */
+export function localPdfPath(uri: string): string {
+  const path = uri.replace(/^file:\/\//, "");
+  try {
+    return decodeURIComponent(path);
+  } catch {
+    return path;
+  }
+}

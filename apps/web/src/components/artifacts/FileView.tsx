@@ -130,6 +130,7 @@ export function FileVideo({
           onOpen={onOpen}
           actions={actions}
           onFailed={() => setFailed(true)}
+          handoff={artifactId}
         />
       </Tip>
     </div>
@@ -187,6 +188,7 @@ export function FileView({
             name={content.name}
             labels={videoLabels}
             onFailed={() => setVideoFailed(true)}
+            handoff={artifactId}
           />
         )}
       </div>

@@ -14,7 +14,7 @@ import { ACCOUNT_CONTACT_JOB, saveAccountContact } from "./account-contacts";
 import { AGENT_MEDIA_JOB, enqueueAgentMedia, maybeSendAgentMedia } from "./agent-media";
 import { aiConnectIntent, type ConnectIntent } from "./ai-intent";
 import { orgHasAi } from "./ai-status";
-import type { ArtifactDeps } from "./artifacts";
+import { type ArtifactDeps, announceFileConversation } from "./artifacts";
 import { PLAN_OPENED_JOB } from "./audience";
 import { routinePostRun, runAuthorityById } from "./authority";
 import { AUTONOMY_REPORT_JOB, queueAutonomyEmail } from "./autonomy-report";
@@ -603,6 +603,9 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
       await dispatchDm(deps.db, message, { maxHops: deps.maxHops }); // idempotent safety net
       return;
     }
+    // A code session's conversation (ADR 0215): what names nobody is for the session's agent, which got it at post
+    // time once its worktree was ready (`codeAgentSql`) or gets it when the worktree becomes ready; never the router's.
+    if (where?.kind === "code") return;
     if (!routing) return routed("none", [], []);
     // In a mission's thread only its owner and deciders make the agent work (the router included).
     if (message.threadId && message.authorUserId) {
@@ -1230,6 +1233,8 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
       }
       // A reply in a task's conversation (ADR 0145): the board's card counts it.
       await announceTaskConversation({ db: deps.db, pubsub: deps.pubsub }, orgOf(job), messageId);
+      // A comment on a picture, a video or a PDF (ADR 0208): its card where it was posted counts it.
+      await announceFileConversation({ db: deps.db, pubsub: deps.pubsub }, orgOf(job), messageId);
     },
     [SURFACE_FALLBACK_JOB]: (job) => fallBack({ db: deps.db, pubsub: deps.pubsub }, String(job.payload.deliveryId)),
     // A request for help in an agent's browser nobody answered within the hour: the people asked hear it again, once.

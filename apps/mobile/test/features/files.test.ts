@@ -237,6 +237,7 @@ describe("viewer", () => {
     expect(viewer).toContain(
       '<Round icon="right" label={t("mobile.files.next")} plate={SCRIM} onPress={() => turn(next)} />',
     );
+    // Gone while zoomed.
     expect(viewer).toContain("visible={chrome && !zoomed}");
     expect(viewer).toContain("else pager.current?.setPage(to);");
     // The count took the dots' place: one place says where you are.
@@ -393,6 +394,12 @@ describe("viewer", () => {
     expect(zoom).toContain("maximumZoomScale={max}");
     expect(zoom).toContain("pinchGestureEnabled");
     expect(zoom).toContain("scroll.current?.scrollResponderZoomTo({ ...rect, animated: !reduced });");
+    // Centered by the system's insets, worked out from the content's size: the content is the picture's own box (a
+    // vertical scroll view stretches its content to its width, and a narrower picture sat at its left edge), and at
+    // 1× the scroll view is put at those insets when a size changes.
+    expect(zoom).toContain("centerContent");
+    expect(zoom).toContain("contentContainerStyle={picture}");
+    expect(zoom).toContain("scroll.current?.scrollTo({ x: -left, y: -top, animated: false })");
     // Android: a pinch of ours that gives a little past its limits and springs back, a drag that resists past the
     // edges, a fling that glides and bounces off an edge it hits; with reduced motion, no glide and no spring.
     expect(zoom).toContain('Platform.OS === "ios" ? <SystemZoom {...zoom} /> : <OwnZoom {...zoom} />');
@@ -465,8 +472,7 @@ describe("viewer", () => {
     expect(viewer).toContain("if (leaving.value) return;");
     expect(viewer).toContain("if (closed.current) return;");
     // Only the picture in sight, at 1×, while the pages are still.
-    // With the conversation's sheet up the pull rests: the sheet goes down first (ADR 0208).
-    expect(viewer).toContain("enabled: active && !zoomed && !paging && !marking,");
+    expect(viewer).toContain("enabled: active && !zoomed && !paging,");
     // It shrinks around the spot the finger took, from rest; caught mid-spring, around the one before.
     expect(viewer).toContain("if (resting)");
     expect(viewer).toContain("pulledPlacement(pullX.value, pullY.value, screen, grab.value)");
@@ -560,8 +566,10 @@ describe("viewer", () => {
     const message = src("features/files/MessageFiles.tsx");
     expect(message).toContain("useRemoteFile(orgId, file.id, file.version, { once: true })");
     expect(message).toMatch(/key=\{`\$\{file\.id\}@\$\{file\.version \?\? "latest"\}`\}/);
-    // A PDF: a copy in the cache per version, drawn from there (ADR 0208), read once while the screen stays.
-    const pdf = src("features/files/PdfPages.tsx");
+    // A PDF: a copy in the cache per version, drawn from there (ADR 0208), read once while the screen stays; the same
+    // copy its cards' first page is drawn from (`usePdfCopy`).
+    expect(src("features/files/PdfPages.tsx")).toContain("const copy = usePdfCopy(detail);");
+    const pdf = src("features/files/pdf-preview.tsx");
     expect(pdf).toContain("const path = await pdfCopy(api, orgId, detail);");
     expect(pdf).toContain("staleTime: Number.POSITIVE_INFINITY,");
     expect(source).toContain("if (file.exists && (file.size ?? 0) > 0) return file.uri;");

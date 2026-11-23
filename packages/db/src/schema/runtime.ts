@@ -107,6 +107,11 @@ export const agentRuns = pgTable(
     /** Thread the agent answers in (the trigger's thread, or the trigger itself when it is top-level). */
     threadRootId: uuid().notNull(),
     triggerMessageId: uuid().notNull(),
+    /**
+     * Asked in a channel's main timeline, it answers in the thread under its trigger (`replyThreadOf`): the channel's
+     * `reply_in_threads` when the run was created, so turning it off or on never moves a run (ADR 0214).
+     */
+    replyInThread: boolean().notNull().default(false),
     trigger: agentRunTriggerEnum().notNull(),
     /** Hop of the reply this run will post (trigger hop + 1). */
     hop: integer().notNull(),
@@ -191,6 +196,12 @@ export const agentRuns = pgTable(
      */
     brain: text(),
     /**
+     * The coding CLI a computer brain thought with and its version, as its computer last reported it when the run took
+     * that brain (`claude 2.1.308 (Claude Code)`): the operator's failures by CLI version (`GET /cli-runs`), which the
+     * Cloud's rollouts of a CLI's new build read. Null for the model brain, a computer that didn't say, and older runs.
+     */
+    cli: text(),
+    /**
      * Long work (ADR 0121): this run stepped out of its conversation into the background. Its replies land in the
      * work's thread and its end goes home; the newest run with this id is the work's current one.
      */
@@ -221,6 +232,12 @@ export const agentRuns = pgTable(
     // The task manager's count of today's finished tasks, asked at every poll: only today's rows read, not every run
     // the workspace ever finished. Built CONCURRENTLY (its migration), as agent_runs is large.
     index("agent_runs_done_finished_idx").on(t.orgId, t.finishedAt).where(sql`${t.status} = 'done'`),
+    // Runs still holding unread messages, found by the inbox sweep (`sweepEndedInboxes`) every tick; the predicate is
+    // the sweep's own expression, so the planner matches it. Not keyed on updated_at, which every update moves: that
+    // would make all of agent_runs' updates non-HOT.
+    index("agent_runs_inbox_idx")
+      .on(t.status)
+      .where(sql`cardinality(${t.pendingMessageIds}) + cardinality(${t.afterMessageIds}) > 0`),
   ],
 );
 

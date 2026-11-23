@@ -41,7 +41,8 @@ const planSchema = {
   items: {
     type: "object",
     properties: {
-      text: { type: "string", minLength: 1, maxLength: 140 },
+      // No maxLength: `cleanPlan` cuts a long step, where a refusal would lose the whole update.
+      text: { type: "string", minLength: 1 },
       state: { type: "string", enum: ["todo", "doing", "done"] },
     },
     required: ["text"],
@@ -129,7 +130,8 @@ export function createWorkToolSource(deps: { pubsub?: PubSub }): ToolSource {
     inputSchema: {
       type: "object",
       properties: {
-        text: { type: "string", minLength: 1, maxLength: WORK_LIMITS.updateMax },
+        // Cut to `WORK_LIMITS.updateMax` by `postWorkUpdate`, never refused.
+        text: { type: "string", minLength: 1 },
         // Clamped to 5–20 by `postWorkUpdate`, never refused: an agent's "30" means "later", not a wrong call.
         next_update_minutes: { type: "number" },
         plan: planSchema,
@@ -141,7 +143,7 @@ export function createWorkToolSource(deps: { pubsub?: PubSub }): ToolSource {
     describe: (input) => ({ title: "Progress update", detail: str(input.text) }),
     async execute(input, ctx) {
       const run = await runOf(ctx);
-      if (!run) return refused("Only background work posts updates.");
+      if (!run) return { content: "Not posted: nothing runs in the background here. Say it in your reply." };
       const out = await postWorkUpdate({ db: ctx.db, pubsub: deps.pubsub }, run.id, {
         text: str(input.text),
         ...(typeof input.next_update_minutes === "number" ? { nextUpdateMin: input.next_update_minutes } : {}),
@@ -156,7 +158,7 @@ export function createWorkToolSource(deps: { pubsub?: PubSub }): ToolSource {
   const steer: ToolDefinition = {
     name: STEER_WORK_TOOL,
     description:
-      'Pass the person\'s message on, unchanged, to your background work it is about (by its id in "# Your background work here"). From who asked for the work, the work reads it as their words at its next step and keeps going; from anyone else, it runs once the work ends or is stopped, as them. Then tell them which in one short line, in their language.',
+      'Pass the person\'s message on, unchanged, to your background work it is about (by its id in "# Your background work here"). From who asked for the work, the work reads it as their words at its next step and keeps going; from anyone else, it runs once the work ends or is stopped, as them. Then tell them which in one short line, in their language. It takes only work_id: their message goes on as they wrote it, with no words of yours.',
     scope: "",
     inputSchema: {
       type: "object",

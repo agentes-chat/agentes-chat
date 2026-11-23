@@ -89,7 +89,7 @@ const ReturnPlace = {
   messageId: z.uuid().openapi({ description: "The return's line (`meta.notice.kind` `follow_up`)." }),
   agentId: z.uuid(),
   channelId: z.uuid(),
-  channelKind: z.enum(["channel", "dm", "task", "file"]),
+  channelKind: z.enum(["channel", "dm", "task", "file", "code"]),
   channelName: z.string().nullable().openapi({ description: "A channel's name; null for a DM or a task's." }),
   threadId: z.uuid().nullable().openapi({ description: "Null: the conversation's main timeline." }),
   at: z.string().openapi({ description: "When it comes (ISO)." }),
@@ -724,6 +724,10 @@ export const Channel = z
       .optional()
       .openapi({ description: "Its sidebar category; null: on top, with none." }),
     position: z.number().int().optional().openapi({ description: "Order inside its category, from 0." }),
+    replyInThreads: z.boolean().optional().openapi({
+      description:
+        "Agents asked in its main timeline answer in the thread under that message, which then shows as one line (ADR 0214). Regular channels only.",
+    }),
     unreadCount: z.number().int().optional().openapi({
       description:
         "Channel list only: messages since you last read it (since you joined, if never), not yours; a thread reply counts only in a thread you follow; an agent's sticker or GIF after its own reply never (ADR 0091). At most 100; 0 when you're not a member.",

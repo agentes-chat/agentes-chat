@@ -119,6 +119,7 @@ describe("the workspace's limits", () => {
       members: { used: 2, limit: null, max: null, canAddSeats: false, payer: null },
       storage: { usedBytes: 0, limitBytes: null, ownStorage: false },
       uploads: { usedBytes24h: 0, limitBytesPerDay: null },
+      connectors: { usedUsd: 0, limitUsd: null },
     });
     const limits = {
       members: 2,
@@ -133,6 +134,7 @@ describe("the workspace's limits", () => {
       members: { used: 2, limit: 2, max: 3, canAddSeats: true, payer: null },
       storage: { usedBytes: 0, limitBytes: 1000, ownStorage: false },
       uploads: { usedBytes24h: 0, limitBytesPerDay: 500 },
+      connectors: { usedUsd: 0, limitUsd: null },
     });
     const stranger = browser(t);
     await signUp(stranger, "eve@example.com");

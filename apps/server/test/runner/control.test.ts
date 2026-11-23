@@ -781,14 +781,16 @@ test("folders, tools and settings from the app: system folders refused, everythi
   expect(diag.text).not.toContain(TOKEN);
 });
 
-test("the task limit is sized to the computer: one per 2 CPUs and 2 GiB past 4, at least 3, at most 20", () => {
-  expect(sizedTaskLimit({ cpus: 4, memoryGb: 8 })).toBe(3);
-  expect(sizedTaskLimit({ cpus: 10, memoryGb: 16 })).toBe(5);
-  expect(sizedTaskLimit({ cpus: 16, memoryGb: 16 })).toBe(6);
-  expect(sizedTaskLimit({ cpus: 12, memoryGb: 64 })).toBe(6);
-  expect(sizedTaskLimit({ cpus: 128, memoryGb: 512 })).toBe(20);
+test("the task limit is sized to the memory: one per 1.5 GiB past 4, at least 3, at most 20, whatever the CPUs", () => {
+  for (const cpus of [2, 4, 8]) {
+    const sizes = [4, 8, 12, 16, 32].map((memoryGb) => ({ cpus, memoryGb }));
+    expect(sizes.map(sizedTaskLimit)).toEqual([3, 3, 5, 8, 18]);
+  }
+  // A 12 GB computer reads a little less than 12 GiB.
+  expect(sizedTaskLimit({ memoryGb: 11.5 })).toBe(5);
+  expect(sizedTaskLimit({ memoryGb: 512 })).toBe(20);
   // A container's limit, not the host's.
-  expect(sizedTaskLimit({ cpus: 64, memoryGb: 256, limit: { cpus: 4, memoryGb: 8 } })).toBe(3);
+  expect(sizedTaskLimit({ memoryGb: 256, limit: { cpus: 4, memoryGb: 8 } })).toBe(3);
   expect(DEFAULT_LIMITS.maxConcurrentTasks).toBeGreaterThanOrEqual(3);
 });
 

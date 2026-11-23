@@ -994,6 +994,16 @@ export async function isEmailVerified(db: Database, userId: string): Promise<boo
   return row ? row.verified === true : null;
 }
 
+/**
+ * What an address never confirmed holds back (ADR 0006, addendum 2026-11-22), on a server that sends email: an account
+ * in no workspace yet makes none until its link is opened (`required`). One already in a workspace keeps working, with
+ * a reminder: some of those pay, and a mistyped address may never get the link. Null when there is nothing to ask.
+ */
+export function emailConfirmation(input: { emailDelivers: boolean; verified: boolean; workspaces: number }) {
+  if (!input.emailDelivers || input.verified) return null;
+  return input.workspaces === 0 ? ("required" as const) : ("reminder" as const);
+}
+
 async function ownerCount(db: Pick<Database, "select">, orgId: string) {
   const [row] = await db
     .select({ n: sql<number>`count(*)::int` })
