@@ -1761,9 +1761,11 @@ export async function addFileVersion(
 /**
  * Why a run can't show a file of a private conversation to the whole workspace, null when it can. Only someone who may
  * add to the Drive widens an audience: the person behind the run, or the creator of the routine it works for in a room
- * no person reads (a run a report woke sits in a conversation, whose private text is no routine's to publish). And a
- * file it didn't make takes more: a routine only moves what its room alone made, and a run that read outside content
- * moves nothing of anyone's, so an injected page can't publish a person's private file.
+ * no person reads (a run a report woke sits in a conversation, whose private text is no routine's to publish). A file
+ * of a conversation is the asker's to publish only as far as they could publish it themselves (ADR 0202: they read it
+ * where it lives and may change it), so someone who only views a file never widens it through an agent. And a file it
+ * didn't make takes more: a routine only moves what its room alone made, and a run that read outside content moves
+ * nothing of anyone's, so an injected page can't publish a person's private file.
  */
 async function sharedDriveRefusal(
   db: Database,
@@ -1785,6 +1787,11 @@ async function sharedDriveRefusal(
   const asker = authority.personId ?? (room ? routineCreatorOf(authority) : null);
   if (!asker || !(await addsToDrive(db, orgId, asker))) {
     return "only a person who may add files to the Drive can ask for that, and nobody who can is behind this run";
+  }
+  // What the file's own dialog would allow them: the same check `setFileSharing` makes, so a viewer's request through
+  // an agent lands no wider than their own.
+  if (!(await readsItThere(db, asker, orgId, a)) || !(await personEdits(db, asker, orgId, a))) {
+    return "the person behind this run can view this file but not change who sees it; someone who can asks for it";
   }
   const made = await db
     .select({ runId: artifactVersions.runId, roomId: schema.agentRuns.channelId })

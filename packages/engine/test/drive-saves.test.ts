@@ -19,6 +19,7 @@ import {
   postPersonMessage,
   receiveMachineUpload,
   runRoutineNow,
+  setFileAccess,
   shareSavedFile,
   surfaceRoomFiles,
   type ToolContext,
@@ -636,6 +637,49 @@ const madeBy = (userId: string, channelId: string, title = "Meu") =>
   });
 
 describe("who may widen a file to the whole workspace", () => {
+  test("a member who only views it can't widen it through an agent; named an editor, they can", async () => {
+    const { bob } = await world();
+    const room = await privateRoom();
+    await addChannelMember(f.db, f.owner.id, f.org.id, room.id, { userId: bob.id });
+    const theirs = await madeBy(f.owner.id, room.id);
+    // Everyone in the conversation views it; Bob is in the conversation, not an editor.
+    await setFileAccess(f.artifactDeps, f.owner.id, f.org.id, theirs.id, {
+      place: "view",
+      workspace: "none",
+      users: [],
+      roles: [],
+      agents: "edit",
+      agentRows: [],
+    });
+    const viewed = await call(ctxOf(await runAfter(f.agent.id, room.id, "@dev publica", bob.id)), "update_artifact", {
+      artifact_id: theirs.id,
+      note: "x",
+      shared_drive: true,
+    });
+    expect(viewed.isError).toBe(true);
+    expect(viewed.content).toContain("can view this file but not change who sees it");
+    // Still where it was: the room. Bob reads it there, and no one else does.
+    expect((await driveOf(bob.id))[0]?.audience).toEqual({ kind: "channel", name: "vendas", private: true });
+    expect(await titles(f.owner.id === bob.id ? "" : f.owner.id)).toEqual(["Meu"]);
+    // Bob edits it: the same request moves it to the shared Drive.
+    await setFileAccess(f.artifactDeps, f.owner.id, f.org.id, theirs.id, {
+      place: "view",
+      workspace: "none",
+      users: [{ id: bob.id, level: "edit" }],
+      roles: [],
+      agents: "edit",
+      agentRows: [],
+    });
+    const moved = await call(ctxOf(await runAfter(f.agent.id, room.id, "@dev publica", bob.id)), "update_artifact", {
+      artifact_id: theirs.id,
+      note: "x",
+      shared_drive: true,
+    });
+    expect(moved.isError).toBeFalsy();
+    expect(moved.content).toContain("the workspace's shared Drive");
+    expect((await driveOf(bob.id))[0]?.audience).toEqual({ kind: "workspace" });
+  });
+
   test("nobody behind the run: a private channel's file stays there, a new one and one that exists", async () => {
     const { bob } = await world();
     const room = await privateRoom();
