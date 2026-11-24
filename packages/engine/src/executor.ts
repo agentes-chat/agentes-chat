@@ -6543,7 +6543,8 @@ async function executeRunInner(
         bound: t.stuck?.endAt !== undefined ? "stuck" : t.wrapUpNoted ? "step_limit" : null,
         quiet: silent && !judged,
         decided: decided && !silent && !said && !capped && !closingSummary(t, true) ? decided : null,
-        unanswered: !silent && !viaRoutine && !words && (sentinelOnly || (!text && !anythingPosted)),
+        unanswered:
+          !silent && !viaRoutine && !words && (sentinelOnly || ((!text || text === DONE_TEXT) && !anythingPosted)),
         unreached,
         judged: owesAnswer && !capped ? judged : "",
         mission: Boolean(plan.missionId),
