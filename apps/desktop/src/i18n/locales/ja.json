@@ -821,7 +821,7 @@
     "stopped": "この{{device}}のagentes.chatが停止しました",
     "failing": "この{{device}}でagentes.chatが起動しません",
     "tailnetOff": "agentes.chatを開くには、この{{device}}でTailscaleを接続してください。",
-    "tailnetUp": "ターミナルで: sudo tailscale up",
+    "tailnetUp": "ターミナルで: `sudo tailscale up`",
     "tailnetTray": "時計の横のアイコンから開いてください。",
     "onlyHere": "この{{device}}でのみ使う",
     "start": "起動する",

@@ -911,7 +911,7 @@ export const desktopEn = {
     stopped: "agentes.chat stopped on this {{device}}",
     failing: "agentes.chat isn't starting on this {{device}}",
     tailnetOff: "Connect Tailscale on this {{device}} to open agentes.chat.",
-    tailnetUp: "In the terminal: sudo tailscale up",
+    tailnetUp: "In the terminal: `sudo tailscale up`",
     tailnetTray: "Open it from its icon by the clock.",
     onlyHere: "Use only on this {{device}}",
     start: "Start it",

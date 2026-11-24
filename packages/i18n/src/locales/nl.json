@@ -15153,9 +15153,9 @@
     "nameHelp": "Hoe de database er voor jou en de agents uitziet.",
     "namePlaceholder": "Bijv.: Productie",
     "url": "Adres van de database",
-    "urlHelp": "Begint met postgres://. De databasenaam aan het eind is optioneel. Versleuteld op de server opgeslagen. Niemand ziet het nog, ook de agents niet.",
+    "urlHelp": "Begint met `postgres://`. De databasenaam aan het eind is optioneel. Versleuteld op de server opgeslagen. Niemand ziet het nog, ook de agents niet.",
     "urlPlaceholder": "postgres://user:wachtwoord@host/db",
-    "urlInvalid": "Plak een adres dat begint met postgres://, of vul de velden onder Geavanceerd in.",
+    "urlInvalid": "Plak een adres dat begint met `postgres://`, of vul de velden onder Geavanceerd in.",
     "scope": "Welke databases",
     "scopeOne": "Alleen deze database",
     "scopeAll": "Alle databases op deze server",
@@ -15169,32 +15169,32 @@
       "supabase": {
         "1": "Open de SQL Editor in je Supabase-project en voer de opdracht hieronder uit (verander het wachtwoord).",
         "2": "Kopieer bij Project Settings → Database de URI-verbindingsstring.",
-        "3": "Vervang daarin de gebruiker en het wachtwoord door agentes_leitura en het wachtwoord dat je koos, en plak hem hier."
+        "3": "Vervang daarin de gebruiker en het wachtwoord door `agentes_leitura` en het wachtwoord dat je koos, en plak hem hier."
       },
       "neon": {
         "1": "Open de SQL Editor in je Neon-project en voer de opdracht hieronder uit (verander het wachtwoord).",
         "2": "Kopieer bij Connect het adres van je database.",
-        "3": "Vervang daarin de gebruiker en het wachtwoord door agentes_leitura en het wachtwoord dat je koos, en plak hem hier."
+        "3": "Vervang daarin de gebruiker en het wachtwoord door `agentes_leitura` en het wachtwoord dat je koos, en plak hem hier."
       },
       "railway": {
         "1": "Open in de Postgres-service Data → Query en voer de opdracht hieronder uit (verander het wachtwoord).",
         "2": "Kopieer bij Variables `DATABASE_PUBLIC_URL` (`DATABASE_URL` is intern en werkt niet vanaf hier).",
-        "3": "Vervang daarin de gebruiker en het wachtwoord door agentes_leitura en het wachtwoord dat je koos, en plak hem hier."
+        "3": "Vervang daarin de gebruiker en het wachtwoord door `agentes_leitura` en het wachtwoord dat je koos, en plak hem hier."
       },
       "rds": {
         "1": "Maak verbinding met de database via je gebruikelijke tool en voer de opdracht hieronder uit (verander het wachtwoord).",
         "2": "Kopieer bij Connectivity & security het endpoint. De database moet publiek bereikbaar zijn op poort 5432.",
-        "3": "Stel het adres postgres://agentes_leitura:wachtwoord@endpoint:5432/database samen en plak het hier."
+        "3": "Stel het adres `postgres://agentes_leitura:password@endpoint:5432/database` samen en plak het hier."
       },
       "render": {
         "1": "Maak verbinding met de PSQL-opdracht van de databasepagina en voer de opdracht hieronder uit (verander het wachtwoord).",
         "2": "Kopieer bij Connections de External Database URL.",
-        "3": "Vervang daarin de gebruiker en het wachtwoord door agentes_leitura en het wachtwoord dat je koos, en plak hem hier."
+        "3": "Vervang daarin de gebruiker en het wachtwoord door `agentes_leitura` en het wachtwoord dat je koos, en plak hem hier."
       },
       "other": {
         "1": "Vraag wie de database beheert om de opdracht hieronder uit te voeren (met een eigen wachtwoord).",
         "2": "Vraag om het publieke adres van de server, de poort en de naam van de database.",
-        "3": "Stel het adres postgres://agentes_leitura:wachtwoord@server:5432/database samen en plak het hier."
+        "3": "Stel het adres `postgres://agentes_leitura:password@server:5432/database` samen en plak het hier."
       }
     },
     "howAll": "Om alle databases te lezen (Postgres 14 of nieuwer).",

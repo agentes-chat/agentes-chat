@@ -821,7 +821,7 @@
     "stopped": "agentes.chat 已在这台 {{device}} 上停止",
     "failing": "agentes.chat 无法在这台 {{device}} 上启动",
     "tailnetOff": "请在这台 {{device}} 上连接 Tailscale 以打开 agentes.chat。",
-    "tailnetUp": "在终端中运行：sudo tailscale up",
+    "tailnetUp": "在终端中运行：`sudo tailscale up`",
     "tailnetTray": "通过时钟旁的图标打开它。",
     "onlyHere": "仅在这台 {{device}} 上使用",
     "start": "启动",

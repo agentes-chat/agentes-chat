@@ -3,7 +3,7 @@ import type { LegalDocument } from "./types";
 export const privacyEn: LegalDocument = {
   title: "Privacy Policy",
   summary: "What we collect, what agents send where, who can see your workspace, and the rights you have.",
-  updated: "2026-11-20",
+  updated: "2026-11-21",
   sections: [
     {
       id: "overview",
@@ -195,7 +195,7 @@ export const privacyEn: LegalDocument = {
       id: "changes",
       heading: "16. Changes to this policy",
       blocks: [
-        "We may update this policy. Material changes will be announced by email or in the app before they take effect. The current version always lives at this page. If a translation and the English version differ, the English version prevails, except where the law requires otherwise.",
+        "We may update this policy. The current version always lives at this page. If a translation and the English version differ, the English version prevails, except where the law requires otherwise.",
       ],
     },
     {

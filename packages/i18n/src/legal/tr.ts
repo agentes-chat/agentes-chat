@@ -8,7 +8,7 @@ export const legalTr: Partial<Record<LegalKind, LegalDocument>> = {
       "agentes.chat'in kullanımına ilişkin sözleşme: çalışma alanınız, ajanlarınız ve her bir tarafın neden sorumlu olduğu.",
     courtesy:
       "Bu metin bir nezaket çevirisidir. İngilizce sürümden farklılık göstermesi hâlinde İngilizce sürüm esas alınır.",
-    updated: "2026-11-20",
+    updated: "2026-11-21",
     sections: [
       {
         id: "agreement",
@@ -158,7 +158,7 @@ export const legalTr: Partial<Record<LegalKind, LegalDocument>> = {
         id: "changes",
         heading: "17. İşbu Koşullardaki değişiklikler",
         blocks: [
-          "İşbu Koşulları güncelleyebiliriz. Esaslı değişiklikler, yürürlüğe girmelerinden en az 14 gün önce e-posta yoluyla veya uygulama içinde duyurulur. Yürürlük tarihinden sonra kullanıma devam edilmesi kabul anlamına gelir. Güncel sürüm her zaman bu sayfada yer alır. Bir çeviri ile İngilizce sürüm arasında farklılık olması hâlinde, kanunun aksini gerektirdiği hâller dışında İngilizce sürüm esas alınır.",
+          "İşbu Koşulları güncelleyebiliriz. Bir güncellemeden sonra kullanıma devam edilmesi kabul anlamına gelir. Güncel sürüm her zaman bu sayfada yer alır. Bir çeviri ile İngilizce sürüm arasında farklılık olması hâlinde, kanunun aksini gerektirdiği hâller dışında İngilizce sürüm esas alınır.",
         ],
       },
       {
@@ -176,7 +176,7 @@ export const legalTr: Partial<Record<LegalKind, LegalDocument>> = {
       "Neleri topladığımız, ajanların neyi nereye gönderdiği, çalışma alanınızı kimlerin görebildiği ve sahip olduğunuz haklar.",
     courtesy:
       "Bu metin bir nezaket çevirisidir. İngilizce sürümden farklılık göstermesi hâlinde İngilizce sürüm esas alınır.",
-    updated: "2026-11-20",
+    updated: "2026-11-21",
     sections: [
       {
         id: "overview",
@@ -368,7 +368,7 @@ export const legalTr: Partial<Record<LegalKind, LegalDocument>> = {
         id: "changes",
         heading: "16. Bu politikadaki değişiklikler",
         blocks: [
-          "Bu politikayı güncelleyebiliriz. Esaslı değişiklikler yürürlüğe girmeden önce e-posta yoluyla veya uygulama içinde duyurulur. Güncel sürüm her zaman bu sayfada yer alır. Bir çeviri ile İngilizce sürüm arasında farklılık olması hâlinde, kanunun aksini gerektirdiği hâller dışında İngilizce sürüm esas alınır.",
+          "Bu politikayı güncelleyebiliriz. Güncel sürüm her zaman bu sayfada yer alır. Bir çeviri ile İngilizce sürüm arasında farklılık olması hâlinde, kanunun aksini gerektirdiği hâller dışında İngilizce sürüm esas alınır.",
         ],
       },
       {

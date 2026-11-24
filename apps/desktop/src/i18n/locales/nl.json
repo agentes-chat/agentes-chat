@@ -826,7 +826,7 @@
     "stopped": "agentes.chat is gestopt op deze {{device}}",
     "failing": "agentes.chat start niet op deze {{device}}",
     "tailnetOff": "Verbind Tailscale op deze {{device}} om agentes.chat te openen.",
-    "tailnetUp": "In de terminal: sudo tailscale up",
+    "tailnetUp": "In de terminal: `sudo tailscale up`",
     "tailnetTray": "Open het via het pictogram naast de klok.",
     "onlyHere": "Alleen op deze {{device}} gebruiken",
     "start": "Starten",

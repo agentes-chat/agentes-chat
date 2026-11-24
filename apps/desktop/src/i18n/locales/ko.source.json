@@ -2250,7 +2250,7 @@
     "value": "Connect Tailscale on this {{device}} to open agentes.chat."
   },
   "cover.tailnetUp": {
-    "value": "In the terminal: sudo tailscale up"
+    "value": "In the terminal: `sudo tailscale up`"
   },
   "cover.tailnetTray": {
     "value": "Open it from its icon by the clock."

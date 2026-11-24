@@ -826,7 +826,7 @@
     "stopped": "agentes.chat bu {{device}} üzerinde durdu",
     "failing": "agentes.chat bu {{device}} üzerinde başlamıyor",
     "tailnetOff": "agentes.chat'i açmak için bu {{device}} üzerinde Tailscale'i bağlayın.",
-    "tailnetUp": "Terminalde: sudo tailscale up",
+    "tailnetUp": "Terminalde: `sudo tailscale up`",
     "tailnetTray": "Saatin yanındaki simgesinden açın.",
     "onlyHere": "Yalnızca bu {{device}} üzerinde kullan",
     "start": "Başlat",

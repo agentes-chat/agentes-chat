@@ -37113,13 +37113,13 @@
     "value": "Database address"
   },
   "database.urlHelp": {
-    "value": "Starts with postgres://. The database name at the end is optional. Stored encrypted on the server. Nobody sees it again, not even the agents."
+    "value": "Starts with `postgres://`. The database name at the end is optional. Stored encrypted on the server. Nobody sees it again, not even the agents."
   },
   "database.urlPlaceholder": {
     "value": "postgres://user:password@host/db"
   },
   "database.urlInvalid": {
-    "value": "Paste an address that starts with postgres://, or fill in the fields under Advanced."
+    "value": "Paste an address that starts with `postgres://`, or fill in the fields under Advanced."
   },
   "database.scope": {
     "value": "Which databases"
@@ -37155,7 +37155,7 @@
     "value": "In Project Settings → Database, copy the URI connection string."
   },
   "database.how.supabase.3": {
-    "value": "Swap the user and password in it for agentes_leitura and the password you chose, and paste it here."
+    "value": "Swap the user and password in it for `agentes_leitura` and the password you chose, and paste it here."
   },
   "database.how.neon.1": {
     "value": "Open the SQL Editor in your Neon project and run the command below (change the password)."
@@ -37164,7 +37164,7 @@
     "value": "In Connect, copy the address of your database."
   },
   "database.how.neon.3": {
-    "value": "Swap the user and password in it for agentes_leitura and the password you chose, and paste it here."
+    "value": "Swap the user and password in it for `agentes_leitura` and the password you chose, and paste it here."
   },
   "database.how.railway.1": {
     "value": "In the Postgres service, open Data → Query and run the command below (change the password)."
@@ -37173,7 +37173,7 @@
     "value": "In Variables, copy `DATABASE_PUBLIC_URL` (`DATABASE_URL` is internal and doesn't work from here)."
   },
   "database.how.railway.3": {
-    "value": "Swap the user and password in it for agentes_leitura and the password you chose, and paste it here."
+    "value": "Swap the user and password in it for `agentes_leitura` and the password you chose, and paste it here."
   },
   "database.how.rds.1": {
     "value": "Connect to the database with your usual tool and run the command below (change the password)."
@@ -37182,7 +37182,7 @@
     "value": "In Connectivity & security, copy the endpoint. The database needs public access on port 5432."
   },
   "database.how.rds.3": {
-    "value": "Build the address postgres://agentes_leitura:password@endpoint:5432/database and paste it here."
+    "value": "Build the address `postgres://agentes_leitura:password@endpoint:5432/database` and paste it here."
   },
   "database.how.render.1": {
     "value": "Connect with the PSQL command from the database page and run the command below (change the password)."
@@ -37191,7 +37191,7 @@
     "value": "In Connections, copy the External Database URL."
   },
   "database.how.render.3": {
-    "value": "Swap the user and password in it for agentes_leitura and the password you chose, and paste it here."
+    "value": "Swap the user and password in it for `agentes_leitura` and the password you chose, and paste it here."
   },
   "database.how.other.1": {
     "value": "Ask whoever looks after the database to run the command below (with a password of their own)."
@@ -37200,7 +37200,7 @@
     "value": "Ask them for the public address of the server, its port and the database name."
   },
   "database.how.other.3": {
-    "value": "Build the address postgres://agentes_leitura:password@server:5432/database and paste it here."
+    "value": "Build the address `postgres://agentes_leitura:password@server:5432/database` and paste it here."
   },
   "database.howAll": {
     "value": "To read every database (Postgres 14 or newer)."

@@ -8,7 +8,7 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
       "Perjanjian untuk menggunakan agentes.chat: ruang kerja Anda, agen Anda, dan apa yang menjadi tanggung jawab masing-masing pihak.",
     courtesy:
       "Dokumen ini adalah terjemahan yang disediakan semata-mata untuk kemudahan. Apabila terdapat perbedaan dengan versi bahasa Inggris, versi bahasa Inggris yang berlaku.",
-    updated: "2026-11-20",
+    updated: "2026-11-21",
     sections: [
       {
         id: "agreement",
@@ -158,7 +158,7 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
         id: "changes",
         heading: "17. Perubahan atas Ketentuan ini",
         blocks: [
-          "Kami dapat memperbarui Ketentuan ini. Perubahan material akan diumumkan melalui email atau di aplikasi sekurang-kurangnya 14 hari sebelum berlaku. Penggunaan yang berlanjut setelah tanggal berlakunya merupakan penerimaan. Versi terkini selalu tersedia di halaman ini. Apabila suatu terjemahan berbeda dengan versi bahasa Inggris, versi bahasa Inggris yang berlaku, kecuali apabila hukum menentukan lain.",
+          "Kami dapat memperbarui Ketentuan ini. Penggunaan yang berlanjut setelah suatu pembaruan merupakan penerimaan. Versi terkini selalu tersedia di halaman ini. Apabila suatu terjemahan berbeda dengan versi bahasa Inggris, versi bahasa Inggris yang berlaku, kecuali apabila hukum menentukan lain.",
         ],
       },
       {
@@ -176,7 +176,7 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
       "Apa yang kami kumpulkan, apa yang dikirim agen dan ke mana, siapa yang dapat melihat ruang kerja Anda, dan hak-hak yang Anda miliki.",
     courtesy:
       "Dokumen ini adalah terjemahan yang disediakan semata-mata untuk kemudahan. Apabila terdapat perbedaan dengan versi bahasa Inggris, versi bahasa Inggris yang berlaku.",
-    updated: "2026-11-20",
+    updated: "2026-11-21",
     sections: [
       {
         id: "overview",
@@ -368,7 +368,7 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
         id: "changes",
         heading: "16. Perubahan atas kebijakan ini",
         blocks: [
-          "Kami dapat memperbarui kebijakan ini. Perubahan material akan diumumkan melalui email atau di aplikasi sebelum berlaku. Versi terkini selalu tersedia di halaman ini. Apabila suatu terjemahan berbeda dengan versi bahasa Inggris, versi bahasa Inggris yang berlaku, kecuali apabila hukum menentukan lain.",
+          "Kami dapat memperbarui kebijakan ini. Versi terkini selalu tersedia di halaman ini. Apabila suatu terjemahan berbeda dengan versi bahasa Inggris, versi bahasa Inggris yang berlaku, kecuali apabila hukum menentukan lain.",
         ],
       },
       {

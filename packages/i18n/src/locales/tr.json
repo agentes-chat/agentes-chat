@@ -15014,9 +15014,9 @@
     "nameHelp": "Veritabanının size ve ajanlara nasıl görüneceği.",
     "namePlaceholder": "Örn.: Üretim",
     "url": "Veritabanı adresi",
-    "urlHelp": "postgres:// ile başlar. Sondaki veritabanı adı isteğe bağlıdır. Sunucuda şifreli saklanır. Ajanlar dahil kimse bir daha göremez.",
+    "urlHelp": "`postgres://` ile başlar. Sondaki veritabanı adı isteğe bağlıdır. Sunucuda şifreli saklanır. Ajanlar dahil kimse bir daha göremez.",
     "urlPlaceholder": "postgres://user:password@host/db",
-    "urlInvalid": "postgres:// ile başlayan bir adres yapıştırın ya da Gelişmiş altındaki alanları doldurun.",
+    "urlInvalid": "`postgres://` ile başlayan bir adres yapıştırın ya da Gelişmiş altındaki alanları doldurun.",
     "scope": "Hangi veritabanları",
     "scopeOne": "Yalnızca bu veritabanı",
     "scopeAll": "Bu sunucudaki tüm veritabanları",
@@ -15030,32 +15030,32 @@
       "supabase": {
         "1": "Supabase projenizde SQL Editor'ı açın ve aşağıdaki komutu çalıştırın (şifreyi değiştirin).",
         "2": "Project Settings → Database bölümünde URI bağlantı dizesini kopyalayın.",
-        "3": "İçindeki kullanıcı ve şifreyi agentes_leitura ve seçtiğiniz şifreyle değiştirip buraya yapıştırın."
+        "3": "İçindeki kullanıcı ve şifreyi `agentes_leitura` ve seçtiğiniz şifreyle değiştirip buraya yapıştırın."
       },
       "neon": {
         "1": "Neon projenizde SQL Editor'ı açın ve aşağıdaki komutu çalıştırın (şifreyi değiştirin).",
         "2": "Connect bölümünde veritabanınızın adresini kopyalayın.",
-        "3": "İçindeki kullanıcı ve şifreyi agentes_leitura ve seçtiğiniz şifreyle değiştirip buraya yapıştırın."
+        "3": "İçindeki kullanıcı ve şifreyi `agentes_leitura` ve seçtiğiniz şifreyle değiştirip buraya yapıştırın."
       },
       "railway": {
         "1": "Postgres hizmetinde Data → Query bölümünü açın ve aşağıdaki komutu çalıştırın (şifreyi değiştirin).",
         "2": "Variables bölümünde `DATABASE_PUBLIC_URL` değerini kopyalayın (`DATABASE_URL` dahilidir ve buradan çalışmaz).",
-        "3": "İçindeki kullanıcı ve şifreyi agentes_leitura ve seçtiğiniz şifreyle değiştirip buraya yapıştırın."
+        "3": "İçindeki kullanıcı ve şifreyi `agentes_leitura` ve seçtiğiniz şifreyle değiştirip buraya yapıştırın."
       },
       "rds": {
         "1": "Her zamanki aracınızla veritabanına bağlanın ve aşağıdaki komutu çalıştırın (şifreyi değiştirin).",
         "2": "Connectivity & security bölümünde uç noktayı kopyalayın. Veritabanının 5432 numaralı bağlantı noktasında herkese açık erişimi olmalı.",
-        "3": "postgres://agentes_leitura:şifre@uç-nokta:5432/veritabanı adresini oluşturup buraya yapıştırın."
+        "3": "`postgres://agentes_leitura:password@endpoint:5432/database` adresini oluşturup buraya yapıştırın."
       },
       "render": {
         "1": "Veritabanı sayfasındaki PSQL komutuyla bağlanın ve aşağıdaki komutu çalıştırın (şifreyi değiştirin).",
         "2": "Connections bölümünde External Database URL değerini kopyalayın.",
-        "3": "İçindeki kullanıcı ve şifreyi agentes_leitura ve seçtiğiniz şifreyle değiştirip buraya yapıştırın."
+        "3": "İçindeki kullanıcı ve şifreyi `agentes_leitura` ve seçtiğiniz şifreyle değiştirip buraya yapıştırın."
       },
       "other": {
         "1": "Veritabanıyla ilgilenen kişiden aşağıdaki komutu (kendi seçtiği bir şifreyle) çalıştırmasını isteyin.",
         "2": "Ondan sunucunun herkese açık adresini, bağlantı noktasını ve veritabanı adını isteyin.",
-        "3": "postgres://agentes_leitura:şifre@sunucu:5432/veritabanı adresini oluşturup buraya yapıştırın."
+        "3": "`postgres://agentes_leitura:password@server:5432/database` adresini oluşturup buraya yapıştırın."
       }
     },
     "howAll": "Tüm veritabanlarını okumak için (Postgres 14 veya daha yeni).",

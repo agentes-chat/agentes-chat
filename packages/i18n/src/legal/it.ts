@@ -8,7 +8,7 @@ export const legalIt: Partial<Record<LegalKind, LegalDocument>> = {
       "L'accordo per l'utilizzo di agentes.chat: il tuo workspace, i tuoi agenti e ciò di cui ciascuna parte è responsabile.",
     courtesy:
       "La presente è una traduzione di cortesia. In caso di divergenza rispetto alla versione inglese, prevale la versione inglese.",
-    updated: "2026-11-20",
+    updated: "2026-11-21",
     sections: [
       {
         id: "agreement",
@@ -158,7 +158,7 @@ export const legalIt: Partial<Record<LegalKind, LegalDocument>> = {
         id: "changes",
         heading: "17. Modifiche ai presenti Termini",
         blocks: [
-          "Possiamo aggiornare i presenti Termini. Le modifiche sostanziali saranno annunciate via e-mail o nell'app almeno 14 giorni prima della loro entrata in vigore. L'uso continuato dopo la data di efficacia costituisce accettazione. La versione vigente è sempre disponibile in questa pagina. In caso di divergenza tra una traduzione e la versione inglese, prevale la versione inglese, salvo diversa disposizione di legge.",
+          "Possiamo aggiornare i presenti Termini. L'uso continuato dopo un aggiornamento costituisce accettazione. La versione vigente è sempre disponibile in questa pagina. In caso di divergenza tra una traduzione e la versione inglese, prevale la versione inglese, salvo diversa disposizione di legge.",
         ],
       },
       {
@@ -176,7 +176,7 @@ export const legalIt: Partial<Record<LegalKind, LegalDocument>> = {
       "Quali dati raccogliamo, che cosa gli agenti inviano e dove, chi può vedere il tuo workspace e quali diritti hai.",
     courtesy:
       "La presente è una traduzione di cortesia. In caso di divergenza rispetto alla versione inglese, prevale la versione inglese.",
-    updated: "2026-11-20",
+    updated: "2026-11-21",
     sections: [
       {
         id: "overview",
@@ -368,7 +368,7 @@ export const legalIt: Partial<Record<LegalKind, LegalDocument>> = {
         id: "changes",
         heading: "16. Modifiche alla presente informativa",
         blocks: [
-          "Possiamo aggiornare la presente informativa. Le modifiche sostanziali saranno annunciate via e-mail o nell'app prima della loro entrata in vigore. La versione vigente è sempre disponibile in questa pagina. In caso di divergenza tra una traduzione e la versione inglese, prevale la versione inglese, salvo diversa disposizione di legge.",
+          "Possiamo aggiornare la presente informativa. La versione vigente è sempre disponibile in questa pagina. In caso di divergenza tra una traduzione e la versione inglese, prevale la versione inglese, salvo diversa disposizione di legge.",
         ],
       },
       {

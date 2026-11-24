@@ -8,7 +8,7 @@ export const legalDe: Partial<Record<LegalKind, LegalDocument>> = {
       "Die Vereinbarung über die Nutzung von agentes.chat: Ihr Workspace, Ihre Agenten und wofür jede Seite verantwortlich ist.",
     courtesy:
       "Dies ist eine unverbindliche Übersetzung. Weicht sie von der englischen Fassung ab, ist die englische Fassung maßgeblich.",
-    updated: "2026-11-20",
+    updated: "2026-11-21",
     sections: [
       {
         id: "agreement",
@@ -158,7 +158,7 @@ export const legalDe: Partial<Record<LegalKind, LegalDocument>> = {
         id: "changes",
         heading: "17. Änderungen dieser Bedingungen",
         blocks: [
-          "Wir können diese Bedingungen aktualisieren. Wesentliche Änderungen werden mindestens 14 Tage vor ihrem Inkrafttreten per E-Mail oder in der App angekündigt. Die fortgesetzte Nutzung nach dem Zeitpunkt des Inkrafttretens gilt als Zustimmung. Die aktuelle Fassung ist stets auf dieser Seite abrufbar. Weicht eine Übersetzung von der englischen Fassung ab, ist die englische Fassung maßgeblich, sofern das Gesetz nichts anderes vorschreibt.",
+          "Wir können diese Bedingungen aktualisieren. Die fortgesetzte Nutzung nach einer Aktualisierung gilt als Zustimmung. Die aktuelle Fassung ist stets auf dieser Seite abrufbar. Weicht eine Übersetzung von der englischen Fassung ab, ist die englische Fassung maßgeblich, sofern das Gesetz nichts anderes vorschreibt.",
         ],
       },
       {
@@ -176,7 +176,7 @@ export const legalDe: Partial<Record<LegalKind, LegalDocument>> = {
       "Welche Daten wir erheben, was Agenten wohin senden, wer Ihren Workspace sehen kann und welche Rechte Sie haben.",
     courtesy:
       "Dies ist eine unverbindliche Übersetzung. Weicht sie von der englischen Fassung ab, ist die englische Fassung maßgeblich.",
-    updated: "2026-11-20",
+    updated: "2026-11-21",
     sections: [
       {
         id: "overview",
@@ -368,7 +368,7 @@ export const legalDe: Partial<Record<LegalKind, LegalDocument>> = {
         id: "changes",
         heading: "16. Änderungen dieser Erklärung",
         blocks: [
-          "Wir können diese Erklärung aktualisieren. Wesentliche Änderungen werden vor ihrem Inkrafttreten per E-Mail oder in der App angekündigt. Die aktuelle Fassung ist stets auf dieser Seite abrufbar. Weicht eine Übersetzung von der englischen Fassung ab, ist die englische Fassung maßgeblich, sofern das Gesetz nichts anderes vorschreibt.",
+          "Wir können diese Erklärung aktualisieren. Die aktuelle Fassung ist stets auf dieser Seite abrufbar. Weicht eine Übersetzung von der englischen Fassung ab, ist die englische Fassung maßgeblich, sofern das Gesetz nichts anderes vorschreibt.",
         ],
       },
       {

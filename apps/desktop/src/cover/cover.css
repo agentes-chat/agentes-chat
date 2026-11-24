@@ -58,6 +58,15 @@
   opacity: 0.85;
   text-shadow: 0 1px 6px rgba(4, 32, 63, 0.6);
 }
+/* A command to type in the line ("sudo tailscale up"), on a plate as in the app's inline code. */
+.cover__line code {
+  font-family: "Martian Mono Variable", ui-monospace, Menlo, monospace;
+  font-size: 0.86em;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: rgba(4, 32, 63, 0.35);
+  white-space: nowrap;
+}
 /* How long the server here has been starting or updating, ticking (from 10 s). */
 .cover__time {
   margin: -8px 0 0;

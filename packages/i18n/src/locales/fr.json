@@ -15616,9 +15616,9 @@
     "nameHelp": "Comment la base de données apparaît pour vous et pour les agents.",
     "namePlaceholder": "Ex. : Production",
     "url": "Adresse de la base de données",
-    "urlHelp": "Commence par postgres://. Le nom de la base à la fin est facultatif. Stockée chiffrée sur le serveur. Personne ne la revoit, pas même les agents.",
+    "urlHelp": "Commence par `postgres://`. Le nom de la base à la fin est facultatif. Stockée chiffrée sur le serveur. Personne ne la revoit, pas même les agents.",
     "urlPlaceholder": "postgres://utilisateur:mdp@hôte/base",
-    "urlInvalid": "Collez une adresse qui commence par postgres://, ou remplissez les champs sous Avancé.",
+    "urlInvalid": "Collez une adresse qui commence par `postgres://`, ou remplissez les champs sous Avancé.",
     "scope": "Quelles bases",
     "scopeOne": "Seulement cette base",
     "scopeAll": "Toutes les bases de ce serveur",
@@ -15632,32 +15632,32 @@
       "supabase": {
         "1": "Ouvrez le SQL Editor de votre projet Supabase et exécutez la commande ci-dessous (changez le mot de passe).",
         "2": "Dans Project Settings → Database, copiez la chaîne de connexion URI.",
-        "3": "Remplacez-y l'utilisateur et le mot de passe par agentes_leitura et le mot de passe choisi, puis collez-la ici."
+        "3": "Remplacez-y l'utilisateur et le mot de passe par `agentes_leitura` et le mot de passe choisi, puis collez-la ici."
       },
       "neon": {
         "1": "Ouvrez le SQL Editor de votre projet Neon et exécutez la commande ci-dessous (changez le mot de passe).",
         "2": "Dans Connect, copiez l'adresse de votre base de données.",
-        "3": "Remplacez-y l'utilisateur et le mot de passe par agentes_leitura et le mot de passe choisi, puis collez-la ici."
+        "3": "Remplacez-y l'utilisateur et le mot de passe par `agentes_leitura` et le mot de passe choisi, puis collez-la ici."
       },
       "railway": {
         "1": "Dans le service Postgres, ouvrez Data → Query et exécutez la commande ci-dessous (changez le mot de passe).",
         "2": "Dans Variables, copiez `DATABASE_PUBLIC_URL` (`DATABASE_URL` est interne et ne fonctionne pas d'ici).",
-        "3": "Remplacez-y l'utilisateur et le mot de passe par agentes_leitura et le mot de passe choisi, puis collez-la ici."
+        "3": "Remplacez-y l'utilisateur et le mot de passe par `agentes_leitura` et le mot de passe choisi, puis collez-la ici."
       },
       "rds": {
         "1": "Connectez-vous à la base de données avec votre outil habituel et exécutez la commande ci-dessous (changez le mot de passe).",
         "2": "Dans Connectivity & security, copiez l'endpoint. La base de données doit être accessible publiquement sur le port 5432.",
-        "3": "Construisez l'adresse postgres://agentes_leitura:motdepasse@endpoint:5432/base et collez-la ici."
+        "3": "Construisez l'adresse `postgres://agentes_leitura:password@endpoint:5432/database` et collez-la ici."
       },
       "render": {
         "1": "Connectez-vous avec la commande PSQL de la page de la base de données et exécutez la commande ci-dessous (changez le mot de passe).",
         "2": "Dans Connections, copiez l'External Database URL.",
-        "3": "Remplacez-y l'utilisateur et le mot de passe par agentes_leitura et le mot de passe choisi, puis collez-la ici."
+        "3": "Remplacez-y l'utilisateur et le mot de passe par `agentes_leitura` et le mot de passe choisi, puis collez-la ici."
       },
       "other": {
         "1": "Demandez à la personne qui gère la base de données d'exécuter la commande ci-dessous (avec son propre mot de passe).",
         "2": "Demandez-lui l'adresse publique du serveur, son port et le nom de la base de données.",
-        "3": "Construisez l'adresse postgres://agentes_leitura:motdepasse@serveur:5432/base et collez-la ici."
+        "3": "Construisez l'adresse `postgres://agentes_leitura:password@server:5432/database` et collez-la ici."
       }
     },
     "howAll": "Pour lire toutes les bases (Postgres 14 ou plus récent).",

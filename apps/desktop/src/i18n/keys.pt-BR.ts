@@ -882,7 +882,7 @@ export const desktopPtBR = {
     stopped: "O agentes.chat parou neste {{device}}",
     failing: "O agentes.chat não está iniciando neste {{device}}",
     tailnetOff: "Conecte o Tailscale neste {{device}} para abrir o agentes.chat.",
-    tailnetUp: "No terminal: sudo tailscale up",
+    tailnetUp: "No terminal: `sudo tailscale up`",
     tailnetTray: "Abra pelo ícone perto do relógio.",
     onlyHere: "Usar só neste {{device}}",
     start: "Iniciar",

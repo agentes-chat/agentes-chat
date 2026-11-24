@@ -14504,9 +14504,9 @@
     "nameHelp": "나와 에이전트에게 데이터베이스가 표시되는 이름이에요.",
     "namePlaceholder": "예: 프로덕션",
     "url": "데이터베이스 주소",
-    "urlHelp": "postgres://로 시작합니다. 끝의 데이터베이스 이름은 생략할 수 있습니다. 서버에 암호화되어 저장되며 에이전트를 포함해 아무도 다시 볼 수 없습니다.",
+    "urlHelp": "`postgres://`로 시작합니다. 끝의 데이터베이스 이름은 생략할 수 있습니다. 서버에 암호화되어 저장되며 에이전트를 포함해 아무도 다시 볼 수 없습니다.",
     "urlPlaceholder": "postgres://user:password@host/db",
-    "urlInvalid": "postgres://로 시작하는 주소를 붙여넣거나, 고급 설정의 항목을 채우세요.",
+    "urlInvalid": "`postgres://`로 시작하는 주소를 붙여넣거나, 고급 설정의 항목을 채우세요.",
     "scope": "어떤 데이터베이스",
     "scopeOne": "이 데이터베이스만",
     "scopeAll": "이 서버의 모든 데이터베이스",
@@ -14520,32 +14520,32 @@
       "supabase": {
         "1": "Supabase 프로젝트에서 SQL Editor를 열고 아래 명령을 실행하세요(비밀번호는 바꾸세요).",
         "2": "Project Settings → Database에서 URI 연결 문자열을 복사하세요.",
-        "3": "그 안의 사용자와 비밀번호를 agentes_leitura와 정한 비밀번호로 바꿔서 여기에 붙여넣으세요."
+        "3": "그 안의 사용자와 비밀번호를 `agentes_leitura`와 정한 비밀번호로 바꿔서 여기에 붙여넣으세요."
       },
       "neon": {
         "1": "Neon 프로젝트에서 SQL Editor를 열고 아래 명령을 실행하세요(비밀번호는 바꾸세요).",
         "2": "Connect에서 데이터베이스 주소를 복사하세요.",
-        "3": "그 안의 사용자와 비밀번호를 agentes_leitura와 정한 비밀번호로 바꿔서 여기에 붙여넣으세요."
+        "3": "그 안의 사용자와 비밀번호를 `agentes_leitura`와 정한 비밀번호로 바꿔서 여기에 붙여넣으세요."
       },
       "railway": {
         "1": "Postgres 서비스에서 Data → Query를 열고 아래 명령을 실행하세요(비밀번호는 바꾸세요).",
         "2": "Variables에서 `DATABASE_PUBLIC_URL`을 복사하세요(`DATABASE_URL`은 내부용이라 여기서는 작동하지 않아요).",
-        "3": "그 안의 사용자와 비밀번호를 agentes_leitura와 정한 비밀번호로 바꿔서 여기에 붙여넣으세요."
+        "3": "그 안의 사용자와 비밀번호를 `agentes_leitura`와 정한 비밀번호로 바꿔서 여기에 붙여넣으세요."
       },
       "rds": {
         "1": "평소 쓰는 도구로 데이터베이스에 연결해 아래 명령을 실행하세요(비밀번호는 바꾸세요).",
         "2": "Connectivity & security에서 엔드포인트를 복사하세요. 데이터베이스는 5432 포트로 공개 접근이 가능해야 해요.",
-        "3": "postgres://agentes_leitura:password@endpoint:5432/database 형식으로 주소를 만들어 여기에 붙여넣으세요."
+        "3": "`postgres://agentes_leitura:password@endpoint:5432/database` 형식으로 주소를 만들어 여기에 붙여넣으세요."
       },
       "render": {
         "1": "데이터베이스 페이지의 PSQL 명령으로 연결해 아래 명령을 실행하세요(비밀번호는 바꾸세요).",
         "2": "Connections에서 External Database URL을 복사하세요.",
-        "3": "그 안의 사용자와 비밀번호를 agentes_leitura와 정한 비밀번호로 바꿔서 여기에 붙여넣으세요."
+        "3": "그 안의 사용자와 비밀번호를 `agentes_leitura`와 정한 비밀번호로 바꿔서 여기에 붙여넣으세요."
       },
       "other": {
         "1": "데이터베이스 관리자에게 아래 명령을 실행해 달라고 하세요(비밀번호는 직접 정하게 하세요).",
         "2": "서버의 공개 주소, 포트, 데이터베이스 이름도 알려 달라고 하세요.",
-        "3": "postgres://agentes_leitura:password@server:5432/database 형식으로 주소를 만들어 여기에 붙여넣으세요."
+        "3": "`postgres://agentes_leitura:password@server:5432/database` 형식으로 주소를 만들어 여기에 붙여넣으세요."
       }
     },
     "howAll": "모든 데이터베이스를 읽으려면 (Postgres 14 이상).",

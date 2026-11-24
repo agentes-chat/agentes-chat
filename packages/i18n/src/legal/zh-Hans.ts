@@ -6,7 +6,7 @@ export const legalZhHans: Partial<Record<LegalKind, LegalDocument>> = {
     title: "使用条款",
     summary: "使用 agentes.chat 的协议：您的工作区、您的智能体，以及双方各自承担的责任。",
     courtesy: "本文件为礼节性译本。如本译本与英文版本存在任何差异，以英文版本为准。",
-    updated: "2026-11-20",
+    updated: "2026-11-21",
     sections: [
       {
         id: "agreement",
@@ -156,7 +156,7 @@ export const legalZhHans: Partial<Record<LegalKind, LegalDocument>> = {
         id: "changes",
         heading: "17. 本条款的变更",
         blocks: [
-          "我们可以更新本条款。重大变更将至少在生效前 14 天通过电子邮件或在应用中公布。在生效日期之后继续使用即视为接受。现行版本始终发布于本页面。如果译本与英文版本存在差异，以英文版本为准，但法律另有要求的除外。",
+          "我们可以更新本条款。在更新之后继续使用即视为接受。现行版本始终发布于本页面。如果译本与英文版本存在差异，以英文版本为准，但法律另有要求的除外。",
         ],
       },
       {
@@ -172,7 +172,7 @@ export const legalZhHans: Partial<Record<LegalKind, LegalDocument>> = {
     title: "隐私政策",
     summary: "我们收集哪些数据、智能体将数据发送至何处、谁能看到您的工作区，以及您享有的权利。",
     courtesy: "本文件为礼节性译本。如本译本与英文版本存在任何差异，以英文版本为准。",
-    updated: "2026-11-20",
+    updated: "2026-11-21",
     sections: [
       {
         id: "overview",
@@ -364,7 +364,7 @@ export const legalZhHans: Partial<Record<LegalKind, LegalDocument>> = {
         id: "changes",
         heading: "16. 本政策的变更",
         blocks: [
-          "我们可以更新本政策。重大变更将在生效前通过电子邮件或在应用中公布。现行版本始终发布于本页面。如果译本与英文版本存在差异，以英文版本为准，但法律另有要求的除外。",
+          "我们可以更新本政策。现行版本始终发布于本页面。如果译本与英文版本存在差异，以英文版本为准，但法律另有要求的除外。",
         ],
       },
       {

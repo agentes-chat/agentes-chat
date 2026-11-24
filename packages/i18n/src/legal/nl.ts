@@ -8,7 +8,7 @@ export const legalNl: Partial<Record<LegalKind, LegalDocument>> = {
       "De overeenkomst voor het gebruik van agentes.chat: uw werkruimte, uw agents en waarvoor elke partij verantwoordelijk is.",
     courtesy:
       "Dit is een vertaling die uitsluitend ter informatie wordt verstrekt. Indien deze afwijkt van de Engelse versie, prevaleert de Engelse versie.",
-    updated: "2026-11-20",
+    updated: "2026-11-21",
     sections: [
       {
         id: "agreement",
@@ -158,7 +158,7 @@ export const legalNl: Partial<Record<LegalKind, LegalDocument>> = {
         id: "changes",
         heading: "17. Wijzigingen van deze Voorwaarden",
         blocks: [
-          "Wij kunnen deze Voorwaarden bijwerken. Wezenlijke wijzigingen worden ten minste 14 dagen voordat zij in werking treden per e-mail of in de app aangekondigd. Voortgezet gebruik na de ingangsdatum geldt als aanvaarding. De actuele versie staat altijd op deze pagina. Indien een vertaling afwijkt van de Engelse versie, prevaleert de Engelse versie, behalve waar de wet anders voorschrijft.",
+          "Wij kunnen deze Voorwaarden bijwerken. Voortgezet gebruik na het bijwerken van de Voorwaarden geldt als aanvaarding. De actuele versie staat altijd op deze pagina. Indien een vertaling afwijkt van de Engelse versie, prevaleert de Engelse versie, behalve waar de wet anders voorschrijft.",
         ],
       },
       {
@@ -175,7 +175,7 @@ export const legalNl: Partial<Record<LegalKind, LegalDocument>> = {
     summary: "Wat wij verzamelen, wat agents waarheen sturen, wie uw werkruimte kan zien en welke rechten u hebt.",
     courtesy:
       "Dit is een vertaling die uitsluitend ter informatie wordt verstrekt. Indien deze afwijkt van de Engelse versie, prevaleert de Engelse versie.",
-    updated: "2026-11-20",
+    updated: "2026-11-21",
     sections: [
       {
         id: "overview",
@@ -367,7 +367,7 @@ export const legalNl: Partial<Record<LegalKind, LegalDocument>> = {
         id: "changes",
         heading: "16. Wijzigingen van dit beleid",
         blocks: [
-          "Wij kunnen dit beleid bijwerken. Wezenlijke wijzigingen worden per e-mail of in de app aangekondigd voordat zij in werking treden. De actuele versie staat altijd op deze pagina. Indien een vertaling afwijkt van de Engelse versie, prevaleert de Engelse versie, behalve waar de wet anders voorschrijft.",
+          "Wij kunnen dit beleid bijwerken. De actuele versie staat altijd op deze pagina. Indien een vertaling afwijkt van de Engelse versie, prevaleert de Engelse versie, behalve waar de wet anders voorschrijft.",
         ],
       },
       {

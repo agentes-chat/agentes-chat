@@ -16160,9 +16160,9 @@
     "nameHelp": "Jak baza danych będzie się wyświetlać tobie i agentom.",
     "namePlaceholder": "Np. Produkcja",
     "url": "Adres bazy danych",
-    "urlHelp": "Zaczyna się od postgres://. Nazwa bazy na końcu jest opcjonalna. Zapisany w postaci zaszyfrowanej na serwerze. Nikt go już nie zobaczy, nawet agenci.",
+    "urlHelp": "Zaczyna się od `postgres://`. Nazwa bazy na końcu jest opcjonalna. Zapisany w postaci zaszyfrowanej na serwerze. Nikt go już nie zobaczy, nawet agenci.",
     "urlPlaceholder": "postgres://user:haslo@host/db",
-    "urlInvalid": "Wklej adres zaczynający się od postgres:// albo wypełnij pola w sekcji Zaawansowane.",
+    "urlInvalid": "Wklej adres zaczynający się od `postgres://` albo wypełnij pola w sekcji Zaawansowane.",
     "scope": "Które bazy",
     "scopeOne": "Tylko ta baza",
     "scopeAll": "Wszystkie bazy na tym serwerze",
@@ -16176,32 +16176,32 @@
       "supabase": {
         "1": "Otwórz SQL Editor w swoim projekcie Supabase i uruchom poniższe polecenie (zmień hasło).",
         "2": "W Project Settings → Database skopiuj connection string URI.",
-        "3": "Zamień w nim użytkownika i hasło na agentes_leitura i wybrane hasło, a potem wklej go tutaj."
+        "3": "Zamień w nim użytkownika i hasło na `agentes_leitura` i wybrane hasło, a potem wklej go tutaj."
       },
       "neon": {
         "1": "Otwórz SQL Editor w swoim projekcie Neon i uruchom poniższe polecenie (zmień hasło).",
         "2": "W Connect skopiuj adres swojej bazy danych.",
-        "3": "Zamień w nim użytkownika i hasło na agentes_leitura i wybrane hasło, a potem wklej go tutaj."
+        "3": "Zamień w nim użytkownika i hasło na `agentes_leitura` i wybrane hasło, a potem wklej go tutaj."
       },
       "railway": {
         "1": "W usłudze Postgres otwórz Data → Query i uruchom poniższe polecenie (zmień hasło).",
         "2": "W Variables skopiuj `DATABASE_PUBLIC_URL` (`DATABASE_URL` jest wewnętrzny i stąd nie działa).",
-        "3": "Zamień w nim użytkownika i hasło na agentes_leitura i wybrane hasło, a potem wklej go tutaj."
+        "3": "Zamień w nim użytkownika i hasło na `agentes_leitura` i wybrane hasło, a potem wklej go tutaj."
       },
       "rds": {
         "1": "Połącz się z bazą danych swoim zwykłym narzędziem i uruchom poniższe polecenie (zmień hasło).",
         "2": "W Connectivity & security skopiuj endpoint. Baza danych potrzebuje publicznego dostępu na porcie 5432.",
-        "3": "Zbuduj adres postgres://agentes_leitura:haslo@endpoint:5432/baza i wklej go tutaj."
+        "3": "Zbuduj adres `postgres://agentes_leitura:password@endpoint:5432/database` i wklej go tutaj."
       },
       "render": {
         "1": "Połącz się poleceniem PSQL ze strony bazy danych i uruchom poniższe polecenie (zmień hasło).",
         "2": "W Connections skopiuj External Database URL.",
-        "3": "Zamień w nim użytkownika i hasło na agentes_leitura i wybrane hasło, a potem wklej go tutaj."
+        "3": "Zamień w nim użytkownika i hasło na `agentes_leitura` i wybrane hasło, a potem wklej go tutaj."
       },
       "other": {
         "1": "Poproś osobę, która opiekuje się bazą danych, żeby uruchomiła poniższe polecenie (z własnym hasłem).",
         "2": "Poproś ją o publiczny adres serwera, jego port i nazwę bazy danych.",
-        "3": "Zbuduj adres postgres://agentes_leitura:haslo@serwer:5432/baza i wklej go tutaj."
+        "3": "Zbuduj adres `postgres://agentes_leitura:password@server:5432/database` i wklej go tutaj."
       }
     },
     "howAll": "Aby czytać wszystkie bazy (Postgres 14 lub nowszy).",

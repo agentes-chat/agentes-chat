@@ -10,9 +10,11 @@
 
 import { CLOUD_SERVER, isTailnet, serverHost } from "@agenteschat/client/lib/server";
 import { drawAgent, idlePose } from "@agenteschat/ui/agent/engine";
+import { codeAndBoldParts } from "@agenteschat/ui/markdown";
 import { startSky } from "@agenteschat/ui/sky/engine";
 import { SKY_TONES } from "@agenteschat/ui/sky/math";
 import { invoke } from "@tauri-apps/api/core";
+import "@fontsource-variable/martian-mono/index.css";
 import "@fontsource-variable/onest/index.css";
 import "../fonts.css";
 import "./cover.css";
@@ -109,8 +111,16 @@ if (agent) {
   requestAnimationFrame(frame);
 }
 
+/** A line's `code` (a command to type) and **bold** spans, as text nodes, never parsed HTML. */
 function say(text: string) {
-  if (line) line.textContent = text;
+  line?.replaceChildren(
+    ...codeAndBoldParts(text).map((part) => {
+      if (!part.mark) return part.text;
+      const mark = document.createElement(part.mark === "code" ? "code" : "b");
+      mark.textContent = part.text;
+      return mark;
+    }),
+  );
 }
 
 /** The cover's buttons: label and what it does; the first is the main one. */

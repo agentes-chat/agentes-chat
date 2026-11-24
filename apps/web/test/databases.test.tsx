@@ -70,9 +70,13 @@ describe("Connectors → Database", () => {
     expect(flow().textContent).toContain("create role agentes_leitura");
     expect(within(flow()).getByRole("button", { name: "Copiar" })).toBeTruthy();
     expect(within(flow()).getByRole("link", { name: "Abrir o Supabase" })).toBeTruthy();
+    // What to type shows as code: the address's start under the field, the read-only user in step 3.
+    const codes = () => [...flow().querySelectorAll(".ac-field__example code, li code")].map((c) => c.textContent);
+    expect(codes()).toEqual(["postgres://", "agentes_leitura"]);
 
     await click(within(flow()).getByRole("button", { name: "Conectar" }));
     expect(flow().textContent).toContain("Cole um endereço que comece com postgres://");
+    expect(flow().querySelector(".ac-field__error code")?.textContent).toBe("postgres://");
     expect(state.calls.some((c) => c.method === "databases.connect")).toBe(false);
 
     await type(within(flow()).getByLabelText("Nome"), "Produção");

@@ -14569,9 +14569,9 @@
     "nameHelp": "Nama database yang tampil untukmu dan untuk agen.",
     "namePlaceholder": "Mis.: Produksi",
     "url": "Alamat database",
-    "urlHelp": "Diawali postgres://. Nama database di akhir boleh dikosongkan. Disimpan terenkripsi di server. Tidak ada yang melihatnya lagi, termasuk agen.",
+    "urlHelp": "Diawali `postgres://`. Nama database di akhir boleh dikosongkan. Disimpan terenkripsi di server. Tidak ada yang melihatnya lagi, termasuk agen.",
     "urlPlaceholder": "postgres://user:sandi@host/db",
-    "urlInvalid": "Tempel alamat yang diawali postgres://, atau isi kolom di bagian Lanjutan.",
+    "urlInvalid": "Tempel alamat yang diawali `postgres://`, atau isi kolom di bagian Lanjutan.",
     "scope": "Database mana",
     "scopeOne": "Hanya database ini",
     "scopeAll": "Semua database di server ini",
@@ -14585,32 +14585,32 @@
       "supabase": {
         "1": "Buka SQL Editor di proyek Supabase-mu dan jalankan perintah di bawah (ganti kata sandinya).",
         "2": "Di Project Settings → Database, salin connection string URI.",
-        "3": "Ganti user dan kata sandi di dalamnya dengan agentes_leitura dan kata sandi pilihanmu, lalu tempel di sini."
+        "3": "Ganti user dan kata sandi di dalamnya dengan `agentes_leitura` dan kata sandi pilihanmu, lalu tempel di sini."
       },
       "neon": {
         "1": "Buka SQL Editor di proyek Neon-mu dan jalankan perintah di bawah (ganti kata sandinya).",
         "2": "Di Connect, salin alamat database-mu.",
-        "3": "Ganti user dan kata sandi di dalamnya dengan agentes_leitura dan kata sandi pilihanmu, lalu tempel di sini."
+        "3": "Ganti user dan kata sandi di dalamnya dengan `agentes_leitura` dan kata sandi pilihanmu, lalu tempel di sini."
       },
       "railway": {
         "1": "Di layanan Postgres, buka Data → Query dan jalankan perintah di bawah (ganti kata sandinya).",
         "2": "Di Variables, salin `DATABASE_PUBLIC_URL` (`DATABASE_URL` bersifat internal dan tidak bisa dipakai dari sini).",
-        "3": "Ganti user dan kata sandi di dalamnya dengan agentes_leitura dan kata sandi pilihanmu, lalu tempel di sini."
+        "3": "Ganti user dan kata sandi di dalamnya dengan `agentes_leitura` dan kata sandi pilihanmu, lalu tempel di sini."
       },
       "rds": {
         "1": "Hubungkan ke database dengan alat yang biasa kamu pakai dan jalankan perintah di bawah (ganti kata sandinya).",
         "2": "Di Connectivity & security, salin endpoint-nya. Database harus punya akses publik di port 5432.",
-        "3": "Susun alamat postgres://agentes_leitura:sandi@endpoint:5432/database lalu tempel di sini."
+        "3": "Susun alamat `postgres://agentes_leitura:password@endpoint:5432/database` lalu tempel di sini."
       },
       "render": {
         "1": "Hubungkan dengan perintah PSQL dari halaman database dan jalankan perintah di bawah (ganti kata sandinya).",
         "2": "Di Connections, salin External Database URL.",
-        "3": "Ganti user dan kata sandi di dalamnya dengan agentes_leitura dan kata sandi pilihanmu, lalu tempel di sini."
+        "3": "Ganti user dan kata sandi di dalamnya dengan `agentes_leitura` dan kata sandi pilihanmu, lalu tempel di sini."
       },
       "other": {
         "1": "Minta pengelola database menjalankan perintah di bawah (dengan kata sandi pilihannya sendiri).",
         "2": "Minta alamat publik server, port, dan nama database-nya.",
-        "3": "Susun alamat postgres://agentes_leitura:sandi@server:5432/database lalu tempel di sini."
+        "3": "Susun alamat `postgres://agentes_leitura:password@server:5432/database` lalu tempel di sini."
       }
     },
     "howAll": "Untuk membaca semua database (Postgres 14 atau lebih baru).",

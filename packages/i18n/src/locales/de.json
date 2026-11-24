@@ -15085,9 +15085,9 @@
     "nameHelp": "So erscheint die Datenbank für dich und die Agenten.",
     "namePlaceholder": "Z. B.: Produktion",
     "url": "Adresse der Datenbank",
-    "urlHelp": "Beginnt mit postgres://. Der Datenbankname am Ende ist optional. Verschlüsselt auf dem Server gespeichert. Niemand sieht sie wieder, nicht einmal die Agenten.",
+    "urlHelp": "Beginnt mit `postgres://`. Der Datenbankname am Ende ist optional. Verschlüsselt auf dem Server gespeichert. Niemand sieht sie wieder, nicht einmal die Agenten.",
     "urlPlaceholder": "postgres://benutzer:passwort@host/db",
-    "urlInvalid": "Füg eine Adresse ein, die mit postgres:// beginnt, oder füll die Felder unter Erweitert aus.",
+    "urlInvalid": "Füg eine Adresse ein, die mit `postgres://` beginnt, oder füll die Felder unter Erweitert aus.",
     "scope": "Welche Datenbanken",
     "scopeOne": "Nur diese Datenbank",
     "scopeAll": "Alle Datenbanken dieses Servers",
@@ -15101,32 +15101,32 @@
       "supabase": {
         "1": "Öffne den SQL Editor in deinem Supabase-Projekt und führ den Befehl unten aus (ändere das Passwort).",
         "2": "Kopier unter Project Settings → Database den URI-Verbindungsstring.",
-        "3": "Ersetz darin Benutzer und Passwort durch agentes_leitura und das Passwort, das du gewählt hast, und füg ihn hier ein."
+        "3": "Ersetz darin Benutzer und Passwort durch `agentes_leitura` und das Passwort, das du gewählt hast, und füg ihn hier ein."
       },
       "neon": {
         "1": "Öffne den SQL Editor in deinem Neon-Projekt und führ den Befehl unten aus (ändere das Passwort).",
         "2": "Kopier unter Connect die Adresse deiner Datenbank.",
-        "3": "Ersetz darin Benutzer und Passwort durch agentes_leitura und das Passwort, das du gewählt hast, und füg sie hier ein."
+        "3": "Ersetz darin Benutzer und Passwort durch `agentes_leitura` und das Passwort, das du gewählt hast, und füg sie hier ein."
       },
       "railway": {
         "1": "Öffne im Postgres-Dienst Data → Query und führ den Befehl unten aus (ändere das Passwort).",
         "2": "Kopier unter Variables `DATABASE_PUBLIC_URL` (`DATABASE_URL` ist intern und funktioniert von hier aus nicht).",
-        "3": "Ersetz darin Benutzer und Passwort durch agentes_leitura und das Passwort, das du gewählt hast, und füg sie hier ein."
+        "3": "Ersetz darin Benutzer und Passwort durch `agentes_leitura` und das Passwort, das du gewählt hast, und füg sie hier ein."
       },
       "rds": {
         "1": "Verbinde dich mit deinem üblichen Tool mit der Datenbank und führ den Befehl unten aus (ändere das Passwort).",
         "2": "Kopier unter Connectivity & security den Endpoint. Die Datenbank braucht öffentlichen Zugriff auf Port 5432.",
-        "3": "Bau die Adresse postgres://agentes_leitura:passwort@endpoint:5432/datenbank und füg sie hier ein."
+        "3": "Bau die Adresse `postgres://agentes_leitura:password@endpoint:5432/database` und füg sie hier ein."
       },
       "render": {
         "1": "Verbinde dich mit dem PSQL-Befehl von der Seite der Datenbank und führ den Befehl unten aus (ändere das Passwort).",
         "2": "Kopier unter Connections die External Database URL.",
-        "3": "Ersetz darin Benutzer und Passwort durch agentes_leitura und das Passwort, das du gewählt hast, und füg sie hier ein."
+        "3": "Ersetz darin Benutzer und Passwort durch `agentes_leitura` und das Passwort, das du gewählt hast, und füg sie hier ein."
       },
       "other": {
         "1": "Bitte die Person, die sich um die Datenbank kümmert, den Befehl unten auszuführen (mit einem eigenen Passwort).",
         "2": "Frag sie nach der öffentlichen Adresse des Servers, seinem Port und dem Namen der Datenbank.",
-        "3": "Bau die Adresse postgres://agentes_leitura:passwort@server:5432/datenbank und füg sie hier ein."
+        "3": "Bau die Adresse `postgres://agentes_leitura:password@server:5432/database` und füg sie hier ein."
       }
     },
     "howAll": "Um alle Datenbanken zu lesen (Postgres 14 oder neuer).",

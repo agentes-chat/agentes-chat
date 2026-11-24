@@ -8,7 +8,7 @@ export const legalPl: Partial<Record<LegalKind, LegalDocument>> = {
       "Umowa dotycząca korzystania z agentes.chat: Twój obszar roboczy, Twoi agenci oraz zakres odpowiedzialności każdej ze stron.",
     courtesy:
       "Niniejszy dokument jest tłumaczeniem grzecznościowym. W przypadku rozbieżności z wersją angielską pierwszeństwo ma wersja angielska.",
-    updated: "2026-11-20",
+    updated: "2026-11-21",
     sections: [
       {
         id: "agreement",
@@ -158,7 +158,7 @@ export const legalPl: Partial<Record<LegalKind, LegalDocument>> = {
         id: "changes",
         heading: "17. Zmiany Warunków",
         blocks: [
-          "Możemy aktualizować niniejsze Warunki. Istotne zmiany zostaną ogłoszone e-mailem lub w aplikacji co najmniej 14 dni przed ich wejściem w życie. Dalsze korzystanie z Usługi po dacie wejścia w życie oznacza ich akceptację. Aktualna wersja jest zawsze dostępna na tej stronie. Jeżeli tłumaczenie różni się od wersji angielskiej, pierwszeństwo ma wersja angielska, chyba że przepisy prawa stanowią inaczej.",
+          "Możemy aktualizować niniejsze Warunki. Dalsze korzystanie z Usługi po aktualizacji oznacza jej akceptację. Aktualna wersja jest zawsze dostępna na tej stronie. Jeżeli tłumaczenie różni się od wersji angielskiej, pierwszeństwo ma wersja angielska, chyba że przepisy prawa stanowią inaczej.",
         ],
       },
       {
@@ -176,7 +176,7 @@ export const legalPl: Partial<Record<LegalKind, LegalDocument>> = {
       "Jakie dane zbieramy, co i dokąd wysyłają agenci, kto może widzieć Twój obszar roboczy oraz jakie przysługują Ci prawa.",
     courtesy:
       "Niniejszy dokument jest tłumaczeniem grzecznościowym. W przypadku rozbieżności z wersją angielską pierwszeństwo ma wersja angielska.",
-    updated: "2026-11-20",
+    updated: "2026-11-21",
     sections: [
       {
         id: "overview",
@@ -368,7 +368,7 @@ export const legalPl: Partial<Record<LegalKind, LegalDocument>> = {
         id: "changes",
         heading: "16. Zmiany niniejszej polityki",
         blocks: [
-          "Możemy aktualizować niniejszą politykę. Istotne zmiany zostaną ogłoszone e-mailem lub w aplikacji przed ich wejściem w życie. Aktualna wersja jest zawsze dostępna na tej stronie. Jeżeli tłumaczenie różni się od wersji angielskiej, pierwszeństwo ma wersja angielska, chyba że przepisy prawa stanowią inaczej.",
+          "Możemy aktualizować niniejszą politykę. Aktualna wersja jest zawsze dostępna na tej stronie. Jeżeli tłumaczenie różni się od wersji angielskiej, pierwszeństwo ma wersja angielska, chyba że przepisy prawa stanowią inaczej.",
         ],
       },
       {

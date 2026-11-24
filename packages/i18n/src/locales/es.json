@@ -15541,9 +15541,9 @@
     "nameHelp": "Cómo aparece la base de datos para ti y para los agentes.",
     "namePlaceholder": "Ej.: Producción",
     "url": "Dirección de la base de datos",
-    "urlHelp": "Empieza con postgres://. El nombre de la base al final es opcional. Se guarda cifrada en el servidor. Nadie la vuelve a ver, ni siquiera los agentes.",
+    "urlHelp": "Empieza con `postgres://`. El nombre de la base al final es opcional. Se guarda cifrada en el servidor. Nadie la vuelve a ver, ni siquiera los agentes.",
     "urlPlaceholder": "postgres://usuario:clave@host/bd",
-    "urlInvalid": "Pega una dirección que empiece con postgres://, o completa los campos en Avanzado.",
+    "urlInvalid": "Pega una dirección que empiece con `postgres://`, o completa los campos en Avanzado.",
     "scope": "Qué bases de datos",
     "scopeOne": "Solo esta base",
     "scopeAll": "Todas las bases de este servidor",
@@ -15557,32 +15557,32 @@
       "supabase": {
         "1": "Abre el SQL Editor de tu proyecto de Supabase y ejecuta el comando de abajo (cambia la contraseña).",
         "2": "En Project Settings → Database, copia el connection string URI.",
-        "3": "Cambia el usuario y la contraseña por agentes_leitura y la contraseña que elegiste, y pégalo aquí."
+        "3": "Cambia el usuario y la contraseña por `agentes_leitura` y la contraseña que elegiste, y pégalo aquí."
       },
       "neon": {
         "1": "Abre el SQL Editor de tu proyecto de Neon y ejecuta el comando de abajo (cambia la contraseña).",
         "2": "En Connect, copia la dirección de tu base de datos.",
-        "3": "Cambia el usuario y la contraseña por agentes_leitura y la contraseña que elegiste, y pégalo aquí."
+        "3": "Cambia el usuario y la contraseña por `agentes_leitura` y la contraseña que elegiste, y pégalo aquí."
       },
       "railway": {
         "1": "En el servicio de Postgres, abre Data → Query y ejecuta el comando de abajo (cambia la contraseña).",
         "2": "En Variables, copia `DATABASE_PUBLIC_URL` (`DATABASE_URL` es interna y no funciona desde aquí).",
-        "3": "Cambia el usuario y la contraseña por agentes_leitura y la contraseña que elegiste, y pégalo aquí."
+        "3": "Cambia el usuario y la contraseña por `agentes_leitura` y la contraseña que elegiste, y pégalo aquí."
       },
       "rds": {
         "1": "Conéctate a la base de datos con tu herramienta de siempre y ejecuta el comando de abajo (cambia la contraseña).",
         "2": "En Connectivity & security, copia el endpoint. La base de datos necesita acceso público en el puerto 5432.",
-        "3": "Arma la dirección postgres://agentes_leitura:contraseña@endpoint:5432/basededatos y pégala aquí."
+        "3": "Arma la dirección `postgres://agentes_leitura:password@endpoint:5432/database` y pégala aquí."
       },
       "render": {
         "1": "Conéctate con el comando PSQL de la página de la base de datos y ejecuta el comando de abajo (cambia la contraseña).",
         "2": "En Connections, copia la External Database URL.",
-        "3": "Cambia el usuario y la contraseña por agentes_leitura y la contraseña que elegiste, y pégalo aquí."
+        "3": "Cambia el usuario y la contraseña por `agentes_leitura` y la contraseña que elegiste, y pégalo aquí."
       },
       "other": {
         "1": "Pídele a quien cuida la base de datos que ejecute el comando de abajo (con una contraseña propia).",
         "2": "Pídele la dirección pública del servidor, su puerto y el nombre de la base de datos.",
-        "3": "Arma la dirección postgres://agentes_leitura:contraseña@servidor:5432/basededatos y pégala aquí."
+        "3": "Arma la dirección `postgres://agentes_leitura:password@server:5432/database` y pégala aquí."
       }
     },
     "howAll": "Para leer todas las bases (Postgres 14 o más nuevo).",

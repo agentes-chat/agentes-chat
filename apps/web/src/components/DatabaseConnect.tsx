@@ -214,7 +214,7 @@ function ConnectStep({
   const [error, setError] = useState<DatabaseConnectError | null>(null);
   useUnsavedInDialog(useEdited(true, [label, url, host, port, database, username, password, prefix]));
   const fields = host.trim() !== "" && username.trim() !== "" && password !== "";
-  const urlError = touched && !fields && !isDatabaseUrl(url) ? t("database.urlInvalid") : undefined;
+  const urlError = touched && !fields && !isDatabaseUrl(url) ? codeAndBold(t("database.urlInvalid")) : undefined;
   const dbName = database.trim() || databaseNameOf(url);
   const whole = (scope ?? (dbName ? "one" : "all")) === "all";
   const testing = useStepText(connect.isPending, [
@@ -285,7 +285,7 @@ function ConnectStep({
               onChange={(e) => setLabel(e.target.value)}
             />
           </Field>
-          <Field label={t("database.url")} id="db-url" example={t("database.urlHelp")} error={urlError}>
+          <Field label={t("database.url")} id="db-url" example={codeAndBold(t("database.urlHelp"))} error={urlError}>
             <Input
               autoComplete="off"
               data-1p-ignore

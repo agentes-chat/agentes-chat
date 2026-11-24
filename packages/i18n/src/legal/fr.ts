@@ -8,7 +8,7 @@ export const legalFr: Partial<Record<LegalKind, LegalDocument>> = {
       "Le contrat d'utilisation d'agentes.chat : votre espace de travail, vos agents et les responsabilités de chaque partie.",
     courtesy:
       "Ceci est une traduction de courtoisie. En cas de divergence avec la version anglaise, la version anglaise prévaut.",
-    updated: "2026-11-20",
+    updated: "2026-11-21",
     sections: [
       {
         id: "agreement",
@@ -158,7 +158,7 @@ export const legalFr: Partial<Record<LegalKind, LegalDocument>> = {
         id: "changes",
         heading: "17. Modifications des présentes Conditions",
         blocks: [
-          "Nous pouvons mettre à jour les présentes Conditions. Les modifications substantielles seront annoncées par e-mail ou dans l'application au moins 14 jours avant leur entrée en vigueur. La poursuite de l'utilisation après la date d'entrée en vigueur vaut acceptation. La version en vigueur figure toujours sur cette page. En cas de divergence entre une traduction et la version anglaise, la version anglaise prévaut, sauf disposition légale contraire.",
+          "Nous pouvons mettre à jour les présentes Conditions. La poursuite de l'utilisation après une mise à jour vaut acceptation. La version en vigueur figure toujours sur cette page. En cas de divergence entre une traduction et la version anglaise, la version anglaise prévaut, sauf disposition légale contraire.",
         ],
       },
       {
@@ -176,7 +176,7 @@ export const legalFr: Partial<Record<LegalKind, LegalDocument>> = {
       "Ce que nous collectons, ce que les agents envoient et à qui, qui peut voir votre espace de travail, et les droits dont vous disposez.",
     courtesy:
       "Ceci est une traduction de courtoisie. En cas de divergence avec la version anglaise, la version anglaise prévaut.",
-    updated: "2026-11-20",
+    updated: "2026-11-21",
     sections: [
       {
         id: "overview",
@@ -368,7 +368,7 @@ export const legalFr: Partial<Record<LegalKind, LegalDocument>> = {
         id: "changes",
         heading: "16. Modifications de la présente politique",
         blocks: [
-          "Nous pouvons mettre à jour la présente politique. Les modifications substantielles seront annoncées par e-mail ou dans l'application avant leur entrée en vigueur. La version en vigueur figure toujours sur cette page. En cas de divergence entre une traduction et la version anglaise, la version anglaise prévaut, sauf disposition légale contraire.",
+          "Nous pouvons mettre à jour la présente politique. La version en vigueur figure toujours sur cette page. En cas de divergence entre une traduction et la version anglaise, la version anglaise prévaut, sauf disposition légale contraire.",
         ],
       },
       {

@@ -37,7 +37,7 @@ test("Tailscale off over the server here: the Mac's app, Windows' icon by the cl
   for (const { cover } of [desktopEn, desktopPtBR]) {
     expect(cover.openTailscale).toBeTruthy();
     expect(cover.tailnetTray).not.toMatch(/sudo|terminal/);
-    expect(cover.tailnetUp).toContain("sudo tailscale up");
+    expect(cover.tailnetUp).toContain("`sudo tailscale up`");
   }
 });
 

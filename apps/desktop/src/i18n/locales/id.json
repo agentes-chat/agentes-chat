@@ -821,7 +821,7 @@
     "stopped": "agentes.chat berhenti di {{device}} ini",
     "failing": "agentes.chat gagal dimulai di {{device}} ini",
     "tailnetOff": "Hubungkan Tailscale di {{device}} ini untuk membuka agentes.chat.",
-    "tailnetUp": "Di terminal: sudo tailscale up",
+    "tailnetUp": "Di terminal: `sudo tailscale up`",
     "tailnetTray": "Buka dari ikonnya di dekat jam.",
     "onlyHere": "Pakai hanya di {{device}} ini",
     "start": "Jalankan",

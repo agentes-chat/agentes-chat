@@ -14579,9 +14579,9 @@
     "nameHelp": "这个数据库对你和智能体显示的名称。",
     "namePlaceholder": "例如：生产环境",
     "url": "数据库地址",
-    "urlHelp": "以 postgres:// 开头。末尾的数据库名可以省略。加密保存在服务器上，之后没人能再看到，智能体也不能。",
+    "urlHelp": "以 `postgres://` 开头。末尾的数据库名可以省略。加密保存在服务器上，之后没人能再看到，智能体也不能。",
     "urlPlaceholder": "postgres://user:password@host/db",
-    "urlInvalid": "请粘贴以 postgres:// 开头的地址，或填写“高级”下的各项。",
+    "urlInvalid": "请粘贴以 `postgres://` 开头的地址，或填写“高级”下的各项。",
     "scope": "哪些数据库",
     "scopeOne": "仅此数据库",
     "scopeAll": "此服务器上的所有数据库",
@@ -14595,32 +14595,32 @@
       "supabase": {
         "1": "在你的 Supabase 项目中打开 SQL Editor，运行下面的命令（请修改密码）。",
         "2": "在 Project Settings → Database 中，复制 URI 连接字符串。",
-        "3": "把其中的用户名和密码换成 agentes_leitura 和你设置的密码，然后粘贴到这里。"
+        "3": "把其中的用户名和密码换成 `agentes_leitura` 和你设置的密码，然后粘贴到这里。"
       },
       "neon": {
         "1": "在你的 Neon 项目中打开 SQL Editor，运行下面的命令（请修改密码）。",
         "2": "在 Connect 中，复制你的数据库地址。",
-        "3": "把其中的用户名和密码换成 agentes_leitura 和你设置的密码，然后粘贴到这里。"
+        "3": "把其中的用户名和密码换成 `agentes_leitura` 和你设置的密码，然后粘贴到这里。"
       },
       "railway": {
         "1": "在 Postgres 服务中，打开 Data → Query，运行下面的命令（请修改密码）。",
         "2": "在 Variables 中，复制 `DATABASE_PUBLIC_URL`（`DATABASE_URL` 是内部地址，从这里无法使用）。",
-        "3": "把其中的用户名和密码换成 agentes_leitura 和你设置的密码，然后粘贴到这里。"
+        "3": "把其中的用户名和密码换成 `agentes_leitura` 和你设置的密码，然后粘贴到这里。"
       },
       "rds": {
         "1": "用你常用的工具连接数据库，运行下面的命令（请修改密码）。",
         "2": "在 Connectivity & security 中，复制 endpoint。数据库需要在 5432 端口开放公网访问。",
-        "3": "拼出地址 postgres://agentes_leitura:password@endpoint:5432/database，然后粘贴到这里。"
+        "3": "拼出地址 `postgres://agentes_leitura:password@endpoint:5432/database`，然后粘贴到这里。"
       },
       "render": {
         "1": "使用数据库页面上的 PSQL 命令连接，运行下面的命令（请修改密码）。",
         "2": "在 Connections 中，复制 External Database URL。",
-        "3": "把其中的用户名和密码换成 agentes_leitura 和你设置的密码，然后粘贴到这里。"
+        "3": "把其中的用户名和密码换成 `agentes_leitura` 和你设置的密码，然后粘贴到这里。"
       },
       "other": {
         "1": "请负责维护数据库的人运行下面的命令（使用他们自己设置的密码）。",
         "2": "向他们要服务器的公网地址、端口和数据库名称。",
-        "3": "拼出地址 postgres://agentes_leitura:password@server:5432/database，然后粘贴到这里。"
+        "3": "拼出地址 `postgres://agentes_leitura:password@server:5432/database`，然后粘贴到这里。"
       }
     },
     "howAll": "用于读取所有数据库（Postgres 14 或更新版本）。",

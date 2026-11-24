@@ -6,7 +6,7 @@ export const legalEs: Partial<Record<LegalKind, LegalDocument>> = {
     title: "Términos de uso",
     summary: "El acuerdo para usar agentes.chat: su espacio de trabajo, sus agentes y de qué responde cada parte.",
     courtesy: "Esta es una traducción de cortesía. Si difiere de la versión en inglés, prevalece la versión en inglés.",
-    updated: "2026-11-20",
+    updated: "2026-11-21",
     sections: [
       {
         id: "agreement",
@@ -156,7 +156,7 @@ export const legalEs: Partial<Record<LegalKind, LegalDocument>> = {
         id: "changes",
         heading: "17. Cambios en estos Términos",
         blocks: [
-          "Podemos actualizar estos Términos. Los cambios sustanciales se anunciarán por correo electrónico o en la aplicación al menos 14 días antes de que entren en vigor. El uso continuado después de la fecha de entrada en vigor implica su aceptación. La versión vigente se encuentra siempre en esta página. Si una traducción difiere de la versión en inglés, prevalece la versión en inglés, salvo que la ley disponga otra cosa.",
+          "Podemos actualizar estos Términos. El uso continuado después de una actualización implica su aceptación. La versión vigente se encuentra siempre en esta página. Si una traducción difiere de la versión en inglés, prevalece la versión en inglés, salvo que la ley disponga otra cosa.",
         ],
       },
       {
@@ -173,7 +173,7 @@ export const legalEs: Partial<Record<LegalKind, LegalDocument>> = {
     summary:
       "Qué recopilamos, qué envían los agentes y adónde, quién puede ver su espacio de trabajo y qué derechos tiene usted.",
     courtesy: "Esta es una traducción de cortesía. Si difiere de la versión en inglés, prevalece la versión en inglés.",
-    updated: "2026-11-20",
+    updated: "2026-11-21",
     sections: [
       {
         id: "overview",
@@ -365,7 +365,7 @@ export const legalEs: Partial<Record<LegalKind, LegalDocument>> = {
         id: "changes",
         heading: "16. Cambios en esta política",
         blocks: [
-          "Podemos actualizar esta política. Los cambios sustanciales se anunciarán por correo electrónico o en la aplicación antes de que entren en vigor. La versión vigente se encuentra siempre en esta página. Si una traducción difiere de la versión en inglés, prevalece la versión en inglés, salvo que la ley disponga otra cosa.",
+          "Podemos actualizar esta política. La versión vigente se encuentra siempre en esta página. Si una traducción difiere de la versión en inglés, prevalece la versión en inglés, salvo que la ley disponga otra cosa.",
         ],
       },
       {
