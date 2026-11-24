@@ -6460,6 +6460,28 @@
           "send": "Wyślij na {{computer}}",
           "sending": "Wysyłanie kodu na {{computer}}…",
           "sent": "Kod wysłany. Kończenie logowania na komputerze {{computer}}.",
+          "choice": {
+            "billing": "Jak rozliczać Gemini?",
+            "billingHint": "Google pyta o to po kodzie. Subskrypcja korzysta z licencji Gemini Enterprise, którą Twoja organizacja już ma.",
+            "subscription": "Która subskrypcja Gemini Enterprise?",
+            "subscriptionHint": "Te, które administrator przypisał do tego konta Google.",
+            "subscriptionWhere": "Projekt {{project}} · {{location}}",
+            "project": "Który projekt Google Cloud?",
+            "projectHint": "Płatność za użycie jest naliczana temu projektowi. Upewnij się, że mu ufasz.",
+            "projectLabel": "Identyfikator projektu",
+            "projectShape": "Identyfikator projektu ma od 6 do 30 małych liter, cyfr lub łączników i zaczyna się od litery.",
+            "region": "Który region?",
+            "regionHint": "Gdzie Google uruchamia Gemini dla tego projektu.",
+            "billingModel": {
+              "subscriptions": "Subskrypcja Gemini Enterprise",
+              "subscriptionsText": "Korzysta z licencji, którą Twoja organizacja już ma.",
+              "pay_as_you_go": "Płatność za użycie",
+              "pay_as_you_goText": "Rozliczane za użyte tokeny, przez Google Cloud."
+            },
+            "continue": "Dalej",
+            "sending": "Wysyłanie wyboru na {{computer}}…",
+            "failed": "Nie udało się wysłać wyboru na {{computer}}. Spróbuj ponownie."
+          },
           "local": "Jesteś na samym komputerze {{computer}}? Jeśli jego przeglądarka otworzyła się sama, po prostu autoryzuj tam.",
           "deviceCode": "Kod do ChatGPT",
           "grokCode": "Kod do Grok",
@@ -19492,6 +19514,9 @@
     "speedFallback": {
       "text": "ChatGPT odrzucił szybkość Szybka dla tego konta lub modelu, więc ta odpowiedź przyszła ze standardową szybkością.",
       "action": "Otwórz agenta"
+    },
+    "mcpOff": {
+      "text": "Gemini odpowiedział bez narzędzi agentes.chat: Antigravity CLI ich nie wczytał. Przy licencji Gemini Enterprise administrator musi włączyć serwery MCP (konsola Google Cloud → Gemini Enterprise → Ustawienia → Narzędzia dla deweloperów AI)."
     },
     "standIn": {
       "needsComputer": "Odpowiedziałem przez {{via}}: {{plan}} potrzebuje komputera.",

@@ -123,6 +123,8 @@ export type CodexBrainEvent =
   /** App-server only: the answer of a Codex turn an urgent message ended, posted as it comes (`answers: "each"`). */
   | { type: "answer"; text: string }
   | { type: "speed_fallback"; message: string }
+  /** Protocol 79 (Antigravity only): the CLI started without our server's tools; the turn goes on without them. */
+  | { type: "mcp_off"; message: string }
   /** A file a tool of Codex's own made (an image), kept in the agent's folder: the server shows it with the reply. */
   | { type: "file"; path: string };
 

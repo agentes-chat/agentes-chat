@@ -294,6 +294,7 @@ import { ChannelPinnedBar } from "@/components/ChannelPins";
 import { InlineProposal, MemoryChangeCard, QuestionCard, SecretCard } from "@/components/ChatCards";
 import {
   AppViaTag,
+  McpOffLine,
   NoticeLine,
   RoutineReport,
   RoutineTag,
@@ -4947,6 +4948,7 @@ export const TimelineMessage = memo(function TimelineMessage({
             {media && <ChatMedia media={media} />}
             {voice && <ChatVoice message={m} voice={voice} />}
             {m.author.type === "agent" && meta.speedFallback === true && <SpeedFallbackLine agent={agent} />}
+            {m.author.type === "agent" && meta.mcpOff === true && <McpOffLine />}
             {m.author.type === "agent" && standIn && <ModelStandInLine text={standIn} agent={agent} meta={meta} />}
             {(stopped.canceled || atLimit || providerCut) && (
               <StoppedLine

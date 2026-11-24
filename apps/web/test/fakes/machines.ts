@@ -378,6 +378,9 @@ export function createFakeMachines(ctx: MockContext, log: (method: string, ...ar
         // The account it signed in as the server sends it: whether its name is the automatic one.
         return st.account ? { ...st, account: withNamed(st.account) } : st;
       },
+      chooseAccountOption: async (orgId, machineId, loginId, step, option) => {
+        log("machines.chooseAccountOption", orgId, machineId, loginId, step, option);
+      },
       cancelAccountLogin: async (orgId, machineId, loginId) => {
         log("machines.cancelAccountLogin", orgId, machineId, loginId);
         const l = logins.find((x) => x.loginId === loginId);

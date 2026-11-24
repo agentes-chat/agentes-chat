@@ -772,6 +772,8 @@ export interface Transcript {
   standInRefused?: true;
   /** Fast was refused on a turn of this run, which went on at standard speed (`meta.speedFallback`). */
   speedFallback?: boolean;
+  /** A turn of this run thought without our tools: the Antigravity CLI dropped our MCP server (`meta.mcpOff`). */
+  mcpOff?: boolean;
   /**
    * The plan refused the model "Automático" mapped to, and the turn went again on one the key serves
    * (`meta.modelStandIn`): labels for the line under the reply, the id that answered, and the computer and account
@@ -5596,6 +5598,10 @@ async function executeRunInner(
               transcript.speedFallback = true;
               later(() => addRunStep(db, run, "context", { speedFallback: message }));
             },
+            onMcpOff: (message) => {
+              transcript.mcpOff = true;
+              later(() => addRunStep(db, run, "context", { mcpOff: message }));
+            },
             // The end of a wait for room, for the operator's analytics (`work-analytics.ts`): the turn's own first
             // step can come minutes later.
             onTaken: async () => {
@@ -7064,6 +7070,8 @@ async function thinkOnce(
     onTaken?(): void | Promise<void>;
     /** Fast failed and the turn answered at standard speed. */
     onSpeedFallback?(message: string): void;
+    /** The Antigravity CLI started without our server's tools; the turn goes on without them. */
+    onMcpOff?(message: string): void;
     /** The computer stopped the brain's CLI for its silence (`stalled`): resumed there, or the turn ends. */
     onStalled?(stall: Extract<BrainEvent, { type: "stalled" }>): void;
     /** A failed turn that is the plan's refusal, though the CLI didn't call it a limit. */
@@ -7159,6 +7167,7 @@ async function thinkOnce(
       if (!(await hooks.onAnswer?.(event.text).catch(() => false))) kept.push(event.text);
     } else if (event.type === "file") hooks.onFile?.(event.path);
     else if (event.type === "speed_fallback") hooks.onSpeedFallback?.(event.message);
+    else if (event.type === "mcp_off") hooks.onMcpOff?.(event.message);
     // `event.session`: computer brains keep a stable session per conversation (`brainSessionId`); nothing to store.
     else if (event.type === "done") {
       text = kept.length > 0 ? [...kept, event.text].filter(Boolean).join("\n\n") : event.text;
@@ -7639,13 +7648,15 @@ const withCode = (meta: Record<string, unknown> | undefined, code: ReturnType<ty
 
 /**
  * The quiet notes on a reply: Fast was refused and it came at standard speed (`meta.speedFallback`, the apps say so
- * under the reply), or the plan refused the model "Automático" picked (`meta.modelStandIn`).
+ * under the reply), the plan refused the model "Automático" picked (`meta.modelStandIn`), or the Antigravity CLI
+ * thought without our tools (`meta.mcpOff`, the apps say what the Gemini Enterprise admin must turn on).
  */
 const withFallback = (t: Transcript, meta: Record<string, unknown> | undefined) =>
-  t.speedFallback || t.modelStandIn
+  t.speedFallback || t.modelStandIn || t.mcpOff
     ? {
         ...(meta ?? {}),
         ...(t.speedFallback ? { speedFallback: true } : {}),
+        ...(t.mcpOff ? { mcpOff: true } : {}),
         ...(t.modelStandIn ? { modelStandIn: t.modelStandIn } : {}),
       }
     : meta;

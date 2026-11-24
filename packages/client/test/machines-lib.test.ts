@@ -13,6 +13,7 @@ import {
   browserNoAnswerMessage,
   browserOffMessage,
   CLI_HOME_ONLY,
+  choiceOptionText,
   cliCommandWayOut,
   cliInstallCommand,
   cliInstallFailure,
@@ -29,6 +30,7 @@ import {
   geminiNotShared,
   installableCli,
   installCommand,
+  isGcpProjectId,
   isHandheld,
   isPaused,
   isUrlWithoutCode,
@@ -83,6 +85,30 @@ describe("connected computers helpers (ADR 0036)", () => {
     );
     expect(commandInReason("Desktop use runs on Linux computers only")).toBeNull();
     expect(commandInReason(null)).toBeNull();
+  });
+
+  test("what a Gemini Enterprise sign-in asks, in the person's words: billing models, subscriptions by name, a project's shape", async () => {
+    const { resources } = await import("@agenteschat/i18n");
+    const i18next = (await import("i18next")).default;
+    const instance = i18next.createInstance();
+    void instance.init({ lng: "pt-BR", fallbackLng: "en", resources, initAsync: false });
+    const t = instance.t;
+    expect(choiceOptionText(t, "billing", "subscriptions")).toEqual({
+      title: "Assinatura do Gemini Enterprise",
+      description: "Usa uma licença que sua organização já tem.",
+    });
+    expect(choiceOptionText(t, "billing", "pay_as_you_go").title).toBe("Pagamento por uso");
+    expect(choiceOptionText(t, "subscription", "Gemini Enterprise Plus (Project: acme-ge, Location: global)")).toEqual({
+      title: "Gemini Enterprise Plus",
+      description: "Projeto acme-ge · global",
+    });
+    // As the computer worded it, where it doesn't fit.
+    expect(choiceOptionText(t, "subscription", "Gemini Enterprise Plus")).toEqual({ title: "Gemini Enterprise Plus" });
+    expect(choiceOptionText(t, "region", "eu")).toEqual({ title: "eu" });
+    for (const ok of ["acme-dev-123", "abcdef"]) expect(isGcpProjectId(ok)).toBe(true);
+    for (const bad of ["Acme-dev", "acme_dev", "12345678", "abcde", "acme-dev-", `a${"b".repeat(30)}`]) {
+      expect(isGcpProjectId(bad)).toBe(false);
+    }
   });
 
   test("why a computer can't yet: the runner's code in the person's words; an older runner's own English as it is", async () => {
@@ -338,6 +364,12 @@ describe("connected computers helpers (ADR 0036)", () => {
     expect(await beginLogin(begin, "claude_code", { provider: "zai", hint: "walt@acme.com" })).toEqual({
       provider: "zai",
     });
+    // Gemini Enterprise: the person answers what its CLI asks after the code.
+    expect(await beginLogin(begin, "antigravity", { provider: "enterprise" })).toEqual({
+      provider: "enterprise",
+      choose: true,
+    });
+    expect(await beginLogin(begin, "antigravity", {})).toEqual({});
     // The hint only steered Claude's page: refused, the sign-in starts without it; anything else stays an error.
     const strict = async (input: AccountLoginInput) => {
       if (input.email) throw new ApiError(400, "account.invalid_email", "Use a plain email address");

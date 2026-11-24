@@ -249,6 +249,8 @@ export type BrainEvent =
   | { type: "answer"; text: string }
   /** Fast failed (`message`: the provider's words) and this turn answered at standard speed. */
   | { type: "speed_fallback"; message: string }
+  /** The Antigravity CLI started without our server's tools (MCP servers off on a Gemini Enterprise seat). */
+  | { type: "mcp_off"; message: string }
   /**
    * A computer brain started a call of its own: shown only, its `tool_call` with `executed` follows. `input`: what it
    * was given, from a newer runner (a code session shows its line while it runs, ADR 0215).

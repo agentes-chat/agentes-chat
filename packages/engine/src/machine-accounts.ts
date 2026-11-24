@@ -2,9 +2,11 @@ import {
   ACCOUNT_KINDS,
   ACCOUNT_LOGIN_TTL_MS,
   ACCOUNTS_PROTOCOL,
+  type AccountChoice,
   type AccountKind,
   type AccountLoginFailure,
   type AccountLoginState,
+  AGY_CHOICE_PROTOCOL,
   ANTIGRAVITY_MAC_PROTOCOL,
   ANTIGRAVITY_PROTOCOL,
   type AuthMethod,
@@ -15,10 +17,14 @@ import {
   CURSOR_PROTOCOL,
   claudeLoginMethodsOf,
   GROK_PROTOCOL,
+  isAccountChoice,
+  isAccountChoiceStep,
   isAccountId,
   isAccountKind,
   isAccountLoginFailure,
+  isChoiceOption,
   isClaudeLoginMethod,
+  isGcpProjectId,
   isLoginEmail,
   MAX_MACHINE_ACCOUNTS,
   type MachineReplies,
@@ -1511,6 +1517,8 @@ export async function beginAccountLogin(
   email?: string,
   /** A coding plan's key account on Claude Code (protocol 20): the key comes next, sealed like a code. */
   provider?: string,
+  /** Gemini Enterprise: the app asks the person what the CLI asks after the code (`AGY_CHOICE_PROTOCOL`). */
+  choose?: boolean,
 ): Promise<AccountLoginView> {
   if (!isAccountKind(kind)) {
     throw new ValidationError(
@@ -1626,6 +1634,7 @@ export async function beginAccountLogin(
       ...(plan || cliKey || enterprise ? { provider } : {}),
       ...(shared ? { shared: true } : {}),
       ...(method && protocol >= CLAUDE_AUTH_PROTOCOL ? { method } : {}),
+      ...(enterprise && choose && protocol >= AGY_CHOICE_PROTOCOL ? { choose: true } : {}),
     });
   } catch (error) {
     await fail();
@@ -1700,8 +1709,29 @@ export async function sendAccountLoginCode(
   });
 }
 
+/** The person's answer to what their waiting sign-in asks (`AccountLoginStatus.choice`), relayed to the computer. */
+export async function chooseAccountLoginOption(
+  deps: MachineAccountHubDeps,
+  userId: string,
+  orgId: string,
+  machineId: string,
+  loginId: string,
+  step: unknown,
+  option: unknown,
+) {
+  if (!isAccountChoiceStep(step) || !isChoiceOption(option) || (step === "project" && !isGcpProjectId(option))) {
+    throw new ValidationError("Choose one of the options the sign-in offers", "account.invalid_choice");
+  }
+  const { machine } = await memberMachine(deps.db, userId, orgId, machineId);
+  const row = await ownSignIn(deps.db, userId, orgId, machine.id, loginId);
+  await requireLive(deps, machine, AGY_CHOICE_PROTOCOL);
+  await deps.hub.call(machine.id, { op: "account", action: "choose", loginId: row.id, step, option });
+}
+
 export interface AccountLoginStatus {
   state: AccountLoginState;
+  /** `waiting`: what the CLI waits on the person to choose (Gemini Enterprise begun with `choose`). */
+  choice?: AccountChoice;
   account?: MachineAccountView;
   /** `failed`: why, for people. */
   error?: string;
@@ -1737,7 +1767,7 @@ export async function accountLoginStatus(
     : "failed";
   const said = (v: unknown) => (typeof v === "string" ? scrubSignIns(v, "••••").text.slice(0, 300) : undefined);
   const error = said(reply.error);
-  if (state === "waiting") return { state };
+  if (state === "waiting") return isAccountChoice(reply.choice) ? { state, choice: reply.choice } : { state };
   if (state !== "done") {
     const code = isAccountLoginFailure(reply.code) ? reply.code : undefined;
     const message = code ? said(reply.message) : undefined;
@@ -1795,15 +1825,20 @@ export async function accountLoginStatus(
   if (!settled.row || !LISTED_ACCOUNT_STATUSES.includes(settled.row.status)) {
     return { state: "failed", error: "The account was removed from this computer." };
   }
-  // A new key: what the plan refused the old one (a model switched off, its region) is asked again.
-  if (settled.row.usage?.models) {
+  // A new sign-in: the old one's reading goes (another plan's windows: a personal Google account's quotas on what is
+  // now a Gemini Enterprise seat), unless the computer has read this one's already; its computer reads it again. With
+  // it, what the plan refused the old one (a model switched off, its region) is asked again.
+  const old = settled.row.usage;
+  const stale = old && !info.usage;
+  if (stale || old?.models) {
     await deps.db
       .update(schema.machineAccounts)
-      .set({ usage: sql`${schema.machineAccounts.usage} #- '{models}'` })
+      .set({ usage: stale ? null : sql`${schema.machineAccounts.usage} #- '{models}'` })
       .where(and(eq(schema.machineAccounts.orgId, orgId), eq(schema.machineAccounts.id, settled.row.id)));
   }
-  if (settled.changed || settled.row.usage?.models) await publishAccountsChanged(deps.pubsub, orgId, machine.id);
-  return { state, account: await accountViewOf(deps.db, orgId, settled.row, userId) };
+  if (settled.changed || stale || old?.models) await publishAccountsChanged(deps.pubsub, orgId, machine.id);
+  const signedIn = stale ? { ...settled.row, usage: null } : settled.row;
+  return { state, account: await accountViewOf(deps.db, orgId, signedIn, userId) };
 }
 
 /**

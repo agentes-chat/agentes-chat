@@ -6357,6 +6357,30 @@ export const ptBR = {
           send: "Enviar ao {{computer}}",
           sending: "Enviando o código ao {{computer}}…",
           sent: "Código enviado. O {{computer}} está terminando de entrar.",
+          /** Gemini Enterprise, after Google's code: what its CLI asks the person, how it's billed and which subscription. */
+          choice: {
+            billing: "Como o Gemini vai ser cobrado?",
+            billingHint:
+              "O Google pergunta isso depois do código. A assinatura usa a licença do Gemini Enterprise que sua organização já tem.",
+            subscription: "Qual assinatura do Gemini Enterprise?",
+            subscriptionHint: "As que o administrador atribuiu a esta conta Google.",
+            subscriptionWhere: "Projeto {{project}} · {{location}}",
+            project: "Qual projeto do Google Cloud?",
+            projectHint: "O pagamento por uso é cobrado neste projeto. Confira se ele é confiável.",
+            projectLabel: "ID do projeto",
+            projectShape: "O ID do projeto tem de 6 a 30 letras minúsculas, números ou hifens, e começa com uma letra.",
+            region: "Qual região?",
+            regionHint: "Onde o Google roda o Gemini para este projeto.",
+            billingModel: {
+              subscriptions: "Assinatura do Gemini Enterprise",
+              subscriptionsText: "Usa uma licença que sua organização já tem.",
+              pay_as_you_go: "Pagamento por uso",
+              pay_as_you_goText: "Cobrado pelos tokens usados, pelo Google Cloud.",
+            },
+            continue: "Continuar",
+            sending: "Enviando sua escolha ao {{computer}}…",
+            failed: "Não deu para enviar sua escolha ao {{computer}}. Tente de novo.",
+          },
           local: "Está no próprio {{computer}}? Se o navegador dele abriu sozinho, é só autorizar lá.",
           deviceCode: "Código para o ChatGPT",
           grokCode: "Código para o Grok",
@@ -18688,6 +18712,13 @@ export const ptBR = {
     speedFallback: {
       text: "O ChatGPT recusou a velocidade Rápida nesta conta ou neste modelo, então esta resposta veio no padrão.",
       action: "Abrir agente",
+    },
+    /**
+     * Under a reply Gemini gave without our tools (`meta.mcpOff`, ADR 0143): the Antigravity CLI dropped our MCP server,
+     * as with MCP servers off on a Gemini Enterprise seat. The console path is Google's, in its Portuguese words.
+     */
+    mcpOff: {
+      text: "O Gemini respondeu sem as ferramentas do agentes.chat: o Antigravity CLI não as carregou. Numa conta Gemini Enterprise, o admin precisa ativar os servidores MCP (Google Cloud console → Gemini Enterprise → Configurações → Ferramentas para desenvolvedores de IA).",
     },
     standIn: {
       needsComputer: "Respondi com {{via}}: {{plan}} precisa de um computador.",

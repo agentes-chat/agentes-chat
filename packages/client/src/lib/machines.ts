@@ -1,5 +1,6 @@
 import type { TFunction } from "i18next";
 import type {
+  AccountChoice,
   AccountLoginFailure,
   AccountLoginStatus,
   CliInstall,
@@ -17,6 +18,7 @@ import type {
 import { errorCode, errorText, sendWaits } from "./errors";
 import { formatBytes } from "./files";
 import { clockAt, firstName } from "./format";
+import { GEMINI_ENTERPRISE_PROVIDER } from "./plans";
 
 /**
  * Connected computers (ADR 0025, ADR 0036): the device code, the commands the
@@ -526,11 +528,42 @@ export function loginFailureLine(code: string | null | undefined) {
   };
 }
 
+/** A Google Cloud project id (mirror of `isGcpProjectId` in `@agenteschat/adapters`): 6 to 30 of `a-z0-9-`. */
+export const isGcpProjectId = (v: string): boolean => /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(v);
+
+/** A Gemini Enterprise subscription as the Antigravity CLI lists it: its name, then its project and location. */
+const SUBSCRIPTION_ROW = /^(.+?) \(Project: ([^,]+), Location: ([^)]+)\)$/;
+
+/**
+ * An option of what a sign-in asks (`AccountLoginStatus.choice`) in the app's words: a billing model's own, a
+ * subscription by its name with its project and location under it (as the CLI words it when it doesn't fit).
+ */
+export function choiceOptionText(
+  t: TFunction,
+  step: AccountChoice["step"],
+  option: string,
+): { title: string; description?: string } {
+  if (step === "billing") {
+    const model = option === "pay_as_you_go" ? "pay_as_you_go" : "subscriptions";
+    return {
+      title: t(`agentPage.work.brain.add.choice.billingModel.${model}`),
+      description: t(`agentPage.work.brain.add.choice.billingModel.${model}Text`),
+    };
+  }
+  const named = SUBSCRIPTION_ROW.exec(option);
+  if (!named) return { title: option };
+  return {
+    title: named[1] ?? option,
+    description: t("agentPage.work.brain.add.choice.subscriptionWhere", { project: named[2], location: named[3] }),
+  };
+}
+
 /** What starts a sign-in on the computer (`beginAccountLogin`'s options). */
 export interface AccountLoginInput {
   accountId?: string;
   email?: string;
   provider?: string;
+  choose?: boolean;
 }
 
 /**
@@ -543,7 +576,12 @@ export async function beginLogin<T>(
   kind: MachineAccountKind,
   { again, provider, hint }: { again?: string | undefined; provider?: string | undefined; hint?: string | null },
 ): Promise<T> {
-  const input: AccountLoginInput = { ...(again ? { accountId: again } : {}), ...(provider ? { provider } : {}) };
+  const input: AccountLoginInput = {
+    ...(again ? { accountId: again } : {}),
+    ...(provider ? { provider } : {}),
+    // Gemini Enterprise: the person answers what its CLI asks after the code (`AccountLoginStatus.choice`).
+    ...(kind === "antigravity" && provider === GEMINI_ENTERPRISE_PROVIDER ? { choose: true } : {}),
+  };
   if (kind !== "claude_code" || provider || !hint) return begin(input);
   try {
     return await begin({ ...input, email: hint });

@@ -1,8 +1,9 @@
-import { ACCOUNT_LOGIN_FAILURES } from "@agenteschat/adapters";
+import { ACCOUNT_CHOICE_STEPS, ACCOUNT_LOGIN_FAILURES, MAX_CHOICE_OPTION } from "@agenteschat/adapters";
 import {
   accountLoginStatus,
   beginAccountLogin,
   cancelAccountLogin,
+  chooseAccountLoginOption,
   getMachineAccounts,
   listAccountOrder,
   listAiAccounts,
@@ -56,9 +57,22 @@ const AccountLogin = z
   })
   .openapi("AccountLogin");
 
+const AccountChoice = z
+  .object({
+    step: z.enum(ACCOUNT_CHOICE_STEPS),
+    options: z.array(z.string()),
+  })
+  .openapi("AccountChoice", {
+    description:
+      "What a Gemini Enterprise sign-in waits on the person to choose once Google's code is in: `billing` (`subscriptions` or `pay_as_you_go`), then `subscription` (each option as the CLI lists it: the subscription's name, project and location); paid as you go, `project` (no options: a Google Cloud project id the person types, `account.invalid_choice` otherwise) and `region` (`global`, `us`, `eu`… as the CLI lists them).",
+  });
+
 const AccountLoginStatus = z
   .object({
     state: z.enum(["waiting", "done", "failed", "expired"]),
+    choice: AccountChoice.optional().openapi({
+      description: "`waiting`: what the computer waits on the person to choose (answer with `…/choice`).",
+    }),
     account: MachineAccount.optional().openapi({ description: "Once `done`: the account, stored." }),
     error: z.string().optional().openapi({ description: "`failed`: why, for people." }),
     code: z.enum(ACCOUNT_LOGIN_FAILURES).optional().openapi({
@@ -169,6 +183,10 @@ export function machineAccountRoutes(deps: AppDeps) {
               description:
                 "Claude Code: which account to sign in to (the CLI's login hint). Letters, digits and `._+-` only (`account.invalid_email`).",
             }),
+            choose: z.boolean().optional().openapi({
+              description:
+                "`enterprise` on `antigravity`: the app asks the person what the CLI asks after Google's code (the status's `choice`). Without it, an older app's sign-in takes Subscriptions and the one subscription listed.",
+            }),
             provider: z.string().max(20).optional().openapi({
               description:
                 "A coding plan on Claude Code (`zai`, `kimi`, `minimax`, `opencode`), `cursor` for a Cursor API key or `zen` for an OpenCode key: a key account. The key is sent next like a code, sealed to the computer. `enterprise` on `antigravity`: a Gemini Enterprise sign-in, not a key (`account.invalid_plan`; a runner without plans' keys: `account.runner_old`).",
@@ -185,7 +203,7 @@ export function machineAccountRoutes(deps: AppDeps) {
     }),
     async (c) => {
       const { orgId, machineId } = c.req.valid("param");
-      const { kind, accountId, email, provider } = c.req.valid("json");
+      const { kind, accountId, email, provider, choose } = c.req.valid("json");
       const userId = c.get("user").id;
       // Each one starts the provider's CLI on the computer, and on a shared one any member may.
       const limit = await deps.adapters.rateLimiter.consume(`account-login:${userId}:${machineId}`, {
@@ -193,7 +211,17 @@ export function machineAccountRoutes(deps: AppDeps) {
         windowMs: 15 * 60_000,
       });
       if (!limit.allowed) return apiError(c, 429, "rate_limited", "Too many sign-ins started. Try again later.");
-      const login = await beginAccountLogin(withHub(), userId, orgId, machineId, kind, accountId, email, provider);
+      const login = await beginAccountLogin(
+        withHub(),
+        userId,
+        orgId,
+        machineId,
+        kind,
+        accountId,
+        email,
+        provider,
+        choose,
+      );
       return c.json(login, 201);
     },
   );
@@ -214,6 +242,29 @@ export function machineAccountRoutes(deps: AppDeps) {
     async (c) => {
       const { orgId, machineId, loginId } = c.req.valid("param");
       await sendAccountLoginCode(withHub(), c.get("user").id, orgId, machineId, loginId, c.req.valid("json").box);
+      return c.body(null, 204);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/machines/{machineId}/account-logins/{loginId}/choice",
+      tags,
+      security,
+      summary: "Answer what the waiting sign-in asks (its status's `choice`): one of its options",
+      description:
+        "Only the person who started the sign-in. Refused once the sign-in moved on (`bad_request` from the computer) or with an option it didn't offer (`account.invalid_choice`).",
+      request: {
+        params: LoginParams,
+        body: body(z.object({ step: z.enum(ACCOUNT_CHOICE_STEPS), option: z.string().min(1).max(MAX_CHOICE_OPTION) })),
+      },
+      responses: { 204: noContent[204], ...errors, ...offline },
+    }),
+    async (c) => {
+      const { orgId, machineId, loginId } = c.req.valid("param");
+      const { step, option } = c.req.valid("json");
+      await chooseAccountLoginOption(withHub(), c.get("user").id, orgId, machineId, loginId, step, option);
       return c.body(null, 204);
     },
   );

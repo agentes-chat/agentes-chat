@@ -6717,9 +6717,21 @@ export type AccountLoginFailure =
   | "timeout"
   | "canceled";
 
+/**
+ * What a Gemini Enterprise sign-in waits on the person to choose once Google's code is in (mirror of `AccountChoice` in
+ * `@agenteschat/adapters`): `billing` (`subscriptions` or `pay_as_you_go`), then `subscription` (as the CLI lists them);
+ * paid as you go, `project` (no options: the person types a Google Cloud project id) and `region`.
+ */
+export interface AccountChoice {
+  step: "billing" | "subscription" | "project" | "region";
+  options: string[];
+}
+
 /** `GET …/account-logins/{loginId}`. */
 export interface AccountLoginStatus {
   state: "waiting" | "done" | "failed" | "expired";
+  /** `waiting`: what the computer waits on the person to choose (`chooseAccountOption`). */
+  choice?: AccountChoice;
   account?: MachineAccount;
   error?: string;
   /** `failed` or `expired` on the computer: why (an older runner sends none). */

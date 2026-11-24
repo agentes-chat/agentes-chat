@@ -33,8 +33,23 @@ function readSettings(home: string): Record<string, unknown> {
   }
 }
 
-/** The account's sign-in type as its settings say it; null when they say none. */
+/**
+ * How the CLI says it signed in, in its sign-in file: `gcp` for a Gemini Enterprise seat on a Google Cloud project
+ * (with its `project_id`, `region` and `user_tier` beside it), `consumer` for a personal account (Antigravity CLI
+ * 1.5.15, Linux, 2026-11-23). Null without that file (macOS keeps the sign-in in the account's keychain) or that field.
+ */
+export function agyAuthMethodOf(home: string): string | null {
+  const v = readSmallJson(path.join(home, AGY_SIGN_IN_FILE), MAX_SIGN_IN_CHARS);
+  return isObject(v) && typeof v.auth_method === "string" ? v.auth_method : null;
+}
+
+/**
+ * The account's sign-in type: what its sign-in says (`agyAuthMethodOf`), else what its settings say; null when neither
+ * says. Settings written before a sign-in name the one asked for, not the one Google gave.
+ */
 export function agyAuthOf(home: string): AgyAuth | null {
+  const method = agyAuthMethodOf(home);
+  if (method !== null) return method === "gcp" ? "oauth-business" : "oauth-personal";
   const auth = readSettings(home).auth;
   const type = auth && typeof auth === "object" ? (auth as Record<string, unknown>).type : undefined;
   return isAgyAuth(type) ? type : null;

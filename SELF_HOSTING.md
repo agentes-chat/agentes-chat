@@ -1372,7 +1372,10 @@ bubblewrap, `sudo apt install -y bubblewrap`, or Grok Build refuses to start and
 Antigravity CLI with
 `curl -fsSL https://antigravity.google/cli/install.sh | bash` (`agy` in `~/.local/bin`; Gemini accounts sign in on Linux
 and macOS computers, not Windows yet, each in a folder of its own (on a Mac, with a keychain of its own there), and a personal Google plan used this way is against Google's terms for
-consumer plans: Gemini Enterprise or an API key avoids that). A runner in system mode (each agent
+consumer plans: Gemini Enterprise or an API key avoids that. A Gemini Enterprise seat follows its admin's settings, in
+the Google Cloud console under Gemini Enterprise, Settings, AI developer tools: the tools on, MCP servers on (with them
+off the CLI drops agentes.chat's server without a word, and agents lose their tools) and the terminal's auto-run mode
+on Always proceed (otherwise every command waits on a review nobody gives in a turn)). A runner in system mode (each agent
 its own system user) needs the CLI where every agent's user can run it, not in one user's home: install it
 under a shared folder and link it into `/usr/local/bin`, for example
 `sudo env HOME=/opt/cursor sh -c 'curl https://cursor.com/install -fsS | bash'`, then

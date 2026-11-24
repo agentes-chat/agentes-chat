@@ -14800,6 +14800,60 @@
   "agentPage.work.brain.add.sent": {
     "value": "Code sent. Finishing the sign-in on {{computer}}."
   },
+  "agentPage.work.brain.add.choice.billing": {
+    "value": "How should Gemini be billed?"
+  },
+  "agentPage.work.brain.add.choice.billingHint": {
+    "value": "Google asks this after the code. A subscription uses the Gemini Enterprise license your organization already has."
+  },
+  "agentPage.work.brain.add.choice.subscription": {
+    "value": "Which Gemini Enterprise subscription?"
+  },
+  "agentPage.work.brain.add.choice.subscriptionHint": {
+    "value": "The ones your administrator assigned to this Google account."
+  },
+  "agentPage.work.brain.add.choice.subscriptionWhere": {
+    "value": "Project {{project}} · {{location}}"
+  },
+  "agentPage.work.brain.add.choice.project": {
+    "value": "Which Google Cloud project?"
+  },
+  "agentPage.work.brain.add.choice.projectHint": {
+    "value": "Pay as you go is billed to this project. Make sure you trust it."
+  },
+  "agentPage.work.brain.add.choice.projectLabel": {
+    "value": "Project ID"
+  },
+  "agentPage.work.brain.add.choice.projectShape": {
+    "value": "A project ID has 6 to 30 lowercase letters, digits or hyphens, and starts with a letter."
+  },
+  "agentPage.work.brain.add.choice.region": {
+    "value": "Which region?"
+  },
+  "agentPage.work.brain.add.choice.regionHint": {
+    "value": "Where Google runs Gemini for this project."
+  },
+  "agentPage.work.brain.add.choice.billingModel.subscriptions": {
+    "value": "Gemini Enterprise subscription"
+  },
+  "agentPage.work.brain.add.choice.billingModel.subscriptionsText": {
+    "value": "Uses a license your organization already has."
+  },
+  "agentPage.work.brain.add.choice.billingModel.pay_as_you_go": {
+    "value": "Pay as you go"
+  },
+  "agentPage.work.brain.add.choice.billingModel.pay_as_you_goText": {
+    "value": "Billed for the tokens you use, through Google Cloud."
+  },
+  "agentPage.work.brain.add.choice.continue": {
+    "value": "Continue"
+  },
+  "agentPage.work.brain.add.choice.sending": {
+    "value": "Sending your choice to {{computer}}…"
+  },
+  "agentPage.work.brain.add.choice.failed": {
+    "value": "Couldn't send your choice to {{computer}}. Try again."
+  },
   "agentPage.work.brain.add.local": {
     "value": "On {{computer}} itself? If its browser opened by itself, just authorize there."
   },
@@ -45039,6 +45093,9 @@
   },
   "chat.speedFallback.action": {
     "value": "Open agent"
+  },
+  "chat.mcpOff.text": {
+    "value": "Gemini answered without agentes.chat's tools: the Antigravity CLI didn't load them. On a Gemini Enterprise seat, its admin has to turn on MCP servers (Google Cloud console → Gemini Enterprise → Settings → AI developer tools)."
   },
   "chat.standIn.needsComputer": {
     "value": "Answered with {{via}}: {{plan}} needs a computer."

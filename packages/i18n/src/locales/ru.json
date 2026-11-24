@@ -6441,6 +6441,28 @@
           "send": "Отправить на {{computer}}",
           "sending": "Отправляем код на {{computer}}…",
           "sent": "Код отправлен. Завершаем вход на {{computer}}.",
+          "choice": {
+            "billing": "Как оплачивать Gemini?",
+            "billingHint": "Google спрашивает об этом после кода. Подписка использует лицензию Gemini Enterprise, которая уже есть у вашей организации.",
+            "subscription": "Какая подписка Gemini Enterprise?",
+            "subscriptionHint": "Те, что администратор назначил этому аккаунту Google.",
+            "subscriptionWhere": "Проект {{project}} · {{location}}",
+            "project": "Какой проект Google Cloud?",
+            "projectHint": "Оплата по факту списывается с этого проекта. Убедитесь, что доверяете ему.",
+            "projectLabel": "ID проекта",
+            "projectShape": "ID проекта состоит из 6–30 строчных латинских букв, цифр или дефисов и начинается с буквы.",
+            "region": "Какой регион?",
+            "regionHint": "Где Google запускает Gemini для этого проекта.",
+            "billingModel": {
+              "subscriptions": "Подписка Gemini Enterprise",
+              "subscriptionsText": "Использует лицензию, которая уже есть у вашей организации.",
+              "pay_as_you_go": "Оплата по факту",
+              "pay_as_you_goText": "Оплата за использованные токены через Google Cloud."
+            },
+            "continue": "Продолжить",
+            "sending": "Отправляем ваш выбор на {{computer}}…",
+            "failed": "Не удалось отправить ваш выбор на {{computer}}. Попробуйте ещё раз."
+          },
           "local": "Вы за самим {{computer}}? Если браузер на нём открылся сам, просто разрешите доступ там.",
           "deviceCode": "Код для ChatGPT",
           "grokCode": "Код для Grok",
@@ -19435,6 +19457,9 @@
     "speedFallback": {
       "text": "ChatGPT отклонил быструю скорость для этого аккаунта или модели, поэтому ответ пришёл на стандартной скорости.",
       "action": "Открыть агента"
+    },
+    "mcpOff": {
+      "text": "Gemini ответил без инструментов agentes.chat: Antigravity CLI их не загрузил. В лицензии Gemini Enterprise администратор должен включить серверы MCP (консоль Google Cloud → Gemini Enterprise → Настройки → Инструменты для разработчиков ИИ)."
     },
     "standIn": {
       "needsComputer": "Ответил через {{via}}: {{plan}} нужен компьютер.",

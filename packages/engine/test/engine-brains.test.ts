@@ -1315,6 +1315,45 @@ test("Fast: the turn of a conversation asks for it; refused, the reply says it c
   expect((await timeline(f)).at(-1)?.meta.speedFallback).toBeUndefined();
 });
 
+test("MCP off: a turn that thought without our tools still answers, the reply says so and the run keeps why", async () => {
+  f = await setup({});
+  await computerAgent(f, { brain: "codex" });
+  // The brain's kind doesn't matter to the engine: the Antigravity runner is the one that sends it (protocol 79).
+  const { brain } = scriptedComputerBrain((n) =>
+    n === 0
+      ? [
+          { type: "mcp_off", message: "The Antigravity CLI started without agentes.chat's tools." },
+          { type: "done", text: "Não consigo ler o documento daqui." },
+        ]
+      : [{ type: "done", text: "Agora sim." }],
+  );
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { codex: () => ({ ...brain, kind: "codex" }) },
+    machines: {
+      status: async (id) =>
+        statusOf(id, {
+          protocol: MACHINE_PROTOCOL_VERSION,
+          executors: { codex: { version: "codex-cli 0.166.0" }, detectedAt: new Date().toISOString() },
+        }),
+    },
+  });
+  await post(f, "@dev lê o documento");
+  await drainOutbox(f.db, handlers);
+  const [run] = await f.db.select().from(schema.agentRuns);
+  expect(run?.status).toBe("done");
+  const reply = (await timeline(f)).at(-1);
+  expect(reply).toMatchObject({ body: "Não consigo ler o documento daqui.", meta: { mcpOff: true } });
+  const steps = await f.db.select().from(schema.agentRunSteps);
+  expect(steps.some((s) => (s.data as { mcpOff?: string }).mcpOff?.includes("without agentes.chat"))).toBe(true);
+
+  // The next turn has our tools again (the admin turned MCP servers on): no note.
+  await post(f, "@dev e agora?");
+  await drainOutbox(f.db, handlers);
+  expect((await timeline(f)).at(-1)).toMatchObject({ body: "Agora sim." });
+  expect((await timeline(f)).at(-1)?.meta.mcpOff).toBeUndefined();
+});
+
 test("a file a computer brain's own tool made goes to the Drive and is a card on the reply", async () => {
   f = await setup({});
   const machineId = await computerAgent(f, { brain: "codex" });

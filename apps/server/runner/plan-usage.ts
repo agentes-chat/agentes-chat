@@ -521,6 +521,11 @@ const agyLimit = (line: string) => {
  * (a group starts at any short line without a % that limit lines follow, whatever its words), a reset in words.
  * Every percentage is what is left, whether or not the line says "Remaining" (Argon's "Weekly Limit\t99%"); only a
  * line that says "used" counts up.
+ *
+ * A Gemini Enterprise seat's report (CLI 1.5.15, 2026-11-23) has no plan windows: one row per model (`All Models\tGemini
+ * 4 Hydrogen (Medium)\t100%\t1970-01-01T00:00:00Z`), each at 100% with the epoch for its reset. Its credits are its
+ * Google Cloud project's, shared by its seats and shown in Google's console. That report is a reading with no windows,
+ * so it replaces one a personal sign-in left, rather than none.
  */
 export function antigravityUsage(text: string, source: PlanUsage["source"], now = Date.now()): PlanUsage | null {
   const lines = text
@@ -532,6 +537,8 @@ export function antigravityUsage(text: string, source: PlanUsage["source"], now 
   const windows: PlanWindow[] = [];
   let group = "";
   let first: string | undefined;
+  /** A row of a model's own (Gemini Enterprise's report): no plan window. */
+  let perModel = false;
   const add = (where: string, which: "five_hour" | "seven_day", used: number, at: string | undefined) => {
     first ??= where;
     windows.push({
@@ -551,6 +558,10 @@ export function antigravityUsage(text: string, source: PlanUsage["source"], now 
       const left = /^(\d{1,3}(?:\.\d+)?)\s*%$/.exec(cells[2] ?? "");
       const at = cells[3] && !Number.isNaN(Date.parse(cells[3])) ? resetIso(cells[3]) : undefined;
       if (left?.[1]) add(cells[0] ?? "", row.which, 100 - Number(left[1]), at);
+      continue;
+    }
+    if (cells.length >= 3 && /^(?:\d{1,3}(?:\.\d+)?\s*%|disabled)$/i.test(cells[2] ?? "")) {
+      perModel = true;
       continue;
     }
     // The docs' panel.
@@ -574,5 +585,6 @@ export function antigravityUsage(text: string, source: PlanUsage["source"], now 
       resetFromWords(`${line} ${shown} ${agyLimit(after) || /%/.test(after) ? "" : after}`, now),
     );
   }
+  if (!windows.length && perModel) return { windows: [], source, at: iso(now) };
   return snapshot(windows, source, now);
 }
