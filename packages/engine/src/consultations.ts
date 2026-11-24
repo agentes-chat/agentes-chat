@@ -20,7 +20,7 @@ import {
 import { agentsOnlyIn, waitSinceIn } from "./agent-work";
 import { currentHandles } from "./agents";
 import { type AiStatusDeps, agentAiState } from "./ai-status";
-import { canTalkTo, speakerFor, viaAgent } from "./audience";
+import { canTalkTo, isPrivateAgent, knowsPrivateAgent, speakerFor, viaAgent } from "./audience";
 import { runAuthorityById } from "./authority";
 import { routineBriefOfRun } from "./background";
 import { type BrakeOutcome, brakeWakes, callableAgents, LATER_JOB, notCallableText } from "./brakes";
@@ -39,6 +39,7 @@ import { notifyAgentUnreached } from "./notification-producers";
 import { runReadOutsideById } from "./outside";
 import { actingRoutineOfCall, personBehindCall, routineCreatorOf } from "./requester";
 import { isRoutineRoomKey } from "./routine-brief";
+import { personQuestionOf } from "./run-hold";
 import { stoppedToSend } from "./run-inbox";
 import { deliverNoticeToRun, resumeRunWithResult } from "./run-resume";
 import { inChannelRun } from "./run-scope";
@@ -118,20 +119,27 @@ type AiCheck = Omit<AiStatusDeps, "db">;
  */
 async function reachableAgent(ctx: ToolContext, input: unknown, ai?: AiCheck, pubsub?: PubSub) {
   const { db } = ctx;
-  const [handle = ""] = await currentHandles(db, ctx.orgId, [String(input).trim().replace(/^@/, "").toLowerCase()]);
+  const typed = String(input).trim().replace(/^@/, "").toLowerCase();
+  const [handle = ""] = await currentHandles(db, ctx.orgId, [typed]);
   const [target] = await db
     .select()
     .from(agents)
     .where(and(eq(agents.orgId, ctx.orgId), eq(agents.handle, handle), isNull(agents.archivedAt)));
   if (!target) return { refused: refuse(await noAgentText(ctx, [handle], { viaAgent: true })) };
   if (target.id === ctx.agentId) return { refused: refuse("That is you: answer it yourself.") };
-  // Who this agent may call at all (ADR 0131 §8): its own settings, before anyone's audience.
-  if (!(await callableAgents(db, ctx.orgId, ctx.agentId, [target.id])).has(target.id))
-    return { refused: refuse(notCallableText([`@${handle}`])) };
   const behind = await personBehindCall(ctx);
   const routine = behind ? null : await actingRoutineOfCall(ctx);
   const person = behind ?? routine?.creatorUserId ?? null;
-  if (!canTalkTo(target, person, viaAgent(await speakerFor(db, ctx.orgId, person)))) {
+  const speaker = viaAgent(await speakerFor(db, ctx.orgId, person));
+  const reaches = canTalkTo(target, person, speaker);
+  // A private agent out of reach stays unlisted (`findsAgent`): refused as the handle that was written, which
+  // doesn't exist (a renamed one's current handle would give it away).
+  if (!reaches && isPrivateAgent(target) && !knowsPrivateAgent(target, person, speaker))
+    return { refused: refuse(await noAgentText(ctx, [typed], { viaAgent: true })) };
+  // Who this agent may call at all (ADR 0131 §8): its own settings, before anyone's audience.
+  if (!(await callableAgents(db, ctx.orgId, ctx.agentId, [target.id])).has(target.id))
+    return { refused: refuse(notCallableText([`@${handle}`])) };
+  if (!reaches) {
     if (!routine?.creatorUserId) {
       return {
         refused: refuse(
@@ -283,10 +291,13 @@ export function createAskAgentToolSource(
         agentId: ctx.agentId,
         consultedAgentId: target.id,
       });
+      const queued = await queuedBehindPerson(db, ctx.orgId, created.targetRunId, handle);
       return {
-        content: between
-          ? `Asked @${handle}. Your answer goes back once @${handle} has answered, together with it: do your own part now, then end your turn saying what you asked.`
-          : `Asked @${handle}. Its answer will reach you as a message in this conversation, even after this turn ends. Meanwhile do what you can yourself and tell the person what you asked and what you found so far; if there's nothing else to do now, say so and end your turn.`,
+        content: `${
+          between
+            ? `Asked @${handle}. Your answer goes back once @${handle} has answered, together with it: do your own part now, then end your turn saying what you asked.`
+            : `Asked @${handle}. Its answer will reach you as a message in this conversation, even after this turn ends. Meanwhile do what you can yourself and tell the person what you asked and what you found so far; if there's nothing else to do now, say so and end your turn.`
+        }${queued}`,
         data: { consultation: { id: created.id, agentId: target.id } },
       };
     },
@@ -457,10 +468,16 @@ function createTellAgentTool(deps: { pubsub?: PubSub; ai?: AiCheck; judge?: Judg
           : handedWork
             ? `Handed to @${handle}; it's on it. The people here follow its progress, its questions and its result from @${handle} itself, under your reply: you are not woken to relay what comes of it. Tell the people in a line who has it, without promising a time or to report back, then do your own part or end your turn.`
             : `Handed to @${handle}; it's on it, and the people here can see that. What comes of it reaches you here by itself once everything you handed off this turn is back. Tell the people in a line who has it, without promising a time, then do your own part or end your turn.`;
+      const [row] = waitsForRoom
+        ? []
+        : await db
+            .select({ targetRunId: agentConsultations.targetRunId })
+            .from(agentConsultations)
+            .where(eq(agentConsultations.id, sent.consultationId));
       return {
         content: waitsForRoom
           ? `${handed} @${handle} hasn't started yet: its computer is full, so your note waits and starts once there's room. It isn't lost: don't send it again.`
-          : handed,
+          : `${handed}${await queuedBehindPerson(db, ctx.orgId, row?.targetRunId ?? null, handle)}`,
         data: {
           agentNote: { messageId: sent.message.id, agentId: target.id },
           consultation: { id: sent.consultationId, agentId: target.id },
@@ -468,6 +485,17 @@ function createTellAgentTool(deps: { pubsub?: PubSub; ai?: AiCheck; judge?: Judg
       };
     },
   };
+}
+
+/**
+ * Told once, in the tool's result, when a question or a note joined a run of its agent that waits on a person's answer
+ * (`personQuestionOf`): it waits there, read once they answer, and is kept meanwhile (`stuckOn` never fails it).
+ */
+async function queuedBehindPerson(db: Executor, orgId: string, runId: string | null, handle: string) {
+  const asked = runId ? await personQuestionOf(db, orgId, runId) : null;
+  if (!asked) return "";
+  const who = asked.name ?? "a person";
+  return ` @${handle} is waiting on ${who}'s answer to a question it asked, so this waits behind it and is read once ${asked.name ?? "they"} answer${asked.name ? "s" : ""}. It is kept until then: don't send it again or check on it.`;
 }
 
 /**

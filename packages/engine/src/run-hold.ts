@@ -3,7 +3,7 @@ import { isDeviceWaitId } from "./device-waits";
 import type { StoredTranscript } from "./run-resume";
 import type { AgentRun } from "./runs";
 
-const { agentConsultations, agentQuestions, agentRuns, browserHandoffs } = schema;
+const { agentConsultations, agentQuestions, agentRuns, browserHandoffs, users } = schema;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -74,4 +74,27 @@ export async function holdsMessages(
   ]);
   const known = new Set([...consulted.map((c) => c.waitId), ...handoffs.map((h) => h.id)]);
   return waitIds.some((id) => !known.has(id));
+}
+
+/**
+ * The open question to people a run waits on (`waiting_input` on `ask_user`), with the name of whom it was asked
+ * (null: anyone there); null when it waits on nothing or on something else.
+ */
+export async function personQuestionOf(db: Executor, orgId: string, runId: string) {
+  const [run] = await db
+    .select({ status: agentRuns.status, transcript: agentRuns.transcript })
+    .from(agentRuns)
+    .where(and(eq(agentRuns.id, runId), eq(agentRuns.orgId, orgId)));
+  if (run?.status !== "waiting_input") return null;
+  const t = run.transcript as StoredTranscript | null;
+  if (t?.waitingForBrain) return null;
+  const asked = (t?.pending?.calls ?? []).flatMap((c) => (!c.result && c.questionId ? [c.questionId] : []));
+  if (asked.length === 0) return null;
+  const [open] = await db
+    .select({ name: users.name })
+    .from(agentQuestions)
+    .leftJoin(users, eq(users.id, agentQuestions.requestedForUserId))
+    .where(and(eq(agentQuestions.orgId, orgId), inArray(agentQuestions.id, asked), eq(agentQuestions.status, "open")))
+    .limit(1);
+  return open ?? null;
 }

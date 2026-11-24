@@ -1725,6 +1725,84 @@ describe("tell_agent: what comes of work handed off comes back by itself (ADR 00
     expect(await notesBack()).toHaveLength(2);
   });
 
+  test("another agent's note to a run waiting on a person's answer waits there, kept, and its sender hears so once", async () => {
+    f = await setup({
+      askAgent: true,
+      askUser: true,
+      judge: notesMatter,
+      reply: (req) => {
+        if (!inAgentDm(req)) return answer("ok");
+        const picked = /The person answered: (\w+)/.exec(lastText(req));
+        if (picked) return answer(`Watching the ${picked[1]} metrics and the error rate.`);
+        return {
+          chunks: [],
+          toolUses: [
+            {
+              name: "ask_user",
+              input: {
+                why: "The note doesn't say which deploy finished, and the metrics to watch depend on it.",
+                question: "Which deploy?",
+                choices: ["staging", "production"],
+              },
+            },
+          ],
+        };
+      },
+    });
+    await addInfra();
+    const dev = await devRun("@dev tell infra the deploy finished");
+    await tell(dev, "@infra", "The deploy finished.");
+    await drainOutbox(f.db, f.handlers);
+    const [first] = await consultations();
+    const waiting = await runFor(first);
+    expect(waiting.status).toBe("waiting_input");
+    const [q] = await f.db.select().from(schema.agentQuestions);
+    await f.db
+      .update(schema.agentQuestions)
+      .set({ requestedForUserId: f.owner.id })
+      .where(eq(schema.agentQuestions.id, q?.id ?? ""));
+
+    expect(await tell(dev, "@infra", "Also watch the error rate.")).toMatchObject({
+      output: {
+        content: expect.stringContaining(
+          `@infra is waiting on ${f.owner.name}'s answer to a question it asked, so this waits behind it`,
+        ),
+      },
+    });
+    const asked = await f.tools?.invoke(ctxOf(dev), {
+      toolUseId: `tu_${crypto.randomUUID()}`,
+      name: "ask_agent",
+      input: { agent: "@infra", question: "Which region was it?" },
+    });
+    expect(asked).toMatchObject({
+      output: { content: expect.stringContaining(`waiting on ${f.owner.name}'s answer`) },
+    });
+    const [, note, question] = await consultations();
+    expect(note).toMatchObject({ status: "open", targetRunId: waiting.id });
+    expect(question).toMatchObject({ status: "open", targetRunId: waiting.id });
+    expect((await runFor(note)).pendingMessageIds).toEqual([note?.messageId ?? "", question?.messageId ?? ""]);
+
+    // Never failed as stuck while the person hasn't answered: only the question's own deadline moves it.
+    expect(await expireConsultations({ db: f.db }, new Date(Date.now() + 3 * CONSULTATION_HUNG_MS))).toBe(0);
+    expect((await consultations()).map((c) => c.status)).toEqual(["open", "open", "open"]);
+
+    await answerQuestion({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, q?.id ?? "", { choice: "staging" });
+    await drainOutbox(f.db, f.handlers);
+    expect((await consultations()).map((c) => [c.status, c.answer])).toEqual([
+      ["answered", "Watching the staging metrics and the error rate."],
+      ["answered", "Watching the staging metrics and the error rate."],
+      ["answered", "Watching the staging metrics and the error rate."],
+    ]);
+  });
+
+  test("a note to a run that waits on nothing says nothing of a wait", async () => {
+    f = await setup({ askAgent: true, judge: notesMatter, reply: () => answer("ok") });
+    await addInfra();
+    expect(await tell(await devRun("@dev tell infra"), "@infra", "The deploy finished.")).toMatchObject({
+      output: { content: expect.not.stringContaining("is waiting on") },
+    });
+  });
+
   test("a colleague waiting on a person holds up no other result: entering the wait lets them come back", async () => {
     const github = fakeGithub();
     f = await setup({

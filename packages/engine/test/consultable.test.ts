@@ -169,7 +169,9 @@ describe("other agents can consult it", () => {
 
   test("off: refused with the line that says why and how to open it", async () => {
     f = await setup({ askAgent: true });
-    const { lia } = await world({ consultable: false });
+    const rui = await addMember(f.db, f.org.id, "member", "rui");
+    // Answering Rui too, it isn't private (`isPrivateAgent`): Lia hears why, and how to open it.
+    const { lia } = await world({ consultable: false, audienceMode: "people", audienceUserIds: [rui.id] });
     expect(await ask(await devRunFor(lia.id, "@dev a fatura 812 foi paga?"))).toMatchObject({
       output: {
         isError: true,
@@ -186,8 +188,9 @@ describe("other agents can consult it", () => {
     const { lia, nino } = await world({ brain: "claude_code" });
     const via = viaAgent(await speakerFor(f.db, f.org.id, lia.id));
     expect(canTalkTo(nino, lia.id, via)).toBe(false);
+    // Private, so unlisted to her: refused as a handle that doesn't exist.
     expect(await ask(await devRunFor(lia.id, "@dev a fatura 812 foi paga?"))).toMatchObject({
-      output: { isError: true, content: expect.stringContaining("@nino only works with some people") },
+      output: { isError: true, content: expect.stringContaining("No agent @nino here.") },
     });
     // "Só algumas pessoas" with nobody but its owner picked (what a move onto a plan keeps): still only its owner.
     for (const audienceUserIds of [[], [f.owner.id]]) {
@@ -199,6 +202,45 @@ describe("other agents can consult it", () => {
     expect(canTalkTo({ ...shared, consultable: false }, lia.id, via)).toBe(false);
     // Never directly.
     expect(canTalkTo(shared, lia.id, await speakerFor(f.db, f.org.id, lia.id))).toBe(false);
+  });
+
+  test("a private agent out of reach is refused like a handle that doesn't exist, except to who may list it", async () => {
+    f = await setup({ askAgent: true });
+    const { lia, nino } = await world({ consultable: false });
+    const ctx = await devRunFor(lia.id, "@dev a fatura 812 foi paga?");
+    const unknown = await noAgentText(ctx, ["nino"], { viaAgent: true });
+    const told = async (c: ToolContext) => {
+      const out = [];
+      for (const name of ["ask_agent", "tell_agent"]) {
+        const input = name === "ask_agent" ? { question: "A fatura 812 foi paga?" } : { message: "Confere a 812." };
+        const result = await invoke(c, name, { agent: "@nino", ...input });
+        out.push("output" in result ? result.output : null);
+      }
+      return out;
+    };
+    expect(await told(ctx)).toEqual([
+      { isError: true, content: unknown },
+      { isError: true, content: unknown },
+    ]);
+    expect(await f.db.select().from(schema.agentConsultations)).toEqual([]);
+    // Renamed, its old handle reads as unknown too, without naming the new one.
+    await f.db
+      .update(schema.agents)
+      .set({ handle: "nina", previousHandles: ["nino"] })
+      .where(eq(schema.agents.id, nino.id));
+    expect(await told(ctx)).toEqual([
+      { isError: true, content: unknown },
+      { isError: true, content: unknown },
+    ]);
+    await f.db.update(schema.agents).set({ handle: "nino", previousHandles: [] }).where(eq(schema.agents.id, nino.id));
+    // Named under "Quem pode editar", Lia lists it: she hears why, as before.
+    await f.db
+      .update(schema.agents)
+      .set({ editorUserIds: [lia.id] })
+      .where(eq(schema.agents.id, nino.id));
+    for (const out of await told(ctx)) {
+      expect(out?.content).toContain("@nino only works with some people");
+    }
   });
 
   test("the switch: its owner or an admin turns it off and on again, on a plan too, audited", async () => {

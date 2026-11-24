@@ -411,13 +411,15 @@ export const listsAgentTo = (a: AgentAccessFields, userId: string, membership: V
  * owner, an administrator or who its "Quem pode editar" names, so a teammate's agent doesn't discover it either.
  */
 export const findsAgent = (a: AgentAccessFields, person: string | null, speaker: Speaker) =>
-  canTalkTo(a, person, speaker) &&
-  (!isPrivateAgent(a) ||
-    (!!person &&
-      (ownsAgent(a, person, speaker.roleIds) ||
-        speaker.admin === true ||
-        a.editorUserIds.includes(person) ||
-        a.editorRoleIds.some((id) => speaker.roleIds.includes(id)))));
+  canTalkTo(a, person, speaker) && (!isPrivateAgent(a) || knowsPrivateAgent(a, person, speaker));
+
+/** Who may know a private agent (`isPrivateAgent`) exists: its owner, an administrator, who "Quem pode editar" names. */
+export const knowsPrivateAgent = (a: AgentAccessFields, person: string | null, speaker: Speaker) =>
+  !!person &&
+  (ownsAgent(a, person, speaker.roleIds) ||
+    speaker.admin === true ||
+    a.editorUserIds.includes(person) ||
+    a.editorRoleIds.some((id) => speaker.roleIds.includes(id)));
 
 /** The agent, for someone who sees how it works (`seesAgentDetails`); 403 `agent.details_hidden` for anyone else. */
 export async function requireAgentDetails(db: Database, userId: string, orgId: string, agentId: string) {
