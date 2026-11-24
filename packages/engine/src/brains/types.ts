@@ -28,13 +28,12 @@ export const BRAIN_NAMES: Readonly<Record<ComputerBrainKind, string>> = {
 };
 
 /**
- * Whether a computer brain runs on a computer's system (`hello.os`), as its runner allows: Cursor, Grok Build and the
- * Antigravity CLI not on Windows yet (ADR 0143: there it keeps its sign-in in the computer user's one Credential
- * Manager). A system nobody reported passes: the runner says.
+ * Whether a computer brain runs on a computer's system (`hello.os`), as its runner allows: Cursor and Grok Build not on
+ * Windows yet; the Antigravity CLI runs on Linux, macOS, and Windows. A system nobody reported passes: the runner says.
  */
 export function brainRunsOn(kind: ComputerBrainKind, os: string | null | undefined): boolean {
   if (!os) return true;
-  if (kind === "cursor" || kind === "grok" || kind === "antigravity") return os !== "windows";
+  if (kind === "cursor" || kind === "grok") return os !== "windows";
   return true;
 }
 
