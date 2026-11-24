@@ -5485,6 +5485,12 @@ html:not([data-pointer]) .catalog-tile:focus-visible {
 .cflow__title:has(> .ac-captop) > :first-child {
   translate: none;
 }
+/* A stage's back, before the tile (ADR 0016 addendum 2026-11-23): centred on the tile (its row's middle is 26 under the
+   head's top) as it rises to the title's capitals, its plate reaching out so the arrow sits near the dialog's edge. */
+.cflow > .ac-dialog__head > .ac-dialog__lead {
+  translate: 0 calc(26px - var(--title-cap-mid) - 50%);
+  margin-inline: -8px -4px;
+}
 .cflow__steps {
   display: flex;
   gap: 6px;
@@ -5553,8 +5559,14 @@ html:not([data-pointer]) .cflow__more summary:focus-visible {
   gap: var(--form-gap);
   margin-top: var(--space-3);
 }
-/* After "Para quem" the dialog's own gap is the space: a field ends on its own line, not on running text. */
-.ac-field + .cflow__key {
+/* After "For whom" the dialog's own gap is the space: a field ends on its own line, not on running text. Under a
+   line of "Other ways to connect", its body's gap is, and under a stage's question (or the server's words) the
+   dialog's. */
+.ac-field + .cflow__key,
+.cflow__ask + .cflow__key,
+.cflow__said + .cflow__key,
+.ac-optrow__more > .cflow__key,
+.ac-setmore__body > .cflow__headers {
   margin-top: 0;
 }
 /* A server by address's request headers: what they are for, the saved names, a name and a value per row, one more. */
@@ -5599,11 +5611,236 @@ html:not([data-pointer]) .cflow__more summary:focus-visible {
   align-items: center;
   gap: var(--space-2) var(--space-3);
 }
+/* A step's address to copy (an admin's own app: the redirect URI) takes the step's width and wraps whole on a phone. */
+.agp-addacct__text > .machine-command {
+  align-self: stretch;
+}
+.agp-addacct__text > .machine-command > .machine-command__code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+/* Connecting a server in stages (ADR 0016 addendum 2026-11-23): each one asks one thing, its question in the kit's h3
+   with a line under it, and at most one field. */
+.cflow__ask {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cflow__question {
+  margin: 0;
+  font-size: var(--text-h3);
+  line-height: 24px;
+  font-weight: 650;
+  color: var(--ink);
+  text-wrap: balance;
+}
+.cflow__big {
+  display: block;
+}
+/* The redirect address while it loads: a block as tall as the address it waits for, with its corners. */
+.cflow__address-wait {
+  display: block;
+  width: 100%;
+  height: 40px;
+  border-radius: var(--control-r-md);
+}
+/* "Connect another way": a quiet link under the address, at its start. */
+.cflow__other {
+  align-self: flex-start;
+  margin-inline-start: 0;
+  font-size: 14px;
+}
+/* A scene's ground (ConnectPaste `useGround`): the dialog's surface dithered toward its ink. */
+.cflow-ground {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-under);
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+/* Our agent (the engine's) and the service's tile on that ground, a pixel trail between them lit to where it has come. */
+.cflow-scene {
+  position: relative;
+  display: block;
+  height: 148px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  isolation: isolate;
+}
+.cflow-scene__row {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+.cflow-scene__agent {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+}
+.cflow-scene__trail {
+  display: flex;
+  gap: 6px;
+}
+.cflow-scene__trail > i {
+  width: 7px;
+  height: 7px;
+  background: var(--ink);
+  opacity: 0.14;
+}
+.cflow-scene__trail > i[data-on] {
+  opacity: 0.85;
+}
+.cflow-scene__trail > i[data-next] {
+  opacity: 0.4;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .cflow-scene__trail > i[data-next] {
+    animation: cflow-trail 1.2s steps(2, jump-none) infinite;
+  }
+}
+@keyframes cflow-trail {
+  from {
+    opacity: 0.14;
+  }
+  to {
+    opacity: 0.85;
+  }
+}
+.cflow-scene .connector-icon--lg {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  font-size: 20px;
+}
+/* A sign-in whose return is pasted (ConnectPaste): the page to copy from, drawn. */
+/* The page that doesn't load, drawn as the app's scenes are: a pixel window rising from a dithered ground. One
+   surface, the band; the window is a drawing on it, with pixel corners and no shadow. */
+.cflow-paste__scene {
+  --px: 3px;
+  position: relative;
+  display: block;
+  height: 148px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  isolation: isolate;
+}
+.cflow-paste__win {
+  position: absolute;
+  left: 50%;
+  top: 26px;
+  translate: -50% 0;
+  width: min(420px, calc(100% - 40px));
+  height: 200px;
+  box-sizing: border-box;
+  background: var(--surface-raised);
+  border: var(--px) solid var(--ink);
+  border-bottom: 0;
+  clip-path: polygon(
+    var(--px) 0,
+    calc(100% - var(--px)) 0,
+    calc(100% - var(--px)) var(--px),
+    100% var(--px),
+    100% 100%,
+    0 100%,
+    0 var(--px),
+    var(--px) var(--px)
+  );
+}
+.cflow-paste__top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 12px 12px 14px;
+  border-bottom: var(--px) solid var(--ink);
+}
+.cflow-paste__dots {
+  display: flex;
+  gap: 4px;
+  flex: none;
+}
+.cflow-paste__dots > i {
+  width: 6px;
+  height: 6px;
+  background: var(--ink);
+  opacity: 0.28;
+}
+.cflow-paste__addr {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  border: var(--px) solid var(--ink);
+  font: 12.5px / 18px var(--font-mono);
+  clip-path: polygon(
+    var(--px) 0,
+    calc(100% - var(--px)) 0,
+    calc(100% - var(--px)) var(--px),
+    100% var(--px),
+    100% calc(100% - var(--px)),
+    calc(100% - var(--px)) calc(100% - var(--px)),
+    calc(100% - var(--px)) 100%,
+    var(--px) 100%,
+    var(--px) calc(100% - var(--px)),
+    0 calc(100% - var(--px)),
+    0 var(--px),
+    var(--px) var(--px)
+  );
+}
+/* Selected, as text is right before it is copied. */
+.cflow-paste__addr > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 4px;
+  background: var(--ink);
+  color: var(--surface-raised);
+}
+/* The browser's own words, with its exclamation in two pixels. */
+.cflow-paste__page {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 16px;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--ink-muted);
+}
+.cflow-paste__page > i {
+  flex: none;
+  display: grid;
+  gap: 2px;
+}
+.cflow-paste__page > i::before,
+.cflow-paste__page > i::after {
+  content: "";
+  display: block;
+  width: 4px;
+  background: var(--ink-muted);
+}
+.cflow-paste__page > i::before {
+  height: 9px;
+}
+.cflow-paste__page > i::after {
+  height: 4px;
+}
 /* The server's own words under ours: its codes are long unbroken words. */
 .cflow__said {
   display: block;
   margin-top: 4px;
   overflow-wrap: anywhere;
+}
+/* A stage's own line under its question or our address: the body's gap is its room. */
+.cflow__body > .cflow__said {
+  margin-top: 0;
 }
 .cflow__lead {
   display: flex;

@@ -207,6 +207,13 @@ export function oauthScope(meta: AuthServerMetadata, scopes: string[]): string |
 }
 
 /**
+ * The loopback redirect URI a server that refuses our callback may take instead (RFC 8252 §7.3, the address
+ * command-line clients register): nothing listens there, so the sign-in ends on a page that doesn't load, and the
+ * person pastes its address back (ADR 0016 addendum 2026-11-23).
+ */
+export const LOOPBACK_REDIRECT_URI = "http://localhost:8976/callback";
+
+/**
  * The client agentes.chat registered with this issuer for this org, or a new
  * one (Dynamic Client Registration). A registration is reused only while an
  * active connection uses it: once every connection to that server is gone,
@@ -215,13 +222,15 @@ export function oauthScope(meta: AuthServerMetadata, scopes: string[]): string |
  * doesn't offer PKCE S256 or the registration fails; `NotApproved` when it
  * has OAuth but only takes clients it approved (no registration for us, or a
  * refused one). An admin's own client (`provided_by_person`) is always the one, used or not.
+ * `loopback`: when the server refuses our callback, a second registration with this redirect URI (the caller can take
+ * the person's paste); taken, the client keeps it in `redirectUri`.
  */
 export async function ensureOAuthClient(
   deps: McpOAuthDeps,
   orgId: string,
   issuer: string,
   meta: AuthServerMetadata,
-  input: { redirectUri: string; scope: string | null },
+  input: { redirectUri: string; scope: string | null; loopback?: string },
 ): Promise<OAuthClientRow | NotApproved | null> {
   const [existing] = await deps.db
     .select()
@@ -250,7 +259,7 @@ export async function ensureOAuthClient(
       : supported.includes("client_secret_post")
         ? "client_secret_post"
         : "client_secret_basic";
-  const register = async (clientName: string) => {
+  const register = async (clientName: string, redirectUri: string) => {
     const res = await http(deps)(endpoint, {
       method: "POST",
       redirect: "error",
@@ -258,7 +267,7 @@ export async function ensureOAuthClient(
       headers: { "content-type": "application/json", accept: "application/json" },
       body: JSON.stringify({
         client_name: clientName,
-        redirect_uris: [input.redirectUri],
+        redirect_uris: [redirectUri],
         grant_types: ["authorization_code", "refresh_token"],
         response_types: ["code"],
         token_endpoint_auth_method: method,
@@ -267,12 +276,29 @@ export async function ensureOAuthClient(
     }).catch(() => null);
     return { res, refusal: res && !res.ok ? await res.text().catch(() => "") : "" };
   };
-  let { res, refusal } = await register("agentes.chat");
-  // Calendly takes only letters, digits, hyphens and spaces in a client's name. The others keep the brand's,
-  // the name people see on the consent screen.
-  if (res?.status === 400 && /\b(client_)?name\b/i.test(refusal)) ({ res, refusal } = await register("agentes chat"));
+  const attempt = async (redirectUri: string) => {
+    const first = await register("agentes.chat", redirectUri);
+    // Calendly takes only letters, digits, hyphens and spaces in a client's name. The others keep the brand's,
+    // the name people see on the consent screen.
+    if (first.res?.status === 400 && /\b(client_)?name\b/i.test(first.refusal)) {
+      return register("agentes chat", redirectUri);
+    }
+    return first;
+  };
   // RFC 7591: 400 for a redirect URI or metadata it won't take, 401 or 403 for a registration closed to us.
-  if (res && [400, 401, 403].includes(res.status)) return { notApproved: true, ...refusalDetail(refusal) };
+  const refused = (r: Response | null) => r !== null && [400, 401, 403].includes(r.status);
+  let { res, refusal } = await attempt(input.redirectUri);
+  let redirectUri: string | null = null;
+  // Servers that let in only the addresses they listed often list the loopback one: one more registration costs a
+  // request, and its answer says whether our address was what it refused. Refused again, our refusal is the one told.
+  if (refused(res) && input.loopback) {
+    const again = await attempt(input.loopback);
+    if (again.res?.ok) {
+      res = again.res;
+      redirectUri = input.loopback;
+    }
+  }
+  if (refused(res)) return { notApproved: true, ...refusalDetail(refusal) };
   if (!res?.ok) return null;
   const body = (await res.json().catch(() => ({}))) as {
     client_id?: string;
@@ -301,6 +327,7 @@ export async function ensureOAuthClient(
         kekId: sealed?.kekId ?? null,
         scope,
         tokenAuthMethod,
+        redirectUri,
       })
       .where(eq(oauthClients.id, existing.id))
       .returning();
@@ -320,6 +347,7 @@ export async function ensureOAuthClient(
       kekId: sealed?.kekId ?? null,
       scope,
       tokenAuthMethod,
+      redirectUri,
     })
     .onConflictDoNothing()
     .returning();

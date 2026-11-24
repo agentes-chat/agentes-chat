@@ -13324,7 +13324,6 @@
     "added": "{{repo}} kommt beim Speichern auf die Liste."
   },
   "connectors": {
-    "title": "Konnektoren",
     "store": {
       "featured": "Empfohlen",
       "suggested": "Vorgeschlagen",
@@ -13367,6 +13366,7 @@
       "addressPassword": "Adresse und Passwort",
       "composio": "Über Composio"
     },
+    "title": "Konnektoren",
     "add": "Konnektor hinzufügen",
     "personal": {
       "note": "Nur du öffnest diese Verbindungen. Deine Agenten verwenden sie nur, wenn du sie darum bittest.",
@@ -14950,14 +14950,13 @@
       "2": "Wer ihn nutzen darf"
     },
     "connectTitle": "{{name}} verbinden",
-    "customTitle": "Einen MCP-Server verbinden",
+    "customTitle": "Einen Server verbinden",
     "toolsTitle": "Was {{name}} macht",
     "whoTitle": "Wer {{name}} nutzen darf",
     "oauthHelp": "Du autorisierst auf der Seite von {{name}} und kommst hierher zurück.",
     "customText": "Jeder MCP-Server über seine https-Adresse. Unterstützt er OAuth, autorisierst du auf seiner Seite.",
     "urlHelp": "Die https-Adresse des Servers.",
     "name": "Name",
-    "namePlaceholder": "Z. B. Support",
     "continueIn": "Weiter bei {{name}}",
     "continueInComposio": "Weiter bei Composio",
     "github": {
@@ -14982,15 +14981,79 @@
     },
     "composioHelp": "Du meldest dich auf der Seite von Composio an, auf Englisch, und kommst hierher zurück. {{name}} zeigt die Berechtigung als „Composio“ an.",
     "or": "oder",
-    "withKey": "Mit einem API-Schlüssel verbinden",
     "needsKey": "Dieser Server unterstützt kein OAuth. Verbinde ihn mit einem API-Schlüssel.",
     "notApproved": "{{name}} lässt nur freigegebene Apps zur Anmeldung zu, und agentes.chat ist noch nicht freigegeben. Wenn du dort einen API-Schlüssel bekommst, kannst du dich damit verbinden.",
     "serverSaid": "Der Server hat geantwortet: {{detail}}",
+    "more": {
+      "title": "Andere Wege zum Verbinden",
+      "key": "ein API-Schlüssel",
+      "own": "deine eigene OAuth-App",
+      "headers": "Anfrage-Header"
+    },
+    "ways": {
+      "label": "So verbindest du",
+      "page": "Auf der Seite des Dienstes",
+      "pageText": "Du autorisierst dort und kommst hierher zurück. So funktionieren die meisten Dienste.",
+      "key": "Mit einem API-Schlüssel",
+      "keyText": "Für einen Server, der dir einen Schlüssel statt einer Anmeldung gibt.",
+      "own": "Mit deiner eigenen OAuth-App",
+      "ownText": "Für einen Server, der nur Apps hereinlässt, die er freigegeben hat."
+    },
+    "address": {
+      "question": "Wie lautet die Adresse des Servers?",
+      "lead": "Füg die MCP-Adresse ein, die dir der Dienst gegeben hat. Den Rest finden wir heraus.",
+      "continue": "Weiter",
+      "other": "Auf andere Weise verbinden",
+      "team": "Das ganze Team kann ihn nutzen.",
+      "justMe": "Nur für mich",
+      "mine": "Nur du kannst ihn nutzen.",
+      "toTeam": "Für das Team"
+    },
+    "paste": {
+      "openTitle": "Melde dich bei {{name}} an und autorisiere",
+      "openText": "Es öffnet sich in einem neuen Tab. Am Ende zeigt {{name}} eine Seite, die nicht lädt: Genau die bringst du hierher zurück.",
+      "open": "{{name}} öffnen",
+      "pasteTitle": "Füg die Adresse dieser Seite ein",
+      "pasteText": "Sie steht in der Adressleiste des Browsers und beginnt mit localhost. Sobald du sie einfügst, wird verbunden.",
+      "unreachable": "Die Website ist nicht erreichbar",
+      "paste": "Einfügen",
+      "pasteFailed": "Der Browser hat das Einfügen nicht erlaubt. Füg mit Ctrl+V ein (⌘V auf dem Mac).",
+      "wrong": "Das ist nicht die Adresse dieser Seite. Sie beginnt mit {{start}}.",
+      "refused": "{{name}} wurde nicht autorisiert. Öffne es noch einmal, um es erneut zu versuchen.",
+      "connecting": "Verbindung zu {{name}}…",
+      "notOpened": "Hat sich nichts geöffnet?",
+      "openAgain": "{{name}} erneut öffnen"
+    },
+    "refused": {
+      "ownTitle": "{{name}} lässt nur Apps herein, die es freigegeben hat",
+      "ownText": "Erstelle in den Entwicklereinstellungen von {{name}} eine App und trage dort diese Weiterleitungsadresse ein.",
+      "ownTextIn": {
+        "metaAds": "Erstelle in Meta for Developers eine App mit dem Anwendungsfall Marketing API und trage dort diese Weiterleitungsadresse ein."
+      },
+      "created": "Erledigt",
+      "idTitle": "Füg die ID der App ein",
+      "idText": "Sie steht auf der Seite der App, die du bei {{name}} erstellt hast.",
+      "keyTitle": "{{name}} verlangt einen API-Schlüssel",
+      "keyText": "Den Schlüssel findest du in den Einstellungen von {{name}}. Er wird verschlüsselt gespeichert und niemand sieht ihn wieder.",
+      "key": "Wenn du dort einen API-Schlüssel bekommst, kannst du dich damit verbinden.",
+      "askAdmin": "Ein Admin kann es mit einer eigenen App des Workspace verbinden, oder du nutzt einen API-Schlüssel, falls {{name}} dir einen gibt.",
+      "useKey": "Mit Schlüssel verbinden",
+      "useOwn": "Eigene App verwenden"
+    },
     "ownClient": {
       "title": "Eigene OAuth-App verwenden",
       "notApproved": "{{name}} lässt nur Apps herein, die es freigegeben hat, und agentes.chat gehört noch nicht dazu. Du kannst es mit deiner eigenen App dort verbinden.",
-      "askAdmin": "Ein Admin kann es mit der eigenen App des Workspace verbinden.",
       "help": "Erstelle beim Anbieter eine App, trage dort diese Weiterleitungs-URI ein und füge ihre Client-ID hier ein. Jede Anmeldung dort aus dem Workspace nutzt dann deine App.",
+      "stepCreate": "Erstelle eine App bei {{name}}",
+      "stepCreateText": "In den Entwicklereinstellungen von {{name}}.",
+      "stepRedirect": "Trage dort diese Weiterleitungsadresse ein",
+      "stepRedirectText": "Bei den OAuth-Weiterleitungs-URIs der App.",
+      "stepId": "Füg die Client-ID der App ein",
+      "more": "Client-Geheimnis und Scopes",
+      "moreText": "Nur wenn die App sie verlangt.",
+      "createIn": {
+        "metaAds": "In Meta for Developers, mit dem Anwendungsfall Marketing API."
+      },
       "guide": {
         "metaAds": "Erstelle in Meta for Developers eine App mit dem Anwendungsfall Marketing API. Füge diese Weiterleitungs-URI zu ihren gültigen OAuth-Weiterleitungs-URIs hinzu und füge dann die App-ID ein, und das App-Geheimnis, falls deine App eines verlangt."
       },
@@ -15009,7 +15072,7 @@
     },
     "headers": {
       "title": "Anfrage-Header",
-      "help": "Für einen Schlüssel, der in einen anderen Header gehört, oder ein Gateway vor dem Server. Die meisten Server brauchen keine.",
+      "help": "Für einen Schlüssel in einem anderen Header oder ein Gateway davor. Die meisten Server brauchen keine.",
       "value": "Wert",
       "nameOf": "Name von Header {{n}}",
       "valueOf": "Wert von Header {{n}}",

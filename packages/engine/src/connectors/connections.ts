@@ -32,7 +32,8 @@ import {
 } from "./personal";
 import { presetForServer } from "./presets";
 
-const { connectorConnections, oauthStates, agentScopes, agents, approvalRules, githubAppInstallations } = schema;
+const { connectorConnections, oauthStates, oauthClients, agentScopes, agents, approvalRules, githubAppInstallations } =
+  schema;
 
 export type ConnectorConnection = typeof connectorConnections.$inferSelect;
 
@@ -1008,12 +1009,13 @@ export async function noteRefusedSignIn(db: Database, connection: ConnectorConne
 /**
  * What a state stands for, without using it up: who started it, in which organization, for which connector, and where
  * it lands. Null when it is unknown, used or expired. The callback reads it to know whether the phone app started
- * the authorization (the app then finishes it with its own session).
+ * the authorization (the app then finishes it with its own session). `pasted`: it was sent to a client's loopback
+ * address, whose return the person pastes into the app (ADR 0016 addendum 2026-11-23).
  */
 export async function peekOAuthState(
   deps: Pick<ConnectorDeps, "db" | "now">,
   state: string,
-): Promise<{ orgId: string; userId: string; connector: string; returnTo: string } | null> {
+): Promise<{ orgId: string; userId: string; connector: string; returnTo: string; pasted: boolean } | null> {
   const at = deps.now?.() ?? new Date();
   const [row] = await deps.db
     .select({
@@ -1023,11 +1025,19 @@ export async function peekOAuthState(
       returnTo: oauthStates.returnTo,
       usedAt: oauthStates.usedAt,
       expiresAt: oauthStates.expiresAt,
+      redirectUri: oauthClients.redirectUri,
     })
     .from(oauthStates)
+    .leftJoin(oauthClients, eq(oauthClients.id, oauthStates.oauthClientId))
     .where(eq(oauthStates.stateHash, sha256(state)));
   if (!row || row.usedAt || row.expiresAt <= at) return null;
-  return { orgId: row.orgId, userId: row.userId, connector: row.connector, returnTo: row.returnTo };
+  return {
+    orgId: row.orgId,
+    userId: row.userId,
+    connector: row.connector,
+    returnTo: row.returnTo,
+    pasted: row.redirectUri != null,
+  };
 }
 
 /**
@@ -1348,7 +1358,8 @@ async function completeMcpOAuth(
     {
       grant_type: "authorization_code",
       code,
-      redirect_uri: oauthRedirectUri(deps.publicUrl),
+      // The one the authorization was sent back to: a pasted return's is the loopback address the client took.
+      redirect_uri: client.redirectUri ?? oauthRedirectUri(deps.publicUrl),
       code_verifier: verifier,
       ...(row.resource ? { resource: row.resource } : {}),
       ...auth.form,

@@ -14339,7 +14339,6 @@
     "added": "{{repo}} trafi na listę po zapisaniu."
   },
   "connectors": {
-    "title": "Konektory",
     "store": {
       "featured": "Wyróżnione",
       "suggested": "Sugerowane",
@@ -14390,6 +14389,7 @@
       "addressPassword": "Adres i hasło",
       "composio": "Przez Composio"
     },
+    "title": "Konektory",
     "add": "Dodaj konektor",
     "personal": {
       "note": "Te połączenia otwierasz tylko ty. Twoi agenci używają ich tylko wtedy, gdy o to poprosisz.",
@@ -16013,14 +16013,13 @@
       "2": "Kto może używać"
     },
     "connectTitle": "Połącz {{name}}",
-    "customTitle": "Połącz serwer MCP",
+    "customTitle": "Połącz serwer",
     "toolsTitle": "Co robi {{name}}",
     "whoTitle": "Kto może używać {{name}}",
     "oauthHelp": "Autoryzujesz na stronie {{name}} i wracasz tutaj.",
     "customText": "Dowolny serwer MCP po jego adresie https. Jeśli obsługuje OAuth, autoryzujesz na jego stronie.",
     "urlHelp": "Adres https serwera.",
     "name": "Nazwa",
-    "namePlaceholder": "Np. Wsparcie",
     "continueIn": "Kontynuuj w {{name}}",
     "continueInComposio": "Kontynuuj w Composio",
     "github": {
@@ -16045,15 +16044,79 @@
     },
     "composioHelp": "Logujesz się na stronie Composio, po angielsku, i wracasz tutaj. {{name}} pokaże uprawnienie jako „Composio”.",
     "or": "lub",
-    "withKey": "Połącz kluczem API",
     "needsKey": "Ten serwer nie obsługuje OAuth. Połącz go kluczem API.",
     "notApproved": "{{name}} pozwala logować się tylko zatwierdzonym aplikacjom, a agentes.chat jeszcze nie jest zatwierdzony. Jeśli dostaniesz tam klucz API, możesz połączyć się nim.",
     "serverSaid": "Odpowiedź serwera: {{detail}}",
+    "more": {
+      "title": "Inne sposoby połączenia",
+      "key": "klucz API",
+      "own": "własna aplikacja OAuth",
+      "headers": "nagłówki żądania"
+    },
+    "ways": {
+      "label": "Jak połączyć",
+      "page": "Na stronie usługi",
+      "pageText": "Autoryzujesz tam i wracasz tutaj. Tak działa większość usług.",
+      "key": "Kluczem API",
+      "keyText": "Dla serwera, który zamiast logowania daje ci klucz.",
+      "own": "Własną aplikacją OAuth",
+      "ownText": "Dla serwera, który wpuszcza tylko zatwierdzone przez siebie aplikacje."
+    },
+    "address": {
+      "question": "Jaki jest adres serwera?",
+      "lead": "Wklej adres MCP, który dała ci usługa. Resztę ustalimy sami.",
+      "continue": "Dalej",
+      "other": "Połącz inaczej",
+      "team": "Cały zespół będzie mógł z niego korzystać.",
+      "justMe": "Tylko dla mnie",
+      "mine": "Korzystać z niego będziesz tylko ty.",
+      "toTeam": "Dla zespołu"
+    },
+    "paste": {
+      "openTitle": "Zaloguj się w {{name}} i autoryzuj",
+      "openText": "Otworzy się w nowej karcie. Na końcu {{name}} pokaże stronę, która się nie ładuje: to z nią wracasz tutaj.",
+      "open": "Otwórz {{name}}",
+      "pasteTitle": "Wklej adres tej strony",
+      "pasteText": "To ten w pasku przeglądarki, zaczynający się od localhost. Po wklejeniu połączy się.",
+      "unreachable": "Nie można uzyskać dostępu do tej witryny",
+      "paste": "Wklej",
+      "pasteFailed": "Przeglądarka nie pozwoliła wkleić. Wklej za pomocą Ctrl+V (⌘V na Macu).",
+      "wrong": "To nie jest adres tej strony. Zaczyna się od {{start}}.",
+      "refused": "Usługa {{name}} nie została autoryzowana. Otwórz ją ponownie, aby spróbować jeszcze raz.",
+      "connecting": "Łączenie z {{name}}…",
+      "notOpened": "Nie otworzyło się?",
+      "openAgain": "Otwórz {{name}} ponownie"
+    },
+    "refused": {
+      "ownTitle": "{{name}} wpuszcza tylko zatwierdzone przez siebie aplikacje",
+      "ownText": "Utwórz aplikację w ustawieniach dla deweloperów usługi {{name}} i dodaj do niej ten adres przekierowania.",
+      "ownTextIn": {
+        "metaAds": "W Meta for Developers utwórz aplikację z przypadkiem użycia Marketing API i dodaj do niej ten adres przekierowania."
+      },
+      "created": "Gotowe",
+      "idTitle": "Wklej identyfikator aplikacji",
+      "idText": "Znajdziesz go na stronie aplikacji utworzonej w usłudze {{name}}.",
+      "keyTitle": "{{name}} prosi o klucz API",
+      "keyText": "Klucz znajdziesz w ustawieniach usługi {{name}}. Jest przechowywany w postaci zaszyfrowanej i nikt już go nie zobaczy.",
+      "key": "Jeśli da ci klucz API, możesz się nim połączyć.",
+      "askAdmin": "Administrator może połączyć to aplikacją własną workspace'u albo możesz użyć klucza API, jeśli {{name}} ci go da.",
+      "useKey": "Połącz kluczem",
+      "useOwn": "Użyj własnej aplikacji"
+    },
     "ownClient": {
       "title": "Użyj własnej aplikacji OAuth",
       "notApproved": "{{name}} wpuszcza tylko zatwierdzone przez siebie aplikacje, a agentes.chat jeszcze do nich nie należy. Możesz połączyć się własną aplikacją.",
-      "askAdmin": "Administrator może połączyć to aplikacją własną workspace'u.",
       "help": "Utwórz aplikację u dostawcy, zarejestruj w niej ten URI przekierowania i wklej jej identyfikator klienta. Od tej pory każde logowanie tam z workspace'u używa Twojej aplikacji.",
+      "stepCreate": "Utwórz aplikację w {{name}}",
+      "stepCreateText": "W ustawieniach dla deweloperów usługi {{name}}.",
+      "stepRedirect": "Dodaj do niej ten adres przekierowania",
+      "stepRedirectText": "Wśród URI przekierowania OAuth aplikacji.",
+      "stepId": "Wklej identyfikator klienta aplikacji",
+      "more": "Klucz tajny klienta i zakresy",
+      "moreText": "Tylko jeśli aplikacja ich wymaga.",
+      "createIn": {
+        "metaAds": "W Meta for Developers, z przypadkiem użycia Marketing API."
+      },
       "guide": {
         "metaAds": "W Meta for Developers utwórz aplikację z przypadkiem użycia Marketing API. Dodaj ten URI przekierowania do prawidłowych URI przekierowania OAuth, a następnie wklej identyfikator aplikacji oraz klucz tajny aplikacji, jeśli aplikacja go wymaga."
       },
@@ -16072,7 +16135,7 @@
     },
     "headers": {
       "title": "Nagłówki żądania",
-      "help": "Dla klucza wysyłanego w innym nagłówku albo bramy przed serwerem. Większość serwerów ich nie potrzebuje.",
+      "help": "Dla klucza w innym nagłówku albo bramy przed serwerem. Większość serwerów ich nie potrzebuje.",
       "value": "Wartość",
       "nameOf": "Nazwa nagłówka {{n}}",
       "valueOf": "Wartość nagłówka {{n}}",

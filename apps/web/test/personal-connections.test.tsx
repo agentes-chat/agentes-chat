@@ -82,6 +82,12 @@ describe("Conectores: Equipe | Pessoal", () => {
     expect(within(section()).getAllByRole("button", { name: "Ver conectores" }).length).toBeGreaterThan(0);
     await click(byAddress());
     const dialog = flow();
+    // The address alone first: theirs, as the footer says, with nothing to choose.
+    expect(dialog.querySelector(".ac-dialog__foot-note")?.textContent).toBe("Seus agentes só usam quando você pede.");
+    expect(within(dialog).queryByRole("button", { name: "Para a equipe" })).toBeNull();
+    await type(within(dialog).getByLabelText("Qual é o endereço do servidor?"), "https://mcp.example.com/mcp");
+    await click(within(dialog).getByRole("button", { name: "Conectar de outro jeito" }));
+    // The whole form: "For whom" locked to Personal.
     const forWhom = within(dialog).getByRole("radiogroup", { name: "Para quem" });
     expect(within(forWhom).getByRole("radio", { name: "Pessoal" }).getAttribute("aria-checked")).toBe("true");
     expect(within(forWhom).getByRole("radio", { name: "Equipe" }).hasAttribute("disabled")).toBe(true);
@@ -90,8 +96,7 @@ describe("Conectores: Equipe | Pessoal", () => {
     expect(forWhom.hasAttribute("aria-disabled")).toBe(false);
     expect(dialog.textContent).toContain("Só quem gerencia conectores adiciona os da equipe.");
     expect(dialog.textContent).toContain("Seus agentes só usam quando você pede.");
-    await type(within(dialog).getByLabelText("Endereço do servidor MCP"), "https://mcp.example.com/mcp");
-    await click(within(dialog).getByText("Conectar com uma chave de API"));
+    await click(within(dialog).getByRole("radio", { name: /^Com uma chave de API/ }));
     await type(within(dialog).getByLabelText("Chave de API"), "fake-key-1234");
     await click(within(dialog).getByRole("button", { name: "Conectar com a chave" }), 6);
     expect(state.calls.find((c) => c.method === "customConnectors.connect")?.args[1]).toMatchObject({
@@ -118,11 +123,18 @@ describe("Conectores: Equipe | Pessoal", () => {
         .getAttribute("aria-checked"),
     ).toBe("true");
     await click(byAddress());
+    // The address alone first: the team's, with the way to keep it for oneself in the footer.
+    const note = () => flow().querySelector(".ac-dialog__foot-note")?.textContent;
+    expect(note()).toBe("Toda a equipe vai poder usar. Só para mim");
+    await click(within(flow()).getByRole("button", { name: "Só para mim" }));
+    expect(note()).toBe("Só você vai poder usar. Para a equipe");
+    await click(within(flow()).getByRole("button", { name: "Para a equipe" }));
+    await type(within(flow()).getByLabelText("Qual é o endereço do servidor?"), "https://mcp.example.com/mcp");
+    await click(within(flow()).getByRole("button", { name: "Conectar de outro jeito" }));
     const forWhom = within(flow()).getByRole("radiogroup", { name: "Para quem" });
     expect(within(forWhom).getByRole("radio", { name: "Equipe" }).getAttribute("aria-checked")).toBe("true");
     expect(flow().textContent).toContain("Ao conectar, todos os agentes podem usar.");
-    await type(within(flow()).getByLabelText("Endereço do servidor MCP"), "https://mcp.example.com/mcp");
-    await click(within(flow()).getByText("Conectar com uma chave de API"));
+    await click(within(flow()).getByRole("radio", { name: /^Com uma chave de API/ }));
     await type(within(flow()).getByLabelText("Chave de API"), "fake-key-1234");
     await click(within(flow()).getByRole("button", { name: "Conectar com a chave" }), 6);
     const sent = state.calls.find((c) => c.method === "customConnectors.connect")?.args[1] as Record<string, unknown>;
@@ -386,6 +398,9 @@ describe("an agent's card to connect an app", () => {
     expect(within(rowOf("Conectar GitHub")).queryByRole("button", { name: "Conectar" })).toBeNull();
     expect(rowOf("Conectar GitHub").textContent).toContain("Um admin conecta");
     await click(within(rowOf("Conectar mcp.example.com")).getByRole("button", { name: "Conectar" }), 6);
+    // Theirs: the address stage says so, and the whole form has "For whom" on Personal.
+    expect(flow().querySelector(".ac-dialog__foot-note")?.textContent).toBe("Seus agentes só usam quando você pede.");
+    await click(within(flow()).getByRole("button", { name: "Conectar de outro jeito" }));
     const forWhom = within(flow()).getByRole("radiogroup", { name: "Para quem" });
     expect(within(forWhom).getByRole("radio", { name: "Pessoal" }).getAttribute("aria-checked")).toBe("true");
   });

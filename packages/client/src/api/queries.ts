@@ -3029,7 +3029,10 @@ export function useMoveConnectionToTeam(orgId: string) {
 /** Where the phone app's OAuth lands: the callback hands `state` and `code` back to the app. */
 export const APP_OAUTH_RETURN = "app:connectors";
 
-/** The phone app (see `APP_OAUTH_RETURN`) or the desktop app's window finishes an authorization it started. */
+/**
+ * The phone app (see `APP_OAUTH_RETURN`) or the desktop app's window finishes an authorization it started, or the web
+ * app one whose return the person pasted.
+ */
 export function useCompleteOAuth(orgId: string) {
   const api = useApi();
   const qc = useQueryClient();
@@ -4735,6 +4738,8 @@ export function useCustomServerAction(orgId: string) {
         returnTo: string;
         connectionId?: string;
         headers?: RequestHeader[];
+        personal?: boolean;
+        paste?: boolean;
       }) => api.customConnectors.connect(orgId, input),
       // A new server is every agent's: their access trees change too.
       onSuccess: () => Promise.all([done(), qc.invalidateQueries({ queryKey: keys.access(orgId) })]),

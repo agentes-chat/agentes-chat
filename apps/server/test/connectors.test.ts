@@ -430,6 +430,112 @@ test("one-click servers that haven't approved agentes.chat: `soon`, refused by i
   expect(asked).toContain("https://mcp.asana.com/register");
 });
 
+test("a server that refuses our callback but takes the loopback one: the web dialog pastes the sign-in's return to finish (ADR 0016)", async () => {
+  const SERVER = "https://mcp.slides.example.com/mcp";
+  const LOOPBACK = "http://localhost:8976/callback";
+  const registered: string[] = [];
+  const tokens: URLSearchParams[] = [];
+  let challenge = "";
+  const http = (async (input: string | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url === SERVER && init?.method === "POST") {
+      return new Response("", {
+        status: 401,
+        headers: {
+          "www-authenticate":
+            'Bearer resource_metadata="https://mcp.slides.example.com/.well-known/oauth-protected-resource"',
+        },
+      });
+    }
+    if (url === "https://mcp.slides.example.com/.well-known/oauth-protected-resource") {
+      return Response.json({ resource: SERVER, authorization_servers: ["https://auth.slides.example.com"] });
+    }
+    if (url === "https://auth.slides.example.com/.well-known/oauth-authorization-server") {
+      return Response.json({
+        issuer: "https://auth.slides.example.com",
+        authorization_endpoint: "https://auth.slides.example.com/authorize",
+        token_endpoint: "https://auth.slides.example.com/token",
+        registration_endpoint: "https://auth.slides.example.com/register",
+        code_challenge_methods_supported: ["S256"],
+      });
+    }
+    if (url === "https://auth.slides.example.com/register") {
+      const asked = (JSON.parse(String(init?.body)) as { redirect_uris: string[] }).redirect_uris[0] ?? "";
+      registered.push(asked);
+      return asked === LOOPBACK
+        ? Response.json({ client_id: "loopback-client" }, { status: 201 })
+        : Response.json(
+            { error: "invalid_redirect_uri", error_description: "redirect_uris.0 is not a permitted redirect domain" },
+            { status: 400 },
+          );
+    }
+    if (url === "https://auth.slides.example.com/token") {
+      const form = new URLSearchParams(String(init?.body));
+      tokens.push(form);
+      const ok =
+        createHash("sha256")
+          .update(form.get("code_verifier") ?? "")
+          .digest("base64url") === challenge;
+      return ok
+        ? Response.json({ access_token: "fake-access", expires_in: 3600 })
+        : Response.json({ error: "invalid_grant" }, { status: 400 });
+    }
+    return new Response("not found", { status: 404 });
+  }) as unknown as typeof fetch;
+  const mcpConnect: McpConnect = async () => ({
+    listTools: async () => [{ name: "list_decks", inputSchema: { type: "object" } }],
+    callTool: async () => ({ content: "ok", isError: false }),
+    close: async () => {},
+  });
+  t = await createTestServer({
+    http,
+    mcpConnect,
+    resolveHost: async () => ["93.184.216.34"],
+    env: { ALLOW_SIGNUP: "true" },
+  });
+  const owner = browser(t);
+  await signUp(owner, "owner@example.com");
+  const { orgId } = await seedOrg(owner);
+  const callback = `${t.config.PUBLIC_URL.replace(/\/$/, "")}/api/app/connectors/oauth/callback`;
+  const custom = `/api/app/organizations/${orgId}/connectors/custom`;
+
+  // Where the return can't be pasted (the phone app, an older web): refused, in its words.
+  expect(await (await owner(custom, { json: { serverUrl: SERVER } })).json()).toEqual({
+    status: "needs_key",
+    reason: "not_approved",
+    detail: "invalid_redirect_uri: redirect_uris.0 is not a permitted redirect domain",
+  });
+  const returnTo = `/org/${orgId}/settings/connectors`;
+  const started = (await (await owner(custom, { json: { serverUrl: SERVER, returnTo, paste: true } })).json()) as {
+    status: string;
+    authorizeUrl: string;
+    paste?: { redirectUri: string };
+  };
+  expect(started).toMatchObject({ status: "oauth", paste: { redirectUri: LOOPBACK } });
+  expect(registered).toEqual([callback, callback, LOOPBACK]);
+  const url = new URL(started.authorizeUrl);
+  expect(url.searchParams.get("redirect_uri")).toBe(LOOPBACK);
+  challenge = url.searchParams.get("code_challenge") ?? "";
+  const state = url.searchParams.get("state") ?? "";
+
+  // Someone else can't finish it.
+  const stranger = browser(t);
+  await signUp(stranger, "stranger@example.com");
+  const complete = `/api/app/organizations/${orgId}/connectors/oauth/complete`;
+  expect([403, 404]).toContain((await stranger(complete, { json: { state, code: "abc" } })).status);
+  // The web dialog, with its own session: the code is exchanged with the loopback address it went to.
+  const done = await owner(complete, { json: { state, code: "abc" } });
+  expect(done.status).toBe(200);
+  const finished = (await done.json()) as { connector: string; outcome: string; returnTo?: string };
+  expect(finished.connector).toStartWith("custom:");
+  // The dialog stays where it is: only a desktop authorization lands somewhere.
+  expect([finished.outcome, finished.returnTo]).toEqual(["connected", undefined]);
+  expect(tokens.at(-1)?.get("redirect_uri")).toBe(LOOPBACK);
+  expect(tokens.at(-1)?.get("client_id")).toBe("loopback-client");
+  // Once only.
+  expect((await owner(complete, { json: { state, code: "abc" } })).status).toBe(404);
+});
+
 test("Meta Ads without this server's Meta app: one click, refused registration, then the admin's own app (its secret never returned)", async () => {
   const ADS = "https://mcp.facebook.com/ads";
   const http = (async (input: string | URL, init?: RequestInit) => {

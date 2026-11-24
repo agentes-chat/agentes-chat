@@ -48,6 +48,7 @@ import {
   Locked,
   Segmented,
   Select,
+  SettingsMore,
   useUnsavedInDialog,
 } from "@agenteschat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -423,43 +424,36 @@ export function ImapStep({
             <span>{t("mail.dedicated")}</span>
           </p>
           {choice === "other" && (
-            <details
-              className="cflow__more"
-              open={advanced || custom}
-              onToggle={(e) => setAdvanced((e.currentTarget as HTMLDetailsElement).open)}
-            >
-              <summary>{t("mail.advanced")}</summary>
-              <div className="cflow__key">
-                <Field
-                  label={t("mail.username")}
-                  id="mail-username"
-                  hint={{ name: t("common.about", { label: t("mail.username") }), text: t("mail.usernameHelp") }}
-                >
-                  <Input autoComplete="off" value={username} onChange={(e) => setUsername(e.target.value)} />
-                </Field>
-                {custom && (
-                  <>
-                    <div className="mail-host">
-                      <Field label={t("mail.imapHost")} id="mail-imap-host">
-                        <Input value={imapHost} onChange={(e) => setImapHost(e.target.value)} />
-                      </Field>
-                      <Field label={t("mail.port")} id="mail-imap-port">
-                        <Input inputMode="numeric" value={imapPort} onChange={(e) => setImapPort(e.target.value)} />
-                      </Field>
-                    </div>
-                    <div className="mail-host">
-                      <Field label={t("mail.smtpHost")} id="mail-smtp-host">
-                        <Input value={smtpHost} onChange={(e) => setSmtpHost(e.target.value)} />
-                      </Field>
-                      <Field label={t("mail.port")} id="mail-smtp-port">
-                        <Input inputMode="numeric" value={smtpPort} onChange={(e) => setSmtpPort(e.target.value)} />
-                      </Field>
-                    </div>
-                    {touched && hostsMissing && <Alert>{t("mail.hostsRequired")}</Alert>}
-                  </>
-                )}
-              </div>
-            </details>
+            <SettingsMore title={t("mail.advanced")} open={advanced || custom} onOpenChange={setAdvanced}>
+              <Field
+                label={t("mail.username")}
+                id="mail-username"
+                hint={{ name: t("common.about", { label: t("mail.username") }), text: t("mail.usernameHelp") }}
+              >
+                <Input autoComplete="off" value={username} onChange={(e) => setUsername(e.target.value)} />
+              </Field>
+              {custom && (
+                <>
+                  <div className="mail-host">
+                    <Field label={t("mail.imapHost")} id="mail-imap-host">
+                      <Input value={imapHost} onChange={(e) => setImapHost(e.target.value)} />
+                    </Field>
+                    <Field label={t("mail.port")} id="mail-imap-port">
+                      <Input inputMode="numeric" value={imapPort} onChange={(e) => setImapPort(e.target.value)} />
+                    </Field>
+                  </div>
+                  <div className="mail-host">
+                    <Field label={t("mail.smtpHost")} id="mail-smtp-host">
+                      <Input value={smtpHost} onChange={(e) => setSmtpHost(e.target.value)} />
+                    </Field>
+                    <Field label={t("mail.port")} id="mail-smtp-port">
+                      <Input inputMode="numeric" value={smtpPort} onChange={(e) => setSmtpPort(e.target.value)} />
+                    </Field>
+                  </div>
+                  {touched && hostsMissing && <Alert>{t("mail.hostsRequired")}</Alert>}
+                </>
+              )}
+            </SettingsMore>
           )}
           <MailForWhom />
           {error && (

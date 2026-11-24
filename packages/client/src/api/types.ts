@@ -3266,7 +3266,12 @@ export type ConnectOutcome = "connected" | "reconnected" | "same_account";
 export type CustomConnectStart =
   /** `outcome`: absent from an older server. */
   | { status: "connected"; server: CustomServer; outcome?: ConnectOutcome }
-  | { status: "oauth"; authorizeUrl: string }
+  /**
+   * `paste` (asked for with `paste: true`): the server took only this loopback address. The sign-in ends on a page
+   * there that doesn't load; the person pastes its address, and the app finishes with its `state` and `code`
+   * (`connectors.completeOAuth`).
+   */
+  | { status: "oauth"; authorizeUrl: string; paste?: { redirectUri: string } }
   /**
    * `not_approved`: it has OAuth but only lets in apps it approved, and agentes.chat isn't one yet. `detail`: how it
    * refused our registration, in its own words (`error: error_description`, short).

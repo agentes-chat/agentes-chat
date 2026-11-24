@@ -13,6 +13,7 @@ import { createI18n } from "@/i18n";
 import { setNavigateAway } from "@/lib/navigate";
 import {
   backToList,
+  connectAddress,
   connectedNames,
   connectionLine,
   openConnection,
@@ -30,6 +31,15 @@ afterEach(() => cleanup());
 
 const click = (el: Element) => act(async () => fireEvent.click(el));
 const type = (el: Element, value: string) => act(async () => fireEvent.change(el, { target: { value } }));
+/** A server by address that signs in with OAuth here; named after its address, without the `mcp.` in front. */
+const SUPORTE = "https://mcp.suporte.example.com/oauth";
+/** "With an API key" under "Other ways to connect", opened first when it is folded. */
+const keyWay = async () => {
+  const dialog = screen().getAllByRole("dialog").at(-1) as HTMLElement;
+  const others = within(dialog).getByRole("button", { name: /^Outras formas de conectar/ });
+  if (others.getAttribute("aria-expanded") !== "true") await click(others);
+  await click(within(dialog).getByRole("radio", { name: /^Com uma chave de API/ }));
+};
 /** Settings › Connectors, then "Browse connectors": the store page. */
 const open = async (state = seedState({ connections: [] }), api = createFakeApi(state)) => {
   await renderApp(`/org/${ORG_ID}/settings/connectors`, { api });
@@ -234,8 +244,8 @@ describe("the connectors store: one page", () => {
     // Its button opens the connect dialog by address, right there.
     await click(within(box).getByRole("button", { name: "Conectar pelo endereço" }));
     await settle(2);
-    expect(screen().getByRole("dialog", { name: "Conectar servidor MCP" })).toBeTruthy();
-    await pressEsc(screen().getByRole("dialog", { name: "Conectar servidor MCP" }));
+    expect(screen().getByRole("dialog", { name: "Conectar um servidor" })).toBeTruthy();
+    await pressEsc(screen().getByRole("dialog", { name: "Conectar um servidor" }));
     await settle(2);
     // Clearing the search brings the store back, empty state gone.
     await searchStore(store, "");
@@ -421,8 +431,8 @@ describe("the connectors store: one page", () => {
     // By address: the note follows the address typed (a server already connected takes another account).
     await searchStore(storeRoot(), "");
     await byAddress();
-    expect(flow().textContent).toContain("Ao conectar, todos os agentes podem usar. Dá para ajustar depois.");
-    await type(within(flow()).getByLabelText("Endereço do servidor MCP"), "https://oauth.zapier.example/mcp");
+    expect(flow().textContent).toContain("Toda a equipe vai poder usar.");
+    await type(within(flow()).getByLabelText("Qual é o endereço do servidor?"), "https://oauth.zapier.example/mcp");
     // No account here was named by its provider, so step 1 can't tell accounts apart and asks for one not yet here.
     expect(flow().textContent).toContain(
       "Entre numa conta que ainda não está conectada, a gente não consegue conferir.",
@@ -466,8 +476,8 @@ describe("the connect flow: conectar → conectado; Ajustar → o que faz → qu
       label: "Linear",
       returnTo: `/org/${ORG_ID}/settings/connectors`,
     });
-    // This server wants a key: the key form opens.
-    expect(flow().textContent).toContain("Este servidor não aceita OAuth. Conecte com uma chave de API.");
+    // This server wants a key: the key's stage.
+    expect(within(flow()).getByText("O Linear pede uma chave de API")).toBeTruthy();
     await click(within(flow()).getByRole("button", { name: "Conectar com a chave" }));
     expect(flow().textContent).toContain("Cole a chave de API (pelo menos 8 caracteres).");
     await type(within(flow()).getByLabelText("Chave de API"), "lin_api_123456");
@@ -574,19 +584,17 @@ describe("the connect flow: conectar → conectado; Ajustar → o que faz → qu
     const flow = screen().getByRole("dialog", { name: "Conectar Linear" });
     await click(within(flow).getByRole("button", { name: "Continuar no Linear" }));
     await settle(4);
-    // An admin: their own app is the way in, opened with the refusal on top.
-    expect(flow.textContent).toContain(
-      "Linear só deixa entrar apps que aprovou, e o agentes.chat ainda não foi aprovado. Dá para conectar com um app seu lá.",
-    );
+    // An admin: their own app is the way in, its stage saying why.
+    expect(within(flow).getByText("O Linear só aceita apps que ele aprovou")).toBeTruthy();
     // Under our words, the server's: which one refused and why.
     expect(flow.querySelector(".cflow__said")?.textContent).toBe(
       "O servidor respondeu: invalid_redirect_uri: redirect_uri not allowed",
     );
-    expect(flow.textContent).not.toContain("não aceita OAuth");
-    const [keyMore, ownMore] = [...flow.querySelectorAll("details.cflow__more")];
-    expect(ownMore?.hasAttribute("open")).toBe(true);
-    expect(keyMore?.hasAttribute("open")).toBe(false);
-    await click(keyMore?.querySelector("summary") as Element);
+    expect(flow.textContent).not.toContain("pede uma chave de API");
+    // The key is the other way in, from the footer.
+    await click(within(flow).getByRole("button", { name: "Conectar com a chave" }));
+    expect(flow.textContent).toContain("Se ele te der uma chave de API, dá para conectar com ela.");
+    expect(within(flow).getByRole("button", { name: "Usar um app seu" })).toBeTruthy();
     await type(within(flow).getByLabelText("Chave de API"), "lin_api_123456");
     await click(within(flow).getByRole("button", { name: "Conectar com a chave" }));
     await settle(4);
@@ -616,13 +624,18 @@ describe("the connect flow: conectar → conectado; Ajustar → o que faz → qu
     const flow = screen().getByRole("dialog", { name: "Conectar Linear" });
     await click(within(flow).getByRole("button", { name: "Continuar no Linear" }));
     await settle(6);
+    // First our address, to register in an app of the workspace's there; then its ID.
+    expect(within(flow).getByText("O Linear só aceita apps que ele aprovou")).toBeTruthy();
     expect(flow.querySelector(".machine-command__code")?.textContent).toBe(
       "https://chat.example.com/api/app/connectors/oauth/callback",
     );
+    await click(within(flow).getByRole("button", { name: "Já criei" }));
+    await settle(2);
     await click(within(flow).getByRole("button", { name: "Salvar e continuar" }));
     await settle(2);
     expect(flow.textContent).toContain("Cole o ID do cliente do app.");
-    await type(within(flow).getByLabelText("ID do cliente"), " 1234567890 ");
+    await type(within(flow).getByLabelText("Cole o ID do app"), " 1234567890 ");
+    await click(within(flow).getByRole("button", { name: /^Chave secreta e escopos/ }));
     await type(within(flow).getByLabelText("Chave secreta do cliente"), "fake-app-secret");
     await click(within(flow).getByRole("button", { name: "Salvar e continuar" }));
     await settle(6);
@@ -654,7 +667,7 @@ describe("the connect flow: conectar → conectado; Ajustar → o que faz → qu
     await pick(store, "Intercom");
     const flow = screen().getByRole("dialog", { name: "Conectar Intercom" });
     expect(within(flow).getByRole("button", { name: "Continuar no Intercom" })).toBeTruthy();
-    expect(flow.textContent).not.toContain("Conectar com uma chave de API");
+    expect(flow.textContent).not.toMatch(/chave de API/i);
     expect(within(flow).queryByLabelText("Chave de API")).toBeNull();
   });
 
@@ -699,14 +712,11 @@ describe("the connect flow: conectar → conectado; Ajustar → o que faz → qu
     const { state } = await open(seedState());
     await byAddress();
     const flow = () => screen().getAllByRole("dialog").at(-1) as HTMLElement;
-    await type(within(flow()).getByLabelText("Endereço do servidor MCP"), "https://oauth.suporte.example.com");
-    await type(within(flow()).getByLabelText("Nome"), "Suporte");
-    await click(within(flow()).getByRole("button", { name: "Conectar" }));
-    await settle(4);
+    await connectAddress(flow(), SUPORTE);
     await adjust();
     await click(within(flow()).getByRole("button", { name: "Continuar" }));
     await settle(4);
-    expect(screen().getByRole("dialog", { name: "Quem pode usar Suporte" })).toBeTruthy();
+    expect(screen().getByRole("dialog", { name: "Quem pode usar suporte.example.com" })).toBeTruthy();
     expect(levels(flow(), ["Nível de todos os agentes", "Nível de Ada", "Nível de Atlas"])).toEqual([
       "Ler e escrever",
       "Ler e escrever",
@@ -717,7 +727,7 @@ describe("the connect flow: conectar → conectado; Ajustar → o que faz → qu
     await click(within(flow()).getByRole("button", { name: "Liberar" }));
     await settle(8);
     expect(state.calls.filter((c) => c.method === "access.set")).toEqual([]);
-    expect(document.body.textContent).toContain("Suporte: 2 agentes podem usar.");
+    expect(document.body.textContent).toContain("suporte.example.com: 2 agentes podem usar.");
   });
 
   test("ours with an OAuth app: 'Continuar no GitHub' leaves for GitHub and comes back to Conectores", async () => {
@@ -727,7 +737,9 @@ describe("the connect flow: conectar → conectado; Ajustar → o que faz → qu
     await pick(store, "GitHub");
     const flow = screen().getByRole("dialog", { name: "Conectar GitHub" });
     // A key is the other way in, folded away.
-    expect(within(flow).getByText("Conectar com uma chave de API")).toBeTruthy();
+    expect(within(flow).getByRole("button", { name: /^Outras formas de conectar/ }).textContent).toContain(
+      "Chave de API.",
+    );
     await click(within(flow).getByRole("button", { name: "Continuar no GitHub" }));
     await settle(4);
     expect(state.calls.find((c) => c.method === "connectors.startOAuth")?.args).toEqual([
@@ -742,7 +754,7 @@ describe("the connect flow: conectar → conectado; Ajustar → o que faz → qu
     const { state, store } = await open();
     await pick(store, "GitHub");
     const flow = () => screen().getAllByRole("dialog").at(-1) as HTMLElement;
-    await click(within(flow()).getByText("Conectar com uma chave de API"));
+    await keyWay();
     await type(within(flow()).getByLabelText("Chave de API"), "ghp_abcdef123456");
     await click(within(flow()).getByRole("button", { name: "Conectar com a chave" }));
     await settle(4);
@@ -790,7 +802,7 @@ describe("the connect flow: conectar → conectado; Ajustar → o que faz → qu
     await pick(await openStore(), "GitHub");
     const flow = () => screen().getAllByRole("dialog").at(-1) as HTMLElement;
     const note = () => flow().querySelector(".ac-dialog__foot-note")?.textContent;
-    await click(within(flow()).getByText("Conectar com uma chave de API"));
+    await keyWay();
     await type(within(flow()).getByLabelText("Chave de API"), "ghp_abcdef123456");
     const shown = note();
     expect(shown).toContain("Ao conectar, todos os agentes podem usar.");
@@ -899,21 +911,18 @@ describe("the connect flow: conectar → conectado; Ajustar → o que faz → qu
     const { state } = await open();
     await byAddress();
     const flow = () => screen().getAllByRole("dialog").at(-1) as HTMLElement;
-    expect(screen().getByRole("dialog", { name: "Conectar servidor MCP" })).toBeTruthy();
-    await type(within(flow()).getByLabelText("Endereço do servidor MCP"), "http://inseguro");
-    await click(within(flow()).getByRole("button", { name: "Conectar" }));
+    expect(screen().getByRole("dialog", { name: "Conectar um servidor" })).toBeTruthy();
+    await connectAddress(flow(), "http://inseguro");
     expect(flow().textContent).toContain("Use um endereço que comece com https://.");
-    await type(within(flow()).getByLabelText("Endereço do servidor MCP"), "https://oauth.suporte.example.com");
-    await type(within(flow()).getByLabelText("Nome"), "Suporte");
-    await click(within(flow()).getByRole("button", { name: "Conectar" }));
-    await settle(4);
+    await connectAddress(flow(), SUPORTE);
+    // Named after its address, without the `mcp.` in front.
     expect(state.calls.find((c) => c.method === "customConnectors.connect")?.args[1]).toMatchObject({
-      serverUrl: "https://oauth.suporte.example.com",
-      label: "Suporte",
+      serverUrl: SUPORTE,
+      label: "suporte.example.com",
     });
-    expect(screen().getByRole("dialog", { name: "Suporte conectado" })).toBe(flow());
+    expect(screen().getByRole("dialog", { name: "suporte.example.com conectado" })).toBe(flow());
     await adjust();
-    expect(screen().getByRole("dialog", { name: REVIEW }).textContent).toContain("ferramentas do Suporte");
+    expect(screen().getByRole("dialog", { name: REVIEW }).textContent).toContain("ferramentas do suporte.example.com");
     cleanup();
 
     const api = createFakeApi(seedState());
@@ -989,16 +998,14 @@ describe("the connect flow: conectar → conectado; Ajustar → o que faz → qu
       "Tem um serviço que não está na loja? Conectar pelo endereço",
     );
     await byAddress();
-    const flow = screen().getByRole("dialog", { name: "Conectar servidor MCP" });
-    await type(within(flow).getByLabelText("Endereço do servidor MCP"), "https://oauth.suporte.example.com");
-    await type(within(flow).getByLabelText("Nome"), "Suporte");
-    await click(within(flow).getByRole("button", { name: "Conectar" }));
-    await settle(4);
+    await connectAddress(screen().getByRole("dialog", { name: "Conectar um servidor" }), SUPORTE);
     await click(
-      within(screen().getByRole("dialog", { name: "Suporte conectado" })).getByRole("button", { name: "Fechar" }),
+      within(screen().getByRole("dialog", { name: "suporte.example.com conectado" })).getByRole("button", {
+        name: "Fechar",
+      }),
     );
     await settle(4);
-    expect([...connectedNames()].sort()).toEqual(["GitHub", "Suporte"]);
+    expect([...connectedNames()].sort()).toEqual(["GitHub", "suporte.example.com"]);
   });
 });
 
@@ -1079,12 +1086,12 @@ describe("several accounts of one service", () => {
     await twoAccounts(true);
     await click(within(await openConnection("Zapier 2")).getByRole("button", { name: "Reconectar Zapier 2" }));
     expect(within(flow()).getByRole("button", { name: "Continuar no Zapier" })).toBeTruthy();
-    expect(flow().textContent).not.toContain("Conectar com uma chave de API");
+    expect(flow().textContent).not.toMatch(/chave de API/i);
     await pressEsc(flow());
     await settle(2);
     await backToList();
     await click(within(await rowMenu("Zapier")).getByRole("menuitem", { name: "Adicionar outra conta" }));
-    expect(flow().textContent).not.toContain("Conectar com uma chave de API");
+    expect(flow().textContent).not.toMatch(/chave de API/i);
     expect(within(flow()).queryByLabelText("Chave de API")).toBeNull();
   });
 
@@ -1207,7 +1214,7 @@ describe("the confirmation that ends connecting", () => {
   test("ours: everyone can use it and how many actions ask; Pronto closes and nothing is saved", async () => {
     const { state, store } = await open();
     await pick(store, "GitHub");
-    await click(within(flow()).getByText("Conectar com uma chave de API"));
+    await keyWay();
     await type(within(flow()).getByLabelText("Chave de API"), "ghp_abcdef123456");
     await click(within(flow()).getByRole("button", { name: "Conectar com a chave" }));
     await settle(4);
@@ -1236,10 +1243,7 @@ describe("the confirmation that ends connecting", () => {
   test("a server whose tools have no level yet: it says so, and Continuar saves the suggested ones", async () => {
     const { state } = await open();
     await byAddress();
-    await type(within(flow()).getByLabelText("Endereço do servidor MCP"), "https://oauth.suporte.example.com");
-    await type(within(flow()).getByLabelText("Nome"), "Suporte");
-    await click(within(flow()).getByRole("button", { name: "Conectar" }));
-    await settle(4);
+    await connectAddress(flow(), SUPORTE);
     expect(sentence()).toBe(`${WAITING} 1 ação pede aprovação no chat.`);
     expect(buttons()).toEqual(["Ajustar", "Continuar"]);
     await click(within(flow()).getByRole("button", { name: "Continuar" }));
@@ -1283,14 +1287,12 @@ describe("the confirmation that ends connecting", () => {
   });
 
   test("a name longer than a connection can take: whole in the title, the two buttons still there", async () => {
-    const long = "Atendimento e Suporte ao Cliente da Loja de Departamentos Internacional Example (Produção 2)";
+    // Named after its address: a host of long words.
+    const long = "atendimento-e-suporte-ao-cliente.loja-de-departamentos-internacional.oauth.example.com";
     expect(long.length).toBeGreaterThan(80);
     await open();
     await byAddress();
-    await type(within(flow()).getByLabelText("Endereço do servidor MCP"), "https://oauth.suporte.example.com");
-    await type(within(flow()).getByLabelText("Nome"), long);
-    await click(within(flow()).getByRole("button", { name: "Conectar" }));
-    await settle(4);
+    await connectAddress(flow(), `https://${long}/mcp`);
     expect(screen().getByRole("dialog", { name: `${long} conectado` })).toBe(flow());
     expect(buttons()).toEqual(["Ajustar", "Continuar"]);
   });

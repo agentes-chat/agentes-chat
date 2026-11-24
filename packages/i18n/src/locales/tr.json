@@ -13253,7 +13253,6 @@
     "added": "{{repo}} kaydettiğinizde listeye eklenir."
   },
   "connectors": {
-    "title": "Bağlayıcılar",
     "store": {
       "featured": "Öne çıkanlar",
       "suggested": "Önerilen",
@@ -13296,6 +13295,7 @@
       "addressPassword": "Adres ve şifre",
       "composio": "Composio üzerinden"
     },
+    "title": "Bağlayıcılar",
     "add": "Bağlayıcı ekle",
     "personal": {
       "note": "Bu bağlantıları yalnızca sen açarsın. Ajanların bunları yalnızca sen istediğinde kullanır.",
@@ -14879,14 +14879,13 @@
       "2": "Kim kullanabilir"
     },
     "connectTitle": "{{name}} bağla",
-    "customTitle": "Bir MCP sunucusu bağlayın",
+    "customTitle": "Bir sunucu bağlayın",
     "toolsTitle": "{{name}} ne yapar",
     "whoTitle": "{{name}} kimler kullanabilir",
     "oauthHelp": "{{name}} sayfasında yetki verip buraya dönersiniz.",
     "customText": "https adresiyle herhangi bir MCP sunucusu. OAuth destekliyorsa onun sayfasında yetki verirsiniz.",
     "urlHelp": "Sunucunun https adresi.",
     "name": "Ad",
-    "namePlaceholder": "Örn. Destek",
     "continueIn": "{{name}} ile devam et",
     "continueInComposio": "Composio ile devam et",
     "github": {
@@ -14911,15 +14910,79 @@
     },
     "composioHelp": "Composio sayfasında İngilizce olarak giriş yapıp buraya dönersiniz. {{name}} izni “Composio” olarak gösterir.",
     "or": "veya",
-    "withKey": "API anahtarıyla bağla",
     "needsKey": "Bu sunucu OAuth desteklemiyor. API anahtarıyla bağlayın.",
     "notApproved": "{{name}} yalnızca onayladığı uygulamaların giriş yapmasına izin veriyor ve agentes.chat henüz onaylanmadı. Size bir API anahtarı veriyorsa onunla bağlanabilirsiniz.",
     "serverSaid": "Sunucunun yanıtı: {{detail}}",
+    "more": {
+      "title": "Diğer bağlanma yolları",
+      "key": "bir API anahtarı",
+      "own": "kendi OAuth uygulamanız",
+      "headers": "istek başlıkları"
+    },
+    "ways": {
+      "label": "Nasıl bağlanır",
+      "page": "Hizmetin sayfasında",
+      "pageText": "Orada yetki verip buraya dönersiniz. Çoğu hizmet böyle çalışır.",
+      "key": "API anahtarıyla",
+      "keyText": "Giriş yerine size anahtar veren bir sunucu için.",
+      "own": "Kendi OAuth uygulamanızla",
+      "ownText": "Yalnızca onayladığı uygulamaları kabul eden bir sunucu için."
+    },
+    "address": {
+      "question": "Sunucunun adresi ne?",
+      "lead": "Hizmetin size verdiği MCP adresini yapıştırın. Gerisini biz çözeriz.",
+      "continue": "Devam",
+      "other": "Başka bir yolla bağlan",
+      "team": "Tüm ekip kullanabilecek.",
+      "justMe": "Yalnızca ben",
+      "mine": "Yalnızca siz kullanabileceksiniz.",
+      "toTeam": "Ekip için"
+    },
+    "paste": {
+      "openTitle": "{{name}} sayfasında giriş yapın ve yetki verin",
+      "openText": "Yeni bir sekmede açılır. Sonunda {{name}} yüklenmeyen bir sayfa gösterir: buraya getireceğiniz sayfa odur.",
+      "open": "{{name}} sayfasını aç",
+      "pasteTitle": "O sayfanın adresini yapıştırın",
+      "pasteText": "Tarayıcının adres çubuğundaki, localhost ile başlayan adres. Yapıştırınca bağlanır.",
+      "unreachable": "Bu siteye ulaşılamıyor",
+      "paste": "Yapıştır",
+      "pasteFailed": "Tarayıcı yapıştırmamıza izin vermedi. Ctrl+V (Mac'te ⌘V) ile yapıştırın.",
+      "wrong": "Bu, o sayfanın adresi değil. O adres {{start}} ile başlar.",
+      "refused": "{{name}} için yetki verilmedi. Bir daha denemek için yeniden açın.",
+      "connecting": "{{name}} bağlanıyor…",
+      "notOpened": "Açılmadı mı?",
+      "openAgain": "{{name}} sayfasını yeniden aç"
+    },
+    "refused": {
+      "ownTitle": "{{name}} yalnızca onayladığı uygulamaları kabul ediyor",
+      "ownText": "{{name}} geliştirici ayarlarında bir uygulama oluşturun ve bu yönlendirme adresini ona ekleyin.",
+      "ownTextIn": {
+        "metaAds": "Meta for Developers'da Marketing API kullanım senaryosuyla bir uygulama oluşturun ve bu yönlendirme adresini ona ekleyin."
+      },
+      "created": "Oluşturdum",
+      "idTitle": "Uygulama kimliğini yapıştırın",
+      "idText": "{{name}} üzerinde oluşturduğunuz uygulamanın sayfasında yer alır.",
+      "keyTitle": "{{name}} bir API anahtarı istiyor",
+      "keyText": "Anahtarı {{name}} ayarlarında bulabilirsiniz. Şifreli saklanır ve kimse onu bir daha göremez.",
+      "key": "Size bir API anahtarı veriyorsa onunla bağlanabilirsiniz.",
+      "askAdmin": "Bir yönetici, çalışma alanının kendi uygulamasıyla bağlayabilir ya da {{name}} size bir API anahtarı veriyorsa onu kullanabilirsiniz.",
+      "useKey": "Anahtarla bağla",
+      "useOwn": "Kendi uygulamanızı kullan"
+    },
     "ownClient": {
       "title": "Kendi OAuth uygulamanı kullan",
       "notApproved": "{{name}} yalnızca onayladığı uygulamaları kabul ediyor ve agentes.chat henüz bunlardan biri değil. Orada kendi uygulamanla bağlayabilirsin.",
-      "askAdmin": "Bir yönetici, çalışma alanının kendi uygulamasıyla bağlayabilir.",
       "help": "Sağlayıcıda bir uygulama oluştur, bu yönlendirme URI'sini oraya kaydet ve istemci kimliğini buraya yapıştır. Bundan sonra çalışma alanından oraya her giriş senin uygulamanı kullanır.",
+      "stepCreate": "{{name}} üzerinde bir uygulama oluşturun",
+      "stepCreateText": "{{name}} geliştirici ayarlarında.",
+      "stepRedirect": "Bu yönlendirme adresini ona ekleyin",
+      "stepRedirectText": "Uygulamanın OAuth yönlendirme URI'leri arasına.",
+      "stepId": "Uygulamanın istemci kimliğini yapıştırın",
+      "more": "İstemci gizli anahtarı ve kapsamlar",
+      "moreText": "Yalnızca uygulama istiyorsa.",
+      "createIn": {
+        "metaAds": "Meta for Developers'da, Marketing API kullanım senaryosuyla."
+      },
       "guide": {
         "metaAds": "Meta for Developers'da Marketing API kullanım senaryosuyla bir uygulama oluştur. Bu yönlendirme URI'sini geçerli OAuth yönlendirme URI'lerine ekle, ardından Uygulama Kimliğini ve uygulaman istiyorsa Uygulama Gizli Anahtarını yapıştır."
       },
@@ -14938,7 +15001,7 @@
     },
     "headers": {
       "title": "İstek başlıkları",
-      "help": "Başka bir başlıkta gönderilen bir anahtar ya da sunucunun önündeki bir ağ geçidi için. Çoğu sunucunun buna ihtiyacı yoktur.",
+      "help": "Başka bir başlıktaki bir anahtar ya da öndeki bir ağ geçidi için. Çoğu sunucunun buna ihtiyacı yoktur.",
       "value": "Değer",
       "nameOf": "{{n}}. başlığın adı",
       "valueOf": "{{n}}. başlığın değeri",

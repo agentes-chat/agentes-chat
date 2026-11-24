@@ -18,6 +18,7 @@ import {
   createToolGateway,
   DIRECTORY_MAX_TOOLS,
   getAgentAccess,
+  LOOPBACK_REDIRECT_URI,
   listAudit,
   listCustomServers,
   type McpConnect,
@@ -49,6 +50,8 @@ afterEach(async () => {
 });
 
 const SERVER = "https://tickets.example.com/mcp";
+/** Our OAuth callback, as `depsOf` sets the public address. */
+const CALLBACK = "https://chat.example.com/api/app/connectors/oauth/callback";
 
 /** An in-process MCP server with a read-only tool and a write tool; `extra` adds one on demand. */
 function ticketsMcp() {
@@ -98,7 +101,9 @@ function oauthServer(
     metadata?: boolean;
     tokenHost?: string;
     registration?: boolean;
-    register?: (body: { client_name: string; token_endpoint_auth_method: string }) => Response;
+    register?: (body: { client_name: string; redirect_uris: string[]; token_endpoint_auth_method: string }) => Response;
+    /** Registrations may ask for the loopback address too (the dialog that takes the sign-in's return pasted). */
+    loopback?: boolean;
     /** The protected resource's `scopes_supported` (default `tickets`; empty leaves it out). */
     scopes?: string[];
     /** The authorization server's `scopes_supported` and `token_endpoint_auth_methods_supported`. */
@@ -113,6 +118,7 @@ function oauthServer(
     names: [] as string[],
     authMethods: [] as string[],
     registeredScopes: [] as (string | undefined)[],
+    redirects: [] as string[],
     tokenForms: [] as URLSearchParams[],
     tokenAuth: [] as (string | null)[],
     challenge: "",
@@ -163,7 +169,9 @@ function oauthServer(
       seen.names.push(body.client_name);
       seen.authMethods.push(body.token_endpoint_auth_method);
       seen.registeredScopes.push(body.scope);
-      expect(body.redirect_uris).toEqual(["https://chat.example.com/api/app/connectors/oauth/callback"]);
+      expect(body.redirect_uris).toHaveLength(1);
+      expect(options.loopback ? [CALLBACK, LOOPBACK_REDIRECT_URI] : [CALLBACK]).toContain(body.redirect_uris[0] ?? "");
+      seen.redirects.push(body.redirect_uris[0] ?? "");
       return options.register?.(body) ?? Response.json({ client_id: "dcr-client-1" }, { status: 201 });
     }
     if (url.pathname === "/token") {
@@ -1253,6 +1261,121 @@ describe("custom MCP servers", () => {
     if (started.status !== "oauth") throw new Error(`expected oauth, got ${started.status}`);
     expect(new URL(started.authorizeUrl).searchParams.get("client_id")).toBe("calendly-client");
     expect(auth.seen.names).toEqual(["agentes.chat", "agentes chat"]);
+  });
+
+  test("refused our callback, the dialog that takes the pasted return registers the loopback address and finishes with it (ADR 0016)", async () => {
+    f = await setup();
+    const mcp = ticketsMcp();
+    const said = "invalid_redirect_uri: redirect_uris.0 is not a permitted redirect domain";
+    const auth = oauthServer({
+      loopback: true,
+      register: (body) =>
+        body.redirect_uris[0] === LOOPBACK_REDIRECT_URI
+          ? Response.json({ client_id: "loopback-client" }, { status: 201 })
+          : Response.json(
+              {
+                error: "invalid_redirect_uri",
+                error_description: "redirect_uris.0 is not a permitted redirect domain",
+              },
+              { status: 400 },
+            ),
+    });
+    const deps = depsOf(f, { connect: mcp.connect, http: auth.http });
+    // Where the return can't be pasted (the phone app, an agent's tool): refused, in its words, as before.
+    expect(await connectCustomServer(deps, f.owner.id, f.org.id, { serverUrl: SERVER })).toEqual({
+      status: "needs_key",
+      reason: "not_approved",
+      detail: said,
+    });
+    expect(auth.seen.redirects).toEqual([CALLBACK]);
+    expect(await f.db.select().from(schema.oauthClients)).toHaveLength(0);
+
+    const started = await connectCustomServer(deps, f.owner.id, f.org.id, {
+      serverUrl: SERVER,
+      returnTo: "/settings",
+      paste: true,
+    });
+    if (started.status !== "oauth") throw new Error(`expected oauth, got ${started.status}`);
+    // The sign-in ends on the loopback address, which the dialog says to paste back.
+    expect(started.paste).toEqual({ redirectUri: LOOPBACK_REDIRECT_URI });
+    const url = new URL(started.authorizeUrl);
+    expect(url.searchParams.get("client_id")).toBe("loopback-client");
+    expect(url.searchParams.get("redirect_uri")).toBe(LOOPBACK_REDIRECT_URI);
+    // Ours first, every time: the loopback one only once ours is refused.
+    expect(auth.seen.redirects).toEqual([CALLBACK, CALLBACK, LOOPBACK_REDIRECT_URI]);
+    const [client] = await f.db.select().from(schema.oauthClients);
+    expect(client?.redirectUri).toBe(LOOPBACK_REDIRECT_URI);
+
+    // The pasted address's code: exchanged with the address it was sent to, as RFC 6749 §4.1.3 asks.
+    auth.seen.challenge = url.searchParams.get("code_challenge") ?? "";
+    const { connection, returnTo } = await completeOAuth(
+      deps,
+      { id: f.owner.id },
+      { state: url.searchParams.get("state") ?? "", code: "code-1" },
+    );
+    expect(returnTo).toBe("/settings");
+    expect(connection.authType).toBe("oauth");
+    expect(auth.seen.tokenForms[0]?.get("redirect_uri")).toBe(LOOPBACK_REDIRECT_URI);
+    expect(auth.seen.tokenForms[0]?.get("client_id")).toBe("loopback-client");
+
+    // Its client in use, a sign-in that can't come back pasted can't use it: not approved, with no new registration.
+    expect(await connectCustomServer(deps, f.owner.id, f.org.id, { serverUrl: SERVER })).toEqual({
+      status: "needs_key",
+      reason: "not_approved",
+    });
+    expect(auth.seen.registrations).toBe(3);
+  });
+
+  test("the loopback address is only a second try: taken ours, never asked; refused both, our refusal is the one told", async () => {
+    f = await setup();
+    const mcp = ticketsMcp();
+    // Ours taken: a sign-in as ever, from the dialog that could take the pasted return too.
+    const open = oauthServer({ loopback: true });
+    const started = await connectCustomServer(
+      depsOf(f, { connect: mcp.connect, http: open.http }),
+      f.owner.id,
+      f.org.id,
+      {
+        serverUrl: SERVER,
+        paste: true,
+      },
+    );
+    if (started.status !== "oauth") throw new Error(`expected oauth, got ${started.status}`);
+    expect(started.paste).toBeUndefined();
+    expect(new URL(started.authorizeUrl).searchParams.get("redirect_uri")).toBe(CALLBACK);
+    expect(open.seen.redirects).toEqual([CALLBACK]);
+    await f.close();
+
+    f = await setup();
+    const closed = oauthServer({
+      loopback: true,
+      register: (body) =>
+        Response.json(
+          {
+            error: "invalid_client_metadata",
+            error_description: `Not for ${body.redirect_uris[0] === CALLBACK ? "ours" : "loopback"}.`,
+          },
+          { status: 400 },
+        ),
+    });
+    expect(
+      await connectCustomServer(depsOf(f, { connect: mcp.connect, http: closed.http }), f.owner.id, f.org.id, {
+        serverUrl: SERVER,
+        paste: true,
+      }),
+    ).toEqual({ status: "needs_key", reason: "not_approved", detail: "invalid_client_metadata: Not for ours." });
+    expect(closed.seen.redirects).toEqual([CALLBACK, LOOPBACK_REDIRECT_URI]);
+    expect(await f.db.select().from(schema.oauthClients)).toHaveLength(0);
+
+    // An outage isn't a refusal: no second try.
+    const down = oauthServer({ loopback: true, register: () => new Response("", { status: 503 }) });
+    expect(
+      await connectCustomServer(depsOf(f, { connect: mcp.connect, http: down.http }), f.owner.id, f.org.id, {
+        serverUrl: SERVER,
+        paste: true,
+      }),
+    ).toEqual({ status: "needs_key" });
+    expect(down.seen.redirects).toEqual([CALLBACK]);
   });
 
   test("OAuth that only lets in apps it approved says so in its own words, not 'no OAuth' (an outage doesn't); a key still connects", async () => {

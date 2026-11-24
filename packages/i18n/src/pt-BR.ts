@@ -15282,14 +15282,13 @@ export const ptBR = {
     steps: "Passos",
     step: { "0": "Conectar", "1": "O que faz", "2": "Quem pode usar" },
     connectTitle: "Conectar {{name}}",
-    customTitle: "Conectar servidor MCP",
+    customTitle: "Conectar um servidor",
     toolsTitle: "O que {{name}} faz",
     whoTitle: "Quem pode usar {{name}}",
     oauthHelp: "Você autoriza na página do {{name}} e volta para cá.",
     customText: "Qualquer servidor MCP pelo endereço https. Se ele aceitar OAuth, você autoriza na página dele.",
     urlHelp: "O endereço https do servidor.",
     name: "Nome",
-    namePlaceholder: "Ex.: Suporte",
     continueIn: "Continuar no {{name}}",
     continueInComposio: "Continuar na Composio",
     /** Conectar o GitHub onde o servidor tem o app agentes.chat: o app primeiro, uma conta depois. */
@@ -15318,17 +15317,87 @@ export const ptBR = {
     composioHelp:
       "Você entra na página da Composio, em inglês, e volta para cá. A permissão do {{name}} aparece como “Composio”.",
     or: "ou",
-    withKey: "Conectar com uma chave de API",
     needsKey: "Este servidor não aceita OAuth. Conecte com uma chave de API.",
     notApproved:
       "{{name}} só deixa entrar apps que aprovou, e o agentes.chat ainda não foi aprovado. Se ele te der uma chave de API, dá para conectar com ela.",
     serverSaid: "O servidor respondeu: {{detail}}",
+    /** Under the address: the other ways in, in one line that opens (ADR 0016 addendum 2026-11-23). */
+    more: {
+      title: "Outras formas de conectar",
+      /** Listed in the line's description, joined as a sentence ("An API key, your own OAuth app, or request headers."). */
+      key: "chave de API",
+      own: "um app OAuth seu",
+      headers: "cabeçalhos da requisição",
+    },
+    ways: {
+      label: "Como conectar",
+      page: "Pela página do serviço",
+      pageText: "Você autoriza lá e volta para cá. É o jeito da maioria.",
+      key: "Com uma chave de API",
+      keyText: "Para o servidor que dá uma chave em vez de pedir login.",
+      own: "Com um app OAuth seu",
+      ownText: "Para o servidor que só deixa entrar apps que aprovou.",
+    },
+    /** The address alone, first: its name comes from it, who can use it is a link in the footer. */
+    address: {
+      question: "Qual é o endereço do servidor?",
+      lead: "Cole o endereço MCP que o serviço te deu. O resto a gente descobre.",
+      continue: "Continuar",
+      other: "Conectar de outro jeito",
+      team: "Toda a equipe vai poder usar.",
+      justMe: "Só para mim",
+      mine: "Só você vai poder usar.",
+      toTeam: "Para a equipe",
+    },
+    /** A server that took only the loopback address: open it, then paste the address of the page it ends on. */
+    paste: {
+      openTitle: "Entre no {{name}} e autorize",
+      openText:
+        "Abre numa aba nova. No fim, o {{name}} mostra uma página que não carrega: é ela que você traz para cá.",
+      open: "Abrir o {{name}}",
+      pasteTitle: "Cole o endereço dessa página",
+      pasteText: "É o que está na barra do navegador, começando com localhost. Colou, conecta.",
+      /** The browser's own words on that page, drawn in the picture. */
+      unreachable: "Não é possível acessar esse site",
+      paste: "Colar",
+      pasteFailed: "O navegador não deixou colar. Cole com Ctrl+V (⌘V no Mac).",
+      wrong: "Esse não é o endereço dessa página. Ele começa com {{start}}.",
+      refused: "O {{name}} não foi autorizado. Abra de novo para tentar outra vez.",
+      connecting: "Conectando ao {{name}}…",
+      notOpened: "Não abriu?",
+      openAgain: "Abrir o {{name}} de novo",
+    },
+    /** A refused sign-in, in stages: an admin's own app (register our address, then paste its ID), or a key. */
+    refused: {
+      ownTitle: "O {{name}} só aceita apps que ele aprovou",
+      ownText: "Crie um app na área de desenvolvedores do {{name}} e cadastre nele este endereço de retorno.",
+      ownTextIn: {
+        metaAds:
+          "No Meta for Developers, crie um app com o caso de uso da API de Marketing e cadastre nele este endereço de retorno.",
+      },
+      created: "Já criei",
+      idTitle: "Cole o ID do app",
+      idText: "Está na página do app que você criou no {{name}}.",
+      keyTitle: "O {{name}} pede uma chave de API",
+      keyText: "Você encontra a chave nas configurações do {{name}}. Ela fica cifrada e ninguém vê depois.",
+      key: "Se ele te der uma chave de API, dá para conectar com ela.",
+      askAdmin: "Um admin pode conectar com um app do workspace, ou use uma chave de API se o {{name}} der uma.",
+      useKey: "Conectar com a chave",
+      useOwn: "Usar um app seu",
+    },
     ownClient: {
       title: "Usar seu próprio app OAuth",
       notApproved:
         "{{name}} só deixa entrar apps que aprovou, e o agentes.chat ainda não foi aprovado. Dá para conectar com um app seu lá.",
-      askAdmin: "Um admin pode conectar com um app próprio do workspace.",
       help: "Crie um app no provedor, cadastre nele esta URI de redirecionamento e cole o ID do cliente. Toda entrada lá pelo workspace passa a usar o seu app.",
+      stepCreate: "Crie um app no {{name}}",
+      stepCreateText: "Na área de desenvolvedores do {{name}}.",
+      stepRedirect: "Cadastre nele este endereço de retorno",
+      stepRedirectText: "Nas URIs de redirecionamento OAuth do app.",
+      stepId: "Cole o ID do cliente do app",
+      more: "Chave secreta e escopos",
+      moreText: "Só se o app pedir.",
+      createIn: { metaAds: "No Meta for Developers, com o caso de uso da API de Marketing." },
       guide: {
         metaAds:
           "No Meta for Developers, crie um app com o caso de uso da API de Marketing. Adicione esta URI de redirecionamento às URIs de redirecionamento OAuth válidas dele e cole o ID do app, e a chave secreta do app se ele pedir.",
@@ -15348,7 +15417,7 @@ export const ptBR = {
     },
     headers: {
       title: "Cabeçalhos da requisição",
-      help: "Para uma chave que vai em outro cabeçalho, ou um gateway na frente do servidor. A maioria dos servidores não precisa.",
+      help: "Para uma chave em outro cabeçalho ou um gateway na frente. A maioria não precisa.",
       value: "Valor",
       nameOf: "Nome do cabeçalho {{n}}",
       valueOf: "Valor do cabeçalho {{n}}",

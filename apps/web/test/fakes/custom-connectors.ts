@@ -2,8 +2,11 @@
  * Test fake — custom MCP servers ("Outro servidor MCP" in "Adicionar conector").
  * Mirrors these endpoints:
  * - GET    /api/app/organizations/{orgId}/connectors/custom
- * - POST   /api/app/organizations/{orgId}/connectors/custom { serverUrl, apiKey?, label?, returnTo, connectionId?, headers? }
- *          → { status: "connected", server, outcome } | { status: "oauth", authorizeUrl } | { status: "needs_key" }
+ * - POST   /api/app/organizations/{orgId}/connectors/custom { serverUrl, apiKey?, label?, returnTo, connectionId?, headers?, paste? }
+ *          → { status: "connected", server, outcome } | { status: "oauth", authorizeUrl, paste? } | { status: "needs_key" }
+ *          (a URL containing "loopback" took only the loopback address: with `paste`, an authorization whose return
+ *          the app pastes, finished by `completePasted`; without, `needs_key` with `not_approved`; one containing
+ *          "closed" lets in only apps it approved: `needs_key` with `not_approved` and the server's words)
  *          (the same address again is another account, "Name 2", which no agent uses; `connectionId`
  *          reconnects that account in place; `headers` alone connect, are refused with a sign-in, and on a
  *          reconnect stay when absent, go with `[]` and are replaced by a list)
@@ -80,6 +83,11 @@ export function createMockCustomConnectors(
   meId: () => string | null = () => null,
 ): ApiClient["customConnectors"] & {
   rename(orgId: string, id: string, label: string): CustomServer | null;
+  /** `POST …/connectors/oauth/complete` for a pasted return; null for any other state. */
+  completePasted(
+    orgId: string,
+    input: { state: string; code: string },
+  ): Promise<{ connectionId: string; connector: string; outcome: "connected" } | null>;
 } {
   const byOrg = new Map<string, CustomServer[]>();
   const ownClients = new Map<string, NonNullable<OwnOAuthClient["client"]>>();
@@ -90,6 +98,8 @@ export function createMockCustomConnectors(
     client: clone(ownClients.get(`${orgId}|${issuerOf(serverUrl)}`) ?? null),
   });
   const refreshed = new Set<string>();
+  /** Authorizations sent to the loopback address, by state: what each connects once its return is pasted. */
+  const pastes = new Map<string, { orgId: string; serverUrl: string; label?: string; personal?: boolean }>();
   const list = (orgId: string) => {
     let l = byOrg.get(orgId);
     if (!l) {
@@ -115,6 +125,24 @@ export function createMockCustomConnectors(
       // Through Composio: its page signs in, back to the callback.
       if (input.serverUrl.startsWith("https://backend.composio.dev/")) {
         return { status: "oauth", authorizeUrl: "https://composio.example/connect/ca_1?state=s" };
+      }
+      // Lets in only apps it approved, whatever address: an admin's own app or a key.
+      if (input.serverUrl.includes("closed") && !input.apiKey && !input.headers?.length) {
+        return {
+          status: "needs_key",
+          reason: "not_approved",
+          detail: "invalid_client_metadata: Dynamic registration is not available for this client.",
+        };
+      }
+      if (input.serverUrl.includes("loopback") && !input.apiKey && !input.headers?.length) {
+        if (!input.paste) return { status: "needs_key", reason: "not_approved" };
+        const state = `paste-${pastes.size + 1}`;
+        pastes.set(state, { orgId, serverUrl: input.serverUrl, label: input.label, personal: input.personal });
+        return {
+          status: "oauth",
+          authorizeUrl: `https://auth.example.com/authorize?client_id=c1&state=${state}`,
+          paste: { redirectUri: "http://localhost:8976/callback" },
+        };
       }
       const oauth = input.serverUrl.includes("oauth");
       const target = input.connectionId ? find(orgId, input.connectionId) : null;
@@ -148,6 +176,27 @@ export function createMockCustomConnectors(
       await onConnected(orgId, server.id);
       // A real OAuth flow leaves for the provider; the mock connects at once.
       return { status: "connected", server: clone(server), outcome: "connected" };
+    },
+    completePasted: async (orgId, input) => {
+      const started = pastes.get(input.state);
+      if (!started || started.orgId !== orgId) return null;
+      pastes.delete(input.state);
+      const now = ctx.now();
+      const server: CustomServer = {
+        id: mockId("mcp"),
+        serverUrl: started.serverUrl,
+        label: started.label?.trim() || new URL(started.serverUrl).hostname,
+        accountLabel: null,
+        authType: "oauth",
+        headerNames: [],
+        tools: TOOLS.map((t) => tool(t, now)),
+        reviewedAt: null,
+        createdAt: now.toISOString(),
+        ...(started.personal ? { ownerUserId: meId() } : {}),
+      };
+      list(orgId).push(server);
+      await onConnected(orgId, server.id);
+      return { connectionId: server.id, connector: `custom:${server.id}`, outcome: "connected" };
     },
     rename: (orgId, id, label) => {
       const s = list(orgId).find((x) => x.id === id);

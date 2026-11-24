@@ -12848,7 +12848,6 @@
     "added": "保存后，{{repo}} 会加入列表。"
   },
   "connectors": {
-    "title": "连接器",
     "store": {
       "featured": "精选",
       "suggested": "推荐",
@@ -12887,6 +12886,7 @@
       "addressPassword": "地址和密码",
       "composio": "通过 Composio"
     },
+    "title": "连接器",
     "add": "添加连接器",
     "personal": {
       "note": "只有你能打开这些连接。你的智能体只在你要求时使用它们。",
@@ -14450,14 +14450,13 @@
       "2": "谁可以使用"
     },
     "connectTitle": "连接 {{name}}",
-    "customTitle": "连接 MCP 服务器",
+    "customTitle": "连接服务器",
     "toolsTitle": "{{name}} 能做什么",
     "whoTitle": "谁可以使用 {{name}}",
     "oauthHelp": "你在 {{name}} 的页面上授权，然后回到这里。",
     "customText": "通过 https 地址连接任意 MCP 服务器。如果它支持 OAuth，你会在它的页面上授权。",
     "urlHelp": "服务器的 https 地址。",
     "name": "名称",
-    "namePlaceholder": "例如：客服",
     "continueIn": "在 {{name}} 上继续",
     "continueInComposio": "在 Composio 上继续",
     "github": {
@@ -14482,15 +14481,79 @@
     },
     "composioHelp": "你会在 Composio 的英文页面上登录，然后回到这里。{{name}} 会把这项权限显示为“Composio”。",
     "or": "或",
-    "withKey": "用 API 密钥连接",
     "needsKey": "此服务器不支持 OAuth，请用 API 密钥连接。",
     "notApproved": "{{name}} 只允许它批准过的应用登录，而 agentes.chat 还未获批。如果它提供 API 密钥，你可以用密钥连接。",
     "serverSaid": "服务器返回：{{detail}}",
+    "more": {
+      "title": "其他连接方式",
+      "key": "API 密钥",
+      "own": "你自己的 OAuth 应用",
+      "headers": "请求标头"
+    },
+    "ways": {
+      "label": "连接方式",
+      "page": "在服务的页面上",
+      "pageText": "在那里授权，然后回到这里。大多数服务都是这样。",
+      "key": "用 API 密钥",
+      "keyText": "适用于提供密钥、而不要求登录的服务器。",
+      "own": "用你自己的 OAuth 应用",
+      "ownText": "适用于只允许它批准过的应用的服务器。"
+    },
+    "address": {
+      "question": "服务器的地址是什么？",
+      "lead": "粘贴服务给你的 MCP 地址。剩下的我们来处理。",
+      "continue": "继续",
+      "other": "用其他方式连接",
+      "team": "整个团队都可以使用。",
+      "justMe": "仅我自己",
+      "mine": "只有你可以使用。",
+      "toTeam": "团队共用"
+    },
+    "paste": {
+      "openTitle": "登录 {{name}} 并授权",
+      "openText": "它会在新标签页中打开。最后，{{name}} 会显示一个无法加载的页面：要带回这里的就是它。",
+      "open": "打开 {{name}}",
+      "pasteTitle": "粘贴那个页面的地址",
+      "pasteText": "就是浏览器地址栏里以 localhost 开头的那个。粘贴后就会连接。",
+      "unreachable": "无法访问此网站",
+      "paste": "粘贴",
+      "pasteFailed": "浏览器不允许粘贴。请用 Ctrl+V（Mac 上为 ⌘V）粘贴。",
+      "wrong": "这不是那个页面的地址。它以 {{start}} 开头。",
+      "refused": "{{name}} 未获授权。请重新打开，再试一次。",
+      "connecting": "正在连接 {{name}}…",
+      "notOpened": "没有打开？",
+      "openAgain": "重新打开 {{name}}"
+    },
+    "refused": {
+      "ownTitle": "{{name}} 只允许它批准过的应用",
+      "ownText": "在 {{name}} 的开发者设置中创建一个应用，并在其中添加这个重定向地址。",
+      "ownTextIn": {
+        "metaAds": "在 Meta for Developers 中，创建一个使用 Marketing API 用例的应用，并在其中添加这个重定向地址。"
+      },
+      "created": "已创建",
+      "idTitle": "粘贴应用的 ID",
+      "idText": "就在你在 {{name}} 创建的应用页面上。",
+      "keyTitle": "{{name}} 需要 API 密钥",
+      "keyText": "你可以在 {{name}} 的设置中找到密钥。它会加密保存，之后任何人都无法再查看。",
+      "key": "如果它提供 API 密钥，你可以用密钥连接。",
+      "askAdmin": "管理员可以用工作区自己的应用来连接它。如果 {{name}} 提供 API 密钥，你也可以用密钥连接。",
+      "useKey": "用密钥连接",
+      "useOwn": "使用你自己的应用"
+    },
     "ownClient": {
       "title": "使用你自己的 OAuth 应用",
       "notApproved": "{{name}} 只允许它批准过的应用登录，而 agentes.chat 还不在其中。你可以用自己的应用来连接它。",
-      "askAdmin": "管理员可以用工作区自己的应用来连接它。",
       "help": "在服务提供方创建一个应用，在其中登记这个重定向 URI，然后粘贴它的客户端 ID。之后，工作区在那里的每次登录都会使用你的应用。",
+      "stepCreate": "在 {{name}} 创建一个应用",
+      "stepCreateText": "在 {{name}} 的开发者设置中。",
+      "stepRedirect": "在其中添加这个重定向地址",
+      "stepRedirectText": "放在应用的 OAuth 重定向 URI 中。",
+      "stepId": "粘贴应用的客户端 ID",
+      "more": "客户端密钥和权限范围",
+      "moreText": "仅在应用需要时填写。",
+      "createIn": {
+        "metaAds": "在 Meta for Developers 中，使用 Marketing API 用例。"
+      },
       "guide": {
         "metaAds": "在 Meta for Developers 中，创建一个使用 Marketing API 用例的应用。把这个重定向 URI 加到它的有效 OAuth 重定向 URI 中，然后粘贴应用编号，如果应用需要，再粘贴应用密钥。"
       },
@@ -14509,7 +14572,7 @@
     },
     "headers": {
       "title": "请求标头",
-      "help": "用于密钥需要放在其他标头中，或服务器前面有网关的情况。大多数服务器不需要。",
+      "help": "用于放在其他标头中的密钥，或前面有网关的情况。大多数服务器不需要。",
       "value": "值",
       "nameOf": "标头 {{n}} 的名称",
       "valueOf": "标头 {{n}} 的值",

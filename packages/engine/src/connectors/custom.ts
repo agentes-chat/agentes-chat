@@ -48,6 +48,7 @@ import type { McpCallResult, McpConnect, McpSession, McpTool } from "./mcp";
 import {
   authServerMetadata,
   ensureOAuthClient,
+  LOOPBACK_REDIRECT_URI,
   type McpOAuthDeps,
   oauthScope,
   probeMcpServer,
@@ -221,7 +222,12 @@ export interface CustomServerView {
 
 export type CustomConnectStart =
   | { status: "connected"; server: CustomServerView; outcome: ConnectOutcome }
-  | { status: "oauth"; authorizeUrl: string }
+  /**
+   * `paste`: the server took only the loopback redirect URI (ADR 0016 addendum 2026-11-23). The authorization ends on a
+   * page that doesn't load at `redirectUri`; the person pastes its address, and the app finishes with `state` and
+   * `code` (`POST …/connectors/oauth/complete`).
+   */
+  | { status: "oauth"; authorizeUrl: string; paste?: { redirectUri: string } }
   /**
    * `not_approved`: it has OAuth but only lets in apps it approved, and agentes.chat isn't one yet. `detail`: how it
    * refused our registration, in its own words (`error: error_description`, short).
@@ -869,6 +875,8 @@ export async function connectCustomServer(
     headers?: RequestHeader[];
     /** The actor's own connection, which any member adds, instead of the team's (who manages connectors). */
     personal?: boolean;
+    /** The app takes a pasted return: a server that refuses our callback may sign in at the loopback address. */
+    paste?: boolean;
   },
 ): Promise<CustomConnectStart> {
   const personal = input.personal === true;
@@ -941,6 +949,7 @@ export async function connectCustomServer(
     returnTo: input.returnTo,
     connectionId: input.connectionId,
     personal,
+    paste: input.paste === true,
   });
 }
 
@@ -948,7 +957,8 @@ export async function connectCustomServer(
  * Starts an MCP-native OAuth authorization: authorization server metadata,
  * a registered client (DCR), state + PKCE S256 + `resource`. `needs_key` when
  * the server can't do it, with `not_approved` when it only registers clients
- * it approved.
+ * it approved. With `paste`, a server that refuses our callback is asked for the loopback one, and a client that has
+ * it starts an authorization whose return the person pastes; without, such a client is `not_approved` too.
  */
 export async function beginMcpOAuth(
   deps: McpOAuthDeps,
@@ -966,19 +976,27 @@ export async function beginMcpOAuth(
     connectionId?: string;
     /** The connection it makes is the actor's own. */
     personal?: boolean;
+    /** The app takes a pasted return (see `CustomConnectStart`). */
+    paste?: boolean;
   },
 ): Promise<Exclude<CustomConnectStart, { status: "connected" }>> {
   const meta = await authServerMetadata(deps, input.issuer);
   if (!meta) return { status: "needs_key" };
-  const redirectUri = oauthRedirectUri(deps.publicUrl);
   // Worked out again each time: a client still in use keeps the scope it was registered with, maybe without
   // offline_access.
   const asked = oauthScope(meta, input.scopes);
-  const client = await ensureOAuthClient(deps, orgId, input.issuer, meta, { redirectUri, scope: asked });
+  const client = await ensureOAuthClient(deps, orgId, input.issuer, meta, {
+    redirectUri: oauthRedirectUri(deps.publicUrl),
+    scope: asked,
+    ...(input.paste ? { loopback: LOOPBACK_REDIRECT_URI } : {}),
+  });
   if (client && "notApproved" in client) {
     return { status: "needs_key", reason: "not_approved", ...(client.detail ? { detail: client.detail } : {}) };
   }
   if (!client) return { status: "needs_key" };
+  // A client that took only the loopback address, for an app that can't take the paste (the phone app): as before.
+  if (client.redirectUri && !input.paste) return { status: "needs_key", reason: "not_approved" };
+  const redirectUri = client.redirectUri ?? oauthRedirectUri(deps.publicUrl);
   // An admin's own app asks for the scopes they typed, when they typed any.
   const scope = (client.providedByPerson && client.scope) || asked;
   const state = randomToken(32);
@@ -1016,7 +1034,11 @@ export async function beginMcpOAuth(
   url.searchParams.set("code_challenge_method", "S256");
   url.searchParams.set("resource", input.resource);
   if (scope) url.searchParams.set("scope", scope);
-  return { status: "oauth", authorizeUrl: url.toString() };
+  return {
+    status: "oauth",
+    authorizeUrl: url.toString(),
+    ...(client.redirectUri ? { paste: { redirectUri: client.redirectUri } } : {}),
+  };
 }
 
 /** Lists the tools again (admins). */

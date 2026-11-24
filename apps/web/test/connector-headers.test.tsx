@@ -16,8 +16,12 @@ const click = (el: Element) => act(async () => fireEvent.click(el));
 const type = (el: Element, value: string) => act(async () => fireEvent.change(el, { target: { value } }));
 const snapshot = () => (globalThis as { geometrySnapshot?: () => void }).geometrySnapshot?.();
 const flow = () => screen().getAllByRole("dialog").at(-1) as HTMLElement;
-/** The request headers' disclosure: the second one, under the key's. */
-const disclosure = () => flow().querySelectorAll("details.cflow__more")[1] as HTMLDetailsElement;
+/** The request headers' fold, under "Other ways to connect": its line, its section, and whether it is open. */
+const headersLine = () => within(flow()).getByRole("button", { name: /^(Cabeçalhos da requisição|Request headers)/ });
+const disclosure = () => headersLine().closest(".ac-setmore") as HTMLElement;
+const isOpen = () => headersLine().getAttribute("aria-expanded") === "true";
+/** "With an API key", one of the ways under "Other ways to connect". */
+const keyWay = () => within(flow()).getByRole("radio", { name: /^Com uma chave de API/ });
 const nameField = (n: number) => within(flow()).getByLabelText(`Nome do cabeçalho ${n}`) as HTMLInputElement;
 const valueField = (n: number) => within(flow()).getByLabelText(`Valor do cabeçalho ${n}`) as HTMLInputElement;
 const add = () => within(flow()).getByRole("button", { name: "Adicionar cabeçalho" }) as HTMLButtonElement;
@@ -44,15 +48,15 @@ async function scrolledBy(run: () => Promise<void>) {
 }
 
 const ADDRESS = "https://mcp.example.com/mcp";
-/** "Connect by address" under the list, with an address and a name typed, the headers open. */
+/** "Connect by address" under the list, an address typed, then "Connect another way": the headers open. */
 async function openForm(state = seedState(), api = createFakeApi(state)) {
   const app = await renderApp(`/org/${ORG_ID}/settings/connectors`, { api });
   await settle(8);
   await click(screen().getByRole("button", { name: "Conectar pelo endereço" }));
-  await type(within(flow()).getByLabelText("Endereço do servidor MCP"), ADDRESS);
-  await type(within(flow()).getByLabelText("Nome"), "Suporte");
-  expect(disclosure().hasAttribute("open")).toBe(false);
-  await click(within(flow()).getByText("Cabeçalhos da requisição"));
+  await type(within(flow()).getByLabelText("Qual é o endereço do servidor?"), ADDRESS);
+  await click(within(flow()).getByRole("button", { name: "Conectar de outro jeito" }));
+  expect(isOpen()).toBe(false);
+  await click(headersLine());
   return { state, api, app };
 }
 /** Reconnect on a connection's page (its line opened first when no page is open yet). */
@@ -82,9 +86,9 @@ async function openReconnect(names = ["X-API-Key", "X-Tenant"]) {
 describe("request headers for a server by address", () => {
   test("closed until asked for; a name and a secret value per row; headers alone connect", async () => {
     const { state } = await openForm();
-    expect(disclosure().hasAttribute("open")).toBe(true);
+    expect(isOpen()).toBe(true);
     expect(disclosure().textContent).toContain(
-      "Para uma chave que vai em outro cabeçalho, ou um gateway na frente do servidor. A maioria dos servidores não precisa.",
+      "Para uma chave em outro cabeçalho ou um gateway na frente. A maioria não precisa.",
     );
     expect(nameField(1).placeholder).toBe("X-API-Key");
     // A name longer than the server takes can't be typed: its refusal would name no way out.
@@ -111,7 +115,8 @@ describe("request headers for a server by address", () => {
         ],
       }),
     ]);
-    expect(screen().getByRole("dialog", { name: "Suporte conectado" })).toBe(flow());
+    // Named after its address.
+    expect(screen().getByRole("dialog", { name: "example.com conectado" })).toBe(flow());
   });
 
   test("with a key the two go together; the headers' own row goes with Remover", async () => {
@@ -121,7 +126,7 @@ describe("request headers for a server by address", () => {
     await header(2, "X-Wrong", "nope");
     await click(within(flow()).getByRole("button", { name: "Remover cabeçalho 2" }));
     expect(within(flow()).queryByLabelText("Nome do cabeçalho 2")).toBeNull();
-    await click(within(flow()).getByText("Conectar com uma chave de API"));
+    await click(keyWay());
     // No key yet: the headers alone would go.
     expect(within(flow()).queryByRole("button", { name: "Conectar com a chave" })).toBeNull();
     await type(within(flow()).getByLabelText("Chave de API"), "test-key-1");
@@ -191,7 +196,7 @@ describe("request headers for a server by address", () => {
     expect(nameField(3).getAttribute("aria-describedby")).toBe(rows()[2]?.querySelector('[role="alert"]')?.id ?? "");
     // On the row alone: no toast says it again.
     expect(document.body.textContent?.split(said)).toHaveLength(2);
-    expect(disclosure().hasAttribute("open")).toBe(true);
+    expect(isOpen()).toBe(true);
     snapshot();
 
     await header(3, "X-Tenant", "");
@@ -218,22 +223,20 @@ describe("request headers for a server by address", () => {
     await settle(4);
     const said =
       "Este servidor pede login, e o login ainda não leva cabeçalhos. Remova os cabeçalhos para entrar, ou conecte com uma chave de API.";
-    expect(disclosure().querySelector(':scope > .cflow__headers > [role="alert"]')?.textContent).toBe(said);
+    expect(disclosure().querySelector('.ac-setmore__body > .cflow__headers > [role="alert"]')?.textContent).toBe(said);
     expect(document.body.textContent?.split(said)).toHaveLength(2);
 
     refuse = true;
     await type(within(flow()).getByLabelText("Endereço do servidor MCP"), ADDRESS);
     // Folded away before it is sent: "confira os valores" brings them back in sight.
-    await act(async () => {
-      disclosure().open = false;
-      fireEvent(disclosure(), new Event("toggle"));
-    });
+    await click(headersLine());
+    expect(isOpen()).toBe(false);
     await click(within(flow()).getByRole("button", { name: "Conectar" }));
     await settle(4);
     expect(flow().textContent).toContain(
       "O servidor não aceitou esses cabeçalhos. Confira os valores, ou conecte com uma chave de API.",
     );
-    expect(disclosure().hasAttribute("open")).toBe(true);
+    expect(isOpen()).toBe(true);
     expect(flow().textContent).not.toContain("não aceita OAuth");
     // The key's form opened, and without a key the headers still go alone.
     expect(within(flow()).getByRole("button", { name: "Conectar" })).toBeTruthy();
@@ -289,7 +292,7 @@ describe("Reconectar and the server's page", () => {
     const { state, reconnect } = await openReconnect();
     await reconnect();
     expect(screen().getByRole("dialog", { name: "Reconectar Suporte" })).toBe(flow());
-    expect(disclosure().hasAttribute("open")).toBe(true);
+    expect(isOpen()).toBe(true);
     expect(disclosure().textContent).toContain(
       "Salvos: X-API-Key e X-Tenant. Continuam, a menos que você digite novos.",
     );
@@ -315,7 +318,7 @@ describe("Reconectar and the server's page", () => {
     await settle(4);
     expect(connectCalls(state).at(-1)).toMatchObject({ headers: [] });
     // With nothing left to send, this server asks for a key.
-    expect(flow().textContent).toContain("Este servidor não aceita OAuth. Conecte com uma chave de API.");
+    expect(within(flow()).getByText("O Suporte pede uma chave de API")).toBeTruthy();
 
     await click(add());
     await header(1, "X-Token", "fake-value");
@@ -355,7 +358,7 @@ describe("Reconectar and the server's page", () => {
       });
     };
     await reconnect();
-    await click(within(flow()).getByText("Conectar com uma chave de API"));
+    await click(keyWay());
     await type(within(flow()).getByLabelText("Chave de API"), "test-key-1");
     await click(within(flow()).getByRole("button", { name: "Conectar com a chave" }));
     await settle(4);
@@ -370,7 +373,7 @@ describe("Reconectar and the server's page", () => {
   test("removing the headers of an account that has no key, the key's form open and empty: no key is asked for", async () => {
     const { state, reconnect } = await openReconnect(["X-API-Key"]);
     await reconnect();
-    await click(within(flow()).getByText("Conectar com uma chave de API"));
+    await click(keyWay());
     expect(within(flow()).getByLabelText("Chave de API")).toBeTruthy();
     await click(within(disclosure()).getByRole("button", { name: "Remover" }));
     // The key's own button would only answer that a key is missing.
@@ -399,7 +402,7 @@ describe("Reconectar and the server's page", () => {
     await reconnectFromPage("Suporte");
     await click(within(flow()).getByRole("button", { name: "Conectar" }));
     await settle(4);
-    expect(disclosure().hasAttribute("open")).toBe(true);
+    expect(isOpen()).toBe(true);
     expect(disclosure().querySelector('[role="alert"]')?.textContent).toBe(
       "Não deu para ler os cabeçalhos salvos. Digite de novo, ou remova.",
     );
@@ -422,15 +425,13 @@ describe("Reconectar and the server's page", () => {
     };
     await reconnect();
     // Folded away before it is sent: the refusal brings them back in sight.
-    await act(async () => {
-      disclosure().open = false;
-      fireEvent(disclosure(), new Event("toggle"));
-    });
+    await click(headersLine());
+    expect(isOpen()).toBe(false);
     const shown = await scrolledBy(conectar);
     const said = "Não deu para ler os cabeçalhos salvos. Digite de novo, ou remova.";
     const alert = () => disclosure().querySelector('.cflow__headers > p > [role="alert"]');
     const link = (name: string) => within(disclosure()).queryByRole("button", { name });
-    expect(disclosure().hasAttribute("open")).toBe(true);
+    expect(isOpen()).toBe(true);
     expect(alert()?.textContent).toBe(said);
     // With many rows it would land below what the dialog shows.
     expect(shown.includes(alert() as Element)).toBe(true);
@@ -505,7 +506,7 @@ describe("worst cases", () => {
       if (i > 0) await click(add());
       await header(i + 1, name, "v".repeat(2000));
     }
-    await click(within(flow()).getByText("Conectar com uma chave de API"));
+    await click(keyWay());
     const shown = await scrolledBy(async () => {
       await click(within(flow()).getByRole("button", { name: "Conectar" }));
       await settle(4);

@@ -13849,7 +13849,6 @@
     "added": "{{repo}} entra nell'elenco quando salvi."
   },
   "connectors": {
-    "title": "Connettori",
     "store": {
       "featured": "In evidenza",
       "suggested": "Suggerito",
@@ -13896,6 +13895,7 @@
       "addressPassword": "Indirizzo e password",
       "composio": "Tramite Composio"
     },
+    "title": "Connettori",
     "add": "Aggiungi connettore",
     "personal": {
       "note": "Solo tu apri queste connessioni. I tuoi agenti le usano solo quando glielo chiedi.",
@@ -15499,14 +15499,13 @@
       "2": "Chi può usarlo"
     },
     "connectTitle": "Collega {{name}}",
-    "customTitle": "Collega un server MCP",
+    "customTitle": "Collega un server",
     "toolsTitle": "Cosa fa {{name}}",
     "whoTitle": "Chi può usare {{name}}",
     "oauthHelp": "Autorizzi nella pagina di {{name}} e torni qui.",
     "customText": "Qualsiasi server MCP tramite il suo indirizzo https. Se supporta OAuth, autorizzi nella sua pagina.",
     "urlHelp": "L'indirizzo https del server.",
     "name": "Nome",
-    "namePlaceholder": "Es. Assistenza",
     "continueIn": "Continua su {{name}}",
     "continueInComposio": "Continua su Composio",
     "github": {
@@ -15531,15 +15530,79 @@
     },
     "composioHelp": "Accedi nella pagina di Composio, in inglese, e torni qui. {{name}} mostra il permesso come “Composio”.",
     "or": "oppure",
-    "withKey": "Collega con una chiave API",
     "needsKey": "Questo server non supporta OAuth. Collegalo con una chiave API.",
     "notApproved": "{{name}} consente l'accesso solo alle app che ha approvato, e agentes.chat non è ancora approvato. Se ti fornisce una chiave API, puoi collegarti con quella.",
     "serverSaid": "Il server ha risposto: {{detail}}",
+    "more": {
+      "title": "Altri modi per collegare",
+      "key": "una chiave API",
+      "own": "la tua app OAuth",
+      "headers": "intestazioni della richiesta"
+    },
+    "ways": {
+      "label": "Come collegare",
+      "page": "Dalla pagina del servizio",
+      "pageText": "Autorizzi lì e torni qui. Funziona così per la maggior parte dei servizi.",
+      "key": "Con una chiave API",
+      "keyText": "Per un server che ti dà una chiave invece di un accesso.",
+      "own": "Con la tua app OAuth",
+      "ownText": "Per un server che fa entrare solo le app che ha approvato."
+    },
+    "address": {
+      "question": "Qual è l'indirizzo del server?",
+      "lead": "Incolla l'indirizzo MCP che ti ha dato il servizio. Al resto pensiamo noi.",
+      "continue": "Continua",
+      "other": "Collega in un altro modo",
+      "team": "Tutto il team potrà usarlo.",
+      "justMe": "Solo per me",
+      "mine": "Solo tu potrai usarlo.",
+      "toTeam": "Per il team"
+    },
+    "paste": {
+      "openTitle": "Accedi a {{name}} e autorizza",
+      "openText": "Si apre in una nuova scheda. Alla fine, {{name}} mostra una pagina che non si carica: è quella che riporti qui.",
+      "open": "Apri {{name}}",
+      "pasteTitle": "Incolla l'indirizzo di quella pagina",
+      "pasteText": "È quello nella barra del browser, che inizia con localhost. Una volta incollato, si collega.",
+      "unreachable": "Impossibile raggiungere il sito",
+      "paste": "Incolla",
+      "pasteFailed": "Il browser non ci ha permesso di incollare. Incolla con Ctrl+V (⌘V su Mac).",
+      "wrong": "Questo non è l'indirizzo di quella pagina. Inizia con {{start}}.",
+      "refused": "{{name}} non è stato autorizzato. Aprilo di nuovo per riprovare.",
+      "connecting": "Collegamento a {{name}}…",
+      "notOpened": "Non si è aperto?",
+      "openAgain": "Apri di nuovo {{name}}"
+    },
+    "refused": {
+      "ownTitle": "{{name}} fa entrare solo le app che ha approvato",
+      "ownText": "Crea un'app nelle impostazioni per sviluppatori di {{name}} e aggiungi questo indirizzo di reindirizzamento.",
+      "ownTextIn": {
+        "metaAds": "In Meta for Developers, crea un'app con il caso d'uso Marketing API e aggiungi questo indirizzo di reindirizzamento."
+      },
+      "created": "L'ho creata",
+      "idTitle": "Incolla l'ID dell'app",
+      "idText": "Si trova nella pagina dell'app che hai creato su {{name}}.",
+      "keyTitle": "{{name}} chiede una chiave API",
+      "keyText": "Trovi la chiave nelle impostazioni di {{name}}. Viene conservata cifrata e nessuno la vedrà più.",
+      "key": "Se ti fornisce una chiave API, puoi collegarti con quella.",
+      "askAdmin": "Un admin può collegarlo con un'app propria del workspace, oppure puoi usare una chiave API se {{name}} te ne fornisce una.",
+      "useKey": "Collega con una chiave",
+      "useOwn": "Usa una tua app"
+    },
     "ownClient": {
       "title": "Usa la tua app OAuth",
       "notApproved": "{{name}} fa entrare solo le app che ha approvato, e agentes.chat non è ancora tra queste. Puoi collegarlo con la tua app.",
-      "askAdmin": "Un admin può collegarlo con l'app propria del workspace.",
       "help": "Crea un'app presso il provider, registra lì questo URI di reindirizzamento e incolla il suo ID client. Da quel momento ogni accesso lì dal workspace usa la tua app.",
+      "stepCreate": "Crea un'app su {{name}}",
+      "stepCreateText": "Nelle impostazioni per sviluppatori di {{name}}.",
+      "stepRedirect": "Aggiungi all'app questo indirizzo di reindirizzamento",
+      "stepRedirectText": "Tra gli URI di reindirizzamento OAuth dell'app.",
+      "stepId": "Incolla l'ID client dell'app",
+      "more": "Segreto client e scope",
+      "moreText": "Solo se l'app li richiede.",
+      "createIn": {
+        "metaAds": "In Meta for Developers, con il caso d'uso Marketing API."
+      },
       "guide": {
         "metaAds": "In Meta for Developers, crea un'app con il caso d'uso Marketing API. Aggiungi questo URI di reindirizzamento agli URI di reindirizzamento OAuth validi, poi incolla l'ID app, e la chiave segreta dell'app se la tua app la richiede."
       },
@@ -15558,7 +15621,7 @@
     },
     "headers": {
       "title": "Intestazioni della richiesta",
-      "help": "Per una chiave che va in un'altra intestazione, o un gateway davanti al server. La maggior parte dei server non ne ha bisogno.",
+      "help": "Per una chiave in un'altra intestazione, o un gateway davanti. La maggior parte dei server non ne ha bisogno.",
       "value": "Valore",
       "nameOf": "Nome dell'intestazione {{n}}",
       "valueOf": "Valore dell'intestazione {{n}}",

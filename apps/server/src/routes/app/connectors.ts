@@ -465,9 +465,9 @@ export function connectorRoutes(deps: AppDeps) {
       path: "/organizations/{orgId}/connectors/oauth/complete",
       tags,
       security,
-      summary: "Finish an OAuth connection the phone app or the desktop app started (admins)",
+      summary: "Finish an OAuth connection the phone app, the desktop app or a pasted return started (admins)",
       description:
-        "The phone app opened the authorize URL in the system browser (`returnTo: \"app:connectors\"`), or the desktop app's window did (`returnTo: \"desktop:\"` + a path); the callback handed `state` and `code` back to the app, which sends them here with its own session. The state must be this person's and this organization's, unused and not expired. `returnTo`: the path a desktop authorization lands on. `connector.misconfigured` (500, with `provider`): the provider refused this server's own OAuth app, reported as an error.",
+        "The phone app opened the authorize URL in the system browser (`returnTo: \"app:connectors\"`), or the desktop app's window did (`returnTo: \"desktop:\"` + a path); the callback handed `state` and `code` back to the app, which sends them here with its own session. A server that took only the loopback address (`paste` in the connect answer) sends the browser there instead: the person pastes that page's address into the app, which sends its `state` and `code` here. The state must be this person's and this organization's, unused and not expired. `returnTo`: the path a desktop authorization lands on. `connector.misconfigured` (500, with `provider`): the provider refused this server's own OAuth app, reported as an error.",
       request: {
         params: OrgParams,
         body: body(z.object({ state: z.string().min(1).max(200), code: z.string().min(1).max(2000) })),
@@ -493,7 +493,7 @@ export function connectorRoutes(deps: AppDeps) {
       if (
         !started ||
         started.orgId !== orgId ||
-        !(isAppReturn(started.returnTo) || isDesktopReturn(started.returnTo))
+        !(started.pasted || isAppReturn(started.returnTo) || isDesktopReturn(started.returnTo))
       ) {
         throw new NotFoundError("This authorization link is invalid or expired");
       }

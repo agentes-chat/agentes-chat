@@ -129,11 +129,6 @@ describe("an agent's card to connect an app or an MCP server, and to invite peop
     body: "server text",
     meta: { bodyCode: "action_connect_app", actionCard: { kind, forUserId: "u-walter", params } },
   });
-  const type = async (el: HTMLElement, value: string) => {
-    await act(async () => fireEvent.change(el, { target: { value } }));
-    await settle(2);
-  };
-
   test("an MCP server's address: Conectar opens connecting by address with it filled in; once connected, one line", async () => {
     const state = seedState();
     state.messages.push(
@@ -144,12 +139,11 @@ describe("an agent's card to connect an app or an MCP server, and to invite peop
     expect(row.textContent).toContain("Você pediu o MCP da Acme.");
     expect(row.textContent).not.toContain("server text");
     await click(within(row).getByRole("button", { name: "Conectar" }));
-    const flow = dialog("Conectar servidor MCP") as HTMLElement;
-    expect((within(flow).getByLabelText("Endereço do servidor MCP") as HTMLInputElement).value).toBe(
+    const flow = dialog("Conectar um servidor") as HTMLElement;
+    expect((within(flow).getByLabelText("Qual é o endereço do servidor?") as HTMLInputElement).value).toBe(
       "https://oauth.acme.example.com/mcp",
     );
-    await type(within(flow).getByLabelText("Nome"), "Acme");
-    await click(within(flow).getByRole("button", { name: "Conectar" }), 8);
+    await click(within(flow).getByRole("button", { name: "Continuar" }), 8);
     const done = cardRow("Conectar oauth.acme.example.com");
     expect(done.querySelector(".rq-open")).toBeNull();
     expect(done.textContent).toContain("Conectado");
@@ -166,8 +160,8 @@ describe("an agent's card to connect an app or an MCP server, and to invite peop
     expect(dialog("Conectar Linear")).toBeTruthy();
     await click(within(dialog("Conectar Linear") as HTMLElement).getByRole("button", { name: "Fechar" }));
     await click(within(cardRow("Adicionar um servidor MCP")).getByRole("button", { name: "Conectar" }));
-    const flow = dialog("Conectar servidor MCP") as HTMLElement;
-    expect((within(flow).getByLabelText("Endereço do servidor MCP") as HTMLInputElement).value).toBe("");
+    const flow = dialog("Conectar um servidor") as HTMLElement;
+    expect((within(flow).getByLabelText("Qual é o endereço do servidor?") as HTMLInputElement).value).toBe("");
   });
 
   test("invites: Convidar opens the invite dialog with the addresses in it; done once they're invited", async () => {

@@ -13752,7 +13752,6 @@
     "added": "{{repo}} entra en la lista cuando guardes."
   },
   "connectors": {
-    "title": "Conectores",
     "store": {
       "featured": "Destacados",
       "suggested": "Sugerido",
@@ -13799,6 +13798,7 @@
       "addressPassword": "Dirección y contraseña",
       "composio": "A través de Composio"
     },
+    "title": "Conectores",
     "add": "Agregar conector",
     "personal": {
       "note": "Solo tú abres estas conexiones. Tus agentes las usan solo cuando se lo pides.",
@@ -15402,14 +15402,13 @@
       "2": "Quién puede usarlo"
     },
     "connectTitle": "Conectar {{name}}",
-    "customTitle": "Conecta un servidor MCP",
+    "customTitle": "Conecta un servidor",
     "toolsTitle": "Qué hace {{name}}",
     "whoTitle": "Quién puede usar {{name}}",
     "oauthHelp": "Autorizas en la página de {{name}} y vuelves aquí.",
     "customText": "Cualquier servidor MCP por su dirección https. Si admite OAuth, autorizas en su página.",
     "urlHelp": "La dirección https del servidor.",
     "name": "Nombre",
-    "namePlaceholder": "Ej.: Soporte",
     "continueIn": "Continuar en {{name}}",
     "continueInComposio": "Continuar en Composio",
     "github": {
@@ -15434,15 +15433,79 @@
     },
     "composioHelp": "Inicias sesión en la página de Composio, en inglés, y vuelves aquí. {{name}} muestra el permiso como “Composio”.",
     "or": "o",
-    "withKey": "Conectar con una clave de API",
     "needsKey": "Este servidor no admite OAuth. Conéctalo con una clave de API.",
     "notApproved": "{{name}} solo deja iniciar sesión a las apps que aprobó, y agentes.chat todavía no está aprobado. Si te da una clave de API, puedes conectarlo con ella.",
     "serverSaid": "El servidor respondió: {{detail}}",
+    "more": {
+      "title": "Otras formas de conectar",
+      "key": "una clave de API",
+      "own": "tu propia app OAuth",
+      "headers": "encabezados de la solicitud"
+    },
+    "ways": {
+      "label": "Cómo conectar",
+      "page": "En la página del servicio",
+      "pageText": "Autorizas allí y vuelves aquí. Así funciona la mayoría de los servicios.",
+      "key": "Con una clave de API",
+      "keyText": "Para un servidor que te da una clave en lugar de un inicio de sesión.",
+      "own": "Con tu propia app OAuth",
+      "ownText": "Para un servidor que solo deja entrar apps que aprobó."
+    },
+    "address": {
+      "question": "¿Cuál es la dirección del servidor?",
+      "lead": "Pega la dirección MCP que te dio el servicio. Del resto nos encargamos nosotros.",
+      "continue": "Continuar",
+      "other": "Conectar de otra forma",
+      "team": "Todo el equipo podrá usarlo.",
+      "justMe": "Solo para mí",
+      "mine": "Solo tú podrás usarlo.",
+      "toTeam": "Para el equipo"
+    },
+    "paste": {
+      "openTitle": "Inicia sesión en {{name}} y autoriza",
+      "openText": "Se abre en una pestaña nueva. Al final, {{name}} muestra una página que no carga: esa es la que traes aquí.",
+      "open": "Abrir {{name}}",
+      "pasteTitle": "Pega la dirección de esa página",
+      "pasteText": "Es la que aparece en la barra del navegador y empieza por localhost. Al pegarla, se conecta.",
+      "unreachable": "No se puede acceder a este sitio web",
+      "paste": "Pegar",
+      "pasteFailed": "El navegador no nos dejó pegar. Pega con Ctrl+V (⌘V en Mac).",
+      "wrong": "Esa no es la dirección de esa página. Empieza por {{start}}.",
+      "refused": "{{name}} no se autorizó. Ábrelo de nuevo para volver a intentarlo.",
+      "connecting": "Conectando con {{name}}…",
+      "notOpened": "¿No se abrió?",
+      "openAgain": "Abrir {{name}} de nuevo"
+    },
+    "refused": {
+      "ownTitle": "{{name}} solo deja entrar apps que aprobó",
+      "ownText": "Crea una app en la configuración para desarrolladores de {{name}} y agrégale esta dirección de redirección.",
+      "ownTextIn": {
+        "metaAds": "En Meta for Developers, crea una app con el caso de uso Marketing API y agrégale esta dirección de redirección."
+      },
+      "created": "Ya la creé",
+      "idTitle": "Pega el ID de la app",
+      "idText": "Está en la página de la app que creaste en {{name}}.",
+      "keyTitle": "{{name}} pide una clave de API",
+      "keyText": "Encontrarás la clave en la configuración de {{name}}. Se guarda cifrada y nadie la vuelve a ver.",
+      "key": "Si te da una clave de API, puedes conectarlo con ella.",
+      "askAdmin": "Un admin puede conectarlo con una app propia del workspace, o puedes usar una clave de API si {{name}} te da una.",
+      "useKey": "Conectar con una clave",
+      "useOwn": "Usar una app propia"
+    },
     "ownClient": {
       "title": "Usar tu propia app OAuth",
       "notApproved": "{{name}} solo deja entrar apps que aprobó, y agentes.chat todavía no es una de ellas. Puedes conectarlo con tu propia app allí.",
-      "askAdmin": "Un admin puede conectarlo con la app propia del workspace.",
       "help": "Crea una app en el proveedor, registra en ella este URI de redirección y pega su ID de cliente. Desde entonces, cada inicio de sesión allí desde el workspace usa tu app.",
+      "stepCreate": "Crea una app en {{name}}",
+      "stepCreateText": "En la configuración para desarrolladores de {{name}}.",
+      "stepRedirect": "Agrégale esta dirección de redirección",
+      "stepRedirectText": "Entre los URI de redirección de OAuth de la app.",
+      "stepId": "Pega el ID de cliente de la app",
+      "more": "Secreto de cliente y scopes",
+      "moreText": "Solo si la app los pide.",
+      "createIn": {
+        "metaAds": "En Meta for Developers, con el caso de uso Marketing API."
+      },
       "guide": {
         "metaAds": "En Meta for Developers, crea una app con el caso de uso Marketing API. Agrega este URI de redirección a sus URI de redirección de OAuth válidos y luego pega el ID de la app, y el secreto de la app si tu app lo pide."
       },
@@ -15461,7 +15524,7 @@
     },
     "headers": {
       "title": "Encabezados de la solicitud",
-      "help": "Para una clave que va en otro encabezado, o un gateway delante del servidor. La mayoría de los servidores no los necesita.",
+      "help": "Para una clave en otro encabezado, o un gateway delante. La mayoría de los servidores no los necesita.",
       "value": "Valor",
       "nameOf": "Nombre del encabezado {{n}}",
       "valueOf": "Valor del encabezado {{n}}",

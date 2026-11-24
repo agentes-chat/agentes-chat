@@ -70,6 +70,7 @@ import {
   toolName,
 } from "@agenteschat/client/lib/tool-review";
 import {
+  AffixInput,
   Alert,
   Button,
   Chip,
@@ -82,7 +83,10 @@ import {
   Input,
   Locked,
   OptionList,
+  type OptionListItem,
   Segmented,
+  SettingNote,
+  SettingsMore,
   Skeleton,
 } from "@agenteschat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -91,7 +95,9 @@ import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { AgentAvatar } from "@/components/AgentAvatar";
+import { Step } from "@/components/ai/AddAccountFlow";
 import { ConnectorIcon } from "@/components/ConnectorIcon";
+import { ConnectPaste, ConnectScene, type PastedDone, StageHead } from "@/components/ConnectPaste";
 import { FlowTitle } from "@/components/FlowTitle";
 import { LoadingList, useStepText } from "@/components/Loading";
 import { CommandBlock } from "@/components/machine-bits";
@@ -131,8 +137,29 @@ export type FlowState =
   /** `naming`: a new account the provider didn't name ("Stripe 2"): its name comes first, above its tools. */
   | { step: "done" | 1 | 2; item: ConnectedItem; naming?: boolean };
 
+/** What the connect step's stage tells the dialog's header: the name it connects as, and the way to the stage before. */
+interface StageHeadInfo {
+  name: string | null;
+  back: (() => void) | null;
+}
+
+/** A server's name from its address, until it says one: its host without `mcp.`, `api.`, `www.` or `app.`. */
+function nameOfAddress(address: string): string {
+  try {
+    return new URL(address).hostname.replace(/^(mcp|api|www|app)\./, "");
+  } catch {
+    return "";
+  }
+}
+
 /** Back from OAuth the app lands here; the server adds `?connected=…`. In the desktop app, through its window. */
 const returnPath = (orgId: string) => oauthReturnPath(`/org/${orgId}/settings/connectors`);
+
+/** Words as one sentence in the person's language: "An API key, your own OAuth app, or request headers." */
+function sentenceOf(words: string[], language: string) {
+  const list = new Intl.ListFormat(language, { type: "disjunction" }).format(words);
+  return `${list.charAt(0).toLocaleUpperCase(language)}${list.slice(1)}.`;
+}
 
 export function ConnectFlow({
   flow,
@@ -147,6 +174,8 @@ export function ConnectFlow({
   returnTo?: string;
 }) {
   const { t } = useTranslation();
+  // The connect step's stages (ADR 0016 addendum 2026-11-23): the name it connects as, and the header's back.
+  const [head, setHead] = useState<StageHeadInfo>({ name: null, back: null });
   if (!flow) return null;
   const name =
     flow.step === 0
@@ -163,7 +192,9 @@ export function ConnectFlow({
         ? t("connectFlow.reconnectTitle", { name: itemName(t, flow.item) })
         : name
           ? t(flow.mode === "add" ? "connectFlow.addTitle" : "connectFlow.connectTitle", { name })
-          : t("connectFlow.customTitle")
+          : head.name
+            ? t("connectFlow.connectTitle", { name: head.name })
+            : t("connectFlow.customTitle")
       : flow.step === "done"
         ? t("connectFlow.done.title", { name })
         : flow.step === 1
@@ -180,8 +211,8 @@ export function ConnectFlow({
       title={
         <FlowTitle
           tile={
-            name ? (
-              <ConnectorIcon def={icon} image={flow.item?.image ?? null} label={name} size="lg" />
+            name || (flow.step === 0 && head.name) ? (
+              <ConnectorIcon def={icon} image={flow.item?.image ?? null} label={name ?? head.name ?? ""} size="lg" />
             ) : (
               <span className="connector-icon connector-icon--lg connector-icon--mono" aria-hidden="true">
                 <Icon name="plus" />
@@ -195,6 +226,19 @@ export function ConnectFlow({
       closeLabel={t("common.close")}
       width={620}
       className="cflow"
+      leading={
+        flow.step === 0 && head.back ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            iconOnly
+            icon="chevronLeft"
+            className="ac-btn--glyph"
+            aria-label={t("common.back")}
+            onClick={head.back}
+          />
+        ) : undefined
+      }
     >
       {at !== null && (
         <ol className="cflow__steps" aria-label={t("connectFlow.steps")}>
@@ -214,6 +258,7 @@ export function ConnectFlow({
           initialUrl={flow.url}
           accountOnly={flow.account === true}
           startPersonal={flow.personal}
+          onHead={setHead}
           onConnected={(item, naming) => onChange({ step: "done", item, naming })}
           onClose={onClose}
         />
@@ -264,6 +309,7 @@ function ConnectStep({
   initialUrl,
   accountOnly,
   startPersonal,
+  onHead,
   onConnected,
   onClose,
 }: {
@@ -274,6 +320,8 @@ function ConnectStep({
   initialUrl?: string;
   accountOnly?: boolean;
   startPersonal?: boolean;
+  /** What the dialog's header says of the stage: the name it connects as (once a stage past the address), and its back. */
+  onHead?: (head: StageHeadInfo) => void;
   /** `naming`: another account of a server the provider didn't name ("Stripe 2"). */
   onConnected: (item: ConnectedItem, naming: boolean) => void;
   onClose: () => void;
@@ -295,10 +343,15 @@ function ConnectStep({
   const installApp = useInstallGitHubApp(org.id);
   const [how, setHow] = useState<"app" | "account">("app");
   const [url, setUrl] = useState(initialUrl ?? "");
-  const [label, setLabel] = useState("");
   const [apiKey, setApiKey] = useState("");
-  const [keyOpen, setKeyOpen] = useState(false);
-  const [ownOpen, setOwnOpen] = useState(false);
+  // How to connect, under "Other ways to connect": the service's page (the main button), a key, or an admin's own app.
+  const [way, setWay] = useState<"page" | "key" | "own">("page");
+  // A server that took only the loopback address (ADR 0016 addendum 2026-11-23): its sign-in comes back pasted.
+  const [paste, setPaste] = useState<{ authorizeUrl: string; redirectUri: string } | null>(null);
+  const [pasted, setPasted] = useState<PastedDone | null>(null);
+  const [pasteStage, setPasteStage] = useState<"open" | "paste">("open");
+  // An admin's own app after a refusal: register our address in it, then paste its ID.
+  const [ownStage, setOwnStage] = useState<"create" | "id">("create");
   const [needsKey, setNeedsKey] = useState<Extract<CustomConnectStart, { status: "needs_key" }> | null>(null);
   const [touched, setTouched] = useState<"oauth" | "key" | null>(null);
   // Reconectar: the headers the account has, by name. They stay unless new ones are typed or "Remover" drops them.
@@ -306,6 +359,8 @@ function ConnectStep({
   const [headerRows, setHeaderRows] = useState<HeaderRow[]>(savedHeaders.length > 0 ? [] : [BLANK_HEADER]);
   const [dropSaved, setDropSaved] = useState(false);
   const [headersOpen, setHeadersOpen] = useState(savedHeaders.length > 0);
+  // "Other ways to connect": open with the headers an account already has, or once the server asks for another way.
+  const [moreOpen, setMoreOpen] = useState(savedHeaders.length > 0);
   const [refused, setRefused] = useState<HeaderRefused | null>(null);
   // The saved headers couldn't be read: kept until the form closes, so nothing brings "they stay" back.
   const [unreadable, setUnreadable] = useState<HeaderRefused | null>(null);
@@ -328,13 +383,18 @@ function ConnectStep({
   const canHeaders = byAddress && !viaComposio && (listed === null || savedHeaders.length > 0);
   // The workspace's own OAuth app, for a server that lets in only apps it approved: who manages connectors sets it.
   const ownOffered = admin && byAddress && !viaComposio;
+  // The ways under "Other ways to connect". With it closed, the service's page is the way.
+  const keyWay = canOAuth && canKey;
+  const ownWay = ownOffered && (askUrl ? isHttpsUrl(url) : true);
+  const offered = (w: typeof way) => w === "page" || (w === "key" ? keyWay : ownWay);
+  const chosen = moreOpen && offered(way) ? way : "page";
   const headers = canHeaders ? headersToSend(headerRows, dropSaved) : undefined;
   const sendsHeaders = canHeaders && (headers ? headers.length > 0 : savedHeaders.length > 0);
   // Headers alone connect, and an account's saved ones are removed with no key: with none typed, the key's button
   // would only ask for one.
   const keyed =
     canKey &&
-    (keyOpen || !canOAuth) &&
+    (chosen === "key" || !canOAuth) &&
     !(canHeaders && connectsWithoutKey(headers, savedHeaders) && apiKey.trim() === "");
   const serverUrl = fixed ?? (def?.kind === "remote_mcp" ? def.serverUrl : url.trim());
   const teamOnly = !personalAllowed(def?.id ?? item?.def?.id);
@@ -347,9 +407,9 @@ function ConnectStep({
     def?.id === "github" && !viaComposio && !mode && !accountOnly && githubApp.data?.installable === true;
   const viaApp = appOffered && how === "app";
   // Read once its form opens: asking takes a request to the server.
-  const own = useOwnOAuthClient(org.id, serverUrl, ownOffered && ownOpen);
+  const own = useOwnOAuthClient(org.id, serverUrl, chosen === "own");
   // Its form open, the dialog's main button saves the app and goes on to the sign-in.
-  const ownForm = ownOffered && ownOpen && own.current.isSuccess;
+  const ownForm = chosen === "own" && own.current.isSuccess;
   const busy = connect.isPending || withKey.isPending || oauth.isPending || installApp.isPending || own.save.isPending;
   const sent = busy || withKey.isSuccess || connect.data?.status === "connected";
   // As the server does: a server by address takes another account, a catalog connector a new sign-in.
@@ -382,12 +442,17 @@ function ConnectStep({
     onClose();
   };
   const byAddressResult = (result: Awaited<ReturnType<typeof connect.mutateAsync>>) => {
-    if (result.status === "oauth") navigateAway(result.authorizeUrl);
+    if (result.status === "oauth" && result.paste) {
+      setPasteStage("open");
+      setPaste({ authorizeUrl: result.authorizeUrl, redirectUri: result.paste.redirectUri });
+    } else if (result.status === "oauth") navigateAway(result.authorizeUrl);
     else if (result.status === "needs_key") {
+      setPaste(null);
+      setOwnStage("create");
       setNeedsKey(result);
       // Refused for want of approval, an admin's own app is the way in; anyone else gets the key.
-      if (result.reason === "not_approved" && ownOffered) setOwnOpen(true);
-      else setKeyOpen(true);
+      setMoreOpen(true);
+      setWay(result.reason === "not_approved" && ownOffered ? "own" : "key");
       // "Check their values": the headers it sent are in sight.
       if (sendsHeaders) setHeadersOpen(true);
       setTouched(null);
@@ -396,6 +461,7 @@ function ConnectStep({
   const failed = (error: unknown) => {
     const refusal = headerRefused(headerRows, headers, error);
     if (!refusal) return toast.show(errorText(t, error, i18n.language), "error");
+    setMoreOpen(true);
     setHeadersOpen(true);
     // Its words stand where the saved names were said to stay. Nothing is removed for the person: connecting again
     // is refused again until they type the headers or choose Remover.
@@ -404,10 +470,59 @@ function ConnectStep({
     if (savedHeadersUnreadable(error) && savedHeaders.length > 0) setUnreadable(refusal);
     else setRefused(refusal);
   };
+  // Typed by address, a server the catalog lists (Meta Ads's) is named as the catalog names it.
+  const listedAt =
+    askUrl && isHttpsUrl(url)
+      ? catalog.data?.connectors.find((c) => c.kind === "remote_mcp" && sameServer(c.serverUrl, url.trim()))
+      : undefined;
   // The service's name: the server names another account after it ("Stripe 2"). A catalog entry's goes in English,
   // so each viewer reads a name nobody changed in their own language.
-  const name = (def ? def.label : fixed ? (accounts[0]?.label ?? item?.label) : label.trim()) || undefined;
+  const name =
+    (def
+      ? def.label
+      : fixed
+        ? (accounts[0]?.label ?? item?.label)
+        : isHttpsUrl(url)
+          ? listedAt
+            ? connectorName(t, listedAt)
+            : nameOfAddress(url.trim())
+          : "") || undefined;
   const back = returnTo ? oauthReturnPath(returnTo) : returnPath(org.id);
+  const shownName = name ?? (isHttpsUrl(serverUrl) ? new URL(serverUrl).hostname : "");
+  // Past the address, the dialog is titled with the name it connects as, and its header goes back a stage.
+  const stageBack: (() => void) | null = paste
+    ? pasteStage === "paste"
+      ? () => setPasteStage("open")
+      : () => setPaste(null)
+    : needsKey
+      ? chosen === "own" && ownStage === "id"
+        ? () => setOwnStage("create")
+        : () => {
+            setNeedsKey(null);
+            setMoreOpen(false);
+            setWay("page");
+          }
+      : askUrl && moreOpen
+        ? () => setMoreOpen(false)
+        : null;
+  const backTo = useRef(stageBack);
+  backTo.current = stageBack;
+  const hasBack = stageBack !== null;
+  const named = paste || needsKey ? shownName : null;
+  useEffect(() => {
+    onHead?.({ name: named, back: hasBack ? () => backTo.current?.() : null });
+  }, [named, hasBack, onHead]);
+  useEffect(() => () => onHead?.({ name: null, back: null }), [onHead]);
+  // Finished by a pasted return: once the list has the account, as if it came back from the sign-in.
+  const finish = useRef(done);
+  finish.current = done;
+  useEffect(() => {
+    if (!pasted || servers.isFetching) return;
+    const server = servers.data?.find((s) => s.id === pasted.connectionId);
+    if (!server) return;
+    setPasted(null);
+    finish.current(fromServer(server, catalog.data?.connectors ?? []), pasted.outcome);
+  }, [pasted, servers.data, servers.isFetching, catalog.data]);
 
   const githubOrgs = mode === "reconnect" && def?.id === "github" && !viaComposio && !item?.viaGithubApp;
   const access = useGithubAccess(org.id, githubOrgs);
@@ -417,8 +532,9 @@ function ConnectStep({
     if (githubOrgs && access.data?.orgs) keepGithubOrgs(access.data.orgs);
     if (byAddress) {
       setRefused(null);
+      // A server that refuses our callback may take the loopback one: this dialog takes the pasted return.
       connect.mutate(
-        { serverUrl, label: name, returnTo: back, connectionId, headers, ...mine },
+        { serverUrl, label: name, returnTo: back, connectionId, headers, paste: true, ...mine },
         { onSuccess: byAddressResult, onError: failed },
       );
     } else if (def) {
@@ -451,26 +567,16 @@ function ConnectStep({
   const keyLabel = telegram ? t("connectFlow.telegram.token") : t("connectors.apiKey");
   const keyHelp = telegram ? t("connectFlow.telegram.steps") : t("connectors.apiKeyHelp");
   const notApproved = needsKey?.reason === "not_approved";
-  const needsKeyAlert = needsKey && (
-    <Alert tone="neutral">
-      {notApproved ? (
-        <>
-          {t(ownOffered ? "connectFlow.ownClient.notApproved" : "connectFlow.notApproved", {
-            name: name ?? new URL(serverUrl).hostname,
-          })}
-          {!ownOffered && <span className="cflow__said">{t("connectFlow.ownClient.askAdmin")}</span>}
-          {needsKey.detail && (
-            <span className="cflow__said small muted">{t("connectFlow.serverSaid", { detail: needsKey.detail })}</span>
-          )}
-        </>
-      ) : (
-        t(sendsHeaders ? "connectFlow.headers.refused" : "connectFlow.needsKey")
-      )}
-    </Alert>
-  );
+  // Refused with a key as the way (it lets in only apps it approved, or takes a key alone): the line under its question.
+  const refusalLead = !needsKey
+    ? null
+    : notApproved
+      ? t(ownOffered ? "connectFlow.refused.key" : "connectFlow.refused.askAdmin", { name: shownName })
+      : t(sendsHeaders ? "connectFlow.headers.refused" : "connectFlow.refused.keyText", { name: shownName });
   // A one-click server whose vendor's steps we know (Meta Ads, where this server has no Meta app of its own).
   const preset = catalog.data?.connectors.find((c) => c.kind === "remote_mcp" && sameServer(c.serverUrl, serverUrl));
-  const guide = preset?.id === "meta-ads" ? t("connectFlow.ownClient.guide.metaAds") : null;
+  const guide = preset?.id === "meta-ads" ? t("connectFlow.ownClient.createIn.metaAds") : null;
+  const guideFull = preset?.id === "meta-ads" ? t("connectFlow.refused.ownTextIn.metaAds") : null;
   const keyForm = (
     <form
       className="cflow__key"
@@ -480,7 +586,6 @@ function ConnectStep({
         else startOAuth();
       }}
     >
-      {!(notApproved && ownOffered) && needsKeyAlert}
       <Field
         label={keyLabel}
         id="cflow-key"
@@ -491,6 +596,269 @@ function ConnectStep({
       </Field>
     </form>
   );
+
+  // "Other ways to connect": how to connect (the service's page, a key, an admin's own app) and the request headers.
+  const ways: OptionListItem<typeof way>[] = [
+    { value: "page" as const, title: t("connectFlow.ways.page"), description: t("connectFlow.ways.pageText") },
+    ...(keyWay
+      ? [{ value: "key" as const, title: t("connectFlow.ways.key"), description: t("connectFlow.ways.keyText") }]
+      : []),
+    ...(ownWay
+      ? [{ value: "own" as const, title: t("connectFlow.ways.own"), description: t("connectFlow.ways.ownText") }]
+      : []),
+  ].map((w) => ({
+    ...w,
+    children:
+      w.value === "key" ? (
+        keyForm
+      ) : w.value === "own" && chosen === "own" ? (
+        <OwnClient own={own} name={shownName} guide={guide} disabled={busy} onSaved={startOAuth} />
+      ) : undefined,
+  }));
+  const othersSaid = [
+    keyWay && t("connectFlow.more.key"),
+    ownWay && t("connectFlow.more.own"),
+    canHeaders && t("connectFlow.more.headers"),
+  ].filter((w): w is string => Boolean(w));
+  const othersLine = othersSaid.length > 0 ? sentenceOf(othersSaid, i18n.language) : undefined;
+  const footNote = viaApp
+    ? t("connectFlow.github.appNote")
+    : replacing
+      ? t(unchecked ? "connectFlow.replaceUnchecked" : "connectFlow.replace")
+      : again && unchecked
+        ? t("connectFlow.newAccountUnchecked")
+        : personal
+          ? t("connectors.personal.done")
+          : t("connectFlow.allCanUse");
+
+  // The dialog's main button: the way chosen (the service's page, a key, an admin's own app) or GitHub's app.
+  const mainButton = viaApp ? (
+    <Button variant="primary" disabled={busy} loading={installApp.isPending} onClick={startApp}>
+      {t("githubApp.install")}
+    </Button>
+  ) : ownForm ? (
+    <Button
+      variant="primary"
+      type="submit"
+      form="cflow-own"
+      disabled={busy}
+      loading={own.save.isPending || (connect.isPending && touched === "oauth")}
+    >
+      {t("connectFlow.ownClient.save")}
+    </Button>
+  ) : keyed ? (
+    <Button
+      variant="primary"
+      disabled={busy}
+      loading={(withKey.isPending || connect.isPending) && touched === "key"}
+      onClick={submitKey}
+    >
+      {t("connectors.saveKey")}
+    </Button>
+  ) : (
+    canOAuth && (
+      <Button
+        variant="primary"
+        disabled={busy}
+        loading={(connect.isPending || oauth.isPending) && touched === "oauth"}
+        onClick={startOAuth}
+      >
+        {viaComposio
+          ? t("connectFlow.continueInComposio")
+          : def
+            ? t("connectFlow.continueIn", { name: connectorBrand(def) })
+            : t("connectors.connect")}
+      </Button>
+    )
+  );
+  const headersMore = (
+    <SettingsMore
+      title={t("connectFlow.headers.title")}
+      description={t("connectFlow.headers.help")}
+      open={headersOpen}
+      onOpenChange={setHeadersOpen}
+    >
+      <HeaderRows
+        rows={headerRows}
+        saved={savedHeaders}
+        dropSaved={dropSaved}
+        refused={refused}
+        unreadable={unreadable}
+        onChange={(rows, drop) => {
+          setHeaderRows(rows);
+          setDropSaved(drop);
+          setRefused(null);
+        }}
+      />
+    </SettingsMore>
+  );
+
+  if (paste) {
+    return (
+      <ConnectPaste
+        name={shownName}
+        stage={pasteStage}
+        onStage={setPasteStage}
+        authorizeUrl={paste.authorizeUrl}
+        redirectUri={paste.redirectUri}
+        note={footNote}
+        onDone={setPasted}
+        onRestart={startOAuth}
+        onClose={onClose}
+      />
+    );
+  }
+
+  // Refused, in stages of one thing each: an admin's own app (register our address in it, then paste its ID), or a key;
+  // the other way in the footer.
+  if (needsKey) {
+    const other = chosen === "own" ? (canKey ? "key" : null) : ownWay ? "own" : null;
+    const said = needsKey.detail ? (
+      <p className="cflow__said small muted">{t("connectFlow.serverSaid", { detail: needsKey.detail })}</p>
+    ) : null;
+    return (
+      <>
+        <Locked when={busy}>
+          <DialogBody className="cflow__body">
+            {chosen === "own" ? (
+              <OwnClient
+                own={own}
+                name={shownName}
+                guide={guide}
+                guideFull={guideFull}
+                stage={ownStage}
+                said={said}
+                disabled={busy}
+                onSaved={startOAuth}
+              />
+            ) : (
+              <>
+                <StageHead
+                  title={t(notApproved ? "connectFlow.refused.ownTitle" : "connectFlow.refused.keyTitle", {
+                    name: shownName,
+                  })}
+                  text={refusalLead}
+                />
+                {said}
+                {keyForm}
+                {canHeaders && headersMore}
+              </>
+            )}
+          </DialogBody>
+        </Locked>
+        <DialogFooter
+          bar
+          busyNote={connect.isPending ? steps : undefined}
+          note={
+            other ? (
+              <Button
+                variant="link"
+                onClick={() => {
+                  setWay(other);
+                  setOwnStage("create");
+                }}
+              >
+                {t(other === "key" ? "connectFlow.refused.useKey" : "connectFlow.refused.useOwn")}
+              </Button>
+            ) : (
+              footNote
+            )
+          }
+        >
+          <Button onClick={onClose}>{t("common.cancel")}</Button>
+          {chosen === "own" && ownStage === "create" ? (
+            <Button variant="primary" onClick={() => setOwnStage("id")}>
+              {t("connectFlow.refused.created")}
+            </Button>
+          ) : (
+            mainButton
+          )}
+        </DialogFooter>
+      </>
+    );
+  }
+
+  // The address alone, first (a server by address): its name comes from it, who can use it is a link in the footer, and
+  // the other ways are a link to the full form.
+  if (askUrl && !moreOpen) {
+    const pasteUrl = async () => {
+      try {
+        setUrl((await navigator.clipboard.readText()).trim());
+        setNeedsKey(null);
+      } catch {
+        document.getElementById("cflow-url")?.focus();
+      }
+    };
+    const whoNote = !forWhom ? (
+      footNote
+    ) : !admin ? (
+      t("connectors.personal.done")
+    ) : (
+      <span>
+        {t(personal ? "connectFlow.address.mine" : "connectFlow.address.team")}{" "}
+        <Button variant="link" onClick={() => setScope(personal ? "team" : "personal")}>
+          {t(personal ? "connectFlow.address.toTeam" : "connectFlow.address.justMe")}
+        </Button>
+      </span>
+    );
+    return (
+      <>
+        <Locked when={busy}>
+          <DialogBody className="cflow__body">
+            <StageHead
+              title={t("connectFlow.address.question")}
+              text={t("connectFlow.address.lead")}
+              htmlFor="cflow-url"
+            />
+            <span className="cflow__big">
+              <AffixInput
+                id="cflow-url"
+                value={url}
+                placeholder="https://"
+                inputMode="url"
+                autoComplete="off"
+                spellCheck={false}
+                aria-invalid={urlError ? true : undefined}
+                onChange={(e) => {
+                  setUrl(e.target.value);
+                  setNeedsKey(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && url.trim()) {
+                    e.preventDefault();
+                    startOAuth();
+                  }
+                }}
+                action={
+                  !url.trim() && (
+                    <Button variant="ghost" size="sm" icon="copy" onClick={() => void pasteUrl()}>
+                      {t("connectFlow.paste.paste")}
+                    </Button>
+                  )
+                }
+              />
+            </span>
+            {urlError && <SettingNote icon="alert">{urlError}</SettingNote>}
+            {/* An address already connected here takes another account: the footer keeps who can use it. */}
+            {!urlError && again && unchecked && (
+              <SettingNote icon="info" live>
+                {t("connectFlow.newAccountUnchecked")}
+              </SettingNote>
+            )}
+            <Button variant="link" className="cflow__other" onClick={() => setMoreOpen(true)}>
+              {t("connectFlow.address.other")}
+            </Button>
+          </DialogBody>
+        </Locked>
+        <DialogFooter bar busyNote={connect.isPending ? steps : undefined} note={whoNote}>
+          <Button onClick={onClose}>{t("common.cancel")}</Button>
+          <Button variant="primary" disabled={busy || !url.trim()} loading={connect.isPending} onClick={startOAuth}>
+            {t("connectFlow.address.continue")}
+          </Button>
+        </DialogFooter>
+      </>
+    );
+  }
 
   return (
     <>
@@ -528,15 +896,6 @@ function ConnectStep({
               />
             </Field>
           )}
-          {def === null && fixed === null && (
-            <Field label={t("connectFlow.name")} id="cflow-name">
-              <Input
-                value={label}
-                onChange={(e) => setLabel(e.target.value)}
-                placeholder={t("connectFlow.namePlaceholder")}
-              />
-            </Field>
-          )}
           {forWhom && (
             <ForWhom
               label={t("connectors.personal.forWhom")}
@@ -567,144 +926,67 @@ function ConnectStep({
               ]}
             />
           )}
-          {!viaApp && canOAuth && canKey && (
-            <details
-              className="cflow__more"
-              open={keyOpen}
-              onToggle={(e) => {
-                const opened = (e.currentTarget as HTMLDetailsElement).open;
-                setKeyOpen(opened);
-                // One way in at a time: the dialog's main button is that way's.
-                if (opened) setOwnOpen(false);
-              }}
-            >
-              <summary>{t("connectFlow.withKey")}</summary>
-              {keyForm}
-            </details>
-          )}
           {!viaApp && !canOAuth && canKey && keyForm}
-          {!viaApp && canHeaders && (
-            <details
-              className="cflow__more"
-              open={headersOpen}
-              onToggle={(e) => setHeadersOpen((e.currentTarget as HTMLDetailsElement).open)}
+          {!viaApp && othersSaid.length > 0 && (
+            <SettingsMore
+              title={t("connectFlow.more.title")}
+              description={othersLine}
+              open={moreOpen}
+              onOpenChange={setMoreOpen}
             >
-              <summary>{t("connectFlow.headers.title")}</summary>
-              <HeaderRows
-                rows={headerRows}
-                saved={savedHeaders}
-                dropSaved={dropSaved}
-                refused={refused}
-                unreadable={unreadable}
-                onChange={(rows, drop) => {
-                  setHeaderRows(rows);
-                  setDropSaved(drop);
-                  setRefused(null);
-                }}
-              />
-            </details>
-          )}
-          {!viaApp && ownOffered && serverUrl !== "" && (askUrl ? isHttpsUrl(url) : true) && (
-            <details
-              className="cflow__more"
-              open={ownOpen}
-              onToggle={(e) => {
-                const opened = (e.currentTarget as HTMLDetailsElement).open;
-                setOwnOpen(opened);
-                if (opened) setKeyOpen(false);
-              }}
-            >
-              <summary>{t("connectFlow.ownClient.title")}</summary>
-              {ownOpen && (
-                <OwnClient
-                  own={own}
-                  guide={guide}
-                  alert={notApproved ? needsKeyAlert : null}
-                  disabled={busy}
-                  onSaved={startOAuth}
-                />
+              {ways.length > 1 && (
+                <Field label={t("connectFlow.ways.label")} group>
+                  <OptionList
+                    aria-label={t("connectFlow.ways.label")}
+                    value={chosen}
+                    onValueChange={setWay}
+                    options={ways}
+                  />
+                </Field>
               )}
-            </details>
+              {canHeaders && headersMore}
+            </SettingsMore>
           )}
         </DialogBody>
       </Locked>
-      <DialogFooter
-        bar
-        busyNote={connect.isPending ? steps : undefined}
-        note={
-          viaApp
-            ? t("connectFlow.github.appNote")
-            : replacing
-              ? t(unchecked ? "connectFlow.replaceUnchecked" : "connectFlow.replace")
-              : again && unchecked
-                ? t("connectFlow.newAccountUnchecked")
-                : personal
-                  ? t("connectors.personal.done")
-                  : t("connectFlow.allCanUse")
-        }
-      >
+      <DialogFooter bar busyNote={connect.isPending ? steps : undefined} note={footNote}>
         <Button onClick={onClose}>{t("common.cancel")}</Button>
-        {viaApp ? (
-          <Button variant="primary" disabled={busy} loading={installApp.isPending} onClick={startApp}>
-            {t("githubApp.install")}
-          </Button>
-        ) : ownForm ? (
-          <Button
-            variant="primary"
-            type="submit"
-            form="cflow-own"
-            disabled={busy}
-            loading={own.save.isPending || (connect.isPending && touched === "oauth")}
-          >
-            {t("connectFlow.ownClient.save")}
-          </Button>
-        ) : keyed ? (
-          <Button
-            variant="primary"
-            disabled={busy}
-            loading={(withKey.isPending || connect.isPending) && touched === "key"}
-            onClick={submitKey}
-          >
-            {t("connectors.saveKey")}
-          </Button>
-        ) : (
-          canOAuth && (
-            <Button
-              variant="primary"
-              disabled={busy}
-              loading={(connect.isPending || oauth.isPending) && touched === "oauth"}
-              onClick={startOAuth}
-            >
-              {viaComposio
-                ? t("connectFlow.continueInComposio")
-                : def
-                  ? t("connectFlow.continueIn", { name: connectorBrand(def) })
-                  : t("connectors.connect")}
-            </Button>
-          )
-        )}
+        {mainButton}
       </DialogFooter>
     </>
   );
 }
 
 /**
- * The workspace's own OAuth app for a server that lets in only apps it approved (who manages connectors): the redirect
- * URI to register there, its client ID, secret and scopes. Saved, every sign-in to that server here uses it. The
- * dialog's main button ("Salvar e continuar") submits it and goes on to the sign-in at once.
+ * The workspace's own OAuth app for a server that lets in only apps it approved (who manages connectors), in three
+ * numbered steps as "AI accounts" signs in: make the app at the provider, register our redirect URI there, paste its
+ * client ID. Its secret and scopes, which few apps need, are folded under them. Saved, every sign-in to that server
+ * here uses it. The dialog's main button ("Save and continue") submits it and goes on to the sign-in at once.
  */
 function OwnClient({
   own,
+  name,
   guide,
-  alert,
+  guideFull = null,
+  stage,
+  said = null,
   disabled,
   onSaved,
 }: {
   own: ReturnType<typeof useOwnOAuthClient>;
-  /** The vendor's own steps, when we know them. */
+  /** The service, as the dialog names it. */
+  name: string;
+  /** Where to make the app, when we know the vendor's steps. */
   guide: string | null;
-  /** Why the sign-in was refused, when it was. */
-  alert: ReactNode;
+  /** The same as one sentence with registering our address, for the `create` stage. */
+  guideFull?: string | null;
+  /**
+   * After a refusal, one thing per stage: `create` (make the app and register our address in it), then `id` (paste its
+   * client ID; secret and scopes folded). Without: the three numbered steps together ("Other ways to connect").
+   */
+  stage?: "create" | "id";
+  /** The server's own words for its refusal, under the `create` stage. */
+  said?: ReactNode;
   disabled: boolean;
   onSaved: () => void;
 }) {
@@ -715,25 +997,26 @@ function OwnClient({
   const [secret, setSecret] = useState("");
   const [scopes, setScopes] = useState("");
   const [touched, setTouched] = useState(false);
+  // Open with what was saved there before.
+  const [moreOpen, setMoreOpen] = useState(false);
   useEffect(() => {
     if (!saved) return;
     setClientId(saved.clientId);
     setScopes(saved.scopes ?? "");
+    if (saved.hasSecret || saved.scopes) setMoreOpen(true);
   }, [saved]);
-  if (own.current.isPending || own.current.error) {
-    return (
-      <div className="cflow__key">
-        {alert}
-        {own.current.error ? (
-          <Alert tone="neutral">{errorText(t, own.current.error, i18n.language)}</Alert>
-        ) : (
-          <Skeleton height={120} />
-        )}
-      </div>
-    );
-  }
   const redirectUri = own.current.data?.redirectUri ?? "";
-  const idError = touched && clientId.trim() === "" ? t("connectFlow.ownClient.clientIdMissing") : undefined;
+  // Only the address waits for the server: the stage's words and fields show at once, the address as a block its size.
+  const address = own.current.error ? (
+    <SettingNote icon="alert">{errorText(t, own.current.error, i18n.language)}</SettingNote>
+  ) : own.current.isPending ? (
+    <Skeleton shape="block" className="cflow__address-wait" />
+  ) : (
+    /* A value to copy, not a field to fill. A long address wraps whole. */
+    <CommandBlock command={redirectUri} labelled />
+  );
+  const loading = own.current.isPending;
+  const idMissing = touched && clientId.trim() === "";
   const save = () => {
     setTouched(true);
     if (clientId.trim() === "") return;
@@ -749,31 +1032,13 @@ function OwnClient({
     );
   };
   const issuer = own.current.data?.issuer ?? "";
-  return (
-    <form
-      id="cflow-own"
-      className="cflow__key"
-      onSubmit={(e) => {
-        e.preventDefault();
-        save();
-      }}
+  const more = (
+    <SettingsMore
+      title={t("connectFlow.ownClient.more")}
+      description={t("connectFlow.ownClient.moreText")}
+      open={moreOpen}
+      onOpenChange={setMoreOpen}
     >
-      {alert}
-      <p className="small muted">{guide ?? t("connectFlow.ownClient.help")}</p>
-      {/* A value to copy, not a field to fill: labelled like one, as tall as its words. A long address wraps whole. */}
-      <div className="cflow__hgroup">
-        <span className="ac-field__label">{t("connectFlow.ownClient.redirectUri")}</span>
-        <CommandBlock command={redirectUri} labelled />
-      </div>
-      <Field label={t("connectFlow.ownClient.clientId")} id="cflow-client-id" error={idError}>
-        <Input
-          value={clientId}
-          onChange={(e) => setClientId(e.target.value)}
-          autoComplete="off"
-          spellCheck={false}
-          disabled={disabled}
-        />
-      </Field>
       <Field
         label={t("connectFlow.ownClient.clientSecret")}
         id="cflow-client-secret"
@@ -827,7 +1092,93 @@ function OwnClient({
           </Button>
         </div>
       )}
-    </form>
+    </SettingsMore>
+  );
+  if (stage === "create") {
+    return (
+      <>
+        <StageHead
+          title={t("connectFlow.refused.ownTitle", { name })}
+          text={guideFull ?? t("connectFlow.refused.ownText", { name })}
+        />
+        {address}
+        {said}
+      </>
+    );
+  }
+  if (stage === "id") {
+    return (
+      <>
+        <form
+          id="cflow-own"
+          className="ac-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            save();
+          }}
+        >
+          <StageHead
+            title={t("connectFlow.refused.idTitle")}
+            text={t("connectFlow.refused.idText", { name })}
+            htmlFor="cflow-client-id"
+          />
+          <span className="cflow__big">
+            <Input
+              id="cflow-client-id"
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
+              autoComplete="off"
+              spellCheck={false}
+              disabled={disabled || loading}
+              aria-invalid={idMissing || undefined}
+            />
+          </span>
+          {idMissing && <SettingNote icon="alert">{t("connectFlow.ownClient.clientIdMissing")}</SettingNote>}
+        </form>
+        {more}
+      </>
+    );
+  }
+  return (
+    <>
+      <form
+        id="cflow-own"
+        className="agp-addacct"
+        aria-label={t("connectFlow.ownClient.title")}
+        onSubmit={(e) => {
+          e.preventDefault();
+          save();
+        }}
+      >
+        <Step n={1}>
+          <b>{t("connectFlow.ownClient.stepCreate", { name })}</b>
+          <span>{guide ?? t("connectFlow.ownClient.stepCreateText", { name })}</span>
+        </Step>
+        <Step n={2}>
+          <b>{t("connectFlow.ownClient.stepRedirect")}</b>
+          <span>{t("connectFlow.ownClient.stepRedirectText")}</span>
+          {address}
+        </Step>
+        <Step n={3}>
+          <label htmlFor="cflow-client-id">
+            <b>{t("connectFlow.ownClient.stepId")}</b>
+          </label>
+          <span className="agp-addacct__paste">
+            <Input
+              id="cflow-client-id"
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
+              autoComplete="off"
+              spellCheck={false}
+              disabled={disabled || loading}
+              aria-invalid={idMissing || undefined}
+            />
+          </span>
+          {idMissing && <SettingNote icon="alert">{t("connectFlow.ownClient.clientIdMissing")}</SettingNote>}
+        </Step>
+      </form>
+      {more}
+    </>
   );
 }
 
@@ -893,7 +1244,6 @@ function HeaderRows({
     );
   return (
     <div ref={box} className="cflow__headers">
-      <p className="small muted">{t("connectFlow.headers.help")}</p>
       {saved.length > 0 && (
         <p className="small">
           {line.says === "unreadable" && unreadable ? (
@@ -1084,6 +1434,7 @@ function DoneStep({ item, onAdjust, onClose }: { item: ConnectedItem; onAdjust: 
   const waiting = item.pending > 0 ? item.server : null;
   return (
     <ConnectedDone
+      art={<ConnectScene name={itemName(t, item)} def={item.def} image={item.image} lit={7} />}
       text={item.ownerUserId ? t("connectors.personal.done") : connectedSummary(t, item)}
       busy={save.isPending}
       onAdjust={onAdjust}
@@ -1120,6 +1471,7 @@ function DoneStep({ item, onAdjust, onClose }: { item: ConnectedItem; onAdjust: 
  * "Pronto", or `primary` in its place.
  */
 export function ConnectedDone({
+  art,
   text,
   children,
   busy,
@@ -1127,6 +1479,8 @@ export function ConnectedDone({
   onAdjust,
   onClose,
 }: {
+  /** A picture over the sentence (a connector's: our agent and the service, joined). */
+  art?: ReactNode;
   text: string;
   children?: ReactNode;
   busy?: boolean;
@@ -1138,6 +1492,7 @@ export function ConnectedDone({
   return (
     <>
       <DialogBody className="cflow__body">
+        {art}
         <p className="cflow__text">{text}</p>
         {children}
       </DialogBody>

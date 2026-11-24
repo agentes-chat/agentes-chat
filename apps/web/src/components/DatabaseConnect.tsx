@@ -37,6 +37,7 @@ import {
   Locked,
   Segmented,
   Select,
+  SettingsMore,
   useUnsavedInDialog,
 } from "@agenteschat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -313,69 +314,66 @@ function ConnectStep({
             <Icon name="info" size={14} />
             <span>{t("database.dedicated")}</span>
           </p>
-          <details
-            className="cflow__more"
+          <SettingsMore
+            title={t("mail.advanced")}
+            description={t("database.advancedText")}
             open={advanced}
-            onToggle={(e) => setAdvanced((e.currentTarget as HTMLDetailsElement).open)}
+            onOpenChange={setAdvanced}
           >
-            <summary>{t("mail.advanced")}</summary>
-            <div className="cflow__key">
-              <p className="small muted">{t("database.advancedText")}</p>
-              <div className="mail-host">
-                <Field label={t("database.host")} id="db-host">
-                  <Input autoComplete="off" value={host} onChange={(e) => setHost(e.target.value)} />
-                </Field>
-                <Field label={t("mail.port")} id="db-port">
-                  <Input inputMode="numeric" value={port} onChange={(e) => setPort(e.target.value)} />
-                </Field>
-              </div>
-              <Field
-                label={t("database.database")}
-                id="db-database"
-                hint={
-                  whole
-                    ? {
-                        name: t("common.about", { label: t("database.database") }),
-                        text: t("database.databaseOptional"),
-                      }
-                    : undefined
-                }
-              >
-                <Input autoComplete="off" value={database} onChange={(e) => setDatabase(e.target.value)} />
+            <div className="mail-host">
+              <Field label={t("database.host")} id="db-host">
+                <Input autoComplete="off" value={host} onChange={(e) => setHost(e.target.value)} />
               </Field>
-              <Field label={t("mail.username")} id="db-username">
-                <Input autoComplete="off" value={username} onChange={(e) => setUsername(e.target.value)} />
-              </Field>
-              <Field
-                label={t("database.password")}
-                id="db-password"
-                hint={{ name: t("common.about", { label: t("database.password") }), text: t("mail.passwordHelp") }}
-              >
-                <Input
-                  type="password"
-                  // "new-password": the browser must not fill a saved login into this form (it put the
-                  // person's email in the address field).
-                  autoComplete="new-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </Field>
-              <Field
-                label={t("database.ssl")}
-                id="db-ssl"
-                example={sslmode === "disable" ? t("database.sslOffHelp") : undefined}
-              >
-                <Select
-                  value={sslmode}
-                  onValueChange={(v) => setSslmode(v === "disable" ? "disable" : "require")}
-                  options={[
-                    { value: "require", label: t("database.sslRequire") },
-                    { value: "disable", label: t("database.sslDisable") },
-                  ]}
-                />
+              <Field label={t("mail.port")} id="db-port">
+                <Input inputMode="numeric" value={port} onChange={(e) => setPort(e.target.value)} />
               </Field>
             </div>
-          </details>
+            <Field
+              label={t("database.database")}
+              id="db-database"
+              hint={
+                whole
+                  ? {
+                      name: t("common.about", { label: t("database.database") }),
+                      text: t("database.databaseOptional"),
+                    }
+                  : undefined
+              }
+            >
+              <Input autoComplete="off" value={database} onChange={(e) => setDatabase(e.target.value)} />
+            </Field>
+            <Field label={t("mail.username")} id="db-username">
+              <Input autoComplete="off" value={username} onChange={(e) => setUsername(e.target.value)} />
+            </Field>
+            <Field
+              label={t("database.password")}
+              id="db-password"
+              hint={{ name: t("common.about", { label: t("database.password") }), text: t("mail.passwordHelp") }}
+            >
+              <Input
+                type="password"
+                // "new-password": the browser must not fill a saved login into this form (it put the
+                // person's email in the address field).
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </Field>
+            <Field
+              label={t("database.ssl")}
+              id="db-ssl"
+              example={sslmode === "disable" ? t("database.sslOffHelp") : undefined}
+            >
+              <Select
+                value={sslmode}
+                onValueChange={(v) => setSslmode(v === "disable" ? "disable" : "require")}
+                options={[
+                  { value: "require", label: t("database.sslRequire") },
+                  { value: "disable", label: t("database.sslDisable") },
+                ]}
+              />
+            </Field>
+          </SettingsMore>
           {error && <Alert>{codeAndBold(t(`database.error.${error}`))}</Alert>}
         </DialogBody>
       </Locked>

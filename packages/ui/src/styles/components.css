@@ -11817,6 +11817,17 @@ html:not([data-pointer]) .ac-setmore__toggle:focus-visible {
 .ac-setmore__body > .ac-setsec:last-child {
   padding-bottom: 0;
 }
+/* In a dialog ("Other ways to connect"): its line comes a section's step under what is above it and ends on the body's
+   own edge, and what it opens is a form, a field's gap under the line and between its parts. */
+.ac-dialog__body .ac-setmore {
+  padding: var(--space-4) 0 0;
+}
+.ac-dialog__body .ac-setmore__body:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--form-gap);
+  padding-top: var(--space-4);
+}
 @media (max-width: 760px) {
   .ac-setrow {
     align-items: flex-start;

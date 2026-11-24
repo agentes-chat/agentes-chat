@@ -32585,9 +32585,6 @@
   "repos.added": {
     "value": "{{repo}} joins the list when you save."
   },
-  "connectors.title": {
-    "value": "Connectors"
-  },
   "connectors.store.featured": {
     "value": "Featured"
   },
@@ -32701,6 +32698,9 @@
   },
   "connectors.howShort.composio": {
     "value": "Through Composio"
+  },
+  "connectors.title": {
+    "value": "Connectors"
   },
   "connectors.add": {
     "value": "Add connector"
@@ -36768,7 +36768,7 @@
     "value": "Connect {{name}}"
   },
   "connectFlow.customTitle": {
-    "value": "Connect an MCP server"
+    "value": "Connect a server"
   },
   "connectFlow.toolsTitle": {
     "value": "What {{name}} does"
@@ -36787,9 +36787,6 @@
   },
   "connectFlow.name": {
     "value": "Name"
-  },
-  "connectFlow.namePlaceholder": {
-    "value": "E.g. Support"
   },
   "connectFlow.continueIn": {
     "value": "Continue on {{name}}"
@@ -36851,9 +36848,6 @@
   "connectFlow.or": {
     "value": "or"
   },
-  "connectFlow.withKey": {
-    "value": "Connect with an API key"
-  },
   "connectFlow.needsKey": {
     "value": "This server doesn't support OAuth. Connect with an API key."
   },
@@ -36863,17 +36857,170 @@
   "connectFlow.serverSaid": {
     "value": "The server answered: {{detail}}"
   },
+  "connectFlow.more.title": {
+    "value": "Other ways to connect"
+  },
+  "connectFlow.more.key": {
+    "value": "an API key"
+  },
+  "connectFlow.more.own": {
+    "value": "your own OAuth app"
+  },
+  "connectFlow.more.headers": {
+    "value": "request headers"
+  },
+  "connectFlow.ways.label": {
+    "value": "How to connect"
+  },
+  "connectFlow.ways.page": {
+    "value": "On the service's page"
+  },
+  "connectFlow.ways.pageText": {
+    "value": "You approve it there and come back here. Most services work this way."
+  },
+  "connectFlow.ways.key": {
+    "value": "With an API key"
+  },
+  "connectFlow.ways.keyText": {
+    "value": "For a server that gives you a key instead of a sign-in."
+  },
+  "connectFlow.ways.own": {
+    "value": "With your own OAuth app"
+  },
+  "connectFlow.ways.ownText": {
+    "value": "For a server that only lets in apps it approved."
+  },
+  "connectFlow.address.question": {
+    "value": "What's the server's address?"
+  },
+  "connectFlow.address.lead": {
+    "value": "Paste the MCP address the service gave you. We'll work out the rest."
+  },
+  "connectFlow.address.continue": {
+    "value": "Continue"
+  },
+  "connectFlow.address.other": {
+    "value": "Connect another way"
+  },
+  "connectFlow.address.team": {
+    "value": "The whole team will be able to use it."
+  },
+  "connectFlow.address.justMe": {
+    "value": "Only me"
+  },
+  "connectFlow.address.mine": {
+    "value": "Only you will be able to use it."
+  },
+  "connectFlow.address.toTeam": {
+    "value": "For the team"
+  },
+  "connectFlow.paste.openTitle": {
+    "value": "Sign in to {{name}} and approve"
+  },
+  "connectFlow.paste.openText": {
+    "value": "It opens in a new tab. At the end, {{name}} shows a page that doesn't load: that's the one you bring back here."
+  },
+  "connectFlow.paste.open": {
+    "value": "Open {{name}}"
+  },
+  "connectFlow.paste.pasteTitle": {
+    "value": "Paste that page's address"
+  },
+  "connectFlow.paste.pasteText": {
+    "value": "It's the one in the browser's bar, starting with localhost. Once pasted, it connects."
+  },
+  "connectFlow.paste.unreachable": {
+    "value": "This site can't be reached"
+  },
+  "connectFlow.paste.paste": {
+    "value": "Paste"
+  },
+  "connectFlow.paste.pasteFailed": {
+    "value": "The browser didn't let us paste. Paste with Ctrl+V (⌘V on a Mac)."
+  },
+  "connectFlow.paste.wrong": {
+    "value": "That's not that page's address. It starts with {{start}}."
+  },
+  "connectFlow.paste.refused": {
+    "value": "{{name}} wasn't approved. Open it again to try once more."
+  },
+  "connectFlow.paste.connecting": {
+    "value": "Connecting to {{name}}…"
+  },
+  "connectFlow.paste.notOpened": {
+    "value": "Didn't open?"
+  },
+  "connectFlow.paste.openAgain": {
+    "value": "Open {{name}} again"
+  },
+  "connectFlow.refused.ownTitle": {
+    "value": "{{name}} only lets in apps it approved"
+  },
+  "connectFlow.refused.ownText": {
+    "value": "Make an app in {{name}}'s developer settings and add this redirect address to it."
+  },
+  "connectFlow.refused.ownTextIn.metaAds": {
+    "value": "In Meta for Developers, make an app with the Marketing API use case and add this redirect address to it."
+  },
+  "connectFlow.refused.created": {
+    "value": "Done"
+  },
+  "connectFlow.refused.idTitle": {
+    "value": "Paste the app's ID"
+  },
+  "connectFlow.refused.idText": {
+    "value": "It's on the page of the app you made at {{name}}."
+  },
+  "connectFlow.refused.keyTitle": {
+    "value": "{{name}} asks for an API key"
+  },
+  "connectFlow.refused.keyText": {
+    "value": "You'll find the key in {{name}}'s settings. It's kept encrypted and nobody sees it again."
+  },
+  "connectFlow.refused.key": {
+    "value": "If it gives you an API key, you can connect with it."
+  },
+  "connectFlow.refused.askAdmin": {
+    "value": "An admin can connect it with an app of the workspace's own, or you can use an API key if {{name}} gives you one."
+  },
+  "connectFlow.refused.useKey": {
+    "value": "Connect with a key"
+  },
+  "connectFlow.refused.useOwn": {
+    "value": "Use an app of your own"
+  },
   "connectFlow.ownClient.title": {
     "value": "Use your own OAuth app"
   },
   "connectFlow.ownClient.notApproved": {
     "value": "{{name}} only lets in apps it approved, and agentes.chat isn't one yet. You can connect it with your own app there."
   },
-  "connectFlow.ownClient.askAdmin": {
-    "value": "An admin can connect it with the workspace's own app."
-  },
   "connectFlow.ownClient.help": {
     "value": "Create an app at the provider, register this redirect URI in it and paste its client ID. Every sign-in there from the workspace then uses your app."
+  },
+  "connectFlow.ownClient.stepCreate": {
+    "value": "Make an app at {{name}}"
+  },
+  "connectFlow.ownClient.stepCreateText": {
+    "value": "In {{name}}'s developer settings."
+  },
+  "connectFlow.ownClient.stepRedirect": {
+    "value": "Add this redirect address to it"
+  },
+  "connectFlow.ownClient.stepRedirectText": {
+    "value": "Among the app's OAuth redirect URIs."
+  },
+  "connectFlow.ownClient.stepId": {
+    "value": "Paste the app's client ID"
+  },
+  "connectFlow.ownClient.more": {
+    "value": "Client secret and scopes"
+  },
+  "connectFlow.ownClient.moreText": {
+    "value": "Only if the app asks for them."
+  },
+  "connectFlow.ownClient.createIn.metaAds": {
+    "value": "In Meta for Developers, with the Marketing API use case."
   },
   "connectFlow.ownClient.guide.metaAds": {
     "value": "In Meta for Developers, create an app with the Marketing API use case. Add this redirect URI to its valid OAuth redirect URIs, then paste the App ID, and the App Secret if your app requires it."
@@ -36918,7 +37065,7 @@
     "value": "Request headers"
   },
   "connectFlow.headers.help": {
-    "value": "For a key that goes in another header, or a gateway in front of the server. Most servers need none."
+    "value": "For a key in another header, or a gateway in front. Most servers need none."
   },
   "connectFlow.headers.value": {
     "value": "Value"

@@ -216,7 +216,8 @@ describe("Conectar GitHub: the agentes.chat app first", () => {
     );
     expect(flow.textContent).toContain("Você escolhe as contas e os repositórios no GitHub e volta para cá.");
     // The account's key is the account's other way in: not offered for the app.
-    expect(within(flow).queryByText("Conectar com uma chave de API")).toBeNull();
+    const others = () => within(flow).queryByRole("button", { name: /^Outras formas de conectar/ });
+    expect(others()).toBeNull();
     await click(within(flow).getByRole("button", { name: "Instalar o app agentes.chat" }));
     await settle(4);
     expect(state.calls.find((c) => c.method === "githubApp.install")?.args).toEqual([ORG_ID, CONNECTORS]);
@@ -224,7 +225,7 @@ describe("Conectar GitHub: the agentes.chat app first", () => {
     expect(left[0]).toStartWith("https://github.com/apps/agentes-chat/installations/new");
 
     await click(account as HTMLElement);
-    expect(within(flow).getByText("Conectar com uma chave de API")).toBeTruthy();
+    expect(others()?.textContent).toContain("Chave de API.");
     expect(within(flow).queryByRole("button", { name: "Instalar o app agentes.chat" })).toBeNull();
     await click(within(flow).getByRole("button", { name: "Continuar no GitHub" }));
     await settle(4);

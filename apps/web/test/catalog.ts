@@ -99,3 +99,12 @@ export async function rowMenu(name: string) {
   await settle(2);
   return screen().getByRole("menu");
 }
+
+/** The connect dialog by address: its one question answered, then "Continue". */
+export async function connectAddress(flow: HTMLElement, address: string) {
+  await act(async () =>
+    fireEvent.change(within(flow).getByLabelText("Qual é o endereço do servidor?"), { target: { value: address } }),
+  );
+  await act(async () => fireEvent.click(within(flow).getByRole("button", { name: "Continuar" })));
+  await settle(4);
+}

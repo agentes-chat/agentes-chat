@@ -4383,6 +4383,9 @@ export function createFakeApi(state: FakeState = seedState(), options: { seed?: 
     },
     connectors: {
       ...http.connectors,
+      // A return the person pasted (a server that took only the loopback address); any other finishes in the callback.
+      completeOAuth: async (orgId, input) =>
+        (await customConnectors.completePasted(orgId, input)) ?? http.connectors.completeOAuth(orgId, input),
       takeOffAgent: async (orgId, connectionId, agentId) => {
         await http.connectors.takeOffAgent(orgId, connectionId, agentId);
         access.takeOff(connectionId, agentId);

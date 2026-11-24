@@ -12838,7 +12838,6 @@
     "added": "{{repo}} masuk ke daftar saat kamu menyimpan."
   },
   "connectors": {
-    "title": "Konektor",
     "store": {
       "featured": "Unggulan",
       "suggested": "Disarankan",
@@ -12877,6 +12876,7 @@
       "addressPassword": "Alamat dan kata sandi",
       "composio": "Lewat Composio"
     },
+    "title": "Konektor",
     "add": "Tambah konektor",
     "personal": {
       "note": "Hanya kamu yang membuka koneksi ini. Agenmu hanya menggunakannya saat kamu minta.",
@@ -14440,14 +14440,13 @@
       "2": "Siapa yang bisa memakai"
     },
     "connectTitle": "Hubungkan {{name}}",
-    "customTitle": "Hubungkan server MCP",
+    "customTitle": "Hubungkan server",
     "toolsTitle": "Apa yang dilakukan {{name}}",
     "whoTitle": "Siapa yang bisa memakai {{name}}",
     "oauthHelp": "Kamu memberi izin di halaman {{name}} lalu kembali ke sini.",
     "customText": "Server MCP apa pun lewat alamat https-nya. Kalau mendukung OAuth, kamu memberi izin di halamannya.",
     "urlHelp": "Alamat https server.",
     "name": "Nama",
-    "namePlaceholder": "Mis. Dukungan",
     "continueIn": "Lanjutkan di {{name}}",
     "continueInComposio": "Lanjutkan di Composio",
     "github": {
@@ -14472,15 +14471,79 @@
     },
     "composioHelp": "Kamu masuk di halaman Composio, dalam bahasa Inggris, lalu kembali ke sini. {{name}} menampilkan izinnya sebagai “Composio”.",
     "or": "atau",
-    "withKey": "Hubungkan dengan kunci API",
     "needsKey": "Server ini tidak mendukung OAuth. Hubungkan dengan kunci API.",
     "notApproved": "{{name}} hanya mengizinkan aplikasi yang sudah disetujuinya untuk masuk, dan agentes.chat belum disetujui. Kalau {{name}} memberimu kunci API, kamu bisa menghubungkan dengan kunci itu.",
     "serverSaid": "Jawaban server: {{detail}}",
+    "more": {
+      "title": "Cara lain untuk menghubungkan",
+      "key": "kunci API",
+      "own": "aplikasi OAuth-mu sendiri",
+      "headers": "header permintaan"
+    },
+    "ways": {
+      "label": "Cara menghubungkan",
+      "page": "Di halaman layanan",
+      "pageText": "Kamu memberi izin di sana lalu kembali ke sini. Sebagian besar layanan bekerja seperti ini.",
+      "key": "Dengan kunci API",
+      "keyText": "Untuk server yang memberimu kunci, bukan meminta masuk.",
+      "own": "Dengan aplikasi OAuth-mu sendiri",
+      "ownText": "Untuk server yang hanya mengizinkan aplikasi yang sudah disetujuinya."
+    },
+    "address": {
+      "question": "Apa alamat servernya?",
+      "lead": "Tempel alamat MCP yang diberikan layanan itu. Sisanya kami yang urus.",
+      "continue": "Lanjutkan",
+      "other": "Hubungkan dengan cara lain",
+      "team": "Seluruh tim akan bisa memakainya.",
+      "justMe": "Hanya saya",
+      "mine": "Hanya kamu yang akan bisa memakainya.",
+      "toTeam": "Untuk tim"
+    },
+    "paste": {
+      "openTitle": "Masuk ke {{name}} dan beri izin",
+      "openText": "Terbuka di tab baru. Di akhir, {{name}} menampilkan halaman yang tidak bisa dimuat: halaman itulah yang kamu bawa kembali ke sini.",
+      "open": "Buka {{name}}",
+      "pasteTitle": "Tempel alamat halaman itu",
+      "pasteText": "Alamat di bilah browser, yang diawali localhost. Setelah ditempel, langsung terhubung.",
+      "unreachable": "Situs ini tidak dapat dijangkau",
+      "paste": "Tempel",
+      "pasteFailed": "Browser tidak mengizinkan kami menempel. Tempel dengan Ctrl+V (⌘V di Mac).",
+      "wrong": "Itu bukan alamat halaman itu. Alamatnya diawali {{start}}.",
+      "refused": "{{name}} tidak diberi izin. Buka lagi untuk mencoba sekali lagi.",
+      "connecting": "Menghubungkan ke {{name}}…",
+      "notOpened": "Tidak terbuka?",
+      "openAgain": "Buka {{name}} lagi"
+    },
+    "refused": {
+      "ownTitle": "{{name}} hanya mengizinkan aplikasi yang sudah disetujuinya",
+      "ownText": "Buat aplikasi di pengaturan developer {{name}} dan tambahkan alamat pengalihan ini ke aplikasi itu.",
+      "ownTextIn": {
+        "metaAds": "Di Meta for Developers, buat aplikasi dengan kasus penggunaan Marketing API dan tambahkan alamat pengalihan ini ke aplikasi itu."
+      },
+      "created": "Sudah dibuat",
+      "idTitle": "Tempel ID aplikasinya",
+      "idText": "Ada di halaman aplikasi yang kamu buat di {{name}}.",
+      "keyTitle": "{{name}} meminta kunci API",
+      "keyText": "Kamu bisa menemukan kuncinya di pengaturan {{name}}. Kunci disimpan terenkripsi dan tidak ada yang bisa melihatnya lagi.",
+      "key": "Kalau kamu diberi kunci API, kamu bisa menghubungkan dengan kunci itu.",
+      "askAdmin": "Admin bisa menghubungkannya dengan aplikasi milik workspace, atau kamu bisa memakai kunci API kalau {{name}} memberimu kunci.",
+      "useKey": "Hubungkan dengan kunci",
+      "useOwn": "Pakai aplikasimu sendiri"
+    },
     "ownClient": {
       "title": "Pakai aplikasi OAuth Anda sendiri",
       "notApproved": "{{name}} hanya mengizinkan aplikasi yang sudah disetujuinya, dan agentes.chat belum termasuk. Anda bisa menghubungkannya dengan aplikasi Anda sendiri di sana.",
-      "askAdmin": "Admin bisa menghubungkannya dengan aplikasi milik workspace.",
       "help": "Buat aplikasi di penyedia, daftarkan URI pengalihan ini di sana, lalu tempel client ID-nya. Setiap masuk ke sana dari workspace akan memakai aplikasi Anda.",
+      "stepCreate": "Buat aplikasi di {{name}}",
+      "stepCreateText": "Di pengaturan developer {{name}}.",
+      "stepRedirect": "Tambahkan alamat pengalihan ini ke aplikasi itu",
+      "stepRedirectText": "Di antara URI pengalihan OAuth aplikasi.",
+      "stepId": "Tempel client ID aplikasi",
+      "more": "Client secret dan scope",
+      "moreText": "Hanya jika aplikasi memintanya.",
+      "createIn": {
+        "metaAds": "Di Meta for Developers, dengan kasus penggunaan Marketing API."
+      },
       "guide": {
         "metaAds": "Di Meta for Developers, buat aplikasi dengan kasus penggunaan Marketing API. Tambahkan URI pengalihan ini ke URI pengalihan OAuth yang valid, lalu tempel App ID, dan App Secret jika aplikasi Anda memintanya."
       },
@@ -14499,7 +14562,7 @@
     },
     "headers": {
       "title": "Header permintaan",
-      "help": "Untuk kunci yang dikirim di header lain, atau gateway di depan server. Kebanyakan server tidak memerlukannya.",
+      "help": "Untuk kunci di header lain, atau gateway di depan. Kebanyakan server tidak memerlukannya.",
       "value": "Nilai",
       "nameOf": "Nama header {{n}}",
       "valueOf": "Nilai header {{n}}",

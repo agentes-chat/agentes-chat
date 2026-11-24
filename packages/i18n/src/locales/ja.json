@@ -12779,7 +12779,6 @@
     "added": "保存すると{{repo}}がリストに追加されます。"
   },
   "connectors": {
-    "title": "コネクタ",
     "store": {
       "featured": "注目",
       "suggested": "おすすめ",
@@ -12818,6 +12817,7 @@
       "addressPassword": "アドレスとパスワード",
       "composio": "Composio経由"
     },
+    "title": "コネクタ",
     "add": "コネクタを追加",
     "personal": {
       "note": "これらの接続を開けるのはあなただけです。エージェントは、あなたが頼んだときだけ使います。",
@@ -14381,14 +14381,13 @@
       "2": "使える人"
     },
     "connectTitle": "{{name}}を接続",
-    "customTitle": "MCPサーバーを接続",
+    "customTitle": "サーバーを接続",
     "toolsTitle": "{{name}}でできること",
     "whoTitle": "{{name}}を使える人",
     "oauthHelp": "{{name}}のページで承認して、ここに戻ってきます。",
     "customText": "httpsアドレスで、どのMCPサーバーでも接続できます。OAuthに対応していれば、そのページで承認します。",
     "urlHelp": "サーバーのhttpsアドレス。",
     "name": "名前",
-    "namePlaceholder": "例: サポート",
     "continueIn": "{{name}}で続ける",
     "continueInComposio": "Composioで続ける",
     "github": {
@@ -14413,15 +14412,79 @@
     },
     "composioHelp": "Composioのページ（英語）でログインして、ここに戻ってきます。{{name}}では権限が「Composio」と表示されます。",
     "or": "または",
-    "withKey": "APIキーで接続",
     "needsKey": "このサーバーはOAuthに対応していません。APIキーで接続してください。",
     "notApproved": "{{name}}は承認済みのアプリしかログインを許可しておらず、agentes.chatはまだ承認されていません。APIキーが発行されれば、それで接続できます。",
     "serverSaid": "サーバーの応答: {{detail}}",
+    "more": {
+      "title": "ほかの接続方法",
+      "key": "APIキー",
+      "own": "自分の OAuth アプリ",
+      "headers": "リクエストヘッダー"
+    },
+    "ways": {
+      "label": "接続方法",
+      "page": "サービスのページで",
+      "pageText": "そこで承認して、ここに戻ってきます。ほとんどのサービスはこの方法です。",
+      "key": "APIキーで",
+      "keyText": "ログインの代わりにキーを発行するサーバー向け。",
+      "own": "自分の OAuth アプリで",
+      "ownText": "承認したアプリしか受け付けないサーバー向け。"
+    },
+    "address": {
+      "question": "サーバーのアドレスは？",
+      "lead": "サービスから受け取ったMCPアドレスを貼り付けてください。残りはこちらで調べます。",
+      "continue": "続ける",
+      "other": "別の方法で接続",
+      "team": "チーム全員が使えるようになります。",
+      "justMe": "自分だけ",
+      "mine": "あなただけが使えるようになります。",
+      "toTeam": "チーム全員"
+    },
+    "paste": {
+      "openTitle": "{{name}}にログインして承認",
+      "openText": "新しいタブで開きます。最後に{{name}}が読み込まれないページを表示します。ここに持ってくるのはそのページです。",
+      "open": "{{name}}を開く",
+      "pasteTitle": "そのページのアドレスを貼り付け",
+      "pasteText": "ブラウザのアドレスバーにある、localhostで始まるアドレスです。貼り付けると接続します。",
+      "unreachable": "このサイトにアクセスできません",
+      "paste": "貼り付け",
+      "pasteFailed": "ブラウザで貼り付けが許可されませんでした。Ctrl+V（Macでは⌘V）で貼り付けてください。",
+      "wrong": "それはそのページのアドレスではありません。{{start}}で始まるアドレスです。",
+      "refused": "{{name}}は承認されませんでした。もう一度開いて、やり直してください。",
+      "connecting": "{{name}}に接続中…",
+      "notOpened": "開きませんでしたか？",
+      "openAgain": "{{name}}をもう一度開く"
+    },
+    "refused": {
+      "ownTitle": "{{name}}は承認したアプリしか受け付けません",
+      "ownText": "{{name}}の開発者向け設定でアプリを作成し、このリダイレクト先アドレスを登録してください。",
+      "ownTextIn": {
+        "metaAds": "Meta for Developers で、Marketing API のユースケースを持つアプリを作成し、このリダイレクト先アドレスを登録してください。"
+      },
+      "created": "作成しました",
+      "idTitle": "アプリの ID を貼り付け",
+      "idText": "{{name}}で作成したアプリのページにあります。",
+      "keyTitle": "{{name}}はAPIキーを求めています",
+      "keyText": "キーは{{name}}の設定にあります。暗号化して保存され、誰も二度と見ることはできません。",
+      "key": "APIキーが発行されれば、それで接続できます。",
+      "askAdmin": "管理者がワークスペース独自のアプリで接続できます。または、{{name}}からAPIキーが発行されれば、それを使えます。",
+      "useKey": "キーで接続",
+      "useOwn": "自分のアプリを使う"
+    },
     "ownClient": {
       "title": "自分の OAuth アプリを使う",
       "notApproved": "{{name}} は承認したアプリしか受け付けず、agentes.chat はまだ承認されていません。自分のアプリで接続できます。",
-      "askAdmin": "管理者がワークスペース独自のアプリで接続できます。",
       "help": "プロバイダーでアプリを作成し、このリダイレクト URI を登録して、クライアント ID を貼り付けてください。以後、このワークスペースからのサインインはすべてあなたのアプリを使います。",
+      "stepCreate": "{{name}}でアプリを作成",
+      "stepCreateText": "{{name}}の開発者向け設定で。",
+      "stepRedirect": "このリダイレクト先アドレスを登録",
+      "stepRedirectText": "アプリの OAuth リダイレクト URI に。",
+      "stepId": "アプリのクライアント ID を貼り付け",
+      "more": "クライアントシークレットとスコープ",
+      "moreText": "アプリが求める場合のみ。",
+      "createIn": {
+        "metaAds": "Meta for Developers で、Marketing API のユースケースを選びます。"
+      },
       "guide": {
         "metaAds": "Meta for Developers で、Marketing API のユースケースを持つアプリを作成します。このリダイレクト URI を有効な OAuth リダイレクト URI に追加し、App ID を貼り付けます。アプリが求める場合は App Secret も貼り付けてください。"
       },
@@ -14440,7 +14503,7 @@
     },
     "headers": {
       "title": "リクエストヘッダー",
-      "help": "キーを別のヘッダーで送る場合や、サーバーの前にゲートウェイがある場合に使います。ほとんどのサーバーでは不要です。",
+      "help": "キーを別のヘッダーで送る場合や、前にゲートウェイがある場合に。ほとんどのサーバーでは不要です。",
       "value": "値",
       "nameOf": "ヘッダー{{n}}の名前",
       "valueOf": "ヘッダー{{n}}の値",

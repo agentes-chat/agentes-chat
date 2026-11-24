@@ -13827,7 +13827,6 @@
     "added": "{{repo}} rejoindra la liste à l'enregistrement."
   },
   "connectors": {
-    "title": "Connecteurs",
     "store": {
       "featured": "À la une",
       "suggested": "Suggéré",
@@ -13874,6 +13873,7 @@
       "addressPassword": "Adresse et mot de passe",
       "composio": "Via Composio"
     },
+    "title": "Connecteurs",
     "add": "Ajouter un connecteur",
     "personal": {
       "note": "Vous seul ouvrez ces connexions. Vos agents les utilisent seulement quand vous le demandez.",
@@ -15477,14 +15477,13 @@
       "2": "Qui peut l'utiliser"
     },
     "connectTitle": "Connecter {{name}}",
-    "customTitle": "Connecter un serveur MCP",
+    "customTitle": "Connecter un serveur",
     "toolsTitle": "Ce que fait {{name}}",
     "whoTitle": "Qui peut utiliser {{name}}",
     "oauthHelp": "Vous autorisez l'accès sur la page de {{name}} puis revenez ici.",
     "customText": "N'importe quel serveur MCP, via son adresse https. S'il prend en charge OAuth, vous autorisez l'accès sur sa page.",
     "urlHelp": "L'adresse https du serveur.",
     "name": "Nom",
-    "namePlaceholder": "Ex. : Support client",
     "continueIn": "Continuer sur {{name}}",
     "continueInComposio": "Continuer sur Composio",
     "github": {
@@ -15509,15 +15508,79 @@
     },
     "composioHelp": "Vous vous connectez sur la page de Composio, en anglais, puis revenez ici. {{name}} affiche l'autorisation sous le nom « Composio ».",
     "or": "ou",
-    "withKey": "Connecter avec une clé API",
     "needsKey": "Ce serveur ne prend pas en charge OAuth. Connectez-le avec une clé API.",
     "notApproved": "{{name}} n'autorise la connexion qu'aux applications qu'il a approuvées, et agentes.chat ne l'est pas encore. S'il vous fournit une clé API, vous pouvez vous connecter avec.",
     "serverSaid": "Le serveur a répondu : {{detail}}",
+    "more": {
+      "title": "Autres façons de connecter",
+      "key": "une clé API",
+      "own": "votre propre app OAuth",
+      "headers": "des en-têtes de requête"
+    },
+    "ways": {
+      "label": "Mode de connexion",
+      "page": "Sur la page du service",
+      "pageText": "Vous autorisez l'accès là-bas, puis revenez ici. C'est le cas de la plupart des services.",
+      "key": "Avec une clé API",
+      "keyText": "Pour un serveur qui vous donne une clé plutôt qu'une connexion.",
+      "own": "Avec votre propre app OAuth",
+      "ownText": "Pour un serveur qui n'accepte que les apps qu'il a approuvées."
+    },
+    "address": {
+      "question": "Quelle est l'adresse du serveur ?",
+      "lead": "Collez l'adresse MCP que le service vous a donnée. Nous nous occupons du reste.",
+      "continue": "Continuer",
+      "other": "Connecter autrement",
+      "team": "Toute l'équipe pourra l'utiliser.",
+      "justMe": "Moi uniquement",
+      "mine": "Personne d'autre que vous ne pourra l'utiliser.",
+      "toTeam": "Pour l'équipe"
+    },
+    "paste": {
+      "openTitle": "Connectez-vous à {{name}} et autorisez l'accès",
+      "openText": "La page s'ouvre dans un nouvel onglet. À la fin, {{name}} affiche une page qui ne se charge pas : c'est elle que vous rapportez ici.",
+      "open": "Ouvrir {{name}}",
+      "pasteTitle": "Collez l'adresse de cette page",
+      "pasteText": "C'est celle de la barre d'adresse du navigateur, qui commence par localhost. Une fois collée, la connexion se fait.",
+      "unreachable": "Ce site est inaccessible",
+      "paste": "Coller",
+      "pasteFailed": "Le navigateur n'a pas autorisé le collage. Collez avec Ctrl+V (⌘V sur Mac).",
+      "wrong": "Ce n'est pas l'adresse de cette page. Elle commence par {{start}}.",
+      "refused": "{{name}} n'a pas été autorisé. Rouvrez-le pour réessayer.",
+      "connecting": "Connexion à {{name}}…",
+      "notOpened": "Rien ne s'est ouvert ?",
+      "openAgain": "Rouvrir {{name}}"
+    },
+    "refused": {
+      "ownTitle": "{{name}} n'accepte que les apps qu'il a approuvées",
+      "ownText": "Créez une app dans les paramètres développeur de {{name}} et ajoutez-y cette adresse de redirection.",
+      "ownTextIn": {
+        "metaAds": "Dans Meta for Developers, créez une app avec le cas d'usage Marketing API et ajoutez-y cette adresse de redirection."
+      },
+      "created": "C'est fait",
+      "idTitle": "Collez l'ID de l'app",
+      "idText": "Il se trouve sur la page de l'app que vous avez créée sur {{name}}.",
+      "keyTitle": "{{name}} demande une clé API",
+      "keyText": "Vous trouverez la clé dans les paramètres de {{name}}. Elle est conservée chiffrée et personne ne la reverra.",
+      "key": "S'il vous fournit une clé API, vous pouvez vous connecter avec.",
+      "askAdmin": "Un admin peut le connecter avec une app propre au workspace, ou vous pouvez utiliser une clé API si {{name}} vous en fournit une.",
+      "useKey": "Connecter avec une clé",
+      "useOwn": "Utiliser votre propre app"
+    },
     "ownClient": {
       "title": "Utiliser votre propre app OAuth",
       "notApproved": "{{name}} n'accepte que les apps qu'il a approuvées, et agentes.chat n'en fait pas encore partie. Vous pouvez le connecter avec votre propre app chez lui.",
-      "askAdmin": "Un admin peut le connecter avec l'app propre au workspace.",
       "help": "Créez une app chez le fournisseur, enregistrez-y cette URI de redirection et collez son ID client. Chaque connexion depuis le workspace utilise alors votre app.",
+      "stepCreate": "Créez une app sur {{name}}",
+      "stepCreateText": "Dans les paramètres développeur de {{name}}.",
+      "stepRedirect": "Ajoutez-y cette adresse de redirection",
+      "stepRedirectText": "Parmi les URI de redirection OAuth de l'app.",
+      "stepId": "Collez l'ID client de l'app",
+      "more": "Secret client et scopes",
+      "moreText": "Seulement si l'app les demande.",
+      "createIn": {
+        "metaAds": "Dans Meta for Developers, avec le cas d'usage Marketing API."
+      },
       "guide": {
         "metaAds": "Dans Meta for Developers, créez une app avec le cas d'usage Marketing API. Ajoutez cette URI de redirection à ses URI de redirection OAuth valides, puis collez l'ID de l'app, et la clé secrète de l'app si elle en demande une."
       },
@@ -15536,7 +15599,7 @@
     },
     "headers": {
       "title": "En-têtes de requête",
-      "help": "Pour une clé à envoyer dans un autre en-tête, ou une passerelle placée devant le serveur. La plupart des serveurs n'en ont pas besoin.",
+      "help": "Pour une clé dans un autre en-tête, ou une passerelle devant. La plupart des serveurs n'en ont pas besoin.",
       "value": "Valeur",
       "nameOf": "Nom de l'en-tête {{n}}",
       "valueOf": "Valeur de l'en-tête {{n}}",

@@ -548,7 +548,8 @@ describe("Instalar skill: private repositories", () => {
     // A token instead: connected in place and the link read again to pick, while the flow goes on to its tools and
     // who uses them, as from Conectores.
     state.githubRepos = repos;
-    await click(within(flow()).getByText("Conectar com uma chave de API"));
+    await click(within(flow()).getByRole("button", { name: /^Outras formas de conectar/ }));
+    await click(within(flow()).getByRole("radio", { name: /^Com uma chave de API/ }));
     await type(within(flow()).getByLabelText("Chave de API"), "ghp_fake_token_for_tests");
     await click(within(flow()).getByRole("button", { name: "Conectar com a chave" }));
     await settle(8);

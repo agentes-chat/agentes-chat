@@ -15311,14 +15311,13 @@ export const en = {
     steps: "Steps",
     step: { "0": "Connect", "1": "What it does", "2": "Who can use it" },
     connectTitle: "Connect {{name}}",
-    customTitle: "Connect an MCP server",
+    customTitle: "Connect a server",
     toolsTitle: "What {{name}} does",
     whoTitle: "Who can use {{name}}",
     oauthHelp: "You authorize on {{name}}'s page and come back here.",
     customText: "Any MCP server by its https address. If it supports OAuth, you authorize on its page.",
     urlHelp: "The server's https address.",
     name: "Name",
-    namePlaceholder: "E.g. Support",
     continueIn: "Continue on {{name}}",
     continueInComposio: "Continue on Composio",
     /** On Reconnect GitHub: its sign-in asks about organizations only the first time. */
@@ -15347,11 +15346,75 @@ export const en = {
     composioHelp:
       "You sign in on Composio's page, in English, and come back here. {{name}} shows the permission as “Composio”.",
     or: "or",
-    withKey: "Connect with an API key",
     needsKey: "This server doesn't support OAuth. Connect with an API key.",
     notApproved:
       "{{name}} only lets apps it approved sign in, and agentes.chat isn't approved yet. If it gives you an API key, you can connect with that.",
     serverSaid: "The server answered: {{detail}}",
+    /** Under the address: the other ways in, in one line that opens (ADR 0016 addendum 2026-11-23). */
+    more: {
+      title: "Other ways to connect",
+      /** Listed in the line's description, joined as a sentence ("An API key, your own OAuth app, or request headers."). */
+      key: "an API key",
+      own: "your own OAuth app",
+      headers: "request headers",
+    },
+    ways: {
+      label: "How to connect",
+      page: "On the service's page",
+      pageText: "You approve it there and come back here. Most services work this way.",
+      key: "With an API key",
+      keyText: "For a server that gives you a key instead of a sign-in.",
+      own: "With your own OAuth app",
+      ownText: "For a server that only lets in apps it approved.",
+    },
+    /** The address alone, first: its name comes from it, who can use it is a link in the footer. */
+    address: {
+      question: "What's the server's address?",
+      lead: "Paste the MCP address the service gave you. We'll work out the rest.",
+      continue: "Continue",
+      other: "Connect another way",
+      team: "The whole team will be able to use it.",
+      justMe: "Only me",
+      mine: "Only you will be able to use it.",
+      toTeam: "For the team",
+    },
+    /** A server that took only the loopback address: open it, then paste the address of the page it ends on. */
+    paste: {
+      openTitle: "Sign in to {{name}} and approve",
+      openText:
+        "It opens in a new tab. At the end, {{name}} shows a page that doesn't load: that's the one you bring back here.",
+      open: "Open {{name}}",
+      pasteTitle: "Paste that page's address",
+      pasteText: "It's the one in the browser's bar, starting with localhost. Once pasted, it connects.",
+      /** The browser's own words on that page, drawn in the picture. */
+      unreachable: "This site can't be reached",
+      paste: "Paste",
+      pasteFailed: "The browser didn't let us paste. Paste with Ctrl+V (⌘V on a Mac).",
+      wrong: "That's not that page's address. It starts with {{start}}.",
+      refused: "{{name}} wasn't approved. Open it again to try once more.",
+      connecting: "Connecting to {{name}}…",
+      notOpened: "Didn't open?",
+      openAgain: "Open {{name}} again",
+    },
+    /** A refused sign-in, in stages: an admin's own app (register our address, then paste its ID), or a key. */
+    refused: {
+      ownTitle: "{{name}} only lets in apps it approved",
+      ownText: "Make an app in {{name}}'s developer settings and add this redirect address to it.",
+      ownTextIn: {
+        metaAds:
+          "In Meta for Developers, make an app with the Marketing API use case and add this redirect address to it.",
+      },
+      created: "Done",
+      idTitle: "Paste the app's ID",
+      idText: "It's on the page of the app you made at {{name}}.",
+      keyTitle: "{{name}} asks for an API key",
+      keyText: "You'll find the key in {{name}}'s settings. It's kept encrypted and nobody sees it again.",
+      key: "If it gives you an API key, you can connect with it.",
+      askAdmin:
+        "An admin can connect it with an app of the workspace's own, or you can use an API key if {{name}} gives you one.",
+      useKey: "Connect with a key",
+      useOwn: "Use an app of your own",
+    },
     /**
      * A server that lets in only OAuth apps it approved (Meta Ads): an admin registers an app of the workspace's own
      * there and pastes its client ID (and secret). "Redirect URI", "Client ID", "Client secret" and "Scopes" are the
@@ -15361,8 +15424,15 @@ export const en = {
       title: "Use your own OAuth app",
       notApproved:
         "{{name}} only lets in apps it approved, and agentes.chat isn't one yet. You can connect it with your own app there.",
-      askAdmin: "An admin can connect it with the workspace's own app.",
       help: "Create an app at the provider, register this redirect URI in it and paste its client ID. Every sign-in there from the workspace then uses your app.",
+      stepCreate: "Make an app at {{name}}",
+      stepCreateText: "In {{name}}'s developer settings.",
+      stepRedirect: "Add this redirect address to it",
+      stepRedirectText: "Among the app's OAuth redirect URIs.",
+      stepId: "Paste the app's client ID",
+      more: "Client secret and scopes",
+      moreText: "Only if the app asks for them.",
+      createIn: { metaAds: "In Meta for Developers, with the Marketing API use case." },
       guide: {
         metaAds:
           "In Meta for Developers, create an app with the Marketing API use case. Add this redirect URI to its valid OAuth redirect URIs, then paste the App ID, and the App Secret if your app requires it.",
@@ -15386,7 +15456,7 @@ export const en = {
      */
     headers: {
       title: "Request headers",
-      help: "For a key that goes in another header, or a gateway in front of the server. Most servers need none.",
+      help: "For a key in another header, or a gateway in front. Most servers need none.",
       value: "Value",
       nameOf: "Name of header {{n}}",
       valueOf: "Value of header {{n}}",

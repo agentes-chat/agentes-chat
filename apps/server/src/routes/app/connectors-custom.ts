@@ -135,7 +135,14 @@ const ServerParams = OrgParams.extend({ serverId: z.uuid() });
 
 const ConnectStart = z.union([
   z.object({ status: z.literal("connected"), server: CustomServer, outcome: Outcome }),
-  z.object({ status: z.literal("oauth"), authorizeUrl: z.string() }),
+  z.object({
+    status: z.literal("oauth"),
+    authorizeUrl: z.string(),
+    paste: z.object({ redirectUri: z.string() }).optional().openapi({
+      description:
+        "Only when asked with `paste`: the server took only this loopback address (ADR 0016 addendum 2026-11-23). The sign-in ends on a page there that doesn't load; the person pastes its address, and the app sends its `state` and `code` to `POST …/connectors/oauth/complete`.",
+    }),
+  }),
   z.object({
     status: z.literal("needs_key"),
     reason: z.literal("not_approved").optional().openapi({
@@ -147,6 +154,10 @@ const ConnectStart = z.union([
     }),
   }),
 ]);
+const Paste = z.boolean().optional().openapi({
+  description:
+    "The app can take a pasted return: a server that refuses our callback is asked to take the loopback address, and the answer says so (`paste`).",
+});
 const ReconnectId = z.uuid().optional().openapi({
   description:
     "Reconectar: the account whose sign-in or key this replaces (same address; its name, tools and grants stay). Without it a new account comes in.",
@@ -231,6 +242,7 @@ export function customConnectorRoutes(deps: AppDeps) {
             returnTo: z.string().max(500).optional(),
             connectionId: ReconnectId,
             personal: Personal,
+            paste: Paste,
             headers: z
               .array(z.object({ name: z.string(), value: z.string() }))
               .optional()
@@ -301,7 +313,12 @@ export function customConnectorRoutes(deps: AppDeps) {
       request: {
         params: OrgParams.extend({ presetId: z.string().max(60) }),
         body: body(
-          z.object({ returnTo: z.string().max(500).optional(), connectionId: ReconnectId, personal: Personal }),
+          z.object({
+            returnTo: z.string().max(500).optional(),
+            connectionId: ReconnectId,
+            personal: Personal,
+            paste: Paste,
+          }),
         ),
       },
       responses: { 200: json(ConnectStart), ...errors },
@@ -316,13 +333,14 @@ export function customConnectorRoutes(deps: AppDeps) {
           connector: preset.id,
         });
       }
-      const { returnTo, connectionId, personal } = c.req.valid("json");
+      const { returnTo, connectionId, personal, paste } = c.req.valid("json");
       const started = await connectCustomServer(custom, c.get("user").id, orgId, {
         serverUrl: way?.serverUrl ?? preset.serverUrl,
         label: preset.label,
         returnTo,
         connectionId,
         personal,
+        paste,
       });
       return c.json(started, 200);
     },

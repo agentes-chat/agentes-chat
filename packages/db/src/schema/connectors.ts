@@ -187,6 +187,12 @@ export const oauthClients = pgTable(
      * connection using it, and its `scope`, when set, is the one every authorization asks for.
      */
     providedByPerson: boolean().notNull().default(false),
+    /**
+     * The redirect URI it was registered with when it isn't our callback: the loopback address a server that refused
+     * ours took (ADR 0016 addendum 2026-11-23). Its sign-ins end on a page that doesn't load, whose address the person
+     * pastes back. Null: our callback.
+     */
+    redirectUri: text(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("oauth_clients_org_issuer").on(t.orgId, t.issuer)],
