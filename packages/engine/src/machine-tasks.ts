@@ -442,11 +442,23 @@ async function insertTask(
   return row;
 }
 
-/** The runner said its slots are full, or the computer is away: a queued task waits for the next chance. */
+/**
+ * The runner's link is full (`MAX_IN_FLIGHT` requests in flight, `handlers.ts`): it answers `internal` / `busy`
+ * before reading the request. Nothing ends when those requests do, so a task put back for it gets its own retry.
+ */
+export const isLinkBusy = (error: unknown) =>
+  (error as { code?: unknown })?.code === "internal" && (error as { message?: unknown })?.message === "busy";
+
+/** The runner said its slots or its link are full, or the computer is away: a queued task waits for the next chance. */
 export const isWaitError = (error: unknown) =>
   error instanceof MachineOfflineError ||
   ["no_slot", "offline", "paused"].includes(String((error as { code?: unknown })?.code ?? "")) ||
+  isLinkBusy(error) ||
   error instanceof MachinePausedError;
+
+/** How long a task put back by a full link waits before its machine's queue is walked again. */
+export const LINK_BUSY_RETRY_MS = 5_000;
+export const MACHINE_QUEUE_RETRY_JOB = "machine.queue_retry";
 
 /**
  * Asks the machine to start a recorded task (status `queued`). `requeue`: a
@@ -527,11 +539,25 @@ export async function launchTask(
       return { row: now, queued: false };
     }
     if (options.requeue && isWaitError(error)) {
-      const [back] = await deps.db
-        .update(machineTasks)
-        .set({ startRequest: input as unknown as Record<string, unknown>, updatedAt: new Date() })
-        .where(and(eq(machineTasks.id, row.id), eq(machineTasks.status, "queued"), isNull(machineTasks.endedAt)))
-        .returning();
+      // Put back with its retry in one transaction: a task back in the queue is never left without a wake.
+      const back = await deps.db.transaction(async (tx) => {
+        const [put] = await tx
+          .update(machineTasks)
+          .set({ startRequest: input as unknown as Record<string, unknown>, updatedAt: new Date() })
+          .where(and(eq(machineTasks.id, row.id), eq(machineTasks.status, "queued"), isNull(machineTasks.endedAt)))
+          .returning();
+        // One walk per machine per window, however many tasks were put back in it.
+        if (put && isLinkBusy(error)) {
+          await enqueue(tx, {
+            orgId: put.orgId,
+            kind: MACHINE_QUEUE_RETRY_JOB,
+            payload: { machineId: put.machineId },
+            dedupeKey: `${MACHINE_QUEUE_RETRY_JOB}:${put.machineId}:${Math.floor(Date.now() / LINK_BUSY_RETRY_MS)}`,
+            runAt: new Date(Date.now() + LINK_BUSY_RETRY_MS),
+          });
+        }
+        return put;
+      });
       if (back) {
         await publishTaskEvent(deps.pubsub, back);
         return { row: back, queued: true };
