@@ -294,6 +294,7 @@ export const MACHINE_TOOLS: MachineToolName[] = [
   "opencode",
   "grok",
   "antigravity",
+  "commandcode",
   "commands",
 ];
 

@@ -8374,6 +8374,9 @@
   "noAi.notSignedIn.opencode": {
     "value": "OpenCode can't think on this computer. Connect an OpenCode key on {{name}}'s page."
   },
+  "noAi.notSignedIn.commandcode": {
+    "value": "Command Code can't think on this computer. Connect a Command Code key on {{name}}'s page."
+  },
   "noAi.notSignedInOn.claude_code": {
     "value": "Claude Code isn't signed in on {{computer}}. Connect a Claude account on {{name}}'s page."
   },
@@ -8391,6 +8394,9 @@
   },
   "noAi.notSignedInOn.opencode": {
     "value": "OpenCode can't think on {{computer}}. Connect an OpenCode key on {{name}}'s page."
+  },
+  "noAi.notSignedInOn.commandcode": {
+    "value": "Command Code can't think on {{computer}}. Connect a Command Code key on {{name}}'s page."
   },
   "noAi.card.connected": {
     "value": "{{name}} has an AI now."
@@ -8523,6 +8529,9 @@
   },
   "connectAi.title.zen": {
     "value": "Connect OpenCode"
+  },
+  "connectAi.title.commandcode": {
+    "value": "Connect Command Code"
   },
   "connectAi.title.api_key": {
     "value": "Add an API key"
@@ -8830,6 +8839,12 @@
   "connectAi.plan.zen.tiers": {
     "value": "Free models, or your OpenCode key"
   },
+  "connectAi.plan.commandcode.title": {
+    "value": "Command Code"
+  },
+  "connectAi.plan.commandcode.tiers": {
+    "value": "Your Command Code key"
+  },
   "connectAi.plan.zai.tiers": {
     "value": "Lite, Pro or Max"
   },
@@ -9049,6 +9064,9 @@
   },
   "connectAi.otherAccount.opencode": {
     "value": "OpenCode signed in as {{email}}, not {{account}}. Try again with the right key."
+  },
+  "connectAi.otherAccount.commandcode": {
+    "value": "Command Code signed in as {{email}}, not {{account}}. Try again with the right key."
   },
   "connectAi.useAnyway": {
     "value": "Use {{email}}"
@@ -14650,6 +14668,9 @@
   "agentPage.work.brain.add.title.opencode": {
     "value": "Add an OpenCode key"
   },
+  "agentPage.work.brain.add.title.commandcode": {
+    "value": "Add a Command Code key"
+  },
   "agentPage.work.brain.add.stepOne.claude_code": {
     "value": "The account with your plan"
   },
@@ -14817,6 +14838,9 @@
   },
   "agentPage.work.brain.add.duplicate.opencode": {
     "value": "That OpenCode key is already connected as {{account}}."
+  },
+  "agentPage.work.brain.add.duplicate.commandcode": {
+    "value": "That Command Code key is already connected as {{account}}."
   },
   "agentPage.work.brain.add.startFailed": {
     "value": "No answer from {{computer}}. Try again in a moment."
@@ -26271,6 +26295,9 @@
   "aiAccounts.connect.opencode": {
     "value": "OpenCode"
   },
+  "aiAccounts.connect.commandcode": {
+    "value": "Command Code"
+  },
   "aiAccounts.connect.needs.keys": {
     "value": "Update agentes on the computer to use a plan's key"
   },
@@ -30012,6 +30039,9 @@
   "brain.line.zen": {
     "value": "{{model}} on OpenCode"
   },
+  "brain.line.commandcode": {
+    "value": "{{model}} on Command Code"
+  },
   "brain.line.coding": {
     "value": "{{model}} on {{plan}}"
   },
@@ -30032,6 +30062,9 @@
   },
   "brain.line.zenOf": {
     "value": "{{model}} on {{owner}}'s OpenCode"
+  },
+  "brain.line.commandcodeOf": {
+    "value": "{{model}} on {{owner}}'s Command Code"
   },
   "brain.line.codingOf": {
     "value": "{{model}} on {{owner}}'s {{plan}}"
@@ -30054,6 +30087,9 @@
   "brain.line.zenAuto": {
     "value": "OpenCode"
   },
+  "brain.line.commandcodeAuto": {
+    "value": "Command Code"
+  },
   "brain.line.codingAuto": {
     "value": "{{plan}}"
   },
@@ -30074,6 +30110,9 @@
   },
   "brain.line.zenAutoOf": {
     "value": "{{owner}}'s OpenCode"
+  },
+  "brain.line.commandcodeAutoOf": {
+    "value": "{{owner}}'s Command Code"
   },
   "brain.line.codingAutoOf": {
     "value": "{{owner}}'s {{plan}}"
@@ -30101,6 +30140,9 @@
   },
   "brain.card.opencode": {
     "value": "OpenCode"
+  },
+  "brain.card.commandcode": {
+    "value": "Command Code"
   },
   "brain.card.grok": {
     "value": "Grok Build"
@@ -30131,6 +30173,9 @@
   },
   "brain.grokText": {
     "value": "Uses the Grok plan of whoever connected the computer."
+  },
+  "brain.commandcodeText": {
+    "value": "Uses the Command Code plan of whoever connected the computer."
   },
   "brain.antigravityText": {
     "value": "Uses the Gemini plan of whoever connected the computer."
@@ -30272,6 +30317,9 @@
   },
   "brain.summary.opencode": {
     "value": "OpenCode · {{model}}"
+  },
+  "brain.summary.commandcode": {
+    "value": "Command Code · {{model}}"
   },
   "brain.mission.modelLabel": {
     "value": "Model"
@@ -39577,6 +39625,9 @@
   "machines.oneClick.tools.opencode": {
     "value": "OpenCode"
   },
+  "machines.oneClick.tools.commandcode": {
+    "value": "Command Code"
+  },
   "machines.oneClick.tools.grok": {
     "value": "Grok Build"
   },
@@ -39993,6 +40044,9 @@
   "machines.access.tool.opencode": {
     "value": "OpenCode"
   },
+  "machines.access.tool.commandcode": {
+    "value": "Command Code"
+  },
   "machines.access.tool.commands": {
     "value": "Commands"
   },
@@ -40010,6 +40064,9 @@
   },
   "machines.access.toolText.grok": {
     "value": "Like Claude Code, with a Grok account. Only in the allowed folders."
+  },
+  "machines.access.toolText.commandcode": {
+    "value": "Like Claude Code, with a Command Code account. Only in the allowed folders."
   },
   "machines.access.toolText.antigravity": {
     "value": "Like Claude Code, with a Gemini account. Only in the allowed folders."

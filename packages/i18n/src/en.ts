@@ -3661,6 +3661,7 @@ export const en = {
       grok: "Grok isn't signed in on this computer. Connect a Grok account on {{name}}'s\u00a0page.",
       antigravity: "Gemini isn't signed in on this computer. Connect a Gemini account on {{name}}'s\u00a0page.",
       opencode: "OpenCode can't think on this computer. Connect an OpenCode key on {{name}}'s\u00a0page.",
+      commandcode: "Command Code can't think on this computer. Connect a Command Code key on {{name}}'s\u00a0page.",
     },
     /** The same, naming the computer it isn't signed in on (`NoAiCard.computer`). */
     notSignedInOn: {
@@ -3670,6 +3671,7 @@ export const en = {
       grok: "Grok isn't signed in on {{computer}}. Connect a Grok account on {{name}}'s\u00a0page.",
       antigravity: "Gemini isn't signed in on {{computer}}. Connect a Gemini account on {{name}}'s\u00a0page.",
       opencode: "OpenCode can't think on {{computer}}. Connect an OpenCode key on {{name}}'s\u00a0page.",
+      commandcode: "Command Code can't think on {{computer}}. Connect a Command Code key on {{name}}'s\u00a0page.",
     },
     card: {
       connected: "{{name}} has an AI now.",
@@ -3749,6 +3751,7 @@ export const en = {
       grok: "Connect your Grok plan",
       gemini: "Connect your Gemini plan",
       zen: "Connect OpenCode",
+      commandcode: "Connect Command Code",
       api_key: "Add an API key",
     },
     /**
@@ -3904,6 +3907,10 @@ export const en = {
       },
       /** OpenCode's CLI (ADR 0132): its free models with no sign-in, or a key from OpenCode's console. */
       zen: { title: "OpenCode", tiers: "Free models, or your OpenCode key" },
+      commandcode: {
+        title: "Command Code",
+        tiers: "Your Command Code key",
+      },
       zai: { tiers: "Lite, Pro or Max" },
       kimi: { tiers: "Plus, Pro, Max or Ultra" },
       minimax: { tiers: "Go, Explore or Build" },
@@ -4012,6 +4019,7 @@ export const en = {
       grok: "Grok signed in as {{email}}, not {{account}}. Sign out on Grok's page and try again.",
       antigravity: "Gemini signed in as {{email}}, not {{account}}. Sign out on Google's page and try again.",
       opencode: "OpenCode signed in as {{email}}, not {{account}}. Try again with the right key.",
+      commandcode: "Command Code signed in as {{email}}, not {{account}}. Try again with the right key.",
     },
     useAnyway: "Use {{email}}",
     assignFailed: "The {{label}} account is connected, but {{agent}} couldn't switch to it.",
@@ -6418,6 +6426,7 @@ export const en = {
             grok: "Add a Grok account",
             antigravity: "Add a Gemini account",
             opencode: "Add an OpenCode key",
+            commandcode: "Add a Command Code key",
           },
           stepOne: {
             claude_code: "The account with your plan",
@@ -6500,6 +6509,7 @@ export const en = {
             antigravity:
               "Gemini signed in as {{account}}, an account you already connected. To use another, sign out on Google's page and try again.",
             opencode: "That OpenCode key is already connected as {{account}}.",
+            commandcode: "That Command Code key is already connected as {{account}}.",
           },
           startFailed: "No answer from {{computer}}. Try again in a moment.",
           sendFailed: "Couldn't send the code. Check it and try again.",
@@ -11262,6 +11272,7 @@ export const en = {
       grok: "Grok",
       antigravity: "Gemini",
       opencode: "OpenCode",
+      commandcode: "Command Code",
       needs: {
         keys: "Update agentes on the computer to use a plan's key",
       },
@@ -12769,6 +12780,7 @@ export const en = {
       grok: "{{model}} on the Grok plan",
       gemini: "{{model}} on the Gemini plan",
       zen: "{{model}} on OpenCode",
+      commandcode: "{{model}} on Command Code",
       coding: "{{model}} on {{plan}}",
       claudeOf: "{{model}} on {{owner}}'s Claude plan",
       chatgptOf: "{{model}} on {{owner}}'s ChatGPT plan",
@@ -12776,6 +12788,7 @@ export const en = {
       grokOf: "{{model}} on {{owner}}'s Grok plan",
       geminiOf: "{{model}} on {{owner}}'s Gemini plan",
       zenOf: "{{model}} on {{owner}}'s OpenCode",
+      commandcodeOf: "{{model}} on {{owner}}'s Command Code",
       codingOf: "{{model}} on {{owner}}'s {{plan}}",
       claudeAuto: "Claude plan",
       chatgptAuto: "ChatGPT plan",
@@ -12783,6 +12796,7 @@ export const en = {
       grokAuto: "Grok plan",
       geminiAuto: "Gemini plan",
       zenAuto: "OpenCode",
+      commandcodeAuto: "Command Code",
       codingAuto: "{{plan}}",
       claudeAutoOf: "{{owner}}'s Claude plan",
       chatgptAutoOf: "{{owner}}'s ChatGPT plan",
@@ -12790,6 +12804,7 @@ export const en = {
       grokAutoOf: "{{owner}}'s Grok plan",
       geminiAutoOf: "{{owner}}'s Gemini plan",
       zenAutoOf: "{{owner}}'s OpenCode",
+      commandcodeAutoOf: "{{owner}}'s Command Code",
       codingAutoOf: "{{owner}}'s {{plan}}",
       on: "{{line}} on {{computer}}",
     },
@@ -12801,6 +12816,7 @@ export const en = {
       codex: "Codex",
       cursor: "Cursor",
       opencode: "OpenCode",
+      commandcode: "Command Code",
       grok: "Grok Build",
       antigravity: "Antigravity CLI",
     },
@@ -12814,6 +12830,7 @@ export const en = {
     codexText: "Uses the ChatGPT plan of whoever connected the computer.",
     cursorText: "Uses the Cursor plan of whoever connected the computer.",
     grokText: "Uses the Grok plan of whoever connected the computer.",
+    commandcodeText: "Uses the Command Code plan of whoever connected the computer.",
     antigravityText: "Uses the Gemini plan of whoever connected the computer.",
     opencodeText: "OpenCode's free models, or the OpenCode key of whoever connected the computer.",
     /** Cursor's models (ADR 0114), where its CLI said which the plan includes. */
@@ -12887,6 +12904,7 @@ export const en = {
       grok: "Grok Build · {{model}}",
       antigravity: "Antigravity CLI · {{model}}",
       opencode: "OpenCode · {{model}}",
+      commandcode: "Command Code · {{model}}",
     },
     mission: {
       modelLabel: "Model",
@@ -16547,6 +16565,7 @@ export const en = {
         codex: "Codex",
         cursor: "Cursor",
         opencode: "OpenCode",
+        commandcode: "Command Code",
         grok: "Grok Build",
         antigravity: "Antigravity CLI",
         commands: "commands",
@@ -16703,6 +16722,7 @@ export const en = {
         grok: "Grok Build",
         antigravity: "Antigravity CLI",
         opencode: "OpenCode",
+        commandcode: "Command Code",
         commands: "Commands",
         browser: "Browser",
       },
@@ -16711,6 +16731,7 @@ export const en = {
         codex: "Like Claude Code, with a ChatGPT account. Only in the allowed folders.",
         cursor: "Like Claude Code, with a Cursor account. Only in the allowed folders.",
         grok: "Like Claude Code, with a Grok account. Only in the allowed folders.",
+        commandcode: "Like Claude Code, with a Command Code account. Only in the allowed folders.",
         antigravity: "Like Claude Code, with a Gemini account. Only in the allowed folders.",
         opencode: "Like Claude Code, with OpenCode's free models or an OpenCode key. Only in the allowed folders.",
         commands: "Runs Terminal commands, like tests and builds.",

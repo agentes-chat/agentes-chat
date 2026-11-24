@@ -458,7 +458,15 @@ export const pickable = <A extends MachineAccount>(rows: readonly ExistingAi<A>[
  */
 export const listsExisting = (agent: Pick<Agent, "builtin"> | undefined, noAi: boolean) => noAi || isRightHand(agent);
 
-export const ACCOUNT_KINDS = ["claude_code", "codex", "cursor", "opencode", "grok", "antigravity"] as const;
+export const ACCOUNT_KINDS = [
+  "claude_code",
+  "codex",
+  "cursor",
+  "opencode",
+  "grok",
+  "antigravity",
+  "commandcode",
+] as const;
 
 /** A computer's own sign-in as "Seus planos" lists it ("Conta deste computador"). */
 export interface OwnSignInRow {

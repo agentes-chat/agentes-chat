@@ -19,6 +19,7 @@ import {
   type BrainTurn,
   blockSpecAt,
   CodexBrain,
+  CommandcodeBrain,
   type ContextDeps,
   CursorBrain,
   composioConnectorsOf,
@@ -791,6 +792,15 @@ export function buildEngine(o: EngineOptions) {
     // ADR 0143: Google's Antigravity CLI, one process per turn like Grok's.
     antigravity: (_agent, _run, setup) =>
       new AntigravityBrain({
+        link: brainLink,
+        mcp: async () => ({ token: setup.mcpToken() }),
+        agent: agentScope,
+        permissions: turnPermissions,
+        prepare: prepareCode,
+      }),
+    // ADR 0221: Command Code's CLI over ACP, one process per turn like OpenCode's.
+    commandcode: (_agent, _run, setup) =>
+      new CommandcodeBrain({
         link: brainLink,
         mcp: async () => ({ token: setup.mcpToken() }),
         agent: agentScope,

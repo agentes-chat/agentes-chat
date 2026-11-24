@@ -12,7 +12,15 @@ import type { ToolImage } from "@agenteschat/providers";
 import { planOf } from "@agenteschat/providers/plans";
 import type { CodeSetup } from "../git/machine";
 
-export type BrainKind = "model" | "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+export type BrainKind =
+  | "model"
+  | "claude_code"
+  | "codex"
+  | "cursor"
+  | "opencode"
+  | "grok"
+  | "antigravity"
+  | "commandcode";
 
 /** A brain that runs on the agent's computer with a person's plan (ADR 0114 adds Cursor). */
 export type ComputerBrainKind = Exclude<BrainKind, "model">;
@@ -25,16 +33,18 @@ export const BRAIN_NAMES: Readonly<Record<ComputerBrainKind, string>> = {
   opencode: "OpenCode",
   grok: "Grok Build",
   antigravity: "Antigravity CLI",
+  commandcode: "Command Code",
 };
 
 /**
- * Whether a computer brain runs on a computer's system (`hello.os`), as its runner allows: Cursor, Grok Build and the
- * Antigravity CLI not on Windows yet (ADR 0143: there it keeps its sign-in in the computer user's one Credential
- * Manager). A system nobody reported passes: the runner says.
+ * Whether a computer brain runs on a computer's system (`hello.os`), as its runner allows: Cursor, Grok Build, the
+ * Antigravity CLI and Command Code's CLI not on Windows yet (ADR 0143: there the Antigravity CLI keeps its sign-in in the
+ * computer user's one Credential Manager; ADR 0221: Command Code was not run there). A system nobody reported passes: the
+ * runner says.
  */
 export function brainRunsOn(kind: ComputerBrainKind, os: string | null | undefined): boolean {
   if (!os) return true;
-  if (kind === "cursor" || kind === "grok" || kind === "antigravity") return os !== "windows";
+  if (kind === "cursor" || kind === "grok" || kind === "antigravity" || kind === "commandcode") return os !== "windows";
   return true;
 }
 
@@ -49,6 +59,7 @@ export const BRAIN_PLAN_NAMES: Readonly<Record<ComputerBrainKind, string>> = {
   opencode: "OpenCode",
   grok: "Grok",
   antigravity: "Gemini",
+  commandcode: "Command Code",
 };
 
 /**
@@ -66,11 +77,17 @@ export function askingPermissions(
 
 /** Brains that run on the agent's computer with a person's plan. */
 export const isComputerBrain = (v: unknown): v is ComputerBrainKind =>
-  v === "claude_code" || v === "codex" || v === "cursor" || v === "opencode" || v === "grok" || v === "antigravity";
+  v === "claude_code" ||
+  v === "codex" ||
+  v === "cursor" ||
+  v === "opencode" ||
+  v === "grok" ||
+  v === "antigravity" ||
+  v === "commandcode";
 
 /**
  * Brains whose shell runs in a sandbox of the CLI's own (ADR 0053 §3, 0114, 0142, 0143), the limit of what their turns
- * do. Claude Code's own sandbox is never switched on here, and OpenCode has none.
+ * do. Claude Code's own sandbox is never switched on here, and OpenCode and Command Code have none.
  */
 export const isSandboxedBrain = (v: unknown) => v === "codex" || v === "cursor" || v === "grok" || v === "antigravity";
 

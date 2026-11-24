@@ -6,6 +6,7 @@ import {
   ANTIGRAVITY_MAC_PROTOCOL,
   BRAIN_PROTOCOL,
   CODEX_WINDOWS_PROTOCOL,
+  COMMANDCODE_PROTOCOL,
   CONTEXT_LIMIT_PROTOCOL,
   MISSION_PROTOCOL,
   OPENCODE_ACP_PROTOCOL,
@@ -40,8 +41,10 @@ import {
   brainOf,
   brainOptions,
   CLAUDE_CODE_MODELS,
+  commandcodeModels,
   defaultBrainModel,
   executorBrain,
+  modelIdName,
   normalizeBrainModel,
 } from "../src/brain-settings";
 import { contextFields, recordPlanUsage, speedFields } from "../src/brains/claude-code";
@@ -182,6 +185,7 @@ describe("brain settings", () => {
       opencode: { version: "1.19.5" },
       grok: { version: "1.0.80" },
       antigravity: { version: "1.2.3" },
+      commandcode: { version: "1.89.1" },
       detectedAt: "x",
     };
     const reasons = (m: ReturnType<typeof mac>) =>
@@ -190,13 +194,14 @@ describe("brain settings", () => {
           .slice(3)
           .map((o) => [o.kind, o.reason ?? null]),
       );
-    // An older Windows runner refuses every OpenCode turn; Cursor, Grok Build and the Antigravity CLI don't run on
-    // Windows; a Mac runner before `ANTIGRAVITY_MAC_PROTOCOL` refuses Gemini.
+    // An older Windows runner refuses every OpenCode turn; Cursor, Grok Build, the Antigravity CLI and Command Code
+    // don't run on Windows; a Mac runner before `ANTIGRAVITY_MAC_PROTOCOL` refuses Gemini.
     expect(reasons(mac({ os: "windows", protocol: OPENCODE_ACP_PROTOCOL - 1, executors }))).toEqual({
       cursor: "system",
       opencode: "runner_old",
       grok: "system",
       antigravity: "system",
+      commandcode: "system",
     });
     expect(reasons(mac({ os: "windows", protocol: OPENCODE_ACP_PROTOCOL, executors })).opencode).toBeNull();
     expect(reasons(mac({ os: "darwin", protocol: OPENCODE_ACP_PROTOCOL - 1, executors }))).toEqual({
@@ -204,13 +209,22 @@ describe("brain settings", () => {
       opencode: null,
       grok: null,
       antigravity: "runner_old",
+      // Command Code needs runner protocol 80 (`COMMANDCODE_PROTOCOL`).
+      commandcode: "runner_old",
     });
-    expect(reasons(mac({ os: "darwin", protocol: ANTIGRAVITY_MAC_PROTOCOL, executors })).antigravity).toBeNull();
-    expect(reasons(mac({ os: "linux", protocol: OPENCODE_ACP_PROTOCOL, executors }))).toEqual({
+    expect(reasons(mac({ os: "darwin", protocol: COMMANDCODE_PROTOCOL, executors }))).toEqual({
       cursor: null,
       opencode: null,
       grok: null,
       antigravity: null,
+      commandcode: null,
+    });
+    expect(reasons(mac({ os: "linux", protocol: COMMANDCODE_PROTOCOL, executors }))).toEqual({
+      cursor: null,
+      opencode: null,
+      grok: null,
+      antigravity: null,
+      commandcode: null,
     });
   });
 
@@ -225,6 +239,7 @@ describe("brain settings", () => {
       ["opencode", false, "no_computer"],
       ["grok", false, "no_computer"],
       ["antigravity", false, "no_computer"],
+      ["commandcode", false, "no_computer"],
     ]);
     expect(reasons(mac())).toEqual([
       ["model", true, null],
@@ -238,6 +253,8 @@ describe("brain settings", () => {
       ["grok", false, "runner_old"],
       // The Antigravity CLI needs runner protocol 44 (`ANTIGRAVITY_PROTOCOL`).
       ["antigravity", false, "runner_old"],
+      // Command Code needs runner protocol 80 (`COMMANDCODE_PROTOCOL`).
+      ["commandcode", false, "runner_old"],
     ]);
     expect(reasons(mac({ execAllowed: false }))[1]).toEqual(["claude_code", false, "exec_off"]);
     expect(reasons(mac({ protocol: MISSION_PROTOCOL - 1 }))[1]).toEqual(["claude_code", false, "runner_old"]);
@@ -268,7 +285,9 @@ describe("brain settings", () => {
     ]);
     const both = mac({ executors: { claude: { version: "2" }, codex: { version: "0.170.0" }, detectedAt: "x" } });
     expect(
-      brainOptions(both).every((o) => o.available || ["cursor", "opencode", "grok", "antigravity"].includes(o.kind)),
+      brainOptions(both).every(
+        (o) => o.available || ["cursor", "opencode", "grok", "antigravity", "commandcode"].includes(o.kind),
+      ),
     ).toBe(true);
     // Installed but turned off in the app's Tools: says so (not "not installed"); turned on, available.
     const off = mac({ ...both, access: { tools: { claude: false, codex: true } } });
@@ -1099,4 +1118,43 @@ describe("what the agent thinks with changes: its computer waits look again", ()
     expect(await wokenNow(fx, planCut)).toBe(false);
     expect(await wokenNow(fx, noTools)).toBe(true);
   });
+});
+
+test("Command Code's models: what its CLI listed, named and priced by the catalog's rows; else those rows", () => {
+  const listed = commandcodeModels([{ id: "moonshotai/kimi-k3.1-pro" }, { id: "qwen/qwen3.8-max" }]);
+  // The CLI lowercases Moonshot's id; the catalog's row still names it.
+  expect(listed[0]).toMatchObject({
+    value: "moonshotai/kimi-k3.1-pro",
+    modelId: "commandcode:moonshotai/Kimi-K3.1-Pro",
+  });
+  // One the catalog doesn't have: named from its id.
+  expect(listed[1]).toEqual({ value: "qwen/qwen3.8-max", label: "Qwen3.8 Max" });
+  const fallback = commandcodeModels();
+  const rows = Object.entries(MODEL_CATALOG).filter(([, m]) => m.provider === "commandcode");
+  expect(fallback.map((o) => o.modelId)).toEqual(rows.map(([id]) => id));
+  expect(fallback.every((o) => !o.value.startsWith("commandcode:"))).toBe(true);
+});
+
+test("a Command Code id the catalog doesn't name, as its maker writes it", () => {
+  expect(
+    [
+      "deepseek/deepseek-v4-flash-vision-exp",
+      "claude-opus-4-8",
+      "claude-haiku-4-5",
+      "gpt-6.1-terra",
+      "zai-org/glm-5.2-fast",
+      "qwen/qwen3.8-27b",
+      "xiaomi/mimo-v2.6-flash",
+      "thinkingmachines/inkling-2-small:free",
+    ].map(modelIdName),
+  ).toEqual([
+    "DeepSeek V4 Flash Vision (exp)",
+    "Claude Opus 4.8",
+    "Claude Haiku 4.5",
+    "GPT-6.1 Terra",
+    "GLM-5.2 Fast",
+    "Qwen3.8 27B",
+    "MiMo V2.6 Flash",
+    "Inkling 2 Small (free)",
+  ]);
 });

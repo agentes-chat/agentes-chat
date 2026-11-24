@@ -42,7 +42,7 @@ import { useToast } from "../../ui/Toast";
  * What changes between Claude Code and Codex (names stay in the strings; sites are not words). Cursor's accounts
  * (ADR 0114), OpenCode's keys (ADR 0132), Grok's accounts (ADR 0142) and Gemini's (ADR 0143) are added from the web app, not here yet.
  */
-type DesktopKind = Exclude<AccountKind, "cursor" | "opencode" | "grok" | "antigravity">;
+type DesktopKind = Exclude<AccountKind, "cursor" | "opencode" | "grok" | "antigravity" | "commandcode">;
 const KINDS: Record<
   DesktopKind,
   { title: string; tool: string; product: string; signIn: string; signInLead: string; site: string }
@@ -252,7 +252,8 @@ export function ToolAccounts({ homes, executors }: { homes: Home[]; executors: C
             removing.kind !== "cursor" &&
             removing.kind !== "opencode" &&
             removing.kind !== "grok" &&
-            removing.kind !== "antigravity"
+            removing.kind !== "antigravity" &&
+            removing.kind !== "commandcode"
               ? KINDS[removing.kind].site
               : "",
         })}

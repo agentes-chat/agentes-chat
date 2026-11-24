@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 77;
+export const MACHINE_PROTOCOL_VERSION = 80;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -747,6 +747,15 @@ export interface RunnerReportParts {
   logTail: string[];
 }
 
+/**
+ * From this protocol on (ADR 0221): the Command Code brain. `brain.turn` takes `kind: "commandcode"` (Command Code's CLI
+ * over the Agent Client Protocol, `cmd acp`, one process per turn), `account` takes `kind: "commandcode"` (only a Command
+ * Code key sealed to the machine: `begin` with `provider: "commandcode"`), `hello.executors.commandcode` reports the CLI,
+ * and `access.tools.commandcode` turns it on or off. The server never sends any of these to an older runner.
+ */
+export const COMMANDCODE_PROTOCOL = 80;
+/** `account` `begin`'s `provider` for a Command Code account: a Command Code API key (`user_…`), its only sign-in. */
+export const COMMANDCODE_KEY_PROVIDER = "commandcode";
 /** The coding CLIs `cli.install` installs: Claude Code and Codex. */
 export const INSTALLABLE_CLIS = ["claude", "codex"] as const;
 export type InstallableCli = (typeof INSTALLABLE_CLIS)[number];
@@ -1112,7 +1121,7 @@ export interface ExecVault {
 }
 
 /** Which CLI an account signs in. */
-export type AccountKind = "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+export type AccountKind = "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "commandcode";
 export const ACCOUNT_KINDS: readonly AccountKind[] = [
   "claude_code",
   "codex",
@@ -1120,6 +1129,7 @@ export const ACCOUNT_KINDS: readonly AccountKind[] = [
   "opencode",
   "grok",
   "antigravity",
+  "commandcode",
 ];
 export const isAccountKind = (v: unknown): v is AccountKind => ACCOUNT_KINDS.some((k) => k === v);
 /** Account and sign-in ids: UUIDs (the server makes them; the desktop app's runner too). */
@@ -1288,6 +1298,7 @@ export const OWN_USAGE_ID: Record<AccountKind, string> = {
   opencode: "own:opencode",
   grok: "own:grok",
   antigravity: "own:antigravity",
+  commandcode: "own:commandcode",
 };
 
 export const PLAN_USAGE_LIMITS = { windows: 8, label: 40 } as const;
@@ -2090,7 +2101,7 @@ export interface TaskStart {
 }
 
 /** The coding CLIs `hello.executors` reports. */
-export const CLI_NAMES = ["claude", "codex", "cursor", "opencode", "grok", "antigravity"] as const;
+export const CLI_NAMES = ["claude", "codex", "cursor", "opencode", "grok", "antigravity", "commandcode"] as const;
 export type CliName = (typeof CLI_NAMES)[number];
 
 /** A coding CLI on the machine, as `hello` reports it (protocol 7). */
@@ -2108,6 +2119,7 @@ export interface RunnerExecutorInfo {
    * Protocol 36, `cursor`: the models its sign-in lists (`agent models`), and which its plan includes when the CLI
    * says. Protocol 39, `opencode`: the models `opencode models` lists (`provider/model`), `free` on OpenCode's free tier.
    * Protocol 43, `grok`: the models `grok models` lists. Protocol 44, `antigravity`: the models `agy models` lists.
+   * protocol 80, `commandcode`: the models `cmd acp` offers its key (its `session/new` model option).
    */
   models?: CursorModelInfo[];
 }
@@ -2124,6 +2136,8 @@ export interface CursorModelInfo {
 
 /** Most models kept from `agent models`, and their longest id and label. */
 export const CURSOR_MODEL_LIMITS = { models: 60, id: 80, label: 80 } as const;
+/** Most models kept from Command Code's listing (`cmd --list-models`: 98 on 2026-11-15). */
+export const COMMANDCODE_MODEL_LIMIT = 160;
 
 /**
  * How a brain turn started on the runner (Claude Code; an older runner leaves it out): on a process already open
@@ -2358,9 +2372,9 @@ export interface BrainTurnRequest {
   runId: string;
   /**
    * `cursor`: protocol 36 (`CURSOR_PROTOCOL`); `opencode`: protocol 39 (`OPENCODE_PROTOCOL`); `grok`: 43
-   * (`GROK_PROTOCOL`); `antigravity`: 44 (`ANTIGRAVITY_PROTOCOL`).
+   * (`GROK_PROTOCOL`); `antigravity`: 44 (`ANTIGRAVITY_PROTOCOL`); `commandcode`: 67 (`COMMANDCODE_PROTOCOL`).
    */
-  kind: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+  kind: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "commandcode";
   /** The executor's session (a UUID, stable per thread); `resume`: the server knows it ran before (a hint). */
   session: { id: string; resume: boolean };
   /** Relative to the agent's folder ("" = the folder). */
@@ -2654,6 +2668,8 @@ export interface RunnerTools {
   grok?: boolean;
   /** Protocol 44: Google's Antigravity CLI (ADR 0143). Absent = off (older runners). */
   antigravity?: boolean;
+  /** protocol 80: Command Code's CLI (ADR 0221). Absent = off (older runners). */
+  commandcode?: boolean;
   /** Shell commands (`exec`, `shell` tasks). The same as `exec` in `hello` once protocol 10 is in use. */
   commands: boolean;
   /** Protocol 12: the agent browser (ADR 0040). Absent = off (older runners). */
@@ -2720,6 +2736,7 @@ export interface RunnerInfo {
     opencode?: RunnerExecutorInfo;
     grok?: RunnerExecutorInfo;
     antigravity?: RunnerExecutorInfo;
+    commandcode?: RunnerExecutorInfo;
     /**
      * `CLI_INSTALL_PROTOCOL`: a CLI that is there and whose `--version` keeps failing, with its own last line of
      * error. It is not listed above: it can't run turns, and it isn't missing either.
@@ -3688,8 +3705,8 @@ const denialList = (v: unknown): TaskDenial[] => {
   return out;
 };
 
-/** `cursor`'s `models` (protocol 36), cut to `CURSOR_MODEL_LIMITS`; ids are short words only. */
-export function parseCursorModels(v: unknown): CursorModelInfo[] {
+/** `cursor`'s `models` (protocol 36), cut to `max` (`CURSOR_MODEL_LIMITS`'s); ids are short words only. */
+export function parseCursorModels(v: unknown, max: number = CURSOR_MODEL_LIMITS.models): CursorModelInfo[] {
   if (!Array.isArray(v)) return [];
   const out: CursorModelInfo[] = [];
   for (const m of v) {
@@ -3702,13 +3719,13 @@ export function parseCursorModels(v: unknown): CursorModelInfo[] {
       ...(m.inPlan === true ? { inPlan: true } : {}),
       ...(m.free === true ? { free: true } : {}),
     });
-    if (out.length >= CURSOR_MODEL_LIMITS.models) break;
+    if (out.length >= max) break;
   }
   return out;
 }
 
 /**
- * `hello.executors`: only `claude`, `codex`, `cursor`, `opencode`, `grok` and `antigravity`, each with a short version
+ * `hello.executors`: only `claude`, `codex`, `cursor`, `opencode`, `grok`, `antigravity` and `commandcode`, each with a short version
  * line (and Claude Code's login), and `broken`: the error line of each of them that is there and can't start.
  */
 export function parseExecutors(v: Record<string, unknown>): NonNullable<RunnerInfo["executors"]> {
@@ -3727,7 +3744,10 @@ export function parseExecutors(v: Record<string, unknown>): NonNullable<RunnerIn
       ...(authMethod ? { authMethod } : {}),
       ...(plan ? { plan } : {}),
     };
-    const models = name === "claude" || name === "codex" ? [] : parseCursorModels(e.models);
+    const models =
+      name === "claude" || name === "codex"
+        ? []
+        : parseCursorModels(e.models, name === "commandcode" ? COMMANDCODE_MODEL_LIMIT : CURSOR_MODEL_LIMITS.models);
     if (models.length) out[name] = { ...out[name], models } as RunnerExecutorInfo;
   }
   if (isObject(v.broken)) {
@@ -4727,6 +4747,8 @@ export function parseAccess(v: unknown): RunnerAccess | undefined {
       ...(typeof t.grok === "boolean" ? { grok: t.grok } : {}),
       // Absent: a runner before the Antigravity CLI's switch (protocol 44), where it is off.
       ...(typeof t.antigravity === "boolean" ? { antigravity: t.antigravity } : {}),
+      // Absent: a runner before Command Code's switch (protocol 80), where it is off.
+      ...(typeof t.commandcode === "boolean" ? { commandcode: t.commandcode } : {}),
       commands: t.commands === true,
       ...(t.browser === true ? { browser: true } : {}),
       ...(t.desktop === true ? { desktop: true } : {}),

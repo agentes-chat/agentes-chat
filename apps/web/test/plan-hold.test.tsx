@@ -34,10 +34,20 @@ const COMPUTER: AiComputer = {
   mine: true,
   canAdd: true,
   keys: true,
-  brains: { claude_code: true, codex: true, cursor: true, opencode: true, grok: true, antigravity: true },
+  brains: {
+    claude_code: true,
+    codex: true,
+    cursor: true,
+    opencode: true,
+    grok: true,
+    antigravity: true,
+    commandcode: true,
+  },
 };
 
-const EVERY_PROGRAM = (["claude_code", "codex", "cursor", "opencode", "grok", "antigravity"] as const).map((kind) => ({
+const EVERY_PROGRAM = (
+  ["claude_code", "codex", "cursor", "opencode", "grok", "antigravity", "commandcode"] as const
+).map((kind) => ({
   kind,
   available: true,
   models: [],
@@ -116,6 +126,7 @@ const CARD: Partial<Record<PlanChoice, string>> = {
   grok: "Grok",
   gemini: "Gemini",
   zen: "Começar grátis",
+  commandcode: "Command Code",
 };
 
 async function planPanel(dialog: HTMLElement, choice: PlanChoice) {

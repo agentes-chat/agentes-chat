@@ -114,14 +114,28 @@ export const OPENCODE_KEY_PLAN: Pick<CodingPlan, "label" | "name" | "maker" | "s
   placeholder: "oc_sk_",
 };
 
+/** A Command Code key (ADR 0221), made on its site: its account's only sign-in, as OpenCode's is. */
+export const COMMANDCODE_KEY_PLAN: Pick<
+  CodingPlan,
+  "label" | "name" | "maker" | "site" | "keyPattern" | "placeholder"
+> = {
+  label: "Command Code",
+  name: "Command Code API key",
+  maker: "Command Code",
+  site: "https://commandcode.ai/settings/keys",
+  keyPattern: "^user_[A-Za-z0-9_-]{16,}$",
+  placeholder: "user_…",
+};
+
 /**
  * The key step an account sign-in shows, if any: a coding plan's (its `provider`), Cursor's API key when chosen
- * under Cursor's sign-in, or OpenCode's, its only one; and the `provider` the sign-in starts with.
+ * under Cursor's sign-in, or OpenCode's or Command Code's, their only one; and the `provider` the sign-in starts with.
  */
 export function signInKey(provider: string | undefined, kind: string, cursorKey: boolean) {
   const coding = planOf(provider);
   if (coding) return { plan: coding as typeof CURSOR_KEY_PLAN, provider };
   if (kind === "opencode") return { plan: OPENCODE_KEY_PLAN, provider: "zen" };
+  if (kind === "commandcode") return { plan: COMMANDCODE_KEY_PLAN, provider: "commandcode" };
   return kind === "cursor" && cursorKey
     ? { plan: CURSOR_KEY_PLAN, provider: "cursor" }
     : { plan: undefined, provider: undefined };
@@ -158,7 +172,7 @@ export function planReplies(
     agent: string | null;
     /** The plan's owner, to anyone else (an admin): "pelo plano do Claude de Walter". Absent: the viewer's own. */
     owner?: string;
-    brain: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+    brain: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "commandcode";
     /** The account's plan as the CLI says it (`max`, `team`…): a seat has its own words. */
     plan?: string | null;
     coding?: CodingPlan;

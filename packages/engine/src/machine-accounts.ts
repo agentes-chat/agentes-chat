@@ -11,6 +11,8 @@ import {
   accountCodeAad,
   CLAUDE_AUTH_PROTOCOL,
   type ClaudeLoginMethod,
+  COMMANDCODE_KEY_PROVIDER,
+  COMMANDCODE_PROTOCOL,
   CURSOR_KEY_PROVIDER,
   CURSOR_PROTOCOL,
   claudeLoginMethodsOf,
@@ -997,7 +999,8 @@ export async function syncMachineAccounts(
         const provider =
           isPlanId(a.provider) ||
           (a.kind === "cursor" && a.provider === CURSOR_KEY_PROVIDER) ||
-          (a.kind === "opencode" && a.provider === OPENCODE_KEY_PROVIDER)
+          (a.kind === "opencode" && a.provider === OPENCODE_KEY_PROVIDER) ||
+          (a.kind === "commandcode" && a.provider === COMMANDCODE_KEY_PROVIDER)
             ? a.provider
             : null;
         const candidate = { orgId, machineId, id: a.id, kind: a.kind, createdBy: owner, provider };
@@ -1301,11 +1304,11 @@ const sharedSignInProtocol = (kind: string) =>
  */
 export function sharesSignIns(
   machine: Pick<MachineRow, "protocol" | "executors">,
-  which: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "key",
+  which: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "commandcode" | "key",
 ): boolean {
   if (machine.protocol < SHARED_ACCOUNTS_PROTOCOL) return false;
   if (machine.executors?.mode !== "system") return true;
-  if (which === "cursor" || which === "opencode") return false;
+  if (which === "cursor" || which === "opencode" || which === "commandcode") return false;
   return machine.protocol >= sharedSignInProtocol(which) && SHARED_SIGN_INS[which];
 }
 
@@ -1482,14 +1485,16 @@ export const CURSOR_KEYS_URL = "https://cursor.com/dashboard?tab=integrations";
 
 /** Where a person makes an OpenCode key (its console, API Keys; opencode.ai/docs/zen). */
 export const OPENCODE_KEYS_URL = "https://opencode.ai/console";
+/** Where a Command Code key is made (ADR 0221). */
+export const COMMANDCODE_KEYS_URL = "https://commandcode.ai/settings/keys";
 
 export interface AccountLoginView {
   loginId: string;
   kind: AccountKind;
   /** The provider's page (Claude's sign-in, Codex's device page, or where a plan's key is made). */
   url: string;
-  /** A key account's coding plan, `cursor` for a Cursor API key, or `zen` for an OpenCode key. */
-  provider?: PlanId | typeof CURSOR_KEY_PROVIDER | typeof OPENCODE_KEY_PROVIDER;
+  /** A key account's coding plan, `cursor` for a Cursor API key, `zen` for an OpenCode key, `commandcode` for Command Code's. */
+  provider?: PlanId | typeof CURSOR_KEY_PROVIDER | typeof OPENCODE_KEY_PROVIDER | typeof COMMANDCODE_KEY_PROVIDER;
   /** Claude Code: the key the browser seals the pasted code to (raw P-256, base64). */
   publicKey?: string;
   /** Codex: the one-time code to type on its page. */
@@ -1528,17 +1533,18 @@ export async function beginAccountLogin(
 ): Promise<AccountLoginView> {
   if (!isAccountKind(kind)) {
     throw new ValidationError(
-      "Choose claude_code, codex, cursor, opencode, grok or antigravity",
+      "Choose claude_code, codex, cursor, opencode, grok, antigravity or commandcode",
       "account.invalid_kind",
     );
   }
   if (email !== undefined && (kind !== "claude_code" || provider !== undefined || !isLoginEmail(email))) {
     throw new ValidationError("Use a plain email address, like ana@example.com", "account.invalid_email");
   }
-  // A CLI's own API key: Cursor's (chosen), OpenCode's (its only sign-in).
+  // A CLI's own API key: Cursor's (chosen), OpenCode's and Command Code's (their only sign-in).
   const cliKey =
     (kind === "cursor" && provider === CURSOR_KEY_PROVIDER) ||
-    (kind === "opencode" && provider === OPENCODE_KEY_PROVIDER);
+    (kind === "opencode" && provider === OPENCODE_KEY_PROVIDER) ||
+    (kind === "commandcode" && provider === COMMANDCODE_KEY_PROVIDER);
   // Not a key: Gemini Enterprise's sign-in (ADR 0143), kept as the account's provider.
   const enterprise = kind === "antigravity" && provider === GEMINI_ENTERPRISE_PROVIDER;
   if (provider !== undefined && !cliKey && !enterprise && (kind !== "claude_code" || !isPlanId(provider))) {
@@ -1546,6 +1552,9 @@ export async function beginAccountLogin(
   }
   if (kind === "opencode" && !cliKey) {
     throw new ValidationError("OpenCode signs in with its API key", "account.invalid_plan");
+  }
+  if (kind === "commandcode" && !cliKey) {
+    throw new ValidationError("Command Code signs in with its API key", "account.invalid_plan");
   }
   const plan = planOf(provider);
   const { machine } = await memberMachine(deps.db, userId, orgId, machineId);
@@ -1574,9 +1583,11 @@ export async function beginAccountLogin(
           ? GROK_PROTOCOL
           : kind === "opencode"
             ? OPENCODE_PROTOCOL
-            : plan
-              ? PLAN_KEYS_PROTOCOL
-              : ACCOUNTS_PROTOCOL,
+            : kind === "commandcode"
+              ? COMMANDCODE_PROTOCOL
+              : plan
+                ? PLAN_KEYS_PROTOCOL
+                : ACCOUNTS_PROTOCOL,
   );
   // Once for every agent of its owner there, where the runner can (protocol 29; ChatGPT's 38, Gemini's 58).
   const shared = protocol >= sharedSignInProtocol(kind) && sharedSignIn(kind, provider);
@@ -1658,13 +1669,15 @@ export async function beginAccountLogin(
     return { loginId, kind, url: plan.site, provider, publicKey, expiresAt };
   }
   if (cliKey) {
-    // A Cursor or OpenCode API key: made on its own site, sealed to the computer like a plan's key.
+    // A Cursor, OpenCode or Command Code API key: made on its own site, sealed to the computer like a plan's key.
     if (!publicKey) {
       await fail();
       throw new ConflictError("The computer couldn't start the sign-in", "account.begin_failed", {
         name: machine.name,
       });
     }
+    if (kind === "commandcode")
+      return { loginId, kind, url: COMMANDCODE_KEYS_URL, provider: COMMANDCODE_KEY_PROVIDER, publicKey, expiresAt };
     return kind === "opencode"
       ? { loginId, kind, url: OPENCODE_KEYS_URL, provider: OPENCODE_KEY_PROVIDER, publicKey, expiresAt }
       : { loginId, kind, url: CURSOR_KEYS_URL, provider: CURSOR_KEY_PROVIDER, publicKey, expiresAt };

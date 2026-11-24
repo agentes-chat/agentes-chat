@@ -498,6 +498,8 @@
     "grokDesc": "Grok hesabınızla, izin verilen klasörlerde kod yazar ve değiştirir.",
     "antigravityName": "Antigravity CLI",
     "antigravityDesc": "Gemini hesabınızla, izin verilen klasörlerde kod yazar ve değiştirir.",
+    "commandcodeName": "Command Code",
+    "commandcodeDesc": "Command Code hesabınızla, izin verilen klasörlerde kod yazar ve değiştirir.",
     "found": "Bulundu",
     "notFound": "Bulunamadı",
     "loggedOut": "Giriş yapılmadı",

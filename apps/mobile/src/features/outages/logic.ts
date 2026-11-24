@@ -67,6 +67,7 @@ export const BRAIN_NAME: Record<ComputerBrain, string> = {
   opencode: "OpenCode",
   grok: "Grok Build",
   antigravity: "Antigravity CLI",
+  commandcode: "Command Code",
 };
 
 // ── Words ───────────────────────────────────────────────────────────────────
