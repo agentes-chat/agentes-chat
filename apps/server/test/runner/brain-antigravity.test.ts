@@ -20,11 +20,14 @@ import {
 } from "../../runner/accounts";
 import {
   AGY_CHAT_AGENT,
+  AGY_CHAT_SETTINGS,
   AGY_KEYCHAIN,
   AGY_PLANTED,
   AGY_SIGN_IN_FILE,
   agyAuthOf,
+  agyEagerTools,
   agyKeychain,
+  agyMcpConfig,
   agyRuntimeDir,
   agySignInOf,
   dropAgySignIns,
@@ -32,6 +35,9 @@ import {
   writeAgySettings,
 } from "../../runner/agy-home";
 import {
+  AGY_EMPTY_MESSAGE,
+  AGY_EMPTY_NUDGE,
+  AGY_EMPTY_OUTPUT,
   type AntigravityBrainContext,
   type AntigravityBrainTurnRequest,
   antigravityChatBreach,
@@ -39,6 +45,7 @@ import {
   antigravityProblem,
   antigravityTurnArgs,
   handleAntigravityBrainTurn,
+  isOurAgyMcpCall,
   isOurAgyTool,
   parseAgyError,
 } from "../../runner/brain-antigravity";
@@ -60,6 +67,7 @@ afterEach(async () => {
   delete process.env.FAKE_AGY_KEYRING;
   delete process.env.FAKE_AGY_REFRESH_MS;
   delete process.env.FAKE_AGY_CHECK;
+  delete process.env.FAKE_AGY_SILENT;
   removeDirs(dirs);
 });
 
@@ -91,6 +99,46 @@ test("command line: headless stream-json in the sandbox; work takes edits, plan 
   const chat = antigravityTurnArgs({ prompt: "oi", locked: true }).join(" ");
   expect(chat).toContain(`--agent ${AGY_CHAT_AGENT}`);
   expect(chat).not.toContain("accept-edits");
+  // The chat's own session settings: the CLI's file, command and web actions denied by rule, our server allowed.
+  const locked = antigravityTurnArgs({ prompt: "oi", locked: true });
+  expect(locked[locked.indexOf("--settings") + 1]).toBe(AGY_CHAT_SETTINGS);
+  expect(JSON.parse(AGY_CHAT_SETTINGS)).toEqual({
+    permissions: {
+      allow: [`mcp(${CODEX_MCP_SERVER}/*)`],
+      deny: ["command(*)", "read_file(*)", "write_file(*)", "read_url(*)", "execute_url(*)"],
+    },
+  });
+  expect(work).not.toContain("--settings");
+  expect(antigravityTurnArgs({ prompt: "oi", profile: "plan" })).not.toContain("--settings");
+});
+
+test("the turn's tools up front: each eager in mcp_config.json, names that aren't a tool's left out", () => {
+  expect(agyEagerTools(" post_message  read_artifact\nlist_artifacts ")).toEqual([
+    "post_message",
+    "read_artifact",
+    "list_artifacts",
+  ]);
+  expect(agyEagerTools(undefined)).toEqual([]);
+  const config = JSON.parse(
+    agyMcpConfig(["/usr/bin/agentes-runner"], ["post_message", "read_artifact", "post_message", "../evil", "a b"]),
+  );
+  expect(config).toEqual({
+    mcpServers: {
+      [CODEX_MCP_SERVER]: {
+        command: "/usr/bin/agentes-runner",
+        args: ["mcp"],
+        timeoutSeconds: 360,
+        tools: { post_message: { eager: true }, read_artifact: { eager: true } },
+      },
+    },
+  });
+  // None: the server alone, as before.
+  expect(JSON.parse(agyMcpConfig(["/usr/bin/agentes-runner"], [])).mcpServers[CODEX_MCP_SERVER].tools).toBeUndefined();
+  const home = tempDir("agy-eager-");
+  dirs.push(home);
+  prepareAgyHome(home, ["/usr/bin/agentes-runner"], ["post_message"]);
+  const written = JSON.parse(readFileSync(path.join(home, ".gemini/config/mcp_config.json"), "utf8"));
+  expect(written.mcpServers[CODEX_MCP_SERVER].tools).toEqual({ post_message: { eager: true } });
 });
 
 test("the account's home: what a turn planted goes, our settings, our server alone and Lodi's agent; the sign-in stays", () => {
@@ -187,6 +235,23 @@ test("a chat turn's guard: init with our server's tools alone; a tool of its own
   const sub = { event: "step_update", step_update: { step_type: "agent_response", subagent_info: { subagents: [] } } };
   expect(antigravityChatBreach(sub, true)).toContain("another agent");
   expect(isOurAgyTool(`evil_${CODEX_MCP_SERVER}/x`)).toBe(false);
+  // 1.5.x: init names the agent and lists the CLI's static catalog, which Lodi's agent's `tools: []` then strips.
+  const as = (agent: string, tools: unknown[]) => ({ event: "init", conversation_id: FIRST, init: { agent, tools } });
+  expect(antigravityChatBreach(as(AGY_CHAT_AGENT, ["run_command", "view_file", "call_mcp_tool"]), false)).toBeNull();
+  expect(antigravityChatBreach(as("default", ["run_command"]), false)).toContain('agent "default"');
+  expect(antigravityChatBreach(as(AGY_CHAT_AGENT, ["linear/save_issue"]), false)).toContain("linear/save_issue");
+  expect(antigravityChatBreach(as(AGY_CHAT_AGENT, ["mcp_linear_save_issue"]), false)).toContain("mcp_linear");
+  // A lazy call to our server is ours; to any other server, or with no tool named, it isn't.
+  const lazy = (p: Record<string, unknown>) => ({
+    event: "step_update",
+    step_update: { step_type: "tool", tool_name: "call_mcp_tool", tool_info: { name: "call_mcp_tool", parameters: p } },
+  });
+  expect(antigravityChatBreach(lazy({ ServerName: CODEX_MCP_SERVER, ToolName: "post_message" }), true)).toBeNull();
+  expect(antigravityChatBreach(lazy({ ServerName: "linear", ToolName: "save_issue" }), true)).toContain(
+    "call_mcp_tool",
+  );
+  expect(isOurAgyMcpCall("call_mcp_tool", { parameters: { ServerName: CODEX_MCP_SERVER } })).toBe(false);
+  expect(isOurAgyMcpCall("run_command", { parameters: { ServerName: CODEX_MCP_SERVER, ToolName: "x" } })).toBe(false);
 });
 
 test("a turn that went wrong: AGY_ERROR's quota is a plan limit with its reset, a refused sign-in, anything else", () => {
@@ -511,9 +576,95 @@ test.skipIf(!posix)(
       code: "tools_not_locked",
       message: expect.stringContaining("view_file"),
     });
+    expect(logOf(log)[0]?.args).toContain("--settings");
+    // 1.5.x's catalog beside Lodi's agent passes; another server's tool doesn't.
     process.env.FAKE_AGY_TOOLS = `${CODEX_MCP_SERVER}/post_message,run_command`;
+    const catalog = await run(ctx, turn({ ...chat, runId: RUN.replace(/1$/, "9"), prompt: "BRIDGE_ONLY" }));
+    expect(catalog.at(-1)).toMatchObject({ type: "done" });
+    process.env.FAKE_AGY_TOOLS = `${CODEX_MCP_SERVER}/post_message,linear/save_issue`;
     const listed = await run(ctx, turn({ ...chat, runId: RUN.replace(/1$/, "8"), prompt: "BRIDGE_ONLY" }));
-    expect(listed.at(-1)).toMatchObject({ code: "tools_not_locked", message: expect.stringContaining("run_command") });
+    expect(listed.at(-1)).toMatchObject({
+      code: "tools_not_locked",
+      message: expect.stringContaining("linear/save_issue"),
+    });
+  },
+  20_000,
+);
+
+test.skipIf(!posix)(
+  "a work turn: the engine's tools reach the CLI up front, and a lazy call_mcp_tool to our server isn't repeated",
+  async () => {
+    const root = tempDir("brain-agy-");
+    dirs.push(root);
+    const { ctx, accountDir } = turnContext(root);
+    signIn(accountDir);
+    const log = path.join(root, "agy.log");
+    process.env.FAKE_AGY_LOG = log;
+    const events = await run(
+      ctx,
+      turn({ prompt: "LAZY run it", mcp: { token: "tok_run", tools: "list_artifacts post_message read_artifact" } }),
+    );
+    expect(events.at(-1)).toEqual({ type: "done", text: "Let me check. All good.", session: { id: SESSION } });
+    expect(logOf(log)[0]).toMatchObject({ eager: ["list_artifacts", "post_message", "read_artifact"], settings: null });
+    expect(events.filter((e) => e.type === "tool_call").map((e) => (e as { name: string }).name)).toEqual([
+      "run_command",
+    ]);
+  },
+  20_000,
+);
+
+test.skipIf(!posix)(
+  "an empty turn (only the CLI's own steps, empty, and no reply): marked, resumed once in its conversation, then answered",
+  async () => {
+    const root = tempDir("brain-agy-");
+    dirs.push(root);
+    const { ctx, accountDir } = turnContext(root);
+    signIn(accountDir);
+    const log = path.join(root, "agy.log");
+    process.env.FAKE_AGY_LOG = log;
+    const events = await run(ctx, turn({ prompt: "SILENT read the report" }));
+    // The steps that gave nothing say so, for the records and the judge.
+    const calls = events.filter((e) => e.type === "tool_call") as Array<{ name: string; executed: unknown }>;
+    expect(calls.map((c) => [c.name, c.executed])).toEqual([
+      ["read_file", { content: AGY_EMPTY_OUTPUT }],
+      ["run_command", { content: AGY_EMPTY_OUTPUT }],
+      ["run_command", { content: "3 pass\n" }],
+    ]);
+    const runs = logOf(log);
+    expect(runs).toHaveLength(2);
+    expect(runs[1]?.args[1]).toBe(AGY_EMPTY_NUDGE);
+    expect(runs[1]?.args.join(" ")).toContain(`--conversation ${FIRST}`);
+    expect(events.at(-1)).toEqual({ type: "done", text: "Let me check. All good.", session: { id: SESSION } });
+    // One usage for the whole turn: both runs of the CLI.
+    expect(events.filter((e) => e.type === "usage")).toEqual([
+      { type: "usage", source: "plan", input: 1800, output: 60, cacheRead: 400 },
+    ]);
+  },
+  20_000,
+);
+
+test.skipIf(!posix)(
+  "an empty turn twice is a visible failure, never an empty done; one that called our server ends as it did",
+  async () => {
+    const root = tempDir("brain-agy-");
+    dirs.push(root);
+    const { ctx, accountDir } = turnContext(root);
+    signIn(accountDir);
+    const log = path.join(root, "agy.log");
+    process.env.FAKE_AGY_LOG = log;
+    process.env.FAKE_AGY_SILENT = "1";
+    const events = await run(ctx, turn({ prompt: "read the report" }));
+    expect(events.some((e) => e.type === "done")).toBe(false);
+    expect(events.at(-1)).toEqual({ type: "error", code: "antigravity_failed", message: `${AGY_EMPTY_MESSAGE}.` });
+    expect(logOf(log)).toHaveLength(2);
+    expect(events.filter((e) => e.type === "usage")).toEqual([
+      { type: "usage", source: "plan", input: 1600, output: 40 },
+    ]);
+    delete process.env.FAKE_AGY_SILENT;
+    // Our server's tool ran (the engine posted through it): no retry, its end as it came.
+    const answered = await run(ctx, turn({ runId: RUN.replace(/1$/, "5"), prompt: "SILENT LAZY post it" }));
+    expect(answered.at(-1)).toEqual({ type: "done", text: "", session: { id: SESSION } });
+    expect(logOf(log)).toHaveLength(3);
   },
   20_000,
 );
