@@ -91,6 +91,26 @@ test("a credential is masked as JSON writes it too, and under a field named for 
   });
   expect(maskSecretFields("password: x")).toBe("password: x");
 });
+test("a key of the makers people connect is masked by its shape, never kept whole", () => {
+  const shapes = [
+    `sk_live_${"a".repeat(24)}`, // Stripe
+    `rk_test_${"b".repeat(24)}`,
+    `whsec_${"c".repeat(24)}`, // Stripe's webhook signing secret
+    `AIza${"d".repeat(35)}`, // Google
+    `glpat-${"e".repeat(20)}`, // GitLab
+    `npm_${"f".repeat(36)}`, // npm
+    `hf_${"g".repeat(30)}`, // Hugging Face
+    `eyJ${"h".repeat(20)}.${"i".repeat(20)}.${"j".repeat(20)}`, // a JWT
+  ];
+  for (const key of shapes) {
+    const masked = redactCommon(`asked with ${key} and nothing else`);
+    expect(masked).not.toContain(key);
+    expect(masked.startsWith("asked with ")).toBe(true);
+  }
+  // A PEM private key, body and all, as one masked value.
+  const pem = "-----BEGIN RSA PRIVATE KEY-----\nMIIEfakebodyfakebody\n-----END RSA PRIVATE KEY-----";
+  expect(redactCommon(`key: ${pem}`)).toBe("key: -----BEGIN PRIVATE KEY-----***-----END PRIVATE KEY-----");
+});
 
 test("a record's texts go through the text rule as themselves, and a text that is itself JSON is opened", () => {
   // Written as JSON the three lines are one word; read as they are, each name has its value.

@@ -49,6 +49,24 @@ describe("what the audit keeps of a call", () => {
     expect(kept.list).toHaveLength(21);
     expect(JSON.stringify(kept)).not.toContain("hunter2");
   });
+  test("a credential under a name no shape matches is masked by the name: key, auth, dsn, signing_key", () => {
+    const kept = auditInput({
+      key: "not-shaped-like-anything",
+      auth: "plain words",
+      dsn: "postgres://agentes:secret@db:5432/x",
+      signing_key: "another value",
+      session: "sess-value",
+      visibility: "private",
+    });
+    expect(kept).toEqual({
+      key: "***",
+      auth: "***",
+      dsn: "***",
+      signing_key: "***",
+      session: "***",
+      visibility: "private",
+    });
+  });
 
   test("changes, sends and a connected app's reads; not looking around inside; every refusal", () => {
     expect(auditsCall("external", {}, "done")).toBe(true);

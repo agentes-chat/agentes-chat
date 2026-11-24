@@ -38,6 +38,7 @@ import { and, type Database, eq, inArray, lt, schema, sql } from "@agenteschat/d
 import type { ToolImage } from "@agenteschat/providers";
 import { getAgentCached } from "./agents";
 import { UUID } from "./authority";
+import { safeEqual } from "./crypto";
 import { type MachinePhoneRow, publishDevicesChanged, syncMachinePhones } from "./devices";
 import { cutText } from "./format";
 import { agentCoAuthorLine } from "./git/signature";
@@ -571,6 +572,12 @@ export function createMachineHub(deps: MachineHubDeps) {
   const replicaId = deps.replicaId ?? crypto.randomUUID();
   const heartbeatMs = deps.heartbeatMs ?? HEARTBEAT_MS;
   const helloTimeoutMs = deps.helloTimeoutMs ?? HELLO_TIMEOUT_MS;
+  /**
+   * The most a frame read before the token is checked may hold: a `hello` is a few hundred bytes (its largest field a
+   * workspace path), so 64 KiB leaves room for an app's own additions without letting a stranger's sockets each cost a
+   * buffer and a parse of `MAX_FRAME_BYTES`. A frame cut before its closing brace is not a hello.
+   */
+  const preHelloBytes = 64 * 1024;
   const rpcPollMs = deps.rpcPollMs ?? 500;
   const taskOfflineGraceMs = deps.taskOfflineGraceMs ?? TASK_OFFLINE_GRACE_MS;
   const mcpRepeatWaitMs = deps.mcpRepeatWaitMs ?? MCP_REPEAT_WAIT_MS;
@@ -1573,7 +1580,13 @@ export function createMachineHub(deps: MachineHubDeps) {
     async message(conn: MachineConnection, raw: string | Buffer | Uint8Array) {
       // Any frame is a sign of life, not only a pong (which may queue behind a busy runner's output).
       conn.lastPong = Date.now();
-      const text = typeof raw === "string" ? raw : new TextDecoder().decode(raw);
+      // A socket nobody authenticated yet has its frame read up to `preHelloBytes` (a `hello` is a few hundred): a
+      // stranger holding many sockets can't make the server buffer and parse 8 MiB each before the token is checked
+      // (ADR 0025). Once a hello is being checked, its whole frame is read.
+      const handshaken = conn.machineId !== null || conn.authing;
+      const bytes = typeof raw === "string" ? new TextEncoder().encode(raw) : raw;
+      // A cut lands inside a multi-byte character only for a frame too large to be a `hello` anyway.
+      const text = new TextDecoder().decode(handshaken ? bytes : bytes.subarray(0, preHelloBytes));
       const frame = parseRunnerFrame(text);
       if (!frame) {
         if (!conn.machineId) refuse(conn, "invalid_token", "Send hello first.", MACHINE_CLOSE.badFrame);
@@ -1595,10 +1608,10 @@ export function createMachineHub(deps: MachineHubDeps) {
       else if (frame.type === "task.event") {
         await applyTaskEvent({ db, pubsub }, conn.machineId, frame).catch(() => undefined);
       } else if (frame.type === "mcp.call") {
-        if (frame.token) touchBrain(conn, (b) => b.token === frame.token);
+        if (frame.token) touchBrain(conn, (b) => safeEqual(b.token ?? "", frame.token ?? ""));
         mcpCall(conn, frame);
       } else if (frame.type === "mcp.list") {
-        touchBrain(conn, (b) => b.token === frame.token);
+        touchBrain(conn, (b) => safeEqual(b.token ?? "", frame.token ?? ""));
         mcpList(conn, frame);
       } else if (frame.type === "brain.event" || frame.type === "brain.done") {
         touchBrain(conn, (b) => b.runId === frame.runId);

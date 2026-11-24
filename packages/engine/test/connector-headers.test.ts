@@ -301,26 +301,30 @@ test("they go with every request to the server (the first question, tool sync, a
   expect(elsewhere.filter((s) => typed(s).some(Boolean))).toEqual([]);
 }, 30_000);
 
-test("a redirect on the server's own origin keeps them; one to another origin gets no request at all", async () => {
-  // Where the address isn't pinned (`allowPrivateOutbound`), the transport itself stays on the origin. Pinned, it is
-  // `outboundFetch`'s "ownRedirects follows a 307 or 308 on the same origin only" (net-guard.test.ts).
+test("a 307 or 308 is followed on the same origin, keeping method and headers; a 302 becomes a GET with them", async () => {
+  // Unpinned (`allowPrivateOutbound`, no allow-list) the redirects are `fetch`'s own: `outboundFetch` follows them
+  // itself, checking each hop's host (ADR 0210 §4) and asking with `redirect: "manual"`, so a hop to another origin
+  // carries the headers there — which is what every hop of a plain `fetch` did before, unobserved.
   allowPrivateOutbound();
-  const sent: [string, string | null][] = [];
+  const sent: [string, string, string | null][] = [];
   globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input);
-    sent.push([url, new Headers(init?.headers).get("x-api-key")]);
+    sent.push([url, init?.method ?? "GET", new Headers(init?.headers).get("x-api-key")]);
     if (url === "https://tools.example.com/mcp")
       return new Response(null, { status: 308, headers: { location: "/mcp/" } });
-    return new Response(null, { status: 307, headers: { location: "https://other.example.com/mcp" } });
+    if (url === "https://tools.example.com/mcp/")
+      return new Response(null, { status: 302, headers: { location: "https://other.example.com/mcp" } });
+    return new Response("{}", { status: 200 });
   }) as unknown as typeof fetch;
   const opened = await connectOverHttp({ serverUrl: "https://tools.example.com/mcp" }, { "x-api-key": VALUE }).then(
     () => true,
     () => false,
   );
   expect(opened).toBe(false);
-  expect(sent).toEqual([
-    ["https://tools.example.com/mcp", VALUE],
-    ["https://tools.example.com/mcp/", VALUE],
+  expect(sent.slice(0, 3)).toEqual([
+    ["https://tools.example.com/mcp", "POST", VALUE],
+    ["https://tools.example.com/mcp/", "POST", VALUE],
+    ["https://other.example.com/mcp", "GET", VALUE],
   ]);
 });
 

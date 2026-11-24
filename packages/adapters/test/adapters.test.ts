@@ -8,6 +8,7 @@ import {
   createPostgresPubSub,
   isReservedSecretName,
   listenResumedTopic,
+  MEMORY_LIMIT_KEYS,
   PayloadTooLargeError,
   type PgNotifier,
   type PubSub,
@@ -115,6 +116,19 @@ test("memory rate limiter uses fixed windows; a take given back counts no more, 
   await rl.release("k");
   await rl.release("k");
   expect((await rl.consume("k", rule)).remaining).toBe(1);
+});
+
+test("memory rate limiter keeps a bounded map under a flood of keys", async () => {
+  const rl = createMemoryRateLimiter(() => 0);
+  const rule = { limit: 1_000_000, windowMs: 3_600_000 };
+  await rl.consume("honest", rule);
+  // Every key its own address: past the cap the oldest windows go, so the map stays bounded. The key taken gets a
+  // fresh window — a limit that only ever loosens under a flood (the honestly used key is the oldest here).
+  for (let n = 0; n < MEMORY_LIMIT_KEYS + 10; n++) await rl.consume(`forged-${n}`, rule);
+  expect((await rl.consume("honest", rule)).remaining).toBe(rule.limit - 1);
+  // A key being used keeps its own count: the sweep only takes what nothing has touched since.
+  await rl.consume("late", rule);
+  expect((await rl.consume("late", rule)).remaining).toBe(rule.limit - 2);
 });
 
 test("postgres pub/sub: publish doesn't wait for the database; a tick's events go out in one statement, in order", async () => {

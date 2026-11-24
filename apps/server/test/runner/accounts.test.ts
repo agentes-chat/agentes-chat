@@ -794,6 +794,34 @@ test.if(posix)("system mode: a pipe an agent's user leaves where a key would be 
   const listed = await Promise.race([m.list(), new Promise<null>((r) => setTimeout(() => r(null), 3000))]);
   expect(listed).toEqual([{ id, kind: "claude_code", loggedIn: true, authMethod: "cli_login" }]);
 });
+test.if(posix)(
+  "system mode: a link an agent's user leaves where a re-sign-in writes never takes root's key",
+  async () => {
+    const { m, root } = setup({ lending: { chown: async () => {} } });
+    const id = LOGIN(57);
+    const dir = path.join(root, "claude_code", id);
+    const begun = await m.begin("claude_code", id, false, undefined, "zai");
+    const first = await sealed(begun.publicKey as string, id, GLM_KEY);
+    await m.code(id, first.aad, first.box);
+    // Signed in again: the folder stays the agent's (no `.signing-in` until it finishes), and its user leaves the
+    // temporary name a link to a file they own, then a link under `provider.json` itself.
+    const again = await m.begin("claude_code", id, true, undefined, "zai");
+    expect(m.status(id)).toEqual({ state: "waiting" });
+    const agentOwned = path.join(path.dirname(root), `agent-owned-${id}.json`);
+    writeFileSync(agentOwned, "agent");
+    symlinkSync(agentOwned, path.join(dir, `provider.json.${process.pid}.0.tmp`));
+    const next = await sealed(again.publicKey as string, id, `${GLM_KEY}9`);
+    await m.code(id, next.aad, next.box);
+    // The key landed in this runner's own file; the agent's file kept what it had.
+    expect(readFileSync(agentOwned, "utf8")).toBe("agent");
+    const file = path.join(dir, "provider.json");
+    expect(statSync(file).isFile()).toBe(true);
+    expect(JSON.parse(readFileSync(file, "utf8"))).toEqual({ provider: "zai", key: `${GLM_KEY}9` });
+    m.invalidate();
+    expect((await m.list())[0]).toMatchObject({ keyHint: "nOp9", loggedIn: true });
+  },
+  15_000,
+);
 
 test.if(posix)(
   "system mode: a folder an agent's user had lists the plan Claude Code keeps there, never through a link, with no CLI",

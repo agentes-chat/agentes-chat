@@ -24,7 +24,11 @@ const MAX_SEGMENT = 200;
 /** Shortest run of private text that counts as copied: longer than a word, a date or an id prefix. */
 const WINDOW = 24;
 
-/** The form of an address `seen` compares: https, lowercase host, no fragment, no trailing slash. */
+/**
+ * The form of an address `seen` compares: https, lowercase host, no fragment, no trailing slash. The slash is cut by
+ * index, not by `/\/+$/`: that pattern is quadratic on a long run of slashes that doesn't end the text (`/\/+$/`
+ * scans the run again from each of its slashes), and this runs over every address a page an agent reads shows.
+ */
 export function normalizeUrl(raw: string): string | null {
   let u: URL;
   try {
@@ -35,7 +39,10 @@ export function normalizeUrl(raw: string): string | null {
   if (u.protocol !== "http:" && u.protocol !== "https:") return null;
   u.hash = "";
   u.protocol = "https:";
-  return u.toString().replace(/\/+$/, "");
+  const text = u.toString();
+  let end = text.length;
+  while (end > 0 && text.charCodeAt(end - 1) === 47) end--;
+  return text.slice(0, end);
 }
 
 const URLS_IN_TEXT = /https?:\/\/[^\s<>"'`]+/gi;

@@ -96,17 +96,20 @@ export type KnownLabel = "server" | "computer" | "workspace" | "agent" | "person
  * scrubbed line gives the same line.
  */
 export function scrubLogLine(line: string, known: ReadonlyArray<readonly [value: string, label: KnownLabel]> = []) {
+  // Cut first: every step below is a regex over the line, and a runner's line has no length of its own (a megabyte
+  // of `a.` with no `@` costs seconds in `scrubText`'s email pattern). The tail past the cut is never shown.
+  const cut = line.length > LOG_LINE_MAX ? line.slice(0, LOG_LINE_MAX) : line;
   // Longest first: a machine called "box" never eats part of "box-2".
   const values = [...known].filter(([v]) => v.trim().length >= 3).sort((a, b) => b[0].length - a[0].length);
-  const label = (text: string, which: typeof values) =>
-    which.reduce((out, [value, name]) => out.split(value).join(`[${name}]`), text);
   // Names before the masks (a home folder may hold what reads as a token). URLs are cut before `scrubText`, so a
   // password in one (`postgres://user:p!ss@host`) goes with its credentials, not in part through the email mask; the
   // server's host is labeled after.
+  const label = (text: string, which: typeof values) =>
+    which.reduce((out, [value, name]) => out.split(value).join(`[${name}]`), text);
   const out = label(
     scrubText(
       label(
-        line,
+        cut,
         values.filter(([, name]) => name !== "server"),
       )
         .replace(COOKIE_HEADER, "$1***")

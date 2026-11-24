@@ -1,4 +1,4 @@
-import { closeSync, constants, fstatSync, openSync, readFileSync, readSync, renameSync, writeFileSync } from "node:fs";
+import { closeSync, constants, fstatSync, openSync, readFileSync, readSync, renameSync, writeSync } from "node:fs";
 
 /** The file's JSON, or null when it is missing or not JSON. */
 export function readJson<T>(file: string): T | null {
@@ -30,9 +30,35 @@ export function readSmallJson(file: string, maxBytes: number, follow = false, ow
   }
 }
 
-/** Written whole (mode 600), then renamed: a crash never leaves half a file. */
+/**
+ * Written whole (mode 600), then renamed: a crash never leaves half a file. The temporary is one this call creates
+ * (`O_EXCL`) and writes through its own descriptor, so a link an agent's user left under the name — the folder may be
+ * lent to one while root writes (ADR 0059 §8) — is never followed: the bytes land in a file this call made, and the
+ * rename puts them where they belong. A temporary left behind by a runner that died is skipped, never reopened.
+ */
 export function writeJson(file: string, data: unknown) {
-  const tmp = `${file}.${process.pid}.tmp`;
-  writeFileSync(tmp, JSON.stringify(data), { mode: 0o600 });
-  renameSync(tmp, file);
+  const bytes = Buffer.from(JSON.stringify(data));
+  for (let attempt = 0; ; attempt++) {
+    const tmp = `${file}.${process.pid}.${attempt}.tmp`;
+    let fd: number;
+    try {
+      fd = openSync(
+        tmp,
+        constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | (constants.O_NOFOLLOW ?? 0),
+        0o600,
+      );
+    } catch (error) {
+      // Anything else (a folder root can't write) is the caller's to see.
+      if (attempt < 4 && error instanceof Error && "code" in error && error.code === "EEXIST") continue;
+      throw error;
+    }
+    try {
+      let at = 0;
+      while (at < bytes.byteLength) at += writeSync(fd, bytes, at, bytes.byteLength - at);
+    } finally {
+      closeSync(fd);
+    }
+    renameSync(tmp, file);
+    return;
+  }
 }

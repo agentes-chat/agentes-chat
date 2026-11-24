@@ -148,6 +148,12 @@ is who made the copy, so it reaches nobody more. `shared_drive` (an agent moving
 shares it with everyone. A limited task that takes its author's Drive file (ADR 0151) keeps a list it was shared with,
 and one shared with everyone becomes its conversation's alone.
 
+**Amendment (2026-11-22): `shared_drive` widens no further than the person behind the run could.** The move to the
+shared Drive needs the asker to pass the file dialog's own two checks (`readsItThere` and `personEdits`, ADR 0202):
+someone who only views a file — a file whose editors are limited, its conversation's members who don't edit — cannot
+publish it to the workspace through an agent, where they could not publish it themselves. Agents' own levels are
+unchanged.
+
 **Apps**: the web's dialog and the phone's sheet offer the three choices on a Drive file, the first one named Só você
 for its maker; the Drive lists a file not shared with everyone in its private section (`isPrivateArtifact`), and
 Copiar link of one only its maker sees opens the dialog (`onlyItsConversation`). The operator's access explanation
