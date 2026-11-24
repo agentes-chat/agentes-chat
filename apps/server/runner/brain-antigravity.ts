@@ -17,7 +17,7 @@ import {
   withoutContainers,
   withoutSignIns,
 } from "./accounts";
-import { AGY_CHAT_AGENT, prepareAgyHome } from "./agy-home";
+import { AGY_CHAT_AGENT, AGY_CHAT_SETTINGS, agyEagerTools, prepareAgyHome } from "./agy-home";
 import { LIMIT_TEXT } from "./brain";
 import { type CodexBrainEvent, CodexThreads, chatFolder, codexProfileOf, codexThreadKey } from "./brain-codex";
 import { cursorPrompt } from "./brain-cursor";
@@ -50,12 +50,17 @@ import { turnZoneEnv } from "./turn-zone";
  *   no network) and the account's `proceed-in-sandbox`; `work` adds `--mode accept-edits` (edits in the workspace
  *   without asking), `plan` doesn't (an edit needs an approval nobody gives in headless mode, so it is refused).
  * - `chat` (the team's right hand, ADR 0137 §4): `--agent agenteschat-chat` (no built-in tool, no commands, never a
- *   subagent), in an empty folder with none of the agent's secrets. `antigravityChatBreach` kills the turn on an
+ *   subagent) and `--settings` that deny the CLI's own file, command and web actions by rule (`AGY_CHAT_SETTINGS`), in
+ *   an empty folder with none of the agent's secrets. `antigravityChatBreach` kills the turn on an
  *   `init` listing any tool but our server's, on anything before `init`, on a tool step that isn't ours and on a
  *   subagent.
- * - Our server's calls are not repeated as `tool_call`: the engine ran them. The CLI's own tools are, as what the turn
- *   tried. Usage is the plan's (`source: "plan"`): the turn's `agent_response` steps summed (`result.usage` counts
- *   the whole conversation).
+ * - Our server's calls (by name, or through `call_mcp_tool`) are not repeated as `tool_call`: the engine ran them. The
+ *   turn's tools are declared up front (`eager` in `mcp_config.json`, from the engine's `mcp.tools`), so the model
+ *   never needs the CLI's lazy schema files. The CLI's own tools are repeated, as what the turn tried; one that gave
+ *   nothing reads `AGY_EMPTY_OUTPUT`. Usage is the plan's (`source: "plan"`): the turn's `agent_response` steps
+ *   summed (`result.usage` counts the whole conversation), once for all of the turn's runs of the CLI.
+ * - A turn that ends with no reply and none of our tools is resumed once in its conversation (`AGY_EMPTY_NUDGE`);
+ *   empty again, it fails (`antigravity_failed`), so the engine never posts it as an empty "Done.".
  * - A failed turn exits non-zero; a model or agent failure exits 3 with an `AGY_ERROR: {…}` line on stderr (its
  *   canonical status, HTTP or gRPC code, retryability): quota and rate limits are `plan_limit`, a refused sign-in
  *   `not_logged_in`.
@@ -121,7 +126,11 @@ export function antigravityTurnArgs(input: {
     "stream-json",
     "--sandbox",
     "--disable-slash-commands",
-    ...(input.locked ? ["--agent", AGY_CHAT_AGENT] : input.profile === "plan" ? [] : ["--mode", "accept-edits"]),
+    ...(input.locked
+      ? ["--agent", AGY_CHAT_AGENT, "--settings", AGY_CHAT_SETTINGS]
+      : input.profile === "plan"
+        ? []
+        : ["--mode", "accept-edits"]),
     ...(input.model ? ["--model", input.model] : []),
     ...(effort ? ["--effort", effort] : []),
     ...(input.chat ? ["--conversation", input.chat] : []),
@@ -131,15 +140,40 @@ export function antigravityTurnArgs(input: {
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
 /**
- * A `chat` turn's guard (protocol 44), line by line: `init` must list our server's tools alone, nothing may come
- * before it, and no step may be a tool that isn't ours or a subagent. Null when the line is fine.
+ * A lazy MCP call (`call_mcp_tool`, Antigravity CLI 1.5.x) to our server: the engine ran it, like a call by the tool's
+ * own name.
+ */
+export function isOurAgyMcpCall(name: unknown, info: unknown): boolean {
+  if (name !== "call_mcp_tool" || !isRecord(info) || !isRecord(info.parameters)) return false;
+  const p = info.parameters;
+  return p.ServerName === CODEX_MCP_SERVER && typeof p.ToolName === "string" && /^[\w.-]{1,64}$/.test(p.ToolName);
+}
+
+/**
+ * A tool name of the CLI's own static catalog, which 1.5.x lists in `init.tools` before the agent's `tools: []` and
+ * MCP discovery apply: plain snake_case, never an `mcp_*` name.
+ */
+const BUILTIN_CATALOG_TOOL = /^(?!mcp_)[a-z][a-z0-9_]{0,63}$/;
+
+/**
+ * A `chat` turn's guard (protocol 44), line by line: `init` must list our server's tools alone (or, when it says it
+ * runs as Lodi's agent, the CLI's static catalog of 1.5.x that the agent's `tools: []` then strips), nothing may come
+ * before it, and no step may be a tool that isn't ours (by name or through `call_mcp_tool`) or a subagent. Null when
+ * the line is fine.
  */
 export function antigravityChatBreach(ev: Record<string, unknown>, sawInit: boolean): string | null {
   const stop = (why: string) => `${why}, so the turn stopped.`;
   if (ev.event === "init") {
-    const tools = isRecord(ev.init) ? ev.init.tools : undefined;
+    const init = isRecord(ev.init) ? ev.init : {};
+    const tools = init.tools;
     if (!Array.isArray(tools)) return "The Antigravity CLI didn't list its tools, so the turn stopped before it began.";
-    const theirs = tools.filter((t) => !isOurAgyTool(t)).map((t) => String(t).slice(0, 64));
+    if (init.agent !== undefined && init.agent !== AGY_CHAT_AGENT) {
+      return stop(`The Antigravity CLI started as agent "${String(init.agent).slice(0, 64)}", not ${AGY_CHAT_AGENT}`);
+    }
+    const locked = init.agent === AGY_CHAT_AGENT;
+    const theirs = tools
+      .filter((t) => !isOurAgyTool(t) && !(locked && typeof t === "string" && BUILTIN_CATALOG_TOOL.test(t)))
+      .map((t) => String(t).slice(0, 64));
     if (theirs.length === 0) return null;
     return `The Antigravity CLI offers tools of its own here (${theirs.slice(0, 8).join(", ")}), so the turn stopped before it could use them.`;
   }
@@ -149,7 +183,7 @@ export function antigravityChatBreach(ev: Record<string, unknown>, sawInit: bool
   if (step.subagent_info !== undefined) return stop("The Antigravity CLI started another agent");
   const info = isRecord(step.tool_info) ? step.tool_info : {};
   const name = step.tool_name ?? info.name;
-  if ((step.step_type === "tool" || name !== undefined) && !isOurAgyTool(name)) {
+  if ((step.step_type === "tool" || name !== undefined) && !isOurAgyTool(name) && !isOurAgyMcpCall(name, info)) {
     return stop(`The Antigravity CLI used a tool of its own (${String(name ?? "unknown").slice(0, 64)})`);
   }
   return null;
@@ -202,6 +236,29 @@ export function antigravityProblem(
   return [{ type: "error", code: "antigravity_failed", message: problem, retryable: true }];
 }
 
+/**
+ * What a step of the CLI's own that gave neither output nor an error stands as in the turn's record: the CLI ran
+ * nothing it could show (a schema file pruned before it was read, a command that wasn't there), never an empty line
+ * the judge and the records can't tell from a real one.
+ */
+export const AGY_EMPTY_OUTPUT =
+  "(The Antigravity CLI gave this step no output and no error: what it reached for wasn't there in this turn. Use the agentes tools instead.)";
+
+/**
+ * The prompt of the one retry of a turn that ended with no reply and none of our server's tools called: the same
+ * conversation, told so.
+ */
+export const AGY_EMPTY_NUDGE = [
+  "Your last turn ended without a reply and without calling any agentes tool.",
+  "The agentes tools are declared in your tools list: call them directly, there is no schema file to read first,",
+  "and files or commands of your own that came back empty aren't there in this turn.",
+  "Answer now with the result, or say plainly what blocked you.",
+].join(" ");
+
+/** A turn that ended twice with no reply (after `AGY_EMPTY_NUDGE`): a visible failure, never an empty answer. */
+export const AGY_EMPTY_MESSAGE =
+  "The Antigravity CLI ended the turn twice without a reply and without calling any agentes tool (Gemini stopped after its own file or command steps came back empty)";
+
 const tokens = (v: unknown) => (typeof v === "number" && Number.isFinite(v) && v > 0 ? Math.round(v) : 0);
 
 /** One usage record as ours: every input token (the CLI's input may already leave the cache out), output with thinking. */
@@ -219,7 +276,8 @@ export interface AntigravityTurnInput {
   effort?: BrainEffort;
   system: string;
   prompt: string;
-  mcp: { token: string };
+  /** `tools`: the turn's tools of our server (names joined by spaces), declared to the model up front. */
+  mcp: { token: string; tools?: string };
   /** The account: its folder is the CLI's `HOME`, its chats are its own. */
   account: { id: string; home: string };
   profile?: CommandProfile;
@@ -250,7 +308,7 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
   const fail = (code: string, message: string, retryable?: boolean) =>
     opts.emit({ type: "error", code, message, ...(retryable ? { retryable } : {}) });
   try {
-    prepareAgyHome(input.account.home, opts.mcpCommand);
+    prepareAgyHome(input.account.home, opts.mcpCommand, agyEagerTools(input.mcp.tools));
     if (input.chat) {
       // Nothing of the workspace's own config (`.agents/`, `.gemini/`) in Lodi's folder.
       for (const name of [".agents", ".gemini"]) rmSync(path.join(input.cwd, name), { recursive: true, force: true });
@@ -276,11 +334,27 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
   const clean = (text: string) => (opts.redact ? opts.redact(text) : text);
   const hold = opts.redact ? (opts.redactHold ?? 0) : 0;
 
+  // What the turn's runs of the CLI spent, emitted once at its end (the engine keeps a turn's last `usage`).
+  const spent = { input: 0, output: 0, cacheRead: 0 };
+  let model = input.model;
+  const emitUsage = () => {
+    if (!spent.input && !spent.output) return;
+    opts.emit({
+      type: "usage",
+      input: spent.input,
+      output: spent.output,
+      source: "plan",
+      ...(model ? { model } : {}),
+      ...(spent.cacheRead ? { cacheRead: spent.cacheRead } : {}),
+    });
+  };
+  // A turn that ended with no reply and none of our tools: resumed once, told so (`AGY_EMPTY_NUDGE`).
+  let nudge = false;
   // One retry, as a new chat, when the CLI doesn't have the conversation it was to resume.
   for (let attempt = 0; ; attempt++) {
     const chat = opts.chats.get(chatKey);
     const args = antigravityTurnArgs({
-      prompt: cursorPrompt(input.system, input.prompt, !chat),
+      prompt: nudge && chat ? AGY_EMPTY_NUDGE : cursorPrompt(input.system, input.prompt, !chat),
       ...(chat ? { chat } : {}),
       ...(input.model ? { model: input.model } : {}),
       ...(input.effort ? { effort: input.effort } : {}),
@@ -307,6 +381,8 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
     let tail = "";
     let streamed = false;
     let worked = false;
+    /** Calls to our server (by name or through `call_mcp_tool`): the engine ran them. */
+    let ours = 0;
     const flush = (text: string, whole: boolean) => {
       const out = clean(tail + text);
       const at = whole ? out.length : Math.max(0, out.length - hold);
@@ -320,7 +396,6 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
     let lost = false;
     let breach: string | null = null;
     let result: Record<string, unknown> | undefined;
-    let model = input.model;
     const used = { input: 0, output: 0, cacheRead: 0, steps: 0 };
     const lines = createInterface({ input: child.stdout as NonNullable<ChildProcess["stdout"]> });
     (lines as unknown as EventEmitter).on("line", (line: string) => {
@@ -344,7 +419,7 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
         const id = typeof ev.conversation_id === "string" ? ev.conversation_id : undefined;
         if (isRecord(ev.init) && typeof ev.init.model === "string") model = ev.init.model;
         // A resume the CLI didn't have comes back as a new conversation, without the context.
-        if (chat && id && id !== chat && attempt === 0) {
+        if (chat && id && id !== chat && (attempt === 0 || nudge)) {
           lost = true;
           killTree(child, "SIGKILL");
           return;
@@ -374,10 +449,14 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
       const name = typeof step.tool_name === "string" ? step.tool_name : String(info.name ?? "tool");
       worked = true;
       // Our bridge's calls: the engine ran them.
-      if (isOurAgyTool(name)) return;
+      if (isOurAgyTool(name) || isOurAgyMcpCall(name, info)) {
+        ours++;
+        return;
+      }
       flush("", true);
       const error = isRecord(info.error) ? info.error : null;
-      const output = error ? String(error.message ?? error.type ?? "failed") : String(info.output ?? "");
+      const said = error ? String(error.message ?? error.type ?? "failed") : String(info.output ?? "");
+      const output = said.trim() ? said : AGY_EMPTY_OUTPUT;
       opts.emit({
         type: "tool_call",
         id: `${String(step.conversation_id ?? "agy")}:${String(step.step_index ?? used.steps)}`,
@@ -414,6 +493,11 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
     lines.close();
     if (opts.signal.aborted) return fail("canceled", "The turn was canceled.");
     if (breach) return fail("tools_not_locked", breach);
+    // The retry's conversation was gone: a new one wouldn't know the turn, so it fails as the empty turn it was.
+    if (nudge && lost) {
+      emitUsage();
+      return fail("antigravity_failed", `${AGY_EMPTY_MESSAGE}.`);
+    }
     if (exit.error) {
       const missing = (exit.error as NodeJS.ErrnoException).code === "ENOENT";
       return fail(
@@ -429,23 +513,28 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
     flush("", true);
     const r = result ?? {};
     const u = used.steps === 0 && !chat && isRecord(r.usage) ? usageOf(r.usage) : used;
-    if (u.input || u.output) {
-      opts.emit({
-        type: "usage",
-        input: u.input,
-        output: u.output,
-        source: "plan",
-        ...(model ? { model } : {}),
-        ...(u.cacheRead ? { cacheRead: u.cacheRead } : {}),
-      });
-    }
+    spent.input += u.input;
+    spent.output += u.output;
+    spent.cacheRead += u.cacheRead;
     const response = typeof r.response === "string" ? r.response : "";
     if (r.status === "SUCCESS" && exit.code === 0) {
       const text = clean(response.trimEnd());
+      // No reply and none of our tools (only the CLI's own steps, or none): never an empty answer the engine would
+      // post as "Done.". Once more in the same conversation, told so; then a failure everyone sees.
+      if (!text && !streamed && ours === 0) {
+        if (!nudge && opts.chats.get(chatKey)) {
+          nudge = true;
+          continue;
+        }
+        emitUsage();
+        return fail("antigravity_failed", `${AGY_EMPTY_MESSAGE}.`);
+      }
+      emitUsage();
       if (text && !streamed) opts.emit({ type: "text_delta", text });
       opts.emit({ type: "done", text, session: { id: input.sessionId } });
       return;
     }
+    emitUsage();
     const agyError = parseAgyError(stderr);
     const why =
       agyError?.message ??
@@ -562,7 +651,10 @@ export async function handleAntigravityBrainTurn(
         ...(req.effort ? { effort: req.effort } : {}),
         system: typeof req.system === "string" ? req.system : "",
         prompt: typeof req.prompt === "string" ? req.prompt : "",
-        mcp: { token: req.mcp.token },
+        mcp: {
+          token: req.mcp.token,
+          ...(typeof req.mcp.tools === "string" && req.mcp.tools ? { tools: req.mcp.tools.slice(0, 64_000) } : {}),
+        },
         account: { id: accountId, home: signIn.home },
         profile: codexProfileOf(req),
         ...(chat ? { chat } : {}),

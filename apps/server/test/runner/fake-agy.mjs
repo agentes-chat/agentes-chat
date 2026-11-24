@@ -16,7 +16,10 @@
 // `--conversation`'s, or a new one when it doesn't know that one; its tools: our server's alone with `--agent`, else
 // the CLI's own and ours, or $FAKE_AGY_TOOLS), a text delta, a shell step (none with "BRIDGE_ONLY"), a call to our
 // server (a tool of the CLI's own with "OWN_TOOL"), the last delta with usage and the result. "LIMIT": an AGY_ERROR
-// quota line on stderr and exit 3. "ENV": the shell step's output is the env.
+// quota line on stderr and exit 3. "ENV": the shell step's output is the env. "LAZY": the call to our server goes
+// through `call_mcp_tool`, as 1.5.x calls a lazy tool. "SILENT" (or $FAKE_AGY_SILENT, every turn): Gemini's empty turn
+// seen on 1.5.10 (2026-11-24): a schema read and a command that both give nothing, then the end with no text. With
+// `--agent` its init names the agent, as 1.5.x does. Its log line also holds the tools `mcp_config.json` marks eager.
 import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
@@ -46,6 +49,16 @@ if (env.FAKE_AGY_LOG) {
       geminiKey: env.GEMINI_API_KEY ?? null,
       dbus: env.DBUS_SESSION_BUS_ADDRESS ?? null,
       updates: env.AGY_CLI_DISABLE_AUTO_UPDATE ?? null,
+      eager: (() => {
+        try {
+          const file = path.join(env.HOME ?? "/nonexistent", ".gemini", "config", "mcp_config.json");
+          const servers = JSON.parse(readFileSync(file, "utf8")).mcpServers ?? {};
+          return Object.keys(servers.agenteschat_agentes?.tools ?? {});
+        } catch {
+          return null;
+        }
+      })(),
+      settings: flag("--settings") ?? null,
     })}\n`,
   );
 }
@@ -165,6 +178,7 @@ if (args[0] === "-p") {
       cwd: process.cwd(),
       tools,
       permission_mode: "request-review",
+      ...(flag("--agent") ? { agent: flag("--agent") } : {}),
       ...(flag("--model") ? { model: flag("--model") } : {}),
     },
   });
@@ -175,6 +189,44 @@ if (args[0] === "-p") {
     );
     out({ event: "result", result: { conversation_id: conversation, status: "ERROR", response: "", error: "quota" } });
     process.exit(3);
+  }
+  const lazy = (index) =>
+    step({
+      step_index: index,
+      state: "DONE",
+      step_type: "tool",
+      tool_name: "call_mcp_tool",
+      tool_info: {
+        name: "call_mcp_tool",
+        parameters: { ServerName: "agenteschat_agentes", ToolName: "post_message", Arguments: { text: "hi" } },
+        output: "ok",
+      },
+    });
+  if (prompt.includes("SILENT") || env.FAKE_AGY_SILENT) {
+    const schema = path.join(env.HOME ?? "", ".gemini/antigravity-cli/mcp/agenteschat_agentes/read_artifact.json");
+    step({
+      step_index: 1,
+      state: "DONE",
+      step_type: "tool",
+      tool_name: "read_file",
+      tool_info: { name: "read_file", parameters: { AbsolutePath: schema }, output: "" },
+    });
+    step({
+      step_index: 2,
+      state: "DONE",
+      step_type: "tool",
+      tool_name: "run_command",
+      tool_info: { name: "run_command", parameters: { CommandLine: "ls" }, output: "" },
+    });
+    if (prompt.includes("LAZY")) lazy(3);
+    step({
+      step_index: 4,
+      state: "DONE",
+      step_type: "agent_response",
+      usage: { input_tokens: 800, output_tokens: 20, total_tokens: 820 },
+    });
+    out({ event: "result", result: { conversation_id: conversation, status: "SUCCESS", response: "", num_turns: 1 } });
+    process.exit(0);
   }
   step({ step_index: 1, state: "ACTIVE", step_type: "agent_response", text_delta: "Let me check. " });
   if (!prompt.includes("BRIDGE_ONLY")) {
@@ -191,13 +243,15 @@ if (args[0] === "-p") {
     });
   }
   const call = prompt.includes("OWN_TOOL") ? "view_file" : "agenteschat_agentes/post_message";
-  step({
-    step_index: 3,
-    state: "DONE",
-    step_type: "tool",
-    tool_name: call,
-    tool_info: { name: call, parameters: {}, output: "ok" },
-  });
+  if (prompt.includes("LAZY")) lazy(3);
+  else
+    step({
+      step_index: 3,
+      state: "DONE",
+      step_type: "tool",
+      tool_name: call,
+      tool_info: { name: call, parameters: {}, output: "ok" },
+    });
   step({
     step_index: 4,
     state: "DONE",
