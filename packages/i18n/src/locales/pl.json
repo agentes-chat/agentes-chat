@@ -457,7 +457,7 @@
     },
     "manage_agents": {
       "title": "Edycja agentów",
-      "desc": "Instrukcje, mózg, budżet i to, z czego każdy korzysta, u agentów, z którymi ta osoba rozmawia. Prywatni agenci innych osób są wyłączeni.",
+      "desc": "Instrukcje, mózg, budżet i to, z czego każdy korzysta, u agentów, z którymi ta osoba rozmawia. Z prywatnych agentów innych osób tylko nazwa, osoba odpowiedzialna i użycie.",
       "short": "edycja agentów",
       "say": "edytuje agentów, z którymi rozmawia"
     },
@@ -6712,6 +6712,20 @@
     },
     "copyHandle": "Kopiuj @{{handle}}",
     "copied": "Skopiowano @{{handle}}.",
+    "facts": {
+      "private": "Prywatny",
+      "created": "Utworzono",
+      "createdBy": "{{name}}, {{date}}",
+      "usage": "Użycie w miesiącu: {{month}}",
+      "budget": "Budżet",
+      "budgetUsed": "Wykorzystano {{percent}}",
+      "last": "Ostatnia aktywność",
+      "never": "Jeszcze nic",
+      "title": "Co robi",
+      "locked": "Instrukcje, pamięć, narzędzia, rozmowy, rutyny i pliki agenta {{name}} zostają u: {{owner}}, osób, które ta osoba poprosi o edycję, i adminów.",
+      "lockedNoOwner": "Instrukcje, pamięć, narzędzia, rozmowy, rutyny i pliki agenta {{name}} zostają u osób, które mogą go edytować, i adminów.",
+      "ask": "Poproś: {{owner}}"
+    },
     "overview": {
       "approvals_one": "{{count}} prośba o zatwierdzenie",
       "approvals_few": "{{count}} prośby o zatwierdzenie",
@@ -17677,17 +17691,21 @@
       "rolesHint": "Może go używać każdy z tą rolą, także osoba, która dostanie ją później.",
       "computerHint": "Czyi agenci mogą tu wykonywać zadania. Administratorzy mogą to zawęzić, a poszerzyć może tylko właściciel.",
       "phoneHint": "Udostępnienie telefonu nigdy nie udostępnia komputera {{host}}.",
-      "followsHint": "iPhone stosuje regułę Maca, do którego jest podłączony.",
-      "serverHelp": "Każdy agent działa na nim jako osobny użytkownik.",
-      "computerHelp": "Polecenia agentów działają na nim jako twój użytkownik."
+      "followsHint": "iPhone stosuje regułę Maca, do którego jest podłączony."
+    },
+    "share": {
+      "title": "Pozwól całej przestrzeni roboczej z niego korzystać",
+      "off": "Na razie tylko ty",
+      "on": "Wszyscy w {{org}}",
+      "hint": "Agenci wszystkich w {{org}} mogą uruchamiać na nim zadania jako twój użytkownik.",
+      "hintServer": "Agenci wszystkich w {{org}} mogą uruchamiać na nim zadania, każdy jako osobny użytkownik."
     },
     "request": {
       "title": "{{name}} chce dołączyć do {{org}}",
       "list": "Prośby o dołączenie",
       "letJoin": "Wpuść",
       "deny": "Odmów",
-      "denied": "{{name}} nie dołączy.",
-      "joined": "{{name}} jest już w przestrzeni roboczej."
+      "denied": "{{name}} nie dołączy."
     },
     "empty": {
       "title": "Nie ma jeszcze urządzeń",

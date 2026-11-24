@@ -638,6 +638,7 @@
       "codeSessions.tabs.terminalN"
     ],
     "fr": [
+      "agentPage.facts.budget",
       "usage.kinds.routines",
       "channel.tooLong.fileName",
       "calendar.moreRuns",
@@ -1165,6 +1166,7 @@
       "connectors.store.agents"
     ],
     "de": [
+      "agentPage.facts.budget",
       "aiHub.detail.limits",
       "live.sheet.args.k",
       "live.sheet.args.x",
@@ -1666,6 +1668,7 @@
       "codeSessions.tabs.terminalN"
     ],
     "it": [
+      "agentPage.facts.budget",
       "live.sheet.args.a1",
       "live.sheet.args.k",
       "live.sheet.args.x",
@@ -2069,6 +2072,7 @@
       "connectors.store.account"
     ],
     "nl": [
+      "agentPage.facts.budget",
       "aiHub.accounts",
       "usage.kinds.routines",
       "calendar.moreRuns",

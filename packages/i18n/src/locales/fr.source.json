@@ -1056,7 +1056,7 @@
     "value": "Edit agents"
   },
   "permissions.manage_agents.desc": {
-    "value": "Instructions, brain, budget and what each one uses, on the agents they talk to. Other people's private agents stay out."
+    "value": "Instructions, brain, budget and what each one uses, on the agents they talk to. Of other people's private agents, only the name, owner and usage."
   },
   "permissions.manage_agents.short": {
     "value": "edit agents"
@@ -15344,6 +15344,42 @@
   },
   "agentPage.copied": {
     "value": "@{{handle}} copied."
+  },
+  "agentPage.facts.private": {
+    "value": "Private"
+  },
+  "agentPage.facts.created": {
+    "value": "Made"
+  },
+  "agentPage.facts.createdBy": {
+    "value": "{{name}}, {{date}}"
+  },
+  "agentPage.facts.usage": {
+    "value": "Usage in {{month}}"
+  },
+  "agentPage.facts.budget": {
+    "value": "Budget"
+  },
+  "agentPage.facts.budgetUsed": {
+    "value": "{{percent}} used"
+  },
+  "agentPage.facts.last": {
+    "value": "Last activity"
+  },
+  "agentPage.facts.never": {
+    "value": "None yet"
+  },
+  "agentPage.facts.title": {
+    "value": "What it does"
+  },
+  "agentPage.facts.locked": {
+    "value": "{{name}}'s instructions, memory, tools, conversations, routines and files stay with {{owner}}, whoever they ask to edit it and the admins."
+  },
+  "agentPage.facts.lockedNoOwner": {
+    "value": "{{name}}'s instructions, memory, tools, conversations, routines and files stay with whoever edits it and the admins."
+  },
+  "agentPage.facts.ask": {
+    "value": "Ask {{owner}}"
   },
   "agentPage.overview.approvals": {
     "value": {
@@ -40728,11 +40764,20 @@
   "devices.who.followsHint": {
     "value": "An iPhone follows the rule of the Mac it's plugged into."
   },
-  "devices.who.serverHelp": {
-    "value": "Each agent runs as its own user on it."
+  "devices.share.title": {
+    "value": "Let the whole workspace use it"
   },
-  "devices.who.computerHelp": {
-    "value": "Agents' commands run as your user on it."
+  "devices.share.off": {
+    "value": "Only you for now"
+  },
+  "devices.share.on": {
+    "value": "Everyone in {{org}}"
+  },
+  "devices.share.hint": {
+    "value": "Everyone's agents in {{org}} can run tasks on it, as your user."
+  },
+  "devices.share.hintServer": {
+    "value": "Everyone's agents in {{org}} can run tasks on it, each as its own user."
   },
   "devices.request.title": {
     "value": "{{name}} wants to join {{org}}"
@@ -40748,9 +40793,6 @@
   },
   "devices.request.denied": {
     "value": "{{name}} won't join."
-  },
-  "devices.request.joined": {
-    "value": "{{name}} joined."
   },
   "devices.empty.title": {
     "value": "No devices yet"

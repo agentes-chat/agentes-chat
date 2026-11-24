@@ -406,6 +406,22 @@ export const listsAgentTo = (a: AgentAccessFields, userId: string, membership: V
   (listsAllAgents(membership ?? null) && !isPrivateAgent(a)) || seesAgentDetails(a, userId, membership);
 
 /**
+ * Whether a person sees a teammate's private agent (`isPrivateAgent`) by its facts alone (ADR 0085, addendum of
+ * 2026-11-24): "Editar agentes" without seeing how it works. Its Equipe row and page show who made it and when, who
+ * talks to it and edits it, where it works and this month's usage, never its instructions, memory, conversations or
+ * files, and nothing to change. Admins, its owner and its "Quem pode editar" see its details instead.
+ */
+export const seesAgentFactsOnly = (a: AgentAccessFields, userId: string, membership: Viewer) =>
+  isPrivateAgent(a) && can(membership, "manage_agents") && !seesAgentDetails(a, userId, membership);
+
+/**
+ * A private agent whose page this person doesn't open at all: neither its details nor its facts
+ * (`seesAgentFactsOnly`). Its messages in shared channels still show who wrote them.
+ */
+export const hidesAgentPage = (a: AgentAccessFields, userId: string, membership: Viewer) =>
+  isPrivateAgent(a) && !seesAgentDetails(a, userId, membership) && !can(membership, "manage_agents");
+
+/**
  * Whether a run for `person` finds the agent among its teammates (`find_agent`, "# Your team", the handles it is
  * offered): one it may ask for them (`canTalkTo` with `speaker`), and a private one (`isPrivateAgent`) only for its
  * owner, an administrator or who its "Quem pode editar" names, so a teammate's agent doesn't discover it either.

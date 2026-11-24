@@ -509,6 +509,10 @@ export const desktopEn = {
     linkBody: "If you didn't ask for this, choose Not now.",
     waiting: "Waiting for {{by}} to let it in…",
     done: "Connected to {{org}}",
+    /** Once it's in: one switch, off, that lets the whole workspace use it (Preferences › This Mac holds the rest). */
+    share: "Let the whole workspace use it",
+    shareOff: "Only you for now",
+    shareHint: "Everyone's agents in {{org}} can run tasks on it, as your user.",
     addFolders: "Add folders",
     expired: "This link expired. Make a new one in Devices.",
     openDevices: "Open Devices",

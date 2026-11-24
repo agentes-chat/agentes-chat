@@ -459,7 +459,7 @@ export const en = {
     },
     manage_agents: {
       title: "Edit agents",
-      desc: "Instructions, brain, budget and what each one uses, on the agents they talk to. Other people's private agents stay out.",
+      desc: "Instructions, brain, budget and what each one uses, on the agents they talk to. Of other people's private agents, only the name, owner and usage.",
       short: "edit agents",
       say: "edits the agents they talk to",
     },
@@ -6738,6 +6738,26 @@ export const en = {
     },
     copyHandle: "Copy @{{handle}}",
     copied: "@{{handle}} copied.",
+    /**
+     * A teammate's private agent seen through "Editar agentes" (ADR 0085, addendum of 2026-11-24): its facts and this
+     * month's usage, never how it works. `owner` is a person's name.
+     */
+    facts: {
+      private: "Private",
+      created: "Made",
+      createdBy: "{{name}}, {{date}}",
+      usage: "Usage in {{month}}",
+      budget: "Budget",
+      budgetUsed: "{{percent}} used",
+      last: "Last activity",
+      never: "None yet",
+      title: "What it does",
+      locked:
+        "{{name}}'s instructions, memory, tools, conversations, routines and files stay with {{owner}}, whoever they ask to edit it and the admins.",
+      lockedNoOwner:
+        "{{name}}'s instructions, memory, tools, conversations, routines and files stay with whoever edits it and the admins.",
+      ask: "Ask {{owner}}",
+    },
     overview: {
       approvals_one: "{{count}} approval request",
       approvals_other: "{{count}} approval requests",
@@ -16983,8 +17003,14 @@ export const en = {
       computerHint: "Whose agents may run tasks here. Admins can narrow it, only its owner can widen it.",
       phoneHint: "Sharing a phone never shares {{host}}.",
       followsHint: "An iPhone follows the rule of the Mac it's plugged into.",
-      serverHelp: "Each agent runs as its own user on it.",
-      computerHelp: "Agents' commands run as your user on it.",
+    },
+    /** Right after a computer or a phone joins: one switch, off for a person's computer, on for a server. */
+    share: {
+      title: "Let the whole workspace use it",
+      off: "Only you for now",
+      on: "Everyone in {{org}}",
+      hint: "Everyone's agents in {{org}} can run tasks on it, as your user.",
+      hintServer: "Everyone's agents in {{org}} can run tasks on it, each as its own user.",
     },
     request: {
       title: "{{name}} wants to join {{org}}",
@@ -16992,7 +17018,6 @@ export const en = {
       letJoin: "Let it join",
       deny: "Deny",
       denied: "{{name}} won't join.",
-      joined: "{{name}} joined.",
     },
     empty: {
       title: "No devices yet",

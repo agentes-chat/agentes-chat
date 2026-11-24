@@ -994,6 +994,11 @@ export interface Agent {
    */
   seesDetails?: boolean;
   /**
+   * A teammate's private agent I see through "Editar agentes": listed on Equipe with a lock, its page its facts and
+   * this month's usage, never how it works, nothing to change. Absent = no (an older server).
+   */
+  factsOnly?: boolean;
+  /**
    * Whether my lists and pickers name it; absent = yes (an older server). False for a private agent (it answers only its
    * owner) to anyone but its owner, administrators and who its "Quem pode editar" names: its messages and its public
    * card still show.
@@ -1150,6 +1155,8 @@ export interface TeamAgent {
   canTalk: boolean;
   /** Whether I see how it works (absent = yes); without it `capabilities` is empty. */
   seesDetails?: boolean;
+  /** A teammate's private agent I see by its facts alone (as `Agent.factsOnly`); absent = no. */
+  factsOnly?: boolean;
   /** Whether I manage it (as `Agent.canManage`); absent = no. */
   canManage?: boolean;
 }
@@ -3103,6 +3110,14 @@ export interface AgentDetail {
   pendingApprovals: number;
   channels: AgentChannel[];
   createdAt: string;
+  /** "Quem pode editar", for who sees its details or its facts (absent from older servers). */
+  editors?: AgentEditors;
+  /** Its facts alone (as `Agent.factsOnly`); absent = no. */
+  factsOnly?: boolean;
+  /** Who made it, for who sees its details or facts (absent from older servers). */
+  createdByUserId?: string | null;
+  /** When its last run started, for who sees its details or facts (absent from older servers). */
+  lastActivityAt?: string | null;
 }
 
 export interface Run {

@@ -444,7 +444,7 @@
     },
     "manage_agents": {
       "title": "Modificare agenti",
-      "desc": "Istruzioni, cervello, budget e cosa usa ciascuno, sugli agenti con cui la persona parla. Gli agenti privati degli altri restano esclusi.",
+      "desc": "Istruzioni, cervello, budget e cosa usa ciascuno, sugli agenti con cui la persona parla. Degli agenti privati degli altri, solo il nome, il responsabile e l'uso.",
       "short": "modificare agenti",
       "say": "modifica gli agenti con cui parla"
     },
@@ -6480,6 +6480,20 @@
     },
     "copyHandle": "Copia @{{handle}}",
     "copied": "@{{handle}} copiato.",
+    "facts": {
+      "private": "Privato",
+      "created": "Creato",
+      "createdBy": "{{name}}, {{date}}",
+      "usage": "Uso a {{month}}",
+      "budget": "Budget",
+      "budgetUsed": "{{percent}} usato",
+      "last": "Ultima attività",
+      "never": "Nessuna ancora",
+      "title": "Cosa fa",
+      "locked": "Istruzioni, memoria, strumenti, conversazioni, routine e file di {{name}} restano a {{owner}}, a chi questa persona chiama a modificarlo e agli admin.",
+      "lockedNoOwner": "Istruzioni, memoria, strumenti, conversazioni, routine e file di {{name}} restano a chi può modificarlo e agli admin.",
+      "ask": "Chiedi a {{owner}}"
+    },
     "overview": {
       "approvals_one": "{{count}} richiesta di approvazione",
       "approvals_many": "{{count}} richieste di approvazione",
@@ -17142,17 +17156,21 @@
       "rolesHint": "Chiunque abbia il ruolo può usarlo, anche chi lo riceverà in futuro.",
       "computerHint": "Le persone i cui agenti possono eseguire attività qui. Gli admin possono restringere, solo il proprietario può allargare.",
       "phoneHint": "Condividere un telefono non condivide mai {{host}}.",
-      "followsHint": "Un iPhone segue la regola del Mac a cui è collegato.",
-      "serverHelp": "Ogni agente lo usa con il proprio utente.",
-      "computerHelp": "I comandi degli agenti girano lì con il tuo utente."
+      "followsHint": "Un iPhone segue la regola del Mac a cui è collegato."
+    },
+    "share": {
+      "title": "Fallo usare a tutto lo spazio di lavoro",
+      "off": "Solo tu per ora",
+      "on": "Tutti in {{org}}",
+      "hint": "Gli agenti di tutti in {{org}} possono eseguirci attività, con il tuo utente.",
+      "hintServer": "Gli agenti di tutti in {{org}} possono eseguirci attività, ognuno con il proprio utente."
     },
     "request": {
       "title": "{{name}} vuole entrare in {{org}}",
       "list": "Chiedono di entrare",
       "letJoin": "Fallo entrare",
       "deny": "Rifiuta",
-      "denied": "{{name}} non entrerà.",
-      "joined": "{{name}} è entrato."
+      "denied": "{{name}} non entrerà."
     },
     "empty": {
       "title": "Ancora nessun dispositivo",

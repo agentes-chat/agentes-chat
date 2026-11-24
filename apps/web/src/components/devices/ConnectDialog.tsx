@@ -1,11 +1,10 @@
 import { type DeviceJoinRequest, useMe } from "@agenteschat/client";
-import { joinFacts, linkPhase, newComputerOf } from "@agenteschat/client/lib/devices";
-import { computerKind, isHandheld, platformOf } from "@agenteschat/client/lib/machines";
+import { linkPhase, newComputerOf } from "@agenteschat/client/lib/devices";
+import { isHandheld, platformOf } from "@agenteschat/client/lib/machines";
 import { can } from "@agenteschat/client/lib/permissions";
 import { appPairsWith, pairLink, plainHttpServer } from "@agenteschat/client/lib/server";
 import {
   Button,
-  ComputerPortrait,
   Dialog,
   DialogBody,
   DialogFooter,
@@ -27,10 +26,10 @@ import { useOrg } from "@/components/org-context";
 import { ThisMacButton, useAgentsHere } from "@/components/ThisMac";
 import { inDesktopApp } from "@/lib/desktop";
 import { AndroidFlow, IphoneFlow } from "./ConnectPhone";
-import { JoinRequestForm } from "./dialogs";
+import { Joined, JoinRequestForm } from "./dialogs";
 import { FlowFooter, type FlowProps } from "./flow";
-import { StatusPill } from "./parts";
 import { useConnectLink, useDevices, useLinkState } from "./queries";
+import { ComputerShareSwitch } from "./ShareSwitch";
 
 export type ConnectStep = "choose" | "this" | "server" | "computer" | "link" | "android" | "iphone";
 /** Which flow the dialog opens on, and the computer a phone flow starts with. */
@@ -322,6 +321,7 @@ function ComputerFlow({
             <span>{t("devices.computer.waiting")}</span>
           </p>
         )}
+        {found && <ComputerShareSwitch machineId={found.id} />}
       </DialogBody>
       <FlowFooter
         onClose={onClose}
@@ -381,7 +381,7 @@ function LinkFlow({
     else setTitle(t(kind === "server" ? "devices.link.serverTitle" : "devices.link.computerTitle"));
   }, [joined, phase, request, kind, viaApp, org.name, setTitle, t]);
 
-  if (joined) return <Joined joined={joined} onClose={onClose} />;
+  if (joined) return <Joined joined={joined} server={kind === "server"} onClose={onClose} />;
   if (phase === "asking" && request)
     return (
       <JoinRequestForm
@@ -551,58 +551,6 @@ function OpenInApp({
           </button>
         </p>
       </section>
-    </>
-  );
-}
-
-/** The computer joined: its portrait, name and state, what it is, and Done. */
-function Joined({
-  joined,
-  onClose,
-}: {
-  joined: { machineId: string; name: string; request: DeviceJoinRequest };
-  onClose: () => void;
-}) {
-  const { t } = useTranslation();
-  const { org } = useOrg();
-  const devices = useDevices(org.id);
-  const device = devices.data?.devices.find((d) => d.id === joined.machineId);
-  return (
-    <>
-      <DialogBody>
-        <div className="ac-faceline" role="status">
-          <span className="dv-pic">
-            <ComputerPortrait kind={computerKind(joined.request.os)} state="online" />
-          </span>
-          <span className="dv-connected__text">
-            <span className="dv-connected__name ac-captop">
-              {joined.name}
-              {/* Just joined and not running yet: its service is starting, not a computer gone away. */}
-              {device && (
-                <StatusPill
-                  status={device.status.kind === "offline" ? { kind: "preparing", reason: "starting" } : device.status}
-                />
-              )}
-            </span>
-            <span className="dv-connected__facts">{joinFacts(t, joined.request)}</span>
-          </span>
-        </div>
-        <p className="small muted">
-          <Link
-            to="/org/$orgId/settings/devices/$deviceId"
-            params={{ orgId: org.id, deviceId: joined.machineId }}
-            className="ac-link"
-            onClick={onClose}
-          >
-            {t("devices.link.openPage")}
-          </Link>
-        </p>
-      </DialogBody>
-      <DialogFooter>
-        <Button variant="primary" onClick={onClose}>
-          {t("devices.done")}
-        </Button>
-      </DialogFooter>
     </>
   );
 }

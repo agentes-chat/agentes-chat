@@ -431,7 +431,7 @@
     },
     "manage_agents": {
       "title": "Agenten bearbeiten",
-      "desc": "Anweisungen, Gehirn, Budget und was jeder nutzt, bei den Agenten, mit denen die Person spricht. Private Agenten anderer Personen bleiben außen vor.",
+      "desc": "Anweisungen, Gehirn, Budget und was jeder nutzt, bei den Agenten, mit denen die Person spricht. Von privaten Agenten anderer Personen nur Name, Verantwortliche und Nutzung.",
       "short": "Agenten bearbeiten",
       "say": "bearbeitet die Agenten, mit denen sie spricht"
     },
@@ -6235,6 +6235,20 @@
     },
     "copyHandle": "@{{handle}} kopieren",
     "copied": "@{{handle}} kopiert.",
+    "facts": {
+      "private": "Privat",
+      "created": "Erstellt",
+      "createdBy": "{{name}}, {{date}}",
+      "usage": "Nutzung im {{month}}",
+      "budget": "Budget",
+      "budgetUsed": "{{percent}} verbraucht",
+      "last": "Letzte Aktivität",
+      "never": "Noch keine",
+      "title": "Was er tut",
+      "locked": "Anweisungen, Gedächtnis, Werkzeuge, Unterhaltungen, Routinen und Dateien von {{name}} bleiben bei {{owner}}, bei denen, die diese Person zum Bearbeiten holt, und bei den Admins.",
+      "lockedNoOwner": "Anweisungen, Gedächtnis, Werkzeuge, Unterhaltungen, Routinen und Dateien von {{name}} bleiben bei denen, die ihn bearbeiten dürfen, und bei den Admins.",
+      "ask": "{{owner}} fragen"
+    },
     "overview": {
       "approvals_one": "{{count}} Freigabeanfrage",
       "approvals_other": "{{count}} Freigabeanfragen",
@@ -16576,17 +16590,21 @@
       "rolesHint": "Alle mit der Rolle können es nutzen, auch wer sie später bekommt.",
       "computerHint": "Wessen Agenten hier Aufgaben ausführen dürfen. Admins können den Kreis verkleinern, nur der Inhaber kann ihn erweitern.",
       "phoneHint": "Wer ein Handy freigibt, gibt nie {{host}} frei.",
-      "followsHint": "Ein iPhone folgt der Regel des Macs, an dem es hängt.",
-      "serverHelp": "Jeder Agent läuft dort als eigener Benutzer.",
-      "computerHelp": "Die Befehle der Agenten laufen dort als dein Benutzer."
+      "followsHint": "Ein iPhone folgt der Regel des Macs, an dem es hängt."
+    },
+    "share": {
+      "title": "Den ganzen Workspace nutzen lassen",
+      "off": "Vorerst nur du",
+      "on": "Alle in {{org}}",
+      "hint": "Die Agenten aller in {{org}} können dort Aufgaben ausführen, als dein Benutzer.",
+      "hintServer": "Die Agenten aller in {{org}} können dort Aufgaben ausführen, jeder als eigener Benutzer."
     },
     "request": {
       "title": "{{name}} möchte {{org}} beitreten",
       "list": "Möchten beitreten",
       "letJoin": "Beitreten lassen",
       "deny": "Ablehnen",
-      "denied": "{{name}} tritt nicht bei.",
-      "joined": "{{name}} ist beigetreten."
+      "denied": "{{name}} tritt nicht bei."
     },
     "empty": {
       "title": "Noch keine Geräte",

@@ -457,7 +457,7 @@ export const ptBR = {
     },
     manage_agents: {
       title: "Editar agentes",
-      desc: "Instruções, cérebro, orçamento e o que cada um usa, nos agentes com que a pessoa fala. Os privados de outras pessoas ficam de fora.",
+      desc: "Instruções, cérebro, orçamento e o que cada um usa, nos agentes com que a pessoa fala. Dos privados de outras pessoas, só o nome, o dono e o uso.",
       short: "editar agentes",
       say: "edita os agentes com que fala",
     },
@@ -6636,6 +6636,28 @@ export const ptBR = {
     },
     copyHandle: "Copiar @{{handle}}",
     copied: "@{{handle}} copiado.",
+    facts: {
+      private: "Privado",
+      created: "Criado",
+      created_female: "Criada",
+      createdBy: "{{name}}, {{date}}",
+      usage: "Uso em {{month}}",
+      budget: "Orçamento",
+      budgetUsed: "{{percent}} usado",
+      last: "Última atividade",
+      never: "Nenhuma ainda",
+      title: "O que ele faz",
+      title_female: "O que ela faz",
+      locked:
+        "Instruções, memória, ferramentas, conversas, rotinas e arquivos do {{name}} ficam com {{owner}}, quem essa pessoa chamar para editar e os admins.",
+      locked_female:
+        "Instruções, memória, ferramentas, conversas, rotinas e arquivos da {{name}} ficam com {{owner}}, quem essa pessoa chamar para editar e os admins.",
+      lockedNoOwner:
+        "Instruções, memória, ferramentas, conversas, rotinas e arquivos do {{name}} ficam com quem pode editá-lo e os admins.",
+      lockedNoOwner_female:
+        "Instruções, memória, ferramentas, conversas, rotinas e arquivos da {{name}} ficam com quem pode editá-la e os admins.",
+      ask: "Pedir a {{owner}}",
+    },
     overview: {
       approvals_one: "{{count}} pedido de aprovação",
       approvals_other: "{{count}} pedidos de aprovação",
@@ -16910,8 +16932,13 @@ export const ptBR = {
         "De quem os agentes podem rodar tarefas aqui. Admins podem restringir, só o dono pode abrir para mais gente.",
       phoneHint: "Compartilhar um celular nunca compartilha {{host}}.",
       followsHint: "Um iPhone segue a regra do Mac em que está conectado.",
-      serverHelp: "Cada agente roda nele com o próprio usuário.",
-      computerHelp: "Os comandos dos agentes rodam nele com o seu usuário.",
+    },
+    share: {
+      title: "Deixar o workspace todo usar",
+      off: "Só você por enquanto",
+      on: "Todos em {{org}}",
+      hint: "Os agentes de todos em {{org}} podem rodar tarefas nele, com o seu usuário.",
+      hintServer: "Os agentes de todos em {{org}} podem rodar tarefas nele, cada um com o próprio usuário.",
     },
     request: {
       title: "{{name}} quer entrar em {{org}}",
@@ -16919,7 +16946,6 @@ export const ptBR = {
       letJoin: "Deixar entrar",
       deny: "Recusar",
       denied: "{{name}} não vai entrar.",
-      joined: "{{name}} entrou.",
     },
     empty: {
       title: "Nenhum dispositivo ainda",

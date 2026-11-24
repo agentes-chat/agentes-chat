@@ -418,7 +418,7 @@
     },
     "manage_agents": {
       "title": "Edit agen",
-      "desc": "Instruksi, otak, anggaran, dan apa yang dipakai masing-masing, di agen yang diajak bicara orang itu. Agen pribadi milik orang lain tidak termasuk.",
+      "desc": "Instruksi, otak, anggaran, dan apa yang dipakai masing-masing, di agen yang diajak bicara orang itu. Dari agen pribadi milik orang lain, hanya nama, penanggung jawab, dan pemakaiannya.",
       "short": "edit agen",
       "say": "mengedit agen yang diajak bicara"
     },
@@ -6008,6 +6008,20 @@
     },
     "copyHandle": "Salin @{{handle}}",
     "copied": "@{{handle}} disalin.",
+    "facts": {
+      "private": "Pribadi",
+      "created": "Dibuat",
+      "createdBy": "{{name}}, {{date}}",
+      "usage": "Pemakaian bulan {{month}}",
+      "budget": "Anggaran",
+      "budgetUsed": "{{percent}} terpakai",
+      "last": "Aktivitas terakhir",
+      "never": "Belum ada",
+      "title": "Apa yang dikerjakannya",
+      "locked": "Instruksi, memori, alat, percakapan, rutinitas, dan file {{name}} tetap di {{owner}}, orang yang diajaknya mengedit, dan admin.",
+      "lockedNoOwner": "Instruksi, memori, alat, percakapan, rutinitas, dan file {{name}} tetap di orang yang bisa mengeditnya dan admin.",
+      "ask": "Minta ke {{owner}}"
+    },
     "overview": {
       "approvals_other": "{{count}} permintaan persetujuan",
       "approvalsYou": "Setujui atau tolak di Persetujuan atau di chat",
@@ -16047,17 +16061,21 @@
       "rolesHint": "Siapa pun dengan peran ini bisa memakainya, termasuk yang mendapat peran itu nanti.",
       "computerHint": "Agen siapa yang boleh menjalankan tugas di sini. Admin bisa mempersempitnya, hanya pemiliknya yang bisa memperluasnya.",
       "phoneHint": "Membagikan ponsel tidak pernah membagikan {{host}}.",
-      "followsHint": "iPhone mengikuti aturan Mac tempat ia dicolokkan.",
-      "serverHelp": "Setiap agen berjalan di sana sebagai penggunanya sendiri.",
-      "computerHelp": "Perintah agen berjalan di sana sebagai penggunamu."
+      "followsHint": "iPhone mengikuti aturan Mac tempat ia dicolokkan."
+    },
+    "share": {
+      "title": "Izinkan seluruh ruang kerja memakainya",
+      "off": "Hanya kamu untuk saat ini",
+      "on": "Semua orang di {{org}}",
+      "hint": "Agen semua orang di {{org}} bisa menjalankan tugas di sana sebagai penggunamu.",
+      "hintServer": "Agen semua orang di {{org}} bisa menjalankan tugas di sana, masing-masing sebagai penggunanya sendiri."
     },
     "request": {
       "title": "{{name}} ingin bergabung ke {{org}}",
       "list": "Minta bergabung",
       "letJoin": "Izinkan bergabung",
       "deny": "Tolak",
-      "denied": "{{name}} tidak akan bergabung.",
-      "joined": "{{name}} sudah bergabung."
+      "denied": "{{name}} tidak akan bergabung."
     },
     "empty": {
       "title": "Belum ada perangkat",

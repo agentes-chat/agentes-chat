@@ -632,6 +632,10 @@ export const Agent = z
       description:
         "Whether the current person sees how it works: who edits it (`canEdit`) and whoever it answers. Without it `instructions` is empty and its tools, memory, usage and activity answer 403 `agent.details_hidden`.",
     }),
+    factsOnly: z.boolean().optional().openapi({
+      description:
+        "A teammate's private agent seen through \"Editar agentes\" (ADR 0085, addendum of 2026-11-24): listed on Equipe with a lock, its page shows its facts and this month's usage, never how it works, and nothing to change. Absent (older servers): false.",
+    }),
     listed: z.boolean().optional().openapi({
       description:
         "Whether the current person's lists and pickers name it: every agent with `view_all_agents` or `manage_agents`, but a private one (it answers only its owner) only for who sees how it works (`seesDetails`). False: it stays out of every list; its messages and its public card still show. Absent (older servers): true.",

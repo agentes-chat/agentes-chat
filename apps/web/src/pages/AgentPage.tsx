@@ -13,6 +13,7 @@ import {
   useUpdateAgent,
 } from "@agenteschat/client";
 import { type Level, levelsOf, resourcesOf } from "@agenteschat/client/lib/access-levels";
+import { hidesAgentPage } from "@agenteschat/client/lib/agent-facts";
 import { groupOf, NO_GROUP } from "@agenteschat/client/lib/agent-groups";
 import { ownerPatchOf, ownerValueOf, ownsAgentAs, roleOfOwnerValue } from "@agenteschat/client/lib/agent-owner";
 import {
@@ -166,7 +167,8 @@ export function AgentPage(props: AgentPageProps) {
       </div>
     );
   }
-  if (!agent) {
+  // A private agent whose page this person may not open reads as one that isn't there, as its link answers.
+  if (!agent || hidesAgentPage(agent)) {
     return (
       <div className="page page--full">
         <EmptyState icon="agent">{t("agent.notFound")}</EmptyState>

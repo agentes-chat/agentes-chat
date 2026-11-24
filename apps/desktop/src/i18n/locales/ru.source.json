@@ -1244,6 +1244,15 @@
   "pair.done": {
     "value": "Connected to {{org}}"
   },
+  "pair.share": {
+    "value": "Let the whole workspace use it"
+  },
+  "pair.shareOff": {
+    "value": "Only you for now"
+  },
+  "pair.shareHint": {
+    "value": "Everyone's agents in {{org}} can run tasks on it, as your user."
+  },
   "pair.addFolders": {
     "value": "Add folders"
   },

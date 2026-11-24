@@ -50,6 +50,7 @@ import { resumeBudgetWaits } from "./usage-pause";
 import { isWorkspaceMode, WORKSPACE_MODES, type WorkspaceMode, workspaceModeCacheKey } from "./workspace-mode";
 
 const {
+  auditLog,
   organizations,
   organizationSettings,
   organizationMembers,
@@ -377,6 +378,26 @@ export async function agentDetail(db: Database, actorId: string, orgId: string, 
     .where(and(eq(agentRuns.orgId, orgId), eq(agentRuns.agentId, agentId), gte(agentRuns.createdAt, since)))
     .groupBy(sql`1`)
     .orderBy(sql`1`);
+  const [last] = await db
+    .select({ at: sql<Date | null>`max(${agentRuns.createdAt})` })
+    .from(agentRuns)
+    .where(and(eq(agentRuns.orgId, orgId), eq(agentRuns.agentId, agentId)));
+  // Who made it: the person its `agent.created` audit row names. That row is written with the agent, so the minute
+  // around its creation keeps the read on the log's (org, time) index.
+  const [made] = await db
+    .select({ userId: auditLog.actorId })
+    .from(auditLog)
+    .where(
+      and(
+        eq(auditLog.orgId, orgId),
+        gte(auditLog.createdAt, new Date(agent.createdAt.getTime() - 60_000)),
+        lt(auditLog.createdAt, new Date(agent.createdAt.getTime() + 60_000)),
+        eq(auditLog.action, "agent.created"),
+        eq(auditLog.actorType, "person"),
+        eq(auditLog.targetId, agentId),
+      ),
+    )
+    .limit(1);
   const [pending] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(approvals)
@@ -403,6 +424,9 @@ export async function agentDetail(db: Database, actorId: string, orgId: string, 
     },
     pendingApprovals: pending?.n ?? 0,
     channels: channelsOf,
+    /** When its last run started, any month. */
+    lastRunAt: last?.at ? new Date(last.at) : null,
+    createdByUserId: made?.userId ?? null,
   };
 }
 

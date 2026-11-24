@@ -444,7 +444,7 @@
     },
     "manage_agents": {
       "title": "Modifier les agents",
-      "desc": "Instructions, cerveau, budget et ce que chacun utilise, sur les agents à qui la personne parle. Les agents privés des autres restent exclus.",
+      "desc": "Instructions, cerveau, budget et ce que chacun utilise, sur les agents à qui la personne parle. Des agents privés des autres, seulement le nom, le responsable et l'utilisation.",
       "short": "modifier les agents",
       "say": "modifie les agents à qui elle parle"
     },
@@ -6470,6 +6470,20 @@
     },
     "copyHandle": "Copier @{{handle}}",
     "copied": "@{{handle}} copié.",
+    "facts": {
+      "private": "Privé",
+      "created": "Créé",
+      "createdBy": "{{name}}, {{date}}",
+      "usage": "Utilisation en {{month}}",
+      "budget": "Budget",
+      "budgetUsed": "{{percent}} utilisé",
+      "last": "Dernière activité",
+      "never": "Aucune pour l'instant",
+      "title": "Ce qu'il fait",
+      "locked": "Les instructions, la mémoire, les outils, les conversations, les routines et les fichiers de {{name}} restent avec {{owner}}, les personnes qu'il ou elle invite à le modifier et les admins.",
+      "lockedNoOwner": "Les instructions, la mémoire, les outils, les conversations, les routines et les fichiers de {{name}} restent avec les personnes qui peuvent le modifier et les admins.",
+      "ask": "Demander à {{owner}}"
+    },
     "overview": {
       "approvals_one": "{{count}} demande d'approbation",
       "approvals_many": "{{count}} demandes d'approbation",
@@ -17119,17 +17133,21 @@
       "rolesHint": "Toute personne ayant le rôle peut l'utiliser, y compris celles qui l'obtiendront plus tard.",
       "computerHint": "Les personnes dont les agents peuvent exécuter des tâches ici. Les admins peuvent restreindre, seul son propriétaire peut élargir.",
       "phoneHint": "Partager un téléphone ne partage jamais {{host}}.",
-      "followsHint": "Un iPhone suit la règle du Mac auquel il est branché.",
-      "serverHelp": "Chaque agent y tourne avec son propre utilisateur.",
-      "computerHelp": "Les commandes des agents y tournent avec votre utilisateur."
+      "followsHint": "Un iPhone suit la règle du Mac auquel il est branché."
+    },
+    "share": {
+      "title": "Laisser tout l'espace de travail l'utiliser",
+      "off": "Vous seul pour l'instant",
+      "on": "Tout le monde dans {{org}}",
+      "hint": "Les agents de tout le monde dans {{org}} peuvent y lancer des tâches, avec votre utilisateur.",
+      "hintServer": "Les agents de tout le monde dans {{org}} peuvent y lancer des tâches, chacun avec son propre utilisateur."
     },
     "request": {
       "title": "{{name}} veut rejoindre {{org}}",
       "list": "Demandent à rejoindre",
       "letJoin": "Accepter",
       "deny": "Refuser",
-      "denied": "{{name}} ne rejoindra pas.",
-      "joined": "{{name}} a été ajouté."
+      "denied": "{{name}} ne rejoindra pas."
     },
     "empty": {
       "title": "Aucun appareil pour l'instant",

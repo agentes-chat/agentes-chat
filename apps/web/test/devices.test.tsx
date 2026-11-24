@@ -215,17 +215,32 @@ describe("Settings › Devices", () => {
     expect(screen().getByRole("dialog", { name: "Connect an iPhone" })).toBeTruthy();
   });
 
-  test("Let it join, from the list: name and who can use it, then the server lets it in", async () => {
+  test("Let it join, from the list: only its name before, then connected with the switch that shares it", async () => {
     const { state } = await open(`/org/${ORG_ID}/settings/devices`);
     const ask = screen().getByRole("list", { name: "Asking to join" });
     await click(within(ask).getByRole("button", { name: "Let it join" }));
     const dialog = screen().getByRole("dialog", { name: "ci-runner wants to join Acme" });
     expect(dialog.textContent).toContain("203.0.113.7");
+    // Who can use it is asked once it's in, not before.
+    expect(within(dialog).queryByRole("combobox")).toBeNull();
+    expect(within(dialog).queryByRole("switch")).toBeNull();
     await click(within(dialog).getByRole("button", { name: "Let it join" }));
     expect(calls(state, "devices.approveRequest")[0]?.args.slice(1)).toEqual([
       "r-ci",
       { name: "ci-runner", audience: { mode: "owner", userIds: [], roleIds: [] } },
     ]);
+    const joined = screen().getByRole("dialog", { name: "ci-runner is connected" });
+    const share = within(joined).getByRole("switch", { name: "Let the whole workspace use it" });
+    expect(share.getAttribute("aria-checked")).toBe("false");
+    expect(joined.textContent).toContain("Only you for now");
+    await click(share);
+    expect(calls(state, "devices.updateComputer").at(-1)?.args).toEqual([
+      ORG_ID,
+      "m-r-ci",
+      { audience: { mode: "everyone", userIds: [], roleIds: [] } },
+    ]);
+    expect(share.getAttribute("aria-checked")).toBe("true");
+    expect(joined.textContent).toContain("Everyone in Acme");
   });
 });
 
@@ -245,13 +260,18 @@ describe("Connect a device", () => {
     devices.setLink({ status: "asking", request: acmeDevices().requests[0] });
     await refetch(services);
     const asking = screen().getByRole("dialog", { name: "ci-runner wants to join Acme" });
+    expect(within(asking).queryByRole("combobox")).toBeNull();
     await click(within(asking).getByRole("button", { name: "Let it join" }));
     // A server is everyone's by default.
     expect(calls(state, "devices.approveRequest")[0]?.args[2]).toEqual({
       name: "ci-runner",
       audience: { mode: "everyone", userIds: [], roleIds: [] },
     });
-    expect(screen().getByRole("dialog", { name: "ci-runner is connected" })).toBeTruthy();
+    const joined = screen().getByRole("dialog", { name: "ci-runner is connected" });
+    expect(
+      within(joined).getByRole("switch", { name: "Let the whole workspace use it" }).getAttribute("aria-checked"),
+    ).toBe("true");
+    expect(joined.textContent).toContain("Everyone in Acme");
   });
 
   test("the computers: this one, another one, a server or VPS", async () => {
@@ -310,7 +330,7 @@ describe("Connect a device", () => {
   });
 
   test("another computer: the app on it, signed in as me, then Connected once a computer of mine shows up", async () => {
-    const { devices, services } = await open(`/org/${ORG_ID}/settings/devices`);
+    const { devices, services, state } = await open(`/org/${ORG_ID}/settings/devices`);
     await click(screen().getByRole("button", { name: "Connect a device" }));
     await click(screen().getByRole("button", { name: /Another computer/ }));
     const dialog = screen().getByRole("dialog", { name: "Connect another computer" });
@@ -338,6 +358,15 @@ describe("Connect a device", () => {
       `/org/${ORG_ID}/settings/devices/m-sam-new`,
     );
     expect(within(dialog).getByRole("button", { name: "Done" })).toBeTruthy();
+    // Private as it joined, and one switch away from the whole workspace.
+    const share = within(dialog).getByRole("switch", { name: "Let the whole workspace use it" });
+    expect(share.getAttribute("aria-checked")).toBe("false");
+    await click(share);
+    expect(calls(state, "devices.updateComputer").at(-1)?.args).toEqual([
+      ORG_ID,
+      "m-sam-new",
+      { audience: { mode: "everyone", userIds: [], roleIds: [] } },
+    ]);
     await click(within(dialog).getByRole("button", { name: "Can't install the app on it? Use a terminal line" }));
     expect(screen().getByRole("dialog", { name: "Connect a computer" })).toBeTruthy();
   });
@@ -393,7 +422,18 @@ describe("Connect a device", () => {
     if (added) added.status = { kind: "ready" };
     devices.set(list);
     await refetch(services);
-    expect(screen().getByRole("dialog", { name: "Galaxy S24 is connected" })).toBeTruthy();
+    const connected = screen().getByRole("dialog", { name: "Galaxy S24 is connected" });
+    // No select on the last step: the switch, saved at once.
+    expect(within(connected).queryByRole("combobox")).toBeNull();
+    const share = within(connected).getByRole("switch", { name: "Let the whole workspace use it" });
+    expect(share.getAttribute("aria-checked")).toBe("true");
+    await click(share);
+    expect(calls(state, "devices.updatePhone").at(-1)?.args).toEqual([
+      ORG_ID,
+      "p-new",
+      { audience: { mode: "owner", userIds: [], roleIds: [] } },
+    ]);
+    expect(connected.textContent).toContain("Only you for now");
   });
 
   test("Android by cable: the phone already plugged in shows up asking, and every step before Allow is done", async () => {

@@ -2523,23 +2523,27 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         return { previous };
       },
       team: async () => ({
-        agents: listed().map((a) => ({
-          id: a.id,
-          name: a.name,
-          handle: a.handle,
-          role: a.role,
-          appearance: a.appearance ?? null,
-          ownerUserId: a.ownerUserId,
-          reportsToAgentId: a.reportsToAgentId ?? null,
-          capabilities: ["drive", "issues"],
-          busy: false,
-          channelIds: state.channels
-            .filter((c) => (state.channelMembers[c.id] ?? []).some((m) => m.type === "agent" && m.id === a.id))
-            .map((c) => c.id),
-          canTalk: true,
-          canManage: rightsOf(a).canManage,
-          ...(a.seesDetails === false ? { capabilities: [], canTalk: false, seesDetails: false } : {}),
-        })),
+        // A teammate's private agent seen by its facts alone (`factsOnly` set by the test) is on Equipe too.
+        agents: state.agents
+          .filter((a) => listsToMe(a) || a.factsOnly)
+          .map((a) => ({
+            id: a.id,
+            name: a.name,
+            handle: a.handle,
+            role: a.role,
+            appearance: a.appearance ?? null,
+            ownerUserId: a.ownerUserId,
+            reportsToAgentId: a.reportsToAgentId ?? null,
+            capabilities: ["drive", "issues"],
+            busy: false,
+            channelIds: state.channels
+              .filter((c) => (state.channelMembers[c.id] ?? []).some((m) => m.type === "agent" && m.id === a.id))
+              .map((c) => c.id),
+            canTalk: true,
+            canManage: rightsOf(a).canManage,
+            ...(a.seesDetails === false ? { capabilities: [], canTalk: false, seesDetails: false } : {}),
+            ...(a.factsOnly ? { factsOnly: true } : {}),
+          })),
         people: state.members
           .filter((m) => state.agents.some((a) => a.ownerUserId === m.userId))
           .map((m) => ({ id: m.userId, name: m.name, image: m.image ?? null })),
@@ -3019,6 +3023,9 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
               : [{ day: 1, runs: 12, failed: 0 }],
           pendingApprovals: state.approvals.filter((x) => x.agentId === agentId && x.status === "pending").length,
           channels,
+          editors: a.editors ?? { userIds: [], roleIds: [] },
+          createdByUserId: a.ownerUserId,
+          lastActivityAt: new Date(NOW.getTime() - 2 * 3_600_000).toISOString(),
         };
       },
       channels: async (_orgId, agentId) =>

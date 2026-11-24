@@ -431,7 +431,7 @@
     },
     "manage_agents": {
       "title": "Ajanları düzenleme",
-      "desc": "Talimatlar, beyin, bütçe ve her birinin kullandıkları, kişinin konuştuğu ajanlarda. Başkalarının özel ajanları hariç.",
+      "desc": "Talimatlar, beyin, bütçe ve her birinin kullandıkları, kişinin konuştuğu ajanlarda. Başkalarının özel ajanlarından yalnızca adı, sorumlusu ve kullanımı.",
       "short": "ajanları düzenleme",
       "say": "konuştuğu ajanları düzenler"
     },
@@ -6211,6 +6211,20 @@
     },
     "copyHandle": "@{{handle}} kopyala",
     "copied": "@{{handle}} kopyalandı.",
+    "facts": {
+      "private": "Özel",
+      "created": "Oluşturuldu",
+      "createdBy": "{{name}}, {{date}}",
+      "usage": "{{month}} kullanımı",
+      "budget": "Bütçe",
+      "budgetUsed": "%{{percent}} kullanıldı",
+      "last": "Son etkinlik",
+      "never": "Henüz yok",
+      "title": "Ne yapar",
+      "locked": "{{name}} adlı ajanın talimatları, belleği, araçları, konuşmaları, rutinleri ve dosyaları {{owner}}, bu kişinin düzenlemeye çağırdıkları ve yöneticilerde kalır.",
+      "lockedNoOwner": "{{name}} adlı ajanın talimatları, belleği, araçları, konuşmaları, rutinleri ve dosyaları onu düzenleyebilenlerde ve yöneticilerde kalır.",
+      "ask": "{{owner}} kişisine sor"
+    },
     "overview": {
       "approvals_one": "{{count}} onay isteği",
       "approvals_other": "{{count}} onay isteği",
@@ -16506,17 +16520,21 @@
       "rolesHint": "Bu role sahip herkes kullanabilir, rolü sonradan alanlar da.",
       "computerHint": "Burada kimlerin ajanlarının görev çalıştırabileceği. Yöneticiler daraltabilir, yalnızca sahibi genişletebilir.",
       "phoneHint": "Bir telefonu paylaşmak {{host}} bilgisayarını asla paylaşmaz.",
-      "followsHint": "Bir iPhone, takılı olduğu Mac'in kuralını izler.",
-      "serverHelp": "Her ajan üzerinde kendi kullanıcısı olarak çalışır.",
-      "computerHelp": "Ajanların komutları üzerinde sizin kullanıcınız olarak çalışır."
+      "followsHint": "Bir iPhone, takılı olduğu Mac'in kuralını izler."
+    },
+    "share": {
+      "title": "Tüm çalışma alanı kullansın",
+      "off": "Şimdilik yalnızca siz",
+      "on": "{{org}} içindeki herkes",
+      "hint": "{{org}} içindeki herkesin ajanları üzerinde sizin kullanıcınız olarak görev çalıştırabilir.",
+      "hintServer": "{{org}} içindeki herkesin ajanları üzerinde her biri kendi kullanıcısı olarak görev çalıştırabilir."
     },
     "request": {
       "title": "{{name}}, {{org}} çalışma alanına katılmak istiyor",
       "list": "Katılmak isteyenler",
       "letJoin": "Katılmasına izin ver",
       "deny": "Reddet",
-      "denied": "{{name}} katılmayacak.",
-      "joined": "{{name}} katıldı."
+      "denied": "{{name}} katılmayacak."
     },
     "empty": {
       "title": "Henüz cihaz yok",
