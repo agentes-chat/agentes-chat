@@ -2814,6 +2814,20 @@ export interface OrgOverview {
   code?: boolean;
 }
 
+/** A folder request is informational here. Only the computer can grant access (ADR 0036 §8). */
+export interface FolderAccessRequest {
+  id: string;
+  machineId: string;
+  agent: { id: string; name: string; handle: string };
+  path: string;
+  reason: string;
+  status: string;
+  createdAt: string;
+  expiresAt: string;
+  decidedAt: string | null;
+  command: string | null;
+}
+
 export interface Person {
   userId: string;
   name: string;

@@ -60,6 +60,7 @@ import { Trans, useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { useOpenComputer } from "@/components/computer/open";
 import { MachineToolButton, useToolOneClick } from "@/components/devices/ToolOneClick";
+import { FolderRequestsCard } from "@/components/FolderAccessRequests";
 import { HelpLink } from "@/components/HelpLink";
 import { ErrorState, LoadingList } from "@/components/Loading";
 import { useOrg } from "@/components/org-context";
@@ -822,6 +823,7 @@ export function MachineAccessCards({ machine: m }: { machine: Machine }) {
   const [reduce, setReduce] = useState<Reduce | null>(null);
   return (
     <>
+      <FolderRequestsCard machine={m} />
       <FoldersCard machine={m} onReduce={setReduce} />
       <ToolsCard machine={m} onReduce={setReduce} />
       <MachineBrowserCard machine={m} onTurnOff={() => setReduce({ kind: "tool", tool: "browser" })} />

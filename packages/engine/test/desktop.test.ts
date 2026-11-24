@@ -11,6 +11,7 @@ import {
   computerBrainUnavailable,
   confirmDeviceCode,
   containersText,
+  createAgent,
   createJobHandlers,
   createOrganization,
   DEVICE_MAX_PENDING_PER_IP,
@@ -23,6 +24,8 @@ import {
   fullMachinePath,
   getDeviceCode,
   grantScopes,
+  insertMessage,
+  listFolderAccessRequests,
   listMachines,
   listMessages,
   type MachineHub,
@@ -32,6 +35,7 @@ import {
   machinePause,
   NotFoundError,
   notAllowedMessage,
+  openAgentDm,
   pathInOwnFolder,
   pausedMessage,
   pollDeviceToken,
@@ -601,6 +605,9 @@ describe("folders and tools on the machine (protocol 10)", () => {
     });
     expect(pending.isError).toBeFalsy();
     expect(pending.content).toContain("You will be woken in this conversation");
+    expect(pending.content).toContain("pending, not approved");
+    expect(pending.content).toContain("not read-only");
+    expect(pending.content).toContain("cannot grant folders");
     const rows = await f.db.select().from(schema.machineAccessRequests);
     const asked = rows.find((r) => r.path === "/Users/ana/Documents");
     expect(rows.find((r) => r.path === "/Users/ana/Projects")).toMatchObject({ status: "granted" });
@@ -691,6 +698,81 @@ describe("folders and tools on the machine (protocol 10)", () => {
     await drainOutbox(f.db, f.handlers);
     const later = await listMessages(f.db, f.owner.id, f.org.id, f.general.id);
     expect(later.some((m) => m.meta.bodyCode === "machine_access_expired")).toBe(true);
+  });
+
+  test("a delegated folder request reaches the human conversation without moving the colleague's wake-up", async () => {
+    f = await setup({ machines: true, reply: () => ({ chunks: ["Ok"] }) });
+    const hub = f.machineHub as MachineHub;
+    const paired = await pairMachine(deps(), f.owner.id, f.org.id, COMPUTER);
+    await grantScopes(f.db, f.org.id, f.agent.id, SANDBOX);
+    await setAgentComputerTarget(deps(), f.owner.id, f.org.id, f.agent.id, paired.machineId);
+    const runner = fakeRunner(hub, (req) =>
+      req.op === "access.request" ? { ok: true, data: { requestId: req.requestId, status: "pending" } } : undefined,
+    );
+    await runner.hello(paired.token, { access: { folders: [], tools: ACCESS.tools } });
+    const root = await runCtx();
+    const lead = await createAgent(
+      f.db,
+      f.owner.id,
+      f.org.id,
+      {
+        name: "Lead",
+        handle: "lead",
+        role: "Coordinator",
+        instructions: "Delegate work",
+        credentialId: f.credential.id,
+      },
+      { model: f.agent.model },
+    );
+    await f.db.update(schema.agentRuns).set({ agentId: lead.id }).where(eq(schema.agentRuns.id, root.runId));
+    const dm = await openAgentDm(f.db, f.org.id, lead.id, f.agent.id);
+    const msg = await insertMessage(f.db, {
+      orgId: f.org.id,
+      channelId: dm.id,
+      author: { type: "agent", agentId: lead.id, runId: root.runId, hop: 1 },
+      body: "Read the documents",
+    });
+    const targetRunId = Bun.randomUUIDv7();
+    await f.db.insert(schema.agentRuns).values({
+      id: targetRunId,
+      orgId: f.org.id,
+      agentId: f.agent.id,
+      channelId: dm.id,
+      threadRootId: msg.id,
+      triggerMessageId: msg.id,
+      trigger: "dm",
+      hop: 2,
+    });
+    await f.db.insert(schema.agentConsultations).values({
+      orgId: f.org.id,
+      askerRunId: root.runId,
+      askerAgentId: lead.id,
+      targetAgentId: f.agent.id,
+      channelId: dm.id,
+      messageId: msg.id,
+      targetRunId,
+      waitId: "async:test",
+      question: "Read documents",
+      chain: [lead.id],
+      expiresAt: new Date(Date.now() + 60_000),
+    });
+    const result = await invoke(
+      { ...root, runId: targetRunId, channelId: dm.id, threadRootId: msg.id, triggerMessageId: msg.id },
+      "request_folder_access",
+      {
+        path: "/Users/ana/Documents",
+        reason: "Read project documents",
+      },
+    );
+    expect(result.isError).toBeFalsy();
+    const [stored] = await f.db.select().from(schema.machineAccessRequests);
+    expect(stored?.channelId).toBe(dm.id);
+    const human = await listMessages(f.db, f.owner.id, f.org.id, f.general.id);
+    expect(human.some((m) => m.meta.bodyCode === "machine_access_requested")).toBe(true);
+    const visible = await listFolderAccessRequests(f.db, f.owner.id, f.org.id, paired.machineId);
+    expect(visible.map((r) => r.id)).toContain(stored?.id ?? "");
+    // The existing wake-up still refers to the consulted run, not a new run in the person's channel.
+    expect(stored?.runId).toBe(targetRunId);
   });
 
   test("a folder an agent waits for waits in the computer owner's inbox, and the answer ends it", async () => {

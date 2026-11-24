@@ -40,6 +40,7 @@ import {
 } from "@agenteschat/client/lib/errors";
 import { mentionsReader } from "@agenteschat/client/lib/everyone";
 import { feedbackOfferOf } from "@agenteschat/client/lib/feedback-offer";
+import { folderRequestOf } from "@agenteschat/client/lib/folder-access";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { issueWorkOf } from "@agenteschat/client/lib/issues";
 import { workAnchorBody, workContinuable, workIsOver } from "@agenteschat/client/lib/long-work";
@@ -121,6 +122,7 @@ import { AwayPill, BrainWait } from "../outages/WaitCard";
 import { SettingsProposals } from "../right-hand/SettingsCard";
 import { ReplyChips, TeamCard } from "../right-hand/TeamCard";
 import { TeamWeek } from "../right-hand/TeamWeekCard";
+import { FolderRequestMessage } from "../settings/FolderRequests";
 import { type BubbleHead, BubbleHeadContext, type BubblePart, BubblePartContext } from "../shared/bubble-part";
 import { AgentFace, Face, withAgentFaces } from "../shared/Face";
 import { useColors, useOrgId, useWhen } from "../shared/hooks";
@@ -328,9 +330,14 @@ function RowBody({
   // What the server wrote itself is said in the person's language; a stopped reply drops the server's note. Where a
   // task ran is said only where the workspace has more than one computer.
   const names = useRowNamesComputers();
-  const said = hidesBody(m)
-    ? ""
-    : reminderBody(splitCanceled(serverBody(t, listedText(m.body, meta), meta, i18n.language, names), meta).body, meta);
+  const folderRequest = folderRequestOf(meta);
+  const said =
+    folderRequest || hidesBody(m)
+      ? ""
+      : reminderBody(
+          splitCanceled(serverBody(t, listedText(m.body, meta), meta, i18n.language, names), meta).body,
+          meta,
+        );
   // A long work's anchor once it's over: no promise left, and dimmed (its line says how it ended).
   // The right hand's stand-in line is its pill's sentence (`NoAiCard`): no text above it too.
   const body = isStandInLine(meta) ? "" : m.longWork ? workAnchorBody(t, said, meta, m.longWork) : said;
@@ -561,6 +568,7 @@ function RowBody({
   // The cards it carries: above an agent's tools, which come last.
   const cards = (
     <>
+      {folderRequest && <FolderRequestMessage {...folderRequest} />}
       {issueWork ? (
         <IssueWorkCard work={issueWork} authorId={m.author.type === "person" ? (m.author.id ?? null) : null} />
       ) : null}
