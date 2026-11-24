@@ -17,7 +17,14 @@ import {
   withoutContainers,
   withoutSignIns,
 } from "./accounts";
-import { AGY_CHAT_AGENT, AGY_CHAT_SETTINGS, agyEagerTools, prepareAgyHome } from "./agy-home";
+import {
+  AGY_CHAT_AGENT,
+  AGY_CHAT_SETTINGS,
+  AGY_WORK_AGENT,
+  AGY_WORK_SETTINGS,
+  agyEagerTools,
+  prepareAgyHome,
+} from "./agy-home";
 import { LIMIT_TEXT } from "./brain";
 import { type CodexBrainEvent, CodexThreads, chatFolder, codexProfileOf, codexThreadKey } from "./brain-codex";
 import { cursorPrompt } from "./brain-cursor";
@@ -49,6 +56,9 @@ import { turnZoneEnv } from "./turn-zone";
  * - ADR 0053 §3: every turn runs with `--sandbox` (terminal commands in the CLI's sandbox: the turn's folder and temp,
  *   no network) and the account's `proceed-in-sandbox`; `work` adds `--mode accept-edits` (edits in the workspace
  *   without asking), `plan` doesn't (an edit needs an approval nobody gives in headless mode, so it is refused).
+ * - `work` and `plan`: `--agent agenteschat-work` (the CLI's file tools, none of its terminal or web search) and
+ *   `--settings` that deny its commands and URL actions by rule (`AGY_WORK_SETTINGS`): Gemini got empty outputs from
+ *   them and ended its turn with no reply; commands and the web go through our server's tools.
  * - `chat` (the team's right hand, ADR 0137 §4): `--agent agenteschat-chat` (no built-in tool, no commands, never a
  *   subagent) and `--settings` that deny the CLI's own file, command and web actions by rule (`AGY_CHAT_SETTINGS`), in
  *   an empty folder with none of the agent's secrets. `antigravityChatBreach` kills the turn on an
@@ -59,8 +69,10 @@ import { turnZoneEnv } from "./turn-zone";
  *   never needs the CLI's lazy schema files. The CLI's own tools are repeated, as what the turn tried; one that gave
  *   nothing reads `AGY_EMPTY_OUTPUT`. Usage is the plan's (`source: "plan"`): the turn's `agent_response` steps
  *   summed (`result.usage` counts the whole conversation), once for all of the turn's runs of the CLI.
- * - A turn that ends with no reply and none of our tools is resumed once in its conversation (`AGY_EMPTY_NUDGE`);
- *   empty again, it fails (`antigravity_failed`), so the engine never posts it as an empty "Done.".
+ * - A turn that ends with no reply is resumed once in its conversation (`AGY_EMPTY_NUDGE`), whatever tools it called,
+ *   unless its last call to our server told it to end there without a word (`quietEnd`: a reaction, a pass, a card
+ *   asking a person); empty again, it fails (`antigravity_failed`), so the engine never posts it as an empty "Done."
+ *   nor drops it as no reply.
  * - A failed turn exits non-zero; a model or agent failure exits 3 with an `AGY_ERROR: {…}` line on stderr (its
  *   canonical status, HTTP or gRPC code, retryability): quota and rate limits are `plan_limit`, a refused sign-in
  *   `not_logged_in`.
@@ -128,9 +140,13 @@ export function antigravityTurnArgs(input: {
     "--disable-slash-commands",
     ...(input.locked
       ? ["--agent", AGY_CHAT_AGENT, "--settings", AGY_CHAT_SETTINGS]
-      : input.profile === "plan"
-        ? []
-        : ["--mode", "accept-edits"]),
+      : [
+          "--agent",
+          AGY_WORK_AGENT,
+          "--settings",
+          AGY_WORK_SETTINGS,
+          ...(input.profile === "plan" ? [] : ["--mode", "accept-edits"]),
+        ]),
     ...(input.model ? ["--model", input.model] : []),
     ...(effort ? ["--effort", effort] : []),
     ...(input.chat ? ["--conversation", input.chat] : []),
@@ -245,19 +261,55 @@ export const AGY_EMPTY_OUTPUT =
   "(The Antigravity CLI gave this step no output and no error: what it reached for wasn't there in this turn. Use the agentes tools instead.)";
 
 /**
- * The prompt of the one retry of a turn that ended with no reply and none of our server's tools called: the same
- * conversation, told so.
+ * The prompt of the one retry of a turn that ended with no reply: the same conversation, told so, and pointed at the
+ * way that works (a big file changed on the computer, not read into the conversation in pieces).
  */
 export const AGY_EMPTY_NUDGE = [
-  "Your last turn ended without a reply and without calling any agentes tool.",
-  "The agentes tools are declared in your tools list: call them directly, there is no schema file to read first,",
-  "and files or commands of your own that came back empty aren't there in this turn.",
-  "Answer now with the result, or say plainly what blocked you.",
+  "Your last turn ended without a reply: nobody saw any answer.",
+  "Reply now in text with the result of what you did, or say plainly what blocked you.",
+  "If work is left, do it with the agentes tools, declared in your tools list (call them directly, there is no schema",
+  "file to read first): run_code for commands and scripts, read_file and write_file for files on the computer,",
+  "web_search and web_fetch for the web. Your own terminal, web search and URL tools are off here, and their steps",
+  "that came back empty or refused never ran. To change a big file such as a long HTML page, don't read it in",
+  "pieces: bring it to the computer with import_file, edit it there with one run_code script (python3), then save",
+  "it as a new version with export_file and its artifact_id.",
 ].join(" ");
 
 /** A turn that ended twice with no reply (after `AGY_EMPTY_NUDGE`): a visible failure, never an empty answer. */
 export const AGY_EMPTY_MESSAGE =
-  "The Antigravity CLI ended the turn twice without a reply and without calling any agentes tool (Gemini stopped after its own file or command steps came back empty)";
+  "The Antigravity CLI ended the turn twice without a reply (Gemini stopped writing after its tool steps, also when asked again to answer)";
+
+/** What a tool of our server answers when the turn is to end there with no text (`react`, `pass`, a card's ask). */
+const QUIET_END =
+  /\bend your turn (?:now )?(?:without (?:any text|writing|posting)|with an empty)|\bstop now and (?:end your turn|wait)|\bnothing is posted\b|\bwrite nothing else\b/i;
+/** Our server's tools a turn may end on with no text, whatever their answer says. */
+const QUIET_TOOLS = new Set([
+  "react",
+  "pass",
+  "ask_user",
+  "ask_choices",
+  "request_approval",
+  "request_secret",
+  "request_permission",
+  "browser_ask_person",
+  "desktop_ask_person",
+]);
+
+/** The bare name of a call to our server: by its own name, or through `call_mcp_tool`. */
+function ourToolName(name: string, info: Record<string, unknown>): string {
+  if (name === "call_mcp_tool" && isRecord(info.parameters)) return String(info.parameters.ToolName ?? "");
+  return name.replace(OURS_PREFIX, "");
+}
+const OURS_PREFIX = new RegExp(`^(?:mcp[_.:/-]{1,2})?${CODEX_MCP_SERVER}(?:__|[_.:/-])`);
+
+/**
+ * Whether the turn's last call to our server told it to end there without a word: a reaction, a pass, a card asking
+ * a person. Such a turn is no empty turn to ask again.
+ */
+export function quietEnd(last: { name: string; output: string } | null): boolean {
+  if (!last) return false;
+  return QUIET_TOOLS.has(last.name) || QUIET_END.test(last.output);
+}
 
 const tokens = (v: unknown) => (typeof v === "number" && Number.isFinite(v) && v > 0 ? Math.round(v) : 0);
 
@@ -381,8 +433,8 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
     let tail = "";
     let streamed = false;
     let worked = false;
-    /** Calls to our server (by name or through `call_mcp_tool`): the engine ran them. */
-    let ours = 0;
+    /** The last call to our server (by name or through `call_mcp_tool`): the engine ran it. */
+    let lastOurs: { name: string; output: string } | null = null;
     const flush = (text: string, whole: boolean) => {
       const out = clean(tail + text);
       const at = whole ? out.length : Math.max(0, out.length - hold);
@@ -450,7 +502,8 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
       worked = true;
       // Our bridge's calls: the engine ran them.
       if (isOurAgyTool(name) || isOurAgyMcpCall(name, info)) {
-        ours++;
+        const out = isRecord(info.error) ? String(info.error.message ?? "") : String(info.output ?? "");
+        lastOurs = { name: ourToolName(name, info), output: out.slice(0, 2000) };
         return;
       }
       flush("", true);
@@ -519,9 +572,10 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
     const response = typeof r.response === "string" ? r.response : "";
     if (r.status === "SUCCESS" && exit.code === 0) {
       const text = clean(response.trimEnd());
-      // No reply and none of our tools (only the CLI's own steps, or none): never an empty answer the engine would
-      // post as "Done.". Once more in the same conversation, told so; then a failure everyone sees.
-      if (!text && !streamed && ours === 0) {
+      // No reply, whatever tools it called: never an empty answer the engine would post as "Done." or drop as no
+      // reply. Once more in the same conversation, told so; then a failure everyone sees. Not when our server's last
+      // answer told it to end there without a word (a reaction, a pass, a card asking a person).
+      if (!text && !streamed && !quietEnd(lastOurs)) {
         if (!nudge && opts.chats.get(chatKey)) {
           nudge = true;
           continue;

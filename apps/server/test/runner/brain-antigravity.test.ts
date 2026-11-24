@@ -25,12 +25,15 @@ import {
   AGY_KEYCHAIN,
   AGY_PLANTED,
   AGY_SIGN_IN_FILE,
+  AGY_WORK_AGENT,
+  AGY_WORK_SETTINGS,
   agyAuthOf,
   agyEagerTools,
   agyKeychain,
   agyMcpConfig,
   agyRuntimeDir,
   agySignInOf,
+  agyWorkAgent,
   dropAgySignIns,
   prepareAgyHome,
   writeAgySettings,
@@ -49,6 +52,7 @@ import {
   isOurAgyMcpCall,
   isOurAgyTool,
   parseAgyError,
+  quietEnd,
 } from "../../runner/brain-antigravity";
 import type { CodexBrainEvent } from "../../runner/brain-codex";
 import { detectExecutors, inHomeDirs, parseAgyModels } from "../../runner/executors";
@@ -85,7 +89,8 @@ const NOW = Date.parse("2026-11-04T12:00:00Z");
 test("command line: headless stream-json in the sandbox; work takes edits, plan doesn't, chat runs as Lodi's agent", () => {
   const work = antigravityTurnArgs({ prompt: "oi", model: "gemini-4-argon-high", chat: FIRST, effort: "max" });
   expect(work.slice(0, 4)).toEqual(["-p", "oi", "--output-format", "stream-json"]);
-  expect(work.join(" ")).toContain("--sandbox --disable-slash-commands --mode accept-edits");
+  expect(work.join(" ")).toContain("--sandbox --disable-slash-commands");
+  expect(work.join(" ")).toContain("--mode accept-edits");
   expect(work.join(" ")).toContain("--model gemini-4-argon-high");
   // A slug names its thinking level: no `--effort` beside it, the extra one (`xhigh`) included.
   expect(work).not.toContain("--effort");
@@ -109,8 +114,18 @@ test("command line: headless stream-json in the sandbox; work takes edits, plan 
       deny: ["command(*)", "read_file(*)", "write_file(*)", "read_url(*)", "execute_url(*)"],
     },
   });
-  expect(work).not.toContain("--settings");
-  expect(antigravityTurnArgs({ prompt: "oi", profile: "plan" })).not.toContain("--settings");
+  // Work and plan: the work agent (no terminal, no web search of the CLI's own) and its commands and URLs denied.
+  expect(work.join(" ")).toContain(`--agent ${AGY_WORK_AGENT}`);
+  expect(work[work.indexOf("--settings") + 1]).toBe(AGY_WORK_SETTINGS);
+  const planned = antigravityTurnArgs({ prompt: "oi", profile: "plan" });
+  expect(planned.join(" ")).toContain(`--agent ${AGY_WORK_AGENT}`);
+  expect(planned[planned.indexOf("--settings") + 1]).toBe(AGY_WORK_SETTINGS);
+  expect(JSON.parse(AGY_WORK_SETTINGS)).toEqual({
+    permissions: {
+      allow: [`mcp(${CODEX_MCP_SERVER}/*)`],
+      deny: ["command(*)", "read_url(*)", "execute_url(*)"],
+    },
+  });
 });
 
 test("the turn's tools up front: each eager in mcp_config.json, names that aren't a tool's left out", () => {
@@ -173,6 +188,15 @@ test("the account's home: what a turn planted goes, our settings, our server alo
   const agent = readFileSync(path.join(home, `.gemini/config/agents/${AGY_CHAT_AGENT}/agent.md`), "utf8");
   expect(agent).toContain("tools: []");
   expect(agent).toContain("subagent: false");
+  // The work agent: the CLI's file tools alone, and the way to the agentes tools (a big file through run_code).
+  const work = readFileSync(path.join(home, `.gemini/config/agents/${AGY_WORK_AGENT}/agent.md`), "utf8");
+  expect(work).toBe(agyWorkAgent());
+  expect(work).toContain(`name: ${AGY_WORK_AGENT}`);
+  expect(work).toContain("tools: [read_file, edit_file, write_file]");
+  expect(work).not.toMatch(/tools: \[[^\]]*(?:run_command|manage_task|search_web)/);
+  expect(work).toContain("commandExecutionPolicy: off");
+  expect(work).toContain("run_code");
+  expect(work).toContain("export_file");
 });
 
 test("macOS: each Gemini account signs in to a keychain of its own in its folder, made once and unlocked before every run", () => {
@@ -624,7 +648,11 @@ test.skipIf(!posix)(
       turn({ prompt: "LAZY run it", mcp: { token: "tok_run", tools: "list_artifacts post_message read_artifact" } }),
     );
     expect(events.at(-1)).toEqual({ type: "done", text: "Let me check. All good.", session: { id: SESSION } });
-    expect(logOf(log)[0]).toMatchObject({ eager: ["list_artifacts", "post_message", "read_artifact"], settings: null });
+    expect(logOf(log)[0]).toMatchObject({
+      eager: ["list_artifacts", "post_message", "read_artifact"],
+      settings: AGY_WORK_SETTINGS,
+    });
+    expect(logOf(log)[0]?.args.join(" ")).toContain(`--agent ${AGY_WORK_AGENT}`);
     expect(events.filter((e) => e.type === "tool_call").map((e) => (e as { name: string }).name)).toEqual([
       "run_command",
     ]);
@@ -663,7 +691,7 @@ test.skipIf(!posix)(
 );
 
 test.skipIf(!posix)(
-  "an empty turn twice is a visible failure, never an empty done; one that called our server ends as it did",
+  "an empty turn twice is a visible failure, never an empty done; one that called our server is asked again too",
   async () => {
     const root = tempDir("brain-agy-");
     dirs.push(root);
@@ -680,13 +708,37 @@ test.skipIf(!posix)(
       { type: "usage", source: "plan", input: 1600, output: 40 },
     ]);
     delete process.env.FAKE_AGY_SILENT;
-    // Our server's tool ran (the engine posted through it): no retry, its end as it came.
+    // It called our server (Vic's turns, 2026-11-24: 99 calls, then no word): asked once more, it answers.
     const answered = await run(ctx, turn({ runId: RUN.replace(/1$/, "5"), prompt: "SILENT LAZY post it" }));
-    expect(answered.at(-1)).toEqual({ type: "done", text: "", session: { id: SESSION } });
-    expect(logOf(log)).toHaveLength(3);
+    expect(logOf(log)).toHaveLength(4);
+    expect(logOf(log)[3]?.args[1]).toBe(AGY_EMPTY_NUDGE);
+    expect(answered.at(-1)).toEqual({ type: "done", text: "Let me check. All good.", session: { id: SESSION } });
+    // Its last call to our server said to end with no text (a reaction): its quiet end stands, asked nothing more.
+    const reacted = await run(ctx, turn({ runId: RUN.replace(/1$/, "6"), prompt: "SILENT REACT thanks" }));
+    expect(reacted.at(-1)).toEqual({ type: "done", text: "", session: { id: SESSION } });
+    expect(logOf(log)).toHaveLength(5);
   },
   20_000,
 );
+
+test("a quiet end: our server's last answer said to end with no text, or its tool is one a turn ends on", () => {
+  expect(quietEnd(null)).toBe(false);
+  expect(quietEnd({ name: "react", output: "" })).toBe(true);
+  expect(quietEnd({ name: "pass", output: "" })).toBe(true);
+  expect(quietEnd({ name: "ask_choices", output: "" })).toBe(true);
+  expect(quietEnd({ name: "x", output: "Passed: nothing is posted. End your turn now without any text." })).toBe(true);
+  expect(
+    quietEnd({
+      name: "x",
+      output: "Waiting for a person to approve: X. Stop now and end your turn; you'll be resumed",
+    }),
+  ).toBe(true);
+  expect(quietEnd({ name: "post_message", output: "Posted in #geral." })).toBe(false);
+  expect(quietEnd({ name: "read_artifact", output: "<html>…</html>" })).toBe(false);
+  expect(
+    quietEnd({ name: "tell_agent", output: "Do your own part now, then end your turn saying what you handed on." }),
+  ).toBe(false);
+});
 
 test.skipIf(!posix)("the CLI turned off on the computer refuses the turn", async () => {
   const root = tempDir("brain-agy-");

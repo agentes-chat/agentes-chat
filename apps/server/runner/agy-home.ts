@@ -19,6 +19,12 @@ const configDir = (home: string) => path.join(home, ".gemini", "config");
 /** The agent Lodi's turns run as (`--agent`): no built-in tool, our server's alone. */
 export const AGY_CHAT_AGENT = "agenteschat-chat";
 
+/**
+ * The agent every other turn runs as (`--agent`): the CLI's own file tools, but none of its terminal (`run_command`,
+ * `manage_task`) or web search (`search_web`); commands and the web go through our server's tools.
+ */
+export const AGY_WORK_AGENT = "agenteschat-work";
+
 /** How the account signs in (`auth.type`): a personal Google account, or Gemini Enterprise. */
 export type AgyAuth = "oauth-personal" | "oauth-business";
 
@@ -265,6 +271,44 @@ export const AGY_CHAT_SETTINGS = JSON.stringify({
   },
 });
 
+/**
+ * `--settings` for every other turn (never saved): our server allowed, the CLI's own commands and URL actions denied
+ * by rule, so a call the model still makes to one is refused with a denial it reads, never an empty output (the CLI's
+ * sandboxed terminal gave Gemini empty outputs, and Gemini then ended its turn with no reply). Its file tools stay.
+ */
+export const AGY_WORK_SETTINGS = JSON.stringify({
+  permissions: {
+    allow: [`mcp(${CODEX_MCP_SERVER}/*)`],
+    deny: ["command(*)", "read_url(*)", "execute_url(*)"],
+  },
+});
+
+/**
+ * The agent of every turn but Lodi's: the CLI's own tool groups as its agent files name them (`read_file`,
+ * `edit_file`, `write_file`, `run_command`, `manage_task`, `search_web`; Antigravity CLI 1.5.10's own migration guide,
+ * read off its binary 2026-11-24) but the terminal and web search, and what the model reaches for instead. Our server's
+ * tools are not in that list: MCP tools come with the server, as Lodi's agent shows with `tools: []`.
+ */
+export const agyWorkAgent = (): string =>
+  [
+    "---",
+    `name: ${AGY_WORK_AGENT}`,
+    "description: Works for the team in agentes.chat: the agentes tools for commands, the web and files.",
+    "tools: [read_file, edit_file, write_file]",
+    "mainAgent: true",
+    "subagent: false",
+    "commandExecutionPolicy: off",
+    "---",
+    "Your own terminal, web search and URL tools are off in this session. Use the agentes tools instead:",
+    "run_code to run commands and scripts, read_file and write_file for files on the computer, web_search and",
+    "web_fetch for the web, export_file (with the file's artifact_id for a new version) to save a file to the Drive.",
+    "When a tool you need isn't in your list, say so in your reply instead of trying another way.",
+    "To change a big file (a long HTML page, a dataset), don't read it whole into the conversation in pieces: bring it",
+    "to the computer (import_file), change it there with one run_code script (python3 that reads, edits and writes",
+    "it), then save it with export_file. Every turn ends with a reply in text: the result, or what blocked you.",
+    "",
+  ].join("\n");
+
 /** Lodi's agent: none of the CLI's tools, no commands, never a subagent; it answers through our server. */
 export const agyChatAgent = (): string =>
   [
@@ -281,12 +325,13 @@ export const agyChatAgent = (): string =>
   ].join("\n");
 
 /**
- * Before a turn: what an earlier turn planted dropped, then our settings, our server alone (the turn's tools up front)
- * and Lodi's agent written (each only when it differs).
+ * Before a turn: what an earlier turn planted dropped, then our settings, our server alone (the turn's tools up front),
+ * Lodi's agent and the work agent written (each only when it differs).
  */
 export function prepareAgyHome(home: string, command: string[] | undefined, eagerTools?: readonly string[]) {
   for (const rel of AGY_PLANTED) rmSync(path.join(home, rel), { recursive: true, force: true });
   writeAgySettings(home);
   writeIfChanged(path.join(configDir(home), "mcp_config.json"), agyMcpConfig(command, eagerTools));
   writeIfChanged(path.join(configDir(home), "agents", AGY_CHAT_AGENT, "agent.md"), agyChatAgent());
+  writeIfChanged(path.join(configDir(home), "agents", AGY_WORK_AGENT, "agent.md"), agyWorkAgent());
 }

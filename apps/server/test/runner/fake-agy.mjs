@@ -18,8 +18,9 @@
 // server (a tool of the CLI's own with "OWN_TOOL"), the last delta with usage and the result. "LIMIT": an AGY_ERROR
 // quota line on stderr and exit 3. "ENV": the shell step's output is the env. "LAZY": the call to our server goes
 // through `call_mcp_tool`, as 1.5.x calls a lazy tool. "SILENT" (or $FAKE_AGY_SILENT, every turn): Gemini's empty turn
-// seen on 1.5.10 (2026-11-24): a schema read and a command that both give nothing, then the end with no text. With
-// `--agent` its init names the agent, as 1.5.x does. Its log line also holds the tools `mcp_config.json` marks eager.
+// seen on 1.5.10 (2026-11-24): a schema read and a command that both give nothing, then the end with no text; with
+// "REACT" a call to our server's `react` (which says to end with no text) comes last. With `--agent` its init names
+// the agent, as 1.5.x does. Its log line also holds the tools `mcp_config.json` marks eager.
 import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
@@ -219,6 +220,18 @@ if (args[0] === "-p") {
       tool_info: { name: "run_command", parameters: { CommandLine: "ls" }, output: "" },
     });
     if (prompt.includes("LAZY")) lazy(3);
+    if (prompt.includes("REACT"))
+      step({
+        step_index: 3,
+        state: "DONE",
+        step_type: "tool",
+        tool_name: "agenteschat_agentes/react",
+        tool_info: {
+          name: "agenteschat_agentes/react",
+          parameters: { emoji: "👍" },
+          output: "Reacted 👍 to the message. End your turn now without any text.",
+        },
+      });
     step({
       step_index: 4,
       state: "DONE",
