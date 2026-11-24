@@ -183,6 +183,24 @@ describe("OpenRouter's model list", () => {
     expect(m["nvidia/nemotron-3-ultra-550b-a55b:free"]?.structuredOutput).toBe(false);
   });
 
+  test("marks images: true only when input_modalities (and alias target's) include image", () => {
+    const m = models();
+    expect(m["deepseek/deepseek-v4.1-flash-1017"]?.images).toBe(true);
+    expect(m["~deepseek/deepseek-flash-latest"]?.images).toBe(true);
+    expect(m["anthropic/claude-sonnet-5.5"]?.images).toBe(true);
+    expect(m["~anthropic/claude-sonnet-latest"]?.images).toBe(true);
+    expect(m["z-ai/glm-5.3"]?.images).toBeUndefined();
+    expect(m["~z-ai/glm-latest"]?.images).toBeUndefined();
+    expect(m["tencent/hy3-preview"]?.images).toBeUndefined();
+
+    const target = fixture.data.find((d) => d.id === "deepseek/deepseek-v4.1-flash-1017");
+    const alias = fixture.data.find((d) => d.id === "~deepseek/deepseek-flash-latest");
+    const mismatched = parseOpenRouterModels({
+      data: [{ ...target, architecture: { ...target?.architecture, input_modalities: ["text"] } }, alias],
+    });
+    expect(mismatched["~deepseek/deepseek-flash-latest"]?.images).toBeUndefined();
+  });
+
   test("untrusted entries: bad ids, names, windows and prices are left out, and a pick without a schema routes nothing", () => {
     const base = fixture.data.find((d) => d.id === "tencent/hy3-preview");
     const variant = (patch: Record<string, unknown>) => parseOpenRouterModels({ data: [{ ...base, ...patch }] });
@@ -531,6 +549,84 @@ describe("OpenRouter adapter (Chat Completions, scripted transport)", () => {
     e = await failure(call({}, scripted({ body: sse([delta({ content: "Hal" })], "") }).fetcher).result);
     expect(e).toMatchObject({ retryable: true });
     expect(e.message).toContain("ended early");
+  });
+
+  test("tool result images go to multimodal models as image_url, while PDFs and text-only models are left out", async () => {
+    setOpenRouterModels(models());
+    const toolTurn = [
+      { role: "user" as const, content: "inspect these" },
+      {
+        role: "assistant" as const,
+        content: [{ type: "tool_use" as const, id: "call_1", name: "read_artifact", input: {} }],
+      },
+      {
+        role: "user" as const,
+        content: [
+          {
+            type: "tool_result" as const,
+            toolUseId: "call_1",
+            content: "shot.png",
+            images: [{ mediaType: "image/png", data: "UE5H" }],
+          },
+          { type: "text" as const, text: "what do you see?" },
+        ],
+      },
+    ];
+
+    // Multimodal model (~deepseek/deepseek-flash-latest): forwards PNG as image_url in user turn after tool role.
+    const mm = scripted({ body: sse([delta({ content: "I see a screenshot." }, "stop")]) });
+    const mmRes = await call({ model: "~deepseek/deepseek-flash-latest", messages: toolTurn }, mm.fetcher).result;
+    expect(mmRes.imagesLeftOut).toBeUndefined();
+    const mmMsgs = mm.requests[0]?.body.messages as Record<string, unknown>[];
+    expect(mmMsgs.slice(-2)).toEqual([
+      { role: "tool", tool_call_id: "call_1", content: "shot.png" },
+      {
+        role: "user",
+        content: [
+          { type: "text", text: "what do you see?" },
+          { type: "image_url", image_url: { url: "data:image/png;base64,UE5H" } },
+        ],
+      },
+    ]);
+
+    // Multimodal model with a PDF alongside a picture: keeps picture, drops PDF with note and imagesLeftOut: true.
+    const mixedTurn = [
+      ...toolTurn.slice(0, 2),
+      {
+        role: "user" as const,
+        content: [
+          {
+            type: "tool_result" as const,
+            toolUseId: "call_1",
+            content: "files",
+            images: [
+              { mediaType: "image/png", data: "UE5H" },
+              { mediaType: "application/pdf", data: "UERGA==", pages: 1, name: "doc.pdf" },
+            ],
+          },
+        ],
+      },
+    ];
+    const mix = scripted({ body: sse([delta({ content: "Only saw the image." }, "stop")]) });
+    const mixRes = await call({ model: "~deepseek/deepseek-flash-latest", messages: mixedTurn }, mix.fetcher).result;
+    expect(mixRes.imagesLeftOut).toBe(true);
+    const mixMsgs = mix.requests[0]?.body.messages as Record<string, unknown>[];
+    expect(mixMsgs.at(-2)).toMatchObject({ role: "tool", tool_call_id: "call_1" });
+    expect((mixMsgs.at(-2) as { content: string }).content).toContain(
+      "reads text and pictures only through this connection",
+    );
+    expect(mixMsgs.at(-1)).toEqual({
+      role: "user",
+      content: [{ type: "image_url", image_url: { url: "data:image/png;base64,UE5H" } }],
+    });
+
+    // Text-only model (~z-ai/glm-latest): strips picture with note and sets imagesLeftOut: true.
+    const txt = scripted({ body: sse([delta({ content: "Text only." }, "stop")]) });
+    const txtRes = await call({ model: "~z-ai/glm-latest", messages: toolTurn }, txt.fetcher).result;
+    expect(txtRes.imagesLeftOut).toBe(true);
+    const txtMsgs = txt.requests[0]?.body.messages as Record<string, unknown>[];
+    expect((txtMsgs.at(-2) as { content: string }).content).toContain("reads text only through this connection");
+    expect(txtMsgs.at(-1)).toEqual({ role: "user", content: "what do you see?" });
   });
 });
 
