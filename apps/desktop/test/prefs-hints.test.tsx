@@ -875,3 +875,130 @@ describe("Preferences › General: Compatibility mode (Linux)", () => {
       );
   });
 });
+
+describe("Preferences › General: Lightweight mode (Windows)", () => {
+  const toast = () => document.querySelector(".dk-toast");
+  const ready = (el: HTMLElement) => {
+    const sw = el.querySelector<HTMLButtonElement>("#light-mode");
+    return sw && !sw.disabled;
+  };
+
+  test("persists a choice, waits for the save and offers an explicit reopen", () =>
+    pane("windows", <General />, ready, async (el, host) => {
+      const sw = el.querySelector<HTMLButtonElement>("#light-mode") as HTMLButtonElement;
+      expect(sw.getAttribute("aria-checked")).toBe("false");
+      expect(describedBy(sw)).toContain("Reduce decorative motion");
+      const save = host.setLightMode;
+      let finish = () => {};
+      host.setLightMode = (on) =>
+        new Promise<void>((resolve) => {
+          finish = () => {
+            void save(on).then(resolve);
+          };
+        });
+      let reopened = 0;
+      host.reopen = async () => {
+        reopened++;
+      };
+      await act(async () => sw.click());
+      expect(sw.disabled).toBe(true);
+      expect(await host.lightMode()).toBe(false);
+      expect(reopened).toBe(0);
+      await act(async () => finish());
+      await until(() => !sw.disabled);
+      expect(await host.lightMode()).toBe(true);
+      expect(sw.getAttribute("aria-checked")).toBe("true");
+      const toast = document.querySelector(".dk-toast") as HTMLElement;
+      expect(toast.textContent).toContain("Takes effect when the app reopens.");
+      await act(async () => buttonIn(toast, "Reopen now")?.click());
+      expect(reopened).toBe(1);
+    }));
+
+  test("a failed save retains the previous choice and does not offer a reopen", () =>
+    pane("windows", <General />, ready, async (el, host) => {
+      host.setLightMode = async () => {
+        throw new Error("disk full");
+      };
+      const sw = el.querySelector<HTMLButtonElement>("#light-mode") as HTMLButtonElement;
+      await act(async () => sw.click());
+      await until(() => !sw.disabled);
+      expect(sw.getAttribute("aria-checked")).toBe("false");
+      expect(await host.lightMode()).toBe(false);
+      expect(document.querySelector(".dk-toast")?.textContent).not.toContain("Reopen now");
+    }));
+
+  test("reads a saved choice when Preferences opens and can turn it off", () =>
+    pane(
+      "windows",
+      <General />,
+      ready,
+      async (el, host) => {
+        const sw = el.querySelector<HTMLButtonElement>("#light-mode") as HTMLButtonElement;
+        expect(sw.getAttribute("aria-checked")).toBe("true");
+        await act(async () => sw.click());
+        await until(() => !sw.disabled);
+        expect(sw.getAttribute("aria-checked")).toBe("false");
+        expect(await host.lightMode()).toBe(false);
+      },
+      {
+        host: (host) => {
+          void host.setLightMode(true);
+        },
+      },
+    ));
+
+  test("asks before reopening while agents use this computer", () =>
+    pane(
+      "selfhost",
+      <General />,
+      (el) => row(el, "Name") && ready(el),
+      async (el, host) => {
+        let reopened = 0;
+        host.reopen = async () => {
+          reopened++;
+        };
+        await act(async () => el.querySelector<HTMLButtonElement>("#light-mode")?.click());
+        await until(() => buttonIn(toast() as HTMLElement, "Reopen now"));
+        await act(async () => buttonIn(toast() as HTMLElement, "Reopen now")?.click());
+        await until(() => document.querySelector('[role="dialog"]'));
+        const dialog = document.querySelector('[role="dialog"]') as HTMLElement;
+        expect(dialog.textContent).toContain("Agents can't use this computer until the app opens again.");
+        expect(reopened).toBe(0);
+        await act(async () => buttonIn(dialog, "Cancel")?.click());
+        expect(reopened).toBe(0);
+        expect(await host.lightMode()).toBe(true);
+      },
+      { host: (host) => Object.assign(host, { platform: "windows" }) },
+    ));
+
+  test("leaves the switch disabled when the saved setting cannot be read", () =>
+    pane(
+      "windows",
+      <General />,
+      () => toast(),
+      (el) => {
+        expect(el.querySelector<HTMLButtonElement>("#light-mode")?.disabled).toBe(true);
+        expect(buttonIn(toast() as HTMLElement, "Reopen now")).toBeUndefined();
+      },
+      {
+        host: (host) => {
+          host.lightMode = async () => {
+            throw new Error("unavailable");
+          };
+        },
+      },
+    ));
+
+  test("does not expose the Windows setting on other systems", async () => {
+    for (const scenario of ["selfhost", "linux"] as const) {
+      await pane(
+        scenario,
+        <General />,
+        (el) => row(el, "Language"),
+        (el) => {
+          expect(el.querySelector("#light-mode")).toBeNull();
+        },
+      );
+    }
+  });
+});

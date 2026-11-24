@@ -90,6 +90,8 @@ export function createTauriHost(): Host {
     hideWindow: (w) => invoke<void>("hide_window", { name: w }),
     quit: () => invoke<void>("quit_app"),
     appInfo: () => invoke<AppInfo>("app_info"),
+    lightMode: () => invoke<boolean>("light_mode_get"),
+    setLightMode: (on) => invoke<void>("light_mode_set", { on }),
     compatMode: () => invoke<CompatMode>("compat_get"),
     setCompatMode: (on) => invoke<void>("compat_set", { on }),
     reopen: () => invoke<void>("app_reopen"),

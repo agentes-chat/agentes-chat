@@ -22,6 +22,8 @@ const COMMANDS: &[&str] = &[
     "quit_app",
     "app_info",
     "app_reopen",
+    "light_mode_get",
+    "light_mode_set",
     "compat_get",
     "compat_set",
     "autostart_get",

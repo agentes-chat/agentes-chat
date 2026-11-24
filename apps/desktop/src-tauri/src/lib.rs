@@ -17,6 +17,7 @@ mod graphics;
 mod health;
 mod host_sync;
 mod local_server;
+mod light_mode;
 mod main_window;
 mod menus;
 mod notch;
@@ -673,6 +674,8 @@ pub fn run() {
             quit_app,
             app_info,
             app_reopen,
+            light_mode::light_mode_get,
+            light_mode::light_mode_set,
             graphics::compat_get,
             graphics::compat_set,
             autostart_get,
@@ -804,8 +807,10 @@ pub fn run() {
         }
         let _ = webview.reload();
     });
+    let mut context = tauri::generate_context!();
+    light_mode::configure(context.config_mut());
     let app = builder
-        .build(tauri::generate_context!())
+        .build(context)
         .expect("error while building agentes.chat");
 
     app.run(|app, event| match event {
