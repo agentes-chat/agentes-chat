@@ -13355,6 +13355,11 @@
         "1": "Melihat tagihan dan pelanggan",
         "2": "Membuat tagihan Pix"
       },
+      "acainfe": {
+        "1": "Melihat perusahaan, produk, penjualan, dan faktur",
+        "2": "Menerbitkan dan mengirim faktur, serta mendaftarkan pelanggan dan produk",
+        "ask": "Membatalkan faktur dan mengembalikan dana penjualan selalu meminta persetujuanmu"
+      },
       "instagram": {
         "1": "Melihat postingan, story, dan statistik",
         "2": "Memublikasikan postingan dan membaca pesan langsung",
@@ -13550,6 +13555,7 @@
       "superwall": "Paywall, kampanye, dan eksperimen.",
       "paddle": "Pelanggan, langganan, transaksi, dan produk.",
       "abacatepay": "Tagihan Pix, pelanggan, dan penarikan dana.",
+      "acainfe": "Faktur jasa Brasil (NFS-e): perusahaan, produk, pelanggan, penjualan, dan faktur.",
       "instagram": "Akun bisnis dan kreator Instagram: postingan, story, statistik, dan pesan langsung.",
       "facebook": "Halaman Facebook: postingan, foto, video, komentar, dan statistik.",
       "linkedin": "Postingan, video, dan komentar LinkedIn atas nama anggota yang masuk.",

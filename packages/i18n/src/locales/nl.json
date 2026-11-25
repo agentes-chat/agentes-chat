@@ -13906,6 +13906,11 @@
         "1": "Betaalverzoeken en klanten bekijken",
         "2": "Pix-betaalverzoeken maken"
       },
+      "acainfe": {
+        "1": "Het bedrijf, de producten, de verkopen en de facturen bekijken",
+        "2": "Facturen uitgeven en versturen, en klanten en producten registreren",
+        "ask": "Facturen annuleren en verkopen terugbetalen vraagt altijd om jouw goedkeuring"
+      },
       "instagram": {
         "1": "Posts, verhalen en statistieken bekijken",
         "2": "Posts publiceren en directe berichten lezen",
@@ -14106,6 +14111,7 @@
       "superwall": "Paywalls, campagnes en experimenten.",
       "paddle": "Klanten, abonnementen, transacties en producten.",
       "abacatepay": "Pix-betaalverzoeken, klanten en opnames.",
+      "acainfe": "Braziliaanse dienstenfacturen (NFS-e): bedrijf, producten, klanten, verkopen en facturen.",
       "instagram": "Zakelijke en creator-accounts op Instagram: posts, verhalen, statistieken en directe berichten.",
       "facebook": "Facebook-pagina's: posts, foto's, video's, reacties en statistieken.",
       "linkedin": "LinkedIn-posts, video's en reacties namens het lid dat inlogt.",

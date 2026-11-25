@@ -14263,6 +14263,11 @@
         "1": "Ver cobros y clientes",
         "2": "Crear cobros con Pix"
       },
+      "acainfe": {
+        "1": "Ver la empresa, los productos, las ventas y las facturas",
+        "2": "Emitir y enviar facturas, y registrar clientes y productos",
+        "ask": "Cancelar facturas y reembolsar ventas siempre pide tu aprobación"
+      },
       "instagram": {
         "1": "Ver publicaciones, historias y estadísticas",
         "2": "Publicar contenido y leer mensajes directos",
@@ -14468,6 +14473,7 @@
       "superwall": "Paywalls, campañas y experimentos.",
       "paddle": "Clientes, suscripciones, transacciones y productos.",
       "abacatepay": "Cobros con Pix, clientes y retiros.",
+      "acainfe": "Facturas de servicios de Brasil (NFS-e): empresa, productos, clientes, ventas y facturas.",
       "instagram": "Cuentas de empresa y de creador de Instagram: publicaciones, historias, estadísticas y mensajes directos.",
       "facebook": "Páginas de Facebook: publicaciones, fotos, videos, comentarios y estadísticas.",
       "linkedin": "Publicaciones, videos y comentarios en LinkedIn en nombre de quien se conecta.",

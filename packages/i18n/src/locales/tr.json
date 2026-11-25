@@ -13768,6 +13768,11 @@
         "1": "Tahsilatları ve müşterileri görür",
         "2": "Pix tahsilatı oluşturur"
       },
+      "acainfe": {
+        "1": "Şirketi, ürünleri, satışları ve faturaları görür",
+        "2": "Fatura keser ve gönderir, müşteri ve ürün kaydeder",
+        "ask": "Fatura iptali ve satış iadesi her zaman onayınızı ister"
+      },
       "instagram": {
         "1": "Gönderileri, hikayeleri ve istatistikleri görür",
         "2": "Gönderi yayınlar ve direkt mesajları okur",
@@ -13968,6 +13973,7 @@
       "superwall": "Ödeme duvarları, kampanyalar ve deneyler.",
       "paddle": "Müşteriler, abonelikler, işlemler ve ürünler.",
       "abacatepay": "Pix tahsilatları, müşteriler ve para çekme işlemleri.",
+      "acainfe": "Brezilya hizmet faturaları (NFS-e): şirket, ürünler, müşteriler, satışlar ve faturalar.",
       "instagram": "Instagram işletme ve içerik üreticisi hesapları: gönderiler, hikayeler, istatistikler ve direkt mesajlar.",
       "facebook": "Facebook Sayfaları: gönderiler, fotoğraflar, videolar, yorumlar ve istatistikler.",
       "linkedin": "Giriş yapan üye adına LinkedIn gönderileri, videoları ve yorumları.",

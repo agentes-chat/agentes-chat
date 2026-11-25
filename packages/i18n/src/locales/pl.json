@@ -14847,6 +14847,11 @@
         "1": "Podgląd obciążeń i klientów",
         "2": "Tworzenie płatności Pix"
       },
+      "acainfe": {
+        "1": "Podgląd firmy, produktów, sprzedaży i faktur",
+        "2": "Wystawianie i wysyłanie faktur oraz rejestrowanie klientów i produktów",
+        "ask": "Anulowanie faktur i zwroty za sprzedaż zawsze proszą o twoje zatwierdzenie"
+      },
       "instagram": {
         "1": "Podgląd postów, relacji i statystyk",
         "2": "Publikowanie postów i czytanie wiadomości prywatnych",
@@ -15057,6 +15062,7 @@
       "superwall": "Paywalle, kampanie i eksperymenty.",
       "paddle": "Klienci, subskrypcje, transakcje i produkty.",
       "abacatepay": "Płatności Pix, klienci i wypłaty.",
+      "acainfe": "Brazylijskie faktury za usługi (NFS-e): firma, produkty, klienci, sprzedaż i faktury.",
       "instagram": "Konta firmowe i twórców na Instagramie: posty, relacje, statystyki i wiadomości prywatne.",
       "facebook": "Strony na Facebooku: posty, zdjęcia, filmy, komentarze i statystyki.",
       "linkedin": "Posty, filmy i komentarze na LinkedIn w imieniu zalogowanego członka.",

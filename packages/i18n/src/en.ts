@@ -14249,6 +14249,11 @@ export const en = {
       superwall: { "1": "See paywalls and results", "2": "Create and adjust campaigns" },
       paddle: { "1": "See customers, subscriptions and transactions", "2": "Create products and prices" },
       abacatepay: { "1": "See charges and customers", "2": "Create Pix charges" },
+      acainfe: {
+        "1": "See the company, products, sales and invoices",
+        "2": "Issue and send invoices, and register customers and products",
+        ask: "Cancelling invoices and refunding sales always asks for your approval",
+      },
       instagram: {
         "1": "See posts, stories and insights",
         "2": "Publish posts and read direct messages",
@@ -14452,6 +14457,7 @@ export const en = {
       superwall: "Paywalls, campaigns and experiments.",
       paddle: "Customers, subscriptions, transactions and products.",
       abacatepay: "Pix charges, customers and withdrawals.",
+      acainfe: "Brazilian service invoices (NFS-e): companies, products, customers, sales and invoices.",
       instagram: "Instagram business and creator accounts: posts, stories, insights and direct messages.",
       facebook: "Facebook Pages: posts, photos, videos, comments and insights.",
       linkedin: "LinkedIn posts, videos and comments as the member who signs in.",

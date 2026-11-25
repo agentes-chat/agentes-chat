@@ -14251,6 +14251,11 @@ export const ptBR = {
       superwall: { "1": "Ver paywalls e resultados", "2": "Criar e ajustar campanhas" },
       paddle: { "1": "Ver clientes, assinaturas e transações", "2": "Criar produtos e preços" },
       abacatepay: { "1": "Ver cobranças e clientes", "2": "Criar cobranças Pix" },
+      acainfe: {
+        "1": "Ver a empresa, os produtos, as vendas e as notas",
+        "2": "Emitir e enviar notas e cadastrar clientes e produtos",
+        ask: "Cancelar notas e estornar vendas sempre pede sua aprovação",
+      },
       instagram: {
         "1": "Ver posts, stories e métricas",
         "2": "Publicar posts e ler mensagens do Direct",
@@ -14450,6 +14455,7 @@ export const ptBR = {
       superwall: "Paywalls, campanhas e experimentos.",
       paddle: "Clientes, assinaturas, transações e produtos.",
       abacatepay: "Cobranças Pix, clientes e saques.",
+      acainfe: "Notas fiscais de serviço (NFS-e): empresa, produtos, clientes, vendas e notas.",
       instagram: "Contas comerciais e de criador do Instagram: posts, stories, métricas e mensagens do Direct.",
       facebook: "Páginas do Facebook: posts, fotos, vídeos, comentários e métricas.",
       linkedin: "Posts, vídeos e comentários no LinkedIn em nome de quem conecta.",
