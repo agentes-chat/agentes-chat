@@ -3513,6 +3513,8 @@ export const featureKeysEn = {
       key: "API key",
       keyDefault: "workspace default",
       api: "API",
+      /** Before a pick takes a login another agent thinks with: `agent` is that agent. */
+      asksMove: "{{agent}} stops using it.",
     },
     /** A mission's AI, on its screen. */
     missionAi: "AI",

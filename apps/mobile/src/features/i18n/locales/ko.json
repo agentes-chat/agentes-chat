@@ -3114,7 +3114,8 @@
       "workspaceSub": "워크스페이스 API 키",
       "key": "API 키",
       "keyDefault": "워크스페이스 기본값",
-      "api": "API"
+      "api": "API",
+      "asksMove": "{{agent}}은(는) 이 계정을 더 이상 쓰지 않아요."
     },
     "missionAi": "AI",
     "missionLocked": "작업할 주체는 시작 전에 고릅니다. 모델은 언제든 바꿀 수 있어요."

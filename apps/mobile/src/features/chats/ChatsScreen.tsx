@@ -34,6 +34,7 @@ import { useOpenDm } from "../new/useOpenDm";
 import { OutageNotices } from "../outages/OutageNotice";
 import { useMachineOutages } from "../outages/queries";
 import { RightHandAsk } from "../right-hand/Pin";
+import { teamArrivals } from "../right-hand/team-arrivals";
 import { FirstUse } from "../shared/FirstUse";
 import { useDirectory, useMeId, useOrgId, usePullRefresh } from "../shared/hooks";
 import { pickOne } from "../shared/PickerSheet";
@@ -173,6 +174,13 @@ function Home() {
   const focused = useIsFocused();
   // What the person chose to open when the app starts goes over Conversas, once (ADR 0108).
   useOpenStart(focused);
+  // A team just made from Lodi's card: its conversations come in once, the next time Conversas shows.
+  const [fresh, setFresh] = useState<ReadonlySet<string>>(() => new Set());
+  useEffect(() => {
+    if (!focused) return;
+    const keys = teamArrivals.takeFresh();
+    if (keys.size > 0) setFresh(keys);
+  }, [focused]);
   const tabHeader = useTabHeader();
   const dir = useDirectory();
   // A team's Conversas lists its conversations by latest activity or by sector: the choice is a glass button beside
@@ -432,7 +440,13 @@ function Home() {
                 ? sectors.map((section) => {
                     const closed = sectorsFold.collapsed.includes(section.key);
                     const rowOf = (r: ConversationRow, i: number, kept = false) => (
-                      <LandRow key={r.key} land={load.landing} index={2 + i} moves={section.rows.length <= MOVING_ROWS}>
+                      <LandRow
+                        key={r.key}
+                        land={load.landing}
+                        fresh={fresh.has(r.key)}
+                        index={2 + i}
+                        moves={section.rows.length <= MOVING_ROWS}
+                      >
                         {/* A sector's channels follow its agents under a hairline from edge to edge (ADR 0240). */}
                         {!kept && i > 0 && i === section.channelsFrom ? <SectorLine /> : null}
                         <HomeRow
@@ -503,7 +517,7 @@ function Home() {
                       // Swiped left: Fixar no topo (or Tirar do topo) and a channel's Silenciar; held: the menu
                       // (`HomeRow`). The row's key is on the box that travels: a conversation that goes to the top with
                       // a new message moves there, and the ones it passes move down.
-                      <LandRow key={r.key} land={load.landing} index={2 + i} moves>
+                      <LandRow key={r.key} land={load.landing} fresh={fresh.has(r.key)} index={2 + i} moves>
                         <HomeRow
                           row={r}
                           facts={factsOf(r, agentStates.get(r.key))}

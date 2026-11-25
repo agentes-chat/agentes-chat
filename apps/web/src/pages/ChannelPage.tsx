@@ -336,7 +336,7 @@ import { ArrivalCard, useArrival } from "@/components/invite/Arrival";
 import { InviteOfferRow, useInviteDialog, useInviteOffer } from "@/components/invite/InviteDialog";
 import { useLeaveChannelWithUndo } from "@/components/LeaveChannelDialog";
 import { useUploadFailed } from "@/components/Limits";
-import { LiveCodeToggle } from "@/components/LiveCode";
+import { CodePanel, lastCodeCall } from "@/components/LiveCode";
 import { ErrorState, LoadingConversation } from "@/components/Loading";
 import { ResolveButton, ResolvedLine } from "@/components/live/media/ResolveBits";
 import { ChatCommentsLine } from "@/components/live/media/ViewerBits";
@@ -1920,13 +1920,10 @@ function ChannelView({
     }
   }, [lastKey, slotsKey]);
 
-  // Which agents' blocks are on screen: the line above the composer speaks only for those out of view.
-  // By run: a "pensando…" hands its block (same key) to the real run, and that run must count as in view.
-  // A block's row draws only once it has something to show (`RunBlock`, `rowShows`): then it is measured again.
+  // A block's row draws only once it has something to show (`RunBlock`, `rowShows`): then what is on screen is measured
+  // again.
   const [rowsDrawn, setRowsDrawn] = useState(0);
   const rowDrawn = useCallback(() => setRowsDrawn((n) => n + 1), []);
-  const inView = useBlocksInView(scroller, `${slots.map((x) => x.runId).join(" ")} ${rowsDrawn}`);
-  const outOfView = useMemo(() => (runId: string) => !inView.has(runId), [inView]);
   // Hand-offs whose line under the reply that handed them is on screen (`HandedWorkLine`): the bar leaves those out.
   const handoffsKey = timeline
     .flatMap((i) => (i.kind === "message" ? (i.message.handedWorks ?? []).map((w) => w.id) : []))
@@ -3053,7 +3050,6 @@ function ChannelView({
                             channelId={channel.id}
                             threadId={thread?.id ?? null}
                             visible={runVisible}
-                            outOfView={outOfView}
                             asks={asksOut}
                             pendingAsks={pendingAsks}
                             onSeeAsk={seeAsk}
@@ -4243,10 +4239,9 @@ function useWorkHere({ channelId, threadId, visible, pendingAsks, consultBlocks,
 /**
  * The bar right above the composer: what waits on the reader (a request out of view, what waits on them here with no
  * card loaded) and, while nobody works, the soonest return (ADR 0037 addendum). Who works and what they do is the
- * conversation's last row (`WorkingTail`), as a reply on its way; agents running code keep "Ver código" here.
+ * conversation's last row (`WorkingTail`), as a reply on its way, with the code it runs.
  */
 function ActivityBar({
-  outOfView,
   asks,
   onSeeAsk,
   waiting,
@@ -4254,8 +4249,6 @@ function ActivityBar({
   member,
   ...here
 }: WorkHere & {
-  /** The run's block is not on screen. */
-  outOfView: (runId: string) => boolean;
   /** Requests waiting for the viewer out of view: the bar says the first one. */
   asks: PendingAsk[];
   /** "Ver" on a request: scrolls to it and lights it up. */
@@ -4273,12 +4266,7 @@ function ActivityBar({
   const { channelId, threadId } = here;
   // The returns agents set here (a thread's own, else the main timeline's): the bar holds them while nobody works.
   const returns = returnsHere(useFollowUps(org.id, channelId).data, threadId);
-  const { runs, entries } = useWorkHere(here);
-  // Agents running code: "Ver código" with the live code and output.
-  const coding = runs.filter(
-    (r) =>
-      (waitsForWords(r) || outOfView(r.runId)) && r.code && (r.work ?? []).some((w) => w.kind === "call" && w.running),
-  );
+  const { entries } = useWorkHere(here);
   // A request waiting for you, out of view: the bar says that instead (waiting beats working).
   const ask = asks[0];
   const askName = ask ? (dir.anyAgent(ask.agentId)?.name ?? t("channel.unknownAgent")) : "";
@@ -4287,72 +4275,58 @@ function ActivityBar({
   // Nobody at work and nothing waiting on the reader: the soonest return rests in the same box (ADR 0037 addendum).
   const rest = !ask && !away && entries.length === 0 && returns.length > 0;
   return (
-    <>
-      {coding.map((r) =>
-        r.code ? (
-          <LiveCodeToggle
-            key={r.runId}
-            name={dir.agentById.get(r.agentId)?.name ?? t("channel.unknownAgent")}
-            code={r.code}
-            output={r.output ?? []}
-          />
-        ) : null,
+    <div
+      className="ac-typing"
+      aria-live="polite"
+      data-active={Boolean(ask) || Boolean(away)}
+      data-rest={rest || undefined}
+      data-ask={ask || away ? true : undefined}
+    >
+      {ask && (
+        <>
+          <span className="ac-typing__avatars" aria-hidden="true">
+            <span className="ac-typing__tok">
+              <AgentAvatar agentId={ask.agentId} size="xs" name={askName} state="waiting" />
+            </span>
+          </span>
+          <WaitMark />
+          <span className="ac-typing__text">
+            {/* What it asks is the agent's or a person's own text: shown as written, never read as markup. */}
+            <Trans
+              i18nKey={`ask.bar.${ask.kind}` as const}
+              values={{ name: askName, what: ask.what }}
+              components={{ b: <b /> }}
+              {...TYPED_VALUES}
+            />
+          </span>
+          {asks.length > 1 && <span className="ac-typing__more">{t("ask.bar.more", { count: asks.length - 1 })}</span>}
+          <span className="ac-typing__sep" aria-hidden="true" />
+          <button type="button" className="ac-typing__see" onClick={() => onSeeAsk(ask.id)}>
+            {t("ask.bar.see")}
+          </button>
+        </>
       )}
-      <div
-        className="ac-typing"
-        aria-live="polite"
-        data-active={Boolean(ask) || Boolean(away)}
-        data-rest={rest || undefined}
-        data-ask={ask || away ? true : undefined}
-      >
-        {ask && (
-          <>
+      {away && (
+        <>
+          {awayAgent && (
             <span className="ac-typing__avatars" aria-hidden="true">
               <span className="ac-typing__tok">
-                <AgentAvatar agentId={ask.agentId} size="xs" name={askName} state="waiting" />
+                <AgentAvatar agentId={awayAgent.id} size="xs" name={awayAgent.name} state="waiting" />
               </span>
             </span>
-            <WaitMark />
-            <span className="ac-typing__text">
-              {/* What it asks is the agent's or a person's own text: shown as written, never read as markup. */}
-              <Trans
-                i18nKey={`ask.bar.${ask.kind}` as const}
-                values={{ name: askName, what: ask.what }}
-                components={{ b: <b /> }}
-                {...TYPED_VALUES}
-              />
-            </span>
-            {asks.length > 1 && (
-              <span className="ac-typing__more">{t("ask.bar.more", { count: asks.length - 1 })}</span>
-            )}
-            <span className="ac-typing__sep" aria-hidden="true" />
-            <button type="button" className="ac-typing__see" onClick={() => onSeeAsk(ask.id)}>
-              {t("ask.bar.see")}
-            </button>
-          </>
-        )}
-        {away && (
-          <>
-            {awayAgent && (
-              <span className="ac-typing__avatars" aria-hidden="true">
-                <span className="ac-typing__tok">
-                  <AgentAvatar agentId={awayAgent.id} size="xs" name={awayAgent.name} state="waiting" />
-                </span>
-              </span>
-            )}
-            <WaitMark />
-            <span className="ac-typing__text">
-              <b>{t("ask.bar.here", { count: waiting.length })}</b>
-            </span>
-            <span className="ac-typing__sep" aria-hidden="true" />
-            <button type="button" className="ac-typing__see" onClick={() => onSeeWaiting(away)}>
-              {t("ask.bar.see")}
-            </button>
-          </>
-        )}
-        {rest && <ReturnLine returns={returns} channelId={channelId} canAnswer={member} />}
-      </div>
-    </>
+          )}
+          <WaitMark />
+          <span className="ac-typing__text">
+            <b>{t("ask.bar.here", { count: waiting.length })}</b>
+          </span>
+          <span className="ac-typing__sep" aria-hidden="true" />
+          <button type="button" className="ac-typing__see" onClick={() => onSeeWaiting(away)}>
+            {t("ask.bar.see")}
+          </button>
+        </>
+      )}
+      {rest && <ReturnLine returns={returns} channelId={channelId} canAnswer={member} />}
+    </div>
   );
 }
 
@@ -4392,6 +4366,11 @@ function WorkingTail({ onSeeAsk, ...here }: WorkHere & { onSeeAsk: (id: string) 
   // An agent working in its browser: the row says so, and a click opens its browser card in the conversation.
   const browsing = runs.find((r) => usesBrowser(r) && waitsForWords(r));
   const openBrowser = browsing ? () => requestBrowserCard({ agentId: browsing.agentId }) : undefined;
+  // Its last code and that code's output, from its first command until its reply: "See code" stays between two
+  // commands (and the code stays open, showing the last one), or the row would change under the pointer each time.
+  const code = solo && step !== null ? lastCodeCall(solo) : undefined;
+  const [codeOpenFor, setCodeOpenFor] = useState<string | null>(null);
+  const codeOpen = Boolean(code) && codeOpenFor === solo?.runId;
   if (entries.length === 0) return null;
   // The agent at work leads in the face's column, with its rings; the line's small faces are the others.
   const orbiting = lead && !lead.consult ? lead : undefined;
@@ -4441,6 +4420,19 @@ function WorkingTail({ onSeeAsk, ...here }: WorkHere & { onSeeAsk: (id: string) 
             </span>
             {/* Its time and its stop right after its words; who types beside it after them. */}
             {solo && step !== null && <RunTail run={solo} />}
+            {solo && code && (
+              <>
+                <span className="ac-typing__sep" aria-hidden="true" />
+                <button
+                  type="button"
+                  className="ac-typing__see"
+                  aria-expanded={codeOpen}
+                  onClick={() => setCodeOpenFor(codeOpen ? null : solo.runId)}
+                >
+                  {t(codeOpen ? "code.hide" : "code.see")}
+                </button>
+              </>
+            )}
             <ConsultClock entries={entries} now={now} />
             {consultTime && <span className="ac-typing__elapsed ac-num">{consultTime}</span>}
             {step !== null && <BarAlsoTyping entries={entries} />}
@@ -4483,6 +4475,11 @@ function WorkingTail({ onSeeAsk, ...here }: WorkHere & { onSeeAsk: (id: string) 
               <li key={l.key}>{l.text}</li>
             ))}
           </ol>
+        )}
+        {code && codeOpen && (
+          <div className="working-tail__code">
+            <CodePanel code={code.code} output={code.output} live={code.running} header={code.code.language} />
+          </div>
         )}
       </div>
     </div>
@@ -6023,7 +6020,6 @@ function AddToChannelOffer({ channelId, agentId, onDone }: { channelId: string; 
   const { org } = useOrg();
   const dir = useDirectory(org.id);
   const add = useAddChannelMember(org.id);
-  const toast = useToast();
   const name = dir.agentById.get(agentId)?.name ?? t("channel.unknownAgent");
   const admin = can(org, "manage_channels");
   return (
@@ -6037,12 +6033,8 @@ function AddToChannelOffer({ channelId, agentId, onDone }: { channelId: string; 
           onClick={() =>
             add.mutate(
               { channelId, member: { agentId } },
-              {
-                onSuccess: () => {
-                  toast.show(t("mentions.added", { name }));
-                  onDone();
-                },
-              },
+              // No toast: the conversation's own line says who joined, for everyone.
+              { onSuccess: onDone },
             )
           }
         >

@@ -1237,3 +1237,27 @@ describe("what the agent thinks with changes: its computer waits look again", ()
     expect(await wokenNow(fx, noTools)).toBe(true);
   });
 });
+
+describe("the key an agent on the API thinks with (the picker's Conta)", () => {
+  test("its own key; else its provider's, though nobody made it the default; none without one or on a plan", async () => {
+    const { fx, deps } = await world();
+    const keyId = async () => (await getAgentBrain(deps, fx.owner.id, fx.org.id, fx.agent.id)).keyId;
+    const agent = (patch: Partial<typeof schema.agents.$inferInsert>) =>
+      fx.db.update(schema.agents).set(patch).where(eq(schema.agents.id, fx.agent.id));
+    // The fixture's agent points at the workspace's only key, added without being made the default.
+    expect(await keyId()).toBe(fx.credential.id);
+    // With no key of its own its calls take its provider's all the same: the picker shows that one chosen.
+    await agent({ credentialId: null });
+    expect(await keyId()).toBe(fx.credential.id);
+    // On a plan it thinks with no key.
+    await agent({ brain: "claude_code" });
+    expect(await keyId()).toBeNull();
+    // With no live key, none (the server's own may serve).
+    await agent({ brain: "model" });
+    await fx.db
+      .update(schema.providerCredentials)
+      .set({ revokedAt: new Date() })
+      .where(eq(schema.providerCredentials.id, fx.credential.id));
+    expect(await keyId()).toBeNull();
+  });
+});

@@ -4,6 +4,7 @@ import type { FakeReply } from "@agenteschat/providers/testing";
 import {
   type Agent,
   addChannelMember,
+  CHANNEL_JOINED_JOB,
   createAgent,
   createChannel,
   createJobHandlers,
@@ -265,6 +266,8 @@ export async function world(options: WorldOptions) {
       await addChannelMember(f.db, f.owner.id, f.org.id, channelId, { agentId: agent.id });
     for (const [name, p] of Object.entries(people))
       if (name !== "ana") await addChannelMember(f.db, f.owner.id, f.org.id, channelId, { userId: p.id });
+    // The scenario starts with everyone in the room: their joins aren't news.
+    await f.db.delete(schema.outbox).where(eq(schema.outbox.kind, CHANNEL_JOINED_JOB));
   }
 
   // The router's step, from the scenario's table (by body; a burst of messages is one body per line).

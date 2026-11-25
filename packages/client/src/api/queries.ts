@@ -225,6 +225,7 @@ import type {
   SidebarSection,
   SidebarView,
   Skill,
+  SkillDraftInput,
   SkillInput,
   SkillPatch,
   SkillSettings,
@@ -1388,6 +1389,20 @@ export function useConfirmSetup(orgId: string, agentId: string) {
       );
       agentChanged(qc, orgId, agentId);
     },
+  });
+}
+
+/** Closes a new agent's checklist on its page (its ×): gone at once; a refusal brings it back as the list is read again. */
+export function useCloseSetup(orgId: string, agentId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.agents.closeSetup(orgId, agentId),
+    onMutate: () =>
+      qc.setQueryData<Agent[]>(keys.agents(orgId), (list) =>
+        list?.map((a) => (a.id === agentId && a.setup ? { ...a, setup: { ...a.setup, closed: true as const } } : a)),
+      ),
+    onSettled: () => agentChanged(qc, orgId, agentId),
   });
 }
 
@@ -6269,6 +6284,76 @@ export const useLearnedSkills = (orgId: string, agentId: string) => {
   });
 };
 
+/** The library's skills that would help an agent, from its last week (none on older servers). */
+export const useSkillSuggestions = (orgId: string, agentId: string, enabled = true) => {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.skillSuggestions(orgId, agentId),
+    queryFn: () => api.skills.suggestions?.(orgId, agentId) ?? Promise.resolve([]),
+    enabled,
+    retry: false,
+    staleTime: 10 * 60_000,
+  });
+};
+
+/** "Learns on its own" for an agent (on where the server doesn't say). */
+export const useAgentLearnsSkills = (orgId: string, agentId: string) => {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.agentLearnsSkills(orgId, agentId),
+    queryFn: () => api.skills.learns?.(orgId, agentId) ?? Promise.resolve(true),
+    retry: false,
+  });
+};
+
+export function useSetAgentLearnsSkills(orgId: string, agentId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (on: boolean) => api.skills.setLearns?.(orgId, agentId, on) ?? Promise.resolve(),
+    ...optimistic(qc, (on: boolean) => [edit<boolean>(keys.agentLearnsSkills(orgId, agentId), () => on)]),
+  });
+}
+
+/** "Teach something new": the skill written from the person's words, or the draft with a change. */
+export function useDraftSkill(orgId: string) {
+  const api = useApi();
+  return useMutation({
+    meta: { silent: true },
+    mutationFn: (input: SkillDraftInput) => {
+      if (!api.skills.draft) throw new Error("not supported");
+      return api.skills.draft(orgId, input);
+    },
+  });
+}
+
+/** Saves a written skill, on for the agents chosen. */
+export function useSaveDraftedSkill(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Parameters<NonNullable<ApiClient["skills"]["saveDraft"]>>[1]) => {
+      if (!api.skills.saveDraft) throw new Error("not supported");
+      return api.skills.saveDraft(orgId, input);
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: keys.skills(orgId) }),
+  });
+}
+
+/** "Ask for a change": the skill rewritten as the person says, a new version with undo. */
+export function useRewriteSkill(orgId: string, id: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    meta: { silent: true },
+    mutationFn: (words: string) => {
+      if (!api.skills.rewrite) throw new Error("not supported");
+      return api.skills.rewrite(orgId, id, words);
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: keys.skills(orgId) }),
+  });
+}
+
 /** Which agents use each skill (the API lists skills per agent): skillId → agents. */
 export function useSkillUsage(orgId: string, enabled: boolean) {
   const api = useApi();
@@ -6302,6 +6387,7 @@ type SkillChange =
       upload?: UploadOptions;
     }
   | { type: "importPicked"; url: string; paths: string[]; forAgentId?: string; personal?: boolean }
+  | { type: "importPickedZip"; zipBase64: string; paths: string[]; personal?: boolean; upload?: UploadOptions }
   | { type: "create"; input: SkillInput }
   | { type: "update"; id: string; patch: SkillPatch }
   | { type: "reimport"; id: string }
@@ -6324,6 +6410,8 @@ export function useSkillAction(orgId: string, { silent = false } = {}) {
           return api.skills.import(orgId, action.input, action.upload);
         case "importPicked":
           return api.skills.importPicked(orgId, action.url, action.paths, action.forAgentId, action.personal);
+        case "importPickedZip":
+          return api.skills.importPickedZip(orgId, action.zipBase64, action.paths, action.personal, action.upload);
         case "create":
           return api.skills.create(orgId, action.input);
         case "update":

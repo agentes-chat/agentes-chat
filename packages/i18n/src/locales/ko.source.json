@@ -5387,6 +5387,12 @@
   "shell.moreWhat.dashboards": {
     "value": "Numbers and charts the agents keep up to date"
   },
+  "shell.moreWhat.skills": {
+    "value": "What the team knows how to do, and teaching something new"
+  },
+  "shell.moreWhat.skillsPersonal": {
+    "value": "What your agents know how to do, and teaching something new"
+  },
   "shell.moreWhat.taskManager": {
     "value": "What each agent does now, and stop what you need"
   },
@@ -5720,6 +5726,9 @@
   "shell.dashboards": {
     "value": "Dashboards"
   },
+  "shell.skills": {
+    "value": "Skills"
+  },
   "shell.taskManager": {
     "value": "Task manager"
   },
@@ -6031,6 +6040,15 @@
   },
   "appsDownload.googlePlay": {
     "value": "Google Play"
+  },
+  "lodiCursor.skip": {
+    "value": "Skip"
+  },
+  "lodiCursor.inMenu": {
+    "value": {
+      "one": "{{count}} new in the menu",
+      "other": "{{count}} new in the menu"
+    }
   },
   "openOnPhone.qr": {
     "value": "QR code to sign in to the agentes app"
@@ -14503,6 +14521,9 @@
   "agentPage.work.brain.efforts.high": {
     "value": "High"
   },
+  "agentPage.work.brain.efforts.xhigh": {
+    "value": "Extra high"
+  },
   "agentPage.work.brain.efforts.max": {
     "value": "Maximum"
   },
@@ -14517,6 +14538,9 @@
   },
   "agentPage.work.brain.effortsLower.high": {
     "value": "high"
+  },
+  "agentPage.work.brain.effortsLower.xhigh": {
+    "value": "extra high"
   },
   "agentPage.work.brain.effortsLower.max": {
     "value": "maximum"
@@ -14538,6 +14562,9 @@
   },
   "agentPage.work.brain.effortText.high": {
     "value": "Thinks more on hard tasks. Slower and costs more."
+  },
+  "agentPage.work.brain.effortText.xhigh": {
+    "value": "Thinks longer than high on the hardest tasks. Slower and costs more again."
   },
   "agentPage.work.brain.effortText.max": {
     "value": "Thinks as much as possible. Much slower and pricier."
@@ -14991,6 +15018,12 @@
   },
   "agentPage.work.brain.v2.fullWait": {
     "value": "On this account {{name}} waits until the plan renews."
+  },
+  "agentPage.work.brain.v2.switchTo": {
+    "value": "Switch to {{label}}"
+  },
+  "agentPage.work.brain.v2.seeUsage": {
+    "value": "See usage"
   },
   "agentPage.work.brain.v2.modelTitle": {
     "value": "{{name}}'s model"
@@ -25702,6 +25735,12 @@
       "other": "This link holds {{count}} skills. Pick the ones to install."
     }
   },
+  "skills.pickLeadZip": {
+    "value": {
+      "one": "This .zip holds 1 skill. Check it to install.",
+      "other": "This .zip holds {{count}} skills. Pick the ones to install."
+    }
+  },
   "skills.pickAll": {
     "value": "All"
   },
@@ -25727,7 +25766,13 @@
     "value": "{{count}} skills installed."
   },
   "skills.zipHelp": {
-    "value": "A .zip of the skill's folder, up to {{max}} MB."
+    "value": "A .zip of a skill's folder, or of several, up to {{max}} MB."
+  },
+  "skills.zipManyHere": {
+    "value": {
+      "one": "This .zip holds 1 skill to pick. Install it from a computer, in Skills.",
+      "other": "This .zip holds {{count}} skills. To pick the ones to install, use a computer, in Skills."
+    }
   },
   "skills.zipAbout": {
     "value": "SKILL.md goes at the top of the .zip, or in its one folder. A skill keeps up to {{text}} MB of text and {{assets}} MB of images and other files."
@@ -26046,6 +26091,399 @@
   },
   "skills.manage": {
     "value": "Manage skills"
+  },
+  "skills.page.meta": {
+    "value": "What {{org}}'s team knows how to do."
+  },
+  "skills.page.metaFor": {
+    "value": "What {{name}} knows, and what the team can teach them."
+  },
+  "skills.page.for": {
+    "value": "For"
+  },
+  "skills.page.forEveryone": {
+    "value": "All agents"
+  },
+  "skills.page.teachNew": {
+    "value": "Teach something new"
+  },
+  "skills.page.fromLink": {
+    "value": "Bring from a GitHub link"
+  },
+  "skills.page.fromZip": {
+    "value": "Upload a .zip"
+  },
+  "skills.page.haveOne": {
+    "value": "Have a skill ready?"
+  },
+  "skills.page.fromLinkLower": {
+    "value": "Bring it from a GitHub link"
+  },
+  "skills.page.or": {
+    "value": "or"
+  },
+  "skills.page.fromZipLower": {
+    "value": "upload a .zip"
+  },
+  "skills.page.filters": {
+    "value": "Filter skills"
+  },
+  "skills.page.all": {
+    "value": "All"
+  },
+  "skills.page.learned": {
+    "value": "Learned by agents"
+  },
+  "skills.page.mine": {
+    "value": "Only mine"
+  },
+  "skills.page.colSkill": {
+    "value": "Skill"
+  },
+  "skills.page.colWho": {
+    "value": "Who knows it"
+  },
+  "skills.page.colWeek": {
+    "value": "This week"
+  },
+  "skills.page.noneHere": {
+    "value": "No skills here yet."
+  },
+  "skills.page.inRepo": {
+    "value": {
+      "one": "{{count}} skill",
+      "other": "{{count}} skills"
+    }
+  },
+  "skills.page.chooseVersion": {
+    "value": "Choose a version"
+  },
+  "skills.page.onlyYours": {
+    "value": "only yours"
+  },
+  "skills.page.learnedBy": {
+    "value": "learned by {{name}}"
+  },
+  "skills.page.knows": {
+    "value": "Knows it"
+  },
+  "skills.page.teach": {
+    "value": "Teach"
+  },
+  "skills.page.taught": {
+    "value": "{{name}} knows {{skill}} now."
+  },
+  "skills.teach.ask": {
+    "value": "What does the team need to know how to do?"
+  },
+  "skills.teach.askMine": {
+    "value": "What do your agents need to know how to do?"
+  },
+  "skills.teach.help": {
+    "value": "Explain it as you would to someone new on the team. {{name}} writes the skill."
+  },
+  "skills.teach.writer": {
+    "value": "Your right hand"
+  },
+  "skills.teach.placeholder": {
+    "value": "E.g.: every Monday, take the refund requests from the support inbox, check they're within 7 days and answer each customer."
+  },
+  "skills.teach.who": {
+    "value": "Who will know it"
+  },
+  "skills.teach.nobody": {
+    "value": "No agent yet"
+  },
+  "skills.teach.forTeam": {
+    "value": "The whole team"
+  },
+  "skills.teach.forMe": {
+    "value": "Just me"
+  },
+  "skills.teach.haveOne": {
+    "value": "Have one ready?"
+  },
+  "skills.teach.link": {
+    "value": "GitHub link"
+  },
+  "skills.teach.zip": {
+    "value": ".zip file"
+  },
+  "skills.teach.write": {
+    "value": "Write the skill"
+  },
+  "skills.teach.writing": {
+    "value": "{{name}} is writing…"
+  },
+  "skills.teach.wrote": {
+    "value": "Here's what I wrote. Check it before saving."
+  },
+  "skills.teach.adjust": {
+    "value": "Adjust"
+  },
+  "skills.teach.adjustPlaceholder": {
+    "value": "Say what to adjust. E.g.: in Spanish for customers in Chile"
+  },
+  "skills.teach.appsOk": {
+    "value": {
+      "one": "{{agents}} already uses {{apps}}.",
+      "other": "{{agents}} already use {{apps}}."
+    }
+  },
+  "skills.teach.appMissing": {
+    "value": {
+      "one": "{{agents}} doesn't use {{app}} yet.",
+      "other": "{{agents}} don't use {{app}} yet."
+    }
+  },
+  "skills.teach.giveAccess": {
+    "value": "Give access"
+  },
+  "skills.teach.save": {
+    "value": "Save"
+  },
+  "skills.teach.saveFor": {
+    "value": "Save and teach"
+  },
+  "skills.teach.saved": {
+    "value": {
+      "one": "{{skill}} is ready. {{agents}} knows it.",
+      "other": "{{skill}} is ready. {{agents}} know it."
+    }
+  },
+  "skills.teach.savedNobody": {
+    "value": "{{skill}} is ready. Teach it to an agent on its page."
+  },
+  "skills.one.how": {
+    "value": "How to do it"
+  },
+  "skills.one.teachOther": {
+    "value": "Teach another agent"
+  },
+  "skills.one.editText": {
+    "value": "Edit the text"
+  },
+  "skills.one.rename": {
+    "value": "Rename"
+  },
+  "skills.one.name": {
+    "value": "Name"
+  },
+  "skills.one.nameHelp": {
+    "value": "Leave it empty to go back to its own name, {{name}}."
+  },
+  "skills.one.readMore": {
+    "value": "See more"
+  },
+  "skills.one.download": {
+    "value": "Download .zip"
+  },
+  "skills.one.who": {
+    "value": "Who knows it"
+  },
+  "skills.one.nobody": {
+    "value": "No agent yet"
+  },
+  "skills.one.change": {
+    "value": "Change"
+  },
+  "skills.one.week": {
+    "value": "This week"
+  },
+  "skills.one.times": {
+    "value": {
+      "one": "{{count}} time",
+      "other": "{{count}} times"
+    }
+  },
+  "skills.one.notUsed": {
+    "value": "Not used yet"
+  },
+  "skills.one.lastChange": {
+    "value": "Last change"
+  },
+  "skills.one.byLink": {
+    "value": "From its link, {{when}}"
+  },
+  "skills.one.someone": {
+    "value": "Someone"
+  },
+  "skills.one.never": {
+    "value": "None yet"
+  },
+  "skills.one.from": {
+    "value": "Where it came from"
+  },
+  "skills.one.learnedBy": {
+    "value": "Learned by {{name}}, {{when}}"
+  },
+  "skills.one.fromLink": {
+    "value": "GitHub link"
+  },
+  "skills.one.fromLinkAuto": {
+    "value": "GitHub link, updates by itself"
+  },
+  "skills.one.fromZip": {
+    "value": ".zip file"
+  },
+  "skills.one.madeBy": {
+    "value": "Made by {{name}}, {{when}}"
+  },
+  "skills.one.madeHere": {
+    "value": "Made here"
+  },
+  "skills.one.alsoUses": {
+    "value": "Also uses"
+  },
+  "skills.one.ask": {
+    "value": "Ask for a change"
+  },
+  "skills.one.askPlaceholder": {
+    "value": "Say what to change. E.g.: add the sales by seller"
+  },
+  "skills.one.askSend": {
+    "value": "Ask"
+  },
+  "skills.one.askHelp": {
+    "value": {
+      "one": "{{agents}} rewrites it right away. You can undo it.",
+      "other": "{{agents}} rewrite it right away. You can undo it."
+    }
+  },
+  "skills.one.askHelpNobody": {
+    "value": "Your right hand rewrites it right away. You can undo it."
+  },
+  "skills.one.changed": {
+    "value": "{{name}} changed as you asked."
+  },
+  "skills.one.undone": {
+    "value": "{{name}} is back as it was."
+  },
+  "skills.one.lastTimes": {
+    "value": "Last times"
+  },
+  "skills.one.noUses": {
+    "value": "No agent has used it yet."
+  },
+  "skills.one.quoted": {
+    "value": "“{{words}}”"
+  },
+  "skills.one.openConversation": {
+    "value": "Open the conversation"
+  },
+  "skills.one.usedPrivately": {
+    "value": "In a conversation you don't see"
+  },
+  "skills.one.inChannel": {
+    "value": "{{agent}} in #{{channel}}"
+  },
+  "skills.one.inDm": {
+    "value": "{{name}} in a direct conversation"
+  },
+  "skills.one.inTask": {
+    "value": "{{name}} in a task"
+  },
+  "skills.one.somewhere": {
+    "value": "{{name}} in a conversation"
+  },
+  "skills.one.changes": {
+    "value": "Changes"
+  },
+  "skills.one.noChanges": {
+    "value": "Nothing changed yet."
+  },
+  "skills.one.goneTitle": {
+    "value": "This skill isn't here"
+  },
+  "skills.one.gone": {
+    "value": "It was removed, or it's someone else's personal skill."
+  },
+  "skills.one.event.created": {
+    "value": "{{name}} made it"
+  },
+  "skills.one.event.installed": {
+    "value": "{{name}} installed it"
+  },
+  "skills.one.event.edited": {
+    "value": "{{name}} edited the text"
+  },
+  "skills.one.event.rewritten": {
+    "value": "{{name}} asked for a change"
+  },
+  "skills.one.event.rewrittenWords": {
+    "value": "{{name}} asked: “{{words}}”"
+  },
+  "skills.one.event.link": {
+    "value": "Updated from its link"
+  },
+  "skills.one.event.agent": {
+    "value": "{{name}} improved it"
+  },
+  "skills.one.event.restored": {
+    "value": "{{name}} brought it back"
+  },
+  "skills.one.event.undone": {
+    "value": "{{name}} undid the last change"
+  },
+  "skills.agentTab.title": {
+    "value": "What {{name}} knows how to do"
+  },
+  "skills.agentTab.sub": {
+    "value": "It opens the right skill when the work calls for it."
+  },
+  "skills.agentTab.emptyTitle": {
+    "value": "{{name}} doesn't know any skill yet"
+  },
+  "skills.agentTab.empty": {
+    "value": "Teach it what the team already knows, or something new, in words."
+  },
+  "skills.agentTab.week": {
+    "value": {
+      "one": "{{count}} time this week",
+      "other": "{{count}} times this week"
+    }
+  },
+  "skills.agentTab.lastUsed": {
+    "value": "Used {{when}}"
+  },
+  "skills.agentTab.notYet": {
+    "value": "Not used yet"
+  },
+  "skills.agentTab.open": {
+    "value": "Open the skill"
+  },
+  "skills.agentTab.takeAway": {
+    "value": "Take away from {{name}}"
+  },
+  "skills.agentTab.removed": {
+    "value": "{{name}} doesn't know {{skill}} anymore."
+  },
+  "skills.agentTab.learnedHere": {
+    "value": "learned by it"
+  },
+  "skills.agentTab.couldLearn": {
+    "value": "Could learn"
+  },
+  "skills.agentTab.usedBy": {
+    "value": "{{name}} uses it"
+  },
+  "skills.agentTab.team": {
+    "value": "the team's"
+  },
+  "skills.agentTab.learns": {
+    "value": "Learns on its own"
+  },
+  "skills.agentTab.learnsHelp": {
+    "value": "When {{name}} does something the same way a few times, it keeps it as a skill and improves the ones it uses. It shows here, with Undo."
+  },
+  "skills.agentTab.madeMoved": {
+    "value": {
+      "one": "The skill {{name}} made is on the Skills tab.",
+      "other": "The {{count}} skills {{name}} made are on the Skills tab."
+    }
+  },
+  "skills.agentTab.seeSkills": {
+    "value": "See skills"
   },
   "edit.unsaved": {
     "value": "Unsaved changes"
@@ -28110,8 +28548,8 @@
       "other": "Ran {{count}} lines of {{language}} · output {{size}}"
     }
   },
-  "code.show": {
-    "value": "See {{name}}'s code"
+  "code.see": {
+    "value": "See code"
   },
   "code.hide": {
     "value": "Hide code"
@@ -39718,6 +40156,9 @@
   "errors.skill.tooManySkills": {
     "value": "This link holds more than {{max}} skills. Link one of its folders."
   },
+  "errors.skill.zipTooManySkills": {
+    "value": "This .zip holds more than {{max}} skills. Send them in parts."
+  },
   "errors.skill.invalidName": {
     "value": "The name must use lowercase letters, numbers and hyphens, up to {{max}} characters."
   },
@@ -39765,6 +40206,27 @@
   },
   "errors.skill.noPendingUpdate": {
     "value": "No update of this skill is waiting."
+  },
+  "errors.skill.pickedTwice": {
+    "value": "Two of the skills picked are named {{name}}. Pick only one of them."
+  },
+  "errors.skill.draftUnavailable": {
+    "value": "No AI model can write the skill right now. Try again in a moment."
+  },
+  "errors.skill.draftFailed": {
+    "value": "The skill couldn't be written. Try again."
+  },
+  "errors.skill.draftEmpty": {
+    "value": "Say how the work is done."
+  },
+  "errors.skill.changeEmpty": {
+    "value": "Say what to change."
+  },
+  "errors.skill.secret": {
+    "value": "This looks like a password or a key, and it can't go in a skill."
+  },
+  "errors.skill.permissions": {
+    "value": "A skill can't change permissions or approvals."
   },
   "errors.agentGroup.notFound": {
     "value": "This department no longer exists."
@@ -45825,6 +46287,15 @@
   "chat.consultPair.labelMany": {
     "value": "{{from}}'s talks with {{to}}"
   },
+  "chat.consultPair.askedHere": {
+    "value": "asked"
+  },
+  "chat.consultPair.forYou": {
+    "value": "for you"
+  },
+  "chat.consultPair.askedIn": {
+    "value": "in {{channel}}"
+  },
   "chat.consultPanel.label": {
     "value": "Conversation between {{from}} and {{to}}"
   },
@@ -45885,11 +46356,29 @@
   "chat.notice.agentNoteAnon": {
     "value": "Note from another agent"
   },
+  "chat.notice.handOff": {
+    "value": "{{from}} asked {{to}}"
+  },
   "chat.notice.waitResult": {
     "value": "What {{name}} was waiting for came in"
   },
   "chat.notice.other": {
     "value": "Notice for {{name}}"
+  },
+  "chat.notice.joined": {
+    "value": {
+      "one": "{{who}} joined the channel",
+      "other": "{{who}} joined the channel"
+    }
+  },
+  "chat.notice.joinedBy": {
+    "value": {
+      "one": "{{who}} joined the channel · added by {{by}}",
+      "other": "{{who}} joined the channel · added by {{by}}"
+    }
+  },
+  "chat.notice.left": {
+    "value": "{{who}} left the channel"
   },
   "chat.notice.wakeSkipped": {
     "value": "{{name}}'s mention didn't reach {{agents}}"
@@ -47664,7 +48153,7 @@
     "value": "Offer to connect an app or MCP"
   },
   "builtinTools.offer_connect_app.description": {
-    "value": "Posts a card whose button opens the dialog to connect an app or an MCP server by its address."
+    "value": "Posts a card whose button opens the dialog to connect an app or an MCP server: from the catalog by name, any other by its address."
   },
   "builtinTools.offer_invites.label": {
     "value": "Offer to invite people"

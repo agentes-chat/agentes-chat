@@ -3252,7 +3252,8 @@
       "workspaceSub": "Çalışma alanının API anahtarı",
       "key": "API anahtarı",
       "keyDefault": "çalışma alanı varsayılanı",
-      "api": "API"
+      "api": "API",
+      "asksMove": "{{agent}} artık bunu kullanmaz."
     },
     "missionAi": "Yapay zeka",
     "missionLocked": "İşi kimin yapacağı Başlat'tan önce seçilir. Model her zaman değiştirilebilir."

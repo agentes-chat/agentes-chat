@@ -32,8 +32,8 @@ export interface InlinePart {
 export interface EmailContact {
   email: string;
   /**
-   * Custom properties, merged into what the provider already has; null removes one. With a null the contact is only
-   * updated: one the provider doesn't have yet isn't created.
+   * Custom properties, merged into what the provider already has; null removes one. With a null the contact is
+   * updated first; one the provider doesn't have yet is created with the other properties, or not at all with none.
    */
   properties: Record<string, string | number | null>;
 }
@@ -122,7 +122,7 @@ export function createMillionSendSender(options: {
     },
     /**
      * `POST /contacts`; an existing contact (409) gets its properties merged with `PATCH /contacts/{email}`. A null
-     * goes only by `PATCH`, where it removes the key; a contact it doesn't find (404) has nothing to remove.
+     * goes only by `PATCH`, where it removes the key; a contact it doesn't find (404) is created with the rest.
      */
     async saveContact(contact) {
       const call = async (method: string, path: string, body: unknown) => {
@@ -143,7 +143,11 @@ export function createMillionSendSender(options: {
         ? await patch()
         : await call("POST", "/contacts", { email: contact.email, properties: contact.properties });
       if (res.status === 409) res = await patch();
-      if (removes && res.status === 404) return;
+      if (removes && res.status === 404) {
+        const kept = Object.fromEntries(Object.entries(contact.properties).filter(([, value]) => value !== null));
+        if (Object.keys(kept).length === 0) return;
+        res = await call("POST", "/contacts", { email: contact.email, properties: kept });
+      }
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { message?: string; name?: string };
         throw new EmailError(

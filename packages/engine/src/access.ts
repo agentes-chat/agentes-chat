@@ -313,7 +313,8 @@ export const BUILTIN_TOOL_INFO: Record<string, { label: string; description: str
   },
   offer_connect_app: {
     label: "Offer to connect an app or MCP",
-    description: "Posts a card whose button opens the dialog to connect an app or an MCP server by its address.",
+    description:
+      "Posts a card whose button opens the dialog to connect an app or an MCP server: from the catalog by name, any other by its address.",
   },
   offer_invites: {
     label: "Offer to invite people",

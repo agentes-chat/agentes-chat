@@ -3114,7 +3114,8 @@
       "workspaceSub": "工作区的 API 密钥",
       "key": "API 密钥",
       "keyDefault": "工作区默认",
-      "api": "API"
+      "api": "API",
+      "asksMove": "{{agent}} 将不再使用它。"
     },
     "missionAi": "AI",
     "missionLocked": "开始前选择由谁来做。模型随时可以更改。"

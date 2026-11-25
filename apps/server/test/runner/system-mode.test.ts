@@ -39,7 +39,9 @@ import {
   installSystemService,
   SYSTEM_UNIT_PATH,
   systemdSystemUnit,
+  systemdUnit,
   systemdVersion,
+  systemSliceMemoryPath,
 } from "../../runner/service";
 import { errorCode, removeDirs, tempDir } from "./helpers";
 
@@ -76,6 +78,10 @@ test("the system unit: root, from boot, a PATH root owns, and tasks outlive a re
   expect(unit).toContain("WantedBy=multi-user.target");
   // No User=: systemd runs a system unit as root.
   expect(unit).not.toContain("User=");
+  // Ahead of the agents (agents.slice: 50) for CPU, IO and memory, with nothing their scopes would inherit from it.
+  expect(unit).toContain("\nCPUWeight=1000\nIOWeight=1000\nMemoryMin=256M\n");
+  for (const inherited of ["Nice=", "IOSchedulingClass=", "OOMScoreAdjust="]) expect(unit).not.toContain(inherited);
+  expect(systemdUnit({ runtime: BUN, script: BUNDLE, home: "/home/ada/.agentes-runner" })).not.toContain("CPUWeight");
 });
 
 test("config: the mode and the agents' uid range are read and checked", () => {
@@ -285,8 +291,13 @@ test.if(posix)("service install --system: a system home, and it starts only when
     "MemoryMax=75%",
     "MemorySwapMax=2048M",
     "TasksMax=50%",
+    "CPUWeight=50",
+    "IOWeight=50",
     "",
   ]);
+  // The runner's memory protection holds only as far as its parent's does.
+  expect(systemSliceMemoryPath()).toBe("/etc/systemd/system/system.slice.d/agentes-runner.conf");
+  expect(readFileSync(systemSliceMemoryPath(unitPath), "utf8")).toBe("[Slice]\nMemoryMin=256M\n");
   // The swap caps follow the RAM the installer sees (rounded down to a MiB).
   expect(agentLimits(4 * 2 ** 30 + 5, false).all).toContain("\nMemorySwapMax=1024M\n");
   // Where their counters are read (memory.events).
@@ -366,13 +377,13 @@ test.if(posix)(
     expect(install({ args: ["host", "--server", "http://127.0.0.1:3000", "--token-file", `${h}/token`] })).toBe(0);
     expect(dropIns()).toEqual([
       "[Slice]\nCPUWeight=100\nTasksMax=4096\n",
-      "[Slice]\nMemoryMax=50%\nMemorySwapMax=682M\nTasksMax=50%\n",
+      "[Slice]\nMemoryMax=50%\nMemorySwapMax=682M\nTasksMax=50%\nCPUWeight=50\nIOWeight=50\n",
     ]);
     // The same computer for agents alone: theirs is more of it.
     expect(install()).toBe(0);
     expect(dropIns()).toEqual([
       "[Slice]\nCPUWeight=100\nTasksMax=4096\n",
-      "[Slice]\nMemoryMax=75%\nMemorySwapMax=1024M\nTasksMax=50%\n",
+      "[Slice]\nMemoryMax=75%\nMemorySwapMax=1024M\nTasksMax=50%\nCPUWeight=50\nIOWeight=50\n",
     ]);
   },
 );

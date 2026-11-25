@@ -579,6 +579,9 @@ export const AgentSetupChecklist = z
       .openapi({
         description: "The apps it was made to use (catalog connector ids) at their levels (ADR 0164).",
       }),
+    closed: z.literal(true).optional().openapi({
+      description: "Closed on its page: the page shows it no more, whatever is left; its chat keeps its own.",
+    }),
   })
   .openapi("AgentSetupChecklist");
 
@@ -1375,6 +1378,10 @@ export const AgentBrain = z
         description:
           "The workspace's live API keys, id and provider only: the providers its owner may move it onto (only admins list the keys).",
       }),
+    keyId: z.string().nullable().optional().openapi({
+      description:
+        "On the API: the workspace's key its calls take now (its own, else its provider's), shown chosen in the picker; null with none or on a plan.",
+    }),
   })
   .openapi("AgentBrain");
 

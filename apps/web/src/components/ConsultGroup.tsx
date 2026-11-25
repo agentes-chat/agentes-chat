@@ -3,6 +3,7 @@ import {
   type Message,
   type MessageConsultation,
   type RunConsultation,
+  useChannelName,
   useConsultationConversation,
   useConsultations,
 } from "@agenteschat/client";
@@ -25,10 +26,10 @@ import {
 import { consultSubject, consultTimeText, previewOf, withoutRelayLine } from "@agenteschat/client/lib/consultations";
 import { joinNames, namesText } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { cx, Icon, Tip } from "@agenteschat/ui";
+import { cx, Icon, Tip, useMorph } from "@agenteschat/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MessageBody } from "@/chat/MessageBody";
 import { AgentAvatar, withAgentFace } from "@/components/AgentAvatar";
@@ -170,7 +171,22 @@ export function useConsultById(channelId: string, id: string | undefined): RunCo
  * same row stands for an answer whose reply is farther up or not here, and for a hand-off by direct message on a
  * reach line.
  */
-export function ConsultPairRow({ askerId, items }: { askerId: string; items: readonly ConsultPairItem[] }) {
+export function ConsultPairRow({
+  askerId,
+  items,
+  handed = false,
+  askedIn = null,
+}: {
+  askerId: string;
+  items: readonly ConsultPairItem[];
+  /**
+   * Another agent's request in the DM of the agent it went to (`handOffOf`): "Atlas pediu à Ada por você" in place of
+   * ⇄, and nothing about its state until it ends (the agent's working line already says it).
+   */
+  handed?: boolean;
+  /** Handed: the channel where the person asked ("em #eng"). */
+  askedIn?: string | null;
+}) {
   const { t, i18n } = useTranslation();
   const { org } = useOrg();
   const dir = useDirectory(org.id);
@@ -178,6 +194,7 @@ export function ConsultPairRow({ askerId, items }: { askerId: string; items: rea
   const dialog = actions?.openConsultation;
   const openId = useOpenConsultation();
   const [open, setOpen] = useState(false);
+  const where = useChannelName(org.id, askedIn);
   const live = items.some((c) => c.status === "open");
   const now = useNow(live);
   // The consulted agent's card here waits on me: the row says so (amber) before the list hears the run park, and a
@@ -185,8 +202,9 @@ export function ConsultPairRow({ askerId, items }: { askerId: string; items: rea
   const asks = usePendingAsks();
   const only = items.length === 1 && items[0]?.status === "open" ? items[0] : undefined;
   const mine = only ? askOf(asks, only.consultedAgentId, only.consultedRunId) : null;
-  const pair = consultPair(items, now, askerId, mine?.on ?? null);
-  if (!pair) return null;
+  const found = consultPair(items, now, askerId, handed ? null : (mine?.on ?? null));
+  if (!found) return null;
+  const pair = handed && live ? { ...found, word: null, seconds: null, tone: null } : found;
   // An old reply's question with no id of its own has no conversation to open: it opens in place.
   const openConsultation = openableConsultation(pair.opens) ? dialog : undefined;
   const seeCard = mine && actions?.seeRequest ? () => actions.seeRequest?.(mine.ask.id) : undefined;
@@ -207,9 +225,13 @@ export function ConsultPairRow({ askerId, items }: { askerId: string; items: rea
       <Tip button look="ac-msg__tip tm-tip" tip={rowTip(title, question ? [question] : [])}>
         <button
           type="button"
-          className={cx("consult-pair__row", pair.tone && `consult-pair__row--${pair.tone}`)}
+          className={cx(
+            "consult-pair__row",
+            pair.tone && `consult-pair__row--${pair.tone}`,
+            handed && "consult-pair__row--handed",
+          )}
           aria-description={question || undefined}
-          {...(seeCard
+          {...(seeCard && !handed
             ? { onClick: seeCard }
             : openConsultation
               ? {
@@ -228,7 +250,11 @@ export function ConsultPairRow({ askerId, items }: { askerId: string; items: rea
               <AgentAvatar agentId={askerId} size="xs" name={from} state="idle" />
               <span className="consult-pair__name">{from}</span>
             </span>
-            {pair.tone === "you" ? (
+            {handed ? (
+              <span className="consult-pair__asked">
+                {t("chat.consultPair.askedHere", { context: agentGrammar(names[0] ?? "").context })}
+              </span>
+            ) : pair.tone === "you" ? (
               <span className="consult-pair__swap consult-pair__wait">
                 <WaitMark />
               </span>
@@ -250,6 +276,7 @@ export function ConsultPairRow({ askerId, items }: { askerId: string; items: rea
               </span>
               <span className="consult-pair__name">{names.length === 1 ? names[0] : namesText(t, names, 1)}</span>
             </span>
+            {handed && <span className="consult-pair__for">{t("chat.consultPair.forYou")}</span>}
           </span>
           {/* The subject carries its own ·: when it has no room left, the dot goes with it. */}
           {subject && (
@@ -260,8 +287,16 @@ export function ConsultPairRow({ askerId, items }: { askerId: string; items: rea
               {subject}
             </span>
           )}{" "}
+          {handed && where && (
+            <span className="consult-pair__where">
+              <span className="consult-pair__sep" aria-hidden="true">
+                ·
+              </span>
+              {t("chat.consultPair.askedIn", { channel: `#${where}` })}
+            </span>
+          )}{" "}
           {(pair.word || pair.seconds !== null) && (
-            <span className="consult-pair__sep" aria-hidden="true">
+            <span className="consult-pair__sep consult-pair__how" aria-hidden="true">
               ·
             </span>
           )}{" "}
@@ -301,8 +336,11 @@ function ConsultInPlace({
   const from = agentGrammar(dir.agentById.get(askedBy)?.name ?? t("channel.unknownAgent"));
   const to = agentGrammar(dir.agentById.get(c.consultedAgentId)?.name ?? t("channel.unknownAgent"));
   const state = consultLineState(c, now);
+  // Its answer arriving: the waiting line fades out over it as the box glides to the answer's height.
+  const box = useRef<HTMLDivElement>(null);
+  useMorph(box, { live: state !== "answered" });
   return (
-    <div className="ac-consult__body ac-consult__body--inline">
+    <div ref={box} className="ac-consult__body ac-consult__body--inline">
       <small>{withAgentFace(t(consultAskedKey(c), { name: from.name }), from.name, askedBy)}</small>
       <div className="ac-consult__text ac-consult__text--q">
         <MessageBody

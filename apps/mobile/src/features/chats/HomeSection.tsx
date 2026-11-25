@@ -74,11 +74,14 @@ const LAND_MS = 240;
  */
 export function LandRow({
   land = false,
+  fresh = false,
   index = 0,
   moves = false,
   children,
 }: {
   land?: boolean;
+  /** New since the person was last here (a team just made): it fades in once where it stands. */
+  fresh?: boolean;
   index?: number;
   moves?: boolean;
   children: ReactNode;
@@ -88,14 +91,20 @@ export function LandRow({
   const [arrives] = useState(land && !reduced);
   const [delay] = useState(Math.min(index, LAND_ROWS) * LAND_GAP);
   const shown = useSharedValue(arrives ? 0 : 1);
+  const comes = fresh && !reduced;
   useEffect(() => {
     if (!arrives) return;
     shown.set(withDelay(delay, withTiming(1, { duration: LAND_MS, easing: motion.easeOut })));
   }, [arrives, delay, shown]);
+  useEffect(() => {
+    if (!comes) return;
+    shown.set(0);
+    shown.set(withDelay(delay, withTiming(1, { duration: LAND_MS, easing: motion.easeOut })));
+  }, [comes, delay, shown]);
   const look = useAnimatedStyle(() => ({ opacity: shown.get() }));
   return (
     // Only a row that arrives carries a style; the rest stay plain views.
-    <Animated.View layout={moves && !reduced ? LIST_MOVE : undefined} style={arrives ? look : undefined}>
+    <Animated.View layout={moves && !reduced ? LIST_MOVE : undefined} style={arrives || comes ? look : undefined}>
       {children}
     </Animated.View>
   );

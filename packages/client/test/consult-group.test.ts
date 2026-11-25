@@ -21,6 +21,7 @@ import {
   firstOfRun,
   foldsNotice,
   groupsByRun,
+  handOffOf,
   pairItemOf,
   shownConsultations,
 } from "../src/lib/consult-group";
@@ -468,4 +469,51 @@ test("a row's time: its clock while it's out, how long it took once it's back, i
   const t = ((key: string, values: { time: string }) => `${key} ${values.time}`) as unknown as TFunction;
   expect(consultTimeText(t, "en", true, 42)).toBe("42 s");
   expect(consultTimeText(t, "en", false, 1446 * 60)).toBe("chat.consultPair.took 24 h");
+});
+
+describe("another agent's request in the DM of the agent it went to", () => {
+  const meta = (refs: Record<string, string>) => ({ notice: { kind: "hand_off", text: '"x"', from: "@atlas", refs } });
+  const refs = {
+    consultationId: "c1",
+    askerAgentId: "atlas",
+    agentId: "ada",
+    kind: "note",
+    question: "Relatório de vendas de outubro",
+    createdAt: "2026-11-14T13:35:00.000Z",
+  };
+
+  test("while it is out the row says no state; once it ends, how long it took", () => {
+    const open = handOffOf(meta({ ...refs, status: "open" }));
+    expect(open?.askerId).toBe("atlas");
+    const now = Date.parse("2026-11-14T13:40:00.000Z");
+    expect(
+      consultPair(
+        [open?.item].filter((i) => i !== undefined),
+        now,
+      )?.tone,
+    ).toBe("live");
+    const done = handOffOf(meta({ ...refs, status: "answered", answeredAt: "2026-11-14T13:38:00.000Z" }));
+    expect(
+      consultPair(
+        [done?.item].filter((i) => i !== undefined),
+        now,
+      ),
+    ).toMatchObject({
+      word: null,
+      tone: null,
+      seconds: 180,
+    });
+    const failed = handOffOf(meta({ ...refs, status: "failed", answeredAt: "2026-11-14T13:38:00.000Z" }));
+    expect(
+      consultPair(
+        [failed?.item].filter((i) => i !== undefined),
+        now,
+      )?.word?.key,
+    ).toBe("chat.consultPair.notFinished");
+  });
+
+  test("any other notice, or one missing who asked, is not one", () => {
+    expect(handOffOf(meta({ ...refs, askerAgentId: "" }))).toBeNull();
+    expect(handOffOf({ notice: { kind: "consult_reply", text: "x", refs } })).toBeNull();
+  });
 });

@@ -481,7 +481,7 @@ describe("the agent's AI", () => {
     ]);
     // One row per account (the one choice), its login for this agent picked when it has one of its own.
     expect(screen).toContain("const login = logins.find((a) => a.usedByIds?.includes(agentId)) ?? logins[0];");
-    expect(screen).toContain("if (login) choose(login);");
+    expect(screen).toContain("if (login) void choose(login);");
     // That account's email goes along as Claude's hint, on Claude's page only, whatever the agent's own login is.
     expect(screen).toContain("...(also && a?.email ? { email: a.email } : {}),");
     expect(sheet).toContain("{...(ask.email ? { email: ask.email } : {})}");
@@ -935,10 +935,16 @@ describe("the agent's AI", () => {
     expect(screen).toContain(
       "const done = (saved: AgentBrain) => accountSaved(t, i18n.language, name, a, input, saved);",
     );
-    // Said once the server answers, unless a newer pick of the same is on its way (its own toast speaks).
+    // Said once the server answers, unless a newer pick of the same is on its way (its own toast speaks), with
+    // Desfazer where the caller says what goes back.
     expect(save).toContain(
-      'if (newest(input)) toast({ title: typeof done === "string" ? done : done(saved), icon: "check" });',
+      'if (newest(input))\n        toast({\n          title: typeof done === "string" ? done : done(saved),',
     );
+    expect(save).toContain(
+      'onPress: () => void save(undo, t("agentPage.work.brain.v2.undone"), undefined, undefined, giveBack),',
+    );
+    // An account switch gives its Desfazer the account (and the model) it had.
+    expect(screen).toContain("account: view.account,");
   });
 
   test("a pick on the agent's AI shows on the tap, and only its own row waits for the server", async () => {
@@ -991,7 +997,10 @@ describe("the agent's AI", () => {
     expect(accountAt).toBeGreaterThan(0);
     expect(screen.indexOf('target={{ kind: "agent", agentId }}')).toBeGreaterThan(accountAt);
     expect(screen).toContain("const input = accountInput(view, a);");
-    expect(screen).toContain("save({ ...input, moveAccount: true }, done)");
+    // Another agent's login, or someone else's plan, asks first in a line under the list; its button takes it.
+    expect(screen).toContain("if (a && !asked && (others.length > 0 || lentTo(a) || full(a))) return setAsking(a);");
+    expect(screen).toContain("others.length > 0 ? { ...input, moveAccount: true } : input");
+    expect(screen).not.toContain("Alert.alert");
     expect(screen).toMatch(/model\?\.needs \? t\(`brain\.modelHow\.\$\{model\.needs\}`\)/);
     expect(screen).toContain("refused ? openConnectAi({ agentId, plan: refused }) : connect(current)");
     expect(screen).toContain('brain: ai === "key" ? r.label : thinksWith(t, ai, r.label),');
@@ -1552,4 +1561,62 @@ describe("the order of use at a limit (ADR 0041 §6)", () => {
     expect(advanced).toContain("toggle={shown.accountPinned}");
     expect(advanced).toContain("accountPinned: pending.accountPinned ?? now.accountPinned");
   });
+});
+
+test("the effort shows the levels the model takes: the ramp up to four, a list past that; the one choice saves with Desfazer and asks first inline", async () => {
+  const read = (file: string) => Bun.file(new URL(`../../src/features/ai/${file}`, import.meta.url).pathname).text();
+  const ramp = await read("EffortRamp.tsx");
+  expect(ramp).toContain("props.levels.length > RAMP_MAX ? <EffortPick {...shown} /> : <Ramp {...shown} />");
+  expect(ramp).toContain("value: props.value && shownEffort(props.value, props.levels)");
+  // A stored level above the model's shows as the one under it, and picking that one saves it.
+  expect(ramp).toContain("if (level !== props.value) props.onChange(level);");
+  expect(ramp).not.toContain("level !== value");
+  for (const file of ["AgentAiScreen.tsx", "AgentAdvancedScreen.tsx"])
+    expect(await read(file)).toContain("effortLevelsFor(");
+  const choice = await read("AiChoice.tsx");
+  expect(choice).toContain("state.efforts(active, isAuto(model?.value) ? null : (model?.value ?? null))");
+  expect(choice).toContain('label: t("agentPage.work.brain.v2.undo"),');
+  expect(choice).toContain("if (picked === null || picked === current.effort) return;");
+  expect(choice).toContain("if (!controlled && aiChoiceAsks(row, agentId)) return setAsking(row);");
+});
+
+test("Desfazer after taking a login from another agent gives it back to that agent; an account at its limit asks first", async () => {
+  const read = (file: string) => Bun.file(new URL(`../../src/features/ai/${file}`, import.meta.url).pathname).text();
+  const screen = await read("AgentAiScreen.tsx");
+  // What the agents losing it thought with is read before the move; the toast's Desfazer puts it back after this one.
+  expect(screen).toContain(
+    "a && others.length > 0 ? await giveBackLogin(api.agents, orgId, loginHolders(a, agentId)) : undefined;",
+  );
+  expect(screen).toMatch(
+    /\{ account: view\.account, \.\.\.\("model" in input \? \{ model: view\.model \} : \{\}\) \},\s*giveBack,/,
+  );
+  const hook = await read("useSaveBrain.ts");
+  expect(hook).toContain(
+    'onPress: () => void save(undo, t("agentPage.work.brain.v2.undone"), undefined, undefined, giveBack),',
+  );
+  // Given back once this agent let go of it, before "Desfeito" is said; a failure says it failed.
+  expect(hook.indexOf("await then?.();")).toBeGreaterThan(hook.indexOf("qc.setQueryData("));
+  expect(hook.indexOf("await then?.();")).toBeLessThan(hook.indexOf("if (newest(input))"));
+  // The other pickers (Lodi's) take it the same way.
+  const choice = await read("AiChoice.tsx");
+  expect(choice).toContain(
+    "const giveBack = await giveBackLogin(api.agents, orgId, loginHolders(row.account, agentId));",
+  );
+  expect(choice).toMatch(/\.save\(before\)\s*\.then\(\(\) => giveBack\?\.\(\)\)\s*\.then\(\(\) => toast\(/);
+  // Its button goes at once: a second tap while the agents losing it are read doesn't take it twice.
+  const take = choice.slice(choice.indexOf("const take = async (row: AiChoiceRow, moves: boolean) => {"));
+  expect(take.indexOf("setAsking(null);")).toBeGreaterThan(-1);
+  expect(take.indexOf("setAsking(null);")).toBeLessThan(take.indexOf("await giveBackLogin("));
+  // At its limit the agent would wait there: it asks, as the web's Quem pensa, with the usage a tap away.
+  expect(screen).toContain(
+    'const full = (a: MachineAccount) => a.usage != null && planState(a.usage).state === "limited";',
+  );
+  expect(screen).toContain('full(asking) ? t("agentPage.work.brain.v2.fullWait", g) : null,');
+  expect(screen).toContain('icon={lentTo(asking) ? "mail" : full(asking) ? "clock" : "info"}');
+  expect(screen).toContain(
+    'link: { label: t("agentPage.work.brain.v2.seeUsage"), onPress: () => router.push("/usage" as never) }',
+  );
+  expect(choice).toContain(
+    '<Text variant="small" accessibilityRole="link" style={styles.link} onPress={link.onPress}>',
+  );
 });

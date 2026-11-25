@@ -350,7 +350,7 @@ const NOTICE_ICON: Record<string, EventLineView["icon"]> = {
 
 export function eventLineOf(
   m: Pick<Message, "body" | "meta">,
-  names: { author: string; agentByHandle: (handle: string) => string | null },
+  names: Parameters<typeof noticeView>[1],
 ): EventLineView | null {
   const view = noticeView(m, names);
   const kind = noticeOf(m.meta)?.kind ?? "";

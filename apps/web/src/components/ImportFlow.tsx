@@ -38,6 +38,7 @@ import { failedOffline } from "@/chat/offline";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { HelpLink } from "@/components/HelpLink";
 import { type ImportFocus, ImportSheet, type ImportSheetKind, useFocusOn } from "@/components/ImportSheet";
+import { arrivals } from "@/components/lodi-cursor/arrivals";
 import { useOrg } from "@/components/org-context";
 import {
   type AgentFile,
@@ -74,6 +75,7 @@ import {
   itemId,
   kindsLine,
   MANY_FILES,
+  madeByImport,
   NOT_GITHUB,
   picksOf,
   todoLine,
@@ -347,6 +349,7 @@ export function useImportFlow(orgId: string | null) {
       );
       focus.current = "report";
       setReport(items);
+      arrivals.add(madeByImport(items));
       const arrived = agentsArrived(planned.items, items, pick, sent.current);
       for (const [key, id] of arrived) agentIds.current.set(key, id);
       setSeen((s) => s && new Set([...s, ...arrived.values()]));

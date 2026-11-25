@@ -592,7 +592,7 @@ describe("a request's screen on the phone", () => {
     const page = sheet.slice(sheet.lastIndexOf("return ("));
     expect(page.indexOf("<OpenItemHead agentId={a?.agentId ?? null} grouped />")).toBeGreaterThan(-1);
     expect(page.indexOf("<OpenItemHead")).toBeLessThan(page.indexOf("{body}"));
-    expect(sheet).toContain(".filter((tr) => tr !== undo)");
+    expect(sheet).toContain(".filter((tr) => tr !== undo && tr !== effect)");
     const parts = read("approvals/parts.tsx");
     expect(parts).toContain("const { undo } = approvalEffects(a);");
     // biome-ignore lint/suspicious/noTemplateCurlyInString: the component's own template, read as source text
@@ -615,7 +615,7 @@ describe("a request's screen on the phone", () => {
     // A pushed screen with the system's back, never a sheet (ADR 0218 §6); its dock is pinned over what scrolls, and
     // the content ends clear of it.
     expect(sheet).toContain(
-      '<PushedLargeTitle title="" collapsed grouped keyboard bottomInset={dock ? 140 : 24} dock={dock}>',
+      '<PushedLargeTitle title="" collapsed grouped keyboard bottomInset={dock ? dockHeight : 24} dock={dock}>',
     );
     expect(sheet).toMatch(/dock: \{\s*position: "absolute",\s*left: 0,\s*right: 0,\s*bottom: 0,/);
     expect(sheet).toContain("paddingBottom: insets.bottom + 12");

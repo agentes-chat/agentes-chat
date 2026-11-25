@@ -665,6 +665,11 @@ export interface AgentBrainView {
    * onto in the model picker, since only admins list the keys themselves.
    */
   keys?: { id: string; provider: string }[];
+  /**
+   * On the API: the workspace's key its calls take now (`keyInUse`: its own, else its provider's), so the picker shows
+   * it chosen even when it isn't the default; null with none (the server's own key may serve) or on a plan.
+   */
+  keyId?: string | null;
 }
 
 /** The account part of the brain view. */
@@ -904,6 +909,15 @@ async function personalAgent(db: Database, agent: Agent, userId: string, account
 
 /** The workspace's key the right hand's model thinks with, in the order its calls take: null where they'd find none. */
 async function workspaceKey(db: Database, agent: Agent) {
+  const key = await keyInUse(db, agent);
+  return key ? { provider: key.provider, label: key.label } : null;
+}
+
+/**
+ * The workspace's key an agent's model calls take: its own (a key it was given, a custom model's), else its
+ * provider's default, else that provider's newest key (`providerKeyOf`); null where they'd find none.
+ */
+async function keyInUse(db: Database, agent: Agent) {
   const pinned = parseCustomModel(agent.model)?.credentialId ?? agent.credentialId;
   const [provider, defaults, rows] = await Promise.all([
     isAutoModel(agent.model) ? orgModelProvider(db, agent.orgId) : modelProvider(agent.model),
@@ -919,8 +933,7 @@ async function workspaceKey(db: Database, agent: Agent) {
       .where(eq(schema.providerCredentials.orgId, agent.orgId))
       .orderBy(asc(schema.providerCredentials.createdAt)),
   ]);
-  const key = pinned ? rows.find((r) => r.id === pinned && !r.revokedAt) : providerKeyOf(rows, defaults, provider);
-  return key ? { provider: key.provider, label: key.label } : null;
+  return (pinned ? rows.find((r) => r.id === pinned && !r.revokedAt) : providerKeyOf(rows, defaults, provider)) ?? null;
 }
 
 /** What everyone's DM with the right hand thinks with while they have no AI of their own (its `agents` row). */
@@ -1207,7 +1220,7 @@ export async function getAgentBrain(
   const agent = await settingsAgent(deps.db, access.agent, userId);
   const machineLook = agentMachine(deps.db, orgId, agent.machineId);
   const { providerCredentials } = schema;
-  const [machine, machines, accounts, keys] = await Promise.all([
+  const [machine, machines, accounts, keys, inUse] = await Promise.all([
     machineLook,
     candidateMachines(deps.db, userId, orgId, admin, agent.machineId),
     machineLook.then((m) => brainAccounts(deps.db, userId, orgId, agent, m)),
@@ -1215,10 +1228,12 @@ export async function getAgentBrain(
       .select({ id: providerCredentials.id, provider: providerCredentials.provider })
       .from(providerCredentials)
       .where(and(eq(providerCredentials.orgId, orgId), isNull(providerCredentials.revokedAt))),
+    brainOf(agent.brain) === "model" ? keyInUse(deps.db, agent) : null,
   ]);
   return {
     ...view(agent, machine, machines, accounts, userId),
     keys,
+    keyId: inUse?.id ?? null,
     ...(access.scope ? { workspaceAi: await workspaceAi(deps.db, access.agent, userId) } : {}),
   };
 }

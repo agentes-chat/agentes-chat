@@ -138,6 +138,7 @@ describe("the tools on top", () => {
       "Wiki",
       "Rotinas",
       "Calendário",
+      "Skills",
       "Painéis",
       "Gerenciador de tarefas",
     ]);
@@ -313,6 +314,7 @@ describe("the tools on top", () => {
       "Wiki",
       "Drive",
       "Calendário",
+      "Skills",
       "Painéis",
       "Gerenciador de tarefas",
     ]);
@@ -393,6 +395,7 @@ describe("the tools on top", () => {
           "routines",
           "calendar",
           "team",
+          "skills",
           "dashboards",
           "code",
           "taskManager",
@@ -439,6 +442,7 @@ describe("the tools on top", () => {
         "routines",
         "calendar",
         "team",
+        "skills",
         "dashboards",
         "code",
         "taskManager",

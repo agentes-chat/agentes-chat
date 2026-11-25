@@ -7900,6 +7900,9 @@
   "aiHub.choice.api": {
     "value": "API"
   },
+  "aiHub.choice.asksMove": {
+    "value": "{{agent}} stops using it."
+  },
   "aiHub.missionAi": {
     "value": "AI"
   },

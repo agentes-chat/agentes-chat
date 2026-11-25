@@ -3252,7 +3252,8 @@
       "workspaceSub": "API-Schlüssel des Workspaces",
       "key": "API-Schlüssel",
       "keyDefault": "Standard des Workspaces",
-      "api": "API"
+      "api": "API",
+      "asksMove": "{{agent}} nutzt es dann nicht mehr."
     },
     "missionAi": "KI",
     "missionLocked": "Wer die Arbeit macht, wird vor dem Start gewählt. Das Modell lässt sich jederzeit ändern."

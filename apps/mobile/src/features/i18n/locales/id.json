@@ -3114,7 +3114,8 @@
       "workspaceSub": "Kunci API workspace",
       "key": "Kunci API",
       "keyDefault": "default workspace",
-      "api": "API"
+      "api": "API",
+      "asksMove": "{{agent}} berhenti memakainya."
     },
     "missionAi": "AI",
     "missionLocked": "Siapa yang mengerjakan dipilih sebelum Mulai. Modelnya bisa diubah kapan saja."

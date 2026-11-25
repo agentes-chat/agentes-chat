@@ -1713,9 +1713,80 @@
                     "type": "integer",
                     "minimum": 0,
                     "description": "Composio connected accounts made this month (mailboxes), reconnects included: Composio bills each once past the free ones."
+                  },
+                  "orgs": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "orgId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "connectors": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "connector": {
+                                "type": "string",
+                                "description": "The connector's stable key: a catalog connector's or a one-click preset's id (a custom server on a preset's host takes it too), a custom server's hostname (never its path), `gmail`, `outlook`, an IMAP preset's id or `imap`, `postgres`, or a Composio toolkit's slug."
+                              },
+                              "label": {
+                                "type": "string",
+                                "description": "Its name in the catalog or the presets, else the key."
+                              }
+                            },
+                            "required": ["connector", "label"]
+                          },
+                          "description": "Its Composio connectors this month: called, billed or connected."
+                        },
+                        "calls": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "description": "Its calls of Composio's tools."
+                        },
+                        "errors": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "executions": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "failures": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "events": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "connections": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "description": "Its connected accounts made this month."
+                        }
+                      },
+                      "required": [
+                        "orgId",
+                        "connectors",
+                        "calls",
+                        "errors",
+                        "executions",
+                        "failures",
+                        "events",
+                        "connections"
+                      ]
+                    },
+                    "description": "Per workspace with a call or something billed this month, most executions first (then events, calls and connections), at most 500."
+                  },
+                  "orgsMore": {
+                    "type": "boolean",
+                    "description": "More workspaces than were listed."
                   }
                 },
-                "required": ["month", "executions", "failures", "events", "connections"],
+                "required": ["month", "executions", "failures", "events", "connections", "orgs", "orgsMore"],
                 "description": "This month whatever the dates: Composio's free allowances are monthly."
               }
             },

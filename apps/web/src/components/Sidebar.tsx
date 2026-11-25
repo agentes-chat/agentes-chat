@@ -120,6 +120,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { useNewAgent } from "@/components/new-agent/new-agent-context";
+import { useArrived } from "@/hooks/useArrived";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useEverTrue } from "@/hooks/useEverTrue";
 import { useInboxWaiting } from "@/hooks/useInboxWaiting";
@@ -163,6 +164,8 @@ import { FeedbackMark } from "./arrival/FeedbackDialog";
 import { MenuEntries } from "./DesktopMenus";
 import { useAgentMenu, useChannelMenu, usePersonMenu } from "./entity-menus";
 import { useInviteDialog } from "./invite/InviteDialog";
+import { arrivalProps, useArrivals } from "./lodi-cursor/arrivals";
+import { useRowsDrawIn } from "./lodi-cursor/runner";
 import { useNow } from "./missions/MissionBits";
 import { COMPACT_QUERY, useMediaQuery, useNavDrawer } from "./NavDrawer";
 import { NewChannelDialog } from "./NewChannelDialog";
@@ -391,6 +394,10 @@ export function Sidebar() {
   // the key doesn't reach (ADR 0085 addendum of 2026-11-17), which Team still lists.
   const manages = can(org, "manage_agents");
   const team = dir.agents.filter((a) => !isRightHand(a));
+  const arrivedAgents = useArrived(
+    team.map((a) => a.id),
+    !dir.loading,
+  );
   const shownAgents = team.filter((a) => canTalk(a) || (manages && view.showAllAgents && opensDm(a)));
   const groupsQuery = useAgentGroups(orgId);
   const groups = groupsQuery.data ?? [];
@@ -410,6 +417,7 @@ export function Sidebar() {
   );
   const channelRows = useSidebarChannels({
     channels: listedChannels,
+    loading: channels.isLoading,
     groups,
     // Until the sectors load, a channel in one shows under Canais: none drags, or a drop would take it out.
     groupsReady: groupsQuery.data !== undefined,
@@ -491,6 +499,7 @@ export function Sidebar() {
       >
         <AgentRow
           agent={a}
+          arrival={arrivalProps(arrivedAgents, a.id)}
           unread={unread}
           waitingFor={waitingFor.get(a.id)}
           live={busy.has(a.id) || waits.has(a.id) || waitingFor.has(a.id) || unread > 0}
@@ -506,6 +515,7 @@ export function Sidebar() {
   // Only the middle scrolls: the workspace card on top and the foot stay put. The active item
   // paints its own background (no sliding pill).
   const navRef = useRef<HTMLDivElement>(null);
+  useRowsDrawIn(navRef);
   // The list fades out at an edge only while there is more to scroll past it (no hard cut); re-checked as lists load.
   useScrollEdges(navRef, [channels.data, directs.length, shownAgents.length, groups.length, rail]);
 
@@ -1181,6 +1191,7 @@ const SECTOR_KEY = "sector:";
  */
 function useSidebarChannels({
   channels: all,
+  loading,
   groups,
   groupsReady,
   sections,
@@ -1190,6 +1201,7 @@ function useSidebarChannels({
   onNewSector,
 }: {
   channels: Channel[];
+  loading: boolean;
   groups: AgentGroup[];
   groupsReady: boolean;
   sections: ReturnType<typeof useSidebarSections>;
@@ -1210,6 +1222,12 @@ function useSidebarChannels({
   // An administrator reads every channel (ADR 0151): the ones they aren't in wait under one row, not in the list.
   const path = useRouterState({ select: (s) => s.location.pathname });
   const channels = all.filter((c) => !c.seenAsAdmin || path.endsWith(`/c/${c.id}`));
+  // New since the list loaded (a team's, someone else's): their rows open their room as they land.
+  const arrived = useArrived(
+    channels.map((c) => c.id),
+    !loading,
+  );
+  useArrivals();
   const mayChange = (c: Channel) => managesChannel(c, me.user.id, org);
   const drag = useRef<string | null>(null);
   const [mark, setMark] = useState<DropMark>(null);
@@ -1361,6 +1379,9 @@ function useSidebarChannels({
     // mention still shows.
     const unread = looksUnread(c);
     const mentions = c.mentionCount ?? 0;
+    // The row's own marks go on what the list holds: the link, or the row around it with its buttons.
+    const outer = { "data-channel-row": c.id, ...arrivalProps(arrived, c.id) };
+    const plain = !mayChange(c);
     const link = (
       <Link
         key={c.id}
@@ -1368,6 +1389,7 @@ function useSidebarChannels({
         params={{ orgId, channelId: c.id }}
         className="sidebar__item"
         title={`#${c.name}`}
+        {...(plain ? outer : {})}
         data-kind="channel"
         data-unread={unread}
         data-muted={c.muted || undefined}
@@ -1406,13 +1428,13 @@ function useSidebarChannels({
       </Link>
     );
     // On hover or focus, like Discord's invite and settings: who manages the channel adds members or opens its details.
-    if (!mayChange(c)) return link;
+    if (plain) return link;
     const open = (ask: "details" | "add") => () => {
       requestChannelDetails(c.id, ask);
       void navigate({ to: "/org/$orgId/c/$channelId", params: { orgId, channelId: c.id } });
     };
     return (
-      <div key={c.id} className="sidebar__row" data-unread={unread} data-acts={2}>
+      <div key={c.id} className="sidebar__row" data-unread={unread} data-acts={2} {...outer}>
         {link}
         <span className="sidebar__row-acts">
           <RowAction icon="personAdd" label={t("shell.sidebarMenu.addMembers")} onClick={open("add")} />
@@ -1673,6 +1695,7 @@ function PinnedMark() {
  */
 function AgentRow({
   agent: a,
+  arrival,
   unread,
   waitingFor,
   live,
@@ -1683,6 +1706,8 @@ function AgentRow({
   menuExtra,
 }: {
   agent: Agent;
+  /** Its marks while it lands in the sidebar (`arrivalProps`). */
+  arrival?: ReturnType<typeof arrivalProps>;
   unread: number;
   /** The offline computer it waits for (its brain runs there). */
   waitingFor?: string;
@@ -1764,7 +1789,13 @@ function AgentRow({
     : [a.name, a.role, now ?? word, line?.text].filter(Boolean).join(" · ");
   const roleTag = !locked && !out;
   return (
-    <div className="sidebar__row" data-agent-row={a.id} data-live={live || undefined} data-acts={edits ? 1 : undefined}>
+    <div
+      className="sidebar__row"
+      data-agent-row={a.id}
+      data-live={live || undefined}
+      data-acts={edits ? 1 : undefined}
+      {...arrival}
+    >
       <Link
         {...rowMenu}
         to="/org/$orgId/dm/agent/$agentId"

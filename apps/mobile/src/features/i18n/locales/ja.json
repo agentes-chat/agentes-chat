@@ -3114,7 +3114,8 @@
       "workspaceSub": "ワークスペースのAPIキー",
       "key": "APIキー",
       "keyDefault": "ワークスペースの既定",
-      "api": "API"
+      "api": "API",
+      "asksMove": "{{agent}} はこのアカウントを使わなくなります。"
     },
     "missionAi": "AI",
     "missionLocked": "作業する人は開始前に選びます。モデルはいつでも変更できます。"

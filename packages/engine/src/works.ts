@@ -5,7 +5,7 @@ import type { AppLocale } from "@agenteschat/i18n/locale";
 import { plainLines } from "@agenteschat/ui/markdown";
 import { runAuthority } from "./authority";
 import { confidentialThreadSql, threadIsConfidential } from "./confidential";
-import { answersHandOffs, consultationOrigin } from "./consultations";
+import { answersHandOffs, consultationOrigin, settleHandedWorkTrace } from "./consultations";
 import { getChannelCached } from "./context";
 import type { ContextDeps } from "./context/summaries";
 import { deliverNotice, publishDelivery } from "./delivery";
@@ -1188,6 +1188,7 @@ export async function endWork(
   if (!ended) return null;
   if (ended.end && deps.pubsub) await publishMessageCreated(deps.pubsub, messageView(ended.end));
   if (ended.work.issueId) await setWorkIssueState(deps, ended.work, { ended: ended.status }).catch(() => null);
+  await settleHandedWorkTrace(deps, ended.work).catch(() => {});
   await announceWork(deps.pubsub, db, ended.work.orgId, ended.work.id);
   for (const id of ended.released) await announceWork(deps.pubsub, db, ended.work.orgId, id);
   return ended.work;

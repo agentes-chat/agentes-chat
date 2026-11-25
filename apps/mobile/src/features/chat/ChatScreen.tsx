@@ -21,6 +21,7 @@ import { OpenHandoffProvider } from "../browser/open";
 import { MissionCardView } from "../missions/cards";
 import { isOpenMission } from "../missions/logic";
 import { RightHandIntro } from "../right-hand/Intro";
+import { TeamFlight } from "../right-hand/TeamFlight";
 import { FirstUse } from "../shared/FirstUse";
 import { useColors, useDirectory, useMeId, useMyHandle, useOrgId, useWhen } from "../shared/hooks";
 import { FocusLive } from "../shared/parts";
@@ -52,6 +53,7 @@ import { useConversationActions } from "./screen/useConversationActions";
 import { useFollowEnd } from "./screen/useFollowEnd";
 import { useKeepPlace } from "./screen/useKeepPlace";
 import { HereReturns, type WorkLine } from "./screen/work-line";
+import { ThreadLanding, useMarkThreadOpen } from "./thread-open";
 import { withOpacity } from "./turn";
 
 /** How far from its end a list that follows it may rest (rounding) before it is taken there. */
@@ -92,22 +94,26 @@ export function ChatScreen({
   // Where the same conversation was being read on the other display (ADR 0212: an iPhone Duo opened or closed), taken
   // once as it opens, when no message was asked for: it opens there, as a pin opens at its message, without the light.
   const [handed] = useState(() => (focusId ? null : takeHandedPlace(placeKey(channelId, threadId ?? null))));
+  // A thread's screen: its message stays marked in the conversation under it, and its first rows fade in, in turn.
+  useMarkThreadOpen(threadId ?? null);
   // Its rows read the agents' questions once for the conversation (`ConversationRowData`), its sheets included.
   return (
-    <ConversationRowData channelId={channelId}>
-      <SheetHostProvider>
-        <FocusLive>
-          <OpenHandoffProvider handoffId={handoffId ?? null}>
-            <Chat
-              channelId={channelId}
-              threadId={threadId ?? null}
-              focusId={focusId ?? handed}
-              quietFocus={!focusId && handed !== null}
-            />
-          </OpenHandoffProvider>
-        </FocusLive>
-      </SheetHostProvider>
-    </ConversationRowData>
+    <ThreadLanding on={Boolean(threadId)}>
+      <ConversationRowData channelId={channelId}>
+        <SheetHostProvider>
+          <FocusLive>
+            <OpenHandoffProvider handoffId={handoffId ?? null}>
+              <Chat
+                channelId={channelId}
+                threadId={threadId ?? null}
+                focusId={focusId ?? handed}
+                quietFocus={!focusId && handed !== null}
+              />
+            </OpenHandoffProvider>
+          </FocusLive>
+        </SheetHostProvider>
+      </ConversationRowData>
+    </ThreadLanding>
   );
 }
 
@@ -920,6 +926,7 @@ function Chat({
               />
             )}
           </DockGestureArea>
+          <TeamFlight barHeight={headerHeight} />
         </View>
       </AskStoreProvider>
     </CodeConversation.Provider>

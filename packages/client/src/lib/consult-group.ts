@@ -199,6 +199,40 @@ export const pairItemOf = (c: MessageConsultation): ConsultPairItem => ({
   answeredAt: null,
 });
 
+const CLOSED_STATUSES: ReadonlySet<string> = new Set(["answered", "expired", "failed"]);
+
+/**
+ * Another agent's request in the DM of the agent it went to (a `hand_off` notice, packages/engine/src/consultations.ts
+ * `traceHandOff`): the agent that asked, the channel where the person asked it (none for a DM), and the pair row it
+ * draws there, which opens the exchange. Null for any other message.
+ */
+export function handOffOf(
+  meta: Record<string, unknown> | undefined,
+): { askerId: string; askedIn: string | null; item: ConsultPairItem } | null {
+  const notice = noticeOf(meta);
+  const r = notice?.kind === "hand_off" ? notice.refs : null;
+  if (!r?.consultationId || !r.askerAgentId || !r.agentId) return null;
+  const status = r.status && CLOSED_STATUSES.has(r.status) ? (r.status as ConsultPairItem["status"]) : "open";
+  return {
+    askerId: r.askerAgentId,
+    askedIn: r.askedIn ?? null,
+    item: {
+      id: r.consultationId,
+      kind: r.kind === "note" ? "note" : "question",
+      consultedAgentId: r.agentId,
+      status,
+      waiting: null,
+      question: r.question ?? "",
+      // The row never shows the answer (it opens with the exchange): only that one came.
+      answer: status === "answered" ? "…" : null,
+      // Its row says nothing while it is out, so no deadline counts down here.
+      expiresAt: "9999-12-31T00:00:00Z",
+      createdAt: r.createdAt ?? null,
+      answeredAt: r.answeredAt ?? null,
+    },
+  };
+}
+
 /** The short word after the names while one question is out ("perguntando 42 s"). */
 function pairOpenKey(state: ConsultLineState, c: ConsultPairItem) {
   switch (state) {

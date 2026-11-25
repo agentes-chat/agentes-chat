@@ -19,6 +19,7 @@ import {
   type AgentRun,
   type ArtifactDeps,
   addChannelMember,
+  CHANNEL_JOINED_JOB,
   type ContextDeps,
   createAgent,
   createAgentGifPoster,
@@ -401,6 +402,7 @@ export async function setup(
             blobs: artifactDeps.blobs,
             pubsub,
             judge: context.judge,
+            context,
             ...(sandboxDeps ? { computer: sandboxDeps } : {}),
           }),
         ]
@@ -448,6 +450,8 @@ export async function setup(
     ...(options.brains ? { brains: options.brains } : {}),
   };
   const handlers = createJobHandlers(jobDeps);
+  // The workspace as it starts: its agents' joins aren't news, so no test meets their lines' jobs.
+  await db.delete(schema.outbox).where(eq(schema.outbox.kind, CHANNEL_JOINED_JOB));
 
   /** Records every event published to a channel. */
   const listen = (channelId: string) => {

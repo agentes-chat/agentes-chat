@@ -184,6 +184,7 @@ import { useStopMovedOn, useStoppedRun } from "./stopped-runs";
 import { SwipeSlide, SwipeTime, useGiveWay, useSwipeSlide } from "./swipe-time";
 import { TeamChecks } from "./TeamChecks";
 import { SavedTools, TurnTools } from "./ToolCalls";
+import { ThreadRootMark, useLandingEntrance } from "./thread-open";
 import { keptTurn, stepLimitOf, stoppedOf, turnOpener } from "./turn";
 import { HandedWorkLines, MessageWorkLine } from "./WorkLine";
 
@@ -210,11 +211,16 @@ const TRAIL_RECENT_MS = 12 * 60 * 60_000;
  */
 export const MessageRow = memo(function MessageRow(props: RowProps) {
   const opened = useContext(OpenedMessagesContext)?.has(props.message.id) === true;
-  return (
+  const reduced = useReducedMotion();
+  const entering = useLandingEntrance(reduced);
+  const body = (
     <LayoutAnimationConfig key={opened ? "opened" : "row"} skipEntering>
       <RowBody {...props} />
     </LayoutAnimationConfig>
   );
+  const row = props.thread ? <ThreadRootMark threadId={props.thread.id}>{body}</ThreadRootMark> : body;
+  // A row of a thread's first load, as its screen opens: it fades in after the one above it.
+  return entering ? <Animated.View entering={entering}>{row}</Animated.View> : row;
 });
 
 interface RowProps {
