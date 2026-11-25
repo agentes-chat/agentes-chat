@@ -3,7 +3,7 @@ import { setupDom } from "@agenteschat/ui/testing/dom";
 
 setupDom();
 
-import type { AgentStatus, AgentWork, Message, ThreadInfo } from "@agenteschat/client";
+import { type AgentStatus, type AgentWork, keys, type Message, type ThreadInfo } from "@agenteschat/client";
 import { formatTime } from "@agenteschat/client/lib/format";
 import { act, cleanup, within } from "@testing-library/react";
 import { DESKTOP_QUERY } from "@/components/NavDrawer";
@@ -74,6 +74,81 @@ const nav = () => screen().getByRole("navigation", { name: "Navegação do works
 const agentRow = (id: string) => nav().querySelector(`[data-agent-row="${id}"]`) as HTMLElement;
 
 describe("the sidebar's agents", () => {
+  test("the working count filters visible agents in place and can be cleared after the work ends", async () => {
+    const state = seedState();
+    const ada = state.agents.find((a) => a.id === ADA_ID);
+    if (!ada || !state.me?.organizations[0]) throw new Error("missing workspace fixtures");
+    state.me.organizations[0].role = "member";
+    const rightHandId = "right-hand";
+    const privateId = "private-agent";
+    state.agents.push(
+      { ...ada, id: rightHandId, name: "Right hand", builtin: "right_hand" },
+      { ...ada, id: privateId, name: "Private", ownerUserId: "u-joao", audience: { mode: "owner", userIds: [] } },
+    );
+    state.agentGroups = [
+      { id: "integrations", name: "Integrations", agentIds: [ATLAS_ID, ADA_ID] },
+      { id: "private", name: "Private group", agentIds: [privateId] },
+    ];
+    seedDm(state, { type: "agent", id: ADA_ID }, { unread: 2 });
+    state.agentStatuses = [
+      status(ATLAS_ID, { presence: "busy", working: true, work: work() }),
+      status(ADA_ID, { work: work({ state: "approval" }) }),
+      status(privateId, { presence: "busy", working: true, work: work() }),
+    ];
+    const { services, sockets } = await renderApp(`/org/${ORG_ID}/c/${GENERAL_ID}`, { api: createFakeApi(state) });
+    await settle(8);
+    const socket = sockets.last();
+    const rightHandRun = (status: "running" | "done") =>
+      socket.push({
+        type: "event",
+        channelId: GENERAL_ID,
+        event: {
+          channelId: GENERAL_ID,
+          type: "agent.run",
+          threadId: null,
+          runId: "r-right",
+          agentId: rightHandId,
+          status,
+        },
+      });
+    const filter = () => within(nav()).getByRole("button", { name: "Mostrar só agentes trabalhando" });
+    const group = () => within(nav()).getByRole("button", { name: "Integrations" });
+    const rightHand = () => nav().querySelector("[data-right-hand]");
+    expect(agentRow(ADA_ID)).toBeTruthy();
+    expect(agentRow(privateId)).toBeNull();
+    expect(filter().textContent).toBe("1 trabalhando");
+    await act(async () => {
+      socket.open();
+      rightHandRun("running");
+    });
+    await settle(4);
+    expect(filter().textContent).toBe("2 trabalhando");
+    await act(async () => group().click());
+    await act(async () => within(nav()).getByRole("button", { name: "Agentes" }).click());
+    await act(async () => filter().click());
+    expect(filter().getAttribute("aria-pressed")).toBe("true");
+    expect(within(nav()).getByRole("button", { name: "Agentes" }).getAttribute("aria-expanded")).toBe("true");
+    expect(group().getAttribute("aria-expanded")).toBe("false");
+    expect(group().parentElement?.querySelector(".sidebar__section-count")?.textContent).toBe("1");
+    expect(agentRow(ATLAS_ID)?.dataset.live).toBe("true");
+    expect(agentRow(ADA_ID)).toBeNull();
+    expect(rightHand()).toBeTruthy();
+    expect(within(nav()).queryByRole("button", { name: "Private group" })).toBeNull();
+
+    await act(async () => {
+      rightHandRun("done");
+      services.queryClient.setQueryData<AgentStatus[]>(keys.agentStatus(ORG_ID), [status(privateId, { work: work() })]);
+    });
+    await settle(4);
+    expect(filter().textContent).toBe("0 trabalhando");
+    expect(rightHand()).toBeNull();
+    expect(within(nav()).queryByRole("button", { name: "Integrations" })).toBeNull();
+    await act(async () => filter().click());
+    expect(agentRow(ADA_ID)).toBeTruthy();
+    expect(rightHand()).toBeTruthy();
+    expect(group().getAttribute("aria-expanded")).toBe("false");
+  });
+
   test("whom it helps and how long, its orbit, a blue face, and Agentes counts it; amber for what waits on you", async () => {
     const state = seedState();
     state.agentStatuses = [
