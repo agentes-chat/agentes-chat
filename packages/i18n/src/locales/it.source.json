@@ -21460,8 +21460,8 @@
   },
   "routines.horizon.later": {
     "value": {
-      "one": "{{count}} runs later",
-      "other": "{{count}} run later"
+      "one": "{{count}} run later",
+      "other": "{{count}} runs later"
     }
   },
   "routines.horizon.now": {
