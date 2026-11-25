@@ -3281,7 +3281,8 @@
       "withoutMention": "Por su cuenta",
       "mentionOnly": "Solo cuando lo mencionan",
       "skillOn": "Activada",
-      "skillOff": "Desactivada"
+      "skillOff": "Desactivada",
+      "newGroup": "{{name}} (nuevo departamento)"
     },
     "remove": {
       "archiveTitle_one": "¿Archivar {{count}} agente?",

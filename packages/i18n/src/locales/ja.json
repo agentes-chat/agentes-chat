@@ -3051,7 +3051,8 @@
       "withoutMention": "自分の判断で",
       "mentionOnly": "メンションされたときだけ",
       "skillOn": "オン",
-      "skillOff": "オフ"
+      "skillOff": "オフ",
+      "newGroup": "{{name}}（新しい部署）"
     },
     "remove": {
       "archiveTitle_other": "{{count}}体のエージェントをアーカイブしますか？",

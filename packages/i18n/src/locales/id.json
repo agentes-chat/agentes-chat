@@ -3051,7 +3051,8 @@
       "withoutMention": "Atas inisiatif sendiri",
       "mentionOnly": "Hanya saat disebut",
       "skillOn": "Aktif",
-      "skillOff": "Nonaktif"
+      "skillOff": "Nonaktif",
+      "newGroup": "{{name}} (departemen baru)"
     },
     "remove": {
       "archiveTitle_other": "Arsipkan {{count}} agen?",

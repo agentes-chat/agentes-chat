@@ -3051,7 +3051,8 @@
       "withoutMention": "스스로",
       "mentionOnly": "멘션될 때만",
       "skillOn": "켜짐",
-      "skillOff": "꺼짐"
+      "skillOff": "꺼짐",
+      "newGroup": "{{name}}(새 부서)"
     },
     "remove": {
       "archiveTitle_other": "에이전트 {{count}}개를 보관할까요?",

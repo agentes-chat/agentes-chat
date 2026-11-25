@@ -3400,7 +3400,8 @@
       "withoutMention": "Samodzielnie",
       "mentionOnly": "Tylko po wzmiance",
       "skillOn": "Włączona",
-      "skillOff": "Wyłączona"
+      "skillOff": "Wyłączona",
+      "newGroup": "{{name}} (nowy dział)"
     },
     "remove": {
       "archiveTitle_one": "Zarchiwizować {{count}} agenta?",

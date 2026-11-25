@@ -62,15 +62,26 @@ const groupRows = (db: Executor, orgId: string) =>
     .orderBy(asc(agentGroups.position), asc(agentGroups.createdAt));
 
 /**
- * The groups a name means, for who names one in words (the right hand's cards): the ones called exactly that, else the
- * ones called that in any case. One is the group; none, no group has that name; more, the name can't tell them apart.
+ * The groups a name means for the right hand's cards. Prefer the exact spelling unless applying a stored name
+ * (`exact`) or checking that a newly named department is still unambiguous for Undo (`anyCase`).
  */
-export async function agentGroupsNamed(db: Executor, orgId: string, name: string) {
+export async function agentGroupsNamed(
+  db: Executor,
+  orgId: string,
+  name: string,
+  match: "preferExact" | "exact" | "anyCase" = "preferExact",
+) {
   const wanted = name.trim();
   const found = await db
     .select({ id: agentGroups.id, name: agentGroups.name })
     .from(agentGroups)
-    .where(and(eq(agentGroups.orgId, orgId), sql`lower(${agentGroups.name}) = lower(${wanted})`));
+    .where(
+      and(
+        eq(agentGroups.orgId, orgId),
+        match === "exact" ? eq(agentGroups.name, wanted) : sql`lower(${agentGroups.name}) = lower(${wanted})`,
+      ),
+    );
+  if (match !== "preferExact") return found;
   const exact = found.filter((g) => g.name === wanted);
   return exact.length ? exact : found;
 }

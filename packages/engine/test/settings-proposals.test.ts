@@ -42,6 +42,7 @@ import {
   type ToolContext,
   undoAgentAction,
   undoMessageActions,
+  undoProposal,
   updateAgent,
 } from "../src";
 import { monthStartUtc } from "../src/usage";
@@ -379,6 +380,46 @@ describe("a change of department", () => {
     await redoAgentAction(deps, f.owner.id, f.org.id, receiptOf(f.agent.id));
     const again = await agentGroupViews(f.db, f.org.id);
     expect(again.map((g) => [g.name, g.agentIds])).toEqual([["Arquimedium", [f.agent.id]]]);
+  });
+
+  test("a card can move the agent to an existing department with a different case", async () => {
+    f = await setup({ rightHand: true });
+    const deps = { db: f.db, pubsub: f.pubsub };
+    const [first] = await createAgentGroup(deps, f.owner.id, f.org.id, { name: "Vendas", agentIds: [f.agent.id] });
+    const groups = await createAgentGroup(deps, f.owner.id, f.org.id, { name: "vendas" });
+    const second = groups.find((g) => g.name === "vendas");
+    const ctx = await lodiRun(f, f.owner.id, "coloca o dev no setor vendas", true);
+    const out = await call(f, ctx, { changes: [{ agent: "@dev", group: "vendas" }], reason: "pediu" });
+    expect(out.content).toContain("applied at once");
+    const { card, rows } = await cardRows(f, f.owner.id);
+    expect(rows[0]?.settings).toEqual([{ field: "group", from: "Vendas", to: "vendas" }]);
+    expect((await getAgent(f.db, f.org.id, f.agent.id))?.groupId).toBe(second?.id);
+    const [receipt] = (await actionsFor(f.db, f.org.id, [card.id])).get(card.id) ?? [];
+    await undoAgentAction(deps, f.owner.id, f.org.id, receipt?.id ?? "");
+    expect((await getAgent(f.db, f.org.id, f.agent.id))?.groupId).toBe(first?.id);
+    await deleteAgentGroup(deps, f.owner.id, f.org.id, second?.id ?? "");
+    await expect(redoAgentAction(deps, f.owner.id, f.org.id, receipt?.id ?? "")).rejects.toMatchObject({
+      code: "agent_group.not_found",
+    });
+  });
+
+  test("Undo cannot overwrite a later move to a department with the same name in another case", async () => {
+    f = await setup({ rightHand: true });
+    const deps = { db: f.db, pubsub: f.pubsub };
+    const ctx = await lodiRun(f, f.owner.id, "cria o setor Vendas e coloca o dev nele", true);
+    await call(f, ctx, { changes: [{ agent: "@dev", group: "Vendas" }], reason: "pediu" });
+    const { card, rows } = await cardRows(f, f.owner.id);
+    expect(rows[0]?.settings).toEqual([{ field: "group", from: null, to: "Vendas", newGroup: true }]);
+    const [receipt] = (await actionsFor(f.db, f.org.id, [card.id])).get(card.id) ?? [];
+    const groups = await createAgentGroup(deps, f.owner.id, f.org.id, { name: "vendas", agentIds: [f.agent.id] });
+    const moved = groups.find((g) => g.name === "vendas");
+    await expect(undoAgentAction(deps, f.owner.id, f.org.id, receipt?.id ?? "")).rejects.toMatchObject({
+      code: "action.changed_since",
+    });
+    await expect(undoProposal(deps, f.owner.id, f.org.id, rows[0]?.id ?? "")).rejects.toMatchObject({
+      code: "proposal.changed",
+    });
+    expect((await getAgent(f.db, f.org.id, f.agent.id))?.groupId).toBe(moved?.id);
   });
 
   test("who no longer manages agents when they click creates nothing", async () => {

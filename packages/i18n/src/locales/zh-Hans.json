@@ -3050,7 +3050,8 @@
       "withoutMention": "自主回复",
       "mentionOnly": "仅在被提及时",
       "skillOn": "已开启",
-      "skillOff": "已关闭"
+      "skillOff": "已关闭",
+      "newGroup": "{{name}}（新部门）"
     },
     "remove": {
       "archiveTitle_other": "归档 {{count}} 个智能体？",

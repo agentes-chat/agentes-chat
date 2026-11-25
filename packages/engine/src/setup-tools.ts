@@ -2,7 +2,6 @@ import { holdEvents, type PubSub } from "@agenteschat/adapters";
 import { and, count, eq, inArray, isNull, or, schema, sql } from "@agenteschat/db";
 import { isKnownProvider, PROVIDERS } from "@agenteschat/providers";
 import { actWithUndo, publishMessageActions } from "./agent-actions";
-import { agentGroupsNamed } from "./agent-groups";
 import {
   AGENT_PROPOSAL_CARD,
   type AgentProposalCard,
@@ -1666,12 +1665,7 @@ async function wantedLines(ctx: ToolContext, change: SettingsChangeInput): Promi
   if (change.look) lines.push({ field: "look", to: change.look });
   if (typeof change.group === "string") {
     const wanted = change.group.trim();
-    // "none" takes the agent out of every sector; any other name is stored as the workspace writes it, so the card,
-    // its apply and Undo all find the same sector however the model typed its case. A name no sector has stays as
-    // typed, and the card creates it; one several share stays as typed too, and the card refuses a guess.
-    const none = wanted.toLowerCase() === "none";
-    const found = none ? [] : await agentGroupsNamed(ctx.db, ctx.orgId, wanted);
-    lines.push({ field: "group", to: none ? null : found.length === 1 ? (found[0]?.name ?? wanted) : wanted });
+    lines.push({ field: "group", to: wanted.toLowerCase() === "none" ? null : wanted });
   }
   if (typeof change.reports_to === "string") {
     const wanted = change.reports_to.trim().replace(/^@/, "").toLowerCase();

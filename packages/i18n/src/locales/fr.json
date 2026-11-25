@@ -3286,7 +3286,8 @@
       "withoutMention": "De sa propre initiative",
       "mentionOnly": "Seulement quand on le mentionne",
       "skillOn": "Activée",
-      "skillOff": "Désactivée"
+      "skillOff": "Désactivée",
+      "newGroup": "{{name}} (nouveau service)"
     },
     "remove": {
       "archiveTitle_one": "Archiver {{count}} agent ?",

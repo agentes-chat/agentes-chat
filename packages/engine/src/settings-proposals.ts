@@ -102,15 +102,6 @@ const ORDER: SettingField[] = [
 
 const same = (a: unknown, b: unknown) => canonicalJson(a ?? null) === canonicalJson(b ?? null);
 
-/**
- * A setting's two values the same: a department's name in any case, as `agentGroupsNamed` reads it, so a card that
- * named a new department "arquimedium" after another card made "Arquimedium" still finds it on Undo.
- */
-const sameValue = (field: ReceiptLine["field"], a: unknown, b: unknown) =>
-  field === "group" && typeof a === "string" && typeof b === "string"
-    ? a.toLowerCase() === b.toLowerCase()
-    : same(a, b);
-
 /** What `from` and `to` hold for an AI account: the brain it thinks with and the account (null: the API). */
 interface AccountValue {
   brain: string;
@@ -255,7 +246,7 @@ async function setValue(
       // Only a line that said so creates it, and only going to it (apply, Redo): Undo never makes a department.
       const creates = line.newGroup === true && value === line.to;
       const place = async (on: { db: Database; pubsub?: PubSub }) => {
-        const named = await agentGroupsNamed(on.db, orgId, name);
+        const named = await agentGroupsNamed(on.db, orgId, name, creates ? "preferExact" : "exact");
         if (named.length > 1)
           throw new ValidationError(`Two departments are called ${name}`, "agent_group.ambiguous", { name });
         const [group] = named;
@@ -454,15 +445,24 @@ export async function settingLines(
       skipped.push(`${who}: ${why}`);
       continue;
     }
-    const from = await valueNow(db, agent, w);
     // As it is stored, so Undo finds what it left.
-    const to =
-      w.field === "look"
-        ? validateAppearance(w.to as Parameters<typeof validateAppearance>[0])
-        : w.field === "model" && isComputerBrain(agent.brain)
-          ? normalizeBrainModel(agent.brain, w.to, agent.brainModel)
-          : w.to;
-    if (sameValue(w.field, from, to)) {
+    let to = w.to;
+    let newGroup = false;
+    if (w.field === "group" && typeof to === "string") {
+      const name = to.trim();
+      const named = await agentGroupsNamed(db, orgId, name);
+      if (named.length > 1) {
+        skipped.push(`${who}: two departments are called "${name}": ask the person to rename one of them first.`);
+        continue;
+      }
+      to = named[0]?.name ?? name;
+      // A department no one has made yet: the card says applying it creates it (ADR 0083).
+      newGroup = named.length === 0;
+    } else if (w.field === "look") to = validateAppearance(w.to as Parameters<typeof validateAppearance>[0]);
+    else if (w.field === "model" && isComputerBrain(agent.brain))
+      to = normalizeBrainModel(agent.brain, w.to, agent.brainModel);
+    const from = await valueNow(db, agent, w);
+    if (same(from, to)) {
       skipped.push(
         w.field === "skill"
           ? `${who} ${to ? "already has" : "doesn't have"} the skill ${w.label?.to ?? ""}.`
@@ -477,11 +477,8 @@ export async function settingLines(
       w.field === "reports_to" && typeof from === "string"
         ? { ...w.label, from: (await getAgent(db, orgId, from))?.name }
         : w.label;
-    const { pausesNow: _, ...asked } = w;
+    const { pausesNow: _, newGroup: _newGroup, ...asked } = w;
     const pausesNow = w.field === "budget" && (await spentPast(db, agent, to)) !== null;
-    // A department no one has made yet: the card says applying it creates it (ADR 0083 amendment of 2026-11-21).
-    const newGroup =
-      w.field === "group" && typeof to === "string" && (await agentGroupsNamed(db, orgId, to)).length === 0;
     lines.push({
       ...asked,
       to,
@@ -557,15 +554,8 @@ async function refusal(db: Database, orgId: string, requesterId: string, agent: 
     case "reports_to":
       if (w.to !== null && typeof w.to !== "string") return "say which agent, or none.";
       return reportsToRefusal(db, orgId, agent.id, w.to);
-    case "group": {
-      if (w.to === null) return null;
-      if (typeof w.to !== "string" || !w.to.trim()) return "say which department, or none.";
-      const name = w.to.trim();
-      // A name no department has is a new one, which the card creates.
-      return (await agentGroupsNamed(db, orgId, name)).length > 1
-        ? `two departments are called "${name}": ask the person to rename one of them first.`
-        : null;
-    }
+    case "group":
+      return w.to === null || (typeof w.to === "string" && w.to.trim()) ? null : "say which department, or none.";
     default: {
       const [channel] = await db
         .select()
@@ -696,9 +686,14 @@ export async function revertSettings(
   const steps = direction === "undo" ? lines.reverse() : lines;
   const agent = await getAgent(deps.db, a.orgId, a.targetId);
   if (!agent) throw new NotFoundError("The agent is gone", "action.target_gone");
-  for (const l of steps)
-    if (!sameValue(l.field, await valueNow(deps.db, agent, l), direction === "undo" ? l.to : l.from))
-      throw changedSince();
+  for (const l of steps) {
+    if (direction === "undo" && l.field === "group" && l.newGroup && typeof l.to === "string") {
+      // Another card may have made it with a different spelling. With two spellings, even an exact one
+      // can't tell us which group the original card put the agent in.
+      const named = await agentGroupsNamed(deps.db, a.orgId, l.to, "anyCase");
+      if (named.length !== 1 || named[0]?.id !== agent.groupId) throw changedSince();
+    } else if (!same(await valueNow(deps.db, agent, l), direction === "undo" ? l.to : l.from)) throw changedSince();
+  }
   for (const l of steps) await setValue(deps, userId, a.orgId, agent.id, l, direction === "undo" ? l.from : l.to);
   // Who it answers and its AI have no event of their own.
   await publishAgentsChanged(deps.pubsub, a.orgId);

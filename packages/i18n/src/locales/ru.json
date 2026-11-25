@@ -3396,7 +3396,8 @@
       "withoutMention": "Самостоятельно",
       "mentionOnly": "Только при упоминании",
       "skillOn": "Включён",
-      "skillOff": "Выключен"
+      "skillOff": "Выключен",
+      "newGroup": "{{name}} (новый отдел)"
     },
     "remove": {
       "archiveTitle_one": "Архивировать {{count}} агента?",

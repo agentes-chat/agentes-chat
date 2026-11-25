@@ -7901,6 +7901,9 @@
   "rightHand.value.skillOff": {
     "value": "Off"
   },
+  "rightHand.value.newGroup": {
+    "value": "{{name}} (new department)"
+  },
   "rightHand.remove.archiveTitle": {
     "value": {
       "one": "Archive {{count}} agent?",
