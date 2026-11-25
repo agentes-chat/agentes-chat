@@ -63,13 +63,13 @@ const groupRows = (db: Executor, orgId: string) =>
 
 /**
  * The groups a name means for the right hand's cards. Prefer the exact spelling unless applying a stored name
- * (`exact`) or checking that a newly named department is still unambiguous for Undo (`anyCase`).
+ * (`exact`), where a differently spelled group cannot stand in for a deleted one.
  */
 export async function agentGroupsNamed(
   db: Executor,
   orgId: string,
   name: string,
-  match: "preferExact" | "exact" | "anyCase" = "preferExact",
+  match: "preferExact" | "exact" = "preferExact",
 ) {
   const wanted = name.trim();
   const found = await db
@@ -81,14 +81,14 @@ export async function agentGroupsNamed(
         match === "exact" ? eq(agentGroups.name, wanted) : sql`lower(${agentGroups.name}) = lower(${wanted})`,
       ),
     );
-  if (match !== "preferExact") return found;
+  if (match === "exact") return found;
   const exact = found.filter((g) => g.name === wanted);
   return exact.length ? exact : found;
 }
 
 /**
- * Holds, to the end of `tx`, every other card creating a group in this workspace: the second of two cards naming one new
- * group then finds the first's (`agentGroupsNamed`) instead of making another.
+ * Serializes this workspace's department cards until commit. Take it before any agent row locks, since a move
+ * writes positions of other agents in the department as well as the one on the card.
  */
 export const lockAgentGroupNames = (tx: Executor, orgId: string) =>
   tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`agent-group-names:${orgId}`}))`);

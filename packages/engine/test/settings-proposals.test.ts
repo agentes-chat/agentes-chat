@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { orgTopic } from "@agenteschat/adapters";
 import { and, eq, schema } from "@agenteschat/db";
 import {
   actionsFor,
   addChannelMember,
   agentGroupViews,
+  archiveAgent,
   askProposal,
   createAgent,
   createAgentGroup,
@@ -315,6 +317,39 @@ describe("a change of department", () => {
     expect(await agentGroupViews(f.db, f.org.id)).toHaveLength(2);
   });
 
+  test("a failed Redo leaves both the settings and the receipt undone", async () => {
+    f = await setup({ rightHand: true });
+    const deps = { db: f.db, pubsub: f.pubsub };
+    const lead = await createAgent(f.db, f.owner.id, f.org.id, { name: "Lead", handle: "lead" }, NEW_AGENT_DEFAULTS);
+    const ctx = await lodiRun(f, f.owner.id, "coloca o dev em Vendas e sob o lead", true);
+    const out = await call(f, ctx, {
+      changes: [{ agent: "@dev", group: "Vendas", reports_to: "@lead" }],
+      reason: "pediu",
+    });
+    expect(out.content).toContain("applied at once");
+    const [vendas] = await agentGroupViews(f.db, f.org.id);
+    expect(vendas?.name).toBe("Vendas");
+    expect((await getAgent(f.db, f.org.id, f.agent.id))?.reportsToAgentId).toBe(lead.id);
+    const { card } = await cardRows(f, f.owner.id);
+    const [receipt] = (await actionsFor(f.db, f.org.id, [card.id])).get(card.id) ?? [];
+    const undone = await undoAgentAction(deps, f.owner.id, f.org.id, receipt?.id ?? "");
+    await deleteAgentGroup(deps, f.owner.id, f.org.id, vendas?.id ?? "");
+    await archiveAgent(f.db, f.owner.id, f.org.id, lead.id);
+
+    const events: string[] = [];
+    const stop = f.pubsub.subscribe(orgTopic(f.org.id), (e) => {
+      events.push(e.type);
+    });
+    await expect(redoAgentAction(deps, f.owner.id, f.org.id, undone.id)).rejects.toMatchObject({
+      code: "agent.reports_to",
+    });
+    stop();
+    expect(events).toEqual([]);
+    expect(await agentGroupViews(f.db, f.org.id)).toEqual([]);
+    expect(await getAgent(f.db, f.org.id, f.agent.id)).toMatchObject({ groupId: null, reportsToAgentId: null });
+    expect((await actionsFor(f.db, f.org.id, [card.id])).get(card.id)).toEqual([undone]);
+  });
+
   test("a name a department has, in any case, only moves the agent", async () => {
     f = await setup({ rightHand: true });
     const deps = { db: f.db, pubsub: f.pubsub };
@@ -380,6 +415,11 @@ describe("a change of department", () => {
     await redoAgentAction(deps, f.owner.id, f.org.id, receiptOf(f.agent.id));
     const again = await agentGroupViews(f.db, f.org.id);
     expect(again.map((g) => [g.name, g.agentIds])).toEqual([["Arquimedium", [f.agent.id]]]);
+    await redoAgentAction(deps, f.owner.id, f.org.id, receiptOf(ops.id));
+    expect((await getAgent(f.db, f.org.id, ops.id))?.groupId).toBe(again[0]?.id);
+    await undoAgentAction(deps, f.owner.id, f.org.id, receiptOf(f.agent.id));
+    await undoProposal(deps, f.owner.id, f.org.id, rows.find((r) => r.agentId === ops.id)?.id ?? "");
+    expect((await agentGroupViews(f.db, f.org.id))[0]?.agentIds).toEqual([]);
   });
 
   test("a card can move the agent to an existing department with a different case", async () => {
@@ -409,10 +449,17 @@ describe("a change of department", () => {
     const ctx = await lodiRun(f, f.owner.id, "cria o setor Vendas e coloca o dev nele", true);
     await call(f, ctx, { changes: [{ agent: "@dev", group: "Vendas" }], reason: "pediu" });
     const { card, rows } = await cardRows(f, f.owner.id);
-    expect(rows[0]?.settings).toEqual([{ field: "group", from: null, to: "Vendas", newGroup: true }]);
+    const originalId = (await getAgent(f.db, f.org.id, f.agent.id))?.groupId;
+    expect(typeof originalId).toBe("string");
+    expect(rows[0]?.settings).toEqual([
+      { field: "group", from: null, to: "Vendas", newGroup: true, appliedGroupId: originalId },
+    ]);
     const [receipt] = (await actionsFor(f.db, f.org.id, [card.id])).get(card.id) ?? [];
     const groups = await createAgentGroup(deps, f.owner.id, f.org.id, { name: "vendas", agentIds: [f.agent.id] });
     const moved = groups.find((g) => g.name === "vendas");
+    // Even when the case-folded name becomes unique again, it is not the group the receipt changed.
+    await deleteAgentGroup(deps, f.owner.id, f.org.id, originalId ?? "");
+    expect((await agentGroupViews(f.db, f.org.id)).map((g) => g.name)).toEqual(["vendas"]);
     await expect(undoAgentAction(deps, f.owner.id, f.org.id, receipt?.id ?? "")).rejects.toMatchObject({
       code: "action.changed_since",
     });

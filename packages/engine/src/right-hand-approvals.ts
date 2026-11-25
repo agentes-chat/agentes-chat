@@ -1,4 +1,4 @@
-import type { PubSub } from "@agenteschat/adapters";
+import { holdEvents, type PubSub } from "@agenteschat/adapters";
 import { and, type Database, desc, eq, gte, inArray, isNull, ne, or, schema, sql } from "@agenteschat/db";
 import { isAutoModel } from "@agenteschat/providers";
 import { type AgentProposalCard, agentProposalOf, createProposedAgent } from "./agent-proposals";
@@ -19,6 +19,7 @@ import { can, getMembership, requirePermission } from "./organizations";
 import { enqueue } from "./outbox";
 import { RIGHT_HAND } from "./right-hand";
 import { maySettle, revertSettings, type SettingLine } from "./settings-proposals";
+import { forgetTeam } from "./team";
 import { orgDefaultAgentBudget } from "./usage";
 import { isPersonalWorkspace } from "./workspace-mode";
 
@@ -720,7 +721,15 @@ export async function undoRightHandDecision(
           )
           .orderBy(desc(agentActions.createdAt))
       : [];
-    for (const receipt of receipts) await revertSettings(deps, receipt, actorId, "undo", changed);
+    for (const receipt of receipts) {
+      const events = holdEvents(deps.pubsub);
+      await db.transaction((tx) =>
+        revertSettings({ db: tx as unknown as Database, pubsub: events.pubsub }, receipt, actorId, "undo", changed),
+      );
+      const fields = receipt.params.fields;
+      if (Array.isArray(fields) && fields.includes("group")) forgetTeam(orgId);
+      await events.flush();
+    }
   }
   const [done] = await db
     .update(rightHandDecisions)

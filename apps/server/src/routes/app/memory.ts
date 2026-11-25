@@ -490,7 +490,7 @@ async function proposalViews(db: Database, rows: (ProposalRow & { canDecide: boo
             ? { type: r.target, agentId: r.agentId }
             : { type: "org_context" as const },
       access: r.target === "agent_access" ? (r.access ?? []) : null,
-      settings: r.target === "agent_settings" ? (r.settings ?? []) : null,
+      settings: r.target === "agent_settings" ? (r.settings ?? []).map(({ appliedGroupId: _, ...line }) => line) : null,
       requestedBy: r.requestedByUserId
         ? { userId: r.requestedByUserId, name: users.get(r.requestedByUserId) ?? "" }
         : null,

@@ -229,6 +229,8 @@ export interface ProposedSettingLine {
   /** `budget`: at or below what the agent spent this month, so applying it stops the agent at once. */
   pausesNow?: boolean;
   newGroup?: boolean;
+  /** Where a `newGroup` line actually put the agent, including when another card had already made it. */
+  appliedGroupId?: string;
 }
 
 /**

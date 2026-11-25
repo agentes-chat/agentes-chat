@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { channelTopic, orgTopic, userTopic } from "@agenteschat/adapters";
-import { and, countQueries, eq, schema } from "@agenteschat/db";
+import { channelTopic, holdEvents, orgTopic, userTopic } from "@agenteschat/adapters";
+import { and, countQueries, type Database, eq, schema } from "@agenteschat/db";
 import {
   addChannelMember,
   archiveAgent,
@@ -295,13 +295,24 @@ describe("every path that changes the agents or the channels tells the workspace
     const { db, pubsub, org, owner, agent } = f;
     const everyone = { mode: "everyone", userIds: [], roleIds: [] };
     const action = {
+      before: null,
       orgId: org.id,
       targetId: agent.id,
       params: {
         lines: [{ field: "audience", from: { mode: "owner", userIds: [], roleIds: [] }, to: everyone, label: "" }],
       },
-    } as unknown as Parameters<typeof revertSettings>[1];
-    await revertSettings({ db, pubsub }, action, owner.id, "undo", () => new Error("changed"));
+    };
+    const events = holdEvents(pubsub);
+    await db.transaction((tx) =>
+      revertSettings(
+        { db: tx as unknown as Database, pubsub: events.pubsub },
+        action,
+        owner.id,
+        "undo",
+        () => new Error("changed"),
+      ),
+    );
+    await events.flush();
     expect(announced(log, AGENTS)).toBe(1);
   });
 

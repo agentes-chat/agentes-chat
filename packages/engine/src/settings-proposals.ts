@@ -1,4 +1,4 @@
-import { holdEvents, type PubSub } from "@agenteschat/adapters";
+import type { PubSub } from "@agenteschat/adapters";
 import { and, type Database, type Executor, eq, isNull, schema } from "@agenteschat/db";
 import { accessInputOf, replaceableGrants, setAgentAccess } from "./access";
 import { agentGroupsNamed, createAgentGroup, lockAgentGroupNames, moveAgentToGroup } from "./agent-groups";
@@ -193,7 +193,7 @@ async function setValue(
   actorId: string,
   orgId: string,
   agentId: string,
-  line: Pick<ReceiptLine, "field" | "channelId" | "skillId" | "to" | "newGroup">,
+  line: Pick<ReceiptLine, "field" | "channelId" | "skillId" | "to" | "newGroup" | "appliedGroupId">,
   value: unknown,
 ) {
   const { db, pubsub } = deps;
@@ -245,25 +245,32 @@ async function setValue(
       if (!name) return void (await moveAgentToGroup(deps, actorId, orgId, agentId, { groupId: null }));
       // Only a line that said so creates it, and only going to it (apply, Redo): Undo never makes a department.
       const creates = line.newGroup === true && value === line.to;
-      const place = async (on: { db: Database; pubsub?: PubSub }) => {
-        const named = await agentGroupsNamed(on.db, orgId, name, creates ? "preferExact" : "exact");
-        if (named.length > 1)
-          throw new ValidationError(`Two departments are called ${name}`, "agent_group.ambiguous", { name });
-        const [group] = named;
-        if (group) return void (await moveAgentToGroup(on, actorId, orgId, agentId, { groupId: group.id }));
-        if (!creates) throw new NotFoundError("That department is gone", "agent_group.not_found");
-        // Created with the agent in it: `createAgentGroup` checks `manage_agents` and that the clicker manages it.
-        return void (await createAgentGroup(on, actorId, orgId, { name, agentIds: [agentId] }));
-      };
-      if (!creates) return place(deps);
-      // Under the workspace's lock, in a transaction of its own (a savepoint inside a decision's), so the lock holds
-      // until the department is committed on Redo too, which runs outside one; its events go out after.
-      const events = holdEvents(pubsub);
-      await db.transaction(async (tx) => {
-        await lockAgentGroupNames(tx, orgId);
-        await place({ db: tx as unknown as Database, pubsub: events.pubsub });
-      });
-      return events.flush();
+      // Redo returns to the group it actually used, even if someone later made a group with a similar name.
+      const pinned =
+        creates && line.appliedGroupId
+          ? await db
+              .select({ id: agentGroups.id })
+              .from(agentGroups)
+              .where(and(eq(agentGroups.orgId, orgId), eq(agentGroups.id, line.appliedGroupId)))
+          : [];
+      const named = pinned.length ? pinned : await agentGroupsNamed(db, orgId, name, creates ? "preferExact" : "exact");
+      if (named.length > 1)
+        throw new ValidationError(`Two departments are called ${name}`, "agent_group.ambiguous", { name });
+      const [group] = named;
+      if (group) {
+        await moveAgentToGroup(deps, actorId, orgId, agentId, { groupId: group.id });
+        if (creates) line.appliedGroupId = group.id;
+        return;
+      }
+      if (!creates) throw new NotFoundError("That department is gone", "agent_group.not_found");
+      await createAgentGroup(deps, actorId, orgId, { name, agentIds: [agentId] });
+      const [placed] = await db
+        .select({ groupId: agents.groupId })
+        .from(agents)
+        .where(and(eq(agents.orgId, orgId), eq(agents.id, agentId)));
+      if (!placed?.groupId) throw new NotFoundError("That department is gone", "agent_group.not_found");
+      line.appliedGroupId = placed.groupId;
+      return;
     }
     case "model": {
       const agent = await getAgent(db, orgId, agentId);
@@ -414,7 +421,7 @@ const RIGHT_HAND_SETTINGS: ReadonlySet<SettingField> = new Set([
 ]);
 
 /** What a target's lines ask for, before `from` is read: `to`, and the channel for a channel line. */
-export type WantedLine = Omit<SettingLine, "from">;
+export type WantedLine = Omit<SettingLine, "from" | "newGroup" | "appliedGroupId">;
 
 /**
  * Checks each wanted line against the agent as it is now and fills in `from`. A line that changes nothing or can't be
@@ -477,7 +484,7 @@ export async function settingLines(
       w.field === "reports_to" && typeof from === "string"
         ? { ...w.label, from: (await getAgent(db, orgId, from))?.name }
         : w.label;
-    const { pausesNow: _, newGroup: _newGroup, ...asked } = w;
+    const { pausesNow: _, ...asked } = w;
     const pausesNow = w.field === "budget" && (await spentPast(db, agent, to)) !== null;
     lines.push({
       ...asked,
@@ -620,8 +627,8 @@ export function settingsRows(lines: SettingLine[]) {
 }
 
 /**
- * Applies an accepted row as `actorId` (its agent locked by the caller): false when a setting moved since it was
- * proposed (stale). Each line through the page's own editor, so it never does more than they could there.
+ * Applies an accepted row as `actorId`, or returns false if stale. The caller locks the agent, after taking the
+ * group lock for a department row. Each line uses its editor and a `newGroup` line records the id it moved into.
  */
 export async function applySettings(
   deps: { db: Database; pubsub?: PubSub },
@@ -650,6 +657,8 @@ export async function recordSettingsReceipt(
   // A deleted agent can't come back: no Undo.
   if (!p.proposedByAgentId || deletes(p)) return;
   const now = new Date();
+  const settings = p.settings ?? [];
+  const appliedGroupId = settings.find((l) => l.field === "group")?.appliedGroupId;
   await db.insert(agentActions).values({
     orgId: p.orgId,
     runId: card.runId,
@@ -664,37 +673,55 @@ export async function recordSettingsReceipt(
     params: {
       proposalId: p.id,
       agentName,
-      fields: (p.settings ?? []).map((l) => l.field),
-      lines: (p.settings ?? []) as unknown as Record<string, unknown>[],
+      fields: settings.map((l) => l.field),
+      lines: appliedGroupId ? settings.map(({ appliedGroupId: _, ...line }) => line) : settings,
     },
+    ...(appliedGroupId ? { state: { appliedGroupId } } : {}),
     createdAt: now,
     undoableUntil: new Date(now.getTime() + undoWindowMs),
   });
 }
 
-/** Undo (back to each `from`, last line first) or Redo, as `userId`; refused when a setting moved since. */
+/** Undo (last line first) or Redo inside its caller's transaction, refused when a setting moved since. */
 export async function revertSettings(
   deps: { db: Database; pubsub?: PubSub },
-  a: typeof agentActions.$inferSelect,
+  a: Pick<typeof agentActions.$inferSelect, "before" | "params" | "orgId" | "targetId"> & {
+    state?: Record<string, unknown>;
+  },
   userId: string,
   direction: "undo" | "redo",
   changedSince: () => Error,
 ) {
   // An instructions, role or apps row keeps its texts off the receipt everyone in the conversation reads.
-  const kept = (a.before as { lines?: ReceiptLine[] } | null)?.lines;
-  const lines = (kept ?? (a.params as { lines?: ReceiptLine[] }).lines ?? []).slice();
+  const kept = a.before as { lines?: ReceiptLine[] } | null;
+  // `recordSettingsReceipt` writes these public settings lines, separately from the private receipt lines.
+  const stored = a.params as { lines?: SettingLine[] };
+  const settings = stored.lines ?? [];
+  const lines = (kept?.lines ?? settings).slice();
   const steps = direction === "undo" ? lines.reverse() : lines;
-  const agent = await getAgent(deps.db, a.orgId, a.targetId);
+  const { db } = deps;
+  // A group move writes other members' positions, so group cards take this before locking any agent.
+  const group = steps.find((l) => l.field === "group");
+  if (group) {
+    await lockAgentGroupNames(db, a.orgId);
+    if (group.newGroup && typeof a.state?.appliedGroupId === "string") group.appliedGroupId = a.state.appliedGroupId;
+  }
+  const appliedGroupId = group?.appliedGroupId;
+  const [agent] = await db
+    .select()
+    .from(agents)
+    .where(and(eq(agents.id, a.targetId), eq(agents.orgId, a.orgId), isNull(agents.deletedAt)))
+    .for("update");
   if (!agent) throw new NotFoundError("The agent is gone", "action.target_gone");
   for (const l of steps) {
-    if (direction === "undo" && l.field === "group" && l.newGroup && typeof l.to === "string") {
-      // Another card may have made it with a different spelling. With two spellings, even an exact one
-      // can't tell us which group the original card put the agent in.
-      const named = await agentGroupsNamed(deps.db, a.orgId, l.to, "anyCase");
-      if (named.length !== 1 || named[0]?.id !== agent.groupId) throw changedSince();
+    if (direction === "undo" && l.field === "group" && l.newGroup) {
+      if (!l.appliedGroupId || l.appliedGroupId !== agent.groupId) throw changedSince();
     } else if (!same(await valueNow(deps.db, agent, l), direction === "undo" ? l.to : l.from)) throw changedSince();
   }
   for (const l of steps) await setValue(deps, userId, a.orgId, agent.id, l, direction === "undo" ? l.from : l.to);
   // Who it answers and its AI have no event of their own.
   await publishAgentsChanged(deps.pubsub, a.orgId);
+  return group?.appliedGroupId && group.appliedGroupId !== appliedGroupId
+    ? { appliedGroupId: group.appliedGroupId, settings }
+    : undefined;
 }
