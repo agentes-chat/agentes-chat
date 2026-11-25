@@ -14306,6 +14306,8 @@
       "share_dashboard": "대시보드 공유",
       "create_widget": "위젯 생성",
       "update_widget": "위젯 업데이트",
+      "change_widget": "위젯 변경 요청",
+      "remove_widget": "위젯 삭제",
       "load_skill": "스킬 열기",
       "read_skill_file": "스킬 파일 읽기",
       "update_skill": "스킬 업데이트",

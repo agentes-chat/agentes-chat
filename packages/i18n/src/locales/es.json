@@ -15289,6 +15289,8 @@
       "share_dashboard": "Compartir panel",
       "create_widget": "Crear widget",
       "update_widget": "Actualizar widget",
+      "change_widget": "Pedir un cambio en el widget",
+      "remove_widget": "Quitar widget",
       "load_skill": "Abrir habilidad",
       "read_skill_file": "Leer archivo de habilidad",
       "update_skill": "Actualizar habilidad",

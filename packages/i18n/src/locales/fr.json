@@ -15363,6 +15363,8 @@
       "share_dashboard": "Partager un tableau de bord",
       "create_widget": "Créer un widget",
       "update_widget": "Modifier un widget",
+      "change_widget": "Demander une modification du widget",
+      "remove_widget": "Retirer un widget",
       "load_skill": "Ouvrir une compétence",
       "read_skill_file": "Lire un fichier de compétence",
       "update_skill": "Modifier une compétence",

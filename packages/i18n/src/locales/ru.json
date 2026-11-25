@@ -15823,6 +15823,8 @@
       "share_dashboard": "Поделиться дашбордом",
       "create_widget": "Создать виджет",
       "update_widget": "Изменить виджет",
+      "change_widget": "Попросить изменить виджет",
+      "remove_widget": "Удалить виджет",
       "load_skill": "Открыть навык",
       "read_skill_file": "Прочитать файл навыка",
       "update_skill": "Изменить навык",
